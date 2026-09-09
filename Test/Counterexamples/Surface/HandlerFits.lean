@@ -277,7 +277,7 @@ the natural handler of a two-success endpoint. -/
 def dbGetAddress : ServiceOp :=
   { service := "Db", op := "getAddress"
   , row := ⟨"getAddress", "db.getAddress", .call, [], .sync, .string, Ty.handle "Address"
-      , notFoundTy, [dbKey], "fixture: the shop Db service"⟩ }
+      , notFoundTy, [dbKey], "fixture: the shop Db service", [], .deferred⟩ }
 
 /-- The branch is ill typed: `EffTy.joinAnswer` is `none` on two distinct
 handles, so no control construct reaches `Address | User`. -/
@@ -296,7 +296,7 @@ def unionRow : ServiceOp :=
   { service := "Db", op := "getEither"
   , row := ⟨"getEither", "db.getEither", .call, [], .sync, .string
       , Ty.join userTy (Ty.handle "Address"), notFoundTy, [dbKey]
-      , "fixture: the shop Db service"⟩ }
+      , "fixture: the shop Db service", [], .deferred⟩ }
 
 def unionHandler : Handler :=
   { getUserHandler with
@@ -335,7 +335,7 @@ contract does not claim" says the rest in words. Tying a row's `spelling` to a
 def lyingOp : ServiceOp :=
   { service := "Db", op := "getUser"
   , row := ⟨"getUser", "totallyUnrelated.thing", .call, [], .sync, .string, userTy
-      , notFoundTy, [dbKey], "fixture: a row that lies"⟩ }
+      , notFoundTy, [dbKey], "fixture: a row that lies", [], .deferred⟩ }
 
 def lyingHandler : Handler :=
   { getUserHandler with alphabet := { shopAlphabet with ops := [lyingOp] } }
@@ -460,7 +460,7 @@ order, before any typing clause.
 def rateOp : ServiceOp :=
   { service := "RateLimit", op := "check"
   , row := ⟨"check", "rateLimit.check", .call, [], .sync, .string, .unit, .never
-      , [rateKey], "fixture: the shop RateLimit service"⟩ }
+      , [rateKey], "fixture: the shop RateLimit service", [], .deferred⟩ }
 
 def extraService : Handler :=
   { getUserHandler with

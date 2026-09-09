@@ -322,6 +322,11 @@ inductive CodeMeans (root : NativeEff) : NCode → RProgram → Prop
       (hnode : Node.at_ (.eff root) p.path = some (.eff (.scoped b))) (hk : Delivers k) :
       CodeMeans root (Prim.withFiber (EffThunk.act p)) (.vis (.inr (.scoped (p.child 0))) k)
 
+  /-- The external callback has no cancellation finalizer and answers with an exit. -/
+  | asyncForeign (op : NativeOp) (request : Val) (k : ExitV → RProgram) (hk : Delivers k) :
+      CodeMeans root (Prim.async (.external op request) false none)
+        (.vis (.inr (.async (.external op request) request)) k)
+
 /-! ## The saved slots -/
 
 /-- One frame on the frame stack and one slot on the term stack carry the same
@@ -639,6 +644,7 @@ theorem CodeMeans.bindTail {root : NativeEff} {c : NCode} {r : RProgram} (h : Co
   | yieldNow priority k hk => exact CodeMeans.yieldNow priority _ (delivers_seqR_bind hk ht)
   | asyncAwait cell request k hk => exact CodeMeans.asyncAwait cell request _ (delivers_bind hk ht)
   | asyncExternal slot k hk => exact CodeMeans.asyncExternal slot _ (delivers_bind hk ht)
+  | asyncForeign op request k hk => exact CodeMeans.asyncForeign op request _ (delivers_bind hk ht)
   | asyncSleep millis request k hk => exact CodeMeans.asyncSleep millis request _ (delivers_bind hk ht)
   | joinValue target k hk => exact CodeMeans.joinValue target _ (delivers_seqR_bind hk ht)
   | joinEffect target k hk => exact CodeMeans.joinEffect target _ (delivers_bind hk ht)
@@ -739,6 +745,7 @@ theorem CodeMeans.prepare {root : NativeEff} {c : NCode} {r : RProgram} (h : Cod
   | yieldNow priority k hk => exact CodeMeans.yieldNow priority k hk
   | asyncAwait cell request k hk => exact CodeMeans.asyncAwait cell request k hk
   | asyncExternal slot k hk => exact CodeMeans.asyncExternal slot k hk
+  | asyncForeign op request k hk => exact CodeMeans.asyncForeign op request k hk
   | asyncSleep millis request k hk => exact CodeMeans.asyncSleep millis request k hk
   | joinValue target k hk => exact CodeMeans.joinValue target k hk
   | joinEffect target k hk => exact CodeMeans.joinEffect target k hk

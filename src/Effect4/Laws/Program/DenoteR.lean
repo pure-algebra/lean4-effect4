@@ -227,6 +227,12 @@ def denoteAsync (request : Term) (p : Point) : RProgram :=
     | none => .pure badShapeExit
     | some cell => .vis (.inr (.async (.registerAwait cell) value)) Effects.Program.pure
 
+/-- An external callback retains its row and request until it receives an exit. -/
+def denoteForeign (op : NativeOp) (request : Term) (p : Point) : RProgram :=
+  match evalTerm p.env request with
+  | none => .pure badShapeExit
+  | some value => .vis (.inr (.async (.external op value) value)) Effects.Program.pure
+
 /-- `Effect.sleep(d)` on the term route (the timer, A4): `d = 0` is the counted yield, the rest
 the registration on the logical clock by the machine's name. -/
 def denoteSleep (request : Term) (p : Point) : RProgram :=
@@ -482,6 +488,8 @@ def inlineYield : NativeEff → Point → Option ExitV
       | .program => none
     | .callback op request =>
       match op with
+      | .external _ => match evalTerm p.env request with
+        | some _ => none | none => some badShapeExit
       | .sleep => match (evalTerm p.env request).bind NativeOp.sleepMillisOf with
         | some _ => none | none => some badShapeExit
       | _ => match (NativeOp.row op).kind with
@@ -626,6 +634,7 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
   | .yieldNow priority, _ => .vis (.inr (.yieldNow priority)) fun v => .pure (.success v)
   | .callback op request, p =>
     match op with
+    | .external _ => denoteForeign op request p
     | .sleep => denoteSleep request p
     | _ => match (NativeOp.row op).kind with
       | .async => denoteAsync request p
@@ -984,6 +993,7 @@ theorem denoteR_yieldNow (priority : Nat) (h : p.fuel ≠ 0) :
 theorem denoteR_callback (op : NativeOp) (r : Term) (h : p.fuel ≠ 0) :
     denoteR root (.callback op r) p =
       (match op with
+       | .external _ => denoteForeign op r p
        | .sleep => denoteSleep r p
        | _ => match (NativeOp.row op).kind with
          | .async => denoteAsync r p
@@ -1223,6 +1233,7 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
     | callback op request =>
       cases op
       all_goals simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
+      case external i => cases evalTerm p.env request <;> rfl
       case sleep =>
         cases (evalTerm p.env request).bind NativeOp.sleepMillisOf with
         | none => rfl

@@ -172,6 +172,14 @@ inductive RowShape
   | value
   /-- Apply the request tuple as separate arguments, followed by trailing names. -/
   | tupleCall
+  /-- The first request component is the receiver; its second component supplies the arguments. -/
+  | method
+deriving DecidableEq, Repr
+
+/-- Who answers an asynchronous row: the deferred store or the external oracle. -/
+inductive Registration
+  | deferred
+  | external
 deriving DecidableEq, Repr
 
 structure Row where
@@ -196,6 +204,7 @@ structure Row where
   every later use of the handle is typed at that default instead
   (`E4-CHECK-CE-013`). Empty means the call is printed and read without type arguments. -/
   typeArgs : List String := []
+  registration : Registration := .deferred
 deriving DecidableEq, Repr
 
 /-! ## Values -/

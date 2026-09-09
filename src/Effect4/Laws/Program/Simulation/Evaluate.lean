@@ -394,6 +394,16 @@ theorem registerAsyncR_await (root : NativeEff) (c : List (FiberId × ExitV)) (c
       ({ s with deferreds := (s.deferreds.register cell fid tok).1 },
         (s.deferreds.register cell fid tok).2.map denoteStored) := rfl
 
+/-- The default table has no external registration to answer. -/
+theorem registerAsync_foreign (root : NativeEff) (c : List (FiberId × ExitV))
+    (op : NativeOp) (request : Val) (fid : FiberId) (tok : Nat) (s : Stores) :
+    (interpAt root c).registerAsync (.external op request) fid tok s = (s, none) := by
+  cases op <;> rfl
+
+theorem registerAsyncR_foreign (root : NativeEff) (c : List (FiberId × ExitV))
+    (op : NativeOp) (request : Val) (fid : FiberId) (tok : Nat) (s : Stores) :
+    (interpRAt root c).registerAsync (.external op request) fid tok s = (s, none) := rfl
+
 theorem registerAsync_external (root : NativeEff) (c : List (FiberId × ExitV)) (slot : Nat)
     (fid : FiberId) (tok : Nat) (s : Stores) :
     (interpAt root c).registerAsync (.store (.externalRegister slot)) fid tok s = (s, none) := rfl
@@ -765,6 +775,16 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     dsimp only [evaluateFiberR, saveAnswerR, pushR]
     simp only [registerAsyncR_external]
     rw [evaluatePrim_async_none root _ m₁ f₁ y hc₁ (registerAsync_external _ _ _ _ _ _)]
+    dsimp only
+    simp only [Bool.false_or, Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
+    rw [hm.nextToken, hm.state]
+    exact iterRel_prepare ⟨machineOk_emit (machineOk_withStateToken hok (hm.state ▸ hok.state) _) _,
+      BMeans.emit (hm.withStateToken _ _) _ _, (hf'.saveAnswer hk).park _, rfl, rfl, ListRel.nil⟩
+  | asyncForeign op request k hk =>
+    rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
+    dsimp only [evaluateFiberR, saveAnswerR, pushR]
+    simp only [registerAsyncR_foreign]
+    rw [evaluatePrim_async_none root _ m₁ f₁ y hc₁ (registerAsync_foreign _ _ _ _ _ _ _)]
     dsimp only
     simp only [Bool.false_or, Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
     rw [hm.nextToken, hm.state]

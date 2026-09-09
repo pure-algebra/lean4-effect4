@@ -32,10 +32,9 @@ let strings =
 
 let rand_string () = pick strings
 
-(* All 53 op values — every constructor, and inside them every FnName and every
-   FinalizerStrategy — are enumerated by Eff_native.all_ops, so drawing from it covers
-   the op alphabet without a separate FnName/FinalizerStrategy generator. *)
-let rand_op () = pick Eff_native.all_ops
+(* The 55 built-in op values enumerate every FnName and FinalizerStrategy.
+   External operations additionally sample scalar row indices. *)
+let rand_op () = if ri 4 = 0 then Native_op_external (rand_nat ()) else pick Eff_native.all_ops
 let rand_mask () = pick [ Mask_mode_interruptible; Mask_mode_uninterruptible; Mask_mode_inherit ]
 let rand_mode () = pick [ Observer_mode_awaitValue; Observer_mode_joinEffect ]
 
@@ -178,11 +177,12 @@ let rand_list f = List.init (ri 4) (fun _ -> f ())
 
 let rand_row () =
   { row_name = rand_string (); row_spelling = rand_string ();
-    row_shape = pick [ Row_shape_call; Row_shape_value ]; row_trailing = rand_list rand_string;
+    row_shape = pick [ Row_shape_call; Row_shape_value; Row_shape_tupleCall; Row_shape_method ]; row_trailing = rand_list rand_string;
     row_kind = pick [ Row_kind_sync; Row_kind_async; Row_kind_program ];
     row_request = rand_ty 2; row_answer = rand_ty 2; row_error = rand_ty 2;
     row_requires = rand_list rand_key; row_cite = rand_string ();
-    row_typeArgs = rand_list rand_string }
+    row_typeArgs = rand_list rand_string;
+    row_registration = pick [ Registration_deferred; Registration_external ] }
 
 let rand_eff_ty () = { eff_ty_answer = rand_ty 3; eff_ty_error = rand_ty 3; eff_ty_requires = rand_list rand_key }
 

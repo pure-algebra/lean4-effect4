@@ -26,7 +26,7 @@ Writes six files, all `GENERATED`, none ever edited:
   import through the schemas of `eff.gen.ts`: the address (`hostPin.libraries` plus the
   `typescript` revision read out of `lakefile.toml`), the reserved heads
   (`Effect4.Program.reserved`, cross-checked against every `.ident "…"` literal of
-  `Print.lean`), and one entry per `NativeOp` value — the operation as a `NativeOp` node and
+  `Print.lean`), and one entry per built-in `NativeOp` value — the operation as a `NativeOp` node and
   its `Row` as a `Row` node. No row type is written by hand: `Row`, `Ty`, `NativeOp` are
   families like any other. A stamp (FNV-1a 64 over the payload bytes) is recomputed at import.
 
@@ -396,7 +396,7 @@ def rmwOps : List (Effect4.Machine.FnName → Effect4.Program.NativeOp) :=
   [.refUpdate, .refGetAndUpdate, .refUpdateAndGet, .refUpdateSome, .refGetAndUpdateSome,
    .refUpdateSomeAndGet, .refModify, .refModifySome]
 
-/-- Every `NativeOp` value, in the declaration order of the inductive. -/
+/-- The 55 built-in rows. External indices are supplied by row tables and are not enumerated. -/
 def allNativeOps : List Effect4.Program.NativeOp :=
   [.refMake, .refGet, .refSet, .refGetAndSet, .refSetAndGet] ++
   rmwOps.flatMap (fun con => allFnNames.map con) ++
@@ -422,7 +422,8 @@ run_cmd do
          ``Effect4.Program.NativeOp.deferredIsDone, ``Effect4.Program.NativeOp.deferredPoll,
          ``Effect4.Program.NativeOp.deferredSucceed, ``Effect4.Program.NativeOp.deferredFail,
          ``Effect4.Program.NativeOp.deferredAwait, ``Effect4.Program.NativeOp.scopeMake,
-         ``Effect4.Program.NativeOp.sleep, ``Effect4.Program.NativeOp.clockNow])
+         ``Effect4.Program.NativeOp.sleep, ``Effect4.Program.NativeOp.clockNow,
+         ``Effect4.Program.NativeOp.external])
     , (``Effect4.Machine.FnName,
         [``Effect4.Machine.FnName.incr, ``Effect4.Machine.FnName.double,
          ``Effect4.Machine.FnName.zeroWhenPositive, ``Effect4.Machine.FnName.noChange,
@@ -481,6 +482,7 @@ def opJs : Effect4.Program.NativeOp → String
   | .sleep => tagged "sleep" []
   | .clockNow => tagged "clockNow" []
   | .scopeMake s => tagged "scopeMake" [("strategy", strategyJs s)]
+  | .external i => tagged "external" [("index", toString i)]
 
 def tyJs : Effect4.Program.Ty → String
   | .never => tagged "never" []
@@ -503,6 +505,11 @@ def shapeJs : Effect4.Program.RowShape → String
   | .call => lit "call"
   | .value => lit "value"
   | .tupleCall => lit "tupleCall"
+  | .method => lit "method"
+
+def registrationJs : Effect4.Program.Registration → String
+  | .deferred => lit "deferred"
+  | .external => lit "external"
 
 def kindJs : Effect4.Program.RowKind → String
   | .sync => lit "sync"
@@ -518,7 +525,7 @@ def rowJs (r : Effect4.Program.Row) : String :=
       , ("trailing", arr (r.trailing.map lit)), ("kind", kindJs r.kind)
       , ("request", tyJs r.request), ("answer", tyJs r.answer), ("error", tyJs r.error)
       , ("requires", arr (r.requires.map keyJs)), ("cite", lit r.cite)
-      , ("typeArgs", arr (r.typeArgs.map lit)) ]
+      , ("typeArgs", arr (r.typeArgs.map lit)), ("registration", registrationJs r.registration) ]
 
 def entryJs (op : Effect4.Program.NativeOp) : String :=
   obj [("op", opJs op), ("row", rowJs (Effect4.Program.nativeSignature.rowOf op))]

@@ -116,6 +116,39 @@ def printRowHead (row : Row) : TypeScript.Expr :=
   | [] => .ident row.spelling
   | args => .generic (.ident row.spelling) args
 
+/-- The arguments of a method use the ordinary call or tuple-call convention.
+The receiver is the first component of the original request. -/
+def methodArgsRow (row : Row) : Row :=
+  let args := match row.request with
+    | .prod _ args => args
+    | _ => .never
+  { row with request := args, shape := match args with
+      | .prod _ _ => .tupleCall
+      | _ => .call }
+
+@[simp] theorem methodArgsRow_spelling (row : Row) : (methodArgsRow row).spelling = row.spelling := rfl
+@[simp] theorem methodArgsRow_trailing (row : Row) : (methodArgsRow row).trailing = row.trailing := rfl
+@[simp] theorem methodArgsRow_typeArgs (row : Row) : (methodArgsRow row).typeArgs = row.typeArgs := rfl
+@[simp] theorem methodArgsRow_kind (row : Row) : (methodArgsRow row).kind = row.kind := rfl
+
+theorem methodArgsRow_shape (row : Row) :
+    (methodArgsRow row).shape = .call ∨ (methodArgsRow row).shape = .tupleCall := by
+  unfold methodArgsRow
+  split <;> simp
+  split <;> simp
+
+def printMethodArgs (row : Row) (args : Term) : List TypeScript.Expr :=
+  let trailing := row.trailing.map TypeScript.Expr.ident
+  if (methodArgsRow row).shape = .tupleCall then printTupleArgs args ++ trailing
+  else if (methodArgsRow row).request = Ty.unit then trailing
+  else printTerm args :: trailing
+
+def printMethod (row : Row) (receiver args : Term) : TypeScript.Expr :=
+  match row.typeArgs with
+  | [] => .method (printTerm receiver) row.spelling (printMethodArgs row args)
+  | typeArgs => .call (.generic (.member (printTerm receiver) row.spelling) typeArgs)
+      (printMethodArgs row args)
+
 /-- A row's operation, by the row's declared shape and request type: a value row is the
 bare `spelling` (the service route's nullary rows), a call row on a `unit` request is
 `spelling()`, and every other call row is `spelling(request)`. A tuple-call row receives
@@ -129,6 +162,10 @@ def printRow (row : Row) (request : Term) : TypeScript.Expr :=
     if row.request = Ty.unit then .call (printRowHead row) trailing
     else .call (printRowHead row) (printTerm request :: trailing)
   | .tupleCall => .call (printRowHead row) (printTupleArgs request ++ trailing)
+  | .method =>
+    match pairArgs? request with
+    | some (receiver, args) => printMethod row receiver args
+    | none => printMethod row (.app "fst" (.cons request .nil)) (.app "snd" (.cons request .nil))
 
 /-- The fork options object rc.112's fork family takes:
 `{ startImmediately: b, uninterruptible: true | false | "inherit" }`. `daemon` is not a

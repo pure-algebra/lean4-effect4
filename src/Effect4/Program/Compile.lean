@@ -1,4 +1,4 @@
-import Effect4.Program.Native
+import Effect4.Program.Typed
 import Effect4.Machine.Fibers
 
 /-!
@@ -292,6 +292,8 @@ inductive EffName
   /-- A layer's build was forked, the value its fiber: the next layer, or the await. -/
   | mergeAllForkNext (q : Point) (i : Nat) (memoMap : MemoMapId) (parent : Nat)
       (forked : List FiberId)
+  /-- An external row and its evaluated request, retained while parked. -/
+  | external (op : NativeOp) (request : Val)
 deriving DecidableEq
 
 /-- The thunk alphabet: a pure term at a point, a body to compile at a point, a store
@@ -571,6 +573,10 @@ def compileEff : NativeEff → Point → NCode
       | .yieldNow priority => Prim.yieldNowWith priority
       | .callback register request =>
         match register with
+        | .external _ =>
+          match evalTerm p.env request with
+          | some v => Prim.async (EffName.external register v) false none
+          | none => badShape
         -- `Effect.sleep(d)` (`internal/effect.ts:6052-6066`; the timer, A4): `d ≤ 0` is
         -- `yieldNow`, the rest registers on the logical clock by the machine's name, cancelled
         -- by `clearTimeout`
@@ -1259,8 +1265,29 @@ def loopAt (root : NativeEff) (p : Point) : Option (Term × Term × NativeEff) :
   | some (Node.eff (.whileLoop _ test step body)) => some (test, step, body)
   | _ => none
 
+/-- An external registration must name an external asynchronous row. -/
+def externalRow (table : RowTable) (i : Nat) : Option Row := do
+  let row ← table[i]?
+  guard (row.registration = .external ∧ row.kind = .async)
+  some row
+
+/-- The typed error part of a completion; defects and interruptions remain
+outside the error type, as in `causeTy`. -/
+def errAdmits (ty : Ty) : Reason Err Defect FiberId Ann → Bool
+  | .fail (.tag n) _ => Val.hasTy (.nat n) ty
+  | .fail .boom _ => false
+  | .die _ _ | .interrupt _ _ => true
+
+/-- Registration consumes a typed, handle-free oracle completion. A reference
+read is an effect and is admitted only by the later decision check, with its heap. -/
+def externalAdmits (table : RowTable) (i : Nat) (answer : Completion Val Err Defect FiberId Ann) : Bool :=
+  match externalRow table i, answer with
+  | some row, .ofExit (.success v) => Val.hasTy v row.answer && (Store.Val.handles v).isEmpty
+  | some row, .ofExit (.failure cause) => cause.reasons.all (errAdmits row.error)
+  | _, _ => false
+
 /-- The interp of a root program: names mean the subterms they address. -/
-def interpOf (root : NativeEff) :
+def interpOf (root : NativeEff) (table : RowTable := []) :
     RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores where
   contA := contAOf root
   contE := contEOf root
@@ -1347,6 +1374,18 @@ def interpOf (root : NativeEff) :
       ({ state with deferreds := deferreds }, immediate.map embed)
     | .store (Name.registerSleep millis) =>
       ({ state with timers := state.timers.sleep fiber token millis }, none)
+    | .external (.external i) _ =>
+      if (externalRow table i).isNone then (state, none)
+      else match state.externals.answers with
+      | [] => (state, none)
+      | answer :: rest =>
+        if externalAdmits table i answer then
+          ({ state with externals := { state.externals with answers := rest } },
+            some (embed (completionPrim answer)))
+        else
+          let rejected := state.externals.rejected.orElse
+            (fun _ => some (i, answer, state.externals.answers.length))
+          ({ state with externals := { state.externals with rejected } }, none)
     | _ => (state, none)
   dueResumes := fun state =>
     let (due, deferreds) := state.deferreds.drainDue
@@ -1415,9 +1454,9 @@ def interpOf (root : NativeEff) :
 /-- Native source callbacks construct their code from the exits visible when
 invoked (`internal/effect.ts:767-777,814-822`). Eager action bodies and the scoped
 administrative callbacks keep the view captured in their point. -/
-def interpAt (root : NativeEff) (completed : List (FiberId × ExitV)) :
+def interpAt (root : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable := []) :
     RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores :=
-  { interpOf root with
+  { interpOf root table with
     contA := fun name value => contAOf root (match name with
       | .cont p => .cont { p with completed }
       | .onValue p => .onValue { p with completed }
@@ -1497,24 +1536,25 @@ def exitScoped (root : NativeEff)
 scoped entry and its exit callback need state in addition to the source hooks. -/
 def evaluateNative (root : NativeEff)
     (m : RunMachine EffName EffThunk Val Err Defect FiberId Ann Ctx Stores)
-    (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (yielding : Bool) :
+    (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (yielding : Bool)
+    (table : RowTable := []) :
     Iter EffName EffThunk Val Err Defect FiberId Ann Ctx Stores :=
   match f.frame.current with
   | .withFiber (.act p) =>
     match Node.at_ (.eff root) p.path with
     | some (.eff (.scoped _)) => enterScoped root p m f yielding
-    | _ => evaluatePrim (interpAt root m.completedExits) m f yielding
+    | _ => evaluatePrim (interpAt root m.completedExits table) m f yielding
   | .success v => exitScoped root m f yielding (.success v)
   | .failure c => exitScoped root m f yielding (.failure c)
-  | _ => evaluatePrim (interpAt root m.completedExits) m f yielding
+  | _ => evaluatePrim (interpAt root m.completedExits table) m f yielding
 
 /-- Native callbacks use the construction view and scoped protocol of this
 evaluation. The command loop retains `interpOf` for bookkeeping and stores. -/
-@[reducible] def evaluatorFor (root : NativeEff) :
+@[reducible] def evaluatorFor (root : NativeEff) (table : RowTable := []) :
     FiberEvaluator EffName EffThunk Val Err Defect FiberId Ann Ctx Stores NCode
       (FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
       (FrameEvent EffName EffThunk Val Err Defect FiberId Ann) where
-  evaluate := fun _ => evaluateNative root
+  evaluate := fun _ m f yielding => evaluateNative root m f yielding table
 
 /-- The root point of a program: the empty path, no values, the fuel and the tape. -/
 def rootPoint (fuel : Nat) (tape : List Bool := []) : Point :=

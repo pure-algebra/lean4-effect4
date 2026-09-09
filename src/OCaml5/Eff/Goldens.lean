@@ -172,6 +172,7 @@ def opV : NativeOp → V
   | .scopeMake s => .ctor ``NativeOp.scopeMake [stratV s]
   | .sleep => .ctor ``NativeOp.sleep []
   | .clockNow => .ctor ``NativeOp.clockNow []
+  | .external i => .ctor ``NativeOp.external [.nat i]
 
 def keyV (k : ServiceKey) : V :=
   .struct ``Effect4.ServiceKey
@@ -396,6 +397,10 @@ def pMergeAll : P :=
     (.mergeAll (ls [.succeed kB (.nat 1), .effect kA (.succeed (n 7)), .succeed kC (.bool true)]))
     false (.bind (.service kA) (.service kC))
 
+/-- External constructor coverage. A supplied row table types this callback; the empty
+built-in table deliberately does not. -/
+def pExternal : P := .callback (.external 0) u
+
 def corpus : List (String × P) :=
   [ ("p42", p42), ("pBind", pBind), ("pFork", pFork), ("pTwo", pTwo), ("pAwait", pAwait)
   , ("pGen", pGen), ("pWhile", pWhile), ("pCatch", pCatch), ("pStr", pStr), ("pFailCause", pFailCause)
@@ -406,7 +411,7 @@ def corpus : List (String × P) :=
   , ("pIll", pIll), ("pIllRet", pIllRet), ("pIllReq", pIllReq), ("pIllBreak", pIllBreak)
   , ("pIllBranch", pIllBranch), ("pIllJoin", pIllJoin), ("pIllVar", pIllVar)
   , ("pIllCallback", pIllCallback), ("pIllStep", pIllStep), ("pIllInterruptor", pIllInterruptor)
-  , ("pProvide", pProvide), ("pSleep", pSleep), ("pDiamond", pDiamond), ("pMergeAll", pMergeAll) ]
+  , ("pProvide", pProvide), ("pSleep", pSleep), ("pDiamond", pDiamond), ("pMergeAll", pMergeAll), ("pExternal", pExternal) ]
 
 end Corpus
 

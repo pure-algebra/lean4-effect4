@@ -248,6 +248,8 @@ let rec check_eff (env : env) (p : eff) : eff_ty checked =
     let* t = term_ty env t in
     Ok (pure t)
   | Eff_suspend body -> check_eff env body
+  | Eff_perform (Native_op_external _, _) ->
+    refuse "perform: external index is outside the empty row table"
   | Eff_perform (op, request) ->
     let row = Eff_native.row_of op in
     let* r = term_ty env request in
@@ -302,6 +304,8 @@ let rec check_eff (env : env) (p : eff) : eff_ty checked =
     if t = Ty_bool && s = cursor then Ok (mk Ty_unit b.eff_ty_error b.eff_ty_requires)
     else refuse "whileLoop: the test is not a bool or the step is not the cursor's type"
   | Eff_yieldNow _ -> Ok (pure Ty_unit)
+  | Eff_callback (Native_op_external _, _) ->
+    refuse "callback: external index is outside the empty row table"
   | Eff_callback (register, request) ->
     let row = Eff_native.row_of register in
     let* r = term_ty env request in

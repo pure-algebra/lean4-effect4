@@ -79,6 +79,12 @@ theorem prepareR_constructR (completed : List (FiberId × ExitV))
     (k : List (FiberId × ExitV) → RProgram) :
     prepareR completed (constructR k) = prepareR completed (k completed) := rfl
 
+theorem prepareR_denoteForeign (op : NativeOp) (r : Term) (p : Point)
+    (completed : List (FiberId × ExitV)) :
+    prepareR completed (denoteForeign op r p) = denoteForeign op r p := by
+  unfold denoteForeign
+  cases evalTerm p.env r <;> rfl
+
 theorem prepareR_denoteSleep (r : Term) (p : Point) (completed : List (FiberId × ExitV)) :
     prepareR completed (denoteSleep r p) = denoteSleep r p := by
   unfold denoteSleep
@@ -225,6 +231,10 @@ theorem compileEff_yieldNow (priority : Nat) (hf : p.fuel = k + 1) :
 theorem compileEff_callback (op : NativeOp) (r : Term) (hf : p.fuel = k + 1) :
     compileEff (.callback op r) p =
       (match op with
+       | .external _ =>
+         match evalTerm p.env r with
+         | some v => Prim.async (EffName.external op v) false none
+         | none => badShape
        | .sleep =>
          match (evalTerm p.env r).bind NativeOp.sleepMillisOf with
          | some 0 => Prim.yieldNowWith 0
@@ -338,6 +348,7 @@ theorem prepareR_denoteR (root : NativeEff) (e : NativeEff) (p : Point)
       | callback op r =>
         rw [denoteR_callback root op r hpos]
         cases op
+        case external i => exact prepareR_denoteForeign (.external i) r p completed
         case sleep => exact prepareR_denoteSleep r p completed
         all_goals first
           | rfl
@@ -1870,6 +1881,11 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
   | callback op r =>
     rw [compileEff_callback op r hf, denoteR_callback root op r hpos]
     cases op
+    case external i =>
+      simp only [denoteForeign]
+      cases evalTerm p.env r with
+      | none => exact codeMeans_badShape root
+      | some v => exact CodeMeans.asyncForeign (.external i) v _ delivers_pure
     case sleep =>
       unfold denoteSleep
       cases (evalTerm p.env r).bind NativeOp.sleepMillisOf with

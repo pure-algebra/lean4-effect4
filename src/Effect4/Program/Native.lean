@@ -133,7 +133,12 @@ inductive NativeOp
   /-- `Effect.currentTimeMillis` (`internal/effect.ts:6118`): the logical clock, read
   (`SyncOp.clockNow`). -/
   | clockNow
+  /-- A position in the row table supplied beside the program. -/
+  | external (index : Nat)
 deriving DecidableEq
+
+/-- Rows are unit content beside the program's bytes. -/
+abbrev RowTable := List Row
 
 namespace NativeOp
 
@@ -156,72 +161,80 @@ def fnSpelling : FnName → String
   | .noChange => "noChange"
   | .takeAndBump => "takeAndBump"
 
+/-- An absent external position cannot type as a callback. Its empty spelling is
+outside the admitted table domain. -/
+def externalPlaceholder : Row :=
+  { name := "external", spelling := "", shape := .value, kind := .program,
+    request := .never, answer := .never, cite := "", registration := .external }
+
 /-- The row of each operation. -/
 def row : NativeOp → Row
-  | refMake => ⟨"refMake", "Ref.make", .call, [], .sync, .nat, refTy, .never, [], "Ref.ts:173", []⟩
-  | refGet => ⟨"refGet", "Ref.get", .call, [], .sync, refTy, .nat, .never, [], "Ref.ts:200", []⟩
+  | refMake => ⟨"refMake", "Ref.make", .call, [], .sync, .nat, refTy, .never, [], "Ref.ts:173", [], .deferred⟩
+  | refGet => ⟨"refGet", "Ref.get", .call, [], .sync, refTy, .nat, .never, [], "Ref.ts:200", [], .deferred⟩
   | refSet =>
-    ⟨"refSet", "Ref.set", .tupleCall, [], .sync, .prod refTy .nat, refTy, .never, [], "Ref.ts:306-307", []⟩
+    ⟨"refSet", "Ref.set", .tupleCall, [], .sync, .prod refTy .nat, refTy, .never, [], "Ref.ts:306-307", [], .deferred⟩
   | refGetAndSet =>
     ⟨"refGetAndSet", "Ref.getAndSet", .tupleCall, [], .sync, .prod refTy .nat, .nat, .never, [],
-      "Ref.ts:399-404", []⟩
+      "Ref.ts:399-404", [], .deferred⟩
   | refSetAndGet =>
     ⟨"refSetAndGet", "Ref.setAndGet", .tupleCall, [], .sync, .prod refTy .nat, .nat, .never, [],
-      "Ref.ts:747", []⟩
+      "Ref.ts:747", [], .deferred⟩
   | refUpdate f =>
     ⟨"refUpdate", "Ref.update", .call, [fnSpelling f], .sync, refTy, .unit, .never, [],
-      "Ref.ts:1273-1276", []⟩
+      "Ref.ts:1273-1276", [], .deferred⟩
   | refGetAndUpdate f =>
     ⟨"refGetAndUpdate", "Ref.getAndUpdate", .call, [fnSpelling f], .sync, refTy, .nat, .never, [],
-      "Ref.ts:496-501", []⟩
+      "Ref.ts:496-501", [], .deferred⟩
   | refUpdateAndGet f =>
     ⟨"refUpdateAndGet", "Ref.updateAndGet", .call, [fnSpelling f], .sync, refTy, .nat, .never, [],
-      "Ref.ts:1368", []⟩
+      "Ref.ts:1368", [], .deferred⟩
   | refUpdateSome f =>
     ⟨"refUpdateSome", "Ref.updateSome", .call, [fnSpelling f], .sync, refTy, .unit, .never, [],
-      "Ref.ts:1502-1508", []⟩
+      "Ref.ts:1502-1508", [], .deferred⟩
   | refGetAndUpdateSome f =>
     ⟨"refGetAndUpdateSome", "Ref.getAndUpdateSome", .call, [fnSpelling f], .sync, refTy, .nat,
-      .never, [], "Ref.ts:635-643", []⟩
+      .never, [], "Ref.ts:635-643", [], .deferred⟩
   | refUpdateSomeAndGet f =>
     ⟨"refUpdateSomeAndGet", "Ref.updateSomeAndGet", .call, [fnSpelling f], .sync, refTy, .nat,
-      .never, [], "Ref.ts:1639-1646", []⟩
+      .never, [], "Ref.ts:1639-1646", [], .deferred⟩
   | refModify f =>
     ⟨"refModify", "Ref.modify", .call, [fnSpelling f], .sync, refTy, .nat, .never, [],
-      "Ref.ts:896-901", []⟩
+      "Ref.ts:896-901", [], .deferred⟩
   | refModifySome f =>
     ⟨"refModifySome", "Ref.modifySome", .call, [fnSpelling f], .sync, refTy, .nat, .never, [],
-      "Ref.ts:1159-1163", []⟩
+      "Ref.ts:1159-1163", [], .deferred⟩
   | deferredMake =>
     ⟨"deferredMake", "Deferred.make", .call, [], .sync, .unit, deferredTy, .never, [],
-      "Deferred.ts:171", deferredTypeArgs⟩
+      "Deferred.ts:171", deferredTypeArgs, .deferred⟩
   | deferredIsDone =>
     ⟨"deferredIsDone", "Deferred.isDone", .call, [], .sync, deferredTy, .bool, .never, [],
-      "Deferred.ts:1382", []⟩
+      "Deferred.ts:1382", [], .deferred⟩
   | deferredPoll =>
     ⟨"deferredPoll", "Deferred.poll", .call, [], .sync, deferredTy, .bool, .never, [],
-      "Deferred.ts:1414-1416", []⟩
+      "Deferred.ts:1414-1416", [], .deferred⟩
   | deferredSucceed =>
     ⟨"deferredSucceed", "Deferred.succeed", .tupleCall, [], .sync, .prod deferredTy .nat, .bool, .never,
-      [], "Deferred.ts:1514", []⟩
+      [], "Deferred.ts:1514", [], .deferred⟩
   | deferredFail =>
     ⟨"deferredFail", "Deferred.fail", .tupleCall, [], .sync, .prod deferredTy .nat, .bool, .never, [],
-      "Deferred.ts:669", []⟩
+      "Deferred.ts:669", [], .deferred⟩
   | deferredAwait =>
     ⟨"deferredAwait", "Deferred.await", .call, [], .async, deferredTy, .nat, .nat, [],
-      "Deferred.ts:173-186", []⟩
+      "Deferred.ts:173-186", [], .deferred⟩
   | scopeMake .sequential =>
     ⟨"scopeMake", "Scope.make", .call, [], .sync, .unit, Ty.scope, .never, [],
-      "internal/effect.ts:3914-3922", []⟩
+      "internal/effect.ts:3914-3922", [], .deferred⟩
   | scopeMake .parallel =>
     ⟨"scopeMake", "Scope.make", .call, ["\"parallel\""], .sync, .unit, Ty.scope, .never, [],
-      "internal/effect.ts:3914-3922", []⟩
+      "internal/effect.ts:3914-3922", [], .deferred⟩
   | sleep =>
     ⟨"sleep", "Effect.sleep", .call, [], .async, .nat, .unit, .never, [],
-      "internal/effect.ts:6114-6116", []⟩
+      "internal/effect.ts:6114-6116", [], .deferred⟩
   | clockNow =>
     ⟨"clockNow", "Effect.currentTimeMillis", .value, [], .sync, .unit, .nat, .never, [],
-      "internal/effect.ts:6118", []⟩
+      "internal/effect.ts:6118", [], .deferred⟩
+
+  | external _ => externalPlaceholder
 
 /-- The store operation a row runs on a request value; `none` is a request of the wrong
 shape, which the compile turns into the `badName` defect (`Deep.Stores` does the same for a
@@ -283,10 +296,31 @@ def nativeServiceTy (key : ServiceKey) : Option Ty :=
     | 7 => some (.handle "Ref.Ref<number>")
     | _ => none
 
+def fnNames : List Effect4.Machine.FnName := [.incr, .double, .zeroWhenPositive, .noChange, .takeAndBump]
+
+/-- Every native operation, once. -/
+def NativeOp.all : List NativeOp :=
+  [.refMake, .refGet, .refSet, .refGetAndSet, .refSetAndGet]
+  ++ fnNames.flatMap (fun f =>
+      [.refUpdate f, .refGetAndUpdate f, .refUpdateAndGet f, .refUpdateSome f,
+       .refGetAndUpdateSome f, .refUpdateSomeAndGet f, .refModify f, .refModifySome f])
+  ++ [.deferredMake, .deferredIsDone, .deferredPoll, .deferredSucceed, .deferredFail,
+      .deferredAwait, .scopeMake .sequential, .scopeMake .parallel, .sleep, .clockNow]
+
+/-- An external index reads its supplied row. Built-ins keep their original row. -/
+def nativeRowOf (table : RowTable) : NativeOp → Row
+  | .external i => (table[i]?).getD NativeOp.externalPlaceholder
+  | op => op.row
+
+@[simp] theorem nativeRowOf_nil (op : NativeOp) : nativeRowOf [] op = op.row := by
+  cases op <;> rfl
+
 /-- The native signature: the rows above, the atoms and the service table, for `typeOf` and
 `print`. -/
-def nativeSignature : Signature NativeOp :=
-  ⟨NativeOp.row, nativeAtomTy, nativeScopeKey, nativeServiceTy⟩
+def nativeSignature (table : RowTable := []) : Signature NativeOp :=
+  { rowOf := nativeRowOf table, atomOf := nativeAtomTy, scopeKey := nativeScopeKey,
+    serviceTy := nativeServiceTy,
+    dom := fun | .external i => decide (i < table.length) | _ => true }
 
 /-- A program of the native route. -/
 abbrev NativeEff := Eff NativeOp

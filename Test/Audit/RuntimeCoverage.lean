@@ -2945,7 +2945,7 @@ here, so a drift is a type mismatch. -/
               scopes :=
                 (state.scopes.addFinalizer scope state.nextName
                     (Effect4.Machine.FinName.interruptFiber fiber Bool.true)).fst,
-              memo := state.memo, timers := state.timers, nextName := state.nextName + 1 },
+              memo := state.memo, timers := state.timers, nextName := state.nextName + 1, externals := state.externals },
             state.nextName))
 
 #check (@Effect4.Machine.scopeStore_forkChild_names :
@@ -3347,7 +3347,7 @@ continuation equations (`Program/Agreement.lean`), the store laws of the memo wo
                     (Option.some (Effect4.Machine.Name.cancelAwait s.deferreds.make.fst)),
                 layerScope := s.nextName, deferred := s.deferreds.make.fst,
                 finalizer := Effect4.Machine.FinName.memoEntry layer memoMap },
-          timers := s.timers, nextName := s.nextName + 1 },
+          timers := s.timers, nextName := s.nextName + 1, externals := s.externals },
         Effect4.Machine.Val.scopeHandle s.nextName))
 
 #check (@Effect4.Program.Agreement.contAOf_memoize_unit :
@@ -3391,7 +3391,7 @@ continuation equations (`Program/Agreement.lean`), the store laws of the memo wo
               s.memo.updateEntry memoMap layer fun e =>
                 { observers := e.observers, effect := Effect4.Prim.ofExit exit, layerScope := e.layerScope,
                   deferred := e.deferred, finalizer := e.finalizer },
-            timers := s.timers, nextName := s.nextName },
+            timers := s.timers, nextName := s.nextName, externals := s.externals },
           Effect4.Store.Val.unit))
 
 #check (@Effect4.Machine.finProgram_memoEntry :
@@ -3409,7 +3409,7 @@ continuation equations (`Program/Agreement.lean`), the store laws of the memo wo
       Effect4.Machine.syncOpStep (Effect4.Machine.SyncOp.memoRelease layer memoMap) s =
         Option.some
           ({ refs := s.refs, deferreds := s.deferreds, scopes := s.scopes, memo := s.memo.deleteEntry memoMap layer,
-              timers := s.timers, nextName := s.nextName },
+              timers := s.timers, nextName := s.nextName, externals := s.externals },
             Effect4.Machine.Val.scopeHandle entry.layerScope))
 
 #check (@Effect4.Machine.syncOpStep_memoRelease_dec :
@@ -3424,7 +3424,7 @@ continuation equations (`Program/Agreement.lean`), the store laws of the memo wo
                 s.memo.updateEntry memoMap layer fun e =>
                   { observers := e.observers - 1, effect := e.effect, layerScope := e.layerScope,
                     deferred := e.deferred, finalizer := e.finalizer },
-              timers := s.timers, nextName := s.nextName },
+              timers := s.timers, nextName := s.nextName, externals := s.externals },
             Effect4.Store.Val.unit))
 
 #check (@Effect4.Machine.contAOf_closeIfLast_scope :
@@ -3448,7 +3448,7 @@ continuation equations (`Program/Agreement.lean`), the store laws of the memo wo
               s.memo.updateEntry owner layer fun e =>
                 { observers := e.observers + 1, effect := e.effect, layerScope := e.layerScope, deferred := e.deferred,
                   finalizer := e.finalizer },
-            timers := s.timers, nextName := s.nextName },
+            timers := s.timers, nextName := s.nextName, externals := s.externals },
           Effect4.Store.Val.pair (Effect4.Machine.Val.promise entry.deferred) (Effect4.Machine.Val.memoMap owner)))
 
 #check (@Effect4.Program.Agreement.contAOf_memoize_hit :
@@ -3525,7 +3525,7 @@ continuation equations (`Program/Agreement.lean`), the store laws of the memo wo
     Option.some
       ({ refs := s.refs, deferreds := s.deferreds, scopes := s.scopes,
           memo := s.memo ++ [{ id := { index := s.nextName }, parent := parent, entries := [] }],
-          timers := s.timers, nextName := s.nextName + 1 },
+          timers := s.timers, nextName := s.nextName + 1, externals := s.externals },
         Effect4.Machine.Val.memoMap { index := s.nextName }))
 
 #check (@Effect4.Program.Agreement.buildWithScopeK_context :

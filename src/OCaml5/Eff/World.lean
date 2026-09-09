@@ -107,6 +107,7 @@ def blocks : List (List Spec) :=
     , ⟨`Effect4.Program.LayerTerms, "layer_terms", [natOp]⟩ ]
   , [⟨`Effect4.Program.RowKind, "row_kind", []⟩]
   , [⟨`Effect4.Program.RowShape, "row_shape", []⟩]
+  , [⟨`Effect4.Program.Registration, "registration", []⟩]
   , [⟨`Effect4.Program.Row, "row", []⟩]
   , [⟨`Effect4.Program.EffTy, "eff_ty", []⟩] ]
 

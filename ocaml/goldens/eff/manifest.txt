@@ -4,7 +4,7 @@ Terms: nil cons
 CauseTerm: fail die interrupt both
 FnName: incr double zeroWhenPositive noChange takeAndBump
 FinalizerStrategy: sequential parallel
-NativeOp: refMake refGet refSet refGetAndSet refSetAndGet refUpdate refGetAndUpdate refUpdateAndGet refUpdateSome refGetAndUpdateSome refUpdateSomeAndGet refModify refModifySome deferredMake deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake sleep clockNow
+NativeOp: refMake refGet refSet refGetAndSet refSetAndGet refUpdate refGetAndUpdate refUpdateAndGet refUpdateSome refGetAndUpdateSome refUpdateSomeAndGet refModify refModifySome deferredMake deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake sleep clockNow external
 MaskMode: interruptible uninterruptible inherit
 ObserverMode: awaitValue joinEffect
 ForkOptions: startImmediately daemon maskMode

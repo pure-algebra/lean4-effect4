@@ -71,6 +71,19 @@ def PlainFrame : NCode → Bool
   | Prim.setInterruptible true => true
   | _ => false
 
+/-- A plain finalizer frame has the compiled finalizer name and is uninterruptible. -/
+theorem plainFrame_onExit {b : NCode} {n : EffName} {flag : Bool}
+    (h : PlainFrame (Prim.onExit b n flag) = true) :
+    ∃ p, n = .fin p ∧ flag = false ∧ PlainCode b = true := by
+  cases n <;> cases flag <;> simp [PlainFrame] at h
+  exact ⟨_, rfl, rfl, h⟩
+
+theorem plainCode_onExit {b : NCode} {n : EffName} {flag : Bool}
+    (h : PlainCode (Prim.onExit b n flag) = true) :
+    ∃ p, n = .fin p ∧ flag = false ∧ PlainCode b = true := by
+  cases n <;> cases flag <;> simp [PlainCode] at h
+  exact ⟨_, rfl, rfl, h⟩
+
 /-- A stack of plain frames. -/
 def PlainStack (K : List NCode) : Prop := ∀ f ∈ K, PlainFrame f = true
 
@@ -364,6 +377,88 @@ theorem localStep_other (root : NativeEff) (cur : NCode) (K : List NCode) (i : B
 
 /-! ### The local step keeps the fiber plain -/
 
+set_option linter.unusedSimpArgs false in
+theorem localStep_success_plain {root : NativeEff} (hroot : Plain root = true)
+    (v : Val) (K : List NCode) (i : Bool) (s : Stores) (fr' : NFiber) (s' : Stores)
+    (hK : PlainStack K)
+    (h : localStep root (fiberOf (Prim.success v) K i) s = .running fr' s') :
+      ∃ cur' K' i', fr' = fiberOf cur' K' i' ∧ PlainCode cur' = true ∧ PlainStack K' := by
+  induction K generalizing i with
+  | nil =>
+    have he := step_exit_empty root (Exit.success v) i s
+    simp only [Prim.ofExit] at he
+    rw [he] at h
+    cases h
+  | cons f K ih =>
+    have hf := hK.head
+    have hK' := hK.tail
+    cases f <;> (try simp only [PlainFrame, Bool.and_eq_true, Bool.false_eq_true] at hf)
+    · rw [step_success_onSuccess] at h
+      cases h
+      exact ⟨_, _, _, rfl, plainCode_contAAt hroot hf.2 v, hK'⟩
+    · rw [step_success_pass_onFailure] at h
+      exact ih i hK' h
+    · rw [step_success_onSuccessAndFailure] at h
+      cases h
+      exact ⟨_, _, _, rfl, plainCode_contAAt hroot hf.2.1 v, hK'⟩
+    · rw [step_success_exitFrame] at h
+      cases h
+      exact ⟨_, _, _, rfl, rfl, hK'⟩
+    · next b n flag =>
+      obtain ⟨p, rfl, rfl, _⟩ := plainFrame_onExit hf
+      have hm := step_ofExit_onExit root (Exit.success v) b p K i s
+      simp only [Prim.ofExit] at hm
+      rw [hm] at h
+      cases h
+      refine ⟨_, _, _, rfl, ?_, hK'.mask i⟩
+      simp [finalizerCode, PlainCode, PlainName, plainCode_resolve hroot, interpAt, interpOf]
+    · next flag =>
+      cases flag <;> simp only [PlainFrame] at hf
+      all_goals try exact absurd hf (by decide)
+      rw [step_success_pass_setInterruptible] at h
+      exact ih true hK' h
+
+set_option linter.unusedSimpArgs false in
+theorem localStep_failure_plain {root : NativeEff} (hroot : Plain root = true)
+    (c : CauseV) (K : List NCode) (i : Bool) (s : Stores) (fr' : NFiber) (s' : Stores)
+    (hK : PlainStack K)
+    (h : localStep root (fiberOf (Prim.failure c) K i) s = .running fr' s') :
+      ∃ cur' K' i', fr' = fiberOf cur' K' i' ∧ PlainCode cur' = true ∧ PlainStack K' := by
+  induction K generalizing i with
+  | nil =>
+    have he := step_exit_empty root (Exit.failure c) i s
+    simp only [Prim.ofExit] at he
+    rw [he] at h
+    cases h
+  | cons f K ih =>
+    have hf := hK.head
+    have hK' := hK.tail
+    cases f <;> (try simp only [PlainFrame, Bool.and_eq_true, Bool.false_eq_true] at hf)
+    · rw [step_failure_pass_onSuccess] at h
+      exact ih i hK' h
+    · rw [step_failure_onFailure] at h
+      cases h
+      exact ⟨_, _, _, rfl, plainCode_contEAt hroot hf.2 c, hK'⟩
+    · rw [step_failure_onSuccessAndFailure] at h
+      cases h
+      exact ⟨_, _, _, rfl, plainCode_contEAt hroot hf.2.2 c, hK'⟩
+    · rw [step_failure_exitFrame] at h
+      cases h
+      exact ⟨_, _, _, rfl, rfl, hK'⟩
+    · next b n flag =>
+      obtain ⟨p, rfl, rfl, _⟩ := plainFrame_onExit hf
+      have hm := step_ofExit_onExit root (Exit.failure c) b p K i s
+      simp only [Prim.ofExit] at hm
+      rw [hm] at h
+      cases h
+      refine ⟨_, _, _, rfl, ?_, hK'.mask i⟩
+      simp [finalizerCode, PlainCode, PlainName, plainCode_resolve hroot, interpAt, interpOf]
+    · next flag =>
+      cases flag <;> simp only [PlainFrame] at hf
+      all_goals try exact absurd hf (by decide)
+      rw [step_failure_pass_setInterruptible] at h
+      exact ih true hK' h
+
 -- The `PlainFrame` argument is spent in some branches of the frame case split and not in
 -- others; the linter reports the latter.
 set_option linter.unusedSimpArgs false in
@@ -371,86 +466,18 @@ theorem localStep_plain {root : NativeEff} (hroot : Plain root = true) :
     ∀ (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (fr' : NFiber) (s' : Stores),
       PlainCode cur = true → PlainStack K →
       localStep root (fiberOf cur K i) s = .running fr' s' →
-      ∃ cur' K' i', fr' = fiberOf cur' K' i' ∧ PlainCode cur' = true ∧ PlainStack K'
-  | Prim.success v, K, i, s, fr', s', _, hK, h => by
-    induction K generalizing i with
-    | nil =>
-      have he := step_exit_empty root (Exit.success v) i s
-      simp only [Prim.ofExit] at he
-      rw [he] at h
-      cases h
-    | cons f K ih =>
-      have hf := hK.head
-      have hK' := hK.tail
-      cases f <;> (try simp only [PlainFrame, Bool.and_eq_true, Bool.false_eq_true] at hf)
-      · rw [step_success_onSuccess] at h
-        cases h
-        exact ⟨_, _, _, rfl, plainCode_contAAt hroot hf.2 v, hK'⟩
-      · rw [step_success_pass_onFailure] at h
-        exact ih i hK' h
-      · rw [step_success_onSuccessAndFailure] at h
-        cases h
-        exact ⟨_, _, _, rfl, plainCode_contAAt hroot hf.2.1 v, hK'⟩
-      · rw [step_success_exitFrame] at h
-        cases h
-        exact ⟨_, _, _, rfl, rfl, hK'⟩
-      · next b n flag =>
-        cases n <;> cases flag <;> simp only [PlainFrame] at hf
-        all_goals try exact absurd hf (by decide)
-        rename_i p
-        have hm := step_ofExit_onExit root (Exit.success v) b p K i s
-        simp only [Prim.ofExit] at hm
-        rw [hm] at h
-        cases h
-        refine ⟨_, _, _, rfl, ?_, hK'.mask i⟩
-        simp [finalizerCode, PlainCode, PlainName, plainCode_resolve hroot, interpAt, interpOf]
-      · next flag =>
-        cases flag <;> simp only [PlainFrame] at hf
-        all_goals try exact absurd hf (by decide)
-        rw [step_success_pass_setInterruptible] at h
-        exact ih true hK' h
-  | Prim.failure c, K, i, s, fr', s', _, hK, h => by
-    induction K generalizing i with
-    | nil =>
-      have he := step_exit_empty root (Exit.failure c) i s
-      simp only [Prim.ofExit] at he
-      rw [he] at h
-      cases h
-    | cons f K ih =>
-      have hf := hK.head
-      have hK' := hK.tail
-      cases f <;> (try simp only [PlainFrame, Bool.and_eq_true, Bool.false_eq_true] at hf)
-      · rw [step_failure_pass_onSuccess] at h
-        exact ih i hK' h
-      · rw [step_failure_onFailure] at h
-        cases h
-        exact ⟨_, _, _, rfl, plainCode_contEAt hroot hf.2 c, hK'⟩
-      · rw [step_failure_onSuccessAndFailure] at h
-        cases h
-        exact ⟨_, _, _, rfl, plainCode_contEAt hroot hf.2.2 c, hK'⟩
-      · rw [step_failure_exitFrame] at h
-        cases h
-        exact ⟨_, _, _, rfl, rfl, hK'⟩
-      · next b n flag =>
-        cases n <;> cases flag <;> simp only [PlainFrame] at hf
-        all_goals try exact absurd hf (by decide)
-        rename_i p
-        have hm := step_ofExit_onExit root (Exit.failure c) b p K i s
-        simp only [Prim.ofExit] at hm
-        rw [hm] at h
-        cases h
-        refine ⟨_, _, _, rfl, ?_, hK'.mask i⟩
-        simp [finalizerCode, PlainCode, PlainName, plainCode_resolve hroot, interpAt, interpOf]
-      · next flag =>
-        cases flag <;> simp only [PlainFrame] at hf
-        all_goals try exact absurd hf (by decide)
-        rw [step_failure_pass_setInterruptible] at h
-        exact ih true hK' h
-  | Prim.yieldableError e, K, i, s, fr', s', _, hK, h => by
+      ∃ cur' K' i', fr' = fiberOf cur' K' i' ∧ PlainCode cur' = true ∧ PlainStack K' := by
+  intro cur K i s fr' s' hpl hK h
+  cases cur with
+  | success v =>
+    exact localStep_success_plain hroot v K i s fr' s' hK h
+  | failure c =>
+    exact localStep_failure_plain hroot c K i s fr' s' hK h
+  | yieldableError e =>
     rw [step_yieldableError] at h
     cases h
     exact ⟨_, _, _, rfl, rfl, hK⟩
-  | Prim.sync thunk, K, i, s, fr', s', hpl, hK, h => by
+  | sync thunk =>
     cases thunk <;> simp only [PlainCode, Bool.false_eq_true] at hpl
     · rw [step_sync_pure] at h
       cases h
@@ -461,42 +488,38 @@ theorem localStep_plain {root : NativeEff} (hroot : Plain root = true) :
         exact ⟨_, _, _, rfl, rfl, hK⟩
       · cases h
         exact ⟨_, _, _, rfl, rfl, hK⟩
-  | Prim.suspend thunk, K, i, s, fr', s', hpl, hK, h => by
+  | suspend thunk =>
     cases thunk <;> simp only [PlainCode, Bool.false_eq_true] at hpl
     rw [step_suspend] at h
     cases h
     exact ⟨_, _, _, rfl, plainCode_suspendBodyAt hroot _, hK⟩
-  | Prim.onSuccess b n, K, i, s, fr', s', hpl, hK, h => by
+  | onSuccess b n =>
     rw [step_push_onSuccess] at h
     cases h
     simp only [PlainCode, Bool.and_eq_true] at hpl
     exact ⟨_, _, _, rfl, hpl.1, hK.cons (by simp [PlainFrame, hpl.1, hpl.2])⟩
-  | Prim.onFailure b n, K, i, s, fr', s', hpl, hK, h => by
+  | onFailure b n =>
     rw [step_push_onFailure] at h
     cases h
     simp only [PlainCode, Bool.and_eq_true] at hpl
     exact ⟨_, _, _, rfl, hpl.1, hK.cons (by simp [PlainFrame, hpl.1, hpl.2])⟩
-  | Prim.onSuccessAndFailure b n₁ n₂, K, i, s, fr', s', hpl, hK, h => by
+  | onSuccessAndFailure b n₁ n₂ =>
     rw [step_push_onSuccessAndFailure] at h
     cases h
     simp only [PlainCode, Bool.and_eq_true] at hpl
     exact ⟨_, _, _, rfl, hpl.1, hK.cons (by simp [PlainFrame, hpl.1, hpl.2.1, hpl.2.2])⟩
-  | Prim.exitFrame b, K, i, s, fr', s', hpl, hK, h => by
+  | exitFrame b =>
     rw [step_push_exitFrame] at h
     cases h
     exact ⟨_, _, _, rfl, hpl, hK.cons hpl⟩
-  | Prim.onExit b n flag, K, i, s, fr', s', hpl, hK, h => by
-    cases n <;> cases flag <;> simp only [PlainCode, Bool.false_eq_true] at hpl
+  | onExit b n flag =>
+    obtain ⟨p, rfl, rfl, hb⟩ := plainCode_onExit hpl
     rw [step_push_onExit] at h
     cases h
-    exact ⟨_, _, _, rfl, hpl, hK.cons hpl⟩
-  | Prim.withFiber _, _, _, _, _, _, hpl, _, _
-  | Prim.iterator _ _, _, _, _, _, _, hpl, _, _
-  | Prim.setInterruptible _, _, _, _, _, _, hpl, _, _
-  | Prim.whileLoop _ _, _, _, _, _, _, hpl, _, _
-  | Prim.yieldNowWith _, _, _, _, _, _, hpl, _, _
-  | Prim.async _ _ _, _, _, _, _, _, hpl, _, _
-  | Prim.asyncFinalizer _, _, _, _, _, _, hpl, _, _ => by simp [PlainCode] at hpl
+    exact ⟨_, _, _, rfl, hb, hK.cons hb⟩
+  | withFiber _ | iterator _ _ | setInterruptible _ | whileLoop _ _
+  | yieldNowWith _ | async _ _ _ | asyncFinalizer _ | onSuccessConst _ _ =>
+    simp [PlainCode] at hpl
 
 /-! ## Quiet stores: nothing owed to any waiter -/
 

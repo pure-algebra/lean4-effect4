@@ -1,3 +1,4 @@
+import Test.Api.ExternalContract
 import Effect4.Api
 import TypeScript.Render
 

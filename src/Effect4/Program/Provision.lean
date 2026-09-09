@@ -631,15 +631,15 @@ deriving DecidableEq, Repr
 
 def DocsOp.row : DocsOp → Row
   | .makeDb =>
-    ⟨"makeDb", "makeDb", .call, [], .sync, .unit, .handle "Db", .never, [dbBinding], "docs app", []⟩
+    ⟨"makeDb", "makeDb", .call, [], .sync, .unit, .handle "Db", .never, [dbBinding], "docs app", [], .deferred⟩
   | .makeRate =>
     ⟨"makeRate", "makeRate", .call, [], .sync, .unit, .handle "RateLimit", .never, [rateBinding],
-      "docs app", []⟩
+      "docs app", [], .deferred⟩
   | .insertFeedback =>
     ⟨"insertFeedback", "db.insertFeedback", .call, [], .sync, .nat, .unit, .never, [dbKey],
-      "docs app", []⟩
+      "docs app", [], .deferred⟩
   | .rateCheck =>
-    ⟨"rateCheck", "rateLimit.check", .call, [], .sync, .unit, .bool, .never, [rateKey], "docs app", []⟩
+    ⟨"rateCheck", "rateLimit.check", .call, [], .sync, .unit, .bool, .never, [rateKey], "docs app", [], .deferred⟩
 
 /-- The docs signature's service table: the two services are the host objects their rows
 build, the two bindings are the numbers the platform hands over. -/
@@ -649,7 +649,7 @@ def docsServiceTy (key : ServiceKey) : Option Ty :=
   else if key = dbBinding ∨ key = rateBinding then some .nat
   else none
 
-def docsSig : Signature DocsOp := ⟨DocsOp.row, fun _ _ => none, scopeKey, docsServiceTy⟩
+def docsSig : Signature DocsOp := ⟨DocsOp.row, fun _ _ => none, scopeKey, docsServiceTy, fun _ => true⟩
 
 /-- The leaf semantics of the docs alphabet: a body that performs one row reads the row's one
 required service and binds it as the new service (the machine's `Construction.fromService`);

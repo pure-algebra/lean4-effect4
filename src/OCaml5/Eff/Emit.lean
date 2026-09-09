@@ -266,6 +266,11 @@ def shapeO : RowShape → String
   | .call => octor "row_shape" "call"
   | .value => octor "row_shape" "value"
   | .tupleCall => octor "row_shape" "tupleCall"
+  | .method => octor "row_shape" "method"
+
+def registrationO : Registration → String
+  | .deferred => octor "registration" "deferred"
+  | .external => octor "registration" "external"
 
 def keyO (k : ServiceKey) : String :=
   "{ " ++ ofield "service_key" "name" ++ " = { " ++ ofield "service_name" "value" ++ " = " ++
@@ -287,7 +292,8 @@ def rowO (r : Row) : String :=
     , ofield "row" "error" ++ " = " ++ tyO r.error
     , ofield "row" "requires" ++ " = " ++ listO (r.requires.map keyO)
     , ofield "row" "cite" ++ " = " ++ ostr r.cite
-    , ofield "row" "typeArgs" ++ " = " ++ listO (r.typeArgs.map ostr) ] ++ " }"
+    , ofield "row" "typeArgs" ++ " = " ++ listO (r.typeArgs.map ostr)
+    , ofield "row" "registration" ++ " = " ++ registrationO r.registration ] ++ " }"
 
 def fnO : FnName → String
   | .incr => octor "fn_name" "incr"
@@ -323,11 +329,12 @@ def opO : NativeOp → String
   | .scopeMake s => s!"({octor "native_op" "scopeMake"} {stratO s})"
   | .sleep => octor "native_op" "sleep"
   | .clockNow => octor "native_op" "clockNow"
+  | .external i => s!"({octor "native_op" "external"} {i})"
 
 def fnNames : List FnName := [.incr, .double, .zeroWhenPositive, .noChange, .takeAndBump]
 
-/-- Every value of `NativeOp`, in declaration order, the parameterised constructors at every
-argument. Its length is checked against the environment's constructor table in `main`. -/
+/-- The finite built-in alphabet in declaration order. External row indices range over
+`Nat` and are supplied by a separate table. `main` checks both constructor classes. -/
 def allOps : List NativeOp :=
   [.refMake, .refGet, .refSet, .refGetAndSet, .refSetAndGet] ++
   (fnNames.map NativeOp.refUpdate) ++ (fnNames.map NativeOp.refGetAndUpdate) ++
@@ -371,7 +378,7 @@ def checkAtoms : Except String Unit := do
       throw s!"atom probe disagrees with nativeAtomTy on {n} {repr args}"
 
 def emitNative (nullaryOps fnOps stratOps : Nat) : String :=
-  header "Eff_native: the native alphabet as data. atom_ty is nativeAtomTy (src/Effect4/Program/Native.lean): the monomorphic rows are data in EffGen.lean checked against nativeAtomTy by evaluation at generation time, the three polymorphic atoms are fixed arms checked on probes (tested at generation: a disagreement aborts). row_of is NativeOp.row evaluated on every NativeOp value (all_ops, whose length is checked against the constructor table). scope_key is nativeScopeKey." ++
+  header "Eff_native: the native alphabet as data. atom_ty is nativeAtomTy (src/Effect4/Program/Native.lean): the monomorphic rows are data in EffGen.lean checked against nativeAtomTy by evaluation at generation time, the three polymorphic atoms are fixed arms checked on probes (tested at generation: a disagreement aborts). row_of is NativeOp.row evaluated on the finite built-in alphabet, with the empty-table placeholder for external indices (the constructor table checks both classes). scope_key is nativeScopeKey." ++
   "open Eff_types\n\n" ++
   "let atom_names : string list = " ++ listO ((monoAtoms.map (ostr ·.1)) ++ [ostr "pair", ostr "fst", ostr "snd"]) ++ "\n\n" ++
   "let atom_ty (name : string) (args : ty list) : ty option =\n  match name, args with\n" ++
@@ -381,7 +388,8 @@ def emitNative (nullaryOps fnOps stratOps : Nat) : String :=
   s!"(* {nullaryOps} nullary operations, {fnOps} over every fn_name, {stratOps} over every finalizer_strategy: {allOps.length} values. *)\n" ++
   "let all_ops : native_op list =\n  [ " ++ "\n  ; ".intercalate (allOps.map opO) ++ " ]\n\n" ++
   "let row_of : native_op -> row = function\n" ++
-  "\n".intercalate (allOps.map fun op => s!"  | {opO op} ->\n    {rowO op.row}") ++ "\n\n" ++
+  "\n".intercalate (allOps.map fun op => s!"  | {opO op} ->\n    {rowO op.row}") ++
+  s!"\n  | {octor "native_op" "external"} _ ->\n    {rowO NativeOp.externalPlaceholder}\n\n" ++
   "let scope_key : service_key = " ++ keyO nativeScopeKey ++ "\n" ++
   "let ref_ty : ty = " ++ tyO NativeOp.refTy ++ "\n" ++
   "let deferred_ty : ty = " ++ tyO NativeOp.deferredTy ++ "\n" ++

@@ -2014,6 +2014,25 @@ theorem mergeAwaited_eq_mergeExits (exits : List ExitV) :
 
 /-! ## The service state -/
 
+/-- Answers supplied by the host, in encounter order, and the target spellings
+of resources minted by the machine. A refused head stays available to admission. -/
+structure ExternalStore where
+  answers : List (Completion Val Err Defect FiberId Ann)
+  allocated : List String
+  /-- First rejected registration: row index, offered completion, queue length.
+  It stays visible even if another fiber consumes that head before the decision ends. -/
+  rejected : Option (Nat × Completion Val Err Defect FiberId Ann × Nat)
+deriving DecidableEq
+
+namespace ExternalStore
+
+def empty : ExternalStore := ⟨[], [], none⟩
+
+def ofAnswers (answers : List (Completion Val Err Defect FiberId Ann)) : ExternalStore :=
+  ⟨answers, [], none⟩
+
+end ExternalStore
+
 /-- `St`: the four stores and one fresh-name counter, which mints scope keys, registration keys
 and memo-map ids alike — each is an *object* in rc.112 (`finalizerKey: {}`, `MemoMapImpl`,
 `ScopeImpl`) and identity is the only fact the runtime reads off one, so one counter mints every
@@ -2032,12 +2051,13 @@ structure Stores where
   timers : TimerStore
   /-- Fresh scope keys, finalizer keys and memo-map ids. -/
   nextName : Nat
+  externals : ExternalStore
 deriving DecidableEq
 
 namespace Stores
 
 /-- An empty service state: the bottom every family's law holds at. -/
-def empty : Stores := ⟨[], ⟨[], []⟩, ⟨[]⟩, [], TimerStore.empty, 0⟩
+def empty : Stores := ⟨[], ⟨[], []⟩, ⟨[]⟩, [], TimerStore.empty, 0, ExternalStore.empty⟩
 
 /-- The registration-identity invariant (`E4-CHECK-CE-016`): every registration key any
 scope holds is below the store's fresh-name supply, so `nextName` is a key no scope holds.

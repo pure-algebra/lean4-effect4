@@ -133,24 +133,24 @@ Everything from here down is owed by wave 2d. -/
 def dbGetUser : ServiceOp :=
   { service := "Db", op := "getUser"
   , row := ⟨"getUser", "db.getUser", .call, [], .sync, .string, userTy, notFoundTy
-      , [dbKey], "fixture: the shop Db service"⟩ }
+      , [dbKey], "fixture: the shop Db service", [], .deferred⟩ }
 
 def dbCreateUser : ServiceOp :=
   { service := "Db", op := "createUser"
   , row := ⟨"createUser", "db.createUser", .call, [], .sync, .string, userTy, notFoundTy
-      , [dbKey], "fixture: the shop Db service"⟩ }
+      , [dbKey], "fixture: the shop Db service", [], .deferred⟩ }
 
 def dbDeleteUser : ServiceOp :=
   { service := "Db", op := "deleteUser"
   , row := ⟨"deleteUser", "db.deleteUser", .call, [], .sync, .string, .unit, notFoundTy
-      , [dbKey], "fixture: the shop Db service"⟩ }
+      , [dbKey], "fixture: the shop Db service", [], .deferred⟩ }
 
 /-- A row that opens a scope, so its requirement carries `scopeKey` and rc.112
 excludes it. -/
 def dbScoped : ServiceOp :=
   { service := "Db", op := "withConnection"
   , row := ⟨"withConnection", "db.withConnection", .call, [], .sync, .string, userTy
-      , notFoundTy, [dbKey, scopeKey], "fixture: the shop Db service"⟩ }
+      , notFoundTy, [dbKey, scopeKey], "fixture: the shop Db service", [], .deferred⟩ }
 
 /-- The alphabet of every `shop` handler: the three `Db` rows and the atom the
 typed stub needs. -/

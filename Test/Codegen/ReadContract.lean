@@ -30,12 +30,12 @@ open Effect4.Program
 read-modify-write row whose pure function trails the request. -/
 def rowOf : Fin 4 → Row
   | 0 => ⟨"get", "Ref.get", .call, [], .sync, .handle "Ref.Ref<number>", .nat, .never, [],
-           "Ref.ts:200", []⟩
-  | 1 => ⟨"count", "cell.count", .value, [], .sync, .unit, .nat, .never, [], "Ref.ts:210", []⟩
+           "Ref.ts:200", [], .deferred⟩
+  | 1 => ⟨"count", "cell.count", .value, [], .sync, .unit, .nat, .never, [], "Ref.ts:210", [], .deferred⟩
   | 2 => ⟨"await", "Deferred.await", .call, [], .async,
-           .handle "Deferred.Deferred<number, never>", .nat, .never, [], "Deferred.ts:120", []⟩
+           .handle "Deferred.Deferred<number, never>", .nat, .never, [], "Deferred.ts:120", [], .deferred⟩
   | 3 => ⟨"update", "Ref.update", .call, ["incr"], .sync, .handle "Ref.Ref<number>", .unit,
-           .never, [], "Ref.ts:1273-1276", []⟩
+           .never, [], "Ref.ts:1273-1276", [], .deferred⟩
 
 def sig : Signature (Fin 4) :=
   { rowOf := rowOf
@@ -95,7 +95,7 @@ def genericSig : Signature Bool :=
   { rowOf := fun _ =>
       ⟨"make", "Deferred.make", .call, [], .sync, .unit,
         .handle "Deferred.Deferred<number, number>", .never, [], "Deferred.ts:171",
-        ["number", "number"]⟩
+        ["number", "number"], .deferred⟩
   , atomOf := fun _ _ => none, scopeKey := ⟨⟨0⟩, ⟨0⟩⟩, serviceTy := fun _ => none }
 
 def genericSpell (s : String) (names : List String) : Option Bool :=
@@ -125,9 +125,9 @@ def genericSpell (s : String) (names : List String) : Option Bool :=
 
 def tupleRowOf : Bool → Row
   | false => ⟨"tuple", "Fixture.tuple", .tupleCall, [], .sync,
-      .prod .nat .nat, .nat, .never, [], "§14 tuple-call fixture", []⟩
+      .prod .nat .nat, .nat, .never, [], "§14 tuple-call fixture", [], .deferred⟩
   | true => ⟨"tupleAsync", "Fixture.tuple", .tupleCall, ["first", "second"], .async,
-      .prod .nat .nat, .nat, .never, [], "§14 tuple-call fixture with trailing names", []⟩
+      .prod .nat .nat, .nat, .never, [], "§14 tuple-call fixture with trailing names", [], .deferred⟩
 
 def tupleSig : Signature Bool :=
   { rowOf := tupleRowOf, atomOf := fun _ _ => none, scopeKey := ⟨⟨0⟩, ⟨0⟩⟩

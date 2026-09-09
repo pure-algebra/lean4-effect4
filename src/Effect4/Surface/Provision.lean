@@ -163,10 +163,10 @@ deriving DecidableEq, Repr
 def DeployOp.row : DeployOp → Row
   | .fromBinding binding _ =>
     ⟨"fromBinding", "fromBinding", .call, [], .sync, .unit, .unit, .never, [binding],
-      "Layer.ts:1427 (Layer.effect) over internal/effect.ts:2069 (Effect.service)", []⟩
+      "Layer.ts:1427 (Layer.effect) over internal/effect.ts:2069 (Effect.service)", [], .deferred⟩
 
 /-- The signature: the one row, no pure atoms, the machine's ambient scope key. -/
-def deploySig : Signature DeployOp := ⟨DeployOp.row, fun _ _ => none, scopeKey, fun _ => none⟩
+def deploySig : Signature DeployOp := ⟨DeployOp.row, fun _ _ => none, scopeKey, fun _ => none, fun _ => true⟩
 
 /-! ## The layers -/
 

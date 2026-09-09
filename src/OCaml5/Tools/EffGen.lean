@@ -18,7 +18,7 @@ Writes into `<outdir>`:
                       length-directed decoder, per type, over the hand-written `Eff_frame`;
 * `eff_json.ml`     — the JSON printer (a printer only) per type, over `Eff_json_text`;
 * `eff_native.ml`   — the native alphabet as data: the atom typing table (verified here against
-                      `nativeAtomTy` on probes), every `NativeOp` value with its `Row`, the
+                      `nativeAtomTy` on probes), every built-in `NativeOp` value with its `Row`, the empty-table external placeholder, the
                       signature's scope key;
 * `eff_manifest.txt` — one line per family: constructor names, arities and argument carriers;
 * `goldens/<name>.{bin,json,ty}` and `goldens/corpus.txt` — the corpus below, encoded by the
@@ -51,13 +51,15 @@ open Effect4.Machine (FnName)
 
 namespace OCaml5.Eff
 
-def countOps (nativeOp : Family) : Nat × Nat × Nat :=
-  nativeOp.ctors.foldl (init := (0, 0, 0)) fun (nul, fn, st) c =>
+def countOps (nativeOp : Family) : Nat × Nat × Nat × Nat :=
+  nativeOp.ctors.foldl (init := (0, 0, 0, 0)) fun (nul, fn, st, indexed) c =>
     match c.args with
-    | [] => (nul + 1, fn, st)
-    | [(_, .named "fn_name")] => (nul, fn + 1, st)
-    | [(_, .named "finalizer_strategy")] => (nul, fn, st + 1)
-    | _ => (nul, fn, st)
+    | [] => (nul + 1, fn, st, indexed)
+    | [(_, .named "fn_name")] => (nul, fn + 1, st, indexed)
+    | [(_, .named "finalizer_strategy")] => (nul, fn, st + 1, indexed)
+    | [(_, .int)] => (nul, fn, st, indexed + 1)
+    | _ => (nul, fn, st, indexed)
+
 
 
 end OCaml5.Eff
@@ -83,16 +85,16 @@ def main (args : List String) : IO Unit := do
   let famOf (n : Name) : Option Family := families.find? (·.spec.leanName == n)
   let ctorCount (n : Name) : Nat := (famOf n).map (·.ctors.length) |>.getD 0
   -- cross-checks before anything is written
-  unless fnNames.length == ctorCount `Effect4.Machine.FnName && fnNames.eraseDups.length == fnNames.length do
+  unless OCaml5.Eff.fnNames.length == ctorCount `Effect4.Machine.FnName && OCaml5.Eff.fnNames.eraseDups.length == OCaml5.Eff.fnNames.length do
     throw (IO.userError "EffGen: fnNames does not enumerate FnName")
   unless FinalizerStrategy.all.length == ctorCount `Effect4.FinalizerStrategy do
     throw (IO.userError "EffGen: FinalizerStrategy.all does not enumerate FinalizerStrategy")
   let some nativeOp := famOf `Effect4.Program.NativeOp | throw (IO.userError "EffGen: NativeOp missing")
-  let (nul, fn, st) := countOps nativeOp
-  unless nul + fn + st == nativeOp.ctors.length do
+  let (nul, fn, st, indexed) := countOps nativeOp
+  unless nul + fn + st + indexed == nativeOp.ctors.length do
     throw (IO.userError "EffGen: a NativeOp constructor has an argument shape this tool does not enumerate")
-  unless allOps.length == nul + fn * fnNames.length + st * FinalizerStrategy.all.length do
-    throw (IO.userError s!"EffGen: allOps has {allOps.length} values, the constructor table implies {nul + fn * fnNames.length + st * FinalizerStrategy.all.length}")
+  unless allOps.length == nul + fn * OCaml5.Eff.fnNames.length + st * FinalizerStrategy.all.length do
+    throw (IO.userError s!"EffGen: allOps has {allOps.length} values, the constructor table implies {nul + fn * OCaml5.Eff.fnNames.length + st * FinalizerStrategy.all.length}")
   unless allOps.eraseDups.length == allOps.length do throw (IO.userError "EffGen: allOps repeats a value")
   match checkAtoms with
   | .ok () => pure ()
@@ -132,7 +134,7 @@ def main (args : List String) : IO Unit := do
   let mut missing : Array String := #[]
   for f in families do
     if [`Effect4.Program.Ty, `Effect4.Program.RowKind, `Effect4.Program.RowShape, `Effect4.ServiceName,
-        `Effect4.ServiceTypeCode, `Effect4.ServiceKey, `Effect4.Program.Row, `Effect4.Program.EffTy].contains f.spec.leanName then
+        `Effect4.ServiceTypeCode, `Effect4.ServiceKey, `Effect4.Program.Registration, `Effect4.Program.Row, `Effect4.Program.EffTy].contains f.spec.leanName then
       continue
     for c in f.ctors do
       let k := (coverage.find? c.name).getD 0

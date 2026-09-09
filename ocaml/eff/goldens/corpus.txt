@@ -39,3 +39,4 @@ pProvide	well-typed
 pSleep	well-typed
 pDiamond	ill-typed
 pMergeAll	well-typed
+pExternal	ill-typed

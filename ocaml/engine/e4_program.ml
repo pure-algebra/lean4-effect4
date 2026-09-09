@@ -377,9 +377,10 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Native_op_deferredFail -> A.NativeOp_deferredFail
     | Eff_types.Native_op_deferredAwait -> A.NativeOp_deferredAwait
     | Eff_types.Native_op_scopeMake s -> A.NativeOp_scopeMake (of_finalizer_strategy s)
-    | Eff_types.Native_op_sleep | Eff_types.Native_op_clockNow ->
+    | Eff_types.Native_op_sleep | Eff_types.Native_op_clockNow
+    | Eff_types.Native_op_external _ ->
       raise (Ordinal_mismatch
-        "engine cut before the timer rows; regenerate (plan v2 Phase 1)")
+        "engine cut before the timer and external rows; regenerate (plan v2 Phase 1)")
 
   let rec of_eff : Eff_types.eff -> A.native_op A.eff = function
     | Eff_types.Eff_succeed t -> A.Eff_succeed (of_term t)

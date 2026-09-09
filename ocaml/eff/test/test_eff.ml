@@ -53,7 +53,7 @@ let ellipsis (n : int) (s : string) : string =
 (* ---- 1. goldens ---- *)
 
 let () =
-  check "corpus has 41 programs" (List.length corpus = 41);
+  check "corpus has 42 programs" (List.length corpus = 42);
   Printf.printf "  %-16s %6s %-8s %-10s %-6s %s\n" "program" "bytes" "decode" "re-encode" "JSON" "typeOf";
   List.iter
     (fun (name, typed) ->
@@ -428,7 +428,7 @@ let () =
   check "ObserverMode has 2" (List.length ctor_names_observer_mode = 2);
   check "FinalizerStrategy has 2" (List.length ctor_names_finalizer_strategy = 2);
   check "FnName has 5" (List.length ctor_names_fn_name = 5);
-  check "NativeOp has 22" (List.length ctor_names_native_op = 22);
+  check "NativeOp has 23" (List.length ctor_names_native_op = 23);
   check "Eff has 27" (List.length ctor_names_eff = 27);
   check "LayerTerm has 10" (List.length ctor_names_layer_term = 10);
   check "LayerTerms has 2" (List.length ctor_names_layer_terms = 2);
@@ -449,6 +449,8 @@ let () =
   check "Eff.gen is 8, perform 6, bind 7" (ctor_index_eff (Eff_gen Stmts_nil) = 8 && ctor_index_eff (Eff_perform (Native_op_refGet, Term_var 0)) = 6 && ctor_index_eff (Eff_bind (Eff_yieldNow 0, Eff_yieldNow 0)) = 7);
   check "ActionTerm.closeScope is 15" (ctor_index_action_term (Action_term_closeScope (Term_var 0, Term_var 0)) = 15);
   check "NativeOp.scopeMake is 19" (ctor_index_native_op (Native_op_scopeMake Finalizer_strategy_parallel) = 19);
+  check "NativeOp.external is 22 (the host rows slice appends)"
+    (ctor_index_native_op (Native_op_external 0) = 22);
   check "NativeOp.refUpdate is 5" (ctor_index_native_op (Native_op_refUpdate Fn_name_incr) = 5);
   check "Ty.union is 14, handle 6" (ctor_index_ty (Ty_union (Ty_nat, Ty_nat)) = 14 && ctor_index_ty (Ty_handle "") = 6);
   check "nil is 0 and cons is 1 in Terms, Stmts, Effs, LayerTerms"
@@ -469,7 +471,7 @@ let () =
     go 0
   in
   let manifest = read_file "../eff_manifest.txt" |> String.split_on_char '\n' |> List.filter (fun l -> l <> "") in
-  check "the manifest has 25 families" (List.length manifest = 25);
+  check "the manifest has 26 families" (List.length manifest = 26);
   check "the manifest's Eff line names the 24 constructors with their carriers"
     (List.exists
        (fun l ->
@@ -485,8 +487,8 @@ let () =
        manifest);
   check "the manifest's LayerTerms line is the spine"
     (List.exists (fun l -> contains l "Effect4.Program.LayerTerms (layer_terms) inductive: nil cons(layer_term,layer_terms)") manifest);
-  check "the manifest's NativeOp line ends with scopeMake(finalizer_strategy)"
-    (List.exists (fun l -> contains l "(native_op) inductive: refMake" && contains l "deferredAwait scopeMake(finalizer_strategy) sleep clockNow") manifest);
+  check "the manifest's NativeOp line ends with external(int)"
+    (List.exists (fun l -> contains l "(native_op) inductive: refMake" && contains l "deferredAwait scopeMake(finalizer_strategy) sleep clockNow external(int)") manifest);
   (* atoms *)
   let open Eff_native in
   check "succ : nat -> nat" (atom_ty "succ" [ Ty_nat ] = Some Ty_nat);

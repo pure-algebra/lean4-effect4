@@ -35,15 +35,15 @@ open TypeScript.Render (expr constDecl)
 a value row whose request is `unit`, and an async row. -/
 def rowOf : Fin 3 → Row
   | 0 => ⟨"get", "Ref.get", .call, [], .sync, .handle "Ref.Ref<number>", .nat, .never, [],
-           "Ref.ts:200", []⟩
-  | 1 => ⟨"count", "cell.count", .value, [], .sync, .unit, .nat, .never, [], "Ref.ts:210", []⟩
+           "Ref.ts:200", [], .deferred⟩
+  | 1 => ⟨"count", "cell.count", .value, [], .sync, .unit, .nat, .never, [], "Ref.ts:210", [], .deferred⟩
   | 2 => ⟨"await", "Deferred.await", .call, [], .async,
-           .handle "Deferred.Deferred<number, never>", .nat, .never, [], "Deferred.ts:120", []⟩
+           .handle "Deferred.Deferred<number, never>", .nat, .never, [], "Deferred.ts:120", [], .deferred⟩
 
 /-- A read-modify-write row: its pure function prints after the request. -/
 def updateRow : Row :=
   ⟨"update", "Ref.update", .call, ["incr"], .sync, .handle "Ref.Ref<number>", .unit, .never, [],
-    "Ref.ts:1273-1276", []⟩
+    "Ref.ts:1273-1276", [], .deferred⟩
 
 #guard expr house0 0 (printRow updateRow (.var 0)) = "Ref.update(a0, incr)"
 
@@ -51,7 +51,7 @@ def updateRow : Row :=
 have no trailing names; this fixture checks the generic row convention. -/
 def tupleRow : Row :=
   ⟨"tuple", "Fixture.tuple", .tupleCall, ["first", "second"], .sync,
-    .prod .nat .nat, .nat, .never, [], "§14 tuple-call fixture", []⟩
+    .prod .nat .nat, .nat, .never, [], "§14 tuple-call fixture", [], .deferred⟩
 
 /-- A row that declares explicit type arguments: the export's own parameters have defaults,
 so the call must carry them or the host types the answer at those defaults
@@ -59,7 +59,7 @@ so the call must carry them or the host types the answer at those defaults
 def genericRow : Row :=
   ⟨"make", "Deferred.make", .call, [], .sync, .unit,
     .handle "Deferred.Deferred<number, number>", .never, [], "Deferred.ts:171",
-    ["number", "number"]⟩
+    ["number", "number"], .deferred⟩
 
 #guard expr house0 0 (printRow genericRow (.lit .unit)) = "Deferred.make<number, number>()"
 

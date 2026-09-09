@@ -57,6 +57,8 @@ structure Signature (Op : Type) where
   `Effect.provideService(self, key, value)` types `value` at it; a layer's own leaves are
   typed by their bodies (`layerTy`), not by the table. -/
   serviceTy : ServiceKey → Option Ty
+  /-- The row positions admitted by this signature. -/
+  dom : Op → Bool := fun _ => true
 
 variable {Op : Type}
 

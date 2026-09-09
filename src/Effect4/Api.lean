@@ -1,4 +1,4 @@
-import Effect4.Program.Compile
+import Effect4.Program.Admit
 import Effect4.Program.Wire
 import Effect4.Codegen.Print
 import Effect4.Codegen.Read
@@ -76,31 +76,31 @@ abbrev Program := NativeEff
 /-- The type of a program against the native signature; `none` when ill-typed. Layer
 references are resolved first (`Program.typeOfProgram`: well-formed, then expanded to their
 targets), so a program with a diamond types as its inlined twin does. -/
-def typeOf (program : Program) : Option EffTy := Program.typeOfProgram nativeSignature program
+def typeOf (program : Program) (table : RowTable := []) : Option EffTy := Program.typeOfProgram (nativeSignature table) program
 
 /-- Whether the program is well-typed. -/
-def wellTyped (program : Program) : Bool := (typeOf program).isSome
+def wellTyped (program : Program) (table : RowTable := []) : Bool := (typeOf program table).isSome
 
 /-- The program as one TypeScript expression, at the empty environment. -/
-def print (program : Program) : Except PrintRefusal TypeScript.Expr :=
-  Program.print nativeSignature 0 program
+def print (program : Program) (table : RowTable := []) : Except PrintRefusal TypeScript.Expr :=
+  Program.print (nativeSignature table) 0 program
 
 /-- A program back from one TypeScript expression, at the empty environment: the inverse of
 `print` on the trees `print` produces (`src/Effect4/Codegen/Read.lean`, `read_print` and
 `read_exact`), a `ReadRefusal` on every other tree. -/
-def read (expression : TypeScript.Expr) : Except ReadRefusal Program :=
-  Program.readEff nativeSignature nativeSpell 0 expression
+def read (expression : TypeScript.Expr) (table : RowTable := []) : Except ReadRefusal Program :=
+  Program.readEff (nativeSignature table) (nativeSpell table) 0 expression
 
 /-- Whether the printer keeps the program whole, so that `read` of its printing is the program
 itself; what it loses is documented on `Effect4.Program.readable`. -/
-def readable (program : Program) : Bool :=
-  Program.readable nativeSignature nativeSpell 0 program
+def readable (program : Program) (table : RowTable := []) : Bool :=
+  Program.readable (nativeSignature table) (nativeSpell table) 0 program
 
 /-- `read` after `print`: the program itself when it is `readable` and the printer accepts
 it (`Effect4.Program.roundTrip_eq`), and otherwise the program the printer kept, which prints
 the same (`read_exact`). -/
-def roundTrip (program : Program) : Except ReadRefusal Program :=
-  Program.roundTrip nativeSignature nativeSpell 0 program
+def roundTrip (program : Program) (table : RowTable := []) : Except ReadRefusal Program :=
+  Program.roundTrip (nativeSignature table) (nativeSpell table) 0 program
 
 /-! ## Bytes: how a program crosses a boundary -/
 
@@ -114,8 +114,8 @@ def ofBytes (bytes : Store.Bytes) : Option Program := Wire.decodeProgram bytes
 
 /-- The program as an exported constant with its `Effect.Effect<A, E>` type; `none` when it
 is ill-typed or the printer refuses it. -/
-def printDecl (name : String) (program : Program) : Option TypeScript.ConstDecl :=
-  match typeOf program, print program with
+def printDecl (name : String) (program : Program) (table : RowTable := []) : Option TypeScript.ConstDecl :=
+  match typeOf program table, print program table with
   | some ty, Except.ok body => some (Program.printDecl name ty body)
   | _, _ => none
 
@@ -124,18 +124,18 @@ def printDecl (name : String) (program : Program) : Option TypeScript.ConstDecl 
 is ill-typed or the printer refuses it. The block is what a host must run for a program with
 a layer reference: rc.112 keys its memo map on the layer object (`Layer.ts:411`), and the one
 `const` is the one object. -/
-def printModule (name : String) (program : Program) : Option TypeScript.Module :=
-  match typeOf program with
+def printModule (name : String) (program : Program) (table : RowTable := []) : Option TypeScript.Module :=
+  match typeOf program table with
   | some ty =>
-    match Program.printModule nativeSignature name ty program with
+    match Program.printModule (nativeSignature table) name ty program with
     | Except.ok decls => some { header := [], imports := [], decls := decls.map .const }
     | Except.error _ => none
   | none => none
 
 /-- A program back from a declaration block: the inverse of `printModule` on the blocks it
 prints (`Program.readModule`), a `ReadRefusal` on every other. -/
-def readModule (module : TypeScript.Module) : Except ReadRefusal Program :=
-  Program.readModule nativeSignature nativeSpell module.decls
+def readModule (module : TypeScript.Module) (table : RowTable := []) : Except ReadRefusal Program :=
+  Program.readModule (nativeSignature table) (nativeSpell table) module.decls
 
 /-! ## Compiling and running -/
 
@@ -153,8 +153,9 @@ def root : FiberId := ⟨0⟩
 
 /-- A fresh machine over the empty stores and the empty context, holding the compiled
 program as its root fiber, not yet evaluated. -/
-def load (program : Program) (fuel : Nat) (choices : List Bool := []) : Machine :=
-  { (RunMachine.empty Stores.empty : Machine) with
+def load (program : Program) (fuel : Nat) (choices : List Bool := [])
+    (answers : List (Completion Val Err Defect FiberId Ann) := []) : Machine :=
+  { (RunMachine.empty { Stores.empty with externals := ExternalStore.ofAnswers answers } : Machine) with
     fibers := [RunFiber.make root (compile program fuel choices) true
       (stores.budgetOf emptyCtx) emptyCtx]
     nextId := 1 }
@@ -173,10 +174,11 @@ structure Run where
   machine : Machine
 
 /-- Replay a host decision tape against the program. -/
-def replay (program : Program) (fuel : Nat) (tape : List Decision) (choices : List Bool := []) :
+def replay (program : Program) (fuel : Nat) (tape : List Decision) (choices : List Bool := [])
+    (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := []) :
     Run :=
-  letI := evaluatorFor program
-  match replayEval (interpOf program) fuel tape (load program fuel choices) with
+  letI := evaluatorFor program table
+  match replayEval (interpOf program table) fuel tape (load program fuel choices answers) with
   | ReplayResult.finished m => ⟨Outcome.finished, m⟩
   | ReplayResult.frontier m => ⟨Outcome.frontier, m⟩
   | ReplayResult.stuck why m => ⟨Outcome.stuck why, m⟩
@@ -188,14 +190,17 @@ def evaluate : Decision := RunDecision.evaluate root
 def flush : Decision := RunDecision.flush
 
 /-- The ordinary run: evaluate the root, then flush. -/
-def run (program : Program) (fuel : Nat) (choices : List Bool := []) : Run :=
-  replay program fuel [evaluate, flush] choices
+def run (program : Program) (fuel : Nat) (choices : List Bool := [])
+    (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := []) : Run :=
+  replay program fuel [evaluate, flush] choices answers table
 
 /-- `Effect.runSyncExit`: the root evaluated on the caller's stack, its dispatcher flushed,
 and the `AsyncFiberError` defect when it has not exited. -/
-def runSync (program : Program) (fuel : Nat) (choices : List Bool := []) : Machine × ExitV :=
-  letI := evaluatorFor program
-  runSyncExit (interpOf program) fuel (RunMachine.empty Stores.empty)
+def runSync (program : Program) (fuel : Nat) (choices : List Bool := [])
+    (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := []) : Machine × ExitV :=
+  letI := evaluatorFor program table
+  runSyncExit (interpOf program table) fuel
+    (RunMachine.empty { Stores.empty with externals := ExternalStore.ofAnswers answers })
     (compile program fuel choices) emptyCtx
 
 /-- The root's exit; `none` while it is still live. -/
@@ -210,6 +215,32 @@ def Run.stores (r : Run) : Stores := r.machine.state
 
 /-- How many fibers the run created, the root included. -/
 def Run.fiberCount (r : Run) : Nat := r.machine.fibers.length
+
+/-- The external row and evaluated request at a matching guard token. -/
+def requestOf (m : Machine) (fiber : FiberId) (token : Nat) : Option (NativeOp × Val) :=
+  Program.requestOf m fiber token
+
+abbrev Refusal := Program.Refusal
+
+/-- Replay with admission. A refusal contains the decision position and the
+machine at the refusal; it is separate from the program's exit. -/
+def replayChecked (program : Program) (fuel : Nat) (tape : List Decision)
+    (choices : List Bool := [])
+    (answers : List (Completion Val Err Defect FiberId Ann) := [])
+    (table : RowTable := []) : Run ⊕ (Nat × Decision × Refusal × Machine) :=
+  match Program.replayCheckedFrom program fuel answers table 0 tape
+      (load program fuel choices answers) with
+  | .inr refusal => .inr refusal
+  | .inl (.finished m) => .inl ⟨.finished, m⟩
+  | .inl (.frontier m) => .inl ⟨.frontier, m⟩
+  | .inl (.stuck why m) => .inl ⟨.stuck why, m⟩
+
+/-- The external frontiers after each decision, with their row and request. -/
+def replaySteps (program : Program) (fuel : Nat) (tape : List Decision)
+    (choices : List Bool := [])
+    (answers : List (Completion Val Err Defect FiberId Ann) := [])
+    (table : RowTable := []) : List (Nat × Decision × List Program.Await) :=
+  Program.replayStepsFrom program fuel table 0 tape (load program fuel choices answers)
 
 /-! ## Schema, as syntax -/
 

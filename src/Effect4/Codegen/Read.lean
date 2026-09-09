@@ -338,6 +338,36 @@ def readRowCall (sig : Signature Op) (spell : String → List String → Option 
         | [] => none
     | [] => none
 
+/-- The ordinary call view of each row's method arguments; row identities and
+argument-name hygiene are unchanged. -/
+def methodSignature (sig : Signature Op) : Signature Op :=
+  { sig with rowOf := fun op => methodArgsRow (sig.rowOf op) }
+
+def addReceiver (sig : Signature Op) (receiver : Term) : Eff Op → Except ReadRefusal (Eff Op)
+  | .perform op args | .callback op args =>
+    if (sig.rowOf op).shape = .method then
+      .ok (rowAnswer (sig.rowOf op) op (.app "pair" (.cons receiver (.cons args .nil))))
+    else .error (.shape "method row")
+  | _ => .error (.shape "method row")
+
+/-- Method arguments use the same three arity readings as ordinary row calls. -/
+def readRowMethod (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
+    (receiver : Expr) (s : String) (typeArgs : List String) (args : List Expr) :
+    Except ReadRefusal (Eff Op) := do
+  let recv ← readTerm n receiver
+  let body ← (readRowCall (methodSignature sig) spell n s typeArgs args).getD
+    (.error (.unknownHead s))
+  addReceiver sig recv body
+
+/-- Methods have their own receiver syntax. Empty generic lists are outside the printed image. -/
+def readMethod (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
+    (x : Expr) : Except ReadRefusal (Eff Op) :=
+  match x with
+  | .method receiver s args => readRowMethod sig spell n receiver s [] args
+  | .call (.generic (.member receiver s) (ta :: tas)) args =>
+    readRowMethod sig spell n receiver s (ta :: tas) args
+  | _ => .error (.shape "expression")
+
 /-- The canonical adapter for the synchronous rc.112 `Fiber.runIn` export. The
 callback adds no binder, links the fiber once, and returns the unit effect. -/
 def readRunIn (n : Nat) (args : List Expr) : Except ReadRefusal (Eff Op) :=
@@ -426,7 +456,7 @@ mutual
       match readRowCall sig spell n s (ta :: tas) args with
       | some answer => answer
       | none => .error (.unknownHead s)
-    | _ => .error (.shape "expression")
+    | _ => readMethod sig spell n x
   termination_by structural x
 
   /-- A reserved head applied to its arguments, one arm per row of the printer's table. -/
@@ -744,12 +774,7 @@ def noRow (spell : String → List String → Option Op) (atom : String) (args :
 row keeps a `pair` application of scoped components or a scoped variable; a `pair` whose
 printed components spell the saved-variable form `fst(a)`, `snd(a)` reads back as that
 variable and is outside the image (source-repairs §18). -/
-def requestReadable (row : Row) (n : Nat) (request : Term) : Bool :=
-  match row.shape with
-  | .value => decide (request = .lit .unit)
-  | .call =>
-    if row.request = Ty.unit then decide (request = .lit .unit) else request.scoped n
-  | .tupleCall =>
+def tupleRequestReadable (n : Nat) (request : Term) : Bool :=
     match pairArgs? request with
     | some (x, y) => x.scoped n && y.scoped n && (savedVar? (printTerm x) (printTerm y)).isNone
     | none =>
@@ -758,6 +783,21 @@ def requestReadable (row : Row) (n : Nat) (request : Term) : Bool :=
       | .var _ => request.scoped n
       | .lit .unit => true
       | _ => false
+
+def requestReadable (row : Row) (n : Nat) (request : Term) : Bool :=
+  match row.shape with
+  | .value => decide (request = .lit .unit)
+  | .call =>
+    if row.request = Ty.unit then decide (request = .lit .unit) else request.scoped n
+  | .tupleCall => tupleRequestReadable n request
+  | .method =>
+    match pairArgs? request with
+    | some (receiver, args) =>
+      receiver.scoped n &&
+        if (methodArgsRow row).shape = .tupleCall then tupleRequestReadable n args
+        else if (methodArgsRow row).request = Ty.unit then decide (args = .lit .unit)
+        else args.scoped n
+    | none => false
 
 mutual
   /-- The program is one the printer keeps whole: variables in scope, rows performed on the
@@ -775,7 +815,7 @@ mutual
     | .sync thunk => thunk.scoped n
     | .suspend body => readable sig spell n body
     | .perform op request =>
-      decide ((sig.rowOf op).kind ≠ .async) && requestReadable (sig.rowOf op) n request
+      decide ((sig.rowOf op).kind ≠ .async) && sig.dom op && requestReadable (sig.rowOf op) n request
     | .bind first rest => readable sig spell n first && readable sig spell (n + 1) rest
     | .gen body => readableStmts sig spell n body
     | .catchCause body handler =>
@@ -794,7 +834,7 @@ mutual
         && readable sig spell (n + 1) body
     | .yieldNow _ => true
     | .callback register request =>
-      decide ((sig.rowOf register).kind = .async) && requestReadable (sig.rowOf register) n request
+      decide ((sig.rowOf register).kind = .async) && sig.dom register && requestReadable (sig.rowOf register) n request
     | .awaitFiber fiber _ => fiber.scoped n
     | .withFiber action => readableAction sig spell n action
     | .scoped body => readable sig spell n body
@@ -880,7 +920,8 @@ names (the printer drops them), and no spelling or trailing name is a binder nam
 `undefined`, or a reserved head. -/
 structure LawfulSpelling (sig : Signature Op) (spell : String → List String → Option Op) :
     Prop where
-  spell_row : ∀ op, spell (sig.rowOf op).spelling (sig.rowOf op).trailing = some op
+  spell_row : ∀ op, sig.dom op = true →
+    spell (sig.rowOf op).spelling (sig.rowOf op).trailing = some op
   row_of_spell : ∀ s names op, spell s names = some op →
     (sig.rowOf op).spelling = s ∧ (sig.rowOf op).trailing = names
   value_trailing : ∀ op, (sig.rowOf op).shape = .value → (sig.rowOf op).trailing = []
@@ -1310,12 +1351,14 @@ theorem print_not_cond {sig : Signature Op} {n : Nat} {e : Eff Op} {t a b : Expr
     · simp at hp
     · split at hp <;> simp at hp
     · simp at hp
+    · split at hp <;> unfold printMethod at hp <;> split at hp <;> cases hp
   case callback op r =>
     simp only [print, printRow, Except.ok.injEq] at hp
     split at hp
     · simp at hp
     · split at hp <;> simp at hp
     · simp at hp
+    · split at hp <;> unfold printMethod at hp <;> split at hp <;> cases hp
   case awaitFiber f m => cases m <;> simp [print] at hp
   case withFiber act =>
     cases act
@@ -1350,17 +1393,17 @@ theorem readRowCall_none {sig : Signature Op} {spell : String → List String �
       rw [idents?_printTerms names, h.2.2]
 
 theorem readRowCall_unit {sig : Signature Op} {spell : String → List String → Option Op}
-    (hl : LawfulSpelling sig spell) {n : Nat} (op : Op)
+    (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true)
     (hshape : (sig.rowOf op).shape = .call) (hreq : (sig.rowOf op).request = Ty.unit) :
     readRowCall sig spell n (sig.rowOf op).spelling (sig.rowOf op).typeArgs
         ((sig.rowOf op).trailing.map Expr.ident)
       = some (.ok (rowAnswer (sig.rowOf op) op (.lit .unit))) := by
   unfold readRowCall
-  rw [idents?_map, Option.bind_some, hl.spell_row]
+  rw [idents?_map, Option.bind_some, hl.spell_row op hd]
   simp [hshape, hreq]
 
 theorem readRowCall_request {sig : Signature Op} {spell : String → List String → Option Op}
-    (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (r : Term)
+    (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true) (r : Term)
     (hshape : (sig.rowOf op).shape = .call) (hreq : (sig.rowOf op).request ≠ Ty.unit) :
     readRowCall sig spell n (sig.rowOf op).spelling (sig.rowOf op).typeArgs
         (printTerm r :: (sig.rowOf op).trailing.map Expr.ident)
@@ -1389,7 +1432,7 @@ theorem readRowCall_request {sig : Signature Op} {spell : String → List String
   unfold readRowCall
   rw [hA]
   dsimp only
-  rw [idents?_map, Option.bind_some, hl.spell_row]
+  rw [idents?_map, Option.bind_some, hl.spell_row op hd]
   simp [hshape, hreq]
 
 /-! ## `read_print`: what the printer prints of a readable program reads back to it -/
@@ -1428,7 +1471,7 @@ theorem printTerm_ident_not_trailing {sig : Signature Op}
 /-- The tuple reading of a row: two arguments that are not trailing names, then the row's
 trailing names, read through `readTupleArgs`. -/
 theorem readRowCall_tuple {sig : Signature Op} {spell : String → List String → Option Op}
-    (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (x y : Expr)
+    (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true) (x y : Expr)
     (hshape : (sig.rowOf op).shape = .tupleCall)
     (hx : ∀ op' v, x = .ident v → v ∉ (sig.rowOf op').trailing)
     (hy : ∀ op' v, y = .ident v → v ∉ (sig.rowOf op').trailing) :
@@ -1466,8 +1509,114 @@ theorem readRowCall_tuple {sig : Signature Op} {spell : String → List String �
   dsimp only
   rw [hB]
   dsimp only
-  rw [idents?_map, Option.bind_some, hl.spell_row]
+  rw [idents?_map, Option.bind_some, hl.spell_row op hd]
   simp [hshape]
+
+/-- The tuple request round trip is shared by free calls and receiver methods. -/
+theorem readRowCall_printTupleArgs {sig : Signature Op} {spell : String → List String → Option Op}
+    (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true)
+    (hshape : (sig.rowOf op).shape = .tupleCall) (r : Term)
+    (h : tupleRequestReadable n r = true) :
+    readRowCall sig spell n (sig.rowOf op).spelling (sig.rowOf op).typeArgs
+      (printTupleArgs r ++ (sig.rowOf op).trailing.map Expr.ident) =
+      some (.ok (rowAnswer (sig.rowOf op) op r)) := by
+  simp only [tupleRequestReadable] at h
+  rcases hpa : pairArgs? r with _ | ⟨x, y⟩
+  · simp only [hpa] at h
+    cases r with
+    | var i =>
+      simp only at h
+      simp only [printTupleArgs, hpa, printTerm, List.cons_append, List.nil_append]
+      rw [readRowCall_tuple hl op hd _ _ hshape
+        (fun _ _ hx => by cases hx) (fun _ _ hy => by cases hy)]
+      have hv : readTerm n (.ident (Var.name i)) = .ok (.var i) :=
+        readTerm_printTerm (.var i) h
+      simp [readTupleArgs, savedVar?, hv]
+    | lit value =>
+      cases value with
+      | unit =>
+        simp only [printTupleArgs, hpa, printTerm, printLit, List.cons_append, List.nil_append]
+        rw [readRowCall_tuple hl op hd _ _ hshape
+          (fun _ _ hx => by cases hx) (fun _ _ hy => by cases hy)]
+        have hv : readTerm n (.ident "undefined") = .ok (.lit .unit) :=
+          readTerm_printTerm (.lit .unit) rfl
+        simp [readTupleArgs, savedVar?, hv]
+      | nat _ | bool _ | str _ => simp at h
+    | app _ _ => simp at h
+  · simp only [hpa, Bool.and_eq_true, Option.isNone_iff_eq_none] at h
+    obtain ⟨⟨hx, hy⟩, hsv⟩ := h
+    obtain rfl := pairArgs?_some hpa
+    simp only [printTupleArgs, hpa, List.cons_append, List.nil_append]
+    rw [readRowCall_tuple hl op hd _ _ hshape
+      (fun op' v hv => printTerm_ident_not_trailing hl x op' v hv)
+      (fun op' v hv => printTerm_ident_not_trailing hl y op' v hv)]
+    simp [readTupleArgs, hsv, readTerm_printTerm x hx, readTerm_printTerm y hy]
+
+/-- Method projection keeps the same row identities and name hygiene. -/
+theorem methodLawful {sig : Signature Op} {spell : String → List String → Option Op}
+    (hl : LawfulSpelling sig spell) : LawfulSpelling (methodSignature sig) spell where
+  spell_row := hl.spell_row
+  row_of_spell := hl.row_of_spell
+  value_trailing := by
+    intro op hv
+    have hs := methodArgsRow_shape (sig.rowOf op)
+    change (methodArgsRow (sig.rowOf op)).shape = .value at hv
+    rcases hs with hs | hs <;> simp [hs] at hv
+  spelling_ne_name := hl.spelling_ne_name
+  spelling_not_reserved := hl.spelling_not_reserved
+  trailing_ne_name := hl.trailing_ne_name
+  trailing_ne_undefined := hl.trailing_ne_undefined
+
+theorem readRowCall_methodArgs {sig : Signature Op} {spell : String → List String → Option Op}
+    (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true) (args : Term)
+    (h : (if (methodArgsRow (sig.rowOf op)).shape = .tupleCall then tupleRequestReadable n args
+      else if (methodArgsRow (sig.rowOf op)).request = Ty.unit then decide (args = .lit .unit)
+      else args.scoped n) = true) :
+    readRowCall (methodSignature sig) spell n (sig.rowOf op).spelling (sig.rowOf op).typeArgs
+      (printMethodArgs (sig.rowOf op) args) = some (.ok (rowAnswer (sig.rowOf op) op args)) := by
+  have hm := methodLawful hl
+  rcases methodArgsRow_shape (sig.rowOf op) with hs | hs
+  · simp only [hs, reduceCtorEq, if_false] at h
+    by_cases ht : (methodArgsRow (sig.rowOf op)).request = Ty.unit
+    · simp only [ht, if_true, decide_eq_true_eq] at h
+      subst args
+      simp only [printMethodArgs, hs, reduceCtorEq, if_false, ht, if_true]
+      have result := readRowCall_unit (n := n) hm op hd hs ht
+      dsimp +instances only [methodSignature, methodArgsRow, rowAnswer] at result ⊢
+      exact result
+    · simp only [ht, if_false] at h
+      simp only [printMethodArgs, hs, reduceCtorEq, if_false, ht]
+      have result := readRowCall_request (n := n) hm op hd args hs ht
+      rw [readTerm_printTerm args h] at result
+      simp only [map_ok] at result
+      dsimp +instances only [methodSignature, methodArgsRow, rowAnswer] at result ⊢
+      exact result
+  · simp only [hs, if_true] at h
+    simp only [printMethodArgs, hs, if_true]
+    have result := readRowCall_printTupleArgs (n := n) hm op hd hs args h
+    dsimp +instances only [methodSignature, methodArgsRow, rowAnswer] at result ⊢
+    exact result
+
+theorem readRowMethod_print {sig : Signature Op} {spell : String → List String → Option Op}
+    (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true)
+    (receiver args : Term) (hs : (sig.rowOf op).shape = .method)
+    (hr : receiver.scoped n = true)
+    (ha : (if (methodArgsRow (sig.rowOf op)).shape = .tupleCall then tupleRequestReadable n args
+      else if (methodArgsRow (sig.rowOf op)).request = Ty.unit then decide (args = .lit .unit)
+      else args.scoped n) = true) :
+    readRowMethod sig spell n (printTerm receiver) (sig.rowOf op).spelling (sig.rowOf op).typeArgs
+      (printMethodArgs (sig.rowOf op) args) =
+      .ok (rowAnswer (sig.rowOf op) op (.app "pair" (.cons receiver (.cons args .nil)))) := by
+  simp only [readRowMethod, readTerm_printTerm receiver hr, ok_bind,
+    readRowCall_methodArgs hl op hd args ha, Option.getD_some]
+  unfold rowAnswer
+  split <;> simp [addReceiver, hs, rowAnswer, *]
+
+/-- The printed form of a row answer is independent of the synchronous/asynchronous choice. -/
+theorem print_rowAnswer {sig : Signature Op} {n : Nat} (op : Op) (r : Term) :
+    print sig n (rowAnswer (sig.rowOf op) op r) = .ok (printRow (sig.rowOf op) r) := by
+  unfold rowAnswer
+  split <;> rfl
 
 /-- The reader's two call arms agree on a row's printed head: with no declared type
 arguments it is a plain `spelling(...)` call, and with them a `spelling<T…>(...)` call; both
@@ -1493,7 +1642,7 @@ theorem readEff_printRowHead {sig : Signature Op} {spell : String → List Strin
 
 /-- A row prints and reads back to `rowAnswer`. -/
 theorem read_printRow {sig : Signature Op} {spell : String → List String → Option Op}
-    (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (r : Term)
+    (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true) (r : Term)
     (h : requestReadable (sig.rowOf op) n r = true) :
     readEff sig spell n (printRow (sig.rowOf op) r) = .ok (rowAnswer (sig.rowOf op) op r) := by
   have hname : ∀ i, Var.name i ≠ (sig.rowOf op).spelling := fun i => (hl.spelling_ne_name op i).symm
@@ -1502,7 +1651,7 @@ theorem read_printRow {sig : Signature Op} {spell : String → List String → O
   | value =>
     rw [readable_row_value hshape h]
     have htr := hl.value_trailing op hshape
-    have hsp := hl.spell_row op
+    have hsp := hl.spell_row op hd
     rw [htr] at hsp
     simp only [printRow, hshape]
     unfold readEff
@@ -1511,43 +1660,33 @@ theorem read_printRow {sig : Signature Op} {spell : String → List String → O
     by_cases hreq : (sig.rowOf op).request = Ty.unit
     · rw [readable_row_unit hshape hreq h]
       simp only [printRow, hshape, hreq, if_true]
-      rw [readEff_printRowHead op _ _ hhead (readRowCall_unit hl op hshape hreq)]
+      rw [readEff_printRowHead op _ _ hhead (readRowCall_unit hl op hd hshape hreq)]
     · simp only [printRow, hshape, hreq, if_false]
-      rw [readEff_printRowHead op _ _ hhead (readRowCall_request hl op r hshape hreq)]
+      rw [readEff_printRowHead op _ _ hhead (readRowCall_request hl op hd r hshape hreq)]
       simp [readTerm_printTerm r (readable_row_request hshape hreq h)]
   | tupleCall =>
-    simp only [printRow, hshape]
     simp only [requestReadable, hshape] at h
-    rcases hpa : pairArgs? r with _ | ⟨x, y⟩
-    · simp only [hpa] at h
-      cases r with
-      | var i =>
-        simp only at h
-        simp only [printTupleArgs, hpa, printTerm, List.cons_append, List.nil_append]
-        rw [readEff_printRowHead op _ _ hhead (readRowCall_tuple hl op _ _ hshape
-          (fun _ _ hx => by cases hx) (fun _ _ hy => by cases hy))]
-        have hv : readTerm n (.ident (Var.name i)) = .ok (.var i) :=
-          readTerm_printTerm (.var i) h
-        simp [readTupleArgs, savedVar?, hv]
-      | lit value =>
-        cases value with
-        | unit =>
-          simp only [printTupleArgs, hpa, printTerm, printLit, List.cons_append, List.nil_append]
-          rw [readEff_printRowHead op _ _ hhead (readRowCall_tuple hl op _ _ hshape
-            (fun _ _ hx => by cases hx) (fun _ _ hy => by cases hy))]
-          have hv : readTerm n (.ident "undefined") = .ok (.lit .unit) :=
-            readTerm_printTerm (.lit .unit) rfl
-          simp [readTupleArgs, savedVar?, hv]
-        | nat _ | bool _ | str _ => simp at h
-      | app _ _ => simp at h
-    · simp only [hpa, Bool.and_eq_true, Option.isNone_iff_eq_none] at h
-      obtain ⟨⟨hx, hy⟩, hsv⟩ := h
-      obtain rfl := pairArgs?_some hpa
-      simp only [printTupleArgs, hpa, List.cons_append, List.nil_append]
-      rw [readEff_printRowHead op _ _ hhead (readRowCall_tuple hl op _ _ hshape
-        (fun op' v hv => printTerm_ident_not_trailing hl x op' v hv)
-        (fun op' v hv => printTerm_ident_not_trailing hl y op' v hv))]
-      simp [readTupleArgs, hsv, readTerm_printTerm x hx, readTerm_printTerm y hy]
+    simp only [printRow, hshape]
+    exact readEff_printRowHead op _ _ hhead (readRowCall_printTupleArgs hl op hd hshape r h)
+  | method =>
+    simp only [requestReadable, hshape] at h
+    cases hp : pairArgs? r with
+    | none => simp [hp] at h
+    | some parts =>
+      obtain ⟨receiver, args⟩ := parts
+      simp only [hp, Bool.and_eq_true_iff] at h
+      obtain ⟨hr, ha⟩ := h
+      have hm := readRowMethod_print hl op hd receiver args hshape hr ha
+      obtain rfl := pairArgs?_some hp
+      cases ht : (sig.rowOf op).typeArgs with
+      | nil =>
+        simp only [ht] at hm
+        simp [printRow, hshape, pairArgs?, printMethod, ht, readEff, readMethod, hm,
+          print_rowAnswer]
+      | cons t ts =>
+        simp only [ht] at hm
+        simp [printRow, hshape, pairArgs?, printMethod, ht, readEff, readMethod, hm,
+          print_rowAnswer]
 
 mutual
 theorem read_print {sig : Signature Op} {spell : String → List String → Option Op}
@@ -1601,9 +1740,9 @@ theorem read_print {sig : Signature Op} {spell : String → List String → Opti
     cases pb <;> first | exact (print_not_cond hpb).elim | (unfold readHead; simp [ih])
   | .perform op r, hr, hp => by
     simp only [readable, Bool.and_eq_true, decide_eq_true_eq] at hr
-    obtain ⟨hkind, hreq⟩ := hr
+    obtain ⟨⟨hkind, hd⟩, hreq⟩ := hr
     simp only [print, Except.ok.injEq] at hp; subst hp
-    rw [read_printRow hl op r hreq]
+    rw [read_printRow hl op hd r hreq]
     simp [rowAnswer, hkind]
   | .bind first rest, hr, hp => by
     simp only [readable, Bool.and_eq_true] at hr
@@ -1688,9 +1827,9 @@ theorem read_print {sig : Signature Op} {spell : String → List String → Opti
     unfold readEff readHead; simp [headOf_lit .yieldNowWith "Effect.yieldNowWith" rfl]
   | .callback op r, hr, hp => by
     simp only [readable, Bool.and_eq_true, decide_eq_true_eq] at hr
-    obtain ⟨hkind, hreq⟩ := hr
+    obtain ⟨⟨hkind, hd⟩, hreq⟩ := hr
     simp only [print, Except.ok.injEq] at hp; subst hp
-    rw [read_printRow hl op r hreq]
+    rw [read_printRow hl op hd r hreq]
     simp [rowAnswer, hkind]
   | .awaitFiber f mode, hr, hp => by
     simp only [readable] at hr
@@ -1961,10 +2100,6 @@ termination_by structural a
 end
 
 
-/-- The printed form of a row answer: both kinds print through `printRow`. -/
-theorem print_rowAnswer (sig : Signature Op) (n : Nat) (op : Op) (r : Term) :
-    print sig n (rowAnswer (sig.rowOf op) op r) = .ok (printRow (sig.rowOf op) r) := by
-  unfold rowAnswer; split <;> simp [print]
 
 /-- The tuple reading reconstructs its two arguments: a saved variable prints as its two
 component reads, any other pair as the printed components. -/
@@ -2012,6 +2147,103 @@ local macro "close_arm" h:ident : tactic => `(tactic| first
   | (exfalso; subst_vars; solve_by_elim [rfl])
   | cases $h:ident
   | (split at $h:ident <;> first | (exfalso; subst_vars; solve_by_elim [rfl]) | cases $h:ident))
+
+/-- The call reader recovers the method's row identity and exactly its argument syntax. -/
+theorem readRowCall_method_parts {sig : Signature Op} {spell : String → List String → Option Op}
+    (hl : LawfulSpelling sig spell) {n : Nat} {s : String} {ta : List String} {args : List Expr}
+    {e : Eff Op}
+    (h : readRowCall (methodSignature sig) spell n s ta args = some (.ok e)) :
+    ∃ op r, e = rowAnswer (sig.rowOf op) op r ∧ (sig.rowOf op).spelling = s ∧
+      (sig.rowOf op).typeArgs = ta ∧ printMethodArgs (sig.rowOf op) r = args := by
+  unfold readRowCall at h
+  split at h
+  · rename_i op hA
+    simp only [Option.some.injEq] at h
+    split at h
+    · rename_i hc
+      dsimp only [methodSignature] at hc
+      cases h
+      obtain ⟨names, hn, hsp⟩ := Option.bind_eq_some_iff.mp hA
+      obtain ⟨hs, htr⟩ := hl.row_of_spell _ _ _ hsp
+      refine ⟨op, .lit .unit, rfl, hs, hc.2.2, ?_⟩
+      rw [idents?_exact hn]
+      simp only [printMethodArgs, hc.1, reduceCtorEq, if_false, hc.2.1, if_true, htr]
+    · cases h
+  · split at h
+    · split at h
+      · simp only [Option.some.injEq] at h
+        split at h
+        · rename_i hc
+          dsimp only [methodSignature] at hc
+          obtain ⟨r, hr, rfl⟩ := map_eq_ok.mp h
+          obtain ⟨names, hn, hsp⟩ :=
+            Option.bind_eq_some_iff.mp ‹(idents? _).bind (spell s) = some _›
+          obtain ⟨hs, htr⟩ := hl.row_of_spell _ _ _ hsp
+          refine ⟨_, r, rfl, hs, hc.2.2, ?_⟩
+          rw [idents?_exact hn]
+          simp only [printMethodArgs, hc.1, reduceCtorEq, if_false, hc.2.1, htr,
+            readTerm_exact _ hr]
+        · cases h
+      · split at h
+        · split at h
+          · simp only [Option.some.injEq] at h
+            split at h
+            · rename_i hc
+              dsimp only [methodSignature] at hc
+              obtain ⟨r, hr, rfl⟩ := map_eq_ok.mp h
+              obtain ⟨names, hn, hsp⟩ :=
+                Option.bind_eq_some_iff.mp ‹(idents? _).bind (spell s) = some _›
+              obtain ⟨hs, htr⟩ := hl.row_of_spell _ _ _ hsp
+              refine ⟨_, r, rfl, hs, hc.2, ?_⟩
+              rw [idents?_exact hn]
+              simp only [printMethodArgs, hc.1, if_true, htr, readTupleArgs_exact hr,
+                List.cons_append, List.nil_append]
+            · cases h
+          · cases h
+        · cases h
+    · cases h
+
+theorem addReceiver_rowAnswer (sig : Signature Op) (receiver : Term) (op : Op) (args : Term) :
+    addReceiver sig receiver (rowAnswer (sig.rowOf op) op args) =
+      if (sig.rowOf op).shape = .method then
+        .ok (rowAnswer (sig.rowOf op) op (.app "pair" (.cons receiver (.cons args .nil))))
+      else .error (.shape "method row") := by
+  unfold rowAnswer
+  split <;> simp [addReceiver, rowAnswer, *]
+
+theorem readRowMethod_exact {sig : Signature Op} {spell : String → List String → Option Op}
+    (hl : LawfulSpelling sig spell) {n : Nat} {receiver : Expr} {s : String}
+    {ta : List String} {args : List Expr} {e : Eff Op}
+    (h : readRowMethod sig spell n receiver s ta args = .ok e) :
+    print sig n e = .ok (match ta with
+      | [] => .method receiver s args
+      | ts => .call (.generic (.member receiver s) ts) args) := by
+  unfold readRowMethod at h
+  obtain ⟨recv, hr, h⟩ := bind_eq_ok.mp h
+  obtain ⟨body, hb, h⟩ := bind_eq_ok.mp h
+  cases hc : readRowCall (methodSignature sig) spell n s ta args with
+  | none => simp [hc] at hb
+  | some answer =>
+    simp only [hc, Option.getD_some] at hb
+    rw [hb] at hc
+    obtain ⟨op, request, rfl, hs, ht, ha⟩ := readRowCall_method_parts hl hc
+    rw [addReceiver_rowAnswer] at h
+    split at h
+    · rename_i hshape
+      cases h
+      simp [print_rowAnswer, printRow, hshape, pairArgs?, printMethod,
+        hs, ht, ha, readTerm_exact _ hr]
+      cases ta <;> rfl
+    · cases h
+
+theorem readMethod_exact {sig : Signature Op} {spell : String → List String → Option Op}
+    (hl : LawfulSpelling sig spell) {n : Nat} {x : Expr} {e : Eff Op}
+    (h : readMethod sig spell n x = .ok e) : print sig n e = .ok x := by
+  unfold readMethod at h
+  split at h
+  · exact readRowMethod_exact hl h
+  · exact readRowMethod_exact hl h
+  · cases h
 
 /-- The exactness of the reader, over the six mutual readers at once, by the functional
 induction principle Lean generates for `readEff`: one case per arm of the reader. -/
@@ -2191,7 +2423,7 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
     intros
     rename_i e h
     unfold readEff at h
-    split at h <;> close_arm h
+    split at h <;> first | exact readMethod_exact hl h | close_arm h
   -- readHead
   case case29 =>
     intro n v e h
@@ -2608,60 +2840,193 @@ rows share eight spellings and are told apart by the pure function's name, the t
 rows by the `"parallel"` strategy. `nativeLawful` is the receipt that the native table meets
 `LawfulSpelling`; the two theorems specialise to it below. -/
 
-def fnNames : List Effect4.Machine.FnName := [.incr, .double, .zeroWhenPositive, .noChange, .takeAndBump]
+def rowKey (row : Row) : String × List String := (row.spelling, row.trailing)
 
-/-- Every native operation, once. -/
-def NativeOp.all : List NativeOp :=
-  [.refMake, .refGet, .refSet, .refGetAndSet, .refSetAndGet]
-  ++ fnNames.flatMap (fun f =>
-      [.refUpdate f, .refGetAndUpdate f, .refUpdateAndGet f, .refUpdateSome f,
-       .refGetAndUpdateSome f, .refUpdateSomeAndGet f, .refModify f, .refModifySome f])
-  ++ [.deferredMake, .deferredIsDone, .deferredPoll, .deferredSucceed, .deferredFail,
-      .deferredAwait, .scopeMake .sequential, .scopeMake .parallel, .sleep, .clockNow]
+/-- Uniqueness makes the first matching row exactly the supplied position. -/
+theorem rowIndex_roundTrip (table : List Row) (hn : (table.map rowKey).Nodup)
+    (i : Nat) (hi : i < table.length) :
+    table.findIdx? (fun row => decide (rowKey row = rowKey table[i])) = some i := by
+  induction table generalizing i with
+  | nil => cases hi
+  | cons row rest ih =>
+    have hnodup := List.nodup_cons.mp hn
+    cases i with
+    | zero => simp [List.findIdx?_cons]
+    | succ i =>
+      have hi' : i < rest.length := Nat.lt_of_succ_lt_succ hi
+      have hne : rowKey row ≠ rowKey rest[i] := by
+        intro he
+        exact hnodup.1 (List.mem_map.mpr ⟨rest[i], List.getElem_mem hi', he.symm⟩)
+      simpa [List.findIdx?_cons, hne, ih hnodup.2 i hi']
 
-/-- The native row a (spelling, trailing names) pair names. -/
-def nativeSpell (s : String) (names : List String) : Option NativeOp :=
-  NativeOp.all.find? fun op => decide (op.row.spelling = s ∧ op.row.trailing = names)
+/-- A successful lookup names an existing row with exactly the supplied key. -/
+theorem rowIndex_exact (table : List Row) (key : String × List String) (i : Nat)
+    (h : table.findIdx? (fun row => decide (rowKey row = key)) = some i) :
+    ∃ hi : i < table.length, rowKey table[i] = key := by
+  induction table generalizing i with
+  | nil => simp at h
+  | cons row rest ih =>
+    rw [List.findIdx?_cons] at h
+    split at h
+    · rename_i hk
+      cases h
+      exact ⟨Nat.zero_lt_succ _, of_decide_eq_true hk⟩
+    · obtain ⟨j, hj, rfl⟩ := Option.map_eq_some_iff.mp h
+      obtain ⟨hlt, hk⟩ := ih j hj
+      exact ⟨Nat.succ_lt_succ hlt, hk⟩
+
+theorem builtinLookup_none (key : String × List String)
+    (h : key ∉ NativeOp.all.map (rowKey ∘ NativeOp.row)) :
+    NativeOp.all.find? (fun op => decide (rowKey op.row = key)) = none := by
+  apply List.find?_eq_none.mpr
+  intro op hop heq
+  apply h
+  exact List.mem_map.mpr ⟨op, hop, of_decide_eq_true heq⟩
+
+/-- The first UTF-8 byte; no traversal of a `String` enters the proof graph. -/
+def firstByte (s : String) : Option UInt8 := s.toByteArray.data.toList.head?
+
+/-- The names in a row cannot capture a printed binder or a reserved program head. -/
+def rowNamesSafe (row : Row) : Bool :=
+  firstByte row.spelling != some 97 && !reserved.contains row.spelling &&
+    row.trailing.all (fun name => firstByte name != some 97 && name != "undefined")
+
+/-- The four table requirements: unique keys, no built-in collision, no dropped
+trailing names on a value row, and names outside the reserved/binder alphabets. -/
+def LawfulTable (table : RowTable) : Bool :=
+  decide (table.map rowKey).Nodup &&
+    table.all (fun row => !(NativeOp.all.map (rowKey ∘ NativeOp.row)).contains (rowKey row)) &&
+    table.all (fun row => !decide (row.shape = .value) || row.trailing.isEmpty) &&
+    table.all rowNamesSafe
+
+/-- Built-ins are checked first; the external key identifies its position in the
+supplied table. No external index is recovered by parsing an identifier. -/
+def nativeSpell (table : RowTable := []) (s : String) (names : List String) : Option NativeOp :=
+  match NativeOp.all.find? (fun op => decide (rowKey op.row = (s, names))) with
+  | some op => some op
+  | none => (table.findIdx? (fun row => decide (rowKey row = (s, names)))).map NativeOp.external
 
 theorem name_notin (l : List String) (h : ∀ s ∈ l, s.toByteArray.data.toList.head? ≠ some 97)
     (i : Nat) : Var.name i ∉ l := fun hm => Var.name_ne (h _ hm) i rfl
 
-theorem NativeOp.all_complete (op : NativeOp) : op ∈ NativeOp.all := by
-  cases op <;> first | decide | (rename_i f; cases f <;> decide)
+theorem NativeOp.external_not_mem_all (i : Nat) : NativeOp.external i ∉ NativeOp.all := by
+  simp [NativeOp.all, fnNames]
 
-theorem nativeLawful : LawfulSpelling nativeSignature nativeSpell where
+theorem NativeOp.all_complete (op : NativeOp) (h : ∀ i, op ≠ .external i) :
+    op ∈ NativeOp.all := by
+  cases op <;> first
+    | decide
+    | (rename_i f; cases f <;> decide)
+    | exact (h _ rfl).elim
+
+theorem nativeRowOf_mem_all (table : RowTable) (op : NativeOp) (h : op ∈ NativeOp.all) :
+    nativeRowOf table op = op.row := by
+  cases op <;> first | rfl | exact (NativeOp.external_not_mem_all _ h).elim
+
+theorem nativeRowOf_external (table : RowTable) (i : Nat) (hi : i < table.length) :
+    nativeRowOf table (.external i) = table[i] := by
+  simp [nativeRowOf, List.getElem?_eq_getElem hi]
+
+theorem lawfulTable_member (table : RowTable) (h : LawfulTable table = true)
+    (row : Row) (hr : row ∈ table) :
+    rowKey row ∉ NativeOp.all.map (rowKey ∘ NativeOp.row) ∧
+    (row.shape = .value → row.trailing = []) ∧ rowNamesSafe row = true := by
+  simp only [LawfulTable, Bool.and_eq_true] at h
+  refine ⟨?_, ?_, List.all_eq_true.mp h.2 row hr⟩
+  · have hc := List.all_eq_true.mp h.1.1.2 row hr
+    simpa using hc
+  · have hv := List.all_eq_true.mp h.1.2 row hr
+    intro hs
+    simpa [hs] using hv
+
+theorem nativeRow_hygiene (table : RowTable) (h : LawfulTable table = true) (op : NativeOp) :
+    ((nativeRowOf table op).shape = .value → (nativeRowOf table op).trailing = []) ∧
+      rowNamesSafe (nativeRowOf table op) = true := by
+  cases op with
+  | external i =>
+    by_cases hi : i < table.length
+    · rw [nativeRowOf_external table i hi]
+      exact (lawfulTable_member table h _ (List.getElem_mem hi)).2
+    · simp only [nativeRowOf, List.getElem?_eq_none (Nat.le_of_not_gt hi), Option.getD_none]
+      decide
+  | _ => first
+    | (simp only [nativeRowOf]; decide)
+    | (rename_i f; cases f <;> simp only [nativeRowOf] <;> decide)
+
+theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := by decide) :
+    LawfulSpelling (nativeSignature table) (nativeSpell table) where
   spell_row := by
-    intro op
-    cases op <;> first | decide | (rename_i f; cases f <;> decide)
+    intro op hd
+    cases op with
+    | external i =>
+      have hi : i < table.length := of_decide_eq_true hd
+      change nativeSpell table (nativeRowOf table (.external i)).spelling
+        (nativeRowOf table (.external i)).trailing = some (.external i)
+      rw [nativeRowOf_external table i hi]
+      have hn : (table.map rowKey).Nodup := by
+        simp only [LawfulTable, Bool.and_eq_true, decide_eq_true_eq] at h
+        exact h.1.1.1
+      have hc := (lawfulTable_member table h _ (List.getElem_mem hi)).1
+      have hb := builtinLookup_none (rowKey table[i]) hc
+      have hf := rowIndex_roundTrip table hn i hi
+      dsimp +instances only [rowKey] at hb hf
+      unfold nativeSpell rowKey
+      rw [hb, hf]
+      rfl
+    | _ => first
+      | rfl
+      | (rename_i f; cases f <;> rfl)
   row_of_spell := by
-    intro s names op h
-    have := List.find?_some h
-    simpa [nativeSignature] using this
-  value_trailing := by
-    intro op
-    cases op <;> first | decide | (rename_i f; cases f <;> decide)
+    intro s names op hs
+    unfold nativeSpell at hs
+    split at hs
+    · rename_i found hfound
+      have heq : found = op := Option.some.inj hs
+      subst op
+      have hm := List.mem_of_find?_eq_some hfound
+      have hk := List.find?_some
+        (p := fun op : NativeOp => decide (rowKey op.row = (s, names))) hfound
+      change (nativeRowOf table found).spelling = s ∧ (nativeRowOf table found).trailing = names
+      rw [nativeRowOf_mem_all table found hm]
+      exact Prod.mk.inj (of_decide_eq_true hk)
+    · obtain ⟨i, hi, rfl⟩ := Option.map_eq_some_iff.mp hs
+      obtain ⟨hlt, hk⟩ := rowIndex_exact table (s, names) i hi
+      change (nativeRowOf table (.external i)).spelling = s ∧
+        (nativeRowOf table (.external i)).trailing = names
+      rw [nativeRowOf_external table i hlt]
+      exact Prod.mk.inj hk
+  value_trailing := fun op => (nativeRow_hygiene table h op).1
   spelling_ne_name := by
     intro op i
-    cases op <;> first
-      | exact (Var.name_ne (by decide) i).symm
-      | (rename_i f; cases f <;> exact (Var.name_ne (by decide) i).symm)
+    have hn := (nativeRow_hygiene table h op).2
+    simp only [rowNamesSafe, Bool.and_eq_true] at hn
+    exact (Var.name_ne (by simpa [firstByte, nativeSignature] using hn.1.1) i).symm
   spelling_not_reserved := by
     intro op
-    cases op <;> first | decide | (rename_i f; cases f <;> decide)
+    have hn := (nativeRow_hygiene table h op).2
+    simp only [rowNamesSafe, Bool.and_eq_true] at hn
+    simpa [nativeSignature] using hn.1.2
   trailing_ne_name := by
     intro op i
-    cases op <;> first
-      | exact name_notin _ (by decide) i
-      | (rename_i f; cases f <;> exact name_notin _ (by decide) i)
+    have hn := (nativeRow_hygiene table h op).2
+    simp only [rowNamesSafe, Bool.and_eq_true] at hn
+    apply name_notin
+    intro name hm
+    have ht := List.all_eq_true.mp hn.2 name hm
+    simpa [firstByte, nativeSignature] using (Bool.and_eq_true_iff.mp ht).1
   trailing_ne_undefined := by
-    intro op
-    cases op <;> first | decide | (rename_i f; cases f <;> decide)
+    intro op hm
+    have hn := (nativeRow_hygiene table h op).2
+    simp only [rowNamesSafe, Bool.and_eq_true] at hn
+    have ht := List.all_eq_true.mp hn.2 "undefined" hm
+    simp at ht
 
-
-theorem read_print_native {n : Nat} (e : NativeEff)
-    (hr : readable nativeSignature nativeSpell n e = true) {x : Expr}
-    (hp : print nativeSignature n e = .ok x) : readEff nativeSignature nativeSpell n x = .ok e :=
-  read_print nativeLawful e hr hp
+ theorem read_print_native (table : RowTable := []) (h : LawfulTable table = true := by decide)
+    {n : Nat} (e : NativeEff)
+    (hr : readable (nativeSignature table) (nativeSpell table) n e = true) {x : Expr}
+    (hp : print (nativeSignature table) n e = .ok x) :
+    readEff (nativeSignature table) (nativeSpell table) n x = .ok e :=
+  read_print (nativeLawful table h) e hr hp
 
 /-- `read_print` as the round trip: a readable program that prints comes back as itself. -/
 theorem roundTrip_eq {sig : Signature Op} {spell : String → List String → Option Op}
@@ -2670,9 +3035,11 @@ theorem roundTrip_eq {sig : Signature Op} {spell : String → List String → Op
     roundTrip sig spell n e = .ok e := by
   unfold roundTrip; rw [hp]; exact read_print hl e hr hp
 
-theorem read_exact_native {n : Nat} {x : Expr} {e : NativeEff}
-    (h : readEff nativeSignature nativeSpell n x = .ok e) : print nativeSignature n e = .ok x :=
-  read_exact nativeLawful h
+theorem read_exact_native (table : RowTable := []) (ht : LawfulTable table = true := by decide)
+    {n : Nat} {x : Expr} {e : NativeEff}
+    (h : readEff (nativeSignature table) (nativeSpell table) n x = .ok e) :
+    print (nativeSignature table) n e = .ok x :=
+  read_exact (nativeLawful table ht) h
 
 /-! ## Compatibility with positional weakening -/
 
@@ -2856,6 +3223,20 @@ private theorem weaken_eq_unit (cut : Nat) (request : Term) :
     Term.weaken cut request = .lit .unit ↔ request = .lit .unit := by
   cases request <;> simp only [Term.weaken, reduceCtorEq]
 
+private theorem tupleRequestReadable_weaken {cut n : Nat} (hc : cut ≤ n) (request : Term) :
+    tupleRequestReadable (n + 1) (Term.weaken cut request) = tupleRequestReadable n request := by
+  simp only [tupleRequestReadable]
+  rw [pairArgs_weaken]
+  cases hp : pairArgs? request with
+  | some xy =>
+    obtain ⟨x, y⟩ := xy
+    simp only [Option.map, Term.scoped_weaken hc, savedVar_weaken]
+  | none =>
+    cases request with
+    | var index => exact Term.scoped_weaken hc (.var index)
+    | lit value => cases value <;> rfl
+    | app _ _ => rfl
+
 private theorem requestReadable_weaken {cut n : Nat} (hc : cut ≤ n) (row : Row)
     (request : Term) :
     requestReadable row (n + 1) (Term.weaken cut request) = requestReadable row n request := by
@@ -2864,18 +3245,14 @@ private theorem requestReadable_weaken {cut n : Nat} (hc : cut ≤ n) (row : Row
   | call =>
     simp only [requestReadable, hs]
     split <;> simp only [weaken_eq_unit, Term.scoped_weaken hc]
-  | tupleCall =>
-    simp only [requestReadable, hs]
-    rw [pairArgs_weaken]
+  | tupleCall => simpa only [requestReadable, hs] using tupleRequestReadable_weaken hc request
+  | method =>
+    simp only [requestReadable, hs, pairArgs_weaken]
     cases hp : pairArgs? request with
-    | some xy =>
-      obtain ⟨x, y⟩ := xy
-      simp only [Option.map, Term.scoped_weaken hc, savedVar_weaken]
-    | none =>
-      cases request with
-      | var index => exact Term.scoped_weaken hc (.var index)
-      | lit value => cases value <;> rfl
-      | app _ _ => rfl
+    | none => rfl
+    | some parts =>
+      obtain ⟨receiver, args⟩ := parts
+      simp only [Option.map, Term.scoped_weaken hc, tupleRequestReadable_weaken hc, weaken_eq_unit]
 
 mutual
   /-- Inserting an unused environment slot retains exactly the readable domain. -/

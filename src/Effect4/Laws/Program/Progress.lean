@@ -355,6 +355,7 @@ theorem step_typed (op : NativeOp) (v : Val) (o : SyncOp) (s s' : Stores) (a : V
     simp only [syncOpStep_deferredCompleteWith, Option.some.injEq, Prod.mk.injEq] at hstep
     obtain ⟨rfl, rfl⟩ := hstep
     exact ⟨by simp [NativeOp.row, Val.hasTy], hheap⟩
+  | external _ => cases ho
   | deferredAwait =>
     rw [syncOpOf_async_none NativeOp.deferredAwait v rfl] at ho
     cases ho
@@ -445,6 +446,7 @@ theorem syncOpOf_validIn (op : NativeOp) (v : Val) (o : SyncOp) (s : Stores)
       Bool.and_eq_true, decide_eq_true_eq] at hval
     simp only [SyncOp.validIn, decide_eq_true_eq]
     exact hval.1
+  | external _ => cases ho
   | deferredAwait =>
     rw [syncOpOf_async_none NativeOp.deferredAwait v rfl] at ho
     cases ho
