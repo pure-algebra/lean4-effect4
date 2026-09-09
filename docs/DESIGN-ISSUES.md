@@ -1,0 +1,102 @@
+# Effect4 design issues
+
+This register holds the design questions that are **open**. `docs/DESIGN-BASIS.md` holds the
+ones that are **settled**: a DB row is an end state with a `Status:` line, and its "what this
+basis refuses" clauses are the closed doors. This file is the other half — the questions still
+in flight, what each would force to be redone if it were answered late or wrongly, and the
+milestone by which answering it is cheapest. It was opened 2026-09-09 from the design-risk
+sweep after the error-paths cycle (the companion notes are listed at the end).
+
+A row moves in one direction. **open** — the question is named and nobody has answered it.
+**recommended** — a scout or a slice has proposed an answer and stated its cost; work may
+proceed on it where the row says so, on the understanding that a different ruling costs a
+revert, not a redesign. **ruled** — the owner has decided; the ruling text and its date live in
+the row, and the row names the tracked place the ruling was written into: a DB row, a module
+header, a contract packet, a counterexample row, a `# reason:` line in
+`Test/fixtures/trust-gate/known-red.txt`. **basis** — the ruling has become a `DB-nn` row and
+this row is retired to a one-line pointer. A row is never deleted and an id is never reused, as
+in `Test/Counterexamples/REGISTER.md`.
+
+Two rules make the register worth keeping.
+
+**A ruling is not made until it is written into a tracked file.** `docs/research/` is
+gitignored, and `scripts/check-source-citations.py` accepts citations into it without checking
+that they resolve, so a decision recorded only there does not survive a clone — the sweep
+counted 504 such citations from 278 tracked files, six of whose targets are already gone. When
+a row reaches **ruled**, the same commit puts the ruling in a tracked place and the row cites
+it. DI-00 is the worked example: decided in a note, written into DB-15, the truth driver and
+the sqlite module header the same day.
+
+**Every row names what it would force to be redone** — wire ordinals, goldens, proofs,
+engines, generated families, the printed face, corpus pins — because that, not the size of the
+change, is what makes a late answer expensive. Rows are cited by id (`DI-nn`), never by line.
+
+Milestones used in `decide by`: **step 8** (the engine host, waiting on plan v2 Phase 1),
+**Phase 1** (the LCNF engine regeneration), **third package** (the next canonical package
+table), **foreign lift** (admitting wild TypeScript), **release**.
+
+## The register
+
+| id | question | category | status | ruling or recommendation | forces rework of | decide by | pointers |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| DI-00 | Which pair a tagged `SqlError` posts. | errors | **basis** | Ruled 2026-09-09: the reason's tag and the driver's message, rc.112's own two-level `catchReason` form, the outer tag implied by the row. | — | — | DB-15; `harness/truth/run-truth.ts` (`taggedPair`); `src/Effect4/Program/Packages/SqliteBun.lean` header |
+| DI-01 | Is the unit of publication `bytes` or `(bytes, keys : Cid KeyTable)`, and is the ordinal ledger a stored `table` node kind? | wire/CAS | open | CAS amendment M17's default is yes | every `Cid`; `keyOf`'s signature; `Kind.byte_le`'s bound; the renaming proofs | step 8, before the first published unit | `src/Effect4/Surface/Provision.lean`; the CAS amendments note (M17) |
+| DI-02 | Does an append-only ordinal ledger exist, and which alphabets does it gate? | wire | open | build it before anything is published; today no mechanical guard exists | `Eff` 0–26, `NativeOp` 0–22, `Store.Tag` 1–12, `HandleKind` 0–7, `Kind` 1–15, service codes 4–9, package row positions — first publication freezes all seven by accident | step 8 | `src/Effect4/Program/Derived.lean`; the CAS amendments note (M16) |
+| DI-03 | Where do ordinals live — a ledger file, a pinned Lean value, or M17's `table` node? | wire/generated | open | plan v2: the Lean value plus the M17 node; no text file | every wire golden and hex pin; the `.eff` differential; seventeen ordinal copies, six by hand | step 8 | `src/Effect4/Program/Wire.lean` (the hex pins) |
+| DI-04 | Is a published tape, log or exit replay-relative, never host-relative? | wire/CAS | open | M2's default is yes | the tape, log, exit and checkpoint carriers become bytes plus hand images | step 8 | the CAS amendments note (M2) |
+| DI-05 | Is a `ServiceKey`'s position content or machine-relative? | wire | open | machine-relative; M17's key table is what makes a published unit sound | ordinals inside every `provideService`, `service` and `provideLayer` subtree; every layer `Cid` | foreign lift | `src/Effect4/Surface/Provision.lean` |
+| DI-06 | `Cid` or `Ref` for a program or tape inside a job? | wire/CAS | open | `Cid` | every published job and receipt; the `byCid` index | step 8 | the CAS design note §12 |
+| DI-07 | Does machine and algebra agreement extend past the single-fiber straight-line fragment? | laws | open | none; the refusal `CORE-FB-SIMULATION` reserves the scope but names no successor | the code relation, the eight simulation modules, `meaning`, possibly the code shape; every straight-line receipt restated | before any equational or logic layer | `src/Effect4/Laws/Program/Agreement/Machine.lean` (`run_eq_meaning`'s `Straight` premise); `Test/contracts/machine-scheduler-core.contract.md` |
+| DI-08 | Is Schema in the release, and does `Store.Shape` depend on the checker or only on the document carrier? | architecture | open | none — the acknowledged blocker of the Tier B archive line and the area roots | the Tier B archive line, the area roots, the `Api` closure, 7,095 lines of checker | now | `src/Effect4/Store/Shape.lean` (imports `Effect4.Schema.Authoring`) |
+| DI-09 | Does the error channel get an elimination form? Today it is write-only: `catchCause` binds `Ty.causeOf`, which no value inhabits; no atom projects a cause. | type/faces | **ruled** (2026-09-09, spoken): **both** — `Eff.catch` as an appended constructor **and** a cause-projecting atom, with derived combinators (`catchTag`, the `orElse` family). Design in flight. | the design note names each commit's cost | one appended `Eff` constructor and its arms on both faces and both engines; the `eff`, `derived` and `ts` families; the ingest census (opens the 8,869 foreign `E-HANDLER` sites) | before Phase 1, while the append is still byte-free | `src/Effect4/Program/Typing.lean` (`catchCause`); `src/Effect4/Laws/Program/Typed.lean` (`TYPED-FB-CAUSE`); the elimination design note |
+| DI-10 | Is there a bind law, and what is a neutral stack (papers review G8)? | laws | open | the general law is refused by name; a neutrality side condition is the shape on offer | the frame stack, if a general law is wanted; the logic layer inherits whichever shape is chosen | now, before DI-09 lands | `src/Effect4/Program/Compile.lean` (`contE`, `contAll`); DB-nn refuses only the fixed-fuel law |
+| DI-11 | Do streams and channels stay fibers plus queues, or does a continuation become a value? | machine/type | open | fibers plus queues; no continuation handles in the value language | `Val` tags (DB-11 froze them), `Eff` constructors, the frame alphabet, the snapshot format, the engine | before the Queue and PubSub slice | DB-11 |
+| DI-12 | Are scoped and higher-order operations `Eff` constructors, or `RowKind.program` rows carrying a body? | type | open | constructors for the runtime primitives; everything derivable is an `Eff` to `Eff` expansion | the central sums and every wire ordinal; both readers; both OCaml faces | before the next family adds a constructor | `src/Effect4/Program/Eff.lean` (`RowKind.program`) |
+| DI-13 | One pinned description of the cross-language types, or three independent reflections? | generated | deferred | one, at Phase 3 | all three reflections; every OCaml and TypeScript projection; the Derived Lean files; every stamp | before Phase 3 | `tools/Effect4Gen/manifest.json`; `src/OCaml5/Eff/World.lean` |
+| DI-14 | Is a target's in-memory representation free where it has no byte writer? | wire/OCaml | ruled in an untracked note | yes — table R of plan v2 | reversing it re-frames `ServiceName` on the wire and moves every golden | before a second byte-writing target | the one-generator plan v2 note (table R) — needs a tracked home |
+| DI-15 | Does `Ty` gain a tagged sum, with a subtype relation? `Ty.union` is an untagged union de-duplicated by structural key, so `sqlError` and `kvError` are one type. | type | **ruled to investigate** (2026-09-09, spoken): the sum, incorporating the subtype; recommended after DI-09, with the third package | `Ty.tagged (tags)` plus `Ty.sub`; amend DB-15 to say "no record", not "no sum" | the `eff`, `derived` and `ts` families; a golden reaching the constructor or `EffGen` aborts; two OCaml hand edits; `joinAnswer`/`Ty.join` if they become least upper bounds; DB-15 | third package | `src/Effect4/Program/Eff.lean` (`Ty`, `union`); DB-15; the elimination design note |
+| DI-16 | Does the standards and surface lane live in this repository or its own package? | architecture | open | one decision, once, before Tier B writes Lean | namespaces, `lakefile.toml`, the axiom gate's hardcoded roots, every citation, CI | before Tier B | `Test/Audit/AxiomGate.lean` (the root gate) |
+| DI-17 | Is the adequacy route C16/C17a/C17b/C18? | laws | recommended | half A (`never_stuck`) is small and can start now; half B is the size of the handles module | a typing invariant beside `Minted`; `TypeBounded` in place of `KeyBounded`; type and requirement environments on the node | before the logic layer | `src/Effect4/Laws/Machine/Handles.lean`; the adequacy route note |
+| DI-18 | May `import Lean` enter the audited closure, and does `deriving Canonical` happen? | generated/process | ruled in an untracked note; the mechanism does not exist | yes, under a written exemption checked by the library-roots gate — neither the exemption text nor the check has been written | roughly 5,100 generated lines and 223 generated theorems, in either direction | before Phase 2 | `scripts/check-library-roots.sh` |
+| DI-19 | What is the acceptance test of the first engine regeneration? | OCaml | ruled in an untracked note, contradicted by a receipt | the differential is the acceptance test of the carrier and extern change, not of correspondence with Lean; regeneration has *not* been shown to clear every engine failure | both declared-red gates; the engine sources; the differential's corpus width | before Phase 1 | `docs/GENERATED.md` (the LCNF rows); `Test/fixtures/trust-gate/known-red.txt` |
+| DI-20 | Is the requirement channel polymorphic, and is that type-level or term-level? | type | open | none — called the single largest DX decision in the ecosystem audit | `Row.diff`, `Provision`, `LayerTy` and every layer signature law; `Typing.lean` | before the second effect family | the ecosystem audit note §11 |
+| DI-21 | Are class-shaped units and `Effect.fn` ever admissible on the foreign face? | faces | deferred | its own grill; not in the ingest packet | the unit definition, a parameterised `Eff` declaration, both engines, the census denominator, the printer | before foreign lift is a goal | `ts/eff/ingest/ck.ts` (`E-PARAM-SHAPE`) |
+| DI-22 | Is a package row's index a position in the concatenated table or in its own package's? Both conventions are live. | wire/tables | open | the concatenated table, as the module header already says; reconcile the Lean fixtures to it | six tapes; `packages.gen.ts`; both engines; the table-length pins | third package | `src/Effect4/Program/Packages.lean` vs `harness/truth/Truth.lean` (`hostInputs`) |
+| DI-23 | Are tapes and the denotation single-fiber, and if not, what orders a multi-fiber tape? | machine | open | state the restriction now; reconcile with the FileSystem slice | the tape format; every committed tape; the truth gate's comparison | before the FileSystem slice | `harness/truth/Truth.lean` (the tape docstring) |
+| DI-24 | Does the printed face spell class declarations and requirement rows? | faces | open | none; the class former is deferred to a file that does not exist | the printer, the three reader theorems, 408 printed oracles, `ts/eff/read.ts`, both engines, the truth module template | before release | `src/Effect4/Codegen/Print.lean` (the `Layer.lean` forward reference; `printDecl`) |
+| DI-25 | Do `Kind`'s constructors grow to the CAS's kinds, and where does the sentinel live? | wire | ruled in an untracked note | kinds 16–23 by the CAS lane before the ledger; the sentinel moves to 127, reserved forever | `Kind.byte_le` and its axiom print; nine sentinel sites in six files; the CAS goldens | before the ledger | `src/Effect4/Store/Kind.lean` |
+| DI-26 | Does the failure branch of an external answer carry a theorem? The three admission laws are success-only and `errAdmits` is cited by no theorem. | laws | open | state `external_error_typed` beside the three success-only laws | `errAdmits`'s shape — it is not inverse to `errOf` today; the adequacy route's typing half; every tape whose row fails | with DI-09 | `src/Effect4/Laws/Program/Admit.lean`; `src/Effect4/Program/Compile.lean` (`errAdmits`) |
+| DI-27 | Does the Surface emitter route get a driver and a gate, or is the `Api` codegen export cut and Tier B archived? | architecture/generated | ruled in an untracked note, unexecuted | keep nine rules and commission them; cut the `Api` export | 16,260 lines; 26 frozen batteries; three stale contracts; the public `Api` surface | before the MCP and HTTP-API lane | `src/Effect4/Api.lean` (the codegen export); `Test/fixtures/trust-gate/known-red.txt` |
+| DI-28 | Is effect polymorphism off the table? | type | refused in an untracked note only | yes — put it in DESIGN-BASIS's exclusion list; the cost of recording it is one line | `typeOf`, the row discipline, every `Ty` and `Requirement` law | now | DB exclusion list |
+| DI-29 | Does the package row type oracle bind the raw package member or the prelude shim? | tables | recommended | a generated `packages.types.gen.ts` of *mutual*-assignability assertions (one-way would not have caught the open row) under the typecheck the ingest gate already runs | eight declared row types are unchecked against rc.112 today; `LawfulTable` says nothing about them | third package | `src/Effect4/Codegen/Read.lean` (`LawfulTable`); `tools/Tools/TsGen.lean` |
+| DI-30 | What may enter the `Classical.choice` boundary, and on what grounds? | laws/process | silently assumed | the gate enforces a seven-module, thirty-six-declaration list by name; no rule says what may join it, and the file it cites as the record is absent | the axiom ceiling every receipt quotes | before release | `Test/Audit/AxiomGate.lean` |
+| DI-31 | Does `Ann` stay `Unit`, and does `Defect` stay closed with no string payload? | value/errors | silently assumed | `Defect.tagged` is the small byte-stable fix (E4-HOST-CE-003); `Defect.host (text)` is larger and changes what the truth harness proves — rule them separately | the alphabet's images, `defectJson`, `reasonCode`, `orDieCause`; for `host`, tape replay and exit comparison | with DI-09 | `src/Effect4/Machine/Stores.lean`; `Test/Counterexamples/REGISTER.md` (E4-HOST-CE-003) |
+| DI-32 | Is a stamp match evidence of freshness, and may a second stamp protocol exist? | generated/process | silently assumed | say what evidence class "stamp-only" carries; unify the two protocols or name why not | what the gate means for the CAS goldens, LCNF and the ingest family | before release | `docs/GENERATED.md` |
+| DI-33 | Do the hand-carried generated families ever join `generate.sh`? | generated | silently assumed | today "one command" is five commands, and the ingest README has no producer at all (a `Packages`, `Forms` or `Taxonomy` change silently reds three gates until it is re-rendered by hand) | any table change; the sweep's three gates | before the map is cited as one command | `docs/GENERATED.md`; `scripts/lib/generate.py`; `ts/eff/ingest/render-readme.ts` |
+| DI-34 | Are the corpus pins and the wild census inside the repository and inside a gate? | faces/process | silently assumed | vendor the manifest; gate a wild slice | every published census and fidelity number is unreproducible if the external corpus moves | before release | `ts/eff/ingest/census/pins.ts`; `scripts/check-ingest.sh` |
+| DI-35 | Does `eq` become comprehensive and derivable, and where does equality belong? rc.112's `Equal.equals` is structural at this pin; `catchTag` uses `===` on one string. | type/faces | recommended (2026-09-09) | widen `eq` to `.string` only, landing with DI-09; keep the printed `eq` as `===`; write the refusal set into DB-15 (widen one `Ty` at a time, only where `===` compares faithfully; past that the printed `eq` becomes `Equal.equals`, its own slice); file `Val.eqAt : Ty → Val → Val → Bool` as the destination beside `Val.hasTy`; no `Equal` class in the `Effects` package (its claim boundary retires decidable equality) | the atom families (`polyArms`, not `monoAtoms` — a duplicate `"eq"` breaks the OCaml atom count), the prelude and its self-test, a truth fixture per admitted type | with DI-09 | `src/Effect4/Program/Native.lean` (`eq`); `src/Effect4/Program/Typed.lean`; `src/OCaml5/Eff/Emit.lean`; the equality note |
+| DI-36 | Where do the canonical package tables live? Under `Effect4.Api` (ruling A2) a data edit invalidates 48 modules across four build roots, including 14 proof modules and the audit, with zero content consumers under `src/`. | architecture/tables | recommended (2026-09-09) | an `Effect4Packages` library root imported by tools, tests and the truth driver only; `Api` already takes a table parameter | `lakefile.toml` and the axiom gate's root list (coordinator-owned); every importer of `Effect4.Program.Packages` | third package | `src/Effect4/Api.lean` (the import); `src/Effect4/Program/Packages.lean` |
+| DI-37 | The printed-image versus strict-foreign contracts of the ingest (ordinals per unit from 4 not 10; `true` into a number key refused). | faces | ruled 2026-09-08 in an untracked note only | the two-contract ruling; its only durable trace is one sentence in a generated README and two code comments | both engines' contracts; the corpus gate's oracles; the census | now — one paragraph in a tracked place | `ts/eff/ingest/README.md` (generated); `ts/eff/ingest/ck.ts` |
+
+## Tracked records the sweep found already wrong (to correct)
+
+- `AGENTS.md` said the basis runs DB-01…DB-10 (corrected 2026-09-09 with this register's row).
+- `src/Effect4/Machine/Fibers.lean` says "the dispatcher table retires it" against DB-13's
+  "there is no dispatcher table".
+- `Test/contracts/machine-completion.contract.md` asks for a ruling that
+  `Test/contracts/machine-handles.contract.md` already made.
+- `Test/Counterexamples/REGISTER.md` (the row before E4-HOST) says a repair is open that is
+  installed.
+- DESIGN-BASIS's "Required proof graph" lists ten of eleven edges `Pending` while the coverage
+  document quotes 133 of 135.
+- Six tracked citations point at research notes that no longer exist on this machine,
+  including the sole citation for DB-01's ruling and the axiom gate's boundary record.
+
+## Companion notes
+
+Untracked working notes under `docs/research/` (gitignored; they may not survive a clone,
+which is why rulings move out of them): the design-risk sweep, the error-paths scout notes
+(friction, types, map, elimination, equality), the host-rows decisions memo (rulings A–G), the
+CAS amendments (M1–M17), the one-generator plan v2, the ecosystem audit, the effects papers
+review, the adequacy route, the architecture and codegen reviews, all dated 2026-09-02 to
+2026-09-09.

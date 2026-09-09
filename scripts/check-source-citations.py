@@ -107,7 +107,7 @@ def inspect(root: Path):
                 path = match.group().removeprefix("./")
                 if path.startswith("docs/research/"):
                     if rel in {"AGENTS.md", "README.md", "docs/ARCHITECTURE.md",
-                               "docs/DESIGN-BASIS.md", "docs/RUNTIME-COVERAGE.md"}:
+                               "docs/DESIGN-BASIS.md", "docs/DESIGN-ISSUES.md", "docs/RUNTIME-COVERAGE.md"}:
                         if "(untracked working note)" not in line:
                             notes.append(f"{rel}:{n}: {path} needs (untracked working note)")
                     continue

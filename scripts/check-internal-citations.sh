@@ -58,7 +58,7 @@ set -euo pipefail
 
 # The retired router name remains detector input, not a live document citation.
 retired_router_name="AGENT-ROUTING.md"
-protected_docs="docs/research/SCHEMA-CUTOVER.md SCHEMA-CUTOVER.md PLAN.md AGENTS.md docs/ARCHITECTURE.md ARCHITECTURE.md docs/${retired_router_name} ${retired_router_name}"
+protected_docs="docs/research/SCHEMA-CUTOVER.md SCHEMA-CUTOVER.md PLAN.md AGENTS.md docs/ARCHITECTURE.md ARCHITECTURE.md docs/DESIGN-ISSUES.md DESIGN-ISSUES.md docs/${retired_router_name} ${retired_router_name}"
 scanned_trees="src Test tools ocaml ts docs scripts harness generated"
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -187,10 +187,10 @@ if [[ "$violation_count" -gt 0 ]]; then
   exit 1
 fi
 
-summary="$(printf '%s citation tokens examined in %s files, none into the 5 protected documents' \
+summary="$(printf '%s citation tokens examined in %s files, none into the 6 protected documents' \
   "$candidates" "${#files[@]}")"
 if [[ "$stamped" -eq 1 ]]; then stamp_write internal-citations "$key" "$summary"; fi
-printf 'PASS no line-numbered citation into the 5 protected authored documents\n'
+printf 'PASS no line-numbered citation into the 6 protected authored documents\n'
 printf 'PASS %s citation tokens examined in %s files across %s scanned tree(s)\n' \
   "$candidates" "${#files[@]}" "${#scan_dirs[@]}"
 if [[ "$root" == "$repo_root" ]]; then
