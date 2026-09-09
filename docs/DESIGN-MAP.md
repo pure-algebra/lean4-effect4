@@ -1,0 +1,224 @@
+# Effect4 design map
+
+This document is the framework the other design documents hang from. It names the layers of
+the reification, the representations each layer holds, the conversions between them and the
+grade of evidence each conversion carries today, the places where one fact is held twice
+without a gate, the literature each layer sits in, and the register rows that belong to it.
+`docs/DESIGN-BASIS.md` holds what is settled, `docs/DESIGN-ISSUES.md` what is open,
+`docs/ARCHITECTURE.md` the tree, `docs/GENERATED.md` the generated families. This map is
+cited by section, never by line. It was opened 2026-09-09 from the second design-scout round;
+its sections change when a register row moves to basis or a guarantee changes.
+
+## The grades of evidence
+
+Every claim that two representations agree is held by exactly one of four things, and the
+vocabulary is the build-systems one (Mokhov, Mitchell and Peyton Jones, *Build Systems à la
+Carte*, 2018):
+
+1. **A theorem** — `decode_encode`, `read_print`, `answer_typed`, an `Image` law.
+2. **A constructive check** — a gate that regenerates and compares bytes, or a corpus
+   differential against an oracle: the hex and `.bin`/`.json`/`.ty` goldens, the printed-corpus
+   comparison, the truth column's exit and schedule agreement.
+3. **A verifying trace** — a `cut-from:` stamp, which proves the inputs are the ones the
+   producer saw and nothing about the committed bytes.
+4. **Nothing** — a hand-written copy held equal by attention.
+
+The map names the grade at every seam. Drift lives where the grade is four, and the cure is
+always the same shape: one source of truth, projections generated from it, conformance vectors
+cut from it, gates that are incremental. A theorem is worth stating where it buys a claim
+(round trip, compatibility, soundness) and nowhere else.
+
+## The layers
+
+| layer | what it holds | state |
+| --- | --- | --- |
+| L1 reference semantics | the machine (fibers, scopes, the wake list, stores, the layer memo) and the algebra it denotes into; the run API and its refusals | solid; its open rows are about the *reach* of the agreement, not its content |
+| L2 the type layer | the `Eff` object language, `Ty`, the row and table discipline, the error and requirement channels, the typing algorithm and the value typing | routed faithfully, coarse in content; no declarative system, no subtyping, one uninhabited binder type |
+| L3 representations and bytes | the value carrier, canonical bytes and the content-addressed store, the wire and its ordinals, the JSON forms, the World description and its OCaml and TypeScript projections, the goldens, the stamps | the rank-one rework risks live here: identity, ordinals, four independent reflections of one description |
+| L4 the faces | the printer and readers between `Eff` and TypeScript source, the foreign ingest with its two contracts, the truth harness and its tapes, the OCaml face as a conformance suite, the runtime coverage census | the largest subsystem with no contract packet; classification by rule order; the printed image never type-checked |
+| L5 process | the generators and their families, the stamps and gates, the one-compiler lane, the basis and the register | the drift-removal machinery; two stamp protocols; five families carried by hand |
+
+## L1 — the reference semantics
+
+The machine is the reference: fibers with continuations, scopes and finalizers, the wake list,
+the stores, the layer memo keyed on paths, and the run API (`Api.run`, `runSync`, `replay`,
+`replayChecked`) with a first-order refusal alphabet and frontiers that are never failures. It
+denotes into the `Effects` package's algebra (signatures, programs, handlers, initiality); the
+error channel lives in the *carrier* (`ExitV`), not in the signature, so the algebra needs
+nothing for any richer error type, and its own claim boundary says it provides no error
+algebra and no requirement polymorphism.
+
+Guarantees: `run_eq_ref` over the compile route; `run_eq_meaning` over the single-fiber
+straight-line fragment (`Straight`), which excludes fork, `gen`, loops, layers and async
+(DI-07); the sync-route row preservation `answer_typed`; the axiom ceiling `[propext,
+Quot.sound]` with a named `Classical.choice` boundary (DI-30). Rows: DI-07, DI-10, DI-11,
+DI-17, DI-23, DI-30, DI-31.
+
+Literature: Plotkin and Pretnar, handlers of algebraic effects (2009/2013); Bauer and Pretnar,
+an effect system for handlers (2013); Hillerström and Lindley, liberating effects with rows and
+handlers (2016) for the machine shape; de Vilhena and Pottier for the bind-law side condition
+the papers review named G8 (DI-10).
+
+## L2 — the type layer
+
+The object language is `Eff Op` — 27 constructors, first-order, no binder, no abstraction
+form — typed by a monomorphic type-and-effect system in the Lucassen–Gifford line: one
+judgment `Σ; Γ ⊢ e : ⟨A, E, R⟩` where `A` and `E` are ground `Ty` (fifteen constructors
+including an untagged TypeScript union) and `R` is a finite label set of service keys whose
+labels carry a closed type code. Its representations are five and independent: the
+algorithmic checker (`Typing.lean`), the extrinsic value typing (`Val.hasTy`), the hand-written
+OCaml checker, the intrinsic OCaml GADT surface, and the generated TypeScript reflections. The
+first two are proved to agree only for terms; the middle two are held to the first by 42 `.ty`
+goldens (grade two); the last is generated (grade three).
+
+Guarantees: weakening in all six forms; syntactic soundness for the term language; row
+preservation for the sync route and for the external route's success branch. Non-guarantees,
+each named: no declarative rule system, so no rule can be cited or inverted, and the two
+typing faces can only be compared by goldens — and already disagree on a program Lean accepts
+(DI-54); no subtype relation, so the answer column is discrete where the error and requirement
+columns are semilattices (DI-38); the union's canonicalisation is one level deep, so `Ty`
+equality is finer than the target's below the top level (DI-53); four of fifteen `Ty`
+constructors are uninhabited, and one of them, `causeOf`, is what a catch handler's binder is
+typed at, so the value-typing invariant fails at every handler point and preservation for
+programs cannot yet be stated (DI-09, DI-17); the failure branch of an external answer has no
+theorem and `errAdmits` is not inverse to `errOf` (DI-26). The error channel is write-only for
+a program until the elimination form and the cause atoms land (DI-09); the error's content is
+the DB-15 pair, ruled as the reason tag and the driver message (DI-00), and a literal type
+(`Ty.lit`) with a subtype relation is the designed next step (DI-15, DI-55).
+
+Drift points: the atom table (fourteen copies, three stale — DI-40); `Ty` (twenty copies,
+thirteen hand-written, no count guard); the typing algorithm written three times; the package
+rows' declared types unchecked against the package (DI-29); the `Forms` arity table
+re-implemented in both engines (DI-39).
+
+Rows: DI-09, DI-10, DI-12, DI-15, DI-17, DI-20, DI-26, DI-28, DI-35, DI-38, DI-53, DI-54,
+DI-55; from the neighbouring layers DI-29, DI-40, DI-41, DI-49.
+
+Literature: Lucassen and Gifford (1988) and Talpin and Jouvelot (1992) for effect sets and
+subeffecting; Bauer and Pretnar (2013) and Leijen (2014, 2017) for handler typing and
+type-directed compilation of effects; Pierce, *Types and Programming Languages*, §15.5 and
+§16.3, for the join rule the two-branch forms need; Dolan, *Algebraic Subtyping* (2017), for the
+lattice discipline and not its inference; Frisch, Castagna and Benzaken, *Semantic Subtyping*
+(2008), for the equivalence the shallow canonicalisation lacks; Wright and Felleisen (1994) for
+the soundness shape; Reynolds (2000) for the intrinsic/extrinsic split the two OCaml files
+embody. Row polymorphism and effect polymorphism are refused on the ground that `Eff` has no
+binder to quantify over, not on cost (DI-20, DI-28).
+
+## L3 — representations and bytes
+
+One byte language and one value tree, and everything else is a projection of them. The kernel
+is the frame `tag :: be64 len ++ payload`, the twelve-tag value tree, and the `Canonical` class
+whose laws make a carrier an exact image of that tree — a partial isomorphism, not a lens. From
+those, once and for every carrier: the bytes, the exact decoder, `decode_encode`,
+`decode_exact`, `encode_injective` and the payload digest (grade one). Above the kernel the
+layer holds six representations of a program (Lean term, value tree, canonical bytes, JSON,
+printed TypeScript, CAS node), four of a type (`Ty`, its OCaml and TypeScript twins, a rendered
+TypeScript string), three byte alphabets (`Store.Tag`, `Store.Kind`, `HandleKind`) and two
+identity schemes — content (a digest of node bytes) and position (service keys, layer paths,
+package row indices) — which is the distinction a reader gets wrong first.
+
+Guarantees by grade: the wire theorems (one); the 400-program `.eff` and JSON differentials,
+the eight hex goldens and the 42 `.bin`/`.json` goldens (two); every `cut-from` stamp (three);
+and the hand copies (four): seventeen ordinal copies, six by hand; four independent reflections
+of the family list (the World blocks, the generator manifest, the wire tool's hand list, the
+LCNF types — DI-13); a hand value tree that cuts the goldens and is both faces' JSON oracle,
+compared with nothing (DI-42); six families with host byte writers and no Lean encoder
+(DI-41); a tag alphabet with no census (DI-43); Lean's kind table behind OCaml's (DI-25); the
+CAS goldens at grade three only (DI-45).
+
+Rows: DI-01, DI-02, DI-03, DI-04, DI-05, DI-06, DI-11, DI-13, DI-14, DI-18, DI-22, DI-25,
+DI-32, DI-33, DI-40, DI-41, DI-42, DI-43, DI-44, DI-45, DI-46, DI-47. The single change that
+closes the most of them is one World datum with a build-time pin and an order relation under
+which append-only is a theorem rather than a review rule (DI-47).
+
+Literature: deterministic serialization (RFC 8949 §4.2; ITU-T X.690 DER); interface
+description and one-specification-many-bindings (Cap'n Proto; the WebAssembly specification
+with its reference interpreter and conformance suite); schema evolution (Protocol Buffers field
+numbers; Avro schema resolution); content addressing with a separate name layer (IPLD and
+CIDs, Unison, Nix); build provenance (Mokhov, Mitchell and Peyton Jones, 2018).
+
+## L4 — the faces
+
+One `Eff` program has several representations that must agree, and each pair is held by a
+different kind of evidence. The Lean printer and the Lean reader are a partial isomorphism:
+both round-trip laws are theorems (`read_print_native`, `read_exact_native`, premised on
+`LawfulTable`), and the reader's refusal alphabet names the places rc.112's surface genuinely
+loses information, which is why a reader that guessed would be wrong rather than unproved. The
+TypeScript printer-image reader is a third implementation of the same relation, held by byte
+comparison against Lean-produced oracles over a generated corpus, with its head coverage held
+by the type checker because its head union is generated. The two foreign engines are island
+recognizers of a sub-language of rc.112, sharing no recognition code and held only by agreement
+with each other plus, where an oracle exists, equality with Lean; their refusals are a closed,
+exhaustive, injectively coded taxonomy owned in Lean whose classification is still a function
+of rule order rather than of the input (DI-48). The printed image is a sub-language of the
+foreign one and the two contracts differ on three axes — the admitted language, the refusal
+discipline, the service-key numbering — which is a ruling, not an implementation detail
+(DI-37). The truth harness is a bounded differential against rc.112 over a frozen corpus at a
+pinned host, single-fiber, with recorded tapes as a two-way byte obligation (DI-23); it is not
+a bisimulation. The OCaml face is a conformance suite: a second implementation of the wire, the
+JSON and the typing, checked against goldens the Lean side cuts, with a generator that refuses
+to write when the corpus fails to reach a constructor — the model the OCaml engine's
+acceptance test should follow (DI-19). The runtime coverage census is the traceability matrix
+for rc.112's runtime, not for this layer.
+
+Non-guarantees: no contract packet covers the printer, either reader, the ingest, the truth
+harness or the OCaml face (DI-50); the printed image is executed and parsed but never
+type-checked (DI-49); a program with a non-empty requirement row prints untyped (DI-24).
+
+Drift points: the engines' atom sets and handler lists (DI-40); the truth prelude's hand
+transcription and the import header copied into every generated module; the external corpus
+and its pins (DI-34); the wire differential's hand equality list (DI-52); prefix-less citations
+the source gate cannot see (DI-51).
+
+Rows: DI-19, DI-21, DI-23, DI-24, DI-27, DI-29, DI-34, DI-37, DI-39, DI-40, DI-48, DI-49,
+DI-50, DI-51, DI-52; the faces halves of DI-09 and DI-15.
+
+Literature that fits: Rendel and Ostermann, invertible syntax descriptions (2010) — the tree
+instantiates both laws; Moonen, island grammars (2001), the honest name for the engines; Kim
+et al. (ASE 2017), two lifters differentially tested; Le, Afshari and Su (PLDI 2014), the
+metamorphic corpus is EMI-shaped; McKeeman, differential testing (1998); O'Callahan et al., rr
+(2017), for what a tape proves; Haas et al. (PLDI 2017) and the WebAssembly reference
+interpreter; Gotel and Finkelstein (1994) for traceability. False friends, with the reason:
+lenses (a `put` here would guess); translation validation (no formal semantics on the rc.112
+side); decompilation into logic (the same reason — ingest can only be recognition plus
+measured fidelity).
+
+## L5 — process
+
+The generators and their ten families, five of which run under one command and five of which
+are carried by hand (DI-33); the stamps (grade three) and the byte-comparing gates (grade two);
+the one-compiler lane under which every acceptance is a serial walk; the basis for what is
+settled and the register for what is open, with the rule that a ruling is not made until it is
+written into a tracked file. Drift points: two stamp protocols (DI-32); the generated-file map
+checked in one direction only (DI-44); a self-test pin outside every gate that stayed stale
+for a slice; the ingest README with no producer; citations into gitignored notes accepted
+without resolution (DI-51); tracked records already wrong (listed in the register).
+
+Rows: DI-16, DI-18, DI-27, DI-30, DI-32, DI-33, DI-44, DI-45, DI-51.
+
+Literature: Mokhov, Mitchell and Peyton Jones (2018) for what a trace means; reproducible
+builds; Nygard's architecture decision records for the register's shape; W3C PROV for
+provenance.
+
+## Where the drift is removed first
+
+The shortest path that removes the most grade-four evidence, in the order the scouts costed
+it, each item a register row:
+
+1. DI-54 — read `Signature.dom` in the typing: one line, a live disagreement closed.
+2. DI-40 — one generated atom set read by both engines and the prelude; three copies are
+   already stale.
+3. DI-49 — type-check the printed image; DI-29 — the package-row type oracle under the same
+   checker. Together they are the type checker the codegen review asked for.
+4. DI-09's atoms commit, which also discharges the uninhabited handler binder and makes
+   preservation statable (DI-17); then the constructor; then the sugar (DI-39).
+5. DI-53 then `Ty.lit` with `Ty.sub` (DI-15), then DI-38.
+6. DI-41 and DI-42 — Lean encoders for the six families and the hand value tree checked, before
+   Phase 1; DI-43 — the tag census.
+7. One World datum with its pin and the compatibility relation (DI-13, DI-47), which retires
+   the ledger design (DI-02, DI-03).
+8. The faces packet (DI-50) and the two-contract paragraph (DI-37).
+
+Everything above the line is generation, pins and one-line fixes; the theorems are the
+declarative typing system, subtyping with its monotonicity law, the compatibility relation,
+and the preservation invariant — each stated once, where it buys a claim.

@@ -12,6 +12,7 @@ full, then open only the authority documents named for the current task.
 | `docs/GENERATED.md` | generated artifact inventory, producer commands, inputs, consumers, stamps and gates |
 | `docs/DESIGN-BASIS.md` | the representation decisions (DB-01 … DB-15), their status and sources |
 | `docs/DESIGN-ISSUES.md` | the open design questions (DI-nn): status, what each would force to be redone, the milestone to decide by; a ruling is made only when written into a tracked file |
+| `docs/DESIGN-MAP.md` | the framework: the five layers of the reification, their representations and conversions with the grade of evidence each carries, the drift points, the literature per layer, the register rows per layer; cited by section |
 | `docs/RUNTIME-COVERAGE.md` | the rc.112 runtime mechanism census, its rows, and the one coverage report format |
 | `docs/SCHEMA-ANNOTATIONS.md` | the annotation data plane as the host defines it |
 | `Test/contracts/` | frozen contract packets and their executable falsifiers |
