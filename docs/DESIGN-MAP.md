@@ -23,10 +23,24 @@ Carte*, 2018):
    producer saw and nothing about the committed bytes.
 4. **Nothing** — a hand-written copy held equal by attention.
 
-The map names the grade at every seam. Drift lives where the grade is four, and the cure is
-always the same shape: one source of truth, projections generated from it, conformance vectors
-cut from it, gates that are incremental. A theorem is worth stating where it buys a claim
-(round trip, compatibility, soundness) and nowhere else.
+The map names the grade at every seam. Drift lives mostly where the grade is four, and the cure
+is usually the same shape: one source of truth, projections generated from it, conformance
+vectors cut from it, gates that are incremental. A theorem is worth stating where it buys a
+claim (round trip, compatibility, soundness) and nowhere else.
+
+Two cautions the Codex seat added, both right. The grades are not one ladder: a reproduction
+and a behavioural differential establish different facts, and a stamp establishes provenance
+only; a claim should say which dimension it holds — proved, reproduced, tested over a named
+observer and corpus, or stamped — and drift can survive a theorem whose scope misses the
+changed edge or a corpus whose observer drops the changed payload (the truth comparator
+compares a defect and an interrupt by kind only). And a shared source of truth should retire
+accidental mirrors, not every independent oracle: the hand-written wire fixture and the
+literal hex pins catch correlated generator errors that regenerated goldens cannot.
+
+The register also carries a second, cross-cutting classification — six kinds of obligation
+(meaning; static semantics; representation and evolution; language interfaces; reproducible
+production and evidence; modularity and ownership) — because one change usually touches
+several layers, and the kind is what makes its cost visible.
 
 ## The layers
 
@@ -48,11 +62,14 @@ error channel lives in the *carrier* (`ExitV`), not in the signature, so the alg
 nothing for any richer error type, and its own claim boundary says it provides no error
 algebra and no requirement polymorphism.
 
-Guarantees: `run_eq_ref` over the compile route; `run_eq_meaning` over the single-fiber
-straight-line fragment (`Straight`), which excludes fork, `gen`, loops, layers and async
-(DI-07); the sync-route row preservation `answer_typed`; the axiom ceiling `[propext,
-Quot.sound]` with a named `Classical.choice` boundary (DI-30). Rows: DI-07, DI-10, DI-11,
-DI-17, DI-23, DI-30, DI-31.
+Guarantees: `run_eq_ref` over the compile route — stated with no row-table or oracle-answer
+parameter, so it covers the empty profile and says nothing yet about an external package
+execution (DI-57); `run_eq_meaning` over the single-fiber straight-line fragment
+(`Straight`), which excludes fork, `gen`, loops, layers and async (DI-07); the sync-route row
+preservation `answer_typed`; the axiom ceiling `[propext, Quot.sound]` with a named
+`Classical.choice` boundary (DI-30). Replay consumes a tape's answers and does not yet check
+the recorded call envelope against the row it answers (DI-58). Rows: DI-07, DI-10, DI-11,
+DI-17, DI-23, DI-30, DI-31, DI-57, DI-58.
 
 Literature: Plotkin and Pretnar, handlers of algebraic effects (2009/2013); Bauer and Pretnar,
 an effect system for handlers (2013); Hillerström and Lindley, liberating effects with rows and
@@ -102,12 +119,19 @@ lattice discipline and not its inference; Frisch, Castagna and Benzaken, *Semant
 (2008), for the equivalence the shallow canonicalisation lacks; Wright and Felleisen (1994) for
 the soundness shape; Reynolds (2000) for the intrinsic/extrinsic split the two OCaml files
 embody. Row polymorphism and effect polymorphism are refused on the ground that `Eff` has no
-binder to quantify over, not on cost (DI-20, DI-28).
+polymorphic binder to quantify over — it binds values through environments in `bind`, catch
+handlers and generators, but has no abstraction form — not on cost; that supports today's
+profile restriction and does not make polymorphism impossible later (DI-20, DI-28). Each
+target's scalar domain is its own question: the generated schema admits values the wire
+refuses (DI-56).
 
 ## L3 — representations and bytes
 
-One byte language and one value tree, and everything else is a projection of them. The kernel
-is the frame `tag :: be64 len ++ payload`, the twelve-tag value tree, and the `Canonical` class
+One byte language and one value tree, of which every *stored* representation is a projection;
+host objects, runtime layouts and observations are not, and the identities in play differ —
+logical identity, structural and byte identity, a content address, a table-relative key, a
+live handle — and must not be conflated. The kernel is the frame `tag :: be64 len ++ payload`,
+the twelve-tag value tree, and the `Canonical` class
 whose laws make a carrier an exact image of that tree — a partial isomorphism, not a lens. From
 those, once and for every carrier: the bytes, the exact decoder, `decode_encode`,
 `decode_exact`, `encode_injective` and the payload digest (grade one). Above the kernel the
@@ -178,15 +202,18 @@ instantiates both laws; Moonen, island grammars (2001), the honest name for the 
 et al. (ASE 2017), two lifters differentially tested; Le, Afshari and Su (PLDI 2014), the
 metamorphic corpus is EMI-shaped; McKeeman, differential testing (1998); O'Callahan et al., rr
 (2017), for what a tape proves; Haas et al. (PLDI 2017) and the WebAssembly reference
-interpreter; Gotel and Finkelstein (1994) for traceability. False friends, with the reason:
-lenses (a `put` here would guess); translation validation (no formal semantics on the rc.112
-side); decompilation into logic (the same reason — ingest can only be recognition plus
-measured fidelity).
+interpreter; Gotel and Finkelstein (1994) for traceability. False friends today, with the
+reason: lenses (a `put` here would guess); decompilation into logic (no formal semantics on
+the rc.112 side — ingest can only be recognition plus measured fidelity). Translation
+validation does not describe today's dual-recognizer tests, but it is a future option for a
+bounded fragment once a source-to-target semantic relation is specified (Alive2 is the model),
+so the decision is whether that relation is worth modelling, not whether the technique applies.
 
 ## L5 — process
 
 The generators and their ten families, five of which run under one command and five of which
-are carried by hand (DI-33); the stamps (grade three) and the byte-comparing gates (grade two);
+are carried by hand — the ingest README has its own renderer and gate but sits outside that
+command (DI-33); the stamps (grade three) and the byte-comparing gates (grade two);
 the one-compiler lane under which every acceptance is a serial walk; the basis for what is
 settled and the register for what is open, with the rule that a ruling is not made until it is
 written into a tracked file. Drift points: two stamp protocols (DI-32); the generated-file map
@@ -222,3 +249,13 @@ it, each item a register row:
 Everything above the line is generation, pins and one-line fixes; the theorems are the
 declarative typing system, subtyping with its monotonicity law, the compatibility relation,
 and the preservation invariant — each stated once, where it buys a claim.
+
+The Codex seat proposed a complementary sequence with reviewable stopping points — state the
+boundary as a faces and host contract packet first; close the demonstrated local gaps
+(DI-54, DI-40, DI-22, DI-49, DI-29, DI-56); decide the error and type slice; consolidate the
+descriptions and canonical metadata; establish publication and evolution; then broaden the
+semantic and host claims (DI-57, DI-58) — and one small experiment to validate the
+abstractions before scaling them: follow a single host row end to end, from its stable name
+and index through its types, values, bytes, printed call, shim, recorded success and failure,
+allocation, replay and observer, with one positive case, one malformed request, one failure
+and one table reordering.
