@@ -1,3 +1,4 @@
+import Tools.GeneratedStamp
 import Effect4.Codegen.Schema
 
 namespace Effect4Harness.SchemaGeneration
@@ -17,6 +18,8 @@ private def fixture : String :=
     [ ("ada", .obj [("name", .str "Ada"), ("active", .bool true)])
     , ("prototypeData", .obj [("__proto__", .str "data")]) ]).getD ""
 
-#eval IO.print fixture
+#eval do
+  IO.println ("// " ++ (← Tools.GeneratedStamp.line "harness/schema-generation/EmitFixture.lean"))
+  IO.print fixture
 
 end Effect4Harness.SchemaGeneration

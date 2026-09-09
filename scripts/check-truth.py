@@ -10,6 +10,9 @@ import sys
 import tempfile
 
 root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(root / 'scripts/lib'))
+from generated_bytes import comparable
+
 truth = root / 'harness/truth'
 modules = Path(os.environ.get('EFFECT4_EFFECT_NODE_MODULES', root / 'ts/eff/node_modules')).resolve()
 package = modules / 'effect/package.json'
@@ -40,6 +43,8 @@ inputs = list(truth.glob('*.ts')) + list(truth.glob('*.lean')) + [package, Path(
 inputs += sorted((root/'src/Effect4').rglob('*.lean'))
 inputs += [truth/'corpus.json', truth/'result.json', truth/'result.md']
 inputs += sorted((truth/'generated').glob('*.ts'))
+inputs += sorted(truth.glob('*.cut-from'))
+inputs += [root/'scripts/lib/generated_bytes.py', root/'tools/Tools/GeneratedStamp.lean']
 # The package version alone cannot detect locally changed host implementations.
 inputs += sorted(path for path in package.parent.rglob('*') if path.is_file())
 digest = hashlib.sha256()
@@ -60,15 +65,15 @@ with tempfile.TemporaryDirectory(prefix='truth-check-', dir=truth) as work:
                    cwd=root, check=True, timeout=540)
     subprocess.run([bun, 'run', host_path(truth/'run-truth.ts'), '--manifest', host_path(manifest),
                     '--out', host_path(Path(work)), '--timeout', '300'], cwd=root, check=True, timeout=180)
-    for name in ['corpus.json', 'result.json', 'result.md']:
-        if (Path(work)/name).read_bytes() != (truth/name).read_bytes():
+    for name in ['corpus.json', 'result.json', 'result.md', 'corpus.json.cut-from', 'result.json.cut-from']:
+        if comparable((Path(work)/name).read_bytes()) != comparable((truth/name).read_bytes()):
             sys.exit(f'FAIL truth: harness/truth/{name} drifted; inspect the regenerated differential before refreshing')
     generated = Path(work)/'generated'
     expected = truth/'generated'
     if sorted(p.name for p in generated.glob('*.ts')) != sorted(p.name for p in expected.glob('*.ts')):
         sys.exit('FAIL truth: generated module inventory drifted')
     for file in generated.glob('*.ts'):
-        if file.read_bytes() != (expected/file.name).read_bytes():
+        if comparable(file.read_bytes()) != comparable((expected/file.name).read_bytes()):
             sys.exit(f'FAIL truth: generated module {file.name} drifted')
 stamp_dir.mkdir(parents=True, exist_ok=True)
 for old in stamp_dir.iterdir():

@@ -1,3 +1,4 @@
+import Tools.GeneratedStamp
 import Effect4.Codegen.Schema
 
 /-!
@@ -33,6 +34,8 @@ private def fixture : String :=
         Codegen.Schema.multiDocumentSource multi
     , "" ]
 
-#eval IO.print fixture
+#eval do
+  IO.println ("// " ++ (← Tools.GeneratedStamp.line "harness/schema-generation/EmitMultiFixture.lean"))
+  IO.print fixture
 
 end Effect4Harness.SchemaGenerationMulti

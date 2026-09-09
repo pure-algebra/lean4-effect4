@@ -1,3 +1,4 @@
+import Tools.GeneratedStamp
 import Lean
 import OCaml5.Eff.World
 import Effect4.Program.Native
@@ -722,17 +723,20 @@ def main (args : List String) : IO Unit := do
   let extraInHeads := missingFrom expectedIdents printed
   unless extraInPrint.isEmpty && extraInHeads.isEmpty do
     throw (IO.userError s!"TsGen: the reader's heads/nested return literal and Print.lean's `.ident` literals differ: in Print.lean only {extraInPrint}; in reserved only {extraInHeads}")
+  let stamp ← Tools.GeneratedStamp.line "tools/Tools/TsGen.lean"
+    ["Effect4.Program.Native"] ["lakefile.toml", "src/Effect4/Codegen/Print.lean"]
+  let stampHeader := "// " ++ stamp ++ "\n"
   -- write
   IO.FS.createDirAll out
   let schemas := emitSchemas fs
   let json := emitJson fs root
   let profile := emitProfile address
-  IO.FS.writeFile (out / "eff.gen.ts") schemas
-  IO.FS.writeFile (out / "json.gen.ts") json
-  IO.FS.writeFile (out / "profile.gen.ts") profile
-  IO.FS.writeFile (out / "wire.gen.ts") (emitWire fs)
-  IO.FS.writeFile (out / "taxonomy.gen.ts") emitTaxonomy
-  IO.FS.writeFile (out / "forms.gen.ts") emitForms
+  IO.FS.writeFile (out / "eff.gen.ts") (stampHeader ++ schemas)
+  IO.FS.writeFile (out / "json.gen.ts") (stampHeader ++ json)
+  IO.FS.writeFile (out / "profile.gen.ts") (stampHeader ++ profile)
+  IO.FS.writeFile (out / "wire.gen.ts") (stampHeader ++ (emitWire fs))
+  IO.FS.writeFile (out / "taxonomy.gen.ts") (stampHeader ++ emitTaxonomy)
+  IO.FS.writeFile (out / "forms.gen.ts") (stampHeader ++ emitForms)
   let kinds := fs.map fun f => match kindOf f with
     | .enum => "literals" | .struct => "struct" | .consList _ => "array" | .tagged => "tagged"
   IO.println s!"TsGen: {fs.length} families ({(kinds.filter (· == "tagged")).length} tagged, {(kinds.filter (· == "literals")).length} literals, {(kinds.filter (· == "struct")).length} struct, {(kinds.filter (· == "array")).length} array), {fs.foldl (fun n f => n + f.ctors.length) 0} constructors; profile {Effect4.Program.reserved.length} heads, {allNativeOps.length} rows, address {address}"

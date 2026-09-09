@@ -29,22 +29,25 @@ temporary_dir="$(mktemp -d)"
 trap 'rm -rf "$temporary_dir"' EXIT
 
 cd "$project_root"
-lake env lean "$harness_dir/EmitFixture.lean" > "$temporary_dir/Person.generated.ts"
-cmp "$harness_dir/Person.generated.ts" "$temporary_dir/Person.generated.ts"
-lake env lean "$harness_dir/EmitCoverageFixture.lean" > \
+lake env lean -M4096 "$harness_dir/EmitFixture.lean" > "$temporary_dir/Person.generated.ts"
+python3 "$project_root/scripts/lib/generated_bytes.py" "$harness_dir/Person.generated.ts" "$temporary_dir/Person.generated.ts"
+lake env lean -M4096 "$harness_dir/EmitCoverageFixture.lean" > \
   "$temporary_dir/AllRepresentations.generated.ts"
-cmp "$harness_dir/AllRepresentations.generated.ts" \
+python3 "$project_root/scripts/lib/generated_bytes.py" "$harness_dir/AllRepresentations.generated.ts" \
   "$temporary_dir/AllRepresentations.generated.ts"
-lake env lean "$harness_dir/EmitMultiFixture.lean" > \
+lake env lean -M4096 "$harness_dir/EmitMultiFixture.lean" > \
   "$temporary_dir/TwoRoots.generated.ts"
-cmp "$harness_dir/TwoRoots.generated.ts" "$temporary_dir/TwoRoots.generated.ts"
+python3 "$project_root/scripts/lib/generated_bytes.py" "$harness_dir/TwoRoots.generated.ts" "$temporary_dir/TwoRoots.generated.ts"
 
 cp "$harness_dir/tsconfig.json" "$temporary_dir/tsconfig.json"
 cp "$harness_dir/runtime-check.ts" "$temporary_dir/runtime-check.ts"
 cp "$harness_dir/coverage-runtime-check.ts" \
   "$temporary_dir/coverage-runtime-check.ts"
 cp "$harness_dir/multi-runtime-check.ts" "$temporary_dir/multi-runtime-check.ts"
-ln -s "$node_modules" "$temporary_dir/node_modules"
+# The language-service launcher chmods its bundled compiler on every invocation.
+# Keep the selected installation read-only, including a shared Foldlab install.
+cp -RL "$node_modules" "$temporary_dir/node_modules"
+node_modules="$temporary_dir/node_modules"
 
 compiler_output="$("$host_compiler" -p "$temporary_dir/tsconfig.json" --pretty false 2>&1)"
 if [[ -n "$compiler_output" ]]; then
@@ -54,11 +57,15 @@ if [[ -n "$compiler_output" ]]; then
 fi
 
 diagnostics="$temporary_dir/effect-language-service.json"
-(
+if ! (
   cd "$temporary_dir"
   "$node_modules/.bin/effect-tsgo" diagnostics \
     --project tsconfig.json --format json --strict --list-files > "$diagnostics"
-)
+); then
+  cat "$diagnostics" >&2
+  echo "schema TypeScript harness: language service command failed" >&2
+  exit 1
+fi
 
 if ! "$node_bin" -e '
   const fs = require("node:fs")

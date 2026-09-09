@@ -1,3 +1,4 @@
+import Tools.GeneratedStamp
 import Lean
 
 /-!
@@ -936,6 +937,8 @@ structure Args where
   group : String := "Group"
   imports : List String := []
   out : Option String := none
+  /-- Stable reproduction target when a checker redirects the output to a temporary file. -/
+  headerOut : Option String := none
   append : Option String := none
   /-- `--kind <Type>=<kind>`, in the order given. -/
   kinds : List (String × String) := []
@@ -947,6 +950,7 @@ partial def parseArgs : List String → Args → Except String Args
   | "--imports" :: i :: rest, a =>
     parseArgs rest { a with imports := (i.splitOn ",").filter (· != "") }
   | "--out" :: o :: rest, a => parseArgs rest { a with out := some o }
+  | "--header-out" :: o :: rest, a => parseArgs rest { a with headerOut := some o }
   | "--append" :: p :: rest, a => parseArgs rest { a with append := some p }
   | "--kind" :: k :: rest, a =>
     match k.splitOn "=" with
@@ -962,11 +966,11 @@ def run (args : Args) : MetaM (Array String) := do
   let env ← getEnv
   let mut out : Out := {}
   -- The regenerating command, wrapped over `--`-comment lines so that no header line runs long.
-  let outPath := args.out.getD ("<stdout>")
-  let head := "lake env lean -M 4096 --run tools\\Effect4Gen\\Main.lean --group " ++ args.group
+  let outPath := (args.headerOut.orElse (fun _ => args.out) |>.getD "<stdout>").replace "\\" "/"
+  let head := "lake env lean -M 4096 --run tools/Effect4Gen/Main.lean --group " ++ args.group
     ++ " --imports " ++ String.intercalate "," args.imports
     ++ " --out " ++ outPath
-    ++ (match args.append with | some p => " --append " ++ p | none => "")
+    ++ (match args.append with | some p => " --append " ++ p.replace "\\" "/" | none => "")
     ++ String.join (args.kinds.map fun (t, k) => " --kind " ++ t ++ "=" ++ k)
   let mut cmdLines : Array String := #["--   " ++ head ++ " \\"]
   let mut cur := "--    "
@@ -994,7 +998,7 @@ def run (args : Args) : MetaM (Array String) := do
     ++ cmdLines
     ++ #["-- Carriers read from: " ++ String.intercalate ", " mods.toList]
     ++ (match args.append with
-        | some p => #["-- Acceptance guards appended verbatim from: " ++ p]
+        | some p => #["-- Acceptance guards appended verbatim from: " ++ p.replace "\\" "/"]
         | none => #[])
     ++ (args.imports.map fun i => "import " ++ i).toArray
     ++ #["",
@@ -1075,7 +1079,9 @@ def main (argv : List String) : IO Unit := do
   let ctx : Core.Context := { fileName := "<gen>", fileMap := default }
   let act : MetaM Unit := do
     let lines ← run args
-    let text := String.intercalate "\n" lines.toList ++ "\n"
+    let stamp ← Tools.GeneratedStamp.line "tools/Effect4Gen/Main.lean" args.imports
+      (["tools/Effect4Gen/manifest.json"] ++ args.append.toList)
+    let text := "-- " ++ stamp ++ "\n" ++ String.intercalate "\n" lines.toList ++ "\n"
     match args.out with
     | some p => IO.FS.writeFile p text
     | none => IO.println text

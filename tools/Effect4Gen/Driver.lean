@@ -28,14 +28,10 @@ reaches `sorryAx` or `Classical.choice`, and runs the projection guard over all 
 `--verify` turns a change into a non-zero exit and also asks `git diff --exit-code`
 whether an emitted file differs from the committed one.
 
-`Out` and `Guards` are ARGUMENTS before they are paths: `Main.lean` writes both into the
-regeneration header of the file it emits, so they are passed through verbatim and the
-emitted bytes never depend on the machine that ran the generator. Only this driver's own
-file handling translates them, and only where `\` is not a path separator: there the
-generator would write its output under the literal backslash name and read its guard
-fragment from one, so the driver stages the guard fragment under that name and moves the
-output into place afterwards. On Windows both translations are the identity and nothing
-is staged.
+The manifest retains its legacy backslash argument spelling. The driver stages
+those paths where needed by the host filesystem. Main prints forward-slash
+paths in the reproduction header, so the recorded command is portable even
+when a checker redirects the actual output to a temporary file.
 
 ## What it does not do
 

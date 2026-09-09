@@ -1,3 +1,4 @@
+import Tools.GeneratedStamp
 import Effect4.Store.Word
 import Effect4.Store.Genesis
 import Effect4.Machine.Stores
@@ -513,6 +514,7 @@ def familyCount (cs : List Case) (f : String) : Nat := (cs.filter fun c => c.fam
 def main (args : List String) : IO Unit := do
   match args with
   | [dir] =>
+    let stamp ← Tools.GeneratedStamp.line "src/OCaml5/Tools/CasGoldens.lean"
     IO.FS.createDirAll dir
     for c in allCases do
       IO.FS.writeFile s!"{dir}/{c.name}.hex" (hex c.bytes ++ "\n")
@@ -521,6 +523,10 @@ def main (args : List String) : IO Unit := do
     IO.FS.writeFile s!"{dir}/cases.txt"
       (String.join ((header.map fun l => l ++ "\n") ++
         allCases.map fun c => s!"{c.name}\t{c.family}\t{c.expected}\n"))
+    for c in allCases do
+      Tools.GeneratedStamp.sidecar s!"{dir}/{c.name}.hex" stamp
+    Tools.GeneratedStamp.sidecar s!"{dir}/manifest.txt" stamp
+    Tools.GeneratedStamp.sidecar s!"{dir}/cases.txt" stamp
     IO.println s!"wrote {allCases.length} cases to {dir}"
     for f in ["a1", "g1", "g2", "g3", "g4", "g4entries", "g5", "g6", "g7"] do
       IO.println s!"  {f}\t{familyCount allCases f}"

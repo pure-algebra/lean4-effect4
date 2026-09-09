@@ -1,3 +1,4 @@
+import Tools.GeneratedStamp
 import Effect4.Program.Wire
 
 /-!
@@ -51,10 +52,14 @@ def manifest : String :=
 def main (args : List String) : IO Unit := do
   match args with
   | [dir] =>
+    let stamp ← Tools.GeneratedStamp.line "src/OCaml5/Tools/EffWire.lean"
     IO.FS.createDirAll dir
     for (name, p) in Corpus.all do
       IO.FS.writeFile s!"{dir}/{name}.hex" (hex (encodeProgram p) ++ "\n")
     IO.FS.writeFile s!"{dir}/manifest.txt" (manifest ++ "\n")
+    for (name, _) in Corpus.all do
+      Tools.GeneratedStamp.sidecar s!"{dir}/{name}.hex" stamp
+    Tools.GeneratedStamp.sidecar s!"{dir}/manifest.txt" stamp
     IO.println s!"wrote {Corpus.all.length} goldens and manifest.txt to {dir}"
   | _ =>
     IO.println manifest

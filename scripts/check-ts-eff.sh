@@ -45,7 +45,7 @@ fi
 rm -f "$build_log"
 
 key="$(stamp_key \
-  "${BASH_SOURCE[0]}" "$generator" \
+  "${BASH_SOURCE[0]}" "$generator" "$repo_root/scripts/lib/generated_bytes.py" \
   "$repo_root/lean-toolchain" "$repo_root/lakefile.toml" \
   "$repo_root/src/Effect4/Codegen/Print.lean" \
   "$stamp_build_lib/Tools/TsGen.trace" \
@@ -72,7 +72,7 @@ trap cleanup EXIT
 
 summary="$("$generator" "$tmp_root" | sed -n '1p')"
 for f in "${files[@]}"; do
-  if ! cmp -s -- "$tmp_root/$f" "ts/eff/$f"; then
+  if ! python3 "$repo_root/scripts/lib/generated_bytes.py" "$tmp_root/$f" "ts/eff/$f"; then
     printf 'FAIL %s: ts/eff/%s is not what Lean emits; run scripts/generate-ts-eff.sh\n' "$gate" "$f" >&2
     diff -u -- "ts/eff/$f" "$tmp_root/$f" >&2 | head -60 || true
     exit 1

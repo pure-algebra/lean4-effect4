@@ -1,3 +1,4 @@
+import Tools.GeneratedStamp
 import OCaml5.Eff.Emit
 import OCaml5.Eff.Goldens
 
@@ -103,13 +104,14 @@ def main (args : List String) : IO Unit := do
       unless idx.contains (norm n) do
         throw (IO.userError s!"EffGen: {nm} uses {n}, not a constructor of the closed world")
   let lookup (n : Name) : Nat := (idx.find? (norm n)).getD 0
+  let stamp ← Tools.GeneratedStamp.line "src/OCaml5/Tools/EffGen.lean" ["Effect4.Program.Native"]
   -- write
   IO.FS.createDirAll out
   IO.FS.createDirAll (out / "goldens")
-  IO.FS.writeFile (out / "eff_types.ml") (emitTypes bs)
-  IO.FS.writeFile (out / "eff_wire.ml") (emitWire bs)
-  IO.FS.writeFile (out / "eff_json.ml") (emitJson bs)
-  IO.FS.writeFile (out / "eff_native.ml") (emitNative nul fn st)
+  IO.FS.writeFile (out / "eff_types.ml") ("(* " ++ stamp ++ " *)\n" ++ emitTypes bs)
+  IO.FS.writeFile (out / "eff_wire.ml") ("(* " ++ stamp ++ " *)\n" ++ emitWire bs)
+  IO.FS.writeFile (out / "eff_json.ml") ("(* " ++ stamp ++ " *)\n" ++ emitJson bs)
+  IO.FS.writeFile (out / "eff_native.ml") ("(* " ++ stamp ++ " *)\n" ++ emitNative nul fn st)
   IO.FS.writeFile (out / "eff_manifest.txt") (manifest bs)
   let mut corpusLines : Array String := #[]
   let mut coverage : NameMap Nat := {}
@@ -137,6 +139,12 @@ def main (args : List String) : IO Unit := do
       cov := cov.push s!"{c.name}\t{k}"
       if k == 0 then missing := missing.push c.name.toString
   IO.FS.writeFile (out / "goldens" / "coverage.txt") ("\n".intercalate cov.toList ++ "\n")
+  Tools.GeneratedStamp.sidecar (out / "eff_manifest.txt") stamp
+  for (name, _, _) in trees do
+    for suffix in [".bin", ".json", ".ty"] do
+      Tools.GeneratedStamp.sidecar (out / "goldens" / (name ++ suffix)) stamp
+  for name in ["corpus.txt", "coverage.txt"] do
+    Tools.GeneratedStamp.sidecar (out / "goldens" / name) stamp
   unless missing.isEmpty do
     throw (IO.userError s!"EffGen: the corpus reaches no {missing}")
   IO.println s!"EffGen: {families.length} families, {trees.length} corpus programs, written to {outDir}"
