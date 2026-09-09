@@ -97,6 +97,8 @@ themselves decidable, so an assertion over them is as much a theorem as one over
 
 def reasonCode : Reason Err Defect FiberId Ann → Nat
   | Reason.fail Err.boom _ => 100
+  -- the code does not carry the pair; it is read through `causeImage` and the truth wire
+  | Reason.fail (Err.tagged _ _) _ => 101
   | Reason.fail (Err.tag c) _ => 110 + c
   | Reason.die Defect.notImplemented _ => 200
   | Reason.die Defect.asyncFiber _ => 201

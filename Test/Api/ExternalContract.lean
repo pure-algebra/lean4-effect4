@@ -13,7 +13,7 @@ def row (name : String) (answer : Ty) (error : Ty := .never) : Row :=
     request := .nat, answer, error, cite := "" }
 
 def table : RowTable := [row "query" .nat, row "cell" NativeOp.refTy,
-  row "flag" .bool, row "tagged" .nat .nat]
+  row "flag" .bool, row "tagged" .nat .nat, row "sql" .nat (.prod .string .string)]
 
 #guard LawfulTable table
 
@@ -90,6 +90,24 @@ def methodPrograms : List NativeEff :=
 #guard methodPrograms.all fun p => Api.roundTrip p methodTable = .ok p
 #guard methodPrograms.all fun p =>
   (Api.run p 1000 [] [accepted] methodTable).exit = some (.success (.nat 7))
+
+/-- The tagged package error (DB-15): admitted at a `prod string string` error column on both
+the oracle and the delayed path, refused at a numeric or empty one, and a numeric tag is
+refused at the pair column. -/
+def failed : Completion Val Err Defect FiberId Ann :=
+  .ofExit (.failure (Cause.fail (.tagged "SqlError" "no such table: t")))
+#guard refusal (program 4) [Api.evaluate] [failed] = none
+#guard (Api.run (program 4) 1000 [] [failed] table).exit =
+  some (.failure (Cause.fail (.tagged "SqlError" "no such table: t")))
+#guard refusal (program 4) [Api.evaluate, .answerAsync Api.root 0 failed] = none
+#guard refusal (program 4) [Api.evaluate,
+  .answerAsync Api.root 0 (.ofExit (.failure (Cause.fail (.tag 1))))] =
+  some (.errorType Api.root 0 (.prod .string .string))
+#guard refusal (program 3) [Api.evaluate, .answerAsync Api.root 0 failed] =
+  some (.errorType Api.root 0 .nat)
+#guard refusal (program 0) [Api.evaluate, .answerAsync Api.root 0 failed] =
+  some (.errorType Api.root 0 .never)
+#guard (refusal (program 3) [Api.evaluate] [failed]).isSome
 
 -- The finite table admits exactly its indexed rows; duplicates and built-in collisions fail.
 #guard !(nativeSignature table).dom (.external table.length)

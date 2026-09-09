@@ -118,6 +118,10 @@ section Inhabited
 #guard Val.hasTy (Val.fibers [⟨1⟩, ⟨2⟩]) (.list (.fiberOf (.handle "unknown") (.handle "unknown")))
 #guard Val.hasTy (Val.exitOk (Val.nat 1)) (.exitOf .nat .nat)
 #guard Val.hasTy (Val.exitErr (Cause.fail (Err.tag 1))) (.exitOf .nat .nat)
+-- a tagged package error's cause reads back through its image (`ctor 2 [str, str]`)
+#guard Val.hasTy (Val.exitErr (Cause.fail (Err.tagged "SqlError" "boom"))) (.exitOf .nat (.prod .string .string))
+#guard causeImage.ofVal (causeImage.toVal (Cause.fail (Err.tagged "SqlError" "boom"))) =
+  some (Cause.fail (Err.tagged "SqlError" "boom"))
 #guard Val.hasTy (Val.tuple [Val.nat 1, Val.bool true]) (.prod .nat .bool)
 #guard Val.hasTy Val.exitNil (.list .nat)
 #guard Val.hasTy (Val.list [Val.nat 1, Val.nat 2]) (.list .nat)

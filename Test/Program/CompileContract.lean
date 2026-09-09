@@ -173,6 +173,19 @@ def pFail : NativeEff := .fail (.lit (.nat 7))
 #guard exitOf (replayEff pFail [evaluateRoot]) 0
   = some (Exit.failure (Cause.fail (Err.tag 7)))
 
+/-- `Effect.fail(pair("SqlError", "boom"))`: a pair of strings is the tagged package error of
+DB-15; any other non-numeric value stays `boom`. -/
+def pFailTagged : NativeEff :=
+  .fail (.app "pair" (.cons (.lit (.str "SqlError")) (.cons (.lit (.str "boom")) .nil)))
+
+#guard (typeOf nativeSignature pFailTagged).isSome
+#guard exitOf (replayEff pFailTagged [evaluateRoot]) 0
+  = some (Exit.failure (Cause.fail (Err.tagged "SqlError" "boom")))
+#guard errOf (Val.list [Val.str "SqlError", Val.str "boom"]) = Err.tagged "SqlError" "boom"
+#guard errOf (Val.list [Val.str "SqlError"]) = Err.boom
+#guard errOf (Val.list [Val.str "SqlError", Val.nat 1]) = Err.boom
+#guard errOf (Val.bool true) = Err.boom
+
 /-- `Effect.catchCause`: the handler receives the reified cause and answers `9`. -/
 def pCatch : NativeEff := .catchCause pFail (.succeed (.lit (.nat 9)))
 

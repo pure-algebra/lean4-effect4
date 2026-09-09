@@ -553,7 +553,13 @@ parameters are `list string`; and every cell and parameter is JSON text (`7` is 
 is `"\"a\""`, `null` is `"null"`). A bind outside `Lit` (a `Date`, a `Uint8Array`, an object)
 is `E-ARG-DYNAMIC` at ingest. An error crosses as `prod string string`, the `_tag` and the
 message: `SqlError` is a tagged union of eleven reasons (`unstable/sql/SqlError.ts:31-329`)
-and `Ty` has no sum. A handle a row answers stays a `Ty.handle` target spelling (DB-11); an
+and `Ty` has no sum. The machine's error alphabet carries it as `Err.tagged tag message`
+(`src/Effect4/Machine/Stores.lean`, appended 2026-09-09 so every earlier golden keeps its
+bytes), whose value image is `ctor 2 [str tag, str message]`; `errOf` reads a two-string pair
+into it, `errAdmits` admits it exactly where the row's error type admits the pair, and the
+truth wire spells it as the two-element array the host's `pair` builds. `orDie` on a tagged
+error dies as `badName`, since the defect alphabet has no string payload
+(`ORDIE-FB-TAGGED`). A handle a row answers stays a `Ty.handle` target spelling (DB-11); an
 optional answer (`KeyValueStore.get`) is `.option string`.
 
 What this basis refuses. A `json` leaf in `Ty`: the value language is the carrier's frames

@@ -3,11 +3,4 @@
 // Regenerate: scripts/check-truth.sh
 import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope } from "effect"
 import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, incr, double, takeAndBump, zeroWhenPositive, noChange, Host } from "../prelude.ts"
-export const main: Effect.Effect<boolean, never> = Effect.gen(function* () {
-  const a0 = yield* Effect.succeed(3)
-  if (isZero(a0)) {
-    return true
-  } else {
-    return false
-  }
-})
+export const main: Effect.Effect<never, readonly [string, string]> = Effect.fail(pair("SqlError", "boom"))

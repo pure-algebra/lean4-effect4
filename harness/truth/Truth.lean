@@ -204,12 +204,19 @@ def acquireHandleAnswers : List (Completion Val Err Defect FiberId Ann) :=
 def hostInputs (name : String) : RowTable × List (Completion Val Err Defect FiberId Ann) :=
   if name == "pAcquireHandle" then (acquireHandleTable, acquireHandleAnswers) else ([], [])
 
+/-- A failure with the tagged package error of DB-15: `Effect.fail(pair("SqlError", "boom"))`
+fails with the pair, which the host wires as a two-string array and the machine reads as
+`Err.tagged` (`errOf`). The exit's fail payload is compared on both faces. -/
+def pFailTagged : Api.Program :=
+  .fail (.app "pair" (.cons (.lit (.str "SqlError")) (.cons (.lit (.str "boom")) .nil)))
+
 /-- The programs checked: the wire corpus, then `pTwo`, then the two `acquireRelease`
-fixtures, then the join's three, then the host rows slice's two. -/
+fixtures, then the join's three, then the host rows slice's three. -/
 def corpus : List (String × Api.Program) :=
   Wire.Corpus.all ++ [("pTwo", pTwo), ("pAcquire", pAcquire), ("pAcquireClosed", pAcquireClosed),
     ("pProvide", pProvide), ("pProvideMerge", pProvideMerge), ("pProvideTwice", pProvideTwice),
-    ("pDiamond", pDiamond), ("pMergeAll", pMergeAll), ("pAcquireHandle", pAcquireHandle)]
+    ("pDiamond", pDiamond), ("pMergeAll", pMergeAll), ("pAcquireHandle", pAcquireHandle),
+    ("pFailTagged", pFailTagged)]
 
 /-! ## The value wire -/
 
@@ -223,6 +230,8 @@ def defectJson : Defect → J
 def errJson : Err → J
   | .boom => Lean.Json.str "boom"
   | .tag n => toJson n
+  -- the host wires the failed pair as a two-element array, as `pair` builds it
+  | .tagged t m => Lean.Json.arr #[Lean.Json.str t, Lean.Json.str m]
 
 def reasonJson : Reason Err Defect FiberId Ann → J
   | .fail e _ => Lean.Json.mkObj [("fail", errJson e)]
@@ -241,6 +250,8 @@ partial def valJson : Val → J
   | .unit => Lean.Json.null
   | .nat n => toJson n
   | .bool b => Lean.Json.bool b
+  -- strings are machine values since DB-15; the host wires a string as itself
+  | .str s => Lean.Json.str s
   | Value.external index => Lean.Json.mkObj [("external", toJson index)]
   | Value.fiber id => Lean.Json.mkObj [("fiber", toJson id)]
   | Value.fiberSnapshot handles =>
@@ -418,11 +429,16 @@ def manifest (fuel : Nat) : J :=
 
 /-! ## Receipts -/
 
-#guard corpus.length = 17
+#guard corpus.length = 18
 #guard (corpus.map (·.1)).eraseDups.length = corpus.length
 #guard (corpus.map (·.1)) =
   ["p42", "pBind", "pFork", "pAwait", "pGen", "pLoop", "pCatch", "pScope", "pTwo", "pAcquire",
-   "pAcquireClosed", "pProvide", "pProvideMerge", "pProvideTwice", "pDiamond", "pMergeAll", "pAcquireHandle"]
+   "pAcquireClosed", "pProvide", "pProvideMerge", "pProvideTwice", "pDiamond", "pMergeAll", "pAcquireHandle",
+   "pFailTagged"]
+-- the tagged failure types at the pair, evaluates to `Err.tagged`, and reads back
+#guard Api.typeOf pFailTagged = some ⟨.never, .prod .string .string, Env.Requirement.empty⟩
+#guard (Api.run pFailTagged 1000).exit = some (.failure (Cause.fail (.tagged "SqlError" "boom")))
+#guard Api.roundTrip pFailTagged = .ok pFailTagged
 -- the join's fixtures are well-typed, so they cross as declarations
 #guard Api.wellTyped pProvide
 #guard Api.wellTyped pProvideMerge

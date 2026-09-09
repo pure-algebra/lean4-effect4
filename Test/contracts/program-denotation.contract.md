@@ -109,6 +109,16 @@ inhabits `.string` with the carrier's `str` frame and `.option t` with `none` an
 lose their `str` premise. `E4-TYPED-CE-001` is retired with its ID kept. No other public
 premise moves; the frozen statements below read with this amendment applied.
 
+Error-alphabet amendment (2026-09-09, the owner's ruling before host-rows step 5; DB-15):
+`Machine.Err` gains one appended constructor `tagged (tag message : String)`, image
+`ctor 2 [str tag, str message]`; the two older constructors keep their images and every
+golden its bytes. `errOf` reads exactly the two-string list `Val.list [.str t, .str m]` into
+it and every other non-numeric value stays `boom`; `errAdmits` admits a tagged failure where
+the row's error type admits the pair. `meaning (.fail e)` and `meaning (.yieldError e)` below
+are unchanged: they name `errOf` symbolically. `TYPED-FB-CAUSE` (the error column of a
+reified exit is not checked) and the `.causeOf` refusal are unchanged; `orDie` on a tagged
+error dies as `badName` (`ORDIE-FB-TAGGED`, `E4-HOST-CE-003`).
+
 Ratified host-rows step 4 amendment (2026-09-09, slice §2.2): `Val.hasTy` gains a
 trailing allocation table, defaulting to `[]`. A byte-7 handle must name an allocated
 entry with exactly the declared target spelling. The full three-argument signature

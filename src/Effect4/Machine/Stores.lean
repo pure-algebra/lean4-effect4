@@ -58,10 +58,14 @@ Every alphabet is first-order and derives `DecidableEq`, which the separation ga
 `Deep.Fibers` (`docs/research/FRAMES-DAG.md` separation 4) need at this instantiation.
 The generic Completion data and its Ref key are shared through `Machine.Completion`. -/
 
-/-- The typed error alphabet. -/
+/-- The typed error alphabet: `boom` a failure with no typed payload, `tag n` a numeric
+error (`Effect.fail(7)`), and `tagged tag message` a host package failure crossing as the
+ratified `prod string string` (DB-15, the host rows slice): the error's `_tag` and its
+message. Appended 2026-09-09, so every existing golden keeps its bytes. -/
 inductive Err
   | boom
   | tag (code : Nat)
+  | tagged (tag message : String)
 deriving DecidableEq, Repr
 
 /-- The defect alphabet: `defaultEvaluate`'s payload (`PrimInterp.notImplemented`), the
@@ -229,13 +233,16 @@ open Effect4.Store (Image)
 def ofErr : Store.Val → Option Err
   | .ctor 0 [] => some .boom
   | .ctor 1 [.nat c] => some (.tag c)
+  | .ctor 2 [.str t, .str m] => some (.tagged t m)
   | _ => none
 
-/-- `Err` at the generated rule: `boom` is `ctor 0 []`, `tag c` is `ctor 1 [nat c]`. -/
+/-- `Err` at the generated rule: `boom` is `ctor 0 []`, `tag c` is `ctor 1 [nat c]`,
+`tagged tag message` is `ctor 2 [str tag, str message]`. -/
 def Err.image : Image Err where
   toVal
     | .boom => .ctor 0 []
     | .tag c => .ctor 1 [.nat c]
+    | .tagged t m => .ctor 2 [.str t, .str m]
   ofVal := ofErr
   ofVal_toVal e := by cases e <;> rfl
   ofVal_exact := by

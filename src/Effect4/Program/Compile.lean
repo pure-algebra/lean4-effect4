@@ -403,10 +403,12 @@ def embedAction : WithFiberAction Name Thunk Val Err Defect FiberId Ann Ctx → 
 
 /-! ## The compile -/
 
-/-- The error alphabet's image of a value: numbers are tags; anything else is `boom`
-(`typeOf` admits only numbers). -/
+/-- The error alphabet's image of a value: a number is a tag, a pair of strings is the tagged
+package error of DB-15 (the `_tag` and the message, `Effect.fail(pair("SqlError", m))`),
+anything else is `boom`. -/
 def errOf : Val → Err
   | Val.nat n => Err.tag n
+  | Val.list [Val.str t, Val.str m] => Err.tagged t m
   | _ => Err.boom
 
 /-- A value of the wrong shape where the program's typing promised another: the same
@@ -471,11 +473,13 @@ def updateKeepsIdentity : Env.ContextUpdate → Env.Ctx → Bool
   | _, _ => false
 
 /-- `catch_(self, die)` (`internal/effect.ts:3289`, `:2558-2572`): the cause's first typed error
-becomes the defect, alone; a cause with no typed error passes through. -/
+becomes the defect, alone; a cause with no typed error passes through. The defect alphabet
+carries a numeric payload only, so a `boom` and a tagged package error both die as
+`badName` (`ORDIE-FB-TAGGED`: the host dies with the error object itself). -/
 def orDieCause (cause : CauseV) : CauseV :=
   match cause.reasons.findSome? (fun | .fail e _ => some e | _ => none) with
   | some (Err.tag code) => Cause.die (Defect.user code)
-  | some Err.boom => Cause.die Defect.badName
+  | some Err.boom | some (Err.tagged _ _) => Cause.die Defect.badName
   | none => cause
 
 /-- The contexts of a list of reified exits, when every one succeeded with a context. -/
@@ -1275,6 +1279,7 @@ def externalRow (table : RowTable) (i : Nat) : Option Row := do
 outside the error type, as in `causeTy`. -/
 def errAdmits (ty : Ty) : Reason Err Defect FiberId Ann → Bool
   | .fail (.tag n) _ => Val.hasTy (.nat n) ty
+  | .fail (.tagged t m) _ => Val.hasTy (.list [.str t, .str m]) ty
   | .fail .boom _ => false
   | .die _ _ | .interrupt _ _ => true
 
