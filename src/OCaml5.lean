@@ -36,7 +36,7 @@ import OCaml5.Ml.Reflect
 import OCaml5.Ml.Profile
 import OCaml5.Ml.Passes
 import OCaml5.Ml.Check
--- Lean carriers with laws for the OCaml libraries the avatar and the daemon use.
+-- Lean carriers with laws for the OCaml libraries the engine uses.
 import OCaml5.Lib.Order
 import OCaml5.Lib.Map
 import OCaml5.Lib.Set
@@ -47,18 +47,13 @@ import OCaml5.Lib.Eio
 import OCaml5.Lib.Picos
 import OCaml5.Lib.Deque
 import OCaml5.Lib.Test
--- The `Term` → OCaml renderer, the avatar's generated half (`OCaml5.Avatar`: one `Part` per
--- avatar module, its descriptions, its derived twins and the projection guard `Check`), and
--- the program fuzz (`Fuzz` declares the driver's `main`; `MlTest`, the language model's own
--- battery, declares another and is built through the lakefile's glob instead of imported here).
+-- The `Term` → OCaml renderer and the term fuzz generators (`MlTest`, the language model's
+-- own battery, declares a `main` and is built through the lakefile's glob instead of imported
+-- here). The avatar, its descriptions, its corpus and tapes are archived on
+-- `archive/ocaml5-avatar` at `14e6835`.
 import OCaml5.Runtime.Render
-import OCaml5.Avatar
-import OCaml5.Avatar.Check
 import OCaml5.Fuzz.Gen
 import OCaml5.Fuzz.Term
-import OCaml5.Fuzz.Corpus
-import OCaml5.Fuzz.Tape
-import OCaml5.Fuzz
 -- The `Eff` program IR as an OCaml library (`ocaml/eff`): the closed world, the emitters,
 -- the goldens. `Tools/EffGen.lean` is the driver.
 import OCaml5.Eff.World
@@ -70,9 +65,6 @@ import OCaml5.Lcnf.Dump
 import OCaml5.Lcnf.Naming
 import OCaml5.Lcnf.Types
 import OCaml5.Lcnf.Translate
--- The syntax-level transpiler of `src/Effect4/Machine/Fibers.lean` (F3's derived-avatar probe);
--- `Tools/TranspileDeep.lean` is the driver.
-import OCaml5.Avatar.Transpile
 -- Route 1: the Lean machine held by OCaml as an opaque value (`@[export]`ed session API
 -- over `Effect4.Api`; `ocaml/link` links the static library).
 import OCaml5.Bridge

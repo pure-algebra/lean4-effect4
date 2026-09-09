@@ -23,12 +23,12 @@
 #
 # ON OCAMLFORMAT, A CHOICE AND NOT A SILENCE. The canonical printer for the estate's generated
 # OCaml is `OCaml5.Ml.Render`, not `ocamlformat`, and the reason is the check that matters most:
-# `tools/fuzz.sh avatar` diffs the generated carriers byte for byte against
-# `ocaml/avatar/deep_fibers.ml`, which is hand-written in its own layout. Adopting
-# ocamlformat as canonical would mean reformatting that file first, and the diff would then be
-# testing ocamlformat rather than the generator. So the lane below is INFORMATIONAL: it reports
-# how many lines the two printers disagree on and never fails the run. If the avatar is ever
-# reformatted, flip it to a gate and delete this paragraph.
+# `scripts/check-generated.sh` compares the generated OCaml (`ocaml/gen/api_gen.ml`,
+# `ocaml/engine/api_engine.ml`) byte for byte against a fresh render. Adopting ocamlformat as
+# canonical would make that comparison test ocamlformat rather than the generator. So the lane
+# below is INFORMATIONAL: it reports how many lines the two printers disagree on and never fails
+# the run. (The retired avatar's `fuzz.sh avatar` was the earlier form of the same diff, against
+# a hand-written file; it is archived on `archive/ocaml5-avatar`.)
 #
 # `ocamlc` runs with **default warnings**, not `-w -a`: a generated module that warns is a
 # generated module a consumer has to silence, so the fixture carries its own

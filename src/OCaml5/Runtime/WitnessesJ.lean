@@ -20,7 +20,7 @@ entries, continuations as cell lists outermost first, and `caml_callback`'s
 
 Witnesses 14 and 15 are new, and are the two host divergences spike P3 found; see the report
 §6. Their sources are `ocaml/probes/witnesses/w14-root-leak.ml` and `w15-shallow-taken.ml`,
-run by `ocaml/tools/run-witness.sh` like the other thirteen.
+run by `git:14e6835:ocaml/tools/run-witness.sh` like the other thirteen.
 -/
 
 namespace OCaml5

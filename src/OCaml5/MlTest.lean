@@ -1,5 +1,5 @@
 import OCaml5.Ml.Check
-import OCaml5.Avatar
+import OCaml5.Ml.Reflect
 
 /-!
 # OCaml5.MlTest — the battery for the `OCaml5.Ml` API
@@ -19,17 +19,18 @@ Two forms are deliberately absent from the fixture and are checked elsewhere:
 
 * `Expr.reperform`. The raw `%reperform` primitive is typed over `last_fiber`, which
   `stdlib/effect.ml` does not export, so no ordinary compilation unit can name it. The
-  declaration that *can* is `OCaml5.Render.fixedPrelude`, and `ocaml/tools/fuzz.sh witnesses` compiles
-  and runs it on all three hosts. What `MlTest` checks about `reperform` is the tail-position
+  declaration that *can* is `OCaml5.Render.fixedPrelude`, and `git:14e6835:ocaml/tools/fuzz.sh witnesses` compiled
+  and ran it on all three hosts. What `MlTest` checks about `reperform` is the tail-position
   rule, which is a `Check` property and is checked below.
 * `Ty.asVar`, the `(t as 'a)` constraint. It is legal only where the equation is not cyclic, and
   every use a generator would have is inside a `constraint` clause the surface does not spell.
   It renders (`Ml/Render.lean`'s `#guard`s) and is not compiled.
 
-**(b) The five avatar carriers still render byte-identical.** That is
-`ocaml/tools/fuzz.sh avatar`, unchanged, which cuts each carrier out of
-`ocaml/avatar/deep_fibers.ml` and out of the generated module and runs `diff`. It is
-not repeated here: a copy of the file inside Lean would be the thing the check exists to avoid.
+**(b) The five avatar carriers rendered byte-identical** while the avatar existed: that was
+`git:14e6835:ocaml/tools/fuzz.sh avatar`, which cut each carrier out of
+`git:14e6835:ocaml/avatar/deep_fibers.ml` and out of the generated module and ran `diff`. The
+avatar is archived on `archive/ocaml5-avatar`; the check was never repeated here, because a
+copy of the file inside Lean would be the thing the check existed to avoid.
 
 **(c) The checker rejects ten deliberately bad modules and accepts the good ones.**
 `badModules` below, one per diagnostic code, each `#guard`ed to produce exactly its code; and
@@ -694,13 +695,6 @@ def dequeSig : ModTy :=
 
 /-! ## (d) The identifier mangling round-trips -/
 
-#guard (Avatar.Fibers.runFiber.fields.map (·.leanName)).all
-  (fun n => unmangleField (mangleField n) == n)
-#guard (Avatar.Fibers.frameFiber.fields.map (·.leanName)).all
-  (fun n => unmangleField (mangleField n) == n)
-#guard (Avatar.Fibers.inductives.flatMap (fun d => d.ctors.flatMap (fun c =>
-          c.args.map (·.leanName)))).all
-  (fun n => unmangleField (mangleField n) == n)
 #guard ["exit", "type", "currentOpCount", "a_b", "aB", "x'", "ABC", "", "let", "a__b",
         "a.b", "ν", "f0", "_x", "with", "μ'", "A_B_c", "0", "__"].all
   (fun n => unmangleField (mangleField n) == n)

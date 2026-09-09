@@ -66,7 +66,6 @@ The gates beyond the build (bash; on Windows run them through WSL):
 scripts/test-trust-gate.sh                       # the gate's own self-test
 scripts/check-library-roots.sh                  # fresh library-root and trust audit
 scripts/check-source-citations.sh                # live paths and immutable historical references
-scripts/check-armmap-citations.sh                # avatar citation resolution, without OCaml
 scripts/check-effect-runtime-census.sh           # the rc.112 mechanism census join
 npm ci --prefix harness/schema-host # pinned Schema host and compiler integrations
 scripts/test-schema-structural-assurance-gate.sh # the Schema assurance projection

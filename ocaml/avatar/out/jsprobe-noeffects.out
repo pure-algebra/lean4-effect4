@@ -1,8 +1,0 @@
-D:ocaml-closure-repr typeof=function l=- length=2 name=-
-D:partial-application callgen-full=7 callgen-partial.l=1 callgen-viaPartial=7 wrapped-full=7 wrapped.length=0
-A:ocaml-callback-entered n=7
-A:js-closure-repr typeof=function l=- length=1 name=e
-A:js-closure-returned 107
-A:result 108
-B:counter-before 0
-Fatal error: exception Failure("Effect handlers are not supported")

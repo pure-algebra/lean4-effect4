@@ -18,7 +18,10 @@ their argument names) with their types as `LTy`. The decisions — `isMutable`, 
 which is exactly the part a human is supposed to write.
 
     lake env lean --run src/OCaml5/Tools/Describe.lean Effect4.Machine.RunFiber ...
-    lake env lean --run src/OCaml5/Tools/Describe.lean --module OCaml5.Avatar.Derived.Stores refKey=Effect4.Machine.RefKey … > src/OCaml5/Avatar/Derived/Stores.lean
+    lake env lean --run src/OCaml5/Tools/Describe.lean --module OCaml5.Avatar.Derived.Stores refKey=Effect4.Machine.RefKey … > git:14e6835:src/OCaml5/Avatar/Derived/Stores.lean
+
+(The `OCaml5.Avatar.Derived.*` outputs that line produced are archived with the avatar on
+`archive/ocaml5-avatar`; the tool has no committed outputs at present.)
 
 This is a tool (`IO`, `Lean.Meta`); it is not part of any audited library.
 -/

@@ -119,13 +119,13 @@ case "$mode" in
     expect 'a declared entry with no result is `not built`' 0 "$tmp/not-built"
 
     # 5. a declared gate, red and then green. Gates share the module policy.
-    printf 'gate avatar-witnesses fail\n' >"$tmp/gate-red"
-    printf 'gate avatar-witnesses pass\n' >"$tmp/gate-green"
-    if known_red_declared gate avatar-witnesses; then
+    printf 'gate engine-tests fail\n' >"$tmp/gate-red"
+    printf 'gate engine-tests pass\n' >"$tmp/gate-green"
+    if known_red_declared gate engine-tests; then
       expect 'a declared gate that is red is accepted' 0 "$tmp/gate-red" gate
       expect 'a declared gate that has gone green refuses' 1 "$tmp/gate-green" gate
     else
-      printf 'NOTE self-test: no gate is declared red today, so the gate half is exercised as the undeclared case\n'
+      printf 'NOTE self-test: the sample gate is not declared red today, so the gate half is exercised as the undeclared case\n'
       expect 'an undeclared gate failure refuses' 1 "$tmp/gate-red" gate
     fi
 

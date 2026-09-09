@@ -8,7 +8,7 @@ Status: spike O1, 2026-09-03. Module `OCaml5.Witnesses`. Plan:
 `docs/research/2026-09-03-spike-o1-runtime-machine.md`.
 
 A witness is an OCaml source file under `ocaml/probes/witnesses/`, run on three hosts by
-`ocaml/tools/run-witness.sh`:
+`git:14e6835:ocaml/tools/run-witness.sh`:
 
 * **bytecode**: `ocamlc` then `ocamlrun` — `runtime/interp.c`;
 * **native**: `ocamlopt` — the assembly presentation (`runtime/amd64.S`, `arm64.S`);
@@ -36,7 +36,7 @@ namespace OCaml5
 universe u
 
 /-- One row printed by an instrumented witness. The spelling is fixed by
-`ocaml/tools/run-witness.sh`: tab-separated, first cell the event kind. -/
+`git:14e6835:ocaml/tools/run-witness.sh`: tab-separated, first cell the event kind. -/
 abbrev Row := String
 
 /-- A witness: the source file, the rows each of the three hosts printed, and the term the Lean
@@ -410,7 +410,7 @@ end W
 
 /-! ## The corpus
 
-Rows transcribed from `ocaml/tools/run-witness.sh ocaml/probes/witnesses/*.ml`
+Rows transcribed from `git:14e6835:ocaml/tools/run-witness.sh ocaml/probes/witnesses/*.ml`
 on 2026-09-03: OCaml 5.1.1 (`ocamlc`/`ocamlrun`, `ocamlopt`), js_of_ocaml 5.7.1 under node
 v22.23.2. -/
 

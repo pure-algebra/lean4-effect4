@@ -10,7 +10,7 @@ Status: 2026-09-04. Module `OCaml5.Ir.RunUnderHandler`. Report:
 A0 asked for the transform proved on "the block shape a scheduler `match_with` produces: a
 closure allocated at a dominator whose body contains a `%perform` in tail position under a
 `Pushtrap`". This file is that shape, taken from the compiler rather than guessed:
-`ocaml/avatar/fibers_fixture.ml` was compiled to a `.cmo` and dumped exactly as spike
+`git:14e6835:ocaml/avatar/fibers_fixture.ml` was compiled to a `.cmo` and dumped exactly as spike
 O2 dumped its three witnesses,
 
 ```

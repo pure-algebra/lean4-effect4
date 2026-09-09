@@ -1,6 +1,6 @@
 (* REFERENCE COPY for the differential in gen_check.ml. Do not edit here.
 
-   Source of truth: ocaml/avatar/deep_fibers.ml, lines 184-214 (the `task`,
+   Source of truth: git:14e6835:ocaml/avatar/deep_fibers.ml, lines 184-214 (the `task`,
    `bucket`, `dispatcher` types and the `Dispatcher` module), copied verbatim on 2026-09-04
    with ONE substitution: the avatar's `answer` type (deep_fibers.ml:174-182, the resume
    payload carrying a `value`/`cause`/`exitv list`/program) is the stand-in below, because

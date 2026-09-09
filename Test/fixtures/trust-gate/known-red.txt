@@ -26,8 +26,7 @@
 #   # gate: <name>     a sweep gate (scripts/sweep.sh's table) rather than a
 #                      Lean module, for a gate that is red for a declared
 #                      reason. The gate still runs; its owning script asks this
-#                      file whether the failure was declared. The two avatar
-#                      debts below remain owed to the OCaml cutover lane.
+#                      file whether the failure was declared.
 #
 # `scripts/lib/known-red.sh` is the reader and the judge; per entry it reports
 # `red as declared`, `UNEXPECTED PASS` or `not built`, and it refuses on an
@@ -93,13 +92,10 @@ Test.Counterexamples.Surface.Derive
 Test.Surface.HandlerFitsContract
 Test.Counterexamples.Surface.HandlerFits
 
-# Owner amendment, 2026-09-08: both gates were red at 62c04d9 before release cleanup.
-# Keep running them; an unexpected pass refuses until the entry is removed deliberately.
-# No machine fingerprint or arm-map resolution triple is refreshed by the cleanup.
-# reason: handwritten avatar predates the join, scheduler and timer; clause/witness coverage and machine fingerprints require the OCaml lane's cutover repair
-# gate: avatar-witnesses
-# reason: the same pre-existing machine edits moved the avatar's cited definitions; arm-map resolution drift remains owed to the OCaml lane
-# gate: armmap-citations
+# History: the gates `avatar-witnesses` and `armmap-citations` were declared here from
+# 62c04d9 (the hand-written avatar predated the join, the scheduler and the timer) until
+# 2026-09-08, when the avatar and the daemon were archived on `archive/ocaml5-avatar` and
+# both gates were deleted with them.
 
 # reason: engines cut before e2285a9; cleared by plan v2 Phase 1
 # gate: generated-stale

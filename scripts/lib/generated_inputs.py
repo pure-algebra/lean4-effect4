@@ -7,9 +7,7 @@ import re
 import shlex
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFERRED_ARTIFACTS = {'ocaml/avatar/deep_stores.ml', 'ocaml/avatar/deep_layer.ml',
-                      'ocaml/avatar/deep_context.ml', 'ocaml/avatar/deep_forkflow.ml',
-                      'generated/schema-structural-assurance.tsv'}
+DEFERRED_ARTIFACTS = {'generated/schema-structural-assurance.tsv'}
 
 
 def inventory():
@@ -22,19 +20,12 @@ def inventory():
 
 
 def data_recipe(family):
-    if family == 'Archived daemon inputs':
-        manifest = 'ocaml/server/generated/archived-from.tsv'
-        outputs = [manifest] + ['ocaml/server/' + row.split('\t')[0]
-                                for row in (ROOT / manifest).read_text().splitlines()[1:]]
-        source = 'ocaml/server/tools/vendor-archived-inputs.sh'
-        inputs = outputs
-    else:
-        census = family == 'Runtime census'
-        outputs = ['generated/' + ('effect-runtime-census.tsv' if census else 'schema-structural-assurance.tsv')]
-        source = 'scripts/generate-' + ('effect-runtime-census.sh' if census else 'schema-structural-assurance.sh')
-        inputs = outputs + [field for line in (ROOT / outputs[0]).read_text().splitlines()
-                            for field in line.split('\t')
-                            if re.fullmatch(r'[A-Za-z0-9_./-]+', field) and (ROOT / field).is_file()]
+    census = family == 'Runtime census'
+    outputs = ['generated/' + ('effect-runtime-census.tsv' if census else 'schema-structural-assurance.tsv')]
+    source = 'scripts/generate-' + ('effect-runtime-census.sh' if census else 'schema-structural-assurance.sh')
+    inputs = outputs + [field for line in (ROOT / outputs[0]).read_text().splitlines()
+                        for field in line.split('\t')
+                        if re.fullmatch(r'[A-Za-z0-9_./-]+', field) and (ROOT / field).is_file()]
     return source, [], sorted(set(inputs + ['scripts/generate-data-stamps.py'])), outputs
 
 
@@ -60,16 +51,12 @@ def recipe(path, family):
         modules = [m for i,a in enumerate(args) if a == '--import' for m in args[i+1].split(',')]
         files = [args[i+1] for i,a in enumerate(args) if a in ['--externs', '--prelude']]
         return 'src/OCaml5/Tools/LcnfGen.lean', modules or ['Effect4.Machine.Fibers'], files
-    if family == 'Avatar descriptions':
-        return 'src/OCaml5/Tools/Describe.lean', ['Effect4.Machine.' + n for n in ['Fibers', 'Stores', 'Context', 'Scope', 'Key']], []
-    if family == 'Avatar blocks':
-        return 'src/OCaml5/Tools/RenderDeep.lean', [], []
     if family == 'Truth':
         return 'harness/truth/Truth.lean', [], ['harness/truth/run-truth.ts', 'harness/truth/prelude.ts', 'ts/eff/package.json', 'ts/eff/bun.lock']
     if family == 'Schema TypeScript':
         source = {'Person': 'EmitFixture', 'AllRepresentations': 'EmitCoverageFixture', 'TwoRoots': 'EmitMultiFixture'}[Path(path).name.split('.')[0]]
         return 'harness/schema-generation/' + source + '.lean', [], []
-    if family in ['Runtime census', 'Schema assurance', 'Archived daemon inputs']:
+    if family in ['Runtime census', 'Schema assurance']:
         source, modules, files, _ = data_recipe(family)
         return source, modules, files
     raise ValueError(f'No stamp recipe for {path}: {family}')

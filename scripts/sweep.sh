@@ -65,8 +65,6 @@ done
 gate_table() {
   cat <<'GATES'
 hermetic|generated-stale|scripts/check-generated.sh --stale
-hermetic|armmap-citations|scripts/check-armmap-citations.sh
-hermetic|armmap-policy|scripts/test-armmap-citations-gate.sh
 hermetic|library-roots|scripts/check-library-roots.sh
 hermetic|source-citations|scripts/check-source-citations.sh
 hermetic|internal-citations|scripts/check-internal-citations.sh
@@ -77,8 +75,6 @@ host|schema-typescript|scripts/check-schema-typescript-generation.sh
 host|ts-eff-corpus|scripts/check-ts-eff-corpus.sh
 host|ingest|scripts/check-ingest.sh
 host|truth|scripts/check-truth.sh
-ocaml|avatar-witnesses|scripts/check-ocaml.sh avatar-witnesses
-ocaml|daemon-protocol|scripts/check-ocaml.sh daemon-protocol
 ocaml|gen-check|scripts/check-ocaml.sh gen-check
 ocaml|dune-tests|scripts/check-ocaml.sh dune-tests
 ocaml|engine-tests|scripts/check-ocaml.sh engine-tests

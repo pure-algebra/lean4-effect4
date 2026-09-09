@@ -10,8 +10,8 @@ a total function of the syntax alone. Two properties follow, and they are the wh
 
 * **Equal syntax gives equal bytes.** `render` is a `Module → String`; there is no configuration,
   no environment, no ordering by a hash, and no wall clock. Two runs of the same generator on the
-  same day and on different machines produce the same file, which is what makes
-  `ocaml/tools/fuzz.sh avatar`'s byte diff against a hand-written file meaningful.
+  same day and on different machines produce the same file, which is what makes a byte diff
+  against a hand-written file meaningful (the retired avatar's `fuzz.sh avatar` was that diff).
 * **Fixed layout.** Where a line break goes is a property of the *form*, not of a width budget:
   a record or variant with `wideAt` or more members is one member per line, everything else is
   one line, and nested expressions are indented by their `ind` depth. There is no reflowing pass,
@@ -577,7 +577,7 @@ private def trailing : Option String → String
   | some t => "  (* " ++ t ++ " *)"
 
 /-- A record or variant with four or more members is laid out one member per line, which is
-the shape `ocaml/avatar/deep_fibers.ml` is written in; three or fewer stay on one
+the shape the retired avatar's `deep_fibers.ml` was written in; three or fewer stay on one
 line. Below the threshold a comment has nowhere to go and is dropped. -/
 def wideAt : Nat := 4
 

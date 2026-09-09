@@ -17,7 +17,7 @@
        generated code is wrong today (NOTES.md:263 "still not guarded").          tested
    N3  Truncated subtraction: `sub a b = max 0 (a - b)`.                by construction
    N4  Host width: `bits` is Sys.int_size (63 native, 32 under js_of_ocaml, 31 under
-       wasm_of_ocaml — ocaml/wasm/README.md:13); `max_nat` is `max_int`; `wire_limit` is the
+       wasm_of_ocaml — git:14e6835:ocaml/wasm/README.md:13, the archived wasm host); `max_nat` is `max_int`; `wire_limit` is the
        bound at which ocaml/eff/eff_frame.ml refuses a natural — see D1 below.
                                                                        by construction; tested
    N5  Guarded shifts: OCaml's `lsl`/`lsr` are undefined at >= 63; `shift_right` answers 0

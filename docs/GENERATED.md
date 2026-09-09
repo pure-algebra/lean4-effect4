@@ -5,8 +5,8 @@ cover them. It owns this inventory and the generation rule; `docs/ARCHITECTURE.m
 owns the surrounding module boundaries. It is the Phase 0 step 0.2 inventory,
 expanded from the five-scout plan (untracked working notes under `docs/research/`).
 Step 0.4 adds provenance stamps. The LCNF outputs remain unstamped until the
-approved Phase 1 regeneration. The four frozen avatar blocks and the legacy
-Schema assurance report also remain explicitly unstamped under the owner amendments.
+approved Phase 1 regeneration. The legacy Schema assurance report also remains
+explicitly unstamped under the owner amendment.
 
 ## The rule
 
@@ -43,7 +43,7 @@ in dependency order. `--only derived|eff|wire|cas|ts` selects one family;
 `--only lcnf` is the explicit Phase 1 engine regeneration route. The entry point
 holds the Lean lane and gives each Lean invocation a 600-second timeout. It runs
 the producers every time. If only the informational revision differs, it retains
-the existing output bytes. The four frozen avatar blocks are excluded.
+the existing output bytes.
 
 ## Commands and current coverage
 
@@ -66,10 +66,6 @@ this inventory. `cut-from` is the header stamp; a cached gate verdict is separat
 | CAS goldens | `lake env lean -M4096 --run src/OCaml5/Tools/CasGoldens.lean ocaml/engine/cas/goldens` | Store Word and Genesis, Machine Stores, `Test.Store.NodeContract` | `ocaml/engine/cas/test/dune` | `bash scripts/check-generated.sh --stale` for provenance only; `bash scripts/check-ocaml.sh engine-tests`, red as declared in the OCaml sweep |
 | LCNF | exact command in each output's first comment, run with `lake env` before `lean` | `src/OCaml5/Tools/LcnfGen.lean`, `src/OCaml5/Lcnf/`, named import and roots; engine also reads `ocaml/engine/externs.txt` and `ocaml/engine/tools/api_engine_prelude.ml` | `effect4_gen`, `effect4_engine` | `bash scripts/check-generated.sh --stale`, red as declared until Phase 1; `bash scripts/check-ocaml.sh gen-check` in sweep for the seam; neither regenerates LCNF |
 | TypeScript | `bash scripts/generate-ts-eff.sh` | `OCaml5.Eff.World`, native rows, ingestion taxonomy, forms, profile, `lakefile.toml`, `src/Effect4/Codegen/Print.lean` | TypeScript readers, checkers and tests | `bash scripts/check-ts-eff.sh`; byte comparison, in sweep |
-| Avatar descriptions | exact `Describe.lean` command in each file's `Regenerate:` header, stdout redirected to that file | `src/OCaml5/Tools/Describe.lean`, Machine Stores, Fibers and Context | `OCaml5.Avatar.Check`, hand overlays | `bash scripts/check-generated.sh --stale` for provenance; no body comparison, owner: avatar retirement lane, 2026-09-08 |
-| Avatar blocks | frozen until the avatar retirement packet deletes them | `src/OCaml5/Tools/RenderDeep.lean`, `OCaml5.Avatar.parts` | avatar library | none; owner: the avatar retirement packet, 2026-09-08 |
-| Archived daemon inputs | `python3 scripts/generate-data-stamps.py archived` (checks the recorded archived blobs and writes metadata) | archived Git revision `606918e` | daemon's dune rules | `bash scripts/check-ocaml.sh daemon-protocol`; provenance blobs in `ocaml/server/generated/archived-from.tsv`, no independent blob-check gate; owner: daemon lane, 2026-09-08 |
-| Daemon | `cd ocaml && dune build server` | explicit rules in `ocaml/server/dune`, archived inputs, avatar sources and Lean machine | daemon library | `bash scripts/check-ocaml.sh daemon-protocol`; build dependencies owned by dune |
 | Truth | corpus: `lake env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json`; other outputs: `bun run harness/truth/run-truth.ts --manifest harness/truth/corpus.json --out harness/truth --timeout 300` | Eff corpus, `harness/truth/prelude.ts`, pinned rc.112 | truth differential, TypeScript corpus check | `bash scripts/check-truth.sh`; fresh generation and comparison plus bounded host observations |
 | Schema TypeScript | `lake env lean -M4096 harness/schema-generation/EmitFixture.lean` for Person, `EmitCoverageFixture.lean` for AllRepresentations, `EmitMultiFixture.lean` for TwoRoots; redirect stdout to named output | `Effect4.Codegen.Schema`, fixture declarations | three runtime checks in `harness/schema-generation/` | `bash scripts/check-schema-typescript-generation.sh`, host lane in sweep |
 | Runtime census | `python3 scripts/generate-data-stamps.py census` (runs the census producer and stamps identical data) | pinned rc.112 sources listed by output | `docs/RUNTIME-COVERAGE.md`, `Test/Audit/RuntimeCoverage.lean` | `bash scripts/check-effect-runtime-census.sh`, in sweep |
@@ -82,12 +78,9 @@ The two files `ocaml/eff/goldens/val_ref.hex` and
 inventory; EffGen does not write them. They remain independent fixtures and are
 excluded from this generated-artifact inventory. The first inventory had 335 rows.
 
-The dispatch freezes all four avatar blocks until the avatar retirement packet
-removes them. `deep_layer.ml`: producer retired with the Layer machine at the
-join; frozen until deleted. `deep_stores.ml`: producer output drifted from
-Machine/Stores since the join and the timer; frozen until deleted.
-`deep_context.ml` and `deep_forkflow.ml`: reproduce at HEAD; frozen with the others.
-Their gate is none, owner the avatar retirement packet, date 2026-09-08.
+The avatar's four frozen blocks, its three derived descriptions and the daemon's
+archived inputs left this inventory on 2026-09-08 with the avatar and the daemon,
+archived on `archive/ocaml5-avatar` at `14e6835`.
 
 The owner also deferred the stamp on `generated/schema-structural-assurance.tsv`
 on 2026-09-08: its manual producer refuses the frozen fingerprint for
@@ -403,49 +396,6 @@ their own recorded provenance; they are not regenerated by this Phase 0 lane.
 | `ts/eff/profile.gen.ts` | committed projection | TypeScript | TypeScript | TypeScript | TypeScript | yes | yes |
 | `ts/eff/taxonomy.gen.ts` | committed projection | TypeScript | TypeScript | TypeScript | TypeScript | yes | yes |
 | `ts/eff/wire.gen.ts` | committed projection | TypeScript | TypeScript | TypeScript | TypeScript | yes | yes |
-| `src/OCaml5/Avatar/Derived/Context.lean` | committed projection | Avatar descriptions | Avatar descriptions | Avatar descriptions | Avatar descriptions | yes | yes |
-| `src/OCaml5/Avatar/Derived/Fibers.lean` | committed projection | Avatar descriptions | Avatar descriptions | Avatar descriptions | Avatar descriptions | yes | yes |
-| `src/OCaml5/Avatar/Derived/Stores.lean` | committed projection | Avatar descriptions | Avatar descriptions | Avatar descriptions | Avatar descriptions | yes | yes |
-| `ocaml/avatar/deep_stores.ml` | committed projection | Avatar blocks | Avatar blocks | Avatar blocks | Avatar blocks | deferred: avatar retirement | yes |
-| `ocaml/avatar/deep_layer.ml` | committed projection | Avatar blocks | Avatar blocks | Avatar blocks | Avatar blocks | deferred: avatar retirement | yes |
-| `ocaml/avatar/deep_context.ml` | committed projection | Avatar blocks | Avatar blocks | Avatar blocks | Avatar blocks | deferred: avatar retirement | yes |
-| `ocaml/avatar/deep_forkflow.ml` | committed projection | Avatar blocks | Avatar blocks | Avatar blocks | Avatar blocks | deferred: avatar retirement | yes |
-| `ocaml/server/generated/archived-from.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/harness-trace/deferred-fixture.ts` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/harness-trace/fibers-fixture.stub.ts` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/harness-trace/layer-fixture.ts` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/harness-trace/ref-fixture.ts` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/harness-trace/scope-fixture.ts` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/deferred/deferredDoubleComplete.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/deferred/deferredFailAwait.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/deferred/deferredPendingAwait.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/deferred/deferredPollPending.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/deferred/deferredSucceedAwait.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/deferred/deferredTwoHandles.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/layer/buildMemo.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/layer/buildOnce.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/layer/freshRebuild.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/layer/freshRegion.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/layer/freshRelease.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/layer/rebuildAfterClose.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/layer/releaseOrder.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/layer/scopedRelease.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/masks.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/ref/getAndSetOld.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/ref/makeGet.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/ref/modifyOld.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/ref/setGet.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/ref/takeUnderflow.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/ref/twoRefs.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/ref/updateTwice.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/scope/addAfterClosed.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/scope/closeTwice.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/scope/lifo.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/server/generated/traces/scope/remove.tsv` | vendored input | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | adjacent `.cut-from` | yes |
-| `ocaml/_build/default/server/e4d_masks_data.ml` | build artifact | Daemon | Daemon | Daemon | Daemon | no | no |
-| `ocaml/_build/default/server/e4d_families_data.ml` | build artifact | Daemon | Daemon | Daemon | Daemon | no | no |
-| `ocaml/_build/default/server/e4d_armmap.ml` | build artifact | Daemon | Daemon | Daemon | Daemon | no | no |
-| `ocaml/_build/default/server/e4d_pins.ml` | build artifact | Daemon | Daemon | Daemon | Daemon | no | no |
 | `harness/truth/generated/p42.ts` | committed projection | Truth | Truth | Truth | Truth | yes | yes |
 | `harness/truth/generated/pAcquire.ts` | committed projection | Truth | Truth | Truth | Truth | yes | yes |
 | `harness/truth/generated/pAcquireClosed.ts` | committed projection | Truth | Truth | Truth | Truth | yes | yes |
@@ -718,38 +668,6 @@ their own recorded provenance; they are not regenerated by this Phase 0 lane.
 | `ocaml/engine/cas/goldens/manifest.txt.cut-from` | committed projection | CAS goldens | CAS goldens | CAS goldens | CAS goldens | yes | yes |
 | `ocaml/engine/cas/goldens/val_handle.hex.cut-from` | committed projection | CAS goldens | CAS goldens | CAS goldens | CAS goldens | yes | yes |
 | `ocaml/engine/cas/goldens/val_ref.hex.cut-from` | committed projection | CAS goldens | CAS goldens | CAS goldens | CAS goldens | yes | yes |
-| `ocaml/server/generated/archived-from.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/harness-trace/deferred-fixture.ts.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/harness-trace/fibers-fixture.stub.ts.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/harness-trace/layer-fixture.ts.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/harness-trace/ref-fixture.ts.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/harness-trace/scope-fixture.ts.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/deferred/deferredDoubleComplete.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/deferred/deferredFailAwait.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/deferred/deferredPendingAwait.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/deferred/deferredPollPending.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/deferred/deferredSucceedAwait.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/deferred/deferredTwoHandles.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/layer/buildMemo.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/layer/buildOnce.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/layer/freshRebuild.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/layer/freshRegion.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/layer/freshRelease.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/layer/rebuildAfterClose.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/layer/releaseOrder.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/layer/scopedRelease.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/masks.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/ref/getAndSetOld.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/ref/makeGet.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/ref/modifyOld.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/ref/setGet.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/ref/takeUnderflow.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/ref/twoRefs.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/ref/updateTwice.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/scope/addAfterClosed.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/scope/closeTwice.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/scope/lifo.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
-| `ocaml/server/generated/traces/scope/remove.tsv.cut-from` | committed projection | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | Archived daemon inputs | yes | yes |
 | `harness/truth/corpus.json.cut-from` | committed projection | Truth | Truth | Truth | Truth | yes | yes |
 | `harness/truth/result.json.cut-from` | committed projection | Truth | Truth | Truth | Truth | yes | yes |
 | `generated/effect-runtime-census.tsv.cut-from` | committed projection | Runtime census | Runtime census | Runtime census | Runtime census | yes | yes |

@@ -15,7 +15,7 @@ the same consequence: a value of these types is target data, never the denotatio
 ## Completeness
 
 The fragment is what a *runtime port* needs — a hand-written OCaml runtime, of the size of
-`ocaml/avatar/deep_fibers.ml`, generated instead of typed. That is the whole of the
+the retired avatar's `deep_fibers.ml` (`archive/ocaml5-avatar`), generated instead of typed. That is the whole of the
 core language and the module language's declaration forms, and none of the object system, none of
 `class`, no first-class modules, no `let module`, no polymorphic method types, and no attributes
 other than the two a generator actually emits. Where a form is deliberately absent it is named in

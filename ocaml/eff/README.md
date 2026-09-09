@@ -319,7 +319,7 @@ that `deferredAwait` is the single `async` row and the rest are `sync`.
 
 **Deliberately out of scope.** No JSON *parser* anywhere — the JSON side is a printer only. No
 TypeScript printing: Lean owns `Api.print`. No evaluator: this library authors, checks and
-serialises programs; running them is the Lean fiber machine and the `ocaml/avatar` lane. No
+serialises programs; running them is the Lean fiber machine and the engine (`ocaml/engine`). No
 `Obj`, no `Marshal`, no polymorphic compare on abstract types.
 
 **Bound.** OCaml naturals are `int`, so literals and variable indices above 2⁶² − 1 are refused
