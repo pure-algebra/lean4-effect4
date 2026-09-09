@@ -740,6 +740,22 @@ Reading rules, the same as on the page:
 </ul>
 <p class="rules">Each is a log row the language needs; design-language.md §6.4 lists them, and the engine's query layer marks them <em>owed</em> rather than guessing.</p>
 
+<h2>Sources</h2>
+<p class="rules">The full reading list, with the repository files and line ranges the language was read off and
+every primary source with its URL, is <a href="../design-language.md">design-language.md §8</a>, together with what
+was read and rejected and why. The primary sources the studies rest on:</p>
+<ul class="rules">
+  <li><b>Bertin</b>, <i>Sémiologie graphique</i> — the visual variables and their levels (selective, associative, ordered, quantitative): why hue is for agents only and position for the index.</li>
+  <li><b>Wilkinson</b>, <i>The Grammar of Graphics</i> — cross, nest, blend: the score is <code>index * (fiber / segment) + index * queue + index * clock</code>.</li>
+  <li><b>Lamport</b> 1978 and <b>Allen</b> 1983 — happened-before and the thirteen interval relations: causality drawn only as recorded relations; enclosures read as intervals.</li>
+  <li><b>Reichenbach</b> 1947 — speech, event and reference time: the cursor is R, the reading axis is never E.</li>
+  <li><b>Pearl</b>'s do-operator and <b>Prior–Belnap</b> branching time — a variation is an action on the tape and a history through one moment.</li>
+  <li><b>Talmy</b>, force dynamics — an interrupt as an Antagonist arriving; <b>Zacks &amp; Tversky</b> 2001 on event structure.</li>
+  <li><b>Iverson</b>, <i>Notation as a Tool of Thought</i>; <b>Victor</b>, <i>Learnable Programming</i> — one notation for the written, spoken and drawn form.</li>
+  <li>Music notation (rests, bar lines, voltas, the fermata), PGN's recursive annotation variations, punched tape, locking tables — the borrowed conventions, each with its reason in §8.</li>
+  <li>Rejected there, with reasons: MSC lifelines and UML sequence diagrams, proportional timelines, statecharts as the drawing, Petri nets as the drawing, a colour per fiber.</li>
+</ul>
+
 <footer>docs/design/design-language — the studies are SVG and plain text so they print and diff. Sources: the seat's delivery of 2026-09-08 over corpus runs pTwo, pAcquireClosed, pFork, pAwait.</footer>
 
 </body>
