@@ -2,9 +2,10 @@
 //
 //   readTypeScript(source)
 //     │ parseSync           text → oxc's ESTree                             (oxc-parser)
-//     │ programExprOf       the one expression a program file holds          § 2
+//     │ programModuleOf     the declarations and the one program a file holds § 2
 //     │ exprOf              ESTree → the fragment the Lean printer emits      § 2
 //     │ readEff(0, ·)       fragment → Eff, src/Effect4/Codegen/Read.lean clause for clause   § 3
+//     │ readModule          the hoisted layers put back at their paths        § 4
 //     └ decodeEff           the node checked against the schema             (eff.gen.ts)
 //
 // Everything else in this package is generated from Lean: the nodes (eff.gen.ts), their
@@ -47,19 +48,22 @@ export const readTypeScript = (source: string, filename = "program.ts"): Read<Ef
   if (parsed.errors.length > 0) return refuse({ _tag: "parse", messages: parsed.errors.map((e) => e.message) })
   const program = parsed.program as unknown
   if (!isNode(program)) return refuse({ _tag: "program", what: "no program" })
-  const expression = programExprOf(program)
-  if (failed(expression)) return again(expression)
-  return readExpression(expression.success)
+  const module = programModuleOf(program)
+  if (failed(module)) return again(module)
+  const { declarations, main } = module.success
+  return declarations.length === 0 ? readExpression(main) : readModule(declarations, main)
 }
 
 /** Fragment seam for the independent oxc normalization and printer-image test entrypoint. */
-export const readExpression = (expression: unknown): Read<Eff> => {
+export const readExpression = (expression: unknown): Read<Eff> =>
+  Result.map(readProgramExpr(expression), decodeEff)
+
+/** The same, before the schema decode: what a declaration block's main expression reads to. */
+const readProgramExpr = (expression: unknown): Read<Eff> => {
   if (!isNode(expression)) return refuse({ _tag: "node", type: typeof expression, where: "expression" })
   const fragment = exprOf(expression)
   if (failed(fragment)) return again(fragment)
-  const eff = readEff(0, fragment.success)
-  if (failed(eff)) return again(eff)
-  return ok(decodeEff(eff.success))
+  return readEff(0, fragment.success)
 }
 
 export const showRefusal = (r: Refusal): string => {
@@ -467,27 +471,54 @@ const stmtsOf = (items: ReadonlyArray<unknown>): Read<ReadonlyArray<TsStmt>> => 
   return ok(out)
 }
 
+/** A file's leading declarations and the one program it ends with. */
+interface Module {
+  /** The `const L_<path> = <layer>` declarations before the last statement, in file order. */
+  readonly declarations: ReadonlyArray<Declaration>
+  /** The last statement's expression: the program itself. */
+  readonly main: Node
+}
+
+interface Declaration {
+  readonly name: string
+  readonly value: Node
+}
+
+/** `const name = value` or `export const name = value`, one declarator, any declared type. */
+const constDeclOf = (s: Node): Declaration | undefined => {
+  const decl = s.type === "ExportNamedDeclaration" ? nodeAt(s, "declaration") : s
+  if (!decl || decl.type !== "VariableDeclaration" || decl.kind !== "const") return undefined
+  const decls = listAt(decl, "declarations")
+  const d = decls && decls.length === 1 ? decls[0] : undefined
+  if (!isNode(d)) return undefined
+  const id = nodeAt(d, "id")
+  const init = nodeAt(d, "init")
+  if (!id || id.type !== "Identifier" || typeof id.name !== "string" || !init) return undefined
+  return { name: id.name, value: init }
+}
+
 /**
- * The one expression a program file holds: a bare expression statement (the generated
- * corpus), or `export const name = expression` with any declared type (the truth files).
- * Imports are skipped; anything else is not one program.
+ * What a program file holds: any number of `const name = expression` declarations — the
+ * layers `printModule` hoists — and then the program, as a bare expression statement (the
+ * generated corpus) or as `export const name = expression` with any declared type (the truth
+ * files). Imports are skipped; anything else before the last statement is not one program.
  */
-const programExprOf = (program: Node): Read<Node> => {
-  const body = (listAt(program, "body") ?? []).filter((s) => isNode(s) && s.type !== "ImportDeclaration")
-  if (body.length !== 1 || !isNode(body[0])) return refuse({ _tag: "program", what: `${body.length} statements after imports` })
-  const s = body[0]
-  if (s.type === "ExpressionStatement") {
-    const e = nodeAt(s, "expression")
-    return e ? ok(e) : refuse({ _tag: "program", what: "empty expression statement" })
+const programModuleOf = (program: Node): Read<Module> => {
+  const body = (listAt(program, "body") ?? []).filter((s): s is Node => isNode(s) && s.type !== "ImportDeclaration")
+  const last = body[body.length - 1]
+  if (last === undefined) return refuse({ _tag: "program", what: "0 statements after imports" })
+  const declarations: Declaration[] = []
+  for (const s of body.slice(0, -1)) {
+    const d = constDeclOf(s)
+    if (d === undefined) return refuse({ _tag: "program", what: `${s.type} where a const declaration was expected` })
+    declarations.push(d)
   }
-  if (s.type === "ExportNamedDeclaration") {
-    const decl = nodeAt(s, "declaration")
-    const decls = decl && decl.type === "VariableDeclaration" && decl.kind === "const" ? listAt(decl, "declarations") : undefined
-    const d = decls && decls.length === 1 ? decls[0] : undefined
-    const init = isNode(d) ? nodeAt(d, "init") : undefined
-    return init ? ok(init) : refuse({ _tag: "program", what: "export that is not one const with an initializer" })
+  if (last.type === "ExpressionStatement") {
+    const e = nodeAt(last, "expression")
+    return e ? ok({ declarations, main: e }) : refuse({ _tag: "program", what: "empty expression statement" })
   }
-  return refuse({ _tag: "program", what: s.type })
+  const main = constDeclOf(last)
+  return main ? ok({ declarations, main: main.value }) : refuse({ _tag: "program", what: last.type })
 }
 
 /* ============================================================ § 3  the fragment → Eff  (Read.lean) */
@@ -713,9 +744,18 @@ const readLiteral = (x: Expr): Read<Lit> => {
   return term.success._tag === "lit" ? ok(term.success.value) : refuse({ _tag: "shape", what: "literal" })
 }
 
-/** The eight printed Layer forms; every effect body starts at environment length zero. */
+/**
+ * The ten printed Layer forms; every effect body starts at environment length zero. A bare
+ * identifier is a reference to the path its name carries (§ 4, `LayerTerm.readRefName` of
+ * `src/Effect4/Program/Refs.lean`), admitted only when the name is exactly that path's
+ * spelling, so what is read is what `printLayer` prints: `L_01` and `L_1_` are refused.
+ */
 const readLayer = (x: Expr): Read<LayerTerm> => {
   const bad = () => refuse({ _tag: "shape", what: "layer" })
+  if (x._tag === "ident") {
+    const target = readRefName(x.name)
+    return target !== undefined && refName(target) === x.name ? ok({ _tag: "ref", target }) : bad()
+  }
   if (x._tag === "method") {
     const segment = x.args[0]
     if (x.name !== "pipe" || x.args.length !== 1 || segment?._tag !== "call" ||
@@ -756,6 +796,10 @@ const readLayer = (x: Expr): Read<LayerTerm> => {
       const right = readLayer(second)
       return failed(right) ? again(right) : ok({ _tag: "merge", left: left.success, right: right.success })
     }
+    // the n-ary merge takes any number of layers, none included; `Layer.merge` and
+    // `Layer.mergeAll` build different scope trees and are never read as each other
+    case "Layer.mergeAll":
+      return Result.map(readLayers(x.args), (layers): LayerTerm => ({ _tag: "mergeAll", layers }))
     case "Layer.fresh":
     case "Layer.orDie": {
       if (x.args.length !== 1 || first === undefined) return bad()
@@ -764,6 +808,17 @@ const readLayer = (x: Expr): Read<LayerTerm> => {
     }
     default: return bad()
   }
+}
+
+/** The layers of a `mergeAll`, in order, each closed. */
+const readLayers = (xs: ReadonlyArray<Expr>): Read<ReadonlyArray<LayerTerm>> => {
+  const out: LayerTerm[] = []
+  for (const x of xs) {
+    const l = readLayer(x)
+    if (failed(l)) return again(l)
+    out.push(l.success)
+  }
+  return ok(out)
 }
 
 export const readEff = (n: number, x: Expr): Read<Eff> => {
@@ -1093,6 +1148,7 @@ const headReaders: Record<Head, HeadReader> = {
   "Layer.merge": notHere("Layer.merge"),
   "Layer.fresh": notHere("Layer.fresh"),
   "Layer.orDie": notHere("Layer.orDie"),
+  "Layer.mergeAll": notHere("Layer.mergeAll"),
 }
 
 /** A generator body, statement by statement, with the binder counts of the printer. */
@@ -1156,4 +1212,237 @@ const readEffs = (n: number, items: ReadonlyArray<Expr>): Read<ReadonlyArray<Eff
     out.push(e.success)
   }
   return ok(out)
+}
+
+/* ============================================================ § 4  the declaration block  (Refs.lean) */
+
+// A layer's identity is its path: the child indices from the root, in the one scheme
+// `Node.child` of `src/Effect4/Program/Refs.lean` fixes. `printModule` hoists every
+// referenced target into `const L_<path> = …`, so the defining site and every reference
+// print as that one identifier; § 3 reads each of them as `LayerTerm.ref <path>`, and this
+// section puts the declarations back at their paths (`readModule`, `Eff.restoreAll`), which
+// leaves the defining site the layer itself and every later site a reference to it.
+
+/** The declared name of a target: `L_` then its indices joined by `_` (`LayerTerm.refName`). */
+const refName = (target: ReadonlyArray<number>): string => `L_${target.join("_")}`
+
+/**
+ * The path a declared name carries: `L_` then decimal groups separated by `_`, each group at
+ * least one digit (`LayerTerm.readRefName`, read off the bytes there). An empty group —
+ * `L_`, `L_1_`, `L_1__0` — is refused here; a group that decodes but does not spell itself
+ * back — `L_01` — is refused by the caller's `refName` check, which is where Lean's reader
+ * refuses it too.
+ */
+const readRefName = (s: string): ReadonlyArray<number> | undefined => {
+  if (s.length < 3 || s.charCodeAt(0) !== 76 /* L */ || s.charCodeAt(1) !== 95 /* _ */) return undefined
+  const groups: number[] = []
+  let value = 0
+  let seen = false
+  for (let i = 2; i < s.length; i++) {
+    const b = s.charCodeAt(i)
+    if (b === 95) {
+      if (!seen) return undefined
+      groups.push(value)
+      value = 0
+      seen = false
+    } else if (b >= 48 && b <= 57) {
+      value = value * 10 + (b - 48)
+      seen = true
+    } else return undefined
+  }
+  if (!seen) return undefined
+  groups.push(value)
+  return groups
+}
+
+/** Program order on paths: a proper prefix is earlier, then the first differing index
+ * (`Path.lt`). */
+const pathLt = (a: ReadonlyArray<number>, b: ReadonlyArray<number>): boolean => {
+  for (let i = 0; i < a.length && i < b.length; i++) {
+    if (a[i]! < b[i]!) return true
+    if (b[i]! < a[i]!) return false
+  }
+  return a.length < b.length
+}
+
+/** The seven node sorts a path addresses; terms are not nodes (`Node`). */
+type IrNode =
+  | { readonly sort: "eff"; readonly eff: Eff }
+  | { readonly sort: "stmts"; readonly stmts: ReadonlyArray<Stmt> }
+  | { readonly sort: "stmt"; readonly stmt: Stmt }
+  | { readonly sort: "action"; readonly action: ActionTerm }
+  | { readonly sort: "effs"; readonly effs: ReadonlyArray<Eff> }
+  | { readonly sort: "layer"; readonly layer: LayerTerm }
+  | { readonly sort: "layers"; readonly layers: ReadonlyArray<LayerTerm> }
+
+const kEff = (eff: Eff): IrNode => ({ sort: "eff", eff })
+const kStmts = (stmts: ReadonlyArray<Stmt>): IrNode => ({ sort: "stmts", stmts })
+const kStmt = (stmt: Stmt): IrNode => ({ sort: "stmt", stmt })
+const kAction = (action: ActionTerm): IrNode => ({ sort: "action", action })
+const kEffs = (effs: ReadonlyArray<Eff>): IrNode => ({ sort: "effs", effs })
+const kLayer = (layer: LayerTerm): IrNode => ({ sort: "layer", layer })
+const kLayers = (layers: ReadonlyArray<LayerTerm>): IrNode => ({ sort: "layers", layers })
+
+/** One child: the node it holds, and the rebuild that puts a replacement of the same sort
+ * back in its place (`Node.child` and `Node.setChild` in one entry). */
+type Child = readonly [IrNode, (replacement: IrNode) => IrNode | undefined]
+
+const atEff = (v: Eff, back: (v: Eff) => IrNode): Child =>
+  [kEff(v), (c) => (c.sort === "eff" ? back(c.eff) : undefined)]
+const atStmts = (v: ReadonlyArray<Stmt>, back: (v: ReadonlyArray<Stmt>) => IrNode): Child =>
+  [kStmts(v), (c) => (c.sort === "stmts" ? back(c.stmts) : undefined)]
+const atStmt = (v: Stmt, back: (v: Stmt) => IrNode): Child =>
+  [kStmt(v), (c) => (c.sort === "stmt" ? back(c.stmt) : undefined)]
+const atAction = (v: ActionTerm, back: (v: ActionTerm) => IrNode): Child =>
+  [kAction(v), (c) => (c.sort === "action" ? back(c.action) : undefined)]
+const atEffs = (v: ReadonlyArray<Eff>, back: (v: ReadonlyArray<Eff>) => IrNode): Child =>
+  [kEffs(v), (c) => (c.sort === "effs" ? back(c.effs) : undefined)]
+const atLayer = (v: LayerTerm, back: (v: LayerTerm) => IrNode): Child =>
+  [kLayer(v), (c) => (c.sort === "layer" ? back(c.layer) : undefined)]
+const atLayers = (v: ReadonlyArray<LayerTerm>, back: (v: ReadonlyArray<LayerTerm>) => IrNode): Child =>
+  [kLayers(v), (c) => (c.sort === "layers" ? back(c.layers) : undefined)]
+
+/**
+ * A node's children, in the order the path scheme numbers them — a node's children are these
+ * and nothing else (`Node.child`). A spine is a cons cell: its head is child 0 and its tail
+ * child 1, so element `i` of the spine at child `c` of `p` is at `p ++ [c] ++ [1]*i ++ [0]`.
+ */
+const childrenOf = (n: IrNode): ReadonlyArray<Child> => {
+  switch (n.sort) {
+    case "eff": {
+      const e = n.eff
+      switch (e._tag) {
+        case "suspend": return [atEff(e.body, (body) => kEff({ ...e, body }))]
+        case "bind": return [atEff(e.first, (first) => kEff({ ...e, first })), atEff(e.rest, (rest) => kEff({ ...e, rest }))]
+        case "gen": return [atStmts(e.body, (body) => kEff({ ...e, body }))]
+        case "catchCause":
+          return [atEff(e.body, (body) => kEff({ ...e, body })), atEff(e.handler, (handler) => kEff({ ...e, handler }))]
+        case "matchCause":
+          return [atEff(e.body, (body) => kEff({ ...e, body })), atEff(e.onValue, (onValue) => kEff({ ...e, onValue })),
+            atEff(e.onCause, (onCause) => kEff({ ...e, onCause }))]
+        case "onExit":
+          return [atEff(e.body, (body) => kEff({ ...e, body })), atEff(e.finalizer, (finalizer) => kEff({ ...e, finalizer }))]
+        case "exit": return [atEff(e.body, (body) => kEff({ ...e, body }))]
+        case "uninterruptible": return [atEff(e.body, (body) => kEff({ ...e, body }))]
+        case "interruptible": return [atEff(e.body, (body) => kEff({ ...e, body }))]
+        case "branch":
+          return [atEff(e.thenB, (thenB) => kEff({ ...e, thenB })), atEff(e.elseB, (elseB) => kEff({ ...e, elseB }))]
+        case "whileLoop": return [atEff(e.body, (body) => kEff({ ...e, body }))]
+        case "withFiber": return [atAction(e.action, (action) => kEff({ ...e, action }))]
+        case "scoped": return [atEff(e.body, (body) => kEff({ ...e, body }))]
+        case "acquireRelease":
+          return [atEff(e.acquire, (acquire) => kEff({ ...e, acquire })), atEff(e.release, (release) => kEff({ ...e, release }))]
+        case "choose":
+          return [atEff(e.left, (left) => kEff({ ...e, left })), atEff(e.right, (right) => kEff({ ...e, right }))]
+        case "provideLayer":
+          return [atLayer(e.layer, (layer) => kEff({ ...e, layer })), atEff(e.body, (body) => kEff({ ...e, body }))]
+        case "provideService": return [atEff(e.body, (body) => kEff({ ...e, body }))]
+        default: return []
+      }
+    }
+    case "layer": {
+      const l = n.layer
+      switch (l._tag) {
+        case "effect": return [atEff(l.body, (body) => kLayer({ ...l, body }))]
+        case "effectDiscard": return [atEff(l.body, (body) => kLayer({ ...l, body }))]
+        case "provide":
+          return [atLayer(l.self, (self) => kLayer({ ...l, self })), atLayer(l.that, (that) => kLayer({ ...l, that }))]
+        case "provideMerge":
+          return [atLayer(l.self, (self) => kLayer({ ...l, self })), atLayer(l.that, (that) => kLayer({ ...l, that }))]
+        case "merge":
+          return [atLayer(l.left, (left) => kLayer({ ...l, left })), atLayer(l.right, (right) => kLayer({ ...l, right }))]
+        case "fresh": return [atLayer(l.inner, (inner) => kLayer({ ...l, inner }))]
+        case "orDie": return [atLayer(l.inner, (inner) => kLayer({ ...l, inner }))]
+        case "mergeAll": return [atLayers(l.layers, (layers) => kLayer({ ...l, layers }))]
+        default: return []
+      }
+    }
+    case "stmt": {
+      const s = n.stmt
+      switch (s._tag) {
+        case "bindYield": return [atEff(s.effect, (effect) => kStmt({ ...s, effect }))]
+        case "yieldDiscard": return [atEff(s.effect, (effect) => kStmt({ ...s, effect }))]
+        case "ifElse":
+          return [atStmts(s.thenB, (thenB) => kStmt({ ...s, thenB })), atStmts(s.elseB, (elseB) => kStmt({ ...s, elseB }))]
+        case "whileTrue": return [atStmts(s.body, (body) => kStmt({ ...s, body }))]
+        default: return []
+      }
+    }
+    case "action": {
+      const a = n.action
+      switch (a._tag) {
+        case "fork": return [atEff(a.program, (program) => kAction({ ...a, program }))]
+        case "forkIn": return [atEff(a.program, (program) => kAction({ ...a, program }))]
+        case "forkScoped": return [atEff(a.program, (program) => kAction({ ...a, program }))]
+        case "raceAll": return [atEffs(a.entrants, (entrants) => kAction({ ...a, entrants }))]
+        default: return []
+      }
+    }
+    case "stmts": {
+      const [head, ...tail] = n.stmts
+      if (head === undefined) return []
+      return [atStmt(head, (h) => kStmts([h, ...tail])), atStmts(tail, (t) => kStmts([head, ...t]))]
+    }
+    case "effs": {
+      const [head, ...tail] = n.effs
+      if (head === undefined) return []
+      return [atEff(head, (h) => kEffs([h, ...tail])), atEffs(tail, (t) => kEffs([head, ...t]))]
+    }
+    case "layers": {
+      const [head, ...tail] = n.layers
+      if (head === undefined) return []
+      return [atLayer(head, (h) => kLayers([h, ...tail])), atLayers(tail, (t) => kLayers([head, ...t]))]
+    }
+  }
+}
+
+/** The node with the layer at a path replaced; `undefined` when the path names no layer
+ * (`Node.replaceLayerAt`). */
+const replaceLayerAt = (n: IrNode, path: ReadonlyArray<number>, layer: LayerTerm): IrNode | undefined => {
+  const [index, ...rest] = path
+  if (index === undefined) return n.sort === "layer" ? kLayer(layer) : undefined
+  const child = childrenOf(n)[index]
+  if (child === undefined) return undefined
+  const replaced = replaceLayerAt(child[0], rest, layer)
+  return replaced === undefined ? undefined : child[1](replaced)
+}
+
+/** The declarations put back at their paths, ancestors first (ascending program order), so a
+ * nested target's site exists when its turn comes (`Eff.restoreAll`). */
+const restoreAll = (main: Eff, decls: ReadonlyArray<readonly [ReadonlyArray<number>, LayerTerm]>): Eff | undefined => {
+  const ordered = [...decls].sort(([a], [b]) => (pathLt(a, b) ? -1 : pathLt(b, a) ? 1 : 0))
+  let node: IrNode = kEff(main)
+  for (const [target, layer] of ordered) {
+    const replaced = replaceLayerAt(node, target, layer)
+    if (replaced === undefined) return undefined
+    node = replaced
+  }
+  return node.sort === "eff" ? node.eff : undefined
+}
+
+/**
+ * A declaration block back to the program (`readModule` of `Read.lean`): the last statement
+ * is the program, and every `const L_<path>` before it is a layer term put back at the path
+ * its name carries. Every occurrence of the identifier — the defining site and each
+ * reference — reads as `ref <path>` in § 3, so putting the declaration back at that path
+ * leaves the first occurrence (the site at exactly that path, which is what `printModule`
+ * hoists) the layer itself and every later occurrence a reference to it. A declaration whose
+ * name is no canonical path spelling, or whose path names no layer, is `shape "module"`.
+ */
+const readModule = (declarations: ReadonlyArray<Declaration>, main: Node): Read<Eff> => {
+  const notModule = refuse({ _tag: "shape", what: "module" })
+  const program = readProgramExpr(main)
+  if (failed(program)) return again(program)
+  const decls: Array<readonly [ReadonlyArray<number>, LayerTerm]> = []
+  for (const declaration of declarations) {
+    const target = readRefName(declaration.name)
+    if (target === undefined || refName(target) !== declaration.name) return notModule
+    const fragment = exprOf(declaration.value)
+    if (failed(fragment)) return again(fragment)
+    const layer = readLayer(fragment.success)
+    if (failed(layer)) return again(layer)
+    decls.push([target, layer.success])
+  }
+  const whole = restoreAll(program.success, decls)
+  return whole === undefined ? notModule : ok(decodeEff(whole))
 }

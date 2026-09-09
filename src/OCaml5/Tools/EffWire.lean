@@ -36,7 +36,7 @@ def manifest (env : Lean.Environment) : IO String := do
     `Effect4.Supervision.ObserverMode, `Effect4.Supervision.ForkOptions,
     `Effect4.ServiceKey, `Effect4.Program.Eff, `Effect4.Program.LayerTerm,
     `Effect4.Program.Stmt, `Effect4.Program.Stmts, `Effect4.Program.Effs,
-    `Effect4.Program.ActionTerm]
+    `Effect4.Program.ActionTerm, `Effect4.Program.LayerTerms]
   let mut rows : List String := []
   for name in families do
     let names ← if Lean.isStructure env name then

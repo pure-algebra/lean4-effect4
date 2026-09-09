@@ -283,6 +283,13 @@ and _ layer =
   | L_merge : 'e1 layer * 'e2 layer -> ('e1, 'e2) union layer
   | L_fresh : 'e layer -> 'e layer
   | L_or_die : 'e layer -> never layer
+  (** The host rows slice (2026-09-08): `Layer.mergeAll` over a non-empty spine, typed as the
+      checker's right fold; a reference (`LayerTerm.ref`) has no typed form here. *)
+  | L_merge_all : 'e layers -> 'e layer
+
+and _ layers =
+  | Ls_last : 'e layer -> 'e layers
+  | Ls_cons : 'e1 layer * 'e2 layers -> ('e1, 'e2) union layers
 
 (** A closed program with its witnesses, for tables and tests. *)
 type program = Program : (empty, 'a, 'e) eff * 'a ty * 'e ty -> program
@@ -312,6 +319,7 @@ val erase_action : int -> ('env, 'a, 'e) action -> Eff_types.action_term
 val erase_key : 's skey -> Eff_types.service_key
 val erase_layer_value : layer_value -> Eff_types.lit
 val erase_layer : 'e layer -> Eff_types.layer_term
+val erase_layers : 'e layers -> Eff_types.layer_terms
 
 (** A closed program, erased at the empty environment. *)
 val erase : (empty, 'a, 'e) eff -> Eff_types.eff

@@ -109,123 +109,11 @@ theorem prepareR_denoteAction (root : NativeEff) (p : Point) (completed : List (
     · rw [prepareR_guardR_bind]; rfl
     · rfl
 
-/-! ## The denotation, one arm at a time, at positive fuel -/
+/-! ## The continuation names `Agreement.lean` does not spell (the equations of `denoteR` are in `DenoteR.lean`) -/
 
 section denoteEqs
 
 variable (root : NativeEff) {p : Point}
-
-theorem denoteR_succeed (t : Term) (h : p.fuel ≠ 0) :
-    denoteR root (.succeed t) p =
-      .pure (match evalTerm p.env t with | some v => .success v | none => badShapeExit) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]; try rfl
-
-theorem denoteR_fail (t : Term) (h : p.fuel ≠ 0) :
-    denoteR root (.fail t) p =
-      .pure (match evalTerm p.env t with
-        | some v => .failure (Cause.fail (errOf v)) | none => badShapeExit) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]; try rfl
-
-theorem denoteR_failCause (c : CauseTerm) (h : p.fuel ≠ 0) :
-    denoteR root (.failCause c) p =
-      .pure (match causeOf p.env c with | some cause => .failure cause | none => badShapeExit) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]; try rfl
-
-theorem denoteR_yieldError (t : Term) (h : p.fuel ≠ 0) :
-    denoteR root (.yieldError t) p =
-      (match evalTerm p.env t with
-       | some v => suspendR p (.pure (.failure (Cause.fail (errOf v))))
-       | none => .pure badShapeExit) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]; try rfl
-
-theorem denoteR_sync (t : Term) (h : p.fuel ≠ 0) :
-    denoteR root (.sync t) p =
-      .vis (.inr (.sync ((evalTerm p.env t).getD Val.unit))) fun v => .pure (.success v) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]; try rfl
-
-theorem denoteR_perform (op : NativeOp) (r : Term) (h : p.fuel ≠ 0) :
-    denoteR root (.perform op r) p =
-      (match (NativeOp.row op).kind with
-       | .sync =>
-         match (evalTerm p.env r).bind (NativeOp.syncOpOf op) with
-         | some operation => .vis (.inl operation) fun v => .pure (.success v)
-         | none => .pure badShapeExit
-       | .async => denoteAsync r p
-       | .program => pending .unsupported p) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]; try rfl
-
-theorem denoteR_catchCause (b hd : NativeEff) (h : p.fuel ≠ 0) :
-    denoteR root (.catchCause b hd) p =
-      (guardR .onFailure (denoteR root b (p.child 0))).bind fun
-        | .success v => .pure (.success v)
-        | .failure c => constructR fun completed =>
-            denoteR root hd ({ p with completed }.childWith 1 (.exitErr c)) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]; try rfl
-
-theorem denoteR_matchCause (b v c : NativeEff) (h : p.fuel ≠ 0) :
-    denoteR root (.matchCause b v c) p =
-      (guardR .all (denoteR root b (p.child 0))).bind fun
-        | .success x => constructR fun completed =>
-            denoteR root v ({ p with completed }.childWith 1 x)
-        | .failure cause => constructR fun completed =>
-            denoteR root c ({ p with completed }.childWith 2 (.exitErr cause)) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]; try rfl
-
-theorem denoteR_onExit (b f : NativeEff) (h : p.fuel ≠ 0) :
-    denoteR root (.onExit b f) p =
-      onExitR (denoteR root b (p.child 0)) fun ex =>
-        constructR fun completed => denoteR root f ({ p with completed }.childWith 1 (reifyExitVal ex)) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]; try rfl
-
-theorem denoteR_yieldNow (priority : Nat) (h : p.fuel ≠ 0) :
-    denoteR root (.yieldNow priority) p =
-      .vis (.inr (.yieldNow priority)) fun v => .pure (.success v) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]; try rfl
-
-theorem denoteR_callback (op : NativeOp) (r : Term) (h : p.fuel ≠ 0) :
-    denoteR root (.callback op r) p =
-      (match op with
-       | .sleep => denoteSleep r p
-       | _ => match (NativeOp.row op).kind with
-         | .async => denoteAsync r p
-         | _ => .pure badShapeExit) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => cases op <;> (rw [denoteR, hf]; try rfl) <;> (try (intro h; cases h))
-
-theorem denoteR_awaitFiber (t : Term) (mode : Supervision.ObserverMode) (h : p.fuel ≠ 0) :
-    denoteR root (.awaitFiber t mode) p =
-      (match evalTerm p.env t with
-       | some (Val.fiber ⟨id⟩) =>
-         match p.awaitExit ⟨id⟩ mode with
-         | some exit => .pure exit
-         | none => match mode with
-           | .joinEffect => .vis (.inr (.await ⟨id⟩ .joinEffect)) Effects.Program.pure
-           | .awaitValue => .vis (.inr (.await ⟨id⟩ .awaitValue)) fun v => .pure (.success v)
-       | _ => .pure badShapeExit) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]; try rfl
 
 /-- The `forkScoped` wrapper's continuation on anything but a scope handle is the wrong
 shape (`Compile.lean` `contAOf`, the `forkScopedIn` arms). -/
@@ -292,61 +180,6 @@ theorem contAOf_releaseUnder (ctx : Ctx) (exit : ExitV) (v : Val) :
 theorem contAOf_releaseBody (exit : ExitV) (previous : Ctx) (v : Val) :
     Program.contAOf root (.releaseBody p exit previous) v =
       Prim.withFiber (EffThunk.releaseMasked (p.childWith 1 (reifyExitVal exit)) previous) := rfl
-
-theorem denoteR_uninterruptible (b : NativeEff) (h : p.fuel ≠ 0) :
-    denoteR root (.uninterruptible b) p = denoteAction root p := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]; try rfl
-
-theorem denoteR_interruptible (b : NativeEff) (h : p.fuel ≠ 0) :
-    denoteR root (.interruptible b) p = denoteAction root p := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]; try rfl
-
-theorem denoteR_scoped (b : NativeEff) (h : p.fuel ≠ 0) :
-    denoteR root (.scoped b) p = .vis (.inr (.scoped (p.child 0))) Effects.Program.pure := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]; try rfl
-
-theorem denoteR_acquireRelease (a r : NativeEff) (h : p.fuel ≠ 0) :
-    denoteR root (.acquireRelease a r) p =
-      (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun v =>
-        match Val.context? v with
-        | some ctx => .vis (.inr (.mask false (.acquireIn p ctx))) Effects.Program.pure
-        | none => .pure badShapeExit) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]; try rfl
-
--- the join's three constructors
-theorem denoteR_provideLayer (l : LayerTerm NativeOp) (i : Bool) (b : NativeEff) (h : p.fuel ≠ 0) :
-    denoteR root (.provideLayer l i b) p =
-      suspendR p (constructR fun completed =>
-        provideLayerR (fun q m s => denoteLayer root l q m s) (fun q => denoteR root b q)
-          (fun q => inlineYield b q) i { p with completed }) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]; try rfl
-
-theorem denoteR_service (key : ServiceKey) (h : p.fuel ≠ 0) :
-    denoteR root (.service key) p =
-      (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun v => serviceLookupR key v) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]; try rfl
-
-theorem denoteR_provideService (key : ServiceKey) (value : Term) (b : NativeEff)
-    (h : p.fuel ≠ 0) :
-    denoteR root (.provideService key value b) p =
-      (match evalTerm p.env value with
-       | some v => updateContextR (.provideService key v) (denoteR root b (p.child 0))
-       | none => .pure badShapeExit) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => rw [denoteR, hf]; try rfl
 
 end denoteEqs
 
@@ -554,12 +387,12 @@ termination_by structural e
 
 /-! ## Addresses and weights -/
 
-theorem at_child_of {root : NativeEff} {p : Point} {n : Node}
+theorem at_child_of {root : NativeEff} {p : Point} {n : Node NativeOp}
     (h : Node.at_ (Node.eff root) p.path = some n) (i : Nat) :
     Node.at_ (Node.eff root) (p.child i).path = n.child i := by
   simp only [Point.child, Node.at_append, h, Option.bind]
 
-theorem at_childWith_of {root : NativeEff} {p : Point} {n : Node}
+theorem at_childWith_of {root : NativeEff} {p : Point} {n : Node NativeOp}
     (h : Node.at_ (Node.eff root) p.path = some n) (i : Nat) (v : Val) :
     Node.at_ (Node.eff root) (p.childWith i v).path = n.child i := by
   simp only [Point.childWith, Node.at_append, h, Option.bind]
@@ -585,6 +418,32 @@ theorem weight_childWith_lt (p : Point) (i : Nat) (v : Val) (h : p.fuel ≠ 0) :
 
 theorem weight_completed (p : Point) (completed : List (FiberId × ExitV)) :
     ({ p with completed } : Point).weight = p.weight := rfl
+
+theorem fuel_child_le (p : Point) (i : Nat) : (p.child i).fuel ≤ p.fuel := by
+  rw [Point.child_fuel]; exact Nat.sub_le _ _
+
+/-- A reference's hop keeps the tape and spends one fuel: no heavier than its point. -/
+theorem weight_redirect_le (p : Point) (target : List Nat) :
+    (p.redirect target).weight ≤ p.weight := by
+  simp only [Point.weight, Point.redirect]; omega
+
+/-- The spine of a `mergeAll` walked `i` steps in from a point (`Node.child`'s
+`layers (.cons _ t), 1`), peeled from the head, so that a statement about the spine descends
+with its term. -/
+def _root_.Effect4.Program.Point.spineWalk : Nat → Point → Point
+  | 0, p => p
+  | i + 1, p => Point.spineWalk i (p.child 1)
+
+theorem foldl_child_eq_spineWalk {α : Type} : ∀ (l : List α) (p : Point),
+    l.foldl (fun acc _ => acc.child 1) p = Point.spineWalk l.length p
+  | [], _ => rfl
+  | _ :: l, p => foldl_child_eq_spineWalk l (p.child 1)
+
+/-- `Point.spineChild` is the walk from the spine's head. -/
+theorem Point.spineChild_eq (q : Point) (i : Nat) :
+    q.spineChild i = (Point.spineWalk i (q.child 0)).child 0 := by
+  unfold Point.spineChild
+  rw [foldl_child_eq_spineWalk, List.length_range]
 
 /-! ## What a suspension returns, with the point kept whole -/
 
@@ -1321,21 +1180,162 @@ theorem layerBuildR_of_at {root : NativeEff} {q : Point} {l : LayerTerm NativeOp
     layerBuildR root q m scope = denoteLayer root l q m scope := by
   simp [layerBuildR, h]
 
-/-- **A layer's build.** At its point, the frame's `compileLayer` and the term's `denoteLayer`
-are related, structurally in the layer, given every program at a lighter point. -/
-theorem layer_intro (root : NativeEff) (n : Nat)
-    (hres : ∀ q : Point, q.weight < n → CodeMeans root (resolve root q) (denoteAt root q)) :
-    ∀ (l : LayerTerm NativeOp) (q : Point) (m : MemoMapId) (scope : Nat), q.weight < n →
-      Node.at_ (.eff root) q.path = some (.layer l) →
-      CodeMeans root (compileLayer l q m scope) (denoteLayer root l q m scope)
-  | .succeed key value, q, m, scope, _, _ => by
-    simp only [compileLayer, denoteLayer]
+/-- `mergeAllEffect`'s fork loop for a `mergeAll` (`Layer.ts:1597-1600`, the host rows slice),
+from layer `i` with `remaining` layers left and the fibers forked so far: the frame's
+`mergeAllForkOne`/`mergeAllForkNext` names and the term's `mergeAllForkR` are related, given
+every layer of the spine at its own point. The last step awaits every forked fiber and merges. -/
+theorem mergeAllFork_intro (root : NativeEff) (q : Point) (m : MemoMapId) (parent : Nat)
+    (count : Nat) (hcount : mergeAllCount root q = count)
+    (hi : ∀ i, i < count → ∀ c,
+      CodeMeans root (resolveLayer root (q.spineChild i) m c) (layerBuildR root (q.spineChild i) m c)) :
+    ∀ (remaining i : Nat) (forked : List FiberId), i + remaining = count →
+      CodeMeans root
+        (match remaining with
+         | 0 => Prim.onSuccess (Prim.withFiber (EffThunk.awaitAllFailFast forked)) .mergeContexts
+         | _ + 1 =>
+           Prim.onSuccess
+             (Prim.sync (EffThunk.op (SyncOp.scopeFork parent FinalizerStrategy.sequential)))
+             (.mergeAllForkOne q i m parent forked))
+        (mergeAllForkR q m parent remaining i forked)
+  | 0, i, forked, _ => by
+    show CodeMeans root
+      (Prim.onSuccess (Prim.withFiber (EffThunk.awaitAllFailFast forked)) .mergeContexts) _
+    simp only [mergeAllForkR]
+    rw [guardR_bind]
+    refine CodeMeans.onSuccess _ _ _ (fiberValR (.awaitAllFailFast forked) rfl) _
+      (CodeMeans.actAwaitAllFailFast _ _ _ rfl delivers_seqR_pure) ?_ rfl (fun _ => rfl)
+    intro completed ex
+    show CodeMeans root (Program.contAOf root .mergeContexts ex) _
+    rw [contAOf_mergeContexts]
+    simp only [seqR]
+    unfold mergeContextsK mergeContextsR
+    cases contextsOf ex with
+    | some ctxs => simp only [prepareR_pure]; exact CodeMeans.success _
+    | none =>
+      cases reasonsOfVal ex with
+      | nil => exact codeMeans_badShape root
+      | cons reason rest => simp only [prepareR_pure]; exact CodeMeans.failure _
+  | remaining + 1, i, forked, hsum => by
+    show CodeMeans root
+      (Prim.onSuccess
+        (Prim.sync (EffThunk.op (SyncOp.scopeFork parent FinalizerStrategy.sequential)))
+        (.mergeAllForkOne q i m parent forked)) _
+    simp only [mergeAllForkR]
+    rw [guardR_bind]
+    refine CodeMeans.onSuccess _ _ _ (storeR (.scopeFork parent .sequential)) _
+      (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
+    intro completed w
+    simp only [seqR]
+    cases hs : Val.scope? w with
+    | some c =>
+      have hw := Val.scope?_exact hs
+      subst hw
+      show CodeMeans root
+        (Program.contAOf root (.mergeAllForkOne q i m parent forked) (Val.scopeHandle c)) _
+      rw [contAOf_mergeAllForkOne_scope]
+      dsimp only
+      try unfold forkLayerR
+      rw [prepareR_guardR_bind, guardR_bind]
+      refine CodeMeans.onSuccess _ _ _ (prepareR completed _) _ ?_ ?_ rfl (fun _ => rfl)
+      · exact CodeMeans.actFork _ _ _ (.layerBuild (q.spineChild i) m c) _ rfl
+          (hi i (by omega) c) (successV root)
+      · intro completed' f
+        show CodeMeans root (Program.contAOf root (.mergeAllForkNext q i m parent forked) f) _
+        simp only [seqR]
+        cases hf : Val.fiber? f with
+        | some id =>
+          have hf' := Val.fiber?_exact hf
+          subst hf'
+          rw [contAOf_mergeAllForkNext_fiber, hcount]
+          dsimp only
+          have ih := mergeAllFork_intro root q m parent count hcount hi remaining (i + 1)
+            (forked ++ [id]) (by omega)
+          cases remaining with
+          | zero =>
+            rw [if_neg (by omega)]
+            exact ih.prepare completed'
+          | succ r =>
+            rw [if_pos (by omega)]
+            exact ih.prepare completed'
+        | none =>
+          rw [contAOf_mergeAllForkNext_other root q i m parent forked f (Val.fiber?_none hf)]
+          simp only [prepareR_pure]
+          exact codeMeans_badShape root
+    | none =>
+      show CodeMeans root (Program.contAOf root (.mergeAllForkOne q i m parent forked) w) _
+      rw [contAOf_mergeAllForkOne_other root q i m parent forked w (Val.scope?_none hs)]
+      simp only [prepareR_pure]
+      exact codeMeans_badShape root
+
+/-- `mergeAllEffect` for a `mergeAll` (`Layer.ts:1587-1602`, the host rows slice): the parallel
+parent, then the fork loop over the spine from layer `0`; no layers is the empty await. -/
+theorem mergeAll_intro (root : NativeEff) (q : Point) (m : MemoMapId) (child : Nat) (count : Nat)
+    (hcount : mergeAllCount root q = count)
+    (hi : ∀ i, i < count → ∀ c,
+      CodeMeans root (resolveLayer root (q.spineChild i) m c) (layerBuildR root (q.spineChild i) m c)) :
+    CodeMeans root
+      (Prim.onSuccess
+        (Prim.sync (EffThunk.op (SyncOp.scopeFork child FinalizerStrategy.parallel)))
+        (.mergeAllChildren q m))
+      (mergeAllR q m child count) := by
+  unfold mergeAllR
+  rw [guardR_bind]
+  refine CodeMeans.onSuccess _ _ _ (storeR (.scopeFork child .parallel)) _
+    (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
+  intro completed v
+  simp only [seqR]
+  cases hs : Val.scope? v with
+  | some parent =>
+    have hv := Val.scope?_exact hs
+    subst hv
+    show CodeMeans root (Program.contAOf root (.mergeAllChildren q m) (Val.scopeHandle parent)) _
+    rw [contAOf_mergeAllChildren_scope, hcount]
+    dsimp only
+    have ih := mergeAllFork_intro root q m parent count hcount hi count 0 [] (Nat.zero_add _)
+    cases count with
+    | zero =>
+      rw [if_neg (Nat.lt_irrefl 0)]
+      exact ih.prepare completed
+    | succ c =>
+      rw [if_pos (Nat.succ_pos c)]
+      exact ih.prepare completed
+  | none =>
+    show CodeMeans root (Program.contAOf root (.mergeAllChildren q m) v) _
+    rw [contAOf_mergeAllChildren_other root q m v (Val.scope?_none hs)]
+    simp only [prepareR_pure]
+    exact codeMeans_badShape root
+
+/-! ## A layer's build
+
+The recursion is structural in the layer term, with one hypothesis it cannot discharge by
+structure: a reference (`LayerTerm.ref`, the host rows slice) hops to its target's term, which
+is no subterm, one fuel down. So the structural pass takes every layer at strictly less fuel
+as given (`hhop`), and `layer_intro` closes it by induction on the fuel. The layers of a
+`mergeAll` are the spine's elements at their own points (`Point.spineChild`), walked with the
+spine (`layerTerms_intro`). -/
+
+mutual
+/-- **A layer's build**, the structural pass. At its point, the frame's
+`resolveLayer.resolveLayerTerm` and the term's `denoteLayer` are related, given every program
+at a lighter point (`hres`) and every layer at strictly less fuel (`hhop`). -/
+theorem layerTerm_intro (root : NativeEff) (n : Nat)
+    (hres : ∀ q : Point, q.weight < n → CodeMeans root (resolve root q) (denoteAt root q))
+    (K : Nat)
+    (hhop : ∀ (l : LayerTerm NativeOp) (q : Point) (m : MemoMapId) (scope : Nat),
+      q.fuel < K → q.weight < n → Node.at_ (.eff root) q.path = some (.layer l) →
+      CodeMeans root (resolveLayer.resolveLayerTerm root l q m scope) (denoteLayer root l q m scope)) :
+    ∀ (l : LayerTerm NativeOp) (q : Point) (m : MemoMapId) (scope : Nat), q.fuel ≤ K →
+      q.weight < n → Node.at_ (.eff root) q.path = some (.layer l) →
+      CodeMeans root (resolveLayer.resolveLayerTerm root l q m scope) (denoteLayer root l q m scope)
+  | .succeed key value, q, m, scope, _, _, _ => by
+    rw [resolveLayerTerm_of_nonref root (.succeed key value) q m scope nofun, denoteLayer_succeed]
+    simp only [compileLayer]
     cases Lit.toVal value with
     | some v => exact CodeMeans.success _
     | none => exact codeMeans_badShape root
-  | .fresh inner, q, m, scope, hq, h => by
-    simp only [compileLayer, denoteLayer]
-    rw [guardR_bind]
+  | .fresh inner, q, m, scope, hK, hq, h => by
+    rw [resolveLayerTerm_of_nonref root (.fresh inner) q m scope nofun, compileLayer_fresh,
+      denoteLayer_fresh, guardR_bind]
     refine CodeMeans.onSuccess _ _ _ (storeR (.memoFork none)) _
       (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
     intro completed v
@@ -1348,27 +1348,34 @@ theorem layer_intro (root : NativeEff) (n : Nat)
       show CodeMeans root (Program.contAOf root (.freshThen (q.child 0) scope) (Val.memoMap id)) _
       rw [contAOf_freshThen_memoMap, resolveLayer_of_at root hinner]
       dsimp only
-      exact (layer_intro root n hres inner (q.child 0) id scope
-        (Nat.lt_of_le_of_lt (weight_child q 0) hq) hinner).prepare completed
+      exact (layerTerm_intro root n hres K hhop inner (q.child 0) id scope
+        (Nat.le_trans (fuel_child_le q 0) hK) (Nat.lt_of_le_of_lt (weight_child q 0) hq)
+        hinner).prepare completed
     | none =>
       show CodeMeans root (Program.contAOf root (.freshThen (q.child 0) scope) v) _
       rw [contAOf_freshThen_other root _ _ v (Val.memoMap?_none hid)]
       simp only [prepareR_pure]
       exact codeMeans_badShape root
-  | .orDie inner, q, m, scope, hq, h => by
-    simp only [compileLayer, denoteLayer]
-    rw [guardR_bind]
+  | .orDie inner, q, m, scope, hK, hq, h => by
+    rw [resolveLayerTerm_of_nonref root (.orDie inner) q m scope nofun, compileLayer_orDie,
+      denoteLayer_orDie, guardR_bind]
     have hinner := at_child_of h 0
-    refine CodeMeans.onFailure _ _ _ (denoteLayer root inner (q.child 0) m scope) _
-      (layer_intro root n hres inner (q.child 0) m scope
-        (Nat.lt_of_le_of_lt (weight_child q 0) hq) hinner) ?_ rfl (fun _ => rfl)
-    intro completed c
-    show CodeMeans root (Prim.failure (orDieCause c))
-      (prepareR completed (.pure (.failure (orDieCause c))))
-    rw [prepareR_pure]
-    exact CodeMeans.failure _
-  | .effect key body, q, m, scope, hq, h => by
-    simp only [compileLayer, denoteLayer]
+    have ih := layerTerm_intro root n hres K hhop inner (q.child 0) m scope
+      (Nat.le_trans (fuel_child_le q 0) hK) (Nat.lt_of_le_of_lt (weight_child q 0) hq) hinner
+    refine CodeMeans.onFailure _ _ _
+      (if inner.isRef then .pure badShapeExit else denoteLayer root inner (q.child 0) m scope) _
+      ?_ ?_ rfl (fun _ => rfl)
+    · -- the inner term is compiled at the table directly: a reference is the refusal on
+      -- both sides, every other constructor its own build
+      cases inner <;> first | exact codeMeans_badShape root | exact ih
+    · intro completed c
+      show CodeMeans root (Prim.failure (orDieCause c))
+        (prepareR completed (.pure (.failure (orDieCause c))))
+      rw [prepareR_pure]
+      exact CodeMeans.failure _
+  | .effect key body, q, m, scope, _, hq, h => by
+    rw [resolveLayerTerm_of_nonref root (.effect key body) q m scope nofun, compileLayer_effect,
+      denoteLayer_effect]
     refine fromBuild_intro root q m scope _ fun child => ?_
     rw [innerLayerAt_effect root h]
     refine memoize_intro root q m child _ fun layerScope => ?_
@@ -1386,8 +1393,9 @@ theorem layer_intro (root : NativeEff) (n : Nat)
       rw [contAOf_bindService]
       simp only [seqR, bindServiceK, bindServiceR, prepareR_pure]
       exact CodeMeans.success _
-  | .effectDiscard body, q, m, scope, hq, h => by
-    simp only [compileLayer, denoteLayer]
+  | .effectDiscard body, q, m, scope, _, hq, h => by
+    rw [resolveLayerTerm_of_nonref root (.effectDiscard body) q m scope nofun,
+      compileLayer_effectDiscard, denoteLayer_effectDiscard]
     refine fromBuild_intro root q m scope _ fun child => ?_
     rw [innerLayerAt_effectDiscard root h]
     refine memoize_intro root q m child _ fun layerScope => ?_
@@ -1405,34 +1413,37 @@ theorem layer_intro (root : NativeEff) (n : Nat)
       rw [contAOf_bindService]
       simp only [seqR, bindServiceK, bindServiceR, prepareR_pure]
       exact CodeMeans.success _
-  | .provide self that, q, m, scope, hq, h => by
-    simp only [compileLayer, denoteLayer]
+  | .provide self that, q, m, scope, hK, hq, h => by
+    rw [resolveLayerTerm_of_nonref root (.provide self that) q m scope nofun, compileLayer_provide,
+      denoteLayer_provide]
     refine fromBuild_intro root q m scope _ fun child => ?_
     rw [innerLayerAt_provide root h]
     have hs := at_child_of h 0
     have ht := at_child_of h 1
     refine provideWith_intro root q m child .provide _ _ ?_ ?_
     · rw [resolveLayer_of_at root ht]
-      exact layer_intro root n hres that (q.child 1) m child
-        (Nat.lt_of_le_of_lt (weight_child q 1) hq) ht
+      exact layerTerm_intro root n hres K hhop that (q.child 1) m child
+        (Nat.le_trans (fuel_child_le q 1) hK) (Nat.lt_of_le_of_lt (weight_child q 1) hq) ht
     · rw [resolveLayer_of_at root hs]
-      exact layer_intro root n hres self (q.child 0) m child
-        (Nat.lt_of_le_of_lt (weight_child q 0) hq) hs
-  | .provideMerge self that, q, m, scope, hq, h => by
-    simp only [compileLayer, denoteLayer]
+      exact layerTerm_intro root n hres K hhop self (q.child 0) m child
+        (Nat.le_trans (fuel_child_le q 0) hK) (Nat.lt_of_le_of_lt (weight_child q 0) hq) hs
+  | .provideMerge self that, q, m, scope, hK, hq, h => by
+    rw [resolveLayerTerm_of_nonref root (.provideMerge self that) q m scope nofun,
+      compileLayer_provideMerge, denoteLayer_provideMerge]
     refine fromBuild_intro root q m scope _ fun child => ?_
     rw [innerLayerAt_provideMerge root h]
     have hs := at_child_of h 0
     have ht := at_child_of h 1
     refine provideWith_intro root q m child .provideMerge _ _ ?_ ?_
     · rw [resolveLayer_of_at root ht]
-      exact layer_intro root n hres that (q.child 1) m child
-        (Nat.lt_of_le_of_lt (weight_child q 1) hq) ht
+      exact layerTerm_intro root n hres K hhop that (q.child 1) m child
+        (Nat.le_trans (fuel_child_le q 1) hK) (Nat.lt_of_le_of_lt (weight_child q 1) hq) ht
     · rw [resolveLayer_of_at root hs]
-      exact layer_intro root n hres self (q.child 0) m child
-        (Nat.lt_of_le_of_lt (weight_child q 0) hq) hs
-  | .merge left right, q, m, scope, hq, h => by
-    simp only [compileLayer, denoteLayer]
+      exact layerTerm_intro root n hres K hhop self (q.child 0) m child
+        (Nat.le_trans (fuel_child_le q 0) hK) (Nat.lt_of_le_of_lt (weight_child q 0) hq) hs
+  | .merge left right, q, m, scope, hK, hq, h => by
+    rw [resolveLayerTerm_of_nonref root (.merge left right) q m scope nofun, compileLayer_merge,
+      denoteLayer_merge]
     refine fromBuild_intro root q m scope _ fun child => ?_
     rw [innerLayerAt_merge root h]
     have h0 := at_child_of h 0
@@ -1440,12 +1451,93 @@ theorem layer_intro (root : NativeEff) (n : Nat)
     refine mergeTwo_intro root q m child ?_ ?_
     · intro c
       rw [resolveLayer_of_at root h0, layerBuildR_of_at h0]
-      exact layer_intro root n hres left (q.child 0) m c
-        (Nat.lt_of_le_of_lt (weight_child q 0) hq) h0
+      exact layerTerm_intro root n hres K hhop left (q.child 0) m c
+        (Nat.le_trans (fuel_child_le q 0) hK) (Nat.lt_of_le_of_lt (weight_child q 0) hq) h0
     · intro c
       rw [resolveLayer_of_at root h1, layerBuildR_of_at h1]
-      exact layer_intro root n hres right (q.child 1) m c
-        (Nat.lt_of_le_of_lt (weight_child q 1) hq) h1
+      exact layerTerm_intro root n hres K hhop right (q.child 1) m c
+        (Nat.le_trans (fuel_child_le q 1) hK) (Nat.lt_of_le_of_lt (weight_child q 1) hq) h1
+  | .mergeAll layers, q, m, scope, hK, hq, h => by
+    rw [resolveLayerTerm_of_nonref root (.mergeAll layers) q m scope nofun, compileLayer_mergeAll,
+      denoteLayer_mergeAll]
+    refine fromBuild_intro root q m scope _ fun child => ?_
+    rw [innerLayerAt_mergeAll root h]
+    refine mergeAll_intro root q m child layers.length (mergeAllCount_of_at root h) ?_
+    intro i hi c
+    rw [Point.spineChild_eq]
+    exact layerTerms_intro root n hres K hhop layers (q.child 0) i hi
+      (Nat.le_trans (fuel_child_le q 0) hK) (Nat.lt_of_le_of_lt (weight_child q 0) hq)
+      (at_child_of h 0) m c
+  | .ref target, q, m, scope, hK, hq, _ => by
+    rw [resolveLayerTerm_ref]
+    cases hf : q.fuel with
+    | zero =>
+      -- no fuel for the hop: the live frontier at the reference's point, on both sides
+      rw [denoteLayer_ref_zero root target q m scope hf]
+      exact CodeMeans.frontier q q _ _ ⟨rfl, rfl, rfl, rfl, rfl⟩ fun completed => by
+        rw [suspendBodyAt_zero' (q := { q with completed }) hf]; rfl
+    | succ k =>
+      -- the hop: the target's term at the target's path, one fuel down, given by `hhop`; a
+      -- target that is a reference itself, or no layer, is the wrong shape on both sides
+      rw [denoteLayer_ref_succ root target q m scope hf]
+      have hw : (q.redirect target).weight < n :=
+        Nat.lt_of_le_of_lt (weight_redirect_le q target) hq
+      have hk : (q.redirect target).fuel < K := by
+        rw [Point.redirect_fuel, hf]; omega
+      rcases hn : Node.at_ (Node.eff root) target with _ | node
+      · exact codeMeans_badShape root
+      · cases node with
+        | layer l' =>
+          have ih := hhop l' (q.redirect target) m scope hk hw hn
+          cases l' <;> first | exact codeMeans_badShape root | exact ih
+        | _ => exact codeMeans_badShape root
+termination_by structural l => l
+
+/-- The layers of a `mergeAll`'s spine, each built at its own point: the `i`-th layer of the
+spine at `p` is the head of the spine walked `i` steps in (`Point.spineWalk`). -/
+theorem layerTerms_intro (root : NativeEff) (n : Nat)
+    (hres : ∀ q : Point, q.weight < n → CodeMeans root (resolve root q) (denoteAt root q))
+    (K : Nat)
+    (hhop : ∀ (l : LayerTerm NativeOp) (q : Point) (m : MemoMapId) (scope : Nat),
+      q.fuel < K → q.weight < n → Node.at_ (.eff root) q.path = some (.layer l) →
+      CodeMeans root (resolveLayer.resolveLayerTerm root l q m scope) (denoteLayer root l q m scope)) :
+    ∀ (ls : LayerTerms NativeOp) (p : Point) (i : Nat), i < ls.length → p.fuel ≤ K →
+      p.weight < n → Node.at_ (.eff root) p.path = some (.layers ls) →
+      ∀ (m : MemoMapId) (c : Nat),
+        CodeMeans root (resolveLayer root ((Point.spineWalk i p).child 0) m c)
+          (layerBuildR root ((Point.spineWalk i p).child 0) m c)
+  | .nil, _, i, hi, _, _, _, _, _ => absurd hi (Nat.not_lt_zero i)
+  | .cons hd _, p, 0, _, hK, hp, h, m, c => by
+    have hh := at_child_of h 0
+    show CodeMeans root (resolveLayer root (p.child 0) m c) (layerBuildR root (p.child 0) m c)
+    rw [resolveLayer_of_at root hh, layerBuildR_of_at hh]
+    exact layerTerm_intro root n hres K hhop hd (p.child 0) m c
+      (Nat.le_trans (fuel_child_le p 0) hK) (Nat.lt_of_le_of_lt (weight_child p 0) hp) hh
+  | .cons _ tl, p, i + 1, hi, hK, hp, h, m, c =>
+    layerTerms_intro root n hres K hhop tl (p.child 1) i (Nat.lt_of_succ_lt_succ hi)
+      (Nat.le_trans (fuel_child_le p 1) hK) (Nat.lt_of_le_of_lt (weight_child p 1) hp)
+      (at_child_of h 1) m c
+termination_by structural ls => ls
+end
+
+/-- **A layer's build.** At its point, the frame's `resolveLayer.resolveLayerTerm` and the
+term's `denoteLayer` are related, given every program at a lighter point: the structural pass
+closed by induction on the fuel a reference's hop spends. -/
+theorem layer_intro (root : NativeEff) (n : Nat)
+    (hres : ∀ q : Point, q.weight < n → CodeMeans root (resolve root q) (denoteAt root q))
+    (l : LayerTerm NativeOp) (q : Point) (m : MemoMapId) (scope : Nat) (hq : q.weight < n)
+    (h : Node.at_ (.eff root) q.path = some (.layer l)) :
+    CodeMeans root (resolveLayer.resolveLayerTerm root l q m scope) (denoteLayer root l q m scope) := by
+  suffices main : ∀ (K : Nat) (l : LayerTerm NativeOp) (q : Point) (m : MemoMapId) (scope : Nat),
+      q.fuel < K → q.weight < n → Node.at_ (.eff root) q.path = some (.layer l) →
+      CodeMeans root (resolveLayer.resolveLayerTerm root l q m scope) (denoteLayer root l q m scope)
+    from main (q.fuel + 1) l q m scope (Nat.lt_succ_self _) hq h
+  intro K
+  induction K with
+  | zero => intro l q m scope hK; exact absurd hK (Nat.not_lt_zero _)
+  | succ K ih =>
+    intro l q m scope hK
+    exact layerTerm_intro root n hres K ih l q m scope (Nat.lt_succ_iff.mp hK)
 
 /-- `Effect.provide`'s protocol after its counted step (`internal/layer.ts:15-21`): the scope
 made, the layer built into it, the body under the built context, the scope closed. -/
@@ -1819,7 +1911,10 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
         have hb : ∀ id, v ≠ Val.fiber ⟨id⟩ := fun id => Val.fiber?_none hfib ⟨id⟩
         split
         · next id heq => exact absurd (Option.some.inj heq) (hb id)
-        · exact codeMeans_badShape root
+        · -- the denotation matches on the same value with the same two cases
+          split
+          · next id heq => exact absurd (Option.some.inj heq) (hb id)
+          · exact codeMeans_badShape root
   | withFiber a =>
     cases hfs : forkScoped? a with
     | some co =>

@@ -3460,6 +3460,21 @@ continuation equations (`Program/Agreement.lean`), the store laws of the memo wo
     Effect4.Prim.onSuccess (Effect4.Program.scopeAddAt scope (Effect4.Machine.FinName.memoEntry q.path owner))
       (Effect4.Program.EffName.awaitPromise cell))
 
+-- the host rows slice (2026-09-08): a reference hops to its target's term at the target's path,
+-- so the second site keys the memo map like the first and the hit branch is reachable from a
+-- printed program (`pDiamond`)
+#check (@Effect4.Program.Agreement.resolveLayerTerm_ref :
+  ∀ (root : Effect4.Program.NativeEff) (target : List Nat) (q : Effect4.Program.Point)
+  (m : Effect4.Machine.MemoMapId) (scope : Nat),
+  Effect4.Program.resolveLayer.resolveLayerTerm root (Effect4.Program.LayerTerm.ref target) q m scope =
+    match q.fuel with
+    | 0 => Effect4.Program.frontier q
+    | _ + 1 =>
+      match (Effect4.Program.Node.eff root).at_ target with
+      | Option.some (Effect4.Program.Node.layer (Effect4.Program.LayerTerm.ref _)) => Effect4.Program.badShape
+      | Option.some (Effect4.Program.Node.layer l) => Effect4.Program.compileLayer l (q.redirect target) m scope
+      | _ => Effect4.Program.badShape)
+
 #check (@Effect4.Machine.MemoWorld.get_own :
   ∀ (w : Effect4.Machine.MemoWorld) (layer : Effect4.Machine.LayerId)
   (id : Effect4.Machine.MemoMapId) (entry : Effect4.Machine.MemoEntry),
@@ -3618,6 +3633,60 @@ continuation equations (`Program/Agreement.lean`), the store laws of the memo wo
             (Effect4.Program.EffThunk.op
               (Effect4.Machine.SyncOp.scopeFork parent Effect4.FinalizerStrategy.sequential))).onSuccess
         (Effect4.Program.EffName.mergeForkOne q 1 m parent (forked ++ [id]))
+    else
+      (Effect4.Prim.withFiber (Effect4.Program.EffThunk.awaitAllFailFast (forked ++ [id]))).onSuccess
+        Effect4.Program.EffName.mergeContexts)
+
+-- the host rows slice (2026-09-08): the n-ary merge is the same protocol over the `layers`
+-- spine, the sibling count read off the node (`mergeAllCount`)
+#check (@Effect4.Program.Agreement.innerLayerAt_mergeAll :
+  ∀ (root : Effect4.Program.NativeEff) {q : Effect4.Program.Point}
+  {layers : Effect4.Program.LayerTerms Effect4.Program.NativeOp},
+  (Effect4.Program.Node.eff root).at_ q.path = Option.some (Effect4.Program.Node.layer (Effect4.Program.LayerTerm.mergeAll layers)) →
+    ∀ (m : Effect4.Machine.MemoMapId) (child : Nat),
+      Effect4.Program.innerLayerAt root q m child =
+        (Effect4.Prim.sync
+              (Effect4.Program.EffThunk.op
+                (Effect4.Machine.SyncOp.scopeFork child Effect4.FinalizerStrategy.parallel))).onSuccess
+          (Effect4.Program.EffName.mergeAllChildren q m))
+
+#check (@Effect4.Program.Agreement.mergeAllCount_of_at :
+  ∀ (root : Effect4.Program.NativeEff) {q : Effect4.Program.Point}
+  {layers : Effect4.Program.LayerTerms Effect4.Program.NativeOp},
+  (Effect4.Program.Node.eff root).at_ q.path = Option.some (Effect4.Program.Node.layer (Effect4.Program.LayerTerm.mergeAll layers)) →
+    Effect4.Program.mergeAllCount root q = layers.length)
+
+#check (@Effect4.Program.Agreement.contAOf_mergeAllChildren_scope :
+  ∀ (root : Effect4.Program.NativeEff) (q : Effect4.Program.Point)
+  (m : Effect4.Machine.MemoMapId) (parent : Nat),
+  Effect4.Program.contAOf root (Effect4.Program.EffName.mergeAllChildren q m) (Effect4.Machine.Val.scopeHandle parent) =
+    if 0 < Effect4.Program.mergeAllCount root q then
+      (Effect4.Prim.sync
+            (Effect4.Program.EffThunk.op
+              (Effect4.Machine.SyncOp.scopeFork parent Effect4.FinalizerStrategy.sequential))).onSuccess
+        (Effect4.Program.EffName.mergeAllForkOne q 0 m parent [])
+    else
+      (Effect4.Prim.withFiber (Effect4.Program.EffThunk.awaitAllFailFast [])).onSuccess
+        Effect4.Program.EffName.mergeContexts)
+
+#check (@Effect4.Program.Agreement.contAOf_mergeAllForkOne_scope :
+  ∀ (root : Effect4.Program.NativeEff) (q : Effect4.Program.Point)
+  (i : Nat) (m : Effect4.Machine.MemoMapId) (parent : Nat) (forked : List Effect4.FiberId) (child : Nat),
+  Effect4.Program.contAOf root (Effect4.Program.EffName.mergeAllForkOne q i m parent forked)
+      (Effect4.Machine.Val.scopeHandle child) =
+    (Effect4.Prim.withFiber (Effect4.Program.EffThunk.forkLayer (q.spineChild i) m child)).onSuccess
+      (Effect4.Program.EffName.mergeAllForkNext q i m parent forked))
+
+#check (@Effect4.Program.Agreement.contAOf_mergeAllForkNext_fiber :
+  ∀ (root : Effect4.Program.NativeEff) (q : Effect4.Program.Point)
+  (i : Nat) (m : Effect4.Machine.MemoMapId) (parent : Nat) (forked : List Effect4.FiberId) (id : Effect4.FiberId),
+  Effect4.Program.contAOf root (Effect4.Program.EffName.mergeAllForkNext q i m parent forked)
+      (Effect4.Machine.Val.fiber id) =
+    if i + 1 < Effect4.Program.mergeAllCount root q then
+      (Effect4.Prim.sync
+            (Effect4.Program.EffThunk.op
+              (Effect4.Machine.SyncOp.scopeFork parent Effect4.FinalizerStrategy.sequential))).onSuccess
+        (Effect4.Program.EffName.mergeAllForkOne q (i + 1) m parent (forked ++ [id]))
     else
       (Effect4.Prim.withFiber (Effect4.Program.EffThunk.awaitAllFailFast (forked ++ [id]))).onSuccess
         Effect4.Program.EffName.mergeContexts)
@@ -6436,18 +6505,21 @@ private def censusRows : List Row :=
         , w `Effect4.Program.Agreement.contAOf_buildIntoLayerScope_scope "propext,Quot.sound"
         , w `Effect4.Program.Agreement.contAOf_thenBuildInto "propext,Quot.sound"
         , w `Effect4.Machine.finProgram_memoDone "none"
-        , w `Effect4.Machine.syncOpStep_memoComplete_some "propext" ] }
+        , w `Effect4.Machine.syncOpStep_memoComplete_some "propext"
+        , w `Effect4.Program.Agreement.resolveLayerTerm_ref "propext,Quot.sound" ] }
   , { id := "layer.memo-finalizer-last-observer", kind := "layer", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Machine.finProgram_memoEntry "none"
         , w `Effect4.Machine.syncOpStep_memoRelease_last "propext"
         , w `Effect4.Machine.syncOpStep_memoRelease_dec "propext"
         , w `Effect4.Machine.contAOf_closeIfLast_scope "propext"
-        , w `Effect4.Program.Sched.contAOf_closeIfLast_other "propext,Quot.sound" ] }
+        , w `Effect4.Program.Sched.contAOf_closeIfLast_other "propext,Quot.sound"
+        , w `Effect4.Program.Agreement.resolveLayerTerm_ref "propext,Quot.sound" ] }
   , { id := "layer.memo-reuse-observer-count", kind := "layer", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Machine.syncOpStep_memoGet_some "propext"
-        , w `Effect4.Program.Agreement.contAOf_memoize_hit "propext,Quot.sound" ] }
+        , w `Effect4.Program.Agreement.contAOf_memoize_hit "propext,Quot.sound"
+        , w `Effect4.Program.Agreement.resolveLayerTerm_ref "propext,Quot.sound" ] }
   , { id := "layer.memo-map-parent-lookup", kind := "layer", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ w `Effect4.Machine.MemoWorld.get_own "propext"
@@ -6485,6 +6557,11 @@ private def censusRows : List Row :=
         , w `Effect4.Program.Agreement.contAOf_mergeForkOne_scope "propext,Quot.sound"
         , w `Effect4.Program.Agreement.withFiberOf_forkLayer "propext,Quot.sound"
         , w `Effect4.Program.Agreement.contAOf_mergeForkNext_fiber "propext,Quot.sound"
+        , w `Effect4.Program.Agreement.innerLayerAt_mergeAll "propext,Quot.sound"
+        , w `Effect4.Program.Agreement.mergeAllCount_of_at "propext"
+        , w `Effect4.Program.Agreement.contAOf_mergeAllChildren_scope "propext,Quot.sound"
+        , w `Effect4.Program.Agreement.contAOf_mergeAllForkOne_scope "propext,Quot.sound"
+        , w `Effect4.Program.Agreement.contAOf_mergeAllForkNext_fiber "propext,Quot.sound"
         , w `Effect4.Program.Agreement.withFiberOf_awaitAllFailFast "propext,Quot.sound"
         , w `Effect4.Program.Agreement.contAOf_mergeContexts "propext,Quot.sound"
         , w `Effect4.Program.Agreement.mergeContextsK_contexts "propext,Quot.sound" ] }
@@ -6980,6 +7057,7 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Program.Sched.contAOf_closeIfLast_other
   , `Effect4.Machine.syncOpStep_memoGet_some
   , `Effect4.Program.Agreement.contAOf_memoize_hit
+  , `Effect4.Program.Agreement.resolveLayerTerm_ref
   , `Effect4.Machine.MemoWorld.get_own
   , `Effect4.Machine.MemoWorld.get_parent
   , `Effect4.Program.Agreement.innerLayerAt_effect
@@ -7000,6 +7078,11 @@ private def snapshotWitnesses : List Name :=
   , `Effect4.Program.Agreement.contAOf_mergeForkOne_scope
   , `Effect4.Program.Agreement.withFiberOf_forkLayer
   , `Effect4.Program.Agreement.contAOf_mergeForkNext_fiber
+  , `Effect4.Program.Agreement.innerLayerAt_mergeAll
+  , `Effect4.Program.Agreement.mergeAllCount_of_at
+  , `Effect4.Program.Agreement.contAOf_mergeAllChildren_scope
+  , `Effect4.Program.Agreement.contAOf_mergeAllForkOne_scope
+  , `Effect4.Program.Agreement.contAOf_mergeAllForkNext_fiber
   , `Effect4.Program.Agreement.withFiberOf_awaitAllFailFast
   , `Effect4.Program.Agreement.contAOf_mergeContexts
   , `Effect4.Program.Agreement.mergeContextsK_contexts

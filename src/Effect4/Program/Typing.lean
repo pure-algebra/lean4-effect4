@@ -1,4 +1,4 @@
-import Effect4.Program.Eff
+import Effect4.Program.Refs
 import Effect4.Machine.Context
 
 /-!
@@ -297,6 +297,20 @@ mutual
       some (a.merge b)
     | .fresh inner => layerTy sig inner
     | .orDie inner => (layerTy sig inner).map LayerTy.orDie
+    -- a reference is typed by the whole program (`typeOfProgram` expands it to its target);
+    -- structurally it is nothing
+    | .ref _ => none
+    | .mergeAll layers => layersTy sig layers
+
+  /-- The layers of a `mergeAll` (`Layer.ts:1652`, at least one): their signatures merged as
+  siblings, `merge` folded to the right. -/
+  def layersTy (sig : Signature Op) : LayerTerms Op → Option LayerTy
+    | .nil => none
+    | .cons head .nil => layerTy sig head
+    | .cons head tail => do
+      let h ← layerTy sig head
+      let t ← layersTy sig tail
+      some (h.merge t)
 
   /-- A generator body, statement by statement; `inLoop` admits `break`. A `return` ends
   the body: statements after it are refused. -/
@@ -409,8 +423,19 @@ mutual
       | _ => none
 end
 
-/-- `typeOf` at the empty environment. -/
+/-- `typeOf` at the empty environment. Structural: a layer reference (`LayerTerm.ref`) types
+as nothing here; `typeOfProgram` is the whole program's typing. -/
 def typeOf (sig : Signature Op) (program : Eff Op) : Option EffTy := effTy sig [] program
+
+/-- The type of a whole program, its layer references resolved (the host rows slice): when
+the references are well formed (`Eff.layerRefsWF`, `Program/Refs.lean`: every target a
+non-reference layer that precedes its reference) the program is expanded to its
+reference-free twin (`Eff.expandRefs`) and typed structurally; otherwise `none`. A program
+with no references is `typeOf` itself. -/
+def typeOfProgram (sig : Signature Op) (program : Eff Op) : Option EffTy :=
+  if program.layerRefsWF && (program.expandRefs.refSites []).isEmpty then
+    typeOf sig program.expandRefs
+  else none
 
 /-! ### Inserting an environment slot -/
 

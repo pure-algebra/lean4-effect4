@@ -53,7 +53,7 @@ let ellipsis (n : int) (s : string) : string =
 (* ---- 1. goldens ---- *)
 
 let () =
-  check "corpus has 39 programs" (List.length corpus = 39);
+  check "corpus has 41 programs" (List.length corpus = 41);
   Printf.printf "  %-16s %6s %-8s %-10s %-6s %s\n" "program" "bytes" "decode" "re-encode" "JSON" "typeOf";
   List.iter
     (fun (name, typed) ->
@@ -150,6 +150,26 @@ let p_provide_typed : program =
     ( Provide_layer (layer, false, Bind (Service k_a, Provide_service (k_b, nat 2, Service k_b)))
     , Nat
     , Union (Union (Never, Never), Never) )
+
+(* The host rows slice (2026-09-08): Layer.mergeAll over three layers (Goldens.lean pMergeAll),
+   provided to a body that reads two of them. The error witness is the checker's right fold
+   over the spine, under the body's bind. pDiamond (the memo diamond, a `ref`) has no typed
+   form: a reference is typed by the whole program, and the corpus records its structural
+   answer, ill-typed. *)
+let p_merge_all_typed : program =
+  let k_a = Nat_key (Option.get (free_name 4)) in
+  let k_b = Nat_key (Option.get (free_name 5)) in
+  let k_c = Bool_key (Option.get (free_name 6)) in
+  let layer =
+    L_merge_all
+      (Ls_cons
+         ( L_succeed (k_b, Lv_nat 1)
+         , Ls_cons (L_effect (k_a, Succeed (nat 7)), Ls_last (L_succeed (k_c, Lv_bool true))) ))
+  in
+  Program
+    ( Provide_layer (layer, false, Bind (Service k_a, Service k_c))
+    , Bool
+    , Union (Union (Never, Never), Union (Never, Union (Never, Never))) )
 
 let typed_corpus : (string * program) list =
   [ ("p42", Program (Succeed (nat 42), Nat, Never))
@@ -317,6 +337,7 @@ let typed_corpus : (string * program) list =
         , un16 (un4 Nat) ) )
   ; ("pProvide", p_provide_typed)
   ; ("pSleep", Program (Bind (Callback (Sleep, nat 3), Perform (Clock_now, unit_)), Nat, un Never))
+  ; ("pMergeAll", p_merge_all_typed)
   ]
 
 let () =
@@ -409,7 +430,8 @@ let () =
   check "FnName has 5" (List.length ctor_names_fn_name = 5);
   check "NativeOp has 22" (List.length ctor_names_native_op = 22);
   check "Eff has 27" (List.length ctor_names_eff = 27);
-  check "LayerTerm has 8" (List.length ctor_names_layer_term = 8);
+  check "LayerTerm has 10" (List.length ctor_names_layer_term = 10);
+  check "LayerTerms has 2" (List.length ctor_names_layer_terms = 2);
   check "Stmt has 6" (List.length ctor_names_stmt = 6);
   check "ActionTerm has 16" (List.length ctor_names_action_term = 16);
   check "Eff.succeed is 0" (ctor_index_eff (Eff_yieldNow 0) = 17 && ctor_index_eff (Eff_succeed (Term_var 0)) = 0);
@@ -421,15 +443,20 @@ let () =
   check "LayerTerm.succeed is 0, orDie 7"
     (ctor_index_layer_term (Layer_term_succeed (Eff_native.scope_key, Lit_unit)) = 0
      && ctor_index_layer_term (Layer_term_orDie (Layer_term_effectDiscard (Eff_yieldNow 0))) = 7);
+  check "LayerTerm.ref is 8, mergeAll 9 (the host rows slice appends)"
+    (ctor_index_layer_term (Layer_term_ref [ 0; 0 ]) = 8
+     && ctor_index_layer_term (Layer_term_mergeAll Layer_terms_nil) = 9);
   check "Eff.gen is 8, perform 6, bind 7" (ctor_index_eff (Eff_gen Stmts_nil) = 8 && ctor_index_eff (Eff_perform (Native_op_refGet, Term_var 0)) = 6 && ctor_index_eff (Eff_bind (Eff_yieldNow 0, Eff_yieldNow 0)) = 7);
   check "ActionTerm.closeScope is 15" (ctor_index_action_term (Action_term_closeScope (Term_var 0, Term_var 0)) = 15);
   check "NativeOp.scopeMake is 19" (ctor_index_native_op (Native_op_scopeMake Finalizer_strategy_parallel) = 19);
   check "NativeOp.refUpdate is 5" (ctor_index_native_op (Native_op_refUpdate Fn_name_incr) = 5);
   check "Ty.union is 14, handle 6" (ctor_index_ty (Ty_union (Ty_nat, Ty_nat)) = 14 && ctor_index_ty (Ty_handle "") = 6);
-  check "nil is 0 and cons is 1 in Terms, Stmts, Effs"
+  check "nil is 0 and cons is 1 in Terms, Stmts, Effs, LayerTerms"
     (ctor_index_terms Terms_nil = 0 && ctor_index_terms (Terms_cons (Term_var 0, Terms_nil)) = 1
      && ctor_index_stmts Stmts_nil = 0 && ctor_index_stmts (Stmts_cons (Stmt_breakLoop, Stmts_nil)) = 1
-     && ctor_index_effs Effs_nil = 0 && ctor_index_effs (Effs_cons (Eff_yieldNow 0, Effs_nil)) = 1);
+     && ctor_index_effs Effs_nil = 0 && ctor_index_effs (Effs_cons (Eff_yieldNow 0, Effs_nil)) = 1
+     && ctor_index_layer_terms Layer_terms_nil = 0
+     && ctor_index_layer_terms (Layer_terms_cons (Layer_term_ref [], Layer_terms_nil)) = 1);
   check "MaskMode: interruptible 0, uninterruptible 1, inherit 2"
     (ctor_index_mask_mode Mask_mode_interruptible = 0 && ctor_index_mask_mode Mask_mode_inherit = 2);
   check "ObserverMode: awaitValue 0, joinEffect 1" (ctor_index_observer_mode Observer_mode_joinEffect = 1);
@@ -442,7 +469,7 @@ let () =
     go 0
   in
   let manifest = read_file "../eff_manifest.txt" |> String.split_on_char '\n' |> List.filter (fun l -> l <> "") in
-  check "the manifest has 24 families" (List.length manifest = 24);
+  check "the manifest has 25 families" (List.length manifest = 25);
   check "the manifest's Eff line names the 24 constructors with their carriers"
     (List.exists
        (fun l ->
@@ -450,12 +477,14 @@ let () =
          && contains l "whileLoop(term,term,term,eff)"
          && contains l "choose(int,eff,eff) provideLayer(layer_term,bool,eff) service(service_key) provideService(service_key,term,eff)")
        manifest);
-  check "the manifest's LayerTerm line names the 8 constructors with their carriers"
+  check "the manifest's LayerTerm line names the 10 constructors with their carriers"
     (List.exists
        (fun l ->
          contains l "Effect4.Program.LayerTerm (layer_term) inductive: succeed(service_key,lit) effect(service_key,eff)"
-         && contains l "merge(layer_term,layer_term) fresh(layer_term) orDie(layer_term)")
+         && contains l "merge(layer_term,layer_term) fresh(layer_term) orDie(layer_term) ref(int list) mergeAll(layer_terms)")
        manifest);
+  check "the manifest's LayerTerms line is the spine"
+    (List.exists (fun l -> contains l "Effect4.Program.LayerTerms (layer_terms) inductive: nil cons(layer_term,layer_terms)") manifest);
   check "the manifest's NativeOp line ends with scopeMake(finalizer_strategy)"
     (List.exists (fun l -> contains l "(native_op) inductive: refMake" && contains l "deferredAwait scopeMake(finalizer_strategy) sleep clockNow") manifest);
   (* atoms *)

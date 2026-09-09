@@ -501,6 +501,19 @@ and check_layer : layer_term -> layer_ty checked = function
   | Layer_term_orDie inner ->
     let* l = check_layer inner in
     Ok (layer_or_die l)
+  (* the host rows slice (2026-09-08): a reference is typed by the whole program in Lean
+     (`typeOfProgram` expands it to its target); structurally it is nothing, as `layerTy`
+     answers. `mergeAll` merges its layers to the right; none is nothing. *)
+  | Layer_term_ref _ -> refuse "LayerTerm.ref: a reference is typed by the whole program"
+  | Layer_term_mergeAll layers -> check_layers layers
+
+and check_layers : layer_terms -> layer_ty checked = function
+  | Layer_terms_nil -> refuse "Layer.mergeAll: no layers"
+  | Layer_terms_cons (head, Layer_terms_nil) -> check_layer head
+  | Layer_terms_cons (head, tail) ->
+    let* a = check_layer head in
+    let* b = check_layers tail in
+    Ok (layer_merge a b)
 
 (* ---- the face ---- *)
 

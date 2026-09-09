@@ -216,6 +216,11 @@ partial def layerV : LayerTerm NativeOp → V
   | .merge l r => .ctor ``LayerTerm.merge [layerV l, layerV r]
   | .fresh i => .ctor ``LayerTerm.fresh [layerV i]
   | .orDie i => .ctor ``LayerTerm.orDie [layerV i]
+  | .ref target => .ctor ``LayerTerm.ref [.list (target.map .nat)]
+  | .mergeAll ls => .ctor ``LayerTerm.mergeAll [layersV ls]
+partial def layersV : LayerTerms NativeOp → V
+  | .nil => .ctor ``LayerTerms.nil []
+  | .cons h t => .ctor ``LayerTerms.cons [layerV h, layersV t]
 partial def stmtV : Stmt NativeOp → V
   | .bindYield e => .ctor ``Stmt.bindYield [effV e]
   | .yieldDiscard e => .ctor ``Stmt.yieldDiscard [effV e]
@@ -376,6 +381,21 @@ def pProvide : P :=
 /-- The timer (A4, 2026-09-08): a sleep, then the clock read. -/
 def pSleep : P := .bind (.callback .sleep (n 3)) (.perform .clockNow u)
 
+def ls (xs : List (LayerTerm NativeOp)) : LayerTerms NativeOp := xs.foldr .cons .nil
+
+/-- The memo fix (the host rows slice, 2026-09-08): one layer at two sites, the second a
+reference to the first's path (`[0, 0]`: the root `provideLayer`'s layer is child `0`, the
+merge's left child `0`), so both sites share one memo entry. -/
+def pDiamond : P :=
+  .provideLayer (.merge (.effect kA (.succeed (n 7))) (.ref [0, 0])) false (.service kA)
+
+/-- The n-ary merge (the host rows slice): three layers built as siblings under one parallel
+parent scope. -/
+def pMergeAll : P :=
+  .provideLayer
+    (.mergeAll (ls [.succeed kB (.nat 1), .effect kA (.succeed (n 7)), .succeed kC (.bool true)]))
+    false (.bind (.service kA) (.service kC))
+
 def corpus : List (String × P) :=
   [ ("p42", p42), ("pBind", pBind), ("pFork", pFork), ("pTwo", pTwo), ("pAwait", pAwait)
   , ("pGen", pGen), ("pWhile", pWhile), ("pCatch", pCatch), ("pStr", pStr), ("pFailCause", pFailCause)
@@ -386,7 +406,7 @@ def corpus : List (String × P) :=
   , ("pIll", pIll), ("pIllRet", pIllRet), ("pIllReq", pIllReq), ("pIllBreak", pIllBreak)
   , ("pIllBranch", pIllBranch), ("pIllJoin", pIllJoin), ("pIllVar", pIllVar)
   , ("pIllCallback", pIllCallback), ("pIllStep", pIllStep), ("pIllInterruptor", pIllInterruptor)
-  , ("pProvide", pProvide), ("pSleep", pSleep) ]
+  , ("pProvide", pProvide), ("pSleep", pSleep), ("pDiamond", pDiamond), ("pMergeAll", pMergeAll) ]
 
 end Corpus
 

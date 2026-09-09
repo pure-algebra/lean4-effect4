@@ -178,10 +178,20 @@ def genOp : M NativeOp := do
 /-- Free numeric service keys for the generated corpus; other carriers have explicit reader pins. -/
 def genKey : M ServiceKey := do pure ⟨⟨4 + (← pick 8)⟩, ⟨4⟩⟩
 
-/-- One layer arm, with recursive generators already one depth below. -/
+/-- `count` layers one depth below, as a `mergeAll` spine. -/
+def genLayers (prevLayer : M (LayerTerm NativeOp)) : Nat → M (LayerTerms NativeOp)
+  | 0 => pure .nil
+  | count + 1 => do
+    let head ← prevLayer
+    let tail ← genLayers prevLayer count
+    pure (.cons head tail)
+
+/-- One layer arm, with recursive generators already one depth below; the ninth draw (the
+host rows slice) is a `mergeAll` of one to three layers. A `ref` is never drawn here: it
+names a path of the whole program, which `refPass` chooses after the draw. -/
 def genLayerStep (prev : Nat → M (Eff NativeOp)) (prevLayer : M (LayerTerm NativeOp)) :
     M (LayerTerm NativeOp) := do
-  match ← pick 8 with
+  match ← pick 9 with
   | 0 => pure (.succeed (← genKey) (.nat (← pick 20)))
   | 1 => pure (.effect (← genKey) (← prev 0))
   | 2 => pure (.effectDiscard (← prev 0))
@@ -189,7 +199,8 @@ def genLayerStep (prev : Nat → M (Eff NativeOp)) (prevLayer : M (LayerTerm Nat
   | 4 => pure (.provideMerge (← prevLayer) (← prevLayer))
   | 5 => pure (.merge (← prevLayer) (← prevLayer))
   | 6 => pure (.fresh (← prevLayer))
-  | _ => pure (.orDie (← prevLayer))
+  | 7 => pure (.orDie (← prevLayer))
+  | _ => pure (.mergeAll (← genLayers prevLayer (1 + (← pick 3))))
 
 /-! ## Programs
 
@@ -316,9 +327,27 @@ end
 def genEffs (n depth count : Nat) : M (Effs NativeOp) :=
   effsOf (fun m => genEff m depth) n count
 
-/-- Program `i` of the corpus, at `depth`: the generator run from the seed the spike used. -/
+/-- The host rows slice: a layer reference drawn into a generated program by a post-pass,
+since a reference names a path of the whole program and a structural draw has no tree in
+hand. The first layer of the program (in program order) is the target and the first later
+layer not inside it, if any, becomes `.ref` to it — so every drawn reference satisfies
+`layerRefsWF` by construction (the target precedes the site and does not enclose it, and
+is no reference itself), and the corpus reaches `LayerTerm.ref`. -/
+def refPass (e : Eff NativeOp) : Eff NativeOp :=
+  match e.layerPaths [] with
+  | target :: rest =>
+    match rest.find? (fun site => !Path.properPrefix target site) with
+    | some site =>
+      match (Node.eff e).replaceLayerAt site (.ref target) with
+      | some (Node.eff e') => e'
+      | _ => e
+    | none => e
+  | [] => e
+
+/-- Program `i` of the corpus, at `depth`: the generator run from the seed the spike used,
+then the reference pass. -/
 def program (i depth : Nat) : Eff NativeOp :=
-  ((genEff 0 depth).run ⟨1000003 * (i + 1) + 17⟩).1
+  refPass ((genEff 0 depth).run ⟨1000003 * (i + 1) + 17⟩).1
 
 /-- The first `count` programs at `depth`. -/
 def corpus (count depth : Nat) : List (Eff NativeOp) :=
@@ -359,11 +388,17 @@ def walkEff (pe : Eff NativeOp → Bool) (ps : Stmt NativeOp → Bool)
 /-- Traverse closed effect bodies and nested layer combinators. -/
 def walkLayer (pe : Eff NativeOp → Bool) (ps : Stmt NativeOp → Bool)
     (pa : ActionTerm NativeOp → Bool) : LayerTerm NativeOp → Bool
-  | .succeed _ _ => false
+  | .succeed _ _ | .ref _ => false
   | .effect _ body | .effectDiscard body => walkEff pe ps pa body
   | .provide self that | .provideMerge self that | .merge self that =>
     walkLayer pe ps pa self || walkLayer pe ps pa that
   | .fresh inner | .orDie inner => walkLayer pe ps pa inner
+  | .mergeAll layers => walkLayers pe ps pa layers
+
+def walkLayers (pe : Eff NativeOp → Bool) (ps : Stmt NativeOp → Bool)
+    (pa : ActionTerm NativeOp → Bool) : LayerTerms NativeOp → Bool
+  | .nil => false
+  | .cons head tail => walkLayer pe ps pa head || walkLayers pe ps pa tail
 
 def walkStmts (pe : Eff NativeOp → Bool) (ps : Stmt NativeOp → Bool)
     (pa : ActionTerm NativeOp → Bool) : Stmts NativeOp → Bool
@@ -405,12 +440,18 @@ def mentionsStmt (p : Stmt NativeOp → Bool) (e : Eff NativeOp) : Bool :=
 def mentionsAction (p : ActionTerm NativeOp → Bool) (e : Eff NativeOp) : Bool :=
   walkEff (fun _ => false) (fun _ => false) p e
 
+mutual
 /-- The layer constructors in one layer tree; the outer walker visits nested effect bodies. -/
 def layerContains (p : LayerTerm NativeOp → Bool) : LayerTerm NativeOp → Bool
   | layer@(.provide self that) | layer@(.provideMerge self that) | layer@(.merge self that) =>
     p layer || layerContains p self || layerContains p that
   | layer@(.fresh inner) | layer@(.orDie inner) => p layer || layerContains p inner
+  | layer@(.mergeAll layers) => p layer || layersContain p layers
   | layer => p layer
+def layersContain (p : LayerTerm NativeOp → Bool) : LayerTerms NativeOp → Bool
+  | .nil => false
+  | .cons head tail => layerContains p head || layersContain p tail
+end
 
 /-- Whether a program contains a layer node satisfying the predicate. -/
 def mentionsLayer (p : LayerTerm NativeOp → Bool) : Eff NativeOp → Bool :=
@@ -447,10 +488,15 @@ def nodesEff : Eff NativeOp → Nat
   | _ => 1
 
 def nodesLayer : LayerTerm NativeOp → Nat
-  | .succeed _ _ => 0
+  | .succeed _ _ | .ref _ => 0
   | .effect _ body | .effectDiscard body => nodesEff body
   | .provide self that | .provideMerge self that | .merge self that => nodesLayer self + nodesLayer that
   | .fresh inner | .orDie inner => nodesLayer inner
+  | .mergeAll layers => nodesLayers layers
+
+def nodesLayers : LayerTerms NativeOp → Nat
+  | .nil => 0
+  | .cons head tail => nodesLayer head + nodesLayers tail
 
 def nodesStmts : Stmts NativeOp → Nat
   | .nil => 0
@@ -501,10 +547,15 @@ def depthEff : Eff NativeOp → Nat
   | _ => 1
 
 def depthLayer : LayerTerm NativeOp → Nat
-  | .succeed _ _ => 0
+  | .succeed _ _ | .ref _ => 0
   | .effect _ body | .effectDiscard body => depthEff body
   | .provide self that | .provideMerge self that | .merge self that => max (depthLayer self) (depthLayer that)
   | .fresh inner | .orDie inner => depthLayer inner
+  | .mergeAll layers => depthLayers layers
+
+def depthLayers : LayerTerms NativeOp → Nat
+  | .nil => 0
+  | .cons head tail => max (depthLayer head) (depthLayers tail)
 
 def depthStmts : Stmts NativeOp → Nat
   | .nil => 0
@@ -580,13 +631,13 @@ def wellTypedCount : Nat := (sample.filter Api.wellTyped).length
 
 /-! ### The well-typed count -/
 
-#guard wellTypedCount = 148
+#guard wellTypedCount = 152
 
 /-! ### Size -/
 
 #guard maxNodes = 24
 #guard maxDepth = 5
-#guard totalNodes = 1864
+#guard totalNodes = 1860
 
 /-! ### Every `Eff` constructor the printer accepts occurs -/
 
@@ -628,6 +679,11 @@ def wellTypedCount : Nat := (sample.filter Api.wellTyped).length
 #guard coversLayer (fun | .merge _ _ => true | _ => false)
 #guard coversLayer (fun | .fresh _ => true | _ => false)
 #guard coversLayer (fun | .orDie _ => true | _ => false)
+-- the host rows slice: the n-ary merge is drawn, the reference is placed by `refPass`
+#guard coversLayer (fun | .mergeAll _ => true | _ => false)
+#guard coversLayer (fun | .ref _ => true | _ => false)
+-- every drawn reference is well formed
+#guard sample.all Eff.layerRefsWF
 
 /-! The one constructor the printer refuses is the one the generator never draws. -/
 #guard !coversEff (fun | .choose _ _ _ => true | _ => false)

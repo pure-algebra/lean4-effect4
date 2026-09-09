@@ -26,7 +26,7 @@ What this module adds to the tree, and what it deliberately reuses:
   a function on rows — the same rule types a middleware and a layer.
 * **`LayerTerm`, the first-order layer language**, one constructor per rc.112 export the
   corpus uses (`succeed`, `effect`, `effectDiscard`, `provide`, `provideMerge`, `merge`,
-  `fresh`, `orDie`; `mergeAll` is the fold of `merge`), with `layerTy` its typing and
+  `fresh`, `orDie`, and since the host rows slice `ref` and the n-ary `mergeAll`), with `layerTy` its typing and
   `Eff` bodies at the `effect` leaves — the same `Eff` the printer prints and the
   compile compiles; both live in `Program/Eff.lean` and `Program/Typing.lean` since the
   join. Nothing here is a closure; `DecidableEq` throughout.
@@ -291,7 +291,10 @@ structure LeafSem (Op : Type) where
   /-- Whether `effectDiscard body` completes under a context. -/
   discard : Eff Op → Ctx → Option Unit
 
-/-- The context a layer builds under a context; `none` is a leaf that did not build. -/
+mutual
+/-- The context a layer builds under a context; `none` is a leaf that did not build. A
+reference builds nothing here: this specification is structural, and a reference is typed
+and resolved by the whole program (`Program/Refs.lean`). -/
 def build {Op : Type} (sem : LeafSem Op) : LayerTerm Op → Ctx → Option Ctx
   | .succeed key value, _ => (litVal value).map fun v => Context.empty.addV key v
   | .effect key body, ctx => (sem.effect key body ctx).map fun v => Context.empty.addV key v
@@ -309,6 +312,19 @@ def build {Op : Type} (sem : LeafSem Op) : LayerTerm Op → Ctx → Option Ctx
     some (a.merge b)
   | .fresh inner, ctx => build sem inner ctx
   | .orDie inner, ctx => build sem inner ctx
+  | .ref _, _ => none
+  | .mergeAll layers, ctx => buildAll sem layers ctx
+
+/-- The layers of a `mergeAll` built as siblings, merged to the right (`Context.mergeAll`,
+`Layer.ts:1600`); none is nothing, as `layersTy` types it. -/
+def buildAll {Op : Type} (sem : LeafSem Op) : LayerTerms Op → Ctx → Option Ctx
+  | .nil, _ => none
+  | .cons head .nil, ctx => build sem head ctx
+  | .cons head tail, ctx => do
+    let a ← build sem head ctx
+    let b ← buildAll sem tail ctx
+    some (a.merge b)
+end
 
 /-- A leaf semantics is *typed* for a signature when every leaf builds under a context that
 satisfies the leaf's own requirement row. Every honest leaf semantics is: a body that reads
@@ -321,6 +337,7 @@ structure LeafSem.Typed {Op : Type} (sig : Signature Op) (sem : LeafSem Op) : Pr
     typeOf sig body = some t → ctx.Satisfies (bodyRequires sig t) →
       (sem.discard body ctx).isSome = true
 
+mutual
 /-- **Build totality.** Under a typed leaf semantics, a well-typed layer builds under every
 context satisfying its requirement row, and the built context satisfies its output row. -/
 theorem build_total {Op : Type} (sig : Signature Op) (sem : LeafSem Op) (hsem : sem.Typed sig) :
@@ -446,6 +463,44 @@ theorem build_total {Op : Type} (sig : Signature Op) (sem : LeafSem Op) (hsem : 
       obtain ⟨out, hb, hout⟩ := ih i ctx hi hsat
       refine ⟨out, ?_, hout⟩
       simp [build, hb]
+  | .ref _, t, ctx, ht, _ => by simp [layerTy] at ht
+  | .mergeAll layers, t, ctx, ht, hsat => by
+    have ih := buildAll_total sig sem hsem layers
+    obtain ⟨out, hb, hout⟩ := ih t ctx (by simpa [layerTy] using ht) hsat
+    refine ⟨out, ?_, hout⟩
+    simp [build, hb]
+termination_by structural l => l
+
+/-- The list form of `build_total`: the layers of a `mergeAll`, their outputs the union. -/
+theorem buildAll_total {Op : Type} (sig : Signature Op) (sem : LeafSem Op) (hsem : sem.Typed sig) :
+    ∀ (ls : LayerTerms Op) (t : LayerTy) (ctx : Ctx), layersTy sig ls = some t →
+      ctx.Satisfies t.requires → ∃ out, buildAll sem ls ctx = some out ∧ out.Satisfies t.out
+  | .nil, t, ctx, ht, _ => by simp [layersTy] at ht
+  | .cons head .nil, t, ctx, ht, hsat => by
+    have ih := build_total sig sem hsem head
+    obtain ⟨out, hb, hout⟩ := ih t ctx (by simpa [layersTy] using ht) hsat
+    exact ⟨out, by simp [buildAll, hb], hout⟩
+  | .cons head (.cons second rest), t, ctx, ht, hsat => by
+    have ihh := build_total sig sem hsem head
+    have iht := buildAll_total sig sem hsem (.cons second rest)
+    cases ha : layerTy sig head with
+    | none => simp [layersTy, ha] at ht
+    | some a =>
+      cases hb : layersTy sig (.cons second rest) with
+      | none => simp [layersTy, ha, hb] at ht
+      | some b =>
+        simp [layersTy, ha, hb] at ht
+        subst ht
+        obtain ⟨actx, hab, haout⟩ :=
+          ihh a ctx ha (Context.satisfies_weaken ctx hsat (Row.subset_union_left _ _))
+        obtain ⟨bctx, hbb, hbout⟩ :=
+          iht b ctx hb (Context.satisfies_weaken ctx hsat (Row.subset_union_right _ _))
+        refine ⟨actx.merge bctx, ?_, ?_⟩
+        · simp [buildAll, hab, hbb]
+        · exact satisfies_union_of _ _ _ (satisfies_merge_left actx bctx _ haout)
+            (satisfies_merge_right actx bctx _ hbout)
+termination_by structural ls => ls
+end
 /-! ## References: the soft half of a requirement row
 
 rc.112's `Context.Reference` (`Context.ts:485`, `:2002`) is a key with a default; `getOption`
@@ -689,6 +744,7 @@ def docsBody : Eff DocsOp → Option NativeEff
   | .fail (.lit (.nat n)) => some (.fail (.lit (.nat n)))
   | _ => none
 
+mutual
 /-- A docs layer on the native route, leaf by leaf; `none` at a body the transcription does not
 read. -/
 def docsLayer : LayerTerm DocsOp → Option (LayerTerm NativeOp)
@@ -700,6 +756,12 @@ def docsLayer : LayerTerm DocsOp → Option (LayerTerm NativeOp)
   | .merge left right => do some (.merge (← docsLayer left) (← docsLayer right))
   | .fresh inner => (docsLayer inner).map .fresh
   | .orDie inner => (docsLayer inner).map .orDie
+  | .ref target => some (.ref target)
+  | .mergeAll layers => (docsLayers layers).map .mergeAll
+def docsLayers : LayerTerms DocsOp → Option (LayerTerms NativeOp)
+  | .nil => some .nil
+  | .cons head tail => do some (.cons (← docsLayer head) (← docsLayers tail))
+end
 
 #guard (docsLayer deploymentLayer).map buildSucceeds = some true
 #guard (docsLayer deploymentLayer).map buildServices =

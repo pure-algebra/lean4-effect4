@@ -199,11 +199,11 @@ theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), Plain e = true �
 /-! ### Every subterm of a straight-line program is straight-line -/
 
 /-- A node that is a straight-line program. -/
-def NodePlain : Node → Prop
+def NodePlain : Node NativeOp → Prop
   | Node.eff e => Plain e = true
   | _ => False
 
-theorem child_plain {r : NativeEff} (hr : Plain r = true) {i : Nat} {m : Node}
+theorem child_plain {r : NativeEff} (hr : Plain r = true) {i : Nat} {m : Node NativeOp}
     (h : (Node.eff r).child i = some m) : NodePlain m := by
   -- a constructor that is not plain is refuted by `hr` before its children are looked at
   cases r <;> first
@@ -211,7 +211,7 @@ theorem child_plain {r : NativeEff} (hr : Plain r = true) {i : Nat} {m : Node}
     | (rcases i with _ | _ | _ | i <;> simp [Node.child] at h <;> subst h <;>
         simp_all [NodePlain, Plain])
 
-theorem plain_at : ∀ (path : List Nat) (n : Node) (e : NativeEff), NodePlain n →
+theorem plain_at : ∀ (path : List Nat) (n : Node NativeOp) (e : NativeEff), NodePlain n →
     Node.at_ n path = some (Node.eff e) → Plain e = true
   | [], n, e, hn, h => by
     simp only [Node.at_, Option.some.injEq] at h
@@ -250,7 +250,7 @@ theorem suspendBodyAt_missing {root : NativeEff} {q : Point} {k : Nat} (hf : q.f
     suspendBodyAt root (EffThunk.body q) = badShape := by
   simp [suspendBodyAt, hf, h]
 
-theorem suspendBodyAt_other {root : NativeEff} {q : Point} {k : Nat} {n : Node}
+theorem suspendBodyAt_other {root : NativeEff} {q : Point} {k : Nat} {n : Node NativeOp}
     (hf : q.fuel = k + 1) (h : Node.at_ (Node.eff root) q.path = some n)
     (hn : ∀ e, n ≠ Node.eff e) :
     suspendBodyAt root (EffThunk.body q) = badShape := by
@@ -287,6 +287,7 @@ theorem plainCode_suspendBodyAt {root : NativeEff} (hroot : Plain root = true) (
       | action _ => rw [suspendBodyAt_other hf h (fun _ h => by cases h)]; rfl
       | effs _ => rw [suspendBodyAt_other hf h (fun _ h => by cases h)]; rfl
       | layer _ => rw [suspendBodyAt_other hf h (fun _ h => by cases h)]; rfl
+      | layers _ => rw [suspendBodyAt_other hf h (fun _ h => by cases h)]; rfl
 
 theorem plainCode_ofExit (ex : ExitV) : PlainCode (Prim.ofExit ex) = true := by
   cases ex <;> rfl

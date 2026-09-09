@@ -132,8 +132,9 @@ const importHeader = [
   ""
 ].join("\n")
 
-/** The module text: the exported declaration verbatim, or `export const main = <expr>` when
- * the manifest has no declaration (ill-typed: `printDecl` refuses, `print` does not). */
+/** The module text: the exported declaration block verbatim — one `export const L_<path>` per
+ * hoisted layer, `main` last (`printModule`) — or `export const main = <expr>` when the
+ * manifest has no declaration (ill-typed: `printDecl` refuses, `print` does not). */
 const moduleFor = (entry: Entry): { text: string; source: "decl" | "expr" } | null => {
   if (entry.decl !== null) return { text: importHeader + entry.decl, source: "decl" }
   if (entry.expr !== null) return { text: importHeader + `export const main = ${entry.expr}\n`, source: "expr" }

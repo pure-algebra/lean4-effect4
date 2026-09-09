@@ -17,7 +17,8 @@ Effect4.Program.Stmt (stmt) inductive: bindYield(eff) yieldDiscard(eff) ret(term
 Effect4.Program.Stmts (stmts) inductive: nil cons(stmt,stmts)
 Effect4.Program.Effs (effs) inductive: nil cons(eff,effs)
 Effect4.Program.ActionTerm (action_term) inductive: fork(eff,fork_options) forkIn(eff,fork_options,term) forkScoped(eff,fork_options) runIn(term,term) interrupt(term) interruptScoped(term) interruptAll(term,term option) awaitAll(term) awaitAllFailFast(term) snapshotChildren awaitNewChildren(term) raceAll(effs) setContext(term) getContext getId closeScope(term,term)
-Effect4.Program.LayerTerm (layer_term) inductive: succeed(service_key,lit) effect(service_key,eff) effectDiscard(eff) provide(layer_term,layer_term) provideMerge(layer_term,layer_term) merge(layer_term,layer_term) fresh(layer_term) orDie(layer_term)
+Effect4.Program.LayerTerm (layer_term) inductive: succeed(service_key,lit) effect(service_key,eff) effectDiscard(eff) provide(layer_term,layer_term) provideMerge(layer_term,layer_term) merge(layer_term,layer_term) fresh(layer_term) orDie(layer_term) ref(int list) mergeAll(layer_terms)
+Effect4.Program.LayerTerms (layer_terms) inductive: nil cons(layer_term,layer_terms)
 Effect4.Program.RowKind (row_kind) inductive: sync async program
 Effect4.Program.RowShape (row_shape) inductive: call value tupleCall
 Effect4.Program.Row (row) structure: name:string spelling:string shape:row_shape trailing:string list kind:row_kind request:ty answer:ty error:ty requires:service_key list cite:string typeArgs:string list
