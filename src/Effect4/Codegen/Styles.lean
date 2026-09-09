@@ -196,21 +196,21 @@ def Form.foreign (f : Form) (style : Style) (n : Nat) : Option Expr := do
   let a := "a" ++ toString n
   let result ← match f.id with
     | "void" | "yieldNow" => some (head style f.head)
-    | "die" => return call [← term 0]
+    | "die" => do pure <| call [← term 0]
     | "yieldKey" => do
         let _ ← args.keys[0]?
         -- The driver supplies the declaration for Key; this unit uses its yieldable face.
-        some (.generator [.constYield a (ident "Key"), .ret (ident a)])
-    | "andThenEffect" | "tapEffect" | "ensuring" => return call [← eff 0 n, ← eff 1 n]
-    | "andThenContinuation" | "tapContinuation" => return call [← eff 0 n, .lambda [a] (← eff 1 (n + 1))]
-    | "andThenThunk" => return call [← eff 0 n, .lambda [] (← eff 1 n)]
-    | "as" => return call [← eff 0 n, ← term 0]
-    | "asVoid" => return call [← eff 0 n]
-    | "matchCause" => return call [← eff 0 n, .object [("onSuccess", .lambda [a] (← term 0)), ("onFailure", .lambda [a] (← term 1))]]
-    | "matchCauseEffect" => return call [← eff 0 n, .object [("onSuccess", .lambda [a] (← eff 1 (n + 1))), ("onFailure", .lambda [a] (← eff 2 (n + 1)))]]
-    | "forkChildDefault" | "forkDetachDefault" | "forkScopedDefault" => return call [← eff 0 n]
-    | "forkInDefault" => return call [← eff 0 n, ← term 0]
-    | "releaseOne" => return call [← eff 0 n, .lambda [a] (← eff 1 (n + 1))]
+        some (.call (head style "Effect.gen") [.generator [.constYield a (ident "Key"), .ret (ident a)]])
+    | "andThenEffect" | "tapEffect" | "ensuring" => do pure <| call [← eff 0 n, ← eff 1 n]
+    | "andThenContinuation" | "tapContinuation" => do pure <| call [← eff 0 n, .lambda [a] (← eff 1 (n + 1))]
+    | "andThenThunk" => do pure <| call [← eff 0 n, .lambda [] (← eff 1 n)]
+    | "as" => do pure <| call [← eff 0 n, ← term 0]
+    | "asVoid" => do pure <| call [← eff 0 n]
+    | "matchCause" => do pure <| call [← eff 0 n, .object [("onSuccess", .lambda [a] (← term 0)), ("onFailure", .lambda [a] (← term 1))]]
+    | "matchCauseEffect" => do pure <| call [← eff 0 n, .object [("onSuccess", .lambda [a] (← eff 1 (n + 1))), ("onFailure", .lambda [a] (← eff 2 (n + 1)))]]
+    | "forkChildDefault" | "forkDetachDefault" | "forkScopedDefault" => do pure <| call [← eff 0 n]
+    | "forkInDefault" => do pure <| call [← eff 0 n, ← term 0]
+    | "releaseOne" => do pure <| call [← eff 0 n, .lambda [a] (← eff 1 (n + 1))]
     | _ => none
   let rec wrap (i remaining : Nat) (body : Expr) : Expr :=
     match remaining with

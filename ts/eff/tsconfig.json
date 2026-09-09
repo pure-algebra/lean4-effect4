@@ -13,5 +13,6 @@
     "skipLibCheck": true,
     "types": ["bun"]
   },
-  "include": ["*.ts", "test"]
+  "include": ["*.ts", "test", "ingest"],
+  "exclude": ["ingest/fixtures"]
 }

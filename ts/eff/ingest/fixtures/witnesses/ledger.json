@@ -1,0 +1,4 @@
+[
+  {"file":"service-shape.ts","original":"ingest-delivery/commit-3-spec-audit/baseline-g222.ts","kind":"refusal","code":"E-ARG-DYNAMIC","detail":"dynamic argument: service literal shape"},
+  {"file":"key-number.ts","original":"ingest-delivery/commit-3-spec-audit/baseline-g324.ts","kind":"lifted","eff":["service",{"name":{"value":4},"service":{"value":4}}],"keys":[{"ordinal":4,"service":4,"sourceId":"k10_4"}]}
+]

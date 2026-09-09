@@ -47,7 +47,7 @@ rm -f "$build_log"
 key="$(stamp_key \
   "${BASH_SOURCE[0]}" "$repo_root/lean-toolchain" \
   "$stamp_build_lib/Tools/Corpus.trace" \
-  "$repo_root"/ts/eff/*.ts "$repo_root/ts/eff/test" \
+  "$repo_root"/ts/eff/*.ts "$repo_root/ts/eff/test" "$repo_root/ts/eff/ingest" \
   "$repo_root/ts/eff/package.json" "$repo_root/ts/eff/bun.lock" "$repo_root/ts/eff/tsconfig.json" \
   "$repo_root/harness/truth/generated" \
   "$(stamp_fact bun "$bun_version")")"

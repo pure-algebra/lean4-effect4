@@ -49,11 +49,16 @@ export const readTypeScript = (source: string, filename = "program.ts"): Read<Ef
   if (!isNode(program)) return refuse({ _tag: "program", what: "no program" })
   const expression = programExprOf(program)
   if (failed(expression)) return again(expression)
-  const fragment = exprOf(expression.success)
+  return readExpression(expression.success)
+}
+
+/** Fragment seam for the independent oxc normalization and printer-image test entrypoint. */
+export const readExpression = (expression: unknown): Read<Eff> => {
+  if (!isNode(expression)) return refuse({ _tag: "node", type: typeof expression, where: "expression" })
+  const fragment = exprOf(expression)
   if (failed(fragment)) return again(fragment)
   const eff = readEff(0, fragment.success)
   if (failed(eff)) return again(eff)
-  // The reader mints nodes by construction; the decode is the receipt that they are the schema's.
   return ok(decodeEff(eff.success))
 }
 
@@ -104,7 +109,7 @@ const unitRequest = (e: Entry): boolean => e.row.request._tag === "unit"
 // here: a dotted head such as `Effect.flatMap` arrives as a member chain of identifiers, and
 // oxc-parser keeps parentheses as `ParenthesizedExpression` nodes.
 
-type Expr =
+export type Expr =
   | { readonly _tag: "ident"; readonly name: string }
   | { readonly _tag: "str"; readonly value: string }
   | { readonly _tag: "int"; readonly value: number }
@@ -126,7 +131,7 @@ type Expr =
   /** `(a) => { body }` */
   | { readonly _tag: "arrowBlock"; readonly params: ReadonlyArray<string>; readonly body: ReadonlyArray<TsStmt> }
 
-type TsStmt =
+export type TsStmt =
   /** `const name = yield* value` */
   | { readonly _tag: "constYield"; readonly name: string; readonly value: Expr }
   | { readonly _tag: "ret"; readonly value: Expr }
@@ -240,7 +245,7 @@ const paramNames = (n: Node): ReadonlyArray<string> | undefined => {
 const yieldStar = (n: Node): Node | undefined =>
   n.type === "YieldExpression" && n.delegate === true ? nodeAt(n, "argument") : undefined
 
-const exprOf = (raw: Node): Read<Expr> => {
+export const exprOf = (raw: Node): Read<Expr> => {
   const n = unwrap(raw)
   switch (n.type) {
     case "Identifier":
@@ -761,7 +766,7 @@ const readLayer = (x: Expr): Read<LayerTerm> => {
   }
 }
 
-const readEff = (n: number, x: Expr): Read<Eff> => {
+export const readEff = (n: number, x: Expr): Read<Eff> => {
   switch (x._tag) {
     case "ident": {
       const i = varRead(n, x.name)

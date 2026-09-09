@@ -3,6 +3,7 @@ import Effect4.Program.Wire
 import OCaml5.Eff.Goldens
 import TypeScript.Render
 import Tools.Styles
+import Tools.ForeignCorpus
 
 /-!
 # Tools.Corpus — the printed corpus, with the programs beside it
@@ -53,8 +54,9 @@ def writeProgram (dir name : String) (p : Eff NativeOp) : IO (Option String) := 
   | _, _ => return none
 
 def main (args : List String) : IO Unit := do
-  let styles := args.contains "--styles"
-  let args := args.filter (· != "--styles")
+  let foreign := args.contains "--foreign"
+  let styles := args.contains "--styles" || foreign
+  let args := args.filter (fun a => a != "--styles" && a != "--foreign")
   let dir := args.getD 0 "."
   let count := (args.getD 1 "400").toNat!
   let depth := (args.getD 2 "4").toNat!
@@ -62,7 +64,8 @@ def main (args : List String) : IO Unit := do
     let generated := (List.range count).filterMap fun i =>
       let p := Test.Program.Gen.program i depth
       match Api.print p with | .ok _ => some (s!"g{i}", p) | _ => none
-    Tools.Styles.corpus dir (generated ++ Wire.Corpus.all)
+    if foreign then Tools.ForeignCorpus.corpus dir (generated ++ Wire.Corpus.all)
+    else Tools.Styles.corpus dir (generated ++ Wire.Corpus.all)
     return
   IO.FS.createDirAll dir
   let mut index := ""

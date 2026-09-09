@@ -32,6 +32,16 @@ def args (n : Nat) : Arguments :=
   | .leaf (.ident "takeAndBump") => true | _ => false
 #guard match expression { lambdas := true } (.ident "incr") with
   | .atomLambda .addOne => true | _ => false
+-- Every depth-n example includes its n enclosing bindings in the emitted source data.
+#guard all.all fun f =>
+  match Form.foreign f {} 1 with
+  | some (.call _ [_, .lambda ["a0"] _]) => true
+  | _ => false
+#guard match all.find? (fun f => f.id == "yieldKey") with
+  | some f => match Form.foreign f {} 0 with
+    | some (.call (.leaf (.ident "Effect.gen")) [.generator _]) => true
+    | _ => false
+  | none => false
 #print axioms lambdaAtom_exact
 #print axioms Template.expand
 #print axioms expression

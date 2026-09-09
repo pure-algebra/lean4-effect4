@@ -50,6 +50,8 @@ def recipe(path, family):
         return 'src/OCaml5/Tools/EffWire.lean', [], []
     if family == 'CAS goldens':
         return 'src/OCaml5/Tools/CasGoldens.lean', [], []
+    if family == 'Ingest tables':
+        return 'ts/eff/ingest/render-readme.ts', [], ['ts/eff/profile.gen.ts', 'ts/eff/forms.gen.ts', 'ts/eff/taxonomy.gen.ts']
     if family == 'TypeScript':
         return 'tools/Tools/TsGen.lean', ['Effect4.Program.Native'], ['lakefile.toml', 'src/Effect4/Codegen/Print.lean']
     if family == 'LCNF':

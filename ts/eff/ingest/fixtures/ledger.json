@@ -1,0 +1,112 @@
+[
+  {
+    "code": "E-PARAM-SHAPE",
+    "file": "e-param-shape.ts",
+    "value": "function"
+  },
+  {
+    "code": "E-SPINE-ESCAPE",
+    "file": "e-spine-escape.ts",
+    "value": "optional"
+  },
+  {
+    "code": "E-YIELD-POSITION",
+    "file": "e-yield-position.ts",
+    "value": "return"
+  },
+  {
+    "code": "E-BIND-SHAPE",
+    "file": "e-bind-shape.ts",
+    "value": "parameters"
+  },
+  {
+    "code": "E-STMT-SHAPE",
+    "file": "e-stmt-shape.ts",
+    "value": "for"
+  },
+  {
+    "code": "E-OP-RECEIVER",
+    "file": "e-op-receiver.ts",
+    "value": "Other.succeed"
+  },
+  {
+    "code": "E-OP-UNKNOWN",
+    "file": "e-op-unknown.ts",
+    "value": "Effect.unknown"
+  },
+  {
+    "code": "E-BRANCH",
+    "file": "e-branch.ts",
+    "value": "conditional"
+  },
+  {
+    "code": "E-LOOP",
+    "file": "e-loop.ts",
+    "value": "whileLoop"
+  },
+  {
+    "code": "E-HANDLER",
+    "file": "e-handler.ts",
+    "value": "Effect.catchTag"
+  },
+  {
+    "code": "E-RETURN-SHAPE",
+    "file": "e-return-shape.ts",
+    "value": "term"
+  },
+  {
+    "code": "E-NODE-SHAPE",
+    "file": "e-node-shape.ts",
+    "value": "new"
+  },
+  {
+    "code": "E-ARG-DYNAMIC",
+    "file": "e-arg-dynamic.ts",
+    "value": "number"
+  },
+  {
+    "code": "E-ARG-CLOSURE",
+    "file": "e-arg-closure.ts",
+    "value": "Effect.promise"
+  },
+  {
+    "code": "E-REF-UNBOUND",
+    "file": "e-ref-unbound.ts",
+    "value": "missing"
+  },
+  {
+    "code": "E-REF-FORWARD",
+    "file": "e-ref-forward.ts",
+    "value": "later"
+  },
+  {
+    "code": "E-ANSWER-HIGHER-ORDER",
+    "file": "e-answer-higher-order.ts",
+    "value": "f"
+  },
+  {
+    "code": "E-FAIL-NOT-DOCUMENTED",
+    "file": "e-fail-not-documented.ts",
+    "value": "literal required"
+  },
+  {
+    "code": "E-IMPORT-OPAQUE",
+    "file": "e-import-opaque.ts",
+    "value": "opaque"
+  },
+  {
+    "code": "E-TYPE-PARAM",
+    "file": "e-type-param.ts",
+    "value": "generic unit"
+  },
+  {
+    "code": "E-NODE",
+    "file": "e-node.ts",
+    "value": "program fragment"
+  },
+  {
+    "code": "E-PROGRAM",
+    "file": "e-program.ts",
+    "value": "destructured unit"
+  }
+]

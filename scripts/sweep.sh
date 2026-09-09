@@ -75,6 +75,7 @@ hermetic|ts-eff|scripts/check-ts-eff.sh
 hermetic|generated|scripts/check-generated.sh
 host|schema-typescript|scripts/check-schema-typescript-generation.sh
 host|ts-eff-corpus|scripts/check-ts-eff-corpus.sh
+host|ingest|scripts/check-ingest.sh
 host|truth|scripts/check-truth.sh
 ocaml|avatar-witnesses|scripts/check-ocaml.sh avatar-witnesses
 ocaml|daemon-protocol|scripts/check-ocaml.sh daemon-protocol
