@@ -7,8 +7,6 @@
 ;   engine/  the host engine under the generated machine: math, carriers, persistence,
 ;            queueing, query (docs/research/2026-09-08-engine-brief.md)
 ;
-; Not built from here: link/ (route 1, links the Lean machine's static libraries and is
-; built by link/tools/build.sh after the Lean half compiles), probes/ (single-file probes
-; and corpora with their own shell builds), goldens/ (data). The avatar, the daemon
-; `effect4d` and the wasm host are archived on `archive/ocaml5-avatar` at `14e6835`.
+; Not built from here: goldens/ (data). The avatar, the daemon `effect4d`, the wasm host,
+; route 1 (link/) and the spike probes are archived on `archive/ocaml5-avatar` at `14e6835`.
 (dirs gen eff engine)

@@ -8,7 +8,7 @@
    THE STEP UNIT, stated once and printed on every table.  Two units, never mixed:
 
      dec/s  one HOST DECISION applied to one machine.  This is route 1's unit
-            (`ocaml/link/e4_bench.ml:52-55` divides `E4_worker.status.steps` -- decisions
+            (`git:14e6835:ocaml/link/e4_bench.ml:52-55` divides `E4_worker.status.steps` -- decisions
             applied -- by the wall time; probe §6.1: "a step is one host decision applied
             to one machine, not a machine transition").  `Api.run`'s tape is
             `[evaluate 0; flush]` (`e4_engine.ml:360`), so one `drive` is 2 decisions.
@@ -320,7 +320,7 @@ let rec forkn_then (n : int) (tail : Ty.eff) : Ty.eff =
           (Ty.Action_term_fork (Ty.Eff_succeed (Ty.Term_lit (Ty.Lit_nat 0)), fork_opts)),
         forkn_then (n - 1) tail )
 
-(* `src/OCaml5/Bridge.lean:48-51`'s `pTwo` -- the program route 1's domain sweep runs --
+(* `git:14e6835:src/OCaml5/Bridge.lean:48-51`'s `pTwo` -- the program route 1's domain sweep ran --
    transcribed so the sweep is like-for-like.  `Bridge.lean:43`'s `forkOptions` is
    `{startImmediately := false, daemon := false, maskMode := .inherit}`, i.e. {!fork_opts}.
    The BYTE GOLDEN of the same name is a different program: measured below, 41 trace rows
@@ -724,7 +724,7 @@ let sweep () =
   Printf.printf
     "`E4_sched` (lane Q5) over `E4_engine.Fast`, `evaluate 0` then `flush` per machine, \
      fuel 100.\nStep unit: **dec/s** — decisions APPLIED, counted from \
-     `E4_sched.status.steps`, exactly as\n`ocaml/link/e4_bench.ml:52-55` counts \
+     `E4_sched.status.steps`, exactly as\n`git:14e6835:ocaml/link/e4_bench.ml:52-55` counts \
      `E4_worker.status.steps`.  A `pTwo` machine takes 3:\nevaluate, flush, and the \
      event-loop rule's `fire 0`.  Best of %d, median beside.\n"
     (min reps 3);
@@ -740,7 +740,7 @@ let sweep () =
        let s = sweep_run ~program:label ~domains:1 ~machines:1 ~fuel:100 () in
        recordf ("sweep.dec." ^ label) (float_of_int s.s_steps);
        Printf.printf "| `%s` | %s | %d | %d | %d |\n%!" label src rows fibers s.s_steps)
-    [ ("pTwo", "`src/OCaml5/Bridge.lean:48-51`, transcribed — route 1's program",
+    [ ("pTwo", "`git:14e6835:src/OCaml5/Bridge.lean:48-51`, transcribed — route 1's program",
        p_two_bridge);
       ("pTwoGolden", "`ocaml/eff/goldens/pTwo.bin` — a DIFFERENT program of the same name",
        (match by_name goldens "pTwo" with

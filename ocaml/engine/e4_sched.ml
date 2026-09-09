@@ -1,6 +1,6 @@
 (* e4_sched.ml — the host scheduler: machine -> domain, run queue, wake, quiescence.
 
-   Re-homed from ocaml/link/e4_worker.ml, ocaml/link/e4_router.ml and ocaml/link/e4_host.ml
+   Re-homed from git:14e6835:ocaml/link/e4_worker.ml, e4_router.ml and e4_host.ml (route 1, archived)
    at 7d53312; E4_bridge replaced by the engine record; changes:
      - the three files become one module, as the design's §1.2.1 disposition table says
        ("re-homed ... folded into e4_sched");

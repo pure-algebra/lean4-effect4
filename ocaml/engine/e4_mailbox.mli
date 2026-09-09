@@ -2,7 +2,7 @@
 
    The design (2026-09-08-engine-a3-queue-query.md §1.2.1) says "verbatim + a new .mli" and
    gives no text for it, so THIS INTERFACE IS DERIVED from the module's public face as
-   `ocaml/link/e4_mailbox.ml` exposes it at 7d53312 (every top-level value of that file),
+   `git:14e6835:ocaml/link/e4_mailbox.ml` exposes it at 7d53312 (every top-level value of that file),
    with `stats` widened by the B-Q4a counter. Nothing is hidden that `link/` used and
    nothing is added that it did not have.
 

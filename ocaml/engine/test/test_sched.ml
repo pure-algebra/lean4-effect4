@@ -11,7 +11,7 @@
    no mutable structure: every step returns a fresh record (brief rule 3).
 
    Where the checks come from:
-     - `sched-*` are `ocaml/link/e4_test.ml`'s host tests (7d53312, lines 477-564) ported
+     - `sched-*` are `git:14e6835:ocaml/link/e4_test.ml`'s host tests (7d53312, lines 477-564) ported
        against the toy engine: `sched-four-machines`, `sched-rule-alone`, `sched-refusals`,
        `sched-stopped`, `sched-cross-machine` are host-four-machines, host-rule-alone,
        host-refusals, host-stopped, host-cross-machine with `E4_bridge` replaced by the

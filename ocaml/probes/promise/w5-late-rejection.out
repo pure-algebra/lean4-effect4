@@ -1,7 +1,0 @@
-["S:rejected-with-no-handler",
- "S:early-handler-attached",
- "EARLY:caught quiet",
- "HOOK:unhandledRejection boom",
- "MACRO:attaching-late-handler",
- "LATE:caught boom",
- "HOOK:rejectionHandled"]

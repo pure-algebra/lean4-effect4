@@ -6,7 +6,7 @@
    the owning domain (the memory rule).
    Depends on: nothing in the library.
 
-   Copied from ocaml/link/e4_ring.ml at 7d53312; changes: none.
+   Copied from git:14e6835:ocaml/link/e4_ring.ml (as it stood at 7d53312); changes: none.
 
    Properties:
      G1  Single writer, checked. The first domain to `append` owns the write side; an

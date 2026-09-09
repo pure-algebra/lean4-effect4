@@ -8,7 +8,7 @@
    wake per mailbox) plus the control messages in flight.
    Depends on: nothing in the library.
 
-   Copied from ocaml/link/e4_inbox.ml at 7d53312; changes: none.
+   Copied from git:14e6835:ocaml/link/e4_inbox.ml (as it stood at 7d53312); changes: none.
 
    Properties:
      I1  FIFO, and `push` never refuses while the inbox is open. [by construction;

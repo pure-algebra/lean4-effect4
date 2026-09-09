@@ -4,7 +4,7 @@
 
    Where the checks come from:
      - `mailbox-*`, `inbox-*`, `reply-once`, `ring-*`, `quiescence-*` are the property tests
-       of `ocaml/link/e4_test.ml` (7d53312) for the five modules copied into the engine,
+       of `git:14e6835:ocaml/link/e4_test.ml` (7d53312) for the five modules copied into the engine,
        ported unchanged apart from the module paths;
      - `mailbox-refuse-never-drop` is the added multi-domain test: N producer domains push
        into ONE mailbox against one draining consumer, and refuse-never-drop (M2, M3) is

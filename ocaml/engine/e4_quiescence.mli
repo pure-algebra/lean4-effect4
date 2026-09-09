@@ -1,7 +1,7 @@
 (* e4_quiescence.mli — the count of accepted-but-not-yet-applied work, and the wait for zero.
 
    The design (§1.2.1) says "verbatim + a new .mli" and gives no text for it, so THIS
-   INTERFACE IS DERIVED from the module's public face as `ocaml/link/e4_quiescence.ml`
+   INTERFACE IS DERIVED from the module's public face as `git:14e6835:ocaml/link/e4_quiescence.ml`
    exposes it at 7d53312 (every top-level value of that file). The laws Q1-Q3 are at the
    head of e4_quiescence.ml. *)
 

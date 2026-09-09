@@ -1,6 +1,6 @@
 (* e4_sched.mli — the host scheduler: machine -> domain, run queue, wake, quiescence.
 
-   What it is: `ocaml/link/e4_worker.ml`, `e4_router.ml` and `e4_host.ml` re-homed into one
+   What it is: `git:14e6835:ocaml/link/e4_worker.ml`, `e4_router.ml` and `e4_host.ml` re-homed into one
    module at 7d53312; `E4_bridge` is replaced by the {!engine} record of functions, so this
    file names neither Lean nor the generated engine and links neither. One machine has
    exactly one owning domain and exactly one worker loop (W1); a machine's engine value is

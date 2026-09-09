@@ -1,7 +1,0 @@
-["S:sync-tail",
- "Q:q1",
- "P:p1",
- "Q:q2",
- "P:p3",
- "Q:q2-nested",
- "P:p2-from-q2"]

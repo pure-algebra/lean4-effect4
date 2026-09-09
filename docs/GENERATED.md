@@ -70,7 +70,6 @@ this inventory. `cut-from` is the header stamp; a cached gate verdict is separat
 | Schema TypeScript | `lake env lean -M4096 harness/schema-generation/EmitFixture.lean` for Person, `EmitCoverageFixture.lean` for AllRepresentations, `EmitMultiFixture.lean` for TwoRoots; redirect stdout to named output | `Effect4.Codegen.Schema`, fixture declarations | three runtime checks in `harness/schema-generation/` | `bash scripts/check-schema-typescript-generation.sh`, host lane in sweep |
 | Runtime census | `python3 scripts/generate-data-stamps.py census` (runs the census producer and stamps identical data) | pinned rc.112 sources listed by output | `docs/RUNTIME-COVERAGE.md`, `Test/Audit/RuntimeCoverage.lean` | `bash scripts/check-effect-runtime-census.sh`, in sweep |
 | Schema assurance | `python3 scripts/generate-data-stamps.py assurance` (runs the assurance producer and stamps identical data) | schema sources, frozen batteries, pinned host sources listed by generator | schema assurance report | `bash scripts/check-schema-structural-assurance.sh`, manual by owner decision; owner: Schema assurance lane, 2026-09-08 |
-| Link flags | `bash ocaml/link/tools/lean-flags.sh` | local Lean installation and Bridge object | `ocaml/link` build | none; owner: bridge lane, 2026-09-08. Local output names below are targets under `ocaml/link`, absent until that build runs |
 
 The two files `ocaml/eff/goldens/val_ref.hex` and
 `ocaml/eff/goldens/val_handle.hex` are hand-derived test fixtures, as recorded in

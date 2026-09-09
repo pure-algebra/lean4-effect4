@@ -3,7 +3,7 @@
    What it checks, and against what:
      W1..W6   the laws LG1-LG9 of ../e4_wal.mli: the round trip over three segments, replay
               from a position, the tape window, the opaque body (including the empty string,
-              NUL bytes and today's five decision wire strings — ocaml/link/e4_bridge.ml:75-80),
+              NUL bytes and today's five decision wire strings — git:14e6835:ocaml/link/e4_bridge.ml:75-80),
               group commit and `durable_upto`, and the single-writer claim.
      X6*      the crash families of docs/research/2026-09-08-engine-a2-persistence.md §4.3 X6:
               a torn last row, a flipped row checksum, a missing middle segment, an unsealed

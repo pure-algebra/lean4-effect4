@@ -1,7 +1,7 @@
 (* e4_ring.mli — the per-domain event ring: seq-tagged rows, single writer, bounded.
 
    The design (§1.2.1) says "verbatim + a new .mli" and gives no text for it, so THIS
-   INTERFACE IS DERIVED from the module's public face as `ocaml/link/e4_ring.ml` exposes it
+   INTERFACE IS DERIVED from the module's public face as `git:14e6835:ocaml/link/e4_ring.ml` exposes it
    at 7d53312 (every top-level value of that file; `entry` and `read` stay concrete, since
    `link/e4_test.ml` and `e4_host.ml` read their fields). The laws G1-G3 are at the head of
    e4_ring.ml. *)

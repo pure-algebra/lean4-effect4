@@ -11,7 +11,7 @@
    A row body is an OPAQUE canonical byte string plus a row-kind byte.  This module never
    parses a decision, so it does not depend on today's decision alphabet (`evaluate`,
    `flush`, `fire:<o>`, `evaluate:<f>`, `answer:<f>:<t>:<n>` — src/Effect4/Api.lean,
-   ocaml/link/e4_bridge.ml:75-80): the bytes a caller stages are the bytes replay returns,
+   git:14e6835:ocaml/link/e4_bridge.ml:75-80): the bytes a caller stages are the bytes replay returns,
    and they are the canonical bytes Lean would hash (brief §2.2).  `Event of string` stands
    until the `LogEvent` carrier exists (A2 risk R7 / knock-on C4); the framing above is
    defined without it, so the carrier's arrival changes no byte of this file's grammar.

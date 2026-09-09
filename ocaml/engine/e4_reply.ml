@@ -5,7 +5,7 @@
    strings, records of them — never a Lean value). `Mutex` + `Condition`.
    Depends on: nothing in the library.
 
-   Copied from ocaml/link/e4_reply.ml at 7d53312; changes: none.
+   Copied from git:14e6835:ocaml/link/e4_reply.ml (as it stood at 7d53312); changes: none.
 
    Properties:
      P1  At most one value: a second `fill` raises `Invalid_argument` and leaves the first

@@ -1,7 +1,0 @@
-["S:resolving-with-self",
- "S:resolved-with-self",
- "S:second-call-returned",
- "S:adopting",
- "S:sync-tail",
- "SELF:rejected TypeError :: Chaining cycle detected for promise #<Promise>",
- "A:fulfilled from-b"]

@@ -1,7 +1,7 @@
 (* e4_reply.mli — a one-shot reply cell across domains.
 
    The design (§1.2.1) says "verbatim + a new .mli" and gives no text for it, so THIS
-   INTERFACE IS DERIVED from the module's public face as `ocaml/link/e4_reply.ml` exposes it
+   INTERFACE IS DERIVED from the module's public face as `git:14e6835:ocaml/link/e4_reply.ml` exposes it
    at 7d53312 (every top-level value of that file). The laws P1-P2 are at the head of
    e4_reply.ml.
 

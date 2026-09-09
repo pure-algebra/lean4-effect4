@@ -5,7 +5,7 @@
    producers, one consumer, `Mutex` + `Condition` from the OCaml 5 standard library.
    Depends on: nothing in the library (polymorphic in the element).
 
-   Copied from ocaml/link/e4_mailbox.ml at 7d53312; changes: broadcast moved outside the
+   Copied from git:14e6835:ocaml/link/e4_mailbox.ml (as it stood at 7d53312); changes: broadcast moved outside the
    critical section (Q-A3-8), and a `Mutex.try_lock`-failure counter on the push path
    (bench cell B-Q4a, 2026-09-08-engine-a3-queue-query.md §4.3) reported as
    `stats.contended`. Both are additive: M1-M5 hold with the same witnesses.

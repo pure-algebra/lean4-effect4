@@ -34,12 +34,9 @@ __pycache__/
 # The TypeScript estate (`ts/`) is tracked; its installs are not.
 /ts/**/node_modules/
 
-# The OCaml estate (`ocaml/`, one dune workspace) is tracked; dune's build directories,
-# the per-machine generated link flags (absolute paths of this machine's Lean install,
-# written by ocaml/link/tools/lean-flags.sh) and any node install are not.
+# The OCaml estate (`ocaml/`, one dune workspace) is tracked; dune's build directories
+# and any node install are not.
 /ocaml/**/_build/
 /ocaml/**/node_modules/
-/ocaml/link/c_flags.sexp
-/ocaml/link/lean_flags.sexp
 
 /harness/schema-host/node_modules/

@@ -6,7 +6,7 @@
    inbox is empty and no step is in flight — nothing anywhere is pending.
    Depends on: nothing in the library (Unix for the timed wait).
 
-   Copied from ocaml/link/e4_quiescence.ml at 7d53312; changes: none.
+   Copied from git:14e6835:ocaml/link/e4_quiescence.ml (as it stood at 7d53312); changes: none.
 
    Properties:
      Q1  `outstanding` = enters - leaves, and `leave` below zero raises: a leave without
