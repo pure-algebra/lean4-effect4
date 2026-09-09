@@ -1,0 +1,3 @@
+{"fiber":0,"op":"Sql.open","request":[":memory:"],"answer":{"external":0}}
+{"fiber":0,"op":"unsafe","request":[{"external":0},"SELECT a FROM missing",[]],"failed":["UnknownError","no such table: missing"],"error":"SqlError"}
+{"fiber":0,"op":"Sql.close","request":[{"external":0}],"answer":null}

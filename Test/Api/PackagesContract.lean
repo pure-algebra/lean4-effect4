@@ -28,6 +28,9 @@ set_option maxRecDepth 8192
 #guard LawfulTable Packages.table
 #guard Packages.table.length = 8
 #guard Packages.all.map (·.module) = ["unstable/sql", "unstable/persistence"]
+-- the sqlite rows' error channels: `make` is typed `never` (a file that cannot be opened is a
+-- defect, not a `SqlError`), a statement fails with `SqlError`, the release cannot fail
+#guard sqliteBun.map (·.error) = [.never, sqlError, .never]
 -- every cite is a repository-relative path (decision 10; the citation gate resolves them)
 #guard (sqliteBun ++ keyValueStoreMemory).all fun row => row.cite.startsWith "vendor/effect-4.0.0-rc.112/src/"
 #guard NativeOp.all.all fun op => op.row.cite.startsWith "vendor/effect-4.0.0-rc.112/src/"
@@ -111,12 +114,53 @@ def kvAnswers : List (Completion Val Err Defect FiberId Ann) :=
   | .error _ => false
 
 -- a tagged package failure is admitted at the error column and reaches the exit; the scope
--- still releases the client on the way out, which consumes the close row's oracle answer
-def failed : Completion Val Err Defect FiberId Ann :=
-  .ofExit (.failure (Cause.fail (.tagged "SqlError" "no such table: t")))
+-- still releases the client on the way out, which consumes the close row's oracle answer.
+-- The pair is rc.112's two-level form (ruling G1, 2026-09-09): the reason's tag and the
+-- driver's message under it, the outer `"SqlError"` implied by the row. `SqlError.message`
+-- itself is the constant `"Failed to execute statement"` for a missing table, a syntax error,
+-- a constraint violation and a closed database alike, so the literal `(_tag, message)` pair
+-- distinguished nothing; a constraint violation reads `("ConstraintError", "UNIQUE constraint
+-- failed: u.a")` (observed 2026-09-09, `harness/truth/tapes/pSqlFail.jsonl`)
+def sqlFailed : Err := .tagged "UnknownError" "no such table: missing"
+def failed : Completion Val Err Defect FiberId Ann := .ofExit (.failure (Cause.fail sqlFailed))
 #guard (Api.run pSqlite 1000 [] [answer (.nat 0), failed, answer .unit] sqliteBun).exit =
-  some (.failure (Cause.fail (.tagged "SqlError" "no such table: t")))
+  some (.failure (Cause.fail sqlFailed))
 -- without that answer the release parks at a frontier and the program has no exit yet
 #guard (Api.run pSqlite 1000 [] [answer (.nat 0), failed] sqliteBun).exit = none
+
+/-- The failing statement under an open client the scope releases (`Truth.lean`'s
+`sqlClient`/`sqlMissing`, whose tapes carry the real answers). -/
+def sqlMissing : Api.Program :=
+  .callback (.external 1) (pair (.var 0) (pair (.lit (.str "SELECT a FROM missing")) (strs [])))
+def sqlClient (body : Api.Program) : Api.Program :=
+  .scoped (.bind (.acquireRelease (.callback (.external 0) (.lit (.str ":memory:")))
+                                  (.callback (.external 2) (.var 0)))
+    body)
+def sqlAnswers : List (Completion Val Err Defect FiberId Ann) := [answer (.nat 0), failed, answer .unit]
+
+-- the failure caught: the handler's value is the program's, and the release still runs; the
+-- two arms share one answer type (`Ty` has no union), so the body answers a string too
+def pSqlCatch : Api.Program :=
+  sqlClient (.catchCause (.bind sqlMissing (.succeed (.lit (.str "rows")))) (.succeed (.lit (.str "recovered"))))
+#guard Api.wellTyped pSqlCatch sqliteBun
+#guard (Api.typeOf pSqlCatch sqliteBun).map (fun t => (t.answer, t.error)) = some (.string, .never)
+#guard (Api.run pSqlCatch 1000 [] sqlAnswers sqliteBun).exit = some (.success (.str "recovered"))
+-- the failure reified is well typed at the exit type, and it escapes at the pair
+#guard (Api.typeOf (sqlClient (.exit sqlMissing)) sqliteBun).map (fun t => (t.answer, t.error)) =
+  some (.exitOf sqlRows sqlError, .never)
+#guard (Api.typeOf (sqlClient sqlMissing) sqliteBun).map (fun t => (t.answer, t.error)) = some (sqlRows, sqlError)
+-- the failure reified: the program succeeds with the exit, the tagged pair its one reason
+#guard match (Api.run (sqlClient (.exit sqlMissing)) 1000 [] sqlAnswers sqliteBun).exit with
+  | some (.success (Value.exitErr written)) =>
+    (causeImage.ofVal written).map (·.reasons.map fun | .fail e _ => some e | _ => none) = some [some sqlFailed]
+  | _ => false
+-- a failed answer is refused where the row's error channel is empty (the open row): at the
+-- oracle's position on the registration path, at the token on the delayed path
+#guard match Api.replayChecked (sqlClient sqlMissing) 1000 [Api.evaluate] [] [failed] sqliteBun with
+  | .inr (0, _, .oracleType 0 .never, _) => true
+  | _ => false
+#guard match Api.replayChecked (sqlClient sqlMissing) 1000 [Api.evaluate, .answerAsync Api.root 0 failed] [] [] sqliteBun with
+  | .inr (1, _, .errorType _ 0 .never, _) => true
+  | _ => false
 
 end Test.Api.PackagesContract

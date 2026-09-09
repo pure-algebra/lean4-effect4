@@ -3,4 +3,4 @@
 // Regenerate: scripts/check-truth.sh
 import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope } from "effect"
 import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, incr, double, takeAndBump, zeroWhenPositive, noChange, Host, Sql, Kv } from "../prelude.ts"
-export const main: Effect.Effect<number, never> = Effect.flatMap(Effect.succeed(1), (a0) => Effect.succeed(succ(a0)))
+export const main = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(":memory:"), (a0, a1) => Sql.close(a0)), (a0) => Effect.catchCause(Effect.flatMap(a0.unsafe("SELECT a FROM missing", strings()), (a1) => Effect.succeed("rows")), (a1) => Effect.succeed("recovered"))))

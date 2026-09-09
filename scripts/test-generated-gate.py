@@ -105,5 +105,8 @@ refuses('undeclared LCNF stale state', lambda: gate.policy(['ocaml/gen/api_gen.m
 refuses('unexpected LCNF pass', lambda: gate.policy([], gate.REASON))
 refuses('different declared reason', lambda: gate.policy(['ocaml/gen/api_gen.ml'], 'ignore errors'))
 assert gate.policy(['ocaml/gen/api_gen.ml'], gate.REASON).startswith('red as declared:')
-assert len(gate.drift_files(list(inputs.inventory()))) == 24
+# 24 -> 25 on 2026-09-09 with check_generated.py: ts/eff/packages.gen.ts joined the TypeScript
+# family (host rows step 5); this battery was not moved with the pin and failed until the
+# error-paths map scout noticed.
+assert len(gate.drift_files(list(inputs.inventory()))) == 25
 print('PASS generated gate reaction battery; temporary fixtures only')

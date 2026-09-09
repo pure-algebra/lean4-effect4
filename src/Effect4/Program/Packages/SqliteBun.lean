@@ -26,9 +26,14 @@ What is the package's, verbatim, and what is modelled (the scouts of 2026-09-09,
   the constructor registers on its scope — there is no `close` method. The two rows spell a
   prelude pair over a scope the prelude mints, so the machine sees an `acquireRelease` whose
   release is observable. Their `cite` names the package facts they wrap, not a method.
-* Errors cross as `prod string string`: `SqlError._tag` is the constant `"SqlError"` and the
-  reason is under `reason._tag`/`reason.message`; which pair the host posts is the recorder's
-  ruling (decisions memo D4), the column is the same either way.
+* Errors cross as `prod string string` in rc.112's own two-level form (ruling G1, 2026-09-09):
+  the reason's tag (`reason._tag`, the eleven discriminants `Effect.catchReason` dispatches on)
+  and the driver's message under it (`reason.cause.message`); the outer `_tag`, the constant
+  `"SqlError"`, is implied by the row. Not the literal `(_tag, message)`: this driver builds
+  every reason with the constant message `"Failed to execute statement"` and keeps its own
+  text under `reason.cause`, so that pair was the same for every statement failure (observed
+  2026-09-09). Only `unsafe` has the channel: `make` is typed `never` (an unopenable file is a
+  thrown defect) and the release cannot fail.
 
 A program that uses these rows types, prints and reads back only under this table
 (`Api.typeOf p sqliteBun`, `Api.print p sqliteBun`, `Api.read e sqliteBun`); its external
@@ -49,9 +54,13 @@ def sqlRows : Ty := .list (.list (.prod .string .string))
 
 def sqliteBun : RowTable :=
   [ { name := "sqliteOpen", spelling := "Sql.open", shape := .call, kind := .async,
-      registration := .external, request := .string, answer := NativeOp.sqlTy, error := sqlError,
+      registration := .external, request := .string, answer := NativeOp.sqlTy, error := .never,
       -- the prelude's constructor call over a minted scope; the package's `make` takes
-      -- `{ filename, disableWAL: true }` and registers its own release on that scope
+      -- `{ filename, disableWAL: true }` and registers its own release on that scope. Its
+      -- error channel is `never`: `make` is typed `Effect<SqliteClient, never, Scope |
+      -- Reactivity>` in `@effect/sql-sqlite-bun`'s `SqliteClient.ts`, and a file that cannot
+      -- be opened is a defect thrown by `new Database`, not a `SqlError` (observed 2026-09-09,
+      -- the error-paths receipt), so no typed failure can ever answer this row
       cite := "vendor/effect-4.0.0-rc.112/src/unstable/sql/SqlClient.ts:95" }
   , { name := "sqlUnsafe", spelling := "unsafe", shape := .method, kind := .async,
       registration := .external,

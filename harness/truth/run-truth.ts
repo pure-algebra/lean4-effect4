@@ -58,6 +58,12 @@
  *  - exact where it can be: a success value and a `fail` payload are compared as JSON; a
  *    `die` and an `interrupt` are compared by kind, the payloads shown (the Lean defect
  *    alphabet has no host errors) (by construction, `compareExits`);
+ *  - one pair for a host error: a tagged error (an `Error` with a string `_tag`) crosses as
+ *    the `(tag, message)` pair of DB-15 wherever it stands — a fail payload, a caught value, a
+ *    reason inside a reified exit, a tape row — through one function (`taggedPair`), in
+ *    rc.112's two-level form for an error whose `reason` is itself tagged (`SqlError`: the
+ *    reason's tag and the driver's message; ruling G1); a defect inside a recorded call is a
+ *    `died` tape row, which Lean refuses to replay (by construction);
  *  - the prelude is checked before any program runs (tested: `selfTest`).
  */
 import { Cause, Context, Effect, Exit, Scheduler, Tracer, Schema } from "effect"
@@ -286,6 +292,9 @@ class Recorder {
       if (SCOPE in record) return { scope: this.handle("scope", value) }
       if (record._tag === "Some") return { some: this.wire(record.value) }
       if (record._tag === "None") return { none: true }
+      // a tagged host error in value position (a caught `SqlError`, a fail payload, a reason
+      // inside a reified exit): the `(_tag, message)` pair of DB-15, as the tape spells it
+      if (value instanceof Error && typeof record._tag === "string") return taggedPair(value)
       // a `Context` (what a layer build answers, `Effect.context()`): `{"context":true}` on
       // both faces (the join, 2026-09-07)
       if (Context.isContext(value)) return { context: true }
@@ -294,12 +303,12 @@ class Recorder {
   }
 
   /** One tape row (host rows step 6): the calling fiber, the operation, the wired request and
-   * the wired answer, or the failure as the `(_tag, message)` pair of DB-15. */
+   * the wired answer, or the failure half (`failureOf`). */
   tapeRow(call: TapeCall): TapeRow {
     const base = { fiber: this.currentFiber(), op: call.op, request: this.wire(call.request) }
     return Exit.isSuccess(call.exit)
       ? { ...base, answer: this.wire(call.exit.value) }
-      : { ...base, failed: failedPair(call.exit) }
+      : { ...base, ...failureOf(call.exit) }
   }
 
   reasonJson(reason: any): Json {
@@ -325,6 +334,39 @@ class Recorder {
 const describe = (value: unknown): string => {
   if (value instanceof Error) return `${value.name}: ${value.message}`
   try { return JSON.stringify(value) ?? String(value) } catch { return String(value) }
+}
+
+/** The `(tag, message)` pair of DB-15 for a value in error position, in rc.112's own two-level
+ * form (ruling G1, 2026-09-09). A tagged error whose one field `reason` is itself tagged —
+ * `SqlError`, whose `message` is the driver's constant `"Failed to execute statement"` and
+ * whose `reason._tag` is what `Effect.catchReason` dispatches on (`internal/effect.ts:3007`,
+ * `SqlError.ts:409-411`) — crosses as the reason's tag and the driver's message under it
+ * (`reason.cause.message`, else `reason.message`); the outer `_tag` is implied by the row and
+ * recorded beside the tape row. Any other tagged error crosses as its own tag and message; a
+ * two-string array as itself (a printed `Effect.fail(pair(…))`); anything else described under
+ * `"?"`. The one rule for the fail payload, a caught value, a reason inside a reified exit and
+ * the tape. */
+const taggedPair = (e: unknown): [string, string] => {
+  if (Array.isArray(e) && e.length === 2 && typeof e[0] === "string" && typeof e[1] === "string") return [e[0], e[1]]
+  if (e !== null && typeof e === "object" && typeof (e as any)._tag === "string") {
+    const reason = (e as any).reason
+    if (reason !== null && typeof reason === "object" && typeof reason._tag === "string") {
+      const cause = reason.cause
+      const driver = cause !== null && typeof cause === "object" && typeof cause.message === "string" ? cause.message : reason.message
+      return [reason._tag, typeof driver === "string" ? driver : describe(reason)]
+    }
+    const message = (e as any).message
+    return [(e as any)._tag, typeof message === "string" ? message : describe(e)]
+  }
+  return ["?", describe(e)]
+}
+
+/** The outer tag of a two-level tagged error (`"SqlError"`), which `taggedPair` leaves to the
+ * row; `undefined` for anything else. Recorded beside a failed tape row, never read by Lean. */
+const outerTag = (e: unknown): string | undefined => {
+  if (e === null || typeof e !== "object" || typeof (e as any)._tag !== "string") return undefined
+  const reason = (e as any).reason
+  return reason !== null && typeof reason === "object" && typeof reason._tag === "string" ? (e as any)._tag : undefined
 }
 
 /** The kind of a wired exit, with the archived tracer's precedence: fail, interrupt, die. */
@@ -367,22 +409,32 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
 
 // ---- the tape (host rows step 6) ---------------------------------------------------------
 /** One recorded package call: the calling fiber's index, the row's operation, the wired
- * request, and the wired answer or the failure pair. Rows are in call order; `Api.replay`
- * consumes the answers in that order (single-fiber fixtures; decisions memo D5). */
-interface TapeRow { fiber: number; op: string; request: Json; answer?: Json; failed?: [string, string] }
+ * request, and the wired answer or the failure half. Rows are in call order; `Api.replay`
+ * consumes the answers in that order (single-fiber fixtures; decisions memo D5).
+ *
+ * The failure half: `failed`, the `(tag, message)` pair of DB-15 as `taggedPair` spells it, is
+ * what Lean replays as `Err.tagged`. Beside it, for the record only (Lean does not read it):
+ * `error`, the outer tag of a two-level error (`"SqlError"`), which the pair leaves to the row.
+ * `died` is any other cause — a defect, an interrupt — described; Lean's decoder refuses such
+ * a row, so a host defect is never replayed as a typed failure. */
+interface TapeRow {
+  fiber: number; op: string; request: Json
+  answer?: Json
+  failed?: [string, string]; error?: string
+  died?: string
+}
 
-/** The `(_tag, message)` pair of a failed call (DB-15): a tagged error's own tag and message;
- * a two-string array as itself; anything else described. */
-const failedPair = (exit: unknown): [string, string] => {
-  const reasons = ((exit as any)?.cause?.reasons ?? []) as Array<{ _tag: string; error?: unknown }>
+const failureOf = (exit: unknown): { failed: [string, string]; error?: string } | { died: string } => {
+  const reasons = ((exit as any)?.cause?.reasons ?? []) as Array<{ _tag: string; error?: unknown; defect?: unknown }>
   const fail = reasons.find((r) => r._tag === "Fail")
-  const e = fail?.error
-  if (Array.isArray(e) && e.length === 2 && typeof e[0] === "string" && typeof e[1] === "string") return [e[0], e[1]]
-  if (e !== null && typeof e === "object" && typeof (e as any)._tag === "string") {
-    const message = (e as any).message
-    return [(e as any)._tag, typeof message === "string" ? message : describe(e)]
+  if (fail === undefined) {
+    const die = reasons.find((r) => r._tag === "Die")
+    return { died: die === undefined ? `no Fail reason: ${JSON.stringify(reasons.map((r) => r._tag))}` : describe(die.defect) }
   }
-  return ["?", describe(e)]
+  const row: { failed: [string, string]; error?: string } = { failed: taggedPair(fail.error) }
+  const outer = outerTag(fail.error)
+  if (outer !== undefined) row.error = outer
+  return row
 }
 
 const withoutTape = (observation: Observation): Omit<Observation, "tape"> => {

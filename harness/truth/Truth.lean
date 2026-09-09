@@ -42,7 +42,8 @@ The value wire: `unit` ↦ `null`, `nat` ↦ number,
 `bool` ↦ boolean, a tuple / exit list ↦ JSON array, `fiber k` ↦ `{"fiber":k}`,
 `cell k` ↦ `{"ref":k}`, `promise k` ↦ `{"deferred":k}`, `scopeHandle k` ↦ `{"scope":k}`,
 `context` ↦ `{"context":true}`, a reified exit ↦ `{"success":v}` / `{"failure":cause}`; a
-cause is `{"reasons":[…]}` with `{"fail":n|"boom"}`, `{"die":d}`, `{"interrupt":who|null}`;
+cause is `{"reasons":[…]}` with `{"fail":n|"boom"|[tag,message]}`, `{"die":d}`,
+`{"interrupt":who|null}`;
 an exit is `{"success":v}` / `{"failure":cause}`. Annotations are dropped.
 
 Behaviours held:
@@ -224,12 +225,58 @@ def pKv : Api.Program :=
           (.bind (.callback (.external 3) (pairT (.var 0) (.lit (.str "k"))))
             (.succeed (pairT (.var 2) (.var 3)))))))
 
+/-! ### The error paths (2026-09-09, after the slice): what a real `SqlError` does
+
+`sql.unsafe` on a missing table fails with rc.112's `SqlError`; the recorder posts the pair
+of DB-15 in rc.112's two-level form — the reason's tag and the driver's message under it,
+`("UnknownError", "no such table: missing")`, the outer `"SqlError"` implied by the row
+(ruling G1) — to the tape and the machine replays it as `Err.tagged`. Each
+way a program has of meeting such a failure is one fixture over the same client and statement:
+it escapes through the scope, whose release still runs (`pSqlFail`); it is caught
+(`pSqlCatch`); it is reified into the answer (`pSqlExit`); a layer built over it dies under
+`Layer.orDie` (`pSqlOrDie`: the machine's defect is `badName`, `ORDIE-FB-TAGGED`, rc.112's is
+the `SqlError` itself; the truth column compares a `die` by kind and shows both). The answers
+come from `tapes/pSql*.jsonl`. -/
+
+/-- The statement that fails: no table `missing`. -/
+def sqlMissing (handle : Term) : Api.Program :=
+  .callback (.external 1) (pairT handle (pairT (.lit (.str "SELECT a FROM missing")) (strs [])))
+
+/-- `body` under an open client (`.var 0`) that the scope's end releases, as `pSqlite`. -/
+def sqlClient (body : Api.Program) : Api.Program :=
+  .scoped (.bind (.acquireRelease (.callback (.external 0) (.lit (.str ":memory:")))
+                                  (.callback (.external 2) (.var 0)))
+    body)
+
+def pSqlFail : Api.Program := sqlClient (sqlMissing (.var 0))
+/-- The two arms of a `catchCause` share one answer type (`Ty` has no union), so the body
+answers a string the statement never reaches and the handler the string that is observed. -/
+def pSqlCatch : Api.Program :=
+  sqlClient (.catchCause (.bind (sqlMissing (.var 0)) (.succeed (.lit (.str "rows"))))
+    (.succeed (.lit (.str "recovered"))))
+def pSqlExit : Api.Program := sqlClient (.exit (sqlMissing (.var 0)))
+
+def kSql : ServiceKey := ⟨⟨8⟩, ⟨4⟩⟩
+
+/-- A layer whose build acquires the client on the layer scope, fails on the statement, and
+releases when the failed build's scope closes; `Layer.orDie` turns the tagged failure into a
+defect on both faces. -/
+def pSqlOrDie : Api.Program :=
+  .provideLayer (.orDie (.effect kSql
+      (.bind (.acquireRelease (.callback (.external 0) (.lit (.str ":memory:")))
+                              (.callback (.external 2) (.var 0)))
+        (.bind (sqlMissing (.var 0)) (.succeed (.lit (.nat 1)))))))
+    false (.service kSql)
+
+/-- The programs over the sqlite table. -/
+def sqliteFixtures : List String := ["pSqlite", "pSqlFail", "pSqlCatch", "pSqlExit", "pSqlOrDie"]
+
 /-- Per-fixture input data supplied beside the canonical program: the row table, and the
 built-in oracle answers of a unit-declared fixture (`pAcquireHandle`); a canonical package
 fixture's answers come from its tape, appended by `main`. -/
 def hostInputs (name : String) : RowTable × List (Completion Val Err Defect FiberId Ann) :=
   if name == "pAcquireHandle" then (acquireHandleTable, acquireHandleAnswers)
-  else if name == "pSqlite" then (Packages.sqliteBun, [])
+  else if sqliteFixtures.contains name then (Packages.sqliteBun, [])
   else if name == "pKv" then (Packages.keyValueStoreMemory, [])
   else ([], [])
 
@@ -240,12 +287,13 @@ def pFailTagged : Api.Program :=
   .fail (.app "pair" (.cons (.lit (.str "SqlError")) (.cons (.lit (.str "boom")) .nil)))
 
 /-- The programs checked: the wire corpus, then `pTwo`, then the two `acquireRelease`
-fixtures, then the join's three, then the host rows slice's five. -/
+fixtures, then the join's three, then the host rows slice's five, then the four error paths. -/
 def corpus : List (String × Api.Program) :=
   Wire.Corpus.all ++ [("pTwo", pTwo), ("pAcquire", pAcquire), ("pAcquireClosed", pAcquireClosed),
     ("pProvide", pProvide), ("pProvideMerge", pProvideMerge), ("pProvideTwice", pProvideTwice),
     ("pDiamond", pDiamond), ("pMergeAll", pMergeAll), ("pAcquireHandle", pAcquireHandle),
-    ("pFailTagged", pFailTagged), ("pSqlite", pSqlite), ("pKv", pKv)]
+    ("pFailTagged", pFailTagged), ("pSqlite", pSqlite), ("pKv", pKv),
+    ("pSqlFail", pSqlFail), ("pSqlCatch", pSqlCatch), ("pSqlExit", pSqlExit), ("pSqlOrDie", pSqlOrDie)]
 
 /-! ## The value wire -/
 
@@ -485,7 +533,10 @@ partial def jsonToVal : J → Option Val
 /-- An oracle answer: what a tape row decodes to. -/
 abbrev Answer := Completion Val Err Defect FiberId Ann
 
-/-- One tape row as a completion: `answer` a success, `failed` the tagged pair of DB-15. -/
+/-- One tape row as a completion: `answer` a success, `failed` the tagged pair of DB-15 (the
+runner's informational `error`, the outer tag, beside it is not read). A `died` row — a defect
+inside the host's call — is no completion: the defect alphabet has no host defects, and
+replaying one as a typed failure would be a guess. -/
 def tapeAnswer (row : J) : Except String Answer :=
   match row.getObjVal? "answer" with
   | .ok a => match jsonToVal a with
@@ -495,7 +546,10 @@ def tapeAnswer (row : J) : Except String Answer :=
     match row.getObjVal? "failed" with
     | .ok (.arr #[.str tag, .str message]) => .ok (.ofExit (.failure (Cause.fail (.tagged tag message))))
     | .ok other => .error s!"undecodable failure {other.compress}"
-    | .error _ => .error s!"a tape row with neither answer nor failed: {row.compress}"
+    | .error _ =>
+      match row.getObjVal? "died" with
+      | .ok defect => .error s!"a host defect on the tape cannot be replayed as a typed failure: {defect.compress}"
+      | .error _ => .error s!"a tape row with neither answer nor failed: {row.compress}"
 
 def tapeAnswers (lines : List String) : Except String (List Answer) :=
   (lines.filter (· ≠ "")).mapM fun line => do
@@ -504,12 +558,33 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 
 /-! ## Receipts -/
 
-#guard corpus.length = 20
+#guard corpus.length = 24
 #guard (corpus.map (·.1)).eraseDups.length = corpus.length
 #guard (corpus.map (·.1)) =
   ["p42", "pBind", "pFork", "pAwait", "pGen", "pLoop", "pCatch", "pScope", "pTwo", "pAcquire",
    "pAcquireClosed", "pProvide", "pProvideMerge", "pProvideTwice", "pDiamond", "pMergeAll", "pAcquireHandle",
-   "pFailTagged", "pSqlite", "pKv"]
+   "pFailTagged", "pSqlite", "pKv", "pSqlFail", "pSqlCatch", "pSqlExit", "pSqlOrDie"]
+-- the error-path fixtures type only under the sqlite table and read back
+#guard sqliteFixtures.all fun name => (corpus.lookup name).isSome
+#guard Api.wellTyped pSqlFail Packages.sqliteBun
+#guard Api.wellTyped pSqlCatch Packages.sqliteBun
+#guard Api.wellTyped pSqlExit Packages.sqliteBun
+#guard Api.wellTyped pSqlOrDie Packages.sqliteBun
+#guard !Api.wellTyped pSqlFail
+#guard !Api.wellTyped pSqlCatch
+#guard !Api.wellTyped pSqlExit
+#guard !Api.wellTyped pSqlOrDie
+#guard Api.roundTrip pSqlFail Packages.sqliteBun = .ok pSqlFail
+#guard Api.roundTrip pSqlCatch Packages.sqliteBun = .ok pSqlCatch
+#guard Api.roundTrip pSqlExit Packages.sqliteBun = .ok pSqlExit
+#guard Api.roundTrip pSqlOrDie Packages.sqliteBun = .ok pSqlOrDie
+-- their types: the failure escapes, is caught, is reified, becomes a defect
+#guard (Api.typeOf pSqlFail Packages.sqliteBun).map (fun t => (t.answer, t.error)) =
+  some (Packages.sqlRows, Packages.sqlError)
+#guard (Api.typeOf pSqlCatch Packages.sqliteBun).map (fun t => (t.answer, t.error)) = some (.string, .never)
+#guard (Api.typeOf pSqlExit Packages.sqliteBun).map (fun t => (t.answer, t.error)) =
+  some (.exitOf Packages.sqlRows Packages.sqlError, .never)
+#guard (Api.typeOf pSqlOrDie Packages.sqliteBun).map (fun t => (t.answer, t.error)) = some (.nat, .never)
 -- the two package fixtures type only under their tables and read back; their runs are the
 -- tapes' (the batteries of `Test/Api/PackagesContract.lean` pin the shapes over fixed answers)
 #guard Api.wellTyped pSqlite Packages.sqliteBun
@@ -526,6 +601,10 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 #guard (tapeAnswers ["{\"fiber\":0,\"op\":\"has\",\"request\":[],\"answer\":true}", "", "{\"failed\":[\"SqlError\",\"m\"]}"]).toOption =
   some [.ofExit (.success (.bool true)), .ofExit (.failure (Cause.fail (.tagged "SqlError" "m")))]
 #guard (tapeAnswers ["{\"answer\":{\"raw\":1}}"]).toOption = none
+-- the runner's informational field beside `failed` is not read; a `died` row is refused
+#guard (tapeAnswers ["{\"fiber\":0,\"op\":\"unsafe\",\"request\":[],\"failed\":[\"UnknownError\",\"no such table: missing\"],\"error\":\"SqlError\"}"]).toOption =
+  some [.ofExit (.failure (Cause.fail (.tagged "UnknownError" "no such table: missing")))]
+#guard (tapeAnswers ["{\"fiber\":0,\"op\":\"Sql.open\",\"request\":[\"/nowhere/x.db\"],\"died\":\"SQLiteError: unable to open database file\"}"]).toOption = none
 -- the tagged failure types at the pair, evaluates to `Err.tagged`, and reads back
 #guard Api.typeOf pFailTagged = some ⟨.never, .prod .string .string, Env.Requirement.empty⟩
 #guard (Api.run pFailTagged 1000).exit = some (.failure (Cause.fail (.tagged "SqlError" "boom")))

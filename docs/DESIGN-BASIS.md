@@ -559,7 +559,15 @@ bytes), whose value image is `ctor 2 [str tag, str message]`; `errOf` reads a tw
 into it, `errAdmits` admits it exactly where the row's error type admits the pair, and the
 truth wire spells it as the two-element array the host's `pair` builds. `orDie` on a tagged
 error dies as `badName`, since the defect alphabet has no string payload
-(`ORDIE-FB-TAGGED`). A handle a row answers stays a `Ty.handle` target spelling (DB-11); an
+(`ORDIE-FB-TAGGED`). For a two-level error — a tagged record whose one field `reason` is
+itself tagged, rc.112's `SqlError`, the shape its `Effect.catchReason` dispatches on — the pair
+is the reason's tag and the driver's message under it, the outer `_tag` implied by the row
+(ruling G1, 2026-09-09): `SqlError.message` is the constant `"Failed to execute statement"`
+for a missing table, a syntax error, a constraint violation and a closed database alike, so
+the literal `(_tag, message)` distinguished none of them (the error-paths receipt). A row
+whose package effect is typed `never` — the sqlite client's `make` — has an empty error
+channel: a file that cannot be opened is a defect rc.112 throws, which no tape can replay. A
+handle a row answers stays a `Ty.handle` target spelling (DB-11); an
 optional answer (`KeyValueStore.get`) is `.option string`, and the host adapts the package's
 `string | undefined` with `Option.fromNullable`. Amended 2026-09-09 (host rows step 5): a
 term spells a parameter list with the variadic atom `strings(s₁, …, sₙ) : list string`
