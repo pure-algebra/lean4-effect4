@@ -49,17 +49,19 @@ def Stores.le (s s' : Stores) : Prop :=
   (∀ key, (s.scopes.entryAt key).isSome = true → (s'.scopes.entryAt key).isSome = true) ∧
   s.nextName ≤ s'.nextName ∧
   -- a memo map is never removed (`memoFork` appends, `setMap` maps in place; the join)
-  ∀ id, (s.memo.mapAt id).isSome = true → (s'.memo.mapAt id).isSome = true
+  (∀ id, (s.memo.mapAt id).isSome = true → (s'.memo.mapAt id).isSome = true) ∧
+  s.externals.allocated.length ≤ s'.externals.allocated.length
 
 /-- Reflexive (ENSURES 10). -/
 theorem Stores.le_refl (s : Stores) : s.le s :=
-  ⟨Nat.le_refl _, Nat.le_refl _, fun _ h => h, Nat.le_refl _, fun _ h => h⟩
+  ⟨Nat.le_refl _, Nat.le_refl _, fun _ h => h, Nat.le_refl _, (fun _ h => h), Nat.le_refl _⟩
 
 /-- Transitive (ENSURES 10). -/
 theorem Stores.le_trans {s s' s'' : Stores} (h : s.le s') (h' : s'.le s'') : s.le s'' :=
   ⟨Nat.le_trans h.1 h'.1, Nat.le_trans h.2.1 h'.2.1,
     fun key hk => h'.2.2.1 key (h.2.2.1 key hk), Nat.le_trans h.2.2.2.1 h'.2.2.2.1,
-    fun id hm => h'.2.2.2.2 id (h.2.2.2.2 id hm)⟩
+    (fun id hm => h'.2.2.2.2.1 id (h.2.2.2.2.1 id hm)),
+    Nat.le_trans h.2.2.2.2.2 h'.2.2.2.2.2⟩
 
 /-! ## Validity -/
 
@@ -75,6 +77,7 @@ def Stores.handleValid (s : Stores) (kind : UInt8) (index : Nat) : Bool :=
   | some .promise => index < s.deferreds.cells.length
   | some .scope => (s.scopes.entryAt index).isSome
   | some .memoMap => (s.memo.mapAt ⟨index⟩).isSome
+  | some .external => index < s.externals.allocated.length
   | none => false
 
 mutual
@@ -259,7 +262,8 @@ theorem Stores.handleValid_mono {s s' : Stores} (hle : s.le s') (kind : UInt8) (
     | cell => exact decide_eq_true (Nat.lt_of_lt_of_le (of_decide_eq_true h) hle.1)
     | promise => exact decide_eq_true (Nat.lt_of_lt_of_le (of_decide_eq_true h) hle.2.1)
     | scope => exact hle.2.2.1 index h
-    | memoMap => exact hle.2.2.2.2 ⟨index⟩ h
+    | memoMap => exact hle.2.2.2.2.1 ⟨index⟩ h
+    | external => exact of_decide_eq_true h |> fun hh => decide_eq_true (Nat.lt_of_lt_of_le hh hle.2.2.2.2.2)
 
 /-- Validity survives growth (plan §3.2, ENSURES 13): every handle of the value does. -/
 theorem Val.validIn_mono {s s' : Stores} (hle : s.le s') (v : Val) (h : v.validIn s = true) :
@@ -291,11 +295,11 @@ theorem SyncOp.validIn_mono {s s' : Stores} (hle : s.le s') (o : SyncOp)
   | memoFork parent =>
     cases parent with
     | none => rfl
-    | some parent => exact hle.2.2.2.2 parent h
-  | memoGet _ memoMap | memoBuild _ memoMap | memoRelease _ memoMap => exact hle.2.2.2.2 memoMap h
+    | some parent => exact hle.2.2.2.2.1 parent h
+  | memoGet _ memoMap | memoBuild _ memoMap | memoRelease _ memoMap => exact hle.2.2.2.2.1 memoMap h
   | memoComplete _ memoMap exit =>
     simp only [SyncOp.validIn, Bool.and_eq_true] at h ⊢
-    exact ⟨hle.2.2.2.2 memoMap h.1, Val.validIn_mono hle _ h.2⟩
+    exact ⟨hle.2.2.2.2.1 memoMap h.1, Val.validIn_mono hle _ h.2⟩
 
 /-! ## The pure functions keep validity
 
@@ -402,7 +406,7 @@ theorem refPoke_valid (s : Stores) (cell : RefKey) (y : Val) (hwf : s.WF)
   have hwf := hwf.1
   intro x hx
   have hle : s.le { s with refs := refPoke s.refs cell y } :=
-    ⟨by simp [refPoke], Nat.le_refl _, fun _ h => h, Nat.le_refl _, fun _ h => h⟩
+    ⟨by simp [refPoke], Nat.le_refl _, fun _ h => h, Nat.le_refl _, (fun _ h => h), Nat.le_refl _⟩
   apply Val.validIn_mono hle
   rcases List.mem_or_eq_of_mem_set hx with hmem | rfl
   · exact hwf x hmem
@@ -418,7 +422,7 @@ theorem refStep_valid (o : SyncOp) (s : Stores) (v : Val) (heap' : RefHeap) (hwf
     (∀ x ∈ heap', x.validIn { s with refs := heap' } = true) ∧
       v.validIn { s with refs := heap' } = true := by
   have hle : s.le { s with refs := heap' } :=
-    ⟨refStep_length o s.refs v heap' h, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, fun _ hm => hm⟩
+    ⟨refStep_length o s.refs v heap' h, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, (fun _ hm => hm), Nat.le_refl _⟩
   have hwf' := hwf
   have hwf := hwf.1
   cases o with
@@ -911,7 +915,7 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
   | deferredMake =>
     simp only [syncOpStep_deferredMake, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
-    exact ⟨Nat.le_refl _, by simp [DeferredStore.make], fun _ hk => hk, Nat.le_refl _, fun _ hm => hm⟩
+    exact ⟨Nat.le_refl _, by simp [DeferredStore.make], fun _ hk => hk, Nat.le_refl _, fun _ hm => hm, Nat.le_refl _⟩
   | deferredIsDone cell | deferredPoll cell | scopeIsClosed cell =>
     simp only [syncOpStep_deferredIsDone, syncOpStep_deferredPoll, syncOpStep_scopeIsClosed] at h
     obtain ⟨_, _, hf⟩ := Option.map_eq_some_iff.mp h
@@ -921,22 +925,22 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
     simp only [syncOpStep_deferredCompleteWith, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
     exact ⟨Nat.le_refl _, Nat.le_of_eq (DeferredStore.complete_cells_length _ _ _).symm,
-      fun _ hk => hk, Nat.le_refl _, fun _ hm => hm⟩
+      fun _ hk => hk, Nat.le_refl _, fun _ hm => hm, Nat.le_refl _⟩
   | deferredInterruptWith cell interruptor =>
     simp only [syncOpStep_deferredInterruptWith, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
     exact ⟨Nat.le_refl _, Nat.le_of_eq (DeferredStore.complete_cells_length _ _ _).symm,
-      fun _ hk => hk, Nat.le_refl _, fun _ hm => hm⟩
+      fun _ hk => hk, Nat.le_refl _, fun _ hm => hm, Nat.le_refl _⟩
   | deferredAwaitCleanup cell waiter token =>
     simp only [syncOpStep_deferredAwaitCleanup, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
     exact ⟨Nat.le_refl _, Nat.le_of_eq (DeferredStore.cancel_cells_length _ _ _ _).symm,
-      fun _ hk => hk, Nat.le_refl _, fun _ hm => hm⟩
+      fun _ hk => hk, Nat.le_refl _, fun _ hm => hm, Nat.le_refl _⟩
   | scopeMake strategy =>
     simp only [syncOpStep_scopeMake, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
     exact ⟨Nat.le_refl _, Nat.le_refl _,
-      fun key hk => ScopeStore.entryAt_make_isSome _ _ _ key hk, Nat.le_succ _, fun _ hm => hm⟩
+      fun key hk => ScopeStore.entryAt_make_isSome _ _ _ key hk, Nat.le_succ _, fun _ hm => hm, Nat.le_refl _⟩
   | scopeAdd scope fin =>
     cases hentry : s.scopes.entryAt scope with
     | none => rw [syncOpStep_scopeAdd_none s scope fin hentry] at h; cases h
@@ -952,12 +956,12 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
           Prod.mk.injEq] at h
         obtain ⟨rfl, _⟩ := h
         exact ⟨Nat.le_refl _, Nat.le_refl _,
-          fun k hk => ScopeStore.entryAt_setEntry_isSome _ _ k hk, Nat.le_succ _, fun _ hm => hm⟩
+          fun k hk => ScopeStore.entryAt_setEntry_isSome _ _ k hk, Nat.le_succ _, fun _ hm => hm, Nat.le_refl _⟩
   | scopeRemove scope key =>
     simp only [syncOpStep_scopeRemove, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
     exact ⟨Nat.le_refl _, Nat.le_refl _,
-      fun k hk => ScopeStore.entryAt_removeFinalizer_isSome _ _ _ k hk, Nat.le_refl _, fun _ hm => hm⟩
+      fun k hk => ScopeStore.entryAt_removeFinalizer_isSome _ _ _ k hk, Nat.le_refl _, fun _ hm => hm, Nat.le_refl _⟩
   | scopeFork parent strategy =>
     cases hentry : s.scopes.entryAt parent with
     | none => rw [syncOpStep_scopeFork_none s parent strategy hentry] at h; cases h
@@ -966,13 +970,13 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
       obtain ⟨rfl, _⟩ := h
       exact ⟨Nat.le_refl _, Nat.le_refl _,
         fun k hk => ScopeStore.entryAt_forkChild_isSome _ _ _ _ _ k hk, Nat.le_add_right _ _,
-        fun _ hm => hm⟩
+        fun _ hm => hm, Nat.le_refl _⟩
   | memoFork parent =>
     simp only [syncOpStep_memoFork, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
     exact ⟨Nat.le_refl _, Nat.le_refl _, fun _ hk => hk, Nat.le_succ _, fun id hm => by
       show ((s.memo ++ [(⟨⟨s.nextName⟩, parent, []⟩ : MemoMap)]).mapAt id).isSome = true
-      exact MemoWorld.mapAt_append_isSome hm⟩
+      exact MemoWorld.mapAt_append_isSome hm, Nat.le_refl _⟩
   | memoGet layer memoMap =>
     cases hget : s.memo.get layer memoMap with
     | none =>
@@ -986,14 +990,14 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
       exact ⟨Nat.le_refl _, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, fun id hm => by
         show ((s.memo.updateEntry owner layer fun e => { e with observers := e.observers + 1 }).mapAt
           id).isSome = true
-        exact MemoWorld.mapAt_updateEntry_isSome hm⟩
+        exact MemoWorld.mapAt_updateEntry_isSome hm, Nat.le_refl _⟩
   | memoBuild layer memoMap =>
     simp only [syncOpStep_memoBuild, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
     exact ⟨Nat.le_refl _, by simp [DeferredStore.make],
       fun k hk => ScopeStore.entryAt_make_isSome _ _ _ k hk, Nat.le_succ _, fun id hm => by
         show ((s.memo.insertEntry memoMap layer _).mapAt id).isSome = true
-        exact MemoWorld.mapAt_insertEntry_isSome hm⟩
+        exact MemoWorld.mapAt_insertEntry_isSome hm, Nat.le_refl _⟩
   | memoComplete layer memoMap exit =>
     cases hentry : s.memo.entryAt memoMap layer with
     | none =>
@@ -1009,7 +1013,7 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
         fun _ hk => hk, Nat.le_refl _, fun id hm => by
           show ((s.memo.updateEntry memoMap layer fun e => { e with effect := Prim.ofExit exit }).mapAt
             id).isSome = true
-          exact MemoWorld.mapAt_updateEntry_isSome hm⟩
+          exact MemoWorld.mapAt_updateEntry_isSome hm, Nat.le_refl _⟩
   | memoRelease layer memoMap =>
     cases hentry : s.memo.entryAt memoMap layer with
     | none =>
@@ -1023,14 +1027,14 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
         obtain ⟨rfl, _⟩ := h
         exact ⟨Nat.le_refl _, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, fun id hm => by
           show ((s.memo.deleteEntry memoMap layer).mapAt id).isSome = true
-          exact MemoWorld.mapAt_deleteEntry_isSome hm⟩
+          exact MemoWorld.mapAt_deleteEntry_isSome hm, Nat.le_refl _⟩
       · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hobs, Option.some.injEq,
           Prod.mk.injEq] at h
         obtain ⟨rfl, _⟩ := h
         exact ⟨Nat.le_refl _, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, fun id hm => by
           show ((s.memo.updateEntry memoMap layer fun e => { e with observers := e.observers - 1 }).mapAt
             id).isSome = true
-          exact MemoWorld.mapAt_updateEntry_isSome hm⟩
+          exact MemoWorld.mapAt_updateEntry_isSome hm, Nat.le_refl _⟩
   | clockNow =>
     simp only [syncOpStep_clockNow, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
@@ -1038,13 +1042,13 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
   | sleepCancel waiter token =>
     simp only [syncOpStep_sleepCancel, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
-    exact ⟨Nat.le_refl _, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, fun _ hm => hm⟩
+    exact ⟨Nat.le_refl _, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, fun _ hm => hm, Nat.le_refl _⟩
   | _ =>
     simp only [syncOpStep] at h
     obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h
     cases hf
     exact ⟨refStep_length _ s.refs a heap' hstep, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _,
-      fun _ hm => hm⟩
+      fun _ hm => hm, Nat.le_refl _⟩
 
 /-- A step keeps every closing exit the store held: a closed scope's exit is answered, never
 rewritten; an open registration goes under `addUnsafe`; the heap and Deferred arms leave the

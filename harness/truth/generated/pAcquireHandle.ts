@@ -3,13 +3,4 @@
 // Regenerate: scripts/check-truth.sh
 import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope } from "effect"
 import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, incr, double, takeAndBump, zeroWhenPositive, noChange, Host } from "../prelude.ts"
-export const main: Effect.Effect<void, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.suspend(() => {
-  let a1 = 0
-  return Effect.whileLoop({
-    while: () => isZero(a1),
-    body: () => Ref.update(a0, incr),
-    step: (a2) => {
-      a1 = succ(a1)
-    },
-  })
-}))
+export const main = Effect.flatMap(Effect.scoped(Effect.acquireRelease(Host.acquire(), (a0, a1) => Host.close(a0))), (a0) => Effect.flatMap(Host.read(a0), (a1) => Effect.succeed(pair(a0, a1))))

@@ -1278,11 +1278,47 @@ def errAdmits (ty : Ty) : Reason Err Defect FiberId Ann → Bool
   | .fail .boom _ => false
   | .die _ _ | .interrupt _ _ => true
 
+/-- A host gives the next scalar allocation index for an external handle. The
+machine writes the target spelling and constructs the handle. Other values retain
+their shape; a host-supplied external handle is never an allocation request. -/
+def externalValue (ty : Ty) (allocated : List String) (value : Val) :
+    Option (List String × Val) :=
+  match ty, value with
+  | .handle target, .nat index =>
+    if externalHandleTarget target && index == allocated.length then
+      some (allocated ++ [target], Value.external index)
+    else none
+  | _, _ =>
+    if Val.hasTy value ty allocated &&
+        !(Store.Val.handles value).any (fun h => h.1 == HandleKind.external.byte) then
+      some (allocated, value)
+    else none
+
+/-- Prepare the actual answer code, allocating only at a matching external row.
+The unchecked runner retains its raw completion behavior when a reply is refused;
+the checked API reports that refusal before executing this hook. -/
+def prepareExternalAnswer (table : RowTable) (current : Option NCode)
+    (answer : Completion Val Err Defect FiberId Ann) (state : Stores) : Stores × NCode :=
+  let fallback := (state, embed (completionPrim answer))
+  if table.isEmpty then fallback else
+  match current, answer with
+  | some (.async (.external (.external i) _) _ _), .ofExit (.success value) =>
+    match externalRow table i with
+    | none => fallback
+    | some row =>
+      match externalValue row.answer state.externals.allocated value with
+      | none => fallback
+      | some (allocated, value) =>
+        ({ state with externals := { state.externals with allocated } }, .success value)
+  | _, _ => fallback
+
 /-- Registration consumes a typed, handle-free oracle completion. A reference
 read is an effect and is admitted only by the later decision check, with its heap. -/
-def externalAdmits (table : RowTable) (i : Nat) (answer : Completion Val Err Defect FiberId Ann) : Bool :=
+def externalAdmits (table : RowTable) (i : Nat) (answer : Completion Val Err Defect FiberId Ann)
+    (allocated : List String := []) : Bool :=
   match externalRow table i, answer with
-  | some row, .ofExit (.success v) => Val.hasTy v row.answer && (Store.Val.handles v).isEmpty
+  | some row, .ofExit (.success v) =>
+    (externalValue row.answer allocated v).isSome && (Store.Val.handles v).isEmpty
   | some row, .ofExit (.failure cause) => cause.reasons.all (errAdmits row.error)
   | _, _ => false
 
@@ -1379,9 +1415,9 @@ def interpOf (root : NativeEff) (table : RowTable := []) :
       else match state.externals.answers with
       | [] => (state, none)
       | answer :: rest =>
-        if externalAdmits table i answer then
-          ({ state with externals := { state.externals with answers := rest } },
-            some (embed (completionPrim answer)))
+        if externalAdmits table i answer state.externals.allocated then
+          let (next, code) := prepareExternalAnswer table (some (.async name false none)) answer state
+          ({ next with externals := { next.externals with answers := rest } }, some code)
         else
           let rejected := state.externals.rejected.orElse
             (fun _ => some (i, answer, state.externals.answers.length))
@@ -1395,6 +1431,7 @@ def interpOf (root : NativeEff) (table : RowTable := []) :
     let (owed, timers) := state.timers.clockStep millis (Prim.success Val.unit)
     (owed.map (Owed.mapCode embed), { state with timers := timers })
   answerCode := fun answer => embed (completionPrim answer)
+  prepareAnswer := prepareExternalAnswer table
   cancelName := fun base fiber token => EffName.withWaiter base fiber token
   -- the parks' cleanups and the settled race's program are the stores' own, embedded
   parkCancelName := EffName.store Name.cancelPark

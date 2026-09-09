@@ -19,6 +19,7 @@ def handleLive (m : NativeMachine) (handle : UInt8 × Nat) : Bool :=
   | some .promise => decide (handle.2 < m.state.deferreds.cells.length)
   | some .scope => (m.state.scopes.entryAt handle.2).isSome
   | some .memoMap => (m.state.memo.mapAt ⟨handle.2⟩).isSome
+  | some .external => decide (handle.2 < m.state.externals.allocated.length)
   | none => true
 
 def mintedIn (m : NativeMachine) (v : Val) : Bool :=
@@ -58,7 +59,8 @@ is reported as `deadHandle`. A reference read must satisfy the same answer type.
 def admitAnswer (row : Row) (m : NativeMachine) (fiber : FiberId) (token : Nat) :
     Completion Val Err Defect FiberId Ann → Option Refusal
   | .ofExit (.success v) =>
-    if !Val.hasTy v row.answer then some (.answerType fiber token row.answer)
+    if (externalValue row.answer m.state.externals.allocated v).isNone then
+      some (.answerType fiber token row.answer)
     else if !mintedIn m v then some (.deadHandle fiber token)
     else none
   | .ofExit (.failure cause) =>
@@ -68,7 +70,7 @@ def admitAnswer (row : Row) (m : NativeMachine) (fiber : FiberId) (token : Nat) 
     match m.state.refs[cell.index]? with
     | none => some (.unknownCell cell)
     | some v =>
-      if !Val.hasTy v row.answer then some (.answerType fiber token row.answer)
+      if !Val.hasTy v row.answer m.state.externals.allocated then some (.answerType fiber token row.answer)
       else if !mintedIn m v then some (.deadHandle fiber token)
       else none
 

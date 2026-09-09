@@ -51,30 +51,67 @@ theorem admitted_row (table : RowTable) (m : NativeMachine) (fiber : FiberId) (t
   split at h <;> try cases h
   exact ⟨_, _, _, by assumption, by assumption, h⟩
 
-/-- A success admitted for the parked row inhabits that row's answer type. -/
+/-- A successful conversion returns a value with the declared type in the resulting
+allocation table. The input scalar index is not itself claimed to have a handle type. -/
+theorem externalValue_typed (ty : Ty) (allocated allocated' : List String) (value result : Val)
+    (h : externalValue ty allocated value = some (allocated', result)) :
+    Val.hasTy result ty allocated' = true := by
+  unfold externalValue at h
+  split at h
+  · rename_i target index
+    split at h
+    · rename_i ha
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      simp only [Bool.and_eq_true, beq_iff_eq] at ha
+      obtain ⟨ht, rfl⟩ := ha
+      have hk : HandleKind.ofByte? 7 = some .external := rfl
+      simp only [Val.hasTy, hk, ht, Bool.true_and]
+      rw [List.getElem?_append_right (Nat.le_refl _)]
+      simp only [Nat.sub_self, List.getElem?_cons_zero]
+      change decide (target = target) = true
+      exact of_decide_eq_self_eq_true target
+    · cases h
+  · split at h
+    · rename_i ha
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      exact (Bool.and_eq_true_iff.mp ha).1
+    · cases h
+
+/-- Admission returns a conversion whose actual output, including a freshly minted
+handle, inhabits the parked row's answer type. -/
 theorem external_answer_typed (table : RowTable) (m : NativeMachine)
     (fiber : FiberId) (token : Nat) (value : Val)
     (h : admit table m (.answerAsync fiber token (.ofExit (.success value))) = none) :
-    ∃ i request row, requestOf m fiber token = some (.external i, request) ∧
-      externalRow table i = some row ∧ Val.hasTy value row.answer = true := by
+    ∃ i request row allocated result, requestOf m fiber token = some (.external i, request) ∧
+      externalRow table i = some row ∧
+      externalValue row.answer m.state.externals.allocated value = some (allocated, result) ∧
+      Val.hasTy result row.answer allocated = true := by
   obtain ⟨i, request, row, hp, hr, ha⟩ := admitted_row table m fiber token _ h
-  refine ⟨i, request, row, hp, hr, ?_⟩
-  cases ht : Val.hasTy value row.answer with
-  | true => rfl
-  | false => simp [admitAnswer, ht] at ha
+  cases hv : externalValue row.answer m.state.externals.allocated value with
+  | none => simp [admitAnswer, hv] at ha
+  | some converted =>
+    obtain ⟨allocated, result⟩ := converted
+    exact ⟨i, request, row, allocated, result, hp, hr, hv,
+      externalValue_typed _ _ _ _ _ hv⟩
 
-/-- An oracle success taken at registration has the same answer-type obligation. -/
+/-- The oracle has the same typed conversion as the delayed decision path. -/
 theorem external_oracle_typed (table : RowTable) (i : Nat) (value : Val)
-    (h : externalAdmits table i (.ofExit (.success value)) = true) :
-    ∃ row, externalRow table i = some row ∧ Val.hasTy value row.answer = true := by
+    (allocated : List String)
+    (h : externalAdmits table i (.ofExit (.success value)) allocated = true) :
+    ∃ row allocated' result, externalRow table i = some row ∧
+      externalValue row.answer allocated value = some (allocated', result) ∧
+      Val.hasTy result row.answer allocated' = true := by
   cases hr : externalRow table i with
-  | some row =>
-    simp only [externalAdmits, hr] at h
-    exact ⟨row, rfl, (Bool.and_eq_true_iff.mp h).1⟩
   | none => simp [externalAdmits, hr] at h
+  | some row =>
+    cases hv : externalValue row.answer allocated value with
+    | none => simp [externalAdmits, hr, hv] at h
+    | some converted =>
+      obtain ⟨allocated', result⟩ := converted
+      exact ⟨row, allocated', result, rfl, hv, externalValue_typed _ _ _ _ _ hv⟩
 
-/-- A successful oracle registration resumes with the head value itself, and that
-value inhabits the row's answer type. This connects admission to the actual code. -/
+/-- A successful oracle registration resumes with its converted value, typed against
+exactly the allocations in the store it produces. -/
 theorem external_registration_typed (program : NativeEff) (table : RowTable)
     (i : Nat) (request : Val) (row : Row) (fiber : FiberId) (token : Nat)
     (before after : Stores) (value : Val)
@@ -83,19 +120,68 @@ theorem external_registration_typed (program : NativeEff) (table : RowTable)
     (hhead : before.externals.answers = .ofExit (.success value) :: rest)
     (hreg : (interpOf program table).registerAsync (.external (.external i) request)
       fiber token before = (after, some code)) :
-    code = .success value ∧ Val.hasTy value row.answer = true := by
-  by_cases ha : externalAdmits table i (.ofExit (.success value)) = true
-  · have ht := ha
-    simp only [externalAdmits, hrow, Bool.and_eq_true_iff] at ht
-    simp only [interpOf, hrow, Option.isNone_some, Bool.false_eq_true, if_false,
-      hhead, ha, if_true] at hreg
-    have hc := congrArg Prod.snd hreg
-    simp only [Option.some.injEq] at hc
-    exact ⟨hc.symm, ht.1⟩
+    ∃ result, code = .success result ∧ Val.hasTy result row.answer after.externals.allocated = true := by
+  have hne : table.isEmpty = false := by
+    cases table with
+    | nil => simp [externalRow] at hrow
+    | cons row rest => rfl
+  by_cases ha : externalAdmits table i (.ofExit (.success value)) before.externals.allocated = true
+  · cases hv : externalValue row.answer before.externals.allocated value with
+    | none => simp [externalAdmits, hrow, hv] at ha
+    | some converted =>
+      obtain ⟨allocated, result⟩ := converted
+      simp only [interpOf, hrow, Option.isNone_some, Bool.false_eq_true, if_false,
+        hhead, ha, if_true, prepareExternalAnswer, hv, hne] at hreg
+      obtain ⟨rfl, hc⟩ := Prod.mk.inj hreg
+      have hc := Option.some.inj hc
+      exact ⟨result, hc.symm, externalValue_typed _ _ _ _ _ hv⟩
   · simp only [interpOf, hrow, Option.isNone_some, Bool.false_eq_true, if_false,
       hhead, ha] at hreg
     have hc := congrArg Prod.snd hreg
     cases hc
+
+/-- The request projection identifies the exact current code at the matching guard. -/
+theorem requestOf_current (m : NativeMachine) (fiber : FiberId) (token : Nat)
+    (op : NativeOp) (request : Val) (h : requestOf m fiber token = some (op, request)) :
+    ∃ f controller cancel, m.fiber? fiber = some f ∧ f.parked = .withGuard token ∧
+      f.frame.current = .async (.external op request) controller cancel := by
+  cases hf : m.fiber? fiber with
+  | none => simp [requestOf, hf] at h
+  | some f =>
+    by_cases hp : f.parked = .withGuard token
+    · simp [requestOf, hf, hp, guard] at h
+      split at h
+      · try simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact ⟨f, _, _, rfl, hp, by assumption⟩
+      · cases h
+    · simp [requestOf, hf, hp, guard] at h
+      cases h
+
+/-- An admitted delayed success on a live machine prepares the actual typed resume
+code, using exactly the allocation table returned beside that code. -/
+theorem external_prepared_answer_typed (program : NativeEff) (table : RowTable)
+    (m : NativeMachine) (fiber : FiberId) (token : Nat) (value : Val)
+    (hs : m.stuck = none)
+    (ha : admit table m (.answerAsync fiber token (.ofExit (.success value))) = none) :
+    ∃ i request row result, requestOf m fiber token = some (.external i, request) ∧
+      externalRow table i = some row ∧
+      (prepareAsyncAnswer (interpOf program table) m fiber token (.ofExit (.success value))).2 =
+        .success result ∧
+      Val.hasTy result row.answer
+        (prepareAsyncAnswer (interpOf program table) m fiber token
+          (.ofExit (.success value))).1.externals.allocated = true := by
+  obtain ⟨i, request, row, allocated, result, hreq, hrow, hv, ht⟩ :=
+    external_answer_typed table m fiber token value ha
+  obtain ⟨f, controller, cancel, hf, hp, hc⟩ := requestOf_current m fiber token _ _ hreq
+  have hne : table.isEmpty = false := by
+    cases table with
+    | nil => simp [externalRow] at hrow
+    | cons row rest => rfl
+  refine ⟨i, request, row, result, hreq, hrow, ?_, ?_⟩ <;>
+    simp only [prepareAsyncAnswer, hs, Option.isSome_none, Bool.false_eq_true, if_false,
+      hf, hp, if_true, interpOf, prepareExternalAnswer, hne, hc, hrow, hv]
+  exact ht
 
 /-- Every accepted completion names only handles present before the answer. -/
 theorem admitAnswer_minted (row : Row) (m : NativeMachine) (fiber : FiberId) (token : Nat)
@@ -105,9 +191,9 @@ theorem admitAnswer_minted (row : Row) (m : NativeMachine) (fiber : FiberId) (to
   | ofExit exit =>
     cases exit with
     | success value =>
-      cases ht : Val.hasTy value row.answer with
-      | false => simp [admitAnswer, ht] at h
-      | true =>
+      cases ht : externalValue row.answer m.state.externals.allocated value with
+      | none => simp [admitAnswer, ht] at h
+      | some converted =>
         cases hm : mintedIn m value with
         | false => simp [admitAnswer, ht, hm] at h
         | true => exact (mintedIn_iff_MintedIn m value).mp hm

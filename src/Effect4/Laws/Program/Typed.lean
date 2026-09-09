@@ -101,6 +101,7 @@ theorem Val.hasTy_refTy_inv {v : Val} (h : Val.hasTy v NativeOp.refTy = true) :
     · exact absurd h (by decide)
     · exact absurd h (by decide)
     · exact nomatch h
+    · exact nomatch h
   · exact absurd (Bool.and_eq_true_iff.mp h).1 (by decide)
 
 /-- A `NativeOp.deferredTy` is a `Val.promise`. -/
@@ -113,6 +114,7 @@ theorem Val.hasTy_deferredTy_inv {v : Val} (h : Val.hasTy v NativeOp.deferredTy 
     · exact absurd h (by decide)
     · next hk => exact ⟨⟨index⟩, by rw [HandleKind.ofByte?_exact hk]; rfl⟩
     · exact absurd h (by decide)
+    · exact nomatch h
     · exact nomatch h
   · exact absurd (Bool.and_eq_true_iff.mp h).1 (by decide)
 

@@ -563,9 +563,12 @@ let () =
     { service_key_name = { service_name_value = n }; service_key_service = { service_type_code_value = c } }
   in
   let open Eff_typing in
-  check "service_ty: a free name is typed by its code (4 nat, 5 bool, 6 unit, 7 ref), other codes refuse"
+  check "service_ty: a free name is typed by its code (4 nat, 5 bool, 6 unit, 7 ref, 8 sql, 9 kv), other codes refuse"
     (service_ty (k 4 4) = Some Ty_nat && service_ty (k 9 5) = Some Ty_bool && service_ty (k 4 6) = Some Ty_unit
-     && service_ty (k 4 7) = Some Eff_native.ref_ty && service_ty (k 4 3) = None && service_ty (k 4 8) = None);
+     && service_ty (k 4 7) = Some Eff_native.ref_ty
+     && service_ty (k 4 8) = Some (Ty_handle "SqlClient.SqlClient")
+     && service_ty (k 4 9) = Some (Ty_handle "KeyValueStore.KeyValueStore")
+     && service_ty (k 4 3) = None && service_ty (k 4 10) = None);
   check "service_ty: of the reserved names only the Scope key types"
     (service_ty Eff_native.scope_key = Some Eff_native.scope_ty && service_ty (k 1 4) = None
      && service_ty (k 3 5) = None && first_free_name = 4);

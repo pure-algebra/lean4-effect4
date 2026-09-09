@@ -585,6 +585,12 @@ structure RunInterp (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St
   throws `ServiceNotFound` (`:5400-5406`). Named apart from `notImplemented`, which is the
   "unimplemented step" of `defaultEvaluate` (finding S1-1, 2026-09-04). -/
   missingScope : δ
+  /-- Interpret a completion against the matching parked code and store. The default
+  is the existing completion embedding. External resource profiles allocate here,
+  before `resume` can put a newly minted handle in a fiber. No matching park supplies
+  `none`, so stale or duplicate replies cannot allocate a resource. -/
+  prepareAnswer : Option κ → Completion β ε δ ι α → St → St × κ :=
+    fun _ answer state => (state, answerCode answer)
 
 /-! ## Machine operations -/
 
@@ -2037,6 +2043,16 @@ def flushRootState (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Na
         let r := fireState interp fuel m root
         if r.2 then flushRootState interp fuel root rounds r.1 else r
 
+/-- The completion hook sees current code only at its exact guard token. -/
+def prepareAsyncAnswer (interp : RunInterp ν σ β ε δ ι α χ St κ)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (id : FiberId) (token : Nat)
+    (answer : Completion β ε δ ι α) : St × κ :=
+  if m.stuck.isSome then (m.state, interp.answerCode answer) else
+  let current := match m.fiber? id with
+    | none => none
+    | some f => if f.parked = .withGuard token then some (core.current f.frame) else none
+  interp.prepareAnswer current answer m.state
+
 /-- One decision and its command-sufficiency receipt. A false receipt is a
 fuel frontier; it is not a failure of the running program. -/
 def stepDecisionState (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
@@ -2048,7 +2064,11 @@ def stepDecisionState (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel :
   | RunDecision.yieldVerdict id verdict =>
     (m.modify id fun f => { f with yieldOverride := some verdict }, true)
   | RunDecision.answerAsync id token answer =>
-    loop (driveState interp fuel m [Cmd.resume id token (interp.answerCode answer), Cmd.drainDue])
+    match fuel with
+    | 0 => (m, m.stuck.isSome)
+    | fuel + 1 =>
+      let (state, code) := prepareAsyncAnswer interp m id token answer
+      loop (driveState interp (fuel + 1) { m with state } [Cmd.resume id token code, Cmd.drainDue])
   | RunDecision.interruptFrom interruptor annotations target =>
     match m.fiber? target with
     | none => (m, true)

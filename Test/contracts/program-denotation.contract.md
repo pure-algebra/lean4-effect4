@@ -86,7 +86,7 @@ Not modelled here: generators, `whileLoop`, `choose`, the masks, `yieldNow`, `ca
 fiber, the trace, the cause component of a reified failed exit (`TYPED-FB-CAUSE`), the
 stored program of a completed Deferred (`STORES-FB-COMPLETION`), and the types `.int`,
 `.except`, `.causeOf`, `.never` and unknown handle targets, which no value of this cut
-inhabits (`TYPED-FB-INT`). `.string` and `.option` are inhabited since the DB-15 amendment
+inhabits at the empty external allocation table (`TYPED-FB-INT`). `.string` and `.option` are inhabited since the DB-15 amendment
 below.
 
 ## ENSURES
@@ -109,12 +109,22 @@ inhabits `.string` with the carrier's `str` frame and `.option t` with `none` an
 lose their `str` premise. `E4-TYPED-CE-001` is retired with its ID kept. No other public
 premise moves; the frozen statements below read with this amendment applied.
 
+Ratified host-rows step 4 amendment (2026-09-09, slice §2.2): `Val.hasTy` gains a
+trailing allocation table, defaulting to `[]`. A byte-7 handle must name an allocated
+entry with exactly the declared target spelling. The full three-argument signature
+and the existing two-argument call are both checked in `Test/Program/TypedContract.lean`.
+The `Fits`, term-typing, totality and sync-decoding statements below retain the empty
+table and all their existing premises. The new external-answer laws check the returned
+value against the allocation table produced by that answer; they do not generalize the
+old closed-term statements to arbitrary external environments.
+
 The three lanes owe exactly these public facts. Every theorem is at `propext`/`Quot.sound`.
 
 Lane 1, `Effect4.Program`:
 
-1. `Val.hasTy : Val → Ty → Bool` with the table of the plan §2.1; `.union` is the disjunction
-   of its members.
+1. `Val.hasTy : Val → Ty → List String → Bool`, with a default empty allocation table,
+   the native types of the plan §2.1 and the external handle arm of the amendment above;
+   `.union` is the disjunction of its members.
 2. `Fits env tys` is `List.Forall₂` of `hasTy`; `Fits.get?`, `Fits.length`, `Fits.append`.
 3. (Retired by the DB-15 amendment: `Term.noStr` and `Terms.noStr` are gone; every literal
    evaluates.)

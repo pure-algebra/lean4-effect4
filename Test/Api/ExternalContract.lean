@@ -1,5 +1,6 @@
 import Effect4.Api
 import Effect4.Laws.Program.Admit
+import Test.Api.AcquireHandleContract
 
 namespace Test.Api.ExternalContract
 open Effect4 Effect4.Program Effect4.Machine

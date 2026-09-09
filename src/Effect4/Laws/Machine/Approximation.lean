@@ -1044,8 +1044,21 @@ theorem stepDecisionState_stable (interp : RunInterp ν σ β ε δ ι α χ St 
     simp only [stepDecisionState, stepDecisionState.loop] at h ⊢
     rw [driveState_settled_add interp fuel m _ h k]
   | answerAsync id token answer =>
-    simp only [stepDecisionState, stepDecisionState.loop] at h ⊢
-    rw [driveState_settled_add interp fuel m _ h k]
+    cases fuel with
+    | zero =>
+      change m.stuck.isSome = true at h
+      cases k with
+      | zero => rfl
+      | succ k =>
+        simp only [stepDecisionState, prepareAsyncAnswer, h, if_true, stepDecisionState.loop]
+        rw [driveState_stuck interp _ m _ h]
+        simp [settled, h]
+    | succ fuel =>
+      simp only [Nat.succ_add, stepDecisionState, stepDecisionState.loop] at h ⊢
+      have hd := driveState_settled_add interp (fuel + 1)
+        { m with state := (prepareAsyncAnswer interp m id token answer).1 } _ h k
+      rw [show fuel + 1 + k = fuel + k + 1 from Nat.succ_add fuel k] at hd
+      rw [hd]
   | interruptFrom interruptor annotations target =>
     simp only [stepDecisionState, stepDecisionState.loop] at h ⊢
     split at h
@@ -1291,7 +1304,21 @@ theorem stepDecision_trace_mono (interp : RunInterp ν σ β ε δ ι α χ St) 
   | flush => cases hd
   | advance millis => cases hd
   | evaluate id => exact drive_trace_mono interp h m _
-  | answerAsync id token answer => exact drive_trace_mono interp h m _
+  | answerAsync id token answer =>
+    cases n with
+    | zero =>
+      cases n' with
+      | zero => exact Extends.refl _
+      | succ n' =>
+        have he := drive_extends (interp := interp) (fuel := n' + 1)
+          (m := { m with state := (prepareAsyncAnswer interp m id token answer).1 })
+          (cmds := [Cmd.resume id token (prepareAsyncAnswer interp m id token answer).2, Cmd.drainDue])
+        simpa only [stepDecision, stepDecisionState, stepDecisionState.loop, Extends,
+          drive_eq_driveState] using he
+    | succ n =>
+      cases n' with
+      | zero => exact False.elim (Nat.not_succ_le_zero n h)
+      | succ n' => exact drive_trace_mono interp h _ _
   | yieldVerdict id verdict => exact Extends.refl _
   | installMiddleware => exact Extends.refl _
   | interruptFrom interruptor annotations target =>
@@ -1360,8 +1387,22 @@ theorem stepDecision_stuck_stable (interp : RunInterp ν σ β ε δ ι α χ St
     simp only [stepDecision, stepDecisionState, stepDecisionState.loop] at hs ⊢
     exact drive_stable_of_stuck interp fuel m _ hs k
   | answerAsync id token answer =>
-    simp only [stepDecision, stepDecisionState, stepDecisionState.loop] at hs ⊢
-    exact drive_stable_of_stuck interp fuel m _ hs k
+    cases fuel with
+    | zero =>
+      change m.stuck.isSome = true at hs
+      cases k with
+      | zero => rfl
+      | succ k =>
+        simp only [Nat.zero_add, stepDecision, stepDecisionState, stepDecisionState.loop,
+          prepareAsyncAnswer, hs, if_true]
+        simpa only [drive_eq_driveState] using
+          drive_stuck interp (Nat.add 0 k + 1) m
+            [Cmd.resume id token (interp.answerCode answer), Cmd.drainDue] hs
+    | succ fuel =>
+      simp only [Nat.succ_add, stepDecision, stepDecisionState, stepDecisionState.loop] at hs ⊢
+      have hd := drive_stable_of_stuck interp (fuel + 1)
+        { m with state := (prepareAsyncAnswer interp m id token answer).1 } _ hs k
+      simpa only [Nat.succ_add, drive_eq_driveState] using hd
   | yieldVerdict id verdict => rfl
   | installMiddleware => rfl
   | interruptFrom interruptor annotations target =>

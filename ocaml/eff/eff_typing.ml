@@ -113,7 +113,8 @@ let req_diff (r : requirement) (s : requirement) : requirement = List.filter (fu
 let first_free_name : int = 4
 
 (* The Scope key answers Ty.scope; the other reserved names type nothing; a free name is typed
-   by its own type code: 4 a number, 5 a boolean, 6 unit, 7 a Ref.Ref<number> handle. *)
+   by its own type code: 4 a number, 5 a boolean, 6 unit, 7 a Ref.Ref<number> handle,
+   8 a SqlClient.SqlClient handle, 9 a KeyValueStore.KeyValueStore handle. *)
 let service_ty (key : service_key) : ty option =
   if key = Eff_native.scope_key then Some Eff_native.scope_ty
   else if key.service_key_name.service_name_value < first_free_name then None
@@ -123,6 +124,8 @@ let service_ty (key : service_key) : ty option =
     | 5 -> Some Ty_bool
     | 6 -> Some Ty_unit
     | 7 -> Some Eff_native.ref_ty
+    | 8 -> Some (Ty_handle "SqlClient.SqlClient")
+    | 9 -> Some (Ty_handle "KeyValueStore.KeyValueStore")
     | _ -> None
 
 (* ---- LayerTy (Typing.lean): Layer<ROut, E, RIn> as three rows, and its four operations ---- *)

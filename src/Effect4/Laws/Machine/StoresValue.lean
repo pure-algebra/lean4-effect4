@@ -45,13 +45,14 @@ def Handle.toStore : Handle → Store.Val
   | .promise k => Val.promise k
   | .scope s => Val.scopeHandle s
   | .memoMap id => Val.memoMap ⟨id⟩
+  | .external key => Value.external key
 
 def Handle.ofStore : Store.Val → Option Handle
   | .handle kind index => Handle.ofCode (kind, index)
   | _ => none
 
-/-- `Machine/Handles.lean`'s `Handle` as a value: the five minted kinds (`memoMap` since the
-join); an unregistered byte is refused. -/
+/-- `Machine/Handles.lean`'s `Handle` as a value, including external allocations at byte 7;
+an unregistered byte is refused. -/
 def Handle.image : Image Handle where
   toVal := Handle.toStore
   ofVal := Handle.ofStore
@@ -137,6 +138,7 @@ theorem Val.handles_eq_keys_code (v : Val) (hall : ∀ h ∈ v.handles, (Handle.
 #guard Val.keys (Value.memoMap 3) = [Handle.memoMap 3]
 #guard Val.keys (Store.Val.handle 9 3) = []
 #guard Handle.image.ofVal (Value.memoMap 3) = some (Handle.memoMap 3)
+#guard Handle.image.ofVal (.handle 7 3) = some (Handle.external 3)
 #guard Handle.image.ofVal (Val.cell ⟨2⟩) = some (Handle.cell ⟨2⟩)
 #guard (exitImage.encode? (Exit.success (Val.fibers [⟨1⟩]))).isSome
 

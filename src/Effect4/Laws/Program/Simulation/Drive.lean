@@ -225,10 +225,22 @@ theorem clockStep_rel (root : NativeEff) (millis : Nat) (s : Stores) (hs : Store
 
 /-- The book's hook obligation, discharged at the two instances. -/
 theorem hooksAgree_of (root : NativeEff) :
-    HooksAgree (interpOf root) (interpR root) StoresOk (CodeMeans root) (Means root) :=
+    HooksAgree (η₁ := FrameEvent EffName EffThunk Val Err Defect FiberId Ann) (η₂ := Unit)
+      (interpOf root) (interpR root) StoresOk (CodeMeans root) (Means root) :=
   ⟨answerCode_means root, fun t₁ t₂ who extra ht =>
     interruptRecord_rel root (interpAgree_of root) who extra ht,
-    fun millis s hs => clockStep_rel root millis s hs⟩
+    (fun millis s hs => clockStep_rel root millis s hs), by
+      intro a b id token answer hok h
+      have hp₁ : prepareAsyncAnswer (interpOf root) a id token answer =
+          (a.state, (interpOf root).answerCode answer) := by
+        simp only [prepareAsyncAnswer, interpOf, prepareExternalAnswer, List.isEmpty_nil, if_true]
+        split <;> rfl
+      have hp₂ : prepareAsyncAnswer (interpR root) b id token answer =
+          (b.state, (interpR root).answerCode answer) := by
+        simp only [prepareAsyncAnswer, interpR]
+        split <;> rfl
+      rw [hp₁, hp₂]
+      exact ⟨hok.1, h.state, answerCode_means root answer⟩⟩
 
 theorem resumePrim_means (root : NativeEff) (resume : Resume EffName)
     (hres : ∀ name, resume ≠ Resume.continueWith name) (exits : List ExitV) :

@@ -305,6 +305,17 @@ describe("the join", () => {
       expect(refusal(`Effect.service(${key})`)).toEqual({ _tag: "shape", what: "service key" })
     }
   })
+  test("checks the external service handle spellings at codes 8 and 9", () => {
+    expect(json('Effect.service(Context.Service<SqlClient.SqlClient>("k4_8"))')).toBe(
+      '["service",{"name":{"value":4},"service":{"value":8}}]',
+    )
+    expect(json('Effect.service(Context.Service<KeyValueStore.KeyValueStore>("k5_9"))')).toBe(
+      '["service",{"name":{"value":5},"service":{"value":9}}]',
+    )
+    expect(refusal('Effect.service(Context.Service<KeyValueStore.KeyValueStore>("k4_8"))')).toEqual(
+      { _tag: "shape", what: "service key" },
+    )
+  })
   test("rejects local false and nonliteral Layer.succeed values", () => {
     expect(refusal(`Effect.provide(Effect.succeed(7), ${leaf}, { local: false })`)._tag).toBe("arity")
     expect(refusal(`Effect.provide(Effect.succeed(7), Layer.succeed(${key}, add(1, 2)))`)).toEqual({ _tag: "shape", what: "literal" })

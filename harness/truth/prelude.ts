@@ -23,7 +23,7 @@
  *    these identifiers — a printed `Ref.modify(ref, takeAndBump)` would call the total shape
  *    and misbehave on rc.112. Recorded as finding F3 in `REPORT.md`; not patched here.
  */
-import { Option } from "effect"
+import { Effect, Option } from "effect"
 
 // ---- nativeAtom (Native.lean:59-70) -------------------------------------------------
 
@@ -87,3 +87,18 @@ export const selfTestCases: ReadonlyArray<readonly [string, () => unknown, unkno
   ["zeroWhenPositive 0 is none", () => Option.isNone(zeroWhenPositive(0)), true],
   ["noChange 7 is none", () => Option.isNone(noChange(7)), true]
 ]
+
+/** A unit-declared resource used only by pAcquireHandle. Effect supplies the execution
+ * and scoped-finalizer behavior; this is not a canonical package implementation. */
+class Resource {
+  readonly ["~effect4/ExternalHandle"] = "Host.Resource"
+  closed = false
+}
+export const Host = {
+  acquire: () => Effect.sync(() => new Resource()),
+  close: (resource: Resource) => Effect.sync(() => {
+    if (resource.closed) throw new Error("resource released twice")
+    resource.closed = true
+  }),
+  read: (resource: Resource) => Effect.sync(() => resource.closed ? 1 : 0)
+}

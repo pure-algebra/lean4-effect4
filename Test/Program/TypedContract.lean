@@ -40,7 +40,10 @@ open Effect4.Program
 
 section Statements
 
-#check (@Effect4.Program.Val.hasTy : Val → Ty → Bool)
+-- The ratified host-rows step 4 adds the allocation table. Pin the full signature
+-- and keep the original two-argument call at its default empty table.
+#check (@Effect4.Program.Val.hasTy : Val → Ty → List String → Bool)
+#check ((fun v t => Effect4.Program.Val.hasTy v t) : Val → Ty → Bool)
 
 #check (@Effect4.Program.Fits : List Val → TyEnv → Prop)
 

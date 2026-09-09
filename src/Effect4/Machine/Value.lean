@@ -63,6 +63,7 @@ inductive HandleKind
   | promise
   | scope
   | memoMap
+  | external
 deriving DecidableEq, Repr
 
 namespace HandleKind
@@ -74,6 +75,7 @@ def byte : HandleKind → UInt8
   | promise => 3
   | scope => 4
   | memoMap => 5
+  | external => 7
 
 /-- The kind of a byte; an unregistered byte is no kind. -/
 def ofByte? (b : UInt8) : Option HandleKind :=
@@ -82,6 +84,7 @@ def ofByte? (b : UInt8) : Option HandleKind :=
   else if b = 3 then some promise
   else if b = 4 then some scope
   else if b = 5 then some memoMap
+  else if b = 7 then some external
   else none
 
 theorem ofByte?_byte (k : HandleKind) : ofByte? k.byte = some k := by
@@ -114,6 +117,11 @@ theorem ofByte?_exact {b : UInt8} {k : HandleKind} (h : ofByte? b = some k) : b 
     injection h with h
     subst h
     exact h5
+  split at h
+  · next h7 =>
+    injection h with h
+    subst h
+    exact h7
   exact nomatch h
 
 def ofHandle (k : HandleKind) : Val → Option Nat
@@ -184,6 +192,9 @@ namespace Value
 @[match_pattern] abbrev promise (index : Nat) : Val := .handle 3 index
 @[match_pattern] abbrev scope (index : Nat) : Val := .handle 4 index
 @[match_pattern] abbrev memoMap (index : Nat) : Val := .handle 5 index
+/-- An external resource handle (`HandleKind.external`, byte 7; byte 6 stays reserved): the
+index is the allocation's position in the store's table, which records its target spelling. -/
+@[match_pattern] abbrev external (index : Nat) : Val := .handle 7 index
 /-- `Exit.success value`. -/
 @[match_pattern] abbrev exitOk (value : Val) : Val := .ctor 0 [value]
 /-- `Exit.failure cause`, the cause already written. -/

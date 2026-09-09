@@ -1614,7 +1614,8 @@ theorem point_bind_keys (p : Point) (v : Val) (bind : Bool) :
 
 /-- A scalar oracle completion contributes no unallocated handle to resumed code. -/
 theorem externalAdmits_keys (table : RowTable) (i : Nat)
-    (answer : Completion Val Err Defect FiberId Ann) (h : externalAdmits table i answer = true) :
+    (answer : Completion Val Err Defect FiberId Ann) (allocated : List String)
+    (h : externalAdmits table i answer allocated = true) :
     answer.keys = [] := by
   cases answer with
   | ofExit exit =>
@@ -1628,6 +1629,62 @@ theorem externalAdmits_keys (table : RowTable) (i : Nat)
         simp only [Completion.keys, exitKeys, Val.keys_eq_handles, h.2, List.filterMap_nil]
   | ofRefGet cell =>
     cases hr : externalRow table i <;> simp [externalAdmits, hr] at h
+
+/-- A converted reply grows only the external allocation list; every returned handle
+is either an already valid input or the fresh index just appended. -/
+theorem externalValue_minted (ty : Ty) (s : Stores) (ids : List FiberId)
+    (value result : Val) (allocated : List String)
+    (hc : externalValue ty s.externals.allocated value = some (allocated, result))
+    (hok : Ok ⟨ids, s⟩ (value.keys ++ s.keys)) :
+    let next := { s with externals := { s.externals with allocated } }
+    s.le next ∧ Ok ⟨ids, next⟩ (next.keys ++ result.keys) := by
+  unfold externalValue at hc
+  split at hc
+  · rename_i target index
+    split at hc
+    · rename_i ha
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hc)
+      simp only [Bool.and_eq_true, beq_iff_eq] at ha
+      obtain ⟨_, rfl⟩ := ha
+      have hle : s.le { s with externals := { s.externals with
+          allocated := s.externals.allocated ++ [target] } } :=
+        ⟨Nat.le_refl _, Nat.le_refl _, (fun _ h => h), Nat.le_refl _,
+          (fun _ h => h), by simp⟩
+      refine ⟨hle, Ok_append.mpr ⟨?_, ?_⟩⟩
+      · exact Ok_mono (World.le_of_state hle) (Ok_append.mp hok).2
+      · simp [Val.keys_eq_handles, Store.Val.handles, Handle.ofCode, HandleKind.ofByte?,
+          Ok, Handle.existsIn]
+    · cases hc
+  · split at hc
+    · obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hc)
+      exact ⟨Stores.le_refl _, Ok_append.mpr ⟨(Ok_append.mp hok).2, (Ok_append.mp hok).1⟩⟩
+    · cases hc
+
+/-- The stateful answer hook meets the generic handle contract for every current
+code and table, including refused and nonexternal inputs. -/
+theorem prepareExternalAnswer_minted (table : RowTable) (current : Option NCode)
+    (answer : Completion Val Err Defect FiberId Ann) (s : Stores) (ids : List FiberId)
+    (hok : Ok ⟨ids, s⟩ (answer.keys ++ s.keys)) :
+    s.le (prepareExternalAnswer table current answer s).1 ∧
+      Ok ⟨ids, (prepareExternalAnswer table current answer s).1⟩
+        ((prepareExternalAnswer table current answer s).1.keys ++
+          nativeKeys (prepareExternalAnswer table current answer s).2) := by
+  have fallback : s.le s ∧ Ok ⟨ids, s⟩ (s.keys ++ nativeKeys (embed (completionPrim answer))) := by
+    refine ⟨Stores.le_refl _, ?_⟩
+    exact Ok_of_subset (by rw [nativeKeys, embed_keys]; sub_tac using completionPrim_keys answer) hok
+  unfold prepareExternalAnswer
+  split
+  · exact fallback
+  · split
+    · rename_i i request controller cancel value
+      split
+      · exact fallback
+      · rename_i row hr
+        split
+        · exact fallback
+        · rename_i allocated result hv
+          exact externalValue_minted row.answer s ids value result allocated hv hok
+    · exact fallback
 
 -- One declaration, forty fields, one heartbeat budget: the key normalisation on the shared
 -- carrier (U1) took this instance past the default 200 000 (it was near it before: at
@@ -1828,7 +1885,7 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
       intro cell hok
       obtain ⟨hkeys, himm, hlen⟩ := DeferredStore.register_keys s.deferreds cell fiber token
       have hle : s.le { s with deferreds := (s.deferreds.register cell fiber token).1 } :=
-        ⟨Nat.le_refl _, hlen, fun _ hh => hh, Nat.le_refl _, fun _ hm => hm⟩
+        ⟨Nat.le_refl _, hlen, fun _ hh => hh, Nat.le_refl _, (fun _ hm => hm), Nat.le_refl _⟩
       refine ⟨hle, ?_⟩
       have hok' := Ok_mono (World.le_of_state hle) hok
       refine Ok_of_subset ?_ hok'
@@ -1848,7 +1905,7 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
       | registerSleep millis =>
         -- the sleep is a waiter on the timer list, which holds no handle of the world
         simp only [interpOf]
-        exact ⟨⟨Nat.le_refl _, Nat.le_refl _, fun _ hh => hh, Nat.le_refl _, fun _ hm => hm⟩,
+        exact ⟨⟨Nat.le_refl _, Nat.le_refl _, fun _ hh => hh, Nat.le_refl _, (fun _ hm => hm), Nat.le_refl _⟩,
           Ok_of_subset (by sub_tac) hok⟩
       | restore _ | merge _ | seq _ | joinOn _ | interruptWith _ | doneInto _ | constant _ | exitOfValue
       | snapshotThen _ | cancelAwait _ | cancelSleep | externalRegister _ | abortController | cancelPark
@@ -1870,10 +1927,11 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
             simp only [hq]
             split
             · rename_i ha
-              have hk : nativeKeys (embed (completionPrim answer)) ⊆ [] := by
-                simpa only [nativeKeys, embed_keys, Machine.programKeys, externalAdmits_keys table i answer ha] using
-                  completionPrim_keys answer
-              exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac using hk) hok⟩
+              have hinput : Ok ⟨ids, s⟩ (answer.keys ++ s.keys) := by
+                rw [externalAdmits_keys table i answer s.externals.allocated ha]
+                exact Ok_of_subset (by sub_tac) hok
+              exact prepareExternalAnswer_minted table
+                (some (.async (.external (.external i) request) false none)) answer s ids hinput
             · exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
       | _ =>
         simp only [interpOf]
@@ -1894,11 +1952,12 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
       simp only [interpOf]
       exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
   answerCode c := by simp only [interpOf]; rw [embed_keys]; exact Machine.completionPrim_keys c
+  prepareAnswer := prepareExternalAnswer_minted table
   dueResumes s ids hok := by
     simp only [interpOf]
     obtain ⟨h1, h2⟩ := DeferredStore.drainDue_keys s.deferreds
     have hle : s.le { s with deferreds := (s.deferreds.drainDue).2 } := by
-      refine ⟨Nat.le_refl _, ?_, fun _ hh => hh, Nat.le_refl _, fun _ hm => hm⟩
+      refine ⟨Nat.le_refl _, ?_, fun _ hh => hh, Nat.le_refl _, (fun _ hm => hm), Nat.le_refl _⟩
       simp only [DeferredStore.drainDue]
       exact Nat.le_refl _
     refine ⟨hle, ?_⟩
@@ -1921,7 +1980,7 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
     simp only [interpOf]
     rcases hc : s.timers.clockStep millis (Prim.success Val.unit) with ⟨o, timers⟩
     have hle : s.le { s with timers := timers } :=
-      ⟨Nat.le_refl _, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, fun _ hm => hm⟩
+      ⟨Nat.le_refl _, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, (fun _ hm => hm), Nat.le_refl _⟩
     refine ⟨hle, Ok_of_subset ?_ (Ok_mono (World.le_of_state hle) hok)⟩
     cases o with
     | none => simp only [Option.map_none, Option.getD_none, List.append_nil]; exact fun _ h => h
@@ -2105,6 +2164,7 @@ theorem interpAt_keyBounded (root : NativeEff) (completed : List (FiberId × Exi
   syncState := (interpOf_keyBounded root table).syncState
   registerAsync := (interpOf_keyBounded root table).registerAsync
   answerCode := (interpOf_keyBounded root table).answerCode
+  prepareAnswer := (interpOf_keyBounded root table).prepareAnswer
   dueResumes := (interpOf_keyBounded root table).dueResumes
   wakeList := (interpOf_keyBounded root table).wakeList
   clockStep := (interpOf_keyBounded root table).clockStep

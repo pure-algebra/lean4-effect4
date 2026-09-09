@@ -110,8 +110,8 @@ def nativeProbes : List (String × Eff NativeOp) :=
       | _ => .var 0
     let p := if row.kind == .async then Eff.callback op request else Eff.perform op request
     let p := match row.request with
-      | .handle name => .bind (.perform (if name == "Ref.Ref<number>" then .refMake else .deferredMake) (.lit (.nat 1))) p
-      | .prod (.handle name) _ => .bind (.perform (if name == "Ref.Ref<number>" then .refMake else .deferredMake) (.lit (.nat 1))) p
+      | .handle name => .bind (.perform (if name == NativeOp.refTarget then .refMake else .deferredMake) (.lit (.nat 1))) p
+      | .prod (.handle name) _ => .bind (.perform (if name == NativeOp.refTarget then .refMake else .deferredMake) (.lit (.nat 1))) p
       | _ => p
     ("native-" ++ toString index ++ "-" ++ row.name ++ "-" ++ "-".intercalate row.trailing, p)
 

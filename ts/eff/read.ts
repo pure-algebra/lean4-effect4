@@ -715,6 +715,8 @@ const serviceType = (name: number, service: number): string | undefined => {
     case 5: return "boolean"
     case 6: return "void"
     case 7: return "Ref.Ref<number>"
+    case 8: return "SqlClient.SqlClient"
+    case 9: return "KeyValueStore.KeyValueStore"
     default: return undefined
   }
 }

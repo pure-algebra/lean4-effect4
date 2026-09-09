@@ -143,15 +143,18 @@ abbrev RowTable := List Row
 namespace NativeOp
 
 /-- The handle types this cut spells: cells hold numbers, deferreds carry numbers and fail
-with numbers (the error alphabet's `Err.tag`). -/
-def refTy : Ty := .handle "Ref.Ref<number>"
+with numbers (the error alphabet's `Err.tag`). Each spelling is written once, here; the
+typing arms (`Program/Typed.lean`) and the service table below read these names. -/
+def refTarget : String := "Ref.Ref<number>"
+def refTy : Ty := .handle refTarget
 /-- The type arguments of the `Deferred` handle this cut spells, in order. They are what
 `Deferred.make` must be *called* with: the export's own parameters have defaults
 (`Deferred<unknown, never>`), so without them the host types the cell at those defaults and
 rejects every later use at this row's declared types (`E4-CHECK-CE-013`,
 `Deferred.ts:171`). -/
 def deferredTypeArgs : List String := ["number", "number"]
-def deferredTy : Ty := .handle "Deferred.Deferred<number, number>"
+def deferredTarget : String := "Deferred.Deferred<number, number>"
+def deferredTy : Ty := .handle deferredTarget
 
 /-- The printed name of a pure function, `Ref.update(ref, incr)`. -/
 def fnSpelling : FnName → String
@@ -283,7 +286,8 @@ def nativeScopeKey : ServiceKey := ⟨⟨0⟩, ⟨0⟩⟩
 `Scope` under its reserved key, nothing under the other reserved names (`Env.firstFreeName`:
 the scheduler's two references and `CurrentMemoMap` are the machine's, not a program's), and
 for a free name the carrier its type code spells — `4` a number, `5` a boolean, `6` unit, `7`
-a `Ref.Ref<number>` handle. A key is typed by its own data, which is what `Machine/Key.lean`
+a `Ref.Ref<number>` handle, `8` a `SqlClient.SqlClient` handle and `9` a
+`KeyValueStore.KeyValueStore` handle. A key is typed by its own data, which is what `Machine/Key.lean`
 means a `ServiceTypeCode` to be read as. -/
 def nativeServiceTy (key : ServiceKey) : Option Ty :=
   if key = nativeScopeKey then some Ty.scope
@@ -293,7 +297,9 @@ def nativeServiceTy (key : ServiceKey) : Option Ty :=
     | 4 => some .nat
     | 5 => some .bool
     | 6 => some .unit
-    | 7 => some (.handle "Ref.Ref<number>")
+    | 7 => some NativeOp.refTy
+    | 8 => some (.handle "SqlClient.SqlClient")
+    | 9 => some (.handle "KeyValueStore.KeyValueStore")
     | _ => none
 
 def fnNames : List Effect4.Machine.FnName := [.incr, .double, .zeroWhenPositive, .noChange, .takeAndBump]

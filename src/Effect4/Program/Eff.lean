@@ -140,11 +140,13 @@ def isNever : Ty → Bool
   | .never => true
   | _ => false
 
-/-- The `Scope` service handle. -/
-def scope : Ty := .handle "Scope.Scope"
+/-- The `Scope` service handle; its spelling is written once, here. -/
+def scopeTarget : String := "Scope.Scope"
+def scope : Ty := .handle scopeTarget
 
-/-- A context handle. -/
-def context : Ty := .handle "Context.Context<unknown>"
+/-- A context handle; its spelling is written once, here. -/
+def contextTarget : String := "Context.Context<unknown>"
+def context : Ty := .handle contextTarget
 
 end Ty
 

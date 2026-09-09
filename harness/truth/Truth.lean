@@ -180,12 +180,36 @@ def pMergeAll : Api.Program :=
           false (.service kC))
         (.perform .refGet (.var 0))))
 
+/-- A unit-declared resource fixture. Acquisition and release run through actual
+Effect.sync and Effect.acquireRelease on the host. The final read observes release,
+and the returned pair also exercises the external-handle wire. -/
+def acquireHandleTable : RowTable :=
+  [ { name := "acquire", spelling := "Host.acquire", kind := .async,
+      registration := .external, request := .unit, answer := .handle "Host.Resource", error := .never, cite := "" }
+  , { name := "close", spelling := "Host.close", kind := .async,
+      registration := .external, request := .handle "Host.Resource", answer := .unit, error := .never, cite := "" }
+  , { name := "read", spelling := "Host.read", kind := .async,
+      registration := .external, request := .handle "Host.Resource", answer := .nat, error := .never, cite := "" } ]
+
+def pAcquireHandle : Api.Program :=
+  .bind (.scoped (.acquireRelease (.callback (.external 0) (.lit .unit))
+      (.callback (.external 1) (.var 0))))
+    (.bind (.callback (.external 2) (.var 0))
+      (.succeed (.app "pair" (.cons (.var 0) (.cons (.var 1) .nil)))))
+
+def acquireHandleAnswers : List (Completion Val Err Defect FiberId Ann) :=
+  [.ofExit (.success (.nat 0)), .ofExit (.success .unit), .ofExit (.success (.nat 1))]
+
+/-- Per-fixture input data supplied beside the canonical program. -/
+def hostInputs (name : String) : RowTable × List (Completion Val Err Defect FiberId Ann) :=
+  if name == "pAcquireHandle" then (acquireHandleTable, acquireHandleAnswers) else ([], [])
+
 /-- The programs checked: the wire corpus, then `pTwo`, then the two `acquireRelease`
 fixtures, then the join's three, then the host rows slice's two. -/
 def corpus : List (String × Api.Program) :=
   Wire.Corpus.all ++ [("pTwo", pTwo), ("pAcquire", pAcquire), ("pAcquireClosed", pAcquireClosed),
     ("pProvide", pProvide), ("pProvideMerge", pProvideMerge), ("pProvideTwice", pProvideTwice),
-    ("pDiamond", pDiamond), ("pMergeAll", pMergeAll)]
+    ("pDiamond", pDiamond), ("pMergeAll", pMergeAll), ("pAcquireHandle", pAcquireHandle)]
 
 /-! ## The value wire -/
 
@@ -217,6 +241,7 @@ partial def valJson : Val → J
   | .unit => Lean.Json.null
   | .nat n => toJson n
   | .bool b => Lean.Json.bool b
+  | Value.external index => Lean.Json.mkObj [("external", toJson index)]
   | Value.fiber id => Lean.Json.mkObj [("fiber", toJson id)]
   | Value.fiberSnapshot handles =>
     Lean.Json.mkObj [("fibers", Lean.Json.arr
@@ -335,8 +360,9 @@ def fiberJson (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) : J
 
 def strings (xs : List String) : J := Lean.Json.arr (xs.map Lean.Json.str).toArray
 
-def runJson (p : Api.Program) (fuel : Nat) : J :=
-  let r := Api.run p fuel
+def runJson (p : Api.Program) (fuel : Nat) (table : RowTable := [])
+    (answers : List (Completion Val Err Defect FiberId Ann) := []) : J :=
+  let r := Api.run p fuel [] answers table
   let trace := r.trace
   Lean.Json.mkObj
     [ ("outcome", Lean.Json.str (outcomeText r.outcome))
@@ -349,19 +375,21 @@ def runJson (p : Api.Program) (fuel : Nat) : J :=
     , ("internal", strings (trace.filterMap internal))
     , ("frames", toJson (trace.filter isFrame).length) ]
 
-def runSyncJson (p : Api.Program) (fuel : Nat) : J :=
-  let (_, exit) := Api.runSync p fuel
+def runSyncJson (p : Api.Program) (fuel : Nat) (table : RowTable := [])
+    (answers : List (Completion Val Err Defect FiberId Ann) := []) : J :=
+  let (_, exit) := Api.runSync p fuel [] answers table
   Lean.Json.mkObj
     [ ("exit", exitJson exit)
     , ("exitKind", Lean.Json.str (exitKind exit))
     , ("sync", Lean.Json.bool (!isAsyncFiberDefect exit)) ]
 
 def entry (fuel : Nat) (name : String) (p : Api.Program) : J :=
-  let ty := Api.typeOf p
-  let printed := Api.print p
+  let (table, answers) := hostInputs name
+  let ty := Api.typeOf p table
+  let printed := Api.print p table
   -- the declaration block (`Api.printModule`, the host rows slice): one `const L_<path>` per
   -- referenced layer target, then `main`; one declaration for a program with no references
-  let decl := (Api.printModule "main" p).map fun m =>
+  let decl := (Api.printModule "main" p table).map fun m =>
     String.join (m.decls.map (TypeScript.Render.decl house0))
   Lean.Json.mkObj
     [ ("name", Lean.Json.str name)
@@ -376,8 +404,8 @@ def entry (fuel : Nat) (name : String) (p : Api.Program) : J :=
     , ("decl", match decl with
         | some text => Lean.Json.str text
         | none => Lean.Json.null)
-    , ("run", runJson p fuel)
-    , ("runSync", runSyncJson p fuel) ]
+    , ("run", runJson p fuel table answers)
+    , ("runSync", runSyncJson p fuel table answers) ]
 
 /-- The whole manifest. -/
 def manifest (fuel : Nat) : J :=
@@ -390,11 +418,11 @@ def manifest (fuel : Nat) : J :=
 
 /-! ## Receipts -/
 
-#guard corpus.length = 16
+#guard corpus.length = 17
 #guard (corpus.map (·.1)).eraseDups.length = corpus.length
 #guard (corpus.map (·.1)) =
   ["p42", "pBind", "pFork", "pAwait", "pGen", "pLoop", "pCatch", "pScope", "pTwo", "pAcquire",
-   "pAcquireClosed", "pProvide", "pProvideMerge", "pProvideTwice", "pDiamond", "pMergeAll"]
+   "pAcquireClosed", "pProvide", "pProvideMerge", "pProvideTwice", "pDiamond", "pMergeAll", "pAcquireHandle"]
 -- the join's fixtures are well-typed, so they cross as declarations
 #guard Api.wellTyped pProvide
 #guard Api.wellTyped pProvideMerge
@@ -409,6 +437,13 @@ def manifest (fuel : Nat) : J :=
 #guard (Api.printModule "main" pDiamond).map Api.readModule = some (.ok pDiamond)
 #guard (Api.printModule "main" pMergeAll).map Api.readModule = some (.ok pMergeAll)
 #guard (Api.printModule "main" pProvideTwice).map Api.readModule = some (.ok pProvideTwice)
+
+#guard LawfulTable acquireHandleTable
+#guard Api.wellTyped pAcquireHandle acquireHandleTable
+#guard (Api.run pAcquireHandle 1000 [] acquireHandleAnswers acquireHandleTable).exit =
+  some (.success (.list [.handle 7 0, .nat 1]))
+#guard (Api.run pAcquireHandle 1000 [] acquireHandleAnswers acquireHandleTable).stores.externals.allocated =
+  ["Host.Resource"]
 
 end OCaml5.Truth
 

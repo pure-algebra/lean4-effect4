@@ -63,6 +63,7 @@ inductive Handle
   | scope (key : Nat)
   /-- A memo map (`Layer.ts:421-458`; the join). -/
   | memoMap (id : Nat)
+  | external (key : Nat)
 deriving DecidableEq, Repr
 
 /-- The kind byte and index of a handle: the `handle` frame's payload, `Store.Val.handles`'
@@ -73,6 +74,7 @@ def Handle.code : Handle → UInt8 × Nat
   | .promise key => (3, key.index)
   | .scope key => (4, key)
   | .memoMap id => (5, id)
+  | .external key => (7, key)
 
 /-- The handle of a kind byte and index: the five minted kinds (`memoMap` since the join); an
 unregistered byte is no handle. -/
@@ -83,6 +85,7 @@ def Handle.ofCode (code : UInt8 × Nat) : Option Handle :=
   | some .promise => some (.promise ⟨code.2⟩)
   | some .scope => some (.scope code.2)
   | some .memoMap => some (.memoMap code.2)
+  | some .external => some (.external code.2)
   | none => none
 
 theorem Handle.ofCode_code (h : Handle) : Handle.ofCode h.code = some h := by
@@ -816,6 +819,7 @@ def Handle.existsIn (w : World) : Handle → Bool
   | Handle.promise key => decide (key.index < w.state.deferreds.cells.length)
   | Handle.scope key => (w.state.scopes.entryAt key).isSome
   | Handle.memoMap id => (w.state.memo.mapAt ⟨id⟩).isSome
+  | Handle.external key => decide (key < w.state.externals.allocated.length)
 
 /-- Every handle of a list exists in a world. -/
 def Ok (w : World) (hs : List Handle) : Prop := ∀ h ∈ hs, h.existsIn w = true
@@ -888,6 +892,11 @@ structure KeyBounded (nk : ν → List Handle) (sk : σ → List Handle)
         ((interp.registerAsync n fiber token s).1.keys ++
           ((interp.registerAsync n fiber token s).2.map (primKeys nk sk)).getD [])
   answerCode : ∀ c, primKeys nk sk (interp.answerCode c) ⊆ c.keys
+  prepareAnswer : ∀ current answer s ids, Ok ⟨ids, s⟩ (answer.keys ++ s.keys) →
+    s.le (interp.prepareAnswer current answer s).1 ∧
+      Ok ⟨ids, (interp.prepareAnswer current answer s).1⟩
+        ((interp.prepareAnswer current answer s).1.keys ++
+          primKeys nk sk (interp.prepareAnswer current answer s).2)
   dueResumes : ∀ s ids, Ok ⟨ids, s⟩ s.keys →
     s.le (interp.dueResumes s).2 ∧
       Ok ⟨ids, (interp.dueResumes s).2⟩
@@ -1009,7 +1018,10 @@ theorem Handle.existsIn_mono {w w' : World} (hle : w.le w') (h : Handle)
     exact hle.2.2.2.1 key hh
   | memoMap id =>
     simp only [Handle.existsIn] at hh ⊢
-    exact hle.2.2.2.2.2 ⟨id⟩ hh
+    exact hle.2.2.2.2.2.1 ⟨id⟩ hh
+  | external key =>
+    simp only [Handle.existsIn, decide_eq_true_eq] at hh ⊢
+    exact Nat.lt_of_lt_of_le hh hle.2.2.2.2.2.2
 
 theorem Ok_mono {w w' : World} (hle : w.le w') {hs : List Handle} (ok : Ok w hs) : Ok w' hs :=
   fun h hh => Handle.existsIn_mono hle h (ok h hh)
@@ -4848,13 +4860,31 @@ theorem stepDecisionState_minted_of_evaluator (hb : KeyBounded nk sk interp)
     refine Ok_of_subset (keys_modify_subset nk sk id _ [] fun g => by sub_tac) ?_
     exact Ok_of_subset (by sub_tac) hm
   | answerAsync id token answer =>
-    simp only [stepDecisionState, stepDecisionState.loop]
-    have ha : MintedIn m answer.keys := hanswer id token answer rfl
-    have hcode : Ok m.world (primKeys nk sk (interp.answerCode answer)) := Ok_of_subset (hb.answerCode answer) ha
-    obtain ⟨hle, hok⟩ := driveState_minted_of_evaluator nk sk hb hEval fuel m
-      [Cmd.resume id token (interp.answerCode answer), Cmd.drainDue]
-      (Ok_of_subset (by sub_tac) (Ok_append.mpr ⟨hm, hcode⟩))
-    exact ⟨hle, Ok_of_subset (List.subset_append_left _ _) hok⟩
+    cases fuel with
+    | zero => exact ⟨World.le_refl _, hm⟩
+    | succ fuel =>
+      simp only [stepDecisionState, stepDecisionState.loop]
+      have ha : MintedIn m answer.keys := hanswer id token answer rfl
+      have hp : m.state.le (prepareAsyncAnswer interp m id token answer).1 ∧
+          Ok ⟨m.fibers.map RunFiber.id, (prepareAsyncAnswer interp m id token answer).1⟩
+            ((prepareAsyncAnswer interp m id token answer).1.keys ++
+              primKeys nk sk (prepareAsyncAnswer interp m id token answer).2) := by
+        unfold prepareAsyncAnswer
+        split
+        · exact ⟨Stores.le_refl _, Ok_append.mpr
+            ⟨Ok_of_subset (by sub_tac) hm, Ok_of_subset (hb.answerCode answer) ha⟩⟩
+        · apply hb.prepareAnswer
+          exact Ok_append.mpr ⟨ha, Ok_of_subset (by sub_tac) hm⟩
+      let next := prepareAsyncAnswer interp m id token answer
+      have hle : m.world.le ({ m with state := next.1 } : NM ν σ).world :=
+        ⟨fun _ h => h, hp.1⟩
+      have hm' : MintedIn ({ m with state := next.1 } : NM ν σ)
+          (({ m with state := next.1 } : NM ν σ).keys nk sk ++
+            cmdsKeys nk sk [Cmd.resume id token next.2, Cmd.drainDue]) := by
+        exact Ok_of_subset (by sub_tac) (Ok_append.mpr ⟨Ok_mono hle hm, hp.2⟩)
+      obtain ⟨hle', hok⟩ := driveState_minted_of_evaluator nk sk hb hEval (fuel + 1)
+        { m with state := next.1 } [Cmd.resume id token next.2, Cmd.drainDue] hm'
+      exact ⟨World.le_trans hle hle', Ok_of_subset (List.subset_append_left _ _) hok⟩
   | interruptFrom interruptor annotations target =>
     simp only [stepDecisionState, stepDecisionState.loop]
     split
@@ -5409,7 +5439,7 @@ theorem Stores.wakeList_keys (key : WakeKey) (phase : WakePhase) (s : Stores) :
   unfold Stores.wakeList
   split
   · obtain ⟨hk, hlen⟩ := DeferredStore.wakeBatch_keys s.deferreds ⟨key.index⟩
-    refine ⟨?_, ⟨Nat.le_refl _, hlen, fun _ hh => hh, Nat.le_refl _, fun _ hm => hm⟩⟩
+    refine ⟨?_, ⟨Nat.le_refl _, hlen, fun _ hh => hh, Nat.le_refl _, (fun _ hm => hm), Nat.le_refl _⟩⟩
     simp only [Stores.keys]
     sub_tac using hk
   · exact ⟨List.Subset.refl _, Stores.le_refl _⟩
@@ -5684,7 +5714,7 @@ theorem refStep_keys (o : SyncOp) (s : Stores) (v : Val) (heap' : RefHeap) (ids 
     (h : refStep o s.refs = some (v, heap')) (hok : Ok ⟨ids, s⟩ (o.keys ++ s.keys)) :
     Ok ⟨ids, { s with refs := heap' }⟩ (v.keys ++ heap'.flatMap Val.keys) := by
   have hle : s.le { s with refs := heap' } :=
-    ⟨refStep_length o s.refs v heap' h, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, fun _ hm => hm⟩
+    ⟨refStep_length o s.refs v heap' h, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, (fun _ hm => hm), Nat.le_refl _⟩
   have hmono : World.le ⟨ids, s⟩ ⟨ids, { s with refs := heap' }⟩ := ⟨fun _ hh => hh, hle⟩
   have hok' := Ok_mono hmono hok
   cases o with
@@ -6174,7 +6204,7 @@ theorem scopeCloseSnapshot_keys (scope : Nat) (exit : ExitV) (s s' : Stores)
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl, rfl⟩ := h
   refine ⟨⟨Nat.le_refl _, Nat.le_refl _,
-    fun key hk => ScopeStore.entryAt_closeState_isSome _ _ _ _ hk, Nat.le_refl _, fun _ hm => hm⟩,
+    fun key hk => ScopeStore.entryAt_closeState_isSome _ _ _ _ hk, Nat.le_refl _, (fun _ hm => hm), Nat.le_refl _⟩,
     ?_, ?_⟩
   · sub_tac using (ScopeStore.closeState_keys s.scopes scope exit)
   · exact List.Subset.trans (ScopeStore.closeOrder_keys hentry) (by sub_tac)
@@ -6219,7 +6249,7 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
     simp only [stores]
     rcases hc : s.timers.clockStep millis (Prim.success Val.unit) with ⟨o, timers⟩
     have hle : s.le { s with timers := timers } :=
-      ⟨Nat.le_refl _, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, fun _ hm => hm⟩
+      ⟨Nat.le_refl _, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, (fun _ hm => hm), Nat.le_refl _⟩
     refine ⟨hle, Ok_of_subset ?_ (Ok_mono (World.le_of_state hle) hok)⟩
     cases o with
     | none => simp only [Option.map_none, Option.getD_none, List.append_nil]; exact fun _ h => h
@@ -6318,7 +6348,7 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
       simp only [stores]
       obtain ⟨hkeys, himm, hlen⟩ := DeferredStore.register_keys s.deferreds cell fiber token
       have hle : s.le { s with deferreds := (s.deferreds.register cell fiber token).1 } :=
-        ⟨Nat.le_refl _, hlen, fun _ hh => hh, Nat.le_refl _, fun _ hm => hm⟩
+        ⟨Nat.le_refl _, hlen, fun _ hh => hh, Nat.le_refl _, (fun _ hm => hm), Nat.le_refl _⟩
       refine ⟨hle, ?_⟩
       have hok' := Ok_mono (World.le_of_state hle) hok
       refine Ok_of_subset ?_ hok'
@@ -6333,7 +6363,7 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
     | registerSleep millis =>
       -- the sleep is a waiter on the timer list, which holds no handle of the world
       simp only [stores]
-      exact ⟨⟨Nat.le_refl _, Nat.le_refl _, fun _ hh => hh, Nat.le_refl _, fun _ hm => hm⟩,
+      exact ⟨⟨Nat.le_refl _, Nat.le_refl _, fun _ hh => hh, Nat.le_refl _, (fun _ hm => hm), Nat.le_refl _⟩,
         Ok_of_subset (by sub_tac) hok⟩
     | restore _ | merge _ | seq _ | joinOn _ | interruptWith _ | doneInto _ | constant _ | exitOfValue
     | snapshotThen _ | cancelAwait _ | cancelSleep | externalRegister _ | abortController | cancelPark
@@ -6342,11 +6372,14 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
       simp only [stores]
       exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
   answerCode c := completionPrim_keys c
+  prepareAnswer current answer s ids hok := by
+    refine ⟨Stores.le_refl _, ?_⟩
+    exact Ok_of_subset (by sub_tac using completionPrim_keys answer) hok
   dueResumes s ids hok := by
     simp only [stores]
     obtain ⟨h1, h2⟩ := DeferredStore.drainDue_keys s.deferreds
     have hle : s.le { s with deferreds := (s.deferreds.drainDue).2 } := by
-      refine ⟨Nat.le_refl _, ?_, fun _ hh => hh, Nat.le_refl _, fun _ hm => hm⟩
+      refine ⟨Nat.le_refl _, ?_, fun _ hh => hh, Nat.le_refl _, (fun _ hm => hm), Nat.le_refl _⟩
       simp only [DeferredStore.drainDue]
       exact Nat.le_refl _
     refine ⟨hle, ?_⟩
@@ -6387,7 +6420,7 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
         rw [← hs]
         exact ⟨Nat.le_refl _, Nat.le_refl _,
           fun k hk => ScopeStore.entryAt_addFinalizer_isSome _ _ _ _ k hk, Nat.le_succ _,
-          fun _ hm => hm⟩
+          (fun _ hm => hm), Nat.le_refl _⟩
       refine ⟨hle, ?_⟩
       have hok' := Ok_mono (World.le_of_state hle) hok
       refine Ok_of_subset ?_ hok'
@@ -6401,7 +6434,7 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
       subst h
       have hle : s.le { s with scopes := s.scopes.removeFinalizer scope key } :=
         ⟨Nat.le_refl _, Nat.le_refl _, fun k hk => ScopeStore.entryAt_removeFinalizer_isSome _ _ _ k hk,
-          Nat.le_refl _, fun _ hm => hm⟩
+          Nat.le_refl _, (fun _ hm => hm), Nat.le_refl _⟩
       refine ⟨hle, ?_⟩
       have hok' := Ok_mono (World.le_of_state hle) hok
       refine Ok_of_subset ?_ hok'
