@@ -268,11 +268,32 @@ body back, leaving the environment as it was.
 This is the answer to the availability catch (`seat-lcnf.md` §1.4): a declaration whose mono
 body the `.olean` does not carry — because the module system's export filter dropped it, or
 because the phase was never persisted — does not have to be a hole. `Lean.Compiler.LCNF.main`
-is the same entry point `compileDecls` uses, so the body produced here is the body the
-compiler would have persisted; `withoutModifyingEnv` discards the extension state it writes.
-Measured deterministic by the coordinator (`ir-reuse.md` §2, probe D) and by
-`recompileAgrees?` below: a fresh mono decl is `Code.alphaEqv` to the persisted one and hashes
-to the same `DeclHash`.
+is the same entry point `compileDecls` uses; `withoutModifyingEnv` discards the extension
+state it writes.
+
+**It is a fallback, not a reproduction, and the availability tag says so.** A body produced
+here is what the compiler can make *from the imported environment*, which is not in general
+the body it persisted when it compiled the defining module. Measured with `recompileAgrees?`
+over the two audited closures: of the 20 declarations of the `Ty` closure, 3 recompile to an
+`alphaEqv` body, 12 differ and 5 produce no fresh body at all; of the 605 of the `api`
+closure, 68 agree, 155 differ, and 382 produce nothing. Two causes, both read off the printed
+LCNF (`lcnf/idiom/probes/recompile-diff.txt`):
+
+* **A matcher is no longer inlined.** `Ty.isNever` is persisted as a `cases` of 5 nodes; the
+  fresh body is 3 nodes and still *calls* `Ty.isNever.match_1` with two lambda-lifted arms,
+  because the matcher's own LCNF is not in the imported environment for the simplifier to
+  inline. This is the same missing entry that makes `main` raise, below.
+* **A mono type degrades to `lcAny`.** `Ty.join`'s two bodies print identically and are not
+  `alphaEqv`: one `let`'s mono type is `List Effect4.Program.Ty` persisted and `List lcAny`
+  fresh. `Code.alphaEqv` compares `LetDecl.type`, so a type-only difference is a difference.
+
+The 382 that produce nothing are the compiler-generated twins — `_redArg`, `spec_N`, `_lam_N`
+— which have no kernel definition, so `main` cannot be asked for them at all: they exist only
+as a side effect of compiling their host.
+
+So: use this to fill a hole, and read the `on-demand` availability as "a body, and not the
+one the `.olean` would have carried". The gate on `opaque-by-visibility` (`seat-lcnf.md` §3
+R7(ii)) stays the primary defence against a `module` migration; this is the second one.
 
 A refusal (a `Prop`, a `noncomputable`, an `@[extern]` with no body, an elaboration error) is
 `none`, never an exception: this is a *fallback*, and a caller that asked for it still gets a
@@ -285,15 +306,18 @@ pipeline, base → mono → impure, and the impure passes need more of the envir
 (`LCNF/InferBorrow.lean:333`), because the auxiliary matcher's *impure* signature was never
 imported. That failure is **after** the mono phase's `saveMono`, so the body this function
 wants is already in the (temporary) extension state when the exception is thrown; catching it
-here and reading `getMonoDecl?` afterwards is what makes the path work at all. Measured on
-six `Effect4.Program.Ty` declarations: four raise in `InferBorrow`, all six then yield a mono
-body that is `Code.alphaEqv` to the persisted one and hashes to the same `DeclHash`.
+here and reading the extension afterwards is what makes the path work at all. Measured on six
+`Effect4.Program.Ty` declarations: four raise in `InferBorrow`, and all six still yield a mono
+body.
 
-The answer is read out of `monoExt`'s **local** state rather than through `getMonoDecl?`,
-which would fall back to the imported entry: an entry is in the local state only if
-`saveMono` ran *in this process*, so a `some` here is always a freshly compiled body and
-never the persisted one handed back. That is what makes `recompileAgrees?` a real
-comparison. -/
+**The answer is read out of `monoExt`'s local state, not through `getMonoDecl?`.** This is
+not a detail. `getMonoDecl?` goes through `findExtEntry?` (`LCNF/Basic.lean:1241-1251`), which
+looks a name up by *module index first* and consults the local state only when the name has
+none — so for an imported declaration it hands back the persisted entry and a fresh compile is
+invisible through it. An entry is in the local state only if `saveMono` ran in this process,
+so a `some` here is always the freshly compiled body. **Correction to `ir-reuse.md` §2, probe
+D**: that probe read `getMonoDecl?` after recompiling an imported declaration and concluded
+the pipeline was deterministic; it had compared the persisted declaration with itself. -/
 def compileMono? (n : Name) : CoreM (Option (Decl .pure)) := do
   withoutModifyingEnv do
     try
@@ -304,8 +328,12 @@ def compileMono? (n : Name) : CoreM (Option (Decl .pure)) := do
 
 /-- Recompile `n` and compare with its persisted mono body: `Code.alphaEqv` (equal modulo
 free-variable names) and `DeclHash` equality (`hash`, which is id-*sensitive*). `none` when
-either side has no code. The ids need no normalising first: `saveMono` runs `normalizeFVarIds`
-on both sides (`LCNF/Passes.lean:66-74`), which is why the second component is `true` at all. -/
+either side has no code — including when `compileMono?` could not produce one at all.
+
+The ids are not normalised first, and do not need to be: `saveMono` runs `normalizeFVarIds`
+on both sides (`LCNF/Passes.lean:66-74`), so where the two bodies agree the hashes agree too.
+Both components are reported because they answer different questions — `alphaEqv` whether the
+*code* is the same, `hash` whether the persisted bytes would be. -/
 def recompileAgrees? (n : Name) : CoreM (Option (Bool × Bool)) := do
   let (_, persisted?) := monoAvailability (← getEnv) n
   let some persisted := persisted? | return none
