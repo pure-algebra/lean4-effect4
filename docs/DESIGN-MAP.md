@@ -56,7 +56,7 @@ several layers, and the kind is what makes its cost visible.
 | L1 reference semantics | the machine (fibers, scopes, the wake list, stores, the layer memo) and the algebra it denotes into; the run API and its refusals | solid; its open rows are about the *reach* of the agreement, not its content |
 | L2 the type layer | the `Eff` object language, `Ty`, the row and table discipline, the error and requirement channels, the typing algorithm and the value typing | routed faithfully, coarse in content; no declarative system, no subtyping, one uninhabited binder type |
 | L3 representations and bytes | the value carrier, canonical bytes and the content-addressed store, the wire and its ordinals, the JSON forms, the World description and its OCaml and TypeScript projections, the goldens, the stamps | the rank-one rework risks live here: identity, ordinals, four independent reflections of one description |
-| L4 the faces | the printer and readers between `Eff` and TypeScript source, the foreign ingest with its two contracts, the truth harness and its tapes, the OCaml face as a conformance suite, the runtime coverage census | the largest subsystem with no contract packet; classification by rule order; the printed image never type-checked |
+| L4 the faces | the printer and readers between `Eff` and TypeScript source, the foreign ingest with its two contracts, the truth harness and its tapes, the OCaml face as a conformance suite, the runtime coverage census | its claims are stated in `Test/contracts/faces.contract.md` (DI-50), which names the batteries that exist and adds none; classification by rule order; the printed image never type-checked |
 | L5 process | the generators and their families, the stamps and gates, the one-compiler lane, the basis and the register | the drift-removal machinery; two stamp protocols; five families carried by hand |
 
 ## L1 — the reference semantics
@@ -74,8 +74,13 @@ parameter, so it covers the empty profile and says nothing yet about an external
 execution (DI-57); `run_eq_meaning` over the single-fiber straight-line fragment
 (`Straight`), which excludes fork, `gen`, loops, layers and async (DI-07); the sync-route row
 preservation `answer_typed`; the axiom ceiling `[propext, Quot.sound]` with a named
-`Classical.choice` boundary (DI-30). Replay consumes a tape's answers and does not yet check
-the recorded call envelope against the row it answers (DI-58). Rows: DI-07, DI-10, DI-11,
+`Classical.choice` boundary (DI-30). Replay now has two routes (DI-58): the raw one
+(`Api.replay`, `Api.replayChecked`) consumes a tape's answers from a preloaded list and does
+not check the recorded call envelope against the row it answers; the session route
+(`src/Effect4/Api/HostSession.lean`) does, through `Envelope` and `acceptReply`
+(`src/Effect4/Program/Admit.lean`), which bind a reply to the call it answers before it becomes
+a decision. The batteries still use the raw route, so the check is available, not yet
+universal. Rows: DI-07, DI-10, DI-11,
 DI-17, DI-23, DI-30, DI-31, DI-57, DI-58.
 
 Literature: Plotkin and Pretnar, handlers of algebraic effects (2009/2013); Bauer and Pretnar,
@@ -219,8 +224,10 @@ to write when the corpus fails to reach a constructor — the model the OCaml en
 acceptance test should follow (DI-19). The runtime coverage census is the traceability matrix
 for rc.112's runtime, not for this layer.
 
-Non-guarantees: no contract packet covers the printer, either reader, the ingest, the truth
-harness or the OCaml face (DI-50); the printed image is executed and parsed but never
+Non-guarantees: `Test/contracts/faces.contract.md` (DI-50) states what the printer, both
+readers, the ingest, the truth harness and the OCaml face claim about each other, with the
+evidence word of each claim; it is a statement of the layer's claims, not a red battery, so it
+adds no falsifier the layer did not already have. The printed image is executed and parsed but never
 type-checked (DI-49); a program with a non-empty requirement row prints untyped (DI-24) — and
 four of the six host programs have such a row only because `effTy`'s `.scoped` arm does not
 discharge `Scope` as rc.112 does, so they print untyped for a requirement the target does not

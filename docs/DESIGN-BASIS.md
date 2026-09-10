@@ -703,23 +703,31 @@ library to model the complete effectful interface through composition.
 Each public type closes its own graph before cutover. A later theorem cannot
 silently stand in for an earlier edge.
 
+Re-cut 2026-09-10 against `src/Effect4/Laws` and `Test/Audit/RuntimeCoverage.lean`. Two rows
+were deleted with the subsystems they named: the `Program`/`Flow` bridge (the Flow route is at
+`606918e` in main's history and on `archive/flow-route`) and the Foldlab adapter (the foldlab
+vendor evidence is at `62c04d9` on `archive/char-stdlib`). "Pending" below means no theorem or
+battery in this tree discharges the judgment — not that one is expected soon.
+
 | Edge | Required judgment or evidence | Current state |
 | --- | --- | --- |
-| Algebra | monad equations; interpretation of `pure`, `bind`, and `perform`; sum laws; handler composition; freeness and initiality; axiom receipt | Implemented; independent assurance review remains separate |
-| Admission | raw reference resolution, index well-formedness, type preservation, checked erasure, decidability, and stable refusal classification | Pending |
-| `Program`/`Flow` bridge | sequential quotation, elaboration preservation, interpretation agreement, and the exact boundary where cyclic or unbounded recursive unfolding ceases to be an inductive `Program` value | Pending |
-| Operational semantics | step preservation, terminal exclusivity, tape compatibility, per-tape determinism where applicable, and explicit scheduler assumptions | Pending |
-| Recursive meaning | approximation monotonicity, coherence, finite adequacy, divergence adequacy, and no completion-to-failure regression | Pending |
-| Logic | `wlp` laws, totality, `wp <-> wlp /\ total`, consequence, bind at the semantic face, and classification transfer soundness | Pending |
-| Scope and runtime | state retention on failure, finalizer order and exactly-once execution, delimiter laws, interruption behavior, fiber ownership, and disposal | Pending |
-| Schema and services | representation well-formedness, directional codec laws, service-key identity, Layer dependency laws, provision observations, and scope elimination | Pending |
-| TypeScript target | typed lowering, deterministic rendering, decode round trips, direct rc.112 type/runtime vectors, diagnostic negatives, and simulation for each admitted fragment | Pending |
-| Foldlab adapter | source digest, conversions in both directions, round trips, interpretation agreement, counterexample coverage, and axiom receipt for each moved type | Pending |
+| Algebra | monad equations; interpretation of `pure`, `bind`, and `perform`; sum laws; handler composition; freeness and initiality; axiom receipt | Implemented in the `effects` dependency and consumed by `src/Effect4/Laws/Program/Denote.lean`; independent assurance review remains separate |
+| Admission | raw reference resolution, index well-formedness, type preservation, checked erasure, decidability, and stable refusal classification | Partly discharged by `src/Effect4/Laws/Program/Admit.lean`: which row a passed check identifies (`admitted_row`), that an accepted answer and its error image are typed in the allocation table (`external_answer_typed`, `external_error_typed`), that an accepted completion names only live handles (`admitted_decision_minted`), and that a checked replay walks the tape the unchecked one walks (`replayCheckedFrom_eq_replay`). The checker and the rules agree on the whole mutual syntax in `src/Effect4/Laws/Program/Typing/Sound.lean` (`effTy_sound`, `effTy_complete`, `hasTy_unique`), which is the decidability and type-preservation half. Stable refusal classification: **pending** |
+| Operational semantics | step preservation, terminal exclusivity, tape compatibility, per-tape determinism where applicable, and explicit scheduler assumptions | Partly discharged: `run_eq_ref` (`src/Effect4/Laws/Program/RuntimeR.lean`) equates the frame machine's replay with the term reference's on every admitted program, compile budget, command budget, `Completion` tape and choice list — same classification, same observation, same sufficiency receipt. Budget irrelevance and the terminal projection are `Beh_fuel_irrelevant` and `obs_mono_of_le_terminal` (`src/Effect4/Laws/Machine/Behaviour.lean`) over `drive_add` (`src/Effect4/Laws/Machine/Approximation.lean`). The scheduler assumptions are the declared signature of `src/Effect4/Laws/Program/Sched.lean` and the census rows joined in `Test/Audit/RuntimeCoverage.lean`. No theorem relates either machine to rc.112 |
+| Recursive meaning | approximation monotonicity, coherence, finite adequacy, divergence adequacy, and no completion-to-failure regression | Partly discharged: monotonicity and stability under a larger budget are `src/Effect4/Laws/Machine/Approximation.lean` (`drive_add`, `drive_stable_of_done`), packet `Test/contracts/machine-approximation.contract.md`. Finite adequacy holds on the single-fiber straight-line fragment only — `run_eq_meaning` (`src/Effect4/Laws/Program/Agreement/Machine.lean`) with `straight_ref` and `straight_sufficient` (`src/Effect4/Laws/Program/RuntimeR.lean`) — which excludes fork, `gen`, loops, layers and async (DI-07). Divergence adequacy: **pending**; the machine is fuel-indexed and a frontier is not divergence |
+| Logic | `wlp` laws, totality, `wp <-> wlp /\ total`, consequence, bind at the semantic face, and classification transfer soundness | **Pending**, and empty: no weakest-precondition calculus exists in the tree. The `Std.Do` triples of `src/Effect4/Laws/Store/CanonicalSpec.lean` are decoder specifications, not this edge |
+| Scope and runtime | state retention on failure, finalizer order and exactly-once execution, delimiter laws, interruption behavior, fiber ownership, and disposal | Partly discharged: `src/Effect4/Laws/Machine/ScopeMachine.lean` retains machine and service state, failure included, at every prefix and at the sequential fold's completion, for both strategy labels; `src/Effect4/Laws/Machine/ScopeRestoration.lean` gives the nine equations of the frame resumption; `src/Effect4/Laws/Machine/Handles.lean` states `MintedAt` — every collected handle names a live fiber, heap index, Deferred cell or scope entry; `src/Effect4/Laws/Machine/StoresLaws.lean` gives store growth, validity and heap well-formedness. The census's scope, fork and interrupt rows are joined to their witnesses in `Test/Audit/RuntimeCoverage.lean`. Parallel finalizer scheduling is not implemented and general region compilation is not claimed |
+| Schema and services | representation well-formedness, directional codec laws, service-key identity, Layer dependency laws, provision observations, and scope elimination | Partly discharged, by mixed evidence. Service-key identity: `Test/contracts/environment-context-key.contract.md` with `Test/Machine/Environment/ContextKeyContract.lean`, and the context alphabet in `src/Effect4/Laws/Machine/ContextValue.lean`. One codec direction — a successful decode reconstructs its input — is `src/Effect4/Laws/Store/CanonicalSpec.lean` (`ofVal_spec`, `mapM_ofVal_spec`). The Layer rows are witnessed on the compile route by the `Program.Agreement.provideLayer*` declarations joined in `Test/Audit/RuntimeCoverage.lean`. Schema representation well-formedness is *tested* and *reproduced*, not proved: `Test/Schema/RepresentationContract.lean` and the `scripts/check-schema-*.sh` gates. Scope elimination: **pending** — `effTy`'s `.scoped` arm does not discharge `Scope` as rc.112 does (DI-63) |
+| TypeScript target | typed lowering, deterministic rendering, decode round trips, direct rc.112 type/runtime vectors, diagnostic negatives, and simulation for each admitted fragment | Partly discharged: deterministic rendering and the decode round trip are `read_print` and `roundTrip_eq` in `src/Effect4/Codegen/Read.lean`, with `read_print_native` at the native alphabet. Direct rc.112 vectors are the truth harness's bounded differential over a frozen corpus at a pinned host, whose quantifiers and side conditions are stated in `Test/contracts/faces.contract.md`. Typed lowering: **pending** — the printed image is executed and parsed but never type-checked (DI-49), and a program with a non-empty requirement row prints untyped (DI-24). Simulation for each admitted fragment: **pending** |
 
-The strongest present claim is that the implemented well-founded algebra compiles
-and has a dedicated proof and counterexample battery. The document makes no
-claim that the pending flow, runtime, target, or compatibility edges are
-proved.
+Read the table as it stands. `Algebra`, `Admission`, `Operational semantics`, `Recursive
+meaning` and `Scope and runtime` carry Lean theorems, each with its fragment and premises named
+beside it; `Schema and services` and `TypeScript target` carry tested and reproduced evidence
+rather than proofs; `Logic` has nothing. No edge asserts agreement with the rc.112 runtime: the
+only evidence for that is the truth harness's bounded differential, which is a differential and
+not a bisimulation. `docs/DESIGN-MAP.md` grades the same material with the four evidence words
+and `docs/RUNTIME-COVERAGE.md` owns the coverage number; a claim quoted from here should agree
+with both.
 
 ## Source and evidence rules
 
@@ -737,8 +745,11 @@ one another.
 | Corpus census | Which public spellings appeared in a pinned sample | Completeness of the target API or semantic correctness |
 
 The exact operational pins, source digests, and cutover dispositions are owned
-by [`PORT-MANIFEST.md`](../PORT-MANIFEST.md). This document owns the
-architectural consequences of that evidence.
+by [`docs/GENERATED.md`](GENERATED.md): the generated inventory, the generation
+order, the `cut-from:` stamps and the gates that compare them. (This paragraph
+previously pointed at a `PORT-MANIFEST.md` above the repository root, which has
+never existed here.) This document owns the architectural consequences of that
+evidence.
 
 ## Designs excluded by this basis
 

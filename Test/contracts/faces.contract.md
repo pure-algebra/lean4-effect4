@@ -122,9 +122,12 @@ The claim held by face 8 is bounded on five axes, and every one of them is part 
    fiber ran.
 3. **A pinned host.** `effect@4.0.0-rc.112` and `@effect/sql-sqlite-bun@4.0.0-rc.112` on bun;
    `scripts/check-truth.py` refuses to run without them. The claim is about those bytes.
-4. **24 programs, 6 tapes.** The corpus is frozen and listed in `harness/truth/Truth.lean`;
-   six programs perform package rows and have tapes. The gate re-records all six on every run
-   and refuses a byte that moved, so a committed tape is the answer rc.112 just gave.
+4. **31 programs, 6 tapes** at the 2026-09-10 corpus. The corpus is frozen and listed in
+   `harness/truth/Truth.lean`, which cuts `harness/truth/corpus.json`; the program count is
+   that file's `programs` length, and no gate compares this sentence to it, so read the file
+   for the count of the day. Six programs perform package rows and have tapes. The gate
+   re-records all six on every run and refuses a byte that moved, so a committed tape is the
+   answer rc.112 just gave.
 5. **It is a differential, not a bisimulation.** Exits are compared exactly for a success
    value and a `fail` payload, and by kind for a `die` and an `interrupt`; schedules are
    compared row by row with `scheduled` rows dropped on both faces. Nothing here claims

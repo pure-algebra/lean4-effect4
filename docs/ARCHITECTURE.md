@@ -20,7 +20,6 @@ Machine and Program -> Effect4.Laws: the separate proof graph; no reverse import
 
 Schema (carrier, annotations, checker, authoring) -> Codegen (profile, Schema generation)
 Store (Val, one byte codec, Canonical, Kind, Ref, node, store, word, traits)
-                                      -> Surface (entities, HTTP API, MCP agent, deployment, site)
 Arch (JSON numbers, structural acceptance of Schema documents)
 
 OCaml5 (lake library, src/OCaml5): the OCaml 5 / js_of_ocaml runtime model, the OCaml
