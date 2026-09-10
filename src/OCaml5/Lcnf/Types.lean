@@ -118,23 +118,38 @@ def trivialFieldIdx? (n : Name) : MetaM (Option Nat) := do
     let ci ← getConstInfoCtor ctorName
     Conform.Source.withConstructor ctorName fun _ xs => do
       let mut result := none
-      for i in [:xs.size - info.numParams] do
+      for i in [:ci.numFields] do
         let x := xs[info.numParams + i]!
         unless ← isIrrelevantFieldType (← inferType x) do
           if result.isSome then return none
           result := some i
       return result
 
-/-- OCaml type parameters are type binders. The one erased dictionary policy is `Row`'s
-order instance, which appears only in its erased ascending proof. Service universes retain
-the existing carrier interpretation. Other value or dictionary parameters refuse by name. -/
+def unwrapParam (e : Lean.Expr) : Lean.Expr :=
+  match e with
+  | .app (.app (.const `optParam _) inner) _ => unwrapParam inner
+  | .app (.app (.const `autoParam _) inner) _ => unwrapParam inner
+  | .app (.const `outParam _) inner => unwrapParam inner
+  | .app (.const `semiOutParam _) inner => unwrapParam inner
+  | d => d
+
+/-- Whether a parameter domain represents an OCaml type parameter. Handles sorts,
+service universes, and parameter wrappers (`optParam`, `autoParam`, `outParam`, `semiOutParam`). -/
+def isTypeParameter (domain : Lean.Expr) : Bool :=
+  let ty := unwrapParam domain
+  ty.isSort || ty.isConstOf `Effect4.ServiceUniverse
+
+/-- OCaml type parameters are type binders. Erased dictionary parameters (typeclass
+instances marked `.instImplicit`), proposition-valued parameters (`Prop`), and value parameters
+(which are erased at runtime) are dropped. Service universes retain the existing
+carrier interpretation. -/
 def typeParameterIndices (owner : Name) (count : Nat) (type : Lean.Expr) : Except String (Array Nat) :=
   go count 0 type #[]
 where
   go : Nat → Nat → Lean.Expr → Array Nat → Except String (Array Nat)
     | 0, _, _, out => .ok out
     | k + 1, i, .forallE name domain body bi, out =>
-      if domain.isSort || domain.isConstOf `Effect4.ServiceUniverse then
+      if isTypeParameter domain then
         go k (i + 1) body (out.push i)
       else if owner == `Effect4.Row && bi == .instImplicit then
         go k (i + 1) body out
@@ -249,7 +264,6 @@ def typeInfo? (ex : Externs) (tn : TypeNames) (n : Name) : MetaM (Option TypeInf
   let mut unknown : Array String := #[]
   let mut usedFields : Array Name := #[]
   for ctorName in info.ctors do
-    let ci ← getConstInfoCtor ctorName
     let (ctor, fs, alias, r, u, uf) ← Conform.Source.withConstructor ctorName fun _ xs => do
       let mut pmap : Std.HashMap FVarId String := {}
       for i in indices, v in pnames do

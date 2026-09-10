@@ -83,6 +83,26 @@ def stripRedArg : Name → Name
   | .str p "_redArg" => p
   | n => n
 
+/-- Strip trailing compiler specialization suffixes (`.spec_N`). -/
+def stripSpec : Name → Name
+  | .str p s =>
+    if s.startsWith "spec_" && (s.drop 5).all Char.isDigit then
+      stripSpec p
+    else
+      .str (stripSpec p) s
+  | .num p k => .num (stripSpec p) k
+  | .anonymous => .anonymous
+
+/-- Normalize a function name by stripping `_redArg` and compiler specialization suffixes. -/
+def normalizeFnName (n : Name) : Name :=
+  stripRedArg (stripSpec (stripRedArg n))
+
+/-- How a carg parameter is identified: by 0-based position or by binder name. -/
+inductive CargParam where
+  | pos (i : Nat)
+  | name (s : String)
+deriving Inhabited, BEq
+
 /-- One argument of an extern row's application. -/
 inductive ExArg where
   /-- A literal extra argument: a name in scope at the call site. -/
@@ -120,22 +140,34 @@ structure Externs where
   /-- `<Struct>.<field>` → the carrier key its chain ends in: which operations a value read
   out of that field understands. -/
   fieldCarrier : Std.HashMap Name String := {}
-  /-- Lean declaration → the OCaml parameter positions that carry a carrier, with the chain
-  that spells each. The declaration's result annotation is dropped. -/
-  cargs : Std.HashMap Name (List (Nat × List String)) := {}
+  /-- Lean declaration → the OCaml parameter positions or binder names that carry a carrier,
+  with the chain that spells each. The declaration's result annotation is dropped. -/
+  cargs : Std.HashMap Name (List (CargParam × List String)) := {}
   /-- The rows in file order, for the report. -/
   order : Array String := #[]
 
 instance : Inhabited Externs := ⟨{}⟩
 
-/-- The row for a constant, `_redArg`-blind. -/
-def Externs.fn? (ex : Externs) (n : Name) : Option ExternFn :=
-  match ex.fns[n]? with
-  | some f => some f
-  | none => ex.fns[stripRedArg n]?
+/-- The declared key in `ex.fns` that matches `n`, checking arity on normalized fallback. -/
+def Externs.fnRowKey? (ex : Externs) (n : Name) (arity : Option Nat := none) : Option Name :=
+  if ex.fns.contains n then some n
+  else if ex.fns.contains (stripRedArg n) then some (stripRedArg n)
+  else
+    let norm := normalizeFnName n
+    ex.fns.toList.findSome? fun (k, row) =>
+      if normalizeFnName k == norm && (match arity with | some a => row.arity == a | none => true) then
+        some k
+      else
+        none
 
-/-- Whether a constant has a row. -/
-def Externs.hasFn (ex : Externs) (n : Name) : Bool := (ex.fn? n).isSome
+/-- The row for a constant, `_redArg`-blind and specialization-insensitive when arity matches. -/
+def Externs.fn? (ex : Externs) (n : Name) (arity : Option Nat := none) : Option ExternFn :=
+  match ex.fnRowKey? n arity with
+  | some k => ex.fns[k]?
+  | none => none
+
+/-- Whether a constant has a row, checking arity on normalized fallback. -/
+def Externs.hasFn (ex : Externs) (n : Name) (arity : Option Nat := none) : Bool := (ex.fn? n arity).isSome
 
 /-- One operation of a carrier, by the carrier's key. -/
 def Externs.op? (ex : Externs) (carrier op : String) : Option ExternFn :=
@@ -145,17 +177,30 @@ def Externs.op? (ex : Externs) (carrier op : String) : Option ExternFn :=
 def Externs.fieldCarrier? (ex : Externs) (owner : Name) (field : String) : Option String :=
   ex.fieldCarrier[owner ++ Name.mkSimple field]?
 
-/-- The carrier parameters of a declaration, `_redArg`-blind. -/
-def Externs.carg? (ex : Externs) (n : Name) : Option (List (Nat × List String)) :=
-  match ex.cargs[n]? with
-  | some r => some r
-  | none => ex.cargs[stripRedArg n]?
+/-- The declared key in `ex.cargs` that matches `n`. -/
+def Externs.cargRowKey? (ex : Externs) (n : Name) : Option Name :=
+  if ex.cargs.contains n then some n
+  else if ex.cargs.contains (stripRedArg n) then some (stripRedArg n)
+  else
+    let norm := normalizeFnName n
+    ex.cargs.toList.findSome? fun (k, _) =>
+      if normalizeFnName k == norm then some k else none
 
-/-- The chain that spells the *i*-th OCaml parameter of `n`, if the table gives it one. -/
-def Externs.cargChain? (ex : Externs) (n : Name) (i : Nat) : Option (List String) :=
+/-- The carrier parameters of a declaration, `_redArg`-blind and specialization-insensitive. -/
+def Externs.carg? (ex : Externs) (n : Name) : Option (List (CargParam × List String)) :=
+  match ex.cargRowKey? n with
+  | some k => ex.cargs[k]?
+  | none => none
+
+/-- The chain that spells the *i*-th OCaml parameter (or binder `paramName`) of `n`, if the table gives it one. -/
+def Externs.cargChain? (ex : Externs) (n : Name) (i : Nat) (paramName : String := "") : Option (List String) :=
   match ex.carg? n with
   | none => none
-  | some rows => (rows.find? (·.1 == i)).map (·.2)
+  | some rows =>
+    rows.findSome? fun (p, ch) =>
+      match p with
+      | .pos idx => if idx == i then some ch else none
+      | .name s => if s == paramName then some ch else none
 
 /-! ## Applying a row -/
 
@@ -304,9 +349,12 @@ def Externs.parse (text : String) : Except String Externs := do
         order := ex.order.push row }
     | "carg" :: name :: idx :: chain =>
       if chain.isEmpty then throw s!"externs:{lineNo}: `carg` row with no target chain"
-      let some i := idx.toNat? | throw s!"externs:{lineNo}: `{idx}` is not a parameter index"
-      let prev := ex.cargs.getD name.toName []
-      ex := { ex with cargs := ex.cargs.insert name.toName (prev ++ [(i, chain)]),
+      let p := match idx.toNat? with
+        | some i => CargParam.pos i
+        | none => CargParam.name idx
+      let n := name.toName
+      let prev := ex.cargs.getD n []
+      ex := { ex with cargs := ex.cargs.insert n (prev ++ [(p, chain)]),
                       order := ex.order.push row }
     | "elem" :: name :: chain =>
       if chain.isEmpty then throw s!"externs:{lineNo}: `elem` row with no target chain"
@@ -315,9 +363,16 @@ def Externs.parse (text : String) : Except String Externs := do
       if kind != "fn" && kind != "fn?" then
         throw s!"externs:{lineNo}: unknown row kind `{kind}`"
       let some k := arity.toNat? | throw s!"externs:{lineNo}: `{arity}` is not an arity"
+      let spec := toks.map parseTok
+      let slots := (spec.filter isSlot).length
+      if slots > k then
+        throw s!"externs:{lineNo}: row `{name}` has {slots} argument slots for declared arity {k}"
       let fnRow : ExternFn :=
-        { arity := k, head := head, spec := toks.map parseTok, optional := kind == "fn?" }
-      ex := { ex with fns := ex.fns.insert name.toName fnRow, order := ex.order.push row }
+        { arity := k, head := head, spec := spec, optional := kind == "fn?" }
+      let n := name.toName
+      ex := { ex with
+        fns := ex.fns.insert n fnRow,
+        order := ex.order.push row }
     | _ => throw s!"externs:{lineNo}: cannot read row `{row}`"
   return ex
 

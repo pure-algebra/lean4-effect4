@@ -30,16 +30,24 @@ def declarations(source):
             i += 1
     if depth: raise ValueError('unterminated engine comment')
     source = ''.join(chars)
-    matches = list(re.finditer(r'(?m)^(?:type|and)\s+([^=\n]+?)\s*=', source))
+    matches = list(re.finditer(r'(?m)^[ ]*(type|and)\s+([^=\n]+?)\s*=', source))
     result = {}
+    in_type = False
     for i, match in enumerate(matches):
-        name = match[1].strip().split()[-1]
+        kw = match.group(1)
+        if kw == 'type':
+            in_type = True
+        elif not in_type:
+            continue
+        name = match[2].strip().split()[-1]
         end = matches[i+1].start() if i+1 < len(matches) else len(source)
         body = source[match.end():end]
-        cut = re.search(r'(?m)^(?:let|module|end)\b', body)
-        if cut: body = body[:cut.start()]
+        cut = re.search(r'(?m)^[ ]*(?:let|module|end)\b', body)
+        if cut:
+            body = body[:cut.start()]
+            in_type = False
         if name in result: raise ValueError('ambiguous engine declaration: ' + name)
-        result[name] = Declaration(match[1].strip(), body.strip())
+        result[name] = Declaration(match[2].strip(), body.strip())
     return result
 
 def split_top(text, separator='*'):

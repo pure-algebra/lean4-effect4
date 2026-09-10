@@ -71,17 +71,25 @@ open Lean Compiler LCNF
 
 /-! ## Mono types as annotations -/
 
-/-- A mono-phase LCNF type as an OCaml type annotation: `lcAny`/`lcErased` are `_`. An extern
-`type` row is spelled by its carrier chain, so an annotation and the type group agree. -/
-partial def monoTy (ex : Externs) (tn : TypeNames) (e : Lean.Expr) : Ml.Ty :=
+/-- Map a mono type expression to an OCaml type. Inductive type arguments are filtered
+by `typeParameterIndices` to match the declared OCaml type arity. -/
+partial def monoTy (env : Environment) (ex : Externs) (tn : TypeNames) (e : Lean.Expr) : Ml.Ty :=
   match e with
-  | .forallE _ d b _ => .arrow (monoTy ex tn d) (monoTy ex tn b)
+  | .forallE _ d b _ => .arrow (monoTy env ex tn d) (monoTy env ex tn b)
   | _ =>
     if e.isErased || e.isAny then .anon
     else
       let fn := e.getAppFn
       let rawArgs := e.getAppArgs.toList
-      let args := rawArgs.map (monoTy ex tn)
+      let args := match fn with
+        | .const n _ =>
+          match env.find? n with
+          | some (.inductInfo info) =>
+            match typeParameterIndices n rawArgs.length info.type with
+            | .ok indices => indices.toList.filterMap (fun i => rawArgs[i]?) |>.map (monoTy env ex tn)
+            | .error _ => rawArgs.map (monoTy env ex tn)
+          | _ => rawArgs.map (monoTy env ex tn)
+        | _ => rawArgs.map (monoTy env ex tn)
       match fn with
       | .const n _ =>
         match ex.tys[n]? with
@@ -210,7 +218,7 @@ def builtin? (n : Name) : Option Builtin :=
       | [inst, a, l] => Ml.Expr.call "List.exists" [.app inst [a], l]
       | _ => .unit)
   | `List.contains => some (3, fun
-      | [inst, l, a] => Ml.Expr.call "List.exists" [.fn ["_elem"] (.app inst [.var "_elem", a]), l]
+      | [inst, l, a] => Ml.Expr.call "List.exists" [.fn ["_elem"] (.app inst [a, .var "_elem"]), l]
       | _ => .unit)
   | `List.map | `List.mapTR => some (call2 "List.map")
   | `List.filter | `List.filterTR => some (call2 "List.filter")
@@ -669,9 +677,10 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option 
     -- arguments — the type parameters among them — are dropped, as they are for a builtin.
     -- A row takes a carrier argument RAW: the hand body is written against the signature.
     let exx ← readExterns
-    match exx.fn? n with
+    let relCount : Nat := args.foldl (fun (c : Nat) a => match a with | .fvar _ => c + 1 | _ => c) 0
+    match exx.fn? n (some relCount) with
     | some f =>
-      let key := if exx.fns.contains n then n else stripRedArg n
+      let key := (exx.fnRowKey? n (some relCount)).getD n
       let deps := f.spec.filterMap fun | .lit d => some d | _ => none
       modify fun s =>
         { s with usedExterns := if s.usedExterns.contains key then s.usedExterns
@@ -709,8 +718,10 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option 
           let wparams := (wrapperParams? env n).getD #[]
           if args.size ≥ wparams.size then
             let kept := keep.filterMap fun i => args[i]?
-            if kept.isEmpty then return (g, none)
-            return (.app g (← argsFor n kept.toList), none)
+            let extra := args.toList.drop wparams.size
+            let allKept := kept.toList ++ extra
+            if allKept.isEmpty then return (g, none)
+            return (.app g (← argsFor n allKept), none)
           -- eta-expand: one OCaml binder per missing relevant parameter, `()` per erased one
           let mut binders : List String := []
           let mut extra : Std.HashMap Nat Ml.Expr := {}
@@ -875,17 +886,18 @@ def translateDecl (env : Environment) (d : LCNF.Decl .pure) (userName : Name) (o
     for p in d.params do
       let x ← bindVar p.fvarId p.binderName
       noteMentioned (monoTyConsts p.type)
-      let t := monoTy ex tn p.type
+      let t := monoTy env ex tn p.type
       -- a `carg` row: this parameter carries a carrier, not the list. It is what an
       -- inter-procedural analysis would infer (`blockExit`'s `env` is one because its callers
       -- pass one) and what the table states instead.
-      let t ← match ex.cargChain? d.name i with
+      let t ← match ex.cargChain? d.name i p.binderName.toString with
         | none => pure t
         | some chain => do
           setCarrier p.fvarId (chainKey chain)
+          let ckey := (ex.cargRowKey? d.name).getD (stripRedArg d.name)
           modify fun s =>
-            { s with usedCargs := if s.usedCargs.contains (stripRedArg d.name) then s.usedCargs
-                                  else s.usedCargs.push (stripRedArg d.name) }
+            { s with usedCargs := if s.usedCargs.contains ckey then s.usedCargs
+                                  else s.usedCargs.push ckey }
           pure (carrierAnnot chain t)
       params := params ++ [(x, if tyIsAnon t then none else some t)]
       i := i + 1
@@ -899,7 +911,7 @@ def translateDecl (env : Environment) (d : LCNF.Decl .pure) (userName : Name) (o
     -- a declaration that takes a carrier may return one at a position no chain can spell
     -- (`Option (Prod (List Nat) (List Val))`), so its result annotation is dropped and OCaml
     -- infers it.
-    let result := if (ex.carg? d.name).isSome then Ml.Ty.anon else monoTy ex tn rty
+    let result := if (ex.carg? d.name).isSome then Ml.Ty.anon else monoTy env ex tn rty
     let body ← match d.value with
       | .code c => code d.name c
       | .extern _ => do
@@ -952,9 +964,8 @@ def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {
     let n := queue[i]!
     i := i + 1
     if done.contains n then continue
-    -- `Extract Constant`: an externed constant is not translated **and its callees are never
-    -- enqueued** — this one line is what deletes a generated declaration (A1 §1.6 G4).
-    if ex.hasFn n then continue
+    let arity := (mono.findIn? env n).map (fun d => d.params.size)
+    if ex.hasFn n arity then continue
     if (builtin? n).isSome then continue
     if env.find? n matches some (.ctorInfo _) then continue
     if c.decls.size ≥ cap then
