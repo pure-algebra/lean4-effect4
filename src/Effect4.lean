@@ -88,6 +88,7 @@ import Effect4.Codegen.Target
 -- is the one program IR of this library; it compiles to the frame alphabet the
 -- Deep machine runs.
 import Effect4.Program.Eff
+import Effect4.Program.Fold
 import Effect4.Program.Typing
 import Effect4.Codegen.Print
 import Effect4.Codegen.Read
