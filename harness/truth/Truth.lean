@@ -479,7 +479,6 @@ def typeJson (ty : EffTy) : J :=
     , ("requiresEmpty", Lean.Json.bool (decide (ty.requires = Machine.Env.Requirement.empty))) ]
 
 def refusalText : PrintRefusal → String
-  | .choose site => s!"choose site {site}"
   | .internalAction name => s!"internal action {name}"
   | .layerRef target => s!"layer reference to {target}"
 

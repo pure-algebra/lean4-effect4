@@ -587,15 +587,6 @@ theorem Point.ofCapture_keys (c : Capture) : (Point.ofCapture c).keys ⊆ Val.ke
   simp only [Point.keys, Point.ofCapture, List.flatMap_nil, List.nil_append, Val.keysList_eq_flatMap]
   exact List.Subset.refl _
 
-theorem compileEff_choose (site : Nat) (l r : NativeEff) (hf : p.fuel = k + 1) :
-    compileEff (.choose site l r) p =
-      (match p.tape with
-       | true :: rest => compileEff l { p with path := p.path ++ [0], tape := rest }
-       | false :: rest => compileEff r { p with path := p.path ++ [1], tape := rest }
-       | [] => frontier p) := by
-  simp [compileEff, hf]
-  rfl
-
 end compileArms
 
 theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEff e p) ⊆ p.keys
@@ -739,14 +730,6 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; exact frontier_keys p
     · rw [compileEff_acquireRelease a r hf]; sub_tac
-  | .choose site l r, p => by
-    rcases hf : p.fuel with _ | k
-    · rw [compileEff_zero _ hf]; exact frontier_keys p
-    · rw [compileEff_choose site l r hf]
-      split
-      · next rest _ => exact compileEff_keys l { p with path := p.path ++ [0], tape := rest }
-      · next rest _ => exact compileEff_keys r { p with path := p.path ++ [1], tape := rest }
-      · exact frontier_keys p
   -- the join: a suspension at the point, a context read, a region over the evaluated value
   | .provideLayer l i b, p => by
     rcases hf : p.fuel with _ | k

@@ -594,19 +594,6 @@ def pBranchFalse : NativeEff :=
 #guard exitOf (replayEff pBranchTrue [evaluateRoot]) 0 = some (Exit.success (Val.nat 1))
 #guard exitOf (replayEff pBranchFalse [evaluateRoot]) 0 = some (Exit.success (Val.nat 2))
 
-/-- `choose` is answered by the point's tape (D2); an exhausted tape is a live frontier. -/
-def pChoose : NativeEff :=
-  .choose 0 (.succeed (.lit (.nat 1))) (.succeed (.lit (.nat 2)))
-
-#guard (typeOf nativeSignature pChoose).isSome
-#guard exitOf (replayEffTape pChoose [true] [evaluateRoot]) 0
-  = some (Exit.success (Val.nat 1))
-#guard exitOf (replayEffTape pChoose [false] [evaluateRoot]) 0
-  = some (Exit.success (Val.nat 2))
-#guard exitOf (replayEffTape pChoose [] [evaluateRoot]) 0 = none
-#guard stuckOf (replayEffTape pChoose [] [evaluateRoot]) = none
-#guard replayArm pChoose [] [evaluateRoot] = 1
-
 /-! ## Scheduling: `yieldNow` -/
 
 def pYieldNow : NativeEff := .bind (.yieldNow 0) (.succeed (.lit (.nat 5)))

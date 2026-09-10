@@ -224,14 +224,6 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
       HasTy sig (env ++ [a.answer, .exitOf a.answer a.error]) release r →
       HasTy sig env (.acquireRelease acquire release)
         ⟨a.answer, a.error, (a.requires.union r.requires).union (Requirement.single sig.scopeKey)⟩
-  /-- The flows' choice point (`Effects.Flow.RawTerm.choose`; refused by the native printer,
-  tape-answered at compile): typed exactly as a branch whose test has already been taken. -/
-  | choose {env : TyEnv} (site : Nat) {left right : Eff Op} {l r : EffTy} {answer : Ty} :
-      HasTy sig env left l →
-      HasTy sig env right r →
-      EffTy.joinAnswer l.answer r.answer = some answer →
-      HasTy sig env (.choose site left right)
-        ⟨answer, l.error.join r.error, l.requires.union r.requires⟩
   /-- `Effect.provide` (`internal/layer.ts:8-22`): the layer is typed closed — no environment —
   its error joins the body's, its own requirements are added, and what it provides is
   discharged from the body's row. `isLocal` chooses the memo map at run time and changes no

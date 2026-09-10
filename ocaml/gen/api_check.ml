@@ -39,6 +39,7 @@ let rec show_val (v : A.val_) =
 let show_reason = function
   | A.Reason_fail (A.Err_boom, _) -> "fail(boom)"
   | A.Reason_fail (A.Err_tag t, _) -> Printf.sprintf "fail(tag %d)" t
+  | A.Reason_fail _ -> "fail"
   | A.Reason_die (_, _) -> "die"
   | A.Reason_interrupt (None, _) -> "interrupt(none)"
   | A.Reason_interrupt (Some i, _) -> Printf.sprintf "interrupt(%d)" i
@@ -62,7 +63,7 @@ let root_exit (r : A.run) =
   | Some f -> f.A.exit_
 
 let run_and_show name (p : A.native_op A.eff) =
-  let r = A.api_run p 1000 [] in
+  let r = A.api_run p 1000 [] [] [] in
   let e = root_exit r in
   Printf.printf "  %s: outcome=%s fibers=%d exit=%s\n" name (show_outcome r.A.outcome)
     (List.length r.A.machine.A.fibers) (show_exit e);

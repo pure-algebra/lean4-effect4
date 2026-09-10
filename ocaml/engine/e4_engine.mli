@@ -126,7 +126,11 @@ module type INSTANCE = sig
     | Completion_ofExit of ('b, 'e, 'd, 'i, 'a) exit_
     | Completion_ofRefGet of ref_key
 
-  type err = Err_boom | Err_tag of int  (* :653 *)
+  type err =
+    | Err_boom
+    | Err_tag of int
+    | Err_tagged of string * string
+    | Err_text of string
 
   type defect =  (* :236-241 *)
     | Defect_notImplemented
@@ -134,6 +138,7 @@ module type INSTANCE = sig
     | Defect_badName
     | Defect_missingService
     | Defect_user of int
+    | Defect_error of err
 
   type val_ =  (* :208-220 *)
     | Val_unit
@@ -205,9 +210,20 @@ module type INSTANCE = sig
     | FrameEvent_deferred of ('e, 'd, 'i, 'a) cause
     | FrameEvent_yielded of ('b, 'e, 'd, 'i, 'a) exit_
 
+  type handle_kind =
+    | HandleKind_fiber
+    | HandleKind_cell
+    | HandleKind_promise
+    | HandleKind_scope
+    | HandleKind_memoMap
+    | HandleKind_external
+
+  type wake_key = { kind : handle_kind; index : int }
+
   type ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task =  (* :734 *)
     | Task_start of fiber_id
     | Task_resume of fiber_id * int * 'k
+    | Task_wake of wake_key * int
 
   type ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'h) run_event =  (* :174-195 *)
     | RunEvent_forked of fiber_id * fiber_id * bool
@@ -240,6 +256,7 @@ module type INSTANCE = sig
     | RunDecision_answerAsync of fiber_id * int * ('b, 'e, 'd, 'i, 'a) completion
     | RunDecision_interruptFrom of fiber_id option * 'a reason_annotations * fiber_id
     | RunDecision_installMiddleware
+    | RunDecision_advance of int
 
   (** The fully applied machine.  `machine`, `fiber` and `interp` are abstract: they mention
       the carriers. *)
@@ -334,6 +351,7 @@ module type ENGINE = sig
 
   val interrupt_from : int option -> int -> decision
   val install_middleware : decision
+  val advance : int -> decision
 
   (** {2 Loading} *)
 

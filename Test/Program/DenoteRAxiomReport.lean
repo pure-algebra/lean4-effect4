@@ -32,7 +32,7 @@ ceiling. -/
 #print axioms Effect4.Program.Sched.denoteR_suspend
 #print axioms Effect4.Program.Sched.denoteR_branch
 #print axioms Effect4.Program.Sched.denoteR_exit
-#print axioms Effect4.Program.Sched.denoteR_choose
+#print axioms Effect4.Program.Sched.denoteR_catchIf
 #print axioms Effect4.Program.Sched.denoteR_withFiber
 #print axioms Effect4.Program.Sched.denoteR_gen
 #print axioms Effect4.Program.Sched.denoteR_whileLoop

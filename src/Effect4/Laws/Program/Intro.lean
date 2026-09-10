@@ -7,8 +7,8 @@ Packet: `Test/contracts/program-runtime-r.contract.md` (the P3 relation). The re
 `Means.lean` is inhabited at every source address: the frame's compile and the term's
 denotation of one node at one point are related (`code_intro`), and so are the programs the
 names and thunks of `interpOf` build from addresses (`resolve_intro`). The descent is on
-the point's weight (its fuel plus its tape): every child point spends one unit of fuel and
-a `choose` one decision, so no structural recursion into the mutual source family is
+the point's weight (its fuel plus its tape): every child point spends one unit of fuel,
+so no structural recursion into the mutual source family is
 needed. The term's construction heads never sit at the head of a denotation, so `prepareR`
 is the identity on it (`prepareR_denoteR`); the guard clauses' continuations resolve their
 constructions against the view the frame's refreshed names read.
@@ -297,14 +297,6 @@ theorem compileEff_acquireRelease (a r : NativeEff) (hf : p.fuel = k + 1) :
       Prim.onSuccess (Prim.withFiber EffThunk.getCtx) (EffName.acquireCtx p) := by
   rw [compileEff, hf]; try rfl
 
-theorem compileEff_choose (site : Nat) (l r : NativeEff) (hf : p.fuel = k + 1) :
-    compileEff (.choose site l r) p =
-      (match p.tape with
-       | true :: rest => compileEff l { p with path := p.path ++ [0], tape := rest }
-       | false :: rest => compileEff r { p with path := p.path ++ [1], tape := rest }
-       | [] => frontier p) := by
-  rw [compileEff, hf]; try rfl
-
 end compileEqs
 
 /-! ## `prepareR` is the identity on a denotation -/
@@ -416,14 +408,6 @@ theorem prepareR_denoteR (root : NativeEff) (e : NativeEff) (p : Point)
         cases evalTerm p.env value with
         | some v => unfold updateContextR; rw [prepareR_guardR_bind]; rfl
         | none => rfl
-      | choose site l r =>
-        rw [denoteR_choose root site l r p hpos]
-        cases p.tape with
-        | nil => rfl
-        | cons flag rest =>
-          cases flag
-          · exact prepareR_denoteR root r _ completed
-          · exact prepareR_denoteR root l _ completed
 termination_by structural e
 
 /-! ## Addresses and weights -/
@@ -443,8 +427,7 @@ theorem denoteAt_of_at {root : NativeEff} {q : Point} {e : NativeEff}
     denoteAt root q = denoteR root e q := by
   simp [denoteAt, h]
 
-/-- The measure the introduction descends: every child point spends a unit of fuel, a
-`choose` a unit of tape. -/
+/-- The measure the introduction descends: every child point spends a unit of fuel. -/
 def _root_.Effect4.Program.Point.weight (p : Point) : Nat := p.fuel + p.tape.length
 
 theorem weight_child (p : Point) (i : Nat) : (p.child i).weight ≤ p.weight := by
@@ -2187,29 +2170,6 @@ theorem intro_acquireRelease (root : NativeEff) (n : Nat) (a r : NativeEff) (p :
       exact foreignRelease_intro root _ ex fun completed' => hres _ (hwrel completed' a ctx ex)
     | none => exact codeMeans_badShape root
 
-theorem intro_choose (root : NativeEff) (n : Nat) (site : Nat) (l r : NativeEff) (p : Point) (k : Nat)
-    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) (hle : p.weight ≤ n)
-    (h : Node.at_ (.eff root) p.path = some (.eff (.choose site l r)))
-    (ih : ∀ (p : Point), p.weight < n → ∀ (e : NativeEff),
-      Node.at_ (.eff root) p.path = some (.eff e) → CodeMeans root (compileEff e p) (denoteR root e p)) :
-    CodeMeans root (compileEff (.choose site l r) p) (denoteR root (.choose site l r) p) := by
-  rw [compileEff_choose site l r hf, denoteR_choose root site l r p hpos]
-  rcases ht : p.tape with _ | ⟨flag, rest⟩
-  · exact CodeMeans.frontier p p _ _ ⟨rfl, rfl, rfl, rfl, rfl⟩ fun completed => by
-      rw [suspendBodyAt_of_at (q := { p with completed }) hf h nofun nofun nofun nofun nofun,
-        compileEff_choose site l r (p := { p with completed }) hf]
-      simp only [ht]
-      rfl
-  · have hw : p.fuel + rest.length < n := by
-      simp only [Point.weight] at hle
-      rw [ht, List.length_cons] at hle
-      omega
-    cases flag
-    · exact ih { p with path := p.path ++ [1], tape := rest } hw r
-        (by rw [Node.at_append, h]; rfl)
-    · exact ih { p with path := p.path ++ [0], tape := rest } hw l
-        (by rw [Node.at_append, h]; rfl)
-
 theorem intro_provideLayer (root : NativeEff) (n : Nat) (l : LayerTerm NativeOp) (i : Bool)
     (b : NativeEff) (p : Point) (k : Nat)
     (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) (hle : p.weight ≤ n)
@@ -2311,7 +2271,6 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
   | withFiber a => exact intro_withFiber root n a p k hf hpos hw00 h hres ih
   | «scoped» b => exact intro_scoped root b p k hf hpos h
   | acquireRelease a r => exact intro_acquireRelease root n a r p k hf hpos hle hw0 hres
-  | choose site l r => exact intro_choose root n site l r p k hf hpos hle h ih
   | provideLayer l i b => exact intro_provideLayer root n l i b p k hf hpos hle h hres
   | service key => exact intro_service root key p k hf hpos
   | provideService key value b => exact intro_provideService root n key value b p k hf hpos hw0 h ih

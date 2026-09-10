@@ -35,7 +35,11 @@ module type INSTANCE = sig
     | Completion_ofExit of ('b, 'e, 'd, 'i, 'a) exit_
     | Completion_ofRefGet of ref_key
 
-  type err = Err_boom | Err_tag of int
+  type err =
+    | Err_boom
+    | Err_tag of int
+    | Err_tagged of string * string
+    | Err_text of string
 
   type defect =
     | Defect_notImplemented
@@ -43,6 +47,7 @@ module type INSTANCE = sig
     | Defect_badName
     | Defect_missingService
     | Defect_user of int
+    | Defect_error of err
 
   type val_ =
     | Val_unit
@@ -114,9 +119,20 @@ module type INSTANCE = sig
     | FrameEvent_deferred of ('e, 'd, 'i, 'a) cause
     | FrameEvent_yielded of ('b, 'e, 'd, 'i, 'a) exit_
 
+  type handle_kind =
+    | HandleKind_fiber
+    | HandleKind_cell
+    | HandleKind_promise
+    | HandleKind_scope
+    | HandleKind_memoMap
+    | HandleKind_external
+
+  type wake_key = { kind : handle_kind; index : int }
+
   type ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task =
     | Task_start of fiber_id
     | Task_resume of fiber_id * int * 'k
+    | Task_wake of wake_key * int
 
   type ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'h) run_event =
     | RunEvent_forked of fiber_id * fiber_id * bool
@@ -149,6 +165,7 @@ module type INSTANCE = sig
     | RunDecision_answerAsync of fiber_id * int * ('b, 'e, 'd, 'i, 'a) completion
     | RunDecision_interruptFrom of fiber_id option * 'a reason_annotations * fiber_id
     | RunDecision_installMiddleware
+    | RunDecision_advance of int
 
   type machine
   type fiber
@@ -227,6 +244,7 @@ module type ENGINE = sig
   val answer_async_success : int -> int -> int -> decision
   val interrupt_from : int option -> int -> decision
   val install_middleware : decision
+  val advance : int -> decision
   val compile : Eff_types.eff -> program
   val of_bytes : string -> program option
   val load_program : program -> fuel:int -> t
@@ -289,6 +307,7 @@ module Make (I : INSTANCE) = struct
     I.RunDecision_interruptFrom (who, [], target)
 
   let install_middleware : decision = I.RunDecision_installMiddleware
+  let advance millis : decision = I.RunDecision_advance millis
 
   (* -- loading -------------------------------------------------------------------- *)
 
@@ -382,7 +401,11 @@ module Make (I : INSTANCE) = struct
     | I.Val_handle (k, n) -> Printf.sprintf "handle %d/%d" k n
 
   let show_err (e : I.err) : string =
-    match e with I.Err_boom -> "boom" | I.Err_tag t -> Printf.sprintf "tag %d" t
+    match e with
+    | I.Err_boom -> "boom"
+    | I.Err_tag t -> Printf.sprintf "tag %d" t
+    | I.Err_tagged (tag, msg) -> Printf.sprintf "tagged %s: %s" tag msg
+    | I.Err_text msg -> Printf.sprintf "text %s" msg
 
   let show_defect (d : I.defect) : string =
     match d with
@@ -391,6 +414,7 @@ module Make (I : INSTANCE) = struct
     | I.Defect_badName -> "badName"
     | I.Defect_missingService -> "missingService"
     | I.Defect_user n -> Printf.sprintf "user %d" n
+    | I.Defect_error e -> "error(" ^ show_err e ^ ")"
 
   let show_anns (a : unit I.reason_annotations) : string =
     if a = [] then "" else "{" ^ String.concat "," (List.map fst a) ^ "}"
@@ -505,6 +529,7 @@ module Make (I : INSTANCE) = struct
     match t with
     | I.Task_start f -> Printf.sprintf "start(%d)" f
     | I.Task_resume (f, tok, k) -> Printf.sprintf "resume(%d,%d,%s)" f tok (show_prim k)
+    | I.Task_wake (key, due) -> Printf.sprintf "wake(%d,%d)" key.index due
 
   let ids xs = "[" ^ String.concat "," (List.map string_of_int xs) ^ "]"
 

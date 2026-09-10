@@ -16,7 +16,7 @@ Layer and Context models), which compile to the frontier. `acquireRelease` lower
 does (`internal/effect.ts:3971-3987`: `contextWith → uninterruptibleMask → scope → tap(acquire,
 scopeAddFinalizerExit)`); its release is a first-order `Capture` in the scope store
 (`FinName.foreign`, V1 2026-09-07) that `suspendBodyAt` resolves when the scope closes, on
-whichever fiber closes it. `choose` is answered by the point's tape. The stores are `src/Effect4/Machine/Stores.lean`'s, unchanged: the
+whichever fiber closes it. The stores are `src/Effect4/Machine/Stores.lean`'s, unchanged: the
 store-touching arms of `interpOf` call the same `syncOpStep`, `DeferredStore.register`,
 `storesCloseScope` and `cancelProgram`-shaped functions (`docs/research/2026-09-04-eff-compile.md`
 G5); only the alphabet is new.
@@ -61,7 +61,7 @@ structure Point where
   env : List Val
   /-- What is left: every continuation name costs one, every loop iteration one. -/
   fuel : Nat
-  /-- The decisions left, for `choose` sites. -/
+  /-- The decisions left on the tape. -/
   tape : List Bool
   /-- Completed fibers observed when this code was constructed. Eager bodies
   retain this first-order view (`internal/effect.ts:767-777,814-822`); source
@@ -625,11 +625,6 @@ def compileEff : NativeEff → Point → NCode
       -- (scope, exit => provideContext(release(a, exit), context)))))` (`:3971-3987`): the
       -- context read first, the rest named step by step (`contAOf`)
       | .acquireRelease _ _ => Prim.onSuccess (Prim.withFiber EffThunk.getCtx) (EffName.acquireCtx p)
-      | .choose _ left right =>
-        match p.tape with
-        | true :: rest => compileEff left { p with path := p.path ++ [0], tape := rest }
-        | false :: rest => compileEff right { p with path := p.path ++ [1], tape := rest }
-        | [] => frontier p
       -- `Effect.provide(self, layer)` is `scopedWith` (`internal/layer.ts:15`), a `suspend`
       -- (`internal/effect.ts:3960-3968`): `suspendBodyAt` allocates the scope and names the rest
       | .provideLayer _ _ _ => Prim.suspend (EffThunk.body p)
@@ -701,7 +696,7 @@ where
       match q.fuel with
       | 0 => frontier q
       | _ + 1 =>
-        match Node.at_ (Node.eff root) target with
+        match Node.at_ (Node.eff root) (q.redirect target).path with
         | some (Node.layer (.ref _)) => badShape
         | some (Node.layer l) => compileLayer l (q.redirect target) m scope
         | _ => badShape

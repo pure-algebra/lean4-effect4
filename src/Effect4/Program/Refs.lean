@@ -78,8 +78,6 @@ def child : Node Op → Nat → Option (Node Op)
   | eff (.scoped b), 0 => some (eff b)
   | eff (.acquireRelease a _), 0 => some (eff a)
   | eff (.acquireRelease _ r), 1 => some (eff r)
-  | eff (.choose _ l _), 0 => some (eff l)
-  | eff (.choose _ _ r), 1 => some (eff r)
   | eff (.provideLayer l _ _), 0 => some (layer l)
   | eff (.provideLayer _ _ b), 1 => some (eff b)
   | eff (.provideService _ _ b), 0 => some (eff b)
@@ -142,8 +140,6 @@ def setChild : Node Op → Nat → Node Op → Option (Node Op)
   | eff (.scoped _), 0, eff b => some (eff (.scoped b))
   | eff (.acquireRelease _ r), 0, eff a => some (eff (.acquireRelease a r))
   | eff (.acquireRelease a _), 1, eff r => some (eff (.acquireRelease a r))
-  | eff (.choose s _ r), 0, eff l => some (eff (.choose s l r))
-  | eff (.choose s l _), 1, eff r => some (eff (.choose s l r))
   | eff (.provideLayer _ f b), 0, layer l => some (eff (.provideLayer l f b))
   | eff (.provideLayer l f _), 1, eff b => some (eff (.provideLayer l f b))
   | eff (.provideService k v _), 0, eff b => some (eff (.provideService k v b))
@@ -249,7 +245,6 @@ mutual
     | .withFiber a => ActionTerm.refSites (p ++ [0]) a
     | .scoped b => Eff.refSites (p ++ [0]) b
     | .acquireRelease a r => Eff.refSites (p ++ [0]) a ++ Eff.refSites (p ++ [1]) r
-    | .choose _ l r => Eff.refSites (p ++ [0]) l ++ Eff.refSites (p ++ [1]) r
     | .provideLayer l _ b => LayerTerm.refSites (p ++ [0]) l ++ Eff.refSites (p ++ [1]) b
     | .provideService _ _ b => Eff.refSites (p ++ [0]) b
     | .succeed _ | .fail _ | .failCause _ | .yieldError _ | .sync _ | .perform _ _
@@ -313,7 +308,6 @@ mutual
     | .withFiber a => .withFiber (ActionTerm.expandRound orig a)
     | .scoped b => .scoped (Eff.expandRound orig b)
     | .acquireRelease a r => .acquireRelease (Eff.expandRound orig a) (Eff.expandRound orig r)
-    | .choose s l r => .choose s (Eff.expandRound orig l) (Eff.expandRound orig r)
     | .provideLayer l f b => .provideLayer (LayerTerm.expandRound orig l) f (Eff.expandRound orig b)
     | .provideService k v b => .provideService k v (Eff.expandRound orig b)
     | .succeed v => .succeed v
@@ -406,7 +400,6 @@ mutual
     | .withFiber a => ActionTerm.layerPaths (p ++ [0]) a
     | .scoped b => Eff.layerPaths (p ++ [0]) b
     | .acquireRelease a r => Eff.layerPaths (p ++ [0]) a ++ Eff.layerPaths (p ++ [1]) r
-    | .choose _ l r => Eff.layerPaths (p ++ [0]) l ++ Eff.layerPaths (p ++ [1]) r
     | .provideLayer l _ b => LayerTerm.layerPaths (p ++ [0]) l ++ Eff.layerPaths (p ++ [1]) b
     | .provideService _ _ b => Eff.layerPaths (p ++ [0]) b
     | .succeed _ | .fail _ | .failCause _ | .yieldError _ | .sync _ | .perform _ _

@@ -19,7 +19,7 @@ namespace Test.Program.SchedContract
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote Effect4.Program.Sched
 open Test.Syntax.CompileContract (pSucceed pBindSync pFail pCatch pOnExit pRefSet pBranchTrue
-  pChoose scopedChild exitOf replayEff evaluateRoot)
+  scopedChild exitOf replayEff evaluateRoot)
 
 /-! ## The signature's shape -/
 
@@ -62,8 +62,6 @@ theorem draft_zero_not_straight : (Effects.Program.pure outsideExit : RProgram) 
   cases h
 
 #guard compile pSucceed 0 [] = frontier ⟨[], [], 0, [], [], 0⟩
-#guard compile pChoose 1 [true] = Prim.success (Val.nat 1)
-#guard compile pChoose 1 [] = frontier ⟨[], [], 1, [], [], 0⟩
 
 -- Async completion and a scoped fork can deliver failures through the caller's handlers.
 example : completionPrim (.ofExit (.failure (Cause.fail Err.boom))) =

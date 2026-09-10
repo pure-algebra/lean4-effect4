@@ -11,10 +11,10 @@ this module and writes the bytes; the generator itself lives here.
 
 ## What it generates
 
-Every `Eff` constructor the printer accepts — everything but `choose` and the five internal
+Every `Eff` constructor the printer accepts — everything but the five internal
 fiber actions (`interruptScoped`, `awaitAllFailFast`, `snapshotChildren`, `awaitNewChildren`,
 `setContext`), which `src/Effect4/Codegen/Print.lean` refuses by design. The coverage pins below
-are one `#guard` per constructor of each family, plus two negative pins saying the refused
+are one `#guard` per constructor of each family, plus a negative pin saying the refused
 arms occur nowhere in the corpus — which is why the zero-refusal pin holds: the generator has
 no arm that draws them, not one seed that happened to miss them.
 
@@ -381,7 +381,6 @@ def walkEff (pe : Eff NativeOp → Bool) (ps : Stmt NativeOp → Bool)
   | e@(.scoped body) => pe e || walkEff pe ps pa body
   | e@(.acquireRelease acquire release) =>
     pe e || walkEff pe ps pa acquire || walkEff pe ps pa release
-  | e@(.choose _ left right) => pe e || walkEff pe ps pa left || walkEff pe ps pa right
   | e@(.provideLayer layer _ body) => pe e || walkLayer pe ps pa layer || walkEff pe ps pa body
   | e@(.provideService _ _ body) => pe e || walkEff pe ps pa body
   | e => pe e
@@ -483,7 +482,6 @@ def nodesEff : Eff NativeOp → Nat
   | .withFiber action => 1 + nodesAction action
   | .scoped body => 1 + nodesEff body
   | .acquireRelease acquire release => 1 + nodesEff acquire + nodesEff release
-  | .choose _ left right => 1 + nodesEff left + nodesEff right
   | .provideLayer layer _ body => 1 + nodesLayer layer + nodesEff body
   | .provideService _ _ body => 1 + nodesEff body
   | _ => 1
@@ -542,7 +540,6 @@ def depthEff : Eff NativeOp → Nat
   | .withFiber action => 1 + depthAction action
   | .scoped body => 1 + depthEff body
   | .acquireRelease acquire release => 1 + max (depthEff acquire) (depthEff release)
-  | .choose _ left right => 1 + max (depthEff left) (depthEff right)
   | .provideLayer layer _ body => 1 + max (depthLayer layer) (depthEff body)
   | .provideService _ _ body => 1 + depthEff body
   | _ => 1
@@ -689,9 +686,6 @@ def wellTypedCount : Nat := (sample.filter Api.wellTyped).length
 #guard coversLayer (fun | .ref _ => true | _ => false)
 -- every drawn reference is well formed
 #guard sample.all Eff.layerRefsWF
-
-/-! The one constructor the printer refuses is the one the generator never draws. -/
-#guard !coversEff (fun | .choose _ _ _ => true | _ => false)
 
 /-! ### Both observer modes of `awaitFiber` -/
 

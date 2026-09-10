@@ -58,7 +58,8 @@ let children (f : family) (c : int) : (int * family) list =
     | 20 -> [ (0, Action) ] (* withFiber a *)
     | 21 -> [ (0, Eff) ] (* scoped b *)
     | 22 -> [ (0, Eff); (1, Eff) ] (* acquireRelease a r *)
-    | 23 -> [ (1, Eff); (2, Eff) ] (* choose n l r        -- M5: 0,1 -> 1,2 *)
+    | 25 -> [ (2, Eff) ] (* provideService k t e -- M5: 0 -> 2 *)
+    | 26 -> [ (1, Eff); (2, Eff) ] (* catchIf t b h -- M5: 0,1 -> 1,2 *)
     | _ -> [])
   | Stmt -> (
     match c with
@@ -137,8 +138,9 @@ module Tree = struct
     | N_eff (Eff_scoped b), 0 -> Some (N_eff b)
     | N_eff (Eff_acquireRelease (a, _)), 0 -> Some (N_eff a)
     | N_eff (Eff_acquireRelease (_, r)), 1 -> Some (N_eff r)
-    | N_eff (Eff_choose (_, l, _)), 0 -> Some (N_eff l)
-    | N_eff (Eff_choose (_, _, r)), 1 -> Some (N_eff r)
+    | N_eff (Eff_provideService (_, _, b)), 0 -> Some (N_eff b)
+    | N_eff (Eff_catchIf (_, b, _)), 0 -> Some (N_eff b)
+    | N_eff (Eff_catchIf (_, _, h)), 1 -> Some (N_eff h)
     | N_stmts (Stmts_cons (h, _)), 0 -> Some (N_stmt h)
     | N_stmts (Stmts_cons (_, t)), 1 -> Some (N_stmts t)
     | N_stmt (Stmt_bindYield e), 0 -> Some (N_eff e)

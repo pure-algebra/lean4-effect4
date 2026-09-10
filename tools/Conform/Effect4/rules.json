@@ -48,11 +48,6 @@
       "register": "types seat 2026-09-09 section 3.3",
       "reason": "as `perform`: a printed row, not a head (Print.lean:267). DI-54's guard is pinned in the Lean column and holds." },
 
-    { "constructor": "choose",
-      "signals": ["target.missing"],
-      "register": "types seat 2026-09-09 section 3.3",
-      "reason": "the native printer REFUSES `choose` (Print.lean:279): it is a flows-only constructor, tape-answered by the compile (D2), so there is no printed head to measure." },
-
     { "constructor": "exit",
       "signals": ["target.spelling:A"],
       "register": "SPELLING (seat-audit.md section 4.4)",

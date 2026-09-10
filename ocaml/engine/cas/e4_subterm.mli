@@ -28,11 +28,10 @@
    is a list of child indices in `Node.child`; a `ValPath` is a list of argument indices in the
    encoded tree.  They are NOT equal, and M3 records that `Node.argIndex`'s fallback "program
    child i = value argument i" is wrong.  In the alphabet `ocaml/eff/eff_types.ml` carries they
-   differ at exactly four constructors:
+   differ at exactly three constructors:
 
      eff  branch    (term, eff, eff)          prog 0,1 -> val 1,2
      eff  whileLoop (term, term, term, eff)   prog 0   -> val 3
-     eff  choose    (nat, eff, eff)           prog 0,1 -> val 1,2
      stmt ifElse    (term, stmts, stmts)      prog 0,1 -> val 1,2
 
    (Lean's `Eff` has three arms this wire does not — `provideLayer`, `service`,
@@ -56,11 +55,11 @@
        (amendment M6: a `Cid` erases the kind).  Two occurrences of one subterm, in one program
        or in two, have equal `cid` and different `off`.                          tested (S4)
    SB4 TWO PATH SPACES (L-SUB-2, M5).  `val_path` is the `ProgPath` mapped through `children`
-       and it differs from `prog_path` at exactly `branch`, `whileLoop`, `choose` and
+       and it differs from `prog_path` at exactly `branch`, `whileLoop` and
        `ifElse`; `prog_of_val`/`val_of_prog` are the two directions and each is the other's
        inverse where both are defined.                                        tested (S5, S6)
    SB5 TABLE-DRIVEN, NO FALLBACK (L-SUB-3, M3).  `children` enumerates every constructor of
-       every family — 24 `eff`, 6 `stmt`, 2 `stmts`, 2 `effs`, 16 `action_term`, fifty in all —
+       every family — 27 `eff`, 6 `stmt`, 2 `stmts`, 2 `effs`, 16 `action_term`, 53 in all —
        and there is no "child i = argument i" default anywhere in this module.  The test walks
        a witness of EVERY constructor, not the corpus.                          tested (S2, S7)
    SB6 Order: `entries` is the pre-order of the program — a node before its children, children

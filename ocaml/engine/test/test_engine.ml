@@ -340,8 +340,7 @@ let sample_effs =
     E.Eff_awaitFiber (a_term, E.Observer_mode_awaitValue);
     E.Eff_withFiber E.Action_term_getId;
     E.Eff_scoped u;
-    E.Eff_acquireRelease (u, u);
-    E.Eff_choose (0, u, u) ]
+    E.Eff_acquireRelease (u, u) ]
 
 let sample_stmts =
   [ E.Stmt_bindYield u; E.Stmt_yieldDiscard u; E.Stmt_ret a_term;

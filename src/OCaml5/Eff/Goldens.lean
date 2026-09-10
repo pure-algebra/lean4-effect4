@@ -205,7 +205,6 @@ partial def effV : Eff NativeOp → V
   | .withFiber a => .ctor ``Eff.withFiber [actionV a]
   | .scoped b => .ctor ``Eff.scoped [effV b]
   | .acquireRelease a r => .ctor ``Eff.acquireRelease [effV a, effV r]
-  | .choose site l r => .ctor ``Eff.choose [.nat site, effV l, effV r]
   | .provideLayer l isLocal b => .ctor ``Eff.provideLayer [layerV l, .bool isLocal, effV b]
   | .service k => .ctor ``Eff.service [keyV k]
   | .provideService k v b => .ctor ``Eff.provideService [keyV k, termV v, effV b]
@@ -304,7 +303,6 @@ def pScoped : P :=
   .scoped (.bind (.perform (.scopeMake .parallel) u)
     (.withFiber (.forkIn (.succeed (n 1)) ⟨true, true, .uninterruptible⟩ (v 0))))
 def pAcquire : P := .acquireRelease (.perform .refMake (n 0)) (.perform .refGet (v 0))
-def pChoose : P := .choose 3 (.succeed (n 1)) (.succeed (n 2))
 def pPair : P := .succeed (.app "fst" (ts [.app "pair" (ts [n 1, .lit (.bool true)])]))
 def pStmts : P :=
   .gen (st [ .bindYield (.succeed (n 0))
@@ -423,7 +421,7 @@ def corpus : List (String × P) :=
   , ("pYieldError", pYieldError), ("pSync", pSync), ("pSuspend", pSuspend), ("pMatch", pMatch)
   , ("pOnExit", pOnExit), ("pExit", pExit), ("pMasks", pMasks), ("pBranch", pBranch)
   , ("pCallback", pCallback), ("pJoin", pJoin), ("pScoped", pScoped), ("pAcquire", pAcquire)
-  , ("pChoose", pChoose), ("pPair", pPair), ("pStmts", pStmts), ("pActions", pActions), ("pOps", pOps)
+  , ("pPair", pPair), ("pStmts", pStmts), ("pActions", pActions), ("pOps", pOps)
   , ("pIll", pIll), ("pIllRet", pIllRet), ("pIllReq", pIllReq), ("pIllBreak", pIllBreak)
   , ("pIllBranch", pIllBranch), ("pIllJoin", pIllJoin), ("pIllVar", pIllVar)
   , ("pIllCallback", pIllCallback), ("pIllStep", pIllStep), ("pIllInterruptor", pIllInterruptor)

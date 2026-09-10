@@ -12,7 +12,7 @@ Effect4.Program.NativeOp (native_op) inductive: refMake refGet refSet refGetAndS
 Effect4.ServiceName (service_name) structure: value:int
 Effect4.ServiceTypeCode (service_type_code) structure: value:int
 Effect4.ServiceKey (service_key) structure: name:service_name service:service_type_code
-Effect4.Program.Eff (eff) inductive: succeed(term) fail(term) failCause(cause_term) yieldError(term) sync(term) suspend(eff) perform(native_op,term) bind(eff,eff) gen(stmts) catchCause(eff,eff) matchCause(eff,eff,eff) onExit(eff,eff) exit(eff) uninterruptible(eff) interruptible(eff) branch(term,eff,eff) whileLoop(term,term,term,eff) yieldNow(int) callback(native_op,term) awaitFiber(term,observer_mode) withFiber(action_term) scoped(eff) acquireRelease(eff,eff) choose(int,eff,eff) provideLayer(layer_term,bool,eff) service(service_key) provideService(service_key,term,eff) catchIf(term,eff,eff)
+Effect4.Program.Eff (eff) inductive: succeed(term) fail(term) failCause(cause_term) yieldError(term) sync(term) suspend(eff) perform(native_op,term) bind(eff,eff) gen(stmts) catchCause(eff,eff) matchCause(eff,eff,eff) onExit(eff,eff) exit(eff) uninterruptible(eff) interruptible(eff) branch(term,eff,eff) whileLoop(term,term,term,eff) yieldNow(int) callback(native_op,term) awaitFiber(term,observer_mode) withFiber(action_term) scoped(eff) acquireRelease(eff,eff) provideLayer(layer_term,bool,eff) service(service_key) provideService(service_key,term,eff) catchIf(term,eff,eff)
 Effect4.Program.Stmt (stmt) inductive: bindYield(eff) yieldDiscard(eff) ret(term) ifElse(term,stmts,stmts) whileTrue(stmts) breakLoop
 Effect4.Program.Stmts (stmts) inductive: nil cons(stmt,stmts)
 Effect4.Program.Effs (effs) inductive: nil cons(eff,effs)

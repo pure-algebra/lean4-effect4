@@ -12,7 +12,7 @@ namespace Test.Program.WeakenContract
 
 open Effect4.Program
 
-#guard constructorNames.length = 28
+#guard constructorNames.length = 27
 #guard arms.map Arm.constructor = constructorNames
 
 #guard Term.weaken 2 (.app "pair" (.cons (.var 1) (.cons (.var 2) .nil))) =

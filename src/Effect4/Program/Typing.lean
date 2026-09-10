@@ -275,11 +275,6 @@ mutual
       let a ← effTy sig env acquire
       let r ← effTy sig (env ++ [a.answer, .exitOf a.answer a.error]) release
       some ⟨a.answer, a.error, (a.requires.union r.requires).union (Requirement.single sig.scopeKey)⟩
-    | .choose _ left right => do
-      let l ← effTy sig env left
-      let r ← effTy sig env right
-      let answer ← EffTy.joinAnswer l.answer r.answer
-      some ⟨answer, l.error.join r.error, l.requires.union r.requires⟩
     -- `Effect.provide(self, layer)`: `Effect<A, E | E2, RIn | Exclude<R, ROut>>`
     -- (`internal/layer.ts:8-14`) — the layer's requirements join, what it provides is
     -- discharged from the body's
@@ -527,7 +522,7 @@ mutual
     | .perform _ _ | .bind _ _ | .gen _ | .catchCause _ _ | .catchIf _ _ _ | .matchCause _ _ _
     | .onExit _ _ | .exit _ | .uninterruptible _ | .interruptible _ | .branch _ _ _
     | .whileLoop _ _ _ _ | .yieldNow _ | .callback _ _ | .awaitFiber _ _
-    | .withFiber _ | .scoped _ | .acquireRelease _ _ | .choose _ _ _
+    | .withFiber _ | .scoped _ | .acquireRelease _ _
     | .provideLayer _ _ _ | .service _ | .provideService _ _ _ => by
       simp only [Eff.weaken, effTy, termTy_weaken, causeTy_weaken, Term.weaken_eq_lit,
         List.append_assoc, List.cons_append, effTy_weaken, stmtsTy_weaken, actionTy_weaken]

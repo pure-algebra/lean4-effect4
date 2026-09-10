@@ -208,14 +208,6 @@ theorem inv_acquireRelease (sig : Signature Op) (env : TyEnv) (acquire release :
   refine Option.of_triple ?_
   simp only [effTy]; mvcgen; all_goals simp_all
 
-theorem inv_choose (sig : Signature Op) (env : TyEnv) (site : Nat) (left right : Eff Op) :
-    ∀ t, effTy sig env (.choose site left right) = some t →
-      ∃ l r answer, effTy sig env left = some l ∧ effTy sig env right = some r ∧
-        EffTy.joinAnswer l.answer r.answer = some answer ∧
-        t = ⟨answer, l.error.join r.error, l.requires.union r.requires⟩ := by
-  refine Option.of_triple ?_
-  simp only [effTy]; mvcgen; all_goals simp_all
-
 theorem inv_provideLayer (sig : Signature Op) (env : TyEnv) (layer : LayerTerm Op)
     (isLocal : Bool) (body : Eff Op) :
     ∀ t, effTy sig env (.provideLayer layer isLocal body) = some t →
@@ -573,7 +565,6 @@ theorem inv_layers_cons (sig : Signature Op) (head next : LayerTerm Op)
 #print axioms inv_withFiber
 #print axioms inv_scoped
 #print axioms inv_acquireRelease
-#print axioms inv_choose
 #print axioms inv_provideLayer
 #print axioms inv_service
 #print axioms inv_provideService

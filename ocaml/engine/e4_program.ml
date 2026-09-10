@@ -190,10 +190,9 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Native_op_deferredFail -> A.NativeOp_deferredFail
     | Eff_types.Native_op_deferredAwait -> A.NativeOp_deferredAwait
     | Eff_types.Native_op_scopeMake s -> A.NativeOp_scopeMake (of_finalizer_strategy s)
-    | Eff_types.Native_op_sleep | Eff_types.Native_op_clockNow
-    | Eff_types.Native_op_external _ ->
-      raise (Ordinal_mismatch
-        "engine cut before the timer and external rows; regenerate (plan v2 Phase 1)")
+    | Eff_types.Native_op_sleep -> A.NativeOp_sleep
+    | Eff_types.Native_op_clockNow -> A.NativeOp_clockNow
+    | Eff_types.Native_op_external d -> A.NativeOp_external d
 
   let rec of_eff : Eff_types.eff -> A.native_op A.eff = function
     | Eff_types.Eff_succeed t -> A.Eff_succeed (of_term t)
@@ -206,9 +205,7 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Eff_bind (a, b) -> A.Eff_bind (of_eff a, of_eff b)
     | Eff_types.Eff_gen s -> A.Eff_gen (of_stmts s)
     | Eff_types.Eff_catchCause (a, b) -> A.Eff_catchCause (of_eff a, of_eff b)
-    | Eff_types.Eff_catchIf _ ->
-      raise (Ordinal_mismatch
-        "catchIf: engine cut before Phase 1 regeneration")
+    | Eff_types.Eff_catchIf (t, a, b) -> A.Eff_catchIf (of_term t, of_eff a, of_eff b)
     | Eff_types.Eff_matchCause (a, b, c) ->
       A.Eff_matchCause (of_eff a, of_eff b, of_eff c)
     | Eff_types.Eff_onExit (a, b) -> A.Eff_onExit (of_eff a, of_eff b)
@@ -224,7 +221,6 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Eff_withFiber a -> A.Eff_withFiber (of_action_term a)
     | Eff_types.Eff_scoped e -> A.Eff_scoped (of_eff e)
     | Eff_types.Eff_acquireRelease (a, b) -> A.Eff_acquireRelease (of_eff a, of_eff b)
-    | Eff_types.Eff_choose (n, a, b) -> A.Eff_choose (n, of_eff a, of_eff b)
     | Eff_types.Eff_provideLayer (l, local, e) ->
       A.Eff_provideLayer (of_layer_term l, local, of_eff e)
     | Eff_types.Eff_service k -> A.Eff_service (of_service_key k)
@@ -244,13 +240,12 @@ module Make (A : PROGRAM_TYPES) = struct
       A.LayerTerm_merge (of_layer_term a, of_layer_term b)
     | Eff_types.Layer_term_fresh l -> A.LayerTerm_fresh (of_layer_term l)
     | Eff_types.Layer_term_orDie l -> A.LayerTerm_orDie (of_layer_term l)
-    (* the host rows slice (2026-09-08): the wire carries `ref` and `mergeAll`, the engine's
-       frozen LCNF projection (`api_engine.ml`, cut before this slice) does not; a program
-       that reaches them is refused here until plan v2 Phase 1 regenerates the engine *)
-    | Eff_types.Layer_term_ref _ ->
-      failwith "e4_program: LayerTerm.ref predates the engine's regeneration (Phase 1)"
-    | Eff_types.Layer_term_mergeAll _ ->
-      failwith "e4_program: LayerTerm.mergeAll predates the engine's regeneration (Phase 1)"
+    | Eff_types.Layer_term_ref path -> A.LayerTerm_ref path
+    | Eff_types.Layer_term_mergeAll layers -> A.LayerTerm_mergeAll (of_layer_terms layers)
+
+  and of_layer_terms : Eff_types.layer_terms -> A.native_op A.layer_terms = function
+    | Eff_types.Layer_terms_nil -> A.LayerTerms_nil
+    | Eff_types.Layer_terms_cons (h, t) -> A.LayerTerms_cons (of_layer_term h, of_layer_terms t)
 
   and of_stmt : Eff_types.stmt -> A.native_op A.stmt = function
     | Eff_types.Stmt_bindYield e -> A.Stmt_bindYield (of_eff e)
@@ -345,6 +340,9 @@ module Make (A : PROGRAM_TYPES) = struct
     | A.NativeOp_deferredFail -> 17
     | A.NativeOp_deferredAwait -> 18
     | A.NativeOp_scopeMake _ -> 19
+    | A.NativeOp_sleep -> 20
+    | A.NativeOp_clockNow -> 21
+    | A.NativeOp_external _ -> 22
 
   let ctor_index_eff : 'op A.eff -> int = function
     | A.Eff_succeed _ -> 0
@@ -370,10 +368,10 @@ module Make (A : PROGRAM_TYPES) = struct
     | A.Eff_withFiber _ -> 20
     | A.Eff_scoped _ -> 21
     | A.Eff_acquireRelease _ -> 22
-    | A.Eff_choose _ -> 23
-    | A.Eff_provideLayer _ -> 24
-    | A.Eff_service _ -> 25
-    | A.Eff_provideService _ -> 26
+    | A.Eff_provideLayer _ -> 23
+    | A.Eff_service _ -> 24
+    | A.Eff_provideService _ -> 25
+    | A.Eff_catchIf _ -> 26
 
   let ctor_index_stmt : 'op A.stmt -> int = function
     | A.Stmt_bindYield _ -> 0 | A.Stmt_yieldDiscard _ -> 1 | A.Stmt_ret _ -> 2

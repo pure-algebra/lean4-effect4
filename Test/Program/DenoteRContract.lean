@@ -73,17 +73,11 @@ def writeThenFail : NativeEff :=
 #guard result (.succeed (.var 0)) = .done badShapeExit Stores.empty
 #guard result (.sync (.var 0)) = .done (.success .unit) Stores.empty
 
--- Compile fuel and unanswered choices are visible operations, never terminal failures.
+-- Compile fuel exhaustion is a visible operation, never a terminal failure.
 -- P2 removed the unfolding budget: loops and generators are runtime operations, so the
 -- compile budget at the point is the only frontier of this kind.
 #guard observe 5 (unfolded pSucceed 0) Stores.empty =
   .waiting (.frontier .compileFuel (rootPoint 0)) Stores.empty
-#guard observe 5 (unfolded pChoose 1 [] []) Stores.empty =
-  .waiting (.frontier .unansweredChoice (rootPoint 1)) Stores.empty
-#guard observe 5 (unfolded pChoose 1 [] [true]) Stores.empty =
-  .done (.success (.nat 1)) Stores.empty
-#guard observe 5 (unfolded pChoose 1 [] [false]) Stores.empty =
-  .done (.success (.nat 2)) Stores.empty
 -- `acquireRelease` denotes as the compile names it (V1): under the erased guard, the first
 -- fiber operation is `contextWith`'s context read
 #guard operation? (result (.acquireRelease pSucceed pSucceed)) = some .getContext

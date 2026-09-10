@@ -31,7 +31,7 @@
        S3-S4  the root is the whole; pre-order; two occurrences of one subterm share a `Cid`
               and differ in `off` (SB3).
        S5-S6  the two path spaces (L-SUB-2, M5): `val_of_prog` / `prog_of_val` round-trip, and
-              the divergence is EXACTLY branch, whileLoop, choose and ifElse — enumerated, so
+              the divergence is EXACTLY branch, whileLoop and ifElse — enumerated, so
               a fifth divergence or a lost one fails here.
        S7     the child table against the value side at every constructor.
        S9-S11 malformed bytes are refused whole (SB7); the index is a function of the bytes
@@ -477,6 +477,10 @@ let fopts =
 (* A witness of EVERY constructor of EVERY family (L-SUB-3, M3): fifty of them, with distinct
    children wherever a constructor has more than one, so that a wrong ValPath cannot pass by
    two children happening to be equal. *)
+let skey0 =
+  { service_key_name = { service_name_value = 0 };
+    service_key_service = { service_type_code_value = 0 } }
+
 let eff_witnesses : Eff_types.eff list =
   [ Eff_succeed t_unit;
     Eff_fail t_unit;
@@ -501,7 +505,10 @@ let eff_witnesses : Eff_types.eff list =
     Eff_withFiber Action_term_getId;
     Eff_scoped ea;
     Eff_acquireRelease (ea, eb);
-    Eff_choose (1, ea, eb) ]
+    Eff_provideLayer (Layer_term_succeed (skey0, Lit_unit), false, ea);
+    Eff_service skey0;
+    Eff_provideService (skey0, t_unit, ea);
+    Eff_catchIf (t_unit, ea, eb) ]
 
 let stmt_witnesses : Eff_types.stmt list =
   [ Stmt_bindYield ea; Stmt_yieldDiscard eb; Stmt_ret t_unit; Stmt_ifElse (t_unit, ssa, ssb);
@@ -652,7 +659,7 @@ let test_slice_goldens () =
          "S1 every subterm's own encoding equals the slice its entry names (%d programs, %d \
           subterms)"
          !progs !total)
-      (!bad = 0 && !progs = 37 && !refused = 0);
+      (!bad = 0 && !progs = 48 && !refused = 0);
     check "S3 the root entry is the whole program, at path ." !root_ok;
     check "S8 `entries` is a pre-order: a parent precedes every descendant" !order_ok
 
@@ -726,12 +733,12 @@ let test_every_constructor () =
                   end)
               value_children))
     embedded;
-  note "S2 %d constructors: 24 eff + 6 stmt + 2 stmts + 2 effs + 16 action" !n;
+  note "S2 %d constructors: 27 eff + 6 stmt + 2 stmts + 2 effs + 16 action" !n;
   check "S2 every constructor of every family: the entry, its slice, its children, its ValPath"
-    (!bad = 0 && !n = 50);
+    (!bad = 0 && !n = 53);
   (* the table's alphabet is the wire's alphabet, family for family *)
   check "S7 `children` covers exactly the constructors `Eff_types` declares"
-    (E4_subterm.arity E4_subterm.Eff = 24
+    (E4_subterm.arity E4_subterm.Eff = 27
     && E4_subterm.arity E4_subterm.Stmt = 6
     && E4_subterm.arity E4_subterm.Stmts = 2
     && E4_subterm.arity E4_subterm.Effs = 2
@@ -764,13 +771,14 @@ let test_path_spaces () =
     List.sort compare
       [ ("eff", 15, 0, 1); ("eff", 15, 1, 2); (* branch *)
         ("eff", 16, 0, 3); (* whileLoop *)
-        ("eff", 23, 0, 1); ("eff", 23, 1, 2); (* choose *)
+        ("eff", 25, 0, 2); (* provideService *)
+        ("eff", 26, 0, 1); ("eff", 26, 1, 2); (* catchIf *)
         ("stmt", 3, 0, 1); ("stmt", 3, 1, 2) (* ifElse *) ]
   in
   List.iter (fun (f, c, k, v) -> note "S5 %s ctor %d: program child %d is argument %d" f c k v) got;
   check
-    "S5 the two path spaces differ at exactly branch, whileLoop, choose and ifElse — and \
-     nowhere else"
+    "S5 the two path spaces differ at exactly branch, whileLoop, provideService, catchIf and \
+     ifElse — and nowhere else"
     (got = want);
   let rt = ref true in
   List.iter
@@ -789,6 +797,9 @@ let test_path_spaces () =
     && E4_subterm.prog_of_val E4_subterm.Eff 16 0 = None
     && E4_subterm.prog_of_val E4_subterm.Eff 16 1 = None
     && E4_subterm.prog_of_val E4_subterm.Eff 16 2 = None
+    && E4_subterm.prog_of_val E4_subterm.Eff 25 0 = None
+    && E4_subterm.prog_of_val E4_subterm.Eff 25 1 = None
+    && E4_subterm.prog_of_val E4_subterm.Eff 26 0 = None
     && E4_subterm.val_of_prog E4_subterm.Eff 0 0 = None)
 
 (* ---- S4, S9-S11: cids, refusals, and the index as a function of the bytes ---- *)

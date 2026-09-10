@@ -78,7 +78,7 @@ let rec rand_eff d =
     | _ -> Eff_perform (rand_op (), t ())
   else
     let e () = rand_eff (d - 1) in
-    match ri 28 with
+    match ri 27 with
     | 0 -> Eff_succeed (t ())
     | 1 -> Eff_fail (t ())
     | 2 -> Eff_failCause (rand_cause (d - 1))
@@ -102,10 +102,9 @@ let rec rand_eff d =
     | 20 -> Eff_withFiber (rand_action (d - 1))
     | 21 -> Eff_scoped (e ())
     | 22 -> Eff_acquireRelease (e (), e ())
-    | 23 -> Eff_choose (rand_nat (), e (), e ())
-    | 24 -> Eff_provideLayer (rand_layer (d - 1), rb (), e ())
-    | 25 -> Eff_service (rand_service_key ())
-    | 26 -> Eff_provideService (rand_service_key (), t (), e ())
+    | 23 -> Eff_provideLayer (rand_layer (d - 1), rb (), e ())
+    | 24 -> Eff_service (rand_service_key ())
+    | 25 -> Eff_provideService (rand_service_key (), t (), e ())
     | _ -> Eff_catchIf (t (), e (), e ())
 
 and rand_layer d =

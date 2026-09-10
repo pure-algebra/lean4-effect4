@@ -207,7 +207,6 @@ truncation refused, a flipped tag refused, a length past the end refused.
 | pJoin | 291 | ok | identical | equal | `nat` / `never` |
 | pScoped | 320 | ok | identical | equal | `fiberOf nat never` / `never` |
 | pAcquire | 168 | ok | identical | equal | `handle Ref.Ref<number>` / `never`, requires ⟨0,0⟩ |
-| pChoose | 161 | ok | identical | equal | `nat` / `never` |
 | pPair | 270 | ok | identical | equal | `nat` / `never` |
 | pStmts | 599 | ok | identical | equal | `nat` / `never` |
 | pActions | 1836 | ok | identical | equal | `nat` / `never`, requires ⟨0,0⟩ |
@@ -223,12 +222,12 @@ truncation refused, a flipped tag refused, a length past the end refused.
 | pIllStep | 303 | ok | identical | equal | ill-typed |
 | pIllInterruptor | 95 | ok | identical | equal | ill-typed |
 
-### Per program: the GADT corpus (the 29 well-typed programs)
+### Per program: the GADT corpus (the 28 well-typed programs)
 
-Each is rebuilt through `Eff_typed`'s constructors, erased, and encoded. For all 29 — p42,
+Each is rebuilt through `Eff_typed`'s constructors, erased, and encoded. For all 28 — p42,
 pBind, pFork, pTwo, pAwait, pGen, pWhile, pCatch, pStr, pFailCause, pYieldError, pSync,
 pSuspend, pMatch, pOnExit, pExit, pMasks, pBranch, pCallback, pJoin, pScoped, pAcquire,
-pChoose, pPair, pStmts, pActions, pOps, pProvide, pSleep — the run reports *identical to golden* / *well-typed:
+pPair, pStmts, pActions, pOps, pProvide, pSleep — the run reports *identical to golden* / *well-typed:
 yes* / *answer and error both agree with the erased witness*. That is the proof that OCaml
 authors exactly what Lean would.
 

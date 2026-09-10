@@ -218,8 +218,6 @@ mutual
     | scoped (body : Eff Op)
     /-- `release` is a program over the environment extended by the resource and the exit. -/
     | acquireRelease (acquire release : Eff Op)
-    -- flows only: refused by the native printer, tape-answered by the compile (D2)
-    | choose (site : Nat) (left right : Eff Op)
     -- provision (the join, 2026-09-07): a layer is a subterm, and its build runs at its point.
     -- Appended, so no stored program's bytes move (`Wire.lean`).
     /-- `Effect.provide(self, layer, { local })` (`internal/layer.ts:8-22`): `scopedWith` a
@@ -409,7 +407,6 @@ mutual
     | .scoped body => .scoped (Eff.weaken cut body)
     | .acquireRelease acquire release =>
       .acquireRelease (Eff.weaken cut acquire) (Eff.weaken cut release)
-    | .choose site left right => .choose site (Eff.weaken cut left) (Eff.weaken cut right)
     | .provideLayer layer isLocal body => .provideLayer layer isLocal (Eff.weaken cut body)
     | .service key => .service key
     | .provideService key value body =>
@@ -489,7 +486,6 @@ def arms : List Arm :=
   , ⟨"withFiber", "Effect.withFiber", "Prim.withFiber", "internal/effect.ts:1147"⟩
   , ⟨"scoped", "Effect.scoped", "the region frames of compileRegion", "internal/effect.ts:3960"⟩
   , ⟨"acquireRelease", "Effect.acquireRelease", "uninterruptible + onExit over the scope", "internal/effect.ts:3978"⟩
-  , ⟨"choose", "(flows only; refused by the native printer)", "tape-answered at compile", "Effects.Flow.RawTerm.choose"⟩
   , ⟨"provideLayer", "Effect.provide", "scoped layer build + provideContext region", "internal/layer.ts:8-22"⟩
   , ⟨"service", "Effect.service", "Prim.onSuccess (Prim.withFiber getCtx) serviceLookup", "internal/effect.ts:2059"⟩
   , ⟨"provideService", "Effect.provideService", "updateContext region", "internal/effect.ts:2202-2232"⟩
@@ -500,10 +496,10 @@ def constructorNames : List String :=
   ["succeed", "fail", "failCause", "yieldError", "sync", "suspend", "perform", "bind", "gen",
    "catchCause", "matchCause", "onExit", "exit", "uninterruptible", "interruptible", "branch",
    "whileLoop", "yieldNow", "callback", "awaitFiber", "withFiber", "scoped", "acquireRelease",
-   "choose", "provideLayer", "service", "provideService", "catchIf"]
+   "provideLayer", "service", "provideService", "catchIf"]
 
 #guard arms.map Arm.constructor = constructorNames
-#guard constructorNames.length = 28
+#guard constructorNames.length = 27
 
 /-! ## The separation-4 receipts: first-order, decidable throughout -/
 

@@ -146,10 +146,6 @@ theorem effTy_sound (sig : Signature Op) (e : Eff Op) :
     intro env t h
     obtain ⟨a, r, ha, hr, rfl⟩ := inv_acquireRelease sig env acquire release t h
     exact .acquireRelease (effTy_sound sig acquire env a ha) (effTy_sound sig release _ r hr)
-  | choose site left right =>
-    intro env t h
-    obtain ⟨l, r, answer, hl, hr, hj, rfl⟩ := inv_choose sig env site left right t h
-    exact .choose site (effTy_sound sig left env l hl) (effTy_sound sig right env r hr) hj
   | provideLayer layer isLocal body =>
     intro env t h
     obtain ⟨l, b, hl, hb, rfl⟩ := inv_provideLayer sig env layer isLocal body t h
@@ -477,11 +473,6 @@ theorem effTy_complete (sig : Signature Op) (e : Eff Op) :
     intro env t hd; cases hd
     have iha := effTy_complete sig acquire _ _ ‹HasTy sig _ acquire _›
     have ihr := effTy_complete sig release _ _ ‹HasTy sig _ release _›
-    simp_all [effTy]
-  | choose site left right =>
-    intro env t hd; cases hd
-    have ihl := effTy_complete sig left _ _ ‹HasTy sig _ left _›
-    have ihr := effTy_complete sig right _ _ ‹HasTy sig _ right _›
     simp_all [effTy]
   | provideLayer layer isLocal body =>
     intro env t hd; cases hd

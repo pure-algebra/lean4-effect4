@@ -1,4 +1,4 @@
-(* cut-from: rev=70b1571e-dirty toolchain=4.33.1 inputs=960662dde268041ea86be2e654a47ec3016d42b2ecbff4d397d8438fb65272da *)
+(* cut-from: rev=ac07384-dirty toolchain=4.33.1 inputs=0636c1e70cd31c1532c0322fe4ef7d4a74946e2e5f5671828d69f07c82e3b469 *)
 (* GENERATED source-structure view; no runtime or execution-permission claim. *)
 let wire_families = [
   ("Ty", ["never"; "unit"; "nat"; "int"; "string"; "bool"; "handle"; "option"; "list"; "prod"; "except"; "exitOf"; "causeOf"; "fiberOf"; "union"]);
@@ -15,7 +15,7 @@ let wire_families = [
   ("ServiceName", ["value"]);
   ("ServiceTypeCode", ["value"]);
   ("ServiceKey", ["name"; "service"]);
-  ("Eff", ["succeed"; "fail"; "failCause"; "yieldError"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "branch"; "whileLoop"; "yieldNow"; "callback"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "choose"; "provideLayer"; "service"; "provideService"; "catchIf"]);
+  ("Eff", ["succeed"; "fail"; "failCause"; "yieldError"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "branch"; "whileLoop"; "yieldNow"; "callback"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"]);
   ("Stmt", ["bindYield"; "yieldDiscard"; "ret"; "ifElse"; "whileTrue"; "breakLoop"]);
   ("Stmts", ["nil"; "cons"]);
   ("Effs", ["nil"; "cons"]);

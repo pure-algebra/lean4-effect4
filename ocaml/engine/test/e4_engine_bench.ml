@@ -70,17 +70,17 @@ module Api_gen_inst = struct
   type interp = (nu, s, val_, err, defect, fiber_id, unit, ctx, stores, prim_) run_interp
   type program = native_op eff
 
-  let interp_of (p : program) : interp = program_interp_of p
+  let interp_of (p : program) : interp = program_interp_of p []
 
   let load (p : program) ~(fuel : int) ~(choices : bool list) : machine =
-    api_load p fuel choices
+    api_load p fuel choices []
 
   let step (p : program) (i : interp) ~(fuel : int) (m : machine) (d : decision)
     : machine * bool =
-    step_decision_state_at_replay_eval_at_api_replay_spec_0_spec_0 p i fuel m d
+    step_decision_state_at_program_replay_checked_from_spec_1 p [] i fuel m d
 
   let run_api (p : program) ~(fuel : int) ~(choices : bool list) : outcome * machine =
-    let r = api_run p fuel choices in
+    let r = api_run p fuel choices [] [] in
     (r.outcome, r.machine)
 
   let fibers (m : machine) : (fiber_id * fiber) list =

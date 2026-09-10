@@ -1466,8 +1466,6 @@ export const childrenOf = (n: IrNode): ReadonlyArray<Child> => {
         case "scoped": return [atEff(e.body, (body) => kEff({ ...e, body }))]
         case "acquireRelease":
           return [atEff(e.acquire, (acquire) => kEff({ ...e, acquire })), atEff(e.release, (release) => kEff({ ...e, release }))]
-        case "choose":
-          return [atEff(e.left, (left) => kEff({ ...e, left })), atEff(e.right, (right) => kEff({ ...e, right }))]
         case "provideLayer":
           return [atLayer(e.layer, (layer) => kEff({ ...e, layer })), atEff(e.body, (body) => kEff({ ...e, body }))]
         case "provideService": return [atEff(e.body, (body) => kEff({ ...e, body }))]

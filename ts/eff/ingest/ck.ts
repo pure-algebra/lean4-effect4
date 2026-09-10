@@ -62,7 +62,6 @@ function walkProgram(program: Eff, onLayer: (l: LayerTerm, path: readonly number
       case "branch": return { ...e, thenB: eff(e.thenB, child(0)), elseB: eff(e.elseB, child(1)) }
       case "withFiber": return { ...e, action: action(e.action, child(0)) }
       case "acquireRelease": return { ...e, acquire: eff(e.acquire, child(0)), release: eff(e.release, child(1)) }
-      case "choose": return { ...e, left: eff(e.left, child(0)), right: eff(e.right, child(1)) }
       case "provideLayer": {
         if (!keyOrder) return { ...e, layer: layer(e.layer, child(0)), body: eff(e.body, child(1)) }
         const body = eff(e.body, child(1))

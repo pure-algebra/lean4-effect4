@@ -256,9 +256,6 @@ type (_, _, _) eff =
   | Scoped : ('env, 'a, 'e) eff -> ('env, 'a, 'e) eff
   | Acquire_release :
       ('env, 'a, 'e) eff * (('a, 'e) exit * ('a * 'env), 'b, 'e2) eff -> ('env, 'a, 'e) eff
-  | Choose :
-      int * ('env, 'a, 'e1) eff * ('env, 'b, 'e2) eff * ('a, 'b, 'c) join_answer
-      -> ('env, 'c, ('e1, 'e2) union) eff
   (* Effect.provide(self, layer): the body's answer, the errors union (the requirement rows
      are the checker's, E3). *)
   | Provide_layer : 'e1 layer * bool * ('env, 'a, 'e2) eff -> ('env, 'a, ('e2, 'e1) union) eff
@@ -473,7 +470,6 @@ let rec erase_eff : type env a e. int -> (env, a, e) eff -> Eff_types.eff = fun 
   | With_fiber a -> Eff_types.Eff_withFiber (erase_action d a)
   | Scoped b -> Eff_types.Eff_scoped (erase_eff d b)
   | Acquire_release (a, r) -> Eff_types.Eff_acquireRelease (erase_eff d a, erase_eff (d + 2) r)
-  | Choose (site, l, r, _) -> Eff_types.Eff_choose (site, erase_eff d l, erase_eff d r)
   | Provide_layer (l, is_local, b) -> Eff_types.Eff_provideLayer (erase_layer l, is_local, erase_eff d b)
   | Service k -> Eff_types.Eff_service (erase_key k)
   | Provide_service (k, v, b) -> Eff_types.Eff_provideService (erase_key k, t v, erase_eff d b)

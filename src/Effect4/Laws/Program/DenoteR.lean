@@ -513,10 +513,6 @@ def inlineYield : NativeEff → Point → Option ExitV
     | .awaitFiber target mode => match evalTerm p.env target with
       | some (Val.fiber ⟨id⟩) => p.awaitExit ⟨id⟩ mode | _ => some badShapeExit
     | .exit b => (inlineYield b (p.child 0)).map fun ex => .success (reifyExitVal ex)
-    | .choose _ left right => match p.tape with
-      | true :: rest => inlineYield left { p with path := p.path ++ [0], tape := rest }
-      | false :: rest => inlineYield right { p with path := p.path ++ [1], tape := rest }
-      | [] => none
     -- `provideService` of a value that does not evaluate is the wrong-shape refusal
     | .provideService _ value _ => match evalTerm p.env value with
       | some _ => none | none => some badShapeExit
@@ -565,8 +561,7 @@ point's own fuel: `denoteR` and `denoteLayer` pass it in, and every child call p
 child's). It is the recursion: a layer reference (`LayerTerm.ref`, the host rows slice) hops
 to its target's term, which is no subterm, one fuel down, so the block is structural on the
 budget, its arms at a positive budget in two bodies that take the predecessor budget's two
-denotations as arguments (`denoteEffBody`, `denoteLayerBody`). Only a decided `choose`, which
-keeps the point's fuel, descends in its term (structurally, inside `denoteEffBody`), and only
+denotations as arguments (`denoteEffBody`, `denoteLayerBody`), and only
 a layer at no fuel, whose children have none either, descends in its term
 (`denoteLayerZero`). Structural recursion keeps every finite run reducible by `rfl`, which the
 batteries pin (`Test/Program/RuntimeRContract.lean`); the equations below are the only
@@ -581,8 +576,7 @@ def _root_.Effect4.Program.LayerTerm.isRef {Op : Type} : LayerTerm Op → Bool
   | _ => false
 
 /-- The arms of the denotation at a positive budget, every child at the predecessor budget
-through `rec` (a program at its point) and `recL` (a layer at its point); a decided `choose`
-keeps the point's fuel and descends in its term. Every arm names the `compileEff` arm it
+through `rec` (a program at its point) and `recL` (a layer at its point). Every arm names the `compileEff` arm it
 mirrors; the counted checkpoints are where the frame machine spends a primitive that the term
 would otherwise elide. -/
 def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
@@ -675,12 +669,6 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
       match Val.context? v with
       | some ctx => .vis (.inr (.mask false (.acquireIn p ctx))) Effects.Program.pure
       | none => .pure badShapeExit)
-  -- a decided branch keeps the point's fuel, so the budget stays: the term descends
-  | .choose _ left right, p =>
-    match p.tape with
-    | true :: rest => denoteEffBody root rec recL left { p with path := p.path ++ [0], tape := rest }
-    | false :: rest => denoteEffBody root rec recL right { p with path := p.path ++ [1], tape := rest }
-    | [] => pending .unansweredChoice p
   -- the join. `Effect.provide(self, layer)`: `Prim.suspend (body p)`, the counted step
   -- (`scopedWith`, `internal/effect.ts:3966`), then the scope made, the layer built into it
   -- (`buildWithScope` off the context's memo map, or a private map when `local`), the body
@@ -872,17 +860,6 @@ theorem denoteR_exit (root : NativeEff) (b : NativeEff) (p : Point) (h : p.fuel 
       | some ex => .pure (.success (reifyExitVal ex))
       | none => (guardR .all (denoteR root b (p.child 0))).bind fun ex =>
           .pure (.success (reifyExitVal ex)) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => budget hf
-
-theorem denoteR_choose (root : NativeEff) (site : Nat) (a b : NativeEff) (p : Point)
-    (h : p.fuel ≠ 0) :
-    denoteR root (.choose site a b) p =
-      match p.tape with
-      | true :: rest => denoteR root a { p with path := p.path ++ [0], tape := rest }
-      | false :: rest => denoteR root b { p with path := p.path ++ [1], tape := rest }
-      | [] => pending .unansweredChoice p := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
   | succ f => budget hf
@@ -1280,14 +1257,6 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
     cases e <;> simp only [inlineYield, hf, ↓reduceIte, hc, frontier, headExit]
   | succ f =>
     cases e with
-    | choose site a b =>
-      simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
-      cases ht : p.tape with
-      | nil => rfl
-      | cons choice rest =>
-        cases choice <;> dsimp only
-        · exact inlineYield_eq_headExit b _
-        · exact inlineYield_eq_headExit a _
     | exit b =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
       rw [inlineYield_eq_headExit b (p.child 0), headExit_eq_asExit? (compileEff b (p.child 0))]
@@ -1429,7 +1398,7 @@ theorem denote_of_inlineYield : ∀ (b : NativeEff) (q : Point) {exit : ExitV},
   | .gen _, _, _, hs, _ | .uninterruptible _, _, _, hs, _ | .interruptible _, _, _, hs, _
   | .whileLoop _ _ _ _, _, _, hs, _ | .yieldNow _, _, _, hs, _ | .callback _ _, _, _, hs, _
   | .awaitFiber _ _, _, _, hs, _ | .withFiber _, _, _, hs, _ | .«scoped» _, _, _, hs, _
-  | .acquireRelease _ _, _, _, hs, _ | .choose _ _ _, _, _, hs, _
+  | .acquireRelease _ _, _, _, hs, _
   | .provideLayer _ _ _, _, _, hs, _ | .service _, _, _, hs, _
   | .provideService _ _ _, _, _, hs, _
   | .catchIf _ _ _, _, _, hs, _ => by
@@ -1602,7 +1571,7 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
   | .gen _, _, hs, _ | .uninterruptible _, _, hs, _ | .interruptible _, _, hs, _
   | .whileLoop _ _ _ _, _, hs, _ | .yieldNow _, _, hs, _ | .callback _ _, _, hs, _
   | .awaitFiber _ _, _, hs, _ | .withFiber _, _, hs, _ | .«scoped» _, _, hs, _
-  | .acquireRelease _ _, _, hs, _ | .choose _ _ _, _, hs, _
+  | .acquireRelease _ _, _, hs, _
   | .provideLayer _ _ _, _, hs, _ | .service _, _, hs, _
   | .provideService _ _ _, _, hs, _
   | .catchIf _ _ _, _, hs, _ => by

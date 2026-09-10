@@ -22,49 +22,13 @@
     "Effect4.Program.Effs",
     "Effect4.Program.ActionTerm",
     "Effect4.Program.LayerTerm",
+    "Effect4.Program.LayerTerms",
     "Effect4.Program.RowKind",
     "Effect4.Program.RowShape",
+    "Effect4.Program.Registration",
     "Effect4.Program.Row"
   ],
   "unavailable": [
-    {
-      "family": "Effect4.Program.NativeOp",
-      "reason": "source-append-unavailable-in-frozen-engine",
-      "engine": 20,
-      "source": 23
-    },
-    {
-      "family": "Effect4.Program.Eff",
-      "reason": "source-append-unavailable-in-frozen-engine",
-      "engine": 27,
-      "source": 28
-    },
-    {
-      "family": "Effect4.Program.LayerTerm",
-      "reason": "source-append-unavailable-in-frozen-engine",
-      "engine": 8,
-      "source": 10
-    },
-    {
-      "family": "Effect4.Program.LayerTerms",
-      "reason": "absent-frozen-engine-family"
-    },
-    {
-      "family": "Effect4.Program.RowShape",
-      "reason": "source-append-unavailable-in-frozen-engine",
-      "engine": 3,
-      "source": 4
-    },
-    {
-      "family": "Effect4.Program.Registration",
-      "reason": "absent-frozen-engine-family"
-    },
-    {
-      "family": "Effect4.Program.Row",
-      "reason": "source-structure-append-unavailable-in-frozen-engine",
-      "engine": 11,
-      "source": 12
-    },
     {
       "family": "Effect4.Program.EffTy",
       "reason": "absent-frozen-engine-family"

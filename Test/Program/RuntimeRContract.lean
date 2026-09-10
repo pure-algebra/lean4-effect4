@@ -102,13 +102,9 @@ def agrees (program : NativeEff) (tape : List Api.Decision) (choices : List Bool
 #guard agrees raceEmpty startTape
 #guard agrees raceEmpty interruptTape
 
--- 14. Choices and compile exhaustion remain unfinished when no answer exists.
-#guard agrees choice startTape
-#guard agrees choice startTape [true]
-#guard agrees choice startTape [false]
-
+-- 14. Compile exhaustion leaves a live frontier.
 def termCompileZero : RReplay :=
-  replayEval (interpR choice) budget startTape (loadR choice 0)
+  replayEval (interpR compileZeroProg) budget startTape (loadR compileZeroProg 0)
 
 #guard obsR termCompileZero.machine = obs compileZero.machine
 #guard termControl termCompileZero.machine = frameControl compileZero.machine

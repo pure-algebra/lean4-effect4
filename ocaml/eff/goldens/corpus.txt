@@ -20,7 +20,6 @@ pCallback	well-typed
 pJoin	well-typed
 pScoped	well-typed
 pAcquire	well-typed
-pChoose	well-typed
 pPair	well-typed
 pStmts	well-typed
 pActions	well-typed

@@ -309,12 +309,8 @@ def sig : Signature (Fin 3) :=
 
 /-! ## The refused row of §5.1
 
-`choose` is flows-only (D2); the five internal actions have no public rc.112 export with the
+The five internal actions have no public rc.112 export with the
 same frame shape. Each refusal names itself, so a refusal is data rather than a gap. -/
-
-#guard (print sig 0 (.choose 0 (.succeed (.lit (.nat 1))) (.succeed (.lit .unit)))).map
-    (expr house0 0)
-  = .error (.choose 0)
 
 #guard (print sig 1 (.withFiber (.interruptScoped (.var 0)))).map (expr house0 0)
   = .error (.internalAction "interruptScoped")

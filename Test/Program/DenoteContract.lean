@@ -23,7 +23,7 @@ namespace Test.Program.DenoteContract
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote
 open Test.Syntax.CompileContract (fuel pSucceed pBindSync pFail pCatch pMatchValue pMatchCause
   pMatchCauseReified pExit pOnExit pDie pRefSet pRefUpdate pRefModify pBranchTrue pBranchFalse
-  pDeferred pForkJoin pRace pScoped pGenTwoYields pWhileLoop pChoose pYieldNow pMasked)
+  pDeferred pForkJoin pRace pScoped pGenTwoYields pWhileLoop pYieldNow pMasked)
 
 /-- The oracle: on the ordinary run (`evaluate` then `flush`) the machine finishes with the
 meaning's exit and the meaning's stores. -/
@@ -50,7 +50,7 @@ def agrees (p : NativeEff) : Bool :=
 #guard Straight pBranchTrue = true
 #guard Straight pBranchFalse = true
 
--- Outside the fragment: a park, a fork, a race, a scope, a generator, a loop, a `choose`, a
+-- Outside the fragment: a park, a fork, a race, a scope, a generator, a loop, a
 -- yield, a mask.
 #guard Straight pDeferred = false
 #guard Straight pForkJoin = false
@@ -58,7 +58,6 @@ def agrees (p : NativeEff) : Bool :=
 #guard Straight pScoped = false
 #guard Straight pGenTwoYields = false
 #guard Straight pWhileLoop = false
-#guard Straight pChoose = false
 #guard Straight pYieldNow = false
 #guard Straight pMasked = false
 

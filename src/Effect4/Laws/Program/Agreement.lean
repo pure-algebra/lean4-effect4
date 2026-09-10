@@ -60,7 +60,7 @@ theorem Plain_eq_Straight : ∀ e : NativeEff, Plain e = Straight e
   | .onExit b f => by simp only [Plain, Straight, Plain_eq_Straight b, Plain_eq_Straight f]
   | .succeed _ | .fail _ | .failCause _ | .yieldError _ | .sync _ | .perform _ _ | .gen _
   | .uninterruptible _ | .interruptible _ | .whileLoop _ _ _ _ | .yieldNow _ | .callback _ _
-  | .awaitFiber _ _ | .withFiber _ | .scoped _ | .acquireRelease _ _ | .choose _ _ _
+  | .awaitFiber _ _ | .withFiber _ | .scoped _ | .acquireRelease _ _
   | .provideLayer _ _ _ | .service _ | .provideService _ _ _ | .catchIf _ _ _ => rfl
 
 theorem Plain.suspend {b : NativeEff} (h : Plain (.suspend b) = true) : Plain b = true := h
@@ -1511,7 +1511,7 @@ theorem meaning_of_asExit : ∀ (b : NativeEff) (q : Point) (s : Stores) {exit :
   | .yieldNow _, _, _, _, hpl, _ | .callback _ _, _, _, _, hpl, _
   | .awaitFiber _ _, _, _, _, hpl, _ | .withFiber _, _, _, _, hpl, _
   | .«scoped» _, _, _, _, hpl, _ | .acquireRelease _ _, _, _, _, hpl, _
-  | .choose _ _ _, _, _, _, hpl, _ | .provideLayer _ _ _, _, _, _, hpl, _
+  | .provideLayer _ _ _, _, _, _, hpl, _
   | .service _, _, _, _, hpl, _ | .provideService _ _ _, _, _, _, hpl, _
   | .catchIf _ _ _, _, _, _, hpl, _ => by simp [Plain] at hpl
 
@@ -1998,7 +1998,6 @@ theorem localRun_compile (root : NativeEff) :
   | .withFiber _, _, _, _, _, hpl, _, _
   | .scoped _, _, _, _, _, hpl, _, _
   | .acquireRelease _ _, _, _, _, _, hpl, _, _
-  | .choose _ _ _, _, _, _, _, hpl, _, _
   | .provideLayer _ _ _, _, _, _, _, hpl, _, _
   | .service _, _, _, _, _, hpl, _, _
   | .provideService _ _ _, _, _, _, _, hpl, _, _

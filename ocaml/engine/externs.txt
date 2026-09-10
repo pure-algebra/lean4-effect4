@@ -60,8 +60,8 @@ field Effect4.Machine.MemoMap.entries L.t
 # with the generated `node` type: the path CARRIES the node it addresses, so `Point.child` is
 # a cons and `resolve` is a field read.  `Capture` is `Point` minus the completed view
 # (src/Effect4/Machine/Stores.lean:162), so it takes the same two carriers.
-field Effect4.Program.Point.path @node P.t
-field Effect4.Machine.Capture.path @node P.t
+field Effect4.Program.Point.path @native_op node P.t
+field Effect4.Machine.Capture.path @native_op node P.t
 field Effect4.Program.Point.env E.t
 field Effect4.Machine.Capture.env E.t
 
@@ -72,7 +72,7 @@ elem Effect4.Machine.ScopeEntry M.t
 
 # ---- E1: the trace ------------------------------------------------------------------------
 fn Effect4.Machine.RunMachine.emit 2 sh_machine_emit
-fn Effect4.Api.load 3 sh_api_load program_compile empty_ctx stores
+fn Effect4.Api.load 4 sh_api_load program_compile empty_ctx stores
 # `RunMachine.empty` (Fibers.lean:612) and `Stores.empty` (Stores.lean:1987) have no row:
 # `Api.load` was their only caller in this closure, so externing it deletes them outright.
 # Their bodies are `sh_machine_empty` / `sh_stores_empty` in the prelude, called by
@@ -84,7 +84,7 @@ fn Effect4.Machine.RunMachine.update 2 sh_machine_update
 fn Effect4.Machine.RunMachine.finished 1 sh_machine_finished
 fn Effect4.Machine.RunMachine.completedExits 1 sh_machine_completed_exits
 fn Effect4.Machine.spawn._at_.Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_0.spec_1.spec_3 5 sh_spawn
-fn Effect4.Machine.spawn._at_.Effect4.Machine.launchEntrant._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Machine.replayEval._at_.Effect4.Api.replay.spec_0.spec_0.spec_3.spec_6.spec_11.spec_17 5 sh_spawn
+fn Effect4.Machine.spawn._at_.Effect4.Machine.launchEntrant._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_12.spec_19 5 sh_spawn
 fn Effect4.Machine.spawn 6 sh_spawn_generic run_fiber_make
 fn List.mapTR.loop._at_.Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_0.spec_1.spec_12 3 sh_drop_observers
 
@@ -129,7 +129,6 @@ ops E.t append E.append
 ops E.t get E.get
 ops E.t length E.length
 ops E.t take E.take
-ops E.t to_list E.to_list
 
 # `Node.at_` is answered by the path itself.  The row's hand body compares the node the caller
 # passes with the one the spine was built from and reads the carried node when they are the
@@ -139,6 +138,7 @@ fn Effect4.Program.Node.at_ 2 sh_node_at program_node_child
 # `rootPoint` must know the root program to build the spine's node; `Program.compile` is its
 # only caller and holds it under the name `root` (api_engine.ml:11518).
 fn Effect4.Program.rootPoint 2 sh_root_point root
+fn Effect4.Program.Point.redirect 2 sh_point_redirect program_node_child
 # `Node.child` was reached ONLY through `Node.at_`, which the row above deletes; it is now an
 # extra generator root, because `P.snoc` needs it.
 
@@ -151,6 +151,7 @@ fn Effect4.Program.rootPoint 2 sh_root_point root
 carg Effect4.Program.evalTerm 0 E.t
 carg Effect4.Program.evalTerms 0 E.t
 carg Effect4.Program.causeOf 0 E.t
+carg Effect4.Program.caughtErrorValue? 0 E.t
 carg Effect4.Program.blockExit 3 E.t
 carg Effect4.Program.loopExit 4 E.t
 carg Effect4.Program.runStmts 4 E.t

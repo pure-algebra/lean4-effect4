@@ -53,7 +53,7 @@ let ellipsis (n : int) (s : string) : string =
 (* ---- 1. goldens ---- *)
 
 let () =
-  check "corpus has 49 programs" (List.length corpus = 49);
+  check "corpus has 48 programs" (List.length corpus = 48);
   Printf.printf "  %-16s %6s %-8s %-10s %-6s %s\n" "program" "bytes" "decode" "re-encode" "JSON" "typeOf";
   List.iter
     (fun (name, typed) ->
@@ -231,7 +231,6 @@ let typed_corpus : (string * program) list =
         ( Acquire_release (Perform (Ref_make, nat 0), Perform (Ref_get, v1))
         , Handle Ref_number
         , Never ) )
-  ; ("pChoose", Program (Choose (3, Succeed (nat 1), Succeed (nat 2), Same), Nat, Union (Never, Never)))
   ; ("pPair", Program (Succeed (Fst (Pair (nat 1, bool true))), Nat, Never))
   ; ( "pStmts"
     , Program
@@ -433,17 +432,16 @@ let () =
   check "FinalizerStrategy has 2" (List.length ctor_names_finalizer_strategy = 2);
   check "FnName has 5" (List.length ctor_names_fn_name = 5);
   check "NativeOp has 23" (List.length ctor_names_native_op = 23);
-  check "Eff has 28" (List.length ctor_names_eff = 28);
+  check "Eff has 27" (List.length ctor_names_eff = 27);
   check "LayerTerm has 10" (List.length ctor_names_layer_term = 10);
   check "LayerTerms has 2" (List.length ctor_names_layer_terms = 2);
   check "Stmt has 6" (List.length ctor_names_stmt = 6);
   check "ActionTerm has 16" (List.length ctor_names_action_term = 16);
   check "Eff.succeed is 0" (ctor_index_eff (Eff_yieldNow 0) = 17 && ctor_index_eff (Eff_succeed (Term_var 0)) = 0);
-  check "Eff.choose is 23" (ctor_index_eff (Eff_choose (0, Eff_yieldNow 0, Eff_yieldNow 0)) = 23);
-  check "Eff.provideLayer is 24, service 25, provideService 26 (the join appends)"
-    (ctor_index_eff (Eff_provideLayer (Layer_term_effectDiscard (Eff_yieldNow 0), false, Eff_yieldNow 0)) = 24
-     && ctor_index_eff (Eff_service Eff_native.scope_key) = 25
-     && ctor_index_eff (Eff_provideService (Eff_native.scope_key, Term_var 0, Eff_yieldNow 0)) = 26);
+  check "Eff.provideLayer is 23, service 24, provideService 25 (the join appends)"
+    (ctor_index_eff (Eff_provideLayer (Layer_term_effectDiscard (Eff_yieldNow 0), false, Eff_yieldNow 0)) = 23
+     && ctor_index_eff (Eff_service Eff_native.scope_key) = 24
+     && ctor_index_eff (Eff_provideService (Eff_native.scope_key, Term_var 0, Eff_yieldNow 0)) = 25);
   check "LayerTerm.succeed is 0, orDie 7"
     (ctor_index_layer_term (Layer_term_succeed (Eff_native.scope_key, Lit_unit)) = 0
      && ctor_index_layer_term (Layer_term_orDie (Layer_term_effectDiscard (Eff_yieldNow 0))) = 7);
@@ -481,7 +479,7 @@ let () =
        (fun l ->
          contains l "Effect4.Program.Eff (eff) inductive: succeed(term) fail(term)"
          && contains l "whileLoop(term,term,term,eff)"
-         && contains l "choose(int,eff,eff) provideLayer(layer_term,bool,eff) service(service_key) provideService(service_key,term,eff)")
+         && contains l "provideLayer(layer_term,bool,eff) service(service_key) provideService(service_key,term,eff) catchIf(term,eff,eff)")
        manifest);
   check "the manifest's LayerTerm line names the 10 constructors with their carriers"
     (List.exists
@@ -652,8 +650,8 @@ let () =
     (match Eff_typing.type_of (erase conditional) with
      | Ok t -> t.eff_ty_answer = Ty_nat && t.eff_ty_error = Ty_nat
      | Error _ -> false);
-  check "catchIf appends at ordinal 27"
-    (ctor_index_eff (erase conditional) = 27)
+  check "catchIf appends at ordinal 26"
+    (ctor_index_eff (erase conditional) = 26)
 
 let () =
   Printf.printf "test_eff: %d checks, %d failures\n%!" !checks !failures;

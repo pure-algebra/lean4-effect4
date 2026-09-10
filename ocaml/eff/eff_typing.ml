@@ -371,13 +371,6 @@ let rec check_eff (env : env) (p : eff) : eff_ty checked =
     let* r = check_eff (env @ [ a.eff_ty_answer; Ty_exitOf (a.eff_ty_answer, a.eff_ty_error) ]) release in
     Ok (mk a.eff_ty_answer a.eff_ty_error
           (req_union (req_union a.eff_ty_requires r.eff_ty_requires) (req_single Eff_native.scope_key)))
-  | Eff_choose (_, left, right) ->
-    let* l = check_eff env left in
-    let* r = check_eff env right in
-    (match join_answer l.eff_ty_answer r.eff_ty_answer with
-     | None -> refuse "choose: the answers do not join"
-     | Some answer ->
-       Ok (mk answer (join l.eff_ty_error r.eff_ty_error) (req_union l.eff_ty_requires r.eff_ty_requires)))
   (* Effect.provide(self, layer): the layer's requirements join, what it provides is discharged
      from the body's (internal/layer.ts:8-14). *)
   | Eff_provideLayer (layer, _, body) ->

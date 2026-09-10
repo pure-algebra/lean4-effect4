@@ -499,7 +499,7 @@ let rec gen_eff (r : rng) (env : ty list) (b : int) : eff * eff_ty =
   else
     let rec attempt k =
       if k = 0 then gen_leaf r env
-      else match gen_node r env b (rnd r 20) with Some x -> x | None -> attempt (k - 1)
+      else match gen_node r env b (rnd r 19) with Some x -> x | None -> attempt (k - 1)
     in
     attempt 8
 
@@ -655,24 +655,6 @@ and gen_node (r : rng) (env : ty list) (b : int) (tag : int) : (eff * eff_ty) op
       ( Eff_whileLoop (initial, test, step, body),
         Eff_typing.mk Ty_unit tb.eff_ty_error tb.eff_ty_requires )
   | 11 ->
-    let x, tx = gen_eff r env half in
-    let y, ty_ = gen_eff r env half in
-    let y, ty_ =
-      match Eff_typing.join_answer tx.eff_ty_answer ty_.eff_ty_answer with
-      | Some _ -> (y, ty_)
-      | None -> never_arm r
-    in
-    let answer =
-      match Eff_typing.join_answer tx.eff_ty_answer ty_.eff_ty_answer with
-      | Some a -> a
-      | None -> tx.eff_ty_answer
-    in
-    Some
-      ( Eff_choose (rnd r 3, x, y),
-        Eff_typing.mk answer
-          (Eff_typing.join tx.eff_ty_error ty_.eff_ty_error)
-          (Eff_typing.req_union tx.eff_ty_requires ty_.eff_ty_requires) )
-  | 12 ->
     let a, ta = gen_eff r env half in
     let rel, tr =
       gen_eff r
@@ -685,14 +667,14 @@ and gen_node (r : rng) (env : ty list) (b : int) (tag : int) : (eff * eff_ty) op
           (Eff_typing.req_union
              (Eff_typing.req_union ta.eff_ty_requires tr.eff_ty_requires)
              (Eff_typing.req_single Eff_native.scope_key)) )
-  | 13 ->
+  | 12 ->
     let body, g = gen_stmts r env false (b - 1) in
     Some
       ( Eff_gen body,
         Eff_typing.mk
           (match g.Eff_typing.gen_answer with Some a -> a | None -> Ty_unit)
           g.Eff_typing.gen_error g.Eff_typing.gen_requires )
-  | 14 ->
+  | 13 ->
     let p, tp = gen_eff r env (b - 1) in
     let opts = gen_fork_options r in
     if rbool r then
@@ -709,10 +691,10 @@ and gen_node (r : rng) (env : ty list) (b : int) (tag : int) : (eff * eff_ty) op
             Ty_never
             (Eff_typing.req_union tp.eff_ty_requires
                (Eff_typing.req_single Eff_native.scope_key)) )
-  | 15 -> Some (shape_fork r env b)
-  | 16 -> Some (shape_deferred r env b)
-  | 17 -> Some (shape_ref r env b)
-  | 18 -> Some (shape_scope r env b)
+  | 14 -> Some (shape_fork r env b)
+  | 15 -> Some (shape_deferred r env b)
+  | 16 -> Some (shape_ref r env b)
+  | 17 -> Some (shape_scope r env b)
   | _ -> shape_actions r env b
 
 (* -------------------------------------------------------------------- the shapes *)
@@ -992,7 +974,7 @@ let rec depth_of (e : eff) : int =
   | Eff_catchIf (_, a, c) ->
     max (depth_of a) (depth_of c)
   | Eff_matchCause (a, c, d) -> max (depth_of a) (max (depth_of c) (depth_of d))
-  | Eff_branch (_, a, c) | Eff_choose (_, a, c) -> max (depth_of a) (depth_of c)
+  | Eff_branch (_, a, c) -> max (depth_of a) (depth_of c)
   | Eff_whileLoop (_, _, _, a) -> depth_of a
   | Eff_provideLayer (l, _, e) -> max (depth_layer l) (depth_of e)
   | Eff_service _ -> 0
@@ -1085,7 +1067,7 @@ let census (ps : program list) : (string * int) list =
       ->
       e_ a; e_ c
     | Eff_matchCause (a, c, d) -> e_ a; e_ c; e_ d
-    | Eff_branch (_, a, c) | Eff_choose (_, a, c) -> e_ a; e_ c
+    | Eff_branch (_, a, c) -> e_ a; e_ c
     | Eff_whileLoop (_, _, _, a) -> e_ a
     | Eff_gen b -> s_ b
     | Eff_withFiber a -> a_ a

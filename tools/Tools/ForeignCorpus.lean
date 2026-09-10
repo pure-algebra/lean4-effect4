@@ -50,7 +50,6 @@ mutual
     | .withFiber a => return .withFiber (← action a)
     | .scoped a => return .scoped (← program a)
     | .acquireRelease a b => return .acquireRelease (← program a) (← program b)
-    | .choose n a b => return .choose n (← program a) (← program b)
     | .provideLayer l isLocal b => do
       let b ← program b
       let l ← layer l

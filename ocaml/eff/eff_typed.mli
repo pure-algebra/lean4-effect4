@@ -236,9 +236,6 @@ type (_, _, _) eff =
   | Scoped : ('env, 'a, 'e) eff -> ('env, 'a, 'e) eff
   | Acquire_release :
       ('env, 'a, 'e) eff * (('a, 'e) exit * ('a * 'env), 'b, 'e2) eff -> ('env, 'a, 'e) eff
-  | Choose :
-      int * ('env, 'a, 'e1) eff * ('env, 'b, 'e2) eff * ('a, 'b, 'c) join_answer
-      -> ('env, 'c, ('e1, 'e2) union) eff
   | Provide_layer : 'e1 layer * bool * ('env, 'a, 'e2) eff -> ('env, 'a, ('e2, 'e1) union) eff
   | Service : 's skey -> ('env, 's, never) eff
   | Provide_service : 's skey * ('env, 's) term * ('env, 'a, 'e) eff -> ('env, 'a, 'e) eff

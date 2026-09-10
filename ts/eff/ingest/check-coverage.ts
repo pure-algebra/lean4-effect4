@@ -46,7 +46,7 @@ function layer(v: unknown): void {
 const files = readdirSync(dir)
 for (const file of files.filter(f => f.endsWith(".json") && !f.endsWith(".keys.json"))) eff(JSON.parse(readFileSync(join(dir, file), "utf8")))
 const expected = {
-  eff: Object.keys(Eff.cases).filter(n => n !== "choose"),
+  eff: Object.keys(Eff.cases),
   stmt: Object.keys(Stmt.cases),
   action: Object.keys(ActionTerm.cases).filter(n => !["interruptScoped", "awaitAllFailFast", "snapshotChildren", "awaitNewChildren", "setContext"].includes(n)),
   layer: Object.keys(LayerTerm.cases),

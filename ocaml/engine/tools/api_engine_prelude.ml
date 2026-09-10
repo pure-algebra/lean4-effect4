@@ -37,7 +37,9 @@ let sh_stores_empty : stores =
     deferreds = { cells = M.empty; due = [] };
     scopes = M.empty;
     memo = [];
-    next_name = 0 }
+    timers = { now = 0; wake = { waiters = []; batch = None; phase = 0 }; target = None };
+    next_name = 0;
+    externals = { answers = []; allocated = []; rejected = None } }
 
 (* Effect4.Machine.RunMachine.empty, src/Effect4/Machine/Fibers.lean:612-622. *)
 let sh_machine_empty state =
@@ -109,8 +111,9 @@ let sh_run_fiber_make id current interruptible (budget : int * bool) context =
    `compile` (`Program.compile`), `ectx` (`emptyCtx`) and `interp` (`Machine.stores`) are
    generated and come AFTER this prelude, so the row hands them in at the call site; `emit`
    adds the emission-order edge that keeps each of them above its user. *)
-let sh_api_load compile ectx interp program fuel choices =
-  let m = sh_machine_empty sh_stores_empty in
+let sh_api_load compile ectx interp program fuel choices answers =
+  let stores = { sh_stores_empty with externals = { answers; allocated = []; rejected = None } } in
+  let m = sh_machine_empty stores in
   let root = sh_run_fiber_make 0 (compile program fuel choices) true (interp.budget_of ectx) ectx in
   { m with fibers = F.add ~exit_of:sh_fiber_exit 0 root F.empty; next_id = 1 }
 
@@ -261,7 +264,7 @@ let sh_ref_step total partial_update modify modify_some op heap =
 (* Effect4.Machine.DeferredStore.make, src/Effect4/Machine/Stores.lean:1365-1366. *)
 let sh_deferred_make (self : deferred_store) =
   let k = M.cardinal self.cells in
-  (k, { self with cells = M.add k { completion = None; waiters = [] } self.cells })
+  (k, { self with cells = M.add k { completion = None; wake = { waiters = []; batch = None; phase = 0 } } self.cells })
 
 (* Effect4.Machine.DeferredStore.cellAt, src/Effect4/Machine/Stores.lean:1369-1370. *)
 let sh_deferred_cell_at (self : deferred_store) cell = M.find_opt cell self.cells
@@ -356,7 +359,7 @@ let sh_memo_delete_entry w id layer =
    Proof: if the test holds, `P.node c p = walk c (P.root p) (P.to_list p)` (PPATH PP3) and
    `P.root p` is `n` up to the reallocated constructor; otherwise it is `P.walk`, which IS
    `Node.at_`. *)
-let sh_node_at child (n : node) (p : node P.t) : node option =
+let sh_node_at child (n : native_op node) (p : native_op node P.t) : native_op node option =
   match n, P.root p with
   | Node_eff a, Node_eff b when a == b -> P.node child p
   | _ -> P.walk child n (P.to_list p)
@@ -368,6 +371,12 @@ let sh_node_at child (n : node) (p : node P.t) : node option =
 let sh_root_point (root : native_op eff) (fuel : int) (tape : bool list) : point =
   ({ path = P.make (Node_eff root); env = E.empty; fuel; tape; completed = []; root = 0 }
    : point)
+
+(* Effect4.Program.Point.redirect, src/Effect4/Program/Refs.lean *)
+let sh_point_redirect child (p : point) target : point =
+  { p with
+    path = P.append child (P.make (P.root p.path)) target;
+    fuel = max 0 (p.fuel - 1) }
 
 (* -- carrier constructors the mono phase inlines ------------------------------------------ *)
 

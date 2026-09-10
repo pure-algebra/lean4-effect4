@@ -204,7 +204,6 @@ theorem plainCode_compileEff : âˆ€ (e : NativeEff) (p : Point), Plain e = true â
   | .withFiber _, _, hpl
   | .scoped _, _, hpl
   | .acquireRelease _ _, _, hpl
-  | .choose _ _ _, _, hpl
   | .provideLayer _ _ _, _, hpl
   | .service _, _, hpl
   | .provideService _ _ _, _, hpl

@@ -227,17 +227,12 @@ def raceEmpty : NativeEff := .withFiber (.raceAll .nil)
 #guard (run raceEmpty startTape).fiberCount = 1
 #guard (run raceEmpty interruptTape).exit = some interrupted
 
--- 14. Missing choices and compile exhaustion leave live frontiers. The last
--- control has compile fuel zero but a positive machine budget, so the loop
--- actually reaches the compiled suspension.
-def choice : NativeEff := Test.Syntax.CompileContract.pChoose
+-- 14. Compile exhaustion leaves a live frontier. The control has compile fuel zero
+-- but a positive machine budget, so the loop actually reaches the compiled suspension.
+def compileZeroProg : NativeEff := Test.Syntax.CompileContract.pSucceed
 def compileZero : ReplayResult EffName EffThunk Val Err Defect FiberId Ann Ctx Stores :=
-  replayEval (interpOf choice) budget startTape (Api.load choice 0)
+  replayEval (interpOf compileZeroProg) budget startTape (Api.load compileZeroProg 0)
 
-#guard (run choice startTape).outcome = .frontier
-#guard (run choice startTape).exit = none
-#guard (run choice startTape [true]).exit = some (.success (.nat 1))
-#guard (run choice startTape [false]).exit = some (.success (.nat 2))
 #guard (compileZero.machine.fiber? Api.root).bind RunFiber.exit = none
 #guard compileZero.machine.stuck = none
 

@@ -22,8 +22,7 @@ positional environment, the flows' convention), so the next binder minted is
 identifier and never invents one twice.
 
 What the table refuses, the printer refuses by name rather than by a fallback spelling:
-`choose` is a flows-only constructor with no Effect combinator (D2), and the five internal
-fiber actions (`interruptScoped`, `awaitAllFailFast`, `snapshotChildren`,
+the five internal fiber actions (`interruptScoped`, `awaitAllFailFast`, `snapshotChildren`,
 `awaitNewChildren`, `setContext`) have no public rc.112 export with the same frame shape.
 `PrintRefusal` is the closed refusal alphabet; a refusal is data, never a printed guess.
 -/
@@ -32,14 +31,11 @@ namespace Effect4.Program
 
 open Effect4.Machine.Env (Requirement)
 
-/-- Why the printer declined a program. The first two arms are the §5.1 table's "refused"
-row: `choose` names the decision site the flows front-end would have answered from a tape,
-and `internalAction` names the `ActionTerm` constructor whose rc.112 counterpart has no
-public export with the same frame shape. `layerRef` is the declaration block's (the host
-rows slice): a layer reference whose target path names no layer, so no `const` can be
-hoisted for it. -/
+/-- Why the printer declined a program. `internalAction` names the `ActionTerm` constructor
+whose rc.112 counterpart has no public export with the same frame shape. `layerRef` is the
+declaration block's (the host rows slice): a layer reference whose target path names no layer,
+so no `const` can be hoisted for it. -/
 inductive PrintRefusal
-  | choose (site : Nat)
   | internalAction (name : String)
   | layerRef (target : List Nat)
 deriving DecidableEq, Repr
@@ -283,7 +279,6 @@ mutual
       let r ← print sig (n + 2) release
       .ok (.call (.ident "Effect.acquireRelease")
         [a, .lambda [Var.name n, Var.name (n + 1)] r])
-    | .choose site _ _ => .error (.choose site)
     -- `Effect.provide(self, layer, { local })` (`internal/layer.ts:8-22`, `Effect.ts:11383`):
     -- the option object only when set, as the corpus writes it
     | .provideLayer layer isLocal body => do

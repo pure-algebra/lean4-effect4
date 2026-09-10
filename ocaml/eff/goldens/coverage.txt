@@ -1,9 +1,9 @@
 Effect4.Program.Lit.unit	11
-Effect4.Program.Lit.nat	62
+Effect4.Program.Lit.nat	60
 Effect4.Program.Lit.bool	14
 Effect4.Program.Lit.str	2
 Effect4.Program.Term.var	53
-Effect4.Program.Term.lit	85
+Effect4.Program.Term.lit	83
 Effect4.Program.Term.app	17
 Effect4.Program.Terms.nil	17
 Effect4.Program.Terms.cons	28
@@ -47,7 +47,7 @@ Effect4.Program.NativeOp.scopeMake	4
 Effect4.Program.NativeOp.sleep	1
 Effect4.Program.NativeOp.clockNow	1
 Effect4.Program.NativeOp.external	2
-Effect4.Program.Eff.succeed	39
+Effect4.Program.Eff.succeed	37
 Effect4.Program.Eff.fail	9
 Effect4.Program.Eff.failCause	3
 Effect4.Program.Eff.yieldError	1
@@ -70,7 +70,6 @@ Effect4.Program.Eff.awaitFiber	4
 Effect4.Program.Eff.withFiber	20
 Effect4.Program.Eff.scoped	1
 Effect4.Program.Eff.acquireRelease	1
-Effect4.Program.Eff.choose	1
 Effect4.Program.Eff.provideLayer	3
 Effect4.Program.Eff.service	5
 Effect4.Program.Eff.provideService	1

@@ -824,7 +824,7 @@ def requestReadable (row : Row) (n : Nat) (request : Term) : Bool :=
 mutual
   /-- The program is one the printer keeps whole: variables in scope, rows performed on the
   kind their row declares, requests the row prints, atoms that are no head and no row, no
-  `choose`, no internal fiber action, and no `daemon` on a scoped fork. -/
+  internal fiber action, and no `daemon` on a scoped fork. -/
   def readable (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat) :
       Eff Op → Bool
     | .succeed value => value.scoped n
@@ -864,7 +864,6 @@ mutual
     | .scoped body => readable sig spell n body
     | .acquireRelease acquire release =>
       readable sig spell n acquire && readable sig spell (n + 2) release
-    | .choose _ _ _ => false
     | .provideLayer layer _ body => readableLayer sig spell layer && readable sig spell n body
     | .service _ => true
     | .provideService _ value body => value.scoped n && readable sig spell n body
@@ -1935,7 +1934,6 @@ theorem read_print {sig : Signature Op} {spell : String → List String → Opti
     unfold readEff readHead
     simp [headOf_lit .acquireRelease "Effect.acquireRelease" rfl, read_print hl acquire hr.1 ha,
       read_print hl release hr.2 hr']
-  | .choose _ _ _, hr, _ => by simp [readable] at hr
   | .provideLayer layer isLocal body, hr, hp => by
     simp only [readable, Bool.and_eq_true] at hr
     simp only [print, bind_eq_ok] at hp
@@ -3370,7 +3368,7 @@ mutual
     | .bind _ _ | .gen _ | .catchCause _ _ | .catchIf _ _ _ | .matchCause _ _ _ | .onExit _ _ | .exit _
     | .uninterruptible _ | .interruptible _ | .branch _ _ _ | .whileLoop _ _ _ _
     | .yieldNow _ | .callback _ _ | .awaitFiber _ _ | .withFiber _ | .scoped _
-    | .acquireRelease _ _ | .choose _ _ _ | .provideLayer _ _ _ | .service _
+    | .acquireRelease _ _ | .provideLayer _ _ _ | .service _
     | .provideService _ _ _ => by
       have hc1 : cut ≤ n + 1 := Nat.le_trans hc (Nat.le_add_right n 1)
       have hc2 : cut ≤ n + 2 := Nat.le_trans hc (Nat.le_add_right n 2)
@@ -3462,7 +3460,6 @@ mutual
       obtain ⟨a, ha⟩ := print_readable sig spell n acquire hs.1
       obtain ⟨r, hrel⟩ := print_readable sig spell (n + 2) release hs.2
       exact ⟨_, by simp only [print, ha, hrel] <;> rfl⟩
-    | .choose _ _ _ => by cases hr
     | .service _ => ⟨_, rfl⟩
     | .provideLayer layer _ body => by
       have hs := Bool.and_eq_true_iff.mp hr
