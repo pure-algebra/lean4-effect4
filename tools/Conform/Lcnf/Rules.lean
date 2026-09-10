@@ -146,50 +146,53 @@ private abbrev Binders := Std.HashMap FVarId Name
 private def bindParams (ns : Binders) (ps : Array (Param .pure)) : Binders :=
   ps.foldl (fun ns p => ns.insert p.fvarId p.binderName) ns
 
-private partial def walkArm (alg : Algorithm) (ns : Binders) : Code .pure → StateM ArmState Unit
-  | .let decl k => do
-    modify fun s => { s with nodes := s.nodes + 1 }
-    match decl.value with
-    | .const n _ _ =>
-      modify fun s => { s with
-        callees := s.callees.push n
-        appends := if n == alg.append then s.appends + 1 else s.appends
-        conses := if n == alg.cons then s.conses + 1 else s.conses
-        refusals := if n == alg.refusal then s.refusals + 1 else s.refusals }
-    | .fvar f args =>
-      -- a bound function applied: after a structure `cases`, this is a FIELD of that structure
-      -- being called, and the binder name is the field's name (`sig.dom op` ↦ `dom`)
-      if !args.isEmpty then
-        modify fun s => { s with applied := s.applied.push (ns.getD f `_unknown) }
-    | .proj typeName idx _ =>
-      modify fun s => { s with projections := s.projections.push s!"{typeName}#{idx}" }
-    | v =>
-      match litText v with
-      | some t => modify fun s => { s with literals := s.literals.push t }
-      | none => pure ()
-    walkArm alg (ns.insert decl.fvarId decl.binderName) k
-  | .fun d k => do
-    modify fun s => { s with nodes := s.nodes + 1 }
-    let ns' := ns.insert d.fvarId d.binderName
-    walkArm alg (bindParams ns' d.params) d.value
-    walkArm alg ns' k
-  | .jp d k => do
-    modify fun s => { s with nodes := s.nodes + 1, joinPoints := s.joinPoints + 1 }
-    let ns' := ns.insert d.fvarId d.binderName
-    walkArm alg (bindParams ns' d.params) d.value
-    walkArm alg ns' k
-  | .jmp .. => modify fun s => { s with nodes := s.nodes + 1, jumps := s.jumps + 1 }
-  | .return _ => modify fun s => { s with nodes := s.nodes + 1 }
-  | .unreach _ => modify fun s => { s with nodes := s.nodes + 1 }
-  | .cases c => do
-    modify fun s => { s with nodes := s.nodes + 1, nested := s.nested.push c.typeName }
-    for a in c.alts do
-      match a with
-      | .alt _ params code => walkArm alg (bindParams ns params) code
-      | .default code => walkArm alg ns code
+/-- Every binder the arm introduces, `FVarId ↦ binderName`, collected in one `Code.forM` pass.
 
+LCNF free-variable ids are unique inside a declaration (`Internalize.normalizeFVarIds`), and a use
+is always inside its binder's scope, so this one flat map answers exactly what the *scoped* map the
+first cut of this walker threaded answered — and it is what lets the summary itself be a
+`Code.forM` rather than a hand-written `partial` recursion. -/
+private def bindersOf (code : Code .pure) : Binders :=
+  let collect : StateM Binders Unit := code.forM fun
+    | .let decl _ => modify (·.insert decl.fvarId decl.binderName)
+    | .fun d _ | .jp d _ => modify fun ns => bindParams (ns.insert d.fvarId d.binderName) d.params
+    | .cases c => modify fun ns => c.alts.foldl (fun ns a => bindParams ns a.getParams) ns
+    | _ => pure ()
+  (collect.run {}).2
+
+/-- The arm's summary, in the compiler's own pre-order: `Code.forM`
+(`LCNF/Basic.lean:860-872`) visits a node, then a `let`'s continuation, a `fun`/`jp`'s body before
+its continuation, and a `cases`'s alternatives in order — the order the hand walker used, so every
+sequence this records (`callees`, `applied`, `projections`, `nestedCases`) is unchanged. -/
 private def summarise (alg : Algorithm) (ctor : Name) (code : Code .pure) : ArmSummary :=
-  let (_, st) := (walkArm alg {} code).run {}
+  let ns := bindersOf code
+  let walk : StateM ArmState Unit := code.forM fun c =>
+    modify fun s =>
+      let s := { s with nodes := s.nodes + 1 }
+      match c with
+      | .let decl _ =>
+        match decl.value with
+        | .const n _ _ =>
+          { s with
+            callees := s.callees.push n
+            appends := if n == alg.append then s.appends + 1 else s.appends
+            conses := if n == alg.cons then s.conses + 1 else s.conses
+            refusals := if n == alg.refusal then s.refusals + 1 else s.refusals }
+        -- a bound function applied: after a structure `cases`, this is a FIELD of that structure
+        -- being called, and the binder name is the field's name (`sig.dom op` ↦ `dom`)
+        | .fvar f args =>
+          if args.isEmpty then s else { s with applied := s.applied.push (ns.getD f `_unknown) }
+        | .proj typeName idx _ =>
+          { s with projections := s.projections.push s!"{typeName}#{idx}" }
+        | v =>
+          match litText v with
+          | some t => { s with literals := s.literals.push t }
+          | none => s
+      | .jp .. => { s with joinPoints := s.joinPoints + 1 }
+      | .jmp .. => { s with jumps := s.jumps + 1 }
+      | .cases c => { s with nested := s.nested.push c.typeName }
+      | .fun .. | .return _ | .unreach _ => s
+  let st := (walk.run {}).2
   { ctor
   , callees := st.callees
   , salient := st.callees.filter fun c => alg.salient.any fun p => p.isPrefixOf c
@@ -199,19 +202,14 @@ private def summarise (alg : Algorithm) (ctor : Name) (code : Code .pure) : ArmS
   , nestedCases := st.nested, applied := st.applied, projections := st.projections
   , nodes := st.nodes }
 
-/-- The first `cases` on `alg.family` in the declaration's code, in pre-order. Returns `none` when
-the declaration has no mono code, is an `extern` stub, or never scrutinises the family. -/
-private partial def topCases (family : Name) : Code .pure → Option (Cases .pure)
-  | .let _ k => topCases family k
-  | .fun d k => (topCases family d.value).orElse fun _ => topCases family k
-  | .jp d k => (topCases family d.value).orElse fun _ => topCases family k
-  | .jmp .. => none
-  | .return _ => none
-  | .unreach _ => none
-  | .cases c =>
-    if c.typeName == family then some c
-    else c.alts.foldl (init := none) fun acc a =>
-      acc.orElse fun _ => topCases family a.getCode
+/-- The first `cases` on `family` in the declaration's code, in the compiler's pre-order
+(`Code.forM`). Returns `none` when the code never scrutinises the family. -/
+private def topCases (family : Name) (code : Code .pure) : Option (Cases .pure) :=
+  let search : StateM (Option (Cases .pure)) Unit := code.forM fun
+    | .cases c => modify fun found =>
+        found.orElse fun _ => if c.typeName == family then some c else none
+    | _ => pure ()
+  (search.run none).2
 
 /-! ## 3. Extraction
 
@@ -292,7 +290,9 @@ private def forwardsTo? : Code .pure → Option Name
 def extractAlgorithm (alg : Algorithm) : CoreM (Except String Extraction) := do
   let env ← getEnv
   let ctors : Array Name ← match env.find? alg.family with
-    | some (.inductInfo i) => pure (i.ctors.toArray.map fun c => c.getString!.toName)
+    -- `Name.mkSimple`, not `String.toName`: the same short-name rule `Conform.Lcnf.Cases` uses,
+    -- and the identity on the component rather than a parse of it
+    | some (.inductInfo i) => pure (i.ctors.toArray.map fun c => Name.mkSimple c.getString!)
     | some _ => return .error s!"`{alg.family}` is a constant but not an inductive type"
     | none => return .error s!"`{alg.family}` is not a constant of the imported environment"
   -- follow forwarders to the declaration that actually holds the code
@@ -321,7 +321,8 @@ def extractAlgorithm (alg : Algorithm) : CoreM (Except String Extraction) := do
   let mut hasDefault := false
   for a in cs.alts do
     match a with
-    | .alt ctor _ armCode => arms := arms.push (summarise alg (ctor.getString!.toName) armCode)
+    | .alt ctor _ armCode =>
+      arms := arms.push (summarise alg (Name.mkSimple ctor.getString!) armCode)
     | .default armCode => hasDefault := true; arms := arms.push (summarise alg `_default armCode)
   let named := arms.map (·.ctor)
   return .ok
@@ -376,16 +377,10 @@ def apply (n : Normalisation) (s : String) : String := Id.run do
   let mut t := if n.stripImports then dropImports s else s
   for x in n.strip do t := t.replace x ""
   for (a, b) in n.replace do t := t.replace a b
-  -- collapse runs of whitespace
-  let mut out : List Char := []
-  let mut space := false
-  for c in t.toList do
-    if c == ' ' || c == '\n' || c == '\t' then space := true
-    else
-      if space && !out.isEmpty then out := ' ' :: out
-      space := false
-      out := c :: out
-  return String.ofList out.reverse
+  -- collapse runs of whitespace, with `String.foldl` rather than a `List Char` round trip
+  return (t.foldl (init := ("", false)) fun (out, space) c =>
+    if c == ' ' || c == '\n' || c == '\t' then (out, true)
+    else ((if space && !out.isEmpty then out.push ' ' else out).push c, false)).1
 
 end Normalisation
 
@@ -393,10 +388,12 @@ end Normalisation
 "lean": {"A","E","R"}, "wellTyped", "diagnostics"}]}` — the shape a target-side oracle writes. -/
 def readHeads (text : String) : Except String (Array HeadRow) := do
   let j ← Json.parse text
-  let rows ← match j.getObjVal? "rows" with
-    | .ok (.arr xs) => pure xs
-    | .ok _ => throw "`rows` is not an array"
-    | .error e => throw s!"no `rows` key: {e}"
+  let rows ← (j.getObjVal? "rows" |>.mapError fun e => s!"no `rows` key: {e}")
+    >>= (·.getArr?.mapError fun _ => "`rows` is not an array")
+  /- Deliberately **lenient**, so it is spelled out rather than left to `Json.getStr?`: a head
+  table's column may be a JSON `null` (the checker answered nothing) or a nested value (a printed
+  object), and this reader renders both rather than refusing the file. Refusing would make one
+  odd row cost the whole join. -/
   let str (o : Json) (k : String) : Except String String :=
     match o.getObjVal? k with
     | .ok (.str s) => .ok s
@@ -414,12 +411,10 @@ def readHeads (text : String) : Except String (Array HeadRow) := do
     let ctor := (key.splitOn "/").headD key
     let checker ← triple r "checker"
     let model ← triple r "lean"
-    let wellTyped ← match r.getObjVal? "wellTyped" with
-      | .ok (.bool b) => pure b
-      | _ => throw s!"`{key}`: no boolean `wellTyped`"
-    let diagnostics ← match r.getObjVal? "diagnostics" with
-      | .ok (.arr xs) => pure xs.size
-      | _ => pure 0
+    let wellTyped ← match r.getObjVal? "wellTyped" >>= Json.getBool? with
+      | .ok b => pure b
+      | .error _ => throw s!"`{key}`: no boolean `wellTyped`"
+    let diagnostics := ((r.getObjVal? "diagnostics" >>= Json.getArr?).toOption.map (·.size)).getD 0
     out := out.push { key, ctor, checker, model, wellTyped, diagnostics }
   return out
 
@@ -438,6 +433,12 @@ def readCoverage (text : String) (prefix_ : String) : Except String (Array (Stri
         | none => throw s!"`{t}`: `{count}` is not a count"
     | _ => throw s!"`{t}`: expected `<name>\\t<count>`"
   return out
+
+/-- The coverage table as a lookup rather than as an association list scanned per constructor. A
+duplicated name keeps the **first** row, which is what the `Array.find?` this replaces did; the
+reader itself still returns the file's own order. -/
+def coverageIndex (rows : Array (String × Nat)) : Std.HashMap String Nat :=
+  rows.foldl (init := {}) fun m (n, c) => if m.contains n then m else m.insert n c
 
 /-! ## 5. Signals -/
 
@@ -611,7 +612,7 @@ def JoinRow.toJson (r : JoinRow) (n : Normalisation) : Json :=
 
 /-- The signals of one constructor: the whole of the join's mechanical content. -/
 def signalsOf (spec : RulesSpec) (e : Extraction) (heads : Option (Array HeadRow))
-    (coverage : Option (Array (String × Nat))) (c : Name) : Array Signal := Id.run do
+    (coverage : Option (Std.HashMap String Nat)) (c : Name) : Array Signal := Id.run do
   let mut out : Array Signal := #[]
   match e.armOf? c with
   | none => out := out.push .leanArmMissing
@@ -622,6 +623,8 @@ def signalsOf (spec : RulesSpec) (e : Extraction) (heads : Option (Array HeadRow
           unless arm.callees.contains callee || arm.applied.contains callee do
             out := out.push (.leanGuardMissing callee)
   if let some hs := heads then
+    -- a *filter*, not a lookup: a constructor can have several head rows and all of them are
+    -- judged, so `Array.filter` is the right built-in and a lookup map would be the wrong shape
     let mine := hs.filter fun h => h.ctor == c.toString
     if mine.isEmpty then out := out.push .targetMissing
     for h in mine do
@@ -634,10 +637,9 @@ def signalsOf (spec : RulesSpec) (e : Extraction) (heads : Option (Array HeadRow
         let md' := spec.normalisation.apply md
         if ck' != md' then out := out.push (.targetSpelling col h.key ck' md')
   if let some cov := coverage then
-    match cov.find? fun (n, _) => n == c.toString with
-    | some (_, 0) => out := out.push .secondUnexercised
+    match cov[c.toString]? with
+    | some 0 | none => out := out.push .secondUnexercised
     | some _ => pure ()
-    | none => out := out.push .secondUnexercised
   return out
 
 /-- The A4 run: extract, join, and judge each constructor against the declared disagreements.
@@ -677,7 +679,7 @@ def extract (spec : RulesSpec) : CoreM (Json × Array Row × Nat) := do
       | some f =>
         if ← System.FilePath.pathExists f then
           match readCoverage (← IO.FS.readFile f) spec.coveragePrefix with
-          | .ok cs => inputs := inputs.push f.toString; pure (some cs)
+          | .ok cs => inputs := inputs.push f.toString; pure (some (coverageIndex cs))
           | .error e =>
             rows := rows.push <| Row.unresolved "rules.join.second"
               { kind := "file", path := [f.toString] } s!"the coverage table did not parse: {e}"
@@ -695,7 +697,7 @@ def extract (spec : RulesSpec) : CoreM (Json × Array Row × Nat) := do
         { ctor := c
         , lean := extraction.armOf? c
         , heads := (heads.getD #[]).filter fun h => h.ctor == c.toString
-        , exercised := (coverage.getD #[]).find? (fun (n, _) => n == c.toString) |>.map (·.2)
+        , exercised := coverage.bind (·[c.toString]?)
         , signals }
       joinRows := joinRows.push jr
       let subject : Subject :=
@@ -703,8 +705,7 @@ def extract (spec : RulesSpec) : CoreM (Json × Array Row × Nat) := do
       -- ids, deduplicated: a constructor with four head-table variants can raise the same
       -- signal four times, and the declaration should name it once. The full list, with the
       -- rows it came from, stays in the row's detail.
-      let observed := signals.map Signal.id |>.foldl (init := #[])
-        fun acc i => if acc.contains i then acc else acc.push i
+      let observed := (signals.map Signal.id).toList.eraseDups.toArray
       let known? := spec.known.find? fun k => k.ctor == c
       let declared := (known?.map (·.signals)).getD #[]
       let unexpected := observed.filter fun s => !declared.contains s

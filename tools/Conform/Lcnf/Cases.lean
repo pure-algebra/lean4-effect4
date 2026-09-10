@@ -69,18 +69,28 @@ deriving Inhabited
 
 namespace FamilyTable
 
-/-- The short name of a constructor: its last component. -/
-def shortCtor (c : Name) : Name := c.getString!.toName
+/-- The short name of a constructor: its last component. `Name.mkSimple` rather than
+`String.toName` — the latter runs the *parser* over the string, so a component with a dot or a
+French quote in it would come back as something else; `mkSimple` is the identity on the component
+the environment stored. Equal on every name in this tree (checked in `Fixtures/Traffic.lean`). -/
+def shortCtor (c : Name) : Name := Name.mkSimple c.getString!
+
+/-- The constructors of one inductive, as short names in declaration order, or the reason there
+are none. Deliberately **not** `getConstInfoInduct`: that throws, and this tool's three callers
+each owe the caller a named refusal (`Except`) rather than an exception — absence, refusal and
+frontier are three things. `InductiveVal.ctors` is the built-in that does the work. -/
+def ctorsOf (env : Environment) (f : Name) : Except String (Array Name) :=
+  match env.find? f with
+  | some (.inductInfo i) => .ok (i.ctors.toArray.map shortCtor)
+  | some _ => .error s!"`{f}` is a constant but not an inductive type"
+  | none => .error s!"`{f}` is not a constant of the imported environment"
 
 def ofEnv (env : Environment) (families : Array Name) : Except String FamilyTable := do
   let mut ctors : Std.HashMap Name (Array Name) := {}
   for f in families do
     if ctors.contains f then
       throw s!"family `{f}` is listed twice"
-    match env.find? f with
-    | some (.inductInfo i) => ctors := ctors.insert f (i.ctors.toArray.map shortCtor)
-    | some _ => throw s!"`{f}` is a constant but not an inductive type"
-    | none => throw s!"`{f}` is not a constant of the imported environment"
+    ctors := ctors.insert f (← ctorsOf env f)
   return { order := families, ctors }
 
 def contains (t : FamilyTable) (f : Name) : Bool := t.ctors.contains f
@@ -129,9 +139,9 @@ environment, so it is directly testable — and it is tested, in
 def stripAux (raw : Name) : Name × Array String := Id.run do
   let mut steps : Array String := #[]
   let mut n := raw
-  if isPrivateName n then
+  if let some user := privateToUserName? n then
     steps := steps.push "private"
-    n := privateToUserName n
+    n := user
   for _ in [0:8] do
     match n with
     | .str p s =>
@@ -192,6 +202,9 @@ def unreachable (t : FamilyTable) (s : Site) : Array Name :=
 def subject (s : Site) : Subject :=
   { kind := "caseSite", path := [s.family.toString, s.decl.toString, toString s.ordinal] }
 
+/-- Hand-written, not `deriving ToJson`: the schema is not the record. `attribution` is the field
+`steps` under the name a reader of the dump needs, and `absorbed`/`unreachable` are computed
+against the family table, which the record does not carry. -/
 def toJson (t : FamilyTable) (s : Site) : Json :=
   Json.mkObj
     [ ("decl", Json.str s.decl.toString)
@@ -211,34 +224,29 @@ private structure WalkState where
   node : Nat := 0
   sites : Array Site := #[]
 
-/-- The pure walk of one declaration's code. Visits `fun`/`jp` bodies before the continuation and
-pushes a `cases` node before its alternatives, so the order is a stable pre-order. -/
-private partial def walk (raw : Name) (keep : Name → Bool) :
-    Code .pure → StateM WalkState Unit
-  | .let _ k => walk raw keep k
-  | .fun d k => do walk raw keep d.value; walk raw keep k
-  | .jp d k => do walk raw keep d.value; walk raw keep k
-  | .jmp .. => pure ()
-  | .return _ => pure ()
-  | .unreach _ => pure ()
-  | .cases c => do
-    let node := (← get).node
-    modify fun s => { s with node := s.node + 1 }
-    if keep c.typeName then
-      let named := c.alts.filterMap fun a =>
-        match a with
-        | .alt ctor _ _ => some (FamilyTable.shortCtor ctor)
-        | .default _ => none
-      let hasDefault := c.alts.any fun a =>
-        match a with
-        | .default _ => true
-        | _ => false
-      let site : Site :=
-        { raw, decl := raw, steps := #[], family := c.typeName, node, ordinal := 0
-        , named, hasDefault }
-      modify fun s => { s with sites := s.sites.push site }
-    for a in c.alts do
-      walk raw keep a.getCode
+/-- One `cases` node, as a site. `named` is in the compiler's alternative order, which is why
+`Cases.getCtorNames` (`LCNF/Basic.lean:449-455`) is **not** used here: it answers with a `NameSet`,
+and a set has lost the order the audit reports. -/
+private def siteOf (raw : Name) (node : Nat) (c : Cases .pure) : Site :=
+  { raw, decl := raw, steps := #[], family := c.typeName, node, ordinal := 0
+  , named := c.alts.filterMap fun
+      | .alt ctor .. => some (FamilyTable.shortCtor ctor)
+      | .default _ => none
+  , hasDefault := c.alts.any (· matches .default _) }
+
+/-- The audited case sites of one declaration's code, in the compiler's own pre-order.
+
+`Code.forM` (`LCNF/Basic.lean:860-872`) *is* that walk: it visits a node, then a `let`'s
+continuation, a `fun`/`jp`'s body before its continuation, and a `cases`'s alternatives in order.
+It replaces the hand-written `partial` walker this seat first wrote, node index for node index —
+the index counts `cases` nodes only, and `Code.forM` reaches them in the same order. -/
+private def sitesOf (raw : Name) (keep : Name → Bool) (code : Code .pure) : Array Site :=
+  let walk : StateM WalkState Unit := code.forM fun
+    | .cases c => modify fun s =>
+        { node := s.node + 1
+        , sites := if keep c.typeName then s.sites.push (siteOf raw s.node c) else s.sites }
+    | _ => pure ()
+  (walk.run {}).2.sites
 
 /-- Where the scan gets its list of declarations to walk. The two answers are **not** the same set,
 and the difference is not small.
@@ -296,9 +304,7 @@ deriving Inhabited
 def scan (cfg : ScanConfig) : CoreM Scan := do
   let start ← IO.monoMsNow
   let env ← getEnv
-  let families ← match FamilyTable.ofEnv env cfg.families with
-    | .ok t => pure t
-    | .error e => throwError e
+  let families ← ofExcept (FamilyTable.ofEnv env cfg.families)
   let underRoots (n : Name) : Bool :=
     cfg.roots.isEmpty || cfg.roots.any fun r => r.isPrefixOf n
   let keep (n : Name) : Bool := families.contains n
@@ -314,14 +320,19 @@ def scan (cfg : ScanConfig) : CoreM Scan := do
     match d.value with
     | .extern _ => (1, sites)
     | .code c =>
-      let (_, st) := (walk n keep c).run {}
       let a := attributeOf env n
-      (0, st.sites.foldl (init := sites) fun acc s =>
-        acc.push ({ s with decl := a.user, steps := a.steps }))
+      (0, sites ++ (sitesOf n keep c).map fun s => { s with decl := a.user, steps := a.steps })
   match cfg.source with
   | .constants =>
-    for (n, _) in env.constants.toList do
-      unless underRoots n do continue
+    -- `Environment.constants` is an `SMap`; `toList` would cons a ~300k-element list only for the
+    -- roots to throw all but a few thousand of it away. `SMap.fold` visits the same entries, and
+    -- the list `toList` builds is the *reverse* of the fold order (`Lean/Data/SMap.lean:107-114`),
+    -- so reversing the filtered array reproduces the `toList` walk's order exactly — two builds'
+    -- `--dump-scan` receipts stay diffable.
+    let underRootNames : Array Name :=
+      (env.constants.fold (init := #[]) fun acc n _ =>
+        if underRoots n then acc.push n else acc).reverse
+    for n in underRootNames do
       constants := constants + 1
       match (← getMonoDecl? n) with
       | none => pure ()
@@ -366,8 +377,24 @@ def pins (s : Scan) : List Pin :=
   , { name := "scan.sites", value := toString s.sites.size }
   , { name := "scan.wallMs", value := toString s.wallMs } ]
 
+/-- One family's line of the scan's summary table. Four plain fields: the record is the schema. -/
+structure FamilyStat where
+  family : String
+  constructors : Nat
+  caseSites : Nat
+  sitesWithDefaultArm : Nat
+deriving ToJson
+
+def familyStats (s : Scan) : Array FamilyStat :=
+  s.byFamily.map fun (f, fs) =>
+    { family := f.toString
+    , constructors := (s.families.constructors f).size
+    , caseSites := fs.size
+    , sitesWithDefaultArm := (fs.filter (·.hasDefault)).size }
+
 /-- The whole scan as JSON: the shape the prototype wrote, plus the attribution and the
-absorbed/unreachable split. -/
+absorbed/unreachable split. Hand-written at the top level because the schema is not this record —
+`sites` is a *count* while the field is an array, and `site` is that array under another name. -/
 def toJson (s : Scan) : Json :=
   Json.mkObj
     [ ("source", Json.str s.source.id)
@@ -376,12 +403,7 @@ def toJson (s : Scan) : Json :=
     , ("externs", Json.num s.externs)
     , ("sites", Json.num s.sites.size)
     , ("wallMs", Json.num s.wallMs)
-    , ("byFamily", Json.arr ((s.byFamily).map fun (f, fs) =>
-        Json.mkObj
-          [ ("family", Json.str f.toString)
-          , ("constructors", Json.num (s.families.constructors f).size)
-          , ("caseSites", Json.num fs.size)
-          , ("sitesWithDefaultArm", Json.num (fs.filter (·.hasDefault)).size) ]))
+    , ("byFamily", Lean.toJson s.familyStats)
     , ("site", Json.arr (s.sites.map (Site.toJson s.families))) ]
 
 end Scan
@@ -485,22 +507,22 @@ private def readFamily (j : Json) : Policy.Reader FamilyPolicy := do
   let unlisted ← field get "unlisted" fun u =>
     enum u [("refuse", Unlisted.refuse), ("report", Unlisted.report)]
   let functions ← field get "functions" fun f => array f readFunction
-  let mut seen : Array Name := #[]
+  let mut seen : Std.HashSet Name := {}
   for fn in functions do
-    if seen.contains fn.name then
-      fail s!"function `{fn.name}` is listed twice under family `{name}`"
-    seen := seen.push fn.name
+    let (dup, seen') := seen.containsThenInsert fn.name
+    if dup then fail s!"function `{fn.name}` is listed twice under family `{name}`"
+    seen := seen'
   return { name, unlisted, functions }
 
 def read (j : Json) : Policy.Reader CasesPolicy := do
   let get ← object j ["families", "note"]
   let note ← field? get "note" string
   let families ← field get "families" fun f => array f readFamily
-  let mut seen : Array Name := #[]
+  let mut seen : Std.HashSet Name := {}
   for fam in families do
-    if seen.contains fam.name then
-      fail s!"family `{fam.name}` is listed twice"
-    seen := seen.push fam.name
+    let (dup, seen') := seen.containsThenInsert fam.name
+    if dup then fail s!"family `{fam.name}` is listed twice"
+    seen := seen'
   return { families, note }
 
 def load (file : System.FilePath) : IO CasesPolicy := Policy.load file read
@@ -533,6 +555,16 @@ def toJson (p : CasesPolicy) : Json :=
 end CasesPolicy
 
 /-! ## 5. The check -/
+
+/-- The `lcnf.cases.stale` row's detail. Four plain fields and no computation: the record **is**
+the schema, so the encoder is `deriving ToJson` rather than a hand `Json.mkObj`. (`Site.toJson`
+and `Scan.toJson` are not like this — see their notes.) -/
+private structure StaleDetail where
+  family : String
+  decl : String
+  rules : Nat
+  sitesFound : Nat
+deriving ToJson
 
 private def names (cs : Array Name) : String :=
   if cs.isEmpty then "none" else ", ".intercalate (cs.toList.map (·.toString))
@@ -610,32 +642,36 @@ def check (s : Scan) (p : CasesPolicy) : Array Row × Nat := Id.run do
   let mut expected := 0
   for fam in p.families do
     let famSites := s.sites.filter fun st => st.family == fam.name
+    -- The two lookups this loop needs, as maps built once per family rather than as a linear
+    -- search per site (`CasesPolicy.readFamily` already refuses a duplicate function name, so
+    -- "last insert wins" and "first match wins" are the same rule here).
+    let byName : Std.HashMap Name FunctionRule :=
+      fam.functions.foldl (init := {}) fun m fn => m.insert fn.name fn
+    let siteCount : Std.HashMap Name Nat :=
+      famSites.foldl (init := {}) fun m st => m.insert st.decl (m.getD st.decl 0 + 1)
     -- sites, in scan order
     for site in famSites do
       expected := expected + 1
-      let rule? := fam.functions.find? fun fn => fn.name == site.decl
       let paired : Option (FunctionRule × Option CaseMode) :=
-        rule?.map fun fn => (fn, fn.sites[site.ordinal]?)
+        byName[site.decl]?.map fun fn => (fn, fn.sites[site.ordinal]?)
       rows := rows.push (rowForSite s.families fam site paired)
     -- rules with no site: a stale policy, one row each
     for fn in fam.functions do
-      let found := famSites.filter fun st => st.decl == fn.name
-      for i in [found.size:fn.sites.size] do
+      let found := siteCount.getD fn.name 0
+      for i in [found:fn.sites.size] do
         expected := expected + 1
         let subject : Subject :=
           { kind := "caseSite", path := [fam.name.toString, fn.name.toString, toString i] }
         rows := rows.push <| Row.refused "lcnf.cases.stale" subject
-          (if found.isEmpty then
+          (if found == 0 then
             s!"the policy decides `{fn.name}` on `{fam.name}`, but the scan found no case site \
                there: the function is gone, was renamed, or no longer matches on this family"
            else
             s!"the policy gives `{fn.name}` {fn.sites.size} case sites on `{fam.name}`, the scan \
-               found {found.size}")
-          (Json.mkObj
-            [ ("family", Json.str fam.name.toString)
-            , ("decl", Json.str fn.name.toString)
-            , ("rules", Json.num fn.sites.size)
-            , ("sitesFound", Json.num found.size) ])
+               found {found}")
+          (toJson (α := StaleDetail)
+            { family := fam.name.toString, decl := fn.name.toString
+            , rules := fn.sites.size, sitesFound := found })
   return (rows, expected)
 
 /-! ## 6. Seeding
@@ -648,16 +684,18 @@ out in the family's declaration order. -/
 def seed (s : Scan) (unlisted : Unlisted := .refuse) : CasesPolicy :=
   { note := some "seeded from a measured scan; every cover is a decision, not a fix"
   , families := s.families.order.map fun f =>
-      let famSites := s.sites.filter fun st => st.family == f
-      let decls := famSites.foldl (init := #[]) fun acc st =>
-        if acc.contains st.decl then acc else acc.push st.decl
-      { name := f
-      , unlisted
-      , functions := decls.map fun d =>
-          { name := d
-          , sites := (famSites.filter fun st => st.decl == d).map fun st =>
+      -- one pass: the declarations in first-appearance order, and each one's modes in walk order
+      let (decls, modes) :=
+        (s.sites.filter fun st => st.family == f).foldl
+          (init := ((#[] : Array Name), (∅ : Std.HashMap Name (Array CaseMode))))
+          fun (decls, modes) st =>
+            let mode :=
               if st.hasDefault then CaseMode.withDefault (st.absorbed s.families)
               else CaseMode.exhaustive
-          , note := none } } }
+            ( if modes.contains st.decl then decls else decls.push st.decl
+            , modes.insert st.decl ((modes.getD st.decl #[]).push mode) )
+      { name := f
+      , unlisted
+      , functions := decls.map fun d => { name := d, sites := modes.getD d #[], note := none } } }
 
 end Conform.Lcnf

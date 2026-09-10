@@ -152,16 +152,14 @@ def Diff.agrees (d : Diff) : Bool :=
 constructors both lists carry, so a rename and a reorder are reported as the two different things
 they are. -/
 def diff (expected found : Array String) : Diff :=
-  let missing := expected.filter fun c => !found.contains c
-  let extra := found.filter fun c => !expected.contains c
-  let commonE := expected.filter fun c => found.contains c
-  let commonF := found.filter fun c => expected.contains c
-  let misordered := Id.run do
-    for h : i in [0:commonE.size] do
-      if hj : i < commonF.size then
-        if commonE[i] != commonF[i] then
-          return some (i, commonE[i], commonF[i])
-    return none
+  let inFound : Std.HashSet String := found.foldl (init := {}) (·.insert ·)
+  let inExpected : Std.HashSet String := expected.foldl (init := {}) (·.insert ·)
+  let missing := expected.filter fun c => !inFound.contains c
+  let extra := found.filter fun c => !inExpected.contains c
+  -- `zip` truncates to the shorter list, which is exactly the bound the hand loop guarded
+  let common := (expected.filter inFound.contains).zip (found.filter inExpected.contains)
+  let misordered := (common.findIdx? fun (e, f) => e != f).map fun i =>
+    (i, common[i]!.1, common[i]!.2)
   { missing, extra, misordered }
 
 private def list (xs : Array String) : String :=
@@ -201,10 +199,12 @@ private def normalise (m : Mirror) (s : String) : Except String String := do
   | some (_, t) => pure t
   | none => pure (m.rename.apply base)
 
-/-- The environment's constructors of `m.family`, as short names in declaration order. -/
+/-- The environment's constructors of `m.family`, as short names in declaration order.
+`InductiveVal.ctors` is the built-in; `getConstInfoInduct` is deliberately not, because this
+check owes its caller a named refusal rather than an exception. -/
 private def familyCtors (env : Environment) (f : Name) : Except String (Array String) :=
   match env.find? f with
-  | some (.inductInfo i) => .ok (i.ctors.toArray.map fun c => c.getString!)
+  | some (.inductInfo i) => .ok (i.ctors.toArray.map Name.getString!)
   | some _ => .error s!"`{f}` is a constant but not an inductive type"
   | none => .error s!"`{f}` is not a constant of the imported environment"
 
@@ -253,14 +253,20 @@ def checkOne (env : Environment) (m : Mirror) : IO Row := do
           s!"{m.file} disagrees with `{m.family}`: {d.message}{why}" detail
 
 /-- Every mirror in the list gets exactly one row; `expected` is the list's length, and the files
-actually opened come back so the driver can hash them into the report's `inputs`. -/
+the list *names* and that exist come back, in first-mention order, so the driver can hash them into
+the report's `inputs`.
+
+Note that this is the list's files, not the files `checkOne` opened: a mirror declared
+`reader: "unresolved"` is never read and its file is still hashed, because an edit to it should
+still make the gate's stamp miss. `Array.contains` over a list that has sixteen entries in this
+tree is the deduplication, and the array keeps the order the digests are taken in. -/
 def check (spec : MirrorSpec) : CoreM (Array Row × Nat × Array System.FilePath) := do
   let env ← getEnv
   let mut rows : Array Row := #[]
   let mut files : Array System.FilePath := #[]
   for m in spec.mirrors do
     rows := rows.push (← checkOne env m)
-    if (← System.FilePath.pathExists m.file) && !files.contains m.file then
+    if !files.contains m.file && (← System.FilePath.pathExists m.file) then
       files := files.push m.file
   return (rows, spec.mirrors.size, files)
 

@@ -81,4 +81,20 @@ section
 #guard stripAux `Foo.bar._wat == (`Foo.bar._wat, #[])
 end
 
+/-! ## Unit control for the short-name helper
+
+`FamilyTable.shortCtor` takes a constructor's last component. It uses `Name.mkSimple`, which is
+the identity on that component; `String.toName`, which the first cut of this seat used, runs the
+*parser* over it. The two agree on every constructor of this tree — these guards are the witness,
+and the last one is the input on which they would not. -/
+
+open Conform.Lcnf in
+section
+#guard FamilyTable.shortCtor `Effect4.Program.Ty.exitOf == `exitOf
+#guard FamilyTable.shortCtor `Effect4.Program.Eff.acquireRelease
+          == "acquireRelease".toName
+#guard FamilyTable.shortCtor (Lean.Name.mkStr (Lean.Name.mkSimple "F") "a.b") == Lean.Name.mkSimple "a.b"
+#guard (Lean.Name.mkSimple "a.b" != "a.b".toName)
+end
+
 end Conform.Effect4.Fixtures

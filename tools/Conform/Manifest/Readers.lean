@@ -57,28 +57,28 @@ def dropS (s : String) (n : Nat) : String := (s.drop n).toString
 
 /-- The number of leading spaces of a line. -/
 def indentOf (l : String) : Nat :=
-  (l.toList.takeWhile (· == ' ')).length
+  (l.takeWhile (· == ' ')).toString.length
 
 /-- The identifier at the front of `s`: letters, digits, `_`, `'`. Empty when `s` starts with
 something else. -/
 def leadingIdent (s : String) : String :=
-  String.ofList (s.toList.takeWhile fun c => c.isAlphanum || c == '_' || c == '\'')
+  (s.takeWhile fun c => c.isAlphanum || c == '_' || c == '\'').toString
 
 /-- Split on spaces that are **outside** parentheses, so `interrupt(term option)` is one item and
 not two. Refuses nothing: an unbalanced line simply yields one long item, which the caller's
-comparison then reports. -/
+comparison then reports. Not `String.splitOn`: that grammar is the whole point of this helper. -/
 def splitTopLevel (s : String) : Array String := Id.run do
   let mut out : Array String := #[]
-  let mut cur : List Char := []
+  let mut cur := ""
   let mut depth := 0
   for c in s.toList do
-    if c == '(' then depth := depth + 1; cur := c :: cur
-    else if c == ')' then depth := depth - 1; cur := c :: cur
+    if c == '(' then depth := depth + 1; cur := cur.push c
+    else if c == ')' then depth := depth - 1; cur := cur.push c
     else if c == ' ' && depth == 0 then
-      if !cur.isEmpty then out := out.push (String.ofList cur.reverse)
-      cur := []
-    else cur := c :: cur
-  if !cur.isEmpty then out := out.push (String.ofList cur.reverse)
+      if !cur.isEmpty then out := out.push cur
+      cur := ""
+    else cur := cur.push c
+  if !cur.isEmpty then out := out.push cur
   return out
 
 /-- The text between the first pair of `"` in `s`, or `none`. -/
@@ -110,13 +110,13 @@ private def ocamlToCamel (s : String) : String := Id.run do
   match s.toList with
   | [] => return ""
   | c :: rest =>
-    let mut out : List Char := [c.toLower]
+    let mut out := "".push c.toLower
     let mut underscore := false
     for d in rest do
       if d == '_' then underscore := true
-      else if underscore then out := d.toUpper :: out; underscore := false
-      else out := d :: out
-    return String.ofList out.reverse
+      else if underscore then out := out.push d.toUpper; underscore := false
+      else out := out.push d
+    return out
 
 def apply : Rename → String → String
   | .identity, s => s
@@ -145,25 +145,14 @@ strings, and a key no entry carries. -/
 def jsonInventory (shape : JsonShape) (text : String) (key : String) :
     Except String (Array String) := do
   let j ← Json.parse text
-  let arr ← match j.getObjVal? shape.array with
-    | .ok (.arr xs) => pure xs
-    | .ok _ => throw s!"`{shape.array}` is not an array"
-    | .error e => throw s!"no `{shape.array}` key: {e}"
+  let arr ← (j.getObjVal? shape.array |>.mapError fun e => s!"no `{shape.array}` key: {e}")
+    >>= (·.getArr?.mapError fun _ => s!"`{shape.array}` is not an array")
   for entry in arr do
-    match entry.getObjVal? shape.key with
-    | .ok (.str n) =>
-      if n == key then
-        match entry.getObjVal? shape.list with
-        | .ok (.arr cs) =>
-          let mut out : Array String := #[]
-          for c in cs do
-            match c with
-            | .str s => out := out.push s
-            | _ => throw s!"`{key}`: a `{shape.list}` entry is not a string"
-          return out
-        | .ok _ => throw s!"`{key}`: `{shape.list}` is not an array"
-        | .error _ => throw s!"`{key}`: no `{shape.list}` key"
-    | _ => pure ()
+    if (entry.getObjVal? shape.key >>= Json.getStr?).toOption == some key then
+      let cs ← (entry.getObjVal? shape.list |>.mapError fun _ => s!"`{key}`: no `{shape.list}` key")
+        >>= (·.getArr?.mapError fun _ => s!"`{key}`: `{shape.list}` is not an array")
+      return ← cs.mapM fun (c : Json) =>
+        c.getStr?.mapError fun _ => s!"`{key}`: a `{shape.list}` entry is not a string"
   throw s!"no entry with `{shape.key}` = `{key}`"
 
 /-- `Effect4.Program.Ty (ty) inductive: never unit nat … handle(string) option(ty)` — a generator's

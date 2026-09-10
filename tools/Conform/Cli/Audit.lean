@@ -129,7 +129,9 @@ structure Args where
   withRules : Bool := false
 deriving Inhabited
 
-partial def parseArgs : List String → Args → Except String Args
+/-- Total: every recursive call drops at least one element, so no `partial` and no `termination_by`
+are needed — the compiler sees the structural recursion. -/
+def parseArgs : List String → Args → Except String Args
   | [], a => if a.config == "" then .error "--config is required" else .ok a
   | "--config" :: v :: rest, a => parseArgs rest { a with config := v }
   | "--out" :: v :: rest, a => parseArgs rest { a with out := some v }
@@ -235,6 +237,10 @@ def main (argv : List String) : IO UInt32 := do
     IO.eprintln s!"conform-audit: {e.toString}"
     return 2
   initSearchPath (← findSysroot)
+  -- `importModules`, not `withImportModules`: the latter is `unsafe` (it frees the imported
+  -- regions when its action returns), and this driver exits the moment the report is written, so
+  -- the only thing that would buy is an `unsafe def main`. Measured: the kernel refuses the safe
+  -- `main` that calls it — `(kernel) invalid declaration, it uses unsafe declaration`.
   let env ← importModules (cfg.imports.map fun m => { module := m }) {} 0
   let ctx : Lean.Core.Context := { fileName := "<conform-audit>", fileMap := default }
   let result : Except String Report ← try
