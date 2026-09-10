@@ -56,8 +56,9 @@
 # 2026-09-08, when the avatar and the daemon were archived on `archive/ocaml5-avatar` and
 # both gates were deleted with them.
 
-# reason: engines cut before e2285a9; cleared by the Phase 1 regeneration, whose acceptance is DI-19's conformance suite (2026-09-09): 42 ocaml/eff goldens decoded and re-encoded, 8 wire goldens byte-equal, 24 truth programs to the same exit. Regeneration is the precondition, never the test
-# gate: generated-stale
+# History: the gate `engine-tests` was declared here from the timer commit (e2285a9) until
+# 2026-09-10, when the OCaml engine was regenerated at HEAD with the choose removal and
+# `dune test engine` passed; the entry was removed deliberately on that unexpected pass.
 
-# reason: engines cut before e2285a9; same acceptance as the entry above — DI-19's conformance suite, not the OCaml differential, which accepts only the carrier and extern change. An unexpected pass still refuses: the entry leaves deliberately when the suite passes
-# gate: engine-tests
+# reason: the two flat LCNF outputs `ocaml/gen/fibers_gen.ml` and `machine_gen.ml` were cut before e2285a9; regenerating them at HEAD builds, but the hand-written `ocaml/gen/gen_check.ml` still tests the pre-timer machine shape (no Task_wake, no wake_list/clock_step/prepare_answer) and fails C2. Cleared when gen_check.ml is brought to the timer and external rows (DI-19's Phase 1)
+# gate: generated-stale

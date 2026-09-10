@@ -141,7 +141,8 @@ stamp_inputs=(
 while IFS= read -r trace; do
   stamp_inputs+=("$trace")
 done < <(find "$real_build_lib/Effect4" "$real_build_lib/Test" -name '*.trace')
-stamp_inputs+=("${red_sources[@]}")
+# bash 3.2 (macOS) treats an empty array as unbound under `set -u`; expand it guarded.
+stamp_inputs+=(${red_sources[@]+"${red_sources[@]}"})
 gate_key="$(stamp_key "${stamp_inputs[@]}")"
 step_end "step 0c  key ${#stamp_inputs[@]} inputs"
 if stamp_hit trust-gate "$gate_key"; then
