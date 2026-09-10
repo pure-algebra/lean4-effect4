@@ -42,18 +42,17 @@ theorem effTy_gen_spec {Op : Type} (sig : Signature Op) (env : TyEnv) (body : St
   mvcgen
   all_goals simp_all
 
+/-- The inversion in the closed form (`seat-rules.md` §3.1): `∀ t, … = some t → P t` makes
+`Option.of_triple`'s invariant a Miller pattern, so it is written once. -/
 theorem effTy_branch_inv {Op : Type} (sig : Signature Op) (env : TyEnv)
-    (test : Term) (thenB elseB : Eff Op) (t : EffTy)
-    (h : effTy sig env (.branch test thenB elseB) = some t) :
-    termTy sig env test = some .bool ∧ ∃ a b,
-      effTy sig env thenB = some a ∧ effTy sig env elseB = some b ∧
-      EffTy.joinAnswer a.answer b.answer = some t.answer ∧
-      t.error = a.error.join b.error ∧ t.requires = a.requires.union b.requires :=
-  Option.of_triple (Inv := fun t => termTy sig env test = some .bool ∧ ∃ a b,
-      effTy sig env thenB = some a ∧ effTy sig env elseB = some b ∧
-      EffTy.joinAnswer a.answer b.answer = some t.answer ∧
-      t.error = a.error.join b.error ∧ t.requires = a.requires.union b.requires)
-    (by simp only [effTy]; mvcgen; all_goals simp_all) t h
+    (test : Term) (thenB elseB : Eff Op) :
+    ∀ t, effTy sig env (.branch test thenB elseB) = some t →
+      termTy sig env test = some .bool ∧ ∃ a b,
+        effTy sig env thenB = some a ∧ effTy sig env elseB = some b ∧
+        EffTy.joinAnswer a.answer b.answer = some t.answer ∧
+        t.error = a.error.join b.error ∧ t.requires = a.requires.union b.requires := by
+  refine Option.of_triple ?_
+  simp only [effTy]; mvcgen; all_goals simp_all
 
 #print axioms effTy_bind_spec
 #print axioms effTy_gen_spec

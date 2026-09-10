@@ -14,12 +14,16 @@ The pilot's culmination, end to end in one file:
 5. `effTy_sound`: acceptance by the algorithm implies the judgment, and `effTy_complete`: the
    judgment implies acceptance, both by induction on the fragment derivation.
 
-The fragment is the eight constructors that recurse only into `Eff` — `succeed`, `fail`,
+The fragment is the nine constructors that recurse only into `Eff` — `succeed`, `fail`,
 `sync`, `suspend`, `bind`, `branch`, `perform`, `scoped`, `acquireRelease` — so the induction
-never has to cross into `Stmts`, `Effs`, `ActionTerm` or `LayerTerm`; the full relation needs
-the seven-type mutual scaffolding (`Eff.lean:261-398`) and is the types scout's T3. What this
-file shows is that once the scaffolding is written, **every arm is mechanical**: the human
-writes the rule, the machine writes the proof.
+never has to cross into `Stmts`, `Effs`, `ActionTerm` or `LayerTerm`; the full relation over the
+seven-type mutual block (`Eff.lean:261-398`) is `Conform.Effect4.Typing` (the rules seat, 65
+rules, 68 inversions, sound and complete). What this file shows is that once the scaffolding is
+written, **every arm is mechanical**: the human writes the rule, the machine writes the proof.
+
+**The inversion form** (carried back from the rules seat, `seat-rules.md` §3.1): each lemma is
+stated closed, `∀ t, effTy … = some t → P t`, so `Option.of_triple`'s invariant is a Miller
+pattern and `refine Option.of_triple ?_` fills it — the invariant is written once, not twice.
 -/
 
 namespace Conform.Spec.Probe4
@@ -91,72 +95,62 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
 
 /-! ## The arms as inversion implications, each proved by the generator -/
 
-theorem inv_succeed (sig : Signature Op) (env : TyEnv) (value : Term) (t : EffTy)
-    (h : effTy sig env (.succeed value) = some t) :
-    ∃ ty, termTy sig env value = some ty ∧ t = EffTy.pure ty :=
-  Option.of_triple (Inv := fun t => ∃ ty, termTy sig env value = some ty ∧ t = EffTy.pure ty)
-    (by simp only [effTy]; mvcgen; all_goals simp_all) t h
+theorem inv_succeed (sig : Signature Op) (env : TyEnv) (value : Term) :
+    ∀ t, effTy sig env (.succeed value) = some t →
+      ∃ ty, termTy sig env value = some ty ∧ t = EffTy.pure ty := by
+  refine Option.of_triple ?_
+  simp only [effTy]; mvcgen; all_goals simp_all
 
-theorem inv_fail (sig : Signature Op) (env : TyEnv) (error : Term) (t : EffTy)
-    (h : effTy sig env (.fail error) = some t) :
-    ∃ ty, termTy sig env error = some ty ∧ t = ⟨.never, ty, Requirement.empty⟩ :=
-  Option.of_triple (Inv := fun t => ∃ ty, termTy sig env error = some ty ∧
-      t = ⟨.never, ty, Requirement.empty⟩)
-    (by simp only [effTy]; mvcgen; all_goals simp_all) t h
+theorem inv_fail (sig : Signature Op) (env : TyEnv) (error : Term) :
+    ∀ t, effTy sig env (.fail error) = some t →
+      ∃ ty, termTy sig env error = some ty ∧ t = ⟨.never, ty, Requirement.empty⟩ := by
+  refine Option.of_triple ?_
+  simp only [effTy]; mvcgen; all_goals simp_all
 
-theorem inv_sync (sig : Signature Op) (env : TyEnv) (thunk : Term) (t : EffTy)
-    (h : effTy sig env (.sync thunk) = some t) :
-    ∃ ty, termTy sig env thunk = some ty ∧ t = EffTy.pure ty :=
-  Option.of_triple (Inv := fun t => ∃ ty, termTy sig env thunk = some ty ∧ t = EffTy.pure ty)
-    (by simp only [effTy]; mvcgen; all_goals simp_all) t h
+theorem inv_sync (sig : Signature Op) (env : TyEnv) (thunk : Term) :
+    ∀ t, effTy sig env (.sync thunk) = some t →
+      ∃ ty, termTy sig env thunk = some ty ∧ t = EffTy.pure ty := by
+  refine Option.of_triple ?_
+  simp only [effTy]; mvcgen; all_goals simp_all
 
-theorem inv_suspend (sig : Signature Op) (env : TyEnv) (body : Eff Op) (t : EffTy)
-    (h : effTy sig env (.suspend body) = some t) : effTy sig env body = some t := by
-  simpa only [effTy] using h
+theorem inv_suspend (sig : Signature Op) (env : TyEnv) (body : Eff Op) :
+    ∀ t, effTy sig env (.suspend body) = some t → effTy sig env body = some t := by
+  intro t h; simpa only [effTy] using h
 
-theorem inv_bind (sig : Signature Op) (env : TyEnv) (first rest : Eff Op) (t : EffTy)
-    (h : effTy sig env (.bind first rest) = some t) :
-    ∃ f r, effTy sig env first = some f ∧ effTy sig (env ++ [f.answer]) rest = some r ∧
-      t = ⟨r.answer, f.error.join r.error, f.requires.union r.requires⟩ :=
-  Option.of_triple (Inv := fun t => ∃ f r, effTy sig env first = some f ∧
-      effTy sig (env ++ [f.answer]) rest = some r ∧
-      t = ⟨r.answer, f.error.join r.error, f.requires.union r.requires⟩)
-    (by simp only [effTy]; mvcgen; all_goals simp_all) t h
+theorem inv_bind (sig : Signature Op) (env : TyEnv) (first rest : Eff Op) :
+    ∀ t, effTy sig env (.bind first rest) = some t →
+      ∃ f r, effTy sig env first = some f ∧ effTy sig (env ++ [f.answer]) rest = some r ∧
+        t = ⟨r.answer, f.error.join r.error, f.requires.union r.requires⟩ := by
+  refine Option.of_triple ?_
+  simp only [effTy]; mvcgen; all_goals simp_all
 
-theorem inv_branch (sig : Signature Op) (env : TyEnv) (test : Term) (thenB elseB : Eff Op)
-    (t : EffTy) (h : effTy sig env (.branch test thenB elseB) = some t) :
-    termTy sig env test = some .bool ∧ ∃ a b answer,
-      effTy sig env thenB = some a ∧ effTy sig env elseB = some b ∧
-      EffTy.joinAnswer a.answer b.answer = some answer ∧
-      t = ⟨answer, a.error.join b.error, a.requires.union b.requires⟩ :=
-  Option.of_triple (Inv := fun t => termTy sig env test = some .bool ∧ ∃ a b answer,
-      effTy sig env thenB = some a ∧ effTy sig env elseB = some b ∧
-      EffTy.joinAnswer a.answer b.answer = some answer ∧
-      t = ⟨answer, a.error.join b.error, a.requires.union b.requires⟩)
-    (by simp only [effTy]; mvcgen; all_goals simp_all) t h
+theorem inv_branch (sig : Signature Op) (env : TyEnv) (test : Term) (thenB elseB : Eff Op) :
+    ∀ t, effTy sig env (.branch test thenB elseB) = some t →
+      termTy sig env test = some .bool ∧ ∃ a b answer,
+        effTy sig env thenB = some a ∧ effTy sig env elseB = some b ∧
+        EffTy.joinAnswer a.answer b.answer = some answer ∧
+        t = ⟨answer, a.error.join b.error, a.requires.union b.requires⟩ := by
+  refine Option.of_triple ?_
+  simp only [effTy]; mvcgen; all_goals simp_all
 
-theorem inv_perform (sig : Signature Op) (env : TyEnv) (op : Op) (request : Term) (t : EffTy)
-    (h : effTy sig env (.perform op request) = some t) :
-    sig.dom op = true ∧ termTy sig env request = some (sig.rowOf op).request ∧
-      t = ⟨(sig.rowOf op).answer, (sig.rowOf op).error, Requirement.ofList (sig.rowOf op).requires⟩ :=
-  Option.of_triple (Inv := fun t => sig.dom op = true ∧
-      termTy sig env request = some (sig.rowOf op).request ∧
-      t = ⟨(sig.rowOf op).answer, (sig.rowOf op).error, Requirement.ofList (sig.rowOf op).requires⟩)
-    (by simp only [effTy]; mvcgen; all_goals simp_all) t h
+theorem inv_perform (sig : Signature Op) (env : TyEnv) (op : Op) (request : Term) :
+    ∀ t, effTy sig env (.perform op request) = some t →
+      sig.dom op = true ∧ termTy sig env request = some (sig.rowOf op).request ∧
+        t = ⟨(sig.rowOf op).answer, (sig.rowOf op).error, Requirement.ofList (sig.rowOf op).requires⟩ := by
+  refine Option.of_triple ?_
+  simp only [effTy]; mvcgen; all_goals simp_all
 
-theorem inv_scoped (sig : Signature Op) (env : TyEnv) (body : Eff Op) (t : EffTy)
-    (h : effTy sig env (.scoped body) = some t) : effTy sig env body = some t := by
-  simpa only [effTy] using h
+theorem inv_scoped (sig : Signature Op) (env : TyEnv) (body : Eff Op) :
+    ∀ t, effTy sig env (.scoped body) = some t → effTy sig env body = some t := by
+  intro t h; simpa only [effTy] using h
 
-theorem inv_acquireRelease (sig : Signature Op) (env : TyEnv) (acquire release : Eff Op)
-    (t : EffTy) (h : effTy sig env (.acquireRelease acquire release) = some t) :
-    ∃ a r, effTy sig env acquire = some a ∧
-      effTy sig (env ++ [a.answer, .exitOf a.answer a.error]) release = some r ∧
-      t = ⟨a.answer, a.error, (a.requires.union r.requires).union (Requirement.single sig.scopeKey)⟩ :=
-  Option.of_triple (Inv := fun t => ∃ a r, effTy sig env acquire = some a ∧
-      effTy sig (env ++ [a.answer, .exitOf a.answer a.error]) release = some r ∧
-      t = ⟨a.answer, a.error, (a.requires.union r.requires).union (Requirement.single sig.scopeKey)⟩)
-    (by simp only [effTy]; mvcgen; all_goals simp_all) t h
+theorem inv_acquireRelease (sig : Signature Op) (env : TyEnv) (acquire release : Eff Op) :
+    ∀ t, effTy sig env (.acquireRelease acquire release) = some t →
+      ∃ a r, effTy sig env acquire = some a ∧
+        effTy sig (env ++ [a.answer, .exitOf a.answer a.error]) release = some r ∧
+        t = ⟨a.answer, a.error, (a.requires.union r.requires).union (Requirement.single sig.scopeKey)⟩ := by
+  refine Option.of_triple ?_
+  simp only [effTy]; mvcgen; all_goals simp_all
 
 /-! ## Soundness: acceptance implies the judgment -/
 
