@@ -291,10 +291,16 @@ def main (argv : List String) : IO UInt32 := do
       let mut same := 0
       let mut differ := 0
       let mut noCode := 0
+      let mut noCodeInternal := 0
       let mut examples : Array String := #[]
       for d in closure.decls do
         match ← recompileAgrees? d.name with
-        | none => noCode := noCode + 1
+        | none =>
+          noCode := noCode + 1
+          -- `Name.isInternal` is the compiler's own "the frontend could not have written
+          -- this" test: `_redArg`, `_lam_N` and the `._at_.….spec_N` chains all match it,
+          -- and those are exactly the names that have no kernel definition to compile.
+          if d.name.isInternal then noCodeInternal := noCodeInternal + 1
         | some (alpha, sameHash) =>
           if alpha then same := same + 1
           else
@@ -302,7 +308,7 @@ def main (argv : List String) : IO UInt32 := do
             if examples.size < 8 then
               examples := examples.push s!"{d.name} (same DeclHash: {sameHash})"
       IO.println s!"recompiled {closure.decls.size}: alphaEqv {same}, differ {differ}, \
-        no fresh body {noCode}"
+        no fresh body {noCode} (of which internal names: {noCodeInternal})"
       for e in examples do IO.println s!"  differs: {e}"
     -- cross-check against the real translator: the same roots through
     -- `OCaml5.Lcnf.translateClosure`, so the walker's numbers and the route's numbers are
