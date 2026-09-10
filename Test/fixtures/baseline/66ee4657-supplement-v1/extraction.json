@@ -1,0 +1,163 @@
+{
+  "extractor_sha256": "b650f5b240f27728935726cab26141eae8f63e88c1dd8f091c7e6860dab22293",
+  "inventory_sha256": "d85011d5335ceda9a8d18ee3b0ec7cd1dbe8656b300c26d4e6c472f1dc41bb7f",
+  "revision": "66ee465730126048ad90d99d24ce4f12f5bb2982",
+  "source_closure": [
+    {
+      "path": "src/Effect4/Arch/JsonNumber.lean",
+      "sha256": "cdd70c4b42b6ceff3ae503052755c9d47f89f086601626475015535aa6e76807"
+    },
+    {
+      "path": "src/Effect4/Data/Json.lean",
+      "sha256": "aedfb6ccf23396bc817a9d722a8319c76d13206a06679fcb6941af20c33f7e6e"
+    },
+    {
+      "path": "src/Effect4/Data/Optic.lean",
+      "sha256": "0a02907cd4e994ff180c2d11b090f7948481dc888812d85bdb892fb7c0adf78f"
+    },
+    {
+      "path": "src/Effect4/Data/Row.lean",
+      "sha256": "cfabbde2ff468e111c46cd3e16de6cd176ee4867e1cec4cb1a69df3b74f9848b"
+    },
+    {
+      "path": "src/Effect4/Machine/Cause.lean",
+      "sha256": "5af7693cae61303029b76a95ed63fefb565cb5f3b68afd0837f3413cad502f9a"
+    },
+    {
+      "path": "src/Effect4/Machine/Completion.lean",
+      "sha256": "0ae6167b79b5af271385f9fd15df824f5b16152bf3e9e356daddad480c551431"
+    },
+    {
+      "path": "src/Effect4/Machine/Context.lean",
+      "sha256": "9cf5a336e72aac22aa8614b14032b5d26382e84705ab1bb58e93f5fc1f72a335"
+    },
+    {
+      "path": "src/Effect4/Machine/ContextMap.lean",
+      "sha256": "e7fd464cf37443d7de0d92365210de18e8ce1a0b9cf11b5cd9af99c687de0d0e"
+    },
+    {
+      "path": "src/Effect4/Machine/Exit.lean",
+      "sha256": "348d0876578c65146cb67df5bbdaafbf64f7221c0bd6f8b79a7c3fd8391f5a4f"
+    },
+    {
+      "path": "src/Effect4/Machine/Fiber.lean",
+      "sha256": "804e126340aa3933819f6a2561ff5cfa95e5f28ba92926ef723c095b8d796bee"
+    },
+    {
+      "path": "src/Effect4/Machine/Fibers.lean",
+      "sha256": "b17d8e164c538eac7760e7111dfa5bb6ad594974a540b83106d9fed45f60332a"
+    },
+    {
+      "path": "src/Effect4/Machine/Frames.lean",
+      "sha256": "9f862ed588db26d479fa26cad4b2c84214e00f46cca3ab2c25e3ec8fb7ac2d9a"
+    },
+    {
+      "path": "src/Effect4/Machine/Key.lean",
+      "sha256": "e185856f4d04f951127001d45906ced511024b496ef40783a6b780ac1da84984"
+    },
+    {
+      "path": "src/Effect4/Machine/Scope.lean",
+      "sha256": "939826d574a3db860725d3d79a62378974995002c50ac9823c6536fe82397068"
+    },
+    {
+      "path": "src/Effect4/Machine/Stores.lean",
+      "sha256": "9c0131803e966891e1305a8f1673ff6d7489cabde542a0b55dbf9eee03453a3c"
+    },
+    {
+      "path": "src/Effect4/Machine/Supervision.lean",
+      "sha256": "675bf84940cc1e89bdc1ecdfedef9b94a81e3fc322e036ff25a8311498349fd6"
+    },
+    {
+      "path": "src/Effect4/Machine/Timer.lean",
+      "sha256": "97eeda1b4d75b36927ce9fae98797cbf84200f45485e009677441e39433e4bbb"
+    },
+    {
+      "path": "src/Effect4/Machine/Value.lean",
+      "sha256": "818b974ee1e958ad677d8db331b68e8972722f329f19526571947763be023fbc"
+    },
+    {
+      "path": "src/Effect4/Machine/Wake.lean",
+      "sha256": "27dca8657ba65dc0f3ef40b82bc3d9fe4fc1468272ea82d88c81b03b708c8065"
+    },
+    {
+      "path": "src/Effect4/Program/Eff.lean",
+      "sha256": "6df20e285a3ff893a5925b0e6d34a564185ea2d7efa88ab83d3bc2c6b4d85f71"
+    },
+    {
+      "path": "src/Effect4/Program/Native.lean",
+      "sha256": "e5a0bb9a5ac953c85e30ab2c4a2d4ac0c53b30ef5f0a38ba78a5ce66652e35a6"
+    },
+    {
+      "path": "src/Effect4/Program/Refs.lean",
+      "sha256": "8babd3fecbae9e1bdec996825c382eb7d2d89cf0949b922d2c10d19f0b2b35e5"
+    },
+    {
+      "path": "src/Effect4/Program/Typing.lean",
+      "sha256": "42282571d6406a71b9173123c27aae40add812bd6b4842bf57ef31b422f5b7bd"
+    },
+    {
+      "path": "src/Effect4/Schema/Annotations.lean",
+      "sha256": "94fdb0e002c79fbaddd00f862f184f822373a0d33dda947ecb85443b3bd2beb7"
+    },
+    {
+      "path": "src/Effect4/Schema/Authoring.lean",
+      "sha256": "0af8cc28fa1e82933d50410539b258ad9df7ba6f3b69be73147389c0c76a1922"
+    },
+    {
+      "path": "src/Effect4/Schema/Check.lean",
+      "sha256": "cf63447dc0c7a4a7899e1806992e9e4ab82079ee9a9fd0d00bb49089ff524592"
+    },
+    {
+      "path": "src/Effect4/Schema/Document.lean",
+      "sha256": "3575deb7ac4952b9f5910b884f247431ef6166c5a9b2b8051bd13054d582ae67"
+    },
+    {
+      "path": "src/Effect4/Schema/Payload.lean",
+      "sha256": "77dc812193a79c389d2a69e4ce3f6a3461c966e6487b273ae673258e4b65d18e"
+    },
+    {
+      "path": "src/Effect4/Schema/Representation.lean",
+      "sha256": "4a24b87cb4e164a68ddb91b21fb495a0d8c9cdc7c9d6d28f0318efc5145c692c"
+    },
+    {
+      "path": "src/Effect4/Store/Canonical.lean",
+      "sha256": "9997393b9fcfb77468414e93c9f5de80ed756c9ce03a86209ef483f402941962"
+    },
+    {
+      "path": "src/Effect4/Store/Digest.lean",
+      "sha256": "71f30ceb41c5a90fda3117d18cc78f9a64c8d4afbcc02580a37c4c8317926c65"
+    },
+    {
+      "path": "src/Effect4/Store/Digits.lean",
+      "sha256": "0e92a0fe5b8cb4427c7b9a49becd86892de0025f8b57236a53ab2ec6afb46c5c"
+    },
+    {
+      "path": "src/Effect4/Store/Image.lean",
+      "sha256": "d8b0c946868f1f766876c7607b7c73ef63498180b02032607a5d840aa690ea58"
+    },
+    {
+      "path": "src/Effect4/Store/Kind.lean",
+      "sha256": "d5343fd362236c302f112446463cb66d240fb029099c1964ea0c204017440657"
+    },
+    {
+      "path": "src/Effect4/Store/Node.lean",
+      "sha256": "a71153a18571d850f5a43d1499dd7dd821c680f6371d08d7a47744b3678bd20f"
+    },
+    {
+      "path": "src/Effect4/Store/Pin.lean",
+      "sha256": "2e7f71de307265b5cf9b2019428d5fd6ae542887db709fe3909dcf7a237e46fd"
+    },
+    {
+      "path": "src/Effect4/Store/Shape.lean",
+      "sha256": "d96098742817d0faf7c763d0ef027a7b961ce2cb7deaa09fbecf4c74c89ca17f"
+    },
+    {
+      "path": "src/Effect4/Store/Utf8.lean",
+      "sha256": "c532718c0616a3fcbb70c65c49ab2ea51dab864294ed8774e855b4dd6e7b87ab"
+    },
+    {
+      "path": "src/Effect4/Store/Val.lean",
+      "sha256": "f2c583cda17961c1d0440515894724d4457697ce93065672dda00f50a7532185"
+    }
+  ]
+}

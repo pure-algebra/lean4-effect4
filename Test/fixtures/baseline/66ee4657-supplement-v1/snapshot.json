@@ -1,0 +1,6740 @@
+{
+  "byte_maps": {
+    "HandleKind": [
+      {
+        "byte": 1,
+        "name": "fiber"
+      },
+      {
+        "byte": 2,
+        "name": "cell"
+      },
+      {
+        "byte": 3,
+        "name": "promise"
+      },
+      {
+        "byte": 4,
+        "name": "scope"
+      },
+      {
+        "byte": 5,
+        "name": "memoMap"
+      },
+      {
+        "byte": 7,
+        "name": "external"
+      }
+    ],
+    "Kind": [
+      {
+        "byte": 1,
+        "name": "source"
+      },
+      {
+        "byte": 2,
+        "name": "export"
+      },
+      {
+        "byte": 3,
+        "name": "type"
+      },
+      {
+        "byte": 4,
+        "name": "schema"
+      },
+      {
+        "byte": 5,
+        "name": "program"
+      },
+      {
+        "byte": 6,
+        "name": "annotation"
+      },
+      {
+        "byte": 7,
+        "name": "entry"
+      },
+      {
+        "byte": 8,
+        "name": "query"
+      },
+      {
+        "byte": 9,
+        "name": "result"
+      },
+      {
+        "byte": 10,
+        "name": "chunk"
+      },
+      {
+        "byte": 11,
+        "name": "tree"
+      },
+      {
+        "byte": 12,
+        "name": "manifest"
+      },
+      {
+        "byte": 13,
+        "name": "component"
+      },
+      {
+        "byte": 14,
+        "name": "vector"
+      },
+      {
+        "byte": 15,
+        "name": "fiber"
+      }
+    ],
+    "Tag": [
+      {
+        "byte": 1,
+        "name": "bool"
+      },
+      {
+        "byte": 2,
+        "name": "nat"
+      },
+      {
+        "byte": 3,
+        "name": "string"
+      },
+      {
+        "byte": 4,
+        "name": "list"
+      },
+      {
+        "byte": 5,
+        "name": "pair"
+      },
+      {
+        "byte": 6,
+        "name": "none"
+      },
+      {
+        "byte": 7,
+        "name": "some"
+      },
+      {
+        "byte": 8,
+        "name": "bytes"
+      },
+      {
+        "byte": 9,
+        "name": "unit"
+      },
+      {
+        "byte": 10,
+        "name": "ctor"
+      },
+      {
+        "byte": 11,
+        "name": "ref"
+      },
+      {
+        "byte": 12,
+        "name": "handle"
+      }
+    ]
+  },
+  "consumers": {
+    "deriving:Json": [
+      "Effect4.Float64",
+      "Effect4.Json"
+    ],
+    "deriving:Pin": [
+      "Effect4.Store.PinRole",
+      "Effect4.Store.Pin",
+      "Effect4.Store.Tree"
+    ],
+    "deriving:Program": [
+      "Effect4.Program.Lit",
+      "Effect4.Machine.FnName",
+      "Effect4.FinalizerStrategy",
+      "Effect4.Supervision.MaskMode",
+      "Effect4.Supervision.ObserverMode",
+      "Effect4.Program.NativeOp",
+      "Effect4.Supervision.ForkOptions",
+      "Effect4.Program.Term",
+      "Effect4.Program.CauseTerm",
+      "Effect4.ServiceName",
+      "Effect4.ServiceTypeCode",
+      "Effect4.ServiceKey",
+      "Effect4.Program.Eff@Effect4.Program.NativeOp"
+    ],
+    "deriving:Schema": [
+      "Effect4.ReferenceKey",
+      "Effect4.GlobalSymbolKey",
+      "Effect4.AnnotationEntry",
+      "Effect4.LiteralValue",
+      "Effect4.EnumValue",
+      "Effect4.EnumEntry",
+      "Effect4.PropertyKey",
+      "Effect4.RepresentationAnnotation",
+      "Effect4.UnionMode",
+      "Effect4.Representation",
+      "Effect4.ReferenceEntry",
+      "Effect4.Document",
+      "Effect4.MultiDocument"
+    ],
+    "ocaml-world": [
+      "Effect4.Program.Ty",
+      "Effect4.Program.Lit",
+      "Effect4.Program.Term",
+      "Effect4.Program.Terms",
+      "Effect4.Program.CauseTerm",
+      "Effect4.Supervision.MaskMode",
+      "Effect4.Supervision.ForkOptions",
+      "Effect4.Supervision.ObserverMode",
+      "Effect4.FinalizerStrategy",
+      "Effect4.Machine.FnName",
+      "Effect4.Program.NativeOp",
+      "Effect4.ServiceName",
+      "Effect4.ServiceTypeCode",
+      "Effect4.ServiceKey",
+      "Effect4.Program.Eff",
+      "Effect4.Program.Stmt",
+      "Effect4.Program.Stmts",
+      "Effect4.Program.Effs",
+      "Effect4.Program.ActionTerm",
+      "Effect4.Program.LayerTerm",
+      "Effect4.Program.LayerTerms",
+      "Effect4.Program.RowKind",
+      "Effect4.Program.RowShape",
+      "Effect4.Program.Registration",
+      "Effect4.Program.Row",
+      "Effect4.Program.EffTy"
+    ],
+    "wire": [
+      "Effect4.Program.Lit",
+      "Effect4.Program.Term",
+      "Effect4.Program.Terms",
+      "Effect4.Program.CauseTerm",
+      "Effect4.Machine.FnName",
+      "Effect4.FinalizerStrategy",
+      "Effect4.Program.NativeOp",
+      "Effect4.Supervision.MaskMode",
+      "Effect4.Supervision.ObserverMode",
+      "Effect4.Supervision.ForkOptions",
+      "Effect4.ServiceKey",
+      "Effect4.Program.Eff",
+      "Effect4.Program.LayerTerm",
+      "Effect4.Program.Stmt",
+      "Effect4.Program.Stmts",
+      "Effect4.Program.Effs",
+      "Effect4.Program.ActionTerm",
+      "Effect4.Program.LayerTerms"
+    ]
+  },
+  "families": [
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "key",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            },
+            {
+              "name": "payload",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Json",
+                "levels": []
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.AnnotationEntry",
+      "fields": [
+        "key",
+        "payload"
+      ],
+      "instance": {
+        "constant": "Effect4.AnnotationEntry",
+        "levels": []
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.AnnotationEntry"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "representation",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Representation",
+                "levels": []
+              }
+            },
+            {
+              "name": "references",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.ReferenceEntry",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.Document",
+      "fields": [
+        "representation",
+        "references"
+      ],
+      "instance": {
+        "constant": "Effect4.Document",
+        "levels": []
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.Document"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "name",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            },
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.EnumValue",
+                "levels": []
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.EnumEntry",
+      "fields": [
+        "name",
+        "value"
+      ],
+      "instance": {
+        "constant": "Effect4.EnumEntry",
+        "levels": []
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.EnumEntry"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            }
+          ],
+          "name": "string",
+          "ordinal": 0
+        },
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Float64",
+                "levels": []
+              }
+            }
+          ],
+          "name": "number",
+          "ordinal": 1
+        }
+      ],
+      "family": "Effect4.EnumValue",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.EnumValue",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.EnumValue"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "sequential",
+          "ordinal": 0
+        },
+        {
+          "arguments": [],
+          "name": "parallel",
+          "ordinal": 1
+        }
+      ],
+      "family": "Effect4.FinalizerStrategy",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.FinalizerStrategy",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.FinalizerStrategy"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "bits",
+              "proof": false,
+              "type": {
+                "constant": "UInt64",
+                "levels": []
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.Float64",
+      "fields": [
+        "bits"
+      ],
+      "instance": {
+        "constant": "Effect4.Float64",
+        "levels": []
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.Float64"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "key",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.GlobalSymbolKey",
+      "fields": [
+        "key"
+      ],
+      "instance": {
+        "constant": "Effect4.GlobalSymbolKey",
+        "levels": []
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.GlobalSymbolKey"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "null",
+          "ordinal": 0
+        },
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Bool",
+                "levels": []
+              }
+            }
+          ],
+          "name": "bool",
+          "ordinal": 1
+        },
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Float64",
+                "levels": []
+              }
+            }
+          ],
+          "name": "number",
+          "ordinal": 2
+        },
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            }
+          ],
+          "name": "str",
+          "ordinal": 3
+        },
+        {
+          "arguments": [
+            {
+              "name": "elements",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Json",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "arr",
+          "ordinal": 4
+        },
+        {
+          "arguments": [
+            {
+              "name": "entries",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "apply": [
+                          {
+                            "constant": "Prod",
+                            "levels": [
+                              "zero",
+                              "zero"
+                            ]
+                          },
+                          {
+                            "constant": "String",
+                            "levels": []
+                          }
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.Json",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "obj",
+          "ordinal": 5
+        }
+      ],
+      "family": "Effect4.Json",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.Json",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Json"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            }
+          ],
+          "name": "string",
+          "ordinal": 0
+        },
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Float64",
+                "levels": []
+              }
+            }
+          ],
+          "name": "number",
+          "ordinal": 1
+        },
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Int",
+                "levels": []
+              }
+            }
+          ],
+          "name": "bigint",
+          "ordinal": 2
+        },
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Bool",
+                "levels": []
+              }
+            }
+          ],
+          "name": "boolean",
+          "ordinal": 3
+        }
+      ],
+      "family": "Effect4.LiteralValue",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.LiteralValue",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.LiteralValue"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "incr",
+          "ordinal": 0
+        },
+        {
+          "arguments": [],
+          "name": "double",
+          "ordinal": 1
+        },
+        {
+          "arguments": [],
+          "name": "zeroWhenPositive",
+          "ordinal": 2
+        },
+        {
+          "arguments": [],
+          "name": "noChange",
+          "ordinal": 3
+        },
+        {
+          "arguments": [],
+          "name": "takeAndBump",
+          "ordinal": 4
+        }
+      ],
+      "family": "Effect4.Machine.FnName",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.Machine.FnName",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Machine.FnName"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "representations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Representation",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "references",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.ReferenceEntry",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.MultiDocument",
+      "fields": [
+        "representations",
+        "references"
+      ],
+      "instance": {
+        "constant": "Effect4.MultiDocument",
+        "levels": []
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.MultiDocument"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            }
+          ],
+          "name": "succeed",
+          "ordinal": 0
+        },
+        {
+          "arguments": [
+            {
+              "name": "error",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            }
+          ],
+          "name": "fail",
+          "ordinal": 1
+        },
+        {
+          "arguments": [
+            {
+              "name": "cause",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.CauseTerm",
+                "levels": []
+              }
+            }
+          ],
+          "name": "failCause",
+          "ordinal": 2
+        },
+        {
+          "arguments": [
+            {
+              "name": "error",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            }
+          ],
+          "name": "yieldError",
+          "ordinal": 3
+        },
+        {
+          "arguments": [
+            {
+              "name": "thunk",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            }
+          ],
+          "name": "sync",
+          "ordinal": 4
+        },
+        {
+          "arguments": [
+            {
+              "name": "body",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "suspend",
+          "ordinal": 5
+        },
+        {
+          "arguments": [
+            {
+              "name": "op",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.NativeOp",
+                "levels": []
+              }
+            },
+            {
+              "name": "request",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            }
+          ],
+          "name": "perform",
+          "ordinal": 6
+        },
+        {
+          "arguments": [
+            {
+              "name": "first",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "rest",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "bind",
+          "ordinal": 7
+        },
+        {
+          "arguments": [
+            {
+              "name": "body",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Stmts",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "gen",
+          "ordinal": 8
+        },
+        {
+          "arguments": [
+            {
+              "name": "body",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "handler",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "catchCause",
+          "ordinal": 9
+        },
+        {
+          "arguments": [
+            {
+              "name": "body",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "onValue",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "onCause",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "matchCause",
+          "ordinal": 10
+        },
+        {
+          "arguments": [
+            {
+              "name": "body",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "finalizer",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "onExit",
+          "ordinal": 11
+        },
+        {
+          "arguments": [
+            {
+              "name": "body",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "exit",
+          "ordinal": 12
+        },
+        {
+          "arguments": [
+            {
+              "name": "body",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "uninterruptible",
+          "ordinal": 13
+        },
+        {
+          "arguments": [
+            {
+              "name": "body",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "interruptible",
+          "ordinal": 14
+        },
+        {
+          "arguments": [
+            {
+              "name": "test",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            },
+            {
+              "name": "thenB",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "elseB",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "branch",
+          "ordinal": 15
+        },
+        {
+          "arguments": [
+            {
+              "name": "initial",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            },
+            {
+              "name": "test",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            },
+            {
+              "name": "step",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            },
+            {
+              "name": "body",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "whileLoop",
+          "ordinal": 16
+        },
+        {
+          "arguments": [
+            {
+              "name": "priority",
+              "proof": false,
+              "type": {
+                "constant": "Nat",
+                "levels": []
+              }
+            }
+          ],
+          "name": "yieldNow",
+          "ordinal": 17
+        },
+        {
+          "arguments": [
+            {
+              "name": "register",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.NativeOp",
+                "levels": []
+              }
+            },
+            {
+              "name": "request",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            }
+          ],
+          "name": "callback",
+          "ordinal": 18
+        },
+        {
+          "arguments": [
+            {
+              "name": "fiber",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            },
+            {
+              "name": "mode",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Supervision.ObserverMode",
+                "levels": []
+              }
+            }
+          ],
+          "name": "awaitFiber",
+          "ordinal": 19
+        },
+        {
+          "arguments": [
+            {
+              "name": "action",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.ActionTerm",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "withFiber",
+          "ordinal": 20
+        },
+        {
+          "arguments": [
+            {
+              "name": "body",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "scoped",
+          "ordinal": 21
+        },
+        {
+          "arguments": [
+            {
+              "name": "acquire",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "release",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "acquireRelease",
+          "ordinal": 22
+        },
+        {
+          "arguments": [
+            {
+              "name": "site",
+              "proof": false,
+              "type": {
+                "constant": "Nat",
+                "levels": []
+              }
+            },
+            {
+              "name": "left",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "right",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "choose",
+          "ordinal": 23
+        },
+        {
+          "arguments": [
+            {
+              "name": "layer",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.LayerTerm",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "isLocal",
+              "proof": false,
+              "type": {
+                "constant": "Bool",
+                "levels": []
+              }
+            },
+            {
+              "name": "body",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "provideLayer",
+          "ordinal": 24
+        },
+        {
+          "arguments": [
+            {
+              "name": "key",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.ServiceKey",
+                "levels": []
+              }
+            }
+          ],
+          "name": "service",
+          "ordinal": 25
+        },
+        {
+          "arguments": [
+            {
+              "name": "key",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.ServiceKey",
+                "levels": []
+              }
+            },
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            },
+            {
+              "name": "body",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "provideService",
+          "ordinal": 26
+        }
+      ],
+      "family": "Effect4.Program.Eff",
+      "fields": [],
+      "instance": {
+        "apply": [
+          {
+            "constant": "Effect4.Program.Eff",
+            "levels": []
+          },
+          {
+            "constant": "Effect4.Program.NativeOp",
+            "levels": []
+          }
+        ]
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Program.Eff",
+        "Effect4.Program.Stmt",
+        "Effect4.Program.Stmts",
+        "Effect4.Program.Effs",
+        "Effect4.Program.ActionTerm",
+        "Effect4.Program.LayerTerm",
+        "Effect4.Program.LayerTerms"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "effect",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "bindYield",
+          "ordinal": 0
+        },
+        {
+          "arguments": [
+            {
+              "name": "effect",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "yieldDiscard",
+          "ordinal": 1
+        },
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            }
+          ],
+          "name": "ret",
+          "ordinal": 2
+        },
+        {
+          "arguments": [
+            {
+              "name": "test",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            },
+            {
+              "name": "thenB",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Stmts",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "elseB",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Stmts",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "ifElse",
+          "ordinal": 3
+        },
+        {
+          "arguments": [
+            {
+              "name": "body",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Stmts",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "whileTrue",
+          "ordinal": 4
+        },
+        {
+          "arguments": [],
+          "name": "breakLoop",
+          "ordinal": 5
+        }
+      ],
+      "family": "Effect4.Program.Stmt",
+      "fields": [],
+      "instance": {
+        "apply": [
+          {
+            "constant": "Effect4.Program.Stmt",
+            "levels": []
+          },
+          {
+            "constant": "Effect4.Program.NativeOp",
+            "levels": []
+          }
+        ]
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Program.Eff",
+        "Effect4.Program.Stmt",
+        "Effect4.Program.Stmts",
+        "Effect4.Program.Effs",
+        "Effect4.Program.ActionTerm",
+        "Effect4.Program.LayerTerm",
+        "Effect4.Program.LayerTerms"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "nil",
+          "ordinal": 0
+        },
+        {
+          "arguments": [
+            {
+              "name": "head",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Stmt",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "tail",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Stmts",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "cons",
+          "ordinal": 1
+        }
+      ],
+      "family": "Effect4.Program.Stmts",
+      "fields": [],
+      "instance": {
+        "apply": [
+          {
+            "constant": "Effect4.Program.Stmts",
+            "levels": []
+          },
+          {
+            "constant": "Effect4.Program.NativeOp",
+            "levels": []
+          }
+        ]
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Program.Eff",
+        "Effect4.Program.Stmt",
+        "Effect4.Program.Stmts",
+        "Effect4.Program.Effs",
+        "Effect4.Program.ActionTerm",
+        "Effect4.Program.LayerTerm",
+        "Effect4.Program.LayerTerms"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "nil",
+          "ordinal": 0
+        },
+        {
+          "arguments": [
+            {
+              "name": "head",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "tail",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Effs",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "cons",
+          "ordinal": 1
+        }
+      ],
+      "family": "Effect4.Program.Effs",
+      "fields": [],
+      "instance": {
+        "apply": [
+          {
+            "constant": "Effect4.Program.Effs",
+            "levels": []
+          },
+          {
+            "constant": "Effect4.Program.NativeOp",
+            "levels": []
+          }
+        ]
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Program.Eff",
+        "Effect4.Program.Stmt",
+        "Effect4.Program.Stmts",
+        "Effect4.Program.Effs",
+        "Effect4.Program.ActionTerm",
+        "Effect4.Program.LayerTerm",
+        "Effect4.Program.LayerTerms"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "program",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "options",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Supervision.ForkOptions",
+                "levels": []
+              }
+            }
+          ],
+          "name": "fork",
+          "ordinal": 0
+        },
+        {
+          "arguments": [
+            {
+              "name": "program",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "options",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Supervision.ForkOptions",
+                "levels": []
+              }
+            },
+            {
+              "name": "scope",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            }
+          ],
+          "name": "forkIn",
+          "ordinal": 1
+        },
+        {
+          "arguments": [
+            {
+              "name": "program",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "options",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Supervision.ForkOptions",
+                "levels": []
+              }
+            }
+          ],
+          "name": "forkScoped",
+          "ordinal": 2
+        },
+        {
+          "arguments": [
+            {
+              "name": "target",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            },
+            {
+              "name": "scope",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            }
+          ],
+          "name": "runIn",
+          "ordinal": 3
+        },
+        {
+          "arguments": [
+            {
+              "name": "target",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            }
+          ],
+          "name": "interrupt",
+          "ordinal": 4
+        },
+        {
+          "arguments": [
+            {
+              "name": "target",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            }
+          ],
+          "name": "interruptScoped",
+          "ordinal": 5
+        },
+        {
+          "arguments": [
+            {
+              "name": "targets",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            },
+            {
+              "name": "interruptor",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Program.Term",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "interruptAll",
+          "ordinal": 6
+        },
+        {
+          "arguments": [
+            {
+              "name": "targets",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            }
+          ],
+          "name": "awaitAll",
+          "ordinal": 7
+        },
+        {
+          "arguments": [
+            {
+              "name": "targets",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            }
+          ],
+          "name": "awaitAllFailFast",
+          "ordinal": 8
+        },
+        {
+          "arguments": [],
+          "name": "snapshotChildren",
+          "ordinal": 9
+        },
+        {
+          "arguments": [
+            {
+              "name": "snapshot",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            }
+          ],
+          "name": "awaitNewChildren",
+          "ordinal": 10
+        },
+        {
+          "arguments": [
+            {
+              "name": "entrants",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Effs",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "raceAll",
+          "ordinal": 11
+        },
+        {
+          "arguments": [
+            {
+              "name": "context",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            }
+          ],
+          "name": "setContext",
+          "ordinal": 12
+        },
+        {
+          "arguments": [],
+          "name": "getContext",
+          "ordinal": 13
+        },
+        {
+          "arguments": [],
+          "name": "getId",
+          "ordinal": 14
+        },
+        {
+          "arguments": [
+            {
+              "name": "scope",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            },
+            {
+              "name": "exit",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            }
+          ],
+          "name": "closeScope",
+          "ordinal": 15
+        }
+      ],
+      "family": "Effect4.Program.ActionTerm",
+      "fields": [],
+      "instance": {
+        "apply": [
+          {
+            "constant": "Effect4.Program.ActionTerm",
+            "levels": []
+          },
+          {
+            "constant": "Effect4.Program.NativeOp",
+            "levels": []
+          }
+        ]
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Program.Eff",
+        "Effect4.Program.Stmt",
+        "Effect4.Program.Stmts",
+        "Effect4.Program.Effs",
+        "Effect4.Program.ActionTerm",
+        "Effect4.Program.LayerTerm",
+        "Effect4.Program.LayerTerms"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "key",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.ServiceKey",
+                "levels": []
+              }
+            },
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Lit",
+                "levels": []
+              }
+            }
+          ],
+          "name": "succeed",
+          "ordinal": 0
+        },
+        {
+          "arguments": [
+            {
+              "name": "key",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.ServiceKey",
+                "levels": []
+              }
+            },
+            {
+              "name": "body",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "effect",
+          "ordinal": 1
+        },
+        {
+          "arguments": [
+            {
+              "name": "body",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.Eff",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "effectDiscard",
+          "ordinal": 2
+        },
+        {
+          "arguments": [
+            {
+              "name": "self",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.LayerTerm",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "that",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.LayerTerm",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "provide",
+          "ordinal": 3
+        },
+        {
+          "arguments": [
+            {
+              "name": "self",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.LayerTerm",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "that",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.LayerTerm",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "provideMerge",
+          "ordinal": 4
+        },
+        {
+          "arguments": [
+            {
+              "name": "left",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.LayerTerm",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "right",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.LayerTerm",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "merge",
+          "ordinal": 5
+        },
+        {
+          "arguments": [
+            {
+              "name": "inner",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.LayerTerm",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "fresh",
+          "ordinal": 6
+        },
+        {
+          "arguments": [
+            {
+              "name": "inner",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.LayerTerm",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "orDie",
+          "ordinal": 7
+        },
+        {
+          "arguments": [
+            {
+              "name": "target",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Nat",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "ref",
+          "ordinal": 8
+        },
+        {
+          "arguments": [
+            {
+              "name": "layers",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.LayerTerms",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "mergeAll",
+          "ordinal": 9
+        }
+      ],
+      "family": "Effect4.Program.LayerTerm",
+      "fields": [],
+      "instance": {
+        "apply": [
+          {
+            "constant": "Effect4.Program.LayerTerm",
+            "levels": []
+          },
+          {
+            "constant": "Effect4.Program.NativeOp",
+            "levels": []
+          }
+        ]
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Program.Eff",
+        "Effect4.Program.Stmt",
+        "Effect4.Program.Stmts",
+        "Effect4.Program.Effs",
+        "Effect4.Program.ActionTerm",
+        "Effect4.Program.LayerTerm",
+        "Effect4.Program.LayerTerms"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "nil",
+          "ordinal": 0
+        },
+        {
+          "arguments": [
+            {
+              "name": "head",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.LayerTerm",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "tail",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.Program.LayerTerms",
+                    "levels": []
+                  },
+                  {
+                    "constant": "Effect4.Program.NativeOp",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "cons",
+          "ordinal": 1
+        }
+      ],
+      "family": "Effect4.Program.LayerTerms",
+      "fields": [],
+      "instance": {
+        "apply": [
+          {
+            "constant": "Effect4.Program.LayerTerms",
+            "levels": []
+          },
+          {
+            "constant": "Effect4.Program.NativeOp",
+            "levels": []
+          }
+        ]
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Program.Eff",
+        "Effect4.Program.Stmt",
+        "Effect4.Program.Stmts",
+        "Effect4.Program.Effs",
+        "Effect4.Program.ActionTerm",
+        "Effect4.Program.LayerTerm",
+        "Effect4.Program.LayerTerms"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "error",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            }
+          ],
+          "name": "fail",
+          "ordinal": 0
+        },
+        {
+          "arguments": [
+            {
+              "name": "defect",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            }
+          ],
+          "name": "die",
+          "ordinal": 1
+        },
+        {
+          "arguments": [
+            {
+              "name": "interruptor",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Program.Term",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "interrupt",
+          "ordinal": 2
+        },
+        {
+          "arguments": [
+            {
+              "name": "left",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.CauseTerm",
+                "levels": []
+              }
+            },
+            {
+              "name": "right",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.CauseTerm",
+                "levels": []
+              }
+            }
+          ],
+          "name": "both",
+          "ordinal": 3
+        }
+      ],
+      "family": "Effect4.Program.CauseTerm",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.Program.CauseTerm",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Program.CauseTerm"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "answer",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Ty",
+                "levels": []
+              }
+            },
+            {
+              "name": "error",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Ty",
+                "levels": []
+              }
+            },
+            {
+              "name": "requires",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "apply": [
+                      {
+                        "constant": "Effect4.Row",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.ServiceKey",
+                        "levels": []
+                      }
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.instLTServiceKey",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.Program.EffTy",
+      "fields": [
+        "answer",
+        "error",
+        "requires"
+      ],
+      "instance": {
+        "constant": "Effect4.Program.EffTy",
+        "levels": []
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.Program.EffTy"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "unit",
+          "ordinal": 0
+        },
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Nat",
+                "levels": []
+              }
+            }
+          ],
+          "name": "nat",
+          "ordinal": 1
+        },
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Bool",
+                "levels": []
+              }
+            }
+          ],
+          "name": "bool",
+          "ordinal": 2
+        },
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            }
+          ],
+          "name": "str",
+          "ordinal": 3
+        }
+      ],
+      "family": "Effect4.Program.Lit",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.Program.Lit",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Program.Lit"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "refMake",
+          "ordinal": 0
+        },
+        {
+          "arguments": [],
+          "name": "refGet",
+          "ordinal": 1
+        },
+        {
+          "arguments": [],
+          "name": "refSet",
+          "ordinal": 2
+        },
+        {
+          "arguments": [],
+          "name": "refGetAndSet",
+          "ordinal": 3
+        },
+        {
+          "arguments": [],
+          "name": "refSetAndGet",
+          "ordinal": 4
+        },
+        {
+          "arguments": [
+            {
+              "name": "f",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Machine.FnName",
+                "levels": []
+              }
+            }
+          ],
+          "name": "refUpdate",
+          "ordinal": 5
+        },
+        {
+          "arguments": [
+            {
+              "name": "f",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Machine.FnName",
+                "levels": []
+              }
+            }
+          ],
+          "name": "refGetAndUpdate",
+          "ordinal": 6
+        },
+        {
+          "arguments": [
+            {
+              "name": "f",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Machine.FnName",
+                "levels": []
+              }
+            }
+          ],
+          "name": "refUpdateAndGet",
+          "ordinal": 7
+        },
+        {
+          "arguments": [
+            {
+              "name": "f",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Machine.FnName",
+                "levels": []
+              }
+            }
+          ],
+          "name": "refUpdateSome",
+          "ordinal": 8
+        },
+        {
+          "arguments": [
+            {
+              "name": "f",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Machine.FnName",
+                "levels": []
+              }
+            }
+          ],
+          "name": "refGetAndUpdateSome",
+          "ordinal": 9
+        },
+        {
+          "arguments": [
+            {
+              "name": "f",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Machine.FnName",
+                "levels": []
+              }
+            }
+          ],
+          "name": "refUpdateSomeAndGet",
+          "ordinal": 10
+        },
+        {
+          "arguments": [
+            {
+              "name": "f",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Machine.FnName",
+                "levels": []
+              }
+            }
+          ],
+          "name": "refModify",
+          "ordinal": 11
+        },
+        {
+          "arguments": [
+            {
+              "name": "f",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Machine.FnName",
+                "levels": []
+              }
+            }
+          ],
+          "name": "refModifySome",
+          "ordinal": 12
+        },
+        {
+          "arguments": [],
+          "name": "deferredMake",
+          "ordinal": 13
+        },
+        {
+          "arguments": [],
+          "name": "deferredIsDone",
+          "ordinal": 14
+        },
+        {
+          "arguments": [],
+          "name": "deferredPoll",
+          "ordinal": 15
+        },
+        {
+          "arguments": [],
+          "name": "deferredSucceed",
+          "ordinal": 16
+        },
+        {
+          "arguments": [],
+          "name": "deferredFail",
+          "ordinal": 17
+        },
+        {
+          "arguments": [],
+          "name": "deferredAwait",
+          "ordinal": 18
+        },
+        {
+          "arguments": [
+            {
+              "name": "strategy",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.FinalizerStrategy",
+                "levels": []
+              }
+            }
+          ],
+          "name": "scopeMake",
+          "ordinal": 19
+        },
+        {
+          "arguments": [],
+          "name": "sleep",
+          "ordinal": 20
+        },
+        {
+          "arguments": [],
+          "name": "clockNow",
+          "ordinal": 21
+        },
+        {
+          "arguments": [
+            {
+              "name": "index",
+              "proof": false,
+              "type": {
+                "constant": "Nat",
+                "levels": []
+              }
+            }
+          ],
+          "name": "external",
+          "ordinal": 22
+        }
+      ],
+      "family": "Effect4.Program.NativeOp",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.Program.NativeOp",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Program.NativeOp"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "deferred",
+          "ordinal": 0
+        },
+        {
+          "arguments": [],
+          "name": "external",
+          "ordinal": 1
+        }
+      ],
+      "family": "Effect4.Program.Registration",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.Program.Registration",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Program.Registration"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "name",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            },
+            {
+              "name": "spelling",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            },
+            {
+              "name": "shape",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.RowShape",
+                "levels": []
+              }
+            },
+            {
+              "name": "trailing",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "String",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "kind",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.RowKind",
+                "levels": []
+              }
+            },
+            {
+              "name": "request",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Ty",
+                "levels": []
+              }
+            },
+            {
+              "name": "answer",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Ty",
+                "levels": []
+              }
+            },
+            {
+              "name": "error",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Ty",
+                "levels": []
+              }
+            },
+            {
+              "name": "requires",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.ServiceKey",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "cite",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            },
+            {
+              "name": "typeArgs",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "String",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "registration",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Registration",
+                "levels": []
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.Program.Row",
+      "fields": [
+        "name",
+        "spelling",
+        "shape",
+        "trailing",
+        "kind",
+        "request",
+        "answer",
+        "error",
+        "requires",
+        "cite",
+        "typeArgs",
+        "registration"
+      ],
+      "instance": {
+        "constant": "Effect4.Program.Row",
+        "levels": []
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.Program.Row"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "sync",
+          "ordinal": 0
+        },
+        {
+          "arguments": [],
+          "name": "async",
+          "ordinal": 1
+        },
+        {
+          "arguments": [],
+          "name": "program",
+          "ordinal": 2
+        }
+      ],
+      "family": "Effect4.Program.RowKind",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.Program.RowKind",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Program.RowKind"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "call",
+          "ordinal": 0
+        },
+        {
+          "arguments": [],
+          "name": "value",
+          "ordinal": 1
+        },
+        {
+          "arguments": [],
+          "name": "tupleCall",
+          "ordinal": 2
+        },
+        {
+          "arguments": [],
+          "name": "method",
+          "ordinal": 3
+        }
+      ],
+      "family": "Effect4.Program.RowShape",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.Program.RowShape",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Program.RowShape"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "index",
+              "proof": false,
+              "type": {
+                "constant": "Nat",
+                "levels": []
+              }
+            }
+          ],
+          "name": "var",
+          "ordinal": 0
+        },
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Lit",
+                "levels": []
+              }
+            }
+          ],
+          "name": "lit",
+          "ordinal": 1
+        },
+        {
+          "arguments": [
+            {
+              "name": "atom",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            },
+            {
+              "name": "args",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Terms",
+                "levels": []
+              }
+            }
+          ],
+          "name": "app",
+          "ordinal": 2
+        }
+      ],
+      "family": "Effect4.Program.Term",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.Program.Term",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Program.Term",
+        "Effect4.Program.Terms"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "nil",
+          "ordinal": 0
+        },
+        {
+          "arguments": [
+            {
+              "name": "head",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Term",
+                "levels": []
+              }
+            },
+            {
+              "name": "tail",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Terms",
+                "levels": []
+              }
+            }
+          ],
+          "name": "cons",
+          "ordinal": 1
+        }
+      ],
+      "family": "Effect4.Program.Terms",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.Program.Terms",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Program.Term",
+        "Effect4.Program.Terms"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "never",
+          "ordinal": 0
+        },
+        {
+          "arguments": [],
+          "name": "unit",
+          "ordinal": 1
+        },
+        {
+          "arguments": [],
+          "name": "nat",
+          "ordinal": 2
+        },
+        {
+          "arguments": [],
+          "name": "int",
+          "ordinal": 3
+        },
+        {
+          "arguments": [],
+          "name": "string",
+          "ordinal": 4
+        },
+        {
+          "arguments": [],
+          "name": "bool",
+          "ordinal": 5
+        },
+        {
+          "arguments": [
+            {
+              "name": "target",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            }
+          ],
+          "name": "handle",
+          "ordinal": 6
+        },
+        {
+          "arguments": [
+            {
+              "name": "inner",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Ty",
+                "levels": []
+              }
+            }
+          ],
+          "name": "option",
+          "ordinal": 7
+        },
+        {
+          "arguments": [
+            {
+              "name": "inner",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Ty",
+                "levels": []
+              }
+            }
+          ],
+          "name": "list",
+          "ordinal": 8
+        },
+        {
+          "arguments": [
+            {
+              "name": "left",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Ty",
+                "levels": []
+              }
+            },
+            {
+              "name": "right",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Ty",
+                "levels": []
+              }
+            }
+          ],
+          "name": "prod",
+          "ordinal": 9
+        },
+        {
+          "arguments": [
+            {
+              "name": "error",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Ty",
+                "levels": []
+              }
+            },
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Ty",
+                "levels": []
+              }
+            }
+          ],
+          "name": "except",
+          "ordinal": 10
+        },
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Ty",
+                "levels": []
+              }
+            },
+            {
+              "name": "error",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Ty",
+                "levels": []
+              }
+            }
+          ],
+          "name": "exitOf",
+          "ordinal": 11
+        },
+        {
+          "arguments": [
+            {
+              "name": "error",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Ty",
+                "levels": []
+              }
+            }
+          ],
+          "name": "causeOf",
+          "ordinal": 12
+        },
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Ty",
+                "levels": []
+              }
+            },
+            {
+              "name": "error",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Ty",
+                "levels": []
+              }
+            }
+          ],
+          "name": "fiberOf",
+          "ordinal": 13
+        },
+        {
+          "arguments": [
+            {
+              "name": "left",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Ty",
+                "levels": []
+              }
+            },
+            {
+              "name": "right",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Program.Ty",
+                "levels": []
+              }
+            }
+          ],
+          "name": "union",
+          "ordinal": 14
+        }
+      ],
+      "family": "Effect4.Program.Ty",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.Program.Ty",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Program.Ty"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            }
+          ],
+          "name": "string",
+          "ordinal": 0
+        },
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Float64",
+                "levels": []
+              }
+            }
+          ],
+          "name": "number",
+          "ordinal": 1
+        },
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.GlobalSymbolKey",
+                "levels": []
+              }
+            }
+          ],
+          "name": "globalSymbol",
+          "ordinal": 2
+        }
+      ],
+      "family": "Effect4.PropertyKey",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.PropertyKey",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.PropertyKey"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "key",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            },
+            {
+              "name": "representation",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Representation",
+                "levels": []
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.ReferenceEntry",
+      "fields": [
+        "key",
+        "representation"
+      ],
+      "instance": {
+        "constant": "Effect4.ReferenceEntry",
+        "levels": []
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.ReferenceEntry"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.ReferenceKey",
+      "fields": [
+        "value"
+      ],
+      "instance": {
+        "constant": "Effect4.ReferenceKey",
+        "levels": []
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.ReferenceKey"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "representation",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.RepresentationAnnotation",
+                "levels": []
+              }
+            },
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "typeParameters",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Representation",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "declaration",
+          "ordinal": 0
+        },
+        {
+          "arguments": [
+            {
+              "name": "ref",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.ReferenceKey",
+                "levels": []
+              }
+            }
+          ],
+          "name": "reference",
+          "ordinal": 1
+        },
+        {
+          "arguments": [
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "thunk",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Representation",
+                "levels": []
+              }
+            }
+          ],
+          "name": "suspend",
+          "ordinal": 2
+        },
+        {
+          "arguments": [
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "null",
+          "ordinal": 3
+        },
+        {
+          "arguments": [
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "undefined",
+          "ordinal": 4
+        },
+        {
+          "arguments": [
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "void",
+          "ordinal": 5
+        },
+        {
+          "arguments": [
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "never",
+          "ordinal": 6
+        },
+        {
+          "arguments": [
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "unknown",
+          "ordinal": 7
+        },
+        {
+          "arguments": [
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "any",
+          "ordinal": 8
+        },
+        {
+          "arguments": [
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "string",
+          "ordinal": 9
+        },
+        {
+          "arguments": [
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "number",
+          "ordinal": 10
+        },
+        {
+          "arguments": [
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "boolean",
+          "ordinal": 11
+        },
+        {
+          "arguments": [
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "bigint",
+          "ordinal": 12
+        },
+        {
+          "arguments": [
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "symbol",
+          "ordinal": 13
+        },
+        {
+          "arguments": [
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "literal",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.LiteralValue",
+                "levels": []
+              }
+            }
+          ],
+          "name": "literal",
+          "ordinal": 14
+        },
+        {
+          "arguments": [
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "symbol",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.GlobalSymbolKey",
+                "levels": []
+              }
+            }
+          ],
+          "name": "uniqueSymbol",
+          "ordinal": 15
+        },
+        {
+          "arguments": [
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "objectKeyword",
+          "ordinal": 16
+        },
+        {
+          "arguments": [
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "enums",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.EnumEntry",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "enum",
+          "ordinal": 17
+        },
+        {
+          "arguments": [
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "parts",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Representation",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "templateLiteral",
+          "ordinal": 18
+        },
+        {
+          "arguments": [
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "elements",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "Effect4.ElementOf",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.Representation",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "rest",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Representation",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "arrays",
+          "ordinal": 19
+        },
+        {
+          "arguments": [
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "propertySignatures",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "Effect4.PropertySignatureOf",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.Representation",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "indexSignatures",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "Effect4.IndexSignatureOf",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.Representation",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "objects",
+          "ordinal": 20
+        },
+        {
+          "arguments": [
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "types",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Representation",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "mode",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.UnionMode",
+                "levels": []
+              }
+            }
+          ],
+          "name": "union",
+          "ordinal": 21
+        }
+      ],
+      "family": "Effect4.Representation",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.Representation",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Representation",
+        "Effect4.Check"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "representation",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Effect4.CheckRepresentationAnnotationOf",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Representation",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "aborted",
+              "proof": false,
+              "type": {
+                "constant": "Bool",
+                "levels": []
+              }
+            }
+          ],
+          "name": "filter",
+          "ordinal": 0
+        },
+        {
+          "arguments": [
+            {
+              "name": "representation",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "Effect4.CheckRepresentationAnnotationOf",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.Representation",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "name": "checks",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.Check",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "filterGroup",
+          "ordinal": 1
+        }
+      ],
+      "family": "Effect4.Check",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.Check",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Representation",
+        "Effect4.Check"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "id",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            },
+            {
+              "name": "payload",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Json",
+                "levels": []
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.RepresentationAnnotation",
+      "fields": [
+        "id",
+        "payload"
+      ],
+      "instance": {
+        "constant": "Effect4.RepresentationAnnotation",
+        "levels": []
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.RepresentationAnnotation"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "name",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.ServiceName",
+                "levels": []
+              }
+            },
+            {
+              "name": "service",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.ServiceTypeCode",
+                "levels": []
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.ServiceKey",
+      "fields": [
+        "name",
+        "service"
+      ],
+      "instance": {
+        "constant": "Effect4.ServiceKey",
+        "levels": []
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.ServiceKey"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Nat",
+                "levels": []
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.ServiceName",
+      "fields": [
+        "value"
+      ],
+      "instance": {
+        "constant": "Effect4.ServiceName",
+        "levels": []
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.ServiceName"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "value",
+              "proof": false,
+              "type": {
+                "constant": "Nat",
+                "levels": []
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.ServiceTypeCode",
+      "fields": [
+        "value"
+      ],
+      "instance": {
+        "constant": "Effect4.ServiceTypeCode",
+        "levels": []
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.ServiceTypeCode"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "package",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            },
+            {
+              "name": "version",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            },
+            {
+              "name": "file",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            },
+            {
+              "name": "declaration",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            },
+            {
+              "name": "role",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Store.PinRole",
+                "levels": []
+              }
+            },
+            {
+              "name": "anchor",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            },
+            {
+              "name": "offsetStart",
+              "proof": false,
+              "type": {
+                "constant": "Nat",
+                "levels": []
+              }
+            },
+            {
+              "name": "offsetEnd",
+              "proof": false,
+              "type": {
+                "constant": "Nat",
+                "levels": []
+              }
+            },
+            {
+              "name": "spanDigest",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Store.Digest",
+                "levels": []
+              }
+            },
+            {
+              "name": "text",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "String",
+                    "levels": []
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.Store.Pin",
+      "fields": [
+        "package",
+        "version",
+        "file",
+        "declaration",
+        "role",
+        "anchor",
+        "offsetStart",
+        "offsetEnd",
+        "spanDigest",
+        "text"
+      ],
+      "instance": {
+        "constant": "Effect4.Store.Pin",
+        "levels": []
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.Store.Pin"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "public",
+          "ordinal": 0
+        },
+        {
+          "arguments": [],
+          "name": "internal",
+          "ordinal": 1
+        }
+      ],
+      "family": "Effect4.Store.PinRole",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.Store.PinRole",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Store.PinRole"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "bindings",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "apply": [
+                          {
+                            "constant": "Prod",
+                            "levels": [
+                              "zero",
+                              "zero"
+                            ]
+                          },
+                          {
+                            "constant": "String",
+                            "levels": []
+                          }
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.Store.AnyRef",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.Store.Tree",
+      "fields": [
+        "bindings"
+      ],
+      "instance": {
+        "constant": "Effect4.Store.Tree",
+        "levels": []
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.Store.Tree"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "startImmediately",
+              "proof": false,
+              "type": {
+                "constant": "Bool",
+                "levels": []
+              }
+            },
+            {
+              "name": "daemon",
+              "proof": false,
+              "type": {
+                "constant": "Bool",
+                "levels": []
+              }
+            },
+            {
+              "name": "maskMode",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Supervision.MaskMode",
+                "levels": []
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.Supervision.ForkOptions",
+      "fields": [
+        "startImmediately",
+        "daemon",
+        "maskMode"
+      ],
+      "instance": {
+        "constant": "Effect4.Supervision.ForkOptions",
+        "levels": []
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.Supervision.ForkOptions"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "interruptible",
+          "ordinal": 0
+        },
+        {
+          "arguments": [],
+          "name": "uninterruptible",
+          "ordinal": 1
+        },
+        {
+          "arguments": [],
+          "name": "inherit",
+          "ordinal": 2
+        }
+      ],
+      "family": "Effect4.Supervision.MaskMode",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.Supervision.MaskMode",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Supervision.MaskMode"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "awaitValue",
+          "ordinal": 0
+        },
+        {
+          "arguments": [],
+          "name": "joinEffect",
+          "ordinal": 1
+        }
+      ],
+      "family": "Effect4.Supervision.ObserverMode",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.Supervision.ObserverMode",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Supervision.ObserverMode"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "anyOf",
+          "ordinal": 0
+        },
+        {
+          "arguments": [],
+          "name": "oneOf",
+          "ordinal": 1
+        }
+      ],
+      "family": "Effect4.UnionMode",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.UnionMode",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.UnionMode"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "boom",
+          "ordinal": 0
+        },
+        {
+          "arguments": [
+            {
+              "name": "code",
+              "proof": false,
+              "type": {
+                "constant": "Nat",
+                "levels": []
+              }
+            }
+          ],
+          "name": "tag",
+          "ordinal": 1
+        },
+        {
+          "arguments": [
+            {
+              "name": "tag",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            },
+            {
+              "name": "message",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            }
+          ],
+          "name": "tagged",
+          "ordinal": 2
+        }
+      ],
+      "family": "Effect4.Machine.Err",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.Machine.Err",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Machine.Err"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "notImplemented",
+          "ordinal": 0
+        },
+        {
+          "arguments": [],
+          "name": "asyncFiber",
+          "ordinal": 1
+        },
+        {
+          "arguments": [],
+          "name": "badName",
+          "ordinal": 2
+        },
+        {
+          "arguments": [],
+          "name": "missingService",
+          "ordinal": 3
+        },
+        {
+          "arguments": [
+            {
+              "name": "payload",
+              "proof": false,
+              "type": {
+                "constant": "Nat",
+                "levels": []
+              }
+            }
+          ],
+          "name": "user",
+          "ordinal": 4
+        }
+      ],
+      "family": "Effect4.Machine.Defect",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.Machine.Defect",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Machine.Defect"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "source",
+          "ordinal": 0
+        },
+        {
+          "arguments": [],
+          "name": "export",
+          "ordinal": 1
+        },
+        {
+          "arguments": [],
+          "name": "type",
+          "ordinal": 2
+        },
+        {
+          "arguments": [],
+          "name": "schema",
+          "ordinal": 3
+        },
+        {
+          "arguments": [],
+          "name": "program",
+          "ordinal": 4
+        },
+        {
+          "arguments": [],
+          "name": "annotation",
+          "ordinal": 5
+        },
+        {
+          "arguments": [],
+          "name": "entry",
+          "ordinal": 6
+        },
+        {
+          "arguments": [],
+          "name": "query",
+          "ordinal": 7
+        },
+        {
+          "arguments": [],
+          "name": "result",
+          "ordinal": 8
+        },
+        {
+          "arguments": [],
+          "name": "chunk",
+          "ordinal": 9
+        },
+        {
+          "arguments": [],
+          "name": "tree",
+          "ordinal": 10
+        },
+        {
+          "arguments": [],
+          "name": "manifest",
+          "ordinal": 11
+        },
+        {
+          "arguments": [],
+          "name": "component",
+          "ordinal": 12
+        },
+        {
+          "arguments": [],
+          "name": "vector",
+          "ordinal": 13
+        },
+        {
+          "arguments": [],
+          "name": "fiber",
+          "ordinal": 14
+        }
+      ],
+      "family": "Effect4.Store.Kind",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.Store.Kind",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Store.Kind"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [],
+          "name": "fiber",
+          "ordinal": 0
+        },
+        {
+          "arguments": [],
+          "name": "cell",
+          "ordinal": 1
+        },
+        {
+          "arguments": [],
+          "name": "promise",
+          "ordinal": 2
+        },
+        {
+          "arguments": [],
+          "name": "scope",
+          "ordinal": 3
+        },
+        {
+          "arguments": [],
+          "name": "memoMap",
+          "ordinal": 4
+        },
+        {
+          "arguments": [],
+          "name": "external",
+          "ordinal": 5
+        }
+      ],
+      "family": "Effect4.Machine.HandleKind",
+      "fields": [],
+      "instance": {
+        "constant": "Effect4.Machine.HandleKind",
+        "levels": []
+      },
+      "kind": "inductive",
+      "mutual": [
+        "Effect4.Machine.HandleKind"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "elems",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      {
+                        "parameter": "u"
+                      }
+                    ]
+                  },
+                  {
+                    "constant": "Effect4.ServiceKey",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "ascending",
+              "proof": true,
+              "type": {
+                "apply": [
+                  {
+                    "binder": "Lean.BinderInfo.default",
+                    "lambda": [
+                      {
+                        "apply": [
+                          {
+                            "constant": "List",
+                            "levels": [
+                              {
+                                "parameter": "u"
+                              }
+                            ]
+                          },
+                          {
+                            "constant": "Effect4.ServiceKey",
+                            "levels": []
+                          }
+                        ]
+                      },
+                      {
+                        "apply": [
+                          {
+                            "apply": [
+                              {
+                                "apply": [
+                                  {
+                                    "constant": "List.Pairwise",
+                                    "levels": [
+                                      {
+                                        "parameter": "u"
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "constant": "Effect4.ServiceKey",
+                                    "levels": []
+                                  }
+                                ]
+                              },
+                              {
+                                "binder": "Lean.BinderInfo.default",
+                                "lambda": [
+                                  {
+                                    "constant": "Effect4.ServiceKey",
+                                    "levels": []
+                                  },
+                                  {
+                                    "binder": "Lean.BinderInfo.default",
+                                    "lambda": [
+                                      {
+                                        "constant": "Effect4.ServiceKey",
+                                        "levels": []
+                                      },
+                                      {
+                                        "apply": [
+                                          {
+                                            "apply": [
+                                              {
+                                                "apply": [
+                                                  {
+                                                    "apply": [
+                                                      {
+                                                        "constant": "LT.lt",
+                                                        "levels": [
+                                                          {
+                                                            "parameter": "u"
+                                                          }
+                                                        ]
+                                                      },
+                                                      {
+                                                        "constant": "Effect4.ServiceKey",
+                                                        "levels": []
+                                                      }
+                                                    ]
+                                                  },
+                                                  {
+                                                    "constant": "Effect4.instLTServiceKey",
+                                                    "levels": []
+                                                  }
+                                                ]
+                                              },
+                                              {
+                                                "bound": 1
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "bound": 0
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "bound": 0
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "bound": 0
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.Row",
+      "fields": [
+        "elems",
+        "ascending"
+      ],
+      "instance": {
+        "apply": [
+          {
+            "apply": [
+              {
+                "constant": "Effect4.Row",
+                "levels": [
+                  "zero"
+                ]
+              },
+              {
+                "constant": "Effect4.ServiceKey",
+                "levels": []
+              }
+            ]
+          },
+          {
+            "constant": "Effect4.instLTServiceKey",
+            "levels": []
+          }
+        ]
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.Row"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "isOptional",
+              "proof": false,
+              "type": {
+                "constant": "Bool",
+                "levels": []
+              }
+            },
+            {
+              "name": "type",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Representation",
+                "levels": []
+              }
+            },
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.ElementOf",
+      "fields": [
+        "isOptional",
+        "type",
+        "annotations"
+      ],
+      "instance": {
+        "apply": [
+          {
+            "constant": "Effect4.ElementOf",
+            "levels": [
+              "zero"
+            ]
+          },
+          {
+            "constant": "Effect4.Representation",
+            "levels": []
+          }
+        ]
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.ElementOf"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "name",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.PropertyKey",
+                "levels": []
+              }
+            },
+            {
+              "name": "type",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Representation",
+                "levels": []
+              }
+            },
+            {
+              "name": "isOptional",
+              "proof": false,
+              "type": {
+                "constant": "Bool",
+                "levels": []
+              }
+            },
+            {
+              "name": "isMutable",
+              "proof": false,
+              "type": {
+                "constant": "Bool",
+                "levels": []
+              }
+            },
+            {
+              "name": "annotations",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          "zero"
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.AnnotationEntry",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.PropertySignatureOf",
+      "fields": [
+        "name",
+        "type",
+        "isOptional",
+        "isMutable",
+        "annotations"
+      ],
+      "instance": {
+        "apply": [
+          {
+            "constant": "Effect4.PropertySignatureOf",
+            "levels": [
+              "zero"
+            ]
+          },
+          {
+            "constant": "Effect4.Representation",
+            "levels": []
+          }
+        ]
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.PropertySignatureOf"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "parameter",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Representation",
+                "levels": []
+              }
+            },
+            {
+              "name": "type",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Representation",
+                "levels": []
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.IndexSignatureOf",
+      "fields": [
+        "parameter",
+        "type"
+      ],
+      "instance": {
+        "apply": [
+          {
+            "constant": "Effect4.IndexSignatureOf",
+            "levels": [
+              "zero"
+            ]
+          },
+          {
+            "constant": "Effect4.Representation",
+            "levels": []
+          }
+        ]
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.IndexSignatureOf"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "id",
+              "proof": false,
+              "type": {
+                "constant": "String",
+                "levels": []
+              }
+            },
+            {
+              "name": "payload",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Json",
+                "levels": []
+              }
+            },
+            {
+              "name": "schemas",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "Option",
+                    "levels": [
+                      {
+                        "parameter": "u"
+                      }
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "constant": "List",
+                        "levels": [
+                          {
+                            "parameter": "u"
+                          }
+                        ]
+                      },
+                      {
+                        "constant": "Effect4.Representation",
+                        "levels": []
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.CheckRepresentationAnnotationOf",
+      "fields": [
+        "id",
+        "payload",
+        "schemas"
+      ],
+      "instance": {
+        "apply": [
+          {
+            "constant": "Effect4.CheckRepresentationAnnotationOf",
+            "levels": [
+              "zero"
+            ]
+          },
+          {
+            "constant": "Effect4.Representation",
+            "levels": []
+          }
+        ]
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.CheckRepresentationAnnotationOf"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "bytes",
+              "proof": false,
+              "type": {
+                "apply": [
+                  {
+                    "constant": "List",
+                    "levels": [
+                      "zero"
+                    ]
+                  },
+                  {
+                    "constant": "UInt8",
+                    "levels": []
+                  }
+                ]
+              }
+            },
+            {
+              "name": "length_eq",
+              "proof": true,
+              "type": {
+                "apply": [
+                  {
+                    "apply": [
+                      {
+                        "apply": [
+                          {
+                            "constant": "Eq",
+                            "levels": [
+                              {
+                                "succ": "zero"
+                              }
+                            ]
+                          },
+                          {
+                            "constant": "Nat",
+                            "levels": []
+                          }
+                        ]
+                      },
+                      {
+                        "apply": [
+                          {
+                            "apply": [
+                              {
+                                "constant": "List.length",
+                                "levels": [
+                                  "zero"
+                                ]
+                              },
+                              {
+                                "constant": "UInt8",
+                                "levels": []
+                              }
+                            ]
+                          },
+                          {
+                            "bound": 0
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "apply": [
+                      {
+                        "apply": [
+                          {
+                            "apply": [
+                              {
+                                "constant": "OfNat.ofNat",
+                                "levels": [
+                                  "zero"
+                                ]
+                              },
+                              {
+                                "constant": "Nat",
+                                "levels": []
+                              }
+                            ]
+                          },
+                          {
+                            "nat": 32
+                          }
+                        ]
+                      },
+                      {
+                        "apply": [
+                          {
+                            "constant": "instOfNatNat",
+                            "levels": []
+                          },
+                          {
+                            "nat": 32
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.Store.Digest",
+      "fields": [
+        "bytes",
+        "length_eq"
+      ],
+      "instance": {
+        "constant": "Effect4.Store.Digest",
+        "levels": []
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.Store.Digest"
+      ]
+    },
+    {
+      "constructors": [
+        {
+          "arguments": [
+            {
+              "name": "kind",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Store.Kind",
+                "levels": []
+              }
+            },
+            {
+              "name": "digest",
+              "proof": false,
+              "type": {
+                "constant": "Effect4.Store.Digest",
+                "levels": []
+              }
+            }
+          ],
+          "name": "mk",
+          "ordinal": 0
+        }
+      ],
+      "family": "Effect4.Store.AnyRef",
+      "fields": [
+        "kind",
+        "digest"
+      ],
+      "instance": {
+        "constant": "Effect4.Store.AnyRef",
+        "levels": []
+      },
+      "kind": "structure",
+      "mutual": [
+        "Effect4.Store.AnyRef"
+      ]
+    }
+  ],
+  "format": "effect4-compatibility-snapshot-v1",
+  "framing": {
+    "digit_count_definition": "go n n\nwhere\n  go : Nat → Nat → Nat\n    | 0, _ => 0\n    | fuel + 1, m => if m = 0 then 0 else go fuel (m / 256) + 1",
+    "digits_definition": "| 0, _ => []\n  | w + 1, n => UInt8.ofNat (n / 256 ^ w % 256) :: toDigits w n",
+    "frame_definition": "tag :: (be64 payload.length ++ payload)",
+    "length_definition": "toDigits 8 n",
+    "nat_definition": "toDigits (digitCount n) n"
+  },
+  "roots": [
+    "Effect4.AnnotationEntry",
+    "Effect4.Document",
+    "Effect4.EnumEntry",
+    "Effect4.EnumValue",
+    "Effect4.FinalizerStrategy",
+    "Effect4.Float64",
+    "Effect4.GlobalSymbolKey",
+    "Effect4.Json",
+    "Effect4.LiteralValue",
+    "Effect4.Machine.FnName",
+    "Effect4.MultiDocument",
+    "Effect4.Program.Eff",
+    "Effect4.Program.Stmt",
+    "Effect4.Program.Stmts",
+    "Effect4.Program.Effs",
+    "Effect4.Program.ActionTerm",
+    "Effect4.Program.LayerTerm",
+    "Effect4.Program.LayerTerms",
+    "Effect4.Program.CauseTerm",
+    "Effect4.Program.EffTy",
+    "Effect4.Program.Lit",
+    "Effect4.Program.NativeOp",
+    "Effect4.Program.Registration",
+    "Effect4.Program.Row",
+    "Effect4.Program.RowKind",
+    "Effect4.Program.RowShape",
+    "Effect4.Program.Term",
+    "Effect4.Program.Terms",
+    "Effect4.Program.Ty",
+    "Effect4.PropertyKey",
+    "Effect4.ReferenceEntry",
+    "Effect4.ReferenceKey",
+    "Effect4.Representation",
+    "Effect4.Check",
+    "Effect4.RepresentationAnnotation",
+    "Effect4.ServiceKey",
+    "Effect4.ServiceName",
+    "Effect4.ServiceTypeCode",
+    "Effect4.Store.Pin",
+    "Effect4.Store.PinRole",
+    "Effect4.Store.Tree",
+    "Effect4.Supervision.ForkOptions",
+    "Effect4.Supervision.MaskMode",
+    "Effect4.Supervision.ObserverMode",
+    "Effect4.UnionMode",
+    "Effect4.Machine.Err",
+    "Effect4.Machine.Defect",
+    "Effect4.Store.Kind",
+    "Effect4.Machine.HandleKind"
+  ],
+  "source": {
+    "reflection_sha256": "b272023e5099a169dca42e3833679633a128d5b315f4cffecc48e3a566a85d9c",
+    "revision": "66ee465730126048ad90d99d24ce4f12f5bb2982",
+    "source_closure": [
+      {
+        "path": "src/Effect4/Arch/JsonNumber.lean",
+        "sha256": "cdd70c4b42b6ceff3ae503052755c9d47f89f086601626475015535aa6e76807"
+      },
+      {
+        "path": "src/Effect4/Data/Json.lean",
+        "sha256": "aedfb6ccf23396bc817a9d722a8319c76d13206a06679fcb6941af20c33f7e6e"
+      },
+      {
+        "path": "src/Effect4/Data/Optic.lean",
+        "sha256": "0a02907cd4e994ff180c2d11b090f7948481dc888812d85bdb892fb7c0adf78f"
+      },
+      {
+        "path": "src/Effect4/Data/Row.lean",
+        "sha256": "cfabbde2ff468e111c46cd3e16de6cd176ee4867e1cec4cb1a69df3b74f9848b"
+      },
+      {
+        "path": "src/Effect4/Machine/Cause.lean",
+        "sha256": "5af7693cae61303029b76a95ed63fefb565cb5f3b68afd0837f3413cad502f9a"
+      },
+      {
+        "path": "src/Effect4/Machine/Completion.lean",
+        "sha256": "0ae6167b79b5af271385f9fd15df824f5b16152bf3e9e356daddad480c551431"
+      },
+      {
+        "path": "src/Effect4/Machine/Context.lean",
+        "sha256": "9cf5a336e72aac22aa8614b14032b5d26382e84705ab1bb58e93f5fc1f72a335"
+      },
+      {
+        "path": "src/Effect4/Machine/ContextMap.lean",
+        "sha256": "e7fd464cf37443d7de0d92365210de18e8ce1a0b9cf11b5cd9af99c687de0d0e"
+      },
+      {
+        "path": "src/Effect4/Machine/Exit.lean",
+        "sha256": "348d0876578c65146cb67df5bbdaafbf64f7221c0bd6f8b79a7c3fd8391f5a4f"
+      },
+      {
+        "path": "src/Effect4/Machine/Fiber.lean",
+        "sha256": "804e126340aa3933819f6a2561ff5cfa95e5f28ba92926ef723c095b8d796bee"
+      },
+      {
+        "path": "src/Effect4/Machine/Fibers.lean",
+        "sha256": "b17d8e164c538eac7760e7111dfa5bb6ad594974a540b83106d9fed45f60332a"
+      },
+      {
+        "path": "src/Effect4/Machine/Frames.lean",
+        "sha256": "9f862ed588db26d479fa26cad4b2c84214e00f46cca3ab2c25e3ec8fb7ac2d9a"
+      },
+      {
+        "path": "src/Effect4/Machine/Key.lean",
+        "sha256": "e185856f4d04f951127001d45906ced511024b496ef40783a6b780ac1da84984"
+      },
+      {
+        "path": "src/Effect4/Machine/Scope.lean",
+        "sha256": "939826d574a3db860725d3d79a62378974995002c50ac9823c6536fe82397068"
+      },
+      {
+        "path": "src/Effect4/Machine/Stores.lean",
+        "sha256": "9c0131803e966891e1305a8f1673ff6d7489cabde542a0b55dbf9eee03453a3c"
+      },
+      {
+        "path": "src/Effect4/Machine/Supervision.lean",
+        "sha256": "675bf84940cc1e89bdc1ecdfedef9b94a81e3fc322e036ff25a8311498349fd6"
+      },
+      {
+        "path": "src/Effect4/Machine/Timer.lean",
+        "sha256": "97eeda1b4d75b36927ce9fae98797cbf84200f45485e009677441e39433e4bbb"
+      },
+      {
+        "path": "src/Effect4/Machine/Value.lean",
+        "sha256": "818b974ee1e958ad677d8db331b68e8972722f329f19526571947763be023fbc"
+      },
+      {
+        "path": "src/Effect4/Machine/Wake.lean",
+        "sha256": "27dca8657ba65dc0f3ef40b82bc3d9fe4fc1468272ea82d88c81b03b708c8065"
+      },
+      {
+        "path": "src/Effect4/Program/Eff.lean",
+        "sha256": "6df20e285a3ff893a5925b0e6d34a564185ea2d7efa88ab83d3bc2c6b4d85f71"
+      },
+      {
+        "path": "src/Effect4/Program/Native.lean",
+        "sha256": "e5a0bb9a5ac953c85e30ab2c4a2d4ac0c53b30ef5f0a38ba78a5ce66652e35a6"
+      },
+      {
+        "path": "src/Effect4/Program/Refs.lean",
+        "sha256": "8babd3fecbae9e1bdec996825c382eb7d2d89cf0949b922d2c10d19f0b2b35e5"
+      },
+      {
+        "path": "src/Effect4/Program/Typing.lean",
+        "sha256": "42282571d6406a71b9173123c27aae40add812bd6b4842bf57ef31b422f5b7bd"
+      },
+      {
+        "path": "src/Effect4/Schema/Annotations.lean",
+        "sha256": "94fdb0e002c79fbaddd00f862f184f822373a0d33dda947ecb85443b3bd2beb7"
+      },
+      {
+        "path": "src/Effect4/Schema/Authoring.lean",
+        "sha256": "0af8cc28fa1e82933d50410539b258ad9df7ba6f3b69be73147389c0c76a1922"
+      },
+      {
+        "path": "src/Effect4/Schema/Check.lean",
+        "sha256": "cf63447dc0c7a4a7899e1806992e9e4ab82079ee9a9fd0d00bb49089ff524592"
+      },
+      {
+        "path": "src/Effect4/Schema/Document.lean",
+        "sha256": "3575deb7ac4952b9f5910b884f247431ef6166c5a9b2b8051bd13054d582ae67"
+      },
+      {
+        "path": "src/Effect4/Schema/Payload.lean",
+        "sha256": "77dc812193a79c389d2a69e4ce3f6a3461c966e6487b273ae673258e4b65d18e"
+      },
+      {
+        "path": "src/Effect4/Schema/Representation.lean",
+        "sha256": "4a24b87cb4e164a68ddb91b21fb495a0d8c9cdc7c9d6d28f0318efc5145c692c"
+      },
+      {
+        "path": "src/Effect4/Store/Canonical.lean",
+        "sha256": "9997393b9fcfb77468414e93c9f5de80ed756c9ce03a86209ef483f402941962"
+      },
+      {
+        "path": "src/Effect4/Store/Digest.lean",
+        "sha256": "71f30ceb41c5a90fda3117d18cc78f9a64c8d4afbcc02580a37c4c8317926c65"
+      },
+      {
+        "path": "src/Effect4/Store/Digits.lean",
+        "sha256": "0e92a0fe5b8cb4427c7b9a49becd86892de0025f8b57236a53ab2ec6afb46c5c"
+      },
+      {
+        "path": "src/Effect4/Store/Image.lean",
+        "sha256": "d8b0c946868f1f766876c7607b7c73ef63498180b02032607a5d840aa690ea58"
+      },
+      {
+        "path": "src/Effect4/Store/Kind.lean",
+        "sha256": "d5343fd362236c302f112446463cb66d240fb029099c1964ea0c204017440657"
+      },
+      {
+        "path": "src/Effect4/Store/Node.lean",
+        "sha256": "a71153a18571d850f5a43d1499dd7dd821c680f6371d08d7a47744b3678bd20f"
+      },
+      {
+        "path": "src/Effect4/Store/Pin.lean",
+        "sha256": "2e7f71de307265b5cf9b2019428d5fd6ae542887db709fe3909dcf7a237e46fd"
+      },
+      {
+        "path": "src/Effect4/Store/Shape.lean",
+        "sha256": "d96098742817d0faf7c763d0ef027a7b961ce2cb7deaa09fbecf4c74c89ca17f"
+      },
+      {
+        "path": "src/Effect4/Store/Utf8.lean",
+        "sha256": "c532718c0616a3fcbb70c65c49ab2ea51dab864294ed8774e855b4dd6e7b87ab"
+      },
+      {
+        "path": "src/Effect4/Store/Val.lean",
+        "sha256": "f2c583cda17961c1d0440515894724d4457697ce93065672dda00f50a7532185"
+      }
+    ],
+    "toolchain": "leanprover/lean4:v4.33.1"
+  }
+}
