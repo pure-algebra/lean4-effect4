@@ -245,6 +245,7 @@ theorem wrappingNat_collides (bits : Nat) :
 #print axioms nullable_collides
 #print axioms nullable_nested_collides
 #print axioms nativeOption_injective
+#print axioms nativeOption_nested_distinct
 #print axioms literal_inj
 #print axioms zip_right_inj
 #print axioms object_injective
