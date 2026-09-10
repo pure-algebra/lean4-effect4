@@ -290,7 +290,9 @@ private def forwardsTo? : Code .pure → Option Name
 def extractAlgorithm (alg : Algorithm) : CoreM (Except String Extraction) := do
   let env ← getEnv
   let ctors : Array Name ← match env.find? alg.family with
-    | some (.inductInfo i) => pure (i.ctors.toArray.map fun c => c.getString!.toName)
+    -- `Name.mkSimple`, not `String.toName`: the same short-name rule `Conform.Lcnf.Cases` uses,
+    -- and the identity on the component rather than a parse of it
+    | some (.inductInfo i) => pure (i.ctors.toArray.map fun c => Name.mkSimple c.getString!)
     | some _ => return .error s!"`{alg.family}` is a constant but not an inductive type"
     | none => return .error s!"`{alg.family}` is not a constant of the imported environment"
   -- follow forwarders to the declaration that actually holds the code
@@ -319,7 +321,8 @@ def extractAlgorithm (alg : Algorithm) : CoreM (Except String Extraction) := do
   let mut hasDefault := false
   for a in cs.alts do
     match a with
-    | .alt ctor _ armCode => arms := arms.push (summarise alg (ctor.getString!.toName) armCode)
+    | .alt ctor _ armCode =>
+      arms := arms.push (summarise alg (Name.mkSimple ctor.getString!) armCode)
     | .default armCode => hasDefault := true; arms := arms.push (summarise alg `_default armCode)
   let named := arms.map (·.ctor)
   return .ok
