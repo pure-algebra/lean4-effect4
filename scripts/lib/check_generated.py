@@ -16,10 +16,10 @@ LCNF = {'ocaml/gen/api_gen.ml', 'ocaml/gen/fibers_gen.ml',
         'ocaml/gen/machine_gen.ml', 'ocaml/engine/api_engine.ml'}
 # The declared reason of the `generated-stale` red entry in Test/fixtures/trust-gate/known-red.txt,
 # verbatim; the gate refuses when the two drift apart, so a change there is a change here.
-REASON = ("engines cut before e2285a9; cleared by the Phase 1 regeneration, whose acceptance is "
-          "DI-19's conformance suite (2026-09-09): 42 ocaml/eff goldens decoded and re-encoded, "
-          "8 wire goldens byte-equal, 24 truth programs to the same exit. Regeneration is the "
-          "precondition, never the test")
+REASON = ("the two flat LCNF outputs `ocaml/gen/fibers_gen.ml` and `machine_gen.ml` were cut before "
+          "e2285a9; regenerating them at HEAD builds, but the hand-written `ocaml/gen/gen_check.ml` "
+          "still tests the pre-timer machine shape (no Task_wake, no wake_list/clock_step/prepare_answer) "
+          "and fails C2. Cleared when gen_check.ml is brought to the timer and external rows (DI-19's Phase 1)")
 
 
 def mapped_paths():
