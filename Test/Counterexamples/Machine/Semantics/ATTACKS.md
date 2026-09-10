@@ -1,9 +1,9 @@
 # Semantics cause and exit attacks
 
 These attacks belong to the `Effect4.Cause` / `Effect4.Exit` first-order data
-packet frozen by [`Test/contracts/cause-exit.contract.md`](../../contracts/cause-exit.contract.md)
-and [`docs/research/CAUSE-DAG.md`](../../../docs/CAUSE-DAG.md). Stable IDs live in
-[`../REGISTER.md`](../REGISTER.md); the executable Lean witnesses live in
+packet frozen by [`Test/contracts/cause-exit.contract.md`](../../../contracts/cause-exit.contract.md)
+and `docs/research/CAUSE-DAG.md` (untracked working note). Stable IDs live in
+[`Test/Counterexamples/REGISTER.md`](../../REGISTER.md); the executable Lean witnesses live in
 `Test/Counterexamples/Machine/Semantics/CauseExit.lean` and are a self-contained
 breaker model that stays green while the production surface is absent.
 

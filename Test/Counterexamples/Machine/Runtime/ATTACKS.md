@@ -1,9 +1,9 @@
 # Runtime scope attacks
 
 These attacks belong to the `Effect4.Scope` first-order state-machine packet
-frozen by [`Test/contracts/scope.contract.md`](../../contracts/scope.contract.md)
-and [`docs/research/SCOPE-DAG.md`](../../../docs/SCOPE-DAG.md). Stable IDs live in
-[`../REGISTER.md`](../REGISTER.md); the executable Lean witnesses live in
+frozen by [`Test/contracts/scope.contract.md`](../../../contracts/scope.contract.md)
+and `docs/research/SCOPE-DAG.md` (untracked working note). Stable IDs live in
+[`Test/Counterexamples/REGISTER.md`](../../REGISTER.md); the executable Lean witnesses live in
 `Test/Counterexamples/Machine/Runtime/Scope.lean` and are a self-contained
 breaker model that stays green while the production surface is absent.
 
@@ -169,8 +169,8 @@ The pinned source is `effect@4.0.0-rc.112` under
 ## Frame-machine attacks
 
 The attacks below belong to the frame-machine packet frozen by
-[`Test/contracts/frames.contract.md`](../../contracts/frames.contract.md) and
-[`docs/research/FRAMES-DAG.md`](../../../docs/FRAMES-DAG.md). Their executable Lean
+[`Test/contracts/frames.contract.md`](../../../contracts/frames.contract.md) and
+`docs/research/FRAMES-DAG.md` (untracked working note). Their executable Lean
 witnesses live in `Test/Counterexamples/Machine/Runtime/Frames.lean` and are a
 second self-contained breaker model, independent of the scope one above.
 

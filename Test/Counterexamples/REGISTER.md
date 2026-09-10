@@ -404,14 +404,16 @@ ID is retained here so citations resolve, and the row is not reused.
 | `E4-HOST-CE-004` | SEEDED 2026-09-09 | Typing is admission: a program that types can be run, and `perform` at an operation is the same call as `callback` at it on every face | `src/Effect4/Program/Compile.lean:549-554` (read at `66ee4657`) with the foundation admission probe, 110 route comparisons over `NativeOp.all` (55 operations), exit 0 at `[propext]`: `perform sleep 1` **types**, prints the same call as `callback sleep 1`, and **dies `badName`**, because the `perform` async branch assumes every async operation is a Deferred await; `perform (external i)` types and parks at a frontier through the placeholder row's `.program` kind; and a row registered `.deferred` types, passes `LawfulTable`, and parks with its answer unused. The executable witness is `Test/Program/InvocationContract.lean` (the 55 × 2 route matrix and the six external negatives) when S1a lands | DI-61: one shared `asyncRoute` dispatcher extracted from the `callback` arm, with externals routed **first** and the placeholder's kind no longer consulted, so `compileEff (.perform op r) p = compileEff (.callback op r) p` for an external or async `op` (`compile_perform_eq_callback`), and the same equality at the API under `externalRow table i = some row`; plus `Api.checkTable` refusing an unregistrable supplied row **with its position**, and `Api.admitProgram`/`Api.runAdmitted` consuming a certificate whose fields are `typed`, `lawful`, `runnable` — `readable` deliberately **not** among them, since the historical wire program `pAwait` is typed, runnable and not image-certifiable (S1a). Landed at S1a: the extraction, `checkTable` and the certificate; the `perform` routing is pinned as `THE GAP` in the battery and is the scoped task S1a-b, because the reference denotation mirrors the old arm and `run_eq_ref` has no premise |
 
 Area-specific attack shapes are in
-[`algebra/ATTACKS.md`](algebra/ATTACKS.md),
-[`flow/ATTACKS.md`](flow/ATTACKS.md),
-[`schema/ATTACKS.md`](schema/ATTACKS.md),
-[`environment/ATTACKS.md`](environment/ATTACKS.md),
-[`semantics/ATTACKS.md`](semantics/ATTACKS.md),
-[`runtime/ATTACKS.md`](runtime/ATTACKS.md),
-[`target/ATTACKS.md`](target/ATTACKS.md), and
-[`data/ATTACKS.md`](data/ATTACKS.md). Fired implementation attacks
+[`Machine/Environment/ATTACKS.md`](Machine/Environment/ATTACKS.md),
+[`Machine/Semantics/ATTACKS.md`](Machine/Semantics/ATTACKS.md),
+[`Machine/Runtime/ATTACKS.md`](Machine/Runtime/ATTACKS.md),
+[`Codegen/ATTACKS.md`](Codegen/ATTACKS.md) (the TypeScript target),
+[`Schema/ATTACKS.md`](Schema/ATTACKS.md),
+[`Data/ATTACKS.md`](Data/ATTACKS.md), and, for the retired areas,
+[`Archive/algebra/ATTACKS.md`](Archive/algebra/ATTACKS.md),
+[`Archive/flow/ATTACKS.md`](Archive/flow/ATTACKS.md) and
+[`Archive/ocaml5-avatar/ATTACKS.md`](Archive/ocaml5-avatar/ATTACKS.md).
+Fired implementation attacks
 add a `BROKE / LAW / WITNESS / CLASS / FIXED-BY` record to the owning contract
 packet without deleting the stable row.
 
