@@ -62,7 +62,7 @@ theorem hasTy_fibers_nil (inner : Ty) (allocated : List String) :
 theorem hasTy_normalize (t : Ty) (v : Val) (allocated : List String) :
     Val.hasTy v t.normalize allocated = Val.hasTy v t allocated := by
   induction t generalizing v with
-  | never | unit | nat | int | string | bool | handle => rfl
+  | never | unit | nat | int | string | bool | handle | lit => rfl
   | except => rfl
   | fiberOf => rfl
   | option t ih =>

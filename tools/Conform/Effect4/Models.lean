@@ -186,6 +186,7 @@ theorem tyToVal_handles (t : Ty) : (tyToVal t).handles = [] := by
   induction t with
   | never | unit | nat | int | string | bool => rfl
   | handle t => rfl
+  | lit s => rfl
   | option i ih | list i ih | causeOf i ih =>
     show (Val.ctor _ [tyToVal i]).handles = []
     rw [Val.handles, Val.handlesList_cons, ih, Val.handlesList_nil]

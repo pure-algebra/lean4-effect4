@@ -89,6 +89,15 @@ theorem Val.hasTy_string_inv {v : Val} (h : Val.hasTy v .string = true) : ∃ s,
   · next s => exact ⟨s, rfl⟩
   · exact nomatch h
 
+/-- A `.lit s` is `Val.str s`. -/
+theorem Val.hasTy_lit_inv {v : Val} {s : String} (h : Val.hasTy v (.lit s) = true) : v = Val.str s := by
+  simp only [Val.hasTy] at h
+  split at h
+  · next s' =>
+    obtain rfl : s' = s := beq_iff_eq.mp h
+    rfl
+  · exact nomatch h
+
 /-- An `.option t` is `none` or a `some` of a `t` (DB-15). -/
 theorem Val.hasTy_option_inv {v : Val} {t : Ty} (h : Val.hasTy v (.option t) = true) :
     v = Store.Val.none ∨ ∃ x, v = Store.Val.some x ∧ Val.hasTy x t = true := by
@@ -262,7 +271,7 @@ theorem hasTy_mono (ty : Ty) (v : Val) (a b : List String)
     (ext : Extends a b) (typed : Val.hasTy v ty a = true) : Val.hasTy v ty b = true := by
   induction ty generalizing v with
   | never | int | except => simp [Val.hasTy] at typed
-  | unit | nat | bool | string | fiberOf => exact typed
+  | unit | nat | bool | string | fiberOf | lit => exact typed
   | handle target =>
     cases v <;> simp only [Val.hasTy] at typed ⊢
     all_goals try exact typed

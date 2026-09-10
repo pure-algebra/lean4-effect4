@@ -55,7 +55,8 @@ def types : List (String × Ty) := [
   ("option", .option (.list .nat)), ("list", .list (.option .string)),
   ("prod", .prod .string .nat), ("except", .except .string (.list .nat)),
   ("exitOf", .exitOf .nat .string), ("causeOf", .causeOf .string),
-  ("fiberOf", .fiberOf .unit .nat), ("union", .union .nat (.union .never .string))]
+  ("fiberOf", .fiberOf .unit .nat), ("union", .union .nat (.union .never .string)),
+  ("lit", .lit "tag")]
 
 def keys : List Effect4.ServiceKey := [⟨⟨1⟩, ⟨2⟩⟩, ⟨⟨1⟩, ⟨3⟩⟩, ⟨⟨2⟩, ⟨0⟩⟩]
 

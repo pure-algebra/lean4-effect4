@@ -53,6 +53,7 @@ def tyValue : Ty → Value
   | .causeOf e => .ctor ``Ty.causeOf #[tyValue e]
   | .fiberOf v e => .ctor ``Ty.fiberOf #[tyValue v, tyValue e]
   | .union l r => .ctor ``Ty.union #[tyValue l, tyValue r]
+  | .lit s => .ctor ``Ty.lit #[.str s]
 
 /-- The inverse, so the marshalling can be round-tripped rather than trusted. -/
 partial def valueTy? (v : Value) : Option Ty := do
@@ -73,6 +74,7 @@ partial def valueTy? (v : Value) : Option Ty := do
     else if n == ``Ty.exitOf then do return .exitOf (← valueTy? (← fs[0]?)) (← valueTy? (← fs[1]?))
     else if n == ``Ty.fiberOf then do return .fiberOf (← valueTy? (← fs[0]?)) (← valueTy? (← fs[1]?))
     else if n == ``Ty.union then do return .union (← valueTy? (← fs[0]?)) (← valueTy? (← fs[1]?))
+    else if n == ``Ty.lit then do return .lit (← (← fs[0]?).toStr?)
     else none
   | _ => none
 

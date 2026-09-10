@@ -1,4 +1,4 @@
-Effect4.Program.Ty (ty) inductive: never unit nat int string bool handle(string) option(ty) list(ty) prod(ty,ty) except(ty,ty) exitOf(ty,ty) causeOf(ty) fiberOf(ty,ty) union(ty,ty)
+Effect4.Program.Ty (ty) inductive: never unit nat int string bool handle(string) option(ty) list(ty) prod(ty,ty) except(ty,ty) exitOf(ty,ty) causeOf(ty) fiberOf(ty,ty) union(ty,ty) lit(string)
 Effect4.Program.Lit (lit) inductive: unit nat(int) bool(bool) str(string)
 Effect4.Program.Term (term) inductive: var(int) lit(lit) app(string,terms)
 Effect4.Program.Terms (terms) inductive: nil cons(term,terms)

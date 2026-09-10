@@ -259,6 +259,7 @@ def tyO : Ty → String
   | .causeOf e => s!"({octor "ty" "causeOf"} {tyO e})"
   | .fiberOf v e => s!"({octor "ty" "fiberOf"} ({tyO v}, {tyO e}))"
   | .union l r => s!"({octor "ty" "union"} ({tyO l}, {tyO r}))"
+  | .lit s => s!"({octor "ty" "lit"} {ostr s})"
 
 def kindO : RowKind → String
   | .sync => octor "row_kind" "sync"

@@ -101,6 +101,7 @@ def tyV : Ty → V
   | .causeOf e => .ctor ``Ty.causeOf [tyV e]
   | .fiberOf v e => .ctor ``Ty.fiberOf [tyV v, tyV e]
   | .union l r => .ctor ``Ty.union [tyV l, tyV r]
+  | .lit s => .ctor ``Ty.lit [.str s]
 
 def litV : Lit → V
   | .unit => .ctor ``Lit.unit []

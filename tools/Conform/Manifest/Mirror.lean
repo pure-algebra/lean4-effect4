@@ -186,7 +186,7 @@ def Diff.toJson (d : Diff) : Json :=
 /-! ## 3. The check -/
 
 private def subjectOf (m : Mirror) : Subject :=
-  { kind := "familyMirror", path := [m.family.toString, m.kind.id, m.file.toString] }
+  { kind := "familyMirror", path := [m.family.toString, m.kind.id, m.file.toString, m.key] }
 
 /-- Map one artefact spelling back to a Lean constructor short name. -/
 private def normalise (m : Mirror) (s : String) : Except String String := do

@@ -38,14 +38,21 @@ open Effect4 (ServiceKey)
 
 
 
-/-- The closed error language represented without payload loss by `Err` (DI-62).
+/-- Whether a type is a represented tag (string, string literal, or union of them). -/
+def isTagTy : Ty → Bool
+  | .string | .lit _ => true
+  | .union l r => isTagTy l && isTagTy r
+  | _ => false
+
+/-- The closed error language represented without payload loss by `Err` (DI-15, DI-62).
 `never` admits no values; unions admit only represented columns. Defects and interruptions
 remain outside this error language. -/
 def supportedErrTy : Ty → Bool
-  | .never | .nat | .string => true
-  | .prod a b => decide (a = .string ∧ b = .string)
+  | .never | .nat | .string | .lit _ => true
+  | .prod a b => isTagTy a && decide (b = .string)
   | .union l r => supportedErrTy l && supportedErrTy r
-  | _ => false
+  | .unit | .int | .bool | .handle _ | .option _ | .list _
+  | .except _ _ | .exitOf _ _ | .causeOf _ | .fiberOf _ _ => false
 
 /-- Failure introduction compares the closed error profile after deep normalization.
 The raw support predicate remains available for exact image proofs. -/

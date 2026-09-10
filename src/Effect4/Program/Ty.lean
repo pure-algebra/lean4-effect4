@@ -38,6 +38,7 @@ inductive Ty
   /-- `Fiber.Fiber<A, E>`: what a fork answers. -/
   | fiberOf (value error : Ty)
   | union (left right : Ty)
+  | lit (value : String)
 deriving DecidableEq, Repr
 
 namespace Ty
@@ -59,12 +60,26 @@ def render : Ty → String
   | .causeOf error => "Cause.Cause<" ++ render error ++ ">"
   | .fiberOf value error => "Fiber.Fiber<" ++ render value ++ ", " ++ render error ++ ">"
   | .union left right => render left ++ " | " ++ render right
+  | .lit value => "\"" ++ value ++ "\""
 
 /-- The members of a union, flattened at the top; `never` contributes none. -/
 def members : Ty → List Ty
   | .never => []
   | .union left right => members left ++ members right
-  | t => [t]
+  | .unit => [.unit]
+  | .nat => [.nat]
+  | .int => [.int]
+  | .string => [.string]
+  | .bool => [.bool]
+  | .handle target => [.handle target]
+  | .option inner => [.option inner]
+  | .list inner => [.list inner]
+  | .prod left right => [.prod left right]
+  | .except error value => [.except error value]
+  | .exitOf value error => [.exitOf value error]
+  | .causeOf error => [.causeOf error]
+  | .fiberOf value error => [.fiberOf value error]
+  | .lit value => [.lit value]
 
 /-- An injective structural key, for ordering union members: a constructor code, then the
 length-prefixed keys of the components; a handle's target by its UTF-8 bytes
@@ -86,6 +101,7 @@ def key : Ty → List Nat
   | .causeOf error => 12 :: key error
   | .fiberOf value error => 13 :: (key value).length :: key value ++ key error
   | .union left right => 14 :: (key left).length :: key left ++ key right
+  | .lit value => 15 :: value.toUTF8.data.toList.map UInt8.toNat
 
 /-- Lexicographic order on keys, as a Boolean. -/
 def ltKey : List Nat → List Nat → Bool
@@ -111,7 +127,10 @@ def ofMembers : List Ty → Ty
 
 def isNever : Ty → Bool
   | .never => true
-  | _ => false
+  | .unit | .nat | .int | .string | .bool
+  | .handle _ | .option _ | .list _ | .prod _ _
+  | .except _ _ | .exitOf _ _ | .causeOf _ | .fiberOf _ _ | .union _ _
+  | .lit _ => false
 
 /-- The `Scope` service handle; its spelling is written once, here. -/
 def scopeTarget : String := "Scope.Scope"
@@ -150,6 +169,7 @@ theorem key_injective {a b : Ty} (h : key a = key b) : a = b := by
     congr 1 <;> (apply_assumption; assumption)
   · obtain ⟨hl, hr⟩ := List.append_inj h.2.2 h.2.1
     congr 1 <;> (apply_assumption; assumption)
+  · exact congrArg Ty.lit (utf8_key_injective h.2)
 
 theorem ltKey_iff_lex (a b : List Nat) :
     ltKey a b = true ↔ List.Lex (· < ·) a b := by
@@ -278,7 +298,10 @@ instance instLawfulOrderLT : Std.LawfulOrderLT Ty where
 /-- A union member has neither an empty nor a union head. -/
 def isMember : Ty → Bool
   | .never | .union _ _ => false
-  | _ => true
+  | .unit | .nat | .int | .string | .bool
+  | .handle _ | .option _ | .list _ | .prod _ _
+  | .except _ _ | .exitOf _ _ | .causeOf _ | .fiberOf _ _
+  | .lit _ => true
 
 theorem members_isMember {t x : Ty} (h : x ∈ members t) : isMember x = true := by
   induction t <;> simp only [members, List.mem_append, List.mem_singleton] at h
@@ -312,7 +335,14 @@ def normalize : Ty → Ty
   | .fiberOf a b => .fiberOf (normalize a) (normalize b)
   | .union a b => ofMembers (Effect4.Row.normalize
       ((normalize a).members ++ (normalize b).members)).elems
-  | t => t
+  | .never => .never
+  | .unit => .unit
+  | .nat => .nat
+  | .int => .int
+  | .string => .string
+  | .bool => .bool
+  | .handle s => .handle s
+  | .lit s => .lit s
 
 /-- Proof-only construction invariant. Its row case has canonical atomic members. -/
 inductive Normal : Ty → Prop
@@ -323,6 +353,7 @@ inductive Normal : Ty → Prop
   | string : Normal .string
   | bool : Normal .bool
   | handle (s : String) : Normal (.handle s)
+  | lit (s : String) : Normal (.lit s)
   | option {t} : Normal t → Normal (.option t)
   | list {t} : Normal t → Normal (.list t)
   | prod {a b} : Normal a → Normal b → Normal (.prod a b)
@@ -350,6 +381,7 @@ theorem normal_normalize (t : Ty) : Normal (normalize t) := by
   | string => exact .string
   | bool => exact .bool
   | handle s => exact .handle s
+  | lit s => exact .lit s
   | option t ih => exact .option ih
   | list t ih => exact .list ih
   | prod a b iha ihb => exact .prod iha ihb
@@ -404,6 +436,81 @@ def join (a b : Ty) : Ty := normalize (.union a b)
 
 /-- The API witness means equality with the computed canonical representative. -/
 def Canonical (t : Ty) : Prop := normalize t = t
+
+/-- The subtype relation on `Ty` (DI-15). Covariant in structural constructors;
+unions distribute on the left and are choices on the right; string literals are
+subtypes of `string`. Reflexive. -/
+def sub (a b : Ty) : Bool :=
+  if a = b then true
+  else match a, b with
+  | .never, _ => true
+  | .union a1 a2, b => sub a1 b && sub a2 b
+  | a, .union b1 b2 => sub a b1 || sub a b2
+  | .lit _, .string => true
+  | .option a, .option b => sub a b
+  | .list a, .list b => sub a b
+  | .prod a1 a2, .prod b1 b2 => sub a1 b1 && sub a2 b2
+  | .except e1 a1, .except e2 a2 => sub e1 e2 && sub a1 a2
+  | .exitOf a1 e1, .exitOf a2 e2 => sub a1 a2 && sub e1 e2
+  | .causeOf e1, .causeOf e2 => sub e1 e2
+  | .fiberOf a1 e1, .fiberOf a2 e2 => sub a1 a2 && sub e1 e2
+  | _, _ => false
+termination_by sizeOf a + sizeOf b
+
+theorem sub_refl (t : Ty) : sub t t = true := by
+  unfold sub
+  simp
+
+theorem sub_union_right (a b1 b2 : Ty) (ha : isMember a = true) :
+    sub a (.union b1 b2) = (sub a b1 || sub a b2) := by
+  have hne : a ≠ .union b1 b2 := by
+    rintro rfl
+    contradiction
+  conv => lhs; unfold sub
+  simp only [hne, ↓reduceIte]
+  cases a <;> try contradiction
+  all_goals rfl
+
+theorem sub_union_left (a1 a2 b : Ty) (hne : union a1 a2 ≠ b) :
+    sub (union a1 a2) b = (sub a1 b && sub a2 b) := by
+  conv => lhs; unfold sub
+  simp only [hne, ↓reduceIte]
+
+theorem sub_lit_string (s : String) :
+    sub (lit s) string = true := by
+  have hne : lit s ≠ string := by intro h; contradiction
+  conv => lhs; unfold sub
+  simp only [hne, ↓reduceIte]
+
+theorem sub_option_of_ne (a b : Ty) (hne : option a ≠ option b) :
+    sub (option a) (option b) = sub a b := by
+  conv => lhs; unfold sub
+  simp only [hne, ↓reduceIte]
+
+theorem sub_list_of_ne (a b : Ty) (hne : list a ≠ list b) :
+    sub (list a) (list b) = sub a b := by
+  conv => lhs; unfold sub
+  simp only [hne, ↓reduceIte]
+
+theorem sub_prod_of_ne (a1 a2 b1 b2 : Ty) (hne : prod a1 a2 ≠ prod b1 b2) :
+    sub (prod a1 a2) (prod b1 b2) = (sub a1 b1 && sub a2 b2) := by
+  conv => lhs; unfold sub
+  simp only [hne, ↓reduceIte]
+
+theorem sub_exitOf_of_ne (a1 e1 a2 e2 : Ty) (hne : exitOf a1 e1 ≠ exitOf a2 e2) :
+    sub (exitOf a1 e1) (exitOf a2 e2) = (sub a1 a2 && sub e1 e2) := by
+  conv => lhs; unfold sub
+  simp only [hne, ↓reduceIte]
+
+theorem sub_causeOf_of_ne (e1 e2 : Ty) (hne : causeOf e1 ≠ causeOf e2) :
+    sub (causeOf e1) (causeOf e2) = sub e1 e2 := by
+  conv => lhs; unfold sub
+  simp only [hne, ↓reduceIte]
+
+theorem sub_fiberOf_of_ne (a1 e1 a2 e2 : Ty) (hne : fiberOf a1 e1 ≠ fiberOf a2 e2) :
+    sub (fiberOf a1 e1) (fiberOf a2 e2) = (sub a1 a2 && sub e1 e2) := by
+  conv => lhs; unfold sub
+  simp only [hne, ↓reduceIte]
 
 end Ty
 end Effect4.Program

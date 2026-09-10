@@ -167,14 +167,60 @@ theorem valOfErr_errOf (v : Val) (h : errOf v ≠ .boom) : valOfErr (errOf v) = 
   unfold errOf at h ⊢
   split at h <;> simp_all [valOfErr]
 
+theorem hasTy_isTagTy_allocation (ty : Ty) (v : Val) (allocated : List String)
+    (ht : isTagTy ty = true) : Val.hasTy v ty allocated = Val.hasTy v ty [] := by
+  induction ty with
+  | string | lit _ => rfl
+  | union a b iha ihb =>
+    obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp ht
+    simp only [Val.hasTy, iha ha, ihb hb]
+  | _ => contradiction
+
+theorem isTagTy_string (ty : Ty) (v : Val) (allocated : List String)
+    (ht : isTagTy ty = true) (hv : Val.hasTy v ty allocated = true) :
+    ∃ s : String, v = Val.str s := by
+  induction ty with
+  | string =>
+    cases v with
+    | str s => exact ⟨s, rfl⟩
+    | _ => simp [Val.hasTy] at hv
+  | lit s =>
+    cases v with
+    | str s' => exact ⟨s', rfl⟩
+    | _ => simp [Val.hasTy] at hv
+  | union a b iha ihb =>
+    obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp ht
+    obtain h | h := Bool.or_eq_true_iff.mp hv
+    · exact iha ha h
+    · exact ihb hb h
+  | _ => contradiction
+
 /-- Row DI-62. Supported error membership does not depend on resource allocation. -/
 theorem hasTy_supported_allocation (ty : Ty) (v : Val) (allocated : List String)
     (hs : supportedErrTy ty = true) : Val.hasTy v ty allocated = Val.hasTy v ty [] := by
   induction ty with
-  | never | nat | string => rfl
+  | never | nat | string | lit _ => rfl
   | prod a b _ _ =>
-    obtain ⟨rfl, rfl⟩ := of_decide_eq_true hs
-    rfl
+    obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hs
+    have hb' : b = .string := by
+      revert hb
+      cases b <;> intro hb <;> try contradiction
+      rfl
+    subst hb'
+    simp only [Val.hasTy]
+    cases v with
+    | list vs =>
+      cases vs with
+      | nil => rfl
+      | cons x xs =>
+        cases xs with
+        | nil => rfl
+        | cons y ys =>
+          cases ys with
+          | nil =>
+            simp only [hasTy_isTagTy_allocation a x allocated ha]
+          | cons _ _ => rfl
+    | _ => rfl
   | union a b iha ihb =>
     obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hs
     simp only [Val.hasTy, iha ha, ihb hb]
@@ -194,13 +240,37 @@ theorem valOfErr_errOf_supported (ty : Ty) (v : Val) (allocated : List String)
   | string =>
     obtain ⟨s, rfl⟩ := Val.hasTy_string_inv hv
     rfl
+  | lit s =>
+    cases v with
+    | str s' =>
+      simp only [Val.hasTy, beq_iff_eq] at hv
+      subst hv
+      rfl
+    | _ => simp [Val.hasTy] at hv
   | prod a b _ _ =>
-    obtain ⟨rfl, rfl⟩ := of_decide_eq_true hs
-    obtain ⟨x, y, rfl, hx, hy⟩ :=
-      Val.hasTy_prod_inv (v := v) (a := .string) (b := .string) hv
-    obtain ⟨t, rfl⟩ := Val.hasTy_string_inv hx
-    obtain ⟨m, rfl⟩ := Val.hasTy_string_inv hy
-    rfl
+    obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hs
+    have hb' : b = .string := by
+      revert hb
+      cases b <;> intro hb <;> try contradiction
+      rfl
+    subst hb'
+    cases v with
+    | list vs =>
+      cases vs with
+      | nil => simp [Val.hasTy] at hv
+      | cons x xs =>
+        cases xs with
+        | nil => simp [Val.hasTy] at hv
+        | cons y ys =>
+          cases ys with
+          | cons _ _ => simp [Val.hasTy] at hv
+          | nil =>
+            simp only [Val.hasTy, Bool.and_eq_true_iff] at hv
+            obtain ⟨hx, hy⟩ := hv
+            obtain ⟨s, rfl⟩ := isTagTy_string a x allocated ha hx
+            obtain ⟨m, rfl⟩ := Val.hasTy_string_inv hy
+            rfl
+    | _ => simp [Val.hasTy] at hv
   | union a b iha ihb =>
     obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hs
     obtain h | h := Bool.or_eq_true_iff.mp hv

@@ -13,6 +13,7 @@ Effect4.Program.Ty.exitOf	1
 Effect4.Program.Ty.causeOf	1
 Effect4.Program.Ty.fiberOf	1
 Effect4.Program.Ty.union	4
+Effect4.Program.Ty.lit	1
 Effect4.Program.RowKind.sync	1
 Effect4.Program.RowKind.async	2
 Effect4.Program.RowKind.program	1
