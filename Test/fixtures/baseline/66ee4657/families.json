@@ -1,0 +1,784 @@
+{
+ "families": [
+  {
+   "constructors": [
+    "mk"
+   ],
+   "family": "Effect4.AnnotationEntry",
+   "fields": [
+    "key",
+    "payload"
+   ],
+   "mutual": [
+    "Effect4.AnnotationEntry"
+   ]
+  },
+  {
+   "constructors": [
+    "mk"
+   ],
+   "family": "Effect4.Document",
+   "fields": [
+    "representation",
+    "references"
+   ],
+   "mutual": [
+    "Effect4.Document"
+   ]
+  },
+  {
+   "constructors": [
+    "mk"
+   ],
+   "family": "Effect4.EnumEntry",
+   "fields": [
+    "name",
+    "value"
+   ],
+   "mutual": [
+    "Effect4.EnumEntry"
+   ]
+  },
+  {
+   "constructors": [
+    "string",
+    "number"
+   ],
+   "family": "Effect4.EnumValue",
+   "fields": [],
+   "mutual": [
+    "Effect4.EnumValue"
+   ]
+  },
+  {
+   "constructors": [
+    "sequential",
+    "parallel"
+   ],
+   "family": "Effect4.FinalizerStrategy",
+   "fields": [],
+   "mutual": [
+    "Effect4.FinalizerStrategy"
+   ]
+  },
+  {
+   "constructors": [
+    "mk"
+   ],
+   "family": "Effect4.Float64",
+   "fields": [
+    "bits"
+   ],
+   "mutual": [
+    "Effect4.Float64"
+   ]
+  },
+  {
+   "constructors": [
+    "mk"
+   ],
+   "family": "Effect4.GlobalSymbolKey",
+   "fields": [
+    "key"
+   ],
+   "mutual": [
+    "Effect4.GlobalSymbolKey"
+   ]
+  },
+  {
+   "constructors": [
+    "null",
+    "bool",
+    "number",
+    "str",
+    "arr",
+    "obj"
+   ],
+   "family": "Effect4.Json",
+   "fields": [],
+   "mutual": [
+    "Effect4.Json"
+   ]
+  },
+  {
+   "constructors": [
+    "string",
+    "number",
+    "bigint",
+    "boolean"
+   ],
+   "family": "Effect4.LiteralValue",
+   "fields": [],
+   "mutual": [
+    "Effect4.LiteralValue"
+   ]
+  },
+  {
+   "constructors": [
+    "incr",
+    "double",
+    "zeroWhenPositive",
+    "noChange",
+    "takeAndBump"
+   ],
+   "family": "Effect4.Machine.FnName",
+   "fields": [],
+   "mutual": [
+    "Effect4.Machine.FnName"
+   ]
+  },
+  {
+   "constructors": [
+    "mk"
+   ],
+   "family": "Effect4.MultiDocument",
+   "fields": [
+    "representations",
+    "references"
+   ],
+   "mutual": [
+    "Effect4.MultiDocument"
+   ]
+  },
+  {
+   "constructors": [
+    "succeed",
+    "fail",
+    "failCause",
+    "yieldError",
+    "sync",
+    "suspend",
+    "perform",
+    "bind",
+    "gen",
+    "catchCause",
+    "matchCause",
+    "onExit",
+    "exit",
+    "uninterruptible",
+    "interruptible",
+    "branch",
+    "whileLoop",
+    "yieldNow",
+    "callback",
+    "awaitFiber",
+    "withFiber",
+    "scoped",
+    "acquireRelease",
+    "choose",
+    "provideLayer",
+    "service",
+    "provideService"
+   ],
+   "family": "Effect4.Program.Eff",
+   "fields": [],
+   "mutual": [
+    "Effect4.Program.Eff",
+    "Effect4.Program.Stmt",
+    "Effect4.Program.Stmts",
+    "Effect4.Program.Effs",
+    "Effect4.Program.ActionTerm",
+    "Effect4.Program.LayerTerm",
+    "Effect4.Program.LayerTerms"
+   ]
+  },
+  {
+   "constructors": [
+    "bindYield",
+    "yieldDiscard",
+    "ret",
+    "ifElse",
+    "whileTrue",
+    "breakLoop"
+   ],
+   "family": "Effect4.Program.Stmt",
+   "fields": [],
+   "mutual": [
+    "Effect4.Program.Eff",
+    "Effect4.Program.Stmt",
+    "Effect4.Program.Stmts",
+    "Effect4.Program.Effs",
+    "Effect4.Program.ActionTerm",
+    "Effect4.Program.LayerTerm",
+    "Effect4.Program.LayerTerms"
+   ]
+  },
+  {
+   "constructors": [
+    "nil",
+    "cons"
+   ],
+   "family": "Effect4.Program.Stmts",
+   "fields": [],
+   "mutual": [
+    "Effect4.Program.Eff",
+    "Effect4.Program.Stmt",
+    "Effect4.Program.Stmts",
+    "Effect4.Program.Effs",
+    "Effect4.Program.ActionTerm",
+    "Effect4.Program.LayerTerm",
+    "Effect4.Program.LayerTerms"
+   ]
+  },
+  {
+   "constructors": [
+    "nil",
+    "cons"
+   ],
+   "family": "Effect4.Program.Effs",
+   "fields": [],
+   "mutual": [
+    "Effect4.Program.Eff",
+    "Effect4.Program.Stmt",
+    "Effect4.Program.Stmts",
+    "Effect4.Program.Effs",
+    "Effect4.Program.ActionTerm",
+    "Effect4.Program.LayerTerm",
+    "Effect4.Program.LayerTerms"
+   ]
+  },
+  {
+   "constructors": [
+    "fork",
+    "forkIn",
+    "forkScoped",
+    "runIn",
+    "interrupt",
+    "interruptScoped",
+    "interruptAll",
+    "awaitAll",
+    "awaitAllFailFast",
+    "snapshotChildren",
+    "awaitNewChildren",
+    "raceAll",
+    "setContext",
+    "getContext",
+    "getId",
+    "closeScope"
+   ],
+   "family": "Effect4.Program.ActionTerm",
+   "fields": [],
+   "mutual": [
+    "Effect4.Program.Eff",
+    "Effect4.Program.Stmt",
+    "Effect4.Program.Stmts",
+    "Effect4.Program.Effs",
+    "Effect4.Program.ActionTerm",
+    "Effect4.Program.LayerTerm",
+    "Effect4.Program.LayerTerms"
+   ]
+  },
+  {
+   "constructors": [
+    "succeed",
+    "effect",
+    "effectDiscard",
+    "provide",
+    "provideMerge",
+    "merge",
+    "fresh",
+    "orDie",
+    "ref",
+    "mergeAll"
+   ],
+   "family": "Effect4.Program.LayerTerm",
+   "fields": [],
+   "mutual": [
+    "Effect4.Program.Eff",
+    "Effect4.Program.Stmt",
+    "Effect4.Program.Stmts",
+    "Effect4.Program.Effs",
+    "Effect4.Program.ActionTerm",
+    "Effect4.Program.LayerTerm",
+    "Effect4.Program.LayerTerms"
+   ]
+  },
+  {
+   "constructors": [
+    "nil",
+    "cons"
+   ],
+   "family": "Effect4.Program.LayerTerms",
+   "fields": [],
+   "mutual": [
+    "Effect4.Program.Eff",
+    "Effect4.Program.Stmt",
+    "Effect4.Program.Stmts",
+    "Effect4.Program.Effs",
+    "Effect4.Program.ActionTerm",
+    "Effect4.Program.LayerTerm",
+    "Effect4.Program.LayerTerms"
+   ]
+  },
+  {
+   "constructors": [
+    "fail",
+    "die",
+    "interrupt",
+    "both"
+   ],
+   "family": "Effect4.Program.CauseTerm",
+   "fields": [],
+   "mutual": [
+    "Effect4.Program.CauseTerm"
+   ]
+  },
+  {
+   "constructors": [
+    "mk"
+   ],
+   "family": "Effect4.Program.EffTy",
+   "fields": [
+    "answer",
+    "error",
+    "requires"
+   ],
+   "mutual": [
+    "Effect4.Program.EffTy"
+   ]
+  },
+  {
+   "constructors": [
+    "unit",
+    "nat",
+    "bool",
+    "str"
+   ],
+   "family": "Effect4.Program.Lit",
+   "fields": [],
+   "mutual": [
+    "Effect4.Program.Lit"
+   ]
+  },
+  {
+   "constructors": [
+    "refMake",
+    "refGet",
+    "refSet",
+    "refGetAndSet",
+    "refSetAndGet",
+    "refUpdate",
+    "refGetAndUpdate",
+    "refUpdateAndGet",
+    "refUpdateSome",
+    "refGetAndUpdateSome",
+    "refUpdateSomeAndGet",
+    "refModify",
+    "refModifySome",
+    "deferredMake",
+    "deferredIsDone",
+    "deferredPoll",
+    "deferredSucceed",
+    "deferredFail",
+    "deferredAwait",
+    "scopeMake",
+    "sleep",
+    "clockNow",
+    "external"
+   ],
+   "family": "Effect4.Program.NativeOp",
+   "fields": [],
+   "mutual": [
+    "Effect4.Program.NativeOp"
+   ]
+  },
+  {
+   "constructors": [
+    "deferred",
+    "external"
+   ],
+   "family": "Effect4.Program.Registration",
+   "fields": [],
+   "mutual": [
+    "Effect4.Program.Registration"
+   ]
+  },
+  {
+   "constructors": [
+    "mk"
+   ],
+   "family": "Effect4.Program.Row",
+   "fields": [
+    "name",
+    "spelling",
+    "shape",
+    "trailing",
+    "kind",
+    "request",
+    "answer",
+    "error",
+    "requires",
+    "cite",
+    "typeArgs",
+    "registration"
+   ],
+   "mutual": [
+    "Effect4.Program.Row"
+   ]
+  },
+  {
+   "constructors": [
+    "sync",
+    "async",
+    "program"
+   ],
+   "family": "Effect4.Program.RowKind",
+   "fields": [],
+   "mutual": [
+    "Effect4.Program.RowKind"
+   ]
+  },
+  {
+   "constructors": [
+    "call",
+    "value",
+    "tupleCall",
+    "method"
+   ],
+   "family": "Effect4.Program.RowShape",
+   "fields": [],
+   "mutual": [
+    "Effect4.Program.RowShape"
+   ]
+  },
+  {
+   "constructors": [
+    "var",
+    "lit",
+    "app"
+   ],
+   "family": "Effect4.Program.Term",
+   "fields": [],
+   "mutual": [
+    "Effect4.Program.Term",
+    "Effect4.Program.Terms"
+   ]
+  },
+  {
+   "constructors": [
+    "nil",
+    "cons"
+   ],
+   "family": "Effect4.Program.Terms",
+   "fields": [],
+   "mutual": [
+    "Effect4.Program.Term",
+    "Effect4.Program.Terms"
+   ]
+  },
+  {
+   "constructors": [
+    "never",
+    "unit",
+    "nat",
+    "int",
+    "string",
+    "bool",
+    "handle",
+    "option",
+    "list",
+    "prod",
+    "except",
+    "exitOf",
+    "causeOf",
+    "fiberOf",
+    "union"
+   ],
+   "family": "Effect4.Program.Ty",
+   "fields": [],
+   "mutual": [
+    "Effect4.Program.Ty"
+   ]
+  },
+  {
+   "constructors": [
+    "string",
+    "number",
+    "globalSymbol"
+   ],
+   "family": "Effect4.PropertyKey",
+   "fields": [],
+   "mutual": [
+    "Effect4.PropertyKey"
+   ]
+  },
+  {
+   "constructors": [
+    "mk"
+   ],
+   "family": "Effect4.ReferenceEntry",
+   "fields": [
+    "key",
+    "representation"
+   ],
+   "mutual": [
+    "Effect4.ReferenceEntry"
+   ]
+  },
+  {
+   "constructors": [
+    "mk"
+   ],
+   "family": "Effect4.ReferenceKey",
+   "fields": [
+    "value"
+   ],
+   "mutual": [
+    "Effect4.ReferenceKey"
+   ]
+  },
+  {
+   "constructors": [
+    "declaration",
+    "reference",
+    "suspend",
+    "null",
+    "undefined",
+    "void",
+    "never",
+    "unknown",
+    "any",
+    "string",
+    "number",
+    "boolean",
+    "bigint",
+    "symbol",
+    "literal",
+    "uniqueSymbol",
+    "objectKeyword",
+    "enum",
+    "templateLiteral",
+    "arrays",
+    "objects",
+    "union"
+   ],
+   "family": "Effect4.Representation",
+   "fields": [],
+   "mutual": [
+    "Effect4.Representation",
+    "Effect4.Check"
+   ]
+  },
+  {
+   "constructors": [
+    "filter",
+    "filterGroup"
+   ],
+   "family": "Effect4.Check",
+   "fields": [],
+   "mutual": [
+    "Effect4.Representation",
+    "Effect4.Check"
+   ]
+  },
+  {
+   "constructors": [
+    "mk"
+   ],
+   "family": "Effect4.RepresentationAnnotation",
+   "fields": [
+    "id",
+    "payload"
+   ],
+   "mutual": [
+    "Effect4.RepresentationAnnotation"
+   ]
+  },
+  {
+   "constructors": [
+    "mk"
+   ],
+   "family": "Effect4.ServiceKey",
+   "fields": [
+    "name",
+    "service"
+   ],
+   "mutual": [
+    "Effect4.ServiceKey"
+   ]
+  },
+  {
+   "constructors": [
+    "mk"
+   ],
+   "family": "Effect4.ServiceName",
+   "fields": [
+    "value"
+   ],
+   "mutual": [
+    "Effect4.ServiceName"
+   ]
+  },
+  {
+   "constructors": [
+    "mk"
+   ],
+   "family": "Effect4.ServiceTypeCode",
+   "fields": [
+    "value"
+   ],
+   "mutual": [
+    "Effect4.ServiceTypeCode"
+   ]
+  },
+  {
+   "constructors": [
+    "mk"
+   ],
+   "family": "Effect4.Store.Pin",
+   "fields": [
+    "package",
+    "version",
+    "file",
+    "declaration",
+    "role",
+    "anchor",
+    "offsetStart",
+    "offsetEnd",
+    "spanDigest",
+    "text"
+   ],
+   "mutual": [
+    "Effect4.Store.Pin"
+   ]
+  },
+  {
+   "constructors": [
+    "public",
+    "internal"
+   ],
+   "family": "Effect4.Store.PinRole",
+   "fields": [],
+   "mutual": [
+    "Effect4.Store.PinRole"
+   ]
+  },
+  {
+   "constructors": [
+    "mk"
+   ],
+   "family": "Effect4.Store.Tree",
+   "fields": [
+    "bindings"
+   ],
+   "mutual": [
+    "Effect4.Store.Tree"
+   ]
+  },
+  {
+   "constructors": [
+    "mk"
+   ],
+   "family": "Effect4.Supervision.ForkOptions",
+   "fields": [
+    "startImmediately",
+    "daemon",
+    "maskMode"
+   ],
+   "mutual": [
+    "Effect4.Supervision.ForkOptions"
+   ]
+  },
+  {
+   "constructors": [
+    "interruptible",
+    "uninterruptible",
+    "inherit"
+   ],
+   "family": "Effect4.Supervision.MaskMode",
+   "fields": [],
+   "mutual": [
+    "Effect4.Supervision.MaskMode"
+   ]
+  },
+  {
+   "constructors": [
+    "awaitValue",
+    "joinEffect"
+   ],
+   "family": "Effect4.Supervision.ObserverMode",
+   "fields": [],
+   "mutual": [
+    "Effect4.Supervision.ObserverMode"
+   ]
+  },
+  {
+   "constructors": [
+    "anyOf",
+    "oneOf"
+   ],
+   "family": "Effect4.UnionMode",
+   "fields": [],
+   "mutual": [
+    "Effect4.UnionMode"
+   ]
+  },
+  {
+   "constructors": [
+    "boom",
+    "tag",
+    "tagged"
+   ],
+   "family": "Effect4.Machine.Err",
+   "fields": [],
+   "mutual": [
+    "Effect4.Machine.Err"
+   ]
+  },
+  {
+   "constructors": [
+    "notImplemented",
+    "asyncFiber",
+    "badName",
+    "missingService",
+    "user"
+   ],
+   "family": "Effect4.Machine.Defect",
+   "fields": [],
+   "mutual": [
+    "Effect4.Machine.Defect"
+   ]
+  },
+  {
+   "constructors": [
+    "source",
+    "export",
+    "type",
+    "schema",
+    "program",
+    "annotation",
+    "entry",
+    "query",
+    "result",
+    "chunk",
+    "tree",
+    "manifest",
+    "component",
+    "vector",
+    "fiber"
+   ],
+   "family": "Effect4.Store.Kind",
+   "fields": [],
+   "mutual": [
+    "Effect4.Store.Kind"
+   ]
+  },
+  {
+   "constructors": [
+    "fiber",
+    "cell",
+    "promise",
+    "scope",
+    "memoMap",
+    "external"
+   ],
+   "family": "Effect4.Machine.HandleKind",
+   "fields": [],
+   "mutual": [
+    "Effect4.Machine.HandleKind"
+   ]
+  }
+ ],
+ "head": "66ee465730126048ad90d99d24ce4f12f5bb2982",
+ "missing": []
+}

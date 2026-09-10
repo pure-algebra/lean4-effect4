@@ -71,6 +71,14 @@ functional utilities without reaching Laws. The audit checks both closures again
 every library source; `scripts/check-library-roots.sh` runs it freshly so a new
 unimported source cannot hide behind a cached build.
 
+**No Lean tooling import enters the audited closure** (DI-18, ruled 2026-09-09). `import Lean`
+does not appear under `src/Effect4/**`, and no exemption text is owed for one. Deriving and
+reflection live in a **tool root** — `tools/Tools` and `tools/Effect4Gen`, sibling roots outside
+the gate — and emit ordinary `.lean` declarations that the kernel then checks like any other
+source, which is a stronger arrangement than an exempted metaprogram inside the closure: the
+output, not the generator, is what the audit reads. The six owed encoders (DI-41) go through
+`tools/Effect4Gen`, and the `deriving Canonical` handler stays a pilot for later families.
+
 Tests mirror these areas under `Test/`; durable attacks live under
 `Test/Counterexamples/` with their stable IDs in
 `Test/Counterexamples/REGISTER.md` and their contracts under `Test/contracts/`.
@@ -111,6 +119,41 @@ frame machine as the default instance. This shares the command loop without
 changing `Eff` as canonical program content. An algebra-carrier integration
 fixture exercises the same loop; the later term evaluator and simulation remain
 outside this slice. The decision tape carries Completion data at every instance.
+
+## The faces, and the two ingest contracts
+
+`Eff` has several faces — the Lean printer and reader, the TypeScript reader over the printed
+image, the two foreign ingest engines, the truth harness, the OCaml conformance face — and each
+pair is held by a different kind of evidence; the packet that states them one by one is
+`Test/contracts/faces.contract.md` (DI-50), in the format of `Test/contracts/README.md`.
+
+The **two ingest contracts are different contracts, not one implementation with options**
+(DI-37, ruled 2026-09-08, written here 2026-09-09), and they differ on three axes:
+
+1. *The admitted language.* The printed image is the sub-language the Lean printer emits; the
+   strict-foreign contract admits wild rc.112 source, including spellings the printer never
+   produces.
+2. *The refusal discipline.* The printed-image reader may treat what it meets as well formed and
+   refuse by name where rc.112's surface genuinely loses information; the foreign engines must
+   classify every input into a closed, injectively coded taxonomy — a `true` passed into a
+   number-shaped service key is refused there, and the printed image never contains one.
+3. *The service-key numbering.* The printed image carries each key's own recorded numbers (the
+   printer mints `k<name>_<service>` from the key's data and invents nothing), while the foreign
+   contract *assigns* ordinals per unit in first-use order from 4, with 0–3 reserved. One source
+   unit can therefore have two different key tables, one per contract.
+
+The relation between them is an **inclusion property**: the printed image is a sub-language of
+the foreign one, and the property is a cross-contract test over the corpus that already exists
+(`ts/eff/ingest/check-corpus.ts`), not a claim in prose.
+
+## The codegen route and the `Api` export
+
+The Surface emitter route keeps its nine rules and they are commissioned — given a driver, a
+gate and a named evidence word — while the `Api` codegen export is **cut** (DI-27, ruled
+2026-09-09, unexecuted). The two halves of the earlier type-checker ruling landed apart: the
+`ts/eff` half runs inside the ingest gate, the truth half is DI-49's `tsc --noEmit`, and that
+gap is independent of this ruling. Execute both before the MCP and HTTP-API lane, which is the
+first consumer that would otherwise inherit an uncommissioned emitter.
 
 ## What is not here
 

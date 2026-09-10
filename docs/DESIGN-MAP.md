@@ -23,6 +23,13 @@ Carte*, 2018):
    producer saw and nothing about the committed bytes.
 4. **Nothing** — a hand-written copy held equal by attention.
 
+The words a claim carries name the same four things from the claim's side (DI-32, ruled
+2026-09-09): **proved** for a theorem, **reproduced** for a byte comparison or a corpus
+differential, **tested** for a finite checker run over named inputs (`tsc`, a `#guard`, a host
+fixture), **stamped** for a verifying trace. They **co-occur** — one slice's evidence is often
+"proved; reproduced (goldens); tested (`tsc`)" — and a finite checker run is *tested*, never
+*reproduced*. `docs/GENERATED.md` carries the words family by family.
+
 The map names the grade at every seam. Drift lives mostly where the grade is four, and the cure
 is usually the same shape: one source of truth, projections generated from it, conformance
 vectors cut from it, gates that are incremental. A theorem is worth stating where it buys a
@@ -78,8 +85,9 @@ the papers review named G8 (DI-10).
 
 ## L2 — the type layer
 
-The object language is `Eff Op` — 27 constructors, first-order, no binder, no abstraction
-form — typed by a monomorphic type-and-effect system in the Lucassen–Gifford line: one
+The object language is `Eff Op` — 27 constructors, first-order, binding values in `bind`,
+handlers and generators, with no abstraction form — typed by a monomorphic type-and-effect
+system in the Lucassen–Gifford line: one
 judgment `Σ; Γ ⊢ e : ⟨A, E, R⟩` where `A` and `E` are ground `Ty` (fifteen constructors
 including an untagged TypeScript union) and `R` is a finite label set of service keys whose
 labels carry a closed type code. Its representations are five and independent: the
@@ -97,9 +105,11 @@ columns are semilattices (DI-38); the union's canonicalisation is one level deep
 equality is finer than the target's below the top level (DI-53); four of fifteen `Ty`
 constructors are uninhabited, and one of them, `causeOf`, is what a catch handler's binder is
 typed at, so the value-typing invariant fails at every handler point and preservation for
-programs cannot yet be stated (DI-09, DI-17); the failure branch of an external answer has no
-theorem and `errAdmits` is not inverse to `errOf` (DI-26). The error channel is write-only for
-a program until the elimination form and the cause atoms land (DI-09); the error's content is
+programs cannot yet be stated (DI-09, DI-17); the failure branch of an external answer gained its
+theorem on 2026-09-09 (`external_error_typed`, `external_oracle_error_typed`, in `23e5717`),
+while `errAdmits` is still not inverse to `errOf` until S2's admissible image lands (DI-26,
+DI-62). The error channel is write-only for a program until the elimination form and the cause
+atoms land (DI-09); the error's content is
 the DB-15 pair, ruled as the reason tag and the driver message (DI-00), and a literal type
 (`Ty.lit`) with a subtype relation is the designed next step (DI-15, DI-55).
 
@@ -109,7 +119,7 @@ rows' declared types unchecked against the package (DI-29); the `Forms` arity ta
 re-implemented in both engines (DI-39).
 
 Rows: DI-09, DI-10, DI-12, DI-15, DI-17, DI-20, DI-26, DI-28, DI-35, DI-38, DI-53, DI-54,
-DI-55; from the neighbouring layers DI-29, DI-40, DI-41, DI-49.
+DI-55, DI-61, DI-62, DI-63; from the neighbouring layers DI-29, DI-40, DI-41, DI-49.
 
 Literature: Lucassen and Gifford (1988) and Talpin and Jouvelot (1992) for effect sets and
 subeffecting; Bauer and Pretnar (2013) and Leijen (2014, 2017) for handler typing and
@@ -150,9 +160,30 @@ compared with nothing (DI-42); six families with host byte writers and no Lean e
 (DI-41); a tag alphabet with no census (DI-43); Lean's kind table behind OCaml's (DI-25); the
 CAS goldens at grade three only (DI-45).
 
+The partition of that description has three owners, ruled 2026-09-09 (DI-13, DI-14, DI-22), and
+they are not one table. The **World** describes *structural identities* — families, constructors
+in declaration order, fields, tags — and the wire framing and the target's runtime layout are
+**separate columns** of it, never one fixed family list: the LCNF route follows compiler erasure
+and a dynamically discovered closure, and a target's in-memory representation is free wherever no
+byte writer sees it. The **profile** owns DB-09's data (scalar domains, admitted operations,
+adapter identities, the error projection). The **link table** owns program content — which
+package row an index names. The World closes only when three consumers read it: the generator
+manifest checked equal to its family list, the wire tool's hand lists replaced by a World read,
+and the engine's mirror generated from or checked against it (S5b); the six Lean encoders (DI-41)
+are a precondition, not the closure.
+
+Beside it, and independent of the generator that will read it, is the **retained baseline**
+(DI-47): `Test/fixtures/baseline/66ee4657/README.md` and its four files — the World reflection as
+JSON, the OCaml and wire manifests, the golden digests — frozen at `66ee4657` before S2's
+`Err.text` and `Defect.error`, S3a's `Eff.catchIf` and S4b's `Ty.lit`, promoted only by a named
+command and never written by a generator, so a diff there is a review event. The compatibility
+gate compares the reflected description against it and refuses on four counts — old content still
+readable, old bytes unchanged, decoding still exact, execution still permitted — and the two `⊑`
+theorems follow it. This is what replaces the ordinal-ledger design (DI-02, DI-03).
+
 Rows: DI-01, DI-02, DI-03, DI-04, DI-05, DI-06, DI-11, DI-13, DI-14, DI-18, DI-22, DI-25,
-DI-32, DI-33, DI-40, DI-41, DI-42, DI-43, DI-44, DI-45, DI-46, DI-47. The single change that
-closes the most of them is one World datum with a build-time pin and an order relation under
+DI-32, DI-33, DI-40, DI-41, DI-42, DI-43, DI-44, DI-45, DI-46, DI-47, DI-64. The single change
+that closes the most of them is one World datum with a build-time pin and an order relation under
 which append-only is a theorem rather than a review rule (DI-47).
 
 Literature: deterministic serialization (RFC 8949 §4.2; ITU-T X.690 DER); interface
@@ -187,7 +218,10 @@ for rc.112's runtime, not for this layer.
 
 Non-guarantees: no contract packet covers the printer, either reader, the ingest, the truth
 harness or the OCaml face (DI-50); the printed image is executed and parsed but never
-type-checked (DI-49); a program with a non-empty requirement row prints untyped (DI-24).
+type-checked (DI-49); a program with a non-empty requirement row prints untyped (DI-24) — and
+four of the six host programs have such a row only because `effTy`'s `.scoped` arm does not
+discharge `Scope` as rc.112 does, so they print untyped for a requirement the target does not
+give them (DI-63).
 
 Drift points: the engines' atom sets and handler lists (DI-40); the truth prelude's hand
 transcription and the import header copied into every generated module; the external corpus
@@ -195,7 +229,7 @@ and its pins (DI-34); the wire differential's hand equality list (DI-52); prefix
 the source gate cannot see (DI-51).
 
 Rows: DI-19, DI-21, DI-23, DI-24, DI-27, DI-29, DI-34, DI-37, DI-39, DI-40, DI-48, DI-49,
-DI-50, DI-51, DI-52; the faces halves of DI-09 and DI-15.
+DI-50, DI-51, DI-52, DI-59, DI-63; the faces halves of DI-09 and DI-15.
 
 Literature that fits: Rendel and Ostermann, invertible syntax descriptions (2010) — the tree
 instantiates both laws; Moonen, island grammars (2001), the honest name for the engines; Kim
@@ -229,26 +263,53 @@ provenance.
 
 ## Where the drift is removed first
 
-The shortest path that removes the most grade-four evidence, in the order the scouts costed
-it, each item a register row:
+The order is the foundation settlement's, ratified as **S0** (2026-09-09). Each item names the
+register rows it closes and the evidence words it must carry (DI-32); a slice is finished when
+its rows are closed *and* its evidence exists, not when its code compiles.
 
-1. DI-54 — read `Signature.dom` in the typing: one line, a live disagreement closed.
-2. DI-40 — one generated atom set read by both engines and the prelude; three copies are
-   already stale.
-3. DI-49 — type-check the printed image; DI-29 — the package-row type oracle under the same
-   checker. Together they are the type checker the codegen review asked for.
-4. DI-09's atoms commit, which also discharges the uninhabited handler binder and makes
-   preservation statable (DI-17); then the constructor; then the sugar (DI-39).
-5. DI-53 then `Ty.lit` with `Ty.sub` (DI-15), then DI-38.
-6. DI-41 and DI-42 — Lean encoders for the six families and the hand value tree checked, before
-   Phase 1; DI-43 — the tag census.
-7. One World datum with its pin and the compatibility relation (DI-13, DI-47), which retires
-   the ledger design (DI-02, DI-03).
-8. The faces packet (DI-50) and the two-contract paragraph (DI-37).
+1. **S0 — the decision commit and the baseline.** Every ruled row of the register, the DB-09 and
+   DB-15 amendments, the two exclusion lines, this map's §L2 and §L3 corrections,
+   `docs/GENERATED.md`'s evidence words, three counterexample rows, `known-red.txt`'s two
+   reasons, and the retained baseline frozen before any alphabet moves (DI-47, DI-02, DI-03,
+   DI-13, DI-14, DI-18, DI-19, DI-20, DI-27, DI-28, DI-32, DI-37). Evidence: stamped.
+2. **S1a — core admission.** `Signature.dom` read in the two typing arms; the shared `asyncRoute`
+   dispatcher, so `perform` and `callback` compile alike at an async or external op;
+   `Api.checkTable`, `Api.admitProgram` and `runAdmitted`, with the print image a *separate*
+   certificate; the 55 × 2 invocation matrix (DI-54, DI-61, DI-60, DI-22, DI-23, DI-24, DI-51). Evidence: proved (the
+   compiler equality); tested (the matrix, the replay fixtures).
+3. **S2 — the error foundation.** `supportedErrTy` beside `Ty`, `Program/ErrorImage.lean` below
+   `Native`, `Err.text`, `Defect.error`, the three typing arms, the `.causeOf` and `.exitOf`
+   membership arms, `FitsIn` (DI-62, DI-26, DI-31, DI-17). Evidence: proved; reproduced (goldens,
+   tapes); tested (truth fixtures). It shares two files with S1a and follows it in one lane.
+4. **S6a — the small host specification.** `ProfileData`, `HostSpec` and `Binding` as DB-09 now
+   describes them; the `Envelope` predicate with at most one accepted completion per call;
+   `run_eq_ref` stated exactly (DI-57, DI-58). Evidence: proved (local transitions, envelope
+   laws).
+5. **S1b — the adapter and the type gate.** The pair made at the row adapter with the raw
+   diagnostics kept beside it; `tsc --noEmit` over the truth modules and the printed corpus; the
+   atom set emitted once and read by both engines and the prelude; the tree-to-map walk; the faces
+   packet; the inclusion test (DI-59, DI-49, DI-40, DI-44, DI-33, DI-37, DI-50). Evidence: tested
+   (bun, `tsc`); reproduced (tapes, goldens).
+6. **S3a — the elimination form.** `Eff.catchIf` and the four cause atoms under the first-`Fail`
+   rule, `eq` at `.string` with `or`/`and`, the `Forms` rows and both engines' pipe segment
+   (DI-09, DI-35, DI-07, DI-39). Evidence: proved (the compiler proof); reproduced; tested.
+7. **S4a → S4b → S4c — the type algebra**, three ratifications, never one: deep `normalize` with
+   the laws stated through it (DI-53); then `Ty.lit` with `Ty.sub` and `hasTy_sub` (DI-15, DI-55);
+   then the answer join as a least upper bound (DI-38). Evidence: proved; reproduced (`.ty`);
+   tested (`tsc`).
+8. **S5a → S5b — generation and the World.** Six Lean encoders with a metadata fixture inventory,
+   the hand value tree cross-checked, the tag census (DI-41, DI-42, DI-43, DI-45); then the three
+   World consumers, the baseline gate and the js_of_ocaml framing repair as its own bounded commit
+   (DI-13, DI-14, DI-47, DI-18, DI-52, DI-56). Evidence: proved (encoders, tags); reproduced
+   (baseline, vectors).
+9. **S6b — envelopes in replay, the table-aware reference, one host integration** (DI-58, DI-57,
+   DI-29, DI-24's spelling, DI-56's refusal outcome, the third package). Evidence: tested (host);
+   proved (envelope, then the reference).
 
-Everything above the line is generation, pins and one-line fixes; the theorems are the
-declarative typing system, subtyping with its monotonicity law, the compatibility relation,
-and the preservation invariant — each stated once, where it buys a claim.
+The theorems in that order are few and each buys a claim: the compiler's invocation equality, the
+error image's round trips, the envelope's one-completion law, normalisation and subtyping with
+their monotonicity, the compatibility relation, and — last, once `Reached` is defined — the
+preservation invariant. Everything else is generation, pins and one-line fixes.
 
 The Codex seat proposed a complementary sequence with reviewable stopping points — state the
 boundary as a faces and host contract packet first; close the demonstrated local gaps

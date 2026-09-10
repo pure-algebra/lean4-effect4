@@ -1,11 +1,18 @@
 # Effect4
 
-Effect4 is a Lean 4 library that models Effect TypeScript (`effect@4.0.0-rc.112`)
-closely enough to generate it. Its product is **Effect codegen**: a first-order
-program syntax (`Eff`) that prints as Effect TS and compiles to the rc.112
-frame machine, a reference fiber machine (`Machine`) that runs those frames the
-way rc.112's run loop does, and the Effect Schema data plane with its
-TypeScript generation, optics and surface carriers beside it.
+Effect4 makes Effect-style computations explicit, inspectable **program data**. Lean
+defines their structure, execution rules and construction checks. Effect TypeScript
+rc.112 is the first target profile and the behavioural reference for that profile,
+never the semantic owner; OCaml is an authoring and execution test bed. Host
+connections supply real services while keeping their values, errors, lifetimes and
+scheduling choices visible at defined boundaries, each held by a named grade of
+evidence.
+
+Concretely, the product is **Effect codegen**: a first-order program syntax (`Eff`)
+that prints as Effect TS and reads back, a compiler to the rc.112 frame machine, a
+reference fiber machine (`Machine`) that runs those frames the way rc.112's run loop
+does, and the Effect Schema data plane with its TypeScript generation, optics and
+surface carriers beside it.
 
 ```text
  Effect TS text  ⇄  Eff program  →  rc.112 frames  →  Machine

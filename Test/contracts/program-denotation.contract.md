@@ -248,6 +248,36 @@ This closes the wrapper correction, not the remaining scoped or P3 obligations.
 35. `progress`: under `WF`, `HeapNat`, a `sync` row, and a typed, valid request, the step
     exists, answers a typed and valid value, and keeps `WF` and `HeapNat`.
 
+The error-image and allocation lane, `Effect4.Program.ErrorImage` and the laws above `Typed`
+(landed 2026-09-09 in `23e5717` as S2's preparation; the instantiation of the folds into
+`Val.hasTy`'s `.causeOf` and `.exitOf` arms is S2's cutover and is **not** claimed here):
+
+36. Allocation extension: `Extends`, `extends_append`; `hasTy_mono` — a value typed against an
+    allocation table stays typed against any extension of it — and `hasTy_append`, both by
+    induction on `Ty`, at `[propext, Quot.sound]`.
+37. Environments at an allocation state: `FitsWith`, `FitsIn allocated`, and
+    `Fits_iff_FitsIn_nil` — agreement with `Fits` at `[]`, so no statement above moves and
+    `Fits` itself is byte-unchanged — with `FitsWith.append`, `FitsIn.append`, `FitsIn.mono`;
+    and `fits_childWith` for a compiled `Point`, which lives in
+    `src/Effect4/Laws/Program/Admit.lean` because `Point` is declared above `Effect4.Program.Typed`
+    and the value-typing laws must not depend on the compiler.
+38. The error image: `valOfErr`, and the folds `reasonAdmits` and `causeAdmits` parameterised by
+    a payload-membership function (`src/Effect4/Program/ErrorImage.lean`, below `Native`), with
+    `reasonAdmits_congr` and `causeAdmits_congr` (no axioms at all) so that two spellings of the
+    membership argument are interchangeable in later proofs. The round trips are
+    `errOf_valOfErr` and `valOfErr_errOf`, and `errAdmits_eq_reasonAdmits` says the existing
+    `errAdmits` **is** that fold at `Val.hasTy`, read the other way; `reasonAdmits_hasTy`,
+    `causeAdmits_hasTy`, `hasTyCause`, `hasTyCause_exitErr_fold` and `hasTyCause_exitErr` stand
+    beside them.
+39. The failure branch of an external answer: `external_error_typed` (`[propext]`) and
+    `external_oracle_error_typed`, beside the three success-only admission laws. The failure
+    branch of `admitAnswer` is a short proof from `admitted_row` with no induction — the earlier
+    description of it as a definitional unfolding is corrected.
+
+The battery for 36–39 is `Test/Program/TypedContract.lean:130-201` (the `@`-ascriptions at their
+exact propositions) with its `#print axioms` twin; every declaration is within
+`[propext, Quot.sound]` and none reaches `Classical.choice`.
+
 ## Algebra and dependency spine
 
 ```text

@@ -38,12 +38,22 @@ regenerates into temporary files and compares every output byte except the
 informational revision field. Data bytes are compared in full. Neither a compiler
 check nor a host test establishes that a committed output matches today's Lean source.
 
-`bash scripts/generate.sh` runs derived, Eff, wire, CAS and TypeScript producers
-in dependency order. `--only derived|eff|wire|cas|ts` selects one family;
-`--only lcnf` is the explicit Phase 1 engine regeneration route. The entry point
+`bash scripts/generate.sh` — with no argument or with `--all`, which name the same thing —
+runs the one named order (DI-33): **derived, eff, wire, cas, ts, readme**. Each family's
+inputs are an earlier family's outputs, and `readme` is last because
+`bun ts/eff/ingest/render-readme.ts` reads three `.gen.ts` files that `ts` has just written;
+it is a host producer, so it writes `ts/eff/ingest/README.md` in place and its `--check` is
+its drift form. `--only derived|eff|wire|cas|ts|readme` selects one family; `--only lcnf` is
+the explicit Phase 1 engine regeneration route and is not in the order. The entry point
 holds the Lean lane and gives each Lean invocation a 600-second timeout. It runs
 the producers every time. If only the informational revision differs, it retains
 the existing output bytes.
+
+**Truth is a host-lane family and is not in that order.** Its two commands are in its row
+below and must be run in sequence by hand or through `bash scripts/check-truth.sh`, because
+the Lean half reads the committed tapes that the bun half re-records: the two producers are a
+fixed point, not a pipeline stage. Putting it in `--all` would let one run regenerate a tape
+and a corpus that had never been compared with each other.
 
 ## Commands and current coverage
 
@@ -54,22 +64,29 @@ use `LEAN_NUM_THREADS=3`, and use `-M4096` for Lean drivers. Run one Lean proces
 A command listed here is a reproduction instruction, not a claim that it was run for
 this inventory. `cut-from` is the header stamp; a cached gate verdict is separate.
 
-| Family | Producer command | Inputs | Consumers | Designated gate and present limit |
-| --- | --- | --- | --- | --- |
-| Derived Json | `lake env lean -M4096 --run tools/Effect4Gen/Driver.lean --group Json` | `tools/Effect4Gen/manifest.json`, `tools/Effect4Gen/guards/json.lean`, `Effect4.Store.Canonical` | `Effect4.Store.Derived.Schema`, Effect4 library | `bash scripts/check-generated.sh`; fresh byte comparison, plus `lake build Test` for shapes |
-| Derived Schema | same driver, `--group Schema` | manifest, `tools/Effect4Gen/guards/schema.lean`, `Effect4.Store.Derived.Json` | Effect4 library | `bash scripts/check-generated.sh`; fresh byte comparison, plus `lake build Test` for shapes |
-| Derived Program | same driver, `--group Program` | manifest, `tools/Effect4Gen/guards/program.lean`, `Effect4.Program.Native`, `Effect4.Store.Canonical` | `Effect4.Api`, program wire | `bash scripts/check-generated.sh`; fresh byte comparison, plus `lake build Test` for shapes |
-| Derived Pin | same driver, `--group Pin` | manifest, `tools/Effect4Gen/guards/pin.lean`, `Effect4.Store.Pin`, `Effect4.Store.Node` | store | `bash scripts/check-generated.sh`; fresh byte comparison, plus `lake build Test` for shapes |
-| Eff | `lake env lean -M4096 --run src/OCaml5/Tools/EffGen.lean ocaml/eff` | `src/OCaml5/Eff/World.lean`, `src/OCaml5/Eff/Emit.lean`, imported Lean declarations | `effect4_eff`, `effect4_engine` | `bash scripts/check-generated.sh`; fresh byte comparison, plus `bash scripts/check-ocaml.sh dune-tests` |
-| Eff goldens | same EffGen command | `src/OCaml5/Eff/Goldens.lean` | `ocaml/eff/test/dune` | `bash scripts/check-generated.sh --stale` for provenance; `bash scripts/check-ocaml.sh dune-tests` for behavior |
-| Wire goldens | `lake env lean -M4096 --run src/OCaml5/Tools/EffWire.lean ocaml/goldens/eff` | `Effect4.Program.Wire.Corpus`, `src/OCaml5/Tools/EffWire.lean` | `ocaml/eff/test/test_lean_wire.ml` | `bash scripts/check-generated.sh`; fresh byte comparison and missing-file refusal |
-| CAS goldens | `lake env lean -M4096 --run src/OCaml5/Tools/CasGoldens.lean ocaml/engine/cas/goldens` | Store Word and Genesis, Machine Stores, `Test.Store.NodeContract` | `ocaml/engine/cas/test/dune` | `bash scripts/check-generated.sh --stale` for provenance only; `bash scripts/check-ocaml.sh engine-tests`, red as declared in the OCaml sweep |
-| LCNF | exact command in each output's first comment, run with `lake env` before `lean` | `src/OCaml5/Tools/LcnfGen.lean`, `src/OCaml5/Lcnf/`, named import and roots; engine also reads `ocaml/engine/externs.txt` and `ocaml/engine/tools/api_engine_prelude.ml` | `effect4_gen`, `effect4_engine` | `bash scripts/check-generated.sh --stale`, red as declared until Phase 1; `bash scripts/check-ocaml.sh gen-check` in sweep for the seam; neither regenerates LCNF |
-| TypeScript | `bash scripts/generate-ts-eff.sh` | `OCaml5.Eff.World`, native rows, ingestion taxonomy, forms, profile, `lakefile.toml`, `src/Effect4/Codegen/Print.lean` | TypeScript readers, checkers and tests | `bash scripts/check-ts-eff.sh`; byte comparison, in sweep |
-| Truth | corpus: `lake env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes`; other outputs and the tapes: `bun run harness/truth/run-truth.ts --manifest harness/truth/corpus.json --out harness/truth --timeout 300 --tape-out harness/truth/tapes` | Eff corpus, `harness/truth/prelude.ts`, the committed tapes (the package rows' recorded answers, read by Lean and re-recorded by rc.112 on every run), pinned rc.112 and `@effect/sql-sqlite-bun`, `ts/eff/package.json` and `bun.lock` | truth differential, TypeScript corpus check | `bash scripts/check-truth.sh`; fresh generation and comparison plus bounded host observations; `python3 scripts/test-truth-stamp.py` for the stamp's inputs. Not a `scripts/generate.sh` family |
-| Schema TypeScript | `lake env lean -M4096 harness/schema-generation/EmitFixture.lean` for Person, `EmitCoverageFixture.lean` for AllRepresentations, `EmitMultiFixture.lean` for TwoRoots; redirect stdout to named output | `Effect4.Codegen.Schema`, fixture declarations | three runtime checks in `harness/schema-generation/` | `bash scripts/check-schema-typescript-generation.sh`, host lane in sweep |
-| Runtime census | `python3 scripts/generate-data-stamps.py census` (runs the census producer and stamps identical data) | pinned rc.112 sources listed by output | `docs/RUNTIME-COVERAGE.md`, `Test/Audit/RuntimeCoverage.lean` | `bash scripts/check-effect-runtime-census.sh`, in sweep |
-| Schema assurance | `python3 scripts/generate-data-stamps.py assurance` (runs the assurance producer and stamps identical data) | schema sources, frozen batteries, pinned host sources listed by generator | schema assurance report | `bash scripts/check-schema-structural-assurance.sh`, manual by owner decision; owner: Schema assurance lane, 2026-09-08 |
+The **evidence** column is the word, or words, a family's claim carries, ruled 2026-09-09
+(DI-32): *proved* for a theorem, *reproduced* for a byte comparison against a fresh producer
+run, *tested* for a finite checker or host run over named inputs, *stamped* for a verifying
+trace — the inputs were the ones the producer saw, and nothing about the committed bytes. The
+words **co-occur**, and a finite checker run is *tested*, never *reproduced*. A family whose
+only word is *stamped* carries no claim that its committed bytes match a fresh run.
+
+| Family | Producer command | Inputs | Consumers | Designated gate and present limit | Evidence (DI-32) |
+| --- | --- | --- | --- | --- | --- |
+| Derived Json | `lake env lean -M4096 --run tools/Effect4Gen/Driver.lean --group Json` | `tools/Effect4Gen/manifest.json`, `tools/Effect4Gen/guards/json.lean`, `Effect4.Store.Canonical` | `Effect4.Store.Derived.Schema`, Effect4 library | `bash scripts/check-generated.sh`; fresh byte comparison, plus `lake build Test` for shapes | reproduced; tested |
+| Derived Schema | same driver, `--group Schema` | manifest, `tools/Effect4Gen/guards/schema.lean`, `Effect4.Store.Derived.Json` | Effect4 library | `bash scripts/check-generated.sh`; fresh byte comparison, plus `lake build Test` for shapes | reproduced; tested |
+| Derived Program | same driver, `--group Program` | manifest, `tools/Effect4Gen/guards/program.lean`, `Effect4.Program.Native`, `Effect4.Store.Canonical` | `Effect4.Api`, program wire | `bash scripts/check-generated.sh`; fresh byte comparison, plus `lake build Test` for shapes | reproduced; tested |
+| Derived Pin | same driver, `--group Pin` | manifest, `tools/Effect4Gen/guards/pin.lean`, `Effect4.Store.Pin`, `Effect4.Store.Node` | store | `bash scripts/check-generated.sh`; fresh byte comparison, plus `lake build Test` for shapes | reproduced; tested |
+| Eff | `lake env lean -M4096 --run src/OCaml5/Tools/EffGen.lean ocaml/eff` | `src/OCaml5/Eff/World.lean`, `src/OCaml5/Eff/Emit.lean`, imported Lean declarations | `effect4_eff`, `effect4_engine` | `bash scripts/check-generated.sh`; fresh byte comparison, plus `bash scripts/check-ocaml.sh dune-tests` | reproduced; tested |
+| Eff goldens | same EffGen command | `src/OCaml5/Eff/Goldens.lean` | `ocaml/eff/test/dune` | `bash scripts/check-generated.sh --stale` for provenance; `bash scripts/check-ocaml.sh dune-tests` for behavior | stamped; tested |
+| Wire goldens | `lake env lean -M4096 --run src/OCaml5/Tools/EffWire.lean ocaml/goldens/eff` | `Effect4.Program.Wire.Corpus`, `src/OCaml5/Tools/EffWire.lean` | `ocaml/eff/test/test_lean_wire.ml` | `bash scripts/check-generated.sh`; fresh byte comparison and missing-file refusal | reproduced |
+| CAS goldens | `lake env lean -M4096 --run src/OCaml5/Tools/CasGoldens.lean ocaml/engine/cas/goldens` | Store Word and Genesis, Machine Stores, `Test.Store.NodeContract` | `ocaml/engine/cas/test/dune` | `bash scripts/check-generated.sh --stale` for provenance only; `bash scripts/check-ocaml.sh engine-tests`, red as declared in the OCaml sweep | stamped (constructive check owed: DI-45) |
+| LCNF | exact command in each output's first comment, run with `lake env` before `lean` | `src/OCaml5/Tools/LcnfGen.lean`, `src/OCaml5/Lcnf/`, named import and roots; engine also reads `ocaml/engine/externs.txt` and `ocaml/engine/tools/api_engine_prelude.ml` | `effect4_gen`, `effect4_engine` | `bash scripts/check-generated.sh --stale`, red as declared until Phase 1; `bash scripts/check-ocaml.sh gen-check` in sweep for the seam; neither regenerates LCNF | stamped (the acceptance test of a regeneration is DI-19's conformance suite) |
+| TypeScript | `bash scripts/generate-ts-eff.sh` | `OCaml5.Eff.World`, native rows, ingestion taxonomy, forms, profile, `lakefile.toml`, `src/Effect4/Codegen/Print.lean` | TypeScript readers, checkers and tests | `bash scripts/check-ts-eff.sh`; byte comparison, in sweep | reproduced; tested (the corpus check against Lean's own oracles) |
+| Truth | corpus: `lake env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes`; other outputs and the tapes: `bun run harness/truth/run-truth.ts --manifest harness/truth/corpus.json --out harness/truth --timeout 300 --tape-out harness/truth/tapes` | Eff corpus, `harness/truth/prelude.ts`, the committed tapes (the package rows' recorded answers, read by Lean and re-recorded by rc.112 on every run), pinned rc.112 and `@effect/sql-sqlite-bun`, `ts/eff/package.json` and `bun.lock` | truth differential, TypeScript corpus check | `bash scripts/check-truth.sh`; fresh generation and comparison plus bounded host observations, and `tsc --noEmit -p harness/truth/tsconfig.json` over the regenerated modules before any byte is compared (DI-49); `python3 scripts/test-truth-stamp.py` for the stamp's inputs. Not a `scripts/generate.sh` family | reproduced (the tapes and corpus); tested (24 bounded host runs, single-fiber — DI-23) |
+| Schema TypeScript | `lake env lean -M4096 harness/schema-generation/EmitFixture.lean` for Person, `EmitCoverageFixture.lean` for AllRepresentations, `EmitMultiFixture.lean` for TwoRoots; redirect stdout to named output | `Effect4.Codegen.Schema`, fixture declarations | three runtime checks in `harness/schema-generation/` | `bash scripts/check-schema-typescript-generation.sh`, host lane in sweep | reproduced; tested (three host runtime checks) |
+| Runtime census | `python3 scripts/generate-data-stamps.py census` (runs the census producer and stamps identical data) | pinned rc.112 sources listed by output | `docs/RUNTIME-COVERAGE.md`, `Test/Audit/RuntimeCoverage.lean` | `bash scripts/check-effect-runtime-census.sh`, in sweep | reproduced (the census data); proved (only where a row's witness theorem is joined in `Test/Audit/RuntimeCoverage.lean`) |
+| Schema assurance | `python3 scripts/generate-data-stamps.py assurance` (runs the assurance producer and stamps identical data) | schema sources, frozen batteries, pinned host sources listed by generator | schema assurance report | `bash scripts/check-schema-structural-assurance.sh`, manual by owner decision; owner: Schema assurance lane, 2026-09-08 | stamped (and the stamp itself is deferred: the frozen fingerprint is refused) |
 
 The two files `ocaml/eff/goldens/val_ref.hex` and
 `ocaml/eff/goldens/val_handle.hex` are hand-derived test fixtures, as recorded in
@@ -720,9 +737,13 @@ sorted source-file SHA-256 stamp protocol; it has no Lean import closure. The
 foreign fixture corpus is temporary output of `Tools.Corpus --foreign`, checked
 against its construction oracles by the host gate.
 
+Evidence for this family (DI-32): **reproduced** — a fresh byte comparison of the rendered
+tables, everything but the informational revision — and **tested**, for the recognizers the
+tables describe, whose verdicts are finite runs over the fixture corpus.
+
 | Family | Producer command | Inputs | Consumers | Designated gate and present limit |
 | --- | --- | --- | --- | --- |
-| Ingest tables | `bun ts/eff/ingest/render-readme.ts` | producer and profile/forms/taxonomy `.gen.ts` | recognizer users | `bash scripts/check-ingest.sh`; fresh byte comparison except informational revision |
+| Ingest tables | `bun ts/eff/ingest/render-readme.ts`, also `bash scripts/generate.sh --only readme` and last in `--all` (DI-33) | producer and profile/forms/taxonomy `.gen.ts` | recognizer users | `bash scripts/check-ingest.sh`; fresh byte comparison except informational revision |
 
 | Path | Tier | Family | Producer | Inputs | Consumer | Gate | Committed |
 | --- | --- | --- | --- | --- | --- | --- | --- |

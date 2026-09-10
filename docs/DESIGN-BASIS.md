@@ -355,6 +355,32 @@ Generation must prove or test separate claims:
 
 No one gate discharges the others.
 
+Amended 2026-09-09 (S0; register rows DI-56, DI-57, DI-58). A target profile has **three
+parts, and they are three kinds of content**, not three data files:
+
+- **ProfileData** — serialisable policy and identity: the scalar domains and their refusal
+  rule, the admitted operations and their invocation forms, the adapter identities and
+  imports, and the error projection.
+- **HostSpec** — a Lean specification: the value correspondence `Rep`, the state relation,
+  the call protocol and the observation relation, as propositions and functions in checking
+  code. Functions in checking and semantic code are allowed; functions in canonical programs
+  are not (the exclusion list below), and no language for serialising every law is invented.
+- **Binding** — the runtime adapter and its evidence: the tapes, the differentials, the
+  finite host tests.
+
+rc.112 is the first profile. OCaml native is a **test bed**, not a claimed target. js_of_ocaml
+is **unclaimed** until its framing vectors, the arithmetic profile and the conformance suite
+all pass; framing vectors alone admit no execution route (DI-56, DI-19).
+
+A profile's scalar domain is **bounded with explicit refusal, intermediates included**:
+naturals, framing lengths and every arithmetic result stay inside it or the host refuses —
+no wrapping, no saturation — while the logical `Nat` stays unbounded and distinct from any
+target's finite representation. A refusal must have an execution outcome: the adapter raises
+a distinguished `ProfileRefusal`, the recorder records it as its own row class, and the
+comparator classifies that run "outside the profile" — neither agreement nor disagreement,
+with the retained state per the observation policy; the run is counted, not claimed. Until
+that lands, the truth claim names the exercised safe fragment (DI-56).
+
 ### DB-10 — PolyFun is pinned prior art, not a public dependency
 
 Status: adopted as prior art, not an Effect4 proof receipt.
@@ -577,10 +603,51 @@ number and `"\"x\""` a string, exactly as the foreign `${7}` and `${"x"}` did. T
 tables are `Program/Packages/SqliteBun.lean` and `KeyValueStoreMemory.lean`; what in them is
 the package's and what is the harness's plumbing is said in their module headers.
 
+Amended 2026-09-09 (S0; the foundation settlement, register rows DI-59, DI-35, DI-62), three
+sentences.
+
+*Where the pair is made* (DI-59): at the **row adapter** — `Effect.mapError(toPair)` in every
+shim of `harness/truth/prelude.ts` — so the program's own handlers and the recorder observe the
+same value; the recorder records the pair and **keeps the raw diagnostics** (`reason._tag`,
+`cause`) beside the row, so what the projection drops is not lost to the tape, and the type
+oracle (DI-29) binds the adapter rather than the package member.
+
+*The equality refusal set* (DI-35, ruling G9): `eq` widens **one `Ty` at a time, and only where
+`===` compares faithfully** — `.string` today, with `or`/`and` at `.bool` beside it, since the
+term language has `not` and no other connective. Past that the printed `eq` becomes
+`Equal.equals`, which is its own slice; `Val.eqAt : Ty → Val → Val → Bool` is the destination
+beside `Val.hasTy`; the `Effects` package gets no `Equal` class.
+
+*The admissible error image* (DI-62): a program may introduce a failure payload only at `never`,
+`nat`, `string`, `prod string string`, or a union of those (a literal type once `Ty.lit` lands),
+and the restriction applies at **every** introduction — `fail`, `yieldError`, and each `fail`
+leaf of a cause literal — while defect-only and interrupt-only causes stay admitted at `never`.
+`Err.text s` is appended so a plain string round-trips instead of collapsing to `boom`; `errOf`
+is total onto `tag`/`text`/`tagged` with `boom` retained for old tapes; and a declared error type
+never permits discarded data (`errAdmits_errOf`). `Err.value (v : Val)` is **refused**: a handle
+inside a cause would extend the minted-handle invariant into causes.
+
 What this basis refuses. A `json` leaf in `Ty`: the value language is the carrier's frames
 and a codec is a row. A record type in `Ty`: columns are pairs. `.int` stays uninhabited
 (`TYPED-FB-INT`): `Val.nat` is a `.nat`, and the printer's identification of the two as
 `number` is not the typing's.
+
+Recommended beside these refusals, not ruled (scout E, 2026-09-09). All three stand, with two
+amendments: `Headers` and `File.Info` are codec-able as `list (prod string string)`, the shape
+the SQL row already uses; and `.int` is the one refusal a package member's *declared* type
+contradicts (`SocketCloseError.code: Schema.Int`), and the cheapest to lift, since the ordinal
+and its `render` arm already exist. G1's implied outer tag is sound **exactly when a row's
+package effect has a single outer tag**: `SqlClient.withTransaction` (whose channel is the
+body's `E` union `SqlError`) and `SqliteMigrator.layer` (two outer tags, from the installed
+driver) violate it, and four error class names are declared twice across packages
+(`AuthenticationError`, `UnknownError`, `InternalError`, `PersistenceError`), so a row whose
+`E` is a union must declare the outer tag too. Two sentences above are corrected by the same
+reading: `SqlError`'s eleven reasons are **not uniform** — `UniqueViolation` carries a twelfth
+field `constraint` the other ten do not, and "they differ only by tag" is what makes
+`prod string string` look sufficient; and the JSON-text refusal covers the **bind** direction
+only — the package's own parameter and cell domain is `Statement.PrimitiveKind`'s eight members,
+`JSON.stringify` throws on a `bigint` and is lossy on a `Date` and a `Uint8Array`, and the
+**answer** direction is unrefused (DI-56).
 
 ## Native library boundaries
 
@@ -668,9 +735,16 @@ The following choices require a new decision record and a breaker packet:
 - storing raw `Expr`, host closures, promises, or runtime objects as canonical
   program content;
 - making PolyFun, Mathlib, Foldlab, Effect TypeScript, or the Effect language
-  service the semantic owner of the core library; and
+  service the semantic owner of the core library;
 - claiming full reification from compilation, a finite corpus sweep, or a
-  finite runtime test alone.
+  finite runtime test alone;
+- requirement polymorphism in a **stored program** (DI-20, refused 2026-09-09 as a
+  profile choice): this profile has no runtime polymorphic syntax and adds none.
+  Lean and OCaml builders are polymorphic and instantiate closed `Eff` programs;
+  subeffecting (`Row.Subset` as subsumption) is the shape on offer. This is a
+  bounded refusal, not a claim that polymorphism is impossible here; and
+- effect polymorphism in a stored program (DI-28), refused on the same ground and
+  with the same bound.
 
 These exclusions keep the proof graph inspectable while leaving room for
 explicit comparison models and target-specific implementations.

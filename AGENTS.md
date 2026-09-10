@@ -17,6 +17,7 @@ full, then open only the authority documents named for the current task.
 | `docs/SCHEMA-ANNOTATIONS.md` | the annotation data plane as the host defines it |
 | `Test/contracts/` | frozen contract packets and their executable falsifiers |
 | `Test/Counterexamples/REGISTER.md` | stable IDs of every declaration-changing counterexample |
+| `Test/fixtures/baseline/<commit>/` | retained pre-change baselines of the descriptions and alphabets, the independent authority a compatibility gate compares against (DI-47). No generator writes here; it changes only by a named promotion command, and a diff in it is a review event, not drift |
 | `src/Effect4/` | API and functional utilities through `Effect4`; the proof graph through `Effect4.Laws`, with declaration namespaces unchanged |
 | `Test/` | batteries, attacks and proof receipts; `Audit/AxiomGate.lean` is the gate |
 | `generated/` | deterministic projections only; never hand-edited |

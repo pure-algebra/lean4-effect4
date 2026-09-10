@@ -97,8 +97,8 @@ Test.Counterexamples.Surface.HandlerFits
 # 2026-09-08, when the avatar and the daemon were archived on `archive/ocaml5-avatar` and
 # both gates were deleted with them.
 
-# reason: engines cut before e2285a9; cleared by plan v2 Phase 1
+# reason: engines cut before e2285a9; cleared by the Phase 1 regeneration, whose acceptance is DI-19's conformance suite (2026-09-09): 42 ocaml/eff goldens decoded and re-encoded, 8 wire goldens byte-equal, 24 truth programs to the same exit. Regeneration is the precondition, never the test
 # gate: generated-stale
 
-# reason: engines cut before e2285a9; cleared by plan v2 Phase 1
+# reason: engines cut before e2285a9; same acceptance as the entry above — DI-19's conformance suite, not the OCaml differential, which accepts only the carrier and extern change. An unexpected pass still refuses: the entry leaves deliberately when the suite passes
 # gate: engine-tests
