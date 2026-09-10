@@ -1,5 +1,8 @@
 # Surface capabilities and derivations contract
 
+Retired 2026-09-10: the Surface library is archived on branch `archive/surface` at `70b1571`
+(removed from `main` in `ac07384`). Retained for the counterexample rows this packet names.
+
 Status: breaker packet, red, 2026-09-04 (wave 1b, for wave 2e of
 `docs/research/2026-09-04-surface-library-plan.md` §14.3-§14.7)
 
@@ -11,7 +14,7 @@ Counterexamples: `E4-SURFACE-CE-071` through `E4-SURFACE-CE-075`
 
 Witnesses: `git:70b1571:Test/Counterexamples/Surface/Derive.lean`
 
-Depends on: `Test/contracts/surface-facts.contract.md` (the lifted clauses and
+Depends on: `Test/contracts/archive/surface-facts.contract.md` (the lifted clauses and
 each carrier's `wellFormed_iff`)
 
 ## Purpose

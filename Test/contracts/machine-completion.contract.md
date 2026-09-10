@@ -22,7 +22,8 @@ choice is separate from D6, whose Completion format is already selected.
 `D6-FB-AVATAR-ANSWER`: the OCaml bridge's success-answer parser constructs the
 selected Completion data. The separate OCaml avatar still has an exit-only
 answer tape. Its regenerated description exposes that mismatch, pinned by name
-in `OCaml5/Avatar/Check.lean`; the projection report now has 47 of 58 matching
+in `git:14e6835:src/OCaml5/Avatar/Check.lean` (the avatar is archived on branch
+`archive/ocaml5-avatar`); the projection report now has 47 of 58 matching
 descriptions. This slice does not widen that host's answer protocol.
 
 No host execution or later term-scheduler correspondence is asserted. Receipts:

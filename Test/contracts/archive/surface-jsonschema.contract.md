@@ -1,5 +1,8 @@
 # Surface JSON Schema contract
 
+Retired 2026-09-10: the Surface library is archived on branch `archive/surface` at `70b1571`
+(removed from `main` in `ac07384`). Retained for the counterexample rows this packet names.
+
 Status: breaker packet, red, 2026-09-04 (wave 1b of
 `docs/research/2026-09-04-surface-library-plan.md` §4.3)
 
@@ -53,7 +56,7 @@ would never be reached by dot notation on a document value; the name is frozen
 here as `documentJsonSchema`. See finding 5 of the wave-1b report.
 
 `Refusal` is the ingest refusal alphabet frozen in
-`Test/contracts/surface-ingest.contract.md`; this module contributes the
+`Test/contracts/archive/surface-ingest.contract.md`; this module contributes the
 constructors `unknownKeyword`, `unsupportedRefTarget` and `unsupportedShape`
 and adds none of its own.
 

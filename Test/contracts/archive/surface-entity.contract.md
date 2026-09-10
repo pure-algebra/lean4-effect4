@@ -1,5 +1,8 @@
 # Surface entity and domain contract
 
+Retired 2026-09-10: the Surface library is archived on branch `archive/surface` at `70b1571`
+(removed from `main` in `ac07384`). Retained for the counterexample rows this packet names.
+
 Status: breaker packet, red, 2026-09-04 (wave 1b of
 `docs/research/2026-09-04-surface-library-plan.md` §4.1-§4.2)
 
@@ -10,7 +13,7 @@ Battery: `git:70b1571:Test/Surface/EntityContract.lean`
 Counterexamples: `E4-SURFACE-CE-009` through `E4-SURFACE-CE-015`,
 `E4-SURFACE-CE-062`, `E4-SURFACE-CE-063`
 
-Shared: `Test/contracts/surface-facts.contract.md` owns the `Refusal`
+Shared: `Test/contracts/archive/surface-facts.contract.md` owns the `Refusal`
 alphabet; this contract owns the entity and domain clause names and their
 order.
 

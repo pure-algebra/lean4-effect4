@@ -1,5 +1,8 @@
 # Surface handler contract
 
+Retired 2026-09-10: the Surface library is archived on branch `archive/surface` at `70b1571`
+(removed from `main` in `ac07384`). Retained for the counterexample rows this packet names.
+
 Status: breaker packet, red, 2026-09-04 (wave 1b, for wave 2d of
 `docs/research/2026-09-04-surface-library-plan.md` §13.2, under the rulings of
 §13.7)
@@ -16,7 +19,7 @@ Reads: `src/Effect4/Program/Typing.lean` (`Ty`, `EffTy`, `Signature`, `typeOf`,
 `EffTy.joinAnswer`), `src/Effect4/Program/Eff.lean` (`Eff`, `Row`, `Ty.join`,
 `Ty.key`), `src/Effect4/Codegen/Print.lean` (`print`, `PrintRefusal`, `printDecl`)
 
-Shared: `Test/contracts/surface-facts.contract.md` owns the `Refusal`
+Shared: `Test/contracts/archive/surface-facts.contract.md` owns the `Refusal`
 alphabet; this contract adds six constructors and owns their clause order.
 
 Pins: rc.112 `unstable/httpapi/HttpApiBuilder.ts:126` (`group`), `:441`

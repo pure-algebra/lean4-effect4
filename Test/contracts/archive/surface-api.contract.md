@@ -1,5 +1,8 @@
 # Surface API contract
 
+Retired 2026-09-10: the Surface library is archived on branch `archive/surface` at `70b1571`
+(removed from `main` in `ac07384`). Retained for the counterexample rows this packet names.
+
 Status: breaker packet, red, 2026-09-04 (wave 1b of
 `docs/research/2026-09-04-surface-library-plan.md`, §4.4 as revised by §13.1)
 
@@ -12,7 +15,7 @@ Counterexamples: `E4-SURFACE-CE-016` through `E4-SURFACE-CE-037`,
 
 Witnesses: `git:70b1571:Test/Counterexamples/Surface/Api.lean`
 
-Shared: `Test/contracts/surface-facts.contract.md` owns the `Refusal`
+Shared: `Test/contracts/archive/surface-facts.contract.md` owns the `Refusal`
 alphabet; this contract owns the endpoint, group and API clause names and
 their order.
 

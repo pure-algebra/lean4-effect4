@@ -1,5 +1,8 @@
 # Surface ingest contract
 
+Retired 2026-09-10: the Surface library is archived on branch `archive/surface` at `70b1571`
+(removed from `main` in `ac07384`). Retained for the counterexample rows this packet names.
+
 Status: breaker packet, red, 2026-09-04 (wave 1b of
 `docs/research/2026-09-04-surface-library-plan.md` §4.8)
 
@@ -31,7 +34,7 @@ exists to prevent; `E4-SURFACE-CE-008` is that attack.
 All in namespace `Effect4.Surface`.
 
 `Refusal` is the one closed alphabet of
-`Test/contracts/surface-facts.contract.md`; the constructors this module uses
+`Test/contracts/archive/surface-facts.contract.md`; the constructors this module uses
 are `unknownKeyword`, `unsupportedContentType`, `unsupportedRefTarget`,
 `unsupportedMethod`, `unsupportedParameterLocation`, `unsupportedBindingKind`,
 `unsupportedShape`, `streamingResponse`, `recursiveSchema`,

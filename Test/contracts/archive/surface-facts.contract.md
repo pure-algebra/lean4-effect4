@@ -1,5 +1,8 @@
 # Surface facts and refusal alphabet contract
 
+Retired 2026-09-10: the Surface library is archived on branch `archive/surface` at `70b1571`
+(removed from `main` in `ac07384`). Retained for the counterexample rows this packet names.
+
 Status: breaker packet, red, 2026-09-04 (wave 1b, for waves 1a and 2e of
 `docs/research/2026-09-04-surface-library-plan.md` §14.2, §14.6, §15.2)
 

@@ -1,14 +1,17 @@
 # Surface handler fit contract
 
+Retired 2026-09-10: the Surface library is archived on branch `archive/surface` at `70b1571`
+(removed from `main` in `ac07384`). Retained for the counterexample rows this packet names.
+
 Status: breaker packet, red, 2026-09-04 (plan §13.7 ruling 7, for wave 2d of
 `docs/research/2026-09-04-surface-library-plan.md` §13.2)
 
 **Collision notice, read first.** A contract for this subject already exists at
-`Test/contracts/surface-handler.contract.md`, landed in commit `9f9e0e6` by the
+`Test/contracts/archive/surface-handler.contract.md`, landed in commit `9f9e0e6` by the
 wave-1b breaker, claiming `E4-SURFACE-CE-076` through `E4-SURFACE-CE-087`. The
 repository's own coordination record says it does not: `COORDINATION.md`'s
 checkpoint says "the breaker's handler packet (§13.7 ruling 7) not started",
-`Test/contracts/surface-api.contract.md` says handlers have "no contract in
+`Test/contracts/archive/surface-api.contract.md` says handlers have "no contract in
 this packet", and `REGISTER.md` at that commit ends at `E4-SURFACE-CE-075` with
 no row for `076` through `087`. This packet was dispatched on that record. It
 is therefore filed beside the prior contract rather than over it, its rows
@@ -25,8 +28,8 @@ Counterexamples: `E4-SURFACE-CE-088` through `E4-SURFACE-CE-110`
 
 Witnesses: `git:70b1571:Test/Counterexamples/Surface/HandlerFits.lean`
 
-Shared: `Test/contracts/surface-facts.contract.md` owns the `Refusal`
-alphabet; `Test/contracts/surface-api.contract.md` owns `Endpoint`, `Group`,
+Shared: `Test/contracts/archive/surface-facts.contract.md` owns the `Refusal`
+alphabet; `Test/contracts/archive/surface-api.contract.md` owns `Endpoint`, `Group`,
 `Api`, `Response` and `ResponseBody`. This contract owns the handler carrier,
 the endpoint's type projections, the fit relation and their clause order.
 
