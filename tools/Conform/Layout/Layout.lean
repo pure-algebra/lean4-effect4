@@ -510,6 +510,10 @@ partial def decodeAt (T : Target) (W : World) (fuel : Nat) (ty : TypeRef) (t : T
   | .nativeScalar k =>
     match k, t with
     | .numK, .numV n => pure (.natLit n)
+    -- `bigintK` is a number too: `valuesMemo` enumerates it with `numK`, and leaving it out
+    -- here made a target that uses it refuse its own construction (found by
+    -- `Conform.Effect4.TargetLeanNative`, whose `Nat` is an arbitrary-precision scalar).
+    | .bigintK, .numV n => pure (.natLit n)
     | .strK, .strV s => pure (.strLit s)
     | .boolK, .boolV b => pure (.boolLit b)
     | .unitK, .undef => pure (.ctor h (r.ctors.head?.map (·.ctor) |>.getD "unit") [])
