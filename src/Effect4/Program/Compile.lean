@@ -508,6 +508,46 @@ def mergeContextsK (v : Val) : NCode :=
     | [] => badShape
     | reason :: rest => Prim.failure ⟨reason :: rest⟩
 
+/-- The route an asynchronous invocation takes: the `callback` arm of `compileEff`, extracted
+so that the `perform` arm can share it (v2 DI-61 (a)). It is a plain definition, outside the
+compile's structural recursion, because no arm of it compiles a subterm.
+
+**Half of DI-61 (a) is landed here.** The extraction is behaviour-free — `callback` compiles
+to exactly what it compiled to at `66ee4657`, for every operation. The other half, routing
+`perform` through this dispatcher, is *not* landed: see the note on the `perform` arm below,
+`Effect4.Laws.Program.Invocation`'s header, and
+`docs/research/2026-09-09-seat-core-admission.md` §4 (an untracked working note).
+
+Three cases, in this order, and the order is the ruling: an **external** row registers by its
+index and its evaluated request, table-independently at compile time — the table is read when
+the registration executes (`externalRow`, `:1272`), not here, which is why the external case
+must be decided before any row kind is consulted (the placeholder's kind is `.program`,
+`Native.lean:189-191`). **`sleep`** registers on the logical clock, `0` millis yielding
+(`internal/effect.ts:6052-6066`, the timer of A4). Every other operation registers a Deferred
+waiter when its row is `.async`, and is `badShape` otherwise — a `callback` on a sync row is a
+value of the wrong shape, exactly as before. -/
+def asyncRoute (op : NativeOp) (request : Term) (p : Point) : NCode :=
+  match op with
+  | .external _ =>
+    match evalTerm p.env request with
+    | some v => Prim.async (EffName.external op v) false none
+    | none => badShape
+  | .sleep =>
+    match (evalTerm p.env request).bind NativeOp.sleepMillisOf with
+    | some 0 => Prim.yieldNowWith 0
+    | some (n + 1) =>
+      Prim.async (EffName.store (Name.registerSleep (n + 1))) true
+        (some (EffName.store Name.cancelSleep))
+    | none => badShape
+  | _ =>
+    match (NativeOp.row op).kind with
+    | .async =>
+      match (evalTerm p.env request).bind NativeOp.awaitCellOf with
+      | some cell =>
+        Prim.async (EffName.registerAwait cell) true (some (EffName.cancelAwait cell))
+      | none => badShape
+    | _ => badShape
+
 /-- `compile` of plan §3, structural in the program; the point is data. Names are minted at
 the point; `interpOf` resolves them by compiling the subterm they address. -/
 def compileEff : NativeEff → Point → NCode
@@ -537,6 +577,17 @@ def compileEff : NativeEff → Point → NCode
       -- `suspend` must return the child's complete code, including any suspension
       -- that `Effect.gen` or the printed loop constructs (`internal/effect.ts:1175-1196`).
       | .suspend _ => Prim.suspend (EffThunk.body p)
+      -- v2 DI-61 (a) would route this arm through `asyncRoute` as well, so that `perform` and
+      -- `callback` are one invocation. **Not landed here**: the reference denotation
+      -- (`Laws/Program/DenoteR.lean`, `denoteR`'s own `perform` arm) and the compiler-head
+      -- mirrors (`inlineYield`, `Laws/Program/Handles.lean`'s `compileEff_perform`,
+      -- `Laws/Program/Intro.lean`'s `compileEff_perform_async`/`_program`) spell this arm as
+      -- it stands, and `run_eq_ref` (`Laws/Program/RuntimeR.lean:200`) relates the two with no
+      -- premise, so the routing change is false-making for the agreement graph until the
+      -- denotation is changed with it. Measured and recorded in
+      -- `docs/research/2026-09-09-seat-core-admission.md` §4 (untracked working note); the
+      -- tracked statement of the gap is `Effect4.Laws.Program.Invocation`'s header and the
+      -- `THE GAP` guards of `Test/Program/InvocationContract.lean`.
       | .perform op request =>
         match (NativeOp.row op).kind with
         | .sync =>
@@ -575,30 +626,8 @@ def compileEff : NativeEff → Point → NCode
       -- `While` frame built when the suspension runs, by `suspendBodyAt`.
       | .whileLoop _ _ _ _ => Prim.suspend (EffThunk.body p)
       | .yieldNow priority => Prim.yieldNowWith priority
-      | .callback register request =>
-        match register with
-        | .external _ =>
-          match evalTerm p.env request with
-          | some v => Prim.async (EffName.external register v) false none
-          | none => badShape
-        -- `Effect.sleep(d)` (`internal/effect.ts:6052-6066`; the timer, A4): `d ≤ 0` is
-        -- `yieldNow`, the rest registers on the logical clock by the machine's name, cancelled
-        -- by `clearTimeout`
-        | .sleep =>
-          match (evalTerm p.env request).bind NativeOp.sleepMillisOf with
-          | some 0 => Prim.yieldNowWith 0
-          | some (n + 1) =>
-            Prim.async (EffName.store (Name.registerSleep (n + 1))) true
-              (some (EffName.store Name.cancelSleep))
-          | none => badShape
-        | _ =>
-          match (NativeOp.row register).kind with
-          | .async =>
-            match (evalTerm p.env request).bind NativeOp.awaitCellOf with
-            | some cell =>
-              Prim.async (EffName.registerAwait cell) true (some (EffName.cancelAwait cell))
-            | none => badShape
-          | _ => badShape
+      -- The shared dispatcher, unchanged in what it compiles for every operation.
+      | .callback register request => asyncRoute register request p
       | .awaitFiber fiber mode =>
         match evalTerm p.env fiber with
         | some (Val.fiber ⟨id⟩) =>

@@ -174,7 +174,13 @@ structure Run where
   outcome : Outcome
   machine : Machine
 
-/-- Replay a host decision tape against the program. -/
+/-- Replay a host decision tape against the program. **Raw**: this entry point checks
+nothing. It does not type the program, does not check the supplied table's names
+(`LawfulTable`) and does not check that the runner can register the table's rows
+(`checkTable`). The checked entry point is `replayAdmitted`, whose certificate
+`admitProgram` builds; `replayChecked` is a different check again — it admits the incoming
+*decisions*, not the program. Kept and named for fixtures, negative tests and the truth
+driver. -/
 def replay (program : Program) (fuel : Nat) (tape : List Decision) (choices : List Bool := [])
     (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := []) :
     Run :=
@@ -190,13 +196,18 @@ def evaluate : Decision := RunDecision.evaluate root
 /-- The decision that drains every armed dispatcher, round after round. -/
 def flush : Decision := RunDecision.flush
 
-/-- The ordinary run: evaluate the root, then flush. -/
+/-- The ordinary run: evaluate the root, then flush. **Raw**, exactly as `replay` is: no
+typing, no table check. `runAdmitted` is the checked one. It also takes no decision tape, so a
+program that parks on a clock cannot finish through it — a timed `sleep` needs
+`replay … [evaluate, .advance 1, flush]`. -/
 def run (program : Program) (fuel : Nat) (choices : List Bool := [])
     (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := []) : Run :=
   replay program fuel [evaluate, flush] choices answers table
 
 /-- `Effect.runSyncExit`: the root evaluated on the caller's stack, its dispatcher flushed,
-and the `AsyncFiberError` defect when it has not exited. -/
+and the `AsyncFiberError` defect when it has not exited. **Raw**, as `run` and `replay` are:
+it checks neither the program nor the table. There is no `runSyncAdmitted`; a caller that
+wants the certificate builds it with `admitProgram` and keeps it. -/
 def runSync (program : Program) (fuel : Nat) (choices : List Bool := [])
     (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := []) : Machine × ExitV :=
   letI := evaluatorFor program table
@@ -242,6 +253,90 @@ def replaySteps (program : Program) (fuel : Nat) (tape : List Decision)
     (answers : List (Completion Val Err Defect FiberId Ann) := [])
     (table : RowTable := []) : List (Nat × Decision × List Program.Await) :=
   Program.replayStepsFrom program fuel table 0 tape (load program fuel choices answers)
+
+/-! ## Admission: the three checks a run is entitled to (v2 DI-61 (b), (c), (d))
+
+Five different questions are answered by five different checks
+(`docs/research/2026-09-09-foundation-admission-boundary.md` §1), and this face keeps them
+apart rather than bundling them into one word:
+
+* **typed** — `typeOf` computes an `EffTy`. Since DI-54 that includes operation-domain
+  membership, so an external index outside the supplied table no longer types.
+* **lawful** — `LawfulTable`: the supplied rows' *names* are unique, do not collide with a
+  built-in, drop no trailing name and capture no printed binder.
+* **runnable** — `checkTable`: this runner can register every supplied row, i.e. each is
+  `(registration := .external, kind := .async)`. Naming lawfulness does not imply it.
+
+`readable` is **not** among them. It means "printing this program and reading it back gives
+this program", which is a property of the *print image*, not of execution: the historical wire
+program `Wire.Corpus.pAwait` is typed and runs, and is not readable (it spells `perform` on an
+async row, which the reader canonicalises to `callback`). Bundling it would have refused the
+compatibility case the invocation unification exists for, so it is a separate optional
+certificate, `imageCertificate`.
+
+None of this is a completion claim: an admitted program may park at a live frontier, and a
+frontier is never a refusal (`AGENTS.md`, representation rules). -/
+
+export Effect4.Program (TableRefusal checkTable)
+
+/-- What `admitProgram` refuses, in the order it checks. -/
+inductive AdmitRefusal
+  /-- `typeOf` answered `none` against this table. -/
+  | illTyped
+  /-- `LawfulTable` refused the supplied rows' names. -/
+  | unlawfulTable
+  /-- This runner cannot register a supplied row, with its position. -/
+  | table (why : TableRefusal)
+deriving DecidableEq, Repr
+
+/-- A program admitted to run against a table: its type, and the three facts a caller is
+entitled to assume. The fields are proofs, so an `AdmittedProgram` cannot be forged by
+building the structure with the wrong table — the table and the program are its indices. -/
+structure AdmittedProgram (program : Program) (table : RowTable) where
+  ty : EffTy
+  typed : typeOf program table = some ty
+  lawful : LawfulTable table = true
+  runnable : checkTable table = none
+
+/-- The decidable admission: the type, the table's names, the table's registrations. No
+classical reasoning and no `sorry` — every field is discharged by the evaluation that decided
+it. -/
+def admitProgram (program : Program) (table : RowTable := []) :
+    Except AdmitRefusal (AdmittedProgram program table) :=
+  match htyped : typeOf program table with
+  | none => .error .illTyped
+  | some ty =>
+    if hlawful : LawfulTable table = true then
+      match hrunnable : checkTable table with
+      | some why => .error (.table why)
+      | none => .ok ⟨ty, htyped, hlawful, hrunnable⟩
+    else .error .unlawfulTable
+
+/-- The print-image certificate, separate from admission on purpose: the proof that this
+program survives `print` and `read` unchanged. A program without it still runs.
+
+`PLift` only because `Option` is a `Type` and the certificate is a `Prop`; the proposition
+carried is exactly `readable program table = true`, reached as `.down`. -/
+def imageCertificate (program : Program) (table : RowTable := []) :
+    Option (PLift (readable program table = true)) :=
+  if h : readable program table = true then some ⟨h⟩ else none
+
+/-- The checked ordinary run: `run`, with the certificate consumed. -/
+def runAdmitted {program : Program} {table : RowTable}
+    (admitted : AdmittedProgram program table) (fuel : Nat) (choices : List Bool := [])
+    (answers : List (Completion Val Err Defect FiberId Ann) := []) : Run :=
+  let _ := admitted.ty
+  run program fuel choices answers table
+
+/-- The checked replay: `replay`, with the certificate consumed. The tape is the caller's,
+as in `replay`; admission says nothing about which decisions are legal (that is
+`replayChecked`) and nothing about finishing. -/
+def replayAdmitted {program : Program} {table : RowTable}
+    (admitted : AdmittedProgram program table) (fuel : Nat) (tape : List Decision)
+    (choices : List Bool := [])
+    (answers : List (Completion Val Err Defect FiberId Ann) := []) : Run :=
+  let _ := admitted.ty
+  replay program fuel tape choices answers table
 
 /-! ## Schema, as syntax -/
 

@@ -32,6 +32,7 @@ import Effect4.Laws.Program.Simulation.Evaluate
 import Effect4.Laws.Program.Simulation.Pending
 import Effect4.Laws.Program.Simulation.Drive
 import Effect4.Laws.Program.RuntimeR
+import Effect4.Laws.Program.Invocation
 
 /-!
 # Effect4 proof graph

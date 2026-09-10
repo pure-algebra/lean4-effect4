@@ -348,6 +348,38 @@ def nativeSignature (table : RowTable := []) : Signature NativeOp :=
     serviceTy := nativeServiceTy,
     dom := fun | .external i => decide (i < table.length) | _ => true }
 
+/-! ## Which supplied tables this runner can register (v2 DI-61 (b))
+
+`LawfulTable` (`src/Effect4/Codegen/Read.lean`) is about *names*: unique keys, no built-in
+collision, no dropped trailing name, no captured binder. It says nothing about how a row is
+answered, so a table can be lawful, type a program and print it, and still supply no runnable
+registration — the row with `registration := .deferred` of
+`docs/research/foundation-probes/Admission.lean:13` parks with its answer unused and refuses
+an explicit `answerAsync` as `notExternal`. `checkTable` is that missing decision, with the
+position of the first row this runner cannot register. `LawfulTable` is unchanged. -/
+
+/-- A row a supplied table cannot be registered by, and where it sits. The two conditions are
+`externalRow`'s (`src/Effect4/Program/Compile.lean`), read in its order: who answers the row
+first, then whether it is asynchronous at all. -/
+inductive TableRefusal
+  /-- The row at this position is not answered by the external oracle. -/
+  | notExternal (index : Nat)
+  /-- The row at this position is answered externally but is not an asynchronous row. -/
+  | notAsync (index : Nat)
+deriving DecidableEq, Repr
+
+/-- The first position of a supplied table this runner cannot register, `none` when every row
+is `(registration := .external, kind := .async)`. An empty table is accepted: a program with
+no external call needs no row. -/
+def checkTable (table : RowTable) : Option TableRefusal :=
+  (List.range table.length).findSome? fun index =>
+    match table[index]? with
+    | some row =>
+      if row.registration ≠ .external then some (.notExternal index)
+      else if row.kind ≠ .async then some (.notAsync index)
+      else none
+    | none => none
+
 /-- A program of the native route. -/
 abbrev NativeEff := Eff NativeOp
 

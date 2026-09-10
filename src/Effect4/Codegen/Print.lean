@@ -297,8 +297,11 @@ mutual
   different scope trees, and the compile follows the term's. A reference prints as the
   identifier that carries its target's path (`LayerTerm.refName`, `Refs.lean`); the `const`
   that binds it is `printModule`'s, and an expression printed on its own leaves the
-  identifier free. The named spelling of a layer, keys as class identifiers, is
-  `Codegen/Layer.lean`'s. -/
+  identifier free. The named spelling of a layer — keys as class identifiers — is **not
+  printed by any module of this tree**: it is the open half of DI-24
+  (`docs/DESIGN-ISSUES.md`), and the `Codegen/Layer.lean` this docstring used to forward to
+  has never existed (DI-51: the citation evaded `scripts/check-source-citations.py` because it
+  carried no repository root). -/
   def printLayer (sig : Signature Op) : LayerTerm Op → Except PrintRefusal TypeScript.Expr
     | .succeed key value =>
       .ok (.call (.ident "Layer.succeed") [printKey sig key, printLit value])
@@ -426,11 +429,23 @@ mutual
       .ok (.call (.ident "Scope.close") [printTerm scope, printTerm exit])
 end
 
-/-- The printed program as an exported constant. The declared type is
-`Effect.Effect<A, E>` — the two parameters `EffTy` spells — exactly when the requirement
-row is empty; a program with a requirement has no two-parameter spelling here, so its type
-is left to inference (§2.2 owns the third parameter, and the requirement's service names
-are not this lane's). -/
+/-- The printed program as an exported constant.
+
+**What this does today.** The declared type is `Effect.Effect<A, E>` — the two parameters
+`EffTy` spells — exactly when the requirement row is empty. A program *with* a requirement has
+no two-parameter spelling here, so it prints with **no declared type at all** and the host
+infers one.
+
+**The policy this owes (DI-24, `docs/DESIGN-ISSUES.md`).** A program prints its declared type
+*always*, with three parameters — `Effect.Effect<A, E, R>` — because a printed program with no
+declared type is the one case where the printed image carries less than the program's own
+typing, and the type oracle (DI-29) cannot check what is not printed. What is not settled, and
+so is not implemented here, is the *spelling* of `R`: the requirement row is a set of
+`ServiceKey`s, and the target spells a requirement as the union of the services' `Identifier`
+types, which is the same open question as the class spelling of keys in `printLayer` above.
+Until that spelling is fixed under `tsc` on the truth harness, this arm stays two-parameter
+and a requirement-carrying program stays untyped in its printed image; the reader
+(`Codegen/Read.lean`) reads both shapes. -/
 def printDecl (name : String) (ty : EffTy) (body : TypeScript.Expr) : TypeScript.ConstDecl :=
   { doc := []
   , name := name

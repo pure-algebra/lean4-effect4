@@ -1232,7 +1232,11 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
       | program => rfl
     | callback op request =>
       cases op
-      all_goals simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
+      -- `asyncRoute` since v2 DI-61 (a): the `callback` arm is the shared dispatcher, so the
+      -- script unfolds it here to reach the same case split as before. What the arm compiles
+      -- to is unchanged for every operation.
+      all_goals simp only [inlineYield, compileEff, asyncRoute, hf, Nat.succ_ne_zero,
+        ↓reduceIte]
       case external i => cases evalTerm p.env request <;> rfl
       case sleep =>
         cases (evalTerm p.env request).bind NativeOp.sleepMillisOf with

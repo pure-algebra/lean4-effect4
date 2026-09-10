@@ -182,10 +182,15 @@ mutual
     | .yieldError error => (termTy sig env error).map fun e => ⟨.never, e, Requirement.empty⟩
     | .sync thunk => (termTy sig env thunk).map EffTy.pure
     | .suspend body => effTy sig env body
+    -- The operation must be in the signature's domain (`Signature.dom`, DI-54): an external
+    -- index outside the supplied table is refused here rather than typed through the
+    -- placeholder row, whose `request := .never` otherwise admits any request term typed
+    -- `never` (`Native.lean:189-191`). The OCaml checker already refuses it categorically.
     | .perform op request => do
       let row := sig.rowOf op
       let r ← termTy sig env request
-      if r = row.request then some ⟨row.answer, row.error, Requirement.ofList row.requires⟩
+      if sig.dom op = true ∧ r = row.request then
+        some ⟨row.answer, row.error, Requirement.ofList row.requires⟩
       else none
     | .bind first rest => do
       let f ← effTy sig env first
@@ -229,10 +234,14 @@ mutual
       let s ← termTy sig (env ++ [cursor, b.answer]) step
       if t = .bool ∧ s = cursor then some ⟨.unit, b.error, b.requires⟩ else none
     | .yieldNow _ => some (EffTy.pure .unit)
+    -- Same domain check as `perform` (DI-54). The kind check is not a domain check: an
+    -- out-of-range external index has the placeholder's `kind = .program`, but a *supplied*
+    -- table can make an in-range row async while the index is still outside the domain of a
+    -- different signature.
     | .callback register request => do
       let row := sig.rowOf register
       let r ← termTy sig env request
-      if row.kind = .async ∧ r = row.request then
+      if sig.dom register = true ∧ row.kind = .async ∧ r = row.request then
         some ⟨row.answer, row.error, Requirement.ofList row.requires⟩
       else none
     | .awaitFiber fiber mode => do
