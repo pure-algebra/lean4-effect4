@@ -180,6 +180,8 @@ def compare(old, new, policy=None):
     allowed = set(policy.get('constructor_appends', []))
     allowed_consumers = set(policy.get('consumer_appends', []))
     used, used_consumers, errors, changes = set(), set(), [], []
+    if old.get('source', {}).get('toolchain') != new.get('source', {}).get('toolchain'):
+        errors.append('toolchain: changed or missing core-container identity pin')
     nf = {canonical(f['instance']): f for f in new['families']}
     for before in old['families']:
         name = before['family']

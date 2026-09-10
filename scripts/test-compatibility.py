@@ -54,7 +54,8 @@ class CompatibilityTests(unittest.TestCase):
         def handle(x): x['byte_maps']['HandleKind'][0]['byte'] = 254
         def frame(x): x['framing']['length_definition'] = 'little-endian mutant'
         def selection(x): x['consumers']['wire'].pop()
-        for mutate in (payload, order, fields, kind, handle, frame, selection):
+        def toolchain(x): x['source']['toolchain'] = 'unreviewed-compiler'
+        for mutate in (payload, order, fields, kind, handle, frame, selection, toolchain):
             with self.subTest(mutation=mutate.__name__):
                 changed = copy.deepcopy(baseline); mutate(changed)
                 self.assertEqual(c.compare(baseline, changed)['status'], 'fail')
