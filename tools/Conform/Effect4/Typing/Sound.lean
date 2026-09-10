@@ -719,7 +719,7 @@ theorem hasTy_weaken_closed (sig : Signature Op) (inserted : Ty) (program : Eff 
     HasTy sig [inserted] (Eff.weaken 0 program) t ↔ HasTy sig [] program t :=
   hasTy_weaken sig [] [] inserted program t
 
-/-! ## Axioms: the ceiling is `[propext, Quot.sound]` for all fourteen -/
+/-! ## Axioms: the ceiling is `[propext, Quot.sound]` for all twenty-one -/
 
 #print axioms effTy_sound
 #print axioms stmtsTy_sound
@@ -736,6 +736,11 @@ theorem hasTy_weaken_closed (sig : Signature Op) (inserted : Ty) (program : Eff 
 #print axioms effTy_eq_hasTy
 #print axioms wellTyped_iff
 #print axioms hasTy_unique
+#print axioms stmtsHasTy_unique
+#print axioms effsHasTy_unique
+#print axioms actionHasTy_unique
+#print axioms layerHasTy_unique
 #print axioms hasTy_weaken
+#print axioms hasTy_weaken_closed
 
 end Conform.Effect4.Typing
