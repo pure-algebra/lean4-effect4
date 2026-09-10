@@ -10,8 +10,10 @@ type, its parameters, whether it is a structure, and, per constructor in declara
 computationally relevant fields with their types as `TypeRef`s. Everything downstream is plain
 data, which is what keeps `Conform.Layout.Layout` free of any dependency on this repository.
 
-**Depends on.** `Lean.Meta` (`getConstInfoInduct`, `forallTelescope`, `isProp`,
-`isTypeFormerType`, `isStructure`), `Conform.Layout.Types`.
+**Depends on.** `Lean.Meta` (`getConstInfoInduct`, `InductiveVal.ctors`, `getConstInfoCtor`,
+`ConstructorVal.cidx`/`numParams`/`numFields`, `forallBoundedTelescope`, `inferType`, `isProp`,
+`isTypeFormerType`, `isStructure`), `Conform.Layout.Types`. Nothing here recomputes what one of
+those answers.
 
 **Properties.**
 * **Relevance is a stated policy, not a guess.** `Relevance.propsOnly` drops `Prop` fields (what
@@ -20,8 +22,9 @@ data, which is what keeps `Conform.Layout.Layout` free of any dependency on this
 * **A field type this module cannot spell is named, never dropped.** It becomes
   `TypeRef.con `_unspellable []` and the name is collected in `Reading.unspellable` — *by
   construction*.
-* **Declaration order is preserved.** `CtorView.index` is the position in `InductiveVal.ctors`,
-  which is the canonical wire's tag — *by construction*.
+* **Declaration order is preserved.** `CtorView.index` is `ConstructorVal.cidx`, the compiler's
+  own position of the constructor in `InductiveVal.ctors`, which is the canonical wire's tag —
+  *by construction*, and no longer by a hand `zip` against `List.range`.
 -/
 
 namespace Conform.Layout.Reflect
@@ -83,24 +86,27 @@ def readType (rel : Relevance) (n : Name) (instantiation : List TypeRef) :
   let isStruct := isStructure env n
   let mut unspellable : Array String := #[]
   let mut ctors : Array CtorView := #[]
-  for (c, idx) in info.ctors.zip (List.range info.ctors.length) do
+  for c in info.ctors do
     let ci ← getConstInfoCtor c
-    let (fields, us) ← forallTelescope ci.type fun xs _ => do
+    -- `ConstructorVal` carries the split the reader needs: `numParams` binders of the
+    -- declaration, then `numFields` binders of the constructor, and `cidx` is the position in
+    -- `InductiveVal.ctors`, which is the canonical wire's tag.
+    let (fields, us) ← forallBoundedTelescope ci.type (ci.numParams + ci.numFields) fun xs _ => do
       let pm : List (FVarId × Nat) :=
-        (List.range info.numParams).map fun i => (xs[i]!.fvarId!, i)
+        (List.range ci.numParams).map fun i => (xs[i]!.fvarId!, i)
       let mut fs : Array FieldView := #[]
       let mut us : Array String := #[]
-      for f in xs[info.numParams:] do
+      for f in xs[ci.numParams:] do
         let t ← inferType f
         unless ← isRelevant rel t do continue
         let nm ← f.fvarId!.getUserName
         let ref ← toRef pm t
-        if ref.render == unspellableName.toString then
+        if ref == .con unspellableName [] then
           us := us.push s!"{c}.{nm} : {← ppExpr t}"
         fs := fs.push { name := nm.toString, type := ref }
       pure (fs.toList, us)
     unspellable := unspellable ++ us
-    ctors := ctors.push { name := c.getString!, index := idx, fields }
+    ctors := ctors.push { name := c.getString!, index := ci.cidx, fields }
   -- the parameters, instantiated where the caller asked for it
   let paramNames := (List.range info.numParams).map fun i => s!"p{i}"
   let finalCtors :=
@@ -115,9 +121,11 @@ def readType (rel : Relevance) (n : Name) (instantiation : List TypeRef) :
 at. Requests are read in order and a repeated name is read once. -/
 def readWorld (rel : Relevance) (requests : Array (Name × List TypeRef)) : MetaM Reading := do
   let mut types : Array TypeView := #[]
+  let mut seen : NameSet := {}
   let mut unspellable : Array String := #[]
   for (n, inst) in requests do
-    if types.any (·.name == n) then continue
+    if seen.contains n then continue
+    seen := seen.insert n
     let (tv, us) ← readType rel n inst
     types := types.push tv
     unspellable := unspellable ++ us

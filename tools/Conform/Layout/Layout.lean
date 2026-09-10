@@ -16,7 +16,8 @@ answers the four questions a representation has to answer:
 | scalar domain | `Rule.scalar` | where does the target narrow the source domain? |
 | container | `Rule.container` | what target shape does a value of this type take? |
 
-The datum is first-order and total: it is JSON (`Target.toJson` / `Target.reader`, through
+The datum is first-order and total: it is JSON (`deriving ToJson` on the records, the
+`ToString`-based spelling on the five leaves, and `Target.reader` back through
 `Conform.Policy`), it names no Lean declaration except by `Name`, and the constructor
 information it is checked against arrives as a `World` of plain records
 (`Conform.Layout.Reflect` builds one by reflection in the driver). Nothing in this module
@@ -56,9 +57,16 @@ datum is coherent because it reads the same rule; and it decides the three check
 
 namespace Conform.Layout
 
-open Lean (Name Json)
+open Lean (Name Json ToJson toJson)
 
-/-! ## The datum -/
+/-! ## The datum
+
+Every *record* below is its own JSON schema, so its encoder is `deriving ToJson`. Every *leaf*
+below is not: a `Discrimination`, a `Payload`, a `Container`, a `ScalarKind` and a
+`ScalarDomain` are JSON as the one-line spelling `toString` gives them and `ofString?` reads
+back (`tagField:_tag`, `named:fst,snd`, `bounded:53`), because that spelling is the vocabulary
+the audit form of `layout.coherent` compares emitters in. Those five therefore keep a hand
+`ToJson` instance, written once over the `ToString` they already had. -/
 
 /-- The target's own scalar carriers. -/
 inductive ScalarKind where
@@ -73,6 +81,7 @@ instance : ToString ScalarKind := ⟨ScalarKind.toString⟩
 def ofString? : String → Option ScalarKind
   | "bool" => some .boolK | "number" => some .numK | "string" => some .strK
   | "unit" => some .unitK | "bigint" => some .bigintK | _ => none
+instance : ToJson ScalarKind := ⟨fun k => Json.str (toString k)⟩
 end ScalarKind
 
 /-- Where the target narrows the source domain. -/
@@ -107,6 +116,7 @@ def ofString? (s : String) : Option ScalarDomain :=
     | ["bounded", b] => (b.toNat?).map .bounded
     | ["wrapping", b] => (b.toNat?).map .wrapping
     | _ => none
+instance : ToJson ScalarDomain := ⟨fun d => Json.str (toString d)⟩
 end ScalarDomain
 
 /-- Given a target value, which Lean constructor is it? Each constructor states its
@@ -193,6 +203,7 @@ def ofString? (s : String) : Option Discrimination :=
   | ["nativeScalar", k] => (ScalarKind.ofString? k).map .nativeScalar
   | ["nativeOption", n, s] => some (.nativeOption n s)
   | _ => none
+instance : ToJson Discrimination := ⟨fun d => Json.str (toString d)⟩
 end Discrimination
 
 /-- Given the constructor, where are its arguments? -/
@@ -226,6 +237,7 @@ def ofString? (s : String) : Option Payload :=
 def fieldNames : Payload → List String
   | .named fs => fs
   | _ => []
+instance : ToJson Payload := ⟨fun p => Json.str (toString p)⟩
 end Payload
 
 /-- What target shape a value of the type takes. Declared in the rule and cross-checked
@@ -244,6 +256,7 @@ def ofString? : String → Option Container
   | "scalar" => some .scalarC | "object" => some .objectC | "array" => some .arrayC
   | "tuple" => some .tupleC | "frame" => some .frameC | "literal" => some .literalC
   | "nullOr" => some .nullOrC | _ => none
+instance : ToJson Container := ⟨fun c => Json.str (toString c)⟩
 end Container
 
 /-- The container a discrimination induces. -/
@@ -266,7 +279,7 @@ structure CtorRule where
   /-- The integer discriminant, for `intTagField` and `indexed`. -/
   intTag : Nat := 0
   payload : Payload := .erased
-deriving Inhabited
+deriving Inhabited, ToJson
 
 /-- How one target represents one Lean type constructor. -/
 structure Rule where
@@ -287,7 +300,7 @@ structure Rule where
   absence leaves the refusal. -/
   domainRestriction : Option String := none
   note : String := ""
-deriving Inhabited
+deriving Inhabited, ToJson
 
 /-- A nesting the target is checked at that the closed world does not itself contain: the
 result type of an operation, a boundary payload. Every field type of every constructor of the
@@ -295,7 +308,7 @@ world is a usage already and needs no entry here. -/
 structure Usage where
   site : String
   type : TypeRef
-deriving Inhabited
+deriving Inhabited, ToJson
 
 /-- A target's whole representation table.
 
@@ -307,7 +320,7 @@ structure Target where
   note : String := ""
   rules : Array Rule := #[]
   usages : Array Usage := #[]
-deriving Inhabited
+deriving Inhabited, ToJson
 
 namespace Target
 
@@ -336,10 +349,6 @@ end Target
 
 namespace CtorRule
 
-def toJson (c : CtorRule) : Json :=
-  Json.mkObj [("ctor", Json.str c.ctor), ("tag", Json.str c.tag),
-    ("intTag", Json.num c.intTag), ("payload", Json.str (toString c.payload))]
-
 def reader (j : Json) : Policy.Reader CtorRule := do
   let get ← Policy.object j ["ctor", "tag", "intTag", "payload"]
   let ctor ← Policy.field get "ctor" Policy.string
@@ -353,20 +362,6 @@ def reader (j : Json) : Policy.Reader CtorRule := do
 end CtorRule
 
 namespace Rule
-
-def toJson (r : Rule) : Json :=
-  Json.mkObj
-    [ ("type", Json.str r.type.toString)
-    , ("applies", match r.applies with
-        | some args => Json.arr (args.toArray.map fun a => Json.str a.render)
-        | none => Json.null)
-    , ("discrimination", Json.str (toString r.discrimination))
-    , ("ctors", Json.arr (r.ctors.toArray.map CtorRule.toJson))
-    , ("scalar", match r.scalar with | some s => Json.str (toString s) | none => Json.null)
-    , ("container", Json.str (toString r.container))
-    , ("domainRestriction",
-        match r.domainRestriction with | some s => Json.str s | none => Json.null)
-    , ("note", Json.str r.note) ]
 
 def reader (j : Json) : Policy.Reader Rule := do
   let get ← Policy.object j
@@ -396,17 +391,6 @@ end Rule
 
 namespace Target
 
-/-- The whole table as JSON; `Target.reader` reads exactly this back. Usages are rendered as
-their spelling and read back by the caller's own parser, so the JSON never carries a Lean
-expression. -/
-def toJson (T : Target) : Json :=
-  Json.mkObj
-    [ ("name", Json.str T.name)
-    , ("note", Json.str T.note)
-    , ("rules", Json.arr (T.rules.map Rule.toJson))
-    , ("usages", Json.arr (T.usages.map fun u =>
-        Json.mkObj [("site", Json.str u.site), ("type", Json.str u.type.render)])) ]
-
 /-- The table read back. Usages come back with their spelling in `site` and an unresolved
 `param 0` type: a usage's `TypeRef` is built by the caller from the world, never parsed here. -/
 def reader (j : Json) : Policy.Reader Target := do
@@ -422,9 +406,16 @@ end Target
 
 /-- A target object literal: a repeated key overwrites, the first occurrence fixes the
 position. This is why a payload field named like the tag destroys the discriminant. -/
-def collapse (fs : List (String × TVal)) : List (String × TVal) :=
-  let keys := fs.foldl (fun acc (k, _) => if acc.contains k then acc else acc ++ [k]) []
-  keys.map fun k => (k, (fs.reverse.find? (·.1 == k)).map (·.2) |>.getD .null)
+def collapse (fs : List (String × TVal)) : List (String × TVal) := Id.run do
+  -- the last write of each key wins, the first occurrence fixes the position
+  let last : Std.HashMap String TVal := fs.foldl (fun m (k, v) => m.insert k v) {}
+  let mut placed : Std.HashSet String := {}
+  let mut out : Array (String × TVal) := #[]
+  for (k, _) in fs do
+    unless placed.contains k do
+      placed := placed.insert k
+      out := out.push (k, last.getD k .null)
+  return out.toList
 
 /-- The field types of one constructor of an applied type, instantiated at its arguments. -/
 def fieldTypes (W : World) (ty : TypeRef) (c : String) : LayoutM (List TypeRef) := do
@@ -695,8 +686,10 @@ partial def nullFree (T : Target) (W : World) (fuel : Nat) (ty : TypeRef) : Null
 
 /-- A memo of the values already enumerated, keyed by `<depth>:<type spelling>`: without it the
 cost of `valuesAt` is exponential in the depth, because every field of every constructor
-re-enumerates its type. -/
-abbrev ValueMemo := List (String × List DataValue)
+re-enumerates its type. A key is written at most once (the recursive calls are all at a
+strictly smaller depth, so no key can be computed twice), which is why a `Std.HashMap` is the
+same memo as the association list it replaces and not merely a faster one. -/
+abbrev ValueMemo := Std.HashMap String (List DataValue)
 
 /-- Every value of an applied type down to `depth`, with the scalar samples below and at most
 `width` values kept per field so a wide product does not explode. The scalar samples stay
@@ -705,11 +698,11 @@ check tests separately. -/
 partial def valuesMemo (T : Target) (W : World) (width : Nat) (depth : Nat) (ty : TypeRef) :
     StateM ValueMemo (List DataValue) := do
   let key := s!"{depth}:{ty.render}"
-  match (← get).find? (·.1 == key) with
-  | some (_, vs) => return vs
+  match (← get)[key]? with
+  | some vs => return vs
   | none =>
     let vs ← compute
-    modify fun m => (key, vs) :: m
+    modify (·.insert key vs)
     return vs
 where
   compute : StateM ValueMemo (List DataValue) := do
@@ -746,7 +739,7 @@ where
 
 /-- `valuesMemo` run at an empty memo. -/
 def valuesAt (T : Target) (W : World) (depth width : Nat) (ty : TypeRef) : List DataValue :=
-  (valuesMemo T W width depth ty).run' []
+  (valuesMemo T W width depth ty).run' {}
 
 /-! ## The admissibility decision -/
 
@@ -757,18 +750,15 @@ inductive Verdict where
   | undecided (reason : String)
 deriving Inhabited
 
-/-- Pairwise distinctness of a list of strings; the first duplicate is named. -/
-def firstDuplicate (xs : List String) : Option String :=
-  let rec go : List String → List String → Option String
-    | [], _ => none
-    | x :: rest, seen => if seen.contains x then some x else go rest (x :: seen)
-  go xs []
-
-def firstDuplicateNat (xs : List Nat) : Option Nat :=
-  let rec go : List Nat → List Nat → Option Nat
-    | [], _ => none
-    | x :: rest, seen => if seen.contains x then some x else go rest (x :: seen)
-  go xs []
+/-- Pairwise distinctness; the first repeated element, in list order, is named. One definition
+over `Std.HashSet` serves both the string tags and the integer tags, so there is no second
+hand-rolled scan. -/
+def firstDuplicate? {α} [BEq α] [Hashable α] (xs : List α) : Option α := Id.run do
+  let mut seen : Std.HashSet α := {}
+  for x in xs do
+    if seen.contains x then return some x
+    seen := seen.insert x
+  return none
 
 /-- **The admissibility condition of every rule, decided.** The `law` a verdict names is the
 theorem of `Conform.Layout.Laws` whose hypothesis this decision discharges. -/
@@ -787,7 +777,7 @@ def admissible (T : Target) (W : World) (ty : TypeRef) : Verdict :=
     let arityOf (c : String) : Option Nat := (arities.find? (·.1 == c)).map (·.2)
     match r.discrimination with
     | .tagField f =>
-      match firstDuplicate tags with
+      match firstDuplicate? tags with
       | some d => .inadmissible s!"two constructors carry the tag `{d}`" "Laws.tagged_ne_of_tag_ne"
       | none =>
         match r.ctors.find? (fun cr => cr.payload.fieldNames.contains f) with
@@ -795,12 +785,12 @@ def admissible (T : Target) (W : World) (ty : TypeRef) : Verdict :=
           .inadmissible s!"{h}.{cr.ctor} has a payload field named `{f}`, the tag field"
             "Laws.tagged_injective"
         | none =>
-          match r.ctors.find? (fun cr => (firstDuplicate cr.payload.fieldNames).isSome) with
+          match r.ctors.find? (fun cr => (firstDuplicate? cr.payload.fieldNames).isSome) with
           | some cr => .inadmissible s!"{h}.{cr.ctor} has two payload fields with one name"
               "Laws.object_injective"
           | none => .admissible "Laws.tagged_ne_of_tag_ne + Laws.tagged_injective"
     | .intTagField f =>
-      match firstDuplicateNat ints with
+      match firstDuplicate? ints with
       | some d => .inadmissible s!"two constructors carry the tag {d}" "Laws.object_injective"
       | none =>
         match r.ctors.find? (fun cr => cr.payload.fieldNames.contains f) with
@@ -808,18 +798,18 @@ def admissible (T : Target) (W : World) (ty : TypeRef) : Verdict :=
             "Laws.object_injective"
         | none => .admissible "Laws.object_injective"
     | .indexed =>
-      match firstDuplicateNat ints with
+      match firstDuplicate? ints with
       | some d => .inadmissible s!"two constructors have index {d}" "Laws.frame_ne_of_name_ne"
       | none => .admissible "Laws.frame_ne_of_name_ne"
     | .variant =>
-      match firstDuplicate tags with
+      match firstDuplicate? tags with
       | some d => .inadmissible s!"two constructors are spelled `{d}`" "Laws.frame_ne_of_name_ne"
       | none => .admissible "Laws.frame_ne_of_name_ne"
     | .record =>
       if r.ctors.length != 1 then
         .inadmissible s!"{h} has {r.ctors.length} constructors, and a record needs one"
           "Laws.object_injective"
-      else match r.ctors.head?.bind fun cr => firstDuplicate cr.payload.fieldNames with
+      else match r.ctors.head?.bind fun cr => firstDuplicate? cr.payload.fieldNames with
         | some d => .inadmissible s!"{h} has two payload fields named `{d}`" "Laws.object_injective"
         | none => .admissible "Laws.object_injective"
     | .literalUnion =>
@@ -827,7 +817,7 @@ def admissible (T : Target) (W : World) (ty : TypeRef) : Verdict :=
       | some (c, n) => .inadmissible s!"{h}.{c} carries {n} arguments, so it is not a literal"
           "Laws.literal_inj"
       | none =>
-        match firstDuplicate tags with
+        match firstDuplicate? tags with
         | some d => .inadmissible s!"two constructors spell the literal `{d}`" "Laws.literal_inj"
         | none => .admissible "Laws.literal_inj"
     | .unboxed =>

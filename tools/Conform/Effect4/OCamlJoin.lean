@@ -121,13 +121,13 @@ def extractDecl (text : String) (name : String) : Option (List String) :=
 /-- One constructor row of a rendered variant: `  | Ty_prod of ty * ty` becomes
 `("Ty_prod", ["ty", "ty"])`. -/
 def parseCtorLine (l : String) : Option (String × List String) :=
-  let t : String := l.trim
+  let t : String := l.trimAscii.toString
   if !t.startsWith "|" then none
   else
-    let t : String := (t.drop 1).trim.toString
+    let t : String := (t.drop 1).trimAscii.toString
     match (t.splitOn " of ") with
-    | [nm] => some (nm.trim, [])
-    | [nm, args] => some (nm.trim, (args.splitOn " * ").map fun a => a.trim)
+    | [nm] => some (nm.trimAscii.toString, [])
+    | [nm, args] => some (nm.trimAscii.toString, (args.splitOn " * ").map (·.trimAscii.toString))
     | _ => none
 
 def parseVariant (lines : List String) : List (String × List String) :=
@@ -152,31 +152,36 @@ def recoverTable (T : Target) (name : String) (files : List (String × String)) 
   let table := spellingTable T
   let mut cons : Array EmitterRow := #[]
   let mut dest : Array EmitterRow := #[]
+  -- the first occurrence of a `(type, constructor)` on each side is the row kept; these two
+  -- sets are that "already have one", in place of a linear scan of the growing arrays.
+  let mut consSeen : Std.HashSet (Name × String) := {}
+  let mut destSeen : Std.HashSet (Name × String) := {}
   for (file, text) in files do
     for (line, lineNo) in (text.splitOn "\n").zipIdx do
       for (spelling, ty, ctor) in table do
         if !containsWord line spelling then continue
         let shape := (shapeOf T ty ctor).getD "?"
         let row : EmitterRow :=
-          { type := ty, ctor, shape, evidence := s!"{file}:{lineNo + 1} {line.trim}" }
+          { type := ty, ctor, shape, evidence := s!"{file}:{lineNo + 1} {line.trimAscii.toString}" }
         if isPattern line spelling then
-          unless dest.any (fun r => r.type == ty && r.ctor == ctor) do dest := dest.push row
+          unless destSeen.contains (ty, ctor) do
+            destSeen := destSeen.insert (ty, ctor); dest := dest.push row
         else
-          unless cons.any (fun r => r.type == ty && r.ctor == ctor) do cons := cons.push row
+          unless consSeen.contains (ty, ctor) do
+            consSeen := consSeen.insert (ty, ctor); cons := cons.push row
   return { name, construction := cons, destruction := dest }
 where
   /-- `Ty_prod` occurs in the line as a whole token, not as a prefix of `Ty_prodX`. -/
   containsWord (line spelling : String) : Bool :=
     let parts := line.splitOn spelling
     parts.length > 1 &&
-      (List.range (parts.length - 1)).any fun i =>
-        let after := parts[i + 1]!
-        (after.isEmpty || !(after.get 0).isAlphanum && after.get 0 != '_')
+      parts.tail.any fun after =>
+        after.isEmpty || !after.front.isAlphanum && after.front != '_'
   /-- The spelling opens a match arm or a `function` arm. -/
   isPattern (line spelling : String) : Bool :=
     match line.splitOn spelling with
     | before :: _ =>
-      let b := before.trim
+      let b := before.trimAscii.toString
       b.endsWith "|" || b == "|"
     | [] => false
 
@@ -271,7 +276,7 @@ def main (argv : List String) : IO UInt32 := do
       let files ← scanned.mapM fun p => do pure (p, ← IO.FS.readFile (System.FilePath.mk p))
       let tbl := Conform.Effect4.recoverTable T "ocaml-eff recovered from generated OCaml" files
       IO.FS.writeFile (outDir / "ocaml-recovered-table.json")
-        ((Conform.Layout.EmitterTable.toJson tbl).pretty ++ "\n")
+        ((Lean.toJson tbl).pretty ++ "\n")
       let auditRows := Conform.Layout.auditCoherence T tbl
       let auditReport : Conform.Report :=
         { tool := "conform.layout.audit[ocaml-eff recovered]"
