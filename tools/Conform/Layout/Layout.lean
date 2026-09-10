@@ -689,14 +689,18 @@ cost of `valuesAt` is exponential in the depth, because every field of every con
 re-enumerates its type. A key is written at most once (the recursive calls are all at a
 strictly smaller depth, so no key can be computed twice), which is why a `Std.HashMap` is the
 same memo as the association list it replaces and not merely a faster one. -/
-abbrev ValueMemo := Std.HashMap String (List DataValue)
+abbrev ValueMemo := Std.HashMap String (Array DataValue)
 
 /-- Every value of an applied type down to `depth`, with the scalar samples below and at most
 `width` values kept per field so a wide product does not explode. The scalar samples stay
 inside every declared domain, so enumeration never manufactures the domain refusal the scalar
-check tests separately. -/
+check tests separately.
+
+The enumeration itself is an `Array` (the checks `take` a prefix of it and iterate it); only
+the *arguments of one constructor* stay a `List`, because that is the shape `DataValue.ctor`
+holds them in. -/
 partial def valuesMemo (T : Target) (W : World) (width : Nat) (depth : Nat) (ty : TypeRef) :
-    StateM ValueMemo (List DataValue) := do
+    StateM ValueMemo (Array DataValue) := do
   let key := s!"{depth}:{ty.render}"
   match (← get)[key]? with
   | some vs => return vs
@@ -705,40 +709,41 @@ partial def valuesMemo (T : Target) (W : World) (width : Nat) (depth : Nat) (ty 
     modify (·.insert key vs)
     return vs
 where
-  compute : StateM ValueMemo (List DataValue) := do
+  compute : StateM ValueMemo (Array DataValue) := do
     match ty.head? with
-    | none => return []
+    | none => return #[]
     | some h =>
       match T.ruleFor? ty with
-      | none => return []
+      | none => return #[]
       | some r =>
         match r.discrimination with
-        | .nativeScalar .numK | .nativeScalar .bigintK => return [.natLit 0, .natLit 1]
-        | .nativeScalar .strK => return [.strLit "", .strLit "a"]
-        | .nativeScalar .boolK => return [.boolLit false, .boolLit true]
+        | .nativeScalar .numK | .nativeScalar .bigintK => return #[.natLit 0, .natLit 1]
+        | .nativeScalar .strK => return #[.strLit "", .strLit "a"]
+        | .nativeScalar .boolK => return #[.boolLit false, .boolLit true]
         | _ =>
           match W.find? h with
-          | none => return []
+          | none => return #[]
           | some tv =>
-            let mut out : List DataValue := []
+            let mut out : Array DataValue := #[]
             for cv in tv.ctors do
               if cv.fields.isEmpty then
-                out := out ++ [DataValue.ctor h cv.name []]
+                out := out.push (DataValue.ctor h cv.name [])
               else if depth == 0 then
                 pure ()
               else
                 let mut fieldVals : List (List DataValue) := []
                 for f in cv.fields do
                   let vs ← valuesMemo T W width (depth - 1) (f.type.instantiate ty.args)
-                  fieldVals := fieldVals ++ [vs.take width]
-                out := out ++ (product fieldVals).map fun args => DataValue.ctor h cv.name args
+                  fieldVals := fieldVals ++ [(vs.take width).toList]
+                for args in product fieldVals do
+                  out := out.push (DataValue.ctor h cv.name args)
             return out
   product : List (List DataValue) → List (List DataValue)
     | [] => [[]]
     | xs :: rest => (product rest).flatMap fun tail => xs.map fun x => x :: tail
 
 /-- `valuesMemo` run at an empty memo. -/
-def valuesAt (T : Target) (W : World) (depth width : Nat) (ty : TypeRef) : List DataValue :=
+def valuesAt (T : Target) (W : World) (depth width : Nat) (ty : TypeRef) : Array DataValue :=
   (valuesMemo T W width depth ty).run' {}
 
 /-! ## The admissibility decision -/
