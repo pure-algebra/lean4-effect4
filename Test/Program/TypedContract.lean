@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Typed
+import Effect4.Laws.Program.Admit
 
 /-!
 # Typed contract — the value typing of the native cut, frozen
@@ -26,6 +27,31 @@ Register rows (`Test/Counterexamples/REGISTER.md`):
   `Val.hasTy (.nat 1) .int = false` while `Ty.render .nat = Ty.render .int`; `.int` is a
   refusal of the value typing (`TYPED-FB-INT`), the printer's identification is not the
   typing's.
+
+Added 2026-09-09 (rows DI-17, DI-26, DI-62), beside the frozen statements and changing none
+of them. The obligations are `Extends`, `hasTy_mono`, `hasTy_append`, `Fits_iff_FitsIn_nil`,
+`FitsIn.append`, `FitsIn.mono` (`src/Effect4/Laws/Program/Typed.lean`) and `errOf_valOfErr`,
+`valOfErr_errOf`, `errAdmits_eq_reasonAdmits`, `hasTyCause_exitErr`, `external_error_typed`,
+`external_oracle_error_typed`, `fits_childWith` (`src/Effect4/Laws/Program/Admit.lean`).
+The new executable claims are:
+
+* allocation — a handle is typed only in a table naming its target at its own index; a
+  different target, a different index and the empty table all refuse; appending to the table
+  keeps every existing membership (`hasTy_mono`'s content, seen).
+* `Fits` versus `FitsIn` — one external handle is refused by `Fits` (whose table is the
+  default `[]`) and admitted by `FitsIn` at the table that minted it. This is the pair the
+  generalisation exists for.
+* the error image — `valOfErr` inverts `errOf` off `boom`, and `errOf` collapses a string
+  today (`errOf (.str "lost") = .boom`): the collapse DI-62's `Err.text` arm repairs, pinned
+  here so the repair is visible as a changed guard.
+* `hasTyCause` — a tagged package error is admitted at `prod string string` and refused at
+  `nat`; a `boom` is refused at every type; a defect and an interruption are admitted at
+  `never`, because `E = never` bounds the typed failures only.
+
+The refusal `Val.hasTy (Val.exitErr (Cause.fail (Err.tag 1))) (.causeOf .nat) = false` in
+"Refused" below stays as it is: the `.causeOf` arm of `Val.hasTy` is the S2 cutover's, and
+flipping that guard before the arm exists would be a claim with no definition under it. The
+same holds for the `.fiberOf` arm, which reads neither of its columns.
 -/
 
 set_option autoImplicit false
@@ -101,6 +127,79 @@ section Statements
 #check (@Effect4.Program.syncOpOf_async_none :
   ∀ (op : NativeOp) (v : Val), (NativeOp.row op).kind = .async → NativeOp.syncOpOf op v = none)
 
+/-! ### Allocation and the environment at an allocation state (DI-17) -/
+
+#check (@Effect4.Program.Extends : List String → List String → Prop)
+
+#check (@Effect4.Program.extends_append :
+  ∀ (before added : List String), Extends before (before ++ added))
+
+#check (@Effect4.Program.hasTy_mono :
+  ∀ (ty : Ty) (v : Val) (a b : List String),
+    Extends a b → Val.hasTy v ty a = true → Val.hasTy v ty b = true)
+
+#check (@Effect4.Program.hasTy_append :
+  ∀ (ty : Ty) (v : Val) (a added : List String),
+    Val.hasTy v ty a = true → Val.hasTy v ty (a ++ added) = true)
+
+#check (@Effect4.Program.FitsWith : (Val → Ty → Prop) → List Val → TyEnv → Prop)
+
+#check (@Effect4.Program.Fits_iff_FitsIn_nil :
+  ∀ (vs : List Val) (ts : TyEnv), Fits vs ts ↔ FitsIn [] vs ts)
+
+#check (@Effect4.Program.FitsIn.append :
+  ∀ {allocated : List String} {vs : List Val} {ts : TyEnv}, FitsIn allocated vs ts →
+    ∀ {v : Val} {t : Ty}, Val.hasTy v t allocated = true →
+      FitsIn allocated (vs ++ [v]) (ts ++ [t]))
+
+#check (@Effect4.Program.FitsIn.mono :
+  ∀ {a b : List String} {vs : List Val} {ts : TyEnv},
+    Extends a b → FitsIn a vs ts → FitsIn b vs ts)
+
+#check (@Effect4.Program.fits_childWith :
+  ∀ (allocated : List String) (p : Point) (ts : TyEnv) (i : Nat) (v : Val) (t : Ty),
+    FitsIn allocated p.env ts → Val.hasTy v t allocated = true →
+      FitsIn allocated (p.childWith i v).env (ts ++ [t]))
+
+/-! ### The error image and the failure branch (DI-62, DI-26) -/
+
+#check (@Effect4.Program.valOfErr : Err → Option Val)
+
+#check (@Effect4.Program.reasonAdmits :
+  (Val → Ty → Bool) → Ty → Reason Err Defect FiberId Ann → Bool)
+
+#check (@Effect4.Program.causeAdmits : (Val → Ty → Bool) → Ty → CauseV → Bool)
+
+#check (@Effect4.Program.causeAdmits_congr :
+  ∀ {f g : Val → Ty → Bool} (ty : Ty), (∀ v, f v ty = g v ty) →
+    ∀ (c : CauseV), causeAdmits f ty c = causeAdmits g ty c)
+
+#check (@Effect4.Program.errOf_valOfErr :
+  ∀ (e : Err) (v : Val), valOfErr e = some v → errOf v = e)
+
+#check (@Effect4.Program.valOfErr_errOf :
+  ∀ (v : Val), errOf v ≠ .boom → valOfErr (errOf v) = some v)
+
+#check (@Effect4.Program.errAdmits_eq_reasonAdmits :
+  ∀ (ty : Ty) (r : Reason Err Defect FiberId Ann),
+    errAdmits ty r = reasonAdmits (fun v t => Val.hasTy v t) ty r)
+
+#check (@Effect4.Program.hasTyCause_exitErr :
+  ∀ (c : CauseV) (e : Ty),
+    hasTyCause (Val.exitErr c) e = c.reasons.all (errAdmits e))
+
+#check (@Effect4.Program.external_error_typed :
+  ∀ (table : RowTable) (m : NativeMachine) (fiber : FiberId) (token : Nat) (c : CauseV),
+    admit table m (.answerAsync fiber token (.ofExit (.failure c))) = none →
+      ∃ i request row, requestOf m fiber token = some (.external i, request) ∧
+        externalRow table i = some row ∧ hasTyCause (Val.exitErr c) row.error = true)
+
+#check (@Effect4.Program.external_oracle_error_typed :
+  ∀ (table : RowTable) (i : Nat) (c : CauseV) (allocated : List String),
+    externalAdmits table i (.ofExit (.failure c)) allocated = true →
+      ∃ row, externalRow table i = some row ∧
+        hasTyCause (Val.exitErr c) row.error = true)
+
 end Statements
 
 /-! ## `Val.hasTy` — one value of each inhabited type -/
@@ -167,6 +266,67 @@ section Refused
 #guard Val.hasTy (Val.nat 1) (.union .bool .unit) = false
 
 end Refused
+
+/-! ## Allocation: a handle is typed only in a table naming its target (DI-17) -/
+
+section Allocation
+
+-- byte 7 is the external kind; the target spelling is read at the handle's own index
+#guard Val.hasTy (Store.Val.handle 7 0) (.handle "Host.Resource") ["Host.Resource"]
+#guard !Val.hasTy (Store.Val.handle 7 0) (.handle "Host.Resource") ["Other.Resource"]
+#guard !Val.hasTy (Store.Val.handle 7 1) (.handle "Host.Resource") ["Host.Resource"]
+#guard !Val.hasTy (Store.Val.handle 7 0) (.handle "Host.Resource")
+#guard Val.hasTy (Store.Val.some (Val.list [Store.Val.handle 7 0]))
+  (.option (.list (.handle "Host.Resource"))) ["Host.Resource", "Other"]
+-- a registration appends, and an append keeps every existing membership (`hasTy_append`)
+#guard Val.hasTy (Store.Val.handle 7 0) (.handle "Host.Resource")
+  (["Host.Resource"] ++ ["Other.Resource"])
+-- a target spelling says which kind of resource a handle names, never whether it is still
+-- open or which run minted it: both of these are the same membership
+#guard Val.hasTy (Store.Val.handle 7 0) (.handle "Host.Resource") ["Host.Resource"] =
+  Val.hasTy (Store.Val.handle 7 0) (.handle "Host.Resource") ["Host.Resource", "Other"]
+
+-- the pair `FitsIn` exists for: the default empty table refuses a live external handle
+#guard !(Val.hasTy (Value.external 0) (.handle NativeOp.sqlTarget))
+#guard Val.hasTy (Value.external 0) (.handle NativeOp.sqlTarget) [NativeOp.sqlTarget]
+
+end Allocation
+
+/-! ## The error image and the cause fold (DI-62, DI-26) -/
+
+section ErrorImage
+
+-- `valOfErr` inverts `errOf` off `boom`
+#guard valOfErr Err.boom = none
+#guard valOfErr (Err.tag 7) = some (Val.nat 7)
+#guard valOfErr (Err.tagged "SqlError" "m") = some (Val.list [Val.str "SqlError", Val.str "m"])
+#guard errOf (Val.nat 7) = Err.tag 7
+#guard errOf (Val.list [Val.str "SqlError", Val.str "m"]) = Err.tagged "SqlError" "m"
+-- today's collapse, which DI-62's `Err.text` arm repairs: a string failure loses its payload
+#guard errOf (Val.str "lost") = Err.boom
+#guard errOf (Val.bool true) = Err.boom
+
+-- the bridge, read on each reason shape: `errAdmits` is the fold at `Val.hasTy`
+#guard errAdmits .nat (Reason.fail (Err.tag 7) ReasonAnnotations.empty) =
+  reasonAdmits (fun v t => Val.hasTy v t) .nat (Reason.fail (Err.tag 7) ReasonAnnotations.empty)
+#guard errAdmits .nat (Reason.fail Err.boom ReasonAnnotations.empty) =
+  reasonAdmits (fun v t => Val.hasTy v t) .nat (Reason.fail Err.boom ReasonAnnotations.empty)
+#guard errAdmits .never (Reason.die Defect.badName ReasonAnnotations.empty) =
+  reasonAdmits (fun v t => Val.hasTy v t) .never (Reason.die Defect.badName ReasonAnnotations.empty)
+
+-- `hasTyCause` on a reified failed exit
+#guard hasTyCause (Val.exitErr (Cause.fail (Err.tagged "A" "m"))) (.prod .string .string)
+#guard !(hasTyCause (Val.exitErr (Cause.fail (Err.tagged "A" "m"))) .nat)
+#guard hasTyCause (Val.exitErr (Cause.fail (Err.tag 7))) .nat
+#guard !(hasTyCause (Val.exitErr (Cause.fail Err.boom)) .nat)
+-- `E = never` bounds the typed failures only: a defect and an interruption stay admitted
+#guard hasTyCause (Val.exitErr (Cause.die Defect.badName)) .never
+#guard hasTyCause (Val.exitErr (Cause.interrupt none)) .never
+-- a value that is not a reified failed exit has no cause to read
+#guard !(hasTyCause (Val.nat 1) .nat)
+#guard !(hasTyCause (Val.exitOk (Val.nat 1)) .nat)
+
+end ErrorImage
 
 /-! ## The register rows -/
 

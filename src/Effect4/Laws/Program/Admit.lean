@@ -1,5 +1,33 @@
 import Effect4.Program.Admit
 import Effect4.Laws.Machine.Handles
+import Effect4.Laws.Program.Typed
+
+/-!
+# Program.Admit — what a checked decision and a checked replay establish
+
+Rows: DI-26 (the failure branch of an external answer), DI-62 (the error image), DI-17
+(environments at an allocation state). Battery: `Test/Api/ExternalContract.lean`,
+`Test/Api/AcquireHandleContract.lean`, and the pins in `Test/Program/TypedContract.lean`.
+
+This module owns the laws of `src/Effect4/Program/Admit.lean`: which row a passed decision
+check identifies, what the accepted answer's converted value is typed as and in which
+allocation table, that an accepted completion names only live handles, and that a checked
+replay walks exactly the tape the unchecked one walks. Since 2026-09-09 it also owns the
+error side of that boundary — the round-trip laws of `errOf`/`valOfErr`, the bridge from
+`errAdmits` (`src/Effect4/Program/Compile.lean`) to the parameterised fold `reasonAdmits`
+(`src/Effect4/Program/ErrorImage.lean`), `hasTyCause`, and the two failure-branch theorems
+that stand beside the three success-only ones.
+
+What it refuses to claim: nothing here types a whole machine, a reachable point or a
+retained state; `external_error_typed` is a statement about one accepted completion at one
+parked call, and `hasTyCause` reads a *reified* cause, never a live fiber's.
+
+`src/Effect4/Program/ErrorImage.lean` is reached from here through
+`src/Effect4/Laws/Program/Typed.lean`, which imports it for the duration of slice S2 only:
+the module's home is one line in `src/Effect4/Program/Native.lean`, which the core seat owns
+and adds at the cutover. Until then that import is what makes the new module reachable from
+the `Effect4.Laws` root (`Test/Audit/AxiomGate.lean`, the library-root gate).
+-/
 
 namespace Effect4.Program
 open Effect4 Effect4.Machine
@@ -109,6 +137,121 @@ theorem external_oracle_typed (table : RowTable) (i : Nat) (value : Val)
     | some converted =>
       obtain ⟨allocated', result⟩ := converted
       exact ⟨row, allocated', result, rfl, hv, externalValue_typed _ _ _ _ _ hv⟩
+
+/-! ## The error image and the failure branch
+
+Rows DI-62 and DI-26. The three theorems above are success-only, and `errAdmits`
+(`src/Effect4/Program/Compile.lean`) was cited by no theorem at all. What follows closes
+that side: `errOf` and `valOfErr` are partial inverses, `errAdmits` *is* the parameterised
+fold of `src/Effect4/Program/ErrorImage.lean` at `Val.hasTy`, and an accepted failing
+completion carries a cause every reason of which stays inside the parked row's error column.
+
+The bridge is the load-bearing one. At the S2 cutover `errAdmits`'s body is replaced by
+`reasonAdmits (fun v t => Val.hasTy v t) ty r`; `errAdmits_eq_reasonAdmits` is the receipt
+that the replacement changes no verdict on any reason, so `admitAnswer`, `externalAdmits`,
+every tape and every golden read the same. Source of the proofs: scout B
+(`docs/research/2026-09-09-scout-proof-statements.md` §3), reproved here against the
+production definitions unchanged. -/
+
+/-- A value read out of the error alphabet rebuilds the same error (`errOf` on the left
+inverse of `valOfErr`). `boom` has no image, so it is excluded by the hypothesis rather than
+by a side condition. -/
+theorem errOf_valOfErr (e : Err) (v : Val) (h : valOfErr e = some v) : errOf v = e := by
+  cases e with
+  | boom => cases h
+  | tag n => cases Option.some.inj h; rfl
+  | tagged t m => cases Option.some.inj h; rfl
+
+/-- A value that is not collapsed by `errOf` is recovered by `valOfErr`. The premise is the
+collapse itself: `errOf` sends every unrecognised shape to `boom`, and a collapse has no
+inverse — `errOf (.str s) = .boom` today, which is exactly what DI-62's `Err.text` arm
+repairs. -/
+theorem valOfErr_errOf (v : Val) (h : errOf v ≠ .boom) : valOfErr (errOf v) = some v := by
+  unfold errOf at h ⊢
+  split at h <;> simp_all [valOfErr]
+
+/-- The bridge: the production `errAdmits` is the parameterised fold at `Val.hasTy`, arm by
+arm. Proved by direct case analysis on the reason and on the error — no `simp` — so it stays
+at `[propext]` (scout B §3's trust finding: one broad simplification reached
+`Classical.choice`). -/
+theorem errAdmits_eq_reasonAdmits (ty : Ty) (r : Reason Err Defect FiberId Ann) :
+    errAdmits ty r = reasonAdmits (fun v t => Val.hasTy v t) ty r := by
+  cases r with
+  | fail e _ =>
+    cases e with
+    | boom => rfl
+    | tag n => rfl
+    | tagged t m => rfl
+  | die _ _ => rfl
+  | interrupt _ _ => rfl
+
+/-- The bridge as an equality of the two predicates. Stated because it is the shape a
+rewrite under a higher-order argument wants; it needs `funext`, so it carries `Quot.sound`
+and nothing below depends on it. -/
+theorem reasonAdmits_hasTy (ty : Ty) :
+    reasonAdmits (fun v t => Val.hasTy v t) ty = errAdmits ty :=
+  funext fun r => (errAdmits_eq_reasonAdmits ty r).symm
+
+/-- The cause fold at `Val.hasTy` is the reason-wise `errAdmits` the admission check runs
+(`admitAnswer`'s failure branch, `src/Effect4/Program/Admit.lean`). Proved by induction on
+the reason list rather than by `funext` on the predicate, so it stays at `[propext]` and so
+do the two failure-branch theorems below. -/
+theorem causeAdmits_hasTy (ty : Ty) (c : CauseV) :
+    causeAdmits (fun v t => Val.hasTy v t) ty c = c.reasons.all (errAdmits ty) := by
+  unfold causeAdmits
+  generalize c.reasons = rs
+  induction rs with
+  | nil => rfl
+  | cons r rest ih =>
+    rw [List.all_cons, List.all_cons, ih, errAdmits_eq_reasonAdmits]
+
+/-- Does a *reified* cause value stay inside an error type? This is the shape the `.causeOf`
+arm of `Val.hasTy` takes at the S2 cutover, stated here where the fold and the carrier are
+both in scope. A value that is not a reified failed exit is refused: there is nothing to
+read. -/
+def hasTyCause (v : Val) (e : Ty) : Bool :=
+  match Val.cause? v with
+  | some c => causeAdmits (fun w t => Val.hasTy w t) e c
+  | none => false
+
+/-- On a reified failed exit the fold is applied to the cause it was built from. -/
+theorem hasTyCause_exitErr_fold (c : CauseV) (e : Ty) :
+    hasTyCause (Val.exitErr c) e = causeAdmits (fun w t => Val.hasTy w t) e c := by
+  simp only [hasTyCause, Val.cause?_exitErr]
+
+/-- The same, spelled with the production `errAdmits`: scout B's statement. -/
+theorem hasTyCause_exitErr (c : CauseV) (e : Ty) :
+    hasTyCause (Val.exitErr c) e = c.reasons.all (errAdmits e) := by
+  rw [hasTyCause_exitErr_fold, causeAdmits_hasTy]
+
+/-- Row DI-26. An accepted failing completion identifies the parked external row, and every
+reason of its cause stays inside that row's declared error column. The counterpart of
+`external_answer_typed` on the failure branch: no induction over programs or executions, only
+the decision check's own arms. Defects and interruptions are admitted at every error column,
+including `never` — a computation with no typed failure can still die or be interrupted. -/
+theorem external_error_typed (table : RowTable) (m : NativeMachine)
+    (fiber : FiberId) (token : Nat) (c : CauseV)
+    (h : admit table m (.answerAsync fiber token (.ofExit (.failure c))) = none) :
+    ∃ i request row, requestOf m fiber token = some (.external i, request) ∧
+      externalRow table i = some row ∧ hasTyCause (Val.exitErr c) row.error = true := by
+  obtain ⟨i, request, row, hp, hr, ha⟩ := admitted_row table m fiber token _ h
+  refine ⟨i, request, row, hp, hr, ?_⟩
+  rw [hasTyCause_exitErr]
+  change (if c.reasons.all (errAdmits row.error) then (none : Option Refusal)
+    else some (.errorType fiber token row.error)) = none at ha
+  split at ha
+  · assumption
+  · cases ha
+
+/-- The oracle registration path has the same failure-branch guarantee as the delayed
+decision path (`external_oracle_typed` is its success half). -/
+theorem external_oracle_error_typed (table : RowTable) (i : Nat) (c : CauseV)
+    (allocated : List String)
+    (h : externalAdmits table i (.ofExit (.failure c)) allocated = true) :
+    ∃ row, externalRow table i = some row ∧ hasTyCause (Val.exitErr c) row.error = true := by
+  cases hr : externalRow table i with
+  | none => simp [externalAdmits, hr] at h
+  | some row => exact ⟨row, rfl, by simpa [hasTyCause_exitErr, externalAdmits, hr] using h⟩
 
 /-- A successful oracle registration resumes with its converted value, typed against
 exactly the allocations in the store it produces. -/
@@ -289,5 +432,21 @@ theorem replayCheckedFrom_eq_replay (program : NativeEff) (fuel : Nat)
           | true =>
             simp only [if_true] at h ⊢
             exact ih (position + 1) m' r h
+
+/-! ## Environments at a compiled point
+
+Row DI-17. `FitsIn` and its append lemma are stated in `src/Effect4/Laws/Program/Typed.lean`,
+where the value typing is; `Point` is a compile-time structure
+(`src/Effect4/Program/Compile.lean`), above that module, so the one lemma that mentions a
+point lands here instead. It is `FitsIn.append` read at `Point.childWith`: a child point
+that binds one answer extends its parent's environment on the right, so the parent's fit at
+an allocation table extends to the child's whenever the bound value has the bound type. -/
+
+/-- A child point binding one answer keeps the fit (scout B's `fits_childWith`). -/
+theorem fits_childWith (allocated : List String) (p : Point) (ts : TyEnv) (i : Nat)
+    (v : Val) (t : Ty) (hf : FitsIn allocated p.env ts)
+    (hv : Val.hasTy v t allocated = true) :
+    FitsIn allocated (p.childWith i v).env (ts ++ [t]) :=
+  FitsIn.append hf hv
 
 end Effect4.Program

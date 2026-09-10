@@ -1,4 +1,5 @@
 import Effect4.Program.Typed
+import Effect4.Program.ErrorImage
 
 /-!
 # Program.Typed — the value typing of the native cut (slice 1, lane 1)
@@ -36,6 +37,16 @@ tree carries no Mathlib, so `Fits` is its own two-constructor inductive of that 
 `Val.hasTy` recurses on the *type* — the exit, product, list and union arms all descend into
 the type, and the value is matched inside each arm — so it is structural in `Ty`; a closed
 instance is settled by `simp [Val.hasTy]`, by `rfl`, or by a `#guard`.
+
+Added 2026-09-09 for row DI-17, beside the existing statements and changing none of them: the
+allocation section (`Extends`, `extends_append`, `hasTy_mono`, `hasTy_append`) and the
+environment relation at an allocation state (`FitsWith`, `FitsIn`, `Fits_iff_FitsIn_nil`,
+`FitsWith.append`, `FitsIn.append`, `FitsIn.mono`). `Fits` and every theorem over it keep
+their statements; `Fits_iff_FitsIn_nil` is the bridge. What this module still does **not**
+own: the `.causeOf` and failed-exit-error arms of `Val.hasTy` (the S2 cutover adds them,
+through the folds of `src/Effect4/Program/ErrorImage.lean`), and the `.fiberOf` arm, which
+is a handle check and reads neither of its columns — that is a deliberate coarseness, not a
+guarantee (`Test/Program/TypedContract.lean` pins it as a refusal).
 -/
 
 set_option autoImplicit false
@@ -127,6 +138,118 @@ theorem Val.hasTy_prod_inv {v : Val} {a b : Ty} (h : Val.hasTy v (.prod a b) = t
   · next x y => exact ⟨x, y, rfl, (Bool.and_eq_true_iff.mp h).1, (Bool.and_eq_true_iff.mp h).2⟩
   · exact nomatch h
 
+/-! ## Allocation
+
+Row DI-17. `Val.hasTy` takes an allocation table (`allocated : List String`, the target
+spelling minted at each external index) since the host rows slice; only the `.handle` arm
+reads it, and it reads it by index. The external store never rewrites an index it has
+already written — a registration appends — so the table only ever grows to the right, and
+membership at a smaller table is membership at every larger one.
+
+`Extends` is that growth as a relation on tables, stated by index rather than as `<+:` so it
+is exactly what the `.handle` arm needs and nothing more. It is *not* a semantic type order:
+a target spelling says which kind of resource a handle names, never whether that resource is
+still open or which run minted it (`Test/Program/TypedContract.lean` pins both facts).
+Source of the proofs: the foundation probe `Allocation.lean` (2026-09-09), reproved here
+against the production definition unchanged. -/
+
+/-- The allocation table `after` agrees with `before` at every index `before` has. -/
+def Extends (before after : List String) : Prop :=
+  ∀ (i : Nat) (target : String), before[i]? = some target → after[i]? = some target
+
+/-- A registration appends, and an append extends. -/
+theorem extends_append (before added : List String) : Extends before (before ++ added) := by
+  intro i target h
+  rw [List.getElem?_append_left (List.getElem?_eq_some_iff.mp h).1]
+  exact h
+
+/-- Membership is monotone in the allocation table, at every type. The induction is on the
+type — `Val.hasTy` recurses on the type, the value is matched inside each arm — and every
+constructor is discharged: the four uninhabited ones by their `false`, the five that ignore
+the table by the hypothesis itself, and the `.handle` arm by `Extends` at the index the arm
+reads. (At the S2 cutover this gains the `.causeOf` arm and the error column of `.exitOf`;
+see the recipe in `docs/research/2026-09-09-seat-error-laws.md`.) -/
+theorem hasTy_mono (ty : Ty) (v : Val) (a b : List String)
+    (ext : Extends a b) (typed : Val.hasTy v ty a = true) : Val.hasTy v ty b = true := by
+  induction ty generalizing v with
+  | never | int | except | causeOf => simp [Val.hasTy] at typed
+  | unit | nat | bool | string | fiberOf => exact typed
+  | handle target =>
+    cases v <;> simp only [Val.hasTy] at typed ⊢
+    all_goals try exact typed
+    split at typed <;> try exact typed
+    next h =>
+      obtain ⟨ht, hi⟩ := Bool.and_eq_true_iff.mp typed
+      apply Bool.and_eq_true_iff.mpr
+      exact ⟨ht, beq_iff_eq.mpr (ext _ _ (beq_iff_eq.mp hi))⟩
+  | option inner ih =>
+    cases v <;> simp only [Val.hasTy] at typed ⊢
+    all_goals try exact typed
+    exact ih _ typed
+  | prod x y ihx ihy =>
+    simp only [Val.hasTy] at typed ⊢
+    split at typed <;> try exact typed
+    next u v =>
+      exact Bool.and_eq_true_iff.mpr ⟨ihx u (Bool.and_eq_true_iff.mp typed).1,
+        ihy v (Bool.and_eq_true_iff.mp typed).2⟩
+  | union x y ihx ihy =>
+    simp only [Val.hasTy, Bool.or_eq_true] at typed ⊢
+    exact typed.elim (fun h => Or.inl (ihx _ h)) (fun h => Or.inr (ihy _ h))
+  | exitOf x y ihx _ =>
+    simp only [Val.hasTy] at typed ⊢
+    split at typed <;> try exact typed
+    exact ihx _ typed
+  | list x ih =>
+    simp only [Val.hasTy] at typed ⊢
+    split at typed <;> try exact typed
+    next values =>
+      simp only [List.all_eq_true] at typed ⊢
+      intro value hv
+      exact ih value (typed value hv)
+
+/-- The registration case of `hasTy_mono`: a value typed before an allocation is typed
+after it. -/
+theorem hasTy_append (ty : Ty) (v : Val) (a added : List String)
+    (h : Val.hasTy v ty a = true) : Val.hasTy v ty (a ++ added) = true :=
+  hasTy_mono ty v a (a ++ added) (extends_append a added) h
+
+/-! ## The error folds
+
+Row DI-62. `reasonAdmits` and `causeAdmits` (`src/Effect4/Program/ErrorImage.lean`) take the
+membership predicate as a parameter, and they only ever apply it at the one type they are
+folding at. The two congruences below say exactly that, and they are what the S2 cutover
+needs: the `.causeOf e` arm of `Val.hasTy` must pass a *closed* predicate
+`fun v _ => Val.hasTy v e allocated` rather than `fun v t => Val.hasTy v t allocated`, because
+Lean's structural recursion has to see the recursive call at the subterm `e` and cannot see
+through a lambda-bound type. These lemmas make the two spellings interchangeable afterwards,
+so the arm and the `errAdmits` instantiation stay one fold read two ways.
+
+`reasonAdmits_congr` gains one case (`text`) when `Err.text` is appended; nothing else here
+changes at the cutover. -/
+
+/-- The reason fold only reads its predicate at the type it folds at. -/
+theorem reasonAdmits_congr {f g : Val → Ty → Bool} (ty : Ty) (h : ∀ v, f v ty = g v ty)
+    (r : Reason Err Defect FiberId Ann) :
+    reasonAdmits f ty r = reasonAdmits g ty r := by
+  cases r with
+  | fail e _ =>
+    cases e with
+    | boom => rfl
+    | tag n => exact h _
+    | tagged t m => exact h _
+  | die _ _ => rfl
+  | interrupt _ _ => rfl
+
+/-- The cause fold only reads its predicate at the type it folds at. -/
+theorem causeAdmits_congr {f g : Val → Ty → Bool} (ty : Ty) (h : ∀ v, f v ty = g v ty)
+    (c : CauseV) : causeAdmits f ty c = causeAdmits g ty c := by
+  unfold causeAdmits
+  generalize c.reasons = rs
+  induction rs with
+  | nil => rfl
+  | cons r rest ih =>
+    rw [List.all_cons, List.all_cons, ih, reasonAdmits_congr ty h r]
+
 /-! ## Environments -/
 
 /-- A positional environment fits a typing environment: `List.Forall₂` of `hasTy` (plan §2.1,
@@ -193,6 +316,68 @@ theorem Fits.pair_inv {vs : List Val} {a b : Ty} (h : Fits vs [a, b]) :
   | cons hx hrest =>
     cases hrest with
     | cons hy hrest' => cases hrest'; exact ⟨_, _, rfl, hx, hy⟩
+
+/-! ### Environments at an allocation state
+
+Row DI-17. `Fits` above fixes the allocation table at the default `[]`, so it refuses an
+environment holding a live external handle however the handle was minted: the `.handle` arm
+looks the index up in an empty table (`Test/Program/TypedContract.lean` pins the pair). The
+generalisation is one relation with the membership predicate as a parameter, and `FitsIn` is
+its instance at a table.
+
+This is a proof abstraction with the same two constructors as `Fits`, not a second program
+representation and not a change to `Fits`: `Fits` keeps its statement, every theorem stated
+over it keeps its statement, and `Fits_iff_FitsIn_nil` is the bridge. Source: scout B's
+`FitsWith`/`FitsIn` (`docs/research/2026-09-09-scout-proof-statements.md` §5), reproved here. -/
+
+/-- A positional environment fits a typing environment at an arbitrary notion of membership.
+Core v4.33.1 carries no `List.Forall₂` and this tree carries no Mathlib, so this is its own
+two-constructor inductive, exactly as `Fits` is. -/
+inductive FitsWith (holds : Val → Ty → Prop) : List Val → TyEnv → Prop
+  | nil : FitsWith holds [] []
+  | cons {v : Val} {t : Ty} {vs : List Val} {ts : TyEnv} :
+      holds v t → FitsWith holds vs ts → FitsWith holds (v :: vs) (t :: ts)
+
+/-- The environment relation at an allocation state: `Fits` with the table supplied. -/
+abbrev FitsIn (allocated : List String) := FitsWith (fun v t => Val.hasTy v t allocated = true)
+
+/-- `Fits` is exactly `FitsIn []`: the existing relation is the empty-allocation instance of
+the generalisation, so nothing stated over `Fits` weakens or strengthens. -/
+theorem Fits_iff_FitsIn_nil (vs : List Val) (ts : TyEnv) : Fits vs ts ↔ FitsIn [] vs ts := by
+  constructor
+  · intro h
+    induction h with
+    | nil => exact .nil
+    | cons hv _ ih => exact .cons hv ih
+  · intro h
+    induction h with
+    | nil => exact .nil
+    | cons hv _ ih => exact .cons hv ih
+
+/-- Appending an answer of the answer's type keeps the fit, at any membership (`Fits.append`
+generalised; D1's convention, every node passes its scope forward and an answer is
+appended). -/
+theorem FitsWith.append {holds : Val → Ty → Prop} {vs : List Val} {ts : TyEnv}
+    (hf : FitsWith holds vs ts) {v : Val} {t : Ty} (hv : holds v t) :
+    FitsWith holds (vs ++ [v]) (ts ++ [t]) := by
+  induction hf with
+  | nil => exact .cons hv .nil
+  | cons h _ ih => exact .cons h ih
+
+/-- `FitsWith.append` at an allocation state. -/
+theorem FitsIn.append {allocated : List String} {vs : List Val} {ts : TyEnv}
+    (hf : FitsIn allocated vs ts) {v : Val} {t : Ty}
+    (hv : Val.hasTy v t allocated = true) : FitsIn allocated (vs ++ [v]) (ts ++ [t]) :=
+  FitsWith.append hf hv
+
+/-- A fit survives a registration: `hasTy_mono` pointwise. This is the environment half of
+the allocation row — an external registration extends the table and no value already in
+scope loses its type. -/
+theorem FitsIn.mono {a b : List String} {vs : List Val} {ts : TyEnv}
+    (ext : Extends a b) (h : FitsIn a vs ts) : FitsIn b vs ts := by
+  induction h with
+  | nil => exact .nil
+  | cons hv _ ih => exact .cons (hasTy_mono _ _ a b ext hv) ih
 
 /-! ## Literals -/
 

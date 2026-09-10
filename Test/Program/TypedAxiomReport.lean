@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Typed
+import Effect4.Laws.Program.Admit
 
 /-!
 Fresh kernel dependency report for the value typing of the native cut
@@ -43,3 +44,37 @@ declaration below is expected at the ceiling `propext`/`Quot.sound`; the gate
 -- TYPED/row: the request shapes.
 #print axioms Effect4.Program.syncOpOf_isSome
 #print axioms Effect4.Program.syncOpOf_async_none
+
+-- TYPED/allocation (DI-17, 2026-09-09): the table order and membership monotonicity.
+#print axioms Effect4.Program.Extends
+#print axioms Effect4.Program.extends_append
+#print axioms Effect4.Program.hasTy_mono
+#print axioms Effect4.Program.hasTy_append
+
+-- TYPED/environment at an allocation state (DI-17): the generalisation of `Fits`.
+#print axioms Effect4.Program.FitsWith
+#print axioms Effect4.Program.FitsIn
+#print axioms Effect4.Program.Fits_iff_FitsIn_nil
+#print axioms Effect4.Program.FitsWith.append
+#print axioms Effect4.Program.FitsIn.append
+#print axioms Effect4.Program.FitsIn.mono
+#print axioms Effect4.Program.fits_childWith
+
+-- ERROR IMAGE (DI-62): the folds and the round trip (`src/Effect4/Program/ErrorImage.lean`).
+#print axioms Effect4.Program.valOfErr
+#print axioms Effect4.Program.reasonAdmits
+#print axioms Effect4.Program.causeAdmits
+#print axioms Effect4.Program.reasonAdmits_congr
+#print axioms Effect4.Program.causeAdmits_congr
+#print axioms Effect4.Program.errOf_valOfErr
+#print axioms Effect4.Program.valOfErr_errOf
+#print axioms Effect4.Program.errAdmits_eq_reasonAdmits
+#print axioms Effect4.Program.reasonAdmits_hasTy
+#print axioms Effect4.Program.causeAdmits_hasTy
+
+-- ADMIT/failure branch (DI-26): the counterpart of the three success-only laws.
+#print axioms Effect4.Program.hasTyCause
+#print axioms Effect4.Program.hasTyCause_exitErr_fold
+#print axioms Effect4.Program.hasTyCause_exitErr
+#print axioms Effect4.Program.external_error_typed
+#print axioms Effect4.Program.external_oracle_error_typed
