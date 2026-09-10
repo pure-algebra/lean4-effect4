@@ -720,14 +720,16 @@ battery in this tree discharges the judgment — not that one is expected soon.
 | Schema and services | representation well-formedness, directional codec laws, service-key identity, Layer dependency laws, provision observations, and scope elimination | Partly discharged, by mixed evidence. Service-key identity: `Test/contracts/environment-context-key.contract.md` with `Test/Machine/Environment/ContextKeyContract.lean`, and the context alphabet in `src/Effect4/Laws/Machine/ContextValue.lean`. One codec direction — a successful decode reconstructs its input — is `src/Effect4/Laws/Store/CanonicalSpec.lean` (`ofVal_spec`, `mapM_ofVal_spec`). The Layer rows are witnessed on the compile route by the `Program.Agreement.provideLayer*` declarations joined in `Test/Audit/RuntimeCoverage.lean`. Schema representation well-formedness is *tested* and *reproduced*, not proved: `Test/Schema/RepresentationContract.lean` and the `scripts/check-schema-*.sh` gates. Scope elimination: **pending** — `effTy`'s `.scoped` arm does not discharge `Scope` as rc.112 does (DI-63) |
 | TypeScript target | typed lowering, deterministic rendering, decode round trips, direct rc.112 type/runtime vectors, diagnostic negatives, and simulation for each admitted fragment | Partly discharged: deterministic rendering and the decode round trip are `read_print` and `roundTrip_eq` in `src/Effect4/Codegen/Read.lean`, with `read_print_native` at the native alphabet. Direct rc.112 vectors are the truth harness's bounded differential over a frozen corpus at a pinned host, whose quantifiers and side conditions are stated in `Test/contracts/faces.contract.md`. Typed lowering: **pending** — the printed image is executed and parsed but never type-checked (DI-49), and a program with a non-empty requirement row prints untyped (DI-24). Simulation for each admitted fragment: **pending** |
 
-Read the table as it stands. `Algebra`, `Admission`, `Operational semantics`, `Recursive
-meaning` and `Scope and runtime` carry Lean theorems, each with its fragment and premises named
-beside it; `Schema and services` and `TypeScript target` carry tested and reproduced evidence
-rather than proofs; `Logic` has nothing. No edge asserts agreement with the rc.112 runtime: the
-only evidence for that is the truth harness's bounded differential, which is a differential and
-not a bisimulation. `docs/DESIGN-MAP.md` grades the same material with the four evidence words
-and `docs/RUNTIME-COVERAGE.md` owns the coverage number; a claim quoted from here should agree
-with both.
+Read the table as it stands. Every edge but `Logic` carries something now. `Admission`,
+`Operational semantics`, `Recursive meaning` and `Scope and runtime` carry Lean theorems, each
+with its fragment and its premises named beside it; `Schema and services` and `TypeScript
+target` mix theorems with tested and reproduced evidence. No edge is closed: where a cell says
+**pending** in bold, that is the named judgment of the edge which still has nothing, and for
+`Logic` it is the whole row. No edge asserts agreement with the rc.112 runtime —
+the only evidence for that is the truth harness's bounded differential, which is a differential
+and not a bisimulation. `docs/DESIGN-MAP.md` grades the same material with the four evidence
+words and `docs/RUNTIME-COVERAGE.md` owns the coverage number; a claim quoted from here should
+agree with both.
 
 ## Source and evidence rules
 
