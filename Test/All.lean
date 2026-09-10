@@ -97,6 +97,8 @@ import Test.Program.ProgressContract
 import Test.Program.ProgressAxiomReport
 import Test.Program.InvocationContract
 import Test.Program.InvocationAxiomReport
+import Test.Program.HostSpecContract
+import Test.Program.HostSpecAxiomReport
 import Test.Program.SchedContract
 import Test.Program.SchedAxiomReport
 import Test.Program.DenoteRContract

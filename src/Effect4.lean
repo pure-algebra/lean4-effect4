@@ -151,6 +151,9 @@ import Effect4.Codegen.Print
 import Effect4.Codegen.Read
 import Effect4.Program.Native
 import Effect4.Program.Compile
+-- The target profile as data and as specification (DB-09's three parts; S6a): reachable from
+-- this root, imported by nothing in the API, so the library-root gate sees it here.
+import Effect4.Program.Profile
 -- The provision algebra (docs/research/2026-09-04-provision-algebra.md): `Row.diff`, the
 -- layer signature `LayerTy` and its laws, the layer term `LayerTerm` over `Eff` bodies,
 -- `App` (`Effect.provide`), the build specification with its totality theorem, and the

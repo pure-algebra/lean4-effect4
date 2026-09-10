@@ -196,7 +196,16 @@ theorem replay_machine (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) (
 same program, at the same compile and command budget, on the same `Completion` tape and
 choices, end the same way and observe the same thing: every fiber's exit and the whole
 stores. No premise: the relation is inhabited at the load and preserved by every command.
-Nothing is said about an external host. -/
+Nothing is said about an external host.
+
+**At the empty table, with no oracle answers** (DI-57). `Api.replay` takes a `RowTable` and a
+list of external answers; this theorem takes neither, so both stay at their defaults — the
+empty table and the empty oracle. It is an internal agreement on that fragment and it does not
+extend to a run with external rows: the reference lacks external registration, the answer's
+conversion and allocation, the prepared answer, and a way to select its evaluator. The
+table-aware proposition is filed verbatim, with those four gaps at their `file:line`, in
+`Test/contracts/machine-scheduler-core.contract.md`, "Table-aware agreement (DI-57)"; its
+proof is a later slice. -/
 theorem run_eq_ref (e : NativeEff) (fuel : Nat) (tape : List Api.Decision)
     (choices : List Bool := []) :
     (Api.replay e fuel tape choices).outcome = classify (replayR e fuel tape choices) ∧

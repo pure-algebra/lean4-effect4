@@ -142,4 +142,133 @@ def replayStepsFrom (program : NativeEff) (fuel : Nat) (table : RowTable)
         if r.2 then replayStepsFrom program fuel table (position + 1) rest r.1 else []
 termination_by tape
 
+/-! ## Recorded replies and their envelope (DI-58)
+
+A checked replay above consumes *decisions*. A recorded host reply is not a decision: it is a
+record a driver decoded, and DI-58 is the ruling that the driver must check the record against
+the machine before turning it into one. `Envelope` is that check and `acceptReply` is the
+turning.
+
+Scout B elaborated and proved this shape before the settlement ruled on it
+(`docs/research/2026-09-09-scout-proof-statements.md` §2 P1(b)); the definitions and the two
+implications below are its work, landed here with the laws the settlement adds.
+
+**What is refused, and what is not.** Refusals are for *malformed envelopes only*: a wrong
+table, row, request, token or fiber, a completion the row's answer or error type refuses, and
+a duplicate or stale reply. An unanswered call, an exhausted tape, or a decision that does not
+advance the machine is a **frontier**, and `replayCheckedFrom` already spells it as one
+(`[] ↦ replayEval …`, and `r.2 = false ↦ .frontier`). A fixture that expects a run to finish
+fails its own completion assertion; it does not turn a valid prefix into a refusal.
+
+**What the table field is.** `RecordedReply` stores the whole `RowTable` rather than an
+identity or a digest of one. That is deliberate: publishing a table identity is a decision
+nobody has taken (DI-22 on what an external index is a position in), and full equality needs
+none. -/
+
+/-- One decoded host reply: the table it was recorded against, the parked call it answers, the
+row and request it claims that call made, and the completion it carries. -/
+structure RecordedReply where
+  table : RowTable
+  fiber : FiberId
+  token : Nat
+  op : NativeOp
+  request : Val
+  completion : Completion Val Err Defect FiberId Ann
+
+/-- The envelope of a recorded reply, in three parts, all decidable: the reply was recorded
+against *this* table; the machine really holds that parked call, at that token, on that row and
+that evaluated request (`requestOf`); and the answer this runner would be handed is admissible
+(`admit`, whose `Refusal` alphabet covers the answer type, the error type, dead handles and
+unknown cells). -/
+def Envelope (table : RowTable) (m : NativeMachine) (r : RecordedReply) : Prop :=
+  r.table = table ∧ requestOf m r.fiber r.token = some (r.op, r.request) ∧
+    admit table m (.answerAsync r.fiber r.token r.completion) = none
+
+instance (table : RowTable) (m : NativeMachine) (r : RecordedReply) :
+    Decidable (Envelope table m r) := inferInstanceAs (Decidable (_ ∧ _ ∧ _))
+
+/-- Turn a recorded reply into a decision, or refuse it. The only decision this ever returns is
+the `answerAsync` the record names, so a driver cannot smuggle a different one through. -/
+def acceptReply (table : RowTable) (m : NativeMachine) (r : RecordedReply) :
+    Option NativeDecision :=
+  if Envelope table m r then some (.answerAsync r.fiber r.token r.completion) else none
+
+/-- An accepted reply establishes its envelope (scout B). -/
+theorem acceptReply_envelope (table : RowTable) (m : NativeMachine) (r : RecordedReply)
+    (d : NativeDecision) (h : acceptReply table m r = some d) : Envelope table m r := by
+  unfold acceptReply at h
+  split at h
+  · assumption
+  · exact absurd h.symm (Option.some_ne_none _)
+
+/-- An accepted reply returns exactly the decision the record names, and nothing else. -/
+theorem acceptReply_decision (table : RowTable) (m : NativeMachine) (r : RecordedReply)
+    (d : NativeDecision) (h : acceptReply table m r = some d) :
+    d = .answerAsync r.fiber r.token r.completion := by
+  unfold acceptReply at h
+  split at h
+  · exact (Option.some.inj h).symm
+  · exact absurd h.symm (Option.some_ne_none _)
+
+/-- The converse: an envelope is accepted. Together with the two above, `acceptReply` is the
+envelope and nothing more. -/
+theorem acceptReply_of_envelope (table : RowTable) (m : NativeMachine) (r : RecordedReply)
+    (h : Envelope table m r) :
+    acceptReply table m r = some (.answerAsync r.fiber r.token r.completion) :=
+  if_pos h
+
+/-- A reply recorded against a different table is refused, whatever else is right about it. -/
+theorem acceptReply_none_of_table (table : RowTable) (m : NativeMachine) (r : RecordedReply)
+    (h : r.table ≠ table) : acceptReply table m r = none :=
+  if_neg fun envelope => h envelope.1
+
+/-- A reply whose claimed row or request is not the parked one is refused. -/
+theorem acceptReply_none_of_request (table : RowTable) (m : NativeMachine) (r : RecordedReply)
+    (h : requestOf m r.fiber r.token ≠ some (r.op, r.request)) : acceptReply table m r = none :=
+  if_neg fun envelope => h envelope.2.1
+
+/-- A reply this runner would refuse to admit is refused here first. -/
+theorem acceptReply_none_of_admit (table : RowTable) (m : NativeMachine) (r : RecordedReply)
+    (h : admit table m (.answerAsync r.fiber r.token r.completion) ≠ none) :
+    acceptReply table m r = none :=
+  if_neg fun envelope => h envelope.2.2
+
+/-- No park, no reply: a machine that is not holding that call at that token accepts nothing
+for it. This is what a stale token and a duplicate reply both come down to — `requestOf`
+answers `none` unless the fiber is parked `.withGuard token` on an external registration
+(`requestOf`, above). -/
+theorem acceptReply_none_of_unparked (table : RowTable) (m : NativeMachine) (r : RecordedReply)
+    (h : requestOf m r.fiber r.token = none) : acceptReply table m r = none :=
+  acceptReply_none_of_request table m r
+    (by rw [h]; exact fun hc => absurd hc.symm (Option.some_ne_none _))
+
+/-- The machine after the checked replay applies one decision: the same step
+`replayCheckedFrom` takes, named so that a law about "after the reply" can be stated without
+re-deriving the evaluator instance. -/
+def steppedBy (program : NativeEff) (fuel : Nat) (table : RowTable) (m : NativeMachine)
+    (d : NativeDecision) : NativeMachine :=
+  letI := evaluatorFor program table
+  (stepDecisionState (interpOf program table) fuel m d).1
+
+/-- **At most one accepted completion per outstanding call** (DI-58, v2 R4b): once a reply has
+been accepted and applied, the same reply is refused. -/
+def AcceptedOnce (program : NativeEff) (fuel : Nat) (table : RowTable) (m : NativeMachine)
+    (r : RecordedReply) : Prop :=
+  ∀ d, acceptReply table m r = some d →
+    acceptReply table (steppedBy program fuel table m d) r = none
+
+/-- The one-completion law, from the one fact that carries it: applying the answer takes the
+fiber off its guard, so the machine afterwards holds no park at that token and
+`acceptReply_none_of_unparked` refuses the second reply. The premise is about the stepped
+machine, so a fixture supplies it by evaluation — see `Test/Program/HostSpecContract.lean`. -/
+theorem acceptedOnce_of_unparked (program : NativeEff) (fuel : Nat) (table : RowTable)
+    (m : NativeMachine) (r : RecordedReply)
+    (h : requestOf (steppedBy program fuel table m (.answerAsync r.fiber r.token r.completion))
+      r.fiber r.token = none) :
+    AcceptedOnce program fuel table m r := by
+  intro d hd
+  have hdec := acceptReply_decision table m r d hd
+  subst hdec
+  exact acceptReply_none_of_unparked table _ r h
+
 end Effect4.Program
