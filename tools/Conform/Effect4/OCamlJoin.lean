@@ -160,6 +160,9 @@ def recoverTable (T : Target) (name : String) (files : List (String × String)) 
     for (line, lineNo) in (text.splitOn "\n").zipIdx do
       for (spelling, ty, ctor) in table do
         if !containsWord line spelling then continue
+        -- `spellingTable` is built from the target's own `variant` rules, so `shapeOf` answers
+        -- for every `(ty, ctor)` that reaches here and the `"?"` is unreachable; where a shape
+        -- really is missing, `auditCoherence` says `unresolved` rather than reading a marker.
         let shape := (shapeOf T ty ctor).getD "?"
         let row : EmitterRow :=
           { type := ty, ctor, shape, evidence := s!"{file}:{lineNo + 1} {line.trimAscii.toString}" }
