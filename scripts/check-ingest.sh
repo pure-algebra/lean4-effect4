@@ -40,6 +40,11 @@ lean_run tools/Tools/Corpus.lean "$work/printed" 400 4
 lean_run tools/Tools/Corpus.lean --foreign "$work/foreign" 400 4
 bun ts/eff/ingest/check-coverage.ts "$work/foreign"
 bun ts/eff/ingest/cli.ts gate --printed "$work/printed" --foreign "$work/foreign"
+# DI-37: the printed image against the foreign contract over the same printed corpus, up to the
+# service-key renumbering the two contracts differ on. A printed module the foreign contract
+# admits must lift to the printed oracle's program; the modules it refuses are reported with
+# their codes, because the two contracts differ on the admitted language by design.
+bun ts/eff/ingest/check-corpus.ts inclusion "$work/printed"
 for mode in printed foreign; do bun ts/eff/ingest/check-metamorphic.ts "$mode" "$work/$mode"; done
 bun ts/eff/ingest/check-metamorphic.ts negative ts/eff/ingest/fixtures/refusals
 bun ts/eff/ingest/check-metamorphic.ts negative ts/eff/ingest/fixtures/witnesses
@@ -53,6 +58,6 @@ opam exec --switch=effect4 -- ocamlc -I "$repo_root/ocaml/_build/default/eff/.ef
 "$work/check-wire" "$work/printed" "$work/foreign"
 [[ "$(sha256 ts/eff/bun.lock)" = "$before_lock" ]] || { echo 'FAIL ingest: lockfile drift' >&2; exit 1; }
 bun ts/eff/ingest/check-fidelity.ts
-summary='original JSON/wire/key oracles, source-edit invariance, refusal reachability, pinned runtime reproducibility, OCaml exact decoding and original/reprinted fidelity probes'
+summary='original JSON/wire/key oracles, printed-in-foreign inclusion up to key renumbering, source-edit invariance, refusal reachability, pinned runtime reproducibility, OCaml exact decoding and original/reprinted fidelity probes'
 printf 'PASS ingest: %s\n' "$summary"
 stamp_write ingest "$key" "$summary"

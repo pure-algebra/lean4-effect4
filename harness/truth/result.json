@@ -2985,6 +2985,7 @@
           "0:Success",
           "0:Success",
           "0:OnSuccess",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Statement",
@@ -3013,6 +3014,7 @@
           "0:Sync",
           "0:Success",
           "0:OnSuccess",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Statement",
@@ -3040,6 +3042,7 @@
           "0:OnSuccess",
           "0:Sync",
           "0:Success",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Statement",
@@ -3199,6 +3202,7 @@
           "0:Success",
           "0:Success",
           "0:OnSuccess",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Statement",
@@ -3227,6 +3231,7 @@
           "0:Sync",
           "0:Success",
           "0:OnSuccess",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Statement",
@@ -3254,6 +3259,7 @@
           "0:OnSuccess",
           "0:Sync",
           "0:Success",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Statement",
@@ -3382,6 +3388,7 @@
           "0:Sync",
           "0:Success",
           "0:OnSuccess",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Sync",
@@ -3390,6 +3397,7 @@
           "0:Sync",
           "0:Success",
           "0:OnSuccess",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Sync",
@@ -3398,6 +3406,7 @@
           "0:Sync",
           "0:Success",
           "0:OnSuccess",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Sync",
@@ -3406,6 +3415,7 @@
           "0:Sync",
           "0:Success",
           "0:OnSuccess",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Sync",
@@ -3488,6 +3498,7 @@
           "0:Sync",
           "0:Success",
           "0:OnSuccess",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Sync",
@@ -3496,6 +3507,7 @@
           "0:Sync",
           "0:Success",
           "0:OnSuccess",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Sync",
@@ -3504,6 +3516,7 @@
           "0:Sync",
           "0:Success",
           "0:OnSuccess",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Sync",
@@ -3512,6 +3525,7 @@
           "0:Sync",
           "0:Success",
           "0:OnSuccess",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Sync",
@@ -3648,6 +3662,7 @@
           "0:Suspend",
           "0:Success",
           "0:Success",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Statement",
@@ -3675,6 +3690,8 @@
           "0:OnSuccess",
           "0:OnFailure",
           "0:Sync",
+          "0:Failure",
+          "0:Suspend",
           "0:Failure",
           "0:OnSuccess",
           "0:OnFailure",
@@ -3806,6 +3823,7 @@
           "0:Suspend",
           "0:Success",
           "0:Success",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Statement",
@@ -3833,6 +3851,8 @@
           "0:OnSuccess",
           "0:OnFailure",
           "0:Sync",
+          "0:Failure",
+          "0:Suspend",
           "0:Failure",
           "0:OnSuccess",
           "0:OnFailure",
@@ -3970,6 +3990,7 @@
           "0:Success",
           "0:OnFailure",
           "0:OnSuccess",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Statement",
@@ -3997,6 +4018,8 @@
           "0:OnSuccess",
           "0:OnFailure",
           "0:Sync",
+          "0:Failure",
+          "0:Suspend",
           "0:Failure",
           "0:Success",
           "0:OnSuccess",
@@ -4121,6 +4144,7 @@
           "0:Success",
           "0:OnFailure",
           "0:OnSuccess",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Statement",
@@ -4148,6 +4172,8 @@
           "0:OnSuccess",
           "0:OnFailure",
           "0:Sync",
+          "0:Failure",
+          "0:Suspend",
           "0:Failure",
           "0:Success",
           "0:OnSuccess",
@@ -4295,6 +4321,7 @@
           "0:Success",
           "0:Success",
           "0:Exit",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Statement",
@@ -4322,6 +4349,8 @@
           "0:OnSuccess",
           "0:OnFailure",
           "0:Sync",
+          "0:Failure",
+          "0:Suspend",
           "0:Failure",
           "0:Success",
           "0:OnSuccess",
@@ -4456,6 +4485,7 @@
           "0:Success",
           "0:Success",
           "0:Exit",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Statement",
@@ -4484,6 +4514,8 @@
           "0:OnFailure",
           "0:Sync",
           "0:Failure",
+          "0:Suspend",
+          "0:Failure",
           "0:Success",
           "0:OnSuccess",
           "0:WithFiber",
@@ -4507,7 +4539,7 @@
     {
       "program": "pSqlOrDie",
       "leanExit": "die [{\"die\":\"badName\"}]",
-      "hostExit": "die [{\"die\":\"effect/sql/SqlError: Failed to execute statement\"}]",
+      "hostExit": "die [{\"die\":\"[\\\"UnknownError\\\",\\\"no such table: missing\\\"]\"}]",
       "entry": "runSyncExit",
       "exitAgree": true,
       "scheduleAgree": true,
@@ -4522,7 +4554,7 @@
           "failure": {
             "reasons": [
               {
-                "die": "effect/sql/SqlError: Failed to execute statement"
+                "die": "[\"UnknownError\",\"no such table: missing\"]"
               }
             ]
           }
@@ -4534,7 +4566,7 @@
         ],
         "events": [
           "started 0",
-          "exited 0 {\"failure\":{\"reasons\":[{\"die\":\"effect/sql/SqlError: Failed to execute statement\"}]}}"
+          "exited 0 {\"failure\":{\"reasons\":[{\"die\":\"[\\\"UnknownError\\\",\\\"no such table: missing\\\"]\"}]}}"
         ],
         "frames": [
           "0:Suspend",
@@ -4640,6 +4672,7 @@
           "0:Success",
           "0:Success",
           "0:OnSuccess",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Statement",
@@ -4667,6 +4700,8 @@
           "0:OnSuccess",
           "0:OnFailure",
           "0:Sync",
+          "0:Failure",
+          "0:Suspend",
           "0:Failure",
           "0:Failure",
           "0:OnSuccess",
@@ -4716,7 +4751,7 @@
           "failure": {
             "reasons": [
               {
-                "die": "effect/sql/SqlError: Failed to execute statement"
+                "die": "[\"UnknownError\",\"no such table: missing\"]"
               }
             ]
           }
@@ -4728,7 +4763,7 @@
         ],
         "events": [
           "started 0",
-          "exited 0 {\"failure\":{\"reasons\":[{\"die\":\"effect/sql/SqlError: Failed to execute statement\"}]}}"
+          "exited 0 {\"failure\":{\"reasons\":[{\"die\":\"[\\\"UnknownError\\\",\\\"no such table: missing\\\"]\"}]}}"
         ],
         "frames": [
           "0:Suspend",
@@ -4834,6 +4869,7 @@
           "0:Success",
           "0:Success",
           "0:OnSuccess",
+          "0:OnFailure",
           "0:OnExit",
           "0:OnSuccess",
           "0:Statement",
@@ -4861,6 +4897,8 @@
           "0:OnSuccess",
           "0:OnFailure",
           "0:Sync",
+          "0:Failure",
+          "0:Suspend",
           "0:Failure",
           "0:Failure",
           "0:OnSuccess",

@@ -7,6 +7,18 @@
 # must produce the same bytes; the truth lane's exported files (`harness/truth/generated`)
 # are read too, with the same oracles by name. `bun test` runs the pinned cases.
 #
+# The truth lane's files it reads are also type-checked here (DI-49), under the harness's own
+# `harness/truth/tsconfig.json`, so that a printed module which reads back correctly but is
+# not well typed is refused by this gate as well as by `scripts/check-truth.py` — the two are
+# stamped separately and either can be the one that runs.
+#
+# Not type-checked: the corpus this script generates into its temp directory. Those files are
+# bare expressions (`TypeScript.Render.expr`, `tools/Tools/Corpus.lean:49-50`) with no import
+# header and no declaration, and the corpus is deliberately not all well typed — 152 of the
+# 400 sample programs are (`Test/Program/Gen.lean:622,634`), and `Api.print` prints the rest.
+# Type-checking them means wrapping each in the truth harness's header and choosing which
+# ones must pass; that choice is unmeasured and is not made here.
+#
 #   scripts/check-ts-eff-corpus.sh
 #
 # Host lane: needs `bun` and the pinned install under ts/eff/node_modules
@@ -49,7 +61,8 @@ key="$(stamp_key \
   "$stamp_build_lib/Tools/Corpus.trace" \
   "$repo_root"/ts/eff/*.ts "$repo_root/ts/eff/test" "$repo_root/ts/eff/ingest" \
   "$repo_root/ts/eff/package.json" "$repo_root/ts/eff/bun.lock" "$repo_root/ts/eff/tsconfig.json" \
-  "$repo_root/harness/truth/generated" \
+  "$repo_root/harness/truth/generated" "$repo_root/harness/truth/prelude.ts" \
+  "$repo_root/harness/truth/tsconfig.json" \
   "$(stamp_fact bun "$bun_version")")"
 if stamp_hit "$gate" "$key"; then
   stamp_report "$gate" "$key"
@@ -81,6 +94,14 @@ if [[ ! -d node_modules ]]; then
   }
 fi
 
+typecheck_out="$tmp_root/typecheck.log"
+if ! "$bun_cmd" "$(bun_path "$repo_root/ts/eff/node_modules/typescript/bin/tsc")" --pretty false \
+     --noEmit -p "$(bun_path "$repo_root/harness/truth/tsconfig.json")" >"$typecheck_out" 2>&1; then
+  printf 'FAIL %s: the truth lane'"'"'s printed modules do not type-check\n' "$gate" >&2
+  cat "$typecheck_out" >&2
+  exit 1
+fi
+
 check_out="$tmp_root/check.log"
 if ! "$bun_cmd" run check.ts "$(bun_path "$tmp_root")" "$(bun_path "$repo_root/harness/truth/generated")" --oracle "$(bun_path "$tmp_root")" >"$check_out" 2>&1; then
   printf 'FAIL %s: the reader disagrees with Lean on the corpus\n' "$gate" >&2
@@ -97,6 +118,6 @@ if ! "$bun_cmd" test >"$test_out" 2>&1; then
 fi
 test_line="$(grep -E '^ *[0-9]+ pass' "$test_out" | head -1 | sed 's/^ *//')"
 
-summary="$check_line; bun test: $test_line; corpus: $corpus_line"
+summary="$check_line; bun test: $test_line; corpus: $corpus_line; truth modules type-check"
 printf 'PASS %s: %s\n' "$gate" "$summary"
 stamp_write "$gate" "$key" "$summary"

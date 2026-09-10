@@ -1,0 +1,43 @@
+{
+  "//": [
+    "The truth harness's own TypeScript check (DI-49). Not a build: `noEmit`, and the only",
+    "thing it decides is whether the printed modules and the adapter they call are well typed",
+    "under the pinned compiler (`ts/eff/node_modules/.bin/tsc`, 5.9.2). Evidence word: tested —",
+    "a finite checker run, never byte reproduction (DI-32).",
+    "",
+    "Two callers, one file. `scripts/check-truth.py` copies this config beside the freshly",
+    "regenerated `prelude.ts` and `generated/` in its work directory and runs `tsc --noEmit -p`",
+    "there before it compares any byte, so the check is on the modules rc.112 just ran, not on",
+    "the committed copies; running `tsc --noEmit -p harness/truth/tsconfig.json` from the",
+    "repository root checks the committed tree the same way.",
+    "",
+    "What is in scope: the printed images (`generated/*.ts`) and the adapter they call",
+    "(`prelude.ts`). What is not: `run-truth.ts`, the recorder, which is not a printed image and",
+    "has three diagnostics under these options that predate this gate — `option`'s",
+    "`argv[index + 1]` and `failPayloads`' element type under `noUncheckedIndexedAccess`, and",
+    "`TracedScheduler.makeDispatcher`, whose base returns rc.112's unexported",
+    "`MixedSchedulerDispatcher` (`vendor/effect-4.0.0-rc.112/src/Scheduler.ts:188-193`) so the",
+    "override's narrower `SchedulerDispatcher` cannot be named. Widening this gate to the",
+    "recorder means expressing `TracedScheduler` as a delegating `Scheduler.Scheduler`; that is",
+    "its own change, with the schedule rows of `result.json` as its evidence.",
+    "",
+    "The options are `ts/eff/tsconfig.json`'s, verbatim: one compiler, one dialect, two gates.",
+    "`effect` and `@types/bun` resolve through `harness/truth/node_modules`, the link",
+    "`check-truth.py` makes to the pinned installation."
+  ],
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "types": ["bun"]
+  },
+  "include": ["prelude.ts", "generated"]
+}

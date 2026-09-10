@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # Generate committed projections in dependency order. No generation verdict is cached.
-# Usage: scripts/generate.sh [--only derived|eff|wire|cas|ts|lcnf]
+# Usage: scripts/generate.sh [--all | --only derived|eff|wire|cas|ts|readme|lcnf]
+# --all and no argument are the same named order (DI-33): derived, eff, wire, cas, ts, readme.
+# `readme` is the ingest tables (`bun ts/eff/ingest/render-readme.ts`), a host producer that
+# reads three files `ts` just wrote. `lcnf` is not in the order; it is requested by name.
+# The Truth family is not here either: it is a host-lane family with its own two commands
+# (docs/GENERATED.md), because Lean reads the committed tapes that rc.112 re-records.
 # --output-dir DIR is the drift check's temporary destination; canonical files stay put.
 set -euo pipefail
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"

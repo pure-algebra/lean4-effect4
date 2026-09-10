@@ -371,7 +371,7 @@ export function readPrintedSource(source: string, filename = "program.ts"): Eff 
 
 import type { Verdict, RefusalCode, Key, LayerBinding } from "./contract.ts"
 import { taxonomy } from "../taxonomy.gen.ts"
-import { heads } from "../profile.gen.ts"
+import { atomNames, heads } from "../profile.gen.ts"
 import { forms } from "../forms.gen.ts"
 import { encodeProgram } from "../wire.gen.ts"
 import type { Ty } from "../eff.gen.ts"
@@ -384,7 +384,10 @@ class ForeignRefusal extends Error {
 }
 const refuseForeign = (code: RefusalCode, value: string): never => { throw new ForeignRefusal(code, value) }
 const knownHeads = new Set<string>([...heads, ...rows.map(r => r.row.spelling), ...forms.rows.map(r => r.head)])
-const atoms = new Set(["succ", "pred", "isZero", "not", "add", "lt", "eq", "pair", "fst", "snd", "strings"])
+// The pure atoms are read, not copied (DI-40): `atomNames` is `Effect4.Program.nativeAtom`'s
+// own name list, emitted into `profile.gen.ts` by `tools/Tools/TsGen.lean` and checked there
+// against `nativeAtomTy`. An atom appended in Lean reaches this recognizer by regeneration.
+const atoms = atomNames
 
 class ForeignCompilerReader extends CompilerReader {
   readonly keys: Key[] = []

@@ -31,6 +31,14 @@ def install(source, destination, checking):
         destination.write_bytes(data)
 
 
+# The one named order (DI-33). Each producer's inputs are earlier families' outputs:
+# `derived` writes the Lean projections the rest import; `eff`, `wire` and `cas` cut the OCaml
+# estate from them; `ts` cuts the TypeScript estate; `readme` renders the ingest tables out of
+# three files `ts` just wrote, so it is last and it is not a Lean producer at all. `lcnf` is
+# not in the order: it is the explicit Phase 1 route and is requested by name.
+ALL = ['derived', 'eff', 'wire', 'cas', 'ts', 'readme']
+
+
 def generate(families, output):
     checking = output is not None
     with tempfile.TemporaryDirectory(prefix='effect4-generate-') as scratch:
@@ -76,6 +84,11 @@ def generate(families, output):
                 for source in sorted(temp.rglob('*')):
                     if source.is_file():
                         install(source, ROOT / target / source.relative_to(temp), False)
+        if 'readme' in families:
+            # A host producer, not a Lean one: it reads profile/forms/taxonomy `.gen.ts` and
+            # writes `ts/eff/ingest/README.md` in place. Its own `--check` is the drift form,
+            # so the temporary-output route does not apply to it.
+            run(['bun', 'ts/eff/ingest/render-readme.ts', *(['--check'] if checking else [])])
         if 'lcnf' in families:
             if checking:
                 raise ValueError('LCNF is stamp-only in Phase 0; no temporary regeneration')
@@ -89,10 +102,14 @@ def generate(families, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--only', choices=['derived', 'eff', 'wire', 'cas', 'ts', 'lcnf'])
+    parser.add_argument('--only', choices=ALL + ['lcnf'])
+    parser.add_argument('--all', action='store_true',
+                        help='every family of the named order: ' + ', '.join(ALL))
     parser.add_argument('--output-dir')
     args = parser.parse_args()
-    generate([args.only] if args.only else ['derived', 'eff', 'wire', 'cas', 'ts'], args.output_dir)
+    if args.only and args.all:
+        raise ValueError('--only and --all are exclusive')
+    generate([args.only] if args.only else ALL, args.output_dir)
     print('PASS generate: requested producers ran in dependency order')
 
 

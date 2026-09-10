@@ -6,6 +6,13 @@ harness/truth/tapes, the answers rc.112 gave the package rows last time), bun ru
 generated modules with the recording prelude and writes the observed result and fresh tapes,
 and every committed artefact must equal the fresh one. A tape that moved fails the gate the
 way corpus.json does: the answers Lean replayed are byte for byte the answers rc.112 just gave.
+
+Between the two, one more refusal (DI-49): the freshly printed modules and the adapter they
+call must type-check under the pinned compiler, `tsc --noEmit -p harness/truth/tsconfig.json`
+copied beside them in the work directory. Running is not being well typed — `pKv.ts` ran for
+months while its declared error type disagreed with what the shim could raise (TS2375) — so
+the check is on the modules rc.112 just ran, before any byte is compared. Evidence word:
+tested; a finite checker run, not byte reproduction (DI-32).
 """
 import hashlib
 import json
@@ -35,11 +42,14 @@ def inputs_of(root, truth, modules, manifest_files):
               root/'lean-toolchain', root/'lake-manifest.json']
     inputs += list(manifest_files)
     inputs += sorted((root/'src/Effect4').rglob('*.lean'))
-    inputs += [truth/'corpus.json', truth/'result.json', truth/'result.md']
+    inputs += [truth/'corpus.json', truth/'result.json', truth/'result.md', truth/'tsconfig.json']
     inputs += sorted((truth/'generated').glob('*.ts'))
     inputs += sorted(truth.glob('*.cut-from'))
     inputs += sorted((truth/'tapes').glob('*')) if (truth/'tapes').is_dir() else []
     inputs += [root/'scripts/lib/generated_bytes.py', root/'tools/Tools/GeneratedStamp.lean']
+    # `run-truth.ts`'s self-test reads the atom set out of the TypeScript estate's profile
+    # (DI-40), so the profile and the schema module it decodes through are inputs here too.
+    inputs += [root/'ts/eff/profile.gen.ts', root/'ts/eff/eff.gen.ts']
     # The package versions alone cannot detect locally changed host implementations.
     for name in HOST_PACKAGES:
         base = modules / name
@@ -104,6 +114,16 @@ def main():
         subprocess.run([bun, 'run', host_path(truth/'run-truth.ts'), '--manifest', host_path(manifest),
                         '--out', host_path(Path(work)), '--timeout', '300',
                         '--tape-out', host_path(Path(work)/'tapes')], cwd=root, check=True, timeout=180)
+        # DI-49: the modules rc.112 just ran, and the adapter they call, under the pinned
+        # compiler. The config is copied beside them so that `generated/` and `prelude.ts`
+        # resolve as they do in the tree, and `effect`/`@types/bun` through the link above.
+        shutil.copyfile(truth/'tsconfig.json', Path(work)/'tsconfig.json')
+        typed = subprocess.run([bun, host_path(modules/'typescript/bin/tsc'), '--pretty', 'false',
+                                '--noEmit', '-p', host_path(Path(work)/'tsconfig.json')],
+                               cwd=work, text=True, capture_output=True, timeout=300)
+        if typed.returncode != 0:
+            sys.exit('FAIL truth: the regenerated modules do not type-check under '
+                     f'harness/truth/tsconfig.json:\n{typed.stdout}{typed.stderr}')
         for name in ['corpus.json', 'result.json', 'result.md', 'corpus.json.cut-from', 'result.json.cut-from']:
             if comparable((Path(work)/name).read_bytes()) != comparable((truth/name).read_bytes()):
                 sys.exit(f'FAIL truth: harness/truth/{name} drifted; inspect the regenerated differential before refreshing')
@@ -124,8 +144,9 @@ def main():
     stamp_dir.mkdir(parents=True, exist_ok=True)
     for old in stamp_dir.iterdir():
         if old.is_file(): old.unlink()
-    stamp.write_text('bounded corpus differential agrees with rc.112\n')
-    print('PASS truth: pinned corpus and bounded exit/schedule differential agree')
+    stamp.write_text('bounded corpus differential agrees with rc.112; modules type-check\n')
+    print('PASS truth: pinned corpus and bounded exit/schedule differential agree; '
+          'the regenerated modules type-check')
     return 0
 
 

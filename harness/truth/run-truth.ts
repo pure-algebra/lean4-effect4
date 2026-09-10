@@ -12,7 +12,8 @@
  * Effect resolves through `harness/truth/node_modules`, selected by
  * `scripts/check-truth.sh`; the current working directory does not select it.
  *
- * Depends on `effect` (rc.112) and `./prelude.ts` (the atoms; part of the truth claim).
+ * Depends on `effect` (rc.112), `./prelude.ts` (the atoms; part of the truth claim) and
+ * `ts/eff/profile.gen.ts` (the atom set the self-test checks the prelude's table against).
  *
  * How rc.112 is observed — nothing is simulated, every hook is a documented rc.112 seam:
  *  - every primitive a fiber evaluates passes through `Tracer.Tracer`'s optional `context`
@@ -42,7 +43,8 @@
  *  - one alphabet: the compared schedule is `started`, `forked`, `parked`, `resumed`, `ran`,
  *    `exited <kind>` over fiber indices in first-seen order (root `0`, children in fork
  *    order) — `scheduled` rows are recorded on both faces and dropped from the verdict,
- *    because the Lean trace records the fork's scheduling but not the yield's (NOTES.md §5);
+ *    because the Lean trace records the fork's scheduling but not the yield's
+ *    (`Test/contracts/faces.contract.md` §4, quantifiers 2 and 5);
  *  - one entry decides the schedule, and it is the one that has a fiber: the compared rows
  *    are always the fork entry's, because `Api.run` — the Lean side of the comparison — is
  *    `runFork` plus the flush rounds, and `runForkWith` (`:5413-5438`) always constructs a
@@ -58,19 +60,25 @@
  *  - exact where it can be: a success value and a `fail` payload are compared as JSON; a
  *    `die` and an `interrupt` are compared by kind, the payloads shown (the Lean defect
  *    alphabet has no host errors) (by construction, `compareExits`);
- *  - one pair for a host error: a tagged error (an `Error` with a string `_tag`) crosses as
- *    the `(tag, message)` pair of DB-15 wherever it stands — a fail payload, a caught value, a
- *    reason inside a reified exit, a tape row — through one function (`taggedPair`), in
- *    rc.112's two-level form for an error whose `reason` is itself tagged (`SqlError`: the
- *    reason's tag and the driver's message; ruling G1); a defect inside a recorded call is a
- *    `died` tape row, which Lean refuses to replay (by construction);
+ *  - one pair for a host error, and it is the adapter's: a row whose error column is the
+ *    DB-15 pair projects at the adapter (`prelude.ts` `toPair`, DI-59), so the program's own
+ *    handler, the tape row and the Lean machine observe one value; this file's `taggedPair`
+ *    is that same `pairOf`, applied where a value in *value* position still needs it (a
+ *    caught error, a reason inside a reified exit) and where a row's error column is `never`.
+ *    A defect inside a recorded call is a `died` tape row, which Lean refuses to replay (by
+ *    construction);
  *  - the prelude is checked before any program runs (tested: `selfTest`).
  */
 import { Cause, Context, Effect, Exit, Scheduler, Tracer, Schema } from "effect"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { pathToFileURL } from "node:url"
-import { selfTestCases, tape, type TapeCall } from "./prelude.ts"
+import { pairOf, selfTestCases, tape, type TapeCall } from "./prelude.ts"
+// The atom set the printed programs may mention, read rather than copied (DI-40). This is the
+// only file of the harness that reads the TypeScript estate's generated profile; the adapter
+// stays on `effect` alone so that every generated module type-checks against it and nothing
+// more (`harness/truth/tsconfig.json`).
+import { atomNames } from "../../ts/eff/profile.gen.ts"
 
 // ---- rc.112 keys (internal/core.ts:31-61, internal/effect.ts:492, :3766, Ref.ts:21,
 // Deferred.ts:22, Exit.ts:20) ---------------------------------------------------------
@@ -124,11 +132,21 @@ const timeoutMs = Number(option("--timeout", "300"))
 const tapeDir = option("--tape-out", path.join(outDir, "tapes"))
 
 // ---- the prelude self-test ----------------------------------------------------------
-const selfTest = (): string[] =>
-  selfTestCases.flatMap(([name, apply, expected]) => {
+/** Two refusals. Every case of the prelude's table must hold, and every atom the profile
+ * names must have a case: `atomNames` is `Effect4.Program.nativeAtom`'s own list, cut into
+ * `ts/eff/profile.gen.ts` by `tools/Tools/TsGen.lean` and checked there against
+ * `nativeAtomTy` (DI-40). The second refusal is why `strings` is tested at all. */
+const selfTest = (): string[] => {
+  const failures = selfTestCases.flatMap(({ name, apply, expected }) => {
     const got = apply()
     return got === expected ? [] : [`${name}: got ${JSON.stringify(got)}, wanted ${JSON.stringify(expected)}`]
   })
+  const covered = new Set(selfTestCases.map((c) => c.atom))
+  for (const atom of atomNames) {
+    if (!covered.has(atom)) failures.push(`atom ${atom} is in the profile's atom set and has no prelude self-test case`)
+  }
+  return failures
+}
 
 // ---- generation ---------------------------------------------------------------------
 const cutFrom = argv.includes("--observe") ? "" : fs.readFileSync(manifestPath + ".cut-from", "utf8").trimEnd()
@@ -269,7 +287,8 @@ class Recorder {
     this.push(this.schedule, `ran ${owner}`)
   }
 
-  // ---- the value wire (NOTES.md §3) --------------------------------------------------
+  // ---- the value wire (the shape `harness/truth/Truth.lean` documents in its value-wire
+  // section and `Test/contracts/faces.contract.md` §4 quantifies) ---------------------------
   wire(value: unknown): Json {
     if (value === undefined || value === null) return null
     if (typeof value === "number") {
@@ -336,29 +355,19 @@ const describe = (value: unknown): string => {
   try { return JSON.stringify(value) ?? String(value) } catch { return String(value) }
 }
 
-/** The `(tag, message)` pair of DB-15 for a value in error position, in rc.112's own two-level
- * form (ruling G1, 2026-09-09). A tagged error whose one field `reason` is itself tagged —
- * `SqlError`, whose `message` is the driver's constant `"Failed to execute statement"` and
- * whose `reason._tag` is what `Effect.catchReason` dispatches on (`internal/effect.ts:3007`,
- * `SqlError.ts:409-411`) — crosses as the reason's tag and the driver's message under it
- * (`reason.cause.message`, else `reason.message`); the outer `_tag` is implied by the row and
- * recorded beside the tape row. Any other tagged error crosses as its own tag and message; a
- * two-string array as itself (a printed `Effect.fail(pair(…))`); anything else described under
- * `"?"`. The one rule for the fail payload, a caught value, a reason inside a reified exit and
- * the tape. */
+/** The `(tag, message)` pair of DB-15 for a value in error position (ruling G1, 2026-09-09).
+ * **One rule, one function**: this is the adapter's own `pairOf` (`prelude.ts`, DI-59), so
+ * the value a program's handler observes and the value this file records cannot disagree.
+ * Since DI-59 the rows that can fail typed have already projected, and this call is the
+ * identity on their pair; it still runs for a value in *value* position (a caught error, a
+ * reason inside a reified exit) and for a row whose error column is `never`.
+ *
+ * The last resort `["?", …]` is the recorder's diagnostic, never a program's error: the
+ * adapter refuses an inadmissible shape as a defect before it can reach a fail payload
+ * (`toPair`), so a `"?"` on a `failed` tape row would itself be the finding. */
 const taggedPair = (e: unknown): [string, string] => {
-  if (Array.isArray(e) && e.length === 2 && typeof e[0] === "string" && typeof e[1] === "string") return [e[0], e[1]]
-  if (e !== null && typeof e === "object" && typeof (e as any)._tag === "string") {
-    const reason = (e as any).reason
-    if (reason !== null && typeof reason === "object" && typeof reason._tag === "string") {
-      const cause = reason.cause
-      const driver = cause !== null && typeof cause === "object" && typeof cause.message === "string" ? cause.message : reason.message
-      return [reason._tag, typeof driver === "string" ? driver : describe(reason)]
-    }
-    const message = (e as any).message
-    return [(e as any)._tag, typeof message === "string" ? message : describe(e)]
-  }
-  return ["?", describe(e)]
+  const projected = pairOf(e)
+  return projected === null ? ["?", describe(e)] : [projected[0], projected[1]]
 }
 
 /** The outer tag of a two-level tagged error (`"SqlError"`), which `taggedPair` leaves to the
@@ -416,7 +425,14 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
  * what Lean replays as `Err.tagged`. Beside it, for the record only (Lean does not read it):
  * `error`, the outer tag of a two-level error (`"SqlError"`), which the pair leaves to the row.
  * `died` is any other cause — a defect, an interrupt — described; Lean's decoder refuses such
- * a row, so a host defect is never replayed as a typed failure. */
+ * a row, so a host defect is never replayed as a typed failure.
+ *
+ * The call is recorded **before** the adapter's projection (`Effect.mapError(…, toPair)` is
+ * applied outside `recorded`, `prelude.ts`), which is why the raw diagnostics still exist to
+ * record: `outerTag` reads the package's own error object. `taggedPair` and the adapter share
+ * `pairOf`, so `failed` is the value the program's handler saw, whichever side computes it
+ * (DI-59; scout A's Q2 asked which of the two orders to take, and this is the answer: the
+ * diagnostics are kept, and the tape bytes do not move). */
 interface TapeRow {
   fiber: number; op: string; request: Json
   answer?: Json

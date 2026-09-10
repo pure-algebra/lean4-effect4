@@ -4,13 +4,19 @@
  * What it is: one export per name the printed programs can mention outside the `effect`
  * package: the pure atoms of `src/Effect4/Program/Native.lean` (`nativeAtom`) and the
  * `FnName`s of `src/Effect4/Machine/Stores.lean` (`FnName.total`, `FnName.partialUpdate`).
- * Part of the truth claim: `NOTES.md` §4 is the table mapping each export to its Lean
- * definition. Hand-written transcription (no generator exists for it yet); when either Lean
- * table changes, this file and the NOTES table change with it.
+ * Part of the truth claim (`Test/contracts/faces.contract.md` §4): the doc comment on each
+ * export below is the table mapping it to its Lean definition — there is no separate notes
+ * file. Hand-written transcription (no generator exists for it yet); when either Lean table
+ * changes, this file changes with it, and the self-test refuses an atom it does not export.
  *
  * Depends on `effect` (`Option`) only.
  *
  * Behaviours held:
+ *  - one error, one representation: every package row whose Lean row type has the DB-15 pair
+ *    as its error column projects its failure to that pair **at the adapter**, before the
+ *    program sees it (`toPair`, DI-59), so a printed `Effect.catch`/`Effect.catchCause`
+ *    handler, the recorded tape row and the Lean machine all observe one value (tested:
+ *    `docs/research/2026-09-09-seat-host-face-probes.ts`);
  *  - each atom agrees with `nativeAtom` on the values `typeOf` admits — naturals, booleans,
  *    pairs (tested: `run-truth.ts` `selfTest` evaluates the table below against fixed cases
  *    before any program runs);
@@ -69,26 +75,35 @@ export const zeroWhenPositive = (a: number): Option.Option<number> =>
 /** `FnName.noChange`: `None` always. */
 export const noChange = (_a: number): Option.Option<number> => Option.none()
 
-/** The table the runner's self-test walks: `[name, apply, expected]`. */
-export const selfTestCases: ReadonlyArray<readonly [string, () => unknown, unknown]> = [
-  ["succ 41", () => succ(41), 42],
-  ["pred 0", () => pred(0), 0],
-  ["pred 5", () => pred(5), 4],
-  ["isZero 0", () => isZero(0), true],
-  ["isZero 3", () => isZero(3), false],
-  ["not true", () => not(true), false],
-  ["add 2 3", () => add(2, 3), 5],
-  ["lt 2 3", () => lt(2, 3), true],
-  ["lt 3 3", () => lt(3, 3), false],
-  ["eq 3 3", () => eq(3, 3), true],
-  ["fst (pair 1 2)", () => fst(pair(1, 2)), 1],
-  ["snd (pair 1 2)", () => snd(pair(1, 2)), 2],
-  ["incr 1", () => incr(1), 2],
-  ["double 4", () => double(4), 8],
-  ["takeAndBump 4", () => takeAndBump(4), 5],
-  ["zeroWhenPositive 3", () => Option.getOrUndefined(zeroWhenPositive(3)), 0],
-  ["zeroWhenPositive 0 is none", () => Option.isNone(zeroWhenPositive(0)), true],
-  ["noChange 7 is none", () => Option.isNone(noChange(7)), true]
+/** The table the runner's self-test walks. `atom` is the name in `nativeAtom` or `FnName`
+ * that the case exercises: `run-truth.ts` checks the atom names against the profile's own
+ * atom set (`ts/eff/profile.gen.ts`, cut from `nativeAtom` — DI-40), so an atom appended in
+ * Lean cannot stay untested here. `strings` was untested until that check existed. */
+export const selfTestCases: ReadonlyArray<{
+  readonly atom: string; readonly name: string; readonly apply: () => unknown; readonly expected: unknown
+}> = [
+  { atom: "succ", name: "succ 41", apply: () => succ(41), expected: 42 },
+  { atom: "pred", name: "pred 0", apply: () => pred(0), expected: 0 },
+  { atom: "pred", name: "pred 5", apply: () => pred(5), expected: 4 },
+  { atom: "isZero", name: "isZero 0", apply: () => isZero(0), expected: true },
+  { atom: "isZero", name: "isZero 3", apply: () => isZero(3), expected: false },
+  { atom: "not", name: "not true", apply: () => not(true), expected: false },
+  { atom: "add", name: "add 2 3", apply: () => add(2, 3), expected: 5 },
+  { atom: "lt", name: "lt 2 3", apply: () => lt(2, 3), expected: true },
+  { atom: "lt", name: "lt 3 3", apply: () => lt(3, 3), expected: false },
+  { atom: "eq", name: "eq 3 3", apply: () => eq(3, 3), expected: true },
+  { atom: "pair", name: "pair 1 2 is a two-element array", apply: () => JSON.stringify(pair(1, 2)), expected: "[1,2]" },
+  { atom: "fst", name: "fst (pair 1 2)", apply: () => fst(pair(1, 2)), expected: 1 },
+  { atom: "snd", name: "snd (pair 1 2)", apply: () => snd(pair(1, 2)), expected: 2 },
+  { atom: "strings", name: "strings () is empty", apply: () => JSON.stringify(strings()), expected: "[]" },
+  { atom: "strings", name: "strings (\"7\", \"\\\"x\\\"\") keeps its JSON texts",
+    apply: () => JSON.stringify(strings("7", "\"x\"")), expected: "[\"7\",\"\\\"x\\\"\"]" },
+  { atom: "incr", name: "incr 1", apply: () => incr(1), expected: 2 },
+  { atom: "double", name: "double 4", apply: () => double(4), expected: 8 },
+  { atom: "takeAndBump", name: "takeAndBump 4", apply: () => takeAndBump(4), expected: 5 },
+  { atom: "zeroWhenPositive", name: "zeroWhenPositive 3", apply: () => Option.getOrUndefined(zeroWhenPositive(3)), expected: 0 },
+  { atom: "zeroWhenPositive", name: "zeroWhenPositive 0 is none", apply: () => Option.isNone(zeroWhenPositive(0)), expected: true },
+  { atom: "noChange", name: "noChange 7 is none", apply: () => Option.isNone(noChange(7)), expected: true }
 ]
 
 /** A unit-declared resource used only by pAcquireHandle. Effect supplies the execution
@@ -117,6 +132,94 @@ export const Host = {
 /** `"strings", vs => list vs` — the parameter list of a host row, JSON texts (DB-15). */
 export const strings = (...texts: string[]): ReadonlyArray<string> => texts
 
+// ---- the error projection (DI-59, ruling G1) -------------------------------------------
+//
+// DB-15: an error crosses a host row as `prod string string`. The pair is made **here**, at
+// the adapter, so a `catch` or `catchCause` handler inside a printed program observes exactly
+// the value the tape records and the Lean machine replays; before this it was made only at
+// the recorder, and a program's own handler saw the package's error object.
+//
+// Where it is applied: exactly the rows whose Lean row type has the pair in its error column
+// — `sqlUnsafe` (`Program/Packages/SqliteBun.lean`) and `kvGet`/`kvSet`/`kvRemove`/`kvHas`
+// (`KeyValueStoreMemory.lean`). The three rows typed `error := .never` there —
+// `sqliteOpen`, `sqliteClose`, `kvMake` — are **not** projected: their error channel is
+// `never` on both faces, and widening it to the pair would make `Sql.close` inadmissible in
+// `Effect.acquireRelease`'s release slot, which rc.112 types `Effect<unknown, never, R2>`
+// (`vendor/effect-4.0.0-rc.112/src/Effect.ts:12930`). An unopenable file stays the defect
+// rc.112 throws.
+//
+// Where it is applied *relative to the tape*: outside `recorded`, so the tape row keeps the
+// raw diagnostics (the outer `_tag`) it has always kept and its bytes do not move. The tape
+// and the program cannot disagree, because `run-truth.ts`'s `taggedPair` is this same
+// `pairOf`.
+
+/** DB-15's `prod string string` on the host: the two-element tuple `pair` builds. */
+export type Pair = readonly [string, string]
+
+/** A host failure the projection does not admit. Raised as a **defect**, never as a typed
+ * failure: no tag is invented for a shape DB-15 does not describe. */
+export class UnsupportedHostFailure extends Error {
+  override readonly name = "UnsupportedHostFailure"
+  constructor(readonly raw: unknown) {
+    super(`no DB-15 pair for host failure ${describeRaw(raw)}`)
+  }
+}
+
+const describeRaw = (value: unknown): string => {
+  if (value instanceof Error) return `${value.name}: ${value.message}`
+  try { return JSON.stringify(value) ?? String(value) } catch { return String(value) }
+}
+
+/** The projection policy, as a table of the shapes DB-15 admits — **not** a total function
+ * (settlement review R1a). `null` means "no pair", and each caller says what it does with
+ * that: the adapter (`toPair`) makes it a defect; the recorder describes it.
+ *
+ *  1. a value that already is the pair — a two-element array of strings (a printed
+ *     `Effect.fail(pair(…))`, or a row already projected) — is itself;
+ *  2. a two-level tagged error, whose field `reason` is itself tagged (rc.112's `SqlError`,
+ *     `vendor/effect-4.0.0-rc.112/src/unstable/sql/SqlError.ts:409-411`, the shape
+ *     `Effect.catchReason` dispatches on) — the reason's tag and the driver's message under
+ *     it (`reason.cause.message`, else `reason.message`); the outer `_tag` is implied by the
+ *     row and is not in the pair (ruling G1). What is lost: the outer tag, `operation`,
+ *     `isRetryable`, and the driver error's `code`;
+ *  3. a flat tagged error with a string `message` (`Data.TaggedError`: `KeyValueStoreError`,
+ *     `vendor/effect-4.0.0-rc.112/src/unstable/persistence/KeyValueStore.ts:183-195`) — its
+ *     own tag and message. What is lost: `method`, `key`, `cause`;
+ *  4. anything else — a plain `Error` with no `_tag`, a non-`Error` value, a tagged value
+ *     whose message is not a string — has **no pair**. A plain `Error` in particular has no
+ *     tag and one must never be invented.
+ *
+ * A defect (`Die`) and an interruption never reach here: the projection is applied with
+ * `Effect.mapError`, which rewrites only the first `Fail` reason of a cause and leaves
+ * `Die`/`Interrupt` reasons exactly as rc.112 raised them (tested). */
+export const pairOf = (e: unknown): Pair | null => {
+  if (Array.isArray(e) && e.length === 2 && typeof e[0] === "string" && typeof e[1] === "string") return [e[0], e[1]]
+  if (e === null || typeof e !== "object") return null
+  const record = e as Record<string, unknown>
+  if (typeof record["_tag"] !== "string") return null
+  const reason = record["reason"]
+  if (reason !== null && typeof reason === "object" && typeof (reason as Record<string, unknown>)["_tag"] === "string") {
+    const inner = reason as Record<string, unknown>
+    const cause = inner["cause"]
+    const driver = cause !== null && typeof cause === "object" && typeof (cause as Record<string, unknown>)["message"] === "string"
+      ? (cause as Record<string, unknown>)["message"] as string
+      : inner["message"]
+    return typeof driver === "string" ? [inner["_tag"] as string, driver] : null
+  }
+  const message = record["message"]
+  return typeof message === "string" ? [record["_tag"] as string, message] : null
+}
+
+/** The projection at the adapter: `pairOf` where it answers, a defect where it does not.
+ * `Effect.mapError` turns a throw in this function into a `Die` carrying it (tested), so an
+ * inadmissible host failure becomes a defect of the row's call and never a fabricated typed
+ * failure. */
+export const toPair = (e: unknown): Pair => {
+  const p = pairOf(e)
+  if (p === null) throw new UnsupportedHostFailure(e)
+  return p
+}
+
 /** The recording seam. `run-truth.ts` installs a sink for the duration of one run; each
  * package call posts its operation, request and exit raw, and the runner wires them. */
 export interface TapeCall { readonly op: string; readonly request: ReadonlyArray<unknown>; readonly exit: Exit.Exit<unknown, unknown> }
@@ -140,13 +243,15 @@ export class SqlHandle {
   readonly ["~effect4/ExternalHandle"] = "SqlClient.SqlClient"
   constructor(readonly scope: Scope.Closeable, readonly client: SqliteClient.SqliteClient) {}
   unsafe(text: string, params: ReadonlyArray<string>) {
-    return recorded("unsafe", [this, text, params],
-      Effect.map(this.client.unsafe(text, params.map((p) => JSON.parse(p) as unknown)), rowsToWire))
+    return Effect.mapError(recorded("unsafe", [this, text, params],
+      Effect.map(this.client.unsafe(text, params.map((p) => JSON.parse(p) as unknown)), rowsToWire)), toPair)
   }
 }
 export const Sql = {
   /** `SqliteClient.make({ filename, disableWAL: true })` under a scope the prelude mints, so the
-   * package's own release (a finalizer it registers on that scope) runs at `Sql.close`. */
+   * package's own release (a finalizer it registers on that scope) runs at `Sql.close`.
+   * Not projected: the row is typed `error := .never` because `make` is typed `never`, and a
+   * file that cannot be opened is a defect `new Database` throws, which no tape replays. */
   open: (filename: string) => recorded("Sql.open", [filename], Effect.gen(function* () {
     const scope = yield* Scope.make()
     const client = yield* SqliteClient.make({ filename, disableWAL: true }).pipe(
@@ -161,14 +266,16 @@ export const Sql = {
 /** The key-value store handle over the store `KeyValueStore.layerMemory` builds: the four
  * method rows are the store's own; `get`'s `string | undefined` crosses as the row's
  * `.option string`, and `set`/`remove` answer `void` where the store answers its `Map`'s
- * results (`{}`, `true`). */
+ * results (`{}`, `true`). Each of the four carries the pair as its error column, so each
+ * projects (`toPair`); the memory store itself never fails, and the projection is exercised
+ * on a stubbed `KeyValueStoreError` in the seat's probes. */
 export class KvHandle {
   readonly ["~effect4/ExternalHandle"] = "KeyValueStore.KeyValueStore"
   constructor(readonly store: KeyValueStore.KeyValueStore) {}
-  get(key: string) { return recorded("get", [this, key], Effect.map(this.store.get(key), Option.fromNullishOr)) }
-  set(key: string, value: string) { return recorded("set", [this, key, value], Effect.asVoid(this.store.set(key, value))) }
-  remove(key: string) { return recorded("remove", [this, key], Effect.asVoid(this.store.remove(key))) }
-  has(key: string) { return recorded("has", [this, key], this.store.has(key)) }
+  get(key: string) { return Effect.mapError(recorded("get", [this, key], Effect.map(this.store.get(key), Option.fromNullishOr)), toPair) }
+  set(key: string, value: string) { return Effect.mapError(recorded("set", [this, key, value], Effect.asVoid(this.store.set(key, value))), toPair) }
+  remove(key: string) { return Effect.mapError(recorded("remove", [this, key], Effect.asVoid(this.store.remove(key))), toPair) }
+  has(key: string) { return Effect.mapError(recorded("has", [this, key], this.store.has(key)), toPair) }
 }
 export const Kv = {
   make: () => recorded("Kv.make", [],

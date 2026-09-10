@@ -1,6 +1,7 @@
 import Tools.GeneratedStamp
 import Lean
 import OCaml5.Eff.World
+import OCaml5.Eff.Emit
 import Effect4.Program.Native
 import Effect4.Program.Packages
 import Effect4.Codegen.Profile
@@ -27,7 +28,9 @@ Writes seven files, all `GENERATED`, none ever edited:
   import through the schemas of `eff.gen.ts`: the address (`hostPin.libraries` plus the
   `typescript` revision read out of `lakefile.toml`), the reserved heads
   (`Effect4.Program.reserved`, cross-checked against every `.ident "…"` literal of
-  `Print.lean`), and one entry per built-in `NativeOp` value — the operation as a `NativeOp` node and
+  `Print.lean`), the pure atom set (`nativeAtom`/`nativeAtomTy`, name, arity and monomorphic
+  signature, checked against `nativeAtomTy` at generation — DI-40: the ingest engines and the
+  truth prelude read it instead of keeping copies), and one entry per built-in `NativeOp` value — the operation as a `NativeOp` node and
   its `Row` as a `Row` node. No row type is written by hand: `Row`, `Ty`, `NativeOp` are
   families like any other. A stamp (FNV-1a 64 over the payload bytes) is recomputed at import.
 
@@ -536,10 +539,36 @@ def rowJs (r : Effect4.Program.Row) : String :=
 def entryJs (op : Effect4.Program.NativeOp) : String :=
   obj [("op", opJs op), ("row", rowJs (Effect4.Program.nativeSignature.rowOf op))]
 
-/-- The payload: address, heads and entries, as one line of JSON. -/
+/-! ### The pure atom set (DI-40)
+
+`Effect4.Program.nativeAtom` and `nativeAtomTy` (`src/Effect4/Program/Native.lean:67-96`) are
+a closed table of eleven names, and three hand copies of it existed on the host side: both
+ingest engines' `atoms`/`atomNames` sets and the truth prelude's self-test table. The set is
+emitted here so those copies become reads.
+
+The rows are `OCaml5.Eff.Emit`'s — the same data the OCaml target emits, so the two targets
+cannot disagree — and `OCaml5.Eff.checkAtoms` (`src/OCaml5/Eff/Emit.lean:373-382`) evaluates every row and probe
+against `nativeAtomTy` before this file is written: a name or a signature that drifts aborts
+the generator rather than being asserted here. `arity` is `null` for the variadic `strings`;
+`args`/`answer` are `null` for the three atoms whose type is not monomorphic (`pair`, `fst`,
+`snd`), whose signatures are schemes over `Ty` that the profile's `Ty` node cannot spell. -/
+def atomJs : String × Option Nat × Option (List Effect4.Program.Ty × Effect4.Program.Ty) → String
+  | (name, arity, mono) =>
+    obj [ ("name", lit name)
+        , ("arity", match arity with | some n => toString n | none => "null")
+        , ("args", match mono with | some (args, _) => arr (args.map tyJs) | none => "null")
+        , ("answer", match mono with | some (_, answer) => tyJs answer | none => "null") ]
+
+/-- Name, arity and monomorphic signature of every pure atom, in `nativeAtom`'s own order. -/
+def atomRows : List (String × Option Nat × Option (List Effect4.Program.Ty × Effect4.Program.Ty)) :=
+  (OCaml5.Eff.monoAtoms.map fun (n, args, answer) => (n, some args.length, some (args, answer)))
+  ++ [("pair", some 2, none), ("fst", some 1, none), ("snd", some 1, none), ("strings", none, none)]
+
+/-- The payload: address, heads, atoms and entries, as one line of JSON. -/
 def payload (address : String) : String :=
   obj [ ("address", lit address)
       , ("heads", arr (Effect4.Program.reserved.map lit))
+      , ("atoms", arr (atomRows.map atomJs))
       , ("rows", arr (allNativeOps.map entryJs)) ]
 
 def emitProfile (address : String) : String :=
@@ -553,17 +582,27 @@ def emitProfile (address : String) : String :=
   "// through the schemas of eff.gen.ts. `stamp` is FNV-1a 64 over the payload bytes, recomputed here.\n" ++
   "// Address: " ++ address ++ "\n" ++
   "// Stamp:   " ++ toString Effect4.Program.reserved.length ++ " heads, " ++
+    toString atomRows.length ++ " atoms, " ++
     toString allNativeOps.length ++ " rows, content " ++ stamp ++ "\n\n" ++
   "import { Schema } from \"effect\"\n" ++
-  "import { NativeOp, Row } from \"./eff.gen.ts\"\n\n" ++
+  "import { NativeOp, Row, Ty } from \"./eff.gen.ts\"\n\n" ++
   "export const address = " ++ lit address ++ "\n\n" ++
   "export const heads = [\n  " ++ ",\n  ".intercalate (Effect4.Program.reserved.map lit) ++ ",\n] as const\n" ++
   "export type Head = (typeof heads)[number]\n\n" ++
+  "/** The pure atoms of the native route, `Effect4.Program.nativeAtom` in its own order: the\n" ++
+  " * only identifiers besides the reserved heads and the row spellings that a printed term\n" ++
+  " * may mention. `arity` is null for the variadic `strings`; `args`/`answer` are null for the\n" ++
+  " * atoms whose `nativeAtomTy` arm is a scheme, not a monomorphic row. */\n" ++
+  "export const Atom = Schema.Struct({\n" ++
+  "  name: Schema.String,\n  arity: Schema.NullOr(Schema.Number),\n" ++
+  "  args: Schema.NullOr(Schema.Array(Ty)),\n  answer: Schema.NullOr(Ty),\n})\n" ++
+  "export type Atom = typeof Atom.Type\n\n" ++
   "/** One native operation and its row. */\n" ++
   "export const Entry = Schema.Struct({ op: NativeOp, row: Row })\n" ++
   "export type Entry = typeof Entry.Type\n\n" ++
   "export const Profile = Schema.Struct({\n" ++
-  "  address: Schema.String,\n  heads: Schema.Array(Schema.String),\n  rows: Schema.Array(Entry),\n})\n" ++
+  "  address: Schema.String,\n  heads: Schema.Array(Schema.String),\n" ++
+  "  atoms: Schema.Array(Atom),\n  rows: Schema.Array(Entry),\n})\n" ++
   "export type Profile = typeof Profile.Type\n\n" ++
   "/** The payload as Lean wrote it; `stamp` is FNV-1a 64 over exactly these bytes. */\n" ++
   "const text = " ++ lit text ++ "\n" ++
@@ -577,6 +616,9 @@ def emitProfile (address : String) : String :=
   "export const profile: Profile = Schema.decodeUnknownSync(Profile)(JSON.parse(text))\n\n" ++
   "if (profile.address !== address || profile.heads.length !== heads.length || profile.heads.some((h, i) => h !== heads[i])) {\n" ++
   "  throw new Error(\"profile.gen.ts: the payload and the constants disagree; regenerate it\")\n}\n\n" ++
+  "export const atoms: ReadonlyArray<Atom> = profile.atoms\n" ++
+  "/** The atom names as a set, for a reader deciding whether an identifier is an atom. */\n" ++
+  "export const atomNames: ReadonlySet<string> = new Set(atoms.map((a) => a.name))\n\n" ++
   "export const rows: ReadonlyArray<Entry> = profile.rows\n"
 
 
@@ -766,6 +808,11 @@ def main (args : List String) : IO Unit := do
   let tsRev := (revOf lakefile "typescript").getD "UNKNOWN"
   let address := " + ".intercalate
     (Effect4.Codegen.Profile.hostPin.libraries ++ ["lean4-typescript@" ++ tsRev])
+  -- the atom set is data here (DI-40); `checkAtoms` evaluates every row and probe against
+  -- `nativeAtomTy`, so a drifted name or signature aborts rather than being emitted
+  match OCaml5.Eff.checkAtoms with
+  | .error e => throw (IO.userError s!"TsGen: the atom table disagrees with nativeAtomTy: {e}")
+  | .ok _ => pure ()
   let printed := identLiterals (← IO.FS.readFile "src/Effect4/Codegen/Print.lean")
   -- readRunIn consumes Effect.void only as its fixed block return, not as an
   -- effect head, and printTupleArgs spells a saved tuple request's components with
@@ -799,5 +846,5 @@ def main (args : List String) : IO Unit := do
   IO.FS.writeFile (out / "packages.gen.ts") (stampHeader ++ emitPackages)
   let kinds := fs.map fun f => match kindOf f with
     | .enum => "literals" | .struct => "struct" | .consList _ => "array" | .tagged => "tagged"
-  IO.println s!"TsGen: {fs.length} families ({(kinds.filter (· == "tagged")).length} tagged, {(kinds.filter (· == "literals")).length} literals, {(kinds.filter (· == "struct")).length} struct, {(kinds.filter (· == "array")).length} array), {fs.foldl (fun n f => n + f.ctors.length) 0} constructors; profile {Effect4.Program.reserved.length} heads, {allNativeOps.length} rows; packages {Effect4.Program.Packages.all.length} tables, {Effect4.Program.Packages.all.foldl (fun n p => n + p.rows.length) 0} rows, address {address}"
+  IO.println s!"TsGen: {fs.length} families ({(kinds.filter (· == "tagged")).length} tagged, {(kinds.filter (· == "literals")).length} literals, {(kinds.filter (· == "struct")).length} struct, {(kinds.filter (· == "array")).length} array), {fs.foldl (fun n f => n + f.ctors.length) 0} constructors; profile {Effect4.Program.reserved.length} heads, {atomRows.length} atoms, {allNativeOps.length} rows; packages {Effect4.Program.Packages.all.length} tables, {Effect4.Program.Packages.all.foldl (fun n p => n + p.rows.length) 0} rows, address {address}"
   IO.println s!"wrote eff.gen.ts, json.gen.ts, profile.gen.ts, taxonomy.gen.ts, forms.gen.ts, wire.gen.ts, packages.gen.ts under {out}"

@@ -4,7 +4,7 @@ import { parseSync } from "oxc-parser"
 import { Result } from "effect"
 import { readEff, readLayer, restoreAll, exprOf, childrenOf, type IrNode, type Expr, type TsStmt } from "../read.ts"
 import { decodeEff, type Eff, type LayerTerm, type ServiceKey } from "../eff.gen.ts"
-import { heads, rows } from "../profile.gen.ts"
+import { atomNames, heads, rows } from "../profile.gen.ts"
 import type { Ty } from "../eff.gen.ts"
 import type { Package } from "../packages.gen.ts"
 import { withTable } from "../read.ts"
@@ -30,7 +30,9 @@ function reject(code: RefusalCode, value: string): never { throw new Refuse(code
 const id = (name: string): Expr => ({ _tag: "ident", name })
 const call = (name: string, args: readonly Expr[]): Expr => ({ _tag: "call", fn: id(name), args })
 const admitted = new Set<string>([...heads, ...rows.map(r => r.row.spelling), ...forms.rows.map(r => r.head)])
-const atomNames = new Set(["succ", "pred", "isZero", "not", "add", "lt", "eq", "pair", "fst", "snd", "strings"])
+// The pure atoms are read, not copied (DI-40): `atomNames` above is
+// `Effect4.Program.nativeAtom`'s own name list from `profile.gen.ts`, checked at generation
+// against `nativeAtomTy`. This engine and `ck.ts` therefore admit the same eleven names.
 
 class Normalize {
   readonly keys: Key[] = []

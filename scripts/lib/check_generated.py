@@ -8,13 +8,59 @@ import tempfile
 import time
 
 import generated_inputs as inputs
-from generated_bytes import comparable
+from generated_bytes import STAMP, comparable
 
 ROOT = inputs.ROOT
 BASE = '7f8a9fc239822a3028c2f68c2235cb903ee902c2'
 LCNF = {'ocaml/gen/api_gen.ml', 'ocaml/gen/fibers_gen.ml',
         'ocaml/gen/machine_gen.ml', 'ocaml/engine/api_engine.ml'}
-REASON = 'engines cut before e2285a9; cleared by plan v2 Phase 1'
+# The declared reason of the `generated-stale` red entry in Test/fixtures/trust-gate/known-red.txt,
+# verbatim; the gate refuses when the two drift apart, so a change there is a change here.
+REASON = ("engines cut before e2285a9; cleared by the Phase 1 regeneration, whose acceptance is "
+          "DI-19's conformance suite (2026-09-09): 42 ocaml/eff goldens decoded and re-encoded, "
+          "8 wire goldens byte-equal, 24 truth programs to the same exit. Regeneration is the "
+          "precondition, never the test")
+
+
+def mapped_paths():
+    """Every path the map names, whatever its last column says. `inventory()` yields only the
+    rows a byte gate re-cuts; this is the map's whole index."""
+    paths = set()
+    for line in (ROOT/'docs/GENERATED.md').read_text().splitlines():
+        if line.startswith('| `'):
+            paths.add([s.strip() for s in line.strip('|').split('|')][0].strip('`'))
+    return paths
+
+
+def unmapped(tracked=None):
+    """DI-44, the tree-to-map walk: a tracked file that carries a `cut-from:` stamp — in its
+    own header or in a `.cut-from` sidecar beside it — and has no row in docs/GENERATED.md.
+    The map is how every other gate here finds what is generated, so an artefact that stamps
+    itself and is missing from the map is invisible to all of them. The stamp must be in the
+    first three lines: five tracked files mention the format in their body (the map itself,
+    `generated_bytes.py`, `generated_inputs.py`, `GeneratedStamp.lean`, `render-readme.ts`)
+    and are producers, not products. Measured 2026-09-09: 310 stamped files and 266 sidecars,
+    all mapped."""
+    mapped = mapped_paths() | inputs.DEFERRED_ARTIFACTS
+    if tracked is None:
+        tracked = subprocess.check_output(['git', 'ls-files', '-z'], cwd=ROOT).decode().split('\0')
+    missing = []
+    for name in tracked:
+        if not name or name in mapped:
+            continue
+        base = name[:-len('.cut-from')] if name.endswith('.cut-from') else name
+        if base in mapped:
+            continue
+        if name.endswith('.cut-from'):
+            missing.append(name)
+            continue
+        try:
+            head = b'\n'.join((ROOT/name).read_bytes().split(b'\n', 3)[:3])
+        except OSError:
+            continue
+        if STAMP.search(head):
+            missing.append(name)
+    return sorted(set(missing))
 
 
 def observe(rows):
@@ -103,6 +149,11 @@ def main():
     parser.add_argument('--declared-reason')
     args = parser.parse_args()
     start = time.monotonic()
+    # The walk is 0.12 s over 1857 tracked files, so it runs before the stamp shortcut: a
+    # stamped artefact added anywhere in the tree must not be able to hide behind a hit.
+    orphans = unmapped()
+    if orphans:
+        raise ValueError('stamped artefacts with no row in docs/GENERATED.md: ' + ', '.join(orphans))
     rows = [(path, family) for path, family in inputs.inventory()
             if path not in inputs.DEFERRED_ARTIFACTS]
     current, stale, fingerprints = observe(rows)

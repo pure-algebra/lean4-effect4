@@ -510,7 +510,35 @@ def manifest (fuel : Nat) (tapes : String → List (Completion Val Err Defect Fi
     , ("fuel", toJson fuel)
     , ("programs", Lean.Json.arr (corpus.map fun (name, p) => entry fuel tapes name p).toArray) ]
 
-/-! ## The tapes: rc.112's recorded answers, decoded into the oracle -/
+/-! ## The tapes: rc.112's recorded answers, decoded into the oracle
+
+**What a tape is, and the quantifier on the claim it supports (DI-23).** A tape is the list
+of package-row completions rc.112 gave *one* program on *one* run of the pinned host, in call
+order, one JSON Lines row per call (`harness/truth/tapes/<name>.jsonl`, written by
+`harness/truth/run-truth.ts`). Replaying it here is an agreement claim of exactly this shape:
+
+* **single-fiber.** The rows carry the calling fiber's index but are consumed in file order,
+  so a tape is a faithful oracle only while every row of a program is made by one fiber. Every
+  fixture with a tape is single-fiber today, and there is no fork-using host fixture. The
+  first one is an obligation, not an extension: rows would have to be selected per fiber, and
+  a schedule the machine chose differently would consume them in a different order. Nothing in
+  this file detects that; the fixture's author must.
+* **the schedule comparison is untouched by tapes.** `compareSchedules` (`run-truth.ts`)
+  compares the two faces' `started`/`forked`/`parked`/`resumed`/`ran`/`exited` rows and is not
+  a function of the tape. A tape decides what a row *answered*, never when a fiber ran.
+* **pinned host.** `effect@4.0.0-rc.112` and `@effect/sql-sqlite-bun@4.0.0-rc.112`, the
+  versions `scripts/check-truth.py` refuses to run without, on bun. A tape is evidence about
+  those bytes and no others.
+* **the corpus.** 24 programs, of which 6 have tapes; the gate re-records all six on every run
+  and refuses a byte that moved, so a committed tape is the answer rc.112 *just* gave, not a
+  remembered one.
+* **the error column.** A `failed` row is the DB-15 pair, made at the adapter before the
+  program sees it (`prelude.ts` `toPair`, DI-59), so the value replayed here, the value the
+  printed program's own handler observed and the value on the tape are one value.
+
+The evidence word is *reproduced* (the gate regenerates and compares bytes) together with
+*tested* (a finite corpus under a named observer) — never *proved*. `Test/contracts/faces.contract.md`
+states the same quantifiers for the reader who is not in this file. -/
 
 /-- The value wire, read back: `null` a unit, a number a natural, a string, a boolean, an
 array a list, `{"external":i}` the next allocation index a resource reply names (the machine
