@@ -55,33 +55,30 @@ def load {α} (file : System.FilePath) (r : Json → Reader α) : IO α := do
 /-- An object with exactly the listed keys admitted; unknown keys are refusals. Returns a
 lookup that itself refuses a key outside the list (a programming error, reported as one). -/
 def object (json : Json) (known : List String) : Reader (String → Option Json) := do
-  match json with
-  | .obj kvs =>
+  match json.getObj? with
+  | .ok kvs =>
     for k in kvs.keys do
       unless known.contains k do
         fail s!"unknown key `{k}` (known: {", ".intercalate known})"
     pure fun k => if known.contains k then kvs.get? k else none
-  | _ => fail "expected an object"
+  | .error _ => fail "expected an object"
 
-def string (json : Json) : Reader String :=
-  match json with
-  | .str s => pure s
-  | _ => fail "expected a string"
+/-- The library's accessor, with this module's error message and path in place of its own. -/
+private def lift {α} (r : Except String α) (expected : String) : Reader α :=
+  match r with
+  | .ok a => pure a
+  | .error _ => fail s!"expected {expected}"
 
-def bool (json : Json) : Reader Bool :=
-  match json with
-  | .bool b => pure b
-  | _ => fail "expected a boolean"
+def string (json : Json) : Reader String := lift json.getStr? "a string"
 
-def nat (json : Json) : Reader Nat :=
-  match json with
-  | .num n => if n.exponent == 0 && n.mantissa ≥ 0 then pure n.mantissa.toNat else fail "expected a natural number"
-  | _ => fail "expected a natural number"
+def bool (json : Json) : Reader Bool := lift json.getBool? "a boolean"
 
-def array {α} (json : Json) (item : Json → Reader α) : Reader (Array α) :=
-  match json with
-  | .arr xs => xs.mapIdxM fun i x => index i (item x)
-  | _ => fail "expected an array"
+/-- `Json.getNat?` admits exactly the non-negative integers written without an exponent. -/
+def nat (json : Json) : Reader Nat := lift json.getNat? "a natural number"
+
+def array {α} (json : Json) (item : Json → Reader α) : Reader (Array α) := do
+  let xs ← lift json.getArr? "an array"
+  xs.mapIdxM fun i x => index i (item x)
 
 def strings (json : Json) : Reader (Array String) := array json string
 

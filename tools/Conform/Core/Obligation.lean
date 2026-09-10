@@ -60,6 +60,7 @@ protected def toString : Obligation.Status → String
   | .refuted => "refuted"
 
 instance : ToString Obligation.Status := ⟨Obligation.Status.toString⟩
+instance : Lean.ToJson Obligation.Status := ⟨fun s => Json.str (toString s)⟩
 
 end Obligation.Status
 
@@ -84,19 +85,13 @@ structure Obligation where
   /-- The exact statement as the check rendered it, for a human; not a proof term. -/
   statement : String
   detail : Json := Json.null
-deriving Inhabited
+deriving Inhabited, Lean.ToJson
 
 namespace Obligation
 
-def toJson (o : Obligation) : Json :=
-  Json.mkObj
-    [ ("kind", Json.str o.kind)
-    , ("subject", o.subject.toJson)
-    , ("status", Json.str (toString o.status))
-    , ("dependsOn", Json.arr (o.dependsOn.toArray.map Json.str))
-    , ("profile", Json.str o.profile)
-    , ("statement", Json.str o.statement)
-    , ("detail", o.detail) ]
+/-- The derived encoder, under the name the rest of the library calls; the keys are the field
+names, sorted by `Json.obj`. -/
+def toJson (o : Obligation) : Json := Lean.toJson o
 
 /-- Every obligation's kind is registered; the first offender is named. -/
 def validate (registry : Registry) (os : Array Obligation) : Except String Unit := do
