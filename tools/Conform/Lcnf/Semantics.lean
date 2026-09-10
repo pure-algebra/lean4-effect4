@@ -18,10 +18,12 @@ repository; roots, primitives and marshalling arrive as arguments.
 **Properties.**
 * **The evaluator is total.** `evalCode`, `evalLetValue`, `evalConst`, `applyValue`,
   `applyPrim` and `selectAlt` are structurally recursive on a `Nat` fuel; none is `partial`
-  and there is no `sorry` anywhere. (Five helpers that walk a finite `Value` or a finite
-  `Code` for printing, comparison or name collection — `Value.toList?`, `Value.beq`,
-  `Value.render`, `arrayOfList`, `constNames` — are `partial`; none of them is part of the
-  semantics.) Running out of fuel is `Outcome.outOfFuel`, the machine's *frontier* — distinct
+  and there is no `sorry` anywhere. (Three helpers that walk a finite `Value` for printing or
+  comparison — `Value.toList?`, `Value.beq`, `Value.render` — are `partial`, because `Value`
+  is nested through `Array Value` and a structural recursion would need a measure over the
+  array; none of them is part of the semantics. `arrayOfList` and `constNames` used to be two
+  more: the first is not recursive at all, and the second is now the compiler's `Code.forM`.)
+  Running out of fuel is `Outcome.outOfFuel`, the machine's *frontier* — distinct
   from `Outcome.stuck`, a *refusal* (a rule the interpreter does not have, a value of the
   wrong shape), and distinct from `Value.erased`, which is *absent data*. Three things, three
   names (`brief-common.md`).
@@ -205,7 +207,7 @@ private def natCmp (f : Nat → Nat → Bool) (a b : Value) : Option Value := do
 private def boolBin (f : Bool → Bool → Bool) (a b : Value) : Option Value := do
   return .bool (f (← a.toBool?) (← b.toBool?))
 
-private partial def arrayOfList (v : Value) : Option (Array Value) := do
+private def arrayOfList (v : Value) : Option (Array Value) := do
   return (← v.toList?).toArray
 
 /-- The meaning of a row on relevant arguments. `none` is a refusal: the wrong number of
@@ -472,18 +474,25 @@ end
 /-! ## 4. Driving a declaration -/
 
 /-- Every constant a body names, as a `LetValue.const` head or as an `Alt.alt` constructor:
-the superset from which the constructor arities are read. -/
-private partial def constNames (c : Code .pure) (acc : Array Name) : Array Name :=
-  match c with
-  | .let decl k =>
-    let acc := match decl.value with | .const n _ _ => acc.push n | _ => acc
-    constNames k acc
-  | .fun decl k | .jp decl k => constNames k (constNames decl.value acc)
-  | .jmp _ _ | .return _ | .unreach _ => acc
-  | .cases cs => cs.alts.foldl (init := acc) fun acc alt =>
-      match alt with
-      | .default k => constNames k acc
-      | .alt c _ k => constNames k (acc.push c)
+the superset from which the constructor arities are read.
+
+The traversal is the compiler's `Code.forM` (`LCNF/Basic.lean:861`), so this is no longer a
+`partial` walker of the seat's own. The alternatives' constructor names are collected at the
+`cases` node rather than on the way into each arm, which permutes the result; every consumer
+here reads it as a *set* (`Ctx.ofClosure` builds a `HashMap` from it). -/
+private def constNames (c : Code .pure) (acc : Array Name) : Array Name :=
+  ((c.forM visit).run acc).2
+where
+  visit (k : Code .pure) : StateM (Array Name) Unit :=
+    match k with
+    | .let decl _ =>
+      match decl.value with
+      | .const n _ _ => modify (·.push n)
+      | _ => pure ()
+    | .cases cs => cs.alts.forM fun
+      | .alt c _ _ => modify (·.push c)
+      | .default _ => pure ()
+    | _ => pure ()
 
 /-- Build a context from an environment and a set of declarations, resolving `_redArg`
 wrappers to their twins so a call to either lands on the code. -/

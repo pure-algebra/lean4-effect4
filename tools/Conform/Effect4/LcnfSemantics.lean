@@ -37,7 +37,7 @@ constructor's own name applied to its own arguments. The round trip is checked o
 vector (`marshalRoundTrip` below), so a mistake here is a red row rather than a silent
 agreement. -/
 
-partial def tyValue : Ty → Value
+def tyValue : Ty → Value
   | .never => .ctor ``Ty.never #[]
   | .unit => .ctor ``Ty.unit #[]
   | .nat => .ctor ``Ty.nat #[]
@@ -179,31 +179,36 @@ def mutateCtors (m : Mutant) (ctors : Std.HashMap Name (Nat × Nat)) :
   | _ => ctors
 
 /-- The **code** mutants: the interpreter's *input* is rewritten, never the interpreter. Each
-is a transformation a wrong translator would make. -/
+is a transformation a wrong translator would make.
+
+The rewriter is shaped like the compiler's own structural rewriter,
+`Code.instantiateValueLevelParams` (`LCNF/Basic.lean:874-916`): every node is rebuilt through
+`Code.updateLet!`/`updateFun!`/`updateCases!`, `LetDecl.updateCore` and `Alt.updateCode`
+rather than by naming the constructor and its fields. Those helpers return the *same* object
+when nothing under it changed (they compare by pointer), so an unmutated subtree is shared
+rather than copied, and — the reason to prefer them here — a `FunDecl` or an `Alt` keeps every
+field this rewriter does not mean to touch, including the ones a future `Basic.lean` adds.
+
+It stays a hand walker: the compiler has no generic `Code → Code` map (`DeclValue.mapCodeM`
+applies a function to the body, it does not descend), and `Code.forM` cannot rebuild. -/
 partial def mutateCode (m : Mutant) (c : Code .pure) : Code .pure :=
   match c with
-  | .let decl k => .let { decl with value := mutateLetValue m decl.value } (mutateCode m k)
-  | .fun decl k =>
-    .fun (.mk decl.fvarId decl.binderName decl.params decl.type (mutateCode m decl.value))
+  | .let decl k =>
+    c.updateLet! (decl.updateCore decl.type (mutateLetValue m decl.value)) (mutateCode m k)
+  | .fun decl k | .jp decl k =>
+    c.updateFun! (decl.updateCore decl.type decl.params (mutateCode m decl.value))
       (mutateCode m k)
-  | .jp decl k =>
-    .jp (.mk decl.fvarId decl.binderName decl.params decl.type (mutateCode m decl.value))
-      (mutateCode m k)
-  | .jmp f args => .jmp f args
-  | .return x => .return x
-  | .unreach t => .unreach t
+  | .jmp .. | .return .. | .unreach .. => c
   | .cases cs =>
-    let alts := cs.alts.map fun
-      | .alt n ps k => Alt.alt n ps (mutateCode m k)
-      | .default k => Alt.default (mutateCode m k)
+    let alts := cs.alts.map fun alt => alt.updateCode (mutateCode m alt.getCode)
     let alts :=
       if m == .boolArmsSwapped && cs.typeName == ``Bool && alts.size == 2 then
         -- keep each alternative's constructor name and give it the other one's body
         match alts[0]!, alts[1]! with
-        | .alt n0 p0 k0, .alt n1 p1 k1 => #[Alt.alt n0 p0 k1, Alt.alt n1 p1 k0]
+        | a@(.alt ..), b@(.alt ..) => #[a.updateCode b.getCode, b.updateCode a.getCode]
         | a, b => #[b, a]
       else alts
-    .cases (.mk cs.typeName cs.resultType cs.discr alts)
+    c.updateCases! cs.resultType cs.discr alts
 where
   mutateLetValue (m : Mutant) (v : LetValue .pure) : LetValue .pure :=
     match m, v with
@@ -295,7 +300,7 @@ structure Args where
   /-- Also run `GenTy.merge`. -/
   genTy : Bool := true
 
-partial def parseArgs : List String → Args → Args
+def parseArgs : List String → Args → Args
   | "--out" :: p :: rest, a => parseArgs rest { a with out := some p }
   | "--fuel" :: n :: rest, a => parseArgs rest { a with fuel := n.toNat! }
   | "--mutate" :: n :: rest, a => parseArgs rest { a with mutate := n.toNat! }

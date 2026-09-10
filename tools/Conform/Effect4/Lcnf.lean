@@ -215,14 +215,19 @@ structure Args where
   /-- Do not treat the OCaml builtin table as primitive: walk into the stdlib too, so the
   measurement says how much of the closure the table hides. -/
   noBuiltins : Bool := false
+  /-- Compile a callee whose mono body the extension does not carry, instead of recording it
+  as `missing` (`Conform.Lcnf.Walk.Config.onDemand`). An **addition**: off by default, so a
+  default run reads exactly what an out-of-process generator reads. -/
+  onDemand : Bool := false
 
-partial def parseArgs : List String → Args → Args
+def parseArgs : List String → Args → Args
   | "--import" :: m :: rest, a =>
     parseArgs rest { a with imports := ((m.splitOn ",").map String.toName).toArray }
   | "--cap" :: n :: rest, a => parseArgs rest { a with cap := n.toNat! }
   | "--out" :: p :: rest, a => parseArgs rest { a with out := some p }
   | "--check-types" :: rest, a => parseArgs rest { a with checkTypes := true }
   | "--no-builtins" :: rest, a => parseArgs rest { a with noBuiltins := true }
+  | "--on-demand" :: rest, a => parseArgs rest { a with onDemand := true }
   | r :: rest, a => parseArgs rest { a with roots := a.roots.push r.toName }
   | [], a => a
 
@@ -230,7 +235,7 @@ def main (argv : List String) : IO UInt32 := do
   initSearchPath (← findSysroot)
   let args := parseArgs argv {}
   if args.roots.isEmpty then
-    IO.eprintln "usage: … Lcnf.lean [--import M,N] [--cap n] [--out dir] [--check-types] [--no-builtins] root…"
+    IO.eprintln "usage: … Lcnf.lean [--import M,N] [--cap n] [--out dir] [--check-types] [--no-builtins] [--on-demand] root…"
     return 2
   let env ← importModules (args.imports.map fun m => { module := m }) {} 0
   let ctx : Core.Context := { fileName := "<conform-lcnf>", fileMap := default }
@@ -241,7 +246,8 @@ def main (argv : List String) : IO UInt32 := do
       return 3
     let cfg : Walk.Config :=
       { primitive := if args.noBuiltins then (fun _ => false) else ocamlPrimitive {}
-        cap := args.cap }
+        cap := args.cap
+        onDemand := args.onDemand }
     let closure ← walkClosure args.roots cfg args.checkTypes
     let manifest : Manifest :=
       { leanVersion := Lean.versionString, roots := args.roots, imports := args.imports
@@ -273,6 +279,37 @@ def main (argv : List String) : IO UInt32 := do
       | .ok _ => pure ()
     IO.println s!"primitives hit ({closure.primitives.size}):"
     for n in closure.primitives do IO.println s!"  {n}"
+    -- the availability catch's remedy, and its self-check. Both are silent unless asked for,
+    -- so a default run's bytes are the bytes it had before the flag existed.
+    if args.onDemand then
+      let onDemand := closure.decls.filter (·.availability == .onDemand)
+      IO.println s!"on-demand compiled ({onDemand.size}), still missing ({closure.missing.size}):"
+      for d in onDemand do IO.println s!"  {d.name} ({d.size} nodes)"
+      -- the mechanism's own self-check, and it is not a formality: recompile every
+      -- declaration that *does* have a persisted body and say how often the in-process
+      -- compile reproduces it. See the note's §2 — it usually does not.
+      let mut same := 0
+      let mut differ := 0
+      let mut noCode := 0
+      let mut noCodeInternal := 0
+      let mut examples : Array String := #[]
+      for d in closure.decls do
+        match ← recompileAgrees? d.name with
+        | none =>
+          noCode := noCode + 1
+          -- `Name.isInternal` is the compiler's own "the frontend could not have written
+          -- this" test: `_redArg`, `_lam_N` and the `._at_.….spec_N` chains all match it,
+          -- and those are exactly the names that have no kernel definition to compile.
+          if d.name.isInternal then noCodeInternal := noCodeInternal + 1
+        | some (alpha, sameHash) =>
+          if alpha then same := same + 1
+          else
+            differ := differ + 1
+            if examples.size < 8 then
+              examples := examples.push s!"{d.name} (same DeclHash: {sameHash})"
+      IO.println s!"recompiled {closure.decls.size}: alphaEqv {same}, differ {differ}, \
+        no fresh body {noCode} (of which internal names: {noCodeInternal})"
+      for e in examples do IO.println s!"  differs: {e}"
     -- cross-check against the real translator: the same roots through
     -- `OCaml5.Lcnf.translateClosure`, so the walker's numbers and the route's numbers are
     -- compared rather than assumed equal, and the OCaml **name collisions** are measured.

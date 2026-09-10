@@ -146,42 +146,44 @@ def ofLetValue (c : Census) : LetValue .pure → Census
     c.ofArgs args
   | .fvar _ args => (c.bump "LetValue.fvar").ofArgs args
 
-mutual
+/-- The census of one `Code .pure`.
 
-/-- The census of one `Code .pure`, by fuel on the tree's depth-in-nodes. `Code` is a nested
-inductive with an `Array (Alt .pure)`; a structural recursion would need a well-founded
-measure over the array, so the walk is `partial` — it is a *counter*, not a semantics, and
-its termination is the tree's finiteness. -/
-partial def ofCode (c : Census) : Code .pure → Census
-  | .let decl k => (c.bump "Code.let").ofLetValue decl.value |>.ofCode k
-  | .fun decl k =>
-    let c := c.bump "Code.fun"
-    let c := { c with maxFunArity := max c.maxFunArity decl.params.size,
-                      nullaryFuns := c.nullaryFuns + (if decl.params.isEmpty then 1 else 0) }
-    (c.ofCode decl.value).ofCode k
-  | .jp decl k =>
-    let c := c.bump "Code.jp"
-    let c := { c with maxFunArity := max c.maxFunArity decl.params.size,
-                      nullaryFuns := c.nullaryFuns + (if decl.params.isEmpty then 1 else 0) }
-    (c.ofCode decl.value).ofCode k
-  | .jmp _ args => (c.bump "Code.jmp").ofArgs args
-  | .return _ => c.bump "Code.return"
-  | .unreach _ => c.bump "Code.unreach"
-  | .cases cs =>
-    let c := c.bump "Code.cases"
-    let c := { c with casesTypes := bumpName c.casesTypes cs.typeName }
-    cs.alts.foldl (init := c) ofAlt
+The traversal is the compiler's own `Code.forM` (`LCNF/Basic.lean:861`), which visits every
+node of the tree in pre-order — the continuation of a `let`, the *body* and the continuation
+of a local function or join point, and the code of every alternative. This function therefore
+says only what a single node contributes; the recursion, and its termination, are the
+compiler's, and the seat's `partial` walker is gone.
 
-partial def ofAlt (c : Census) : Alt .pure → Census
-  | .default k => (c.bump "Alt.default").ofCode k
-  | .alt ctor _ k =>
-    let c := c.bump "Alt.alt"
-    let c := { c with altCtors := bumpName c.altCtors ctor }
-    c.ofCode k
+`step` counts an alternative at the `cases` node that owns it rather than when the walk
+reaches its code, which is the same count in a different order: `HashMap` totals do not
+depend on the order the increments arrive in. -/
+def ofCode (c : Census) (code : Code .pure) : Census :=
+  ((code.forM visit).run c).2
+where
+  visit (k : Code .pure) : StateM Census Unit := modify (step · k)
+  step (c : Census) : Code .pure → Census
+    | .let decl _ => (c.bump "Code.let").ofLetValue decl.value
+    | .fun decl _ => fnBinder (c.bump "Code.fun") decl
+    | .jp decl _ => fnBinder (c.bump "Code.jp") decl
+    | .jmp _ args => (c.bump "Code.jmp").ofArgs args
+    | .return _ => c.bump "Code.return"
+    | .unreach _ => c.bump "Code.unreach"
+    | .cases cs =>
+      let c := c.bump "Code.cases"
+      let c := { c with casesTypes := bumpName c.casesTypes cs.typeName }
+      cs.alts.foldl (init := c) altHead
+  fnBinder (c : Census) (decl : FunDecl .pure) : Census :=
+    { c with maxFunArity := max c.maxFunArity decl.params.size,
+             nullaryFuns := c.nullaryFuns + (if decl.params.isEmpty then 1 else 0) }
+  altHead (c : Census) : Alt .pure → Census
+    | .default _ => c.bump "Alt.default"
+    | .alt ctor _ _ =>
+      let c := c.bump "Alt.alt"
+      { c with altCtors := bumpName c.altCtors ctor }
 
-end
-
-/-- The census of one declaration, its body and its parameter list. -/
+/-- The census of one declaration, its body and its parameter list. `DeclValue.forCodeM` is
+the compiler's door here, but it drops the `.extern` arm on the floor and this census has to
+*count* it, so the two-arm match stays. -/
 def ofDecl (c : Census) (d : Decl .pure) : Census :=
   match d.value with
   | .code code => (c.bump "DeclValue.code").ofCode code
@@ -223,6 +225,11 @@ inductive Availability
   /-- No entry in `monoExt` at all: an inductive, a constructor, a `Prop`, a
   `noncomputable`, or a declaration whose module never persisted the phase. -/
   | absent
+  /-- The persisted extension had no body, and the declaration was compiled **in this
+  process** — `Lean.Compiler.LCNF.main` under `withoutModifyingEnv`, then `getMonoDecl?`.
+  Only `Walk.Config.onDemand` produces this; with the flag off a walk reads exactly what an
+  out-of-process generator would read. -/
+  | onDemand
   deriving Inhabited, DecidableEq
 
 namespace Availability
@@ -232,12 +239,13 @@ protected def toString : Availability → String
   | .opaqueByVisibility => "opaque-by-visibility"
   | .extern _ => "extern"
   | .absent => "absent"
+  | .onDemand => "on-demand"
 
 instance : ToString Availability := ⟨Availability.toString⟩
 
 /-- Whether a translator can read a body here. -/
 def hasCode : Availability → Bool
-  | .code => true
+  | .code | .onDemand => true
   | _ => false
 
 end Availability
@@ -253,6 +261,86 @@ def monoAvailability (env : Environment) (n : Name) : Availability × Option (De
     | .extern data =>
       if data.entries == [ExternEntry.opaque] then (.opaqueByVisibility, some d)
       else (.extern data.entries.length, some d)
+
+/-- Compile `n` through the compiler's whole pipeline **in this process** and read its mono
+body back, leaving the environment as it was.
+
+This is the answer to the availability catch (`seat-lcnf.md` §1.4): a declaration whose mono
+body the `.olean` does not carry — because the module system's export filter dropped it, or
+because the phase was never persisted — does not have to be a hole. `Lean.Compiler.LCNF.main`
+is the same entry point `compileDecls` uses; `withoutModifyingEnv` discards the extension
+state it writes.
+
+**It is a fallback, not a reproduction, and the availability tag says so.** A body produced
+here is what the compiler can make *from the imported environment*, which is not in general
+the body it persisted when it compiled the defining module. Measured with `recompileAgrees?`
+over the two audited closures: of the 20 declarations of the `Ty` closure, 3 recompile to an
+`alphaEqv` body, 12 differ and 5 produce no fresh body at all; of the 605 of the `api`
+closure, 68 agree, 155 differ, and 382 produce nothing. Two causes, both read off the printed
+LCNF (`lcnf/idiom/probes/recompile-diff.txt`):
+
+* **A matcher is no longer inlined.** `Ty.isNever` is persisted as a `cases` of 5 nodes; the
+  fresh body is 3 nodes and still *calls* `Ty.isNever.match_1` with two lambda-lifted arms,
+  because the matcher's own LCNF is not in the imported environment for the simplifier to
+  inline. This is the same missing entry that makes `main` raise, below.
+* **A mono type degrades to `lcAny`.** `Ty.join`'s two bodies print identically and are not
+  `alphaEqv`: one `let`'s mono type is `List Effect4.Program.Ty` persisted and `List lcAny`
+  fresh. `Code.alphaEqv` compares `LetDecl.type`, so a type-only difference is a difference.
+
+The 382 that produce nothing are the compiler-generated twins — `_redArg`, `spec_N`, `_lam_N`
+— which have no kernel definition, so `main` cannot be asked for them at all: they exist only
+as a side effect of compiling their host.
+
+So: use this to fill a hole, and read the `on-demand` availability as "a body, and not the
+one the `.olean` would have carried". The gate on `opaque-by-visibility` (`seat-lcnf.md` §3
+R7(ii)) stays the primary defence against a `module` migration; this is the second one.
+
+A refusal (a `Prop`, a `noncomputable`, an `@[extern]` with no body, an elaboration error) is
+`none`, never an exception: this is a *fallback*, and a caller that asked for it still gets a
+`missing` row when it cannot be met.
+
+**Why the failure of `main` is caught and the answer read anyway.** `main` runs the *whole*
+pipeline, base → mono → impure, and the impure passes need more of the environment than an
+`.olean` carries: recompiling a single declaration whose body used a `match` raises
+`Failed to find LCNF signature for …match_1` inside `InferBorrow`
+(`LCNF/InferBorrow.lean:333`), because the auxiliary matcher's *impure* signature was never
+imported. That failure is **after** the mono phase's `saveMono`, so the body this function
+wants is already in the (temporary) extension state when the exception is thrown; catching it
+here and reading the extension afterwards is what makes the path work at all. Measured on six
+`Effect4.Program.Ty` declarations: four raise in `InferBorrow`, and all six still yield a mono
+body.
+
+**The answer is read out of `monoExt`'s local state, not through `getMonoDecl?`.** This is
+not a detail. `getMonoDecl?` goes through `findExtEntry?` (`LCNF/Basic.lean:1243-1251`), which
+looks a name up by *module index first* and consults the local state only when the name has
+none — so for an imported declaration it hands back the persisted entry and a fresh compile is
+invisible through it. An entry is in the local state only if `saveMono` ran in this process,
+so a `some` here is always the freshly compiled body. **Correction to `ir-reuse.md` §2, probe
+D**: that probe read `getMonoDecl?` after recompiling an imported declaration and concluded
+the pipeline was deterministic; it had compared the persisted declaration with itself. -/
+def compileMono? (n : Name) : CoreM (Option (Decl .pure)) := do
+  withoutModifyingEnv do
+    try
+      Lean.Compiler.LCNF.main #[n] (← getOptions)
+    catch _ =>
+      pure ()
+    return monoExt.getState (← getEnv) |>.find? n
+
+/-- Recompile `n` and compare with its persisted mono body: `Code.alphaEqv` (equal modulo
+free-variable names) and `DeclHash` equality (`hash`, which is id-*sensitive*). `none` when
+either side has no code — including when `compileMono?` could not produce one at all.
+
+The ids are not normalised first, and do not need to be: `saveMono` runs `normalizeFVarIds`
+on both sides (`LCNF/Passes.lean:66-73`), so where the two bodies agree the hashes agree too.
+Both components are reported because they answer different questions — `alphaEqv` whether the
+*code* is the same, `hash` whether the persisted bytes would be. -/
+def recompileAgrees? (n : Name) : CoreM (Option (Bool × Bool)) := do
+  let (_, persisted?) := monoAvailability (← getEnv) n
+  let some persisted := persisted? | return none
+  let some fresh ← compileMono? n | return none
+  match persisted.value, fresh.value with
+  | .code p, .code f => return some (Code.alphaEqv p f, hash p == hash f)
+  | _, _ => return none
 
 /-! ## 3. The compiler's own checker -/
 
@@ -292,6 +380,13 @@ structure Walk.Config where
   cap : Nat := 4096
   /-- Follow `f` when a walk meets `f._redArg`, and vice versa, as `Translate` does. -/
   foldRedArg : Bool := true
+  /-- When the persisted extension has no body for a constant, compile it in this process
+  (`compileMono?`) instead of recording it as `missing`. **Off by default**, and the default
+  is the honest one: with it off the walk sees exactly what a generator running out of process
+  sees, which is what the manifest is a manifest *of*. With it on, an `opaque-by-visibility`
+  or `absent` callee that the compiler can still produce becomes an `on-demand` declaration
+  and is checked and censused like any other. -/
+  onDemand : Bool := false
 
 /-- The `reduceArity` twin's suffix. -/
 def redArgSuffix : Name := `_redArg
@@ -302,24 +397,24 @@ def stripRedArg (n : Name) : Name :=
   | .str p "_redArg" => p
   | _ => n
 
-/-- The constant heads a `Code .pure` calls, in first-occurrence order. -/
-partial def calledConstants (code : Code .pure) : Array Name :=
-  go code #[]
+/-- The constant heads a `Code .pure` calls, in first-occurrence order.
+
+`Code.forM` is the traversal, so the seat's second `partial` walker is gone and the visiting
+order is the compiler's — which is the same pre-order the hand walker had, so the
+first-occurrence order of the result is unchanged. The seat contributes only the dedup, and
+it now keeps a `NameSet` beside the array instead of rescanning the accumulator, so the cost
+is linear rather than quadratic in the number of distinct callees. -/
+def calledConstants (code : Code .pure) : Array Name :=
+  (((code.forM visit).run (#[], ({} : NameSet))).2).1
 where
-  push (acc : Array Name) (n : Name) : Array Name := if acc.contains n then acc else acc.push n
-  goLet (v : LetValue .pure) (acc : Array Name) : Array Name :=
-    match v with
-    | .const n _ _ => push acc n
-    | _ => acc
-  go (c : Code .pure) (acc : Array Name) : Array Name :=
+  visit (c : Code .pure) : StateM (Array Name × NameSet) Unit :=
     match c with
-    | .let decl k => go k (goLet decl.value acc)
-    | .fun decl k | .jp decl k => go k (go decl.value acc)
-    | .jmp _ _ | .return _ | .unreach _ => acc
-    | .cases cs => cs.alts.foldl (init := acc) fun acc alt =>
-        match alt with
-        | .default k => go k acc
-        | .alt _ _ k => go k acc
+    | .let decl _ =>
+      match decl.value with
+      | .const n _ _ => modify fun (acc, seen) =>
+          if seen.contains n then (acc, seen) else (acc.push n, seen.insert n)
+      | _ => pure ()
+    | _ => pure ()
 
 /-- One declaration of a closure, as the manifest records it. -/
 structure DeclFacts where
@@ -440,6 +535,14 @@ def walkClosure (roots : Array Name) (cfg : Walk.Config := {}) (checkTypes : Boo
             d? := d2
       let stripped := stripRedArg n
       if stripped != n then done := done.insert stripped
+    -- the availability catch's remedy: the extension had no body, so make one
+    if cfg.onDemand && !avail.hasCode then
+      if let some d := ← compileMono? n then
+        -- `DeclValue.isCodeAndM` is the compiler's "and it is code" test; a fresh compile of
+        -- a genuine `@[extern]` still yields an `.extern` value, which stays a `missing` row
+        if ← d.value.isCodeAndM (fun _ => pure true) then
+          avail := .onDemand
+          d? := some d
     let missingFacts : MissingFacts :=
       { name := n, availability := avail
         module := (env.getModuleIdxFor? n).bind fun idx => env.header.moduleNames[idx]?
