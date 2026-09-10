@@ -59,6 +59,22 @@ srcDir = "tools"
 globs = ["Tools.+"]
 moreLeanArgs = ["-M6144"]
 
+# Verification tooling (docs/research/type-tooling/, 2026-09-09): the generic core of
+# conformance checks between representations — one report format, evidence grades,
+# obligations, strict policy readers (`Conform.Core`), the mono-LCNF walkers and semantics
+# (`Conform.Lcnf`), layout coherence (`Conform.Layout`, `Conform.Model`), the `Std.Do`
+# specification pilot (`Conform.Spec`) — with Effect4 as its first configuration under
+# `Conform.Effect4` and the `--run` drivers under `Conform.Cli`. A tool root like `Tools`:
+# `import Lean` is allowed here (DI-18), it is outside the axiom gate's audit and imported by
+# nothing under `src/`. The extensibility rule: no module outside `Conform.Effect4` imports
+# `Effect4.*` or `OCaml5.*`; families, roots, policies and manifests reach the generic code as
+# arguments or configuration files.
+[[lean_lib]]
+name = "Conform"
+srcDir = "tools"
+globs = ["Conform.+"]
+moreLeanArgs = ["-M6144"]
+
 # The green battery: the audit root and its import closure.
 [[lean_lib]]
 name = "Test"
