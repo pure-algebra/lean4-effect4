@@ -584,4 +584,77 @@ theorem inv_layers_cons (sig : Signature Op) (head next : LayerTerm Op)
   refine Option.of_triple ?_
   simp only [layersTy]; mvcgen; all_goals simp_all
 
+/-! ## Axioms: the ceiling is `[propext, Quot.sound]` for all sixty-eight
+
+`mvcgen` is experimental, so the ceiling is printed for every generated lemma, not sampled. -/
+
+#print axioms inv_succeed
+#print axioms inv_fail
+#print axioms inv_failCause
+#print axioms inv_yieldError
+#print axioms inv_sync
+#print axioms inv_suspend
+#print axioms inv_perform
+#print axioms inv_bind
+#print axioms inv_gen
+#print axioms inv_catchCause
+#print axioms inv_matchCause
+#print axioms inv_onExit
+#print axioms inv_exit
+#print axioms inv_uninterruptible
+#print axioms inv_interruptible
+#print axioms inv_branch
+#print axioms inv_whileLoop
+#print axioms inv_yieldNow
+#print axioms inv_callback
+#print axioms inv_awaitFiber_join
+#print axioms inv_awaitFiber_await
+#print axioms inv_withFiber
+#print axioms inv_scoped
+#print axioms inv_acquireRelease
+#print axioms inv_choose
+#print axioms inv_provideLayer
+#print axioms inv_service
+#print axioms inv_provideService
+#print axioms inv_stmts_nil
+#print axioms inv_stmts_bindYield
+#print axioms inv_stmts_yieldDiscard
+#print axioms inv_stmts_ret
+#print axioms inv_stmts_ret_cons
+#print axioms inv_stmts_ifElse
+#print axioms inv_stmts_whileTrue
+#print axioms inv_stmts_breakLoop
+#print axioms inv_effs_nil
+#print axioms inv_effs_cons
+#print axioms inv_action_fork
+#print axioms inv_action_forkIn
+#print axioms inv_action_forkScoped
+#print axioms inv_action_runIn
+#print axioms inv_action_interrupt
+#print axioms inv_action_interruptScoped
+#print axioms inv_action_interruptAll_self
+#print axioms inv_action_interruptAll_by
+#print axioms inv_action_awaitAll
+#print axioms inv_action_awaitAllFailFast
+#print axioms inv_action_snapshotChildren
+#print axioms inv_action_awaitNewChildren
+#print axioms inv_action_raceAll
+#print axioms inv_action_setContext
+#print axioms inv_action_getContext
+#print axioms inv_action_getId
+#print axioms inv_action_closeScope
+#print axioms inv_layer_succeed
+#print axioms inv_layer_effect
+#print axioms inv_layer_effectDiscard
+#print axioms inv_layer_provide
+#print axioms inv_layer_provideMerge
+#print axioms inv_layer_merge
+#print axioms inv_layer_fresh
+#print axioms inv_layer_orDie
+#print axioms inv_layer_ref
+#print axioms inv_layer_mergeAll
+#print axioms inv_layers_nil
+#print axioms inv_layers_one
+#print axioms inv_layers_cons
+
 end Conform.Effect4.Typing
