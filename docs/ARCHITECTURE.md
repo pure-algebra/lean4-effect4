@@ -142,9 +142,12 @@ The **two ingest contracts are different contracts, not one implementation with 
    contract *assigns* ordinals per unit in first-use order from 4, with 0–3 reserved. One source
    unit can therefore have two different key tables, one per contract.
 
-The relation between them is an **inclusion property**: the printed image is a sub-language of
-the foreign one, and the property is a cross-contract test over the corpus that already exists
-(`ts/eff/ingest/check-corpus.ts`), not a claim in prose.
+The implemented cross-contract test establishes **conditional fidelity** on the shared admitted
+fragment: two foreign-reader lifts match the printed oracle up to key renumbering. It does not
+establish that every printed program is foreign-admitted. The readers must first return one
+valid verdict each and agree; agreed refusals remain visible, while asymmetric, missing,
+malformed or conflicting verdicts fail. An independent positive control prevents two readers
+that refuse everything from passing (`ts/eff/ingest/check-corpus.ts`, DI-37, Wave 2 amendment).
 
 ## The codegen route and the `Api` export
 

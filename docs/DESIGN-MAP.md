@@ -177,9 +177,12 @@ Beside it, and independent of the generator that will read it, is the **retained
 JSON, the OCaml and wire manifests, the golden digests — frozen at `66ee4657` before S2's
 `Err.text` and `Defect.error`, S3a's `Eff.catchIf` and S4b's `Ty.lit`, promoted only by a named
 command and never written by a generator, so a diff there is a review event. The compatibility
-gate compares the reflected description against it and refuses on four counts — old content still
-readable, old bytes unchanged, decoding still exact, execution still permitted — and the two `⊑`
-theorems follow it. This is what replaces the ordinal-ledger design (DI-02, DI-03).
+gate compares structural/wire compatibility, exact old-value decoding, typing/admission and
+execution permission separately. A supplement extracted from the frozen revision supplies
+payload/field shapes and explicit byte maps absent from the original snapshot. Named S2/S4
+admission/type changes are reviewed policy deltas; they do not authorize changing old bytes
+or silently removing execution permission. Universal compatibility theorems remain separate
+from finite fixture checks. This replaces the ordinal-ledger design (DI-02, DI-03, DI-47).
 
 Rows: DI-01, DI-02, DI-03, DI-04, DI-05, DI-06, DI-11, DI-13, DI-14, DI-18, DI-22, DI-25,
 DI-32, DI-33, DI-40, DI-41, DI-42, DI-43, DI-44, DI-45, DI-46, DI-47, DI-64. The single change
@@ -285,15 +288,17 @@ its rows are closed *and* its evidence exists, not when its code compiles.
    describes them; the `Envelope` predicate with at most one accepted completion per call;
    `run_eq_ref` stated exactly (DI-57, DI-58). Evidence: proved (local transitions, envelope
    laws).
-5. **S1b — the adapter and the type gate.** The pair made at the row adapter with the raw
-   diagnostics kept beside it; `tsc --noEmit` over the truth modules and the printed corpus; the
+5. **S1b — the adapter and the type gate.** The pair made at the row adapter with a bounded,
+   versioned diagnostic projection beside it; `tsc --noEmit` over truth modules, prelude and
+   recorder (the rejected typing corpus is not a uniformly typed target suite); the
    atom set emitted once and read by both engines and the prelude; the tree-to-map walk; the faces
    packet; the inclusion test (DI-59, DI-49, DI-40, DI-44, DI-33, DI-37, DI-50). Evidence: tested
    (bun, `tsc`); reproduced (tapes, goldens).
 6. **S3a — the elimination form.** `Eff.catchIf` and the four cause atoms under the first-`Fail`
    rule, `eq` at `.string` with `or`/`and`, the `Forms` rows and both engines' pipe segment
    (DI-09, DI-35, DI-07, DI-39). Evidence: proved (the compiler proof); reproduced; tested.
-7. **S4a → S4b → S4c — the type algebra**, three ratifications, never one: deep `normalize` with
+7. **S4a → S4b → S4c — the type algebra**, three separately verified landings, authorized by
+   the Wave 2 ruling: deep `normalize` with
    the laws stated through it (DI-53); then `Ty.lit` with `Ty.sub` and `hasTy_sub` (DI-15, DI-55);
    then the answer join as a least upper bound (DI-38). Evidence: proved; reproduced (`.ty`);
    tested (`tsc`).
@@ -302,9 +307,13 @@ its rows are closed *and* its evidence exists, not when its code compiles.
    World consumers, the baseline gate and the js_of_ocaml framing repair as its own bounded commit
    (DI-13, DI-14, DI-47, DI-18, DI-52, DI-56). Evidence: proved (encoders, tags); reproduced
    (baseline, vectors).
-9. **S6b — envelopes in replay, the table-aware reference, one host integration** (DI-58, DI-57,
-   DI-29, DI-24's spelling, DI-56's refusal outcome, the third package). Evidence: tested (host);
-   proved (envelope, then the reference).
+9. **S6b — clarified host contract, checked scalar session, resource integration**, in that
+   order (DI-58, DI-65, DI-29, DI-24's spelling). The session validates before application;
+   zero-fuel acceptance is not consumption. Relational host transitions, allocation conversion,
+   retained failure state and terminal cleanup each have named obligations. The table-aware
+   reference proof (DI-57), full scalar portability boundary (DI-56), and a third package
+   remain separately named follow-ons, not implied by finite resource agreement. Evidence:
+   proved (internal session/model obligations); tested (named host cases).
 
 The theorems in that order are few and each buys a claim: the compiler's invocation equality, the
 error image's round trips, the envelope's one-completion law, normalisation and subtyping with

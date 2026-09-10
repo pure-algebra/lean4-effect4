@@ -368,6 +368,16 @@ parts, and they are three kinds of content**, not three data files:
 - **Binding** — the runtime adapter and its evidence: the tapes, the differentials, the
   finite host tests.
 
+Amended 2026-09-09 (Wave 2, DI-65): general host transitions may have alternative
+completions and resulting states. Determinism is an additional property after fixing the
+determining decisions; at-most-once consumption belongs to the checked session. State
+correspondence during execution can include open resources. The terminal cleanup observation
+requires completed-cleanup and ownership premises, not correspondence alone. The resource
+binding's second close completes with a defect; its closure diagnostic is a separate operation
+from live-resource use. A refused late acquisition reply does not itself release the host
+resource: the adapter/session retains cleanup ownership. The frozen amendment is
+`Test/contracts/foundation-wave2.contract.md`.
+
 rc.112 is the first profile. OCaml native is a **test bed**, not a claimed target. js_of_ocaml
 is **unclaimed** until its framing vectors, the arithmetic profile and the conformance suite
 all pass; framing vectors alone admit no execution route (DI-56, DI-19).
@@ -608,9 +618,12 @@ sentences.
 
 *Where the pair is made* (DI-59): at the **row adapter** — `Effect.mapError(toPair)` in every
 shim of `harness/truth/prelude.ts` — so the program's own handlers and the recorder observe the
-same value; the recorder records the pair and **keeps the raw diagnostics** (`reason._tag`,
-`cause`) beside the row, so what the projection drops is not lost to the tape, and the type
-oracle (DI-29) binds the adapter rather than the package member.
+same value. Corrected 2026-09-09 (Wave 2): the recorder retains a **bounded, versioned diagnostic
+projection** beside the row, with its fields, ordering and losses explicit. It does not promise
+lossless serialization of arbitrary raw host objects or causes. Unsupported mixed-cause
+recording must be represented or explicitly refused, not silently reduced to the first failure.
+The current historical tapes contain the projected pair/outer tag until their explicit migration.
+The type oracle (DI-29) binds the adapter rather than the package member.
 
 *The equality refusal set* (DI-35, ruling G9): `eq` widens **one `Ty` at a time, and only where
 `===` compares faithfully** — `.string` today, with `or`/`and` at `.bool` beside it, since the
@@ -626,6 +639,12 @@ leaf of a cause literal — while defect-only and interrupt-only causes stay adm
 is total onto `tag`/`text`/`tagged` with `boom` retained for old tapes; and a declared error type
 never permits discarded data (`errAdmits_errOf`). `Err.value (v : Val)` is **refused**: a handle
 inside a cause would extend the minted-handle invariant into causes.
+
+Ruled 2026-09-09 (Wave 2, DI-15/55/38): append string-literal `Ty.lit` and its subtype
+relation after deep normalization, then change answer merging in a separate proved slice.
+Keep literal tags through const-generic pair construction. A richer `prod (lit tag) X` error
+still requires a supported image for X and its recovery laws; literals alone do not create
+that image. No record constructor or arbitrary error-value carrier is added by this ruling.
 
 What this basis refuses. A `json` leaf in `Ty`: the value language is the carrier's frames
 and a codec is a row. A record type in `Ty`: columns are pairs. `.int` stays uninhabited
