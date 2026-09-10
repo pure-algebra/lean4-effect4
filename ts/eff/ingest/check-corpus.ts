@@ -8,6 +8,7 @@ import * as oxc from "./oxc.ts"
 import { effJson } from "../json.gen.ts"
 import { encodeProgram } from "../wire.gen.ts"
 import { compareVerdicts } from "./gate.ts"
+import { decodeVerdict } from "./contract.ts"
 
 const [mode, dir, offset = "0", count = "500"] = process.argv.slice(2)
 if (!dir) throw new Error("check-corpus.ts printed|foreign|inclusion|printed-batch|foreign-batch|inclusion-batch <directory> [offset] [count]")
@@ -16,9 +17,9 @@ if (!dir) throw new Error("check-corpus.ts printed|foreign|inclusion|printed-bat
 // The two ingest contracts differ on three axes: the admitted language, the refusal
 // discipline, and the service-key numbering — a foreign lift renumbers keys from 4 in
 // first-seen order (`ck.ts` `this.keys.length + 4`, `oxc.ts` the same), while a printed image
-// carries the ordinals Lean minted. The claim under test is that the printed image is a
-// sub-language of the foreign one: every printed module the foreign contract admits must lift
-// to the program the printed oracle names, *up to that renumbering*.
+// carries the ordinals Lean minted. Both foreign readers must agree on admission. Every
+// printed module they admit must lift to the program the printed oracle names, *up to that
+// renumbering*. Agreed refusals report the difference between the two admitted languages.
 //
 // The numbering axis is taken out by canonical renumbering rather than by asserting either
 // base: every `{name:{value},service:{value}}` node is rewritten with its first-seen index, on
@@ -59,32 +60,46 @@ const asModule = (expression: string): string =>
 const names = readdirSync(dir).filter(n => n.endsWith(".ts")).sort()
 if (!names.length) throw new Error("empty required corpus")
 if (mode === "inclusion-batch") {
-  const report: Array<{ file: string; verdict: string }> = []
-  for (const file of names.slice(Number(offset), Number(offset) + Number(count))) {
-    const base = join(dir, file.slice(0, -3))
-    const source = asModule(readFileSync(base + ".ts", "utf8"))
-    const expected: unknown = JSON.parse(readFileSync(base + ".json", "utf8"))
-    const left = ck.recognizeSource(source, file), right = oxc.recognizeSource(source, file)
-    const one = (vs: ReadonlyArray<{ kind: string }>) => vs.length === 1 ? vs[0]! : undefined
-    const l = one(left as never), r = one(right as never)
-    if (l?.kind !== "lifted" || r?.kind !== "lifted") {
-      const code = (v: unknown) => v === undefined ? "no-single-verdict"
-        : (v as { kind: string; code?: string }).kind === "refusal" ? (v as { code?: string }).code ?? "refusal" : (v as { kind: string }).kind
-      report.push({ file: basename(base), verdict: `refused ck=${code(l)} oxc=${code(r)}` })
-      continue
+  const check = (expression: string, file: string, expected: unknown): string => {
+    const source = asModule(expression)
+    const one = (engine: string, vs: unknown) => {
+      if (!Array.isArray(vs) || vs.length !== 1) {
+        throw new Error(`${file}: ${engine} must return exactly one verdict`)
+      }
+      try { return decodeVerdict(vs[0]) }
+      catch (cause) { throw new Error(`${file}: ${engine} returned a malformed verdict`, { cause }) }
     }
-    if (compareVerdicts(left, right).status !== "agree") {
-      throw new Error(`${basename(base)}: the two engines disagree on a printed module`)
+    const l = one("ck", ck.recognizeSource(source, file)), r = one("oxc", oxc.recognizeSource(source, file))
+    if (compareVerdicts([l], [r]).status !== "agree") {
+      throw new Error(`${file}: the two engines disagree on a printed module`)
+    }
+    if (l.kind === "refusal" && r.kind === "refusal") {
+      return `refused ck=${l.code} oxc=${r.code}`
+    }
+    if (l.kind !== "lifted" || r.kind !== "lifted") {
+      throw new Error(`${file}: the two engines disagree on admission`)
     }
     const bases: number[] = []
     const oracle = upToKeyNumbering(expected, [])
     for (const [engine, v] of [["ck", l], ["oxc", r]] as const) {
-      const lifted = upToKeyNumbering(effJson((v as unknown as { eff: never }).eff), bases)
+      const lifted = upToKeyNumbering(effJson(v.eff), bases)
       if (lifted !== oracle) {
-        throw new Error(`${basename(base)}: ${engine} lifted a printed module to a different program up to key renumbering\n  oracle ${oracle}\n  lifted ${lifted}`)
+        throw new Error(`${file}: ${engine} lifted a printed module to a different program up to key renumbering\n  oracle ${oracle}\n  lifted ${lifted}`)
       }
     }
-    report.push({ file: basename(base), verdict: `included${bases.length ? ` (foreign key base ${bases[0]})` : ""}` })
+    return `included${bases.length ? ` (foreign key base ${bases[0]})` : ""}`
+  }
+  // An independent positive prevents two broken readers that refuse everything from
+  // satisfying a conditional comparison. It is not part of the measured corpus counts.
+  if (check("Effect.succeed(42)", "inclusion-positive-control.ts",
+    ["succeed", ["lit", ["nat", 42]]]) !== "included") {
+    throw new Error("inclusion positive control was refused by both readers")
+  }
+  const report: Array<{ file: string; verdict: string }> = []
+  for (const file of names.slice(Number(offset), Number(offset) + Number(count))) {
+    const base = join(dir, file.slice(0, -3))
+    const expected: unknown = JSON.parse(readFileSync(base + ".json", "utf8"))
+    report.push({ file: basename(base), verdict: check(readFileSync(base + ".ts", "utf8"), file, expected) })
   }
   process.stdout.write(report.map(r => `${r.file}\t${r.verdict}`).join("\n") + "\n")
 } else if (mode === "printed-batch" || mode === "foreign-batch") {
