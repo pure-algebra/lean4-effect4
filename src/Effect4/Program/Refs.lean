@@ -61,6 +61,8 @@ def child : Node Op → Nat → Option (Node Op)
   | eff (.gen ss), 0 => some (stmts ss)
   | eff (.catchCause b _), 0 => some (eff b)
   | eff (.catchCause _ h), 1 => some (eff h)
+  | eff (.catchIf _ b _), 0 => some (eff b)
+  | eff (.catchIf _ _ h), 1 => some (eff h)
   | eff (.matchCause b _ _), 0 => some (eff b)
   | eff (.matchCause _ v _), 1 => some (eff v)
   | eff (.matchCause _ _ c), 2 => some (eff c)
@@ -123,6 +125,8 @@ def setChild : Node Op → Nat → Node Op → Option (Node Op)
   | eff (.gen _), 0, stmts ss => some (eff (.gen ss))
   | eff (.catchCause _ h), 0, eff b => some (eff (.catchCause b h))
   | eff (.catchCause b _), 1, eff h => some (eff (.catchCause b h))
+  | eff (.catchIf t _ h), 0, eff b => some (eff (.catchIf t b h))
+  | eff (.catchIf t b _), 1, eff h => some (eff (.catchIf t b h))
   | eff (.matchCause _ v c), 0, eff b => some (eff (.matchCause b v c))
   | eff (.matchCause b _ c), 1, eff v => some (eff (.matchCause b v c))
   | eff (.matchCause b v _), 2, eff c => some (eff (.matchCause b v c))
@@ -233,6 +237,7 @@ mutual
     | .bind a b => Eff.refSites (p ++ [0]) a ++ Eff.refSites (p ++ [1]) b
     | .gen ss => Stmts.refSites (p ++ [0]) ss
     | .catchCause b h => Eff.refSites (p ++ [0]) b ++ Eff.refSites (p ++ [1]) h
+    | .catchIf _ b h => Eff.refSites (p ++ [0]) b ++ Eff.refSites (p ++ [1]) h
     | .matchCause b v c =>
       Eff.refSites (p ++ [0]) b ++ Eff.refSites (p ++ [1]) v ++ Eff.refSites (p ++ [2]) c
     | .onExit b f => Eff.refSites (p ++ [0]) b ++ Eff.refSites (p ++ [1]) f
@@ -296,6 +301,7 @@ mutual
     | .bind a b => .bind (Eff.expandRound orig a) (Eff.expandRound orig b)
     | .gen ss => .gen (Stmts.expandRound orig ss)
     | .catchCause b h => .catchCause (Eff.expandRound orig b) (Eff.expandRound orig h)
+    | .catchIf t b h => .catchIf t (Eff.expandRound orig b) (Eff.expandRound orig h)
     | .matchCause b v c =>
       .matchCause (Eff.expandRound orig b) (Eff.expandRound orig v) (Eff.expandRound orig c)
     | .onExit b f => .onExit (Eff.expandRound orig b) (Eff.expandRound orig f)
@@ -388,6 +394,7 @@ mutual
     | .bind a b => Eff.layerPaths (p ++ [0]) a ++ Eff.layerPaths (p ++ [1]) b
     | .gen ss => Stmts.layerPaths (p ++ [0]) ss
     | .catchCause b h => Eff.layerPaths (p ++ [0]) b ++ Eff.layerPaths (p ++ [1]) h
+    | .catchIf _ b h => Eff.layerPaths (p ++ [0]) b ++ Eff.layerPaths (p ++ [1]) h
     | .matchCause b v c =>
       Eff.layerPaths (p ++ [0]) b ++ Eff.layerPaths (p ++ [1]) v ++ Eff.layerPaths (p ++ [2]) c
     | .onExit b f => Eff.layerPaths (p ++ [0]) b ++ Eff.layerPaths (p ++ [1]) f

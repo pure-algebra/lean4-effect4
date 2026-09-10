@@ -351,6 +351,9 @@ theorem prepareR_denoteR (root : NativeEff) (e : NativeEff) (p : Point)
       | catchCause b hd =>
         rw [denoteR_catchCause root b hd hpos, prepareR_guardR_bind,
           prepareR_denoteR root b (p.child 0) completed]
+      | catchIf test b hd =>
+        rw [denoteR_catchIf root test b hd hpos, prepareR_guardR_bind,
+          prepareR_denoteR root b (p.child 0) completed]
       | matchCause b v c =>
         rw [denoteR_matchCause root b v c hpos, prepareR_guardR_bind,
           prepareR_denoteR root b (p.child 0) completed]
@@ -1717,6 +1720,544 @@ theorem asyncRoute_means (root : NativeEff) (op : NativeOp) (r : Term) (p : Poin
          | some cell => exact CodeMeans.asyncAwait cell v _ delivers_pure
          | none => exact codeMeans_badShape root)
 
+/-! ### Constructor families for source introduction -/
+
+/-! #### 1. Pure & Elementary family -/
+
+theorem intro_succeed (root : NativeEff) (t : Term) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) :
+    CodeMeans root (compileEff (.succeed t) p) (denoteR root (.succeed t) p) := by
+  rw [compileEff_succeed t hf, denoteR_succeed root t hpos]
+  cases evalTerm p.env t with
+  | some v => exact CodeMeans.success v
+  | none => exact codeMeans_badShape root
+
+theorem intro_fail (root : NativeEff) (t : Term) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) :
+    CodeMeans root (compileEff (.fail t) p) (denoteR root (.fail t) p) := by
+  rw [compileEff_fail t hf, denoteR_fail root t hpos]
+  cases evalTerm p.env t with
+  | some v => exact CodeMeans.failure _
+  | none => exact codeMeans_badShape root
+
+theorem intro_failCause (root : NativeEff) (c : CauseTerm) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) :
+    CodeMeans root (compileEff (.failCause c) p) (denoteR root (.failCause c) p) := by
+  rw [compileEff_failCause c hf, denoteR_failCause root c hpos]
+  cases causeOf p.env c with
+  | some cause => exact CodeMeans.failure _
+  | none => exact codeMeans_badShape root
+
+theorem intro_yieldError (root : NativeEff) (t : Term) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) :
+    CodeMeans root (compileEff (.yieldError t) p) (denoteR root (.yieldError t) p) := by
+  rw [compileEff_yieldError t hf, denoteR_yieldError root t hpos]
+  cases evalTerm p.env t with
+  | some v => exact CodeMeans.yieldError p (errOf v) _ fun _ => CodeMeans.failure _
+  | none => exact codeMeans_badShape root
+
+theorem intro_sync (root : NativeEff) (t : Term) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.sync t))) :
+    CodeMeans root (compileEff (.sync t) p) (denoteR root (.sync t) p) := by
+  rw [compileEff_sync t hf, denoteR_sync root t hpos, ← syncValueAt_pure h]
+  exact CodeMeans.syncPure p _ (CodeMeans.success _)
+
+theorem intro_perform (root : NativeEff) (op : NativeOp) (r : Term) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) :
+    CodeMeans root (compileEff (.perform op r) p) (denoteR root (.perform op r) p) := by
+  by_cases hk : (NativeOp.row op).kind = .sync
+  · rw [compileEff_perform_sync op r hf hk, denoteR_perform_sync root op r hpos hk]
+    cases evalTerm p.env r with
+    | none => exact codeMeans_badShape root
+    | some v =>
+      dsimp only [Option.bind]
+      cases NativeOp.syncOpOf op v with
+      | some o => exact CodeMeans.syncOp o _ (successV root)
+      | none => exact codeMeans_badShape root
+  · rw [compileEff_perform_nonsync op r hf hk, denoteR_perform_nonsync root op r hpos hk]
+    exact asyncRoute_means root op r p
+
+/-! #### 2. Sequential & Loops family -/
+
+theorem intro_suspend (root : NativeEff) (n : Nat) (b : NativeEff) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
+    (hwc : ∀ (c : List (FiberId × ExitV)) (i : Nat),
+      (({ p with completed := c } : Point).child i).weight < n)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.suspend b)))
+    (ih : ∀ (p : Point), p.weight < n → ∀ (e : NativeEff),
+      Node.at_ (.eff root) p.path = some (.eff e) → CodeMeans root (compileEff e p) (denoteR root e p)) :
+    CodeMeans root (compileEff (.suspend b) p) (denoteR root (.suspend b) p) := by
+  rw [compileEff_suspend b hf, denoteR_suspend root b p hpos]
+  refine CodeMeans.suspendBody p _ fun completed => ?_
+  have hb := at_child_of (p := { p with completed }) h 0
+  show CodeMeans root (suspendBodyAt root (.body { p with completed })) (prepareR completed (constructR _))
+  rw [suspendBodyAt_suspend (q := { p with completed }) hf h, resolve_of_at hb]
+  simp only [prepareR_constructR, prepareR_denoteR]
+  exact ih _ (hwc completed 0) b hb
+
+theorem intro_bind (root : NativeEff) (n : Nat) (a b : NativeEff) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
+    (hw0 : ∀ i, (p.child i).weight < n)
+    (hwcw : ∀ (c : List (FiberId × ExitV)) (i : Nat) (v : Val),
+      (({ p with completed := c } : Point).childWith i v).weight < n)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.bind a b)))
+    (ih : ∀ (p : Point), p.weight < n → ∀ (e : NativeEff),
+      Node.at_ (.eff root) p.path = some (.eff e) → CodeMeans root (compileEff e p) (denoteR root e p)) :
+    CodeMeans root (compileEff (.bind a b) p) (denoteR root (.bind a b) p) := by
+  rw [compileEff_bind a b hf, denoteR_bind root a b p hpos, guardR_bind]
+  refine CodeMeans.onSuccess _ _ _ (denoteR root a (p.child 0))
+    (seqR fun v => constructR fun completed => denoteR root b ({ p with completed }.childWith 1 v))
+    ?_ ?_ rfl (fun _ => rfl)
+  · exact ih _ (hw0 0) a (at_child_of h 0)
+  · intro completed v
+    have hb := at_childWith_of (p := { p with completed }) h 1 v
+    show CodeMeans root (resolve root ({ p with completed }.childWith 1 v))
+      (prepareR completed (constructR _))
+    rw [resolve_of_at hb]
+    simp only [prepareR_constructR, prepareR_denoteR]
+    exact ih _ (hwcw completed 1 v) b hb
+
+theorem intro_gen (root : NativeEff) (ss : Stmts NativeOp) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.gen ss))) :
+    CodeMeans root (compileEff (.gen ss) p) (denoteR root (.gen ss) p) := by
+  rw [compileEff_gen ss hf, denoteR_gen root ss p hpos]
+  refine CodeMeans.suspendBody p _ fun completed => ?_
+  show CodeMeans root (suspendBodyAt root (.body { p with completed }))
+    (prepareR completed (.vis (.inr (.gen p)) Effects.Program.pure))
+  rw [suspendBodyAt_gen (q := { p with completed }) hf h]
+  exact CodeMeans.genEntry p _ _ ⟨rfl, rfl, rfl, rfl, rfl⟩ delivers_pure
+
+theorem intro_branch (root : NativeEff) (n : Nat) (t : Term) (a b : NativeEff) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
+    (hwc : ∀ (c : List (FiberId × ExitV)) (i : Nat),
+      (({ p with completed := c } : Point).child i).weight < n)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.branch t a b)))
+    (ih : ∀ (p : Point), p.weight < n → ∀ (e : NativeEff),
+      Node.at_ (.eff root) p.path = some (.eff e) → CodeMeans root (compileEff e p) (denoteR root e p)) :
+    CodeMeans root (compileEff (.branch t a b) p) (denoteR root (.branch t a b) p) := by
+  rw [compileEff_branch t a b hf, denoteR_branch root t a b p hpos]
+  refine CodeMeans.suspendBody p _ fun completed => ?_
+  show CodeMeans root (suspendBodyAt root (.body { p with completed })) (prepareR completed (constructR _))
+  simp only [prepareR_constructR]
+  rcases hv : evalTerm p.env t with _ | v
+  · rw [suspendBodyAt_branch_bad (q := { p with completed }) hf h
+      (fun flag heq => by rw [hv] at heq; cases heq)]
+    exact codeMeans_badShape root
+  · cases v
+    case bool flag =>
+      cases flag
+      · have hb := at_child_of (p := { p with completed }) h 1
+        rw [suspendBodyAt_branch_false (q := { p with completed }) hf h hv, resolve_of_at hb]
+        simp only [prepareR_denoteR]
+        exact ih _ (hwc completed 1) b hb
+      · have hb := at_child_of (p := { p with completed }) h 0
+        rw [suspendBodyAt_branch_true (q := { p with completed }) hf h hv, resolve_of_at hb]
+        simp only [prepareR_denoteR]
+        exact ih _ (hwc completed 0) a hb
+    all_goals
+      rw [suspendBodyAt_branch_bad (q := { p with completed }) hf h
+        (fun flag heq => by rw [hv] at heq; cases heq)]
+      exact codeMeans_badShape root
+
+theorem intro_whileLoop (root : NativeEff) (i t s : Term) (b : NativeEff) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.whileLoop i t s b))) :
+    CodeMeans root (compileEff (.whileLoop i t s b) p) (denoteR root (.whileLoop i t s b) p) := by
+  rw [compileEff_whileLoop i t s b hf, denoteR_whileLoop root i t s b p hpos]
+  refine CodeMeans.suspendBody p _ fun completed => ?_
+  show CodeMeans root (suspendBodyAt root (.body { p with completed }))
+    (prepareR completed (match evalTerm p.env i with
+      | some cursor => .vis (.inr (.loop p cursor)) Effects.Program.pure
+      | none => .pure badShapeExit))
+  rw [suspendBodyAt_whileLoop (q := { p with completed }) hf h]
+  dsimp only
+  rcases hv : evalTerm p.env i with _ | cursor
+  · exact codeMeans_badShape root
+  · exact CodeMeans.loopEntry p _ cursor _ ⟨rfl, rfl, rfl, rfl, rfl⟩ delivers_pure
+
+theorem intro_onExit (root : NativeEff) (n : Nat) (b f : NativeEff) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
+    (hw0 : ∀ i, (p.child i).weight < n)
+    (hwcw : ∀ (c : List (FiberId × ExitV)) (i : Nat) (v : Val),
+      (({ p with completed := c } : Point).childWith i v).weight < n)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.onExit b f)))
+    (ih : ∀ (p : Point), p.weight < n → ∀ (e : NativeEff),
+      Node.at_ (.eff root) p.path = some (.eff e) → CodeMeans root (compileEff e p) (denoteR root e p)) :
+    CodeMeans root (compileEff (.onExit b f) p) (denoteR root (.onExit b f) p) := by
+  rw [compileEff_onExit b f hf, denoteR_onExit root b f hpos]
+  unfold onExitR
+  rw [guardR_bind]
+  refine CodeMeans.onExit _ _ _ (denoteR root b (p.child 0))
+    (fun ex => finalizerR ex (constructR fun completed =>
+      denoteR root f ({ p with completed }.childWith 1 (reifyExitVal ex))))
+    ?_ ?_ (fun _ _ => rfl) rfl (fun _ => rfl)
+  · exact ih _ (hw0 0) b (at_child_of h 0)
+  · intro completed ex program hprog
+    have hp' : resolve root ({ p with completed }.childWith 1 (reifyExitVal ex)) = program :=
+      Option.some.inj hprog
+    rw [← hp']
+    refine finalizer_intro root completed ex ?_
+    have hb := at_childWith_of (p := { p with completed }) h 1 (reifyExitVal ex)
+    rw [resolve_of_at hb]
+    simp only [prepareR_constructR, prepareR_denoteR]
+    exact ih _ (hwcw completed 1 _) f hb
+
+/-! #### 3. Error Handling family -/
+
+theorem intro_catchCause (root : NativeEff) (n : Nat) (b hd : NativeEff) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
+    (hw0 : ∀ i, (p.child i).weight < n)
+    (hwcw : ∀ (c : List (FiberId × ExitV)) (i : Nat) (v : Val),
+      (({ p with completed := c } : Point).childWith i v).weight < n)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.catchCause b hd)))
+    (ih : ∀ (p : Point), p.weight < n → ∀ (e : NativeEff),
+      Node.at_ (.eff root) p.path = some (.eff e) → CodeMeans root (compileEff e p) (denoteR root e p)) :
+    CodeMeans root (compileEff (.catchCause b hd) p) (denoteR root (.catchCause b hd) p) := by
+  rw [compileEff_catchCause b hd hf, denoteR_catchCause root b hd hpos, guardR_bind]
+  refine CodeMeans.onFailure _ _ _ (denoteR root b (p.child 0)) _ ?_ ?_ rfl (fun _ => rfl)
+  · exact ih _ (hw0 0) b (at_child_of h 0)
+  · intro completed c
+    have hb := at_childWith_of (p := { p with completed }) h 1 (.exitErr c)
+    show CodeMeans root (resolve root ({ p with completed }.childWith 1 (.exitErr c)))
+      (prepareR completed (constructR _))
+    rw [resolve_of_at hb]
+    simp only [prepareR_constructR, prepareR_denoteR]
+    exact ih _ (hwcw completed 1 _) hd hb
+
+theorem intro_catchIf (root : NativeEff) (n : Nat) (test : Term) (b hd : NativeEff) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
+    (hw0 : ∀ i, (p.child i).weight < n)
+    (hwcw : ∀ (c : List (FiberId × ExitV)) (i : Nat) (v : Val),
+      (({ p with completed := c } : Point).childWith i v).weight < n)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.catchIf test b hd)))
+    (ih : ∀ (p : Point), p.weight < n → ∀ (e : NativeEff),
+      Node.at_ (.eff root) p.path = some (.eff e) → CodeMeans root (compileEff e p) (denoteR root e p)) :
+    CodeMeans root (compileEff (.catchIf test b hd) p) (denoteR root (.catchIf test b hd) p) := by
+  rw [compileEff_catchIf test b hd hf, denoteR_catchIf root test b hd hpos, guardR_bind]
+  refine CodeMeans.onFailure _ _ _ (denoteR root b (p.child 0)) _ ?_ ?_ rfl (fun _ => rfl)
+  · exact ih _ (hw0 0) b (at_child_of h 0)
+  · intro completed cause
+    simp only [EffName.refreshE, contEOf, h, prepareR_constructR]
+    cases caughtErrorValue? p.env test cause with
+    | none =>
+      simp only [prepareR]
+      exact CodeMeans.failure cause
+    | some value =>
+      simp only
+      have hb := at_childWith_of (p := { p with completed }) h 1 value
+      rw [resolve_of_at hb]
+      simp only [prepareR_denoteR]
+      exact ih _ (hwcw completed 1 value) hd hb
+
+theorem intro_matchCause (root : NativeEff) (n : Nat) (b v c : NativeEff) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
+    (hw0 : ∀ i, (p.child i).weight < n)
+    (hwcw : ∀ (c : List (FiberId × ExitV)) (i : Nat) (v : Val),
+      (({ p with completed := c } : Point).childWith i v).weight < n)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.matchCause b v c)))
+    (ih : ∀ (p : Point), p.weight < n → ∀ (e : NativeEff),
+      Node.at_ (.eff root) p.path = some (.eff e) → CodeMeans root (compileEff e p) (denoteR root e p)) :
+    CodeMeans root (compileEff (.matchCause b v c) p) (denoteR root (.matchCause b v c) p) := by
+  rw [compileEff_matchCause b v c hf, denoteR_matchCause root b v c hpos, guardR_bind]
+  refine CodeMeans.onBoth _ _ _ _ (denoteR root b (p.child 0)) _ ?_ ?_ ?_ rfl (fun _ => rfl)
+  · exact ih _ (hw0 0) b (at_child_of h 0)
+  · intro completed x
+    have hb := at_childWith_of (p := { p with completed }) h 1 x
+    show CodeMeans root (resolve root ({ p with completed }.childWith 1 x))
+      (prepareR completed (constructR _))
+    rw [resolve_of_at hb]
+    simp only [prepareR_constructR, prepareR_denoteR]
+    exact ih _ (hwcw completed 1 x) v hb
+  · intro completed cause
+    have hb := at_childWith_of (p := { p with completed }) h 2 (.exitErr cause)
+    show CodeMeans root (resolve root ({ p with completed }.childWith 2 (.exitErr cause)))
+      (prepareR completed (constructR _))
+    rw [resolve_of_at hb]
+    simp only [prepareR_constructR, prepareR_denoteR]
+    exact ih _ (hwcw completed 2 _) c hb
+
+theorem intro_exit (root : NativeEff) (n : Nat) (b : NativeEff) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
+    (hw0 : ∀ i, (p.child i).weight < n)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.exit b)))
+    (ih : ∀ (p : Point), p.weight < n → ∀ (e : NativeEff),
+      Node.at_ (.eff root) p.path = some (.eff e) → CodeMeans root (compileEff e p) (denoteR root e p)) :
+    CodeMeans root (compileEff (.exit b) p) (denoteR root (.exit b) p) := by
+  rw [compileEff_exit b hf, denoteR_exit root b p hpos, inlineYield_eq_headExit,
+    headExit_eq_asExit?]
+  cases (compileEff b (p.child 0)).asExit? with
+  | some ex => exact CodeMeans.success _
+  | none =>
+    show CodeMeans root (Prim.exitFrame _) ((guardR .all _).bind _)
+    rw [guardR_bind]
+    refine CodeMeans.exitFrame _ _ (denoteR root b (p.child 0))
+      (fun ex => .pure (.success (reifyExitVal ex))) ?_ (fun _ _ => CodeMeans.success _) rfl
+      (fun _ => rfl)
+    exact ih _ (hw0 0) b (at_child_of h 0)
+
+/-! #### 4. Concurrency & Fibers family -/
+
+theorem intro_uninterruptible (root : NativeEff) (n : Nat) (b : NativeEff) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
+    (hw0 : ∀ i, (p.child i).weight < n)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.uninterruptible b)))
+    (hres : ∀ q : Point, q.weight < n → CodeMeans root (resolve root q) (denoteAt root q)) :
+    CodeMeans root (compileEff (.uninterruptible b) p) (denoteR root (.uninterruptible b) p) := by
+  rw [compileEff_uninterruptible b hf, denoteR_uninterruptible root b hpos]
+  have hact : actionAt root p = some (.setInterruptible (resolve root (p.child 0)) false) := by
+    simp [actionAt, h]
+  unfold denoteAction; rw [hact]
+  exact CodeMeans.actMask _ _ _ (.at_ (p.child 0)) _ hact (hres _ (hw0 0)) delivers_pure
+
+theorem intro_interruptible (root : NativeEff) (n : Nat) (b : NativeEff) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
+    (hw0 : ∀ i, (p.child i).weight < n)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.interruptible b)))
+    (hres : ∀ q : Point, q.weight < n → CodeMeans root (resolve root q) (denoteAt root q)) :
+    CodeMeans root (compileEff (.interruptible b) p) (denoteR root (.interruptible b) p) := by
+  rw [compileEff_interruptible b hf, denoteR_interruptible root b hpos]
+  have hact : actionAt root p = some (.setInterruptible (resolve root (p.child 0)) true) := by
+    simp [actionAt, h]
+  unfold denoteAction; rw [hact]
+  exact CodeMeans.actMask _ _ _ (.at_ (p.child 0)) _ hact (hres _ (hw0 0)) delivers_pure
+
+theorem intro_yieldNow (root : NativeEff) (priority : Nat) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) :
+    CodeMeans root (compileEff (.yieldNow priority) p) (denoteR root (.yieldNow priority) p) := by
+  rw [compileEff_yieldNow priority hf, denoteR_yieldNow root priority hpos]
+  exact CodeMeans.yieldNow priority _ delivers_seqR_pure
+
+theorem intro_callback (root : NativeEff) (op : NativeOp) (r : Term) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) :
+    CodeMeans root (compileEff (.callback op r) p) (denoteR root (.callback op r) p) := by
+  rw [compileEff_callback op r hf, denoteR_callback root op r hpos]
+  exact asyncRoute_means root op r p
+
+theorem intro_awaitFiber (root : NativeEff) (t : Term) (mode : Supervision.ObserverMode) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) :
+    CodeMeans root (compileEff (.awaitFiber t mode) p) (denoteR root (.awaitFiber t mode) p) := by
+  rw [compileEff_awaitFiber t mode hf, denoteR_awaitFiber root t mode hpos]
+  rcases hv : evalTerm p.env t with _ | v
+  · exact codeMeans_badShape root
+  · cases hfib : Val.fiber? v with
+    | some id =>
+      obtain ⟨id⟩ := id
+      have hv := Val.fiber?_exact hfib
+      subst hv
+      simp only
+      cases p.awaitExit ⟨id⟩ mode with
+      | some ex => exact codeMeans_ofExit_pure root ex
+      | none =>
+        cases mode with
+        | joinEffect => exact CodeMeans.joinEffect ⟨id⟩ _ delivers_pure
+        | awaitValue => exact CodeMeans.joinValue ⟨id⟩ _ delivers_seqR_pure
+    | none =>
+      have hb : ∀ id, v ≠ Val.fiber ⟨id⟩ := fun id => Val.fiber?_none hfib ⟨id⟩
+      split
+      · next id heq => exact absurd (Option.some.inj heq) (hb id)
+      · split
+        · next id heq => exact absurd (Option.some.inj heq) (hb id)
+        · exact codeMeans_badShape root
+
+theorem intro_withFiber (root : NativeEff) (n : Nat) (a : ActionTerm NativeOp) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
+    (hw00 : ((p.child 0).child 0).weight < n)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.withFiber a)))
+    (hres : ∀ q : Point, q.weight < n → CodeMeans root (resolve root q) (denoteAt root q))
+    (ih : ∀ (p : Point), p.weight < n → ∀ (e : NativeEff),
+      Node.at_ (.eff root) p.path = some (.eff e) → CodeMeans root (compileEff e p) (denoteR root e p)) :
+    CodeMeans root (compileEff (.withFiber a) p) (denoteR root (.withFiber a) p) := by
+  cases hfs : forkScoped? a with
+  | some co =>
+    obtain ⟨child, options⟩ := co
+    obtain rfl := forkScoped?_some hfs
+    rw [compileEff_withFiber_forkScoped child options hf, denoteR_withFiber root _ p hpos]
+    have hact : actionAt root p = some .ambientScope := by simp [actionAt, h]
+    unfold denoteAction; rw [hact]
+    simp only [denoteFiberAction, h]
+    rw [guardR_bind]
+    refine CodeMeans.onSuccess _ _ _ (fiberValR .ambientScope rfl) _ ?_ ?_ rfl (fun _ => rfl)
+    · exact CodeMeans.actAmbientScope _ _ hact (successV root)
+    · intro completed v
+      cases hsc : Val.scope? v with
+      | some s =>
+        have hv := Val.scope?_exact hsc
+        subst hv
+        show CodeMeans root (Prim.withFiber (.forkInAt p s))
+          (prepareR completed (.vis (.inr (.forkIn ((p.child 0).child 0) options s))
+            fun v => .pure (.success v)))
+        refine CodeMeans.actForkIn _ (resolve root ((p.child 0).child 0)) options _ s _
+          ?_ ?_ (successV root)
+        · show forkScopedAt root p s = _
+          simp [forkScopedAt, h]
+        · exact hres _ hw00
+      | none =>
+        have hne : ∀ s, v ≠ Val.scopeHandle s := Val.scope?_none hsc
+        show CodeMeans root (Program.contAOf root (.forkScopedIn p) v) _
+        rw [contAOf_forkScopedIn_other root v hne]
+        simp only [seqR]
+        first
+          | exact CodeMeans.failure _
+          | (split
+             · first
+                 | (next s heq => exact absurd heq (hne s))
+                 | (next s => exact absurd rfl (hne s))
+             · exact CodeMeans.failure _)
+  | none =>
+    have hnot : ∀ c o, a ≠ .forkScoped c o := forkScoped?_none hfs
+    rw [compileEff_withFiber_other a hf hnot, denoteR_withFiber root a p hpos]
+    obtain ⟨act, hact⟩ : ∃ act, actionAt root p = some act := by
+      unfold actionAt; rw [h]; exact ⟨_, rfl⟩
+    have hs := actionAt_shape h hact
+    unfold denoteAction; rw [hact]
+    have ht : (interpOf root).withFiberOf (.act p) = some act := hact
+    cases act with
+    | fork program options =>
+      obtain rfl := hs.1 program options rfl
+      exact CodeMeans.actFork _ _ _ _ _ ht (hres _ hw00) (successV root)
+    | forkIn program options scope =>
+      obtain rfl := hs.2.1 program options scope rfl
+      exact CodeMeans.actForkIn _ _ _ _ _ _ ht (hres _ hw00) (successV root)
+    | forkScoped program options => exact absurd rfl (hs.2.2.1 program options)
+    | runIn target scope => exact CodeMeans.actRunIn _ _ _ _ ht (successV root)
+    | interrupt target => exact CodeMeans.actInterrupt _ _ _ ht delivers_seqR_pure
+    | interruptAs target who => exact CodeMeans.actInterruptAs _ _ _ _ ht delivers_seqR_pure
+    | interruptScoped target => exact CodeMeans.actInterruptScoped _ _ _ ht delivers_seqR_pure
+    | interruptAll targets who => exact CodeMeans.actInterruptAll _ _ _ _ ht delivers_seqR_pure
+    | awaitAll targets => exact CodeMeans.actAwaitAll _ _ _ ht delivers_seqR_pure
+    | awaitAllFailFast targets => exact CodeMeans.actAwaitAllFailFast _ _ _ ht delivers_seqR_pure
+    | snapshotChildren => exact CodeMeans.actSnapshotChildren _ _ ht (successV root)
+    | awaitNewChildren snapshot =>
+      exact CodeMeans.actAwaitNewChildren _ _ _ ht delivers_seqR_pure
+    | raceAll entrants =>
+      obtain ⟨es, rfl, rfl⟩ := hs.2.2.2.1 entrants rfl
+      have hpts : racePoints root p = entrantPoints es ((p.child 0).child 0) := by
+        simp [racePoints, h]
+      show CodeMeans root _ (.vis (.inr (.raceAll (racePoints root p))) Effects.Program.pure)
+      rw [hpts]
+      have hes : Node.at_ (.eff root) ((p.child 0).child 0).path = some (.effs es) :=
+        at_child_of (n := .action (.raceAll es)) (at_child_of h 0) 0
+      obtain ⟨hlen, hc⟩ := entrants_intro root n ih es _ hw00 hes
+      exact CodeMeans.actRaceAll _ _ _ _ ht hlen hc delivers_pure
+    | setInterruptible body flag => exact absurd rfl (hs.2.2.2.2.1 body flag)
+    | setContext ctx => exact CodeMeans.actSetContext _ _ _ ht (successV root)
+    | getContext => exact CodeMeans.actGetContext _ _ ht (successV root)
+    | getId => exact CodeMeans.actGetId _ _ ht (successV root)
+    | closeScope scope ex => exact CodeMeans.actCloseScope _ _ _ _ ht delivers_pure
+    | refuse cause => exact CodeMeans.actRefuse _ _ _ ht (successV root)
+    | dropObservers token => exact CodeMeans.actDropObservers _ _ _ ht (successV root)
+    | cancelRace race => exact CodeMeans.actCancelRace _ _ _ ht delivers_seqR_pure
+    | ambientScope =>
+      obtain ⟨c, o, heq⟩ := hs.2.2.2.2.2.1 rfl
+      exact absurd heq (hnot c o)
+    | closePar fins => exact absurd rfl (hs.2.2.2.2.2.2 fins)
+
+/-! #### 5. Scope, Layers & Decisions family -/
+
+theorem intro_scoped (root : NativeEff) (b : NativeEff) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.scoped b))) :
+    CodeMeans root (compileEff (.scoped b) p) (denoteR root (.scoped b) p) := by
+  rw [compileEff_scoped b hf, denoteR_scoped root b hpos]
+  exact CodeMeans.scopedNode p b _ h delivers_pure
+
+theorem intro_acquireRelease (root : NativeEff) (n : Nat) (a r : NativeEff) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) (hle : p.weight ≤ n)
+    (hw0 : ∀ i, (p.child i).weight < n)
+    (hres : ∀ q : Point, q.weight < n → CodeMeans root (resolve root q) (denoteAt root q)) :
+    CodeMeans root (compileEff (.acquireRelease a r) p) (denoteR root (.acquireRelease a r) p) := by
+  rw [compileEff_acquireRelease a r hf, denoteR_acquireRelease root a r hpos, guardR_bind]
+  have hwrel : ∀ (completed : List (FiberId × ExitV)) (a : Val) (ctx : Ctx) (ex : ExitV),
+      ((Point.ofCapture (p.capture a ctx) completed).childWith 1 (reifyExitVal ex)).weight < n :=
+    fun completed a ctx ex => Nat.lt_of_lt_of_le
+      (weight_childWith_lt { p with env := p.env ++ [a], completed } 1 (reifyExitVal ex) hpos) hle
+  refine CodeMeans.onSuccess _ _ _ (fiberValR .getContext rfl) _ ?_ ?_ rfl (fun _ => rfl)
+  · exact CodeMeans.actGetContext _ _ rfl (successV root)
+  · intro completed v
+    show CodeMeans root (Program.contAOf root (.acquireCtx p) v) _
+    rw [contAOf_acquireCtx]
+    simp only [seqR]
+    cases hctx : Val.context? v with
+    | some ctx =>
+      dsimp only
+      refine CodeMeans.actMask _ _ false (.acquireIn p ctx) _ rfl ?_ delivers_pure
+      refine acquireIn_intro root p ctx (hres _ (hw0 0)) fun a ex => ?_
+      exact foreignRelease_intro root _ ex fun completed' => hres _ (hwrel completed' a ctx ex)
+    | none => exact codeMeans_badShape root
+
+theorem intro_choose (root : NativeEff) (n : Nat) (site : Nat) (l r : NativeEff) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) (hle : p.weight ≤ n)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.choose site l r)))
+    (ih : ∀ (p : Point), p.weight < n → ∀ (e : NativeEff),
+      Node.at_ (.eff root) p.path = some (.eff e) → CodeMeans root (compileEff e p) (denoteR root e p)) :
+    CodeMeans root (compileEff (.choose site l r) p) (denoteR root (.choose site l r) p) := by
+  rw [compileEff_choose site l r hf, denoteR_choose root site l r p hpos]
+  rcases ht : p.tape with _ | ⟨flag, rest⟩
+  · exact CodeMeans.frontier p p _ _ ⟨rfl, rfl, rfl, rfl, rfl⟩ fun completed => by
+      rw [suspendBodyAt_of_at (q := { p with completed }) hf h nofun nofun nofun nofun nofun,
+        compileEff_choose site l r (p := { p with completed }) hf]
+      simp only [ht]
+      rfl
+  · have hw : p.fuel + rest.length < n := by
+      simp only [Point.weight] at hle
+      rw [ht, List.length_cons] at hle
+      omega
+    cases flag
+    · exact ih { p with path := p.path ++ [1], tape := rest } hw r
+        (by rw [Node.at_append, h]; rfl)
+    · exact ih { p with path := p.path ++ [0], tape := rest } hw l
+        (by rw [Node.at_append, h]; rfl)
+
+theorem intro_provideLayer (root : NativeEff) (n : Nat) (l : LayerTerm NativeOp) (i : Bool)
+    (b : NativeEff) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) (hle : p.weight ≤ n)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.provideLayer l i b)))
+    (hres : ∀ q : Point, q.weight < n → CodeMeans root (resolve root q) (denoteAt root q)) :
+    CodeMeans root (compileEff (.provideLayer l i b) p) (denoteR root (.provideLayer l i b) p) := by
+  rw [compileEff_provideLayer l i b hf, denoteR_provideLayer root l i b hpos]
+  unfold suspendR
+  refine CodeMeans.suspendBody p _ fun completed => ?_
+  rw [suspendBodyAt_provideLayer (q := { p with completed }) hf h, prepareR_constructR]
+  exact provideLayer_intro root n hres l i b { p with completed } completed hle hpos h
+
+theorem intro_service (root : NativeEff) (key : ServiceKey) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) :
+    CodeMeans root (compileEff (.service key) p) (denoteR root (.service key) p) := by
+  rw [compileEff_service key hf, denoteR_service root key hpos, guardR_bind]
+  refine CodeMeans.onSuccess _ _ _ (fiberValR .getContext rfl) _
+    (CodeMeans.actGetContext _ _ rfl (successV root)) ?_ rfl (fun _ => rfl)
+  intro completed v
+  show CodeMeans root (Program.contAOf root (.serviceLookup key) v) _
+  rw [contAOf_serviceLookup]
+  unfold serviceLookupK serviceLookupR
+  simp only [seqR]
+  cases Val.context? v with
+  | some ctx =>
+    cases hg : ctx.services.getV key with
+    | some value => simp only [hg, prepareR_pure]; exact CodeMeans.success _
+    | none => simp only [hg, prepareR_pure]; exact CodeMeans.failure _
+  | none => exact codeMeans_badShape root
+
+theorem intro_provideService (root : NativeEff) (n : Nat) (key : ServiceKey) (value : Term)
+    (b : NativeEff) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
+    (hw0 : ∀ i, (p.child i).weight < n)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.provideService key value b)))
+    (ih : ∀ (p : Point), p.weight < n → ∀ (e : NativeEff),
+      Node.at_ (.eff root) p.path = some (.eff e) → CodeMeans root (compileEff e p) (denoteR root e p)) :
+    CodeMeans root (compileEff (.provideService key value b) p) (denoteR root (.provideService key value b) p) := by
+  rw [compileEff_provideService key value b hf, denoteR_provideService root key value b hpos]
+  cases evalTerm p.env value with
+  | some v =>
+    have hb := at_child_of h 0
+    refine updateContext_intro root _ (Region.program (p.child 0)) (denoteR root b (p.child 0)) ?_
+    show CodeMeans root (resolve root (p.child 0)) _
+    rw [resolve_of_at hb]
+    exact ih _ (hw0 0) b hb
+  | none => exact codeMeans_badShape root
+
 theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight < n →
     ∀ (e : NativeEff), Node.at_ (.eff root) p.path = some (.eff e) →
       CodeMeans root (compileEff e p) (denoteR root e p) := by
@@ -1746,372 +2287,34 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
       (({ p with completed := c } : Point).childWith i v).weight < n := fun c i v =>
     Nat.lt_of_lt_of_le (weight_childWith_lt { p with completed := c } i v hpos) hle
   cases e with
-  | succeed t =>
-    rw [compileEff_succeed t hf, denoteR_succeed root t hpos]
-    cases evalTerm p.env t with
-    | some v => exact CodeMeans.success v
-    | none => exact codeMeans_badShape root
-  | fail t =>
-    rw [compileEff_fail t hf, denoteR_fail root t hpos]
-    cases evalTerm p.env t with
-    | some v => exact CodeMeans.failure _
-    | none => exact codeMeans_badShape root
-  | failCause c =>
-    rw [compileEff_failCause c hf, denoteR_failCause root c hpos]
-    cases causeOf p.env c with
-    | some cause => exact CodeMeans.failure _
-    | none => exact codeMeans_badShape root
-  | yieldError t =>
-    rw [compileEff_yieldError t hf, denoteR_yieldError root t hpos]
-    cases evalTerm p.env t with
-    | some v => exact CodeMeans.yieldError p (errOf v) _ fun _ => CodeMeans.failure _
-    | none => exact codeMeans_badShape root
-  | sync t =>
-    rw [compileEff_sync t hf, denoteR_sync root t hpos, ← syncValueAt_pure h]
-    exact CodeMeans.syncPure p _ (CodeMeans.success _)
-  | suspend b =>
-    rw [compileEff_suspend b hf, denoteR_suspend root b p hpos]
-    refine CodeMeans.suspendBody p _ fun completed => ?_
-    have hb := at_child_of (p := { p with completed }) h 0
-    show CodeMeans root (suspendBodyAt root (.body { p with completed })) (prepareR completed (constructR _))
-    rw [suspendBodyAt_suspend (q := { p with completed }) hf h, resolve_of_at hb]
-    simp only [prepareR_constructR, prepareR_denoteR]
-    exact ih _ (hwc completed 0) b hb
-  | perform op r =>
-    by_cases hk : (NativeOp.row op).kind = .sync
-    · rw [compileEff_perform_sync op r hf hk, denoteR_perform_sync root op r hpos hk]
-      cases evalTerm p.env r with
-      | none => exact codeMeans_badShape root
-      | some v =>
-        dsimp only [Option.bind]
-        cases NativeOp.syncOpOf op v with
-        | some o => exact CodeMeans.syncOp o _ (successV root)
-        | none => exact codeMeans_badShape root
-    · rw [compileEff_perform_nonsync op r hf hk, denoteR_perform_nonsync root op r hpos hk]
-      exact asyncRoute_means root op r p
-  | bind a b =>
-    rw [compileEff_bind a b hf, denoteR_bind root a b p hpos, guardR_bind]
-    refine CodeMeans.onSuccess _ _ _ (denoteR root a (p.child 0))
-      (seqR fun v => constructR fun completed => denoteR root b ({ p with completed }.childWith 1 v))
-      ?_ ?_ rfl (fun _ => rfl)
-    · exact ih _ (hw0 0) a (at_child_of h 0)
-    · intro completed v
-      have hb := at_childWith_of (p := { p with completed }) h 1 v
-      show CodeMeans root (resolve root ({ p with completed }.childWith 1 v))
-        (prepareR completed (constructR _))
-      rw [resolve_of_at hb]
-      simp only [prepareR_constructR, prepareR_denoteR]
-      exact ih _ (hwcw completed 1 v) b hb
-  | gen ss =>
-    rw [compileEff_gen ss hf, denoteR_gen root ss p hpos]
-    refine CodeMeans.suspendBody p _ fun completed => ?_
-    show CodeMeans root (suspendBodyAt root (.body { p with completed }))
-      (prepareR completed (.vis (.inr (.gen p)) Effects.Program.pure))
-    rw [suspendBodyAt_gen (q := { p with completed }) hf h]
-    exact CodeMeans.genEntry p _ _ ⟨rfl, rfl, rfl, rfl, rfl⟩ delivers_pure
-  | catchCause b hd =>
-    rw [compileEff_catchCause b hd hf, denoteR_catchCause root b hd hpos, guardR_bind]
-    refine CodeMeans.onFailure _ _ _ (denoteR root b (p.child 0)) _ ?_ ?_ rfl (fun _ => rfl)
-    · exact ih _ (hw0 0) b (at_child_of h 0)
-    · intro completed c
-      have hb := at_childWith_of (p := { p with completed }) h 1 (.exitErr c)
-      show CodeMeans root (resolve root ({ p with completed }.childWith 1 (.exitErr c)))
-        (prepareR completed (constructR _))
-      rw [resolve_of_at hb]
-      simp only [prepareR_constructR, prepareR_denoteR]
-      exact ih _ (hwcw completed 1 _) hd hb
-  | matchCause b v c =>
-    rw [compileEff_matchCause b v c hf, denoteR_matchCause root b v c hpos, guardR_bind]
-    refine CodeMeans.onBoth _ _ _ _ (denoteR root b (p.child 0)) _ ?_ ?_ ?_ rfl (fun _ => rfl)
-    · exact ih _ (hw0 0) b (at_child_of h 0)
-    · intro completed x
-      have hb := at_childWith_of (p := { p with completed }) h 1 x
-      show CodeMeans root (resolve root ({ p with completed }.childWith 1 x))
-        (prepareR completed (constructR _))
-      rw [resolve_of_at hb]
-      simp only [prepareR_constructR, prepareR_denoteR]
-      exact ih _ (hwcw completed 1 x) v hb
-    · intro completed cause
-      have hb := at_childWith_of (p := { p with completed }) h 2 (.exitErr cause)
-      show CodeMeans root (resolve root ({ p with completed }.childWith 2 (.exitErr cause)))
-        (prepareR completed (constructR _))
-      rw [resolve_of_at hb]
-      simp only [prepareR_constructR, prepareR_denoteR]
-      exact ih _ (hwcw completed 2 _) c hb
-  | onExit b f =>
-    rw [compileEff_onExit b f hf, denoteR_onExit root b f hpos]
-    unfold onExitR
-    rw [guardR_bind]
-    refine CodeMeans.onExit _ _ _ (denoteR root b (p.child 0))
-      (fun ex => finalizerR ex (constructR fun completed =>
-        denoteR root f ({ p with completed }.childWith 1 (reifyExitVal ex))))
-      ?_ ?_ (fun _ _ => rfl) rfl (fun _ => rfl)
-    · exact ih _ (hw0 0) b (at_child_of h 0)
-    · intro completed ex program hprog
-      have hp' : resolve root ({ p with completed }.childWith 1 (reifyExitVal ex)) = program :=
-        Option.some.inj hprog
-      rw [← hp']
-      refine finalizer_intro root completed ex ?_
-      have hb := at_childWith_of (p := { p with completed }) h 1 (reifyExitVal ex)
-      rw [resolve_of_at hb]
-      simp only [prepareR_constructR, prepareR_denoteR]
-      exact ih _ (hwcw completed 1 _) f hb
-  | exit b =>
-    rw [compileEff_exit b hf, denoteR_exit root b p hpos, inlineYield_eq_headExit,
-      headExit_eq_asExit?]
-    cases (compileEff b (p.child 0)).asExit? with
-    | some ex => exact CodeMeans.success _
-    | none =>
-      show CodeMeans root (Prim.exitFrame _) ((guardR .all _).bind _)
-      rw [guardR_bind]
-      refine CodeMeans.exitFrame _ _ (denoteR root b (p.child 0))
-        (fun ex => .pure (.success (reifyExitVal ex))) ?_ (fun _ _ => CodeMeans.success _) rfl
-        (fun _ => rfl)
-      exact ih _ (hw0 0) b (at_child_of h 0)
-  | uninterruptible b =>
-    rw [compileEff_uninterruptible b hf, denoteR_uninterruptible root b hpos]
-    have hact : actionAt root p = some (.setInterruptible (resolve root (p.child 0)) false) := by
-      simp [actionAt, h]
-    unfold denoteAction; rw [hact]
-    exact CodeMeans.actMask _ _ _ (.at_ (p.child 0)) _ hact (hres _ (hw0 0)) delivers_pure
-  | interruptible b =>
-    rw [compileEff_interruptible b hf, denoteR_interruptible root b hpos]
-    have hact : actionAt root p = some (.setInterruptible (resolve root (p.child 0)) true) := by
-      simp [actionAt, h]
-    unfold denoteAction; rw [hact]
-    exact CodeMeans.actMask _ _ _ (.at_ (p.child 0)) _ hact (hres _ (hw0 0)) delivers_pure
-  | branch t a b =>
-    rw [compileEff_branch t a b hf, denoteR_branch root t a b p hpos]
-    refine CodeMeans.suspendBody p _ fun completed => ?_
-    show CodeMeans root (suspendBodyAt root (.body { p with completed })) (prepareR completed (constructR _))
-    simp only [prepareR_constructR]
-    rcases hv : evalTerm p.env t with _ | v
-    · rw [suspendBodyAt_branch_bad (q := { p with completed }) hf h
-        (fun flag heq => by rw [hv] at heq; cases heq)]
-      exact codeMeans_badShape root
-    · cases v
-      case bool flag =>
-        cases flag
-        · have hb := at_child_of (p := { p with completed }) h 1
-          rw [suspendBodyAt_branch_false (q := { p with completed }) hf h hv, resolve_of_at hb]
-          simp only [prepareR_denoteR]
-          exact ih _ (hwc completed 1) b hb
-        · have hb := at_child_of (p := { p with completed }) h 0
-          rw [suspendBodyAt_branch_true (q := { p with completed }) hf h hv, resolve_of_at hb]
-          simp only [prepareR_denoteR]
-          exact ih _ (hwc completed 0) a hb
-      all_goals
-        rw [suspendBodyAt_branch_bad (q := { p with completed }) hf h
-          (fun flag heq => by rw [hv] at heq; cases heq)]
-        exact codeMeans_badShape root
-  | whileLoop i t s b =>
-    rw [compileEff_whileLoop i t s b hf, denoteR_whileLoop root i t s b p hpos]
-    refine CodeMeans.suspendBody p _ fun completed => ?_
-    show CodeMeans root (suspendBodyAt root (.body { p with completed }))
-      (prepareR completed (match evalTerm p.env i with
-        | some cursor => .vis (.inr (.loop p cursor)) Effects.Program.pure
-        | none => .pure badShapeExit))
-    rw [suspendBodyAt_whileLoop (q := { p with completed }) hf h]
-    dsimp only
-    rcases hv : evalTerm p.env i with _ | cursor
-    · exact codeMeans_badShape root
-    · exact CodeMeans.loopEntry p _ cursor _ ⟨rfl, rfl, rfl, rfl, rfl⟩ delivers_pure
-  | yieldNow priority =>
-    rw [compileEff_yieldNow priority hf, denoteR_yieldNow root priority hpos]
-    exact CodeMeans.yieldNow priority _ delivers_seqR_pure
-  | callback op r =>
-    rw [compileEff_callback op r hf, denoteR_callback root op r hpos]
-    exact asyncRoute_means root op r p
-  | awaitFiber t mode =>
-    rw [compileEff_awaitFiber t mode hf, denoteR_awaitFiber root t mode hpos]
-    rcases hv : evalTerm p.env t with _ | v
-    · exact codeMeans_badShape root
-    · -- the value is a fiber handle or it is not; both sides match on that
-      cases hfib : Val.fiber? v with
-      | some id =>
-        obtain ⟨id⟩ := id
-        have hv := Val.fiber?_exact hfib
-        subst hv
-        simp only
-        cases p.awaitExit ⟨id⟩ mode with
-        | some ex => exact codeMeans_ofExit_pure root ex
-        | none =>
-          cases mode with
-          | joinEffect => exact CodeMeans.joinEffect ⟨id⟩ _ delivers_pure
-          | awaitValue => exact CodeMeans.joinValue ⟨id⟩ _ delivers_seqR_pure
-      | none =>
-        -- one `split` settles both sides: they match on the same discriminant
-        have hb : ∀ id, v ≠ Val.fiber ⟨id⟩ := fun id => Val.fiber?_none hfib ⟨id⟩
-        split
-        · next id heq => exact absurd (Option.some.inj heq) (hb id)
-        · -- the denotation matches on the same value with the same two cases
-          split
-          · next id heq => exact absurd (Option.some.inj heq) (hb id)
-          · exact codeMeans_badShape root
-  | withFiber a =>
-    cases hfs : forkScoped? a with
-    | some co =>
-      obtain ⟨child, options⟩ := co
-      obtain rfl := forkScoped?_some hfs
-      rw [compileEff_withFiber_forkScoped child options hf, denoteR_withFiber root _ p hpos]
-      have hact : actionAt root p = some .ambientScope := by simp [actionAt, h]
-      unfold denoteAction; rw [hact]
-      simp only [denoteFiberAction, h]
-      rw [guardR_bind]
-      refine CodeMeans.onSuccess _ _ _ (fiberValR .ambientScope rfl) _ ?_ ?_ rfl (fun _ => rfl)
-      · exact CodeMeans.actAmbientScope _ _ hact (successV root)
-      · intro completed v
-        -- the handle the service read answered is a scope handle or it is not
-        cases hsc : Val.scope? v with
-        | some s =>
-          have hv := Val.scope?_exact hsc
-          subst hv
-          show CodeMeans root (Prim.withFiber (.forkInAt p s))
-            (prepareR completed (.vis (.inr (.forkIn ((p.child 0).child 0) options s))
-              fun v => .pure (.success v)))
-          refine CodeMeans.actForkIn _ (resolve root ((p.child 0).child 0)) options _ s _
-            ?_ ?_ (successV root)
-          · show forkScopedAt root p s = _
-            simp [forkScopedAt, h]
-          · exact hres _ hw00
-        | none =>
-          have hne : ∀ s, v ≠ Val.scopeHandle s := Val.scope?_none hsc
-          show CodeMeans root (Program.contAOf root (.forkScopedIn p) v) _
-          rw [contAOf_forkScopedIn_other root v hne]
-          simp only [seqR]
-          first
-            | exact CodeMeans.failure _
-            | (split
-               · first
-                   | (next s heq => exact absurd heq (hne s))
-                   | (next s => exact absurd rfl (hne s))
-               · exact CodeMeans.failure _)
-    | none =>
-      have hnot : ∀ c o, a ≠ .forkScoped c o := forkScoped?_none hfs
-      rw [compileEff_withFiber_other a hf hnot, denoteR_withFiber root a p hpos]
-      obtain ⟨act, hact⟩ : ∃ act, actionAt root p = some act := by
-        unfold actionAt; rw [h]; exact ⟨_, rfl⟩
-      have hs := actionAt_shape h hact
-      unfold denoteAction; rw [hact]
-      have ht : (interpOf root).withFiberOf (.act p) = some act := hact
-      cases act with
-      | fork program options =>
-        obtain rfl := hs.1 program options rfl
-        exact CodeMeans.actFork _ _ _ _ _ ht (hres _ hw00) (successV root)
-      | forkIn program options scope =>
-        obtain rfl := hs.2.1 program options scope rfl
-        exact CodeMeans.actForkIn _ _ _ _ _ _ ht (hres _ hw00) (successV root)
-      | forkScoped program options => exact absurd rfl (hs.2.2.1 program options)
-      | runIn target scope => exact CodeMeans.actRunIn _ _ _ _ ht (successV root)
-      | interrupt target => exact CodeMeans.actInterrupt _ _ _ ht delivers_seqR_pure
-      | interruptAs target who => exact CodeMeans.actInterruptAs _ _ _ _ ht delivers_seqR_pure
-      | interruptScoped target => exact CodeMeans.actInterruptScoped _ _ _ ht delivers_seqR_pure
-      | interruptAll targets who => exact CodeMeans.actInterruptAll _ _ _ _ ht delivers_seqR_pure
-      | awaitAll targets => exact CodeMeans.actAwaitAll _ _ _ ht delivers_seqR_pure
-      | awaitAllFailFast targets => exact CodeMeans.actAwaitAllFailFast _ _ _ ht delivers_seqR_pure
-      | snapshotChildren => exact CodeMeans.actSnapshotChildren _ _ ht (successV root)
-      | awaitNewChildren snapshot =>
-        exact CodeMeans.actAwaitNewChildren _ _ _ ht delivers_seqR_pure
-      | raceAll entrants =>
-        obtain ⟨es, rfl, rfl⟩ := hs.2.2.2.1 entrants rfl
-        have hpts : racePoints root p = entrantPoints es ((p.child 0).child 0) := by
-          simp [racePoints, h]
-        show CodeMeans root _ (.vis (.inr (.raceAll (racePoints root p))) Effects.Program.pure)
-        rw [hpts]
-        have hes : Node.at_ (.eff root) ((p.child 0).child 0).path = some (.effs es) :=
-          at_child_of (n := .action (.raceAll es)) (at_child_of h 0) 0
-        obtain ⟨hlen, hc⟩ := entrants_intro root n ih es _ hw00 hes
-        exact CodeMeans.actRaceAll _ _ _ _ ht hlen hc delivers_pure
-      | setInterruptible body flag => exact absurd rfl (hs.2.2.2.2.1 body flag)
-      | setContext ctx => exact CodeMeans.actSetContext _ _ _ ht (successV root)
-      | getContext => exact CodeMeans.actGetContext _ _ ht (successV root)
-      | getId => exact CodeMeans.actGetId _ _ ht (successV root)
-      | closeScope scope ex => exact CodeMeans.actCloseScope _ _ _ _ ht delivers_pure
-      | refuse cause => exact CodeMeans.actRefuse _ _ _ ht (successV root)
-      | dropObservers token => exact CodeMeans.actDropObservers _ _ _ ht (successV root)
-      | cancelRace race => exact CodeMeans.actCancelRace _ _ _ ht delivers_seqR_pure
-      | ambientScope =>
-        obtain ⟨c, o, heq⟩ := hs.2.2.2.2.2.1 rfl
-        exact absurd heq (hnot c o)
-      | closePar fins => exact absurd rfl (hs.2.2.2.2.2.2 fins)
-  | «scoped» b =>
-    rw [compileEff_scoped b hf, denoteR_scoped root b hpos]
-    exact CodeMeans.scopedNode p b _ h delivers_pure
-  | acquireRelease a r =>
-    rw [compileEff_acquireRelease a r hf, denoteR_acquireRelease root a r hpos, guardR_bind]
-    -- the release's point: the capture's point (this one, the acquired value appended) at
-    -- child 1, at any view — one fuel down, so inside the measure
-    have hwrel : ∀ (completed : List (FiberId × ExitV)) (a : Val) (ctx : Ctx) (ex : ExitV),
-        ((Point.ofCapture (p.capture a ctx) completed).childWith 1 (reifyExitVal ex)).weight < n :=
-      fun completed a ctx ex => Nat.lt_of_lt_of_le
-        (weight_childWith_lt { p with env := p.env ++ [a], completed } 1 (reifyExitVal ex) hpos) hle
-    refine CodeMeans.onSuccess _ _ _ (fiberValR .getContext rfl) _ ?_ ?_ rfl (fun _ => rfl)
-    · exact CodeMeans.actGetContext _ _ rfl (successV root)
-    · intro completed v
-      show CodeMeans root (Program.contAOf root (.acquireCtx p) v) _
-      rw [contAOf_acquireCtx]
-      simp only [seqR]
-      -- the context read back off the value, or not
-      cases hctx : Val.context? v with
-      | some ctx =>
-        dsimp only
-        -- `prepareR` is the identity on the mask operation, definitionally
-        refine CodeMeans.actMask _ _ false (.acquireIn p ctx) _ rfl ?_ delivers_pure
-        refine acquireIn_intro root p ctx (hres _ (hw0 0)) fun a ex => ?_
-        exact foreignRelease_intro root _ ex fun completed' => hres _ (hwrel completed' a ctx ex)
-      | none => exact codeMeans_badShape root
-  | choose site l r =>
-    rw [compileEff_choose site l r hf, denoteR_choose root site l r p hpos]
-    rcases ht : p.tape with _ | ⟨flag, rest⟩
-    · exact CodeMeans.frontier p p _ _ ⟨rfl, rfl, rfl, rfl, rfl⟩ fun completed => by
-        rw [suspendBodyAt_of_at (q := { p with completed }) hf h nofun nofun nofun nofun nofun,
-          compileEff_choose site l r (p := { p with completed }) hf]
-        simp only [ht]
-        rfl
-    · have hw : p.fuel + rest.length < n := by
-        simp only [Point.weight] at hle
-        rw [ht, List.length_cons] at hle
-        omega
-      cases flag
-      · exact ih { p with path := p.path ++ [1], tape := rest } hw r
-          (by rw [Node.at_append, h]; rfl)
-      · exact ih { p with path := p.path ++ [0], tape := rest } hw l
-          (by rw [Node.at_append, h]; rfl)
-
-  -- the join: the counted step, then the protocol at the point carrying the view
-  | provideLayer l i b =>
-    rw [compileEff_provideLayer l i b hf, denoteR_provideLayer root l i b hpos]
-    unfold suspendR
-    refine CodeMeans.suspendBody p _ fun completed => ?_
-    rw [suspendBodyAt_provideLayer (q := { p with completed }) hf h, prepareR_constructR]
-    exact provideLayer_intro root n hres l i b { p with completed } completed hle hpos h
-  -- the context read, then the lookup
-  | service key =>
-    rw [compileEff_service key hf, denoteR_service root key hpos, guardR_bind]
-    refine CodeMeans.onSuccess _ _ _ (fiberValR .getContext rfl) _
-      (CodeMeans.actGetContext _ _ rfl (successV root)) ?_ rfl (fun _ => rfl)
-    intro completed v
-    show CodeMeans root (Program.contAOf root (.serviceLookup key) v) _
-    rw [contAOf_serviceLookup]
-    unfold serviceLookupK serviceLookupR
-    simp only [seqR]
-    cases Val.context? v with
-    | some ctx =>
-      cases hg : ctx.services.getV key with
-      | some value => simp only [hg, prepareR_pure]; exact CodeMeans.success _
-      | none => simp only [hg, prepareR_pure]; exact CodeMeans.failure _
-    | none => exact codeMeans_badShape root
-  -- a `Context.add` region over the body
-  | provideService key value b =>
-    rw [compileEff_provideService key value b hf, denoteR_provideService root key value b hpos]
-    cases evalTerm p.env value with
-    | some v =>
-      have hb := at_child_of h 0
-      refine updateContext_intro root _ (Region.program (p.child 0)) (denoteR root b (p.child 0)) ?_
-      show CodeMeans root (resolve root (p.child 0)) _
-      rw [resolve_of_at hb]
-      exact ih _ (hw0 0) b hb
-    | none => exact codeMeans_badShape root
+  | succeed t => exact intro_succeed root t p k hf hpos
+  | fail t => exact intro_fail root t p k hf hpos
+  | failCause c => exact intro_failCause root c p k hf hpos
+  | yieldError t => exact intro_yieldError root t p k hf hpos
+  | sync t => exact intro_sync root t p k hf hpos h
+  | suspend b => exact intro_suspend root n b p k hf hpos hwc h ih
+  | perform op r => exact intro_perform root op r p k hf hpos
+  | bind a b => exact intro_bind root n a b p k hf hpos hw0 hwcw h ih
+  | gen ss => exact intro_gen root ss p k hf hpos h
+  | catchCause b hd => exact intro_catchCause root n b hd p k hf hpos hw0 hwcw h ih
+  | catchIf test b hd => exact intro_catchIf root n test b hd p k hf hpos hw0 hwcw h ih
+  | matchCause b v c => exact intro_matchCause root n b v c p k hf hpos hw0 hwcw h ih
+  | onExit b f => exact intro_onExit root n b f p k hf hpos hw0 hwcw h ih
+  | exit b => exact intro_exit root n b p k hf hpos hw0 h ih
+  | uninterruptible b => exact intro_uninterruptible root n b p k hf hpos hw0 h hres
+  | interruptible b => exact intro_interruptible root n b p k hf hpos hw0 h hres
+  | branch t a b => exact intro_branch root n t a b p k hf hpos hwc h ih
+  | whileLoop i t s b => exact intro_whileLoop root i t s b p k hf hpos h
+  | yieldNow priority => exact intro_yieldNow root priority p k hf hpos
+  | callback op r => exact intro_callback root op r p k hf hpos
+  | awaitFiber t mode => exact intro_awaitFiber root t mode p k hf hpos
+  | withFiber a => exact intro_withFiber root n a p k hf hpos hw00 h hres ih
+  | «scoped» b => exact intro_scoped root b p k hf hpos h
+  | acquireRelease a r => exact intro_acquireRelease root n a r p k hf hpos hle hw0 hres
+  | choose site l r => exact intro_choose root n site l r p k hf hpos hle h ih
+  | provideLayer l i b => exact intro_provideLayer root n l i b p k hf hpos hle h hres
+  | service key => exact intro_service root key p k hf hpos
+  | provideService key value b => exact intro_provideService root n key value b p k hf hpos hw0 h ih
 
 /-- **Introduction.** At every source address, the compile and the denotation are related. -/
 theorem code_intro (root : NativeEff) (e : NativeEff) (p : Point)

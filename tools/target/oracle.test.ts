@@ -84,3 +84,18 @@ test("non-Effect and never subjects cannot agree through never-valued extraction
     expect(observation.issues.some(i => i.code === "query-diagnostic")).toBe(true)
   }
 })
+
+test("E4-CATCH-CE-001: an explicit absent fallback selects the data-first overload", () => {
+  const input = (kind: "bad" | "good"): Query => {
+    const source = `Test/fixtures/target/catch-if-predicate-${kind}.ts`
+    return { id: `catch-if/${kind}`, source,
+      imports: [`import type * as C from ${JSON.stringify(resolve(repo, source))}`],
+      subject: "typeof C.program", kind: "effect", expected: { A: "number", E: "never", R: "never" } }
+  }
+  const bad = query(repo, [input("bad")])
+  expect(bad.conforms).toBe(false)
+  expect(bad.globalDiagnostics.some(d => d.code === 2769)).toBe(true)
+  const good = query(repo, [input("good")])
+  expect(good.conforms).toBe(true)
+  expect(good.observations[0]?.status).toBe("agree")
+})

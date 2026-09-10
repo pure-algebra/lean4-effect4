@@ -987,7 +987,91 @@
    "expr":
    "Effect.provide(Effect.service(Context.Service<number>(\"k4_4\")), Layer.orDie(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.fail(\"lost\"), (a0) => Effect.succeed(1)))))",
    "decl":
-   "export const main: Effect.Effect<number, never> = Effect.provide(Effect.service(Context.Service<number>(\"k4_4\")), Layer.orDie(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.fail(\"lost\"), (a0) => Effect.succeed(1)))))\n"}],
+   "export const main: Effect.Effect<number, never> = Effect.provide(Effect.service(Context.Service<number>(\"k4_4\")), Layer.orDie(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.fail(\"lost\"), (a0) => Effect.succeed(1)))))\n"},
+  {"wellTyped": true,
+   "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
+   "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 7}},
+   "run":
+   {"schedule": ["started 0", "exited 0 success"],
+    "outcome": "finished",
+    "internal": [],
+    "frames": 3,
+    "fibers": [{"parkedToken": null, "id": 0, "exited": true, "exit": {"success": 7}}],
+    "fiberCount": 1,
+    "exitKind": "success",
+    "exit": {"success": 7},
+    "events": ["started 0", "exited 0 {\"success\":7}"]},
+   "name": "pCatchError",
+   "exprRefusal": null,
+   "expr": "Effect.catch(Effect.fail(7), (a0) => Effect.succeed(a0))",
+   "decl":
+   "export const main: Effect.Effect<number, never> = Effect.catch(Effect.fail(7), (a0) => Effect.succeed(a0))\n"},
+  {"wellTyped": true,
+   "type": {"requiresEmpty": true, "requires": [], "error": "number", "answer": "number"},
+   "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 7}},
+   "run":
+   {"schedule": ["started 0", "exited 0 success"],
+    "outcome": "finished",
+    "internal": [],
+    "frames": 3,
+    "fibers": [{"parkedToken": null, "id": 0, "exited": true, "exit": {"success": 7}}],
+    "fiberCount": 1,
+    "exitKind": "success",
+    "exit": {"success": 7},
+    "events": ["started 0", "exited 0 {\"success\":7}"]},
+   "name": "pCatchIfHit",
+   "exprRefusal": null,
+   "expr":
+   "Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(7), Cause.combine(Cause.die(3), Cause.fail(9)))), (a0) => eq(a0, 7), (a0) => Effect.succeed(a0), undefined)",
+   "decl":
+   "export const main: Effect.Effect<number, number> = Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(7), Cause.combine(Cause.die(3), Cause.fail(9)))), (a0) => eq(a0, 7), (a0) => Effect.succeed(a0), undefined)\n"},
+  {"wellTyped": true,
+   "type": {"requiresEmpty": true, "requires": [], "error": "number", "answer": "number"},
+   "runSync":
+   {"sync": true,
+    "exitKind": "fail",
+    "exit": {"failure": {"reasons": [{"fail": 7}, {"die": {"user": 3}}, {"fail": 9}]}}},
+   "run":
+   {"schedule": ["started 0", "exited 0 fail"],
+    "outcome": "finished",
+    "internal": [],
+    "frames": 3,
+    "fibers":
+    [{"parkedToken": null,
+      "id": 0,
+      "exited": true,
+      "exit": {"failure": {"reasons": [{"fail": 7}, {"die": {"user": 3}}, {"fail": 9}]}}}],
+    "fiberCount": 1,
+    "exitKind": "fail",
+    "exit": {"failure": {"reasons": [{"fail": 7}, {"die": {"user": 3}}, {"fail": 9}]}},
+    "events":
+    ["started 0",
+     "exited 0 {\"failure\":{\"reasons\":[{\"fail\":7},{\"die\":{\"user\":3}},{\"fail\":9}]}}"]},
+   "name": "pCatchIfMiss",
+   "exprRefusal": null,
+   "expr":
+   "Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(7), Cause.combine(Cause.die(3), Cause.fail(9)))), (a0) => eq(a0, 9), (a0) => Effect.succeed(a0), undefined)",
+   "decl":
+   "export const main: Effect.Effect<number, number> = Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(7), Cause.combine(Cause.die(3), Cause.fail(9)))), (a0) => eq(a0, 9), (a0) => Effect.succeed(a0), undefined)\n"},
+  {"wellTyped": true,
+   "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
+   "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 9}},
+   "run":
+   {"schedule": ["started 0", "exited 0 success"],
+    "outcome": "finished",
+    "internal": [],
+    "frames": 9,
+    "fibers": [{"parkedToken": null, "id": 0, "exited": true, "exit": {"success": 9}}],
+    "fiberCount": 1,
+    "exitKind": "success",
+    "exit": {"success": 9},
+    "events": ["started 0", "exited 0 {\"success\":9}"]},
+   "name": "pCatchIfRetained",
+   "exprRefusal": null,
+   "expr":
+   "Effect.flatMap(Ref.make(1), (a0) => Effect.catchCause(Effect.catchIf(Effect.flatMap(Ref.set(a0, 9), (a1) => Effect.fail(7)), (a1) => false, (a1) => Ref.get(a0), undefined), (a1) => Ref.get(a0)))",
+   "decl":
+   "export const main: Effect.Effect<number, never> = Effect.flatMap(Ref.make(1), (a0) => Effect.catchCause(Effect.catchIf(Effect.flatMap(Ref.set(a0, 9), (a1) => Effect.fail(7)), (a1) => false, (a1) => Ref.get(a0), undefined), (a1) => Ref.get(a0)))\n"}],
  "hostRows":
  [{"typeArgs": [],
    "trailing": [],

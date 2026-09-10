@@ -342,3 +342,12 @@ appears only in the batteries.
 Each row is a pair of guards in the owning battery: the witness as stated and the
 statement the repair makes true. A change that lets a row's attacked statement hold must
 change both guards.
+
+
+## S3 conditional-handler extension (2026-09-10)
+
+`Eff.catchIf` stays outside `Denote.Straight` and `Agreement.Plain` (DI-07).
+Its compiler/reference connection is the existing `Sched.code_intro`, with the same
+`run_eq_ref` decision-tape, fuel and empty-table/no-oracle scope. The extension supplies
+no `run_eq_meaning` instance and no general bind law. `Test/Program/CatchIfContract.lean`
+checks first-Fail selection, the whole-cause miss, replacement on hit and retained writes.

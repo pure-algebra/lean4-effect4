@@ -48,49 +48,8 @@
 # were declared here from their birth; both lanes were retired on 2026-09-04 with
 # their batteries deleted, so the list is empty and the all-green control holds.
 
-# The Surface library's frozen breaker packet (wave 1b of
-# docs/research/2026-09-04-surface-library-plan.md, plus the Handler packet that
-# plan §13.7 ruling 7 requires before wave 2d builds). The breaker froze these
-# from the plan alone, without reading src/Effect4/Surface/, which is the whole point
-# of the role; they are red until §13.7 ruling 5's repair lands, which restates
-# them clause for clause against the vocabulary Refusal.lean actually carries. That
-# repair, the Test/All.lean import lines and the TestSurface target are
-# the coordinator's wave 4. Each entry below was elaborated with
-# `lake env lean` on 2026-09-04 and observed to fail.
-# reason: frozen Surface breaker packet; red until the §13.7 ruling 5 repair restates it against Refusal.lean's vocabulary
-Test.Surface.Fixtures
-Test.Surface.FactsContract
-Test.Surface.KindContract
-Test.Surface.EntityContract
-Test.Surface.JsonSchemaContract
-Test.Surface.ApiContract
-Test.Surface.AgentContract
-Test.Surface.DeployContract
-Test.Surface.SiteContract
-Test.Surface.IngestContract
-Test.Surface.EmitContract
-Test.Surface.DeriveContract
-Test.Surface.SurfaceAxiomReport
-Test.Counterexamples.Surface.Facts
-Test.Counterexamples.Surface.Kind
-Test.Counterexamples.Surface.Entity
-Test.Counterexamples.Surface.JsonSchema
-Test.Counterexamples.Surface.Api
-Test.Counterexamples.Surface.Agent
-Test.Counterexamples.Surface.Deploy
-Test.Counterexamples.Surface.Site
-Test.Counterexamples.Surface.Ingest
-Test.Counterexamples.Surface.Emit
-Test.Counterexamples.Surface.Derive
-
-# The Handler packet that plan §13.7 ruling 7 requires before wave 2d builds.
-# Frozen from §13.2 alone; red until src/Effect4/Surface/Handler.lean exists, whose
-# module path is itself a coordinator ruling (§13.2 puts Endpoint.effTy over
-# Effect4.Program.Typing, and §2 forbids Effect4.Surface.* importing it).
-# Both elaborated with `lake env lean` on 2026-09-04 and observed to fail.
-# reason: frozen Handler packet; red until src/Effect4/Surface/Handler.lean exists (plan §13.7 ruling 7, before wave 2d)
-Test.Surface.HandlerFitsContract
-Test.Counterexamples.Surface.HandlerFits
+# History: The Surface library's frozen breaker packet (26 modules) was retired
+# on 2026-09-10 and archived to branch `archive/surface`.
 
 # History: the gates `avatar-witnesses` and `armmap-citations` were declared here from
 # 62c04d9 (the hand-written avatar predated the join, the scheduler and the timer) until

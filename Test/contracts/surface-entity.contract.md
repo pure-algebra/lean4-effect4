@@ -3,9 +3,9 @@
 Status: breaker packet, red, 2026-09-04 (wave 1b of
 `docs/research/2026-09-04-surface-library-plan.md` §4.1-§4.2)
 
-Implementation (owed): `src/Effect4/Surface/Entity.lean`
+Implementation (owed): `git:70b1571:src/Effect4/Surface/Entity.lean`
 
-Battery: `Test/Surface/EntityContract.lean`
+Battery: `git:70b1571:Test/Surface/EntityContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-009` through `E4-SURFACE-CE-015`,
 `E4-SURFACE-CE-062`, `E4-SURFACE-CE-063`
@@ -14,9 +14,9 @@ Shared: `Test/contracts/surface-facts.contract.md` owns the `Refusal`
 alphabet; this contract owns the entity and domain clause names and their
 order.
 
-Witnesses: `Test/Counterexamples/Surface/Entity.lean`
+Witnesses: `git:70b1571:Test/Counterexamples/Surface/Entity.lean`
 
-Fixtures: `Test/Surface/Fixtures.lean` (the `shop` domain: `User` keyed
+Fixtures: `git:70b1571:Test/Surface/Fixtures.lean` (the `shop` domain: `User` keyed
 by `id`, `Address`, `NotFound`)
 
 ## Purpose
@@ -127,7 +127,7 @@ def spell (refs : List Effect4.ReferenceEntry) :
 entity classification of §4.1 and the emitter classification of §5 `Stance` in
 one namespace; the two are different alphabets and both are public, so this
 packet freezes `EntityStance` here and reserves `Stance` for
-`src/Effect4/Codegen/Emit.lean`. See finding 1 of the wave-1b report.
+`git:70b1571:src/Effect4/Codegen/Emit.lean`. See finding 1 of the wave-1b report.
 
 ## Observations
 
@@ -168,7 +168,7 @@ packet freezes `EntityStance` here and reserves `Stance` for
 - The annotation keys are the exact rc.112 bag key strings `"identifier"`,
   `"title"`, `"description"`, `"documentation"`, `"examples"`, `"default"`,
   `"deprecated"` (`Schema.ts:17105` and the surrounding annotation record).
-  Wave 1a publishes them as `AnnotationKey`s in `src/Effect4/Surface/Annotate.lean`;
+  Wave 1a publishes them as `AnnotationKey`s in `git:70b1571:src/Effect4/Surface/Annotate.lean`;
   the fixtures of this packet write the raw `AnnotationEntry` list so the
   battery does not depend on that module's spelling.
 - `spell` returns `none`, never a partial or `Decl.raw` spelling, for a

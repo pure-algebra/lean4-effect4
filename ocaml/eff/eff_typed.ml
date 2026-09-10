@@ -123,6 +123,13 @@ type (_, _) term =
 
 (* ---- causes (causeTy) ---- *)
 
+(* A conditional predicate cannot be syntactic true: that spelling uses Catch_error,
+   whose result correctly discharges the body's error column. *)
+type 'env conditional_test = Conditional_test of ('env, bool) term
+let conditional_test : type env. (env, bool) term -> env conditional_test option = function
+  | Bool_lit true -> None
+  | term -> Some (Conditional_test term)
+
 type (_, _) cause =
   | C_fail : 'e error_ty * ('env, 'e) term -> ('env, 'e) cause
   | C_die : ('env, 'd) term -> ('env, never) cause
@@ -222,6 +229,12 @@ type (_, _, _) eff =
   | Catch_cause :
       ('env, 'a, 'e1) eff * ('e1 cause_of * 'env, 'b, 'e2) eff * ('a, 'b, 'c) join_answer
       -> ('env, 'c, 'e2) eff
+  | Catch_error :
+      ('env, 'a, 'e1) eff * ('e1 * 'env, 'b, 'e2) eff * ('a, 'b, 'c) join_answer
+      -> ('env, 'c, 'e2) eff
+  | Catch_if :
+      ('e1 * 'env) conditional_test * ('env, 'a, 'e1) eff * ('e1 * 'env, 'b, 'e2) eff
+      * ('a, 'b, 'c) join_answer -> ('env, 'c, ('e1, 'e2) union) eff
   | Match_cause :
       ('env, 'a, 'e) eff * ('a * 'env, 'b, 'e1) eff * ('e cause_of * 'env, 'c, 'e2) eff
       * ('b, 'c, 'd) join_answer
@@ -443,6 +456,8 @@ let rec erase_eff : type env a e. int -> (env, a, e) eff -> Eff_types.eff = fun 
   | Bind (f, r) -> Eff_types.Eff_bind (erase_eff d f, erase_eff (d + 1) r)
   | Gen (body, _) -> Eff_types.Eff_gen (erase_stmts d body)
   | Catch_cause (b, h, _) -> Eff_types.Eff_catchCause (erase_eff d b, erase_eff (d + 1) h)
+  | Catch_error (b, h, _) -> Eff_types.Eff_catchIf (Eff_types.Term_lit (Eff_types.Lit_bool true), erase_eff d b, erase_eff (d + 1) h)
+  | Catch_if (Conditional_test test, b, h, _) -> Eff_types.Eff_catchIf (erase_term (d + 1) test, erase_eff d b, erase_eff (d + 1) h)
   | Match_cause (b, v, c, _) ->
     Eff_types.Eff_matchCause (erase_eff d b, erase_eff (d + 1) v, erase_eff (d + 1) c)
   | On_exit (b, f) -> Eff_types.Eff_onExit (erase_eff d b, erase_eff (d + 1) f)

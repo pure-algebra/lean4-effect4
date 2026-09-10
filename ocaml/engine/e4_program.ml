@@ -206,6 +206,9 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Eff_bind (a, b) -> A.Eff_bind (of_eff a, of_eff b)
     | Eff_types.Eff_gen s -> A.Eff_gen (of_stmts s)
     | Eff_types.Eff_catchCause (a, b) -> A.Eff_catchCause (of_eff a, of_eff b)
+    | Eff_types.Eff_catchIf _ ->
+      raise (Ordinal_mismatch
+        "catchIf: engine cut before Phase 1 regeneration")
     | Eff_types.Eff_matchCause (a, b, c) ->
       A.Eff_matchCause (of_eff a, of_eff b, of_eff c)
     | Eff_types.Eff_onExit (a, b) -> A.Eff_onExit (of_eff a, of_eff b)

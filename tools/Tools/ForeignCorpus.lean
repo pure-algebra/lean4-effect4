@@ -37,6 +37,7 @@ mutual
     | .bind a b => return .bind (← program a) (← program b)
     | .gen b => return .gen (← statements b)
     | .catchCause a b => return .catchCause (← program a) (← program b)
+    | .catchIf t a b => return .catchIf t (← program a) (← program b)
     | .matchCause a b c => return .matchCause (← program a) (← program b) (← program c)
     | .onExit a b => return .onExit (← program a) (← program b)
     | .exit a => return .exit (← program a)

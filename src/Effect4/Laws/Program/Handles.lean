@@ -78,7 +78,7 @@ def Region.keys : Region → List Handle
 def EffName.keys : EffName → List Handle
   | .external _ request => request.keys
   | .cont p => p.keys
-  | .caught p => p.keys
+  | .caught p | .caughtError p => p.keys
   | .onValue p => p.keys
   | .onCause p => p.keys
   | .fin p => p.keys
@@ -655,6 +655,11 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; exact frontier_keys p
     · rw [compileEff_catchCause b h hf]
+      sub_tac using (compileEff_keys b (p.child 0))
+  | .catchIf test b h, p => by
+    rcases hf : p.fuel with _ | k
+    · rw [compileEff_zero _ hf]; exact frontier_keys p
+    · rw [compileEff_catchIf test b h hf]
       sub_tac using (compileEff_keys b (p.child 0))
   | .matchCause b v c, p => by
     rcases hf : p.fuel with _ | k
@@ -1328,7 +1333,7 @@ theorem forkScopedAt_keys (root : NativeEff) (p : Point) (scope : Nat) (a : NAct
   · cases h
 
 -- One table, one budget: the join doubled the arms (`set_option`, as `interpOf_keyBounded`).
-set_option maxHeartbeats 1600000 in
+set_option maxHeartbeats 800000 in
 /-- The compile's continuation table names only what its name and its value name. The join's
 names first, each by its continuation's own bound (`Agreement.lean`'s equations select the arm;
 a handle-reading name splits on its reader); the rest as one `match` over the name and the
@@ -1541,10 +1546,38 @@ theorem contAOf_native_keys (root : NativeEff) (n : EffName) (v : Val) :
                    norm [Point.keys, EffName.keys, EffThunk.keys, embed_keys]
                · sub_tac)))
 
+/-- A successful conditional handler binds exactly the once-selected first error. -/
+theorem caughtErrorValue?_first {env : List Val} {test : Term} {cause : CauseV} {value : Val}
+    (h : caughtErrorValue? env test cause = some value) : firstErrorValue? cause = some value := by
+  simp only [caughtErrorValue?, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+  obtain ⟨found, hfound, h⟩ := h
+  split at h
+  · cases h; exact hfound
+  · cases h
+
+/-- The selected error image cannot introduce a handle into the handler environment. -/
+theorem caughtErrorValue?_keys {env : List Val} {test : Term} {cause : CauseV} {value : Val}
+    (h : caughtErrorValue? env test cause = some value) : value.keys = [] := by
+  have hf := caughtErrorValue?_first h
+  simp only [firstErrorValue?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hf
+  obtain ⟨error, _, he⟩ := hf
+  exact valOfErr_keys error value he
+
 theorem contEOf_native_keys (root : NativeEff) (n : EffName) (cause : CauseV) :
     nativeKeys (Program.contEOf root n cause) ⊆ n.keys := by
   cases n with
   | caught p => simp only [Program.contEOf]; sub_tac using (resolve_keys root (p.childWith 1 (Val.exitErr cause)))
+  | caughtError p =>
+    simp only [Program.contEOf]
+    split
+    · split
+      · rename_i value hvalue
+        have hk := caughtErrorValue?_keys hvalue
+        simpa only [Point.keys, Point.childWith, List.flatMap_append, List.flatMap_cons,
+          List.flatMap_nil, hk, List.append_nil, EffName.keys] using
+          (resolve_keys root (p.childWith 1 value))
+      · exact List.nil_subset _
+    · exact List.nil_subset _
   | onCause p => simp only [Program.contEOf]; sub_tac using (resolve_keys root (p.childWith 2 (Val.exitErr cause)))
   | restore exit =>
     simp only [Program.contEOf, primKeys_ofExit]
@@ -1746,7 +1779,7 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
       simp only [interpOf] at h
       have hs := stores_keyBounded.iterNext_done name v r (embedStep_done h)
       simpa only [EffName.keys, List.nil_append] using hs
-    | cont p | caught p | onValue p | onCause p | fin p | restore e | merge e | loop p | registerAwait cell
+    | cont p | caught p | caughtError p | onValue p | onCause p | fin p | restore e | merge e | loop p | registerAwait cell
     | cancelAwait cell | withWaiter base waiter token | abort | reFail c | scopeOpen p | scopeProvide p s
     | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
     | forkScopedIn p | acquireCtx p | acquireIn p ctx | acquired p ctx sc | afterScopeAdd a finalizer
@@ -1775,7 +1808,7 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
       obtain ⟨next0, n0, hstep, rfl, rfl⟩ := embedStep_resume h
       have hs := stores_keyBounded.iterNext_resume name v next0 n0 hstep
       simpa only [nativeKeys, embed_keys, EffName.keys, List.nil_append] using hs
-    | cont p | caught p | onValue p | onCause p | fin p | restore e | merge e | loop p | registerAwait cell
+    | cont p | caught p | caughtError p | onValue p | onCause p | fin p | restore e | merge e | loop p | registerAwait cell
     | cancelAwait cell | withWaiter base waiter token | abort | reFail c | scopeOpen p | scopeProvide p s
     | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
     | forkScopedIn p | acquireCtx p | acquireIn p ctx | acquired p ctx sc | afterScopeAdd a finalizer
@@ -1792,7 +1825,7 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
   loopBody n c := by
     cases n with
     | loop p => simp only [interpOf]; sub_tac using (resolve_keys root (p.childWith 0 c))
-    | cont p | caught p | onValue p | onCause p | fin p | restore e | merge e | gen p pc bind | registerAwait cell
+    | cont p | caught p | caughtError p | onValue p | onCause p | fin p | restore e | merge e | gen p pc bind | registerAwait cell
     | cancelAwait cell | withWaiter base waiter token | abort | reFail c' | scopeOpen p | scopeProvide p s
     | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
     | store name | forkScopedIn p | acquireCtx p | acquireIn p ctx | acquired p ctx sc | afterScopeAdd a finalizer
@@ -1819,7 +1852,7 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
           simp only [List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.append_nil] at hk
           sub_tac using hk
       · sub_tac
-    | cont p | caught p | onValue p | onCause p | fin p | restore e | merge e | gen p pc bind | registerAwait cell
+    | cont p | caught p | caughtError p | onValue p | onCause p | fin p | restore e | merge e | gen p pc bind | registerAwait cell
     | cancelAwait cell | withWaiter base waiter token | abort | reFail c' | scopeOpen p | scopeProvide p s
     | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
     | store name | forkScopedIn p | acquireCtx p | acquireIn p ctx | acquired p ctx sc | afterScopeAdd a finalizer
@@ -1971,7 +2004,7 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
       | _ =>
         simp only [interpOf]
         exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
-    | cont p | caught p | onValue p | onCause p | fin p | restore e | merge e | gen p pc bind | loop p
+    | cont p | caught p | caughtError p | onValue p | onCause p | fin p | restore e | merge e | gen p pc bind | loop p
     | cancelAwait cell | withWaiter base waiter token' | abort | reFail c | scopeOpen p | scopeProvide p sc
     | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
     | forkScopedIn p | acquireCtx p | acquireIn p ctx | acquired p ctx sc' | afterScopeAdd a finalizer
@@ -2117,6 +2150,7 @@ theorem interpAt_keyBounded (root : NativeEff) (completed : List (FiberId × Exi
   contE n c := by
     have h : (interpAt root completed table).contE n c = contEOf root (match n with
         | .caught p => .caught { p with completed }
+        | .caughtError p => .caughtError { p with completed }
         | .onCause p => .onCause { p with completed }
         | name => name) c := rfl
     rw [h]

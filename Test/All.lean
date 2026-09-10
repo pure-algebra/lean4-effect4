@@ -80,11 +80,6 @@ import Test.Ingest.TaxonomyContract
 import Test.Codegen.FormsContract
 import Test.Codegen.ReadAxiomReport
 import Test.Program.Gen
-import Test.Codegen.RuleContract
-import Test.Codegen.AppContract
-import Test.Ingest.JsonSchemaContract
-import Test.Ingest.WranglerContract
-import Test.Ingest.McpContract
 import Test.Program.CompileContract
 import Test.Program.TypedContract
 import Test.Program.WeakenContract
@@ -114,12 +109,11 @@ import Test.Program.ProvisionContract
 import Test.Program.ProvisionAxiomReport
 import Test.Program.ConfigContract
 import Test.Program.ConfigAxiomReport
-import Test.Surface.ProvisionContract
-import Test.Surface.ProvisionAxiomReport
 import Test.Api.ApiContract
 import Test.Program.ScopedTypingContract
 import Test.Program.NativeAtomContract
 import Test.Program.ErrorQueriesContract
+import Test.Program.CatchIfContract
 import Test.Machine.Fuzz
 import Test.Audit.RuntimeCoverage
 import Test.Audit.AxiomGate

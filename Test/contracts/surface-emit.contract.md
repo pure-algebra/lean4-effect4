@@ -3,13 +3,13 @@
 Status: breaker packet, red, 2026-09-04 (wave 1b of
 `docs/research/2026-09-04-surface-library-plan.md` §5)
 
-Implementation (owed): `src/Effect4/Codegen/Emit.lean`
+Implementation (owed): `git:70b1571:src/Effect4/Codegen/Emit.lean`
 
-Battery: `Test/Surface/EmitContract.lean`
+Battery: `git:70b1571:Test/Surface/EmitContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-058`, `E4-SURFACE-CE-059`, `E4-SURFACE-CE-070`
 
-Witnesses: `Test/Counterexamples/Surface/Emit.lean`
+Witnesses: `git:70b1571:Test/Counterexamples/Surface/Emit.lean`
 
 ## Purpose
 

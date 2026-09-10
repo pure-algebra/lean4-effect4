@@ -34,6 +34,12 @@
       "source": 23
     },
     {
+      "family": "Effect4.Program.Eff",
+      "reason": "source-append-unavailable-in-frozen-engine",
+      "engine": 27,
+      "source": 28
+    },
+    {
       "family": "Effect4.Program.LayerTerm",
       "reason": "source-append-unavailable-in-frozen-engine",
       "engine": 8,

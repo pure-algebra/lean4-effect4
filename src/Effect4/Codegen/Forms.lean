@@ -158,7 +158,7 @@ def duals : List (String × DualRule) :=
   (["flatMap", "catchCause", "matchCauseEffect", "onExit", "map", "andThen", "tap", "as",
     "timeout", "mapError", "delay", "ensuring", "catch", "tapError", "retry", "matchCause"].map
     fun name => ("Effect." ++ name, .fixed 2)) ++
-  (["forkChild", "forkDetach", "forkIn", "forkScoped", "provide", "catchTag"].map
+  (["forkChild", "forkDetach", "forkIn", "forkScoped", "provide", "catchTag", "catchIf"].map
     fun name => ("Effect." ++ name, .effectFirst)) ++
   [("Effect.provideService", .provideService), ("Effect.forEach", .functionSecond),
    ("Effect.zip", .effectSecond), ("Effect.race", .effectSecond)]

@@ -1088,6 +1088,26 @@ const readGen: HeadReader = (n, args) => {
 }
 const readCatchCause: HeadReader = withContinuation("Effect.catchCause", (body, handler) => ({ _tag: "catchCause", body, handler }))
 
+const readCatchError: HeadReader = withContinuation("Effect.catch", (body, handler) =>
+  ({ _tag: "catchIf", test: { _tag: "lit", value: { _tag: "bool", value: true } }, body, handler }))
+const readCatchIf: HeadReader = (n, args) => {
+  const [body, predicate, handler, fallback] = args
+  if (args.length !== 4 || body === undefined || predicate?._tag !== "lambda" || handler?._tag !== "lambda" ||
+    predicate.params.length !== 1 || handler.params.length !== 1) return arity("Effect.catchIf")
+  if (fallback?._tag !== "ident" || fallback.name !== "undefined")
+    return refuse({ _tag: "shape", what: "catchIf requires an absent fallback" })
+  const test = predicate.body
+  if (test._tag === "bool" && test.value) return refuse({ _tag: "shape", what: "unconditional catchIf uses Effect.catch" })
+  if (predicate.params[0] !== varName(n) || handler.params[0] !== varName(n)) return refuse({ _tag: "binder", expected: varName(n) })
+  const b = readEff(n, body)
+  if (failed(b)) return again(b)
+  const t = readTerm(n + 1, test)
+  if (failed(t)) return again(t)
+  const h = readEff(n + 1, handler.body)
+  if (failed(h)) return again(h)
+  return ok({ _tag: "catchIf", test: t.success, body: b.success, handler: h.success })
+}
+
 /** `Effect.matchCauseEffect(body, { onFailure: (a<n>) => c, onSuccess: (a<n>) => v })`. */
 const readMatchCauseEffect: HeadReader = (n, args) => {
   const [body, arms] = args
@@ -1216,6 +1236,8 @@ const headReaders: Record<Head, HeadReader> = {
   "Effect.flatMap": readFlatMap,
   "Effect.gen": readGen,
   "Effect.catchCause": readCatchCause,
+  "Effect.catch": readCatchError,
+  "Effect.catchIf": readCatchIf,
   "Effect.matchCauseEffect": readMatchCauseEffect,
   "Effect.onExit": readOnExit,
   "Effect.exit": readExit,
@@ -1427,6 +1449,7 @@ export const childrenOf = (n: IrNode): ReadonlyArray<Child> => {
         case "bind": return [atEff(e.first, (first) => kEff({ ...e, first })), atEff(e.rest, (rest) => kEff({ ...e, rest }))]
         case "gen": return [atStmts(e.body, (body) => kEff({ ...e, body }))]
         case "catchCause":
+        case "catchIf":
           return [atEff(e.body, (body) => kEff({ ...e, body })), atEff(e.handler, (handler) => kEff({ ...e, handler }))]
         case "matchCause":
           return [atEff(e.body, (body) => kEff({ ...e, body })), atEff(e.onValue, (onValue) => kEff({ ...e, onValue })),

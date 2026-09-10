@@ -62,6 +62,7 @@ def _root_.Effect4.Program.EffName.refreshA (completed : List (FiberId × ExitV)
 /-- `interpAt`'s refresh of the cause-continuation names against a completed view. -/
 def _root_.Effect4.Program.EffName.refreshE (completed : List (FiberId × ExitV)) : EffName → EffName
   | .caught p => .caught { p with completed }
+  | .caughtError p => .caughtError { p with completed }
   | .onCause p => .onCause { p with completed }
   | name => name
 

@@ -233,6 +233,11 @@ mutual
     /-- `Effect.provideService(self, key, value)` (`internal/effect.ts:2202-2232`):
     `updateContext(self, Context.add(key, value))`, a region over the body. -/
     | provideService (key : ServiceKey) (value : Term) (body : Eff Op)
+    /-- `Effect.catchIf` (`internal/effect.ts:2798-2810`): test and handler bind the
+    first Fail's represented error value. A miss or unrepresented first Fail retains
+    the whole cause; a hit replaces it. DI-09's boom policy is `CATCH-FB-BOOM`.
+    Body is child 0 and handler child 1; this form remains outside Straight/Plain. -/
+    | catchIf (test : Term) (body handler : Eff Op)
   /-- A statement of a generator body. -/
   inductive Stmt (Op : Type)
     /-- `const aN = yield* e`: binds the answer as the next variable. -/
@@ -359,6 +364,10 @@ mutual
     | .cons head tail => .cons (Term.weaken cut head) (Terms.weaken cut tail)
 end
 
+@[simp] theorem Term.weaken_eq_lit (cut : Nat) (term : Term) (value : Lit) :
+    Term.weaken cut term = .lit value ↔ term = .lit value := by
+  cases term <;> simp [Term.weaken]
+
 def CauseTerm.weaken (cut : Nat) : CauseTerm → CauseTerm
   | .fail error => .fail (Term.weaken cut error)
   | .die defect => .die (Term.weaken cut defect)
@@ -380,6 +389,8 @@ mutual
     | .bind first rest => .bind (Eff.weaken cut first) (Eff.weaken cut rest)
     | .gen body => .gen (Stmts.weaken cut body)
     | .catchCause body handler => .catchCause (Eff.weaken cut body) (Eff.weaken cut handler)
+    | .catchIf test body handler =>
+      .catchIf (Term.weaken cut test) (Eff.weaken cut body) (Eff.weaken cut handler)
     | .matchCause body onValue onCause =>
       .matchCause (Eff.weaken cut body) (Eff.weaken cut onValue) (Eff.weaken cut onCause)
     | .onExit body finalizer => .onExit (Eff.weaken cut body) (Eff.weaken cut finalizer)
@@ -481,17 +492,18 @@ def arms : List Arm :=
   , ⟨"choose", "(flows only; refused by the native printer)", "tape-answered at compile", "Effects.Flow.RawTerm.choose"⟩
   , ⟨"provideLayer", "Effect.provide", "scoped layer build + provideContext region", "internal/layer.ts:8-22"⟩
   , ⟨"service", "Effect.service", "Prim.onSuccess (Prim.withFiber getCtx) serviceLookup", "internal/effect.ts:2059"⟩
-  , ⟨"provideService", "Effect.provideService", "updateContext region", "internal/effect.ts:2202-2232"⟩ ]
+  , ⟨"provideService", "Effect.provideService", "updateContext region", "internal/effect.ts:2202-2232"⟩
+  , ⟨"catchIf", "Effect.catchIf", "Prim.onFailure", "internal/effect.ts:2798-2810"⟩ ]
 
 /-- Every constructor has one arm and every arm one constructor. -/
 def constructorNames : List String :=
   ["succeed", "fail", "failCause", "yieldError", "sync", "suspend", "perform", "bind", "gen",
    "catchCause", "matchCause", "onExit", "exit", "uninterruptible", "interruptible", "branch",
    "whileLoop", "yieldNow", "callback", "awaitFiber", "withFiber", "scoped", "acquireRelease",
-   "choose", "provideLayer", "service", "provideService"]
+   "choose", "provideLayer", "service", "provideService", "catchIf"]
 
 #guard arms.map Arm.constructor = constructorNames
-#guard constructorNames.length = 27
+#guard constructorNames.length = 28
 
 /-! ## The separation-4 receipts: first-order, decidable throughout -/
 

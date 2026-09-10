@@ -122,6 +122,16 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
       EffTy.joinAnswer b.answer h.answer = some answer →
       HasTy sig env (.catchCause body handler)
         ⟨answer, h.error, b.requires.union h.requires⟩
+  /-- DI-09: first-failure value binder. Only an unconditional literal test
+  discharges the body's error column; predicates do not assert a refinement. -/
+  | catchIf {env : TyEnv} {test : Term} {body handler : Eff Op} {b h : EffTy} {answer : Ty} :
+      HasTy sig env body b →
+      termTy sig (env ++ [b.error]) test = some .bool →
+      HasTy sig (env ++ [b.error]) handler h →
+      EffTy.joinAnswer b.answer h.answer = some answer →
+      HasTy sig env (.catchIf test body handler)
+        ⟨answer, if test = .lit (.bool true) then h.error else b.error.join h.error,
+          b.requires.union h.requires⟩
   /-- `Effect.matchCauseEffect` (`:2645`): the success branch sees the answer, the failure
   branch the cause; both branches' answers must join and both branches' errors survive. -/
   | matchCause {env : TyEnv} {body onValue onCause : Eff Op} {b v c : EffTy} {answer : Ty} :

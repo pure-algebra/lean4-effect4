@@ -3,9 +3,9 @@
 Status: breaker packet, red, 2026-09-04 (wave 1b of
 `docs/research/2026-09-04-surface-library-plan.md` §4.6)
 
-Implementation (owed): `src/Effect4/Surface/Deploy.lean`
+Implementation (owed): `git:70b1571:src/Effect4/Surface/Deploy.lean`
 
-Battery: `Test/Surface/DeployContract.lean`
+Battery: `git:70b1571:Test/Surface/DeployContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-043` through `E4-SURFACE-CE-049`,
 `E4-SURFACE-CE-067`
@@ -13,7 +13,7 @@ Counterexamples: `E4-SURFACE-CE-043` through `E4-SURFACE-CE-049`,
 Shared: `Test/contracts/surface-facts.contract.md` owns the `Refusal`
 alphabet.
 
-Witnesses: `Test/Counterexamples/Surface/Deploy.lean`
+Witnesses: `git:70b1571:Test/Counterexamples/Surface/Deploy.lean`
 
 Pins: `wrangler` 3.114.16 `config-schema.json` (vendored under
 `vendor/wrangler-3.114.16/`, SHA-256 recorded there), rc.112

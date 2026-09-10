@@ -1,4 +1,5 @@
 import Std
+import Effect4.Data.Constructive
 
 /-!
 # Finite canonical rows

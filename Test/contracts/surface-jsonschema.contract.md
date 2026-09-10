@@ -3,13 +3,13 @@
 Status: breaker packet, red, 2026-09-04 (wave 1b of
 `docs/research/2026-09-04-surface-library-plan.md` §4.3)
 
-Implementation (owed): `src/Effect4/Codegen/JsonSchema.lean`
+Implementation (owed): `git:70b1571:src/Effect4/Codegen/JsonSchema.lean`
 
-Battery: `Test/Surface/JsonSchemaContract.lean`
+Battery: `git:70b1571:Test/Surface/JsonSchemaContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-006` through `E4-SURFACE-CE-008`
 
-Witnesses: `Test/Counterexamples/Surface/JsonSchema.lean`
+Witnesses: `git:70b1571:Test/Counterexamples/Surface/JsonSchema.lean`
 
 ## Purpose
 

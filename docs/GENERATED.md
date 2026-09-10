@@ -795,3 +795,16 @@ tables describe, whose verdicts are finite runs over the fixture corpus.
 | `ocaml/goldens/eff/same-programs.txt` | committed projection | Wire goldens | Wire goldens | Wire goldens | Wire goldens | adjacent `.cut-from` | yes |
 | `ocaml/engine/e4_program_layout.ml` | committed projection | Engine structure | Engine structure | Engine structure | Engine structure | yes | yes |
 | `ocaml/engine/e4_program_layout.json` | committed projection | Engine structure | Engine structure | Engine structure | Engine structure | adjacent `.cut-from` | yes |
+| `ocaml/eff/goldens/pCatchError.bin` | committed projection | Eff goldens | Eff goldens | Eff goldens | Eff goldens | adjacent `.cut-from` | yes |
+| `ocaml/eff/goldens/pCatchError.json` | committed projection | Eff goldens | Eff goldens | Eff goldens | Eff goldens | adjacent `.cut-from` | yes |
+| `ocaml/eff/goldens/pCatchError.ty` | committed projection | Eff goldens | Eff goldens | Eff goldens | Eff goldens | adjacent `.cut-from` | yes |
+| `ocaml/eff/goldens/pCatchIf.bin` | committed projection | Eff goldens | Eff goldens | Eff goldens | Eff goldens | adjacent `.cut-from` | yes |
+| `ocaml/eff/goldens/pCatchIf.json` | committed projection | Eff goldens | Eff goldens | Eff goldens | Eff goldens | adjacent `.cut-from` | yes |
+| `ocaml/eff/goldens/pCatchIf.ty` | committed projection | Eff goldens | Eff goldens | Eff goldens | Eff goldens | adjacent `.cut-from` | yes |
+| `ocaml/eff/goldens/pIllCatchIf.bin` | committed projection | Eff goldens | Eff goldens | Eff goldens | Eff goldens | adjacent `.cut-from` | yes |
+| `ocaml/eff/goldens/pIllCatchIf.json` | committed projection | Eff goldens | Eff goldens | Eff goldens | Eff goldens | adjacent `.cut-from` | yes |
+| `ocaml/eff/goldens/pIllCatchIf.ty` | committed projection | Eff goldens | Eff goldens | Eff goldens | Eff goldens | adjacent `.cut-from` | yes |
+| `harness/truth/generated/pCatchError.ts` | committed projection | Truth | Truth | Truth | Truth | yes | yes |
+| `harness/truth/generated/pCatchIfHit.ts` | committed projection | Truth | Truth | Truth | Truth | yes | yes |
+| `harness/truth/generated/pCatchIfMiss.ts` | committed projection | Truth | Truth | Truth | Truth | yes | yes |
+| `harness/truth/generated/pCatchIfRetained.ts` | committed projection | Truth | Truth | Truth | Truth | yes | yes |

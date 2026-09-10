@@ -55,6 +55,7 @@ function walkProgram(program: Eff, onLayer: (l: LayerTerm, path: readonly number
         return { ...e, body: eff(e.body, child(0)) }
       case "bind": return { ...e, first: eff(e.first, child(0)), rest: eff(e.rest, child(1)) }
       case "gen": return { ...e, body: spine(e.body, child(0), stmt) }
+      case "catchIf":
       case "catchCause": return { ...e, body: eff(e.body, child(0)), handler: eff(e.handler, child(1)) }
       case "matchCause": return { ...e, body: eff(e.body, child(0)), onValue: eff(e.onValue, child(1)), onCause: eff(e.onCause, child(2)) }
       case "onExit": return { ...e, body: eff(e.body, child(0)), finalizer: eff(e.finalizer, child(1)) }
@@ -254,6 +255,14 @@ class CompilerReader {
       }
       case "Effect.flatMap": this.arity(a, 2); return { _tag: "bind", first: e(0), rest: k(1) }
       case "Effect.catchCause": this.arity(a, 2); return { _tag: "catchCause", body: e(0), handler: k(1) }
+      case "Effect.catch": this.arity(a, 2); return { _tag: "catchIf", test: { _tag: "lit", value: { _tag: "bool", value: true } }, body: e(0), handler: k(1) }
+      case "Effect.catchIf": {
+        this.arity(a, 4)
+        const predicate = this.arrow(arg(1), env, 1)
+        const value = this.unwrap(this.expression(predicate.body))
+        if (this.name(arg(3)) !== "undefined" || value.kind === ts.SyntaxKind.TrueKeyword) return bad("noncanonical catchIf")
+        return { _tag: "catchIf", test: this.term(value, predicate.env), body: e(0), handler: k(2) }
+      }
       case "Effect.onExit": this.arity(a, 2); return { _tag: "onExit", body: e(0), finalizer: k(1) }
       case "Effect.acquireRelease": this.arity(a, 2); return { _tag: "acquireRelease", acquire: e(0), release: k(1, 2) }
       case "Effect.gen": {
@@ -637,6 +646,14 @@ class ForeignCompilerReader extends CompilerReader {
     }
     if (head === "Effect.flatMap") { this.arity(args, 1); return { _tag: "bind", first, rest: cont(at(0)) } }
     if (head === "Effect.catchCause") { this.arity(args, 1); return { _tag: "catchCause", body: first, handler: cont(at(0)) } }
+    if (head === "Effect.catch") { this.arity(args, 1); return { _tag: "catchIf", test: { _tag: "lit", value: { _tag: "bool", value: true } }, body: first, handler: cont(at(0)) } }
+    if (head === "Effect.catchIf") {
+      if (args.length === 3) {
+        if (this.name(at(2)) !== "undefined") return refuseForeign("E-BIND-SHAPE", "catchIf fallback")
+      } else this.arity(args, 2)
+      const predicate = this.arrow(at(0), env, 1)
+      return { _tag: "catchIf", test: this.term(this.expression(predicate.body), predicate.env), body: first, handler: cont(at(1)) }
+    }
     if (head === "Effect.onExit") { this.arity(args, 1); return { _tag: "onExit", body: first, finalizer: cont(at(0)) } }
     if (head === "Effect.andThen" || head === "Effect.tap") {
       this.arity(args, 1)
@@ -845,7 +862,7 @@ class ForeignCompilerReader extends CompilerReader {
       }
       const h = this.name(x.expression)
       if (h === "Effect.fn" || h === "Effect.fnUntraced") return refuseForeign("E-PARAM-SHAPE", "function")
-      if (["Effect.catchTag", "Effect.catchTags", "Effect.catchIf", "Effect.catch", "Effect.mapError", "Effect.match", "Effect.orElseSucceed"].includes(h)) return refuseForeign("E-HANDLER", h)
+      if (["Effect.catchTag", "Effect.catchTags", "Effect.mapError", "Effect.match", "Effect.orElseSucceed"].includes(h)) return refuseForeign("E-HANDLER", h)
       if (["Effect.promise", "Effect.tryPromise", "Effect.try", "Effect.callback"].includes(h)) return refuseForeign("E-ARG-CLOSURE", h)
       if (h === "Effect.whileLoop") return refuseForeign("E-LOOP", "whileLoop")
       if (h.startsWith("Cause.") || h.startsWith("Layer.")) return refuseForeign("E-NODE", "program fragment")

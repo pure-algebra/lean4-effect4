@@ -299,6 +299,17 @@ let rec check_eff (env : env) (p : eff) : eff_ty checked =
     (match join_answer b.eff_ty_answer h.eff_ty_answer with
      | None -> refuse "catchCause: the answers do not join"
      | Some answer -> Ok (mk answer h.eff_ty_error (req_union b.eff_ty_requires h.eff_ty_requires)))
+  | Eff_catchIf (test, body, handler) ->
+    let* b = check_eff env body in
+    let error_env = env @ [ b.eff_ty_error ] in
+    let* predicate = term_ty error_env test in
+    if predicate <> Ty_bool then refuse "catchIf: predicate must be Boolean" else
+    let* h = check_eff error_env handler in
+    (match join_answer b.eff_ty_answer h.eff_ty_answer with
+     | None -> refuse "catchIf: the answers do not join"
+     | Some answer ->
+       let error = if test = Term_lit (Lit_bool true) then h.eff_ty_error else join b.eff_ty_error h.eff_ty_error in
+       Ok (mk answer error (req_union b.eff_ty_requires h.eff_ty_requires)))
   | Eff_matchCause (body, on_value, on_cause) ->
     let* b = check_eff env body in
     let* v = check_eff (env @ [ b.eff_ty_answer ]) on_value in

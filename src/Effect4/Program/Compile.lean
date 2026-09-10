@@ -294,6 +294,8 @@ inductive EffName
       (forked : List FiberId)
   /-- An external row and its evaluated request, retained while parked. -/
   | external (op : NativeOp) (request : Val)
+  /-- `catchIf`'s predicate and handler are recovered from the node at this point. -/
+  | caughtError (p : Point)
 deriving DecidableEq
 
 /-- The thunk alphabet: a pure term at a point, a body to compile at a point, a store
@@ -585,6 +587,7 @@ def compileEff : NativeEff → Point → NCode
       -- the iterator is what `suspendBodyAt` answers at this point.
       | .gen _ => Prim.suspend (EffThunk.body p)
       | .catchCause body _ => Prim.onFailure (compileEff body (p.child 0)) (EffName.caught p)
+      | .catchIf _ body _ => Prim.onFailure (compileEff body (p.child 0)) (EffName.caughtError p)
       | .matchCause body _ _ =>
         Prim.onSuccessAndFailure (compileEff body (p.child 0)) (EffName.onValue p)
           (EffName.onCause p)
@@ -1202,9 +1205,22 @@ def contAOf (root : NativeEff) : EffName → Val → NCode
   | .bindService key, v => bindServiceK key v
   | _, v => Prim.success v
 
+/-- Select the first Fail once, then test its represented payload. A malformed
+predicate is a miss, as is an unrepresented first failure (DI-09). -/
+def caughtErrorValue? (env : List Val) (test : Term) (cause : CauseV) : Option Val := do
+  let value ← firstErrorValue? cause
+  if evalTerm (env ++ [value]) test = some (.bool true) then some value else none
+
 /-- `cont[contE](cause, fiber)`. -/
 def contEOf (root : NativeEff) : EffName → CauseV → NCode
   | .caught p, cause => resolve root (p.childWith 1 (Val.exitErr cause))
+  | .caughtError p, cause =>
+    match Node.at_ (Node.eff root) p.path with
+    | some (.eff (.catchIf test _ _)) =>
+      match caughtErrorValue? p.env test cause with
+      | some value => resolve root (p.childWith 1 value)
+      | none => Prim.failure cause
+    | _ => Prim.failure cause
   | .onCause p, cause => resolve root (p.childWith 2 (Val.exitErr cause))
   | .restore exit, cause => Prim.ofExit (Exit.restoreAfterFinalizer exit (Exit.failure cause))
   | .merge exit, cause => Prim.ofExit (Exit.restoreAfterFinalizer exit (Exit.failure cause))
@@ -1506,6 +1522,7 @@ def interpAt (root : NativeEff) (completed : List (FiberId × ExitV)) (table : R
       | name => name) value
     contE := fun name cause => contEOf root (match name with
       | .caught p => .caught { p with completed }
+      | .caughtError p => .caughtError { p with completed }
       | .onCause p => .onCause { p with completed }
       | name => name) cause
     suspendBody := fun thunk => suspendBodyAt root (match thunk with

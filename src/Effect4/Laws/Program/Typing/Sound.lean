@@ -84,6 +84,11 @@ theorem effTy_sound (sig : Signature Op) (e : Eff Op) :
     intro env t h
     obtain ⟨b, hh, answer, hb, hhh, hj, rfl⟩ := inv_catchCause sig env body handler t h
     exact .catchCause (effTy_sound sig body env b hb) (effTy_sound sig handler _ hh hhh) hj
+  | catchIf test body handler =>
+    intro env t h
+    obtain ⟨b, hh, answer, hb, ht, hhh, hj, rfl⟩ := inv_catchIf sig env test body handler t h
+    exact .catchIf (effTy_sound sig body env b hb) ht
+      (effTy_sound sig handler _ hh hhh) hj
   | matchCause body onValue onCause =>
     intro env t h
     obtain ⟨b, v, c, answer, hb, hv, hc, hj, rfl⟩ :=
@@ -410,6 +415,11 @@ theorem effTy_complete (sig : Signature Op) (e : Eff Op) :
     have ih := stmtsTy_complete sig body _ _ _ ‹StmtsHasTy sig _ _ body _›
     simp_all [effTy]
   | catchCause body handler =>
+    intro env t hd; cases hd
+    have ihb := effTy_complete sig body _ _ ‹HasTy sig _ body _›
+    have ihh := effTy_complete sig handler _ _ ‹HasTy sig _ handler _›
+    simp_all [effTy]
+  | catchIf test body handler =>
     intro env t hd; cases hd
     have ihb := effTy_complete sig body _ _ ‹HasTy sig _ body _›
     have ihh := effTy_complete sig handler _ _ ‹HasTy sig _ handler _›

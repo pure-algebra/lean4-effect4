@@ -5,14 +5,14 @@ Status: breaker packet, red, 2026-09-04 (wave 1b of
 
 Implementation (owed): `Effect4.Surface.Ingest (planned module; the packet remains red)`
 
-Battery: `Test/Surface/IngestContract.lean`
+Battery: `git:70b1571:Test/Surface/IngestContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-053` through `E4-SURFACE-CE-057`,
 `E4-SURFACE-CE-069`, and
 `E4-SURFACE-CE-007`, `E4-SURFACE-CE-008` (shared with
 `surface-jsonschema.contract.md`)
 
-Witnesses: `Test/Counterexamples/Surface/Ingest.lean`
+Witnesses: `git:70b1571:Test/Counterexamples/Surface/Ingest.lean`
 
 ## Purpose
 

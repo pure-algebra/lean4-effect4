@@ -12,7 +12,7 @@ NativeOp: refMake refGet refSet refGetAndSet refSetAndGet refUpdate refGetAndUpd
 ServiceName: value
 ServiceTypeCode: value
 ServiceKey: name service
-Eff: succeed fail failCause yieldError sync suspend perform bind gen catchCause matchCause onExit exit uninterruptible interruptible branch whileLoop yieldNow callback awaitFiber withFiber scoped acquireRelease choose provideLayer service provideService
+Eff: succeed fail failCause yieldError sync suspend perform bind gen catchCause matchCause onExit exit uninterruptible interruptible branch whileLoop yieldNow callback awaitFiber withFiber scoped acquireRelease choose provideLayer service provideService catchIf
 Stmt: bindYield yieldDiscard ret ifElse whileTrue breakLoop
 Stmts: nil cons
 Effs: nil cons

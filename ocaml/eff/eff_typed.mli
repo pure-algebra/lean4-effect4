@@ -102,6 +102,11 @@ type (_, _) term =
 
 (* ---- causes (causeTy) ---- *)
 
+(* A conditional predicate cannot be syntactic true: that spelling uses Catch_error,
+   whose result correctly discharges the body's error column. *)
+type 'env conditional_test
+val conditional_test : ('env, bool) term -> 'env conditional_test option
+
 type (_, _) cause =
   | C_fail : 'e error_ty * ('env, 'e) term -> ('env, 'e) cause
   | C_die : ('env, 'd) term -> ('env, never) cause
@@ -203,6 +208,12 @@ type (_, _, _) eff =
   | Catch_cause :
       ('env, 'a, 'e1) eff * ('e1 cause_of * 'env, 'b, 'e2) eff * ('a, 'b, 'c) join_answer
       -> ('env, 'c, 'e2) eff
+  | Catch_error :
+      ('env, 'a, 'e1) eff * ('e1 * 'env, 'b, 'e2) eff * ('a, 'b, 'c) join_answer
+      -> ('env, 'c, 'e2) eff
+  | Catch_if :
+      ('e1 * 'env) conditional_test * ('env, 'a, 'e1) eff * ('e1 * 'env, 'b, 'e2) eff
+      * ('a, 'b, 'c) join_answer -> ('env, 'c, ('e1, 'e2) union) eff
   | Match_cause :
       ('env, 'a, 'e) eff * ('a * 'env, 'b, 'e1) eff * ('e cause_of * 'env, 'c, 'e2) eff
       * ('b, 'c, 'd) join_answer

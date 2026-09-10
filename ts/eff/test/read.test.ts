@@ -23,8 +23,8 @@ const refusal = (source: string): Refusal => {
 }
 
 describe("the profile", () => {
-  test("has the reader's 51 heads and one entry per NativeOp value", () => {
-    expect(heads.length).toBe(51)
+  test("has the reader's 53 heads and one entry per NativeOp value", () => {
+    expect(heads.length).toBe(53)
     expect(rows.length).toBe(55)
     expect(new Set(rows.map((e) => e.row.spelling)).size).toBe(22)
     expect(new Set(rows.map((e) => JSON.stringify(e.op))).size).toBe(55)
@@ -529,5 +529,26 @@ describe("supplied tables and method rows", () => {
   test("a dotted head is never a receiver, and a member off a binder is not a program", () => {
     expect(json("Effect.succeed(1)")).toBe(json("Effect.succeed(1)"))
     expect(refusalWith("Effect.flatMap(Effect.succeed(9), (a0) => a0.read)", methodTable)).toEqual({ _tag: "shape", what: "expression" })
+  })
+})
+
+
+describe("conditional handlers", () => {
+  test("canonical catch binds the first error", () => {
+    expect(json("Effect.catch(Effect.fail(7), (a0) => Effect.succeed(a0))")).toBe(
+      '["catchIf",["lit",["bool",true]],["fail",["lit",["nat",7]]],["succeed",["var",0]]]')
+  })
+  test("predicate and handler both see only their own binder", () => {
+    const source = "Effect.catchIf(Effect.fail(7), (a0) => eq(a0, 7), (a0) => Effect.succeed(a0), undefined)"
+    expect(JSON.parse(json(source))[0]).toBe("catchIf")
+    expect(refusal(source.replace("(a0) => eq", "(a1) => eq"))._tag).toBe("binder")
+    expect(refusal(source.replace("(a0) => Effect.succeed", "(a1) => Effect.succeed"))._tag).toBe("binder")
+  })
+  test("the exact reader requires an absent fallback", () => {
+    expect(refusal("Effect.catchIf(Effect.fail(7), (a0) => false, (a0) => Effect.succeed(a0))")._tag).toBe("arity")
+    expect(refusal("Effect.catchIf(Effect.fail(7), (a0) => false, (a0) => Effect.succeed(a0), extra)")._tag).toBe("shape")
+  })
+  test("the noncanonical unconditional spelling stays outside the exact print image", () => {
+    expect(refusal("Effect.catchIf(Effect.fail(7), (a0) => true, (a0) => Effect.succeed(a0), undefined)")._tag).toBe("shape")
   })
 })

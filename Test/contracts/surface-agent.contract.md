@@ -3,9 +3,9 @@
 Status: breaker packet, red, 2026-09-04 (wave 1b of
 `docs/research/2026-09-04-surface-library-plan.md` §4.5)
 
-Implementation (owed): `src/Effect4/Surface/Agent.lean`
+Implementation (owed): `git:70b1571:src/Effect4/Surface/Agent.lean`
 
-Battery: `Test/Surface/AgentContract.lean`
+Battery: `git:70b1571:Test/Surface/AgentContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-038` through `E4-SURFACE-CE-042`,
 `E4-SURFACE-CE-066`
@@ -13,7 +13,7 @@ Counterexamples: `E4-SURFACE-CE-038` through `E4-SURFACE-CE-042`,
 Shared: `Test/contracts/surface-facts.contract.md` owns the `Refusal`
 alphabet.
 
-Witnesses: `Test/Counterexamples/Surface/Agent.lean`
+Witnesses: `git:70b1571:Test/Counterexamples/Surface/Agent.lean`
 
 Pins: rc.112 `unstable/ai/Tool.ts:1204`,
 `unstable/ai/McpServer.ts:1609, 1882, 2106`

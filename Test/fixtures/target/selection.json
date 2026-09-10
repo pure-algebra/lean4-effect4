@@ -26,7 +26,11 @@
     "pSqlOrDie",
     "pFailText",
     "pFailBoomText",
-    "pTextOrDie"
+    "pTextOrDie",
+    "pCatchError",
+    "pCatchIfHit",
+    "pCatchIfMiss",
+    "pCatchIfRetained"
   ],
   "handles": {
     "Host.Resource": "Adapter.HostResource",

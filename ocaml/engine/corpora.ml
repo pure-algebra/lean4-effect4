@@ -988,7 +988,8 @@ let rec depth_of (e : eff) : int =
     0
   | Eff_suspend a | Eff_exit a | Eff_uninterruptible a | Eff_interruptible a | Eff_scoped a ->
     depth_of a
-  | Eff_bind (a, c) | Eff_catchCause (a, c) | Eff_onExit (a, c) | Eff_acquireRelease (a, c) ->
+  | Eff_bind (a, c) | Eff_catchCause (a, c) | Eff_onExit (a, c) | Eff_acquireRelease (a, c)
+  | Eff_catchIf (_, a, c) ->
     max (depth_of a) (depth_of c)
   | Eff_matchCause (a, c, d) -> max (depth_of a) (max (depth_of c) (depth_of d))
   | Eff_branch (_, a, c) | Eff_choose (_, a, c) -> max (depth_of a) (depth_of c)
@@ -1080,6 +1081,7 @@ let census (ps : program list) : (string * int) list =
       ->
       e_ a
     | Eff_bind (a, c) | Eff_catchCause (a, c) | Eff_onExit (a, c) | Eff_acquireRelease (a, c)
+    | Eff_catchIf (_, a, c)
       ->
       e_ a; e_ c
     | Eff_matchCause (a, c, d) -> e_ a; e_ c; e_ d

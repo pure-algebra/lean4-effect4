@@ -221,6 +221,15 @@ mutual
       let b ← print sig n body
       let h ← print sig (n + 1) handler
       .ok (.call (.ident "Effect.catchCause") [b, .lambda [Var.name n] h])
+    | .catchIf test body handler => do
+      let b ← print sig n body
+      let h ← print sig (n + 1) handler
+      if test = .lit (.bool true) then
+        .ok (.call (.ident "Effect.catch") [b, .lambda [Var.name n] h])
+      else
+        .ok (.call (.ident "Effect.catchIf")
+          [b, .lambda [Var.name n] (printTerm test),
+            .lambda [Var.name n] h, .ident "undefined"])
     | .matchCause body onValue onCause => do
       let b ← print sig n body
       let v ← print sig (n + 1) onValue

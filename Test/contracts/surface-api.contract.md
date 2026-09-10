@@ -3,14 +3,14 @@
 Status: breaker packet, red, 2026-09-04 (wave 1b of
 `docs/research/2026-09-04-surface-library-plan.md`, §4.4 as revised by §13.1)
 
-Implementation (owed): `src/Effect4/Surface/Api.lean`, `src/Effect4/Codegen/Target.lean`
+Implementation (owed): `git:70b1571:src/Effect4/Surface/Api.lean`, `src/Effect4/Codegen/Target.lean`
 
-Battery: `Test/Surface/ApiContract.lean`
+Battery: `git:70b1571:Test/Surface/ApiContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-016` through `E4-SURFACE-CE-037`,
 `E4-SURFACE-CE-065`
 
-Witnesses: `Test/Counterexamples/Surface/Api.lean`
+Witnesses: `git:70b1571:Test/Counterexamples/Surface/Api.lean`
 
 Shared: `Test/contracts/surface-facts.contract.md` owns the `Refusal`
 alphabet; this contract owns the endpoint, group and API clause names and

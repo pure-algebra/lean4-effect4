@@ -191,6 +191,7 @@ partial def effV : Eff NativeOp → V
   | .bind f r => .ctor ``Eff.bind [effV f, effV r]
   | .gen body => .ctor ``Eff.gen [stmtsV body]
   | .catchCause b h => .ctor ``Eff.catchCause [effV b, effV h]
+  | .catchIf t b h => .ctor ``Eff.catchIf [termV t, effV b, effV h]
   | .matchCause b v c => .ctor ``Eff.matchCause [effV b, effV v, effV c]
   | .onExit b f => .ctor ``Eff.onExit [effV b, effV f]
   | .exit b => .ctor ``Eff.exit [effV b]
@@ -411,6 +412,11 @@ def pFailText : P := .fail (.lit (.str "lost"))
 def pIllFailBool : P := .fail (.lit (.bool true))
 def pIllCauseBool : P := .failCause (.fail (.lit (.bool true)))
 
+/-- S3: unconditional catch, first-error predicate, and an invalid predicate. -/
+def pCatchError : P := .catchIf (.lit (.bool true)) (.fail (n 7)) (.succeed (v 0))
+def pCatchIf : P := .catchIf (.app "eq" (ts [v 0, n 7])) (.fail (n 7)) (.succeed (v 0))
+def pIllCatchIf : P := .catchIf (n 1) (.fail (n 7)) (.succeed (v 0))
+
 def corpus : List (String × P) :=
   [ ("p42", p42), ("pBind", pBind), ("pFork", pFork), ("pTwo", pTwo), ("pAwait", pAwait)
   , ("pGen", pGen), ("pWhile", pWhile), ("pCatch", pCatch), ("pStr", pStr), ("pFailCause", pFailCause)
@@ -422,7 +428,8 @@ def corpus : List (String × P) :=
   , ("pIllBranch", pIllBranch), ("pIllJoin", pIllJoin), ("pIllVar", pIllVar)
   , ("pIllCallback", pIllCallback), ("pIllStep", pIllStep), ("pIllInterruptor", pIllInterruptor)
   , ("pProvide", pProvide), ("pSleep", pSleep), ("pDiamond", pDiamond), ("pMergeAll", pMergeAll), ("pExternal", pExternal), ("pIllExternalDomain", pIllExternalDomain)
-  , ("pFailText", pFailText), ("pIllFailBool", pIllFailBool), ("pIllCauseBool", pIllCauseBool) ]
+  , ("pFailText", pFailText), ("pIllFailBool", pIllFailBool), ("pIllCauseBool", pIllCauseBool)
+  , ("pCatchError", pCatchError), ("pCatchIf", pCatchIf), ("pIllCatchIf", pIllCatchIf) ]
 
 end Corpus
 

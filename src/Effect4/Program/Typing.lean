@@ -212,6 +212,15 @@ mutual
       let h ← effTy sig (env ++ [.causeOf b.error]) handler
       let answer ← EffTy.joinAnswer b.answer h.answer
       some ⟨answer, h.error, b.requires.union h.requires⟩
+    | .catchIf test body handler => do
+      let b ← effTy sig env body
+      let predicate ← termTy sig (env ++ [b.error]) test
+      if predicate = .bool then
+        let h ← effTy sig (env ++ [b.error]) handler
+        let answer ← EffTy.joinAnswer b.answer h.answer
+        some ⟨answer, if test = .lit (.bool true) then h.error else b.error.join h.error,
+          b.requires.union h.requires⟩
+      else none
     | .matchCause body onValue onCause => do
       let b ← effTy sig env body
       let v ← effTy sig (env ++ [b.answer]) onValue
@@ -515,12 +524,12 @@ mutual
         effTy sig (pre ++ post) program :=
     match program with
     | .succeed _ | .fail _ | .failCause _ | .yieldError _ | .sync _ | .suspend _
-    | .perform _ _ | .bind _ _ | .gen _ | .catchCause _ _ | .matchCause _ _ _
+    | .perform _ _ | .bind _ _ | .gen _ | .catchCause _ _ | .catchIf _ _ _ | .matchCause _ _ _
     | .onExit _ _ | .exit _ | .uninterruptible _ | .interruptible _ | .branch _ _ _
     | .whileLoop _ _ _ _ | .yieldNow _ | .callback _ _ | .awaitFiber _ _
     | .withFiber _ | .scoped _ | .acquireRelease _ _ | .choose _ _ _
     | .provideLayer _ _ _ | .service _ | .provideService _ _ _ => by
-      simp only [Eff.weaken, effTy, termTy_weaken, causeTy_weaken,
+      simp only [Eff.weaken, effTy, termTy_weaken, causeTy_weaken, Term.weaken_eq_lit,
         List.append_assoc, List.cons_append, effTy_weaken, stmtsTy_weaken, actionTy_weaken]
 
   theorem stmtsTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty)

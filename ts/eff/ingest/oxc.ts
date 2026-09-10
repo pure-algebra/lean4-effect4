@@ -385,7 +385,18 @@ class Normalize {
         return call("Effect.flatMap", [first, { ...fn, body: call("Effect.succeed", [fn.body]) }])
       } catch { return reject("E-ARG-CLOSURE", "map") }
     }
-    if (h === "Effect.flatMap" || h === "Effect.catchCause" || h === "Effect.onExit") { arity(2); return call(h, [p(0), k(1)]) }
+    if (h === "Effect.flatMap" || h === "Effect.catchCause" || h === "Effect.catch" || h === "Effect.onExit") { arity(2); return call(h, [p(0), k(1)]) }
+    if (h === "Effect.catchIf") {
+      if (length === 4) {
+        const fallback = unwrap(arg(3))
+        if (fallback.type !== "Identifier" || str(fallback, "name") !== "undefined") return reject("E-BIND-SHAPE", "catchIf fallback")
+      } else arity(3)
+      const predicate = this.continuation(arg(1), env, 1, "term")
+      if (predicate._tag !== "lambda") return reject("E-ARG-CLOSURE", "predicate")
+      const test = predicate.body
+      if (test._tag === "bool" && test.value) return call("Effect.catch", [p(0), k(2)])
+      return call(h, [p(0), predicate, k(2), id("undefined")])
+    }
     if (h === "Effect.andThen" || h === "Effect.tap") {
       arity(2); const first = p(0), n = unwrap(arg(1))
       let body: Expr
@@ -627,7 +638,7 @@ class Normalize {
     }
     const h = this.head(callee)
     if (h === "Effect.fn" || h === "Effect.fnUntraced") return reject("E-PARAM-SHAPE", "function")
-    if (["Effect.catchTag", "Effect.catchTags", "Effect.catchIf", "Effect.catch", "Effect.mapError", "Effect.match", "Effect.orElseSucceed"].includes(h)) return reject("E-HANDLER", h)
+    if (["Effect.catchTag", "Effect.catchTags", "Effect.mapError", "Effect.match", "Effect.orElseSucceed"].includes(h)) return reject("E-HANDLER", h)
     if (["Effect.promise", "Effect.tryPromise", "Effect.try", "Effect.callback"].includes(h)) return reject("E-ARG-CLOSURE", h)
     if (h === "Effect.whileLoop") return reject("E-LOOP", "whileLoop")
     if (h.startsWith("Cause.") || h.startsWith("Layer.")) return reject("E-NODE", "program fragment")
@@ -654,7 +665,7 @@ class Normalize {
       if (shape !== actual) return reject("E-ARG-DYNAMIC", "service literal shape")
       return call(h, [body, key, value])
     }
-    if (h === "Effect.flatMap" || h === "Effect.catchCause" || h === "Effect.onExit") { arity(2); return call(h, [this.program(arg(0), env), this.continuation(arg(1), env, 1)]) }
+    if (h === "Effect.flatMap" || h === "Effect.catchCause" || h === "Effect.catch" || h === "Effect.onExit") { arity(2); return call(h, [this.program(arg(0), env), this.continuation(arg(1), env, 1)]) }
     if (["Effect.exit", "Effect.uninterruptible", "Effect.interruptible", "Effect.scoped"].includes(h)) { arity(1); return call(h, [this.program(arg(0), env)]) }
     if (h === "Effect.sync") { arity(1); return call(h, [this.continuation(arg(0), env, 0, "term")]) }
     if (h === "Effect.gen") {

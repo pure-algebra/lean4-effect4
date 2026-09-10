@@ -1,0 +1,1 @@
+["catchIf",["app","eq",["cons",["var",0],["cons",["lit",["nat",7]],["nil"]]]],["fail",["lit",["nat",7]]],["succeed",["var",0]]]

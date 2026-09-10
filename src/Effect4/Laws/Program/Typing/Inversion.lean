@@ -92,6 +92,17 @@ theorem inv_catchCause (sig : Signature Op) (env : TyEnv) (body handler : Eff Op
   refine Option.of_triple ?_
   simp only [effTy]; mvcgen; all_goals simp_all
 
+theorem inv_catchIf (sig : Signature Op) (env : TyEnv) (test : Term) (body handler : Eff Op) :
+    ∀ t, effTy sig env (.catchIf test body handler) = some t →
+      ∃ b h answer, effTy sig env body = some b ∧
+        termTy sig (env ++ [b.error]) test = some .bool ∧
+        effTy sig (env ++ [b.error]) handler = some h ∧
+        EffTy.joinAnswer b.answer h.answer = some answer ∧
+        t = ⟨answer, if test = .lit (.bool true) then h.error else b.error.join h.error,
+          b.requires.union h.requires⟩ := by
+  refine Option.of_triple ?_
+  simp only [effTy]; mvcgen; all_goals simp_all
+
 theorem inv_matchCause (sig : Signature Op) (env : TyEnv) (body onValue onCause : Eff Op) :
     ∀ t, effTy sig env (.matchCause body onValue onCause) = some t →
       ∃ b v c answer, effTy sig env body = some b ∧

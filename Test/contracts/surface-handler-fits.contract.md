@@ -19,11 +19,11 @@ disagreement. Which packet governs is a coordinator ruling (finding H-0).
 Implementation (owed): the handler module. **Its path is the subject of finding
 H-1 and is not frozen here**; the namespace is. See "Placement" below.
 
-Battery: `Test/Surface/HandlerFitsContract.lean`
+Battery: `git:70b1571:Test/Surface/HandlerFitsContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-088` through `E4-SURFACE-CE-110`
 
-Witnesses: `Test/Counterexamples/Surface/HandlerFits.lean`
+Witnesses: `git:70b1571:Test/Counterexamples/Surface/HandlerFits.lean`
 
 Shared: `Test/contracts/surface-facts.contract.md` owns the `Refusal`
 alphabet; `Test/contracts/surface-api.contract.md` owns `Endpoint`, `Group`,
@@ -424,7 +424,7 @@ typechecks either way".
 ## Refusal constructors this contract needs and `Facts.lean` does not have
 
 Fifteen, all appended, none removed or reordered. The coordinator adds them;
-this packet does not edit `src/Effect4/Surface/Refusal.lean`.
+this packet does not edit `git:70b1571:src/Effect4/Surface/Refusal.lean`.
 
 ```lean
   -- handler (plan §13.2, wave 2d)

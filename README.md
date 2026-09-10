@@ -27,8 +27,7 @@ Import `Effect4.Api` (`src/Effect4/Api.lean`). It is the program interface:
 `typeOf`, `print`, `printDecl`, `compile`, `replay`, `run`, `runSync`,
 and the Schema syntax (`schemaDocument`, `schemaRepresentation`, `jsonExpr`).
 Its program printers answer TypeScript **syntax**; the explicit `render` operation
-crosses from a codegen artefact to bytes. Surface construction uses the carrier
-modules under `Effect4.Surface`, and
+crosses from a codegen artefact to bytes, and
 `Test/Api/ApiContract.lean` is the receipt that crosses it the way a
 caller does.
 
@@ -39,6 +38,7 @@ the dune workspace `ocaml/`; the TypeScript reader lives in `ts/eff`.
 and the dependency boundaries.
 
 The earlier Flow route is retained in git history and on branch `archive/flow-route`.
+The earlier Surface library is preserved on branch `archive/surface`.
 
 ## Building
 

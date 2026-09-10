@@ -53,7 +53,7 @@ let ellipsis (n : int) (s : string) : string =
 (* ---- 1. goldens ---- *)
 
 let () =
-  check "corpus has 46 programs" (List.length corpus = 46);
+  check "corpus has 49 programs" (List.length corpus = 49);
   Printf.printf "  %-16s %6s %-8s %-10s %-6s %s\n" "program" "bytes" "decode" "re-encode" "JSON" "typeOf";
   List.iter
     (fun (name, typed) ->
@@ -338,6 +338,10 @@ let typed_corpus : (string * program) list =
   ; ("pSleep", Program (Bind (Callback (Sleep, nat 3), Perform (Clock_now, unit_)), Nat, un Never))
   ; ("pMergeAll", p_merge_all_typed)
   ; ("pFailText", Program (Fail (Error_string, str "lost"), Never, String))
+  ; ("pCatchError", Program (Catch_error (Fail (Error_nat, nat 7), Succeed v0, Left_never), Nat, Never))
+  ; ("pCatchIf", (let test = match conditional_test (Eq (v0, nat 7)) with
+      | Some test -> test | None -> failwith "nonconstant predicate" in
+      Program (Catch_if (test, Fail (Error_nat, nat 7), Succeed v0, Left_never), Nat, Union (Nat, Never))))
   ]
 
 let () =
@@ -429,7 +433,7 @@ let () =
   check "FinalizerStrategy has 2" (List.length ctor_names_finalizer_strategy = 2);
   check "FnName has 5" (List.length ctor_names_fn_name = 5);
   check "NativeOp has 23" (List.length ctor_names_native_op = 23);
-  check "Eff has 27" (List.length ctor_names_eff = 27);
+  check "Eff has 28" (List.length ctor_names_eff = 28);
   check "LayerTerm has 10" (List.length ctor_names_layer_term = 10);
   check "LayerTerms has 2" (List.length ctor_names_layer_terms = 2);
   check "Stmt has 6" (List.length ctor_names_stmt = 6);
@@ -631,6 +635,25 @@ let () =
          | Ok t -> t.eff_ty_answer = Ty_nat && t.eff_ty_requires = [ k 5 4 ]
          | Error _ -> false));
   check "the GADT's reserved names cannot be built" (Eff_typed.free_name 3 = None && Eff_typed.free_name 4 <> None)
+
+let () =
+  let body = Fail (Error_nat, Nat_lit 7) in
+  let handler = Succeed v0 in
+  let unconditional : (empty, nat, never) eff = Catch_error (body, handler, Left_never) in
+  check "catch error erases with a discharged error column"
+    (match Eff_typing.type_of (erase unconditional) with
+     | Ok t -> t.eff_ty_answer = Ty_nat && t.eff_ty_error = Ty_never
+     | Error _ -> false);
+  check "literal true cannot masquerade as a conditional test"
+    (conditional_test (Bool_lit true) = None);
+  let predicate = match conditional_test (Bool_lit false) with Some p -> p | None -> failwith "false predicate" in
+  let conditional : (empty, nat, (nat, never) union) eff = Catch_if (predicate, body, handler, Left_never) in
+  check "conditional error retains body error in the checked erasure"
+    (match Eff_typing.type_of (erase conditional) with
+     | Ok t -> t.eff_ty_answer = Ty_nat && t.eff_ty_error = Ty_nat
+     | Error _ -> false);
+  check "catchIf appends at ordinal 27"
+    (ctor_index_eff (erase conditional) = 27)
 
 let () =
   Printf.printf "test_eff: %d checks, %d failures\n%!" !checks !failures;

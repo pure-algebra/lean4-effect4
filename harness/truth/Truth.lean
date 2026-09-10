@@ -300,15 +300,38 @@ def pTextOrDie : Api.Program :=
     (.bind (.fail (.lit (.str "lost"))) (.succeed (.lit (.nat 1))))))
     false (.service kA)
 
+
+/-- S3: the printed handlers exercise the actual first-Fail behavior at rc.112
+internal/effect.ts:2798–2810, including retained store writes on a miss. -/
+def catchMixed : CauseTerm := .both (.fail (.lit (.nat 7)))
+  (.both (.die (.lit (.nat 3))) (.fail (.lit (.nat 9))))
+def pCatchError : Api.Program := .catchIf (.lit (.bool true))
+  (.fail (.lit (.nat 7))) (.succeed (.var 0))
+def pCatchIfHit : Api.Program := .catchIf
+  (.app "eq" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil)))
+  (.failCause catchMixed) (.succeed (.var 0))
+def pCatchIfMiss : Api.Program := .catchIf
+  (.app "eq" (.cons (.var 0) (.cons (.lit (.nat 9)) .nil)))
+  (.failCause catchMixed) (.succeed (.var 0))
+def pCatchIfRetained : Api.Program :=
+  .bind (.perform .refMake (.lit (.nat 1)))
+    (.catchCause
+      (.catchIf (.lit (.bool false))
+        (.bind (.perform .refSet (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 9)) .nil))))
+          (.fail (.lit (.nat 7))))
+        (.perform .refGet (.var 0)))
+      (.perform .refGet (.var 0)))
+
 /-- The programs checked: the original wire, control, layer and host fixtures, followed by
-three S2 text/error-image fixtures. Every listed program contributes one manifest entry. -/
+the S2 error-image and S3 handler fixtures. Every listed program contributes one manifest entry. -/
 def corpus : List (String × Api.Program) :=
   Wire.Corpus.all ++ [("pTwo", pTwo), ("pAcquire", pAcquire), ("pAcquireClosed", pAcquireClosed),
     ("pProvide", pProvide), ("pProvideMerge", pProvideMerge), ("pProvideTwice", pProvideTwice),
     ("pDiamond", pDiamond), ("pMergeAll", pMergeAll), ("pAcquireHandle", pAcquireHandle),
     ("pFailTagged", pFailTagged), ("pSqlite", pSqlite), ("pKv", pKv),
     ("pSqlFail", pSqlFail), ("pSqlCatch", pSqlCatch), ("pSqlExit", pSqlExit), ("pSqlOrDie", pSqlOrDie),
-    ("pFailText", pFailText), ("pFailBoomText", pFailBoomText), ("pTextOrDie", pTextOrDie)]
+    ("pFailText", pFailText), ("pFailBoomText", pFailBoomText), ("pTextOrDie", pTextOrDie), ("pCatchError", pCatchError),
+    ("pCatchIfHit", pCatchIfHit), ("pCatchIfMiss", pCatchIfMiss), ("pCatchIfRetained", pCatchIfRetained)]
 
 /-! ## The value wire -/
 
@@ -549,7 +572,7 @@ order, one JSON Lines row per call (`harness/truth/tapes/<name>.jsonl`, written 
 * **pinned host.** `effect@4.0.0-rc.112` and `@effect/sql-sqlite-bun@4.0.0-rc.112`, the
   versions `scripts/check-truth.py` refuses to run without, on bun. A tape is evidence about
   those bytes and no others.
-* **the corpus.** 24 programs, of which 6 have tapes; the gate re-records all six on every run
+* **the corpus.** 31 programs, of which 6 have tapes; the gate re-records all six on every run
   and refuses a byte that moved, so a committed tape is the answer rc.112 *just* gave, not a
   remembered one.
 * **the error column.** A `failed` row is the DB-15 pair, made at the adapter before the
@@ -606,13 +629,13 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 
 /-! ## Receipts -/
 
-#guard corpus.length = 27
+#guard corpus.length = 31
 #guard (corpus.map (·.1)).eraseDups.length = corpus.length
 #guard (corpus.map (·.1)) =
   ["p42", "pBind", "pFork", "pAwait", "pGen", "pLoop", "pCatch", "pScope", "pTwo", "pAcquire",
    "pAcquireClosed", "pProvide", "pProvideMerge", "pProvideTwice", "pDiamond", "pMergeAll", "pAcquireHandle",
    "pFailTagged", "pSqlite", "pKv", "pSqlFail", "pSqlCatch", "pSqlExit", "pSqlOrDie",
-   "pFailText", "pFailBoomText", "pTextOrDie"]
+   "pFailText", "pFailBoomText", "pTextOrDie", "pCatchError", "pCatchIfHit", "pCatchIfMiss", "pCatchIfRetained"]
 -- S2 wire identities are distinct before any host comparison.
 #guard errJson .boom == Lean.Json.mkObj [("boom", Lean.Json.null)]
 #guard errJson (.text "boom") == Lean.Json.str "boom"

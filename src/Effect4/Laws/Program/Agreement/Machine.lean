@@ -207,7 +207,8 @@ theorem plainCode_compileEff : âˆ€ (e : NativeEff) (p : Point), Plain e = true â
   | .choose _ _ _, _, hpl
   | .provideLayer _ _ _, _, hpl
   | .service _, _, hpl
-  | .provideService _ _ _, _, hpl => by simp [Plain] at hpl
+  | .provideService _ _ _, _, hpl
+  | .catchIf _ _ _, _, hpl => by simp [Plain] at hpl
 
 /-! ### Every subterm of a straight-line program is straight-line -/
 

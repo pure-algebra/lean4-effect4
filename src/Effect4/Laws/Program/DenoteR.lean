@@ -631,6 +631,12 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
     | .success v => .pure (.success v)
     | .failure c => constructR fun completed =>
         rec h ({ p with completed }.childWith 1 (.exitErr c))
+  | .catchIf test b h, p => (guardR .onFailure (rec b (p.child 0))).bind fun
+    | .success v => .pure (.success v)
+    | .failure cause => constructR fun completed =>
+      match caughtErrorValue? p.env test cause with
+      | some value => rec h ({ p with completed }.childWith 1 value)
+      | none => .pure (.failure cause)
   | .matchCause b v c, p => (guardR .all (rec b (p.child 0))).bind fun
     | .success x => constructR fun completed =>
         rec v ({ p with completed }.childWith 1 x)
@@ -989,6 +995,18 @@ theorem denoteR_catchCause (b hd : NativeEff) (h : p.fuel ≠ 0) :
   | zero => exact (h hf).elim
   | succ f => budget hf; try rfl
 
+theorem denoteR_catchIf (test : Term) (b hd : NativeEff) (h : p.fuel ≠ 0) :
+    denoteR root (.catchIf test b hd) p =
+      (guardR .onFailure (denoteR root b (p.child 0))).bind fun
+        | .success v => .pure (.success v)
+        | .failure cause => constructR fun completed =>
+          match caughtErrorValue? p.env test cause with
+          | some value => denoteR root hd ({ p with completed }.childWith 1 value)
+          | none => .pure (.failure cause) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf; try rfl
+
 theorem denoteR_matchCause (b v c : NativeEff) (h : p.fuel ≠ 0) :
     denoteR root (.matchCause b v c) p =
       (guardR .all (denoteR root b (p.child 0))).bind fun
@@ -1323,7 +1341,7 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
     | provideService key value body =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
       cases evalTerm p.env value <;> rfl
-    | sync _ | suspend _ | bind _ _ | gen _ | catchCause _ _ | matchCause _ _ _
+    | sync _ | suspend _ | bind _ _ | gen _ | catchCause _ _ | catchIf _ _ _ | matchCause _ _ _
     | onExit _ _ | uninterruptible _ | interruptible _ | branch _ _ _ | whileLoop _ _ _ _
     | yieldNow _ | «scoped» _ | acquireRelease _ _ | provideLayer _ _ _ | service _ =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte, headExit, frontier]
@@ -1413,7 +1431,8 @@ theorem denote_of_inlineYield : ∀ (b : NativeEff) (q : Point) {exit : ExitV},
   | .awaitFiber _ _, _, _, hs, _ | .withFiber _, _, _, hs, _ | .«scoped» _, _, _, hs, _
   | .acquireRelease _ _, _, _, hs, _ | .choose _ _ _, _, _, hs, _
   | .provideLayer _ _ _, _, _, hs, _ | .service _, _, _, hs, _
-  | .provideService _ _ _, _, _, hs, _ => by
+  | .provideService _ _ _, _, _, hs, _
+  | .catchIf _ _ _, _, _, hs, _ => by
     simp [Straight] at hs
 
 /-! ## Restriction to the existing straight denotation -/
@@ -1585,7 +1604,8 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
   | .awaitFiber _ _, _, hs, _ | .withFiber _, _, hs, _ | .«scoped» _, _, hs, _
   | .acquireRelease _ _, _, hs, _ | .choose _ _ _, _, hs, _
   | .provideLayer _ _ _, _, hs, _ | .service _, _, hs, _
-  | .provideService _ _ _, _, hs, _ => by
+  | .provideService _ _ _, _, hs, _
+  | .catchIf _ _ _, _, hs, _ => by
     simp only [Straight, Bool.false_eq_true] at hs
 
 theorem meaning_denoteR_straight (root : NativeEff) (e : NativeEff) (p : Point)

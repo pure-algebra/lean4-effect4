@@ -61,7 +61,7 @@ theorem Plain_eq_Straight : ∀ e : NativeEff, Plain e = Straight e
   | .succeed _ | .fail _ | .failCause _ | .yieldError _ | .sync _ | .perform _ _ | .gen _
   | .uninterruptible _ | .interruptible _ | .whileLoop _ _ _ _ | .yieldNow _ | .callback _ _
   | .awaitFiber _ _ | .withFiber _ | .scoped _ | .acquireRelease _ _ | .choose _ _ _
-  | .provideLayer _ _ _ | .service _ | .provideService _ _ _ => rfl
+  | .provideLayer _ _ _ | .service _ | .provideService _ _ _ | .catchIf _ _ _ => rfl
 
 theorem Plain.suspend {b : NativeEff} (h : Plain (.suspend b) = true) : Plain b = true := h
 
@@ -638,6 +638,11 @@ theorem compileEff_at_zero (e : NativeEff) (hf : p.fuel = 0) : compileEff e p = 
 theorem compileEff_catchCause (b h : NativeEff) (hf : p.fuel = k + 1) :
     compileEff (.catchCause b h) p =
       Prim.onFailure (compileEff b (p.child 0)) (EffName.caught p) := by
+  simp [compileEff, hf]
+
+theorem compileEff_catchIf (test : Term) (b h : NativeEff) (hf : p.fuel = k + 1) :
+    compileEff (.catchIf test b h) p =
+      Prim.onFailure (compileEff b (p.child 0)) (EffName.caughtError p) := by
   simp [compileEff, hf]
 
 theorem compileEff_matchCause (b v c : NativeEff) (hf : p.fuel = k + 1) :
@@ -1507,7 +1512,8 @@ theorem meaning_of_asExit : ∀ (b : NativeEff) (q : Point) (s : Stores) {exit :
   | .awaitFiber _ _, _, _, _, hpl, _ | .withFiber _, _, _, _, hpl, _
   | .«scoped» _, _, _, _, hpl, _ | .acquireRelease _ _, _, _, _, hpl, _
   | .choose _ _ _, _, _, _, hpl, _ | .provideLayer _ _ _, _, _, _, hpl, _
-  | .service _, _, _, _, hpl, _ | .provideService _ _ _, _, _, _, hpl, _ => by simp [Plain] at hpl
+  | .service _, _, _, _, hpl, _ | .provideService _ _ _, _, _, _, hpl, _
+  | .catchIf _ _ _, _, _, _, hpl, _ => by simp [Plain] at hpl
 
 theorem contAOf_cont (root : NativeEff) (p : Point) (v : Val) :
     contAOf root (EffName.cont p) v = resolve root (p.childWith 1 v) := rfl
@@ -1995,7 +2001,8 @@ theorem localRun_compile (root : NativeEff) :
   | .choose _ _ _, _, _, _, _, hpl, _, _
   | .provideLayer _ _ _, _, _, _, _, hpl, _, _
   | .service _, _, _, _, _, hpl, _, _
-  | .provideService _ _ _, _, _, _, _, hpl, _, _ => by simp [Plain] at hpl
+  | .provideService _ _ _, _, _, _, _, hpl, _, _
+  | .catchIf _ _ _, _, _, _, _, hpl, _, _ => by simp [Plain] at hpl
 
 /-- At the root, on the empty stack, from the empty stores: the local run finishes with the
 meaning inside `steps e + 1` steps (the last one is the exit leaving the empty stack). -/

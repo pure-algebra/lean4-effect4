@@ -44,3 +44,6 @@ pIllExternalDomain	ill-typed
 pFailText	well-typed
 pIllFailBool	ill-typed
 pIllCauseBool	ill-typed
+pCatchError	well-typed
+pCatchIf	well-typed
+pIllCatchIf	ill-typed

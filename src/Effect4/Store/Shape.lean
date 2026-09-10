@@ -35,7 +35,7 @@ annotation; `anyRef ↦ struct [kind, address]`; `named ↦ reference`. A defini
 shape is not already a named struct or sum is annotated with its key as `identifier`, so a
 fixed-width scalar (`{root := named "UInt64", defs := [("UInt64", nat)]}`) renders as a
 `number` with an identifier, as Q5 asks. The two annotation keys are restated here with the
-shape of `src/Effect4/Surface/Annotate.lean:73-91` (`identifierKey`) and `:345-351`
+shape of `git:70b1571:src/Effect4/Surface/Annotate.lean` (`identifierKey`) and `:345-351`
 (`markKey`), because that module sits above the store. The printer's number rule,
 `Json.ofNat` over `binary64OfNat`, is `Effect4.Arch.JsonNumber`'s (`src/Effect4/Arch/JsonNumber.lean`,
 namespace `Effect4.Arch`), the one JSON-number rule every printer of the tree reads.

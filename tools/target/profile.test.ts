@@ -50,9 +50,9 @@ test("rendered canonical type bindings use syntax nodes and structured types pre
 test("selected IDs cannot vanish with absent metadata and unexpected inventory is refused", () => {
   const selection: unknown = JSON.parse(readFileSync(resolve(repo, "Test/fixtures/target/selection.json"), "utf8"))
   const queries = queriesFromInputs(repo, selection, { programs: [] }, [])
-  expect(queries).toHaveLength(35)
-  expect(new Set(queries.map(q => q.id)).size).toBe(35)
-  expect(queries.filter(q => q.id.startsWith("program/"))).toHaveLength(24)
+  expect(queries).toHaveLength(42)
+  expect(new Set(queries.map(q => q.id)).size).toBe(42)
+  expect(queries.filter(q => q.id.startsWith("program/"))).toHaveLength(31)
   expect(queries.every(q => q.inputIssues?.length)).toBe(true)
   expect(queries.filter(q => q.id.startsWith("row/")).every(q => q.inputIssues?.some(i => i.code === "row-type-metadata"))).toBe(true)
   const minimal = { programs: ["p42"], handles: {}, rows: [] }

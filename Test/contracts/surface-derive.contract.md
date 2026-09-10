@@ -3,13 +3,13 @@
 Status: breaker packet, red, 2026-09-04 (wave 1b, for wave 2e of
 `docs/research/2026-09-04-surface-library-plan.md` §14.3-§14.7)
 
-Implementation (owed): `src/Effect4/Codegen/App.lean`, `Effect4.Surface.Model (planned module; the packet remains red)`
+Implementation (owed): `git:70b1571:src/Effect4/Codegen/App.lean`, `Effect4.Surface.Model (planned module; the packet remains red)`
 
-Battery: `Test/Surface/DeriveContract.lean`
+Battery: `git:70b1571:Test/Surface/DeriveContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-071` through `E4-SURFACE-CE-075`
 
-Witnesses: `Test/Counterexamples/Surface/Derive.lean`
+Witnesses: `git:70b1571:Test/Counterexamples/Surface/Derive.lean`
 
 Depends on: `Test/contracts/surface-facts.contract.md` (the lifted clauses and
 each carrier's `wellFormed_iff`)

@@ -232,12 +232,12 @@ def effsOf (gen : Nat → M (Eff NativeOp)) (n : Nat) : Nat → M (Effs NativeOp
   | 0 => pure .nil
   | k + 1 => do pure (.cons (← gen n) (← effsOf gen n k))
 
-/-- A program at a positive depth: the 33-way arm table. `prev` is the program generator
+/-- A program at a positive depth: the 34-way arm table. `prev` is the program generator
 one depth below and `prevStmts` the statement-list generator one depth below; `9 | 10 | 11`
 and `22 | 23` weight `bind` and `fork` up, as the spike did. -/
 def genEffStep (prev : Nat → M (Eff NativeOp)) (prevStmts : Nat → Nat → M (Stmts NativeOp))
     (prevLayer : M (LayerTerm NativeOp)) (n : Nat) : M (Eff NativeOp) := do
-  let k ← pick 33
+  let k ← pick 34
   if k < 8 then
     genEffLeaf n k
   else
@@ -273,7 +273,8 @@ def genEffStep (prev : Nat → M (Eff NativeOp)) (prevStmts : Nat → Nat → M 
     | 29 => pure (.acquireRelease (← prev n) (← prev (n + 2)))
     | 30 => pure (.provideLayer (← prevLayer) ((← pick 2) == 0) (← prev n))
     | 31 => pure (.service (← genKey))
-    | _ => pure (.provideService (← genKey) (← genTerm n 1) (← prev n))
+    | 32 => pure (.provideService (← genKey) (← genTerm n 1) (← prev n))
+    | _ => pure (.catchIf (← genTerm (n + 1) 1) (← prev n) (← prev (n + 1)))
 
 /-- A generator body at depth `0`: only the three statement forms that need no nested block. -/
 def stmtsLeafLoop (gen : Nat → M (Eff NativeOp)) (n : Nat) : Nat → M (Stmts NativeOp)
@@ -367,7 +368,7 @@ def walkEff (pe : Eff NativeOp → Bool) (ps : Stmt NativeOp → Bool)
   | e@(.suspend body) => pe e || walkEff pe ps pa body
   | e@(.bind first rest) => pe e || walkEff pe ps pa first || walkEff pe ps pa rest
   | e@(.gen body) => pe e || walkStmts pe ps pa body
-  | e@(.catchCause body handler) => pe e || walkEff pe ps pa body || walkEff pe ps pa handler
+  | e@(.catchCause body handler) | e@(.catchIf _ body handler) => pe e || walkEff pe ps pa body || walkEff pe ps pa handler
   | e@(.matchCause body onValue onCause) =>
     pe e || walkEff pe ps pa body || walkEff pe ps pa onValue || walkEff pe ps pa onCause
   | e@(.onExit body finalizer) => pe e || walkEff pe ps pa body || walkEff pe ps pa finalizer
@@ -470,7 +471,7 @@ def nodesEff : Eff NativeOp → Nat
   | .suspend body => 1 + nodesEff body
   | .bind first rest => 1 + nodesEff first + nodesEff rest
   | .gen body => 1 + nodesStmts body
-  | .catchCause body handler => 1 + nodesEff body + nodesEff handler
+  | .catchCause body handler | .catchIf _ body handler => 1 + nodesEff body + nodesEff handler
   | .matchCause body onValue onCause =>
     1 + nodesEff body + nodesEff onValue + nodesEff onCause
   | .onExit body finalizer => 1 + nodesEff body + nodesEff finalizer
@@ -529,7 +530,7 @@ def depthEff : Eff NativeOp → Nat
   | .suspend body => 1 + depthEff body
   | .bind first rest => 1 + max (depthEff first) (depthEff rest)
   | .gen body => 1 + depthStmts body
-  | .catchCause body handler => 1 + max (depthEff body) (depthEff handler)
+  | .catchCause body handler | .catchIf _ body handler => 1 + max (depthEff body) (depthEff handler)
   | .matchCause body onValue onCause =>
     1 + max (depthEff body) (max (depthEff onValue) (depthEff onCause))
   | .onExit body finalizer => 1 + max (depthEff body) (depthEff finalizer)
@@ -631,16 +632,16 @@ def wellTypedCount : Nat := (sample.filter Api.wellTyped).length
 
 /-! ### The well-typed count -/
 
--- S2's supported-error rule removes 19 historical admissions. The integration receipt
--- records each program by index and wire digest, with current Lean/OCaml agreement on all
--- 400 inputs: docs/research/type-tooling/delivery/admission/delta.json.
-#guard wellTypedCount = 133
+-- S3 adds a constructor draw, changing the seeded corpus. These counts were measured
+-- after that append (wave2-delivery/s3/measure.log). The retained pre-append 400 wires
+-- are compared separately; this reseed is not an admission-policy change.
+#guard wellTypedCount = 126
 
 /-! ### Size -/
 
-#guard maxNodes = 24
+#guard maxNodes = 27
 #guard maxDepth = 5
-#guard totalNodes = 1860
+#guard totalNodes = 1993
 
 /-! ### Every `Eff` constructor the printer accepts occurs -/
 
@@ -654,6 +655,7 @@ def wellTypedCount : Nat := (sample.filter Api.wellTyped).length
 #guard coversEff (fun | .bind _ _ => true | _ => false)
 #guard coversEff (fun | .gen _ => true | _ => false)
 #guard coversEff (fun | .catchCause _ _ => true | _ => false)
+#guard coversEff (fun | .catchIf _ _ _ => true | _ => false)
 #guard coversEff (fun | .matchCause _ _ _ => true | _ => false)
 #guard coversEff (fun | .onExit _ _ => true | _ => false)
 #guard coversEff (fun | .exit _ => true | _ => false)

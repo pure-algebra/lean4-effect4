@@ -6,11 +6,11 @@ Status: breaker packet, red, 2026-09-04 (wave 1b, for wave 2d of
 
 Implementation (owed): `src/Effect4/Surface/Handler.lean`
 
-Battery: `Test/Surface/HandlerFitsContract.lean`
+Battery: `git:70b1571:Test/Surface/HandlerFitsContract.lean`
 
 Counterexamples: `E4-SURFACE-CE-076` through `E4-SURFACE-CE-087`
 
-Witnesses: `Test/Counterexamples/Surface/HandlerFits.lean`
+Witnesses: `git:70b1571:Test/Counterexamples/Surface/HandlerFits.lean`
 
 Reads: `src/Effect4/Program/Typing.lean` (`Ty`, `EffTy`, `Signature`, `typeOf`,
 `EffTy.joinAnswer`), `src/Effect4/Program/Eff.lean` (`Eff`, `Row`, `Ty.join`,
