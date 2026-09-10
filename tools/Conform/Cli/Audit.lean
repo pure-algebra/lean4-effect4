@@ -53,6 +53,10 @@ structure Config where
   imports : Array Name
   /-- Name prefixes the scan walks; empty means every constant in the environment. -/
   roots : Array Name
+  /-- Which declaration list the case-site scan walks: `constants` (the environment's, the
+  conservative denominator) or `monoExtension` (the compiler's own, which also reaches
+  `f._redArg` and friends). See `Conform.Lcnf.ScanSource`. -/
+  source : Conform.Lcnf.ScanSource
   /-- The case-site policy (A2). -/
   casesPolicy : Option System.FilePath
   /-- The mirror list (A3). -/
@@ -68,10 +72,14 @@ namespace Config
 open Conform.Policy
 
 def read (j : Json) : Policy.Reader Config := do
-  let get ← object j ["tool", "imports", "roots", "casesPolicy", "mirrors", "rules", "pins", "note"]
+  let get ← object j
+    ["tool", "imports", "roots", "source", "casesPolicy", "mirrors", "rules", "pins", "note"]
   let tool ← field get "tool" string
   let imports ← field get "imports" fun a => array a Policy.name
   let roots ← field get "roots" fun a => array a Policy.name
+  let source ← field? get "source" fun v =>
+    enum v [("constants", Conform.Lcnf.ScanSource.constants)
+           , ("monoExtension", Conform.Lcnf.ScanSource.monoExtension)]
   let casesPolicy ← field? get "casesPolicy" string
   let mirrors ← field? get "mirrors" string
   let rules ← field? get "rules" string
@@ -81,7 +89,7 @@ def read (j : Json) : Policy.Reader Config := do
     let v ← field g "value" string
     pure (n, v)
   if imports.isEmpty then fail "`imports` is empty: there would be no environment to audit"
-  return { tool, imports, roots
+  return { tool, imports, roots, source := source.getD .constants
          , casesPolicy := casesPolicy.map fun (s : String) => (s : System.FilePath)
          , mirrors := mirrors.map fun (s : String) => (s : System.FilePath)
          , rules := rules.map fun (s : String) => (s : System.FilePath)
@@ -157,7 +165,8 @@ def run (args : Args) (cfg : Config) : CoreM (Report × Option Json) := do
   | none => pure ()
   | some file =>
     let policy ← Conform.Lcnf.CasesPolicy.load file
-    let scan ← Conform.Lcnf.scan { roots := cfg.roots, families := policy.familyNames }
+    let scan ← Conform.Lcnf.scan
+      { roots := cfg.roots, families := policy.familyNames, source := cfg.source }
     scan? := some scan
     let (rows, expected) := Conform.Lcnf.check scan policy
     acc := { acc with
@@ -198,6 +207,15 @@ def run (args : Args) (cfg : Config) : CoreM (Report × Option Json) := do
         expected := acc.expected + expected
         inputs := acc.inputs ++ [← inputOf "rules" file] }
       if let some p := args.rulesOut then writeJson p table
+  -- A run that checked nothing is not a passing run. Without this a configuration whose only
+  -- section is A4, invoked without `--rules`, would print `0/0 subjects, exit 0`.
+  if acc.expected == 0 then
+    acc := { acc with
+      rows := acc.rows.push (Row.unresolved "conform.run"
+        { kind := "config", path := [args.config.toString] }
+        "this run selected no check: the configuration names no section, or the only section it \
+         names is behind a flag that was not given (`--rules`)")
+      expected := 1 }
   let report : Report :=
     { tool := cfg.tool, pins := acc.pins, inputs := acc.inputs
     , expected := acc.expected, rows := acc.rows }

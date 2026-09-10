@@ -240,12 +240,38 @@ private partial def walk (raw : Name) (keep : Name → Bool) :
     for a in c.alts do
       walk raw keep a.getCode
 
+/-- Where the scan gets its list of declarations to walk. The two answers are **not** the same set,
+and the difference is not small.
+
+* `constants` walks `Environment.constants` — every name the elaborator produced — and asks
+  `getMonoDecl?` for each. This is what a human means by "every declaration", and it is what the
+  X4 prototype did.
+* `monoExtension` walks `monoExt`'s own module entries, which include the declarations the
+  *compiler* created during the LCNF passes and never put in the environment: `f._redArg`,
+  `f._lam_0`, `f._closed_3`. Measured on this tree's `Effect4` closure: 305,129 mono entries over
+  2,443 imported modules, of which **250,735 are not environment constants at all**. It matters:
+  `Effect4.Program.effTy`'s own mono code is a one-line tail call to `Effect4.Program.effTy._redArg`,
+  and *that* is where its twenty-seven arms live.
+
+`constants` is therefore the conservative denominator and `monoExtension` the complete one; a
+configuration says which, and the report's pins say which was used. -/
+inductive ScanSource
+  | constants
+  | monoExtension
+deriving Inhabited, DecidableEq
+
+def ScanSource.id : ScanSource → String
+  | .constants => "constants"
+  | .monoExtension => "monoExtension"
+
 /-- What the scan covers and what it found. The three counts are the audit's own scale and go into
 the report as pins: a scan that suddenly sees a tenth of the constants it used to is not a passing
 audit, it is a broken one. -/
 structure Scan where
   families : FamilyTable
-  /-- Constants under the configured roots. -/
+  /-- Which declaration list was walked. -/
+  source : ScanSource
+  /-- Declarations under the configured roots, in whichever list `source` names. -/
   constants : Nat
   /-- Of those, the ones the environment holds a mono-phase LCNF entry for. -/
   withMonoCode : Nat
@@ -256,12 +282,13 @@ structure Scan where
   wallMs : Nat
 deriving Inhabited
 
-/-- What the scan walks. Both fields are configuration: `roots` are name prefixes (empty means
-every constant, which on a real environment also walks the toolchain), `families` are the
-inductives whose case sites are collected. -/
+/-- What the scan walks. Every field is configuration: `roots` are name prefixes (empty means
+everything, which on a real environment also walks the toolchain), `families` are the inductives
+whose case sites are collected, `source` is which declaration list is walked. -/
 structure ScanConfig where
   roots : Array Name
   families : Array Name
+  source : ScanSource := .constants
 deriving Inhabited
 
 /-- Walk every constant under the roots. `CoreM` only for `getMonoDecl?`, which reads the
@@ -279,25 +306,51 @@ def scan (cfg : ScanConfig) : CoreM Scan := do
   let mut withMonoCode := 0
   let mut externs := 0
   let mut sites : Array Site := #[]
-  for (n, _) in env.constants.toList do
-    unless underRoots n do continue
-    constants := constants + 1
-    match (← getMonoDecl? n) with
-    | none => pure ()
-    | some d =>
-      withMonoCode := withMonoCode + 1
-      match d.value with
-      | .extern _ => externs := externs + 1
-      | .code c =>
-        let (_, st) := (walk n keep c).run {}
-        -- attribute once per declaration, then number the sites per (decl, family)
-        let a := attributeOf env n
-        let mut perFamily : Std.HashMap Name Nat := {}
-        for s in st.sites do
-          let k := perFamily.getD s.family 0
-          perFamily := perFamily.insert s.family (k + 1)
-          sites := sites.push ({ s with decl := a.user, steps := a.steps, ordinal := k })
-  return { families, constants, withMonoCode, externs, sites, wallMs := (← IO.monoMsNow) - start }
+  -- one declaration: count it, walk it if it has code, attribute it. Ordinals are **not**
+  -- assigned here: two raw declarations can attribute to the same user declaration (a function
+  -- and its `_redArg` copy), so numbering per raw name would give two site 0s. The whole scan is
+  -- numbered once, below, in scan order.
+  let visit (n : Name) (d : Decl .pure) (sites : Array Site) : Nat × Array Site :=
+    match d.value with
+    | .extern _ => (1, sites)
+    | .code c =>
+      let (_, st) := (walk n keep c).run {}
+      let a := attributeOf env n
+      (0, st.sites.foldl (init := sites) fun acc s =>
+        acc.push ({ s with decl := a.user, steps := a.steps }))
+  match cfg.source with
+  | .constants =>
+    for (n, _) in env.constants.toList do
+      unless underRoots n do continue
+      constants := constants + 1
+      match (← getMonoDecl? n) with
+      | none => pure ()
+      | some d =>
+        withMonoCode := withMonoCode + 1
+        let (e, out) := visit n d sites
+        externs := externs + e
+        sites := out
+  | .monoExtension =>
+    -- `monoExt`'s own entries, per imported module: this is the only way to reach the
+    -- declarations the compiler created and never put in the environment (`f._redArg`).
+    let mut seen : Std.HashSet Name := {}
+    for i in [0:env.header.moduleNames.size] do
+      for d in monoExt.getModuleEntries env i do
+        unless underRoots d.name do continue
+        if seen.contains d.name then continue
+        seen := seen.insert d.name
+        constants := constants + 1
+        withMonoCode := withMonoCode + 1
+        let (e, out) := visit d.name d sites
+        externs := externs + e
+        sites := out
+  -- number the sites per (user declaration, family), in scan order: the policy's key
+  let (_, numbered) := sites.foldl (init := (({} : Std.HashMap (Name × Name) Nat), #[]))
+    fun (counts, acc) s =>
+      let k := counts.getD (s.decl, s.family) 0
+      (counts.insert (s.decl, s.family) (k + 1), acc.push { s with ordinal := k })
+  return { families, source := cfg.source, constants, withMonoCode, externs, sites := numbered
+         , wallMs := (← IO.monoMsNow) - start }
 
 namespace Scan
 
@@ -306,7 +359,8 @@ def byFamily (s : Scan) : Array (Name × Array Site) :=
   s.families.order.map fun f => (f, s.sites.filter fun st => st.family == f)
 
 def pins (s : Scan) : List Pin :=
-  [ { name := "scan.constants", value := toString s.constants }
+  [ { name := "scan.source", value := s.source.id }
+  , { name := "scan.constants", value := toString s.constants }
   , { name := "scan.withMonoCode", value := toString s.withMonoCode }
   , { name := "scan.externs", value := toString s.externs }
   , { name := "scan.sites", value := toString s.sites.size }
@@ -316,7 +370,8 @@ def pins (s : Scan) : List Pin :=
 absorbed/unreachable split. -/
 def toJson (s : Scan) : Json :=
   Json.mkObj
-    [ ("constants", Json.num s.constants)
+    [ ("source", Json.str s.source.id)
+    , ("constants", Json.num s.constants)
     , ("withMonoCode", Json.num s.withMonoCode)
     , ("externs", Json.num s.externs)
     , ("sites", Json.num s.sites.size)

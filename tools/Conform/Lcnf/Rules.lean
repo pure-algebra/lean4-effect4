@@ -64,6 +64,13 @@ structure ArmSummary where
   jumps : Nat
   /-- The scrutinee families of the `cases` nodes nested inside this arm, in order. -/
   nestedCases : Array Name
+  /-- The binder names of the **bound functions** the arm applies, in order. After a structure's
+  `cases` these are that structure's field names, so `sig.dom op` shows up here as `dom` — which
+  is how a landed guard on a record field is pinned at all: a field is a projection, never a
+  callee, so `callees` cannot see it. -/
+  applied : Array Name
+  /-- `<structure>#<index>` for each projection the arm takes. -/
+  projections : Array String
   /-- Nodes walked: the arm's size, so a summary can be read against how much was summarised. -/
   nodes : Nat
 deriving Inhabited
@@ -82,6 +89,8 @@ def toJson (a : ArmSummary) : Json :=
     , ("joinPoints", Json.num a.joinPoints)
     , ("jumps", Json.num a.jumps)
     , ("nestedCases", Json.arr (a.nestedCases.map fun c => Json.str c.toString))
+    , ("appliedBinders", Json.arr (a.applied.map fun c => Json.str c.toString))
+    , ("projections", Json.arr (a.projections.map Json.str))
     , ("nodes", Json.num a.nodes) ]
 
 end ArmSummary
@@ -118,6 +127,8 @@ private structure ArmState where
   joinPoints : Nat := 0
   jumps : Nat := 0
   nested : Array Name := #[]
+  applied : Array Name := #[]
+  projections : Array String := #[]
   nodes : Nat := 0
 
 private def litText : LetValue .pure → Option String
@@ -130,7 +141,12 @@ private def litText : LetValue .pure → Option String
   | .lit (.usize n) => some s!"usize {n}"
   | _ => none
 
-private partial def walkArm (alg : Algorithm) : Code .pure → StateM ArmState Unit
+private abbrev Binders := Std.HashMap FVarId Name
+
+private def bindParams (ns : Binders) (ps : Array (Param .pure)) : Binders :=
+  ps.foldl (fun ns p => ns.insert p.fvarId p.binderName) ns
+
+private partial def walkArm (alg : Algorithm) (ns : Binders) : Code .pure → StateM ArmState Unit
   | .let decl k => do
     modify fun s => { s with nodes := s.nodes + 1 }
     match decl.value with
@@ -140,36 +156,48 @@ private partial def walkArm (alg : Algorithm) : Code .pure → StateM ArmState U
         appends := if n == alg.append then s.appends + 1 else s.appends
         conses := if n == alg.cons then s.conses + 1 else s.conses
         refusals := if n == alg.refusal then s.refusals + 1 else s.refusals }
+    | .fvar f args =>
+      -- a bound function applied: after a structure `cases`, this is a FIELD of that structure
+      -- being called, and the binder name is the field's name (`sig.dom op` ↦ `dom`)
+      if !args.isEmpty then
+        modify fun s => { s with applied := s.applied.push (ns.getD f `_unknown) }
+    | .proj typeName idx _ =>
+      modify fun s => { s with projections := s.projections.push s!"{typeName}#{idx}" }
     | v =>
       match litText v with
       | some t => modify fun s => { s with literals := s.literals.push t }
       | none => pure ()
-    walkArm alg k
+    walkArm alg (ns.insert decl.fvarId decl.binderName) k
   | .fun d k => do
     modify fun s => { s with nodes := s.nodes + 1 }
-    walkArm alg d.value
-    walkArm alg k
+    let ns' := ns.insert d.fvarId d.binderName
+    walkArm alg (bindParams ns' d.params) d.value
+    walkArm alg ns' k
   | .jp d k => do
     modify fun s => { s with nodes := s.nodes + 1, joinPoints := s.joinPoints + 1 }
-    walkArm alg d.value
-    walkArm alg k
+    let ns' := ns.insert d.fvarId d.binderName
+    walkArm alg (bindParams ns' d.params) d.value
+    walkArm alg ns' k
   | .jmp .. => modify fun s => { s with nodes := s.nodes + 1, jumps := s.jumps + 1 }
   | .return _ => modify fun s => { s with nodes := s.nodes + 1 }
   | .unreach _ => modify fun s => { s with nodes := s.nodes + 1 }
   | .cases c => do
     modify fun s => { s with nodes := s.nodes + 1, nested := s.nested.push c.typeName }
     for a in c.alts do
-      walkArm alg a.getCode
+      match a with
+      | .alt _ params code => walkArm alg (bindParams ns params) code
+      | .default code => walkArm alg ns code
 
 private def summarise (alg : Algorithm) (ctor : Name) (code : Code .pure) : ArmSummary :=
-  let (_, st) := (walkArm alg code).run {}
+  let (_, st) := (walkArm alg {} code).run {}
   { ctor
   , callees := st.callees
   , salient := st.callees.filter fun c => alg.salient.any fun p => p.isPrefixOf c
   , literals := st.literals
   , appends := st.appends, conses := st.conses, refusals := st.refusals
   , joinPoints := st.joinPoints, jumps := st.jumps
-  , nestedCases := st.nested, nodes := st.nodes }
+  , nestedCases := st.nested, applied := st.applied, projections := st.projections
+  , nodes := st.nodes }
 
 /-- The first `cases` on `alg.family` in the declaration's code, in pre-order. Returns `none` when
 the declaration has no mono code, is an `extern` stub, or never scrutinises the family. -/
@@ -212,6 +240,11 @@ rule assign". -/
 
 structure Extraction where
   algorithm : Name
+  /-- The declaration whose code was actually summarised: `algorithm`, or the end of its
+  forwarder chain. -/
+  body : Name
+  /-- The forwarder chain from `algorithm` to `body`, inclusive. -/
+  chain : Array Name
   family : Name
   /-- The constructors of the family, in declaration order. -/
   constructors : Array Name
@@ -228,6 +261,8 @@ def armOf? (e : Extraction) (c : Name) : Option ArmSummary := e.arms.find? fun a
 def toJson (e : Extraction) : Json :=
   Json.mkObj
     [ ("algorithm", Json.str e.algorithm.toString)
+    , ("body", Json.str e.body.toString)
+    , ("forwarderChain", Json.arr (e.chain.map fun c => Json.str c.toString))
     , ("family", Json.str e.family.toString)
     , ("constructors", Json.arr (e.constructors.map fun c => Json.str c.toString))
     , ("withoutArm", Json.arr (e.withoutArm.map fun c => Json.str c.toString))
@@ -236,6 +271,23 @@ def toJson (e : Extraction) : Json :=
 
 end Extraction
 
+/-- A declaration whose whole mono code is `let x := f a b c; return x` is a **forwarder**: the
+compiler moved the body to `f` and left a tail call. `Effect4.Program.effTy` is exactly this — its
+mono code is one line calling `Effect4.Program.effTy._redArg`, and the twenty-seven arms are in
+*that* declaration, which is not an environment constant at all.
+
+Following the call is therefore not a convenience, it is the difference between reading the rules
+and reading nothing. The chain is bounded and reported, so a reader always knows which declaration
+was actually summarised. -/
+private def forwardsTo? : Code .pure → Option Name
+  | .let decl (.return x) =>
+    if decl.fvarId == x then
+      match decl.value with
+      | .const n _ _ => some n
+      | _ => none
+    else none
+  | _ => none
+
 /-- Read the algorithm's mono LCNF and summarise every alternative of its top-level `cases`. -/
 def extractAlgorithm (alg : Algorithm) : CoreM (Except String Extraction) := do
   let env ← getEnv
@@ -243,23 +295,38 @@ def extractAlgorithm (alg : Algorithm) : CoreM (Except String Extraction) := do
     | some (.inductInfo i) => pure (i.ctors.toArray.map fun c => c.getString!.toName)
     | some _ => return .error s!"`{alg.family}` is a constant but not an inductive type"
     | none => return .error s!"`{alg.family}` is not a constant of the imported environment"
-  let some decl ← getMonoDecl? alg.name
-    | return .error s!"`{alg.name}` has no mono-phase LCNF entry (no code, or its module was \
-                       built by a compiler that did not persist the mono phase)"
-  let code ← match decl.value with
-    | .code c => pure c
-    | .extern _ => return .error s!"`{alg.name}`'s mono entry is an `extern` stub, not code"
+  -- follow forwarders to the declaration that actually holds the code
+  let mut current := alg.name
+  let mut chain : Array Name := #[alg.name]
+  let mut code : Code .pure := .unreach default
+  for _ in [0:4] do
+    let some decl ← getMonoDecl? current
+      | return .error s!"`{current}` has no mono-phase LCNF entry (no code, or its module was \
+                         built by a compiler that did not persist the mono phase)"
+    match decl.value with
+    | .extern _ => return .error s!"`{current}`'s mono entry is an `extern` stub, not code"
+    | .code c =>
+      code := c
+      match forwardsTo? c with
+      | some next =>
+        if chain.contains next then
+          return .error s!"`{alg.name}`'s forwarder chain loops at `{next}`"
+        current := next
+        chain := chain.push next
+      | none => break
   let some cs := topCases alg.family code
-    | return .error s!"`{alg.name}` has mono code but no `cases` on `{alg.family}` in it"
+    | return .error s!"`{current}` has mono code but no `cases` on `{alg.family}` in it \
+                       (followed from {" → ".intercalate (chain.toList.map (·.toString))})"
   let mut arms : Array ArmSummary := #[]
   let mut hasDefault := false
   for a in cs.alts do
     match a with
-    | .alt ctor _ code => arms := arms.push (summarise alg (ctor.getString!.toName) code)
-    | .default code => hasDefault := true; arms := arms.push (summarise alg `_default code)
+    | .alt ctor _ armCode => arms := arms.push (summarise alg (ctor.getString!.toName) armCode)
+    | .default armCode => hasDefault := true; arms := arms.push (summarise alg `_default armCode)
   let named := arms.map (·.ctor)
   return .ok
-    { algorithm := alg.name, family := alg.family, constructors := ctors, arms
+    { algorithm := alg.name, body := current, chain, family := alg.family
+    , constructors := ctors, arms
     , withoutArm := ctors.filter fun c => !named.contains c
     , hasDefault }
 
@@ -552,7 +619,7 @@ def signalsOf (spec : RulesSpec) (e : Extraction) (heads : Option (Array HeadRow
     for (ctor, callees) in spec.algorithm.requires do
       if ctor == c then
         for callee in callees do
-          unless arm.callees.contains callee do
+          unless arm.callees.contains callee || arm.applied.contains callee do
             out := out.push (.leanGuardMissing callee)
   if let some hs := heads then
     let mine := hs.filter fun h => h.ctor == c.toString
@@ -633,7 +700,11 @@ def extract (spec : RulesSpec) : CoreM (Json × Array Row × Nat) := do
       joinRows := joinRows.push jr
       let subject : Subject :=
         { kind := "typingRule", path := [spec.algorithm.name.toString, c.toString] }
-      let observed := signals.map Signal.id
+      -- ids, deduplicated: a constructor with four head-table variants can raise the same
+      -- signal four times, and the declaration should name it once. The full list, with the
+      -- rows it came from, stays in the row's detail.
+      let observed := signals.map Signal.id |>.foldl (init := #[])
+        fun acc i => if acc.contains i then acc else acc.push i
       let known? := spec.known.find? fun k => k.ctor == c
       let declared := (known?.map (·.signals)).getD #[]
       let unexpected := observed.filter fun s => !declared.contains s

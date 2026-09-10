@@ -1,0 +1,48 @@
+{
+  "note": "RED CONTROL 5, for all three arms of `rules.join` at once. It is `tools/Conform/Effect4/rules.json` with three deliberate edits: (a) `perform` is required to read a binder `domain` that does not exist, so the LEAN column raises `lean.guard.missing:domain` -- this is the arm that pins a landed guard, and it must go red when the guard goes away; (b) `succeed` is declared to be ill-typed under the target, which it is not, so the check must refuse the STALE declaration; (c) `scoped`'s declaration is deleted, so DI-63's real disagreement becomes an UNDECLARED signal and must be a counterexample. Everything else matches `rules.json`, so the run must be red for exactly those three constructors.",
+
+  "algorithm": {
+    "name": "Effect4.Program.effTy",
+    "family": "Effect4.Program.Eff",
+    "salient": ["Effect4"],
+    "refusal": "Option.none",
+    "append": "List.append",
+    "cons": "List.cons",
+    "requires": [
+      { "constructor": "perform", "callees": ["domain", "rowOf"] }
+    ]
+  },
+
+  "heads": "docs/research/seat-types-tooling/x1-heads.json",
+  "normalisation": { "stripImports": true, "strip": ["S.", "\""] },
+  "coverage": "ocaml/eff/goldens/coverage.txt",
+  "coveragePrefix": "Effect4.Program.Eff.",
+
+  "known": [
+    { "constructor": "succeed", "signals": ["target.illTyped"],
+      "register": "THE CONTROL (b)", "reason": "declared and not observed: the declaration is stale" },
+    { "constructor": "acquireRelease",
+      "signals": ["target.illTyped", "target.spelling:E", "target.spelling:R"],
+      "register": "types seat section 3.5", "reason": "as rules.json" },
+    { "constructor": "branch", "signals": ["target.illTyped", "target.spelling:R"],
+      "register": "types seat section 3.4", "reason": "as rules.json" },
+    { "constructor": "perform", "signals": ["target.missing"],
+      "register": "types seat section 3.3", "reason": "as rules.json" },
+    { "constructor": "callback", "signals": ["target.missing"],
+      "register": "types seat section 3.3", "reason": "as rules.json" },
+    { "constructor": "choose", "signals": ["target.missing"],
+      "register": "types seat section 3.3", "reason": "as rules.json" },
+    { "constructor": "exit", "signals": ["target.spelling:A"],
+      "register": "SPELLING", "reason": "as rules.json" },
+    { "constructor": "awaitFiber", "signals": ["target.spelling:A"],
+      "register": "SPELLING", "reason": "as rules.json" },
+    { "constructor": "withFiber", "signals": ["target.spelling:A", "target.spelling:R"],
+      "register": "SPELLING", "reason": "as rules.json" },
+    { "constructor": "provideLayer", "signals": ["target.spelling:R"],
+      "register": "SPELLING", "reason": "as rules.json" },
+    { "constructor": "service", "signals": ["target.spelling:A", "target.spelling:R"],
+      "register": "DI-24", "reason": "as rules.json" },
+    { "constructor": "provideService", "signals": ["target.spelling:A", "target.spelling:R"],
+      "register": "DI-24", "reason": "as rules.json" }
+  ]
+}
