@@ -163,7 +163,7 @@ comparing two different representations. -/
 
 def tyCtor (c : String) : String := OCaml5.Lcnf.ctorName ``Ty c
 
-partial def tyT : Ty → Target.TValue
+def tyT : Ty → Target.TValue
   | .never => .ctorV (tyCtor "never") #[]
   | .unit => .ctorV (tyCtor "unit") #[]
   | .nat => .ctorV (tyCtor "nat") #[]
@@ -256,7 +256,7 @@ structure Args where
   note's §3 R2. -/
   skipGenTy : Bool := false
 
-partial def parseArgs : List String → Args → Args
+def parseArgs : List String → Args → Args
   | "--out" :: p :: rest, a => parseArgs rest { a with out := some p }
   | "--fuel" :: n :: rest, a => parseArgs rest { a with fuel := n.toNat! }
   | "--bits" :: n :: rest, a => parseArgs rest { a with bits := n.toNat! }
@@ -274,7 +274,7 @@ answer and the target evaluator's answer are answers about the *same* syntax tre
 extern holes are replaced by the bodies the proposed extern rows would supply. -/
 
 /-- The vectors, as OCaml source, through the translator's own constructor names. -/
-partial def tyOcaml : Ty → String
+def tyOcaml : Ty → String
   | .never => tyCtor "never"
   | .unit => tyCtor "unit"
   | .nat => tyCtor "nat"
