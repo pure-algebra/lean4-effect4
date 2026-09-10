@@ -56,7 +56,7 @@ transcribed from ctorApp (construction, lines 145-186) and code.cases (destructi
 tools/Tools/TsGen.lean restated"
        , Build.nativeSeq ``List "nil" "cons"
            "([] as any[]) / [h, ...t] (x2.lean:147-148)" ]
-      ++ W.types.filterMap (familyRule W)
+      ++ W.types.filterMap familyRule
     usages :=
       #[ { site := "Effect4.Program.GenTy.joinAnswer result"
            type := .con ``Option [.con ``Option [.con `Effect4.Program.Ty []]] }
@@ -65,7 +65,7 @@ tools/Tools/TsGen.lean restated"
        , { site := "Effect4.Program.GenTy.merge result"
            type := .con ``Option [.con `Effect4.Program.GenTy []] } ] }
 where
-  familyRule (W : World) (tv : TypeView) : Option Rule :=
+  familyRule (tv : TypeView) : Option Rule :=
     -- `Option` and `List` have their own builtin rules; `Prod` and `Effect4.Row` are Lean
     -- structures and the emitter treats them as such (`x2.lean:159-161`), so they go through
     -- the ordinary structure rule.

@@ -24,8 +24,9 @@ libraries — the extensibility rule (`docs/research/type-tooling/brief-common.m
 
 **Properties.**
 * **No partial definitions.** Every recursion over the three nested-inductive languages is
-  structural and written out (`beq`/`render` in `mutual` blocks with their list companions), so
-  nothing here is `partial` and nothing is `opaque` — *by construction*.
+  structural: equality is `deriving BEq` (which does reach through the `List` and the
+  `String × _` of `objV`) and `render` is written out in a `mutual` block with its list
+  companion, so nothing here is `partial` and nothing is `opaque` — *by construction*.
 * **A value renders to exactly one string.** `TVal.render` is total and injective on the shapes
   it is used for in reports; two `DataValue`s that render to the same `TVal` render to the same
   string, which is what a counterexample row prints — *by construction*.
@@ -33,7 +34,7 @@ libraries — the extensibility rule (`docs/research/type-tooling/brief-common.m
 
 namespace Conform.Layout
 
-open Lean (Name Json)
+open Lean (Name Json ToJson toJson)
 
 /-! ## Types -/
 
@@ -42,23 +43,9 @@ stated for; a check that meets one outside a parameterised rule refuses. -/
 inductive TypeRef where
   | con (head : Name) (args : List TypeRef)
   | param (index : Nat)
-deriving Inhabited
+deriving Inhabited, BEq
 
 namespace TypeRef
-
-mutual
-/-- Structural equality, written out: `deriving DecidableEq` does not reach through `List`. -/
-def beq : TypeRef → TypeRef → Bool
-  | .con h args, .con h' args' => h == h' && beqList args args'
-  | .param i, .param j => i == j
-  | _, _ => false
-def beqList : List TypeRef → List TypeRef → Bool
-  | [], [] => true
-  | a :: as, b :: bs => beq a b && beqList as bs
-  | _, _ => false
-end
-
-instance : BEq TypeRef := ⟨beq⟩
 
 mutual
 /-- `Option (Option Nat)`, with the full head names shortened to their last component. -/
@@ -91,7 +78,12 @@ def args : TypeRef → List TypeRef
   | .con _ as => as
   | .param _ => []
 
-def toJson (t : TypeRef) : Json := Json.str t.render
+/-- The spelling, not the tree: a `TypeRef` is JSON as the string a reader recognises
+(`"Option (Option Nat)"`). The schema is therefore *not* the record, so this is a hand
+instance and not `deriving ToJson` — and it is why the datum's JSON round trip is
+one-directional for `Rule.applies` and `Target.usages` (see the module docstring of
+`Conform.Layout.Layout`). -/
+instance : ToJson TypeRef := ⟨fun t => Json.str t.render⟩
 
 mutual
 /-- Substitute the parameters of a rule by the arguments of an applied type. -/
@@ -157,24 +149,9 @@ inductive DataValue where
   | natLit (n : Nat)
   | strLit (s : String)
   | boolLit (b : Bool)
-deriving Inhabited
+deriving Inhabited, BEq
 
 namespace DataValue
-
-mutual
-def beq : DataValue → DataValue → Bool
-  | .ctor t c as, .ctor t' c' as' => t == t' && c == c' && beqList as as'
-  | .natLit a, .natLit b => a == b
-  | .strLit a, .strLit b => a == b
-  | .boolLit a, .boolLit b => a == b
-  | _, _ => false
-def beqList : List DataValue → List DataValue → Bool
-  | [], [] => true
-  | a :: as, b :: bs => beq a b && beqList as bs
-  | _, _ => false
-end
-
-instance : BEq DataValue := ⟨beq⟩
 
 mutual
 /-- The Lean spelling: `Option.some (Option.none)`. -/
@@ -190,7 +167,8 @@ def renderArgs : List DataValue → List String
       :: renderArgs as
 end
 
-def toJson (v : DataValue) : Json := Json.str v.render
+/-- The Lean spelling, not the tree: the schema is not the record (as for `TypeRef`). -/
+instance : ToJson DataValue := ⟨fun v => Json.str v.render⟩
 
 end DataValue
 
@@ -214,7 +192,7 @@ inductive TVal where
   the canonical wire's `ctor i args`). -/
   | conV (name : String) (args : List TVal)
   | tupV (xs : List TVal)
-deriving Inhabited
+deriving Inhabited, BEq
 
 namespace TVal
 
@@ -222,30 +200,6 @@ namespace TVal
 hold the same value. -/
 def sortFields (fs : List (String × TVal)) : List (String × TVal) :=
   (fs.toArray.qsort (fun a b => a.1 < b.1)).toList
-
-mutual
-def beq : TVal → TVal → Bool
-  | .null, .null => true
-  | .undef, .undef => true
-  | .boolV a, .boolV b => a == b
-  | .numV a, .numV b => a == b
-  | .strV a, .strV b => a == b
-  | .arrV a, .arrV b => beqList a b
-  | .tupV a, .tupV b => beqList a b
-  | .conV n a, .conV m b => n == m && beqList a b
-  | .objV a, .objV b => beqFields a b
-  | _, _ => false
-def beqList : List TVal → List TVal → Bool
-  | [], [] => true
-  | a :: as, b :: bs => beq a b && beqList as bs
-  | _, _ => false
-def beqFields : List (String × TVal) → List (String × TVal) → Bool
-  | [], [] => true
-  | (k, a) :: as, (l, b) :: bs => k == l && beq a b && beqFields as bs
-  | _, _ => false
-end
-
-instance : BEq TVal := ⟨beq⟩
 
 mutual
 /-- One unambiguous spelling, used in counterexample rows. -/
@@ -268,7 +222,8 @@ def renderFields : List (String × TVal) → List String
   | (k, v) :: fs => (k ++ ": " ++ render v) :: renderFields fs
 end
 
-def toJson (v : TVal) : Json := Json.str v.render
+/-- The rendered spelling, not the tree: the schema is not the record (as for `TypeRef`). -/
+instance : ToJson TVal := ⟨fun v => Json.str v.render⟩
 
 /-- Whether this target value is the target's null. The nullable admissibility condition is
 stated over exactly this predicate. -/
@@ -292,9 +247,13 @@ namespace Err
 def render (e : Err) : String :=
   (if e.path.isEmpty then "" else "/".intercalate e.path.reverse ++ ": ") ++ e.message
 
+/-- Hand-written, not `deriving ToJson`: `path` is stored innermost-first (`under` conses) and
+written outermost-first, so the schema is not the record. -/
 def toJson (e : Err) : Json :=
   Json.mkObj [("code", Json.str e.code), ("message", Json.str e.message),
     ("path", Json.arr (e.path.reverse.toArray.map Json.str))]
+
+instance : ToJson Err := ⟨toJson⟩
 
 def under (segment : String) (e : Err) : Err := { e with path := segment :: e.path }
 

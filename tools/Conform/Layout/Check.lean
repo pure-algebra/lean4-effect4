@@ -31,7 +31,7 @@ an emitter that is not generated from the datum.
 
 namespace Conform.Layout
 
-open Lean (Name Json)
+open Lean (Name Json ToJson toJson)
 
 /-- What a run of the checks is allowed to spend. -/
 structure Config where
@@ -47,9 +47,17 @@ deriving Inhabited
 
 /-! ## Subjects -/
 
-private def dedupRefs (xs : Array TypeRef) : Array TypeRef :=
-  xs.foldl (init := #[]) fun acc t =>
-    if acc.any (fun u => u.render == t.render) then acc else acc.push t
+private def dedupRefs (xs : Array TypeRef) : Array TypeRef := Id.run do
+  -- deduplicated by *spelling*, not by structure: two `TypeRef`s that render alike are one
+  -- subject. The `Std.HashSet` is that spelling set; the array keeps first-seen order.
+  let mut seen : Std.HashSet String := {}
+  let mut out : Array TypeRef := #[]
+  for t in xs do
+    let r := t.render
+    unless seen.contains r do
+      seen := seen.insert r
+      out := out.push t
+  return out
 
 /-- Every nesting the world actually uses, plus the target's declared usages. -/
 def subjects (T : Target) (W : World) : Array TypeRef :=
@@ -141,15 +149,17 @@ encoder over the enumerated values of the type. -/
 def findCollision (T : Target) (W : World) (cfg : Config) (ty : TypeRef) :
     Option (DataValue × DataValue × TVal) := Id.run do
   let vs := (valuesAt T W cfg.depth cfg.width ty).take cfg.sample
-  let mut seen : Array (String × DataValue × TVal) := #[]
+  -- keyed by the *rendered* target value, which is what a counterexample row prints; the first
+  -- source value that reached a key is the one the row names as `left`.
+  let mut seen : Std.HashMap String (DataValue × TVal) := {}
   for v in vs do
     match encodeAt T W cfg.fuel ty v with
     | .error _ => continue
     | .ok t =>
       let key := t.render
-      match seen.find? (·.1 == key) with
-      | some (_, w, tw) => if !(DataValue.beq w v) then return some (w, v, tw)
-      | none => seen := seen.push (key, v, t)
+      match seen[key]? with
+      | some (w, tw) => if w != v then return some (w, v, tw)
+      | none => seen := seen.insert key (v, t)
   return none
 
 /-- The rule's admissibility condition at every nesting the world uses. -/
@@ -227,7 +237,7 @@ def checkCoherent (T : Target) (W : World) (cfg : Config) : Array Row := Id.run 
             (Json.mkObj [("value", Json.str v.render), ("target", Json.str t.render),
               ("error", e.toJson)]))
         | .ok w =>
-          if DataValue.beq v w then checked := checked + 1
+          if v == w then checked := checked + 1
           else
             failure := some (Row.counterexample "layout.coherent" subj
               s!"{v.render} constructs as {t.render} and destructs as {w.render}"
@@ -255,27 +265,19 @@ structure EmitterRow where
   shape : String
   /-- The source text the row was recovered from, so a reader can check the recovery. -/
   evidence : String := ""
-deriving Inhabited
+deriving Inhabited, ToJson
 
 /-- The two tables recovered from one emitter: how it *builds* each constructor and how it
-*takes it apart*. -/
+*takes it apart*. Its JSON is a report artefact (`ocaml-recovered-table.json`), and the record
+*is* that schema, so the encoder is derived; the *reader* stays on `Conform.Policy`, because a
+recovered table arrives from a fixture file and an unknown key there must be refused. -/
 structure EmitterTable where
   name : String
   construction : Array EmitterRow := #[]
   destruction : Array EmitterRow := #[]
-deriving Inhabited
+deriving Inhabited, ToJson
 
 namespace EmitterTable
-
-/-- One recovered row as JSON. -/
-def rowJson (r : EmitterRow) : Json :=
-  Json.mkObj [("type", Json.str r.type.toString), ("ctor", Json.str r.ctor),
-    ("shape", Json.str r.shape), ("evidence", Json.str r.evidence)]
-
-def toJson (t : EmitterTable) : Json :=
-  Json.mkObj [("name", Json.str t.name),
-    ("construction", Json.arr (t.construction.map rowJson)),
-    ("destruction", Json.arr (t.destruction.map rowJson))]
 
 private def rowReader (j : Json) : Policy.Reader EmitterRow := do
   let get ← Policy.object j ["type", "ctor", "shape", "evidence"]
@@ -308,14 +310,23 @@ def shapeOf (T : Target) (type : Name) (ctor : String) : Option String := do
 /-- The audit: a construction rule and a destruction rule that disagree are refused, and a
 rule that disagrees with the target datum is refused, whichever side it is on. -/
 def auditCoherence (T : Target) (tbl : EmitterTable) : Array Row := Id.run do
+  -- one index per side: the *first* row for a `(type, constructor)` is the one compared, which
+  -- is what the linear `Array.find?` this replaces answered.
+  let index (rows : Array EmitterRow) : Std.HashMap (Name × String) EmitterRow :=
+    rows.foldl (init := {}) fun m r => if m.contains (r.type, r.ctor) then m else m.insert (r.type, r.ctor) r
+  let consIdx := index tbl.construction
+  let destIdx := index tbl.destruction
   let mut keys : Array (Name × String) := #[]
+  let mut seen : Std.HashSet (Name × String) := {}
   for r in tbl.construction ++ tbl.destruction do
-    if !keys.any (fun k => k.1 == r.type && k.2 == r.ctor) then keys := keys.push (r.type, r.ctor)
+    unless seen.contains (r.type, r.ctor) do
+      seen := seen.insert (r.type, r.ctor)
+      keys := keys.push (r.type, r.ctor)
   let mut rows : Array Row := #[]
   for (ty, c) in keys do
     let subj := subjectOf "constructor" [tbl.name, ty.toString, c]
-    let cons := tbl.construction.find? fun r => r.type == ty && r.ctor == c
-    let dest := tbl.destruction.find? fun r => r.type == ty && r.ctor == c
+    let cons := consIdx[(ty, c)]?
+    let dest := destIdx[(ty, c)]?
     match cons, dest with
     | none, none => rows := rows.push (Row.unresolved "layout.coherent" subj "no row on either side")
     | some _, none =>
