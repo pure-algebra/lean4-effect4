@@ -1,0 +1,11 @@
+{
+  "note": "placeholder for the first A1-A3 run; replaced below",
+  "algorithm": {
+    "name": "Effect4.Program.effTy",
+    "family": "Effect4.Program.Eff",
+    "salient": ["Effect4"],
+    "refusal": "Option.none",
+    "append": "List.append",
+    "cons": "List.cons"
+  }
+}

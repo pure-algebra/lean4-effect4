@@ -1,0 +1,7 @@
+{
+  "note": "RED CONTROL 4's driver configuration. See `mutated-mirrors.json`. It imports Effect4 because the check compares against the ENVIRONMENT's constructor list, which is the whole point.",
+  "tool": "conform-audit-control-mirror",
+  "imports": ["Effect4"],
+  "roots": ["Effect4"],
+  "mirrors": "tools/Conform/Effect4/Fixtures/mutated-mirrors.json"
+}

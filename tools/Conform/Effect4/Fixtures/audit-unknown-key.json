@@ -1,0 +1,7 @@
+{
+  "note": "driver configuration for the fixture policy `unknown-key-policy.json`.",
+  "tool": "conform-audit-control-unknown-key",
+  "imports": ["Conform.Effect4.Fixtures.Traffic"],
+  "roots": ["Conform.Effect4.Fixtures"],
+  "casesPolicy": "tools/Conform/Effect4/Fixtures/unknown-key-policy.json"
+}
