@@ -4,7 +4,7 @@ import Test.Program.InvocationContract
 
 /-!
 Fresh kernel dependency report for the invocation slice (v2 §3 row S1a): the shared async
-dispatcher and its two theorems (`src/Effect4/Laws/Program/Invocation.lean`), the table check
+dispatcher and its routing theorems (`src/Effect4/Laws/Program/Invocation.lean`), the table check
 (`src/Effect4/Program/Native.lean`) and the admission face (`src/Effect4/Api.lean`). The
 contract is `Test/Program/InvocationContract.lean`.
 
@@ -16,6 +16,7 @@ Every declaration below is expected at the ceiling `propext`/`Quot.sound`; the g
 #print axioms Effect4.Program.asyncRoute
 #print axioms Effect4.Program.compileEff
 #print axioms Effect4.Program.compile_zero_fuel
+#print axioms Effect4.Program.compile_perform_eq_callback
 #print axioms Effect4.Program.compileEff_callback_eq_asyncRoute
 #print axioms Effect4.Program.compile_perform_eq_callback_await
 #print axioms Effect4.Program.compile_perform_eq_callback_of_await
@@ -38,5 +39,7 @@ Every declaration below is expected at the ceiling `propext`/`Quot.sound`; the g
 #print axioms Effect4.Api.runAdmitted
 #print axioms Effect4.Api.replayAdmitted
 
--- INVOCATION/contract: the battery's one theorem (the two spellings print one call).
+-- INVOCATION/contract: the two spellings print one call and replay the admitted fixture alike.
 #print axioms Test.Program.InvocationContract.sleep_print_same
+
+#print axioms Test.Program.InvocationContract.replay_perform_external_eq_callback

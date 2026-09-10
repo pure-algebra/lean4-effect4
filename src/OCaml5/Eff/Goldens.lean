@@ -401,6 +401,10 @@ def pMergeAll : P :=
 built-in table deliberately does not. -/
 def pExternal : P := .callback (.external 0) u
 
+/-- DI-54: the bound `never` used to satisfy an out-of-domain external placeholder.
+Both checkers must refuse this program at the empty row table. -/
+def pIllExternalDomain : P := .bind (.fail (n 1)) (.perform (.external 0) (.var 0))
+
 def corpus : List (String × P) :=
   [ ("p42", p42), ("pBind", pBind), ("pFork", pFork), ("pTwo", pTwo), ("pAwait", pAwait)
   , ("pGen", pGen), ("pWhile", pWhile), ("pCatch", pCatch), ("pStr", pStr), ("pFailCause", pFailCause)
@@ -411,7 +415,7 @@ def corpus : List (String × P) :=
   , ("pIll", pIll), ("pIllRet", pIllRet), ("pIllReq", pIllReq), ("pIllBreak", pIllBreak)
   , ("pIllBranch", pIllBranch), ("pIllJoin", pIllJoin), ("pIllVar", pIllVar)
   , ("pIllCallback", pIllCallback), ("pIllStep", pIllStep), ("pIllInterruptor", pIllInterruptor)
-  , ("pProvide", pProvide), ("pSleep", pSleep), ("pDiamond", pDiamond), ("pMergeAll", pMergeAll), ("pExternal", pExternal) ]
+  , ("pProvide", pProvide), ("pSleep", pSleep), ("pDiamond", pDiamond), ("pMergeAll", pMergeAll), ("pExternal", pExternal), ("pIllExternalDomain", pIllExternalDomain) ]
 
 end Corpus
 

@@ -597,7 +597,10 @@ theorem compileEff_perform_sync (op : NativeOp) (r : Term) (hf : p.fuel = k + 1)
          | some operation => Prim.sync (EffThunk.op operation)
          | none => badShape
        | none => badShape) := by
-  simp [compileEff, hf, hkind]; rfl
+  cases op with
+  | scopeMake strategy => cases strategy <;> simp [compileEff, hf, NativeOp.row] <;> rfl
+  | external _ => cases hkind
+  | _ => simp_all [NativeOp.row, compileEff, hf] <;> rfl
 
 theorem compileEff_bind (a b : NativeEff) (hf : p.fuel = k + 1) :
     compileEff (.bind a b) p =

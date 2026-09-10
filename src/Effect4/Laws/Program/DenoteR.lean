@@ -462,6 +462,28 @@ def mergeAllR (q : Point) (m : MemoMapId) (child : Nat) (count : Nat) : RProgram
     | some parent => mergeAllForkR q m parent count 0 []
     | none => .pure badShapeExit)
 
+/-- DI-61: the semantic counterpart of `asyncRoute`, shared by both invocation forms.
+External registration is selected before the placeholder's row kind. -/
+def denoteAsyncRoute (op : NativeOp) (request : Term) (p : Point) : RProgram :=
+  match op with
+  | .external _ => denoteForeign op request p
+  | .sleep => denoteSleep request p
+  | _ => match (NativeOp.row op).kind with
+    | .async => denoteAsync request p
+    | _ => .pure badShapeExit
+
+/-- Immediate-exit classification for the shared asynchronous route. -/
+def inlineAsyncYield (op : NativeOp) (request : Term) (p : Point) : Option ExitV :=
+  match op with
+  | .external _ => match evalTerm p.env request with
+    | some _ => none | none => some badShapeExit
+  | .sleep => match (evalTerm p.env request).bind NativeOp.sleepMillisOf with
+    | some _ => none | none => some badShapeExit
+  | _ => match (NativeOp.row op).kind with
+    | .async => match (evalTerm p.env request).bind NativeOp.awaitCellOf with
+      | some _ => none | none => some badShapeExit
+    | _ => some badShapeExit
+
 /-- A yielded source form with an immediate `Prim.success` or `Prim.failure` head.
 `sync`, `yieldError` with a valid argument, and compound frames are not inline exits;
 `exit` of an immediate exit is that exit's success (`internal/effect.ts:3621-3622`), and
@@ -480,22 +502,14 @@ def inlineYield : NativeEff → Point → Option ExitV
     | .yieldError t => match evalTerm p.env t with
       | some _ => none | none => some badShapeExit
     | .perform op request =>
-      match (NativeOp.row op).kind with
-      | .sync => match (evalTerm p.env request).bind (NativeOp.syncOpOf op) with
-        | some _ => none | none => some badShapeExit
-      | .async => match (evalTerm p.env request).bind NativeOp.awaitCellOf with
-        | some _ => none | none => some badShapeExit
-      | .program => none
-    | .callback op request =>
       match op with
-      | .external _ => match evalTerm p.env request with
-        | some _ => none | none => some badShapeExit
-      | .sleep => match (evalTerm p.env request).bind NativeOp.sleepMillisOf with
-        | some _ => none | none => some badShapeExit
+      | .external _ => inlineAsyncYield op request p
       | _ => match (NativeOp.row op).kind with
-        | .async => match (evalTerm p.env request).bind NativeOp.awaitCellOf with
+        | .sync => match (evalTerm p.env request).bind (NativeOp.syncOpOf op) with
           | some _ => none | none => some badShapeExit
-        | _ => some badShapeExit
+        | .async => inlineAsyncYield op request p
+        | .program => none
+    | .callback op request => inlineAsyncYield op request p
     | .awaitFiber target mode => match evalTerm p.env target with
       | some (Val.fiber ⟨id⟩) => p.awaitExit ⟨id⟩ mode | _ => some badShapeExit
     | .exit b => (inlineYield b (p.child 0)).map fun ex => .success (reifyExitVal ex)
@@ -590,13 +604,15 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
   | .suspend b, p => suspendR p (constructR fun completed =>
       rec b ({ p with completed }.child 0))
   | .perform op request, p =>
-    match (NativeOp.row op).kind with
-    | .sync =>
-      match (evalTerm p.env request).bind (NativeOp.syncOpOf op) with
-      | some operation => .vis (.inl operation) fun v => .pure (.success v)
-      | none => .pure badShapeExit
-    | .async => denoteAsync request p
-    | .program => pending .unsupported p
+    match op with
+    | .external _ => denoteAsyncRoute op request p
+    | _ => match (NativeOp.row op).kind with
+      | .sync =>
+        match (evalTerm p.env request).bind (NativeOp.syncOpOf op) with
+        | some operation => .vis (.inl operation) fun v => .pure (.success v)
+        | none => .pure badShapeExit
+      | .async => denoteAsyncRoute op request p
+      | .program => pending .unsupported p
   | .bind a b, p => (guardR .onSuccess (rec a (p.child 0))).bind
       (seqR fun v => constructR fun completed =>
         rec b ({ p with completed }.childWith 1 v))
@@ -632,13 +648,7 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
   -- `Prim.yieldNowWith`: the park answers the void value, which the continuation passes
   -- on (the frame resumes with `success void`; an answer is never discarded)
   | .yieldNow priority, _ => .vis (.inr (.yieldNow priority)) fun v => .pure (.success v)
-  | .callback op request, p =>
-    match op with
-    | .external _ => denoteForeign op request p
-    | .sleep => denoteSleep request p
-    | _ => match (NativeOp.row op).kind with
-      | .async => denoteAsync request p
-      | _ => .pure badShapeExit
+  | .callback op request, p => denoteAsyncRoute op request p
   | .awaitFiber target mode, p =>
     match evalTerm p.env target with
     | some (Val.fiber ⟨id⟩) =>
@@ -943,16 +953,31 @@ theorem denoteR_sync (t : Term) (h : p.fuel ≠ 0) :
 
 theorem denoteR_perform (op : NativeOp) (r : Term) (h : p.fuel ≠ 0) :
     denoteR root (.perform op r) p =
-      (match (NativeOp.row op).kind with
-       | .sync =>
-         match (evalTerm p.env r).bind (NativeOp.syncOpOf op) with
-         | some operation => .vis (.inl operation) fun v => .pure (.success v)
-         | none => .pure badShapeExit
-       | .async => denoteAsync r p
-       | .program => pending .unsupported p) := by
+      (match op with
+       | .external _ => denoteAsyncRoute op r p
+       | _ => match (NativeOp.row op).kind with
+         | .sync =>
+           match (evalTerm p.env r).bind (NativeOp.syncOpOf op) with
+           | some operation => .vis (.inl operation) fun v => .pure (.success v)
+           | none => .pure badShapeExit
+         | .async => denoteAsyncRoute op r p
+         | .program => pending .unsupported p) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
   | succ f => budget hf; try rfl
+
+/-- The synchronous fragment retains its old semantic head under external-first routing. -/
+theorem denoteR_perform_sync (op : NativeOp) (r : Term) (h : p.fuel ≠ 0)
+    (hk : (NativeOp.row op).kind = .sync) :
+    denoteR root (.perform op r) p =
+      (match (evalTerm p.env r).bind (NativeOp.syncOpOf op) with
+       | some operation => .vis (.inl operation) fun v => .pure (.success v)
+       | none => .pure badShapeExit) := by
+  rw [denoteR_perform root op r h]
+  cases op with
+  | scopeMake strategy => cases strategy <;> rfl
+  | external _ => cases hk
+  | _ => simp_all [NativeOp.row] <;> rfl
 
 theorem denoteR_catchCause (b hd : NativeEff) (h : p.fuel ≠ 0) :
     denoteR root (.catchCause b hd) p =
@@ -1199,6 +1224,36 @@ def headExit : NCode → Option ExitV
 theorem headExit_eq_asExit? (c : NCode) : headExit c = c.asExit? := by
   cases c <;> rfl
 
+/-- The synchronous classifier and code use the same request/operation decoding. -/
+theorem inlineSyncYield_eq_headExit (op : NativeOp) (request : Term) (p : Point) :
+    (match (evalTerm p.env request).bind (NativeOp.syncOpOf op) with
+     | some _ => none | none => some badShapeExit) =
+      headExit (match evalTerm p.env request with
+        | some value => match NativeOp.syncOpOf op value with
+          | some operation => Prim.sync (EffThunk.op operation)
+          | none => badShape
+        | none => badShape) := by
+  cases hv : evalTerm p.env request with
+  | none => rfl
+  | some value =>
+    dsimp only [Option.bind]
+    cases NativeOp.syncOpOf op value <;> rfl
+
+/-- The shared route's source classifier agrees with its immediate compiled exit. -/
+theorem inlineAsyncYield_eq_headExit (op : NativeOp) (request : Term) (p : Point) :
+    inlineAsyncYield op request p = headExit (asyncRoute op request p) := by
+  cases op
+  all_goals simp only [inlineAsyncYield, asyncRoute]
+  case external i => cases evalTerm p.env request <;> rfl
+  case sleep =>
+    cases (evalTerm p.env request).bind NativeOp.sleepMillisOf with
+    | none => rfl
+    | some n => cases n <;> rfl
+  all_goals first
+    | rfl
+    | (cases (evalTerm p.env request).bind NativeOp.awaitCellOf <;> rfl)
+    | (rename_i strategy; cases strategy <;> rfl)
+
 theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
     inlineYield e p = headExit (compileEff e p) := by
   cases hf : p.fuel with
@@ -1220,32 +1275,18 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
       rw [inlineYield_eq_headExit b (p.child 0), headExit_eq_asExit? (compileEff b (p.child 0))]
       cases hx : (compileEff b (p.child 0)).asExit? <;> rfl
     | perform op request =>
-      simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
-      cases hk : (NativeOp.row op).kind with
-      | sync =>
-        cases hv : evalTerm p.env request with
-        | none => rfl
-        | some value =>
-          dsimp only [Option.bind]
-          cases NativeOp.syncOpOf op value <;> rfl
-      | async => cases (evalTerm p.env request).bind NativeOp.awaitCellOf <;> rfl
-      | program => rfl
-    | callback op request =>
       cases op
-      -- `asyncRoute` since v2 DI-61 (a): the `callback` arm is the shared dispatcher, so the
-      -- script unfolds it here to reach the same case split as before. What the arm compiles
-      -- to is unchanged for every operation.
-      all_goals simp only [inlineYield, compileEff, asyncRoute, hf, Nat.succ_ne_zero,
-        ↓reduceIte]
-      case external i => cases evalTerm p.env request <;> rfl
-      case sleep =>
-        cases (evalTerm p.env request).bind NativeOp.sleepMillisOf with
-        | none => rfl
-        | some n => cases n <;> rfl
+      all_goals unfold compileEff; rw [hf]
+      all_goals simp only [inlineYield, hf, Nat.succ_ne_zero, ↓reduceIte]
+      case external i => exact inlineAsyncYield_eq_headExit (.external i) request p
+      case sleep => exact inlineAsyncYield_eq_headExit .sleep request p
+      case deferredAwait => exact inlineAsyncYield_eq_headExit .deferredAwait request p
       all_goals first
-        | rfl
-        | (cases (evalTerm p.env request).bind NativeOp.awaitCellOf <;> rfl)
-        | (rename_i s; cases s <;> rfl)
+        | exact inlineSyncYield_eq_headExit _ request p
+        | (rename_i strategy; cases strategy <;> exact inlineSyncYield_eq_headExit _ request p)
+    | callback op request =>
+      simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
+      exact inlineAsyncYield_eq_headExit op request p
     | succeed t | fail t | yieldError t =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
       cases evalTerm p.env t <;> rfl
@@ -1288,6 +1329,18 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte, headExit, frontier]
 termination_by structural e
 
+/-- The synchronous classifier is unchanged by the shared async route. -/
+theorem inlineYield_perform_sync (op : NativeOp) (r : Term) (q : Point)
+    (hk : (NativeOp.row op).kind = .sync) :
+    inlineYield (.perform op r) q =
+      if q.fuel = 0 then none else
+        match (evalTerm q.env r).bind (NativeOp.syncOpOf op) with
+        | some _ => none | none => some badShapeExit := by
+  cases op with
+  | scopeMake strategy => cases strategy <;> rfl
+  | external _ => cases hk
+  | _ => simp_all [NativeOp.row, inlineYield] <;> rfl
+
 /-- A straight source form that `inlineYield` classifies as an immediate exit denotes to
 exactly that exit: the fold of `denoteR`'s `exit` arm is the body's straight meaning. -/
 theorem denote_of_inlineYield : ∀ (b : NativeEff) (q : Point) {exit : ExitV},
@@ -1325,7 +1378,7 @@ theorem denote_of_inlineYield : ∀ (b : NativeEff) (q : Point) {exit : ExitV},
       · simp [hx] at h
   | .perform op r, q, exit, hs, h => by
     have hk := Straight.perform_sync hs
-    simp only [inlineYield, hk] at h
+    rw [inlineYield_perform_sync op r q hk] at h
     split at h
     · cases h
     · rcases hx : evalTerm q.env r with _ | x
@@ -1414,7 +1467,8 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
     | zero => exact (fuel_ne_zero_of_depth hp hf).elim
     | succ f =>
       have hk := Straight.perform_sync hs
-      simp only [denoteR, hf, denoteRWith, denoteEffBody, denote, hk]
+      rw [denoteR_perform_sync root op request (by rw [hf]; exact Nat.succ_ne_zero f) hk]
+      simp only [denote, hk]
       cases (evalTerm p.env request).bind (NativeOp.syncOpOf op) <;> rfl
   | .bind a b, p, hs, hp => by
     have hpos : p.fuel ≠ 0 := by have := Agreement.depth_pos (.bind a b); omega

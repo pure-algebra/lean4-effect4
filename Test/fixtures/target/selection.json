@@ -1,0 +1,90 @@
+{
+  "programs": [
+    "p42",
+    "pBind",
+    "pFork",
+    "pAwait",
+    "pGen",
+    "pLoop",
+    "pCatch",
+    "pScope",
+    "pTwo",
+    "pAcquire",
+    "pAcquireClosed",
+    "pProvide",
+    "pProvideMerge",
+    "pProvideTwice",
+    "pDiamond",
+    "pMergeAll",
+    "pAcquireHandle",
+    "pFailTagged",
+    "pSqlite",
+    "pKv",
+    "pSqlFail",
+    "pSqlCatch",
+    "pSqlExit",
+    "pSqlOrDie"
+  ],
+  "handles": {
+    "Host.Resource": "Adapter.HostResource",
+    "SqlClient.SqlClient": "Adapter.SqlHandle",
+    "KeyValueStore.KeyValueStore": "Adapter.KvHandle"
+  },
+  "rows": [
+    {
+      "table": "SqliteBun",
+      "name": "sqliteOpen",
+      "subject": "typeof Adapter.Sql.open"
+    },
+    {
+      "table": "SqliteBun",
+      "name": "sqlUnsafe",
+      "subject": "Adapter.SqlHandle[\"unsafe\"]"
+    },
+    {
+      "table": "SqliteBun",
+      "name": "sqliteClose",
+      "subject": "typeof Adapter.Sql.close"
+    },
+    {
+      "table": "KeyValueStoreMemory",
+      "name": "kvMake",
+      "subject": "typeof Adapter.Kv.make"
+    },
+    {
+      "table": "KeyValueStoreMemory",
+      "name": "kvGet",
+      "subject": "Adapter.KvHandle[\"get\"]"
+    },
+    {
+      "table": "KeyValueStoreMemory",
+      "name": "kvSet",
+      "subject": "Adapter.KvHandle[\"set\"]"
+    },
+    {
+      "table": "KeyValueStoreMemory",
+      "name": "kvRemove",
+      "subject": "Adapter.KvHandle[\"remove\"]"
+    },
+    {
+      "table": "KeyValueStoreMemory",
+      "name": "kvHas",
+      "subject": "Adapter.KvHandle[\"has\"]"
+    },
+    {
+      "table": "Host",
+      "name": "acquire",
+      "subject": "typeof Adapter.Host.acquire"
+    },
+    {
+      "table": "Host",
+      "name": "close",
+      "subject": "typeof Adapter.Host.close"
+    },
+    {
+      "table": "Host",
+      "name": "read",
+      "subject": "typeof Adapter.Host.read"
+    }
+  ]
+}

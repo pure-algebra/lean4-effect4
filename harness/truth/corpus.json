@@ -1,8 +1,9 @@
-{"regenerate":
+{"scopeKey": {"service": 0, "name": 0},
+ "regenerate":
  "lake env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes",
  "programs":
  [{"wellTyped": true,
-   "type": {"requiresEmpty": true, "error": "never", "answer": "number"},
+   "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 42}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -19,7 +20,7 @@
    "expr": "Effect.succeed(42)",
    "decl": "export const main: Effect.Effect<number, never> = Effect.succeed(42)\n"},
   {"wellTyped": true,
-   "type": {"requiresEmpty": true, "error": "never", "answer": "number"},
+   "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 2}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -37,7 +38,8 @@
    "decl":
    "export const main: Effect.Effect<number, never> = Effect.flatMap(Effect.succeed(1), (a0) => Effect.succeed(succ(a0)))\n"},
   {"wellTyped": true,
-   "type": {"requiresEmpty": true, "error": "never", "answer": "Exit.Exit<number, never>"},
+   "type":
+   {"requiresEmpty": true, "requires": [], "error": "never", "answer": "Exit.Exit<number, never>"},
    "runSync":
    {"sync": false, "exitKind": "die", "exit": {"failure": {"reasons": [{"die": "asyncFiber"}]}}},
    "run":
@@ -87,7 +89,7 @@
    "decl":
    "export const main: Effect.Effect<Exit.Exit<number, never>, never> = Effect.flatMap(Effect.forkChild(Effect.flatMap(Effect.yieldNowWith(0), (a0) => Effect.succeed(7)), { startImmediately: false, uninterruptible: \"inherit\" }), (a0) => Fiber.await(a0))\n"},
   {"wellTyped": true,
-   "type": {"requiresEmpty": true, "error": "number", "answer": "number"},
+   "type": {"requiresEmpty": true, "requires": [], "error": "number", "answer": "number"},
    "runSync":
    {"sync": false, "exitKind": "die", "exit": {"failure": {"reasons": [{"die": "asyncFiber"}]}}},
    "run":
@@ -106,7 +108,7 @@
    "decl":
    "export const main: Effect.Effect<number, number> = Effect.flatMap(Deferred.make<number, number>(), (a0) => Deferred.await(a0))\n"},
   {"wellTyped": true,
-   "type": {"requiresEmpty": true, "error": "never", "answer": "boolean"},
+   "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "boolean"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": false}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -125,7 +127,7 @@
    "decl":
    "export const main: Effect.Effect<boolean, never> = Effect.gen(function* () {\n  const a0 = yield* Effect.succeed(3)\n  if (isZero(a0)) {\n    return true\n  } else {\n    return false\n  }\n})\n"},
   {"wellTyped": true,
-   "type": {"requiresEmpty": true, "error": "never", "answer": "void"},
+   "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "void"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": null}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -144,7 +146,7 @@
    "decl":
    "export const main: Effect.Effect<void, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.suspend(() => {\n  let a1 = 0\n  return Effect.whileLoop({\n    while: () => isZero(a1),\n    body: () => Ref.update(a0, incr),\n    step: (a2) => {\n      a1 = succ(a1)\n    },\n  })\n}))\n"},
   {"wellTyped": true,
-   "type": {"requiresEmpty": true, "error": "never", "answer": "void"},
+   "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "void"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": null}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -163,7 +165,7 @@
    "decl":
    "export const main: Effect.Effect<void, never> = Effect.catchCause(Effect.failCause(Cause.combine(Cause.fail(1), Cause.interrupt())), (a0) => Effect.succeed(undefined))\n"},
   {"wellTyped": true,
-   "type": {"requiresEmpty": true, "error": "never", "answer": "void"},
+   "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "void"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": null}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -182,7 +184,8 @@
    "decl":
    "export const main: Effect.Effect<void, never> = Effect.scoped(Effect.flatMap(Scope.make(\"parallel\"), (a0) => Effect.flatMap(Effect.exit(Effect.succeed(1)), (a1) => Scope.close(a0, a1))))\n"},
   {"wellTyped": true,
-   "type": {"requiresEmpty": true, "error": "never", "answer": "Exit.Exit<number, never>"},
+   "type":
+   {"requiresEmpty": true, "requires": [], "error": "never", "answer": "Exit.Exit<number, never>"},
    "runSync":
    {"sync": false, "exitKind": "die", "exit": {"failure": {"reasons": [{"die": "asyncFiber"}]}}},
    "run":
@@ -251,7 +254,11 @@
    "decl":
    "export const main: Effect.Effect<Exit.Exit<number, never>, never> = Effect.flatMap(Effect.forkChild(Effect.flatMap(Effect.yieldNowWith(0), (a0) => Effect.succeed(1)), { startImmediately: false, uninterruptible: \"inherit\" }), (a0) => Effect.flatMap(Effect.forkChild(Effect.flatMap(Effect.yieldNowWith(0), (a1) => Effect.succeed(2)), { startImmediately: false, uninterruptible: \"inherit\" }), (a1) => Effect.flatMap(Fiber.await(a1), (a2) => Fiber.await(a1))))\n"},
   {"wellTyped": true,
-   "type": {"requiresEmpty": false, "error": "never", "answer": "number"},
+   "type":
+   {"requiresEmpty": false,
+    "requires": [{"service": 0, "name": 0}],
+    "error": "never",
+    "answer": "number"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 7}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -271,7 +278,11 @@
    "decl":
    "export const main = Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Effect.scoped(Effect.acquireRelease(Effect.succeed(7), (a1, a2) => Ref.set(a0, a1))), (a1) => Ref.get(a0)))\n"},
   {"wellTyped": true,
-   "type": {"requiresEmpty": false, "error": "never", "answer": "number"},
+   "type":
+   {"requiresEmpty": false,
+    "requires": [{"service": 0, "name": 0}],
+    "error": "never",
+    "answer": "number"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 7}},
    "run":
    {"schedule":
@@ -317,7 +328,7 @@
    "decl":
    "export const main = Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Effect.scoped(Effect.forkChild(Effect.acquireRelease(Effect.succeed(7), (a1, a2) => Ref.set(a0, a1)), { startImmediately: false, uninterruptible: \"inherit\" })), (a1) => Effect.flatMap(Fiber.await(a1), (a2) => Ref.get(a0))))\n"},
   {"wellTyped": true,
-   "type": {"requiresEmpty": true, "error": "never", "answer": "number"},
+   "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 7}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -348,7 +359,7 @@
    "decl":
    "export const main: Effect.Effect<number, never> = Effect.provide(Effect.service(Context.Service<number>(\"k4_4\")), Layer.effect(Context.Service<number>(\"k4_4\"), Effect.succeed(7)))\n"},
   {"wellTyped": true,
-   "type": {"requiresEmpty": true, "error": "never", "answer": "number"},
+   "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 2}},
    "run":
    {"schedule":
@@ -429,7 +440,7 @@
    "decl":
    "export const main: Effect.Effect<number, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.provideService(Effect.flatMap(Effect.scoped(Effect.provide(Effect.service(Context.Service<number>(\"k5_4\")), Layer.merge(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.acquireRelease(Effect.succeed(1), (a1, a2) => Ref.update(a0, incr)))), Layer.effect(Context.Service<number>(\"k5_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.acquireRelease(Effect.succeed(1), (a1, a2) => Ref.update(a0, incr))))))), (a1) => Ref.get(a0)), Context.Service<Ref.Ref<number>>(\"k6_7\"), a0))\n"},
   {"wellTyped": true,
-   "type": {"requiresEmpty": true, "error": "never", "answer": "number"},
+   "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 2}},
    "run":
    {"schedule":
@@ -504,7 +515,7 @@
    "decl":
    "export const main: Effect.Effect<number, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.provideService(Effect.flatMap(Effect.provide(Effect.service(Context.Service<number>(\"k4_4\")), Layer.merge(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))), Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))))), (a1) => Ref.get(a0)), Context.Service<Ref.Ref<number>>(\"k6_7\"), a0))\n"},
   {"wellTyped": true,
-   "type": {"requiresEmpty": true, "error": "never", "answer": "number"},
+   "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 1}},
    "run":
    {"schedule":
@@ -575,7 +586,7 @@
    "decl":
    "export const L_1_0_0_0_0 = Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5))))\nexport const main: Effect.Effect<number, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.provideService(Effect.flatMap(Effect.provide(Effect.service(Context.Service<number>(\"k4_4\")), Layer.merge(L_1_0_0_0_0, L_1_0_0_0_0)), (a1) => Ref.get(a0)), Context.Service<Ref.Ref<number>>(\"k6_7\"), a0))\n"},
   {"wellTyped": true,
-   "type": {"requiresEmpty": true, "error": "never", "answer": "number"},
+   "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 3}},
    "run":
    {"schedule":
@@ -667,7 +678,11 @@
    "decl":
    "export const main: Effect.Effect<number, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.provideService(Effect.flatMap(Effect.provide(Effect.service(Context.Service<number>(\"k7_4\")), Layer.mergeAll(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))), Layer.effect(Context.Service<number>(\"k5_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))), Layer.effect(Context.Service<number>(\"k7_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))))), (a1) => Ref.get(a0)), Context.Service<Ref.Ref<number>>(\"k6_7\"), a0))\n"},
   {"wellTyped": true,
-   "type": {"requiresEmpty": false, "error": "never", "answer": "readonly [Host.Resource, number]"},
+   "type":
+   {"requiresEmpty": false,
+    "requires": [{"service": 0, "name": 0}],
+    "error": "never",
+    "answer": "readonly [Host.Resource, number]"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": [{"external": 0}, 1]}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -688,7 +703,8 @@
    "decl":
    "export const main = Effect.flatMap(Effect.scoped(Effect.acquireRelease(Host.acquire(), (a0, a1) => Host.close(a0))), (a0) => Effect.flatMap(Host.read(a0), (a1) => Effect.succeed(pair(a0, a1))))\n"},
   {"wellTyped": true,
-   "type": {"requiresEmpty": true, "error": "readonly [string, string]", "answer": "never"},
+   "type":
+   {"requiresEmpty": true, "requires": [], "error": "readonly [string, string]", "answer": "never"},
    "runSync":
    {"sync": true,
     "exitKind": "fail",
@@ -716,6 +732,7 @@
   {"wellTyped": true,
    "type":
    {"requiresEmpty": false,
+    "requires": [{"service": 0, "name": 0}],
     "error": "readonly [string, string]",
     "answer": "ReadonlyArray<ReadonlyArray<readonly [string, string]>>"},
    "runSync":
@@ -744,6 +761,7 @@
   {"wellTyped": true,
    "type":
    {"requiresEmpty": true,
+    "requires": [],
     "error": "readonly [string, string]",
     "answer": "readonly [Option.Option<string>, boolean]"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": [{"some": "1"}, true]}},
@@ -767,6 +785,7 @@
   {"wellTyped": true,
    "type":
    {"requiresEmpty": false,
+    "requires": [{"service": 0, "name": 0}],
     "error": "readonly [string, string]",
     "answer": "ReadonlyArray<ReadonlyArray<readonly [string, string]>>"},
    "runSync":
@@ -797,7 +816,11 @@
    "decl":
    "export const main = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => a0.unsafe(\"SELECT a FROM missing\", strings())))\n"},
   {"wellTyped": true,
-   "type": {"requiresEmpty": false, "error": "never", "answer": "string"},
+   "type":
+   {"requiresEmpty": false,
+    "requires": [{"service": 0, "name": 0}],
+    "error": "never",
+    "answer": "string"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": "recovered"}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -819,6 +842,7 @@
   {"wellTyped": true,
    "type":
    {"requiresEmpty": false,
+    "requires": [{"service": 0, "name": 0}],
     "error": "never",
     "answer":
     "Exit.Exit<ReadonlyArray<ReadonlyArray<readonly [string, string]>>, readonly [string, string]>"},
@@ -854,7 +878,7 @@
    "decl":
    "export const main = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.exit(a0.unsafe(\"SELECT a FROM missing\", strings()))))\n"},
   {"wellTyped": true,
-   "type": {"requiresEmpty": true, "error": "never", "answer": "number"},
+   "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "runSync":
    {"sync": true, "exitKind": "die", "exit": {"failure": {"reasons": [{"die": "badName"}]}}},
    "run":
@@ -889,6 +913,43 @@
    "Effect.provide(Effect.service(Context.Service<number>(\"k8_4\")), Layer.orDie(Layer.effect(Context.Service<number>(\"k8_4\"), Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.flatMap(a0.unsafe(\"SELECT a FROM missing\", strings()), (a1) => Effect.succeed(1))))))",
    "decl":
    "export const main: Effect.Effect<number, never> = Effect.provide(Effect.service(Context.Service<number>(\"k8_4\")), Layer.orDie(Layer.effect(Context.Service<number>(\"k8_4\"), Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.flatMap(a0.unsafe(\"SELECT a FROM missing\", strings()), (a1) => Effect.succeed(1))))))\n"}],
+ "hostRows":
+ [{"typeArgs": [],
+   "trailing": [],
+   "spelling": "Host.acquire",
+   "shape": "call",
+   "requires": [],
+   "request": {"_tag": "unit"},
+   "registration": "external",
+   "name": "acquire",
+   "kind": "async",
+   "error": {"_tag": "never"},
+   "cite": "",
+   "answer": {"target": "Host.Resource", "_tag": "handle"}},
+  {"typeArgs": [],
+   "trailing": [],
+   "spelling": "Host.close",
+   "shape": "call",
+   "requires": [],
+   "request": {"target": "Host.Resource", "_tag": "handle"},
+   "registration": "external",
+   "name": "close",
+   "kind": "async",
+   "error": {"_tag": "never"},
+   "cite": "",
+   "answer": {"_tag": "unit"}},
+  {"typeArgs": [],
+   "trailing": [],
+   "spelling": "Host.read",
+   "shape": "call",
+   "requires": [],
+   "request": {"target": "Host.Resource", "_tag": "handle"},
+   "registration": "external",
+   "name": "read",
+   "kind": "async",
+   "error": {"_tag": "never"},
+   "cite": "",
+   "answer": {"_tag": "nat"}}],
  "generated": "GENERATED by harness/truth/Truth.lean — do not edit",
  "fuel": 1000,
  "format": "effect4-truth-manifest-v1"}

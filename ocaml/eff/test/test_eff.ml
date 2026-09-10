@@ -53,7 +53,7 @@ let ellipsis (n : int) (s : string) : string =
 (* ---- 1. goldens ---- *)
 
 let () =
-  check "corpus has 42 programs" (List.length corpus = 42);
+  check "corpus has 43 programs" (List.length corpus = 43);
   Printf.printf "  %-16s %6s %-8s %-10s %-6s %s\n" "program" "bytes" "decode" "re-encode" "JSON" "typeOf";
   List.iter
     (fun (name, typed) ->

@@ -128,12 +128,10 @@ end ProfileData
 `natBound` is JavaScript's `Number.MAX_SAFE_INTEGER`, `2^53 - 1`: above it the host's `+`
 stops being exact (`harness/truth/prelude.ts`, `add`), which is the arithmetic DI-56 rules on.
 
-`admittedForms` records what the **pinned runner does today**, not what DI-61 (a) rules: the
-`perform` arm of `compileEff` still dispatches on `(NativeOp.row op).kind`, so `perform` of an
-external row reaches the placeholder's `.program` kind and answers `frontier`
-(`src/Effect4/Program/Compile.lean`, the note on the `perform` arm). When DI-61 (a)'s routing
-lands, `external`'s `perform` becomes `true`; that edit belongs to the commit that lands the
-routing, beside its route matrix (`Test/Program/InvocationContract.lean`).
+`admittedForms` records the runner's invocation routes (DI-61): asynchronous built-ins
+and external rows admit both spellings, while synchronous rows retain `perform` only.
+The shared production dispatcher and its independent route matrix establish this boundary
+(`src/Effect4/Program/Compile.lean`; `Test/Program/InvocationContract.lean`).
 
 `adapters` names the prelude exports the eight canonical package rows are bound to
 (`src/Effect4/Program/Packages.lean`; `harness/truth/prelude.ts`, its `Sql`, `Kv`, `SqlHandle`
@@ -145,7 +143,7 @@ def rc112 : ProfileData where
     [ (.row .sync, ⟨true, false⟩)
     , (.row .async, ⟨true, true⟩)
     , (.row .program, ⟨false, false⟩)
-    , (.external, ⟨false, true⟩) ]
+    , (.external, ⟨true, true⟩) ]
   adapters :=
     [ ("sqliteOpen", "prelude.Sql.open")
     , ("sqlUnsafe", "prelude.SqlHandle.unsafe")

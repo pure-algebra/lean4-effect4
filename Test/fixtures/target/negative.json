@@ -1,0 +1,3 @@
+[
+  {"id":"independent/wrong-answer","source":"Test/fixtures/target/controls.ts","imports":["import type * as C from \"../../../Test/fixtures/target/controls.ts\""],"subject":"typeof C.unitProgram","kind":"effect","expected":{"A":"number","E":"never","R":"never"}}
+]

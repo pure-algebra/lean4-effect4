@@ -378,20 +378,19 @@ theorem compileEff_zero (e : NativeEff) (hf : p.fuel = 0) :
 
 theorem compileEff_perform (op : NativeOp) (r : Term) (hf : p.fuel = k + 1) :
     compileEff (.perform op r) p =
-      (match (NativeOp.row op).kind with
-       | .sync =>
-         match evalTerm p.env r with
-         | some val =>
-           match NativeOp.syncOpOf op val with
-           | some operation => Prim.sync (EffThunk.op operation)
+      (match op with
+       | .external _ => asyncRoute op r p
+       | _ => match (NativeOp.row op).kind with
+         | .sync =>
+           match evalTerm p.env r with
+           | some val =>
+             match NativeOp.syncOpOf op val with
+             | some operation => Prim.sync (EffThunk.op operation)
+             | none => badShape
            | none => badShape
-         | none => badShape
-       | .async =>
-         match (evalTerm p.env r).bind NativeOp.awaitCellOf with
-         | some cell => Prim.async (EffName.registerAwait cell) true (some (EffName.cancelAwait cell))
-         | none => badShape
-       | .program => frontier p) := by
-  simp [compileEff, hf]; rfl
+         | .async => asyncRoute op r p
+         | .program => frontier p) := by
+  cases op <;> unfold compileEff <;> rw [hf] <;> rfl
 
 theorem compileEff_gen (ss : Stmts NativeOp) (hf : p.fuel = k + 1) :
     compileEff (.gen ss) p = Prim.suspend (EffThunk.body p) := by
@@ -519,6 +518,38 @@ theorem Point.capture_keys (p : Point) (a : Val) (ctx : Ctx) :
   · exact List.Subset.trans (List.subset_append_right _ _) (List.subset_append_left _ _)
   · exact List.subset_append_right _ _
 
+/-- DI-61. The shared async dispatcher names only handles already captured at the point. -/
+theorem asyncRoute_keys (register : NativeOp) (r : Term) (p : Point) :
+    nativeKeys (asyncRoute register r p) ⊆ p.keys := by
+  unfold asyncRoute
+  cases register
+  case external i =>
+    cases hv : evalTerm p.env r with
+    | none => exact List.nil_subset _
+    | some value =>
+      simp only [nativeKeys, primKeys, EffName.keys, Option.map_none, Option.getD_none, List.append_nil]
+      exact evalTerm_point_keys r p value hv
+  case sleep =>
+    cases (evalTerm p.env r).bind NativeOp.sleepMillisOf with
+    | none => exact List.nil_subset _
+    | some n => cases n <;> exact List.nil_subset _
+  all_goals first
+    | exact List.nil_subset _
+    | (rename_i s; cases s <;> exact List.nil_subset _)
+    | (simp only [NativeOp.row]
+       split
+       all_goals first
+         | exact List.nil_subset _
+         | (next cell hcell =>
+             obtain ⟨val, hval, hc⟩ := Option.bind_eq_some_iff.mp hcell
+             have hmem := awaitCellOf_keys val cell hc
+             have hval' := evalTerm_point_keys r p val hval
+             have hcellKeys : [Handle.promise cell] ⊆ p.keys := by
+               intro key hkey
+               obtain rfl := List.mem_singleton.mp hkey
+               exact hval' hmem
+             sub_tac using hcellKeys))
+
 /-- A capture's point names the capture's environment. -/
 theorem Point.ofCapture_keys (c : Capture) : (Point.ofCapture c).keys ⊆ Val.keysList c.env := by
   simp only [Point.keys, Point.ofCapture, List.flatMap_nil, List.nil_append, Val.keysList_eq_flatMap]
@@ -568,25 +599,17 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
     · rw [compileEff_zero _ hf]; exact frontier_keys p
     · rw [compileEff_perform op r hf]
       split
+      · exact asyncRoute_keys _ r p
       · split
-        · next val hval =>
-          split
-          · next operation hop =>
-            exact List.Subset.trans (syncOpOf_keys op val operation hop) (evalTerm_point_keys r p val hval)
+        · split
+          · next val hval =>
+            split
+            · next operation hop =>
+              exact List.Subset.trans (syncOpOf_keys op val operation hop) (evalTerm_point_keys r p val hval)
+            · exact List.nil_subset _
           · exact List.nil_subset _
-        · exact List.nil_subset _
-      · split
-        · next cell hcell =>
-          obtain ⟨val, hval, hc⟩ := Option.bind_eq_some_iff.mp hcell
-          have hmem := awaitCellOf_keys val cell hc
-          have hval' := evalTerm_point_keys r p val hval
-          have hcellKeys : [Handle.promise cell] ⊆ p.keys := by
-            intro key hkey
-            obtain rfl := List.mem_singleton.mp hkey
-            exact hval' hmem
-          sub_tac using hcellKeys
-        · exact List.nil_subset _
-      · exact frontier_keys p
+        · exact asyncRoute_keys op r p
+        · exact frontier_keys p
   | .bind a b, p => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; exact frontier_keys p
@@ -647,34 +670,8 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
   | .callback register r, p => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; exact frontier_keys p
-    · rw [compileEff_callback register r hf]
-      cases register
-      case external i =>
-        cases hv : evalTerm p.env r with
-        | none => exact List.nil_subset _
-        | some value =>
-          simp only [nativeKeys, primKeys, EffName.keys, Option.map_none, Option.getD_none, List.append_nil]
-          exact evalTerm_point_keys r p value hv
-      case sleep =>
-        cases (evalTerm p.env r).bind NativeOp.sleepMillisOf with
-        | none => exact List.nil_subset _
-        | some n => cases n <;> exact List.nil_subset _
-      all_goals first
-        | exact List.nil_subset _
-        | (rename_i s; cases s <;> exact List.nil_subset _)
-        | (simp only [NativeOp.row]
-           split
-           all_goals first
-             | exact List.nil_subset _
-             | (next cell hcell =>
-                 obtain ⟨val, hval, hc⟩ := Option.bind_eq_some_iff.mp hcell
-                 have hmem := awaitCellOf_keys val cell hc
-                 have hval' := evalTerm_point_keys r p val hval
-                 have hcellKeys : [Handle.promise cell] ⊆ p.keys := by
-                   intro key hkey
-                   obtain rfl := List.mem_singleton.mp hkey
-                   exact hval' hmem
-                 sub_tac using hcellKeys))
+    · simp only [compileEff, hf]
+      exact asyncRoute_keys register r p
   | .awaitFiber fiber mode, p => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; exact frontier_keys p

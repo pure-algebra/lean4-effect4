@@ -508,15 +508,9 @@ def mergeContextsK (v : Val) : NCode :=
     | [] => badShape
     | reason :: rest => Prim.failure ⟨reason :: rest⟩
 
-/-- The route an asynchronous invocation takes: the `callback` arm of `compileEff`, extracted
-so that the `perform` arm can share it (v2 DI-61 (a)). It is a plain definition, outside the
+/-- The route an asynchronous invocation takes, shared by `perform` and `callback`
+(DI-61 (a)). It is a plain definition, outside the
 compile's structural recursion, because no arm of it compiles a subterm.
-
-**Half of DI-61 (a) is landed here.** The extraction is behaviour-free — `callback` compiles
-to exactly what it compiled to at `66ee4657`, for every operation. The other half, routing
-`perform` through this dispatcher, is *not* landed: see the note on the `perform` arm below,
-`Effect4.Laws.Program.Invocation`'s header, and
-`docs/research/2026-09-09-seat-core-admission.md` §4 (an untracked working note).
 
 Three cases, in this order, and the order is the ruling: an **external** row registers by its
 index and its evaluated request, table-independently at compile time — the table is read when
@@ -577,32 +571,21 @@ def compileEff : NativeEff → Point → NCode
       -- `suspend` must return the child's complete code, including any suspension
       -- that `Effect.gen` or the printed loop constructs (`internal/effect.ts:1175-1196`).
       | .suspend _ => Prim.suspend (EffThunk.body p)
-      -- v2 DI-61 (a) would route this arm through `asyncRoute` as well, so that `perform` and
-      -- `callback` are one invocation. **Not landed here**: the reference denotation
-      -- (`Laws/Program/DenoteR.lean`, `denoteR`'s own `perform` arm) and the compiler-head
-      -- mirrors (`inlineYield`, `Laws/Program/Handles.lean`'s `compileEff_perform`,
-      -- `Laws/Program/Intro.lean`'s `compileEff_perform_async`/`_program`) spell this arm as
-      -- it stands, and `run_eq_ref` (`Laws/Program/RuntimeR.lean:200`) relates the two with no
-      -- premise, so the routing change is false-making for the agreement graph until the
-      -- denotation is changed with it. Measured and recorded in
-      -- `docs/research/2026-09-09-seat-core-admission.md` §4 (untracked working note); the
-      -- tracked statement of the gap is `Effect4.Laws.Program.Invocation`'s header and the
-      -- `THE GAP` guards of `Test/Program/InvocationContract.lean`.
+      -- DI-61: external indices route before the placeholder's kind is consulted.
+      -- Both async spellings use the same dispatcher; sync calls retain their route.
       | .perform op request =>
-        match (NativeOp.row op).kind with
-        | .sync =>
-          match evalTerm p.env request with
-          | some val =>
-            match NativeOp.syncOpOf op val with
-            | some operation => Prim.sync (EffThunk.op operation)
+        match op with
+        | .external _ => asyncRoute op request p
+        | _ => match (NativeOp.row op).kind with
+          | .sync =>
+            match evalTerm p.env request with
+            | some val =>
+              match NativeOp.syncOpOf op val with
+              | some operation => Prim.sync (EffThunk.op operation)
+              | none => badShape
             | none => badShape
-          | none => badShape
-        | .async =>
-          match (evalTerm p.env request).bind NativeOp.awaitCellOf with
-          | some cell =>
-            Prim.async (EffName.registerAwait cell) true (some (EffName.cancelAwait cell))
-          | none => badShape
-        | .program => frontier p
+          | .async => asyncRoute op request p
+          | .program => frontier p
       | .bind first _ => Prim.onSuccess (compileEff first (p.child 0)) (EffName.cont p)
       -- `Effect.gen` is `suspend(() => fromIteratorUnsafe(…))` (`internal/effect.ts:1175-1196`):
       -- the iterator is what `suspendBodyAt` answers at this point.

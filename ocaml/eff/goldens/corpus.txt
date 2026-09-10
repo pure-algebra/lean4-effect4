@@ -40,3 +40,4 @@ pSleep	well-typed
 pDiamond	ill-typed
 pMergeAll	well-typed
 pExternal	ill-typed
+pIllExternalDomain	ill-typed

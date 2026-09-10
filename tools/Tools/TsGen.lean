@@ -1,4 +1,5 @@
 import Tools.GeneratedStamp
+import Tools.ProfileJson
 import Lean
 import OCaml5.Eff.World
 import OCaml5.Eff.Emit
@@ -493,48 +494,19 @@ def opJs : Effect4.Program.NativeOp → String
   | .scopeMake s => tagged "scopeMake" [("strategy", strategyJs s)]
   | .external i => tagged "external" [("index", toString i)]
 
-def tyJs : Effect4.Program.Ty → String
-  | .never => tagged "never" []
-  | .unit => tagged "unit" []
-  | .nat => tagged "nat" []
-  | .int => tagged "int" []
-  | .string => tagged "string" []
-  | .bool => tagged "bool" []
-  | .handle target => tagged "handle" [("target", lit target)]
-  | .option inner => tagged "option" [("inner", tyJs inner)]
-  | .list inner => tagged "list" [("inner", tyJs inner)]
-  | .prod l r => tagged "prod" [("left", tyJs l), ("right", tyJs r)]
-  | .except e v => tagged "except" [("error", tyJs e), ("value", tyJs v)]
-  | .exitOf v e => tagged "exitOf" [("value", tyJs v), ("error", tyJs e)]
-  | .causeOf e => tagged "causeOf" [("error", tyJs e)]
-  | .fiberOf v e => tagged "fiberOf" [("value", tyJs v), ("error", tyJs e)]
-  | .union l r => tagged "union" [("left", tyJs l), ("right", tyJs r)]
+/-- The target metadata writers share one JSON view with the truth manifest. -/
+def tyJs (ty : Effect4.Program.Ty) : String := (Tools.ProfileJson.tyJson ty).compress
 
-def shapeJs : Effect4.Program.RowShape → String
-  | .call => lit "call"
-  | .value => lit "value"
-  | .tupleCall => lit "tupleCall"
-  | .method => lit "method"
+def shapeJs (shape : Effect4.Program.RowShape) : String := (Tools.ProfileJson.shapeJson shape).compress
 
-def registrationJs : Effect4.Program.Registration → String
-  | .deferred => lit "deferred"
-  | .external => lit "external"
+def registrationJs (registration : Effect4.Program.Registration) : String :=
+  (Tools.ProfileJson.registrationJson registration).compress
 
-def kindJs : Effect4.Program.RowKind → String
-  | .sync => lit "sync"
-  | .async => lit "async"
-  | .program => lit "program"
+def kindJs (kind : Effect4.Program.RowKind) : String := (Tools.ProfileJson.kindJson kind).compress
 
-def keyJs (k : Effect4.ServiceKey) : String :=
-  obj [("name", obj [("value", toString k.name.value)]),
-       ("service", obj [("value", toString k.service.value)])]
+def keyJs (key : Effect4.ServiceKey) : String := (Tools.ProfileJson.keyJson key).compress
 
-def rowJs (r : Effect4.Program.Row) : String :=
-  obj [ ("name", lit r.name), ("spelling", lit r.spelling), ("shape", shapeJs r.shape)
-      , ("trailing", arr (r.trailing.map lit)), ("kind", kindJs r.kind)
-      , ("request", tyJs r.request), ("answer", tyJs r.answer), ("error", tyJs r.error)
-      , ("requires", arr (r.requires.map keyJs)), ("cite", lit r.cite)
-      , ("typeArgs", arr (r.typeArgs.map lit)), ("registration", registrationJs r.registration) ]
+def rowJs (row : Effect4.Program.Row) : String := (Tools.ProfileJson.rowJson row).compress
 
 def entryJs (op : Effect4.Program.NativeOp) : String :=
   obj [("op", opJs op), ("row", rowJs (Effect4.Program.nativeSignature.rowOf op))]

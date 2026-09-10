@@ -195,18 +195,32 @@ section compileEqs
 
 variable {p : Point} {k : Nat}
 
+/-- Every non-sync native operation is an async built-in or an external index. -/
+theorem compileEff_perform_nonsync (op : NativeOp) (r : Term) (hf : p.fuel = k + 1)
+    (hkind : (NativeOp.row op).kind ≠ .sync) :
+    compileEff (.perform op r) p = asyncRoute op r p := by
+  cases op with
+  | scopeMake strategy => cases strategy <;> simp [NativeOp.row] at hkind
+  | _ => simp_all [NativeOp.row, compileEff, hf] <;> rfl
+
 theorem compileEff_perform_async (op : NativeOp) (r : Term) (hf : p.fuel = k + 1)
     (hkind : (NativeOp.row op).kind = .async) :
-    compileEff (.perform op r) p =
-      (match (evalTerm p.env r).bind NativeOp.awaitCellOf with
-       | some cell => Prim.async (EffName.registerAwait cell) true (some (EffName.cancelAwait cell))
-       | none => badShape) := by
-  rw [compileEff, hf]; simp only [hkind]; try rfl
+    compileEff (.perform op r) p = asyncRoute op r p :=
+  compileEff_perform_nonsync op r hf (by rw [hkind]; decide)
 
+/-- The only native placeholder of program kind is external; it now registers. -/
 theorem compileEff_perform_program (op : NativeOp) (r : Term) (hf : p.fuel = k + 1)
     (hkind : (NativeOp.row op).kind = .program) :
-    compileEff (.perform op r) p = frontier p := by
-  rw [compileEff, hf]; simp only [hkind]; try rfl
+    compileEff (.perform op r) p = asyncRoute op r p :=
+  compileEff_perform_nonsync op r hf (by rw [hkind]; decide)
+
+theorem denoteR_perform_nonsync (root : NativeEff) (op : NativeOp) (r : Term)
+    (hpos : p.fuel ≠ 0) (hkind : (NativeOp.row op).kind ≠ .sync) :
+    denoteR root (.perform op r) p = denoteAsyncRoute op r p := by
+  rw [denoteR_perform root op r hpos]
+  cases op with
+  | scopeMake strategy => cases strategy <;> simp [NativeOp.row] at hkind
+  | _ => simp_all [NativeOp.row] <;> rfl
 
 theorem compileEff_gen (ss : Stmts NativeOp) (hf : p.fuel = k + 1) :
     compileEff (.gen ss) p = Prim.suspend (EffThunk.body p) := by
@@ -295,6 +309,19 @@ end compileEqs
 
 /-! ## `prepareR` is the identity on a denotation -/
 
+/-- Preparing completed exits leaves an asynchronous registration's denotation unchanged. -/
+theorem prepareR_denoteAsyncRoute (op : NativeOp) (r : Term) (p : Point)
+    (completed : List (FiberId × ExitV)) :
+    prepareR completed (denoteAsyncRoute op r p) = denoteAsyncRoute op r p := by
+  unfold denoteAsyncRoute
+  cases op
+  case external i => exact prepareR_denoteForeign (.external i) r p completed
+  case sleep => exact prepareR_denoteSleep r p completed
+  all_goals first
+    | rfl
+    | exact prepareR_denoteAsync r p completed
+    | (rename_i strategy; cases strategy <;> rfl)
+
 theorem prepareR_denoteR (root : NativeEff) (e : NativeEff) (p : Point)
     (completed : List (FiberId × ExitV)) :
     prepareR completed (denoteR root e p) = denoteR root e p := by
@@ -312,11 +339,11 @@ theorem prepareR_denoteR (root : NativeEff) (e : NativeEff) (p : Point)
       | sync t => rw [denoteR_sync root t hpos]; rfl
       | suspend b => rw [denoteR_suspend root b p hpos]; rfl
       | perform op r =>
-        rw [denoteR_perform root op r hpos]
-        cases (NativeOp.row op).kind with
-        | sync => cases (evalTerm p.env r).bind (NativeOp.syncOpOf op) <;> rfl
-        | async => exact prepareR_denoteAsync r p completed
-        | program => rfl
+        by_cases hk : (NativeOp.row op).kind = .sync
+        · rw [denoteR_perform_sync root op r hpos hk]
+          cases (evalTerm p.env r).bind (NativeOp.syncOpOf op) <;> rfl
+        · rw [denoteR_perform_nonsync root op r hpos hk]
+          exact prepareR_denoteAsyncRoute op r p completed
       | bind a b =>
         rw [denoteR_bind root a b p hpos, prepareR_guardR_bind,
           prepareR_denoteR root a (p.child 0) completed]
@@ -1660,6 +1687,36 @@ theorem provideLayer_intro (root : NativeEff) (n : Nat)
     simp only [prepareR_pure]
     exact codeMeans_badShape root
 
+/-- DI-61. Both invocation forms reuse this local compiler/reference connection. -/
+theorem asyncRoute_means (root : NativeEff) (op : NativeOp) (r : Term) (p : Point) :
+    CodeMeans root (asyncRoute op r p) (denoteAsyncRoute op r p) := by
+  unfold asyncRoute denoteAsyncRoute
+  cases op
+  case external i =>
+    simp only [denoteForeign]
+    cases evalTerm p.env r with
+    | none => exact codeMeans_badShape root
+    | some v => exact CodeMeans.asyncForeign (.external i) v _ delivers_pure
+  case sleep =>
+    unfold denoteSleep
+    cases (evalTerm p.env r).bind NativeOp.sleepMillisOf with
+    | none => exact codeMeans_badShape root
+    | some n =>
+      cases n with
+      | zero => exact CodeMeans.yieldNow 0 _ delivers_seqR_pure
+      | succ n => exact CodeMeans.asyncSleep (n + 1) (Val.nat (n + 1)) _ delivers_pure
+  all_goals first
+    | exact codeMeans_badShape root
+    | (rename_i s; cases s <;> exact codeMeans_badShape root)
+    | (unfold denoteAsync
+       cases evalTerm p.env r with
+       | none => exact codeMeans_badShape root
+       | some v =>
+         dsimp only [Option.bind]
+         cases NativeOp.awaitCellOf v with
+         | some cell => exact CodeMeans.asyncAwait cell v _ delivers_pure
+         | none => exact codeMeans_badShape root)
+
 theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight < n →
     ∀ (e : NativeEff), Node.at_ (.eff root) p.path = some (.eff e) →
       CodeMeans root (compileEff e p) (denoteR root e p) := by
@@ -1721,10 +1778,8 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
     simp only [prepareR_constructR, prepareR_denoteR]
     exact ih _ (hwc completed 0) b hb
   | perform op r =>
-    rw [denoteR_perform root op r hpos]
-    cases hk : (NativeOp.row op).kind with
-    | sync =>
-      rw [compileEff_perform_sync op r hf hk]
+    by_cases hk : (NativeOp.row op).kind = .sync
+    · rw [compileEff_perform_sync op r hf hk, denoteR_perform_sync root op r hpos hk]
       cases evalTerm p.env r with
       | none => exact codeMeans_badShape root
       | some v =>
@@ -1732,22 +1787,8 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
         cases NativeOp.syncOpOf op v with
         | some o => exact CodeMeans.syncOp o _ (successV root)
         | none => exact codeMeans_badShape root
-    | async =>
-      rw [compileEff_perform_async op r hf hk]
-      unfold denoteAsync
-      cases evalTerm p.env r with
-      | none => exact codeMeans_badShape root
-      | some v =>
-        dsimp only [Option.bind]
-        cases NativeOp.awaitCellOf v with
-        | some cell => exact CodeMeans.asyncAwait cell v _ delivers_pure
-        | none => exact codeMeans_badShape root
-    | program =>
-      rw [compileEff_perform_program op r hf hk]
-      exact CodeMeans.frontier p p _ _ ⟨rfl, rfl, rfl, rfl, rfl⟩ fun completed => by
-        rw [suspendBodyAt_of_at (q := { p with completed }) hf h nofun nofun nofun nofun nofun,
-          compileEff_perform_program op r (p := { p with completed }) hf hk]
-        rfl
+    · rw [compileEff_perform_nonsync op r hf hk, denoteR_perform_nonsync root op r hpos hk]
+      exact asyncRoute_means root op r p
   | bind a b =>
     rw [compileEff_bind a b hf, denoteR_bind root a b p hpos, guardR_bind]
     refine CodeMeans.onSuccess _ _ _ (denoteR root a (p.child 0))
@@ -1880,31 +1921,7 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
     exact CodeMeans.yieldNow priority _ delivers_seqR_pure
   | callback op r =>
     rw [compileEff_callback op r hf, denoteR_callback root op r hpos]
-    cases op
-    case external i =>
-      simp only [denoteForeign]
-      cases evalTerm p.env r with
-      | none => exact codeMeans_badShape root
-      | some v => exact CodeMeans.asyncForeign (.external i) v _ delivers_pure
-    case sleep =>
-      unfold denoteSleep
-      cases (evalTerm p.env r).bind NativeOp.sleepMillisOf with
-      | none => exact codeMeans_badShape root
-      | some n =>
-        cases n with
-        | zero => exact CodeMeans.yieldNow 0 _ delivers_seqR_pure
-        | succ n => exact CodeMeans.asyncSleep (n + 1) (Val.nat (n + 1)) _ delivers_pure
-    all_goals first
-      | exact codeMeans_badShape root
-      | (rename_i s; cases s <;> exact codeMeans_badShape root)
-      | (unfold denoteAsync
-         cases evalTerm p.env r with
-         | none => exact codeMeans_badShape root
-         | some v =>
-           dsimp only [Option.bind]
-           cases NativeOp.awaitCellOf v with
-           | some cell => exact CodeMeans.asyncAwait cell v _ delivers_pure
-           | none => exact codeMeans_badShape root)
+    exact asyncRoute_means root op r p
   | awaitFiber t mode =>
     rw [compileEff_awaitFiber t mode hf, denoteR_awaitFiber root t mode hpos]
     rcases hv : evalTerm p.env t with _ | v

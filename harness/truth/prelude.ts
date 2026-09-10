@@ -112,6 +112,8 @@ class Resource {
   readonly ["~effect4/ExternalHandle"] = "Host.Resource"
   closed = false
 }
+/** The explicit target type binding for the canonical name `Host.Resource`. */
+export type HostResource = Resource
 export const Host = {
   acquire: () => Effect.sync(() => new Resource()),
   close: (resource: Resource) => Effect.sync(() => {
@@ -120,6 +122,8 @@ export const Host = {
   }),
   read: (resource: Resource) => Effect.sync(() => resource.closed ? 1 : 0)
 }
+/** Type-only namespace for printed annotations; the runtime Host object is unchanged. */
+export namespace Host { export type Resource = HostResource }
 
 // ---- the canonical package tables (host rows step 6, 2026-09-09) -----------------------
 //

@@ -1,0 +1,6 @@
+{
+  "extends": "../../ts/eff/tsconfig.json",
+  "compilerOptions": { "typeRoots": ["../../ts/eff/node_modules/@types"] },
+  "include": ["*.ts", "../../Test/fixtures/target/*.ts"],
+  "exclude": []
+}

@@ -235,9 +235,8 @@ section Data
 #guard rc112.formsOf (.row .sync) = some ⟨true, false⟩
 #guard rc112.formsOf (.row .async) = some ⟨true, true⟩
 #guard rc112.formsOf (.row .program) = some ⟨false, false⟩
--- What the pinned runner does today: `callback` registers an external row, `perform` reaches
--- the placeholder's `.program` kind and answers `frontier`. DI-61 (a) flips the first Boolean.
-#guard rc112.formsOf .external = some ⟨false, true⟩
+-- DI-61: the shared dispatcher registers an external row under either invocation form.
+#guard rc112.formsOf .external = some ⟨true, true⟩
 #guard rc112.adapterOf "kvGet" = some "prelude.KvHandle.get"
 #guard rc112.adapterOf "sqliteOpen" = some "prelude.Sql.open"
 #guard rc112.adapterOf "notARow" = none
