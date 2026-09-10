@@ -311,7 +311,7 @@ here and reading the extension afterwards is what makes the path work at all. Me
 body.
 
 **The answer is read out of `monoExt`'s local state, not through `getMonoDecl?`.** This is
-not a detail. `getMonoDecl?` goes through `findExtEntry?` (`LCNF/Basic.lean:1241-1251`), which
+not a detail. `getMonoDecl?` goes through `findExtEntry?` (`LCNF/Basic.lean:1243-1251`), which
 looks a name up by *module index first* and consults the local state only when the name has
 none — so for an imported declaration it hands back the persisted entry and a fresh compile is
 invisible through it. An entry is in the local state only if `saveMono` ran in this process,
@@ -331,7 +331,7 @@ free-variable names) and `DeclHash` equality (`hash`, which is id-*sensitive*). 
 either side has no code — including when `compileMono?` could not produce one at all.
 
 The ids are not normalised first, and do not need to be: `saveMono` runs `normalizeFVarIds`
-on both sides (`LCNF/Passes.lean:66-74`), so where the two bodies agree the hashes agree too.
+on both sides (`LCNF/Passes.lean:66-73`), so where the two bodies agree the hashes agree too.
 Both components are reported because they answer different questions — `alphaEqv` whether the
 *code* is the same, `hash` whether the persisted bytes would be. -/
 def recompileAgrees? (n : Name) : CoreM (Option (Bool × Bool)) := do
