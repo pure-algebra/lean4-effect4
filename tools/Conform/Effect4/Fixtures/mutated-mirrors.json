@@ -1,0 +1,13 @@
+{
+  "note": "RED CONTROL 4 for `family.mirror.agrees`. `mutated-manifest.txt` is `ocaml/eff/eff_manifest.txt`'s two shortest lines with TWO deliberate edits on the `Ty` line: `causeOf` is spelled `causeOff` (a rename) and `option`/`list` are swapped (a reorder). The check must refuse and name BOTH — a rename that hid a reorder, or a reorder that hid a rename, would be a check worth nothing. The `Lit` line is unedited and must pass, so the run is red for exactly one row.",
+  "mirrors": [
+    { "family": "Effect4.Program.Ty",
+      "file": "tools/Conform/Effect4/Fixtures/mutated-manifest.txt",
+      "reader": "text-manifest", "key": "Effect4.Program.Ty",
+      "note": "THE CONTROL" },
+    { "family": "Effect4.Program.Lit",
+      "file": "tools/Conform/Effect4/Fixtures/mutated-manifest.txt",
+      "reader": "text-manifest", "key": "Effect4.Program.Lit",
+      "note": "the green twin in the same file" }
+  ]
+}

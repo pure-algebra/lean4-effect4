@@ -1,0 +1,9 @@
+{
+  "note": "Effect4 is the first configuration of `Conform`, not the library. Every name here is data: the generic modules under Conform/Lcnf, Conform/Manifest and Conform/Cli name nothing in this file. Run from the repository root: lake env lean -M4096 --run tools/Conform/Cli/Audit.lean --config tools/Conform/Effect4/audit.json",
+  "tool": "conform-audit",
+  "imports": ["Effect4"],
+  "roots": ["Effect4", "Test"],
+  "casesPolicy": "tools/Conform/Effect4/cases-policy.json",
+  "mirrors": "tools/Conform/Effect4/mirrors.json",
+  "rules": "tools/Conform/Effect4/rules.json"
+}

@@ -1,0 +1,17 @@
+{
+  "note": "RED CONTROL 1 for `lcnf.cases.exhaustive`. Every rule here matches the compiled code EXCEPT `Light.label`, which is declared `exhaustive` and in fact has a default arm absorbing `amber` and `off`. The run must refuse exactly that one site: a red run for any other reason is a broken control, not a passing one.",
+  "families": [
+    { "name": "Conform.Effect4.Fixtures.Light",
+      "unlisted": "refuse",
+      "functions": [
+        { "name": "Conform.Effect4.Fixtures.Light.label", "mode": "exhaustive",
+          "note": "THE CONTROL: the source has arms for `red` and `green` and `| _ => \"neither\"`" },
+        { "name": "Conform.Effect4.Fixtures.Light.isGo", "mode": "default",
+          "cover": ["red", "amber", "off"],
+          "note": "the source writes four arms; three of them compiled to one default, because their bodies are equal" },
+        { "name": "Conform.Effect4.Fixtures.Light.brightness", "mode": "default", "cover": ["off"] },
+        { "name": "Conform.Effect4.Fixtures.Light.ctorIdx", "mode": "exhaustive" },
+        { "name": "Conform.Effect4.Fixtures.instReprLight.repr", "mode": "exhaustive" }
+      ] }
+  ]
+}

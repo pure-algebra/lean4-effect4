@@ -1,0 +1,15 @@
+{
+  "note": "The GREEN twin of the two red policies: the same five functions, every rule matching the compiled code. A red control only means something beside a green one, and this file is what makes `exhaustive-policy.json` and `stale-cover-policy.json` red for their declared reason rather than for an accident of the fixture.",
+  "families": [
+    { "name": "Conform.Effect4.Fixtures.Light",
+      "unlisted": "refuse",
+      "functions": [
+        { "name": "Conform.Effect4.Fixtures.Light.label", "mode": "default", "cover": ["amber", "off"] },
+        { "name": "Conform.Effect4.Fixtures.Light.isGo", "mode": "default",
+          "cover": ["red", "amber", "off"] },
+        { "name": "Conform.Effect4.Fixtures.Light.brightness", "mode": "default", "cover": ["off"] },
+        { "name": "Conform.Effect4.Fixtures.Light.ctorIdx", "mode": "exhaustive" },
+        { "name": "Conform.Effect4.Fixtures.instReprLight.repr", "mode": "exhaustive" }
+      ] }
+  ]
+}

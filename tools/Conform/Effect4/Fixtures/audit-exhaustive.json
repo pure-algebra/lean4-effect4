@@ -1,0 +1,7 @@
+{
+  "note": "RED CONTROL 1's driver configuration. See `exhaustive-policy.json`.",
+  "tool": "conform-audit-control-exhaustive",
+  "imports": ["Conform.Effect4.Fixtures.Traffic"],
+  "roots": ["Conform.Effect4.Fixtures"],
+  "casesPolicy": "tools/Conform/Effect4/Fixtures/exhaustive-policy.json"
+}

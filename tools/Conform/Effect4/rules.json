@@ -1,0 +1,86 @@
+{
+  "note": "Effect4's A4 configuration: `effTy` as the algorithm, `Eff` as its family, and the three-column join against the rc.112 head table and the OCaml checker's golden coverage. `known` is the declared-disagreement list, in the shape of `Test/fixtures/trust-gate/known-red.txt`: a signal listed here and still present is a PASS at evidence `assumed` (an open defect, not a proof); a signal not listed is a counterexample; a signal listed and gone is a refusal, because the declaration has become stale. Every `register` names the row or note that owns the disagreement.",
+
+  "algorithm": {
+    "name": "Effect4.Program.effTy",
+    "family": "Effect4.Program.Eff",
+    "salient": ["Effect4"],
+    "refusal": "Option.none",
+    "append": "List.append",
+    "cons": "List.cons",
+    "requires": [
+      { "constructor": "perform", "callees": ["dom", "rowOf"] },
+      { "constructor": "callback", "callees": ["dom", "rowOf"] }
+    ]
+  },
+
+  "heads": "docs/research/seat-types-tooling/x1-heads.json",
+  "normalisation": {
+    "stripImports": true,
+    "strip": ["S.", "\""]
+  },
+  "coverage": "ocaml/eff/goldens/coverage.txt",
+  "coveragePrefix": "Effect4.Program.Eff.",
+
+  "known": [
+    { "constructor": "scoped",
+      "signals": ["target.spelling:R"],
+      "register": "DI-63",
+      "reason": "rc.112's `Effect.scoped` REMOVES `Scope.Scope` from the requirement row (the checker answers `R1`, and `never` for a body that requires only Scope); `effTy`'s arm is `effTy sig env body`, which passes the row through unchanged. Measured on both of the head table's two shapes." },
+
+    { "constructor": "acquireRelease",
+      "signals": ["target.illTyped", "target.spelling:E", "target.spelling:R"],
+      "register": "types seat 2026-09-09 section 3.5 (no register row yet; seat-audit.md R-A5)",
+      "reason": "rc.112 constrains the release to `Effect<unknown, never, R>`, so a FAILING release is TS2375 and the inferred R collapses to `unknown`; `effTy` computes the release's `r.error` and discards it (Typing.lean:255-258), so it accepts programs rc.112 refuses. The spelling:R signal on the well-typed variant is `Scope.Scope` against the model column's `Scope`." },
+
+    { "constructor": "branch",
+      "signals": ["target.illTyped", "target.spelling:R"],
+      "register": "types seat 2026-09-09 section 3.4 (no register row yet; seat-audit.md R-A5)",
+      "reason": "the printed head `Effect.suspend(() => t ? a : b)` (Print.lean:249-252) is TS2375 whenever the two arms carry different requirement rows, and the inferred R is the FIRST arm's; `effTy` gives `a.requires union b.requires` (Typing.lean:222-229). Three repairs are measured in the types seat's section 3.4 table." },
+
+    { "constructor": "perform",
+      "signals": ["target.missing"],
+      "register": "types seat 2026-09-09 section 3.3",
+      "reason": "`perform` prints a ROW, not a head (`printRow`, Print.lean:212), so the head table has no row for it by construction. The interesting half of this constructor is checked in the Lean column instead: `requires` above pins DI-54's domain guard, and it holds." },
+
+    { "constructor": "callback",
+      "signals": ["target.missing"],
+      "register": "types seat 2026-09-09 section 3.3",
+      "reason": "as `perform`: a printed row, not a head (Print.lean:267). DI-54's guard is pinned in the Lean column and holds." },
+
+    { "constructor": "choose",
+      "signals": ["target.missing"],
+      "register": "types seat 2026-09-09 section 3.3",
+      "reason": "the native printer REFUSES `choose` (Print.lean:279): it is a flows-only constructor, tape-answered by the compile (D2), so there is no printed head to measure." },
+
+    { "constructor": "exit",
+      "signals": ["target.spelling:A"],
+      "register": "SPELLING (seat-audit.md section 4.4)",
+      "reason": "`Exit.Exit<A,E>` against the checker's expansion `Exit.Success<A,E> | Exit.Failure<A,E>`: the same type, spelled by its definition. A textual comparison cannot see that; only mutual assignability can (types seat section 3.9), which is the T0 oracle's job and not this join's." },
+
+    { "constructor": "awaitFiber",
+      "signals": ["target.spelling:A"],
+      "register": "SPELLING (seat-audit.md section 4.4)",
+      "reason": "as `exit`: `Fiber.await` answers an `Exit`, and the checker expands it to the Success/Failure union." },
+
+    { "constructor": "withFiber",
+      "signals": ["target.spelling:A", "target.spelling:R"],
+      "register": "SPELLING (seat-audit.md section 4.4)",
+      "reason": "the fork spellings answer `Fiber.Fiber<A,E>` where the head table's model column writes `Fiber<A,E>`, and `forkScoped` adds `Scope.Scope` where the model column writes `Scope`. Both are qualifier differences in the table's own transcription, not disagreements about the type." },
+
+    { "constructor": "provideLayer",
+      "signals": ["target.spelling:R"],
+      "register": "SPELLING (seat-audit.md section 4.4)",
+      "reason": "the model column is the ARITHMETIC `R3 | (R2 minus R2) = R3` rather than a type; the checker answers `R3`. The columns agree; the table is prose here." },
+
+    { "constructor": "service",
+      "signals": ["target.spelling:A", "target.spelling:R"],
+      "register": "DI-24, and SPELLING",
+      "reason": "the model column is prose (`carrier (number)`, `the key`) where the checker answers `number`. DI-24 is the real content: rc.112's requirement channel is indexed by the service CARRIER, not by the key, so the model's `Requirement.single key` and the checker's `number` are not the same thing even where they agree here." },
+
+    { "constructor": "provideService",
+      "signals": ["target.spelling:A", "target.spelling:R"],
+      "register": "DI-24, and SPELLING",
+      "reason": "as `service`, plus the head table's `differentKeySameCarrier` variant, which is DI-24's sharp case: a DIFFERENT key with the same carrier discharges the requirement under rc.112 (`never`) and does not under `effTy` (`the key k8_4 remains`)." }
+  ]
+}
