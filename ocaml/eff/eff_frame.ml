@@ -233,6 +233,17 @@ let decode_list (d : 'a decoder) : 'a list decoder = fun s pos limit ->
     in
     go p []
 
+(* Proof-bearing Lean rows retain list bytes and refuse unordered foreign values.
+   The caller supplies the selected element order; no sorting repairs input. *)
+let rec strictly_ascending lt = function
+  | [] | [_] -> true
+  | a :: (b :: _ as rest) -> lt a b && strictly_ascending lt rest
+
+let decode_checked_list d lt s pos limit =
+  match decode_list d s pos limit with
+  | Some (xs, next) when strictly_ascending lt xs -> Some (xs, next)
+  | _ -> None
+
 let decode_option (d : 'a decoder) : 'a option decoder = fun s pos limit ->
   match read_frame s pos limit with
   | Some (t, p, e, next) when t = tag_none -> if p = e then Some (None, next) else None

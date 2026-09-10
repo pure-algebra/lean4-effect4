@@ -1,0 +1,7 @@
+{
+  "note": "RED CONTROL 5's driver configuration. See `rules-broken.json`. Only the A4 section runs.",
+  "tool": "conform-audit-control-rules",
+  "imports": ["Effect4"],
+  "roots": ["Effect4"],
+  "rules": "tools/Conform/Effect4/Fixtures/rules-broken.json"
+}

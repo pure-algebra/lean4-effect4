@@ -36,7 +36,7 @@ def install(source, destination, checking):
 # estate from them; `ts` cuts the TypeScript estate; `readme` renders the ingest tables out of
 # three files `ts` just wrote, so it is last and it is not a Lean producer at all. `lcnf` is
 # not in the order: it is the explicit Phase 1 route and is requested by name.
-ALL = ['derived', 'eff', 'wire', 'cas', 'ts', 'readme']
+ALL = ['derived', 'specs', 'eff', 'wire', 'cas', 'ts', 'readme']
 
 
 def generate(families, output):
@@ -64,6 +64,13 @@ def generate(families, output):
                 # Schema depends on the Json projection just checked/installed.
                 module = canonical.removeprefix('src/').removesuffix('.lean').replace('/', '.')
                 run(['lake', 'build', module])
+        if 'specs' in families:
+            run(['lake', 'build', 'Conform.Cli.EmitSpecs', 'Effect4.Program.Typing'])
+            canonical = 'src/Effect4/Laws/Program/Typing/Specs.lean'
+            temp = out / canonical
+            run(['lake', 'env', 'lean', '-M4096', '--run', 'tools/Conform/Cli/EmitSpecs.lean',
+                 'tools/Conform/Effect4/specs.json', str(temp)])
+            install(temp, ROOT / canonical, checking)
         routes = [('eff', 'EffGen', 'ocaml/eff'),
                   ('wire', 'EffWire', 'ocaml/goldens/eff'),
                   ('cas', 'CasGoldens', 'ocaml/engine/cas/goldens'),
@@ -84,6 +91,14 @@ def generate(families, output):
                 for source in sorted(temp.rglob('*')):
                     if source.is_file():
                         install(source, ROOT / target / source.relative_to(temp), False)
+            if family == 'eff':
+                engine_out = out / 'ocaml/engine'
+                run(['python3', 'scripts/generate-engine-structure.py',
+                     '--descriptor', str(temp / 'program-structure.json'), '--out', str(engine_out)])
+                if not checking:
+                    for source in sorted(engine_out.iterdir()):
+                        if source.is_file():
+                            install(source, ROOT / 'ocaml/engine' / source.name, False)
         if 'readme' in families:
             # A host producer, not a Lean one: it reads profile/forms/taxonomy `.gen.ts` and
             # writes `ts/eff/ingest/README.md` in place. Its own `--check` is the drift form,

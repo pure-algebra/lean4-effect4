@@ -29,8 +29,12 @@ def refuses(label, action):
 
 with tempfile.TemporaryDirectory(prefix='effect4-stamp-attacks-') as temporary:
     root = Path(temporary)
-    for name in ['tools', 'scripts', 'docs', 'Test']:
+    for name in ['scripts', 'docs']:
         (root/name).symlink_to(original_root/name, target_is_directory=True)
+    # A cloned trace is resolved against this checkout's source tree, never by reading
+    # the absolute source path saved in the original checkout.
+    for name in ['src', 'tools', 'Test']:
+        shutil.copytree(original_root/name, root/name)
     for name in ['lean-toolchain', 'lakefile.toml']:
         shutil.copyfile(original_root/name, root/name)
     traces = root/'.lake/build/lib/lean'
@@ -39,7 +43,15 @@ with tempfile.TemporaryDirectory(prefix='effect4-stamp-attacks-') as temporary:
         target = traces/source.relative_to(original_root/'.lake/build/lib/lean')
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)
-    (root/'.lake/packages').symlink_to(original_root/'.lake/packages', target_is_directory=True)
+    # Dependency packages are also local package roots. Copy their source/config/trace
+    # inventory, without expensive native/compiler build products or git histories.
+    packages = original_root/'.lake/packages'
+    for package in packages.iterdir():
+        for source in package.rglob('*'):
+            if source.is_file() and (source.suffix in {'.lean', '.trace'} or source.name == 'lakefile.toml'):
+                target = root/'.lake/packages'/source.relative_to(packages)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, target)
     source_path = 'src/OCaml5/Tools/EffGen.lean'
     source = root/source_path
     source.parent.mkdir(parents=True, exist_ok=True)
@@ -72,22 +84,28 @@ with tempfile.TemporaryDirectory(prefix='effect4-stamp-attacks-') as temporary:
     refuses('unbuilt producer edit', lambda: gate.observe(rows))
     source.write_bytes(before)
 
-    # A transitive trace may still name its old depHash after a source edit.
-    # Point one copied trace at identical local source, then change source only.
+    # A transitive trace may still point at a different checkout. Matching module suffixes
+    # resolve to local source; unrelated source names refuse rather than being followed.
     import json
     trace = traces/'Effect4/Program/Native.trace'
     trace_data = json.loads(trace.read_text())
     entry = next(e for e in trace_data['inputs'] if e[0].endswith('.lean'))
-    imported = root/'native-input.lean'
-    imported.write_bytes(Path(entry[0]).read_bytes())
-    entry[0] = str(imported)
+    imported = root/'src/Effect4/Program/Native.lean'
+    entry[0] = '/unavailable/old-checkout/src/Effect4/Program/Native.lean'
     trace.write_text(json.dumps(trace_data))
     reset()
     assert gate.observe(rows)[0] == 1
+    print('PASS cloned absolute trace resolves to current module source')
     imported.write_bytes(imported.read_bytes() + b'\n-- unbuilt imported edit\n')
     reset()
     refuses('unbuilt transitive import edit', lambda: gate.observe(rows))
     imported.write_bytes(imported.read_bytes().removesuffix(b'\n-- unbuilt imported edit\n'))
+    entry[0] = '/unavailable/native-input.lean'
+    trace.write_text(json.dumps(trace_data))
+    reset()
+    refuses('trace source names a different module', lambda: gate.observe(rows))
+    entry[0] = '/unavailable/old-checkout/src/Effect4/Program/Native.lean'
+    trace.write_text(json.dumps(trace_data))
     reset()
     output.write_bytes(data + b'\n(* changed body *)\n')
     current, stale, fingerprints = gate.observe(rows)
@@ -105,8 +123,22 @@ refuses('undeclared LCNF stale state', lambda: gate.policy(['ocaml/gen/api_gen.m
 refuses('unexpected LCNF pass', lambda: gate.policy([], gate.REASON))
 refuses('different declared reason', lambda: gate.policy(['ocaml/gen/api_gen.ml'], 'ignore errors'))
 assert gate.policy(['ocaml/gen/api_gen.ml'], gate.REASON).startswith('red as declared:')
-# 24 -> 25 on 2026-09-09 with check_generated.py: ts/eff/packages.gen.ts joined the TypeScript
-# family (host rows step 5); this battery was not moved with the pin and failed until the
-# error-paths map scout noticed.
-assert len(gate.drift_files(list(inputs.inventory()))) == 25
+chosen = gate.drift_files(list(inputs.inventory()))
+assert any(path.startswith('ocaml/engine/cas/goldens/') for path in chosen)
+assert 'ocaml/eff/goldens/metadata.tsv' in chosen
+# Exercise the same full-byte and inventory comparison used after fresh production.
+# Preserve the CAS stamp: stamp-only checking deliberately cannot see this corruption.
+with tempfile.TemporaryDirectory(prefix='effect4-cas-byte-attack-') as temporary:
+    temp = Path(temporary)
+    fixture = next(path for path in chosen if path.startswith('ocaml/engine/cas/goldens/'))
+    fresh = temp/fixture
+    fresh.parent.mkdir(parents=True)
+    data = (original_root/fixture).read_bytes()
+    fresh.write_bytes(data)
+    gate.compare_fresh([fixture], temp)
+    fresh.write_bytes(data + b'\x00')
+    refuses('CAS body corruption with retained stamp', lambda: gate.compare_fresh([fixture], temp))
+    fresh.write_bytes(data)
+    refuses('unlisted fresh output', lambda: gate.compare_fresh([], temp))
+    refuses('missing fresh output', lambda: gate.compare_fresh([fixture, 'missing'], temp))
 print('PASS generated gate reaction battery; temporary fixtures only')

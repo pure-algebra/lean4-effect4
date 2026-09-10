@@ -123,6 +123,7 @@ partial def emitOf : OTy → String → String
   | .list a, x => s!"Eff_frame.emit_list b (fun b y -> {emitOf a "y"}) {x}"
   | .prod a c, x => s!"Eff_frame.emit_pair b (fun b y -> {emitOf a "y"}) (fun b y -> {emitOf c "y"}) {x}"
   | .named n, x => s!"emit_{n} b {x}"
+  | .requirements, x => s!"(if not (Eff_frame.strictly_ascending (fun a c -> (a.service_key_name.service_name_value, a.service_key_service.service_type_code_value) < (c.service_key_name.service_name_value, c.service_key_service.service_type_code_value)) {x}) then invalid_arg \"noncanonical requirements\"; Eff_frame.emit_list b emit_service_key {x})"
 
 partial def decoderOf : OTy → String
   | .int => "Eff_frame.decode_nat"
@@ -133,6 +134,7 @@ partial def decoderOf : OTy → String
   | .list a => s!"(Eff_frame.decode_list {decoderOf a})"
   | .prod a b => s!"(Eff_frame.decode_pair {decoderOf a} {decoderOf b})"
   | .named n => s!"decode_{n}"
+  | .requirements => "(Eff_frame.decode_checked_list decode_service_key (fun a c -> (a.service_key_name.service_name_value, a.service_key_service.service_type_code_value) < (c.service_key_name.service_name_value, c.service_key_service.service_type_code_value)))"
 
 def emitEmitter (first : Bool) (f : Family) : String :=
   let kw := if first then "let rec" else "and"
@@ -202,6 +204,7 @@ partial def jsonOf : OTy → String → String
   | .list a, x => s!"Eff_json_text.Array (List.map (fun y -> {jsonOf a "y"}) {x})"
   | .prod a c, x => s!"(let (y0, y1) = {x} in Eff_json_text.Array [{jsonOf a "y0"}; {jsonOf c "y1"}])"
   | .named n, x => s!"json_{n} {x}"
+  | .requirements, x => s!"Eff_json_text.Array (List.map json_service_key {x})"
 
 def emitJsonFn (first : Bool) (f : Family) : String :=
   let kw := if first then "let rec" else "and"
@@ -346,18 +349,33 @@ def allOps : List NativeOp :=
   -- the timer (A4, 2026-09-08)
   [.sleep, .clockNow]
 
-/-- The monomorphic atoms of `nativeAtomTy`, as data: name, argument types, answer. -/
+/-- Monomorphic rows projected from the complete native inventory. -/
 def monoAtoms : List (String × List Ty × Ty) :=
-  [ ("succ", [.nat], .nat), ("pred", [.nat], .nat), ("isZero", [.nat], .bool), ("not", [.bool], .bool)
-  , ("add", [.nat, .nat], .nat), ("lt", [.nat, .nat], .bool), ("eq", [.nat, .nat], .bool) ]
+  NativeAtom.all.filterMap fun atom => atom.mono.map fun (args, answer) =>
+    (atom.name, args, answer)
 
 /-- The polymorphic and variadic atoms (`pair`, `fst`, `snd`, `strings`) as OCaml arms, and
 the probes that check them and the refusals against `nativeAtomTy`. -/
-def polyArms : List String :=
-  [ s!"  | \"pair\", [a; b] -> Some ({octor "ty" "prod"} (a, b))"
-  , s!"  | \"fst\", [{octor "ty" "prod"} (a, _)] -> Some a"
-  , s!"  | \"snd\", [{octor "ty" "prod"} (_, b)] -> Some b"
-  , s!"  | \"strings\", tys when List.for_all (fun t -> t = {octor "ty" "string"}) tys -> Some ({octor "ty" "list"} {octor "ty" "string"})" ]
+def polyArm (atom : NativeAtom) : Option String :=
+  match atom with
+  | .pair => some s!"  | {ostr atom.name}, [a; b] -> Some ({octor "ty" "prod"} (a, b))"
+  | .fst => some s!"  | {ostr atom.name}, [{octor "ty" "prod"} (a, _)] -> Some a"
+  | .snd => some s!"  | {ostr atom.name}, [{octor "ty" "prod"} (_, b)] -> Some b"
+  | .strings => some s!"  | {ostr atom.name}, tys when List.for_all (fun t -> t = {octor "ty" "string"}) tys -> Some ({octor "ty" "list"} {octor "ty" "string"})"
+  | .eq => some s!"  | {ostr atom.name}, [{octor "ty" "nat"}; {octor "ty" "nat"}] | {ostr atom.name}, [{octor "ty" "string"}; {octor "ty" "string"}] -> Some {octor "ty" "bool"}"
+  | .causeIsFail | .causeIsDie | .causeIsInterrupt =>
+    some s!"  | {ostr atom.name}, [{octor "ty" "causeOf"} _] | {ostr atom.name}, [{octor "ty" "exitOf"} (_, _)] -> Some {octor "ty" "bool"}"
+  | .causeError =>
+    some s!"  | {ostr atom.name}, [{octor "ty" "causeOf"} e] | {ostr atom.name}, [{octor "ty" "exitOf"} (_, e)] -> Some ({octor "ty" "option"} e)"
+  | .succ | .pred | .isZero | .boolNot | .add | .lt | .boolOr | .boolAnd => none
+
+def polyArms : List String := NativeAtom.all.filterMap polyArm
+
+/-- Independent consumer omission check: the authority is the full native enum. -/
+def checkAtomCoverage (consumerNames : List String) : Except String Unit := do
+  for atom in NativeAtom.all do
+    unless consumerNames.contains atom.name do
+      throw s!"native atom consumer omits {atom.name}"
 
 def atomProbes : List (String × List Ty × Option Ty) :=
   [ ("pair", [.nat, .bool], some (.prod .nat .bool)), ("pair", [.nat, .nat], some (.prod .nat .nat))
@@ -368,9 +386,24 @@ def atomProbes : List (String × List Ty × Option Ty) :=
   , ("fst", [.nat], none), ("snd", [.nat, .nat], none), ("pair", [.nat], none), ("pair", [], none)
   , ("succ", [.bool], none), ("succ", [], none), ("succ", [.nat, .nat], none), ("add", [.nat], none)
   , ("mul", [.nat, .nat], none), ("not", [.nat], none), ("eq", [.bool, .bool], none)
-  , ("lt", [.nat, .bool], none), ("isZero", [.bool], none), ("pred", [.nat, .nat], none) ]
+  , ("lt", [.nat, .bool], none), ("isZero", [.bool], none), ("pred", [.nat, .nat], none)
+  , ("eq", [.nat, .nat], some .bool), ("eq", [.string, .string], some .bool)
+  , ("eq", [.string, .nat], none), ("eq", [], none)
+  , ("causeIsFail", [.causeOf .string], some .bool), ("causeIsFail", [.exitOf .nat .string], some .bool)
+  , ("causeIsDie", [.causeOf .never], some .bool), ("causeIsDie", [.exitOf .nat .never], some .bool)
+  , ("causeIsInterrupt", [.causeOf .never], some .bool), ("causeIsInterrupt", [.exitOf .nat .never], some .bool)
+  , ("causeError", [.causeOf .string], some (.option .string))
+  , ("causeError", [.exitOf .nat (.prod .string .string)], some (.option (.prod .string .string)))
+  , ("causeIsFail", [.nat], none), ("causeIsDie", [], none)
+  , ("causeIsInterrupt", [.causeOf .never, .causeOf .never], none), ("causeError", [.string], none) ]
 
 def checkAtoms : Except String Unit := do
+  let monoNames := monoAtoms.map (·.1)
+  let polyNames := NativeAtom.all.filterMap fun atom => (polyArm atom).map fun _ => atom.name
+  checkAtomCoverage (monoNames ++ polyNames)
+  for atom in NativeAtom.all do
+    unless atom.mono.isSome != (polyArm atom).isSome do
+      throw s!"native atom requires exactly one target typing arm: {atom.name}"
   for (n, args, ans) in monoAtoms do
     unless nativeAtomTy n args = some ans do
       throw s!"atom table disagrees with nativeAtomTy on {n}"
@@ -382,9 +415,9 @@ def checkAtoms : Except String Unit := do
       throw s!"atom probe disagrees with nativeAtomTy on {n} {repr args}"
 
 def emitNative (nullaryOps fnOps stratOps : Nat) : String :=
-  header "Eff_native: the native alphabet as data. atom_ty is nativeAtomTy (src/Effect4/Program/Native.lean): the monomorphic rows are data in EffGen.lean checked against nativeAtomTy by evaluation at generation time, the three polymorphic atoms and the variadic strings atom are fixed arms checked on probes (tested at generation: a disagreement aborts). row_of is NativeOp.row evaluated on the finite built-in alphabet, with the empty-table placeholder for external indices (the constructor table checks both classes). scope_key is nativeScopeKey." ++
+  header "Eff_native: the native alphabet as data. atom names and monomorphic metadata project the complete NativeAtom inventory (src/Effect4/Program/NativeAtom.lean). atom_ty is checked against nativeAtomTy: every enum member requires exactly one target arm, monomorphic rows are evaluated, and scheme arms are checked on finite probes (a disagreement or omission aborts). row_of is NativeOp.row evaluated on the finite built-in alphabet, with the empty-table placeholder for external indices (the constructor table checks both classes). scope_key is nativeScopeKey." ++
   "open Eff_types\n\n" ++
-  "let atom_names : string list = " ++ listO ((monoAtoms.map (ostr ·.1)) ++ [ostr "pair", ostr "fst", ostr "snd", ostr "strings"]) ++ "\n\n" ++
+  "let atom_names : string list = " ++ listO (NativeAtom.names.map ostr) ++ "\n\n" ++
   "let atom_ty (name : string) (args : ty list) : ty option =\n  match name, args with\n" ++
   "\n".intercalate (monoAtoms.map fun (n, args, ans) =>
     s!"  | {ostr n}, [{"; ".intercalate (args.map tyO)}] -> Some {tyO ans}") ++ "\n" ++

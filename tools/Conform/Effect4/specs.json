@@ -1,0 +1,14 @@
+{
+  "imports": [
+    "Effect4.Program.Typing"
+  ],
+  "roots": [
+    "Effect4.Program.effTy",
+    "Effect4.Program.layerTy",
+    "Effect4.Program.layersTy",
+    "Effect4.Program.stmtsTy",
+    "Effect4.Program.effsTy",
+    "Effect4.Program.actionTy"
+  ],
+  "supportNamespace": "Effect4.Spec"
+}

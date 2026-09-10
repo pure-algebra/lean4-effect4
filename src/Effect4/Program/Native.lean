@@ -1,4 +1,5 @@
-import Effect4.Program.Typing
+import Effect4.Program.NativeAtom
+import Effect4.Program.ErrorImage
 import Effect4.Machine.Stores
 
 /-!
@@ -56,44 +57,15 @@ def Lit.toVal : Lit → Option Val
   | .bool b => some (Val.bool b)
   | .str s => some (Val.str s)
 
-/-- `strings(s₁, …, sₙ)`: the one list a term can build, a list of strings, for the bind
-parameters of a host row (DB-15: `list string`, every parameter JSON text). Variadic, and
-typed at strings so that `strings()` has a type. -/
-def stringsAtom (vs : List Val) : Option Val :=
-  if vs.all (fun | Val.str _ => true | _ => false) then some (Val.list vs) else none
-
-/-- The pure atoms of the native route: a closed table, interpreted here, typed by
-`nativeAtomTy`. -/
-def nativeAtom : String → List Val → Option Val
-  | "succ", [Val.nat n] => some (Val.nat (n + 1))
-  | "pred", [Val.nat n] => some (Val.nat (n - 1))
-  | "isZero", [Val.nat n] => some (Val.bool (n = 0))
-  | "not", [Val.bool b] => some (Val.bool (!b))
-  | "add", [Val.nat a, Val.nat b] => some (Val.nat (a + b))
-  | "lt", [Val.nat a, Val.nat b] => some (Val.bool (decide (a < b)))
-  | "eq", [Val.nat a, Val.nat b] => some (Val.bool (a = b))
-  | "pair", [a, b] => some (Val.tuple [a, b])
-  | "fst", [.list (a :: _)] => some a
-  | "snd", [.list (_ :: b :: _)] => some b
-  | "strings", vs => stringsAtom vs
-  | _, _ => none
+/-- String-named compatibility surface over the complete native atom inventory. -/
+def nativeAtom (name : String) (values : List Val) : Option Val :=
+  (NativeAtom.ofName? name).bind (fun atom => atom.eval values)
 
 theorem nativeAtom_strings (vs : List Val) : nativeAtom "strings" vs = stringsAtom vs := rfl
 
-/-- The atoms' types, by their argument types. -/
-def nativeAtomTy : String → List Ty → Option Ty
-  | "succ", [.nat] => some .nat
-  | "pred", [.nat] => some .nat
-  | "isZero", [.nat] => some .bool
-  | "not", [.bool] => some .bool
-  | "add", [.nat, .nat] => some .nat
-  | "lt", [.nat, .nat] => some .bool
-  | "eq", [.nat, .nat] => some .bool
-  | "pair", [a, b] => some (.prod a b)
-  | "fst", [.prod a _] => some a
-  | "snd", [.prod _ b] => some b
-  | "strings", tys => if tys.all (· == .string) then some (.list .string) else none
-  | _, _ => none
+/-- The atoms' types, by their argument types, from the same exhaustive owner. -/
+def nativeAtomTy (name : String) (types : List Ty) : Option Ty :=
+  (NativeAtom.ofName? name).bind (fun atom => atom.typeOf types)
 
 theorem nativeAtomTy_strings (tys : List Ty) :
     nativeAtomTy "strings" tys = if tys.all (· == .string) then some (.list .string) else none := rfl
@@ -341,10 +313,10 @@ def nativeRowOf (table : RowTable) : NativeOp → Row
 @[simp] theorem nativeRowOf_nil (op : NativeOp) : nativeRowOf [] op = op.row := by
   cases op <;> rfl
 
-/-- The native signature: the rows above, the atoms and the service table, for `typeOf` and
-`print`. -/
+/-- The native signature uses the same canonical linked-row types as external preparation
+and admission (`externalRow`). Raw table entries retain their source spelling/provenance. -/
 def nativeSignature (table : RowTable := []) : Signature NativeOp :=
-  { rowOf := nativeRowOf table, atomOf := nativeAtomTy, scopeKey := nativeScopeKey,
+  { rowOf := fun op => (nativeRowOf table op).normalizeTypes, atomOf := nativeAtomTy, scopeKey := nativeScopeKey,
     serviceTy := nativeServiceTy,
     dom := fun | .external i => decide (i < table.length) | _ => true }
 

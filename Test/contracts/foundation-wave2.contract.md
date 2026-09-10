@@ -31,6 +31,16 @@ all authorized by the present ruling. G2's compatibility policy/supplement prece
   body refusal unchanged. Opaque target types need real exported symbols/imports.
 - S4a normalizes recursively, with idempotence and value-membership laws, using canonical
   representatives where equality needs them. Changes in inferred types are reported.
+  Technical amendment, 2026-09-09: the 13 retained pre-change snapshot probes show that the
+  old fiber-snapshot membership inspected the raw list-element type head, making the stated
+  deep-normalization law false. Decode the snapshot once and check each represented fiber
+  against the element type. Valid empty snapshots satisfy every list element type by empty
+  universal membership; malformed snapshots still refuse. Record these membership deltas
+  separately from program wire compatibility. This changes no snapshot bytes or allocation.
+  Linked rows use one `Row.normalizeTypes` view for signatures, printing, external answer
+  preparation and reply validation. The raw table remains the identity/provenance input.
+  Accordingly, table-completeness returns the normalized row view. Seven pre-change probes
+  witness the otherwise inconsistent unit-call arity and handle-answer preparation.
 - S4b appends string-literal `Ty.lit`, with a subtype relation and allocation-parameterized
   membership implication. Literal-preserving pair construction uses const type parameters.
   `prod (lit tag) X` is an error only when X has a supported representation/recovery law.
@@ -87,6 +97,10 @@ Keep canonical program error projection at the adapter. Saved diagnostics use a 
 versioned schema with stated fields/limits, not a lossless-raw-object promise. Preserve selected
 reason categories/order; represent or explicitly refuse unsupported cause combinations.
 Relate raw host replies, allocation preparation and prepared machine values explicitly.
+An acquisition completed by the host but still pending preparation owns a host resource
+without a machine allocation yet. Keep that pending ownership explicit; allocation
+correspondence applies after preparation. Compensated late acquisitions do not consume
+machine allocation indices or excuse leaking the actual physical resource.
 Per-row Lean refinement proves the specified model relation; actual JavaScript behavior is
 tested under named runtime assumptions. Profile refusal remains outside-profile evidence,
 distinct from program errors, defects and pending computation.

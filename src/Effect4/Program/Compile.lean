@@ -403,14 +403,6 @@ def embedAction : WithFiberAction Name Thunk Val Err Defect FiberId Ann Ctx → 
 
 /-! ## The compile -/
 
-/-- The error alphabet's image of a value: a number is a tag, a pair of strings is the tagged
-package error of DB-15 (the `_tag` and the message, `Effect.fail(pair("SqlError", m))`),
-anything else is `boom`. -/
-def errOf : Val → Err
-  | Val.nat n => Err.tag n
-  | Val.list [Val.str t, Val.str m] => Err.tagged t m
-  | _ => Err.boom
-
 /-- A value of the wrong shape where the program's typing promised another: the same
 defect the stores answer for a continuation applied to the wrong value. -/
 def badShape : NCode := Prim.failure (Cause.die Defect.badName)
@@ -472,14 +464,16 @@ def updateKeepsIdentity : Env.ContextUpdate → Env.Ctx → Bool
   | .provide that, prev => decide (prev.entries ≠ [] ∧ that.entries = [])
   | _, _ => false
 
-/-- `catch_(self, die)` (`internal/effect.ts:3289`, `:2558-2572`): the cause's first typed error
-becomes the defect, alone; a cause with no typed error passes through. The defect alphabet
-carries a numeric payload only, so a `boom` and a tagged package error both die as
-`badName` (`ORDIE-FB-TAGGED`: the host dies with the error object itself). -/
+/-- `catch_(self, die)` (`internal/effect.ts:3289`, `:2558-2572`): the first typed error
+becomes the defect, alone; a cause with no typed error passes through. Numeric errors retain
+`user`; represented text and package errors retain their exact payload under `error` (DI-31).
+The raw unrepresented `boom` continues to become `badName`. -/
 def orDieCause (cause : CauseV) : CauseV :=
   match cause.reasons.findSome? (fun | .fail e _ => some e | _ => none) with
   | some (Err.tag code) => Cause.die (Defect.user code)
-  | some Err.boom | some (Err.tagged _ _) => Cause.die Defect.badName
+  | some Err.boom => Cause.die Defect.badName
+  | some (Err.tagged t m) => Cause.die (Defect.error (.tagged t m))
+  | some (Err.text s) => Cause.die (Defect.error (.text s))
   | none => cause
 
 /-- The contexts of a list of reified exits, when every one succeeded with a context. -/
@@ -1281,19 +1275,12 @@ def loopAt (root : NativeEff) (p : Point) : Option (Term × Term × NativeEff) :
   | some (Node.eff (.whileLoop _ test step body)) => some (test, step, body)
   | _ => none
 
-/-- An external registration must name an external asynchronous row. -/
+/-- An external registration must name an external asynchronous row. Return the same
+canonical type-column view used by the native signature; the raw table is not rewritten. -/
 def externalRow (table : RowTable) (i : Nat) : Option Row := do
   let row ← table[i]?
   guard (row.registration = .external ∧ row.kind = .async)
-  some row
-
-/-- The typed error part of a completion; defects and interruptions remain
-outside the error type, as in `causeTy`. -/
-def errAdmits (ty : Ty) : Reason Err Defect FiberId Ann → Bool
-  | .fail (.tag n) _ => Val.hasTy (.nat n) ty
-  | .fail (.tagged t m) _ => Val.hasTy (.list [.str t, .str m]) ty
-  | .fail .boom _ => false
-  | .die _ _ | .interrupt _ _ => true
+  some row.normalizeTypes
 
 /-- A host gives the next scalar allocation index for an external handle. The
 machine writes the target spelling and constructs the handle. Other values retain

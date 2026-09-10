@@ -41,7 +41,7 @@ def program : NativeEff :=
 #guard externalValue (.handle resource) [] (.nat 1) = none
 #guard externalValue (.handle resource) [resource] (.handle 7 0) = none
 #guard Api.typeOf program table =
-  some ⟨.nat, .never, Env.Requirement.single (nativeSignature table).scopeKey⟩
+  some ⟨.nat, .never, Env.Requirement.empty⟩
 #guard Api.roundTrip program table = .ok program
 #guard (Api.run program 1000 [] [answer (.nat 0), answer (.nat 7), answer .unit] table).exit =
   some (.success (.nat 7))

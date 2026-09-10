@@ -78,8 +78,21 @@ let rec of_members : ty list -> ty = function
   | [ t ] -> t
   | t :: rest -> Ty_union (t, of_members rest)
 
-let join (a : ty) (b : ty) : ty =
-  of_members (List.fold_left (fun acc t -> insert_member t acc) [] (members a @ members b))
+(* Deep normalization mirrors Program/Ty.lean. Row.normalize is right-folded sorted
+   insertion; the key and unique member order remain unchanged. *)
+let rec normalize : ty -> ty = function
+  | Ty_option t -> Ty_option (normalize t)
+  | Ty_list t -> Ty_list (normalize t)
+  | Ty_prod (a, b) -> Ty_prod (normalize a, normalize b)
+  | Ty_except (a, b) -> Ty_except (normalize a, normalize b)
+  | Ty_exitOf (a, b) -> Ty_exitOf (normalize a, normalize b)
+  | Ty_causeOf t -> Ty_causeOf (normalize t)
+  | Ty_fiberOf (a, b) -> Ty_fiberOf (normalize a, normalize b)
+  | Ty_union (a, b) ->
+    of_members (List.fold_right insert_member (members (normalize a) @ members (normalize b)) [])
+  | t -> t
+
+let join (a : ty) (b : ty) : ty = normalize (Ty_union (a, b))
 
 let is_never : ty -> bool = function Ty_never -> true | _ -> false
 
@@ -162,6 +175,7 @@ let mk answer error requires = { eff_ty_answer = answer; eff_ty_error = error; e
 let pure (answer : ty) : eff_ty = mk answer Ty_never req_empty
 
 let join_answer (a : ty) (b : ty) : ty option =
+  let a = normalize a and b = normalize b in
   if a = b then Some a else if is_never a then Some b else if is_never b then Some a else None
 
 type gen_ty = { gen_answer : ty option; gen_error : ty; gen_requires : requirement }
@@ -209,8 +223,20 @@ and terms_ty (env : env) : terms -> ty list checked = function
     let* xs = terms_ty env t in
     Ok (x :: xs)
 
+(* DI-62: the closed error image; all three failure introductions consult this. *)
+let rec supported_error_ty : ty -> bool = function
+  | Ty_never | Ty_nat | Ty_string | Ty_prod (Ty_string, Ty_string) -> true
+  | Ty_union (l, r) -> supported_error_ty l && supported_error_ty r
+  | _ -> false
+
+(* The GADT witnesses construct a safe subset of raw spellings; the decision checker
+   also admits representable columns exposed by canonical normalization. *)
+let admitted_error_ty t = supported_error_ty (normalize t)
+
 let rec cause_ty (env : env) : cause_term -> ty checked = function
-  | Cause_term_fail e -> term_ty env e
+  | Cause_term_fail e ->
+    let* t = term_ty env e in
+    if admitted_error_ty t then Ok t else refuse "cause fail: unsupported error type"
   | Cause_term_die d ->
     let* _ = term_ty env d in
     Ok Ty_never
@@ -240,13 +266,15 @@ let rec check_eff (env : env) (p : eff) : eff_ty checked =
     Ok (pure t)
   | Eff_fail e ->
     let* t = term_ty env e in
-    Ok (mk Ty_never t req_empty)
+    if admitted_error_ty t then Ok (mk Ty_never t req_empty)
+    else refuse "fail: unsupported error type"
   | Eff_failCause c ->
     let* e = cause_ty env c in
     Ok (mk Ty_never e req_empty)
   | Eff_yieldError e ->
     let* t = term_ty env e in
-    Ok (mk Ty_never t req_empty)
+    if admitted_error_ty t then Ok (mk Ty_never t req_empty)
+    else refuse "yieldError: unsupported error type"
   | Eff_sync t ->
     let* t = term_ty env t in
     Ok (pure t)
@@ -256,7 +284,7 @@ let rec check_eff (env : env) (p : eff) : eff_ty checked =
   | Eff_perform (op, request) ->
     let row = Eff_native.row_of op in
     let* r = term_ty env request in
-    if r = row.row_request then Ok (row_answer row)
+    if normalize r = normalize row.row_request then Ok (row_answer row)
     else refuse ("perform " ^ row.row_name ^ ": the request type is not the row's")
   | Eff_bind (first, rest) ->
     let* f = check_eff env first in
@@ -312,7 +340,7 @@ let rec check_eff (env : env) (p : eff) : eff_ty checked =
   | Eff_callback (register, request) ->
     let row = Eff_native.row_of register in
     let* r = term_ty env request in
-    if row.row_kind = Row_kind_async && r = row.row_request then Ok (row_answer row)
+    if row.row_kind = Row_kind_async && normalize r = normalize row.row_request then Ok (row_answer row)
     else refuse ("callback " ^ row.row_name ^ ": the row is not async or the request type is not the row's")
   | Eff_awaitFiber (fiber, mode) ->
     let* t = term_ty env fiber in
@@ -323,7 +351,10 @@ let rec check_eff (env : env) (p : eff) : eff_ty checked =
         | Observer_mode_joinEffect -> Ok (mk value error req_empty)
         | Observer_mode_awaitValue -> Ok (pure (Ty_exitOf (value, error)))))
   | Eff_withFiber action -> check_action env action
-  | Eff_scoped body -> check_eff env body
+  (* DI-63: Effect.scoped excludes only Scope; the row operation is shared with layers. *)
+  | Eff_scoped body ->
+    let* t = check_eff env body in
+    Ok { t with eff_ty_requires = body_requires t }
   | Eff_acquireRelease (acquire, release) ->
     let* a = check_eff env acquire in
     let* r = check_eff (env @ [ a.eff_ty_answer; Ty_exitOf (a.eff_ty_answer, a.eff_ty_error) ]) release in
@@ -356,7 +387,7 @@ let rec check_eff (env : env) (p : eff) : eff_ty checked =
      | Some ty ->
        let* v = term_ty env value in
        let* b = check_eff env body in
-       if v = ty then Ok (mk b.eff_ty_answer b.eff_ty_error (req_diff b.eff_ty_requires (req_single key)))
+       if normalize v = normalize ty then Ok (mk b.eff_ty_answer b.eff_ty_error (req_diff b.eff_ty_requires (req_single key)))
        else refuse "provideService: the value is not the key's carrier")
 
 and check_stmts (env : env) (in_loop : bool) (body : stmts) : gen_ty checked =

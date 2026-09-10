@@ -41,17 +41,14 @@ The new executable claims are:
 * `Fits` versus `FitsIn` — one external handle is refused by `Fits` (whose table is the
   default `[]`) and admitted by `FitsIn` at the table that minted it. This is the pair the
   generalisation exists for.
-* the error image — `valOfErr` inverts `errOf` off `boom`, and `errOf` collapses a string
-  today (`errOf (.str "lost") = .boom`): the collapse DI-62's `Err.text` arm repairs, pinned
-  here so the repair is visible as a changed guard.
+* the error image — `valOfErr` inverts natural, text and package-pair errors. Every admitted
+  failure introduction has an exact image; unsupported values are refused (DI-62).
 * `hasTyCause` — a tagged package error is admitted at `prod string string` and refused at
   `nat`; a `boom` is refused at every type; a defect and an interruption are admitted at
   `never`, because `E = never` bounds the typed failures only.
 
-The refusal `Val.hasTy (Val.exitErr (Cause.fail (Err.tag 1))) (.causeOf .nat) = false` in
-"Refused" below stays as it is: the `.causeOf` arm of `Val.hasTy` is the S2 cutover's, and
-flipping that guard before the arm exists would be a claim with no definition under it. The
-same holds for the `.fiberOf` arm, which reads neither of its columns.
+The cause and failed-exit guards exercise the S2 membership cutover. Fiber membership still
+reads neither of its columns; those shape-only controls remain fixed.
 -/
 
 set_option autoImplicit false
@@ -200,6 +197,25 @@ section Statements
       ∃ row, externalRow table i = some row ∧
         hasTyCause (Val.exitErr c) row.error = true)
 
+
+#check (@Effect4.Program.reasonAdmits_mono :
+  ∀ {f g : Val → Ty → Bool} (ty : Ty), (∀ v, f v ty = true → g v ty = true) →
+    ∀ r, reasonAdmits f ty r = true → reasonAdmits g ty r = true)
+#check (@Effect4.Program.causeAdmits_mono :
+  ∀ {f g : Val → Ty → Bool} (ty : Ty), (∀ v, f v ty = true → g v ty = true) →
+    ∀ c, causeAdmits f ty c = true → causeAdmits g ty c = true)
+#check (@Effect4.Program.valOfErr_errOf_supported : ∀ ty v allocated,
+  supportedErrTy ty = true → Val.hasTy v ty allocated = true → valOfErr (errOf v) = some v)
+#check (@Effect4.Program.errOf_ne_boom_of_supported : ∀ ty v allocated,
+  supportedErrTy ty = true → Val.hasTy v ty allocated = true → errOf v ≠ .boom)
+#check (@Effect4.Program.errAdmits_errOf : ∀ ty v allocated a,
+  supportedErrTy ty = true → Val.hasTy v ty allocated = true → errAdmits ty (.fail (errOf v) a) = true)
+#check (@Effect4.Program.valOfErr_keys : ∀ e v, valOfErr e = some v → v.keys = [])
+#check (@Effect4.Program.hasTy_causeOf_exitErr : ∀ c e allocated,
+  Val.hasTy (Val.exitErr c) (.causeOf e) allocated = causeAdmits (fun v t => Val.hasTy v t allocated) e c)
+#check (@Effect4.Program.hasTy_exitErr : ∀ c a e allocated,
+  Val.hasTy (Val.exitErr c) (.exitOf a e) allocated = causeAdmits (fun v t => Val.hasTy v t allocated) e c)
+#check (@Effect4.Program.hasTy_causeOf_eq_hasTyCause : ∀ v e, Val.hasTy v (.causeOf e) = hasTyCause v e)
 end Statements
 
 /-! ## `Val.hasTy` — one value of each inhabited type -/
@@ -233,8 +249,8 @@ section Inhabited
 #guard Val.hasTy (Store.Val.some (Store.Val.some (Val.str "s"))) (.option (.option .string))
 #guard Val.hasTy (Val.list [Val.tuple [Val.str "a", Val.str "7"]]) (.list (.prod .string .string))
 
--- TYPED-FB-CAUSE: the cause of a reified failed exit is not checked
-#guard Val.hasTy (Val.exitErr (Cause.fail Err.boom)) (.exitOf .nat .bool)
+-- DI-62: a payloadless boom does not inhabit the declared error column.
+#guard Val.hasTy (Val.exitErr (Cause.fail Err.boom)) (.exitOf .nat .bool) = false
 
 end Inhabited
 
@@ -246,7 +262,7 @@ section Refused
 #guard Val.hasTy Val.unit .string = false
 #guard Val.hasTy Val.unit (.option .unit) = false
 #guard Val.hasTy (Val.exitOk Val.unit) (.except .nat .unit) = false
-#guard Val.hasTy (Val.exitErr (Cause.fail (Err.tag 1))) (.causeOf .nat) = false
+#guard Val.hasTy (Val.exitErr (Cause.fail (Err.tag 1))) (.causeOf .bool) = false
 #guard Val.hasTy Val.unit .never = false
 #guard Val.hasTy (Val.cell ⟨0⟩) (.handle "Ref.Ref<string>") = false
 #guard Val.hasTy (Val.cell ⟨0⟩) NativeOp.deferredTy = false
@@ -273,9 +289,9 @@ section Allocation
 
 -- byte 7 is the external kind; the target spelling is read at the handle's own index
 #guard Val.hasTy (Store.Val.handle 7 0) (.handle "Host.Resource") ["Host.Resource"]
-#guard !Val.hasTy (Store.Val.handle 7 0) (.handle "Host.Resource") ["Other.Resource"]
-#guard !Val.hasTy (Store.Val.handle 7 1) (.handle "Host.Resource") ["Host.Resource"]
-#guard !Val.hasTy (Store.Val.handle 7 0) (.handle "Host.Resource")
+#guard !(Val.hasTy (Store.Val.handle 7 0) (.handle "Host.Resource") ["Other.Resource"])
+#guard !(Val.hasTy (Store.Val.handle 7 1) (.handle "Host.Resource") ["Host.Resource"])
+#guard !(Val.hasTy (Store.Val.handle 7 0) (.handle "Host.Resource"))
 #guard Val.hasTy (Store.Val.some (Val.list [Store.Val.handle 7 0]))
   (.option (.list (.handle "Host.Resource"))) ["Host.Resource", "Other"]
 -- a registration appends, and an append keeps every existing membership (`hasTy_append`)
@@ -302,8 +318,10 @@ section ErrorImage
 #guard valOfErr (Err.tagged "SqlError" "m") = some (Val.list [Val.str "SqlError", Val.str "m"])
 #guard errOf (Val.nat 7) = Err.tag 7
 #guard errOf (Val.list [Val.str "SqlError", Val.str "m"]) = Err.tagged "SqlError" "m"
--- today's collapse, which DI-62's `Err.text` arm repairs: a string failure loses its payload
-#guard errOf (Val.str "lost") = Err.boom
+-- DI-62: text has an exact image, including the text "boom".
+#guard errOf (Val.str "lost") = Err.text "lost"
+#guard valOfErr (Err.text "boom") = some (.str "boom")
+#guard errOf (Val.str "boom") ≠ Err.boom
 #guard errOf (Val.bool true) = Err.boom
 
 -- the bridge, read on each reason shape: `errAdmits` is the fold at `Val.hasTy`
@@ -325,6 +343,68 @@ section ErrorImage
 -- a value that is not a reified failed exit has no cause to read
 #guard !(hasTyCause (Val.nat 1) .nat)
 #guard !(hasTyCause (Val.exitOk (Val.nat 1)) .nat)
+
+
+-- DI-62: all three error introductions consult the same supported type language.
+#guard supportedErrTy .never
+#guard supportedErrTy .nat
+#guard supportedErrTy .string
+#guard supportedErrTy (.prod .string .string)
+#guard supportedErrTy (.union .nat (.union .string (.prod .string .string)))
+#guard !(supportedErrTy .bool)
+#guard !(supportedErrTy (.union .nat .bool))
+#guard !(supportedErrTy (.prod .string .nat))
+#guard !(supportedErrTy (.handle "Db"))
+#guard (effTy nativeSignature [] (.fail (.lit (.str "lost")))).isSome
+#guard (effTy nativeSignature [] (.yieldError (.lit (.str "lost")))).isSome
+#guard (effTy nativeSignature [] (.failCause (.fail (.lit (.str "lost"))))).isSome
+#guard effTy nativeSignature [] (.fail (.lit (.bool true))) = none
+#guard effTy nativeSignature [] (.yieldError (.lit (.bool true))) = none
+#guard effTy nativeSignature [] (.failCause (.fail (.lit (.bool true)))) = none
+#guard effTy nativeSignature [Ty.scope] (.fail (.var 0)) = none
+#guard effTy nativeSignature []
+  (.failCause (.both (.fail (.lit (.nat 1))) (.fail (.lit (.bool true))))) = none
+#guard (effTy nativeSignature [.union .nat .string] (.fail (.var 0))).isSome
+#guard effTy nativeSignature [.union .nat .bool] (.fail (.var 0)) = none
+
+-- Exact error/defect images, including malformed shape refusals and old ordinal pins.
+#guard Err.image.toVal .boom = .ctor 0 []
+#guard Err.image.toVal (.tag 4) = .ctor 1 [.nat 4]
+#guard Err.image.toVal (.tagged "A" "m") = .ctor 2 [.str "A", .str "m"]
+#guard Err.image.toVal (.text "m") = .ctor 3 [.str "m"]
+#guard ofErr (.ctor 3 [.nat 1]) = none
+#guard ofErr (.ctor 3 []) = none
+#guard ofErr (.ctor 3 [.str "a", .str "b"]) = none
+#guard Defect.image.toVal (.user 4) = .ctor 4 [.nat 4]
+#guard Defect.image.toVal (.error (.text "m")) = .ctor 5 [.ctor 3 [.str "m"]]
+#guard ofDefect (.ctor 5 [.ctor 3 [.nat 1]]) = none
+#guard ofDefect (.ctor 5 []) = none
+#guard ofDefect (.ctor 5 [.ctor 99 []]) = none
+#guard ofDefect (.ctor 5 [.ctor 0 [], .ctor 0 []]) = none
+#guard ([Err.boom, .tag 3, .tagged "A" "m", .text "s"]).all (fun e =>
+  Defect.image.ofVal (Defect.image.toVal (.error e)) == some (.error e))
+
+-- Cause and failed-exit E checks reject a single bad reason in a mixed cause.
+#guard Val.hasTy (Val.exitErr (Cause.fail (.tag 1))) (.causeOf .nat)
+#guard Val.hasTy (Val.exitErr (Cause.fail (.text "lost"))) (.causeOf .string)
+#guard Val.hasTy (Val.exitErr (Cause.fail (.text "lost"))) (.exitOf .nat .string)
+#guard !(Val.hasTy (Val.exitErr (Cause.fail (.text "lost"))) (.causeOf .nat))
+#guard !(Val.hasTy (Val.exitErr (Cause.fail (.tagged "A" "m"))) (.exitOf .nat .string))
+#guard !(Val.hasTy (Val.exitErr (Cause.combine (Cause.fail (.tag 1)) (Cause.fail (.text "s")))) (.causeOf .nat))
+#guard Val.hasTy (Val.exitErr (Cause.combine (Cause.fail (.tag 1)) (Cause.fail (.text "s")))) (.causeOf (.union .nat .string))
+#guard Val.hasTy (Val.exitErr (Cause.combine (Cause.die (.error (.text "s"))) (Cause.interrupt none))) (.causeOf .never)
+#guard !(Val.hasTy (Val.exitErr (Cause.combine (Cause.fail (.tag 1)) (Cause.fail .boom))) (.causeOf .nat))
+#guard !(Val.hasTy (Value.exitErr (.ctor 99 [])) (.causeOf .nat))
+#guard !(Val.hasTy (Value.exitErr (.ctor 99 [])) (.exitOf .nat .nat))
+#guard !(Val.hasTy (Val.exitOk (.nat 1)) (.causeOf .nat))
+
+-- Wrappers agree with the allocation-aware branch; unrelated allocation changes do not
+-- alter closed error values, while successful exits still consult their resource column.
+#guard Val.hasTy (Val.exitErr (Cause.fail (.text "s"))) (.causeOf .string) ["Db"] =
+  causeAdmits (fun v t => Val.hasTy v t ["Db"]) .string (Cause.fail (.text "s"))
+#guard Val.hasTy (Val.exitOk (Value.external 0)) (.exitOf (.handle "Db") .string) ["Db"]
+#guard Val.hasTy (Val.exitOk (Value.external 0)) (.exitOf (.handle "Db") .string) ["Db", "Other"]
+#guard !(Val.hasTy (Val.exitOk (Value.external 0)) (.exitOf (.handle "Db") .string) [])
 
 end ErrorImage
 

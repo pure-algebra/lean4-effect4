@@ -53,7 +53,7 @@ let ellipsis (n : int) (s : string) : string =
 (* ---- 1. goldens ---- *)
 
 let () =
-  check "corpus has 43 programs" (List.length corpus = 43);
+  check "corpus has 46 programs" (List.length corpus = 46);
   Printf.printf "  %-16s %6s %-8s %-10s %-6s %s\n" "program" "bytes" "decode" "re-encode" "JSON" "typeOf";
   List.iter
     (fun (name, typed) ->
@@ -187,15 +187,14 @@ let typed_corpus : (string * program) list =
   ; ("pAwait", Program (Bind (Perform (Deferred_make, unit_), Perform (Deferred_await, v0)), Nat, un Nat))
   ; ("pGen", Program (Gen (Bind_yield (Succeed (nat 1), Ret (Succ v0)), G_ret), Nat, un Never))
   ; ("pWhile", Program (While_loop (nat 0, Lt (v0, nat 3), Succ v1, Yield_now 0), Unit, Never))
-  ; ("pCatch", Program (Catch_cause (Fail (nat 1), Succeed (nat 0), Left_never), Nat, Never))
+  ; ("pCatch", Program (Catch_cause (Fail (Error_nat, nat 1), Succeed (nat 0), Left_never), Nat, Never))
   ; ("pStr", Program (Succeed (str "hi \"there\"\n"), String, Never))
   ; ( "pFailCause"
     , Program
         ( Fail_cause
-            (C_both (C_fail (nat 1), C_both (C_die (nat 2), C_both (C_interrupt (Some (nat 3)), C_interrupt None))))
+            (C_both (C_fail (Error_nat, nat 1), C_both (C_die (nat 2), C_both (C_interrupt (Some (nat 3)), C_interrupt None))))
         , Never
         , Union (Nat, Union (Never, Union (Never, Never))) ) )
-  ; ("pYieldError", Program (Yield_error (bool true), Never, Bool))
   ; ("pSync", Program (Sync (Add (nat 2, nat 3)), Nat, Never))
   ; ("pSuspend", Program (Suspend (Succeed unit_), Unit, Never))
   ; ( "pMatch"
@@ -204,9 +203,9 @@ let typed_corpus : (string * program) list =
         , Bool
         , Union (Never, Never) ) )
   ; ("pOnExit", Program (On_exit (Succeed (nat 1), Yield_now 1), Nat, Union (Never, Never)))
-  ; ("pExit", Program (Exit (Fail (nat 9)), Exit_of (Never, Nat), Never))
+  ; ("pExit", Program (Exit (Fail (Error_nat, nat 9)), Exit_of (Never, Nat), Never))
   ; ("pMasks", Program (Uninterruptible (Interruptible (Succeed (nat 1))), Nat, Never))
-  ; ("pBranch", Program (Branch (bool true, Succeed (nat 1), Fail (nat 2), Right_never), Nat, Union (Never, Nat)))
+  ; ("pBranch", Program (Branch (bool true, Succeed (nat 1), Fail (Error_nat, nat 2), Right_never), Nat, Union (Never, Nat)))
   ; ("pCallback", Program (Bind (Perform (Deferred_make, unit_), Callback (Deferred_await, v0)), Nat, un Nat))
   ; ( "pJoin"
     , Program
@@ -338,6 +337,7 @@ let typed_corpus : (string * program) list =
   ; ("pProvide", p_provide_typed)
   ; ("pSleep", Program (Bind (Callback (Sleep, nat 3), Perform (Clock_now, unit_)), Nat, un Never))
   ; ("pMergeAll", p_merge_all_typed)
+  ; ("pFailText", Program (Fail (Error_string, str "lost"), Never, String))
   ]
 
 let () =
@@ -510,7 +510,7 @@ let () =
   check "atoms refuse wrong arities and types"
     (atom_ty "succ" [ Ty_bool ] = None && atom_ty "succ" [] = None && atom_ty "add" [ Ty_nat ] = None
      && atom_ty "fst" [ Ty_nat ] = None && atom_ty "mul" [ Ty_nat; Ty_nat ] = None);
-  check "11 atom names (ten built-ins and strings)" (List.length atom_names = 11);
+  check "17 modeled atom names including native queries" (List.length atom_names = 17);
   (* ops *)
   check "55 op values, none repeated"
     (List.length all_ops = 55 && List.length (List.sort_uniq compare all_ops) = 55);

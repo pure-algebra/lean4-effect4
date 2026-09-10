@@ -7,8 +7,8 @@ generated modules with the recording prelude and writes the observed result and 
 and every committed artefact must equal the fresh one. A tape that moved fails the gate the
 way corpus.json does: the answers Lean replayed are byte for byte the answers rc.112 just gave.
 
-Between the two, one more refusal (DI-49): the freshly printed modules and the adapter they
-call must type-check under the pinned compiler, `tsc --noEmit -p harness/truth/tsconfig.json`
+Between the two, one more refusal (DI-49): the freshly printed modules, their adapter, and the recorder/session sources
+must type-check under the pinned compiler, `tsc --noEmit -p harness/truth/tsconfig.json`
 copied beside them in the work directory. Running is not being well typed — `pKv.ts` ran for
 months while its declared error type disagreed with what the shim could raise (TS2375) — so
 the check is on the modules rc.112 just ran, before any byte is compared. Evidence word:
@@ -38,7 +38,7 @@ HOST_PACKAGES = ('effect', '@effect')
 def inputs_of(root, truth, modules, manifest_files):
     """Everything the differential reads, in a fixed order: the harness, the Lean sources, the
     committed artefacts and tapes, the host packages, and the manifest that pins them."""
-    inputs = list(truth.glob('*.ts')) + list(truth.glob('*.lean')) + [Path(__file__),
+    inputs = list(truth.glob('*.ts')) + list(truth.glob('*.lean')) + sorted((truth/'session').glob('*.ts')) + [Path(__file__),
               root/'lean-toolchain', root/'lake-manifest.json']
     inputs += list(manifest_files)
     inputs += sorted((root/'src/Effect4').rglob('*.lean'))
@@ -117,7 +117,13 @@ def main():
         # DI-49: the modules rc.112 just ran, and the adapter they call, under the pinned
         # compiler. The config is copied beside them so that `generated/` and `prelude.ts`
         # resolve as they do in the tree, and `effect`/`@types/bun` through the link above.
-        shutil.copyfile(truth/'tsconfig.json', Path(work)/'tsconfig.json')
+        # Check the actual recorder and session sources as well. Copying them flat would
+        # break their relative imports of the generated profile; absolute files preserve
+        # source topology while prelude/generated are the freshly exercised copies.
+        config = json.loads((truth/'tsconfig.json').read_text())
+        config['files'] = [host_path(truth/'run-truth.ts')] + [
+            host_path(path) for path in sorted((truth/'session').glob('*.ts'))]
+        (Path(work)/'tsconfig.json').write_text(json.dumps(config, indent=2) + '\n')
         typed = subprocess.run([bun, host_path(modules/'typescript/bin/tsc'), '--pretty', 'false',
                                 '--noEmit', '-p', host_path(Path(work)/'tsconfig.json')],
                                cwd=work, text=True, capture_output=True, timeout=300)

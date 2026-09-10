@@ -42,7 +42,7 @@
     },
     {
       "Name": "Program",
-      "Imports": "Effect4.Program.Native,Effect4.Store.Canonical",
+      "Imports": "Effect4.Program.Native,Effect4.Store.Canonical,Effect4.Store.RowCanonical",
       "Out": "src\\Effect4\\Program\\Derived.lean",
       "Guards": "tools\\Effect4Gen\\guards\\program.lean",
       "Kinds": [],
@@ -52,7 +52,9 @@
         "Effect4.Program.NativeOp", "Effect4.Supervision.ForkOptions", "Effect4.Program.Term",
         "Effect4.Program.CauseTerm",
         "Effect4.ServiceName", "Effect4.ServiceTypeCode", "Effect4.ServiceKey",
-        "Effect4.Program.Eff@Effect4.Program.NativeOp"
+        "Effect4.Program.Eff@Effect4.Program.NativeOp",
+        "Effect4.Program.Ty", "Effect4.Program.RowKind", "Effect4.Program.RowShape",
+        "Effect4.Program.Registration", "Effect4.Program.Row", "Effect4.Program.EffTy"
       ]
     },
     {

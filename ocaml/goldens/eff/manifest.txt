@@ -1,19 +1,27 @@
+Ty: never unit nat int string bool handle option list prod except exitOf causeOf fiberOf union
 Lit: unit nat bool str
 Term: var lit app
 Terms: nil cons
 CauseTerm: fail die interrupt both
-FnName: incr double zeroWhenPositive noChange takeAndBump
-FinalizerStrategy: sequential parallel
-NativeOp: refMake refGet refSet refGetAndSet refSetAndGet refUpdate refGetAndUpdate refUpdateAndGet refUpdateSome refGetAndUpdateSome refUpdateSomeAndGet refModify refModifySome deferredMake deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake sleep clockNow external
 MaskMode: interruptible uninterruptible inherit
-ObserverMode: awaitValue joinEffect
 ForkOptions: startImmediately daemon maskMode
+ObserverMode: awaitValue joinEffect
+FinalizerStrategy: sequential parallel
+FnName: incr double zeroWhenPositive noChange takeAndBump
+NativeOp: refMake refGet refSet refGetAndSet refSetAndGet refUpdate refGetAndUpdate refUpdateAndGet refUpdateSome refGetAndUpdateSome refUpdateSomeAndGet refModify refModifySome deferredMake deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake sleep clockNow external
+ServiceName: value
+ServiceTypeCode: value
 ServiceKey: name service
 Eff: succeed fail failCause yieldError sync suspend perform bind gen catchCause matchCause onExit exit uninterruptible interruptible branch whileLoop yieldNow callback awaitFiber withFiber scoped acquireRelease choose provideLayer service provideService
-LayerTerm: succeed effect effectDiscard provide provideMerge merge fresh orDie ref mergeAll
 Stmt: bindYield yieldDiscard ret ifElse whileTrue breakLoop
 Stmts: nil cons
 Effs: nil cons
 ActionTerm: fork forkIn forkScoped runIn interrupt interruptScoped interruptAll awaitAll awaitAllFailFast snapshotChildren awaitNewChildren raceAll setContext getContext getId closeScope
+LayerTerm: succeed effect effectDiscard provide provideMerge merge fresh orDie ref mergeAll
 LayerTerms: nil cons
+RowKind: sync async program
+RowShape: call value tupleCall method
+Registration: deferred external
+Row: name spelling shape trailing kind request answer error requires cite typeArgs registration
+EffTy: answer error requires
 tags: bool=1 nat=2 string=3 list=4 pair=5 none=6 some=7 bytes=8 unit=9 ctor=10 ref=11 handle=12

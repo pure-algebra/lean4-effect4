@@ -1,5 +1,7 @@
 import Tools.GeneratedStamp
 import Effect4.Program.Wire
+import Tools.ProgramStructure
+import OCaml5.Eff.Goldens
 
 /-!
 # EffWire — the goldens of the Eff wire
@@ -29,14 +31,7 @@ def hex (bs : List UInt8) : String := String.join (bs.map hexOfByte)
 `LayerTerm` and the `ServiceKey` fields; `ocaml/eff/test/test_lean_wire.ml` checks every line
 against the OCaml library's generated tables). -/
 def manifest (env : Lean.Environment) : IO String := do
-  let families : List Lean.Name := [
-    `Effect4.Program.Lit, `Effect4.Program.Term, `Effect4.Program.Terms,
-    `Effect4.Program.CauseTerm, `Effect4.Machine.FnName, `Effect4.FinalizerStrategy,
-    `Effect4.Program.NativeOp, `Effect4.Supervision.MaskMode,
-    `Effect4.Supervision.ObserverMode, `Effect4.Supervision.ForkOptions,
-    `Effect4.ServiceKey, `Effect4.Program.Eff, `Effect4.Program.LayerTerm,
-    `Effect4.Program.Stmt, `Effect4.Program.Stmts, `Effect4.Program.Effs,
-    `Effect4.Program.ActionTerm, `Effect4.Program.LayerTerms]
+  let families := Tools.ProgramStructure.allSpecs.map (·.leanName)
   let mut rows : List String := []
   for name in families do
     let names ← if Lean.isStructure env name then
@@ -46,15 +41,7 @@ def manifest (env : Lean.Environment) : IO String := do
       | some (.inductInfo info) => pure info.ctors
       | _ => throw (IO.userError s!"EffWire: no inductive family {name}")
     rows := rows ++ [name.getString! ++ ": " ++ " ".intercalate (names.map Lean.Name.getString!)]
-  let tags : List (String × UInt8) := [
-    ("bool", Effect4.Store.Tag.bool), ("nat", Effect4.Store.Tag.nat),
-    ("string", Effect4.Store.Tag.string), ("list", Effect4.Store.Tag.list),
-    ("pair", Effect4.Store.Tag.pair), ("none", Effect4.Store.Tag.none),
-    ("some", Effect4.Store.Tag.some), ("bytes", Effect4.Store.Tag.bytes),
-    ("unit", Effect4.Store.Tag.unit), ("ctor", Effect4.Store.Tag.ctor),
-    -- CAS amendment M16 (2026-09-09, host rows step 7): the two tags the carrier gained
-    -- with the value foundation, `ref` and `handle`, which the table had stopped short of
-    ("ref", Effect4.Store.Tag.ref), ("handle", Effect4.Store.Tag.handle)]
+  let tags := Effect4.Store.Tag.all
   return "\n".intercalate (rows ++ ["tags: " ++ " ".intercalate
     (tags.map fun (name, value) => name ++ "=" ++ toString value.toNat)])
 
@@ -69,6 +56,13 @@ def main (args : List String) : IO Unit := do
     for (name, p) in Corpus.all do
       IO.FS.writeFile s!"{dir}/{name}.hex" (hex (encodeProgram p) ++ "\n")
     IO.FS.writeFile s!"{dir}/manifest.txt" (manifest ++ "\n")
+    -- Identity comes from independently declared Eff values, not a name whitelist.
+    let common := Corpus.all.filterMap fun (name, program) =>
+      match OCaml5.Eff.Corpus.corpus.find? (·.1 == name) with
+      | some (_, other) => if program == other then some name else none
+      | none => none
+    IO.FS.writeFile s!"{dir}/same-programs.txt" ("\n".intercalate common ++ "\n")
+    Tools.GeneratedStamp.sidecar s!"{dir}/same-programs.txt" stamp
     for (name, _) in Corpus.all do
       Tools.GeneratedStamp.sidecar s!"{dir}/{name}.hex" stamp
     Tools.GeneratedStamp.sidecar s!"{dir}/manifest.txt" stamp

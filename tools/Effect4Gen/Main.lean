@@ -1,4 +1,5 @@
 import Tools.GeneratedStamp
+import Tools.ProgramStructure
 import Lean
 
 /-!
@@ -137,7 +138,9 @@ partial def tyText (e : Expr) : String :=
   | .const n _ =>
     let base := "_root_." ++ n.toString
     if args.isEmpty then base
-    else base ++ " " ++ String.intercalate " " (args.toList.map fun a => "(" ++ tyText a ++ ")")
+    -- Expr applications include implicit/instance arguments. Make application explicit
+    -- rather than accidentally applying an already inferred instance a second time.
+    else "@" ++ base ++ " " ++ String.intercalate " " (args.toList.map fun a => "(" ++ tyText a ++ ")")
   | _ => "«unprintable»"
 
 /-- A type as Lean source text, parenthesised when it is an application, so that it can stand
@@ -984,6 +987,8 @@ def run (args : Args) : MetaM (Array String) := do
   let mut seeds : Array Expr := #[]
   for t in args.types do
     seeds := seeds.push (← elabTy t)
+  if args.group == "Program" then
+    Tools.ProgramStructure.checkProgramSeeds seeds
   let mut kinds : Array KindReq := #[]
   for (t, k) in args.kinds do
     kinds := kinds.push { ty := ← elabTy t, kind := k }

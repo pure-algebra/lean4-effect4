@@ -34,8 +34,10 @@ namespace EffTy
 
 def pure (answer : Ty) : EffTy := ⟨answer, .never, Requirement.empty⟩
 
-/-- Two answer types agree when equal or when one is `never`. -/
+/-- Compare normalized answers: equality or one `never`; distinct answers still refuse. -/
 def joinAnswer (a b : Ty) : Option Ty :=
+  let a := a.normalize
+  let b := b.normalize
   if a = b then some a
   else if a.isNever then some b
   else if b.isNever then some a
@@ -81,7 +83,9 @@ end
 /-- The error type a cause carries: its `fail` reasons; defects and interrupts contribute
 none (`Cause.die` and `Cause.interrupt` are outside `E`). -/
 def causeTy (sig : Signature Op) (env : TyEnv) : CauseTerm → Option Ty
-  | .fail error => termTy sig env error
+  | .fail error => do
+    let e ← termTy sig env error
+    if admittedErrTy e then some e else none
   | .die defect => (termTy sig env defect).map fun _ => .never
   | .interrupt none => some .never
   | .interrupt (some who) => do
@@ -177,9 +181,13 @@ mutual
   /-- `typeOf` over the environment, structural in the program. -/
   def effTy (sig : Signature Op) (env : TyEnv) : Eff Op → Option EffTy
     | .succeed value => (termTy sig env value).map EffTy.pure
-    | .fail error => (termTy sig env error).map fun e => ⟨.never, e, Requirement.empty⟩
+    | .fail error => do
+      let e ← termTy sig env error
+      if admittedErrTy e then some ⟨.never, e, Requirement.empty⟩ else none
     | .failCause cause => (causeTy sig env cause).map fun e => ⟨.never, e, Requirement.empty⟩
-    | .yieldError error => (termTy sig env error).map fun e => ⟨.never, e, Requirement.empty⟩
+    | .yieldError error => do
+      let e ← termTy sig env error
+      if admittedErrTy e then some ⟨.never, e, Requirement.empty⟩ else none
     | .sync thunk => (termTy sig env thunk).map EffTy.pure
     | .suspend body => effTy sig env body
     -- The operation must be in the signature's domain (`Signature.dom`, DI-54): an external
@@ -189,7 +197,7 @@ mutual
     | .perform op request => do
       let row := sig.rowOf op
       let r ← termTy sig env request
-      if sig.dom op = true ∧ r = row.request then
+      if sig.dom op = true ∧ r.normalize = row.request.normalize then
         some ⟨row.answer, row.error, Requirement.ofList row.requires⟩
       else none
     | .bind first rest => do
@@ -241,7 +249,7 @@ mutual
     | .callback register request => do
       let row := sig.rowOf register
       let r ← termTy sig env request
-      if sig.dom register = true ∧ row.kind = .async ∧ r = row.request then
+      if sig.dom register = true ∧ row.kind = .async ∧ r.normalize = row.request.normalize then
         some ⟨row.answer, row.error, Requirement.ofList row.requires⟩
       else none
     | .awaitFiber fiber mode => do
@@ -251,7 +259,9 @@ mutual
       | .joinEffect => some ⟨value, error, Requirement.empty⟩
       | .awaitValue => some (EffTy.pure (.exitOf value error))
     | .withFiber action => actionTy sig env action
-    | .scoped body => effTy sig env body
+    -- DI-63: Effect.scoped excludes only Scope (vendor/effect-4.0.0-rc.112/src/Effect.ts:12815-12817).
+    | .scoped body => (effTy sig env body).map fun t =>
+        { t with requires := bodyRequires sig t }
     | .acquireRelease acquire release => do
       let a ← effTy sig env acquire
       let r ← effTy sig (env ++ [a.answer, .exitOf a.answer a.error]) release
@@ -277,7 +287,7 @@ mutual
       let ty ← sig.serviceTy key
       let v ← termTy sig env value
       let b ← effTy sig env body
-      if v = ty then some ⟨b.answer, b.error, Row.diff b.requires (Requirement.single key)⟩
+      if v.normalize = ty.normalize then some ⟨b.answer, b.error, Row.diff b.requires (Requirement.single key)⟩
       else none
 
   /-- The signature of a layer term, structural; `none` refuses an ill-typed body or a literal

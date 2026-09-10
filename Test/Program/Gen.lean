@@ -631,7 +631,10 @@ def wellTypedCount : Nat := (sample.filter Api.wellTyped).length
 
 /-! ### The well-typed count -/
 
-#guard wellTypedCount = 152
+-- S2's supported-error rule removes 19 historical admissions. The integration receipt
+-- records each program by index and wire digest, with current Lean/OCaml agreement on all
+-- 400 inputs: docs/research/type-tooling/delivery/admission/delta.json.
+#guard wellTypedCount = 133
 
 /-! ### Size -/
 

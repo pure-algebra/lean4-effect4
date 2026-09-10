@@ -66,6 +66,8 @@ inductive Err
   | boom
   | tag (code : Nat)
   | tagged (tag message : String)
+  /-- A textual typed failure (DI-62), preserving its exact payload. -/
+  | text (message : String)
 deriving DecidableEq, Repr
 
 /-- The defect alphabet: `defaultEvaluate`'s payload (`PrimInterp.notImplemented`), the
@@ -80,6 +82,8 @@ inductive Defect
   | missingService
   /-- A user defect, `Effect.die(d)` with a numeric payload (the `Eff` compile's `die`). -/
   | user (payload : Nat)
+  /-- A represented typed error promoted to a defect by `orDie` (DI-31). -/
+  | error (payload : Err)
 deriving DecidableEq, Repr
 
 /-- The cause-annotation value alphabet; `stackAnnotations` contributes none
@@ -234,15 +238,18 @@ def ofErr : Store.Val → Option Err
   | .ctor 0 [] => some .boom
   | .ctor 1 [.nat c] => some (.tag c)
   | .ctor 2 [.str t, .str m] => some (.tagged t m)
+  | .ctor 3 [.str s] => some (.text s)
   | _ => none
 
 /-- `Err` at the generated rule: `boom` is `ctor 0 []`, `tag c` is `ctor 1 [nat c]`,
-`tagged tag message` is `ctor 2 [str tag, str message]`. -/
+`tagged tag message` is `ctor 2 [str tag, str message]`, and `text s` is
+`ctor 3 [str s]`. Existing constructor encodings remain fixed. -/
 def Err.image : Image Err where
   toVal
     | .boom => .ctor 0 []
     | .tag c => .ctor 1 [.nat c]
     | .tagged t m => .ctor 2 [.str t, .str m]
+    | .text s => .ctor 3 [.str s]
   ofVal := ofErr
   ofVal_toVal e := by cases e <;> rfl
   ofVal_exact := by
@@ -260,9 +267,11 @@ def ofDefect : Store.Val → Option Defect
   | .ctor 2 [] => some .badName
   | .ctor 3 [] => some .missingService
   | .ctor 4 [.nat n] => some (.user n)
+  | .ctor 5 [e] => (ofErr e).map Defect.error
   | _ => none
 
-/-- `Defect` at the generated rule, in declaration order; `user n` is `ctor 4 [nat n]`. -/
+/-- `Defect` at the generated rule, in declaration order; `user n` is `ctor 4 [nat n]`
+and `error e` is `ctor 5 [Err.image.toVal e]`. A malformed nested error is refused. -/
 def Defect.image : Image Defect where
   toVal
     | .notImplemented => .ctor 0 []
@@ -270,16 +279,33 @@ def Defect.image : Image Defect where
     | .badName => .ctor 2 []
     | .missingService => .ctor 3 []
     | .user n => .ctor 4 [.nat n]
+    | .error e => .ctor 5 [Err.image.toVal e]
   ofVal := ofDefect
-  ofVal_toVal d := by cases d <;> rfl
+  ofVal_toVal d := by
+    cases d <;> try rfl
+    next e =>
+      change (ofErr (Err.image.toVal e)).map Defect.error = some (.error e)
+      rw [show ofErr (Err.image.toVal e) = some e from Err.image.ofVal_toVal e]
+      rfl
   ofVal_exact := by
     intro v d h
     unfold ofDefect at h
-    split at h <;> first | (injection h with h; subst h; rfl) | exact nomatch h
+    split at h
+    all_goals try (injection h with h; subst h; rfl)
+    · next written =>
+      obtain ⟨e, he, hd⟩ := Image.map_eq_some_inv h
+      subst hd
+      show Store.Val.ctor 5 [written] = Store.Val.ctor 5 [Err.image.toVal e]
+      rw [Err.image.ofVal_exact he]
+    · exact nomatch h
 
 theorem Defect.image_handleFree : Image.HandleFree Defect.image := by
   intro d
-  cases d <;> rfl
+  cases d <;> try rfl
+  next e =>
+    change (Err.image.toVal e).handles ++ [] = []
+    rw [Err.image_handleFree e]
+    rfl
 
 /-- The cause carrier at this instantiation. -/
 abbrev CauseV := Cause Err Defect FiberId Ann

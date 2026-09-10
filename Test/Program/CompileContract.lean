@@ -174,7 +174,7 @@ def pFail : NativeEff := .fail (.lit (.nat 7))
   = some (Exit.failure (Cause.fail (Err.tag 7)))
 
 /-- `Effect.fail(pair("SqlError", "boom"))`: a pair of strings is the tagged package error of
-DB-15; any other non-numeric value stays `boom`. -/
+DB-15; text has its own error image, while unsupported raw values stay `boom`. -/
 def pFailTagged : NativeEff :=
   .fail (.app "pair" (.cons (.lit (.str "SqlError")) (.cons (.lit (.str "boom")) .nil)))
 
@@ -185,6 +185,26 @@ def pFailTagged : NativeEff :=
 #guard errOf (Val.list [Val.str "SqlError"]) = Err.boom
 #guard errOf (Val.list [Val.str "SqlError", Val.nat 1]) = Err.boom
 #guard errOf (Val.bool true) = Err.boom
+
+
+/-- DI-62: text remains text through ordinary and generator-style failure. -/
+def pFailText : NativeEff := .fail (.lit (.str "lost"))
+def pYieldText : NativeEff := .yieldError (.lit (.str "lost"))
+def pCauseText : NativeEff := .failCause (.fail (.lit (.str "lost")))
+#guard (typeOf nativeSignature pFailText).isSome
+#guard (typeOf nativeSignature pYieldText).isSome
+#guard (typeOf nativeSignature pCauseText).isSome
+#guard exitOf (replayEff pFailText [evaluateRoot]) 0 = some (.failure (Cause.fail (.text "lost")))
+#guard exitOf (replayEff pYieldText [evaluateRoot]) 0 = some (.failure (Cause.fail (.text "lost")))
+#guard exitOf (replayEff pCauseText [evaluateRoot]) 0 = some (.failure (Cause.fail (.text "lost")))
+#guard orDieCause (Cause.fail (.text "lost")) = Cause.die (.error (.text "lost"))
+#guard orDieCause (Cause.fail (.tagged "SqlError" "boom")) = Cause.die (.error (.tagged "SqlError" "boom"))
+#guard orDieCause (Cause.fail (.tag 4)) = Cause.die (.user 4)
+#guard orDieCause (Cause.fail .boom) = Cause.die .badName
+-- A leading unrepresented boom is selected, not skipped in favor of a later payload.
+#guard orDieCause (Cause.combine (Cause.fail .boom) (Cause.fail (.text "later"))) = Cause.die .badName
+#guard orDieCause (Cause.combine (Cause.die (.user 2)) (Cause.interrupt none)) =
+  Cause.combine (Cause.die (.user 2)) (Cause.interrupt none)
 
 /-- `Effect.catchCause`: the handler receives the reified cause and answers `9`. -/
 def pCatch : NativeEff := .catchCause pFail (.succeed (.lit (.nat 9)))

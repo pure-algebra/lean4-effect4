@@ -415,6 +415,22 @@ Area-specific attack shapes are in
 add a `BROKE / LAW / WITNESS / CLASS / FIXED-BY` record to the owning contract
 packet without deleting the stable row.
 
+
+## Conform integration controls (2026-09-10)
+
+| ID | Status | Attacked statement | Witness / evidence | Forced repair |
+| --- | --- | --- | --- | --- |
+| `E4-CONFORM-CE-001` | REPAIRED 2026-09-10 | Row count establishes exact report coverage | `scripts/test-conform-report.py`: duplicate A with B missing; truncated plan; extra C | Independently planned structural check/subject identities and exact bijection; process/summary checks |
+| `E4-CONFORM-CE-002` | REPAIRED 2026-09-10 | A theorem-shaped name is evidence of its requested law | `Conform.Cli.BoundaryControls`: ordinary definition, wrong proposition and Classical.em | Core.Proof validates theorem kind, exact frozen proposition/universes and transitive axioms |
+| `E4-CONFORM-CE-003` | REPAIRED 2026-09-10 | An accepted external table returns raw type columns | `Test.Program.LinkedRowsContract`: raw unit union and raw handle-answer union; `InvocationContract` exact theorem type | `checkTable_none_externalRow` returns `row.normalizeTypes`, shared by checking, printing and preparation; raw metadata remains stored |
+| `E4-CONFORM-CE-004` | REPAIRED 2026-09-10 | A canonical pair image is also a program tuple model | `Test.Program.ValueModelContract`: encoded `(7, true)` differs between pair and tuple | Preserve historical pair bytes; ValueModel.pair uses Image.tuple2 with its membership proof |
+| `E4-CONFORM-CE-005` | REPAIRED 2026-09-10 | OCaml byte length is Lean String.length | `Conform.Effect4.CompilerControls`: length of é🙂 is 2; UTF-8 encoding of é is [195,169]; compiler runner mutates actual emitted helper | Explicit UTF-8 scalar counting and byte helper, valid-input domain, actual target control |
+| `E4-CONFORM-CE-006` | REPAIRED 2026-09-10 | The target primitive rules agree at boundary inputs | `CompilerControls`: Nat division/modulo by zero, UInt8 clamp at 256, saturated shift, default array lookup, asymmetric List.contains | Repair actual builtin expressions; retain finite host controls and separate integer/panic observation limits |
+| `E4-CONFORM-CE-007` | REPAIRED 2026-09-10 | A name-keyed SCC graph may silently coalesce duplicate emitted names | `CompilerControls`: two translated declarations named a | Refuse the collision before Lean.SCC.scc; retain dependency/member order control |
+| `E4-CONFORM-CE-008` | REPAIRED 2026-09-10 | Proof inversion permits a branch requirement row containing only its then arm | `tools/conform-red/Probe2Neg.lean`, `RulesNeg.lean` | Ordinary generated specifications plus checker/judgment proofs reject the altered postcondition and both altered rule directions |
+
+| `E4-CONFORM-CE-009` | REPAIRED 2026-09-10 | OCaml decimal escapes can encode a Unicode scalar directly | `CompilerControls`: actual emitted `é🙂` length and UTF-8 bytes; prior renderer emitted `\233\128578` | Shared Ml string renderer encodes UTF-8 bytes before three-digit decimal escapes; expression and pattern literals use that renderer |
+
 ## History
 
 - 2026-09-08: `E4-TYPED-CE-001` retired (DB-15, the host rows slice, decision 3): strings are machine values on the native route, so the statement it refuted, "a term that types always evaluates", is now the theorem `evalTerm_isSome` without its `noStr` premise; `Term.noStr` and `Terms.noStr` are deleted. The ID is kept. `E4-PROV-CE-004` is reworded: the layer-value refusal is the provision route's `litVal`, not a fact about machine values.

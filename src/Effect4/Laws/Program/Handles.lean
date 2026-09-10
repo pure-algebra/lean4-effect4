@@ -257,17 +257,49 @@ theorem embedStep_resume {s : IterStep Name Thunk Val Err Defect FiberId Ann Pro
 theorem Lit.toVal_keys (l : Lit) (v : Val) (h : l.toVal = some v) : v.keys = [] := by
   cases l <;> simp only [Lit.toVal, Option.some.injEq] at h <;> (try cases h) <;> rfl
 
+/-- Cause-tag queries construct only a Boolean, never a new handle. -/
+theorem queryTag_keys (tag : ReasonTag) (input output : Val)
+    (h : queryTag tag input = some output) : output.keys = [] := by
+  obtain ⟨reasons, _, houtput⟩ := Option.map_eq_some_iff.mp h
+  cases houtput
+  rfl
+
+/-- A cause-error query wraps only S2's closed, handle-free error image. -/
+theorem queryError_keys (input output : Val) (h : queryError input = some output) :
+    output.keys = [] := by
+  obtain ⟨reasons, _, houtput⟩ := Option.bind_eq_some_iff.mp h
+  cases hfound : (reasons.findSome? Reason.error?).bind valOfErr with
+  | none =>
+    simp only [hfound] at houtput
+    cases houtput
+    rfl
+  | some value =>
+    simp only [hfound] at houtput
+    cases houtput
+    change value.keys = []
+    obtain ⟨error, _, hvalue⟩ := Option.bind_eq_some_iff.mp hfound
+    exact valOfErr_keys error value hvalue
+
 theorem nativeAtom_keys (atom : String) (vs : List Val) (v : Val) (h : nativeAtom atom vs = some v) :
     v.keys ⊆ vs.flatMap Val.keys := by
   unfold nativeAtom at h
+  obtain ⟨named, _, h⟩ := Option.bind_eq_some_iff.mp h
+  unfold NativeAtom.eval at h
   split at h <;> (try cases h) <;> (try (sub_tac norm [Val.tuple]; done))
-  -- the `strings` arm answers the argument list itself, so its keys are exactly theirs
-  unfold stringsAtom at h
-  split at h
-  · cases h
-    rw [Val.keys_list]
-    exact List.Subset.refl _
-  · cases h
+  all_goals first
+    | have free := queryTag_keys _ _ _ h
+      rw [free]
+      exact List.nil_subset _
+    | have free := queryError_keys _ _ h
+      rw [free]
+      exact List.nil_subset _
+    | -- strings returns exactly the argument list
+      unfold stringsAtom at h
+      split at h
+      · cases h
+        rw [Val.keys_list]
+        exact List.Subset.refl _
+      · cases h
 
 theorem flatMap_subset_of_subset {α : Type} {f : α → List Handle} {l l' : List α} (h : l' ⊆ l) :
     l'.flatMap f ⊆ l.flatMap f := by

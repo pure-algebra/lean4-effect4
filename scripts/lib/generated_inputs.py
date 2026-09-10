@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import re
 import shlex
+import tomllib
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFERRED_ARTIFACTS = {'generated/schema-structural-assurance.tsv'}
@@ -31,12 +32,19 @@ def data_recipe(family):
 
 @functools.lru_cache(None)
 def recipe(path, family):
+    if family == 'Typing specs':
+        config = json.loads((ROOT / 'tools/Conform/Effect4/specs.json').read_text())
+        return 'tools/Conform/Cli/EmitSpecs.lean', config['imports'] + ['Conform.Cli.EmitSpecs'], ['tools/Conform/Effect4/specs.json']
     if family.startswith('Derived '):
         group = next(g for g in json.loads((ROOT/'tools/Effect4Gen/manifest.json').read_text())['groups']
                      if g['Name'] == family.removeprefix('Derived '))
         return 'tools/Effect4Gen/Main.lean', group['Imports'].split(','), ['tools/Effect4Gen/manifest.json', group['Guards'].replace('\\', '/')]
     if family in ['Eff', 'Eff goldens']:
         return 'src/OCaml5/Tools/EffGen.lean', ['Effect4.Program.Native'], []
+    if family == 'Engine structure':
+        return 'scripts/generate-engine-structure.py', [], [
+            'scripts/lib/program_structure.py', 'ocaml/eff/program-structure.json',
+            'ocaml/engine/api_engine.ml']
     if family == 'Wire goldens':
         return 'src/OCaml5/Tools/EffWire.lean', [], []
     if family == 'CAS goldens':
@@ -105,6 +113,32 @@ def imports(data):
     return result
 
 
+def module_source(name, artifact):
+    """Resolve in the package that supplies this artifact, never from a trace's absolute path."""
+    artifact = Path(artifact).resolve()
+    artifact.relative_to(ROOT.resolve())
+    marker = '/.lake/build/lib/lean/'
+    if marker not in artifact.as_posix():
+        raise ValueError(f'not a workspace Lake artifact: {artifact}')
+    package = Path(artifact.as_posix().rsplit(marker, 1)[0])
+    config = package / 'lakefile.toml'
+    if config.exists():
+        data = tomllib.loads(config.read_text())
+        directories = {data.get('srcDir', '.')} | {lib.get('srcDir', data.get('srcDir', '.'))
+                      for lib in data.get('lean_lib', [])}
+    else:
+        config = package / 'lakefile.lean'
+        directories = {'.'} | set(re.findall(r'srcDir\s*:=\s*"([^"]+)"', config.read_text()))
+    tail = Path(*name.split('.')).with_suffix('.lean')
+    candidates = {(package / directory / tail).resolve() for directory in directories
+                  if (package / directory / tail).is_file()}
+    if len(candidates) != 1:
+        raise ValueError(f'{name}: expected one source in current package {package}, found {candidates}')
+    source = candidates.pop()
+    source.relative_to(package.resolve())
+    return source
+
+
 @functools.lru_cache(None)
 def trace(name):
     tail = Path(*name.split('.')).with_suffix('.trace')
@@ -117,7 +151,10 @@ def trace(name):
     source = next((p for p, _ in value['inputs'] if p.endswith('.lean')), None)
     if source is None:
         raise ValueError(f'Lake trace has no source input: {path}')
-    return value['depHash'], read(source)
+    current = module_source(name, path)
+    if not source.replace('\\', '/').endswith('/'.join(name.split('.')) + '.lean'):
+        raise ValueError(f'trace source does not identify {name}: {source}')
+    return value['depHash'], read(current)
 
 
 @functools.lru_cache(None)
@@ -126,7 +163,7 @@ def digest(source, modules, files):
     seen, rows = set(), []
     while pending:
         name = pending.pop()
-        if name.split('.')[0] in {'Lean', 'Init', 'Std'} or name in seen:
+        if name.split('.')[0] in {'Lean', 'Init', 'Std', 'Lake'} or name in seen:
             continue
         seen.add(name)
         if len(seen) > 8192:
@@ -155,3 +192,12 @@ def recorded(path):
     if len(matches) != 1:
         raise ValueError(f'{path}: expected exactly one provenance stamp')
     return tuple(x.decode() for x in matches[0])
+
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(description='Resolve generator sources in the current Lake workspace')
+    parser.add_argument('--source-of', required=True)
+    parser.add_argument('--artifact', type=Path, required=True)
+    args = parser.parse_args()
+    print(module_source(args.source_of, args.artifact))

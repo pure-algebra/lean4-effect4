@@ -78,3 +78,21 @@ declaration below is expected at the ceiling `propext`/`Quot.sound`; the gate
 #print axioms Effect4.Program.hasTyCause_exitErr
 #print axioms Effect4.Program.external_error_typed
 #print axioms Effect4.Program.external_oracle_error_typed
+
+-- S2 closed errors, recursive membership, and exact defect conversion.
+#print axioms Effect4.Program.reasonAdmits_mono
+#print axioms Effect4.Program.causeAdmits_mono
+#print axioms Effect4.Program.hasTy_causeOf_exitErr
+#print axioms Effect4.Program.hasTy_exitErr
+#print axioms Effect4.Program.hasTy_causeOf_eq_hasTyCause
+#print axioms Effect4.Program.hasTy_supported_allocation
+#print axioms Effect4.Program.valOfErr_errOf_supported
+#print axioms Effect4.Program.errOf_ne_boom_of_supported
+#print axioms Effect4.Program.valOfErr_keys
+#print axioms Effect4.Program.errAdmits_errOf
+#print axioms Effect4.Program.orDieCause_fail
+#print axioms Effect4.Machine.Err.image
+#print axioms Effect4.Machine.Err.image_handleFree
+#print axioms Effect4.Machine.Defect.image
+#print axioms Effect4.Machine.Defect.image_handleFree
+#print axioms Effect4.Machine.causeImage_handleFree

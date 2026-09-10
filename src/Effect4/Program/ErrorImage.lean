@@ -2,60 +2,18 @@ import Effect4.Program.Eff
 import Effect4.Machine.Stores
 
 /-!
-# Program.ErrorImage — the error image between the value carrier and the error alphabet
+# Program.ErrorImage — the closed error image and parameterized cause folds
 
-Rows: DI-62 (the admissible error image at every introduction), DI-26 (the failure branch of
-an external answer), DI-17 (`FitsIn` and the cause/exit arms of `Val.hasTy`).
-Plan: `docs/research/2026-09-09-foundation-settlement-v2.md` §2 DI-62, "Module layout".
+Rows DI-62 (lossless admitted failures), DI-26 (external failure admission), and DI-17
+(cause/exit membership). `errOf` and `valOfErr` connect the closed error alphabet to native
+values. `boom` has no typed payload and its inverse is `none`; only unchecked execution of
+unsupported values reaches that collapse. The typing introductions consult `supportedErrTy`
+in `Program/Eff.lean` before accepting an error term.
 
-This module owns two things and nothing else:
-
-* `valOfErr : Err → Option Val` — the partial inverse of `errOf`
-  (`src/Effect4/Program/Compile.lean`, the `Val → Err` direction). It is partial on purpose:
-  `errOf` collapses every unrecognised shape to `Err.boom`, and a collapse has no inverse.
-  `errOf` itself moves here at the S2 cutover, beside its inverse; today it stays where its
-  clients are and the two round-trip laws are stated in `src/Effect4/Laws/Program/Admit.lean`.
-* `reasonAdmits` and `causeAdmits` — the admission folds of a cause, **parameterised by a
-  membership function** `member : Val → Ty → Bool` rather than fixed at `Val.hasTy`.
-
-## Why the folds are parameterised
-
-`Val.hasTy` (`src/Effect4/Program/Typed.lean`) is above this module: the import chain is
-`Eff → Typing → Native → Typed → Compile`, `Err` enters at `Machine/Stores.lean` and is
-reachable from `Native` on. The two consumers of the folds sit on opposite sides of that
-chain — `errAdmits` (`Compile.lean`) reads `Val.hasTy`, and the `.causeOf` / `.exitOf` arms of
-`Val.hasTy` itself must read the same fold — so a fold that named `Val.hasTy` directly would
-be an import cycle. Parameterising by membership breaks it: this module sits below `Native`,
-`Typed.lean` instantiates `member := fun v t => Val.hasTy v t allocated` and exports the
-result under the existing `Effect4.Program` names, and no client changes.
-
-The allocation table is closed over by the instantiating caller rather than threaded as a
-third argument of `member`: `Val → Ty → Bool` is the shape both call sites want (`errAdmits`
-uses the default empty table; the `Val.hasTy` arms pass their own `allocated`), and a
-`Val → Ty → List String → Bool` parameter would force every caller to re-thread a table it
-has already fixed. This is a refinement of v2 DI-62's wording, recorded in
-`docs/research/2026-09-09-seat-error-laws.md`.
-
-## What this module refuses
-
-* `Err.value (v : Val)` — a constructor carrying an arbitrary value is refused (v2's
-  what-not-to-do list). The error alphabet stays a closed, first-order, append-only image;
-  `valOfErr` is total *into* `Option` because of it.
-* `supportedErrTy : Ty → Bool` does **not** live here. It is a predicate on `Ty` alone with
-  no `Val` in it, so it belongs beside `Ty` in `src/Effect4/Program/Eff.lean`, where the three
-  typing introductions (`Typing.lean`, `fail`, `yieldError`, each `CauseTerm.fail` leaf) can
-  read it without importing the carrier. It lands there at the S2 cutover.
-* No arm of `valOfErr` invents a payload. `Err.boom` is *no* typed payload, and it maps to
-  `none`, never to a placeholder value; that is what makes `errAdmits` refuse a `boom` at
-  every error type including `never`.
-
-## What the S2 cutover adds here
-
-One arm, and only one: `Err.text s ↦ some (.str s)` in `valOfErr`, the day `Err.text`
-(`ctor 3 [str s]`) is appended in `src/Effect4/Machine/Stores.lean`. `reasonAdmits` gains no
-arm — it already matches `.fail e _` for every `e` — so a text error is admitted at `.string`
-exactly when `member (.str s) ty` holds. The recipe is §6 of
-`docs/research/2026-09-09-seat-error-laws.md`.
+`reasonAdmits` and `causeAdmits` accept a membership predicate so `Program/Typed.lean` can
+use the same fold both recursively and at external admission. The recursive caller closes
+over the smaller type and its allocation table; this module has no dependency on `Val.hasTy`.
+The conversion and membership laws live in `Laws/Program/{Typed,Admit}.lean`.
 -/
 
 set_option autoImplicit false
@@ -64,16 +22,21 @@ namespace Effect4.Program
 
 open Effect4 Effect4.Machine
 
-/-- The error alphabet read back as a value: the partial inverse of `errOf`
-(`src/Effect4/Program/Compile.lean`). `tag n` is the number it was built from and
-`tagged t m` the two-cell `prod string string` of DB-15; `boom` carries no typed payload and
-has no image, so it is `none` — not a placeholder value.
+/-- The represented error image: natural, text, and the two-string package payload.
+Every other raw value collapses to `boom`; the supported-error typing guards exclude those
+values at each admitted failure introduction (DI-62). -/
+def errOf : Val → Err
+  | .nat n => .tag n
+  | .str s => .text s
+  | .list [.str t, .str m] => .tagged t m
+  | _ => .boom
 
-At the S2 cutover this gains `| .text s => some (.str s)` (DI-62). -/
+/-- The partial inverse of `errOf`. `boom` has no typed payload; no arm invents one. -/
 def valOfErr : Err → Option Val
   | .boom => none
   | .tag n => some (.nat n)
   | .tagged tag message => some (.list [.str tag, .str message])
+  | .text s => some (.str s)
 
 /-- Does one reason of a cause stay inside the declared error type, at the supplied notion of
 membership? A typed failure must have an image (`valOfErr`) that is a member of the type; a

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Generate committed projections in dependency order. No generation verdict is cached.
-# Usage: scripts/generate.sh [--all | --only derived|eff|wire|cas|ts|readme|lcnf]
-# --all and no argument are the same named order (DI-33): derived, eff, wire, cas, ts, readme.
+# Usage: scripts/generate.sh [--all | --only derived|specs|eff|wire|cas|ts|readme|lcnf]
+# --all and no argument are the same named order (DI-33): derived, specs, eff, wire, cas, ts, readme.
 # `readme` is the ingest tables (`bun ts/eff/ingest/render-readme.ts`), a host producer that
 # reads three files `ts` just wrote. `lcnf` is not in the order; it is requested by name.
 # The Truth family is not here either: it is a host-lane family with its own two commands

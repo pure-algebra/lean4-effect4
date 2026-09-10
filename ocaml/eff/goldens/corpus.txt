@@ -8,7 +8,7 @@ pWhile	well-typed
 pCatch	well-typed
 pStr	well-typed
 pFailCause	well-typed
-pYieldError	well-typed
+pYieldError	ill-typed
 pSync	well-typed
 pSuspend	well-typed
 pMatch	well-typed
@@ -41,3 +41,6 @@ pDiamond	ill-typed
 pMergeAll	well-typed
 pExternal	ill-typed
 pIllExternalDomain	ill-typed
+pFailText	well-typed
+pIllFailBool	ill-typed
+pIllCauseBool	ill-typed

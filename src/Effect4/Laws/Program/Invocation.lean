@@ -66,11 +66,12 @@ theorem compile_perform_eq_callback_of_await (op : NativeOp) (r : Term) (p : Poi
 
 /-! ## The table check and the registration lookup -/
 
-/-- An accepted table registers every row it holds: what `checkTable` decides is exactly what
-the registration hook consults through `externalRow`. The converse direction (a rejected table
+/-- An accepted table registers the normalized linked view of every row it holds. The raw
+metadata remains unchanged in the table (DI-53). The converse direction (a rejected table
 has a position `externalRow` refuses) is `checkTable`'s own `index`. -/
 theorem checkTable_none_externalRow {table : RowTable} (h : checkTable table = none)
-    (i : Nat) (row : Row) (hi : table[i]? = some row) : externalRow table i = some row := by
+    (i : Nat) (row : Row) (hi : table[i]? = some row) :
+    externalRow table i = some row.normalizeTypes := by
   have hlt : i < table.length := by
     rcases Nat.lt_or_ge i table.length with hlt | hge
     · exact hlt

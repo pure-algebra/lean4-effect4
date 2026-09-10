@@ -3000,12 +3000,12 @@ theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := b
     intro op i
     have hn := (nativeRow_hygiene table h op).2
     simp only [rowNamesSafe, Bool.and_eq_true] at hn
-    exact (Var.name_ne (by simpa [firstByte, nativeSignature] using hn.1.1) i).symm
+    exact (Var.name_ne (by simpa [firstByte, nativeSignature, Program.Row.normalizeTypes] using hn.1.1) i).symm
   spelling_not_reserved := by
     intro op
     have hn := (nativeRow_hygiene table h op).2
     simp only [rowNamesSafe, Bool.and_eq_true] at hn
-    simpa [nativeSignature] using hn.1.2
+    simpa [nativeSignature, Program.Row.normalizeTypes] using hn.1.2
   trailing_ne_name := by
     intro op i
     have hn := (nativeRow_hygiene table h op).2
@@ -3013,7 +3013,7 @@ theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := b
     apply name_notin
     intro name hm
     have ht := List.all_eq_true.mp hn.2 name hm
-    simpa [firstByte, nativeSignature] using (Bool.and_eq_true_iff.mp ht).1
+    simpa [firstByte, nativeSignature, Program.Row.normalizeTypes] using (Bool.and_eq_true_iff.mp ht).1
   trailing_ne_undefined := by
     intro op hm
     have hn := (nativeRow_hygiene table h op).2

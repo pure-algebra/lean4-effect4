@@ -163,4 +163,16 @@ def pSqlCatch : Api.Program :=
   | .inr (1, _, .errorType _ 0 .never, _) => true
   | _ => false
 
+/-- DI-31: the actual package pair survives layer orDie, after its client is released. -/
+def pSqlOrDie : Api.Program :=
+  .provideLayer (.orDie (.effect (⟨⟨8⟩, ⟨4⟩⟩ : ServiceKey)
+      (.bind (.acquireRelease (.callback (.external 0) (.lit (.str ":memory:")))
+                              (.callback (.external 2) (.var 0)))
+        (.bind sqlMissing (.succeed (.lit (.nat 1)))))))
+    false (.service (⟨⟨8⟩, ⟨4⟩⟩ : ServiceKey))
+#guard Api.wellTyped pSqlOrDie sqliteBun
+#guard (Api.run pSqlOrDie 1000 [] sqlAnswers sqliteBun).exit =
+  some (.failure (Cause.die (.error sqlFailed)))
+#guard (Api.run pSqlOrDie 1000 [] [answer (.nat 0), failed] sqliteBun).exit = none
+
 end Test.Api.PackagesContract

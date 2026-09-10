@@ -36,8 +36,10 @@ private def pad3 (n : Nat) : String :=
   let s := toString n
   if s.length ≥ 3 then s else if s.length == 2 then "0" ++ s else "00" ++ s
 
-/-- One character inside a `" … "` literal. -/
-private def escStringChar (c : Char) : String :=
+/-- One UTF-8 byte inside a `" … "` literal. OCaml decimal escapes encode bytes,
+not Unicode scalar numbers. -/
+private def escStringByte (b : UInt8) : String :=
+  let c := Char.ofNat b.toNat
   if c == '"' then "\\\""
   else if c == '\\' then "\\\\"
   else if c == '\t' then "\\t"
@@ -45,10 +47,10 @@ private def escStringChar (c : Char) : String :=
   else if c.toNat < 32 || c.toNat > 126 then "\\" ++ pad3 c.toNat
   else String.singleton c
 
-/-- The body of an OCaml string literal (§11.1, "String literals"). Total, and injective on the
-printable-ASCII-plus-control alphabet: every escape is self-delimiting. -/
+/-- The body of an OCaml string literal (§11.1, "String literals"). Non-ASCII scalars
+are first encoded as UTF-8, then each byte gets a three-digit escape. -/
 def escString (s : String) : String :=
-  s.foldl (init := "") fun acc c => acc ++ escStringChar c
+  s.toUTF8.data.foldl (init := "") fun acc b => acc ++ escStringByte b
 
 /-- The body of an OCaml character literal (§11.1, "Character literals"). A `'` must be escaped
 here and a `"` need not be, which is why this is not `escString`. -/

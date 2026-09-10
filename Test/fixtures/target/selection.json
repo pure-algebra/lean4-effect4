@@ -23,7 +23,10 @@
     "pSqlFail",
     "pSqlCatch",
     "pSqlExit",
-    "pSqlOrDie"
+    "pSqlOrDie",
+    "pFailText",
+    "pFailBoomText",
+    "pTextOrDie"
   ],
   "handles": {
     "Host.Resource": "Adapter.HostResource",

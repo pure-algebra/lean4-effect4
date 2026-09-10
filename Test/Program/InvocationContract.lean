@@ -57,7 +57,7 @@ section Statements
 
 #check (@Effect4.Program.checkTable_none_externalRow :
   ∀ {table : RowTable}, checkTable table = none →
-    ∀ (i : Nat) (row : Row), table[i]? = some row → externalRow table i = some row)
+    ∀ (i : Nat) (row : Row), table[i]? = some row → externalRow table i = some row.normalizeTypes)
 
 #check (@Effect4.Program.checkTable : RowTable → Option TableRefusal)
 

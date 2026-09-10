@@ -1,0 +1,10 @@
+{
+  "note": "The COMPLETE case-site audit: `source: \"monoExtension\"` walks the compiler's own mono-phase declaration list rather than the environment's constants, so it also reaches the declarations the LCNF passes created and never registered (`f._redArg`, `f._lam_0`). Measured at seat/audit: 351 case sites against the constants walk's 122, and `Effect4.Program.effTy`'s twenty-seven arms are among the 229 the constants walk cannot see, because `effTy`'s own mono code is a one-line tail call to `effTy._redArg`. Costs: the policy is 351 rules rather than 122, and `_redArg` naming is a compiler detail, so a toolchain bump will need a re-seed and a diff. `audit.json` is the conservative twin.",
+  "tool": "conform-audit-complete",
+  "imports": ["Effect4"],
+  "roots": ["Effect4", "Test"],
+  "source": "monoExtension",
+  "casesPolicy": "tools/Conform/Effect4/cases-policy-complete.json",
+  "mirrors": "tools/Conform/Effect4/mirrors.json",
+  "rules": "tools/Conform/Effect4/rules.json"
+}

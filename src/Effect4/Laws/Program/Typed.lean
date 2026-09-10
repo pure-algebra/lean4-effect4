@@ -1,5 +1,6 @@
 import Effect4.Program.Typed
 import Effect4.Program.ErrorImage
+import Effect4.Laws.Program.ErrorQueries
 
 /-!
 # Program.Typed — the value typing of the native cut (slice 1, lane 1)
@@ -22,15 +23,15 @@ Refusals of the value typing, each a `false` of `Val.hasTy` and not a silent one
 
 * `TYPED-FB-INT` — `.int` has no inhabitant: `Val.nat` is a `.nat`. `Ty.render` sends both to
   `number`; the printer's identification is not the typing's (`E4-TYPED-CE-002`).
-* `.except`, `.causeOf`, `.never` and an unknown handle target have no inhabitant in this cut.
+* `.except`, `.never` and an unknown handle target have no inhabitant in this cut.
 
 Since the host rows slice (2026-09-08, DB-15) `.string` is inhabited by the carrier's `str`
 frame and `.option t` by `none` and a `some` of a `t`: strings are machine values on the
 native route (`Native.lean` `Lit.toVal`), so every literal evaluates and totality carries no
 `noStr` premise. The former refusal `TYPED-FB-STRING` and the register row `E4-TYPED-CE-001`
 are retired, the ID kept.
-* `TYPED-FB-CAUSE` — `Val.exitErr` inhabits every `.exitOf _ _` whatever its cause: the error
-  column is not checked in this slice (plan §7).
+The cause/failed-exit error column is checked through the shared `causeAdmits` fold (DI-62):
+every typed failure has an image inhabiting `E`; defects and interruptions remain outside `E`.
 
 Two facts of this toolchain shape the spelling. Core v4.33.1 has no `List.Forall₂` and this
 tree carries no Mathlib, so `Fits` is its own two-constructor inductive of that shape. And
@@ -42,11 +43,9 @@ Added 2026-09-09 for row DI-17, beside the existing statements and changing none
 allocation section (`Extends`, `extends_append`, `hasTy_mono`, `hasTy_append`) and the
 environment relation at an allocation state (`FitsWith`, `FitsIn`, `Fits_iff_FitsIn_nil`,
 `FitsWith.append`, `FitsIn.append`, `FitsIn.mono`). `Fits` and every theorem over it keep
-their statements; `Fits_iff_FitsIn_nil` is the bridge. What this module still does **not**
-own: the `.causeOf` and failed-exit-error arms of `Val.hasTy` (the S2 cutover adds them,
-through the folds of `src/Effect4/Program/ErrorImage.lean`), and the `.fiberOf` arm, which
-is a handle check and reads neither of its columns — that is a deliberate coarseness, not a
-guarantee (`Test/Program/TypedContract.lean` pins it as a refusal).
+their statements; `Fits_iff_FitsIn_nil` is the bridge. The `.fiberOf` membership arm remains
+a handle check and reads neither result nor error column — that is a deliberate coarseness,
+not a guarantee (`Test/Program/TypedContract.lean` pins it as a refusal).
 -/
 
 set_option autoImplicit false
@@ -163,16 +162,106 @@ theorem extends_append (before added : List String) : Extends before (before ++ 
   rw [List.getElem?_append_left (List.getElem?_eq_some_iff.mp h).1]
   exact h
 
-/-- Membership is monotone in the allocation table, at every type. The induction is on the
-type — `Val.hasTy` recurses on the type, the value is matched inside each arm — and every
-constructor is discharged: the four uninhabited ones by their `false`, the five that ignore
-the table by the hypothesis itself, and the `.handle` arm by `Extends` at the index the arm
-reads. (At the S2 cutover this gains the `.causeOf` arm and the error column of `.exitOf`;
-see the recipe in `docs/research/2026-09-09-seat-error-laws.md`.) -/
+/-! ## The error folds
+
+Row DI-62. `reasonAdmits` and `causeAdmits` (`src/Effect4/Program/ErrorImage.lean`) take the
+membership predicate as a parameter, and they only ever apply it at the one type they are
+folding at. The two congruences below say exactly that, and they are what the S2 cutover
+needs: the `.causeOf e` arm of `Val.hasTy` must pass a *closed* predicate
+`fun v _ => Val.hasTy v e allocated` rather than `fun v t => Val.hasTy v t allocated`, because
+Lean's structural recursion has to see the recursive call at the subterm `e` and cannot see
+through a lambda-bound type. These lemmas make the two spellings interchangeable afterwards,
+so the arm and the `errAdmits` instantiation stay one fold read two ways.
+
+The pointwise congruence and monotonicity laws serve both membership uses without storing
+functions in program syntax. -/
+
+/-- The reason fold only reads its predicate at the type it folds at. -/
+theorem reasonAdmits_congr {f g : Val → Ty → Bool} (ty : Ty) (h : ∀ v, f v ty = g v ty)
+    (r : Reason Err Defect FiberId Ann) :
+    reasonAdmits f ty r = reasonAdmits g ty r := by
+  cases r with
+  | fail e _ =>
+    cases e with
+    | boom => rfl
+    | tag n => exact h _
+    | tagged t m => exact h _
+    | text s => exact h _
+  | die _ _ => rfl
+  | interrupt _ _ => rfl
+
+/-- The cause fold only reads its predicate at the type it folds at. -/
+theorem causeAdmits_congr {f g : Val → Ty → Bool} (ty : Ty) (h : ∀ v, f v ty = g v ty)
+    (c : CauseV) : causeAdmits f ty c = causeAdmits g ty c := by
+  unfold causeAdmits
+  generalize c.reasons = rs
+  induction rs with
+  | nil => rfl
+  | cons r rest ih =>
+    rw [List.all_cons, List.all_cons, ih, reasonAdmits_congr ty h r]
+
+/-- A pointwise enlargement of membership enlarges reason admission at the selected type. -/
+theorem reasonAdmits_mono {f g : Val → Ty → Bool} (ty : Ty)
+    (h : ∀ v, f v ty = true → g v ty = true) (r : Reason Err Defect FiberId Ann) :
+    reasonAdmits f ty r = true → reasonAdmits g ty r = true := by
+  cases r with
+  | fail e _ =>
+    cases e with
+    | boom => intro impossible; cases impossible
+    | tag n => exact h _
+    | tagged t m => exact h _
+    | text s => exact h _
+  | die _ _ => exact id
+  | interrupt _ _ => exact id
+
+/-- Cause admission is monotone in the pointwise membership predicate. -/
+theorem causeAdmits_mono {f g : Val → Ty → Bool} (ty : Ty)
+    (h : ∀ v, f v ty = true → g v ty = true) (c : CauseV) :
+    causeAdmits f ty c = true → causeAdmits g ty c = true := by
+  intro hc
+  apply List.all_eq_true.mpr
+  intro r hr
+  exact reasonAdmits_mono ty h r (List.all_eq_true.mp hc r hr)
+
+/-- Row DI-62. Reified-cause membership uses the same allocation-aware cause fold. -/
+theorem hasTy_causeOf_exitErr (c : CauseV) (e : Ty) (allocated : List String) :
+    Val.hasTy (Val.exitErr c) (.causeOf e) allocated =
+      causeAdmits (fun v t => Val.hasTy v t allocated) e c := by
+  change (match Val.cause? (Val.exitErr c) with
+    | some cause => causeAdmits (fun v _ => Val.hasTy v e allocated) e cause
+    | none => false) = _
+  rw [Val.cause?_exitErr]
+  exact causeAdmits_congr e (fun _ => rfl) c
+
+/-- Row DI-62. A failed exit checks its error column at its actual allocation table. -/
+theorem hasTy_exitErr (c : CauseV) (a e : Ty) (allocated : List String) :
+    Val.hasTy (Val.exitErr c) (.exitOf a e) allocated =
+      causeAdmits (fun v t => Val.hasTy v t allocated) e c := by
+  change (match causeImage.ofVal (causeImage.toVal c) with
+    | some cause => causeAdmits (fun v _ => Val.hasTy v e allocated) e cause
+    | none => false) = _
+  rw [causeImage.ofVal_toVal]
+  exact causeAdmits_congr e (fun _ => rfl) c
+
+/-- The retained public wrapper is the default-allocation cause membership arm. -/
+theorem hasTy_causeOf_eq_hasTyCause (v : Val) (e : Ty) :
+    Val.hasTy v (.causeOf e) = hasTyCause v e := by
+  change (match Val.cause? v with
+    | some c => causeAdmits (fun w _ => Val.hasTy w e) e c
+    | none => false) = (match Val.cause? v with
+    | some c => causeAdmits (fun w t => Val.hasTy w t) e c
+    | none => false)
+  cases hc : Val.cause? v with
+  | none => rfl
+  | some c => exact causeAdmits_congr e (fun _ => rfl) c
+
+/-- Membership is monotone in the allocation table at every type. The type induction
+uses the shared pointwise cause-fold law for causes and failed exits; only external handle
+membership reads the table. All previous environment statements retain their premises. -/
 theorem hasTy_mono (ty : Ty) (v : Val) (a b : List String)
     (ext : Extends a b) (typed : Val.hasTy v ty a = true) : Val.hasTy v ty b = true := by
   induction ty generalizing v with
-  | never | int | except | causeOf => simp [Val.hasTy] at typed
+  | never | int | except => simp [Val.hasTy] at typed
   | unit | nat | bool | string | fiberOf => exact typed
   | handle target =>
     cases v <;> simp only [Val.hasTy] at typed ⊢
@@ -195,60 +284,32 @@ theorem hasTy_mono (ty : Ty) (v : Val) (a b : List String)
   | union x y ihx ihy =>
     simp only [Val.hasTy, Bool.or_eq_true] at typed ⊢
     exact typed.elim (fun h => Or.inl (ihx _ h)) (fun h => Or.inr (ihy _ h))
-  | exitOf x y ihx _ =>
+  | exitOf x y ihx ihy =>
     simp only [Val.hasTy] at typed ⊢
     split at typed <;> try exact typed
-    exact ihx _ typed
+    · exact ihx _ typed
+    · split at typed <;> try exact typed
+      exact causeAdmits_mono y (fun w => ihy w) _ typed
+  | causeOf e ih =>
+    simp only [Val.hasTy] at typed ⊢
+    split at typed <;> try exact typed
+    exact causeAdmits_mono e (fun w => ih w) _ typed
   | list x ih =>
     simp only [Val.hasTy] at typed ⊢
     split at typed <;> try exact typed
-    next values =>
-      simp only [List.all_eq_true] at typed ⊢
+    · split at typed <;> try exact typed
+      apply List.all_eq_true.mpr
+      intro id hid
+      exact ih (Val.fiber id) (List.all_eq_true.mp typed id hid)
+    · apply List.all_eq_true.mpr
       intro value hv
-      exact ih value (typed value hv)
+      exact ih value (List.all_eq_true.mp typed value hv)
 
 /-- The registration case of `hasTy_mono`: a value typed before an allocation is typed
 after it. -/
 theorem hasTy_append (ty : Ty) (v : Val) (a added : List String)
     (h : Val.hasTy v ty a = true) : Val.hasTy v ty (a ++ added) = true :=
   hasTy_mono ty v a (a ++ added) (extends_append a added) h
-
-/-! ## The error folds
-
-Row DI-62. `reasonAdmits` and `causeAdmits` (`src/Effect4/Program/ErrorImage.lean`) take the
-membership predicate as a parameter, and they only ever apply it at the one type they are
-folding at. The two congruences below say exactly that, and they are what the S2 cutover
-needs: the `.causeOf e` arm of `Val.hasTy` must pass a *closed* predicate
-`fun v _ => Val.hasTy v e allocated` rather than `fun v t => Val.hasTy v t allocated`, because
-Lean's structural recursion has to see the recursive call at the subterm `e` and cannot see
-through a lambda-bound type. These lemmas make the two spellings interchangeable afterwards,
-so the arm and the `errAdmits` instantiation stay one fold read two ways.
-
-`reasonAdmits_congr` gains one case (`text`) when `Err.text` is appended; nothing else here
-changes at the cutover. -/
-
-/-- The reason fold only reads its predicate at the type it folds at. -/
-theorem reasonAdmits_congr {f g : Val → Ty → Bool} (ty : Ty) (h : ∀ v, f v ty = g v ty)
-    (r : Reason Err Defect FiberId Ann) :
-    reasonAdmits f ty r = reasonAdmits g ty r := by
-  cases r with
-  | fail e _ =>
-    cases e with
-    | boom => rfl
-    | tag n => exact h _
-    | tagged t m => exact h _
-  | die _ _ => rfl
-  | interrupt _ _ => rfl
-
-/-- The cause fold only reads its predicate at the type it folds at. -/
-theorem causeAdmits_congr {f g : Val → Ty → Bool} (ty : Ty) (h : ∀ v, f v ty = g v ty)
-    (c : CauseV) : causeAdmits f ty c = causeAdmits g ty c := by
-  unfold causeAdmits
-  generalize c.reasons = rs
-  induction rs with
-  | nil => rfl
-  | cons r rest ih =>
-    rw [List.all_cons, List.all_cons, ih, reasonAdmits_congr ty h r]
 
 /-! ## Environments -/
 
@@ -404,6 +465,9 @@ theorem nativeAtom_typed (atom : String) (tys : List Ty) (ty : Ty) (vs : List Va
     (hty : nativeAtomTy atom tys = some ty) (hfit : Fits vs tys) :
     ∃ v, nativeAtom atom vs = some v ∧ Val.hasTy v ty = true := by
   unfold nativeAtomTy at hty
+  obtain ⟨named, hname, hty⟩ := Option.bind_eq_some_iff.mp hty
+  simp only [nativeAtom, hname, Option.bind_some]
+  unfold NativeAtom.typeOf at hty
   split at hty
   · -- succ
     cases hty
@@ -443,6 +507,12 @@ theorem nativeAtom_typed (atom : String) (tys : List Ty) (ty : Ty) (vs : List Va
     obtain ⟨m, rfl⟩ := Val.hasTy_nat_inv hx
     obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hy
     exact ⟨_, rfl, by simp [Val.hasTy]⟩
+  · -- string equality
+    cases hty
+    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+    obtain ⟨a, rfl⟩ := Val.hasTy_string_inv hx
+    obtain ⟨b, rfl⟩ := Val.hasTy_string_inv hy
+    exact ⟨_, rfl, by simp [Val.hasTy]⟩
   · -- pair
     cases hty
     obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
@@ -464,7 +534,7 @@ theorem nativeAtom_typed (atom : String) (tys : List Ty) (ty : Ty) (vs : List Va
       have hstr : ∀ v ∈ vs, ∃ s, v = Val.str s := fun v hv =>
         Val.hasTy_string_inv (Fits.all_string hfit hall v hv)
       refine ⟨Val.list vs, ?_, ?_⟩
-      · rw [nativeAtom_strings, stringsAtom, if_pos]
+      · rw [NativeAtom.eval, stringsAtom, if_pos]
         rw [List.all_eq_true]
         intro v hv
         obtain ⟨s, rfl⟩ := hstr v hv
@@ -474,8 +544,40 @@ theorem nativeAtom_typed (atom : String) (tys : List Ty) (ty : Ty) (vs : List Va
         obtain ⟨s, rfl⟩ := hstr v hv
         rfl
     · cases hty
-  · -- the refusal
-    simp at hty
+  · -- cause failure query
+    obtain ⟨error, hdomain, hanswer⟩ := Option.map_eq_some_iff.mp hty
+    cases hanswer
+    obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
+    exact queryTag_typed .fail value _ error [] hdomain hv
+  · -- cause defect query
+    obtain ⟨error, hdomain, hanswer⟩ := Option.map_eq_some_iff.mp hty
+    cases hanswer
+    obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
+    exact queryTag_typed .die value _ error [] hdomain hv
+  · -- cause interruption query
+    obtain ⟨error, hdomain, hanswer⟩ := Option.map_eq_some_iff.mp hty
+    cases hanswer
+    obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
+    exact queryTag_typed .interrupt value _ error [] hdomain hv
+  · -- first failure payload query
+    obtain ⟨error, hdomain, hanswer⟩ := Option.map_eq_some_iff.mp hty
+    cases hanswer
+    obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
+    exact queryError_typed value _ error [] hdomain hv
+  · -- Boolean or
+    cases hty
+    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+    obtain ⟨a, rfl⟩ := Val.hasTy_bool_inv hx
+    obtain ⟨b, rfl⟩ := Val.hasTy_bool_inv hy
+    exact ⟨_, rfl, by simp [Val.hasTy]⟩
+  · -- Boolean and
+    cases hty
+    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+    obtain ⟨a, rfl⟩ := Val.hasTy_bool_inv hx
+    obtain ⟨b, rfl⟩ := Val.hasTy_bool_inv hy
+    exact ⟨_, rfl, by simp [Val.hasTy]⟩
+  -- Each constructor has its own exhaustive argument-shape refusal.
+  all_goals cases hty
 
 /-! ## Terms -/
 

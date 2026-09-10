@@ -11,11 +11,11 @@
    (api_engine.ml:427-454), because the type group mentions the carrier parameters, so
    `Api_engine.Make(fast carriers).eff` and `Api_engine.Make(list carriers).eff` are two
    distinct OCaml types.  {!PROGRAM_TYPES} is the part of that type group the program
-   alphabet actually uses -- nineteen declarations, none of which mentions a carrier -- so
+   alphabet actually uses, with its selected declaration set generated from the source description, so
    ONE conversion serves every instance.
 
-   THAT SIGNATURE IS ITSELF THE STRUCTURAL HALF OF THE PIN.  It is a hand transcription of
-   api_engine.ml's declarations, and `ocamlopt` checks it against every instance the engine
+   THE SIGNATURE IS THE STRUCTURAL HALF OF THE PIN. It is generated from actual
+   api_engine.ml declarations checked against the selected source description, and `ocamlopt` checks it against every instance the engine
    is applied to: a constructor added, removed, renamed or re-ordered in the generated file
    is a compile error here, naming the family.  The ordinal half ({!pin}, {!check_manifest})
    is what catches a re-ordering that keeps the same set of names.
@@ -23,18 +23,17 @@
    Depends on: effect4_eff (Eff_types, Eff_wire), stdlib.
 
    Behaviours:
-   P1  Total on the source: `of_eff` is defined at every constructor of `Eff_types.eff` and
-       raises nothing.  OCaml's exhaustiveness check is the evidence.     by construction
+   P1  `of_eff` covers every source constructor, with explicit refusal for constructors
+       the frozen engine cannot execute. Exhaustiveness does not establish total admission.
    P2  Ordinal-preserving: for every arm, `Eff_types.ctor_index_<t> v` equals
        `ctor_index_<t> (of_<t> v)`, for each of the fourteen families.  This is what closes
        the transposition hole a plain structural map leaves (two same-arity arms swapped).
                                                                           tested (test_engine
                                                                           check 3)
-   P3  Append-only alphabets (brief §2.6, CAS amendment M17): the source's constructor names
-       are a PREFIX of the engine's, family by family.  `eff` is the one family where they
-       differ -- the engine has 27 arms and the wire 24, because `provideLayer`, `service`
-       and `provideService` joined `Eff` after `eff_types.ml` was cut -- and a prefix is
-       exactly what "append-only" means.  A re-order is not a prefix.     tested; {!pin}
+   P3  The execution pin requires the source's constructor names to be a PREFIX of the
+       engine's, family by family. The structural producer separately reports source
+       additions unavailable in the frozen engine. Such additions do not satisfy this
+       execution pin; a re-order never does either.                     tested; {!pin}
    P4  The content table is `ocaml/eff/eff_manifest.txt`: {!check_manifest} reads it and
        compares its constructor names, family by family, with `Eff_types`'.  M17's "every
        ordinal is a position in a content table" is that comparison.      tested
@@ -47,134 +46,7 @@ exception Ordinal_mismatch of string
 
 (** {1 The alphabet the generated engine declares} *)
 
-module type PROGRAM_TYPES = sig
-  (* Transcribed from ocaml/engine/api_engine.ml; the line number of each declaration is on
-     its right.  Every instance of `Api_engine.Make` satisfies this signature. *)
-
-  type mask_mode = MaskMode_interruptible | MaskMode_uninterruptible | MaskMode_inherit
-  (* :626 *)
-
-  type fork_options = { start_immediately : bool; daemon : bool; mask_mode : mask_mode }
-  (* :627 *)
-
-  type finalizer_strategy = FinalizerStrategy_sequential | FinalizerStrategy_parallel
-  (* :628 *)
-
-  type observer_mode = ObserverMode_awaitValue | ObserverMode_joinEffect  (* :541 *)
-
-  type fn_name =                                                          (* :221-226 *)
-    | FnName_incr
-    | FnName_double
-    | FnName_zeroWhenPositive
-    | FnName_noChange
-    | FnName_takeAndBump
-
-  type lit = Lit_unit | Lit_nat of int | Lit_bool of bool | Lit_str of string  (* :736-740 *)
-
-  type term = Term_var of int | Term_lit of lit | Term_app of string * terms  (* :652 *)
-  and terms = Terms_nil | Terms_cons of term * terms                          (* :741 *)
-
-  type cause_term =                                                       (* :655-659 *)
-    | CauseTerm_fail of term
-    | CauseTerm_die of term
-    | CauseTerm_interrupt of term option
-    | CauseTerm_both of cause_term * cause_term
-
-  type service_name = int                                                 (* :783 *)
-  type service_type_code = int                                            (* :784 *)
-  type service_key = { name : service_name; service : service_type_code }  (* :722 *)
-
-  type native_op =                                                        (* :660-680 *)
-    | NativeOp_refMake
-    | NativeOp_refGet
-    | NativeOp_refSet
-    | NativeOp_refGetAndSet
-    | NativeOp_refSetAndGet
-    | NativeOp_refUpdate of fn_name
-    | NativeOp_refGetAndUpdate of fn_name
-    | NativeOp_refUpdateAndGet of fn_name
-    | NativeOp_refUpdateSome of fn_name
-    | NativeOp_refGetAndUpdateSome of fn_name
-    | NativeOp_refUpdateSomeAndGet of fn_name
-    | NativeOp_refModify of fn_name
-    | NativeOp_refModifySome of fn_name
-    | NativeOp_deferredMake
-    | NativeOp_deferredIsDone
-    | NativeOp_deferredPoll
-    | NativeOp_deferredSucceed
-    | NativeOp_deferredFail
-    | NativeOp_deferredAwait
-    | NativeOp_scopeMake of finalizer_strategy
-
-  type 'op eff =                                                          (* :427-454 *)
-    | Eff_succeed of term
-    | Eff_fail of term
-    | Eff_failCause of cause_term
-    | Eff_yieldError of term
-    | Eff_sync of term
-    | Eff_suspend of 'op eff
-    | Eff_perform of 'op * term
-    | Eff_bind of 'op eff * 'op eff
-    | Eff_gen of 'op stmts
-    | Eff_catchCause of 'op eff * 'op eff
-    | Eff_matchCause of 'op eff * 'op eff * 'op eff
-    | Eff_onExit of 'op eff * 'op eff
-    | Eff_exit of 'op eff
-    | Eff_uninterruptible of 'op eff
-    | Eff_interruptible of 'op eff
-    | Eff_branch of term * 'op eff * 'op eff
-    | Eff_whileLoop of term * term * term * 'op eff
-    | Eff_yieldNow of int
-    | Eff_callback of 'op * term
-    | Eff_awaitFiber of term * observer_mode
-    | Eff_withFiber of 'op action_term
-    | Eff_scoped of 'op eff
-    | Eff_acquireRelease of 'op eff * 'op eff
-    | Eff_choose of int * 'op eff * 'op eff
-    | Eff_provideLayer of 'op layer_term * bool * 'op eff
-    | Eff_service of service_key
-    | Eff_provideService of service_key * term * 'op eff
-
-  and 'op stmts = Stmts_nil | Stmts_cons of 'op stmt * 'op stmts          (* :714 *)
-
-  and 'op stmt =                                                          (* :715-721 *)
-    | Stmt_bindYield of 'op eff
-    | Stmt_yieldDiscard of 'op eff
-    | Stmt_ret of term
-    | Stmt_ifElse of term * 'op stmts * 'op stmts
-    | Stmt_whileTrue of 'op stmts
-    | Stmt_breakLoop
-
-  and 'op effs = Effs_nil | Effs_cons of 'op eff * 'op effs               (* :750 *)
-
-  and 'op action_term =                                                   (* :469-485 *)
-    | ActionTerm_fork of 'op eff * fork_options
-    | ActionTerm_forkIn of 'op eff * fork_options * term
-    | ActionTerm_forkScoped of 'op eff * fork_options
-    | ActionTerm_runIn of term * term
-    | ActionTerm_interrupt of term
-    | ActionTerm_interruptScoped of term
-    | ActionTerm_interruptAll of term * term option
-    | ActionTerm_awaitAll of term
-    | ActionTerm_awaitAllFailFast of term
-    | ActionTerm_snapshotChildren
-    | ActionTerm_awaitNewChildren of term
-    | ActionTerm_raceAll of 'op effs
-    | ActionTerm_setContext of term
-    | ActionTerm_getContext
-    | ActionTerm_getId
-    | ActionTerm_closeScope of term * term
-
-  and 'op layer_term =                                                    (* :723-731 *)
-    | LayerTerm_succeed of service_key * lit
-    | LayerTerm_effect of service_key * 'op eff
-    | LayerTerm_effectDiscard of 'op eff
-    | LayerTerm_provide of 'op layer_term * 'op layer_term
-    | LayerTerm_provideMerge of 'op layer_term * 'op layer_term
-    | LayerTerm_merge of 'op layer_term * 'op layer_term
-    | LayerTerm_fresh of 'op layer_term
-    | LayerTerm_orDie of 'op layer_term
-end
+module type PROGRAM_TYPES = E4_program_layout.PROGRAM_TYPES
 
 (** {1 The ordinal ledger} *)
 
@@ -183,8 +55,8 @@ val source_ctor_names : (string * string list) list
     constructor names -- i.e. `Eff_types.ctor_names_<t>` gathered into one table. *)
 
 val engine_ctor_names : (string * string list) list
-(** The same families as the GENERATED engine declares them (api_engine.ml), hand
-    transcribed beside {!PROGRAM_TYPES}.  `eff` has three arms the wire does not. *)
+(** The selected common families read from the actual generated engine declarations.
+    Missing source additions are recorded in e4_program_layout.json. *)
 
 val pin : unit -> (unit, string) result
 (** P3: for every family, the source's names are a prefix of the engine's.  `Error msg` names

@@ -5,7 +5,7 @@
   "effect": "4.0.0-rc.112",
   "bun": "1.3.14",
   "timeoutMs": 300,
-  "summary": "PASS: 24 programs, exits and schedules agree with rc.112",
+  "summary": "PASS: 27 programs, exits and schedules agree with rc.112",
   "rows": [
     {
       "program": "p42",
@@ -4538,14 +4538,14 @@
     },
     {
       "program": "pSqlOrDie",
-      "leanExit": "die [{\"die\":\"badName\"}]",
-      "hostExit": "die [{\"die\":\"[\\\"UnknownError\\\",\\\"no such table: missing\\\"]\"}]",
+      "leanExit": "die [{\"die\":{\"error\":[\"UnknownError\",\"no such table: missing\"]}}]",
+      "hostExit": "die [{\"die\":{\"error\":[\"UnknownError\",\"no such table: missing\"]}}]",
       "entry": "runSyncExit",
       "exitAgree": true,
       "scheduleAgree": true,
       "runSyncAgree": true,
       "notes": [
-        "same kind (die); payloads compared by eye",
+        "same represented-defect cause",
         "tape: 3 calls"
       ],
       "host": {
@@ -4554,7 +4554,12 @@
           "failure": {
             "reasons": [
               {
-                "die": "[\"UnknownError\",\"no such table: missing\"]"
+                "die": {
+                  "error": [
+                    "UnknownError",
+                    "no such table: missing"
+                  ]
+                }
               }
             ]
           }
@@ -4566,7 +4571,7 @@
         ],
         "events": [
           "started 0",
-          "exited 0 {\"failure\":{\"reasons\":[{\"die\":\"[\\\"UnknownError\\\",\\\"no such table: missing\\\"]\"}]}}"
+          "exited 0 {\"failure\":{\"reasons\":[{\"die\":{\"error\":[\"UnknownError\",\"no such table: missing\"]}}]}}"
         ],
         "frames": [
           "0:Suspend",
@@ -4751,7 +4756,12 @@
           "failure": {
             "reasons": [
               {
-                "die": "[\"UnknownError\",\"no such table: missing\"]"
+                "die": {
+                  "error": [
+                    "UnknownError",
+                    "no such table: missing"
+                  ]
+                }
               }
             ]
           }
@@ -4763,7 +4773,7 @@
         ],
         "events": [
           "started 0",
-          "exited 0 {\"failure\":{\"reasons\":[{\"die\":\"[\\\"UnknownError\\\",\\\"no such table: missing\\\"]\"}]}}"
+          "exited 0 {\"failure\":{\"reasons\":[{\"die\":{\"error\":[\"UnknownError\",\"no such table: missing\"]}}]}}"
         ],
         "frames": [
           "0:Suspend",
@@ -4924,6 +4934,278 @@
           "0:OnSuccess",
           "0:Sync",
           "0:Success",
+          "0:Success",
+          "0:Success",
+          "0:Exit",
+          "0:Sync",
+          "0:Success",
+          "0:Success",
+          "0:Failure",
+          "0:Failure",
+          "0:Failure",
+          "0:OnSuccess",
+          "0:OnFailure",
+          "0:Suspend",
+          "0:Success",
+          "0:Failure"
+        ],
+        "late": [],
+        "settledLater": null
+      }
+    },
+    {
+      "program": "pFailText",
+      "leanExit": "fail [{\"fail\":\"lost\"}]",
+      "hostExit": "fail [{\"fail\":\"lost\"}]",
+      "entry": "runSyncExit",
+      "exitAgree": true,
+      "scheduleAgree": true,
+      "runSyncAgree": true,
+      "notes": [
+        "runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one",
+        "same fail payloads"
+      ],
+      "host": {
+        "entry": "runPromiseExit",
+        "exit": {
+          "failure": {
+            "reasons": [
+              {
+                "fail": "lost"
+              }
+            ]
+          }
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 fail"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"failure\":{\"reasons\":[{\"fail\":\"lost\"}]}}"
+        ],
+        "frames": [
+          "0:Failure"
+        ],
+        "late": [],
+        "settledLater": null
+      },
+      "hostSync": {
+        "entry": "runSyncExit",
+        "exit": {
+          "failure": {
+            "reasons": [
+              {
+                "fail": "lost"
+              }
+            ]
+          }
+        },
+        "parked": false,
+        "schedule": [],
+        "events": [],
+        "frames": [],
+        "late": [],
+        "settledLater": null
+      }
+    },
+    {
+      "program": "pFailBoomText",
+      "leanExit": "fail [{\"fail\":\"boom\"}]",
+      "hostExit": "fail [{\"fail\":\"boom\"}]",
+      "entry": "runSyncExit",
+      "exitAgree": true,
+      "scheduleAgree": true,
+      "runSyncAgree": true,
+      "notes": [
+        "runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one",
+        "same fail payloads"
+      ],
+      "host": {
+        "entry": "runPromiseExit",
+        "exit": {
+          "failure": {
+            "reasons": [
+              {
+                "fail": "boom"
+              }
+            ]
+          }
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 fail"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"failure\":{\"reasons\":[{\"fail\":\"boom\"}]}}"
+        ],
+        "frames": [
+          "0:Failure"
+        ],
+        "late": [],
+        "settledLater": null
+      },
+      "hostSync": {
+        "entry": "runSyncExit",
+        "exit": {
+          "failure": {
+            "reasons": [
+              {
+                "fail": "boom"
+              }
+            ]
+          }
+        },
+        "parked": false,
+        "schedule": [],
+        "events": [],
+        "frames": [],
+        "late": [],
+        "settledLater": null
+      }
+    },
+    {
+      "program": "pTextOrDie",
+      "leanExit": "die [{\"die\":{\"error\":\"lost\"}}]",
+      "hostExit": "die [{\"die\":{\"error\":\"lost\"}}]",
+      "entry": "runSyncExit",
+      "exitAgree": true,
+      "scheduleAgree": true,
+      "runSyncAgree": true,
+      "notes": [
+        "same represented-defect cause"
+      ],
+      "host": {
+        "entry": "runPromiseExit",
+        "exit": {
+          "failure": {
+            "reasons": [
+              {
+                "die": {
+                  "error": "lost"
+                }
+              }
+            ]
+          }
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 die"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"failure\":{\"reasons\":[{\"die\":{\"error\":\"lost\"}}]}}"
+        ],
+        "frames": [
+          "0:Suspend",
+          "0:OnExit",
+          "0:OnSuccess",
+          "0:WithFiber",
+          "0:WithFiber",
+          "0:OnExit",
+          "0:OnSuccess",
+          "0:OnFailure",
+          "0:OnExit",
+          "0:Suspend",
+          "0:OnExit",
+          "0:OnSuccess",
+          "0:Suspend",
+          "0:Success",
+          "0:WithFiber",
+          "0:OnExit",
+          "0:OnSuccess",
+          "0:OnSuccess",
+          "0:Failure",
+          "0:Failure",
+          "0:OnSuccess",
+          "0:OnFailure",
+          "0:Sync",
+          "0:Failure",
+          "0:OnSuccess",
+          "0:OnFailure",
+          "0:Suspend",
+          "0:Suspend",
+          "0:Iterator",
+          "0:Exit",
+          "0:Suspend",
+          "0:Suspend",
+          "0:Success",
+          "0:Success",
+          "0:Exit",
+          "0:Sync",
+          "0:Success",
+          "0:Success",
+          "0:Failure",
+          "0:Failure",
+          "0:Failure",
+          "0:OnSuccess",
+          "0:OnFailure",
+          "0:Suspend",
+          "0:Success",
+          "0:Failure"
+        ],
+        "late": [],
+        "settledLater": null
+      },
+      "hostSync": {
+        "entry": "runSyncExit",
+        "exit": {
+          "failure": {
+            "reasons": [
+              {
+                "die": {
+                  "error": "lost"
+                }
+              }
+            ]
+          }
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 die"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"failure\":{\"reasons\":[{\"die\":{\"error\":\"lost\"}}]}}"
+        ],
+        "frames": [
+          "0:Suspend",
+          "0:OnExit",
+          "0:OnSuccess",
+          "0:WithFiber",
+          "0:WithFiber",
+          "0:OnExit",
+          "0:OnSuccess",
+          "0:OnFailure",
+          "0:OnExit",
+          "0:Suspend",
+          "0:OnExit",
+          "0:OnSuccess",
+          "0:Suspend",
+          "0:Success",
+          "0:WithFiber",
+          "0:OnExit",
+          "0:OnSuccess",
+          "0:OnSuccess",
+          "0:Failure",
+          "0:Failure",
+          "0:OnSuccess",
+          "0:OnFailure",
+          "0:Sync",
+          "0:Failure",
+          "0:OnSuccess",
+          "0:OnFailure",
+          "0:Suspend",
+          "0:Suspend",
+          "0:Iterator",
+          "0:Exit",
+          "0:Suspend",
+          "0:Suspend",
           "0:Success",
           "0:Success",
           "0:Exit",

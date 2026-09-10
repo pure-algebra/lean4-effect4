@@ -9,7 +9,7 @@
 
    Behaviours (see eff_typed.ml for the argument):
    E1  for every constructible `p : (empty, 'a, 'e) eff`, `Eff_typing.well_typed (erase p)`,
-       and the checker's answer and error are `to_ty` of the indices.   tested (28 programs)
+       and the checker's answer and error are `to_ty` of the indices.   tested (named corpus)
    E2  `Eff_wire.encode_program (erase p)` is byte for byte what Lean encodes for the same
        program.                                                  tested (goldens/<name>.bin)
    E3  completeness is deliberately partial (unions are not canonical at the type level, a
@@ -62,6 +62,15 @@ type _ ty =
   | Fiber_of : 'a ty * 'e ty -> ('a, 'e) fiber ty
   | Union : 'a ty * 'b ty -> ('a, 'b) union ty
 
+(* DI-62: a closed witness for types with an exact runtime error image. No Boolean,
+   arbitrary product, handle, or container witness can be constructed. *)
+type _ error_ty =
+  | Error_never : never error_ty
+  | Error_nat : nat error_ty
+  | Error_string : string error_ty
+  | Error_pair : (string * string) error_ty
+  | Error_union : 'a error_ty * 'b error_ty -> ('a, 'b) union error_ty
+
 (* ---- environments and variables ----
    An environment is a type-level snoc list `'newest * 'older`, `empty` at the root; a
    variable is a de Bruijn index counted from the newest entry. *)
@@ -94,7 +103,7 @@ type (_, _) term =
 (* ---- causes (causeTy) ---- *)
 
 type (_, _) cause =
-  | C_fail : ('env, 'e) term -> ('env, 'e) cause
+  | C_fail : 'e error_ty * ('env, 'e) term -> ('env, 'e) cause
   | C_die : ('env, 'd) term -> ('env, never) cause
   | C_interrupt : ('env, nat) term option -> ('env, never) cause
   | C_both : ('env, 'e1) cause * ('env, 'e2) cause -> ('env, ('e1, 'e2) union) cause
@@ -183,9 +192,9 @@ type layer_value = Lv_unit | Lv_nat of int | Lv_bool of bool
 
 type (_, _, _) eff =
   | Succeed : ('env, 'a) term -> ('env, 'a, never) eff
-  | Fail : ('env, 'e) term -> ('env, never, 'e) eff
+  | Fail : 'e error_ty * ('env, 'e) term -> ('env, never, 'e) eff
   | Fail_cause : ('env, 'e) cause -> ('env, never, 'e) eff
-  | Yield_error : ('env, 'e) term -> ('env, never, 'e) eff
+  | Yield_error : 'e error_ty * ('env, 'e) term -> ('env, never, 'e) eff
   | Sync : ('env, 'a) term -> ('env, 'a, never) eff
   | Suspend : ('env, 'a, 'e) eff -> ('env, 'a, 'e) eff
   | Perform : ('req, 'ans, 'err, 'k) op * ('env, 'req) term -> ('env, 'ans, 'err) eff

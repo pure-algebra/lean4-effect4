@@ -26,15 +26,18 @@
    Behaviours it holds itself to:
    E1  Soundness: for every constructible `p : (empty, 'a, 'e) eff`, `Eff_typing.well_typed
        (erase p)`, and Lean's answer and error are `to_ty` of the indices (the error up to
-       `Ty.join`, which `to_ty` applies).      tested (the 28 well-typed corpus programs);
+       `Ty.join`, which `to_ty` applies).      tested (the accepted named golden corpus);
                                               the Lean theorem is stated in REPORT.md, open
    E2  Exactness of authorship: `Eff_wire.encode_program (erase p)` is byte for byte what
-       Lean encodes for the same program.       tested (goldens/<name>.bin, 27 programs)
+       Lean encodes for the same program.       tested (goldens/<name>.bin)
    E3  Completeness is deliberately partial: unions are not canonical at the type level
        (`(nat, never) union` is not `nat` to OCaml, it is to Lean), a generator's returns must
        agree exactly (a `never` return does not merge), handle targets are the closed set
        above. Every refusal here is also a refusal or a stricter reading of Lean's rule,
        never an acceptance Lean refuses.        by construction (see E1)
+   E4  Failure introductions require a closed error witness, excluding unsupported Boolean,
+       handle, container and arbitrary-product errors. By construction; compile controls in
+       test/error_witness_controls.sh exercise the accepted and refused introductions.
    Depends on: Eff_types, Eff_native (row data is not consulted: the op signatures below are
    written by hand from eff_native.ml and pinned against it by the tests), Eff_typing (join). *)
 
@@ -82,6 +85,15 @@ type _ ty =
   | Fiber_of : 'a ty * 'e ty -> ('a, 'e) fiber ty
   | Union : 'a ty * 'b ty -> ('a, 'b) union ty
 
+(* DI-62: a closed witness for types with an exact runtime error image. No Boolean,
+   arbitrary product, handle, or container witness can be constructed. *)
+type _ error_ty =
+  | Error_never : never error_ty
+  | Error_nat : nat error_ty
+  | Error_string : string error_ty
+  | Error_pair : (string * string) error_ty
+  | Error_union : 'a error_ty * 'b error_ty -> ('a, 'b) union error_ty
+
 (* ---- environments and variables ---- *)
 
 type empty
@@ -112,7 +124,7 @@ type (_, _) term =
 (* ---- causes (causeTy) ---- *)
 
 type (_, _) cause =
-  | C_fail : ('env, 'e) term -> ('env, 'e) cause
+  | C_fail : 'e error_ty * ('env, 'e) term -> ('env, 'e) cause
   | C_die : ('env, 'd) term -> ('env, never) cause
   | C_interrupt : ('env, nat) term option -> ('env, never) cause
   | C_both : ('env, 'e1) cause * ('env, 'e2) cause -> ('env, ('e1, 'e2) union) cause
@@ -199,9 +211,9 @@ type layer_value = Lv_unit | Lv_nat of int | Lv_bool of bool
 
 type (_, _, _) eff =
   | Succeed : ('env, 'a) term -> ('env, 'a, never) eff
-  | Fail : ('env, 'e) term -> ('env, never, 'e) eff
+  | Fail : 'e error_ty * ('env, 'e) term -> ('env, never, 'e) eff
   | Fail_cause : ('env, 'e) cause -> ('env, never, 'e) eff
-  | Yield_error : ('env, 'e) term -> ('env, never, 'e) eff
+  | Yield_error : 'e error_ty * ('env, 'e) term -> ('env, never, 'e) eff
   | Sync : ('env, 'a) term -> ('env, 'a, never) eff
   | Suspend : ('env, 'a, 'e) eff -> ('env, 'a, 'e) eff
   | Perform : ('req, 'ans, 'err, 'k) op * ('env, 'req) term -> ('env, 'ans, 'err) eff
@@ -369,7 +381,7 @@ let rec erase_term : type env a. int -> (env, a) term -> Eff_types.term = fun de
 
 let rec erase_cause : type env e. int -> (env, e) cause -> Eff_types.cause_term = fun depth c ->
   match c with
-  | C_fail t -> Eff_types.Cause_term_fail (erase_term depth t)
+  | C_fail (_, t) -> Eff_types.Cause_term_fail (erase_term depth t)
   | C_die t -> Eff_types.Cause_term_die (erase_term depth t)
   | C_interrupt who -> Eff_types.Cause_term_interrupt (Option.map (erase_term depth) who)
   | C_both (l, r) -> Eff_types.Cause_term_both (erase_cause depth l, erase_cause depth r)
@@ -422,9 +434,9 @@ let rec erase_eff : type env a e. int -> (env, a, e) eff -> Eff_types.eff = fun 
   let t : type b. (env, b) term -> Eff_types.term = fun x -> erase_term d x in
   match p with
   | Succeed v -> Eff_types.Eff_succeed (t v)
-  | Fail v -> Eff_types.Eff_fail (t v)
+  | Fail (_, v) -> Eff_types.Eff_fail (t v)
   | Fail_cause c -> Eff_types.Eff_failCause (erase_cause d c)
-  | Yield_error v -> Eff_types.Eff_yieldError (t v)
+  | Yield_error (_, v) -> Eff_types.Eff_yieldError (t v)
   | Sync v -> Eff_types.Eff_sync (t v)
   | Suspend b -> Eff_types.Eff_suspend (erase_eff d b)
   | Perform (op, r) -> Eff_types.Eff_perform (erase_op op, t r)

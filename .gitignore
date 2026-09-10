@@ -25,18 +25,18 @@ __pycache__/
 /harness/*
 !/harness/truth/
 !/harness/schema-host/
-/harness/truth/node_modules/
+/harness/truth/node_modules
 /harness/truth/archive/
 /harness/truth/lean.out.log
 /harness/truth/lean.err.log
 /harness/truth/truth-check-*/
 
 # The TypeScript estate (`ts/`) is tracked; its installs are not.
-/ts/**/node_modules/
+/ts/**/node_modules
 
 # The OCaml estate (`ocaml/`, one dune workspace) is tracked; dune's build directories
 # and any node install are not.
 /ocaml/**/_build/
-/ocaml/**/node_modules/
+/ocaml/**/node_modules
 
-/harness/schema-host/node_modules/
+/harness/schema-host/node_modules

@@ -44,9 +44,10 @@ not vacuous. It owns no adapter, no tape, no third package.
   state-indexed `Realizes(P, w, τ, …)` of the Codex review §3.2 is the shape a later slice
   needs; this one records the limit rather than pretending the relation is stronger.
 * **A claim that an unanswered call is a refusal.** The frontier rule (v2 R4b, DI-58):
-  `RowStep` is a *partial* relation, and a call with no step is a call the host has not
-  answered yet. The `Refusal` alphabet of `src/Effect4/Program/Admit.lean` is for malformed
-  envelopes; an exhausted tape is `replayCheckedFrom`'s `[] ↦ replayEval` frontier.
+  the semantic relation describes possible completed transitions. `HostBoundary` separates
+  pending validated requests from malformed or outside-profile input. Absence of a supplied
+  reply does not mean that no semantic transition exists. The `Refusal` alphabet in Admit
+  belongs to envelope/decision checks; valid incomplete replay remains a frontier.
 -/
 
 set_option autoImplicit false
@@ -162,17 +163,15 @@ def rc112 : ProfileData where
 
 /-! ## Part two: `HostSpec`, the Lean specification
 
-Four relations and one function, over two abstract types — the host's state and the host's
-values. Neither type is a second heap: `HostState` is whatever a binding needs in order to say
-which resources exist and what they hold, and `HostVal` is whatever crosses the boundary. The
-machine's side of each relation is the tree's own data (`Ty`, `Val`, `Stores`, `Completion`),
-so a specification is written without naming a single host object.
+Five relations over two abstract types: the host's state and its values. Neither is stored
+program syntax. Work specifies the states an operation can leave, while RowStep includes its
+actual completion and resulting state. A law requires every completed transition, including
+failure, to retain a state allowed by the work relation. Concrete models below use equality
+to their explicit after-functions, so rolling back a charged failure violates that law.
 
-`after` is the one function field, and it is what makes DB-07 statable: a row's work reaches a
-state *before* its outcome is decided, and `LawfulHostSpec.step_retains` says every step lands
-on that state whether the call succeeded or failed. Scout B's transformer counterexample is
-why it is a field and not a convention: `StateT σ (Except ε)` discards the state on failure and
-`ExceptT ε (StateM σ)` keeps it (`docs/research/2026-09-09-scout-proof-statements.md` §4). -/
+Work itself can be relational, allowing alternative results and states. Determinism is a
+separate requested law; once-only reply application belongs to the session/guard protocol,
+not to a uniqueness assumption about the host's possible behavior. -/
 
 /-- A target's semantics, as relations. `HostState` and `HostVal` are abstract: a binding
 chooses them and nothing here inspects them. -/
@@ -182,19 +181,19 @@ structure HostSpec (HostState HostVal : Type) where
   Rep : Ty → Val → HostVal → Prop
   /-- The state relation: which machine stores a host state may stand beside. -/
   RelatedState : Stores → HostState → Prop
-  /-- The state a row's work reaches, before its outcome is decided. -/
-  after : Row → Val → HostState → HostState
+  /-- States the row's work may reach. Each completed transition must retain one. -/
+  Work : Row → Val → HostState → HostState → Prop
   /-- The call protocol, as one relation: from this state, this row at this request may
-  complete this way and leave that state. A *partial* relation — a call with no step is a call
-  the host has not answered, which is a frontier and not a refusal (DI-58). Both the success
-  and the failure transition carry an after-state; `step_retains` fixes which one. -/
+  complete this way and leave that state. Alternative completions and states are permitted.
+  Both success and failure carry the resulting state; step_retains checks it against Work.
+  A boundary driver separately validates input and reports whether a reply is pending. -/
   RowStep : Row → Val → HostState → Completion Val Err Defect FiberId Ann → HostState → Prop
   /-- The observation the differential compares under: what a run's stores and the host's state
   must agree on. The comparator's own losses are named where it lives
   (`harness/truth/run-truth.ts`), not here. -/
   observe : Stores → HostState → Prop
 
-/-- The three laws a specification owes. Each is earned by a fixture in
+/-- The two general laws a specification owes. Each is earned by a fixture in
 `Test/Program/HostSpecContract.lean`. -/
 structure LawfulHostSpec {HostState HostVal : Type}
     (profile : ProfileData) (spec : HostSpec HostState HostVal) : Prop where
@@ -202,21 +201,25 @@ structure LawfulHostSpec {HostState HostVal : Type}
   bound. This is what makes `natBound` policy and not a comment (DI-56). -/
   rep_scalar_bound :
     ∀ (n : Nat) (hostValue : HostVal), spec.Rep .nat (.nat n) hostValue → n ≤ profile.natBound
-  /-- DB-07: a step lands on the state its work reached, whichever way it completed. A
-  specification whose failure arm rolls back to the before-state cannot satisfy this;
-  `Profile.Resource.rollback_not_lawful` is the refutation that says the field is not
-  decoration. -/
+  /-- DB-07: a completed step retains a resulting state allowed by its specified work.
+  Resource.Work fixes the charged state, so its rolling-back failure cannot satisfy this;
+  Profile.Resource.rollback_not_lawful is the concrete counterexample. A generic arbitrary
+  Work predicate alone is not an execution invariant or a host refinement proof. -/
   step_retains :
     ∀ (row : Row) (request : Val) (state : HostState)
       (completion : Completion Val Err Defect FiberId Ann) (state' : HostState),
-      spec.RowStep row request state completion state' → state' = spec.after row request state
-  /-- DI-58, at the specification: at most one completion per outstanding call. Two
-  completions of the same call from the same state cannot both step. -/
-  one_completion :
+      spec.RowStep row request state completion state' → spec.Work row request state state'
+
+/-- Additional determinism, only for a model whose determining choices are fixed.
+This is not the session's once-only application law; that law checks the consumed guard. -/
+structure DeterministicHostSpec {HostState HostVal : Type}
+    (spec : HostSpec HostState HostVal) : Prop where
+  step_unique :
     ∀ (row : Row) (request : Val) (state : HostState)
       (c₁ : Completion Val Err Defect FiberId Ann) (s₁ : HostState)
       (c₂ : Completion Val Err Defect FiberId Ann) (s₂ : HostState),
-      spec.RowStep row request state c₁ s₁ → spec.RowStep row request state c₂ s₂ → c₁ = c₂
+      spec.RowStep row request state c₁ s₁ → spec.RowStep row request state c₂ s₂ →
+        c₁ = c₂ ∧ s₁ = s₂
 
 namespace Profile
 
@@ -242,7 +245,7 @@ theorem graphOf_snd {σ : Type} {outcome : Option (Completion Val Err Defect Fib
   · exact (congrArg Prod.snd (Option.some.inj h)).symm
   · exact absurd h.symm (Option.some_ne_none _)
 
-/-- A partial function has at most one value: `LawfulHostSpec.one_completion` for a graph. -/
+/-- A partial function has at most one value: `DeterministicHostSpec.step_unique` for a graph. -/
 theorem graph_functional {α β : Type} {step : Option (α × β)} {a₁ a₂ : α} {b₁ b₂ : β}
     (h₁ : step = some (a₁, b₁)) (h₂ : step = some (a₂, b₂)) : a₁ = a₂ ∧ b₁ = b₂ :=
   let h := Option.some.inj (h₁.symm.trans h₂)
@@ -286,12 +289,6 @@ def profile : ProfileData where
   imports := []
   errorProjection := rc112.errorProjection
 
-/-- DI-56's distinguished refusal: a value outside the scalar domain neither answers nor fails
-the way the program failed — it crosses as its own tagged host error, so a comparator can
-classify the run "outside the profile" instead of as agreement or disagreement. The pair is
-DB-15's. -/
-def refusal : Err := .tagged "ProfileRefusal" "nat outside the profile"
-
 /-- The host value: a number, and nothing else. -/
 abbrev HostVal := Nat
 
@@ -319,15 +316,16 @@ instance (stores : Stores) (state : State) : Decidable (observe stores state) :=
 /-- The row's work changes nothing. -/
 def after (_row : Row) (_request : Val) (state : State) : State := state
 
-/-- How the call completes: the request echoed inside the bound, the profile refusal outside
-it, and no step at all for another row or a request of the wrong shape. -/
+/-- The admitted scalar transition echoes its request. Outside-profile, unknown-row and
+wrong-shape input has no semantic completion; HostBoundary distinguishes their classifications
+from a validated call whose reply has not yet been supplied. -/
 def outcome? (row : Row) (request : Val) (_state : State) :
     Option (Completion Val Err Defect FiberId Ann) :=
   match request with
   | .nat n =>
-    if row.name = waitRow.name then
+    if row = waitRow then
       if n ≤ profile.natBound then some (.ofExit (.success (.nat n)))
-      else some (.ofExit (.failure (Cause.fail refusal)))
+      else none
     else none
   | _ => none
 
@@ -339,7 +337,7 @@ def step? (row : Row) (request : Val) (state : State) :
 def spec : HostSpec State HostVal where
   Rep := Rep
   RelatedState := RelatedState
-  after := after
+  Work := fun row request before afterState => afterState = after row request before
   RowStep := fun row request state completion state' =>
     step? row request state = some (completion, state')
   observe := observe
@@ -352,7 +350,9 @@ theorem lawful : LawfulHostSpec profile spec where
     subst heq
     exact hb
   step_retains := fun _ _ _ _ _ h => graphOf_snd h
-  one_completion := fun _ _ _ _ _ _ _ h₁ h₂ => (graph_functional h₁ h₂).1
+
+theorem deterministic : DeterministicHostSpec spec where
+  step_unique := fun _ _ _ _ _ _ _ h₁ h₂ => graph_functional h₁ h₂
 
 /-! The three facts the settlement asks a scalar row to show. -/
 
@@ -360,7 +360,7 @@ theorem outcome_in_profile (n : Nat) (h : n ≤ profile.natBound) :
     outcome? waitRow (.nat n) () = some (.ofExit (.success (.nat n))) := if_pos h
 
 theorem outcome_out_of_profile (n : Nat) (h : ¬ n ≤ profile.natBound) :
-    outcome? waitRow (.nat n) () = some (.ofExit (.failure (Cause.fail refusal))) := if_neg h
+    outcome? waitRow (.nat n) () = none := if_neg h
 
 /-- A request inside the bound is answered by echoing it. -/
 theorem in_profile (n : Nat) (h : n ≤ profile.natBound) :
@@ -370,16 +370,18 @@ theorem in_profile (n : Nat) (h : n ≤ profile.natBound) :
   rw [outcome_in_profile n h]
   rfl
 
-/-- A request outside the bound completes as the profile refusal, not as an answer: the run is
-outside the profile and says so (DI-56). -/
-theorem out_of_profile (n : Nat) (h : ¬ n ≤ profile.natBound) :
-    spec.RowStep waitRow (.nat n) () (.ofExit (.failure (Cause.fail refusal))) () := by
-  show step? waitRow (.nat n) () = _
-  unfold step?
-  rw [outcome_out_of_profile n h]
-  rfl
+/-- Outside-profile input has no admitted semantic completion. The boundary classifies
+it as outsideProfile, independently of valid calls whose reply is currently pending. -/
+theorem no_step_out_of_profile (n : Nat) (h : ¬ n ≤ profile.natBound) :
+    ¬ ∃ completion state', spec.RowStep waitRow (.nat n) () completion state' := by
+  rintro ⟨completion, state', hstep⟩
+  change graphOf (outcome? waitRow (.nat n) ()) (after waitRow (.nat n) ()) =
+    some (completion, state') at hstep
+  rw [outcome_out_of_profile n h] at hstep
+  cases hstep
 
-/-- Nothing else steps: a request of the wrong shape is a call the host has not answered. -/
+/-- Wrong-shaped requests have no admitted semantic transition; the boundary reports
+malformed input, not a pending valid call. -/
 theorem no_step_of_wrong_shape (s : String) :
     ¬ ∃ completion state', spec.RowStep waitRow (.str s) () completion state' := by
   rintro ⟨completion, state', h⟩
@@ -430,9 +432,9 @@ def useRow : Row where
   error := .prod .string .string
   cite := "src/Effect4/Program/Profile.lean"
 
-/-- `release : handle → unit`. Releasing twice has no step: the second release is a call the
-host will not answer. The pinned adapter agrees — `Host.close` throws on a closed resource
-(`harness/truth/prelude.ts`). -/
+/-- `release : handle → unit`. Releasing an acquired resource twice completes with Die,
+matching the selected Host.close binding's thrown Error category and projected message
+(harness/truth/prelude.ts). Never-acquired handles are malformed at the boundary. -/
 def releaseRow : Row where
   name := "release"
   spelling := "Host.release"
@@ -456,6 +458,14 @@ def profile : ProfileData where
 
 /-- The budget's failure, as DB-15's pair. -/
 def spent : Err := .tagged "Resource" "the resource's use budget is spent"
+
+/-- Category and message projection of the selected live-use binding's misuse error.
+The adapter's Error object and stack are not canonical program data. S2 owns Defect.error. -/
+def closedUse : Defect := .error (.text "resource used after release")
+
+/-- The selected Host.close binding throws Error with this message on a second close
+(harness/truth/prelude.ts). Its modeled category is Die, never an unanswered call. -/
+def doubleRelease : Defect := .error (.text "resource released twice")
 
 /-- The host's state: one slot per `acquire` in allocation order, `true` while the resource is
 open, and the number of `use` calls already charged. Acquisition *extends* the slot list and
@@ -511,39 +521,48 @@ instance (stores : Stores) (state : State) : Decidable (RelatedState stores stat
 instance (stores : Stores) (state : State) : Decidable (observe stores state) :=
   inferInstanceAs (Decidable (_ ∧ _))
 
-/-- The state a row's work reaches: `acquire` appends a slot, `use` charges the call, `release`
-closes the slot it names. This is the state every step lands on, success or failure
-(`LawfulHostSpec.step_retains`). -/
+/-- The concrete work state: acquire appends a slot, live use charges once, release closes
+its slot. Misuse of an already closed slot leaves state unchanged. Every actual transition,
+including charged use failure, retains this state (LawfulHostSpec.step_retains). -/
 def after (row : Row) (request : Val) (state : State) : State :=
-  if row.name = acquireRow.name then { state with slots := state.slots ++ [true] }
-  else if row.name = useRow.name then { state with uses := state.uses + 1 }
-  else if row.name = releaseRow.name then
+  if row = acquireRow then { state with slots := state.slots ++ [true] }
+  else if row = useRow then
+    match request with
+    | Value.external index =>
+      if state.isOpen index then { state with uses := state.uses + 1 } else state
+    | _ => state
+  else if row = releaseRow then
     match request with
     | Value.external index => { state with slots := state.slots.set index false }
     | _ => state
   else state
 
-/-- How the call completes. Three rows, and `none` — no step — wherever the host owes no
-answer: an unknown row, a request of the wrong shape, a `use` after release, a second
-release. -/
+/-- The three exact selected rows. Closed use and double release complete with the selected
+misuse defects. Invalid requests have no semantic completion and are classified by HostBoundary;
+none here is not by itself an assertion that a valid host call is pending. -/
 def outcome? (row : Row) (request : Val) (state : State) :
     Option (Completion Val Err Defect FiberId Ann) :=
-  if row.name = acquireRow.name then
+  if row = acquireRow then
     match request with
     | .unit => some (.ofExit (.success (Value.external state.slots.length)))
     | _ => none
-  else if row.name = useRow.name then
+  else if row = useRow then
     match request with
     | Value.external index =>
       if state.isOpen index then
         if state.uses + 1 ≤ quota then some (.ofExit (.success (.nat (state.uses + 1))))
         else some (.ofExit (.failure (Cause.fail spent)))
+      else if index < state.slots.length then
+        some (.ofExit (.failure (Cause.die closedUse)))
       else none
     | _ => none
-  else if row.name = releaseRow.name then
+  else if row = releaseRow then
     match request with
     | Value.external index =>
-      if state.isOpen index then some (.ofExit (.success .unit)) else none
+      if state.isOpen index then some (.ofExit (.success .unit))
+      else if index < state.slots.length then
+        some (.ofExit (.failure (Cause.die doubleRelease)))
+      else none
     | _ => none
   else none
 
@@ -555,7 +574,7 @@ def step? (row : Row) (request : Val) (state : State) :
 def spec : HostSpec State HostVal where
   Rep := Rep
   RelatedState := RelatedState
-  after := after
+  Work := fun row request before afterState => afterState = after row request before
   RowStep := fun row request state completion state' =>
     step? row request state = some (completion, state')
   observe := observe
@@ -572,7 +591,9 @@ theorem lawful : LawfulHostSpec profile spec where
     | res index => obtain ⟨ht, _⟩ := h; exact Ty.noConfusion ht
     | unit => obtain ⟨ht, _⟩ := h; exact Ty.noConfusion ht
   step_retains := fun _ _ _ _ _ h => graphOf_snd h
-  one_completion := fun _ _ _ _ _ _ _ h₁ h₂ => (graph_functional h₁ h₂).1
+
+theorem deterministic : DeterministicHostSpec spec where
+  step_unique := fun _ _ _ _ _ _ _ h₁ h₂ => graph_functional h₁ h₂
 
 /-! The transitions the settlement asks an allocating row to show. -/
 
@@ -600,24 +621,15 @@ theorem release_after_failure :
     spec.RowStep releaseRow (Value.external 0) ⟨[true], quota + 1⟩
       (.ofExit (.success .unit)) ⟨[false], quota + 1⟩ := rfl
 
-/-- **Use after release is refused by having no step**, not by a completion: the host owes an
-answer it will never give, which is a frontier and not a refusal (DI-58). -/
-theorem no_use_after_release :
-    ¬ ∃ completion state',
-        spec.RowStep useRow (Value.external 0) ⟨[false], quota + 1⟩ completion state' := by
-  rintro ⟨completion, state', h⟩
-  have hn : (none : Option (Completion Val Err Defect FiberId Ann × State)) =
-      some (completion, state') := h
-  exact absurd hn.symm (Option.some_ne_none _)
+/-- A closed acquired resource completes with a defect and retains its charged state. -/
+theorem closed_use_dies :
+    spec.RowStep useRow (Value.external 0) ⟨[false], quota + 1⟩
+      (.ofExit (.failure (Cause.die closedUse))) ⟨[false], quota + 1⟩ := rfl
 
-/-- A second release has no step either. -/
-theorem no_double_release :
-    ¬ ∃ completion state',
-        spec.RowStep releaseRow (Value.external 0) ⟨[false], quota + 1⟩ completion state' := by
-  rintro ⟨completion, state', h⟩
-  have hn : (none : Option (Completion Val Err Defect FiberId Ann × State)) =
-      some (completion, state') := h
-  exact absurd hn.symm (Option.some_ne_none _)
+/-- A second release completes with the selected binding's defect, retaining state. -/
+theorem double_release_dies :
+    spec.RowStep releaseRow (Value.external 0) ⟨[false], quota + 1⟩
+      (.ofExit (.failure (Cause.die doubleRelease))) ⟨[false], quota + 1⟩ := rfl
 
 /-! ### The refutation: `step_retains` is not decoration
 

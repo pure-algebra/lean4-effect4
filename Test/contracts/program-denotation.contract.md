@@ -119,6 +119,25 @@ are unchanged: they name `errOf` symbolically. `TYPED-FB-CAUSE` (the error colum
 reified exit is not checked) and the `.causeOf` refusal are unchanged; `orDie` on a tagged
 error dies as `badName` (`ORDIE-FB-TAGGED`, `E4-HOST-CE-003`).
 
+S2 cutover amendment (2026-09-09, DI-62 and DI-31; supersedes those historical error
+refusals): append `Err.text` at tag 3 and `Defect.error` at tag 5, retaining all older
+encodings. `supportedErrTy` admits `never`, `nat`, `string`, `prod string string`, and
+unions of supported columns. All three failure introductions (`fail`, `yieldError`,
+each `CauseTerm.fail`) require that predicate. The admitted value's `errOf` conversion
+must have the exact inverse `valOfErr`, for every allocation table; unsupported raw
+execution remains defined and can still collapse to `boom`.
+
+`Val.hasTy` now checks every failure reason inside `.causeOf e` and failed `.exitOf a e`
+through the shared parameterized cause fold. Defects and interruptions remain outside
+`E`. The public two-argument `hasTyCause` wrapper stays fixed; its bridge to the new
+membership arm and allocation monotonicity are required obligations. Fiber membership
+still checks shape only. `orDieCause` retains natural-to-`user` and raw-`boom`-to-`badName`
+behavior; text and two-string errors become `Defect.error` carrying the exact original
+error. The SQL truth comparison must reject a changed represented defect payload, not
+only compare its reason kind. Historical Boolean `pYieldError` bytes remain in the wire
+corpus with an explicit refusal verdict; the typed OCaml API requires the corresponding
+closed error witness. Fresh command and axiom receipts own verification status.
+
 Ratified host-rows step 4 amendment (2026-09-09, slice §2.2): `Val.hasTy` gains a
 trailing allocation table, defaulting to `[]`. A byte-7 handle must name an allocated
 entry with exactly the declared target spelling. The full three-argument signature

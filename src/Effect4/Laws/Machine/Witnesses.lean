@@ -99,12 +99,15 @@ def reasonCode : Reason Err Defect FiberId Ann → Nat
   | Reason.fail Err.boom _ => 100
   -- the code does not carry the pair; it is read through `causeImage` and the truth wire
   | Reason.fail (Err.tagged _ _) _ => 101
+  | Reason.fail (Err.text _) _ => 102
   | Reason.fail (Err.tag c) _ => 110 + c
   | Reason.die Defect.notImplemented _ => 200
   | Reason.die Defect.asyncFiber _ => 201
   | Reason.die Defect.badName _ => 202
   | Reason.die Defect.missingService _ => 203
   | Reason.die (Defect.user n) _ => 210 + n
+  -- Diagnostic only: exact payloads are carried by causeImage, not this code.
+  | Reason.die (Defect.error _) _ => 220
   | Reason.interrupt none _ => 300
   | Reason.interrupt (some i) _ => 310 + i.value
 

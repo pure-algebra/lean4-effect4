@@ -19,9 +19,8 @@ The routes that once stood beside it are archived on the local branch `archive/o
 at `14e6835` (engine brief ruling: one OCaml engine, `gen/`): the avatar (the same machine as
 OCaml 5 effect handlers, `avatar/`), the daemon `effect4d` that served it (`server/`), its
 wasm host (`wasm/`), route 1's OCaml half (`link/`, whose host core `engine/` re-homed), and
-the spike probes (`probes/`). Route 1's Lean half, `src/OCaml5/Bridge.lean`, is still in the
-tree only because `harness/truth/Truth.lean` cites it and is a stamp input of the truth
-family; it leaves with the next edit that re-stamps the truth artefacts. The host over the
+the spike probes (`probes/`). Route 1's Lean bridge is archived there too; its last active copy was removed
+when the truth family was refreshed for the Conform integration. The host over the
 engine that replaces the daemon is owed by the host-rows slice.
 
 ## Map
@@ -44,7 +43,6 @@ The Lean half, `src/OCaml5/`:
 | `Lib/*` | Lean carriers with laws for the libraries the engine uses (`Map`, `Set`, `Deque`, `Order`, `Sexp`, `Stream`, `Eio`, `Picos`, `Derived`); `Lib/Deque` projects onto `Effect4.Machine.Dispatcher` by `rfl` |
 | `Eff/*` | the `Eff` program IR as OCaml: the closed world read off the environment (`World`), the emitters of the `eff/` library (`Emit`), the goldens and corpus (`Goldens`) |
 | `Lcnf/*` | the LCNF → OCaml backend: dump, naming, types, the translation rules and the builtin table |
-| `Bridge` | route 1's session API exported to C; its OCaml half is archived and the module stays only until the truth family is next re-stamped (see above) |
 | `Tools/*` | the `--run` drivers, each a thin `main` over a library module: `LcnfDump`/`LcnfGen` (route 2 and the engine), `EffGen` (over `Eff`), `EffWire` (the wire goldens), `CasGoldens` (the CAS goldens), `Describe` (derives a description of a Machine inductive from the environment; its avatar outputs are archived, and `tools/Effect4Gen` borrows its environment walk) |
 
 The rest of the OCaml 5 reification (the handler machine's invariants and witnesses, the

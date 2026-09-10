@@ -77,8 +77,9 @@ section Statements
 #check (@Effect4.Program.HostSpec.RelatedState :
   ∀ {HostState HostVal : Type}, HostSpec HostState HostVal → Stores → HostState → Prop)
 
-#check (@Effect4.Program.HostSpec.after :
-  ∀ {HostState HostVal : Type}, HostSpec HostState HostVal → Row → Val → HostState → HostState)
+#check (@Effect4.Program.HostSpec.Work :
+  ∀ {HostState HostVal : Type}, HostSpec HostState HostVal →
+    Row → Val → HostState → HostState → Prop)
 
 #check (@Effect4.Program.HostSpec.RowStep :
   ∀ {HostState HostVal : Type}, HostSpec HostState HostVal →
@@ -100,17 +101,7 @@ section Statements
     LawfulHostSpec profile spec →
       ∀ (row : Row) (request : Val) (state : HostState)
         (completion : Completion Val Err Defect FiberId Ann) (state' : HostState),
-        spec.RowStep row request state completion state' → state' = spec.after row request state)
-
-#check (@Effect4.Program.LawfulHostSpec.one_completion :
-  ∀ {HostState HostVal : Type} {profile : ProfileData} {spec : HostSpec HostState HostVal},
-    LawfulHostSpec profile spec →
-      ∀ (row : Row) (request : Val) (state : HostState)
-        (c₁ : Completion Val Err Defect FiberId Ann) (s₁ : HostState)
-        (c₂ : Completion Val Err Defect FiberId Ann) (s₂ : HostState),
-        spec.RowStep row request state c₁ s₁ → spec.RowStep row request state c₂ s₂ → c₁ = c₂)
-
-/-! ### The two models -/
+        spec.RowStep row request state completion state' → spec.Work row request state state')
 
 #check (@Effect4.Program.Profile.Scalar.lawful :
   LawfulHostSpec Profile.Scalar.profile Profile.Scalar.spec)
@@ -120,14 +111,9 @@ section Statements
     Profile.Scalar.spec.RowStep Profile.Scalar.waitRow (.nat n) ()
       (.ofExit (.success (.nat n))) ())
 
-#check (@Effect4.Program.Profile.Scalar.out_of_profile :
+#check (@Effect4.Program.Profile.Scalar.no_step_out_of_profile :
   ∀ (n : Nat), ¬ n ≤ Profile.Scalar.profile.natBound →
-    Profile.Scalar.spec.RowStep Profile.Scalar.waitRow (.nat n) ()
-      (.ofExit (.failure (Cause.fail Profile.Scalar.refusal))) ())
-
-#check (@Effect4.Program.Profile.Scalar.no_step_of_wrong_shape :
-  ∀ (s : String), ¬ ∃ completion state',
-    Profile.Scalar.spec.RowStep Profile.Scalar.waitRow (.str s) () completion state')
+    ¬ ∃ completion state', Profile.Scalar.spec.RowStep Profile.Scalar.waitRow (.nat n) () completion state')
 
 #check (@Effect4.Program.Profile.Resource.lawful :
   LawfulHostSpec Profile.Resource.profile Profile.Resource.spec)
@@ -152,15 +138,17 @@ section Statements
     ⟨[true], Profile.Resource.quota + 1⟩ (.ofExit (.success .unit))
     ⟨[false], Profile.Resource.quota + 1⟩)
 
-#check (@Effect4.Program.Profile.Resource.no_use_after_release :
-  ¬ ∃ completion state',
-    Profile.Resource.spec.RowStep Profile.Resource.useRow (Value.external 0)
-      ⟨[false], Profile.Resource.quota + 1⟩ completion state')
+#check (@Effect4.Program.Profile.Resource.closed_use_dies :
+  Profile.Resource.spec.RowStep Profile.Resource.useRow (Value.external 0)
+    ⟨[false], Profile.Resource.quota + 1⟩
+    (.ofExit (.failure (Cause.die Profile.Resource.closedUse)))
+    ⟨[false], Profile.Resource.quota + 1⟩)
 
-#check (@Effect4.Program.Profile.Resource.no_double_release :
-  ¬ ∃ completion state',
-    Profile.Resource.spec.RowStep Profile.Resource.releaseRow (Value.external 0)
-      ⟨[false], Profile.Resource.quota + 1⟩ completion state')
+#check (@Effect4.Program.Profile.Resource.double_release_dies :
+  Profile.Resource.spec.RowStep Profile.Resource.releaseRow (Value.external 0)
+    ⟨[false], Profile.Resource.quota + 1⟩
+    (.ofExit (.failure (Cause.die Profile.Resource.doubleRelease)))
+    ⟨[false], Profile.Resource.quota + 1⟩)
 
 #check (@Effect4.Program.Profile.Resource.rollback_steps :
   Profile.Resource.rollbackSpec.RowStep Profile.Resource.useRow (Value.external 0)
@@ -262,10 +250,9 @@ open Effect4.Program.Profile
 -- inside the bound: the request is echoed
 #guard Scalar.outcome? Scalar.waitRow (.nat 3) () = some (.ofExit (.success (.nat 3)))
 #guard Scalar.step? Scalar.waitRow (.nat 3) () = some (.ofExit (.success (.nat 3)), ())
--- outside it: the distinguished profile refusal, not an ordinary answer (DI-56)
-#guard Scalar.outcome? Scalar.waitRow (.nat 9) () =
-  some (.ofExit (.failure (Cause.fail Scalar.refusal)))
-#guard Scalar.refusal = Err.tagged "ProfileRefusal" "nat outside the profile"
+-- Outside-domain input has no admitted transition. HostBoundary reports outsideProfile,
+-- while a validated but unanswered call is pending (separate boundary battery).
+#guard Scalar.outcome? Scalar.waitRow (.nat 9) () = none
 -- a request of the wrong shape, and an unknown row: no step at all
 #guard (Scalar.step? Scalar.waitRow (.str "3") ()).isNone
 #guard (Scalar.step? Scalar.waitRow .unit ()).isNone
@@ -304,9 +291,11 @@ open Effect4.Program.Profile
 -- cleanup after failure: release still steps from the state the failure left
 #guard Resource.step? Resource.releaseRow (Value.external 0) ⟨[true], 3⟩ =
   some (.ofExit (.success .unit), ⟨[false], 3⟩)
--- use after release, and a second release: no step at all, which is a frontier and not a refusal
-#guard (Resource.step? Resource.useRow (Value.external 0) ⟨[false], 3⟩).isNone
-#guard (Resource.step? Resource.releaseRow (Value.external 0) ⟨[false], 3⟩).isNone
+-- Closed acquired resources complete with terminal defects and retain state.
+#guard Resource.step? Resource.useRow (Value.external 0) ⟨[false], 3⟩ =
+  some (.ofExit (.failure (Cause.die Resource.closedUse)), ⟨[false], 3⟩)
+#guard Resource.step? Resource.releaseRow (Value.external 0) ⟨[false], 3⟩ =
+  some (.ofExit (.failure (Cause.die Resource.doubleRelease)), ⟨[false], 3⟩)
 -- a handle that was never acquired has no step either
 #guard (Resource.step? Resource.useRow (Value.external 5) ⟨[true], 0⟩).isNone
 #guard (Resource.step? Resource.releaseRow (Value.external 5) ⟨[true], 0⟩).isNone

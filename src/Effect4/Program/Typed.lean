@@ -23,8 +23,9 @@ The scalars against the carrier's own frames; a handle against the spelling of i
 against `NativeOp.deferredTy` (`Native.lean`), `Val.scopeHandle` against `Ty.scope`, and a
 context — a value `Val.context?` reads back — against `Ty.context` (`Eff.lean`); the fiber
 handle against `.fiberOf`, and a snapshot of fiber handles (`Val.snapshot?`) against a `.list`
-of them; a reified exit against `.exitOf` — a failure's cause must read back, its error column
-is not checked (`TYPED-FB-CAUSE`); the two-cell `list` `Val.tuple` builds (`Native.lean`)
+of them; a reified exit against `.exitOf` — a failure's cause must read back and every typed
+failure must inhabit its error column (DI-62); a reified cause against `.causeOf` by the same
+error fold; the two-cell `list` `Val.tuple` builds (`Native.lean`)
 against `.prod`; a `list` against `.list` when every member does; a union as the disjunction
 of its members; a string against the carrier's `str` frame and an option against its `none`
 and `some` frames (DB-15). An external handle at byte 7 must name its exact target
@@ -52,11 +53,18 @@ def Val.hasTy (v : Val) (ty : Ty) (allocated : List String := []) : Bool :=
       | _ => false
     | _ => target == Ty.contextTarget && (Val.context? v).isSome
   | .fiberOf _ _ => match v with | Value.fiber _ => true | _ => false
-  | .exitOf a _ =>
+  | .exitOf a e =>
     match v with
     | Val.exitOk x => Val.hasTy x a allocated
-    | Value.exitErr written => (causeImage.ofVal written).isSome
+    | Value.exitErr written =>
+      match causeImage.ofVal written with
+      | some c => causeAdmits (fun w _ => Val.hasTy w e allocated) e c
+      | none => false
     | _ => false
+  | .causeOf e =>
+    match Val.cause? v with
+    | some c => causeAdmits (fun w _ => Val.hasTy w e allocated) e c
+    | none => false
   | .prod ta tb =>
     match v with
     | .list [x, y] => Val.hasTy x ta allocated && Val.hasTy y tb allocated
@@ -64,12 +72,24 @@ def Val.hasTy (v : Val) (ty : Ty) (allocated : List String := []) : Bool :=
   | .list ty =>
     match v with
     | Value.fiberSnapshot _ =>
-      match ty with
-      | .fiberOf _ _ => (Val.snapshot? v).isSome
-      | _ => false
+      match Val.snapshot? v with
+      | some ids => ids.all (fun id => Val.hasTy (Val.fiber id) ty allocated)
+      | none => false
     | .list values => values.all fun x => Val.hasTy x ty allocated
     | _ => false
   | .union l r => Val.hasTy v l allocated || Val.hasTy v r allocated
   | _ => false
+
+/-- The typed error part of a completion; defects and interruptions stay outside `E`.
+This is the shared reason fold at the default empty allocation table. -/
+def errAdmits (ty : Ty) : Reason Err Defect FiberId Ann → Bool :=
+  reasonAdmits (fun v t => Val.hasTy v t) ty
+
+/-- Membership of a reified cause at the public, default-allocation interface. The recursive
+`Val.hasTy` arms close over their own allocation table and use the same cause fold. -/
+def hasTyCause (v : Val) (e : Ty) : Bool :=
+  match Val.cause? v with
+  | some c => causeAdmits (fun w t => Val.hasTy w t) e c
+  | none => false
 
 end Effect4.Program

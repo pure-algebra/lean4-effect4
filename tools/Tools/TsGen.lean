@@ -123,12 +123,14 @@ def jsonFn (f : Family) : String := lowerFirst (tsName f) ++ "Json"
 def familyOf (fs : List Family) (oname : String) : Option Family := fs.find? (·.spec.oname == oname)
 
 partial def namedIn : OTy → List String
+  | .requirements => ["service_key"]
   | .named o => [o]
   | .option a | .list a => namedIn a
   | .prod a b => namedIn a ++ namedIn b
   | _ => []
 
 partial def tsTy (fs : List Family) : OTy → String
+  | .requirements => "ReadonlyArray<ServiceKey>"
   | .int => "number"
   | .bool => "boolean"
   | .string => "string"
@@ -147,6 +149,7 @@ partial def tsTy (fs : List Family) : OTy → String
 /-- The schema of a carrier. A reference to a tagged family is suspended: the families are
 mutually recursive and the schema constants are declared in dependency order. -/
 partial def tsSchema (fs : List Family) : OTy → String
+  | .requirements => "Schema.Array(ServiceKey).check(Schema.makeFilter((xs) => xs.every((b, i) => i === 0 || ((a) => a !== undefined && (a.name.value < b.name.value || (a.name.value === b.name.value && a.service.value < b.service.value)))(xs[i - 1]))))"
   | .int => "Schema.Int"
   | .bool => "Schema.Boolean"
   | .string => "Schema.String"
@@ -220,6 +223,7 @@ def emitSchemas (fs : List Family) : String :=
 /-! ## JSON writers -/
 
 partial def jsonOf (fs : List Family) : OTy → String → String
+  | .requirements, x => s!"{x}.map(serviceKeyJson)"
   | .int, x | .bool, x | .string, x => x
   | .unit, _ => "[]"
   | .option a, x => s!"({x} === null ? null : {jsonOf fs a x})"
@@ -354,6 +358,7 @@ def writeFn (f : Family) : String := "write" ++ tsName f
 
 /-- The field traversal is generated structurally from the closed world's carriers. -/
 def wireOf (fs : List Family) : OTy → String → String
+  | .requirements, x => s!"(() => \{ if (!{x}.every((b, i) => i === 0 || ((a) => a !== undefined && (a.name.value < b.name.value || (a.name.value === b.name.value && a.service.value < b.service.value)))({x}[i - 1]))) throw new TypeError(\"noncanonical requirements\"); w.list({x}, (y) => writeServiceKey(w, y)) })()"
   | .int, x => s!"w.nat({x})"
   | .bool, x => s!"w.bool({x})"
   | .string, x => s!"w.str({x})"
@@ -513,17 +518,15 @@ def entryJs (op : Effect4.Program.NativeOp) : String :=
 
 /-! ### The pure atom set (DI-40)
 
-`Effect4.Program.nativeAtom` and `nativeAtomTy` (`src/Effect4/Program/Native.lean:67-96`) are
-a closed table of eleven names, and three hand copies of it existed on the host side: both
-ingest engines' `atoms`/`atomNames` sets and the truth prelude's self-test table. The set is
-emitted here so those copies become reads.
+`Effect4.Program.NativeAtom` (`src/Effect4/Program/NativeAtom.lean`) owns the complete
+finite atom inventory, exhaustive typing/evaluation, names, arities and monomorphic
+metadata. Both foreign readers and the prelude coverage check read its generated projection.
 
-The rows are `OCaml5.Eff.Emit`'s — the same data the OCaml target emits, so the two targets
-cannot disagree — and `OCaml5.Eff.checkAtoms` (`src/OCaml5/Eff/Emit.lean:373-382`) evaluates every row and probe
-against `nativeAtomTy` before this file is written: a name or a signature that drifts aborts
-the generator rather than being asserted here. `arity` is `null` for the variadic `strings`;
-`args`/`answer` are `null` for the three atoms whose type is not monomorphic (`pair`, `fst`,
-`snd`), whose signatures are schemes over `Ty` that the profile's `Ty` node cannot spell. -/
+`OCaml5.Eff.checkAtoms` checks target arm coverage against the complete enum, then checks
+each concrete target row/probe against `nativeAtomTy`. Its scheme implementations remain
+finite checked transcriptions; a passing probe is not a universal translation theorem.
+`arity` is null for a variadic atom, and `args`/`answer` are null for schemes. -/
+
 def atomJs : String × Option Nat × Option (List Effect4.Program.Ty × Effect4.Program.Ty) → String
   | (name, arity, mono) =>
     obj [ ("name", lit name)
@@ -533,8 +536,7 @@ def atomJs : String × Option Nat × Option (List Effect4.Program.Ty × Effect4.
 
 /-- Name, arity and monomorphic signature of every pure atom, in `nativeAtom`'s own order. -/
 def atomRows : List (String × Option Nat × Option (List Effect4.Program.Ty × Effect4.Program.Ty)) :=
-  (OCaml5.Eff.monoAtoms.map fun (n, args, answer) => (n, some args.length, some (args, answer)))
-  ++ [("pair", some 2, none), ("fst", some 1, none), ("snd", some 1, none), ("strings", none, none)]
+  Effect4.Program.NativeAtom.all.map fun atom => (atom.name, atom.arity, atom.mono)
 
 /-- The payload: address, heads, atoms and entries, as one line of JSON. -/
 def payload (address : String) : String :=

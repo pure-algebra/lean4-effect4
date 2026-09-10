@@ -1,5 +1,6 @@
 import Effect4.Machine.Key
 import Effect4.Machine.Supervision
+import Effect4.Program.Ty
 
 /-!
 # Syntax.Eff — the Effect TS program AST (lane A1 of the AST relation)
@@ -35,120 +36,20 @@ namespace Effect4.Program
 
 open Effect4 (ServiceKey)
 
-/-! ## The type language
 
-`Ty` is the type language of the programs this tree prints: the wire types a service row
-spells plus what an `Effect<A, E, R>` needs and a row never spells: `never`, the `Exit`,
-`Cause` and `Fiber` handles, and unions of error types. `render` is its TypeScript spelling;
-the codegen layer reads that and adds nothing. Unions are canonical through `join`: members
-sorted by a structural key, no duplicates, right-nested, `never` the empty union. -/
 
-inductive Ty
-  | never
-  | unit
-  | nat
-  | int
-  | string
-  | bool
-  | handle (target : String)
-  | option (inner : Ty)
-  | list (inner : Ty)
-  | prod (left right : Ty)
-  | except (error value : Ty)
-  /-- `Exit.Exit<A, E>`: what `Effect.exit` and `Fiber.await` answer. -/
-  | exitOf (value error : Ty)
-  /-- `Cause.Cause<E>`: what a `catchCause` handler receives. -/
-  | causeOf (error : Ty)
-  /-- `Fiber.Fiber<A, E>`: what a fork answers. -/
-  | fiberOf (value error : Ty)
-  | union (left right : Ty)
-deriving DecidableEq, Repr
-
-namespace Ty
-
-/-- The TypeScript spelling. rc.112 has no `Either`: an `except` answer is the data reading
-`Result.Result<A, E>`; a `handle` is an opaque host type whose spelling is carried verbatim. -/
-def render : Ty → String
-  | .never => "never"
-  | .unit => "void"
-  | .nat | .int => "number"
-  | .string => "string"
-  | .bool => "boolean"
-  | .handle target => target
-  | .option inner => "Option.Option<" ++ render inner ++ ">"
-  | .list inner => "ReadonlyArray<" ++ render inner ++ ">"
-  | .prod left right => "readonly [" ++ render left ++ ", " ++ render right ++ "]"
-  | .except error value => "Result.Result<" ++ render value ++ ", " ++ render error ++ ">"
-  | .exitOf value error => "Exit.Exit<" ++ render value ++ ", " ++ render error ++ ">"
-  | .causeOf error => "Cause.Cause<" ++ render error ++ ">"
-  | .fiberOf value error => "Fiber.Fiber<" ++ render value ++ ", " ++ render error ++ ">"
-  | .union left right => render left ++ " | " ++ render right
-
-/-- The members of a union, flattened at the top; `never` contributes none. -/
-def members : Ty → List Ty
-  | .never => []
-  | .union left right => members left ++ members right
-  | t => [t]
-
-/-- An injective structural key, for ordering union members: a constructor code, then the
-length-prefixed keys of the components; a handle's target by its UTF-8 bytes
-(`String.toUTF8` is the representation; `String.toList` and the string order reach
-`Classical.choice` on this toolchain, so no member is ordered by its rendering). -/
-def key : Ty → List Nat
-  | .never => [0]
-  | .unit => [1]
-  | .nat => [2]
-  | .int => [3]
-  | .string => [4]
-  | .bool => [5]
-  | .handle target => 6 :: target.toUTF8.data.toList.map UInt8.toNat
-  | .option inner => 7 :: key inner
-  | .list inner => 8 :: key inner
-  | .prod left right => 9 :: (key left).length :: key left ++ key right
-  | .except error value => 10 :: (key error).length :: key error ++ key value
-  | .exitOf value error => 11 :: (key value).length :: key value ++ key error
-  | .causeOf error => 12 :: key error
-  | .fiberOf value error => 13 :: (key value).length :: key value ++ key error
-  | .union left right => 14 :: (key left).length :: key left ++ key right
-
-/-- Lexicographic order on keys, as a Boolean. -/
-def ltKey : List Nat → List Nat → Bool
-  | [], [] => false
-  | [], _ :: _ => true
-  | _ :: _, [] => false
-  | a :: as, b :: bs => if a < b then true else if b < a then false else ltKey as bs
-
-/-- Insert into a list sorted by key, without duplicates. -/
-def insertMember (t : Ty) : List Ty → List Ty
-  | [] => [t]
-  | u :: rest =>
-    if t = u then u :: rest
-    else if ltKey t.key u.key then t :: u :: rest
-    else u :: insertMember t rest
-
-/-- A right-nested union of the given members; none is `never`. -/
-def ofMembers : List Ty → Ty
-  | [] => .never
-  | [t] => t
-  | t :: rest => .union t (ofMembers rest)
-
-/-- The canonical union of two types. -/
-def join (a b : Ty) : Ty :=
-  ofMembers ((members a ++ members b).foldl (fun acc t => insertMember t acc) [])
-
-def isNever : Ty → Bool
-  | .never => true
+/-- The closed error language represented without payload loss by `Err` (DI-62).
+`never` admits no values; unions admit only represented columns. Defects and interruptions
+remain outside this error language. -/
+def supportedErrTy : Ty → Bool
+  | .never | .nat | .string => true
+  | .prod a b => decide (a = .string ∧ b = .string)
+  | .union l r => supportedErrTy l && supportedErrTy r
   | _ => false
 
-/-- The `Scope` service handle; its spelling is written once, here. -/
-def scopeTarget : String := "Scope.Scope"
-def scope : Ty := .handle scopeTarget
-
-/-- A context handle; its spelling is written once, here. -/
-def contextTarget : String := "Context.Context<unknown>"
-def context : Ty := .handle contextTarget
-
-end Ty
+/-- Failure introduction compares the closed error profile after deep normalization.
+The raw support predicate remains available for exact image proofs. -/
+def admittedErrTy (t : Ty) : Bool := supportedErrTy t.normalize
 
 /-! ## Rows: the perform alphabet's declarations
 
@@ -208,6 +109,23 @@ structure Row where
   typeArgs : List String := []
   registration : Registration := .deferred
 deriving DecidableEq, Repr
+
+namespace Row
+
+/-- The transient linked view of a raw row. Identity, spelling, call shape, registration,
+requirements and provenance stay unchanged; only the three type columns are canonicalized. -/
+def normalizeTypes (row : Row) : Row :=
+  { row with
+    request := row.request.normalize
+    answer := row.answer.normalize
+    error := row.error.normalize }
+
+@[simp] theorem normalizeTypes_idem (row : Row) :
+    row.normalizeTypes.normalizeTypes = row.normalizeTypes := by
+  cases row
+  simp only [normalizeTypes, Ty.normalize_idem]
+
+end Row
 
 /-! ## Values -/
 

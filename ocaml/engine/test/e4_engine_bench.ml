@@ -321,7 +321,7 @@ let rec forkn_then (n : int) (tail : Ty.eff) : Ty.eff =
         forkn_then (n - 1) tail )
 
 (* `git:14e6835:src/OCaml5/Bridge.lean:48-51`'s `pTwo` -- the program route 1's domain sweep ran --
-   transcribed so the sweep is like-for-like.  `Bridge.lean:43`'s `forkOptions` is
+   transcribed so the sweep is like-for-like.  `git:14e6835:src/OCaml5/Bridge.lean:43`'s `forkOptions` is
    `{startImmediately := false, daemon := false, maskMode := .inherit}`, i.e. {!fork_opts}.
    The BYTE GOLDEN of the same name is a different program: measured below, 41 trace rows
    against this one's 43, and 4 host decisions under the event-loop rule against 3. *)

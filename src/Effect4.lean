@@ -22,10 +22,12 @@ import Effect4.Store.Val
 -- The shape-free exact-image trait (U0, 2026-09-07): the views of the shared carrier the
 -- Machine layer uses without naming a `Shape`; `Canonical.image` is the bridge.
 import Effect4.Store.Image
+import Effect4.Store.Image.Containers
 import Effect4.Store.Digest
 import Effect4.Store.Kind
 import Effect4.Store.Shape
 import Effect4.Store.Canonical
+import Effect4.Store.RowCanonical
 import Effect4.Store.Node
 import Effect4.Store.Store
 import Effect4.Store.Word
@@ -154,6 +156,7 @@ import Effect4.Program.Compile
 -- The target profile as data and as specification (DB-09's three parts; S6a): reachable from
 -- this root, imported by nothing in the API, so the library-root gate sees it here.
 import Effect4.Program.Profile
+import Effect4.Program.HostBoundary
 -- The provision algebra (docs/research/2026-09-04-provision-algebra.md): `Row.diff`, the
 -- layer signature `LayerTy` and its laws, the layer term `LayerTerm` over `Eff` bodies,
 -- `App` (`Effect.provide`), the build specification with its totality theorem, and the
@@ -178,6 +181,7 @@ import Effect4.Program.Wire
 -- The application face: one module, the whole pipeline (type, print, compile,
 -- run; the Schema syntax), answering syntax and never text. Import this.
 import Effect4.Api
+import Effect4.Api.HostSession
 -- Foreign-source ingestion tables and constructed target spellings.
 import Effect4.Ingest.Taxonomy
 import Effect4.Codegen.Forms

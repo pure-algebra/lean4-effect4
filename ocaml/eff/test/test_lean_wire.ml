@@ -13,9 +13,8 @@
    L2  every <name>.hex decodes exactly (no trailing bytes, no repairs);
    L3  re-encoding the decoded program reproduces Lean's bytes exactly;
    L4  the JSON printer and the checker run on it (the type is printed for the record);
-   L5  for the programs the two corpora define identically (p42, pBind, pFork, pAwait — read
-       off src/Effect4/Program/Wire.lean §Corpus against src/OCaml5/Tools/EffGen.lean
-       §Corpus), Lean's bytes are byte for byte this library's goldens/<name>.bin. Where a
+   L5  for the programs the two corpora define identically (the producer compares actual
+       Eff values and emits same-programs.txt, independently checked against decoded values), Lean's bytes are byte for byte this library's goldens/<name>.bin. Where a
        name is shared but the Lean definition differs (pGen, pCatch), the comparison is
        reported, not asserted.
 
@@ -82,9 +81,10 @@ let first_diff (a : string) (b : string) : int option =
 let byte_at (s : string) (i : int) : string =
   if i < String.length s then Printf.sprintf "%02x" (Char.code s.[i]) else "<end>"
 
-(* The names whose Lean definition in Wire.lean §Corpus is the same term as the one
-   EffGen.lean §Corpus writes to goldens/<name>.bin. *)
-let same_program = [ "p42"; "pBind"; "pFork"; "pAwait" ]
+(* Produced by comparing actual Eff values in both Lean corpora. *)
+let same_program =
+  read_file (Filename.concat dir "same-programs.txt") |> String.split_on_char '\n'
+  |> List.filter (fun name -> name <> "")
 
 let words (s : string) : string list =
   String.split_on_char ' ' s |> List.filter (fun w -> w <> "")
@@ -117,25 +117,9 @@ let () =
     let family key names =
       check (Printf.sprintf "manifest %s is this library's constructor order" key) (line key = Some names)
     in
-    check "the Lean manifest has 19 lines" (List.length manifest = 19);
-    family "Lit" Eff_types.ctor_names_lit;
-    family "Term" Eff_types.ctor_names_term;
-    family "Terms" Eff_types.ctor_names_terms;
-    family "CauseTerm" Eff_types.ctor_names_cause_term;
-    family "FnName" Eff_types.ctor_names_fn_name;
-    family "FinalizerStrategy" Eff_types.ctor_names_finalizer_strategy;
-    family "NativeOp" Eff_types.ctor_names_native_op;
-    family "MaskMode" Eff_types.ctor_names_mask_mode;
-    family "ObserverMode" Eff_types.ctor_names_observer_mode;
-    family "ForkOptions" Eff_types.field_names_fork_options;
-    family "ServiceKey" Eff_types.field_names_service_key;
-    family "Eff" Eff_types.ctor_names_eff;
-    family "LayerTerm" Eff_types.ctor_names_layer_term;
-    family "Stmt" Eff_types.ctor_names_stmt;
-    family "Stmts" Eff_types.ctor_names_stmts;
-    family "Effs" Eff_types.ctor_names_effs;
-    family "ActionTerm" Eff_types.ctor_names_action_term;
-    family "LayerTerms" Eff_types.ctor_names_layer_terms;
+    check "manifest covers the shared selected description"
+      (List.length manifest = List.length Eff_layout.wire_families + 1);
+    List.iter (fun (name, fields) -> family name fields) Eff_layout.wire_families;
     let tags =
       match line "tags" with
       | None -> []
@@ -180,6 +164,8 @@ let () =
             | None -> "(no golden of that name)"
             | Some b ->
               let same = List.mem name same_program in
+              check (name ^ ": common-program data matches actual decoded identity")
+                (same = (Eff_wire.decode_program_exact b = Some p));
               if same then check (name ^ ": Lean's bytes are this library's golden") (b = bytes);
               (match first_diff b bytes with
                | None -> "identical"

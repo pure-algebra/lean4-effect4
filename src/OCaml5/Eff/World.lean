@@ -1,4 +1,5 @@
 import Lean
+import Tools.ProgramStructure
 import Effect4.Program.Native
 
 /-!
@@ -37,6 +38,8 @@ inductive OTy
   | list (a : OTy)
   | prod (a b : OTy)
   | named (n : String)
+  /-- Strictly ascending ServiceKey list: proof-free bytes, checked at the boundary. -/
+  | requirements
 deriving Repr, BEq, Inhabited
 
 mutual
@@ -49,6 +52,7 @@ partial def OTy.render : OTy → String
   | .list a => a.renderArg ++ " list"
   | .prod a b => a.renderArg ++ " * " ++ b.renderArg
   | .named n => n
+  | .requirements => "service_key list"
 /-- As a constructor argument or a type-constructor argument: products parenthesised. -/
 partial def OTy.renderArg : OTy → String
   | .prod a b => "(" ++ OTy.render (.prod a b) ++ ")"
@@ -83,60 +87,30 @@ def natOp : OTy := .named "native_op"
 
 /-- The families, grouped as the OCaml `type … and …` groups are emitted: a Lean mutual block
 is one group. Order is dependency order. -/
-def blocks : List (List Spec) :=
-  [ [⟨`Effect4.Program.Ty, "ty", []⟩]
-  , [⟨`Effect4.Program.Lit, "lit", []⟩]
-  , [⟨`Effect4.Program.Term, "term", []⟩, ⟨`Effect4.Program.Terms, "terms", []⟩]
-  , [⟨`Effect4.Program.CauseTerm, "cause_term", []⟩]
-  , [⟨`Effect4.Supervision.MaskMode, "mask_mode", []⟩]
-  , [⟨`Effect4.Supervision.ForkOptions, "fork_options", []⟩]
-  , [⟨`Effect4.Supervision.ObserverMode, "observer_mode", []⟩]
-  , [⟨`Effect4.FinalizerStrategy, "finalizer_strategy", []⟩]
-  , [⟨`Effect4.Machine.FnName, "fn_name", []⟩]
-  , [⟨`Effect4.Program.NativeOp, "native_op", []⟩]
-  -- the service key before the `Eff` group since the join (2026-09-07): `provideLayer`,
-  -- `service`, `provideService` and `LayerTerm` carry a `ServiceKey`
-  , [⟨`Effect4.ServiceName, "service_name", []⟩]
-  , [⟨`Effect4.ServiceTypeCode, "service_type_code", []⟩]
-  , [⟨`Effect4.ServiceKey, "service_key", []⟩]
-  , [ ⟨`Effect4.Program.Eff, "eff", [natOp]⟩, ⟨`Effect4.Program.Stmt, "stmt", [natOp]⟩
-    , ⟨`Effect4.Program.Stmts, "stmts", [natOp]⟩, ⟨`Effect4.Program.Effs, "effs", [natOp]⟩
-    , ⟨`Effect4.Program.ActionTerm, "action_term", [natOp]⟩
-    , ⟨`Effect4.Program.LayerTerm, "layer_term", [natOp]⟩
-    -- the host rows slice (2026-09-08): the spine of `LayerTerm.mergeAll`
-    , ⟨`Effect4.Program.LayerTerms, "layer_terms", [natOp]⟩ ]
-  , [⟨`Effect4.Program.RowKind, "row_kind", []⟩]
-  , [⟨`Effect4.Program.RowShape, "row_shape", []⟩]
-  , [⟨`Effect4.Program.Registration, "registration", []⟩]
-  , [⟨`Effect4.Program.Row, "row", []⟩]
-  , [⟨`Effect4.Program.EffTy, "eff_ty", []⟩] ]
+def projectSpec (spec : Tools.ProgramStructure.Spec) : Spec :=
+  ⟨spec.leanName, spec.label, spec.parameters.map fun name =>
+    .named ((Tools.ProgramStructure.allSpecs.find? (·.leanName == name)).map (·.label) |>.getD name.toString)⟩
+
+/-- Target grouping projects the single selected source inventory. -/
+def blocks : List (List Spec) := Tools.ProgramStructure.blocks.map (·.map projectSpec)
 
 def allSpecs : List Spec := blocks.flatten
 
-/-- The carrier of a Lean type expression. `Effect4.Row α` (a canonical list with a proof
-field) is carried as `α list`: the one non-structural rule, for `EffTy.requires`. -/
-partial def ocamlTy (pm : List (FVarId × OTy)) (e : Expr) : MetaM OTy := do
-  let e ← whnfR e
-  match e with
-  | .fvar id =>
-    match pm.find? (·.1 == id) with
-    | some (_, t) => pure t
-    | none => throwError "EffGen: a field mentions a parameter with no OCaml carrier: {e}"
-  | _ =>
-    let fn := e.getAppFn
-    let args := e.getAppArgs
-    let .const n _ := fn | throwError "EffGen: no OCaml carrier for {e}"
-    if n == ``Nat then pure .int
-    else if n == ``Bool then pure .bool
-    else if n == ``String then pure .string
-    else if n == ``Unit || n == ``PUnit then pure .unit
-    else if n == ``Option then pure (.option (← ocamlTy pm args[0]!))
-    else if n == ``List then pure (.list (← ocamlTy pm args[0]!))
-    else if n == ``Prod then pure (.prod (← ocamlTy pm args[0]!) (← ocamlTy pm args[1]!))
-    else if n == `Effect4.Row then pure (.list (← ocamlTy pm args[0]!))
-    else match allSpecs.find? (·.leanName == n) with
-      | some s => pure (.named s.oname)
-      | none => throwError "EffGen: no OCaml carrier for {e} (head {n})"
+/-- The only target-specific erasures; unsupported canonical row elements refuse. -/
+def projectShape (path : String) : Tools.ProgramStructure.Shape → Except String OTy
+  | .nat => .ok .int
+  | .bool => .ok .bool
+  | .string => .ok .string
+  | .unit => .ok .unit
+  | .option a => return .option (← projectShape path a)
+  | .list a => return .list (← projectShape path a)
+  | .prod a b => return .prod (← projectShape path a) (← projectShape path b)
+  | .canonicalRow (.nominal `Effect4.ServiceKey []) => .ok .requirements
+  | .canonicalRow _ => .error ("EffGen: unsupported canonical row at " ++ path)
+  | .nominal name _ =>
+    match Tools.ProgramStructure.allSpecs.find? (·.leanName == name) with
+    | some spec => .ok (.named spec.label)
+    | none => .error ("EffGen: unselected nominal at " ++ path ++ ": " ++ name.toString)
 
 structure Ctor where
   name : Name
@@ -152,27 +126,17 @@ structure Family where
 /-- `Effect4.Program.Term`, unambiguous beside `Lean.Term`. -/
 abbrev PTerm := Effect4.Program.Term
 
-def readFamily (spec : Spec) : MetaM Family := do
-  let env ← getEnv
-  let info ← getConstInfoInduct spec.leanName
-  let isStruct := isStructure env spec.leanName
-  let ctors ← info.ctors.mapM fun c => do
-    let ci ← getConstInfoCtor c
-    forallTelescope ci.type fun xs _ => do
-      let pm := (List.range info.numParams).filterMap fun i =>
-        match spec.params[i]? with
-        | some t => some (xs[i]!.fvarId!, t)
-        | none => none
-      let mut args : Array (String × OTy) := #[]
-      for f in xs[info.numParams:] do
-        let t ← inferType f
-        if ← isProp t then continue
-        let nm ← f.fvarId!.getUserName
-        args := args.push (nm.toString, ← ocamlTy pm t)
-      pure { name := c, short := shortName c, args := args.toList }
-  pure { spec, isStruct, ctors }
+def projectFamily (family : Tools.ProgramStructure.Family) : MetaM Family := do
+  let ctors ← family.constructors.mapM fun ctor => do
+    let args ← ctor.fields.mapM fun field =>
+      match projectShape s!"{family.spec.leanName}.{field.name}" field.shape with
+      | .ok shape => pure (field.name, shape)
+      | .error message => throwError message
+    pure { name := ctor.name, short := shortName ctor.name, args : Ctor }
+  pure { spec := projectSpec family.spec, isStruct := family.isStruct, ctors }
 
-def readBlocks : MetaM (List (List Family)) := blocks.mapM (·.mapM readFamily)
+def readBlocks : MetaM (List (List Family)) := do
+  (← Tools.ProgramStructure.readBlocks).mapM (·.mapM projectFamily)
 
 
 end OCaml5.Eff

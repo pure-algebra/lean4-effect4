@@ -327,8 +327,8 @@ battery pins them at the fixture instances by `#guard` instead
 | --- | --- |
 | `Ty.join_comm` | `Ty.join a b = Ty.join b a` |
 | `Ty.join_assoc` | `Ty.join (Ty.join a b) c = Ty.join a (Ty.join b c)` |
-| `Ty.join_idem` | `Ty.join a a = a` for `a` with no top-level union |
-| `Ty.join_never` | `Ty.join a .never = a` and `Ty.join .never a = a` |
+| `Ty.join_idem` | `Ty.join a a = Ty.normalize a`; raw equality requires `Ty.Canonical a` |
+| `Ty.join_never` | `Ty.join a .never = Ty.normalize a` and `Ty.join .never a = Ty.normalize a`; raw equality requires `Ty.Canonical a` |
 | `Ty.sub_join_left` | `Ty.Sub a (Ty.join a b)` |
 | `Ty.sub_trans` | `Ty.Sub a b → Ty.Sub b c → Ty.Sub a c` |
 | `Ty.minus_sub` | `Ty.Sub a b ↔ (Ty.minus a b).isNever = true` |

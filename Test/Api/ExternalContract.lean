@@ -13,7 +13,8 @@ def row (name : String) (answer : Ty) (error : Ty := .never) : Row :=
     request := .nat, answer, error, cite := "" }
 
 def table : RowTable := [row "query" .nat, row "cell" NativeOp.refTy,
-  row "flag" .bool, row "tagged" .nat .nat, row "sql" .nat (.prod .string .string)]
+  row "flag" .bool, row "tagged" .nat .nat, row "sql" .nat (.prod .string .string),
+  row "text" .nat .string]
 
 #guard LawfulTable table
 
@@ -118,5 +119,26 @@ def failed : Completion Val Err Defect FiberId Ann :=
 #print axioms Effect4.Program.external_oracle_typed
 #print axioms Effect4.Program.mintedIn_iff_MintedIn
 #print axioms Effect4.Program.replayCheckedFrom_answersValid
+
+/-- DI-62: a text failure is checked against an explicit text error column. -/
+def failedText : Completion Val Err Defect FiberId Ann :=
+  .ofExit (.failure (Cause.fail (.text "lost")))
+#guard refusal (program 5) [Api.evaluate] [failedText] = none
+#guard refusal (program 5) [Api.evaluate, .answerAsync Api.root 0 failedText] = none
+#guard (Api.run (program 5) 1000 [] [failedText] table).exit =
+  some (.failure (Cause.fail (.text "lost")))
+#guard refusal (program 3) [Api.evaluate, .answerAsync Api.root 0 failedText] =
+  some (.errorType Api.root 0 .nat)
+#guard (refusal (program 4) [Api.evaluate] [failedText]).isSome
+#guard refusal (program 5) [Api.evaluate,
+  .answerAsync Api.root 0 (.ofExit (.failure (Cause.fail (.tag 1))))] =
+  some (.errorType Api.root 0 .string)
+#guard refusal (program 5) [Api.evaluate,
+  .answerAsync Api.root 0 (.ofExit (.failure (Cause.fail .boom)))] =
+  some (.errorType Api.root 0 .string)
+#guard refusal (program 5) [Api.evaluate,
+  .answerAsync Api.root 0 (.ofExit (.failure
+    (Cause.combine (Cause.fail (.text "lost")) (Cause.fail (.tag 1)))))] =
+  some (.errorType Api.root 0 .string)
 
 end Test.Api.ExternalContract

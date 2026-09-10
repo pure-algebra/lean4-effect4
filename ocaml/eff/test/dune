@@ -13,6 +13,11 @@
  (modules prop_wire)
  (libraries effect4_eff))
 
+(test
+ (name test_scoped_typing)
+ (modules test_scoped_typing)
+ (libraries effect4_eff))
+
 ; The two frames the shared value foundation adds on top of Canonical.lean's ten: ref (11)
 ; and handle (12), the last two constructors of Effect4.Store.Val. Its two goldens
 ; (goldens/val_handle.hex, goldens/val_ref.hex) are HAND-DERIVED from Val.lean's encoder and
@@ -32,3 +37,35 @@
  (modules test_lean_wire)
  (libraries effect4_eff)
  (deps (glob_files %{project_root}/goldens/*)))
+
+; DI-62: compile a supported witness battery, then require each Boolean introduction
+; to fail for its own type mismatch rather than an unavailable module or tool.
+(test
+ (name test_error_typing)
+ (modules test_error_typing)
+ (libraries effect4_eff))
+
+(rule
+ (alias runtest)
+ (deps
+  error_witness_controls.sh
+  (glob_files error_witness_controls/*.ml)
+  ../.effect4_eff.objs/byte/eff_typed.cmi
+  ../.effect4_eff.objs/byte/eff_types.cmi)
+ (action (run bash %{dep:error_witness_controls.sh} %{ocamlc} ../.effect4_eff.objs/byte)))
+
+(test
+ (name test_metadata)
+ (modules test_metadata)
+ (libraries effect4_eff)
+ (deps (glob_files %{project_root}/goldens/*)))
+
+(test
+ (name test_native_queries)
+ (modules test_native_queries)
+ (libraries effect4_eff))
+
+(test
+ (name test_type_normalization)
+ (modules test_type_normalization)
+ (libraries effect4_eff))

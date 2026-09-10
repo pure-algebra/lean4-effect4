@@ -175,16 +175,22 @@ let rand_key () =
 
 let rand_list f = List.init (ri 4) (fun _ -> f ())
 
+(* Requirement rows are canonical sets in the Lean source image. Invalid ordering and
+   duplicates are tested separately by test_metadata; round-trip samples stay in-domain. *)
+let rand_requirements () =
+  let key k = k.service_key_name.service_name_value, k.service_key_service.service_type_code_value in
+  List.sort_uniq (fun a b -> compare (key a) (key b)) (rand_list rand_key)
+
 let rand_row () =
   { row_name = rand_string (); row_spelling = rand_string ();
     row_shape = pick [ Row_shape_call; Row_shape_value; Row_shape_tupleCall; Row_shape_method ]; row_trailing = rand_list rand_string;
     row_kind = pick [ Row_kind_sync; Row_kind_async; Row_kind_program ];
     row_request = rand_ty 2; row_answer = rand_ty 2; row_error = rand_ty 2;
-    row_requires = rand_list rand_key; row_cite = rand_string ();
+    row_requires = rand_requirements (); row_cite = rand_string ();
     row_typeArgs = rand_list rand_string;
     row_registration = pick [ Registration_deferred; Registration_external ] }
 
-let rand_eff_ty () = { eff_ty_answer = rand_ty 3; eff_ty_error = rand_ty 3; eff_ty_requires = rand_list rand_key }
+let rand_eff_ty () = { eff_ty_answer = rand_ty 3; eff_ty_error = rand_ty 3; eff_ty_requires = rand_requirements () }
 
 let checks = ref 0
 let failures = ref 0

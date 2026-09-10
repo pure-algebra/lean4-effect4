@@ -71,3 +71,27 @@ def genDecode (b : Bytes) : Option (Eff NativeOp) :=
     (ProgramGen.CauseTermC.toValCauseTerm c) = some c
 
 end ProgramAcceptance
+
+namespace MetadataAcceptance
+open Effect4.Program
+
+-- Canonical requirement rows keep list frames but refuse duplicates and wrong order.
+def key1 : Effect4.ServiceKey := ⟨⟨1⟩, ⟨2⟩⟩
+def key2 : Effect4.ServiceKey := ⟨⟨1⟩, ⟨3⟩⟩
+def row : Effect4.Row Effect4.ServiceKey := ⟨[key1, key2], by decide⟩
+#guard Canonical.decode (α := Effect4.Row Effect4.ServiceKey) (Canonical.encode row) = some row
+#guard Canonical.decode (α := Effect4.Row Effect4.ServiceKey)
+  (Canonical.encode [key2, key1]) = none
+#guard Canonical.decode (α := Effect4.Row Effect4.ServiceKey)
+  (Canonical.encode [key1, key1]) = none
+#guard Canonical.decode (α := Effect4.Row Effect4.ServiceKey)
+  (Canonical.encode ([] : List Effect4.ServiceKey)) = some ⟨[], by decide⟩
+-- Selected metadata instances state universal image round trips; malformed framing refuses.
+#guard Canonical.decode (α := Ty) (Canonical.encode (Ty.option (.union .nat .string))) =
+  some (.option (.union .nat .string))
+#guard Canonical.decode (α := Ty) (Canonical.encode Ty.nat ++ [0]) = none
+#guard Canonical.decode (α := Ty) (Canonical.encode Ty.nat).dropLast = none
+#guard Canonical.ofVal (α := Ty) (.ctor 255 []) = none
+#guard Canonical.ofVal (α := Ty) (.ctor 2 [.unit]) = none
+
+end MetadataAcceptance

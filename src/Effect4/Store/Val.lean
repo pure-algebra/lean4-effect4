@@ -70,6 +70,66 @@ def ctor : UInt8 := 10
 def ref : UInt8 := 11
 /-- A live handle: the kind byte, then the allocation index as `nat` digits. -/
 def handle : UInt8 := 12
+
+/-- The finite frame alphabet; current explicit bytes remain the wire authority. -/
+inductive Code where
+  | bool | nat | string | list | pair | none | some | bytes | unit | ctor | ref | handle
+  deriving DecidableEq, Repr
+
+def Code.byte : Code → UInt8
+  | .bool => Tag.bool
+  | .nat => Tag.nat
+  | .string => Tag.string
+  | .list => Tag.list
+  | .pair => Tag.pair
+  | .none => Tag.none
+  | .some => Tag.some
+  | .bytes => Tag.bytes
+  | .unit => Tag.unit
+  | .ctor => Tag.ctor
+  | .ref => Tag.ref
+  | .handle => Tag.handle
+
+def Code.spelling : Code → String
+  | .bool => "bool"
+  | .nat => "nat"
+  | .string => "string"
+  | .list => "list"
+  | .pair => "pair"
+  | .none => "none"
+  | .some => "some"
+  | .bytes => "bytes"
+  | .unit => "unit"
+  | .ctor => "ctor"
+  | .ref => "ref"
+  | .handle => "handle"
+
+def codes : List Code := [.bool, .nat, .string, .list, .pair, .none, .some,
+  .bytes, .unit, .ctor, .ref, .handle]
+
+theorem mem_codes (code : Code) : code ∈ codes := by cases code <;> decide
+
+def ofByte (byte : UInt8) : Option Code := codes.find? (fun code => code.byte == byte)
+
+abbrev ofByte? := ofByte
+
+theorem ofByte_byte (code : Code) : ofByte code.byte = Option.some code := by
+  cases code <;> decide
+
+theorem byte_injective {a b : Code} (h : a.byte = b.byte) : a = b := by
+  have eq := congrArg ofByte h
+  rw [ofByte_byte, ofByte_byte] at eq
+  exact Option.some.inj eq
+
+theorem bytes_distinct : (codes.map Code.byte).Nodup := by decide
+
+def all : List (String × UInt8) := codes.map fun code => (code.spelling, code.byte)
+
+#print axioms mem_codes
+#print axioms ofByte_byte
+#print axioms byte_injective
+#print axioms bytes_distinct
+
 end Tag
 
 /-- The tag is the first byte of every frame. -/

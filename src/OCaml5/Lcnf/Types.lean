@@ -1,4 +1,5 @@
 import Lean
+import Conform.Source.Description
 import OCaml5.Ml.Syntax
 import OCaml5.Lcnf.Naming
 import OCaml5.Lcnf.Externs
@@ -76,8 +77,8 @@ def unknownTypeName : String := "lcnf_unknown"
 /-- What the generator learned about one Lean type constant. -/
 structure TypeInfo where
   leanName : Name
-  /-- The OCaml type parameters, in Lean parameter order (every parameter, so that the
-  arity agrees with the mono types `Translate` annotates with). -/
+  /-- Supported type/carrier parameters in source order; explicit dictionary policy matches
+  applications and constructor declarations. Term dictionaries remain computational. -/
   params : List String
   /-- The declaration to emit in full. -/
   decl : Ml.TypeDecl
@@ -115,7 +116,7 @@ def trivialFieldIdx? (n : Name) : MetaM (Option Nat) := do
     if info.isUnsafe || info.isRec then return none
     let [ctorName] := info.ctors | return none
     let ci ← getConstInfoCtor ctorName
-    forallTelescopeReducing ci.type fun xs _ => do
+    Conform.Source.withConstructor ctorName fun _ xs => do
       let mut result := none
       for i in [:xs.size - info.numParams] do
         let x := xs[info.numParams + i]!
@@ -123,6 +124,22 @@ def trivialFieldIdx? (n : Name) : MetaM (Option Nat) := do
           if result.isSome then return none
           result := some i
       return result
+
+/-- OCaml type parameters are type binders. The one erased dictionary policy is `Row`'s
+order instance, which appears only in its erased ascending proof. Service universes retain
+the existing carrier interpretation. Other value or dictionary parameters refuse by name. -/
+def typeParameterIndices (owner : Name) (count : Nat) (type : Lean.Expr) : Except String (Array Nat) :=
+  go count 0 type #[]
+where
+  go : Nat → Nat → Lean.Expr → Array Nat → Except String (Array Nat)
+    | 0, _, _, out => .ok out
+    | k + 1, i, .forallE name domain body bi, out =>
+      if domain.isSort || domain.isConstOf `Effect4.ServiceUniverse then
+        go k (i + 1) body (out.push i)
+      else if owner == `Effect4.Row && bi == .instImplicit then
+        go k (i + 1) body out
+      else .error s!"{owner}: unsupported parameter {name} at {i}"
+    | _, _, _, _ => .error s!"{owner}: incomplete parameter telescope"
 
 /-- A field type, with the inductive's parameters as free variables, as an OCaml type. Returns
 the type constants it mentions and `none` when the shape could not be spelled. -/
@@ -167,7 +184,10 @@ partial def kernelTy (ex : Externs) (tn : TypeNames) (params : Std.HashMap FVarI
         let mut tys : Array Ml.Ty := #[]
         let mut refs : Array Name := #[]
         let mut ok := true
-        for a in args do
+        let info ← getConstInfo n
+        let .ok indices := typeParameterIndices n args.size info.type | return (none, #[])
+        for i in indices do
+          let a := args[i]!
           let (t, r) ← kernelTy ex tn params a
           refs := refs ++ r
           match t with
@@ -203,11 +223,15 @@ def externField (chain : List String) (owner : Name) (field : String) (t : Ml.Ty
 def typeInfo? (ex : Externs) (tn : TypeNames) (n : Name) : MetaM (Option TypeInfo) := do
   let env ← getEnv
   let some (.inductInfo info) := env.find? n | return none
+  let indices ← match typeParameterIndices n info.numParams info.type with
+    | .ok indices => pure indices
+    | .error message => throwError message
   -- the parameter names, from the type's own telescope; made unique
-  let pnames ← forallTelescope info.type fun xs _ => do
+  let pnames ← forallBoundedTelescope info.type info.numParams fun xs _ => do
     let mut seen : Std.HashSet String := {}
     let mut out : Array String := #[]
-    for x in xs[:info.numParams] do
+    for i in indices do
+      let x := xs[i]!
       let base := tyVar (← x.fvarId!.getUserName)
       let mut v := base
       let mut i := 1
@@ -226,10 +250,10 @@ def typeInfo? (ex : Externs) (tn : TypeNames) (n : Name) : MetaM (Option TypeInf
   let mut usedFields : Array Name := #[]
   for ctorName in info.ctors do
     let ci ← getConstInfoCtor ctorName
-    let (ctor, fs, alias, r, u, uf) ← forallTelescope ci.type fun xs _ => do
+    let (ctor, fs, alias, r, u, uf) ← Conform.Source.withConstructor ctorName fun _ xs => do
       let mut pmap : Std.HashMap FVarId String := {}
-      for x in xs[:info.numParams], v in pnames do
-        pmap := pmap.insert x.fvarId! v
+      for i in indices, v in pnames do
+        pmap := pmap.insert xs[i]!.fvarId! v
       let mut args : Array Ml.Ty := #[]
       let mut fs : Array Ml.Field := #[]
       let mut alias : Option Ml.Ty := none

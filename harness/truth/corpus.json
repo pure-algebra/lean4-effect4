@@ -254,11 +254,7 @@
    "decl":
    "export const main: Effect.Effect<Exit.Exit<number, never>, never> = Effect.flatMap(Effect.forkChild(Effect.flatMap(Effect.yieldNowWith(0), (a0) => Effect.succeed(1)), { startImmediately: false, uninterruptible: \"inherit\" }), (a0) => Effect.flatMap(Effect.forkChild(Effect.flatMap(Effect.yieldNowWith(0), (a1) => Effect.succeed(2)), { startImmediately: false, uninterruptible: \"inherit\" }), (a1) => Effect.flatMap(Fiber.await(a1), (a2) => Fiber.await(a1))))\n"},
   {"wellTyped": true,
-   "type":
-   {"requiresEmpty": false,
-    "requires": [{"service": 0, "name": 0}],
-    "error": "never",
-    "answer": "number"},
+   "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 7}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -276,13 +272,9 @@
    "expr":
    "Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Effect.scoped(Effect.acquireRelease(Effect.succeed(7), (a1, a2) => Ref.set(a0, a1))), (a1) => Ref.get(a0)))",
    "decl":
-   "export const main = Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Effect.scoped(Effect.acquireRelease(Effect.succeed(7), (a1, a2) => Ref.set(a0, a1))), (a1) => Ref.get(a0)))\n"},
+   "export const main: Effect.Effect<number, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Effect.scoped(Effect.acquireRelease(Effect.succeed(7), (a1, a2) => Ref.set(a0, a1))), (a1) => Ref.get(a0)))\n"},
   {"wellTyped": true,
-   "type":
-   {"requiresEmpty": false,
-    "requires": [{"service": 0, "name": 0}],
-    "error": "never",
-    "answer": "number"},
+   "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 7}},
    "run":
    {"schedule":
@@ -326,7 +318,7 @@
    "expr":
    "Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Effect.scoped(Effect.forkChild(Effect.acquireRelease(Effect.succeed(7), (a1, a2) => Ref.set(a0, a1)), { startImmediately: false, uninterruptible: \"inherit\" })), (a1) => Effect.flatMap(Fiber.await(a1), (a2) => Ref.get(a0))))",
    "decl":
-   "export const main = Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Effect.scoped(Effect.forkChild(Effect.acquireRelease(Effect.succeed(7), (a1, a2) => Ref.set(a0, a1)), { startImmediately: false, uninterruptible: \"inherit\" })), (a1) => Effect.flatMap(Fiber.await(a1), (a2) => Ref.get(a0))))\n"},
+   "export const main: Effect.Effect<number, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Effect.scoped(Effect.forkChild(Effect.acquireRelease(Effect.succeed(7), (a1, a2) => Ref.set(a0, a1)), { startImmediately: false, uninterruptible: \"inherit\" })), (a1) => Effect.flatMap(Fiber.await(a1), (a2) => Ref.get(a0))))\n"},
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 7}},
@@ -679,8 +671,8 @@
    "export const main: Effect.Effect<number, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.provideService(Effect.flatMap(Effect.provide(Effect.service(Context.Service<number>(\"k7_4\")), Layer.mergeAll(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))), Layer.effect(Context.Service<number>(\"k5_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))), Layer.effect(Context.Service<number>(\"k7_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))))), (a1) => Ref.get(a0)), Context.Service<Ref.Ref<number>>(\"k6_7\"), a0))\n"},
   {"wellTyped": true,
    "type":
-   {"requiresEmpty": false,
-    "requires": [{"service": 0, "name": 0}],
+   {"requiresEmpty": true,
+    "requires": [],
     "error": "never",
     "answer": "readonly [Host.Resource, number]"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": [{"external": 0}, 1]}},
@@ -701,7 +693,7 @@
    "expr":
    "Effect.flatMap(Effect.scoped(Effect.acquireRelease(Host.acquire(), (a0, a1) => Host.close(a0))), (a0) => Effect.flatMap(Host.read(a0), (a1) => Effect.succeed(pair(a0, a1))))",
    "decl":
-   "export const main = Effect.flatMap(Effect.scoped(Effect.acquireRelease(Host.acquire(), (a0, a1) => Host.close(a0))), (a0) => Effect.flatMap(Host.read(a0), (a1) => Effect.succeed(pair(a0, a1))))\n"},
+   "export const main: Effect.Effect<readonly [Host.Resource, number], never> = Effect.flatMap(Effect.scoped(Effect.acquireRelease(Host.acquire(), (a0, a1) => Host.close(a0))), (a0) => Effect.flatMap(Host.read(a0), (a1) => Effect.succeed(pair(a0, a1))))\n"},
   {"wellTyped": true,
    "type":
    {"requiresEmpty": true, "requires": [], "error": "readonly [string, string]", "answer": "never"},
@@ -731,8 +723,8 @@
    "export const main: Effect.Effect<never, readonly [string, string]> = Effect.fail(pair(\"SqlError\", \"boom\"))\n"},
   {"wellTyped": true,
    "type":
-   {"requiresEmpty": false,
-    "requires": [{"service": 0, "name": 0}],
+   {"requiresEmpty": true,
+    "requires": [],
     "error": "readonly [string, string]",
     "answer": "ReadonlyArray<ReadonlyArray<readonly [string, string]>>"},
    "runSync":
@@ -757,7 +749,7 @@
    "expr":
    "Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.flatMap(a0.unsafe(\"CREATE TABLE t (a INTEGER, b TEXT)\", strings()), (a1) => Effect.flatMap(a0.unsafe(\"INSERT INTO t (a, b) VALUES (?, ?)\", strings(\"7\", \"\\\"x\\\"\")), (a2) => a0.unsafe(\"SELECT a, b FROM t\", strings())))))",
    "decl":
-   "export const main = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.flatMap(a0.unsafe(\"CREATE TABLE t (a INTEGER, b TEXT)\", strings()), (a1) => Effect.flatMap(a0.unsafe(\"INSERT INTO t (a, b) VALUES (?, ?)\", strings(\"7\", \"\\\"x\\\"\")), (a2) => a0.unsafe(\"SELECT a, b FROM t\", strings())))))\n"},
+   "export const main: Effect.Effect<ReadonlyArray<ReadonlyArray<readonly [string, string]>>, readonly [string, string]> = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.flatMap(a0.unsafe(\"CREATE TABLE t (a INTEGER, b TEXT)\", strings()), (a1) => Effect.flatMap(a0.unsafe(\"INSERT INTO t (a, b) VALUES (?, ?)\", strings(\"7\", \"\\\"x\\\"\")), (a2) => a0.unsafe(\"SELECT a, b FROM t\", strings())))))\n"},
   {"wellTyped": true,
    "type":
    {"requiresEmpty": true,
@@ -784,8 +776,8 @@
    "export const main: Effect.Effect<readonly [Option.Option<string>, boolean], readonly [string, string]> = Effect.flatMap(Kv.make(), (a0) => Effect.flatMap(a0.set(\"k\", \"1\"), (a1) => Effect.flatMap(a0.get(\"k\"), (a2) => Effect.flatMap(a0.has(\"k\"), (a3) => Effect.flatMap(a0.remove(\"k\"), (a4) => Effect.succeed(pair(a2, a3)))))))\n"},
   {"wellTyped": true,
    "type":
-   {"requiresEmpty": false,
-    "requires": [{"service": 0, "name": 0}],
+   {"requiresEmpty": true,
+    "requires": [],
     "error": "readonly [string, string]",
     "answer": "ReadonlyArray<ReadonlyArray<readonly [string, string]>>"},
    "runSync":
@@ -814,13 +806,9 @@
    "expr":
    "Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => a0.unsafe(\"SELECT a FROM missing\", strings())))",
    "decl":
-   "export const main = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => a0.unsafe(\"SELECT a FROM missing\", strings())))\n"},
+   "export const main: Effect.Effect<ReadonlyArray<ReadonlyArray<readonly [string, string]>>, readonly [string, string]> = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => a0.unsafe(\"SELECT a FROM missing\", strings())))\n"},
   {"wellTyped": true,
-   "type":
-   {"requiresEmpty": false,
-    "requires": [{"service": 0, "name": 0}],
-    "error": "never",
-    "answer": "string"},
+   "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "string"},
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": "recovered"}},
    "run":
    {"schedule": ["started 0", "exited 0 success"],
@@ -838,11 +826,11 @@
    "expr":
    "Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.catchCause(Effect.flatMap(a0.unsafe(\"SELECT a FROM missing\", strings()), (a1) => Effect.succeed(\"rows\")), (a1) => Effect.succeed(\"recovered\"))))",
    "decl":
-   "export const main = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.catchCause(Effect.flatMap(a0.unsafe(\"SELECT a FROM missing\", strings()), (a1) => Effect.succeed(\"rows\")), (a1) => Effect.succeed(\"recovered\"))))\n"},
+   "export const main: Effect.Effect<string, never> = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.catchCause(Effect.flatMap(a0.unsafe(\"SELECT a FROM missing\", strings()), (a1) => Effect.succeed(\"rows\")), (a1) => Effect.succeed(\"recovered\"))))\n"},
   {"wellTyped": true,
    "type":
-   {"requiresEmpty": false,
-    "requires": [{"service": 0, "name": 0}],
+   {"requiresEmpty": true,
+    "requires": [],
     "error": "never",
     "answer":
     "Exit.Exit<ReadonlyArray<ReadonlyArray<readonly [string, string]>>, readonly [string, string]>"},
@@ -876,11 +864,14 @@
    "expr":
    "Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.exit(a0.unsafe(\"SELECT a FROM missing\", strings()))))",
    "decl":
-   "export const main = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.exit(a0.unsafe(\"SELECT a FROM missing\", strings()))))\n"},
+   "export const main: Effect.Effect<Exit.Exit<ReadonlyArray<ReadonlyArray<readonly [string, string]>>, readonly [string, string]>, never> = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.exit(a0.unsafe(\"SELECT a FROM missing\", strings()))))\n"},
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "runSync":
-   {"sync": true, "exitKind": "die", "exit": {"failure": {"reasons": [{"die": "badName"}]}}},
+   {"sync": true,
+    "exitKind": "die",
+    "exit":
+    {"failure": {"reasons": [{"die": {"error": ["UnknownError", "no such table: missing"]}}]}}},
    "run":
    {"schedule": ["started 0", "exited 0 die"],
     "outcome": "finished",
@@ -902,17 +893,101 @@
     [{"parkedToken": null,
       "id": 0,
       "exited": true,
-      "exit": {"failure": {"reasons": [{"die": "badName"}]}}}],
+      "exit":
+      {"failure": {"reasons": [{"die": {"error": ["UnknownError", "no such table: missing"]}}]}}}],
     "fiberCount": 1,
     "exitKind": "die",
-    "exit": {"failure": {"reasons": [{"die": "badName"}]}},
-    "events": ["started 0", "exited 0 {\"failure\":{\"reasons\":[{\"die\":\"badName\"}]}}"]},
+    "exit":
+    {"failure": {"reasons": [{"die": {"error": ["UnknownError", "no such table: missing"]}}]}},
+    "events":
+    ["started 0",
+     "exited 0 {\"failure\":{\"reasons\":[{\"die\":{\"error\":[\"UnknownError\",\"no such table: missing\"]}}]}}"]},
    "name": "pSqlOrDie",
    "exprRefusal": null,
    "expr":
    "Effect.provide(Effect.service(Context.Service<number>(\"k8_4\")), Layer.orDie(Layer.effect(Context.Service<number>(\"k8_4\"), Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.flatMap(a0.unsafe(\"SELECT a FROM missing\", strings()), (a1) => Effect.succeed(1))))))",
    "decl":
-   "export const main: Effect.Effect<number, never> = Effect.provide(Effect.service(Context.Service<number>(\"k8_4\")), Layer.orDie(Layer.effect(Context.Service<number>(\"k8_4\"), Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.flatMap(a0.unsafe(\"SELECT a FROM missing\", strings()), (a1) => Effect.succeed(1))))))\n"}],
+   "export const main: Effect.Effect<number, never> = Effect.provide(Effect.service(Context.Service<number>(\"k8_4\")), Layer.orDie(Layer.effect(Context.Service<number>(\"k8_4\"), Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.flatMap(a0.unsafe(\"SELECT a FROM missing\", strings()), (a1) => Effect.succeed(1))))))\n"},
+  {"wellTyped": true,
+   "type": {"requiresEmpty": true, "requires": [], "error": "string", "answer": "never"},
+   "runSync":
+   {"sync": true, "exitKind": "fail", "exit": {"failure": {"reasons": [{"fail": "lost"}]}}},
+   "run":
+   {"schedule": ["started 0", "exited 0 fail"],
+    "outcome": "finished",
+    "internal": [],
+    "frames": 1,
+    "fibers":
+    [{"parkedToken": null,
+      "id": 0,
+      "exited": true,
+      "exit": {"failure": {"reasons": [{"fail": "lost"}]}}}],
+    "fiberCount": 1,
+    "exitKind": "fail",
+    "exit": {"failure": {"reasons": [{"fail": "lost"}]}},
+    "events": ["started 0", "exited 0 {\"failure\":{\"reasons\":[{\"fail\":\"lost\"}]}}"]},
+   "name": "pFailText",
+   "exprRefusal": null,
+   "expr": "Effect.fail(\"lost\")",
+   "decl": "export const main: Effect.Effect<never, string> = Effect.fail(\"lost\")\n"},
+  {"wellTyped": true,
+   "type": {"requiresEmpty": true, "requires": [], "error": "string", "answer": "never"},
+   "runSync":
+   {"sync": true, "exitKind": "fail", "exit": {"failure": {"reasons": [{"fail": "boom"}]}}},
+   "run":
+   {"schedule": ["started 0", "exited 0 fail"],
+    "outcome": "finished",
+    "internal": [],
+    "frames": 1,
+    "fibers":
+    [{"parkedToken": null,
+      "id": 0,
+      "exited": true,
+      "exit": {"failure": {"reasons": [{"fail": "boom"}]}}}],
+    "fiberCount": 1,
+    "exitKind": "fail",
+    "exit": {"failure": {"reasons": [{"fail": "boom"}]}},
+    "events": ["started 0", "exited 0 {\"failure\":{\"reasons\":[{\"fail\":\"boom\"}]}}"]},
+   "name": "pFailBoomText",
+   "exprRefusal": null,
+   "expr": "Effect.fail(\"boom\")",
+   "decl": "export const main: Effect.Effect<never, string> = Effect.fail(\"boom\")\n"},
+  {"wellTyped": true,
+   "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
+   "runSync":
+   {"sync": true,
+    "exitKind": "die",
+    "exit": {"failure": {"reasons": [{"die": {"error": "lost"}}]}}},
+   "run":
+   {"schedule": ["started 0", "exited 0 die"],
+    "outcome": "finished",
+    "internal":
+    ["contextSet 0",
+     "contextSet 0",
+     "finalizerProgram 0 fail",
+     "contextSet 0",
+     "finalizerProgram 0 fail",
+     "finalizerProgram 0 fail",
+     "finalizerProgram 0 die",
+     "contextSet 0",
+     "finalizerProgram 0 die"],
+    "frames": 90,
+    "fibers":
+    [{"parkedToken": null,
+      "id": 0,
+      "exited": true,
+      "exit": {"failure": {"reasons": [{"die": {"error": "lost"}}]}}}],
+    "fiberCount": 1,
+    "exitKind": "die",
+    "exit": {"failure": {"reasons": [{"die": {"error": "lost"}}]}},
+    "events":
+    ["started 0", "exited 0 {\"failure\":{\"reasons\":[{\"die\":{\"error\":\"lost\"}}]}}"]},
+   "name": "pTextOrDie",
+   "exprRefusal": null,
+   "expr":
+   "Effect.provide(Effect.service(Context.Service<number>(\"k4_4\")), Layer.orDie(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.fail(\"lost\"), (a0) => Effect.succeed(1)))))",
+   "decl":
+   "export const main: Effect.Effect<number, never> = Effect.provide(Effect.service(Context.Service<number>(\"k4_4\")), Layer.orDie(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.fail(\"lost\"), (a0) => Effect.succeed(1)))))\n"}],
  "hostRows":
  [{"typeArgs": [],
    "trailing": [],

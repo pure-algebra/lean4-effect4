@@ -1,0 +1,2 @@
+Effect4.Program.Ty (ty) inductive: never unit nat int string bool handle(string) list(ty) option(ty) prod(ty,ty) except(ty,ty) exitOf(ty,ty) causeOff(ty) fiberOf(ty,ty) union(ty,ty)
+Effect4.Program.Lit (lit) inductive: unit nat(int) bool(bool) str(string)

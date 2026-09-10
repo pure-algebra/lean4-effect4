@@ -32,18 +32,20 @@ cut-from: rev=<git describe --always --dirty> toolchain=<lean version> inputs=<s
 `tools/Tools/GeneratedStamp.lean` computes `inputs` from sorted import names and
 Lake `depHash` values across the import closure, current source hashes for that
 closure, the producer source, and explicit run-time inputs. Local diagnostic paths
-and logs are excluded. The current source hashes expose edits before a rebuild. The revision is informational and is never compared.
+and logs are excluded. Sources are resolved in the current workspace/package rather than at an absolute path
+left by a different checkout. Producers also compare Lake's recorded source hash against
+the resolved source before emitting a stamp; source edits require a rebuild. The revision is informational and is never compared.
 The stale check compares the input digest without regeneration. The drift check
 regenerates into temporary files and compares every output byte except the
 informational revision field. Data bytes are compared in full. Neither a compiler
 check nor a host test establishes that a committed output matches today's Lean source.
 
 `bash scripts/generate.sh` — with no argument or with `--all`, which name the same thing —
-runs the one named order (DI-33): **derived, eff, wire, cas, ts, readme**. Each family's
+runs the one named order (DI-33): **derived, specs, eff, wire, cas, ts, readme**. Each family's
 inputs are an earlier family's outputs, and `readme` is last because
 `bun ts/eff/ingest/render-readme.ts` reads three `.gen.ts` files that `ts` has just written;
 it is a host producer, so it writes `ts/eff/ingest/README.md` in place and its `--check` is
-its drift form. `--only derived|eff|wire|cas|ts|readme` selects one family; `--only lcnf` is
+its drift form. `--only derived|specs|eff|wire|cas|ts|readme` selects one family; `--only lcnf` is
 the explicit Phase 1 engine regeneration route and is not in the order. The entry point
 holds the Lean lane and gives each Lean invocation a 600-second timeout. It runs
 the producers every time. If only the informational revision differs, it retains
@@ -54,6 +56,15 @@ below and must be run in sequence by hand or through `bash scripts/check-truth.s
 the Lean half reads the committed tapes that the bun half re-records: the two producers are a
 fixed point, not a pipeline stage. Putting it in `--all` would let one run regenerate a tape
 and a corpus that had never been compared with each other.
+
+## Conform outputs
+
+`src/Effect4/Laws/Program/Typing/Specs.lean` is the committed ordinary specification
+projection. Its configuration (`tools/Conform/Effect4/specs.json`) and checker declarations
+are inputs, not generated output. Source descriptions and conformance reports are build
+artifacts under `.lake/conform/`; `scripts/check-conform.sh` produces them freshly and retains
+source/compiled-input hashes, process status and the exact generated files. The compiler
+profile's OCaml is an inspected execution artifact, not a replacement for `ocaml/gen`.
 
 ## Commands and current coverage
 
@@ -73,14 +84,16 @@ only word is *stamped* carries no claim that its committed bytes match a fresh r
 
 | Family | Producer command | Inputs | Consumers | Designated gate and present limit | Evidence (DI-32) |
 | --- | --- | --- | --- | --- | --- |
+| Typing specs | `bash scripts/generate.sh --only specs` | `Conform.Cli.EmitSpecs`, configured checker imports, `tools/Conform/Effect4/specs.json` | `Effect4.Laws.Program.Typing.Inversion` | `bash scripts/check-generated.sh`; fresh bytes plus ordinary Laws elaboration | reproduced; kernel checked |
 | Derived Json | `lake env lean -M4096 --run tools/Effect4Gen/Driver.lean --group Json` | `tools/Effect4Gen/manifest.json`, `tools/Effect4Gen/guards/json.lean`, `Effect4.Store.Canonical` | `Effect4.Store.Derived.Schema`, Effect4 library | `bash scripts/check-generated.sh`; fresh byte comparison, plus `lake build Test` for shapes | reproduced; tested |
 | Derived Schema | same driver, `--group Schema` | manifest, `tools/Effect4Gen/guards/schema.lean`, `Effect4.Store.Derived.Json` | Effect4 library | `bash scripts/check-generated.sh`; fresh byte comparison, plus `lake build Test` for shapes | reproduced; tested |
 | Derived Program | same driver, `--group Program` | manifest, `tools/Effect4Gen/guards/program.lean`, `Effect4.Program.Native`, `Effect4.Store.Canonical` | `Effect4.Api`, program wire | `bash scripts/check-generated.sh`; fresh byte comparison, plus `lake build Test` for shapes | reproduced; tested |
 | Derived Pin | same driver, `--group Pin` | manifest, `tools/Effect4Gen/guards/pin.lean`, `Effect4.Store.Pin`, `Effect4.Store.Node` | store | `bash scripts/check-generated.sh`; fresh byte comparison, plus `lake build Test` for shapes | reproduced; tested |
 | Eff | `lake env lean -M4096 --run src/OCaml5/Tools/EffGen.lean ocaml/eff` | `src/OCaml5/Eff/World.lean`, `src/OCaml5/Eff/Emit.lean`, imported Lean declarations | `effect4_eff`, `effect4_engine` | `bash scripts/check-generated.sh`; fresh byte comparison, plus `bash scripts/check-ocaml.sh dune-tests` | reproduced; tested |
-| Eff goldens | same EffGen command | `src/OCaml5/Eff/Goldens.lean` | `ocaml/eff/test/dune` | `bash scripts/check-generated.sh --stale` for provenance; `bash scripts/check-ocaml.sh dune-tests` for behavior | stamped; tested |
+| Engine structure | `python3 scripts/generate-engine-structure.py` (also run after Eff generation) | `ocaml/eff/program-structure.json`, actual `ocaml/engine/api_engine.ml`, parser/producer | `E4_program`, engine structural checks | fresh generated bytes and parser refusal controls; historical engine shortages remain explicit | migration in progress; no engine execution cutover |
+| Eff goldens | same EffGen command | `src/OCaml5/Eff/Goldens.lean` | `ocaml/eff/test/dune` | `bash scripts/check-generated.sh` for fresh bytes; `bash scripts/check-ocaml.sh dune-tests` for behavior | reproduced; tested |
 | Wire goldens | `lake env lean -M4096 --run src/OCaml5/Tools/EffWire.lean ocaml/goldens/eff` | `Effect4.Program.Wire.Corpus`, `src/OCaml5/Tools/EffWire.lean` | `ocaml/eff/test/test_lean_wire.ml` | `bash scripts/check-generated.sh`; fresh byte comparison and missing-file refusal | reproduced |
-| CAS goldens | `lake env lean -M4096 --run src/OCaml5/Tools/CasGoldens.lean ocaml/engine/cas/goldens` | Store Word and Genesis, Machine Stores, `Test.Store.NodeContract` | `ocaml/engine/cas/test/dune` | `bash scripts/check-generated.sh --stale` for provenance only; `bash scripts/check-ocaml.sh engine-tests`, red as declared in the OCaml sweep | stamped (constructive check owed: DI-45) |
+| CAS goldens | `lake env lean -M4096 --run src/OCaml5/Tools/CasGoldens.lean ocaml/engine/cas/goldens` | Store Word and Genesis, Machine Stores, `Test.Store.NodeContract` | `ocaml/engine/cas/test/dune` | `bash scripts/check-generated.sh` for fresh bytes; `bash scripts/check-ocaml.sh engine-tests`, red as declared in the OCaml sweep | fresh-byte producer and comparison wired; execution remains separately declared |
 | LCNF | exact command in each output's first comment, run with `lake env` before `lean` | `src/OCaml5/Tools/LcnfGen.lean`, `src/OCaml5/Lcnf/`, named import and roots; engine also reads `ocaml/engine/externs.txt` and `ocaml/engine/tools/api_engine_prelude.ml` | `effect4_gen`, `effect4_engine` | `bash scripts/check-generated.sh --stale`, red as declared until Phase 1; `bash scripts/check-ocaml.sh gen-check` in sweep for the seam; neither regenerates LCNF | stamped (the acceptance test of a regeneration is DI-19's conformance suite) |
 | TypeScript | `bash scripts/generate-ts-eff.sh` | `OCaml5.Eff.World`, native rows, ingestion taxonomy, forms, profile, `lakefile.toml`, `src/Effect4/Codegen/Print.lean` | TypeScript readers, checkers and tests | `bash scripts/check-ts-eff.sh`; byte comparison, in sweep | reproduced; tested (the corpus check against Lean's own oracles) |
 | Truth | corpus: `lake env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes`; other outputs and the tapes: `bun run harness/truth/run-truth.ts --manifest harness/truth/corpus.json --out harness/truth --timeout 300 --tape-out harness/truth/tapes` | Eff corpus, `harness/truth/prelude.ts`, the committed tapes (the package rows' recorded answers, read by Lean and re-recorded by rc.112 on every run), pinned rc.112 and `@effect/sql-sqlite-bun`, `ts/eff/package.json` and `bun.lock` | truth differential, TypeScript corpus check | `bash scripts/check-truth.sh`; fresh generation and comparison plus bounded host observations, and `tsc --noEmit -p harness/truth/tsconfig.json` over the regenerated modules and prelude before any byte is compared (DI-49; recorder inclusion follows in S6b); `python3 scripts/test-truth-stamp.py` for the stamp's inputs. Not a `scripts/generate.sh` family | reproduced (the tapes and corpus); tested (the named bounded host corpus; recorded package-row fixtures are single-fiber — DI-23) |
@@ -111,12 +124,12 @@ on 2026-09-08: its manual producer refuses the frozen fingerprint for
 The report, frozen fingerprint and manual check remain unchanged.
 
 `bash scripts/check-generated.sh --stale` checks all active provenance without
-running Lean. `bash scripts/check-generated.sh` freshly compares 25 outputs:
-four derived Lean files, five Eff files, nine wire files and seven TypeScript files
-(the seventh, `packages.gen.ts`, since the host rows slice's step 5, 2026-09-09).
-The 119 CAS goldens and LCNF outputs are checked by stamp only. Raw data are
-compared in full on their designated byte/behavior routes; a provenance match
-alone is not a claim that their contents match a fresh generator run.
+running Lean. `bash scripts/check-generated.sh` freshly produces the derived, Eff,
+wire, CAS and TypeScript families. It requires a bijection between the generated-map
+selection and every freshly produced non-sidecar file before comparing full non-stamp
+bytes. The count comes from that inventory, including program and metadata fixtures.
+LCNF retains its separately declared provenance policy. A provenance match alone is
+not a claim that contents match a fresh generator run.
 
 The LCNF declaration covers only the four unstamped files with their original
 Phase 0 base bytes. A missing or changed stamp on any other active artifact
@@ -154,6 +167,7 @@ their own recorded provenance; they are not regenerated by this Phase 0 lane.
 
 | File or build target | Tier | Producer command | Inputs | Consumers | Gate | cut-from stamp | Committed |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `src/Effect4/Laws/Program/Typing/Specs.lean` | committed projection | Typing specs | configured checker equations and full telescopes | typing inversions | generated | yes | yes |
 | `src/Effect4/Store/Derived/Json.lean` | committed projection | Derived Json | Derived Json | Derived Json | Derived Json | yes | yes |
 | `src/Effect4/Store/Derived/Schema.lean` | committed projection | Derived Schema | Derived Schema | Derived Schema | Derived Schema | yes | yes |
 | `src/Effect4/Program/Derived.lean` | committed projection | Derived Program | Derived Program | Derived Program | Derived Program | yes | yes |
@@ -761,3 +775,23 @@ tables describe, whose verdicts are finite runs over the fixture corpus.
 | Path | Tier | Family | Producer | Inputs | Consumer | Gate | Committed |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `ts/eff/ingest/README.md` | committed projection | Ingest tables | family command | family inputs | recognizer users | ingest | yes |
+
+| `ocaml/eff/goldens/metadata.tsv` | committed projection | Eff goldens | Eff goldens | Eff goldens | Eff goldens | adjacent `.cut-from` | yes |
+| `ocaml/eff/goldens/coverage-metadata.txt` | committed projection | Eff goldens | Eff goldens | Eff goldens | Eff goldens | adjacent `.cut-from` | yes |
+| `harness/truth/generated/pFailText.ts` | committed projection | Truth | Truth | Truth | Truth | yes | yes |
+| `harness/truth/generated/pFailBoomText.ts` | committed projection | Truth | Truth | Truth | Truth | yes | yes |
+| `harness/truth/generated/pTextOrDie.ts` | committed projection | Truth | Truth | Truth | Truth | yes | yes |
+| `ocaml/eff/goldens/pFailText.bin` | committed projection | Eff goldens | Eff goldens | Eff goldens | Eff goldens | adjacent `.cut-from` | yes |
+| `ocaml/eff/goldens/pFailText.json` | committed projection | Eff goldens | Eff goldens | Eff goldens | Eff goldens | adjacent `.cut-from` | yes |
+| `ocaml/eff/goldens/pFailText.ty` | committed projection | Eff goldens | Eff goldens | Eff goldens | Eff goldens | adjacent `.cut-from` | yes |
+| `ocaml/eff/goldens/pIllFailBool.bin` | committed projection | Eff goldens | Eff goldens | Eff goldens | Eff goldens | adjacent `.cut-from` | yes |
+| `ocaml/eff/goldens/pIllFailBool.json` | committed projection | Eff goldens | Eff goldens | Eff goldens | Eff goldens | adjacent `.cut-from` | yes |
+| `ocaml/eff/goldens/pIllFailBool.ty` | committed projection | Eff goldens | Eff goldens | Eff goldens | Eff goldens | adjacent `.cut-from` | yes |
+| `ocaml/eff/goldens/pIllCauseBool.bin` | committed projection | Eff goldens | Eff goldens | Eff goldens | Eff goldens | adjacent `.cut-from` | yes |
+| `ocaml/eff/goldens/pIllCauseBool.json` | committed projection | Eff goldens | Eff goldens | Eff goldens | Eff goldens | adjacent `.cut-from` | yes |
+| `ocaml/eff/goldens/pIllCauseBool.ty` | committed projection | Eff goldens | Eff goldens | Eff goldens | Eff goldens | adjacent `.cut-from` | yes |
+| `ocaml/eff/program-structure.json` | committed projection | Eff | Eff | Eff | Eff | adjacent `.cut-from` | yes |
+| `ocaml/eff/eff_layout.ml` | committed projection | Eff | Eff | Eff | Eff | yes | yes |
+| `ocaml/goldens/eff/same-programs.txt` | committed projection | Wire goldens | Wire goldens | Wire goldens | Wire goldens | adjacent `.cut-from` | yes |
+| `ocaml/engine/e4_program_layout.ml` | committed projection | Engine structure | Engine structure | Engine structure | Engine structure | yes | yes |
+| `ocaml/engine/e4_program_layout.json` | committed projection | Engine structure | Engine structure | Engine structure | Engine structure | adjacent `.cut-from` | yes |

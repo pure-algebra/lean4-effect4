@@ -1,0 +1,10 @@
+{
+  "note": "RED CONTROL 3: the reader itself. `funcs` is a plausible misspelling of `functions`. `Conform.Policy.object` is given the complete key list and refuses anything else, naming the key and the JSON path, so a misspelled `cover` cannot silently become `no cover`. The driver must fail at LOAD, before any environment is read: exit 2 (`Report.exitCode`'s \"not even a verdict\" -- nothing was checked), the reader's message with its JSON path on stderr, and no report written.",
+  "families": [
+    { "name": "Conform.Effect4.Fixtures.Light",
+      "unlisted": "refuse",
+      "funcs": [
+        { "name": "Conform.Effect4.Fixtures.Light.label", "mode": "default", "cover": ["amber", "off"] }
+      ] }
+  ]
+}

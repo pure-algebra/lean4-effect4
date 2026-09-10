@@ -1,0 +1,18 @@
+{
+  "note": "RED CONTROL 2 for `lcnf.cases.default`, in both directions. `Light.label`'s cover drops `off`, which the default DOES absorb — the drift direction, the one an appended constructor causes. `Light.brightness`'s cover adds `amber`, which the default does NOT absorb — the stale direction, the one a repaired function causes. Both must refuse, and each message must name which direction it is.",
+  "families": [
+    { "name": "Conform.Effect4.Fixtures.Light",
+      "unlisted": "refuse",
+      "functions": [
+        { "name": "Conform.Effect4.Fixtures.Light.label", "mode": "default", "cover": ["amber"],
+          "note": "THE CONTROL (drift): `off` is absorbed and not covered" },
+        { "name": "Conform.Effect4.Fixtures.Light.brightness", "mode": "default",
+          "cover": ["off", "amber"],
+          "note": "THE CONTROL (stale): `amber` is covered and has its own arm" },
+        { "name": "Conform.Effect4.Fixtures.Light.isGo", "mode": "default",
+          "cover": ["red", "amber", "off"] },
+        { "name": "Conform.Effect4.Fixtures.Light.ctorIdx", "mode": "exhaustive" },
+        { "name": "Conform.Effect4.Fixtures.instReprLight.repr", "mode": "exhaustive" }
+      ] }
+  ]
+}

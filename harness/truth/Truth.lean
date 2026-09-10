@@ -8,7 +8,7 @@ import Lean.Data.Json
 # Truth — the Lean face of the rc.112 truth check
 
 What it is: for every program of the `Eff` corpus (`Effect4.Program.Wire.Corpus.all` plus
-`pTwo` of `src/OCaml5/Bridge.lean`), the Lean machine's verdict and its observable
+`pTwo` of `git:14e6835:src/OCaml5/Bridge.lean`), the Lean machine's verdict and its observable
 schedule, written as one JSON manifest (`harness/truth/corpus.json`) that the rc.112 runner
 (`harness/truth/run-truth.ts`) and, later, the OCaml host replay against.
 
@@ -43,7 +43,8 @@ The value wire: `unit` ↦ `null`, `nat` ↦ number,
 `bool` ↦ boolean, a tuple / exit list ↦ JSON array, `fiber k` ↦ `{"fiber":k}`,
 `cell k` ↦ `{"ref":k}`, `promise k` ↦ `{"deferred":k}`, `scopeHandle k` ↦ `{"scope":k}`,
 `context` ↦ `{"context":true}`, a reified exit ↦ `{"success":v}` / `{"failure":cause}`; a
-cause is `{"reasons":[…]}` with `{"fail":n|"boom"|[tag,message]}`, `{"die":d}`,
+cause is `{"reasons":[…]}` with `{"fail":n|string|{"boom":null}|[tag,message]}`, `{"die":d}`,
+where a represented error defect is `{"die":{"error":<the same error wire>}}`,
 `{"interrupt":who|null}`;
 an exit is `{"success":v}` / `{"failure":cause}`. Annotations are dropped.
 
@@ -73,11 +74,11 @@ open TypeScript (house0)
 
 /-! ## The corpus -/
 
-/-- `Bridge.forkOptions`, verbatim. -/
+/-- `forkOptions` from `git:14e6835:src/OCaml5/Bridge.lean`, verbatim. -/
 def forkOptions : Supervision.ForkOptions :=
   { startImmediately := false, daemon := false, maskMode := .inherit }
 
-/-- `Bridge.pTwo`, verbatim: two children forked, the second awaited twice (`.var 1` names the
+/-- `pTwo` from `git:14e6835:src/OCaml5/Bridge.lean`, verbatim: two children forked, the second awaited twice (`.var 1` names the
 second child before and after the first await). -/
 def pTwo : Api.Program :=
   .bind (.withFiber (.fork (.bind (.yieldNow 0) (.succeed (.lit (.nat 1)))) forkOptions))
@@ -235,8 +236,8 @@ of DB-15 in rc.112's two-level form — the reason's tag and the driver's messag
 way a program has of meeting such a failure is one fixture over the same client and statement:
 it escapes through the scope, whose release still runs (`pSqlFail`); it is caught
 (`pSqlCatch`); it is reified into the answer (`pSqlExit`); a layer built over it dies under
-`Layer.orDie` (`pSqlOrDie`: the machine's defect is `badName`, `ORDIE-FB-TAGGED`, rc.112's is
-the `SqlError` itself; the truth column compares a `die` by kind and shows both). The answers
+`Layer.orDie` (`pSqlOrDie`: both faces retain the adapter's exact two-string pair inside the
+defect, compared as represented error data). The answers
 come from `tapes/pSql*.jsonl`. -/
 
 /-- The statement that fails: no table `missing`. -/
@@ -287,16 +288,36 @@ fails with the pair, which the host wires as a two-string array and the machine 
 def pFailTagged : Api.Program :=
   .fail (.app "pair" (.cons (.lit (.str "SqlError")) (.cons (.lit (.str "boom")) .nil)))
 
-/-- The programs checked: the wire corpus, then `pTwo`, then the two `acquireRelease`
-fixtures, then the join's three, then the host rows slice's five, then the four error paths. -/
+/-- S2: ordinary text failures keep their exact strings, including the string "boom",
+which is distinct from the raw unsupported-error marker Err.boom. -/
+def pFailText : Api.Program := .fail (.lit (.str "lost"))
+def pFailBoomText : Api.Program := .fail (.lit (.str "boom"))
+
+/-- A text failure during layer construction becomes a represented text defect under
+Layer.orDie. There is no external table or tape in this fixture. -/
+def pTextOrDie : Api.Program :=
+  .provideLayer (.orDie (.effect kA
+    (.bind (.fail (.lit (.str "lost"))) (.succeed (.lit (.nat 1))))))
+    false (.service kA)
+
+/-- The programs checked: the original wire, control, layer and host fixtures, followed by
+three S2 text/error-image fixtures. Every listed program contributes one manifest entry. -/
 def corpus : List (String × Api.Program) :=
   Wire.Corpus.all ++ [("pTwo", pTwo), ("pAcquire", pAcquire), ("pAcquireClosed", pAcquireClosed),
     ("pProvide", pProvide), ("pProvideMerge", pProvideMerge), ("pProvideTwice", pProvideTwice),
     ("pDiamond", pDiamond), ("pMergeAll", pMergeAll), ("pAcquireHandle", pAcquireHandle),
     ("pFailTagged", pFailTagged), ("pSqlite", pSqlite), ("pKv", pKv),
-    ("pSqlFail", pSqlFail), ("pSqlCatch", pSqlCatch), ("pSqlExit", pSqlExit), ("pSqlOrDie", pSqlOrDie)]
+    ("pSqlFail", pSqlFail), ("pSqlCatch", pSqlCatch), ("pSqlExit", pSqlExit), ("pSqlOrDie", pSqlOrDie),
+    ("pFailText", pFailText), ("pFailBoomText", pFailBoomText), ("pTextOrDie", pTextOrDie)]
 
 /-! ## The value wire -/
+
+def errJson : Err → J
+  | .boom => Lean.Json.mkObj [("boom", Lean.Json.null)]
+  | .tag n => toJson n
+  -- the host wires the failed pair as a two-element array, as `pair` builds it
+  | .tagged t m => Lean.Json.arr #[Lean.Json.str t, Lean.Json.str m]
+  | .text s => Lean.Json.str s
 
 def defectJson : Defect → J
   | .notImplemented => Lean.Json.str "notImplemented"
@@ -304,12 +325,7 @@ def defectJson : Defect → J
   | .badName => Lean.Json.str "badName"
   | .missingService => Lean.Json.str "missingService"
   | .user n => Lean.Json.mkObj [("user", toJson n)]
-
-def errJson : Err → J
-  | .boom => Lean.Json.str "boom"
-  | .tag n => toJson n
-  -- the host wires the failed pair as a two-element array, as `pair` builds it
-  | .tagged t m => Lean.Json.arr #[Lean.Json.str t, Lean.Json.str m]
+  | .error e => Lean.Json.mkObj [("error", errJson e)]
 
 def reasonJson : Reason Err Defect FiberId Ann → J
   | .fail e _ => Lean.Json.mkObj [("fail", errJson e)]
@@ -566,9 +582,9 @@ partial def jsonToVal : J → Option Val
 abbrev Answer := Completion Val Err Defect FiberId Ann
 
 /-- One tape row as a completion: `answer` a success, `failed` the tagged pair of DB-15 (the
-runner's informational `error`, the outer tag, beside it is not read). A `died` row — a defect
-inside the host's call — is no completion: the defect alphabet has no host defects, and
-replaying one as a typed failure would be a guess. -/
+runner's informational `error`, the outer tag, beside it is not read). A legacy `died` row is an unstructured diagnostic, so this legacy reader refuses it.
+The versioned session reader separately supports selected represented defects; it does not
+retroactively supply missing category/payload provenance to old rows. -/
 def tapeAnswer (row : J) : Except String Answer :=
   match row.getObjVal? "answer" with
   | .ok a => match jsonToVal a with
@@ -590,12 +606,24 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 
 /-! ## Receipts -/
 
-#guard corpus.length = 24
+#guard corpus.length = 27
 #guard (corpus.map (·.1)).eraseDups.length = corpus.length
 #guard (corpus.map (·.1)) =
   ["p42", "pBind", "pFork", "pAwait", "pGen", "pLoop", "pCatch", "pScope", "pTwo", "pAcquire",
    "pAcquireClosed", "pProvide", "pProvideMerge", "pProvideTwice", "pDiamond", "pMergeAll", "pAcquireHandle",
-   "pFailTagged", "pSqlite", "pKv", "pSqlFail", "pSqlCatch", "pSqlExit", "pSqlOrDie"]
+   "pFailTagged", "pSqlite", "pKv", "pSqlFail", "pSqlCatch", "pSqlExit", "pSqlOrDie",
+   "pFailText", "pFailBoomText", "pTextOrDie"]
+-- S2 wire identities are distinct before any host comparison.
+#guard errJson .boom == Lean.Json.mkObj [("boom", Lean.Json.null)]
+#guard errJson (.text "boom") == Lean.Json.str "boom"
+#guard errJson .boom != errJson (.text "boom")
+#guard defectJson (.error (.text "lost")) == Lean.Json.mkObj [("error", Lean.Json.str "lost")]
+#guard Api.typeOf pFailText = some ⟨.never, .string, Env.Requirement.empty⟩
+#guard Api.typeOf pFailBoomText = some ⟨.never, .string, Env.Requirement.empty⟩
+#guard (Api.run pFailText 1000).exit = some (.failure (Cause.fail (.text "lost")))
+#guard (Api.run pFailBoomText 1000).exit = some (.failure (Cause.fail (.text "boom")))
+#guard Api.wellTyped pTextOrDie
+#guard (Api.run pTextOrDie 1000).exit = some (.failure (Cause.die (.error (.text "lost"))))
 -- the error-path fixtures type only under the sqlite table and read back
 #guard sqliteFixtures.all fun name => (corpus.lookup name).isSome
 #guard Api.wellTyped pSqlFail Packages.sqliteBun

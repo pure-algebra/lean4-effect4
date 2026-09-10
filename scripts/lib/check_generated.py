@@ -122,24 +122,39 @@ def drift_files(rows):
     for path, family in rows:
         if path.endswith('.cut-from'):
             continue
-        if family.startswith('Derived ') or family in {'Eff', 'Wire goldens', 'TypeScript'}:
+        if family.startswith('Derived ') or family in {'Typing specs', 'Eff', 'Eff goldens', 'Engine structure', 'Wire goldens', 'CAS goldens', 'TypeScript'}:
             chosen.append(path)
-    # 24 -> 25 on 2026-09-09: ts/eff/packages.gen.ts joined the TypeScript family (host rows step 5).
-    if len(chosen) != 25:
-        raise ValueError(f'expected 25 cheap drift files, map names {len(chosen)}')
+    if len(chosen) != len(set(chosen)):
+        raise ValueError('duplicate fresh-byte inventory path')
+    for prefix in ['src/Effect4/', 'ocaml/eff/', 'ocaml/goldens/eff/',
+                   'ocaml/engine/cas/goldens/', 'ts/eff/']:
+        if not any(path.startswith(prefix) for path in chosen):
+            raise ValueError('missing fresh-byte family: ' + prefix)
     return chosen
+
+
+def compare_fresh(chosen, temporary):
+    """Check an inventory bijection before comparing complete non-stamp bytes."""
+    temporary = Path(temporary)
+    produced = {str(path.relative_to(temporary)) for path in temporary.rglob('*')
+                if path.is_file() and not path.name.endswith('.cut-from')}
+    if produced != set(chosen):
+        raise ValueError('fresh-byte inventory differs: unlisted=' +
+                         repr(sorted(produced - set(chosen))) + ', unproduced=' +
+                         repr(sorted(set(chosen) - produced)))
+    for path in chosen:
+        if comparable((temporary/path).read_bytes()) != comparable((ROOT/path).read_bytes()):
+            raise ValueError(path + ': is not what Lean emits')
 
 
 def drift(rows):
     chosen = drift_files(rows)
     with tempfile.TemporaryDirectory(prefix='effect4-generated-check-') as temporary:
-        for family in ['derived', 'eff', 'wire', 'ts']:
+        for family in ['derived', 'specs', 'eff', 'wire', 'cas', 'ts']:
             subprocess.run(['bash', 'scripts/generate.sh', '--only', family,
                             '--output-dir', temporary], cwd=ROOT, check=True,
                            stdout=None, stderr=None)
-        for path in chosen:
-            if comparable((Path(temporary)/path).read_bytes()) != comparable((ROOT/path).read_bytes()):
-                raise ValueError(path + ': is not what Lean emits')
+        compare_fresh(chosen, temporary)
     return len(chosen)
 
 
@@ -172,7 +187,7 @@ def main():
         current, stale, fingerprints = observe(rows)
         verdict = policy(stale, args.declared_reason)
         stamp = ROOT/'.lake/stamps'/gate/key(rows, fingerprints)
-        summary = f'PASS generated: {count} files are what Lean emits; LCNF and 119 CAS goldens checked by stamp'
+        summary = f'PASS generated: {count} files are what Lean emits, including CAS and metadata; LCNF checked by its declared provenance policy'
     else:
         summary = f'PASS generated-stale: {current} stamps checked in {time.monotonic()-start:.3f}s; {verdict}'
     if stale:

@@ -38,14 +38,10 @@ import OCaml5.Lib.Test
 import OCaml5.Eff.World
 import OCaml5.Eff.Emit
 import OCaml5.Eff.Goldens
+import OCaml5.Eff.Metadata
 -- The LCNF → OCaml backend (route 2, the one engine): Lean's mono-phase compiler IR as typed
 -- OCaml. `Tools/LcnfGen.lean` is the driver.
 import OCaml5.Lcnf.Dump
 import OCaml5.Lcnf.Naming
 import OCaml5.Lcnf.Types
 import OCaml5.Lcnf.Translate
--- Route 1's Lean half, the `@[export]`ed session API over `Effect4.Api`. Its OCaml half
--- (`ocaml/link`) is archived; this module stays only because `harness/truth/Truth.lean`
--- cites it and that file is a stamp input of the truth family, so it leaves with the next
--- edit that re-stamps the truth artefacts.
-import OCaml5.Bridge

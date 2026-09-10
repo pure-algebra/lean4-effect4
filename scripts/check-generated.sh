@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# --stale checks provenance without Lean; default compares 25 fresh projections (the count
-# lives in scripts/lib/check_generated.py and moved 24 -> 25 on 2026-09-09).
+# --stale checks provenance without Lean; default compares the complete mapped output set
+# of the selected producers, including CAS bytes and the engine structural mirror.
 set -euo pipefail
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$repo_root"

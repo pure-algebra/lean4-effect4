@@ -22,7 +22,7 @@ below is expected at the ceiling `propext`/`Quot.sound`; the gate
 #print axioms Effect4.Program.ProfileData.admitsNat_iff
 #print axioms Effect4.Program.rc112
 
--- PROFILE/spec: the relations and the three laws.
+-- PROFILE/spec: the relations and the general laws.
 #print axioms Effect4.Program.HostSpec
 #print axioms Effect4.Program.LawfulHostSpec
 #print axioms Effect4.Program.Profile.graphOf
@@ -32,7 +32,6 @@ below is expected at the ceiling `propext`/`Quot.sound`; the gate
 -- PROFILE/scalar model: the pure row, its laws, and its three transitions.
 #print axioms Effect4.Program.Profile.Scalar.waitRow
 #print axioms Effect4.Program.Profile.Scalar.profile
-#print axioms Effect4.Program.Profile.Scalar.refusal
 #print axioms Effect4.Program.Profile.Scalar.Rep
 #print axioms Effect4.Program.Profile.Scalar.RelatedState
 #print axioms Effect4.Program.Profile.Scalar.observe
@@ -44,7 +43,7 @@ below is expected at the ceiling `propext`/`Quot.sound`; the gate
 #print axioms Effect4.Program.Profile.Scalar.outcome_in_profile
 #print axioms Effect4.Program.Profile.Scalar.outcome_out_of_profile
 #print axioms Effect4.Program.Profile.Scalar.in_profile
-#print axioms Effect4.Program.Profile.Scalar.out_of_profile
+#print axioms Effect4.Program.Profile.Scalar.no_step_out_of_profile
 #print axioms Effect4.Program.Profile.Scalar.no_step_of_wrong_shape
 
 -- PROFILE/allocating model: acquire, use, release, and the rollback refutation.
@@ -63,8 +62,8 @@ below is expected at the ceiling `propext`/`Quot.sound`; the gate
 #print axioms Effect4.Program.Profile.Resource.use_fails_after_mutation
 #print axioms Effect4.Program.Profile.Resource.use_failure_mutated
 #print axioms Effect4.Program.Profile.Resource.release_after_failure
-#print axioms Effect4.Program.Profile.Resource.no_use_after_release
-#print axioms Effect4.Program.Profile.Resource.no_double_release
+#print axioms Effect4.Program.Profile.Resource.closed_use_dies
+#print axioms Effect4.Program.Profile.Resource.double_release_dies
 #print axioms Effect4.Program.Profile.Resource.failing
 #print axioms Effect4.Program.Profile.Resource.rollbackStep?
 #print axioms Effect4.Program.Profile.Resource.rollbackSpec

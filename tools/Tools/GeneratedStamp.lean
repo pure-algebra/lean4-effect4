@@ -1,4 +1,5 @@
 import Lean
+import Lake.Build.Trace
 
 /-!
 Shared provenance for committed projections. Each direct import's Lake `depHash`
@@ -27,14 +28,14 @@ private def importsOf (text : String) : IO (List String) := do
   return imports.toList.map (fun i => i.module.toString)
 
 private def toolchainModule (name : String) : Bool :=
-  ["Lean", "Init", "Std"].any fun root => name == root || name.startsWith (root ++ ".")
+  ["Lean", "Init", "Std", "Lake"].any fun root => name == root || name.startsWith (root ++ ".")
 
-private def sourceOfTrace (trace : Lean.Json) : Except String String := do
+private def sourceOfTrace (trace : Lean.Json) : Except String (String × String) := do
   for entry in ← trace.getObjValAs? (Array Lean.Json) "inputs" do
     let parts ← entry.getArr?
     if let some first := parts[0]? then
       if let .ok name := first.getStr? then
-        if name.endsWith ".lean" then return name
+        if name.endsWith ".lean" then return (name, ← parts[1]!.getStr?)
   throw "Lake trace has no source input"
 
 /-- One stamp implementation for source headers and data sidecars. Import traces
@@ -56,7 +57,15 @@ def line (source : String) (modules : List String := [])
     let path := (← Lean.findOLean name.toName).withExtension "trace"
     let json ← IO.ofExcept (Lean.Json.parse (← IO.FS.readFile path))
     let hash ← IO.ofExcept (json.getObjValAs? String "depHash")
-    let moduleSource ← IO.FS.readFile (← IO.ofExcept (sourceOfTrace json))
+    let (recordedPath, recordedHash) ← IO.ofExcept (sourceOfTrace json)
+    let resolved ← IO.Process.run { cmd := "python3", args := #["scripts/lib/generated_inputs.py",
+      "--source-of", name, "--artifact", path.toString] }
+    let current : System.FilePath := resolved.trimAscii.toString
+    unless recordedPath.replace "\\" "/" |>.endsWith (name.replace "." "/" ++ ".lean") do
+      throw (IO.userError s!"trace source does not identify {name}: {recordedPath}")
+    unless (← Lake.computeTextFileHash current).hex == recordedHash do
+      throw (IO.userError s!"stale compiled input for {name}; build its current source before generation")
+    let moduleSource ← IO.FS.readFile current
     rows := s!"trace {name} {hash} source={← sha256 moduleSource}\n" :: rows
     pending := pending ++ (← importsOf moduleSource)
   unless pending.isEmpty do throw (IO.userError "stamp import closure exceeds 8192 entries")

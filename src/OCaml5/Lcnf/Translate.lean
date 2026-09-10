@@ -1,8 +1,10 @@
 import Lean
+import Conform.Lcnf.Index
 import OCaml5.Ml.Syntax
 import OCaml5.Lcnf.Dump
 import OCaml5.Lcnf.Naming
 import OCaml5.Lcnf.Types
+import OCaml5.Lcnf.Native
 
 /-!
 # OCaml5.Lcnf.Translate
@@ -149,8 +151,8 @@ def builtin? (n : Name) : Option Builtin :=
   | `Nat.decLe | `Nat.ble => some (bin "<=")
   | `Nat.add => some (bin "+")
   | `Nat.mul => some (bin "*")
-  | `Nat.div => some (bin "/")
-  | `Nat.mod => some (bin "mod")
+  | `Nat.div => some (2, fun | [a, b] => .ifThen (.binop "=" b (.int 0)) (.int 0) (.binop "/" a b) | _ => .unit)
+  | `Nat.mod => some (2, fun | [a, b] => .ifThen (.binop "=" b (.int 0)) a (.binop "mod" a b) | _ => .unit)
   | `Nat.sub => some (2, fun
       | [a, b] => Ml.Expr.call "max" [.int 0, .binop "-" a b]
       | _ => .unit)
@@ -164,9 +166,12 @@ def builtin? (n : Name) : Option Builtin :=
   | `Nat.pow => some (2, fun
       | [a, b] => powClamped a b
       | _ => .unit)
-  -- `a <<< b = a * 2 ^ b`, clamped through the same helper
+  -- Clamp the multiplication too; clamping only the power still allowed a wrap.
   | `Nat.shiftLeft => some (2, fun
-      | [a, b] => .binop "*" a (powClamped (.int 2) b)
+      | [a, b] => .letIn "_shift_scale" (powClamped (.int 2) b)
+        (.ifThen (.binop "=" a (.int 0)) (.int 0)
+          (.ifThen (.binop ">" (.var "_shift_scale") (.binop "/" (.var "max_int") a))
+            (.var "max_int") (.binop "*" a (.var "_shift_scale"))))
       | _ => .unit)
   -- `a >>> b` and `a &&& b`; OCaml's shifts are undefined at ≥ 63, so the shift is clamped.
   | `Nat.shiftRight => some (2, fun
@@ -177,8 +182,9 @@ def builtin? (n : Name) : Option Builtin :=
   | `Nat.xor => some (bin "lxor")
   -- UInt8 as `int` (`Types.builtinTy?`): equality, the truncating injection, the identity out
   | `UInt8.decEq | `instDecidableEqUInt8 | `UInt8.beq => some (bin "=")
-  | `UInt8.ofNat | `UInt8.ofNatLT | `UInt8.ofNatTruncate =>
+  | `UInt8.ofNat | `UInt8.ofNatLT =>
     some (1, fun | [a] => .binop "land" a (.int 255) | _ => .unit)
+  | `UInt8.ofNatTruncate | `UInt8.ofNatClamp => some (1, fun | [a] => Ml.Expr.call "min" [a, .int 255] | _ => .unit)
   | `UInt8.toNat | `UInt8.toUInt64 | `UInt8.toUInt32 =>
     some (1, fun | [a] => a | _ => .unit)
   -- Bool
@@ -189,7 +195,9 @@ def builtin? (n : Name) : Option Builtin :=
   -- String
   | `String.decEq | `instDecidableEqString => some (bin "=")
   | `String.append => some (bin "^")
-  | `String.length => some (call1 "String.length")
+  | `String.length => some (call1 "lcnf_utf8_length")
+  | `String.toUTF8 => some (call1 "lcnf_utf8_bytes")
+  | `ByteArray.data => some (1, fun | [a] => a | _ => .unit)
   -- List
   | `List.appendTR | `List.append => some (bin "@")
   | `List.reverse => some (call1 "List.rev")
@@ -202,7 +210,7 @@ def builtin? (n : Name) : Option Builtin :=
       | [inst, a, l] => Ml.Expr.call "List.exists" [.app inst [a], l]
       | _ => .unit)
   | `List.contains => some (3, fun
-      | [inst, l, a] => Ml.Expr.call "List.exists" [.app inst [a], l]
+      | [inst, l, a] => Ml.Expr.call "List.exists" [.fn ["_elem"] (.app inst [.var "_elem", a]), l]
       | _ => .unit)
   | `List.map | `List.mapTR => some (call2 "List.map")
   | `List.filter | `List.filterTR => some (call2 "List.filter")
@@ -229,7 +237,11 @@ def builtin? (n : Name) : Option Builtin :=
       | [a, b] => Ml.Expr.call "max" [.int 0, .binop "-" a b]
       | _ => .unit)
   | `USize.add => some (bin "+")
-  | `Array.uget | `Array.get! | `Array.fget => some (call2 "List.nth")
+  | `Array.uget | `Array.fget => some (call2 "List.nth")
+  | `Array.get! => some (3, fun
+      | [defaultValue, a, i] => .ifThen (.binop "<" i (Ml.Expr.call "List.length" [a]))
+          (Ml.Expr.call "List.nth" [a, i]) defaultValue
+      | _ => .unit)
   -- Option
   | `Option.isSome => some (call1 "Option.is_some")
   | `Option.isNone => some (call1 "Option.is_none")
@@ -354,13 +366,12 @@ def noteMentioned (ns : Array Name) : TM Unit :=
   modify fun s => { s with mentioned := ns.foldl (fun acc n => if acc.contains n then acc else acc.push n) s.mentioned }
 
 /-- The binder names of a constructor's fields, from its type. -/
-partial def ctorFieldNames (ci : ConstructorVal) : Array Name :=
-  go ci.type ci.numParams #[]
+def ctorFieldNames (ci : ConstructorVal) : Array Name :=
+  go (ci.numParams + ci.numFields) ci.type #[] |>.extract ci.numParams (ci.numParams + ci.numFields)
 where
-  go : Lean.Expr → Nat → Array Name → Array Name
-    | .forallE n _ b _, 0, acc => go b 0 (acc.push n)
-    | .forallE _ _ b _, k + 1, acc => go b k acc
-    | .mdata _ e, k, acc => go e k acc
+  go : Nat → Lean.Expr → Array Name → Array Name
+    | 0, _, acc => acc
+    | k + 1, .forallE n _ b _, acc => go k b (acc.push n)
     | _, _, acc => acc
 
 /-- The `reduceArity` wrapper shape: `let _x := f._redArg …; return _x`. -/
@@ -397,15 +408,12 @@ def wrapperParams? (env : Environment) (n : Name) : Option (Array (LCNF.Param .p
 /-- `(_, …, _) t` for an inductive, as an annotation. -/
 def tyOfInd (ex : Externs) (tn : TypeNames) (env : Environment) (ind : Name) : Ml.Ty :=
   let params := match env.find? ind with
-    | some (.inductInfo info) => List.replicate info.numParams Ml.Ty.anon
+    | some (.inductInfo info) => List.replicate
+        ((typeParameterIndices ind info.numParams info.type).toOption.getD #[]).size Ml.Ty.anon
     | _ => []
   match ex.tys[ind]? with
   | some chain => applyChain chain params
   | none => .con (OCaml5.Lcnf.typeNameIn tn ind) params
-
-/-- The inductives OCaml spells natively; a `cases` on one is not annotated. -/
-def nativeInductives : List Name :=
-  [``List, ``Option, ``Bool, ``Prod, ``Except, ``Unit, ``PUnit, ``Nat]
 
 /-! ## Arguments and values -/
 
@@ -502,20 +510,8 @@ def ctorApp (ci : ConstructorVal) (args : Array (Arg .pure)) : TM Ml.Expr := do
           else useAsList s!"{ci.name}.{fn}" c e
       rel := rel ++ [e]
       named := named ++ [(fieldName fn.toString, e)]
-  match ci.name, rel with
-  | ``List.nil, [] => return Ml.Expr.nil
-  | ``List.cons, [h, t] => return .binop "::" h t
-  | ``Option.none, [] => return Ml.Expr.none_
-  | ``Option.some, [x] => return Ml.Expr.some_ x
-  | ``Bool.true, [] => return .bool true
-  | ``Bool.false, [] => return .bool false
-  | ``Prod.mk, [a, b] => return .tuple [a, b]
-  | ``Except.ok, [x] => return .ctor "Ok" [x]
-  | ``Except.error, [e] => return .ctor "Error" [e]
-  | ``PUnit.unit, [] => return .unit
-  | ``Nat.zero, [] => return .int 0
-  | ``Nat.succ, [a] => return .binop "+" a (.int 1)
-  | _, _ =>
+  if let some native := Native.expression ci.name rel then return native
+  else
     let env ← readEnv
     noteReal ci.induct
     if isStructure env ci.induct then
@@ -749,18 +745,8 @@ def altPat (ctor : Name) (ps : Array (LCNF.Param .pure)) (usedVars : FVarIdHashS
     else
       pats := pats.push (some .wild)
   let rel := pats.toList.filterMap id
-  match ctor, rel with
-  | ``List.nil, [] => return Ml.Pat.nil
-  | ``List.cons, [h, t] => return .cons h t
-  | ``Option.none, [] => return Ml.Pat.none_
-  | ``Option.some, [x] => return Ml.Pat.some_ x
-  | ``Bool.true, [] => return Ml.Pat.true_
-  | ``Bool.false, [] => return Ml.Pat.false_
-  | ``Prod.mk, [a, b] => return .tuple [a, b]
-  | ``Except.ok, [x] => return .ctor "Ok" [x]
-  | ``Except.error, [e] => return .ctor "Error" [e]
-  | ``PUnit.unit, [] => return Ml.Pat.unit
-  | _, _ =>
+  if let some native := Native.pattern ctor rel then return native
+  else
     match env.find? ctor with
     | some (.ctorInfo ci) =>
       noteReal ci.induct
@@ -830,9 +816,9 @@ partial def code (declName : Name) (c : Code .pure) : TM Ml.Expr := do
       let tn ← readTypeNames
       let exx ← readExterns
       let scrut : Ml.Expr :=
-        if nativeInductives.contains cs.typeName then .var d
+        if Native.owns cs.typeName then .var d
         else .annot (.var d) (tyOfInd exx tn env cs.typeName)
-      unless nativeInductives.contains cs.typeName do noteReal cs.typeName
+      unless Native.owns cs.typeName do noteReal cs.typeName
       let mut arms : List Ml.Arm := []
       for alt in cs.alts do
         match alt with
@@ -957,6 +943,7 @@ declarations. -/
 def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
     (ex : Externs := {}) : CoreM Closure := do
   let env ← getEnv
+  let mono := Conform.Lcnf.persistedMonoIndex env
   let mut c : Closure := {}
   let mut done : NameSet := {}
   let mut queue : Array Name := roots
@@ -974,7 +961,7 @@ def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {
       c := { c with frontier := pushNew c.frontier n }
       continue
     done := done.insert n
-    let d? ← monoDecl? n
+    let d? := mono.findIn? env n
     if d?.isNone then
       c := { c with missing := pushNew c.missing n }
       continue
@@ -985,7 +972,7 @@ def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {
     match redArgTarget? d with
     | some twin =>
       done := done.insert twin
-      if let some dt ← monoDecl? twin then d := dt
+      if let some dt := mono.findIn? env twin then d := dt
     | none =>
       -- a twin reached directly: its wrapper is the user-facing name
       userName := stripRedArg n
@@ -1004,72 +991,42 @@ def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {
       unless done.contains callee do
         -- a direct reference to a wrapper that has a twin: note it, translate the twin
         if stripRedArg callee == callee then
-          if (← monoDecl? (callee ++ `_redArg)).isSome then
+          if (mono.findIn? env (callee ++ `_redArg)).isSome then
             c := { c with wrapperRefs := pushNew c.wrapperRefs callee }
         queue := queue.push callee
   return c
 
 /-! ## Emission: strongly connected components, dependencies first -/
 
-private structure Tarjan where
-  index : Nat := 0
-  indices : Array (Option Nat)
-  low : Array Nat
-  onStack : Array Bool
-  stack : Array Nat := #[]
-  sccs : Array (Array Nat) := #[]
+/-- Pure OCaml primitive implementations. Strings admitted by this profile are valid UTF-8;
+`ByteArray` and `Array UInt8` both use a byte list. These definitions are emitted by the
+production backend and are part of the manifest, never patched into a generated file. -/
+def primitivePrelude : List Ml.Decl := [
+  .rawD "let lcnf_utf8_bytes s = List.init (String.length s) (fun i -> Char.code (String.get s i))",
+  .rawD "let lcnf_utf8_length s = String.fold_left (fun n c -> if Char.code c land 192 = 128 then n else n + 1) 0 s",
+  .blank]
 
-private partial def strongconnect (adj : Array (Array Nat)) (v : Nat) : StateM Tarjan Unit := do
-  modify fun s => { s with
-    indices := s.indices.set! v (some s.index), low := s.low.set! v s.index,
-    index := s.index + 1, stack := s.stack.push v, onStack := s.onStack.set! v true }
-  for w in adj[v]! do
-    let s ← get
-    match s.indices[w]! with
-    | none =>
-      strongconnect adj w
-      modify fun s => { s with low := s.low.set! v (min s.low[v]! s.low[w]!) }
-    | some iw =>
-      if s.onStack[w]! then
-        modify fun s => { s with low := s.low.set! v (min s.low[v]! iw) }
-  let s ← get
-  if s.low[v]! == s.indices[v]!.getD 0 then
-    let mut comp : Array Nat := #[]
-    let mut st := s.stack
-    let mut onStack := s.onStack
-    let mut go := true
-    while go do
-      match st.back? with
-      | none => go := false
-      | some w =>
-        st := st.pop
-        onStack := onStack.set! w false
-        comp := comp.push w
-        if w == v then go := false
-    set { s with stack := st, onStack := onStack, sccs := s.sccs.push comp.reverse }
+/-- Dependencies first on the translated-name graph. Wrapper/twin aliases and the
+extern leading-argument dependencies use this same graph. Duplicate output names are a
+refusal before any map insertion, because overwriting a vertex loses a declaration. -/
+def emissionGroups (ds : Array Translated) : Except String (List (List Nat)) := do
+  let mut byName : Std.HashMap String Nat := {}
+  for i in [:ds.size] do
+    let name := ds[i]!.ocamlName
+    if byName.contains name then throw s!"duplicate emitted name: {name}"
+    byName := byName.insert name i
+  let adj := ds.map fun t =>
+    (t.callees.filterMap fun c => byName[globalName c]?) ++
+      t.externDeps.filterMap fun n => byName[n]?
+  return Lean.SCC.scc (List.range ds.size) (fun i => adj[i]!.toList)
 
-/-- The declarations as OCaml structure items: one `let`/`let rec` per component, a
-component's dependencies before it, and an origin comment above each. -/
-def emit (ds : Array Translated) : List Ml.Decl :=
-  let n := ds.size
-  let byName : Std.HashMap String Nat := ds.foldl (init := {}) fun m t =>
-    m.insert t.ocamlName m.size
-  -- adjacency by OCaml name (a wrapper and its twin share one), plus the emission-order edges
-  -- an extern row's leading arguments create: a hand body is spliced above every declaration,
-  -- so the generated helper it is handed must be emitted before the declaration that hands it.
-  let adj : Array (Array Nat) := ds.map fun t =>
-    (t.callees.filterMap fun c => byName[globalName c]?)
-      ++ t.externDeps.filterMap fun d => byName[d]?
-  let init : Tarjan := { indices := Array.replicate n none, low := Array.replicate n 0,
-                         onStack := Array.replicate n false }
-  let run : StateM Tarjan Unit := do
-    for v in [:n] do
-      if (← get).indices[v]!.isNone then strongconnect adj v
-  let (_, s) := Id.run (run.run init)
-  s.sccs.toList.flatMap fun comp =>
-    let binds := comp.toList.map fun v => ds[v]!.bind
-    let isRec := comp.size > 1 || comp.any fun v => ds[v]!.recursive
-    let origin := String.intercalate "\n   " (comp.toList.map fun v => ds[v]!.signature)
+/-- One binding group per component, preserving input/successor order and origin comments. -/
+def emit (ds : Array Translated) : Except String (List Ml.Decl) := do
+  let groups ← emissionGroups ds
+  return primitivePrelude ++ groups.flatMap fun comp =>
+    let binds := comp.map fun v => ds[v]!.bind
+    let isRec := comp.length > 1 || comp.any fun v => ds[v]!.recursive
+    let origin := String.intercalate "\n   " (comp.map fun v => ds[v]!.signature)
     [.comment ("LCNF mono: " ++ origin), .letD isRec binds, .blank]
 
 end OCaml5.Lcnf

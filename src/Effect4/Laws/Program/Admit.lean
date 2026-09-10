@@ -22,11 +22,8 @@ What it refuses to claim: nothing here types a whole machine, a reachable point 
 retained state; `external_error_typed` is a statement about one accepted completion at one
 parked call, and `hasTyCause` reads a *reified* cause, never a live fiber's.
 
-`src/Effect4/Program/ErrorImage.lean` is reached from here through
-`src/Effect4/Laws/Program/Typed.lean`, which imports it for the duration of slice S2 only:
-the module's home is one line in `src/Effect4/Program/Native.lean`, which the core seat owns
-and adds at the cutover. Until then that import is what makes the new module reachable from
-the `Effect4.Laws` root (`Test/Audit/AxiomGate.lean`, the library-root gate).
+`Program/ErrorImage` is below `Native` and `Typed`; the executable wrappers live in
+`Program/Typed`. The laws here import those definitions and do not duplicate them.
 -/
 
 namespace Effect4.Program
@@ -161,29 +158,97 @@ theorem errOf_valOfErr (e : Err) (v : Val) (h : valOfErr e = some v) : errOf v =
   | boom => cases h
   | tag n => cases Option.some.inj h; rfl
   | tagged t m => cases Option.some.inj h; rfl
+  | text s => cases Option.some.inj h; rfl
 
 /-- A value that is not collapsed by `errOf` is recovered by `valOfErr`. The premise is the
 collapse itself: `errOf` sends every unrecognised shape to `boom`, and a collapse has no
-inverse — `errOf (.str s) = .boom` today, which is exactly what DI-62's `Err.text` arm
-repairs. -/
+inverse. Natural, text, and two-string payloads all have an exact inverse (DI-62). -/
 theorem valOfErr_errOf (v : Val) (h : errOf v ≠ .boom) : valOfErr (errOf v) = some v := by
   unfold errOf at h ⊢
   split at h <;> simp_all [valOfErr]
 
-/-- The bridge: the production `errAdmits` is the parameterised fold at `Val.hasTy`, arm by
-arm. Proved by direct case analysis on the reason and on the error — no `simp` — so it stays
-at `[propext]` (scout B §3's trust finding: one broad simplification reached
-`Classical.choice`). -/
+/-- Row DI-62. Supported error membership does not depend on resource allocation. -/
+theorem hasTy_supported_allocation (ty : Ty) (v : Val) (allocated : List String)
+    (hs : supportedErrTy ty = true) : Val.hasTy v ty allocated = Val.hasTy v ty [] := by
+  induction ty with
+  | never | nat | string => rfl
+  | prod a b _ _ =>
+    obtain ⟨rfl, rfl⟩ := of_decide_eq_true hs
+    rfl
+  | union a b iha ihb =>
+    obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hs
+    simp only [Val.hasTy, iha ha, ihb hb]
+  | unit | int | bool | handle | option | list | except | exitOf | causeOf | fiberOf =>
+    simp only [supportedErrTy] at hs
+    contradiction
+
+/-- Row DI-62. Every admitted error value is recovered exactly from its closed error image. -/
+theorem valOfErr_errOf_supported (ty : Ty) (v : Val) (allocated : List String)
+    (hs : supportedErrTy ty = true) (hv : Val.hasTy v ty allocated = true) :
+    valOfErr (errOf v) = some v := by
+  induction ty with
+  | never => simp only [Val.hasTy] at hv; contradiction
+  | nat =>
+    obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hv
+    rfl
+  | string =>
+    obtain ⟨s, rfl⟩ := Val.hasTy_string_inv hv
+    rfl
+  | prod a b _ _ =>
+    obtain ⟨rfl, rfl⟩ := of_decide_eq_true hs
+    obtain ⟨x, y, rfl, hx, hy⟩ :=
+      Val.hasTy_prod_inv (v := v) (a := .string) (b := .string) hv
+    obtain ⟨t, rfl⟩ := Val.hasTy_string_inv hx
+    obtain ⟨m, rfl⟩ := Val.hasTy_string_inv hy
+    rfl
+  | union a b iha ihb =>
+    obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hs
+    obtain h | h := Bool.or_eq_true_iff.mp hv
+    · exact iha ha h
+    · exact ihb hb h
+  | unit | int | bool | handle | option | list | except | exitOf | causeOf | fiberOf =>
+    simp only [supportedErrTy] at hs
+    contradiction
+
+/-- Row DI-62. The admitted error language excludes the payload-discarding `boom` case. -/
+theorem errOf_ne_boom_of_supported (ty : Ty) (v : Val) (allocated : List String)
+    (hs : supportedErrTy ty = true) (hv : Val.hasTy v ty allocated = true) :
+    errOf v ≠ .boom := by
+  intro collapsed
+  have recovered := valOfErr_errOf_supported ty v allocated hs hv
+  rw [collapsed] at recovered
+  cases recovered
+
+/-- A decoded closed error image contains no resource handles. -/
+theorem valOfErr_keys (e : Err) (v : Val) (h : valOfErr e = some v) : v.keys = [] := by
+  cases e with
+  | boom => cases h
+  | tag n => cases Option.some.inj h; rfl
+  | tagged t m => cases Option.some.inj h; rfl
+  | text s => cases Option.some.inj h; rfl
+
+/-- Row DI-62. Converting a well-typed supported error gives an admitted failure reason. -/
+theorem errAdmits_errOf (ty : Ty) (v : Val) (allocated : List String)
+    (a : ReasonAnnotations Ann)
+    (hs : supportedErrTy ty = true) (hv : Val.hasTy v ty allocated = true) :
+    errAdmits ty (.fail (errOf v) a) = true := by
+  simp only [errAdmits, reasonAdmits, valOfErr_errOf_supported ty v allocated hs hv]
+  rw [← hasTy_supported_allocation ty v allocated hs]
+  exact hv
+
+/-- Row DI-31. `orDie` retains text and package payloads, and the historical numeric/raw cases. -/
+theorem orDieCause_fail (e : Err) :
+    orDieCause (Cause.fail e) =
+      Cause.die (match e with
+        | .boom => Defect.badName
+        | .tag n => Defect.user n
+        | .tagged t m => Defect.error (.tagged t m)
+        | .text s => Defect.error (.text s)) := by
+  cases e <;> rfl
+
+/-- The production reason predicate is the shared fold at default-allocation membership. -/
 theorem errAdmits_eq_reasonAdmits (ty : Ty) (r : Reason Err Defect FiberId Ann) :
-    errAdmits ty r = reasonAdmits (fun v t => Val.hasTy v t) ty r := by
-  cases r with
-  | fail e _ =>
-    cases e with
-    | boom => rfl
-    | tag n => rfl
-    | tagged t m => rfl
-  | die _ _ => rfl
-  | interrupt _ _ => rfl
+    errAdmits ty r = reasonAdmits (fun v t => Val.hasTy v t) ty r := rfl
 
 /-- The bridge as an equality of the two predicates. Stated because it is the shape a
 rewrite under a higher-order argument wants; it needs `funext`, so it carries `Quot.sound`
@@ -204,15 +269,6 @@ theorem causeAdmits_hasTy (ty : Ty) (c : CauseV) :
   | nil => rfl
   | cons r rest ih =>
     rw [List.all_cons, List.all_cons, ih, errAdmits_eq_reasonAdmits]
-
-/-- Does a *reified* cause value stay inside an error type? This is the shape the `.causeOf`
-arm of `Val.hasTy` takes at the S2 cutover, stated here where the fold and the carrier are
-both in scope. A value that is not a reified failed exit is refused: there is nothing to
-read. -/
-def hasTyCause (v : Val) (e : Ty) : Bool :=
-  match Val.cause? v with
-  | some c => causeAdmits (fun w t => Val.hasTy w t) e c
-  | none => false
 
 /-- On a reified failed exit the fold is applied to the cause it was built from. -/
 theorem hasTyCause_exitErr_fold (c : CauseV) (e : Ty) :

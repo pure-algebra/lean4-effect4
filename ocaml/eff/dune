@@ -5,5 +5,5 @@
  (name effect4_eff)
  (public_name effect4_eff)
  (wrapped false)
- (modules eff_frame eff_json_text eff_types eff_wire eff_json eff_native eff_typing eff_typed)
+ (modules eff_frame eff_json_text eff_types eff_layout eff_wire eff_json eff_native eff_typing eff_typed)
  (flags (:standard -w -4-9-39-40-41-42-44-45-70)))

@@ -29,7 +29,7 @@
  *    these identifiers — a printed `Ref.modify(ref, takeAndBump)` would call the total shape
  *    and misbehave on rc.112. Recorded as finding F3 in `REPORT.md`; not patched here.
  */
-import { Effect, Exit, Option, Scope } from "effect"
+import { Cause, Effect, Exit, Option, Scope } from "effect"
 import { KeyValueStore } from "effect/unstable/persistence"
 import * as Reactivity from "effect/unstable/reactivity/Reactivity"
 import { SqliteClient } from "@effect/sql-sqlite-bun"
@@ -48,8 +48,8 @@ export const not = (b: boolean): boolean => !b
 export const add = (a: number, b: number): number => a + b
 /** `"lt", [nat a, nat b] => bool (a < b)` */
 export const lt = (a: number, b: number): boolean => a < b
-/** `"eq", [nat a, nat b] => bool (a = b)` */
-export const eq = (a: number, b: number): boolean => a === b
+/** NativeAtom.eq on admitted natural or string pairs (DI-09). */
+export const eq = (a: number | string, b: number | string): boolean => a === b
 /** `"pair", [a, b] => Val.tuple [a, b]` — a two-element tuple, the wire's JSON array. */
 export const pair = <A, B>(a: A, b: B): readonly [A, B] => [a, b]
 /** `"fst", [exitCons a _] => a` */
@@ -79,6 +79,27 @@ export const noChange = (_a: number): Option.Option<number> => Option.none()
  * that the case exercises: `run-truth.ts` checks the atom names against the profile's own
  * atom set (`ts/eff/profile.gen.ts`, cut from `nativeAtom` — DI-40), so an atom appended in
  * Lean cannot stay untested here. `strings` was untested until that check existed. */
+/** NativeAtom.boolOr/boolAnd; all inputs are pure evaluated Boolean values. */
+export const or = (a: boolean, b: boolean): boolean => a || b
+export const and = (a: boolean, b: boolean): boolean => a && b
+
+/** The two query inputs advertised by NativeAtom; successful exits have no reasons. */
+const queryCause = <A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): Cause.Cause<E> =>
+  Exit.isExit(input) ? Exit.isFailure(input) ? input.cause : Cause.empty : input
+/** NativeAtom.causeIsFail; rc.112 internal/effect.ts:148 (any Fail, not Fail only). */
+export const causeIsFail = <A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): boolean =>
+  Cause.hasFails(queryCause(input))
+/** NativeAtom.causeIsDie; rc.112 internal/effect.ts:171. */
+export const causeIsDie = <A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): boolean =>
+  Cause.hasDies(queryCause(input))
+/** NativeAtom.causeIsInterrupt; rc.112 internal/effect.ts:186. */
+export const causeIsInterrupt = <A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): boolean =>
+  Cause.hasInterrupts(queryCause(input))
+/** NativeAtom.causeError; rc.112 internal/effect.ts:157-168 selects the first Fail.
+ * Lean's unrepresentable boom is an explicit model boundary, not a host string value. */
+export const causeError = <A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): Option.Option<E> =>
+  Cause.findErrorOption(queryCause(input))
+
 export const selfTestCases: ReadonlyArray<{
   readonly atom: string; readonly name: string; readonly apply: () => unknown; readonly expected: unknown
 }> = [
@@ -98,6 +119,16 @@ export const selfTestCases: ReadonlyArray<{
   { atom: "strings", name: "strings () is empty", apply: () => JSON.stringify(strings()), expected: "[]" },
   { atom: "strings", name: "strings (\"7\", \"\\\"x\\\"\") keeps its JSON texts",
     apply: () => JSON.stringify(strings("7", "\"x\"")), expected: "[\"7\",\"\\\"x\\\"\"]" },
+  { atom: "eq", name: "string equality hit", apply: () => eq("A", "A"), expected: true },
+  { atom: "eq", name: "string equality miss", apply: () => eq("A", "B"), expected: false },
+  { atom: "or", name: "or false true", apply: () => or(false, true), expected: true },
+  { atom: "and", name: "and true false", apply: () => and(true, false), expected: false },
+  { atom: "causeIsFail", name: "mixed cause contains Fail", apply: () => causeIsFail(Cause.combine(Cause.fail(7), Cause.interrupt(1))), expected: true },
+  { atom: "causeIsFail", name: "successful exit has no Fail", apply: () => causeIsFail(Exit.succeed(7)), expected: false },
+  { atom: "causeIsDie", name: "failed exit contains Die", apply: () => causeIsDie(Exit.failCause(Cause.die("defect"))), expected: true },
+  { atom: "causeIsInterrupt", name: "mixed cause contains Interrupt", apply: () => causeIsInterrupt(Cause.combine(Cause.fail(7), Cause.interrupt(1))), expected: true },
+  { atom: "causeError", name: "first Fail is retained", apply: () => Option.getOrUndefined(causeError(Cause.combine(Cause.fail(7), Cause.fail(9)))), expected: 7 },
+  { atom: "causeError", name: "successful exit has no error", apply: () => Option.isNone(causeError(Exit.succeed(7))), expected: true },
   { atom: "incr", name: "incr 1", apply: () => incr(1), expected: 2 },
   { atom: "double", name: "double 4", apply: () => double(4), expected: 8 },
   { atom: "takeAndBump", name: "takeAndBump 4", apply: () => takeAndBump(4), expected: 5 },
@@ -120,7 +151,7 @@ export const Host = {
     if (resource.closed) throw new Error("resource released twice")
     resource.closed = true
   }),
-  read: (resource: Resource) => Effect.sync(() => resource.closed ? 1 : 0)
+  read: (resource: Resource): Effect.Effect<number> => Effect.sync(() => resource.closed ? 1 : 0)
 }
 /** Type-only namespace for printed annotations; the runtime Host object is unchanged. */
 export namespace Host { export type Resource = HostResource }
