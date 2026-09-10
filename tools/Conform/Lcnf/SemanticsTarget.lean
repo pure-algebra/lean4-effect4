@@ -27,9 +27,12 @@ this repository — in particular **not** `OCaml5.*`: that is the extensibility 
 * **Strings are byte sequences.** `TValue.str` carries the target's own string; the primitive
   `strLength` answers the **byte** length, because that is what OCaml's `String.length` does.
   A backend whose strings are scalar-value sequences supplies a different primitive.
-* **Total.** The evaluator is structurally recursive on fuel: no `partial`, no `sorry`.
-  `stuck` is a refusal, `outOfFuel` is the frontier, and `exn` is the target's own
-  exception — the third thing an OCaml expression can do, which a Lean function cannot.
+* **The evaluator is total.** `evalT`, `evalArgs`, `evalArms`, `applyT` and `applyNamed` are
+  structurally recursive on fuel; none is `partial` and there is no `sorry` anywhere. (Four
+  helpers that walk a finite value or pattern — `TValue.beq`, `TValue.render`, `asListV`,
+  `matchPat` — are `partial`; none is part of the semantics.) `stuck` is a refusal,
+  `outOfFuel` is the frontier, and `exn` is the target's own exception — the third thing an
+  OCaml expression can do, which a Lean function cannot.
 -/
 
 namespace Conform.Lcnf.Target

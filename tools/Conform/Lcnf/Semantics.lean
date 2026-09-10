@@ -16,11 +16,15 @@ must implement, and it is small (nine rows carry `Effect4.Program.Ty`'s whole cl
 repository; roots, primitives and marshalling arrive as arguments.
 
 **Properties.**
-* **Total.** `evalCode` is structurally recursive on a `Nat` fuel; there is no `partial` in
-  this file and no `sorry`. Running out of fuel is `Outcome.outOfFuel`, which is the
-  machine's *frontier* — distinct from `Outcome.stuck`, a *refusal* (a rule the interpreter
-  does not have, a value of the wrong shape), and distinct from `Value.erased`, which is
-  *absent data*. Three things, three names (`brief-common.md`).
+* **The evaluator is total.** `evalCode`, `evalLetValue`, `evalConst`, `applyValue`,
+  `applyPrim` and `selectAlt` are structurally recursive on a `Nat` fuel; none is `partial`
+  and there is no `sorry` anywhere. (Five helpers that walk a finite `Value` or a finite
+  `Code` for printing, comparison or name collection — `Value.toList?`, `Value.beq`,
+  `Value.render`, `arrayOfList`, `constNames` — are `partial`; none of them is part of the
+  semantics.) Running out of fuel is `Outcome.outOfFuel`, the machine's *frontier* — distinct
+  from `Outcome.stuck`, a *refusal* (a rule the interpreter does not have, a value of the
+  wrong shape), and distinct from `Value.erased`, which is *absent data*. Three things, three
+  names (`brief-common.md`).
 * **First-order.** `Value` holds constructor trees, naturals, strings, arrays and code
   closures. A closure carries a `Code .pure` and an association list, not a Lean function, so
   a `Value` can be printed, compared and put in a report.
