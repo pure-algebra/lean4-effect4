@@ -22,10 +22,10 @@ allocation table where a handle is involved. Nothing here assumes an allocation.
   of `Image.pair` ever inhabits a `.prod`: `pair_never_hasTy_prod`. The repair is
   `pairTuple` below — the same two element images under the frame `Val.hasTy` reads — and its
   membership theorem is `hasTy_pairTuple`.
-* **`Ty.int` and `Ty.except` are uninhabited by `Val.hasTy` today.** They fall to its
-  final `| _ => false` (`Typed.lean:73`), so no image can have a membership theorem at them at
-  all: `hasTy_int_false`, `hasTy_except_false`. That is DI-09/DI-17 as a
-  theorem; the obligation rows below carry it into the report.
+* **`Ty.int` is uninhabited by `Val.hasTy` today.** `hasTy_int_false` carries this
+  remaining gap into the report. `Ty.result` uses the existing `Ty.except` constructor;
+  `hasTy_result` connects `Image.except` to both inhabited branches under their payload
+  membership premises and the same allocation table.
 * **A handle needs the allocation premise**, which no image can supply: `handleObligations`.
 
 **Depends on.** `Conform.Effect4.Models`.
@@ -101,11 +101,10 @@ theorem hasTy_pairTuple (I : Image α) (J : Image β) (ta tb : Ty) (allocated : 
   rw [hI, hJ]
   rfl
 
-/-! ## The types no image can inhabit today
+/-! ## Empty membership and the inhabited Result image
 
-Three of `Ty`'s fifteen constructors fall to `Val.hasTy`'s final `| _ => false`
-(`src/Effect4/Program/Typed.lean:73`). A membership theorem at any of them is therefore not
-merely unproved: it is false, for every value. -/
+`never` and the currently unrepresented `int` reject every value. Result uses the existing
+sum image, with failure at constructor zero and success at constructor one. -/
 
 theorem hasTy_never_false (v : Val) (allocated : List String) :
     hasTy v .never allocated = false := rfl
@@ -113,8 +112,14 @@ theorem hasTy_never_false (v : Val) (allocated : List String) :
 theorem hasTy_int_false (v : Val) (allocated : List String) :
     hasTy v .int allocated = false := rfl
 
-theorem hasTy_except_false (v : Val) (e a : Ty) (allocated : List String) :
-    hasTy v (.except e a) allocated = false := rfl
+theorem hasTy_result (I : Image α) (J : Image β) (error value : Ty)
+    (allocated : List String)
+    (hI : ∀ e, hasTy (I.toVal e) error allocated = true)
+    (hJ : ∀ a, hasTy (J.toVal a) value allocated = true) (v : Except α β) :
+    hasTy ((Image.except I J).toVal v) (Ty.result value error) allocated = true := by
+  cases v with
+  | error e => exact hI e
+  | ok a => exact hJ a
 
 /-- Current cause membership is exactly decoding followed by error membership. -/
 theorem hasTy_causeOf (v : Val) (e : Ty) (allocated : List String) :
@@ -155,11 +160,6 @@ supplied by the caller" }
        statement := "`Ty.int` is uninhabited by `Val.hasTy` (it falls to the final `_ => false`, \
 Typed.lean:73), and `hasTy_int_false` proves it, while `Ty.render` still spells it `number` \
 (Eff.lean:73) — a type the checker admits and the value admission never accepts" }
-   , { kind := "representation.membership-missing"
-       subject := { kind := "type", path := ["Effect4.Program.Ty", "except"] }
-       status := .refuted
-       profile := "hasTy"
-       statement := "`Ty.except` is uninhabited by `Val.hasTy` (`hasTy_except_false`); DI-17" }
    , { kind := "representation.law-missing"
        subject := { kind := "image", path := ["Store.Image", "pair"] }
        status := .refuted
@@ -183,7 +183,7 @@ product type. `Conform.Effect4.Membership.pairTuple` is the same composition und
 #print axioms hasTy_pairTuple
 #print axioms hasTy_never_false
 #print axioms hasTy_int_false
-#print axioms hasTy_except_false
+#print axioms hasTy_result
 #print axioms hasTy_causeOf
 #print axioms hasTy_optOptNat
 

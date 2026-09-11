@@ -63,7 +63,11 @@ theorem hasTy_normalize (t : Ty) (v : Val) (allocated : List String) :
     Val.hasTy v t.normalize allocated = Val.hasTy v t allocated := by
   induction t generalizing v with
   | never | unit | nat | int | string | bool | handle | lit => rfl
-  | except => rfl
+  | except error value ihe ihv =>
+    simp only [Ty.normalize, Val.hasTy]
+    split <;> try rfl
+    · exact ihe _
+    · exact ihv _
   | fiberOf => rfl
   | option t ih =>
     simp only [Ty.normalize, Val.hasTy]

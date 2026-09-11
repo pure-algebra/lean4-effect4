@@ -43,6 +43,10 @@ deriving DecidableEq, Repr
 
 namespace Ty
 
+/-- Effect rc.112 `Result.Result<A, E>` (Result.ts:66). Value first, error second,
+like `exitOf` and `fiberOf`. The existing constructor and its ordinal remain unchanged. -/
+abbrev result (value error : Ty) : Ty := .except error value
+
 /-- The TypeScript spelling. rc.112 has no `Either`: an `except` answer is the data reading
 `Result.Result<A, E>`; a `handle` is an opaque host type whose spelling is carried verbatim. -/
 def render : Ty → String

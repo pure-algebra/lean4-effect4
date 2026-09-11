@@ -108,6 +108,7 @@ def main():
         # Generated modules import ../prelude.ts and resolve Effect from their parent tree.
         # Keep the temporary run beneath the selected installation link, as the real run is.
         shutil.copyfile(truth/'prelude.ts', Path(work)/'prelude.ts')
+        shutil.copytree(truth/'session', Path(work)/'session', ignore=shutil.ignore_patterns('.work'))
         manifest = Path(work)/'corpus.json'
         subprocess.run(['lake', 'env', 'lean', '-M4096', '--run', 'harness/truth/Truth.lean', str(manifest),
                         '--tapes', str(tapes)], cwd=root, check=True, timeout=540)

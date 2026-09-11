@@ -438,6 +438,8 @@ packet without deleting the stable row.
 | ID | Status | Attacked statement | Witness / evidence | Forced repair |
 | --- | --- | --- | --- | --- |
 | `E4-CATCH-CE-001` | REPAIRED | Every admitted Boolean predicate selects the usable rc.112 catchIf overload without assistance | `Test/fixtures/target/catch-if-predicate-bad.ts` and `tools/target/oracle.test.ts`: the pinned compiler rejects the three-argument constant-false predicate with TS2769 after inferring a never handler parameter | `Codegen.Print` emits an explicit fourth `undefined` fallback to select the data-first overload. Exact readers require that absent fallback; foreign readers also accept the three-argument source form. `catch-if-predicate-good.ts` checks both directions of A/E/R without assertions. Stored predicate data is unchanged |
+| `E4-HOST-CE-005` | SEEDED | Distinct fiber/token keys make answer application commute even when continuations share a Ref | `Test/Api/KeyedHostContract.lean`, `shared`: admitted checked AB exits 2, BA exits 1 | `reply_commute` covers receiving/storing replies; applications are separate explicitly ordered tape records |
+| `E4-HOST-CE-006` | SEEDED | An unkeyed oracle answer queue identifies concurrent calls | `Test/Api/KeyedHostContract.lean`, `program`: reversed queue gives second child 2; keyed replies give it 3 | v2 records carry fiber/token keys and exact call claims; legacy queues retain their single-fiber limitation |
 
 ## History
 

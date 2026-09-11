@@ -53,6 +53,7 @@ let rec key : ty -> int list = function
   | Ty_union (l, r) ->
     let kl = key l in
     (14 :: List.length kl :: kl) @ key r
+  | Ty_lit value -> 15 :: List.init (String.length value) (fun i -> Char.code value.[i])
 
 let rec lt_key (a : int list) (b : int list) : bool =
   match a, b with

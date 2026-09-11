@@ -60,7 +60,8 @@ def provedLaws : List (String × String × ProofRef) :=
   , ("Image.pair", "never inhabits .prod", (checked_theorem% Conform.Effect4.Membership.pair_never_hasTy_prod))
   , ("Ty.never", "uninhabited by hasTy", (checked_theorem% Conform.Effect4.Membership.hasTy_never_false))
   , ("Ty.int", "uninhabited by hasTy", (checked_theorem% Conform.Effect4.Membership.hasTy_int_false))
-  , ("Ty.except", "uninhabited by hasTy", (checked_theorem% Conform.Effect4.Membership.hasTy_except_false))
+  , ("Image.except", "hasTy Ty.result, under both payloads' membership",
+      (checked_theorem% Conform.Effect4.Membership.hasTy_result))
   , ("Ty.causeOf", "represented cause membership", (checked_theorem% Conform.Effect4.Membership.hasTy_causeOf)) ]
 
 /-- The exact propositions and axiom policy are checked, not declaration existence. -/

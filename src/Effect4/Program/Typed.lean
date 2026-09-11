@@ -81,7 +81,11 @@ def Val.hasTy (v : Val) (ty : Ty) (allocated : List String := []) : Bool :=
   | .lit value => match v with | .str s => s == value | _ => false
   | .never => false
   | .int => false
-  | .except _ _ => false
+  | .except error value =>
+    match v with
+    | .ctor 0 [err] => Val.hasTy err error allocated
+    | .ctor 1 [val] => Val.hasTy val value allocated
+    | _ => false
 
 /-- The typed error part of a completion; defects and interruptions stay outside `E`.
 This is the shared reason fold at the default empty allocation table. -/
@@ -134,7 +138,23 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
     cases a with
     | never => simp [Val.hasTy] at hv
     | int => simp [Val.hasTy] at hv
-    | except _ _ => simp [Val.hasTy] at hv
+    | except ae av =>
+      cases b with
+      | union b1 b2 =>
+        rw [Ty.sub_union_right (.except ae av) b1 b2 rfl] at hsub
+        obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
+        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub (.except ae av) b1 v allocated h1 hv)
+        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub (.except ae av) b2 v allocated h2 hv)
+      | except be bv =>
+        have hab : Ty.sub ae be = true ∧ Ty.sub av bv = true := by
+          simpa [Ty.sub, heq] using hsub
+        dsimp only [Val.hasTy] at hv ⊢
+        split at hv <;> try contradiction
+        · exact hasTy_sub ae be _ allocated hab.1 hv
+        · exact hasTy_sub av bv _ allocated hab.2 hv
+      | never | unit | nat | int | string | bool | handle _ | lit _ | option _ | list _
+      | prod _ _ | exitOf _ _ | causeOf _ | fiberOf _ _ =>
+        revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
     | union a1 a2 =>
       rw [Ty.sub_union_left a1 a2 b heq] at hsub
       obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hsub

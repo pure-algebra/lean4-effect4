@@ -97,6 +97,7 @@ import Test.Program.HostSpecAxiomReport
 import Test.Program.HostBoundaryContract
 import Test.Program.HostBoundaryAxiomReport
 import Test.Api.HostSessionContract
+import Test.Api.KeyedHostContract
 import Test.Api.HostSessionAxiomReport
 import Test.Program.SchedContract
 import Test.Program.SchedAxiomReport

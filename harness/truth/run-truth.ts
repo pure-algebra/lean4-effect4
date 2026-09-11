@@ -57,10 +57,11 @@
  *    compared. Nothing is masked — no row kind is dropped for any program, and the sync
  *    entry's rows are never substituted for the fork entry's (by construction:
  *    `compareSchedules` is called on `hostFork` alone);
- *  - exact where represented: success and Fail payloads are compared as JSON. A cause
- *    containing a represented text/pair error defect is compared in full, so an altered or
- *    absent defect payload cannot pass by kind. AsyncFiberError keeps its explicit marker.
- *    Other host objects and interrupt payloads retain their stated diagnostic-only boundary;
+ *  - exact over the recorded observation: success values and every ordered failure reason
+ *    are compared as JSON, including defect and interrupt payloads. Numeric user defects
+ *    retain their natural value, text/pair error defects retain their error value, and
+ *    AsyncFiberError keeps its explicit marker. Other host objects remain diagnostic text;
+ *    equality of that text does not establish equality of arbitrary runtime objects;
  *  - one pair for a host error, and it is the adapter's: a row whose error column is the
  *    DB-15 pair projects at the adapter (`prelude.ts` `toPair`, DI-59), so the program's own
  *    handler, the tape row and the Lean machine observe one value; this file's `taggedPair`
@@ -359,6 +360,8 @@ const describe = (value: unknown): string => {
  * pairOf; a raw object here stays diagnostic rather than acquiring an invented Err value. */
 const defectWire = (defect: unknown): Json => {
   if (Cause.isAsyncFiberError(defect)) return "asyncFiber"
+  // Machine.Defect.user / Truth.defectJson retain a natural defect as numeric data.
+  if (typeof defect === "number" && Number.isSafeInteger(defect) && defect >= 0 && !Object.is(defect, -0)) return { user: defect }
   if (typeof defect === "string") return { error: defect }
   if (Array.isArray(defect) && defect.length === 2 && typeof defect[0] === "string" && typeof defect[1] === "string") {
     return { error: [defect[0], defect[1]] }
@@ -546,12 +549,6 @@ const runPromiseEntry = async (main: any): Promise<Observation> => {
 // ---- comparison -----------------------------------------------------------------------
 const deepEqual = (a: Json, b: Json): boolean => JSON.stringify(a) === JSON.stringify(b)
 
-const failPayloads = (exit: Json): Json[] =>
-  (((exit as any)?.failure?.reasons ?? []) as Array<Record<string, Json>>).flatMap((r) => {
-    const payload = r.fail
-    return payload === undefined ? [] : [payload]
-  })
-
 /** The Lean verdict of `Api.run`: an exit, a park (frontier with the root parked), or a
  * frontier with the root live and unparked — the compile stopped (`acquireRelease`,
  * `RowKind.program`, or no fuel), which rc.112 can never reproduce. */
@@ -608,11 +605,8 @@ const compareExits = (lean: { kind: string; exit: Json | null }, host: Observati
     const same = deepEqual((lean.exit as any).success, (host.exit as any).success)
     return { agree: same, note: same ? "same value" : "same kind, values differ" }
   }
-  if (lean.kind === "fail") {
-    const same = deepEqual(failPayloads(lean.exit!), failPayloads(host.exit!))
-    return { agree: same, note: same ? "same fail payloads" : "same kind, fail payloads differ" }
-  }
-  return { agree: true, note: `same kind (${lean.kind}); payloads compared by eye` }
+  const same = deepEqual(failureReasons(lean.exit), failureReasons(host.exit))
+  return { agree: same, note: same ? "same failure reasons and payloads" : "failure reasons or payloads differ" }
 }
 
 /** Pure independent controls; no Effect is run and no manifest/tape is rewritten. */
@@ -639,7 +633,15 @@ const selfTestErrors = (): number => {
     ["text boom remains text", agrees(fail("boom"), fail("boom"))],
     ["pair projection exact", deepEqual(defectWire(["SqlError", "boom"]), { error: ["SqlError", "boom"] })],
     ["unsupported object remains diagnostic", typeof defectWire({ _tag: "SqlError", message: "boom" }) === "string"],
-    ["text asyncFiber is not the runtime marker", !isAsyncFiberExit(die(defectWire("asyncFiber")))]
+    ["text asyncFiber is not the runtime marker", !isAsyncFiberExit(die(defectWire("asyncFiber")))],
+    ["unrepresented defect payload mutation rejected", !agrees(die("lost"), die("found"))],
+    ["numeric user defect projection", deepEqual(defectWire(3), { user: 3 })],
+    ["numeric user defect mutation rejected", !agrees(die({ user: 3 }), die(defectWire(4)))],
+    ["interrupt identity mutation rejected", !agrees(
+      { failure: { reasons: [{ interrupt: 1 }] } }, { failure: { reasons: [{ interrupt: 2 }] } })],
+    ["mixed unrepresented defect mutation rejected", !agrees(
+      { failure: { reasons: [{ fail: "same" }, { die: "lost" }] } },
+      { failure: { reasons: [{ fail: "same" }, { die: "found" }] } })]
   ]
   const failures = cases.filter(([, pass]) => !pass).map(([name]) => name)
   console.log(JSON.stringify({ kind: "pure-error-comparison-controls", checks: cases.length, failures }))

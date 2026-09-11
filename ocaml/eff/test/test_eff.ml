@@ -423,7 +423,10 @@ let () =
 (* ---- 3. pins ---- *)
 
 let () =
-  check "Ty has 15 constructors" (List.length ctor_names_ty = 15);
+  (* Result is an alias; pin the stored alphabet, including the existing literal type. *)
+  check "Ty constructor alphabet is unchanged"
+    (ctor_names_ty = ["never"; "unit"; "nat"; "int"; "string"; "bool"; "handle";
+      "option"; "list"; "prod"; "except"; "exitOf"; "causeOf"; "fiberOf"; "union"; "lit"]);
   check "Lit has 4" (List.length ctor_names_lit = 4);
   check "Term has 3" (List.length ctor_names_term = 3);
   check "CauseTerm has 4" (List.length ctor_names_cause_term = 4);

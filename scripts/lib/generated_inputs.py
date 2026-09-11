@@ -65,6 +65,8 @@ def recipe(path, family):
         modules = [m for i,a in enumerate(args) if a == '--import' for m in args[i+1].split(',')]
         files = [args[i+1] for i,a in enumerate(args) if a in ['--externs', '--prelude']]
         return 'src/OCaml5/Tools/LcnfGen.lean', modules or ['Effect4.Machine.Fibers'], files
+    if family == 'Host protocol':
+        return 'tools/Tools/HostProtocol.lean', [], []
     if family == 'Truth':
         return 'harness/truth/Truth.lean', [], ['harness/truth/run-truth.ts', 'harness/truth/prelude.ts', 'ts/eff/package.json', 'ts/eff/bun.lock']
     if family == 'Schema TypeScript':

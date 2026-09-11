@@ -1,5 +1,5 @@
 import Effect4.Api.HostSession
-import Effect4.Program.HostResource
+import Effect4.Program.Profile
 import Tools.ProfileJson
 import TypeScript.Render
 import Lean.Data.Json
@@ -7,7 +7,8 @@ import Lean.Data.Json
 /-! Thin strict JSON boundary for the selected serial-root scalar session.
 The table check is equality with Tools.ProfileJson's complete view. This tool is outside
 canonical Eff and the library proof boundary; no JSON-parser or JS-adequacy theorem is claimed.
-Legacy oracle tapes have no entry point here. -/
+This is the explicit v1 serial adapter; it binds the missing key at the actual park and
+retains the original v1 records. New v2 recordings use Keyed.lean and require recorded keys. -/
 
 open Lean Effect4 Effect4.Machine Effect4.Program Effect4.Api.HostSession
 abbrev J := Lean.Json
@@ -25,7 +26,7 @@ def resourceClosed : Api.Program :=
   .bind (.callback (.external 0) (.lit .unit))
     (.bind (.callback (.external 2) (.var 0)) (.callback (.external 1) (.var 0)))
 def isResource (name : String) : Bool := ["resourceFailure", "resourceSuccess", "resourceClosed"].contains name
-def tableFor (name : String) : RowTable := if isResource name then Profile.Resource.Binding.table else table
+def tableFor (name : String) : RowTable := if isResource name then [Profile.Resource.acquireRow, Profile.Resource.useRow, Profile.Resource.releaseRow] else table
 def profileFor (name : String) : String := if isResource name then "serial-root-resource-v1" else "serial-root-scalar-v1"
 
 def program (name : String) : Except String Api.Program :=
@@ -65,7 +66,7 @@ def natField (j : J) (key : String) : Except String Nat := do
   if n ≤ rc112.natBound then pure n else throw "unsafe natural"
 
 def checkVersion (j : J) : Except String Unit := do
-  if (← natField j "version") = version then pure () else throw "unknown version"
+  if (← natField j "version") = 1 then pure () else throw "unknown version"
 
 def decodeAnswer (j : J) : Except String Answer := do
   match ← strField j "kind" with
@@ -131,12 +132,14 @@ def consume {p : Api.Program} {rows : RowTable} (s : Session p rows) (rootRuntim
     let request ← decodeRequest session s.header.profile (← field j "request")
     let some current := (outstanding s).find? (fun x => x.1 = ⟨fiber⟩)
       | throw "no outstanding call for recorded fiber"
-    pure (bindCall s ⟨1, session, s.header.table, callId, ⟨fiber⟩, .external row, request⟩ current.2.1)
+    pure (bindCall s ⟨version, session, s.header.table, callId, ⟨fiber⟩, .external row, request⟩ current.2.1)
   | "reply" =>
     keys j ["kind", "version", "session", "callId", "completion"]
     let completion ← decodeAnswer (← field j "completion")
-    let reply : Reply := ⟨1, session, callId, completion⟩
-    let staged ← match s.pending with
+    let some bound := s.active.find? (fun b => b.call.callId == callId)
+      | throw "unknown legacy call association"
+    let reply : Reply := ⟨version, session, callId, bound.key, completion⟩
+    let staged ← match readReply s.pending reply.key with
       | none => pure (submit s reply)
       | some old => if old = reply then pure ⟨.preflight, s⟩ else throw "pending reply differs"
     if staged.phase = .preflight then pure (applyPending staged.session fuel)
@@ -182,7 +185,7 @@ def outcomeJson (o : Api.Outcome) : J := .str <| match o with
 def receipt {p : Api.Program} {rows : RowTable} (r : Walk p rows) : J :=
   let run := inspect r.session
   Json.mkObj [("status", .str r.status), ("position", toJson r.position),
-    ("applied", toJson r.session.applied), ("pending", .bool r.session.pending.isSome),
+    ("applied", toJson r.session.applied), ("pending", .bool (!(pendingReplies r.session).isEmpty)),
     ("outcome", outcomeJson run.outcome), ("exit", (run.exit.map exitJson).getD .null),
     ("remaining", toJson r.remaining.length), ("allocated", toJson r.session.machine.state.externals.allocated), ("oracleAnswers", toJson r.session.machine.state.externals.answers.length),
     ("awaits", .arr ((outstanding r.session).map fun (fiber, token, op, req) => Json.mkObj [
@@ -201,7 +204,7 @@ def replay (j : J) (fuel : Nat) (splitAt : Option Nat := none) : Except String J
   let rows := tableFor name
   if (← field h "table") != tableJson rows then throw "full table mismatch"
   let rootRuntime ← natField h "rootRuntimeFiber"
-  let header : Header := ⟨1, ← strField h "session", ← strField h "profile", rows⟩
+  let header : Header := ⟨version, ← strField h "session", ← strField h "profile", rows⟩
   let s ← (start p rows (profileFor name) header 300).mapError reprStr
   let s := (advance s 300 Api.evaluate).session
   let records := (← (← field j "records").getArr?).toList

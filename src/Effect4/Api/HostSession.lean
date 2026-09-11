@@ -1,7 +1,7 @@
-import Effect4.Api
+import Effect4.Api.HostProtocol
 
 /-!
-A checked, serialized host-reply session over the existing Eff machine. The program and
+A checked, keyed host-reply session over the existing Eff machine. The program and
 row table are indexed by the existing admission certificate. Recorder call IDs are distinct
 from machine guard tokens; `bindCall` is their checked association. No oracle answers are
 loaded. This module owns no JSON decoder, host adequacy theorem or scheduling policy.
@@ -16,7 +16,9 @@ open Effect4 Effect4.Machine Effect4.Program
 
 abbrev Answer := Completion Val Err Defect FiberId Ann
 
-def version : Nat := 1
+abbrev Key := HostProtocol.Key
+
+def version : Nat := HostProtocol.hostProtocol.version
 
 structure Header where
   version : Nat
@@ -47,8 +49,25 @@ structure Reply where
   version : Nat
   session : String
   callId : Nat
+  key : Key
   completion : Answer
 deriving DecidableEq
+
+def BoundCall.key (bound : BoundCall) : Key := ⟨bound.call.fiber, bound.token⟩
+
+/-- Slots are created in binding order, so receipt changes a value without reordering
+storage. The finite representation contains no function-valued map. -/
+structure ReplySlot where
+  key : Key
+  reply : Option Reply
+ deriving DecidableEq
+
+def readReply : List ReplySlot → Key → Option Reply
+  | [], _ => none
+  | slot :: rest, key => if slot.key = key then slot.reply else readReply rest key
+
+def storeReply (slots : List ReplySlot) (reply : Reply) : List ReplySlot :=
+  slots.map fun slot => if slot.key = reply.key then { slot with reply := some reply } else slot
 
 /-- The recorded claims come from the call record, not from the machine's expected call. -/
 def BoundCall.record (bound : BoundCall) (reply : Reply) : RecordedReply :=
@@ -68,8 +87,8 @@ structure Session (program : Api.Program) (table : RowTable) where
   machine : Api.Machine
   nextCall : Nat := 0
   applied : Nat := 0
-  active : Option BoundCall := none
-  pending : Option Reply := none
+  active : List BoundCall := []
+  pending : List ReplySlot := []
   consumed : List Nat := []
   retired : List RetiredCall := []
 
@@ -79,7 +98,9 @@ inductive Refusal
   | profile
   | table
   | program (reason : AdmitRefusal)
-  | activeCall
+  | duplicateCall
+  | protocol
+  | selectionRequired
   | pendingReply
   | callOrder
   | noCall
@@ -127,12 +148,14 @@ def bindCall {program : Api.Program} {table : RowTable} (s : Session program tab
   if call.version ≠ version then refuse .version
   else if call.session ≠ s.header.session then refuse .session
   else if call.table ≠ table then refuse .table
-  else if s.active.isSome then refuse .activeCall
-  else if s.pending.isSome then refuse .pendingReply
+  else if s.active.any (fun bound => bound.key == ⟨call.fiber, token⟩) then refuse .duplicateCall
   else if call.callId ≠ s.nextCall then refuse .callOrder
   else if requestOf s.machine call.fiber token ≠ some (call.op, call.request) then
     refuse .staleCall
-  else ⟨.bound, { s with active := some ⟨call, token⟩, nextCall := s.nextCall + 1 }⟩
+  else ⟨.bound, { s with
+    active := s.active ++ [⟨call, token⟩]
+    pending := s.pending ++ [⟨⟨call.fiber, token⟩, none⟩]
+    nextCall := s.nextCall + 1 }⟩
 
 /-- Pure preflight. Success establishes exactly the existing `Envelope` and returns only
 its recorded answer decision. It neither applies a decision nor consumes a reply. -/
@@ -140,62 +163,91 @@ def preflight {program : Api.Program} {table : RowTable} (s : Session program ta
     (reply : Reply) : Except Refusal NativeDecision :=
   if reply.version ≠ version then .error .version
   else if reply.session ≠ s.header.session then .error .session
-  else match s.active with
+  else match s.active.find? (fun bound => bound.key == reply.key) with
     | none => .error .noCall
     | some bound =>
       if reply.callId ≠ bound.call.callId then .error .callOrder
+      else if requestOf s.machine bound.call.fiber bound.token = none then .error .staleCall
       else match acceptReply table s.machine (bound.record reply) with
         | none => .error .envelope
         | some decision => .ok decision
 
-/-- Hold one preflighted completion until execution actually removes its exact guard. -/
+/-- Pending completions in binding order; no application policy is inferred from this list. -/
+def pendingReplies {program : Api.Program} {table : RowTable} (s : Session program table) : List Reply :=
+  s.pending.filterMap ReplySlot.reply
+
+/-- Receipt stores only. Another key may already have a pending completion. -/
 def submit {program : Api.Program} {table : RowTable} (s : Session program table)
     (reply : Reply) : Result program table :=
-  if s.pending.isSome then ⟨.refused .pendingReply, s⟩
+  if (readReply s.pending reply.key).isSome then ⟨.refused .pendingReply, s⟩
   else match preflight s reply with
     | .error why => ⟨.refused why, s⟩
-    | .ok _ => ⟨.preflight, { s with pending := some reply }⟩
+    | .ok _ =>
+      if !(s.pending.any fun slot => slot.key == reply.key) then ⟨.refused .noCall, s⟩
+      else if !HostProtocol.allows (HostProtocol.observe s.machine) (.submit reply.key)
+          (HostProtocol.observe s.machine) then ⟨.refused .protocol, s⟩
+      else ⟨.preflight, { s with pending := storeReply s.pending reply }⟩
 
-/-- Zero fuel retains both the machine and the pending record. A positive application is
-counted only if its exact guard disappeared, even when later command execution exhausted
-fuel. If that guard survives, keep the resulting state and pending record as a frontier. -/
-def applyPending {program : Api.Program} {table : RowTable} (s : Session program table) :
-    Nat → Result program table
+/-- Retire every association whose exact guard was removed by a machine step. Shared
+cancellation may retire more than the selected key. Accepted but unapplied payloads remain
+available to the host cleanup driver, without consuming a machine allocation or a call. -/
+def retire {program : Api.Program} {table : RowTable} (s : Session program table) : Session program table :=
+  let dead := s.active.filter fun bound => (requestOf s.machine bound.call.fiber bound.token).isNone
+  { s with
+    active := s.active.filter fun bound => (requestOf s.machine bound.call.fiber bound.token).isSome
+    pending := s.pending.filter fun slot => !(dead.any fun bound => bound.key == slot.key)
+    retired := s.retired ++ dead.map (fun bound => ⟨bound, readReply s.pending bound.key⟩) }
+
+/-- Execute one explicitly selected key. Zero fuel changes nothing. Consumption is counted
+only after its exact guard disappears. The remaining continuations run in the tape's order;
+this function is deliberately absent from the receipt commutation law. -/
+def applyReply {program : Api.Program} {table : RowTable} (s : Session program table)
+    (key : Key) : Nat → Result program table
   | 0 => ⟨.frontier, s⟩
   | fuel + 1 =>
-    match s.active, s.pending with
+    match s.active.find? (fun bound => bound.key == key), readReply s.pending key with
     | some bound, some reply =>
       match preflight s reply with
       | .error why => ⟨.refused why, s⟩
       | .ok decision =>
         let machine := steppedBy program (fuel + 1) table s.machine decision
-        if requestOf machine bound.call.fiber bound.token = none then
-          ⟨.applied, { s with machine, active := none, pending := none, applied := s.applied + 1, consumed := s.consumed ++ [bound.call.callId] }⟩
+        if !HostProtocol.allows (HostProtocol.observe s.machine) (.answer key)
+            (HostProtocol.observe machine) then ⟨.refused .protocol, s⟩
+        else if requestOf machine bound.call.fiber bound.token = none then
+          let next := { s with
+            machine := machine
+            active := s.active.filter (fun b => b.key != key)
+            pending := s.pending.filter (fun slot => slot.key != key)
+            applied := s.applied + 1
+            consumed := s.consumed ++ [bound.call.callId] }
+          ⟨.applied, retire next⟩
         else ⟨.frontier, { s with machine }⟩
     | _, _ => ⟨.refused .noCall, s⟩
 
-/-- A control step cannot smuggle an unchecked answer. While a reply is pending only
-explicit cancellation may move the machine. If cancellation removes an active guard, retain
-its association and pending payload in `retired`; never mark it applied. -/
+/-- Explicit compatibility convenience for a single pending completion. More than one
+pending reply requires a key; arrival or binding order is never an implicit scheduler. -/
+def applyPending {program : Api.Program} {table : RowTable} (s : Session program table) :
+    Nat → Result program table
+  | 0 => ⟨.frontier, s⟩
+  | fuel + 1 => match pendingReplies s with
+    | [reply] => applyReply s reply.key (fuel + 1)
+    | [] => ⟨.refused .noCall, s⟩
+    | _ => ⟨.refused .selectionRequired, s⟩
+
+/-- Controls and reply applications are separate tape records. Pending replies do not
+forbid scheduling other fibers. After any control, all removed associations are retired. -/
 def advance {program : Api.Program} {table : RowTable} (s : Session program table)
     (fuel : Nat) (decision : NativeDecision) : Result program table :=
   match decision with
   | .answerAsync _ _ _ => ⟨.refused .directAnswer, s⟩
   | _ =>
-    let cancellation := match decision with | .interruptFrom _ _ _ => true | _ => false
-    if s.pending.isSome && !cancellation then ⟨.refused .pendingControl, s⟩
-    else if s.machine.stuck.isSome then ⟨.refused .stuck, s⟩
+    if s.machine.stuck.isSome then ⟨.refused .stuck, s⟩
     else
       letI := evaluatorFor program table
       let (machine, enough) := stepDecisionState (interpOf program table) fuel s.machine decision
-      let next := { s with machine }
-      let next := match s.active with
-        | none => next
-        | some bound =>
-          if requestOf machine bound.call.fiber bound.token = none then
-            { next with active := none, pending := none, retired := s.retired ++ [⟨bound, s.pending⟩] }
-          else next
-      ⟨if enough then .progressed else .frontier, next⟩
+      if !HostProtocol.allows (HostProtocol.observe s.machine) (HostProtocol.controlLabel decision)
+          (HostProtocol.observe machine) then ⟨.refused .protocol, s⟩
+      else ⟨if enough then .progressed else .frontier, retire { s with machine }⟩
 
 /-- Reading a frontier does not execute pending replies or discard the session ledger. -/
 def inspect {program : Api.Program} {table : RowTable} (s : Session program table) : Api.Run :=

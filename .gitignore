@@ -24,6 +24,7 @@ __pycache__/
 # is tracked; its bun install and its copy of the archived trace lane are not.
 /harness/*
 !/harness/truth/
+!/harness/streams/
 !/harness/schema-host/
 /harness/truth/node_modules
 /harness/truth/archive/
@@ -40,3 +41,5 @@ __pycache__/
 /ocaml/**/node_modules
 
 /harness/schema-host/node_modules
+
+/harness/truth/session/.work/

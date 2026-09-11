@@ -57,6 +57,43 @@ the Lean half reads the committed tapes that the bun half re-records: the two pr
 fixed point, not a pipeline stage. Putting it in `--all` would let one run regenerate a tape
 and a corpus that had never been compared with each other.
 
+## Stream example outputs
+
+The stream example lane produces two ignored build artifacts under `harness/streams/`,
+rather than committed projections. `census.json` is produced by
+`bash scripts/generate-effect-stream-census.sh` from the executable doc fences in the
+pinned Stream, Channel, Pull, Queue, Scope, Sink, PubSub and Fiber modules. It records
+source spans, SHA-256 digests, programs and expectations. `result.json`
+is produced by `bun harness/streams/run.ts`; its per-row input digest includes the
+vendored source tree, runner, compiler/declarations, runtime and deadline. The designated
+gate for both is `bash scripts/check-streams.sh`. Its evidence is bounded host output
+agreement, separately reported type checking and execution without an output oracle;
+no Lean stream relation is claimed. Neither file is a committed projection or a
+replacement for the runtime coverage report.
+
+## Host protocol projections
+
+`harness/truth/session/protocol.gen.ts` and `harness/truth/session/tape.schema.json`
+are deterministic committed projections of `src/Effect4/Api/HostProtocol.lean`, produced
+by `bash scripts/generate-host-protocol.sh` through `tools/Tools/HostProtocol.lean`.
+The TypeScript adapter and Lean JSON driver both use the datum's record fields and
+transition table. The schema describes record structure; `Envelope` remains responsible
+for the actual machine's row/request/completion judgment. This schema is a tape schema,
+not a published content-address encoding (DI-01/04).
+
+`bash scripts/check-host-protocol.sh` freshly regenerates and compares both files,
+compares provenance except its informational revision, emits admitted Eff fixtures and binding plans, runs the printed expressions on rc.112,
+typechecks those same generated expressions, and replays the actual recorded tapes in
+Lean. Its finite controls include missing/stale/duplicate keys, wrong row/request/value,
+receipt reordering, explicit application reordering, zero application fuel, and empty
+public chunks. Inputs are the protocol/session/typing library, fixture and projection
+drivers, host binding and comparator, pinned toolchain and Effect installation. No success
+stamp skips this gate. Its latest working receipt is kept under the ignored `.work/`
+folder beneath `harness/truth/session/`; it is not a committed projection or an oracle.
+
+The v1 serial adapter in `harness/truth/session/Session.lean` is explicit and separately
+version checked. V2 never fills in missing keys from a replay's expected request.
+
 ## Conform outputs
 
 `src/Effect4/Laws/Program/Typing/Specs.lean` is the committed ordinary specification
@@ -802,3 +839,6 @@ tables describe, whose verdicts are finite runs over the fixture corpus.
 | `harness/truth/generated/pCatchIfHit.ts` | committed projection | Truth | Truth | Truth | Truth | yes | yes |
 | `harness/truth/generated/pCatchIfMiss.ts` | committed projection | Truth | Truth | Truth | Truth | yes | yes |
 | `harness/truth/generated/pCatchIfRetained.ts` | committed projection | Truth | Truth | Truth | Truth | yes | yes |
+
+| `harness/truth/session/protocol.gen.ts` | committed projection | Host protocol | Host protocol | Host protocol | Host protocol | cut-from header; fresh-byte gate | yes |
+| `harness/truth/session/tape.schema.json` | committed projection | Host protocol | Host protocol | Host protocol | Host protocol | adjacent cut-from; fresh-byte gate | yes |

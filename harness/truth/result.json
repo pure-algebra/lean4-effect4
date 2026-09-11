@@ -2806,7 +2806,7 @@
       "runSyncAgree": true,
       "notes": [
         "runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one",
-        "same fail payloads"
+        "same failure reasons and payloads"
       ],
       "host": {
         "entry": "runPromiseExit",
@@ -3548,7 +3548,7 @@
       "scheduleAgree": true,
       "runSyncAgree": true,
       "notes": [
-        "same fail payloads",
+        "same failure reasons and payloads",
         "tape: 3 calls"
       ],
       "host": {
@@ -4963,7 +4963,7 @@
       "runSyncAgree": true,
       "notes": [
         "runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one",
-        "same fail payloads"
+        "same failure reasons and payloads"
       ],
       "host": {
         "entry": "runPromiseExit",
@@ -5020,7 +5020,7 @@
       "runSyncAgree": true,
       "notes": [
         "runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one",
-        "same fail payloads"
+        "same failure reasons and payloads"
       ],
       "host": {
         "entry": "runPromiseExit",
@@ -5340,13 +5340,13 @@
     {
       "program": "pCatchIfMiss",
       "leanExit": "fail [{\"fail\":7},{\"die\":{\"user\":3}},{\"fail\":9}]",
-      "hostExit": "fail [{\"fail\":7},{\"die\":\"3\"},{\"fail\":9}]",
+      "hostExit": "fail [{\"fail\":7},{\"die\":{\"user\":3}},{\"fail\":9}]",
       "entry": "runSyncExit",
       "exitAgree": true,
       "scheduleAgree": true,
       "runSyncAgree": true,
       "notes": [
-        "same fail payloads"
+        "same failure reasons and payloads"
       ],
       "host": {
         "entry": "runPromiseExit",
@@ -5357,7 +5357,9 @@
                 "fail": 7
               },
               {
-                "die": "3"
+                "die": {
+                  "user": 3
+                }
               },
               {
                 "fail": 9
@@ -5372,7 +5374,7 @@
         ],
         "events": [
           "started 0",
-          "exited 0 {\"failure\":{\"reasons\":[{\"fail\":7},{\"die\":\"3\"},{\"fail\":9}]}}"
+          "exited 0 {\"failure\":{\"reasons\":[{\"fail\":7},{\"die\":{\"user\":3}},{\"fail\":9}]}}"
         ],
         "frames": [
           "0:OnFailure",
@@ -5391,7 +5393,9 @@
                 "fail": 7
               },
               {
-                "die": "3"
+                "die": {
+                  "user": 3
+                }
               },
               {
                 "fail": 9
@@ -5406,7 +5410,7 @@
         ],
         "events": [
           "started 0",
-          "exited 0 {\"failure\":{\"reasons\":[{\"fail\":7},{\"die\":\"3\"},{\"fail\":9}]}}"
+          "exited 0 {\"failure\":{\"reasons\":[{\"fail\":7},{\"die\":{\"user\":3}},{\"fail\":9}]}}"
         ],
         "frames": [
           "0:OnFailure",

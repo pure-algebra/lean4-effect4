@@ -75,7 +75,9 @@ hermetic|generated|scripts/check-generated.sh
 host|schema-typescript|scripts/check-schema-typescript-generation.sh
 host|ts-eff-corpus|scripts/check-ts-eff-corpus.sh
 host|ingest|scripts/check-ingest.sh
+host|host-protocol|scripts/check-host-protocol.sh
 host|truth|scripts/check-truth.sh
+host|streams|scripts/check-streams.sh
 ocaml|gen-check|scripts/check-ocaml.sh gen-check
 ocaml|dune-tests|scripts/check-ocaml.sh dune-tests
 ocaml|engine-tests|scripts/check-ocaml.sh engine-tests

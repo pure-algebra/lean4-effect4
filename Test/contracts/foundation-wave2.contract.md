@@ -125,3 +125,31 @@ changed identities/verdicts/bytes and reproducible commands on its saved tree. C
 integrates roots/generation and runs the full build and relevant gates under the unchanged
 declared-red policy. A ruled decision, generated stamp or compiling finite example does not
 replace these obligations.
+
+### T-09 / T-12 amendment (owner ruled 2026-09-10)
+
+The protocol is a first-order transition datum with phases idle, awaitingAsync, parked,
+and terminated. Its projections provide the Lean session transition check, the TypeScript
+adapter table, and the versioned tape record schema. Scheduler controls remain explicit.
+
+Outstanding associations use `(fiber, token)` keys. Call IDs increase when calls bind;
+they do not constrain reply arrival. A reply is checked and stored without executing the
+machine. A separate keyed application record selects the stored completion to execute.
+`reply_commute` states equality after receiving two valid replies for distinct keys in
+opposite orders, under unchanged execution state. It makes no claim that resumed programs
+with shared effects commute. Per-key duplicate, stale, and malformed replies refuse;
+zero fuel retains the pending reply. Cancellation retains unapplied payloads for cleanup.
+
+The older single-fiber oracle tapes remain explicitly legacy evidence. They are not
+silently interpreted as version 2 tapes. New multi-fiber comparisons check the recorded
+key, row, request, completion, and application sequence against checked Lean replay.
+
+### Result ergonomics amendment (owner ruled 2026-09-10)
+
+`Ty.result value error` abbreviates the existing `Ty.except error value`; no constructor,
+ordinal, or stored type is renamed. The target remains `Result.Result<A, E>`. Membership
+uses the existing `Image.except` representation: `.ctor 0 [error]` and `.ctor 1 [value]`,
+with recursive typing and the caller's allocation table. Wrong branch payloads, tags and
+arities refuse. Normalization, subtyping and allocation-extension laws apply to both arms.
+`Ty.schema` is not yet implemented; its future Result reflection keeps the already-ratified
+value/error order, without adding a second type constructor here.

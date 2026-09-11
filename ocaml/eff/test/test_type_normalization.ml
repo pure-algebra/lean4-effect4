@@ -25,6 +25,9 @@ let () =
   List.iter (fun f -> check "binary children" (f canon canon) (normalize (f raw raw))) binary;
   check "utf8 order" (Ty_union (Ty_handle "A", Ty_handle "é"))
     (normalize (Ty_union (Ty_handle "é", Ty_handle "A")));
+  check "literal utf8 key" [15; 195; 169] (key (Ty_lit "é"));
+  check "literal union order" (Ty_union (Ty_lit "A", Ty_lit "é"))
+    (normalize (Ty_union (Ty_lit "é", Ty_union (Ty_lit "A", Ty_lit "é"))));
   check "empty union" Ty_never (normalize (Ty_union (Ty_never, Ty_never)));
   check "deep duplicate" (Ty_option canon)
     (normalize (Ty_union (Ty_option raw, Ty_option canon)));

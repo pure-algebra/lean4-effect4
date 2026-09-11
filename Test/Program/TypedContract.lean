@@ -252,6 +252,21 @@ section Inhabited
 -- DI-62: a payloadless boom does not inhabit the declared error column.
 #guard Val.hasTy (Val.exitErr (Cause.fail Err.boom)) (.exitOf .nat .bool) = false
 
+-- Result keeps Except's stored shape; the developer alias follows Effect's A, E order.
+#guard Ty.result .string .nat = Ty.except .nat .string
+#guard (Ty.result .string .nat).render = "Result.Result<string, number>"
+#guard Val.hasTy (.ctor 0 [.nat 7]) (Ty.result .string .nat)
+#guard Val.hasTy (.ctor 1 [.str "ok"]) (Ty.result .string .nat)
+#guard !Val.hasTy (.ctor 0 [.str "wrong"]) (Ty.result .string .nat)
+#guard !Val.hasTy (.ctor 1 [.nat 7]) (Ty.result .string .nat)
+#guard !Val.hasTy (.ctor 2 [.nat 7]) (Ty.result .string .nat)
+#guard !Val.hasTy (.ctor 1 []) (Ty.result .string .nat)
+#guard !Val.hasTy (.ctor 1 [.str "ok", .str "extra"]) (Ty.result .string .nat)
+#guard !Val.hasTy (.ctor 0 [.nat 0]) (Ty.result .string .never)
+#guard Val.hasTy (.some (.ctor 1 [.str "ok"])) (.option (Ty.result .string .nat))
+#guard Val.hasTy (.ctor 1 [Value.external 0]) (Ty.result (.handle "Result.Resource") .nat) ["Result.Resource"]
+#guard !Val.hasTy (.ctor 1 [Value.external 0]) (Ty.result (.handle "Result.Resource") .nat)
+
 end Inhabited
 
 /-! ## `Val.hasTy` — one refusal per uninhabited type, and the mismatches -/

@@ -270,7 +270,12 @@ membership reads the table. All previous environment statements retain their pre
 theorem hasTy_mono (ty : Ty) (v : Val) (a b : List String)
     (ext : Extends a b) (typed : Val.hasTy v ty a = true) : Val.hasTy v ty b = true := by
   induction ty generalizing v with
-  | never | int | except => simp [Val.hasTy] at typed
+  | never | int => simp [Val.hasTy] at typed
+  | except error value ihe ihv =>
+    simp only [Val.hasTy] at typed ⊢
+    split at typed <;> try exact typed
+    · exact ihe _ typed
+    · exact ihv _ typed
   | unit | nat | bool | string | fiberOf | lit => exact typed
   | handle target =>
     cases v <;> simp only [Val.hasTy] at typed ⊢
