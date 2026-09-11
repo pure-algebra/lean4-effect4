@@ -42,6 +42,7 @@ import Effect4.Laws.Program.LinkedRows
 import Effect4.Laws.Program.Typing.Sound
 import Effect4.Laws.Program.Typing.Check
 import Effect4.Laws.Store.CanonicalSpec
+import Effect4.Laws.Schema.Codec
 
 /-!
 # Effect4 proof graph

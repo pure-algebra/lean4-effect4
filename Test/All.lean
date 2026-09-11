@@ -17,6 +17,7 @@ import Test.Counterexamples.Schema.AnnotationDataPlane
 import Test.Counterexamples.Schema.EffectfulField
 import Test.Counterexamples.Schema.EffectfulFieldProperties
 import Test.Counterexamples.Schema.RecursiveElimination
+import Test.Counterexamples.Schema.Codec
 import Test.Schema.RepresentationContract
 import Test.Schema.RepresentationFoldContract
 import Test.Schema.SubAlphabetContract

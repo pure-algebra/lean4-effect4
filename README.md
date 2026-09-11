@@ -79,6 +79,7 @@ scripts/test-schema-structural-assurance-gate.sh # the Schema assurance projecti
 scripts/check-ts-eff.sh                          # ts/eff/*.gen.ts are what Lean emits
 scripts/check-ts-eff-corpus.sh                   # the TypeScript reader = Lean's reader (bun)
 scripts/check-truth.sh                           # bounded Lean/rc.112 differential (bun)
+scripts/check-schema-codec.sh                    # fresh type-directed JSON vs rc.112 (bun)
 scripts/sweep.sh --hermetic                      # every hermetic gate, stamped
 scripts/sweep.sh --ocaml                         # avatar, daemon protocol and dune tests
 ```

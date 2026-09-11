@@ -71,6 +71,18 @@ agreement, separately reported type checking and execution without an output ora
 no Lean stream relation is claimed. Neither file is a committed projection or a
 replacement for the runtime coverage report.
 
+## Schema codec comparisons
+
+The S-3 codec gate `bash scripts/check-schema-codec.sh` produces a temporary
+TypeScript data module from the public `Ty.encode` results for
+`Test/Codegen/SchemaGenerationContract.lean`'s representative cases. Its producer
+is `harness/truth/schema-codec/Emit.lean`. The paired `check.ts` compares these
+fresh outputs with pinned rc.112 `Schema.toCodecJson`, decodes and re-encodes them
+on the host, and checks the rejected legacy Result/Cause shapes. The temporary
+module is a build artifact, removed after each run; no codec golden is copied
+into a committed generated file. This is finite host evidence, separate from
+the universal checked-boundary laws in `Laws/Schema/Codec`.
+
 ## Host protocol projections
 
 `harness/truth/session/protocol.gen.ts` and `harness/truth/session/tape.schema.json`

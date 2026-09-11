@@ -5,6 +5,7 @@ import Effect4.Codegen.Print
 import Effect4.Codegen.Read
 import Effect4.Codegen.Schema
 import Effect4.Codegen.Target
+import Effect4.Schema.Codec
 
 /-!
 # Effect4.Api — the application face

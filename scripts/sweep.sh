@@ -73,6 +73,7 @@ hermetic|ts-eff|scripts/check-ts-eff.sh
 hermetic|conform|scripts/check-conform.sh models native types
 hermetic|generated|scripts/check-generated.sh
 host|schema-typescript|scripts/check-schema-typescript-generation.sh
+host|schema-codec|scripts/check-schema-codec.sh
 host|ts-eff-corpus|scripts/check-ts-eff-corpus.sh
 host|ingest|scripts/check-ingest.sh
 host|host-protocol|scripts/check-host-protocol.sh
