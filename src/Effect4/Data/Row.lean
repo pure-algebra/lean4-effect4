@@ -264,6 +264,177 @@ theorem normalize_duplicate {α : Type u} [LE α] [LT α]
   · exact fun h => h.elim id id
   · exact Or.inl
 
+/-! ## Maximal-element filtering
+
+`antichain` keeps every maximal member for the supplied Boolean relation, in
+input order, including equivalent members and repeated occurrences. Membership,
+idempotence and sublist/order preservation need no laws of the relation.
+`antichain_coverage` and the append absorption laws additionally assume
+reflexivity and transitivity.
+-/
+
+/-- Keep exactly those elements with no strictly greater member in the input. -/
+def antichain {α : Type u} (le : α → α → Bool) (xs : List α) : List α :=
+  xs.filter fun x => xs.all fun y => !le x y || le y x
+
+/-- Maximal-element filtering retains a sublist, in the original order. -/
+theorem antichain_sublist {α : Type u} (le : α → α → Bool) (xs : List α) :
+    (antichain le xs).Sublist xs :=
+  List.filter_sublist
+
+/-- Filtering to maximal elements introduces no new members. -/
+theorem antichain_subset {α : Type u} (le : α → α → Bool) {xs : List α} {x : α}
+    (hx : x ∈ antichain le xs) : x ∈ xs :=
+  (antichain_sublist le xs).subset hx
+
+/-- A retained member is exactly an input member with no strict dominator. -/
+theorem mem_antichain_iff {α : Type u} (le : α → α → Bool) (xs : List α) (x : α) :
+    x ∈ antichain le xs ↔ x ∈ xs ∧ ∀ y ∈ xs, le x y = true → le y x = true := by
+  rw [antichain, List.mem_filter]
+  constructor
+  · intro ⟨hx, hmax⟩
+    refine ⟨hx, ?_⟩
+    intro y hy hxy
+    have h := (Constructive.List.all_eq_true_iff _ xs).mp hmax y hy
+    simpa only [hxy, Bool.not_true, Bool.false_or] using h
+  · intro ⟨hx, hmax⟩
+    refine ⟨hx, (Constructive.List.all_eq_true_iff _ xs).mpr ?_⟩
+    intro y hy
+    cases hxy : le x y with
+    | false => rfl
+    | true => simpa only [hxy, Bool.not_true, Bool.false_or] using hmax y hy hxy
+
+/-- Any pairwise relation on the input still holds after filtering. -/
+theorem antichain_pairwise {α : Type u} (le : α → α → Bool) {r : α → α → Prop}
+    {xs : List α} (hxs : xs.Pairwise r) : (antichain le xs).Pairwise r :=
+  List.Pairwise.sublist (antichain_sublist le xs) hxs
+
+/-- Filtering a sorted input retains its strict ascending order. -/
+theorem ascending_antichain {α : Type u} [LT α] (le : α → α → Bool)
+    {xs : List α} (hxs : Ascending xs) : Ascending (antichain le xs) :=
+  antichain_pairwise le hxs
+
+/-- Filtering fixes a list exactly when all its members are already maximal. -/
+theorem antichain_eq_self_iff {α : Type u} (le : α → α → Bool) (xs : List α) :
+    antichain le xs = xs ↔ ∀ x ∈ xs, ∀ y ∈ xs, le x y = true → le y x = true := by
+  constructor
+  · intro h x hx
+    exact ((mem_antichain_iff le xs x).mp (h.symm ▸ hx)).2
+  · intro h
+    apply List.filter_eq_self.mpr
+    intro x hx
+    exact (List.mem_filter.mp ((mem_antichain_iff le xs x).mpr ⟨hx, h x hx⟩)).2
+
+/-- A singleton is fixed for every Boolean relation, including irreflexive ones. -/
+theorem antichain_singleton {α : Type u} (le : α → α → Bool) (x : α) :
+    antichain le [x] = [x] := by
+  cases h : le x x <;> simp [antichain, h]
+
+/-- Filtering twice gives the same list, without any assumptions on `le`. -/
+theorem antichain_idem {α : Type u} (le : α → α → Bool) (xs : List α) :
+    antichain le (antichain le xs) = antichain le xs := by
+  apply (antichain_eq_self_iff le _).mpr
+  intro x hx y hy hxy
+  exact ((mem_antichain_iff le xs x).mp hx).2 y (antichain_subset le hy) hxy
+
+/-- For a reflexive, transitive Boolean relation, every input member lies below
+a retained maximal member. The witness is obtained by finite list induction. -/
+theorem antichain_coverage {α : Type u} (le : α → α → Bool)
+    (le_refl : ∀ x, le x x = true)
+    (le_trans : ∀ x y z, le x y = true → le y z = true → le x z = true)
+    (xs : List α) : ∀ x ∈ xs, ∃ y ∈ antichain le xs, le x y = true := by
+  induction xs with
+  | nil => intro x hx; cases hx
+  | cons a xs ih =>
+      have head_covered : ∃ y ∈ antichain le (a :: xs), le a y = true := by
+        by_cases hsome : xs.any (le a) = true
+        · obtain ⟨b, hb, hab⟩ := (Constructive.List.any_eq_true_iff _ xs).mp hsome
+          obtain ⟨c, hc, hbc⟩ := ih b hb
+          have hac := le_trans a b c hab hbc
+          have hcmax := (mem_antichain_iff le xs c).mp hc
+          refine ⟨c, (mem_antichain_iff le (a :: xs) c).mpr ⟨?_, ?_⟩, hac⟩
+          · exact List.mem_cons_of_mem a hcmax.1
+          · intro z hz hcz
+            rcases List.mem_cons.mp hz with rfl | hz
+            · exact hac
+            · exact hcmax.2 z hz hcz
+        · refine ⟨a, (mem_antichain_iff le (a :: xs) a).mpr ⟨List.mem_cons_self, ?_⟩,
+            le_refl a⟩
+          intro z hz haz
+          rcases List.mem_cons.mp hz with rfl | hz
+          · exact haz
+          · exact (hsome ((Constructive.List.any_eq_true_iff _ xs).mpr ⟨z, hz, haz⟩)).elim
+      intro x hx
+      rcases List.mem_cons.mp hx with rfl | hx
+      · exact head_covered
+      · obtain ⟨y, hy, hxy⟩ := ih x hx
+        by_cases hya : le y a = true
+        · obtain ⟨z, hz, haz⟩ := head_covered
+          exact ⟨z, hz, le_trans x y z hxy (le_trans y a z hya haz)⟩
+        · have hymax := (mem_antichain_iff le xs y).mp hy
+          refine ⟨y, (mem_antichain_iff le (a :: xs) y).mpr ⟨?_, ?_⟩, hxy⟩
+          · exact List.mem_cons_of_mem a hymax.1
+          · intro z hz hyz
+            rcases List.mem_cons.mp hz with rfl | hz
+            · exact (hya hyz).elim
+            · exact hymax.2 z hz hyz
+
+private theorem antichain_all_eq {α : Type u} (le : α → α → Bool)
+    (le_refl : ∀ x, le x x = true)
+    (le_trans : ∀ x y z, le x y = true → le y z = true → le x z = true)
+    (xs : List α) (x : α) :
+    (antichain le xs).all (fun y => !le x y || le y x) =
+      xs.all (fun y => !le x y || le y x) := by
+  apply Bool.eq_iff_iff.mpr
+  rw [Constructive.List.all_eq_true_iff, Constructive.List.all_eq_true_iff]
+  constructor
+  · intro h y hy
+    cases hxy : le x y with
+    | false => rfl
+    | true =>
+        obtain ⟨z, hz, hyz⟩ := antichain_coverage le le_refl le_trans xs y hy
+        have hxz := le_trans x y z hxy hyz
+        have hzx : le z x = true := by
+          simpa only [hxz, Bool.not_true, Bool.false_or] using h z hz
+        simpa only [hxy, Bool.not_true, Bool.false_or] using le_trans y z x hyz hzx
+  · intro h y hy
+    exact h y (antichain_subset le hy)
+
+/-- Filtering the left input before appending does not change the final list
+of maximal members, including their order and multiplicity. -/
+theorem antichain_append_left {α : Type u} (le : α → α → Bool)
+    (le_refl : ∀ x, le x x = true)
+    (le_trans : ∀ x y z, le x y = true → le y z = true → le x z = true)
+    (xs ys : List α) :
+    antichain le (antichain le xs ++ ys) = antichain le (xs ++ ys) := by
+  change (antichain le xs ++ ys).filter
+    (fun x => (antichain le xs ++ ys).all fun y => !le x y || le y x) =
+    (xs ++ ys).filter (fun x => (xs ++ ys).all fun y => !le x y || le y x)
+  simp only [List.all_append, antichain_all_eq le le_refl le_trans, List.filter_append]
+  congr 1
+  rw [antichain, List.filter_filter]
+  apply List.filter_congr
+  intro x _
+  rw [Bool.and_comm]
+  exact Bool.and_self_left _ _
+
+/-- Filtering the right input before appending does not change the final list
+of maximal members, including their order and multiplicity. -/
+theorem antichain_append_right {α : Type u} (le : α → α → Bool)
+    (le_refl : ∀ x, le x x = true)
+    (le_trans : ∀ x y z, le x y = true → le y z = true → le x z = true)
+    (xs ys : List α) :
+    antichain le (xs ++ antichain le ys) = antichain le (xs ++ ys) := by
+  change (xs ++ antichain le ys).filter
+    (fun x => (xs ++ antichain le ys).all fun y => !le x y || le y x) =
+    (xs ++ ys).filter (fun x => (xs ++ ys).all fun y => !le x y || le y x)
+  simp only [List.all_append, antichain_all_eq le le_refl le_trans, List.filter_append]
+  congr 1
+  rw [antichain, List.filter_filter]
+  apply List.filter_congr
+  intro x _
+  exact Bool.and_self_right _ _
+
 /-! ## Finite union algebra -/
 
 /-- No value belongs to the empty row. -/

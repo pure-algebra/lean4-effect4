@@ -7,7 +7,7 @@ let raw = Ty_union (Ty_bool, Ty_union (Ty_never, Ty_union (Ty_nat, Ty_bool)))
 let canon = Ty_union (Ty_nat, Ty_bool)
 let unary = [ (fun x -> Ty_option x); (fun x -> Ty_list x); (fun x -> Ty_causeOf x) ]
 let binary =
-  [ (fun a b -> Ty_prod (a,b)); (fun a b -> Ty_except (a,b))
+  [ (fun a b -> Ty_except (a,b))
   ; (fun a b -> Ty_exitOf (a,b)); (fun a b -> Ty_fiberOf (a,b)) ]
 
 let checks = ref 0
@@ -23,6 +23,15 @@ let () =
   check "top union" canon (normalize raw);
   List.iter (fun f -> check "unary child" (f canon) (normalize (f raw))) unary;
   List.iter (fun f -> check "binary children" (f canon canon) (normalize (f raw raw))) binary;
+  check "product distribution"
+    (Ty_union (Ty_prod (Ty_nat, Ty_nat), Ty_union (Ty_prod (Ty_nat, Ty_bool),
+      Ty_union (Ty_prod (Ty_bool, Ty_nat), Ty_prod (Ty_bool, Ty_bool)))))
+    (normalize (Ty_prod (raw, raw)));
+  check "literal absorption" Ty_string (join (Ty_lit "A") Ty_string);
+  check "product absorption" (Ty_prod (Ty_string, Ty_string))
+    (join (Ty_prod (Ty_lit "A", Ty_string)) (Ty_prod (Ty_string, Ty_string)));
+  check "list retains its union" (Ty_list (Ty_union (Ty_nat, Ty_string)))
+    (normalize (Ty_list (Ty_union (Ty_nat, Ty_string))));
   check "utf8 order" (Ty_union (Ty_handle "A", Ty_handle "é"))
     (normalize (Ty_union (Ty_handle "é", Ty_handle "A")));
   check "literal utf8 key" [15; 195; 169] (key (Ty_lit "é"));

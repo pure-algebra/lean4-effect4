@@ -14,7 +14,8 @@ private def canon : Ty := .union .nat .bool
 #guard raw.normalize = canon
 #guard (Ty.option raw).normalize = .option canon
 #guard (Ty.list raw).normalize = .list canon
-#guard (Ty.prod raw raw).normalize = .prod canon canon
+#guard (Ty.prod raw raw).normalize =
+  .union (.prod .nat .nat) (.union (.prod .nat .bool) (.union (.prod .bool .nat) (.prod .bool .bool)))
 #guard (Ty.except raw raw).normalize = .except canon canon
 #guard (Ty.exitOf raw raw).normalize = .exitOf canon canon
 #guard (Ty.causeOf raw).normalize = .causeOf canon
@@ -27,6 +28,42 @@ private def canon : Ty := .union .nat .bool
 #guard CTy.toRaw (CTy.join (CTy.ofRaw raw) (CTy.ofRaw raw)) = canon
 #guard (Ty.union .nat .int).normalize != .nat
 #guard (Ty.fiberOf .nat .nat).normalize != (Ty.fiberOf .bool .string).normalize
+
+-- P2a: the exact 37-type universe of Seat A's retained p6.lean, normalized at entry.
+private def scoutBase : List Ty :=
+  [.never, .unit, .nat, .int, .string, .bool, .lit "A", .lit "B", .handle "H"]
+
+private def scoutUniverse : List Ty :=
+  scoutBase ++ scoutBase.map Ty.option ++ scoutBase.map Ty.list ++
+    [.prod (.lit "A") .string, .prod .string .string,
+      .union (.lit "A") (.lit "B"), .union (.lit "A") .string,
+      .union .string (.lit "A"), .union .nat .string,
+      .causeOf (.lit "A"), .causeOf .string,
+      .exitOf .nat (.lit "A"), .exitOf .nat .string]
+
+private def canonicalUniverse : List Ty := scoutUniverse.map Ty.normalize
+
+#guard scoutUniverse.length == 37
+#guard (canonicalUniverse.flatMap fun a => canonicalUniverse.filter fun b =>
+  Ty.sub a b && Ty.sub b a && a != b).length == 0
+#guard (canonicalUniverse.flatMap fun a => canonicalUniverse.filter fun b =>
+  Ty.sub a b && Ty.join a b != b).length == 0
+#guard Ty.join (.lit "A") .string = .string
+#guard Ty.join (.prod (.lit "A") .string) (.prod .string .string) = .prod .string .string
+#guard (Ty.prod (.union (.lit "A") (.lit "B")) .string).normalize =
+  .union (.prod (.lit "A") .string) (.prod (.lit "B") .string)
+#guard (Ty.prod .string (.union (.lit "A") (.lit "B"))).normalize =
+  .union (.prod .string (.lit "A")) (.prod .string (.lit "B"))
+#guard (Ty.list (.union .nat .string)).normalize = .list (.union .nat .string)
+#guard (Ty.prod .never .string).normalize = .prod .never .string
+
+-- Generic filtering preserves order and equivalent maximal occurrences.
+#guard Effect4.Row.antichain (fun x y : Nat => decide (x ≤ y)) [] == []
+#guard Effect4.Row.antichain (fun x y : Nat => decide (x ≤ y)) [3, 1, 3, 2] == [3, 3]
+#guard Effect4.Row.antichain (fun x y : Nat => decide (x / 2 ≤ y / 2)) [0, 1, 2, 3] == [2, 3]
+#guard Effect4.Row.antichain (fun x y : Nat => y % x == 0) [6, 1, 4, 2, 3] == [6, 4]
+#guard Effect4.Row.antichain (fun _ _ : Nat => false) [2, 1, 2] == [2, 1, 2]
+#guard Effect4.Row.antichain (fun x y : Nat => (x + 1) % 3 == y) [0, 1, 2] == []
 
 -- The old 13-guard snapshot falsifier is retained in research. These are the new outcomes.
 #guard Val.hasTy (Val.fibers [⟨0⟩]) (.list (.union (.fiberOf .nat .nat) .never))

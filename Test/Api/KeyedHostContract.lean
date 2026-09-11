@@ -19,7 +19,7 @@ def program : Api.Program :=
 def initial : Session program table where
   admitted := {
     ty := ⟨.exitOf .nat (.prod .string .string), .never, .empty⟩
-    typed := by decide
+    typed := by cbv
     lawful := by decide
     runnable := by decide }
   header := ⟨version, "multi", "keyed-v2", table⟩

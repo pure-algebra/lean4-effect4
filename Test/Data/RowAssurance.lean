@@ -7,9 +7,9 @@ import Effect4.Data.Row
 # Data.Row declaration and proof-graph join
 
 This test-only checker closes the existing `DATA-PG-ROW` graph without
-creating another graph.  It separates Lean's complete 72-name module-owned
-surface (including generated companions) from the 44 names deliberately
-authored as the public Row API.  It also checks the 32 exported theorem
+creating another graph.  It separates Lean's complete 87-name module-owned
+surface (including generated companions) from the 56 names deliberately
+authored as the public Row API.  It also checks the 43 exported theorem
 receipts, their exact kernel dependencies, every declaration owner, the exact
 standard-order instance binders, and the frozen duplicate-prevention names.
 The `DIFFERENCE` edge (`Row.diff` and its nine laws) joined on 2026-09-04 with
@@ -36,7 +36,19 @@ private def expectedOwnedDeclarations : List Name :=
   [ `Effect4.Ascending
   , `Effect4.Row
   , `Effect4.Row.Subset
+  , `Effect4.Row.antichain
+  , `Effect4.Row.antichain.eq_1
+  , `Effect4.Row.antichain_append_left
+  , `Effect4.Row.antichain_append_right
+  , `Effect4.Row.antichain_coverage
+  , `Effect4.Row.antichain_eq_self_iff
+  , `Effect4.Row.antichain_idem
+  , `Effect4.Row.antichain_pairwise
+  , `Effect4.Row.antichain_singleton
+  , `Effect4.Row.antichain_sublist
+  , `Effect4.Row.antichain_subset
   , `Effect4.Row.ascending
+  , `Effect4.Row.ascending_antichain
   , `Effect4.Row.ascending_insert
   , `Effect4.Row.ascending_normalize
   , `Effect4.Row.casesOn
@@ -61,6 +73,9 @@ private def expectedOwnedDeclarations : List Name :=
   , `Effect4.Row.instDecidableSubsetOfDecidableEq
   , `Effect4.Row.instMembership
   , `Effect4.Row.mem_def
+  , `Effect4.Row.mem_antichain_iff
+  , `Effect4.Row.mem_antichain_iff.match_1_2
+  , `Effect4.Row.mem_antichain_iff.match_1_4
   , `Effect4.Row.mem_diff
   , `Effect4.Row.mem_insert
   , `Effect4.Row.mem_normalize
@@ -119,6 +134,18 @@ private def authoredApiDeclarations : List (Name × String) :=
   , (`Effect4.Row.mem_insert, "INSERT")
   , (`Effect4.Row.ascending_insert, "INSERT")
   , (`Effect4.Row.normalize, "NORMALIZE")
+  , (`Effect4.Row.antichain, "NORMALIZE")
+  , (`Effect4.Row.antichain_sublist, "NORMALIZE")
+  , (`Effect4.Row.antichain_subset, "NORMALIZE")
+  , (`Effect4.Row.mem_antichain_iff, "NORMALIZE")
+  , (`Effect4.Row.antichain_pairwise, "NORMALIZE")
+  , (`Effect4.Row.ascending_antichain, "NORMALIZE")
+  , (`Effect4.Row.antichain_eq_self_iff, "NORMALIZE")
+  , (`Effect4.Row.antichain_singleton, "NORMALIZE")
+  , (`Effect4.Row.antichain_idem, "NORMALIZE")
+  , (`Effect4.Row.antichain_coverage, "NORMALIZE")
+  , (`Effect4.Row.antichain_append_left, "NORMALIZE")
+  , (`Effect4.Row.antichain_append_right, "NORMALIZE")
   , (`Effect4.Row.mem_normalize, "NORMALIZE")
   , (`Effect4.Row.ascending_normalize, "NORMALIZE")
   , (`Effect4.Row.eq_of_mem_iff, "EXTENSIONALITY")
@@ -170,6 +197,18 @@ private def hypothesisProfiles : List (Name × List Name) :=
   , (`Effect4.Row.mem_insert, sixOrderHypotheses)
   , (`Effect4.Row.ascending_insert, sixOrderHypotheses)
   , (`Effect4.Row.normalize, sixOrderHypotheses)
+  , (`Effect4.Row.antichain, [])
+  , (`Effect4.Row.antichain_sublist, [])
+  , (`Effect4.Row.antichain_subset, [])
+  , (`Effect4.Row.mem_antichain_iff, [])
+  , (`Effect4.Row.antichain_pairwise, [])
+  , (`Effect4.Row.ascending_antichain, [`LT])
+  , (`Effect4.Row.antichain_eq_self_iff, [])
+  , (`Effect4.Row.antichain_singleton, [])
+  , (`Effect4.Row.antichain_idem, [])
+  , (`Effect4.Row.antichain_coverage, [])
+  , (`Effect4.Row.antichain_append_left, [])
+  , (`Effect4.Row.antichain_append_right, [])
   , (`Effect4.Row.mem_normalize, sixOrderHypotheses)
   , (`Effect4.Row.ascending_normalize, sixOrderHypotheses)
   , (`Effect4.Row.eq_of_mem_iff,
@@ -208,6 +247,17 @@ private def hypothesisProfiles : List (Name × List Name) :=
 
 private def theoremReceipts : List (Name × String) :=
   [ (`Effect4.ascending_iff, "IDENTITY")
+  , (`Effect4.Row.antichain_sublist, "NORMALIZE")
+  , (`Effect4.Row.antichain_subset, "NORMALIZE")
+  , (`Effect4.Row.mem_antichain_iff, "NORMALIZE")
+  , (`Effect4.Row.antichain_pairwise, "NORMALIZE")
+  , (`Effect4.Row.ascending_antichain, "NORMALIZE")
+  , (`Effect4.Row.antichain_eq_self_iff, "NORMALIZE")
+  , (`Effect4.Row.antichain_singleton, "NORMALIZE")
+  , (`Effect4.Row.antichain_idem, "NORMALIZE")
+  , (`Effect4.Row.antichain_coverage, "NORMALIZE")
+  , (`Effect4.Row.antichain_append_left, "NORMALIZE")
+  , (`Effect4.Row.antichain_append_right, "NORMALIZE")
   , (`Effect4.Row.mem_def, "IDENTITY")
   , (`Effect4.Row.mem_insert, "INSERT")
   , (`Effect4.Row.ascending_insert, "INSERT")
@@ -247,6 +297,17 @@ private def propextAndQuot : List Name := [`propext, `Quot.sound]
 
 private def axiomReceipts : List (Name × List Name) :=
   [ (`Effect4.ascending_iff, noAxioms)
+  , (`Effect4.Row.antichain_sublist, propextOnly)
+  , (`Effect4.Row.antichain_subset, propextOnly)
+  , (`Effect4.Row.mem_antichain_iff, propextOnly)
+  , (`Effect4.Row.antichain_pairwise, propextOnly)
+  , (`Effect4.Row.ascending_antichain, propextOnly)
+  , (`Effect4.Row.antichain_eq_self_iff, propextAndQuot)
+  , (`Effect4.Row.antichain_singleton, propextAndQuot)
+  , (`Effect4.Row.antichain_idem, propextAndQuot)
+  , (`Effect4.Row.antichain_coverage, propextOnly)
+  , (`Effect4.Row.antichain_append_left, propextAndQuot)
+  , (`Effect4.Row.antichain_append_right, propextAndQuot)
   , (`Effect4.Row.mem_def, noAxioms)
   , (`Effect4.Row.mem_insert, propextAndQuot)
   , (`Effect4.Row.ascending_insert, propextAndQuot)

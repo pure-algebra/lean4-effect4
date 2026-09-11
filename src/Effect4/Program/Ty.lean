@@ -371,16 +371,79 @@ theorem members_ofMembers (xs : List Ty)
       rw [ih (fun z hz => h z (List.mem_cons_of_mem x hz))]
       rfl
 
+/-- The subtype relation on `Ty` (DI-15). Covariant in structural constructors;
+unions distribute on the left and are choices on the right; string literals are
+subtypes of `string`. Reflexive. -/
+def sub (a b : Ty) : Bool :=
+  if a = b then true
+  else match a, b with
+  | .never, _ => true
+  | .union a1 a2, b => sub a1 b && sub a2 b
+  | a, .union b1 b2 => sub a b1 || sub a b2
+  | .lit _, .string => true
+  | .option a, .option b => sub a b
+  | .list a, .list b => sub a b
+  | .prod a1 a2, .prod b1 b2 => sub a1 b1 && sub a2 b2
+  | .except e1 a1, .except e2 a2 => sub e1 e2 && sub a1 a2
+  | .exitOf a1 e1, .exitOf a2 e2 => sub a1 a2 && sub e1 e2
+  | .causeOf e1, .causeOf e2 => sub e1 e2
+  | .fiberOf a1 e1, .fiberOf a2 e2 => sub a1 a2 && sub e1 e2
+  | _, _ => false
+termination_by sizeOf a + sizeOf b
+
+/-- Product distribution expands union factors. An explicit `never` factor stays
+explicit: this operation does not add a product-annihilation rule to subtyping. -/
+def factors (t : Ty) : List Ty :=
+  match t with
+  | .never => [.never]
+  | t => t.members
+
+/-- A factor has no union head; its children may still contain unions. -/
+def isFactor : Ty → Bool
+  | .union _ _ => false
+  | _ => true
+
+theorem factors_isFactor {t x : Ty} (h : x ∈ factors t) : isFactor x = true := by
+  cases t with
+  | never => simp only [factors, List.mem_singleton] at h; subst x; rfl
+  | union a b =>
+    have hm := members_isMember (t := .union a b) h
+    cases x <;> simp_all [isMember, isFactor]
+  | _ =>
+    simp only [factors, members, List.mem_singleton] at h
+    subst x
+    rfl
+
+theorem factors_singleton {t : Ty} (h : isFactor t = true) : factors t = [t] := by
+  cases t <;> simp_all [factors, isFactor, members]
+
+/-- Sort, deduplicate and retain only maximal union members. -/
+def normalizeRow (xs : List Ty) : Effect4.Row Ty :=
+  ⟨Effect4.Row.antichain sub (Effect4.Row.normalize xs).elems,
+    Effect4.Row.ascending_antichain sub (Effect4.Row.normalize xs).ascending⟩
+
+theorem mem_normalizeRow (x : Ty) (xs : List Ty) :
+    x ∈ (normalizeRow xs).elems ↔
+      x ∈ xs ∧ ∀ y ∈ xs, sub x y = true → sub y x = true := by
+  simp only [normalizeRow, Effect4.Row.mem_antichain_iff]
+  change (x ∈ Effect4.Row.normalize xs ∧
+    ∀ y ∈ (Effect4.Row.normalize xs).elems, sub x y = true → sub y x = true) ↔ _
+  simp only [Effect4.Row.mem_normalize, ← Effect4.Row.mem_def]
+
+/-- All products of the two normalized factors, before union absorption. -/
+def productMembers (a b : Ty) : List Ty :=
+  a.factors.flatMap fun x => b.factors.map fun y => .prod x y
+
 /-- Deep normalization uses the existing canonical finite-row algebra. -/
 def normalize : Ty → Ty
   | .option t => .option (normalize t)
   | .list t => .list (normalize t)
-  | .prod a b => .prod (normalize a) (normalize b)
+  | .prod a b => ofMembers (normalizeRow (productMembers (normalize a) (normalize b))).elems
   | .except a b => .except (normalize a) (normalize b)
   | .exitOf a b => .exitOf (normalize a) (normalize b)
   | .causeOf t => .causeOf (normalize t)
   | .fiberOf a b => .fiberOf (normalize a) (normalize b)
-  | .union a b => ofMembers (Effect4.Row.normalize
+  | .union a b => ofMembers (normalizeRow
       ((normalize a).members ++ (normalize b).members)).elems
   | .never => .never
   | .unit => .unit
@@ -403,21 +466,36 @@ inductive Normal : Ty → Prop
   | lit (s : String) : Normal (.lit s)
   | option {t} : Normal t → Normal (.option t)
   | list {t} : Normal t → Normal (.list t)
-  | prod {a b} : Normal a → Normal b → Normal (.prod a b)
+  | prod {a b} : Normal a → Normal b → isFactor a = true → isFactor b = true → Normal (.prod a b)
   | except {a b} : Normal a → Normal b → Normal (.except a b)
   | exitOf {a b} : Normal a → Normal b → Normal (.exitOf a b)
   | causeOf {t} : Normal t → Normal (.causeOf t)
   | fiberOf {a b} : Normal a → Normal b → Normal (.fiberOf a b)
   | row (r : Effect4.Row Ty)
       (children : ∀ t ∈ r.elems, Normal t)
-      (atoms : ∀ t ∈ r.elems, isMember t = true) : Normal (ofMembers r.elems)
+      (atoms : ∀ t ∈ r.elems, isMember t = true)
+      (maximal : ∀ x ∈ r.elems, ∀ y ∈ r.elems, sub x y = true → sub y x = true) :
+      Normal (ofMembers r.elems)
 
 theorem Normal.members {t x : Ty} (h : Normal t) (hx : x ∈ t.members) : Normal x := by
   cases h <;> try (simp only [Ty.members, List.mem_singleton] at hx; subst x; constructor <;> assumption)
   case never => exact False.elim (List.not_mem_nil hx)
-  case row r children atoms =>
+  case row r children atoms maximal =>
     rw [members_ofMembers r.elems atoms] at hx
     exact children x hx
+
+theorem Normal.factors {t x : Ty} (h : Normal t) (hx : x ∈ t.factors) : Normal x := by
+  cases t with
+  | never => simp only [Ty.factors, List.mem_singleton] at hx; subst x; exact h
+  | _ => exact h.members hx
+
+theorem normal_row (xs : List Ty) (hn : ∀ t ∈ xs, Normal t)
+    (ha : ∀ t ∈ xs, isMember t = true) : Normal (ofMembers (normalizeRow xs).elems) := by
+  apply Normal.row
+  · intro t ht; exact hn t ((mem_normalizeRow t xs).mp ht).1
+  · intro t ht; exact ha t ((mem_normalizeRow t xs).mp ht).1
+  · intro x hx y hy hxy
+    exact ((mem_normalizeRow x xs).mp hx).2 y ((mem_normalizeRow y xs).mp hy).1 hxy
 
 theorem normal_normalize (t : Ty) : Normal (normalize t) := by
   induction t with
@@ -431,28 +509,35 @@ theorem normal_normalize (t : Ty) : Normal (normalize t) := by
   | lit s => exact .lit s
   | option t ih => exact .option ih
   | list t ih => exact .list ih
-  | prod a b iha ihb => exact .prod iha ihb
+  | prod a b iha ihb =>
+    apply normal_row
+    · intro t ht
+      obtain ⟨x, hx, ht⟩ := List.mem_flatMap.mp ht
+      obtain ⟨y, hy, rfl⟩ := List.mem_map.mp ht
+      exact .prod (iha.factors hx) (ihb.factors hy) (factors_isFactor hx) (factors_isFactor hy)
+    · intro t ht
+      obtain ⟨x, hx, ht⟩ := List.mem_flatMap.mp ht
+      obtain ⟨y, hy, rfl⟩ := List.mem_map.mp ht
+      rfl
   | except a b iha ihb => exact .except iha ihb
   | exitOf a b iha ihb => exact .exitOf iha ihb
   | causeOf t ih => exact .causeOf ih
   | fiberOf a b iha ihb => exact .fiberOf iha ihb
   | union a b iha ihb =>
-    apply Normal.row
+    apply normal_row
     · intro t ht
-      have ht : t ∈ (normalize a).members ++ (normalize b).members :=
-        (Effect4.Row.mem_normalize t _).mp ht
       rcases List.mem_append.mp ht with ha | hb
       · exact iha.members ha
       · exact ihb.members hb
     · intro t ht
-      have ht : t ∈ (normalize a).members ++ (normalize b).members :=
-        (Effect4.Row.mem_normalize t _).mp ht
       exact (List.mem_append.mp ht).elim members_isMember members_isMember
 
 theorem normalize_ofMembers_fixed (xs : List Ty)
     (ha : ∀ t ∈ xs, isMember t = true)
     (hf : ∀ t ∈ xs, normalize t = t)
-    (hs : Effect4.Ascending xs) : normalize (ofMembers xs) = ofMembers xs := by
+    (hs : Effect4.Ascending xs)
+    (hm : ∀ x ∈ xs, ∀ y ∈ xs, sub x y = true → sub y x = true) :
+    normalize (ofMembers xs) = ofMembers xs := by
   induction xs with
   | nil => rfl
   | cons x xs ih =>
@@ -461,18 +546,26 @@ theorem normalize_ofMembers_fixed (xs : List Ty)
     | cons y ys =>
       have haTail := fun t ht => ha t (List.mem_cons_of_mem x ht)
       have hfTail := fun t ht => hf t (List.mem_cons_of_mem x ht)
-      have tail := ih haTail hfTail (List.Pairwise.tail hs)
-      change ofMembers (Effect4.Row.normalize
+      have hmTail := fun x hx y hy => hm x (List.mem_cons_of_mem _ hx) y (List.mem_cons_of_mem _ hy)
+      have tail := ih haTail hfTail (List.Pairwise.tail hs) hmTail
+      change ofMembers (normalizeRow
         ((normalize x).members ++ (normalize (ofMembers (y :: ys))).members)).elems = _
       rw [hf x List.mem_cons_self, tail, members_atom (ha x List.mem_cons_self),
         members_ofMembers _ haTail]
-      change ofMembers (Effect4.Row.normalize (x :: y :: ys)).elems = _
-      rw [Effect4.Row.normalize_of_ascending _ hs]
+      change ofMembers (Effect4.Row.antichain sub (Effect4.Row.normalize (x :: y :: ys)).elems) = _
+      rw [Effect4.Row.normalize_of_ascending _ hs,
+        (Effect4.Row.antichain_eq_self_iff sub _).mpr hm]
 
 theorem Normal.fixed {t : Ty} (h : Normal t) : normalize t = t := by
   induction h <;> try (simp only [normalize, *])
-  case row r children atoms ih =>
-    exact normalize_ofMembers_fixed r.elems atoms ih r.ascending
+  case prod a b ha hb hfa hfb iha ihb =>
+    simp only [productMembers, factors_singleton hfa, factors_singleton hfb,
+      List.flatMap_cons, List.flatMap_nil, List.map_cons, List.map_nil, List.append_nil]
+    change ofMembers (Effect4.Row.antichain sub [.prod a b]) = .prod a b
+    rw [Effect4.Row.antichain_singleton]
+    rfl
+  case row r children atoms maximal ih =>
+    exact normalize_ofMembers_fixed r.elems atoms ih r.ascending maximal
 
 /-- Construction is total; no checked partial constructor is needed. -/
 theorem normalize_idem (t : Ty) : normalize (normalize t) = normalize t :=
@@ -483,26 +576,6 @@ def join (a b : Ty) : Ty := normalize (.union a b)
 
 /-- The API witness means equality with the computed canonical representative. -/
 def Canonical (t : Ty) : Prop := normalize t = t
-
-/-- The subtype relation on `Ty` (DI-15). Covariant in structural constructors;
-unions distribute on the left and are choices on the right; string literals are
-subtypes of `string`. Reflexive. -/
-def sub (a b : Ty) : Bool :=
-  if a = b then true
-  else match a, b with
-  | .never, _ => true
-  | .union a1 a2, b => sub a1 b && sub a2 b
-  | a, .union b1 b2 => sub a b1 || sub a b2
-  | .lit _, .string => true
-  | .option a, .option b => sub a b
-  | .list a, .list b => sub a b
-  | .prod a1 a2, .prod b1 b2 => sub a1 b1 && sub a2 b2
-  | .except e1 a1, .except e2 a2 => sub e1 e2 && sub a1 a2
-  | .exitOf a1 e1, .exitOf a2 e2 => sub a1 a2 && sub e1 e2
-  | .causeOf e1, .causeOf e2 => sub e1 e2
-  | .fiberOf a1 e1, .fiberOf a2 e2 => sub a1 a2 && sub e1 e2
-  | _, _ => false
-termination_by sizeOf a + sizeOf b
 
 theorem sub_refl (t : Ty) : sub t t = true := by
   unfold sub

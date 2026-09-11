@@ -17,7 +17,7 @@ def program : Api.Program :=
 def header : Header := ⟨2, "session-A", "serial-root-scalar-v1", table⟩
 def admitted : Api.AdmittedProgram program table where
   ty := ⟨.nat, .prod .string .string, .empty⟩
-  typed := by decide
+  typed := by cbv
   lawful := by decide
   runnable := by decide
 

@@ -17,8 +17,9 @@
                                               tested (goldens/<name>.ty for every corpus program)
    T2  Structural and total: every arm is a pattern of the carrier; refusals are Error with the
        rule that refused, never an exception.                        by construction
-   T3  Unions are canonical: join sorts members by Ty.key, drops duplicates and `never`,
-       right-nests; requirement rows are strictly ascending by the name-major key order.
+   T3  Unions are canonical: join sorts members by Ty.key, drops duplicates, `never`
+       and strictly narrower members, and right-nests. Products distribute over unions;
+       lists do not. Requirement rows ascend by the name-major key order.
                                                                       by construction; tested
    The refusal messages are this side's own; Lean answers `none`. Only acceptance and the
    accepted type are the contract. *)
@@ -79,18 +80,42 @@ let rec of_members : ty list -> ty = function
   | [ t ] -> t
   | t :: rest -> Ty_union (t, of_members rest)
 
+(* The unchanged structural Ty.sub; normalization never participates in this relation. *)
+let rec sub (a : ty) (b : ty) : bool =
+  a = b || match a, b with
+  | Ty_never, _ -> true
+  | Ty_union (a1, a2), b -> sub a1 b && sub a2 b
+  | a, Ty_union (b1, b2) -> sub a b1 || sub a b2
+  | Ty_lit _, Ty_string -> true
+  | Ty_option a, Ty_option b | Ty_list a, Ty_list b
+  | Ty_causeOf a, Ty_causeOf b -> sub a b
+  | Ty_prod (a1, a2), Ty_prod (b1, b2)
+  | Ty_except (a1, a2), Ty_except (b1, b2)
+  | Ty_exitOf (a1, a2), Ty_exitOf (b1, b2)
+  | Ty_fiberOf (a1, a2), Ty_fiberOf (b1, b2) -> sub a1 b1 && sub a2 b2
+  | _ -> false
+
+let normalize_members xs =
+  let sorted = List.fold_right insert_member xs [] in
+  List.filter (fun x -> List.for_all (fun y -> not (sub x y) || sub y x) sorted) sorted
+
+let factors = function Ty_never -> [Ty_never] | t -> members t
+
 (* Deep normalization mirrors Program/Ty.lean. Row.normalize is right-folded sorted
-   insertion; the key and unique member order remain unchanged. *)
+   insertion followed by Row.antichain; the structural key is unchanged. *)
 let rec normalize : ty -> ty = function
   | Ty_option t -> Ty_option (normalize t)
   | Ty_list t -> Ty_list (normalize t)
-  | Ty_prod (a, b) -> Ty_prod (normalize a, normalize b)
+  | Ty_prod (a, b) ->
+    let left = factors (normalize a) and right = factors (normalize b) in
+    of_members (normalize_members
+      (List.concat_map (fun x -> List.map (fun y -> Ty_prod (x, y)) right) left))
   | Ty_except (a, b) -> Ty_except (normalize a, normalize b)
   | Ty_exitOf (a, b) -> Ty_exitOf (normalize a, normalize b)
   | Ty_causeOf t -> Ty_causeOf (normalize t)
   | Ty_fiberOf (a, b) -> Ty_fiberOf (normalize a, normalize b)
   | Ty_union (a, b) ->
-    of_members (List.fold_right insert_member (members (normalize a) @ members (normalize b)) [])
+    of_members (normalize_members (members (normalize a) @ members (normalize b)))
   | t -> t
 
 let join (a : ty) (b : ty) : ty = normalize (Ty_union (a, b))

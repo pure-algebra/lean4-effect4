@@ -157,7 +157,8 @@ value/error order, without adding a second type constructor here.
 ### Formal foundations amendment (owner ruled 2026-09-11)
 
 Rows DI-15, DI-17, DI-23, DI-39, DI-55, DI-57, DI-58 amended and DI-67 to DI-71 added;
-map ticket T-13; the packet is `docs/research/2026-09-11-eff-formal-foundations-implementation.md`.
+map ticket T-13; the packet is `docs/research/2026-09-11-eff-formal-foundations-implementation.md`
+(untracked working note).
 
 **Type identity.** Two types are the same type when each is a subtype of the other. `Ty.sub`
 is a proved preorder. Union normalization drops a narrower member beside a wider one
@@ -169,6 +170,26 @@ bound. A string literal types as `string` in general position and as `lit` as an
 `pair`. The printed face of a tag-set column becomes a union of tuples. `sub` stays sound for
 membership and deliberately incomplete against value containment beyond these rules.
 
+**P2a resumption amendment (owner ruled 2026-09-11).** Distribution lives only in
+`normalize`. Keep the existing `Ty.sub` and `sub_union_right` definitions and
+statement unchanged. Delete `sub_prod_union_left`, `sub_prod_union_right` and
+`sub_normalize` from the obligations. State `sub_antisymm_canonical`,
+`sub_join_left`, `sub_join_right` and `join_least` on `CTy`. Attempt the one-way
+normalization law `sub a b = true → sub a.normalize b.normalize = true`; if false,
+retain its counterexample and define the public order on canonical types.
+The raw relation remains the structural preorder; canonical identity and the
+join laws concern the canonical representatives.
+
+The owner approved the necessary helper statement amendments: add maximality to
+`normalize_ofMembers_fixed`, and use the sorted antichain in `join_eq_ofMembers`
+and `members_join`. The retained witness is `[string, lit "A"]`: both members are
+sorted and individually fixed, but their union normalizes to `string`.
+
+Rename the structural error-support predicate `rawSupportedErrTy` and define
+`supportedErrTy t := rawSupportedErrTy t.normalize`. Its normalization invariance
+follows from `normalize_idem`; demonstrate that `admittedErrTy` is unchanged.
+No answer-joining, literal-synthesis or residual changes belong to P2a.
+
 **Tag residual.** The tag test is the native atom `tagIs`, true only on a pair whose first
 component is the tag, printed through the prelude. A `catchIf` whose test is that atom types
 its error column as the residual joined with the handler's error; any other test keeps the
@@ -177,8 +198,11 @@ single-`Fail` premise, and the two-`Fail` miss is a filed counterexample. The fi
 elimination rule is unchanged.
 
 **Inhabitation.** Every admitted type either normalizes to `never` or has a value under some
-allocation table. `Ty.int` keeps its ordinal and is refused at admission and at the schema
-boundary. The value alphabet is not extended.
+allocation table. Under the P2a resumption amendment, `Ty.int` keeps its ordinal and
+is refused only at program/table admission with `AdmitRefusal.uninhabited (at : Path)`.
+Keep `Ty.ofSchema` and both schema retraction theorems unchanged. A foreign integer
+schema parses, and a program using its type is refused at admission with its path.
+Canonicality alone does not certify admission. The value alphabet is not extended.
 
 **One run route.** Host answers reach a program only through the keyed session. The
 preloaded answer list is deleted after the legacy truth programs run through the session on
@@ -186,10 +210,16 @@ version-2 tapes, never before. A refused reply is `submit`'s verdict with the se
 unchanged; there is no refused outcome. The agreement target is `session_eq_ref` over a
 well-formed tape, with `run_eq_ref` as its empty-table corollary.
 
-**Frontier reasons.** One generated family: command fuel per fiber, compile fuel, a host
-call by key, a timer by fiber and wake time, a scheduling decision. No await-fiber reason.
-Compile fuel is a separate budget. Laws: fuel monotonicity of a finished result, stability
-of a host frontier under unrelated decisions, tape completeness as the absence of host and
+**Frontier reasons** (amended 2026-09-11 after the P2b probe). One generated family: command
+fuel, compile fuel by fiber, a host call by key, a timer by fiber and wake time, a scheduling
+decision. No await-fiber reason. The reasons are observed into a `reasons` field of the run
+result from the driver's exhaustion tag (fuel or tape) and the final machine; the outcome type
+and the existing agreement theorem keep their statements, and reasons agreement with the
+reference is a separately named lemma. The reference's pending-reason type is renamed and
+projects to this alphabet. Compile fuel is a separate budget, added with a default. Laws: fuel
+monotonicity of a finished replay with compile fuel pinned; guard persistence under any
+decision that is not the key's reply, up to interruption of the key's fiber; agreement of the
+protocol's observed state with the reasons; tape completeness as the absence of host and
 decision reasons.
 
 **Row table meaning.** The row table means the algebra package's `Family` through
