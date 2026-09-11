@@ -153,3 +153,61 @@ with recursive typing and the caller's allocation table. Wrong branch payloads, 
 arities refuse. Normalization, subtyping and allocation-extension laws apply to both arms.
 `Ty.schema` is not yet implemented; its future Result reflection keeps the already-ratified
 value/error order, without adding a second type constructor here.
+
+### Formal foundations amendment (owner ruled 2026-09-11)
+
+Rows DI-15, DI-17, DI-23, DI-39, DI-55, DI-57, DI-58 amended and DI-67 to DI-71 added;
+map ticket T-13; the packet is `docs/research/2026-09-11-eff-formal-foundations-implementation.md`.
+
+**Type identity.** Two types are the same type when each is a subtype of the other. `Ty.sub`
+is a proved preorder. Union normalization drops a narrower member beside a wider one
+(`Row.antichain sub`) and distributes `prod` over `union` on either side, so a normal form has
+no union under a `prod` head; nothing distributes under `list`. On canonical types mutual
+subtyping is equality and `join` is the least upper bound. Every store key, schema document,
+codec law and printed type is taken of the canonical form. Answer joining is the least upper
+bound. A string literal types as `string` in general position and as `lit` as an argument of
+`pair`. The printed face of a tag-set column becomes a union of tuples. `sub` stays sound for
+membership and deliberately incomplete against value containment beyond these rules.
+
+**Tag residual.** The tag test is the native atom `tagIs`, true only on a pair whose first
+component is the tag, printed through the prelude. A `catchIf` whose test is that atom types
+its error column as the residual joined with the handler's error; any other test keeps the
+join. The residual is a fidelity claim to the printed type; its adequacy statement carries the
+single-`Fail` premise, and the two-`Fail` miss is a filed counterexample. The first-`Fail`
+elimination rule is unchanged.
+
+**Inhabitation.** Every admitted type either normalizes to `never` or has a value under some
+allocation table. `Ty.int` keeps its ordinal and is refused at admission and at the schema
+boundary. The value alphabet is not extended.
+
+**One run route.** Host answers reach a program only through the keyed session. The
+preloaded answer list is deleted after the legacy truth programs run through the session on
+version-2 tapes, never before. A refused reply is `submit`'s verdict with the session
+unchanged; there is no refused outcome. The agreement target is `session_eq_ref` over a
+well-formed tape, with `run_eq_ref` as its empty-table corollary.
+
+**Frontier reasons.** One generated family: command fuel per fiber, compile fuel, a host
+call by key, a timer by fiber and wake time, a scheduling decision. No await-fiber reason.
+Compile fuel is a separate budget. Laws: fuel monotonicity of a finished result, stability
+of a host frontier under unrelated decisions, tape completeness as the absence of host and
+decision reasons.
+
+**Row table meaning.** The row table means the algebra package's `Family` through
+`Alphabet.toFamily`, and its signature through `toSignature`; the denotation extends to
+straight-line programs with external rows on one fiber; a tape is a partial handler whose
+missing answer is the host frontier. Fork and scope remain the reference machine's.
+
+**Layer identity.** A layer's identity is its position, with sharing explicit through
+`LayerTerm.ref` and unsharing through `LayerTerm.fresh`, as the runtime keys its memo map on
+the layer object. Content-addressed layer identity is rejected. Owed: the provide-twice law
+over references, the fresh-never-shares law, and agreement of typing by expansion with
+compilation by redirect.
+
+**Admission and printing.** Admission certifies that a program can run: unique row keys, no
+collision with a built-in, no trailing names on a value row, from `Program/Table.lean`.
+Printing certifies that it can print: reserved heads and the binder byte are the printer's
+refusal. Admission does not import the reader.
+
+**Generators.** `tools/Effect4Gen` hosts every generator that writes into `src/` or `Test/`;
+the seven-family `cata_eq_rec` and the frontier parameter come from the Fold group, not by
+hand.

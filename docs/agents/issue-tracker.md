@@ -5,7 +5,7 @@ engineering skills adapt to that; nothing new is created for them.
 
 | what | where | who writes |
 | --- | --- | --- |
-| open design questions | `docs/DESIGN-ISSUES.md`, rows `DI-nn`; status open → recommended → ruled → basis | the owner rules; an agent proposes in a research note and cites the row id, never edits the row |
+| open design questions | `docs/DESIGN-ISSUES.md`, rows `DI-nn`; status open → recommended → ruled → basis | the owner rules; an agent proposes in a research note and cites the row id, and once the owner has ratified, writes the row and the tracked place it cites in the same commit |
 | settled decisions | `docs/DESIGN-BASIS.md`, rows `DB-nn` | the owner |
 | frozen contracts and falsifiers | `Test/contracts/*.contract.md` | a slice, landed by the coordinator |
 | declaration-changing counterexamples | `Test/Counterexamples/REGISTER.md` | a slice |
@@ -15,10 +15,12 @@ engineering skills adapt to that; nothing new is created for them.
 ## Conventions
 
 - A ruling is not made until it is written into a tracked file (the register's first rule).
-  A research note proposes; the register records; the owner writes the row.
+  A research note proposes; the owner ratifies; the register records, in the same commit as
+  the tracked place the row cites.
 - Rows are cited by id, never by line. Ids are never reused.
-- An agent never edits `docs/DESIGN-ISSUES.md` or `docs/DESIGN-BASIS.md` on its own
-  initiative. It writes the proposed text into the research note and names the row.
+- An agent does not edit `docs/DESIGN-ISSUES.md` or `docs/DESIGN-BASIS.md` on its own
+  initiative. After the owner's ratification it writes the ruling into the row and the tracked
+  place itself (owner correction, 2026-09-11).
 
 ## When a skill says "publish to the issue tracker"
 
@@ -47,7 +49,7 @@ separate tracker files, no labels, no board.
 - **Claim**: set `Status: claimed (<seat>, <date>)` before any work.
 - **Resolve**: append the answer under the ticket, set `Status: resolved (<date>)`, and add
   one line to the map's "Decisions so far". If the answer is a ruling, it is proposed to
-  the owner by `DI` row id; the register is the owner's to write.
+  the owner by `DI` row id and written into the row once ratified.
 - **Blocking**: the `Blocked by:` line. There is no native dependency view, so the ticket
   list in the note is the visual.
 - **Research tickets** may be resolved by a subagent that writes its findings to
