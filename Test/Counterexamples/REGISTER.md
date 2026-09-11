@@ -445,7 +445,7 @@ packet without deleting the stable row.
 | `E4-HOST-CE-005` | SEEDED | Distinct fiber/token keys make answer application commute even when continuations share a Ref | `Test/Api/KeyedHostContract.lean`, `shared`: admitted checked AB exits 2, BA exits 1 | `reply_commute` covers receiving/storing replies; applications are separate explicitly ordered tape records |
 | `E4-HOST-CE-006` | SEEDED | An unkeyed oracle answer queue identifies concurrent calls | `Test/Api/KeyedHostContract.lean`, `program`: reversed queue gives second child 2; keyed replies give it 3 | v2 records carry fiber/token keys and exact call claims; legacy queues retain their single-fiber limitation |
 
-## History
+## Historical notes
 
 - 2026-09-08: `E4-TYPED-CE-001` retired (DB-15, the host rows slice, decision 3): strings are machine values on the native route, so the statement it refuted, "a term that types always evaluates", is now the theorem `evalTerm_isSome` without its `noStr` premise; `Term.noStr` and `Terms.noStr` are deleted. The ID is kept. `E4-PROV-CE-004` is reworded: the layer-value refusal is the provision route's `litVal`, not a fact about machine values.
 - 2026-09-08: `E4-OBS-CE-001` through `E4-OBS-CE-004` retain their IDs; their inline observability examples are archived at `62c04d9` on `archive/char-stdlib`.

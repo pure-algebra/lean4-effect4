@@ -85,6 +85,8 @@ the universal checked-boundary laws in `Laws/Schema/Codec`.
 
 ## Host protocol projections
 
+### Keyed session protocol
+
 `harness/truth/session/protocol.gen.ts` and `harness/truth/session/tape.schema.json`
 are deterministic committed projections of `src/Effect4/Api/HostProtocol.lean`, produced
 by `bash scripts/generate-host-protocol.sh` through `tools/Tools/HostProtocol.lean`.

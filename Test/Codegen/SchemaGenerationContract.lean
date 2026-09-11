@@ -1,4 +1,6 @@
 import Effect4.Codegen.Schema
+import Effect4.Schema.Bridge
+import Effect4.Api
 import Effect4.Laws.Schema.Codec
 
 /-! Representative raw Schema and containing-data generation receipts. -/
@@ -138,6 +140,122 @@ private def duplicatePrototypeReferenceDocument : Document :=
   Codegen.Schema.source? "PersonSchema" personDocument
     [("ada", .obj [("name", .str "Ada"), ("active", .bool true)])]
 
+/-! ## Decision 12 (S-1 / S-2): Ty.schema, ofSchema, and retraction -/
+
+open Effect4.Program Effect4.Schema.Bridge
+
+#guard Ty.ofSchema (Ty.schema .never) = some .never
+#guard Ty.ofSchema (Ty.schema .unit) = some .unit
+#guard Ty.ofSchema (Ty.schema .nat) = some .nat
+#guard Ty.ofSchema (Ty.schema .int) = some .int
+#guard Ty.ofSchema (Ty.schema .string) = some .string
+#guard Ty.ofSchema (Ty.schema .bool) = some .bool
+#guard Ty.ofSchema (Ty.schema (.lit "User")) = some (.lit "User")
+#guard Ty.ofSchema (Ty.schema (.option .string)) = some (.option .string)
+#guard Ty.ofSchema (Ty.schema (.list .nat)) = some (.list .nat)
+#guard Ty.ofSchema (Ty.schema (.prod .nat .string)) = some (.prod .nat .string)
+#guard Ty.ofSchema (Ty.schema (Ty.result .string .nat)) = some (Ty.result .string .nat)
+#guard Ty.ofSchema (Ty.schema (.exitOf .string .nat)) = some (.exitOf .string .nat)
+#guard Ty.ofSchema (Ty.schema (.causeOf .string)) = some (.causeOf .string)
+#guard Ty.ofSchema (Ty.schema (.fiberOf .string .nat)) = some (.fiberOf .string .nat)
+#guard Ty.ofSchema (Ty.schema (.handle "Scope.Scope")) = some (.handle "Scope.Scope")
+#guard Ty.ofSchema (Ty.schema (.union .string .nat)) = some (.union .string .nat)
+
+#check ofSchema_schema
+#check ofSchema_schema_cty
+
+/-! ## Higher-Order Schema APIs, Functions, and Combinators -/
+
+open Effect4.Schema Effect4.Store
+
+private def getUserEndpoint : Endpoint :=
+  (Endpoint.make "getUser")
+    |>.external
+    |>.withTitle "Get User"
+    |>.withDescription "Fetch a user record by string ID"
+    |>.withHttp "GET" "/users/:id"
+    |>.withInput .string
+    |>.withOutput (Ty.tagged "User" .string)
+    |>.withError .string
+
+#guard getUserEndpoint.name = "getUser"
+#guard getUserEndpoint.input = .string
+#guard getUserEndpoint.output = Ty.tagged "User" .string
+#guard getUserEndpoint.error = .string
+
+private def userRow : Effect4.Program.Row := getUserEndpoint.toRow
+#guard userRow.name = "getUser"
+#guard userRow.request = .string
+#guard userRow.answer = .prod (.lit "User") .string
+#guard userRow.error = .string
+
+private def userDoc : Document := getUserEndpoint.document
+#guard userDoc.references.length = 3
+#guard (userDoc.references.map (·.key)) = ["request", "answer", "error"]
+
+private def userApi : ApiSpec :=
+  (ApiSpec.make "UserApi")
+    |>.withTitle "User Management API"
+    |>.withVersion "1.2.0"
+    |>.addEndpoint getUserEndpoint
+
+#guard userApi.endpoints.length = 1
+#guard userApi.toRowTable.length = 1
+#guard userApi.document.references.length = 3
+
+private def doubleFn : SchemaFn :=
+  SchemaFn.pure "double" .nat .nat fun
+    | .nat n => .nat (n * 2)
+    | v => v
+
+#guard doubleFn.apply (.nat 21) = some (.nat 42)
+#guard doubleFn.apply (.str "not a nat") = none
+#guard doubleFn.apply .unit = none
+
+private def fallibleDivFn : SchemaFn :=
+  SchemaFn.fallible "safeHalf" .nat .nat .string fun
+    | .nat n => if n % 2 == 0 then some (.nat (n / 2)) else none
+    | _ => none
+
+#guard fallibleDivFn.apply (.nat 10) = some (.nat 5)
+#guard fallibleDivFn.apply (.nat 11) = none
+
+#guard (SchemaFn.compose? doubleFn doubleFn).isSome
+#guard ((SchemaFn.compose? doubleFn doubleFn).get!.apply (Val.nat 5)) = some (Val.nat 20)
+
+#guard Ty.tagged "Profile" .string = .prod (.lit "Profile") .string
+#guard Ty.record [("name", .string), ("active", .bool)] =
+  .prod (.prod (.lit "name") .string) (.prod (.lit "active") .bool)
+
+#print axioms SchemaFn.apply_sound
+#print axioms titleKey_lawful
+#print axioms httpMethodKey_lawful
+#print axioms deprecatedKey_lawful
+
+/-! ## Multi-Tier Cascading CAS -/
+
+open Effect4.Store
+
+-- CascadingStore operations
+private def cs0 : CascadingStore := CascadingStore.empty
+#guard cs0.find Effect4.Store.zeroDigest = none
+#guard !cs0.contains Effect4.Store.zeroDigest
+#guard cs0.findWithSource Effect4.Store.zeroDigest = none
+
+private def testNode : Effect4.Store.Node := ⟨0, .schema, Effect4.Store.zeroDigest, .str "test"⟩
+private def testNodeAddress : Effect4.Store.Digest := Effect4.Store.sha256 testNode.encode
+
+#guard match cs0.putLocal testNode with
+  | .ok (.fresh, d, cs1) =>
+      d = testNodeAddress &&
+      cs1.contains testNodeAddress &&
+      cs1.find testNodeAddress = some testNode &&
+      (cs1.findWithSource testNodeAddress).map Prod.snd = some .«local»
+  | _ => false
+
+#print axioms CascadingStore.find_of_local
+#print axioms CascadingStore.find_of_upstream
+
 /-! ## S-3: the checked JSON boundary, owner amendment 2026-09-11 -/
 
 open Effect4.Program
@@ -235,4 +353,189 @@ example (v : Store.Val) (hv : Program.Val.hasTy v (.lit "User") = true) :
 #check Schema.hasTy_decode
 #check Schema.encode_sub
 
+/-! ## Stability of Core Language Constructs & Effect Reification -/
+
+-- 1. Branching & Pure Terms
+private def pBranch (cond : Bool) : Api.Program :=
+  .branch (.lit (.bool cond)) (.succeed (.lit (.nat 10))) (.succeed (.lit (.nat 20)))
+
+#guard Api.wellTyped (pBranch true)
+#guard Api.wellTyped (pBranch false)
+#guard Api.typeOf (pBranch true) = some (.pure .nat)
+#guard Api.roundTrip (pBranch true) = .ok (pBranch true)
+#guard Api.roundTrip (pBranch false) = .ok (pBranch false)
+#guard (Api.run (pBranch true) 100).outcome = Api.Outcome.finished
+#guard (Api.run (pBranch true) 100).exit = some (Exit.success (Store.Val.nat 10))
+#guard (Api.run (pBranch false) 100).exit = some (Exit.success (Store.Val.nat 20))
+#guard (Api.runSync (pBranch true) 100).2 = Exit.success (Store.Val.nat 10)
+
+-- 2. Generator Syntax (gen with bindYield, yieldDiscard, ret)
+private def pGen : Api.Program :=
+  .gen (.cons (.bindYield (.succeed (.lit (.nat 41))))
+       (.cons (.yieldDiscard (.succeed (.lit .unit)))
+       (.cons (.ret (.app "succ" (.cons (.var 0) .nil))) .nil)))
+
+#guard Api.wellTyped pGen
+#guard Api.typeOf pGen = some (.pure .nat)
+#guard (Api.print pGen).isOk
+#guard (Api.run pGen 100).outcome = Api.Outcome.finished
+#guard (Api.run pGen 100).exit = some (Exit.success (Store.Val.nat 42))
+#guard (Api.runSync pGen 100).2 = Exit.success (Store.Val.nat 42)
+
+-- 3. Resource Management (scoped and acquireRelease)
+private def pScopedAcquire : Api.Program :=
+  .scoped (.bind (.acquireRelease (.succeed (.lit (.nat 7))) (.succeed (.lit .unit)))
+                 (.succeed (.app "succ" (.cons (.var 0) .nil))))
+
+#guard Api.wellTyped pScopedAcquire
+#guard Api.typeOf pScopedAcquire = some (.pure .nat)
+#guard Api.roundTrip pScopedAcquire = .ok pScopedAcquire
+#guard (Api.run pScopedAcquire 100).exit = some (Exit.success (Store.Val.nat 8))
+
+-- Resource cleanup with state mutation: acquire makes a Ref, release mutates it to 99, body reads 10
+private def pRefScope : Api.Program :=
+  .scoped (.bind (.acquireRelease (.perform .refMake (.lit (.nat 10)))
+                                  (.perform .refSet (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 99)) .nil)))))
+                 (.perform .refGet (.var 0)))
+
+#guard Api.wellTyped pRefScope
+#guard Api.typeOf pRefScope = some (.pure .nat)
+#guard (Api.run pRefScope 300).exit = some (Exit.success (Store.Val.nat 10))
+#guard (Api.run pRefScope 300).stores.refs = [Store.Val.nat 99]
+
+-- 4. Context Service Provision (service and provideService)
+private def testServiceKey : Effect4.ServiceKey := ⟨⟨4⟩, ⟨4⟩⟩
+private def pServiceProg : Api.Program :=
+  .provideService testServiceKey (.lit (.nat 100))
+    (.bind (.service testServiceKey)
+           (.succeed (.app "succ" (.cons (.var 0) .nil))))
+
+#guard Api.wellTyped pServiceProg
+#guard Api.typeOf pServiceProg = some (.pure .nat)
+#guard Api.roundTrip pServiceProg = .ok pServiceProg
+#guard (Api.run pServiceProg 100).exit = some (Exit.success (Store.Val.nat 101))
+
+-- 5. Conditional Catch (catchIf)
+private def pHitCatch : Api.Program :=
+  .catchIf (.lit (.bool true)) (.fail (.lit (.nat 7))) (.succeed (.var 0))
+private def pMissCatch : Api.Program :=
+  .catchIf (.lit (.bool false)) (.fail (.lit (.nat 7))) (.succeed (.var 0))
+
+#guard Api.wellTyped pHitCatch
+#guard Api.wellTyped pMissCatch
+#guard (Api.run pHitCatch 100).exit = some (Exit.success (Store.Val.nat 7))
+#guard (Api.run pMissCatch 100).exit = some (Exit.failure (.fail (.tag 7)))
+
+-- 6. Loop iteration (whileLoop with Ref mutation)
+private def pLoopProg : Api.Program :=
+  .bind (.perform .refMake (.lit (.nat 0)))
+    (.whileLoop (.lit (.nat 0)) (.app "isZero" (.cons (.var 1) .nil))
+      (.app "succ" (.cons (.var 1) .nil)) (.perform (.refUpdate .incr) (.var 0)))
+
+#guard Api.wellTyped pLoopProg
+#guard Api.typeOf pLoopProg = some (.pure .unit)
+#guard (Api.run pLoopProg 300).exit = some (Exit.success Store.Val.unit)
+#guard (Api.run pLoopProg 300).stores.refs = [Store.Val.nat 1]
+
+-- 7. Schema-Backed Endpoint Invocation (Endpoint -> RowTable -> Eff)
+private def pCallGetUser (id : String) : Api.Program :=
+  .callback (.external 0) (.lit (.str id))
+
+#guard Api.wellTyped (pCallGetUser "alice") userApi.toRowTable
+#guard Api.typeOf (pCallGetUser "alice") userApi.toRowTable =
+  some ⟨.prod (.lit "User") .string, .string, Effect4.Machine.Env.Requirement.empty⟩
+#guard Api.roundTrip (pCallGetUser "alice") userApi.toRowTable = .ok (pCallGetUser "alice")
+
+-- Verify TypeScript reification: endpoint spelling reifies directly to host call
+#guard match Api.print (pCallGetUser "alice") userApi.toRowTable with
+  | .ok expr => TypeScript.Render.expr TypeScript.house0 0 expr == "getUser(\"alice\")"
+  | .error _ => false
+
+-- Oracle completion answer
+private def aliceAnswer : Machine.Completion Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann :=
+  .ofExit (.success (Store.Val.list [Store.Val.str "User", Store.Val.str "Alice Smith"]))
+
+#guard (Api.run (pCallGetUser "alice") 1000 [] [aliceAnswer] userApi.toRowTable).exit =
+  some (.success (Store.Val.list [Store.Val.str "User", Store.Val.str "Alice Smith"]))
+
+-- Refusal on wrong answer type
+private def wrongTypeAnswer : Machine.Completion Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann :=
+  .ofExit (.success (Store.Val.nat 42))
+
+#guard match Api.replayChecked (pCallGetUser "alice") 1000 [Api.evaluate, .answerAsync Api.root 0 wrongTypeAnswer] [] [] userApi.toRowTable with
+  | .inr (_, _, why, _) => why == .answerType Api.root 0 (.prod (.lit "User") .string)
+  | _ => false
+
+-- Error propagation from external call
+private def userNotFoundAnswer : Machine.Completion Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann :=
+  .ofExit (.failure (Cause.fail (.text "User not found")))
+
+#guard (Api.run (pCallGetUser "alice") 1000 [] [userNotFoundAnswer] userApi.toRowTable).exit =
+  some (.failure (Cause.fail (.text "User not found")))
+
+-- 8. CAS Wire Serialization & Exact Deserialization
+private def pCallBytes := Api.bytesOf (pCallGetUser "alice")
+#guard Api.ofBytes pCallBytes = some (pCallGetUser "alice")
+
+private def pGenBytes := Api.bytesOf pGen
+#guard Api.ofBytes pGenBytes = some pGen
+
+private def pRefScopeBytes := Api.bytesOf pRefScope
+#guard Api.ofBytes pRefScopeBytes = some pRefScope
+
+-- 9. Multi-Tier Cascading CAS with Serialized Programs and Codec Data
+private def progCasNode : Effect4.Store.Node :=
+  ⟨0, .schema, Effect4.Store.zeroDigest, Store.Val.bytes pCallBytes⟩
+private def progCasDigest : Effect4.Store.Digest :=
+  Effect4.Store.sha256 progCasNode.encode
+
+-- Put in local tier of CascadingStore
+private def csWithProg : CascadingStore :=
+  match cs0.putLocal progCasNode with
+  | .ok (_, _, s) => s
+  | .error _ => cs0
+
+#guard csWithProg.contains progCasDigest
+#guard csWithProg.find progCasDigest = some progCasNode
+#guard csWithProg.findWithSource progCasDigest = some (progCasNode, .«local»)
+
+-- Deserializing back from CAS payload
+#guard match (csWithProg.find progCasDigest).map (·.payload) with
+  | some (Store.Val.bytes b) => Api.ofBytes b = some (pCallGetUser "alice")
+  | _ => false
+
+-- Cascading upstream lookup via promote
+private def csTiered : CascadingStore :=
+  match csWithProg.promote progCasDigest with
+  | .ok (_, _, csPromoted) => { csPromoted with localStore := Store.empty }
+  | .error _ => cs0
+
+#guard csTiered.contains progCasDigest
+#guard csTiered.find progCasDigest = some progCasNode
+#guard csTiered.findWithSource progCasDigest = some (progCasNode, .upstream)
+
+-- 10. SchemaTransform Composition over Eff
+private def tId : SchemaTransform NativeOp := SchemaTransform.id .nat
+private def tSucc : SchemaTransform NativeOp :=
+  { name := "succ", source := .nat, target := .nat,
+    program := .succeed (.app "succ" (.cons (.var 0) .nil)) }
+
+private def tComposedUser : SchemaTransform NativeOp :=
+  SchemaTransform.compose tSucc tId
+
+#guard tComposedUser.source = .nat
+#guard tComposedUser.target = .nat
+#guard tComposedUser.error = .never
+
+-- Applied with an input: 41 + 1 = 42
+private def pAppliedTransform : Api.Program :=
+  .bind (.succeed (.lit (.nat 41))) tComposedUser.program
+
+#guard Api.wellTyped pAppliedTransform
+#guard Api.typeOf pAppliedTransform = some (.pure .nat)
+#guard (Api.run pAppliedTransform 100).outcome = Api.Outcome.finished
+#guard (Api.run pAppliedTransform 100).exit = some (Exit.success (Store.Val.nat 42))
+#guard (Api.runSync pAppliedTransform 100).2 = Exit.success (Store.Val.nat 42)
+
 end Test.Codegen.SchemaGenerationContract
+

@@ -31,6 +31,9 @@ crosses from a codegen artefact to bytes, and
 `Test/Api/ApiContract.lean` is the receipt that crosses it the way a
 caller does.
 
+The same import exposes concrete value images, typed effectful transformations,
+multi-tier cascading CAS stores, and checked schema endpoints.
+
 The library lives under `src/Effect4`, its batteries under `Test/`, and its
 generators and drivers under `tools/`. The OCaml estate spans `src/OCaml5` and
 the dune workspace `ocaml/`; the TypeScript reader lives in `ts/eff`.

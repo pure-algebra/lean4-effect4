@@ -44,6 +44,12 @@ none of their carriers.
 
 ## Source tree
 
+The schema authoring boundary sits above Program and Schema. `Schema/Image`
+connects concrete Lean carriers to admitted program values; `Schema/Transform`
+wraps existing `Eff`/`Term` syntax with typing evidence; `Schema/Endpoint` defines
+typed service interfaces bridging directly into `RowTable` for `Eff` program invocations.
+The separate proofs are in `Laws/Schema/{Image,Transform}`.
+
 | Area | Responsibility |
 | --- | --- |
 | `src/Effect4/Data` | requirement rows, JSON, lawful optics |

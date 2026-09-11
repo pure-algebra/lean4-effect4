@@ -23,6 +23,7 @@ full, then open only the authority documents named for the current task.
 | `generated/` | deterministic projections only; never hand-edited |
 | `docs/research/` (not tracked) | working notes, plans, the proof-graph ledgers and surveys; synced between machines directly |
 | `COORDINATION.md` (not tracked) | live claims between concurrent sessions, and the parity steps for the other machine |
+| `docs/agents/` | where the engineering skills (wayfinder, to-spec, to-tickets, domain-modeling, implement) find this repo's tracker and domain docs; pointers only, it owns no fact |
 
 If two files appear to own the same fact, stop and repair the ownership map.
 
@@ -97,3 +98,17 @@ number in a report behind a command; `ocaml/README.md` is its map.
 - A handoff records base and head commits, changed files, exact commands and
   results, axiom output, open obligations, and whether any evidence is bounded
   or host-only.
+
+## Agent skills
+
+### Issue tracker
+
+This repo's own registers and research notes: `docs/DESIGN-ISSUES.md` (open, owner-ruled),
+`docs/DESIGN-BASIS.md` (settled), `Test/contracts/`, `Test/Counterexamples/REGISTER.md`, and
+`docs/research/` for the history. No external tracker. A wayfinder map lives inside its
+effort's research note. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context; the glossary is `docs/DESIGN-MAP.md` and the decision record is the two
+registers. No `CONTEXT.md`, no `docs/adr/`. See `docs/agents/domain.md`.

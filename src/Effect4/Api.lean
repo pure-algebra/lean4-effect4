@@ -5,7 +5,12 @@ import Effect4.Codegen.Print
 import Effect4.Codegen.Read
 import Effect4.Codegen.Schema
 import Effect4.Codegen.Target
+import Effect4.Store.Cascade
+import Effect4.Schema.Bridge
+import Effect4.Schema.Endpoint
 import Effect4.Schema.Codec
+import Effect4.Schema.Image
+import Effect4.Schema.Transform
 
 /-!
 # Effect4.Api — the application face
@@ -74,6 +79,11 @@ def typeOf (program : Program) (table : RowTable := []) : Option EffTy := Progra
 
 /-- Whether the program is well-typed. -/
 def wellTyped (program : Program) (table : RowTable := []) : Bool := (typeOf program table).isSome
+
+/-- A program's boundary schema document (Decision 12 / S-4): computes the Document for
+any well-typed program, refusing when the program is ill-typed. -/
+def schemaOf (program : Program) (table : RowTable := []) : Option Effect4.Document :=
+  (typeOf program table).map Effect4.Program.EffTy.document
 
 /-- The program as one TypeScript expression, at the empty environment. -/
 def print (program : Program) (table : RowTable := []) : Except PrintRefusal TypeScript.Expr :=
@@ -349,5 +359,15 @@ def jsonExpr (value : Effect4.Json) : TypeScript.Expr :=
 
 export Effect4.Codegen (Target Artefact)
 export Effect4.Codegen.Artefact (render)
+
+/-! ## Multi-Tier Cascading CAS Store -/
+
+export Effect4.Store (CascadingStore)
+
+/-! ## Higher-Order Schema APIs and Functions -/
+
+export Effect4.Schema (Endpoint ApiSpec SchemaFn SchemaTransform
+  titleKey descriptionKey documentationKey httpMethodKey httpPathKey deprecatedKey)
+export Effect4.Schema (ProgramImage Transform PureMap)
 
 end Effect4.Api

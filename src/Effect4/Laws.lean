@@ -43,6 +43,8 @@ import Effect4.Laws.Program.Typing.Sound
 import Effect4.Laws.Program.Typing.Check
 import Effect4.Laws.Store.CanonicalSpec
 import Effect4.Laws.Schema.Codec
+import Effect4.Laws.Schema.Image
+import Effect4.Laws.Schema.Transform
 
 /-!
 # Effect4 proof graph
