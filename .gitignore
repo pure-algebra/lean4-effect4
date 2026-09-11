@@ -11,9 +11,12 @@ __pycache__/
 /PLAN.md
 /misty-frolicking-naur.md
 
-# Claude Code per-machine settings and agent worktrees
-.claude/settings.local.json
-.claude/worktrees/
+# Agent skills and local tooling
+.claude/
+.agents/
+.vscode/
+/scratch/
+skills-lock.json
 
 # Harness spikes: per-machine scratch under harness/ stays on disk, not in git.
 # The 23 files already tracked here are unaffected — six gates read them
