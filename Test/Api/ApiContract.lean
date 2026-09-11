@@ -77,6 +77,54 @@ def pStrBind : Program := .bind (.succeed (.lit (.str "a"))) (.succeed (.var 0))
 -- the one crossing to bytes, kept inside the guard
 #guard render (Effect4.Codegen.Artefact.json (.arr [])) = "[]\n"
 
+/-! ## Type spellings and Result patterns, through the application import
+
+Known target spellings from the DX specification; runtime handles still require
+their exact allocation target. The Result patterns use Failure = 0, Success = 1,
+the opposite success/failure order from Exit. -/
+
+open Effect4.Program (Ty)
+
+#guard ([Ty.result .string .nat, Ty.exit .string .nat, Ty.fiber .string .never,
+  Ty.cause .string, Ty.array .nat, Ty.readonlyArray .string, Ty.null, Ty.undefined,
+  Ty.undefinedOr .nat, Ty.nullOr .nat, Ty.nullable .nat, Ty.duration, Ty.dateTime,
+  Ty.chunk (.result .string .nat), Ty.take .string, Ty.take .string .nat .bool].map Ty.render) =
+  ["Result.Result<string, number>", "Exit.Exit<string, number>", "Fiber.Fiber<string, never>",
+   "Cause.Cause<string>", "ReadonlyArray<number>", "ReadonlyArray<string>", "null", "undefined",
+   "number | undefined", "number | null", "number | null | undefined", "Duration.Duration",
+   "DateTime.DateTime", "Chunk.Chunk<Result.Result<string, number>>",
+   "ReadonlyArray<string> | Exit.Exit<void, never>",
+   "ReadonlyArray<string> | Exit.Exit<boolean, number>"]
+
+/-- Application callers can use the exported helpers on both sides of a match. -/
+def resultPayload? : Val → Option (Bool × Val)
+  | .resultFailure err => some (false, err)
+  | .resultSuccess val => some (true, val)
+  | _ => none
+
+-- Re-exported nullary and payload patterns also resolve with a local dotted spelling.
+private def exitPayload? : Val → Option Val
+  | .exitOk value => some value
+  | .exitNil => some .unit
+  | _ => none
+
+#guard exitPayload? (.exitOk (Val.cell ⟨3⟩)) = some (.cell ⟨3⟩)
+#guard exitPayload? .exitNil = some .unit
+
+#guard resultPayload? (Val.resultFailure (.nat 7)) = some (false, .nat 7)
+#guard resultPayload? (Val.resultSuccess (.str "ok")) = some (true, .str "ok")
+#guard resultPayload? (.ctor 1 [.str "ok", .nat 0]) = none
+#guard Effect4.Program.Val.hasTy (Val.resultSuccess (.str "ok")) (Ty.result .string .nat)
+#guard !Effect4.Program.Val.hasTy (Val.resultFailure (.str "wrong")) (Ty.result .string .nat)
+#guard Effect4.Program.Val.hasTy (.handle 7 0) (Ty.nullable .nat) ["null"]
+#guard !Effect4.Program.Val.hasTy (.handle 7 0) Ty.duration ["DateTime.DateTime"]
+#guard !Effect4.Program.Val.hasTy .unit Ty.null
+
+#print axioms Effect4.Program.Ty.chunk
+#print axioms Effect4.Program.Ty.take
+#print axioms Effect4.Machine.Value.resultFailure
+#print axioms Effect4.Machine.Value.resultSuccess
+
 /-! ## Axiom receipts -/
 
 #print axioms Effect4.Api.typeOf

@@ -144,7 +144,7 @@ theorem Val.keys_promise (key : DeferredKey) : (Val.promise key).keys = [Handle.
 theorem Val.keys_scopeHandle (key : Nat) : (Val.scopeHandle key).keys = [Handle.scope key] := rfl
 theorem Val.keys_memoMap (id : MemoMapId) : (Val.memoMap id).keys = [Handle.memoMap id.index] := rfl
 
-theorem Val.keys_exitOk (v : Val) : (Val.exitOk v).keys = v.keys := by
+theorem Val.keys_exitOk (v : Val) : Val.keys (Val.exitOk v) = v.keys := by
   simp only [Val.keys, Val.keysList, List.append_nil]
 
 theorem Val.keysList_eq_handlesList (values : List Val)

@@ -348,7 +348,7 @@ theorem exitOfVal_keys (v : Val) (e : ExitV) (h : exitOfVal v = some e) : exitKe
   rw [exitImage.ofVal_exact h]
   cases e with
   | success x =>
-    show x.keys ⊆ (Val.exitOk x).keys
+    show x.keys ⊆ Val.keys (Val.exitOk x)
     rw [Val.keys_exitOk]
     exact List.Subset.refl _
   | failure c => exact List.nil_subset _

@@ -570,6 +570,7 @@ abbrev Val := Effect4.Store.Val
 namespace Val
 
 export Effect4.Store.Val (unit nat bool str bytes list pair ctor ref handle)
+export Value (exitOk resultFailure resultSuccess exitNil)
 
 /-- The handle a fork answers (`Value.fiber`, kind 1). -/
 @[match_pattern] abbrev fiber (id : FiberId) : Val := Value.fiber id.value
@@ -579,11 +580,6 @@ export Effect4.Store.Val (unit nat bool str bytes list pair ctor ref handle)
 @[match_pattern] abbrev memoMap (id : Nat) : Val := Value.memoMap id
 /-- A `Deferred` handle (`Deferred.ts:140-145`; `Value.promise`, kind 3). -/
 @[match_pattern] abbrev promise (cell : Nat) : Val := Value.promise cell
-/-- A reified successful `Exit` (`Value.exitOk`). -/
-@[match_pattern] abbrev exitOk (value : Val) : Val := Value.exitOk value
-/-- The empty list of awaited exits (M6): the carrier's empty `list`. One exit list is one
-`list` frame; there is no cons arm. -/
-@[match_pattern] abbrev exitNil : Val := .list []
 /-- `awaitAllChildren`'s snapshot: the fiber handles under `Value.fiberSnapshot`. -/
 abbrev fibers (ids : List FiberId) : Val :=
   Value.fiberSnapshot ((Image.list Value.fiberHandle).toVal ids)

@@ -1,4 +1,4 @@
-(* cut-from: rev=965eb07-dirty toolchain=4.33.1 inputs=dc4427729082fca3005774a1bdef25f98e8c32c6792bafe9da25c29b670ccb31 *)
+(* cut-from: rev=c62ab6f-dirty toolchain=4.33.1 inputs=8f72ac5882cac94abba827b4a4ee4c21ad2a2ade414a3c4442267a74a80f25b4 *)
 (* GENERATED source-structure view; no runtime or execution-permission claim. *)
 let wire_families = [
   ("Ty", ["never"; "unit"; "nat"; "int"; "string"; "bool"; "handle"; "option"; "list"; "prod"; "except"; "exitOf"; "causeOf"; "fiberOf"; "union"; "lit"]);

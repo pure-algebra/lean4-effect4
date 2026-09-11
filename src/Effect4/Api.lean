@@ -58,7 +58,7 @@ before. -/
 namespace Val
 export Effect4.Store.Val (unit nat bool str bytes list pair ctor ref handle)
 export Effect4.Machine.Val (fiber cell promise scopeHandle exitOk exitNil fibers context exitErr
-  snapshot? context? cause?)
+  resultFailure resultSuccess snapshot? context? cause?)
 end Val
 
 /-- A program: the Eff AST over the native operation alphabet. -/

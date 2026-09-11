@@ -47,6 +47,16 @@ namespace Ty
 like `exitOf` and `fiberOf`. The existing constructor and its ordinal remain unchanged. -/
 abbrev result (value error : Ty) : Ty := .except error value
 
+/-- Suffix-free spelling of `Exit.Exit<A, E>` (rc.112 Exit.ts:59). -/
+abbrev exit (value error : Ty) : Ty := .exitOf value error
+/-- Suffix-free spelling of `Fiber.Fiber<A, E>` (rc.112 Fiber.ts:70). -/
+abbrev fiber (value error : Ty) : Ty := .fiberOf value error
+/-- Suffix-free spelling of `Cause.Cause<E>` (rc.112 Cause.ts:75). -/
+abbrev cause (error : Ty) : Ty := .causeOf error
+/-- Both array spellings retain the existing readonly array representation. -/
+abbrev array (inner : Ty) : Ty := .list inner
+abbrev readonlyArray (inner : Ty) : Ty := .list inner
+
 /-- The TypeScript spelling. rc.112 has no `Either`: an `except` answer is the data reading
 `Result.Result<A, E>`; a `handle` is an opaque host type whose spelling is carried verbatim. -/
 def render : Ty → String
@@ -143,6 +153,39 @@ def scope : Ty := .handle scopeTarget
 /-- A context handle; its spelling is written once, here. -/
 def contextTarget : String := "Context.Context<unknown>"
 def context : Ty := .handle contextTarget
+
+/-- TypeScript's null spelling (rc.112 Option.ts:1209). -/
+def nullTarget : String := "null"
+def null : Ty := .handle nullTarget
+
+/-- TypeScript's undefined spelling (rc.112 Option.ts:1239). -/
+def undefinedTarget : String := "undefined"
+def undefined : Ty := .handle undefinedTarget
+
+/-- Nullable spellings use the existing union and allocated external-handle admission.
+They do not turn the unit value, whose type renders as `void`, into a null handle. -/
+abbrev undefinedOr (t : Ty) : Ty := .union t Ty.undefined
+abbrev nullOr (t : Ty) : Ty := .union t Ty.null
+abbrev nullable (t : Ty) : Ty := .union t (.union Ty.null Ty.undefined)
+
+/-- Effect rc.112 `Duration.Duration` (Duration.ts:84), as an opaque host handle. -/
+def durationTarget : String := "Duration.Duration"
+def duration : Ty := .handle durationTarget
+
+/-- Effect rc.112 `DateTime.DateTime` (DateTime.ts:37), as an opaque host handle. -/
+def dateTimeTarget : String := "DateTime.DateTime"
+def dateTime : Ty := .handle dateTimeTarget
+
+/-- Effect rc.112 `Chunk.Chunk<A>` (Chunk.ts:51), with its exact rendered host target.
+The existing handle constructor owns identity; this is not a structural list type. -/
+def chunkTarget (inner : Ty) : String := "Chunk.Chunk<" ++ render inner ++ ">"
+def chunk (inner : Ty) : Ty := .handle (chunkTarget inner)
+
+/-- The batch-or-exit shape of rc.112 `Take<A, E, Done>` (Take.ts:29).
+The existing list type admits empty lists; `Stream.chunk?` enforces the
+nonempty batch requirement at the pull boundary. A successful exit carries `Done`. -/
+def take (a : Ty) (e : Ty := .never) (done : Ty := .unit) : Ty :=
+  .union (.list a) (.exitOf done e)
 
 
 private theorem utf8_key_injective {s t : String}
@@ -541,4 +584,3 @@ def never : CTy := ofRaw .never
 
 end CTy
 end Effect4.Program
-

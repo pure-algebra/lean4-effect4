@@ -123,7 +123,7 @@ def failedPoint : Point :=
 #guard observeRaw 1 (denoteR (awaitTerm .joinEffect) (awaitTerm .joinEffect) completedPoint)
   Stores.empty = .done (.success (.cell ⟨7⟩)) Stores.empty
 #guard observeRaw 1 (denoteR (awaitTerm .awaitValue) (awaitTerm .awaitValue) completedPoint)
-  Stores.empty = .done (.success (.exitOk (.cell ⟨7⟩))) Stores.empty
+  Stores.empty = .done (.success (.exitOk (Val.cell ⟨7⟩))) Stores.empty
 #guard observeRaw 1 (denoteR (awaitTerm .joinEffect) (awaitTerm .joinEffect) failedPoint)
   Stores.empty = .done (.failure (Cause.fail Err.boom)) Stores.empty
 #guard observeRaw 1 (denoteR (awaitTerm .awaitValue) (awaitTerm .awaitValue) failedPoint)
@@ -131,10 +131,10 @@ def failedPoint : Point :=
 #guard inlineYield (awaitTerm .joinEffect) completedPoint = some (.success (.cell ⟨7⟩))
 #guard inlineYield (awaitTerm .joinEffect) failedPoint = some (.failure (Cause.fail Err.boom))
 #guard inlineYield (.exit (awaitTerm .joinEffect)) completedPoint =
-  some (.success (.exitOk (.cell ⟨7⟩)))
+  some (.success (.exitOk (Val.cell ⟨7⟩)))
 #guard observeRaw 1
   (denoteR (.exit (awaitTerm .joinEffect)) (.exit (awaitTerm .joinEffect)) completedPoint)
-  Stores.empty = .done (.success (.exitOk (.cell ⟨7⟩))) Stores.empty
+  Stores.empty = .done (.success (.exitOk (Val.cell ⟨7⟩))) Stores.empty
 #guard (completedPoint.child 0).completed = completedPoint.completed
 #guard (completedPoint.childWith 1 .unit).completed = completedPoint.completed
 

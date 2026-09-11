@@ -199,6 +199,13 @@ index is the allocation's position in the store's table, which records its targe
 @[match_pattern] abbrev exitOk (value : Val) : Val := .ctor 0 [value]
 /-- `Exit.failure cause`, the cause already written. -/
 @[match_pattern] abbrev exitErr (cause : Val) : Val := .ctor 1 [cause]
+/-- rc.112 Result.ts:66: the failure branch in the existing binary sum image. -/
+@[match_pattern] abbrev resultFailure (err : Val) : Val := .ctor 0 [err]
+/-- rc.112 Result.ts:66: the success branch in the existing binary sum image. -/
+@[match_pattern] abbrev resultSuccess (val : Val) : Val := .ctor 1 [val]
+/-- The empty list of awaited exits (`fiberAwaitAll`, rc.112 internal/effect.ts:779).
+One exit list is one list frame; there is no cons arm. -/
+@[match_pattern] abbrev exitNil : Val := .list []
 /-- The fiber's cached context (`Machine.Ctx`): the ambient scope as an option of a scope
 handle, `MaxOpsBeforeYield`, `PreventSchedulerYield`. -/
 @[match_pattern] abbrev fiberContext (ambient budget preventYield : Val) : Val :=

@@ -390,9 +390,9 @@ namespace Val
 
 export Effect4.Store.Val (unit nat bool str bytes list pair ctor ref handle)
 
-/-- A reified successful `Exit` (`Value.exitOk`), at this alphabet's type so a dotted
-argument (`.exitOk (.cell ⟨k⟩)`) resolves here. -/
-@[match_pattern] abbrev exitOk (value : Val) : Val := Value.exitOk value
+-- Exported patterns retain dotted matching; only typed-key wrappers need definitions here.
+-- In a shared pattern's payload, qualify typed handles (`.exitOk (Val.cell ⟨k⟩)`).
+export Value (exitOk resultFailure resultSuccess exitNil)
 /-- The handle a fork answers (`Value.fiber`, kind 1). -/
 @[match_pattern] abbrev fiber (id : FiberId) : Val := Value.fiber id.value
 /-- `Ref.set`'s success value: the `MutableRef` itself (`Ref.ts:307`, `MutableRef.ts:1063-1070`;
@@ -404,9 +404,6 @@ argument (`.exitOk (.cell ⟨k⟩)`) resolves here. -/
 @[match_pattern] abbrev scopeHandle (scope : Nat) : Val := Value.scope scope
 /-- A `MemoMap` handle (`Layer.ts:421-458`; `Value.memoMap`, kind 5; the join). -/
 @[match_pattern] abbrev memoMap (id : MemoMapId) : Val := Value.memoMap id.index
-/-- The empty list of awaited exits (`fiberAwaitAll`, `internal/effect.ts:779`; M6): the
-carrier's empty `list`. One exit list is one `list` frame; there is no cons arm. -/
-@[match_pattern] abbrev exitNil : Val := .list []
 /-- `awaitAllChildren`'s snapshot: the fiber handles under `Value.fiberSnapshot`, distinct
 from a list of exits (rc.112's `fiber.children` is a `Set`, `internal/effect.ts:534`). -/
 abbrev fibers (ids : List FiberId) : Val :=

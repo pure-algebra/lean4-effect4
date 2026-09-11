@@ -126,6 +126,20 @@ outside this slice. The decision tape carries Completion data at every instance.
 
 ## The faces, and the two ingest contracts
 
+`Program.Ty` provides Effect-facing aliases over its existing constructors: `result`,
+`exit`, `fiber`, `cause`, `array` and `readonlyArray`. Nullability helpers compose unions
+with opaque `null` and `undefined` handles; duration, date-time and chunk helpers also
+use the existing external-handle admission. `take` composes a list with an exit; the
+stream binding checks the nonempty-batch requirement. `Api.Val.resultFailure` and
+`resultSuccess` expose the existing sum encoding as match patterns. These helpers add
+no stored constructors, key ordinals or codec cases. Signed integer values and flat
+tuples of arity greater than two remain outside this addition.
+`Machine.Value` owns the shared `exitOk`, `exitNil` and Result patterns; the machine
+and context value namespaces export them. Wrappers that adapt typed keys or causes
+remain beside their owning alphabet.
+Shared pattern payloads use the foundational value type, so nested typed handles
+are qualified, for example `.exitOk (Val.cell ⟨k⟩)`.
+
 `Effect4.Api.HostSession` extends the program API with checked incremental replay over the
 existing machine. Its program/table admission certificate, recorded-call association,
 keyed pending replies and application ledger have separate roles. `Api.HostProtocol` owns
