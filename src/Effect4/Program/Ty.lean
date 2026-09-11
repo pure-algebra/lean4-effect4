@@ -3,8 +3,8 @@ import Effect4.Data.Row
 /-!
 # The inspectable type language and its canonical API
 
-Raw `Ty` remains first-order program data. The order transcribes the existing structural
-key exactly, with constructive laws allowing reuse of `Effect4.Row`. `Normal` is an erased
+Raw `Ty` remains first-order program data. Its key order supports `Effect4.Row` sorting;
+`CTy` exposes the subtype order on canonical representatives. `Normal` is an erased
 proof invariant, not another stored type representation. `CTy.ofRaw` is total because deep
 normalization is proved idempotent here; value-membership laws belong to the Laws graph.
 -/
@@ -17,7 +17,8 @@ namespace Effect4.Program
 spells plus what an `Effect<A, E, R>` needs and a row never spells: `never`, the `Exit`,
 `Cause` and `Fiber` handles, and unions of error types. `render` is its TypeScript spelling;
 the codegen layer reads that and adds nothing. Deep normalization recurses through every constructor; unions have members
-sorted by a structural key, no duplicates, right-nested, `never` the empty union. -/
+sorted by a structural key, maximal under subtyping, right-nested, `never` the empty union.
+Products have no union child; normalization distributes only products. -/
 
 inductive Ty
   | never
@@ -57,23 +58,23 @@ abbrev cause (error : Ty) : Ty := .causeOf error
 abbrev array (inner : Ty) : Ty := .list inner
 abbrev readonlyArray (inner : Ty) : Ty := .list inner
 
-/-- The TypeScript spelling. rc.112 has no `Either`: an `except` answer is the data reading
+/-- Structural spelling, used after normalization by the public renderer. rc.112 has no `Either`: an `except` answer is the data reading
 `Result.Result<A, E>`; a `handle` is an opaque host type whose spelling is carried verbatim. -/
-def render : Ty → String
+def renderRaw : Ty → String
   | .never => "never"
   | .unit => "void"
   | .nat | .int => "number"
   | .string => "string"
   | .bool => "boolean"
   | .handle target => target
-  | .option inner => "Option.Option<" ++ render inner ++ ">"
-  | .list inner => "ReadonlyArray<" ++ render inner ++ ">"
-  | .prod left right => "readonly [" ++ render left ++ ", " ++ render right ++ "]"
-  | .except error value => "Result.Result<" ++ render value ++ ", " ++ render error ++ ">"
-  | .exitOf value error => "Exit.Exit<" ++ render value ++ ", " ++ render error ++ ">"
-  | .causeOf error => "Cause.Cause<" ++ render error ++ ">"
-  | .fiberOf value error => "Fiber.Fiber<" ++ render value ++ ", " ++ render error ++ ">"
-  | .union left right => render left ++ " | " ++ render right
+  | .option inner => "Option.Option<" ++ renderRaw inner ++ ">"
+  | .list inner => "ReadonlyArray<" ++ renderRaw inner ++ ">"
+  | .prod left right => "readonly [" ++ renderRaw left ++ ", " ++ renderRaw right ++ "]"
+  | .except error value => "Result.Result<" ++ renderRaw value ++ ", " ++ renderRaw error ++ ">"
+  | .exitOf value error => "Exit.Exit<" ++ renderRaw value ++ ", " ++ renderRaw error ++ ">"
+  | .causeOf error => "Cause.Cause<" ++ renderRaw error ++ ">"
+  | .fiberOf value error => "Fiber.Fiber<" ++ renderRaw value ++ ", " ++ renderRaw error ++ ">"
+  | .union left right => renderRaw left ++ " | " ++ renderRaw right
   | .lit value => "\"" ++ value ++ "\""
 
 /-- The members of a union, flattened at the top; `never` contributes none. -/
@@ -175,11 +176,6 @@ def duration : Ty := .handle durationTarget
 /-- Effect rc.112 `DateTime.DateTime` (DateTime.ts:37), as an opaque host handle. -/
 def dateTimeTarget : String := "DateTime.DateTime"
 def dateTime : Ty := .handle dateTimeTarget
-
-/-- Effect rc.112 `Chunk.Chunk<A>` (Chunk.ts:51), with its exact rendered host target.
-The existing handle constructor owns identity; this is not a structural list type. -/
-def chunkTarget (inner : Ty) : String := "Chunk.Chunk<" ++ render inner ++ ">"
-def chunk (inner : Ty) : Ty := .handle (chunkTarget inner)
 
 /-- The batch-or-exit shape of rc.112 `Take<A, E, Done>` (Take.ts:29).
 The existing list type admits empty lists; `Stream.chunk?` enforces the
@@ -571,6 +567,14 @@ theorem Normal.fixed {t : Ty} (h : Normal t) : normalize t = t := by
 theorem normalize_idem (t : Ty) : normalize (normalize t) = normalize t :=
   (normal_normalize t).fixed
 
+/-- Public TypeScript spelling uses the canonical type at entry. -/
+def render (t : Ty) : String := renderRaw t.normalize
+
+/-- Effect rc.112 `Chunk.Chunk<A>` (Chunk.ts:51), with its exact rendered host target.
+The existing handle constructor owns identity; this is not a structural list type. -/
+def chunkTarget (inner : Ty) : String := "Chunk.Chunk<" ++ render inner ++ ">"
+def chunk (inner : Ty) : Ty := .handle (chunkTarget inner)
+
 /-- Canonical union includes deep normalization of both inputs. -/
 def join (a b : Ty) : Ty := normalize (.union a b)
 
@@ -645,8 +649,21 @@ def ofRaw (t : Ty) : CTy := ⟨t.normalize, Ty.normalize_idem t⟩
 
 def toRaw (t : CTy) : Ty := t.val
 
+/-- Type identity keys use the canonical representative. Raw `Ty.key` remains injective. -/
+def key : CTy → List Nat := Ty.key ∘ toRaw
+
+/-- Public type order is structural subtyping between canonical representatives. -/
+instance : LE CTy := ⟨fun a b => Ty.sub a.toRaw b.toRaw = true⟩
+instance : DecidableRel (fun a b : CTy => a ≤ b) := fun _ _ =>
+  inferInstanceAs (Decidable (_ = true))
+instance : LT CTy := ⟨fun a b => a ≤ b ∧ ¬ b ≤ a⟩
+instance : DecidableRel (fun a b : CTy => a < b) := fun _ _ =>
+  inferInstanceAs (Decidable (_ ∧ ¬ _))
+
 /-- Canonical union on the witnessed API. -/
 def join (a b : CTy) : CTy := ofRaw (.union a.val b.val)
+
+instance : Max CTy := ⟨join⟩
 
 /-- The empty canonical union. -/
 def never : CTy := ofRaw .never
@@ -654,6 +671,15 @@ def never : CTy := ofRaw .never
 @[simp] theorem ofRaw_toRaw (t : CTy) : ofRaw t.toRaw = t := by
   apply Subtype.ext
   exact t.property
+
+theorem key_injective {a b : CTy} (h : key a = key b) : a = b :=
+  Subtype.ext (Ty.key_injective h)
+
+/-- Printing observes the canonical representative. -/
+def render (t : CTy) : String := Ty.render t.toRaw
+
+theorem render_toRaw (t : CTy) : render t = Ty.renderRaw t.toRaw := by
+  exact congrArg Ty.renderRaw t.property
 
 end CTy
 end Effect4.Program

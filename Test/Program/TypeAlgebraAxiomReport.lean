@@ -56,3 +56,17 @@ import Effect4.Laws.Program.TypeAlgebra
 #print axioms Effect4.Program.CTy.join_never
 #print axioms Effect4.Program.CTy.join_comm
 #print axioms Effect4.Program.CTy.join_assoc
+
+#print axioms Effect4.Program.Ty.sub_trans
+#print axioms Effect4.Program.Ty.sub_normalize_of_sub
+#print axioms Effect4.Program.Ty.sub_antisymm_canonical
+#print axioms Effect4.Program.Ty.sub_join_left
+#print axioms Effect4.Program.Ty.sub_join_right
+#print axioms Effect4.Program.Ty.join_least
+#print axioms Effect4.Program.CTy.key
+#print axioms Effect4.Program.CTy.key_injective
+#print axioms Effect4.Program.CTy.render_toRaw
+#print axioms Effect4.Program.CTy.instIsPartialOrder
+#print axioms Effect4.Program.CTy.instLawfulOrderLT
+#print axioms Effect4.Program.CTy.instLawfulOrderSup
+#print axioms Effect4.Program.CTy.never_le

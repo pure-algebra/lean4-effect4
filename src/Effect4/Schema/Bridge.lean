@@ -160,24 +160,24 @@ theorem ofSchema_schema_cty (t : CTy) : ofSchema (schema t.toRaw) = some t.toRaw
 
 /-- As an effect: the exit schema root with answer, error, and requirement references (S-2). -/
 def effDocument (eff : EffTy) : Document :=
-  { representation := schema (.exitOf eff.answer eff.error)
+  { representation := schema (.exitOf eff.answer.normalize eff.error.normalize)
     references :=
-      [ ⟨"answer", schema eff.answer⟩
-      , ⟨"error", schema eff.error⟩ ] ++
+      [ ⟨"answer", schema eff.answer.normalize⟩
+      , ⟨"error", schema eff.error.normalize⟩ ] ++
       eff.requires.elems.map (fun k => ⟨s!"service_{k.name.value}", schema (.handle s!"service_{k.name.value}")⟩) }
 
 /-- As a plain object: the answer schema alone (S-2). -/
 def effObjectDocument (eff : EffTy) : Document :=
-  { representation := schema eff.answer
+  { representation := schema eff.answer.normalize
     references := [] }
 
 /-- A row's schema document: request, answer, and error (S-2). -/
 def rowDocument (row : Effect4.Program.Row) : Document :=
-  { representation := schema (.exitOf row.answer row.error)
+  { representation := schema (.exitOf row.answer.normalize row.error.normalize)
     references :=
-      [ ⟨"request", schema row.request⟩
-      , ⟨"answer", schema row.answer⟩
-      , ⟨"error", schema row.error⟩ ] }
+      [ ⟨"request", schema row.request.normalize⟩
+      , ⟨"answer", schema row.answer.normalize⟩
+      , ⟨"error", schema row.error.normalize⟩ ] }
 
 end Effect4.Schema.Bridge
 
@@ -185,7 +185,7 @@ namespace Effect4.Program.Ty
 
 /-- Effect Schema representation of this type (Decision 12 / S-1). -/
 abbrev schema (t : Effect4.Program.Ty) : Effect4.Representation :=
-  Effect4.Schema.Bridge.schema t
+  Effect4.Schema.Bridge.schema t.normalize
 
 /-- Reconstitute a `Ty` from its Effect Schema representation (Decision 12 / S-1). -/
 abbrev ofSchema (r : Effect4.Representation) : Option Effect4.Program.Ty :=
@@ -212,3 +212,16 @@ abbrev document (row : Effect4.Program.Row) : Effect4.Document :=
   Effect4.Schema.Bridge.rowDocument row
 
 end Effect4.Program.Row
+
+namespace Effect4.Program.CTy
+
+/-- Schema projection of a canonical type. -/
+def schema (t : CTy) : Effect4.Representation := Ty.schema t.toRaw
+
+/-- The public schema boundary retracts on canonical types; integer parsing is retained. -/
+theorem ofSchema_schema (t : CTy) : Ty.ofSchema (schema t) = some t.toRaw := by
+  change Effect4.Schema.Bridge.ofSchema (Effect4.Schema.Bridge.schema t.val.normalize) = _
+  rw [t.property]
+  exact Effect4.Schema.Bridge.ofSchema_schema t.toRaw
+
+end Effect4.Program.CTy

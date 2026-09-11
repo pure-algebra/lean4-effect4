@@ -1,9 +1,11 @@
 import Effect4.Program.Typed
 import Effect4.Arch.JsonNumber
+import Effect4.Schema.Codec
 
 /-! E4-SCHEMA-CE-056 through 059: retained S-3 contract falsifiers.
 The owner approved value admission and layout-compatible coercions on 2026-09-11.
-These proofs are independent of the corrected codec implementation. -/
+The counterexample proofs are independent of the corrected codec implementation.
+The final guards exercise its public normalization boundary. -/
 namespace Test.Counterexamples.Schema.Codec
 open Effect4 Effect4.Program
 open Effect4.Machine (Val)
@@ -81,6 +83,29 @@ theorem left_biased_roundTrip_impossible (encode : Ty → Val → Option Json)
   have h := roundTrip encoded result_success_admitted
   rw [leftDecoded] at h
   exact (by decide : (some shared : Option Val) ≠ some resultSuccess) h
+
+-- Normalization at each public entry point removes raw union-order dependence.
+-- The canonical order selects an empty list when decoding [], so exact admission
+-- refuses an empty cause under either spelling of this union.
+#guard Schema.encode (.union (.causeOf .never) (.list .bool)) (.exitErr ⟨[]⟩) =
+  Schema.encode (Ty.normalize (.union (.causeOf .never) (.list .bool))) (.exitErr ⟨[]⟩)
+#guard Schema.decode (.union (.causeOf .never) (.list .bool)) (.arr []) =
+  Schema.decode (Ty.normalize (.union (.causeOf .never) (.list .bool))) (.arr [])
+#guard Schema.Codec.isValue (.union (.causeOf .never) (.list .bool)) (.exitErr ⟨[]⟩) =
+  Schema.Codec.isValue (Ty.normalize (.union (.causeOf .never) (.list .bool))) (.exitErr ⟨[]⟩)
+#guard Schema.encode (.union (.causeOf .never) (.list .bool)) (.exitErr ⟨[]⟩) = none
+#guard Schema.decode (.union (.causeOf .never) (.list .bool)) (.arr []) = some (.list [])
+#guard !Schema.Codec.isValue (.union (.causeOf .never) (.list .bool)) (.exitErr ⟨[]⟩)
+
+-- A redundant literal and a distributed product cross the normalized boundary.
+#guard Schema.encode (.union (.lit "A") .string) (.str "A") = some (.str "A")
+#guard Schema.decode (.union .string (.lit "A")) (.str "B") = some (.str "B")
+#guard Schema.Codec.isValue (.union (.lit "A") .string) (.str "B")
+#guard Schema.encode (.prod (.union .nat .string) .bool) (.list [.nat 3, .bool true]) =
+  some (.arr [Arch.Json.ofNat 3, .bool true])
+#guard Schema.decode (.prod (.union .string .nat) .bool) (.arr [Arch.Json.ofNat 3, .bool true]) =
+  some (.list [.nat 3, .bool true])
+#guard Schema.Codec.isValue (.prod (.union .nat .string) .bool) (.list [.nat 3, .bool true])
 
 #print axioms natural_collision
 #print axioms natural_roundTrip_impossible

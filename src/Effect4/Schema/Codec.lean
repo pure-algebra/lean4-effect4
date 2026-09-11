@@ -6,8 +6,8 @@ import Effect4.Arch.JsonNumber
 
 The S-3 owner amendment (2026-09-11) admits values that recover exactly, rather than
 claiming every typed natural or overlapping union has an injective JSON image.
-No machine or stored type constructor changes. `encode` and `decode` are the checked
-boundary; `Codec.encodeRaw` / `decodeRaw` interpret its structural wire layout.
+No machine or stored type constructor changes. `encode` and `decode` normalize the
+type at the checked boundary; `Codec.encodeRaw` / `decodeRaw` interpret its wire layout.
 
 The profile is rc.112 `Schema.toCodecJson` (`vendor/effect-4.0.0-rc.112/src/Schema.ts`):
 Option at 9720-9734, Result at 10051-10066, CauseReason at 10418-10439, Cause at
@@ -206,9 +206,11 @@ def decodeRaw : Ty → Json → Option Val
     | none => (decodeRaw b j).filter (fun v => Val.hasTy v b)
   | _, _ => none
 
-/-- Executable value admission: membership, an available JSON image, and exact recovery.
+/-- Executable value admission after type normalization: membership, a JSON image,
+and exact recovery.
 This is deliberately stronger than type support and ordinary machine membership. -/
 def isValue (t : Ty) (v : Val) : Bool :=
+  let t := t.normalize
   match encodeRaw (layout t) v with
   | none => false
   | some j => Val.hasTy v t && decide (decodeRaw (layout t) j = some v)
@@ -218,16 +220,18 @@ end Effect4.Schema.Codec
 namespace Effect4.Schema
 open Effect4.Program Effect4.Machine
 
-/-- Encode only a typed value whose JSON image recovers its exact machine representation. -/
+/-- Normalize the type and encode only values whose JSON image recovers exactly. -/
 def encode (t : Ty) (v : Val) : Option Json :=
+  let t := t.normalize
   if Val.hasTy v t then
     match Codec.encodeRaw (Codec.layout t) v with
     | none => none
     | some j => if Codec.decodeRaw (Codec.layout t) j = some v then some j else none
   else none
 
-/-- Decode a JSON value, then check its original type, including literal refinements. -/
+/-- Normalize the type, decode a JSON value, and check membership including literals. -/
 def decode (t : Ty) (j : Json) : Option Val :=
+  let t := t.normalize
   (Codec.decodeRaw (Codec.layout t) j).filter (fun v => Val.hasTy v t)
 
 end Effect4.Schema

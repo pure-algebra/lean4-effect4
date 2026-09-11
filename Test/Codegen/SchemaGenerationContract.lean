@@ -159,7 +159,7 @@ open Effect4.Program Effect4.Schema.Bridge
 #guard Ty.ofSchema (Ty.schema (.causeOf .string)) = some (.causeOf .string)
 #guard Ty.ofSchema (Ty.schema (.fiberOf .string .nat)) = some (.fiberOf .string .nat)
 #guard Ty.ofSchema (Ty.schema (.handle "Scope.Scope")) = some (.handle "Scope.Scope")
-#guard Ty.ofSchema (Ty.schema (.union .string .nat)) = some (.union .string .nat)
+#guard Ty.ofSchema (Ty.schema (.union .string .nat)) = some (.union .nat .string)
 
 #check ofSchema_schema
 #check ofSchema_schema_cty
@@ -337,16 +337,18 @@ def codecCases : List (String × Ty × Store.Val × Json) :=
 #guard Ty.encode (.causeOf .never) (Machine.Val.exitErr
   ⟨[.die .badName ⟨[("note", ())], by decide⟩]⟩) = none
 
--- Both an empty list and an empty cause encode as []; the later interpretation refuses.
+-- Canonical union order chooses the list interpretation first; an empty cause refuses
+-- in either raw spelling because both layouts would otherwise encode as [].
 #guard Ty.encode (.union (.list .bool) (.causeOf .never)) (Machine.Val.exitErr ⟨[]⟩) = none
-#guard Ty.encode (.union (.causeOf .never) (.list .bool)) (Machine.Val.exitErr ⟨[]⟩) = some (.arr [])
+#guard Ty.encode (.union (.causeOf .never) (.list .bool)) (Machine.Val.exitErr ⟨[]⟩) = none
 
 -- Conservative compatibility admits literal widening without erasing union selectors.
 example : Schema.Codec.Compatible (.prod (.lit "User") (.option (.lit "ok")))
     (.prod .string (.option .string)) := rfl
 example (v : Store.Val) (hv : Program.Val.hasTy v (.lit "User") = true) :
     Ty.encode .string v = Ty.encode (.lit "User") v :=
-  Schema.encode_sub (by simp [Ty.sub]) hv rfl
+  Schema.encode_sub (s := CTy.ofRaw (.lit "User")) (t := CTy.ofRaw .string)
+    (Ty.sub_lit_string "User") hv rfl
 
 #check Schema.encode_of_hasTy
 #check Schema.decode_encode
@@ -539,3 +541,16 @@ private def pAppliedTransform : Api.Program :=
 
 end Test.Codegen.SchemaGenerationContract
 
+
+
+-- P2a: public schema documents observe the canonical representative.
+#guard Effect4.Program.Ty.ofSchema (Effect4.Program.Ty.schema (.union (.lit "A") .string)) = some .string
+#guard Effect4.Program.Ty.ofSchema
+  (Effect4.Program.Ty.schema (.prod (.union (.lit "A") (.lit "B")) .string)) =
+    some (.union (.prod (.lit "A") .string) (.prod (.lit "B") .string))
+#guard Effect4.Program.Ty.ofSchema
+  (Effect4.Program.Ty.schema (.list (.union .nat .string))) = some (.list (.union .nat .string))
+#guard (Effect4.Schema.Bridge.effObjectDocument
+  ⟨.union (.lit "A") .string, .never, Effect4.Row.empty⟩).representation =
+    Effect4.Program.Ty.schema .string
+#print axioms Effect4.Program.CTy.ofSchema_schema

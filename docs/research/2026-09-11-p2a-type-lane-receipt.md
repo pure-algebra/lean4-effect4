@@ -825,3 +825,258 @@ Commit 1 is accepted under the unchanged declared-red policy. The full build,
 axiom and module-closure gates, truth gate and maintained OCaml layout differential
 all passed. The auxiliary compatibility-snapshot and generated-whitespace limits
 above remain explicitly unclaimed. Commits 2 and 3 are not part of this acceptance.
+
+
+## Commit 2 — canonical order and boundaries
+
+Commit 1 landed as `5db3329`. This second candidate is based on that commit in the
+same checkout and branch. No push, worktree, or branch change.
+
+### Changes and proof graph
+
+The public `Ty.sub_trans` exposes the structural proof needed for commit 1.
+`Ty.sub_normalize_of_sub` proves the owner's one-way implication for every raw
+pair: true subtyping remains true after normalizing both operands. No converse,
+raw normalization equality, or product-distribution rule for `sub` is asserted.
+`Ty.sub` and `Ty.sub_union_right` retain their exact previous declaration text.
+
+The graph proceeds from structural union-member coverage to matching maximal
+canonical members, then recursively to antisymmetry. Product factor coverage
+establishes the normalized product step, and structural induction gives the
+one-way normalization theorem. The helpers' explicit transitivity parameter is
+supplied by the proved `Ty.sub_trans` at every public theorem.
+
+`Ty.sub_antisymm_canonical`, `Ty.sub_join_left`, `Ty.sub_join_right` and
+`Ty.join_least` quantify over `CTy`. Its public `≤` is subtype truth, and `<` is
+strict subtyping. `Std.IsPartialOrder` and `Std.LawfulOrderSup` instances expose
+these laws to Lean's built-in order interface; `CTy.never_le` supplies bottom.
+The raw type's structural-key order still owns sorting inside normalization.
+
+`CTy.key` is exactly `Ty.key ∘ CTy.toRaw`; its injection law is on `CTy`.
+`Ty.key_injective` remains unchanged on raw `Ty`. The store's type kind is
+reserved in this checkout: there was no raw `Content Ty` type-key client to
+retarget. The public canonical type-key function is now explicit; raw structural
+wire encodings and their generated retractions remain unchanged.
+
+`Ty.render` normalizes once before its structural renderer; `CTy.render_toRaw`
+states its canonical observation. The Chunk target helper uses that entry point.
+`Ty.schema` normalizes at entry, and effect, object and operation-row documents
+normalize their type columns. `CTy.ofSchema_schema` states the public retraction.
+`Bridge.ofSchema`, `Bridge.ofSchema_schema` and `Bridge.ofSchema_schema_cty`
+retain their exact previous declaration text, including integer parsing.
+
+`Schema.encode`, `Schema.decode` and `Codec.isValue` normalize their type at entry.
+Their general codec laws now quantify over `CTy`, as authorized. Structural wire
+interpreters and the layout function are unchanged. The value-image adapter's
+existing `ProgramImage.decode_of_encode` statement is retained, deriving its
+result from the canonical codec theorem at `CTy.ofRaw t` and `normalize_idem`.
+
+The `.ty` producer (`src/OCaml5/Tools/EffGen.lean`) and its handwritten OCaml
+`print_type` counterpart now print canonical answer/error columns. This changes
+the reporting boundary only; answer joining and type inference are untouched.
+
+### Tests and exact proof output
+
+The 37-type battery and planted commit-1 controls still pass. Added controls check
+that the public subtype order differs from raw key sorting, canonical key equality
+for absorbed literals, normalized printing, schema absorption/distribution, and
+codec normalization at each entry point. The schema test's reversed raw union now
+expects canonical member order. An intentional codec test delta is recorded:
+`union (causeOf never) (list bool)` now normalizes to the list-first spelling,
+so an empty cause is refused under both raw orders; the decoder chooses the empty
+list and exact admission forbids confusing the two values. This follows directly
+from the requested canonical entry boundary.
+
+The first focused schema build found that intended guard delta, the explicit CTy
+arguments now required by the codec law, and a mistaken namespace in a new test.
+All were repaired; `commit2-schema-tests-final2.log` is the successful rerun.
+Failed elaboration outputs, including compiler-generated placeholders, are retained
+as failed probes and are not proof evidence.
+
+`LEAN_NUM_THREADS=2 lake build` passed (311 jobs), including 278 modules and
+44,080 declarations under the unchanged axiom boundary. The independent fresh
+proof-print commands and output follow:
+
+```sh
+LEAN_NUM_THREADS=2 lake env lean -M4096 Test/Program/TypeAlgebraAxiomReport.lean
+LEAN_NUM_THREADS=2 lake env lean -M4096 src/Effect4/Laws/Schema/Codec.lean
+LEAN_NUM_THREADS=2 lake env lean -M4096 docs/research/2026-09-11-p2a-type-lane-evidence/Commit2HelperAxioms.lean
+```
+
+The new public order/key/printing names (the type report also repeats the entire
+commit-1 regression printout):
+
+```text
+'Effect4.Program.Ty.sub_trans' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.sub_normalize_of_sub' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.sub_antisymm_canonical' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.sub_join_left' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.sub_join_right' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.join_least' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.CTy.key' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.CTy.key_injective' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.CTy.render_toRaw' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.CTy.instIsPartialOrder' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.CTy.instLawfulOrderLT' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.CTy.instLawfulOrderSup' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.CTy.never_le' depends on axioms: [propext, Quot.sound]
+```
+
+Canonical codec laws and helpers:
+
+```text
+'Effect4.Schema.Codec.nat?' depends on axioms: [propext]
+'Effect4.Schema.Codec.encodeRaw' depends on axioms: [propext]
+'Effect4.Schema.Codec.decodeRaw' depends on axioms: [propext]
+'Effect4.Schema.Codec.isValue' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.encode' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.decode' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.encode_eq_some' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.encode_isSome_iff' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.encode_of_hasTy' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.decode_of_encode' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.decode_encode' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.hasTy_decode' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.encode_sub' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.encode_injective' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.encode_string' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.encode_bool' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.encode_unit' depends on axioms: [propext, Quot.sound]
+```
+
+Order proof helpers, public schema retraction and retained image adapter:
+
+```text
+'Effect4.Program.Ty.OrderProof.sub_never' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.member_sub_self' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.sub_member_right_iff' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.sub_iff_members' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.normal_members' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.normal_children' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.sizeOf_member_le' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.sizeOf_member_lt' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.sub_antisymm_normal' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.sub_antisymm_canonical' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.members_join' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.normalizeRow_coverage' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.sub_join_left' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.sub_join_right' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.join_least' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.sub_join_iff' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.members_normalize_union' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.sub_normalize_union_left' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.sub_normalize_union_right' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.sub_normalize_union_le' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.members_subset_factors' depends on axioms: [propext]
+'Effect4.Program.Ty.OrderProof.normal_factors_nonempty' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.factors_coverage' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.sub_prod_mono' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.productMembers_isMember' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.members_normalize_prod' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.sub_normalize_prod_mono' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Ty.OrderProof.sub_normalize_of_sub' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.CTy.ofSchema_schema' depends on axioms: [propext, Quot.sound]
+'Effect4.Schema.ProgramImage.decode_of_encode' depends on axioms: [propext, Quot.sound]
+```
+
+### Generated outputs and final gates
+
+Generation and the required gates completed as recorded below. No gate policy
+or truth tape was edited by hand.
+
+
+Regeneration is complete. The same 343 generated paths enumerated in commit 1
+changed in this commit, all provenance-only. **No `.ty` golden body, printed type
+body, truth corpus body, tape body, or generated OCaml body moved.** The new printed
+boundary behavior is exercised by the authored batteries rather than by inventing
+new golden contents. No generated file or truth tape was edited by hand.
+
+Producer commands, all exit 0 (logs prefixed `commit2-` in the local evidence directory):
+
+```sh
+LEAN_NUM_THREADS=2 lake build Tools.ProgramStructure Conform OCaml5.Tools.EffGen
+LEAN_NUM_THREADS=2 bash scripts/generate.sh
+LEAN_NUM_THREADS=2 bash scripts/generate.sh --only lcnf
+python3 scripts/generate-engine-structure.py
+LEAN_NUM_THREADS=2 bash scripts/generate-host-protocol.sh
+LEAN_NUM_THREADS=2 lake env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes
+bun run harness/truth/run-truth.ts --manifest harness/truth/corpus.json --out harness/truth --timeout 300 --tape-out harness/truth/tapes
+```
+
+The full `lake build` passed again after regeneration (311 jobs). The independent
+fresh `bash scripts/check-library-roots.sh` passed with 278 modules and 44,080
+declarations; the existing 7-module/36-name implementation exception remains
+unchanged. `git diff --check` is green for this commit's changes. The historical
+compatibility-snapshot parser limitation described under commit 1 remains; no
+new compatibility-snapshot pass is claimed.
+
+The maintained OCaml layout commands are the commit-1 commands above with
+`commit2-layout` as their output directory. The directory was created before the
+successful run; an initial missing-directory attempt exited 1 and is retained in
+`commit2-layout-emission.log`. The successful fresh output is:
+
+```text
+wrote docs/research/2026-09-11-p2a-type-lane-evidence/commit2-layout/ty_gen.ml
+wrote docs/research/2026-09-11-p2a-type-lane-evidence/commit2-layout/expected.txt
+translated declarations: 33, read: 33, reader refusals: 0
+cases: 20387
+pass 20387  refused 0  counterexample 0  unresolved 0
+wrote docs/research/2026-09-11-p2a-type-lane-evidence/commit2-layout/target.json
+PASS OCaml executable differential: 1330 vectors, byte-for-byte match
+conform.layout.ocaml-type-decl: 4/4 subjects, 4 pass, 0 refused, 0 counterexample, 0 unresolved, exit 0
+conform.layout.audit[ocaml-eff recovered]: 138/138 subjects, 138 pass, 0 refused, 0 counterexample, 0 unresolved, exit 0
+```
+
+The added translated declaration (33 instead of commit 1's 32) is the separate
+structural renderer needed by the normalized public entry. `ocamlopt` compiled the
+fresh generated module, its executable ran, and `cmp` returned 0 against the fresh
+expected observations. The OCaml generator check also passed. The fresh truth
+recording reports: `PASS: 31 programs, exits and schedules agree with rc.112`.
+The final full sweep and standalone truth check are recorded below when complete.
+
+
+Standalone `bash scripts/check-truth.sh`: PASS, 31 programs, bounded exits and
+schedules agree with rc.112, regenerated modules type-check. OCaml unit tests:
+PASS, including 864 normalization/algebra/admission controls. Engine checks:
+PASS under their existing policy.
+
+For clarity about that last verdict, both commit 1 and commit 2's engine logs
+also print two **non-gated** exploratory comparisons: `pAcquire` reports a missing
+service in the engine, and `pProvide` reports six engine fibers against one in the
+recorded Lean run. The two diagnostics are byte-identical across these runs;
+9/11 exploratory truth comparisons agree. They are not a full engine-equivalence
+pass, and this lane does not repair them or change their status. The required
+31-program rc.112 truth gate and the maintained OCaml type/layout differential
+are separate comparisons and passed as recorded above.
+
+
+Final full sweep: `LEAN_NUM_THREADS=2 bash scripts/sweep.sh --keep-going`, exit 0.
+
+```text
+sweep: every gate, one process at a time
+generated-stale          DECLARED    1s  miss
+library-roots            PASS   25s  miss
+source-citations         PASS    1s  miss
+internal-citations       PASS   93s  miss
+effect-runtime-census    PASS   10s  miss
+ts-eff                   PASS   37s  miss
+conform                  PASS   22s  miss
+generated                PASS    2s  miss
+schema-typescript        PASS   49s  miss
+schema-codec             PASS    2s  miss
+ts-eff-corpus            PASS   12s  miss
+ingest                   PASS  406s  miss
+host-protocol            PASS   68s  miss
+truth                    PASS    0s  hit
+streams                  PASS    5s  miss
+gen-check                PASS    4s  hit
+dune-tests               PASS    3s  hit
+engine-tests             PASS    3s  hit
+sweep: 18 gates, 4 hit, 14 miss, 743s total; table in .lake/sweep-summary.tsv
+PASS every gate under the declared-red policy; declared failures are listed above
+```
+
+Commit 2 is accepted under the unchanged declared-red policy. The full build,
+fresh axiom/module-closure audit, 31-program truth gate and maintained OCaml
+layout differential passed. Its `git diff --check` is green. Commit 3 remains
+separate and is not included in this acceptance.

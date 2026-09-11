@@ -123,3 +123,23 @@ private def hiddenPair : Ty := .prod (.union .string .never) .string
 #check CTy.join_never
 
 end Test.Program.TypeAlgebraContract
+
+
+/-! Public order, identity key and printed boundaries use the canonical type. -/
+#guard CTy.ofRaw (.lit "A") ≤ CTy.ofRaw .string
+#guard ¬ CTy.ofRaw .string ≤ CTy.ofRaw (.lit "A")
+#guard CTy.ofRaw (.lit "A") < CTy.ofRaw .string
+#guard CTy.key (CTy.ofRaw (.union (.lit "A") .string)) = CTy.key (CTy.ofRaw .string)
+#guard Ty.key (.union (.lit "A") .string) != Ty.key .string
+#guard Ty.render (.union (.lit "A") .string) = "string"
+#guard Ty.render (.prod (.union (.lit "A") (.lit "B")) .string) =
+  "readonly [\"A\", string] | readonly [\"B\", string]"
+#guard Ty.render (.list (.union .nat .string)) = "ReadonlyArray<number | string>"
+
+example : Std.IsPartialOrder CTy := inferInstance
+example : Std.LawfulOrderSup CTy := inferInstance
+example (a b : CTy) : a ≤ max a b := Ty.sub_join_left a b
+example (a b c : CTy) (ha : a ≤ c) (hb : b ≤ c) : max a b ≤ c :=
+  Ty.join_least a b c ha hb
+example (a b : Ty) (h : Ty.sub a b = true) : Ty.sub a.normalize b.normalize = true :=
+  Ty.sub_normalize_of_sub a b h

@@ -595,5 +595,6 @@ let well_typed_layer (l : layer_term) : bool = Result.is_ok (layer_of l)
 (* The .ty golden form: the JSON of the EffTy, or "ill-typed". *)
 let print_type (p : eff) : string =
   match type_of p with
-  | Ok t -> Eff_json.print_eff_ty t
+  | Ok t -> Eff_json.print_eff_ty { t with
+      eff_ty_answer = normalize t.eff_ty_answer; eff_ty_error = normalize t.eff_ty_error }
   | Error _ -> "ill-typed"

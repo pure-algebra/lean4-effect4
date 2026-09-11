@@ -9,7 +9,12 @@ variable {α : Type} {t : Ty}
 theorem decode_of_encode (I : ProgramImage α t) (a : α) (j : Json)
     (h : I.encode a = some j) : I.decode j = some a := by
   unfold encode at h
-  simp [decode, Effect4.Schema.decode_of_encode h, I.ofVal_toVal]
+  have encoded : Schema.encode (CTy.ofRaw t).toRaw (I.toVal a) = some j := by
+    simpa only [CTy.ofRaw, CTy.toRaw, Schema.encode, Ty.normalize_idem] using h
+  have decoded := Effect4.Schema.decode_of_encode (t := CTy.ofRaw t) encoded
+  have hd : Schema.decode t j = some (I.toVal a) := by
+    simpa only [CTy.ofRaw, CTy.toRaw, Schema.decode, Ty.normalize_idem] using decoded
+  simp [decode, hd, I.ofVal_toVal]
 
 /-- Concrete decoding cannot change the value admitted by the program codec. -/
 theorem decode_exact (I : ProgramImage α t) (j : Json) (a : α)

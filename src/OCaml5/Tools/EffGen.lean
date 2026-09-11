@@ -161,7 +161,7 @@ def main (args : List String) : IO Unit := do
     IO.FS.writeFile (out / "goldens" / (nm ++ ".json")) (t.json ++ "\n")
     let typed := Effect4.Program.typeOf nativeSignature p
     let ty := match typed with
-      | some t => (effTyV t).json
+      | some t => (effTyV { t with answer := t.answer.normalize, error := t.error.normalize }).json
       | none => "ill-typed"
     IO.FS.writeFile (out / "goldens" / (nm ++ ".ty")) (ty ++ "\n")
     corpusLines := corpusLines.push s!"{nm}\t{if typed.isSome then "well-typed" else "ill-typed"}"
