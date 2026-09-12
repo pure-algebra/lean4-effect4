@@ -216,11 +216,23 @@ decision. No await-fiber reason. The reasons are observed into a `reasons` field
 result from the driver's exhaustion tag (fuel or tape) and the final machine; the outcome type
 and the existing agreement theorem keep their statements, and reasons agreement with the
 reference is a separately named lemma. The reference's pending-reason type is renamed and
-projects to this alphabet. Compile fuel is a separate budget, added with a default. Laws: fuel
-monotonicity of a finished replay with compile fuel pinned; guard persistence under any
-decision that is not the key's reply, up to interruption of the key's fiber; agreement of the
-protocol's observed state with the reasons; tape completeness as the absence of host and
-decision reasons.
+projects to this alphabet. Compile fuel is a separate budget, added with a default. Laws
+(corrected 2026-09-12 by the P2b preflight): fuel monotonicity of a finished replay with
+compile fuel pinned; the observation laws stated against the predicates the protocol observer
+reads, with its host-await priority explicit — awaiting-async iff a host reason is present,
+terminated iff no host reason and every fiber has exited, idle iff no host reason and some
+fiber is runnable, the decision reason present iff the tag is tape and some fiber is
+runnable, and under those two, idle iff the decision reason — never equating terminated with
+a finished run without a driver-completion premise; guard persistence for every decision that
+is not the key's reply, up to the key's fiber being interrupted or exited, with equality as
+the one-fiber corollary; tape completeness as the absence of host and decision reasons.
+
+**Evaluate repair** (owner ruled 2026-09-12). Only a reply or an interruption removes a
+guard. A bare evaluate decision on a fiber parked with a guard is a no-op, as it already is
+for a running or exited fiber, and the evaluate arm's park-clearing assignment goes. Every
+legitimate resume unparks first, and the runtime has no bare evaluate on a suspended fiber.
+Regression: the truth gate, the keyed host gate, and a negative fixture in which a bare
+evaluate leaves the outstanding request and token unchanged and the later reply is accepted.
 
 **Row table meaning.** The row table means the algebra package's `Family` through
 `Alphabet.toFamily`, and its signature through `toSignature`; the denotation extends to
