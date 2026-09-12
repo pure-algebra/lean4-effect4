@@ -138,3 +138,52 @@ private def exitPayload? : Val → Option Val
 #print axioms Effect4.Api.jsonExpr
 
 end Test.Api.ApiContract
+
+
+namespace Test.Api.IntegerAdmission
+open Effect4 Effect4.Program Effect4.Api
+
+def row (answer : Ty) (request : Ty := .nat) (error : Ty := .never) : Effect4.Program.Row :=
+  { name := "query", spelling := "Host.query", request, answer, error,
+    kind := .async, registration := .external, cite := "" }
+def program : Api.Program := .callback (.external 0) (.lit (.nat 1))
+def refusal (p : Api.Program) (table : RowTable) : Option AdmitRefusal :=
+  match admitProgram p table with
+  | .error why => some why
+  | .ok _ => none
+
+#guard (typeOf program [row .int]).map (fun t => t.answer) = some .int
+#guard refusal program [row .int] = some (.uninhabited ["table", "0", "answer"])
+#guard refusal (.succeed (.lit (.nat 1))) [row .int] =
+  some (.uninhabited ["table", "0", "answer"])
+#guard refusal program [row .nat (.option (.list .int))] =
+  some (.uninhabited ["table", "0", "request", "inner", "inner"])
+#guard refusal program [row .nat .nat (.union .never .int)] =
+  some (.uninhabited ["table", "0", "error", "right"])
+#guard refusal program [row .nat] = none
+
+-- The foreign Schema.Int representation still parses; its resulting program refuses.
+def foreignInt : Representation := .number none [Schema.Check.int]
+#guard Ty.ofSchema foreignInt = some .int
+#guard (Ty.ofSchema foreignInt).bind (fun t => refusal program [row t]) =
+  some (.uninhabited ["table", "0", "answer"])
+#guard Ty.key .int = [3]
+#guard findInt [] (.handle "int") = none
+#guard findIntInTable [row .nat, { row .int with name := "other" }] =
+  some ["table", "1", "answer"]
+#guard ([ (.option .int, ["inner"]), (.list .int, ["inner"]),
+    (.causeOf .int, ["error"]), (.prod .int .nat, ["left"]),
+    (.prod .nat .int, ["right"]), (.except .int .nat, ["error"]),
+    (.except .nat .int, ["value"]), (.exitOf .int .nat, ["value"]),
+    (.exitOf .nat .int, ["error"]), (.fiberOf .int .nat, ["value"]),
+    (.fiberOf .nat .int, ["error"]), (.union .int .nat, ["left"]),
+    (.union .nat .int, ["right"]) ] : List (Ty × Path)).all
+      (fun (t, path) => findInt [] t == some path)
+
+#print axioms Api.findInt
+#print axioms Api.findIntInTable
+#print axioms Api.findIntInEffTy
+#print axioms Api.admitProgram
+#print axioms Api.admitProgram_table_int
+#print axioms Api.admitProgram_type_int
+end Test.Api.IntegerAdmission

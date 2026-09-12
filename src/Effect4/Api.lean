@@ -257,11 +257,11 @@ def replaySteps (program : Program) (fuel : Nat) (tape : List Decision)
     (table : RowTable := []) : List (Nat × Decision × List Program.Await) :=
   Program.replayStepsFrom program fuel table 0 tape (load program fuel choices answers)
 
-/-! ## Admission: the three checks a run is entitled to (v2 DI-61 (b), (c), (d))
+/-! ## Admission: execution checks and reserved integer refusal
 
 Five different questions are answered by five different checks
 (`docs/research/2026-09-09-foundation-admission-boundary.md` §1), and this face keeps them
-apart rather than bundling them into one word:
+apart. The execution certificate retains the following three checks:
 
 * **typed** — `typeOf` computes an `EffTy`. Since DI-54 that includes operation-domain
   membership, so an external index outside the supplied table no longer types.
@@ -269,6 +269,10 @@ apart rather than bundling them into one word:
   built-in, drop no trailing name and capture no printed binder.
 * **runnable** — `checkTable`: this runner can register every supplied row, i.e. each is
   `(registration := .external, kind := .async)`. Naming lawfulness does not imply it.
+
+P2a additionally scans every raw table type and both inferred program columns for
+`int`. Successful admission records both negative scan results in its certificate;
+a refusal identifies the exact constructor path.
 
 `readable` is **not** among them. It means "printing this program and reading it back gives
 this program", which is a property of the *print image*, not of execution: the historical wire
@@ -282,7 +286,37 @@ frontier is never a refusal (`AGENTS.md`, representation rules). -/
 
 export Effect4.Program (TableRefusal checkTable)
 
-/-- What `admitProgram` refuses, in the order it checks. -/
+/-- A boundary field path, with decimal positions for table rows. -/
+abbrev Path := List String
+
+/-- First occurrence of the reserved integer constructor in a raw type. -/
+def findInt (pos : Path) : Ty → Option Path
+  | .int => some pos
+  | .option t | .list t => findInt (pos ++ ["inner"]) t
+  | .causeOf e => findInt (pos ++ ["error"]) e
+  | .prod a b | .union a b =>
+      findInt (pos ++ ["left"]) a <|> findInt (pos ++ ["right"]) b
+  | .except e a => findInt (pos ++ ["error"]) e <|> findInt (pos ++ ["value"]) a
+  | .exitOf a e | .fiberOf a e =>
+      findInt (pos ++ ["value"]) a <|> findInt (pos ++ ["error"]) e
+  | .never | .unit | .nat | .string | .bool | .handle _ | .lit _ => none
+
+/-- Scan every supplied row before normalization can discard any syntax. -/
+def findIntInTable (table : RowTable) : Option Path := go 0 table
+where
+  go (index : Nat) : RowTable → Option Path
+    | [] => none
+    | row :: rest =>
+        let pos := ["table", toString index]
+        findInt (pos ++ ["request"]) row.request <|>
+          findInt (pos ++ ["answer"]) row.answer <|>
+          findInt (pos ++ ["error"]) row.error <|> go (index + 1) rest
+
+/-- The inferred answer and error are the program's explicit type columns. -/
+def findIntInEffTy (ty : EffTy) : Option Path :=
+  findInt ["program", "answer"] ty.answer <|> findInt ["program", "error"] ty.error
+
+/-- Admission refusals, retaining the existing constructor ordinals. -/
 inductive AdmitRefusal
   /-- `typeOf` answered `none` against this table. -/
   | illTyped
@@ -290,30 +324,61 @@ inductive AdmitRefusal
   | unlawfulTable
   /-- This runner cannot register a supplied row, with its position. -/
   | table (why : TableRefusal)
+  /-- A raw table or inferred program type mentions the reserved integer constructor. -/
+  | uninhabited («at» : Path)
 deriving DecidableEq, Repr
 
-/-- A program admitted to run against a table: its type, and the three facts a caller is
-entitled to assume. The fields are proofs, so an `AdmittedProgram` cannot be forged by
+/-- A program admitted to run against a table: its type, the execution checks, and
+the successful integer scans. The fields are proofs, so an `AdmittedProgram` cannot be forged by
 building the structure with the wrong table — the table and the program are its indices. -/
 structure AdmittedProgram (program : Program) (table : RowTable) where
   ty : EffTy
   typed : typeOf program table = some ty
   lawful : LawfulTable table = true
   runnable : checkTable table = none
+  intFreeTable : findIntInTable table = none
+  intFreeType : findIntInEffTy ty = none
 
-/-- The decidable admission: the type, the table's names, the table's registrations. No
-classical reasoning and no `sorry` — every field is discharged by the evaluation that decided
-it. -/
+/-- Decide admission by scanning raw table types, inferring the program type, scanning
+its columns, then checking names and registrations. Each certificate field records
+the exact check that admitted it. -/
 def admitProgram (program : Program) (table : RowTable := []) :
     Except AdmitRefusal (AdmittedProgram program table) :=
-  match htyped : typeOf program table with
-  | none => .error .illTyped
-  | some ty =>
-    if hlawful : LawfulTable table = true then
-      match hrunnable : checkTable table with
-      | some why => .error (.table why)
-      | none => .ok ⟨ty, htyped, hlawful, hrunnable⟩
-    else .error .unlawfulTable
+  match htable : findIntInTable table with
+  | some pos => .error (.uninhabited pos)
+  | none =>
+    match htyped : typeOf program table with
+    | none => .error .illTyped
+    | some ty =>
+      match htype : findIntInEffTy ty with
+      | some pos => .error (.uninhabited pos)
+      | none =>
+        if hlawful : LawfulTable table = true then
+          match hrunnable : checkTable table with
+          | some why => .error (.table why)
+          | none => .ok ⟨ty, htyped, hlawful, hrunnable, htable, htype⟩
+        else .error .unlawfulTable
+
+/-- Integer syntax in any supplied table row is refused with its exact path. -/
+theorem admitProgram_table_int (program : Program) (table : RowTable) (pos : Path)
+    (h : findIntInTable table = some pos) :
+    admitProgram program table = .error (.uninhabited pos) := by
+  unfold admitProgram
+  split <;> simp_all
+
+/-- An inferred integer occurrence is refused after the table scan succeeds. -/
+theorem admitProgram_type_int (program : Program) (table : RowTable) (ty : EffTy) (pos : Path)
+    (hTable : findIntInTable table = none) (hTy : typeOf program table = some ty)
+    (hInt : findIntInEffTy ty = some pos) :
+    admitProgram program table = .error (.uninhabited pos) := by
+  unfold admitProgram
+  split
+  · simp_all
+  · split
+    · simp_all
+    · split <;> simp_all
+      all_goals subst_vars
+      all_goals simp_all
 
 /-- The print-image certificate, separate from admission on purpose: the proof that this
 program survives `print` and `read` unchanged. A program without it still runs.

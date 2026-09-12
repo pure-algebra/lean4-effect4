@@ -1,5 +1,17 @@
 # P2a type lane receipt — 2026-09-11
 
+## Current landing status
+
+| Slice | Commit | Acceptance |
+| --- | --- | --- |
+| 1 — absorption and product distribution | `5db3329` | Required gates accepted under the unchanged declared-red policy |
+| 2 — canonical order and public boundaries | `73ae302` | Required gates accepted under the unchanged declared-red policy |
+| 3 — integer admission and error carrier | This commit | Required gates accepted under the unchanged declared-red policy |
+
+One checkout, the original branch, three sequential commits; no push. Exact
+proof names, axiom output, generator paths and gate output are recorded per
+slice below. The original stopped review is retained as historical evidence.
+
 ## Resumption under the owner's amendments
 
 The owner accepted the three findings below and authorized resumption. The
@@ -202,7 +214,7 @@ conditional contradiction theorems quantify over replacement functions under
 their written hypotheses. Neither kind is evidence of a P2a implementation or
 of host behavior.
 
-## Commit and gate ledger
+## Historical preflight commit and gate ledger
 
 | Requested commit | Result | Moved `.ty` goldens and printed types |
 | --- | --- | --- |
@@ -1032,7 +1044,7 @@ structural renderer needed by the normalized public entry. `ocamlopt` compiled t
 fresh generated module, its executable ran, and `cmp` returned 0 against the fresh
 expected observations. The OCaml generator check also passed. The fresh truth
 recording reports: `PASS: 31 programs, exits and schedules agree with rc.112`.
-The final full sweep and standalone truth check are recorded below when complete.
+The final full sweep and standalone truth check are recorded below.
 
 
 Standalone `bash scripts/check-truth.sh`: PASS, 31 programs, bounded exits and
@@ -1080,3 +1092,255 @@ Commit 2 is accepted under the unchanged declared-red policy. The full build,
 fresh axiom/module-closure audit, 31-program truth gate and maintained OCaml
 layout differential passed. Its `git diff --check` is green. Commit 3 remains
 separate and is not included in this acceptance.
+
+
+## Commit 3 — integer admission and the error carrier
+
+Base: `73ae302` (commit 2). This section records the final slice separately from
+normalization (`5db3329`) and the canonical order (`73ae302`). All required gates passed
+under the unchanged declared-red policy, as recorded below. No push.
+
+### Changes and proof graph
+
+`rawSupportedErrTy` is exactly the old structural predicate with its recursive
+name changed. Public `supportedErrTy t` reads `rawSupportedErrTy t.normalize`.
+`admittedErrTy_eq_raw` proves by `rfl` that failure introduction still computes
+the same predicate as before this commit. `supportedErrTy_normalize` follows
+from `Ty.normalize_idem`. `supportedErrTy_join` uses member coverage through the
+normalized antichain and the unchanged structural profile.
+
+`ErrTy` carries a canonical type and its supported-error proof. Its decidable
+order and join are defined in the core. The Laws graph supplies
+`Std.IsPartialOrder`, `Std.LawfulOrderSup`, the bottom law `never_le`, and the
+commutative, associative, idempotent and bottom-unit join laws. These are the
+built-in order classes; no Mathlib or new framework is introduced.
+
+The error-value recovery proofs factor through private raw-profile lemmas and
+`hasTy_normalize`. The statements of all 31 existing public declarations in
+`Laws/Program/Admit.lean` remain unchanged, including allocation independence,
+exact error recovery, exclusion of `boom`, and admitted error conversion.
+
+`Api.findInt` traverses raw types and records their constructor path.
+`findIntInTable` checks every supplied request, answer and error, including unused
+rows, before inference or normalization. `findIntInEffTy` checks the inferred
+answer and error columns. `admitProgram_table_int` and `admitProgram_type_int`
+prove the corresponding path-bearing refusals. Successful `AdmittedProgram`
+certificates retain the two negative scan results as proof fields, so constructing
+a certificate directly cannot bypass the checks. The new refusal constructor is
+appended after the existing three constructors.
+
+Dependency path: unchanged raw type syntax → structural integer scan → admission
+refusal/certificate; canonical normalization → raw supported members → error
+support and join closure → `ErrTy` → public order/join laws. The existing error
+recovery path additionally uses `hasTy_normalize`. All production dependencies
+remain in the API-to-Laws direction; no Laws import enters the API graph.
+
+### Controls and preserved surfaces
+
+The exact 37-type battery remains in `Test/Program/TypeAlgebraContract.lean`.
+It still requires zero mutual-subtype inequalities and zero non-absorptions.
+New controls exercise the error carrier's least-upper-bound/bottom laws, the
+normalized support boundary and the exact unchanged admission computation.
+The historical raw `hiddenPair` negative now names `rawSupportedErrTy`; the
+public predicate and admission both accept its canonical supported type.
+
+`Test/Api/ApiContract.lean` checks all 13 nested constructor positions, a second
+row index, an unused integer row, nested request and error paths, and an ordinary
+natural-number program that still admits. The foreign integer schema parses to
+`some .int`; a program using it refuses with `["table", "0", "answer"]`.
+The same path is checked for a program inferred at `int`. `Ty.key .int = [3]`
+remains a guard. A handle whose opaque name is `"int"` is not the integer type.
+
+Source comparison against the original lane base confirms byte-identical
+`Ty.sub`, `sub_union_right`, `Ty.key`, raw `key_injective`, the `Ty` constructor
+block, `Bridge.ofSchema` and both existing schema retractions. The entire value,
+typing and membership source files are unchanged, as are both protected roots,
+the axiom gate and `lakefile.toml`. Inspection of the unchanged program syntax
+found no embedded type annotations outside the checked table and inferred
+columns. No change to answer joining, `catchIf`, `termTy`, literal synthesis,
+wire layouts, existing ordinals or `Val`. `supportedErrTy_diffTag` remains P3.
+
+The first focused integration build failed only because two new `ErrTy` examples
+used `decide` on well-founded reduction. Replacing it with kernel-checked `cbv`
+resolved that proof elaboration issue; no proposition or gate was weakened.
+The failed output remains in `commit3-focused-build.log` in the local evidence
+directory.
+
+### Fresh theorem and axiom receipts
+
+The production build passed (311 jobs), including the audit of 278 modules and
+44,201 declarations, with the unchanged seven-module/36-name implementation
+exception. The independent tools build passed (188 jobs). Fresh `lake env lean`
+runs of `Test/Program/TypeAlgebraAxiomReport.lean`,
+`Test/Api/ApiContract.lean`, and the error-recovery receipt all passed. Their
+exact new/changed declaration outputs follow; all are within the required
+semantic/test ceiling. The two private raw helpers were printed by exact
+environment name in the local tooling receipt. Initial scratch attempts to
+spell a numeric private name and invoke the command in a term context failed;
+the corrected receipt passed, and none of that tooling enters production.
+
+```text
+'Effect4.Program.ErrTy.instIsPartialOrder' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.ErrTy.instLawfulOrderSup' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.ErrTy.never_le' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.ErrTy.le_join_left' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.ErrTy.le_join_right' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.ErrTy.join_least' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.ErrTy.join_comm' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.ErrTy.join_assoc' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.ErrTy.join_self' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.ErrTy.join_never' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.ErrTy.join_never_right' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.rawSupportedErrTy' depends on axioms: [propext]
+'Effect4.Program.rawSupportedErrTy_iff_members' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.rawSupportedErrTy_ofMembers' depends on axioms: [propext]
+'Effect4.Program.supportedErrTy' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.supportedErrTy_normalize' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.supportedErrTy_never' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.supportedErrTy_join' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.admittedErrTy_eq' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.admittedErrTy_eq_raw' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.ErrTy.canonical' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.ErrTy.supported' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.ErrTy.admitted' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.ErrTy.never' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.ErrTy.join' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.ErrTy.toRaw_never' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.ErrTy.toRaw_join' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.ErrTy.ext' depends on axioms: [propext, Quot.sound]
+'Effect4.Api.findInt' does not depend on any axioms
+'Effect4.Api.findIntInTable' does not depend on any axioms
+'Effect4.Api.findIntInEffTy' does not depend on any axioms
+'Effect4.Api.admitProgram' depends on axioms: [propext, Quot.sound]
+'Effect4.Api.admitProgram_table_int' depends on axioms: [propext, Quot.sound]
+'Effect4.Api.admitProgram_type_int' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.hasTy_supported_allocation' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.valOfErr_errOf_supported' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.errOf_ne_boom_of_supported' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.errAdmits_errOf' depends on axioms: [propext, Quot.sound]
+'_private.Effect4.Laws.Program.Admit.0.Effect4.Program.hasTy_rawSupported_allocation' depends on axioms: [propext]
+'_private.Effect4.Laws.Program.Admit.0.Effect4.Program.valOfErr_errOf_rawSupported' depends on axioms: [propext,
+ Quot.sound]
+'Effect4.Program.ErrTy.instLE' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.ErrTy.instDecidableLE' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.ErrTy.instMax' depends on axioms: [propext, Quot.sound]
+```
+
+### Generated outputs and final gates
+
+The completed producer and final-gate ledger follows below. The maintained
+OCaml type/layout comparison passed with fresh commit-3 output:
+
+```text
+wrote docs/research/2026-09-11-p2a-type-lane-evidence/commit3-layout/ty_gen.ml
+wrote docs/research/2026-09-11-p2a-type-lane-evidence/commit3-layout/expected.txt
+translated declarations: 33, read: 33, reader refusals: 0
+cases: 20387
+pass 20387  refused 0  counterexample 0  unresolved 0
+wrote docs/research/2026-09-11-p2a-type-lane-evidence/commit3-layout/target.json
+PASS ocamlopt compilation and executable run; cmp exit 0
+PASS OCaml executable differential: 1330 vectors, six observations each, byte-for-byte match
+conform.layout.ocaml-type-decl: 4/4 subjects, 4 pass, 0 refused, 0 counterexample, 0 unresolved, exit 0
+conform.layout.audit[ocaml-eff recovered]: 138/138 subjects, 138 pass, 0 refused, 0 counterexample, 0 unresolved, exit 0
+```
+
+These are the same commands recorded for commit 2 with `commit3-layout` as the
+output directory, created before emission. `ocamlopt` compiled the new output,
+the executable ran, and `cmp` returned 0. This is a finite type/layout comparison,
+not a general engine equivalence claim.
+
+
+Regeneration finished using the existing producers only. The exact 343 changed
+generated paths match the list under commit 1 and the commit-2 set; all 343
+changes are provenance-only. **No `.ty` golden body, printed type body, generated
+OCaml body, truth corpus body or tape body moved.** The per-path classification
+is retained in `commit3-generated-changes.json` in the local evidence directory.
+
+All producer commands below returned exit 0:
+
+```sh
+LEAN_NUM_THREADS=2 bash scripts/generate.sh
+LEAN_NUM_THREADS=2 bash scripts/generate.sh --only lcnf
+python3 scripts/generate-engine-structure.py
+LEAN_NUM_THREADS=2 bash scripts/generate-host-protocol.sh
+LEAN_NUM_THREADS=2 lake env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes
+bun run harness/truth/run-truth.ts --manifest harness/truth/corpus.json --out harness/truth --timeout 300 --tape-out harness/truth/tapes
+```
+
+Independent Lean processes used two threads; `generate.sh` retains its existing
+three-thread setting. No compilation-policy file was changed. Builds that
+shared fresh outputs were coordinated; independent proof, layout and host
+checks were allowed to run in parallel under the owner's instruction.
+
+Both builds after the Lean regeneration passed (311 jobs). The final fresh
+`bash scripts/check-library-roots.sh` output is:
+
+```text
+Effect4 library-root gate: 92 API/utility modules, 53 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+Effect4 module and axiom gate: checked 278 modules and 44201 declarations; semantic/test axioms are [propext,
+ Quot.sound]; exact implementation boundary (7 module(s), 36 declaration(s)) additionally allows Classical.choice
+PASS library-roots: fresh module, root-closure and axiom audit
+```
+
+The host producer freshly reported `PASS: 31 programs, exits and schedules
+agree with rc.112`. Standalone OCaml `gen-check`, `dune-tests` and `engine-tests`
+all returned exit 0. The unit-test output includes `test_eff: 760 checks, 0
+failures`. Dune retains its normal dependency cache; this receipt does not
+claim every unchanged internal test was rerun. The existing exploratory engine
+comparison limitations and compatibility-snapshot limitation recorded under
+commits 1 and 2 remain; no broader engine-equivalence or compatibility-snapshot
+pass is claimed here. Integer-free admission is the concrete obligation in
+this slice; no general inhabitation theorem is asserted.
+
+Standalone `LEAN_NUM_THREADS=2 bash scripts/check-truth.sh` returned exit 0:
+
+```text
+PASS: 31 programs, exits and schedules agree with rc.112
+PASS truth: pinned corpus and bounded exit/schedule differential agree; the regenerated modules type-check
+```
+
+The complete sweep result follows below.
+
+
+Final `LEAN_NUM_THREADS=2 bash scripts/sweep.sh --keep-going`, exit 0:
+
+```text
+sweep: every gate, one process at a time
+generated-stale          DECLARED    1s  miss
+library-roots            PASS   24s  miss
+source-citations         PASS    1s  miss
+internal-citations       PASS   93s  miss
+effect-runtime-census    PASS    9s  miss
+ts-eff                   PASS   36s  miss
+conform                  PASS   21s  miss
+generated                PASS    1s  miss
+schema-typescript        PASS   48s  miss
+schema-codec             PASS    2s  miss
+ts-eff-corpus            PASS   12s  miss
+ingest                   PASS  390s  miss
+host-protocol            PASS   69s  miss
+truth                    PASS    0s  hit
+streams                  PASS    5s  miss
+gen-check                PASS    3s  hit
+dune-tests               PASS    2s  hit
+engine-tests             PASS    3s  hit
+sweep: 18 gates, 4 hit, 14 miss, 720s total; table in .lake/sweep-summary.tsv
+PASS every gate under the declared-red policy; declared failures are listed above
+```
+
+The declared result is unchanged and explicit:
+
+```text
+PASS generated-stale: 613 stamps checked in 0.621s; red as declared: the two flat LCNF outputs `ocaml/gen/fibers_gen.ml` and `machine_gen.ml` were cut before e2285a9; regenerating them at HEAD builds, but the hand-written `ocaml/gen/gen_check.ml` still tests the pre-timer machine shape (no Task_wake, no wake_list/clock_step/prepare_answer) and fails C2. Cleared when gen_check.ml is brought to the timer and external rows (DI-19's Phase 1)
+LCNF: ocaml/gen/fibers_gen.ml, ocaml/gen/machine_gen.ml
+the two flat LCNF outputs `ocaml/gen/fibers_gen.ml` and `machine_gen.ml` were cut before e2285a9; regenerating them at HEAD builds, but the hand-written `ocaml/gen/gen_check.ml` still tests the pre-timer machine shape (no Task_wake, no wake_list/clock_step/prepare_answer) and fails C2. Cleared when gen_check.ml is brought to the timer and external rows (DI-19's Phase 1)
+Deferred by owner: generated/schema-structural-assurance.tsv
+```
+
+Commit 3 is accepted under the unchanged declared-red policy. The full build,
+fresh axiom/module-closure audit, 31-program truth gate and maintained OCaml
+layout differential passed. `git diff --check` is green. The final scope review
+contains exactly 353 paths: nine authored source/test files, this receipt, and
+343 producer-owned outputs. No gate script, declared-red policy or protected
+root changed anywhere in the lane. The amended P2a obligations are complete;
+the withdrawn statements and retained limits are recorded above. No push.

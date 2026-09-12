@@ -104,7 +104,8 @@ private def canonicalUniverse : List Ty := scoutUniverse.map Ty.normalize
   (.provideService nativeScopeKey (.var 0) (.service nativeScopeKey))).isSome
 
 private def hiddenPair : Ty := .prod (.union .string .never) .string
-#guard !supportedErrTy hiddenPair
+#guard !rawSupportedErrTy hiddenPair
+#guard supportedErrTy hiddenPair
 #guard admittedErrTy hiddenPair
 #guard (effTy nativeSignature [hiddenPair] (.fail (.var 0))).isSome
 #guard (effTy nativeSignature [hiddenPair] (.yieldError (.var 0))).isSome
@@ -143,3 +144,24 @@ example (a b c : CTy) (ha : a ≤ c) (hb : b ≤ c) : max a b ≤ c :=
   Ty.join_least a b c ha hb
 example (a b : Ty) (h : Ty.sub a b = true) : Ty.sub a.normalize b.normalize = true :=
   Ty.sub_normalize_of_sub a b h
+
+/-! Error support and its canonical carrier use the same admission computation. -/
+example (t : Ty) : admittedErrTy t = rawSupportedErrTy t.normalize := rfl
+example (t : Ty) : supportedErrTy t = supportedErrTy t.normalize :=
+  supportedErrTy_normalize t
+example (a b : Ty) (ha : supportedErrTy a = true) (hb : supportedErrTy b = true) :
+    supportedErrTy (Ty.join a b) = true := supportedErrTy_join a b ha hb
+example : Std.IsPartialOrder ErrTy := inferInstance
+example : Std.LawfulOrderSup ErrTy := inferInstance
+example (t : ErrTy) : ErrTy.never ≤ t := ErrTy.never_le t
+example (a b c : ErrTy) (ha : a ≤ c) (hb : b ≤ c) : max a b ≤ c :=
+  ErrTy.join_least a b c ha hb
+
+private def errorTag : ErrTy := ⟨CTy.ofRaw (.prod (.lit "A") .string), by cbv⟩
+private def errorPair : ErrTy := ⟨CTy.ofRaw (.prod .string .string), by cbv⟩
+#guard errorTag ≤ errorPair
+#guard (ErrTy.join errorTag errorPair).toRaw = .prod .string .string
+#guard (ErrTy.join ErrTy.never errorTag).toRaw = errorTag.toRaw
+#guard (ErrTy.join errorTag ErrTy.never).toRaw = errorTag.toRaw
+#guard !supportedErrTy .int
+#guard !supportedErrTy (.list (.union .nat .string))

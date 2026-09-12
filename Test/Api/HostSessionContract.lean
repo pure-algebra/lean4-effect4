@@ -20,6 +20,8 @@ def admitted : Api.AdmittedProgram program table where
   typed := by cbv
   lawful := by decide
   runnable := by decide
+  intFreeTable := by decide
+  intFreeType := by decide
 
 def initial : Session program table := { admitted, header, machine := Api.load program 100 }
 def parked : Session program table := (advance initial 100 Api.evaluate).session

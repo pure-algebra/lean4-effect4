@@ -44,19 +44,109 @@ def isTagTy : Ty → Bool
   | .union l r => isTagTy l && isTagTy r
   | _ => false
 
-/-- The closed error language represented without payload loss by `Err` (DI-15, DI-62).
+/-- The raw error profile represented without payload loss by `Err` (DI-15, DI-62).
 `never` admits no values; unions admit only represented columns. Defects and interruptions
 remain outside this error language. -/
-def supportedErrTy : Ty → Bool
+def rawSupportedErrTy : Ty → Bool
   | .never | .nat | .string | .lit _ => true
   | .prod a b => isTagTy a && decide (b = .string)
-  | .union l r => supportedErrTy l && supportedErrTy r
+  | .union l r => rawSupportedErrTy l && rawSupportedErrTy r
   | .unit | .int | .bool | .handle _ | .option _ | .list _
   | .except _ _ | .exitOf _ _ | .causeOf _ | .fiberOf _ _ => false
 
-/-- Failure introduction compares the closed error profile after deep normalization.
-The raw support predicate remains available for exact image proofs. -/
-def admittedErrTy (t : Ty) : Bool := supportedErrTy t.normalize
+/-- Error support reads the raw profile of the canonical type. -/
+def supportedErrTy (t : Ty) : Bool := rawSupportedErrTy t.normalize
+
+/-- Failure introduction uses the public error-support boundary. -/
+def admittedErrTy (t : Ty) : Bool := supportedErrTy t
+
+theorem rawSupportedErrTy_iff_members (t : Ty) :
+    rawSupportedErrTy t = true ↔ ∀ x ∈ t.members, rawSupportedErrTy x = true := by
+  induction t with
+  | never => simp [rawSupportedErrTy, Ty.members]
+  | union a b iha ihb =>
+      change (rawSupportedErrTy a && rawSupportedErrTy b) = true ↔
+        ∀ x ∈ a.members ++ b.members, rawSupportedErrTy x = true
+      rw [Bool.and_eq_true, List.forall_mem_append, iha, ihb]
+  | _ => simp only [Ty.members, List.mem_singleton, forall_eq]
+
+theorem rawSupportedErrTy_ofMembers (xs : List Ty)
+    (hs : ∀ x ∈ xs, rawSupportedErrTy x = true) :
+    rawSupportedErrTy (Ty.ofMembers xs) = true := by
+  induction xs with
+  | nil => rfl
+  | cons x xs ih =>
+      cases xs with
+      | nil => exact hs x List.mem_cons_self
+      | cons y ys =>
+          change (rawSupportedErrTy x && rawSupportedErrTy (Ty.ofMembers (y :: ys))) = true
+          exact Bool.and_eq_true_iff.mpr ⟨hs x List.mem_cons_self,
+            ih (fun z hz => hs z (List.mem_cons_of_mem x hz))⟩
+
+theorem supportedErrTy_normalize (t : Ty) :
+    supportedErrTy t = supportedErrTy t.normalize := by
+  simp only [supportedErrTy, Ty.normalize_idem]
+
+theorem supportedErrTy_never : supportedErrTy .never = true := rfl
+
+/-- Joining supported error types keeps only supported maximal members. -/
+theorem supportedErrTy_join (a b : Ty)
+    (ha : supportedErrTy a = true) (hb : supportedErrTy b = true) :
+    supportedErrTy (Ty.join a b) = true := by
+  change rawSupportedErrTy (Ty.normalize (Ty.normalize (.union a b))) = true
+  rw [Ty.normalize_idem]
+  change rawSupportedErrTy (Ty.ofMembers
+    (Ty.normalizeRow (a.normalize.members ++ b.normalize.members)).elems) = true
+  apply rawSupportedErrTy_ofMembers
+  intro x hx
+  have hm := ((Ty.mem_normalizeRow x _).mp hx).1
+  rcases List.mem_append.mp hm with hxa | hxb
+  · exact (rawSupportedErrTy_iff_members a.normalize).mp ha x hxa
+  · exact (rawSupportedErrTy_iff_members b.normalize).mp hb x hxb
+
+theorem admittedErrTy_eq (t : Ty) : admittedErrTy t = supportedErrTy t := rfl
+
+/-- Renaming the raw predicate leaves failure introduction's computation unchanged. -/
+theorem admittedErrTy_eq_raw (t : Ty) :
+    admittedErrTy t = rawSupportedErrTy t.normalize := rfl
+
+/-- A canonical type with evidence that its values belong to the closed error profile. -/
+abbrev ErrTy := {t : CTy // supportedErrTy t.toRaw = true}
+
+namespace ErrTy
+
+def toCTy (t : ErrTy) : CTy := t.val
+
+def toRaw (t : ErrTy) : Ty := t.toCTy.toRaw
+
+theorem canonical (t : ErrTy) : Ty.Canonical t.toRaw := t.val.property
+
+theorem supported (t : ErrTy) : supportedErrTy t.toRaw = true := t.property
+
+theorem admitted (t : ErrTy) : admittedErrTy t.toRaw = true := t.property
+
+def never : ErrTy := ⟨CTy.never, supportedErrTy_never⟩
+
+def join (a b : ErrTy) : ErrTy :=
+  ⟨CTy.join a.toCTy b.toCTy, supportedErrTy_join a.toRaw b.toRaw a.supported b.supported⟩
+
+instance instLE : LE ErrTy := ⟨fun a b => a.toCTy ≤ b.toCTy⟩
+
+instance instDecidableLE : DecidableRel (fun a b : ErrTy => a ≤ b) := fun a b =>
+  inferInstanceAs (Decidable (a.toCTy ≤ b.toCTy))
+
+instance instMax : Max ErrTy := ⟨join⟩
+
+theorem toRaw_never : never.toRaw = .never := rfl
+
+theorem toRaw_join (a b : ErrTy) : (join a b).toRaw = Ty.join a.toRaw b.toRaw := rfl
+
+theorem ext {a b : ErrTy} (h : a.toRaw = b.toRaw) : a = b := by
+  apply Subtype.ext
+  apply Subtype.ext
+  exact h
+
+end ErrTy
 
 /-! ## Rows: the perform alphabet's declarations
 

@@ -821,3 +821,47 @@ instance instLawfulOrderSup : Std.LawfulOrderSup CTy where
 theorem never_le (t : CTy) : never ≤ t := Ty.OrderProof.sub_never t.toRaw
 
 end Effect4.Program.CTy
+
+
+namespace Effect4.Program.ErrTy
+open Effect4.Program
+
+instance instIsPartialOrder : Std.IsPartialOrder ErrTy where
+  le_refl a := Std.le_refl a.toCTy
+  le_trans a _b c hab hbc := (show a.toCTy ≤ c.toCTy from Std.le_trans hab hbc)
+  le_antisymm a b hab hba := Subtype.ext (show a.toCTy = b.toCTy from Std.le_antisymm hab hba)
+
+instance instLawfulOrderSup : Std.LawfulOrderSup ErrTy where
+  max_le_iff a b c := Std.LawfulOrderSup.max_le_iff a.toCTy b.toCTy c.toCTy
+
+theorem never_le (t : ErrTy) : never ≤ t := CTy.never_le t.toCTy
+
+theorem le_join_left (a b : ErrTy) : a ≤ join a b := Ty.sub_join_left a.toCTy b.toCTy
+
+theorem le_join_right (a b : ErrTy) : b ≤ join a b := Ty.sub_join_right a.toCTy b.toCTy
+
+theorem join_least (a b c : ErrTy) (ha : a ≤ c) (hb : b ≤ c) : join a b ≤ c :=
+  Ty.join_least a.toCTy b.toCTy c.toCTy ha hb
+
+theorem join_comm (a b : ErrTy) : join a b = join b a := by
+  apply Subtype.ext
+  exact CTy.join_comm a.toCTy b.toCTy
+
+theorem join_assoc (a b c : ErrTy) : join (join a b) c = join a (join b c) := by
+  apply Subtype.ext
+  exact CTy.join_assoc a.toCTy b.toCTy c.toCTy
+
+theorem join_self (t : ErrTy) : join t t = t := by
+  apply Subtype.ext
+  exact CTy.join_self t.toCTy
+
+theorem join_never (t : ErrTy) : join never t = t := by
+  apply Subtype.ext
+  exact CTy.join_never t.toCTy
+
+theorem join_never_right (t : ErrTy) : join t never = t := by
+  apply Subtype.ext
+  exact CTy.join_never_right t.toCTy
+
+
+end Effect4.Program.ErrTy

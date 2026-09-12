@@ -21,7 +21,9 @@ def initial : Session program table where
     ty := ⟨.exitOf .nat (.prod .string .string), .never, .empty⟩
     typed := by cbv
     lawful := by decide
-    runnable := by decide }
+    runnable := by decide
+    intFreeTable := by decide
+    intFreeType := by decide }
   header := ⟨version, "multi", "keyed-v2", table⟩
   machine := Api.load program 1000
 

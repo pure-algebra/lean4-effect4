@@ -1,6 +1,7 @@
 import Effect4.Program.Admit
 import Effect4.Laws.Machine.Handles
 import Effect4.Laws.Program.Typed
+import Effect4.Laws.Program.TypeAlgebra
 
 /-!
 # Program.Admit — what a checked decision and a checked replay establish
@@ -195,9 +196,9 @@ theorem isTagTy_string (ty : Ty) (v : Val) (allocated : List String)
     · exact ihb hb h
   | _ => contradiction
 
-/-- Row DI-62. Supported error membership does not depend on resource allocation. -/
-theorem hasTy_supported_allocation (ty : Ty) (v : Val) (allocated : List String)
-    (hs : supportedErrTy ty = true) : Val.hasTy v ty allocated = Val.hasTy v ty [] := by
+/-- The structural error profile has allocation-independent membership. -/
+private theorem hasTy_rawSupported_allocation (ty : Ty) (v : Val) (allocated : List String)
+    (hs : rawSupportedErrTy ty = true) : Val.hasTy v ty allocated = Val.hasTy v ty [] := by
   induction ty with
   | never | nat | string | lit _ => rfl
   | prod a b _ _ =>
@@ -225,12 +226,18 @@ theorem hasTy_supported_allocation (ty : Ty) (v : Val) (allocated : List String)
     obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hs
     simp only [Val.hasTy, iha ha, ihb hb]
   | unit | int | bool | handle | option | list | except | exitOf | causeOf | fiberOf =>
-    simp only [supportedErrTy] at hs
+    simp only [rawSupportedErrTy] at hs
     contradiction
 
-/-- Row DI-62. Every admitted error value is recovered exactly from its closed error image. -/
-theorem valOfErr_errOf_supported (ty : Ty) (v : Val) (allocated : List String)
-    (hs : supportedErrTy ty = true) (hv : Val.hasTy v ty allocated = true) :
+/-- Row DI-62. Supported error membership does not depend on resource allocation. -/
+theorem hasTy_supported_allocation (ty : Ty) (v : Val) (allocated : List String)
+    (hs : supportedErrTy ty = true) : Val.hasTy v ty allocated = Val.hasTy v ty [] := by
+  rw [← hasTy_normalize ty v allocated, ← hasTy_normalize ty v []]
+  exact hasTy_rawSupported_allocation ty.normalize v allocated hs
+
+/-- Values in the structural error profile recover from the closed error image. -/
+private theorem valOfErr_errOf_rawSupported (ty : Ty) (v : Val) (allocated : List String)
+    (hs : rawSupportedErrTy ty = true) (hv : Val.hasTy v ty allocated = true) :
     valOfErr (errOf v) = some v := by
   induction ty with
   | never => simp only [Val.hasTy] at hv; contradiction
@@ -277,8 +284,16 @@ theorem valOfErr_errOf_supported (ty : Ty) (v : Val) (allocated : List String)
     · exact iha ha h
     · exact ihb hb h
   | unit | int | bool | handle | option | list | except | exitOf | causeOf | fiberOf =>
-    simp only [supportedErrTy] at hs
+    simp only [rawSupportedErrTy] at hs
     contradiction
+
+/-- Row DI-62. Every admitted error value is recovered exactly from its closed error image. -/
+theorem valOfErr_errOf_supported (ty : Ty) (v : Val) (allocated : List String)
+    (hs : supportedErrTy ty = true) (hv : Val.hasTy v ty allocated = true) :
+    valOfErr (errOf v) = some v := by
+  apply valOfErr_errOf_rawSupported ty.normalize v allocated hs
+  rw [hasTy_normalize]
+  exact hv
 
 /-- Row DI-62. The admitted error language excludes the payload-discarding `boom` case. -/
 theorem errOf_ne_boom_of_supported (ty : Ty) (v : Val) (allocated : List String)
