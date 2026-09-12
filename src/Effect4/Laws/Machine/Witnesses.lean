@@ -45,7 +45,7 @@ def spawnRoot (m : M) (program : ProgName) (ctx : Ctx) : M :=
 def replay (state : Stores) (program : ProgName) (tape : List D) : M :=
   match replayEval stores fuel tape (spawnRoot (RunMachine.empty state) program emptyCtx) with
   | ReplayResult.finished m => m
-  | ReplayResult.frontier m => m
+  | ReplayResult.frontier _ m => m
   | ReplayResult.stuck _ m => m
 
 /-- The `ReplayResult` arm a tape landed on, as a small code: `0` finished, `1` frontier,
@@ -53,7 +53,7 @@ def replay (state : Stores) (program : ProgName) (tape : List D) : M :=
 def replayArm (state : Stores) (program : ProgName) (tape : List D) : Nat :=
   match replayEval stores fuel tape (spawnRoot (RunMachine.empty state) program emptyCtx) with
   | ReplayResult.finished _ => 0
-  | ReplayResult.frontier _ => 1
+  | ReplayResult.frontier _ _ => 1
   | ReplayResult.stuck _ _ => 2
 
 /-- Why the machine halted, if it did (M7; S3's stuck marker). -/

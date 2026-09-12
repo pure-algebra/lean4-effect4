@@ -234,6 +234,12 @@ legitimate resume unparks first, and the runtime has no bare evaluate on a suspe
 Regression: the truth gate, the keyed host gate, and a negative fixture in which a bare
 evaluate leaves the outstanding request and token unchanged and the later reply is accepted.
 
+The owner approved the two resulting helper amendments on 2026-09-12:
+`drive_evaluate_enters` and `driveState_evaluate_enters` require the explicit
+premise `f.parked = Parked.notParked`, with the corresponding runtime-coverage
+statement check updated. A guarded fiber satisfies the old non-running and
+non-exited premises but does not enter evaluation under the repaired driver.
+
 **Row table meaning.** The row table means the algebra package's `Family` through
 `Alphabet.toFamily`, and its signature through `toSignature`; the denotation extends to
 straight-line programs with external rows on one fiber; a tape is a partial handler whose

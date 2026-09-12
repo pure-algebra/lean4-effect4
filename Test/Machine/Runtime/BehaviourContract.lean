@@ -42,7 +42,7 @@ def withCell : Api.Machine := { bare with state := { Stores.empty with refs := [
 -- E4-BEH-CE-001: trace-prefix order alone does not protect the stores.
 theorem equal_traces : withCell.trace = bare.trace := rfl
 
-theorem frontiers_related : ReplayResult.le (.frontier withCell) (.frontier bare) :=
+theorem frontiers_related : ReplayResult.le (.frontier .tape withCell) (.frontier .tape bare) :=
   List.prefix_rfl
 
 theorem observations_not_related : ¬ (obs withCell).le (obs bare) := by
@@ -53,7 +53,7 @@ theorem frontier_projection_false :
     ¬ (∀ (a b : ReplayResult EffName EffThunk Val Err Defect FiberId Ann Ctx Stores),
       ReplayResult.le a b → (obs a.machine).le (obs b.machine)) := by
   intro h
-  exact observations_not_related (h (.frontier withCell) (.frontier bare) frontiers_related)
+  exact observations_not_related (h (.frontier .tape withCell) (.frontier .tape bare) frontiers_related)
 
 #guard (Val.cell ⟨0⟩).validIn withCell.state
 #guard !(Val.cell ⟨0⟩).validIn bare.state

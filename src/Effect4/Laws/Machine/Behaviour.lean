@@ -55,7 +55,7 @@ theorem obs_mono_of_le_terminal
     (ht : a.terminal = true) (h : ReplayResult.le a b) :
     (obs a.machine).le (obs b.machine) := by
   cases a with
-  | frontier m => cases ht
+  | frontier _ m => cases ht
   | finished m =>
     change b = ReplayResult.finished m at h
     subst b

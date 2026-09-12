@@ -621,12 +621,17 @@ theorem drive_evaluate (id : FiberId) :
     exact CmdsRel.mk' hok hm hr
   · rw [h₁, h₂]
     dsimp only
-    have hc : (f₁.exit.isSome || f₁.running) = (f₂.exit.isSome || f₂.running) := by
-      rw [hf.exit, hf.running]
-    by_cases h : (f₁.exit.isSome || f₁.running) = true
+    have hc : (f₁.exit.isSome || f₁.running || f₁.parked != Parked.notParked) =
+        (f₂.exit.isSome || f₂.running || f₂.parked != Parked.notParked) := by
+      rw [hf.exit, hf.running, hf.parked]
+    by_cases h : (f₁.exit.isSome || f₁.running || f₁.parked != Parked.notParked) = true
     · rw [if_pos h, if_pos (hc.symm.trans h)]
       exact CmdsRel.mk' hok hm hr
     · rw [if_neg h, if_neg (fun e => h (hc.trans e))]
+      have hp₁ : f₁.parked = Parked.notParked := by
+        cases hp : f₁.parked <;> simp_all
+      have hp₂ : f₂.parked = Parked.notParked := hf.parked.symm.trans hp₁
+      simp only [hp₁, hp₂]
       refine CmdsRel.mk' (machineOk_emit (machineOk_update hok ?_) _)
         (BMeans.emit (hm.update hf.started) _ _) (ListRel.cons (cmeans_loop root id false) hr)
       exact pendingOk_of_fields (pendingOk_of_fiber? hok h₁) rfl

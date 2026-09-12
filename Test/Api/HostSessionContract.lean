@@ -61,6 +61,29 @@ def finished : Session program table := (applyPending pending1 100).session
 #guard finished.applied = 2
 #guard finished.consumed = [0, 1]
 
+-- DI-58 / P2b: a bare evaluate cannot replace a guarded callback's token.
+def repeatedEvaluation : Api.Run :=
+  Api.replay program 100 [Api.evaluate, Api.evaluate] [] [] table
+def evaluatedAgain : Session program table := (advance bound0 100 Api.evaluate).session
+def replyAfterEvaluate : Session program table := (submit evaluatedAgain reply0).session
+
+theorem evaluate_retains_guard :
+    requestOf repeatedEvaluation.machine Api.root 0 = some (.external 0, .nat 2) := by decide
+
+theorem evaluate_retains_token :
+    repeatedEvaluation.machine.nextToken = parked.machine.nextToken := by decide
+
+#guard outstanding evaluatedAgain = [(Api.root, 0, .external 0, .nat 2)]
+#guard (advance bound0 100 Api.evaluate).phase = .progressed
+#guard (submit evaluatedAgain reply0).phase = .preflight
+#guard (applyPending replyAfterEvaluate 100).phase = .applied
+#guard (applyPending replyAfterEvaluate 100).session.consumed = [0]
+#guard outstanding (applyPending replyAfterEvaluate 100).session =
+  [(Api.root, 1, .external 0, .nat 3)]
+
+#print axioms evaluate_retains_guard
+#print axioms evaluate_retains_token
+
 -- One command consumes the reply even if the subsequent evaluation lacks fuel.
 def shortApplied : Session program table := (applyPending pending0 1).session
 #guard (applyPending pending0 1).phase = .applied

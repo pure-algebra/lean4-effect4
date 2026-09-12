@@ -38,9 +38,10 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote
 abbrev RReplay := ReplayResult EffName EffThunk Val Err Defect FiberId Ann Ctx Stores RProgram RSaved Unit
 
 /-- `Api.load` with the structural term in place of compiled frame code. -/
-def loadR (program : NativeEff) (fuel : Nat) (choices : List Bool := []) : RState :=
+def loadR (program : NativeEff) (fuel : Nat) (choices : List Bool := [])
+    (compileFuel : Nat := fuel) : RState :=
   { (RunMachine.empty Stores.empty : RState) with
-    fibers := [RunFiber.make Api.root (denoteR program program (rootPoint fuel choices)) true
+    fibers := [RunFiber.make Api.root (denoteR program program (rootPoint compileFuel choices)) true
       (stores.budgetOf emptyCtx) emptyCtx]
     nextId := 1 }
 
@@ -48,9 +49,9 @@ def obsR (m : RState) : Obs := obs m
 
 /-- The same Completion data and decision alphabet as `Api.replay`. -/
 def replayR (program : NativeEff) (fuel : Nat) (tape : List Api.Decision)
-    (choices : List Bool := []) : RReplay :=
+    (choices : List Bool := []) (compileFuel : Nat := fuel) : RReplay :=
   letI := termEvaluatorFor program
-  replayEval (interpR program) fuel tape (loadR program fuel choices)
+  replayEval (interpR program) fuel tape (loadR program fuel choices compileFuel)
 
 /-- The loaded term stays fixed when comparing command budgets. -/
 def SufficientR (program : NativeEff) (commandFuel : Nat) (m : RState)
@@ -141,7 +142,7 @@ abbrev FReplay := ReplayResult EffName EffThunk Val Err Defect FiberId Ann Ctx S
 def classify {κ φ η : Type} :
     ReplayResult EffName EffThunk Val Err Defect FiberId Ann Ctx Stores κ φ η → Api.Outcome
   | .finished _ => .finished
-  | .frontier _ => .frontier
+  | .frontier _ _ => .frontier
   | .stuck why _ => .stuck why
 
 /-- The loaded frame machine carries the invariant: empty stores, no park. -/
@@ -176,6 +177,7 @@ theorem replayRel_classify_obs {e : NativeEff} {r₁ : FReplay} {r₂ : RReplay}
   cases r₁ <;> cases r₂ <;> first
     | exact (h : False).elim
     | exact ⟨rfl, bookMeans_obs h⟩
+    | exact ⟨rfl, bookMeans_obs h.2⟩
     | exact ⟨congrArg Api.Outcome.stuck h.1, bookMeans_obs h.2⟩
 
 theorem replay_outcome (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) (choices : List Bool) :

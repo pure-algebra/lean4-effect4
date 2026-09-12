@@ -1066,11 +1066,11 @@ theorem book_stepDecisionState (hstep : StepAgrees i₁ i₂ StOk C S) (hooks : 
           exact ⟨hbase1ok, hbase1, rfl⟩
   | installMiddleware => exact ⟨machineOk_middleware hok, book_middleware h, rfl⟩
 
-/-- Two replays classify alike, and their machines keep the book. -/
+/-- Two replays classify alike, their exhaustion tags agree, and their machines keep the book. -/
 def ReplayRel (C : κ₁ → κ₂ → Prop) (S : φ₁ → φ₂ → Prop) :
     ReplayResult ν σ β ε δ ι α χ St κ₁ φ₁ η₁ → ReplayResult ν σ β ε δ ι α χ St κ₂ φ₂ η₂ → Prop
   | .finished m₁, .finished m₂ => BookMeans C S m₁ m₂
-  | .frontier m₁, .frontier m₂ => BookMeans C S m₁ m₂
+  | .frontier w₁ m₁, .frontier w₂ m₂ => w₁ = w₂ ∧ BookMeans C S m₁ m₂
   | .stuck w₁ m₁, .stuck w₂ m₂ => w₁ = w₂ ∧ BookMeans C S m₁ m₂
   | _, _ => False
 
@@ -1084,7 +1084,7 @@ theorem replayEval_nil (i : RunInterp ν σ β ε δ ι α χ St κ₁) (fuel : 
     replayEval i fuel [] m =
       (match m.stuck with
        | some why => ReplayResult.stuck why m
-       | none => if m.finished then ReplayResult.finished m else ReplayResult.frontier m) := rfl
+       | none => if m.finished then ReplayResult.finished m else ReplayResult.frontier .tape m) := rfl
 
 theorem replayEval_cons (i : RunInterp ν σ β ε δ ι α χ St κ₁) (fuel : Nat)
     (d : RunDecision ν σ β ε δ ι α) (tape : List (RunDecision ν σ β ε δ ι α))
@@ -1095,7 +1095,7 @@ theorem replayEval_cons (i : RunInterp ν σ β ε δ ι α χ St κ₁) (fuel :
        | none =>
          if (stepDecisionState i fuel m d).2 then
            replayEval i fuel tape (stepDecisionState i fuel m d).1
-         else ReplayResult.frontier (stepDecisionState i fuel m d).1) := rfl
+         else ReplayResult.frontier .fuel (stepDecisionState i fuel m d).1) := rfl
 
 /-- **Replay agrees.** Two instances with `StepAgrees` and the hook obligations replay
 every tape to the same classification and related books. -/
@@ -1115,7 +1115,7 @@ theorem book_replayEval (hstep : StepAgrees i₁ i₂ StOk C S) (hooks : HooksAg
       rw [book_finished h]
       by_cases hb : b.finished = true
       · rw [if_pos hb, if_pos hb]; exact h
-      · rw [if_neg hb, if_neg hb]; exact h
+      · rw [if_neg hb, if_neg hb]; exact ⟨rfl, h⟩
   | cons d rest ih =>
     intro a b hok h
     rw [replayEval_cons, replayEval_cons, h.stuck]
@@ -1126,7 +1126,7 @@ theorem book_replayEval (hstep : StepAgrees i₁ i₂ StOk C S) (hooks : HooksAg
       rw [hd.2.2]
       by_cases hr : (stepDecisionState i₂ fuel b d).2 = true
       · rw [if_pos hr, if_pos hr]; exact ih _ _ hd.1 hd.2.1
-      · rw [if_neg hr, if_neg hr]; exact hd.2.1
+      · rw [if_neg hr, if_neg hr]; exact ⟨rfl, hd.2.1⟩
 
 /-- The sufficiency receipt of a whole tape agrees. -/
 theorem book_suffices (hstep : StepAgrees i₁ i₂ StOk C S) (hooks : HooksAgree (η₁ := η₁) (η₂ := η₂) i₁ i₂ StOk C S)

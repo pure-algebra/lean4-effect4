@@ -486,7 +486,7 @@ def withRoots (programs : List Program) : Witnesses.M :=
 def runTape (m : Witnesses.M) (tape : List Witnesses.D) : Witnesses.M :=
   match replayEval stores 400 tape m with
   | .finished m => m
-  | .frontier m => m
+  | .frontier _ m => m
   | .stuck _ m => m
 
 def clockOf (m : Witnesses.M) : Nat := m.state.timers.now

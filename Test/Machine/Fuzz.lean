@@ -45,7 +45,7 @@ def replayWith (bound : Nat) (program : ProgName) (tape : List D) : M :=
   match replayEval stores bound tape
       (spawnRoot (RunMachine.empty Stores.empty) program emptyCtx) with
   | ReplayResult.finished m => m
-  | ReplayResult.frontier m => m
+  | ReplayResult.frontier _ m => m
   | ReplayResult.stuck _ m => m
 
 /-! ## List helpers

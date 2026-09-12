@@ -50,7 +50,7 @@ def termControl (m : RState) : List FiberControl :=
 
 def termOutcome : RReplay → Api.Outcome
   | .finished _ => .finished
-  | .frontier _ => .frontier
+  | .frontier _ _ => .frontier
   | .stuck why _ => .stuck why
 
 def agrees (program : NativeEff) (tape : List Api.Decision) (choices : List Bool := []) : Bool :=

@@ -254,7 +254,7 @@ def inspect {program : Api.Program} {table : RowTable} (s : Session program tabl
   letI := evaluatorFor program table
   match replayEval (interpOf program table) 0 [] s.machine with
   | .finished m => ⟨.finished, m⟩
-  | .frontier m => ⟨.frontier, m⟩
+  | .frontier _ m => ⟨.frontier, m⟩
   | .stuck why m => ⟨.stuck why, m⟩
 
 end Effect4.Api.HostSession

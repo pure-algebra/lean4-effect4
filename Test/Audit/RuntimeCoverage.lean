@@ -2142,6 +2142,7 @@ here, so a drift is a type mismatch. -/
       m.fiber? id = Option.some f →
         f.exit = Option.none →
           f.running = Bool.false →
+            f.parked = Effect4.Machine.Parked.notParked →
             Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.evaluate id :: rest) =
               Effect4.Machine.drive interp fuel
                 ((m.update

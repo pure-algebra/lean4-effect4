@@ -135,9 +135,9 @@ variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
 #check (Effect4.Machine.replay_frontier_mono_single :
   ∀ (interp : RunInterp ν σ β ε δ ι α χ St) {n n' : Nat}, n ≤ n' →
     ∀ (m : RunMachine ν σ β ε δ ι α χ St) (decision : RunDecision ν σ β ε δ ι α),
-    SingleLoop decision = true → ∀ {m₁ : RunMachine ν σ β ε δ ι α χ St},
-    replayEval interp n [decision] m = ReplayResult.frontier m₁ →
-    ReplayResult.le (ReplayResult.frontier m₁) (replayEval interp n' [decision] m))
+    SingleLoop decision = true → ∀ {why : Exhaustion} {m₁ : RunMachine ν σ β ε δ ι α χ St},
+    replayEval interp n [decision] m = ReplayResult.frontier why m₁ →
+    ReplayResult.le (ReplayResult.frontier why m₁) (replayEval interp n' [decision] m))
 
 #check (Effect4.Machine.replay_stuck_mono_single :
   ∀ (interp : RunInterp ν σ β ε δ ι α χ St) {n n' : Nat}, n ≤ n' →
@@ -183,7 +183,7 @@ def machineOf (p : NativeEff) : Api.Machine := Api.load p fuel
 def runAt (p : NativeEff) (f : Nat) (tape : List Api.Decision) : Api.Run :=
   match replayEval (interpOf p) f tape (machineOf p) with
   | ReplayResult.finished m => ⟨Api.Outcome.finished, m⟩
-  | ReplayResult.frontier m => ⟨Api.Outcome.frontier, m⟩
+  | ReplayResult.frontier _ m => ⟨Api.Outcome.frontier, m⟩
   | ReplayResult.stuck why m => ⟨Api.Outcome.stuck why, m⟩
 
 /-- `0` finished, `1` frontier, `2` stuck. -/

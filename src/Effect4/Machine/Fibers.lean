@@ -1799,9 +1799,9 @@ def driveStep (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine
     match m.fiber? id with
     | none => (m, rest)
     | some f =>
-      if f.exit.isSome || f.running then (m, rest)
+      if f.exit.isSome || f.running || f.parked != Parked.notParked then (m, rest)
       else
-        let f := { f with running := true, currentOpCount := 0, parked := Parked.notParked }
+        let f := { f with running := true, currentOpCount := 0 }
         ((m.update f).emit [RunEvent.started id], Cmd.loop id false :: rest)
   | Cmd.loop id yielding, rest =>
     match m.fiber? id with
@@ -2115,13 +2115,18 @@ end stepDecision
 
 /-! ## Replay and the runtime entries -/
 
+/-- Why replay stopped before consuming a complete decision tape. -/
+inductive Exhaustion
+  | fuel
+  | tape
+
 inductive ReplayResult (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St : Type (max u v))
     (κ : Type (max u v) := Prim ν σ β ε δ ι α)
     (φ : Type (max u v) := FrameFiber ν σ β ε δ ι α)
     (η : Type (max u v) := FrameEvent ν σ β ε δ ι α) :
     Type (max u v)
   | finished (machine : RunMachine ν σ β ε δ ι α χ St κ φ η)
-  | frontier (machine : RunMachine ν σ β ε δ ι α χ St κ φ η)
+  | frontier (why : Exhaustion) (machine : RunMachine ν σ β ε δ ι α χ St κ φ η)
   | stuck (why : Stuck) (machine : RunMachine ν σ β ε δ ι α χ St κ φ η)
 
 /-- Replay a decision tape (DB-03: the meaning is the relation over tapes; this is its
@@ -2132,13 +2137,13 @@ def replayEval (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) :
   | [], m =>
     match m.stuck with
     | some why => ReplayResult.stuck why m
-    | none => if m.finished then ReplayResult.finished m else ReplayResult.frontier m
+    | none => if m.finished then ReplayResult.finished m else ReplayResult.frontier .tape m
   | decision :: tape, m =>
     match m.stuck with
     | some why => ReplayResult.stuck why m
     | none =>
       let r := stepDecisionState interp fuel m decision
-      if r.2 then replayEval interp fuel tape r.1 else ReplayResult.frontier r.1
+      if r.2 then replayEval interp fuel tape r.1 else ReplayResult.frontier .fuel r.1
 
 /-- The relation the plan calls the meaning: one decision, one step. -/
 def Step (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)

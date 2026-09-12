@@ -67,7 +67,7 @@ def replayEffTape (root : NativeEff) (decisions : List Bool) (tape : List DC) : 
   letI := evaluatorFor root
   match replayEval (interpOf root) fuel tape (spawnTape root decisions) with
   | ReplayResult.finished m => m
-  | ReplayResult.frontier m => m
+  | ReplayResult.frontier _ m => m
   | ReplayResult.stuck _ m => m
 
 /-- The common case: no `choose` decisions. -/
@@ -78,7 +78,7 @@ def replayArm (root : NativeEff) (decisions : List Bool) (tape : List DC) : Nat 
   letI := evaluatorFor root
   match replayEval (interpOf root) fuel tape (spawnTape root decisions) with
   | ReplayResult.finished _ => 0
-  | ReplayResult.frontier _ => 1
+  | ReplayResult.frontier _ _ => 1
   | ReplayResult.stuck _ _ => 2
 
 /-- The exit of fiber `id`, if it has one; `none` is "still live". -/

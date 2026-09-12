@@ -693,7 +693,7 @@ theorem stepDecision_trace_extends (interp : RunInterp ν σ β ε δ ι α χ S
 def ReplayResult.machine : ReplayResult ν σ β ε δ ι α χ St κ φ η →
     RunMachine ν σ β ε δ ι α χ St κ φ η
   | ReplayResult.finished m => m
-  | ReplayResult.frontier m => m
+  | ReplayResult.frontier _ m => m
   | ReplayResult.stuck _ m => m
 
 theorem replayEval_extends {interp : RunInterp ν σ β ε δ ι α χ St} {fuel : Nat}
@@ -768,27 +768,27 @@ namespace ReplayResult
 `stuck` result are below themselves only. -/
 def le (a b : ReplayResult ν σ β ε δ ι α χ St κ φ η) : Prop :=
   match a with
-  | frontier m => m.trace <+: b.machine.trace
+  | frontier _ m => m.trace <+: b.machine.trace
   | finished m => b = finished m
   | stuck why m => b = stuck why m
 
 /-- A result more fuel is not meant to refine. -/
 def terminal : ReplayResult ν σ β ε δ ι α χ St κ φ η → Bool
-  | frontier _ => false
+  | frontier _ _ => false
   | finished _ => true
   | stuck _ _ => true
 
 theorem le_refl (a : ReplayResult ν σ β ε δ ι α χ St κ φ η) : le a a := by
   cases a with
-  | frontier m => exact List.prefix_rfl
+  | frontier _ m => exact List.prefix_rfl
   | finished m => rfl
   | stuck why m => rfl
 
 theorem le_trans {a b c : ReplayResult ν σ β ε δ ι α χ St κ φ η} (h₁ : le a b) (h₂ : le b c) : le a c := by
   cases a with
-  | frontier m =>
+  | frontier _ m =>
     cases b with
-    | frontier m' => exact List.IsPrefix.trans h₁ h₂
+    | frontier _ m' => exact List.IsPrefix.trans h₁ h₂
     | finished m' => unfold le at h₂; subst h₂; exact h₁
     | stuck why m' => unfold le at h₂; subst h₂; exact h₁
   | finished m => unfold le at h₁; subst h₁; exact h₂
@@ -799,13 +799,14 @@ elsewhere, so the order is a preorder on frontiers. -/
 theorem le_antisymm_terminal {a b : ReplayResult ν σ β ε δ ι α χ St κ φ η} (ht : a.terminal = true)
     (h₁ : le a b) (_ : le b a) : a = b := by
   cases a with
-  | frontier m => cases ht
+  | frontier _ m => cases ht
   | finished m => exact h₁.symm
   | stuck why m => exact h₁.symm
 
 /-- A frontier is below anything that extends it. -/
-theorem frontier_le {m : RunMachine ν σ β ε δ ι α χ St κ φ η} {b : ReplayResult ν σ β ε δ ι α χ St κ φ η}
-    (h : Extends m b.machine) : le (frontier m) b := h
+theorem frontier_le {why : Exhaustion} {m : RunMachine ν σ β ε δ ι α χ St κ φ η}
+    {b : ReplayResult ν σ β ε δ ι α χ St κ φ η}
+    (h : Extends m b.machine) : le (frontier why m) b := h
 
 end ReplayResult
 
@@ -1420,9 +1421,9 @@ theorem stepDecision_stuck_stable (interp : RunInterp ν σ β ε δ ι α χ St
 below the result at any larger fuel. -/
 theorem replay_frontier_mono_single (interp : RunInterp ν σ β ε δ ι α χ St) {n n' : Nat}
     (h : n ≤ n') (m : RunMachine ν σ β ε δ ι α χ St) (decision : RunDecision ν σ β ε δ ι α)
-    (hd : SingleLoop decision = true) {m₁ : RunMachine ν σ β ε δ ι α χ St}
-    (hf : replayEval interp n [decision] m = ReplayResult.frontier m₁) :
-    ReplayResult.le (ReplayResult.frontier m₁) (replayEval interp n' [decision] m) := by
+    (hd : SingleLoop decision = true) {why : Exhaustion} {m₁ : RunMachine ν σ β ε δ ι α χ St}
+    (hf : replayEval interp n [decision] m = ReplayResult.frontier why m₁) :
+    ReplayResult.le (ReplayResult.frontier why m₁) (replayEval interp n' [decision] m) := by
   refine ReplayResult.frontier_le ?_
   cases hs : m.stuck with
   | some why =>

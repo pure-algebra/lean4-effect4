@@ -63,7 +63,7 @@ let root_exit (r : A.run) =
   | Some f -> f.A.exit_
 
 let run_and_show name (p : A.native_op A.eff) =
-  let r = A.api_run p 1000 [] [] [] in
+  let r = A.api_run p 1000 [] [] [] 1000 in
   let e = root_exit r in
   Printf.printf "  %s: outcome=%s fibers=%d exit=%s\n" name (show_outcome r.A.outcome)
     (List.length r.A.machine.A.fibers) (show_exit e);

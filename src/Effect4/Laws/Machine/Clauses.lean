@@ -65,13 +65,13 @@ starts from counts from zero. census: rule.budget-per-runloop-entry -/
 theorem drive_evaluate_enters (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId) (f : RunFiber ν σ β ε δ ι α χ)
     (rest : List (Cmd ν σ β ε δ ι α)) (hs : m.stuck = none) (hf : m.fiber? id = some f)
-    (hexit : f.exit = none) (hrun : f.running = false) :
+    (hexit : f.exit = none) (hrun : f.running = false) (hpark : f.parked = Parked.notParked) :
     drive interp (fuel + 1) m (Cmd.evaluate id :: rest) =
       drive interp fuel
         ((m.update { f with running := true, currentOpCount := 0, parked := Parked.notParked }).emit
           [RunEvent.started id])
         (Cmd.loop id false :: rest) := by
-  simp [drive, driveState, driveStep, hs, hf, hexit, hrun]
+  simp [drive, driveState, driveStep, hs, hf, hexit, hrun, hpark]
 
 /-- `evaluate` on a fiber that has exited is a no-op (`:600`).
 census: rule.budget-per-runloop-entry -/
@@ -1833,13 +1833,13 @@ for the fuel receipts used by replay and the program agreement proof.
 theorem driveState_evaluate_enters (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId) (f : RunFiber ν σ β ε δ ι α χ)
     (rest : List (Cmd ν σ β ε δ ι α)) (hs : m.stuck = none) (hf : m.fiber? id = some f)
-    (hexit : f.exit = none) (hrun : f.running = false) :
+    (hexit : f.exit = none) (hrun : f.running = false) (hpark : f.parked = Parked.notParked) :
     driveState interp (fuel + 1) m (Cmd.evaluate id :: rest) =
       driveState interp fuel
         ((m.update { f with running := true, currentOpCount := 0, parked := Parked.notParked }).emit
           [RunEvent.started id])
         (Cmd.loop id false :: rest) := by
-  simp [driveState, driveStep, hs, hf, hexit, hrun]
+  simp [driveState, driveStep, hs, hf, hexit, hrun, hpark]
 
 theorem driveState_loop_parked (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId) (yielding : Bool)

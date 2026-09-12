@@ -1,4 +1,5 @@
 import Effect4.Laws
+import Test.Api.FrontierContract
 import Test.Support.Environment
 import Test.Schema.AxiomReport
 import Test.Data.OpticContract

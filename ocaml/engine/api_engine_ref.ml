@@ -57,7 +57,7 @@ let step (p : program) (i : interp) ~(fuel : int) (m : machine) (d : decision)
   step_decision_state_at_program_replay_checked_from_spec_1 p [] i fuel m d
 
 let run_api (p : program) ~(fuel : int) ~(choices : bool list) : outcome * machine =
-  let r = api_run p fuel choices [] [] in
+  let r = api_run p fuel choices [] [] fuel in
   (r.outcome, r.machine)
 
 (* -- the free rows -------------------------------------------------------------------- *)

@@ -123,7 +123,7 @@ def replayCheckedFrom (program : NativeEff) (fuel : Nat)
         | some why => .inr (position, decision, why, r.1)
         | none =>
           if r.2 then replayCheckedFrom program fuel answers table (position + 1) rest r.1
-          else .inl (.frontier r.1)
+          else .inl (.frontier .fuel r.1)
 termination_by tape
 
 /-- Every external frontier after each applied decision, in fiber order. -/
