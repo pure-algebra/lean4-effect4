@@ -4,7 +4,7 @@ P2b resumed on 2026-09-12 from `db17914` under the owner's accepted amendments.
 The owner also approved the two evaluate-entry helper amendments below. Commit 1
 landed as `f921bc7`; all its required gates have passed under the unchanged declared-red policy.
 The historical statement check below is retained as evidence; its stop is no
-longer the current lane status. Commit 2 landed as `7804fdc` with the gates recorded below; commits 3–4 remain in scope.
+longer the current lane status. Commit 2 landed as `7804fdc` with the gates recorded below; commit 3 landed as `e94be3c`; commit 4 is the completed layer slice recorded below.
 
 The observation laws now name host-await priority and the separate runnable and
 fiber-exit predicates. The driver repair in commit 1 makes `Cmd.evaluate` a no-op
@@ -438,6 +438,147 @@ No commit-3 proof obligation remains open. Commit 2's separately allowed
 compile-frontier book obligation remains as recorded in that slice; commit 4's
 layer-sharing work is next. No files were pushed.
 
+
+## Commit 4 — layer sharing and reference typing
+
+Implementation and every required final gate are complete on base `e94be3c`. The runtime,
+compiler, `Eff`, `LayerId`, wire, ordinals and `Val` remain unchanged.
+
+`Effect4.Program.LayerSharing.memoize_hit` and `memoGet_memoize_hit` cover an
+arbitrary existing memo entry. The latter uses `syncOpStep_memoGet_some` and
+proves that the stored deferred is awaited, release is registered, and no build
+continuation is selected; the Ref store is unchanged by that memo hit.
+`fresh_forks_without_parent` is the unchanged compiler equation. The approved
+`fresh_never_shares` is a map-scoped law over any finite sequence of the five
+memo operations routed through the fresh map and its isolated descendants.
+It proves parent closure, lookup-owner containment and equality of every
+pre-existing enclosing map. It does not claim that an independently selected
+ambient memo operation becomes local merely by appearing inside a fresh layer.
+
+`Effect4.Program.typeOfProgram_expandRefs` retains both dispatched premises,
+well-formed original layer references and no remaining reference sites after
+expansion. Its conclusion is equality of `typeOfProgram` results, for arbitrary
+operation alphabets and signatures. Nine structural helper lemmas establish
+that reference-free syntax is fixed by expansion and is reference-well-formed.
+
+`Test.Program.LayerSharingContract.provide_ref_twice` compares a counted layer
+provided through one reference with the same counted layer provided through two
+nested reference sites. For every command budget at least 300, compile budget
+16, empty table/choices/answers, and the same `[evaluate, flush]` tape, both runs
+finish with equal root exit `success 1` and the full Ref store `[nat 1]`.
+The kernel checks every transition of two finite certificates (216 and 300
+commands); `Api.finished_mono_fuel` extends their checked completion to every
+larger command budget. This is a concrete counted-layer instance, not a claim
+about arbitrary effectful layers or arbitrary tapes. The general memo-hit and
+map-scoped isolation laws above are independent of those fixtures.
+
+The truth source keeps all 31 program names. `pDiamond` now contains two actual
+nested reference sites to one counted layer. `pProvideTwice` retains two literal
+copies. Source guards check well-formedness, type admission, reference counts,
+and final Ref counts of one and two; the existing observation battery still
+covers every truth program. Only existing producer commands will write the
+printed programs, corpus, results and tape provenance.
+
+### Commit 4 verification and generated artifacts
+
+`LEAN_NUM_THREADS=3 lake build` exited 0 (356 jobs; `c4-lake-build.log`).
+The module/axiom gate checked 323 modules and 51,060 declarations: 94 API/utility
+modules, 94 Laws-only modules, no runtime-root dependency on Laws. The ceiling
+remains `[propext, Quot.sound]`, with the same existing 36 exact rendering
+exceptions across seven modules. The local counted certificate independently
+checks all 1,581 declarations it introduces, including the safety of its 528
+ordinary definitions; no elaboration helper remains as a definition.
+
+The [complete theorem receipt](2026-09-11-p2b-frontier-and-layers-evidence/c4-theorem-axioms.md)
+records all 1,324 exact `#print axioms` reports from the three new modules,
+including private/equational and certificate proofs. The audit command exited 0.
+The dispatched public names report:
+
+```text
+'Effect4.Program.LayerSharing.memoize_hit' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.LayerSharing.memoGet_memoize_hit' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.LayerSharing.fresh_forks_without_parent' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.LayerSharing.fresh_never_shares' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.typeOfProgram_expandRefs' depends on axioms: [propext, Quot.sound]
+'Test.Program.LayerSharingContract.provide_ref_twice' depends on axioms: [propext, Quot.sound]
+```
+
+`bash scripts/generate.sh` exited 0: all 557 requested-family artifacts remain
+current. The separate documented Truth producers both exited 0:
+
+```sh
+LEAN_NUM_THREADS=2 lake env lean -j2 -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes
+bun run harness/truth/run-truth.ts --manifest harness/truth/corpus.json --out harness/truth --timeout 300 --tape-out harness/truth/tapes
+```
+
+The rc.112 execution agrees on all 31 exits and schedules. `pDiamond` builds
+once, and `pProvideTwice` builds twice. The corpus and result retain their existing
+formats and change only the `pDiamond` row. Its nested providers now use one
+hoisted object at all three sites (the definition site plus the two references).
+The printed type stays `Effect.Effect<number, never>`.
+
+The [generated inventory](2026-09-11-p2b-frontier-and-layers-evidence/c4-generated-inventory.md)
+lists every changed path, revision, toolchain, input stamp and SHA-256: 40
+artifacts, 42 changed paths, three payload changes. Those payload paths are
+`harness/truth/generated/pDiamond.ts`, `harness/truth/corpus.json`, and
+`harness/truth/result.json`. All other listed changes are provenance only,
+including the six tape sidecars; every tape payload is unchanged. No `.ty`
+golden or printed type moves. The inventory in `docs/GENERATED.md` already maps
+all these outputs and needs no new row. No generated file was edited by hand.
+
+The forced `opam exec --switch=effect4 -- dune test --force engine` exited 0
+(`c4-engine-direct.log`): 559 programs, 3,472 tapes, 76,682 positions, 153,364
+projection comparisons, zero divergences, 23 layout checks. The separate ungated truth-crossface
+diagnostic retains the same `pAcquire` and `pProvide` differences recorded in
+commits 2 and 3; it is not counted as layout or 31-program agreement.
+`LEAN_NUM_THREADS=2 bash scripts/check-host-protocol.sh` exited 0
+(`c4-host-direct.log`): 57 runs, 52 programs, 29 controls, with exact exits and
+keyed applications. The full sweep also ran the keyed gate freshly and passed.
+
+### Commit 4 final gate output
+
+`LEAN_NUM_THREADS=3 bash scripts/sweep.sh` exited 0: all 18 gates accepted,
+three stamp hits and fifteen misses, 385 seconds. Only `generated-stale` is
+declared red, under the unchanged policy. The [sweep table](2026-09-11-p2b-frontier-and-layers-evidence/c4-sweep-summary.tsv)
+is retained; full local outputs are in `c4-sweep-logs/`, alongside `c4-sweep.log`.
+The truth gate freshly reproduced all 31 programs, checked their generated
+TypeScript, and compared bytes and tapes. The OCaml generation, Eff/wire tests
+and engine gates all passed after regeneration.
+
+```text
+sweep: every gate, one process at a time
+generated-stale          DECLARED    2s  miss
+library-roots            PASS   28s  miss
+source-citations         PASS    2s  miss
+internal-citations       PASS  111s  miss
+effect-runtime-census    PASS    0s  hit
+ts-eff                   PASS    0s  hit
+conform                  PASS   26s  miss
+generated                PASS    2s  miss
+schema-typescript        PASS   44s  miss
+schema-codec             PASS    2s  miss
+ts-eff-corpus            PASS   11s  miss
+ingest                   PASS    3s  hit
+host-protocol            PASS   66s  miss
+truth                    PASS   70s  miss
+streams                  PASS    5s  miss
+gen-check                PASS    8s  miss
+dune-tests               PASS    3s  miss
+engine-tests             PASS    2s  miss
+sweep: 18 gates, 3 hit, 15 miss, 385s total; table in .lake/sweep-summary.tsv
+PASS every gate under the declared-red policy; declared failures are listed above
+```
+
+`git diff --cached --check` and the explicit new-source whitespace check exited
+0. The artifact check confirms unchanged result/corpus formats, 31 rows, only
+`pDiamond` changed, no tape payload or `.ty` changes, and receipt axiom lines
+identical to the observed output (`c4-artifact-checks.log`). `git fetch` exited 0.
+The final receipt and gate table were added after the sweep; no source or
+generated output changed after its passing run. No push.
+
+No commit-4 proof obligation remains open. Commit 2's separately allowed
+reachable compile-frontier book obligation remains documented in its own
+section; the existing `run_eq_ref` has not been relabeled or weakened.
 
 ## Commit 1 statement dependency — explicit unparked premise required
 

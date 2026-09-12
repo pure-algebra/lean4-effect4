@@ -272,3 +272,12 @@ refusal. Admission does not import the reader.
 **Generators.** `tools/Effect4Gen` hosts every generator that writes into `src/` or `Test/`;
 the seven-family `cata_eq_rec` and the frontier parameter come from the Fold group, not by
 hand.
+
+
+**Fresh map scope** (owner ruled 2026-09-12). `fresh_never_shares` covers
+lookups and memo operations routed through the fresh map and its isolated
+descendants. Their lookups remain inside that region and their writes leave
+enclosing maps unchanged. Independently invoked nested program-level
+`provideLayer` operations may select an ambient memo map and are outside this
+claim. The checked counterexample and approval are retained in the P2b receipt;
+`freshThen`, the compiler, and rc.112 behavior remain unchanged.

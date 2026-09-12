@@ -41,6 +41,8 @@ import Effect4.Laws.Program.Simulation.Drive
 import Effect4.Laws.Program.RuntimeR
 import Effect4.Laws.Program.ReasonsR
 import Effect4.Laws.Program.Guard
+import Effect4.Laws.Program.LayerSharing
+import Effect4.Laws.Program.ReferenceTyping
 import Effect4.Laws.Program.Invocation
 import Effect4.Laws.Program.ValueModel
 import Effect4.Laws.Program.LinkedRows

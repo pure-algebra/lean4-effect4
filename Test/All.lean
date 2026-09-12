@@ -125,6 +125,7 @@ import Test.Program.TypeAlgebraAxiomReport
 import Test.Program.ValueModelContract
 import Test.Program.TypingCheckContract
 import Test.Program.LinkedRowsContract
+import Test.Program.LayerSharingContract
 
 /-!
 # Effect4 test battery

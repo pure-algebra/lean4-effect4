@@ -145,29 +145,25 @@ def layerCount (k : ServiceKey) : LayerTerm NativeOp :=
   .effect k (.bind (.service kRef)
     (.bind (.perform (.refUpdate .incr) (.var 0)) (.succeed (.lit (.nat 5)))))
 
-/-- The same layer term at two sites under one memo map (`Layer.merge(L, L)`): printed inline
-it is two layer objects (`Layer.ts:411`, identity by object) and here it is two paths
-(`LayerId`), so each site builds once and the cell reads `2` on both faces. What this pins is
-the memo store's protocol — one entry per site, built, completed, released and its layer scope
-closed on exit — not a hit; a hit needs one object at two sites, which no inline-printed
-program has (`docs/research/2026-09-07-join-delivery.md`). -/
+/-- Two literal copies have different LayerId paths and print separate layer objects
+(`Layer.ts:411`). Both builds run, so the root cell reads `2` on both faces. -/
 def pProvideTwice : Api.Program :=
   .bind (.perform .refMake (.lit (.nat 0)))
     (.provideService kRef (.var 0)
       (.bind (.provideLayer (.merge (layerCount kA) (layerCount kA)) false (.service kA))
         (.perform .refGet (.var 0))))
 
-/-- The memo fix (the host rows slice, 2026-09-08, DB-12 amended): one layer at two sites, the
-second a reference to the first's path — printed `const L_1_0_0_0_0 = Layer.effect(…)` then
-`Layer.merge(L_1_0_0_0_0, L_1_0_0_0_0)` — is one object in rc.112 (`Layer.ts:411`) and one
-memo key here (`resolveLayer` redirects), so the layer builds once and the cell reads `1`.
-Beside `pProvideTwice`'s `2`, the pair is the receipt. The target path: the root `bind`'s
-child `1` is the `provideService`, its child `0` the inner `bind`, its child `0` the
-`provideLayer`, its child `0` the `merge`, its child `0` the layer. -/
+/-- P2b / DI-71: a counted layer definition and two nested `ref` sites share one
+memo entry. The printer hoists one layer object (`Layer.ts:411`), and both references
+redirect to its path here. The definition is the outer provideLayer's child `0`,
+reached through bind `1`, provideService `0`, and bind `0`. The root cell reads `1`.
+Together with pProvideTwice, this compares sharing by reference with literal copies. -/
 def pDiamond : Api.Program :=
   .bind (.perform .refMake (.lit (.nat 0)))
     (.provideService kRef (.var 0)
-      (.bind (.provideLayer (.merge (layerCount kA) (.ref [1, 0, 0, 0, 0])) false (.service kA))
+      (.bind (.provideLayer (layerCount kA) false
+        (.provideLayer (.ref [1, 0, 0, 0]) false
+          (.provideLayer (.ref [1, 0, 0, 0]) false (.service kA))))
         (.perform .refGet (.var 0))))
 
 def kC : ServiceKey := ⟨⟨7⟩, ⟨4⟩⟩
@@ -699,6 +695,10 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 -- the host rows slice: the reference is well formed and typed by expansion, the diamond
 -- prints as a two-declaration block, and both read back whole
 #guard pDiamond.layerRefsWF
+#guard (pDiamond.refSites []).length = 2
+#guard (pProvideTwice.refSites []).isEmpty
+#guard (Api.run pDiamond 1000).stores.refs = [.nat 1]
+#guard (Api.run pProvideTwice 1000).stores.refs = [.nat 2]
 #guard Api.wellTyped pDiamond
 #guard Api.wellTyped pMergeAll
 #guard (Api.printModule "main" pDiamond).map (·.decls.length) = some 2
