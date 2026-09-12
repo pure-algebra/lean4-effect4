@@ -227,6 +227,19 @@ a finished run without a driver-completion premise; guard persistence for every 
 is not the key's reply, up to the key's fiber being interrupted or exited, with equality as
 the one-fiber corollary; tape completeness as the absence of host and decision reasons.
 
+**Guard reachability amendment (owner approved 2026-09-12).** Both guard laws
+start from a machine reachable from `Api.load` by the same program/table
+interpreter over an explicit prefix of decisions. The starting program, table,
+compile budget, choices and oracle answers are fixed; each prefix step has its
+explicit command budget. Every raw decision other than the matching-key reply
+remains in scope, including decisions the host protocol does not admit. Prove
+the ownership invariant excluding timer, deferred and dispatcher resumes at an
+outstanding external key. An arbitrary manually injected timer can reuse that
+key, so the unqualified arbitrary-machine law is false; the checked witness and
+owner approval are retained in the P2b receipt. The one-fiber equality has this
+same reachable scope and excludes cancellations and matching-key replies.
+`Interrupted f` remains `interruptPending f = true ∨ f.exit.isSome`.
+
 **Evaluate repair** (owner ruled 2026-09-12). Only a reply or an interruption removes a
 guard. A bare evaluate decision on a fiber parked with a guard is a no-op, as it already is
 for a running or exited fiber, and the evaluate arm's park-clearing assignment goes. Every

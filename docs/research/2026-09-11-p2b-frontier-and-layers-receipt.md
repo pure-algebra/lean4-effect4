@@ -4,7 +4,7 @@ P2b resumed on 2026-09-12 from `db17914` under the owner's accepted amendments.
 The owner also approved the two evaluate-entry helper amendments below. Commit 1
 landed as `f921bc7`; all its required gates have passed under the unchanged declared-red policy.
 The historical statement check below is retained as evidence; its stop is no
-longer the current lane status. Commit 2 has now passed its gates as recorded below; commits 3–4 remain in scope.
+longer the current lane status. Commit 2 landed as `7804fdc` with the gates recorded below; commits 3–4 remain in scope.
 
 The observation laws now name host-await priority and the separate runnable and
 fiber-exit predicates. The driver repair in commit 1 makes `Cmd.evaluate` a no-op
@@ -278,6 +278,166 @@ passed before the sweep. No gate or declared-red rule was changed.
 | `engine-tests` | PASS | 3 | hit |
 
 The final summary is [retained here](2026-09-11-p2b-frontier-and-layers-evidence/c2-final-sweep-summary.tsv). The first stopped sweep remains [separately retained](2026-09-11-p2b-frontier-and-layers-evidence/c2-first-sweep-summary.tsv). Full local outputs are in `c2-final-sweep-logs/` and `c2-sweep-retry.log`.
+
+## Commit 3 — fuel stability and reachable guard persistence
+
+Implementation and all required gates are complete on base `7804fdc`.
+This slice changes the Laws graph and records the already-approved reachability
+amendment in DI-68 and the frozen foundation contract. All runtime sources remain
+byte-identical to commit 2.
+
+The public laws are in `src/Effect4/Laws/Api/Fuel.lean` and
+`src/Effect4/Laws/Api/Guard.lean`. Their exact reports are:
+
+```text
+'Effect4.Api.finished_mono_fuel' depends on axioms: [propext, Quot.sound]
+'Effect4.Api.guard_persists' depends on axioms: [propext, Quot.sound]
+'Effect4.Api.guard_persists_single' depends on axioms: [propext, Quot.sound]
+'Effect4.Api.guard_persists_single_tape' depends on axioms: [propext, Quot.sound]
+```
+
+`finished_mono_fuel` fixes compile fuel, program, table, tape, choices, and
+initial answers. It proves equality of the entire finished `Run` after increasing
+command fuel, including stores, trace, and reasons, through `Suffices` and
+`replay_stable`.
+
+`guard_persists` starts at a machine reachable from `Api.load` under that fixed
+program/table interpreter. The reachability witness is a finite list of raw
+decisions paired with their independent command budgets. Its only restriction
+on the next decision is that it is not an answer to the protected key. The
+conclusion is the same request, or an existing fiber at that key's identity whose
+`interruptPending` is true or whose exit is present, observed after the step.
+No admission or sufficient-fuel premise is added. Cancellation is included in
+the general law.
+
+`guard_persists_single` adds one starting fiber and excludes cancellation for
+that decision. `guard_persists_single_tape` proves equality across a whole finite
+prefix with no cancellation or matching answer anywhere on it. Only its initial
+machine must be a singleton. Both permit an already-recorded or deferred
+interrupt. The key-ownership invariant needed by the approved amendment is now
+proved for every reachable machine; it is not a public assumption.
+
+Proof graph, through `src/Effect4/Laws/Program/Guard/`:
+
+- `guardState_load` establishes allocated key bounds, external/internal key
+  separation, valid pending guards, frame ownership, and safe stored task code.
+- Native evaluation preserves the stored machine and returned fiber. Settlement
+  connects both halves and transports the existing command tail. Generated
+  commands have the required active owner. An internal `RegistrationQueue`
+  predicate records the later registration-return command for each launch;
+  the driver proves and preserves it rather than requiring it of API callers.
+- The individual command proofs, including observers, interruption, races, and
+  scope/exit completion, establish `driveStep_invariants`,
+  `driveState_invariants`, `reservedKeys_driveState`,
+  `interruptedAt_driveState`, and `requestOrInterrupted_driveState`.
+- Dispatcher snapshots retain their removed keys as reservations while tasks
+  run. `fireState_preserved`, `flushAllState_preserved`, and
+  `advanceState_preserved` lift the command proof through the outer loops.
+- Raw answers handle their first resume before entering the reserved command
+  queue. Together with evaluation, verdicts, middleware installation and raw
+  interruption, these establish `guardState_steppedBy` and
+  `requestOrInterrupted_steppedBy` for every raw decision.
+- `guardState_executePrefix`, `guardState_reachable`, and
+  `requestsOwned_reachable` discharge the reachability premise; the public
+  wrappers use those proofs. The singleton prefix proof keeps the protected
+  guard inert without requiring a fresh induction premise at each tape entry.
+
+The complete [theorem axiom receipt](2026-09-11-p2b-frontier-and-layers-evidence/c3-theorem-axioms.md)
+contains the exact `#print axioms` output for all 3,590 theorem declarations from
+the new law modules, including private and compiler-generated declarations.
+The audit command and exit 0 are recorded there. Every reported dependency is
+within `[propext, Quot.sound]`. Earlier scratch elaboration logs remain under
+the evidence directory; they are not gate evidence. No additional public law
+amendment was needed after the owner's accepted reachability ruling.
+
+### Commit 3 generated artifacts and checks
+
+`bash scripts/generate.sh` exited 0. Its dependency-ordered driver reports all
+557 artifacts in its requested families current, so it rewrites none. A check
+against `7804fdc` confirms that all 617 mapped generated artifacts, their stamps,
+and their payloads are unchanged (`c3-frozen-surfaces.log`). There are no moved
+`.ty` golden paths or printed types/programs. Truth tapes, `result.json`, the
+manifest, `docs/GENERATED.md`, runtime source, and both gate-policy files are
+unchanged. No generated file was edited by hand.
+
+Checks completed before the full sweep:
+
+- `LEAN_NUM_THREADS=3 lake build`: exit 0, 353 jobs
+  (`c3-lake-build.log`). Its fresh module/axiom gate checks 320 modules and
+  49,261 declarations; every library source is reachable through 94 API/utility
+  and 92 Laws-only modules, and the runtime root never reaches Laws. The
+  semantic/test ceiling is `[propext, Quot.sound]`; the existing exact rendering
+  allowance remains 36 declarations across seven modules.
+- Focused final public guard build: exit 0, 129 jobs
+  (`c3-public-guard-build.log`), including the three public guard reports above.
+- `EFFECT4_FORCE=1 LEAN_NUM_THREADS=2 bash scripts/check-truth.sh`: exit 0,
+  all 31 programs agree with rc.112 on exits and schedules; regenerated modules
+  type-check (`c3-truth-direct.log`).
+- `LEAN_NUM_THREADS=2 bash scripts/check-host-protocol.sh`: exit 0, 57 runs,
+  52 programs, 29 controls; exact exits and keyed applications agree
+  (`c3-host-direct.log`). The existing bare-evaluate regression retains the
+  original request/token and accepts the later reply for that key.
+- `git diff --check`: exit 0. `git fetch`: exit 0. No push.
+
+`EFFECT4_FORCE=1 bash scripts/check-ocaml.sh engine-tests` and `dune-tests`
+both exited 0. The explicit `opam exec --switch=effect4 -- dune test --force engine`
+run also exited 0: 559 programs, 3,472 tapes, 76,682 positions, 153,364
+projection comparisons, zero divergences, 23 layout checks. Its tool capture is
+retained as a truncated excerpt in `c3-engine-forced-tail.log`; the ordinary gate
+result is in `c3-engine-direct.log`. A forced `dune test --force eff gen` exited 0
+with 760 Eff checks, 6,250 wire checks, and zero failures (`c3-dune-forced.log`).
+
+The engine's separate, ungated truth-crossface diagnostic still reports
+`pAcquire` and `pProvide` as different, exactly as recorded in commit 2's
+`c2-final-engine-direct.log`. This diagnostic is not counted as layout agreement
+or as the 31-program rc.112 truth gate. No gate or declared-red policy changed.
+
+### Commit 3 final gate output
+
+`bash scripts/sweep.sh` exited 0: all 18 gates were accepted in 353 seconds,
+with seven stamp hits and eleven misses. Only `generated-stale` is declared red,
+under the unchanged policy. The [retained sweep table](2026-09-11-p2b-frontier-and-layers-evidence/c3-sweep-summary.tsv)
+and `c3-sweep.log` record the result. Stamp hits are reported as hits; the separate
+fresh truth/host and forced OCaml runs above supply fresh execution evidence.
+
+```text
+sweep: every gate, one process at a time
+generated-stale          DECLARED    1s  miss
+library-roots            PASS   40s  miss
+source-citations         PASS    1s  miss
+internal-citations       PASS   96s  miss
+effect-runtime-census    PASS    0s  hit
+ts-eff                   PASS    1s  hit
+conform                  PASS   35s  miss
+generated                PASS    2s  miss
+schema-typescript        PASS   57s  miss
+schema-codec             PASS    2s  miss
+ts-eff-corpus            PASS    1s  hit
+ingest                   PASS    3s  hit
+host-protocol            PASS   82s  miss
+truth                    PASS    0s  hit
+streams                  PASS   10s  miss
+gen-check                PASS   13s  miss
+dune-tests               PASS    6s  hit
+engine-tests             PASS    3s  hit
+sweep: 18 gates, 7 hit, 11 miss, 353s total; table in .lake/sweep-summary.tsv
+PASS every gate under the declared-red policy; declared failures are listed above
+```
+
+After the passing sweep, staging exposed one trailing space in
+`Guard/ControlRemainder.lean` and one extra blank line at the end of
+`Guard/Interruption.lean`. Only those whitespace bytes changed. The subsequent
+353-job build and the 3,590-theorem audit both passed with the same results
+(`c3-final-format-build.log`, `c3-axiom-audit-final.log`); the staged whitespace
+check passed. A second full sweep was started unnecessarily for these cosmetic
+changes and was stopped after the owner called out the redundant verification.
+Its partial `c3-final-sweep.log` is not completion evidence; the passing full
+sweep and retained table above remain the commit's sweep evidence.
+
+No commit-3 proof obligation remains open. Commit 2's separately allowed
+compile-frontier book obligation remains as recorded in that slice; commit 4's
+layer-sharing work is next. No files were pushed.
+
 
 ## Commit 1 statement dependency — explicit unparked premise required
 
