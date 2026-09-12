@@ -65,6 +65,19 @@
       "Guards": "tools\\Effect4Gen\\guards\\pin.lean",
       "Kinds": ["Effect4.Store.Pin=source", "Effect4.Store.Tree=tree"],
       "Types": ["Effect4.Store.PinRole", "Effect4.Store.Pin", "Effect4.Store.Tree"]
+    },
+    {
+      "Name": "Api",
+      "Imports": "Effect4.Api.Frontier,Effect4.Store.Canonical",
+      "Out": "src\\Effect4\\Api\\Derived.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\api.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.FiberId",
+        "Effect4.Api.HostProtocol.Key",
+        "Effect4.Machine.Exhaustion",
+        "Effect4.Api.FrontierReason"
+      ]
     }
   ]
 }

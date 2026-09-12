@@ -41,7 +41,7 @@ example (p : Point) : RSig.Answer (.inr (.suspend p)) = Val := rfl
 example (v : Val) : RSig.Answer (.inr (.sync v)) = Val := rfl
 example (p : Point) : RSig.Answer (.inr (.gen p)) = ExitV := rfl
 example (p : Point) (cursor : Val) : RSig.Answer (.inr (.loop p cursor)) = ExitV := rfl
-example (reason : FrontierReason) (p : Point) : RSig.Answer (.inr (.frontier reason p)) = ExitV := rfl
+example (reason : PendingReason) (p : Point) : RSig.Answer (.inr (.frontier reason p)) = ExitV := rfl
 
 -- E4-SCHED-CE-002: the scout's proposed collision is false; success adds `exitOk`.
 theorem exit_encoding_distinguishes (c : CauseV) :

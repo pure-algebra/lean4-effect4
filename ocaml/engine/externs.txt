@@ -83,6 +83,8 @@ fn Effect4.Machine.RunMachine.fiber? 2 sh_machine_fiber
 fn Effect4.Machine.RunMachine.update 2 sh_machine_update
 fn Effect4.Machine.RunMachine.finished 1 sh_machine_finished
 fn Effect4.Machine.RunMachine.completedExits 1 sh_machine_completed_exits
+# P2b frontier observations read the fiber view through its existing ordered projection.
+ops F.t to_list F.to_list
 fn Effect4.Machine.spawn._at_.Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_0.spec_1.spec_3 5 sh_spawn
 fn Effect4.Machine.spawn._at_.Effect4.Machine.launchEntrant._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_12.spec_19 5 sh_spawn
 fn Effect4.Machine.spawn 6 sh_spawn_generic run_fiber_make

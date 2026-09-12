@@ -39,7 +39,7 @@ namespace Effect4.Program.Sched
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote
 
 /-- A live frontier at a point. -/
-def pending (reason : FrontierReason) (at_ : Point) : RProgram :=
+def pending (reason : PendingReason) (at_ : Point) : RProgram :=
   .vis (.inr (.frontier reason at_)) Effects.Program.pure
 
 /-- Value continuations short-circuit on a failed exit. -/

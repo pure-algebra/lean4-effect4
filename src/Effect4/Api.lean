@@ -1,4 +1,5 @@
 import Effect4.Program.Admit
+import Effect4.Api.Derived
 import Effect4.Program.Packages
 import Effect4.Program.Wire
 import Effect4.Codegen.Print
@@ -172,10 +173,11 @@ inductive Outcome
   | stuck (why : Stuck)
 deriving DecidableEq, Repr
 
-/-- A run: how it ended and the machine it ended in. -/
+/-- A run: its outcome, final machine and live frontier reasons. -/
 structure Run where
   outcome : Outcome
   machine : Machine
+  reasons : List FrontierReason
 
 /-- Replay a host decision tape against the program. **Raw**: this entry point checks
 nothing. It does not type the program, does not check the supplied table's names
@@ -190,9 +192,19 @@ def replay (program : Program) (fuel : Nat) (tape : List Decision) (choices : Li
     Run :=
   letI := evaluatorFor program table
   match replayEval (interpOf program table) fuel tape (load program compileFuel choices answers) with
-  | ReplayResult.finished m => ⟨Outcome.finished, m⟩
-  | ReplayResult.frontier _ m => ⟨Outcome.frontier, m⟩
-  | ReplayResult.stuck why m => ⟨Outcome.stuck why, m⟩
+  | ReplayResult.finished m => ⟨Outcome.finished, m, []⟩
+  | ReplayResult.frontier why m => ⟨Outcome.frontier, m, frontierReasons why m⟩
+  | ReplayResult.stuck why m => ⟨Outcome.stuck why, m, []⟩
+
+/-- Completeness of this tape observation at explicit command and compile budgets.
+It excludes outstanding host replies and a missing runnable decision; timers and
+exhaustion remain observable and this predicate does not assert termination. -/
+def Tape.Complete (program : Program) (table : RowTable) (tape : List Decision)
+    (fuel : Nat) (choices : List Bool := [])
+    (answers : List (Completion Val Err Defect FiberId Ann) := [])
+    (compileFuel : Nat := fuel) : Prop :=
+  let reasons := (replay program fuel tape choices answers table compileFuel).reasons
+  (∀ key, FrontierReason.awaitHost key ∉ reasons) ∧ FrontierReason.awaitDecision ∉ reasons
 
 /-- The decision that starts every run: the root evaluated synchronously. -/
 def evaluate : Decision := RunDecision.evaluate root
@@ -249,9 +261,9 @@ def replayChecked (program : Program) (fuel : Nat) (tape : List Decision)
   match Program.replayCheckedFrom program fuel answers table 0 tape
       (load program fuel choices answers) with
   | .inr refusal => .inr refusal
-  | .inl (.finished m) => .inl ⟨.finished, m⟩
-  | .inl (.frontier _ m) => .inl ⟨.frontier, m⟩
-  | .inl (.stuck why m) => .inl ⟨.stuck why, m⟩
+  | .inl (.finished m) => .inl ⟨.finished, m, []⟩
+  | .inl (.frontier why m) => .inl ⟨.frontier, m, frontierReasons why m⟩
+  | .inl (.stuck why m) => .inl ⟨.stuck why, m, []⟩
 
 /-- The external frontiers after each decision, with their row and request. -/
 def replaySteps (program : Program) (fuel : Nat) (tape : List Decision)

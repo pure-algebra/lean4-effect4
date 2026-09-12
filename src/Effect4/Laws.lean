@@ -23,6 +23,7 @@ import Effect4.Laws.Program.ScopedTyping
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Program.HostBoundary
 import Effect4.Laws.Api.HostSession
+import Effect4.Laws.Api.Frontier
 import Effect4.Laws.Program.Handles
 import Effect4.Laws.Program.Means
 import Effect4.Laws.Program.Intro
@@ -36,6 +37,7 @@ import Effect4.Laws.Program.Simulation.Evaluate
 import Effect4.Laws.Program.Simulation.Pending
 import Effect4.Laws.Program.Simulation.Drive
 import Effect4.Laws.Program.RuntimeR
+import Effect4.Laws.Program.ReasonsR
 import Effect4.Laws.Program.Invocation
 import Effect4.Laws.Program.ValueModel
 import Effect4.Laws.Program.LinkedRows

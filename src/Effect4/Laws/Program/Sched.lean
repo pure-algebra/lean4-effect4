@@ -57,9 +57,9 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote
 /-! ## The fiber signature -/
 
 /-- Why a denotation cannot yet supply a result. None is an exit or a cause. -/
-inductive FrontierReason
+inductive PendingReason
   | compileFuel
-  | unansweredChoice
+  /-- Unreachable at the empty-table replay entry; retained for unsupported denotation inputs. -/
   | unsupported
 deriving DecidableEq
 
@@ -140,7 +140,7 @@ inductive FiberOp : Type
   /-- The walk's counted `Iterator` entry (`:1356-1372`; §20): the sequential generator from
   its first finalizer, or the parallel step. Answers the walk's exit. -/
   | closeIter (strategy : FinalizerStrategy) (order : List FinName) (exit : ExitV)
-  | frontier (reason : FrontierReason) (at_ : Point)
+  | frontier (reason : PendingReason) (at_ : Point)
   /-- `none` enters the body; `some exit` resumes outside its saved boundary. -/
   | guard_ (kind : GuardKind)
   | unguard (exit : ExitV)

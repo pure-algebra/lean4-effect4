@@ -182,9 +182,9 @@ def machineOf (p : NativeEff) : Api.Machine := Api.load p fuel
 /-- A replay at machine fuel `f`, the compile fuel held at `fuel`. -/
 def runAt (p : NativeEff) (f : Nat) (tape : List Api.Decision) : Api.Run :=
   match replayEval (interpOf p) f tape (machineOf p) with
-  | ReplayResult.finished m => ⟨Api.Outcome.finished, m⟩
-  | ReplayResult.frontier _ m => ⟨Api.Outcome.frontier, m⟩
-  | ReplayResult.stuck why m => ⟨Api.Outcome.stuck why, m⟩
+  | ReplayResult.finished m => ⟨Api.Outcome.finished, m, []⟩
+  | ReplayResult.frontier why m => ⟨Api.Outcome.frontier, m, Api.frontierReasons why m⟩
+  | ReplayResult.stuck why m => ⟨Api.Outcome.stuck why, m, []⟩
 
 /-- `0` finished, `1` frontier, `2` stuck. -/
 def tag : Api.Outcome → Nat

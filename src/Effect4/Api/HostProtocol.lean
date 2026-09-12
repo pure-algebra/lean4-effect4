@@ -9,11 +9,6 @@ set_option autoImplicit false
 namespace Effect4.Api.HostProtocol
 open Effect4 Effect4.Machine Effect4.Program
 
-structure Key where
-  fiber : FiberId
-  token : Nat
-deriving DecidableEq, Repr
-
 inductive State
   | idle | awaitingAsync | parked | terminated
 deriving DecidableEq, Repr

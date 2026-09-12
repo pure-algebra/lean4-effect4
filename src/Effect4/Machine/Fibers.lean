@@ -2119,6 +2119,7 @@ end stepDecision
 inductive Exhaustion
   | fuel
   | tape
+deriving DecidableEq, Repr
 
 inductive ReplayResult (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St : Type (max u v))
     (κ : Type (max u v) := Prim ν σ β ε δ ι α)

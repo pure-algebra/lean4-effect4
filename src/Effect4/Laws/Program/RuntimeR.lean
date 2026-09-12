@@ -83,7 +83,7 @@ theorem evaluateR_pure (interp : RInterp) (m : RState) (f : RFiber) (yielding : 
       prepareIterR (deliverR interp m (answerR f (.pure ex)) yielding ex) := rfl
 
 theorem evaluateR_frontier (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool)
-    (reason : FrontierReason) (at_ : Point) (k : ExitV → RProgram) :
+    (reason : PendingReason) (at_ : Point) (k : ExitV → RProgram) :
     evaluateR interp m (answerR f (.vis (.inr (.frontier reason at_)) k)) yielding =
       ⟨m, answerR f (.vis (.inr (.frontier reason at_)) k), yielding, .continue_, []⟩ := rfl
 

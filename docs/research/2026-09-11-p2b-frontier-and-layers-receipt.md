@@ -2,9 +2,9 @@
 
 P2b resumed on 2026-09-12 from `db17914` under the owner's accepted amendments.
 The owner also approved the two evaluate-entry helper amendments below. Commit 1
-is complete and all its required gates have passed under the unchanged declared-red policy.
+landed as `f921bc7`; all its required gates have passed under the unchanged declared-red policy.
 The historical statement check below is retained as evidence; its stop is no
-longer the current lane status. Commits 2–4 remain in scope.
+longer the current lane status. Commit 2 has now passed its gates as recorded below; commits 3–4 remain in scope.
 
 The observation laws now name host-await priority and the separate runnable and
 fiber-exit predicates. The driver repair in commit 1 makes `Cmd.evaluate` a no-op
@@ -17,6 +17,267 @@ a suspended fiber (`internal/effect.ts:599–628`, `:1118–1132`).
 guard-persistence law quantifies over every non-answer decision, as ruled; it
 is not restricted to protocol-admitted decisions. Production ruling and contract
 changes were already recorded in `db17914` before this resumption.
+
+## Commit 2 — observed frontier reasons
+
+Commit 1 is `f921bc7`. The second slice adds `Api.FrontierReason` and
+`Api.frontierReasons`; `Run.reasons` receives the frontier projection while
+`Outcome` keeps its exact declaration. Finished and stuck replays have no
+frontier reason list. The observation laws concern `frontierReasons why m` for
+an explicit exhaustion tag; none equates the protocol's aggregate termination
+observation with driver completion.
+
+The generated Api group lists `FiberId`, `HostProtocol.Key`, `Exhaustion`, and
+`FrontierReason` in dependency order. `Key` retains its namespace and fields but
+moves beside the frontier alphabet to avoid an API import cycle. Its canonical
+instances are emitted by the existing driver; no handwritten instance was
+substituted. `Tape.Complete` takes the dispatched program/table/tape
+prefix and explicit command fuel, choices, answers and compile fuel: the
+ellipsis in the packet is resolved by retaining those replay inputs. Its
+condition is exactly absence of host and decision reasons at that observation;
+it is not a termination or timer-completion certificate.
+
+Proof dependencies:
+
+- `Program.awaits` → `hostReasons` → `awaitHost_mem`, `exists_awaitHost_iff`.
+- `hasRunnable` and the exact exhaustion tag → `awaitDecision_iff`,
+  `commandFuel_iff`; the aggregate exit predicate → `all_exited_not_runnable`.
+- Those predicates and the unchanged `HostProtocol.observe` priority →
+  the four `observe_*_iff` laws and `observe_of_reasons`.
+- `BookMeans` relates current external requests, fiber identity/park/exit and
+  stores → `requestOf_eq_ref`, `awaits_eq_ref`, `hasRunnable_eq_ref`,
+  `hostReasons_eq_ref`, `timerReasons_eq_ref`.
+- `ReplayRel`'s equal exhaustion tags and that book relation →
+  `replayRel_reasons_nonCompile` → public `reasons_eq_ref` after dropping only
+  compile-fuel reasons. `run_eq_ref` keeps its original statement.
+
+The reference pending alphabet is renamed `PendingReason`; the unused
+`unansweredChoice` constructor is removed, and `unsupported` keeps the required
+empty-table comment. `reasonsR` projects actual pending compile markers.
+
+**Separate compile observation obligation, as allowed by the dispatch:**
+`CompileBook` requires equal per-fiber compile-frontier observations. Under it,
+`compileReasons_eq_ref` and `book_reasons_eq_ref` provide full reason equality.
+The existing raw `CodeMeans.frontier` permits any pending reason; a native
+zero-fuel suspension can therefore be related to a reference `unsupported`
+marker. The checked draft witness `rawReplayRel_insufficient_for_full_reasons`
+shows why the raw book alone cannot discharge `CompileBook`. It does not assert
+that the witness is reachable. Proving this stronger per-fiber invariant for
+reachable replays remains a separately named obligation; host, timer, command
+fuel and decision reason equality is delivered independently, as authorized.
+
+The truth generator checks the amended observation equations for all 31 corpus
+programs with their actual table and recorded replies; its JSON format is
+unchanged. Generated-file stamps, final axiom output and gate results are recorded below.
+
+### Commit 2 generation and final gates
+
+The corrected generation sequence completed with exit 0 throughout:
+`lake build`, `bash scripts/generate.sh --only derived`,
+`bash scripts/generate.sh`, `bash scripts/generate.sh --only lcnf`,
+`python3 scripts/generate-engine-structure.py`,
+`bash scripts/generate-host-protocol.sh`, the existing Lean truth generator and
+the existing Bun rc.112 recorder. Logs use the `c2-projection-` prefix.
+The recorder reports 31 programs with matching exits and schedules.
+`bash scripts/check-ocaml.sh gen-check` then passes, including the exact lexical
+check that stopped the first sweep. The full sweep retry passes all 18 gates under the unchanged declared-red policy.
+
+The [generated inventory](2026-09-11-p2b-frontier-and-layers-evidence/c2-generated-inventory.md)
+records all 344 changed generated paths with their revision, toolchain, input
+stamp and SHA-256. Only three artifacts change beyond provenance:
+`src/Effect4/Api/Derived.lean`, `ocaml/gen/api_gen.ml`, and
+`ocaml/engine/api_engine.ml`. No `.ty` payload, printed program, truth tape or
+`result.json` payload changes. `Outcome` and the `run_eq_ref` statement were
+compared directly against `f921bc7` and are identical; the frozen type/program/
+compiler files and both gate-policy files are unchanged (`c2-frozen-surfaces.log`).
+
+`git diff --check` reports 13 whitespace-only lines in generated
+`ocaml/engine/api_engine.ml` (exit 2, `c2-projection-diff-check.log`). They were
+emitted by the existing generator and were not edited by hand. This diagnostic
+is retained separately from the required gates.
+
+The final `bash scripts/check-ocaml.sh engine-tests` also ran independently
+while ingest was in progress and exited 0 (`c2-final-engine-direct.log`). Its
+existing layout differential reports 559 programs, 3,472 tapes, 76,682 positions,
+153,364 projection comparisons and zero divergences (23 checks); all other
+engine binaries in that gate pass as well. These are the existing bounded
+projection checks. The separate truth gate owns the 31-program rc.112 claim;
+`result.json` and its comparator do not gain reason fields in this lane.
+
+The final independent truth gate exited 0 (`c2-final-truth-direct.log`): all
+31 programs agree with rc.112 on exits and schedules, and the freshly generated
+modules type-check. `bash scripts/check-ocaml.sh dune-tests` also exited 0
+(`c2-final-dune-direct.log`), with 760 Eff checks and zero failures. These runs
+use the same final source and generated bytes as the sweep; ordinary stamp hits
+may therefore reuse them in its remaining slots.
+
+### Commit 2 focused verification
+
+The first complete sweep stopped at its sixteenth gate, `gen-check`, after the
+fresh truth gate (31 programs) and keyed host gate passed. Its C1 lexical check
+rejected both new `m.fibers.filter` read projections as potential deletion of a
+fiber table. Neither projection was written back to a machine. The gate itself
+already distinguishes `filterMap` as a read (its comment names `completedExits`
+as the precedent). Both compile-reason projections now directly produce optional
+reasons with `filterMap`; the gate and its policy are unchanged. Their theorem
+statements are unchanged. The failed sweep and exact diagnostic are retained in
+`c2-sweep.log`, `c2-first-sweep-summary.tsv` and `c2-first-sweep-logs/gen-check.log`.
+The two gates after gen-check were not run by that stopped sweep. Fresh build,
+regeneration and the full sweep after this correction all passed.
+`C2ProjectionEquivalence.lean` proves the direct projections equal to the old
+filter-then-map expressions for every machine; all three printed names use only
+`propext` (`c2-projection-equivalence.log`, exit 0). The corrected full build
+again passed all 316 jobs and the 283-module/44,539-declaration audit
+(`c2-projection-build-all.log`, exit 0).
+
+
+The first engine-mirror generation refused three new list-observation sites:
+`compileReasons`, `hasRunnable`, and `Program.awaits` needed a `to_list`
+operation for the abstract fiber carrier. The existing FIBERS signature and
+implementation already provide that ordered read. `ocaml/engine/externs.txt`
+now declares `ops F.t to_list F.to_list`; regeneration uses this existing
+adapter. No generated file or carrier implementation was edited by hand.
+The initial fatal closure diagnostic remains in `c2-generate-lcnf.log`.
+
+The corrected full build passes: `LEAN_NUM_THREADS=3 lake build`, exit 0,
+316 jobs. The module and axiom gate checks 283 modules and 44,539 declarations
+at the unchanged semantic/test ceiling; the seven-module, 36-declaration exact
+rendering allowance is unchanged (`c2-lake-build-retry.log`). The final sweep includes accepted host, truth and OCaml gates after regeneration.
+
+The new Api generator group completed successfully, including its exact decoding,
+shape and round-trip guards. All four carriers were accepted by the existing
+driver. The generated source is `src/Effect4/Api/Derived.lean`, with revision
+`f921bc7-dirty`, toolchain `4.33.1`, and input stamp
+`c0b468dcf2057d661770746a71d0afccb3b31452f134c292cd405c0e31a509cb`.
+The API imports that generated module; no manual instances were added.
+
+The final frontier battery and the truth generator's observation checks both
+completed with exit 0 (`c2-frontier-battery.log`, `c2-truth-observations.log`).
+The compile-fuel-1 fixture reports `[commandFuel, compileFuel root]`: the
+zero-fuel source suspension remains current while the command budget runs out.
+It does not report tape exhaustion or awaitDecision. The original test draft
+incorrectly expected awaitDecision; the observed tag and current program point
+were checked before correcting that draft expectation. The dispatched requirement
+that compile exhaustion be reported is met.
+
+Failed elaboration attempts remain in their logs: an internal equality in
+`run_eq_meaning` needed the newly added empty reasons field (its theorem statement
+is unchanged); two reference projection proofs needed a final case split on the
+tag after simplification; the new battery needed its API namespace qualified.
+The first full build also found the three direct run constructors in the
+approximation battery; they now record the same reasons as the API. Its other
+compiled targets passed. The initial generator invocation used the wrong
+argument form and exited 2;
+`bash scripts/generate.sh --only derived` succeeded. A scratch fuel proof read a
+module during the generator's replacement window, then passed on retry. None of
+those failed attempts is counted as proof or gate evidence.
+
+Direct `#print axioms` for the new observation and reference laws, exit 0:
+
+```text
+'Effect4.Api.awaitHost_mem' depends on axioms: [propext, Quot.sound]
+'Effect4.Api.awaitDecision_iff' depends on axioms: [propext, Quot.sound]
+'Effect4.Api.commandFuel_iff' depends on axioms: [propext, Quot.sound]
+'Effect4.Api.exists_awaitHost_iff' depends on axioms: [propext, Quot.sound]
+'Effect4.Api.all_exited_not_runnable' depends on axioms: [propext, Quot.sound]
+'Effect4.Api.observe_awaitingAsync_iff' depends on axioms: [propext, Quot.sound]
+'Effect4.Api.observe_terminated_iff' depends on axioms: [propext, Quot.sound]
+'Effect4.Api.observe_idle_iff' depends on axioms: [propext, Quot.sound]
+'Effect4.Api.observe_idle_tape_iff' depends on axioms: [propext, Quot.sound]
+'Effect4.Api.observe_of_reasons' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Sched.listRel_any' depends on axioms: [propext]
+'Effect4.Program.Sched.listRel_filterMap' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Sched.listRel_filter_map' depends on axioms: [propext]
+'Effect4.Program.Sched.hasRunnable_eq_ref' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Sched.externalRequest_eq_ref' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Sched.requestOf_eq_ref' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Sched.awaits_eq_ref' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Sched.hostReasons_eq_ref' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Sched.timerReasons_eq_ref' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Sched.filter_compile_map' depends on axioms: [propext]
+'Effect4.Program.Sched.filter_compileReasons' depends on axioms: [propext]
+'Effect4.Program.Sched.filter_compileReasonsR' depends on axioms: [propext]
+'Effect4.Program.Sched.book_reasons_nonCompile' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Sched.frontier_reasons_nonCompile' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Sched.replayRel_reasons_nonCompile' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Sched.replayReasons_eq_ref' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Sched.compileReasons_eq_ref' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Sched.book_reasons_eq_ref' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Sched.replay_reasons' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Sched.reasons_eq_ref' depends on axioms: [propext, Quot.sound]
+```
+
+The generated Api carrier laws were audited by exact name, exit 0
+(`c2-carrier-axioms.log`). The fresh observation/reference report after the
+projection repair is `c2-projection-axioms.log`, exit 0.
+
+```text
+'Effect4.Store.ApiGen.FiberIdC.ofVal_toVal' depends on axioms: [propext]
+'Effect4.Store.ApiGen.FiberIdC.ofVal_exact' depends on axioms: [propext]
+'Effect4.Store.ApiGen.FiberIdC.lift_Nat' depends on axioms: [propext, Quot.sound]
+'Effect4.Store.ApiGen.FiberIdC.fits' depends on axioms: [propext, Quot.sound]
+'Effect4.Store.ApiGen.FiberIdC.instCanonical' depends on axioms: [propext, Quot.sound]
+'Effect4.Store.ApiGen.KeyC.ofVal_toVal' depends on axioms: [propext, Quot.sound]
+'Effect4.Store.ApiGen.KeyC.ofVal_exact' depends on axioms: [propext, Quot.sound]
+'Effect4.Store.ApiGen.KeyC.lift_FiberId' depends on axioms: [propext, Quot.sound]
+'Effect4.Store.ApiGen.KeyC.lift_Nat' depends on axioms: [propext, Quot.sound]
+'Effect4.Store.ApiGen.KeyC.fits' depends on axioms: [propext, Quot.sound]
+'Effect4.Store.ApiGen.KeyC.instCanonical' depends on axioms: [propext, Quot.sound]
+'Effect4.Store.ApiGen.ExhaustionC.ofVal_toVal' depends on axioms: [propext]
+'Effect4.Store.ApiGen.ExhaustionC.ofVal_exact' depends on axioms: [propext]
+'Effect4.Store.ApiGen.ExhaustionC.fits' depends on axioms: [propext]
+'Effect4.Store.ApiGen.ExhaustionC.instCanonical' depends on axioms: [propext]
+'Effect4.Store.ApiGen.FrontierReasonC.ofVal_toVal' depends on axioms: [propext, Quot.sound]
+'Effect4.Store.ApiGen.FrontierReasonC.ofVal_exact' depends on axioms: [propext, Quot.sound]
+'Effect4.Store.ApiGen.FrontierReasonC.lift_FiberId' depends on axioms: [propext, Quot.sound]
+'Effect4.Store.ApiGen.FrontierReasonC.lift_Key' depends on axioms: [propext, Quot.sound]
+'Effect4.Store.ApiGen.FrontierReasonC.lift_Nat' depends on axioms: [propext, Quot.sound]
+'Effect4.Store.ApiGen.FrontierReasonC.fits' depends on axioms: [propext, Quot.sound]
+'Effect4.Store.ApiGen.FrontierReasonC.instCanonical' depends on axioms: [propext, Quot.sound]
+```
+
+The new timer-completeness battery also prints:
+
+```text
+'Test.Api.FrontierContract.sleeping_complete' depends on axioms: [propext, Quot.sound]
+```
+
+The fresh keyed host gate reports 57 actual rc.112 runs, 52 admitted printed
+programs and 29 controls; exact exits and keyed applications agree. The fresh
+closure/axiom audit reports 94 API/utility modules, 55 Laws-only modules, and
+283 audited modules containing 44,539 declarations. Its exact pre-existing
+seven-module, 36-declaration rendering allowance is unchanged. All new laws
+reported above remain within `[propext, Quot.sound]`.
+
+### Commit 2 final gate output
+
+`LEAN_NUM_THREADS=3 bash scripts/sweep.sh` exited 0. The only declared red is
+`generated-stale`, exactly as before this lane. A stamp hit is the existing
+content-based gate policy; the focused corrected `gen-check` ran freshly and
+passed before the sweep. No gate or declared-red rule was changed.
+
+| Gate | Status | Seconds | Stamp |
+| --- | --- | ---: | --- |
+| `generated-stale` | DECLARED | 1 | miss |
+| `library-roots` | PASS | 26 | miss |
+| `source-citations` | PASS | 1 | miss |
+| `internal-citations` | PASS | 118 | miss |
+| `effect-runtime-census` | PASS | 31 | miss |
+| `ts-eff` | PASS | 0 | hit |
+| `conform` | PASS | 47 | miss |
+| `generated` | PASS | 6 | miss |
+| `schema-typescript` | PASS | 98 | miss |
+| `schema-codec` | PASS | 5 | miss |
+| `ts-eff-corpus` | PASS | 28 | miss |
+| `ingest` | PASS | 699 | miss |
+| `host-protocol` | PASS | 76 | miss |
+| `truth` | PASS | 0 | hit |
+| `streams` | PASS | 5 | miss |
+| `gen-check` | PASS | 3 | hit |
+| `dune-tests` | PASS | 3 | hit |
+| `engine-tests` | PASS | 3 | hit |
+
+The final summary is [retained here](2026-09-11-p2b-frontier-and-layers-evidence/c2-final-sweep-summary.tsv). The first stopped sweep remains [separately retained](2026-09-11-p2b-frontier-and-layers-evidence/c2-first-sweep-summary.tsv). Full local outputs are in `c2-final-sweep-logs/` and `c2-sweep-retry.log`.
 
 ## Commit 1 statement dependency — explicit unparked premise required
 

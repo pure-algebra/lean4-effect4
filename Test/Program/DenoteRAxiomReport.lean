@@ -4,7 +4,7 @@ import Test.Program.DenoteRContract
 /-! Fresh dependency receipts for R2 as restated by P2; the whole-tree gate enforces the
 ceiling. -/
 
-#print axioms Effect4.Program.Sched.FrontierReason
+#print axioms Effect4.Program.Sched.PendingReason
 #print axioms Effect4.Program.Sched.FiberOp.answer
 #print axioms Effect4.Program.Sched.pending
 #print axioms Effect4.Program.Sched.guardR

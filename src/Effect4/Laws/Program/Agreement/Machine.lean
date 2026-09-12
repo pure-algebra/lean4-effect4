@@ -1808,7 +1808,7 @@ theorem run_eq_meaning (e : NativeEff) (fuel : Nat) (hs : Straight e = true)
   obtain ⟨fr, k', tr', nt', hrep⟩ := replay_Mexit e fuel hpl hd hfuel
   have hrun_eq : Api.run e fuel =
       ⟨Api.Outcome.finished,
-        Mexit e (meaning e [] Stores.empty).1 fr (meaning e [] Stores.empty).2 k' tr' nt'⟩ := by
+        Mexit e (meaning e [] Stores.empty).1 fr (meaning e [] Stores.empty).2 k' tr' nt', []⟩ := by
     unfold Api.run Api.replay
     rw [hrep]
   refine ⟨?_, ?_, ?_⟩

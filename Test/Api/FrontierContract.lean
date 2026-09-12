@@ -1,4 +1,6 @@
-import Effect4.Api
+import Effect4.Laws.Api.Frontier
+import Effect4.Laws.Program.ReasonsR
+import Effect4.Program.Profile
 
 /-! P2b: distinguish the driver's two exhaustion sites and pin compile fuel
 independently of command fuel. Host-guard regression is in HostSessionContract. -/
@@ -31,4 +33,42 @@ theorem tape_exhaustion : exhaustionTag 40 [] = 1 := by decide
 
 #print axioms command_exhaustion
 #print axioms tape_exhaustion
+def sleeping : Api.Program := .callback .sleep (.lit (.nat 4))
+def waiting : Api.Program := .callback (.external 0) (.lit (.nat 7))
+def waitTable : RowTable := [Profile.Scalar.waitRow]
+
+#guard (Api.run sleeping 100).reasons = [.awaitTimer Api.root 4]
+#guard (Api.run waiting 100 [] [] waitTable).reasons = [.awaitHost ⟨Api.root, 0⟩]
+#guard (Api.replay program 100 []).reasons = [.awaitDecision]
+#guard (Api.replay program 0 [Api.evaluate] [] [] [] 32).reasons = [.commandFuel]
+#guard (Api.replay nested 100 [Api.evaluate] [] [] [] 1).reasons =
+  [.commandFuel, .compileFuel Api.root]
+#guard (Api.run program 100).reasons = []
+#guard (Api.replay waiting 100 [Api.evaluate, Api.evaluate] [] [] waitTable).reasons =
+  [.awaitHost ⟨Api.root, 0⟩]
+#guard Api.HostProtocol.observe (Api.run sleeping 100).machine = .parked
+#guard Api.HostProtocol.observe (Api.run waiting 100 [] [] waitTable).machine = .awaitingAsync
+#guard Api.HostProtocol.observe (Api.replay program 100 []).machine = .idle
+#guard Api.HostProtocol.observe (Api.run program 100).machine = .terminated
+
+theorem sleeping_complete : Api.Tape.Complete sleeping [] [Api.evaluate, Api.flush] 100 := by
+  have hr : (Api.replay sleeping 100 [Api.evaluate, Api.flush]).reasons = [.awaitTimer Api.root 4] := by decide
+  change (∀ key, Api.FrontierReason.awaitHost key ∉ (Api.replay sleeping 100 [Api.evaluate, Api.flush]).reasons) ∧
+    Api.FrontierReason.awaitDecision ∉ (Api.replay sleeping 100 [Api.evaluate, Api.flush]).reasons
+  rw [hr]
+  simp
+
+#print axioms sleeping_complete
+#print axioms Effect4.Api.awaitHost_mem
+#print axioms Effect4.Api.awaitDecision_iff
+#print axioms Effect4.Api.commandFuel_iff
+#print axioms Effect4.Api.exists_awaitHost_iff
+#print axioms Effect4.Api.all_exited_not_runnable
+#print axioms Effect4.Api.observe_awaitingAsync_iff
+#print axioms Effect4.Api.observe_terminated_iff
+#print axioms Effect4.Api.observe_idle_iff
+#print axioms Effect4.Api.observe_idle_tape_iff
+#print axioms Effect4.Api.observe_of_reasons
+#print axioms Effect4.Program.Sched.reasons_eq_ref
+#print axioms Effect4.Program.Sched.book_reasons_eq_ref
 end Test.Api.FrontierContract

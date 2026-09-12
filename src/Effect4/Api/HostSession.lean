@@ -253,8 +253,8 @@ def advance {program : Api.Program} {table : RowTable} (s : Session program tabl
 def inspect {program : Api.Program} {table : RowTable} (s : Session program table) : Api.Run :=
   letI := evaluatorFor program table
   match replayEval (interpOf program table) 0 [] s.machine with
-  | .finished m => ⟨.finished, m⟩
-  | .frontier _ m => ⟨.frontier, m⟩
-  | .stuck why m => ⟨.stuck why, m⟩
+  | .finished m => ⟨.finished, m, []⟩
+  | .frontier why m => ⟨.frontier, m, Api.frontierReasons why m⟩
+  | .stuck why m => ⟨.stuck why, m, []⟩
 
 end Effect4.Api.HostSession

@@ -121,7 +121,7 @@ inductive CodeMeans (root : NativeEff) : NCode → RProgram → Prop
       CodeMeans root (Prim.suspend (EffThunk.memoLookup q m scope)) (.vis (.inr (.suspend q)) k)
   /-- A live frontier: the frame's suspension returns itself at every view, the term's
   frontier operation stays. The two points agree on everything but the captured view. -/
-  | frontier (p p' : Point) (reason : FrontierReason) (k : ExitV → RProgram)
+  | frontier (p p' : Point) (reason : PendingReason) (k : ExitV → RProgram)
       (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
       (hloop : ∀ completed, suspendBodyAt root (.body { p' with completed }) =
         Prim.suspend (EffThunk.body { p' with completed })) :

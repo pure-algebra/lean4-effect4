@@ -1,6 +1,7 @@
 import Tools.GeneratedStamp
 import Tools.ProfileJson
 import Effect4.Api
+import Effect4.Laws.Api.Frontier
 import TypeScript.Render
 import Lean.Data.Json
 
@@ -713,6 +714,28 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 #guard (Api.run pAcquireHandle 1000 [] acquireHandleAnswers acquireHandleTable).stores.externals.allocated =
   ["Host.Resource"]
 
+/-- P2b finite check of the amended observation equations on a final machine. -/
+def observesReasons (why : Exhaustion) (m : Api.Machine) : Bool :=
+  let rs := Api.frontierReasons why m
+  let host := rs.any fun | .awaitHost _ => true | _ => false
+  let observation := Api.HostProtocol.observe m
+  ((observation == .awaitingAsync) == host) &&
+    ((observation == .terminated) == (!host && m.fibers.all (fun f => f.exit.isSome))) &&
+    ((observation == .idle) == (!host && Api.hasRunnable m)) &&
+    (rs.contains .awaitDecision == (why == .tape && Api.hasRunnable m))
+
+#guard corpus.all fun (name, p) =>
+  let (table, answers) := hostInputs name
+  let m := (Api.run p 1000 [] answers table).machine
+  observesReasons .fuel m && observesReasons .tape m
+
+-- The universal law instantiates at every corpus member, for any actual host replies.
+example (p : Api.Program) (fuel : Nat) (answers : List Answer) (table : RowTable)
+    (why : Exhaustion) :
+    Api.HostProtocol.observe (Api.run p fuel [] answers table).machine = .awaitingAsync ↔
+      ∃ key, .awaitHost key ∈ Api.frontierReasons why (Api.run p fuel [] answers table).machine :=
+  (Api.observe_of_reasons why _).1
+
 end OCaml5.Truth
 
 /-- The tapes under `dir`: `<name>.jsonl` per corpus program that has one, decoded into that
@@ -739,6 +762,11 @@ def main (args : List String) : IO Unit := do
     | [out] => (some out, "harness/truth/tapes")
     | _ => (none, "harness/truth/tapes")
   let tapes ← readTapes tapeDir
+  for (name, p) in OCaml5.Truth.corpus do
+    let (table, builtIn) := OCaml5.Truth.hostInputs name
+    let m := (Effect4.Api.run p fuel [] (builtIn ++ tapes name) table).machine
+    unless OCaml5.Truth.observesReasons .fuel m && OCaml5.Truth.observesReasons .tape m do
+      throw (IO.userError s!"observation reasons disagree for {name}")
   let text := (OCaml5.Truth.manifest fuel tapes).pretty 100 ++ "\n"
   match out? with
   | some out =>
