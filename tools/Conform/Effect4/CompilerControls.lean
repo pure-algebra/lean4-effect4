@@ -38,10 +38,16 @@ private def equals (actual : Target.TOutcome) (expected : Target.TValue) : Bool 
 #guard (Lcnf.typeParameterIndices `Indexed 1
   (.forallE `n (.const ``Nat []) (.sort .zero) .default)).toOption.isNone
 
-/-- Host checks include the asymmetric comparator that a symmetric equality fixture misses. -/
+/-- Host checks include the asymmetric comparator that a symmetric equality fixture misses.
+`List.contains as a` is `elem a as`, and `elem a (b :: bs)` tests `a == b` — the target
+first — so `[3].contains 2` under `a == b := a < b` is `2 < 3 = true` (Lean 4.33.1,
+`Init/Data/List/Basic.lean`, `elem` and `contains`). The control was first executed on
+2026-09-13, once the checkpoint's primitive table gained the array rows; it had expected
+`false`, the element-first order, and the emitted row (`src/OCaml5/Lcnf/Translate.lean`,
+`List.contains`) was right. -/
 def hostChecks : List (String × Ml.Expr × Ml.Expr) := [
   ("contains-order", Lcnf.applyBuiltin (Lcnf.builtin? `List.contains).get!
-    [.fn ["a", "b"] (.binop "<" (.var "a") (.var "b")), .listLit [.int 3], .int 2], .bool false),
+    [.fn ["a", "b"] (.binop "<" (.var "a") (.var "b")), .listLit [.int 3], .int 2], .bool true),
   ("shift-saturation", Lcnf.applyBuiltin (Lcnf.builtin? `Nat.shiftLeft).get! [.int 3, .int 62], .var "max_int"),
   ("array-default", Lcnf.applyBuiltin (Lcnf.builtin? `Array.get!).get! [.int 77, .listLit [.int 3], .int 2], .int 77),
   ("utf8-length", Lcnf.applyBuiltin (Lcnf.builtin? `String.length).get! [.str "é🙂"], .int 2),

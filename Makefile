@@ -33,7 +33,7 @@ LAKE ?= lake
 BUN ?= bun
 PY ?= python3
 OPAM_SWITCH ?= effect4
-OCAML := opam exec --switch=$(OPAM_SWITCH) --
+OCAML ?= opam exec --switch=$(OPAM_SWITCH) --
 GEN := .lake/gen
 CHK := .lake/check
 export LEAN_NUM_THREADS ?= 3
@@ -195,6 +195,25 @@ ts/eff/node_modules: ts/eff/package.json ts/eff/bun.lock
 	cd ts/eff && $(BUN) install --frozen-lockfile
 	@touch $@
 
+# The truth harness and the schema codec resolve Effect and the compiler through
+# harness/truth/node_modules, a link to that install (never a second install: the truth
+# runner refuses a link that selects a different one).
+harness/truth/node_modules: | ts/eff/node_modules
+	ln -s ../../ts/eff/node_modules $@
+
+.PHONY: doctor
+doctor: ## the tools and installs every tier needs, with their versions
+	@printf 'lean       %s\n' "$$(lean --version 2>&1 | head -1)"
+	@printf 'lake       %s\n' "$$(lake --version 2>&1 | head -1)"
+	@printf 'python3    %s\n' "$$(python3 --version 2>&1)"
+	@printf 'bun        %s\n' "$$(bun --version 2>&1 || echo missing)"
+	@printf 'node       %s\n' "$$(node --version 2>&1 || echo missing)"
+	@printf 'opam       %s\n' "$$(opam --version 2>&1 || echo missing)"
+	@printf 'dune       %s\n' "$$($(OCAML) dune --version 2>&1 || echo 'missing (the OCaml lane needs the effect4 switch)')"
+	@printf 'ts/eff     %s\n' "$$(test -d ts/eff/node_modules/effect && echo 'installed (effect, @effect/sql-sqlite-bun, oxc-parser)' || echo 'missing: bun install --frozen-lockfile --cwd ts/eff')"
+	@printf 'truth link %s\n' "$$(test -e harness/truth/node_modules && echo 'present' || echo 'missing: make harness/truth/node_modules')"
+	@printf 'schema-host %s\n' "$$(test -d harness/schema-host/node_modules/effect && echo 'installed (typescript 7.0.2, tsgo)' || echo 'missing: npm ci --prefix harness/schema-host (check-schema-ts, check-schema-host)')"
+
 # ---------------------------------------------------------------------------- checks
 
 CHECKS := roots cases native ts-reader truth target schema-codec ocaml ingest ingest-smoke \
@@ -259,19 +278,22 @@ $(CHK)/ts-reader: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) $(TR
 	cd ts/eff && $(BUN) test
 	@mkdir -p $(CHK) && touch $@
 
-$(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py
+$(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py | harness/truth/node_modules
 	$(PY) scripts/check-truth.py
 	@mkdir -p $(CHK) && touch $@
 
 # T0: the printed programs' answer, error and requirement types against the pinned
-# TypeScript compiler (tools/target).
-$(CHK)/target: $(TRUTH_GENERATED) Test/fixtures/target/selection.json $(wildcard tools/target/*.ts) ts/eff/profile.gen.ts
+# TypeScript compiler (tools/target). The oracle reads the truth modules and their
+# prelude, the generated TypeScript tables, the package's compiler config and install,
+# and the toolchain file; each is a prerequisite so a change to any of them re-runs it.
+$(CHK)/target: $(TRUTH_GENERATED) harness/truth/prelude.ts Test/fixtures/target/selection.json $(wildcard tools/target/*.ts tools/target/*.json) \
+  ts/eff/profile.gen.ts ts/eff/eff.gen.ts ts/eff/packages.gen.ts ts/eff/tsconfig.json ts/eff/node_modules lean-toolchain
 	$(BUN) tools/target/cli.ts --repo .
 	@mkdir -p $(CHK) && touch $@
 
 # The schema codec: Lean's `Ty.encode` results for the contract's cases, compared with
 # rc.112's `Schema.toCodecJson` on the host; nothing committed.
-$(CHK)/schema-codec: $(CORE) $(wildcard harness/truth/schema-codec/*) | build
+$(CHK)/schema-codec: $(CORE) $(wildcard harness/truth/schema-codec/*) | build harness/truth/node_modules
 	@tmp="$$(mktemp -d "$${TMPDIR:-/tmp}/effect4-schema-codec.XXXXXX")"; \
 	  $(LAKE) env lean -M4096 --run harness/truth/schema-codec/Emit.lean "$$tmp/values.ts" && \
 	  node harness/truth/node_modules/typescript/bin/tsc --project harness/truth/schema-codec/tsconfig.json && \

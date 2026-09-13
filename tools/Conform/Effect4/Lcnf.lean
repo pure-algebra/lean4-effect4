@@ -129,7 +129,7 @@ def fidelityTable : List FidRow :=
   , ⟨`List.instDecidableEqNil, "l = []", .exact, "", "the structural comparison of a list against the empty list is `isEmpty`."⟩
   , ⟨`List.isEmpty, "l = []", .exact, "", ""⟩
   , ⟨`List.elem, "List.exists (inst a) l", .exact, "", "`[BEq α]` is a one-field structure at mono, so the instance is a relevant argument. Lean's `List.elem a (b :: l)` tests `a == b`, i.e. `inst a b`; `List.exists (inst a) l` tests the same, in the same order."⟩
-  , ⟨`List.contains, "List.exists (fun b -> inst b a) l", .exact, "", "Preserves the element-then-target BEq argument order, including asymmetric instances."⟩
+  , ⟨`List.contains, "List.exists (fun b -> inst a b) l", .exact, "", "`contains as a` is `elem a as`, so the target is the first BEq argument, as in the `elem` row; an asymmetric instance sees the same order on both sides (the `contains-order` control)."⟩
   , ⟨`List.map, "List.map", .exact, "", ""⟩
   , ⟨`List.mapTR, "List.map", .exact, "", ""⟩
   , ⟨`List.filter, "List.filter", .exact, "", ""⟩

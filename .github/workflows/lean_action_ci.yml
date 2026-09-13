@@ -1,17 +1,26 @@
 name: Lean Action CI
 
-# One cached build, then the checks as parallel jobs that need it; the long censuses
-# nightly; the axiom audit replayed weekly from a fresh checkout with no cache.
-# Every job runs `make` targets (see the Makefile; `make help` lists them).
-# `leanprover/lean-action` restores and saves `.lake` for every job (its own cache,
-# keyed on the runner, the Lake manifest and the commit, with a manifest-only fallback).
+# One build, cached by commit, then the checks as parallel jobs that need it; the long
+# censuses nightly in separate jobs; the axiom audit replayed weekly from a fresh checkout
+# with no cache. Every job runs `make` targets (see the Makefile; `make help` lists them).
+#
+# The build cache is this file's own (`actions/cache`, keyed on the runner, the Lake
+# manifest, the toolchain and the commit, with a manifest-level fallback): the Lean
+# action's built-in cache saves inside the action, before `make build` runs, so it never
+# carried the outputs the check jobs need. The action is used for the toolchain only.
+#
+# Two pinned TypeScript installs, each with its consumers: ts/eff (effect rc.112, the
+# sqlite driver, TypeScript 5.9.2) for the truth harness, the type oracle, the schema
+# codec, the reader and the ingest; harness/schema-host (TypeScript 7.0.2 with the
+# language service) only for the Schema harnesses, selected through
+# EFFECT4_EFFECT_NODE_MODULES in the jobs that run them and nowhere else.
 
 on:
   push:
   pull_request:
   workflow_dispatch:
   schedule:
-    - cron: "23 3 * * *"   # nightly: the full census lane
+    - cron: "23 3 * * *"   # nightly: the census lanes
     - cron: "17 4 * * 1"   # weekly: the proof replay with no cache
 
 concurrency:
@@ -22,6 +31,8 @@ env:
   LEAN_NUM_THREADS: 2
   BUN_VERSION: 1.3.14
   NODE_VERSION: 22.23.2
+  OCAML_COMPILER: 5.1.1
+  LAKE_CACHE_KEY: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}
 
 jobs:
   build:
@@ -35,6 +46,12 @@ jobs:
         with:
           auto-config: false
           build: false
+          use-github-cache: false
+      - uses: actions/cache@v4
+        with:
+          path: .lake
+          key: ${{ env.LAKE_CACHE_KEY }}-${{ github.sha }}
+          restore-keys: ${{ env.LAKE_CACHE_KEY }}-
       - name: Build the core, the proof graph, the batteries and the axiom audit
         run: make build
       - name: Build the generator and checker roots
@@ -52,11 +69,18 @@ jobs:
         with:
           auto-config: false
           build: false
+          use-github-cache: false
+      - uses: actions/cache/restore@v4
+        with:
+          path: .lake
+          key: ${{ env.LAKE_CACHE_KEY }}-${{ github.sha }}
+          fail-on-cache-miss: true
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
       - name: Install the pinned TypeScript dependencies
         run: bun install --frozen-lockfile --cwd ts/eff
+      - run: make doctor
       - name: The per-change tier (build, roots, generated drift, catch-all arms, layouts, citations, the TypeScript reader)
         run: make check
 
@@ -72,6 +96,12 @@ jobs:
         with:
           auto-config: false
           build: false
+          use-github-cache: false
+      - uses: actions/cache/restore@v4
+        with:
+          path: .lake
+          key: ${{ env.LAKE_CACHE_KEY }}-${{ github.sha }}
+          fail-on-cache-miss: true
       - name: The checkers' own self-tests (planted defects must be refused)
         run: make check-tools
 
@@ -87,6 +117,12 @@ jobs:
         with:
           auto-config: false
           build: false
+          use-github-cache: false
+      - uses: actions/cache/restore@v4
+        with:
+          path: .lake
+          key: ${{ env.LAKE_CACHE_KEY }}-${{ github.sha }}
+          fail-on-cache-miss: true
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
@@ -95,16 +131,43 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install the pinned TypeScript dependencies
         run: bun install --frozen-lockfile --cwd ts/eff
-      - name: Install the pinned Schema host profile
-        run: npm ci --prefix harness/schema-host --no-audit --no-fund
-      # The OCaml switch is not installed on the runner; the OCaml differentials run on
-      # the owner's machines (`make check-ocaml`) until an opam step is added here.
+      - run: make doctor
       - name: The outside oracles (truth, T0, the schema codec, the ingest smoke)
-        env:
-          EFFECT4_EFFECT_NODE_MODULES: ${{ github.workspace }}/harness/schema-host/node_modules
         run: make build check-truth check-target check-schema-codec check-ingest-smoke
 
-  nightly:
+  check-ocaml:
+    needs: build
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          use-github-cache: false
+      - uses: actions/cache/restore@v4
+        with:
+          path: .lake
+          key: ${{ env.LAKE_CACHE_KEY }}-${{ github.sha }}
+          fail-on-cache-miss: true
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: ${{ env.OCAML_COMPILER }}
+      - name: Install the OCaml build tools (the estate uses the standard library only)
+        run: opam install --yes dune ocamlfind
+      - run: make doctor OCAML="opam exec --"
+      - name: The OCaml lane (the eff goldens and wire tests, the engine tests, the three-engine differential over the printed corpus, the seam check)
+        run: make build check-ocaml OCAML="opam exec --"
+      - name: The compiler conformance profile (Lean-emitted OCaml for normalization, compiled and run, plus one emitted-code mutation)
+        run: python3 scripts/check-conform.py compiler
+
+  # ---------------------------------------------------------------- nightly, one job each
+  # Each census lane is its own job so that one failure leaves the others' results standing.
+
+  nightly-gen-full:
     if: github.event_name == 'schedule' && github.event.schedule == '23 3 * * *'
     runs-on: ubuntu-latest
     steps:
@@ -115,6 +178,69 @@ jobs:
         with:
           auto-config: false
           build: false
+          use-github-cache: false
+      - uses: actions/cache@v4
+        with:
+          path: .lake
+          key: ${{ env.LAKE_CACHE_KEY }}-${{ github.sha }}
+          restore-keys: ${{ env.LAKE_CACHE_KEY }}-
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - name: Install the pinned TypeScript dependencies
+        run: bun install --frozen-lockfile --cwd ts/eff
+      - name: Every generated group re-cut from scratch, host-cut groups included, and compared
+        run: make build check-gen-full
+
+  nightly-ingest:
+    if: github.event_name == 'schedule' && github.event.schedule == '23 3 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          use-github-cache: false
+      - uses: actions/cache@v4
+        with:
+          path: .lake
+          key: ${{ env.LAKE_CACHE_KEY }}-${{ github.sha }}
+          restore-keys: ${{ env.LAKE_CACHE_KEY }}-
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: ${{ env.OCAML_COMPILER }}
+      - run: opam install --yes dune ocamlfind
+      - name: Install the pinned TypeScript dependencies
+        run: bun install --frozen-lockfile --cwd ts/eff
+      - name: The full ingest census (the constructed foreign corpus through both recognizers, the OCaml decode)
+        run: make build check-ingest OCAML="opam exec --"
+
+  nightly-host:
+    if: github.event_name == 'schedule' && github.event.schedule == '23 3 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          use-github-cache: false
+      - uses: actions/cache@v4
+        with:
+          path: .lake
+          key: ${{ env.LAKE_CACHE_KEY }}-${{ github.sha }}
+          restore-keys: ${{ env.LAKE_CACHE_KEY }}-
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
@@ -123,12 +249,38 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install the pinned TypeScript dependencies
         run: bun install --frozen-lockfile --cwd ts/eff
-      - name: Install the pinned Schema host profile
+      - name: The host protocol, the runtime census and the stream census
+        run: make build check-host-protocol check-census check-streams
+
+  nightly-schema:
+    if: github.event_name == 'schedule' && github.event.schedule == '23 3 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          use-github-cache: false
+      - uses: actions/cache@v4
+        with:
+          path: .lake
+          key: ${{ env.LAKE_CACHE_KEY }}-${{ github.sha }}
+          restore-keys: ${{ env.LAKE_CACHE_KEY }}-
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install the pinned Schema host profile (TypeScript 7.0.2, the language service)
         run: npm ci --prefix harness/schema-host --no-audit --no-fund
-      - name: The census lane (the full ingest run, the host protocol, the runtime and stream censuses, the Schema slice)
+      - name: The Schema slice on the pinned host (generation, the tag and field pins, the surface fixtures, the two harnesses)
         env:
           EFFECT4_EFFECT_NODE_MODULES: ${{ github.workspace }}/harness/schema-host/node_modules
-        run: make build check-ingest check-host-protocol check-census check-streams check-schema-ts check-schema-pins check-schema-surface check-schema-host
+        run: make build check-schema-ts check-schema-pins check-schema-surface check-schema-host
 
   proof-replay:
     if: github.event_name == 'schedule' && github.event.schedule == '17 4 * * 1'

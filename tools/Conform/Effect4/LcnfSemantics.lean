@@ -116,6 +116,13 @@ def tyPrims : PrimTable :=
   , (``String.toUTF8, .strToUTF8)
   , (``ByteArray.data, .identity)
   , (``Array.toList, .arrayToList)
+  -- `Ty.normalize` builds its member rows in an `Array` since part 4 (2026-09-12); the
+  -- emitter's row table (`tools/Conform/Effect4/Lcnf.lean`) already spelled these externs,
+  -- this table did not, and the checkpoint refused two subjects with "no primitive rule".
+  , (``Array.mkEmpty, .arrayMkEmpty)
+  , (``Array.emptyWithCapacity, .arrayMkEmpty)
+  , (``Array.push, .arrayPush)
+  , (``Array.size, .arraySize)
   , (``UInt8.toNat, .identity) ]
 
 /-! ## 4. The mutants — the negative controls
