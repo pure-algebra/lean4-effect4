@@ -360,6 +360,12 @@ def pIllRet : P := .gen (st [.ret (n 1), .ret (n 2)])
 def pIllReq : P := .perform .refGet (n 1)
 def pIllBreak : P := .gen (st [.breakLoop])
 def pIllBranch : P := .branch (n 1) (.succeed (n 1)) (.succeed (n 2))
+/-- Well-typed since part 4 commit 2 (2026-09-12, S4c: answer joining is the least upper
+bound, `EffTy.joinAnswer a b = some (Ty.join a b)`): its arms answer `nat` and `bool`, which
+join to `union nat bool`. It was ill-typed only because two distinct answers refused to join.
+Kept under its name (DI-60: no fixture is renamed) and listed with the ill programs below so
+the corpus order is unchanged; `pIllBranch`, whose test is a `nat`, stays the negative for the
+test column. -/
 def pIllJoin : P := .branch (.lit (.bool true)) (.succeed (n 1)) (.succeed (.lit (.bool true)))
 def pIllVar : P := .succeed (v 0)
 def pIllCallback : P := .bind (.perform .refMake (n 0)) (.callback .refGet (v 0))

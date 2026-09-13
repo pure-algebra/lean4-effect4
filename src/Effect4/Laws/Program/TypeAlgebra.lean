@@ -801,6 +801,28 @@ theorem join_least (a b c : CTy) (hac : sub a.toRaw c.toRaw = true)
 theorem sub_normalize_of_sub (a b : Ty) (hab : sub a b = true) :
     sub a.normalize b.normalize = true := OrderProof.sub_normalize_of_sub sub_trans a b hab
 
+/-! ### Membership in the least upper bound (S4c, part 4 commit 2, 2026-09-12)
+
+Answer joining is `Ty.join` (`EffTy.joinAnswer`), so the value a branch, a catch or a race
+entrant answers is a value of the joined answer: the left and right members are below the
+join (`sub_normalize_union_left`/`_right`, the raw form of `sub_join_left`/`_right`) and
+`hasTy_sub` carries membership along. Stated once here; every site of `joinAnswer` reads it
+through these two laws. -/
+
+theorem hasTy_join_left (a b : Ty) (v : Effect4.Machine.Val) (allocated : List String)
+    (hv : Effect4.Program.Val.hasTy v a allocated = true) :
+    Effect4.Program.Val.hasTy v (join a b) allocated = true := by
+  rw [← hasTy_normalize a v allocated] at hv
+  exact hasTy_sub a.normalize (join a b) v allocated
+    (OrderProof.sub_normalize_union_left sub_trans a b) hv
+
+theorem hasTy_join_right (a b : Ty) (v : Effect4.Machine.Val) (allocated : List String)
+    (hv : Effect4.Program.Val.hasTy v b allocated = true) :
+    Effect4.Program.Val.hasTy v (join a b) allocated = true := by
+  rw [← hasTy_normalize b v allocated] at hv
+  exact hasTy_sub b.normalize (join a b) v allocated
+    (OrderProof.sub_normalize_union_right sub_trans a b) hv
+
 end Effect4.Program.Ty
 
 namespace Effect4.Program.CTy

@@ -168,11 +168,15 @@ type (_, _, _, _) op =
 
 (* ---- the witnesses ---- *)
 
-(* EffTy.joinAnswer a b: equal, or one of them never. *)
+(* EffTy.joinAnswer a b: the least upper bound (S4c, part 4 commit 2). `Lub` is the general
+   witness, `('a, 'b) union`, whose `to_ty` is the canonical `Ty.join`; the three special
+   cases stay so that an existing program keeps its exact index (`Same` at `'a` where `Lub`
+   would say `('a, 'a) union`, which `to_ty` also joins to `'a`). *)
 type (_, _, _) join_answer =
   | Same : ('a, 'a, 'a) join_answer
   | Left_never : (never, 'b, 'b) join_answer
   | Right_never : ('a, never, 'a) join_answer
+  | Lub : ('a, 'b, ('a, 'b) union) join_answer
 
 (* GenTy.joinAnswer on the returns seen so far: none, or equal. *)
 type no_ret

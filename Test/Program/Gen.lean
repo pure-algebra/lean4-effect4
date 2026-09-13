@@ -632,7 +632,11 @@ def wellTypedCount : Nat := (sample.filter Api.wellTyped).length
 -- S3 adds a constructor draw, changing the seeded corpus. These counts were measured
 -- after that append (wave2-delivery/s3/measure.log). The retained pre-append 400 wires
 -- are compared separately; this reseed is not an admission-policy change.
-#guard wellTypedCount = 126
+-- Part 4 commit 2 (2026-09-12, S4c: answer joining is the least upper bound) widened the
+-- count from 126 to 129 without reseeding; DI-60 names the three programs in the part-4
+-- receipt (`docs/research/2026-09-12-p4-subsumption-receipt.md`). Commit 1 (the literal rule
+-- and subsumption) changed no verdict in this corpus.
+#guard wellTypedCount = 129
 
 /-! ### Size -/
 

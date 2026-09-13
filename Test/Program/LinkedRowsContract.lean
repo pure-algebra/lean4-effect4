@@ -20,7 +20,8 @@ private def program : NativeEff := .perform (.external 0) (.lit .unit)
 #guard (Store.Canonical.image Effect4.Program.Row).decode
   ((Store.Canonical.image Effect4.Program.Row).encode row) = some row
 #guard EffTy.joinAnswer (.option (.union .nat .never)) (.option .nat) = some (.option .nat)
-#guard EffTy.joinAnswer .nat .bool = none
+-- part 4 commit 2 (S4c): two distinct answers join as the least upper bound, never a refusal
+#guard EffTy.joinAnswer .nat .bool = some (.union .nat .bool)
 #guard (effTy (nativeSignature [row]) [] (.perform (.external 1) (.lit .unit))).isNone
 #guard (effTy (nativeSignature [row]) [] (.perform (.external 0) (.lit (.bool true)))).isNone
 end Test.Program.LinkedRowsContract

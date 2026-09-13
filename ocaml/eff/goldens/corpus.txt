@@ -29,7 +29,7 @@ pIllRet	ill-typed
 pIllReq	ill-typed
 pIllBreak	ill-typed
 pIllBranch	ill-typed
-pIllJoin	ill-typed
+pIllJoin	well-typed
 pIllVar	ill-typed
 pIllCallback	ill-typed
 pIllStep	ill-typed

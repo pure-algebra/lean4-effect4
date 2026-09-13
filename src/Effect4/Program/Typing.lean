@@ -12,8 +12,11 @@ well-typed program's compile never reaches `PrimInterp.notImplemented`) and the 
 receipt (the printed module type-checks at the pin) — belong to lanes A3 and A2.
 
 The typing is structural and total; refusals are `none`. Where rc.112 admits a union of
-answer types (`catchCause`, `matchCauseEffect`, `raceAll`, a branch) the answers must join
-(`EffTy.joinAnswer`): equal, or one of them `never`.
+answer types (`catchCause`, `matchCauseEffect`, `raceAll`, a branch) the answers join as the
+least upper bound (`EffTy.joinAnswer`, the canonical union `Ty.join`; S4c, part 4).
+
+The literal rule (DI-15, `litArgTy`) and subsumption (`Ty.sub` at row requests, service
+provision and the arguments of fixed-signature atoms) are part 4 (2026-09-12).
 -/
 
 namespace Effect4.Program
@@ -34,14 +37,14 @@ namespace EffTy
 
 def pure (answer : Ty) : EffTy := ⟨answer, .never, Requirement.empty⟩
 
-/-- Compare normalized answers: equality or one `never`; distinct answers still refuse. -/
-def joinAnswer (a b : Ty) : Option Ty :=
-  let a := a.normalize
-  let b := b.normalize
-  if a = b then some a
-  else if a.isNever then some b
-  else if b.isNever then some a
-  else none
+/-- Answer joining is the least upper bound (S4c, DI-15 clause (4), part 4 commit 2,
+2026-09-12): rc.112's `A_then | A_else`, the canonical union `Ty.join`. It never refuses; the
+`Option` stays so that `GenTy.joinAnswer`'s `Option (Option Ty)` keeps a successful absent
+generator answer distinct from a refusal. Before this commit it compared normalized answers
+and refused two distinct non-`never` answers. -/
+def joinAnswer (a b : Ty) : Option Ty := some (Ty.join a b)
+
+theorem joinAnswer_eq (a b : Ty) : joinAnswer a b = some (Ty.join a b) := rfl
 
 end EffTy
 

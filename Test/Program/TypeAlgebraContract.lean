@@ -103,6 +103,25 @@ private def canonicalUniverse : List Ty := scoutUniverse.map Ty.normalize
 #guard (effTy nativeSignature [.union Ty.scope .never]
   (.provideService nativeScopeKey (.var 0) (.service nativeScopeKey))).isSome
 
+/-! ### Answer joining as the least upper bound (S4c, part 4 commit 2, 2026-09-12) -/
+
+#guard EffTy.joinAnswer .nat .bool = some (.union .nat .bool)
+#guard EffTy.joinAnswer .nat .never = some .nat
+#guard EffTy.joinAnswer (.union .bool .nat) .nat = some (.union .nat .bool)
+#guard (typeOf nativeSignature
+  (.branch (.lit (.bool true)) (.succeed (.lit (.nat 1))) (.succeed (.lit (.bool true))))).map
+    (·.answer) = some (.union .nat .bool)
+-- a value of either side is a value of the join
+#check (@Effect4.Program.Ty.hasTy_join_left : ∀ (a b : Ty) (v : Val) (allocated : List String),
+  Val.hasTy v a allocated = true → Val.hasTy v (Ty.join a b) allocated = true)
+#check (@Effect4.Program.Ty.hasTy_join_right : ∀ (a b : Ty) (v : Val) (allocated : List String),
+  Val.hasTy v b allocated = true → Val.hasTy v (Ty.join a b) allocated = true)
+#guard Val.hasTy (Val.nat 1) (Ty.join .nat .bool)
+#guard Val.hasTy (Val.bool true) (Ty.join .nat .bool)
+#guard !Val.hasTy (Val.str "x") (Ty.join .nat .bool)
+#print axioms Effect4.Program.Ty.hasTy_join_left
+#print axioms Effect4.Program.Ty.hasTy_join_right
+
 private def hiddenPair : Ty := .prod (.union .string .never) .string
 #guard !rawSupportedErrTy hiddenPair
 #guard supportedErrTy hiddenPair

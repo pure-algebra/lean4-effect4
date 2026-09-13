@@ -150,6 +150,7 @@ type (_, _, _) join_answer =
   | Same : ('a, 'a, 'a) join_answer
   | Left_never : (never, 'b, 'b) join_answer
   | Right_never : ('a, never, 'a) join_answer
+  | Lub : ('a, 'b, ('a, 'b) union) join_answer
 
 (** No `ret` yet: `GenTy.answer = none`. *)
 type no_ret

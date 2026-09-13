@@ -1,1 +1,1 @@
-ill-typed
+{"answer":["union",["nat"],["bool"]],"error":["never"],"requires":[]}

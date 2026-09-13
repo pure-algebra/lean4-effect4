@@ -116,8 +116,8 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
       StmtsHasTy sig env false body g →
       HasTy sig env (.gen body) ⟨g.answer.getD .unit, g.error, g.requires⟩
   /-- `Effect.catchCause` (`:2417`): the handler sees `Cause<E>` of the body; the two answers
-  must join, and the conclusion's error column is the **handler's** alone — the body's failures
-  have been caught. -/
+  join as the least upper bound (`EffTy.joinAnswer`, S4c), and the conclusion's error column
+  is the **handler's** alone — the body's failures have been caught. -/
   | catchCause {env : TyEnv} {body handler : Eff Op} {b h : EffTy} {answer : Ty} :
       HasTy sig env body b →
       HasTy sig (env ++ [.causeOf b.error]) handler h →
@@ -125,7 +125,8 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
       HasTy sig env (.catchCause body handler)
         ⟨answer, h.error, b.requires.union h.requires⟩
   /-- DI-09: first-failure value binder. Only an unconditional literal test
-  discharges the body's error column; predicates do not assert a refinement. -/
+  discharges the body's error column; predicates do not assert a refinement. The two answers
+  join as the least upper bound (S4c). -/
   | catchIf {env : TyEnv} {test : Term} {body handler : Eff Op} {b h : EffTy} {answer : Ty} :
       HasTy sig env body b →
       termTy sig (env ++ [b.error]) test = some .bool →
@@ -135,7 +136,8 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
         ⟨answer, if test = .lit (.bool true) then h.error else b.error.join h.error,
           b.requires.union h.requires⟩
   /-- `Effect.matchCauseEffect` (`:2645`): the success branch sees the answer, the failure
-  branch the cause; both branches' answers must join and both branches' errors survive. -/
+  branch the cause; both branches' answers join as the least upper bound and both branches'
+  errors survive. -/
   | matchCause {env : TyEnv} {body onValue onCause : Eff Op} {b v c : EffTy} {answer : Ty} :
       HasTy sig env body b →
       HasTy sig (env ++ [b.answer]) onValue v →
@@ -163,7 +165,8 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
       HasTy sig env body t →
       HasTy sig env (.interruptible body) t
   /-- `if` in a generator body (`E4-FLOW-CE-029`): the test is a `bool` term, the two arms'
-  answers must join, and **both** arms' requirements are in the conclusion. (The row that is
+  answers join as the least upper bound (S4c: `succeed 1` beside `succeed true` is
+  `nat | bool`), and **both** arms' requirements are in the conclusion. (The row that is
   not this one — the `then` arm's alone, which rc.112's printed `Effect.suspend` head infers —
   is the red control `tools/conform-red/RulesNeg.lean`.) -/
   | branch {env : TyEnv} {test : Term} {thenB elseB : Eff Op} {a b : EffTy} {answer : Ty} :
@@ -311,7 +314,7 @@ inductive EffsHasTy (sig : Signature Op) : TyEnv → Effs Op → EffTy → Prop
   until interrupted). -/
   | nil {env : TyEnv} :
       EffsHasTy sig env .nil ⟨.never, .never, Requirement.empty⟩
-  /-- One more entrant: its answer must join with the rest's. -/
+  /-- One more entrant: its answer joins with the rest's as the least upper bound. -/
   | cons {env : TyEnv} {head : Eff Op} {tail : Effs Op} {h t : EffTy} {answer : Ty} :
       HasTy sig env head h →
       EffsHasTy sig env tail t →

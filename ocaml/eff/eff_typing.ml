@@ -200,9 +200,9 @@ let lit_is_value : lit -> bool = function Lit_str _ -> false | _ -> true
 let mk answer error requires = { eff_ty_answer = answer; eff_ty_error = error; eff_ty_requires = requires }
 let pure (answer : ty) : eff_ty = mk answer Ty_never req_empty
 
-let join_answer (a : ty) (b : ty) : ty option =
-  let a = normalize a and b = normalize b in
-  if a = b then Some a else if is_never a then Some b else if is_never b then Some a else None
+(* EffTy.joinAnswer a b: the least upper bound (S4c, part 4 commit 2), never a refusal; the
+   option is kept for gen_join_answer's absent-answer distinction. *)
+let join_answer (a : ty) (b : ty) : ty option = Some (join a b)
 
 type gen_ty = { gen_answer : ty option; gen_error : ty; gen_requires : requirement }
 

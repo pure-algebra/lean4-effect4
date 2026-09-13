@@ -206,6 +206,8 @@ let typed_corpus : (string * program) list =
   ; ("pExit", Program (Exit (Fail (Error_nat, nat 9)), Exit_of (Never, Nat), Never))
   ; ("pMasks", Program (Uninterruptible (Interruptible (Succeed (nat 1))), Nat, Never))
   ; ("pBranch", Program (Branch (bool true, Succeed (nat 1), Fail (Error_nat, nat 2), Right_never), Nat, Union (Never, Nat)))
+  (* well-typed since part 4 commit 2 (S4c): two distinct answers join as the least upper bound *)
+  ; ("pIllJoin", Program (Branch (bool true, Succeed (nat 1), Succeed (bool true), Lub), Union (Nat, Bool), Union (Never, Never)))
   ; ("pCallback", Program (Bind (Perform (Deferred_make, unit_), Callback (Deferred_await, v0)), Nat, un Nat))
   ; ( "pJoin"
     , Program
@@ -539,7 +541,8 @@ let () =
   check "join sorts by key: nat before bool" (join Ty_bool Ty_nat = Ty_union (Ty_nat, Ty_bool) && join Ty_nat Ty_bool = Ty_union (Ty_nat, Ty_bool));
   check "join flattens and right-nests"
     (join (Ty_union (Ty_nat, Ty_bool)) Ty_unit = Ty_union (Ty_unit, Ty_union (Ty_nat, Ty_bool)));
-  check "join_answer" (join_answer Ty_nat Ty_never = Some Ty_nat && join_answer Ty_nat Ty_bool = None && join_answer Ty_never Ty_never = Some Ty_never);
+  (* part 4 commit 2 (S4c): the least upper bound, never a refusal; `nat`/`bool` read `= None` before *)
+  check "join_answer" (join_answer Ty_nat Ty_never = Some Ty_nat && join_answer Ty_nat Ty_bool = Some (Ty_union (Ty_nat, Ty_bool)) && join_answer Ty_never Ty_never = Some Ty_never);
   let k n s = { service_key_name = { service_name_value = n }; service_key_service = { service_type_code_value = s } } in
   check "requirement rows are ascending and deduplicated"
     (req_of_list [ k 1 0; k 0 1; k 0 0; k 1 0 ] = [ k 0 0; k 0 1; k 1 0 ]

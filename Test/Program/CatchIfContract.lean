@@ -39,7 +39,10 @@ def retained (test : Term) : NativeEff :=
 #guard typeOf nativeSignature handled = some (EffTy.pure .nat)
 #guard typeOf nativeSignature hit = some ⟨.nat, .nat, .empty⟩
 #guard typeOf nativeSignature notBool = none
-#guard typeOf nativeSignature (.catchIf yes (.succeed (n 1)) (.succeed (.lit (.bool true)))) = none
+-- part 4 commit 2 (S4c): the body's `nat` and the handler's `bool` join as the least upper
+-- bound; this guard read `= none` before (a DI-60 verdict change, named in the receipt)
+#guard typeOf nativeSignature (.catchIf yes (.succeed (n 1)) (.succeed (.lit (.bool true)))) =
+  some ⟨.union .nat .bool, .never, .empty⟩
 #guard (Api.run hit 300).exit = some (.success (.nat 7))
 #guard (Api.run miss 300).exit = some (.failure mixedValue)
 #guard (Api.run secondMiss 300).exit = some (.failure mixedValue)
