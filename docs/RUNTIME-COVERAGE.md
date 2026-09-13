@@ -17,7 +17,7 @@ Three artefacts carry it:
 | Artefact | Role | Owner |
 | --- | --- | --- |
 | `generated/effect-runtime-census.tsv` | the denominator: one row per behaviour, anchored to the pinned bytes with a span digest | `scripts/generate-effect-runtime-census.sh` |
-| `Test/Audit/RuntimeCoverage.lean` | the numerator: the frozen row list with disposition, coverage state, witnesses, receipts, and exact witness statements | authored, test-side |
+| `Test/Audit/RuntimeCoverage.lean` | the numerator: the frozen row list with disposition, coverage state and witness theorems | authored, test-side |
 | `scripts/check-effect-runtime-census.sh` | the gate: byte drift of the census and the join between census and Lean rows | CI step |
 
 The pinned source is `effect@4.0.0-rc.112` as vendored under
@@ -42,17 +42,19 @@ disposition counts. `owned` rows must carry at least one witness.
 | --- | --- | --- |
 | `absent` | no witness | the only state allowed with an empty witness list |
 | `partial` | at least one witness, but some clause of the row's summary line has no theorem | must list what is missing in the row's comment |
-| `green` | every clause of the row's summary line is a named theorem over the Effect4 model, with an axiom receipt inside `propext`/`Quot.sound` | never declared to make a number move |
+| `green` | every clause of the row's summary line is a named theorem over the Effect4 model, at the axiom ceiling the gate holds | never declared to make a number move |
 
 The green criterion is clause-by-clause against the census summary. A finite
 probe, a compile, a test, or a theorem about the Lean model's own invariants
 does not turn a clause green. When in doubt the state is `partial`; a metric
 whose first green row is arguable is worse than one with none.
 
-**Witness**: a Lean `theorem` (never a `def`, never a Prop-typed def) whose
-exact statement is frozen in the module's `StatementSnapshot` section by
-`#check (@name : proposition)` ascription, and whose kernel receipt is
-`none`, `propext`, `Quot.sound`, or `propext,Quot.sound`.
+**Witness**: a Lean `theorem` (never a `def`, never a Prop-typed def) named in
+the row. Its statement is the theorem's own, in `src/Effect4/`; the axiom
+ceiling is the gate's (`Test/Audit/AxiomGate.lean`), which audits every
+declaration, witnesses included. Until 2026-09-13 the join also carried a
+hand-transcribed copy of every statement and every receipt; both were copies
+of what the source and the gate already say, and were retired.
 
 ## The report format
 
@@ -83,25 +85,18 @@ earlier session.
 
 **Adding a witness** happens in `Test/Audit/RuntimeCoverage.lean` only:
 
-1. add the theorem name and its receipt to the row's `witnesses`;
-2. add the exact statement as a `#check (@…` ascription, transcribed from
-   `#check @name`, and append the name to `snapshotWitnesses` in the same
-   order;
-3. change the row's coverage state only if the green criterion is met;
-4. keep `expectedRowTotal` and `expectedDenominator` true;
-5. run `scripts/check-effect-runtime-census.sh`.
+1. add the theorem name to the row's `witnesses`;
+2. change the row's coverage state only if the green criterion is met;
+3. run `scripts/check-effect-runtime-census.sh`.
 
-The module fails the build on a missing witness, a non-theorem, a statement
-mismatch, an axiom drift, a duplicate id, an owned row without a witness, a
-witness on an excluded row, or a snapshot that does not match the used
-witness set in both directions.
+The module fails the build on a missing witness, a non-theorem, a duplicate
+id, an owned row without a witness, or a witness on an excluded row.
 
 **Adding or re-pinning a census row** happens in the generator only. A row is
 `kind|id|file|anchor|offset-start|offset-end|expected-span-sha256|summary`,
 where the anchor must occur exactly once in its file. Add the row, add the
-matching Lean row with disposition `absent` and no witness, update the
-per-kind counts and totals in both places, regenerate the projection with the
-recorded command, and run the gate. A digest that drifts because upstream
+matching Lean row with disposition `absent` and no witness, regenerate the
+projection with the recorded command, and run the gate. A digest that drifts because upstream
 changed is a deliberate re-pin: the whole pin moves together, never one row.
 
 **A new theorem in `src/Effect4/`** intended as a witness still passes through the

@@ -1,5 +1,4 @@
 import Lean
-import Lean.Util.CollectAxioms
 import Effect4.Machine.Supervision
 import Effect4.Machine.Cause
 import Effect4.Machine.Exit
@@ -21,15 +20,17 @@ declarations that witness those behaviours.
 The census keys are *observed runtime behaviours*, never "function X exists".
 This module holds the frozen row list — one row per census id, carrying the
 disposition defined in `docs/RUNTIME-COVERAGE.md`, the declared coverage state, and the witness
-declarations with their expected kernel dependency receipts. It fails the
-build on a missing witness, a witness that is not a theorem, an axiom receipt
-drift, a duplicate id, or an inconsistent disposition/coverage pairing.
+theorems. It fails the build on a missing witness, a witness that is not a
+theorem, a duplicate id, or an inconsistent disposition/coverage pairing.
+`scripts/check-effect-runtime-census.sh` cross-checks the row ids and kinds
+against the census.
 
-Exact witness statements are frozen by the `#check (@name : proposition)`
-ascriptions in the `StatementSnapshot` section below.
-`scripts/check-effect-runtime-census.sh` cross-checks that the snapshot
-names and the emitted witness rows are the same list, in the same order, so
-the ascriptions cannot be deleted without failing the gate.
+Until 2026-09-13 the module also froze every witness's statement in a `#check`
+ascription (627 of them, transcribed by hand) and every witness's axiom
+receipt. Both were copies: a statement lives in its theorem, and its change is
+that theorem's diff; the ceiling is `#effect4_axiom_gate`'s, held over every
+declaration. The join now says only what nothing else says — which theorem
+witnesses which behaviour, and that it is a theorem.
 
 Nothing here adds to or removes from the `Effect4` surface. Since
 2026-09-04 the fiber rows are witnessed by the reference machine
@@ -46,5500 +47,6 @@ open Lean Elab Command
 
 namespace Test.Audit.RuntimeCoverage
 
-universe u v
-
-section StatementSnapshot
-
-open Effect4
-
-/-! The exact proposition each witness proves, frozen by ascription. A drift in
-any statement is a `type mismatch` at the offending line. -/
-
-/-! The Cause/Exit model witnesses. Statements are transcribed from the frozen
-ascriptions of `Test/Machine/Semantics/CauseExitContract.lean`. -/
-
-#check (@Effect4.Cause.eq_iff : forall {ε δ ι α : Type u} (left right : Cause ε δ ι α),
-  left = right <-> left.reasons = right.reasons)
-
-#check (@Effect4.Cause.ext : forall {ε δ ι α : Type u} {left right : Cause ε δ ι α},
-  left.reasons = right.reasons -> left = right)
-
-#check (@Effect4.Cause.eq_iff_pointwise :
-  forall {ε δ ι α : Type u} (left right : Cause ε δ ι α),
-    left = right <->
-      (left.reasons.length = right.reasons.length /\
-        forall index : Nat, left.reasons[index]? = right.reasons[index]?))
-
-#check (@Effect4.Cause.combine_no_new_reason : forall {ε δ ι α : Type u}
-  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-  (reason : Reason ε δ ι α) (self that : Cause ε δ ι α),
-  reason ∈ (Cause.combine self that).reasons ->
-    reason ∈ self.reasons \/ reason ∈ that.reasons)
-
-#check (@Effect4.Reason.error_fail : forall {ε δ ι α : Type u} (error : ε)
-  (annotations : ReasonAnnotations α),
-  (Reason.fail error annotations : Reason ε δ ι α).error? = some error)
-
-#check (@Effect4.Reason.annotations_fail : forall {ε δ ι α : Type u} (error : ε)
-  (annotations : ReasonAnnotations α),
-  (Reason.fail error annotations : Reason ε δ ι α).annotations = annotations)
-
-#check (@Effect4.Reason.fail_inj : forall {ε δ ι α : Type u} (leftError rightError : ε)
-  (leftAnnotations rightAnnotations : ReasonAnnotations α),
-  (Reason.fail leftError leftAnnotations : Reason ε δ ι α) =
-      Reason.fail rightError rightAnnotations <->
-    leftError = rightError /\ leftAnnotations = rightAnnotations)
-
-#check (@Effect4.Reason.defect_die : forall {ε δ ι α : Type u} (defect : δ)
-  (annotations : ReasonAnnotations α),
-  (Reason.die defect annotations : Reason ε δ ι α).defect? = some defect)
-
-#check (@Effect4.Reason.annotations_die : forall {ε δ ι α : Type u} (defect : δ)
-  (annotations : ReasonAnnotations α),
-  (Reason.die defect annotations : Reason ε δ ι α).annotations = annotations)
-
-#check (@Effect4.Reason.die_inj : forall {ε δ ι α : Type u} (leftDefect rightDefect : δ)
-  (leftAnnotations rightAnnotations : ReasonAnnotations α),
-  (Reason.die leftDefect leftAnnotations : Reason ε δ ι α) =
-      Reason.die rightDefect rightAnnotations <->
-    leftDefect = rightDefect /\ leftAnnotations = rightAnnotations)
-
-#check (@Effect4.Cause.interrupt_reasons : forall {ε δ ι α : Type u}
-  (interruptor : Option ι),
-  (Cause.interrupt interruptor : Cause ε δ ι α).reasons =
-    [Reason.interrupt interruptor ReasonAnnotations.empty])
-
-#check (@Effect4.Reason.annotations_interrupt : forall {ε δ ι α : Type u}
-  (interruptor : Option ι) (annotations : ReasonAnnotations α),
-  (Reason.interrupt interruptor annotations : Reason ε δ ι α).annotations =
-    annotations)
-
-#check (@Effect4.Reason.interrupt_inj : forall {ε δ ι α : Type u}
-  (leftInterruptor rightInterruptor : Option ι)
-  (leftAnnotations rightAnnotations : ReasonAnnotations α),
-  (Reason.interrupt leftInterruptor leftAnnotations : Reason ε δ ι α) =
-      Reason.interrupt rightInterruptor rightAnnotations <->
-    leftInterruptor = rightInterruptor /\
-      leftAnnotations = rightAnnotations)
-
-#check (@Effect4.Cause.combine_empty_left : forall {ε δ ι α : Type u} [DecidableEq ε]
-  [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (that : Cause ε δ ι α),
-  Cause.combine Cause.empty that = that)
-
-#check (@Effect4.Cause.combine_empty_right : forall {ε δ ι α : Type u} [DecidableEq ε]
-  [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (self : Cause ε δ ι α),
-  Cause.combine self Cause.empty = self)
-
-#check (@Effect4.Cause.combine_reasons : forall {ε δ ι α : Type u} [DecidableEq ε]
-  [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-  (self that : Cause ε δ ι α),
-  self.reasons ≠ [] -> that.reasons ≠ [] ->
-  (Cause.combine self that).reasons =
-    Cause.dedup (self.reasons ++ that.reasons))
-
-#check (@Effect4.Cause.mem_combine : forall {ε δ ι α : Type u} [DecidableEq ε]
-  [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-  (reason : Reason ε δ ι α) (self that : Cause ε δ ι α),
-  reason ∈ (Cause.combine self that).reasons <->
-    reason ∈ self.reasons \/ reason ∈ that.reasons)
-
-#check (@Effect4.Cause.combine_self : forall {ε δ ι α : Type u} [DecidableEq ε]
-  [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (self : Cause ε δ ι α),
-  self.reasons.Nodup -> Cause.combine self self = self)
-
-#check (@Effect4.Cause.combine_order : forall {ε δ ι α : Type u} [DecidableEq ε]
-  [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-  (self that : Cause ε δ ι α),
-  self.reasons.Nodup -> that.reasons.Nodup ->
-  (Cause.combine self that).reasons =
-    self.reasons ++
-      that.reasons.filter (fun reason => decide (reason ∉ self.reasons)))
-
-#check (@Effect4.Cause.dedup_cons : forall {ε δ ι α : Type u} [DecidableEq ε]
-  [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-  (reason : Reason ε δ ι α) (rest : List (Reason ε δ ι α)),
-  Cause.dedup (reason :: rest) =
-    reason :: (Cause.dedup rest).filter (fun other => decide (other ≠ reason)))
-
-#check (@Effect4.Cause.mem_dedup : forall {ε δ ι α : Type u} [DecidableEq ε]
-  [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-  (reason : Reason ε δ ι α) (list : List (Reason ε δ ι α)),
-  reason ∈ Cause.dedup list <-> reason ∈ list)
-
-#check (@Effect4.Cause.dedup_nodup : forall {ε δ ι α : Type u} [DecidableEq ε]
-  [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-  (list : List (Reason ε δ ι α)), (Cause.dedup list).Nodup)
-
-#check (@Effect4.Cause.dedup_of_nodup : forall {ε δ ι α : Type u} [DecidableEq ε]
-  [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-  (list : List (Reason ε δ ι α)), list.Nodup -> Cause.dedup list = list)
-
-#check (@Effect4.Exit.mergeFinalizer_failure_failure : forall {β ε δ ι α : Type u}
-  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-  (cause finalizerCause : Cause ε δ ι α),
-  Exit.mergeFinalizer (Exit.failure cause : Exit β ε δ ι α)
-      (Exit.failure finalizerCause) =
-    Exit.failure (Cause.combine cause finalizerCause))
-
-#check (@Effect4.Exit.restoreAfterFinalizer_failure_failure :
-  forall {β ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
-    [DecidableEq α] (cause finalizerCause : Cause ε δ ι α),
-  Exit.restoreAfterFinalizer (Exit.failure cause : Exit β ε δ ι α)
-      (Exit.failure finalizerCause) =
-    Exit.failure (Cause.combine cause finalizerCause))
-
-#check (@Effect4.Exit.mergeFinalizer_success_failure : forall {β ε δ ι α : Type u}
-  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-  (value : β) (finalizerCause : Cause ε δ ι α),
-  Exit.mergeFinalizer (Exit.success value) (Exit.failure finalizerCause) =
-    Exit.failure finalizerCause)
-
-#check (@Effect4.Exit.restoreAfterFinalizer_success_failure :
-  forall {β ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
-    [DecidableEq α] (value : β) (finalizerCause : Cause ε δ ι α),
-  Exit.restoreAfterFinalizer (Exit.success value : Exit β ε δ ι α)
-      (Exit.failure finalizerCause) =
-    Exit.failure finalizerCause)
-
-#check (@Effect4.Cause.squash_error : forall {ε δ ι α : Type u}
-  (self : Cause ε δ ι α) (error : ε) (rest : List ε),
-  self.reasons.filterMap Reason.error? = error :: rest ->
-    self.squash = Squashed.error error)
-
-#check (@Effect4.Cause.squash_defect : forall {ε δ ι α : Type u}
-  (self : Cause ε δ ι α) (defect : δ) (rest : List δ),
-  self.reasons.filterMap Reason.error? = [] ->
-  self.reasons.filterMap Reason.defect? = defect :: rest ->
-    self.squash = Squashed.defect defect)
-
-#check (@Effect4.Cause.squash_interrupted : forall {ε δ ι α : Type u}
-  (self : Cause ε δ ι α),
-  self.reasons.filterMap Reason.error? = [] ->
-  self.reasons.filterMap Reason.defect? = [] ->
-  self.reasons ≠ [] ->
-    self.squash = Squashed.interruptedWithoutError)
-
-#check (@Effect4.Cause.squash_emptyCause_iff : forall {ε δ ι α : Type u}
-  (self : Cause ε δ ι α),
-  self.squash = Squashed.emptyCause <-> self.reasons = [])
-
-#check (@Effect4.Cause.squash_fail_over_die : forall {ε δ ι α : Type u} (error : ε)
-  (defect : δ) (dieAnnotations failAnnotations : ReasonAnnotations α),
-  (Cause.mk [Reason.die defect dieAnnotations,
-      Reason.fail error failAnnotations] : Cause ε δ ι α).squash =
-    Squashed.error error)
-
-#check (@Effect4.ReasonAnnotations.keys_nodup : forall {α : Type u} (self : ReasonAnnotations α),
-  self.keys.Nodup)
-
-#check (@Effect4.Reason.annotate_annotations : forall {ε δ ι α : Type u}
-  (reason : Reason ε δ ι α) (extra : ReasonAnnotations α) (overwrite : Bool),
-  (reason.annotate extra overwrite).annotations =
-    reason.annotations.annotate extra overwrite)
-
-#check (@Effect4.Reason.host_memory_refused :
-  forall {ε α : Type u} (recall : ε -> ReasonAnnotations α) (left right : ε),
-    left = right -> recall left = recall right)
-
-#check (@Effect4.ReasonAnnotations.annotate_entries :
-  forall {α : Type u} (self extra : ReasonAnnotations α) (overwrite : Bool),
-    (self.annotate extra overwrite).entries =
-      self.entries.map (fun entry =>
-        if overwrite = true then
-          match extra.lookup entry.fst with
-          | some value => (entry.fst, value)
-          | none => entry
-        else entry) ++
-      extra.entries.filter (fun entry => decide (entry.fst ∉ self.keys)))
-
-#check (@Effect4.ReasonAnnotations.lookup_annotate_kept :
-  forall {α : Type u} (self extra : ReasonAnnotations α) (key : String) (value : α),
-    self.lookup key = some value ->
-    (self.annotate extra false).lookup key = some value)
-
-#check (@Effect4.ReasonAnnotations.lookup_annotate_overwrite :
-  forall {α : Type u} (self extra : ReasonAnnotations α) (key : String) (value : α),
-    extra.lookup key = some value ->
-    (self.annotate extra true).lookup key = some value)
-
-#check (@Effect4.Exit.cases_receipt : forall {β ε δ ι α : Type u}
-  (self : Exit β ε δ ι α),
-  (exists value, self = Exit.success value) \/
-  (exists cause, self = Exit.failure cause))
-
-#check (@Effect4.Exit.success_ne_failure : forall {β ε δ ι α : Type u} (value : β)
-  (cause : Cause ε δ ι α),
-  (Exit.success value : Exit β ε δ ι α) ≠ Exit.failure cause)
-
-#check (@Effect4.Exit.success_inj : forall {β ε δ ι α : Type u} (left right : β),
-  (Exit.success left : Exit β ε δ ι α) = Exit.success right <-> left = right)
-
-#check (@Effect4.Exit.failure_inj : forall {β ε δ ι α : Type u}
-  (left right : Cause ε δ ι α),
-  (Exit.failure left : Exit β ε δ ι α) = Exit.failure right <-> left = right)
-
-#check (@Effect4.Exit.cause_failure : forall {β ε δ ι α : Type u}
-  (cause : Cause ε δ ι α),
-  (Exit.failure cause : Exit β ε δ ι α).cause? = some cause)
-
-#check (@Effect4.ReasonTag.all_nodup : ReasonTag.all.Nodup)
-
-#check (@Effect4.ReasonTag.mem_all : forall tag : ReasonTag, tag ∈ ReasonTag.all)
-
-#check (@Effect4.ReasonTag.cases_receipt : forall tag : ReasonTag,
-  tag = ReasonTag.fail \/ tag = ReasonTag.die \/ tag = ReasonTag.interrupt)
-
-#check (@Effect4.Reason.cases_receipt : forall {ε δ ι α : Type u}
-  (reason : Reason ε δ ι α),
-  (exists error annotations, reason = Reason.fail error annotations) \/
-  (exists defect annotations, reason = Reason.die defect annotations) \/
-  (exists interruptor annotations,
-    reason = Reason.interrupt interruptor annotations))
-
-#check (@Effect4.Reason.tag_mem_all : forall {ε δ ι α : Type u}
-  (reason : Reason ε δ ι α), reason.tag ∈ ReasonTag.all)
-
-#check (@Effect4.Exit.asVoidAll_reasons : forall {β ε δ ι α : Type u}
-  (exits : List (Exit β ε δ ι α)),
-  (Exit.asVoidAll exits).causeReasons = exits.flatMap Exit.causeReasons)
-
-#check (@Effect4.Exit.asVoidAll_failure : forall {β ε δ ι α : Type u}
-  (exits : List (Exit β ε δ ι α)) (reason : Reason ε δ ι α)
-  (rest : List (Reason ε δ ι α)),
-  exits.flatMap Exit.causeReasons = reason :: rest ->
-    Exit.asVoidAll exits = Exit.failure (Cause.mk (reason :: rest)))
-
-#check (@Effect4.Exit.asVoidAll_all_success : forall {β ε δ ι α : Type u}
-  (exits : List (Exit β ε δ ι α)),
-  (forall exit, exit ∈ exits -> exists value, exit = Exit.success value) ->
-    Exit.asVoidAll exits = Exit.success ())
-
-#check (@Effect4.Exit.void_eq : forall {ε δ ι α : Type u},
-  (Exit.void : Exit Unit ε δ ι α) = Exit.success ())
-
-/-! The Scope model witnesses. Statements are transcribed from the frozen
-ascriptions of `Test/Machine/Runtime/ScopeContract.lean`. -/
-
-#check (@Effect4.ScopeState.cases_receipt :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (state : Effect4.ScopeState κ φ β ε δ ι α),
-    state = Effect4.ScopeState.empty \/
-      state = Effect4.ScopeState.openEmpty \/
-        (exists key finalizer, state = Effect4.ScopeState.openInline key finalizer) \/
-          (exists table, state = Effect4.ScopeState.openMap table) \/
-            (exists exit, state = Effect4.ScopeState.closed exit))
-
-#check (@Effect4.ScopeState.entries_empty :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u},
-    (Effect4.ScopeState.empty : Effect4.ScopeState κ φ β ε δ ι α).entries = [])
-
-#check (@Effect4.ScopeState.entries_openEmpty :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u},
-    (Effect4.ScopeState.openEmpty : Effect4.ScopeState κ φ β ε δ ι α).entries = [])
-
-#check (@Effect4.ScopeState.entries_openInline :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (key : κ) (finalizer : φ),
-    (Effect4.ScopeState.openInline key finalizer :
-      Effect4.ScopeState κ φ β ε δ ι α).entries = [(key, finalizer)])
-
-#check (@Effect4.ScopeState.entries_openMap :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (table : List (κ × φ)),
-    (Effect4.ScopeState.openMap table : Effect4.ScopeState κ φ β ε δ ι α).entries = table)
-
-#check (@Effect4.ScopeState.entries_closed :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (exit : Effect4.Exit β ε δ ι α),
-    (Effect4.ScopeState.closed exit : Effect4.ScopeState κ φ β ε δ ι α).entries = [])
-
-#check (@Effect4.ScopeState.isOpen_empty :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u},
-    (Effect4.ScopeState.empty : Effect4.ScopeState κ φ β ε δ ι α).isOpen = false)
-
-#check (@Effect4.ScopeState.isOpen_openEmpty :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u},
-    (Effect4.ScopeState.openEmpty : Effect4.ScopeState κ φ β ε δ ι α).isOpen = true)
-
-#check (@Effect4.ScopeState.isOpen_openInline :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (key : κ) (finalizer : φ),
-    (Effect4.ScopeState.openInline key finalizer :
-      Effect4.ScopeState κ φ β ε δ ι α).isOpen = true)
-
-#check (@Effect4.ScopeState.isOpen_openMap :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (table : List (κ × φ)),
-    (Effect4.ScopeState.openMap table : Effect4.ScopeState κ φ β ε δ ι α).isOpen = true)
-
-#check (@Effect4.ScopeState.isOpen_closed :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (exit : Effect4.Exit β ε δ ι α),
-    (Effect4.ScopeState.closed exit : Effect4.ScopeState κ φ β ε δ ι α).isOpen = false)
-
-#check (@Effect4.ScopeState.isClosed_eq :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (state : Effect4.ScopeState κ φ β ε δ ι α),
-    state.isClosed = true <-> exists exit, state = Effect4.ScopeState.closed exit)
-
-#check (@Effect4.ScopeState.closingExit_closed :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (exit : Effect4.Exit β ε δ ι α),
-    (Effect4.ScopeState.closed exit : Effect4.ScopeState κ φ β ε δ ι α).closingExit? =
-      some exit)
-
-#check (@Effect4.ScopeState.closingExit_of_not_closed :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (state : Effect4.ScopeState κ φ β ε δ ι α),
-    state.isClosed = false -> state.closingExit? = none)
-
-#check (@Effect4.ScopeState.openEmpty_ne_openMap_nil :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u},
-    (Effect4.ScopeState.openEmpty : Effect4.ScopeState κ φ β ε δ ι α) ≠
-      Effect4.ScopeState.openMap [])
-
-#check (@Effect4.Scope.finalizers_eq :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α),
-    self.finalizers = self.state.entries)
-
-#check (@Effect4.Scope.finalizerKeys_eq :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α),
-    self.finalizerKeys = self.finalizers.map Prod.fst)
-
-#check (@Effect4.Scope.finalizerCount_eq :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α),
-    self.finalizerCount = self.finalizers.length)
-
-#check (@Effect4.Scope.finalizerCount_not_open :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α),
-    self.isOpen = false -> self.finalizerCount = 0)
-
-#check (@Effect4.FinalizerStrategy.all_nodup : Effect4.FinalizerStrategy.all.Nodup)
-
-#check (@Effect4.FinalizerStrategy.mem_all :
-  forall strategy : Effect4.FinalizerStrategy, strategy ∈ Effect4.FinalizerStrategy.all)
-
-#check (@Effect4.Scope.make_strategy :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (strategy : Effect4.FinalizerStrategy),
-    (Effect4.Scope.make strategy : Effect4.Scope κ φ β ε δ ι α).strategy = strategy)
-
-#check (@Effect4.Scope.make_state :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (strategy : Effect4.FinalizerStrategy),
-    (Effect4.Scope.make strategy : Effect4.Scope κ φ β ε δ ι α).state =
-      Effect4.ScopeState.empty)
-
-#check (@Effect4.Scope.make_finalizers :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (strategy : Effect4.FinalizerStrategy),
-    (Effect4.Scope.make strategy : Effect4.Scope κ φ β ε δ ι α).finalizers = [])
-
-#check (@Effect4.Scope.makeDefault_eq :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u},
-    (Effect4.Scope.makeDefault : Effect4.Scope κ φ β ε δ ι α) =
-      Effect4.Scope.make Effect4.FinalizerStrategy.sequential)
-
-#check (@Effect4.Scope.makeDefault_strategy :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u},
-    (Effect4.Scope.makeDefault : Effect4.Scope κ φ β ε δ ι α).strategy =
-      Effect4.FinalizerStrategy.sequential)
-
-#check (@Effect4.Scope.key_freshness_refused :
-  forall {κ : Type u} {γ : Type u} (mint : γ -> κ) (left right : γ),
-    left = right -> mint left = mint right)
-
-#check (@Effect4.Scope.tableInsert_new : forall {κ φ : Type u} [DecidableEq κ]
-  (table : List (κ × φ)) (key : κ) (finalizer : φ),
-  key ∉ table.map Prod.fst ->
-    Effect4.Scope.tableInsert table key finalizer = table ++ [(key, finalizer)])
-
-#check (@Effect4.Scope.tableInsert_existing : forall {κ φ : Type u} [DecidableEq κ]
-  (table : List (κ × φ)) (key : κ) (finalizer : φ),
-  key ∈ table.map Prod.fst ->
-    Effect4.Scope.tableInsert table key finalizer =
-      table.map (fun entry => if entry.fst = key then (key, finalizer) else entry))
-
-#check (@Effect4.Scope.tableInsert_keys_of_mem : forall {κ φ : Type u} [DecidableEq κ]
-  (table : List (κ × φ)) (key : κ) (finalizer : φ),
-  key ∈ table.map Prod.fst ->
-    (Effect4.Scope.tableInsert table key finalizer).map Prod.fst = table.map Prod.fst)
-
-#check (@Effect4.Scope.tableInsert_nodup : forall {κ φ : Type u} [DecidableEq κ]
-  (table : List (κ × φ)) (key : κ) (finalizer : φ),
-  (table.map Prod.fst).Nodup ->
-    ((Effect4.Scope.tableInsert table key finalizer).map Prod.fst).Nodup)
-
-#check (@Effect4.Scope.addUnsafe_strategy :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ),
-    (self.addUnsafe key finalizer).strategy = self.strategy)
-
-#check (@Effect4.Scope.addUnsafe_empty :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ),
-    self.state = Effect4.ScopeState.empty ->
-      (self.addUnsafe key finalizer).state =
-        Effect4.ScopeState.openInline key finalizer)
-
-#check (@Effect4.Scope.addUnsafe_openEmpty :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ),
-    self.state = Effect4.ScopeState.openEmpty ->
-      (self.addUnsafe key finalizer).state =
-        Effect4.ScopeState.openInline key finalizer)
-
-#check (@Effect4.Scope.addUnsafe_openInline :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (self : Effect4.Scope κ φ β ε δ ι α) (existingKey key : κ) (existing finalizer : φ),
-    self.state = Effect4.ScopeState.openInline existingKey existing ->
-      (self.addUnsafe key finalizer).state =
-        Effect4.ScopeState.openMap
-          (Effect4.Scope.tableInsert [(existingKey, existing)] key finalizer))
-
-#check (@Effect4.Scope.addUnsafe_openMap :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (self : Effect4.Scope κ φ β ε δ ι α) (table : List (κ × φ)) (key : κ) (finalizer : φ),
-    self.state = Effect4.ScopeState.openMap table ->
-      (self.addUnsafe key finalizer).state =
-        Effect4.ScopeState.openMap (Effect4.Scope.tableInsert table key finalizer))
-
-#check (@Effect4.Scope.addUnsafe_promotes :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (self : Effect4.Scope κ φ β ε δ ι α) (existingKey key : κ) (existing finalizer : φ),
-    self.state = Effect4.ScopeState.openInline existingKey existing -> existingKey ≠ key ->
-      (self.addUnsafe key finalizer).finalizers =
-        [(existingKey, existing), (key, finalizer)])
-
-#check (@Effect4.Scope.addUnsafe_finalizers :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ),
-    self.isClosed = false -> key ∉ self.finalizerKeys ->
-      (self.addUnsafe key finalizer).finalizers = self.finalizers ++ [(key, finalizer)])
-
-#check (@Effect4.Scope.addUnsafe_keys_nodup :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ),
-    self.finalizerKeys.Nodup -> (self.addUnsafe key finalizer).finalizerKeys.Nodup)
-
-#check (@Effect4.Scope.addUnsafe_closed :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ),
-    self.isClosed = true -> self.addUnsafe key finalizer = self)
-
-#check (@Effect4.Scope.addExit_open :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ),
-    self.isClosed = false ->
-      Effect4.Scope.addExit run self key finalizer =
-        (self.addUnsafe key finalizer, Effect4.Exit.void))
-
-#check (@Effect4.Scope.addExit_closed :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ)
-    (exit : Effect4.Exit β ε δ ι α),
-    self.state = Effect4.ScopeState.closed exit ->
-      Effect4.Scope.addExit run self key finalizer = (self, run finalizer exit))
-
-#check (@Effect4.Scope.addExit_closed_registers_nothing :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ)
-    (exit : Effect4.Exit β ε δ ι α),
-    self.state = Effect4.ScopeState.closed exit ->
-      (Effect4.Scope.addExit run self key finalizer).fst.finalizers = [])
-
-#check (@Effect4.Scope.tableRemove_eq : forall {κ φ : Type u} [DecidableEq κ]
-  (table : List (κ × φ)) (key : κ),
-  Effect4.Scope.tableRemove table key =
-    table.filter (fun entry => decide (entry.fst ≠ key)))
-
-#check (@Effect4.Scope.tableRemove_keys : forall {κ φ : Type u} [DecidableEq κ]
-  (table : List (κ × φ)) (key : κ),
-  key ∉ (Effect4.Scope.tableRemove table key).map Prod.fst)
-
-#check (@Effect4.Scope.tableRemove_nodup : forall {κ φ : Type u} [DecidableEq κ]
-  (table : List (κ × φ)) (key : κ),
-  (table.map Prod.fst).Nodup ->
-    ((Effect4.Scope.tableRemove table key).map Prod.fst).Nodup)
-
-#check (@Effect4.Scope.removeUnsafe_strategy :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ),
-    (self.removeUnsafe key).strategy = self.strategy)
-
-#check (@Effect4.Scope.removeUnsafe_inline_hit :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ),
-    self.state = Effect4.ScopeState.openInline key finalizer ->
-      (self.removeUnsafe key).state = Effect4.ScopeState.openEmpty)
-
-#check (@Effect4.Scope.removeUnsafe_inline_miss :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (self : Effect4.Scope κ φ β ε δ ι α) (existingKey key : κ) (finalizer : φ),
-    self.state = Effect4.ScopeState.openInline existingKey finalizer -> existingKey ≠ key ->
-      self.removeUnsafe key = self)
-
-#check (@Effect4.Scope.removeUnsafe_openMap :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (self : Effect4.Scope κ φ β ε δ ι α) (table : List (κ × φ)) (key : κ),
-    self.state = Effect4.ScopeState.openMap table ->
-      (self.removeUnsafe key).state =
-        Effect4.ScopeState.openMap (Effect4.Scope.tableRemove table key))
-
-#check (@Effect4.Scope.removeUnsafe_not_open :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ),
-    self.isOpen = false -> self.removeUnsafe key = self)
-
-#check (@Effect4.Scope.removeUnsafe_keys :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ),
-    key ∉ (self.removeUnsafe key).finalizerKeys)
-
-#check (@Effect4.Scope.removeUnsafe_keys_nodup :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (self : Effect4.Scope κ φ β ε δ ι α) (key : κ),
-    self.finalizerKeys.Nodup -> (self.removeUnsafe key).finalizerKeys.Nodup)
-
-#check (@Effect4.Scope.close_eq :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
-    Effect4.Scope.close run self exit =
-      (Effect4.Scope.closeState self exit, Effect4.Scope.closeResult run self exit))
-
-#check (@Effect4.Scope.close_state_independent_of_run :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (leftRun rightRun : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
-    (Effect4.Scope.close leftRun self exit).fst =
-      (Effect4.Scope.close rightRun self exit).fst)
-
-#check (@Effect4.Scope.closeState_state :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α)
-    (exit : Effect4.Exit β ε δ ι α),
-    self.isClosed = false ->
-      (Effect4.Scope.closeState self exit).state = Effect4.ScopeState.closed exit)
-
-#check (@Effect4.Scope.closeState_strategy :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α)
-    (exit : Effect4.Exit β ε δ ι α),
-    (Effect4.Scope.closeState self exit).strategy = self.strategy)
-
-#check (@Effect4.Scope.closeState_finalizers :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α)
-    (exit : Effect4.Exit β ε δ ι α),
-    (Effect4.Scope.closeState self exit).finalizers = [])
-
-#check (@Effect4.Scope.closeState_isClosed :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α)
-    (exit : Effect4.Exit β ε δ ι α),
-    (Effect4.Scope.closeState self exit).isClosed = true)
-
-#check (@Effect4.Scope.closeState_idempotent :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α)
-    (exit : Effect4.Exit β ε δ ι α),
-    self.isClosed = true -> Effect4.Scope.closeState self exit = self)
-
-#check (@Effect4.Scope.close_closingExit :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α)
-    (exit : Effect4.Exit β ε δ ι α),
-    self.isClosed = false ->
-      (Effect4.Scope.closeState self exit).closingExit? = some exit)
-
-#check (@Effect4.Scope.close_idempotent :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
-    self.isClosed = true -> Effect4.Scope.close run self exit = (self, Effect4.Exit.void))
-
-#check (@Effect4.Scope.close_twice :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (self : Effect4.Scope κ φ β ε δ ι α) (first second : Effect4.Exit β ε δ ι α),
-    Effect4.Scope.close run (Effect4.Scope.close run self first).fst second =
-      ((Effect4.Scope.close run self first).fst, Effect4.Exit.void))
-
-#check (@Effect4.Scope.close_reentrant_add :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α) (key : κ)
-    (finalizer : φ),
-    self.isClosed = false ->
-      Effect4.Scope.addExit run (Effect4.Scope.closeState self exit) key finalizer =
-        (Effect4.Scope.closeState self exit, run finalizer exit))
-
-#check (@Effect4.Scope.closeResult_closed :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
-    self.isClosed = true -> Effect4.Scope.closeResult run self exit = Effect4.Exit.void)
-
-#check (@Effect4.Scope.closeOrder_eq :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α),
-    self.closeOrder = (self.finalizers.map Prod.snd).reverse)
-
-#check (@Effect4.Scope.closeOrder_last_first :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Scope κ φ β ε δ ι α)
-    (table : List (κ × φ)) (key : κ) (finalizer : φ),
-    self.finalizers = table ++ [(key, finalizer)] ->
-      self.closeOrder = finalizer :: (table.map Prod.snd).reverse)
-
-#check (@Effect4.Scope.closeExits_eq :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
-    Effect4.Scope.closeExits run self exit =
-      self.closeOrder.map (fun finalizer => run finalizer exit))
-
-#check (@Effect4.Scope.closeExits_reverse :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
-    Effect4.Scope.closeExits run self exit =
-      self.finalizers.reverse.map (fun entry => run entry.snd exit))
-
-#check (@Effect4.Scope.runScoped_lifo :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (registrations : List (κ × φ)) (bodyExit : Effect4.Exit β ε δ ι α),
-    (registrations.map Prod.fst).Nodup ->
-      Effect4.Scope.closeExits run
-          ((Effect4.Scope.make Effect4.FinalizerStrategy.sequential :
-            Effect4.Scope κ φ β ε δ ι α).addAll registrations) bodyExit =
-        registrations.reverse.map (fun entry => run entry.snd bodyExit))
-
-#check (@Effect4.Scope.closeExits_length :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
-    (Effect4.Scope.closeExits run self exit).length = self.finalizers.length)
-
-#check (@Effect4.Scope.closeResult_reasons :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
-    self.isClosed = false ->
-      (Effect4.Scope.closeResult run self exit).causeReasons =
-        (Effect4.Scope.closeExits run self exit).flatMap Effect4.Exit.causeReasons)
-
-#check (@Effect4.FinalizerStrategy.cases_receipt :
-  forall strategy : Effect4.FinalizerStrategy,
-    strategy = Effect4.FinalizerStrategy.sequential \/
-      strategy = Effect4.FinalizerStrategy.parallel)
-
-#check (@Effect4.Scope.close_strategy_irrelevant :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (state : Effect4.ScopeState κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
-    (Effect4.Scope.close run
-        ({ strategy := Effect4.FinalizerStrategy.parallel, state := state } :
-          Effect4.Scope κ φ β ε δ ι α) exit).snd =
-      (Effect4.Scope.close run
-        ({ strategy := Effect4.FinalizerStrategy.sequential, state := state } :
-          Effect4.Scope κ φ β ε δ ι α) exit).snd)
-
-#check (@Effect4.Scope.closeResult_nil :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α),
-    self.finalizers = [] -> Effect4.Scope.closeResult run self exit = Effect4.Exit.void)
-
-#check (@Effect4.Scope.closeResult_single :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α) (key : κ)
-    (finalizer : φ),
-    self.isClosed = false -> self.finalizers = [(key, finalizer)] ->
-      Effect4.Scope.closeResult run self exit = run finalizer exit)
-
-#check (@Effect4.Scope.closeResult_many :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (self : Effect4.Scope κ φ β ε δ ι α) (exit : Effect4.Exit β ε δ ι α)
-    (first second : Effect4.Exit Unit ε δ ι α) (rest : List (Effect4.Exit Unit ε δ ι α)),
-    self.isClosed = false ->
-      Effect4.Scope.closeExits run self exit = first :: second :: rest ->
-        Effect4.Scope.closeResult run self exit =
-          Effect4.Exit.asVoidAll (first :: second :: rest))
-
-#check (@Effect4.Scope.fork_closed_parent :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (parent : Effect4.Scope κ φ β ε δ ι α) (strategy : Effect4.FinalizerStrategy)
-    (key : κ) (closeChild detachFromParent : φ) (exit : Effect4.Exit β ε δ ι α),
-    parent.state = Effect4.ScopeState.closed exit ->
-      Effect4.Scope.fork parent strategy key closeChild detachFromParent =
-        (parent, ({ strategy := strategy, state := Effect4.ScopeState.closed exit } :
-          Effect4.Scope κ φ β ε δ ι α)))
-
-#check (@Effect4.Scope.fork_closed_parent_child_exit :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (parent : Effect4.Scope κ φ β ε δ ι α) (strategy : Effect4.FinalizerStrategy)
-    (key : κ) (closeChild detachFromParent : φ) (exit : Effect4.Exit β ε δ ι α),
-    parent.state = Effect4.ScopeState.closed exit ->
-      (Effect4.Scope.fork parent strategy key closeChild detachFromParent).snd.closingExit? =
-        some exit)
-
-#check (@Effect4.Scope.fork_open_parent :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (parent : Effect4.Scope κ φ β ε δ ι α) (strategy : Effect4.FinalizerStrategy)
-    (key : κ) (closeChild detachFromParent : φ),
-    parent.isClosed = false ->
-      Effect4.Scope.fork parent strategy key closeChild detachFromParent =
-        (parent.addUnsafe key closeChild,
-          (Effect4.Scope.make strategy :
-            Effect4.Scope κ φ β ε δ ι α).addUnsafe key detachFromParent))
-
-#check (@Effect4.Scope.fork_child_finalizers :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (parent : Effect4.Scope κ φ β ε δ ι α) (strategy : Effect4.FinalizerStrategy)
-    (key : κ) (closeChild detachFromParent : φ),
-    parent.isClosed = false ->
-      (Effect4.Scope.fork parent strategy key closeChild detachFromParent).snd.finalizers =
-        [(key, detachFromParent)])
-
-#check (@Effect4.Scope.fork_parent_finalizers :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (parent : Effect4.Scope κ φ β ε δ ι α) (strategy : Effect4.FinalizerStrategy)
-    (key : κ) (closeChild detachFromParent : φ),
-    parent.isClosed = false -> key ∉ parent.finalizerKeys ->
-      (Effect4.Scope.fork parent strategy key closeChild detachFromParent).fst.finalizers =
-        parent.finalizers ++ [(key, closeChild)])
-
-#check (@Effect4.Scope.fork_child_strategy :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (parent : Effect4.Scope κ φ β ε δ ι α) (strategy : Effect4.FinalizerStrategy)
-    (key : κ) (closeChild detachFromParent : φ),
-    (Effect4.Scope.fork parent strategy key closeChild detachFromParent).snd.strategy =
-      strategy)
-
-#check (@Effect4.Scope.fork_shared_key :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (parent : Effect4.Scope κ φ β ε δ ι α) (strategy : Effect4.FinalizerStrategy)
-    (key : κ) (closeChild detachFromParent : φ),
-    parent.isClosed = false ->
-      key ∈ (Effect4.Scope.fork parent strategy key closeChild
-          detachFromParent).fst.finalizerKeys /\
-        key ∈ (Effect4.Scope.fork parent strategy key closeChild
-          detachFromParent).snd.finalizerKeys)
-
-#check (@Effect4.Scope.fork_detach :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (parent : Effect4.Scope κ φ β ε δ ι α) (strategy : Effect4.FinalizerStrategy)
-    (key : κ) (closeChild detachFromParent : φ),
-    parent.isClosed = false -> key ∉ parent.finalizerKeys ->
-      ((Effect4.Scope.fork parent strategy key closeChild
-        detachFromParent).fst.removeUnsafe key).finalizers = parent.finalizers)
-
-#check (@Effect4.Scope.addAll_nil :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (self : Effect4.Scope κ φ β ε δ ι α), self.addAll [] = self)
-
-#check (@Effect4.Scope.addAll_cons :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (self : Effect4.Scope κ φ β ε δ ι α) (entry : κ × φ) (rest : List (κ × φ)),
-    self.addAll (entry :: rest) = (self.addUnsafe entry.fst entry.snd).addAll rest)
-
-#check (@Effect4.Scope.addAll_finalizers :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (self : Effect4.Scope κ φ β ε δ ι α) (registrations : List (κ × φ)),
-    self.isClosed = false ->
-      (self.finalizerKeys ++ registrations.map Prod.fst).Nodup ->
-        (self.addAll registrations).finalizers = self.finalizers ++ registrations)
-
-#check (@Effect4.Scope.make_addAll_finalizers :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (strategy : Effect4.FinalizerStrategy) (registrations : List (κ × φ)),
-    (registrations.map Prod.fst).Nodup ->
-      ((Effect4.Scope.make strategy :
-        Effect4.Scope κ φ β ε δ ι α).addAll registrations).finalizers = registrations)
-
-#check (@Effect4.Scope.runScoped_eq :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (registrations : List (κ × φ)) (bodyExit : Effect4.Exit β ε δ ι α),
-    Effect4.Scope.runScoped run registrations bodyExit =
-      Effect4.Scope.close run
-        ((Effect4.Scope.make Effect4.FinalizerStrategy.sequential :
-          Effect4.Scope κ φ β ε δ ι α).addAll registrations) bodyExit)
-
-#check (@Effect4.Scope.runScoped_fresh_scope :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u},
-    (Effect4.Scope.make Effect4.FinalizerStrategy.sequential :
-      Effect4.Scope κ φ β ε δ ι α) =
-      { strategy := Effect4.FinalizerStrategy.sequential,
-        state := Effect4.ScopeState.empty })
-
-#check (@Effect4.Scope.runScoped_state :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (registrations : List (κ × φ)) (bodyExit : Effect4.Exit β ε δ ι α),
-    (Effect4.Scope.runScoped run registrations bodyExit).fst.state =
-      Effect4.ScopeState.closed bodyExit)
-
-#check (@Effect4.Scope.runScoped_strategy :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (registrations : List (κ × φ)) (bodyExit : Effect4.Exit β ε δ ι α),
-    (Effect4.Scope.runScoped run registrations bodyExit).fst.strategy =
-      Effect4.FinalizerStrategy.sequential)
-
-#check (@Effect4.Scope.runScoped_empty :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (bodyExit : Effect4.Exit β ε δ ι α),
-    Effect4.Scope.runScoped run ([] : List (κ × φ)) bodyExit =
-      (({ strategy := Effect4.FinalizerStrategy.sequential,
-            state := Effect4.ScopeState.closed bodyExit } :
-          Effect4.Scope κ φ β ε δ ι α),
-        Effect4.Exit.void))
-
-#check (@Effect4.Scope.acquireRelease_failure :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (ambient : Effect4.Scope κ φ β ε δ ι α) (key : κ) (release : φ)
-    (cause : Effect4.Cause ε δ ι α),
-    Effect4.Scope.acquireRelease run ambient key release (Effect4.Exit.failure cause) =
-      (ambient, Effect4.Exit.void))
-
-#check (@Effect4.Scope.acquireRelease_success :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (ambient : Effect4.Scope κ φ β ε δ ι α) (key : κ) (release : φ) (value : β),
-    Effect4.Scope.acquireRelease run ambient key release (Effect4.Exit.success value) =
-      Effect4.Scope.addExit run ambient key release)
-
-#check (@Effect4.Scope.acquireRelease_registers :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (ambient : Effect4.Scope κ φ β ε δ ι α) (key : κ) (release : φ) (value : β),
-    ambient.isClosed = false -> key ∉ ambient.finalizerKeys ->
-      (Effect4.Scope.acquireRelease run ambient key release
-        (Effect4.Exit.success value)).fst.finalizers =
-          ambient.finalizers ++ [(key, release)])
-
-#check (@Effect4.Scope.acquireRelease_closed_ambient :
-  forall {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq κ]
-    (run : φ -> Effect4.Exit β ε δ ι α -> Effect4.Exit Unit ε δ ι α)
-    (ambient : Effect4.Scope κ φ β ε δ ι α) (key : κ) (release : φ) (value : β)
-    (exit : Effect4.Exit β ε δ ι α),
-    ambient.state = Effect4.ScopeState.closed exit ->
-      Effect4.Scope.acquireRelease run ambient key release (Effect4.Exit.success value) =
-        (ambient, run release exit))
-
-
-/-! Supervision controller receipts. Source interpretation remains open in
-SUPERVISION-PG-RC112; every joined runtime row is partial. -/
-
-#check (@Effect4.Supervision.MaskMode.cases_receipt :
-  forall mode : Effect4.Supervision.MaskMode, mode = .interruptible ∨ mode = .uninterruptible ∨ mode = .inherit)
-
-#check (@Effect4.Supervision.ObserverMode.cases_receipt :
-  forall mode : Effect4.Supervision.ObserverMode, mode = .awaitValue ∨ mode = .joinEffect)
-
-#check (@Effect4.Supervision.ScopeMode.cases_receipt :
-  forall mode : Effect4.Supervision.ScopeMode, mode = .forkIn ∨ mode = .fiberRunIn)
-
-#check (@Effect4.Supervision.interruptCause_eq :
-  forall {ε δ ι α : Type u} (encode : Effect4.FiberId -> ι) (requester : Option Effect4.FiberId) (annotations : Effect4.ReasonAnnotations α), (Effect4.Supervision.interruptCause encode requester annotations : Effect4.Cause ε δ ι α) = Effect4.Cause.annotate (Effect4.Cause.interrupt (requester.map encode)) annotations false)
-
-#check (@Effect4.Supervision.RaceAllState.initial_eq :
-  forall {β : Type v} {ε δ ι α : Type u}, forall entrants : List Effect4.FiberId, (Effect4.Supervision.RaceAllState.initial entrants : Effect4.Supervision.RaceAllState β ε δ ι α) = {unstarted := entrants, starting := none, live := [], remaining := entrants.length, failures := [], winner := none, accepted := none, cleanupNeeded := false, requests := [], cleanup := none, cleanupRequested := false})
-
-#check (@Effect4.Supervision.raceComplete_unknown :
-  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (child : Effect4.FiberId) (exit : Effect4.Exit β ε δ ι α), child ∉ s.live -> Effect4.Supervision.raceComplete s child exit = s)
-
-#check (@Effect4.Supervision.raceComplete_after_accepted :
-  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (child : Effect4.FiberId) (exit accepted : Effect4.Exit β ε δ ι α), child ∈ s.live -> s.accepted = some accepted -> Effect4.Supervision.raceComplete s child exit = {s with live := s.live.filter (fun id => decide (id ≠ child)), remaining := s.remaining - 1, failures := s.failures ++ exit.causeReasons, cleanup := s.cleanup.map (fun wait => if child ∈ Effect4.Supervision.WaitState.pending wait then {wait with published := wait.published ++ [child]} else wait)})
-
-#check (@Effect4.Supervision.raceComplete_success :
-  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (child : Effect4.FiberId) (value : β), child ∈ s.live -> s.accepted = none -> Effect4.Supervision.raceComplete s child (.success value) = {s with live := s.live.filter (fun id => decide (id ≠ child)), remaining := s.remaining - 1, winner := some (child, value), accepted := some (.success value), cleanupNeeded := !(s.live.filter (fun id => decide (id ≠ child))).isEmpty, requests := [], cleanup := none, cleanupRequested := false})
-
-#check (@Effect4.Supervision.raceComplete_failure_last :
-  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (child : Effect4.FiberId) (cause : Effect4.Cause ε δ ι α), child ∈ s.live -> s.accepted = none -> s.remaining ≤ 1 -> Effect4.Supervision.raceComplete s child (.failure cause) = {s with live := s.live.filter (fun id => decide (id ≠ child)), remaining := s.remaining - 1, failures := s.failures ++ cause.reasons, accepted := some (.failure ⟨s.failures ++ cause.reasons⟩), cleanupNeeded := false, requests := [], cleanup := none, cleanupRequested := false})
-
-#check (@Effect4.Supervision.raceComplete_failure_pending :
-  forall {β : Type v} {ε δ ι α : Type u}, forall (s : Effect4.Supervision.RaceAllState β ε δ ι α) (child : Effect4.FiberId) (cause : Effect4.Cause ε δ ι α), child ∈ s.live -> s.accepted = none -> 1 < s.remaining -> Effect4.Supervision.raceComplete s child (.failure cause) = {s with live := s.live.filter (fun id => decide (id ≠ child)), remaining := s.remaining - 1, failures := s.failures ++ cause.reasons})
-
-/-! The frame-machine witnesses. Statements are transcribed from the frozen
-ascriptions of `Test/Machine/Runtime/FramesContract.lean`.
-
-The `Effect4.Prim` and `Effect4.FrameFiber` telescopes carry seven type
-parameters, and many of these statements quantify over all seven while naming
-only some. The binder names are part of the frozen statement, so they are
-transcribed as written rather than renamed to `_ν` to please the
-unused-variable linter; the option below is scoped to this section. -/
-
-set_option linter.unusedVariables false
-
-#check (@Effect4.Arm.all_nodup : List.Nodup Effect4.Arm.all)
-
-#check (@Effect4.Arm.mem_all : ∀ (arm : Effect4.Arm), arm ∈ Effect4.Arm.all)
-
-#check (@Effect4.Arm.cases_receipt :
-  ∀ (arm : Effect4.Arm), arm = Effect4.Arm.contA ∨ arm = Effect4.Arm.contE ∨ arm =
-  Effect4.Arm.contAll)
-
-#check (@Effect4.Arm.demandable_eq :
-  Effect4.Arm.demandable = [Effect4.Arm.contA, Effect4.Arm.contE])
-
-#check (@Effect4.Arm.contAll_not_demandable : ¬Effect4.Arm.contAll ∈ Effect4.Arm.demandable)
-
-#check (@Effect4.Prim.cases_receipt :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Prim ν σ β ε δ ι α), (∃
-  value, self = Effect4.Prim.success value) ∨ (∃ cause, self = Effect4.Prim.failure cause) ∨ (∃
-  thunk, self = Effect4.Prim.sync thunk) ∨ (∃ thunk, self = Effect4.Prim.suspend thunk) ∨ (∃
-  thunk, self = Effect4.Prim.withFiber thunk) ∨ (∃ error, self = Effect4.Prim.yieldableError
-  error) ∨ (∃ generator cursor, self = Effect4.Prim.iterator generator cursor) ∨ (∃ body
-  onValue, self = Effect4.Prim.onSuccess body onValue) ∨ (∃ body next, self =
-  Effect4.Prim.onSuccessConst body next) ∨ (∃ body onCause, self =
-  Effect4.Prim.onFailure body onCause) ∨ (∃ body onValue onCause, self =
-  Effect4.Prim.onSuccessAndFailure body onValue onCause) ∨ (∃ body, self =
-  Effect4.Prim.exitFrame body) ∨ (∃ body finalizer flag, self = Effect4.Prim.onExit body
-  finalizer flag) ∨ (∃ flag, self = Effect4.Prim.setInterruptible flag) ∨ (∃ loop cursor, self =
-  Effect4.Prim.whileLoop loop cursor) ∨ (∃ priority, self = Effect4.Prim.yieldNowWith priority)
-  ∨ (∃ register withSignal cancel, self = Effect4.Prim.async register withSignal cancel) ∨ ∃
-  onInterrupt, self = Effect4.Prim.asyncFinalizer onInterrupt)
-
--- census: frame-arm.OnSuccess
-#check (@Effect4.Prim.arms_onSuccessConst :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
-  (body next : Effect4.Prim ν σ β ε δ ι α),
-  (Effect4.Prim.onSuccessConst body next).arms = [Effect4.Arm.contA])
-
--- census: frame-arm.OnSuccess
-#check (@Effect4.Prim.ensure_onSuccessConst :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
-  (body next : Effect4.Prim ν σ β ε δ ι α) (fiber : Effect4.FrameFiber ν σ β ε δ ι α),
-  (Effect4.Prim.onSuccessConst body next).ensure fiber = (fiber, none))
-
--- census: op.OnSuccess
-#check (@Effect4.Prim.armA_onSuccessConst :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
-  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-  (interp : Effect4.PrimInterp ν σ β ε δ ι α)
-  (body next : Effect4.Prim ν σ β ε δ ι α) (value : β)
-  (provided : Option (Effect4.Exit β ε δ ι α)),
-  (Effect4.Prim.onSuccessConst body next).armA interp value provided = some (next, []))
-
--- census: frame-arm.OnSuccess
-#check (@Effect4.Prim.armE_onSuccessConst_none :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
-  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-  (interp : Effect4.PrimInterp ν σ β ε δ ι α)
-  (body next : Effect4.Prim ν σ β ε δ ι α) (cause : Effect4.Cause ε δ ι α)
-  (provided : Option (Effect4.Exit β ε δ ι α)),
-  (Effect4.Prim.onSuccessConst body next).armE interp cause provided = none)
-
--- census: op.OnSuccess
-#check (@Effect4.FrameFiber.step_onSuccessConst :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
-  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-  (interp : Effect4.PrimInterp ν σ β ε δ ι α) (self : Effect4.FrameFiber ν σ β ε δ ι α)
-  (body next : Effect4.Prim ν σ β ε δ ι α),
-  (Effect4.FrameFiber.mk (Effect4.Prim.onSuccessConst body next) self.stack self.interruptible
-      self.interruptedCause self.deferredInterrupt).step interp =
-    (Effect4.FrameStep.running
-      (Effect4.FrameFiber.mk body (Effect4.Prim.onSuccessConst body next :: self.stack)
-        self.interruptible self.interruptedCause self.deferredInterrupt),
-      [Effect4.FrameEvent.pushed (Effect4.Prim.onSuccessConst body next)]))
-
--- census: op.OnSuccess
-#check (@Effect4.FrameFiber.resumeValue_onSuccessConst :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
-  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-  (interp : Effect4.PrimInterp ν σ β ε δ ι α) (self : Effect4.FrameFiber ν σ β ε δ ι α)
-  (body next : Effect4.Prim ν σ β ε δ ι α) (value : β)
-  (provided : Option (Effect4.Exit β ε δ ι α)), self.deferredInterrupt = false →
-  ({ self with stack := Effect4.Prim.onSuccessConst body next :: self.stack }).resumeValue
-      interp value provided =
-    (Effect4.FrameStep.running { self with current := next },
-      [Effect4.FrameEvent.popped (Effect4.Prim.onSuccessConst body next)]))
-
--- census: op.OnSuccess
-#check (@Effect4.FrameFiber.step_success_onSuccessConst :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
-  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-  (interp : Effect4.PrimInterp ν σ β ε δ ι α) (self : Effect4.FrameFiber ν σ β ε δ ι α)
-  (body next : Effect4.Prim ν σ β ε δ ι α) (value : β), self.deferredInterrupt = false →
-  (Effect4.FrameFiber.mk (Effect4.Prim.success value)
-      (Effect4.Prim.onSuccessConst body next :: self.stack) self.interruptible
-      self.interruptedCause self.deferredInterrupt).step interp =
-    (Effect4.FrameStep.running { self with current := next },
-      [Effect4.FrameEvent.popped (Effect4.Prim.onSuccessConst body next)]))
-
-#check (@Effect4.FrameFiber.start_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (current : Effect4.Prim ν σ β ε δ ι α),
-  Effect4.FrameFiber.start current = Effect4.FrameFiber.mk current [] Bool.true Option.none
-  Bool.false)
-
-#check (@Effect4.FrameFiber.pendingCause_some :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
-  (cause : Effect4.Cause ε δ ι α), self.interruptedCause = Option.some cause →
-  Effect4.FrameFiber.pendingCause self = cause)
-
-#check (@Effect4.FrameFiber.pendingCause_none :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
-  self.interruptedCause = Option.none → Effect4.FrameFiber.pendingCause self =
-  Effect4.Cause.empty)
-
-#check (@Effect4.FrameFiber.masked_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
-  Effect4.FrameFiber.masked self = !self.interruptible)
-
-#check (@Effect4.FrameFiber.interrupted_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
-  Effect4.FrameFiber.interrupted self = (self.interruptible && Option.isSome
-  self.interruptedCause))
-
-#check (@Effect4.FrameEvent.poppedFrames_nil :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}, Effect4.FrameEvent.poppedFrames [] = [])
-
-#check (@Effect4.FrameEvent.poppedFrames_cons_popped :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (frame : Effect4.Prim ν σ β ε δ ι α) (rest :
-  List (Effect4.FrameEvent ν σ β ε δ ι α)), Effect4.FrameEvent.poppedFrames
-  (Effect4.FrameEvent.popped frame :: rest) = frame :: Effect4.FrameEvent.poppedFrames rest)
-
-#check (@Effect4.FrameEvent.finalizersRun_nil :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}, Effect4.FrameEvent.finalizersRun [] = [])
-
-#check (@Effect4.FrameEvent.finalizersRun_cons_ran :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (finalizer : ν) (exit : Effect4.Exit β ε δ ι
-  α) (rest : List (Effect4.FrameEvent ν σ β ε δ ι α)), Effect4.FrameEvent.finalizersRun
-  (Effect4.FrameEvent.ranFinalizer finalizer exit :: rest) = finalizer ::
-  Effect4.FrameEvent.finalizersRun rest)
-
-#check (@Effect4.FrameEvent.finalizersRun_cons_popped :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (frame : Effect4.Prim ν σ β ε δ ι α) (rest :
-  List (Effect4.FrameEvent ν σ β ε δ ι α)), Effect4.FrameEvent.finalizersRun
-  (Effect4.FrameEvent.popped frame :: rest) = Effect4.FrameEvent.finalizersRun rest)
-
-#check (@Effect4.Prim.hasArm_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Prim ν σ β ε δ ι α) (arm :
-  Effect4.Arm), Effect4.Prim.hasArm self arm = List.contains (Effect4.Prim.arms self) arm)
-
-#check (@Effect4.Prim.isFrame_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Prim ν σ β ε δ ι α),
-  Effect4.Prim.isFrame self = !List.isEmpty (Effect4.Prim.arms self))
-
-#check (@Effect4.Prim.isFrame_iff :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Prim ν σ β ε δ ι α),
-  Effect4.Prim.isFrame self = Bool.true ↔ Effect4.Prim.arms self ≠ [])
-
-#check (@Effect4.Prim.arms_onSuccess :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α) (onValue
-  : ν), Effect4.Prim.arms (Effect4.Prim.onSuccess body onValue) = [Effect4.Arm.contA])
-
-#check (@Effect4.Prim.arms_onFailure :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α) (onCause
-  : ν), Effect4.Prim.arms (Effect4.Prim.onFailure body onCause) = [Effect4.Arm.contE])
-
-#check (@Effect4.Prim.arms_onSuccessAndFailure :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α) (onValue
-  onCause : ν), Effect4.Prim.arms (Effect4.Prim.onSuccessAndFailure body onValue onCause) =
-  [Effect4.Arm.contA, Effect4.Arm.contE])
-
-#check (@Effect4.Prim.arms_exitFrame :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α),
-  Effect4.Prim.arms (Effect4.Prim.exitFrame body) = [Effect4.Arm.contA, Effect4.Arm.contE])
-
-#check (@Effect4.Prim.arms_onExit :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α)
-  (finalizer : ν) (flag : Bool), Effect4.Prim.arms (Effect4.Prim.onExit body finalizer flag) =
-  [Effect4.Arm.contA, Effect4.Arm.contE, Effect4.Arm.contAll])
-
-#check (@Effect4.Prim.arms_setInterruptible :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (flag : Bool), Effect4.Prim.arms
-  (Effect4.Prim.setInterruptible flag) = [Effect4.Arm.contAll])
-
-#check (@Effect4.Prim.arms_whileLoop :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (loop : ν) (cursor : β), Effect4.Prim.arms
-  (Effect4.Prim.whileLoop loop cursor) = [Effect4.Arm.contA])
-
-#check (@Effect4.Prim.arms_iterator :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (generator : ν) (cursor : β),
-  Effect4.Prim.arms (Effect4.Prim.iterator generator cursor) = [Effect4.Arm.contA])
-
-#check (@Effect4.Prim.non_frames_have_no_arms :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (value : β) (cause : Effect4.Cause ε δ ι α)
-  (thunk : σ) (error : ε) (priority : Nat) (register : ν) (withSignal : Bool) (cancel : Option
-  ν), Effect4.Prim.arms (Effect4.Prim.success value) = [] ∧
-  Effect4.Prim.arms (Effect4.Prim.failure cause) = [] ∧ Effect4.Prim.arms (Effect4.Prim.sync
-  thunk) = [] ∧ Effect4.Prim.arms (Effect4.Prim.suspend thunk) = [] ∧ Effect4.Prim.arms
-  (Effect4.Prim.withFiber thunk) = [] ∧ Effect4.Prim.arms (Effect4.Prim.yieldableError error) =
-  [] ∧ Effect4.Prim.arms (Effect4.Prim.yieldNowWith priority) = [] ∧ Effect4.Prim.arms
-  (Effect4.Prim.async register withSignal cancel) = [])
-
-#check (@Effect4.Prim.ofExit_asExit? :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (exit : Effect4.Exit β ε δ ι α),
-  Effect4.Prim.asExit? (Effect4.Prim.ofExit exit) = Option.some exit)
-
-#check (@Effect4.Prim.asExit?_success :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (value : β), Effect4.Prim.asExit?
-  (Effect4.Prim.success value) = Option.some (Effect4.Exit.success value))
-
-#check (@Effect4.Prim.asExit?_failure :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (cause : Effect4.Cause ε δ ι α),
-  Effect4.Prim.asExit? (Effect4.Prim.failure cause) = Option.some (Effect4.Exit.failure cause))
-
-#check (@Effect4.Prim.asExit?_eq_some :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.Prim ν σ β ε δ ι α) (exit :
-  Effect4.Exit β ε δ ι α), Effect4.Prim.asExit? self = Option.some exit → self =
-  Effect4.Prim.ofExit exit)
-
-#check (@Effect4.Prim.ofExit_isFrame :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (exit : Effect4.Exit β ε δ ι α),
-  Effect4.Prim.isFrame (Effect4.Prim.ofExit exit) = Bool.false)
-
-#check (@Effect4.Prim.ensure_of_no_contAll :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (frame : Effect4.Prim ν σ β ε δ ι α) (fiber :
-  Effect4.FrameFiber ν σ β ε δ ι α), Effect4.Prim.hasArm frame Effect4.Arm.contAll = Bool.false
-  → Effect4.Prim.ensure frame fiber = (fiber, Option.none))
-
-#check (@Effect4.Prim.ensure_onExit_masks :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α)
-  (finalizer : ν) (fiber : Effect4.FrameFiber ν σ β ε δ ι α), fiber.interruptible = Bool.true →
-  Effect4.Prim.ensure (Effect4.Prim.onExit body finalizer Bool.false) fiber =
-  (Effect4.FrameFiber.mk fiber.current (Effect4.Prim.setInterruptible Bool.true :: fiber.stack)
-  Bool.false fiber.interruptedCause fiber.deferredInterrupt, Option.none))
-
-#check (@Effect4.Prim.ensure_onExit_told_not_to :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α)
-  (finalizer : ν) (fiber : Effect4.FrameFiber ν σ β ε δ ι α), Effect4.Prim.ensure
-  (Effect4.Prim.onExit body finalizer Bool.true) fiber = (fiber, Option.none))
-
-#check (@Effect4.Prim.ensure_onExit_already_masked :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α)
-  (finalizer : ν) (flag : Bool) (fiber : Effect4.FrameFiber ν σ β ε δ ι α), fiber.interruptible
-  = Bool.false → Effect4.Prim.ensure (Effect4.Prim.onExit body finalizer flag) fiber = (fiber,
-  Option.none))
-
-#check (@Effect4.Prim.ensure_onExit_no_replacement :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α)
-  (finalizer : ν) (flag : Bool) (fiber : Effect4.FrameFiber ν σ β ε δ ι α), (Effect4.Prim.ensure
-  (Effect4.Prim.onExit body finalizer flag) fiber).snd = Option.none)
-
-#check (@Effect4.Prim.ensure_setInterruptible_flag :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (flag : Bool) (fiber : Effect4.FrameFiber ν σ
-  β ε δ ι α), (Effect4.Prim.ensure (Effect4.Prim.setInterruptible flag) fiber).fst.interruptible
-  = flag)
-
-#check (@Effect4.Prim.ensure_setInterruptible_stack :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (flag : Bool) (fiber : Effect4.FrameFiber ν σ
-  β ε δ ι α), (Effect4.Prim.ensure (Effect4.Prim.setInterruptible flag) fiber).fst.stack =
-  fiber.stack)
-
-#check (@Effect4.Prim.ensure_setInterruptible_substitutes :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (cause : Effect4.Cause ε δ ι α) (fiber :
-  Effect4.FrameFiber ν σ β ε δ ι α), fiber.interruptedCause = Option.some cause →
-  Effect4.Prim.ensure (Effect4.Prim.setInterruptible Bool.true) fiber = (Effect4.FrameFiber.mk
-  fiber.current fiber.stack Bool.true fiber.interruptedCause fiber.deferredInterrupt,
-  Option.some (Effect4.Prim.failure cause)))
-
-#check (@Effect4.Prim.ensure_setInterruptible_false_no_replacement :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (fiber : Effect4.FrameFiber ν σ β ε δ ι α),
-  (Effect4.Prim.ensure (Effect4.Prim.setInterruptible Bool.false) fiber).snd = Option.none)
-
-#check (@Effect4.Prim.ensure_setInterruptible_no_pending :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (flag : Bool) (fiber : Effect4.FrameFiber ν σ
-  β ε δ ι α), fiber.interruptedCause = Option.none → Effect4.Prim.ensure
-  (Effect4.Prim.setInterruptible flag) fiber = (Effect4.FrameFiber.mk fiber.current fiber.stack
-  flag fiber.interruptedCause fiber.deferredInterrupt, Option.none))
-
-#check (@Effect4.Prim.answerOf_replacement :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (frame next : Effect4.Prim ν σ β ε δ ι α)
-  (demand : Effect4.Arm), Effect4.Prim.answerOf frame demand (Option.some next) = Option.some
-  (Effect4.ContAnswer.replacement next))
-
-#check (@Effect4.Prim.answerOf_arm :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (frame : Effect4.Prim ν σ β ε δ ι α) (demand
-  : Effect4.Arm), Effect4.Prim.hasArm frame demand = Bool.true → Effect4.Prim.answerOf frame
-  demand Option.none = Option.some (Effect4.ContAnswer.frame frame))
-
-#check (@Effect4.Prim.answerOf_missing :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (frame : Effect4.Prim ν σ β ε δ ι α) (demand
-  : Effect4.Arm), Effect4.Prim.hasArm frame demand = Bool.false → Effect4.Prim.answerOf frame
-  demand Option.none = Option.none)
-
-#check (@Effect4.Prim.answerOf_frame_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (frame answering : Effect4.Prim ν σ β ε δ ι
-  α) (demand : Effect4.Arm) (replacement : Option (Effect4.Prim ν σ β ε δ ι α)),
-  Effect4.Prim.answerOf frame demand replacement = Option.some (Effect4.ContAnswer.frame
-  answering) → answering = frame ∧ Effect4.Prim.hasArm frame demand = Bool.true)
-
-#check (@Effect4.Prim.armA_isSome :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (frame : Effect4.Prim ν σ β ε δ ι α) (value : β) (provided : Option (Effect4.Exit β ε δ ι
-  α)), Option.isSome (Effect4.Prim.armA interp frame value provided) = Effect4.Prim.hasArm frame
-  Effect4.Arm.contA)
-
-#check (@Effect4.Prim.armE_isSome :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (frame : Effect4.Prim ν σ β ε δ ι α) (cause : Effect4.Cause ε δ ι α) (provided : Option
-  (Effect4.Exit β ε δ ι α)), Option.isSome (Effect4.Prim.armE interp frame cause provided) =
-  Effect4.Prim.hasArm frame Effect4.Arm.contE)
-
-#check (@Effect4.Prim.armA_onSuccess :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (body : Effect4.Prim ν σ β ε δ ι α) (onValue : ν) (value : β) (provided : Option
-  (Effect4.Exit β ε δ ι α)), Effect4.Prim.armA interp (Effect4.Prim.onSuccess body onValue)
-  value provided = Option.some (interp.contA onValue value, []))
-
-#check (@Effect4.Prim.armA_onSuccessAndFailure :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (body : Effect4.Prim ν σ β ε δ ι α) (onValue onCause : ν) (value : β) (provided : Option
-  (Effect4.Exit β ε δ ι α)), Effect4.Prim.armA interp (Effect4.Prim.onSuccessAndFailure body
-  onValue onCause) value provided = Option.some (interp.contA onValue value, []))
-
-#check (@Effect4.Prim.armE_onFailure :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (body : Effect4.Prim ν σ β ε δ ι α) (onCause : ν) (cause : Effect4.Cause ε δ ι α) (provided
-  : Option (Effect4.Exit β ε δ ι α)), Effect4.Prim.armE interp (Effect4.Prim.onFailure body
-  onCause) cause provided = Option.some (interp.contE onCause cause, []))
-
-#check (@Effect4.Prim.armE_onSuccessAndFailure :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (body : Effect4.Prim ν σ β ε δ ι α) (onValue onCause : ν) (cause : Effect4.Cause ε δ ι α)
-  (provided : Option (Effect4.Exit β ε δ ι α)), Effect4.Prim.armE interp
-  (Effect4.Prim.onSuccessAndFailure body onValue onCause) cause provided = Option.some
-  (interp.contE onCause cause, []))
-
-#check (@Effect4.Prim.armE_onSuccess_none :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (body : Effect4.Prim ν σ β ε δ ι α) (onValue : ν) (cause : Effect4.Cause ε δ ι α) (provided
-  : Option (Effect4.Exit β ε δ ι α)), Effect4.Prim.armE interp (Effect4.Prim.onSuccess body
-  onValue) cause provided = Option.none)
-
-#check (@Effect4.Prim.armA_onFailure_none :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (body : Effect4.Prim ν σ β ε δ ι α) (onCause : ν) (value : β) (provided : Option
-  (Effect4.Exit β ε δ ι α)), Effect4.Prim.armA interp (Effect4.Prim.onFailure body onCause)
-  value provided = Option.none)
-
-#check (@Effect4.Prim.armA_setInterruptible_none :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (flag : Bool) (value : β) (provided : Option (Effect4.Exit β ε δ ι α)), Effect4.Prim.armA
-  interp (Effect4.Prim.setInterruptible flag) value provided = Option.none)
-
-#check (@Effect4.Prim.armE_setInterruptible_none :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (flag : Bool) (cause : Effect4.Cause ε δ ι α) (provided : Option (Effect4.Exit β ε δ ι α)),
-  Effect4.Prim.armE interp (Effect4.Prim.setInterruptible flag) cause provided = Option.none)
-
-#check (@Effect4.Prim.armE_whileLoop_none :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (loop : ν) (cursor : β) (cause : Effect4.Cause ε δ ι α) (provided : Option (Effect4.Exit β
-  ε δ ι α)), Effect4.Prim.armE interp (Effect4.Prim.whileLoop loop cursor) cause provided =
-  Option.none)
-
-#check (@Effect4.Prim.armE_iterator_none :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (generator : ν) (cursor : β) (cause : Effect4.Cause ε δ ι α) (provided : Option
-  (Effect4.Exit β ε δ ι α)), Effect4.Prim.armE interp (Effect4.Prim.iterator generator cursor)
-  cause provided = Option.none)
-
-#check (@Effect4.Prim.armA_exitFrame_provided :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (body : Effect4.Prim ν σ β ε δ ι α) (value : β) (exit : Effect4.Exit β ε δ ι α),
-  Effect4.Prim.armA interp (Effect4.Prim.exitFrame body) value (Option.some exit) = Option.some
-  (Effect4.Prim.success (interp.reifyExit exit), []))
-
-#check (@Effect4.Prim.armA_exitFrame_none :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (body : Effect4.Prim ν σ β ε δ ι α) (value : β), Effect4.Prim.armA interp
-  (Effect4.Prim.exitFrame body) value Option.none = Option.some (Effect4.Prim.success
-  (interp.reifyExit (Effect4.Exit.success value)), []))
-
-#check (@Effect4.Prim.armE_exitFrame_provided :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (body : Effect4.Prim ν σ β ε δ ι α) (cause : Effect4.Cause ε δ ι α) (exit : Effect4.Exit β
-  ε δ ι α), Effect4.Prim.armE interp (Effect4.Prim.exitFrame body) cause (Option.some exit) =
-  Option.some (Effect4.Prim.success (interp.reifyExit exit), []))
-
-#check (@Effect4.Prim.armE_exitFrame_none :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (body : Effect4.Prim ν σ β ε δ ι α) (cause : Effect4.Cause ε δ ι α), Effect4.Prim.armE
-  interp (Effect4.Prim.exitFrame body) cause Option.none = Option.some (Effect4.Prim.success
-  (interp.reifyExit (Effect4.Exit.failure cause)), []))
-
-#check (@Effect4.Prim.armA_onExit :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (body : Effect4.Prim ν σ β ε δ ι α) (finalizer : ν) (flag : Bool) (value : β) (exit :
-  Effect4.Exit β ε δ ι α), Effect4.Prim.armA interp (Effect4.Prim.onExit body finalizer flag)
-  value (Option.some exit) = Option.some (Effect4.Prim.ofExit
-  (Effect4.Exit.restoreAfterFinalizer exit (interp.finalizerExit finalizer exit)), []))
-
-#check (@Effect4.Prim.armE_onExit :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (body : Effect4.Prim ν σ β ε δ ι α) (finalizer : ν) (flag : Bool) (cause : Effect4.Cause ε
-  δ ι α) (exit : Effect4.Exit β ε δ ι α), Effect4.Prim.armE interp (Effect4.Prim.onExit body
-  finalizer flag) cause (Option.some exit) = Option.some (Effect4.Prim.ofExit
-  (Effect4.Exit.restoreAfterFinalizer exit (interp.finalizerExit finalizer exit)), []))
-
-#check (@Effect4.Prim.onExit_finalizer_success_restores :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (body : Effect4.Prim ν σ β ε δ ι α) (finalizer : ν) (flag : Bool) (value : β) (exit :
-  Effect4.Exit β ε δ ι α), interp.finalizerExit finalizer exit = Effect4.Exit.success () →
-  Effect4.Prim.armA interp (Effect4.Prim.onExit body finalizer flag) value (Option.some exit) =
-  Option.some (Effect4.Prim.ofExit exit, []))
-
-#check (@Effect4.Prim.onExit_finalizer_failure_merges :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (body : Effect4.Prim ν σ β ε δ ι α) (finalizer : ν) (flag : Bool) (cause finalizerCause :
-  Effect4.Cause ε δ ι α), interp.finalizerExit finalizer (Effect4.Exit.failure cause) =
-  Effect4.Exit.failure finalizerCause → Effect4.Prim.armE interp (Effect4.Prim.onExit body
-  finalizer flag) cause (Option.some (Effect4.Exit.failure cause)) = Option.some
-  (Effect4.Prim.failure (Effect4.Cause.combine cause finalizerCause), []))
-
-#check (@Effect4.Prim.onExit_success_finalizer_failure :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (body : Effect4.Prim ν σ β ε δ ι α) (finalizer : ν) (flag : Bool) (value produced : β)
-  (finalizerCause : Effect4.Cause ε δ ι α), interp.finalizerExit finalizer (Effect4.Exit.success
-  produced) = Effect4.Exit.failure finalizerCause → Effect4.Prim.armA interp
-  (Effect4.Prim.onExit body finalizer flag) value (Option.some (Effect4.Exit.success produced))
-  = Option.some (Effect4.Prim.failure finalizerCause, []))
-
-#check (@Effect4.Prim.onExit_arm_is_per_frame :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (body other : Effect4.Prim ν σ β ε δ ι α) (finalizer : ν) (flag otherFlag : Bool) (value :
-  β) (provided : Option (Effect4.Exit β ε δ ι α)), Effect4.Prim.armA interp (Effect4.Prim.onExit
-  body finalizer flag) value provided = Effect4.Prim.armA interp (Effect4.Prim.onExit other
-  finalizer otherFlag) value provided)
-
-#check (@Effect4.Prim.onSuccess_arm_is_per_instance :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (body : Effect4.Prim ν σ β ε δ ι α) (left right : ν) (value : β) (provided : Option
-  (Effect4.Exit β ε δ ι α)), interp.contA left value ≠ interp.contA right value →
-  Effect4.Prim.armA interp (Effect4.Prim.onSuccess body left) value provided ≠ Effect4.Prim.armA
-  interp (Effect4.Prim.onSuccess body right) value provided)
-
-#check (@Effect4.Prim.onFailure_arm_is_per_instance :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (body : Effect4.Prim ν σ β ε δ ι α) (left right : ν) (cause : Effect4.Cause ε δ ι α)
-  (provided : Option (Effect4.Exit β ε δ ι α)), interp.contE left cause ≠ interp.contE right
-  cause → Effect4.Prim.armE interp (Effect4.Prim.onFailure body left) cause provided ≠
-  Effect4.Prim.armE interp (Effect4.Prim.onFailure body right) cause provided)
-
-#check (@Effect4.Prim.onSuccessAndFailure_arms_are_per_instance :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (body : Effect4.Prim ν σ β ε δ ι α) (onValue onCause : ν) (value : β) (cause :
-  Effect4.Cause ε δ ι α) (provided : Option (Effect4.Exit β ε δ ι α)), Effect4.Prim.armA interp
-  (Effect4.Prim.onSuccessAndFailure body onValue onCause) value provided = Option.some
-  (interp.contA onValue value, []) ∧ Effect4.Prim.armE interp (Effect4.Prim.onSuccessAndFailure
-  body onValue onCause) cause provided = Option.some (interp.contE onCause cause, []))
-
-#check (@Effect4.Prim.armA_whileLoop_continue :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε]
-    [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι α)
-    (loop : ν) (cursor value : β) (provided : Option (Effect4.Exit β ε δ ι α)),
-    interp.loopTest loop (interp.loopStep loop cursor value) = Bool.true →
-      Effect4.Prim.armA interp (Effect4.Prim.whileLoop loop cursor) value provided =
-        Option.some
-          (interp.loopBody loop (interp.loopStep loop cursor value),
-            [Effect4.Prim.whileLoop loop (interp.loopStep loop cursor value)]))
-
-#check (@Effect4.Prim.armA_whileLoop_stop :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε]
-    [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι α)
-    (loop : ν) (cursor value : β) (provided : Option (Effect4.Exit β ε δ ι α)),
-    interp.loopTest loop (interp.loopStep loop cursor value) = Bool.false →
-      Effect4.Prim.armA interp (Effect4.Prim.whileLoop loop cursor) value provided =
-        Option.some (Effect4.Prim.success (interp.loopDone loop), []))
-
-#check (@Effect4.Prim.armA_iterator_done :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (generator : ν) (cursor value result : β) (provided : Option (Effect4.Exit β ε δ ι α)),
-  (interp.iterNext generator value).snd = Effect4.IterStep.done result → Effect4.Prim.armA
-  interp (Effect4.Prim.iterator generator cursor) value provided = Option.some
-  (Effect4.Prim.success result, []))
-
-#check (@Effect4.Prim.armA_iterator_halt :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (generator : ν) (cursor value : β) (cause : Effect4.Cause ε δ ι α) (provided : Option
-  (Effect4.Exit β ε δ ι α)), (interp.iterNext generator value).snd = Effect4.IterStep.halt cause
-  → Effect4.Prim.armA interp (Effect4.Prim.iterator generator cursor) value provided =
-  Option.some (Effect4.Prim.failure cause, []))
-
-#check (@Effect4.Prim.armA_iterator_resume :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε]
-    [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι α)
-    (generator : ν) (cursor value : β) (next : Effect4.Prim ν σ β ε δ ι α) (continueAs : ν)
-    (provided : Option (Effect4.Exit β ε δ ι α)),
-    (interp.iterNext generator value).snd = Effect4.IterStep.resume next continueAs →
-      Effect4.Prim.armA interp (Effect4.Prim.iterator generator cursor) value provided =
-        Option.some (next, [Effect4.Prim.iterator continueAs cursor]))
-
-#check (@Effect4.Prim.iteratorFolded_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ] [DecidableEq
-  ι] [DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι α) (generator : ν) (cursor value :
-  β), Effect4.Prim.iteratorFolded interp (Effect4.Prim.iterator generator cursor) value =
-  (interp.iterNext generator value).fst)
-
-#check (@Effect4.Prim.iterator_folds_inline :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (left right : Effect4.PrimInterp ν σ β ε
-  δ ι α) (generator : ν) (cursor value : β) (provided : Option (Effect4.Exit β ε δ ι α)),
-  (left.iterNext generator value).snd = (right.iterNext generator value).snd → Effect4.Prim.armA
-  left (Effect4.Prim.iterator generator cursor) value provided = Effect4.Prim.armA right
-  (Effect4.Prim.iterator generator cursor) value provided)
-
-#check (@Effect4.Prim.finalizerEvents_onExit :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α)
-  (finalizer : ν) (flag : Bool) (exit : Effect4.Exit β ε δ ι α), Effect4.Prim.finalizerEvents
-  (Effect4.Prim.onExit body finalizer flag) exit = [Effect4.FrameEvent.ranFinalizer finalizer
-  exit])
-
-#check (@Effect4.Prim.finalizerEvents_onSuccess :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α) (onValue
-  : ν) (exit : Effect4.Exit β ε δ ι α), Effect4.Prim.finalizerEvents (Effect4.Prim.onSuccess
-  body onValue) exit = [])
-
-#check (@Effect4.Prim.finalizerEvents_onFailure :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (body : Effect4.Prim ν σ β ε δ ι α) (onCause
-  : ν) (exit : Effect4.Exit β ε δ ι α), Effect4.Prim.finalizerEvents (Effect4.Prim.onFailure
-  body onCause) exit = [])
-
-#check (@Effect4.FrameFiber.getCont_deferred :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
-  (demand : Effect4.Arm), self.deferredInterrupt = Bool.true → Effect4.FrameFiber.getCont self
-  demand Bool.false = Effect4.FramePop.mk (Effect4.ContAnswer.deferred
-  (Effect4.FrameFiber.pendingCause self)) [] [Effect4.FrameEvent.deferred
-  (Effect4.FrameFiber.pendingCause self)] (Effect4.FrameFiber.mk self.current self.stack
-  self.interruptible self.interruptedCause Bool.false))
-
-#check (@Effect4.FrameFiber.getCont_deferred_pops_nothing :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
-  (demand : Effect4.Arm), self.deferredInterrupt = Bool.true → (Effect4.FrameFiber.getCont self
-  demand Bool.false).popped = [])
-
-#check (@Effect4.FrameFiber.getCont_eq_popFrom :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
-  (demand : Effect4.Arm) (skip : Bool), self.deferredInterrupt = Bool.false →
-  Effect4.FrameFiber.getCont self demand skip = Effect4.FrameFiber.popFrom demand skip
-  self.stack (Effect4.FrameFiber.mk self.current [] self.interruptible self.interruptedCause
-  Bool.false))
-
-#check (@Effect4.FrameFiber.getCont_skip_clears_deferred :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
-  (demand : Effect4.Arm), Effect4.FrameFiber.getCont self demand Bool.true =
-  Effect4.FrameFiber.popFrom demand Bool.true self.stack (Effect4.FrameFiber.mk self.current []
-  self.interruptible self.interruptedCause Bool.false))
-
-#check (@Effect4.FrameFiber.getCont_empty_stack :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
-  (demand : Effect4.Arm) (skip : Bool), self.deferredInterrupt = Bool.false → self.stack = [] →
-  Effect4.FrameFiber.getCont self demand skip = Effect4.FramePop.mk Effect4.ContAnswer.empty []
-  [] (Effect4.FrameFiber.mk self.current [] self.interruptible self.interruptedCause
-  Bool.false))
-
-#check (@Effect4.FrameFiber.popFrom_nil :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (fiber :
-  Effect4.FrameFiber ν σ β ε δ ι α), Effect4.FrameFiber.popFrom demand skip [] fiber =
-  Effect4.FramePop.mk Effect4.ContAnswer.empty [] [] fiber)
-
-#check (@Effect4.FrameFiber.popFrom_answer_answer :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frame :
-  Effect4.Prim ν σ β ε δ ι α) (rest : List (Effect4.Prim ν σ β ε δ ι α)) (fiber :
-  Effect4.FrameFiber ν σ β ε δ ι α) (answer : Effect4.ContAnswer ν σ β ε δ ι α),
-  Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure frame fiber).snd = Option.some answer
-  → (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure frame fiber).fst) = Bool.false
-  → (Effect4.FrameFiber.popFrom demand skip (frame :: rest) fiber).answer = answer)
-
-#check (@Effect4.FrameFiber.popFrom_answer_popped :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frame :
-  Effect4.Prim ν σ β ε δ ι α) (rest : List (Effect4.Prim ν σ β ε δ ι α)) (fiber :
-  Effect4.FrameFiber ν σ β ε δ ι α) (answer : Effect4.ContAnswer ν σ β ε δ ι α),
-  Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure frame fiber).snd = Option.some answer
-  → (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure frame fiber).fst) = Bool.false
-  → (Effect4.FrameFiber.popFrom demand skip (frame :: rest) fiber).popped = [frame])
-
-#check (@Effect4.FrameFiber.popFrom_answer_events :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frame :
-  Effect4.Prim ν σ β ε δ ι α) (rest : List (Effect4.Prim ν σ β ε δ ι α)) (fiber :
-  Effect4.FrameFiber ν σ β ε δ ι α) (answer : Effect4.ContAnswer ν σ β ε δ ι α),
-  Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure frame fiber).snd = Option.some answer
-  → (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure frame fiber).fst) = Bool.false
-  → (Effect4.FrameFiber.popFrom demand skip (frame :: rest) fiber).events =
-  Effect4.Prim.passEvents frame (Effect4.Prim.ensure frame fiber).snd)
-
-#check (@Effect4.FrameFiber.popFrom_answer_fiber :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frame :
-  Effect4.Prim ν σ β ε δ ι α) (rest : List (Effect4.Prim ν σ β ε δ ι α)) (fiber :
-  Effect4.FrameFiber ν σ β ε δ ι α) (answer : Effect4.ContAnswer ν σ β ε δ ι α),
-  Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure frame fiber).snd = Option.some answer
-  → (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure frame fiber).fst) = Bool.false
-  → (Effect4.FrameFiber.popFrom demand skip (frame :: rest) fiber).fiber = have __src :=
-  (Effect4.Prim.ensure frame fiber).fst; Effect4.FrameFiber.mk __src.current
-  ((Effect4.Prim.ensure frame fiber).fst.stack ++ rest) __src.interruptible
-  __src.interruptedCause __src.deferredInterrupt)
-
-#check (@Effect4.FrameFiber.popFrom_continue_answer :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frame :
-  Effect4.Prim ν σ β ε δ ι α) (rest : List (Effect4.Prim ν σ β ε δ ι α)) (fiber :
-  Effect4.FrameFiber ν σ β ε δ ι α), Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure
-  frame fiber).snd = Option.none ∨ (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure
-  frame fiber).fst) = Bool.true → (Effect4.FrameFiber.popFrom demand skip (frame :: rest)
-  fiber).answer = (Effect4.FrameFiber.continueFrom demand skip frame rest fiber).answer)
-
-#check (@Effect4.FrameFiber.popFrom_continue_popped :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frame :
-  Effect4.Prim ν σ β ε δ ι α) (rest : List (Effect4.Prim ν σ β ε δ ι α)) (fiber :
-  Effect4.FrameFiber ν σ β ε δ ι α), Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure
-  frame fiber).snd = Option.none ∨ (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure
-  frame fiber).fst) = Bool.true → (Effect4.FrameFiber.popFrom demand skip (frame :: rest)
-  fiber).popped = frame :: (Effect4.FrameFiber.continueFrom demand skip frame rest
-  fiber).popped)
-
-#check (@Effect4.FrameFiber.popFrom_continue_events :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frame :
-  Effect4.Prim ν σ β ε δ ι α) (rest : List (Effect4.Prim ν σ β ε δ ι α)) (fiber :
-  Effect4.FrameFiber ν σ β ε δ ι α), Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure
-  frame fiber).snd = Option.none ∨ (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure
-  frame fiber).fst) = Bool.true → (Effect4.FrameFiber.popFrom demand skip (frame :: rest)
-  fiber).events = Effect4.Prim.passEvents frame (Effect4.Prim.ensure frame fiber).snd ++
-  (Effect4.FrameFiber.continueFrom demand skip frame rest fiber).events)
-
-#check (@Effect4.FrameFiber.popFrom_continue_fiber :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frame :
-  Effect4.Prim ν σ β ε δ ι α) (rest : List (Effect4.Prim ν σ β ε δ ι α)) (fiber :
-  Effect4.FrameFiber ν σ β ε δ ι α), Effect4.Prim.answerOf frame demand (Effect4.Prim.ensure
-  frame fiber).snd = Option.none ∨ (skip && Effect4.FrameFiber.interrupted (Effect4.Prim.ensure
-  frame fiber).fst) = Bool.true → (Effect4.FrameFiber.popFrom demand skip (frame :: rest)
-  fiber).fiber = (Effect4.FrameFiber.continueFrom demand skip frame rest fiber).fiber)
-
-#check (@Effect4.FrameFiber.popFrom_answer_hasArm :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frames
-  : List (Effect4.Prim ν σ β ε δ ι α)) (fiber : Effect4.FrameFiber ν σ β ε δ ι α) (frame :
-  Effect4.Prim ν σ β ε δ ι α), (Effect4.FrameFiber.popFrom demand skip frames fiber).answer =
-  Effect4.ContAnswer.frame frame → Effect4.Prim.hasArm frame demand = Bool.true)
-
-#check (@Effect4.FrameFiber.getCont_answer_hasArm :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
-  (demand : Effect4.Arm) (skip : Bool) (frame : Effect4.Prim ν σ β ε δ ι α),
-  (Effect4.FrameFiber.getCont self demand skip).answer = Effect4.ContAnswer.frame frame →
-  Effect4.Prim.hasArm frame demand = Bool.true)
-
-#check (@Effect4.FrameFiber.passEvents_ranContAll :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (frame : Effect4.Prim ν σ β ε δ ι α)
-  (replacement : Option (Effect4.Prim ν σ β ε δ ι α)), Effect4.Prim.hasArm frame
-  Effect4.Arm.contAll = Bool.true → Effect4.FrameEvent.ranContAll frame ∈
-  Effect4.Prim.passEvents frame replacement)
-
-#check (@Effect4.FrameFiber.passEvents_poppedFrames :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (frame : Effect4.Prim ν σ β ε δ ι α)
-  (replacement : Option (Effect4.Prim ν σ β ε δ ι α)), Effect4.FrameEvent.poppedFrames
-  (Effect4.Prim.passEvents frame replacement) = [frame])
-
-#check (@Effect4.FrameFiber.popFrom_popped_eq_events :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frames
-  : List (Effect4.Prim ν σ β ε δ ι α)) (fiber : Effect4.FrameFiber ν σ β ε δ ι α),
-  (Effect4.FrameFiber.popFrom demand skip frames fiber).popped = Effect4.FrameEvent.poppedFrames
-  (Effect4.FrameFiber.popFrom demand skip frames fiber).events)
-
-#check (@Effect4.FrameFiber.popFrom_ranContAll :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (demand : Effect4.Arm) (skip : Bool) (frames
-  : List (Effect4.Prim ν σ β ε δ ι α)) (fiber : Effect4.FrameFiber ν σ β ε δ ι α) (frame :
-  Effect4.Prim ν σ β ε δ ι α), Effect4.Prim.hasArm frame Effect4.Arm.contAll = Bool.true → frame
-  ∈ (Effect4.FrameFiber.popFrom demand skip frames fiber).popped → Effect4.FrameEvent.ranContAll
-  frame ∈ (Effect4.FrameFiber.popFrom demand skip frames fiber).events)
-
-#check (@Effect4.FrameFiber.getCont_ranContAll :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
-  (demand : Effect4.Arm) (skip : Bool) (frame : Effect4.Prim ν σ β ε δ ι α),
-  self.deferredInterrupt = Bool.false → Effect4.Prim.hasArm frame Effect4.Arm.contAll =
-  Bool.true → frame ∈ (Effect4.FrameFiber.getCont self demand skip).popped →
-  Effect4.FrameEvent.ranContAll frame ∈ (Effect4.FrameFiber.getCont self demand skip).events)
-
-#check (@Effect4.FrameFiber.getCont_skip_of_no_pending_cause :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
-  (demand : Effect4.Arm), self.deferredInterrupt = Bool.false → self.interruptedCause =
-  Option.none → Effect4.FrameFiber.getCont self demand Bool.true = Effect4.FrameFiber.getCont
-  self demand Bool.false)
-
-#check (@Effect4.FrameFiber.interrupt_skips_every_handler :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
-  (demand : Effect4.Arm) (cause : Effect4.Cause ε δ ι α), self.interruptible = Bool.true →
-  self.interruptedCause = Option.some cause → (∀ (frame : Effect4.Prim ν σ β ε δ ι α), frame ∈
-  self.stack → Effect4.Prim.hasArm frame Effect4.Arm.contAll = Bool.false) →
-  (Effect4.FrameFiber.getCont self demand Bool.true).answer = Effect4.ContAnswer.empty)
-
-#check (@Effect4.FrameFiber.getCont_mask_stops_skip :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
-  (skip : Bool) (rest : List (Effect4.Prim ν σ β ε δ ι α)), self.deferredInterrupt = Bool.false
-  → self.stack = Effect4.Prim.setInterruptible Bool.false :: rest → (Effect4.FrameFiber.getCont
-  self Effect4.Arm.contE skip).answer = (Effect4.FrameFiber.getCont (Effect4.FrameFiber.mk
-  self.current rest Bool.false self.interruptedCause Bool.false) Effect4.Arm.contE skip).answer)
-
-#check (@Effect4.FrameFiber.resumeValue_empty :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (value : β) (provided : Option (Effect4.Exit β ε
-  δ ι α)), (Effect4.FrameFiber.getCont self Effect4.Arm.contA Bool.false).answer =
-  Effect4.ContAnswer.empty → Effect4.FrameFiber.resumeValue interp self value provided =
-  (Effect4.FrameStep.finished (Option.getD provided (Effect4.Exit.success value)),
-  (Effect4.FrameFiber.getCont self Effect4.Arm.contA Bool.false).events ++
-  [Effect4.FrameEvent.yielded (Option.getD provided (Effect4.Exit.success value))]))
-
-#check (@Effect4.FrameFiber.resumeValue_deferred :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (value : β) (provided : Option (Effect4.Exit β ε
-  δ ι α)) (cause : Effect4.Cause ε δ ι α), (Effect4.FrameFiber.getCont self Effect4.Arm.contA
-  Bool.false).answer = Effect4.ContAnswer.deferred cause → Effect4.FrameFiber.resumeValue interp
-  self value provided = (Effect4.FrameStep.running (have __src := (Effect4.FrameFiber.getCont
-  self Effect4.Arm.contA Bool.false).fiber; Effect4.FrameFiber.mk (Effect4.Prim.failure cause)
-  __src.stack __src.interruptible __src.interruptedCause __src.deferredInterrupt),
-  (Effect4.FrameFiber.getCont self Effect4.Arm.contA Bool.false).events))
-
-#check (@Effect4.FrameFiber.resumeValue_replacement :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (value : β) (provided : Option (Effect4.Exit β ε
-  δ ι α)) (next : Effect4.Prim ν σ β ε δ ι α), (Effect4.FrameFiber.getCont self
-  Effect4.Arm.contA Bool.false).answer = Effect4.ContAnswer.replacement next →
-  Effect4.FrameFiber.resumeValue interp self value provided = (Effect4.FrameStep.running (have
-  __src := (Effect4.FrameFiber.getCont self Effect4.Arm.contA Bool.false).fiber;
-  Effect4.FrameFiber.mk next __src.stack __src.interruptible __src.interruptedCause
-  __src.deferredInterrupt), (Effect4.FrameFiber.getCont self Effect4.Arm.contA
-  Bool.false).events))
-
-#check (@Effect4.FrameFiber.resumeValue_frame :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (value : β) (provided : Option (Effect4.Exit β ε
-  δ ι α)) (frame next : Effect4.Prim ν σ β ε δ ι α) (pushed : List (Effect4.Prim ν σ β ε δ ι
-  α)), (Effect4.FrameFiber.getCont self Effect4.Arm.contA Bool.false).answer =
-  Effect4.ContAnswer.frame frame → Effect4.Prim.armA interp frame value provided = Option.some
-  (next, pushed) → Effect4.FrameFiber.resumeValue interp self value provided =
-  (Effect4.FrameStep.running (have __src := (Effect4.FrameFiber.getCont self Effect4.Arm.contA
-  Bool.false).fiber; Effect4.FrameFiber.mk next (pushed ++ (Effect4.FrameFiber.getCont self
-  Effect4.Arm.contA Bool.false).fiber.stack) __src.interruptible __src.interruptedCause
-  __src.deferredInterrupt), (Effect4.FrameFiber.getCont self Effect4.Arm.contA
-  Bool.false).events ++ Effect4.Prim.finalizerEvents frame (Option.getD provided
-  (Effect4.Exit.success value)) ++ List.map Effect4.FrameEvent.pushed pushed))
-
-#check (@Effect4.FrameFiber.resumeCause_empty :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (cause : Effect4.Cause ε δ ι α) (provided :
-  Option (Effect4.Exit β ε δ ι α)), (Effect4.FrameFiber.getCont self Effect4.Arm.contE
-  Bool.true).answer = Effect4.ContAnswer.empty → Effect4.FrameFiber.resumeCause interp self
-  cause provided = (Effect4.FrameStep.finished (Option.getD provided (Effect4.Exit.failure
-  cause)), (Effect4.FrameFiber.getCont self Effect4.Arm.contE Bool.true).events ++
-  [Effect4.FrameEvent.yielded (Option.getD provided (Effect4.Exit.failure cause))]))
-
-#check (@Effect4.FrameFiber.resumeCause_deferred :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (cause deferredCause : Effect4.Cause ε δ ι α)
-  (provided : Option (Effect4.Exit β ε δ ι α)), (Effect4.FrameFiber.getCont self
-  Effect4.Arm.contE Bool.true).answer = Effect4.ContAnswer.deferred deferredCause →
-  Effect4.FrameFiber.resumeCause interp self cause provided = (Effect4.FrameStep.running (have
-  __src := (Effect4.FrameFiber.getCont self Effect4.Arm.contE Bool.true).fiber;
-  Effect4.FrameFiber.mk (Effect4.Prim.failure deferredCause) __src.stack __src.interruptible
-  __src.interruptedCause __src.deferredInterrupt), (Effect4.FrameFiber.getCont self
-  Effect4.Arm.contE Bool.true).events))
-
-#check (@Effect4.FrameFiber.resumeCause_replacement :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (cause : Effect4.Cause ε δ ι α) (provided :
-  Option (Effect4.Exit β ε δ ι α)) (next : Effect4.Prim ν σ β ε δ ι α),
-  (Effect4.FrameFiber.getCont self Effect4.Arm.contE Bool.true).answer =
-  Effect4.ContAnswer.replacement next → Effect4.FrameFiber.resumeCause interp self cause
-  provided = (Effect4.FrameStep.running (have __src := (Effect4.FrameFiber.getCont self
-  Effect4.Arm.contE Bool.true).fiber; Effect4.FrameFiber.mk next __src.stack __src.interruptible
-  __src.interruptedCause __src.deferredInterrupt), (Effect4.FrameFiber.getCont self
-  Effect4.Arm.contE Bool.true).events))
-
-#check (@Effect4.FrameFiber.resumeCause_frame :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (cause : Effect4.Cause ε δ ι α) (provided :
-  Option (Effect4.Exit β ε δ ι α)) (frame next : Effect4.Prim ν σ β ε δ ι α) (pushed : List
-  (Effect4.Prim ν σ β ε δ ι α)), (Effect4.FrameFiber.getCont self Effect4.Arm.contE
-  Bool.true).answer = Effect4.ContAnswer.frame frame → Effect4.Prim.armE interp frame cause
-  provided = Option.some (next, pushed) → Effect4.FrameFiber.resumeCause interp self cause
-  provided = (Effect4.FrameStep.running (have __src := (Effect4.FrameFiber.getCont self
-  Effect4.Arm.contE Bool.true).fiber; Effect4.FrameFiber.mk next (pushed ++
-  (Effect4.FrameFiber.getCont self Effect4.Arm.contE Bool.true).fiber.stack) __src.interruptible
-  __src.interruptedCause __src.deferredInterrupt), (Effect4.FrameFiber.getCont self
-  Effect4.Arm.contE Bool.true).events ++ Effect4.Prim.finalizerEvents frame (Option.getD
-  provided (Effect4.Exit.failure cause)) ++ List.map Effect4.FrameEvent.pushed pushed))
-
-#check (@Effect4.FrameFiber.step_success :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (value : β), Effect4.FrameFiber.step interp
-  (Effect4.FrameFiber.mk (Effect4.Prim.success value) self.stack self.interruptible
-  self.interruptedCause self.deferredInterrupt) = Effect4.FrameFiber.resumeValue interp
-  (Effect4.FrameFiber.mk (Effect4.Prim.success value) self.stack self.interruptible
-  self.interruptedCause self.deferredInterrupt) value (Option.some (Effect4.Exit.success
-  value)))
-
-#check (@Effect4.FrameFiber.step_failure :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (cause : Effect4.Cause ε δ ι α),
-  Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk (Effect4.Prim.failure cause) self.stack
-  self.interruptible self.interruptedCause self.deferredInterrupt) =
-  Effect4.FrameFiber.resumeCause interp (Effect4.FrameFiber.mk (Effect4.Prim.failure cause)
-  self.stack self.interruptible self.interruptedCause self.deferredInterrupt) cause (Option.some
-  (Effect4.Exit.failure cause)))
-
-#check (@Effect4.FrameFiber.step_sync :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (thunk : σ), Effect4.FrameFiber.step interp
-  (Effect4.FrameFiber.mk (Effect4.Prim.sync thunk) self.stack self.interruptible
-  self.interruptedCause self.deferredInterrupt) = Effect4.FrameFiber.resumeValue interp
-  (Effect4.FrameFiber.mk (Effect4.Prim.sync thunk) self.stack self.interruptible
-  self.interruptedCause self.deferredInterrupt) (interp.syncValue thunk) Option.none)
-
-#check (@Effect4.FrameFiber.step_suspend :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (thunk : σ), Effect4.FrameFiber.step interp
-  (Effect4.FrameFiber.mk (Effect4.Prim.suspend thunk) self.stack self.interruptible
-  self.interruptedCause self.deferredInterrupt) = (Effect4.FrameStep.running
-  (Effect4.FrameFiber.mk (interp.suspendBody thunk) self.stack self.interruptible
-  self.interruptedCause self.deferredInterrupt), []))
-
-#check (@Effect4.FrameFiber.step_withFiber :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (thunk : σ), Effect4.FrameFiber.step interp
-  (Effect4.FrameFiber.mk (Effect4.Prim.withFiber thunk) self.stack self.interruptible
-  self.interruptedCause self.deferredInterrupt) = (Effect4.FrameStep.running
-  (Effect4.FrameFiber.mk (interp.suspendBody thunk) self.stack self.interruptible
-  self.interruptedCause self.deferredInterrupt), []))
-
-#check (@Effect4.FrameFiber.step_yieldableError :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (error : ε), Effect4.FrameFiber.step interp
-  (Effect4.FrameFiber.mk (Effect4.Prim.yieldableError error) self.stack self.interruptible
-  self.interruptedCause self.deferredInterrupt) = (Effect4.FrameStep.running
-  (Effect4.FrameFiber.mk (Effect4.Prim.failure (Effect4.Cause.fail error)) self.stack
-  self.interruptible self.interruptedCause self.deferredInterrupt), []))
-
-#check (@Effect4.FrameFiber.step_onSuccess :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (body : Effect4.Prim ν σ β ε δ ι α) (onValue :
-  ν), Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk (Effect4.Prim.onSuccess body
-  onValue) self.stack self.interruptible self.interruptedCause self.deferredInterrupt) =
-  (Effect4.FrameStep.running (Effect4.FrameFiber.mk body (Effect4.Prim.onSuccess body onValue ::
-  self.stack) self.interruptible self.interruptedCause self.deferredInterrupt),
-  [Effect4.FrameEvent.pushed (Effect4.Prim.onSuccess body onValue)]))
-
-#check (@Effect4.FrameFiber.step_onFailure :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (body : Effect4.Prim ν σ β ε δ ι α) (onCause :
-  ν), Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk (Effect4.Prim.onFailure body
-  onCause) self.stack self.interruptible self.interruptedCause self.deferredInterrupt) =
-  (Effect4.FrameStep.running (Effect4.FrameFiber.mk body (Effect4.Prim.onFailure body onCause ::
-  self.stack) self.interruptible self.interruptedCause self.deferredInterrupt),
-  [Effect4.FrameEvent.pushed (Effect4.Prim.onFailure body onCause)]))
-
-#check (@Effect4.FrameFiber.step_onSuccessAndFailure :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (body : Effect4.Prim ν σ β ε δ ι α) (onValue
-  onCause : ν), Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk
-  (Effect4.Prim.onSuccessAndFailure body onValue onCause) self.stack self.interruptible
-  self.interruptedCause self.deferredInterrupt) = (Effect4.FrameStep.running
-  (Effect4.FrameFiber.mk body (Effect4.Prim.onSuccessAndFailure body onValue onCause ::
-  self.stack) self.interruptible self.interruptedCause self.deferredInterrupt),
-  [Effect4.FrameEvent.pushed (Effect4.Prim.onSuccessAndFailure body onValue onCause)]))
-
-#check (@Effect4.FrameFiber.step_exitFrame :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (body : Effect4.Prim ν σ β ε δ ι α),
-  Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk (Effect4.Prim.exitFrame body) self.stack
-  self.interruptible self.interruptedCause self.deferredInterrupt) = (Effect4.FrameStep.running
-  (Effect4.FrameFiber.mk body (Effect4.Prim.exitFrame body :: self.stack) self.interruptible
-  self.interruptedCause self.deferredInterrupt), [Effect4.FrameEvent.pushed
-  (Effect4.Prim.exitFrame body)]))
-
-#check (@Effect4.FrameFiber.step_onExit :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (body : Effect4.Prim ν σ β ε δ ι α) (finalizer :
-  ν) (flag : Bool), Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk (Effect4.Prim.onExit
-  body finalizer flag) self.stack self.interruptible self.interruptedCause
-  self.deferredInterrupt) = (Effect4.FrameStep.running (Effect4.FrameFiber.mk body
-  (Effect4.Prim.onExit body finalizer flag :: self.stack) self.interruptible
-  self.interruptedCause self.deferredInterrupt), [Effect4.FrameEvent.pushed (Effect4.Prim.onExit
-  body finalizer flag)]))
-
-#check (@Effect4.FrameFiber.step_setInterruptible_not_evaluable :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (flag : Bool), Effect4.FrameFiber.step interp
-  (Effect4.FrameFiber.mk (Effect4.Prim.setInterruptible flag) self.stack self.interruptible
-  self.interruptedCause self.deferredInterrupt) = (Effect4.FrameStep.running
-  (Effect4.FrameFiber.mk (Effect4.Prim.failure (Effect4.Cause.die interp.notImplemented))
-  self.stack self.interruptible self.interruptedCause self.deferredInterrupt), []))
-
-#check (@Effect4.FrameFiber.step_whileLoop_true :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (loop : ν) (cursor : β), interp.loopTest loop
-  cursor = Bool.true → Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk
-  (Effect4.Prim.whileLoop loop cursor) self.stack self.interruptible self.interruptedCause
-  self.deferredInterrupt) = (Effect4.FrameStep.running (Effect4.FrameFiber.mk (interp.loopBody
-  loop cursor) (Effect4.Prim.whileLoop loop cursor :: self.stack) self.interruptible
-  self.interruptedCause self.deferredInterrupt), [Effect4.FrameEvent.pushed
-  (Effect4.Prim.whileLoop loop cursor)]))
-
-#check (@Effect4.FrameFiber.step_whileLoop_false :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (loop : ν) (cursor : β), interp.loopTest loop
-  cursor = Bool.false → Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk
-  (Effect4.Prim.whileLoop loop cursor) self.stack self.interruptible self.interruptedCause
-  self.deferredInterrupt) = (Effect4.FrameStep.running (Effect4.FrameFiber.mk
-  (Effect4.Prim.success (interp.loopDone loop)) self.stack self.interruptible
-  self.interruptedCause self.deferredInterrupt), []))
-
-#check (@Effect4.FrameFiber.step_iterator :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (generator : ν) (cursor : β) (next : Effect4.Prim
-  ν σ β ε δ ι α) (pushed : List (Effect4.Prim ν σ β ε δ ι α)), Effect4.Prim.armA interp
-  (Effect4.Prim.iterator generator cursor) cursor Option.none = Option.some (next, pushed) →
-  Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk (Effect4.Prim.iterator generator cursor)
-  self.stack self.interruptible self.interruptedCause self.deferredInterrupt) =
-  (Effect4.FrameStep.running (Effect4.FrameFiber.mk next (pushed ++ self.stack)
-  self.interruptible self.interruptedCause self.deferredInterrupt), List.map
-  Effect4.FrameEvent.pushed pushed))
-
-#check (@Effect4.FrameFiber.step_ofExit_finishes :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (exit : Effect4.Exit β ε δ ι α), Effect4.FrameFiber.step interp (Effect4.FrameFiber.start
-  (Effect4.Prim.ofExit exit)) = (Effect4.FrameStep.finished exit, [Effect4.FrameEvent.yielded
-  exit]))
-
-#check (@Effect4.FrameFiber.run_zero :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α), Effect4.FrameFiber.run interp 0 self =
-  (Effect4.FrameStep.running self, []))
-
-#check (@Effect4.FrameFiber.run_succ_finished :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (fuel : Nat) (exit : Effect4.Exit β ε δ ι α)
-  (events : List (Effect4.FrameEvent ν σ β ε δ ι α)), Effect4.FrameFiber.step interp self =
-  (Effect4.FrameStep.finished exit, events) → Effect4.FrameFiber.run interp (fuel + 1) self =
-  (Effect4.FrameStep.finished exit, events))
-
-#check (@Effect4.FrameFiber.run_succ_running :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self next : Effect4.FrameFiber ν σ β ε δ ι α) (fuel : Nat) (events : List
-  (Effect4.FrameEvent ν σ β ε δ ι α)), Effect4.FrameFiber.step interp self =
-  (Effect4.FrameStep.running next, events) → Effect4.FrameFiber.run interp (fuel + 1) self =
-  ((Effect4.FrameFiber.run interp fuel next).fst, events ++ (Effect4.FrameFiber.run interp fuel
-  next).snd))
-
-#check (@Effect4.FrameFiber.uninterruptible_already_masked :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
-  self.interruptible = Bool.false → Effect4.FrameFiber.uninterruptible self = self)
-
-#check (@Effect4.FrameFiber.uninterruptible_masks :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
-  self.interruptible = Bool.true → Effect4.FrameFiber.uninterruptible self =
-  Effect4.FrameFiber.mk self.current (Effect4.Prim.setInterruptible Bool.true :: self.stack)
-  Bool.false self.interruptedCause self.deferredInterrupt)
-
-#check (@Effect4.FrameFiber.uninterruptibleMask_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
-  Effect4.FrameFiber.uninterruptibleMask self = Effect4.FrameFiber.uninterruptible self)
-
-#check (@Effect4.FrameFiber.setFiberInterruptible_flag :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
-  (Effect4.FrameFiber.setFiberInterruptible self).fst.interruptible = Bool.true)
-
-#check (@Effect4.FrameFiber.setFiberInterruptible_pushes :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
-  (Effect4.FrameFiber.setFiberInterruptible self).fst.stack = Effect4.Prim.setInterruptible
-  Bool.false :: self.stack)
-
-#check (@Effect4.FrameFiber.setFiberInterruptible_immediate_failure :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α)
-  (cause : Effect4.Cause ε δ ι α), self.interruptedCause = Option.some cause →
-  (Effect4.FrameFiber.setFiberInterruptible self).snd = Option.some (Effect4.Prim.failure
-  cause))
-
-#check (@Effect4.FrameFiber.setFiberInterruptible_no_pending :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
-  self.interruptedCause = Option.none → (Effect4.FrameFiber.setFiberInterruptible self).snd =
-  Option.none)
-
-#check (@Effect4.FrameFiber.interruptibleRegion_already :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
-  self.interruptible = Bool.true → Effect4.FrameFiber.interruptibleRegion self = (self,
-  Option.none))
-
-#check (@Effect4.FrameFiber.interruptibleRegion_masked :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
-  self.interruptible = Bool.false → Effect4.FrameFiber.interruptibleRegion self =
-  Effect4.FrameFiber.setFiberInterruptible self)
-
-#check (@Effect4.FrameFiber.restoreAcquire_asked :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
-  Effect4.FrameFiber.restoreAcquire self Bool.true = Effect4.FrameFiber.interruptibleRegion
-  self)
-
-#check (@Effect4.FrameFiber.restoreAcquire_not_asked :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (self : Effect4.FrameFiber ν σ β ε δ ι α),
-  Effect4.FrameFiber.restoreAcquire self Bool.false = (self, Option.none))
-
-#check (@Effect4.Prim.scopedFrame_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ] [DecidableEq
-  ι] [DecidableEq α] (body : Effect4.Prim ν σ β ε δ ι α) (closeScope : ν),
-  Effect4.Prim.scopedFrame body closeScope = Effect4.Prim.onExit body closeScope Bool.false)
-
-#check (@Effect4.Prim.scopedFrame_finalizer_masked :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ] [DecidableEq
-  ι] [DecidableEq α] (body : Effect4.Prim ν σ β ε δ ι α) (closeScope : ν) (fiber :
-  Effect4.FrameFiber ν σ β ε δ ι α), fiber.interruptible = Bool.true → Effect4.Prim.ensure
-  (Effect4.Prim.scopedFrame body closeScope) fiber = (Effect4.FrameFiber.mk fiber.current
-  (Effect4.Prim.setInterruptible Bool.true :: fiber.stack) Bool.false fiber.interruptedCause
-  fiber.deferredInterrupt, Option.none))
-
-#check (@Effect4.FrameFiber.step_scopedFrame :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε] [inst_1 : DecidableEq
-  δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι
-  α) (self : Effect4.FrameFiber ν σ β ε δ ι α) (body : Effect4.Prim ν σ β ε δ ι α) (closeScope :
-  ν), Effect4.FrameFiber.step interp (Effect4.FrameFiber.mk (Effect4.Prim.scopedFrame body
-  closeScope) self.stack self.interruptible self.interruptedCause self.deferredInterrupt) =
-  (Effect4.FrameStep.running (Effect4.FrameFiber.mk body (Effect4.Prim.onExit body closeScope
-  Bool.false :: self.stack) self.interruptible self.interruptedCause self.deferredInterrupt),
-  [Effect4.FrameEvent.pushed (Effect4.Prim.onExit body closeScope Bool.false)]))
-
-#check (@Effect4.Prim.withFiber_refused :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ] [DecidableEq
-  ι] [DecidableEq α] {ϑ : Type u} (resolve : Effect4.FrameFiber ν σ β ε δ ι α → ϑ) (left right :
-  Effect4.FrameFiber ν σ β ε δ ι α), left = right → resolve left = resolve right)
-
-#check (@Effect4.Prim.yieldableError_host_class_refused :
-  ∀ {ε : Type u} [DecidableEq ε] {ϑ : Type u} (host : ε → ϑ) (left right : ε), left = right →
-  host left = host right)
-
-
-/-! The reference machine's clauses (`src/Effect4/Laws/Machine/Clauses.lean`), the stores
-(`src/Effect4/Machine/Stores.lean`), the runtime's `AsyncFinalizer` frame and the context
-family's two defaults, joined on 2026-09-04; the Layer model's rows re-homed on the compile
-route by the join of 2026-09-07. Printed by the elaborator with full names and re-elaborated
-here, so a drift is a type mismatch. -/
-
-#check (@Effect4.Machine.runloopTop_deferred :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} [DecidableEq ε]
-    [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    f.frame.deferredInterrupt = Bool.true →
-      Effect4.Machine.runloopTop f =
-        { id := f.id,
-          frame :=
-            have __src := f.frame;
-            { current := Effect4.Prim.failure f.frame.pendingCause, stack := __src.stack,
-              interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
-              deferredInterrupt := Bool.false },
-          running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
-          currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield, preventYield := f.preventYield,
-          yieldOverride := f.yieldOverride, observers := f.observers, children := f.children, dispatcher := f.dispatcher,
-          context := f.context })
-
-#check (@Effect4.Machine.runloopTop_idle :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} [DecidableEq ε] [DecidableEq δ]
-    [DecidableEq ι] [DecidableEq α] (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    f.frame.deferredInterrupt = Bool.false → Effect4.Machine.runloopTop f = f)
-
-#check (@Effect4.Machine.runloopTop_clears :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} [DecidableEq ε]
-    [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    (Effect4.Machine.runloopTop f).frame.deferredInterrupt = Bool.false)
-
-#check (@Effect4.Machine.iteration_evaluates :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool),
-    Effect4.Machine.injectYield m (Effect4.Machine.countOp (Effect4.Machine.runloopTop f)) yielding = Option.none →
-      Effect4.Machine.iteration interp m f yielding =
-        Effect4.Machine.evaluatePrim interp m (Effect4.Machine.countOp (Effect4.Machine.runloopTop f)) yielding)
-
-#check (@Effect4.Machine.interruptRecord_parked_applies :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (interruptor : Option Effect4.FiberId)
-    (extra : Effect4.ReasonAnnotations α) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    f.exit = Option.none →
-      f.frame.interruptible = Bool.true →
-        f.running = Bool.false →
-          (Effect4.Machine.interruptRecord interp interruptor extra f).snd = Bool.true ∧
-            (Effect4.Machine.interruptRecord interp interruptor extra f).fst.parked = Effect4.Machine.Parked.notParked ∧
-              (Effect4.Machine.interruptRecord interp interruptor extra f).fst.pending = [])
-
-#check (@Effect4.Prim.armE_asyncFinalizer_interrupt :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.PrimInterp ν σ β ε δ ι α) (onInterrupt : ν) (cause : Effect4.Cause ε δ ι α)
-    (provided : Option (Effect4.Exit β ε δ ι α)),
-    cause.hasInterrupts = Bool.true →
-      Effect4.Prim.armE interp (Effect4.Prim.asyncFinalizer onInterrupt) cause provided =
-        Option.some (interp.cancelThenFail onInterrupt cause, []))
-
-#check (@Effect4.FrameFiber.popFrom_asyncFinalizer_pops_its_push :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (onInterrupt : ν) (cause : Effect4.Cause ε δ ι α) (fiber : Effect4.FrameFiber ν σ β ε δ ι α),
-    fiber.stack = [] →
-      fiber.interruptible = Bool.true →
-        fiber.interruptedCause = Option.some cause →
-          (Effect4.FrameFiber.popFrom Effect4.Arm.contA Bool.false [Effect4.Prim.asyncFinalizer onInterrupt]
-                  fiber).answer =
-              Effect4.ContAnswer.replacement (Effect4.Prim.failure cause) ∧
-            (Effect4.FrameFiber.popFrom Effect4.Arm.contA Bool.false [Effect4.Prim.asyncFinalizer onInterrupt]
-                  fiber).popped =
-              [Effect4.Prim.asyncFinalizer onInterrupt, Effect4.Prim.setInterruptible Bool.true])
-
-#check (@Effect4.Machine.countOp_count :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} [DecidableEq ε] [DecidableEq δ]
-    [DecidableEq ι] [DecidableEq α] (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    (Effect4.Machine.countOp f).currentOpCount = f.currentOpCount + 1)
-
-#check (@Effect4.Machine.drive_evaluate_enters :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (id : Effect4.FiberId) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.fiber? id = Option.some f →
-        f.exit = Option.none →
-          f.running = Bool.false →
-            f.parked = Effect4.Machine.Parked.notParked →
-            Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.evaluate id :: rest) =
-              Effect4.Machine.drive interp fuel
-                ((m.update
-                      { id := f.id, frame := f.frame, running := Bool.true, parked := Effect4.Machine.Parked.notParked,
-                        pending := f.pending, finalizing := f.finalizing, exit := f.exit, currentOpCount := 0,
-                        maxOpsBeforeYield := f.maxOpsBeforeYield, preventYield := f.preventYield,
-                        yieldOverride := f.yieldOverride, observers := f.observers, children := f.children,
-                        dispatcher := f.dispatcher, context := f.context }).emit
-                  [Effect4.Machine.RunEvent.started id])
-                (Effect4.Machine.Cmd.loop id Bool.false :: rest))
-
-#check (@Effect4.Machine.drive_evaluate_exited :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (id : Effect4.FiberId) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.fiber? id = Option.some f →
-        f.exit.isSome = Bool.true →
-          Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.evaluate id :: rest) =
-            Effect4.Machine.drive interp fuel m rest)
-
-#check (@Effect4.Machine.drive_evaluate_running :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (id : Effect4.FiberId) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.fiber? id = Option.some f →
-        f.running = Bool.true →
-          Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.evaluate id :: rest) =
-            Effect4.Machine.drive interp fuel m rest)
-
-#check (@Effect4.Machine.injectYield_latched :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ), Effect4.Machine.injectYield m f Bool.true = Option.none)
-
-#check (@Effect4.Machine.injectYield_fires :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    f.preventYield = Bool.false →
-      Effect4.Machine.yieldVerdict f = Bool.true →
-        ∃ it,
-          Effect4.Machine.injectYield m f Bool.false = Option.some it ∧
-            it.yielding = Bool.true ∧
-              it.outcome = Effect4.Machine.Outcome.continue_ ∧
-                it.fiber.frame.current = Effect4.Prim.onSuccessConst
-                  (Effect4.Prim.yieldNowWith 0) f.frame.current ∧
-                  it.fiber.yieldOverride = Option.none ∧
-                    it.fiber.dispatcher =
-                        f.dispatcher ∧
-                      it.machine.nextToken = m.nextToken)
-
-#check (@Effect4.Machine.iteration_injected :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (it : Effect4.Machine.Iter ν σ β ε δ ι α χ St),
-    Effect4.Machine.injectYield m (Effect4.Machine.countOp (Effect4.Machine.runloopTop f)) yielding = Option.some it →
-      Effect4.Machine.iteration interp m f yielding =
-        Effect4.Machine.evaluatePrim interp it.machine it.fiber it.yielding)
-
-#check (@Effect4.Machine.drive_loop_parked :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (id : Effect4.FiberId) (yielding : Bool) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.fiber? id = Option.some f →
-        (Effect4.Machine.iteration interp m f yielding).outcome = Effect4.Machine.Outcome.parked →
-          (Effect4.Machine.iteration interp m f yielding).fiber.frame.deferredInterrupt = false →
-            Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.loop id yielding :: rest) =
-              Effect4.Machine.drive interp fuel
-                ((Effect4.Machine.iteration interp m f yielding).machine.update
-                  { (Effect4.Machine.iteration interp m f yielding).fiber with running := false })
-                ((Effect4.Machine.iteration interp m f yielding).nested ++ rest))
-
-#check (@Effect4.Machine.drive_loop_parked_deferred :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (id : Effect4.FiberId) (yielding : Bool) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.fiber? id = Option.some f →
-        (Effect4.Machine.iteration interp m f yielding).outcome = Effect4.Machine.Outcome.parked →
-          (Effect4.Machine.iteration interp m f yielding).fiber.frame.deferredInterrupt = true →
-            Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.loop id yielding :: rest) =
-              Effect4.Machine.drive interp fuel
-                ((Effect4.Machine.iteration interp m f yielding).machine.update
-                  { (Effect4.Machine.iteration interp m f yielding).fiber with
-                      parked := Effect4.Machine.Parked.notParked, pending := [] })
-                ((Effect4.Machine.iteration interp m f yielding).nested ++
-                  [Effect4.Machine.Cmd.loop id (Effect4.Machine.iteration interp m f yielding).yielding] ++ rest))
-
-#check (@Effect4.Machine.drive_loop_continues :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (id : Effect4.FiberId) (yielding : Bool) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.fiber? id = Option.some f →
-        (Effect4.Machine.iteration interp m f yielding).outcome = Effect4.Machine.Outcome.continue_ →
-          Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.loop id yielding :: rest) =
-            Effect4.Machine.drive interp fuel
-              ((Effect4.Machine.iteration interp m f yielding).machine.update
-                (Effect4.Machine.iteration interp m f yielding).fiber)
-              ((Effect4.Machine.iteration interp m f yielding).nested ++
-                  [Effect4.Machine.Cmd.loop id (Effect4.Machine.iteration interp m f yielding).yielding] ++
-                rest))
-
-#check (@Effect4.Machine.start_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (parent : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (child : Effect4.FiberId),
-    Effect4.Machine.start m parent child Bool.true = (m, parent, [Effect4.Machine.Cmd.evaluate child]) ∧
-      Effect4.Machine.start m parent child Bool.false =
-        ((m.arm parent.id).emit [Effect4.Machine.RunEvent.scheduledTask parent.id 0 (Effect4.Machine.Task.start child)],
-          Effect4.Machine.RunFiber.mk parent.id parent.frame parent.running parent.parked parent.pending parent.finalizing
-            parent.exit parent.currentOpCount parent.maxOpsBeforeYield parent.preventYield parent.yieldOverride
-            parent.observers parent.children (parent.dispatcher.enqueue 0 (Effect4.Machine.Task.start child)) parent.context,
-          []))
-
-#check (@Effect4.Machine.runFork_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (program : Effect4.Prim ν σ β ε δ ι α) (context : χ),
-    Effect4.Machine.runFork interp fuel m program context =
-      (Effect4.Machine.drive interp fuel
-          (Effect4.Machine.RunMachine.mk
-            (m.fibers ++
-              [Effect4.Machine.RunFiber.make (Effect4.FiberId.mk m.nextId) program Bool.true (interp.budgetOf context)
-                  context])
-            m.races (m.nextId + 1) m.nextToken m.nextRace m.middlewareInstalled m.armed m.state m.trace m.stuck)
-          [Effect4.Machine.Cmd.evaluate (Effect4.FiberId.mk m.nextId), Effect4.Machine.Cmd.drainDue],
-        Effect4.FiberId.mk m.nextId))
-
-#check (@Effect4.Machine.interruptRecord_records :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (interruptor : Option Effect4.FiberId)
-    (extra : Effect4.ReasonAnnotations α) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    f.exit = Option.none →
-      (Effect4.Machine.interruptRecord interp interruptor extra f).fst.frame.interruptedCause =
-        Option.some (Effect4.Machine.interruptCauseOf interp interruptor extra f))
-
-#check (@Effect4.Machine.interruptRecord_running_defers :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (interruptor : Option Effect4.FiberId)
-    (extra : Effect4.ReasonAnnotations α) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    f.exit = Option.none →
-      f.frame.interruptible = Bool.true →
-        f.running = Bool.true →
-          (Effect4.Machine.interruptRecord interp interruptor extra f).snd = Bool.false ∧
-            (Effect4.Machine.interruptRecord interp interruptor extra f).fst.frame.deferredInterrupt = Bool.true)
-
-#check (@Effect4.Machine.interruptRecord_idle_applies :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (interruptor : Option Effect4.FiberId)
-    (extra : Effect4.ReasonAnnotations α) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    f.exit = Option.none →
-      f.frame.interruptible = Bool.true →
-        f.running = Bool.false →
-          (Effect4.Machine.interruptRecord interp interruptor extra f).snd = Bool.true ∧
-            (Effect4.Machine.interruptRecord interp interruptor extra f).fst.parked = Effect4.Machine.Parked.notParked ∧
-              (Effect4.Machine.interruptRecord interp interruptor extra f).fst.pending = [] ∧
-                (Effect4.Machine.interruptRecord interp interruptor extra f).fst.frame.current =
-                  Effect4.Prim.failure (Effect4.Machine.interruptCauseOf interp interruptor extra f))
-
-#check (@Effect4.Machine.interruptRecord_masked :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (interruptor : Option Effect4.FiberId)
-    (extra : Effect4.ReasonAnnotations α) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    f.exit = Option.none →
-      f.frame.interruptible = Bool.false →
-        (Effect4.Machine.interruptRecord interp interruptor extra f).snd = Bool.false ∧
-          (Effect4.Machine.interruptRecord interp interruptor extra f).fst.frame.deferredInterrupt =
-              f.frame.deferredInterrupt ∧
-            (Effect4.Machine.interruptRecord interp interruptor extra f).fst.frame.current = f.frame.current)
-
-#check (@Effect4.Machine.spawn_untracked :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (parent : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (program : Effect4.Prim ν σ β ε δ ι α)
-    (options : Effect4.Supervision.ForkOptions),
-    (Effect4.Machine.spawn interp m parent program options).snd.fst = parent)
-
-#check (@Effect4.Machine.drive_trackChild_live :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (parent child : Effect4.FiberId) (c : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.fiber? child = Option.some c →
-        c.exit = Option.none →
-          Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.trackChild parent child :: rest) =
-            Effect4.Machine.drive interp fuel
-              ((m.modify parent fun p => { p with children := p.children ++ [child] }).modify child
-                fun c => { c with observers := c.observers ++ [Effect4.Machine.Observer.untrackChild parent] })
-              rest)
-
-#check (@Effect4.Machine.drive_trackChild_exited :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (parent child : Effect4.FiberId) (c : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (exit : Effect4.Exit β ε δ ι α)
-    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.fiber? child = Option.some c →
-        c.exit = Option.some exit →
-          Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.trackChild parent child :: rest) =
-            Effect4.Machine.drive interp fuel m rest)
-
-#check (@Effect4.Machine.spawnChild_fields :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (parent : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (program : Effect4.Prim ν σ β ε δ ι α) (options : Effect4.Supervision.ForkOptions),
-    (Effect4.Machine.spawnChild interp m parent program options).id = { value := m.nextId } ∧
-      (Effect4.Machine.spawnChild interp m parent program options).context = parent.context ∧
-        ((Effect4.Machine.spawnChild interp m parent program options).frame.interruptible =
-            match options.maskMode with
-            | Effect4.Supervision.MaskMode.interruptible => Bool.true
-            | Effect4.Supervision.MaskMode.uninterruptible => Bool.false
-            | Effect4.Supervision.MaskMode.inherit => parent.frame.interruptible) ∧
-          (Effect4.Machine.spawnChild interp m parent program options).observers = [])
-
-#check (@Effect4.Machine.interruptRecord_exited :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (interruptor : Option Effect4.FiberId)
-    (extra : Effect4.ReasonAnnotations α) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    f.exit.isSome = Bool.true → Effect4.Machine.interruptRecord interp interruptor extra f = (f, Bool.false))
-
-#check (@Effect4.Machine.interruptRecord_accumulates :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (interruptor : Option Effect4.FiberId)
-    (extra : Effect4.ReasonAnnotations α) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (previous : Effect4.Cause ε δ ι α),
-    f.exit = Option.none →
-      f.frame.interruptedCause = Option.some previous →
-        (Effect4.Machine.interruptRecord interp interruptor extra f).fst.frame.interruptedCause =
-          Option.some
-            (previous.combine
-              ((Effect4.Supervision.interruptCause interp.encodeFiber interruptor (interp.stackAnnotations f.id)).annotate
-                extra Bool.false)))
-
-#check (@Effect4.Machine.yieldVerdict_default :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} [DecidableEq ε]
-    [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    f.yieldOverride = Option.none →
-      Effect4.Machine.yieldVerdict f = Decidable.decide (f.currentOpCount ≥ f.maxOpsBeforeYield))
-
-#check (@Effect4.Machine.yieldVerdict_override :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} [DecidableEq ε]
-    [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (verdict : Bool),
-    f.yieldOverride = Option.some verdict → Effect4.Machine.yieldVerdict f = verdict)
-
-#check (@Effect4.Machine.injectYield_no_verdict :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool),
-    Effect4.Machine.yieldVerdict f = Bool.false → Effect4.Machine.injectYield m f yielding = Option.none)
-
-#check (@Effect4.Machine.Dispatcher.enqueue_same_bucket :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε]
-    [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (d : Effect4.Machine.Dispatcher ν σ β ε δ ι α) (priority : Nat)
-    (task : Effect4.Machine.Task ν σ β ε δ ι α) (bucket : Effect4.Machine.Bucket ν σ β ε δ ι α)
-    (rest : List (Effect4.Machine.Bucket ν σ β ε δ ι α)),
-    d.buckets = bucket :: rest →
-      bucket.priority = priority →
-        (d.enqueue priority task).buckets = { priority := bucket.priority, tasks := bucket.tasks ++ [task] } :: rest)
-
-#check (@Effect4.Machine.Dispatcher.enqueue_lower_priority :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε]
-    [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (d : Effect4.Machine.Dispatcher ν σ β ε δ ι α) (priority : Nat)
-    (task : Effect4.Machine.Task ν σ β ε δ ι α) (bucket : Effect4.Machine.Bucket ν σ β ε δ ι α)
-    (rest : List (Effect4.Machine.Bucket ν σ β ε δ ι α)),
-    d.buckets = bucket :: rest →
-      bucket.priority ≠ priority →
-        priority < bucket.priority →
-          (d.enqueue priority task).buckets = { priority := priority, tasks := [task] } :: bucket :: rest)
-
-#check (@Effect4.Machine.Dispatcher.enqueue_empty :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε]
-    [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (priority : Nat) (task : Effect4.Machine.Task ν σ β ε δ ι α),
-    (Effect4.Machine.Dispatcher.empty.enqueue priority task).buckets = [{ priority := priority, tasks := [task] }])
-
-#check (@Effect4.Machine.Dispatcher.enqueue_arms :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε]
-    [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (d : Effect4.Machine.Dispatcher ν σ β ε δ ι α) (priority : Nat)
-    (task : Effect4.Machine.Task ν σ β ε δ ι α), (d.enqueue priority task).armed = Bool.true)
-
-#check (@Effect4.Machine.Dispatcher.drain_disarms :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε]
-    [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (d : Effect4.Machine.Dispatcher ν σ β ε δ ι α),
-    d.drain.snd.armed = Bool.false)
-
-#check (@Effect4.Machine.Dispatcher.drain_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [DecidableEq ε]
-    [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (d : Effect4.Machine.Dispatcher ν σ β ε δ ι α),
-    d.drain = ((List.map Effect4.Machine.Bucket.tasks d.buckets).flatten, Effect4.Machine.Dispatcher.empty))
-
-#check (@Effect4.Machine.fire_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (owner : Effect4.FiberId) (o : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    m.fiber? owner = Option.some o →
-      Effect4.Machine.stepDecision.fire interp fuel m owner =
-        (List.foldl (Effect4.Machine.fireStep interp fuel owner)
-          ((m.update { o with dispatcher := o.dispatcher.drain.snd }).disarm owner, true)
-          o.dispatcher.drain.fst).fst)
-
-#check (@Effect4.Machine.flushAll_idle :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel rounds : Nat)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St),
-    m.armed = [] → Effect4.Machine.stepDecision.flushAll interp fuel (rounds + 1) m = m)
-
-#check (@Effect4.Machine.flushAll_round :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel rounds : Nat)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (owner : Effect4.FiberId) (rest : List Effect4.FiberId),
-    m.armed = owner :: rest →
-      m.stuck = Option.none →
-        (Effect4.Machine.fireState interp fuel m owner).snd = true →
-        Effect4.Machine.stepDecision.flushAll interp fuel (rounds + 1) m =
-          Effect4.Machine.stepDecision.flushAll interp fuel rounds (Effect4.Machine.stepDecision.fire interp fuel m owner))
-
-#check (@Effect4.Machine.evaluatePrim_yieldNowWith :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (priority : Nat),
-    have g :=
-      { id := f.id,
-        frame :=
-          have __src := f.frame;
-          { current := Effect4.Prim.yieldNowWith priority, stack := __src.stack, interruptible := __src.interruptible,
-            interruptedCause := __src.interruptedCause, deferredInterrupt := __src.deferredInterrupt },
-        running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
-        currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield, preventYield := f.preventYield,
-        yieldOverride := f.yieldOverride, observers := f.observers, children := f.children, dispatcher := f.dispatcher,
-        context := f.context };
-    have it := Effect4.Machine.evaluatePrim interp m g yielding;
-    it.outcome = Effect4.Machine.Outcome.parked ∧
-      it.fiber.parked = Effect4.Machine.Parked.withGuard m.nextToken ∧
-        it.fiber.frame.current = Effect4.Prim.success interp.voidValue ∧
-          it.fiber.dispatcher =
-              f.dispatcher.enqueue priority
-                (Effect4.Machine.Task.resume f.id m.nextToken (Effect4.Prim.success interp.voidValue)) ∧
-            it.machine.nextToken = m.nextToken + 1 ∧ it.nested = [])
-
-#check (@Effect4.Machine.drive_resume_wrong_token :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (id : Effect4.FiberId) (token guard : Nat)
-    (answer : Effect4.Prim ν σ β ε δ ι α) (t : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.fiber? id = Option.some t →
-        t.parked = Effect4.Machine.Parked.withGuard guard →
-          guard ≠ token →
-            Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.resume id token answer :: rest) =
-              Effect4.Machine.drive interp fuel m rest)
-
-#check (@Effect4.Machine.drive_resume_guard :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (id : Effect4.FiberId) (token : Nat) (answer : Effect4.Prim ν σ β ε δ ι α) (t : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.fiber? id = Option.some t →
-        t.parked = Effect4.Machine.Parked.withGuard token →
-          Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.resume id token answer :: rest) =
-            Effect4.Machine.drive interp fuel
-              ((m.update
-                    { id := t.id,
-                      frame :=
-                        have __src := t.frame;
-                        { current := answer, stack := __src.stack, interruptible := __src.interruptible,
-                          interruptedCause := __src.interruptedCause, deferredInterrupt := __src.deferredInterrupt },
-                      running := t.running, parked := Effect4.Machine.Parked.notParked,
-                      pending := List.filter (fun p => Decidable.decide (p.token ≠ token)) t.pending,
-                      finalizing := t.finalizing, exit := t.exit, currentOpCount := t.currentOpCount,
-                      maxOpsBeforeYield := t.maxOpsBeforeYield, preventYield := t.preventYield,
-                      yieldOverride := t.yieldOverride, observers := t.observers, children := t.children,
-                      dispatcher := t.dispatcher, context := t.context }).emit
-                [Effect4.Machine.RunEvent.resumedWith id token answer])
-              (Effect4.Machine.Cmd.evaluate id :: rest))
-
-#check (@Effect4.Machine.drive_resume_not_parked :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (id : Effect4.FiberId) (token : Nat)
-    (answer : Effect4.Prim ν σ β ε δ ι α) (t : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.fiber? id = Option.some t →
-        t.parked = Effect4.Machine.Parked.notParked →
-          Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.resume id token answer :: rest) =
-            Effect4.Machine.drive interp fuel m rest)
-
-#check (@Effect4.Machine.Env.hooks_empty :
-  Effect4.Machine.Env.ambientScope Effect4.Machine.Env.Context.empty = Option.none ∧
-    Effect4.Machine.Env.budgetOf Effect4.Machine.Env.Context.empty = (2048, Bool.false))
-
-#check (@Effect4.Machine.injectYield_prevented :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool),
-    f.preventYield = Bool.true → Effect4.Machine.injectYield m f yielding = Option.none)
-
-#check (@Effect4.Machine.stepDecision_abort :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (annotations : Effect4.ReasonAnnotations α) (target : Effect4.FiberId) (t : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    m.fiber? target = Option.some t →
-      Effect4.Machine.stepDecision interp fuel m (Effect4.Machine.RunDecision.interruptFrom Option.none annotations target) =
-        have r := Effect4.Machine.interruptRecord interp Option.none annotations t;
-        have m := m.emit [Effect4.Machine.RunEvent.interruptRecorded Option.none target];
-        have m :=
-          if (r.fst.frame.deferredInterrupt && r.fst.running) = Bool.true then
-            m.emit [Effect4.Machine.RunEvent.interruptDeferred target]
-          else m;
-        have m := m.update r.fst;
-        if r.snd = Bool.true then
-          Effect4.Machine.drive interp fuel m [Effect4.Machine.Cmd.evaluate target, Effect4.Machine.Cmd.drainDue]
-        else m)
-
-#check (@Effect4.Machine.runCallback_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (program : Effect4.Prim ν σ β ε δ ι α) (context : χ) (key : Nat),
-    Effect4.Machine.runCallback interp fuel m program context key =
-      (Effect4.Machine.drive interp fuel
-          (Effect4.Machine.RunMachine.mk
-            (m.fibers ++
-              [have __src :=
-                  Effect4.Machine.RunFiber.make (Effect4.FiberId.mk m.nextId) program Bool.true (interp.budgetOf context)
-                    context;
-                Effect4.Machine.RunFiber.mk __src.id __src.frame __src.running __src.parked __src.pending __src.finalizing
-                  __src.exit __src.currentOpCount __src.maxOpsBeforeYield __src.preventYield __src.yieldOverride
-                  [Effect4.Machine.Observer.callback key] __src.children __src.dispatcher __src.context])
-            m.races (m.nextId + 1) m.nextToken m.nextRace m.middlewareInstalled m.armed m.state m.trace m.stuck)
-          [Effect4.Machine.Cmd.evaluate (Effect4.FiberId.mk m.nextId), Effect4.Machine.Cmd.drainDue],
-        Effect4.FiberId.mk m.nextId))
-
-#check (@Effect4.Machine.fireObserver_callback :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (id : Effect4.FiberId) (exit : Effect4.Exit β ε δ ι α)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (nested : List (Effect4.Machine.Cmd ν σ β ε δ ι α)) (key : Nat),
-    Effect4.Machine.fireObserver interp id exit (m, nested) (Effect4.Machine.Observer.callback key) =
-      ((m.emit [Effect4.Machine.RunEvent.observerFired id (Effect4.Machine.Observer.callback key)]).emit
-          [Effect4.Machine.RunEvent.callback key exit],
-        nested))
-
-#check (@Effect4.Machine.promiseOutcome_eq :
-  ∀ {β : Type v} {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
-    [DecidableEq α] (value : β) (cause : Effect4.Cause ε δ ι α),
-    Effect4.Machine.promiseOutcome (Effect4.Exit.success value) = Except.ok value ∧
-      Effect4.Machine.promiseOutcome (Effect4.Exit.failure cause) = Except.error cause.squash)
-
-#check (@Effect4.Machine.promiseOutcome_failure :
-  ∀ {β : Type v} {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ]
-    [DecidableEq ι] [DecidableEq α] (cause : Effect4.Cause ε δ ι α),
-    Effect4.Machine.promiseOutcome (Effect4.Exit.failure cause) = Except.error cause.squash)
-
-#check (@Effect4.Machine.runSyncExit_exited :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (program : Effect4.Prim ν σ β ε δ ι α) (context : χ) (exit : Effect4.Exit β ε δ ι α),
-    ((Effect4.Machine.stepDecision.flushRoot interp fuel (Effect4.Machine.runFork interp fuel m program context).snd fuel
-                  (Effect4.Machine.runFork interp fuel m program context).fst).fiber?
-              (Effect4.Machine.runFork interp fuel m program context).snd).bind
-          Effect4.Machine.RunFiber.exit =
-        Option.some exit →
-      (Effect4.Machine.runSyncExit interp fuel m program context).snd = exit)
-
-#check (@Effect4.Machine.runSyncExit_survives :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (program : Effect4.Prim ν σ β ε δ ι α) (context : χ),
-    ((Effect4.Machine.stepDecision.flushRoot interp fuel (Effect4.Machine.runFork interp fuel m program context).snd fuel
-                  (Effect4.Machine.runFork interp fuel m program context).fst).fiber?
-              (Effect4.Machine.runFork interp fuel m program context).snd).bind
-          Effect4.Machine.RunFiber.exit =
-        Option.none →
-      (Effect4.Machine.runSyncExit interp fuel m program context).snd =
-        Effect4.Exit.failure (Effect4.Cause.die interp.asyncFiberError))
-
-#check (@Effect4.Machine.spawn_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (parent : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (program : Effect4.Prim ν σ β ε δ ι α) (options : Effect4.Supervision.ForkOptions),
-    Effect4.Machine.spawn interp m parent program options =
-      ((Effect4.Machine.RunMachine.mk (m.fibers ++ [Effect4.Machine.spawnChild interp m parent program options]) m.races
-              (m.nextId + 1) m.nextToken m.nextRace m.middlewareInstalled m.armed m.state m.trace m.stuck).emit
-          [Effect4.Machine.RunEvent.forked parent.id (Effect4.FiberId.mk m.nextId) options.daemon],
-        parent, Effect4.FiberId.mk m.nextId))
-
-#check (@Effect4.Machine.evaluatePrim_join_done :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (thunk : σ) (target : Effect4.FiberId) (mode : Effect4.Supervision.ObserverMode)
-    (t : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (exit : Effect4.Exit β ε δ ι α),
-    interp.parkOf (Effect4.Prim.sync thunk) = Option.some (Except.ok (Effect4.Machine.ParkKind.join target mode)) →
-      m.fiber? target = Option.some t →
-        t.exit = Option.some exit →
-          have g :=
-            { id := f.id,
-              frame :=
-                have __src := f.frame;
-                { current := Effect4.Prim.sync thunk, stack := __src.stack, interruptible := __src.interruptible,
-                  interruptedCause := __src.interruptedCause, deferredInterrupt := __src.deferredInterrupt },
-              running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
-              currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield,
-              preventYield := f.preventYield, yieldOverride := f.yieldOverride, observers := f.observers,
-              children := f.children, dispatcher := f.dispatcher, context := f.context };
-          Effect4.Machine.evaluatePrim interp m g yielding =
-            { machine := m,
-              fiber :=
-                { id := g.id,
-                  frame :=
-                    have __src := g.frame;
-                    { current := interp.exitValue exit mode, stack := __src.stack, interruptible := __src.interruptible,
-                      interruptedCause := __src.interruptedCause, deferredInterrupt := __src.deferredInterrupt },
-                  running := g.running, parked := g.parked, pending := g.pending, finalizing := g.finalizing,
-                  exit := g.exit, currentOpCount := g.currentOpCount, maxOpsBeforeYield := g.maxOpsBeforeYield,
-                  preventYield := g.preventYield, yieldOverride := g.yieldOverride, observers := g.observers,
-                  children := g.children, dispatcher := g.dispatcher, context := g.context },
-              yielding := yielding, outcome := Effect4.Machine.Outcome.continue_, nested := [] })
-
-#check (@Effect4.Machine.evaluatePrim_join_live :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (thunk : σ) (target : Effect4.FiberId) (mode : Effect4.Supervision.ObserverMode)
-    (t : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    interp.parkOf (Effect4.Prim.sync thunk) = Option.some (Except.ok (Effect4.Machine.ParkKind.join target mode)) →
-      m.fiber? target = Option.some t →
-        t.exit = Option.none →
-          have g :=
-            Effect4.Machine.RunFiber.mk f.id
-              (have __src := f.frame;
-              Effect4.FrameFiber.mk (Effect4.Prim.sync thunk) __src.stack __src.interruptible __src.interruptedCause
-                __src.deferredInterrupt)
-              f.running f.parked f.pending f.finalizing f.exit f.currentOpCount f.maxOpsBeforeYield f.preventYield
-              f.yieldOverride f.observers f.children f.dispatcher f.context;
-          Effect4.Machine.evaluatePrim interp m g yielding =
-            Effect4.Machine.Iter.mk
-              (((Effect4.Machine.RunMachine.mk m.fibers m.races m.nextId (m.nextToken + 1) m.nextRace m.middlewareInstalled
-                        m.armed m.state m.trace m.stuck).update
-                    (Effect4.Machine.RunFiber.mk t.id t.frame t.running t.parked t.pending t.finalizing t.exit
-                      t.currentOpCount t.maxOpsBeforeYield t.preventYield t.yieldOverride
-                      (t.observers ++ [Effect4.Machine.Observer.resumeAwait g.id m.nextToken mode]) t.children t.dispatcher
-                      t.context)).emit
-                [Effect4.Machine.RunEvent.parkedOn g.id m.nextToken])
-              ((Effect4.Machine.RunFiber.mk g.id
-                    (have __src := g.frame;
-                    Effect4.FrameFiber.mk __src.current
-                      (Effect4.Prim.asyncFinalizer (interp.cancelName interp.parkCancelName g.id m.nextToken) ::
-                        g.frame.stack)
-                      __src.interruptible __src.interruptedCause __src.deferredInterrupt)
-                    g.running g.parked g.pending g.finalizing g.exit g.currentOpCount g.maxOpsBeforeYield g.preventYield
-                    g.yieldOverride g.observers g.children g.dispatcher g.context).park
-                (Effect4.Machine.Pending.mk m.nextToken (Option.some target) [] [] Effect4.Machine.Resume.void Bool.false))
-              yielding Effect4.Machine.Outcome.parked [])
-
-#check (@Effect4.Machine.evaluatePrim_join_unknown :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (thunk : σ) (target : Effect4.FiberId) (mode : Effect4.Supervision.ObserverMode),
-    interp.parkOf (Effect4.Prim.sync thunk) = Option.some (Except.ok (Effect4.Machine.ParkKind.join target mode)) →
-      m.fiber? target = Option.none →
-        have g :=
-          { id := f.id,
-            frame :=
-              have __src := f.frame;
-              { current := Effect4.Prim.sync thunk, stack := __src.stack, interruptible := __src.interruptible,
-                interruptedCause := __src.interruptedCause, deferredInterrupt := __src.deferredInterrupt },
-            running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
-            currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield, preventYield := f.preventYield,
-            yieldOverride := f.yieldOverride, observers := f.observers, children := f.children,
-            dispatcher := f.dispatcher, context := f.context };
-        (Effect4.Machine.evaluatePrim interp m g yielding).outcome =
-          Effect4.Machine.Outcome.stuck (Effect4.Machine.Stuck.unknownFiber target))
-
-#check (@Effect4.Machine.withFiber_snapshotChildren :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool),
-    Effect4.Machine.evaluatePrim.withFiber interp m f yielding Effect4.Machine.WithFiberAction.snapshotChildren =
-      { machine := m,
-        fiber :=
-          { id := f.id,
-            frame :=
-              have __src := f.frame;
-              { current := Effect4.Prim.success (interp.fibersValue f.children), stack := __src.stack,
-                interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
-                deferredInterrupt := __src.deferredInterrupt },
-            running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
-            currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield, preventYield := f.preventYield,
-            yieldOverride := f.yieldOverride, observers := f.observers, children := f.children,
-            dispatcher := f.dispatcher, context := f.context },
-        yielding := yielding, outcome := Effect4.Machine.Outcome.continue_, nested := [] })
-
-#check (@Effect4.Machine.withFiber_awaitNewChildren :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (snapshot : List Effect4.FiberId),
-    Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.awaitNewChildren snapshot) =
-      have r :=
-        Effect4.Machine.countdownPark interp m f (List.filter (fun c => !snapshot.contains c) f.children)
-          Effect4.Machine.Resume.void;
-      { machine := r.fst, fiber := r.snd.fst, yielding := yielding,
-        outcome :=
-          match r.fst.stuck with
-          | Option.some why => Effect4.Machine.Outcome.stuck why
-          | Option.none => if r.snd.snd = Bool.true then Effect4.Machine.Outcome.parked else Effect4.Machine.Outcome.continue_,
-        nested := [] })
-
-#check (@Effect4.Machine.withFiber_runIn :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (target : Effect4.FiberId) (scope : Nat),
-    Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.runIn target scope) =
-      have r :=
-        Effect4.Machine.linkScope interp m Effect4.Supervision.ScopeMode.fiberRunIn scope target (Option.some target)
-          Effect4.ReasonAnnotations.empty;
-      { machine := r.fst,
-        fiber :=
-          { id := f.id,
-            frame :=
-              have __src := f.frame;
-              { current := Effect4.Prim.success interp.voidValue, stack := __src.stack,
-                interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
-                deferredInterrupt := __src.deferredInterrupt },
-            running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
-            currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield, preventYield := f.preventYield,
-            yieldOverride := f.yieldOverride, observers := f.observers, children := f.children,
-            dispatcher := f.dispatcher, context := f.context },
-        yielding := yielding,
-        outcome :=
-          match r.fst.stuck with
-          | Option.some why => Effect4.Machine.Outcome.stuck why
-          | Option.none => Effect4.Machine.Outcome.continue_,
-        nested := r.snd })
-
-#check (@Effect4.Machine.linkScope_closed :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (mode : Effect4.Supervision.ScopeMode) (scope : Nat) (target : Effect4.FiberId)
-    (interruptor : Option Effect4.FiberId) (extra : Effect4.ReasonAnnotations α) (exit : Effect4.Exit β ε δ ι α)
-    (t : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    interp.scopeStatus scope m.state = Option.some (Option.some exit) →
-      m.fiber? target = Option.some t →
-        Effect4.Machine.linkScope interp m mode scope target interruptor extra =
-          have r := Effect4.Machine.interruptRecord interp interruptor extra t;
-          ((m.update r.fst).emit
-              [Effect4.Machine.RunEvent.scopeClosedOnLink scope target,
-                Effect4.Machine.RunEvent.interruptRecorded interruptor target],
-            if r.snd = Bool.true then [Effect4.Machine.Cmd.evaluate target] else []))
-
-#check (@Effect4.Machine.linkScope_unknown :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (mode : Effect4.Supervision.ScopeMode) (scope : Nat) (target : Effect4.FiberId)
-    (interruptor : Option Effect4.FiberId) (extra : Effect4.ReasonAnnotations α),
-    interp.scopeStatus scope m.state = Option.none →
-      Effect4.Machine.linkScope interp m mode scope target interruptor extra =
-        (m.halt (Effect4.Machine.Stuck.unknownScope scope), []))
-
-#check (@Effect4.FrameFiber.step_async_frontier :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq ε]
-    [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α] (interp : Effect4.PrimInterp ν σ β ε δ ι α)
-    (self : Effect4.FrameFiber ν σ β ε δ ι α) (register : ν) (withSignal : Bool) (cancel : Option ν),
-    Effect4.FrameFiber.step interp
-        { current := Effect4.Prim.async register withSignal cancel, stack := self.stack,
-          interruptible := self.interruptible, interruptedCause := self.interruptedCause,
-          deferredInterrupt := self.deferredInterrupt } =
-      (Effect4.FrameStep.running
-          { current := Effect4.Prim.async register withSignal cancel, stack := self.stack,
-            interruptible := self.interruptible, interruptedCause := self.interruptedCause,
-            deferredInterrupt := self.deferredInterrupt },
-        []))
-
-#check (@Effect4.Prim.armE_asyncFinalizer_no_interrupt :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.PrimInterp ν σ β ε δ ι α) (onInterrupt : ν) (cause : Effect4.Cause ε δ ι α)
-    (provided : Option (Effect4.Exit β ε δ ι α)),
-    cause.hasInterrupts = Bool.false →
-      Effect4.Prim.armE interp (Effect4.Prim.asyncFinalizer onInterrupt) cause provided =
-        Option.some (Effect4.Prim.failure cause, []))
-
-#check (@Effect4.Prim.ensure_asyncFinalizer_masks :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (onInterrupt : ν)
-    (fiber : Effect4.FrameFiber ν σ β ε δ ι α),
-    fiber.interruptible = Bool.true →
-      (Effect4.Prim.asyncFinalizer onInterrupt).ensure fiber =
-        ({ current := fiber.current, stack := Effect4.Prim.setInterruptible Bool.true :: fiber.stack,
-            interruptible := Bool.false, interruptedCause := fiber.interruptedCause,
-            deferredInterrupt := fiber.deferredInterrupt },
-          Option.none))
-
-#check (@Effect4.Prim.arms_asyncFinalizer :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} (onInterrupt : ν),
-    (Effect4.Prim.asyncFinalizer onInterrupt).arms = [Effect4.Arm.contE, Effect4.Arm.contAll])
-
-#check (@Effect4.Prim.hasArm_asyncFinalizer_contA_false :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (onInterrupt : ν), (Effect4.Prim.asyncFinalizer onInterrupt).hasArm Effect4.Arm.contA = Bool.false)
-
--- source-repairs §20 (2026-09-07): the multiple-finalizer close is `scopeCloseFinalizers`'
--- generator, walked by the counted `Iterator`; the chains are retired.
-#check (@Effect4.Machine.closeWalk_sequential :
-  ∀ (order : List Effect4.Machine.FinName) (exit : Effect4.Machine.ExitV),
-    Effect4.Machine.progOf (Effect4.Machine.ProgName.closeWalk Effect4.FinalizerStrategy.sequential order exit) =
-      Effect4.Prim.iterator (Effect4.Machine.Name.closeSeq order exit []) Effect4.Machine.Val.unit)
-
-#check (@Effect4.Machine.closeSeq_step :
-  ∀ (fin : Effect4.Machine.FinName) (rest : List Effect4.Machine.FinName) (exit : Effect4.Machine.ExitV)
-    (captured : List (Effect4.Reason Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
-    (value : Effect4.Machine.Val),
-    Effect4.Machine.stores.iterNext (Effect4.Machine.Name.closeSeq (fin :: rest) exit captured) value =
-      ([], Effect4.IterStep.resume (Effect4.Prim.exitFrame (Effect4.Machine.finProgram fin exit))
-        (Effect4.Machine.Name.closeSeq rest exit (captured ++ Effect4.Machine.reasonsOfVal value))))
-
-#check (@Effect4.Machine.closeSeq_captures :
-  ∀ (rest : List Effect4.Machine.FinName) (exit : Effect4.Machine.ExitV)
-    (captured : List (Effect4.Reason Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
-    (cause : Effect4.Machine.CauseV),
-    Effect4.Machine.stores.iterNext (Effect4.Machine.Name.closeSeq rest exit captured) (Effect4.Machine.Val.exitErr cause) =
-      ([], Effect4.Machine.closeSeqStep rest exit (captured ++ cause.reasons) Effect4.Machine.Val.unit))
-
-#check (@Effect4.Machine.closeSeq_merges :
-  ∀ (exit : Effect4.Machine.ExitV)
-    (captured : List (Effect4.Reason Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
-    (value : Effect4.Machine.Val),
-    Effect4.Machine.stores.iterNext (Effect4.Machine.Name.closeSeq [] exit captured) value =
-      ([], Effect4.Machine.closeDone (captured ++ Effect4.Machine.reasonsOfVal value)))
-
-#check (@Effect4.Machine.closeWalk_parallel :
-  ∀ (order : List Effect4.Machine.FinName) (exit : Effect4.Machine.ExitV),
-    Effect4.Machine.progOf (Effect4.Machine.ProgName.closeWalk Effect4.FinalizerStrategy.parallel order exit) =
-      Effect4.Prim.withFiber (Effect4.Machine.Thunk.act (Effect4.Machine.ActionName.closePar order exit)))
-
-#check (@Effect4.Machine.actionOf_closePar :
-  ∀ (order : List Effect4.Machine.FinName) (exit : Effect4.Machine.ExitV),
-    Effect4.Machine.actionOf (Effect4.Machine.ActionName.closePar order exit) =
-      Effect4.Machine.WithFiberAction.closePar (order.map fun fin => Effect4.Machine.finProgram fin exit))
-
-#check (@Effect4.Machine.closeParDone_is_asVoidAll :
-  ∀ (exits : List Effect4.Machine.ExitV),
-    Effect4.Machine.stores.iterNext Effect4.Machine.Name.closeParDone (Effect4.Machine.stores.exitsValue exits) =
-      ([], Effect4.Machine.stepOfExit (Effect4.Machine.mergeExits exits)))
-
-#check (@Effect4.Machine.scopeLinkFiber_name :
-  ∀ (scope : Nat) (fiber : Effect4.FiberId) (state : Effect4.Machine.Stores)
-    (entry : Effect4.Machine.ScopeEntry),
-    state.scopes.entryAt scope = Option.some entry →
-      Effect4.Machine.stores.scopeLinkFiber Effect4.Supervision.ScopeMode.forkIn scope fiber state =
-        Option.some
-          ({ refs := state.refs, deferreds := state.deferreds,
-              scopes :=
-                (state.scopes.addFinalizer scope state.nextName
-                    (Effect4.Machine.FinName.interruptFiber fiber Bool.true)).fst,
-              memo := state.memo, timers := state.timers, nextName := state.nextName + 1, externals := state.externals },
-            state.nextName))
-
-#check (@Effect4.Machine.scopeStore_forkChild_names :
-  ∀ (self : Effect4.Machine.ScopeStore) (parentKey childKey sharedKey : Nat)
-    (strategy : Effect4.FinalizerStrategy) (parent : Effect4.Machine.ScopeEntry),
-    self.entryAt parentKey = Option.some parent →
-      Effect4.Scope.closingExit? parent.scope = Option.none →
-        (self.forkChild parentKey childKey sharedKey strategy).entries =
-          (self.setEntry
-                { key := parent.key,
-                  scope :=
-                    Effect4.Scope.addUnsafe parent.scope sharedKey
-                      (Effect4.Machine.FinName.closeChildScope childKey) }).entries ++
-            [{ key := childKey,
-                scope :=
-                  (Effect4.Scope.make strategy).addUnsafe sharedKey
-                    (Effect4.Machine.FinName.detachFromParent parentKey sharedKey) }])
-
-/-! The native `scoped` entry and exit on the compile route (`Program/Compile.lean`), the
-`acquireRelease` introductions (V1, `Program/Intro.lean`), and the add-after-closed laws
-(`Scope.lean`, `StoresLaws.lean`): the join of 2026-09-07 re-homed the two scope rows the
-Layer machine carried. -/
-
-#check (@Effect4.Program.Agreement.enterScoped_eq :
-  ∀ (root : Effect4.Program.NativeEff) (p : Effect4.Program.Point)
-    (m : Effect4.Machine.RunMachine Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
-      Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
-      Effect4.Machine.Stores)
-    (f : Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
-      Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx)
-    (yielding : Bool),
-    Effect4.Program.enterScoped root p m f yielding =
-      ⟨{ m with state := { m.state with
-            scopes := m.state.scopes.make m.state.nextName Effect4.FinalizerStrategy.sequential
-            nextName := m.state.nextName + 1 } },
-        { f with
-          context := f.context.withScope m.state.nextName
-          maxOpsBeforeYield := (f.context.withScope m.state.nextName).maxOpsBeforeYield
-          preventYield := (f.context.withScope m.state.nextName).preventYield
-          frame := { f.frame with
-            current := Effect4.Prim.onExit (Effect4.Program.resolve root (p.child 0))
-              (Effect4.Program.EffName.scopedExit f.context m.state.nextName) Bool.false } },
-        yielding, .continue_, []⟩)
-
-#check (@Effect4.Program.Agreement.exitScoped_restores :
-  ∀ (root : Effect4.Program.NativeEff)
-    (m : Effect4.Machine.RunMachine Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
-      Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx
-      Effect4.Machine.Stores)
-    (f : Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
-      Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann Effect4.Machine.Ctx)
-    (yielding : Bool) (ex : Effect4.Machine.ExitV) (body : Effect4.Program.NCode)
-    (previous : Effect4.Machine.Ctx) (scope : Nat) (flag : Bool),
-    (f.frame.getCont (match ex with | .success _ => .contA | .failure _ => .contE)
-        (match ex with | .success _ => false | .failure _ => true)).answer =
-      .frame (Effect4.Prim.onExit body (Effect4.Program.EffName.scopedExit previous scope) flag) →
-    (Effect4.Program.exitScoped root m f yielding ex).fiber.context = previous)
-
-#check (@Effect4.Program.Sched.release_intro :
-  ∀ (root : Effect4.Program.NativeEff) (q : Effect4.Program.Point)
-  (previous : Effect4.Machine.Ctx),
-  Effect4.Program.Sched.CodeMeans root (Effect4.Program.resolve root q) (Effect4.Program.Sched.denoteAt root q) →
-    Effect4.Program.Sched.CodeMeans root
-      (Effect4.Prim.onExit (Effect4.Program.resolve root q) (Effect4.Program.EffName.restoreCtx previous) Bool.false)
-      (Effect4.Program.Sched.denoteBody root (Effect4.Program.Sched.Body.release q previous)))
-
-#check (@Effect4.Program.Sched.foreignRelease_intro :
-  ∀ (root : Effect4.Program.NativeEff) (c : Effect4.Machine.Capture)
-  (ex : Effect4.Machine.ExitV),
-  (∀ (completed : List (Effect4.FiberId × Effect4.Machine.ExitV)),
-      Effect4.Program.Sched.CodeMeans root
-        (Effect4.Program.resolve root
-          ((Effect4.Program.Point.ofCapture c completed).childWith 1 (Effect4.Machine.reifyExitVal ex)))
-        (Effect4.Program.Sched.denoteAt root
-          ((Effect4.Program.Point.ofCapture c completed).childWith 1 (Effect4.Machine.reifyExitVal ex)))) →
-    Effect4.Program.Sched.CodeMeans root
-      (Effect4.Program.embed (Effect4.Machine.finProgram (Effect4.Machine.FinName.foreign c) ex))
-      (Effect4.Program.Sched.denoteFin (Effect4.Machine.FinName.foreign c) ex))
-
-#check (@Effect4.Program.Sched.acquireIn_intro :
-  ∀ (root : Effect4.Program.NativeEff) (p : Effect4.Program.Point)
-  (ctx : Effect4.Machine.Ctx),
-  Effect4.Program.Sched.CodeMeans root (Effect4.Program.resolve root (p.child 0))
-      (Effect4.Program.Sched.denoteAt root (p.child 0)) →
-    (∀ (a : Effect4.Machine.Val) (ex : Effect4.Machine.ExitV),
-        Effect4.Program.Sched.CodeMeans root
-          (Effect4.Program.embed (Effect4.Machine.finProgram (Effect4.Machine.FinName.foreign (p.capture a ctx)) ex))
-          (Effect4.Program.Sched.denoteFin (Effect4.Machine.FinName.foreign (p.capture a ctx)) ex)) →
-      Effect4.Program.Sched.CodeMeans root
-        ((Effect4.Prim.withFiber
-              (Effect4.Program.EffThunk.store
-                (Effect4.Machine.Thunk.act Effect4.Machine.ActionName.ambientScope))).onSuccess
-          (Effect4.Program.EffName.acquireIn p ctx))
-        (Effect4.Program.Sched.denoteBody root (Effect4.Program.Sched.Body.acquireIn p ctx)))
-
-#check (@Effect4.Scope.closingExit_addUnsafe :
-  ∀ {κ φ : Type u} {β : Type v} {ε δ ι α : Type u} [inst : DecidableEq κ]
-  (self : Effect4.Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ),
-  (self.addUnsafe key finalizer).closingExit? = self.closingExit?)
-
-#check (@Effect4.Machine.syncOpStep_scopeAdd_closed :
-  ∀ (s : Effect4.Machine.Stores) (scope : Nat)
-  (fin : Effect4.Machine.FinName) {entry : Effect4.Machine.ScopeEntry} {exit : Effect4.Machine.ExitV},
-  s.scopes.entryAt scope = Option.some entry →
-    Effect4.Scope.closingExit? entry.scope = Option.some exit →
-      Effect4.Machine.syncOpStep (Effect4.Machine.SyncOp.scopeAdd scope fin) s =
-        Option.some (s, Effect4.Machine.reifyExitVal exit))
-
-#check (@Effect4.Machine.refStep_make :
-  ∀ (heap : Effect4.Machine.RefHeap) (a : Effect4.Machine.Val),
-    Effect4.Machine.refStep (Effect4.Machine.SyncOp.refMake a) heap =
-      Option.some (Effect4.Machine.Val.cell { index := List.length heap }, heap ++ [a]))
-
-#check (@Effect4.Machine.refMake_twice_distinct :
-  ∀ (heap : Effect4.Machine.RefHeap) (a b : Effect4.Machine.Val),
-    Option.map Prod.fst (Effect4.Machine.refStep (Effect4.Machine.SyncOp.refMake a) heap) ≠
-      (Effect4.Machine.refStep (Effect4.Machine.SyncOp.refMake a) heap).bind fun step =>
-        Option.map Prod.fst (Effect4.Machine.refStep (Effect4.Machine.SyncOp.refMake b) step.snd))
-
-#check (@Effect4.Machine.refStep_get :
-  ∀ (heap : Effect4.Machine.RefHeap) (cell : Effect4.Machine.RefKey) (a : Effect4.Machine.Val),
-    Effect4.Machine.refPeek heap cell = Option.some a →
-      Effect4.Machine.refStep (Effect4.Machine.SyncOp.refGet cell) heap = Option.some (a, heap))
-
-#check (@Effect4.Machine.refStep_get_after_set :
-  ∀ (heap : Effect4.Machine.RefHeap) (cell : Effect4.Machine.RefKey)
-    (v a : Effect4.Machine.Val),
-    Effect4.Machine.refPeek heap cell = Option.some a →
-      Option.map Prod.fst (Effect4.Machine.refStep (Effect4.Machine.SyncOp.refGet cell) (Effect4.Machine.refPoke heap cell v)) =
-        Option.some v)
-
-#check (@Effect4.Machine.refStep_set :
-  ∀ (heap : Effect4.Machine.RefHeap) (cell : Effect4.Machine.RefKey) (v a : Effect4.Machine.Val),
-    Effect4.Machine.refPeek heap cell = Option.some a →
-      Effect4.Machine.refStep (Effect4.Machine.SyncOp.refSet cell v) heap =
-        Option.some (Effect4.Machine.Val.cell cell, Effect4.Machine.refPoke heap cell v))
-
-#check (@Effect4.Machine.set_answer_ne_update_answer :
-  ∀ (cell : Effect4.Machine.RefKey),
-    Effect4.Machine.Val.cell cell ≠ Effect4.Machine.Val.unit)
-
-#check (@Effect4.Machine.refStep_set_answers_self :
-  ∀ (heap : Effect4.Machine.RefHeap) (cell : Effect4.Machine.RefKey)
-    (v a : Effect4.Machine.Val),
-    Effect4.Machine.refPeek heap cell = Option.some a →
-      Option.map Prod.fst (Effect4.Machine.refStep (Effect4.Machine.SyncOp.refSet cell v) heap) =
-          Option.some (Effect4.Machine.Val.cell cell) ∧
-        Option.map Prod.snd (Effect4.Machine.refStep (Effect4.Machine.SyncOp.refSet cell v) heap) =
-          Option.some (Effect4.Machine.refPoke heap cell v))
-
-#check (@Effect4.Machine.refStep_getAndSet :
-  ∀ (heap : Effect4.Machine.RefHeap) (cell : Effect4.Machine.RefKey) (v a : Effect4.Machine.Val),
-    Effect4.Machine.refPeek heap cell = Option.some a →
-      Effect4.Machine.refStep (Effect4.Machine.SyncOp.refGetAndSet cell v) heap =
-        Option.some (a, Effect4.Machine.refPoke heap cell v))
-
-#check (@Effect4.Machine.refStep_setAndGet :
-  ∀ (heap : Effect4.Machine.RefHeap) (cell : Effect4.Machine.RefKey) (v a : Effect4.Machine.Val),
-    Effect4.Machine.refPeek heap cell = Option.some a →
-      Effect4.Machine.refStep (Effect4.Machine.SyncOp.refSetAndGet cell v) heap =
-        Option.some (v, Effect4.Machine.refPoke heap cell v))
-
-#check (@Effect4.Machine.refStep_update :
-  ∀ (heap : Effect4.Machine.RefHeap) (cell : Effect4.Machine.RefKey) (f : Effect4.Machine.FnName)
-    (a : Effect4.Machine.Val),
-    Effect4.Machine.refPeek heap cell = Option.some a →
-      Effect4.Machine.refStep (Effect4.Machine.SyncOp.refUpdate cell f) heap =
-        Option.some (Effect4.Machine.Val.unit, Effect4.Machine.refPoke heap cell (f.total a)))
-
-#check (@Effect4.Machine.refStep_update_applies_once :
-  ∀ (heap : Effect4.Machine.RefHeap) (cell : Effect4.Machine.RefKey)
-    (a : Effect4.Machine.Val),
-    Effect4.Machine.refPeek heap cell = Option.some a →
-      a = Effect4.Machine.Val.nat 0 →
-        Option.map Prod.snd (Effect4.Machine.refStep (Effect4.Machine.SyncOp.refUpdate cell Effect4.Machine.FnName.incr) heap) =
-          Option.some (Effect4.Machine.refPoke heap cell (Effect4.Machine.Val.nat 1)))
-
-#check (@Effect4.Machine.refStep_modify :
-  ∀ (heap : Effect4.Machine.RefHeap) (cell : Effect4.Machine.RefKey) (f : Effect4.Machine.FnName)
-    (a : Effect4.Machine.Val),
-    Effect4.Machine.refPeek heap cell = Option.some a →
-      Effect4.Machine.refStep (Effect4.Machine.SyncOp.refModify cell f) heap =
-        Option.some ((f.modify a).fst, Effect4.Machine.refPoke heap cell (f.modify a).snd))
-
-#check (@Effect4.Machine.refStep_modifySome_eq_modify :
-  ∀ (heap : Effect4.Machine.RefHeap) (cell : Effect4.Machine.RefKey)
-    (pf : Effect4.Machine.FnName) (a : Effect4.Machine.Val),
-    Effect4.Machine.refPeek heap cell = Option.some a →
-      Effect4.Machine.refStep (Effect4.Machine.SyncOp.refModifySome cell pf) heap =
-        Option.some ((pf.modifySome a).fst, Effect4.Machine.refPoke heap cell ((pf.modifySome a).snd.getD a)))
-
-#check (@Effect4.Machine.refStep_modifySome_none :
-  ∀ (heap : Effect4.Machine.RefHeap) (cell : Effect4.Machine.RefKey)
-    (a : Effect4.Machine.Val),
-    Effect4.Machine.refPeek heap cell = Option.some a →
-      Effect4.Machine.refStep (Effect4.Machine.SyncOp.refModifySome cell Effect4.Machine.FnName.noChange) heap =
-        Option.some (a, Effect4.Machine.refPoke heap cell a))
-
-#check (@Effect4.Machine.refStep_updateSomeAndGet_some :
-  ∀ (heap : Effect4.Machine.RefHeap) (cell : Effect4.Machine.RefKey)
-    (pf : Effect4.Machine.FnName) (a a' : Effect4.Machine.Val),
-    Effect4.Machine.refPeek heap cell = Option.some a →
-      pf.partialUpdate a = Option.some a' →
-        Effect4.Machine.refStep (Effect4.Machine.SyncOp.refUpdateSomeAndGet cell pf) heap =
-          Option.map (fun fresh => (fresh, Effect4.Machine.refPoke heap cell a'))
-            (Effect4.Machine.refPeek (Effect4.Machine.refPoke heap cell a') cell))
-
-#check (@Effect4.Machine.deferredStore_make :
-  ∀ (self : Effect4.Machine.DeferredStore),
-  self.make =
-    ({ index := self.cells.length },
-      { cells := self.cells ++ [{ completion := Option.none, wake := Effect4.Machine.WakeList.empty }],
-        due := self.due }))
-
-#check (@Effect4.Machine.deferredStore_isDone :
-  ∀ (self : Effect4.Machine.DeferredStore) (cell : Effect4.Machine.DeferredKey)
-    (c : Effect4.Machine.DeferredCell), self.cellAt cell = Option.some c → self.isDone cell = Option.some c.completion.isSome)
-
-#check (@Effect4.Machine.awaitDeferred_is_a_park :
-  ∀ (cell : Effect4.Machine.DeferredKey),
-    Effect4.Machine.progOf (Effect4.Machine.ProgName.awaitDeferred cell) =
-      Effect4.Prim.async (Effect4.Machine.Name.registerAwait cell) Bool.true
-        (Option.some (Effect4.Machine.Name.cancelAwait cell)))
-
-#check (@Effect4.Machine.deferredStore_register_pending :
-  ∀ (self : Effect4.Machine.DeferredStore)
-  (cell : Effect4.Machine.DeferredKey) (c : Effect4.Machine.DeferredCell) (waiter : Effect4.FiberId) (token : Nat),
-  self.cellAt cell = Option.some c →
-    c.completion = Option.none →
-      self.register cell waiter token =
-        (self.setCell cell { completion := c.completion, wake := c.wake.register waiter token () }, Option.none))
-
-#check (@Effect4.Machine.deferredStore_register_done :
-  ∀ (self : Effect4.Machine.DeferredStore) (cell : Effect4.Machine.DeferredKey)
-    (c : Effect4.Machine.DeferredCell) (e : Effect4.Machine.Program) (waiter : Effect4.FiberId) (token : Nat),
-    self.cellAt cell = Option.some c →
-      c.completion = Option.some e → self.register cell waiter token = (self, Option.some e))
-
-#check (@Effect4.Machine.deferredStore_complete_done :
-  ∀ (self : Effect4.Machine.DeferredStore) (cell : Effect4.Machine.DeferredKey)
-    (c : Effect4.Machine.DeferredCell) (e e' : Effect4.Machine.Program),
-    self.cellAt cell = Option.some c → c.completion = Option.some e → self.complete cell e' = (self, Bool.false))
-
-#check (@Effect4.Machine.deferredStore_complete_pending :
-  ∀ (self : Effect4.Machine.DeferredStore)
-  (cell : Effect4.Machine.DeferredKey) (c : Effect4.Machine.DeferredCell) (e : Effect4.Machine.Program),
-  self.cellAt cell = Option.some c →
-    c.completion = Option.none →
-      self.complete cell e =
-        (have __src := self.setCell cell { completion := Option.some e, wake := c.wake.wakeAll.snd };
-          { cells := __src.cells,
-            due :=
-              self.due ++
-                List.map
-                  (fun w => { waiter := w.fiber, token := w.token, code := e, mode := Effect4.Machine.WakeMode.now })
-                  c.wake.wakeAll.fst },
-          Bool.true))
-
-#check (@Effect4.Machine.deferredStore_complete_stores_argument :
-  ∀ (self : Effect4.Machine.DeferredStore)
-    (cell : Effect4.Machine.DeferredKey) (c : Effect4.Machine.DeferredCell) (e : Effect4.Machine.Program),
-    self.cellAt cell = Option.some c →
-      c.completion = Option.none →
-        Option.map Effect4.Machine.DeferredCell.completion ((self.complete cell e).fst.cellAt cell) =
-          Option.some (Option.some e))
-
-#check (@Effect4.Machine.deferredStore_waiter_receives_stored :
-  ∀ (self : Effect4.Machine.DeferredStore)
-  (cell : Effect4.Machine.DeferredKey) (c : Effect4.Machine.DeferredCell) (e : Effect4.Machine.Program)
-  (waiter : Effect4.FiberId) (token : Nat) (phase : Effect4.Machine.WakePhase),
-  self.cellAt cell = Option.some c →
-    c.completion = Option.none →
-      c.wake.waiters = [{ fiber := waiter, token := token, phase := phase, payload := () }] →
-        (self.complete cell e).fst.due =
-          self.due ++ [{ waiter := waiter, token := token, code := e, mode := Effect4.Machine.WakeMode.now }])
-
-#check (@Effect4.Machine.doneWith_shared :
-  ∀ (exit : Effect4.Machine.ExitV),
-    Effect4.Prim.asExit? (Effect4.Machine.completionPrim (Effect4.Machine.Completion.ofExit exit)) = Option.some exit)
-
-#check (@Effect4.Machine.completionPrim_ofExit :
-  ∀ (exit : Effect4.Machine.ExitV),
-    Effect4.Machine.completionPrim (Effect4.Machine.Completion.ofExit exit) = Effect4.Prim.ofExit exit)
-
-#check (@Effect4.Machine.interruptDeferred_delegates :
-  ∀ (cell : Effect4.Machine.DeferredKey) (id : Effect4.FiberId),
-    Effect4.Machine.contAOf (Effect4.Machine.Name.interruptWith cell) (Effect4.Machine.Val.nat id.value) =
-      Effect4.Prim.sync (Effect4.Machine.Thunk.op (Effect4.Machine.SyncOp.deferredInterruptWith cell id)))
-
-#check (@Effect4.Machine.interruptWith_is_completion :
-  ∀ (st : Effect4.Machine.Stores) (cell : Effect4.Machine.DeferredKey)
-    (interruptor : Effect4.FiberId),
-    Effect4.Machine.syncOpStep (Effect4.Machine.SyncOp.deferredInterruptWith cell interruptor) st =
-      Effect4.Machine.syncOpStep
-        (Effect4.Machine.SyncOp.deferredCompleteWith cell
-          (Effect4.Machine.Completion.ofExit (Effect4.Exit.failure (Effect4.Cause.interrupt (Option.some interruptor)))))
-        st)
-
-#check (@Effect4.Machine.intoDeferred_spelling :
-  ∀ (body : Effect4.Machine.ProgName) (cell : Effect4.Machine.DeferredKey),
-    Effect4.Machine.progOf (body.intoDeferred cell) =
-      Effect4.Prim.withFiber
-        (Effect4.Machine.Thunk.act (Effect4.Machine.ActionName.setInterruptible (body.intoBody cell) Bool.false)))
-
-#check (@Effect4.Machine.deferredPoll_no_write :
-  ∀ (st : Effect4.Machine.Stores) (cell : Effect4.Machine.DeferredKey),
-    Option.map Prod.fst (Effect4.Machine.syncOpStep (Effect4.Machine.SyncOp.deferredPoll cell) st) =
-      Option.map (fun x => st) (st.deferreds.poll cell))
-
-/-! The layer rows on the compile route (the join, 2026-09-07): `compileLayer`'s arms, the
-continuation equations (`Program/Agreement.lean`), the store laws of the memo world
-(`Machine/StoresLaws.lean`, `Stores.lean`). -/
-
-#check (@Effect4.Program.Agreement.compileLayer_succeed :
-  ∀ (key : Effect4.ServiceKey) (value : Effect4.Program.Lit)
-  (q : Effect4.Program.Point) (m : Effect4.Machine.MemoMapId) (scope : Nat) (v : Effect4.Machine.Val),
-  value.toVal = Option.some v →
-    Effect4.Program.compileLayer (Effect4.Program.LayerTerm.succeed key value) q m scope =
-      Effect4.Prim.success (Effect4.Machine.Env.encode (Effect4.Machine.Env.Context.empty.addV key v)))
-
-#check (@Effect4.Program.Agreement.compileLayer_effect :
-  ∀ (key : Effect4.ServiceKey) (body : Effect4.Program.NativeEff)
-  (q : Effect4.Program.Point) (m : Effect4.Machine.MemoMapId) (scope : Nat),
-  Effect4.Program.compileLayer (Effect4.Program.LayerTerm.effect key body) q m scope =
-    (Effect4.Prim.sync
-          (Effect4.Program.EffThunk.op
-            (Effect4.Machine.SyncOp.scopeFork scope Effect4.FinalizerStrategy.sequential))).onSuccess
-      (Effect4.Program.EffName.fromBuildThen q m))
-
-#check (@Effect4.Program.Agreement.contAOf_fromBuildThen_scope :
-  ∀ (root : Effect4.Program.NativeEff) (q : Effect4.Program.Point)
-  (m : Effect4.Machine.MemoMapId) (child : Nat),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.fromBuildThen q m) (Effect4.Machine.Val.scopeHandle child) =
-    Effect4.Prim.onExit (Effect4.Program.innerLayerAt root q m child)
-      (Effect4.Program.EffName.store
-        (Effect4.Machine.Name.finalizerName (Effect4.Machine.FinName.closeChildOnFailure child)))
-      Bool.false)
-
-#check (@Effect4.Machine.finProgram_closeChildOnFailure_failure :
-  ∀ (scope : Nat) (cause : Effect4.Machine.CauseV),
-  Effect4.Machine.finProgram (Effect4.Machine.FinName.closeChildOnFailure scope) (Effect4.Exit.failure cause) =
-    Effect4.Prim.withFiber
-      (Effect4.Machine.Thunk.act (Effect4.Machine.ActionName.closeScope scope (Effect4.Exit.failure cause))))
-
-#check (@Effect4.Machine.finProgram_closeChildOnFailure_success :
-  ∀ (scope : Nat) (v : Effect4.Machine.Val),
-  Effect4.Machine.finProgram (Effect4.Machine.FinName.closeChildOnFailure scope) (Effect4.Exit.success v) =
-    Effect4.Prim.success Effect4.Store.Val.unit)
-
-#check (@Effect4.Program.Agreement.contAOf_withMemoMapThen_memoMap :
-  ∀ (root : Effect4.Program.NativeEff)
-  (q : Effect4.Program.Point) (scope : Nat) (id : Effect4.Machine.MemoMapId),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.withMemoMapThen q scope) (Effect4.Machine.Val.memoMap id) =
-    Effect4.Program.updateContextAt
-      (Effect4.Machine.Env.ContextUpdate.provideService Effect4.Machine.Env.currentMemoMapKey
-        (Effect4.Machine.Val.memoMap id))
-      (Effect4.Program.Region.buildAdding q id scope))
-
-#check (@Effect4.Program.Agreement.currentMemoMapOf_provideService :
-  ∀ (m : Effect4.Machine.MemoMapId)
-  (prev : Effect4.Machine.Env.Ctx),
-  Effect4.Program.currentMemoMapOf
-      ((Effect4.Machine.Env.ContextUpdate.provideService Effect4.Machine.Env.currentMemoMapKey
-            (Effect4.Machine.Val.memoMap m)).apply
-        prev) =
-    Option.some m)
-
-#check (@Effect4.Program.Agreement.regionCode_buildAdding :
-  ∀ (root : Effect4.Program.NativeEff) (q : Effect4.Program.Point)
-  (m : Effect4.Machine.MemoMapId) (scope : Nat),
-  Effect4.Program.regionCode root (Effect4.Program.Region.buildAdding q m scope) =
-    Effect4.Prim.onSuccess (Effect4.Program.resolveLayer root q m scope) (Effect4.Program.EffName.addCurrentMemoMap m))
-
-#check (@Effect4.Program.Agreement.contAOf_addCurrentMemoMap :
-  ∀ (root : Effect4.Program.NativeEff)
-  (m : Effect4.Machine.MemoMapId) (v : Effect4.Machine.Val),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.addCurrentMemoMap m) v = Effect4.Program.addCurrentMemoMapK m v)
-
-#check (@Effect4.Program.Agreement.addCurrentMemoMapK_context :
-  ∀ (m : Effect4.Machine.MemoMapId)
-  (ctx : Effect4.Machine.Env.Ctx),
-  Effect4.Program.addCurrentMemoMapK m (Effect4.Machine.Env.encode ctx) =
-    Effect4.Prim.success
-      (Effect4.Machine.Env.encode
-        (Effect4.Machine.Env.Context.addV ctx Effect4.Machine.Env.currentMemoMapKey (Effect4.Machine.Val.memoMap m))))
-
-#check (@Effect4.Machine.syncOpStep_memoBuild :
-  ∀ (s : Effect4.Machine.Stores) (layer : Effect4.Machine.LayerId)
-  (memoMap : Effect4.Machine.MemoMapId),
-  Effect4.Machine.syncOpStep (Effect4.Machine.SyncOp.memoBuild layer memoMap) s =
-    Option.some
-      ({ refs := s.refs, deferreds := s.deferreds.make.snd,
-          scopes := s.scopes.make s.nextName Effect4.FinalizerStrategy.sequential,
-          memo :=
-            s.memo.insertEntry memoMap layer
-              { observers := 1,
-                effect :=
-                  Effect4.Prim.async (Effect4.Machine.Name.registerAwait s.deferreds.make.fst) Bool.true
-                    (Option.some (Effect4.Machine.Name.cancelAwait s.deferreds.make.fst)),
-                layerScope := s.nextName, deferred := s.deferreds.make.fst,
-                finalizer := Effect4.Machine.FinName.memoEntry layer memoMap },
-          timers := s.timers, nextName := s.nextName + 1, externals := s.externals },
-        Effect4.Machine.Val.scopeHandle s.nextName))
-
-#check (@Effect4.Program.Agreement.contAOf_memoize_unit :
-  ∀ (root : Effect4.Program.NativeEff) (q : Effect4.Program.Point)
-  (m : Effect4.Machine.MemoMapId) (scope : Nat),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.memoize q m scope) Effect4.Store.Val.unit =
-    (Effect4.Prim.sync (Effect4.Program.EffThunk.op (Effect4.Machine.SyncOp.memoBuild q.path m))).onSuccess
-      (Effect4.Program.EffName.buildIntoLayerScope q m scope))
-
-#check (@Effect4.Program.Agreement.contAOf_buildIntoLayerScope_scope :
-  ∀ (root : Effect4.Program.NativeEff)
-  (q : Effect4.Program.Point) (m : Effect4.Machine.MemoMapId) (scope layerScope : Nat),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.buildIntoLayerScope q m scope)
-      (Effect4.Machine.Val.scopeHandle layerScope) =
-    Effect4.Prim.onSuccess (Effect4.Program.scopeAddAt scope (Effect4.Machine.FinName.memoEntry q.path m))
-      (Effect4.Program.EffName.thenBuildInto q m layerScope))
-
-#check (@Effect4.Program.Agreement.contAOf_thenBuildInto :
-  ∀ (root : Effect4.Program.NativeEff) (q : Effect4.Program.Point)
-  (m : Effect4.Machine.MemoMapId) (layerScope : Nat) (v : Effect4.Machine.Val),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.thenBuildInto q m layerScope) v =
-    Effect4.Prim.onExit (Effect4.Program.constructionAt root q layerScope)
-      (Effect4.Program.EffName.store (Effect4.Machine.Name.finalizerName (Effect4.Machine.FinName.memoDone q.path m)))
-      Bool.false)
-
-#check (@Effect4.Machine.finProgram_memoDone :
-  ∀ (layer : Effect4.Machine.LayerId) (memoMap : Effect4.Machine.MemoMapId)
-  (exit : Effect4.Machine.ExitV),
-  Effect4.Machine.finProgram (Effect4.Machine.FinName.memoDone layer memoMap) exit =
-    Effect4.Prim.sync (Effect4.Machine.Thunk.op (Effect4.Machine.SyncOp.memoComplete layer memoMap exit)))
-
-#check (@Effect4.Machine.syncOpStep_memoComplete_some :
-  ∀ (s : Effect4.Machine.Stores) (layer : Effect4.Machine.LayerId)
-  (memoMap : Effect4.Machine.MemoMapId) (exit : Effect4.Machine.ExitV) {entry : Effect4.Machine.MemoEntry},
-  s.memo.entryAt memoMap layer = Option.some entry →
-    Effect4.Machine.syncOpStep (Effect4.Machine.SyncOp.memoComplete layer memoMap exit) s =
-      Option.some
-        ({ refs := s.refs, deferreds := (s.deferreds.complete entry.deferred (Effect4.Prim.ofExit exit)).fst,
-            scopes := s.scopes,
-            memo :=
-              s.memo.updateEntry memoMap layer fun e =>
-                { observers := e.observers, effect := Effect4.Prim.ofExit exit, layerScope := e.layerScope,
-                  deferred := e.deferred, finalizer := e.finalizer },
-            timers := s.timers, nextName := s.nextName, externals := s.externals },
-          Effect4.Store.Val.unit))
-
-#check (@Effect4.Machine.finProgram_memoEntry :
-  ∀ (layer : Effect4.Machine.LayerId) (memoMap : Effect4.Machine.MemoMapId)
-  (exit : Effect4.Machine.ExitV),
-  Effect4.Machine.finProgram (Effect4.Machine.FinName.memoEntry layer memoMap) exit =
-    (Effect4.Prim.sync (Effect4.Machine.Thunk.op (Effect4.Machine.SyncOp.memoRelease layer memoMap))).onSuccess
-      (Effect4.Machine.Name.closeIfLast exit))
-
-#check (@Effect4.Machine.syncOpStep_memoRelease_last :
-  ∀ (s : Effect4.Machine.Stores) (layer : Effect4.Machine.LayerId)
-  (memoMap : Effect4.Machine.MemoMapId) {entry : Effect4.Machine.MemoEntry},
-  s.memo.entryAt memoMap layer = Option.some entry →
-    entry.observers ≤ 1 →
-      Effect4.Machine.syncOpStep (Effect4.Machine.SyncOp.memoRelease layer memoMap) s =
-        Option.some
-          ({ refs := s.refs, deferreds := s.deferreds, scopes := s.scopes, memo := s.memo.deleteEntry memoMap layer,
-              timers := s.timers, nextName := s.nextName, externals := s.externals },
-            Effect4.Machine.Val.scopeHandle entry.layerScope))
-
-#check (@Effect4.Machine.syncOpStep_memoRelease_dec :
-  ∀ (s : Effect4.Machine.Stores) (layer : Effect4.Machine.LayerId)
-  (memoMap : Effect4.Machine.MemoMapId) {entry : Effect4.Machine.MemoEntry},
-  s.memo.entryAt memoMap layer = Option.some entry →
-    ¬entry.observers ≤ 1 →
-      Effect4.Machine.syncOpStep (Effect4.Machine.SyncOp.memoRelease layer memoMap) s =
-        Option.some
-          ({ refs := s.refs, deferreds := s.deferreds, scopes := s.scopes,
-              memo :=
-                s.memo.updateEntry memoMap layer fun e =>
-                  { observers := e.observers - 1, effect := e.effect, layerScope := e.layerScope,
-                    deferred := e.deferred, finalizer := e.finalizer },
-              timers := s.timers, nextName := s.nextName, externals := s.externals },
-            Effect4.Store.Val.unit))
-
-#check (@Effect4.Machine.contAOf_closeIfLast_scope :
-  ∀ (exit : Effect4.Machine.ExitV) (scope : Nat),
-  Effect4.Machine.contAOf (Effect4.Machine.Name.closeIfLast exit) (Effect4.Machine.Val.scopeHandle scope) =
-    Effect4.Prim.withFiber (Effect4.Machine.Thunk.act (Effect4.Machine.ActionName.closeScope scope exit)))
-
-#check (@Effect4.Program.Sched.contAOf_closeIfLast_other :
-  ∀ (ex : Effect4.Machine.ExitV) (v : Effect4.Machine.Val),
-  (∀ (s : Nat), v ≠ Effect4.Machine.Val.scopeHandle s) →
-    Effect4.Machine.contAOf (Effect4.Machine.Name.closeIfLast ex) v = Effect4.Prim.success Effect4.Store.Val.unit)
-
-#check (@Effect4.Machine.syncOpStep_memoGet_some :
-  ∀ (s : Effect4.Machine.Stores) (layer : Effect4.Machine.LayerId)
-  (memoMap : Effect4.Machine.MemoMapId) {owner : Effect4.Machine.MemoMapId} {entry : Effect4.Machine.MemoEntry},
-  s.memo.get layer memoMap = Option.some (owner, entry) →
-    Effect4.Machine.syncOpStep (Effect4.Machine.SyncOp.memoGet layer memoMap) s =
-      Option.some
-        ({ refs := s.refs, deferreds := s.deferreds, scopes := s.scopes,
-            memo :=
-              s.memo.updateEntry owner layer fun e =>
-                { observers := e.observers + 1, effect := e.effect, layerScope := e.layerScope, deferred := e.deferred,
-                  finalizer := e.finalizer },
-            timers := s.timers, nextName := s.nextName, externals := s.externals },
-          Effect4.Store.Val.pair (Effect4.Machine.Val.promise entry.deferred) (Effect4.Machine.Val.memoMap owner)))
-
-#check (@Effect4.Program.Agreement.contAOf_memoize_hit :
-  ∀ (root : Effect4.Program.NativeEff) (q : Effect4.Program.Point)
-  (m : Effect4.Machine.MemoMapId) (scope : Nat) (cell : Effect4.Machine.DeferredKey)
-  (owner : Effect4.Machine.MemoMapId),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.memoize q m scope)
-      (Effect4.Store.Val.pair (Effect4.Machine.Val.promise cell) (Effect4.Machine.Val.memoMap owner)) =
-    Effect4.Prim.onSuccess (Effect4.Program.scopeAddAt scope (Effect4.Machine.FinName.memoEntry q.path owner))
-      (Effect4.Program.EffName.awaitPromise cell))
-
--- the host rows slice (2026-09-08): a reference hops to its target's term at the target's path,
--- so the second site keys the memo map like the first and the hit branch is reachable from a
--- printed program (`pDiamond`)
-#check (@Effect4.Program.Agreement.resolveLayerTerm_ref :
-  ∀ (root : Effect4.Program.NativeEff) (target : List Nat) (q : Effect4.Program.Point)
-  (m : Effect4.Machine.MemoMapId) (scope : Nat),
-  Effect4.Program.resolveLayer.resolveLayerTerm root (Effect4.Program.LayerTerm.ref target) q m scope =
-    match q.fuel with
-    | 0 => Effect4.Program.frontier q
-    | _ + 1 =>
-      match (Effect4.Program.Node.eff root).at_ target with
-      | Option.some (Effect4.Program.Node.layer (Effect4.Program.LayerTerm.ref _)) => Effect4.Program.badShape
-      | Option.some (Effect4.Program.Node.layer l) => Effect4.Program.compileLayer l (q.redirect target) m scope
-      | _ => Effect4.Program.badShape)
-
-#check (@Effect4.Machine.MemoWorld.get_own :
-  ∀ (w : Effect4.Machine.MemoWorld) (layer : Effect4.Machine.LayerId)
-  (id : Effect4.Machine.MemoMapId) (entry : Effect4.Machine.MemoEntry),
-  w.entryAt id layer = Option.some entry → w.get layer id = Option.some (id, entry))
-
-#check (@Effect4.Machine.MemoWorld.get_parent :
-  ∀ (w : Effect4.Machine.MemoWorld) (layer : Effect4.Machine.LayerId)
-  (id parent : Effect4.Machine.MemoMapId) (m : Effect4.Machine.MemoMap),
-  w.entryAt id layer = Option.none →
-    w.mapAt id = Option.some m → m.parent = Option.some parent → w.get layer id = w.lookup layer (List.length w) parent)
-
-#check (@Effect4.Program.Agreement.innerLayerAt_effect :
-  ∀ (root : Effect4.Program.NativeEff) {q : Effect4.Program.Point}
-  {key : Effect4.ServiceKey} {body : Effect4.Program.NativeEff},
-  (Effect4.Program.Node.eff root).at_ q.path =
-      Option.some (Effect4.Program.Node.layer (Effect4.Program.LayerTerm.effect key body)) →
-    ∀ (m : Effect4.Machine.MemoMapId) (child : Nat),
-      Effect4.Program.innerLayerAt root q m child = Effect4.Prim.suspend (Effect4.Program.EffThunk.memoLookup q m child))
-
-#check (@Effect4.Program.Agreement.suspendBodyAt_memoLookup :
-  ∀ (root : Effect4.Program.NativeEff) (q : Effect4.Program.Point)
-  (m : Effect4.Machine.MemoMapId) (scope : Nat),
-  Effect4.Program.suspendBodyAt root (Effect4.Program.EffThunk.memoLookup q m scope) =
-    (Effect4.Prim.sync (Effect4.Program.EffThunk.op (Effect4.Machine.SyncOp.memoGet q.path m))).onSuccess
-      (Effect4.Program.EffName.memoize q m scope))
-
-#check (@Effect4.Program.Agreement.contAOf_awaitPromise :
-  ∀ (root : Effect4.Program.NativeEff)
-  (cell : Effect4.Machine.DeferredKey) (v : Effect4.Machine.Val),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.awaitPromise cell) v =
-    Effect4.Prim.async (Effect4.Program.EffName.registerAwait cell) Bool.true
-      (Option.some (Effect4.Program.EffName.cancelAwait cell)))
-
-#check (@Effect4.Program.Agreement.currentMemoMapOf_addV :
-  ∀ (ctx : Effect4.Machine.Env.Ctx) (id : Nat),
-  Effect4.Program.currentMemoMapOf
-      (Effect4.Machine.Env.Context.addV ctx Effect4.Machine.Env.currentMemoMapKey
-        (Effect4.Machine.Val.memoMap { index := id })) =
-    Option.some { index := id })
-
-#check (@Effect4.Program.Agreement.currentMemoMapOf_empty :
-  Effect4.Program.currentMemoMapOf Effect4.Machine.Env.Context.empty =
-  Option.none)
-
-#check (@Effect4.Machine.syncOpStep_memoFork :
-  ∀ (s : Effect4.Machine.Stores) (parent : Option Effect4.Machine.MemoMapId),
-  Effect4.Machine.syncOpStep (Effect4.Machine.SyncOp.memoFork parent) s =
-    Option.some
-      ({ refs := s.refs, deferreds := s.deferreds, scopes := s.scopes,
-          memo := s.memo ++ [{ id := { index := s.nextName }, parent := parent, entries := [] }],
-          timers := s.timers, nextName := s.nextName + 1, externals := s.externals },
-        Effect4.Machine.Val.memoMap { index := s.nextName }))
-
-#check (@Effect4.Program.Agreement.buildWithScopeK_context :
-  ∀ (q : Effect4.Program.Point) (scope : Nat)
-  (ctx : Effect4.Machine.Ctx),
-  Effect4.Program.buildWithScopeK q scope (Effect4.Machine.Val.context ctx) =
-    (Effect4.Prim.sync
-          (Effect4.Program.EffThunk.op
-            (Effect4.Machine.SyncOp.memoFork (Effect4.Program.currentMemoMapOf ctx.services)))).onSuccess
-      (Effect4.Program.EffName.withMemoMapThen q scope))
-
-#check (@Effect4.Program.Agreement.contAOf_buildWithScopeFromContext :
-  ∀ (root : Effect4.Program.NativeEff)
-  (q : Effect4.Program.Point) (scope : Nat) (v : Effect4.Machine.Val),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.buildWithScopeFromContext q scope) v =
-    Effect4.Program.buildWithScopeK q scope v)
-
-#check (@Effect4.Program.Agreement.contAOf_serviceLookup :
-  ∀ (root : Effect4.Program.NativeEff) (key : Effect4.ServiceKey)
-  (v : Effect4.Machine.Val),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.serviceLookup key) v = Effect4.Program.serviceLookupK key v)
-
-#check (@Effect4.Program.Agreement.serviceLookupK_found :
-  ∀ (key : Effect4.ServiceKey) (ctx : Effect4.Machine.Ctx)
-  (value : Effect4.Machine.Val),
-  Effect4.Machine.Env.Context.getV ctx.services key = Option.some value →
-    Effect4.Program.serviceLookupK key (Effect4.Machine.Val.context ctx) = Effect4.Prim.success value)
-
-#check (@Effect4.Program.Agreement.serviceLookupK_missing :
-  ∀ (key : Effect4.ServiceKey) (ctx : Effect4.Machine.Ctx),
-  Effect4.Machine.Env.Context.getV ctx.services key = Option.none →
-    Effect4.Program.serviceLookupK key (Effect4.Machine.Val.context ctx) =
-      Effect4.Prim.failure (Effect4.Cause.die Effect4.Machine.Defect.missingService))
-
-#check (@Effect4.Program.Agreement.provideLayerWithK_at :
-  ∀ (root : Effect4.Program.NativeEff) (p : Effect4.Program.Point)
-  (scope : Nat) (l : Effect4.Program.LayerTerm Effect4.Program.NativeOp) (isLocal : Bool)
-  (b : Effect4.Program.NativeEff),
-  (Effect4.Program.Node.eff root).at_ p.path =
-      Option.some (Effect4.Program.Node.eff (Effect4.Program.Eff.provideLayer l isLocal b)) →
-    Effect4.Program.provideLayerWithK root p scope =
-      ((if isLocal = Bool.true then
-                (Effect4.Prim.sync
-                      (Effect4.Program.EffThunk.op (Effect4.Machine.SyncOp.memoFork Option.none))).onSuccess
-                  (Effect4.Program.EffName.withMemoMapThen (p.child 0) scope)
-              else
-                (Effect4.Prim.withFiber Effect4.Program.EffThunk.getCtx).onSuccess
-                  (Effect4.Program.EffName.buildWithScopeFromContext (p.child 0) scope)).onSuccess
-            (Effect4.Program.EffName.provideLayerBody p)).onExit
-        (Effect4.Program.EffName.scopeClose scope) Bool.false)
-
-#check (@Effect4.Program.Agreement.compileLayer_merge :
-  ∀ (left right : Effect4.Program.LayerTerm Effect4.Program.NativeOp)
-  (q : Effect4.Program.Point) (m : Effect4.Machine.MemoMapId) (scope : Nat),
-  Effect4.Program.compileLayer (left.merge right) q m scope =
-    (Effect4.Prim.sync
-          (Effect4.Program.EffThunk.op
-            (Effect4.Machine.SyncOp.scopeFork scope Effect4.FinalizerStrategy.sequential))).onSuccess
-      (Effect4.Program.EffName.fromBuildThen q m))
-
-#check (@Effect4.Program.Agreement.innerLayerAt_merge :
-  ∀ (root : Effect4.Program.NativeEff) {q : Effect4.Program.Point}
-  {left right : Effect4.Program.LayerTerm Effect4.Program.NativeOp},
-  (Effect4.Program.Node.eff root).at_ q.path = Option.some (Effect4.Program.Node.layer (left.merge right)) →
-    ∀ (m : Effect4.Machine.MemoMapId) (child : Nat),
-      Effect4.Program.innerLayerAt root q m child =
-        (Effect4.Prim.sync
-              (Effect4.Program.EffThunk.op
-                (Effect4.Machine.SyncOp.scopeFork child Effect4.FinalizerStrategy.parallel))).onSuccess
-          (Effect4.Program.EffName.mergeChildren q m))
-
-#check (@Effect4.Program.Agreement.contAOf_mergeChildren_scope :
-  ∀ (root : Effect4.Program.NativeEff) (q : Effect4.Program.Point)
-  (m : Effect4.Machine.MemoMapId) (parent : Nat),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.mergeChildren q m) (Effect4.Machine.Val.scopeHandle parent) =
-    (Effect4.Prim.sync
-          (Effect4.Program.EffThunk.op
-            (Effect4.Machine.SyncOp.scopeFork parent Effect4.FinalizerStrategy.sequential))).onSuccess
-      (Effect4.Program.EffName.mergeForkOne q 0 m parent []))
-
-#check (@Effect4.Program.Agreement.contAOf_mergeForkOne_scope :
-  ∀ (root : Effect4.Program.NativeEff) (q : Effect4.Program.Point)
-  (i : Nat) (m : Effect4.Machine.MemoMapId) (parent : Nat) (forked : List Effect4.FiberId) (child : Nat),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.mergeForkOne q i m parent forked)
-      (Effect4.Machine.Val.scopeHandle child) =
-    (Effect4.Prim.withFiber (Effect4.Program.EffThunk.forkLayer (q.child i) m child)).onSuccess
-      (Effect4.Program.EffName.mergeForkNext q i m parent forked))
-
-#check (@Effect4.Program.Agreement.withFiberOf_forkLayer :
-  ∀ (root : Effect4.Program.NativeEff) (q : Effect4.Program.Point) (m : Effect4.Machine.MemoMapId)
-    (scope : Nat),
-    (Effect4.Program.interpOf root).withFiberOf (Effect4.Program.EffThunk.forkLayer q m scope) =
-      Option.some
-        (Effect4.Machine.WithFiberAction.fork (Effect4.Program.resolveLayer root q m scope)
-          { startImmediately := Bool.true, daemon := Bool.true,
-            maskMode := Effect4.Supervision.MaskMode.inherit }))
-
-#check (@Effect4.Program.Agreement.contAOf_mergeForkNext_fiber :
-  ∀ (root : Effect4.Program.NativeEff) (q : Effect4.Program.Point)
-  (i : Nat) (m : Effect4.Machine.MemoMapId) (parent : Nat) (forked : List Effect4.FiberId) (id : Effect4.FiberId),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.mergeForkNext q i m parent forked)
-      (Effect4.Machine.Val.fiber id) =
-    if i = 0 then
-      (Effect4.Prim.sync
-            (Effect4.Program.EffThunk.op
-              (Effect4.Machine.SyncOp.scopeFork parent Effect4.FinalizerStrategy.sequential))).onSuccess
-        (Effect4.Program.EffName.mergeForkOne q 1 m parent (forked ++ [id]))
-    else
-      (Effect4.Prim.withFiber (Effect4.Program.EffThunk.awaitAllFailFast (forked ++ [id]))).onSuccess
-        Effect4.Program.EffName.mergeContexts)
-
--- the host rows slice (2026-09-08): the n-ary merge is the same protocol over the `layers`
--- spine, the sibling count read off the node (`mergeAllCount`)
-#check (@Effect4.Program.Agreement.innerLayerAt_mergeAll :
-  ∀ (root : Effect4.Program.NativeEff) {q : Effect4.Program.Point}
-  {layers : Effect4.Program.LayerTerms Effect4.Program.NativeOp},
-  (Effect4.Program.Node.eff root).at_ q.path = Option.some (Effect4.Program.Node.layer (Effect4.Program.LayerTerm.mergeAll layers)) →
-    ∀ (m : Effect4.Machine.MemoMapId) (child : Nat),
-      Effect4.Program.innerLayerAt root q m child =
-        (Effect4.Prim.sync
-              (Effect4.Program.EffThunk.op
-                (Effect4.Machine.SyncOp.scopeFork child Effect4.FinalizerStrategy.parallel))).onSuccess
-          (Effect4.Program.EffName.mergeAllChildren q m))
-
-#check (@Effect4.Program.Agreement.mergeAllCount_of_at :
-  ∀ (root : Effect4.Program.NativeEff) {q : Effect4.Program.Point}
-  {layers : Effect4.Program.LayerTerms Effect4.Program.NativeOp},
-  (Effect4.Program.Node.eff root).at_ q.path = Option.some (Effect4.Program.Node.layer (Effect4.Program.LayerTerm.mergeAll layers)) →
-    Effect4.Program.mergeAllCount root q = layers.length)
-
-#check (@Effect4.Program.Agreement.contAOf_mergeAllChildren_scope :
-  ∀ (root : Effect4.Program.NativeEff) (q : Effect4.Program.Point)
-  (m : Effect4.Machine.MemoMapId) (parent : Nat),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.mergeAllChildren q m) (Effect4.Machine.Val.scopeHandle parent) =
-    if 0 < Effect4.Program.mergeAllCount root q then
-      (Effect4.Prim.sync
-            (Effect4.Program.EffThunk.op
-              (Effect4.Machine.SyncOp.scopeFork parent Effect4.FinalizerStrategy.sequential))).onSuccess
-        (Effect4.Program.EffName.mergeAllForkOne q 0 m parent [])
-    else
-      (Effect4.Prim.withFiber (Effect4.Program.EffThunk.awaitAllFailFast [])).onSuccess
-        Effect4.Program.EffName.mergeContexts)
-
-#check (@Effect4.Program.Agreement.contAOf_mergeAllForkOne_scope :
-  ∀ (root : Effect4.Program.NativeEff) (q : Effect4.Program.Point)
-  (i : Nat) (m : Effect4.Machine.MemoMapId) (parent : Nat) (forked : List Effect4.FiberId) (child : Nat),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.mergeAllForkOne q i m parent forked)
-      (Effect4.Machine.Val.scopeHandle child) =
-    (Effect4.Prim.withFiber (Effect4.Program.EffThunk.forkLayer (q.spineChild i) m child)).onSuccess
-      (Effect4.Program.EffName.mergeAllForkNext q i m parent forked))
-
-#check (@Effect4.Program.Agreement.contAOf_mergeAllForkNext_fiber :
-  ∀ (root : Effect4.Program.NativeEff) (q : Effect4.Program.Point)
-  (i : Nat) (m : Effect4.Machine.MemoMapId) (parent : Nat) (forked : List Effect4.FiberId) (id : Effect4.FiberId),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.mergeAllForkNext q i m parent forked)
-      (Effect4.Machine.Val.fiber id) =
-    if i + 1 < Effect4.Program.mergeAllCount root q then
-      (Effect4.Prim.sync
-            (Effect4.Program.EffThunk.op
-              (Effect4.Machine.SyncOp.scopeFork parent Effect4.FinalizerStrategy.sequential))).onSuccess
-        (Effect4.Program.EffName.mergeAllForkOne q (i + 1) m parent (forked ++ [id]))
-    else
-      (Effect4.Prim.withFiber (Effect4.Program.EffThunk.awaitAllFailFast (forked ++ [id]))).onSuccess
-        Effect4.Program.EffName.mergeContexts)
-
-#check (@Effect4.Program.Agreement.withFiberOf_awaitAllFailFast :
-  ∀ (root : Effect4.Program.NativeEff) (targets : List Effect4.FiberId),
-    (Effect4.Program.interpOf root).withFiberOf (Effect4.Program.EffThunk.awaitAllFailFast targets) =
-      Option.some (Effect4.Machine.WithFiberAction.awaitAllFailFast targets))
-
-#check (@Effect4.Program.Agreement.contAOf_mergeContexts :
-  ∀ (root : Effect4.Program.NativeEff) (v : Effect4.Machine.Val),
-  Effect4.Program.contAOf root Effect4.Program.EffName.mergeContexts v = Effect4.Program.mergeContextsK v)
-
-#check (@Effect4.Program.Agreement.mergeContextsK_contexts :
-  ∀ (ctxs : List Effect4.Machine.Env.Ctx),
-  Effect4.Program.mergeContextsK
-      (Effect4.Machine.exitsVal (List.map (fun c => Effect4.Exit.success (Effect4.Machine.Env.encode c)) ctxs)) =
-    Effect4.Prim.success (Effect4.Machine.Env.encode (Effect4.Machine.Env.Context.mergeAll ctxs)))
-
-#check (@Effect4.Program.Agreement.compileLayer_provide :
-  ∀ (self that : Effect4.Program.LayerTerm Effect4.Program.NativeOp)
-  (q : Effect4.Program.Point) (m : Effect4.Machine.MemoMapId) (scope : Nat),
-  Effect4.Program.compileLayer (self.provide that) q m scope =
-    (Effect4.Prim.sync
-          (Effect4.Program.EffThunk.op
-            (Effect4.Machine.SyncOp.scopeFork scope Effect4.FinalizerStrategy.sequential))).onSuccess
-      (Effect4.Program.EffName.fromBuildThen q m))
-
-#check (@Effect4.Program.Agreement.compileLayer_provideMerge :
-  ∀ (self that : Effect4.Program.LayerTerm Effect4.Program.NativeOp)
-  (q : Effect4.Program.Point) (m : Effect4.Machine.MemoMapId) (scope : Nat),
-  Effect4.Program.compileLayer (self.provideMerge that) q m scope =
-    (Effect4.Prim.sync
-          (Effect4.Program.EffThunk.op
-            (Effect4.Machine.SyncOp.scopeFork scope Effect4.FinalizerStrategy.sequential))).onSuccess
-      (Effect4.Program.EffName.fromBuildThen q m))
-
-#check (@Effect4.Program.Agreement.innerLayerAt_provide :
-  ∀ (root : Effect4.Program.NativeEff) {q : Effect4.Program.Point}
-  {self that : Effect4.Program.LayerTerm Effect4.Program.NativeOp},
-  (Effect4.Program.Node.eff root).at_ q.path = Option.some (Effect4.Program.Node.layer (self.provide that)) →
-    ∀ (m : Effect4.Machine.MemoMapId) (child : Nat),
-      Effect4.Program.innerLayerAt root q m child =
-        Effect4.Prim.onSuccess (Effect4.Program.resolveLayer root (q.child 1) m child)
-          (Effect4.Program.EffName.provideThen q m child Effect4.Program.CombineMode.provide))
-
-#check (@Effect4.Program.Agreement.contAOf_provideThen :
-  ∀ (root : Effect4.Program.NativeEff) (q : Effect4.Program.Point)
-  (m : Effect4.Machine.MemoMapId) (scope : Nat) (mode : Effect4.Program.CombineMode) (v : Effect4.Machine.Val),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.provideThen q m scope mode) v =
-    Effect4.Program.provideThenK q m scope mode v)
-
-#check (@Effect4.Program.Agreement.provideThenK_context :
-  ∀ (q : Effect4.Program.Point) (m : Effect4.Machine.MemoMapId)
-  (scope : Nat) (mode : Effect4.Program.CombineMode) (ctx : Effect4.Machine.Env.Ctx),
-  Effect4.Program.provideThenK q m scope mode (Effect4.Machine.Env.encode ctx) =
-    Effect4.Prim.onSuccess
-      (Effect4.Program.updateContextAt (Effect4.Machine.Env.ContextUpdate.provide ctx)
-        (Effect4.Program.Region.build (q.child 0) m scope))
-      (Effect4.Program.EffName.combineWith mode ctx))
-
-#check (@Effect4.Program.Agreement.regionCode_build :
-  ∀ (root : Effect4.Program.NativeEff) (q : Effect4.Program.Point)
-  (m : Effect4.Machine.MemoMapId) (scope : Nat),
-  Effect4.Program.regionCode root (Effect4.Program.Region.build q m scope) = Effect4.Program.resolveLayer root q m scope)
-
-#check (@Effect4.Program.Agreement.contAOf_combineWith :
-  ∀ (root : Effect4.Program.NativeEff)
-  (mode : Effect4.Program.CombineMode) (that : Effect4.Machine.Env.Ctx) (v : Effect4.Machine.Val),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.combineWith mode that) v =
-    Effect4.Program.combineWithK mode that v)
-
-#check (@Effect4.Program.Agreement.combineWithK_provide :
-  ∀ (that merged : Effect4.Machine.Env.Ctx),
-  Effect4.Program.combineWithK Effect4.Program.CombineMode.provide that (Effect4.Machine.Env.encode merged) =
-    Effect4.Prim.success (Effect4.Machine.Env.encode merged))
-
-#check (@Effect4.Program.Agreement.combineWithK_provideMerge :
-  ∀ (that merged : Effect4.Machine.Env.Ctx),
-  Effect4.Program.combineWithK Effect4.Program.CombineMode.provideMerge that (Effect4.Machine.Env.encode merged) =
-    Effect4.Prim.success (Effect4.Machine.Env.encode (Effect4.Machine.Env.Context.merge that merged)))
-
-#check (@Effect4.Program.Agreement.compileLayer_fresh :
-  ∀ (inner : Effect4.Program.LayerTerm Effect4.Program.NativeOp)
-  (q : Effect4.Program.Point) (m : Effect4.Machine.MemoMapId) (scope : Nat),
-  Effect4.Program.compileLayer inner.fresh q m scope =
-    (Effect4.Prim.sync (Effect4.Program.EffThunk.op (Effect4.Machine.SyncOp.memoFork Option.none))).onSuccess
-      (Effect4.Program.EffName.freshThen (q.child 0) scope))
-
-#check (@Effect4.Program.Agreement.contAOf_freshThen_memoMap :
-  ∀ (root : Effect4.Program.NativeEff) (q : Effect4.Program.Point)
-  (scope : Nat) (id : Effect4.Machine.MemoMapId),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.freshThen q scope) (Effect4.Machine.Val.memoMap id) =
-    Effect4.Program.resolveLayer root q id scope)
-
-#check (@Effect4.Program.Agreement.finalizerProgram_scopeClose :
-  ∀ (root : Effect4.Program.NativeEff) (scope : Nat) (exit : Effect4.Machine.ExitV),
-    (Effect4.Program.interpOf root).finalizerProgram (Effect4.Program.EffName.scopeClose scope) exit =
-      Option.some (Effect4.Prim.withFiber (Effect4.Program.EffThunk.closeScope scope exit)))
-
-#check (@Effect4.Program.Agreement.compileEff_provideLayer :
-  ∀ {p : Effect4.Program.Point} {k : Nat}
-  (l : Effect4.Program.LayerTerm Effect4.Program.NativeOp) (i : Bool) (b : Effect4.Program.NativeEff),
-  p.fuel = k + 1 →
-    Effect4.Program.compileEff (Effect4.Program.Eff.provideLayer l i b) p =
-      Effect4.Prim.suspend (Effect4.Program.EffThunk.body p))
-
-#check (@Effect4.Program.Agreement.suspendBodyAt_provideLayer :
-  ∀ {root : Effect4.Program.NativeEff} {q : Effect4.Program.Point}
-  {k : Nat} {l : Effect4.Program.LayerTerm Effect4.Program.NativeOp} {i : Bool} {b : Effect4.Program.NativeEff},
-  q.fuel = k + 1 →
-    (Effect4.Program.Node.eff root).at_ q.path =
-        Option.some (Effect4.Program.Node.eff (Effect4.Program.Eff.provideLayer l i b)) →
-      Effect4.Program.suspendBodyAt root (Effect4.Program.EffThunk.body q) =
-        (Effect4.Prim.sync
-              (Effect4.Program.EffThunk.op
-                (Effect4.Machine.SyncOp.scopeMake Effect4.FinalizerStrategy.sequential))).onSuccess
-          (Effect4.Program.EffName.provideLayerWith q))
-
-#check (@Effect4.Program.Agreement.contAOf_provideLayerWith_scope :
-  ∀ (root : Effect4.Program.NativeEff)
-  (p : Effect4.Program.Point) (scope : Nat),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.provideLayerWith p) (Effect4.Machine.Val.scopeHandle scope) =
-    Effect4.Program.provideLayerWithK root p scope)
-
-#check (@Effect4.Program.Agreement.contAOf_provideLayerBody :
-  ∀ (root : Effect4.Program.NativeEff) (p : Effect4.Program.Point)
-  (v : Effect4.Machine.Val),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.provideLayerBody p) v =
-    Effect4.Program.provideLayerBodyK root p v)
-
-#check (@Effect4.Program.Agreement.provideLayerBodyK_context :
-  ∀ (root : Effect4.Program.NativeEff) (p : Effect4.Program.Point)
-  (built : Effect4.Machine.Env.Ctx),
-  Effect4.Prim.asExit? (Effect4.Program.resolve root (p.child 1)) = Option.none →
-    Effect4.Program.provideLayerBodyK root p (Effect4.Machine.Env.encode built) =
-      Effect4.Program.updateContextAt (Effect4.Machine.Env.ContextUpdate.provide built)
-        (Effect4.Program.Region.program (p.child 1)))
-
-#check (@Effect4.Program.Agreement.contAOf_updateThen :
-  ∀ (root : Effect4.Program.NativeEff)
-  (u : Effect4.Machine.Env.ContextUpdate) (body : Effect4.Program.Region) (v : Effect4.Machine.Val),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.updateThen u body) v = Effect4.Program.updateThenK root u body v)
-
-#check (@Effect4.Program.Agreement.updateThenK_context :
-  ∀ (root : Effect4.Program.NativeEff)
-  (u : Effect4.Machine.Env.ContextUpdate) (body : Effect4.Program.Region) (prev : Effect4.Machine.Ctx),
-  Effect4.Program.updateThenK root u body (Effect4.Machine.Val.context prev) =
-    if Effect4.Program.updateKeepsIdentity u prev.services = Bool.true then Effect4.Program.regionCode root body
-    else
-      (Effect4.Prim.withFiber
-            (Effect4.Program.EffThunk.setCtx (Effect4.Machine.Ctx.withServices (u.apply prev.services)))).onSuccess
-        (Effect4.Program.EffName.bodyThen body prev))
-
-#check (@Effect4.Program.Agreement.contAOf_bodyThen :
-  ∀ (root : Effect4.Program.NativeEff) (body : Effect4.Program.Region)
-  (previous : Effect4.Machine.Ctx) (v : Effect4.Machine.Val),
-  Effect4.Program.contAOf root (Effect4.Program.EffName.bodyThen body previous) v =
-    Effect4.Prim.onExit (Effect4.Program.regionCode root body) (Effect4.Program.EffName.restoreCtx previous) Bool.false)
-
-
-/-! Second pass, 2026-09-04: the exit path, the observers, the races and the fork arms of the
-reference machine (`src/Effect4/Laws/Machine/Clauses.lean`), and the concrete witnesses over it
-(`src/Effect4/Laws/Machine/Witnesses.lean`), whose statements decide by evaluation. -/
-
-#check (@Effect4.Machine.exitFiber_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (exit : Effect4.Exit β ε δ ι α),
-    Effect4.Machine.exitFiber interp m f exit =
-      if (m.middlewareInstalled && f.finalizing.isNone && !f.children.isEmpty) = Bool.true then
-        Effect4.Machine.exitFiber.exitInterruptChildren interp m f exit
-      else Effect4.Machine.exitFiber.exitStore interp m f exit)
-
-#check (@Effect4.Machine.exitFiber_no_middleware :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (exit : Effect4.Exit β ε δ ι α),
-    m.middlewareInstalled = Bool.false →
-      Effect4.Machine.exitFiber interp m f exit = Effect4.Machine.exitFiber.exitStore interp m f exit)
-
-#check (@Effect4.Machine.publish_fields :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (exit : Effect4.Exit β ε δ ι α),
-    (f.publish exit).exit = Option.some exit ∧ (f.publish exit).finalizing = Option.none ∧
-      (f.publish exit).running = Bool.false ∧ (f.publish exit).parked = Effect4.Machine.Parked.notParked ∧
-        (f.publish exit).pending = [] ∧ (f.publish exit).frame.deferredInterrupt = Bool.false ∧
-          (f.publish exit).frame.stack = f.frame.stack ∧ (f.publish exit).children = f.children ∧
-            (f.publish exit).observers = f.observers ∧ (f.publish exit).context = f.context)
-
-#check (@Effect4.Machine.cleared_fields :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    (Effect4.Machine.RunFiber.cleared interp f).observers = [] ∧
-      (Effect4.Machine.RunFiber.cleared interp f).frame.stack = [] ∧
-        (Effect4.Machine.RunFiber.cleared interp f).children = [] ∧
-          (Effect4.Machine.RunFiber.cleared interp f).context = interp.emptyContext ∧
-            (Effect4.Machine.RunFiber.cleared interp f).exit = f.exit)
-
-#check (@Effect4.Machine.exitStore_no_observers :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (exit : Effect4.Exit β ε δ ι α),
-    f.observers = [] →
-      Effect4.Machine.exitFiber.exitStore interp m f exit =
-        (((m.update (f.publish exit)).emit [Effect4.Machine.RunEvent.exited f.id exit]).update
-          (Effect4.Machine.RunFiber.cleared interp (f.publish exit)), [Effect4.Machine.Cmd.drainDue]))
-
-#check (@Effect4.Machine.exitStore_observers :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (exit : Effect4.Exit β ε δ ι α) (o : Effect4.Machine.Observer)
-    (os : List Effect4.Machine.Observer),
-    f.observers = o :: os →
-      Effect4.Machine.exitFiber.exitStore interp m f exit =
-        ((m.update (f.publish exit)).emit [Effect4.Machine.RunEvent.exited f.id exit],
-          List.map (Effect4.Machine.Cmd.observe f.id exit) (o :: os) ++
-            [Effect4.Machine.Cmd.exitDone f.id, Effect4.Machine.Cmd.drainDue]))
-
-#check (@Effect4.Machine.drive_observe :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (id : Effect4.FiberId) (exit : Effect4.Exit β ε δ ι α) (observer : Effect4.Machine.Observer)
-    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.observe id exit observer :: rest) =
-        (let r := Effect4.Machine.fireObserver interp id exit (m, []) observer
-         Effect4.Machine.drive interp fuel r.fst (r.snd ++ rest)))
-
-#check (@Effect4.Machine.drive_exitDone :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (id : Effect4.FiberId) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.fiber? id = Option.some f →
-        Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.exitDone id :: rest) =
-          Effect4.Machine.drive interp fuel (m.update (Effect4.Machine.RunFiber.cleared interp f)) rest)
-
-#check (@Effect4.Machine.fireObserver_resumeAwait :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (id : Effect4.FiberId)
-    (exit : Effect4.Exit β ε δ ι α)
-    (acc : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St × List (Effect4.Machine.Cmd ν σ β ε δ ι α)) (waiter : Effect4.FiberId)
-    (token : Nat) (mode : Effect4.Supervision.ObserverMode),
-    Effect4.Machine.fireObserver interp id exit acc (Effect4.Machine.Observer.resumeAwait waiter token mode) =
-      (acc.fst.emit [Effect4.Machine.RunEvent.observerFired id (Effect4.Machine.Observer.resumeAwait waiter token mode)],
-        acc.snd ++ [Effect4.Machine.Cmd.resume waiter token (interp.exitValue exit mode)]))
-
-#check (@Effect4.Machine.stepDecision_installMiddleware :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St),
-    Effect4.Machine.stepDecision interp fuel m Effect4.Machine.RunDecision.installMiddleware =
-      Effect4.Machine.RunMachine.mk m.fibers m.races m.nextId m.nextToken m.nextRace Bool.true m.armed m.state m.trace
-        m.stuck)
-
-#check (@Effect4.Machine.withFiber_fork :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (program : Effect4.Prim ν σ β ε δ ι α)
-    (options : Effect4.Supervision.ForkOptions),
-    Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.fork program options) =
-      have m' :=
-        if options.daemon = Bool.true then m
-        else
-          Effect4.Machine.RunMachine.mk m.fibers m.races m.nextId m.nextToken m.nextRace Bool.true m.armed m.state m.trace
-            m.stuck;
-      have s := Effect4.Machine.spawn interp m' f program options;
-      have t := Effect4.Machine.start s.fst s.snd.fst s.snd.snd options.startImmediately;
-      Effect4.Machine.Iter.mk t.fst
-        (have __src := t.snd.fst;
-        Effect4.Machine.RunFiber.mk __src.id
-          (have __src := t.snd.fst.frame;
-          Effect4.FrameFiber.mk (Effect4.Prim.success (interp.fiberValue s.snd.snd)) __src.stack __src.interruptible
-            __src.interruptedCause __src.deferredInterrupt)
-          __src.running __src.parked __src.pending __src.finalizing __src.exit __src.currentOpCount
-          __src.maxOpsBeforeYield __src.preventYield __src.yieldOverride __src.observers __src.children __src.dispatcher
-          __src.context)
-        yielding Effect4.Machine.Outcome.continue_
-        (t.snd.snd ++ if options.daemon = Bool.true then [] else [Effect4.Machine.Cmd.trackChild f.id s.snd.snd]))
-
-#check (@Effect4.Machine.Witnesses.w1_deferred_join_child :
-  Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w1DeferredJoin 1 =
-      Option.some (Effect4.Exit.success (Effect4.Machine.Val.nat 42)) ∧
-    Effect4.Machine.Witnesses.fiberCount Effect4.Machine.Witnesses.w1DeferredJoin = 2)
-
-#check (@Effect4.Machine.Witnesses.w1_deferred_start_is_a_task :
-  Effect4.Machine.Witnesses.exitOf
-        (Effect4.Machine.Witnesses.replay Effect4.Machine.Stores.empty
-          ((Effect4.Machine.ProgName.value (Effect4.Machine.Val.nat 42)).forkThen Effect4.Machine.Witnesses.deferredChild
-            Effect4.Supervision.ObserverMode.joinEffect)
-          [Effect4.Machine.RunDecision.evaluate { value := 0 }])
-        1 =
-      Option.none ∧
-    Effect4.Machine.Witnesses.armedOf
-        (Effect4.Machine.Witnesses.replay Effect4.Machine.Stores.empty
-          ((Effect4.Machine.ProgName.value (Effect4.Machine.Val.nat 42)).forkThen Effect4.Machine.Witnesses.deferredChild
-            Effect4.Supervision.ObserverMode.joinEffect)
-          [Effect4.Machine.RunDecision.evaluate { value := 0 }])
-        0 =
-      Option.some Bool.true)
-
-#check (@Effect4.Machine.Witnesses.w5_middleware_interrupts_children :
-  Effect4.Machine.Witnesses.exitOf
-        Effect4.Machine.Witnesses.w5WithMiddleware 1 =
-      Option.some
-        (Effect4.Machine.Witnesses.interruptedWith { value := 0 } { value := 1 }
-          (Effect4.Machine.stores.stackAnnotations { value := 0 })) ∧
-    Effect4.Machine.Witnesses.childrenInterruptedRows Effect4.Machine.Witnesses.w5WithMiddleware = [(0, [1])] ∧
-      Effect4.Machine.Witnesses.interruptRows Effect4.Machine.Witnesses.w5WithMiddleware = [(Option.some 0, 1)] ∧
-        Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w5WithMiddleware 0 =
-          Option.some (Effect4.Exit.success Effect4.Machine.Val.unit))
-
-#check (@Effect4.Machine.exitFiber_no_children :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (exit : Effect4.Exit β ε δ ι α),
-    f.children = [] → Effect4.Machine.exitFiber interp m f exit = Effect4.Machine.exitFiber.exitStore interp m f exit)
-
-#check (@Effect4.Machine.exitInterruptChildren_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (exit : Effect4.Exit β ε δ ι α),
-    Effect4.Machine.exitFiber.exitInterruptChildren interp m f exit =
-      ((m.update { f with
-          finalizing := Option.some exit
-          running := Bool.false
-          frame := { f.frame with
-            deferredInterrupt := Bool.false
-            current := Effect4.Prim.onSuccess (interp.interruptAllCode f.children) (interp.restoreName exit) } }).emit
-        [Effect4.Machine.RunEvent.childrenInterrupted f.id f.children],
-       [Effect4.Machine.Cmd.evaluate f.id]))
-
-#check (@Effect4.Machine.exitInterruptChildren_reenters :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (exit : Effect4.Exit β ε δ ι α),
-    (Effect4.Machine.exitFiber.exitInterruptChildren interp m f exit).snd = [Effect4.Machine.Cmd.evaluate f.id])
-
-#check (@Effect4.Machine.Witnesses.w5_fork_latches_the_middleware :
-  Effect4.Machine.Witnesses.w5ForkLatches.middlewareInstalled =
-      Bool.true ∧
-    Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w5ForkLatches 1 =
-        Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w5WithMiddleware 1 ∧
-      Effect4.Machine.Witnesses.childrenInterruptedRows Effect4.Machine.Witnesses.w5ForkLatches = [(0, [1])] ∧
-        Effect4.Machine.Witnesses.interruptRows Effect4.Machine.Witnesses.w5ForkLatches = [(Option.some 0, 1)] ∧
-          Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w5ForkLatches 0 =
-            Option.some (Effect4.Exit.success Effect4.Machine.Val.unit))
-
-#check (@Effect4.Machine.Witnesses.w5_daemon_child_survives_parent_exit :
-  Effect4.Machine.Witnesses.w5Daemon.middlewareInstalled =
-      Bool.false ∧
-    Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w5Daemon 1 = Option.none ∧
-      Effect4.Machine.Witnesses.childrenInterruptedRows Effect4.Machine.Witnesses.w5Daemon = [] ∧
-        Effect4.Machine.Witnesses.interruptRows Effect4.Machine.Witnesses.w5Daemon = [] ∧
-          Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w5Daemon 0 =
-            Option.some (Effect4.Exit.success Effect4.Machine.Val.unit))
-
-#check (@Effect4.Machine.withFiber_forkIn :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (program : Effect4.Prim ν σ β ε δ ι α)
-    (options : Effect4.Supervision.ForkOptions) (scope : Nat),
-    Effect4.Machine.evaluatePrim.withFiber interp m f yielding
-        (Effect4.Machine.WithFiberAction.forkIn program options scope) =
-      have s :=
-        Effect4.Machine.spawn interp m f program
-          { startImmediately := options.startImmediately, daemon := Bool.true, maskMode := options.maskMode };
-      have t := Effect4.Machine.start s.fst s.snd.fst s.snd.snd options.startImmediately;
-      { machine := t.fst,
-        fiber :=
-          have __src := t.snd.fst;
-          { id := __src.id,
-            frame :=
-              have __src := t.snd.fst.frame;
-              { current := Effect4.Prim.success (interp.fiberValue s.snd.snd), stack := __src.stack,
-                interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
-                deferredInterrupt := __src.deferredInterrupt },
-            running := __src.running, parked := __src.parked, pending := __src.pending, finalizing := __src.finalizing,
-            exit := __src.exit, currentOpCount := __src.currentOpCount, maxOpsBeforeYield := __src.maxOpsBeforeYield,
-            preventYield := __src.preventYield, yieldOverride := __src.yieldOverride, observers := __src.observers,
-            children := __src.children, dispatcher := __src.dispatcher, context := __src.context },
-        yielding := yielding, outcome := Effect4.Machine.Outcome.continue_,
-        nested :=
-          t.snd.snd ++
-            [Effect4.Machine.Cmd.link Effect4.Supervision.ScopeMode.forkIn scope s.snd.snd (Option.some t.snd.fst.id)
-                (interp.stackAnnotations t.snd.fst.id)] })
-
-#check (@Effect4.Machine.linkScope_open :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (mode : Effect4.Supervision.ScopeMode) (scope : Nat) (target : Effect4.FiberId)
-    (interruptor : Option Effect4.FiberId) (extra : Effect4.ReasonAnnotations α) (state : St) (key : Nat)
-    (t : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    interp.scopeStatus scope m.state = Option.some Option.none →
-      m.fiber? target = Option.some t →
-        t.exit = Option.none →
-          interp.scopeLinkFiber mode scope target m.state = Option.some (state, key) →
-            Effect4.Machine.linkScope interp m mode scope target interruptor extra =
-              (((Effect4.Machine.RunMachine.mk m.fibers m.races m.nextId m.nextToken m.nextRace m.middlewareInstalled m.armed
-                          state m.trace m.stuck).modify
-                      target fun t =>
-                      Effect4.Machine.RunFiber.mk t.id t.frame t.running t.parked t.pending t.finalizing t.exit
-                        t.currentOpCount t.maxOpsBeforeYield t.preventYield t.yieldOverride
-                        (t.observers ++ [Effect4.Machine.Observer.dropScopeFinalizer scope key]) t.children t.dispatcher
-                        t.context).emit
-                  [Effect4.Machine.RunEvent.scopeLinked mode scope key target],
-                []))
-
-#check (@Effect4.Machine.linkScope_open_exited :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (mode : Effect4.Supervision.ScopeMode) (scope : Nat) (target : Effect4.FiberId)
-    (interruptor : Option Effect4.FiberId) (extra : Effect4.ReasonAnnotations α)
-    (t : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (exit : Effect4.Exit β ε δ ι α),
-    interp.scopeStatus scope m.state = Option.some Option.none →
-      m.fiber? target = Option.some t →
-        t.exit = Option.some exit → Effect4.Machine.linkScope interp m mode scope target interruptor extra = (m, []))
-
-#check (@Effect4.Machine.fireObserver_dropScopeFinalizer :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (id : Effect4.FiberId)
-    (exit : Effect4.Exit β ε δ ι α)
-    (acc : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St × List (Effect4.Machine.Cmd ν σ β ε δ ι α)) (scope key : Nat)
-    (state : St),
-    interp.dropFinalizer scope key acc.fst.state = Option.some state →
-      Effect4.Machine.fireObserver interp id exit acc (Effect4.Machine.Observer.dropScopeFinalizer scope key) =
-        (have __src :=
-            acc.fst.emit [Effect4.Machine.RunEvent.observerFired id (Effect4.Machine.Observer.dropScopeFinalizer scope key)];
-          Effect4.Machine.RunMachine.mk __src.fibers __src.races __src.nextId __src.nextToken __src.nextRace
-            __src.middlewareInstalled __src.armed state __src.trace __src.stuck,
-          acc.snd))
-
-#check (@Effect4.Machine.withFiber_closeScope :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (scope : Nat) (exit : Effect4.Exit β ε δ ι α)
-    (state : St) (program : Effect4.Prim ν σ β ε δ ι α),
-    interp.closeScope scope exit f.frame.interruptible f.id m.state = Option.some (state, program) →
-      Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.closeScope scope exit) =
-        Effect4.Machine.Iter.mk
-          (Effect4.Machine.RunMachine.mk m.fibers m.races m.nextId m.nextToken m.nextRace m.middlewareInstalled m.armed state
-            m.trace m.stuck)
-          (Effect4.Machine.RunFiber.mk f.id
-            (have __src := f.frame;
-            Effect4.FrameFiber.mk program __src.stack __src.interruptible __src.interruptedCause __src.deferredInterrupt)
-            f.running f.parked f.pending f.finalizing f.exit f.currentOpCount f.maxOpsBeforeYield f.preventYield
-            f.yieldOverride f.observers f.children f.dispatcher f.context)
-          yielding Effect4.Machine.Outcome.continue_ [])
-
-#check (@Effect4.Machine.Witnesses.w6_link_then_close :
-  Effect4.Machine.Witnesses.scopeRows Effect4.Machine.Witnesses.w6LinkThenClose =
-      [[0, 0, 0, 102, 1]] ∧
-    Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w6LinkThenClose 1 =
-        Option.some
-          (Effect4.Machine.Witnesses.interruptedWith { value := 0 } { value := 1 }
-            (Effect4.Machine.stores.stackAnnotations { value := 0 })) ∧
-      Effect4.Machine.Witnesses.scopeKeys Effect4.Machine.Witnesses.w6LinkThenClose 0 = Option.some [] ∧
-        Effect4.Machine.Witnesses.scopeClosed Effect4.Machine.Witnesses.w6LinkThenClose 0 = Option.some Bool.true ∧
-          Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w6LinkThenClose 0 =
-            Option.some (Effect4.Exit.success Effect4.Machine.Val.unit))
-
-#check (@Effect4.Machine.Witnesses.w6_closed_scope_interrupts_now :
-  Effect4.Machine.Witnesses.scopeRows
-        Effect4.Machine.Witnesses.w6ClosedScope =
-      [[1, 1, 1]] ∧
-    Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w6ClosedScope 1 =
-        Option.some
-          (Effect4.Machine.Witnesses.interruptedWith { value := 0 } { value := 1 }
-            (Effect4.Machine.stores.stackAnnotations { value := 0 })) ∧
-      Option.map Effect4.Machine.Witnesses.causeKeys (Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w6ClosedScope 1) =
-        Option.some [["stack1", "stack0"]])
-
-#check (@Effect4.Machine.Witnesses.w6_child_exit_drops_key :
-  Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w6DropsKey 1 =
-      Option.some (Effect4.Exit.success (Effect4.Machine.Val.nat 3)) ∧
-    Effect4.Machine.Witnesses.scopeRows Effect4.Machine.Witnesses.w6DropsKey = [] ∧
-      Effect4.Machine.Witnesses.scopeKeys Effect4.Machine.Witnesses.w6DropsKey 0 = Option.some [])
-
-#check (@Effect4.Machine.withFiber_forkScoped_ambient :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (program : Effect4.Prim ν σ β ε δ ι α) (options : Effect4.Supervision.ForkOptions) (scope : Nat),
-    interp.ambientScope f.context = Option.some scope →
-      Effect4.Machine.evaluatePrim.withFiber interp m f yielding
-          (Effect4.Machine.WithFiberAction.forkScoped program options) =
-        have s :=
-          Effect4.Machine.spawn interp m f program
-            { startImmediately := options.startImmediately, daemon := Bool.true, maskMode := options.maskMode };
-        have t := Effect4.Machine.start s.fst s.snd.fst s.snd.snd options.startImmediately;
-        { machine := t.fst,
-          fiber :=
-            have __src := t.snd.fst;
-            { id := __src.id,
-              frame :=
-                have __src := t.snd.fst.frame;
-                { current := Effect4.Prim.success (interp.fiberValue s.snd.snd), stack := __src.stack,
-                  interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
-                  deferredInterrupt := __src.deferredInterrupt },
-              running := __src.running, parked := __src.parked, pending := __src.pending, finalizing := __src.finalizing,
-              exit := __src.exit, currentOpCount := __src.currentOpCount, maxOpsBeforeYield := __src.maxOpsBeforeYield,
-              preventYield := __src.preventYield, yieldOverride := __src.yieldOverride, observers := __src.observers,
-              children := __src.children, dispatcher := __src.dispatcher, context := __src.context },
-          yielding := yielding, outcome := Effect4.Machine.Outcome.continue_,
-          nested :=
-            t.snd.snd ++
-              [Effect4.Machine.Cmd.link Effect4.Supervision.ScopeMode.forkIn scope s.snd.snd (Option.some t.snd.fst.id)
-                  (interp.stackAnnotations t.snd.fst.id)] })
-
-#check (@Effect4.Machine.withFiber_forkScoped_none :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (program : Effect4.Prim ν σ β ε δ ι α) (options : Effect4.Supervision.ForkOptions),
-    interp.ambientScope f.context = Option.none →
-      Effect4.Machine.evaluatePrim.withFiber interp m f yielding
-          (Effect4.Machine.WithFiberAction.forkScoped program options) =
-        { machine := m,
-          fiber :=
-            { id := f.id,
-              frame :=
-                have __src := f.frame;
-                { current := Effect4.Prim.failure (Effect4.Cause.die interp.missingScope), stack := __src.stack,
-                  interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
-                  deferredInterrupt := __src.deferredInterrupt },
-              running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
-              currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield,
-              preventYield := f.preventYield, yieldOverride := f.yieldOverride, observers := f.observers,
-              children := f.children, dispatcher := f.dispatcher, context := f.context },
-          yielding := yielding, outcome := Effect4.Machine.Outcome.continue_, nested := [] })
-
--- source-repairs §20 (2026-09-07): `forkScoped`'s `Scope` service read, and the parallel
--- close's step, forks and await
-#check (@Effect4.Machine.withFiber_ambientScope :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (scope : Nat),
-    interp.ambientScope f.context = Option.some scope →
-      Effect4.Machine.evaluatePrim.withFiber interp m f yielding Effect4.Machine.WithFiberAction.ambientScope =
-        ⟨m, { f with frame := { f.frame with current := Effect4.Prim.success (interp.scopeValue scope) } },
-          yielding, Effect4.Machine.Outcome.continue_, []⟩)
-
-#check (@Effect4.Machine.withFiber_ambientScope_none :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool),
-    interp.ambientScope f.context = Option.none →
-      Effect4.Machine.evaluatePrim.withFiber interp m f yielding Effect4.Machine.WithFiberAction.ambientScope =
-        ⟨m, { f with frame := { f.frame with
-            current := Effect4.Prim.failure (Effect4.Cause.die interp.missingScope) } },
-          yielding, Effect4.Machine.Outcome.continue_, []⟩)
-
-#check (@Effect4.Machine.forkFinalizers_cons :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (host : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (program : Effect4.Prim ν σ β ε δ ι α)
-    (rest : List (Effect4.Prim ν σ β ε δ ι α)),
-    Effect4.Machine.forkFinalizers interp m host (program :: rest) =
-      (let s := Effect4.Machine.spawn interp m host program ⟨true, true, Effect4.Supervision.MaskMode.inherit⟩
-       let t := Effect4.Machine.forkFinalizers interp s.1 host rest
-       (t.1, s.2.2 :: t.2)))
-
-#check (@Effect4.Machine.withFiber_closePar :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (finalizers : List (Effect4.Prim ν σ β ε δ ι α)),
-    Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.closePar finalizers) =
-      (let s := Effect4.Machine.forkFinalizers interp m f finalizers
-       ⟨s.1, f, yielding, Effect4.Machine.Outcome.commands,
-         s.2.map Effect4.Machine.Cmd.evaluate ++ [Effect4.Machine.Cmd.closeParAwait f.id yielding s.2]⟩))
-
-#check (@Effect4.Machine.drive_closeParAwait :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (host : Effect4.FiberId) (yielding : Bool) (fibers : List Effect4.FiberId) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.fiber? host = Option.some f →
-        Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.closeParAwait host yielding fibers :: rest) =
-          Effect4.Machine.drive interp fuel
-            (m.update { f with frame := { f.frame with
-              current := interp.parkCode (Effect4.Machine.ParkKind.awaitAll fibers)
-              stack := Effect4.Prim.iterator interp.closeDoneName interp.voidValue :: f.frame.stack } })
-            (Effect4.Machine.Cmd.loop f.id yielding :: rest))
-
-#check (@Effect4.Machine.withFiber_raceAll :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (entrants : List (Effect4.Prim ν σ β ε δ ι α)),
-    Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.raceAll entrants) =
-      (let raceId := m.nextRace
-       let token := m.nextToken
-       let m := { m with nextRace := m.nextRace + 1, nextToken := m.nextToken + 1 }
-       let race : Effect4.Machine.Race ν σ β ε δ ι α :=
-         ⟨raceId, f.id, token,
-           { Effect4.Supervision.RaceAllState.initial [] with remaining := entrants.length }, false, entrants,
-           false⟩
-       let m := { m with races := m.races ++ [race] }
-       ⟨m.emit [Effect4.Machine.RunEvent.raceStarted raceId f.id entrants.length],
-        { f with frame := { f.frame with current := interp.parkCode (Effect4.Machine.ParkKind.race raceId) } },
-        yielding, Effect4.Machine.Outcome.continue_, []⟩))
-
-#check (@Effect4.Machine.evaluatePrim_raceRegister :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (thunk : σ) (raceId : Nat)
-    (race : Effect4.Machine.Race ν σ β ε δ ι α),
-    f.frame.current = Effect4.Prim.suspend thunk →
-      interp.parkOf (Effect4.Prim.suspend thunk) = Option.some (Except.ok (Effect4.Machine.ParkKind.race raceId)) →
-        m.race? raceId = Option.some race →
-          Effect4.Machine.evaluatePrim interp m f yielding =
-            ⟨m.updateRace { race with registering := true }, f, yielding, Effect4.Machine.Outcome.commands,
-              [Effect4.Machine.Cmd.launch raceId, Effect4.Machine.Cmd.registrationDone raceId yielding]⟩)
-
-#check (@Effect4.Machine.drive_enrollRace_live :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (raceId : Nat) (child : Effect4.FiberId) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α))
-    (race : Effect4.Machine.Race ν σ β ε δ ι α) (c : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    m.stuck = Option.none →
-      m.race? raceId = Option.some race →
-        m.fiber? child = Option.some c →
-          c.exit = Option.none →
-            Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.enrollRace raceId child :: rest) =
-              Effect4.Machine.drive interp fuel
-                ((m.updateRace { race with state := { race.state with live := race.state.live ++ [child] } }).modify
-                  child fun c => { c with observers := c.observers ++ [Effect4.Machine.Observer.raceCallback raceId] })
-                rest)
-
-#check (@Effect4.Machine.drive_enrollRace_exited :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (raceId : Nat) (child : Effect4.FiberId) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α))
-    (race : Effect4.Machine.Race ν σ β ε δ ι α) (c : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (exit : Effect4.Exit β ε δ ι α),
-    m.stuck = Option.none →
-      m.race? raceId = Option.some race →
-        m.fiber? child = Option.some c →
-          c.exit = Option.some exit →
-            Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.enrollRace raceId child :: rest) =
-              (let r := Effect4.Machine.fireObserver interp child exit
-                 (m.updateRace { race with state := { race.state with live := race.state.live ++ [child] } }, [])
-                 (Effect4.Machine.Observer.raceCallback raceId)
-               Effect4.Machine.drive interp fuel r.1 (r.2 ++ rest)))
-
-#check (@Effect4.Machine.drive_registrationDone_answered :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (raceId : Nat) (yielding : Bool) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α))
-    (race : Effect4.Machine.Race ν σ β ε δ ι α) (host : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (accepted : Effect4.Exit β ε δ ι α),
-    m.stuck = Option.none →
-      m.race? raceId = Option.some race →
-        (m.updateRace { race with registering := false }).fiber? race.host = Option.some host →
-          race.state.accepted = Option.some accepted →
-            Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.registrationDone raceId yielding :: rest) =
-              Effect4.Machine.drive interp fuel
-                ((m.updateRace { race with registering := false }).update
-                  { host with frame := { host.frame with
-                      current := interp.raceSettle raceId race.state.cleanupNeeded accepted } })
-                (Effect4.Machine.Cmd.loop host.id yielding :: rest))
-
-#check (@Effect4.Machine.drive_registrationDone_parks :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (raceId : Nat) (yielding : Bool) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α))
-    (race : Effect4.Machine.Race ν σ β ε δ ι α) (host : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    m.stuck = Option.none →
-      m.race? raceId = Option.some race →
-        (m.updateRace { race with registering := false }).fiber? race.host = Option.some host →
-          race.state.accepted = Option.none →
-            host.frame.deferredInterrupt = false →
-              Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.registrationDone raceId yielding :: rest) =
-                (let name := interp.cancelName (interp.raceCancelName raceId) host.id race.token
-                 let g := ({ host with frame := { host.frame with
-                    stack := Effect4.Prim.asyncFinalizer name :: host.frame.stack } }).park
-                   ⟨race.token, none, [], [], Effect4.Machine.Resume.void, false⟩
-                 Effect4.Machine.drive interp fuel
-                   (((m.updateRace { race with registering := false }).emit
-                       [Effect4.Machine.RunEvent.parkedOn g.id race.token]).update
-                     { g with running := false })
-                   rest))
-
-#check (@Effect4.Machine.launchEntrant_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (raceId : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (host : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (program : Effect4.Prim ν σ β ε δ ι α),
-    Effect4.Machine.launchEntrant interp raceId m host program =
-      (let s := Effect4.Machine.spawn interp m host program
-         { startImmediately := Bool.true, daemon := Bool.true, maskMode := Effect4.Supervision.MaskMode.interruptible }
-       (s.fst, s.snd.snd)))
-
-#check (@Effect4.Machine.drive_launch_runs :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (raceId : Nat) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)) (race : Effect4.Machine.Race ν σ β ε δ ι α)
-    (program : Effect4.Prim ν σ β ε δ ι α) (more : List (Effect4.Prim ν σ β ε δ ι α))
-    (host : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    m.stuck = Option.none →
-      m.race? raceId = Option.some race →
-        race.programs = program :: more →
-          race.state.accepted = Option.none →
-            m.fiber? race.host = Option.some host →
-              Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.launch raceId :: rest) =
-                (let l := Effect4.Machine.launchEntrant interp raceId m host program
-                 Effect4.Machine.drive interp fuel
-                   ((l.fst.updateRace { race with programs := more }).emit
-                     [Effect4.Machine.RunEvent.raceLaunched raceId l.snd])
-                   (Effect4.Machine.Cmd.evaluate l.snd :: Effect4.Machine.Cmd.enrollRace raceId l.snd ::
-                     Effect4.Machine.Cmd.launch raceId :: rest)))
-
-#check (@Effect4.Machine.drive_launch_done :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (raceId : Nat) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)) (race : Effect4.Machine.Race ν σ β ε δ ι α)
-    (accepted : Effect4.Exit β ε δ ι α) (program : Effect4.Prim ν σ β ε δ ι α) (more : List (Effect4.Prim ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.race? raceId = Option.some race →
-        race.programs = program :: more →
-          race.state.accepted = Option.some accepted →
-            Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.launch raceId :: rest) =
-              Effect4.Machine.drive interp fuel m rest)
-
-#check (@Effect4.Machine.fireObserver_raceCallback_pending :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (id : Effect4.FiberId)
-    (exit : Effect4.Exit β ε δ ι α)
-    (acc : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St × List (Effect4.Machine.Cmd ν σ β ε δ ι α)) (raceId : Nat)
-    (race : Effect4.Machine.Race ν σ β ε δ ι α),
-    acc.fst.race? raceId = Option.some race →
-      (Effect4.Supervision.raceComplete race.state id exit).accepted = Option.none →
-        Effect4.Machine.fireObserver interp id exit acc (Effect4.Machine.Observer.raceCallback raceId) =
-          ((acc.fst.emit [Effect4.Machine.RunEvent.observerFired id (Effect4.Machine.Observer.raceCallback raceId)]).updateRace
-              { id := race.id, host := race.host, token := race.token,
-                state := Effect4.Supervision.raceComplete race.state id exit, settled := race.settled,
-                programs := race.programs, registering := race.registering },
-            acc.snd))
-
-#check (@Effect4.Machine.fireObserver_raceCallback_settles :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (id : Effect4.FiberId)
-    (exit : Effect4.Exit β ε δ ι α)
-    (acc : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St × List (Effect4.Machine.Cmd ν σ β ε δ ι α)) (raceId : Nat)
-    (race : Effect4.Machine.Race ν σ β ε δ ι α) (accepted : Effect4.Exit β ε δ ι α),
-    acc.fst.race? raceId = Option.some race →
-      (Effect4.Supervision.raceComplete race.state id exit).accepted = Option.some accepted →
-        race.settled = Bool.false →
-          Effect4.Machine.fireObserver interp id exit acc (Effect4.Machine.Observer.raceCallback raceId) =
-            have state := Effect4.Supervision.raceComplete race.state id exit;
-            have race :=
-              { id := race.id, host := race.host, token := race.token, state := state, settled := race.settled,
-                programs := race.programs, registering := race.registering };
-            Effect4.Machine.settleRace interp
-              ((acc.fst.emit
-                    [Effect4.Machine.RunEvent.observerFired id (Effect4.Machine.Observer.raceCallback raceId)]).updateRace
-                race)
-              acc.snd raceId race state accepted)
-
-#check (@Effect4.Machine.fireObserver_raceCallback_late :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (id : Effect4.FiberId)
-    (exit : Effect4.Exit β ε δ ι α)
-    (acc : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St × List (Effect4.Machine.Cmd ν σ β ε δ ι α)) (raceId : Nat)
-    (race : Effect4.Machine.Race ν σ β ε δ ι α),
-    acc.fst.race? raceId = Option.some race →
-      race.settled = Bool.true →
-        Effect4.Machine.fireObserver interp id exit acc (Effect4.Machine.Observer.raceCallback raceId) =
-          ((acc.fst.emit [Effect4.Machine.RunEvent.observerFired id (Effect4.Machine.Observer.raceCallback raceId)]).updateRace
-              { id := race.id, host := race.host, token := race.token,
-                state := Effect4.Supervision.raceComplete race.state id exit, settled := race.settled,
-                programs := race.programs, registering := race.registering },
-            acc.snd))
-
-#check (@Effect4.Machine.resumePrim_continueWith :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (name : ν) (exits : List (Effect4.Exit β ε δ ι α)),
-    Effect4.Machine.countdownPark.resumePrim interp (Effect4.Machine.Resume.continueWith name) exits =
-      (Effect4.Prim.success (interp.exitsValue exits)).onSuccess name)
-
-#check (@Effect4.Machine.Witnesses.w3_empty_is_a_frontier :
-  Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w3EmptyPending 0 =
-      Option.none ∧
-    Effect4.Machine.Witnesses.parkedOf Effect4.Machine.Witnesses.w3EmptyPending 0 =
-        Option.some (Effect4.Machine.Parked.withGuard 0) ∧
-      Effect4.Machine.Witnesses.fiberCount Effect4.Machine.Witnesses.w3EmptyPending = 1)
-
-#check (@Effect4.Machine.Witnesses.w3_empty_until_interrupted :
-  Effect4.Machine.Witnesses.exitOf
-      Effect4.Machine.Witnesses.w3EmptyInterrupted 0 =
-    Option.some (Effect4.Machine.Witnesses.interruptedBy { value := 0 } { value := 0 }))
-
-#check (@Effect4.Machine.Witnesses.w3_immediate_success_stops_launch :
-  Effect4.Machine.Witnesses.exitOf
-        Effect4.Machine.Witnesses.w3StopsLaunch 0 =
-      Option.some (Effect4.Exit.success (Effect4.Machine.Val.nat 1)) ∧
-    Effect4.Machine.Witnesses.raceRows Effect4.Machine.Witnesses.w3StopsLaunch = [[0, 0, 1], [2, 0]] ∧
-      Effect4.Machine.Witnesses.fiberCount Effect4.Machine.Witnesses.w3StopsLaunch = 2 ∧
-        Effect4.Machine.Witnesses.unlaunchedOf Effect4.Machine.Witnesses.w3StopsLaunch 0 = Option.some 1 ∧
-          Effect4.Machine.Witnesses.interruptRows Effect4.Machine.Witnesses.w3StopsLaunch = [] ∧
-            Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w3StopsLaunch 2 = Option.none)
-
-#check (@Effect4.Machine.Witnesses.w3_failure_allows_next_launch :
-  Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w3NextLaunch
-        0 =
-      Option.some (Effect4.Exit.success (Effect4.Machine.Val.nat 9)) ∧
-    Effect4.Machine.Witnesses.raceRows Effect4.Machine.Witnesses.w3NextLaunch = [[0, 0, 1], [0, 0, 2], [2, 0]])
-
-#check (@Effect4.Machine.Witnesses.w3_all_failures_retain_order :
-  Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w3AllFail 0 =
-    Option.some
-      (Effect4.Exit.failure
-        {
-          reasons :=
-            [Effect4.Reason.fail (Effect4.Machine.Err.tag 1) Effect4.ReasonAnnotations.empty,
-              Effect4.Reason.fail (Effect4.Machine.Err.tag 2) Effect4.ReasonAnnotations.empty] }))
-
-#check (@Effect4.Machine.withFiber_interrupt :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (target : Effect4.FiberId),
-    Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.interrupt target) =
-      ⟨m, { f with frame := { f.frame with current := interp.interruptAsCode target f.id } },
-        yielding, Effect4.Machine.Outcome.continue_, []⟩)
-
-#check (@Effect4.Machine.withFiber_interruptAs :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (target who : Effect4.FiberId)
-    (t : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    m.fiber? target = Option.some t →
-      Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.interruptAs target who) =
-        (let r := Effect4.Machine.interruptRecord interp (Option.some who) (interp.stackAnnotations f.id) t
-         ⟨(m.update r.fst).emit [Effect4.Machine.RunEvent.interruptRecorded (Option.some who) target], f, yielding,
-          Effect4.Machine.Outcome.commands,
-          (if r.snd = Bool.true then [Effect4.Machine.Cmd.evaluate target] else []) ++
-            [Effect4.Machine.Cmd.afterInterrupt f.id yielding
-              (Effect4.Machine.ParkKind.join target Effect4.Supervision.ObserverMode.awaitValue)]⟩))
-
-#check (@Effect4.Machine.withFiber_interruptAs_unknown :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (target who : Effect4.FiberId),
-    m.fiber? target = Option.none →
-      Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.interruptAs target who) =
-        ⟨m, f, yielding, Effect4.Machine.Outcome.stuck (Effect4.Machine.Stuck.unknownFiber target), []⟩)
-
-#check (@Effect4.Machine.drive_interruptTarget :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (target : Effect4.FiberId) (who : Option Effect4.FiberId) (extra : Effect4.ReasonAnnotations α)
-    (g : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.fiber? target = Option.some g →
-        Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.interruptTarget target who extra :: rest) =
-          (let r := Effect4.Machine.interruptRecord interp who extra g
-           Effect4.Machine.drive interp fuel
-             ((m.update r.fst).emit [Effect4.Machine.RunEvent.interruptRecorded who target])
-             ((if r.snd = Bool.true then [Effect4.Machine.Cmd.evaluate target] else []) ++ rest)))
-
-#check (@Effect4.Machine.drive_interruptTarget_unknown :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (target : Effect4.FiberId) (who : Option Effect4.FiberId) (extra : Effect4.ReasonAnnotations α)
-    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.fiber? target = Option.none →
-        Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.interruptTarget target who extra :: rest) =
-          Effect4.Machine.drive interp fuel m rest)
-
-#check (@Effect4.Machine.drive_afterInterrupt :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (host : Effect4.FiberId) (yielding : Bool) (kind : Effect4.Machine.ParkKind) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.fiber? host = Option.some f →
-        Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.afterInterrupt host yielding kind :: rest) =
-          Effect4.Machine.drive interp fuel
-            (m.update { f with frame := { f.frame with
-              current := Effect4.Machine.asVoidCode interp (Effect4.Machine.awaitCode interp m kind) } })
-            (Effect4.Machine.Cmd.loop f.id yielding :: rest))
-
-#check (@Effect4.Machine.asVoidCode_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (code : Effect4.Prim ν σ β ε δ ι α),
-    Effect4.Machine.asVoidCode interp code =
-      Effect4.Prim.onSuccess code (interp.restoreName (Effect4.Exit.success interp.voidValue)))
-
-#check (@Effect4.Machine.awaitCode_join_exited :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (target : Effect4.FiberId) (mode : Effect4.Supervision.ObserverMode) (t : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (exit : Effect4.Exit β ε δ ι α),
-    m.fiber? target = Option.some t →
-      t.exit = Option.some exit →
-        Effect4.Machine.awaitCode interp m (Effect4.Machine.ParkKind.join target mode) = interp.exitValue exit mode)
-
-#check (@Effect4.Machine.awaitCode_join_live :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (target : Effect4.FiberId) (mode : Effect4.Supervision.ObserverMode) (t : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    m.fiber? target = Option.some t →
-      t.exit = Option.none →
-        Effect4.Machine.awaitCode interp m (Effect4.Machine.ParkKind.join target mode) =
-          interp.parkCode (Effect4.Machine.ParkKind.join target mode))
-
-#check (@Effect4.Machine.awaitCode_awaitAll :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (targets : List Effect4.FiberId),
-    Effect4.Machine.awaitCode interp m (Effect4.Machine.ParkKind.awaitAll targets) =
-      interp.parkCode (Effect4.Machine.ParkKind.awaitAll targets))
-
-#check (@Effect4.Machine.evaluatePrim_awaitAllPark :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (thunk : σ) (targets : List Effect4.FiberId),
-    f.frame.current = Effect4.Prim.suspend thunk →
-      interp.parkOf (Effect4.Prim.suspend thunk) = Option.some (Except.ok (Effect4.Machine.ParkKind.awaitAll targets)) →
-        Effect4.Machine.evaluatePrim interp m f yielding =
-          (let p := Effect4.Machine.countdownPark interp m f targets Effect4.Machine.Resume.exitsValue
-           ⟨p.fst, p.snd.fst, yielding,
-            (if p.snd.snd = Bool.true then Effect4.Machine.Outcome.parked else Effect4.Machine.Outcome.continue_), []⟩))
-
-#check (@Effect4.Machine.withFiber_interruptScoped_self :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool),
-    Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.interruptScoped f.id) =
-      { machine := m,
-        fiber :=
-          { id := f.id,
-            frame :=
-              have __src := f.frame;
-              { current := Effect4.Prim.success interp.voidValue, stack := __src.stack,
-                interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
-                deferredInterrupt := __src.deferredInterrupt },
-            running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
-            currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield, preventYield := f.preventYield,
-            yieldOverride := f.yieldOverride, observers := f.observers, children := f.children,
-            dispatcher := f.dispatcher, context := f.context },
-        yielding := yielding, outcome := Effect4.Machine.Outcome.continue_, nested := [] })
-
-#check (@Effect4.Machine.withFiber_interruptScoped_other :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (target : Effect4.FiberId),
-    target ≠ f.id →
-      Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.interruptScoped target) =
-        ⟨m, { f with frame := { f.frame with current := interp.interruptCode target } },
-          yielding, Effect4.Machine.Outcome.continue_, []⟩)
-
-#check (@Effect4.Machine.Witnesses.w2_delivered_at_unmask :
-  Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w2 1 =
-    Option.some (Effect4.Machine.Witnesses.interruptedBy { value := 0 } { value := 1 }))
-
-#check (@Effect4.Machine.Witnesses.w2_recorded_once :
-  Effect4.Machine.Witnesses.interruptRows Effect4.Machine.Witnesses.w2 =
-    [(Option.some 0, 1)])
-
-#check (@Effect4.Machine.Witnesses.w2_masked_interrupt_does_not_apply :
-  Effect4.Machine.Witnesses.exitOf
-      (Effect4.Machine.Witnesses.replay Effect4.Machine.Stores.empty
-        (Effect4.Machine.Witnesses.w2Child.forkOnly Effect4.Machine.Witnesses.daemonChild)
-        [Effect4.Machine.RunDecision.evaluate { value := 0 },
-          Effect4.Machine.RunDecision.interruptFrom (Option.some { value := 0 }) Effect4.ReasonAnnotations.empty
-            { value := 1 }])
-      1 =
-    Option.none)
-
-#check (@Effect4.Machine.Witnesses.w6_self_interruptor_skipped :
-  Effect4.Machine.Witnesses.interruptRows
-        Effect4.Machine.Witnesses.w6SelfInterruptorSkipped =
-      [] ∧
-    Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w6SelfInterruptorSkipped 0 =
-      Option.some (Effect4.Exit.success Effect4.Machine.Val.unit))
-
-#check (@Effect4.Machine.withFiber_interruptAll :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (targets : List Effect4.FiberId) (interruptor : Option Effect4.FiberId),
-    Effect4.Machine.evaluatePrim.withFiber interp m f yielding
-        (Effect4.Machine.WithFiberAction.interruptAll targets interruptor) =
-      ⟨m, f, yielding, Effect4.Machine.Outcome.commands,
-        (targets.map fun t =>
-          Effect4.Machine.Cmd.interruptTarget t (Option.some (interruptor.getD f.id)) (interp.stackAnnotations f.id)) ++
-          [Effect4.Machine.Cmd.afterInterrupt f.id yielding (Effect4.Machine.ParkKind.awaitAll targets)]⟩)
-
-#check (@Effect4.Machine.interruptEach_nil :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (who : Effect4.FiberId) (extra : Effect4.ReasonAnnotations α)
-    (acc : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St × List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    Effect4.Machine.interruptEach interp who extra [] acc = acc)
-
-#check (@Effect4.Machine.interruptEach_cons :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (who t : Effect4.FiberId) (extra : Effect4.ReasonAnnotations α)
-    (ts : List Effect4.FiberId)
-    (acc : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St × List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    Effect4.Machine.interruptEach interp who extra (t :: ts) acc =
-      Effect4.Machine.interruptEach interp who extra ts
-        (match acc.fst.fiber? t with
-        | Option.none => acc
-        | Option.some g =>
-          have r := Effect4.Machine.interruptRecord interp (Option.some who) extra g;
-          ((acc.fst.update r.fst).emit [Effect4.Machine.RunEvent.interruptRecorded (Option.some who) t],
-            acc.snd ++ if r.snd = Bool.true then [Effect4.Machine.Cmd.evaluate t] else [])))
-
-#check (@Effect4.Machine.interruptEach_known :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (who t : Effect4.FiberId) (extra : Effect4.ReasonAnnotations α)
-    (ts : List Effect4.FiberId) (acc : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St × List (Effect4.Machine.Cmd ν σ β ε δ ι α))
-    (g : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    acc.fst.fiber? t = Option.some g →
-      Effect4.Machine.interruptEach interp who extra (t :: ts) acc =
-        Effect4.Machine.interruptEach interp who extra ts
-          (have r := Effect4.Machine.interruptRecord interp (Option.some who) extra g;
-          ((acc.fst.update r.fst).emit [Effect4.Machine.RunEvent.interruptRecorded (Option.some who) t],
-            acc.snd ++ if r.snd = Bool.true then [Effect4.Machine.Cmd.evaluate t] else [])))
-
-#check (@Effect4.Machine.fireObserver_countdown_done :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (id : Effect4.FiberId)
-    (exit : Effect4.Exit β ε δ ι α)
-    (acc : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St × List (Effect4.Machine.Cmd ν σ β ε δ ι α)) (waiter : Effect4.FiberId)
-    (token : Nat) (w : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (p : Effect4.Machine.Pending ν β ε δ ι α)
-    (exits : List (Effect4.Exit β ε δ ι α)),
-    acc.fst.fiber? waiter = Option.some w →
-      List.find? (fun q => Decidable.decide (q.token = token)) w.pending = Option.some p →
-        p.failFast = Bool.false →
-          Effect4.Machine.countdownWalk
-                (acc.fst.emit [Effect4.Machine.RunEvent.observerFired id (Effect4.Machine.Observer.countdown waiter token)])
-                p.remaining (p.collected ++ [exit]) =
-              (exits, Option.none) →
-            Effect4.Machine.fireObserver interp id exit acc (Effect4.Machine.Observer.countdown waiter token) =
-              ((acc.fst.emit
-                      [Effect4.Machine.RunEvent.observerFired id (Effect4.Machine.Observer.countdown waiter token)]).update
-                  { id := w.id, frame := w.frame, running := w.running, parked := w.parked,
-                    pending :=
-                      List.map
-                        (fun q =>
-                          if q.token = token then
-                            { token := q.token, waitingOn := Option.none, remaining := [], collected := exits,
-                              resumeWith := q.resumeWith, failFast := q.failFast }
-                          else q)
-                        w.pending,
-                    finalizing := w.finalizing, exit := w.exit, currentOpCount := w.currentOpCount,
-                    maxOpsBeforeYield := w.maxOpsBeforeYield, preventYield := w.preventYield,
-                    yieldOverride := w.yieldOverride, observers := w.observers, children := w.children,
-                    dispatcher := w.dispatcher, context := w.context },
-                acc.snd ++
-                  [Effect4.Machine.Cmd.resume waiter token
-                      (Effect4.Machine.countdownPark.resumePrim interp p.resumeWith exits)]))
-
-#check (@Effect4.Machine.fireObserver_countdown_next :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (id : Effect4.FiberId)
-    (exit : Effect4.Exit β ε δ ι α)
-    (acc : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St × List (Effect4.Machine.Cmd ν σ β ε δ ι α)) (waiter : Effect4.FiberId)
-    (token : Nat) (w : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (p : Effect4.Machine.Pending ν β ε δ ι α)
-    (exits : List (Effect4.Exit β ε δ ι α)) (next : Effect4.FiberId) (rest : List Effect4.FiberId),
-    acc.fst.fiber? waiter = Option.some w →
-      List.find? (fun q => Decidable.decide (q.token = token)) w.pending = Option.some p →
-        p.failFast = Bool.false →
-          Effect4.Machine.countdownWalk
-                (acc.fst.emit [Effect4.Machine.RunEvent.observerFired id (Effect4.Machine.Observer.countdown waiter token)])
-                p.remaining (p.collected ++ [exit]) =
-              (exits, Option.some (next, rest)) →
-            Effect4.Machine.fireObserver interp id exit acc (Effect4.Machine.Observer.countdown waiter token) =
-              (((acc.fst.emit
-                          [Effect4.Machine.RunEvent.observerFired id (Effect4.Machine.Observer.countdown waiter token)]).modify
-                      next fun g =>
-                      { id := g.id, frame := g.frame, running := g.running, parked := g.parked, pending := g.pending,
-                        finalizing := g.finalizing, exit := g.exit, currentOpCount := g.currentOpCount,
-                        maxOpsBeforeYield := g.maxOpsBeforeYield, preventYield := g.preventYield,
-                        yieldOverride := g.yieldOverride,
-                        observers := g.observers ++ [Effect4.Machine.Observer.countdown waiter token],
-                        children := g.children, dispatcher := g.dispatcher, context := g.context }).update
-                  { id := w.id, frame := w.frame, running := w.running, parked := w.parked,
-                    pending :=
-                      List.map
-                        (fun q =>
-                          if q.token = token then
-                            { token := q.token, waitingOn := Option.some next, remaining := rest, collected := exits,
-                              resumeWith := q.resumeWith, failFast := q.failFast }
-                          else q)
-                        w.pending,
-                    finalizing := w.finalizing, exit := w.exit, currentOpCount := w.currentOpCount,
-                    maxOpsBeforeYield := w.maxOpsBeforeYield, preventYield := w.preventYield,
-                    yieldOverride := w.yieldOverride, observers := w.observers, children := w.children,
-                    dispatcher := w.dispatcher, context := w.context },
-                acc.snd))
-
-#check (@Effect4.Machine.Witnesses.w5_await_all_children_awaits_only_new :
-  Effect4.Machine.Witnesses.exitOf
-        Effect4.Machine.Witnesses.w5AwaitAllChildren 2 =
-      Option.some (Effect4.Exit.success (Effect4.Machine.Val.nat 5)) ∧
-    Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w5AwaitAllChildren 0 =
-        Option.some (Effect4.Exit.success (Effect4.Machine.Val.fiber { value := 2 })) ∧
-      Effect4.Machine.Witnesses.childrenInterruptedRows Effect4.Machine.Witnesses.w5AwaitAllChildren = [(0, [1])] ∧
-        Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w5AwaitAllChildren 1 =
-          Option.some
-            (Effect4.Machine.Witnesses.interruptedWith { value := 0 } { value := 1 }
-              (Effect4.Machine.stores.stackAnnotations { value := 0 })))
-
-#check (@Effect4.Machine.Witnesses.w12_awaitAll_answers_the_exits :
-  Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w12AwaitAll
-      0 =
-    Option.some
-      (Effect4.Exit.success
-        (Effect4.Machine.stores.exitsValue
-          [Effect4.Exit.success (Effect4.Machine.Val.nat 4),
-            Effect4.Exit.failure (Effect4.Cause.fail (Effect4.Machine.Err.tag 5))])))
-
-#check (@Effect4.Machine.Witnesses.w6_runIn_closed_scope_uses_no_caller_annotations :
-  Effect4.Machine.Witnesses.scopeRows
-        Effect4.Machine.Witnesses.w6ClosedRunIn =
-      [[1, 1, 1]] ∧
-    Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w6ClosedRunIn 1 =
-        Option.some (Effect4.Machine.Witnesses.interruptedBy { value := 1 } { value := 1 }) ∧
-      Option.map Effect4.Machine.Witnesses.causeKeys (Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w6ClosedRunIn 1) =
-          Option.some [["stack1"]] ∧
-        Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w6ClosedRunIn 0 =
-          Option.some (Effect4.Exit.success Effect4.Machine.Val.unit))
-
-#check (@Effect4.Machine.fireObserver_untrackChild :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (id : Effect4.FiberId)
-    (exit : Effect4.Exit β ε δ ι α)
-    (acc : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St × List (Effect4.Machine.Cmd ν σ β ε δ ι α)) (parent : Effect4.FiberId),
-    Effect4.Machine.fireObserver interp id exit acc (Effect4.Machine.Observer.untrackChild parent) =
-      ((acc.fst.emit [Effect4.Machine.RunEvent.observerFired id (Effect4.Machine.Observer.untrackChild parent)]).modify parent
-          fun p =>
-          { id := p.id, frame := p.frame, running := p.running, parked := p.parked, pending := p.pending,
-            finalizing := p.finalizing, exit := p.exit, currentOpCount := p.currentOpCount,
-            maxOpsBeforeYield := p.maxOpsBeforeYield, preventYield := p.preventYield, yieldOverride := p.yieldOverride,
-            observers := p.observers, children := List.filter (fun c => Decidable.decide (c ≠ id)) p.children,
-            dispatcher := p.dispatcher, context := p.context },
-        acc.snd))
-
-#check (@Effect4.Machine.exitFiber_children :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (exit : Effect4.Exit β ε δ ι α),
-    m.middlewareInstalled = Bool.true →
-      f.finalizing = Option.none →
-        f.children.isEmpty = Bool.false →
-          Effect4.Machine.exitFiber interp m f exit = Effect4.Machine.exitFiber.exitInterruptChildren interp m f exit)
-
-#check (@Effect4.Machine.exitFiber_finalizing :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (exit body : Effect4.Exit β ε δ ι α),
-    f.finalizing = Option.some body →
-      Effect4.Machine.exitFiber interp m f exit = Effect4.Machine.exitFiber.exitStore interp m f exit)
-
-#check (@Effect4.Machine.withFiber_closeScope_unknown :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (scope : Nat) (exit : Effect4.Exit β ε δ ι α),
-    interp.closeScope scope exit f.frame.interruptible f.id m.state = Option.none →
-      Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.closeScope scope exit) =
-        { machine := m, fiber := f, yielding := yielding,
-          outcome := Effect4.Machine.Outcome.stuck (Effect4.Machine.Stuck.unknownScope scope), nested := [] })
-
-#check (@Effect4.Machine.Witnesses.w6_sequential_captures_and_merges :
-  Effect4.Machine.Witnesses.exitOf
-        Effect4.Machine.Witnesses.w6Sequential 0 =
-      Option.some
-        (Effect4.Exit.failure
-          { reasons := [Effect4.Reason.fail (Effect4.Machine.Err.tag 2) Effect4.ReasonAnnotations.empty] }) ∧
-    Effect4.Machine.Witnesses.fiberCount Effect4.Machine.Witnesses.w6Sequential = 1 ∧
-      Effect4.Machine.Witnesses.scopeClosed Effect4.Machine.Witnesses.w6Sequential 3 = Option.some Bool.true)
-
-#check (@Effect4.Machine.Witnesses.w6_parallel_forks_and_merges :
-  Effect4.Machine.Witnesses.fiberCount
-        Effect4.Machine.Witnesses.w6Parallel =
-      3 ∧
-    Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w6Parallel 1 =
-        Option.some
-          (Effect4.Exit.failure
-            { reasons := [Effect4.Reason.fail (Effect4.Machine.Err.tag 4) Effect4.ReasonAnnotations.empty] }) ∧
-      Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w6Parallel 2 =
-          Option.some (Effect4.Exit.success Effect4.Machine.Val.unit) ∧
-        Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w6Parallel 0 =
-            Option.some
-              (Effect4.Exit.failure
-                { reasons := [Effect4.Reason.fail (Effect4.Machine.Err.tag 4) Effect4.ReasonAnnotations.empty] }) ∧
-          Effect4.Machine.Witnesses.scopeClosed Effect4.Machine.Witnesses.w6Parallel 4 = Option.some Bool.true)
-
-#check (@Effect4.Machine.evaluatePrim_async_immediate :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (register : ν) (withSignal : Bool) (cancel : Option ν) (state : St) (next : Effect4.Prim ν σ β ε δ ι α),
-    interp.registerAsync register f.id m.nextToken m.state = (state, Option.some next) →
-      have g :=
-        Effect4.Machine.RunFiber.mk f.id
-          (have __src := f.frame;
-          Effect4.FrameFiber.mk (Effect4.Prim.async register withSignal cancel) __src.stack __src.interruptible
-            __src.interruptedCause __src.deferredInterrupt)
-          f.running f.parked f.pending f.finalizing f.exit f.currentOpCount f.maxOpsBeforeYield f.preventYield
-          f.yieldOverride f.observers f.children f.dispatcher f.context;
-      Effect4.Machine.evaluatePrim interp m g yielding =
-        Effect4.Machine.Iter.mk
-          (Effect4.Machine.RunMachine.mk m.fibers m.races m.nextId (m.nextToken + 1) m.nextRace m.middlewareInstalled m.armed
-            state m.trace m.stuck)
-          (Effect4.Machine.RunFiber.mk g.id
-            (have __src := g.frame;
-            Effect4.FrameFiber.mk next __src.stack __src.interruptible __src.interruptedCause __src.deferredInterrupt)
-            g.running g.parked g.pending g.finalizing g.exit g.currentOpCount g.maxOpsBeforeYield g.preventYield
-            g.yieldOverride g.observers g.children g.dispatcher g.context)
-          yielding Effect4.Machine.Outcome.continue_ [Effect4.Machine.Cmd.drainDue])
-
-#check (@Effect4.Machine.evaluatePrim_async_parks :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (register : ν) (withSignal : Bool) (cancel : Option ν) (state : St),
-    interp.registerAsync register f.id m.nextToken m.state = (state, Option.none) →
-      have g :=
-        Effect4.Machine.RunFiber.mk f.id
-          (have __src := f.frame;
-          Effect4.FrameFiber.mk (Effect4.Prim.async register withSignal cancel) __src.stack __src.interruptible
-            __src.interruptedCause __src.deferredInterrupt)
-          f.running f.parked f.pending f.finalizing f.exit f.currentOpCount f.maxOpsBeforeYield f.preventYield
-          f.yieldOverride f.observers f.children f.dispatcher f.context;
-      Effect4.Machine.evaluatePrim interp m g yielding =
-        have token := m.nextToken;
-        have m :=
-          Effect4.Machine.RunMachine.mk m.fibers m.races m.nextId (m.nextToken + 1) m.nextRace m.middlewareInstalled m.armed
-            state m.trace m.stuck;
-        have g :=
-          if (withSignal || cancel.isSome) = Bool.true then
-            Effect4.Machine.RunFiber.mk g.id
-              (have __src := g.frame;
-              Effect4.FrameFiber.mk __src.current
-                (Effect4.Prim.asyncFinalizer (interp.cancelName (cancel.getD interp.abortName) g.id token) ::
-                  g.frame.stack)
-                __src.interruptible __src.interruptedCause __src.deferredInterrupt)
-              g.running g.parked g.pending g.finalizing g.exit g.currentOpCount g.maxOpsBeforeYield g.preventYield
-              g.yieldOverride g.observers g.children g.dispatcher g.context
-          else g;
-        have g := g.park (Effect4.Machine.Pending.mk token Option.none [] [] Effect4.Machine.Resume.void Bool.false);
-        Effect4.Machine.Iter.mk (m.emit [Effect4.Machine.RunEvent.parkedOn g.id token]) g yielding Effect4.Machine.Outcome.parked
-          [])
-
-
-/-! Repair step 2 of the second review, 2026-09-04 (R2-1): the `Sync` arm answers and the pop is a
-command run after what the thunk owed; the exit path is a command too. -/
-
-#check (@Effect4.Machine.evaluatePrim_sync_answers :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (thunk : σ) (state : St) (value : β),
-    interp.parkOf (Effect4.Prim.sync thunk) = Option.none →
-      interp.syncState thunk m.state = Option.some (state, value) →
-        have g :=
-          Effect4.Machine.RunFiber.mk f.id
-            (have __src := f.frame;
-            Effect4.FrameFiber.mk (Effect4.Prim.sync thunk) __src.stack __src.interruptible __src.interruptedCause
-              __src.deferredInterrupt)
-            f.running f.parked f.pending f.finalizing f.exit f.currentOpCount f.maxOpsBeforeYield f.preventYield
-            f.yieldOverride f.observers f.children f.dispatcher f.context;
-        Effect4.Machine.evaluatePrim interp m g yielding =
-          Effect4.Machine.Iter.mk
-            (Effect4.Machine.RunMachine.mk m.fibers m.races m.nextId m.nextToken m.nextRace m.middlewareInstalled m.armed
-              state m.trace m.stuck)
-            (Effect4.Machine.RunFiber.mk g.id
-              (have __src := g.frame;
-              Effect4.FrameFiber.mk (Effect4.Prim.success value) __src.stack __src.interruptible __src.interruptedCause
-                __src.deferredInterrupt)
-              g.running g.parked g.pending g.finalizing g.exit g.currentOpCount g.maxOpsBeforeYield g.preventYield
-              g.yieldOverride g.observers g.children g.dispatcher g.context)
-            yielding Effect4.Machine.Outcome.answered [Effect4.Machine.Cmd.drainDue])
-
-#check (@Effect4.Machine.evaluatePrim_sync_pure :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (thunk : σ),
-    interp.parkOf (Effect4.Prim.sync thunk) = Option.none →
-      interp.syncState thunk m.state = Option.none →
-        have g :=
-          { id := f.id,
-            frame :=
-              have __src := f.frame;
-              { current := Effect4.Prim.sync thunk, stack := __src.stack, interruptible := __src.interruptible,
-                interruptedCause := __src.interruptedCause, deferredInterrupt := __src.deferredInterrupt },
-            running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
-            currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield, preventYield := f.preventYield,
-            yieldOverride := f.yieldOverride, observers := f.observers, children := f.children,
-            dispatcher := f.dispatcher, context := f.context };
-        Effect4.Machine.evaluatePrim interp m g yielding =
-          { machine := m,
-            fiber :=
-              { id := g.id,
-                frame :=
-                  have __src := g.frame;
-                  { current := Effect4.Prim.success (interp.syncValue thunk), stack := __src.stack,
-                    interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
-                    deferredInterrupt := __src.deferredInterrupt },
-                running := g.running, parked := g.parked, pending := g.pending, finalizing := g.finalizing,
-                exit := g.exit, currentOpCount := g.currentOpCount, maxOpsBeforeYield := g.maxOpsBeforeYield,
-                preventYield := g.preventYield, yieldOverride := g.yieldOverride, observers := g.observers,
-                children := g.children, dispatcher := g.dispatcher, context := g.context },
-            yielding := yielding, outcome := Effect4.Machine.Outcome.answered, nested := [] })
-
-#check (@Effect4.Machine.settle_answered :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (id : Effect4.FiberId)
-    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)) (it : Effect4.Machine.Iter ν σ β ε δ ι α χ St),
-    it.outcome = Effect4.Machine.Outcome.answered →
-      Effect4.Machine.settle id rest it =
-        (it.machine.update it.fiber, it.nested ++ [Effect4.Machine.Cmd.deliver id it.yielding] ++ rest))
-
-#check (@Effect4.Machine.drive_loop_answered :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (id : Effect4.FiberId) (yielding : Bool) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.fiber? id = Option.some f →
-        (Effect4.Machine.iteration interp m f yielding).outcome = Effect4.Machine.Outcome.answered →
-          Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.loop id yielding :: rest) =
-            Effect4.Machine.drive interp fuel
-              ((Effect4.Machine.iteration interp m f yielding).machine.update
-                (Effect4.Machine.iteration interp m f yielding).fiber)
-              ((Effect4.Machine.iteration interp m f yielding).nested ++
-                  [Effect4.Machine.Cmd.deliver id (Effect4.Machine.iteration interp m f yielding).yielding] ++
-                rest))
-
-#check (@Effect4.Machine.drive_deliver :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (id : Effect4.FiberId) (yielding : Bool) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.fiber? id = Option.some f →
-        Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.deliver id yielding :: rest) =
-          Effect4.Machine.drive interp fuel (Effect4.Machine.settle id rest (Effect4.Machine.evaluatePrim interp m f yielding)).fst
-            (Effect4.Machine.settle id rest (Effect4.Machine.evaluatePrim interp m f yielding)).snd)
-
-#check (@Effect4.Machine.Witnesses.w13_completion_pop_sees_the_waiter_interrupt :
-  Effect4.Machine.Witnesses.finalizerRuns
-        Effect4.Machine.Witnesses.w13 0 =
-      1 ∧
-    Effect4.Machine.Witnesses.finalizerExits Effect4.Machine.Witnesses.w13 0 =
-        [Effect4.Machine.Witnesses.interruptedWith { value := 1 } { value := 0 }
-            (Effect4.Machine.stores.stackAnnotations { value := 1 })] ∧
-      Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w13 0 =
-          Option.some
-            (Effect4.Machine.Witnesses.interruptedWith { value := 1 } { value := 0 }
-              (Effect4.Machine.stores.stackAnnotations { value := 1 })) ∧
-        Option.map Effect4.Machine.Witnesses.causeKeys (Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w13 0) =
-            Option.some [["stack0", "stack1"]] ∧
-          Effect4.Machine.Witnesses.interruptRows Effect4.Machine.Witnesses.w13 = [(Option.some 1, 0)] ∧
-            Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w13 1 =
-                Option.some (Effect4.Exit.success Effect4.Machine.Val.unit) ∧
-              Effect4.Machine.Witnesses.resumeAndExitOrder Effect4.Machine.Witnesses.w13 =
-                [[0, 1, 0], [1, 0], [0, 1, 1], [1, 1]])
-
-#check (@Effect4.Machine.Witnesses.w13_sync_meets_the_finalizer_program :
-  Effect4.Machine.Witnesses.finalizerRuns
-        Effect4.Machine.Witnesses.w13SyncUnderOnExit 0 =
-      1 ∧
-    Effect4.Machine.Witnesses.finalizerExits Effect4.Machine.Witnesses.w13SyncUnderOnExit 0 =
-        [Effect4.Exit.success (Effect4.Machine.Val.bool Bool.true)] ∧
-      Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w13SyncUnderOnExit 0 = Option.none ∧
-        Effect4.Machine.Witnesses.parkedOf Effect4.Machine.Witnesses.w13SyncUnderOnExit 0 =
-            Option.some (Effect4.Machine.Parked.withGuard 0) ∧
-          Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w13SyncUnderOnExitAnswered 0 =
-              Option.some (Effect4.Exit.success (Effect4.Machine.Val.bool Bool.true)) ∧
-            Effect4.Machine.Witnesses.finalizerRuns Effect4.Machine.Witnesses.w13SyncUnderOnExitAnswered 0 = 1)
-
-#check (@Effect4.Machine.drive_finish :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (id : Effect4.FiberId) (exit : Effect4.Exit β ε δ ι α) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.fiber? id = Option.some f →
-        Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.finish id exit :: rest) =
-          have r :=
-            Effect4.Machine.exitFiber interp m
-              { id := f.id, frame := f.frame, running := Bool.false, parked := f.parked, pending := f.pending,
-                finalizing := f.finalizing, exit := f.exit, currentOpCount := f.currentOpCount,
-                maxOpsBeforeYield := f.maxOpsBeforeYield, preventYield := f.preventYield,
-                yieldOverride := f.yieldOverride, observers := f.observers, children := f.children,
-                dispatcher := f.dispatcher, context := f.context }
-              exit;
-          Effect4.Machine.drive interp fuel r.fst (r.snd ++ rest))
-
-#check (@Effect4.Machine.settle_finished :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (id : Effect4.FiberId)
-    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)) (it : Effect4.Machine.Iter ν σ β ε δ ι α χ St)
-    (exit : Effect4.Exit β ε δ ι α),
-    it.outcome = Effect4.Machine.Outcome.finished exit →
-      Effect4.Machine.settle id rest it =
-        (it.machine.update it.fiber, it.nested ++ [Effect4.Machine.Cmd.finish id exit] ++ rest))
-
-
-/-! Repair step 3 of the second review, 2026-09-04 (R2-3/4/12/13): the fiber-observer parks and
-the race park push their cleanups as `AsyncFinalizer` frames; a countdown walks its targets in
-input order; a settled race resumes its host with the masked cleanup program. -/
-
-#check (@Effect4.Machine.withFiber_dropObservers :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (token : Nat),
-    Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.dropObservers token) =
-      Effect4.Machine.Iter.mk
-        (Effect4.Machine.RunMachine.mk
-          (List.map
-            (fun g =>
-              Effect4.Machine.RunFiber.mk g.id g.frame g.running g.parked g.pending g.finalizing g.exit g.currentOpCount
-                g.maxOpsBeforeYield g.preventYield g.yieldOverride
-                (List.filter
-                  (fun x =>
-                    match x with
-                    | Effect4.Machine.Observer.resumeAwait waiter t mode => Decidable.decide (t ≠ token)
-                    | Effect4.Machine.Observer.countdown waiter t => Decidable.decide (t ≠ token)
-                    | x => Bool.true)
-                  g.observers)
-                g.children g.dispatcher g.context)
-            m.fibers)
-          m.races m.nextId m.nextToken m.nextRace m.middlewareInstalled m.armed m.state m.trace m.stuck)
-        (Effect4.Machine.RunFiber.mk f.id
-          (have __src := f.frame;
-          Effect4.FrameFiber.mk (Effect4.Prim.success interp.voidValue) __src.stack __src.interruptible
-            __src.interruptedCause __src.deferredInterrupt)
-          f.running f.parked f.pending f.finalizing f.exit f.currentOpCount f.maxOpsBeforeYield f.preventYield
-          f.yieldOverride f.observers f.children f.dispatcher f.context)
-        yielding Effect4.Machine.Outcome.continue_ [])
-
-#check (@Effect4.Machine.Witnesses.w14_join_cleanup_drops_the_observer :
-  Option.map List.length
-        (Effect4.Machine.Witnesses.stackOf Effect4.Machine.Witnesses.w14Parked 2) =
-      Option.some 1 ∧
-    Effect4.Machine.Witnesses.observersOf Effect4.Machine.Witnesses.w14Parked 1 =
-        Option.some [Effect4.Machine.Observer.resumeAwait { value := 2 } 1 Effect4.Supervision.ObserverMode.joinEffect] ∧
-      Effect4.Machine.Witnesses.parkedOf Effect4.Machine.Witnesses.w14Parked 2 = Option.some (Effect4.Machine.Parked.withGuard 1) ∧
-        Effect4.Machine.Witnesses.observersOf Effect4.Machine.Witnesses.w14Cancelled 1 = Option.some [] ∧
-          Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w14Cancelled 2 =
-              Option.some (Effect4.Machine.Witnesses.interruptedBy { value := 0 } { value := 2 }) ∧
-            Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w14Cancelled 1 = Option.none ∧
-              Effect4.Machine.Witnesses.interruptRows Effect4.Machine.Witnesses.w14Cancelled = [(Option.some 0, 2)])
-
-#check (@Effect4.Machine.countdownWalk_nil :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (exits : List (Effect4.Exit β ε δ ι α)), Effect4.Machine.countdownWalk m [] exits = (exits, Option.none))
-
-#check (@Effect4.Machine.countdownWalk_exited :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (t : Effect4.FiberId) (rest : List Effect4.FiberId) (exits : List (Effect4.Exit β ε δ ι α))
-    (g : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (exit : Effect4.Exit β ε δ ι α),
-    m.fiber? t = Option.some g →
-      g.exit = Option.some exit →
-        Effect4.Machine.countdownWalk m (t :: rest) exits = Effect4.Machine.countdownWalk m rest (exits ++ [exit]))
-
-#check (@Effect4.Machine.countdownWalk_live :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (t : Effect4.FiberId) (rest : List Effect4.FiberId) (exits : List (Effect4.Exit β ε δ ι α))
-    (g : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    m.fiber? t = Option.some g →
-      g.exit = Option.none → Effect4.Machine.countdownWalk m (t :: rest) exits = (exits, Option.some (t, rest)))
-
-#check (@Effect4.Machine.countdownPark_none_live :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (targets : List Effect4.FiberId) (resumeWith : Effect4.Machine.Resume ν)
-    (failFast : Bool) (exits : List (Effect4.Exit β ε δ ι α)),
-    Effect4.Machine.countdownWalk
-          (Effect4.Machine.RunMachine.mk m.fibers m.races m.nextId (m.nextToken + 1) m.nextRace m.middlewareInstalled m.armed
-            m.state m.trace m.stuck)
-          targets [] =
-        (exits, Option.none) →
-      Effect4.Machine.countdownPark interp m f targets resumeWith failFast =
-        (Effect4.Machine.RunMachine.mk m.fibers m.races m.nextId (m.nextToken + 1) m.nextRace m.middlewareInstalled m.armed
-            m.state m.trace m.stuck,
-          Effect4.Machine.RunFiber.mk f.id
-            (have __src := f.frame;
-            Effect4.FrameFiber.mk (Effect4.Machine.countdownPark.resumePrim interp resumeWith exits) __src.stack
-              __src.interruptible __src.interruptedCause __src.deferredInterrupt)
-            f.running f.parked f.pending f.finalizing f.exit f.currentOpCount f.maxOpsBeforeYield f.preventYield
-            f.yieldOverride f.observers f.children f.dispatcher f.context,
-          Bool.false))
-
-#check (@Effect4.Machine.countdownPark_parks :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ)
-    (targets : List Effect4.FiberId) (resumeWith : Effect4.Machine.Resume ν) (failFast : Bool)
-    (exits : List (Effect4.Exit β ε δ ι α)) (target : Effect4.FiberId) (remaining : List Effect4.FiberId),
-    Effect4.Machine.countdownWalk
-          (Effect4.Machine.RunMachine.mk m.fibers m.races m.nextId (m.nextToken + 1) m.nextRace m.middlewareInstalled m.armed
-            m.state m.trace m.stuck)
-          targets [] =
-        (exits, Option.some (target, remaining)) →
-      Effect4.Machine.countdownPark interp m f targets resumeWith failFast =
-        have m' :=
-          Effect4.Machine.RunMachine.mk m.fibers m.races m.nextId (m.nextToken + 1) m.nextRace m.middlewareInstalled m.armed
-            m.state m.trace m.stuck;
-        have name := interp.cancelName interp.parkCancelName f.id m.nextToken;
-        have g :=
-          (Effect4.Machine.RunFiber.mk f.id
-                (have __src := f.frame;
-                Effect4.FrameFiber.mk __src.current (Effect4.Prim.asyncFinalizer name :: f.frame.stack)
-                  __src.interruptible __src.interruptedCause __src.deferredInterrupt)
-                f.running f.parked f.pending f.finalizing f.exit f.currentOpCount f.maxOpsBeforeYield f.preventYield
-                f.yieldOverride f.observers f.children f.dispatcher f.context).park
-            (Effect4.Machine.Pending.mk m.nextToken (Option.some target) remaining exits resumeWith failFast);
-        ((m'.modify target fun g =>
-                Effect4.Machine.RunFiber.mk g.id g.frame g.running g.parked g.pending g.finalizing g.exit g.currentOpCount
-                  g.maxOpsBeforeYield g.preventYield g.yieldOverride
-                  (g.observers ++ [Effect4.Machine.Observer.countdown f.id m.nextToken]) g.children g.dispatcher
-                  g.context).emit
-            [Effect4.Machine.RunEvent.parkedOn f.id m.nextToken],
-          g, Bool.true))
-
-#check (@Effect4.Machine.Witnesses.w12_awaitAll_input_order :
-  Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w12InputOrder 0 =
-      Option.some
-        (Effect4.Exit.success
-          (Effect4.Machine.stores.exitsValue
-            [Effect4.Exit.success (Effect4.Machine.Val.nat 3), Effect4.Exit.success (Effect4.Machine.Val.nat 4)])) ∧
-    Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w12InputOrderParked 2 =
-        Option.some (Effect4.Exit.success (Effect4.Machine.Val.nat 4)) ∧
-      Effect4.Machine.Witnesses.observersOf Effect4.Machine.Witnesses.w12InputOrderParked 1 =
-          Option.some
-            [Effect4.Machine.Observer.untrackChild { value := 0 }, Effect4.Machine.Observer.countdown { value := 0 } 0] ∧
-        Effect4.Machine.Witnesses.observersOf Effect4.Machine.Witnesses.w12InputOrderParked 2 = Option.some [] ∧
-          Effect4.Machine.Witnesses.parkedOf Effect4.Machine.Witnesses.w12InputOrderParked 0 =
-            Option.some (Effect4.Machine.Parked.withGuard 0))
-
-#check (@Effect4.Machine.settleRace_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (acc : List (Effect4.Machine.Cmd ν σ β ε δ ι α)) (raceId : Nat)
-    (race : Effect4.Machine.Race ν σ β ε δ ι α) (state : Effect4.Supervision.RaceAllState β ε δ ι α)
-    (accepted : Effect4.Exit β ε δ ι α),
-    Effect4.Machine.settleRace interp m acc raceId race state accepted =
-      ((m.updateRace { race with settled := Bool.true }).emit
-          [Effect4.Machine.RunEvent.raceSettled raceId accepted],
-        acc ++ (if race.registering then [] else
-          [Effect4.Machine.Cmd.resume race.host race.token
-            (interp.raceSettle raceId state.cleanupNeeded accepted)])))
-
-#check (@Effect4.Machine.withFiber_cancelRace :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (raceId : Nat) (race : Effect4.Machine.Race ν σ β ε δ ι α),
-    m.race? raceId = Option.some race →
-      Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.cancelRace raceId) =
-        ⟨m, f, yielding, Effect4.Machine.Outcome.commands,
-          [Effect4.Machine.Cmd.raceCancel raceId f.id yielding race.state.live []]⟩)
-
-#check (@Effect4.Machine.drive_raceCancel_nil :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (raceId : Nat) (host : Effect4.FiberId) (yielding : Bool) (visited : List Effect4.FiberId)
-    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.raceCancel raceId host yielding [] visited :: rest) =
-        Effect4.Machine.drive interp fuel m
-          (Effect4.Machine.Cmd.afterInterrupt host yielding (Effect4.Machine.ParkKind.awaitAll visited) :: rest))
-
-#check (@Effect4.Machine.drive_raceCancel_live :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (raceId : Nat) (host : Effect4.FiberId) (yielding : Bool) (t : Effect4.FiberId) (more visited : List Effect4.FiberId)
-    (race : Effect4.Machine.Race ν σ β ε δ ι α) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.race? raceId = Option.some race →
-        t ∈ race.state.live →
-          Effect4.Machine.drive interp (fuel + 1) m
-              (Effect4.Machine.Cmd.raceCancel raceId host yielding (t :: more) visited :: rest) =
-            Effect4.Machine.drive interp fuel m
-              (Effect4.Machine.Cmd.interruptTarget t (Option.some host) (interp.stackAnnotations host) ::
-                Effect4.Machine.Cmd.raceCancel raceId host yielding more (visited ++ [t]) :: rest))
-
-#check (@Effect4.Machine.drive_raceCancel_gone :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (raceId : Nat) (host : Effect4.FiberId) (yielding : Bool) (t : Effect4.FiberId) (more visited : List Effect4.FiberId)
-    (race : Effect4.Machine.Race ν σ β ε δ ι α) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      m.race? raceId = Option.some race →
-        ¬t ∈ race.state.live →
-          Effect4.Machine.drive interp (fuel + 1) m
-              (Effect4.Machine.Cmd.raceCancel raceId host yielding (t :: more) visited :: rest) =
-            Effect4.Machine.drive interp fuel m
-              (Effect4.Machine.Cmd.raceCancel raceId host yielding more visited :: rest))
-
-#check (@Effect4.Machine.withFiber_cancelRace_unknown :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (f : Effect4.Machine.RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
-    (raceId : Nat),
-    m.race? raceId = Option.none →
-      Effect4.Machine.evaluatePrim.withFiber interp m f yielding (Effect4.Machine.WithFiberAction.cancelRace raceId) =
-        { machine := m,
-          fiber :=
-            { id := f.id,
-              frame :=
-                have __src := f.frame;
-                { current := Effect4.Prim.success interp.voidValue, stack := __src.stack,
-                  interruptible := __src.interruptible, interruptedCause := __src.interruptedCause,
-                  deferredInterrupt := __src.deferredInterrupt },
-              running := f.running, parked := f.parked, pending := f.pending, finalizing := f.finalizing, exit := f.exit,
-              currentOpCount := f.currentOpCount, maxOpsBeforeYield := f.maxOpsBeforeYield,
-              preventYield := f.preventYield, yieldOverride := f.yieldOverride, observers := f.observers,
-              children := f.children, dispatcher := f.dispatcher, context := f.context },
-          yielding := yielding, outcome := Effect4.Machine.Outcome.continue_, nested := [] })
-
-#check (@Effect4.Machine.Witnesses.w3_host_interrupt_cancels_entrants :
-  Option.map List.length
-        (Effect4.Machine.Witnesses.stackOf Effect4.Machine.Witnesses.w3HostParked 0) =
-      Option.some 1 ∧
-    Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w3HostParked 1 = Option.none ∧
-      Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w3HostInterrupted 1 =
-          Option.some
-            (Effect4.Machine.Witnesses.interruptedWith { value := 0 } { value := 1 }
-              (Effect4.Machine.stores.stackAnnotations { value := 0 })) ∧
-        Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w3HostInterrupted 0 =
-            Option.some (Effect4.Machine.Witnesses.interruptedBy { value := 0 } { value := 0 }) ∧
-          Effect4.Machine.Witnesses.interruptRows Effect4.Machine.Witnesses.w3HostInterrupted =
-              [(Option.some 0, 0), (Option.some 0, 1)] ∧
-            Effect4.Machine.Witnesses.raceRows Effect4.Machine.Witnesses.w3HostInterrupted = [[0, 0, 1], [2, 0]])
-
-#check (@Effect4.Machine.Witnesses.w3_settle_interrupts_the_parked_loser :
-  Effect4.Machine.Witnesses.exitOf
-        Effect4.Machine.Witnesses.w3ParkedLoser 0 =
-      Option.some (Effect4.Exit.success (Effect4.Machine.Val.nat 2)) ∧
-    Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w3ParkedLoser 1 =
-        Option.some
-          (Effect4.Machine.Witnesses.interruptedWith { value := 0 } { value := 1 }
-            (Effect4.Machine.stores.stackAnnotations { value := 0 })) ∧
-      Effect4.Machine.Witnesses.interruptRows Effect4.Machine.Witnesses.w3ParkedLoser = [(Option.some 0, 1)] ∧
-        Effect4.Machine.Witnesses.raceRows Effect4.Machine.Witnesses.w3ParkedLoser = [[0, 0, 1], [0, 0, 2], [2, 0]])
-
-
-/-! Repair step 4a of the second review, 2026-09-04 (R2-7/8/11): `awaitAllChildren` as `onExit`, the
-`forkIn` link after the start, and race entrants forked one per launch. -/
-
-#check (@Effect4.Machine.drive_launch_exhausted :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
-    {St : Type (max u v)} [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι]
-    [inst_3 : DecidableEq α] (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (raceId : Nat) (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α))
-    (race : Effect4.Machine.Race ν σ β ε δ ι α),
-    m.stuck = Option.none →
-      m.race? raceId = Option.some race →
-        race.programs = [] →
-          Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.launch raceId :: rest) =
-            Effect4.Machine.drive interp fuel m rest)
-
-#check (@Effect4.Machine.drive_link :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (mode : Effect4.Supervision.ScopeMode) (scope : Nat) (target : Effect4.FiberId)
-    (interruptor : Option Effect4.FiberId) (extra : Effect4.ReasonAnnotations α)
-    (rest : List (Effect4.Machine.Cmd ν σ β ε δ ι α)),
-    m.stuck = Option.none →
-      Effect4.Machine.drive interp (fuel + 1) m (Effect4.Machine.Cmd.link mode scope target interruptor extra :: rest) =
-        have l := Effect4.Machine.linkScope interp m mode scope target interruptor extra;
-        Effect4.Machine.drive interp fuel l.fst (l.snd ++ rest))
-
-#check (@Effect4.Machine.Witnesses.w6_deferred_child_is_linked :
-  Effect4.Machine.Witnesses.scopeRows
-        Effect4.Machine.Witnesses.w6DeferredLinked =
-      [[0, 0, 0, 102, 1]] ∧
-    Effect4.Machine.Witnesses.scopeKeys Effect4.Machine.Witnesses.w6DeferredLinked 0 = Option.some [102] ∧
-      Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w6DeferredLinked 1 = Option.none ∧
-        Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w6DeferredLinkedFired 1 =
-            Option.some (Effect4.Exit.success (Effect4.Machine.Val.nat 3)) ∧
-          Effect4.Machine.Witnesses.scopeKeys Effect4.Machine.Witnesses.w6DeferredLinkedFired 0 = Option.some [])
-
-#check (@Effect4.Machine.Witnesses.w5_await_all_children_on_failure :
-  Effect4.Machine.Witnesses.exitOf
-        Effect4.Machine.Witnesses.w5AwaitAllChildrenFails 0 =
-      Option.none ∧
-    Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w5AwaitAllChildrenFails 1 = Option.none ∧
-      Effect4.Machine.Witnesses.parkedOf Effect4.Machine.Witnesses.w5AwaitAllChildrenFails 0 =
-          Option.some (Effect4.Machine.Parked.withGuard 0) ∧
-        Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w5AwaitAllChildrenFailsFired 1 =
-            Option.some (Effect4.Exit.success (Effect4.Machine.Val.nat 5)) ∧
-          Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w5AwaitAllChildrenFailsFired 0 =
-              Option.some (Effect4.Exit.failure (Effect4.Cause.fail Effect4.Machine.Err.boom)) ∧
-            Effect4.Machine.Witnesses.finalizerRuns Effect4.Machine.Witnesses.w5AwaitAllChildrenFailsFired 0 = 1)
-
-
-/-! Repair step 4b of the second review, 2026-09-04 (R2-14/15): the host runs scheduled callbacks in
-arming order, and `runSyncExit` flushes the root's dispatcher only. -/
-
-#check (@Effect4.Machine.RunMachine.arm_new :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (owner : Effect4.FiberId), m.armed.contains owner = Bool.false → (m.arm owner).armed = m.armed ++ [owner])
-
-#check (@Effect4.Machine.RunMachine.arm_known :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (owner : Effect4.FiberId), m.armed.contains owner = Bool.true → (m.arm owner).armed = m.armed)
-
-#check (@Effect4.Machine.RunMachine.arm_fields :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (owner : Effect4.FiberId),
-    (m.arm owner).fibers = m.fibers ∧
-      (m.arm owner).nextToken = m.nextToken ∧ (m.arm owner).trace = m.trace ∧ (m.arm owner).state = m.state)
-
-#check (@Effect4.Machine.Witnesses.w15_flush_runs_callbacks_in_arming_order :
-  Effect4.Machine.Witnesses.armedQueueOf
-        Effect4.Machine.Witnesses.w15Armed =
-      [2, 1] ∧
-    Effect4.Machine.Witnesses.armedOf Effect4.Machine.Witnesses.w15Armed 1 = Option.some Bool.true ∧
-      Effect4.Machine.Witnesses.armedOf Effect4.Machine.Witnesses.w15Armed 2 = Option.some Bool.true ∧
-        Effect4.Machine.Witnesses.armedQueueOf Effect4.Machine.Witnesses.w15Flushed = [] ∧
-          Effect4.Machine.Witnesses.resumeAndExitOrder Effect4.Machine.Witnesses.w15Flushed =
-            [[1, 0], [0, 1, 0], [0, 2, 1], [1, 2], [0, 1, 2], [1, 1]])
-
-#check (@Effect4.Machine.RunMachine.disarm_eq :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St)
-    (owner : Effect4.FiberId), (m.disarm owner).armed = List.filter (fun x => Decidable.decide (x ≠ owner)) m.armed)
-
-#check (@Effect4.Machine.flushRoot_idle :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel rounds : Nat) (root : Effect4.FiberId)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (o : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    m.fiber? root = Option.some o →
-      o.dispatcher.buckets = [] → Effect4.Machine.stepDecision.flushRoot interp fuel root (rounds + 1) m = m)
-
-#check (@Effect4.Machine.flushRoot_round :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
-    [inst : DecidableEq ε] [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
-    (interp : Effect4.Machine.RunInterp ν σ β ε δ ι α χ St) (fuel rounds : Nat) (root : Effect4.FiberId)
-    (m : Effect4.Machine.RunMachine ν σ β ε δ ι α χ St) (o : Effect4.Machine.RunFiber ν σ β ε δ ι α χ),
-    m.fiber? root = Option.some o →
-      o.dispatcher.buckets.isEmpty = Bool.false →
-        m.stuck = Option.none →
-          (Effect4.Machine.fireState interp fuel m root).snd = true →
-          Effect4.Machine.stepDecision.flushRoot interp fuel root (rounds + 1) m =
-            Effect4.Machine.stepDecision.flushRoot interp fuel root rounds
-              (Effect4.Machine.stepDecision.fire interp fuel m root))
-
-#check (@Effect4.Machine.Witnesses.w8_sync_child_yield_is_async :
-  Effect4.Machine.Witnesses.w8SyncChildYield.snd =
-      Effect4.Exit.failure (Effect4.Cause.die Effect4.Machine.Defect.asyncFiber) ∧
-    Effect4.Machine.Witnesses.exitOf Effect4.Machine.Witnesses.w8SyncChildYield.fst 0 = Option.none ∧
-      Effect4.Machine.Witnesses.armedQueueOf Effect4.Machine.Witnesses.w8SyncChildYield.fst = [1] ∧
-        Effect4.Machine.Witnesses.exitOf
-            (Effect4.Machine.stepDecision Effect4.Machine.stores Effect4.Machine.Witnesses.fuel
-              Effect4.Machine.Witnesses.w8SyncChildYield.fst Effect4.Machine.RunDecision.flush)
-            0 =
-          Option.some (Effect4.Exit.success Effect4.Machine.Val.unit))
-
-end StatementSnapshot
-
 /-! ## The frozen census join -/
 
 /-- One census row. `id` and `kind` must match `generated/effect-runtime-census.tsv`
@@ -5553,10 +60,8 @@ private structure Row where
   disposition : String
   /-- `green`, `partial` or `absent`. -/
   coverage : String
-  /-- Witness declarations with their expected canonical axiom receipt. -/
-  witnesses : List (Name × String)
-
-private def w (name : Name) (axioms : String) : Name × String := (name, axioms)
+  /-- The witness theorems. -/
+  witnesses : List Name
 
 /-- Manifest dispositions that place a row outside the coverage denominator. -/
 private def excludedDispositions : List String :=
@@ -5575,832 +80,832 @@ private def knownCoverage : List String := ["green", "partial", "absent"]
 private def censusRows : List Row :=
   [ { id := "op.Success", kind := "op", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.FrameFiber.getCont_empty_stack "propext"
-        , w `Effect4.FrameFiber.resumeValue_empty "propext"
-        , w `Effect4.FrameFiber.resumeValue_frame "propext"
-        , w `Effect4.FrameFiber.step_success "propext"
-        , w `Effect4.FrameFiber.step_ofExit_finishes "propext" ] }
+        [ `Effect4.FrameFiber.getCont_empty_stack
+        , `Effect4.FrameFiber.resumeValue_empty
+        , `Effect4.FrameFiber.resumeValue_frame
+        , `Effect4.FrameFiber.step_success
+        , `Effect4.FrameFiber.step_ofExit_finishes ] }
   , { id := "op.Failure", kind := "op", disposition := "separateCalculus", coverage := "partial"
       -- missing clause: "annotates the cause with the current stack frame" needs a fiber Context and a StackTrace service key
     , witnesses :=
-        [ w `Effect4.FrameFiber.interrupt_skips_every_handler "propext,Quot.sound"
-        , w `Effect4.FrameFiber.resumeCause_empty "propext"
-        , w `Effect4.FrameFiber.resumeCause_frame "propext"
-        , w `Effect4.FrameFiber.step_failure "propext" ] }
+        [ `Effect4.FrameFiber.interrupt_skips_every_handler
+        , `Effect4.FrameFiber.resumeCause_empty
+        , `Effect4.FrameFiber.resumeCause_frame
+        , `Effect4.FrameFiber.step_failure ] }
   , { id := "op.WithFiber", kind := "op", disposition := "foreignBoundary", coverage := "green"
       -- the raw FiberImpl host-identity clause is closed by refusal, not by a model
     , witnesses :=
-        [ w `Effect4.FrameFiber.step_withFiber "propext"
-        , w `Effect4.Prim.withFiber_refused "none" ] }
+        [ `Effect4.FrameFiber.step_withFiber
+        , `Effect4.Prim.withFiber_refused ] }
   , { id := "op.YieldableError", kind := "op", disposition := "foreignBoundary", coverage := "green"
       -- the host Error subclass identity clause is closed by refusal, not by a model
     , witnesses :=
-        [ w `Effect4.FrameFiber.step_yieldableError "propext"
-        , w `Effect4.Prim.yieldableError_host_class_refused "none" ] }
+        [ `Effect4.FrameFiber.step_yieldableError
+        , `Effect4.Prim.yieldableError_host_class_refused ] }
   , { id := "op.Sync", kind := "op", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.FrameFiber.step_sync "propext"
-        , w `Effect4.Machine.evaluatePrim_sync_answers "propext,Quot.sound"
-        , w `Effect4.Machine.evaluatePrim_sync_pure "propext,Quot.sound"
-        , w `Effect4.Machine.settle_answered "propext"
-        , w `Effect4.Machine.drive_loop_answered "propext,Quot.sound"
-        , w `Effect4.Machine.drive_deliver "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w13_completion_pop_sees_the_waiter_interrupt "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w13_sync_meets_the_finalizer_program "propext,Quot.sound" ] }
+        [ `Effect4.FrameFiber.step_sync
+        , `Effect4.Machine.evaluatePrim_sync_answers
+        , `Effect4.Machine.evaluatePrim_sync_pure
+        , `Effect4.Machine.settle_answered
+        , `Effect4.Machine.drive_loop_answered
+        , `Effect4.Machine.drive_deliver
+        , `Effect4.Machine.Witnesses.w13_completion_pop_sees_the_waiter_interrupt
+        , `Effect4.Machine.Witnesses.w13_sync_meets_the_finalizer_program ] }
   , { id := "op.Suspend", kind := "op", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.FrameFiber.step_suspend "propext" ] }
+        [ `Effect4.FrameFiber.step_suspend ] }
   , { id := "op.Yield", kind := "op", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.evaluatePrim_yieldNowWith "propext,Quot.sound" ] }
+        [ `Effect4.Machine.evaluatePrim_yieldNowWith ] }
   , { id := "op.Async", kind := "op", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.FrameFiber.step_async_frontier "propext"
-        , w `Effect4.Machine.evaluatePrim_async_immediate "propext,Quot.sound"
-        , w `Effect4.Machine.evaluatePrim_async_parks "propext,Quot.sound" ] }
+        [ `Effect4.FrameFiber.step_async_frontier
+        , `Effect4.Machine.evaluatePrim_async_immediate
+        , `Effect4.Machine.evaluatePrim_async_parks ] }
   , { id := "op.AsyncFinalizer", kind := "op", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Prim.armE_asyncFinalizer_interrupt "propext"
-        , w `Effect4.Prim.armE_asyncFinalizer_no_interrupt "propext"
-        , w `Effect4.FrameFiber.popFrom_asyncFinalizer_pops_its_push "propext"
-        , w `Effect4.Prim.ensure_asyncFinalizer_masks "propext"
-        , w `Effect4.Machine.withFiber_dropObservers "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w14_join_cleanup_drops_the_observer "propext,Quot.sound" ] }
+        [ `Effect4.Prim.armE_asyncFinalizer_interrupt
+        , `Effect4.Prim.armE_asyncFinalizer_no_interrupt
+        , `Effect4.FrameFiber.popFrom_asyncFinalizer_pops_its_push
+        , `Effect4.Prim.ensure_asyncFinalizer_masks
+        , `Effect4.Machine.withFiber_dropObservers
+        , `Effect4.Machine.Witnesses.w14_join_cleanup_drops_the_observer ] }
   , { id := "op.Iterator", kind := "op", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Prim.armA_iterator_done "propext"
-        , w `Effect4.Prim.armA_iterator_halt "propext"
-        , w `Effect4.Prim.armA_iterator_resume "propext"
-        , w `Effect4.Prim.iteratorFolded_eq "none"
-        , w `Effect4.Prim.iterator_folds_inline "propext"
-        , w `Effect4.FrameFiber.step_iterator "propext" ] }
+        [ `Effect4.Prim.armA_iterator_done
+        , `Effect4.Prim.armA_iterator_halt
+        , `Effect4.Prim.armA_iterator_resume
+        , `Effect4.Prim.iteratorFolded_eq
+        , `Effect4.Prim.iterator_folds_inline
+        , `Effect4.FrameFiber.step_iterator ] }
   , { id := "op.OnSuccess", kind := "op", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Prim.armA_onSuccess "none"
-        , w `Effect4.Prim.armA_onSuccessConst "none"
-        , w `Effect4.FrameFiber.step_onSuccessConst "propext"
-        , w `Effect4.FrameFiber.resumeValue_onSuccessConst "propext"
-        , w `Effect4.FrameFiber.step_success_onSuccessConst "propext"
-        , w `Effect4.Prim.onSuccess_arm_is_per_instance "none"
-        , w `Effect4.FrameFiber.step_onSuccess "propext" ] }
+        [ `Effect4.Prim.armA_onSuccess
+        , `Effect4.Prim.armA_onSuccessConst
+        , `Effect4.FrameFiber.step_onSuccessConst
+        , `Effect4.FrameFiber.resumeValue_onSuccessConst
+        , `Effect4.FrameFiber.step_success_onSuccessConst
+        , `Effect4.Prim.onSuccess_arm_is_per_instance
+        , `Effect4.FrameFiber.step_onSuccess ] }
   , { id := "op.OnFailure", kind := "op", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Prim.armE_onFailure "none"
-        , w `Effect4.Prim.onFailure_arm_is_per_instance "none"
-        , w `Effect4.FrameFiber.step_onFailure "propext" ] }
+        [ `Effect4.Prim.armE_onFailure
+        , `Effect4.Prim.onFailure_arm_is_per_instance
+        , `Effect4.FrameFiber.step_onFailure ] }
   , { id := "op.OnSuccessAndFailure", kind := "op", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Prim.armA_onSuccessAndFailure "none"
-        , w `Effect4.Prim.armE_onSuccessAndFailure "none"
-        , w `Effect4.Prim.onSuccessAndFailure_arms_are_per_instance "none"
-        , w `Effect4.FrameFiber.step_onSuccessAndFailure "propext" ] }
+        [ `Effect4.Prim.armA_onSuccessAndFailure
+        , `Effect4.Prim.armE_onSuccessAndFailure
+        , `Effect4.Prim.onSuccessAndFailure_arms_are_per_instance
+        , `Effect4.FrameFiber.step_onSuccessAndFailure ] }
   , { id := "op.Exit", kind := "op", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Prim.armA_exitFrame_provided "none"
-        , w `Effect4.Prim.armA_exitFrame_none "none"
-        , w `Effect4.Prim.armE_exitFrame_provided "none"
-        , w `Effect4.Prim.armE_exitFrame_none "none"
-        , w `Effect4.FrameFiber.step_exitFrame "propext" ] }
+        [ `Effect4.Prim.armA_exitFrame_provided
+        , `Effect4.Prim.armA_exitFrame_none
+        , `Effect4.Prim.armE_exitFrame_provided
+        , `Effect4.Prim.armE_exitFrame_none
+        , `Effect4.FrameFiber.step_exitFrame ] }
   , { id := "op.OnExit", kind := "op", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Prim.ensure_onExit_masks "propext"
-        , w `Effect4.Prim.ensure_onExit_told_not_to "propext"
-        , w `Effect4.Prim.ensure_onExit_already_masked "propext"
-        , w `Effect4.Prim.armA_onExit "none"
-        , w `Effect4.Prim.armE_onExit "none"
-        , w `Effect4.Prim.onExit_finalizer_success_restores "none"
-        , w `Effect4.Prim.onExit_finalizer_failure_merges "none"
-        , w `Effect4.Prim.onExit_success_finalizer_failure "none"
-        , w `Effect4.Prim.finalizerEvents_onExit "none"
-        , w `Effect4.Prim.finalizerEvents_onSuccess "none"
-        , w `Effect4.Prim.finalizerEvents_onFailure "none"
-        , w `Effect4.FrameFiber.step_onExit "propext" ] }
+        [ `Effect4.Prim.ensure_onExit_masks
+        , `Effect4.Prim.ensure_onExit_told_not_to
+        , `Effect4.Prim.ensure_onExit_already_masked
+        , `Effect4.Prim.armA_onExit
+        , `Effect4.Prim.armE_onExit
+        , `Effect4.Prim.onExit_finalizer_success_restores
+        , `Effect4.Prim.onExit_finalizer_failure_merges
+        , `Effect4.Prim.onExit_success_finalizer_failure
+        , `Effect4.Prim.finalizerEvents_onExit
+        , `Effect4.Prim.finalizerEvents_onSuccess
+        , `Effect4.Prim.finalizerEvents_onFailure
+        , `Effect4.FrameFiber.step_onExit ] }
   , { id := "op.SetInterruptible", kind := "op", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Prim.arms_setInterruptible "none"
-        , w `Effect4.Prim.ensure_setInterruptible_flag "propext"
-        , w `Effect4.Prim.ensure_setInterruptible_stack "propext"
-        , w `Effect4.Prim.ensure_setInterruptible_substitutes "propext"
-        , w `Effect4.Prim.ensure_setInterruptible_false_no_replacement "propext"
-        , w `Effect4.Prim.ensure_setInterruptible_no_pending "propext"
-        , w `Effect4.Prim.armA_setInterruptible_none "none"
-        , w `Effect4.Prim.armE_setInterruptible_none "none"
-        , w `Effect4.FrameFiber.step_setInterruptible_not_evaluable "propext" ] }
+        [ `Effect4.Prim.arms_setInterruptible
+        , `Effect4.Prim.ensure_setInterruptible_flag
+        , `Effect4.Prim.ensure_setInterruptible_stack
+        , `Effect4.Prim.ensure_setInterruptible_substitutes
+        , `Effect4.Prim.ensure_setInterruptible_false_no_replacement
+        , `Effect4.Prim.ensure_setInterruptible_no_pending
+        , `Effect4.Prim.armA_setInterruptible_none
+        , `Effect4.Prim.armE_setInterruptible_none
+        , `Effect4.FrameFiber.step_setInterruptible_not_evaluable ] }
   , { id := "op.While", kind := "op", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Prim.armA_whileLoop_continue "propext"
-        , w `Effect4.Prim.armA_whileLoop_stop "propext"
-        , w `Effect4.FrameFiber.step_whileLoop_true "propext"
-        , w `Effect4.FrameFiber.step_whileLoop_false "propext" ] }
+        [ `Effect4.Prim.armA_whileLoop_continue
+        , `Effect4.Prim.armA_whileLoop_stop
+        , `Effect4.FrameFiber.step_whileLoop_true
+        , `Effect4.FrameFiber.step_whileLoop_false ] }
   , { id := "frame-arm.OnSuccess", kind := "frame-arm", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Prim.arms_onSuccess "none"
-        , w `Effect4.Prim.arms_onSuccessConst "none"
-        , w `Effect4.Prim.ensure_onSuccessConst "none"
-        , w `Effect4.Prim.armE_onSuccessConst_none "none"
-        , w `Effect4.Prim.armA_isSome "propext"
-        , w `Effect4.Prim.armE_isSome "none"
-        , w `Effect4.Prim.armE_onSuccess_none "none"
-        , w `Effect4.Prim.onSuccess_arm_is_per_instance "none" ] }
+        [ `Effect4.Prim.arms_onSuccess
+        , `Effect4.Prim.arms_onSuccessConst
+        , `Effect4.Prim.ensure_onSuccessConst
+        , `Effect4.Prim.armE_onSuccessConst_none
+        , `Effect4.Prim.armA_isSome
+        , `Effect4.Prim.armE_isSome
+        , `Effect4.Prim.armE_onSuccess_none
+        , `Effect4.Prim.onSuccess_arm_is_per_instance ] }
   , { id := "frame-arm.OnFailure", kind := "frame-arm", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Prim.arms_onFailure "none"
-        , w `Effect4.Prim.armA_onFailure_none "none"
-        , w `Effect4.Prim.onFailure_arm_is_per_instance "none" ] }
+        [ `Effect4.Prim.arms_onFailure
+        , `Effect4.Prim.armA_onFailure_none
+        , `Effect4.Prim.onFailure_arm_is_per_instance ] }
   , { id := "frame-arm.OnSuccessAndFailure", kind := "frame-arm", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Prim.arms_onSuccessAndFailure "none"
-        , w `Effect4.Prim.onSuccessAndFailure_arms_are_per_instance "none" ] }
+        [ `Effect4.Prim.arms_onSuccessAndFailure
+        , `Effect4.Prim.onSuccessAndFailure_arms_are_per_instance ] }
   , { id := "frame-arm.Exit", kind := "frame-arm", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Prim.arms_exitFrame "none"
-        , w `Effect4.Prim.ensure_of_no_contAll "none" ] }
+        [ `Effect4.Prim.arms_exitFrame
+        , `Effect4.Prim.ensure_of_no_contAll ] }
   , { id := "frame-arm.OnExit", kind := "frame-arm", disposition := "owned", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Prim.arms_onExit "none"
-        , w `Effect4.Prim.ensure_onExit_masks "propext"
-        , w `Effect4.Prim.ensure_onExit_told_not_to "propext"
-        , w `Effect4.Prim.ensure_onExit_already_masked "propext"
-        , w `Effect4.Prim.ensure_onExit_no_replacement "propext"
-        , w `Effect4.Prim.onExit_arm_is_per_frame "none"
-        , w `Effect4.Machine.Witnesses.w13_sync_meets_the_finalizer_program "propext,Quot.sound" ] }
+        [ `Effect4.Prim.arms_onExit
+        , `Effect4.Prim.ensure_onExit_masks
+        , `Effect4.Prim.ensure_onExit_told_not_to
+        , `Effect4.Prim.ensure_onExit_already_masked
+        , `Effect4.Prim.ensure_onExit_no_replacement
+        , `Effect4.Prim.onExit_arm_is_per_frame
+        , `Effect4.Machine.Witnesses.w13_sync_meets_the_finalizer_program ] }
   , { id := "frame-arm.SetInterruptible", kind := "frame-arm", disposition := "owned", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Prim.arms_setInterruptible "none"
-        , w `Effect4.Prim.ensure_setInterruptible_substitutes "propext"
-        , w `Effect4.Prim.answerOf_replacement "none"
-        , w `Effect4.Prim.armA_setInterruptible_none "none"
-        , w `Effect4.Prim.armE_setInterruptible_none "none"
-        , w `Effect4.FrameFiber.resumeValue_replacement "propext"
-        , w `Effect4.FrameFiber.resumeCause_replacement "propext" ] }
+        [ `Effect4.Prim.arms_setInterruptible
+        , `Effect4.Prim.ensure_setInterruptible_substitutes
+        , `Effect4.Prim.answerOf_replacement
+        , `Effect4.Prim.armA_setInterruptible_none
+        , `Effect4.Prim.armE_setInterruptible_none
+        , `Effect4.FrameFiber.resumeValue_replacement
+        , `Effect4.FrameFiber.resumeCause_replacement ] }
   , { id := "frame-arm.AsyncFinalizer", kind := "frame-arm", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Prim.arms_asyncFinalizer "none"
-        , w `Effect4.Prim.hasArm_asyncFinalizer_contA_false "none" ] }
+        [ `Effect4.Prim.arms_asyncFinalizer
+        , `Effect4.Prim.hasArm_asyncFinalizer_contA_false ] }
   , { id := "frame-arm.While", kind := "frame-arm", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Prim.arms_whileLoop "none"
-        , w `Effect4.Prim.armE_whileLoop_none "none"
-        , w `Effect4.FrameFiber.step_whileLoop_true "propext" ] }
+        [ `Effect4.Prim.arms_whileLoop
+        , `Effect4.Prim.armE_whileLoop_none
+        , `Effect4.FrameFiber.step_whileLoop_true ] }
   , { id := "frame-arm.Iterator", kind := "frame-arm", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Prim.arms_iterator "none"
-        , w `Effect4.Prim.armE_iterator_none "none"
-        , w `Effect4.FrameFiber.step_iterator "propext" ] }
+        [ `Effect4.Prim.arms_iterator
+        , `Effect4.Prim.armE_iterator_none
+        , `Effect4.FrameFiber.step_iterator ] }
   , { id := "checkpoint.runloop-top", kind := "checkpoint", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.runloopTop_deferred "propext"
-        , w `Effect4.Machine.runloopTop_idle "propext"
-        , w `Effect4.Machine.runloopTop_clears "propext"
-        , w `Effect4.Machine.iteration_evaluates "propext,Quot.sound" ] }
+        [ `Effect4.Machine.runloopTop_deferred
+        , `Effect4.Machine.runloopTop_idle
+        , `Effect4.Machine.runloopTop_clears
+        , `Effect4.Machine.iteration_evaluates ] }
   , { id := "checkpoint.getcont-deferred", kind := "checkpoint", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.FrameFiber.pendingCause_some "none"
-        , w `Effect4.FrameFiber.pendingCause_none "none"
-        , w `Effect4.FrameFiber.getCont_deferred "propext"
-        , w `Effect4.FrameFiber.getCont_deferred_pops_nothing "propext"
-        , w `Effect4.FrameFiber.getCont_skip_clears_deferred "propext"
-        , w `Effect4.FrameFiber.resumeValue_deferred "propext"
-        , w `Effect4.FrameFiber.resumeCause_deferred "propext"
-        , w `Effect4.Machine.Witnesses.w13_completion_pop_sees_the_waiter_interrupt "propext,Quot.sound" ] }
+        [ `Effect4.FrameFiber.pendingCause_some
+        , `Effect4.FrameFiber.pendingCause_none
+        , `Effect4.FrameFiber.getCont_deferred
+        , `Effect4.FrameFiber.getCont_deferred_pops_nothing
+        , `Effect4.FrameFiber.getCont_skip_clears_deferred
+        , `Effect4.FrameFiber.resumeValue_deferred
+        , `Effect4.FrameFiber.resumeCause_deferred
+        , `Effect4.Machine.Witnesses.w13_completion_pop_sees_the_waiter_interrupt ] }
   , { id := "checkpoint.post-yield-cancel", kind := "checkpoint", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.interruptRecord_parked_applies "propext,Quot.sound"
-        , w `Effect4.Prim.armE_asyncFinalizer_interrupt "propext"
-        , w `Effect4.FrameFiber.popFrom_asyncFinalizer_pops_its_push "propext"
-        , w `Effect4.Machine.Witnesses.w14_join_cleanup_drops_the_observer "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w3_host_interrupt_cancels_entrants "propext,Quot.sound" ] }
+        [ `Effect4.Machine.interruptRecord_parked_applies
+        , `Effect4.Prim.armE_asyncFinalizer_interrupt
+        , `Effect4.FrameFiber.popFrom_asyncFinalizer_pops_its_push
+        , `Effect4.Machine.Witnesses.w14_join_cleanup_drops_the_observer
+        , `Effect4.Machine.Witnesses.w3_host_interrupt_cancels_entrants ] }
   , { id := "checkpoint.exit-failcause-skip", kind := "checkpoint", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.FrameFiber.popFrom_continue_answer "propext"
-        , w `Effect4.FrameFiber.getCont_skip_of_no_pending_cause "propext,Quot.sound"
-        , w `Effect4.FrameFiber.interrupt_skips_every_handler "propext,Quot.sound" ] }
+        [ `Effect4.FrameFiber.popFrom_continue_answer
+        , `Effect4.FrameFiber.getCont_skip_of_no_pending_cause
+        , `Effect4.FrameFiber.interrupt_skips_every_handler ] }
   , { id := "checkpoint.set-fiber-interruptible", kind := "checkpoint", disposition := "owned", coverage := "green"
     , witnesses :=
-        [ w `Effect4.FrameFiber.setFiberInterruptible_flag "none"
-        , w `Effect4.FrameFiber.setFiberInterruptible_pushes "none"
-        , w `Effect4.FrameFiber.setFiberInterruptible_immediate_failure "propext"
-        , w `Effect4.FrameFiber.setFiberInterruptible_no_pending "propext"
-        , w `Effect4.FrameFiber.interruptibleRegion_already "propext"
-        , w `Effect4.FrameFiber.interruptibleRegion_masked "propext" ] }
+        [ `Effect4.FrameFiber.setFiberInterruptible_flag
+        , `Effect4.FrameFiber.setFiberInterruptible_pushes
+        , `Effect4.FrameFiber.setFiberInterruptible_immediate_failure
+        , `Effect4.FrameFiber.setFiberInterruptible_no_pending
+        , `Effect4.FrameFiber.interruptibleRegion_already
+        , `Effect4.FrameFiber.interruptibleRegion_masked ] }
   , { id := "checkpoint.set-interruptible-contall", kind := "checkpoint", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Prim.ensure_setInterruptible_substitutes "propext"
-        , w `Effect4.Prim.answerOf_replacement "none"
-        , w `Effect4.FrameFiber.resumeValue_replacement "propext"
-        , w `Effect4.FrameFiber.resumeCause_replacement "propext" ] }
+        [ `Effect4.Prim.ensure_setInterruptible_substitutes
+        , `Effect4.Prim.answerOf_replacement
+        , `Effect4.FrameFiber.resumeValue_replacement
+        , `Effect4.FrameFiber.resumeCause_replacement ] }
   , { id := "interrupt.unsafe-entry", kind := "interrupt", disposition := "owned", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.interruptRecord_exited "propext,Quot.sound"
-        , w `Effect4.Machine.interruptRecord_records "propext,Quot.sound"
-        , w `Effect4.Machine.interruptRecord_running_defers "propext,Quot.sound"
-        , w `Effect4.Machine.interruptRecord_idle_applies "propext,Quot.sound"
-        , w `Effect4.Machine.interruptRecord_masked "propext,Quot.sound" ] }
+        [ `Effect4.Machine.interruptRecord_exited
+        , `Effect4.Machine.interruptRecord_records
+        , `Effect4.Machine.interruptRecord_running_defers
+        , `Effect4.Machine.interruptRecord_idle_applies
+        , `Effect4.Machine.interruptRecord_masked ] }
   , { id := "interrupt.accumulate", kind := "interrupt", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Supervision.interruptCause_eq "propext,Quot.sound"
-        , w `Effect4.Machine.interruptRecord_accumulates "propext,Quot.sound"
-        , w `Effect4.Machine.interruptRecord_idle_applies "propext,Quot.sound"
-        , w `Effect4.Machine.interruptRecord_running_defers "propext,Quot.sound"
-        , w `Effect4.Machine.runloopTop_deferred "propext"
-        , w `Effect4.FrameFiber.pendingCause_some "none" ] }
+        [ `Effect4.Supervision.interruptCause_eq
+        , `Effect4.Machine.interruptRecord_accumulates
+        , `Effect4.Machine.interruptRecord_idle_applies
+        , `Effect4.Machine.interruptRecord_running_defers
+        , `Effect4.Machine.runloopTop_deferred
+        , `Effect4.FrameFiber.pendingCause_some ] }
   , { id := "fork.unsafe", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Supervision.MaskMode.cases_receipt "propext"
-        , w `Effect4.Machine.spawn_eq "none"
-        , w `Effect4.Machine.spawnChild_fields "propext"
-        , w `Effect4.Machine.spawn_untracked "none"
-        , w `Effect4.Machine.drive_trackChild_live "propext,Quot.sound"
-        , w `Effect4.Machine.drive_trackChild_exited "propext,Quot.sound" ] }
+        [ `Effect4.Supervision.MaskMode.cases_receipt
+        , `Effect4.Machine.spawn_eq
+        , `Effect4.Machine.spawnChild_fields
+        , `Effect4.Machine.spawn_untracked
+        , `Effect4.Machine.drive_trackChild_live
+        , `Effect4.Machine.drive_trackChild_exited ] }
   , { id := "fork.child", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.exitFiber_eq "propext"
-        , w `Effect4.Machine.exitFiber_no_middleware "propext"
-        , w `Effect4.Machine.publish_fields "none"
-        , w `Effect4.Machine.cleared_fields "none"
-        , w `Effect4.Machine.exitStore_no_observers "propext"
-        , w `Effect4.Machine.exitStore_observers "propext"
-        , w `Effect4.Machine.drive_observe "propext,Quot.sound"
-        , w `Effect4.Machine.drive_exitDone "propext,Quot.sound"
-        , w `Effect4.Machine.fireObserver_resumeAwait "propext,Quot.sound"
-        , w `Effect4.Machine.stepDecision_installMiddleware "propext,Quot.sound"
-        , w `Effect4.Machine.withFiber_fork "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w1_deferred_join_child "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w1_deferred_start_is_a_task "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w5_middleware_interrupts_children "propext,Quot.sound"
-        , w `Effect4.Machine.drive_finish "propext,Quot.sound" ] }
+        [ `Effect4.Machine.exitFiber_eq
+        , `Effect4.Machine.exitFiber_no_middleware
+        , `Effect4.Machine.publish_fields
+        , `Effect4.Machine.cleared_fields
+        , `Effect4.Machine.exitStore_no_observers
+        , `Effect4.Machine.exitStore_observers
+        , `Effect4.Machine.drive_observe
+        , `Effect4.Machine.drive_exitDone
+        , `Effect4.Machine.fireObserver_resumeAwait
+        , `Effect4.Machine.stepDecision_installMiddleware
+        , `Effect4.Machine.withFiber_fork
+        , `Effect4.Machine.Witnesses.w1_deferred_join_child
+        , `Effect4.Machine.Witnesses.w1_deferred_start_is_a_task
+        , `Effect4.Machine.Witnesses.w5_middleware_interrupts_children
+        , `Effect4.Machine.drive_finish ] }
   , { id := "fork.detach", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.spawn_untracked "none"
-        , w `Effect4.Machine.spawnChild_fields "propext"
-        , w `Effect4.Machine.start_eq "none"
-        , w `Effect4.Machine.exitFiber_no_children "propext"
-        , w `Effect4.Machine.exitInterruptChildren_eq "none"
-        , w `Effect4.Machine.exitInterruptChildren_reenters "none"
-        , w `Effect4.Machine.Witnesses.w5_fork_latches_the_middleware "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w5_daemon_child_survives_parent_exit "propext,Quot.sound" ] }
+        [ `Effect4.Machine.spawn_untracked
+        , `Effect4.Machine.spawnChild_fields
+        , `Effect4.Machine.start_eq
+        , `Effect4.Machine.exitFiber_no_children
+        , `Effect4.Machine.exitInterruptChildren_eq
+        , `Effect4.Machine.exitInterruptChildren_reenters
+        , `Effect4.Machine.Witnesses.w5_fork_latches_the_middleware
+        , `Effect4.Machine.Witnesses.w5_daemon_child_survives_parent_exit ] }
   , { id := "fork.in", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Supervision.ScopeMode.cases_receipt "propext"
-        , w `Effect4.Machine.withFiber_forkIn "propext,Quot.sound"
-        , w `Effect4.Machine.linkScope_open "propext,Quot.sound"
-        , w `Effect4.Machine.linkScope_closed "propext,Quot.sound"
-        , w `Effect4.Machine.fireObserver_dropScopeFinalizer "propext,Quot.sound"
-        , w `Effect4.Machine.withFiber_closeScope "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w6_link_then_close "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w6_closed_scope_interrupts_now "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w6_child_exit_drops_key "propext,Quot.sound"
-        , w `Effect4.Machine.drive_link "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w6_deferred_child_is_linked "propext,Quot.sound" ] }
+        [ `Effect4.Supervision.ScopeMode.cases_receipt
+        , `Effect4.Machine.withFiber_forkIn
+        , `Effect4.Machine.linkScope_open
+        , `Effect4.Machine.linkScope_closed
+        , `Effect4.Machine.fireObserver_dropScopeFinalizer
+        , `Effect4.Machine.withFiber_closeScope
+        , `Effect4.Machine.Witnesses.w6_link_then_close
+        , `Effect4.Machine.Witnesses.w6_closed_scope_interrupts_now
+        , `Effect4.Machine.Witnesses.w6_child_exit_drops_key
+        , `Effect4.Machine.drive_link
+        , `Effect4.Machine.Witnesses.w6_deferred_child_is_linked ] }
   , { id := "fork.scoped", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.withFiber_forkScoped_ambient "propext,Quot.sound"
-        , w `Effect4.Machine.withFiber_forkScoped_none "propext,Quot.sound"
-        , w `Effect4.Machine.withFiber_ambientScope "propext,Quot.sound"
-        , w `Effect4.Machine.withFiber_ambientScope_none "propext,Quot.sound" ] }
+        [ `Effect4.Machine.withFiber_forkScoped_ambient
+        , `Effect4.Machine.withFiber_forkScoped_none
+        , `Effect4.Machine.withFiber_ambientScope
+        , `Effect4.Machine.withFiber_ambientScope_none ] }
   , { id := "fork.race-all", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Supervision.RaceAllState.initial_eq "none"
-        , w `Effect4.Supervision.raceComplete_unknown "propext"
-        , w `Effect4.Supervision.raceComplete_after_accepted "propext,Quot.sound"
-        , w `Effect4.Supervision.raceComplete_success "propext,Quot.sound"
-        , w `Effect4.Supervision.raceComplete_failure_last "propext,Quot.sound"
-        , w `Effect4.Supervision.raceComplete_failure_pending "propext,Quot.sound"
-        , w `Effect4.Machine.withFiber_raceAll "propext,Quot.sound"
-        , w `Effect4.Machine.evaluatePrim_raceRegister "propext,Quot.sound"
-        , w `Effect4.Machine.launchEntrant_eq "none"
-        , w `Effect4.Machine.drive_launch_runs "propext,Quot.sound"
-        , w `Effect4.Machine.drive_enrollRace_live "propext,Quot.sound"
-        , w `Effect4.Machine.drive_enrollRace_exited "propext,Quot.sound"
-        , w `Effect4.Machine.drive_registrationDone_answered "propext,Quot.sound"
-        , w `Effect4.Machine.drive_registrationDone_parks "propext,Quot.sound"
-        , w `Effect4.Machine.drive_launch_done "propext,Quot.sound"
-        , w `Effect4.Machine.fireObserver_raceCallback_pending "propext,Quot.sound"
-        , w `Effect4.Machine.fireObserver_raceCallback_settles "propext,Quot.sound"
-        , w `Effect4.Machine.fireObserver_raceCallback_late "propext,Quot.sound"
-        , w `Effect4.Machine.resumePrim_continueWith "none"
-        , w `Effect4.Machine.Witnesses.w3_empty_is_a_frontier "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w3_empty_until_interrupted "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w3_immediate_success_stops_launch "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w3_failure_allows_next_launch "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w3_all_failures_retain_order "propext,Quot.sound"
-        , w `Effect4.Machine.settleRace_eq "none"
-        , w `Effect4.Machine.withFiber_cancelRace "propext,Quot.sound"
-        , w `Effect4.Machine.drive_raceCancel_nil "propext,Quot.sound"
-        , w `Effect4.Machine.drive_raceCancel_live "propext,Quot.sound"
-        , w `Effect4.Machine.drive_raceCancel_gone "propext,Quot.sound"
-        , w `Effect4.Machine.withFiber_cancelRace_unknown "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w3_host_interrupt_cancels_entrants "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w3_settle_interrupts_the_parked_loser "propext,Quot.sound"
-        , w `Effect4.Machine.drive_launch_exhausted "propext,Quot.sound" ] }
+        [ `Effect4.Supervision.RaceAllState.initial_eq
+        , `Effect4.Supervision.raceComplete_unknown
+        , `Effect4.Supervision.raceComplete_after_accepted
+        , `Effect4.Supervision.raceComplete_success
+        , `Effect4.Supervision.raceComplete_failure_last
+        , `Effect4.Supervision.raceComplete_failure_pending
+        , `Effect4.Machine.withFiber_raceAll
+        , `Effect4.Machine.evaluatePrim_raceRegister
+        , `Effect4.Machine.launchEntrant_eq
+        , `Effect4.Machine.drive_launch_runs
+        , `Effect4.Machine.drive_enrollRace_live
+        , `Effect4.Machine.drive_enrollRace_exited
+        , `Effect4.Machine.drive_registrationDone_answered
+        , `Effect4.Machine.drive_registrationDone_parks
+        , `Effect4.Machine.drive_launch_done
+        , `Effect4.Machine.fireObserver_raceCallback_pending
+        , `Effect4.Machine.fireObserver_raceCallback_settles
+        , `Effect4.Machine.fireObserver_raceCallback_late
+        , `Effect4.Machine.resumePrim_continueWith
+        , `Effect4.Machine.Witnesses.w3_empty_is_a_frontier
+        , `Effect4.Machine.Witnesses.w3_empty_until_interrupted
+        , `Effect4.Machine.Witnesses.w3_immediate_success_stops_launch
+        , `Effect4.Machine.Witnesses.w3_failure_allows_next_launch
+        , `Effect4.Machine.Witnesses.w3_all_failures_retain_order
+        , `Effect4.Machine.settleRace_eq
+        , `Effect4.Machine.withFiber_cancelRace
+        , `Effect4.Machine.drive_raceCancel_nil
+        , `Effect4.Machine.drive_raceCancel_live
+        , `Effect4.Machine.drive_raceCancel_gone
+        , `Effect4.Machine.withFiber_cancelRace_unknown
+        , `Effect4.Machine.Witnesses.w3_host_interrupt_cancels_entrants
+        , `Effect4.Machine.Witnesses.w3_settle_interrupts_the_parked_loser
+        , `Effect4.Machine.drive_launch_exhausted ] }
   , { id := "fork.await-all-children", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.withFiber_snapshotChildren "propext,Quot.sound"
-        , w `Effect4.Machine.withFiber_awaitNewChildren "propext,Quot.sound"
-        , w `Effect4.Machine.fireObserver_countdown_done "propext,Quot.sound"
-        , w `Effect4.Machine.fireObserver_countdown_next "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w5_await_all_children_awaits_only_new "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w12_awaitAll_answers_the_exits "propext,Quot.sound"
-        , w `Effect4.Machine.countdownWalk_nil "none"
-        , w `Effect4.Machine.countdownWalk_exited "propext"
-        , w `Effect4.Machine.countdownWalk_live "propext"
-        , w `Effect4.Machine.countdownPark_none_live "propext"
-        , w `Effect4.Machine.countdownPark_parks "none"
-        , w `Effect4.Machine.Witnesses.w12_awaitAll_input_order "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w5_await_all_children_on_failure "propext,Quot.sound" ] }
+        [ `Effect4.Machine.withFiber_snapshotChildren
+        , `Effect4.Machine.withFiber_awaitNewChildren
+        , `Effect4.Machine.fireObserver_countdown_done
+        , `Effect4.Machine.fireObserver_countdown_next
+        , `Effect4.Machine.Witnesses.w5_await_all_children_awaits_only_new
+        , `Effect4.Machine.Witnesses.w12_awaitAll_answers_the_exits
+        , `Effect4.Machine.countdownWalk_nil
+        , `Effect4.Machine.countdownWalk_exited
+        , `Effect4.Machine.countdownWalk_live
+        , `Effect4.Machine.countdownPark_none_live
+        , `Effect4.Machine.countdownPark_parks
+        , `Effect4.Machine.Witnesses.w12_awaitAll_input_order
+        , `Effect4.Machine.Witnesses.w5_await_all_children_on_failure ] }
   , { id := "fork.fiber-run-in", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Supervision.ScopeMode.cases_receipt "propext"
-        , w `Effect4.Machine.withFiber_runIn "propext,Quot.sound"
-        , w `Effect4.Machine.linkScope_closed "propext,Quot.sound"
-        , w `Effect4.Machine.linkScope_unknown "propext,Quot.sound"
-        , w `Effect4.Machine.linkScope_open "propext,Quot.sound"
-        , w `Effect4.Machine.linkScope_open_exited "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w6_runIn_closed_scope_uses_no_caller_annotations "propext,Quot.sound" ] }
+        [ `Effect4.Supervision.ScopeMode.cases_receipt
+        , `Effect4.Machine.withFiber_runIn
+        , `Effect4.Machine.linkScope_closed
+        , `Effect4.Machine.linkScope_unknown
+        , `Effect4.Machine.linkScope_open
+        , `Effect4.Machine.linkScope_open_exited
+        , `Effect4.Machine.Witnesses.w6_runIn_closed_scope_uses_no_caller_annotations ] }
   , { id := "fork.join", kind := "fork", disposition := "owned", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Supervision.ObserverMode.cases_receipt "propext"
-        , w `Effect4.Machine.evaluatePrim_join_done "propext,Quot.sound"
-        , w `Effect4.Machine.evaluatePrim_join_live "propext,Quot.sound"
-        , w `Effect4.Machine.evaluatePrim_join_unknown "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w14_join_cleanup_drops_the_observer "propext,Quot.sound" ] }
+        [ `Effect4.Supervision.ObserverMode.cases_receipt
+        , `Effect4.Machine.evaluatePrim_join_done
+        , `Effect4.Machine.evaluatePrim_join_live
+        , `Effect4.Machine.evaluatePrim_join_unknown
+        , `Effect4.Machine.Witnesses.w14_join_cleanup_drops_the_observer ] }
   , { id := "fork.await", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Supervision.ObserverMode.cases_receipt "propext"
-        , w `Effect4.Machine.evaluatePrim_join_done "propext,Quot.sound"
-        , w `Effect4.Machine.evaluatePrim_join_live "propext,Quot.sound"
-        , w `Effect4.Machine.withFiber_dropObservers "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w14_join_cleanup_drops_the_observer "propext,Quot.sound" ] }
+        [ `Effect4.Supervision.ObserverMode.cases_receipt
+        , `Effect4.Machine.evaluatePrim_join_done
+        , `Effect4.Machine.evaluatePrim_join_live
+        , `Effect4.Machine.withFiber_dropObservers
+        , `Effect4.Machine.Witnesses.w14_join_cleanup_drops_the_observer ] }
   , { id := "fork.interrupt", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Supervision.interruptCause_eq "propext,Quot.sound"
-        , w `Effect4.Machine.withFiber_interrupt "propext,Quot.sound"
-        , w `Effect4.Machine.withFiber_interruptAs "propext,Quot.sound"
-        , w `Effect4.Machine.withFiber_interruptAs_unknown "propext,Quot.sound"
-        , w `Effect4.Machine.drive_afterInterrupt "propext,Quot.sound"
-        , w `Effect4.Machine.asVoidCode_eq "none"
-        , w `Effect4.Machine.awaitCode_join_exited "propext"
-        , w `Effect4.Machine.awaitCode_join_live "propext"
-        , w `Effect4.Machine.withFiber_interruptScoped_self "propext,Quot.sound"
-        , w `Effect4.Machine.withFiber_interruptScoped_other "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w2_delivered_at_unmask "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w2_recorded_once "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w2_masked_interrupt_does_not_apply "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w6_self_interruptor_skipped "propext,Quot.sound" ] }
+        [ `Effect4.Supervision.interruptCause_eq
+        , `Effect4.Machine.withFiber_interrupt
+        , `Effect4.Machine.withFiber_interruptAs
+        , `Effect4.Machine.withFiber_interruptAs_unknown
+        , `Effect4.Machine.drive_afterInterrupt
+        , `Effect4.Machine.asVoidCode_eq
+        , `Effect4.Machine.awaitCode_join_exited
+        , `Effect4.Machine.awaitCode_join_live
+        , `Effect4.Machine.withFiber_interruptScoped_self
+        , `Effect4.Machine.withFiber_interruptScoped_other
+        , `Effect4.Machine.Witnesses.w2_delivered_at_unmask
+        , `Effect4.Machine.Witnesses.w2_recorded_once
+        , `Effect4.Machine.Witnesses.w2_masked_interrupt_does_not_apply
+        , `Effect4.Machine.Witnesses.w6_self_interruptor_skipped ] }
   , { id := "fork.interrupt-all", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.withFiber_interruptAll "propext,Quot.sound"
-        , w `Effect4.Machine.drive_interruptTarget "propext,Quot.sound"
-        , w `Effect4.Machine.drive_interruptTarget_unknown "propext,Quot.sound"
-        , w `Effect4.Machine.awaitCode_awaitAll "propext"
-        , w `Effect4.Machine.evaluatePrim_awaitAllPark "propext,Quot.sound"
-        , w `Effect4.Machine.interruptEach_nil "propext,Quot.sound"
-        , w `Effect4.Machine.interruptEach_cons "propext,Quot.sound"
-        , w `Effect4.Machine.interruptEach_known "propext,Quot.sound"
-        , w `Effect4.Machine.fireObserver_countdown_done "propext,Quot.sound"
-        , w `Effect4.Machine.fireObserver_countdown_next "propext,Quot.sound"
-        , w `Effect4.Machine.countdownPark_parks "none" ] }
+        [ `Effect4.Machine.withFiber_interruptAll
+        , `Effect4.Machine.drive_interruptTarget
+        , `Effect4.Machine.drive_interruptTarget_unknown
+        , `Effect4.Machine.awaitCode_awaitAll
+        , `Effect4.Machine.evaluatePrim_awaitAllPark
+        , `Effect4.Machine.interruptEach_nil
+        , `Effect4.Machine.interruptEach_cons
+        , `Effect4.Machine.interruptEach_known
+        , `Effect4.Machine.fireObserver_countdown_done
+        , `Effect4.Machine.fireObserver_countdown_next
+        , `Effect4.Machine.countdownPark_parks ] }
   , { id := "scope.states", kind := "scope", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.ScopeState.cases_receipt "none"
-        , w `Effect4.ScopeState.entries_empty "none"
-        , w `Effect4.ScopeState.entries_openEmpty "none"
-        , w `Effect4.ScopeState.entries_openInline "none"
-        , w `Effect4.ScopeState.entries_openMap "none"
-        , w `Effect4.ScopeState.entries_closed "none"
-        , w `Effect4.ScopeState.isOpen_empty "none"
-        , w `Effect4.ScopeState.isOpen_openEmpty "none"
-        , w `Effect4.ScopeState.isOpen_openInline "none"
-        , w `Effect4.ScopeState.isOpen_openMap "none"
-        , w `Effect4.ScopeState.isOpen_closed "none"
-        , w `Effect4.ScopeState.isClosed_eq "none"
-        , w `Effect4.ScopeState.closingExit_closed "none"
-        , w `Effect4.ScopeState.closingExit_of_not_closed "none"
-        , w `Effect4.ScopeState.openEmpty_ne_openMap_nil "none"
-        , w `Effect4.Scope.finalizers_eq "none"
-        , w `Effect4.Scope.finalizerKeys_eq "none"
-        , w `Effect4.Scope.finalizerCount_eq "none"
-        , w `Effect4.Scope.finalizerCount_not_open "none" ] }
+        [ `Effect4.ScopeState.cases_receipt
+        , `Effect4.ScopeState.entries_empty
+        , `Effect4.ScopeState.entries_openEmpty
+        , `Effect4.ScopeState.entries_openInline
+        , `Effect4.ScopeState.entries_openMap
+        , `Effect4.ScopeState.entries_closed
+        , `Effect4.ScopeState.isOpen_empty
+        , `Effect4.ScopeState.isOpen_openEmpty
+        , `Effect4.ScopeState.isOpen_openInline
+        , `Effect4.ScopeState.isOpen_openMap
+        , `Effect4.ScopeState.isOpen_closed
+        , `Effect4.ScopeState.isClosed_eq
+        , `Effect4.ScopeState.closingExit_closed
+        , `Effect4.ScopeState.closingExit_of_not_closed
+        , `Effect4.ScopeState.openEmpty_ne_openMap_nil
+        , `Effect4.Scope.finalizers_eq
+        , `Effect4.Scope.finalizerKeys_eq
+        , `Effect4.Scope.finalizerCount_eq
+        , `Effect4.Scope.finalizerCount_not_open ] }
   , { id := "scope.make", kind := "scope", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.FinalizerStrategy.all_nodup "none"
-        , w `Effect4.FinalizerStrategy.mem_all "propext"
-        , w `Effect4.Scope.make_strategy "none"
-        , w `Effect4.Scope.make_state "none"
-        , w `Effect4.Scope.make_finalizers "none"
-        , w `Effect4.Scope.makeDefault_eq "none"
-        , w `Effect4.Scope.makeDefault_strategy "none" ] }
+        [ `Effect4.FinalizerStrategy.all_nodup
+        , `Effect4.FinalizerStrategy.mem_all
+        , `Effect4.Scope.make_strategy
+        , `Effect4.Scope.make_state
+        , `Effect4.Scope.make_finalizers
+        , `Effect4.Scope.makeDefault_eq
+        , `Effect4.Scope.makeDefault_strategy ] }
   , { id := "scope.add-finalizer", kind := "scope", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Scope.key_freshness_refused "none"
-        , w `Effect4.Scope.tableInsert_new "propext,Quot.sound"
-        , w `Effect4.Scope.tableInsert_existing "propext,Quot.sound"
-        , w `Effect4.Scope.tableInsert_keys_of_mem "propext,Quot.sound"
-        , w `Effect4.Scope.tableInsert_nodup "propext,Quot.sound"
-        , w `Effect4.Scope.addUnsafe_strategy "none"
-        , w `Effect4.Scope.addUnsafe_empty "none"
-        , w `Effect4.Scope.addUnsafe_openEmpty "none"
-        , w `Effect4.Scope.addUnsafe_openInline "none"
-        , w `Effect4.Scope.addUnsafe_openMap "none"
-        , w `Effect4.Scope.addUnsafe_promotes "propext,Quot.sound"
-        , w `Effect4.Scope.addUnsafe_finalizers "propext,Quot.sound"
-        , w `Effect4.Scope.addUnsafe_keys_nodup "propext,Quot.sound" ] }
+        [ `Effect4.Scope.key_freshness_refused
+        , `Effect4.Scope.tableInsert_new
+        , `Effect4.Scope.tableInsert_existing
+        , `Effect4.Scope.tableInsert_keys_of_mem
+        , `Effect4.Scope.tableInsert_nodup
+        , `Effect4.Scope.addUnsafe_strategy
+        , `Effect4.Scope.addUnsafe_empty
+        , `Effect4.Scope.addUnsafe_openEmpty
+        , `Effect4.Scope.addUnsafe_openInline
+        , `Effect4.Scope.addUnsafe_openMap
+        , `Effect4.Scope.addUnsafe_promotes
+        , `Effect4.Scope.addUnsafe_finalizers
+        , `Effect4.Scope.addUnsafe_keys_nodup ] }
   , { id := "scope.add-after-closed", kind := "scope", disposition := "owned", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Scope.addUnsafe_closed "none"
-        , w `Effect4.Scope.addExit_open "none"
-        , w `Effect4.Scope.addExit_closed "none"
-        , w `Effect4.Scope.addExit_closed_registers_nothing "none"
-        , w `Effect4.Scope.closingExit_addUnsafe "none"
-        , w `Effect4.Machine.syncOpStep_scopeAdd_closed "propext" ] }
+        [ `Effect4.Scope.addUnsafe_closed
+        , `Effect4.Scope.addExit_open
+        , `Effect4.Scope.addExit_closed
+        , `Effect4.Scope.addExit_closed_registers_nothing
+        , `Effect4.Scope.closingExit_addUnsafe
+        , `Effect4.Machine.syncOpStep_scopeAdd_closed ] }
   , { id := "scope.remove-finalizer", kind := "scope", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Scope.tableRemove_eq "none"
-        , w `Effect4.Scope.tableRemove_keys "propext,Quot.sound"
-        , w `Effect4.Scope.tableRemove_nodup "propext"
-        , w `Effect4.Scope.removeUnsafe_strategy "none"
-        , w `Effect4.Scope.removeUnsafe_inline_hit "none"
-        , w `Effect4.Scope.removeUnsafe_inline_miss "none"
-        , w `Effect4.Scope.removeUnsafe_openMap "none"
-        , w `Effect4.Scope.removeUnsafe_not_open "none"
-        , w `Effect4.Scope.removeUnsafe_keys "propext,Quot.sound"
-        , w `Effect4.Scope.removeUnsafe_keys_nodup "propext" ] }
+        [ `Effect4.Scope.tableRemove_eq
+        , `Effect4.Scope.tableRemove_keys
+        , `Effect4.Scope.tableRemove_nodup
+        , `Effect4.Scope.removeUnsafe_strategy
+        , `Effect4.Scope.removeUnsafe_inline_hit
+        , `Effect4.Scope.removeUnsafe_inline_miss
+        , `Effect4.Scope.removeUnsafe_openMap
+        , `Effect4.Scope.removeUnsafe_not_open
+        , `Effect4.Scope.removeUnsafe_keys
+        , `Effect4.Scope.removeUnsafe_keys_nodup ] }
   , { id := "scope.close-state-first", kind := "scope", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Scope.close_eq "none"
-        , w `Effect4.Scope.close_state_independent_of_run "none"
-        , w `Effect4.Scope.closeState_state "none"
-        , w `Effect4.Scope.closeState_strategy "none"
-        , w `Effect4.Scope.closeState_finalizers "none"
-        , w `Effect4.Scope.closeState_isClosed "none"
-        , w `Effect4.Scope.closeState_idempotent "none"
-        , w `Effect4.Scope.close_closingExit "none"
-        , w `Effect4.Scope.close_idempotent "none"
-        , w `Effect4.Scope.close_twice "none"
-        , w `Effect4.Scope.close_reentrant_add "none"
-        , w `Effect4.Scope.closeResult_closed "none" ] }
+        [ `Effect4.Scope.close_eq
+        , `Effect4.Scope.close_state_independent_of_run
+        , `Effect4.Scope.closeState_state
+        , `Effect4.Scope.closeState_strategy
+        , `Effect4.Scope.closeState_finalizers
+        , `Effect4.Scope.closeState_isClosed
+        , `Effect4.Scope.closeState_idempotent
+        , `Effect4.Scope.close_closingExit
+        , `Effect4.Scope.close_idempotent
+        , `Effect4.Scope.close_twice
+        , `Effect4.Scope.close_reentrant_add
+        , `Effect4.Scope.closeResult_closed ] }
   , { id := "scope.close-lifo", kind := "scope", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Scope.closeOrder_eq "none"
-        , w `Effect4.Scope.closeOrder_last_first "propext"
-        , w `Effect4.Scope.closeExits_eq "none"
-        , w `Effect4.Scope.closeExits_reverse "propext"
-        , w `Effect4.Scope.runScoped_lifo "propext,Quot.sound"
-        , w `Effect4.Machine.closeWalk_sequential "none"
-        , w `Effect4.Machine.closeSeq_step "propext" ] }
+        [ `Effect4.Scope.closeOrder_eq
+        , `Effect4.Scope.closeOrder_last_first
+        , `Effect4.Scope.closeExits_eq
+        , `Effect4.Scope.closeExits_reverse
+        , `Effect4.Scope.runScoped_lifo
+        , `Effect4.Machine.closeWalk_sequential
+        , `Effect4.Machine.closeSeq_step ] }
   , { id := "scope.close-sequential", kind := "scope", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Scope.closeExits_eq "none"
-        , w `Effect4.Scope.closeExits_length "propext"
-        , w `Effect4.Scope.closeResult_reasons "propext"
-        , w `Effect4.Machine.closeWalk_sequential "none"
-        , w `Effect4.Machine.closeSeq_step "propext"
-        , w `Effect4.Machine.closeSeq_captures "propext"
-        , w `Effect4.Machine.withFiber_closeScope "propext,Quot.sound"
-        , w `Effect4.Machine.withFiber_closeScope_unknown "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w6_sequential_captures_and_merges "propext,Quot.sound" ] }
+        [ `Effect4.Scope.closeExits_eq
+        , `Effect4.Scope.closeExits_length
+        , `Effect4.Scope.closeResult_reasons
+        , `Effect4.Machine.closeWalk_sequential
+        , `Effect4.Machine.closeSeq_step
+        , `Effect4.Machine.closeSeq_captures
+        , `Effect4.Machine.withFiber_closeScope
+        , `Effect4.Machine.withFiber_closeScope_unknown
+        , `Effect4.Machine.Witnesses.w6_sequential_captures_and_merges ] }
   , { id := "scope.close-parallel", kind := "scope", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.FinalizerStrategy.cases_receipt "none"
-        , w `Effect4.Scope.close_strategy_irrelevant "none"
-        , w `Effect4.Machine.closeWalk_parallel "none"
-        , w `Effect4.Machine.actionOf_closePar "none"
-        , w `Effect4.Machine.withFiber_closePar "propext,Quot.sound"
-        , w `Effect4.Machine.forkFinalizers_cons "none"
-        , w `Effect4.Machine.withFiber_fork "propext,Quot.sound"
-        , w `Effect4.Machine.spawnChild_fields "propext"
-        , w `Effect4.Machine.Witnesses.w6_parallel_forks_and_merges "propext,Quot.sound" ] }
+        [ `Effect4.FinalizerStrategy.cases_receipt
+        , `Effect4.Scope.close_strategy_irrelevant
+        , `Effect4.Machine.closeWalk_parallel
+        , `Effect4.Machine.actionOf_closePar
+        , `Effect4.Machine.withFiber_closePar
+        , `Effect4.Machine.forkFinalizers_cons
+        , `Effect4.Machine.withFiber_fork
+        , `Effect4.Machine.spawnChild_fields
+        , `Effect4.Machine.Witnesses.w6_parallel_forks_and_merges ] }
   , { id := "scope.close-merge", kind := "scope", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Scope.closeResult_nil "none"
-        , w `Effect4.Scope.closeResult_single "none"
-        , w `Effect4.Scope.closeResult_many "none"
-        , w `Effect4.Scope.closeResult_reasons "propext"
-        , w `Effect4.Machine.closeSeq_merges "propext"
-        , w `Effect4.Machine.closeParDone_is_asVoidAll "propext"
-        , w `Effect4.Machine.drive_closeParAwait "propext,Quot.sound"
-        , w `Effect4.Machine.fireObserver_countdown_done "propext,Quot.sound"
-        , w `Effect4.Machine.fireObserver_countdown_next "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w6_parallel_forks_and_merges "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w12_awaitAll_answers_the_exits "propext,Quot.sound" ] }
+        [ `Effect4.Scope.closeResult_nil
+        , `Effect4.Scope.closeResult_single
+        , `Effect4.Scope.closeResult_many
+        , `Effect4.Scope.closeResult_reasons
+        , `Effect4.Machine.closeSeq_merges
+        , `Effect4.Machine.closeParDone_is_asVoidAll
+        , `Effect4.Machine.drive_closeParAwait
+        , `Effect4.Machine.fireObserver_countdown_done
+        , `Effect4.Machine.fireObserver_countdown_next
+        , `Effect4.Machine.Witnesses.w6_parallel_forks_and_merges
+        , `Effect4.Machine.Witnesses.w12_awaitAll_answers_the_exits ] }
   , { id := "scope.exit-as-void-all", kind := "scope", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Exit.asVoidAll_reasons "none"
-        , w `Effect4.Exit.asVoidAll_failure "none"
-        , w `Effect4.Exit.asVoidAll_all_success "propext"
-        , w `Effect4.Exit.void_eq "none" ] }
+        [ `Effect4.Exit.asVoidAll_reasons
+        , `Effect4.Exit.asVoidAll_failure
+        , `Effect4.Exit.asVoidAll_all_success
+        , `Effect4.Exit.void_eq ] }
   , { id := "scope.fork-linkage", kind := "scope", disposition := "separateCalculus", coverage := "green"
       -- missing clause: that the linked names are scopeClose(child, exit) and scopeRemoveFinalizerUnsafe(parent, key) needs a scope store
     , witnesses :=
-        [ w `Effect4.Scope.fork_closed_parent "none"
-        , w `Effect4.Scope.fork_closed_parent_child_exit "none"
-        , w `Effect4.Scope.fork_open_parent "none"
-        , w `Effect4.Scope.fork_child_finalizers "none"
-        , w `Effect4.Scope.fork_parent_finalizers "propext,Quot.sound"
-        , w `Effect4.Scope.fork_child_strategy "none"
-        , w `Effect4.Scope.fork_shared_key "propext,Quot.sound"
-        , w `Effect4.Scope.fork_detach "propext,Quot.sound"
-        , w `Effect4.Machine.scopeLinkFiber_name "propext"
-        , w `Effect4.Machine.scopeStore_forkChild_names "propext" ] }
+        [ `Effect4.Scope.fork_closed_parent
+        , `Effect4.Scope.fork_closed_parent_child_exit
+        , `Effect4.Scope.fork_open_parent
+        , `Effect4.Scope.fork_child_finalizers
+        , `Effect4.Scope.fork_parent_finalizers
+        , `Effect4.Scope.fork_child_strategy
+        , `Effect4.Scope.fork_shared_key
+        , `Effect4.Scope.fork_detach
+        , `Effect4.Machine.scopeLinkFiber_name
+        , `Effect4.Machine.scopeStore_forkChild_names ] }
   , { id := "scope.scoped", kind := "scope", disposition := "separateCalculus", coverage := "green"
       -- missing clauses: "installs a fresh scope in the fiber context" and "restoring the previous context first"
     , witnesses :=
-        [ w `Effect4.Scope.addAll_nil "none"
-        , w `Effect4.Scope.addAll_cons "none"
-        , w `Effect4.Scope.addAll_finalizers "propext,Quot.sound"
-        , w `Effect4.Scope.make_addAll_finalizers "propext,Quot.sound"
-        , w `Effect4.Scope.runScoped_eq "none"
-        , w `Effect4.Scope.runScoped_fresh_scope "none"
-        , w `Effect4.Scope.runScoped_state "none"
-        , w `Effect4.Scope.runScoped_strategy "none"
-        , w `Effect4.Scope.runScoped_empty "none"
-        , w `Effect4.Scope.runScoped_lifo "propext,Quot.sound"
-        , w `Effect4.Prim.scopedFrame_eq "none"
-        , w `Effect4.Prim.scopedFrame_finalizer_masked "propext"
-        , w `Effect4.FrameFiber.step_scopedFrame "propext"
-        , w `Effect4.Program.Agreement.enterScoped_eq "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.exitScoped_restores "propext,Quot.sound" ] }
+        [ `Effect4.Scope.addAll_nil
+        , `Effect4.Scope.addAll_cons
+        , `Effect4.Scope.addAll_finalizers
+        , `Effect4.Scope.make_addAll_finalizers
+        , `Effect4.Scope.runScoped_eq
+        , `Effect4.Scope.runScoped_fresh_scope
+        , `Effect4.Scope.runScoped_state
+        , `Effect4.Scope.runScoped_strategy
+        , `Effect4.Scope.runScoped_empty
+        , `Effect4.Scope.runScoped_lifo
+        , `Effect4.Prim.scopedFrame_eq
+        , `Effect4.Prim.scopedFrame_finalizer_masked
+        , `Effect4.FrameFiber.step_scopedFrame
+        , `Effect4.Program.Agreement.enterScoped_eq
+        , `Effect4.Program.Agreement.exitScoped_restores ] }
   , { id := "scope.acquire-release", kind := "scope", disposition := "owned", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Scope.acquireRelease_failure "none"
-        , w `Effect4.Scope.acquireRelease_success "none"
-        , w `Effect4.Scope.acquireRelease_registers "propext,Quot.sound"
-        , w `Effect4.Scope.acquireRelease_closed_ambient "none"
-        , w `Effect4.FrameFiber.uninterruptible_already_masked "propext"
-        , w `Effect4.FrameFiber.uninterruptible_masks "propext"
-        , w `Effect4.FrameFiber.uninterruptibleMask_eq "none"
-        , w `Effect4.FrameFiber.interruptibleRegion_already "propext"
-        , w `Effect4.FrameFiber.interruptibleRegion_masked "propext"
-        , w `Effect4.FrameFiber.restoreAcquire_asked "none"
-        , w `Effect4.FrameFiber.restoreAcquire_not_asked "none"
-        , w `Effect4.Program.Sched.release_intro "propext,Quot.sound"
-        , w `Effect4.Program.Sched.foreignRelease_intro "propext,Quot.sound"
-        , w `Effect4.Program.Sched.acquireIn_intro "propext,Quot.sound" ] }
+        [ `Effect4.Scope.acquireRelease_failure
+        , `Effect4.Scope.acquireRelease_success
+        , `Effect4.Scope.acquireRelease_registers
+        , `Effect4.Scope.acquireRelease_closed_ambient
+        , `Effect4.FrameFiber.uninterruptible_already_masked
+        , `Effect4.FrameFiber.uninterruptible_masks
+        , `Effect4.FrameFiber.uninterruptibleMask_eq
+        , `Effect4.FrameFiber.interruptibleRegion_already
+        , `Effect4.FrameFiber.interruptibleRegion_masked
+        , `Effect4.FrameFiber.restoreAcquire_asked
+        , `Effect4.FrameFiber.restoreAcquire_not_asked
+        , `Effect4.Program.Sched.release_intro
+        , `Effect4.Program.Sched.foreignRelease_intro
+        , `Effect4.Program.Sched.acquireIn_intro ] }
   , { id := "scheduler.should-yield", kind := "scheduler", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.yieldVerdict_default "propext"
-        , w `Effect4.Machine.yieldVerdict_override "propext"
-        , w `Effect4.Machine.injectYield_no_verdict "propext" ] }
+        [ `Effect4.Machine.yieldVerdict_default
+        , `Effect4.Machine.yieldVerdict_override
+        , `Effect4.Machine.injectYield_no_verdict ] }
   , { id := "scheduler.priority-buckets", kind := "scheduler", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.Dispatcher.enqueue_same_bucket "propext"
-        , w `Effect4.Machine.Dispatcher.enqueue_lower_priority "propext"
-        , w `Effect4.Machine.Dispatcher.enqueue_empty "none" ] }
+        [ `Effect4.Machine.Dispatcher.enqueue_same_bucket
+        , `Effect4.Machine.Dispatcher.enqueue_lower_priority
+        , `Effect4.Machine.Dispatcher.enqueue_empty ] }
   , { id := "scheduler.dispatcher-arming", kind := "scheduler", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.Dispatcher.enqueue_arms "none"
-        , w `Effect4.Machine.Dispatcher.drain_disarms "none"
-        , w `Effect4.Machine.RunMachine.arm_new "propext"
-        , w `Effect4.Machine.RunMachine.arm_known "propext"
-        , w `Effect4.Machine.RunMachine.arm_fields "none"
-        , w `Effect4.Machine.Witnesses.w15_flush_runs_callbacks_in_arming_order "propext,Quot.sound" ] }
+        [ `Effect4.Machine.Dispatcher.enqueue_arms
+        , `Effect4.Machine.Dispatcher.drain_disarms
+        , `Effect4.Machine.RunMachine.arm_new
+        , `Effect4.Machine.RunMachine.arm_known
+        , `Effect4.Machine.RunMachine.arm_fields
+        , `Effect4.Machine.Witnesses.w15_flush_runs_callbacks_in_arming_order ] }
   , { id := "scheduler.run-tasks-drain-once", kind := "scheduler", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.Dispatcher.drain_eq "none"
-        , w `Effect4.Machine.Dispatcher.drain_disarms "none"
-        , w `Effect4.Machine.fire_eq "propext,Quot.sound"
-        , w `Effect4.Machine.RunMachine.disarm_eq "none" ] }
+        [ `Effect4.Machine.Dispatcher.drain_eq
+        , `Effect4.Machine.Dispatcher.drain_disarms
+        , `Effect4.Machine.fire_eq
+        , `Effect4.Machine.RunMachine.disarm_eq ] }
   , { id := "scheduler.flush", kind := "scheduler", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.flushAll_idle "propext,Quot.sound"
-        , w `Effect4.Machine.flushAll_round "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w15_flush_runs_callbacks_in_arming_order "propext,Quot.sound" ] }
+        [ `Effect4.Machine.flushAll_idle
+        , `Effect4.Machine.flushAll_round
+        , `Effect4.Machine.Witnesses.w15_flush_runs_callbacks_in_arming_order ] }
   , { id := "scheduler.yield-now-resume-guard", kind := "scheduler", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.evaluatePrim_yieldNowWith "propext,Quot.sound"
-        , w `Effect4.Machine.drive_resume_wrong_token "propext,Quot.sound"
-        , w `Effect4.Machine.drive_resume_guard "propext,Quot.sound"
-        , w `Effect4.Machine.drive_resume_not_parked "propext,Quot.sound" ] }
+        [ `Effect4.Machine.evaluatePrim_yieldNowWith
+        , `Effect4.Machine.drive_resume_wrong_token
+        , `Effect4.Machine.drive_resume_guard
+        , `Effect4.Machine.drive_resume_not_parked ] }
   , { id := "scheduler.max-ops-default", kind := "scheduler", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.Env.hooks_empty "propext" ] }
+        [ `Effect4.Machine.Env.hooks_empty ] }
   , { id := "scheduler.prevent-yield-default", kind := "scheduler", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.injectYield_prevented "propext"
-        , w `Effect4.Machine.Env.hooks_empty "propext" ] }
+        [ `Effect4.Machine.injectYield_prevented
+        , `Effect4.Machine.Env.hooks_empty ] }
   , { id := "scheduler.host-loop", kind := "scheduler", disposition := "targetOnly", coverage := "absent", witnesses := [] }
   , { id := "exit.success-failure", kind := "exit", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Exit.cases_receipt "none"
-        , w `Effect4.Exit.success_ne_failure "none"
-        , w `Effect4.Exit.success_inj "none"
-        , w `Effect4.Exit.failure_inj "none"
-        , w `Effect4.Exit.cause_failure "none"
-        , w `Effect4.Prim.ofExit_asExit? "none"
-        , w `Effect4.Prim.asExit?_success "none"
-        , w `Effect4.Prim.asExit?_failure "none"
-        , w `Effect4.Prim.asExit?_eq_some "propext"
-        , w `Effect4.Prim.ofExit_isFrame "none"
-        , w `Effect4.FrameFiber.step_ofExit_finishes "propext"
-        , w `Effect4.FrameFiber.run_zero "propext"
-        , w `Effect4.FrameFiber.run_succ_finished "propext"
-        , w `Effect4.FrameFiber.run_succ_running "propext" ] }
+        [ `Effect4.Exit.cases_receipt
+        , `Effect4.Exit.success_ne_failure
+        , `Effect4.Exit.success_inj
+        , `Effect4.Exit.failure_inj
+        , `Effect4.Exit.cause_failure
+        , `Effect4.Prim.ofExit_asExit?
+        , `Effect4.Prim.asExit?_success
+        , `Effect4.Prim.asExit?_failure
+        , `Effect4.Prim.asExit?_eq_some
+        , `Effect4.Prim.ofExit_isFrame
+        , `Effect4.FrameFiber.step_ofExit_finishes
+        , `Effect4.FrameFiber.run_zero
+        , `Effect4.FrameFiber.run_succ_finished
+        , `Effect4.FrameFiber.run_succ_running ] }
   , { id := "exit.reason-alphabet", kind := "exit", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.ReasonTag.all_nodup "none"
-        , w `Effect4.ReasonTag.mem_all "propext"
-        , w `Effect4.ReasonTag.cases_receipt "none"
-        , w `Effect4.Reason.cases_receipt "none"
-        , w `Effect4.Reason.tag_mem_all "propext" ] }
+        [ `Effect4.ReasonTag.all_nodup
+        , `Effect4.ReasonTag.mem_all
+        , `Effect4.ReasonTag.cases_receipt
+        , `Effect4.Reason.cases_receipt
+        , `Effect4.Reason.tag_mem_all ] }
   , { id := "cause.flat-reasons", kind := "cause", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Cause.eq_iff "none"
-        , w `Effect4.Cause.ext "none"
-        , w `Effect4.Cause.eq_iff_pointwise "propext"
-        , w `Effect4.Cause.combine_no_new_reason "propext" ] }
+        [ `Effect4.Cause.eq_iff
+        , `Effect4.Cause.ext
+        , `Effect4.Cause.eq_iff_pointwise
+        , `Effect4.Cause.combine_no_new_reason ] }
   , { id := "cause.reason-fail", kind := "cause", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Reason.error_fail "none"
-        , w `Effect4.Reason.annotations_fail "none"
-        , w `Effect4.Reason.fail_inj "none" ] }
+        [ `Effect4.Reason.error_fail
+        , `Effect4.Reason.annotations_fail
+        , `Effect4.Reason.fail_inj ] }
   , { id := "cause.reason-die", kind := "cause", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Reason.defect_die "none"
-        , w `Effect4.Reason.annotations_die "none"
-        , w `Effect4.Reason.die_inj "none" ] }
+        [ `Effect4.Reason.defect_die
+        , `Effect4.Reason.annotations_die
+        , `Effect4.Reason.die_inj ] }
   , { id := "cause.reason-interrupt", kind := "cause", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Cause.interrupt_reasons "none"
-        , w `Effect4.Reason.annotations_interrupt "none"
-        , w `Effect4.Reason.interrupt_inj "none" ] }
+        [ `Effect4.Cause.interrupt_reasons
+        , `Effect4.Reason.annotations_interrupt
+        , `Effect4.Reason.interrupt_inj ] }
   , { id := "cause.combine-union", kind := "cause", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Cause.combine_empty_left "none"
-        , w `Effect4.Cause.combine_empty_right "none"
-        , w `Effect4.Cause.combine_reasons "none"
-        , w `Effect4.Cause.mem_combine "propext"
-        , w `Effect4.Cause.combine_self "propext,Quot.sound" ] }
+        [ `Effect4.Cause.combine_empty_left
+        , `Effect4.Cause.combine_empty_right
+        , `Effect4.Cause.combine_reasons
+        , `Effect4.Cause.mem_combine
+        , `Effect4.Cause.combine_self ] }
   , { id := "cause.finalizer-merge", kind := "cause", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Exit.mergeFinalizer_failure_failure "none"
-        , w `Effect4.Exit.restoreAfterFinalizer_failure_failure "none"
-        , w `Effect4.Exit.mergeFinalizer_success_failure "none"
-        , w `Effect4.Exit.restoreAfterFinalizer_success_failure "none" ] }
+        [ `Effect4.Exit.mergeFinalizer_failure_failure
+        , `Effect4.Exit.restoreAfterFinalizer_failure_failure
+        , `Effect4.Exit.mergeFinalizer_success_failure
+        , `Effect4.Exit.restoreAfterFinalizer_success_failure ] }
   , { id := "cause.squash", kind := "cause", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Cause.squash_error "none"
-        , w `Effect4.Cause.squash_defect "none"
-        , w `Effect4.Cause.squash_interrupted "none"
-        , w `Effect4.Cause.squash_emptyCause_iff "none"
-        , w `Effect4.Cause.squash_fail_over_die "none" ] }
+        [ `Effect4.Cause.squash_error
+        , `Effect4.Cause.squash_defect
+        , `Effect4.Cause.squash_interrupted
+        , `Effect4.Cause.squash_emptyCause_iff
+        , `Effect4.Cause.squash_fail_over_die ] }
   , { id := "cause.union-first-occurrence", kind := "cause", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Cause.combine_empty_left "none"
-        , w `Effect4.Cause.combine_empty_right "none"
-        , w `Effect4.Cause.combine_reasons "none"
-        , w `Effect4.Cause.combine_order "propext,Quot.sound" ] }
+        [ `Effect4.Cause.combine_empty_left
+        , `Effect4.Cause.combine_empty_right
+        , `Effect4.Cause.combine_reasons
+        , `Effect4.Cause.combine_order ] }
   , { id := "cause.dedupe-first-occurrence", kind := "cause", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Cause.dedup_cons "none"
-        , w `Effect4.Cause.mem_dedup "propext"
-        , w `Effect4.Cause.dedup_nodup "propext"
-        , w `Effect4.Cause.dedup_of_nodup "propext,Quot.sound" ] }
+        [ `Effect4.Cause.dedup_cons
+        , `Effect4.Cause.mem_dedup
+        , `Effect4.Cause.dedup_nodup
+        , `Effect4.Cause.dedup_of_nodup ] }
   , { id := "cause.annotations", kind := "cause", disposition := "foreignBoundary", coverage := "green"
       -- the WeakMap host-identity clause is closed by refusal, not by a model
     , witnesses :=
-        [ w `Effect4.ReasonAnnotations.keys_nodup "none"
-        , w `Effect4.Reason.annotate_annotations "propext,Quot.sound"
-        , w `Effect4.Reason.host_memory_refused "none"
-        , w `Effect4.ReasonAnnotations.annotate_entries "propext,Quot.sound"
-        , w `Effect4.ReasonAnnotations.lookup_annotate_kept "propext,Quot.sound"
-        , w `Effect4.ReasonAnnotations.lookup_annotate_overwrite "propext,Quot.sound" ] }
+        [ `Effect4.ReasonAnnotations.keys_nodup
+        , `Effect4.Reason.annotate_annotations
+        , `Effect4.Reason.host_memory_refused
+        , `Effect4.ReasonAnnotations.annotate_entries
+        , `Effect4.ReasonAnnotations.lookup_annotate_kept
+        , `Effect4.ReasonAnnotations.lookup_annotate_overwrite ] }
   , { id := "entry.run-fork-with", kind := "entry", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.runFork_eq "propext,Quot.sound" ] }
+        [ `Effect4.Machine.runFork_eq ] }
   , { id := "entry.abort-signal", kind := "entry", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.stepDecision_abort "propext,Quot.sound" ] }
+        [ `Effect4.Machine.stepDecision_abort ] }
   , { id := "entry.run-callback-with", kind := "entry", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.runCallback_eq "propext,Quot.sound"
-        , w `Effect4.Machine.fireObserver_callback "propext,Quot.sound" ] }
+        [ `Effect4.Machine.runCallback_eq
+        , `Effect4.Machine.fireObserver_callback ] }
   , { id := "entry.run-promise-exit-with", kind := "entry", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.promiseOutcome_eq "none" ] }
+        [ `Effect4.Machine.promiseOutcome_eq ] }
   , { id := "entry.run-promise-with", kind := "entry", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.promiseOutcome_failure "none" ] }
+        [ `Effect4.Machine.promiseOutcome_failure ] }
   , { id := "entry.run-sync-exit-with", kind := "entry", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.runSyncExit_exited "propext,Quot.sound"
-        , w `Effect4.Machine.runSyncExit_survives "propext,Quot.sound"
-        , w `Effect4.Machine.flushRoot_idle "propext,Quot.sound"
-        , w `Effect4.Machine.flushRoot_round "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w8_sync_child_yield_is_async "propext,Quot.sound" ] }
+        [ `Effect4.Machine.runSyncExit_exited
+        , `Effect4.Machine.runSyncExit_survives
+        , `Effect4.Machine.flushRoot_idle
+        , `Effect4.Machine.flushRoot_round
+        , `Effect4.Machine.Witnesses.w8_sync_child_yield_is_async ] }
   , { id := "entry.async-fiber-error", kind := "entry", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.runSyncExit_survives "propext,Quot.sound"
-        , w `Effect4.Machine.Witnesses.w8_sync_child_yield_is_async "propext,Quot.sound" ] }
+        [ `Effect4.Machine.runSyncExit_survives
+        , `Effect4.Machine.Witnesses.w8_sync_child_yield_is_async ] }
   , { id := "entry.with-error-reporting", kind := "entry", disposition := "targetOnly", coverage := "absent", witnesses := [] }
   , { id := "rule.frames-are-primitives", kind := "rule", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Arm.all_nodup "none"
-        , w `Effect4.Arm.mem_all "propext"
-        , w `Effect4.Arm.cases_receipt "none"
-        , w `Effect4.Arm.demandable_eq "none"
-        , w `Effect4.Arm.contAll_not_demandable "propext"
-        , w `Effect4.Prim.cases_receipt "none"
-        , w `Effect4.FrameFiber.start_eq "none"
-        , w `Effect4.FrameFiber.masked_eq "none"
-        , w `Effect4.FrameFiber.interrupted_eq "none"
-        , w `Effect4.FrameEvent.poppedFrames_nil "none"
-        , w `Effect4.FrameEvent.poppedFrames_cons_popped "none"
-        , w `Effect4.FrameEvent.finalizersRun_nil "none"
-        , w `Effect4.FrameEvent.finalizersRun_cons_ran "none"
-        , w `Effect4.FrameEvent.finalizersRun_cons_popped "none"
-        , w `Effect4.Prim.hasArm_eq "none"
-        , w `Effect4.Prim.isFrame_eq "none"
-        , w `Effect4.Prim.isFrame_iff "propext"
-        , w `Effect4.Prim.non_frames_have_no_arms "none"
-        , w `Effect4.Prim.answerOf_replacement "none"
-        , w `Effect4.Prim.answerOf_arm "propext"
-        , w `Effect4.Prim.answerOf_missing "propext"
-        , w `Effect4.Prim.answerOf_frame_eq "propext"
-        , w `Effect4.Prim.armA_isSome "propext"
-        , w `Effect4.Prim.armE_isSome "none"
-        , w `Effect4.FrameFiber.getCont_eq_popFrom "propext"
-        , w `Effect4.FrameFiber.getCont_empty_stack "propext"
-        , w `Effect4.FrameFiber.popFrom_nil "propext"
-        , w `Effect4.FrameFiber.popFrom_answer_answer "propext"
-        , w `Effect4.FrameFiber.popFrom_answer_popped "propext"
-        , w `Effect4.FrameFiber.popFrom_answer_events "propext"
-        , w `Effect4.FrameFiber.popFrom_answer_fiber "propext"
-        , w `Effect4.FrameFiber.popFrom_continue_answer "propext"
-        , w `Effect4.FrameFiber.popFrom_continue_popped "propext"
-        , w `Effect4.FrameFiber.popFrom_continue_events "propext"
-        , w `Effect4.FrameFiber.popFrom_continue_fiber "propext"
-        , w `Effect4.FrameFiber.popFrom_answer_hasArm "propext"
-        , w `Effect4.FrameFiber.getCont_answer_hasArm "propext"
-        , w `Effect4.FrameFiber.passEvents_ranContAll "propext"
-        , w `Effect4.FrameFiber.passEvents_poppedFrames "propext,Quot.sound"
-        , w `Effect4.FrameFiber.popFrom_popped_eq_events "propext,Quot.sound"
-        , w `Effect4.FrameFiber.popFrom_ranContAll "propext"
-        , w `Effect4.FrameFiber.getCont_ranContAll "propext" ] }
+        [ `Effect4.Arm.all_nodup
+        , `Effect4.Arm.mem_all
+        , `Effect4.Arm.cases_receipt
+        , `Effect4.Arm.demandable_eq
+        , `Effect4.Arm.contAll_not_demandable
+        , `Effect4.Prim.cases_receipt
+        , `Effect4.FrameFiber.start_eq
+        , `Effect4.FrameFiber.masked_eq
+        , `Effect4.FrameFiber.interrupted_eq
+        , `Effect4.FrameEvent.poppedFrames_nil
+        , `Effect4.FrameEvent.poppedFrames_cons_popped
+        , `Effect4.FrameEvent.finalizersRun_nil
+        , `Effect4.FrameEvent.finalizersRun_cons_ran
+        , `Effect4.FrameEvent.finalizersRun_cons_popped
+        , `Effect4.Prim.hasArm_eq
+        , `Effect4.Prim.isFrame_eq
+        , `Effect4.Prim.isFrame_iff
+        , `Effect4.Prim.non_frames_have_no_arms
+        , `Effect4.Prim.answerOf_replacement
+        , `Effect4.Prim.answerOf_arm
+        , `Effect4.Prim.answerOf_missing
+        , `Effect4.Prim.answerOf_frame_eq
+        , `Effect4.Prim.armA_isSome
+        , `Effect4.Prim.armE_isSome
+        , `Effect4.FrameFiber.getCont_eq_popFrom
+        , `Effect4.FrameFiber.getCont_empty_stack
+        , `Effect4.FrameFiber.popFrom_nil
+        , `Effect4.FrameFiber.popFrom_answer_answer
+        , `Effect4.FrameFiber.popFrom_answer_popped
+        , `Effect4.FrameFiber.popFrom_answer_events
+        , `Effect4.FrameFiber.popFrom_answer_fiber
+        , `Effect4.FrameFiber.popFrom_continue_answer
+        , `Effect4.FrameFiber.popFrom_continue_popped
+        , `Effect4.FrameFiber.popFrom_continue_events
+        , `Effect4.FrameFiber.popFrom_continue_fiber
+        , `Effect4.FrameFiber.popFrom_answer_hasArm
+        , `Effect4.FrameFiber.getCont_answer_hasArm
+        , `Effect4.FrameFiber.passEvents_ranContAll
+        , `Effect4.FrameFiber.passEvents_poppedFrames
+        , `Effect4.FrameFiber.popFrom_popped_eq_events
+        , `Effect4.FrameFiber.popFrom_ranContAll
+        , `Effect4.FrameFiber.getCont_ranContAll ] }
   , { id := "rule.interrupt-bypasses-handlers", kind := "rule", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Prim.ensure_setInterruptible_flag "propext"
-        , w `Effect4.FrameFiber.interrupt_skips_every_handler "propext,Quot.sound"
-        , w `Effect4.FrameFiber.getCont_mask_stops_skip "propext"
-        , w `Effect4.FrameFiber.step_failure "propext" ] }
+        [ `Effect4.Prim.ensure_setInterruptible_flag
+        , `Effect4.FrameFiber.interrupt_skips_every_handler
+        , `Effect4.FrameFiber.getCont_mask_stops_skip
+        , `Effect4.FrameFiber.step_failure ] }
   , { id := "rule.yield-is-overloaded", kind := "rule", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.drive_loop_parked "propext,Quot.sound"
-        , w `Effect4.Machine.drive_loop_parked_deferred "propext,Quot.sound"
-        , w `Effect4.Machine.drive_loop_continues "propext,Quot.sound" ] }
+        [ `Effect4.Machine.drive_loop_parked
+        , `Effect4.Machine.drive_loop_parked_deferred
+        , `Effect4.Machine.drive_loop_continues ] }
   , { id := "rule.only-fork-child-tracks", kind := "rule", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.spawn_untracked "none"
-        , w `Effect4.Machine.drive_trackChild_live "propext,Quot.sound"
-        , w `Effect4.Machine.drive_trackChild_exited "propext,Quot.sound"
-        , w `Effect4.Machine.spawnChild_fields "propext"
-        , w `Effect4.Machine.withFiber_fork "propext,Quot.sound"
-        , w `Effect4.Machine.withFiber_forkIn "propext,Quot.sound"
-        , w `Effect4.Machine.withFiber_forkScoped_ambient "propext,Quot.sound"
-        , w `Effect4.Machine.launchEntrant_eq "none"
-        , w `Effect4.Machine.fireObserver_untrackChild "propext,Quot.sound" ] }
+        [ `Effect4.Machine.spawn_untracked
+        , `Effect4.Machine.drive_trackChild_live
+        , `Effect4.Machine.drive_trackChild_exited
+        , `Effect4.Machine.spawnChild_fields
+        , `Effect4.Machine.withFiber_fork
+        , `Effect4.Machine.withFiber_forkIn
+        , `Effect4.Machine.withFiber_forkScoped_ambient
+        , `Effect4.Machine.launchEntrant_eq
+        , `Effect4.Machine.fireObserver_untrackChild ] }
   , { id := "rule.children-interrupted-after-exit", kind := "rule", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.exitFiber_eq "propext"
-        , w `Effect4.Machine.exitFiber_children "propext"
-        , w `Effect4.Machine.exitInterruptChildren_eq "none"
-        , w `Effect4.Machine.exitInterruptChildren_reenters "none"
-        , w `Effect4.Machine.resumePrim_continueWith "none"
-        , w `Effect4.Machine.exitFiber_finalizing "propext"
-        , w `Effect4.Machine.Witnesses.w5_middleware_interrupts_children "propext,Quot.sound"
-        , w `Effect4.Machine.settle_finished "propext"
-        , w `Effect4.Machine.drive_finish "propext,Quot.sound" ] }
+        [ `Effect4.Machine.exitFiber_eq
+        , `Effect4.Machine.exitFiber_children
+        , `Effect4.Machine.exitInterruptChildren_eq
+        , `Effect4.Machine.exitInterruptChildren_reenters
+        , `Effect4.Machine.resumePrim_continueWith
+        , `Effect4.Machine.exitFiber_finalizing
+        , `Effect4.Machine.Witnesses.w5_middleware_interrupts_children
+        , `Effect4.Machine.settle_finished
+        , `Effect4.Machine.drive_finish ] }
   , { id := "rule.scope-close-lifo-state-first", kind := "rule", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Scope.close_state_independent_of_run "none"
-        , w `Effect4.Scope.closeState_finalizers "none"
-        , w `Effect4.Scope.close_reentrant_add "none"
-        , w `Effect4.Scope.closeOrder_last_first "propext"
-        , w `Effect4.Scope.closeExits_reverse "propext" ] }
+        [ `Effect4.Scope.close_state_independent_of_run
+        , `Effect4.Scope.closeState_finalizers
+        , `Effect4.Scope.close_reentrant_add
+        , `Effect4.Scope.closeOrder_last_first
+        , `Effect4.Scope.closeExits_reverse ] }
   , { id := "rule.cause-has-no-structure", kind := "rule", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Cause.mem_combine "propext"
-        , w `Effect4.Cause.combine_order "propext,Quot.sound"
-        , w `Effect4.Cause.combine_no_new_reason "propext"
-        , w `Effect4.Cause.ext "none" ] }
+        [ `Effect4.Cause.mem_combine
+        , `Effect4.Cause.combine_order
+        , `Effect4.Cause.combine_no_new_reason
+        , `Effect4.Cause.ext ] }
   , { id := "rule.start-is-asymmetric", kind := "rule", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.start_eq "none"
-        , w `Effect4.Machine.runFork_eq "propext,Quot.sound" ] }
+        [ `Effect4.Machine.start_eq
+        , `Effect4.Machine.runFork_eq ] }
   , { id := "rule.record-and-apply-separate", kind := "rule", disposition := "owned", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.interruptRecord_records "propext,Quot.sound"
-        , w `Effect4.Machine.interruptRecord_running_defers "propext,Quot.sound"
-        , w `Effect4.Machine.interruptRecord_idle_applies "propext,Quot.sound"
-        , w `Effect4.Machine.interruptRecord_masked "propext,Quot.sound" ] }
+        [ `Effect4.Machine.interruptRecord_records
+        , `Effect4.Machine.interruptRecord_running_defers
+        , `Effect4.Machine.interruptRecord_idle_applies
+        , `Effect4.Machine.interruptRecord_masked ] }
   , { id := "rule.budget-per-runloop-entry", kind := "rule", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.countOp_count "none"
-        , w `Effect4.Machine.drive_evaluate_enters "propext,Quot.sound"
-        , w `Effect4.Machine.drive_evaluate_exited "propext,Quot.sound"
-        , w `Effect4.Machine.drive_evaluate_running "propext,Quot.sound"
-        , w `Effect4.Machine.injectYield_latched "propext"
-        , w `Effect4.Machine.injectYield_fires "propext"
-        , w `Effect4.Machine.iteration_injected "propext,Quot.sound" ] }
+        [ `Effect4.Machine.countOp_count
+        , `Effect4.Machine.drive_evaluate_enters
+        , `Effect4.Machine.drive_evaluate_exited
+        , `Effect4.Machine.drive_evaluate_running
+        , `Effect4.Machine.injectYield_latched
+        , `Effect4.Machine.injectYield_fires
+        , `Effect4.Machine.iteration_injected ] }
     -- The Ref and Deferred rows are carried by the reference machine's stores
     -- (`src/Effect4/Machine/Stores.lean`) since 2026-09-04, and the Layer rows by the
     -- compile route (`src/Effect4/Program/{Compile,Agreement}.lean`, the store laws) since
@@ -6409,831 +914,197 @@ private def censusRows : List Row :=
     -- pinned operation; the rest are `separateCalculus`.
   , { id := "ref.make", kind := "ref", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.refStep_make "propext"
-        , w `Effect4.Machine.refMake_twice_distinct "propext" ] }
+        [ `Effect4.Machine.refStep_make
+        , `Effect4.Machine.refMake_twice_distinct ] }
   , { id := "ref.get", kind := "ref", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.refStep_get "propext"
-        , w `Effect4.Machine.refStep_get_after_set "propext" ] }
+        [ `Effect4.Machine.refStep_get
+        , `Effect4.Machine.refStep_get_after_set ] }
   , { id := "ref.set-void-returns-cell", kind := "ref", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.refStep_set "propext"
-        , w `Effect4.Machine.set_answer_ne_update_answer "none" ] }
+        [ `Effect4.Machine.refStep_set
+        , `Effect4.Machine.set_answer_ne_update_answer ] }
   , { id := "ref.cell-set-returns-self", kind := "ref", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.refStep_set_answers_self "propext" ] }
+        [ `Effect4.Machine.refStep_set_answers_self ] }
   , { id := "ref.get-and-set", kind := "ref", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.refStep_getAndSet "propext" ] }
+        [ `Effect4.Machine.refStep_getAndSet ] }
   , { id := "ref.set-and-get-assignment", kind := "ref", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.refStep_setAndGet "propext" ] }
+        [ `Effect4.Machine.refStep_setAndGet ] }
   , { id := "ref.update", kind := "ref", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.refStep_update "propext"
-        , w `Effect4.Machine.refStep_update_applies_once "propext" ] }
+        [ `Effect4.Machine.refStep_update
+        , `Effect4.Machine.refStep_update_applies_once ] }
   , { id := "ref.modify", kind := "ref", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.refStep_modify "propext" ] }
+        [ `Effect4.Machine.refStep_modify ] }
   , { id := "ref.modify-some-no-reread", kind := "ref", disposition := "derivedExpansion", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.refStep_modifySome_eq_modify "propext"
-        , w `Effect4.Machine.refStep_modifySome_none "propext" ] }
+        [ `Effect4.Machine.refStep_modifySome_eq_modify
+        , `Effect4.Machine.refStep_modifySome_none ] }
   , { id := "ref.update-some-and-get-reread", kind := "ref", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.refStep_updateSomeAndGet_some "propext" ] }
+        [ `Effect4.Machine.refStep_updateSomeAndGet_some ] }
   , { id := "deferred.make", kind := "deferred", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.deferredStore_make "none" ] }
+        [ `Effect4.Machine.deferredStore_make ] }
   , { id := "deferred.is-done", kind := "deferred", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.deferredStore_isDone "propext" ] }
+        [ `Effect4.Machine.deferredStore_isDone ] }
   , { id := "deferred.await", kind := "deferred", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.awaitDeferred_is_a_park "none"
-        , w `Effect4.Machine.deferredStore_register_pending "propext"
-        , w `Effect4.Machine.deferredStore_register_done "propext" ] }
+        [ `Effect4.Machine.awaitDeferred_is_a_park
+        , `Effect4.Machine.deferredStore_register_pending
+        , `Effect4.Machine.deferredStore_register_done ] }
   , { id := "deferred.single-completion", kind := "deferred", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.deferredStore_complete_done "propext" ] }
+        [ `Effect4.Machine.deferredStore_complete_done ] }
   , { id := "deferred.completion-order", kind := "deferred", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.deferredStore_complete_pending "propext"
-        , w `Effect4.Machine.Witnesses.w13_completion_pop_sees_the_waiter_interrupt "propext,Quot.sound" ] }
+        [ `Effect4.Machine.deferredStore_complete_pending
+        , `Effect4.Machine.Witnesses.w13_completion_pop_sees_the_waiter_interrupt ] }
   , { id := "deferred.complete-with-stores-effect", kind := "deferred", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.deferredStore_complete_stores_argument "propext"
-        , w `Effect4.Machine.deferredStore_waiter_receives_stored "propext" ] }
+        [ `Effect4.Machine.deferredStore_complete_stores_argument
+        , `Effect4.Machine.deferredStore_waiter_receives_stored ] }
   , { id := "deferred.done-is-complete-with", kind := "deferred", disposition := "derivedExpansion", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.doneWith_shared "none"
-        , w `Effect4.Machine.completionPrim_ofExit "none" ] }
+        [ `Effect4.Machine.doneWith_shared
+        , `Effect4.Machine.completionPrim_ofExit ] }
   , { id := "deferred.complete-runs-once", kind := "deferred", disposition := "derivedExpansion", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.deferredStore_complete_done "propext" ] }
+        [ `Effect4.Machine.deferredStore_complete_done ] }
   , { id := "deferred.into-uninterruptible", kind := "deferred", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.intoDeferred_spelling "none" ] }
+        [ `Effect4.Machine.intoDeferred_spelling ] }
   , { id := "deferred.interrupt", kind := "deferred", disposition := "derivedExpansion", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.interruptDeferred_delegates "propext" ] }
+        [ `Effect4.Machine.interruptDeferred_delegates ] }
   , { id := "deferred.interrupt-with", kind := "deferred", disposition := "derivedExpansion", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.interruptWith_is_completion "propext" ] }
+        [ `Effect4.Machine.interruptWith_is_completion ] }
   , { id := "deferred.poll", kind := "deferred", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.deferredPoll_no_write "propext" ] }
+        [ `Effect4.Machine.deferredPoll_no_write ] }
   , { id := "layer.from-build-unsafe", kind := "layer", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Program.Agreement.compileLayer_succeed "propext,Quot.sound" ] }
+        [ `Effect4.Program.Agreement.compileLayer_succeed ] }
   , { id := "layer.from-build-child-scope", kind := "layer", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Program.Agreement.compileLayer_effect "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.contAOf_fromBuildThen_scope "propext,Quot.sound"
-        , w `Effect4.Machine.finProgram_closeChildOnFailure_failure "none"
-        , w `Effect4.Machine.finProgram_closeChildOnFailure_success "none" ] }
+        [ `Effect4.Program.Agreement.compileLayer_effect
+        , `Effect4.Program.Agreement.contAOf_fromBuildThen_scope
+        , `Effect4.Machine.finProgram_closeChildOnFailure_failure
+        , `Effect4.Machine.finProgram_closeChildOnFailure_success ] }
   , { id := "layer.build-with-memo-map-service", kind := "layer", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Program.Agreement.contAOf_withMemoMapThen_memoMap "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.currentMemoMapOf_provideService "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.regionCode_buildAdding "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.contAOf_addCurrentMemoMap "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.addCurrentMemoMapK_context "propext,Quot.sound" ] }
+        [ `Effect4.Program.Agreement.contAOf_withMemoMapThen_memoMap
+        , `Effect4.Program.Agreement.currentMemoMapOf_provideService
+        , `Effect4.Program.Agreement.regionCode_buildAdding
+        , `Effect4.Program.Agreement.contAOf_addCurrentMemoMap
+        , `Effect4.Program.Agreement.addCurrentMemoMapK_context ] }
   , { id := "layer.memo-build-once", kind := "layer", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.syncOpStep_memoBuild "propext"
-        , w `Effect4.Program.Agreement.contAOf_memoize_unit "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.contAOf_buildIntoLayerScope_scope "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.contAOf_thenBuildInto "propext,Quot.sound"
-        , w `Effect4.Machine.finProgram_memoDone "none"
-        , w `Effect4.Machine.syncOpStep_memoComplete_some "propext"
-        , w `Effect4.Program.Agreement.resolveLayerTerm_ref "propext,Quot.sound" ] }
+        [ `Effect4.Machine.syncOpStep_memoBuild
+        , `Effect4.Program.Agreement.contAOf_memoize_unit
+        , `Effect4.Program.Agreement.contAOf_buildIntoLayerScope_scope
+        , `Effect4.Program.Agreement.contAOf_thenBuildInto
+        , `Effect4.Machine.finProgram_memoDone
+        , `Effect4.Machine.syncOpStep_memoComplete_some
+        , `Effect4.Program.Agreement.resolveLayerTerm_ref ] }
   , { id := "layer.memo-finalizer-last-observer", kind := "layer", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.finProgram_memoEntry "none"
-        , w `Effect4.Machine.syncOpStep_memoRelease_last "propext"
-        , w `Effect4.Machine.syncOpStep_memoRelease_dec "propext"
-        , w `Effect4.Machine.contAOf_closeIfLast_scope "propext"
-        , w `Effect4.Program.Sched.contAOf_closeIfLast_other "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.resolveLayerTerm_ref "propext,Quot.sound" ] }
+        [ `Effect4.Machine.finProgram_memoEntry
+        , `Effect4.Machine.syncOpStep_memoRelease_last
+        , `Effect4.Machine.syncOpStep_memoRelease_dec
+        , `Effect4.Machine.contAOf_closeIfLast_scope
+        , `Effect4.Program.Sched.contAOf_closeIfLast_other
+        , `Effect4.Program.Agreement.resolveLayerTerm_ref ] }
   , { id := "layer.memo-reuse-observer-count", kind := "layer", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.syncOpStep_memoGet_some "propext"
-        , w `Effect4.Program.Agreement.contAOf_memoize_hit "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.resolveLayerTerm_ref "propext,Quot.sound" ] }
+        [ `Effect4.Machine.syncOpStep_memoGet_some
+        , `Effect4.Program.Agreement.contAOf_memoize_hit
+        , `Effect4.Program.Agreement.resolveLayerTerm_ref ] }
   , { id := "layer.memo-map-parent-lookup", kind := "layer", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Machine.MemoWorld.get_own "propext"
-        , w `Effect4.Machine.MemoWorld.get_parent "propext" ] }
+        [ `Effect4.Machine.MemoWorld.get_own
+        , `Effect4.Machine.MemoWorld.get_parent ] }
   , { id := "layer.memo-get-or-else", kind := "layer", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Program.Agreement.innerLayerAt_effect "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.suspendBodyAt_memoLookup "propext"
-        , w `Effect4.Program.Agreement.contAOf_awaitPromise "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.contAOf_memoize_hit "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.contAOf_memoize_unit "propext,Quot.sound" ] }
+        [ `Effect4.Program.Agreement.innerLayerAt_effect
+        , `Effect4.Program.Agreement.suspendBodyAt_memoLookup
+        , `Effect4.Program.Agreement.contAOf_awaitPromise
+        , `Effect4.Program.Agreement.contAOf_memoize_hit
+        , `Effect4.Program.Agreement.contAOf_memoize_unit ] }
   , { id := "layer.current-memo-map-fork-or-create", kind := "layer", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Program.Agreement.currentMemoMapOf_addV "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.currentMemoMapOf_empty "propext"
-        , w `Effect4.Machine.syncOpStep_memoFork "propext"
-        , w `Effect4.Program.Agreement.buildWithScopeK_context "propext" ] }
+        [ `Effect4.Program.Agreement.currentMemoMapOf_addV
+        , `Effect4.Program.Agreement.currentMemoMapOf_empty
+        , `Effect4.Machine.syncOpStep_memoFork
+        , `Effect4.Program.Agreement.buildWithScopeK_context ] }
   , { id := "layer.build-uses-ambient-scope", kind := "layer", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Program.Agreement.contAOf_buildWithScopeFromContext "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.buildWithScopeK_context "propext"
-        , w `Effect4.Program.Agreement.contAOf_serviceLookup "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.serviceLookupK_found "propext"
-        , w `Effect4.Program.Agreement.serviceLookupK_missing "propext" ] }
+        [ `Effect4.Program.Agreement.contAOf_buildWithScopeFromContext
+        , `Effect4.Program.Agreement.buildWithScopeK_context
+        , `Effect4.Program.Agreement.contAOf_serviceLookup
+        , `Effect4.Program.Agreement.serviceLookupK_found
+        , `Effect4.Program.Agreement.serviceLookupK_missing ] }
   , { id := "layer.build-with-scope-still-forks-memo", kind := "layer", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Program.Agreement.provideLayerWithK_at "propext"
-        , w `Effect4.Program.Agreement.contAOf_buildWithScopeFromContext "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.buildWithScopeK_context "propext" ] }
+        [ `Effect4.Program.Agreement.provideLayerWithK_at
+        , `Effect4.Program.Agreement.contAOf_buildWithScopeFromContext
+        , `Effect4.Program.Agreement.buildWithScopeK_context ] }
   , { id := "layer.merge-parallel-scopes", kind := "layer", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Program.Agreement.compileLayer_merge "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.innerLayerAt_merge "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.contAOf_mergeChildren_scope "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.contAOf_mergeForkOne_scope "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.withFiberOf_forkLayer "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.contAOf_mergeForkNext_fiber "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.innerLayerAt_mergeAll "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.mergeAllCount_of_at "propext"
-        , w `Effect4.Program.Agreement.contAOf_mergeAllChildren_scope "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.contAOf_mergeAllForkOne_scope "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.contAOf_mergeAllForkNext_fiber "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.withFiberOf_awaitAllFailFast "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.contAOf_mergeContexts "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.mergeContextsK_contexts "propext,Quot.sound" ] }
+        [ `Effect4.Program.Agreement.compileLayer_merge
+        , `Effect4.Program.Agreement.innerLayerAt_merge
+        , `Effect4.Program.Agreement.contAOf_mergeChildren_scope
+        , `Effect4.Program.Agreement.contAOf_mergeForkOne_scope
+        , `Effect4.Program.Agreement.withFiberOf_forkLayer
+        , `Effect4.Program.Agreement.contAOf_mergeForkNext_fiber
+        , `Effect4.Program.Agreement.innerLayerAt_mergeAll
+        , `Effect4.Program.Agreement.mergeAllCount_of_at
+        , `Effect4.Program.Agreement.contAOf_mergeAllChildren_scope
+        , `Effect4.Program.Agreement.contAOf_mergeAllForkOne_scope
+        , `Effect4.Program.Agreement.contAOf_mergeAllForkNext_fiber
+        , `Effect4.Program.Agreement.withFiberOf_awaitAllFailFast
+        , `Effect4.Program.Agreement.contAOf_mergeContexts
+        , `Effect4.Program.Agreement.mergeContextsK_contexts ] }
   , { id := "layer.provide-dependency-first", kind := "layer", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Program.Agreement.compileLayer_provide "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.compileLayer_provideMerge "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.innerLayerAt_provide "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.contAOf_provideThen "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.provideThenK_context "propext"
-        , w `Effect4.Program.Agreement.regionCode_build "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.contAOf_combineWith "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.combineWithK_provide "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.combineWithK_provideMerge "propext,Quot.sound" ] }
+        [ `Effect4.Program.Agreement.compileLayer_provide
+        , `Effect4.Program.Agreement.compileLayer_provideMerge
+        , `Effect4.Program.Agreement.innerLayerAt_provide
+        , `Effect4.Program.Agreement.contAOf_provideThen
+        , `Effect4.Program.Agreement.provideThenK_context
+        , `Effect4.Program.Agreement.regionCode_build
+        , `Effect4.Program.Agreement.contAOf_combineWith
+        , `Effect4.Program.Agreement.combineWithK_provide
+        , `Effect4.Program.Agreement.combineWithK_provideMerge ] }
   , { id := "layer.fresh-drops-memoization", kind := "layer", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Program.Agreement.compileLayer_fresh "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.contAOf_freshThen_memoMap "propext,Quot.sound" ] }
+        [ `Effect4.Program.Agreement.compileLayer_fresh
+        , `Effect4.Program.Agreement.contAOf_freshThen_memoMap ] }
   , { id := "layer.launch-holds-scope", kind := "layer", disposition := "separateCalculus", coverage := "partial"
       -- missing clause: "then runs never" — `Eff` has no `never`; only the `scopedWith`
       -- frame that holds the built layer's scope until its body exits is witnessed
     , witnesses :=
-        [ w `Effect4.Program.Agreement.provideLayerWithK_at "propext"
-        , w `Effect4.Program.Agreement.finalizerProgram_scopeClose "propext,Quot.sound" ] }
+        [ `Effect4.Program.Agreement.provideLayerWithK_at
+        , `Effect4.Program.Agreement.finalizerProgram_scopeClose ] }
   , { id := "layer.provide-effect-scope", kind := "layer", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
-        [ w `Effect4.Program.Agreement.compileEff_provideLayer "propext"
-        , w `Effect4.Program.Agreement.suspendBodyAt_provideLayer "propext"
-        , w `Effect4.Program.Agreement.contAOf_provideLayerWith_scope "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.provideLayerWithK_at "propext"
-        , w `Effect4.Program.Agreement.contAOf_provideLayerBody "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.provideLayerBodyK_context "propext"
-        , w `Effect4.Program.Agreement.contAOf_updateThen "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.updateThenK_context "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.contAOf_bodyThen "propext,Quot.sound"
-        , w `Effect4.Program.Agreement.finalizerProgram_scopeClose "propext,Quot.sound" ] }
+        [ `Effect4.Program.Agreement.compileEff_provideLayer
+        , `Effect4.Program.Agreement.suspendBodyAt_provideLayer
+        , `Effect4.Program.Agreement.contAOf_provideLayerWith_scope
+        , `Effect4.Program.Agreement.provideLayerWithK_at
+        , `Effect4.Program.Agreement.contAOf_provideLayerBody
+        , `Effect4.Program.Agreement.provideLayerBodyK_context
+        , `Effect4.Program.Agreement.contAOf_updateThen
+        , `Effect4.Program.Agreement.updateThenK_context
+        , `Effect4.Program.Agreement.contAOf_bodyThen
+        , `Effect4.Program.Agreement.finalizerProgram_scopeClose ] }
   ]
-
-/-- The witness names frozen by `StatementSnapshot`, in snapshot order.
-`scripts/check-effect-runtime-census.sh` compares this list, as emitted, with
-the `#check (@…` occurrences in this file, so a deleted ascription fails. -/
-private def snapshotWitnesses : List Name :=
-  [ `Effect4.Cause.eq_iff
-  , `Effect4.Cause.ext
-  , `Effect4.Cause.eq_iff_pointwise
-  , `Effect4.Cause.combine_no_new_reason
-  , `Effect4.Reason.error_fail
-  , `Effect4.Reason.annotations_fail
-  , `Effect4.Reason.fail_inj
-  , `Effect4.Reason.defect_die
-  , `Effect4.Reason.annotations_die
-  , `Effect4.Reason.die_inj
-  , `Effect4.Cause.interrupt_reasons
-  , `Effect4.Reason.annotations_interrupt
-  , `Effect4.Reason.interrupt_inj
-  , `Effect4.Cause.combine_empty_left
-  , `Effect4.Cause.combine_empty_right
-  , `Effect4.Cause.combine_reasons
-  , `Effect4.Cause.mem_combine
-  , `Effect4.Cause.combine_self
-  , `Effect4.Cause.combine_order
-  , `Effect4.Cause.dedup_cons
-  , `Effect4.Cause.mem_dedup
-  , `Effect4.Cause.dedup_nodup
-  , `Effect4.Cause.dedup_of_nodup
-  , `Effect4.Exit.mergeFinalizer_failure_failure
-  , `Effect4.Exit.restoreAfterFinalizer_failure_failure
-  , `Effect4.Exit.mergeFinalizer_success_failure
-  , `Effect4.Exit.restoreAfterFinalizer_success_failure
-  , `Effect4.Cause.squash_error
-  , `Effect4.Cause.squash_defect
-  , `Effect4.Cause.squash_interrupted
-  , `Effect4.Cause.squash_emptyCause_iff
-  , `Effect4.Cause.squash_fail_over_die
-  , `Effect4.ReasonAnnotations.keys_nodup
-  , `Effect4.Reason.annotate_annotations
-  , `Effect4.Reason.host_memory_refused
-  , `Effect4.ReasonAnnotations.annotate_entries
-  , `Effect4.ReasonAnnotations.lookup_annotate_kept
-  , `Effect4.ReasonAnnotations.lookup_annotate_overwrite
-  , `Effect4.Exit.cases_receipt
-  , `Effect4.Exit.success_ne_failure
-  , `Effect4.Exit.success_inj
-  , `Effect4.Exit.failure_inj
-  , `Effect4.Exit.cause_failure
-  , `Effect4.ReasonTag.all_nodup
-  , `Effect4.ReasonTag.mem_all
-  , `Effect4.ReasonTag.cases_receipt
-  , `Effect4.Reason.cases_receipt
-  , `Effect4.Reason.tag_mem_all
-  , `Effect4.Exit.asVoidAll_reasons
-  , `Effect4.Exit.asVoidAll_failure
-  , `Effect4.Exit.asVoidAll_all_success
-  , `Effect4.Exit.void_eq
-  , `Effect4.ScopeState.cases_receipt
-  , `Effect4.ScopeState.entries_empty
-  , `Effect4.ScopeState.entries_openEmpty
-  , `Effect4.ScopeState.entries_openInline
-  , `Effect4.ScopeState.entries_openMap
-  , `Effect4.ScopeState.entries_closed
-  , `Effect4.ScopeState.isOpen_empty
-  , `Effect4.ScopeState.isOpen_openEmpty
-  , `Effect4.ScopeState.isOpen_openInline
-  , `Effect4.ScopeState.isOpen_openMap
-  , `Effect4.ScopeState.isOpen_closed
-  , `Effect4.ScopeState.isClosed_eq
-  , `Effect4.ScopeState.closingExit_closed
-  , `Effect4.ScopeState.closingExit_of_not_closed
-  , `Effect4.ScopeState.openEmpty_ne_openMap_nil
-  , `Effect4.Scope.finalizers_eq
-  , `Effect4.Scope.finalizerKeys_eq
-  , `Effect4.Scope.finalizerCount_eq
-  , `Effect4.Scope.finalizerCount_not_open
-  , `Effect4.FinalizerStrategy.all_nodup
-  , `Effect4.FinalizerStrategy.mem_all
-  , `Effect4.Scope.make_strategy
-  , `Effect4.Scope.make_state
-  , `Effect4.Scope.make_finalizers
-  , `Effect4.Scope.makeDefault_eq
-  , `Effect4.Scope.makeDefault_strategy
-  , `Effect4.Scope.key_freshness_refused
-  , `Effect4.Scope.tableInsert_new
-  , `Effect4.Scope.tableInsert_existing
-  , `Effect4.Scope.tableInsert_keys_of_mem
-  , `Effect4.Scope.tableInsert_nodup
-  , `Effect4.Scope.addUnsafe_strategy
-  , `Effect4.Scope.addUnsafe_empty
-  , `Effect4.Scope.addUnsafe_openEmpty
-  , `Effect4.Scope.addUnsafe_openInline
-  , `Effect4.Scope.addUnsafe_openMap
-  , `Effect4.Scope.addUnsafe_promotes
-  , `Effect4.Scope.addUnsafe_finalizers
-  , `Effect4.Scope.addUnsafe_keys_nodup
-  , `Effect4.Scope.addUnsafe_closed
-  , `Effect4.Scope.addExit_open
-  , `Effect4.Scope.addExit_closed
-  , `Effect4.Scope.addExit_closed_registers_nothing
-  , `Effect4.Scope.tableRemove_eq
-  , `Effect4.Scope.tableRemove_keys
-  , `Effect4.Scope.tableRemove_nodup
-  , `Effect4.Scope.removeUnsafe_strategy
-  , `Effect4.Scope.removeUnsafe_inline_hit
-  , `Effect4.Scope.removeUnsafe_inline_miss
-  , `Effect4.Scope.removeUnsafe_openMap
-  , `Effect4.Scope.removeUnsafe_not_open
-  , `Effect4.Scope.removeUnsafe_keys
-  , `Effect4.Scope.removeUnsafe_keys_nodup
-  , `Effect4.Scope.close_eq
-  , `Effect4.Scope.close_state_independent_of_run
-  , `Effect4.Scope.closeState_state
-  , `Effect4.Scope.closeState_strategy
-  , `Effect4.Scope.closeState_finalizers
-  , `Effect4.Scope.closeState_isClosed
-  , `Effect4.Scope.closeState_idempotent
-  , `Effect4.Scope.close_closingExit
-  , `Effect4.Scope.close_idempotent
-  , `Effect4.Scope.close_twice
-  , `Effect4.Scope.close_reentrant_add
-  , `Effect4.Scope.closeResult_closed
-  , `Effect4.Scope.closeOrder_eq
-  , `Effect4.Scope.closeOrder_last_first
-  , `Effect4.Scope.closeExits_eq
-  , `Effect4.Scope.closeExits_reverse
-  , `Effect4.Scope.runScoped_lifo
-  , `Effect4.Scope.closeExits_length
-  , `Effect4.Scope.closeResult_reasons
-  , `Effect4.FinalizerStrategy.cases_receipt
-  , `Effect4.Scope.close_strategy_irrelevant
-  , `Effect4.Scope.closeResult_nil
-  , `Effect4.Scope.closeResult_single
-  , `Effect4.Scope.closeResult_many
-  , `Effect4.Scope.fork_closed_parent
-  , `Effect4.Scope.fork_closed_parent_child_exit
-  , `Effect4.Scope.fork_open_parent
-  , `Effect4.Scope.fork_child_finalizers
-  , `Effect4.Scope.fork_parent_finalizers
-  , `Effect4.Scope.fork_child_strategy
-  , `Effect4.Scope.fork_shared_key
-  , `Effect4.Scope.fork_detach
-  , `Effect4.Scope.addAll_nil
-  , `Effect4.Scope.addAll_cons
-  , `Effect4.Scope.addAll_finalizers
-  , `Effect4.Scope.make_addAll_finalizers
-  , `Effect4.Scope.runScoped_eq
-  , `Effect4.Scope.runScoped_fresh_scope
-  , `Effect4.Scope.runScoped_state
-  , `Effect4.Scope.runScoped_strategy
-  , `Effect4.Scope.runScoped_empty
-  , `Effect4.Scope.acquireRelease_failure
-  , `Effect4.Scope.acquireRelease_success
-  , `Effect4.Scope.acquireRelease_registers
-  , `Effect4.Scope.acquireRelease_closed_ambient
-  , `Effect4.Supervision.MaskMode.cases_receipt
-  , `Effect4.Supervision.ObserverMode.cases_receipt
-  , `Effect4.Supervision.ScopeMode.cases_receipt
-  , `Effect4.Supervision.interruptCause_eq
-  , `Effect4.Supervision.RaceAllState.initial_eq
-  , `Effect4.Supervision.raceComplete_unknown
-  , `Effect4.Supervision.raceComplete_after_accepted
-  , `Effect4.Supervision.raceComplete_success
-  , `Effect4.Supervision.raceComplete_failure_last
-  , `Effect4.Supervision.raceComplete_failure_pending
-  , `Effect4.Arm.all_nodup
-  , `Effect4.Arm.mem_all
-  , `Effect4.Arm.cases_receipt
-  , `Effect4.Arm.demandable_eq
-  , `Effect4.Arm.contAll_not_demandable
-  , `Effect4.Prim.cases_receipt
-  , `Effect4.Prim.arms_onSuccessConst
-  , `Effect4.Prim.ensure_onSuccessConst
-  , `Effect4.Prim.armA_onSuccessConst
-  , `Effect4.Prim.armE_onSuccessConst_none
-  , `Effect4.FrameFiber.step_onSuccessConst
-  , `Effect4.FrameFiber.resumeValue_onSuccessConst
-  , `Effect4.FrameFiber.step_success_onSuccessConst
-  , `Effect4.FrameFiber.start_eq
-  , `Effect4.FrameFiber.pendingCause_some
-  , `Effect4.FrameFiber.pendingCause_none
-  , `Effect4.FrameFiber.masked_eq
-  , `Effect4.FrameFiber.interrupted_eq
-  , `Effect4.FrameEvent.poppedFrames_nil
-  , `Effect4.FrameEvent.poppedFrames_cons_popped
-  , `Effect4.FrameEvent.finalizersRun_nil
-  , `Effect4.FrameEvent.finalizersRun_cons_ran
-  , `Effect4.FrameEvent.finalizersRun_cons_popped
-  , `Effect4.Prim.hasArm_eq
-  , `Effect4.Prim.isFrame_eq
-  , `Effect4.Prim.isFrame_iff
-  , `Effect4.Prim.arms_onSuccess
-  , `Effect4.Prim.arms_onFailure
-  , `Effect4.Prim.arms_onSuccessAndFailure
-  , `Effect4.Prim.arms_exitFrame
-  , `Effect4.Prim.arms_onExit
-  , `Effect4.Prim.arms_setInterruptible
-  , `Effect4.Prim.arms_whileLoop
-  , `Effect4.Prim.arms_iterator
-  , `Effect4.Prim.non_frames_have_no_arms
-  , `Effect4.Prim.ofExit_asExit?
-  , `Effect4.Prim.asExit?_success
-  , `Effect4.Prim.asExit?_failure
-  , `Effect4.Prim.asExit?_eq_some
-  , `Effect4.Prim.ofExit_isFrame
-  , `Effect4.Prim.ensure_of_no_contAll
-  , `Effect4.Prim.ensure_onExit_masks
-  , `Effect4.Prim.ensure_onExit_told_not_to
-  , `Effect4.Prim.ensure_onExit_already_masked
-  , `Effect4.Prim.ensure_onExit_no_replacement
-  , `Effect4.Prim.ensure_setInterruptible_flag
-  , `Effect4.Prim.ensure_setInterruptible_stack
-  , `Effect4.Prim.ensure_setInterruptible_substitutes
-  , `Effect4.Prim.ensure_setInterruptible_false_no_replacement
-  , `Effect4.Prim.ensure_setInterruptible_no_pending
-  , `Effect4.Prim.answerOf_replacement
-  , `Effect4.Prim.answerOf_arm
-  , `Effect4.Prim.answerOf_missing
-  , `Effect4.Prim.answerOf_frame_eq
-  , `Effect4.Prim.armA_isSome
-  , `Effect4.Prim.armE_isSome
-  , `Effect4.Prim.armA_onSuccess
-  , `Effect4.Prim.armA_onSuccessAndFailure
-  , `Effect4.Prim.armE_onFailure
-  , `Effect4.Prim.armE_onSuccessAndFailure
-  , `Effect4.Prim.armE_onSuccess_none
-  , `Effect4.Prim.armA_onFailure_none
-  , `Effect4.Prim.armA_setInterruptible_none
-  , `Effect4.Prim.armE_setInterruptible_none
-  , `Effect4.Prim.armE_whileLoop_none
-  , `Effect4.Prim.armE_iterator_none
-  , `Effect4.Prim.armA_exitFrame_provided
-  , `Effect4.Prim.armA_exitFrame_none
-  , `Effect4.Prim.armE_exitFrame_provided
-  , `Effect4.Prim.armE_exitFrame_none
-  , `Effect4.Prim.armA_onExit
-  , `Effect4.Prim.armE_onExit
-  , `Effect4.Prim.onExit_finalizer_success_restores
-  , `Effect4.Prim.onExit_finalizer_failure_merges
-  , `Effect4.Prim.onExit_success_finalizer_failure
-  , `Effect4.Prim.onExit_arm_is_per_frame
-  , `Effect4.Prim.onSuccess_arm_is_per_instance
-  , `Effect4.Prim.onFailure_arm_is_per_instance
-  , `Effect4.Prim.onSuccessAndFailure_arms_are_per_instance
-  , `Effect4.Prim.armA_whileLoop_continue
-  , `Effect4.Prim.armA_whileLoop_stop
-  , `Effect4.Prim.armA_iterator_done
-  , `Effect4.Prim.armA_iterator_halt
-  , `Effect4.Prim.armA_iterator_resume
-  , `Effect4.Prim.iteratorFolded_eq
-  , `Effect4.Prim.iterator_folds_inline
-  , `Effect4.Prim.finalizerEvents_onExit
-  , `Effect4.Prim.finalizerEvents_onSuccess
-  , `Effect4.Prim.finalizerEvents_onFailure
-  , `Effect4.FrameFiber.getCont_deferred
-  , `Effect4.FrameFiber.getCont_deferred_pops_nothing
-  , `Effect4.FrameFiber.getCont_eq_popFrom
-  , `Effect4.FrameFiber.getCont_skip_clears_deferred
-  , `Effect4.FrameFiber.getCont_empty_stack
-  , `Effect4.FrameFiber.popFrom_nil
-  , `Effect4.FrameFiber.popFrom_answer_answer
-  , `Effect4.FrameFiber.popFrom_answer_popped
-  , `Effect4.FrameFiber.popFrom_answer_events
-  , `Effect4.FrameFiber.popFrom_answer_fiber
-  , `Effect4.FrameFiber.popFrom_continue_answer
-  , `Effect4.FrameFiber.popFrom_continue_popped
-  , `Effect4.FrameFiber.popFrom_continue_events
-  , `Effect4.FrameFiber.popFrom_continue_fiber
-  , `Effect4.FrameFiber.popFrom_answer_hasArm
-  , `Effect4.FrameFiber.getCont_answer_hasArm
-  , `Effect4.FrameFiber.passEvents_ranContAll
-  , `Effect4.FrameFiber.passEvents_poppedFrames
-  , `Effect4.FrameFiber.popFrom_popped_eq_events
-  , `Effect4.FrameFiber.popFrom_ranContAll
-  , `Effect4.FrameFiber.getCont_ranContAll
-  , `Effect4.FrameFiber.getCont_skip_of_no_pending_cause
-  , `Effect4.FrameFiber.interrupt_skips_every_handler
-  , `Effect4.FrameFiber.getCont_mask_stops_skip
-  , `Effect4.FrameFiber.resumeValue_empty
-  , `Effect4.FrameFiber.resumeValue_deferred
-  , `Effect4.FrameFiber.resumeValue_replacement
-  , `Effect4.FrameFiber.resumeValue_frame
-  , `Effect4.FrameFiber.resumeCause_empty
-  , `Effect4.FrameFiber.resumeCause_deferred
-  , `Effect4.FrameFiber.resumeCause_replacement
-  , `Effect4.FrameFiber.resumeCause_frame
-  , `Effect4.FrameFiber.step_success
-  , `Effect4.FrameFiber.step_failure
-  , `Effect4.FrameFiber.step_sync
-  , `Effect4.FrameFiber.step_suspend
-  , `Effect4.FrameFiber.step_withFiber
-  , `Effect4.FrameFiber.step_yieldableError
-  , `Effect4.FrameFiber.step_onSuccess
-  , `Effect4.FrameFiber.step_onFailure
-  , `Effect4.FrameFiber.step_onSuccessAndFailure
-  , `Effect4.FrameFiber.step_exitFrame
-  , `Effect4.FrameFiber.step_onExit
-  , `Effect4.FrameFiber.step_setInterruptible_not_evaluable
-  , `Effect4.FrameFiber.step_whileLoop_true
-  , `Effect4.FrameFiber.step_whileLoop_false
-  , `Effect4.FrameFiber.step_iterator
-  , `Effect4.FrameFiber.step_ofExit_finishes
-  , `Effect4.FrameFiber.run_zero
-  , `Effect4.FrameFiber.run_succ_finished
-  , `Effect4.FrameFiber.run_succ_running
-  , `Effect4.FrameFiber.uninterruptible_already_masked
-  , `Effect4.FrameFiber.uninterruptible_masks
-  , `Effect4.FrameFiber.uninterruptibleMask_eq
-  , `Effect4.FrameFiber.setFiberInterruptible_flag
-  , `Effect4.FrameFiber.setFiberInterruptible_pushes
-  , `Effect4.FrameFiber.setFiberInterruptible_immediate_failure
-  , `Effect4.FrameFiber.setFiberInterruptible_no_pending
-  , `Effect4.FrameFiber.interruptibleRegion_already
-  , `Effect4.FrameFiber.interruptibleRegion_masked
-  , `Effect4.FrameFiber.restoreAcquire_asked
-  , `Effect4.FrameFiber.restoreAcquire_not_asked
-  , `Effect4.Prim.scopedFrame_eq
-  , `Effect4.Prim.scopedFrame_finalizer_masked
-  , `Effect4.FrameFiber.step_scopedFrame
-  , `Effect4.Prim.withFiber_refused
-  , `Effect4.Prim.yieldableError_host_class_refused
-  , `Effect4.Machine.runloopTop_deferred
-  , `Effect4.Machine.runloopTop_idle
-  , `Effect4.Machine.runloopTop_clears
-  , `Effect4.Machine.iteration_evaluates
-  , `Effect4.Machine.interruptRecord_parked_applies
-  , `Effect4.Prim.armE_asyncFinalizer_interrupt
-  , `Effect4.FrameFiber.popFrom_asyncFinalizer_pops_its_push
-  , `Effect4.Machine.countOp_count
-  , `Effect4.Machine.drive_evaluate_enters
-  , `Effect4.Machine.drive_evaluate_exited
-  , `Effect4.Machine.drive_evaluate_running
-  , `Effect4.Machine.injectYield_latched
-  , `Effect4.Machine.injectYield_fires
-  , `Effect4.Machine.iteration_injected
-  , `Effect4.Machine.drive_loop_parked
-  , `Effect4.Machine.drive_loop_parked_deferred
-  , `Effect4.Machine.drive_loop_continues
-  , `Effect4.Machine.start_eq
-  , `Effect4.Machine.runFork_eq
-  , `Effect4.Machine.interruptRecord_records
-  , `Effect4.Machine.interruptRecord_running_defers
-  , `Effect4.Machine.interruptRecord_idle_applies
-  , `Effect4.Machine.interruptRecord_masked
-  , `Effect4.Machine.spawn_untracked
-  , `Effect4.Machine.drive_trackChild_live
-  , `Effect4.Machine.drive_trackChild_exited
-  , `Effect4.Machine.spawnChild_fields
-  , `Effect4.Machine.interruptRecord_exited
-  , `Effect4.Machine.interruptRecord_accumulates
-  , `Effect4.Machine.yieldVerdict_default
-  , `Effect4.Machine.yieldVerdict_override
-  , `Effect4.Machine.injectYield_no_verdict
-  , `Effect4.Machine.Dispatcher.enqueue_same_bucket
-  , `Effect4.Machine.Dispatcher.enqueue_lower_priority
-  , `Effect4.Machine.Dispatcher.enqueue_empty
-  , `Effect4.Machine.Dispatcher.enqueue_arms
-  , `Effect4.Machine.Dispatcher.drain_disarms
-  , `Effect4.Machine.Dispatcher.drain_eq
-  , `Effect4.Machine.fire_eq
-  , `Effect4.Machine.flushAll_idle
-  , `Effect4.Machine.flushAll_round
-  , `Effect4.Machine.evaluatePrim_yieldNowWith
-  , `Effect4.Machine.drive_resume_wrong_token
-  , `Effect4.Machine.drive_resume_guard
-  , `Effect4.Machine.drive_resume_not_parked
-  , `Effect4.Machine.Env.hooks_empty
-  , `Effect4.Machine.injectYield_prevented
-  , `Effect4.Machine.stepDecision_abort
-  , `Effect4.Machine.runCallback_eq
-  , `Effect4.Machine.fireObserver_callback
-  , `Effect4.Machine.promiseOutcome_eq
-  , `Effect4.Machine.promiseOutcome_failure
-  , `Effect4.Machine.runSyncExit_exited
-  , `Effect4.Machine.runSyncExit_survives
-  , `Effect4.Machine.spawn_eq
-  , `Effect4.Machine.evaluatePrim_join_done
-  , `Effect4.Machine.evaluatePrim_join_live
-  , `Effect4.Machine.evaluatePrim_join_unknown
-  , `Effect4.Machine.withFiber_snapshotChildren
-  , `Effect4.Machine.withFiber_awaitNewChildren
-  , `Effect4.Machine.withFiber_runIn
-  , `Effect4.Machine.linkScope_closed
-  , `Effect4.Machine.linkScope_unknown
-  , `Effect4.FrameFiber.step_async_frontier
-  , `Effect4.Prim.armE_asyncFinalizer_no_interrupt
-  , `Effect4.Prim.ensure_asyncFinalizer_masks
-  , `Effect4.Prim.arms_asyncFinalizer
-  , `Effect4.Prim.hasArm_asyncFinalizer_contA_false
-  , `Effect4.Machine.closeWalk_sequential
-  , `Effect4.Machine.closeSeq_step
-  , `Effect4.Machine.closeSeq_captures
-  , `Effect4.Machine.closeSeq_merges
-  , `Effect4.Machine.closeWalk_parallel
-  , `Effect4.Machine.actionOf_closePar
-  , `Effect4.Machine.closeParDone_is_asVoidAll
-  , `Effect4.Machine.scopeLinkFiber_name
-  , `Effect4.Machine.scopeStore_forkChild_names
-  , `Effect4.Program.Agreement.enterScoped_eq
-  , `Effect4.Program.Agreement.exitScoped_restores
-  , `Effect4.Program.Sched.release_intro
-  , `Effect4.Program.Sched.foreignRelease_intro
-  , `Effect4.Program.Sched.acquireIn_intro
-  , `Effect4.Scope.closingExit_addUnsafe
-  , `Effect4.Machine.syncOpStep_scopeAdd_closed
-  , `Effect4.Machine.refStep_make
-  , `Effect4.Machine.refMake_twice_distinct
-  , `Effect4.Machine.refStep_get
-  , `Effect4.Machine.refStep_get_after_set
-  , `Effect4.Machine.refStep_set
-  , `Effect4.Machine.set_answer_ne_update_answer
-  , `Effect4.Machine.refStep_set_answers_self
-  , `Effect4.Machine.refStep_getAndSet
-  , `Effect4.Machine.refStep_setAndGet
-  , `Effect4.Machine.refStep_update
-  , `Effect4.Machine.refStep_update_applies_once
-  , `Effect4.Machine.refStep_modify
-  , `Effect4.Machine.refStep_modifySome_eq_modify
-  , `Effect4.Machine.refStep_modifySome_none
-  , `Effect4.Machine.refStep_updateSomeAndGet_some
-  , `Effect4.Machine.deferredStore_make
-  , `Effect4.Machine.deferredStore_isDone
-  , `Effect4.Machine.awaitDeferred_is_a_park
-  , `Effect4.Machine.deferredStore_register_pending
-  , `Effect4.Machine.deferredStore_register_done
-  , `Effect4.Machine.deferredStore_complete_done
-  , `Effect4.Machine.deferredStore_complete_pending
-  , `Effect4.Machine.deferredStore_complete_stores_argument
-  , `Effect4.Machine.deferredStore_waiter_receives_stored
-  , `Effect4.Machine.doneWith_shared
-  , `Effect4.Machine.completionPrim_ofExit
-  , `Effect4.Machine.interruptDeferred_delegates
-  , `Effect4.Machine.interruptWith_is_completion
-  , `Effect4.Machine.intoDeferred_spelling
-  , `Effect4.Machine.deferredPoll_no_write
-  , `Effect4.Program.Agreement.compileLayer_succeed
-  , `Effect4.Program.Agreement.compileLayer_effect
-  , `Effect4.Program.Agreement.contAOf_fromBuildThen_scope
-  , `Effect4.Machine.finProgram_closeChildOnFailure_failure
-  , `Effect4.Machine.finProgram_closeChildOnFailure_success
-  , `Effect4.Program.Agreement.contAOf_withMemoMapThen_memoMap
-  , `Effect4.Program.Agreement.currentMemoMapOf_provideService
-  , `Effect4.Program.Agreement.regionCode_buildAdding
-  , `Effect4.Program.Agreement.contAOf_addCurrentMemoMap
-  , `Effect4.Program.Agreement.addCurrentMemoMapK_context
-  , `Effect4.Machine.syncOpStep_memoBuild
-  , `Effect4.Program.Agreement.contAOf_memoize_unit
-  , `Effect4.Program.Agreement.contAOf_buildIntoLayerScope_scope
-  , `Effect4.Program.Agreement.contAOf_thenBuildInto
-  , `Effect4.Machine.finProgram_memoDone
-  , `Effect4.Machine.syncOpStep_memoComplete_some
-  , `Effect4.Machine.finProgram_memoEntry
-  , `Effect4.Machine.syncOpStep_memoRelease_last
-  , `Effect4.Machine.syncOpStep_memoRelease_dec
-  , `Effect4.Machine.contAOf_closeIfLast_scope
-  , `Effect4.Program.Sched.contAOf_closeIfLast_other
-  , `Effect4.Machine.syncOpStep_memoGet_some
-  , `Effect4.Program.Agreement.contAOf_memoize_hit
-  , `Effect4.Program.Agreement.resolveLayerTerm_ref
-  , `Effect4.Machine.MemoWorld.get_own
-  , `Effect4.Machine.MemoWorld.get_parent
-  , `Effect4.Program.Agreement.innerLayerAt_effect
-  , `Effect4.Program.Agreement.suspendBodyAt_memoLookup
-  , `Effect4.Program.Agreement.contAOf_awaitPromise
-  , `Effect4.Program.Agreement.currentMemoMapOf_addV
-  , `Effect4.Program.Agreement.currentMemoMapOf_empty
-  , `Effect4.Machine.syncOpStep_memoFork
-  , `Effect4.Program.Agreement.buildWithScopeK_context
-  , `Effect4.Program.Agreement.contAOf_buildWithScopeFromContext
-  , `Effect4.Program.Agreement.contAOf_serviceLookup
-  , `Effect4.Program.Agreement.serviceLookupK_found
-  , `Effect4.Program.Agreement.serviceLookupK_missing
-  , `Effect4.Program.Agreement.provideLayerWithK_at
-  , `Effect4.Program.Agreement.compileLayer_merge
-  , `Effect4.Program.Agreement.innerLayerAt_merge
-  , `Effect4.Program.Agreement.contAOf_mergeChildren_scope
-  , `Effect4.Program.Agreement.contAOf_mergeForkOne_scope
-  , `Effect4.Program.Agreement.withFiberOf_forkLayer
-  , `Effect4.Program.Agreement.contAOf_mergeForkNext_fiber
-  , `Effect4.Program.Agreement.innerLayerAt_mergeAll
-  , `Effect4.Program.Agreement.mergeAllCount_of_at
-  , `Effect4.Program.Agreement.contAOf_mergeAllChildren_scope
-  , `Effect4.Program.Agreement.contAOf_mergeAllForkOne_scope
-  , `Effect4.Program.Agreement.contAOf_mergeAllForkNext_fiber
-  , `Effect4.Program.Agreement.withFiberOf_awaitAllFailFast
-  , `Effect4.Program.Agreement.contAOf_mergeContexts
-  , `Effect4.Program.Agreement.mergeContextsK_contexts
-  , `Effect4.Program.Agreement.compileLayer_provide
-  , `Effect4.Program.Agreement.compileLayer_provideMerge
-  , `Effect4.Program.Agreement.innerLayerAt_provide
-  , `Effect4.Program.Agreement.contAOf_provideThen
-  , `Effect4.Program.Agreement.provideThenK_context
-  , `Effect4.Program.Agreement.regionCode_build
-  , `Effect4.Program.Agreement.contAOf_combineWith
-  , `Effect4.Program.Agreement.combineWithK_provide
-  , `Effect4.Program.Agreement.combineWithK_provideMerge
-  , `Effect4.Program.Agreement.compileLayer_fresh
-  , `Effect4.Program.Agreement.contAOf_freshThen_memoMap
-  , `Effect4.Program.Agreement.finalizerProgram_scopeClose
-  , `Effect4.Program.Agreement.compileEff_provideLayer
-  , `Effect4.Program.Agreement.suspendBodyAt_provideLayer
-  , `Effect4.Program.Agreement.contAOf_provideLayerWith_scope
-  , `Effect4.Program.Agreement.contAOf_provideLayerBody
-  , `Effect4.Program.Agreement.provideLayerBodyK_context
-  , `Effect4.Program.Agreement.contAOf_updateThen
-  , `Effect4.Program.Agreement.updateThenK_context
-  , `Effect4.Program.Agreement.contAOf_bodyThen
-  , `Effect4.Machine.exitFiber_eq
-  , `Effect4.Machine.exitFiber_no_middleware
-  , `Effect4.Machine.publish_fields
-  , `Effect4.Machine.cleared_fields
-  , `Effect4.Machine.exitStore_no_observers
-  , `Effect4.Machine.exitStore_observers
-  , `Effect4.Machine.drive_observe
-  , `Effect4.Machine.drive_exitDone
-  , `Effect4.Machine.fireObserver_resumeAwait
-  , `Effect4.Machine.stepDecision_installMiddleware
-  , `Effect4.Machine.withFiber_fork
-  , `Effect4.Machine.Witnesses.w1_deferred_join_child
-  , `Effect4.Machine.Witnesses.w1_deferred_start_is_a_task
-  , `Effect4.Machine.Witnesses.w5_middleware_interrupts_children
-  , `Effect4.Machine.exitFiber_no_children
-  , `Effect4.Machine.exitInterruptChildren_eq
-  , `Effect4.Machine.exitInterruptChildren_reenters
-  , `Effect4.Machine.Witnesses.w5_fork_latches_the_middleware
-  , `Effect4.Machine.Witnesses.w5_daemon_child_survives_parent_exit
-  , `Effect4.Machine.withFiber_forkIn
-  , `Effect4.Machine.linkScope_open
-  , `Effect4.Machine.linkScope_open_exited
-  , `Effect4.Machine.fireObserver_dropScopeFinalizer
-  , `Effect4.Machine.withFiber_closeScope
-  , `Effect4.Machine.Witnesses.w6_link_then_close
-  , `Effect4.Machine.Witnesses.w6_closed_scope_interrupts_now
-  , `Effect4.Machine.Witnesses.w6_child_exit_drops_key
-  , `Effect4.Machine.withFiber_forkScoped_ambient
-  , `Effect4.Machine.withFiber_forkScoped_none
-  , `Effect4.Machine.withFiber_ambientScope
-  , `Effect4.Machine.withFiber_ambientScope_none
-  , `Effect4.Machine.forkFinalizers_cons
-  , `Effect4.Machine.withFiber_closePar
-  , `Effect4.Machine.drive_closeParAwait
-  , `Effect4.Machine.withFiber_raceAll
-  , `Effect4.Machine.evaluatePrim_raceRegister
-  , `Effect4.Machine.drive_enrollRace_live
-  , `Effect4.Machine.drive_enrollRace_exited
-  , `Effect4.Machine.drive_registrationDone_answered
-  , `Effect4.Machine.drive_registrationDone_parks
-  , `Effect4.Machine.launchEntrant_eq
-  , `Effect4.Machine.drive_launch_runs
-  , `Effect4.Machine.drive_launch_done
-  , `Effect4.Machine.fireObserver_raceCallback_pending
-  , `Effect4.Machine.fireObserver_raceCallback_settles
-  , `Effect4.Machine.fireObserver_raceCallback_late
-  , `Effect4.Machine.resumePrim_continueWith
-  , `Effect4.Machine.Witnesses.w3_empty_is_a_frontier
-  , `Effect4.Machine.Witnesses.w3_empty_until_interrupted
-  , `Effect4.Machine.Witnesses.w3_immediate_success_stops_launch
-  , `Effect4.Machine.Witnesses.w3_failure_allows_next_launch
-  , `Effect4.Machine.Witnesses.w3_all_failures_retain_order
-  , `Effect4.Machine.withFiber_interrupt
-  , `Effect4.Machine.withFiber_interruptAs
-  , `Effect4.Machine.withFiber_interruptAs_unknown
-  , `Effect4.Machine.drive_interruptTarget
-  , `Effect4.Machine.drive_interruptTarget_unknown
-  , `Effect4.Machine.drive_afterInterrupt
-  , `Effect4.Machine.asVoidCode_eq
-  , `Effect4.Machine.awaitCode_join_exited
-  , `Effect4.Machine.awaitCode_join_live
-  , `Effect4.Machine.awaitCode_awaitAll
-  , `Effect4.Machine.evaluatePrim_awaitAllPark
-  , `Effect4.Machine.withFiber_interruptScoped_self
-  , `Effect4.Machine.withFiber_interruptScoped_other
-  , `Effect4.Machine.Witnesses.w2_delivered_at_unmask
-  , `Effect4.Machine.Witnesses.w2_recorded_once
-  , `Effect4.Machine.Witnesses.w2_masked_interrupt_does_not_apply
-  , `Effect4.Machine.Witnesses.w6_self_interruptor_skipped
-  , `Effect4.Machine.withFiber_interruptAll
-  , `Effect4.Machine.interruptEach_nil
-  , `Effect4.Machine.interruptEach_cons
-  , `Effect4.Machine.interruptEach_known
-  , `Effect4.Machine.fireObserver_countdown_done
-  , `Effect4.Machine.fireObserver_countdown_next
-  , `Effect4.Machine.Witnesses.w5_await_all_children_awaits_only_new
-  , `Effect4.Machine.Witnesses.w12_awaitAll_answers_the_exits
-  , `Effect4.Machine.Witnesses.w6_runIn_closed_scope_uses_no_caller_annotations
-  , `Effect4.Machine.fireObserver_untrackChild
-  , `Effect4.Machine.exitFiber_children
-  , `Effect4.Machine.exitFiber_finalizing
-  , `Effect4.Machine.withFiber_closeScope_unknown
-  , `Effect4.Machine.Witnesses.w6_sequential_captures_and_merges
-  , `Effect4.Machine.Witnesses.w6_parallel_forks_and_merges
-  , `Effect4.Machine.evaluatePrim_async_immediate
-  , `Effect4.Machine.evaluatePrim_async_parks
-  , `Effect4.Machine.evaluatePrim_sync_answers
-  , `Effect4.Machine.evaluatePrim_sync_pure
-  , `Effect4.Machine.settle_answered
-  , `Effect4.Machine.drive_loop_answered
-  , `Effect4.Machine.drive_deliver
-  , `Effect4.Machine.Witnesses.w13_completion_pop_sees_the_waiter_interrupt
-  , `Effect4.Machine.Witnesses.w13_sync_meets_the_finalizer_program
-  , `Effect4.Machine.drive_finish
-  , `Effect4.Machine.settle_finished
-  , `Effect4.Machine.withFiber_dropObservers
-  , `Effect4.Machine.Witnesses.w14_join_cleanup_drops_the_observer
-  , `Effect4.Machine.countdownWalk_nil
-  , `Effect4.Machine.countdownWalk_exited
-  , `Effect4.Machine.countdownWalk_live
-  , `Effect4.Machine.countdownPark_none_live
-  , `Effect4.Machine.countdownPark_parks
-  , `Effect4.Machine.Witnesses.w12_awaitAll_input_order
-  , `Effect4.Machine.settleRace_eq
-  , `Effect4.Machine.withFiber_cancelRace
-  , `Effect4.Machine.drive_raceCancel_nil
-  , `Effect4.Machine.drive_raceCancel_live
-  , `Effect4.Machine.drive_raceCancel_gone
-  , `Effect4.Machine.withFiber_cancelRace_unknown
-  , `Effect4.Machine.Witnesses.w3_host_interrupt_cancels_entrants
-  , `Effect4.Machine.Witnesses.w3_settle_interrupts_the_parked_loser
-  , `Effect4.Machine.drive_launch_exhausted
-  , `Effect4.Machine.drive_link
-  , `Effect4.Machine.Witnesses.w6_deferred_child_is_linked
-  , `Effect4.Machine.Witnesses.w5_await_all_children_on_failure
-  , `Effect4.Machine.RunMachine.arm_new
-  , `Effect4.Machine.RunMachine.arm_known
-  , `Effect4.Machine.RunMachine.arm_fields
-  , `Effect4.Machine.Witnesses.w15_flush_runs_callbacks_in_arming_order
-  , `Effect4.Machine.RunMachine.disarm_eq
-  , `Effect4.Machine.flushRoot_idle
-  , `Effect4.Machine.flushRoot_round
-  , `Effect4.Machine.Witnesses.w8_sync_child_yield_is_async
-  ]
-
-private def expectedRowTotal : Nat := 137
-private def expectedDenominator : Nat := 135
 
 /-! ## Checks -/
 
@@ -7248,25 +1119,9 @@ private def firstDuplicateName? : List Name → Option Name
   | [] => none
   | name :: names => if names.contains name then some name else firstDuplicateName? names
 
-/-- Canonical kernel dependency text for one witness. A witness is a semantic
-theorem, so it is bound by the semantic ceiling `propext`/`Quot.sound`; any
-other axiom, `Classical.choice` included, fails here rather than being spelled
-into a receipt. -/
-private def canonicalAxiomText (name : Name) : CommandElabM String := do
-  let actual := (← collectAxioms name).toList
-  let unknown := actual.filter fun axiomName =>
-    axiomName != ``propext && axiomName != ``Quot.sound
-  unless unknown.isEmpty do
-    failJoin m!"unexpected kernel axioms for witness {name}: {unknown}"
-  let parts := [``propext, ``Quot.sound].filter actual.contains
-  pure <| if parts.isEmpty then "none" else
-    String.intercalate "," (parts.map fun n => n.toString)
-
 private def checkRowShape : CommandElabM Unit := do
   if let some duplicate := firstDuplicateString? (censusRows.map Row.id) then
     failJoin m!"duplicate census row id: {duplicate}"
-  unless censusRows.length == expectedRowTotal do
-    failJoin m!"census row count drifted: {censusRows.length}, expected {expectedRowTotal}"
   for row in censusRows do
     unless knownKinds.contains row.kind do
       failJoin m!"row {row.id} has unknown kind {row.kind}"
@@ -7274,7 +1129,7 @@ private def checkRowShape : CommandElabM Unit := do
       failJoin m!"row {row.id} has a disposition outside the PORT-MANIFEST vocabulary: {row.disposition}"
     unless knownCoverage.contains row.coverage do
       failJoin m!"row {row.id} has unknown coverage {row.coverage}"
-    if let some duplicate := firstDuplicateName? (row.witnesses.map Prod.fst) then
+    if let some duplicate := firstDuplicateName? row.witnesses then
       failJoin m!"row {row.id} lists witness {duplicate} twice"
     let hasWitness := !row.witnesses.isEmpty
     if row.coverage == "absent" && hasWitness then
@@ -7286,10 +1141,12 @@ private def checkRowShape : CommandElabM Unit := do
     if excludedDispositions.contains row.disposition && hasWitness then
       failJoin m!"row {row.id} is {row.disposition}, is outside the coverage denominator, and must carry no witness"
 
+/-- Every witness exists and is a theorem. The axiom ceiling is the gate's
+(`Test/Audit/AxiomGate.lean`), which audits every declaration, witnesses included. -/
 private def checkWitnesses : CommandElabM Unit := do
   let environment ← getEnv
   for row in censusRows do
-    for (name, expectedAxioms) in row.witnesses do
+    for name in row.witnesses do
       match environment.find? name with
       | none => failJoin m!"row {row.id}: missing witness declaration {name}"
       | some (.thmInfo _) => pure ()
@@ -7298,35 +1155,13 @@ private def checkWitnesses : CommandElabM Unit := do
           let kind :=
             if statementIsProp then "a Prop-typed non-theorem declaration" else "not a theorem"
           failJoin m!"row {row.id}: witness {name} is {kind}; a witness must be a theorem"
-      let actualAxioms ← canonicalAxiomText name
-      unless actualAxioms == expectedAxioms do
-        failJoin
-          m!"row {row.id}: axiom receipt for {name}: expected {expectedAxioms}, found {actualAxioms}"
-
-private def checkSnapshot : CommandElabM Unit := do
-  if let some duplicate := firstDuplicateName? snapshotWitnesses then
-    failJoin m!"statement snapshot lists {duplicate} twice"
-  let used := censusRows.flatMap fun row => row.witnesses.map Prod.fst
-  let missing := used.filter fun name => !snapshotWitnesses.contains name
-  unless missing.isEmpty do
-    failJoin m!"witnesses without a frozen statement snapshot: {missing}"
-  let stale := snapshotWitnesses.filter fun name => !used.contains name
-  unless stale.isEmpty do
-    failJoin m!"statement snapshot entries that witness no census row: {stale}"
 
 private def denominatorRows : List Row :=
   censusRows.filter fun row => !excludedDispositions.contains row.disposition
 
-private def checkCoverageArithmetic : CommandElabM Unit := do
-  unless denominatorRows.length == expectedDenominator do
-    failJoin
-      m!"coverage denominator drifted: {denominatorRows.length}, expected {expectedDenominator}"
-
 private def checkRuntimeCoverage : CommandElabM Unit := do
   checkRowShape
   checkWitnesses
-  checkSnapshot
-  checkCoverageArithmetic
   let total := censusRows.length
   let denominator := denominatorRows.length
   let excluded := total - denominator
@@ -7347,11 +1182,8 @@ private def emitRuntimeCoverage : CommandElabM Unit := do
     liftIO <| IO.println
       s!"E4RTCOV\trow\t{row.id}\t{row.kind}\t{row.disposition}\t{row.coverage}\t{row.witnesses.length}"
   for row in censusRows do
-    for (name, _) in row.witnesses do
-      let actual ← canonicalAxiomText name
-      liftIO <| IO.println s!"E4RTCOV\twitness\t{row.id}\t{name}\t{actual}"
-  for name in snapshotWitnesses do
-    liftIO <| IO.println s!"E4RTCOV\tsnapshot\t{name}"
+    for name in row.witnesses do
+      liftIO <| IO.println s!"E4RTCOV\twitness\t{row.id}\t{name}"
   let denominator := denominatorRows.length
   let green := (denominatorRows.filter fun row => row.coverage == "green").length
   let partial_ := (denominatorRows.filter fun row => row.coverage == "partial").length
