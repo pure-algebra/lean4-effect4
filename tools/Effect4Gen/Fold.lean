@@ -30,6 +30,9 @@ structure Arg where
   recFam : Option String
   tyText : String
 
+/-- The `do`-binder that receives a recursive argument's folded value in `foldM`: `a3 ↦ x3`. -/
+def bindName (a : Arg) : String := "x" ++ a.name.drop 1
+
 structure CtorRow where
   fam : String
   ctor : String
@@ -175,6 +178,138 @@ def emitBlock (root : Name) : MetaM (String × List String) := do
         | _ => s!"op (f_{label} ({nodeExpr})) ({recComb childCalls})"
       s := s ++ pat ++ s!"\n    {rhs}\n"
     s := s ++ "termination_by structural node\n"
+  if isMutual then s := s ++ "end\n\n" else s := s ++ "\n"
+
+  -- The Kleisli algebra: the same slots, each returning in `M`. A recursive argument
+  -- arrives already folded; a non-recursive one arrives as itself.
+  let malgType := s!"{blockName}MAlgebra"
+  s := s ++ s!"structure {malgType} {opParam}(M : Type u → Type v) (R : {famType} → Type u) where\n"
+  for (label, _, rows) in block do
+    for r in rows do
+      let argTexts := r.args.map fun a =>
+        match a.recFam with
+        | some f => s!"R .{f}"
+        | none => s!"({a.tyText})"
+      let arrow := String.intercalate " → " (argTexts ++ [s!"M (R .{label})"])
+      s := s ++ s!"  {r.field} : {arrow}\n"
+  s := s ++ "\n"
+
+  s := s ++ s!"def {algType}.toM {opArg}\{M : Type u → Type v} [Monad M] \{R : {famType} → Type u}\n"
+  s := s ++ s!"    (alg : {algType}{opApp} R) : {malgType}{opApp} M R where\n"
+  for (_, _, rows) in block do
+    for r in rows do
+      let binders := String.intercalate " " (r.args.map (·.name))
+      let lhs := if r.args.isEmpty then "" else " " ++ binders
+      let rhs := if r.args.isEmpty then s!"pure alg.{r.field}"
+        else s!"pure (alg.{r.field} {binders})"
+      s := s ++ s!"  {r.field}{lhs} := {rhs}\n"
+  s := s ++ "\n"
+
+  s := s ++ s!"def {malgType}.map {opArg}\{M : Type u → Type v} \{N : Type u → Type w}\n"
+  s := s ++ s!"    \{R : {famType} → Type u} (φ : ∀ \{α}, M α → N α)\n"
+  s := s ++ s!"    (alg : {malgType}{opApp} M R) : {malgType}{opApp} N R where\n"
+  for (_, _, rows) in block do
+    for r in rows do
+      let binders := String.intercalate " " (r.args.map (·.name))
+      let lhs := if r.args.isEmpty then "" else " " ++ binders
+      let rhs := if r.args.isEmpty then s!"φ alg.{r.field}"
+        else s!"φ (alg.{r.field} {binders})"
+      s := s ++ s!"  {r.field}{lhs} := {rhs}\n"
+  s := s ++ "\n"
+
+  -- The sequencing algebra: a plain algebra on the carrier `fun f => M (R f)`, whose
+  -- slots bind their already-monadic children in declaration order before applying.
+  s := s ++ s!"def {malgType}.toSeq {opArg}\{M : Type u → Type v} [Monad M]\n"
+  s := s ++ s!"    \{R : {famType} → Type u} (alg : {malgType}{opApp} M R) :\n"
+  s := s ++ s!"    {algType}{opApp} (fun f => M (R f)) where\n"
+  for (_, _, rows) in block do
+    for r in rows do
+      let binders := String.intercalate " " (r.args.map (·.name))
+      let lhs := if r.args.isEmpty then "" else " " ++ binders
+      let recArgs := r.args.filter (·.recFam.isSome)
+      let callArgs := String.intercalate " " (r.args.map fun a =>
+        match a.recFam with
+        | some _ => bindName a
+        | none => a.name)
+      let apply := if r.args.isEmpty then s!"alg.{r.field}" else s!"alg.{r.field} {callArgs}"
+      if recArgs.isEmpty then
+        s := s ++ s!"  {r.field}{lhs} := {apply}\n"
+      else
+        s := s ++ s!"  {r.field}{lhs} := do\n"
+        for a in recArgs do s := s ++ s!"    let {bindName a} ← {a.name}\n"
+        s := s ++ s!"    {apply}\n"
+  s := s ++ "\n"
+
+  if isMutual then s := s ++ "mutual\n"
+  for (label, fam, rows) in block do
+    s := s ++ s!"def foldM_{label} {opArg}\{M : Type u → Type v} [Monad M] \{R : {famType} → Type u}\n"
+    s := s ++ s!"    (alg : {malgType}{opApp} M R) (node : {fam}{opApp}) : M (R .{label}) :=\n"
+    s := s ++ "  match node with\n"
+    for r in rows do
+      let binders := String.intercalate " " (r.args.map (·.name))
+      let pat := if r.args.isEmpty then s!"  | .{r.ctor} =>" else s!"  | .{r.ctor} {binders} =>"
+      let recArgs := r.args.filter (·.recFam.isSome)
+      let callArgs := String.intercalate " " (r.args.map fun a =>
+        match a.recFam with
+        | some _ => bindName a
+        | none => a.name)
+      let apply := if r.args.isEmpty then s!"alg.{r.field}" else s!"alg.{r.field} {callArgs}"
+      if recArgs.isEmpty then
+        s := s ++ s!"{pat} {apply}\n"
+      else
+        s := s ++ s!"{pat} do\n"
+        for a in recArgs do
+          s := s ++ s!"      let {bindName a} ← foldM_{a.recFam.getD label} alg {a.name}\n"
+        s := s ++ s!"      {apply}\n"
+    s := s ++ "termination_by structural node\n"
+  if isMutual then s := s ++ "end\n\n" else s := s ++ "\n"
+
+  if isMutual then s := s ++ "mutual\n"
+  for (label, fam, rows) in block do
+    s := s ++ s!"theorem foldM_eq_cata_{label} {opArg}\{M : Type u → Type v} [Monad M]\n"
+    s := s ++ s!"    \{R : {famType} → Type u} (alg : {malgType}{opApp} M R) (node : {fam}{opApp}) :\n"
+    s := s ++ s!"    foldM_{label} alg node = cata_{label} alg.toSeq node := by\n"
+    s := s ++ "  match node with\n"
+    for r in rows do
+      let binders := String.intercalate " " (r.args.map (·.name))
+      let pat := if r.args.isEmpty then s!"  | .{r.ctor} =>" else s!"  | .{r.ctor} {binders} =>"
+      let ihs := r.args.filterMap fun a =>
+        a.recFam.map fun f => s!"foldM_eq_cata_{f} alg {a.name}"
+      let lemmas := String.intercalate ", "
+        ([s!"foldM_{label}", s!"cata_{label}", s!"{malgType}.toSeq"] ++ ihs)
+      s := s ++ pat ++ s!"\n    simp only [{lemmas}]\n"
+    s := s ++ "termination_by structural node\n"
+    receipts := receipts ++ [s!"foldM_eq_cata_{label}"]
+  if isMutual then s := s ++ "end\n\n" else s := s ++ "\n"
+
+  -- In the identity monad the monadic fold is the plain fold. The induction is
+  -- `foldM_eq_cata_*`'s; what is left is `(alg.toM).toSeq = alg`, which is `rfl`.
+  for (label, fam, _) in block do
+    s := s ++ s!"theorem foldM_id_{label} {opArg}\{R : {famType} → Type u} (alg : {algType}{opApp} R)\n"
+    s := s ++ s!"    (node : {fam}{opApp}) :\n"
+    s := s ++ s!"    foldM_{label} (M := Id) alg.toM node = cata_{label} alg node := by\n"
+    s := s ++ s!"  rw [foldM_eq_cata_{label}]\n"
+    s := s ++ "  rfl\n\n"
+    receipts := receipts ++ [s!"foldM_id_{label}"]
+
+  if isMutual then s := s ++ "mutual\n"
+  for (label, fam, rows) in block do
+    s := s ++ s!"theorem foldM_natural_{label} {opArg}\{M : Type u → Type v} \{N : Type u → Type w}\n"
+    s := s ++ s!"    [Monad M] [Monad N] \{R : {famType} → Type u} (φ : MonadMorphism M N)\n"
+    s := s ++ s!"    (alg : {malgType}{opApp} M R) (node : {fam}{opApp}) :\n"
+    s := s ++ s!"    φ.toFun (foldM_{label} alg node) = foldM_{label} (alg.map φ.toFun) node := by\n"
+    s := s ++ "  match node with\n"
+    for r in rows do
+      let binders := String.intercalate " " (r.args.map (·.name))
+      let pat := if r.args.isEmpty then s!"  | .{r.ctor} =>" else s!"  | .{r.ctor} {binders} =>"
+      let ihs := r.args.filterMap fun a =>
+        a.recFam.map fun f => s!"foldM_natural_{f} φ alg {a.name}"
+      let bindLemma := if ihs.isEmpty then [] else ["φ.map_bind"]
+      let lemmas := String.intercalate ", "
+        ([s!"foldM_{label}", s!"{malgType}.map"] ++ bindLemma ++ ihs)
+      s := s ++ pat ++ s!"\n    simp only [{lemmas}]\n"
+    s := s ++ "termination_by structural node\n"
+    receipts := receipts ++ [s!"foldM_natural_{label}"]
   if isMutual then s := s ++ "end\n\n" else s := s ++ "\n"
 
   return (s, receipts)
@@ -333,7 +468,18 @@ def run (args : Args) : MetaM (Array String) := do
     "",
     "namespace Effect4.Program",
     "",
-    "universe u",
+    "universe u v w",
+    "",
+    "/-- A monad morphism: a family of maps `M α → N α` that preserves `pure` and `bind`.",
+    "Lean core has no such class and this estate does not depend on Mathlib, so the",
+    "structure is emitted here, once, beside the monadic folds that quantify over it.",
+    "The naturality of `foldM_*` needs exactly these two equations and no monad law. -/",
+    "structure MonadMorphism (M : Type u → Type v) (N : Type u → Type w)",
+    "    [Monad M] [Monad N] where",
+    "  toFun : ∀ {α}, M α → N α",
+    "  map_pure : ∀ {α} (a : α), toFun (pure a) = pure a",
+    "  map_bind : ∀ {α β} (x : M α) (f : α → M β),",
+    "    toFun (x >>= f) = toFun x >>= fun a => toFun (f a)",
     ""
   ]
 
