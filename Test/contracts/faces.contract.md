@@ -22,7 +22,7 @@ holds it, and where the battery is.
 | --- | --- | --- | --- | --- |
 | 1 | the Lean printer | `Api.print` / `Api.printModule`: an `Eff` to one TypeScript expression, or a declaration block with one `const L_<path>` per hoisted layer | proved (§2), tested | `src/Effect4/Codegen/Print.lean`; `Test/Codegen/PrintContract.lean` |
 | 2 | the Lean reader | `Api.readModule` / `readEff`: the partial inverse, with a closed refusal alphabet | proved (§2), tested | `src/Effect4/Codegen/Read.lean`; `Test/Codegen/ReadContract.lean`, `Test/Codegen/ReadAxiomReport.lean` |
-| 3 | the TypeScript printer-image reader | `ts/eff/read.ts`: a third implementation of face 2's relation, in the target language | tested (byte equality against Lean-cut oracles over the generated corpus), reproduced (its head union is generated, so `tsc` holds head coverage) | `ts/eff/read.ts`, `ts/eff/check.ts`; `ts/eff/test/read.test.ts`, `tables.test.ts`; `scripts/check-ts-eff-corpus.sh` |
+| 3 | the TypeScript printer-image reader | `ts/eff/read.ts`: a third implementation of face 2's relation, in the target language | tested (byte equality against Lean-cut oracles over the generated corpus), reproduced (its head union is generated, so `tsc` holds head coverage) | `ts/eff/read.ts`, `ts/eff/check.ts`; `ts/eff/test/read.test.ts`, `tables.test.ts`; `make check-ts-reader` |
 | 4 | the foreign recognizer `ck` | `ts/eff/ingest/ck.ts` over the TypeScript compiler API: an island recognizer of a sub-language of rc.112 | tested (agreement with face 5; equality with Lean where an oracle exists) | `ts/eff/ingest/ck.ts`; `ts/eff/ingest/test/foreign.test.ts`, `gate.test.ts`, `refusals.test.ts` |
 | 5 | the foreign recognizer `oxc` | `ts/eff/ingest/oxc.ts` over oxc 0.147.0, sharing **no** recognition code with face 4 | tested (the same) | `ts/eff/ingest/oxc.ts`; the same batteries |
 | 6 | the canonical wire | the byte encoding of a program, in three implementations: `Effect4.Program.Wire`, `ts/eff/wire.gen.ts`, `ocaml/eff/eff_wire.ml` | proved (`decode_encode`, `decode_exact`, `encode_injective`), reproduced (goldens), tested | `src/Effect4/Program/Wire.lean`; `ocaml/goldens/eff`; `ts/eff/test/wire.test.ts`, `ocaml/eff/test/test_lean_wire.ml`, `prop_wire.ml` |
@@ -152,9 +152,12 @@ Precisely, for each of the families the closed world names:
   goldens `src/OCaml5/Tools/EffWire.lean` cuts (`ocaml/goldens/eff`), and must decode them
   back exactly;
 - **JSON**: `eff_json.ml` must produce the bytes `OCaml5.Eff.effV.json` produces;
-- **typing**: `eff_typing.ml` is hand-written and must agree with `effTy` on the corpus it is
-  given; it is the one part of the OCaml face that is not generated, and it is where the two
-  typing faces can only be compared by goldens;
+- **typing** (amended 2026-09-13): there is no OCaml typing face. The hand-written
+  `eff_typing.ml` that this bullet used to name was retired with the checking refactor; the
+  typing has one implementation, `effTy`, and what the OCaml side holds is its *output* —
+  `<name>.ty` and `corpus.txt` under `ocaml/eff/goldens`, cut by
+  `src/OCaml5/Tools/EffGen.lean` — so a change in the typing shows as a diff of those
+  goldens under `make check-gen`, never as a disagreement between two checkers;
 - **reachability**: the generator refuses to write when the corpus fails to reach a
   constructor (`src/OCaml5/Tools/EffGen.lean`), which is the acceptance model DI-19 asks the
   OCaml engine's own test to follow.

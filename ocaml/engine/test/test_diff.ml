@@ -22,11 +22,15 @@
 
    The corpora (`Corpora`): the 37 byte goldens, the truth corpus (the Lean-cut wire
    goldens of harness/truth/corpus.json plus its two members that only have a `.bin`), and
-   500 generated well-typed `Eff` programs with random ADMISSIBLE tapes (owner default
-   A1-Q4).  Every tape names only fiber ids and park tokens the machine has shown, so a
-   `Stuck` answer is always a fact about the program.
+   the Lean corpus -- the programs `make corpus` prints under `.lake/corpus` from Lean's
+   own seeded generator (`Test.Program.Gen`, 400 at depth 4, plus the wire corpus), as the
+   bytes `Wire.encodeProgram` cut, well typed and ill-typed alike with Lean's verdict
+   beside each.  The random tapes are ADMISSIBLE by construction: every tape names only
+   fiber ids and park tokens the machine has shown, so a `Stuck` answer is always a fact
+   about the program.
 
-   Run: cd ocaml && dune build @engine/test/runtest --force *)
+   Run: make check-ocaml (which writes the Lean corpus first), or by hand
+        make corpus && cd ocaml && dune build @engine/test/runtest --force *)
 
 open Effect4_engine
 
@@ -114,9 +118,13 @@ module Api_gen_inst = struct
   let scope_count (m : machine) : int = List.length (stores_of m).scopes
   let memo_map_count (m : machine) : int = List.length (stores_of m).memo
 
+  (* Lean's list is in insertion order and the carriers answer `bindings` sorted by path;
+     entry order is unobservable (E4_memo MM6), so the projection sorts here too, as
+     api_engine_inst.ml does with `E4_memo.bindings`.  The Lean corpus is what found this:
+     g227 inserts two entries under one map out of path order. *)
   let memo_paths (m : machine) : (int * int list list) list =
     List.map
-      (fun (mm : memo_map) -> (mm.id, List.map fst mm.entries))
+      (fun (mm : memo_map) -> (mm.id, List.map fst (E4_memo_list.bindings mm.entries)))
       (stores_of m).memo
 
   let f_id (f : fiber) : fiber_id = f.id
@@ -254,7 +262,7 @@ let show_report (r : Corpora.load_report) =
     (if r.Corpora.lr_refused = [] then ""
      else " -- REFUSED: " ^ String.concat " " r.Corpora.lr_refused)
 
-(* Every corpus gets the `Api.run` tape; the generated corpus also gets random admissible
+(* Every corpus gets the `Api.run` tape; the Lean corpus also gets random admissible
    tapes drawn from the machine as it runs (A1 §6.3's T5, made admissible by construction).
    The tape is drawn on ONE engine and applied to all three: if the engines disagree about
    what is admissible, the projections diverge and the differential says so. *)
@@ -265,7 +273,7 @@ let show_report (r : Corpora.load_report) =
    run cannot. *)
 let gen_tape_seed = ref 0
 
-let tapes_for_generated (p : Corpora.program) : (int * E4_diff.decision list) list =
+let tapes_for_lean (p : Corpora.program) : (int * E4_diff.decision list) list =
   incr gen_tape_seed;
   let s = !gen_tape_seed in
   [ (1000, E4_diff.drive_tape);
@@ -380,38 +388,34 @@ let () =
   let tt = run_corpus "truth" truth tapes_for_bytes_random in
   verdict "truth" tt;
 
-  (* -------------------------------------------------------------- 3. the generator *)
+  (* -------------------------------------------------------------- 3. the Lean corpus *)
   print_endline "";
-  print_endline "== 3. the generated corpus: 500 well-typed random Eff programs ==";
-  let gen, grpt = Corpora.generate ~seed:20260908 ~count:500 ~max_depth:12 () in
-  Printf.printf
-    "  seed=%d asked=%d drawn=%d refused-by-the-net=%d (%.2f%%) deepest=%d produced=%d\n"
-    grpt.Corpora.gr_seed grpt.Corpora.gr_asked grpt.Corpora.gr_draws
-    grpt.Corpora.gr_refused
-    (100.0 *. float_of_int grpt.Corpora.gr_refused
-    /. float_of_int (max 1 grpt.Corpora.gr_draws))
-    grpt.Corpora.gr_max_depth (List.length gen);
-  check "the generator produced 500 well-typed programs" (List.length gen = 500);
-  check "every generated program satisfies Eff_typing.well_typed"
-    (List.for_all (fun (p : Corpora.program) -> Eff_typing.well_typed p.Corpora.eff) gen);
-  (* The generated corpus is a real corpus, not an in-memory artefact: every program has
-     canonical bytes and comes back from them unchanged (brief §2.2, identity IS the
-     bytes).  Anything the generator can build, the wire can carry. *)
-  check "every generated program round-trips through the canonical wire"
+  print_endline "== 3. the Lean corpus: the programs `make corpus` printed (random tapes, fuel sweep) ==";
+  let lean, lrep = Corpora.lean_corpus () in
+  show_report lrep;
+  check "the Lean corpus is present (`make corpus` writes it under .lake/corpus)"
+    (lrep.Corpora.lr_found > 0);
+  (* Lean cut every one of these byte strings with `Wire.encodeProgram`.  That this
+     library's decoder accepts them all and its encoder gives them back is test_lean_wire's
+     L2/L3 over four hundred programs instead of eight, and the constructor coverage is
+     the generator's own (`Test/Program/Gen.lean` pins it), not re-counted here. *)
+  check "every program of the Lean corpus decodes exactly" (lrep.Corpora.lr_refused = []);
+  check "every program of the Lean corpus re-encodes to Lean's bytes"
     (List.for_all
        (fun (p : Corpora.program) ->
           match p.Corpora.bytes with
-          | Some b -> Eff_wire.decode_program_exact b = Some p.Corpora.eff
+          | Some b -> Eff_wire.encode_program p.Corpora.eff = b
           | None -> false)
-       gen);
-  let cen = Corpora.census gen in
-  print_endline "  coverage (constructor occurrences over the 500 programs):";
-  List.iter (fun (k, v) -> Printf.printf "    %-32s %d\n" k v) cen;
-  let miss = Corpora.census_missing cen in
-  if miss = [] then print_endline "  every Eff / ActionTerm / Stmt / NativeOp constructor appears"
-  else note ("never generated: " ^ String.concat " " miss);
-  let tgen = run_corpus "generated" gen tapes_for_generated in
-  verdict "generated" tgen;
+       lean);
+  let typed =
+    List.length (List.filter (fun (p : Corpora.program) -> p.Corpora.typed = Some true) lean)
+  in
+  Printf.printf
+    "  %d programs: %d well typed by Lean (Api.wellTyped), %d ill-typed -- the machine's \
+     answer to both is semantics\n"
+    (List.length lean) typed (List.length lean - typed);
+  let tl = run_corpus "lean" lean tapes_for_lean in
+  verdict "lean" tl;
 
   (* -------------------------------------------------------------- 4. FB1 and DF-2 *)
   print_endline "";
@@ -512,7 +516,7 @@ let () =
   cross_face truth;
 
   (* -------------------------------------------------------------- the totals *)
-  let tot f = f (fst tg) + f (fst tt) + f (fst tgen) in
+  let tot f = f (fst tg) + f (fst tt) + f (fst tl) in
   print_endline "";
   Printf.printf
     "== totals: %d programs, %d tapes, %d positions, %d projection comparisons, %d \
@@ -522,7 +526,7 @@ let () =
     (tot (fun t -> t.t_positions))
     (tot (fun t -> t.t_pairs))
     (tot (fun t -> t.t_div))
-    (snd tg +. snd tt +. snd tgen);
+    (snd tg +. snd tt +. snd tl);
   if !failures = 0 then
     Printf.printf "== ALL PASS: 0 failure(s) == (%d checks)\n" !checks
   else Printf.printf "== FAILED: %d failure(s) in %d checks ==\n" !failures !checks;

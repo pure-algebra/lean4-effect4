@@ -10,7 +10,7 @@ let atom_names : string list = ["succ"; "pred"; "isZero"; "not"; "add"; "lt"; "e
 let const_atoms : string list = ["pair"]
 let const_atom (name : string) : bool = List.mem name const_atoms
 
-(* A fixed-signature atom accepts each argument at a subtype of its parameter (NativeAtom.typeOf, DI-15); the relation is the caller's (Eff_typing.sub). *)
+(* A fixed-signature atom accepts each argument at a subtype of its parameter (NativeAtom.typeOf, DI-15); the subtype relation is the caller's parameter, so this module never restates Ty.sub. *)
 let atom_ty (sub : ty -> ty -> bool) (name : string) (args : ty list) : ty option =
   match name, args with
   | "succ", [a0] when sub a0 Ty_nat -> Some Ty_nat

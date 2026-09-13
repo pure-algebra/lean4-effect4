@@ -32,7 +32,6 @@ python3 scripts/check-compatibility.py prepare --revision 66ee465730126048ad90d9
 python3 scripts/check-compatibility.py reflect --work /private/tmp/effect4-g2-reproduce
 python3 scripts/check-compatibility.py compare --baseline Test/fixtures/baseline/66ee4657-supplement-v1/snapshot.json --candidate /private/tmp/effect4-g2-reproduce/snapshot.json
 python3 scripts/test-compatibility.py
-python3 scripts/test-compatibility-history.py
 ```
 
 Preparation copies immutable Git sources and build metadata. It reuses the local
@@ -69,12 +68,12 @@ an output file. Independent tests accept unchanged shapes and named appends;
 they reject payload substitution, constructor reorder/removal, field reorder,
 byte remapping/tag reuse, changed framing, missing consumers and malformed shapes.
 
-The history observer separately compiles the current production OCaml decoder,
-encoder and checker in a temporary directory. It reads immutable old bytes via
-Git and checks them against the retained digests: 50 old byte vectors re-encode
-exactly and refuse a trailing byte; 42 additionally match their old JSON values.
-It reports checker outputs separately against the retained `.ty` outputs. A
-Boolean-error control is independently assembled and remains decodable.
+The history observer (`scripts/test-compatibility-history.py`, which compiled the
+production OCaml decoder together with the hand-written checker against the
+retained old byte vectors) was retired on 2026-09-13 with that checker. The old
+bytes it read are still the retained goldens of this directory, and the current
+decoder's agreement with Lean's bytes is `make check-ocaml` (`test_lean_wire`
+and the corpus section of the engine differential).
 
 A shape comparison establishes only its stated structural/layout judgment.
 Decoder observations are finite, and typing changes use explicit expected deltas.

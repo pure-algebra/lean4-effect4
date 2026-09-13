@@ -1,9 +1,9 @@
-; effect4_eff — see README.md. Generated modules (eff_types, eff_wire, eff_json, eff_native)
-; come from `lake env lean -M 4096 --run src/OCaml5/Tools/EffGen.lean ocaml/eff`
-; and carry a GENERATED header; the rest is hand-written. Standard library only.
+; effect4_eff — see README.md. Generated modules (eff_types, eff_layout, eff_wire, eff_json,
+; eff_native) come from `make gen-eff` (src/OCaml5/Tools/EffGen.lean) and carry a GENERATED
+; header; eff_frame and eff_json_text are the hand-written kernel. Standard library only.
 (library
  (name effect4_eff)
  (public_name effect4_eff)
  (wrapped false)
- (modules eff_frame eff_json_text eff_types eff_layout eff_wire eff_json eff_native eff_typing eff_typed)
+ (modules eff_frame eff_json_text eff_types eff_layout eff_wire eff_json eff_native)
  (flags (:standard -w -4-9-39-40-41-42-44-45-70)))

@@ -41,7 +41,7 @@ markers. The recipes hold the Lean lane one at a time.
 | --- | --- | --- | --- | --- | --- |
 | derived | `tools/Effect4Gen/Driver.lean` runs `Main.lean` / `Fold.lean` per manifest group: `Json`, `Schema`, `Program`, `Pin`, `Api`, `Fold` | `tools/Effect4Gen/manifest.json`, the guards, the imports named per group | the Effect4 library (`Store/Derived/*.lean`, `Program/Derived.lean`, `Store/PinDerived.lean`, `Api/Derived.lean`, `Program/Fold.lean`) | `make check-gen`; `lake build Test` for shapes | reproduced; tested |
 | specs | `tools/Conform/Cli/EmitSpecs.lean` | `tools/Conform/Effect4/specs.json`, `Effect4.Program.Typing` | `Effect4.Laws.Program.Typing.Inversion` (`Typing/Specs.lean`) | `make check-gen`; ordinary Laws elaboration | reproduced; kernel checked |
-| eff | `src/OCaml5/Tools/EffGen.lean`, then `scripts/generate-engine-structure.py` | `Effect4.Program.Native`, `OCaml5.Eff.*` | `ocaml/eff/eff_{types,wire,json,native,layout}.ml`, `eff_manifest.txt`, `program-structure.json`, the 48-program goldens under `ocaml/eff/goldens/`, `ocaml/engine/e4_program_layout.{ml,json}` | `make check-gen`; `make check-ocaml` (the goldens decode, re-encode, print and type in OCaml) | reproduced; tested |
+| eff | `src/OCaml5/Tools/EffGen.lean`, then `scripts/generate-engine-structure.py` | `Effect4.Program.Native`, `OCaml5.Eff.*` | `ocaml/eff/eff_{types,wire,json,native,layout}.ml`, `eff_manifest.txt`, `program-structure.json`, the 48-program goldens under `ocaml/eff/goldens/`, `ocaml/engine/e4_program_layout.{ml,json}` | `make check-gen`; `make check-ocaml` (the goldens decode, re-encode and print in OCaml; the `.ty` goldens and `corpus.txt` are Lean's typing verdicts, held by the drift check alone since the OCaml checker was retired on 2026-09-13) | reproduced; tested |
 | wire | `src/OCaml5/Tools/EffWire.lean` | `Effect4.Program.Wire` and its corpus | `ocaml/goldens/eff/*.hex`, `manifest.txt`, `same-programs.txt` | `make check-gen`; `make check-ocaml` (`test_lean_wire`) | reproduced; tested |
 | cas | `src/OCaml5/Tools/CasGoldens.lean` | the store word, genesis and machine stores | `ocaml/engine/cas/goldens/` (119 files) | `make check-gen`; `make check-ocaml` (`engine-tests`) | reproduced; tested |
 | ts | `tools/Tools/TsGen.lean` through `scripts/generate-ts-eff.sh` | the closed world `OCaml5.Eff.World` reads, `Effect4.Codegen.Print`, three pinned vendor sources for the package tables | `ts/eff/{eff,json,wire,profile,taxonomy,forms,packages}.gen.ts` | `make check-gen`; `make check-ts-reader` | reproduced; tested |
@@ -64,6 +64,14 @@ run, *tested* for a finite checker or host run over named inputs. The former fou
 bytes), has no carrier since the labels went; every committed group is *reproduced*.
 
 ## Build artifacts that are not committed
+
+**The printed corpus.** `make corpus` runs `tools/Tools/Corpus.lean` into `.lake/corpus`:
+400 programs of Lean's seeded generator (`Test/Program/Gen.lean`) and the wire corpus, each
+as `.ts` (the printer's bytes), `.json` (the program Lean's own reader kept) and `.eff` (its
+canonical wire bytes), with Lean's `wellTyped` and `readable` verdicts per program in
+`index.tsv`. Three checks read it: `make check-ts-reader`, `make check-ingest-smoke` and the
+OCaml engine differential inside `make check-ocaml`. It is re-cut when Lake's trace of
+`Tools.Corpus` changes; nothing under `.lake/corpus` is committed.
 
 **Stream example outputs.** The stream example lane produces two ignored build artifacts
 under `harness/streams/`: `census.json` from `bash scripts/generate-effect-stream-census.sh`

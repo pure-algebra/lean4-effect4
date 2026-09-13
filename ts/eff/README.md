@@ -53,11 +53,12 @@ tier, so a stale file fails the check and nobody runs a generator by hand. Two c
 
 ## Check
 
-The receipt is a differential against Lean's own reader: `scripts/check-ts-eff-corpus.sh`
-(host lane of the sweep; needs bun). It runs `tools/Tools/Corpus.lean`, which writes 400
-generated programs and the wire corpus as `.ts` (the printer's bytes) with a `.json` and `.eff` beside
-each — the program Lean's reader gets back after the printer (`Api.roundTrip`) — then
-`check.ts`, which reads every `.ts` here and must produce the same JSON and wire bytes, then `bun test`.
+The receipt is a differential against Lean's own reader: `make check-ts-reader` (in the
+per-change tier; needs bun). `make corpus` runs `tools/Tools/Corpus.lean`, which writes 400
+generated programs and the wire corpus under `.lake/corpus` as `.ts` (the printer's bytes)
+with a `.json` and `.eff` beside each — the program Lean's reader gets back after the printer
+(`Api.roundTrip`) — then the check runs `check.ts`, which reads every `.ts` there and must
+produce the same JSON and wire bytes, then the package's type check and `bun test`.
 A pass means: on every program of that corpus, this reader and Lean's reader agree. It does
 not say anything about TypeScript the printer never wrote; such a file is refused by name.
 

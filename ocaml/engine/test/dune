@@ -139,7 +139,9 @@
 
 ; lane X — the differential over every corpus, three engines.
 ;   test_diff   `Corpora` (the 37 byte goldens, the truth corpus's Lean-cut wire goldens,
-;               and 500 generated well-typed Eff programs) x `E4_diff` (thirteen
+;               and the Lean corpus `make corpus` prints under .lake/corpus: 400 programs
+;               of Test/Program/Gen.lean plus the wire corpus, as Lean's own bytes with
+;               Lean's typing verdict beside each) x `E4_diff` (thirteen
 ;               projections per position) x three engines: `Api_gen` as generated (the
 ;               oracle, built here into an `E4_engine.INSTANCE`), `Ref` (the seam over
 ;               list twins — the extern-row half) and `Fast` (the substituted carriers —
@@ -148,7 +150,8 @@
 ;               admissible by construction.  It also discharges lane C's OWED FB1, records
 ;               why DF-2/DF-3 are not run, and reports the engines against
 ;               harness/truth/corpus.json.  Paths are found by an ancestor walk from the
-;               cwd — $E4_EFF_GOLDENS, $E4_HEX_GOLDENS and $E4_TRUTH_CORPUS override.
+;               cwd — $E4_EFF_GOLDENS, $E4_HEX_GOLDENS, $E4_TRUTH_CORPUS and
+;               $E4_LEAN_CORPUS (the directory) override.
 ;               `effect4_gen` is named here and NOWHERE in the library: the third engine
 ;               is a test-only functor application.
 
@@ -222,8 +225,8 @@
 ; lane B — the bench matrix: one receipt with every number the effort claimed, re-measured
 ; on the landed engine (docs/research/2026-09-08-engine-bench.md).
 ;   e4_engine_bench  W1 (the nine truth programs + the 37 byte goldens), W2 (chain of
-;                    refMake at n = 100/300/1000/2000/8000), W3 (the 500 generated
-;                    programs), W4 (fan-out N x M yields) over the THREE engines
+;                    refMake at n = 100/300/1000/2000/8000), W3 (the Lean corpus of
+;                    `make corpus`), W4 (fan-out N x M yields) over the THREE engines
 ;                    (`Api_gen` untouched, `Ref`, `Fast`), plus the domain sweep of 200 and
 ;                    2 000 `pTwo` machines over 1/2/4/8 domains through `E4_sched` with the
 ;                    real `Fast` engine, and the AC1-AC9 acceptance table.  An executable,

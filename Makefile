@@ -1,7 +1,9 @@
 # The one entry point. `make help` lists the targets.
 #
-# Three kinds of target:
+# Four kinds of target:
 #   build*   Lake builds; the axiom audit runs inside `lake build Test`.
+#   corpus   the printed corpus, a build artifact under .lake/corpus that three checks
+#            read (the TypeScript reader, the ingest smoke, the OCaml engine differential).
 #   gen-*    the generated files, one rule per group, in the dependency order the
 #            producers need. A rule fires when its generator, its inputs, or the
 #            compiled core it reads changed; its marker is .lake/gen/<group>.
@@ -155,6 +157,36 @@ GENERATED_PATHS := $(DERIVED_OUT) src/Effect4/Laws/Program/Typing/Specs.lean \
   $(SCHEMA_TS_DIR)/Person.generated.ts $(SCHEMA_TS_DIR)/AllRepresentations.generated.ts $(SCHEMA_TS_DIR)/TwoRoots.generated.ts \
   generated/effect-runtime-census.tsv
 
+# ---------------------------------------------------------------------------- corpus
+#
+# The printed corpus: 400 programs of Lean's seeded generator (Test/Program/Gen.lean) and
+# the wire corpus, printed by tools/Tools/Corpus.lean as TypeScript beside the JSON and
+# the canonical bytes of the program Lean's own reader kept, with Lean's typing verdict
+# per program in index.tsv. A build artifact, not committed. It is re-cut when Lake's
+# trace of Tools.Corpus changes, which Lake rewrites when the generator, the printer, the
+# wire or the tool itself changes; the `lake build` that refreshes the trace is a no-op
+# otherwise. The OCaml engine differential reads the directory through E4_LEAN_CORPUS.
+
+CORPUS := .lake/corpus
+CORPUS_TRACE := .lake/build/lib/lean/Tools/Corpus.trace
+export E4_LEAN_CORPUS := $(abspath $(CORPUS))
+export EFFECT4_CORPUS := $(abspath $(CORPUS))
+
+$(CORPUS_TRACE): $(LEAN_SOURCES) $(wildcard tools/Tools/*.lean) | build
+	$(LAKE) build Tools.Corpus
+
+$(CORPUS)/index.tsv: $(CORPUS_TRACE)
+	rm -rf $(CORPUS) && mkdir -p $(CORPUS)
+	$(LAKE) env lean -M4096 --run tools/Tools/Corpus.lean $(CORPUS) 400 4
+
+.PHONY: corpus
+corpus: $(CORPUS)/index.tsv ## the printed corpus under .lake/corpus (Lean's 400 programs and the wire corpus)
+
+# The pinned TypeScript install the reader, the ingest and the truth harness run on.
+ts/eff/node_modules: ts/eff/package.json ts/eff/bun.lock
+	cd ts/eff && $(BUN) install --frozen-lockfile
+	@touch $@
+
 # ---------------------------------------------------------------------------- checks
 
 CHECKS := roots cases native ts-reader truth target schema-codec ocaml ingest ingest-smoke \
@@ -205,9 +237,14 @@ check-citations: ## every cited path exists; no line-numbered citation into a mu
 	$(PY) scripts/check-source-citations.py
 	bash scripts/check-internal-citations.sh
 
+# The TypeScript reader against Lean's reader: every `.ts` of the corpus and of the truth
+# lane's exported modules must read back to the JSON Lean's own reader kept (`--oracle`),
+# then the package's type check and its pinned cases.
 TRUTH_GENERATED := harness/truth/corpus.json harness/truth/result.json harness/truth/result.md $(wildcard harness/truth/generated/*.ts)
-$(CHK)/ts-reader: $(CORE) $(TS_EFF_SOURCES) tools/Tools/Corpus.lean $(TRUTH_GENERATED) harness/truth/prelude.ts scripts/check-ts-eff-corpus.sh
-	bash scripts/check-ts-eff-corpus.sh
+$(CHK)/ts-reader: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) $(TRUTH_GENERATED) harness/truth/prelude.ts
+	cd ts/eff && $(BUN) run check.ts $(abspath $(CORPUS)) $(abspath harness/truth/generated) --oracle $(abspath $(CORPUS))
+	cd ts/eff && $(BUN) run typecheck
+	cd ts/eff && $(BUN) test
 	@mkdir -p $(CHK) && touch $@
 
 $(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py scripts/check-truth.sh
@@ -222,18 +259,22 @@ $(CHK)/schema-codec: $(CORE) $(wildcard harness/truth/schema-codec/*) scripts/ch
 	bash scripts/check-schema-codec.sh
 	@mkdir -p $(CHK) && touch $@
 
-OCAML_SOURCES := $(shell find ocaml -type f -not -path '*/_build/*' -not -name '*.cut-from')
-$(CHK)/ocaml: $(OCAML_SOURCES) scripts/check-ocaml.sh
+# The OCaml lane: the eff library's goldens and wire tests, the engine's own tests and the
+# three-engine differential (which reads the printed corpus), and the engine seam check.
+OCAML_SOURCES := $(shell find ocaml -type f -not -path '*/_build/*')
+$(CHK)/ocaml: $(CORPUS)/index.tsv $(OCAML_SOURCES) scripts/check-ocaml.sh
 	bash scripts/check-ocaml.sh dune-tests
 	bash scripts/check-ocaml.sh engine-tests
 	bash scripts/check-ocaml.sh gen-check
 	@mkdir -p $(CHK) && touch $@
 
-$(CHK)/ingest-smoke: $(CORE) $(TS_EFF_SOURCES) tools/Tools/Corpus.lean scripts/check-ingest.sh
-	bash scripts/check-ingest.sh --smoke
+# The ingest smoke: the printed corpus through the foreign recognizer's printed contract.
+# The census over the constructed foreign corpus is check-ingest (nightly).
+$(CHK)/ingest-smoke: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES)
+	$(BUN) ts/eff/ingest/check-corpus.ts printed $(abspath $(CORPUS))
 	@mkdir -p $(CHK) && touch $@
 
-$(CHK)/ingest: $(CORE) $(TS_EFF_SOURCES) tools/Tools/Corpus.lean tools/Tools/ForeignCorpus.lean tools/Tools/Styles.lean $(OCAML_SOURCES) scripts/check-ingest.sh
+$(CHK)/ingest: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) tools/Tools/ForeignCorpus.lean tools/Tools/Styles.lean $(OCAML_SOURCES) scripts/check-ingest.sh
 	bash scripts/check-ingest.sh
 	@mkdir -p $(CHK) && touch $@
 

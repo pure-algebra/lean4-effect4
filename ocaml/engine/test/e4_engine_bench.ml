@@ -352,7 +352,7 @@ let by_name (ps : Corpora.program list) (n : string) : Corpora.program option =
 let w1_truth : Corpora.program list =
   List.filter_map (fun n -> by_name truth_progs n) w1_truth_names
 
-let generated, gen_report = Corpora.generate ~seed:20260908 ~count:500 ~max_depth:12 ()
+let generated, gen_report = Corpora.lean_corpus ()
 
 (* ==================================================================== accumulators *)
 
@@ -465,14 +465,14 @@ let w2 () =
 
 let w3 () =
   print_endline "";
-  print_endline "## W3 — the 500 generated well-typed programs, three engines";
+  print_endline "## W3 — the Lean corpus (`make corpus`), three engines";
   print_endline "";
   Printf.printf
-    "Generator: `Corpora.generate ~seed:%d ~count:%d` — %d draws, %d refused by the \
-     `well_typed`\nnet, deepest %d.  fuel 1000.  Aggregate over the whole corpus: one \
-     `drive` per program.\n"
-    gen_report.Corpora.gr_seed gen_report.Corpora.gr_asked gen_report.Corpora.gr_draws
-    gen_report.Corpora.gr_refused gen_report.Corpora.gr_max_depth;
+    "Corpus: `%s` — %d programs indexed, %d decoded, %d well typed by Lean.  fuel 1000.  \
+     Aggregate over the whole corpus: one `drive` per program.\n"
+    gen_report.Corpora.lr_dir gen_report.Corpora.lr_found gen_report.Corpora.lr_decoded
+    (List.length
+       (List.filter (fun (p : Corpora.program) -> p.Corpora.typed = Some true) generated));
   print_endline "";
   let ps = List.map (fun (p : Corpora.program) -> p.Corpora.eff) generated in
   let fuel = 1000 in

@@ -1,36 +1,48 @@
 # effect4_eff — the Eff program IR as an OCaml library
 
 `Eff`, the Effect program IR of this repository (`src/Effect4/Program/`), reified in OCaml:
-a typed embedding you author programs in, the canonical byte wire Lean decodes, the JSON
-printer, and the typing judgement as a checker. An OCaml program written through the typed
-surface erases to bytes that the Lean fiber machine loads, re-checks and runs.
+the canonical byte wire Lean decodes, the JSON printer and the native tables, all generated
+from the Lean environment by one tool over a hand-written framing kernel. An OCaml host
+reads and writes the programs Lean cuts. It does not type them — the typing has one face,
+`effTy` in `src/Effect4/Program/Typing.lean` — and it does not run them; that is the engine
+in `ocaml/engine`, under the generated machine.
 
 Standard library only. OCaml 5.1.1 / dune 3.24 (opam switch `effect4`).
 
 ## Layout
 
-| file | lines | kind | what it is |
-| --- | ---: | --- | --- |
-| `eff_frame.ml` | 265 | hand | the framing kernel: `emit_*`/`decode_*` for the twelve tags, base-256 naturals, UTF-8 validation |
-| `eff_json_text.ml` | 61 | hand | JSON string escaping and number/array/object assembly for the printer |
-| `eff_types.ml` | 471 | **generated** | one OCaml variant/record per Lean inductive/structure, constructor order pinned, `ctor_index_*` / `ctor_name_*` / `ctor_names_*` per family |
-| `eff_wire.ml` | 978 | **generated** | `encode_*` / `decode_*` per family, `*_exact` at the top level |
-| `eff_json.ml` | 187 | **generated** | `print_*` per family (a printer only — there is no JSON parser anywhere) |
-| `eff_native.ml` | 184 | **generated** | the atom typing table (`atom_ty`), the 55 op values (`all_ops`) and their rows (`row_of`), `scope_key`, the handle types |
-| `eff_typing.ml` | 518 | hand | the typing judgement of `Typing.lean` as `type_of : eff -> (eff_ty, error) result`, `well_typed`, `print_type`, `Ty.join`; since the join, the service table (`service_ty`) and `LayerTy` with `layer_of` |
-| `eff_typed.ml` / `.mli` | 515 / 335 | hand | the GADT surface indexed by the Eff type (since the join: typed service keys `skey`, the `layer` GADT, `Provide_layer`/`Service`/`Provide_service`), and `erase` to the untyped carrier |
-| `eff_manifest.txt` | 24 | **generated** | one line per family: name, OCaml type, constructors and their carriers, in order |
-| `goldens/` | 119 files | **generated** | `<name>.bin` (canonical bytes), `<name>.json`, `<name>.ty` for 39 programs, plus `corpus.txt` and `coverage.txt` |
-| `goldens/val_*.hex` | 2 files | **hand-derived** | `val_handle.hex`, `val_ref.hex` — two `Store.Val` trees derived by hand from `Val.lean`'s encoder, pending a Lean cut |
-| `test/test_eff.ml` | 597 | hand | the golden battery, the GADT corpus, the constructor pins, the wire kernel, the join's typing |
-| `test/prop_wire.ml` | 228 | hand | the wire property test on random untyped values (layer terms included) |
-| `test/test_lean_wire.ml` | 180 | hand | the differential against Lean's own encoder (`ocaml/goldens/eff/*.hex`) |
-| `test/test_val_frames.ml` | 191 | hand | the `ref` (11) and `handle` (12) frames: the two goldens, the exactness refusals |
-| `tools/*.sh` | — | hand | build / test / signature-inference drivers for WSL |
+| file | kind | what it is |
+| --- | --- | --- |
+| `eff_frame.ml` | hand | the framing kernel: `emit_*`/`decode_*` for the twelve tags, base-256 naturals, UTF-8 validation |
+| `eff_json_text.ml` | hand | JSON string escaping and number/array/object assembly for the printer |
+| `eff_types.ml` | **generated** | one OCaml variant/record per Lean inductive/structure, constructor order pinned, `ctor_index_*` / `ctor_name_*` / `ctor_names_*` per family |
+| `eff_layout.ml` | **generated** | the wire families and their fields, as data |
+| `eff_wire.ml` | **generated** | `encode_*` / `decode_*` per family, `*_exact` at the top level |
+| `eff_json.ml` | **generated** | `print_*` per family (a printer only — there is no JSON parser anywhere) |
+| `eff_native.ml` | **generated** | the native alphabet as data: the atom names, the atom typing table `atom_ty` (its arms are checked against `nativeAtomTy` when it is generated), the 55 op values `all_ops` and their rows `row_of`, `scope_key`, the handle types |
+| `eff_manifest.txt` | **generated** | one line per family: name, OCaml type, constructors and their carriers, in order |
+| `program-structure.json` | **generated** | the constructor families the engine's layout check reads |
+| `goldens/` | **generated** | for 48 programs: `<name>.bin` (the canonical bytes), `<name>.json` (the Lean JSON printer's output), `<name>.ty` (Lean's `typeOf`); `corpus.txt` (each name with Lean's `wellTyped` verdict); `coverage.txt` (constructor counts over the corpus) |
+| `goldens/val_*.hex` | **hand-derived** | `val_handle.hex`, `val_ref.hex` — two `Store.Val` trees derived by hand from `Val.lean`'s encoder on 2026-09-07, pending a Lean cut |
+| `test/test_eff.ml` | hand | the golden battery and the wire kernel |
+| `test/prop_wire.ml` | hand | the wire property test on random untyped values |
+| `test/test_lean_wire.ml` | hand | the differential against Lean's own encoder (`ocaml/goldens/eff/*.hex`) |
+| `test/test_metadata.ml` | hand | Lean's metadata bytes decode and re-encode |
+| `test/test_val_frames.ml` | hand | the `ref` (11) and `handle` (12) frames |
+| `tools/*.sh` | hand | build and test drivers for WSL |
+
+Until 2026-09-13 the library also carried a hand-written typing checker (`eff_typing.ml`),
+a GADT authoring surface (`eff_typed.ml`), and four tests that re-derived Lean's typing rules
+in OCaml. They were retired with the checking refactor: a second hand-written copy of the
+typing judgement was drift with no consumer, the engine's random program generator that
+was built on it is replaced by Lean's own printed corpus (`make corpus`), and the `.ty`
+goldens stay as the typing's expected output.
 
 ## Build and test
 
-From inside `ocaml/eff` (its own project root, so its `_build` does not contend with the
+`make check-ocaml` from the repository root runs everything below together with the engine
+and seam checks, and writes the printed corpus the engine differential reads. By hand, from
+inside `ocaml/eff` (its own project root, so its `_build` does not contend with the
 `ocaml/` workspace):
 
 ```
@@ -38,28 +50,20 @@ eval $(opam env --switch=effect4 --set-switch)
 cd ocaml/eff && dune build --root . && dune test --root .
 ```
 
-or `cd ocaml && dune build eff` from the workspace root. On Windows the same through WSL:
-`wsl -e bash ocaml/eff/tools/test.sh`.
+or `cd ocaml && dune build eff && dune test eff` from the workspace root. On Windows the
+same through WSL: `wsl -e bash ocaml/eff/tools/test.sh`.
 
 ## Regenerating
 
-The four generated modules, the manifest and the goldens all come from one Lean tool that
-reads the families out of the environment. From the repository root:
+`make gen-eff` regenerates the five generated modules, the manifest, the goldens and the
+engine's layout files from one Lean tool that reads the families out of the environment
+(`src/OCaml5/Tools/EffGen.lean`, then `scripts/generate-engine-structure.py`). Each generated
+file carries a `GENERATED … do not edit` header; a fix to a generated file belongs in the
+tool. `make check-gen` refuses a committed generated file that differs from what the tool
+emits.
 
-```
-lake env lean -M4096 --run src/OCaml5/Tools/EffGen.lean ocaml/eff
-```
-
-It writes `eff_types.ml`, `eff_wire.ml`, `eff_json.ml`, `eff_native.ml`, `eff_manifest.txt`
-and `goldens/`. Each generated file carries a `GENERATED … Do not edit.` header; a fix to a
-generated file belongs in `EffGen.lean`. (The header inside the files spells the command
-without `-M4096`; the cap is this repository's build hygiene rule, not the tool's.)
-
-The Lean-side hex goldens the differential compares against are a different tool:
-
-```
-lake env lean -M4096 --run src/OCaml5/Tools/EffWire.lean ocaml/goldens/eff
-```
+The Lean-side hex goldens the differential compares against are a second tool,
+`src/OCaml5/Tools/EffWire.lean` (`make gen-wire`), which writes `ocaml/goldens/eff`.
 
 ## The wire
 
@@ -96,309 +100,54 @@ rather than truncated.
 
 ## Constructor index tables
 
-`eff_manifest.txt` records the current constructor and field order, with carrier
-types. `ocaml/goldens/eff/manifest.txt` records the wire subset, read directly
-from the Lean environment by EffWire. Both are generated and checked; consult
-those files for the current tables.
+`eff_manifest.txt` records the current constructor and field order, with carrier types.
+`ocaml/goldens/eff/manifest.txt` records the wire subset, read directly from the Lean
+environment by EffWire. Both are generated and drift-checked; consult those files for the
+current tables, and `test_lean_wire` checks the two against each other.
 
 Tags: `bool=1 nat=2 string=3 list=4 pair=5 none=6 some=7 bytes=8 unit=9 ctor=10 ref=11
 handle=12`. The last two are not program frames — no `Eff` constructor carries them and the
 program decoder refuses them at the tag comparison. They belong to the shared value carrier
-`Effect4.Store.Val` (`src/Effect4/Store/Val.lean:107-111`), whose encoder (`:158-159`) writes
+`Effect4.Store.Val` (`src/Effect4/Store/Val.lean`), whose encoder writes
 `ref k d = framed 11 (k :: d)` — the kind byte then opaque digest bytes — and
 `handle k n = framed 12 (k :: natBytes n)` — the kind byte then the key's `nat` digits, so
 the key `0` is one kind byte and no digits. `Eff_frame` carries both so that an OCaml host can
 read and write the value alphabet the machine layer shares; the refusals are the encoder's (a
 payload with no kind byte, a key digit string with a leading zero, a key past `max_int`).
 
-## Properties per module
+## What each test establishes
 
-Each module's header states its own; in short.
+* `test_eff` — every golden decodes exactly, re-encodes byte for byte and prints the JSON
+  Lean printed; a trailing byte, a truncation, a flipped tag and a length past the end are
+  refused; the kernel's naturals, bools, strings and frames round-trip and refuse the
+  non-canonical forms above. The `.ty` beside each golden and the verdict column of
+  `corpus.txt` are printed for the record; nothing in OCaml compares with them.
+* `prop_wire` — `decode_*_exact (encode_* v) = Some v` and `decode_*` never reads past its
+  frame, on 1 250 random values of every family, plus injectivity of `encode` on the sample.
+* `test_lean_wire` — Lean's own encoder (`Effect4.Program.Wire`, printed as hex by EffWire)
+  is an implementation of the byte rule independent of the one this library is generated
+  from. Its manifest must be this library's constructor tables family by family, every hex
+  golden must decode exactly and re-encode to Lean's bytes, and the programs the two corpora
+  define identically must be byte for byte equal.
+* `test_metadata` — Lean's metadata bytes decode and re-encode.
+* `test_val_frames` — the `ref` and `handle` frames against the two hand-derived goldens.
 
-* `eff_frame` — every frame is self-delimiting; every decoder is exact; a non-canonical
-  natural, an invalid UTF-8 string, an out-of-range bool, a `ref`/`handle` with no kind byte
-  and a `handle` key with a leading zero digit are refusals. *tested*
-* `eff_wire` — `decode_*_exact (encode_* v) = Some v`, and `decode_*` never reads past the
-  frame it was given. *generated from the rule; tested on 37 goldens, 8 Lean-side goldens and
-  1 250 random values*
-* `eff_json` — a printer only; `print_eff` of every golden is the Lean printer's output byte
-  for byte. *tested*
-* `eff_native` — `atom_ty` is `nativeAtomTy` and `row_of` is `NativeOp.row`, both checked
-  against Lean by evaluation at generation time. *by construction, plus tested pins*
-* `eff_typing` — agrees with Lean's `typeOf`/`wellTyped` on the whole corpus, well-typed and
-  ill-typed alike. *tested*
-* `eff_typed` — an ill-typed program cannot be constructed; `erase` then `encode` is byte for
-  byte what Lean encodes. *tested on the 29 well-typed programs; the Lean theorem is open,
-  see "The two open theorems" below*
+The engine differential (`ocaml/engine/test/test_diff.ml`, `make check-ocaml`) widens the
+third point to the whole printed corpus: every `.eff` that `make corpus` wrote — 408 programs
+Lean cut with `Wire.encodeProgram` — must decode exactly here and re-encode to Lean's bytes
+before it is run through the three engines.
 
-## Authoring a program
+## The open theorem
 
-```ocaml
-open Eff_typed
-
-(* fun () -> let x = 1 in x + 1, as an Eff program *)
-let p : (empty, nat, (never, never) union) eff =
-  Bind (Succeed (nat 1), Succeed (Succ v0))
-
-let bytes = encode p                       (* the canonical bytes Lean decodes *)
-let json  = Eff_json.print_eff (erase p)   (* the human form *)
-let ty    = Eff_typing.print_type (erase p)
-```
-
-`v0`/`v1`/… are de Bruijn indices counted from the newest binding; `erase` converts them to
-Lean's position from the oldest. The error index is a syntactic `union` tree whose `to_ty` is
-Lean's canonical `Ty.join`. (That example is the `pBind` golden: 199 bytes, and its JSON and
-type are the golden's.)
-
----
-
-# Evidence
-
-Everything below is the state of a run on 2026-09-04, reproducible by the commands named.
-
-## Regeneration is reproducible
-
-Regenerating into a scratch directory and comparing SHA-256 against the checked-in tree:
-`eff_types.ml`, `eff_wire.ml`, `eff_json.ml`, `eff_native.ml`, `eff_manifest.txt` — all five
-identical; 113 golden files compared, 0 differences, 0 missing, 0 extra. The tree on disk is
-exactly what `EffGen.lean` produces at HEAD, so the regenerate command above is verified, not
-merely documented.
-
-## Test results
-
-`cd ocaml/eff && dune build --root . && dune test --root . --force`
-
-| executable | checks | failures |
-| --- | ---: | ---: |
-| `test_eff` — goldens, GADT corpus, pins, wire kernel | 607 | 0 |
-| `prop_wire` — the wire on 1 250 random values, 5 properties each | 6 250 | 0 |
-| `test_lean_wire` — the differential against `Effect4.Program.Wire` | 64 | 0 |
-| `test_val_frames` — the `ref`/`handle` frames, added 2026-09-07 | 26 | 0 |
-| **total** | **6 947** | **0** |
-
-### Per program: the goldens (all 37)
-
-Each row is ten checks: decode exactly, re-encode byte for byte, JSON equals the Lean
-printer's, type equals Lean's `typeOf`, the well-typed flag, `decode` reports the whole length
-as consumed, a trailing byte refused by `decode_exact` and not consumed by `decode`,
-truncation refused, a flipped tag refused, a length past the end refused.
-
-| program | bytes | decode | re-encode | JSON | `typeOf` |
-| --- | ---: | --- | --- | --- | --- |
-| p42 | 66 | ok | identical | equal | `nat` / `never` |
-| pBind | 199 | ok | identical | equal | `nat` / `never` |
-| pFork | 290 | ok | identical | equal | `exitOf nat never` / `never` |
-| pTwo | 599 | ok | identical | equal | `exitOf nat never` / `never` |
-| pAwait | 159 | ok | identical | equal | `nat` / `nat` |
-| pGen | 274 | ok | identical | equal | `nat` / `never` |
-| pWhile | 351 | ok | identical | equal | `unit` / `never` |
-| pCatch | 151 | ok | identical | equal | `nat` / `never` |
-| pStr | 76 | ok | identical | equal | `string` / `never` |
-| pFailCause | 313 | ok | identical | equal | `never` / `nat` |
-| pYieldError | 67 | ok | identical | equal | `never` / `bool` |
-| pSync | 202 | ok | identical | equal | `nat` / `never` |
-| pSuspend | 74 | ok | identical | equal | `unit` / `never` |
-| pMatch | 267 | ok | identical | equal | `bool` / `never` |
-| pOnExit | 114 | ok | identical | equal | `nat` / `never` |
-| pExit | 86 | ok | identical | equal | `exitOf never nat` / `never` |
-| pMasks | 104 | ok | identical | equal | `nat` / `never` |
-| pBranch | 200 | ok | identical | equal | `nat` / `nat` |
-| pCallback | 159 | ok | identical | equal | `nat` / `nat` |
-| pJoin | 291 | ok | identical | equal | `nat` / `never` |
-| pScoped | 320 | ok | identical | equal | `fiberOf nat never` / `never` |
-| pAcquire | 168 | ok | identical | equal | `handle Ref.Ref<number>` / `never`, requires ⟨0,0⟩ |
-| pPair | 270 | ok | identical | equal | `nat` / `never` |
-| pStmts | 599 | ok | identical | equal | `nat` / `never` |
-| pActions | 1836 | ok | identical | equal | `nat` / `never`, requires ⟨0,0⟩ |
-| pOps | 2667 | ok | identical | equal | `nat` / `nat` |
-| pIll | 135 | ok | identical | equal | ill-typed |
-| pIllRet | 209 | ok | identical | equal | ill-typed |
-| pIllReq | 86 | ok | identical | equal | ill-typed |
-| pIllBreak | 75 | ok | identical | equal | ill-typed |
-| pIllBranch | 199 | ok | identical | equal | ill-typed |
-| pIllJoin | 199 | ok | identical | equal | ill-typed |
-| pIllVar | 45 | ok | identical | equal | ill-typed |
-| pIllCallback | 168 | ok | identical | equal | ill-typed |
-| pIllStep | 303 | ok | identical | equal | ill-typed |
-| pIllInterruptor | 95 | ok | identical | equal | ill-typed |
-
-### Per program: the GADT corpus (the 28 well-typed programs)
-
-Each is rebuilt through `Eff_typed`'s constructors, erased, and encoded. For all 28 — p42,
-pBind, pFork, pTwo, pAwait, pGen, pWhile, pCatch, pStr, pFailCause, pYieldError, pSync,
-pSuspend, pMatch, pOnExit, pExit, pMasks, pBranch, pCallback, pJoin, pScoped, pAcquire,
-pPair, pStmts, pActions, pOps, pProvide, pSleep — the run reports *identical to golden* / *well-typed:
-yes* / *answer and error both agree with the erased witness*. That is the proof that OCaml
-authors exactly what Lean would.
-
-The ten `pIll*` programs are not in the GADT corpus and cannot be: that they are
-unconstructible is the point. The test pins the two lists against each other.
-
-## The Lean-side differential
-
-`ocaml/goldens/eff/*.hex` are the canonical bytes of eight programs written by
-`src/OCaml5/Tools/EffWire.lean` through `Effect4.Program.Wire` — Lean's own implementation of
-the byte rule, independent of the one `EffGen.lean` derives this library from. This library's
-decoder reads them and re-encodes:
-
-| program | bytes | decode | re-encode | vs `goldens/<name>.bin` |
-| --- | ---: | --- | --- | --- |
-| p42 | 66 | ok | identical | **identical** |
-| pAwait | 159 | ok | identical | **identical** |
-| pBind | 199 | ok | identical | **identical** |
-| pFork | 290 | ok | identical | **identical** |
-| pCatch | 206 | ok | identical | differs at byte 8 (`8e` vs `c5`) — different programs, same name |
-| pGen | 484 | ok | identical | differs at byte 8 (`09` vs `db`) — different programs, same name |
-| pLoop | 343 | ok | identical | no golden of that name |
-| pScope | 234 | ok | identical | no golden of that name |
-
-* All eight decode **exactly** and re-encode byte for byte. That is the strongest evidence
-  this lane can give that the OCaml wire is Lean's wire — including on `pLoop` (a `whileLoop`
-  over `refUpdate`) and `pScope` (`scoped`/`acquireRelease`/`interruptAll`), which the OCaml
-  corpus does not shape the same way.
-* The four names that denote the *same* Lean term in both corpora (`p42`, `pBind`, `pFork`,
-  `pAwait`, read off `Wire.lean` §Corpus against `EffGen.lean` §Corpus) are byte for byte
-  equal. That is asserted, not merely reported.
-* `pCatch` and `pGen` are different Lean *definitions* sharing a name across the two corpora
-  (`Wire.Corpus.pCatch` catches `both(fail 1, interrupt none)` and returns unit;
-  `EffGen.Corpus.pCatch` catches `fail 1` and returns `0`). The test proves the byte
-  difference is a program difference and not a wire difference, by checking that the two
-  decoded programs differ too. The differences begin at offset 8 — the last byte of the outer
-  frame's `be64` length — which is what a different-sized payload looks like, not a framing
-  disagreement.
-* `test_lean_wire` also checks Lean's own manifest against this library's constructor tables
-  (18 lines: 17 families plus the tag numbers, `LayerTerm` and `ServiceKey` since the join), and that a trailing byte on Lean's bytes is
-  refused.
-
-The Lean goldens are outside this dune project (`ocaml/goldens/eff` is a sibling of
-`ocaml/eff`), so they cannot be a tracked dune dependency: the test reaches them by a relative
-path that is the same from either build root, or takes the directory as `argv(1)`, and prints
-`SKIPPED` rather than passing silently if it is absent.
-
-## What is not covered, and why
-
-**Constructors: nothing is missing.** `goldens/coverage.txt` counts every constructor of every
-family across the 37-program corpus and every count is ≥ 1: all 24 `Eff` arms, all 6 `Stmt`,
-all 16 `ActionTerm`, all 4 `CauseTerm`, all 4 `Lit`, all 3 `Term`, all 20 `NativeOp`, all 5
-`FnName`, all 3 `MaskMode`, both `ObserverMode`, both `FinalizerStrategy`, and the `nil`/`cons`
-of `Terms`/`Stmts`/`Effs`.
-
-**Ops.** All 53 op *values* (11 with no payload, 8 × 5 `FnName`, 1 × 2 `FinalizerStrategy`) are
-enumerated in `Eff_native.all_ops` and each is pinned against its Lean row (name, request,
-answer, error, sync/async), as is the typed `op` GADT's own signature for each. Of the 53, 21
-are actually *performed* by a golden program (`pOps`: one per constructor plus both scope
-strategies); the other 32 differ from one that is only in the `FnName` payload, which the wire
-encodes as a nested constructor frame already exercised.
-
-**Atoms.** The table has 10. Six appear in golden programs (`succ`, `isZero`, `add`, `lt`,
-`pair`, `fst`). `pred`, `not`, `eq`, `snd` appear in none — the Lean corpus never used them.
-They are covered here instead by direct `atom_ty` row checks and by a program built through
-the GADT (`Not (Eq (Pred (Snd (Pair …))))`) that is erased and put to the checker. So they have
-E1 evidence but not E2: no Lean-authored byte string exists for them. Four lines added to
-`EffGen.Corpus` plus a regeneration would close that.
-
-**Types.** As a program's answer or error the `.ty` goldens exercise `never`, `unit`, `nat`,
-`string`, `bool`, `handle`, `exitOf`, `fiberOf`. Not exercised as a program type: `int`,
-`option`, `list`, `prod`, `except`, `causeOf`, and a residual `union`. `prod` and `causeOf` do
-occur inside the run (op requests such as `refSet : ref × nat`, and the cause bound by
-`catchCause`/`matchCause`); `union` is always canonicalised away by `Ty.join` because every
-corpus program's two error branches collapse to one type — a program whose error is a genuine
-two-member union would be a worthwhile addition. `Ty.int`, `Ty.option`, `Ty.list` and
-`Ty.except` have `ty` witnesses in the typed surface for `to_ty` completeness, but no `term` or
-`eff` constructor produces a value of them: Eff is first-order and has no list or option
-literal atom, so a `list` only enters through a variable (`Snapshot_children` binds one and
-`Await_all` consumes it, which `pActions` does).
-
-**Requirements.** The native alphabet has one service key (`scope_key = ⟨0,0⟩`). Two corpus
-programs carry it (`pAcquire`, `pActions`); `pScoped` discharges it with `scoped`. The
-`req_of_list`/`req_union` algebra (ascending, deduplicated) is tested directly.
-
-**`RowKind.program`** is a constructor of the type but no `NativeOp` row uses it; the test pins
-that `deferredAwait` is the single `async` row and the rest are `sync`.
-
-**Deliberately out of scope.** No JSON *parser* anywhere — the JSON side is a printer only. No
-TypeScript printing: Lean owns `Api.print`. No evaluator: this library authors, checks and
-serialises programs; running them is the Lean fiber machine and the engine (`ocaml/engine`). No
-`Obj`, no `Marshal`, no polymorphic compare on abstract types.
-
-**Bound.** OCaml naturals are `int`, so literals and variable indices above 2⁶² − 1 are refused
-rather than encoded; Lean's `Nat` is unbounded. A program from Lean carrying such a literal
-would be refused by this decoder — a refusal, not a truncation, but a real gap against the
-Lean type.
-
-## The typed surface's signature
-
-The authority is `eff_typed.mli` (254 lines) — read it there rather than from a copy. Its
-shape, in one paragraph: five families of phantom value types (`never nat int_ ref_number
-deferred_number scope context unknown`, plus the injective compounds `except exit cause_of
-fiber union`); `'a ty`, the witness that maps a phantom back to Lean's `Ty` (`Union` through
-`Ty.join`); `empty` and `('env,'a) ix` for the type-level environment and de Bruijn index;
-`('env,'a) term` with one arm per literal and per native atom; `('env,'e) cause`;
-`('req,'ans,'err,'kind) op` with the twenty `NativeOp` rows written into the constructor
-types; the witnesses `join_answer`, `merge_ret`, `gen_answer`, `observer`, `in_loop`; the
-mutual `('env,'a,'e) eff` / `('env,'r,'e,'l) stmts` / `('env,'a,'e) effs` /
-`('env,'a,'e) action` with one constructor per Lean arm in Lean's order; `program` as the
-existential of a closed program with its two witnesses; and then `handle_target`, `to_ty`, the
-`erase_*` family (each taking the environment depth, because an OCaml index counts from the
-newest binding and Lean's `Var` from the oldest — the Lean index is `depth - 1 - index`),
-`erase`, `encode`, and the conveniences `v0..v3`, `nat`, `unit_`, `bool`, `str`,
-`fork_options`.
-
-## The two open theorems
-
-Both are about the Lean side and are stated so a Lean seat can pick them up directly. Neither
-is proved; both are pinned by tests over the corpus.
-
-### T1 — erasure of the typed surface is well-typed
-
-Transcribe `eff_typed.mli`'s families into Lean as an inductive family indexed by the typing
-judgement's data, with the same witnesses:
+The wire's exactness is stated for a Lean seat, in `src/Effect4/Program/Wire.lean`'s terms,
+with `encodeProgram : Eff NativeOp → Bytes` and `decodeProgram : Bytes → Option (Eff NativeOp)`:
 
 ```lean
-/-- The OCaml GADT `('env, 'a, 'e) Eff_typed.eff` as a Lean family. `Γ : TyEnv` replaces the
-    type-level snoc list; the phantom-to-`Ty` map `to_ty` is the identity here because the
-    indices are already `Ty`. A `union` index becomes `Ty.join`, and the `join_answer` /
-    `merge_ret` witnesses become `EffTy.joinAnswer` / `GenTy.joinAnswer` equations. -/
-inductive TEff : TyEnv → Ty → Ty → Type
-  | succeed {Γ a}       : TTerm Γ a → TEff Γ a .never
-  | bind {Γ a b e₁ e₂}  : TEff Γ a e₁ → TEff (a :: Γ) b e₂ → TEff Γ b (Ty.join e₁ e₂)
-  | …                   -- one arm per line of the .mli, in the same order
-
-def TEff.erase {Γ a e} : TEff Γ a e → Eff NativeOp := …   -- transcription of erase_eff
-def TEff.requires {Γ a e} : TEff Γ a e → List ServiceKey := …
-
-/-- **T1.** Everything the typed surface can build type-checks in Lean, at exactly the indices
-    the surface carries. -/
-theorem TEff.typeOf_erase {Γ : TyEnv} {a e : Ty} (p : TEff Γ a e) :
-    Typing.check Γ p.erase = some { answer := a, error := e, requires := p.requires }
-
-/-- The closed corollary the OCaml header claims (E1). -/
-theorem TEff.wellTyped_erase {a e : Ty} (p : TEff [] a e) : Api.wellTyped p.erase = true
-```
-
-`requires` is the one piece of the judgement the OCaml GADT deliberately does not track in its
-indices (`scoped` discharges `scope_key`; `perform`/`callback` add their row's `requires`;
-everything else is the union of its children), so it has to be a function of the derivation
-rather than an index. The proof is by induction on `p`, each case `simp [Typing.check, erase]`
-plus the corresponding witness lemma. The interesting cases are `gen` (the statement list's
-return type must be threaded, so the induction is mutual with a `TStmts` lemma) and
-`whileLoop` (the step term is typed two environments deeper).
-
-Evidence today: the 29 well-typed corpus programs are each built through the GADT, erased, and
-the checker's answer and error compared with `to_ty` of the indices — plus one extra program
-for the four atoms no golden uses. Not proved.
-
-### T2 — the wire is exact
-
-In `src/Effect4/Program/Wire.lean`, with `encodeProgram : Eff NativeOp → Bytes` and
-`decodeProgram : Bytes → Option (Eff NativeOp)`:
-
-```lean
-/-- **T2a** (round trip). -/
+/-- T2a (round trip). -/
 theorem decodeProgram_encodeProgram (p : Eff NativeOp) :
     decodeProgram (encodeProgram p) = some p
 
-/-- **T2b** (exactness / canonicity): every byte string the decoder accepts is the encoding of
+/-- T2b (exactness / canonicity): every byte string the decoder accepts is the encoding of
     the program it produces — so there is exactly one byte string per program, and a decode
     never repairs. -/
 theorem encodeProgram_decodeProgram {b : Bytes} {p : Eff NativeOp} :
@@ -413,28 +162,20 @@ framing, `readFrame (framed t p ++ r) = some (t, p, r)` and conversely
 `readFrame b = some (t, p, r) → b = framed t p ++ r` — then lift it through the mutual
 `encEff`/`decEff` recursion, with a `natOfDigits`/`digits` canonicity lemma for the `Nat` case.
 
-Evidence today: `Wire.lean` already `#guard`s T2a and the two refusal corollaries on its
-eight-program corpus. On the OCaml side the same statements are tested on 37 goldens, on the 8
-Lean-authored byte strings, and on 1 250 random values at seed 42 — plus injectivity of
-`encode` on the random sample, the finite shadow of T2b. Not proved.
+Evidence today: `Wire.lean` `#guard`s T2a and the two refusal corollaries on its own corpus.
+On the OCaml side the same statements are tested on the 48 goldens, on the 8 Lean-authored
+byte strings, on the 408 programs of the printed corpus and on 1 250 random values. Not
+proved.
 
-A third statement is what the differential actually measures, and is *not* a Lean theorem
-because one side is OCaml code: for every `p : Eff NativeOp`,
-`Effect4.Program.Wire.encodeProgram p` and `Eff_wire.encode_program (ocaml_of p)` are equal.
-It is discharged empirically by `test_lean_wire` on the eight programs Lean has published
-bytes for; widening `Wire.Corpus` is the cheapest way to strengthen it.
+A third statement is what the differential measures and is not a Lean theorem, because one
+side is OCaml code: for every `p : Eff NativeOp`, `Effect4.Program.Wire.encodeProgram p` and
+`Eff_wire.encode_program (ocaml_of p)` are equal. It is discharged empirically on every
+program Lean has published bytes for; widening `Wire.Corpus` or the generator's depth is the
+cheapest way to strengthen it.
 
 ## What remains owed
 
-* T1 and T2 are open.
-* `pred`, `not`, `eq`, `snd` and a genuinely two-member `union` error have no Lean-authored
-  golden bytes; four short additions to `EffGen.Corpus` plus a regeneration would fix it.
-* `Wire.Corpus` (Lean's own eight) does not cover `gen` with `whileTrue`/`breakLoop`,
-  `matchCause`, `choose`, `raceAll` or the fiber-action alphabet; widening it would widen the
-  strongest evidence this lane has.
+* T2 is open.
+* `goldens/val_handle.hex` and `goldens/val_ref.hex` are hand-derived from `Val.lean`'s
+  encoder, not cut by Lean; `src/OCaml5/Tools/EffWire.lean` is the tool that would cut them.
 * Naturals above 2⁶² − 1 are refused, not encoded.
-* `goldens/val_handle.hex` and `goldens/val_ref.hex` are **hand-derived** from `Val.lean`'s
-  encoder (2026-09-07, no Lean process was available), not cut by Lean. They must be confirmed
-  or replaced by a Lean cut — `src/OCaml5/Tools/EffWire.lean` is the tool that prints goldens —
-  once the PC build is green. Both trees are ones `Val.lean` already `#guard`s
-  (`:1174-1175`, `:1147`), so the confirmation is cheap.

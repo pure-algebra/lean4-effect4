@@ -8,3 +8,12 @@ scripts/check-generated.sh	removed 2026-09-13
 scripts/check-ts-eff.sh	removed 2026-09-13
 ocaml/gen/gen_check.ml	removed 2026-09-13
 ocaml/gen/avatar_reference.ml	removed 2026-09-13
+# Removed 2026-09-13 (decision 1 of the test ledger): the hand-written OCaml typing checker,
+# the GADT surface, the history observer that compiled the checker. Cited by ruled register
+# rows, which are history.
+ocaml/eff/eff_typing.ml	removed 2026-09-13
+ocaml/eff/eff_typed.ml	removed 2026-09-13
+ocaml/eff/eff_typed.mli	removed 2026-09-13
+scripts/test-compatibility-history.py	removed 2026-09-13
+tools/Compatibility/Decode.ml	removed 2026-09-13
+scripts/check-ts-eff-corpus.sh	removed 2026-09-13 (folded into the Makefile)

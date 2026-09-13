@@ -80,7 +80,7 @@ scripts/check-effect-runtime-census.sh           # the rc.112 mechanism census j
 npm ci --prefix harness/schema-host # pinned Schema host and compiler integrations
 scripts/test-schema-structural-assurance-gate.sh # the Schema assurance projection
 make check-gen                                   # every generated file is what its generator emits
-scripts/check-ts-eff-corpus.sh                   # the TypeScript reader = Lean's reader (bun)
+make check-ts-reader                             # the TypeScript reader = Lean's reader over the printed corpus (bun)
 scripts/check-truth.sh                           # bounded Lean/rc.112 differential (bun)
 scripts/check-schema-codec.sh                    # fresh type-directed JSON vs rc.112 (bun)
 make check                                       # the per-change tier (make help lists the rest)

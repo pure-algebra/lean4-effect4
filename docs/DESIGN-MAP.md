@@ -97,11 +97,13 @@ handlers and generators, with no abstraction form — typed by a monomorphic typ
 system in the Lucassen–Gifford line: one
 judgment `Σ; Γ ⊢ e : ⟨A, E, R⟩` where `A` and `E` are ground `Ty` (fifteen constructors
 including an untagged TypeScript union) and `R` is a finite label set of service keys whose
-labels carry a closed type code. Its representations are five and independent: the
-algorithmic checker (`Typing.lean`), the extrinsic value typing (`Val.hasTy`), the hand-written
-OCaml checker, the intrinsic OCaml GADT surface, and the generated TypeScript reflections. The
-first two are proved to agree only for terms; the middle two are held to the first by 42 `.ty`
-goldens (grade two); the last is generated (grade three).
+labels carry a closed type code. Its representations are three and independent: the
+algorithmic checker (`Typing.lean`), the extrinsic value typing (`Val.hasTy`), and the
+generated TypeScript reflections. The first two are proved to agree only for terms; the last
+is generated (grade three). (Amended 2026-09-13: the two OCaml representations this sentence
+used to count — the hand-written checker and the intrinsic GADT surface, held to the first by
+the `.ty` goldens — were retired with the checking refactor; the goldens stay as the
+checker's expected output under `make check-gen`.)
 
 Guarantees: weakening in all six forms; syntactic soundness for the term language; row
 preservation for the sync route and for the external route's success branch. Non-guarantees,

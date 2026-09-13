@@ -359,8 +359,10 @@ def monoAtoms : List (String × List Ty × Ty) :=
 queries) as OCaml arms, and the probes that check them and the refusals against
 `nativeAtomTy`. The emitted `atom_ty` takes the subtype relation `sub` as its first
 parameter (part 4, DI-15: a fixed-signature atom accepts an argument at a subtype of its
-parameter, `NativeAtom.typeOf`), so the generated module never re-states `Ty.sub`; the
-hand-written `Eff_typing.sub` is what the checker passes. -/
+parameter, `NativeAtom.typeOf`), so the generated module never re-states `Ty.sub`. (The
+hand-written OCaml checker that used to pass it was retired on 2026-09-13; the table stays
+a projection of the Lean atom inventory, DI-40, and the probes below are what check the
+emitted arms against `nativeAtomTy`.) -/
 def polyArm (atom : NativeAtom) : Option String :=
   match atom with
   | .pair => some s!"  | {ostr atom.name}, [a; b] -> Some ({octor "ty" "prod"} (a, b))"
@@ -450,7 +452,7 @@ def emitNative (nullaryOps fnOps stratOps : Nat) : String :=
   "(* The const-generic atoms (NativeAtom.constGeneric): a string literal argument keeps its literal type (the literal rule, DI-15). *)\n" ++
   "let const_atoms : string list = " ++ listO (constAtomNames.map ostr) ++ "\n" ++
   "let const_atom (name : string) : bool = List.mem name const_atoms\n\n" ++
-  "(* A fixed-signature atom accepts each argument at a subtype of its parameter (NativeAtom.typeOf, DI-15); the relation is the caller's (Eff_typing.sub). *)\n" ++
+  "(* A fixed-signature atom accepts each argument at a subtype of its parameter (NativeAtom.typeOf, DI-15); the subtype relation is the caller's parameter, so this module never restates Ty.sub. *)\n" ++
   "let atom_ty (sub : ty -> ty -> bool) (name : string) (args : ty list) : ty option =\n  match name, args with\n" ++
   "\n".intercalate (monoAtoms.map fun (n, args, ans) => monoArm n args ans) ++ "\n" ++
   "\n".intercalate polyArms ++ "\n  | _ -> None\n\n" ++

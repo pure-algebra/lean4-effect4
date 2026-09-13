@@ -12,7 +12,7 @@
        tag numbers are Eff_frame's;
    L2  every <name>.hex decodes exactly (no trailing bytes, no repairs);
    L3  re-encoding the decoded program reproduces Lean's bytes exactly;
-   L4  the JSON printer and the checker run on it (the type is printed for the record);
+   L4  the JSON printer runs on it;
    L5  for the programs the two corpora define identically (the producer compares actual
        Eff values and emits same-programs.txt, independently checked against decoded values), Lean's bytes are byte for byte this library's goldens/<name>.bin. Where a
        name is shared but the Lean definition differs (pGen, pCatch), the comparison is
@@ -156,7 +156,6 @@ let () =
           let re = Eff_wire.encode_program p in
           check (name ^ ": re-encoding reproduces Lean's bytes") (re = bytes);
           check (name ^ ": the JSON printer runs") (String.length (Eff_json.print_eff p) > 0);
-          check (name ^ ": the checker runs") (String.length (Eff_typing.print_type p) > 0);
           check (name ^ ": a trailing byte is refused") (Eff_wire.decode_program_exact (bytes ^ "\000") = None);
           let ours = ours_bin name in
           let verdict =

@@ -32,9 +32,12 @@ Tools.Styles constructs the foreign spelling corpus and its JSON/wire oracles; `
 records each style's count. The construction check is `ts/eff/check-styles.ts`; the
 foreign recognizers' exact recovery is a later gate.
 
-`scripts/check-ts-eff-corpus.sh` runs this and `ts/eff/check.ts` over it. The generator
-retains the parser spike's seed formula; its ingestion extension also draws service and
-layer programs. The measured counts and constructor coverage are pinned in the generator.
+`make corpus` runs this into `.lake/corpus`, a build artifact three checks read:
+`make check-ts-reader` (`ts/eff/check.ts` over it), `make check-ingest-smoke` (the printed
+contract of the foreign recognizer) and `make check-ocaml` (the OCaml engine differential
+reads the `.eff` bytes and the `wellTyped` column). The generator retains the parser spike's
+seed formula; its ingestion extension also draws service and layer programs. The measured
+counts and constructor coverage are pinned in the generator.
 
 A tool (`lakefile.toml`, the `Tools` library): outside the axiom gate, imported by nothing.
 -/
