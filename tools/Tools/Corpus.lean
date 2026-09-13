@@ -36,8 +36,10 @@ foreign recognizers' exact recovery is a later gate.
 `make check-ts-reader` (`ts/eff/check.ts` over it), `make check-ingest-smoke` (the printed
 contract of the foreign recognizer) and `make check-ocaml` (the OCaml engine differential
 reads the `.eff` bytes and the `wellTyped` column). The generator retains the parser spike's
-seed formula; its ingestion extension also draws service and layer programs. The measured
-counts and constructor coverage are pinned in the generator.
+seed formula; its ingestion extension also draws service and layer programs. Constructor
+coverage is guarded in the generator against the derived shapes; `make corpus` also installs
+the index as `generated/corpus-index.tsv`, the committed per-program verdicts that
+`make check-gen` holds.
 
 A tool (`lakefile.toml`, the `Tools` library): outside the axiom gate, imported by nothing.
 -/

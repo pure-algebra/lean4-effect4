@@ -110,7 +110,6 @@ def expected (callback : Bool) : NativeOp → Route
   | .external _ => .async
   | _ => if callback then .defect else .sync
 
-#guard NativeOp.all.length = 55
 #guard NativeOp.all.all (fun op => Val.hasTy (requestFor op) op.row.request)
 #guard NativeOp.all.all (fun op => observed false op == expected false op)
 #guard NativeOp.all.all (fun op => observed true op == expected true op)

@@ -1,4 +1,5 @@
 import Effect4.Api
+import Effect4.Program.Fold
 
 /-!
 # The `Eff` corpus generator — packet P3 of the image-parser spike
@@ -13,10 +14,10 @@ this module and writes the bytes; the generator itself lives here.
 
 Every `Eff` constructor the printer accepts — everything but the five internal
 fiber actions (`interruptScoped`, `awaitAllFailFast`, `snapshotChildren`, `awaitNewChildren`,
-`setContext`), which `src/Effect4/Codegen/Print.lean` refuses by design. The coverage pins below
-are one `#guard` per constructor of each family, plus a negative pin saying the refused
-arms occur nowhere in the corpus — which is why the zero-refusal pin holds: the generator has
-no arm that draws them, not one seed that happened to miss them.
+`setContext`), which `src/Effect4/Codegen/Print.lean` refuses by design. The coverage guard
+below states that once, against the language's own description of itself (the derived shapes
+and the generated fold), instead of once per constructor; the refused arms occur nowhere
+because the generator has no arm that draws them, not because a seed happened to miss them.
 
 ## The seed stream
 
@@ -25,7 +26,7 @@ program `i` at depth `d` is `(genEff 0 d).run ⟨1000003 * (i + 1) + 17⟩`. The
 *order* of the draws are the reproducibility contract: `Test/Program/Gen.lean`
 originally reproduced the spike's 400 files byte for byte. The ingestion join adds
 three program arms and a layer generator, producing a deliberately different corpus.
-Every count is measured and pinned below; the seed formula remains unchanged.
+The seed formula remains unchanged; the per-program verdicts are the committed corpus index.
 
 ## Why the recursion is shaped the way it is
 
@@ -354,235 +355,7 @@ def program (i depth : Nat) : Eff NativeOp :=
 def corpus (count depth : Nat) : List (Eff NativeOp) :=
   (List.range count).map (program · depth)
 
-/-! ## The structural walk the pins read
-
-One walker over the whole mutual family, three node predicates: on programs, on statements,
-and on fiber actions. `mentionsEff`, `mentionsStmt` and `mentionsAction` are the three ways a
-pin asks it a question, and no pin reads a rendering. -/
-
-mutual
-
-/-- Whether any node of the program satisfies the predicate of its sort. -/
-def walkEff (pe : Eff NativeOp → Bool) (ps : Stmt NativeOp → Bool)
-    (pa : ActionTerm NativeOp → Bool) : Eff NativeOp → Bool
-  | e@(.suspend body) => pe e || walkEff pe ps pa body
-  | e@(.bind first rest) => pe e || walkEff pe ps pa first || walkEff pe ps pa rest
-  | e@(.gen body) => pe e || walkStmts pe ps pa body
-  | e@(.catchCause body handler) | e@(.catchIf _ body handler) => pe e || walkEff pe ps pa body || walkEff pe ps pa handler
-  | e@(.matchCause body onValue onCause) =>
-    pe e || walkEff pe ps pa body || walkEff pe ps pa onValue || walkEff pe ps pa onCause
-  | e@(.onExit body finalizer) => pe e || walkEff pe ps pa body || walkEff pe ps pa finalizer
-  | e@(.exit body) => pe e || walkEff pe ps pa body
-  | e@(.uninterruptible body) => pe e || walkEff pe ps pa body
-  | e@(.interruptible body) => pe e || walkEff pe ps pa body
-  | e@(.branch _ thenB elseB) => pe e || walkEff pe ps pa thenB || walkEff pe ps pa elseB
-  | e@(.whileLoop _ _ _ body) => pe e || walkEff pe ps pa body
-  | e@(.withFiber action) => pe e || walkAction pe ps pa action
-  | e@(.scoped body) => pe e || walkEff pe ps pa body
-  | e@(.acquireRelease acquire release) =>
-    pe e || walkEff pe ps pa acquire || walkEff pe ps pa release
-  | e@(.provideLayer layer _ body) => pe e || walkLayer pe ps pa layer || walkEff pe ps pa body
-  | e@(.provideService _ _ body) => pe e || walkEff pe ps pa body
-  | e => pe e
-
-/-- Traverse closed effect bodies and nested layer combinators. -/
-def walkLayer (pe : Eff NativeOp → Bool) (ps : Stmt NativeOp → Bool)
-    (pa : ActionTerm NativeOp → Bool) : LayerTerm NativeOp → Bool
-  | .succeed _ _ | .ref _ => false
-  | .effect _ body | .effectDiscard body => walkEff pe ps pa body
-  | .provide self that | .provideMerge self that | .merge self that =>
-    walkLayer pe ps pa self || walkLayer pe ps pa that
-  | .fresh inner | .orDie inner => walkLayer pe ps pa inner
-  | .mergeAll layers => walkLayers pe ps pa layers
-
-def walkLayers (pe : Eff NativeOp → Bool) (ps : Stmt NativeOp → Bool)
-    (pa : ActionTerm NativeOp → Bool) : LayerTerms NativeOp → Bool
-  | .nil => false
-  | .cons head tail => walkLayer pe ps pa head || walkLayers pe ps pa tail
-
-def walkStmts (pe : Eff NativeOp → Bool) (ps : Stmt NativeOp → Bool)
-    (pa : ActionTerm NativeOp → Bool) : Stmts NativeOp → Bool
-  | .nil => false
-  | .cons head tail => walkStmt pe ps pa head || walkStmts pe ps pa tail
-
-def walkStmt (pe : Eff NativeOp → Bool) (ps : Stmt NativeOp → Bool)
-    (pa : ActionTerm NativeOp → Bool) : Stmt NativeOp → Bool
-  | s@(.bindYield effect) => ps s || walkEff pe ps pa effect
-  | s@(.yieldDiscard effect) => ps s || walkEff pe ps pa effect
-  | s@(.ifElse _ thenB elseB) => ps s || walkStmts pe ps pa thenB || walkStmts pe ps pa elseB
-  | s@(.whileTrue body) => ps s || walkStmts pe ps pa body
-  | s => ps s
-
-def walkEffs (pe : Eff NativeOp → Bool) (ps : Stmt NativeOp → Bool)
-    (pa : ActionTerm NativeOp → Bool) : Effs NativeOp → Bool
-  | .nil => false
-  | .cons head tail => walkEff pe ps pa head || walkEffs pe ps pa tail
-
-def walkAction (pe : Eff NativeOp → Bool) (ps : Stmt NativeOp → Bool)
-    (pa : ActionTerm NativeOp → Bool) : ActionTerm NativeOp → Bool
-  | a@(.fork body _) => pa a || walkEff pe ps pa body
-  | a@(.forkIn body _ _) => pa a || walkEff pe ps pa body
-  | a@(.forkScoped body _) => pa a || walkEff pe ps pa body
-  | a@(.raceAll entrants) => pa a || walkEffs pe ps pa entrants
-  | a => pa a
-
-end
-
-/-- Whether some program node satisfies `p`. -/
-def mentionsEff (p : Eff NativeOp → Bool) (e : Eff NativeOp) : Bool :=
-  walkEff p (fun _ => false) (fun _ => false) e
-
-/-- Whether some statement node satisfies `p`. -/
-def mentionsStmt (p : Stmt NativeOp → Bool) (e : Eff NativeOp) : Bool :=
-  walkEff (fun _ => false) p (fun _ => false) e
-
-/-- Whether some fiber action satisfies `p`. -/
-def mentionsAction (p : ActionTerm NativeOp → Bool) (e : Eff NativeOp) : Bool :=
-  walkEff (fun _ => false) (fun _ => false) p e
-
-mutual
-/-- The layer constructors in one layer tree; the outer walker visits nested effect bodies. -/
-def layerContains (p : LayerTerm NativeOp → Bool) : LayerTerm NativeOp → Bool
-  | layer@(.provide self that) | layer@(.provideMerge self that) | layer@(.merge self that) =>
-    p layer || layerContains p self || layerContains p that
-  | layer@(.fresh inner) | layer@(.orDie inner) => p layer || layerContains p inner
-  | layer@(.mergeAll layers) => p layer || layersContain p layers
-  | layer => p layer
-def layersContain (p : LayerTerm NativeOp → Bool) : LayerTerms NativeOp → Bool
-  | .nil => false
-  | .cons head tail => layerContains p head || layersContain p tail
-end
-
-/-- Whether a program contains a layer node satisfying the predicate. -/
-def mentionsLayer (p : LayerTerm NativeOp → Bool) : Eff NativeOp → Bool :=
-  mentionsEff (fun | .provideLayer layer _ _ => layerContains p layer | _ => false)
-
-/-! ## Size, structurally
-
-`nodes` counts `Eff` constructors, following the same family; `depth` is the longest chain of
-them. Both are read only through `max` over the corpus, and both are the pins that say the
-generator still makes programs of the shape the spike measured. -/
-
-mutual
-
-/-- The number of `Eff` nodes in a program. -/
-def nodesEff : Eff NativeOp → Nat
-  | .suspend body => 1 + nodesEff body
-  | .bind first rest => 1 + nodesEff first + nodesEff rest
-  | .gen body => 1 + nodesStmts body
-  | .catchCause body handler | .catchIf _ body handler => 1 + nodesEff body + nodesEff handler
-  | .matchCause body onValue onCause =>
-    1 + nodesEff body + nodesEff onValue + nodesEff onCause
-  | .onExit body finalizer => 1 + nodesEff body + nodesEff finalizer
-  | .exit body => 1 + nodesEff body
-  | .uninterruptible body => 1 + nodesEff body
-  | .interruptible body => 1 + nodesEff body
-  | .branch _ thenB elseB => 1 + nodesEff thenB + nodesEff elseB
-  | .whileLoop _ _ _ body => 1 + nodesEff body
-  | .withFiber action => 1 + nodesAction action
-  | .scoped body => 1 + nodesEff body
-  | .acquireRelease acquire release => 1 + nodesEff acquire + nodesEff release
-  | .provideLayer layer _ body => 1 + nodesLayer layer + nodesEff body
-  | .provideService _ _ body => 1 + nodesEff body
-  | _ => 1
-
-def nodesLayer : LayerTerm NativeOp → Nat
-  | .succeed _ _ | .ref _ => 0
-  | .effect _ body | .effectDiscard body => nodesEff body
-  | .provide self that | .provideMerge self that | .merge self that => nodesLayer self + nodesLayer that
-  | .fresh inner | .orDie inner => nodesLayer inner
-  | .mergeAll layers => nodesLayers layers
-
-def nodesLayers : LayerTerms NativeOp → Nat
-  | .nil => 0
-  | .cons head tail => nodesLayer head + nodesLayers tail
-
-def nodesStmts : Stmts NativeOp → Nat
-  | .nil => 0
-  | .cons head tail => nodesStmt head + nodesStmts tail
-
-def nodesStmt : Stmt NativeOp → Nat
-  | .bindYield effect => nodesEff effect
-  | .yieldDiscard effect => nodesEff effect
-  | .ifElse _ thenB elseB => nodesStmts thenB + nodesStmts elseB
-  | .whileTrue body => nodesStmts body
-  | _ => 0
-
-def nodesEffs : Effs NativeOp → Nat
-  | .nil => 0
-  | .cons head tail => nodesEff head + nodesEffs tail
-
-def nodesAction : ActionTerm NativeOp → Nat
-  | .fork body _ => nodesEff body
-  | .forkIn body _ _ => nodesEff body
-  | .forkScoped body _ => nodesEff body
-  | .raceAll entrants => nodesEffs entrants
-  | _ => 0
-
-end
-
-mutual
-
-/-- The longest chain of `Eff` nodes in a program. -/
-def depthEff : Eff NativeOp → Nat
-  | .suspend body => 1 + depthEff body
-  | .bind first rest => 1 + max (depthEff first) (depthEff rest)
-  | .gen body => 1 + depthStmts body
-  | .catchCause body handler | .catchIf _ body handler => 1 + max (depthEff body) (depthEff handler)
-  | .matchCause body onValue onCause =>
-    1 + max (depthEff body) (max (depthEff onValue) (depthEff onCause))
-  | .onExit body finalizer => 1 + max (depthEff body) (depthEff finalizer)
-  | .exit body => 1 + depthEff body
-  | .uninterruptible body => 1 + depthEff body
-  | .interruptible body => 1 + depthEff body
-  | .branch _ thenB elseB => 1 + max (depthEff thenB) (depthEff elseB)
-  | .whileLoop _ _ _ body => 1 + depthEff body
-  | .withFiber action => 1 + depthAction action
-  | .scoped body => 1 + depthEff body
-  | .acquireRelease acquire release => 1 + max (depthEff acquire) (depthEff release)
-  | .provideLayer layer _ body => 1 + max (depthLayer layer) (depthEff body)
-  | .provideService _ _ body => 1 + depthEff body
-  | _ => 1
-
-def depthLayer : LayerTerm NativeOp → Nat
-  | .succeed _ _ | .ref _ => 0
-  | .effect _ body | .effectDiscard body => depthEff body
-  | .provide self that | .provideMerge self that | .merge self that => max (depthLayer self) (depthLayer that)
-  | .fresh inner | .orDie inner => depthLayer inner
-  | .mergeAll layers => depthLayers layers
-
-def depthLayers : LayerTerms NativeOp → Nat
-  | .nil => 0
-  | .cons head tail => max (depthLayer head) (depthLayers tail)
-
-def depthStmts : Stmts NativeOp → Nat
-  | .nil => 0
-  | .cons head tail => max (depthStmt head) (depthStmts tail)
-
-def depthStmt : Stmt NativeOp → Nat
-  | .bindYield effect => depthEff effect
-  | .yieldDiscard effect => depthEff effect
-  | .ifElse _ thenB elseB => max (depthStmts thenB) (depthStmts elseB)
-  | .whileTrue body => depthStmts body
-  | _ => 0
-
-def depthEffs : Effs NativeOp → Nat
-  | .nil => 0
-  | .cons head tail => max (depthEff head) (depthEffs tail)
-
-def depthAction : ActionTerm NativeOp → Nat
-  | .fork body _ => depthEff body
-  | .forkIn body _ _ => depthEff body
-  | .forkScoped body _ => depthEff body
-  | .raceAll entrants => depthEffs entrants
-  | _ => 0
-
-end
-
-/-! ## The pins
-
-The extended corpus: 400 programs at depth 4, including the join. Every pin below is a
-`#guard` over `sample`, and every expected value was measured after extending the draws. -/
+/-! ## The corpus -/
 
 /-- The pinned corpus: `corpus 400 4`. -/
 def sample : List (Eff NativeOp) := corpus 400 4
@@ -593,140 +366,105 @@ def prints (e : Eff NativeOp) : Bool :=
   | .ok _ => true
   | .error _ => false
 
-/-- Whether some program of the corpus has a node satisfying `p`. -/
-def coversEff (p : Eff NativeOp → Bool) : Bool := sample.any (mentionsEff p)
+/-! ## Coverage, read off the derived shapes
 
-/-- Whether some program of the corpus has a statement satisfying `p`. -/
-def coversStmt (p : Stmt NativeOp → Bool) : Bool := sample.any (mentionsStmt p)
+The corpus must draw every constructor the printer accepts and none it refuses. That is
+stated against the language's own description of itself, not once per constructor: the
+derived projection (`src/Effect4/Program/Derived.lean`, the `EffC` block) gives every node its
+constructor ordinal (`toValEff e` is `.ctor i _`) and every family its shape (`EffShape`,
+`StmtShape`, `ActionTermShape`, `LayerTermShape`: one case per constructor in declaration
+order), and the generated fold (`src/Effect4/Program/Fold.lean`, `foldMap_eff`) visits every
+node of the mutual family. No arm of the language is spelled here, so a constructor added
+upstream appears in its shape and is demanded of the corpus by the guard below with no edit
+to this file, and a missing arm fails by name. -/
 
-/-- Whether some program of the corpus has a fiber action satisfying `p`. -/
-def coversAction (p : ActionTerm NativeOp → Bool) : Bool := sample.any (mentionsAction p)
+section Coverage
+open Effect4.Store.ProgramGen.EffC (toValEff toValStmt toValActionTerm toValLayerTerm
+  EffShape StmtShape ActionTermShape LayerTermShape)
 
-/-- Whether a generated program contains a layer node satisfying the predicate. -/
-def coversLayer (p : LayerTerm NativeOp → Bool) : Bool := sample.any (mentionsLayer p)
+/-- The constructor ordinal of a node's canonical value. -/
+def ordinal : Effect4.Store.Val → Option Nat
+  | .ctor i _ => some i
+  | _ => none
 
-/-- The largest `Eff` node count over the corpus. -/
-def maxNodes : Nat := sample.foldl (fun acc e => max acc (nodesEff e)) 0
+/-- A family with a constructor ordinal: `("Eff", 7)` is `bind`. -/
+abbrev Head := String × Nat
 
-/-- The largest `Eff` nesting over the corpus. -/
-def maxDepth : Nat := sample.foldl (fun acc e => max acc (depthEff e)) 0
+/-- Every head a program uses, through the fold and the projection. -/
+def heads (e : Eff NativeOp) : List Head :=
+  foldMap_eff [] (· ++ ·) e
+    (f_eff := fun n => (ordinal (toValEff n)).toList.map ("Eff", ·))
+    (f_stmt := fun n => (ordinal (toValStmt n)).toList.map ("Stmt", ·))
+    (f_action := fun n => (ordinal (toValActionTerm n)).toList.map ("ActionTerm", ·))
+    (f_layer := fun n => (ordinal (toValLayerTerm n)).toList.map ("LayerTerm", ·))
 
-/-- The `Eff` nodes of the whole corpus. -/
-def totalNodes : Nat := sample.foldl (fun acc e => acc + nodesEff e) 0
+/-- The heads the corpus uses. -/
+def covered : List Head := (sample.flatMap heads).eraseDups
 
-/-- How many of the corpus are well-typed against the native signature. Typing is irrelevant
-to the syntax the spike measured; the count is pinned because it moves when the generator
-does. -/
-def wellTypedCount : Nat := (sample.filter Api.wellTyped).length
+/-- The cases of a derived sum, each as its head and its constructor name. -/
+def casesOf (family : String) : Effect4.Store.Shape → List (Head × String)
+  | .sum _ cases =>
+    ((List.range cases.length).zip (cases.map (·.1))).map fun (i, n) => ((family, i), n)
+  | _ => []
 
-/-! ### The corpus is what it was -/
+/-- The five internal fiber actions the printer refuses (`src/Effect4/Codegen/Print.lean`). -/
+def refusedActions : List String :=
+  ["interruptScoped", "awaitAllFailFast", "snapshotChildren", "awaitNewChildren", "setContext"]
 
-#guard sample.length = 400
+/-- Every case the printer accepts. -/
+def expected : List (Head × String) :=
+  casesOf "Eff" EffShape ++ casesOf "Stmt" StmtShape ++
+    (casesOf "ActionTerm" ActionTermShape).filter (fun c => !refusedActions.contains c.2) ++
+    casesOf "LayerTerm" LayerTermShape
 
-/-! ### The printer refuses none of it -/
+/-- The accepted cases the corpus never draws, as `family.constructor`. -/
+def missing : List String :=
+  (expected.filter fun c => !covered.contains c.1).map fun c => c.1.1 ++ "." ++ c.2
+
+/-- The refused actions the corpus draws anyway. -/
+def refusedDrawn : List String :=
+  ((casesOf "ActionTerm" ActionTermShape).filter fun c =>
+    refusedActions.contains c.2 && covered.contains c.1).map (·.2)
+
+/-- The refused names that are not constructors of `ActionTerm`: a renamed arm cannot hide
+behind the filter. -/
+def refusedUnknown : List String :=
+  refusedActions.filter fun n => !(casesOf "ActionTerm" ActionTermShape).any (·.2 == n)
+
+/-- Whether some program node of the corpus satisfies `p`, through the fold. -/
+def coversEff (p : Eff NativeOp → Bool) : Bool :=
+  sample.any fun e => foldMap_eff false (· || ·) e (f_eff := p)
+
+/-- Whether some fiber action of the corpus satisfies `p`, through the fold. -/
+def coversAction (p : ActionTerm NativeOp → Bool) : Bool :=
+  sample.any fun e => foldMap_eff false (· || ·) e (f_action := p)
+
+end Coverage
+
+/-! ## The pins
+
+What is pinned states a property of the generator. The measured counts (how many programs
+are well typed, the node totals) are not pinned here: the committed corpus index
+(`generated/corpus-index.tsv`, one row per program with Lean's verdicts, cut by `make corpus`
+and held by `make check-gen`) names the programs whose verdict changed, which is the report
+DI-60 asks of a narrowing commit. -/
+
+/-! ### Every constructor the printer accepts occurs, and none it refuses -/
+
+#guard missing = []
+#guard refusedDrawn = []
+#guard refusedUnknown = []
+
+/-! ### The printer refuses none of it; every drawn layer reference is well formed -/
 
 #guard sample.all prints
-
-/-! ### The well-typed count -/
-
--- S3 adds a constructor draw, changing the seeded corpus. These counts were measured
--- after that append (wave2-delivery/s3/measure.log). The retained pre-append 400 wires
--- are compared separately; this reseed is not an admission-policy change.
--- Part 4 commit 2 (2026-09-12, S4c: answer joining is the least upper bound) widened the
--- count from 126 to 129 without reseeding; DI-60 names the three programs in the part-4
--- receipt (`docs/research/2026-09-12-p4-subsumption-receipt.md`). Commit 1 (the literal rule
--- and subsumption) changed no verdict in this corpus.
-#guard wellTypedCount = 129
-
-/-! ### Size -/
-
-#guard maxNodes = 27
-#guard maxDepth = 5
-#guard totalNodes = 1993
-
-/-! ### Every `Eff` constructor the printer accepts occurs -/
-
-#guard coversEff (fun | .succeed _ => true | _ => false)
-#guard coversEff (fun | .fail _ => true | _ => false)
-#guard coversEff (fun | .failCause _ => true | _ => false)
-#guard coversEff (fun | .yieldError _ => true | _ => false)
-#guard coversEff (fun | .sync _ => true | _ => false)
-#guard coversEff (fun | .suspend _ => true | _ => false)
-#guard coversEff (fun | .perform _ _ => true | _ => false)
-#guard coversEff (fun | .bind _ _ => true | _ => false)
-#guard coversEff (fun | .gen _ => true | _ => false)
-#guard coversEff (fun | .catchCause _ _ => true | _ => false)
-#guard coversEff (fun | .catchIf _ _ _ => true | _ => false)
-#guard coversEff (fun | .matchCause _ _ _ => true | _ => false)
-#guard coversEff (fun | .onExit _ _ => true | _ => false)
-#guard coversEff (fun | .exit _ => true | _ => false)
-#guard coversEff (fun | .uninterruptible _ => true | _ => false)
-#guard coversEff (fun | .interruptible _ => true | _ => false)
-#guard coversEff (fun | .branch _ _ _ => true | _ => false)
-#guard coversEff (fun | .whileLoop _ _ _ _ => true | _ => false)
-#guard coversEff (fun | .yieldNow _ => true | _ => false)
-#guard coversEff (fun | .callback _ _ => true | _ => false)
-#guard coversEff (fun | .awaitFiber _ _ => true | _ => false)
-#guard coversEff (fun | .withFiber _ => true | _ => false)
-#guard coversEff (fun | .scoped _ => true | _ => false)
-#guard coversEff (fun | .acquireRelease _ _ => true | _ => false)
-
-#guard coversEff (fun | .provideLayer _ _ _ => true | _ => false)
-#guard coversEff (fun | .service _ => true | _ => false)
-#guard coversEff (fun | .provideService _ _ _ => true | _ => false)
-
-/-! ### All eight layer forms occur -/
-
-#guard coversLayer (fun | .succeed _ _ => true | _ => false)
-#guard coversLayer (fun | .effect _ _ => true | _ => false)
-#guard coversLayer (fun | .effectDiscard _ => true | _ => false)
-#guard coversLayer (fun | .provide _ _ => true | _ => false)
-#guard coversLayer (fun | .provideMerge _ _ => true | _ => false)
-#guard coversLayer (fun | .merge _ _ => true | _ => false)
-#guard coversLayer (fun | .fresh _ => true | _ => false)
-#guard coversLayer (fun | .orDie _ => true | _ => false)
--- the host rows slice: the n-ary merge is drawn, the reference is placed by `refPass`
-#guard coversLayer (fun | .mergeAll _ => true | _ => false)
-#guard coversLayer (fun | .ref _ => true | _ => false)
--- every drawn reference is well formed
 #guard sample.all Eff.layerRefsWF
 
-/-! ### Both observer modes of `awaitFiber` -/
+/-! ### Both values of the two enumerated fields that change a program's meaning -/
 
 #guard coversEff (fun | .awaitFiber _ .awaitValue => true | _ => false)
 #guard coversEff (fun | .awaitFiber _ .joinEffect => true | _ => false)
-
-/-! ### Every `Stmt` form occurs -/
-
-#guard coversStmt (fun | .bindYield _ => true | _ => false)
-#guard coversStmt (fun | .yieldDiscard _ => true | _ => false)
-#guard coversStmt (fun | .ret _ => true | _ => false)
-#guard coversStmt (fun | .ifElse _ _ _ => true | _ => false)
-#guard coversStmt (fun | .whileTrue _ => true | _ => false)
-#guard coversStmt (fun | .breakLoop => true | _ => false)
-
-/-! ### Every `ActionTerm` the printer accepts occurs -/
-
-#guard coversAction (fun | .fork _ _ => true | _ => false)
-#guard coversAction (fun | .forkIn _ _ _ => true | _ => false)
-#guard coversAction (fun | .forkScoped _ _ => true | _ => false)
-#guard coversAction (fun | .runIn _ _ => true | _ => false)
-#guard coversAction (fun | .interrupt _ => true | _ => false)
 #guard coversAction (fun | .interruptAll _ none => true | _ => false)
 #guard coversAction (fun | .interruptAll _ (some _) => true | _ => false)
-#guard coversAction (fun | .awaitAll _ => true | _ => false)
-#guard coversAction (fun | .raceAll _ => true | _ => false)
-#guard coversAction (fun | .getContext => true | _ => false)
-#guard coversAction (fun | .getId => true | _ => false)
-#guard coversAction (fun | .closeScope _ _ => true | _ => false)
-
-/-! The five internal fiber actions the printer refuses never occur. -/
-#guard !coversAction (fun
-  | .interruptScoped _ => true
-  | .awaitAllFailFast _ => true
-  | .snapshotChildren => true
-  | .awaitNewChildren _ => true
-  | .setContext _ => true
-  | _ => false)
 
 end Test.Program.Gen

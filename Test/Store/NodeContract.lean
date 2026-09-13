@@ -36,7 +36,6 @@ open Effect4.Store
 -- The table of `docs/research/2026-09-04-cas-trait-plan.md` §3. Bytes are identity: appended,
 -- never renumbered, and the reserved rows are present so a later consumer cannot take a byte
 -- that is already spoken for.
-#guard Kind.all.length = 15
 #guard Kind.all.map Kind.byte = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 #guard Kind.all.map Kind.name =
   ["source", "export", "type", "schema", "program", "annotation", "entry", "query", "result",

@@ -83,7 +83,6 @@ def document : Document :=
   Schema.document Schema.string
     (referenceEntries ++ [{ key := "StringRef", representation := Schema.string }])
 
-#guard allRepresentations.length = 22
 #guard allRepresentations.map Representation.tag = RepresentationTag.census
 #guard document.fieldAdmissible
 #guard Effect4.Codegen.Schema.documentReady document

@@ -74,7 +74,11 @@ as `.ts` (the printer's bytes), `.json` (the program Lean's own reader kept) and
 canonical wire bytes), with Lean's `wellTyped` and `readable` verdicts per program in
 `index.tsv`. Three checks read it: `make check-ts-reader`, `make check-ingest-smoke` and the
 OCaml engine differential inside `make check-ocaml`. It is re-cut when Lake's trace of
-`Tools.Corpus` changes; nothing under `.lake/corpus` is committed.
+`Tools.Corpus` changes; nothing under `.lake/corpus` is committed except its index, which
+`make corpus` installs as `generated/corpus-index.tsv` and `make check-gen` holds: one row
+per program with Lean's `wellTyped` and `readable` verdicts, so a typing or printer change
+shows as a diff that names the programs it moved (DI-60), where the generator once pinned
+counts.
 
 **Stream example outputs.** The stream example lane produces two ignored build artifacts
 under `harness/streams/`: `census.json` from `python3 scripts/generate-effect-stream-census.py`

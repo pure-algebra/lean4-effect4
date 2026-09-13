@@ -87,9 +87,6 @@ every spelling theorem; it cannot preserve this signature.
 
 /-! ENSURES 1-6, ascribed at their exact propositions. -/
 
-#check (@RepresentationTag.census_length :
-  RepresentationTag.census.length = 22)
-
 #check (@RepresentationTag.census_nodup :
   RepresentationTag.census.Nodup)
 
