@@ -541,7 +541,11 @@ private def moduleImportClosure
 open Lean Elab Command in
 elab "#effect4_axiom_gate" : command => do
   let environment ← getEnv
-  let sourceFile := System.FilePath.mk (← getFileName)
+  -- `lake build` hands the elaborator an absolute file name; `lake env lean Test/All.lean`
+  -- hands it the relative one, whose parent walk ends at `Test` and finds no root.
+  let named := System.FilePath.mk (← getFileName)
+  let workingDirectory ← IO.currentDir
+  let sourceFile := if named.isAbsolute then named else workingDirectory / named
   let some sourceDirectory := sourceFile.parent
     | throwError "Effect4 axiom gate: source file has no parent directory"
   let projectRoot ← liftIO <| findProjectRoot sourceDirectory
