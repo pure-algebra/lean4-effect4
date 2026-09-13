@@ -47,9 +47,8 @@ numbers, so its domain is wider than this host representation.
 
 No row type is written by hand: `Row`, `Ty`, `NativeOp` are families like any other, and the
 profile's entries are values of those schemas. A `.gen.ts` file is written by
-`scripts/generate-ts-eff.sh` and never edited; `scripts/check-ts-eff.sh` is the drift
-gate, stamped and in the sweep, so a stale file fails the sweep and nobody runs a generator by
-hand. Two carrier rules, stated in the generated header: a `nil`/`cons` family is
+`make gen-ts` and never edited; `make check-gen` is the drift check, in the per-change
+tier, so a stale file fails the check and nobody runs a generator by hand. Two carrier rules, stated in the generated header: a `nil`/`cons` family is
 `ReadonlyArray`, an all-nullary family is a union of string literals.
 
 ## Check

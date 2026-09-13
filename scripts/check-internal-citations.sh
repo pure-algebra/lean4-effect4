@@ -63,7 +63,6 @@ scanned_trees="src Test tools ocaml ts docs scripts harness generated"
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 . "$repo_root/scripts/lib/portable.sh"
-. "$repo_root/scripts/lib/stamp.sh"
 root="$repo_root"
 
 while [[ $# -gt 0 ]]; do
@@ -130,17 +129,6 @@ if [[ "${#files[@]}" -eq 0 ]]; then
   exit 1
 fi
 
-if [[ "$root" == "$repo_root" ]]; then
-  stamped=1
-  key="$(stamp_key "$repo_root/scripts/check-internal-citations.sh" "${files[@]}")"
-  if stamp_hit internal-citations "$key"; then
-    stamp_report internal-citations "$key"
-    exit 0
-  fi
-else
-  stamped=0
-fi
-
 report="$(
   awk -v protected="$protected_docs" -v prefix="$root/" '
     BEGIN {
@@ -187,9 +175,6 @@ if [[ "$violation_count" -gt 0 ]]; then
   exit 1
 fi
 
-summary="$(printf '%s citation tokens examined in %s files, none into the 7 protected documents' \
-  "$candidates" "${#files[@]}")"
-if [[ "$stamped" -eq 1 ]]; then stamp_write internal-citations "$key" "$summary"; fi
 printf 'PASS no line-numbered citation into the 7 protected authored documents\n'
 printf 'PASS %s citation tokens examined in %s files across %s scanned tree(s)\n' \
   "$candidates" "${#files[@]}" "${#scan_dirs[@]}"

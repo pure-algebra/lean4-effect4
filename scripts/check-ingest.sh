@@ -15,7 +15,6 @@ cd "$repo_root"
 smoke=0
 if [[ "${1:-}" = "--smoke" ]]; then smoke=1; shift; fi
 . scripts/lib/portable.sh
-. scripts/lib/stamp.sh
 export LEAN_NUM_THREADS=3
 lock="$repo_root/.lake/LANE.lock"
 owned=0
@@ -40,10 +39,6 @@ before_lock="$(sha256 ts/eff/bun.lock)"
 [[ "$(sha256 ts/eff/bun.lock)" = "$before_lock" ]] || { echo 'FAIL ingest: lockfile drift' >&2; exit 1; }
 bun ts/eff/ingest/cli.ts --help >/dev/null
 lake build Tools.Corpus
-key="$(stamp_key "$0" scripts/lib ts/eff/*.ts ts/eff/ingest ts/eff/test ts/eff/package.json ts/eff/bun.lock ts/eff/tsconfig.json tools/Tools/Corpus.lean tools/Tools/ForeignCorpus.lean tools/Tools/Styles.lean \
-  harness/truth/IngestPrint.lean harness/truth/run-truth.ts harness/truth/prelude.ts \
-  "$stamp_build_lib/Tools/Corpus.trace" ocaml/eff lean-toolchain \
-  "$(stamp_fact bun "$(bun --version)")" "$(stamp_fact node "$(node --version)")")"
 if [[ "$smoke" = 1 ]]; then
   # The printed half of `cli.ts gate`; the constructed foreign corpus is one fixed size
   # (22,986 modules, pinned by check-corpus.ts) and belongs to the full run.
@@ -54,7 +49,6 @@ if [[ "$smoke" = 1 ]]; then
   printf 'PASS ingest (smoke): the 408 printed programs through both readers, the type check, the bun tests and the README check\n'
   exit 0
 fi
-if stamp_hit ingest "$key"; then stamp_report ingest "$key"; exit 0; fi
 lean_run tools/Tools/Corpus.lean "$work/printed" 400 4
 lean_run tools/Tools/Corpus.lean --foreign "$work/foreign" 400 4
 bun ts/eff/ingest/check-coverage.ts "$work/foreign"
@@ -79,4 +73,3 @@ opam exec --switch=effect4 -- ocamlc -I "$repo_root/ocaml/_build/default/eff/.ef
 bun ts/eff/ingest/check-fidelity.ts
 summary='original JSON/wire/key oracles, printed-in-foreign inclusion up to key renumbering, source-edit invariance, refusal reachability, pinned runtime reproducibility, OCaml exact decoding and original/reprinted fidelity probes'
 printf 'PASS ingest: %s\n' "$summary"
-stamp_write ingest "$key" "$summary"

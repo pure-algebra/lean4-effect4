@@ -13,8 +13,6 @@ import sys
 ROOT = Path(__file__).resolve().parent.parent
 SESSION = ROOT / 'harness/truth/session'
 MODULES = ROOT / 'ts/eff/node_modules'
-sys.path.insert(0, str(ROOT / 'scripts/lib'))
-from generated_bytes import comparable
 
 def run(*args, output=None, timeout=180):
     if output:
@@ -37,9 +35,9 @@ def main():
         work = Path(tmp)
         projection = work / 'projection'
         lean('tools/Tools/HostProtocol.lean', projection)
-        for name in ['protocol.gen.ts', 'tape.schema.json', 'tape.schema.json.cut-from']:
-            if comparable((projection / name).read_bytes()) != comparable((SESSION / name).read_bytes()):
-                raise SystemExit(f'FAIL host-protocol: {name} drift; run scripts/generate-host-protocol.sh')
+        for name in ['protocol.gen.ts', 'tape.schema.json']:
+            if (projection / name).read_bytes() != (SESSION / name).read_bytes():
+                raise SystemExit(f'FAIL host-protocol: {name} drift; run make gen-host-protocol')
         fixtures = work / 'fixtures.json'
         lean('harness/truth/session/Keyed.lean', 'emit', output=fixtures)
         host = work / 'host'

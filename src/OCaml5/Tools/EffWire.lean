@@ -51,7 +51,6 @@ def main (args : List String) : IO Unit := do
   let manifest ← manifest env
   match args with
   | [dir] =>
-    let stamp ← Tools.GeneratedStamp.line "src/OCaml5/Tools/EffWire.lean"
     IO.FS.createDirAll dir
     for (name, p) in Corpus.all do
       IO.FS.writeFile s!"{dir}/{name}.hex" (hex (encodeProgram p) ++ "\n")
@@ -62,10 +61,6 @@ def main (args : List String) : IO Unit := do
       | some (_, other) => if program == other then some name else none
       | none => none
     IO.FS.writeFile s!"{dir}/same-programs.txt" ("\n".intercalate common ++ "\n")
-    Tools.GeneratedStamp.sidecar s!"{dir}/same-programs.txt" stamp
-    for (name, _) in Corpus.all do
-      Tools.GeneratedStamp.sidecar s!"{dir}/{name}.hex" stamp
-    Tools.GeneratedStamp.sidecar s!"{dir}/manifest.txt" stamp
     IO.println s!"wrote {Corpus.all.length} goldens and manifest.txt to {dir}"
   | _ =>
     IO.println manifest

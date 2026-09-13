@@ -30,14 +30,13 @@ trap 'rm -rf "$temporary_dir"' EXIT
 
 cd "$project_root"
 lake env lean -M4096 "$harness_dir/EmitFixture.lean" > "$temporary_dir/Person.generated.ts"
-python3 "$project_root/scripts/lib/generated_bytes.py" "$harness_dir/Person.generated.ts" "$temporary_dir/Person.generated.ts"
+cmp -- "$harness_dir/Person.generated.ts" "$temporary_dir/Person.generated.ts"
 lake env lean -M4096 "$harness_dir/EmitCoverageFixture.lean" > \
   "$temporary_dir/AllRepresentations.generated.ts"
-python3 "$project_root/scripts/lib/generated_bytes.py" "$harness_dir/AllRepresentations.generated.ts" \
-  "$temporary_dir/AllRepresentations.generated.ts"
+cmp -- "$harness_dir/AllRepresentations.generated.ts" "$temporary_dir/AllRepresentations.generated.ts"
 lake env lean -M4096 "$harness_dir/EmitMultiFixture.lean" > \
   "$temporary_dir/TwoRoots.generated.ts"
-python3 "$project_root/scripts/lib/generated_bytes.py" "$harness_dir/TwoRoots.generated.ts" "$temporary_dir/TwoRoots.generated.ts"
+cmp -- "$harness_dir/TwoRoots.generated.ts" "$temporary_dir/TwoRoots.generated.ts"
 
 cp "$harness_dir/tsconfig.json" "$temporary_dir/tsconfig.json"
 cp "$harness_dir/runtime-check.ts" "$temporary_dir/runtime-check.ts"

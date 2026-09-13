@@ -60,5 +60,8 @@
 # 2026-09-10, when the OCaml engine was regenerated at HEAD with the choose removal and
 # `dune test engine` passed; the entry was removed deliberately on that unexpected pass.
 
-# reason: the two flat LCNF outputs `ocaml/gen/fibers_gen.ml` and `machine_gen.ml` were cut before e2285a9; regenerating them at HEAD builds, but the hand-written `ocaml/gen/gen_check.ml` still tests the pre-timer machine shape (no Task_wake, no wake_list/clock_step/prepare_answer) and fails C2. Cleared when gen_check.ml is brought to the timer and external rows (DI-19's Phase 1)
-# gate: generated-stale
+# History: the gate `generated-stale` was declared here from the timer commit until
+# 2026-09-13, because a `gen_check` executable under ocaml/gen tested the pre-timer shape of
+# the two flat LCNF outputs against a hand copy of the archived avatar. Wave 1 of the checking refactor
+# deleted that test and its copy, regenerated `fibers_gen.ml` and `machine_gen.ml` at HEAD,
+# and retired the provenance labels and their gate; drift is `make check-gen` now.

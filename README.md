@@ -79,12 +79,12 @@ scripts/check-source-citations.sh                # live paths and immutable hist
 scripts/check-effect-runtime-census.sh           # the rc.112 mechanism census join
 npm ci --prefix harness/schema-host # pinned Schema host and compiler integrations
 scripts/test-schema-structural-assurance-gate.sh # the Schema assurance projection
-scripts/check-ts-eff.sh                          # ts/eff/*.gen.ts are what Lean emits
+make check-gen                                   # every generated file is what its generator emits
 scripts/check-ts-eff-corpus.sh                   # the TypeScript reader = Lean's reader (bun)
 scripts/check-truth.sh                           # bounded Lean/rc.112 differential (bun)
 scripts/check-schema-codec.sh                    # fresh type-directed JSON vs rc.112 (bun)
-scripts/sweep.sh --hermetic                      # every hermetic gate, stamped
-scripts/sweep.sh --ocaml                         # avatar, daemon protocol and dune tests
+make check                                       # the per-change tier (make help lists the rest)
+make check-host                                  # the outside oracles: truth, T0, the OCaml tests
 ```
 
 The TypeScript gates use the dependencies pinned in `ts/eff/package.json`; install them

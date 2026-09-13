@@ -17,11 +17,11 @@ and order** — with the environment's own list. One `Conform.Row` per `(family,
 `Conform.Core.Policy`, `Conform.Manifest.Readers`. No repository module and no `Effect4` name: the
 mirror list is a JSON file (`tools/Conform/Effect4/mirrors.json` for this tree).
 
-**What it deliberately does not do.** It does not walk `-- cut-from:` stamps or decide whether a
-generated file is up to date: that is `scripts/lib/check_generated.py`'s job and duplicating it
-would give the tree two disagreeing answers to one question. This check is the complement — it
-reads what the file *says* rather than when it was cut, so it also covers the **hand-written**
-copies, which no stamp walk can.
+**What it deliberately does not do.** It does not decide whether a generated file is up to
+date: that is `make check-gen`'s job (regenerate every group, refuse a changed committed file)
+and duplicating it would give the tree two disagreeing answers to one question. This check is
+the complement — it reads what the file *says* rather than when it was cut, so it also covers
+the **hand-written** copies, which no regeneration can.
 
 **Properties.**
 * **A mirror that cannot be read is `unresolved`, never a pass.** A missing file, an unparsable

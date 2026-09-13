@@ -6,22 +6,18 @@ named host profile and file set; it never defines the Lean semantics. Each
 section below states one harness's purpose, its entry script, its pins, and
 what a pass does and does not establish.
 
-The entry point for all of them together is `scripts/sweep.sh`, which runs
-the citation and runtime-census gates in dependency order -- hermetic before
-host, self-tests last -- one process at a time, and writes
-`.lake/sweep-summary.tsv`. `--hermetic` is the host-free subset that CI runs,
-`--keep-going` runs every gate rather than stopping at the first failure,
-`--force` ignores every stamp, and `--list` prints which gates are in which
-lane. Each gate keys a stamp under `.lake/stamps/` on the content of what it
-reads -- its fixtures, the goldens it compares with, the Lake traces of the
-Lean modules its driver imports, the effect4-tools runner it invokes, and the
-identity of the pinned Effect installation -- and prints its stamped summary
-instead of re-running when none of that has changed. The header of each gate
-names its own inputs. A sweep with nothing changed takes about seven seconds;
-a forced one takes about four minutes.
+The entry point for all of them together is the Makefile (`make help`): `make check`
+is the tier that runs after every change, `make check-host` adds the outside oracles
+(the truth harness, the TypeScript typing oracle, the schema codec, the OCaml tests,
+the ingest smoke), and `make check-full` is everything, the long censuses included.
+Each check is a rule keyed on the files it reads -- its fixtures, the goldens it
+compares with, the Lake trace of the compiled core, the pinned host manifests -- and is
+skipped while none of that has changed; `make -B <target>` or `make clean-check`
+forces it. One Lean process runs at a time. (Until 2026-09-13 this was
+`scripts/sweep.sh` with a per-script result cache; the script survives as a wrapper.)
 
-Three harnesses below are not in the sweep and are still run by hand:
-`schema-generation/`, `schema-annotations/` and `schema-effectful-field/`. Routing them is survey finding H34, not this packet.
+`schema-annotations/` and `schema-effectful-field/` are still run by hand;
+`schema-generation/` is `make check-schema-ts`, in the full tier.
 
 `schema-generation/` contains the first complete bridge fixture. Run
 `scripts/check-schema-typescript-generation.sh`; it regenerates the fixture

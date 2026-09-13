@@ -35,7 +35,6 @@ set -euo pipefail
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 . "$repo_root/scripts/lib/portable.sh"
-. "$repo_root/scripts/lib/stamp.sh"
 
 gate=ts-eff-corpus
 cd "$repo_root"
@@ -55,19 +54,6 @@ if ! lake build Tools.Corpus >"$build_log" 2>&1; then
   exit 1
 fi
 rm -f "$build_log"
-
-key="$(stamp_key \
-  "${BASH_SOURCE[0]}" "$repo_root/lean-toolchain" \
-  "$stamp_build_lib/Tools/Corpus.trace" \
-  "$repo_root"/ts/eff/*.ts "$repo_root/ts/eff/test" "$repo_root/ts/eff/ingest" \
-  "$repo_root/ts/eff/package.json" "$repo_root/ts/eff/bun.lock" "$repo_root/ts/eff/tsconfig.json" \
-  "$repo_root/harness/truth/generated" "$repo_root/harness/truth/prelude.ts" \
-  "$repo_root/harness/truth/tsconfig.json" \
-  "$(stamp_fact bun "$bun_version")")"
-if stamp_hit "$gate" "$key"; then
-  stamp_report "$gate" "$key"
-  exit 0
-fi
 
 tmp_parent="${TMPDIR:-/tmp}"
 tmp_parent="${tmp_parent%/}"
@@ -94,14 +80,6 @@ if [[ ! -d node_modules ]]; then
   }
 fi
 
-typecheck_out="$tmp_root/typecheck.log"
-if ! "$bun_cmd" "$(bun_path "$repo_root/ts/eff/node_modules/typescript/bin/tsc")" --pretty false \
-     --noEmit -p "$(bun_path "$repo_root/harness/truth/tsconfig.json")" >"$typecheck_out" 2>&1; then
-  printf 'FAIL %s: the truth lane'"'"'s printed modules do not type-check\n' "$gate" >&2
-  cat "$typecheck_out" >&2
-  exit 1
-fi
-
 check_out="$tmp_root/check.log"
 if ! "$bun_cmd" run check.ts "$(bun_path "$tmp_root")" "$(bun_path "$repo_root/harness/truth/generated")" --oracle "$(bun_path "$tmp_root")" >"$check_out" 2>&1; then
   printf 'FAIL %s: the reader disagrees with Lean on the corpus\n' "$gate" >&2
@@ -118,6 +96,5 @@ if ! "$bun_cmd" test >"$test_out" 2>&1; then
 fi
 test_line="$(grep -E '^ *[0-9]+ pass' "$test_out" | head -1 | sed 's/^ *//')"
 
-summary="$check_line; bun test: $test_line; corpus: $corpus_line; truth modules type-check"
+summary="$check_line; bun test: $test_line; corpus: $corpus_line"
 printf 'PASS %s: %s\n' "$gate" "$summary"
-stamp_write "$gate" "$key" "$summary"

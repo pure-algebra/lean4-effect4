@@ -136,7 +136,7 @@ def main (args : List String) : IO Unit := do
       let count := (metadataCoverage.find? c.name).getD 0
       if count == 0 then throw (IO.userError s!"EffGen: metadata reaches no {c.name}")
       metadataRows := metadataRows ++ [s!"{c.name}\t{count}"]
-  let stamp ← Tools.GeneratedStamp.line "src/OCaml5/Tools/EffGen.lean" ["Effect4.Program.Native"]
+  let stamp := Tools.GeneratedStamp.note "src/OCaml5/Tools/EffGen.lean"
   -- write
   IO.FS.createDirAll out
   IO.FS.createDirAll (out / "goldens")
@@ -180,13 +180,6 @@ def main (args : List String) : IO Unit := do
       cov := cov.push s!"{c.name}\t{k}"
       if k == 0 then missing := missing.push c.name.toString
   IO.FS.writeFile (out / "goldens" / "coverage.txt") ("\n".intercalate cov.toList ++ "\n")
-  Tools.GeneratedStamp.sidecar (out / "eff_manifest.txt") stamp
-  Tools.GeneratedStamp.sidecar (out / "program-structure.json") stamp
-  for (name, _, _) in trees do
-    for suffix in [".bin", ".json", ".ty"] do
-      Tools.GeneratedStamp.sidecar (out / "goldens" / (name ++ suffix)) stamp
-  for name in ["corpus.txt", "coverage.txt", "metadata.tsv", "coverage-metadata.txt"] do
-    Tools.GeneratedStamp.sidecar (out / "goldens" / name) stamp
   unless missing.isEmpty do
     throw (IO.userError s!"EffGen: the corpus reaches no {missing}")
   IO.println s!"EffGen: {families.length} families, {trees.length} corpus programs, written to {outDir}"

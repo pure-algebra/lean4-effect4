@@ -524,8 +524,7 @@ def main (argv : List String) : IO Unit := do
   let ctx : Core.Context := { fileName := "<gen>", fileMap := default }
   let act : MetaM Unit := do
     let lines ← run args
-    let stamp ← Tools.GeneratedStamp.line "tools/Effect4Gen/Fold.lean" args.imports
-      (["tools/Effect4Gen/manifest.json"] ++ args.append.toList)
+    let stamp := Tools.GeneratedStamp.note "tools/Effect4Gen/Fold.lean"
     let text := "-- " ++ stamp ++ "\n" ++ String.intercalate "\n" lines.toList ++ "\n"
     match args.out with
     | some p => IO.FS.writeFile p text

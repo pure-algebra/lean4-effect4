@@ -20,7 +20,9 @@ Carte*, 2018):
    differential against an oracle: the hex and `.bin`/`.json`/`.ty` goldens, the printed-corpus
    comparison, the truth column's exit and schedule agreement.
 3. **A verifying trace** — a `cut-from:` stamp, which proves the inputs are the ones the
-   producer saw and nothing about the committed bytes.
+   producer saw and nothing about the committed bytes. (Retired 2026-09-13, wave 1 of the
+   checking refactor: the labels and their gate are gone, drift is `make check-gen`, and every
+   committed generated group is a constructive check of grade 2.)
 4. **Nothing** — a hand-written copy held equal by attention.
 
 The words a claim carries name the same four things from the claim's side (DI-32, ruled

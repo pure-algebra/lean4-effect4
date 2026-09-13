@@ -35,7 +35,7 @@ private def fixture : String :=
     , "" ]
 
 #eval do
-  IO.println ("// " ++ (← Tools.GeneratedStamp.line "harness/schema-generation/EmitMultiFixture.lean"))
+  IO.println ("// " ++ Tools.GeneratedStamp.note "harness/schema-generation/EmitMultiFixture.lean")
   IO.print fixture
 
 end Effect4Harness.SchemaGenerationMulti

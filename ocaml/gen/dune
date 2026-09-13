@@ -1,22 +1,16 @@
-; The LCNF route's output and its check. Build standalone from this directory:
+; The LCNF route's output and its smoke check. Build standalone from this directory:
 ;   dune build --root . && dune test --root .
-; `machine_gen.ml` (the nine target functions, exercised by gen_check),
-; `fibers_gen.ml` (every top-level function of Fibers.lean, type-checked only) and
-; `api_gen.ml` (Effect4.Api.run / Effect4.Api.replay and their whole closure, run by
-; api_check) are GENERATED (see their headers for the regenerating command);
-; `avatar_reference.ml` is a marked copy of avatar/deep_fibers.ml's dispatcher.
+; `machine_gen.ml` (the nine target functions), `fibers_gen.ml` (every top-level function
+; of Fibers.lean, type-checked only) and `api_gen.ml` (Effect4.Api.run / Effect4.Api.replay
+; and their whole closure, run by api_check) are GENERATED; each header carries the
+; regenerating command, and `make gen-lcnf` runs all of them. The former `gen_check`, which
+; compared the generated dispatcher against a hand copy of the archived avatar, was removed
+; on 2026-09-13 with that copy.
 
 (library
  (name effect4_gen)
  (public_name effect4_gen)
- (modules machine_gen fibers_gen api_gen avatar_reference)
- (flags
-  (:standard -warn-error -a)))
-
-(executable
- (name gen_check)
- (modules gen_check)
- (libraries effect4_gen)
+ (modules machine_gen fibers_gen api_gen)
  (flags
   (:standard -warn-error -a)))
 
@@ -26,11 +20,6 @@
  (libraries effect4_gen)
  (flags
   (:standard -warn-error -a)))
-
-(rule
- (alias runtest)
- (action
-  (run %{exe:gen_check.exe})))
 
 (rule
  (alias runtest)

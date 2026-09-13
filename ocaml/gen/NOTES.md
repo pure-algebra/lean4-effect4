@@ -3,8 +3,9 @@
 Status: **works end to end.** Every top-level function of `src/Effect4/Machine/Fibers.lean`
 (43 roots, 154 declarations with their transitive helpers, 38 types) translates through the
 mono-phase LCNF into OCaml that `ocamlopt` type-checks, with zero holes; the nine target
-functions are exercised by `gen_check.ml`, and the dispatcher agrees with the hand-written
-avatar on 1419 compared steps. Lean 4.33.1, OCaml 5.1.1, dune 3.24.2.
+functions were exercised by a `gen_check` executable against a hand copy of the avatar's
+dispatcher (1419 compared steps), both removed on 2026-09-13 with the avatar itself
+archived. Lean 4.33.1, OCaml 5.1.1, dune 3.24.2.
 
 ## Commands
 
@@ -307,8 +308,7 @@ ocaml/gen/machine_gen.ml    GENERATED: the nine targets + helpers (38 lets), 10 
 ocaml/gen/fibers_gen.ml     GENERATED: all 43 top-level functions of Fibers.lean (194 lets), 38 full types
 ocaml/gen/api_gen.ml        GENERATED: Effect4.Api.run / Effect4.Api.replay and their whole
                             closure — 475 lets, 80 full types, 0 missing, 0 frontier, 0 holes
-ocaml/gen/avatar_reference.ml  marked verbatim copy of avatar/deep_fibers.ml:184-214 (answer stubbed)
-ocaml/gen/gen_check.ml      the checks of §4
+(the avatar copy and the `gen_check` executable that ran the checks of §4 were removed on 2026-09-13)
 ocaml/gen/api_check.ml      the G0 smoke: p42 / pFork / pAwait through the generated `api_run`
 ocaml/gen/NOTES.md          this file
 ```

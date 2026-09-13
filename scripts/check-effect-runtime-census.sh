@@ -23,7 +23,6 @@ set -euo pipefail
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 . "$repo_root/scripts/lib/portable.sh"
-. "$repo_root/scripts/lib/stamp.sh"
 generator="$repo_root/scripts/generate-effect-runtime-census.sh"
 fixed_projection="$repo_root/generated/effect-runtime-census.tsv"
 coverage_rel="Test/Audit/RuntimeCoverage.lean"
@@ -84,51 +83,6 @@ cleanup() {
   exit "$cleanup_rc"
 }
 trap cleanup EXIT
-
-# 0. The stamp. The witness module is built first so that the traces the key
-#    hashes are the ones the join will read; step 2 builds it again, for free.
-stamped=0
-if [[ "$mode" == "production" ]]; then
-  stamped=1
-  (
-    cd -- "$repo_root"
-    unset LEAN_PATH LEAN_SRC_PATH
-    "$lake_bin" build Test.Audit.RuntimeCoverage >"$tmp_root/stamp-build.log" 2>&1
-  ) || {
-    printf 'FAIL Test.Audit.RuntimeCoverage does not build\n' >&2
-    cat "$tmp_root/stamp-build.log" >&2
-    exit 1
-  }
-  installed_src="${EFFECT4_EFFECT_NODE_MODULES:-$repo_root/../foldlab/library/effects/node_modules}/effect"
-  census_inputs=(
-    "$repo_root/scripts/check-effect-runtime-census.sh"
-    "$generator"
-    "$repo_root/scripts/lib/portable.sh"
-    "$repo_root/scripts/lib/stamp.sh"
-    "$repo_root/$coverage_rel"
-    "$stamp_build_lib/Test/Audit/RuntimeCoverage.trace"
-    "$candidate"
-    "$installed_src/package.json"
-    "$repo_root/lakefile.toml"
-    "$repo_root/lake-manifest.json"
-    "$repo_root/lean-toolchain"
-  )
-  # The `input` rows of the projection name the twelve vendored rc.112 sources
-  # the generator extracts spans from; each is paired with the installed copy
-  # the generator cross-checks it against when one is reachable.
-  while IFS= read -r pinned_rel; do
-    [[ -n "$pinned_rel" ]] || continue
-    census_inputs+=("$repo_root/$pinned_rel" "$installed_src/src/${pinned_rel#*/src/}")
-  done < <(awk -F '\t' '$1 == "input" { print $2 }' "$candidate")
-  while IFS= read -r trace; do
-    census_inputs+=("$trace")
-  done < <(stamp_lean_traces "$repo_root/$coverage_rel")
-  census_key="$(stamp_key "${census_inputs[@]}")"
-  if stamp_hit effect-runtime-census "$census_key"; then
-    stamp_report effect-runtime-census "$census_key"
-    exit 0
-  fi
-fi
 
 # 1. The census must be byte-identical to a fresh extraction from the pinned
 #    Effect source. The generator fails on its own before reaching here if a
@@ -239,11 +193,6 @@ census_total="$(wc -l <"$tmp_root/census.ids" | tr -d ' ')"
 if [[ "$mode" == "dry-run" ]]; then
   printf 'PASS dry-run candidate matches the pinned Effect runtime census; closes nothing\n'
 else
-  if [[ "$stamped" -eq 1 ]]; then
-    stamp_write effect-runtime-census "$census_key" \
-      "$(printf '%s mechanism rows joined; denominator %s, owned-with-green %s, green %s, partial %s, absent %s' \
-        "$census_total" "$denominator" "$owned_green" "$green" "$partial" "$absent")"
-  fi
   printf 'PASS generated Effect 4.0.0-rc.112 runtime census is current: %s mechanism rows\n' "$census_total"
   printf 'PASS census ids, kinds, statement snapshots and witness receipts join the Lean row list\n'
   printf 'PASS coverage: denominator %s; owned-with-green %s; green %s, partial %s, absent %s\n' \

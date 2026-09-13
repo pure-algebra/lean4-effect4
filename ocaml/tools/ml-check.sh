@@ -23,7 +23,7 @@
 #
 # ON OCAMLFORMAT, A CHOICE AND NOT A SILENCE. The canonical printer for the estate's generated
 # OCaml is `OCaml5.Ml.Render`, not `ocamlformat`, and the reason is the check that matters most:
-# `scripts/check-generated.sh` compares the generated OCaml (`ocaml/gen/api_gen.ml`,
+# `make check-gen` compares the generated OCaml (`ocaml/gen/api_gen.ml`,
 # `ocaml/engine/api_engine.ml`) byte for byte against a fresh render. Adopting ocamlformat as
 # canonical would make that comparison test ocamlformat rather than the generator. So the lane
 # below is INFORMATIONAL: it reports how many lines the two printers disagree on and never fails

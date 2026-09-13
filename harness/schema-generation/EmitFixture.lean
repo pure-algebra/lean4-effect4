@@ -19,7 +19,7 @@ private def fixture : String :=
     , ("prototypeData", .obj [("__proto__", .str "data")]) ]).getD ""
 
 #eval do
-  IO.println ("// " ++ (← Tools.GeneratedStamp.line "harness/schema-generation/EmitFixture.lean"))
+  IO.println ("// " ++ Tools.GeneratedStamp.note "harness/schema-generation/EmitFixture.lean")
   IO.print fixture
 
 end Effect4Harness.SchemaGeneration

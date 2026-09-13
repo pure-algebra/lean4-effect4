@@ -811,8 +811,5 @@ def main (args : List String) : IO Unit := do
   match out? with
   | some out =>
     IO.FS.writeFile out text
-    let stamp ← Tools.GeneratedStamp.line "harness/truth/Truth.lean" []
-      ["harness/truth/run-truth.ts", "harness/truth/prelude.ts", "ts/eff/package.json", "ts/eff/bun.lock"]
-    Tools.GeneratedStamp.sidecar out stamp
     IO.println s!"wrote {OCaml5.Truth.corpus.length} programs to {out}"
   | _ => IO.println text

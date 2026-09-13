@@ -12,9 +12,9 @@
 #
 #   scripts/generate-ts-eff.sh [<dir>]      default ts/eff
 #
-# A generator, not a gate (scripts/lib/stamp.sh, "Generators are not stamped"): it builds
-# `Tools.TsGen`, the one Lean module it runs, and writes. The byte-for-byte drift gate over the
-# written files is scripts/check-ts-eff.sh, stamped, in the sweep. Nothing here is typed by
+# A generator, not a check: it builds `Tools.TsGen`, the one Lean module it runs, and writes.
+# The Makefile's `gen-ts` rule decides when it runs and `make check-gen` is the byte-for-byte
+# drift check over the written files. Nothing here is typed by
 # hand: the families, constructors, field names and carriers are read off the environment
 # (`OCaml5.Eff.World`), the heads are `Effect4.Program.reserved`, the rows `NativeOp.row`.
 set -euo pipefail

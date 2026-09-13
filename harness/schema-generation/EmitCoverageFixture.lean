@@ -8,7 +8,7 @@ private def fixture : String :=
     Test.Codegen.SchemaGenerationCoverage.document).getD ""
 
 #eval do
-  IO.println ("// " ++ (← Tools.GeneratedStamp.line "harness/schema-generation/EmitCoverageFixture.lean"))
+  IO.println ("// " ++ Tools.GeneratedStamp.note "harness/schema-generation/EmitCoverageFixture.lean")
   IO.print fixture
 
 end Effect4Harness.SchemaGenerationCoverage

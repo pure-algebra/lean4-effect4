@@ -1,2 +1,10 @@
 # Planned module never written
 src/Effect4/Surface/Handler.lean	Test/contracts/
+# Removed 2026-09-13 (wave 1 of the checking refactor): the provenance-label gate and its
+# library, the separate TypeScript drift gate, and the avatar-copy test. Cited by ruled
+# register rows and a landed dispatch, which are history.
+scripts/lib/check_generated.py	removed 2026-09-13
+scripts/check-generated.sh	removed 2026-09-13
+scripts/check-ts-eff.sh	removed 2026-09-13
+ocaml/gen/gen_check.ml	removed 2026-09-13
+ocaml/gen/avatar_reference.ml	removed 2026-09-13

@@ -42,6 +42,3 @@ def main (args : List String) : IO Unit := do
   let out ← IO.FS.Handle.mk output IO.FS.Mode.write
   for line in lines do
     unless line.isEmpty do out.putStrLn (observe line).compress
-  let stamp ← Tools.GeneratedStamp.line "harness/truth/IngestPrint.lean" []
-    [input, "harness/truth/run-truth.ts", "harness/truth/prelude.ts", "ts/eff/package.json", "ts/eff/bun.lock"]
-  Tools.GeneratedStamp.sidecar output stamp

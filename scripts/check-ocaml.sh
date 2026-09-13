@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Stamped OCaml estate gates. Requires the effect4 switch; absent runtimes are a SKIP.
+# The OCaml estate gates. Requires the effect4 switch; absent runtimes are a SKIP.
+# Whether to run is the Makefile's decision (`make check-ocaml`); this script always runs.
 #
 # A gate that is red for a declared reason is declared in the one policy file,
 # `Test/fixtures/trust-gate/known-red.txt`, as a `# gate: <name>` entry under a
@@ -12,7 +13,6 @@
 set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . "$repo_root/scripts/lib/portable.sh"
-. "$repo_root/scripts/lib/stamp.sh"
 . "$repo_root/scripts/lib/known-red.sh"
 gate="${1:?expected gen-check, engine-tests or dune-tests}"
 case "$gate" in gen-check|engine-tests|dune-tests) ;; *) echo "FAIL unknown OCaml gate: $gate" >&2; exit 2;; esac
@@ -35,14 +35,6 @@ fi
 effect4_toolchain
 command -v dune >/dev/null 2>&1 || { echo "FAIL $gate: dune is required in the effect4 switch" >&2; exit 1; }
 cd "$repo_root"
-inputs=()
-while IFS= read -r file; do inputs+=("$file"); done < <(git ls-files --cached --others --exclude-standard ocaml src/Effect4 src/OCaml5)
-key="$(stamp_key scripts/check-ocaml.sh scripts/lib/known-red.sh \
-  Test/fixtures/trust-gate/known-red.txt "${inputs[@]}" Test/Audit/RuntimeCoverage.lean \
-  "$(stamp_fact ocaml "$(ocamlc -version)")" "$(stamp_fact dune "$(dune --version)")" \
-  "$(stamp_fact jsoo "$(js_of_ocaml --version)")" \
-  "$(stamp_fact node "$(node --version 2>/dev/null || node.exe --version 2>/dev/null || echo absent)")")"
-if stamp_hit "$gate" "$key"; then stamp_report "$gate" "$key"; exit 0; fi
 run_gate() {
   case "$gate" in
     # `&&`, not `;`: `set -e` does not reach into a function called as an `if`
@@ -68,5 +60,4 @@ if [ "$observed" != pass ]; then
   echo "FAIL $gate: the requested OCaml checks failed" >&2
   exit 1
 fi
-stamp_write "$gate" "$key" 'the requested OCaml checks passed'
 echo "PASS $gate: the requested OCaml checks passed"

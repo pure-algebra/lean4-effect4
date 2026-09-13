@@ -18,7 +18,7 @@
        stated for the existing 8-domain harness, where each machine owns its own mailbox,
        and a single shared mailbox is the adversarial fan-in case §4.3 keeps in reserve.
 
-   One line per check, `PASS <name>` or `FAIL <name>` (the `ocaml/gen/gen_check.ml` style);
+   One line per check, `PASS <name>` or `FAIL <name>`;
    the last line is `== ALL PASS: 0 failure(s) ==` and the exit code is 0 iff every check
    passed. Run: `dune test --root . --force` from ocaml/engine. *)
 

@@ -163,20 +163,7 @@ def main() -> int:
     if failures:
         print("\n".join("FAIL source-citations: " + f for f in failures), file=sys.stderr)
         return 1
-    digest.update("\n".join(sorted(baseline)).encode())
-    key = digest.hexdigest()
     summary = f"{tokens} citation tokens examined; {len(missing)} baselined missing targets"
-    if root == Path(__file__).resolve().parent.parent:
-        stamp_dir = root / ".lake/stamps/source-citations"
-        stamp = stamp_dir / key
-        if stamp.exists() and not args.force and os.environ.get("EFFECT4_FORCE") != "1":
-            print(f"PASS source-citations: {summary}; skipped (EFFECT4_FORCE=1 re-runs)")
-            return 0
-        stamp_dir.mkdir(parents=True, exist_ok=True)
-        for old in stamp_dir.iterdir():
-            if old.is_file():
-                old.unlink()
-        stamp.write_text(summary + "\n")
     print(f"PASS source-citations: {summary}")
     return 0
 

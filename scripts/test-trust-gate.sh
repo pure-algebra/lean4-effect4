@@ -46,22 +46,15 @@
 # root, in which case `lake build Test` fails, or it is not, in
 # which case the gate names it.
 #
-# ## Stamps
+# ## When it runs
 #
-# Rule 9: the gate does not re-run when nothing it reads has changed. After
-# step 0a has made the build current, the inputs are keyed (lib/stamp.sh): this
-# script and its two harnesses, the stamp and portability libraries, every
-# fixture, the gate's own source, the Lake configuration, the Lake trace of
-# every module under `src/Effect4/` and `Test/` (each trace hashes that
-# module's source and its imports' traces, so together they stand for every
-# olean the gate reads), and the sources of the declared-red modules, which
-# have no trace because they never build. A hit prints the stamped summary and
-# exits 0; `--force` or EFFECT4_FORCE=1 re-runs.
+# Whether to run is the Makefile's decision (`make check-tools`, keyed on this
+# script, its two harnesses, the fixtures and the gate's own source); this
+# script always runs. `--force` is accepted and ignored.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . "$repo_root/scripts/lib/portable.sh"
-. "$repo_root/scripts/lib/stamp.sh"
 for argument in "$@"; do
   case "$argument" in
     --force) export EFFECT4_FORCE=1 ;;
@@ -110,45 +103,6 @@ step_end "step 0a  lake build Test"
 
 declared_red="$( { [[ -f "$known_red" ]] && grep -v '''^[[:space:]]*#''' "$known_red" \
   | grep -v '''^[[:space:]]*$''' || true; } | LC_ALL=C sort -u )"
-
-# --- 0c. the stamp ------------------------------------------------------------
-
-step_begin
-red_sources=()
-while IFS= read -r module; do
-  [[ -n "$module" ]] || continue
-  # Same mapping as the gate's `modulePath`: the library lives under `src/`, the
-  # batteries and the authored fixtures at the root.
-  case "$module" in
-    Effect4|Effect4.*) red_sources+=("$repo_root/src/${module//.//}.lean") ;;
-    *) red_sources+=("$repo_root/${module//.//}.lean") ;;
-  esac
-done <<<"$declared_red"
-stamp_inputs=(
-  "$repo_root/scripts/test-trust-gate.sh"
-  "$repo_root/scripts/test-source-trust-tokenizer.sh"
-  "$repo_root/scripts/test-trust-boundaries.sh"
-  "$repo_root/scripts/lib/stamp.sh"
-  "$repo_root/scripts/lib/portable.sh"
-  "$fixtures"
-  "$repo_root/Test/Audit/AxiomGate.lean"
-  "$repo_root/lakefile.toml"
-  "$repo_root/lake-manifest.json"
-  "$repo_root/lean-toolchain"
-  "$real_build_lib/Effect4.trace"
-  "$real_build_lib/Test/All.trace"
-)
-while IFS= read -r trace; do
-  stamp_inputs+=("$trace")
-done < <(find "$real_build_lib/Effect4" "$real_build_lib/Test" -name '*.trace')
-# bash 3.2 (macOS) treats an empty array as unbound under `set -u`; expand it guarded.
-stamp_inputs+=(${red_sources[@]+"${red_sources[@]}"})
-gate_key="$(stamp_key "${stamp_inputs[@]}")"
-step_end "step 0c  key ${#stamp_inputs[@]} inputs"
-if stamp_hit trust-gate "$gate_key"; then
-  stamp_report trust-gate "$gate_key"
-  exit 0
-fi
 
 step_begin
 if [[ -n "$declared_red" ]]; then
@@ -425,5 +379,4 @@ step_end "step 4c  Expr equality probes"
 
 summary="$(printf '%d planted defects rejected, %d accepted, %ss' \
   "$rejected" "$accepted" "$(( $(date +%s) - run_start ))")"
-stamp_write trust-gate "$gate_key" "$summary"
 echo "PASS trust gate: $summary"

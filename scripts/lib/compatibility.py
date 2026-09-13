@@ -253,9 +253,42 @@ def policy_delta(before, after, allowed, dimension):
             'judgment': 'comparison of supplied observations, not evidence of their execution'}
 
 
+def imports(data):
+    """The module names a Lean source imports, read off its header (comments skipped)."""
+    import re
+    text, result, pos = data.decode(), [], 0
+    while pos < len(text):
+        if text[pos].isspace():
+            pos += 1
+        elif text.startswith('--', pos):
+            end = text.find('\n', pos)
+            pos = len(text) if end < 0 else end + 1
+        elif text.startswith('/-', pos):
+            depth, pos = 1, pos + 2
+            while depth and pos < len(text):
+                if text.startswith('/-', pos):
+                    depth, pos = depth + 1, pos + 2
+                elif text.startswith('-/', pos):
+                    depth, pos = depth - 1, pos + 2
+                else:
+                    pos += 1
+            if depth:
+                raise ValueError('unterminated Lean header comment')
+        else:
+            match = re.match(r'(?:(?:public|private) )?import ([A-Za-z0-9_.]+)', text[pos:])
+            marker = re.match(r'(?:prelude|module)\b', text[pos:])
+            if match:
+                result.append(match[1])
+                pos += match.end()
+            elif marker:
+                pos += marker.end()
+            else:
+                break
+    return result
+
+
 def source_closure(read, roots=IMPORTS):
     """Exact source closure of the imports built for reflection; no type parsing."""
-    from generated_inputs import imports
     found = {}
     def visit(module):
         if not module.startswith('Effect4.') or module in found:
