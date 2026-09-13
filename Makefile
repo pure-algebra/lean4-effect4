@@ -221,12 +221,12 @@ doctor: ## the tools and installs every tier needs, with their versions
 # ---------------------------------------------------------------------------- checks
 
 CHECKS := roots cases native ts-reader truth target schema-codec ocaml ingest ingest-smoke \
-  host-protocol census streams schema-ts schema-pins schema-surface schema-host compat tools
+  host-protocol census streams schema-ts schema-pins schema-host compat tools
 .PHONY: check check-host check-full check-gen check-gen-full check-citations clean-check $(addprefix check-,$(CHECKS))
 
 check: build check-roots check-gen check-cases check-native check-citations check-ts-reader ## after every change
 check-host: check check-truth check-target check-schema-codec check-ocaml check-ingest-smoke ## per slice: the outside oracles
-check-full: check-host check-gen-full check-ingest check-host-protocol check-census check-streams check-schema-ts check-schema-pins check-schema-surface check-schema-host ## everything
+check-full: check-host check-gen-full check-ingest check-host-protocol check-census check-streams check-schema-ts check-schema-pins check-schema-host ## everything
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
 # generated file. `check-gen-full` re-cuts every group, the host-cut ones included,
@@ -350,19 +350,12 @@ $(CHK)/schema-ts: $(SCHEMA_SOURCES) $(wildcard $(SCHEMA_TS_DIR)/*) scripts/check
 	@mkdir -p $(CHK) && touch $@
 
 # The rest of the Schema slice, on its inputs (ledger decision 3): the rc.112 tag and
-# field pins are textual extractions from the vendored SchemaRepresentation.ts; the
-# surface check elaborates the two boundary fixtures (Test.Schema.PayloadSurface itself is
-# in the build); the host harnesses run the pinned Schema host
-# (EFFECT4_EFFECT_NODE_MODULES, harness/schema-host).
+# field pins are textual extractions from the vendored SchemaRepresentation.ts; the host
+# harnesses run the pinned Schema host (EFFECT4_EFFECT_NODE_MODULES, harness/schema-host).
 SCHEMA_PIN := vendor/effect-4.0.0-rc.112/src/SchemaRepresentation.ts
 $(CHK)/schema-pins: $(SCHEMA_PIN) src/Effect4/Schema/Representation.lean scripts/check-schema-census.sh scripts/check-schema-fields.sh
 	bash scripts/check-schema-census.sh $(SCHEMA_PIN)
 	bash scripts/check-schema-fields.sh $(SCHEMA_PIN)
-	@mkdir -p $(CHK) && touch $@
-
-$(CHK)/schema-surface: $(SCHEMA_SOURCES) Test/Schema/PayloadSurface.lean $(wildcard Test/fixtures/schema-payload-surface/*.lean) | build
-	$(LAKE) env lean Test/fixtures/schema-payload-surface/RequiredPayloadBoundary.lean
-	$(LAKE) env lean Test/fixtures/schema-payload-surface/RequiredOwnership.lean
 	@mkdir -p $(CHK) && touch $@
 
 $(CHK)/schema-host: $(SCHEMA_SOURCES) $(shell find harness/schema-annotations harness/schema-effectful-field -type f -not -path '*/node_modules/*') scripts/check-schema-annotations.sh scripts/check-schema-effectful-field.sh | build
@@ -384,7 +377,7 @@ $(CHK)/compat: $(CORE) scripts/check-compatibility.py scripts/lib/compatibility.
 	@mkdir -p $(CHK) && touch $@
 
 SELFTEST_SOURCES := $(wildcard scripts/test-*.sh scripts/test-*.py scripts/lib/*) Test/Audit/AxiomGate.lean \
-  $(shell find Test/fixtures/trust-gate Test/fixtures/internal-citations Test/fixtures/schema-payload-surface -type f)
+  $(shell find Test/fixtures/trust-gate Test/fixtures/internal-citations -type f)
 $(CHK)/tools: $(SELFTEST_SOURCES) | build
 	bash scripts/test-trust-gate.sh
 	bash scripts/test-internal-citations-gate.sh
@@ -392,7 +385,6 @@ $(CHK)/tools: $(SELFTEST_SOURCES) | build
 	$(PY) scripts/test-conform-report.py
 	$(PY) scripts/test-program-structure.py
 	$(PY) scripts/test-compatibility.py
-	bash scripts/test-schema-payload-surface-gate.sh
 	@mkdir -p $(CHK) && touch $@
 
 # ---------------------------------------------------------------------------- help
@@ -403,7 +395,7 @@ help: ## this list
 	@echo
 	@echo '  check-<name>       one check: roots, cases, native, ts-reader, truth, target, schema-codec,'
 	@echo '                     ocaml, ingest, ingest-smoke, host-protocol, census, streams, schema-ts,'
-	@echo '                     schema-pins, schema-surface, schema-host, compat, tools'
+	@echo '                     schema-pins, schema-host, compat, tools'
 	@echo '                     (each skipped while its inputs are unchanged; -B forces)'
 	@echo '  gen-<group>        one generated group: derived, specs, eff, wire, cas, ts, readme, lcnf,'
 	@echo '                     truth, host-protocol, schema-ts, census'

@@ -9,7 +9,7 @@ trap 'rm -rf -- "$tmp_root"' EXIT
 
 {
   # Private admission resolution needs every named owner present in the environment.
-  printf 'import Test.Schema.StructuralAssurance\nimport Test.Program.ConfigContract\n'
+  printf 'import Test.Audit.RuntimeCoverage\nimport Test.Program.ConfigContract\n'
   cat "$project_root/Test/Audit/AxiomGate.lean"
   cat "$repo_root/Test/fixtures/trust-gate/implementation-boundaries.lean.txt"
 } > "$tmp_root/ImplementationBoundaries.lean"

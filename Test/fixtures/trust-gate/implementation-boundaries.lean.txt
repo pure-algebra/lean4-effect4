@@ -1,4 +1,4 @@
--- Append to the current AxiomGate source after importing StructuralAssurance and ConfigContract.
+-- Append to the current AxiomGate source after importing RuntimeCoverage and ConfigContract.
 -- These checks inspect its private policy rows without adding a public API.
 
 namespace Effect4.Codegen.EffectfulField
@@ -12,7 +12,7 @@ namespace Test.Audit
 
 run_elab do
   let environment ← Lean.getEnv
-  let auditModule := `Test.Schema.StructuralAssurance
+  let auditModule := `Test.Audit.RuntimeCoverage
   let targetModule := `Effect4.Codegen.EffectfulField
   let expectedPublic :=
     [ ``Effect4.Codegen.EffectfulField.source?
@@ -21,7 +21,7 @@ run_elab do
     ]
   let mut failures : Array String := #[]
   unless auditImplementationModules.contains auditModule do
-    failures := failures.push "StructuralAssurance is missing its exact audit implementation admission"
+    failures := failures.push "RuntimeCoverage is missing its exact audit implementation admission"
   if choiceImplementationModules.contains targetModule then
     failures := failures.push "EffectfulField has a forbidden blanket module exemption"
   for name in expectedPublic do
@@ -36,7 +36,7 @@ run_elab do
       unless axioms.all auditImplementationAxioms.contains do
         failures := failures.push s!"audit implementation exceeds its ceiling: {name}"
   unless auditNeedsChoice do
-    failures := failures.push "StructuralAssurance admission is stale or the actual module was not imported"
+    failures := failures.push "RuntimeCoverage admission is stale or the actual module was not imported"
   unless failures.isEmpty do
     throwError "implementation boundary regression(s):\n{String.intercalate "\n" failures.toList}"
   logInfo "PASS exact audit module and public rendering admissions"

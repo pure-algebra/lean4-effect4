@@ -1,6 +1,5 @@
 import Effect4.Laws
 import Test.Api.FrontierContract
-import Test.Support.Environment
 import Test.Data.OpticContract
 import Test.Schema.AnnotationDataPlaneContract
 import Test.Schema.EffectfulFieldContract
@@ -22,12 +21,8 @@ import Test.Schema.RepresentationContract
 import Test.Schema.RepresentationFoldContract
 import Test.Schema.SubAlphabetContract
 import Test.Schema.PayloadContract
-import Test.Schema.PayloadSurface
-import Test.Schema.StructuralAssurance
 import Test.Data.RowContract
-import Test.Data.RowAssurance
 import Test.Machine.Environment.ContextKeyContract
-import Test.Machine.Environment.ContextKeyAssurance
 import Test.Codegen.ExprContract
 import Test.Codegen.SchemaGenerationContract
 import Test.Codegen.SchemaGenerationCoverage

@@ -277,10 +277,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install the pinned Schema host profile (TypeScript 7.0.2, the language service)
         run: npm ci --prefix harness/schema-host --no-audit --no-fund
-      - name: The Schema slice on the pinned host (generation, the tag and field pins, the surface fixtures, the two harnesses)
+      - name: The Schema slice on the pinned host (generation, the tag and field pins, the two harnesses)
         env:
           EFFECT4_EFFECT_NODE_MODULES: ${{ github.workspace }}/harness/schema-host/node_modules
-        run: make build check-schema-ts check-schema-pins check-schema-surface check-schema-host
+        run: make build check-schema-ts check-schema-pins check-schema-host
 
   proof-replay:
     if: github.event_name == 'schedule' && github.event.schedule == '17 4 * * 1'

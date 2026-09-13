@@ -86,11 +86,6 @@ needs the exemption fails the gate, so an entry cannot outlive its reason.
 -/
 private def auditImplementationModules : List Name :=
   [ `Test.Audit.AxiomGate
-  , `Test.Schema.PayloadSurface
-  , `Test.Schema.StructuralAssurance
-  , `Test.Data.RowAssurance
-  , `Test.Support.Environment
-  , `Test.Machine.Environment.ContextKeyAssurance
   , `Test.Audit.RuntimeCoverage
   ]
 

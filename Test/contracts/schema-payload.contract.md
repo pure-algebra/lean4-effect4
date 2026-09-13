@@ -1203,17 +1203,19 @@ lake clean && lake build
 scripts/test-trust-gate.sh
 git:c407ab7:scripts/check-vendor-foldlab.sh
 scripts/check-schema-fields.sh <pinned SchemaRepresentation.ts>
-make check-schema-surface                    # REQUIRED; must turn green in the builder (since 2026-09-13 the recipe; was scripts/check-schema-payload-surface.sh)
-scripts/test-schema-payload-surface-gate.sh  # REQUIRED; four mutations above (in make check-tools)
+# the payload-surface gate and its reaction test: retired 2026-09-13, see the amendment below
 ```
 
-The surface commands are present. The reaction test currently kills all four
-specified declaration mutations and rejects both source-override routes. The
-production command is an explicit green blocker: before the builder move it
-passes the elaborated shape table and then fails because
-`src/Effect4/Schema/Payload.lean` does not yet exist. The builder must make that
-same fixed command green without editing this contract or its Lean battery,
-then record the axiom receipt.
+The surface commands were present until 2026-09-13. The reaction test killed all
+four specified declaration mutations and rejected both source-override routes;
+the production command passed on the delivered carrier. **Amendment, 2026-09-13
+(stage 2 of the checking refactor):** the payload-surface gate, its module and its
+reaction test were retired with the three other hand-frozen declaration censuses
+of the test tree. They froze constructor order and arity, owned names and
+receipts by hand, and every added declaration edited them; the derived projection
+guard (`tools/Effect4Gen/Check.lean`) holds the carrier's shape mechanically, the
+compatibility snapshot freezes its wire form, and the axiom gate is the receipt.
+The payload contract battery (`Test/Schema/PayloadContract.lean`) is unchanged.
 
 ## Fired findings
 

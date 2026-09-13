@@ -55,10 +55,12 @@ markers. The recipes hold the Lean lane one at a time.
 Retired 2026-09-13 (the scripts ledger): `generated/schema-structural-assurance.tsv`, a
 2,682-row projection whose 446-line producer carried the SHA-256 of every Schema source
 inside itself and refused to run once any of them changed (the owner had deferred its
-stamp on 2026-09-08). What it certified is in the build: `Test/Schema/StructuralAssurance.lean`
-is a Test module, compiled by `make build`; the rest of the
-Schema slice runs on its inputs as `make check-schema-pins`, `check-schema-surface` and
-`check-schema-host`, with the payload-surface reaction test in `make check-tools`.
+stamp on 2026-09-08). The Lean module it projected, and the three other hand-frozen
+declaration censuses of the test tree, were retired the same day (stage 2 of the checking
+refactor): what they froze by hand — constructor order and arity, owned names, receipts —
+is held by the derived projection guard (`tools/Effect4Gen/Check.lean`), the compatibility
+snapshot and the axiom gate. The rest of the Schema slice runs on its inputs as
+`make check-schema-pins` and `check-schema-host`.
 
 The **evidence** column is the word, or words, a group's claim carries, ruled 2026-09-09
 (DI-32): *proved* for a theorem, *reproduced* for a byte comparison against a fresh producer
