@@ -578,6 +578,19 @@ def chunk (inner : Ty) : Ty := .handle (chunkTarget inner)
 /-- Canonical union includes deep normalization of both inputs. -/
 def join (a b : Ty) : Ty := normalize (.union a b)
 
+/-- A member the tag test `tagIs tag` can be true on: a pair whose first component is the
+literal `tag` (DI-39). A bare `lit tag` is not one — the atom is false on a bare string. -/
+def isTagged (tag : String) : Ty → Bool
+  | .prod (.lit t) _ => t == tag
+  | _ => false
+
+/-- The tag residual (DI-39, part 4 commit 3): drop every member `prod (lit tag) _`, keep
+every other member, a bare `lit tag` included. On a canonical form (no union under a `prod`
+head) this is a member filter and the result is canonical (`diffTag_canonical`,
+`Laws/Program/Residual.lean`); `diffTag_sub` and `diffTag_sound` hold on every type. -/
+def diffTag (tag : String) (t : Ty) : Ty :=
+  ofMembers (t.members.filter fun m => !isTagged tag m)
+
 /-- The API witness means equality with the computed canonical representative. -/
 def Canonical (t : Ty) : Prop := normalize t = t
 

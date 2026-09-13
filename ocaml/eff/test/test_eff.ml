@@ -524,7 +524,8 @@ let () =
   check "atoms refuse wrong arities and types"
     (atom_ty "succ" [ Ty_bool ] = None && atom_ty "succ" [] = None && atom_ty "add" [ Ty_nat ] = None
      && atom_ty "fst" [ Ty_nat ] = None && atom_ty "mul" [ Ty_nat; Ty_nat ] = None);
-  check "17 modeled atom names including native queries" (List.length atom_names = 17);
+  (* part 4 commit 3 (2026-09-12): `tagIs` is the eighteenth atom *)
+  check "18 modeled atom names including native queries" (List.length atom_names = 18);
   (* ops *)
   check "55 op values, none repeated"
     (List.length all_ops = 55 && List.length (List.sort_uniq compare all_ops) = 55);

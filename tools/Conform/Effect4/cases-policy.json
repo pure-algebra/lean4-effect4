@@ -347,6 +347,51 @@
           "name": "Effect4.Program.NativeAtom.typeOf"
         },
         {
+          "sites": [
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union"
+              ]
+            }
+          ],
+          "name": "Effect4.Program.Ty.isTagged"
+        },
+        {
           "name": "Effect4.Program.Ty.isMember",
           "mode": "default",
           "cover": [
@@ -1295,6 +1340,15 @@
           "mode": "exhaustive"
         },
         {
+          "name": "Effect4.Program.tagTest?",
+          "mode": "default",
+          "cover": [
+            "unit",
+            "nat",
+            "bool"
+          ]
+        },
+        {
           "name": "Effect4.Store.ProgramGen.LitC.toVal",
           "mode": "exhaustive"
         },
@@ -1403,6 +1457,32 @@
             "var",
             "lit"
           ]
+        },
+        {
+          "sites": [
+            {
+              "mode": "default",
+              "cover": [
+                "var",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "var",
+                "app"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "lit",
+                "app"
+              ]
+            }
+          ],
+          "name": "Effect4.Program.tagTest?"
         },
         {
           "name": "Effect4.Program.Term.scoped",

@@ -372,6 +372,8 @@ def polyArm (atom : NativeAtom) : Option String :=
     some s!"  | {ostr atom.name}, [{octor "ty" "causeOf"} _] | {ostr atom.name}, [{octor "ty" "exitOf"} (_, _)] -> Some {octor "ty" "bool"}"
   | .causeError =>
     some s!"  | {ostr atom.name}, [{octor "ty" "causeOf"} e] | {ostr atom.name}, [{octor "ty" "exitOf"} (_, e)] -> Some ({octor "ty" "option"} e)"
+  -- the tag test (DI-39): a string tag, any tested value
+  | .tagIs => some s!"  | {ostr atom.name}, [t; _] when sub t {octor "ty" "string"} -> Some {octor "ty" "bool"}"
   | .succ | .pred | .isZero | .boolNot | .add | .lt | .boolOr | .boolAnd => none
 
 def polyArms : List String := NativeAtom.all.filterMap polyArm
@@ -412,6 +414,10 @@ def atomProbes : List (String × List Ty × Option Ty) :=
   , ("eq", [.lit "a", .nat], none), ("succ", [.never], some .nat)
   , ("add", [.never, .nat], some .nat), ("strings", [.lit "x", .string], some (.list .string))
   , ("not", [.never], some .bool), ("lt", [.nat, .string], none)
+  -- the tag test (DI-39): a string or literal tag, any tested value; not a natural tag
+  , ("tagIs", [.string, .nat], some .bool), ("tagIs", [.lit "A", .prod (.lit "A") .string], some .bool)
+  , ("tagIs", [.string, .union (.prod (.lit "A") .string) .string], some .bool)
+  , ("tagIs", [.nat, .string], none), ("tagIs", [.string], none), ("tagIs", [], none)
   , ("causeIsFail", [.causeOf .string], some .bool), ("causeIsFail", [.exitOf .nat .string], some .bool)
   , ("causeIsDie", [.causeOf .never], some .bool), ("causeIsDie", [.exitOf .nat .never], some .bool)
   , ("causeIsInterrupt", [.causeOf .never], some .bool), ("causeIsInterrupt", [.exitOf .nat .never], some .bool)

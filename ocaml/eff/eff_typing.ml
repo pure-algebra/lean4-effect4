@@ -120,6 +120,33 @@ let rec normalize : ty -> ty = function
 
 let join (a : ty) (b : ty) : ty = normalize (Ty_union (a, b))
 
+(* Ty.isTagged / Ty.diffTag (DI-39, part 4 commit 3): the tag residual — drop the members
+   `prod (lit tag) _` of a canonical column, keep every other member, a bare `lit tag`
+   included. *)
+let is_tagged (tag : string) : ty -> bool = function
+  | Ty_prod (Ty_lit t, _) -> t = tag
+  | _ -> false
+
+let diff_tag (tag : string) (t : ty) : ty =
+  of_members (List.filter (fun m -> not (is_tagged tag m)) (members t))
+
+(* Typing.lean tagTest?: the tag a catchIf test names, when it is `tagIs` applied to a string
+   literal and exactly the caught error variable. *)
+let tag_test (test : term) (caught : int) : string option =
+  match test with
+  | Term_app ("tagIs", Terms_cons (Term_lit (Lit_str tag), Terms_cons (Term_var index, Terms_nil)))
+    when index = caught -> Some tag
+  | _ -> None
+
+(* Typing.lean catchIfError: the handler's column under the literal `true` test, the tag
+   residual of the body's canonical column joined with the handler's under the tag test, the
+   join of both otherwise. *)
+let catch_if_error (test : term) (caught : int) (body_error : ty) (handler_error : ty) : ty =
+  if test = Term_lit (Lit_bool true) then handler_error
+  else match tag_test test caught with
+    | Some tag -> join (diff_tag tag (normalize body_error)) handler_error
+    | None -> join body_error handler_error
+
 let is_never : ty -> bool = function Ty_never -> true | _ -> false
 
 (* ---- Requirement = Row ServiceKey: the strictly ascending key list ---- *)
@@ -359,7 +386,8 @@ let rec check_eff (env : env) (p : eff) : eff_ty checked =
     (match join_answer b.eff_ty_answer h.eff_ty_answer with
      | None -> refuse "catchIf: the answers do not join"
      | Some answer ->
-       let error = if test = Term_lit (Lit_bool true) then h.eff_ty_error else join b.eff_ty_error h.eff_ty_error in
+       (* DI-39: the caught error is the last position, `List.length env` *)
+       let error = catch_if_error test (List.length env) b.eff_ty_error h.eff_ty_error in
        Ok (mk answer error (req_union b.eff_ty_requires h.eff_ty_requires)))
   | Eff_matchCause (body, on_value, on_cause) ->
     let* b = check_eff env body in

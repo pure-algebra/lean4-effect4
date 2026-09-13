@@ -124,17 +124,20 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
       EffTy.joinAnswer b.answer h.answer = some answer →
       HasTy sig env (.catchCause body handler)
         ⟨answer, h.error, b.requires.union h.requires⟩
-  /-- DI-09: first-failure value binder. Only an unconditional literal test
-  discharges the body's error column; predicates do not assert a refinement. The two answers
-  join as the least upper bound (S4c). -/
+  /-- DI-09: first-failure value binder. The error column is `catchIfError` (DI-39): the
+  handler's alone under the literal `true` test, the tag residual `Ty.diffTag` of the body's
+  canonical column joined with the handler's under the tag test `tagIs("A", aN)` on the caught
+  error (`.var env.length`), and the join of both columns under every other predicate —
+  predicates do not assert a refinement, and the residual is a fidelity claim to rc.112's
+  printed type whose preservation law carries the single-`Fail` premise (DI-17,
+  `Laws/Program/Residual.lean`). The two answers join as the least upper bound (S4c). -/
   | catchIf {env : TyEnv} {test : Term} {body handler : Eff Op} {b h : EffTy} {answer : Ty} :
       HasTy sig env body b →
       termTy sig (env ++ [b.error]) test = some .bool →
       HasTy sig (env ++ [b.error]) handler h →
       EffTy.joinAnswer b.answer h.answer = some answer →
       HasTy sig env (.catchIf test body handler)
-        ⟨answer, if test = .lit (.bool true) then h.error else b.error.join h.error,
-          b.requires.union h.requires⟩
+        ⟨answer, catchIfError test env.length b.error h.error, b.requires.union h.requires⟩
   /-- `Effect.matchCauseEffect` (`:2645`): the success branch sees the answer, the failure
   branch the cause; both branches' answers join as the least upper bound and both branches'
   errors survive. -/

@@ -30,7 +30,10 @@
     "pCatchError",
     "pCatchIfHit",
     "pCatchIfMiss",
-    "pCatchIfRetained"
+    "pCatchIfRetained",
+    "pTagHit",
+    "pTagMiss",
+    "pTagTwoFail"
   ],
   "handles": {
     "Host.Resource": "Adapter.HostResource",

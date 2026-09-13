@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.TypeAlgebra
+import Effect4.Laws.Program.Residual
 import Test.Data.DataContract
 
 /-! DI-53: deep canonicalization, exact membership and deliberate admission deltas.
@@ -121,6 +122,43 @@ private def canonicalUniverse : List Ty := scoutUniverse.map Ty.normalize
 #guard !Val.hasTy (Val.str "x") (Ty.join .nat .bool)
 #print axioms Effect4.Program.Ty.hasTy_join_left
 #print axioms Effect4.Program.Ty.hasTy_join_right
+
+/-! ### The tag residual (DI-39, part 4 commit 3, 2026-09-12)
+
+`Ty.diffTag tag` drops the members `prod (lit tag) _` of a canonical column and keeps every
+other member, a bare `lit tag` included. `E4-RESID-CE-002`: the unconditional
+`supportedErrTy e → supportedErrTy (diffTag tag e)` on a raw `e` is false — the witness below
+normalizes to a supported column while its residual is `prod never string`; the law is stated
+on canonical columns, which is the only shape the checker cuts. -/
+
+private def tagged : Ty := .union (.prod (.lit "A") .string) (.union (.prod (.lit "B") .string) .string)
+#guard (Ty.diffTag "A" tagged.normalize) = (Ty.union (.prod (.lit "B") .string) .string).normalize
+#guard (Ty.diffTag "B" tagged.normalize) = (Ty.union (.prod (.lit "A") .string) .string).normalize
+#guard (Ty.diffTag "C" tagged.normalize) = tagged.normalize
+#guard Ty.diffTag "A" (.prod (.lit "A") (.lit "m")) = .never
+-- a bare literal is kept: the atom is false on a bare string
+#guard Ty.diffTag "A" (Ty.union (.lit "A") (.prod (.lit "A") .string)).normalize = .lit "A"
+#guard Ty.sub (Ty.diffTag "A" tagged.normalize) tagged.normalize
+-- canonical: normalization is the identity on it (`Ty.Canonical`, evaluated)
+#guard (Ty.diffTag "A" tagged.normalize).normalize = Ty.diffTag "A" tagged.normalize
+#guard supportedErrTy (Ty.diffTag "A" tagged.normalize)
+-- E4-RESID-CE-002: the raw statement's counterexample
+private def hiddenNever : Ty := .union (.prod .never .string) (.prod (.lit "X") .string)
+#guard hiddenNever.normalize = .prod (.lit "X") .string
+#guard supportedErrTy hiddenNever
+#guard Ty.diffTag "X" hiddenNever = .prod .never .string
+#guard !supportedErrTy (Ty.diffTag "X" hiddenNever)
+#guard supportedErrTy (Ty.diffTag "X" hiddenNever.normalize)
+#check (@Effect4.Program.Ty.diffTag_sub : ∀ (tag : String) (e : Ty), Ty.sub (Ty.diffTag tag e) e = true)
+#check (@Effect4.Program.Ty.diffTag_sound : ∀ (tag : String) (e : Ty) (v : Val) (allocated : List String),
+  Val.hasTy v e allocated = true → NativeAtom.eval .tagIs [.str tag, v] = some (.bool false) →
+    Val.hasTy v (Ty.diffTag tag e) allocated = true)
+#check (@Effect4.Program.supportedErrTy_diffTag : ∀ (tag : String) (e : Ty), Ty.Canonical e →
+  supportedErrTy e = true → supportedErrTy (Ty.diffTag tag e) = true)
+#print axioms Effect4.Program.Ty.diffTag_sub
+#print axioms Effect4.Program.Ty.diffTag_sound
+#print axioms Effect4.Program.Ty.diffTag_canonical
+#print axioms Effect4.Program.supportedErrTy_diffTag
 
 private def hiddenPair : Ty := .prod (.union .string .never) .string
 #guard !rawSupportedErrTy hiddenPair

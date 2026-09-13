@@ -319,8 +319,33 @@ def pCatchIfRetained : Api.Program :=
         (.perform .refGet (.var 0)))
       (.perform .refGet (.var 0)))
 
+/-- Part 4 commit 3 (DI-39, DI-17): the tag residual on the host. A tagged failure caught by the
+tag test (hit), the same program with another tag (miss, the whole cause re-raised), and a
+two-`Fail` cause under the tag catch (miss on its first `Fail`, the whole cause re-raised —
+the retained cause still carries the caught tag, which is the `SingleFail` premise's witness
+at runtime, `E4-RESID-CE-001`). Each prints `Effect.catchIf(…, (a0) => tagIs("A", a0), …)`
+and its declared type is `Ty.diffTag` of the body's column: `string`, the whole union, and
+the other tag's pair. The body's error column is a **union** and the handler's answer does
+not depend on the caught binder, because those are the shapes on which rc.112's printed
+type agrees with the residual: TypeScript infers the printed lambda as a type predicate only
+when the narrowing is non-trivial, and it narrows the handler's binder where Lean types it
+at the whole column (the part-4 receipt, finding F2). The union is built by `bind` — a
+`branch` whose arms fail with unrelated errors prints as a conditional of two `Effect`s that
+TypeScript cannot unify (TS2375, receipt F3) — so the body succeeds through a conditional
+that could fail with text and then fails with the tagged pair. -/
+def tagged (t m : String) : Term :=
+  .app "pair" (.cons (.lit (.str t)) (.cons (.lit (.str m)) .nil))
+def tagBody : Api.Program :=
+  .bind (.branch (.lit (.bool true)) (.succeed (.lit (.nat 0))) (.fail (.lit (.str "text"))))
+    (.fail (tagged "A" "m"))
+def pTagHit : Api.Program := .catchIf (tagTest "A" 0) tagBody (.succeed (.lit (.nat 1)))
+def pTagMiss : Api.Program := .catchIf (tagTest "B" 0) tagBody (.succeed (.lit (.nat 1)))
+def pTagTwoFail : Api.Program := .catchIf (tagTest "A" 0)
+  (.failCause (.both (.fail (tagged "B" "x")) (.fail (tagged "A" "m")))) (.succeed (.lit (.nat 1)))
+
 /-- The programs checked: the original wire, control, layer and host fixtures, followed by
-the S2 error-image and S3 handler fixtures. Every listed program contributes one manifest entry. -/
+the S2 error-image, S3 handler and part-4 residual fixtures. Every listed program contributes
+one manifest entry. -/
 def corpus : List (String × Api.Program) :=
   Wire.Corpus.all ++ [("pTwo", pTwo), ("pAcquire", pAcquire), ("pAcquireClosed", pAcquireClosed),
     ("pProvide", pProvide), ("pProvideMerge", pProvideMerge), ("pProvideTwice", pProvideTwice),
@@ -328,7 +353,8 @@ def corpus : List (String × Api.Program) :=
     ("pFailTagged", pFailTagged), ("pSqlite", pSqlite), ("pKv", pKv),
     ("pSqlFail", pSqlFail), ("pSqlCatch", pSqlCatch), ("pSqlExit", pSqlExit), ("pSqlOrDie", pSqlOrDie),
     ("pFailText", pFailText), ("pFailBoomText", pFailBoomText), ("pTextOrDie", pTextOrDie), ("pCatchError", pCatchError),
-    ("pCatchIfHit", pCatchIfHit), ("pCatchIfMiss", pCatchIfMiss), ("pCatchIfRetained", pCatchIfRetained)]
+    ("pCatchIfHit", pCatchIfHit), ("pCatchIfMiss", pCatchIfMiss), ("pCatchIfRetained", pCatchIfRetained),
+    ("pTagHit", pTagHit), ("pTagMiss", pTagMiss), ("pTagTwoFail", pTagTwoFail)]
 
 /-! ## The value wire -/
 
@@ -626,13 +652,23 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 
 /-! ## Receipts -/
 
-#guard corpus.length = 31
+#guard corpus.length = 34
 #guard (corpus.map (·.1)).eraseDups.length = corpus.length
 #guard (corpus.map (·.1)) =
   ["p42", "pBind", "pFork", "pAwait", "pGen", "pLoop", "pCatch", "pScope", "pTwo", "pAcquire",
    "pAcquireClosed", "pProvide", "pProvideMerge", "pProvideTwice", "pDiamond", "pMergeAll", "pAcquireHandle",
    "pFailTagged", "pSqlite", "pKv", "pSqlFail", "pSqlCatch", "pSqlExit", "pSqlOrDie",
-   "pFailText", "pFailBoomText", "pTextOrDie", "pCatchError", "pCatchIfHit", "pCatchIfMiss", "pCatchIfRetained"]
+   "pFailText", "pFailBoomText", "pTextOrDie", "pCatchError", "pCatchIfHit", "pCatchIfMiss", "pCatchIfRetained",
+   "pTagHit", "pTagMiss", "pTagTwoFail"]
+-- part 4 commit 3: the residual fixtures type at the residual and run as the first-`Fail` rule
+#guard Api.typeOf pTagHit = some ⟨.nat, .string, Env.Requirement.empty⟩
+#guard Api.typeOf pTagMiss =
+  some ⟨.nat, .union .string (.prod (.lit "A") (.lit "m")), Env.Requirement.empty⟩
+#guard Api.typeOf pTagTwoFail = some ⟨.nat, .prod (.lit "B") (.lit "x"), Env.Requirement.empty⟩
+#guard (Api.run pTagHit 1000).exit = some (.success (.nat 1))
+#guard (Api.run pTagMiss 1000).exit = some (.failure (Cause.fail (.tagged "A" "m")))
+#guard (Api.run pTagTwoFail 1000).exit =
+  some (.failure ⟨[.fail (.tagged "B" "x") .empty, .fail (.tagged "A" "m") .empty]⟩)
 -- S2 wire identities are distinct before any host comparison.
 #guard errJson .boom == Lean.Json.mkObj [("boom", Lean.Json.null)]
 #guard errJson (.text "boom") == Lean.Json.str "boom"

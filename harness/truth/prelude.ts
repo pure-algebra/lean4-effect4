@@ -60,6 +60,16 @@ export const pair = <const A, const B>(a: A, b: B): readonly [A, B] => [a, b]
 export const fst = <A, B>(p: readonly [A, B]): A => p[0]
 /** `"snd", [exitCons _ (exitCons b _)] => b` */
 export const snd = <A, B>(p: readonly [A, B]): B => p[1]
+/** NativeAtom.tagIs (DI-39, part 4 commit 3): true exactly on a pair whose first component is
+ * the tag (`.list [.str tag, _]`, `NativeAtom.tagHit`); false on a bare string, a number, a
+ * pair with another tag. Declared as a type guard, not a `boolean`, because that is what
+ * makes rc.112's `Effect.catchIf` take its refinement overload for the printed test
+ * `(aN) => tagIs("A", aN)`: TypeScript 5.5+ infers the lambda as a type predicate and the
+ * host's error column becomes `Exclude<E, EB>`, which is `Ty.diffTag` on a union column
+ * (probe: `docs/research/2026-09-12-p4-subsumption-evidence/c3-tagIs-narrowing-probe.ts`).
+ * With a `boolean` return the predicate overload is chosen and the host keeps the whole `E`. */
+export const tagIs = <const T extends string>(tag: T, e: unknown): e is readonly [T, unknown] =>
+  Array.isArray(e) && e.length === 2 && e[0] === tag
 
 // ---- FnName, total shape (Stores.lean:458-462 `FnName.total`) ------------------------
 
@@ -133,6 +143,10 @@ export const selfTestCases: ReadonlyArray<{
   { atom: "causeIsInterrupt", name: "mixed cause contains Interrupt", apply: () => causeIsInterrupt(Cause.combine(Cause.fail(7), Cause.interrupt(1))), expected: true },
   { atom: "causeError", name: "first Fail is retained", apply: () => Option.getOrUndefined(causeError(Cause.combine(Cause.fail(7), Cause.fail(9)))), expected: 7 },
   { atom: "causeError", name: "successful exit has no error", apply: () => Option.isNone(causeError(Exit.succeed(7))), expected: true },
+  { atom: "tagIs", name: "tagIs hits the tagged pair", apply: () => tagIs("A", pair("A", "m")), expected: true },
+  { atom: "tagIs", name: "tagIs misses another tag", apply: () => tagIs("A", pair("B", "m")), expected: false },
+  { atom: "tagIs", name: "tagIs is false on a bare string", apply: () => tagIs("A", "A"), expected: false },
+  { atom: "tagIs", name: "tagIs is false on a number", apply: () => tagIs("A", 7), expected: false },
   { atom: "incr", name: "incr 1", apply: () => incr(1), expected: 2 },
   { atom: "double", name: "double 4", apply: () => double(4), expected: 8 },
   { atom: "takeAndBump", name: "takeAndBump 4", apply: () => takeAndBump(4), expected: 5 },

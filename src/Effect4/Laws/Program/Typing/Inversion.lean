@@ -98,7 +98,7 @@ theorem inv_catchIf (sig : Signature Op) (env : TyEnv) (test : Term) (body handl
         termTy sig (env ++ [b.error]) test = some .bool ∧
         effTy sig (env ++ [b.error]) handler = some h ∧
         EffTy.joinAnswer b.answer h.answer = some answer ∧
-        t = ⟨answer, if test = .lit (.bool true) then h.error else b.error.join h.error,
+        t = ⟨answer, catchIfError test env.length b.error h.error,
           b.requires.union h.requires⟩ := by
   refine Option.of_triple ?_
   simp only [effTy]; mvcgen; all_goals simp_all

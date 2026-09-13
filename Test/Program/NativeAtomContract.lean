@@ -21,7 +21,22 @@ open Effect4.Program
 
 #guard NativeAtom.names =
   ["succ", "pred", "isZero", "not", "add", "lt", "eq", "pair", "fst", "snd", "strings",
-   "causeIsFail", "causeError", "causeIsDie", "causeIsInterrupt", "or", "and"]
+   "causeIsFail", "causeError", "causeIsDie", "causeIsInterrupt", "or", "and", "tagIs"]
+-- the tag test (DI-39, part 4 commit 3): a string or literal tag, any tested value; total on
+-- values — true exactly on a pair whose first component is the tag
+#guard NativeAtom.arity .tagIs = some 2
+#guard NativeAtom.mono .tagIs = none
+#guard !NativeAtom.constGeneric .tagIs
+#guard nativeAtomTy "tagIs" [.string, .nat] = some .bool
+#guard nativeAtomTy "tagIs" [.lit "A", .union (.prod (.lit "A") .string) .string] = some .bool
+#guard nativeAtomTy "tagIs" [.nat, .string] = none
+#guard nativeAtomTy "tagIs" [.string] = none
+#guard nativeAtom "tagIs" [.str "A", .list [.str "A", .str "m"]] = some (.bool true)
+#guard nativeAtom "tagIs" [.str "A", .list [.str "B", .str "m"]] = some (.bool false)
+#guard nativeAtom "tagIs" [.str "A", .str "A"] = some (.bool false)
+#guard nativeAtom "tagIs" [.str "A", .nat 7] = some (.bool false)
+#guard nativeAtom "tagIs" [.str "A", .list [.str "A"]] = some (.bool false)
+#guard nativeAtom "tagIs" [.nat 1, .str "A"] = none
 #guard NativeAtom.names.eraseDups.length = NativeAtom.names.length
 #guard NativeAtom.covers NativeAtom.names
 #guard !NativeAtom.covers (NativeAtom.names.filter (· != "strings"))

@@ -652,6 +652,14 @@ theorem nativeAtom_typed (atom : String) (tys : List Ty) (ty : Ty) (vs : List Va
       obtain ⟨b, rfl⟩ := Val.hasTy_bool_inv (hasTy_sub _ _ y [] hb hy)
       exact ⟨_, rfl, by simp [Val.hasTy]⟩
     · cases hty
+  · -- the tag test (DI-39): a string-typed tag, any tested value; the atom is total on values
+    split at hty
+    · next hsub =>
+      cases hty
+      obtain ⟨x, y, rfl, hx, _⟩ := hfit.pair_inv
+      obtain ⟨tag, rfl⟩ := Val.hasTy_string_inv (hasTy_sub _ _ x [] hsub hx)
+      exact ⟨_, rfl, by simp [Val.hasTy]⟩
+    · cases hty
   -- Each constructor has its own exhaustive argument-shape refusal.
   all_goals cases hty
 

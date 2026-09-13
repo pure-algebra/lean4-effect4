@@ -183,6 +183,42 @@ def fiberTy : Ty → Option (Ty × Ty)
   | .fiberOf value error => some (value, error)
   | _ => none
 
+/-! ## The tag residual of `catchIf` (DI-39, DI-17; part 4 commit 3, 2026-09-12)
+
+rc.112's `catchTag` removes the caught tag from `E`. Here the tag test is the native atom
+`tagIs` applied to a string literal and the caught error variable, printed as
+`Effect.catchIf(body, (aN) => tagIs("A", aN), handler)`; when a `catchIf`'s test has exactly
+that shape its error column is the residual `Ty.diffTag tag` of the body's canonical column,
+joined with the handler's. Every other test keeps the join of both columns, and the literal
+`true` test (`Effect.catch`) keeps the handler's alone. The residual is a fidelity claim to the
+printed type; its preservation law carries the single-`Fail` premise
+(`Laws/Program/Residual.lean`, `catchIf_miss_admits`). -/
+
+/-- The tag test `tagIs("A", aN)` on the caught error variable `caught`. -/
+def tagTest (tag : String) (caught : Nat) : Term :=
+  .app "tagIs" (.cons (.lit (.str tag)) (.cons (.var caught) .nil))
+
+/-- The tag a `catchIf` test names, when it is `tagTest tag caught` — the atom `tagIs` applied
+to a string literal and exactly the caught error variable; `none` for every other test. -/
+def tagTest? (test : Term) (caught : Nat) : Option String :=
+  match test with
+  | .app atom (.cons (.lit (.str tag)) (.cons (.var index) .nil)) =>
+    if atom = "tagIs" ∧ index = caught then some tag else none
+  | _ => none
+
+theorem tagTest?_tagTest (tag : String) (caught : Nat) :
+    tagTest? (tagTest tag caught) caught = some tag := by
+  simp [tagTest?, tagTest]
+
+/-- The error column of `catchIf test body handler` (DI-09, DI-39): the handler's alone under
+the literal `true` test; the tag residual of the body's canonical column joined with the
+handler's under the tag test on the caught error; the join of both columns otherwise. -/
+def catchIfError (test : Term) (caught : Nat) (bodyError handlerError : Ty) : Ty :=
+  if test = .lit (.bool true) then handlerError
+  else match tagTest? test caught with
+    | some tag => (Ty.diffTag tag bodyError.normalize).join handlerError
+    | none => bodyError.join handlerError
+
 /-! ## The layer signature (the join, 2026-09-07; before it `Program/Provision.lean`)
 
 `Layer<ROut, E, RIn>` (`Layer.ts:54`) as three rows: what the layer provides, its error type,
@@ -276,14 +312,16 @@ mutual
       let h ← effTy sig (env ++ [.causeOf b.error]) handler
       let answer ← EffTy.joinAnswer b.answer h.answer
       some ⟨answer, h.error, b.requires.union h.requires⟩
+    -- the error column is `catchIfError` (DI-09, DI-39): the handler's under `true`, the tag
+    -- residual under `tagIs("A", aN)` on the caught error (`.var env.length`), the join
+    -- otherwise
     | .catchIf test body handler => do
       let b ← effTy sig env body
       let predicate ← termTy sig (env ++ [b.error]) test
       if predicate = .bool then
         let h ← effTy sig (env ++ [b.error]) handler
         let answer ← EffTy.joinAnswer b.answer h.answer
-        some ⟨answer, if test = .lit (.bool true) then h.error else b.error.join h.error,
-          b.requires.union h.requires⟩
+        some ⟨answer, catchIfError test env.length b.error h.error, b.requires.union h.requires⟩
       else none
     | .matchCause body onValue onCause => do
       let b ← effTy sig env body
@@ -582,6 +620,57 @@ theorem causeTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty)
       termTy_weaken]
   | both left right ihl ihr => simp only [CauseTerm.weaken, causeTy, ihl, ihr]
 
+/-- The tag test survives an inserted slot: the caught variable is the last position, so it
+shifts by exactly one when the environment grows by one, and every other test stays `none`. -/
+theorem tagTest?_weaken (cut : Nat) (test : Term) (caught : Nat) (h : cut ≤ caught) :
+    tagTest? (Term.weaken cut test) (caught + 1) = tagTest? test caught := by
+  cases test with
+  | var _ => rfl
+  | lit _ => rfl
+  | app atom args =>
+    cases args with
+    | nil => rfl
+    | cons head tail =>
+      cases head with
+      | var _ => rfl
+      | app _ _ => rfl
+      | lit value =>
+        cases value with
+        | unit | nat _ | bool _ => rfl
+        | str tag =>
+          cases tail with
+          | nil => rfl
+          | cons second rest =>
+            cases second with
+            | lit _ => rfl
+            | app _ _ => rfl
+            | var index =>
+              cases rest with
+              | cons _ _ => rfl
+              | nil =>
+                simp only [Term.weaken, Terms.weaken, tagTest?, Var.weaken]
+                by_cases hlt : index < cut
+                · -- `index < cut ≤ caught`: neither the old nor the new caught position
+                  -- (`omega` does not see through the `Var` abbreviation, so the `Nat` lemmas)
+                  have h1 : index ≠ caught := Nat.ne_of_lt (Nat.lt_of_lt_of_le hlt h)
+                  have h2 : index ≠ caught + 1 :=
+                    Nat.ne_of_lt (Nat.lt_succ_of_lt (Nat.lt_of_lt_of_le hlt h))
+                  simp [hlt, h1, h2]
+                · simp [hlt]
+
+/-- The `catchIf` error column survives an inserted slot (`tagTest?_weaken` at the caught
+position, which is the environment's length). -/
+theorem catchIfError_weaken (pre post : TyEnv) (inserted : Ty) (test : Term) (b h : Ty) :
+    catchIfError (Term.weaken pre.length test) (pre ++ inserted :: post).length b h =
+      catchIfError test (pre ++ post).length b h := by
+  have hlen : (pre ++ inserted :: post).length = (pre ++ post).length + 1 := by
+    simp only [List.length_append, List.length_cons]
+    omega
+  have hle : pre.length ≤ (pre ++ post).length := by
+    simp only [List.length_append]
+    omega
+  simp only [catchIfError, Term.weaken_eq_lit, hlen, tagTest?_weaken pre.length test _ hle]
+
 mutual
   /-- Inserting one slot preserves the entire typing result. Local binders still
   append after the old environment; closed layer bodies retain their empty one.
@@ -598,7 +687,8 @@ mutual
     | .withFiber _ | .scoped _ | .acquireRelease _ _
     | .provideLayer _ _ _ | .service _ | .provideService _ _ _ => by
       simp only [Eff.weaken, effTy, termTy_weaken, causeTy_weaken, Term.weaken_eq_lit,
-        List.append_assoc, List.cons_append, effTy_weaken, stmtsTy_weaken, actionTy_weaken]
+        catchIfError_weaken, List.append_assoc, List.cons_append, effTy_weaken, stmtsTy_weaken,
+        actionTy_weaken]
 
   theorem stmtsTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty)
       (inLoop : Bool) (body : Stmts Op) :

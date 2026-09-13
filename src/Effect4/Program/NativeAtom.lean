@@ -24,6 +24,15 @@ def stringsAtom (vs : List Val) : Option Val :=
 inductive NativeAtom
   | succ | pred | isZero | boolNot | add | lt | eq | pair | fst | snd | strings
   | causeIsFail | causeError | causeIsDie | causeIsInterrupt | boolOr | boolAnd
+  /-- The tag test (DI-39, part 4 commit 3, 2026-09-12): `tagIs(tag, e)` is true exactly on a
+  pair whose first component is the string `tag` (`.list [.str tag, _]`, the pair
+  representation of `Typed.lean`), and false on every other value — a bare string, a natural,
+  a pair whose first component is not the tag — so it never refuses a well-typed program
+  (an error typed `union (prod (lit "A") string) string` can be a bare string). It is what a
+  `catchIf` test names for the tag residual (`Typing.lean` `catchIfError`, `Ty.diffTag`), and
+  it prints as `tagIs("A", aN)` through the atom printer with `tagIs` in the prelude. Atoms
+  are spelled by name on the wire, so appending it moves no ordinal and no byte. -/
+  | tagIs
   deriving DecidableEq, BEq
 
 namespace NativeAtom
@@ -31,7 +40,7 @@ namespace NativeAtom
 /-- Declaration order is the existing generated profile order. -/
 def all : List NativeAtom :=
   [.succ, .pred, .isZero, .boolNot, .add, .lt, .eq, .pair, .fst, .snd, .strings,
-   .causeIsFail, .causeError, .causeIsDie, .causeIsInterrupt, .boolOr, .boolAnd]
+   .causeIsFail, .causeError, .causeIsDie, .causeIsInterrupt, .boolOr, .boolAnd, .tagIs]
 
 theorem all_complete (atom : NativeAtom) : atom ∈ all := by
   cases atom <;> simp [all]
@@ -43,6 +52,7 @@ def name : NativeAtom → String
   | .causeIsFail => "causeIsFail" | .causeError => "causeError"
   | .causeIsDie => "causeIsDie" | .causeIsInterrupt => "causeIsInterrupt"
   | .boolOr => "or" | .boolAnd => "and"
+  | .tagIs => "tagIs"
 
 def names : List String := all.map name
 
@@ -79,7 +89,7 @@ theorem covers_iff (consumerNames : List String) :
 def arity : NativeAtom → Option Nat
   | .succ | .pred | .isZero | .boolNot | .fst | .snd
   | .causeIsFail | .causeError | .causeIsDie | .causeIsInterrupt => some 1
-  | .add | .lt | .eq | .pair | .boolOr | .boolAnd => some 2
+  | .add | .lt | .eq | .pair | .boolOr | .boolAnd | .tagIs => some 2
   | .strings => none
 
 /-- Whether the atom's parameters are const-generic (DI-55, the prelude's
@@ -89,7 +99,8 @@ TypeScript does at a non-`const` parameter. -/
 def constGeneric : NativeAtom → Bool
   | .pair => true
   | .succ | .pred | .isZero | .boolNot | .add | .lt | .eq | .fst | .snd | .strings
-  | .causeIsFail | .causeError | .causeIsDie | .causeIsInterrupt | .boolOr | .boolAnd => false
+  | .causeIsFail | .causeError | .causeIsDie | .causeIsInterrupt | .boolOr | .boolAnd
+  | .tagIs => false
 
 /-- Schemes are explicit none; generators must supply and check their target arms. -/
 def mono : NativeAtom → Option (List Ty × Ty)
@@ -100,7 +111,13 @@ def mono : NativeAtom → Option (List Ty × Ty)
   | .lt => some ([.nat, .nat], .bool)
   | .boolOr | .boolAnd => some ([.bool, .bool], .bool)
   | .eq | .pair | .fst | .snd | .strings
-  | .causeIsFail | .causeError | .causeIsDie | .causeIsInterrupt => none
+  | .causeIsFail | .causeError | .causeIsDie | .causeIsInterrupt | .tagIs => none
+
+/-- The tag test on a value (DI-39): true exactly on a pair whose first component is the
+tag; false on every other value. Total, so `tagIs` never answers `none` on a string tag. -/
+def tagHit (tag : String) : Val → Bool
+  | .list [.str t, _] => t == tag
+  | _ => false
 
 def eval : NativeAtom → List Val → Option Val
   | .succ, [Val.nat n] => some (Val.nat (n + 1))
@@ -121,10 +138,11 @@ def eval : NativeAtom → List Val → Option Val
   | .causeIsInterrupt, [value] => queryTag .interrupt value
   | .boolOr, [Val.bool a, Val.bool b] => some (Val.bool (a || b))
   | .boolAnd, [Val.bool a, Val.bool b] => some (Val.bool (a && b))
+  | .tagIs, [Val.str tag, v] => some (Val.bool (tagHit tag v))
   | .succ, _ | .pred, _ | .isZero, _ | .boolNot, _ | .add, _ | .lt, _ | .eq, _
   | .pair, _ | .fst, _ | .snd, _
   | .causeIsFail, _ | .causeError, _ | .causeIsDie, _ | .causeIsInterrupt, _
-  | .boolOr, _ | .boolAnd, _ => none
+  | .boolOr, _ | .boolAnd, _ | .tagIs, _ => none
 
 /-- The typing of an application by its argument types (DI-40; DI-15, the 2026-09-12 clause).
 A fixed-signature atom accepts each argument at a subtype of its parameter (`Ty.sub`:
@@ -151,10 +169,12 @@ def typeOf : NativeAtom → List Ty → Option Ty
       (causeInputError? input).map fun _ => .bool
   | .causeError, [input] => (causeInputError? input).map Ty.option
   | .boolOr, [a, b] | .boolAnd, [a, b] => if a.sub .bool && b.sub .bool then some .bool else none
+  -- the tag is a string (a literal is one); the tested value is anything (`unknown` on the host)
+  | .tagIs, [t, _] => if t.sub .string then some .bool else none
   | .succ, _ | .pred, _ | .isZero, _ | .boolNot, _ | .add, _ | .lt, _ | .eq, _
   | .pair, _ | .fst, _ | .snd, _
   | .causeIsFail, _ | .causeError, _ | .causeIsDie, _ | .causeIsInterrupt, _
-  | .boolOr, _ | .boolAnd, _ => none
+  | .boolOr, _ | .boolAnd, _ | .tagIs, _ => none
 
 /-- A monomorphic row's typing is exactly argument-wise subsumption (`mono`, `typeOf`). -/
 theorem typeOf_mono (atom : NativeAtom) (args answer : _) (h : atom.mono = some (args, answer))

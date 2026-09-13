@@ -517,6 +517,13 @@ const-generic prelude `pair` types at `readonly ["SqlError", "boom"]`. -/
 #guard typeOf nativeSignature
   (.fail (.app "pair" (.cons (.lit (.str "SqlError")) (.cons (.lit (.str "boom")) .nil))))
   = some ⟨.never, .prod (.lit "SqlError") (.lit "boom"), .empty⟩
+-- the tag test (part 4 commit 3): typed `bool` at a string tag, evaluated by `tagHit`
+#guard termTy nativeSignature [.union (.prod (.lit "A") .string) .string]
+  (.app "tagIs" (.cons (.lit (.str "A")) (.cons (.var 0) .nil))) = some .bool
+#guard evalTerm [Val.tuple [Val.str "A", Val.str "m"]]
+  (.app "tagIs" (.cons (.lit (.str "A")) (.cons (.var 0) .nil))) = some (Val.bool true)
+#guard evalTerm [Val.str "A"]
+  (.app "tagIs" (.cons (.lit (.str "A")) (.cons (.var 0) .nil))) = some (Val.bool false)
 
 end Atoms
 
