@@ -197,6 +197,23 @@ join. The residual is a fidelity claim to the printed type; its adequacy stateme
 single-`Fail` premise, and the two-`Fail` miss is a filed counterexample. The first-`Fail`
 elimination rule is unchanged.
 
+**Part 4 landing amendment (owner ratified 2026-09-12).** Commits 376e364, e6ecd2a and
+7035149 land the literal rule, subsumption, answer joining and the tag residual as ruled,
+with these four points settled at landing. (1) The error carrier admits a literal-typed
+message: `rawSupportedErrTy (prod a b) = isTagTy a && isTagTy b`, forced by the literal rule
+on a tagged pair with a literal message; the image `Err.tagged` is unchanged and DI-62's
+admission laws are re-proved on the wider arm. (2) The residual's laws: `diffTag_sub` and
+`diffTag_sound` on every type; `supportedErrTy_diffTag` on canonical columns only, the raw
+statement being `E4-RESID-CE-002`; the adequacy statement is `catchIf_miss_admits` under
+`SingleFail cause` (`failCount cause = 1`), the two-`Fail` miss being `E4-RESID-CE-001`.
+(3) The prelude `tagIs` is a TypeScript type guard, `e is readonly [T, unknown]`; the printed
+image agrees with `diffTag` on a union column, and the two shapes on which the host narrows
+differently (a single-member column equal to the tag; the handler's binder) are recorded in
+DI-39 as T0 findings, not patched. (4) A `branch` whose arms fail with unrelated types prints
+as a conditional the host cannot type (TS2375); fixtures use `bind`, and the printer ruling
+stays open in DI-55. Subsumption at fixed-signature atom arguments (`NativeAtom.typeOf` on
+`sub` guards) is part of the same rule.
+
 **Inhabitation.** Every admitted type either normalizes to `never` or has a value under some
 allocation table. Under the P2a resumption amendment, `Ty.int` keeps its ordinal and
 is refused only at program/table admission with `AdmitRefusal.uninhabited (at : Path)`.
