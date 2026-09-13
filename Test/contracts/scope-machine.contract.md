@@ -158,7 +158,6 @@ existing owner is accepted. The separate builder preserves this packet.
 
 ```text
 lake env lean Test/Machine/Runtime/ScopeMachineContract.lean
-lake env lean Test/Machine/Runtime/ScopeMachineAxiomReport.lean
 ```
 
 Before implementation, the missing production import is recorded separately

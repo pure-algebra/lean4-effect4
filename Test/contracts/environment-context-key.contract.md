@@ -165,10 +165,9 @@ packet-local on purpose: this slice has no cutover document of its own yet, and
 minting slice-wide IDs here would put a fact in this file that
 `docs/research/ENVIRONMENT-DAG.md` or a later environment cutover ruling should own.
 
-The axiom receipt for this node belongs in `Test/Machine/Environment/AxiomReport.lean`,
-which `docs/research/ENVIRONMENT-DAG.md` places outside every builder's fence. The
-builder does not create or edit it; the coordinator appends the receipt when
-`L0` closes.
+The axiom receipt for this node is the gate's (`Test/Audit/AxiomGate.lean`), which
+audits every declaration; the per-slice report file it once had was retired on
+2026-09-13.
 
 ## CATEGORIES
 
@@ -565,8 +564,8 @@ reached `propext`. The contract's trust paragraph was written against that
 observation.
 
 **WITNESS.** The delivered implementation reaches neither `propext` nor
-`Quot.sound`; all 23 exported constants are axiom-free, receipted in
-`Test/Machine/Environment/AxiomReport.lean`.
+`Quot.sound`; all 23 exported constants are axiom-free, which the gate
+(`Test/Audit/AxiomGate.lean`) holds over every declaration.
 
 **CLASS.** Trust-paragraph scope written from one implementation rather than
 from the obligation.

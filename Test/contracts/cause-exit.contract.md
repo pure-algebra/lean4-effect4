@@ -8,9 +8,6 @@ Implementation fence:
 Lean battery:
 `Test/Machine/Semantics/CauseExitContract.lean`
 
-Axiom report:
-`Test/Machine/Semantics/CauseExitAxiomReport.lean`
-
 Counterexamples: `E4-SEM-CE-001` through `E4-SEM-CE-007` in
 `Test/Counterexamples/REGISTER.md`; witnesses in
 `Test/Counterexamples/Machine/Semantics/CauseExit.lean`; attack shapes in
@@ -639,7 +636,6 @@ exits zero, while
 
 ```sh
 lake env lean Test/Machine/Semantics/CauseExitContract.lean
-lake env lean Test/Machine/Semantics/CauseExitAxiomReport.lean
 ```
 
 both exit nonzero with *only* unknown-identifier and unknown-constant

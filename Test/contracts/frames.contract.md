@@ -15,9 +15,6 @@ Implementation fence:
 Lean battery:
 `Test/Machine/Runtime/FramesContract.lean`
 
-Axiom report:
-`Test/Machine/Runtime/FramesAxiomReport.lean`
-
 Counterexamples: `E4-RUN-CE-010` through `E4-RUN-CE-021` in
 `Test/Counterexamples/REGISTER.md`; witnesses in
 `Test/Counterexamples/Machine/Runtime/Frames.lean`; attack shapes in
@@ -907,7 +904,6 @@ exits zero, while
 
 ```sh
 lake env lean -DmaxErrors=10000 Test/Machine/Runtime/FramesContract.lean
-lake env lean -DmaxErrors=10000 Test/Machine/Runtime/FramesAxiomReport.lean
 ```
 
 both exit nonzero with *only* unknown-identifier and unknown-constant

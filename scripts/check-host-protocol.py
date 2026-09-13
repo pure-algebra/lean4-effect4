@@ -28,7 +28,7 @@ def main():
     bun = shutil.which('bun')
     if not bun or json.loads((MODULES / 'effect/package.json').read_text())['version'] != '4.0.0-rc.112':
         raise SystemExit('FAIL host-protocol: Bun and the pinned rc.112 installation are required')
-    run('lake', 'build', 'Test.Api.HostSessionContract', 'Test.Api.KeyedHostContract', 'Test.Api.HostSessionAxiomReport')
+    run('lake', 'build', 'Test.Api.HostSessionContract', 'Test.Api.KeyedHostContract')
     work_root = SESSION / '.work'
     work_root.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='check-', dir=work_root) as tmp:

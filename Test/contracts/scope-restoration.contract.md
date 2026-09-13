@@ -161,7 +161,6 @@ terminal outcome are checked.
 ```text
 lake env lean Test/Counterexamples/Machine/Runtime/ScopeRestorationBoundary.lean
 lake env lean Test/Machine/Runtime/ScopeRestorationContract.lean
-lake env lean Test/Machine/Runtime/ScopeRestorationAxiomReport.lean
 node harness/trace/scope-restoration.mjs /path/to/node_modules/effect
 ```
 

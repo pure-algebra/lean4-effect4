@@ -74,7 +74,7 @@ therefore conditional on a command-step trace premise in
 that premise in `driveStep_grows`; its unconditional replay-order theorem remains
 `replay_obs_mono`.
 
-Receipts: `Test/Machine/Runtime/SchedulerCoreAxiomReport.lean`. No new trust
+No new trust
 exceptions, host claims, serialized algebra programs or second scheduler.
 
 Source-repairs §20 (2026-09-07): `FiberCore` gains `pushIterator`, the generator's

@@ -21,7 +21,7 @@ holds it, and where the battery is.
 | # | face | what it is | evidence | where |
 | --- | --- | --- | --- | --- |
 | 1 | the Lean printer | `Api.print` / `Api.printModule`: an `Eff` to one TypeScript expression, or a declaration block with one `const L_<path>` per hoisted layer | proved (§2), tested | `src/Effect4/Codegen/Print.lean`; `Test/Codegen/PrintContract.lean` |
-| 2 | the Lean reader | `Api.readModule` / `readEff`: the partial inverse, with a closed refusal alphabet | proved (§2), tested | `src/Effect4/Codegen/Read.lean`; `Test/Codegen/ReadContract.lean`, `Test/Codegen/ReadAxiomReport.lean` |
+| 2 | the Lean reader | `Api.readModule` / `readEff`: the partial inverse, with a closed refusal alphabet | proved (§2), tested | `src/Effect4/Codegen/Read.lean`; `Test/Codegen/ReadContract.lean` |
 | 3 | the TypeScript printer-image reader | `ts/eff/read.ts`: a third implementation of face 2's relation, in the target language | tested (byte equality against Lean-cut oracles over the generated corpus), reproduced (its head union is generated, so `tsc` holds head coverage) | `ts/eff/read.ts`, `ts/eff/check.ts`; `ts/eff/test/read.test.ts`, `tables.test.ts`; `make check-ts-reader` |
 | 4 | the foreign recognizer `ck` | `ts/eff/ingest/ck.ts` over the TypeScript compiler API: an island recognizer of a sub-language of rc.112 | tested (agreement with face 5; equality with Lean where an oracle exists) | `ts/eff/ingest/ck.ts`; `ts/eff/ingest/test/foreign.test.ts`, `gate.test.ts`, `refusals.test.ts` |
 | 5 | the foreign recognizer `oxc` | `ts/eff/ingest/oxc.ts` over oxc 0.147.0, sharing **no** recognition code with face 4 | tested (the same) | `ts/eff/ingest/oxc.ts`; the same batteries |

@@ -56,7 +56,7 @@ Retired 2026-09-13 (the scripts ledger): `generated/schema-structural-assurance.
 2,682-row projection whose 446-line producer carried the SHA-256 of every Schema source
 inside itself and refused to run once any of them changed (the owner had deferred its
 stamp on 2026-09-08). What it certified is in the build: `Test/Schema/StructuralAssurance.lean`
-and the Schema axiom report are Test modules, compiled by `make build`; the rest of the
+is a Test module, compiled by `make build`; the rest of the
 Schema slice runs on its inputs as `make check-schema-pins`, `check-schema-surface` and
 `check-schema-host`, with the payload-surface reaction test in `make check-tools`.
 

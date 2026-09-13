@@ -25,8 +25,7 @@ carrier and imports only `Effect4.Semantics.Exit`.
 Pinned source: `vendor/effect-4.0.0-rc.112/src/Scope.ts` 99-187 and
 `internal/effect.ts` 3769-3922 and 3937-3987. The frozen surface is
 `Test/contracts/scope.contract.md`, held by the battery
-`Test/Machine/Runtime/ScopeContract.lean` and the axiom report
-`Test/Machine/Runtime/ScopeAxiomReport.lean`. The proof graph is
+`Test/Machine/Runtime/ScopeContract.lean`. The proof graph is
 `docs/research/SCOPE-DAG.md`.
 -/
 

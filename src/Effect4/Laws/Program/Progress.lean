@@ -7,7 +7,7 @@ import Effect4.Laws.Machine.StoresLaws
 Plan: `docs/research/2026-09-05-slice-1-compile-ground.md` §6, node `PROGRESS/answer`.
 Packet: `Test/contracts/program-denotation.contract.md`. Batteries:
 `Test/Program/ProgressContract.lean` (the guards and the rows `E4-PROGRESS-CE-001`,
-`E4-PROGRESS-CE-002`) and `Test/Program/ProgressAxiomReport.lean`.
+`E4-PROGRESS-CE-002`).
 
 This module joins lane 1 (`src/Effect4/Laws/Program/Typed.lean`: which values inhabit which types,
 and that a typed request decodes to a store operation) with lane 2

@@ -280,8 +280,8 @@ the observation through that receipt. The proof reuses the frame-side
 
 The full compiled-declaration gate must continue to accept these declarations
 and their dependencies at `[propext, Quot.sound]`, with the existing exact
-rendering exceptions unchanged. `SimulationContract` is reachable through
-`RuntimeRAxiomReport`. Its finite guards supplement the universal judgments.
+rendering exceptions unchanged. `SimulationContract` is reachable from
+`Test/All.lean`. Its finite guards supplement the universal judgments.
 
 Current source/target limits remain explicit:
 

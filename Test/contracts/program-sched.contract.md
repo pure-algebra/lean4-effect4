@@ -12,8 +12,7 @@ whole-tree gate. Final receipt: `docs/research/2026-09-06-r3-r4-implementation.m
 Implementation: `src/Effect4/Laws/Program/Sched.lean`; its R2 consumer and corrected
 denotation contract are `Program/DenoteR.lean` and `program-denote-r.contract.md`.
 
-Lean battery: `Test/Program/SchedContract.lean`. Axiom report:
-`Test/Program/SchedAxiomReport.lean`. Counterexamples: `E4-SCHED-CE-001`–`003` in
+Lean battery: `Test/Program/SchedContract.lean`. Counterexamples: `E4-SCHED-CE-001`–`003` in
 `Test/Counterexamples/REGISTER.md`.
 
 Depends on: `src/Effect4/Laws/Program/Denote.lean` (`StoreSig`, `storeHandler`, `denote`,

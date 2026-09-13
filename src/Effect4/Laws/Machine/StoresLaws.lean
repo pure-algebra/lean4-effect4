@@ -6,7 +6,7 @@ import Effect4.Machine.Stores
 Plan: `docs/research/2026-09-05-slice-1-compile-ground.md` §3. Packet:
 `Test/contracts/program-denotation.contract.md`, ENSURES 10–17. Batteries:
 `Test/Machine/Runtime/StoresLawsContract.lean` (the guards and the rows `E4-STORES-CE-001`,
-`E4-STORES-CE-002`, `E4-STORES-CE-003`) and `Test/Machine/Runtime/StoresLawsAxiomReport.lean`.
+`E4-STORES-CE-002`, `E4-STORES-CE-003`).
 
 This module orders `Effect4.Machine.Stores` (`src/Effect4/Machine/Stores.lean:1029-1043`) by
 growth, says when a value's handles and an operation's keys exist in a store, and proves that

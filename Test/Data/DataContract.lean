@@ -1,11 +1,10 @@
 import Effect4.Data.Constructive
-import Test.Data.ConstructiveAxiomReport
 
 /-!
 # Constructive standard library contract tests
 
 Validates that constructive lemmas evaluate correctly and provide exact finite receipts
-under .
+under the axiom ceiling the gate enforces.
 -/
 
 namespace Test.Data.DataContract

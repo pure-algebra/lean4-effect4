@@ -7,7 +7,7 @@ import Effect4.Machine.Key
 Design: `docs/research/2026-09-04-production-standards-spike.md` §4 (the algebra) and §10 (the
 lane's findings against the source); spiked as `docs/research/2026-09-05-workshop-config/Config.lean`. The batteries
 are `Test/Program/ConfigContract.lean` (the frozen statements and the six register rows
-`E4-CONF-CE-001..006`) and `Test/Program/ConfigAxiomReport.lean`.
+`E4-CONF-CE-001..006`).
 
 The rc.112 model of `ConfigProvider` (`vendor/effect-4.0.0-rc.112/src/ConfigProvider.ts`) and
 `Config` (`.../Config.ts`), first-order and total. A provider is a *path transformer over a

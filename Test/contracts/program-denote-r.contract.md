@@ -8,8 +8,8 @@ The earlier fuel and answer corrections remain recorded in
 `docs/research/2026-09-06-w3-r2-continuation.md`.
 
 Implementation: `src/Effect4/Laws/Program/DenoteR.lean`, with the answer and frontier
-amendments in `src/Effect4/Laws/Program/Sched.lean`. Tests and dependency receipts:
-`Test/Program/DenoteRContract.lean`, `Test/Program/DenoteRAxiomReport.lean`, and
+amendments in `src/Effect4/Laws/Program/Sched.lean`. Tests:
+`Test/Program/DenoteRContract.lean` and
 the existing scheduler signature battery. The obligations below are proved;
 whole-tree integration and the R3/R4 runtime gate also pass. Final receipt:
 `docs/research/2026-09-06-r3-r4-implementation.md`.

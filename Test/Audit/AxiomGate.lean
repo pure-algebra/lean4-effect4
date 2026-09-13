@@ -13,8 +13,11 @@ outside the library's current ceiling: propositional extensionality and
 quotient soundness.
 
 The gate is intentionally exhaustive over the compiled namespace rather than
-maintaining a hand-written theorem list. The separate axiom report remains a
-human-readable receipt.
+maintaining a hand-written theorem list. Until 2026-09-13 thirty-four
+`*AxiomReport.lean` files under `Test/` repeated `#print axioms` for 1,697
+declarations as a human-readable receipt; every one was a subset of what this
+command audits, so they were retired. A receipt for one declaration is
+`#print axioms` at the prompt.
 
 ## Why the source is tokenized at all
 

@@ -8,9 +8,6 @@ Implementation fence:
 Lean battery:
 `Test/Machine/Runtime/ScopeContract.lean`
 
-Axiom report:
-`Test/Machine/Runtime/ScopeAxiomReport.lean`
-
 Counterexamples: `E4-RUN-CE-001` through `E4-RUN-CE-009` in
 `Test/Counterexamples/REGISTER.md`; witnesses in
 `Test/Counterexamples/Machine/Runtime/Scope.lean`; attack shapes in
@@ -723,7 +720,6 @@ exits zero, while
 
 ```sh
 lake env lean -DmaxErrors=10000 Test/Machine/Runtime/ScopeContract.lean
-lake env lean -DmaxErrors=10000 Test/Machine/Runtime/ScopeAxiomReport.lean
 ```
 
 both exit nonzero with *only* unknown-identifier and unknown-constant

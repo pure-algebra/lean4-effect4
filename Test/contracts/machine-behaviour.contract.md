@@ -1,8 +1,7 @@
 # Machine behavior contract
 
 Nodes: BEH/obs and BEH/tape. Implementation: `src/Effect4/Laws/Machine/Behaviour.lean`.
-Battery and receipts: `Test/Machine/Runtime/BehaviourContract.lean` and
-`Test/Machine/Runtime/BehaviourAxiomReport.lean`.
+Battery: `Test/Machine/Runtime/BehaviourContract.lean`.
 
 ## Required statements
 

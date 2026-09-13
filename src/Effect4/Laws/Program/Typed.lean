@@ -8,7 +8,7 @@ import Effect4.Laws.Program.ErrorQueries
 Plan: `docs/research/2026-09-05-slice-1-compile-ground.md` §2. Packet:
 `Test/contracts/program-denotation.contract.md`, ENSURES 1–9. Batteries:
 `Test/Program/TypedContract.lean` (the guards and the row `E4-TYPED-CE-002`; `E4-TYPED-CE-001`
-is retired, below) and `Test/Program/TypedAxiomReport.lean`.
+is retired, below).
 
 This module says which machine values (`src/Effect4/Machine/Stores.lean` `Val`) inhabit which
 types of the program language (`src/Effect4/Program/Eff.lean` `Ty`), and proves three things

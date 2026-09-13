@@ -22,13 +22,6 @@ Lean batteries:
 `Test/Program/AgreementContract.lean`,
 `Test/Program/ProgressContract.lean`
 
-Axiom reports:
-`Test/Program/TypedAxiomReport.lean`,
-`Test/Machine/Runtime/StoresLawsAxiomReport.lean`,
-`Test/Program/DenoteAxiomReport.lean`,
-`Test/Program/AgreementAxiomReport.lean`,
-`Test/Program/ProgressAxiomReport.lean`
-
 Counterexamples: `E4-TYPED-CE-001`, `E4-TYPED-CE-002`, `E4-STORES-CE-001` through
 `E4-STORES-CE-003`, `E4-DEN-CE-001` through `E4-DEN-CE-005`, `E4-PROGRESS-CE-001`,
 `E4-PROGRESS-CE-002` in `Test/Counterexamples/REGISTER.md`; witnesses are guards in the five

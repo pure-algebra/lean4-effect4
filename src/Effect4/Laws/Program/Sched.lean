@@ -8,7 +8,7 @@ Plan: `docs/research/2026-09-05-runtime-proof-graph.md` §3 (Layer R, the term s
 worksheet: `docs/research/2026-09-05-slices-2-3-worksheets.md` (R1); strategy:
 `docs/research/2026-09-05-tactics-cheatsheet-dag-strategy.md` REF/sig; the P2 phase model:
 `docs/research/2026-09-06-p0-fable-record.md` §4. Battery:
-`Test/Program/SchedContract.lean`; report: `Test/Program/SchedAxiomReport.lean`.
+`Test/Program/SchedContract.lean`.
 
 This module declares the signature the term scheduler's fibers speak: the store signature
 `StoreSig` of `Denote.lean` beside a fiber signature `FiberSig`, one operation per

@@ -16,8 +16,7 @@ is a cause, first-occurrence deduplication, `causeCombine`, and the four-armed
 Pinned source: `vendor/effect-4.0.0-rc.112/src/internal/core.ts` 137-319 and
 `internal/effect.ts` 241-258, 298-309. The frozen surface is
 `Test/contracts/cause-exit.contract.md`, held by the battery
-`Test/Machine/Semantics/CauseExitContract.lean` and the axiom report
-`Test/Machine/Semantics/CauseExitAxiomReport.lean`.
+`Test/Machine/Semantics/CauseExitContract.lean`.
 -/
 
 namespace Effect4

@@ -26,6 +26,5 @@ in `git:14e6835:src/OCaml5/Avatar/Check.lean` (the avatar is archived on branch
 `archive/ocaml5-avatar`); the projection report now has 47 of 58 matching
 descriptions. This slice does not widen that host's answer protocol.
 
-No host execution or later term-scheduler correspondence is asserted. Receipts:
-`Test/Machine/Runtime/CompletionAxiomReport.lean`; whole-tree axiom ceiling
-`[propext, Quot.sound]`, with no new exceptions.
+No host execution or later term-scheduler correspondence is asserted. Receipt: the
+whole-tree axiom ceiling `[propext, Quot.sound]`, with no new exceptions.

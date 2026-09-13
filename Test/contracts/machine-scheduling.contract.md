@@ -1,7 +1,7 @@
 # Finite scheduling contract
 
-LIVE/fair. Implementation: `Machine/Scheduling.lean`. Battery and receipts:
-`Test/Machine/Runtime/SchedulingContract.lean` and `SchedulingAxiomReport.lean`.
+LIVE/fair. Implementation: `Machine/Scheduling.lean`. Battery:
+`Test/Machine/Runtime/SchedulingContract.lean`.
 
 `QueueKeeps` says the old armed queue is a prefix of the new one. Every helper
 reached by the concrete frame evaluator, and then `driveState` and a dispatcher

@@ -10,8 +10,6 @@ runtime-coverage statement ascriptions. The public `run_eq_meaning` is unchanged
 
 Lean battery: `Test/Machine/Runtime/ApproximationContract.lean`.
 
-Axiom report: `Test/Machine/Runtime/ApproximationAxiomReport.lean`.
-
 Counterexamples: `E4-APPROX-CE-001` through `E4-APPROX-CE-004` in
 `Test/Counterexamples/REGISTER.md`; witnesses are guards in the battery.
 

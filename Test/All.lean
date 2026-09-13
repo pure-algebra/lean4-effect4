@@ -1,7 +1,6 @@
 import Effect4.Laws
 import Test.Api.FrontierContract
 import Test.Support.Environment
-import Test.Schema.AxiomReport
 import Test.Data.OpticContract
 import Test.Schema.AnnotationDataPlaneContract
 import Test.Schema.EffectfulFieldContract
@@ -27,48 +26,31 @@ import Test.Schema.PayloadSurface
 import Test.Schema.StructuralAssurance
 import Test.Data.RowContract
 import Test.Data.RowAssurance
-import Test.Data.AxiomReport
 import Test.Machine.Environment.ContextKeyContract
-import Test.Machine.Environment.AxiomReport
 import Test.Machine.Environment.ContextKeyAssurance
 import Test.Codegen.ExprContract
 import Test.Codegen.SchemaGenerationContract
 import Test.Codegen.SchemaGenerationCoverage
-import Test.Codegen.SchemaGenerationAxiomReport
 import Test.Codegen.EffectfulFieldContract
-import Test.Codegen.EffectfulFieldAxiomReport
 import Test.Counterexamples.Codegen.EffectfulField
 import Test.Machine.Semantics.CauseExitContract
-import Test.Machine.Semantics.CauseExitAxiomReport
 import Test.Counterexamples.Machine.Semantics.CauseExit
 import Test.Machine.Runtime.ScopeContract
-import Test.Machine.Runtime.ScopeAxiomReport
 import Test.Machine.Runtime.ScopeMachineContract
-import Test.Machine.Runtime.ScopeMachineAxiomReport
 import Test.Machine.Runtime.ScopeRestorationContract
-import Test.Machine.Runtime.ScopeRestorationAxiomReport
 import Test.Counterexamples.Machine.Runtime.ScopeRestorationBoundary
 import Test.Counterexamples.Machine.Runtime.Scope
 import Test.Machine.Runtime.FramesContract
-import Test.Machine.Runtime.FramesAxiomReport
 import Test.Counterexamples.Machine.Runtime.Frames
 import Test.Machine.Runtime.LiveStackContract
-import Test.Machine.Runtime.LiveStackAxiomReport
 import Test.Counterexamples.Machine.Runtime.LiveStack
 import Test.Machine.Runtime.StoresLawsContract
-import Test.Machine.Runtime.StoresLawsAxiomReport
 import Test.Machine.Runtime.ApproximationContract
-import Test.Machine.Runtime.ApproximationAxiomReport
 import Test.Machine.Runtime.BehaviourContract
-import Test.Machine.Runtime.BehaviourAxiomReport
 import Test.Machine.Runtime.CompletionContract
-import Test.Machine.Runtime.CompletionAxiomReport
 import Test.Machine.Runtime.HandlesContract
-import Test.Machine.Runtime.HandlesAxiomReport
 import Test.Machine.Runtime.SchedulerCoreContract
-import Test.Machine.Runtime.SchedulerCoreAxiomReport
 import Test.Machine.Runtime.SchedulingContract
-import Test.Machine.Runtime.SchedulingAxiomReport
 import Test.Store.Templates
 import Test.Store.StoreContract
 import Test.Store.NodeContract
@@ -80,38 +62,25 @@ import Test.Codegen.PrintContract
 import Test.Codegen.ReadContract
 import Test.Ingest.TaxonomyContract
 import Test.Codegen.FormsContract
-import Test.Codegen.ReadAxiomReport
 import Test.Program.Gen
 import Test.Program.CompileContract
 import Test.Program.TypedContract
 import Test.Program.WeakenContract
-import Test.Program.TypedAxiomReport
 import Test.Program.DenoteContract
-import Test.Program.DenoteAxiomReport
 import Test.Program.AgreementContract
-import Test.Program.AgreementAxiomReport
 import Test.Program.ProgressContract
-import Test.Program.ProgressAxiomReport
 import Test.Program.InvocationContract
-import Test.Program.InvocationAxiomReport
 import Test.Program.HostSpecContract
-import Test.Program.HostSpecAxiomReport
 import Test.Program.HostBoundaryContract
-import Test.Program.HostBoundaryAxiomReport
 import Test.Api.HostSessionContract
 import Test.Api.KeyedHostContract
-import Test.Api.HostSessionAxiomReport
 import Test.Program.SchedContract
-import Test.Program.SchedAxiomReport
 import Test.Program.DenoteRContract
-import Test.Program.DenoteRAxiomReport
 import Test.Program.RuntimeRContract
 import Test.Program.RuntimeRShapesContract
-import Test.Program.RuntimeRAxiomReport
+import Test.Program.SimulationContract
 import Test.Program.ProvisionContract
-import Test.Program.ProvisionAxiomReport
 import Test.Program.ConfigContract
-import Test.Program.ConfigAxiomReport
 import Test.Api.ApiContract
 import Test.Program.ScopedTypingContract
 import Test.Program.NativeAtomContract
@@ -121,7 +90,6 @@ import Test.Machine.Fuzz
 import Test.Audit.RuntimeCoverage
 import Test.Audit.AxiomGate
 import Test.Program.TypeAlgebraContract
-import Test.Program.TypeAlgebraAxiomReport
 import Test.Program.ValueModelContract
 import Test.Program.TypingCheckContract
 import Test.Program.LinkedRowsContract
@@ -130,8 +98,8 @@ import Test.Program.LayerSharingContract
 /-!
 # Effect4 test battery
 
-The default Lake build imports every admitted contract, attack, and kernel
-dependency report through this root. A test file not reachable here is not a
+The default Lake build imports every admitted contract and attack through this
+root. A test file not reachable here is not a
 passing gate. The batteries of the Flow route live on branch
 `archive/flow-route` (`docs/research/2026-09-04-prod-cleanup-inventory.md`).
 -/

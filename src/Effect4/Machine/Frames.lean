@@ -38,8 +38,7 @@ Pinned source: `vendor/effect-4.0.0-rc.112/src/internal/core.ts` 365-583 and
 `internal/effect.ts` 505-550, 653-698, 737-744, 928-946, 1356-1379, 1662-1689,
 2474-2501, 3426-3465, 4001-4029, 4302-4367 and 4623-4645. The frozen surface is
 `Test/contracts/frames.contract.md`, held by the battery
-`Test/Machine/Runtime/FramesContract.lean` and the axiom report
-`Test/Machine/Runtime/FramesAxiomReport.lean`. The proof graph is
+`Test/Machine/Runtime/FramesContract.lean`. The proof graph is
 `docs/research/FRAMES-DAG.md`; the registered attacks are `E4-RUN-CE-010` through
 `E4-RUN-CE-021`, witnessed in
 `Test/Counterexamples/Machine/Runtime/Frames.lean`.

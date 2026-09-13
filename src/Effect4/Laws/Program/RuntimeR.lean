@@ -8,8 +8,8 @@ import Effect4.Api
 /-!
 # Running terms on the shared scheduler
 
-Packet: `Test/contracts/program-runtime-r.contract.md`; batteries and receipts:
-`Test/Program/RuntimeR{Contract,AxiomReport}.lean`, `Test/Program/SimulationContract.lean`.
+Packet: `Test/contracts/program-runtime-r.contract.md`; batteries:
+`Test/Program/RuntimeRContract.lean`, `Test/Program/SimulationContract.lean`.
 These definitions instantiate the existing decision loop, sufficiency test and
 observation. The equations below pin that instantiation, and sufficient command
 budgets have the same observation by the existing generic theorem. The loaded

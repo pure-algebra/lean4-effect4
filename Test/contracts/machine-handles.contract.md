@@ -2,9 +2,8 @@
 
 Node: C13, `handles_minted`. Implementation: `src/Effect4/Laws/Machine/Handles.lean` (the
 invariant at any name and thunk alphabet) and `src/Effect4/Laws/Program/Handles.lean` (the
-compiled alphabet and the public statement). Battery and receipts:
-`Test/Machine/Runtime/HandlesContract.lean` and
-`Test/Machine/Runtime/HandlesAxiomReport.lean`.
+compiled alphabet and the public statement). Battery:
+`Test/Machine/Runtime/HandlesContract.lean`.
 
 ## Required statements
 

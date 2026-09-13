@@ -12,8 +12,8 @@ owned-declaration census from Lean's elaborated environment, not from source
 text.  That census includes compiler-generated structural companions.  The
 25-name frozen Context Key API and the 14-name additive Std bridge API are
 reported separately.  The checker verifies every allocated owner, checks the
-contracted and bridge theorem declarations, and confirms the axiom-free
-receipt recorded by `Test/Machine/Environment/AxiomReport.lean`.
+contracted and bridge theorem declarations, and confirms that every
+contracted theorem is axiom-free.
 
 `ServiceName`, `ServiceTypeCode`, and `ServiceKey` remain one passive leaf.
 `ServiceUniverse` is recorded against the existing Context graph edge

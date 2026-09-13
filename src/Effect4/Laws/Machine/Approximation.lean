@@ -7,7 +7,7 @@ import Effect4.Laws.Machine.Clauses
 Review: `docs/research/2026-09-05-effects-papers-review.md` §3 G2. Packet:
 `Test/contracts/machine-approximation.contract.md`. Batteries:
 `Test/Machine/Runtime/ApproximationContract.lean` (the guards and the rows `E4-APPROX-CE-001`
-to `E4-APPROX-CE-004`) and `Test/Machine/Runtime/ApproximationAxiomReport.lean`. The name
+to `E4-APPROX-CE-004`). The name
 mirrors the archived Flow module (`git:c407ab7:Effect4/Semantics/Approximation.lean`); the
 machine under it is `src/Effect4/Machine/Fibers.lean`, whose loop `drive` spends one fuel per
 command and retains unfinished commands in `driveState` when the fuel is gone.
