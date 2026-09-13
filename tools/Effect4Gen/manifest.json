@@ -78,6 +78,18 @@
         "Effect4.Machine.Exhaustion",
         "Effect4.Api.FrontierReason"
       ]
+    },
+    {
+      "Name": "Fold",
+      "Tool": "tools/Effect4Gen/Fold.lean",
+      "Imports": "Effect4.Program.Eff,Effect4.Program.Ty",
+      "Out": "src\\Effect4\\Program\\Fold.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\fold.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Ty", "Effect4.Program.Term",
+        "Effect4.Program.CauseTerm", "Effect4.Program.Eff"
+      ]
     }
   ]
 }

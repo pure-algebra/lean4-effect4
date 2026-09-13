@@ -580,6 +580,10 @@ elab "#effect4_axiom_gate" : command => do
   for moduleName in apiModules do
     if (`Effect4.Laws).isPrefixOf moduleName then
       throwError "Effect4 library-root gate: Effect4 reaches {moduleName}"
+  let admissionModules := moduleImportClosure graph `Effect4.Program.Admission
+  for moduleName in admissionModules do
+    if (`Effect4.Codegen).isPrefixOf moduleName then
+      throwError "Effect4 module-closure gate: Effect4.Program.Admission reaches {moduleName}"
   let libraryPaths := (apiModules ++ lawsModules).map (modulePath projectRoot)
   let libraryDirectory := (projectRoot / "src" / "Effect4").toString ++
     System.FilePath.pathSeparator.toString

@@ -21,8 +21,8 @@ PROFILES = {
     "layouts": ("tools/Conform/Effect4/LayoutMain.lean", ["{out}"],
                 ["layout-x2-typescript.json", "layout-x2-typescript-corrected.json", "layout-canonical-wire.json", "layout-ocaml-eff.json"]),
     "cases": ("tools/Conform/Cli/Audit.lean",
-              ["--config", "tools/Conform/Effect4/audit-complete.json", "--out", "{out}/audit.json"],
-              ["audit.json"]),
+              ["--config", "tools/Conform/Effect4/cases.json", "--out", "{out}/cases.json"],
+              ["cases.json"]),
 }
 
 

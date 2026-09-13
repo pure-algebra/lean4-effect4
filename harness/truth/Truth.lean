@@ -478,6 +478,7 @@ def typeJson (ty : EffTy) : J :=
 def refusalText : PrintRefusal → String
   | .internalAction name => s!"internal action {name}"
   | .layerRef target => s!"layer reference to {target}"
+  | .unsafeName spelling => s!"unsafe name {spelling}"
 
 def fiberJson (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) : J :=
   Lean.Json.mkObj

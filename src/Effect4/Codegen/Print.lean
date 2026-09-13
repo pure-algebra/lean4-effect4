@@ -38,7 +38,105 @@ so no `const` can be hoisted for it. -/
 inductive PrintRefusal
   | internalAction (name : String)
   | layerRef (target : List Nat)
+  /-- A row table carries an unsafe spelling (colliding with binders or reserved heads). -/
+  | unsafeName (spelling : String)
 deriving DecidableEq, Repr
+
+/-- The first UTF-8 byte; no traversal of a `String` enters the proof graph. -/
+def firstByte (s : String) : Option UInt8 := s.toByteArray.data.toList.head?
+
+/-- Every expression head the printer can emit, and the reader recovers. -/
+inductive Head
+  | succeed | fail | failCause | sync | suspend | flatMap | gen | catchCause
+  | matchCauseEffect | onExit | exit | uninterruptible | interruptible | whileLoop
+  | yieldNowWith | join | await | forkChild | forkDetach | forkIn | forkScoped | runIn
+  | interrupt | interruptAll | interruptAllAs | awaitAll | raceAll | context | fiberId
+  | scopeClose | scoped | acquireRelease | causeFail | causeDie | causeInterrupt
+  | causeCombine | undefined | withFiber
+  | contextService | provide | service | provideService
+  | layerSucceed | layerEffect | layerEffectDiscard | layerProvide | layerProvideMerge
+  | layerMerge | layerFresh | layerOrDie
+  | layerMergeAll
+  | catchError | catchIf
+deriving DecidableEq, Repr
+
+/-- The spelling of each head, exactly as `print` emits it. -/
+def Head.spelling : Head → String
+  | .succeed => "Effect.succeed"
+  | .fail => "Effect.fail"
+  | .failCause => "Effect.failCause"
+  | .sync => "Effect.sync"
+  | .suspend => "Effect.suspend"
+  | .flatMap => "Effect.flatMap"
+  | .gen => "Effect.gen"
+  | .catchCause => "Effect.catchCause"
+  | .catchError => "Effect.catch"
+  | .catchIf => "Effect.catchIf"
+  | .matchCauseEffect => "Effect.matchCauseEffect"
+  | .onExit => "Effect.onExit"
+  | .exit => "Effect.exit"
+  | .uninterruptible => "Effect.uninterruptible"
+  | .interruptible => "Effect.interruptible"
+  | .whileLoop => "Effect.whileLoop"
+  | .yieldNowWith => "Effect.yieldNowWith"
+  | .join => "Fiber.join"
+  | .await => "Fiber.await"
+  | .forkChild => "Effect.forkChild"
+  | .forkDetach => "Effect.forkDetach"
+  | .forkIn => "Effect.forkIn"
+  | .forkScoped => "Effect.forkScoped"
+  | .runIn => "Fiber.runIn"
+  | .interrupt => "Fiber.interrupt"
+  | .interruptAll => "Fiber.interruptAll"
+  | .interruptAllAs => "Fiber.interruptAllAs"
+  | .awaitAll => "Fiber.awaitAll"
+  | .raceAll => "Effect.raceAll"
+  | .context => "Effect.context"
+  | .fiberId => "Effect.fiberId"
+  | .scopeClose => "Scope.close"
+  | .scoped => "Effect.scoped"
+  | .acquireRelease => "Effect.acquireRelease"
+  | .causeFail => "Cause.fail"
+  | .causeDie => "Cause.die"
+  | .causeInterrupt => "Cause.interrupt"
+  | .causeCombine => "Cause.combine"
+  | .undefined => "undefined"
+  | .withFiber => "Effect.withFiber"
+  | .contextService => "Context.Service"
+  | .provide => "Effect.provide"
+  | .service => "Effect.service"
+  | .provideService => "Effect.provideService"
+  | .layerSucceed => "Layer.succeed"
+  | .layerEffect => "Layer.effect"
+  | .layerEffectDiscard => "Layer.effectDiscard"
+  | .layerProvide => "Layer.provide"
+  | .layerProvideMerge => "Layer.provideMerge"
+  | .layerMerge => "Layer.merge"
+  | .layerFresh => "Layer.fresh"
+  | .layerOrDie => "Layer.orDie"
+  | .layerMergeAll => "Layer.mergeAll"
+
+/-- Every head, once. -/
+def heads : List Head :=
+  [ .succeed, .fail, .failCause, .sync, .suspend, .flatMap, .gen, .catchCause
+  , .matchCauseEffect, .onExit, .exit, .uninterruptible, .interruptible, .whileLoop
+  , .yieldNowWith, .join, .await, .forkChild, .forkDetach, .forkIn, .forkScoped, .runIn
+  , .interrupt, .interruptAll, .interruptAllAs, .awaitAll, .raceAll, .context, .fiberId
+  , .scopeClose, .scoped, .acquireRelease, .causeFail, .causeDie, .causeInterrupt
+  , .causeCombine, .undefined, .withFiber
+  , .contextService, .provide, .service, .provideService
+  , .layerSucceed, .layerEffect, .layerEffectDiscard, .layerProvide, .layerProvideMerge
+  , .layerMerge, .layerFresh, .layerOrDie, .layerMergeAll, .catchError, .catchIf ]
+
+/-- Every spelling the printer reserves: a row's spelling and a term's atom must avoid
+these. -/
+def reserved : List String := heads.map Head.spelling
+
+/-- The names in a row cannot capture a printed binder or a reserved program head. -/
+def rowNamesSafe (row : Row) : Bool :=
+  firstByte row.spelling != some 97 && !reserved.contains row.spelling &&
+    row.trailing.all (fun name => firstByte name != some 97 && name != "undefined")
+
 
 /-- The binder minted for environment position `index`: `a0`, `a1`, … The environment is
 positional, so a position is a name and the printer needs no source identifiers. -/
@@ -482,4 +580,13 @@ def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
     let m ← print sig 0 main
     .ok (ds ++ [printDecl name ty m])
 
+/-- Print an admitted program against its row table. Refuses by name if any row
+carries an unsafe name (colliding with printed binders `a0`, `a1`, ... or reserved heads). -/
+def printEntry (table : List Row) (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
+    Except PrintRefusal (List TypeScript.ConstDecl) :=
+  match table.find? (fun row => !rowNamesSafe row) with
+  | some row => .error (.unsafeName row.spelling)
+  | none => printModule sig name ty e
+
 end Effect4.Program
+

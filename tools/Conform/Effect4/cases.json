@@ -1,0 +1,7 @@
+{
+  "note": "Effect4's case-site audit (Conform.Lcnf.Cases). Runs A2 over the families the policy decides, with no baseline comparison.",
+  "tool": "conform-cases",
+  "imports": ["Effect4"],
+  "roots": ["Effect4", "Test"],
+  "casesPolicy": "tools/Conform/Effect4/cases-policy.json"
+}

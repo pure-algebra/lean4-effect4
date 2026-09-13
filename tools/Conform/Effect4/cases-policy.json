@@ -1,829 +1,1828 @@
-{"note": "Effect4's case-site policy for `Conform.Lcnf.Cases`. SEEDED from a measured scan at seat/audit (`--seed-policy`), then annotated by hand on the two rows that are decisions rather than facts (`Ty.render`, `Val.hasTy`). It is a PIN, not a proof: it records what the compiled code does today so that tomorrow's drift is a red row. Regenerate the seed with `--seed-policy` and diff; never overwrite the notes. REMOVED 2026-09-10 (idiomatic pass, audit seat): the rule for `Effect4.Program.compileEff` on `Effect4.Program.NativeOp`. That case site was never in the source — the compiler created it by specialising `NativeOp.row` at `.external` — and at `ae85bd6` the compiled code no longer has it, with NO change under src/ between the two commits (`git diff dba71eb..ae85bd6 -- src/` is empty). A case-site count is a count of compiler output read out of a BUILD DIRECTORY, so a gate must build `Effect4` before it scans. If the compiler creates the site again, `unlisted: refuse` catches it as one named row, which is the behaviour this policy wants.",
- "families":
- [{"unlisted": "refuse",
-   "name": "Effect4.Program.Ty",
-   "functions":
-   [{"name": "Effect4.Program.Ty.render",
-     "mode": "default",
-     "cover": ["nat", "int"],
-     "note": "DECISION, not a fix (seat-audit.md R-A1): `| .nat | .int => \"number\"` (src/Effect4/Program/Eff.lean:74) compiles to a default arm, so an appended Ty constructor would silently render \"number\". The cover pins the two the tree meant; a third is a refusal."},
-    {"name": "Effect4.Program.fiberTy",
-     "mode": "default",
-     "cover":
-     ["never",
-      "unit",
-      "nat",
-      "int",
-      "string",
-      "bool",
-      "handle",
-      "option",
-      "list",
-      "prod",
-      "except",
-      "exitOf",
-      "causeOf",
-      "union"]},
-    {"name": "Effect4.Program.externalValue",
-     "mode": "default",
-     "cover":
-     ["never",
-      "unit",
-      "nat",
-      "int",
-      "string",
-      "bool",
-      "option",
-      "list",
-      "prod",
-      "except",
-      "exitOf",
-      "causeOf",
-      "fiberOf",
-      "union"]},
-    {"name": "Effect4.Program.instReprTy.repr", "mode": "exhaustive"},
-    {"sites":
-     [{"mode": "default",
-       "cover":
-       ["never",
-        "unit",
-        "nat",
-        "int",
-        "string",
-        "bool",
-        "handle",
-        "option",
-        "list",
-        "except",
-        "exitOf",
-        "causeOf",
-        "fiberOf",
-        "union"]},
-      {"mode": "default",
-       "cover":
-       ["never",
-        "unit",
-        "nat",
-        "int",
-        "string",
-        "bool",
-        "handle",
-        "option",
-        "list",
-        "except",
-        "exitOf",
-        "causeOf",
-        "fiberOf",
-        "union"]}],
-     "name": "Effect4.Program.methodArgsRow"},
-    {"name": "Effect4.Program.Ty.ctorIdx", "mode": "exhaustive"},
-    {"name": "Effect4.Program.Ty.key", "mode": "exhaustive"},
-    {"sites":
-     [{"mode": "default",
-       "cover": ["never", "unit", "nat", "int", "string", "bool"]},
-      {"mode": "exhaustive"},
-      {"mode": "exhaustive"},
-      {"mode": "exhaustive"},
-      {"mode": "exhaustive"},
-      {"mode": "exhaustive"},
-      {"mode": "exhaustive"},
-      {"mode": "exhaustive"},
-      {"mode": "exhaustive"},
-      {"mode": "exhaustive"}],
-     "name": "Effect4.Program.instDecidableEqTy.decEq"},
-    {"sites":
-     [{"mode": "default", "cover": ["never", "int", "except", "causeOf"]},
-      {"mode": "default",
-       "cover":
-       ["never",
-        "unit",
-        "nat",
-        "int",
-        "string",
-        "bool",
-        "handle",
-        "option",
-        "list",
-        "prod",
-        "except",
-        "exitOf",
-        "causeOf",
-        "union"]}],
-     "name": "Effect4.Program.Val.hasTy",
-     "note": "DECISION, not a fix (seat-audit.md R-A2, register DI-09/DI-17): site 0 is `| _ => false` (src/Effect4/Program/Typed.lean:73), so `never`, `int`, `except` and `causeOf` are silently uninhabited and an appended constructor would join them; site 1 is the inner match on `.list` at :71. The cover pins today's four; a fifth is a refusal."},
-    {"name": "Effect4.Program.Ty.members",
-     "mode": "default",
-     "cover":
-     ["unit",
-      "nat",
-      "int",
-      "string",
-      "bool",
-      "handle",
-      "option",
-      "list",
-      "prod",
-      "except",
-      "exitOf",
-      "causeOf",
-      "fiberOf"]},
-    {"name": "Effect4.Program.Ty.isNever",
-     "mode": "default",
-     "cover":
-     ["unit",
-      "nat",
-      "int",
-      "string",
-      "bool",
-      "handle",
-      "option",
-      "list",
-      "prod",
-      "except",
-      "exitOf",
-      "causeOf",
-      "fiberOf",
-      "union"]},
-    {"sites":
-     [{"mode": "default",
-       "cover":
-       ["never",
-        "unit",
-        "nat",
-        "int",
-        "string",
-        "bool",
-        "handle",
-        "option",
-        "list",
-        "except",
-        "exitOf",
-        "causeOf",
-        "fiberOf",
-        "union"]},
-      {"mode": "default",
-       "cover":
-       ["never",
-        "unit",
-        "nat",
-        "int",
-        "string",
-        "bool",
-        "handle",
-        "option",
-        "list",
-        "except",
-        "exitOf",
-        "causeOf",
-        "fiberOf",
-        "union"]},
-      {"mode": "default",
-       "cover":
-       ["never",
-        "unit",
-        "int",
-        "string",
-        "bool",
-        "handle",
-        "option",
-        "list",
-        "prod",
-        "except",
-        "exitOf",
-        "causeOf",
-        "fiberOf",
-        "union"]},
-      {"mode": "default",
-       "cover":
-       ["never",
-        "unit",
-        "int",
-        "string",
-        "bool",
-        "handle",
-        "option",
-        "list",
-        "prod",
-        "except",
-        "exitOf",
-        "causeOf",
-        "fiberOf",
-        "union"]},
-      {"mode": "default",
-       "cover":
-       ["never",
-        "unit",
-        "int",
-        "string",
-        "bool",
-        "handle",
-        "option",
-        "list",
-        "prod",
-        "except",
-        "exitOf",
-        "causeOf",
-        "fiberOf",
-        "union"]},
-      {"mode": "default",
-       "cover":
-       ["never",
-        "unit",
-        "int",
-        "string",
-        "bool",
-        "handle",
-        "option",
-        "list",
-        "prod",
-        "except",
-        "exitOf",
-        "causeOf",
-        "fiberOf",
-        "union"]},
-      {"mode": "default",
-       "cover":
-       ["never",
-        "unit",
-        "int",
-        "string",
-        "bool",
-        "handle",
-        "option",
-        "list",
-        "prod",
-        "except",
-        "exitOf",
-        "causeOf",
-        "fiberOf",
-        "union"]},
-      {"mode": "default",
-       "cover":
-       ["never",
-        "unit",
-        "int",
-        "string",
-        "bool",
-        "handle",
-        "option",
-        "list",
-        "prod",
-        "except",
-        "exitOf",
-        "causeOf",
-        "fiberOf",
-        "union"]},
-      {"mode": "default",
-       "cover":
-       ["never",
-        "unit",
-        "nat",
-        "int",
-        "string",
-        "handle",
-        "option",
-        "list",
-        "prod",
-        "except",
-        "exitOf",
-        "causeOf",
-        "fiberOf",
-        "union"]},
-      {"mode": "default",
-       "cover":
-       ["never",
-        "unit",
-        "int",
-        "string",
-        "bool",
-        "handle",
-        "option",
-        "list",
-        "prod",
-        "except",
-        "exitOf",
-        "causeOf",
-        "fiberOf",
-        "union"]},
-      {"mode": "default",
-       "cover":
-       ["never",
-        "unit",
-        "int",
-        "string",
-        "bool",
-        "handle",
-        "option",
-        "list",
-        "prod",
-        "except",
-        "exitOf",
-        "causeOf",
-        "fiberOf",
-        "union"]},
-      {"mode": "default",
-       "cover":
-       ["never",
-        "unit",
-        "int",
-        "string",
-        "bool",
-        "handle",
-        "option",
-        "list",
-        "prod",
-        "except",
-        "exitOf",
-        "causeOf",
-        "fiberOf",
-        "union"]}],
-     "name": "Effect4.Program.nativeAtomTy"}]},
-  {"unlisted": "refuse",
-   "name": "Effect4.Program.Eff",
-   "functions":
-   [{"name": "Effect4.Program.Provision.docsBody",
-     "mode": "default",
-     "cover":
-     ["failCause",
-      "yieldError",
-      "sync",
-      "suspend",
-      "bind",
-      "gen",
-      "catchCause",
-      "matchCause",
-      "onExit",
-      "exit",
-      "uninterruptible",
-      "interruptible",
-      "branch",
-      "whileLoop",
-      "yieldNow",
-      "callback",
-      "awaitFiber",
-      "withFiber",
-      "scoped",
-      "acquireRelease",
-      "provideLayer",
-      "service",
-      "provideService"]},
-    {"name": "Effect4.Program.forkScopedAt",
-     "mode": "default",
-     "cover":
-     ["succeed",
-      "fail",
-      "failCause",
-      "yieldError",
-      "sync",
-      "suspend",
-      "perform",
-      "bind",
-      "gen",
-      "catchCause",
-      "matchCause",
-      "onExit",
-      "exit",
-      "uninterruptible",
-      "interruptible",
-      "branch",
-      "whileLoop",
-      "yieldNow",
-      "callback",
-      "awaitFiber",
-      "scoped",
-      "acquireRelease",
-      "provideLayer",
-      "service",
-      "provideService"]},
-    {"name": "Effect4.Program.loopAt",
-     "mode": "default",
-     "cover":
-     ["succeed",
-      "fail",
-      "failCause",
-      "yieldError",
-      "sync",
-      "suspend",
-      "perform",
-      "bind",
-      "gen",
-      "catchCause",
-      "matchCause",
-      "onExit",
-      "exit",
-      "uninterruptible",
-      "interruptible",
-      "branch",
-      "yieldNow",
-      "callback",
-      "awaitFiber",
-      "withFiber",
-      "scoped",
-      "acquireRelease",
-      "provideLayer",
-      "service",
-      "provideService"]},
-    {"name": "Effect4.Program.suspendBodyAt",
-     "mode": "default",
-     "cover":
-     ["succeed",
-      "fail",
-      "failCause",
-      "yieldError",
-      "sync",
-      "perform",
-      "bind",
-      "catchCause",
-      "matchCause",
-      "onExit",
-      "exit",
-      "uninterruptible",
-      "interruptible",
-      "yieldNow",
-      "callback",
-      "awaitFiber",
-      "withFiber",
-      "scoped",
-      "acquireRelease",
-      "service",
-      "provideService"]},
-    {"name": "Effect4.Program.Provision.Deploy.deployBody",
-     "mode": "default",
-     "cover":
-     ["fail",
-      "failCause",
-      "yieldError",
-      "sync",
-      "suspend",
-      "bind",
-      "gen",
-      "catchCause",
-      "matchCause",
-      "onExit",
-      "exit",
-      "uninterruptible",
-      "interruptible",
-      "branch",
-      "whileLoop",
-      "yieldNow",
-      "callback",
-      "awaitFiber",
-      "withFiber",
-      "scoped",
-      "acquireRelease",
-      "provideLayer",
-      "service",
-      "provideService"]},
-    {"name": "Effect4.Program.compileEff",
-     "mode": "default",
-     "cover": ["suspend", "gen", "branch", "whileLoop", "provideLayer"]},
-    {"name": "Effect4.Program.syncValueAt",
-     "mode": "default",
-     "cover":
-     ["succeed",
-      "fail",
-      "failCause",
-      "yieldError",
-      "suspend",
-      "perform",
-      "bind",
-      "gen",
-      "catchCause",
-      "matchCause",
-      "onExit",
-      "exit",
-      "uninterruptible",
-      "interruptible",
-      "branch",
-      "whileLoop",
-      "yieldNow",
-      "callback",
-      "awaitFiber",
-      "withFiber",
-      "scoped",
-      "acquireRelease",
-      "provideLayer",
-      "service",
-      "provideService"]},
-    {"name": "Effect4.Program.provideLayerWithK",
-     "mode": "default",
-     "cover":
-     ["succeed",
-      "fail",
-      "failCause",
-      "yieldError",
-      "sync",
-      "suspend",
-      "perform",
-      "bind",
-      "gen",
-      "catchCause",
-      "matchCause",
-      "onExit",
-      "exit",
-      "uninterruptible",
-      "interruptible",
-      "branch",
-      "whileLoop",
-      "yieldNow",
-      "callback",
-      "awaitFiber",
-      "withFiber",
-      "scoped",
-      "acquireRelease",
-      "service",
-      "provideService"]},
-    {"name": "Effect4.Program.actionAt",
-     "mode": "default",
-     "cover":
-     ["succeed",
-      "fail",
-      "failCause",
-      "yieldError",
-      "sync",
-      "suspend",
-      "perform",
-      "bind",
-      "gen",
-      "catchCause",
-      "matchCause",
-      "onExit",
-      "exit",
-      "branch",
-      "whileLoop",
-      "yieldNow",
-      "callback",
-      "awaitFiber",
-      "scoped",
-      "acquireRelease",
-      "provideLayer",
-      "service",
-      "provideService"]},
-    {"name": "Effect4.Store.ProgramGen.EffC.toValEff", "mode": "exhaustive"},
-    {"name": "Effect4.Program.evaluateNative",
-     "mode": "default",
-     "cover":
-     ["succeed",
-      "fail",
-      "failCause",
-      "yieldError",
-      "sync",
-      "suspend",
-      "perform",
-      "bind",
-      "gen",
-      "catchCause",
-      "matchCause",
-      "onExit",
-      "exit",
-      "uninterruptible",
-      "interruptible",
-      "branch",
-      "whileLoop",
-      "yieldNow",
-      "callback",
-      "awaitFiber",
-      "withFiber",
-      "acquireRelease",
-      "provideLayer",
-      "service",
-      "provideService"]}]},
-  {"unlisted": "refuse",
-   "name": "Effect4.Program.NativeOp",
-   "functions":
-   [{"name": "Effect4.Program.asyncRoute",
-     "mode": "default",
-     "cover":
-     ["refMake",
-      "refGet",
-      "refSet",
-      "refGetAndSet",
-      "refSetAndGet",
-      "refUpdate",
-      "refGetAndUpdate",
-      "refUpdateAndGet",
-      "refUpdateSome",
-      "refGetAndUpdateSome",
-      "refUpdateSomeAndGet",
-      "refModify",
-      "refModifySome",
-      "deferredMake",
-      "deferredIsDone",
-      "deferredPoll",
-      "deferredSucceed",
-      "deferredFail",
-      "deferredAwait",
-      "scopeMake",
-      "clockNow"]},
-    {"name": "Effect4.Program.admit",
-     "mode": "default",
-     "cover":
-     ["refMake",
-      "refGet",
-      "refSet",
-      "refGetAndSet",
-      "refSetAndGet",
-      "refUpdate",
-      "refGetAndUpdate",
-      "refUpdateAndGet",
-      "refUpdateSome",
-      "refGetAndUpdateSome",
-      "refUpdateSomeAndGet",
-      "refModify",
-      "refModifySome",
-      "deferredMake",
-      "deferredIsDone",
-      "deferredPoll",
-      "deferredSucceed",
-      "deferredFail",
-      "deferredAwait",
-      "scopeMake",
-      "sleep",
-      "clockNow"]},
-    {"name": "Effect4.Program.NativeOp.row", "mode": "exhaustive"},
-    {"name": "Effect4.Program.NativeOp.syncOpOf",
-     "mode": "default",
-     "cover": ["deferredAwait", "sleep", "external"]},
-    {"name": "Effect4.Program.nativeRowOf",
-     "mode": "default",
-     "cover":
-     ["refMake",
-      "refGet",
-      "refSet",
-      "refGetAndSet",
-      "refSetAndGet",
-      "refUpdate",
-      "refGetAndUpdate",
-      "refUpdateAndGet",
-      "refUpdateSome",
-      "refGetAndUpdateSome",
-      "refUpdateSomeAndGet",
-      "refModify",
-      "refModifySome",
-      "deferredMake",
-      "deferredIsDone",
-      "deferredPoll",
-      "deferredSucceed",
-      "deferredFail",
-      "deferredAwait",
-      "scopeMake",
-      "sleep",
-      "clockNow"]},
-    {"name": "Effect4.Program.prepareExternalAnswer",
-     "mode": "default",
-     "cover":
-     ["refMake",
-      "refGet",
-      "refSet",
-      "refGetAndSet",
-      "refSetAndGet",
-      "refUpdate",
-      "refGetAndUpdate",
-      "refUpdateAndGet",
-      "refUpdateSome",
-      "refGetAndUpdateSome",
-      "refUpdateSomeAndGet",
-      "refModify",
-      "refModifySome",
-      "deferredMake",
-      "deferredIsDone",
-      "deferredPoll",
-      "deferredSucceed",
-      "deferredFail",
-      "deferredAwait",
-      "scopeMake",
-      "sleep",
-      "clockNow"]},
-    {"name": "Effect4.Program.NativeOp.ctorIdx", "mode": "exhaustive"},
-    {"name": "Effect4.Store.ProgramGen.NativeOpC.toVal", "mode": "exhaustive"},
-    {"sites":
-     [{"mode": "default",
-       "cover":
-       ["refMake",
-        "refGet",
-        "refSet",
-        "refGetAndSet",
-        "refSetAndGet",
-        "deferredMake",
-        "deferredIsDone",
-        "deferredPoll",
-        "deferredSucceed",
-        "deferredFail",
-        "deferredAwait",
-        "sleep",
-        "clockNow"]},
-      {"mode": "exhaustive"},
-      {"mode": "exhaustive"},
-      {"mode": "exhaustive"},
-      {"mode": "exhaustive"},
-      {"mode": "exhaustive"},
-      {"mode": "exhaustive"},
-      {"mode": "exhaustive"},
-      {"mode": "exhaustive"},
-      {"mode": "exhaustive"},
-      {"mode": "exhaustive"}],
-     "name": "Effect4.Program.instDecidableEqNativeOp.decEq"}]},
-  {"unlisted": "refuse",
-   "name": "Effect4.Program.RowKind",
-   "functions":
-   [{"name": "Effect4.Program.asyncRoute",
-     "mode": "default",
-     "cover": ["sync", "program"]},
-    {"name": "Effect4.Program.compileEff", "mode": "exhaustive"},
-    {"name": "Effect4.Program.instReprRowKind.repr", "mode": "exhaustive"},
-    {"name": "Effect4.Program.RowKind.ctorIdx", "mode": "exhaustive"}]},
-  {"unlisted": "refuse",
-   "name": "Effect4.Program.RowShape",
-   "functions":
-   [{"name": "Effect4.Program.RowShape.ctorIdx", "mode": "exhaustive"},
-    {"name": "Effect4.Program.printRow", "mode": "exhaustive"},
-    {"name": "Effect4.Program.instReprRowShape.repr", "mode": "exhaustive"},
-    {"name": "Effect4.Program.requestReadable", "mode": "exhaustive"}]},
-  {"unlisted": "refuse",
-   "name": "Effect4.Program.Registration",
-   "functions":
-   [{"name": "Effect4.Program.instReprRegistration.repr", "mode": "exhaustive"},
-    {"name": "Effect4.Program.Registration.ctorIdx", "mode": "exhaustive"}]},
-  {"unlisted": "refuse",
-   "name": "Effect4.Program.Lit",
-   "functions":
-   [{"name": "Effect4.Program.Provision.docsBody",
-     "mode": "default",
-     "cover": ["unit", "bool", "str"]},
-    {"name": "Effect4.Program.Lit.ctorIdx", "mode": "exhaustive"},
-    {"name": "Effect4.Program.printLit", "mode": "exhaustive"},
-    {"name": "Effect4.Program.tupleRequestReadable",
-     "mode": "default",
-     "cover": ["nat", "bool", "str"]},
-    {"sites":
-     [{"mode": "exhaustive"},
-      {"mode": "default", "cover": ["nat", "bool", "str"]},
-      {"mode": "default", "cover": ["bool", "str"]},
-      {"mode": "default", "cover": ["nat", "str"]},
-      {"mode": "default", "cover": ["nat", "bool"]}],
-     "name": "Effect4.Program.instDecidableEqLit.decEq"},
-    {"name": "Effect4.Program.Lit.ty", "mode": "exhaustive"},
-    {"name": "Effect4.Store.ProgramGen.LitC.toVal", "mode": "exhaustive"},
-    {"name": "Effect4.Program.Lit.toVal", "mode": "exhaustive"},
-    {"name": "Effect4.Program.instReprLit.repr", "mode": "exhaustive"},
-    {"name": "Effect4.Program.Terms.names?",
-     "mode": "default",
-     "cover": ["nat", "bool", "str"]},
-    {"name": "Effect4.Program.litVal", "mode": "exhaustive"}]},
-  {"unlisted": "refuse",
-   "name": "Effect4.Program.Term",
-   "functions":
-   [{"sites":
-     [{"mode": "default", "cover": ["var", "app"]},
-      {"mode": "default", "cover": ["var", "app"]}],
-     "name": "Effect4.Program.Provision.docsBody"},
-    {"name": "Effect4.Program.tupleRequestReadable",
-     "mode": "default",
-     "cover": ["app"]},
-    {"sites":
-     [{"mode": "exhaustive"},
-      {"mode": "default", "cover": ["lit", "app"]},
-      {"mode": "default", "cover": ["var", "app"]},
-      {"mode": "default", "cover": ["var", "lit"]}],
-     "name": "Effect4.Program.instDecidableEqTerm.decEq_1"},
-    {"name": "Effect4.Program.Provision.Deploy.deployBody",
-     "mode": "default",
-     "cover": ["var", "app"]},
-    {"name": "Effect4.Store.ProgramGen.TermC.toValTerm", "mode": "exhaustive"},
-    {"name": "Effect4.Program.printTerm", "mode": "exhaustive"},
-    {"name": "Effect4.Program.readLiteral",
-     "mode": "default",
-     "cover": ["var", "app"]},
-    {"name": "Effect4.Program.pairArgs?",
-     "mode": "default",
-     "cover": ["var", "lit"]},
-    {"name": "Effect4.Program.Term.scoped", "mode": "exhaustive"},
-    {"name": "Effect4.Program.evalTerm", "mode": "exhaustive"},
-    {"name": "Effect4.Program.Term.ctorIdx", "mode": "exhaustive"},
-    {"name": "Effect4.Program.Terms.names?",
-     "mode": "default",
-     "cover": ["app"]},
-    {"name": "Effect4.Program.Term.weaken", "mode": "exhaustive"},
-    {"sites":
-     [{"mode": "exhaustive"},
-      {"mode": "default", "cover": ["lit", "app"]},
-      {"mode": "default", "cover": ["var", "app"]},
-      {"mode": "default", "cover": ["var", "lit"]}],
-     "name": "Effect4.Program.instDecidableEqTerms.decEq_1"}]},
-  {"unlisted": "refuse",
-   "name": "Effect4.Program.CauseTerm",
-   "functions":
-   [{"name": "Effect4.Program.causeOf", "mode": "exhaustive"},
-    {"name": "Effect4.Store.ProgramGen.CauseTermC.toValCauseTerm",
-     "mode": "exhaustive"},
-    {"sites":
-     [{"mode": "exhaustive"},
-      {"mode": "default", "cover": ["die", "interrupt", "both"]},
-      {"mode": "default", "cover": ["fail", "interrupt", "both"]},
-      {"mode": "default", "cover": ["fail", "die", "both"]},
-      {"mode": "default", "cover": ["fail", "die", "interrupt"]}],
-     "name": "Effect4.Program.instDecidableEqCauseTerm.decEq"},
-    {"name": "Effect4.Program.CauseTerm.weaken", "mode": "exhaustive"},
-    {"name": "Effect4.Program.printCause", "mode": "exhaustive"},
-    {"name": "Effect4.Program.CauseTerm.ctorIdx", "mode": "exhaustive"},
-    {"name": "Effect4.Program.CauseTerm.scoped", "mode": "exhaustive"}]}]}
+{
+  "families": [
+    {
+      "unlisted": "refuse",
+      "name": "Effect4.Program.Ty",
+      "functions": [
+        {
+          "name": "Effect4.Program.Ty.factors",
+          "mode": "default",
+          "cover": [
+            "unit",
+            "nat",
+            "int",
+            "string",
+            "bool",
+            "handle",
+            "option",
+            "list",
+            "prod",
+            "except",
+            "exitOf",
+            "causeOf",
+            "fiberOf",
+            "union",
+            "lit"
+          ]
+        },
+        {
+          "name": "Effect4.Schema.Codec.layout",
+          "mode": "default",
+          "cover": [
+            "never",
+            "unit",
+            "nat",
+            "int",
+            "string",
+            "bool",
+            "handle",
+            "fiberOf",
+            "union"
+          ]
+        },
+        {
+          "name": "Effect4.Program.fiberTy",
+          "mode": "default",
+          "cover": [
+            "never",
+            "unit",
+            "nat",
+            "int",
+            "string",
+            "bool",
+            "handle",
+            "option",
+            "list",
+            "prod",
+            "except",
+            "exitOf",
+            "causeOf",
+            "union",
+            "lit"
+          ]
+        },
+        {
+          "name": "Effect4.Program.Ty.renderRaw",
+          "mode": "default",
+          "cover": [
+            "nat",
+            "int"
+          ],
+          "note": "DECISION, not a fix (seat-audit.md R-A1): `| .nat | .int => \"number\"` (src/Effect4/Program/Eff.lean:74) compiles to a default arm, so an appended Ty constructor would silently render \"number\". The cover pins the two the tree meant; a third is a refusal."
+        },
+        {
+          "name": "Effect4.Program.externalValue",
+          "mode": "default",
+          "cover": [
+            "never",
+            "unit",
+            "nat",
+            "int",
+            "string",
+            "bool",
+            "option",
+            "list",
+            "prod",
+            "except",
+            "exitOf",
+            "causeOf",
+            "fiberOf",
+            "union",
+            "lit"
+          ]
+        },
+        {
+          "name": "Effect4.Schema.Bridge.schema",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.findInt",
+          "mode": "default",
+          "cover": [
+            "never",
+            "unit",
+            "nat",
+            "string",
+            "bool"
+          ]
+        },
+        {
+          "name": "Effect4.Program.instReprTy.repr",
+          "mode": "exhaustive"
+        },
+        {
+          "sites": [
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            }
+          ],
+          "name": "Effect4.Program.methodArgsRow"
+        },
+        {
+          "name": "Effect4.Program.causeInputError?",
+          "mode": "default",
+          "cover": [
+            "never",
+            "unit",
+            "nat",
+            "int",
+            "string",
+            "bool",
+            "handle",
+            "option",
+            "list",
+            "prod",
+            "except",
+            "fiberOf",
+            "union",
+            "lit"
+          ]
+        },
+        {
+          "name": "Effect4.Program.Ty.isFactor",
+          "mode": "default",
+          "cover": [
+            "never",
+            "unit",
+            "nat",
+            "int",
+            "string",
+            "bool",
+            "handle",
+            "option",
+            "list",
+            "prod",
+            "except",
+            "exitOf",
+            "causeOf",
+            "fiberOf",
+            "lit"
+          ]
+        },
+        {
+          "name": "Effect4.Program.Ty.ctorIdx",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.Ty.key",
+          "mode": "exhaustive"
+        },
+        {
+          "sites": [
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "bool"
+              ]
+            },
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "exhaustive"
+            }
+          ],
+          "name": "Effect4.Program.instDecidableEqTy.decEq"
+        },
+        {
+          "name": "Effect4.Program.Val.hasTy",
+          "mode": "default",
+          "cover": [
+            "never",
+            "int"
+          ],
+          "note": "DECISION, not a fix (seat-audit.md R-A2, register DI-09/DI-17): site 0 is `| _ => false` (src/Effect4/Program/Typed.lean:73), so `never`, `int`, `except` and `causeOf` are silently uninhabited and an appended constructor would join them; site 1 is the inner match on `.list` at :71. The cover pins today's four; a fifth is a refusal."
+        },
+        {
+          "name": "Effect4.Schema.Codec.isSupported",
+          "mode": "default",
+          "cover": [
+            "never",
+            "unit",
+            "nat",
+            "string",
+            "bool",
+            "lit"
+          ]
+        },
+        {
+          "name": "Effect4.Schema.Codec.decodeRaw",
+          "mode": "default",
+          "cover": [
+            "never",
+            "int",
+            "handle",
+            "fiberOf"
+          ]
+        },
+        {
+          "name": "Effect4.Program.Ty.members",
+          "mode": "default",
+          "cover": [
+            "unit",
+            "nat",
+            "int",
+            "string",
+            "bool",
+            "handle",
+            "option",
+            "list",
+            "prod",
+            "except",
+            "exitOf",
+            "causeOf",
+            "fiberOf",
+            "lit"
+          ]
+        },
+        {
+          "sites": [
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "int",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            }
+          ],
+          "name": "Effect4.Program.NativeAtom.typeOf"
+        },
+        {
+          "name": "Effect4.Program.Ty.isMember",
+          "mode": "default",
+          "cover": [
+            "handle",
+            "option",
+            "list",
+            "prod",
+            "except",
+            "exitOf",
+            "causeOf",
+            "fiberOf",
+            "lit"
+          ]
+        },
+        {
+          "name": "Effect4.Program.isTagTy",
+          "mode": "default",
+          "cover": [
+            "never",
+            "unit",
+            "nat",
+            "int",
+            "bool",
+            "handle",
+            "option",
+            "list",
+            "prod",
+            "except",
+            "exitOf",
+            "causeOf",
+            "fiberOf"
+          ]
+        },
+        {
+          "name": "Effect4.Program.Ty.isNever",
+          "mode": "default",
+          "cover": [
+            "handle",
+            "option",
+            "list",
+            "prod",
+            "except",
+            "exitOf",
+            "causeOf",
+            "fiberOf",
+            "union",
+            "lit"
+          ]
+        },
+        {
+          "name": "Effect4.Schema.Codec.encodeRaw",
+          "mode": "default",
+          "cover": [
+            "never",
+            "int",
+            "handle",
+            "fiberOf"
+          ]
+        },
+        {
+          "name": "Effect4.Store.ProgramGen.TyC.toValTy",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.Ty.normalize",
+          "mode": "default",
+          "cover": [
+            "never",
+            "unit",
+            "nat",
+            "int",
+            "string",
+            "bool"
+          ]
+        },
+        {
+          "sites": [
+            {
+              "mode": "default",
+              "cover": [
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "bool",
+                "handle"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "causeOf",
+                "fiberOf",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "fiberOf",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "lit"
+              ]
+            }
+          ],
+          "name": "Effect4.Program.Ty.sub"
+        },
+        {
+          "name": "Effect4.Program.rawSupportedErrTy",
+          "mode": "default",
+          "cover": [
+            "handle",
+            "option",
+            "list",
+            "except",
+            "exitOf",
+            "causeOf",
+            "fiberOf"
+          ]
+        }
+      ]
+    },
+    {
+      "unlisted": "refuse",
+      "name": "Effect4.Program.Eff",
+      "functions": [
+        {
+          "name": "Effect4.Program.Provision.docsBody",
+          "mode": "default",
+          "cover": [
+            "failCause",
+            "yieldError",
+            "sync",
+            "suspend",
+            "bind",
+            "gen",
+            "catchCause",
+            "matchCause",
+            "onExit",
+            "exit",
+            "uninterruptible",
+            "interruptible",
+            "branch",
+            "whileLoop",
+            "yieldNow",
+            "callback",
+            "awaitFiber",
+            "withFiber",
+            "scoped",
+            "acquireRelease",
+            "provideLayer",
+            "service",
+            "provideService",
+            "catchIf"
+          ]
+        },
+        {
+          "name": "Effect4.Program.forkScopedAt",
+          "mode": "default",
+          "cover": [
+            "succeed",
+            "fail",
+            "failCause",
+            "yieldError",
+            "sync",
+            "suspend",
+            "perform",
+            "bind",
+            "gen",
+            "catchCause",
+            "matchCause",
+            "onExit",
+            "exit",
+            "uninterruptible",
+            "interruptible",
+            "branch",
+            "whileLoop",
+            "yieldNow",
+            "callback",
+            "awaitFiber",
+            "scoped",
+            "acquireRelease",
+            "provideLayer",
+            "service",
+            "provideService",
+            "catchIf"
+          ]
+        },
+        {
+          "name": "Effect4.Program.loopAt",
+          "mode": "default",
+          "cover": [
+            "succeed",
+            "fail",
+            "failCause",
+            "yieldError",
+            "sync",
+            "suspend",
+            "perform",
+            "bind",
+            "gen",
+            "catchCause",
+            "matchCause",
+            "onExit",
+            "exit",
+            "uninterruptible",
+            "interruptible",
+            "branch",
+            "yieldNow",
+            "callback",
+            "awaitFiber",
+            "withFiber",
+            "scoped",
+            "acquireRelease",
+            "provideLayer",
+            "service",
+            "provideService",
+            "catchIf"
+          ]
+        },
+        {
+          "name": "Effect4.Program.contEOf",
+          "mode": "default",
+          "cover": [
+            "succeed",
+            "fail",
+            "failCause",
+            "yieldError",
+            "sync",
+            "suspend",
+            "perform",
+            "bind",
+            "gen",
+            "catchCause",
+            "matchCause",
+            "onExit",
+            "exit",
+            "uninterruptible",
+            "interruptible",
+            "branch",
+            "whileLoop",
+            "yieldNow",
+            "callback",
+            "awaitFiber",
+            "withFiber",
+            "scoped",
+            "acquireRelease",
+            "provideLayer",
+            "service",
+            "provideService"
+          ]
+        },
+        {
+          "name": "Effect4.Program.suspendBodyAt",
+          "mode": "default",
+          "cover": [
+            "succeed",
+            "fail",
+            "failCause",
+            "yieldError",
+            "sync",
+            "perform",
+            "bind",
+            "catchCause",
+            "matchCause",
+            "onExit",
+            "exit",
+            "uninterruptible",
+            "interruptible",
+            "yieldNow",
+            "callback",
+            "awaitFiber",
+            "withFiber",
+            "scoped",
+            "acquireRelease",
+            "service",
+            "provideService",
+            "catchIf"
+          ]
+        },
+        {
+          "name": "Effect4.Program.compileEff",
+          "mode": "default",
+          "cover": [
+            "suspend",
+            "gen",
+            "branch",
+            "whileLoop",
+            "provideLayer"
+          ]
+        },
+        {
+          "name": "Effect4.Program.syncValueAt",
+          "mode": "default",
+          "cover": [
+            "succeed",
+            "fail",
+            "failCause",
+            "yieldError",
+            "suspend",
+            "perform",
+            "bind",
+            "gen",
+            "catchCause",
+            "matchCause",
+            "onExit",
+            "exit",
+            "uninterruptible",
+            "interruptible",
+            "branch",
+            "whileLoop",
+            "yieldNow",
+            "callback",
+            "awaitFiber",
+            "withFiber",
+            "scoped",
+            "acquireRelease",
+            "provideLayer",
+            "service",
+            "provideService",
+            "catchIf"
+          ]
+        },
+        {
+          "name": "Effect4.Program.provideLayerWithK",
+          "mode": "default",
+          "cover": [
+            "succeed",
+            "fail",
+            "failCause",
+            "yieldError",
+            "sync",
+            "suspend",
+            "perform",
+            "bind",
+            "gen",
+            "catchCause",
+            "matchCause",
+            "onExit",
+            "exit",
+            "uninterruptible",
+            "interruptible",
+            "branch",
+            "whileLoop",
+            "yieldNow",
+            "callback",
+            "awaitFiber",
+            "withFiber",
+            "scoped",
+            "acquireRelease",
+            "service",
+            "provideService",
+            "catchIf"
+          ]
+        },
+        {
+          "name": "Effect4.Program.actionAt",
+          "mode": "default",
+          "cover": [
+            "succeed",
+            "fail",
+            "failCause",
+            "yieldError",
+            "sync",
+            "suspend",
+            "perform",
+            "bind",
+            "gen",
+            "catchCause",
+            "matchCause",
+            "onExit",
+            "exit",
+            "branch",
+            "whileLoop",
+            "yieldNow",
+            "callback",
+            "awaitFiber",
+            "scoped",
+            "acquireRelease",
+            "provideLayer",
+            "service",
+            "provideService",
+            "catchIf"
+          ]
+        },
+        {
+          "name": "Effect4.Store.ProgramGen.EffC.toValEff",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.evaluateNative",
+          "mode": "default",
+          "cover": [
+            "succeed",
+            "fail",
+            "failCause",
+            "yieldError",
+            "sync",
+            "suspend",
+            "perform",
+            "bind",
+            "gen",
+            "catchCause",
+            "matchCause",
+            "onExit",
+            "exit",
+            "uninterruptible",
+            "interruptible",
+            "branch",
+            "whileLoop",
+            "yieldNow",
+            "callback",
+            "awaitFiber",
+            "withFiber",
+            "acquireRelease",
+            "provideLayer",
+            "service",
+            "provideService",
+            "catchIf"
+          ]
+        }
+      ]
+    },
+    {
+      "unlisted": "refuse",
+      "name": "Effect4.Program.NativeOp",
+      "functions": [
+        {
+          "name": "Effect4.Program.asyncRoute",
+          "mode": "default",
+          "cover": [
+            "refMake",
+            "refGet",
+            "refSet",
+            "refGetAndSet",
+            "refSetAndGet",
+            "refUpdate",
+            "refGetAndUpdate",
+            "refUpdateAndGet",
+            "refUpdateSome",
+            "refGetAndUpdateSome",
+            "refUpdateSomeAndGet",
+            "refModify",
+            "refModifySome",
+            "deferredMake",
+            "deferredIsDone",
+            "deferredPoll",
+            "deferredSucceed",
+            "deferredFail",
+            "deferredAwait",
+            "scopeMake",
+            "clockNow"
+          ]
+        },
+        {
+          "name": "Effect4.Program.admit",
+          "mode": "default",
+          "cover": [
+            "refMake",
+            "refGet",
+            "refSet",
+            "refGetAndSet",
+            "refSetAndGet",
+            "refUpdate",
+            "refGetAndUpdate",
+            "refUpdateAndGet",
+            "refUpdateSome",
+            "refGetAndUpdateSome",
+            "refUpdateSomeAndGet",
+            "refModify",
+            "refModifySome",
+            "deferredMake",
+            "deferredIsDone",
+            "deferredPoll",
+            "deferredSucceed",
+            "deferredFail",
+            "deferredAwait",
+            "scopeMake",
+            "sleep",
+            "clockNow"
+          ]
+        },
+        {
+          "name": "Effect4.Program.NativeOp.row",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.compileEff",
+          "mode": "default",
+          "cover": [
+            "refMake",
+            "refGet",
+            "refSet",
+            "refGetAndSet",
+            "refSetAndGet",
+            "refUpdate",
+            "refGetAndUpdate",
+            "refUpdateAndGet",
+            "refUpdateSome",
+            "refGetAndUpdateSome",
+            "refUpdateSomeAndGet",
+            "refModify",
+            "refModifySome",
+            "deferredMake",
+            "deferredIsDone",
+            "deferredPoll",
+            "deferredSucceed",
+            "deferredFail",
+            "deferredAwait",
+            "scopeMake",
+            "sleep",
+            "clockNow"
+          ]
+        },
+        {
+          "name": "Effect4.Program.NativeOp.syncOpOf",
+          "mode": "default",
+          "cover": [
+            "deferredAwait",
+            "sleep",
+            "external"
+          ]
+        },
+        {
+          "name": "Effect4.Program.nativeRowOf",
+          "mode": "default",
+          "cover": [
+            "refMake",
+            "refGet",
+            "refSet",
+            "refGetAndSet",
+            "refSetAndGet",
+            "refUpdate",
+            "refGetAndUpdate",
+            "refUpdateAndGet",
+            "refUpdateSome",
+            "refGetAndUpdateSome",
+            "refUpdateSomeAndGet",
+            "refModify",
+            "refModifySome",
+            "deferredMake",
+            "deferredIsDone",
+            "deferredPoll",
+            "deferredSucceed",
+            "deferredFail",
+            "deferredAwait",
+            "scopeMake",
+            "sleep",
+            "clockNow"
+          ]
+        },
+        {
+          "name": "Effect4.Program.prepareExternalAnswer",
+          "mode": "default",
+          "cover": [
+            "refMake",
+            "refGet",
+            "refSet",
+            "refGetAndSet",
+            "refSetAndGet",
+            "refUpdate",
+            "refGetAndUpdate",
+            "refUpdateAndGet",
+            "refUpdateSome",
+            "refGetAndUpdateSome",
+            "refUpdateSomeAndGet",
+            "refModify",
+            "refModifySome",
+            "deferredMake",
+            "deferredIsDone",
+            "deferredPoll",
+            "deferredSucceed",
+            "deferredFail",
+            "deferredAwait",
+            "scopeMake",
+            "sleep",
+            "clockNow"
+          ]
+        },
+        {
+          "name": "Effect4.Program.NativeOp.ctorIdx",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Store.ProgramGen.NativeOpC.toVal",
+          "mode": "exhaustive"
+        },
+        {
+          "sites": [
+            {
+              "mode": "default",
+              "cover": [
+                "refMake",
+                "refGet",
+                "refSet",
+                "refGetAndSet",
+                "refSetAndGet",
+                "deferredMake",
+                "deferredIsDone",
+                "deferredPoll",
+                "deferredSucceed",
+                "deferredFail",
+                "deferredAwait",
+                "sleep",
+                "clockNow"
+              ]
+            },
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "exhaustive"
+            }
+          ],
+          "name": "Effect4.Program.instDecidableEqNativeOp.decEq"
+        }
+      ]
+    },
+    {
+      "unlisted": "refuse",
+      "name": "Effect4.Program.RowKind",
+      "functions": [
+        {
+          "name": "Effect4.Program.asyncRoute",
+          "mode": "default",
+          "cover": [
+            "sync",
+            "program"
+          ]
+        },
+        {
+          "name": "Effect4.Store.ProgramGen.RowKindC.toVal",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.compileEff",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.instReprRowKind.repr",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.RowKind.ctorIdx",
+          "mode": "exhaustive"
+        }
+      ]
+    },
+    {
+      "unlisted": "refuse",
+      "name": "Effect4.Program.RowShape",
+      "functions": [
+        {
+          "name": "Effect4.Program.RowShape.ctorIdx",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Store.ProgramGen.RowShapeC.toVal",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.printRow",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.instReprRowShape.repr",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.requestReadable",
+          "mode": "exhaustive"
+        }
+      ]
+    },
+    {
+      "unlisted": "refuse",
+      "name": "Effect4.Program.Registration",
+      "functions": [
+        {
+          "name": "Effect4.Program.instReprRegistration.repr",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Store.ProgramGen.RegistrationC.toVal",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.Registration.ctorIdx",
+          "mode": "exhaustive"
+        }
+      ]
+    },
+    {
+      "unlisted": "refuse",
+      "name": "Effect4.Program.Lit",
+      "functions": [
+        {
+          "name": "Effect4.Program.Provision.docsBody",
+          "mode": "default",
+          "cover": [
+            "unit",
+            "bool",
+            "str"
+          ]
+        },
+        {
+          "name": "Effect4.Program.Lit.ctorIdx",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.printLit",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.tupleRequestReadable",
+          "mode": "default",
+          "cover": [
+            "nat",
+            "bool",
+            "str"
+          ]
+        },
+        {
+          "sites": [
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "nat",
+                "bool",
+                "str"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "bool",
+                "str"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "nat",
+                "str"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "nat",
+                "bool"
+              ]
+            }
+          ],
+          "name": "Effect4.Program.instDecidableEqLit.decEq"
+        },
+        {
+          "name": "Effect4.Program.Lit.ty",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Store.ProgramGen.LitC.toVal",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.Lit.toVal",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.instReprLit.repr",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.Terms.names?",
+          "mode": "default",
+          "cover": [
+            "nat",
+            "bool",
+            "str"
+          ]
+        },
+        {
+          "name": "Effect4.Program.litVal",
+          "mode": "exhaustive"
+        }
+      ]
+    },
+    {
+      "unlisted": "refuse",
+      "name": "Effect4.Program.Term",
+      "functions": [
+        {
+          "sites": [
+            {
+              "mode": "default",
+              "cover": [
+                "var",
+                "app"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "var",
+                "app"
+              ]
+            }
+          ],
+          "name": "Effect4.Program.Provision.docsBody"
+        },
+        {
+          "name": "Effect4.Program.tupleRequestReadable",
+          "mode": "default",
+          "cover": [
+            "app"
+          ]
+        },
+        {
+          "sites": [
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "lit",
+                "app"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "var",
+                "app"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "var",
+                "lit"
+              ]
+            }
+          ],
+          "name": "Effect4.Program.instDecidableEqTerm.decEq_1"
+        },
+        {
+          "name": "Effect4.Store.ProgramGen.TermC.toValTerm",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.printTerm",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.readLiteral",
+          "mode": "default",
+          "cover": [
+            "var",
+            "app"
+          ]
+        },
+        {
+          "name": "Effect4.Program.pairArgs?",
+          "mode": "default",
+          "cover": [
+            "var",
+            "lit"
+          ]
+        },
+        {
+          "name": "Effect4.Program.Term.scoped",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.evalTerm",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.Term.ctorIdx",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.Terms.names?",
+          "mode": "default",
+          "cover": [
+            "app"
+          ]
+        },
+        {
+          "name": "Effect4.Program.Term.weaken",
+          "mode": "exhaustive"
+        },
+        {
+          "sites": [
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "lit",
+                "app"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "var",
+                "app"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "var",
+                "lit"
+              ]
+            }
+          ],
+          "name": "Effect4.Program.instDecidableEqTerms.decEq_1"
+        }
+      ]
+    },
+    {
+      "unlisted": "refuse",
+      "name": "Effect4.Program.CauseTerm",
+      "functions": [
+        {
+          "name": "Effect4.Program.causeOf",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Store.ProgramGen.CauseTermC.toValCauseTerm",
+          "mode": "exhaustive"
+        },
+        {
+          "sites": [
+            {
+              "mode": "exhaustive"
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "die",
+                "interrupt",
+                "both"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "fail",
+                "interrupt",
+                "both"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "fail",
+                "die",
+                "both"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "fail",
+                "die",
+                "interrupt"
+              ]
+            }
+          ],
+          "name": "Effect4.Program.instDecidableEqCauseTerm.decEq"
+        },
+        {
+          "name": "Effect4.Program.CauseTerm.weaken",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.printCause",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.CauseTerm.ctorIdx",
+          "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.CauseTerm.scoped",
+          "mode": "exhaustive"
+        }
+      ]
+    }
+  ],
+  "note": "Effect4's case-site policy for `Conform.Lcnf.Cases`. SEEDED from a measured scan at seat/audit (`--seed-policy`), then annotated by hand on the two rows that are decisions rather than facts (`Ty.renderRaw`, `Val.hasTy`). It is a PIN, not a proof: it records what the compiled code does today so that tomorrow's drift is a red row. Regenerate the seed with `--seed-policy` and diff; never overwrite the notes. REMOVED 2026-09-10 (idiomatic pass, audit seat): the rule for `Effect4.Program.compileEff` on `Effect4.Program.NativeOp`. That case site was never in the source \u2014 the compiler created it by specialising `NativeOp.row` at `.external` \u2014 and at `ae85bd6` the compiled code no longer has it, with NO change under src/ between the two commits (`git diff dba71eb..ae85bd6 -- src/` is empty). A case-site count is a count of compiler output read out of a BUILD DIRECTORY, so a gate must build `Effect4` before it scans. If the compiler creates the site again, `unlisted: refuse` catches it as one named row, which is the behaviour this policy wants."
+}

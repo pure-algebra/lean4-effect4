@@ -280,7 +280,18 @@ def refusal (program : Api.Program) (table : RowTable := []) : Option Api.AdmitR
 #guard refusal callbackExternal [syncRow] = some .illTyped
 #guard refusal performExternal [syncRow] = some (.table (.notAsync 0))
 #guard refusal (.succeed (.lit (.nat 1))) [{ goodRow with spelling := "Ref.get" }]
-  = some .unlawfulTable
+  = some (.builtinCollision ("Ref.get", []))
+#guard refusal (.succeed (.lit (.nat 1))) [goodRow, goodRow]
+  = some (.duplicateKey ("Host.wait", []))
+#guard refusal (.succeed (.lit (.nat 1))) [{ goodRow with shape := .value, trailing := ["x"] }]
+  = some (.valueRowTrailing ("Host.wait", ["x"]))
+#guard match Program.printEntry [{ goodRow with spelling := "a1" }] (nativeSignature [{ goodRow with spelling := "a1" }]) "main" (EffTy.pure .unit) (.succeed (.lit .unit)) with
+  | .error (.unsafeName "a1") => true
+  | _ => false
+#guard match Program.printEntry [{ goodRow with spelling := "Effect.succeed" }] (nativeSignature [{ goodRow with spelling := "Effect.succeed" }]) "main" (EffTy.pure .unit) (.succeed (.lit .unit)) with
+  | .error (.unsafeName "Effect.succeed") => true
+  | _ => false
+#guard (Api.printModule "main" (.succeed (.lit .unit)) [{ goodRow with spelling := "a1" }]).isNone
 #guard admitted callbackExternal [goodRow]
 #guard admitted performExternal [goodRow]
 

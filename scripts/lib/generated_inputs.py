@@ -38,7 +38,9 @@ def recipe(path, family):
     if family.startswith('Derived '):
         group = next(g for g in json.loads((ROOT/'tools/Effect4Gen/manifest.json').read_text())['groups']
                      if g['Name'] == family.removeprefix('Derived '))
-        return 'tools/Effect4Gen/Main.lean', group['Imports'].split(','), ['tools/Effect4Gen/manifest.json', group['Guards'].replace('\\', '/')]
+        tool = group.get('Tool', 'tools/Effect4Gen/Main.lean')
+        guards = [group['Guards'].replace('\\', '/')] if group.get('Guards') else []
+        return tool, group['Imports'].split(','), ['tools/Effect4Gen/manifest.json'] + guards
     if family in ['Eff', 'Eff goldens']:
         return 'src/OCaml5/Tools/EffGen.lean', ['Effect4.Program.Native'], []
     if family == 'Engine structure':

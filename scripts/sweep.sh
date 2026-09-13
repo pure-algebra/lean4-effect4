@@ -70,7 +70,7 @@ hermetic|source-citations|scripts/check-source-citations.sh
 hermetic|internal-citations|scripts/check-internal-citations.sh
 hermetic|effect-runtime-census|scripts/check-effect-runtime-census.sh
 hermetic|ts-eff|scripts/check-ts-eff.sh
-hermetic|conform|scripts/check-conform.sh models native types
+hermetic|conform|scripts/check-conform.sh models native types cases
 hermetic|generated|scripts/check-generated.sh
 host|schema-typescript|scripts/check-schema-typescript-generation.sh
 host|schema-codec|scripts/check-schema-codec.sh

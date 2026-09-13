@@ -17,7 +17,7 @@ from generated_bytes import comparable
 ROOT = Path(__file__).resolve().parents[2]
 
 FAMILY_MAP = {
-    'derived': ['Derived Json', 'Derived Schema', 'Derived Program', 'Derived Pin', 'Derived Api'],
+    'derived': ['Derived Json', 'Derived Schema', 'Derived Program', 'Derived Pin', 'Derived Api', 'Derived Fold'],
     'specs': ['Typing specs'],
     'eff': ['Eff', 'Eff goldens', 'Engine structure'],
     'wire': ['Wire goldens'],

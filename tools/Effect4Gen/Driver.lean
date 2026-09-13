@@ -51,6 +51,7 @@ namespace Effect4Gen.Driver
 in the same order. -/
 structure Group where
   name : String
+  tool : String := "tools/Effect4Gen/Main.lean"
   imports : String
   /-- The `--out` argument, in the manifest's spelling. -/
   out : String
@@ -78,12 +79,13 @@ def getStrArr (j : Json) (key : String) : Except String (Array String) := do
 
 def parseGroup (j : Json) : Except String Group := do
   let name ← getStr j "Name"
+  let tool := match getStr j "Tool" with | .ok t => t | .error _ => "tools/Effect4Gen/Main.lean"
   let imports ← getStr j "Imports"
   let out ← getStr j "Out"
   let guards ← getStrD j "Guards"
   let kinds ← getStrArr j "Kinds"
   let types ← getStrArr j "Types"
-  return { name, imports, out, guards, kinds, types }
+  return { name, tool, imports, out, guards, kinds, types }
 
 def parseManifest (text : String) : Except String (Array Group) := do
   let j ← Json.parse text
@@ -175,7 +177,6 @@ def main (argv : List String) : IO Unit := do
   if config.help then
     IO.println usage
     return
-  let tool := "tools/Effect4Gen/Main.lean"
   let guardTool := "tools/Effect4Gen/Check.lean"
   let manifestText ← IO.FS.readFile (filePath config.manifest)
   let groups ← match parseManifest manifestText with
@@ -191,7 +192,7 @@ def main (argv : List String) : IO Unit := do
     let mut commands : Array Json := #[]
     for g in groups do
       if config.group.isSome && config.group != some g.name then continue
-      let args := generateArgs tool g (g.guards != "")
+      let args := generateArgs g.tool g (g.guards != "")
       commands := commands.push (Json.mkObj [
         ("name", toJson g.name), ("out", toJson (hostPath g.out)),
         ("args", toJson args)])
@@ -219,7 +220,7 @@ def main (argv : List String) : IO Unit := do
     let appendGuards := g.guards != "" && (← exists? guardsHost)
     let stagedGuards := appendGuards && needsStaging g.guards
     if stagedGuards then copyFile guardsHost g.guards
-    let r ← runLake (generateArgs tool g appendGuards)
+    let r ← runLake (generateArgs g.tool g appendGuards)
     if stagedGuards then removeIfPresent g.guards
     -- Likewise the output: the generator wrote it under the literal name, so move it.
     if needsStaging g.out && (← exists? g.out) then

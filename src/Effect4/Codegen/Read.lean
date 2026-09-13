@@ -1,5 +1,6 @@
 import Effect4.Codegen.Print
 import Effect4.Program.Native
+import Effect4.Program.Table
 
 /-!
 # Codegen.Read — the printer's image back into `Eff` (lane A4 of the AST relation)
@@ -64,96 +65,7 @@ def Var.read : Nat → String → Option Nat
 
 /-! ## The reserved heads -/
 
-/-- The fixed heads of the image, one per spelling the printer emits by name. -/
-inductive Head
-  | succeed | fail | failCause | sync | suspend | flatMap | gen | catchCause
-  | matchCauseEffect | onExit | exit | uninterruptible | interruptible | whileLoop
-  | yieldNowWith | join | await | forkChild | forkDetach | forkIn | forkScoped | runIn
-  | interrupt | interruptAll | interruptAllAs | awaitAll | raceAll | context | fiberId
-  | scopeClose | scoped | acquireRelease | causeFail | causeDie | causeInterrupt
-  | causeCombine | undefined | withFiber
-  -- the join (2026-09-07): the three context constructors and the layer spellings the printer
-  -- emits; layers and keys are read only in the positions that accept them
-  | contextService | provide | service | provideService
-  | layerSucceed | layerEffect | layerEffectDiscard | layerProvide | layerProvideMerge
-  | layerMerge | layerFresh | layerOrDie
-  -- the host rows slice (2026-09-08): the n-ary merge; a layer reference is an identifier,
-  -- not a head
-  | layerMergeAll
-  | catchError | catchIf
-deriving DecidableEq, Repr
-
-/-- The spelling of each head, exactly as `print` emits it. -/
-def Head.spelling : Head → String
-  | .succeed => "Effect.succeed"
-  | .fail => "Effect.fail"
-  | .failCause => "Effect.failCause"
-  | .sync => "Effect.sync"
-  | .suspend => "Effect.suspend"
-  | .flatMap => "Effect.flatMap"
-  | .gen => "Effect.gen"
-  | .catchCause => "Effect.catchCause"
-  | .catchError => "Effect.catch"
-  | .catchIf => "Effect.catchIf"
-  | .matchCauseEffect => "Effect.matchCauseEffect"
-  | .onExit => "Effect.onExit"
-  | .exit => "Effect.exit"
-  | .uninterruptible => "Effect.uninterruptible"
-  | .interruptible => "Effect.interruptible"
-  | .whileLoop => "Effect.whileLoop"
-  | .yieldNowWith => "Effect.yieldNowWith"
-  | .join => "Fiber.join"
-  | .await => "Fiber.await"
-  | .forkChild => "Effect.forkChild"
-  | .forkDetach => "Effect.forkDetach"
-  | .forkIn => "Effect.forkIn"
-  | .forkScoped => "Effect.forkScoped"
-  | .runIn => "Fiber.runIn"
-  | .interrupt => "Fiber.interrupt"
-  | .interruptAll => "Fiber.interruptAll"
-  | .interruptAllAs => "Fiber.interruptAllAs"
-  | .awaitAll => "Fiber.awaitAll"
-  | .raceAll => "Effect.raceAll"
-  | .context => "Effect.context"
-  | .fiberId => "Effect.fiberId"
-  | .scopeClose => "Scope.close"
-  | .scoped => "Effect.scoped"
-  | .acquireRelease => "Effect.acquireRelease"
-  | .causeFail => "Cause.fail"
-  | .causeDie => "Cause.die"
-  | .causeInterrupt => "Cause.interrupt"
-  | .causeCombine => "Cause.combine"
-  | .undefined => "undefined"
-  | .withFiber => "Effect.withFiber"
-  | .contextService => "Context.Service"
-  | .provide => "Effect.provide"
-  | .service => "Effect.service"
-  | .provideService => "Effect.provideService"
-  | .layerSucceed => "Layer.succeed"
-  | .layerEffect => "Layer.effect"
-  | .layerEffectDiscard => "Layer.effectDiscard"
-  | .layerProvide => "Layer.provide"
-  | .layerProvideMerge => "Layer.provideMerge"
-  | .layerMerge => "Layer.merge"
-  | .layerFresh => "Layer.fresh"
-  | .layerOrDie => "Layer.orDie"
-  | .layerMergeAll => "Layer.mergeAll"
-
-/-- Every head, once. -/
-def heads : List Head :=
-  [ .succeed, .fail, .failCause, .sync, .suspend, .flatMap, .gen, .catchCause
-  , .matchCauseEffect, .onExit, .exit, .uninterruptible, .interruptible, .whileLoop
-  , .yieldNowWith, .join, .await, .forkChild, .forkDetach, .forkIn, .forkScoped, .runIn
-  , .interrupt, .interruptAll, .interruptAllAs, .awaitAll, .raceAll, .context, .fiberId
-  , .scopeClose, .scoped, .acquireRelease, .causeFail, .causeDie, .causeInterrupt
-  , .causeCombine, .undefined, .withFiber
-  , .contextService, .provide, .service, .provideService
-  , .layerSucceed, .layerEffect, .layerEffectDiscard, .layerProvide, .layerProvideMerge
-  , .layerMerge, .layerFresh, .layerOrDie, .layerMergeAll, .catchError, .catchIf ]
-
-/-- Every spelling the printer reserves: a row's spelling and a term's atom must avoid
-these. -/
-def reserved : List String := heads.map Head.spelling
+-- `Head`, `Head.spelling`, `heads`, and `reserved` are imported from `Effect4.Codegen.Print`.
 
 /-- The head a spelling names, if any. -/
 def headOf (s : String) : Option Head := heads.find? fun h => decide (h.spelling = s)
@@ -2938,64 +2850,11 @@ rows share eight spellings and are told apart by the pure function's name, the t
 rows by the `"parallel"` strategy. `nativeLawful` is the receipt that the native table meets
 `LawfulSpelling`; the two theorems specialise to it below. -/
 
-def rowKey (row : Row) : String × List String := (row.spelling, row.trailing)
-
-/-- Uniqueness makes the first matching row exactly the supplied position. -/
-theorem rowIndex_roundTrip (table : List Row) (hn : (table.map rowKey).Nodup)
-    (i : Nat) (hi : i < table.length) :
-    table.findIdx? (fun row => decide (rowKey row = rowKey table[i])) = some i := by
-  induction table generalizing i with
-  | nil => cases hi
-  | cons row rest ih =>
-    have hnodup := List.nodup_cons.mp hn
-    cases i with
-    | zero => simp [List.findIdx?_cons]
-    | succ i =>
-      have hi' : i < rest.length := Nat.lt_of_succ_lt_succ hi
-      have hne : rowKey row ≠ rowKey rest[i] := by
-        intro he
-        exact hnodup.1 (List.mem_map.mpr ⟨rest[i], List.getElem_mem hi', he.symm⟩)
-      simpa [List.findIdx?_cons, hne, ih hnodup.2 i hi']
-
-/-- A successful lookup names an existing row with exactly the supplied key. -/
-theorem rowIndex_exact (table : List Row) (key : String × List String) (i : Nat)
-    (h : table.findIdx? (fun row => decide (rowKey row = key)) = some i) :
-    ∃ hi : i < table.length, rowKey table[i] = key := by
-  induction table generalizing i with
-  | nil => simp at h
-  | cons row rest ih =>
-    rw [List.findIdx?_cons] at h
-    split at h
-    · rename_i hk
-      cases h
-      exact ⟨Nat.zero_lt_succ _, of_decide_eq_true hk⟩
-    · obtain ⟨j, hj, rfl⟩ := Option.map_eq_some_iff.mp h
-      obtain ⟨hlt, hk⟩ := ih j hj
-      exact ⟨Nat.succ_lt_succ hlt, hk⟩
-
-theorem builtinLookup_none (key : String × List String)
-    (h : key ∉ NativeOp.all.map (rowKey ∘ NativeOp.row)) :
-    NativeOp.all.find? (fun op => decide (rowKey op.row = key)) = none := by
-  apply List.find?_eq_none.mpr
-  intro op hop heq
-  apply h
-  exact List.mem_map.mpr ⟨op, hop, of_decide_eq_true heq⟩
-
-/-- The first UTF-8 byte; no traversal of a `String` enters the proof graph. -/
-def firstByte (s : String) : Option UInt8 := s.toByteArray.data.toList.head?
-
-/-- The names in a row cannot capture a printed binder or a reserved program head. -/
-def rowNamesSafe (row : Row) : Bool :=
-  firstByte row.spelling != some 97 && !reserved.contains row.spelling &&
-    row.trailing.all (fun name => firstByte name != some 97 && name != "undefined")
-
 /-- The four table requirements: unique keys, no built-in collision, no dropped
-trailing names on a value row, and names outside the reserved/binder alphabets. -/
+trailing names on a value row, and names outside the reserved/binder alphabets.
+Split between the program plane (`Table.lawful`) and the codegen name-safety hygiene (`rowNamesSafe`). -/
 def LawfulTable (table : RowTable) : Bool :=
-  decide (table.map rowKey).Nodup &&
-    table.all (fun row => !(NativeOp.all.map (rowKey ∘ NativeOp.row)).contains (rowKey row)) &&
-    table.all (fun row => !decide (row.shape = .value) || row.trailing.isEmpty) &&
-    table.all rowNamesSafe
+  Table.lawful table && table.all rowNamesSafe
 
 /-- Built-ins are checked first; the external key identifies its position in the
 supplied table. No external index is recovered by parsing an identifier. -/
@@ -3029,10 +2888,10 @@ theorem lawfulTable_member (table : RowTable) (h : LawfulTable table = true)
     (row : Row) (hr : row ∈ table) :
     rowKey row ∉ NativeOp.all.map (rowKey ∘ NativeOp.row) ∧
     (row.shape = .value → row.trailing = []) ∧ rowNamesSafe row = true := by
-  simp only [LawfulTable, Bool.and_eq_true] at h
+  simp only [LawfulTable, Table.lawful, Bool.and_eq_true] at h
   refine ⟨?_, ?_, List.all_eq_true.mp h.2 row hr⟩
   · have hc := List.all_eq_true.mp h.1.1.2 row hr
-    simpa using hc
+    simpa [Row.key] using hc
   · have hv := List.all_eq_true.mp h.1.2 row hr
     intro hs
     simpa [hs] using hv
@@ -3062,7 +2921,7 @@ theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := b
         (nativeRowOf table (.external i)).trailing = some (.external i)
       rw [nativeRowOf_external table i hi]
       have hn : (table.map rowKey).Nodup := by
-        simp only [LawfulTable, Bool.and_eq_true, decide_eq_true_eq] at h
+        simp only [LawfulTable, Table.lawful, Bool.and_eq_true, decide_eq_true_eq] at h
         exact h.1.1.1
       have hc := (lawfulTable_member table h _ (List.getElem_mem hi)).1
       have hb := builtinLookup_none (rowKey table[i]) hc
