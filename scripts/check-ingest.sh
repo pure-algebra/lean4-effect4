@@ -2,9 +2,18 @@
 # Host acceptance: exact printer/foreign oracles, reachability, metamorphic tests,
 # runtime reproducibility, original wire decoded independently by OCaml.
 # The stamp covers tool traces, all package sources/fixtures/pins and OCaml inputs.
+#
+#   scripts/check-ingest.sh          the full census (the nightly lane, about eight minutes)
+#   scripts/check-ingest.sh --smoke  the per-slice form: the 408 printed programs and a
+#                                    small foreign corpus through both readers, the
+#                                    type check, the bun tests and the README check;
+#                                    no coverage pins, no inclusion, no rewrites, no
+#                                    OCaml decode, and no stamp (about a minute)
 set -euo pipefail
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$repo_root"
+smoke=0
+if [[ "${1:-}" = "--smoke" ]]; then smoke=1; shift; fi
 . scripts/lib/portable.sh
 . scripts/lib/stamp.sh
 export LEAN_NUM_THREADS=3
@@ -35,6 +44,16 @@ key="$(stamp_key "$0" scripts/lib ts/eff/*.ts ts/eff/ingest ts/eff/test ts/eff/p
   harness/truth/IngestPrint.lean harness/truth/run-truth.ts harness/truth/prelude.ts \
   "$stamp_build_lib/Tools/Corpus.trace" ocaml/eff lean-toolchain \
   "$(stamp_fact bun "$(bun --version)")" "$(stamp_fact node "$(node --version)")")"
+if [[ "$smoke" = 1 ]]; then
+  # The printed half of `cli.ts gate`; the constructed foreign corpus is one fixed size
+  # (22,986 modules, pinned by check-corpus.ts) and belongs to the full run.
+  lean_run tools/Tools/Corpus.lean "$work/printed" 400 4
+  bun ts/eff/ingest/check-corpus.ts printed "$work/printed"
+  (cd ts/eff && bun run typecheck && bun test)
+  bun ts/eff/ingest/render-readme.ts --check
+  printf 'PASS ingest (smoke): the 408 printed programs through both readers, the type check, the bun tests and the README check\n'
+  exit 0
+fi
 if stamp_hit ingest "$key"; then stamp_report ingest "$key"; exit 0; fi
 lean_run tools/Tools/Corpus.lean "$work/printed" 400 4
 lean_run tools/Tools/Corpus.lean --foreign "$work/foreign" 400 4
