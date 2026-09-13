@@ -32,13 +32,9 @@ Only `Test/Audit/RuntimeCoverage.lean` changes.
 
 - [ ] The theorem exists in `src/Effect4/`, is a `theorem`, and `#print axioms`
       shows only `propext` and/or `Quot.sound`.
-- [ ] Add `w \`Name "receipt"` to the row's `witnesses`.
-- [ ] Add `#check (@Name : …)` in `StatementSnapshot`, transcribed from
-      `#check @Name` output, and append `Name` to `snapshotWitnesses` in the
-      same order.
+- [ ] Add `` `Name `` to the row's `witnesses`.
 - [ ] Set the row's coverage: `green` only if every clause of the census
       summary line has a theorem; otherwise `partial` and note what is missing.
-- [ ] `expectedRowTotal` and `expectedDenominator` still true.
 - [ ] `lake build Test.Audit.RuntimeCoverage` then the gate.
 
 ## Workflow: add or re-pin a census row
@@ -49,7 +45,7 @@ Only `scripts/generate-effect-runtime-census.sh` and the Lean row list change.
       the anchor occurs exactly once in the vendored file.
 - [ ] Compute the span digest with `sed -n 'a,bp' file | shasum -a 256`.
 - [ ] Add the Lean row: same id and kind, a manifest disposition, `absent`,
-      no witness. Update per-kind counts and totals in both places.
+      no witness.
 - [ ] `scripts/generate-effect-runtime-census.sh > generated/effect-runtime-census.tsv`
 - [ ] Gate passes. An upstream re-pin moves the whole vendored pin, its
       README digests, and every span digest together, in one commit.
@@ -61,6 +57,5 @@ Only `scripts/generate-effect-runtime-census.sh` and the Lean row list change.
 - Cite the frozen surface census in the retired FiberAssurance battery:
   it, its two scripts and its projection were retired on
   2026-09-04 with the machines they counted, so a declaration under
-  `src/Effect4/Machine/` now moves only the coverage join. Freeze a surface by
-  its `#check` ascription snapshot in the join instead.
+  `src/Effect4/Machine/` now moves only the coverage join.
 - Describe coverage as compatibility or equivalence with Effect.
