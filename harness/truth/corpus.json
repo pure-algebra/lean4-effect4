@@ -675,7 +675,10 @@
    "export const main: Effect.Effect<readonly [Host.Resource, number], never> = Effect.flatMap(Effect.scoped(Effect.acquireRelease(Host.acquire(), (a0, a1) => Host.close(a0))), (a0) => Effect.flatMap(Host.read(a0), (a1) => Effect.succeed(pair(a0, a1))))\n"},
   {"wellTyped": true,
    "type":
-   {"requiresEmpty": true, "requires": [], "error": "readonly [string, string]", "answer": "never"},
+   {"requiresEmpty": true,
+    "requires": [],
+    "error": "readonly [\"SqlError\", \"boom\"]",
+    "answer": "never"},
    "runSync":
    {"sync": true,
     "exitKind": "fail",
@@ -699,7 +702,7 @@
    "exprRefusal": null,
    "expr": "Effect.fail(pair(\"SqlError\", \"boom\"))",
    "decl":
-   "export const main: Effect.Effect<never, readonly [string, string]> = Effect.fail(pair(\"SqlError\", \"boom\"))\n"},
+   "export const main: Effect.Effect<never, readonly [\"SqlError\", \"boom\"]> = Effect.fail(pair(\"SqlError\", \"boom\"))\n"},
   {"wellTyped": true,
    "type":
    {"requiresEmpty": true,

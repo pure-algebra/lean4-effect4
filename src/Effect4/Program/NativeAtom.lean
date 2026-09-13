@@ -82,6 +82,15 @@ def arity : NativeAtom → Option Nat
   | .add | .lt | .eq | .pair | .boolOr | .boolAnd => some 2
   | .strings => none
 
+/-- Whether the atom's parameters are const-generic (DI-55, the prelude's
+`pair<const A, const B>`): a string literal argument keeps its literal type under the literal
+rule (`litArgTy`, DI-15). Only `pair` is; every other atom widens a literal to `string`, as
+TypeScript does at a non-`const` parameter. -/
+def constGeneric : NativeAtom → Bool
+  | .pair => true
+  | .succ | .pred | .isZero | .boolNot | .add | .lt | .eq | .fst | .snd | .strings
+  | .causeIsFail | .causeError | .causeIsDie | .causeIsInterrupt | .boolOr | .boolAnd => false
+
 /-- Schemes are explicit none; generators must supply and check their target arms. -/
 def mono : NativeAtom → Option (List Ty × Ty)
   | .succ | .pred => some ([.nat], .nat)
@@ -117,27 +126,50 @@ def eval : NativeAtom → List Val → Option Val
   | .causeIsFail, _ | .causeError, _ | .causeIsDie, _ | .causeIsInterrupt, _
   | .boolOr, _ | .boolAnd, _ => none
 
+/-- The typing of an application by its argument types (DI-40; DI-15, the 2026-09-12 clause).
+A fixed-signature atom accepts each argument at a subtype of its parameter (`Ty.sub`:
+TypeScript assignability at a call site), so `succ` takes a `nat` and therefore a `never`,
+and `eq` takes two naturals or two strings and therefore two string literals — which is what
+`eq (fst (pair "A" m)) "A"` needs once `pair`'s literal arguments type at their literals.
+`pair` is polymorphic and answers the product of exactly the types it is given; `fst`/`snd`
+project a product; `strings` takes any number of string-typed arguments; the cause queries
+take a `causeOf`/`exitOf` and are unchanged. -/
 def typeOf : NativeAtom → List Ty → Option Ty
-  | .succ, [.nat] => some .nat
-  | .pred, [.nat] => some .nat
-  | .isZero, [.nat] => some .bool
-  | .boolNot, [.bool] => some .bool
-  | .add, [.nat, .nat] => some .nat
-  | .lt, [.nat, .nat] => some .bool
-  | .eq, [.nat, .nat] => some .bool
-  | .eq, [.string, .string] => some .bool
+  | .succ, [a] => if a.sub .nat then some .nat else none
+  | .pred, [a] => if a.sub .nat then some .nat else none
+  | .isZero, [a] => if a.sub .nat then some .bool else none
+  | .boolNot, [a] => if a.sub .bool then some .bool else none
+  | .add, [a, b] => if a.sub .nat && b.sub .nat then some .nat else none
+  | .lt, [a, b] => if a.sub .nat && b.sub .nat then some .bool else none
+  | .eq, [a, b] =>
+    if (a.sub .nat && b.sub .nat) || (a.sub .string && b.sub .string) then some .bool else none
   | .pair, [a, b] => some (.prod a b)
   | .fst, [.prod a _] => some a
   | .snd, [.prod _ b] => some b
-  | .strings, tys => if tys.all (· == .string) then some (.list .string) else none
+  | .strings, tys => if tys.all (·.sub .string) then some (.list .string) else none
   | .causeIsFail, [input] | .causeIsDie, [input] | .causeIsInterrupt, [input] =>
       (causeInputError? input).map fun _ => .bool
   | .causeError, [input] => (causeInputError? input).map Ty.option
-  | .boolOr, [.bool, .bool] | .boolAnd, [.bool, .bool] => some .bool
+  | .boolOr, [a, b] | .boolAnd, [a, b] => if a.sub .bool && b.sub .bool then some .bool else none
   | .succ, _ | .pred, _ | .isZero, _ | .boolNot, _ | .add, _ | .lt, _ | .eq, _
   | .pair, _ | .fst, _ | .snd, _
   | .causeIsFail, _ | .causeError, _ | .causeIsDie, _ | .causeIsInterrupt, _
   | .boolOr, _ | .boolAnd, _ => none
+
+/-- A monomorphic row's typing is exactly argument-wise subsumption (`mono`, `typeOf`). -/
+theorem typeOf_mono (atom : NativeAtom) (args answer : _) (h : atom.mono = some (args, answer))
+    (tys : List Ty) :
+    typeOf atom tys =
+      if tys.length = args.length ∧ (tys.zip args).all (fun (a, e) => a.sub e) then some answer
+      else none := by
+  cases atom <;> simp only [mono, Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at h
+  all_goals obtain ⟨rfl, rfl⟩ := h
+  all_goals
+    match tys with
+    | [] => rfl
+    | [_] => simp [typeOf]
+    | [_, _] => simp [typeOf]
+    | _ :: _ :: _ :: _ => rfl
 
 end NativeAtom
 end Effect4.Program

@@ -38,7 +38,7 @@ let cases =
 let () =
   List.iter
     (fun (name, args, expected) ->
-      if Eff_native.atom_ty name args <> expected then
+      if Eff_native.atom_ty Eff_typing.sub name args <> expected then
         failwith ("native query typing disagrees: " ^ name))
     cases;
   Printf.printf "PASS: %d independent emitted native-query controls\n" (List.length cases)

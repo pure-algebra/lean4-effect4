@@ -355,15 +355,19 @@ def monoAtoms : List (String × List Ty × Ty) :=
   NativeAtom.all.filterMap fun atom => atom.mono.map fun (args, answer) =>
     (atom.name, args, answer)
 
-/-- The polymorphic and variadic atoms (`pair`, `fst`, `snd`, `strings`) as OCaml arms, and
-the probes that check them and the refusals against `nativeAtomTy`. -/
+/-- The polymorphic and variadic atoms (`pair`, `fst`, `snd`, `strings`, `eq`, the cause
+queries) as OCaml arms, and the probes that check them and the refusals against
+`nativeAtomTy`. The emitted `atom_ty` takes the subtype relation `sub` as its first
+parameter (part 4, DI-15: a fixed-signature atom accepts an argument at a subtype of its
+parameter, `NativeAtom.typeOf`), so the generated module never re-states `Ty.sub`; the
+hand-written `Eff_typing.sub` is what the checker passes. -/
 def polyArm (atom : NativeAtom) : Option String :=
   match atom with
   | .pair => some s!"  | {ostr atom.name}, [a; b] -> Some ({octor "ty" "prod"} (a, b))"
   | .fst => some s!"  | {ostr atom.name}, [{octor "ty" "prod"} (a, _)] -> Some a"
   | .snd => some s!"  | {ostr atom.name}, [{octor "ty" "prod"} (_, b)] -> Some b"
-  | .strings => some s!"  | {ostr atom.name}, tys when List.for_all (fun t -> t = {octor "ty" "string"}) tys -> Some ({octor "ty" "list"} {octor "ty" "string"})"
-  | .eq => some s!"  | {ostr atom.name}, [{octor "ty" "nat"}; {octor "ty" "nat"}] | {ostr atom.name}, [{octor "ty" "string"}; {octor "ty" "string"}] -> Some {octor "ty" "bool"}"
+  | .strings => some s!"  | {ostr atom.name}, tys when List.for_all (fun t -> sub t {octor "ty" "string"}) tys -> Some ({octor "ty" "list"} {octor "ty" "string"})"
+  | .eq => some s!"  | {ostr atom.name}, [a; b] when (sub a {octor "ty" "nat"} && sub b {octor "ty" "nat"}) || (sub a {octor "ty" "string"} && sub b {octor "ty" "string"}) -> Some {octor "ty" "bool"}"
   | .causeIsFail | .causeIsDie | .causeIsInterrupt =>
     some s!"  | {ostr atom.name}, [{octor "ty" "causeOf"} _] | {ostr atom.name}, [{octor "ty" "exitOf"} (_, _)] -> Some {octor "ty" "bool"}"
   | .causeError =>
@@ -371,6 +375,18 @@ def polyArm (atom : NativeAtom) : Option String :=
   | .succ | .pred | .isZero | .boolNot | .add | .lt | .boolOr | .boolAnd => none
 
 def polyArms : List String := NativeAtom.all.filterMap polyArm
+
+/-- A monomorphic row as an OCaml arm: one pattern variable per parameter, each guarded by
+`sub` against the parameter's type (`NativeAtom.typeOf_mono`). -/
+def monoArm (n : String) (args : List Ty) (ans : Ty) : String :=
+  let vars := (List.range args.length).map fun i => s!"a{i}"
+  let guards := (vars.zip args).map fun (v, t) => s!"sub {v} {tyO t}"
+  let guard := if guards.isEmpty then "" else " when " ++ " && ".intercalate guards
+  s!"  | {ostr n}, [{"; ".intercalate vars}]{guard} -> Some {tyO ans}"
+
+/-- The const-generic atoms by name (`NativeAtom.constGeneric`, the literal rule's flag). -/
+def constAtomNames : List String :=
+  (NativeAtom.all.filter NativeAtom.constGeneric).map NativeAtom.name
 
 /-- Independent consumer omission check: the authority is the full native enum. -/
 def checkAtomCoverage (consumerNames : List String) : Except String Unit := do
@@ -390,6 +406,12 @@ def atomProbes : List (String × List Ty × Option Ty) :=
   , ("lt", [.nat, .bool], none), ("isZero", [.bool], none), ("pred", [.nat, .nat], none)
   , ("eq", [.nat, .nat], some .bool), ("eq", [.string, .string], some .bool)
   , ("eq", [.string, .nat], none), ("eq", [], none)
+  -- subsumption at fixed-signature atoms (part 4, DI-15): a subtype of the parameter is
+  -- accepted, so a literal is an `eq` string and `never` is anything
+  , ("eq", [.lit "a", .lit "b"], some .bool), ("eq", [.lit "a", .string], some .bool)
+  , ("eq", [.lit "a", .nat], none), ("succ", [.never], some .nat)
+  , ("add", [.never, .nat], some .nat), ("strings", [.lit "x", .string], some (.list .string))
+  , ("not", [.never], some .bool), ("lt", [.nat, .string], none)
   , ("causeIsFail", [.causeOf .string], some .bool), ("causeIsFail", [.exitOf .nat .string], some .bool)
   , ("causeIsDie", [.causeOf .never], some .bool), ("causeIsDie", [.exitOf .nat .never], some .bool)
   , ("causeIsInterrupt", [.causeOf .never], some .bool), ("causeIsInterrupt", [.exitOf .nat .never], some .bool)
@@ -419,9 +441,12 @@ def emitNative (nullaryOps fnOps stratOps : Nat) : String :=
   header "Eff_native: the native alphabet as data. atom names and monomorphic metadata project the complete NativeAtom inventory (src/Effect4/Program/NativeAtom.lean). atom_ty is checked against nativeAtomTy: every enum member requires exactly one target arm, monomorphic rows are evaluated, and scheme arms are checked on finite probes (a disagreement or omission aborts). row_of is NativeOp.row evaluated on the finite built-in alphabet, with the empty-table placeholder for external indices (the constructor table checks both classes). scope_key is nativeScopeKey." ++
   "open Eff_types\n\n" ++
   "let atom_names : string list = " ++ listO (NativeAtom.names.map ostr) ++ "\n\n" ++
-  "let atom_ty (name : string) (args : ty list) : ty option =\n  match name, args with\n" ++
-  "\n".intercalate (monoAtoms.map fun (n, args, ans) =>
-    s!"  | {ostr n}, [{"; ".intercalate (args.map tyO)}] -> Some {tyO ans}") ++ "\n" ++
+  "(* The const-generic atoms (NativeAtom.constGeneric): a string literal argument keeps its literal type (the literal rule, DI-15). *)\n" ++
+  "let const_atoms : string list = " ++ listO (constAtomNames.map ostr) ++ "\n" ++
+  "let const_atom (name : string) : bool = List.mem name const_atoms\n\n" ++
+  "(* A fixed-signature atom accepts each argument at a subtype of its parameter (NativeAtom.typeOf, DI-15); the relation is the caller's (Eff_typing.sub). *)\n" ++
+  "let atom_ty (sub : ty -> ty -> bool) (name : string) (args : ty list) : ty option =\n  match name, args with\n" ++
+  "\n".intercalate (monoAtoms.map fun (n, args, ans) => monoArm n args ans) ++ "\n" ++
   "\n".intercalate polyArms ++ "\n  | _ -> None\n\n" ++
   s!"(* {nullaryOps} nullary operations, {fnOps} over every fn_name, {stratOps} over every finalizer_strategy: {allOps.length} values. *)\n" ++
   "let all_ops : native_op list =\n  [ " ++ "\n  ; ".intercalate (allOps.map opO) ++ " ]\n\n" ++

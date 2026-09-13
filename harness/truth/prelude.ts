@@ -50,8 +50,12 @@ export const add = (a: number, b: number): number => a + b
 export const lt = (a: number, b: number): boolean => a < b
 /** NativeAtom.eq on admitted natural or string pairs (DI-09). */
 export const eq = (a: number | string, b: number | string): boolean => a === b
-/** `"pair", [a, b] => Val.tuple [a, b]` — a two-element tuple, the wire's JSON array. */
-export const pair = <A, B>(a: A, b: B): readonly [A, B] => [a, b]
+/** `"pair", [a, b] => Val.tuple [a, b]` — a two-element tuple, the wire's JSON array. The
+ * type parameters are `const` (DI-55, DI-15's literal rule, part 4 2026-09-12): a string
+ * literal argument keeps its literal type, so `pair("A", m)` is `readonly ["A", string]` and
+ * `pair("A", "m")` is `readonly ["A", "m"]`, exactly what `NativeAtom.typeOf .pair` answers
+ * under `litArgTy`; a `string` variable stays `string`. The runtime body is unchanged. */
+export const pair = <const A, const B>(a: A, b: B): readonly [A, B] => [a, b]
 /** `"fst", [exitCons a _] => a` */
 export const fst = <A, B>(p: readonly [A, B]): A => p[0]
 /** `"snd", [exitCons _ (exitCons b _)] => b` */

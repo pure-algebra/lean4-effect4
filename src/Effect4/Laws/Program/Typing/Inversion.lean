@@ -63,7 +63,7 @@ theorem inv_suspend (sig : Signature Op) (env : TyEnv) (body : Eff Op) :
 theorem inv_perform (sig : Signature Op) (env : TyEnv) (op : Op) (request : Term) :
     ∀ t, effTy sig env (.perform op request) = some t →
       ∃ requestTy, sig.dom op = true ∧ termTy sig env request = some requestTy ∧
-        requestTy.normalize = (sig.rowOf op).request.normalize ∧
+        Ty.sub requestTy.normalize (sig.rowOf op).request.normalize = true ∧
         t = ⟨(sig.rowOf op).answer, (sig.rowOf op).error,
               Requirement.ofList (sig.rowOf op).requires⟩ := by
   refine Option.of_triple ?_
@@ -167,7 +167,7 @@ theorem inv_callback (sig : Signature Op) (env : TyEnv) (register : Op) (request
     ∀ t, effTy sig env (.callback register request) = some t →
       ∃ requestTy, sig.dom register = true ∧ (sig.rowOf register).kind = .async ∧
         termTy sig env request = some requestTy ∧
-        requestTy.normalize = (sig.rowOf register).request.normalize ∧
+        Ty.sub requestTy.normalize (sig.rowOf register).request.normalize = true ∧
         t = ⟨(sig.rowOf register).answer, (sig.rowOf register).error,
               Requirement.ofList (sig.rowOf register).requires⟩ := by
   refine Option.of_triple ?_
@@ -227,7 +227,7 @@ theorem inv_provideService (sig : Signature Op) (env : TyEnv) (key : ServiceKey)
     (body : Eff Op) :
     ∀ t, effTy sig env (.provideService key value body) = some t →
       ∃ ty valueTy b, sig.serviceTy key = some ty ∧ termTy sig env value = some valueTy ∧
-        valueTy.normalize = ty.normalize ∧
+        Ty.sub valueTy.normalize ty.normalize = true ∧
         effTy sig env body = some b ∧
         t = ⟨b.answer, b.error, Row.diff b.requires (Requirement.single key)⟩ := by
   refine Option.of_triple ?_

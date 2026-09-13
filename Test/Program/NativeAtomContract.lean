@@ -35,6 +35,17 @@ open Effect4.Program
 #guard nativeAtomTy "succ" [] = none
 #guard nativeAtomTy "pair" [.nat, .bool] = some (.prod .nat .bool)
 #guard nativeAtomTy "strings" [] = some (.list .string)
+-- subsumption at a fixed-signature atom (part 4, DI-15): a subtype of the parameter is
+-- accepted, a literal is a string, `never` is anything; the const-generic flag names `pair`
+#guard nativeAtomTy "succ" [.never] = some .nat
+#guard nativeAtomTy "eq" [.lit "a", .lit "b"] = some .bool
+#guard nativeAtomTy "eq" [.lit "a", .string] = some .bool
+#guard nativeAtomTy "eq" [.lit "a", .nat] = none
+#guard nativeAtomTy "strings" [.lit "x", .string] = some (.list .string)
+#guard nativeConstAtom "pair"
+#guard !nativeConstAtom "eq"
+#guard NativeAtom.constGeneric .pair
+#guard !NativeAtom.constGeneric .fst
 
 /-- Every successful native typing names an inventoried atom, for arbitrary input types. -/
 theorem typed_name_known (name : String) (args : List Ty) (answer : Ty)

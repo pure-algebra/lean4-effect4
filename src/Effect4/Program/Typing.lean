@@ -61,24 +61,83 @@ structure Signature (Op : Type) where
   serviceTy : ServiceKey → Option Ty
   /-- The row positions admitted by this signature. -/
   dom : Op → Bool := fun _ => true
+  /-- The atoms whose parameters are const-generic (the prelude's `pair<const A, const B>`,
+  DI-55): a string literal argument of such an atom keeps its literal type (`litArgTy`, the
+  literal rule of DI-15). No atom is const-generic unless the signature says so. -/
+  constAtom : String → Bool := fun _ => false
 
 variable {Op : Type}
 
+/-- The literal rule (DI-15, amended 2026-09-11: "mirror TypeScript"). A string literal types
+as `string` in general position (`Lit.ty`, the rule `termTy` uses) and keeps its literal type
+`lit s` exactly as a direct argument of a const-generic atom (`Signature.constAtom`), which is
+TypeScript's `const` type-parameter rule: `pair("A", m)` is `readonly ["A", string]`,
+`succeed "x"` stays `string`. Every other literal is its `Lit.ty` in both positions. The rule
+is stated once, here; `termsTy` applies it to the direct arguments of an application and
+nowhere else. -/
+def litArgTy (const : Bool) : Lit → Ty
+  | .str s => if const then .lit s else .string
+  | .unit => .unit
+  | .nat _ => .nat
+  | .bool _ => .bool
+
 mutual
-  /-- The type of a pure term. -/
+  /-- The type of a pure term. An application's arguments are typed under the atom's
+  const-generic flag (`Signature.constAtom`), so a string literal argument of `pair` is a
+  `lit` and a string literal argument of any other atom is a `string`. -/
   def termTy (sig : Signature Op) (env : TyEnv) : Term → Option Ty
     | .var index => env[index]?
     | .lit value => some value.ty
     | .app atom args => do
-      let tys ← termsTy sig env args
+      let tys ← termsTy sig env (sig.constAtom atom) args
       sig.atomOf atom tys
-  def termsTy (sig : Signature Op) (env : TyEnv) : Terms → Option (List Ty)
+  /-- The argument types of an application: a literal argument by the literal rule
+  (`litArgTy`, under the atom's const flag), every other argument by `termTy`. -/
+  def termsTy (sig : Signature Op) (env : TyEnv) (const : Bool) : Terms → Option (List Ty)
     | .nil => some []
-    | .cons head tail => do
-      let t ← termTy sig env head
-      let rest ← termsTy sig env tail
+    | .cons (.lit value) tail => do
+      let rest ← termsTy sig env const tail
+      some (litArgTy const value :: rest)
+    | .cons (.var index) tail => do
+      let t ← termTy sig env (.var index)
+      let rest ← termsTy sig env const tail
+      some (t :: rest)
+    | .cons (.app atom args) tail => do
+      let t ← termTy sig env (.app atom args)
+      let rest ← termsTy sig env const tail
       some (t :: rest)
 end
+
+/-- The type of one argument of an application: the literal rule for a literal, `termTy` for
+a variable or a nested application. `termsTy` is this, argument by argument
+(`termsTy_cons`). -/
+def argTy (sig : Signature Op) (env : TyEnv) (const : Bool) : Term → Option Ty
+  | .lit value => some (litArgTy const value)
+  | .var index => termTy sig env (.var index)
+  | .app atom args => termTy sig env (.app atom args)
+
+/-- `termsTy` on a cons (`argTy` for the head), as nested `Option.bind`s. -/
+theorem termsTy_cons (sig : Signature Op) (env : TyEnv) (const : Bool) (head : Term)
+    (tail : Terms) :
+    termsTy sig env const (.cons head tail) =
+      (argTy sig env const head).bind fun t =>
+        (termsTy sig env const tail).bind fun rest => some (t :: rest) := by
+  cases head <;> rfl
+
+/-- The general rule for a literal in argument position, read back: outside a const-generic
+atom the literal rule is `Lit.ty`. -/
+theorem litArgTy_false (value : Lit) : litArgTy false value = value.ty := by
+  cases value <;> rfl
+
+/-- `argTy` answers either by the literal rule or by `termTy`: the case split the term laws
+take instead of a case split on the term. -/
+theorem argTy_cases (sig : Signature Op) (env : TyEnv) (const : Bool) (head : Term) (t : Ty)
+    (h : argTy sig env const head = some t) :
+    (∃ value, head = .lit value ∧ t = litArgTy const value) ∨ termTy sig env head = some t := by
+  cases head with
+  | lit value => exact Or.inl ⟨value, rfl, (Option.some.inj h).symm⟩
+  | var index => exact Or.inr h
+  | app atom args => exact Or.inr h
 
 /-- The error type a cause carries: its `fail` reasons; defects and interrupts contribute
 none (`Cause.die` and `Cause.interrupt` are outside `E`). -/
@@ -194,10 +253,12 @@ mutual
     -- index outside the supplied table is refused here rather than typed through the
     -- placeholder row, whose `request := .never` otherwise admits any request term typed
     -- `never` (`Native.lean:189-191`). The OCaml checker already refuses it categorically.
+    -- The request is admitted at a subtype of the row's request (DI-15, subsumption at the
+    -- row request; TypeScript assignability at the call site); the answer is the row's.
     | .perform op request => do
       let row := sig.rowOf op
       let r ← termTy sig env request
-      if sig.dom op = true ∧ r.normalize = row.request.normalize then
+      if sig.dom op = true ∧ Ty.sub r.normalize row.request.normalize = true then
         some ⟨row.answer, row.error, Requirement.ofList row.requires⟩
       else none
     | .bind first rest => do
@@ -258,7 +319,8 @@ mutual
     | .callback register request => do
       let row := sig.rowOf register
       let r ← termTy sig env request
-      if sig.dom register = true ∧ row.kind = .async ∧ r.normalize = row.request.normalize then
+      if sig.dom register = true ∧ row.kind = .async ∧
+          Ty.sub r.normalize row.request.normalize = true then
         some ⟨row.answer, row.error, Requirement.ofList row.requires⟩
       else none
     | .awaitFiber fiber mode => do
@@ -286,12 +348,14 @@ mutual
     -- from the service table
     | .service key => (sig.serviceTy key).map fun ty => ⟨ty, .never, Requirement.single key⟩
     -- `Effect.provideService(self, key, value)`: `Effect<A, E, Exclude<R, I>>` (`:2202`), the
-    -- value typed at the key's carrier
+    -- value admitted at a subtype of the key's carrier (DI-15, subsumption at service
+    -- provision)
     | .provideService key value body => do
       let ty ← sig.serviceTy key
       let v ← termTy sig env value
       let b ← effTy sig env body
-      if v.normalize = ty.normalize then some ⟨b.answer, b.error, Row.diff b.requires (Requirement.single key)⟩
+      if Ty.sub v.normalize ty.normalize = true then
+        some ⟨b.answer, b.error, Row.diff b.requires (Requirement.single key)⟩
       else none
 
   /-- The signature of a layer term, structural; `none` refuses an ill-typed body or a literal
@@ -486,17 +550,23 @@ mutual
     | .var index => lookup_weaken pre post inserted index
     | .lit _ => rfl
     | .app atom args => by
-      simp only [Term.weaken, termTy, termsTy_weaken sig pre post inserted args]
+      simp only [Term.weaken, termTy, termsTy_weaken sig pre post inserted _ args]
 
   theorem termsTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty)
-      (terms : Terms) :
-      termsTy sig (pre ++ inserted :: post) (Terms.weaken pre.length terms) =
-        termsTy sig (pre ++ post) terms :=
+      (const : Bool) (terms : Terms) :
+      termsTy sig (pre ++ inserted :: post) const (Terms.weaken pre.length terms) =
+        termsTy sig (pre ++ post) const terms :=
     match terms with
     | .nil => rfl
-    | .cons head tail => by
-      simp only [Terms.weaken, termsTy, termTy_weaken sig pre post inserted head,
-        termsTy_weaken sig pre post inserted tail]
+    | .cons (.lit _) tail => by
+      simp only [Terms.weaken, Term.weaken, termsTy, termsTy_weaken sig pre post inserted const tail]
+    | .cons (.var index) tail => by
+      simp only [Terms.weaken, Term.weaken, termsTy, termTy, lookup_weaken,
+        termsTy_weaken sig pre post inserted const tail]
+    | .cons (.app atom args) tail => by
+      simp only [Terms.weaken, Term.weaken, termsTy, termTy,
+        termsTy_weaken sig pre post inserted _ args,
+        termsTy_weaken sig pre post inserted const tail]
 end
 
 theorem causeTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty)
@@ -603,7 +673,8 @@ theorem effTy_provideService_twice (sig : Signature Op) (env : TyEnv) (key : Ser
           exact Row.diff_single_twice _ _
         · cases hinner
   generalize hI : Eff.provideService key far body = I at hinner ⊢
-  simp only [effTy, hty, Option.bind_eq_bind, Option.bind_some, hnear, hinner, if_true]
+  simp only [effTy, hty, Option.bind_eq_bind, Option.bind_some, hnear, hinner, Ty.sub_refl,
+    if_true]
   rw [hreq]
 
 /-- A layer is well-typed when `layerTy` answers. -/

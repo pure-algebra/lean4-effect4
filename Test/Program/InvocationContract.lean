@@ -230,13 +230,19 @@ negative, the reminder that a valid row is not a certificate for the request ter
 The witness of `docs/research/2026-09-09-scout-proof-statements.md` §2: the bound variable has
 type `never` (the answer of `fail`), and `never` is exactly the external placeholder's
 declared request, so the request check passed and the program typed at the empty table. It is
-refused now, and this is the only class of program whose verdict the guards changed. -/
+refused now, and this is the only class of program whose verdict the guards changed.
+
+Part 4 (2026-09-12, DI-15 subsumption at the row request): at a table that *does* supply the
+row the same program is in the domain, and a `never` request is a subtype of every request
+(TypeScript assignability), so it types there — the domain check, not the request check, is
+what refuses it at the empty table. The verdict change is reported under DI-60 in the part-4
+receipt. -/
 
 def counterexample : Api.Program :=
   .bind (.fail (.lit (.nat 1))) (.perform (.external 0) (.var 0))
 
 #guard Api.typeOf counterexample = none
-#guard (Api.typeOf counterexample [goodRow]).isNone
+#guard (Api.typeOf counterexample [goodRow]).isSome
 -- In domain and typed, once the table supplies the row.
 #guard (Api.typeOf (.bind (.fail (.lit (.nat 1))) (.perform (.external 0) (.lit (.nat 7))))
   [goodRow]).isSome

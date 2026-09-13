@@ -103,9 +103,11 @@ section Statements
     Fits env tys → termTy nativeSignature tys t = some ty → evalTerm env t = some v →
       Val.hasTy v ty = true)
 
+-- Part 4 (2026-09-12): the argument list is typed under the atom's const-generic flag, so the
+-- list forms quantify over it (`termsTy` carries the flag; `argTy` reads a literal argument).
 #check (@Effect4.Program.evalTerms_hasTy :
-  ∀ (ts : Terms) (env : List Val) (tys : TyEnv) (tl : List Ty) (vs : List Val),
-    Fits env tys → termsTy nativeSignature tys ts = some tl → evalTerms env ts = some vs →
+  ∀ (ts : Terms) (env : List Val) (tys : TyEnv) (const : Bool) (tl : List Ty) (vs : List Val),
+    Fits env tys → termsTy nativeSignature tys const ts = some tl → evalTerms env ts = some vs →
       Fits vs tl)
 
 #check (@Effect4.Program.evalTerm_isSome :
@@ -113,8 +115,9 @@ section Statements
     Fits env tys → termTy nativeSignature tys t = some ty → (evalTerm env t).isSome = true)
 
 #check (@Effect4.Program.evalTerms_isSome :
-  ∀ (ts : Terms) (env : List Val) (tys : TyEnv) (tl : List Ty),
-    Fits env tys → termsTy nativeSignature tys ts = some tl → (evalTerms env ts).isSome = true)
+  ∀ (ts : Terms) (env : List Val) (tys : TyEnv) (const : Bool) (tl : List Ty),
+    Fits env tys → termsTy nativeSignature tys const ts = some tl →
+      (evalTerms env ts).isSome = true)
 
 #check (@Effect4.Program.syncOpOf_isSome :
   ∀ (op : NativeOp) (v : Val),
@@ -467,6 +470,53 @@ section Atoms
 -- an ill-typed application is refused by the typing and by the evaluation
 #guard termTy nativeSignature [] (.app "succ" (.cons (.lit (.bool true)) .nil)) = none
 #guard evalTerm [] (.app "succ" (.cons (.lit (.bool true)) .nil)) = none
+
+/-! ### The literal rule and subsumption (part 4, 2026-09-12; DI-15, DI-55)
+
+A string literal is `string` in general position and `lit` as an argument of `pair`
+(`litArgTy`, `Signature.constAtom`); a fixed-signature atom accepts an argument at a subtype
+of its parameter (`NativeAtom.typeOf`). The pins the packet asks for: `pair x y` with `x` a
+`string` variable stays `prod string string`; `eq (fst (pair "A" m)) "A"` is `bool`;
+`fail (pair "A" m)` puts `prod (lit "A") string` in the error column and `supportedErrTy`
+accepts it — as it accepts the literal message `pair("SqlError", "boom")`, which the
+const-generic prelude `pair` types at `readonly ["SqlError", "boom"]`. -/
+
+-- general position: `string`; `pair`'s argument: `lit`
+#guard termTy nativeSignature [] (.lit (.str "A")) = some .string
+#guard termTy nativeSignature [.string]
+  (.app "pair" (.cons (.lit (.str "A")) (.cons (.var 0) .nil))) = some (.prod (.lit "A") .string)
+#guard termTy nativeSignature []
+  (.app "pair" (.cons (.lit (.str "A")) (.cons (.lit (.str "m")) .nil)))
+  = some (.prod (.lit "A") (.lit "m"))
+-- a `string` variable stays `string`
+#guard termTy nativeSignature [.string, .string]
+  (.app "pair" (.cons (.var 0) (.cons (.var 1) .nil))) = some (.prod .string .string)
+-- every other atom sees a literal at `string`; `eq` takes two strings, so two literals
+#guard termTy nativeSignature []
+  (.app "eq" (.cons (.lit (.str "a")) (.cons (.lit (.str "b")) .nil))) = some .bool
+-- subsumption at a fixed-signature atom: `eq (fst (pair "A" m)) "A"`
+#guard termTy nativeSignature [.string]
+  (.app "eq" (.cons
+    (.app "fst" (.cons (.app "pair" (.cons (.lit (.str "A")) (.cons (.var 0) .nil))) .nil))
+    (.cons (.lit (.str "A")) .nil))) = some .bool
+-- `never` is a subtype of every parameter; a literal is not a `nat`
+#guard termTy nativeSignature [.never] (.app "succ" (.cons (.var 0) .nil)) = some .nat
+#guard termTy nativeSignature [.lit "x"] (.app "succ" (.cons (.var 0) .nil)) = none
+-- the literal rule evaluates, and the value inhabits the literal type
+#guard evalTerm [Val.str "m"] (.app "pair" (.cons (.lit (.str "A")) (.cons (.var 0) .nil)))
+  = some (Val.tuple [Val.str "A", Val.str "m"])
+#guard Val.hasTy (Val.tuple [Val.str "A", Val.str "m"]) (.prod (.lit "A") .string)
+-- `fail (pair "A" m)`: the error column and its support
+#guard typeOf nativeSignature
+  (.bind (.succeed (.lit (.str "m")))
+    (.fail (.app "pair" (.cons (.lit (.str "A")) (.cons (.var 0) .nil)))))
+  = some ⟨.never, .prod (.lit "A") .string, .empty⟩
+#guard supportedErrTy (.prod (.lit "A") .string)
+#guard supportedErrTy (.prod (.lit "A") (.lit "boom"))
+#guard !(supportedErrTy (.prod (.lit "A") .nat))
+#guard typeOf nativeSignature
+  (.fail (.app "pair" (.cons (.lit (.str "SqlError")) (.cons (.lit (.str "boom")) .nil))))
+  = some ⟨.never, .prod (.lit "SqlError") (.lit "boom"), .empty⟩
 
 end Atoms
 

@@ -93,11 +93,13 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
   (`git:62c04d9:src/Effect4/StdLib/Links.lean`). Two premises, both explicit: the operation is
   in the signature's domain (DI-54 — an index outside the supplied table is refused here, not
   typed through the placeholder row whose `request := .never` admits any `never` term), and the
-  request term has exactly the row's request type. -/
+  request term's type is a subtype of the row's request type (DI-15, subsumption at the row
+  request: TypeScript assignability at the call site; both sides canonical). The answer and
+  error columns are the row's own. -/
   | perform {env : TyEnv} {op : Op} {request : Term} {requestTy : Ty} :
       sig.dom op = true →
       termTy sig env request = some requestTy →
-      requestTy.normalize = (sig.rowOf op).request.normalize →
+      Ty.sub requestTy.normalize (sig.rowOf op).request.normalize = true →
       HasTy sig env (.perform op request)
         ⟨(sig.rowOf op).answer, (sig.rowOf op).error,
           Requirement.ofList (sig.rowOf op).requires⟩
@@ -192,7 +194,7 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
       sig.dom register = true →
       (sig.rowOf register).kind = .async →
       termTy sig env request = some requestTy →
-      requestTy.normalize = (sig.rowOf register).request.normalize →
+      Ty.sub requestTy.normalize (sig.rowOf register).request.normalize = true →
       HasTy sig env (.callback register request)
         ⟨(sig.rowOf register).answer, (sig.rowOf register).error,
           Requirement.ofList (sig.rowOf register).requires⟩
@@ -239,13 +241,14 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
   | service {env : TyEnv} {key : ServiceKey} {ty : Ty} :
       sig.serviceTy key = some ty →
       HasTy sig env (.service key) ⟨ty, .never, Requirement.single key⟩
-  /-- `Effect.provideService` (`:2202-2232`): the value must have the key's carrier type, and
-  the key is discharged from the body's row. -/
+  /-- `Effect.provideService` (`:2202-2232`): the value's type must be a subtype of the key's
+  carrier (DI-15, subsumption at service provision), and the key is discharged from the
+  body's row. -/
   | provideService {env : TyEnv} {key : ServiceKey} {value : Term} {body : Eff Op}
       {ty valueTy : Ty} {b : EffTy} :
       sig.serviceTy key = some ty →
       termTy sig env value = some valueTy →
-      valueTy.normalize = ty.normalize →
+      Ty.sub valueTy.normalize ty.normalize = true →
       HasTy sig env body b →
       HasTy sig env (.provideService key value body)
         ⟨b.answer, b.error, Row.diff b.requires (Requirement.single key)⟩

@@ -231,27 +231,51 @@ let lit_ty : lit -> ty = function
   | Lit_bool _ -> Ty_bool
   | Lit_str _ -> Ty_string
 
+(* The literal rule (Typing.lean `litArgTy`, DI-15 amended 2026-09-11, part 4 2026-09-12):
+   a string literal keeps its literal type as a direct argument of a const-generic atom
+   (`Eff_native.const_atom`, the prelude's `pair<const A, const B>`) and is `string` in every
+   other position. *)
+let lit_arg_ty (const : bool) : lit -> ty = function
+  | Lit_str s -> if const then Ty_lit s else Ty_string
+  | l -> lit_ty l
+
 let rec term_ty (env : env) : term -> ty checked = function
   | Term_var i ->
     if i >= 0 && i < List.length env then Ok (List.nth env i)
     else refuse (Printf.sprintf "var %d: the environment has %d entries" i (List.length env))
   | Term_lit l -> Ok (lit_ty l)
   | Term_app (atom, args) ->
-    let* tys = terms_ty env args in
-    (match Eff_native.atom_ty atom tys with
+    let* tys = terms_ty env (Eff_native.const_atom atom) args in
+    (* a fixed-signature atom accepts each argument at a subtype of its parameter
+       (NativeAtom.typeOf, `Ty.sub`): the generated table takes the relation *)
+    (match Eff_native.atom_ty sub atom tys with
      | Some t -> Ok t
      | None -> refuse ("atom " ^ atom ^ ": refused at these argument types"))
 
-and terms_ty (env : env) : terms -> ty list checked = function
+(* Typing.lean `termsTy`: the direct arguments of an application, a literal by the literal
+   rule under the atom's const flag, everything else by `term_ty`. *)
+and terms_ty (env : env) (const : bool) : terms -> ty list checked = function
   | Terms_nil -> Ok []
+  | Terms_cons (Term_lit l, t) ->
+    let* xs = terms_ty env const t in
+    Ok (lit_arg_ty const l :: xs)
   | Terms_cons (h, t) ->
     let* x = term_ty env h in
-    let* xs = terms_ty env t in
+    let* xs = terms_ty env const t in
     Ok (x :: xs)
 
-(* DI-62: the closed error image; all three failure introductions consult this. *)
+(* Eff.lean `isTagTy`: a represented tag — string, string literal, or a union of them. *)
+let rec is_tag_ty : ty -> bool = function
+  | Ty_string | Ty_lit _ -> true
+  | Ty_union (l, r) -> is_tag_ty l && is_tag_ty r
+  | _ -> false
+
+(* DI-62: the closed error image (Eff.lean `rawSupportedErrTy`); all three failure
+   introductions consult this. A pair is represented when both components are string-valued
+   (part 4: a literal message beside a `string` one, `pair("SqlError", "boom")`). *)
 let rec supported_error_ty : ty -> bool = function
-  | Ty_never | Ty_nat | Ty_string | Ty_prod (Ty_string, Ty_string) -> true
+  | Ty_never | Ty_nat | Ty_string | Ty_lit _ -> true
+  | Ty_prod (a, b) -> is_tag_ty a && is_tag_ty b
   | Ty_union (l, r) -> supported_error_ty l && supported_error_ty r
   | _ -> false
 
@@ -310,8 +334,9 @@ let rec check_eff (env : env) (p : eff) : eff_ty checked =
   | Eff_perform (op, request) ->
     let row = Eff_native.row_of op in
     let* r = term_ty env request in
-    if normalize r = normalize row.row_request then Ok (row_answer row)
-    else refuse ("perform " ^ row.row_name ^ ": the request type is not the row's")
+    (* DI-15: the request at a subtype of the row's request, both canonical *)
+    if sub (normalize r) (normalize row.row_request) then Ok (row_answer row)
+    else refuse ("perform " ^ row.row_name ^ ": the request type is not a subtype of the row's")
   | Eff_bind (first, rest) ->
     let* f = check_eff env first in
     let* r = check_eff (env @ [ f.eff_ty_answer ]) rest in
@@ -377,8 +402,8 @@ let rec check_eff (env : env) (p : eff) : eff_ty checked =
   | Eff_callback (register, request) ->
     let row = Eff_native.row_of register in
     let* r = term_ty env request in
-    if row.row_kind = Row_kind_async && normalize r = normalize row.row_request then Ok (row_answer row)
-    else refuse ("callback " ^ row.row_name ^ ": the row is not async or the request type is not the row's")
+    if row.row_kind = Row_kind_async && sub (normalize r) (normalize row.row_request) then Ok (row_answer row)
+    else refuse ("callback " ^ row.row_name ^ ": the row is not async or the request type is not a subtype of the row's")
   | Eff_awaitFiber (fiber, mode) ->
     let* t = term_ty env fiber in
     (match fiber_ty t with
@@ -417,8 +442,9 @@ let rec check_eff (env : env) (p : eff) : eff_ty checked =
      | Some ty ->
        let* v = term_ty env value in
        let* b = check_eff env body in
-       if normalize v = normalize ty then Ok (mk b.eff_ty_answer b.eff_ty_error (req_diff b.eff_ty_requires (req_single key)))
-       else refuse "provideService: the value is not the key's carrier")
+       (* DI-15: the value at a subtype of the key's carrier *)
+       if sub (normalize v) (normalize ty) then Ok (mk b.eff_ty_answer b.eff_ty_error (req_diff b.eff_ty_requires (req_single key)))
+       else refuse "provideService: the value is not a subtype of the key's carrier")
 
 and check_stmts (env : env) (in_loop : bool) (body : stmts) : gen_ty checked =
   match body with

@@ -494,9 +494,16 @@ let () =
     (List.exists (fun l -> contains l "Effect4.Program.LayerTerms (layer_terms) inductive: nil cons(layer_term,layer_terms)") manifest);
   check "the manifest's NativeOp line ends with external(int)"
     (List.exists (fun l -> contains l "(native_op) inductive: refMake" && contains l "deferredAwait scopeMake(finalizer_strategy) sleep clockNow external(int)") manifest);
-  (* atoms *)
+  (* atoms: the generated table takes the subtype relation (part 4, DI-15 subsumption) *)
   let open Eff_native in
+  let atom_ty = atom_ty Eff_typing.sub in
   check "succ : nat -> nat" (atom_ty "succ" [ Ty_nat ] = Some Ty_nat);
+  check "a fixed-signature atom accepts a subtype (DI-15, part 4)"
+    (atom_ty "succ" [ Ty_never ] = Some Ty_nat
+     && atom_ty "eq" [ Ty_lit "a"; Ty_lit "b" ] = Some Ty_bool
+     && atom_ty "eq" [ Ty_lit "a"; Ty_string ] = Some Ty_bool
+     && atom_ty "eq" [ Ty_lit "a"; Ty_nat ] = None
+     && atom_ty "strings" [ Ty_lit "x" ] = Some (Ty_list Ty_string));
   check "the atoms no corpus program uses are still typed by the table"
     (atom_ty "pred" [ Ty_nat ] = Some Ty_nat
      && atom_ty "not" [ Ty_bool ] = Some Ty_bool

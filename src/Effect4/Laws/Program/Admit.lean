@@ -203,11 +203,6 @@ private theorem hasTy_rawSupported_allocation (ty : Ty) (v : Val) (allocated : L
   | never | nat | string | lit _ => rfl
   | prod a b _ _ =>
     obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hs
-    have hb' : b = .string := by
-      revert hb
-      cases b <;> intro hb <;> try contradiction
-      rfl
-    subst hb'
     simp only [Val.hasTy]
     cases v with
     | list vs =>
@@ -219,7 +214,8 @@ private theorem hasTy_rawSupported_allocation (ty : Ty) (v : Val) (allocated : L
         | cons y ys =>
           cases ys with
           | nil =>
-            simp only [hasTy_isTagTy_allocation a x allocated ha]
+            simp only [hasTy_isTagTy_allocation a x allocated ha,
+              hasTy_isTagTy_allocation b y allocated hb]
           | cons _ _ => rfl
     | _ => rfl
   | union a b iha ihb =>
@@ -256,11 +252,6 @@ private theorem valOfErr_errOf_rawSupported (ty : Ty) (v : Val) (allocated : Lis
     | _ => simp [Val.hasTy] at hv
   | prod a b _ _ =>
     obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hs
-    have hb' : b = .string := by
-      revert hb
-      cases b <;> intro hb <;> try contradiction
-      rfl
-    subst hb'
     cases v with
     | list vs =>
       cases vs with
@@ -275,7 +266,7 @@ private theorem valOfErr_errOf_rawSupported (ty : Ty) (v : Val) (allocated : Lis
             simp only [Val.hasTy, Bool.and_eq_true_iff] at hv
             obtain ⟨hx, hy⟩ := hv
             obtain ⟨s, rfl⟩ := isTagTy_string a x allocated ha hx
-            obtain ⟨m, rfl⟩ := Val.hasTy_string_inv hy
+            obtain ⟨m, rfl⟩ := isTagTy_string b y allocated hb hy
             rfl
     | _ => simp [Val.hasTy] at hv
   | union a b iha ihb =>

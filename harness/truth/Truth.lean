@@ -685,8 +685,11 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 #guard (tapeAnswers ["{\"fiber\":0,\"op\":\"unsafe\",\"request\":[],\"failed\":[\"UnknownError\",\"no such table: missing\"],\"error\":\"SqlError\"}"]).toOption =
   some [.ofExit (.failure (Cause.fail (.tagged "UnknownError" "no such table: missing")))]
 #guard (tapeAnswers ["{\"fiber\":0,\"op\":\"Sql.open\",\"request\":[\"/nowhere/x.db\"],\"died\":\"SQLiteError: unable to open database file\"}"]).toOption = none
--- the tagged failure types at the pair, evaluates to `Err.tagged`, and reads back
-#guard Api.typeOf pFailTagged = some ⟨.never, .prod .string .string, Env.Requirement.empty⟩
+-- the tagged failure types at the pair of its two literals (the literal rule, part 4: the
+-- const-generic prelude `pair` infers `readonly ["SqlError", "boom"]`), evaluates to
+-- `Err.tagged`, and reads back
+#guard Api.typeOf pFailTagged =
+  some ⟨.never, .prod (.lit "SqlError") (.lit "boom"), Env.Requirement.empty⟩
 #guard (Api.run pFailTagged 1000).exit = some (.failure (Cause.fail (.tagged "SqlError" "boom")))
 #guard Api.roundTrip pFailTagged = .ok pFailTagged
 -- the join's fixtures are well-typed, so they cross as declarations

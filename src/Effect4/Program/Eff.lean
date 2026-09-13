@@ -46,10 +46,14 @@ def isTagTy : Ty → Bool
 
 /-- The raw error profile represented without payload loss by `Err` (DI-15, DI-62).
 `never` admits no values; unions admit only represented columns. Defects and interruptions
-remain outside this error language. -/
+remain outside this error language. A pair is represented (`Err.tagged tag message`, two
+strings) when both its components are string-valued — `string` or a string literal — so the
+literal rule's `pair("SqlError", "boom") : readonly ["SqlError", "boom"]` (DI-15, DI-55) is
+an admitted failure exactly as `pair("SqlError", m) : readonly ["SqlError", string]` is
+(part 4, 2026-09-12: the payload column was `string` alone before the literal rule). -/
 def rawSupportedErrTy : Ty → Bool
   | .never | .nat | .string | .lit _ => true
-  | .prod a b => isTagTy a && decide (b = .string)
+  | .prod a b => isTagTy a && isTagTy b
   | .union l r => rawSupportedErrTy l && rawSupportedErrTy r
   | .unit | .int | .bool | .handle _ | .option _ | .list _
   | .except _ _ | .exitOf _ _ | .causeOf _ | .fiberOf _ _ => false

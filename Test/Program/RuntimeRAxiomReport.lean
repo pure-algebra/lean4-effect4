@@ -2,8 +2,10 @@ import Effect4.Laws.Program.RuntimeR
 import Test.Program.RuntimeRContract
 import Test.Program.SimulationContract
 
-#print axioms Test.Program.SimulationContract.ScopeRegistrationCollision.typed_one
-#print axioms Test.Program.SimulationContract.ScopeRegistrationCollision.typed_two
+-- The two typing receipts `ScopeRegistrationCollision.typed_one`/`typed_two` were `decide`
+-- theorems and are `#guard`s since part 4 (2026-09-12: the typing consults the well-founded
+-- `Ty.sub`), so they no longer have an axiom report; the guards are in
+-- `Test/Program/SimulationContract.lean`.
 
 /-! Dependency receipts for R3/R4 as restated by P2, the P1b shared actions and the
 frame-arm identities, and (2026-09-07) the P3 relation, its introduction, the concrete

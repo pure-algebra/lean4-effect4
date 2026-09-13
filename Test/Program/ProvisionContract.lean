@@ -164,21 +164,23 @@ end Build
 
 section Register
 
-/-- `E4-PROV-CE-001`, the typing half: siblings under `merge` keep the bindings required. -/
-theorem sibling_mistake_stays_open :
-    (layerTy docsSig siblingMistake).map LayerTy.requires =
-      some (Requirement.ofList [dbBinding, rateBinding]) := by decide
+-- Part 4 (2026-09-12): these typing receipts were `decide` theorems; the typing now consults
+-- the well-founded `Ty.sub` at every row request, which the kernel cannot unfold, so they
+-- are the same finite claims as `#guard`s, evaluated by the compiler.
 
-/-- `E4-PROV-CE-001`, the positive control: `provideMerge` closes the same two layers. -/
-theorem deployment_closed :
-    (layerTy docsSig deploymentLayer).map LayerTy.requires = some Requirement.empty := by decide
+-- `E4-PROV-CE-001`, the typing half: siblings under `merge` keep the bindings required.
+#guard (layerTy docsSig siblingMistake).map LayerTy.requires =
+  some (Requirement.ofList [dbBinding, rateBinding])
+
+-- `E4-PROV-CE-001`, the positive control: `provideMerge` closes the same two layers.
+#guard (layerTy docsSig deploymentLayer).map LayerTy.requires = some Requirement.empty
 
 -- `E4-PROV-CE-001`, the machine half: the mistake dies, the deployment builds.
 #guard (docsLayer siblingMistake).map buildSucceeds = some false
 #guard (docsLayer deploymentLayer).map buildSucceeds = some true
 
-/-- `E4-PROV-CE-002`, the typing half: one signature. -/
-theorem order_invisible_to_type : layerTy docsSig leftWins = layerTy docsSig rightWins := by decide
+-- `E4-PROV-CE-002`, the typing half: one signature.
+#guard layerTy docsSig leftWins = layerTy docsSig rightWins
 
 -- `E4-PROV-CE-002`, the run half: two contexts, through the specification and the machine.
 #guard (build docsSem leftWins Context.empty).map (fun c => c.getV dbKey) = some (some (.nat 2))
@@ -186,10 +188,9 @@ theorem order_invisible_to_type : layerTy docsSig leftWins = layerTy docsSig rig
 #guard (docsLayer leftWins).map buildServices = some [(10, 2), (3, 0)]
 #guard (docsLayer rightWins).map buildServices = some [(10, 1), (3, 0)]
 
-/-- `E4-PROV-CE-003`: typed with `E := never`; the machine half (`orDie` builds, and turns a
-leaf's failure into a defect) is the `#guard` pair in `Provision.lean`. -/
-theorem orDie_typed :
-    (layerTy docsSig (.orDie servicesLayer)).map LayerTy.error = some Ty.never := by decide
+-- `E4-PROV-CE-003`: typed with `E := never`; the machine half (`orDie` builds, and turns a
+-- leaf's failure into a defect) is the `#guard` pair in `Provision.lean`.
+#guard (layerTy docsSig (.orDie servicesLayer)).map LayerTy.error = some Ty.never
 #guard (docsLayer (.orDie deploymentLayer)).map buildSucceeds = some true
 
 /-- `E4-PROV-CE-004` (`PROV-FB-STRING-VALUE`): a string literal is refused by the typing. -/

@@ -384,6 +384,20 @@ theorem Fits.all_string {vs : List Val} {tys : TyEnv} (h : Fits vs tys)
     | head => exact hv
     | tail _ hw => exact ih hrest w hw
 
+/-- Under subsumption (DI-15, the 2026-09-12 clause): values fitting types that are each a
+subtype of `string` are strings, by `hasTy_sub`. -/
+theorem Fits.all_sub_string {vs : List Val} {tys : TyEnv} (h : Fits vs tys)
+    (hall : tys.all (·.sub Ty.string) = true) : ∀ v ∈ vs, Val.hasTy v .string = true := by
+  induction h with
+  | nil => intro v hv; cases hv
+  | cons hv _ ih =>
+    simp only [List.all_cons, Bool.and_eq_true] at hall
+    obtain ⟨hsub, hrest⟩ := hall
+    intro w hw
+    cases hw with
+    | head => exact hasTy_sub _ _ _ [] hsub hv
+    | tail _ hw => exact ih hrest w hw
+
 /-- A fit against two types is two values of those types. -/
 theorem Fits.pair_inv {vs : List Val} {a b : Ty} (h : Fits vs [a, b]) :
     ∃ x y, vs = [x, y] ∧ Val.hasTy x a = true ∧ Val.hasTy y b = true := by
@@ -470,6 +484,22 @@ since DB-15; ENSURES 4). -/
 theorem Lit.toVal_isSome (l : Lit) : l.toVal.isSome = true := by
   cases l <;> rfl
 
+/-- The literal rule is sound for the literal's own value: a `str s` inhabits `lit s` as it
+inhabits `string`, and every other literal's argument type is its `Lit.ty` (`litArgTy`). -/
+theorem Lit.toVal_hasTy_arg (const : Bool) (l : Lit) (v : Val) (h : l.toVal = some v) :
+    Val.hasTy v (litArgTy const l) = true := by
+  cases l with
+  | str s =>
+    cases Option.some.inj h
+    cases const
+    · simp only [litArgTy, Bool.false_eq_true, ↓reduceIte, Val.hasTy]
+    · -- `s == s` on a string: `beq_iff_eq`, never `simp`'s string lemmas (`Classical.choice`)
+      simp only [litArgTy, ↓reduceIte, Val.hasTy]
+      exact beq_iff_eq.mpr rfl
+  | unit => cases Option.some.inj h; rfl
+  | nat n => cases Option.some.inj h; rfl
+  | bool b => cases Option.some.inj h; rfl
+
 /-! ## Atoms -/
 
 /-- A typed atom application answers a value of the answer type (`nativeAtomTy`,
@@ -483,50 +513,73 @@ theorem nativeAtom_typed (atom : String) (tys : List Ty) (ty : Ty) (vs : List Va
   simp only [nativeAtom, hname, Option.bind_some]
   unfold NativeAtom.typeOf at hty
   split at hty
-  · -- succ
-    cases hty
-    obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
-    obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hv
-    exact ⟨_, rfl, by simp [Val.hasTy]⟩
+  · -- succ: the argument fits a subtype of `nat`, so it is a `nat` (`hasTy_sub`)
+    split at hty
+    · next hsub =>
+      cases hty
+      obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
+      obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv (hasTy_sub _ _ v [] hsub hv)
+      exact ⟨_, rfl, by simp [Val.hasTy]⟩
+    · cases hty
   · -- pred
-    cases hty
-    obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
-    obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hv
-    exact ⟨_, rfl, by simp [Val.hasTy]⟩
+    split at hty
+    · next hsub =>
+      cases hty
+      obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
+      obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv (hasTy_sub _ _ v [] hsub hv)
+      exact ⟨_, rfl, by simp [Val.hasTy]⟩
+    · cases hty
   · -- isZero
-    cases hty
-    obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
-    obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hv
-    exact ⟨_, rfl, by simp [Val.hasTy]⟩
+    split at hty
+    · next hsub =>
+      cases hty
+      obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
+      obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv (hasTy_sub _ _ v [] hsub hv)
+      exact ⟨_, rfl, by simp [Val.hasTy]⟩
+    · cases hty
   · -- not
-    cases hty
-    obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
-    obtain ⟨b, rfl⟩ := Val.hasTy_bool_inv hv
-    exact ⟨_, rfl, by simp [Val.hasTy]⟩
+    split at hty
+    · next hsub =>
+      cases hty
+      obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
+      obtain ⟨b, rfl⟩ := Val.hasTy_bool_inv (hasTy_sub _ _ v [] hsub hv)
+      exact ⟨_, rfl, by simp [Val.hasTy]⟩
+    · cases hty
   · -- add
-    cases hty
-    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
-    obtain ⟨m, rfl⟩ := Val.hasTy_nat_inv hx
-    obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hy
-    exact ⟨_, rfl, by simp [Val.hasTy]⟩
+    split at hty
+    · next hsub =>
+      cases hty
+      obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hsub
+      obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+      obtain ⟨m, rfl⟩ := Val.hasTy_nat_inv (hasTy_sub _ _ x [] ha hx)
+      obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv (hasTy_sub _ _ y [] hb hy)
+      exact ⟨_, rfl, by simp [Val.hasTy]⟩
+    · cases hty
   · -- lt
-    cases hty
-    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
-    obtain ⟨m, rfl⟩ := Val.hasTy_nat_inv hx
-    obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hy
-    exact ⟨_, rfl, by simp [Val.hasTy]⟩
-  · -- eq
-    cases hty
-    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
-    obtain ⟨m, rfl⟩ := Val.hasTy_nat_inv hx
-    obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hy
-    exact ⟨_, rfl, by simp [Val.hasTy]⟩
-  · -- string equality
-    cases hty
-    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
-    obtain ⟨a, rfl⟩ := Val.hasTy_string_inv hx
-    obtain ⟨b, rfl⟩ := Val.hasTy_string_inv hy
-    exact ⟨_, rfl, by simp [Val.hasTy]⟩
+    split at hty
+    · next hsub =>
+      cases hty
+      obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hsub
+      obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+      obtain ⟨m, rfl⟩ := Val.hasTy_nat_inv (hasTy_sub _ _ x [] ha hx)
+      obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv (hasTy_sub _ _ y [] hb hy)
+      exact ⟨_, rfl, by simp [Val.hasTy]⟩
+    · cases hty
+  · -- eq: two naturals or two strings, each at a subtype
+    split at hty
+    · next hsub =>
+      cases hty
+      obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+      rcases Bool.or_eq_true_iff.mp hsub with hnat | hstr
+      · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hnat
+        obtain ⟨m, rfl⟩ := Val.hasTy_nat_inv (hasTy_sub _ _ x [] ha hx)
+        obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv (hasTy_sub _ _ y [] hb hy)
+        exact ⟨_, rfl, by simp [Val.hasTy]⟩
+      · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hstr
+        obtain ⟨a, rfl⟩ := Val.hasTy_string_inv (hasTy_sub _ _ x [] ha hx)
+        obtain ⟨b, rfl⟩ := Val.hasTy_string_inv (hasTy_sub _ _ y [] hb hy)
+        exact ⟨_, rfl, by simp [Val.hasTy]⟩
+    · cases hty
   · -- pair
     cases hty
     obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
@@ -541,12 +594,13 @@ theorem nativeAtom_typed (atom : String) (tys : List Ty) (ty : Ty) (vs : List Va
     obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
     obtain ⟨x, y, rfl, _, hy⟩ := Val.hasTy_prod_inv hv
     exact ⟨y, rfl, hy⟩
-  · -- strings: every argument fits `.string`, so every value is a `str` and the list types
+  · -- strings: every argument fits a subtype of `.string`, so every value is a `str` and the
+    -- list types
     split at hty
     · next hall =>
       cases hty
       have hstr : ∀ v ∈ vs, ∃ s, v = Val.str s := fun v hv =>
-        Val.hasTy_string_inv (Fits.all_string hfit hall v hv)
+        Val.hasTy_string_inv (Fits.all_sub_string hfit hall v hv)
       refine ⟨Val.list vs, ?_, ?_⟩
       · rw [NativeAtom.eval, stringsAtom, if_pos]
         rw [List.all_eq_true]
@@ -579,33 +633,36 @@ theorem nativeAtom_typed (atom : String) (tys : List Ty) (ty : Ty) (vs : List Va
     obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
     exact queryError_typed value _ error [] hdomain hv
   · -- Boolean or
-    cases hty
-    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
-    obtain ⟨a, rfl⟩ := Val.hasTy_bool_inv hx
-    obtain ⟨b, rfl⟩ := Val.hasTy_bool_inv hy
-    exact ⟨_, rfl, by simp [Val.hasTy]⟩
+    split at hty
+    · next hsub =>
+      cases hty
+      obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hsub
+      obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+      obtain ⟨a, rfl⟩ := Val.hasTy_bool_inv (hasTy_sub _ _ x [] ha hx)
+      obtain ⟨b, rfl⟩ := Val.hasTy_bool_inv (hasTy_sub _ _ y [] hb hy)
+      exact ⟨_, rfl, by simp [Val.hasTy]⟩
+    · cases hty
   · -- Boolean and
-    cases hty
-    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
-    obtain ⟨a, rfl⟩ := Val.hasTy_bool_inv hx
-    obtain ⟨b, rfl⟩ := Val.hasTy_bool_inv hy
-    exact ⟨_, rfl, by simp [Val.hasTy]⟩
+    split at hty
+    · next hsub =>
+      cases hty
+      obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hsub
+      obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+      obtain ⟨a, rfl⟩ := Val.hasTy_bool_inv (hasTy_sub _ _ x [] ha hx)
+      obtain ⟨b, rfl⟩ := Val.hasTy_bool_inv (hasTy_sub _ _ y [] hb hy)
+      exact ⟨_, rfl, by simp [Val.hasTy]⟩
+    · cases hty
   -- Each constructor has its own exhaustive argument-shape refusal.
   all_goals cases hty
 
 /-! ## Terms -/
 
-/-- `termTy` on an application is the atom's type at the arguments' types
-(`Typing.lean:63-65`), as an `Option.bind`. -/
+/-- `termTy` on an application is the atom's type at the arguments' types, typed under the
+atom's const-generic flag (`Typing.lean`, `termTy`), as an `Option.bind`. `termsTy_cons`
+(`Typing.lean`) is the cons equation, with `argTy` for the head. -/
 theorem termTy_app (tys : TyEnv) (atom : String) (args : Terms) :
     termTy nativeSignature tys (.app atom args) =
-      (termsTy nativeSignature tys args).bind (nativeAtomTy atom) := rfl
-
-/-- `termsTy` on a cons (`Typing.lean:68-71`), as nested `Option.bind`s. -/
-theorem termsTy_cons (tys : TyEnv) (head : Term) (tail : Terms) :
-    termsTy nativeSignature tys (.cons head tail) =
-      (termTy nativeSignature tys head).bind fun t =>
-        (termsTy nativeSignature tys tail).bind fun rest => some (t :: rest) := rfl
+      (termsTy nativeSignature tys (nativeConstAtom atom) args).bind (nativeAtomTy atom) := rfl
 
 /-- `evalTerm` on an application is the atom at the arguments' values (`Native.lean:91-93`). -/
 theorem evalTerm_app (env : List Val) (atom : String) (args : Terms) :
@@ -636,14 +693,17 @@ theorem evalTerm_hasTy (t : Term) (env : List Val) (tys : TyEnv) (ty : Ty) (v : 
     rw [evalTerm_app] at hev
     obtain ⟨vs, hvs, hv⟩ := Option.bind_eq_some_iff.mp hev
     obtain ⟨v', hv', hty'⟩ :=
-      nativeAtom_typed atom tl ty vs hatom (evalTerms_hasTy args env tys tl vs hfit hts hvs)
+      nativeAtom_typed atom tl ty vs hatom
+        (evalTerms_hasTy args env tys (nativeConstAtom atom) tl vs hfit hts hvs)
     rw [hv'] at hv
     cases hv
     exact hty'
 termination_by structural t
-/-- The list form of `evalTerm_hasTy`: the values fit the types (ENSURES 6). -/
-theorem evalTerms_hasTy (ts : Terms) (env : List Val) (tys : TyEnv) (tl : List Ty)
-    (vs : List Val) (hfit : Fits env tys) (hty : termsTy nativeSignature tys ts = some tl)
+/-- The list form of `evalTerm_hasTy`: the values fit the types (ENSURES 6), under either
+const flag — a literal argument fits its literal-rule type (`Lit.toVal_hasTy_arg`). -/
+theorem evalTerms_hasTy (ts : Terms) (env : List Val) (tys : TyEnv) (const : Bool)
+    (tl : List Ty) (vs : List Val) (hfit : Fits env tys)
+    (hty : termsTy nativeSignature tys const ts = some tl)
     (hev : evalTerms env ts = some vs) : Fits vs tl := by
   cases ts with
   | nil =>
@@ -660,8 +720,10 @@ theorem evalTerms_hasTy (ts : Terms) (env : List Val) (tys : TyEnv) (tl : List T
     obtain ⟨v1, hv1, hev'⟩ := Option.bind_eq_some_iff.mp hev
     obtain ⟨vrest, hvrest, hvcons⟩ := Option.bind_eq_some_iff.mp hev'
     cases hvcons
-    exact Fits.cons (evalTerm_hasTy head env tys t1 v1 hfit ht1 hv1)
-      (evalTerms_hasTy tail env tys rest vrest hfit hrest hvrest)
+    refine Fits.cons ?_ (evalTerms_hasTy tail env tys const rest vrest hfit hrest hvrest)
+    rcases argTy_cases _ _ _ head t1 ht1 with ⟨value, rfl, rfl⟩ | ht1'
+    · exact Lit.toVal_hasTy_arg const value v1 hv1
+    · exact evalTerm_hasTy head env tys t1 v1 hfit ht1' hv1
 termination_by structural ts
 end
 
@@ -688,17 +750,18 @@ theorem evalTerm_isSome (t : Term) (env : List Val) (tys : TyEnv) (ty : Ty)
     rw [termTy_app] at hty
     obtain ⟨tl, hts, hatom⟩ := Option.bind_eq_some_iff.mp hty
     obtain ⟨vs, hvs⟩ :=
-      Option.isSome_iff_exists.mp (evalTerms_isSome args env tys tl hfit hts)
+      Option.isSome_iff_exists.mp (evalTerms_isSome args env tys (nativeConstAtom atom) tl hfit hts)
     obtain ⟨v', hv', _⟩ :=
-      nativeAtom_typed atom tl ty vs hatom (evalTerms_hasTy args env tys tl vs hfit hts hvs)
+      nativeAtom_typed atom tl ty vs hatom
+        (evalTerms_hasTy args env tys (nativeConstAtom atom) tl vs hfit hts hvs)
     rw [evalTerm_app, hvs]
     show (nativeAtom atom vs).isSome = true
     rw [hv']
     rfl
 termination_by structural t
-/-- The list form of `evalTerm_isSome` (ENSURES 7). -/
-theorem evalTerms_isSome (ts : Terms) (env : List Val) (tys : TyEnv) (tl : List Ty)
-    (hfit : Fits env tys) (hty : termsTy nativeSignature tys ts = some tl) :
+/-- The list form of `evalTerm_isSome` (ENSURES 7), under either const flag. -/
+theorem evalTerms_isSome (ts : Terms) (env : List Val) (tys : TyEnv) (const : Bool)
+    (tl : List Ty) (hfit : Fits env tys) (hty : termsTy nativeSignature tys const ts = some tl) :
     (evalTerms env ts).isSome = true := by
   cases ts with
   | nil => rfl
@@ -706,10 +769,13 @@ theorem evalTerms_isSome (ts : Terms) (env : List Val) (tys : TyEnv) (tl : List 
     rw [termsTy_cons] at hty
     obtain ⟨t1, ht1, hty'⟩ := Option.bind_eq_some_iff.mp hty
     obtain ⟨rest, hrest, _⟩ := Option.bind_eq_some_iff.mp hty'
-    obtain ⟨v1, hv1⟩ :=
-      Option.isSome_iff_exists.mp (evalTerm_isSome head env tys t1 hfit ht1)
+    have hhead : (evalTerm env head).isSome = true := by
+      rcases argTy_cases _ _ _ head t1 ht1 with ⟨value, rfl, _⟩ | ht1'
+      · exact Lit.toVal_isSome value
+      · exact evalTerm_isSome head env tys t1 hfit ht1'
+    obtain ⟨v1, hv1⟩ := Option.isSome_iff_exists.mp hhead
     obtain ⟨vrest, hvrest⟩ :=
-      Option.isSome_iff_exists.mp (evalTerms_isSome tail env tys rest hfit hrest)
+      Option.isSome_iff_exists.mp (evalTerms_isSome tail env tys const rest hfit hrest)
     rw [evalTerms_cons, hv1]
     show ((evalTerms env tail).bind fun rest => some (v1 :: rest)).isSome = true
     rw [hvrest]

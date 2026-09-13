@@ -166,9 +166,12 @@ def repeated (n : Nat) : NativeEff :=
       (.withFiber (.forkScoped (.callback .deferredAwait (.var 0))
         ⟨true, true, .inherit⟩))))
 
-theorem typed_one : Api.wellTyped (repeated 1) = true := by decide
-theorem typed_two : Api.wellTyped (repeated 2) = true := by decide
-theorem typed_three : Api.wellTyped (repeated 3) = true := by decide
+-- Finite typing receipts as `#guard`s (part 4, 2026-09-12): the typing now consults `Ty.sub`
+-- at every row request and fixed-signature atom, and `Ty.sub` is well-founded, which the
+-- kernel's `decide` cannot unfold; the compiler evaluates it.
+#guard Api.wellTyped (repeated 1)
+#guard Api.wellTyped (repeated 2)
+#guard Api.wellTyped (repeated 3)
 
 #guard (Api.print (repeated 2)).isOk
 #guard (Api.print (repeated 3)).isOk

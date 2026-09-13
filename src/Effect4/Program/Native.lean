@@ -67,8 +67,16 @@ theorem nativeAtom_strings (vs : List Val) : nativeAtom "strings" vs = stringsAt
 def nativeAtomTy (name : String) (types : List Ty) : Option Ty :=
   (NativeAtom.ofName? name).bind (fun atom => atom.typeOf types)
 
+/-- Which atoms are const-generic, by name, from the same owner (`NativeAtom.constGeneric`):
+the literal rule's flag for `termsTy`. An unknown name is not. -/
+def nativeConstAtom (name : String) : Bool :=
+  (NativeAtom.ofName? name).any NativeAtom.constGeneric
+
+theorem nativeConstAtom_pair : nativeConstAtom "pair" = true := by decide
+
 theorem nativeAtomTy_strings (tys : List Ty) :
-    nativeAtomTy "strings" tys = if tys.all (· == .string) then some (.list .string) else none := rfl
+    nativeAtomTy "strings" tys =
+      if tys.all (·.sub .string) then some (.list .string) else none := rfl
 
 mutual
   /-- A term's value in a positional environment. -/
@@ -318,7 +326,8 @@ and admission (`externalRow`). Raw table entries retain their source spelling/pr
 def nativeSignature (table : RowTable := []) : Signature NativeOp :=
   { rowOf := fun op => (nativeRowOf table op).normalizeTypes, atomOf := nativeAtomTy, scopeKey := nativeScopeKey,
     serviceTy := nativeServiceTy,
-    dom := fun | .external i => decide (i < table.length) | _ => true }
+    dom := fun | .external i => decide (i < table.length) | _ => true,
+    constAtom := nativeConstAtom }
 
 /-! ## Which supplied tables this runner can register (v2 DI-61 (b))
 
