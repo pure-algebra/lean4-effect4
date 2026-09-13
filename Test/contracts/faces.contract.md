@@ -162,8 +162,8 @@ Precisely, for each of the families the closed world names:
   constructor (`src/OCaml5/Tools/EffGen.lean`), which is the acceptance model DI-19 asks the
   OCaml engine's own test to follow.
 
-Evidence: reproduced (the goldens, byte for byte) and tested (`bash scripts/check-ocaml.sh
-dune-tests`); never proved — no theorem relates an OCaml function to a Lean one.
+Evidence: reproduced (the goldens, byte for byte) and tested (`make check-ocaml`); never
+proved — no theorem relates an OCaml function to a Lean one.
 
 ---
 

@@ -13,8 +13,9 @@
 #   # reason: <text>   the named failure reason of every entry below it, until
 #                      the next `# reason:` line. An entry reached with no
 #                      reason in force is a defect: the load refuses.
-#   # gate: <name>     a sweep gate (`scripts/sweep.sh`'s table) rather than a
-#                      Lean module. The bare lines stay Lean module names.
+#   # gate: <name>     a check (a Makefile target) rather than a Lean module; no
+#                      check consults this form since 2026-09-13. The bare lines
+#                      stay Lean module names.
 #
 # Both are ordinary `#` comments, and that is the whole point of the choice.
 # `Test/Audit/AxiomGate.lean` (`declaredRedModules`) and

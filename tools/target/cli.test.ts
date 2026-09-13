@@ -10,14 +10,14 @@ test("real command passes independent positive and fails wrong-answer conformanc
   try {
     for (const [fixture, expectedExit] of [["positive", 0], ["negative", 1]] as const) {
       const output = join(directory, `${fixture}.json`)
-      const result = Bun.spawnSync(["python3", "scripts/check-target.py", "--queries", `Test/fixtures/target/${fixture}.json`, "--out", output], { cwd: repo })
+      const result = Bun.spawnSync(["bun", "tools/target/cli.ts", "--repo", repo, "--queries", `Test/fixtures/target/${fixture}.json`, "--out", output], { cwd: repo })
       expect(result.exitCode).toBe(expectedExit)
       const report = JSON.parse(readFileSync(output, "utf8"))
       expect(report.conforms).toBe(expectedExit === 0)
       expect(report.expected).toEqual(report.attempted)
       if (fixture === "negative") expect(report.observations[0].columns.A.actualToExpected).toBe(false)
     }
-    const missing = Bun.spawnSync(["python3", "scripts/check-target.py", "--queries", join("Test", "fixtures", "target", "not-present.json")], { cwd: repo })
+    const missing = Bun.spawnSync(["bun", "tools/target/cli.ts", "--repo", repo, "--queries", join("Test", "fixtures", "target", "not-present.json")], { cwd: repo })
     expect(missing.exitCode).toBe(2)
     expect(missing.stderr.toString()).toContain("REFUSED input")
   } finally { rmSync(directory, { recursive: true, force: true }) }

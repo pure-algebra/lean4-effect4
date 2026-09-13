@@ -16,8 +16,9 @@ skipped while none of that has changed; `make -B <target>` or `make clean-check`
 forces it. One Lean process runs at a time. (Until 2026-09-13 this was
 `scripts/sweep.sh` with a per-script result cache; the script survives as a wrapper.)
 
-`schema-annotations/` and `schema-effectful-field/` are still run by hand;
-`schema-generation/` is `make check-schema-ts`, in the full tier.
+`schema-annotations/` and `schema-effectful-field/` are `make check-schema-host` and
+`schema-generation/` is `make check-schema-ts`, both in the full tier and the nightly CI
+lane, on the Schema sources and the harness directories as inputs.
 
 `schema-generation/` contains the first complete bridge fixture. Run
 `scripts/check-schema-typescript-generation.sh`; it regenerates the fixture

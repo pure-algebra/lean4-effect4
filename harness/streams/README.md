@@ -1,7 +1,7 @@
 # Pinned stream examples
 
-Run `bash scripts/check-streams.sh` from the repository root. Set `EFFECT4_FORCE=1`
-to rerun every example. The gate mines the vendored rc.112 source, checks the runner's
+Run `make check-streams` from the repository root (`bun harness/streams/run.ts --force`
+reruns every example). The gate mines the vendored rc.112 source, checks the runner's
 types, runs the boundary and mutation tests, then executes the mined examples in
 separate Bun processes. The boundary test body is also checked against the installed
 rc.112 declarations; its runtime checks still execute the vendored source. An example fails if its output differs, an assertion never
@@ -24,7 +24,7 @@ at a caller-selected location.
 
 The doc corpus remains host evidence: its `leanStatus: unrepresented` field never
 claims an automatic translation of arbitrary Stream operators. Its tags and concurrency
-layer are navigation aids. The adjacent `bash scripts/check-host-protocol.sh` gate adds
+layer are navigation aids. The adjacent `make check-host-protocol` gate adds
 48 admitted scoped pull programs covering twelve source/failure/chunk configurations,
 plus concurrent streams, key-value reads and receipt/application ordering. Those exact
 Lean-printed Eff programs execute on rc.112 and their actual keyed tapes replay in Lean.

@@ -63,7 +63,7 @@ def main():
     rendered = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     if args.check:
         if not args.out.exists() or args.out.read_text() != rendered:
-            raise SystemExit("stream census differs; run scripts/generate-effect-stream-census.sh")
+            raise SystemExit("stream census differs; run python3 scripts/generate-effect-stream-census.py")
     else:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(rendered)

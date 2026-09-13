@@ -67,6 +67,6 @@ conservative executable sufficient condition, not a complete decision procedure 
 all semantically equivalent JSON encoders.
 
 All declarations remain within `[propext, Quot.sound]`. The build checks root separation,
-module closure and the axiom ceiling. `scripts/check-schema-codec.sh` typechecks the host
+module closure and the axiom ceiling. `make check-schema-codec` typechecks the host
 comparison and freshly compares public Lean outputs with rc.112, including round trips
 and the rejected legacy shapes. Its finite examples do not replace the universal laws.

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Bounded reaction test for the elaborated Schema payload surface and ownership
-# checkers. Each source is valid Lean through its mutant declaration and must
-# be rejected by the shared Meta checker, not by a source proof or lexical
-# scrape.
+# checkers (`make check-schema-surface` elaborates the two real fixtures; this is
+# its self-test, in `make check-tools`). Each source is valid Lean through its
+# mutant declaration and must be rejected by the shared Meta checker, not by a
+# source proof or lexical scrape.
 set -euo pipefail
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
-gate="$repo_root/scripts/check-schema-payload-surface.sh"
 fixture_root="$repo_root/Test/fixtures/schema-payload-surface"
 tmp_parent="${TMPDIR:-/tmp}"
 tmp_parent="${tmp_parent%/}"
@@ -25,8 +25,6 @@ cleanup() {
   exit "$cleanup_status"
 }
 trap cleanup EXIT
-
-[[ -x "$gate" ]] || { printf 'FAIL gate is not executable: %s\n' "$gate" >&2; exit 1; }
 
 lake_bin="$(command -v lake || true)"
 [[ -n "$lake_bin" ]] || { printf 'FAIL lake is unavailable\n' >&2; exit 1; }
@@ -146,34 +144,8 @@ if grep -Eq 'unknown (constant|identifier)|declaration uses .sorry|unexpected to
 fi
 printf 'PASS rejected by imported-module checker: declaration-free Schema.Value edge\n'
 
-# The production gate has no argument or environment route by which a caller
-# can substitute one of the synthetic sources for the fixed real files.
-if "$gate" "$fixture_root/ExtraConstructor.lean" >"$tmp_root/arg-override.log" 2>&1; then
-  printf 'FAIL production gate accepted a positional source override\n' >&2
-  exit 1
-fi
-grep -Fq 'source is not overridable' "$tmp_root/arg-override.log" || {
-  printf 'FAIL positional override refusal did not name the source boundary\n' >&2
-  cat "$tmp_root/arg-override.log" >&2
-  exit 1
-}
-printf 'PASS production source is not positionally overridable\n'
-
-if EFFECT4_SCHEMA_PAYLOAD_SURFACE_SOURCE="$fixture_root/ExtraConstructor.lean" \
-    "$gate" >"$tmp_root/env-override.log" 2>&1; then
-  printf 'FAIL production gate accepted an environment source override\n' >&2
-  exit 1
-fi
-grep -Fq 'rejects source override variable' "$tmp_root/env-override.log" || {
-  printf 'FAIL environment override refusal did not name the source boundary\n' >&2
-  cat "$tmp_root/env-override.log" >&2
-  exit 1
-}
-printf 'PASS production source is not environment-overridable\n'
-
 printf 'PASS schema payload surface checker kills exactly 4/4 specified shape mutants\n'
 printf 'PASS payload public-type census kills 2/2 alias/ordinary-definition mutants\n'
 printf 'PASS D7 owner checker kills 4/4 judgment/Boolean/reflection/equation drift mutants\n'
 printf 'PASS payload import-boundary checker kills 1/1 declaration-free module mutant\n'
-printf 'PASS production gate enforces 2/2 source-override refusals\n'
 printf 'NOTE declaration-surface receipt only; no admission or wire-semantic claim\n'

@@ -125,14 +125,10 @@ jobs:
         run: bun install --frozen-lockfile --cwd ts/eff
       - name: Install the pinned Schema host profile
         run: npm ci --prefix harness/schema-host --no-audit --no-fund
-      - name: The census lane (the full ingest run, the host protocol, the runtime and stream censuses, the schema host)
+      - name: The census lane (the full ingest run, the host protocol, the runtime and stream censuses, the Schema slice)
         env:
           EFFECT4_EFFECT_NODE_MODULES: ${{ github.workspace }}/harness/schema-host/node_modules
-        run: make build check-ingest check-host-protocol check-census check-streams check-schema-ts
-      - name: The Schema structural-assurance gate and its self-test
-        env:
-          EFFECT4_EFFECT_NODE_MODULES: ${{ github.workspace }}/harness/schema-host/node_modules
-        run: ./scripts/test-schema-structural-assurance-gate.sh
+        run: make build check-ingest check-host-protocol check-census check-streams check-schema-ts check-schema-pins check-schema-surface check-schema-host
 
   proof-replay:
     if: github.event_name == 'schedule' && github.event.schedule == '17 4 * * 1'

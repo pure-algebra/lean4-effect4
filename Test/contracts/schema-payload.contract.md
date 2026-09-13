@@ -1203,8 +1203,8 @@ lake clean && lake build
 scripts/test-trust-gate.sh
 git:c407ab7:scripts/check-vendor-foldlab.sh
 scripts/check-schema-fields.sh <pinned SchemaRepresentation.ts>
-scripts/check-schema-payload-surface.sh      # REQUIRED; must turn green in the builder
-scripts/test-schema-payload-surface-gate.sh  # REQUIRED; four mutations above
+make check-schema-surface                    # REQUIRED; must turn green in the builder (since 2026-09-13 the recipe; was scripts/check-schema-payload-surface.sh)
+scripts/test-schema-payload-surface-gate.sh  # REQUIRED; four mutations above (in make check-tools)
 ```
 
 The surface commands are present. The reaction test currently kills all four

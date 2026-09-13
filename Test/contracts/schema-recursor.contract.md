@@ -229,7 +229,7 @@ SCHEMA-PG-PAYLOAD / SC-REP-03-RECURSOR
   recursion     -> R1 through R13, finite structural decrease
   counterexample -> E4-SCHEMA-CE-043 retained
   trust         -> axiom receipts for all equation theorems
-  coverage      -> fixed battery plus generated structural-assurance join
+  coverage      -> fixed battery (the generated structural-assurance join was retired 2026-09-13)
 ```
 
 A proof graph is required here because this is a nontrivial mutual recursive
@@ -309,6 +309,7 @@ Freeze receipt:
   22 plus 2 named constructor equations.
 
 After implementation both commands must exit zero, followed by the owning
-Schema axiom report, generated structural-assurance gate and its reaction
-test, and the default Lake build. A green local battery closes no document,
+Schema axiom report and the default Lake build (the generated
+structural-assurance gate and its reaction test were retired 2026-09-13; the
+battery and the axiom report are Test modules). A green local battery closes no document,
 wire, denotation, or host-equivalence edge.

@@ -17,3 +17,28 @@ ocaml/eff/eff_typed.mli	removed 2026-09-13
 scripts/test-compatibility-history.py	removed 2026-09-13
 tools/Compatibility/Decode.ml	removed 2026-09-13
 scripts/check-ts-eff-corpus.sh	removed 2026-09-13 (folded into the Makefile)
+# Removed 2026-09-13 (the scripts ledger): thin wrappers folded into the Makefile, the retired
+# sweep runner, and the Schema structural-assurance projection with its producer and self-test.
+# Cited by ruled register rows, contracts and landed dispatches, which are history.
+scripts/generate.sh	folded into the Makefile 2026-09-13 (scripts/generate.py)
+scripts/generate-ts-eff.sh	folded into scripts/generate.py 2026-09-13
+scripts/generate-host-protocol.sh	folded into the Makefile 2026-09-13
+scripts/generate-effect-stream-census.sh	folded into the Makefile 2026-09-13
+scripts/check-conform.sh	folded into the Makefile 2026-09-13
+scripts/check-conform-target.py	folded into scripts/check-conform.py 2026-09-13
+scripts/check-conform-compiler.py	folded into scripts/check-conform.py 2026-09-13
+scripts/check-library-roots.sh	folded into the Makefile 2026-09-13
+scripts/check-truth.sh	folded into the Makefile 2026-09-13
+scripts/check-host-protocol.sh	folded into the Makefile 2026-09-13
+scripts/check-source-citations.sh	folded into the Makefile 2026-09-13
+scripts/check-target.py	folded into the Makefile 2026-09-13
+scripts/check-streams.sh	folded into the Makefile 2026-09-13
+scripts/check-schema-codec.sh	folded into the Makefile 2026-09-13
+scripts/check-ocaml.sh	folded into the Makefile 2026-09-13
+scripts/check-schema-payload-surface.sh	folded into the Makefile 2026-09-13
+scripts/sweep.sh	removed 2026-09-13
+scripts/check-schema-structural-assurance.sh	removed 2026-09-13
+scripts/generate-schema-structural-assurance.sh	removed 2026-09-13
+scripts/test-schema-structural-assurance-gate.sh	removed 2026-09-13
+generated/schema-structural-assurance.tsv	removed 2026-09-13
+scripts/lib/generate.py	moved to scripts/generate.py 2026-09-13

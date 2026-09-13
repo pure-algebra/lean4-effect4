@@ -44,18 +44,21 @@ markers. The recipes hold the Lean lane one at a time.
 | eff | `src/OCaml5/Tools/EffGen.lean`, then `scripts/generate-engine-structure.py` | `Effect4.Program.Native`, `OCaml5.Eff.*` | `ocaml/eff/eff_{types,wire,json,native,layout}.ml`, `eff_manifest.txt`, `program-structure.json`, the 48-program goldens under `ocaml/eff/goldens/`, `ocaml/engine/e4_program_layout.{ml,json}` | `make check-gen`; `make check-ocaml` (the goldens decode, re-encode and print in OCaml; the `.ty` goldens and `corpus.txt` are Lean's typing verdicts, held by the drift check alone since the OCaml checker was retired on 2026-09-13) | reproduced; tested |
 | wire | `src/OCaml5/Tools/EffWire.lean` | `Effect4.Program.Wire` and its corpus | `ocaml/goldens/eff/*.hex`, `manifest.txt`, `same-programs.txt` | `make check-gen`; `make check-ocaml` (`test_lean_wire`) | reproduced; tested |
 | cas | `src/OCaml5/Tools/CasGoldens.lean` | the store word, genesis and machine stores | `ocaml/engine/cas/goldens/` (119 files) | `make check-gen`; `make check-ocaml` (`engine-tests`) | reproduced; tested |
-| ts | `tools/Tools/TsGen.lean` through `scripts/generate-ts-eff.sh` | the closed world `OCaml5.Eff.World` reads, `Effect4.Codegen.Print`, three pinned vendor sources for the package tables | `ts/eff/{eff,json,wire,profile,taxonomy,forms,packages}.gen.ts` | `make check-gen`; `make check-ts-reader` | reproduced; tested |
+| ts | `tools/Tools/TsGen.lean` (`scripts/generate.py --only ts`) | the closed world `OCaml5.Eff.World` reads, `Effect4.Codegen.Print`, three pinned vendor sources for the package tables | `ts/eff/{eff,json,wire,profile,taxonomy,forms,packages}.gen.ts` | `make check-gen`; `make check-ts-reader` | reproduced; tested |
 | readme | `bun ts/eff/ingest/render-readme.ts` (a host producer; writes in place) | `profile.gen.ts`, `forms.gen.ts`, `taxonomy.gen.ts` | `ts/eff/ingest/README.md` | `make check-gen`; the renderer's own `--check` inside `make check-ingest-smoke` | reproduced |
 | lcnf | `src/OCaml5/Tools/LcnfGen.lean`; each output's header carries its exact command | `Effect4.Machine.Fibers`, `Effect4.Api`, `ocaml/engine/externs.txt`, `ocaml/engine/tools/api_engine_prelude.ml` | `ocaml/gen/{fibers_gen,machine_gen,api_gen}.ml`, `ocaml/engine/api_engine.ml` | `make check-gen`; `make check-ocaml` (`api_check`, the engine seam in `gen-check.sh`) | reproduced; tested |
 | truth | `harness/truth/Truth.lean` writes the corpus from the committed tapes; `harness/truth/run-truth.ts` runs rc.112, prints the modules, re-records the tapes, writes the result | the Eff corpus, `prelude.ts`, the tapes, the pinned `effect` and `@effect/sql-sqlite-bun` | `harness/truth/corpus.json`, `generated/*.ts`, `result.{json,md}`, `tapes/*.jsonl` | `make check-truth` (a fresh run must equal the committed artefacts; the printed modules type-check first, DI-49) | reproduced (corpus, tapes); tested (the host run) |
-| host-protocol | `tools/Tools/HostProtocol.lean` through `scripts/generate-host-protocol.sh` | `Effect4.Api.HostProtocol` | `harness/truth/session/protocol.gen.ts`, `tape.schema.json` | `make check-host-protocol` | reproduced; tested |
+| host-protocol | `tools/Tools/HostProtocol.lean` (the `gen-host-protocol` recipe) | `Effect4.Api.HostProtocol` | `harness/truth/session/protocol.gen.ts`, `tape.schema.json` | `make check-host-protocol` | reproduced; tested |
 | schema-ts | `harness/schema-generation/Emit{Fixture,CoverageFixture,MultiFixture}.lean`, stdout redirected | `Effect4.Codegen.Schema`, the fixture declarations | the three `.generated.ts` beside them | `make check-schema-ts` | reproduced; tested |
 | census | `scripts/generate-effect-runtime-census.sh` (stdout) | the twelve vendored rc.112 sources it names | `generated/effect-runtime-census.tsv`, joined by `Test/Audit/RuntimeCoverage.lean` | `make check-census` | reproduced; proved where a row's witness theorem is joined |
 
-Not a group: `generated/schema-structural-assurance.tsv`, whose producer refuses its own
-frozen fingerprint and whose stamp the owner deferred on 2026-09-08; it is checked by
-`scripts/check-schema-structural-assurance.sh` by hand. DI-08 decides whether the Schema
-slice is in the release.
+Retired 2026-09-13 (the scripts ledger): `generated/schema-structural-assurance.tsv`, a
+2,682-row projection whose 446-line producer carried the SHA-256 of every Schema source
+inside itself and refused to run once any of them changed (the owner had deferred its
+stamp on 2026-09-08). What it certified is in the build: `Test/Schema/StructuralAssurance.lean`
+and the Schema axiom report are Test modules, compiled by `make build`; the rest of the
+Schema slice runs on its inputs as `make check-schema-pins`, `check-schema-surface` and
+`check-schema-host`, with the payload-surface reaction test in `make check-tools`.
 
 The **evidence** column is the word, or words, a group's claim carries, ruled 2026-09-09
 (DI-32): *proved* for a theorem, *reproduced* for a byte comparison against a fresh producer
@@ -74,7 +77,7 @@ OCaml engine differential inside `make check-ocaml`. It is re-cut when Lake's tr
 `Tools.Corpus` changes; nothing under `.lake/corpus` is committed.
 
 **Stream example outputs.** The stream example lane produces two ignored build artifacts
-under `harness/streams/`: `census.json` from `bash scripts/generate-effect-stream-census.sh`
+under `harness/streams/`: `census.json` from `python3 scripts/generate-effect-stream-census.py`
 over the executable doc fences of the pinned Stream, Channel, Pull, Queue, Scope, Sink,
 PubSub and Fiber modules, and `result.json` from `bun harness/streams/run.ts`. The check is
 `make check-streams`: bounded host output agreement, separately reported type checking and
@@ -89,7 +92,7 @@ legacy Result/Cause shapes. No codec golden is committed. Finite host evidence, 
 from the universal checked-boundary laws in `Laws/Schema/Codec`.
 
 **Conform outputs.** Source descriptions and conformance reports are build artifacts under
-`.lake/conform/`; `scripts/check-conform.sh` produces them freshly. The compiler profile's
+`.lake/conform/`; `scripts/check-conform.py` produces them freshly. The compiler profile's
 OCaml is an inspected execution artifact, not a replacement for `ocaml/gen`.
 
 **The keyed session's working receipt** lives under the ignored `.work/` folder beneath

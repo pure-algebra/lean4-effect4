@@ -79,7 +79,7 @@ The separate proofs are in `Laws/Schema/{Image,Transform}`.
 `src/Effect4/Laws.lean` imports the proof graph. Its files keep the namespaces of
 the definitions they extend. `src/Effect4.lean` imports the application face and
 functional utilities without reaching Laws. The audit checks both closures against
-every library source; `scripts/check-library-roots.sh` runs it freshly so a new
+every library source; `make check-roots` elaborates `Test/All.lean` freshly so a new
 unimported source cannot hide behind a cached build.
 
 **Project reflection and generators stay outside the audited roots** (DI-18, ruled

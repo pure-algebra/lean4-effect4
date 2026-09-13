@@ -73,28 +73,27 @@ type-checks the `--run` drivers under `tools/Tools/`; one runs as
 The gates beyond the build (bash; on Windows run them through WSL):
 
 ```text
-scripts/test-trust-gate.sh                       # the gate's own self-test
-scripts/check-library-roots.sh                  # fresh library-root and trust audit
-scripts/check-source-citations.sh                # live paths and immutable historical references
-scripts/check-effect-runtime-census.sh           # the rc.112 mechanism census join
+make check-tools                                 # the checkers' own self-tests (planted defects must be refused)
+make check-roots                                 # fresh library-root and trust audit
+make check-citations                             # live paths and immutable historical references
+make check-census                                # the rc.112 mechanism census join
 npm ci --prefix harness/schema-host # pinned Schema host and compiler integrations
-scripts/test-schema-structural-assurance-gate.sh # the Schema assurance projection
 make check-gen                                   # every generated file is what its generator emits
 make check-ts-reader                             # the TypeScript reader = Lean's reader over the printed corpus (bun)
-scripts/check-truth.sh                           # bounded Lean/rc.112 differential (bun)
-scripts/check-schema-codec.sh                    # fresh type-directed JSON vs rc.112 (bun)
+make check-truth                                 # bounded Lean/rc.112 differential (bun)
+make check-schema-codec                          # fresh type-directed JSON vs rc.112 (bun)
 make check                                       # the per-change tier (make help lists the rest)
 make check-host                                  # the outside oracles: truth, T0, the OCaml tests
 ```
 
 The TypeScript gates use the dependencies pinned in `ts/eff/package.json`; install them
 with `bun install --frozen-lockfile --cwd ts/eff`. The truth lane selects its pinned
-host through `EFFECT4_EFFECT_NODE_MODULES`. OCaml gates require the `effect4` opam
-switch and print `SKIP` when `ocamlrun` is absent. Archived receipt paths are checked
-against their recorded git history; this does not refresh their original verdicts.
-The existing avatar witness and arm-map drift are declared in
-`Test/fixtures/trust-gate/known-red.txt`: their checks still run and an unexpected pass
-requires removing the declaration. The OCaml lane owns their repair.
+host through `EFFECT4_EFFECT_NODE_MODULES`. The OCaml lane (`make check-ocaml`) runs
+under the `effect4` opam switch (`opam exec --switch=effect4`) and is local until the CI
+runner has one. Archived receipt paths are checked against their recorded git history;
+this does not refresh their original verdicts. A module that is red on purpose during a
+breaker/builder phase is declared in `Test/fixtures/trust-gate/known-red.txt`; the list is
+empty, and an entry that turns green must be removed deliberately.
 
 `docs/ARCHITECTURE.md` owns module boundaries and dependency direction,
 `docs/DESIGN-BASIS.md` the representation decisions, `docs/RUNTIME-COVERAGE.md`

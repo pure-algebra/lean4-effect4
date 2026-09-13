@@ -7,15 +7,16 @@ their existing `Conform.Effect4.Typing` declaration names remain stable.
 
 ## Routine use
 
-Run commands from the repository root. The shell entry point holds the Lean lane, builds the
-selected tools once, runs report refusal controls, then executes each requested profile once.
+Run commands from the repository root (one `make` or one Lean process at a time; the
+Makefile is the lane). The runner builds the selected tools once, then executes each
+requested profile once in an empty directory and keeps the receipt under `.lake/conform/`.
 
 ```sh
-bash scripts/check-conform.sh                         # models, native layouts, types
-bash scripts/check-conform.sh target                  # current Lean fixtures against T0
-bash scripts/check-conform.sh compiler                # actual emitted OCaml checkpoint
-bash scripts/check-conform.sh cases                   # compiled cases / mirrors / rules
-bash scripts/generate.sh --only specs                 # ordinary checked specifications
+python3 scripts/check-conform.py                      # models, native layouts, types
+python3 scripts/check-conform.py target               # current Lean fixtures against T0
+python3 scripts/check-conform.py compiler             # actual emitted OCaml checkpoint
+make check-cases                                      # compiled cases / mirrors / rules (python3 scripts/check-conform.py cases)
+make gen-specs                                        # ordinary checked specifications (python3 scripts/generate.py --only specs)
 ```
 
 `target` requires the pinned Bun/TypeScript installation; `compiler` requires `ocamlopt` from
@@ -35,7 +36,7 @@ certificate implied by a green finite run.
 
 ## Describe a type
 
-`bash scripts/check-conform.sh types` emits `type-descriptions.json` for the selected Effect4
+`python3 scripts/check-conform.py types` emits `type-descriptions.json` for the selected Effect4
 families, and a report showing raw metadata, normalized metadata, type keys, target spelling
 and remaining connections. The generic API can describe another selected inductive:
 

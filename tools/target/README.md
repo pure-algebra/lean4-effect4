@@ -1,6 +1,6 @@
 # Independent target type diagnostics
 
-`python3 scripts/check-target.py` checks the actual printed programs and adapter members
+`make check-target` (`bun tools/target/cli.ts --repo .`) checks the actual printed programs and adapter members
 against type metadata generated from Lean. It writes `.lake/target/report.json` and exits
 0 only when every selected comparison agrees, 1 on mismatch/refusal, and 2 on an unreadable
 or invalid top-level tool input. It neither runs Lean nor regenerates inputs.
@@ -15,8 +15,8 @@ The full `scopeKey` maps to `Scope.Scope`; a matching service code alone is insu
 Other requirement keys need explicit bindings before this profile can admit them.
 
 `oracle.ts` is the diagnostic library. `profile.ts` projects existing generated metadata
-into its queries. `input.ts` decodes optional local query selections. `cli.ts` and
-`scripts/check-target.py` are thin drivers. The tool uses the repository's pinned TypeScript
+into its queries. `input.ts` decodes optional local query selections. `cli.ts` is the thin
+driver. The tool uses the repository's pinned TypeScript
 compiler and compiler options (with its pinned Bun type root made explicit); imported values
 are never executed. Expected types and actual compiler types meet only in two ordinary
 assignment statements per column. There are no assertions converting actual values to the
@@ -46,8 +46,8 @@ Run `bun ts/eff/node_modules/typescript/bin/tsc --noEmit -p tools/target/tsconfi
 tool's own type check. A reproducible command control is:
 
 ```sh
-python3 scripts/check-target.py --queries Test/fixtures/target/positive.json --out .lake/target/positive.json
-python3 scripts/check-target.py --queries Test/fixtures/target/negative.json --out .lake/target/negative.json
+bun tools/target/cli.ts --repo . --queries Test/fixtures/target/positive.json --out .lake/target/positive.json
+bun tools/target/cli.ts --repo . --queries Test/fixtures/target/negative.json --out .lake/target/negative.json
 ```
 
 The first exits 0, the second exits 1. Explicit queries are reported under a separate profile;

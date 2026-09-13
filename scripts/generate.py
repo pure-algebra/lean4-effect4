@@ -1,6 +1,6 @@
 """The producers behind `make gen-*`: one family per call, run in place or into a directory.
 
-`scripts/generate.sh --only <family>` regenerates that family's files in the tree;
+`python3 scripts/generate.py --only <family>` regenerates that family's files in the tree;
 `--output-dir DIR` writes them under DIR instead and refuses if a file differs from the
 committed one (the drift check's temporary route). Ordering and staleness are the
 Makefile's: each `gen-*` rule names the generator's sources and the Lake traces of the
@@ -15,7 +15,7 @@ import shlex
 import subprocess
 import tempfile
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def run(args, capture=False):
@@ -87,13 +87,12 @@ def generate(families, output):
                 continue
             temp = out / target
             temp.mkdir(parents=True, exist_ok=True)
-            if family == 'ts':
-                # The delegated script caps its build and Lean invocation separately.
-                subprocess.run(['bash', 'scripts/generate-ts-eff.sh', str(temp)], check=True)
-            else:
-                run(['lake', 'build', 'OCaml5.Tools.' + tool])
-                run(['lake', 'env', 'lean', '-M4096', '--run',
-                     'src/OCaml5/Tools/' + tool + '.lean', str(temp)])
+            # `Tools.TsGen` (a Tools module) writes the TypeScript estate; the three OCaml
+            # tools live under src/OCaml5/Tools. Every family reads the closed world off the
+            # environment, so nothing here is typed by hand.
+            source = 'tools/Tools/TsGen.lean' if family == 'ts' else 'src/OCaml5/Tools/' + tool + '.lean'
+            run(['lake', 'build', ('Tools.' if family == 'ts' else 'OCaml5.Tools.') + tool])
+            run(['lake', 'env', 'lean', '-M4096', '--run', source, str(temp)])
             if not checking:
                 for source in sorted(temp.rglob('*')):
                     if source.is_file():

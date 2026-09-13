@@ -21,15 +21,22 @@
 # changes). Drift of a committed generated file is `make check-gen`: regenerate the
 # stale groups, then `git diff --exit-code` over every generated path.
 #
-# One Lean process at a time (.NOTPARALLEL). Checks that need no Lean can be run
+# One Lean process at a time (.NOTPARALLEL), and one `make` at a time: the scripts no
+# longer take a lock file, this file is the lane. Checks that need no Lean can be run
 # in parallel from a second shell; a parallel lane is a later step.
+#
+# The scripts under scripts/ are the checks and producers that are programs in their
+# own right; a step that is one to five commands is written here, not wrapped.
 
 SHELL := /bin/bash
 LAKE ?= lake
 BUN ?= bun
 PY ?= python3
+OPAM_SWITCH ?= effect4
+OCAML := opam exec --switch=$(OPAM_SWITCH) --
 GEN := .lake/gen
 CHK := .lake/check
+export LEAN_NUM_THREADS ?= 3
 .DEFAULT_GOAL := help
 .NOTPARALLEL:
 
@@ -66,43 +73,43 @@ DERIVED_OUT := src/Effect4/Store/Derived/Json.lean src/Effect4/Store/Derived/Sch
   src/Effect4/Program/Fold.lean
 
 $(GEN)/derived: $(DERIVED_SOURCES) $(DERIVED_TRACES) | build
-	bash scripts/generate.sh --only derived
+	$(PY) scripts/generate.py --only derived
 	@mkdir -p $(GEN) && touch $@
 
 $(GEN)/specs: $(GEN)/derived tools/Conform/Cli/EmitSpecs.lean tools/Conform/Effect4/specs.json $(TRACE)/Program/Typing.trace
-	bash scripts/generate.sh --only specs
+	$(PY) scripts/generate.py --only specs
 	@mkdir -p $(GEN) && touch $@
 
 EFF_SOURCES := src/OCaml5/Tools/EffGen.lean $(wildcard src/OCaml5/Eff/*.lean) \
   scripts/generate-engine-structure.py scripts/lib/program_structure.py ocaml/engine/api_engine.ml
 $(GEN)/eff: $(GEN)/specs $(EFF_SOURCES) $(CORE)
-	bash scripts/generate.sh --only eff
+	$(PY) scripts/generate.py --only eff
 	@mkdir -p $(GEN) && touch $@
 
 $(GEN)/wire: $(GEN)/eff src/OCaml5/Tools/EffWire.lean $(CORE)
-	bash scripts/generate.sh --only wire
+	$(PY) scripts/generate.py --only wire
 	@mkdir -p $(GEN) && touch $@
 
 $(GEN)/cas: $(GEN)/wire src/OCaml5/Tools/CasGoldens.lean $(CORE)
-	bash scripts/generate.sh --only cas
+	$(PY) scripts/generate.py --only cas
 	@mkdir -p $(GEN) && touch $@
 
-TS_SOURCES := $(wildcard tools/Tools/*.lean) scripts/generate-ts-eff.sh src/Effect4/Codegen/Print.lean lakefile.toml \
+TS_SOURCES := $(wildcard tools/Tools/*.lean) src/Effect4/Codegen/Print.lean lakefile.toml \
   vendor/effect-4.0.0-rc.112/src/unstable/sql/SqlClient.ts vendor/effect-4.0.0-rc.112/src/unstable/sql/Statement.ts \
   vendor/effect-4.0.0-rc.112/src/unstable/persistence/KeyValueStore.ts
 $(GEN)/ts: $(GEN)/cas $(TS_SOURCES) $(CORE)
-	bash scripts/generate.sh --only ts
+	$(PY) scripts/generate.py --only ts
 	@mkdir -p $(GEN) && touch $@
 
 $(GEN)/readme: $(GEN)/ts ts/eff/ingest/render-readme.ts ts/eff/profile.gen.ts ts/eff/forms.gen.ts ts/eff/taxonomy.gen.ts
-	bash scripts/generate.sh --only readme
+	$(PY) scripts/generate.py --only readme
 	@mkdir -p $(GEN) && touch $@
 
 # The four LCNF outputs (each header carries its own regenerating command).
 LCNF_SOURCES := src/OCaml5/Tools/LcnfGen.lean $(wildcard src/OCaml5/Lcnf/*.lean) \
   ocaml/engine/externs.txt ocaml/engine/tools/api_engine_prelude.ml
 $(GEN)/lcnf: $(GEN)/readme $(LCNF_SOURCES) $(CORE)
-	bash scripts/generate.sh --only lcnf
+	$(PY) scripts/generate.py --only lcnf
 	@mkdir -p $(GEN) && touch $@
 
 # The truth harness: Lean writes the corpus from the committed tapes, then the real
@@ -115,8 +122,9 @@ $(GEN)/truth: $(GEN)/lcnf $(TRUTH_SOURCES) $(CORE) $(LAWS)
 	$(BUN) run harness/truth/run-truth.ts --manifest harness/truth/corpus.json --out harness/truth --timeout 300 --tape-out harness/truth/tapes
 	@mkdir -p $(GEN) && touch $@
 
-$(GEN)/host-protocol: $(GEN)/truth tools/Tools/HostProtocol.lean scripts/generate-host-protocol.sh $(TRACE)/Api/HostSession.trace
-	bash scripts/generate-host-protocol.sh
+$(GEN)/host-protocol: $(GEN)/truth tools/Tools/HostProtocol.lean $(TRACE)/Api/HostSession.trace
+	$(LAKE) build Effect4.Api.HostSession
+	$(LAKE) env lean -M4096 --run tools/Tools/HostProtocol.lean harness/truth/session
 	@mkdir -p $(GEN) && touch $@
 
 SCHEMA_TS_DIR := harness/schema-generation
@@ -190,12 +198,12 @@ ts/eff/node_modules: ts/eff/package.json ts/eff/bun.lock
 # ---------------------------------------------------------------------------- checks
 
 CHECKS := roots cases native ts-reader truth target schema-codec ocaml ingest ingest-smoke \
-  host-protocol census streams schema-ts compat tools
+  host-protocol census streams schema-ts schema-pins schema-surface schema-host compat tools
 .PHONY: check check-host check-full check-gen check-gen-full check-citations clean-check $(addprefix check-,$(CHECKS))
 
 check: build check-roots check-gen check-cases check-native check-citations check-ts-reader ## after every change
 check-host: check check-truth check-target check-schema-codec check-ocaml check-ingest-smoke ## per slice: the outside oracles
-check-full: check-host check-gen-full check-ingest check-host-protocol check-census check-streams check-schema-ts ## everything
+check-full: check-host check-gen-full check-ingest check-host-protocol check-census check-streams check-schema-ts check-schema-pins check-schema-surface check-schema-host ## everything
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
 # generated file. `check-gen-full` re-cuts every group, the host-cut ones included,
@@ -220,17 +228,21 @@ $(addprefix check-,$(CHECKS)): check-%: $(CHK)/%
 clean-check: ## forget the check markers (the next `make check` runs every check)
 	rm -rf $(CHK)
 
-$(CHK)/roots: $(LEAN_SOURCES) lakefile.toml lean-toolchain scripts/check-library-roots.sh | build
-	bash scripts/check-library-roots.sh
+# A fresh elaboration of Test/All.lean sees a new orphan source file even when Lake's
+# roots are cached; the compiled import graph and the source inventory are AxiomGate's.
+$(CHK)/roots: $(LEAN_SOURCES) lakefile.toml lean-toolchain | build
+	$(LAKE) build Test
+	$(LAKE) env lean Test/All.lean
+	@echo 'PASS library-roots: fresh module, root-closure and axiom audit'
 	@mkdir -p $(CHK) && touch $@
 
-CONFORM_SOURCES := $(shell find tools/Conform -name '*.lean' -o -name '*.json') scripts/check-conform.sh scripts/check-conform.py
+CONFORM_SOURCES := $(shell find tools/Conform -name '*.lean' -o -name '*.json') scripts/check-conform.py scripts/lib/conform_report.py
 $(CHK)/cases: $(CORE) $(CONFORM_SOURCES)
-	bash scripts/check-conform.sh cases
+	$(PY) scripts/check-conform.py cases
 	@mkdir -p $(CHK) && touch $@
 
 $(CHK)/native: $(CORE) $(CONFORM_SOURCES)
-	bash scripts/check-conform.sh native
+	$(PY) scripts/check-conform.py native
 	@mkdir -p $(CHK) && touch $@
 
 check-citations: ## every cited path exists; no line-numbered citation into a mutable document
@@ -247,25 +259,34 @@ $(CHK)/ts-reader: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) $(TR
 	cd ts/eff && $(BUN) test
 	@mkdir -p $(CHK) && touch $@
 
-$(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py scripts/check-truth.sh
-	bash scripts/check-truth.sh
+$(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py
+	$(PY) scripts/check-truth.py
 	@mkdir -p $(CHK) && touch $@
 
-$(CHK)/target: $(TRUTH_GENERATED) Test/fixtures/target/selection.json $(wildcard tools/target/*.ts) ts/eff/profile.gen.ts scripts/check-target.py
-	$(PY) scripts/check-target.py
+# T0: the printed programs' answer, error and requirement types against the pinned
+# TypeScript compiler (tools/target).
+$(CHK)/target: $(TRUTH_GENERATED) Test/fixtures/target/selection.json $(wildcard tools/target/*.ts) ts/eff/profile.gen.ts
+	$(BUN) tools/target/cli.ts --repo .
 	@mkdir -p $(CHK) && touch $@
 
-$(CHK)/schema-codec: $(CORE) $(wildcard harness/truth/schema-codec/*) scripts/check-schema-codec.sh
-	bash scripts/check-schema-codec.sh
+# The schema codec: Lean's `Ty.encode` results for the contract's cases, compared with
+# rc.112's `Schema.toCodecJson` on the host; nothing committed.
+$(CHK)/schema-codec: $(CORE) $(wildcard harness/truth/schema-codec/*) | build
+	@tmp="$$(mktemp -d "$${TMPDIR:-/tmp}/effect4-schema-codec.XXXXXX")"; \
+	  $(LAKE) env lean -M4096 --run harness/truth/schema-codec/Emit.lean "$$tmp/values.ts" && \
+	  node harness/truth/node_modules/typescript/bin/tsc --project harness/truth/schema-codec/tsconfig.json && \
+	  $(BUN) harness/truth/schema-codec/check.ts "$$tmp/values.ts"; \
+	  status=$$?; rm -rf "$$tmp"; exit $$status
 	@mkdir -p $(CHK) && touch $@
 
-# The OCaml lane: the eff library's goldens and wire tests, the engine's own tests and the
+# The OCaml lane (the effect4 opam switch; local only until the runner has one): the eff
+# library's goldens and wire tests, the LCNF route's smoke, the engine's own tests and the
 # three-engine differential (which reads the printed corpus), and the engine seam check.
 OCAML_SOURCES := $(shell find ocaml -type f -not -path '*/_build/*')
-$(CHK)/ocaml: $(CORPUS)/index.tsv $(OCAML_SOURCES) scripts/check-ocaml.sh
-	bash scripts/check-ocaml.sh dune-tests
-	bash scripts/check-ocaml.sh engine-tests
-	bash scripts/check-ocaml.sh gen-check
+$(CHK)/ocaml: $(CORPUS)/index.tsv $(OCAML_SOURCES)
+	cd ocaml && $(OCAML) dune build && $(OCAML) dune test eff gen
+	cd ocaml && $(OCAML) dune test engine
+	$(OCAML) bash ocaml/engine/tools/gen-check.sh
 	@mkdir -p $(CHK) && touch $@
 
 # The ingest smoke: the printed corpus through the foreign recognizer's printed contract.
@@ -286,12 +307,41 @@ $(CHK)/census: $(VENDOR_SOURCES) generated/effect-runtime-census.tsv Test/Audit/
 	bash scripts/check-effect-runtime-census.sh
 	@mkdir -p $(CHK) && touch $@
 
-$(CHK)/streams: $(VENDOR_SOURCES) $(shell find harness/streams -type f -not -path '*/node_modules/*') scripts/check-streams.sh
-	bash scripts/check-streams.sh
+# The pinned host's stream examples: the census of executable doc fences, the boundary
+# type checks, the instrumented run. No Lean.
+$(CHK)/streams: $(VENDOR_SOURCES) $(shell find harness/streams -type f -not -path '*/node_modules/*') scripts/generate-effect-stream-census.py ts/eff/node_modules
+	$(PY) scripts/generate-effect-stream-census.py
+	$(PY) scripts/generate-effect-stream-census.py --check
+	$(BUN) ts/eff/node_modules/typescript/bin/tsc --pretty false -p harness/streams/tsconfig.json
+	$(BUN) harness/streams/typecheck-boundaries.ts
+	$(BUN) test harness/streams/instrument.test.ts harness/streams/boundary.test.ts
+	$(BUN) harness/streams/run.ts
 	@mkdir -p $(CHK) && touch $@
 
-$(CHK)/schema-ts: $(shell find src/Effect4/Schema -name '*.lean') src/Effect4/Codegen/Schema.lean $(wildcard $(SCHEMA_TS_DIR)/*) scripts/check-schema-typescript-generation.sh
+SCHEMA_SOURCES := $(shell find src/Effect4/Schema -name '*.lean') src/Effect4/Codegen/Schema.lean
+$(CHK)/schema-ts: $(SCHEMA_SOURCES) $(wildcard $(SCHEMA_TS_DIR)/*) scripts/check-schema-typescript-generation.sh
 	bash scripts/check-schema-typescript-generation.sh
+	@mkdir -p $(CHK) && touch $@
+
+# The rest of the Schema slice, on its inputs (ledger decision 3): the rc.112 tag and
+# field pins are textual extractions from the vendored SchemaRepresentation.ts; the
+# surface check elaborates the two boundary fixtures (Test.Schema.PayloadSurface itself is
+# in the build); the host harnesses run the pinned Schema host
+# (EFFECT4_EFFECT_NODE_MODULES, harness/schema-host).
+SCHEMA_PIN := vendor/effect-4.0.0-rc.112/src/SchemaRepresentation.ts
+$(CHK)/schema-pins: $(SCHEMA_PIN) src/Effect4/Schema/Representation.lean scripts/check-schema-census.sh scripts/check-schema-fields.sh
+	bash scripts/check-schema-census.sh $(SCHEMA_PIN)
+	bash scripts/check-schema-fields.sh $(SCHEMA_PIN)
+	@mkdir -p $(CHK) && touch $@
+
+$(CHK)/schema-surface: $(SCHEMA_SOURCES) Test/Schema/PayloadSurface.lean $(wildcard Test/fixtures/schema-payload-surface/*.lean) | build
+	$(LAKE) env lean Test/fixtures/schema-payload-surface/RequiredPayloadBoundary.lean
+	$(LAKE) env lean Test/fixtures/schema-payload-surface/RequiredOwnership.lean
+	@mkdir -p $(CHK) && touch $@
+
+$(CHK)/schema-host: $(SCHEMA_SOURCES) $(shell find harness/schema-annotations harness/schema-effectful-field -type f -not -path '*/node_modules/*') scripts/check-schema-annotations.sh scripts/check-schema-effectful-field.sh | build
+	bash scripts/check-schema-annotations.sh
+	bash scripts/check-schema-effectful-field.sh
 	@mkdir -p $(CHK) && touch $@
 
 # The compatibility snapshot: reflect the working tree in a checkout outside the
@@ -307,7 +357,8 @@ $(CHK)/compat: $(CORE) scripts/check-compatibility.py scripts/lib/compatibility.
 	  status=$$?; rm -rf "$$(dirname "$$work")"; exit $$status
 	@mkdir -p $(CHK) && touch $@
 
-SELFTEST_SOURCES := $(wildcard scripts/test-*.sh scripts/test-*.py scripts/lib/*) Test/Audit/AxiomGate.lean $(shell find Test/fixtures/trust-gate Test/fixtures/internal-citations -type f)
+SELFTEST_SOURCES := $(wildcard scripts/test-*.sh scripts/test-*.py scripts/lib/*) Test/Audit/AxiomGate.lean \
+  $(shell find Test/fixtures/trust-gate Test/fixtures/internal-citations Test/fixtures/schema-payload-surface -type f)
 $(CHK)/tools: $(SELFTEST_SOURCES) | build
 	bash scripts/test-trust-gate.sh
 	bash scripts/test-internal-citations-gate.sh
@@ -315,6 +366,7 @@ $(CHK)/tools: $(SELFTEST_SOURCES) | build
 	$(PY) scripts/test-conform-report.py
 	$(PY) scripts/test-program-structure.py
 	$(PY) scripts/test-compatibility.py
+	bash scripts/test-schema-payload-surface-gate.sh
 	@mkdir -p $(CHK) && touch $@
 
 # ---------------------------------------------------------------------------- help
@@ -325,7 +377,8 @@ help: ## this list
 	@echo
 	@echo '  check-<name>       one check: roots, cases, native, ts-reader, truth, target, schema-codec,'
 	@echo '                     ocaml, ingest, ingest-smoke, host-protocol, census, streams, schema-ts,'
-	@echo '                     compat, tools (each skipped while its inputs are unchanged; -B forces)'
+	@echo '                     schema-pins, schema-surface, schema-host, compat, tools'
+	@echo '                     (each skipped while its inputs are unchanged; -B forces)'
 	@echo '  gen-<group>        one generated group: derived, specs, eff, wire, cas, ts, readme, lcnf,'
 	@echo '                     truth, host-protocol, schema-ts, census'
 

@@ -10,7 +10,7 @@
  *     bun run <abs path>/harness/truth/run-truth.ts --manifest <corpus.json> [--out <dir>] [--timeout ms]
  *
  * Effect resolves through `harness/truth/node_modules`, selected by
- * `scripts/check-truth.sh`; the current working directory does not select it.
+ * `scripts/check-truth.py` (`make check-truth`); the current working directory does not select it.
  *
  * Depends on `effect` (rc.112), `./prelude.ts` (the atoms; part of the truth claim) and
  * `ts/eff/profile.gen.ts` (the atom set the self-test checks the prelude's table against).

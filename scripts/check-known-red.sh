@@ -14,9 +14,9 @@
 # The default mode is the same evidence `scripts/test-trust-gate.sh` step 0b
 # collects -- one `lake env lean` per declared module -- so run it under the
 # machine's Lean lock, and prefer the dry run when only the policy is in
-# question. Gate entries are judged by the gate that owns them
-# (`scripts/check-ocaml.sh`), not here: this script cannot observe an OCaml
-# switch it did not run.
+# question. Gate entries (the `# gate:` form) have had no consumer since
+# 2026-09-13, when the last owning script became a Makefile recipe; this
+# script parses them and judges only modules.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

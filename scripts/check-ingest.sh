@@ -11,22 +11,8 @@ repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$repo_root"
 printed="${EFFECT4_CORPUS:?the printed corpus directory; run through make (make check-ingest)}"
 . scripts/lib/portable.sh
-export LEAN_NUM_THREADS=3
-lock="$repo_root/.lake/LANE.lock"
-owned=0
-if mkdir "$lock" 2>/dev/null; then
-  owned=1
-  export EFFECT4_LANE_OWNER="ingest-$$-$RANDOM"
-  printf '%s\n' "$EFFECT4_LANE_OWNER" > "$lock/owner"
-elif [[ -z "${EFFECT4_LANE_OWNER:-}" || ! -f "$lock/owner" ]] || [[ "$(cat "$lock/owner")" != "$EFFECT4_LANE_OWNER" ]]; then
-  echo 'FAIL ingest: Lean lane is held by another run' >&2; exit 1
-fi
 work="$(mktemp -d "${TMPDIR:-/tmp}/effect4-ingest.XXXXXX")"
-cleanup() {
-  rm -rf -- "$work"
-  if [[ "$owned" = 1 ]]; then rm -f "$lock/owner"; rmdir "$lock"; fi
-}
-trap cleanup EXIT
+trap 'rm -rf -- "$work"' EXIT
 command -v bun >/dev/null
 command -v node >/dev/null
 command -v opam >/dev/null

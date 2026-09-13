@@ -54,8 +54,8 @@ The enumerations behind the profile are checked, not asserted: `run_cmd` reads t
 inductives out of the environment and refuses if their constructor lists moved. A value
 printer here that disagrees with a generated schema fails the decode at import, loudly.
 
-`make gen-ts` (through `scripts/generate-ts-eff.sh`) runs this; `make check-gen` is the drift check
-over the six files, in the sweep. A tool (`IO`, `Lean.Meta`; `lakefile.toml`, the `Tools`
+`make gen-ts` (`scripts/generate.py --only ts`) runs this; `make check-gen` is the drift check
+over the seven files. A tool (`IO`, `Lean.Meta`; `lakefile.toml`, the `Tools`
 library): outside the axiom gate, imported by nothing.
 -/
 
