@@ -123,6 +123,4 @@ if [[ "$mode" == "dry-run" ]]; then
 else
   printf 'PASS generated Effect 4.0.0-rc.112 runtime census is current: %s mechanism rows\n' "$census_total"
   printf 'PASS census ids and kinds join the Lean row list\n'
-  printf 'PASS coverage: denominator %s; owned-with-green %s; green %s, partial %s, absent %s\n' \
-    "$denominator" "$owned_green" "$green" "$partial" "$absent"
 fi
