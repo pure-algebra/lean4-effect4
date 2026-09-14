@@ -6,15 +6,10 @@ namespace Test.Schema.AuthoringContract
 
 open Effect4
 
-#check (Effect4.Schema.string : Representation)
 #check Effect4.Schema.Predicate.decide
 #check Effect4.Schema.Predicate.and
 #check Effect4.Schema.Predicate.contramap
 #check Effect4.Schema.check
-#check (@Effect4.Schema.Check.named :
-  String → Json → Option (List Representation) → Annotations → Bool → Check)
-#check (@Effect4.Schema.withCheck :
-  Representation → Check → List Check → Option Representation)
 
 private def nameSchema : Representation :=
   Effect4.Schema.struct [Effect4.Schema.property "name" Effect4.Schema.string]

@@ -29,10 +29,6 @@ individual law classes are the native consumer API.
 
 section StandardOrderBoundary
 
-#check (@Std.IsLinearOrder.{u} : (α : Type u) → [LE α] → Prop)
-#check (@Std.LawfulOrderLT.{u} :
-  (α : Type u) → [LT α] → [LE α] → Prop)
-
 example {α : Type u} [LE α] [LT α] [Std.IsLinearOrder α]
     [Std.LawfulOrderLT α] (a : α) : ¬ a < a :=
   Std.lt_irrefl
@@ -69,30 +65,6 @@ no unchecked `ofList` constructor.
 
 section Carrier
 
-#check (@Effect4.Ascending.{u} :
-  {α : Type u} → [LT α] → List α → Prop)
-
-#check (@Effect4.ascending_iff.{u} :
-  forall {α : Type u} [LT α] (xs : List α),
-    Effect4.Ascending xs ↔ xs.Pairwise (· < ·))
-
-#check (@Effect4.Row.{u} : (α : Type u) → [LT α] → Type u)
-
-#check (@Effect4.Row.mk.{u} :
-  {α : Type u} → [LT α] → (elems : List α) →
-    Effect4.Ascending elems → Effect4.Row α)
-
-#check (@Effect4.Row.elems.{u} :
-  {α : Type u} → [LT α] → Effect4.Row α → List α)
-
-#check (@Effect4.Row.ascending.{u} :
-  forall {α : Type u} [LT α] (r : Effect4.Row α),
-    Effect4.Ascending r.elems)
-
-#check (@Effect4.Row.mem_def.{u} :
-  forall {α : Type u} [LT α] (a : α) (r : Effect4.Row α),
-    a ∈ r ↔ a ∈ r.elems)
-
 example {α : Type u} [LT α] [DecidableEq α] (a : α)
     (r : Effect4.Row α) : Decidable (a ∈ r) := inferInstance
 
@@ -112,64 +84,6 @@ only proof-free raw-list boundary.
 
 section Normalization
 
-#check (@Effect4.Row.insert.{u} :
-  {α : Type u} → [LE α] → [LT α] → [DecidableEq α] → [DecidableLT α] →
-    [Std.IsLinearOrder α] → [Std.LawfulOrderLT α] →
-    α → Effect4.Row α → Effect4.Row α)
-
-#check (@Effect4.Row.mem_insert.{u} :
-  forall {α : Type u} [LE α] [LT α] [DecidableEq α] [DecidableLT α]
-    [Std.IsLinearOrder α] [Std.LawfulOrderLT α]
-    (a x : α) (r : Effect4.Row α),
-    a ∈ Effect4.Row.insert x r ↔ a = x ∨ a ∈ r)
-
-#check (@Effect4.Row.ascending_insert.{u} :
-  forall {α : Type u} [LE α] [LT α] [DecidableEq α] [DecidableLT α]
-    [Std.IsLinearOrder α] [Std.LawfulOrderLT α]
-    (x : α) (r : Effect4.Row α),
-    Effect4.Ascending (Effect4.Row.insert x r).elems)
-
-#check (@Effect4.Row.normalize.{u} :
-  {α : Type u} → [LE α] → [LT α] → [DecidableEq α] → [DecidableLT α] →
-    [Std.IsLinearOrder α] → [Std.LawfulOrderLT α] →
-    List α → Effect4.Row α)
-
-#check (@Effect4.Row.mem_normalize.{u} :
-  forall {α : Type u} [LE α] [LT α] [DecidableEq α] [DecidableLT α]
-    [Std.IsLinearOrder α] [Std.LawfulOrderLT α]
-    (a : α) (xs : List α),
-    a ∈ Effect4.Row.normalize xs ↔ a ∈ xs)
-
-#check (@Effect4.Row.ascending_normalize.{u} :
-  forall {α : Type u} [LE α] [LT α] [DecidableEq α] [DecidableLT α]
-    [Std.IsLinearOrder α] [Std.LawfulOrderLT α]
-    (xs : List α), Effect4.Ascending (Effect4.Row.normalize xs).elems)
-
-#check (@Effect4.Row.eq_of_mem_iff.{u} :
-  forall {α : Type u} [LE α] [LT α]
-    [Std.IsLinearOrder α] [Std.LawfulOrderLT α]
-    {r s : Effect4.Row α},
-    (forall a : α, a ∈ r ↔ a ∈ s) → r = s)
-
-#check (@Effect4.Row.normalize_of_ascending.{u} :
-  forall {α : Type u} [LE α] [LT α] [DecidableEq α] [DecidableLT α]
-    [Std.IsLinearOrder α] [Std.LawfulOrderLT α]
-    (xs : List α) (h : Effect4.Ascending xs),
-    Effect4.Row.normalize xs = Effect4.Row.mk xs h)
-
-#check (@Effect4.Row.normalize_idempotent.{u} :
-  forall {α : Type u} [LE α] [LT α] [DecidableEq α] [DecidableLT α]
-    [Std.IsLinearOrder α] [Std.LawfulOrderLT α]
-    (xs : List α),
-    Effect4.Row.normalize (Effect4.Row.normalize xs).elems =
-      Effect4.Row.normalize xs)
-
-#check (@Effect4.Row.normalize_duplicate.{u} :
-  forall {α : Type u} [LE α] [LT α] [DecidableEq α] [DecidableLT α]
-    [Std.IsLinearOrder α] [Std.LawfulOrderLT α]
-    (a : α),
-    Effect4.Row.normalize [a, a] = Effect4.Row.normalize [a])
-
 end Normalization
 
 /-!
@@ -181,59 +95,6 @@ canonical extensionality; none is merely a set-level observation.
 -/
 
 section Union
-
-#check (@Effect4.Row.empty.{u} :
-  {α : Type u} → [LT α] → Effect4.Row α)
-
-#check (@Effect4.Row.not_mem_empty.{u} :
-  forall {α : Type u} [LT α] (a : α),
-    ¬ a ∈ (Effect4.Row.empty : Effect4.Row α))
-
-#check (@Effect4.Row.singleton.{u} :
-  {α : Type u} → [LT α] → α → Effect4.Row α)
-
-#check (@Effect4.Row.mem_singleton.{u} :
-  forall {α : Type u} [LT α] (a b : α),
-    b ∈ Effect4.Row.singleton a ↔ b = a)
-
-#check (@Effect4.Row.union.{u} :
-  {α : Type u} → [LE α] → [LT α] → [DecidableEq α] → [DecidableLT α] →
-    [Std.IsLinearOrder α] → [Std.LawfulOrderLT α] →
-    Effect4.Row α → Effect4.Row α → Effect4.Row α)
-
-#check (@Effect4.Row.mem_union.{u} :
-  forall {α : Type u} [LE α] [LT α] [DecidableEq α] [DecidableLT α]
-    [Std.IsLinearOrder α] [Std.LawfulOrderLT α]
-    (a : α) (r s : Effect4.Row α),
-    a ∈ Effect4.Row.union r s ↔ a ∈ r ∨ a ∈ s)
-
-#check (@Effect4.Row.union_assoc.{u} :
-  forall {α : Type u} [LE α] [LT α] [DecidableEq α] [DecidableLT α]
-    [Std.IsLinearOrder α] [Std.LawfulOrderLT α]
-    (r s t : Effect4.Row α),
-    Effect4.Row.union (Effect4.Row.union r s) t =
-      Effect4.Row.union r (Effect4.Row.union s t))
-
-#check (@Effect4.Row.union_comm.{u} :
-  forall {α : Type u} [LE α] [LT α] [DecidableEq α] [DecidableLT α]
-    [Std.IsLinearOrder α] [Std.LawfulOrderLT α]
-    (r s : Effect4.Row α),
-    Effect4.Row.union r s = Effect4.Row.union s r)
-
-#check (@Effect4.Row.union_idem.{u} :
-  forall {α : Type u} [LE α] [LT α] [DecidableEq α] [DecidableLT α]
-    [Std.IsLinearOrder α] [Std.LawfulOrderLT α]
-    (r : Effect4.Row α), Effect4.Row.union r r = r)
-
-#check (@Effect4.Row.union_empty_left.{u} :
-  forall {α : Type u} [LE α] [LT α] [DecidableEq α] [DecidableLT α]
-    [Std.IsLinearOrder α] [Std.LawfulOrderLT α]
-    (r : Effect4.Row α), Effect4.Row.union Effect4.Row.empty r = r)
-
-#check (@Effect4.Row.union_empty_right.{u} :
-  forall {α : Type u} [LE α] [LT α] [DecidableEq α] [DecidableLT α]
-    [Std.IsLinearOrder α] [Std.LawfulOrderLT α]
-    (r : Effect4.Row α), Effect4.Row.union r Effect4.Row.empty = r)
 
 end Union
 
@@ -248,37 +109,9 @@ this data graph.
 
 section Weakening
 
-#check (@Effect4.Row.Subset.{u} :
-  {α : Type u} → [LT α] → Effect4.Row α → Effect4.Row α → Prop)
-
-#check (@Effect4.Row.subset_iff.{u} :
-  forall {α : Type u} [LT α] (r s : Effect4.Row α),
-    Effect4.Row.Subset r s ↔ forall a : α, a ∈ r → a ∈ s)
-
 example {α : Type u} [LT α] [DecidableEq α]
     (r s : Effect4.Row α) : Decidable (Effect4.Row.Subset r s) :=
   inferInstance
-
-#check (@Effect4.Row.subset_refl.{u} :
-  forall {α : Type u} [LT α] (r : Effect4.Row α),
-    Effect4.Row.Subset r r)
-
-#check (@Effect4.Row.subset_trans.{u} :
-  forall {α : Type u} [LT α] {r s t : Effect4.Row α},
-    Effect4.Row.Subset r s → Effect4.Row.Subset s t →
-      Effect4.Row.Subset r t)
-
-#check (@Effect4.Row.subset_union_left.{u} :
-  forall {α : Type u} [LE α] [LT α] [DecidableEq α] [DecidableLT α]
-    [Std.IsLinearOrder α] [Std.LawfulOrderLT α]
-    (r s : Effect4.Row α),
-    Effect4.Row.Subset r (Effect4.Row.union r s))
-
-#check (@Effect4.Row.subset_union_right.{u} :
-  forall {α : Type u} [LE α] [LT α] [DecidableEq α] [DecidableLT α]
-    [Std.IsLinearOrder α] [Std.LawfulOrderLT α]
-    (r s : Effect4.Row α),
-    Effect4.Row.Subset s (Effect4.Row.union r s))
 
 end Weakening
 

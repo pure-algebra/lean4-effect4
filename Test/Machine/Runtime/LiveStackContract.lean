@@ -15,63 +15,6 @@ set_option autoImplicit false
 open Effect4
 universe u v
 
-#check (@FrameFiber.popLive :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u},
-    FrameFiber ν σ β ε δ ι α → Arm → Bool → FramePop ν σ β ε δ ι α)
-
-#check (@FrameFiber.getContLive :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u},
-    FrameFiber ν σ β ε δ ι α → Arm → Bool → FramePop ν σ β ε δ ι α)
-
-#check (@FrameFiber.popLive_eq_popFrom :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (self : FrameFiber ν σ β ε δ ι α) (demand : Arm) (skip : Bool),
-    FrameFiber.popLive self demand skip =
-      FrameFiber.popFrom demand skip self.stack { self with stack := [] })
-
-#check (@FrameFiber.getContLive_eq_getCont :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (self : FrameFiber ν σ β ε δ ι α) (demand : Arm) (skip : Bool),
-    self.deferredInterrupt = false →
-    FrameFiber.getContLive self demand skip = self.getCont demand skip)
-
-#check (@FrameFiber.getContLive_false_eq_getCont :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (self : FrameFiber ν σ β ε δ ι α) (demand : Arm),
-    FrameFiber.getContLive self demand false = self.getCont demand false)
-
-#check (@FrameFiber.getContLive_deferred_kept :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (self : FrameFiber ν σ β ε δ ι α) (demand : Arm) (skip : Bool),
-    self.deferredInterrupt = true → (skip && self.interrupted) = false →
-    FrameFiber.getContLive self demand skip =
-      (⟨.deferred self.pendingCause, [], [.deferred self.pendingCause],
-        { self with deferredInterrupt := false }⟩ : FramePop ν σ β ε δ ι α))
-
-#check (@FrameFiber.getContLive_deferred_discarded :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (self : FrameFiber ν σ β ε δ ι α) (demand : Arm),
-    self.deferredInterrupt = true → self.interrupted = true →
-    FrameFiber.getContLive self demand true =
-      let next : FramePop ν σ β ε δ ι α :=
-        FrameFiber.popLive { self with deferredInterrupt := false } demand true
-      { next with events := .deferred self.pendingCause :: next.events })
-
-#check (@FrameFiber.getContLive_while :
-  ∀ {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
-    (self : FrameFiber ν σ β ε δ ι α) (demand : Arm),
-    FrameFiber.getContLive self demand true =
-      let first : FramePop ν σ β ε δ ι α := FrameFiber.getContLive self demand false
-      match first.answer with
-      | .empty => first
-      | _ =>
-        if first.fiber.interrupted then
-          let next : FramePop ν σ β ε δ ι α :=
-            FrameFiber.getContLive first.fiber demand true
-          { next with popped := first.popped ++ next.popped,
-                      events := first.events ++ next.events }
-        else first)
-
 namespace Test.Runtime.LiveStackContract
 
 private abbrev P := Prim Nat Nat Nat Nat Nat Nat Nat

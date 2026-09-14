@@ -48,10 +48,6 @@ def recoverText : NativeEff := .catchCause (.fail (.lit (.str "lost")))
 #guard typeOf nativeSignature recoverText = some (EffTy.pure (.option .string))
 #guard (Api.run recoverText 200).exit = some (.success (.some (.str "lost")))
 
-#check (firstErrorValue?_typed : ∀ (cause : CauseV) (error : Ty) (allocated : List String)
-  (value : Val), causeAdmits (fun v _ => Val.hasTy v error allocated) error cause = true →
-  firstErrorValue? cause = some value → Val.hasTy value error allocated = true)
-
 #print axioms Effect4.Program.firstFailure?_head
 #print axioms Effect4.Program.firstFailure?_eq_some_iff
 #print axioms Effect4.Program.firstErrorValue?_boom

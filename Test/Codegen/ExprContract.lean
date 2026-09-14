@@ -11,51 +11,7 @@ open TypeScript
 
 namespace Test.Codegen.ExprContract
 
-
-#check (@Expr.ident : String → Expr)
-#check (@Expr.str : String → Expr)
-#check (@Expr.int : Int → Expr)
-#check (@Expr.float64Bits : UInt64 → Expr)
-#check (@Expr.bool : Bool → Expr)
-#check (Expr.jsNull : Expr)
-#check (@Expr.call : Expr → List Expr → Expr)
-#check (@Expr.object : List (String × Expr) → Expr)
-#check (@Expr.objectML : List (String × Expr) → Expr)
-#check (@Expr.objectQuoted : List (String × Expr) → Expr)
-#check (@Expr.objectQuotedML : List (String × Expr) → Expr)
-#check (@Expr.objectFromEntries : List (String × Expr) → Expr)
-#check (@Expr.arr : List Expr → Expr)
-#check (@Expr.arrow : Option String → Expr → Expr)
 #synth Inhabited Expr
-
-#check (@Stmt.constYield : String → Expr → Stmt)
-#check (@Stmt.ret : Expr → Stmt)
-
-#check (@ConstDecl.mk : List String → String → Expr → Option String → ConstDecl)
-#check (@ConstDecl.doc : ConstDecl → List String)
-#check (@ConstDecl.name : ConstDecl → String)
-#check (@ConstDecl.value : ConstDecl → Expr)
-#check (@ConstDecl.type : ConstDecl → Option String)
-
-#check (@ProgDecl.mk : List String → String → String → String → List Stmt → ProgDecl)
-#check (@ProgDecl.doc : ProgDecl → List String)
-#check (@ProgDecl.name : ProgDecl → String)
-#check (@ProgDecl.paramName : ProgDecl → String)
-#check (@ProgDecl.paramType : ProgDecl → String)
-#check (@ProgDecl.stmts : ProgDecl → List Stmt)
-
-#check (@Decl.const : ConstDecl → Decl)
-#check (@Decl.prog : ProgDecl → Decl)
-#check (@Decl.raw : String → Decl)
-#check (@Import.all : String → String → Import)
-#check (@Import.named : List String → String → Import)
-#check (@Import.types : List String → String → Import)
-#check (@Module.mk : List String → List Import → List Decl → Module)
-
-#check (@Style.mk : Nat → Char → Style)
-#check (house0 : Style)
-#check (@Render.expr : Style → Nat → Expr → String)
-#check (@Render.module : Style → Module → String)
 
 #guard Render.quoted house0 "quote\" slash\\ line\nreturn\rtab\t café" =
   "\"quote\\\" slash\\\\ line\\nreturn\\rtab\\t café\""

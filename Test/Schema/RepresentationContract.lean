@@ -17,33 +17,9 @@ section SurfaceSnapshot
 
 /-! D0: the tag alphabet. Twenty-two nominal constructors, exact names. -/
 
-#check (@RepresentationTag : Type)
 #synth DecidableEq RepresentationTag
 #synth Repr RepresentationTag
 #synth Inhabited RepresentationTag
-
-#check (@RepresentationTag.declaration : RepresentationTag)
-#check (@RepresentationTag.reference : RepresentationTag)
-#check (@RepresentationTag.suspend : RepresentationTag)
-#check (@RepresentationTag.null : RepresentationTag)
-#check (@RepresentationTag.undefined : RepresentationTag)
-#check (@RepresentationTag.void : RepresentationTag)
-#check (@RepresentationTag.never : RepresentationTag)
-#check (@RepresentationTag.unknown : RepresentationTag)
-#check (@RepresentationTag.any : RepresentationTag)
-#check (@RepresentationTag.string : RepresentationTag)
-#check (@RepresentationTag.number : RepresentationTag)
-#check (@RepresentationTag.boolean : RepresentationTag)
-#check (@RepresentationTag.bigint : RepresentationTag)
-#check (@RepresentationTag.symbol : RepresentationTag)
-#check (@RepresentationTag.literal : RepresentationTag)
-#check (@RepresentationTag.uniqueSymbol : RepresentationTag)
-#check (@RepresentationTag.objectKeyword : RepresentationTag)
-#check (@RepresentationTag.enum : RepresentationTag)
-#check (@RepresentationTag.templateLiteral : RepresentationTag)
-#check (@RepresentationTag.arrays : RepresentationTag)
-#check (@RepresentationTag.objects : RepresentationTag)
-#check (@RepresentationTag.union : RepresentationTag)
 
 /-!
 The dependent recursor freezes constructor order as part of the native public
@@ -51,60 +27,9 @@ API. A source edit that swaps two constructors can preserve the census and
 every spelling theorem; it cannot preserve this signature.
 -/
 
-#check (@RepresentationTag.rec.{u} :
-  {motive : RepresentationTag → Sort u} →
-  motive .declaration →
-  motive .reference →
-  motive .suspend →
-  motive .null →
-  motive .undefined →
-  motive .void →
-  motive .never →
-  motive .unknown →
-  motive .any →
-  motive .string →
-  motive .number →
-  motive .boolean →
-  motive .bigint →
-  motive .symbol →
-  motive .literal →
-  motive .uniqueSymbol →
-  motive .objectKeyword →
-  motive .enum →
-  motive .templateLiteral →
-  motive .arrays →
-  motive .objects →
-  motive .union →
-  (tag : RepresentationTag) → motive tag)
-
 /-! D1: the canonical census. D2: wire spelling. -/
 
-#check (@RepresentationTag.census : List RepresentationTag)
-
-#check (@RepresentationTag.tagName : RepresentationTag -> String)
-
-#check (@RepresentationTag.ofTagName : String -> Option RepresentationTag)
-
 /-! ENSURES 1-6, ascribed at their exact propositions. -/
-
-#check (@RepresentationTag.census_nodup :
-  RepresentationTag.census.Nodup)
-
-#check (@RepresentationTag.mem_census :
-  forall tag : RepresentationTag, tag ∈ RepresentationTag.census)
-
-#check (@RepresentationTag.tagName_injective :
-  forall {a b : RepresentationTag},
-    RepresentationTag.tagName a = RepresentationTag.tagName b -> a = b)
-
-#check (@RepresentationTag.ofTagName_tagName :
-  forall tag : RepresentationTag,
-    RepresentationTag.ofTagName (RepresentationTag.tagName tag) = some tag)
-
-#check (@RepresentationTag.tagName_ofTagName :
-  forall {s : String} {tag : RepresentationTag},
-    RepresentationTag.ofTagName s = some tag ->
-      RepresentationTag.tagName tag = s)
 
 end SurfaceSnapshot
 

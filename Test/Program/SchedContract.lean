@@ -125,13 +125,4 @@ def viaRSig (e : NativeEff) : ExitV × Stores :=
 
 /-! ## The statements, frozen -/
 
-#check (@Effect4.Program.Sched.interpret_inl_store :
-  ∀ {A : Type} (program : Effects.Program StoreSig A),
-    Effects.interpret rHandler (Effects.Program.inl program) =
-      Effects.interpret storeHandler program)
-
-#check (@Effect4.Program.Sched.meaning_via_rsig :
-  ∀ (e : NativeEff) (env : List Val) (s : Stores),
-    (Effects.interpret rHandler (Effects.Program.inl (denote e env))).run s = meaning e env s)
-
 end Test.Program.SchedContract

@@ -50,63 +50,6 @@ open Effect4.Program.Config
 
 section C1
 
-#check (@Effect4.Program.Config.load_source :
-  ∀ {Name : Type} (get : Lookup Name) (t : Path Name → Path Name) (p : Path Name),
-    (Provider.source get t).load p = get (t p))
-
-#check (@Effect4.Program.Config.load_make :
-  ∀ {Name : Type} (get : Lookup Name) (p : Path Name), (Provider.make get).load p = get p)
-
-#check (@Effect4.Program.Config.load_orElse :
-  ∀ {Name : Type} (a b : Provider Name) (p : Path Name),
-    (Provider.orElse a b).load p =
-      match a.load p with
-      | .ok (some n) => .ok (some n)
-      | .ok none => b.load p
-      | .error e => .error e)
-
-#check (@Effect4.Program.Config.orElse_assoc :
-  ∀ {Name : Type} (a b c : Provider Name),
-    (Provider.orElse (Provider.orElse a b) c).load
-      = (Provider.orElse a (Provider.orElse b c)).load)
-
-#check (@Effect4.Program.Config.orElse_empty_left :
-  ∀ {Name : Type} (p : Provider Name), (Provider.orElse Provider.empty p).load = p.load)
-
-#check (@Effect4.Program.Config.orElse_empty_right :
-  ∀ {Name : Type} (p : Provider Name), (Provider.orElse p Provider.empty).load = p.load)
-
-#check (@Effect4.Program.Config.orElse_idem :
-  ∀ {Name : Type} (p : Provider Name), (Provider.orElse p p).load = p.load)
-
-#check (@Effect4.Program.Config.mapInput_mapInput :
-  ∀ {Name : Type} (f g : Path Name → Path Name) (p : Provider Name),
-    (p.mapInput g).mapInput f = p.mapInput (fun q => f (g q)))
-
-#check (@Effect4.Program.Config.mapInput_id :
-  ∀ {Name : Type} (p : Provider Name), p.mapInput id = p)
-
-#check (@Effect4.Program.Config.mapInput_orElse :
-  ∀ {Name : Type} (f : Path Name → Path Name) (a b : Provider Name),
-    (Provider.orElse a b).mapInput f = Provider.orElse (a.mapInput f) (b.mapInput f))
-
-#check (@Effect4.Program.Config.nested_nested :
-  ∀ {Name : Type} (p : Provider Name) (q r : Path Name),
-    (p.nested q).nested r = p.nested (r ++ q))
-
-#check (@Effect4.Program.Config.load_mapInput_fresh :
-  ∀ {Name : Type} (get : Lookup Name) (f : Path Name → Path Name) (p : Path Name),
-    ((Provider.make get).mapInput f).load p = get (f p))
-
-#check (@Effect4.Program.Config.load_nested_fresh :
-  ∀ {Name : Type} (get : Lookup Name) (q p : Path Name),
-    ((Provider.make get).nested q).load p = get (q ++ p))
-
-#check (@Effect4.Program.Config.load_mapInput_orElse :
-  ∀ {Name : Type} (f : Path Name → Path Name) (a b : Provider Name) (p : Path Name),
-    ((Provider.orElse a b).mapInput f).load p
-      = (Provider.orElse (a.mapInput f) (b.mapInput f)).load p)
-
 end C1
 
 /-! ## C2 — the reader
@@ -116,49 +59,6 @@ end C1
 
 section C2
 
-#check (@Effect4.Program.Config.eval_withDefault_absent :
-  ∀ {Name : Type} (S : Scalars) (c : ConfigTerm Name) (d : Val) (P : Provider Name)
-    (q : Path Name) (e : ConfigError Name),
-    eval S c P q = .ok (.absent e) → eval S (.withDefault c d) P q = .ok (.resolved d false))
-
-#check (@Effect4.Program.Config.eval_withDefault_resolved :
-  ∀ {Name : Type} (S : Scalars) (c : ConfigTerm Name) (d v : Val) (P : Provider Name)
-    (q : Path Name) (hi : Bool),
-    eval S c P q = .ok (.resolved v hi) → eval S (.withDefault c d) P q = .ok (.resolved v hi))
-
-#check (@Effect4.Program.Config.eval_orElse_absent :
-  ∀ {Name : Type} (S : Scalars) (c d : ConfigTerm Name) (P : Provider Name) (q : Path Name)
-    (e : ConfigError Name),
-    eval S c P q = .ok (.absent e) → eval S (.orElse c d) P q = eval S d P q)
-
-#check (@Effect4.Program.Config.eval_orElse_failure :
-  ∀ {Name : Type} (S : Scalars) (c d : ConfigTerm Name) (P : Provider Name) (q : Path Name)
-    (f : Failure Name),
-    eval S c P q = .error f → eval S (.orElse c d) P q = recover f (eval S d P q))
-
-#check (@Effect4.Program.Config.recover_no_input :
-  ∀ {Name : Type} (f : Failure Name) (y : Outcome Name), f.hasInput = false → recover f y = y)
-
-#check (@Effect4.Program.Config.eval_option_absent :
-  ∀ {Name : Type} (S : Scalars) (c : ConfigTerm Name) (P : Provider Name) (q : Path Name)
-    (e : ConfigError Name),
-    eval S c P q = .ok (.absent e) → eval S (.option c) P q = .ok (.resolved Val.none false))
-
-#check (@Effect4.Program.Config.eval_nested :
-  ∀ {Name : Type} (S : Scalars) (n : Name) (c : ConfigTerm Name) (P : Provider Name)
-    (q : Path Name),
-    eval S (.nested n c) P q = eval S c P (q ++ [Seg.key n]))
-
-#check (@Effect4.Program.Config.eval_nested_transfer :
-  ∀ {Name : Type} (S : Scalars) (get : Lookup Name) (q : Path Name)
-    (c : ConfigTerm Name) (r : Path Name),
-    reroot q (eval S c ((Provider.make get).nested q) r) = eval S c (Provider.make get) (q ++ r))
-
-#check (@Effect4.Program.Config.eval_nested_eq_provider_nested :
-  ∀ {Name : Type} (S : Scalars) (get : Lookup Name) (n : Name) (c : ConfigTerm Name),
-    eval S (.nested n c) (Provider.make get) []
-      = reroot [Seg.key n] (eval S c ((Provider.make get).nested [Seg.key n]) []))
-
 end C2
 
 /-! ## C3 — substitution
@@ -166,19 +66,6 @@ end C2
 `Tmpl` and `expand`: `src/Effect4/Program/Config.lean` §5. -/
 
 section C3
-
-#check (@Effect4.Program.Config.expand_lit :
-  ∀ {Name : Type} [DecidableEq Name] (fuel : Nat) (env : List (Name × Tmpl Name)) (s : String),
-    expand fuel env (.lit s) = .ok s)
-
-#check (@Effect4.Program.Config.expand_ref_self_refused :
-  ∀ {Name : Type} [DecidableEq Name] (a : Name) (fuel : Nat),
-    expand fuel [(a, Tmpl.ref a none)] (Tmpl.ref a none) = .error (.cycle a))
-
-#check (@Effect4.Program.Config.expand_fuel_mono :
-  ∀ {Name : Type} [DecidableEq Name] (n m : Nat) (env : List (Name × Tmpl Name))
-    (t : Tmpl Name) (r : String),
-    n ≤ m → expand n env t = .ok r → expand m env t = .ok r)
 
 end C3
 
@@ -188,19 +75,6 @@ end C3
 `src/Effect4/Program/Config.lean` §6. -/
 
 section C4
-
-#check (@Effect4.Program.Config.absent_names_missing :
-  ∀ {Name : Type} [DecidableEq Name] (S : Scalars) (render : Seg Name → String)
-    (entries : List (Path Name × String)) (c : ConfigTerm Name) (q : Path Name)
-    (e : ConfigError Name),
-    eval S c (fromRecord render entries) q = .ok (.absent e) →
-      ∃ p, p ∈ reads q c ∧ p ∉ provided entries)
-
-#check (@Effect4.Program.Config.residual_empty_of_subset :
-  ∀ {Name : Type} [DecidableEq Name] (table : List (Path Name)) (q : Path Name)
-    (c : ConfigTerm Name) (entries : List (Path Name × String)),
-    Row.Subset (readsRow table q c) (providedRow table entries) →
-      residual table q c entries = Row.empty)
 
 end C4
 

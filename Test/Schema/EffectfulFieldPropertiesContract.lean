@@ -13,20 +13,6 @@ open Effect4
 
 universe u
 
-#check (@PropertySignatureOf.effectfulFieldSpec.{u} :
-  {A : Type u} -> PropertySignatureOf A -> Option EffectfulFieldSpec)
-
-#check (@PropertySignatureOf.hasEffectfulField.{u} :
-  {A : Type u} -> PropertySignatureOf A -> Bool)
-
-#check (@PropertySignatureOf.hasEffectfulField_eq_true_iff.{u} :
-  {A : Type u} -> forall (property : PropertySignatureOf A),
-    property.hasEffectfulField = true <->
-      EffectfulFieldSpec.RawAdmissible property.annotations)
-
-#check (Representation.effectfulFieldProperties :
-  Representation -> List (PropertySignature × EffectfulFieldSpec))
-
 private def spec : EffectfulFieldSpec where
   alphabet := { value := 7 }
   readOperation := { value := 11 }

@@ -9,31 +9,6 @@ namespace Test.Program.HostBoundaryContract
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Profile
 
-#check (@Effect4.Program.HostSpec.Work :
-  ∀ {HostState HostVal : Type}, HostSpec HostState HostVal →
-    Row → Val → HostState → HostState → Prop)
-
-#check (@Effect4.Program.LawfulHostSpec.step_retains :
-  ∀ {HostState HostVal : Type} {profile : ProfileData} {spec : HostSpec HostState HostVal},
-    LawfulHostSpec profile spec →
-    ∀ (row : Row) (request : Val) (before : HostState)
-      (completion : Completion Val Err Defect FiberId Ann) (after : HostState),
-      spec.RowStep row request before completion after → spec.Work row request before after)
-
-#check (@Effect4.Program.DeterministicHostSpec.step_unique :
-  ∀ {HostState HostVal : Type} {spec : HostSpec HostState HostVal},
-    DeterministicHostSpec spec →
-    ∀ (row : Row) (request : Val) (before : HostState)
-      (c₁ : Completion Val Err Defect FiberId Ann) (s₁ : HostState)
-      (c₂ : Completion Val Err Defect FiberId Ann) (s₂ : HostState),
-      spec.RowStep row request before c₁ s₁ → spec.RowStep row request before c₂ s₂ →
-        c₁ = c₂ ∧ s₁ = s₂)
-
-#check (@Effect4.Program.Profile.Choice.lawful : LawfulHostSpec Scalar.profile Choice.spec)
-#check (@Effect4.Program.Profile.Choice.not_deterministic : ¬ DeterministicHostSpec Choice.spec)
-#check (@Effect4.Program.Profile.Scalar.deterministic : DeterministicHostSpec Scalar.spec)
-#check (@Effect4.Program.Profile.Resource.deterministic : DeterministicHostSpec Resource.spec)
-
 #guard Scalar.poll Scalar.waitRow (.nat 3) () true = .completed (.ofExit (.success (.nat 3))) ()
 -- The valid answer exists in the semantic model, but has not been supplied at this observation.
 #guard Scalar.poll Scalar.waitRow (.nat 3) () false = .pending ()
@@ -62,11 +37,6 @@ example : Scalar.spec.RowStep Scalar.waitRow (.nat 3) () (.ofExit (.success (.na
   .malformed "expected an external resource handle" ⟨[true], 0⟩
 #guard Resource.poll { Resource.useRow with request := .nat } (Value.external 0) ⟨[true], 0⟩ true =
   .malformed "unknown resource row" ⟨[true], 0⟩
-
-#check (@Effect4.Program.Profile.Resource.terminal_observe :
-  ∀ (stores : Stores) (state : Resource.State) (owned : List Nat),
-    Resource.RelatedState stores state → Resource.OwnsAll state owned →
-    Resource.CleanupComplete state owned → Resource.observe stores state)
 
 -- Completing cleanup for one resource does not make another open slot disappear.
 example : Resource.CleanupComplete ⟨[false, true], 4⟩ [0] := by

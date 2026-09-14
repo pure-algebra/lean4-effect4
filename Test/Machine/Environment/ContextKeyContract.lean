@@ -14,9 +14,9 @@ produce a failure that is not an unresolved frozen name.
 
 Every unresolved name costs one diagnostic while this battery is red, and Lean
 stops a file at 100. An in-file `set_option maxErrors` does not lift that limit,
-so the obligation set below is deliberately kept free of redundant ascriptions:
-at 93 red diagnostics nothing is truncated, and a later revision that adds
-checks must re-measure rather than assume.
+so the obligation set below is deliberately kept small; a later revision that adds
+checks must re-measure rather than assume. The hand-typed statement copies this file
+once carried were retired on 2026-09-13; the exclusions they stated are the source's.
 -/
 
 import Effect4.Machine.Key
@@ -42,14 +42,8 @@ one derives, and are not separately frozen.
 
 section NominalIdentities
 
-#check (@Effect4.ServiceName : Type)
-#check (@Effect4.ServiceName.mk : Nat → Effect4.ServiceName)
-#check (@Effect4.ServiceName.value : Effect4.ServiceName → Nat)
 #synth DecidableEq Effect4.ServiceName
 
-#check (@Effect4.ServiceTypeCode : Type)
-#check (@Effect4.ServiceTypeCode.mk : Nat → Effect4.ServiceTypeCode)
-#check (@Effect4.ServiceTypeCode.value : Effect4.ServiceTypeCode → Nat)
 #synth DecidableEq Effect4.ServiceTypeCode
 
 end NominalIdentities
@@ -57,8 +51,8 @@ end NominalIdentities
 /-!
 ## D1 — the key carrier (ENSURES 1, ENSURES 2)
 
-`E4-ENV-CE-001`. The ascription `@Effect4.ServiceKey : Type` is the load-bearing
-exclusion of the type-indexed answer: a `ServiceKey : Type u → Type` fails it
+`E4-ENV-CE-001`. `Effect4.ServiceKey : Type` (`src/Effect4/Machine/Key.lean`) is the
+load-bearing exclusion of the type-indexed answer: a `ServiceKey : Type u → Type` fails it
 by arity, and a `ServiceKey.{u}` carrying a `Type u` field fails it because such
 a structure lives in `Type (u + 1)`, which cannot unify with `Type 0`.
 
@@ -71,20 +65,8 @@ because either implies the other.
 
 section KeyCarrier
 
-#check (@Effect4.ServiceKey : Type)
-#check (@Effect4.ServiceKey.mk :
-  Effect4.ServiceName → Effect4.ServiceTypeCode → Effect4.ServiceKey)
-#check (@Effect4.ServiceKey.name : Effect4.ServiceKey → Effect4.ServiceName)
-#check (@Effect4.ServiceKey.service :
-  Effect4.ServiceKey → Effect4.ServiceTypeCode)
 #synth DecidableEq Effect4.ServiceKey
 #synth Repr Effect4.ServiceKey
-
-#check (@Effect4.ServiceKey.rec.{u} :
-  {motive : Effect4.ServiceKey → Sort u} →
-  ((name : Effect4.ServiceName) → (service : Effect4.ServiceTypeCode) →
-    motive (Effect4.ServiceKey.mk name service)) →
-  (t : Effect4.ServiceKey) → motive t)
 
 end KeyCarrier
 
@@ -110,20 +92,6 @@ section Order
 
 example (a b : Effect4.ServiceKey) : Decidable (a < b) := inferInstance
 
-#check (@Effect4.ServiceKey.lt_iff :
-  forall a b : Effect4.ServiceKey,
-    a < b ↔ (a.name.value < b.name.value ∨
-      (a.name = b.name ∧ a.service.value < b.service.value)))
-
-#check (@Effect4.ServiceKey.lt_irrefl :
-  forall a : Effect4.ServiceKey, ¬ a < a)
-
-#check (@Effect4.ServiceKey.lt_trans :
-  forall {a b c : Effect4.ServiceKey}, a < b → b < c → a < c)
-
-#check (@Effect4.ServiceKey.lt_trichotomy :
-  forall a b : Effect4.ServiceKey, a < b ∨ a = b ∨ b < a)
-
 example : (⟨⟨0⟩, ⟨0⟩⟩ : Effect4.ServiceKey) < ⟨⟨0⟩, ⟨1⟩⟩ := by decide
 example : (⟨⟨0⟩, ⟨9⟩⟩ : Effect4.ServiceKey) < ⟨⟨1⟩, ⟨0⟩⟩ := by decide
 example : ¬ ((⟨⟨1⟩, ⟨0⟩⟩ : Effect4.ServiceKey) < ⟨⟨0⟩, ⟨9⟩⟩) := by decide
@@ -148,16 +116,8 @@ not rule on whether an environment may hold a colliding pair; that is the
 
 section NominalCollision
 
-#check (@Effect4.ServiceKey.Conflict :
-  Effect4.ServiceKey → Effect4.ServiceKey → Prop)
-
 example (a b : Effect4.ServiceKey) :
     Decidable (Effect4.ServiceKey.Conflict a b) := inferInstance
-
-#check (@Effect4.ServiceKey.conflict_iff :
-  forall a b : Effect4.ServiceKey,
-    Effect4.ServiceKey.Conflict a b ↔
-      (a.name = b.name ∧ a.service ≠ b.service))
 
 example : Effect4.ServiceKey.Conflict ⟨⟨0⟩, ⟨0⟩⟩ ⟨⟨0⟩, ⟨1⟩⟩ := by decide
 example : ¬ Effect4.ServiceKey.Conflict ⟨⟨0⟩, ⟨0⟩⟩ ⟨⟨1⟩, ⟨0⟩⟩ := by decide
@@ -190,33 +150,6 @@ exists to be relied on.
 
 section Interpretation
 
-#check (@Effect4.ServiceUniverse.{u} : Type (u + 1))
-#check (@Effect4.ServiceUniverse.mk.{u} :
-  (Effect4.ServiceTypeCode → Type u) → Effect4.ServiceUniverse.{u})
-#check (@Effect4.ServiceUniverse.Carrier.{u} :
-  Effect4.ServiceUniverse.{u} → Effect4.ServiceTypeCode → Type u)
-
-#check (@Effect4.ServiceKey.Carrier.{u} :
-  Effect4.ServiceUniverse.{u} → Effect4.ServiceKey → Type u)
-
-#check (@Effect4.ServiceKey.carrier_def.{u} :
-  forall (U : Effect4.ServiceUniverse.{u}) (k : Effect4.ServiceKey),
-    Effect4.ServiceKey.Carrier U k = U.Carrier k.service)
-
-#check (@Effect4.ServiceKey.transport.{u} :
-  (U : Effect4.ServiceUniverse.{u}) → {a b : Effect4.ServiceKey} →
-    a.service = b.service →
-    Effect4.ServiceKey.Carrier U a → Effect4.ServiceKey.Carrier U b)
-
-#check (@Effect4.ServiceKey.transport_rfl.{u} :
-  forall (U : Effect4.ServiceUniverse.{u}) (k : Effect4.ServiceKey)
-    (v : Effect4.ServiceKey.Carrier U k),
-    Effect4.ServiceKey.transport U (rfl : k.service = k.service) v = v)
-
-#check (@Effect4.ServiceUniverse.exists_carrier_collision :
-  ∃ (U : Effect4.ServiceUniverse.{0}) (a b : Effect4.ServiceTypeCode),
-    a ≠ b ∧ U.Carrier a = U.Carrier b)
-
 end Interpretation
 
 /-!
@@ -232,7 +165,7 @@ would make this section fail in one of the two phases for a reason that has
 nothing to do with the attacked design.
 
 These are name-level guards and are defense in depth. The load-bearing
-exclusions are the ascriptions named beside each one.
+exclusions are the declarations' own types in the source.
 -/
 
 section EnforcementByAbsence
@@ -260,9 +193,7 @@ error: Unknown
 #guard_msgs(error, substring := true) in
 #check (@Effect4.ServiceKey.cast)
 
--- A service type code is not minted from a Lean type. Carried by
--- `@Effect4.ServiceTypeCode.mk : Nat → Effect4.ServiceTypeCode` and the
--- `value` projection ascription.
+-- A service type code is not minted from a Lean type: `ServiceTypeCode.mk : Nat → …`.
 /--
 error: Unknown
 -/

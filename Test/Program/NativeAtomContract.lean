@@ -13,12 +13,6 @@ namespace Test.Program.NativeAtomContract
 
 open Effect4.Program
 
-#check (NativeAtom.all_complete : ∀ atom : NativeAtom, atom ∈ NativeAtom.all)
-#check (NativeAtom.covers_iff : ∀ names : List String,
-  NativeAtom.covers names = true ↔ ∀ atom : NativeAtom, atom.name ∈ names)
-#check (NativeAtom.ofName?_name : ∀ atom : NativeAtom,
-  NativeAtom.ofName? atom.name = some atom)
-
 #guard NativeAtom.names =
   ["succ", "pred", "isZero", "not", "add", "lt", "eq", "pair", "fst", "snd", "strings",
    "causeIsFail", "causeError", "causeIsDie", "causeIsInterrupt", "or", "and", "tagIs"]

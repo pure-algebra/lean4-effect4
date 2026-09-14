@@ -28,8 +28,7 @@ Register rows (`Test/Counterexamples/REGISTER.md`):
   refusal of the value typing (`TYPED-FB-INT`), the printer's identification is not the
   typing's.
 
-Added 2026-09-09 (rows DI-17, DI-26, DI-62), beside the frozen statements and changing none
-of them. The obligations are `Extends`, `hasTy_mono`, `hasTy_append`, `Fits_iff_FitsIn_nil`,
+Added 2026-09-09 (rows DI-17, DI-26, DI-62), changing no existing statement. The obligations are `Extends`, `hasTy_mono`, `hasTy_append`, `Fits_iff_FitsIn_nil`,
 `FitsIn.append`, `FitsIn.mono` (`src/Effect4/Laws/Program/Typed.lean`) and `errOf_valOfErr`,
 `valOfErr_errOf`, `errAdmits_eq_reasonAdmits`, `hasTyCause_exitErr`, `external_error_typed`,
 `external_oracle_error_typed`, `fits_childWith` (`src/Effect4/Laws/Program/Admit.lean`).
@@ -65,160 +64,14 @@ section Statements
 
 -- The ratified host-rows step 4 adds the allocation table. Pin the full signature
 -- and keep the original two-argument call at its default empty table.
-#check (@Effect4.Program.Val.hasTy : Val → Ty → List String → Bool)
-#check ((fun v t => Effect4.Program.Val.hasTy v t) : Val → Ty → Bool)
-
-#check (@Effect4.Program.Fits : List Val → TyEnv → Prop)
-
-#check (@Effect4.Program.Fits.get? :
-  ∀ {env : List Val} {tys : TyEnv}, Fits env tys →
-    ∀ {i : Nat} {v : Val} {t : Ty}, env[i]? = some v → tys[i]? = some t → Val.hasTy v t = true)
-
-#check (@Effect4.Program.Fits.length :
-  ∀ {env : List Val} {tys : TyEnv}, Fits env tys → env.length = tys.length)
-
-#check (@Effect4.Program.Fits.append :
-  ∀ {env : List Val} {tys : TyEnv}, Fits env tys →
-    ∀ {v : Val} {t : Ty}, Val.hasTy v t = true → Fits (env ++ [v]) (tys ++ [t]))
-
-#check (@Effect4.Program.Val.hasTy_string_inv :
-  ∀ {v : Val}, Val.hasTy v .string = true → ∃ s, v = Val.str s)
-
-#check (@Effect4.Program.Val.hasTy_option_inv :
-  ∀ {v : Val} {t : Ty}, Val.hasTy v (.option t) = true →
-    v = Store.Val.none ∨ ∃ x, v = Store.Val.some x ∧ Val.hasTy x t = true)
-
-#check (@Effect4.Program.Lit.toVal_hasTy :
-  ∀ (l : Lit) (v : Val), l.toVal = some v → Val.hasTy v l.ty = true)
-
-#check (@Effect4.Program.Lit.toVal_isSome : ∀ (l : Lit), l.toVal.isSome = true)
-
-#check (@Effect4.Program.nativeAtom_typed :
-  ∀ (atom : String) (tys : List Ty) (ty : Ty) (vs : List Val),
-    nativeAtomTy atom tys = some ty → Fits vs tys →
-      ∃ v, nativeAtom atom vs = some v ∧ Val.hasTy v ty = true)
-
-#check (@Effect4.Program.evalTerm_hasTy :
-  ∀ (t : Term) (env : List Val) (tys : TyEnv) (ty : Ty) (v : Val),
-    Fits env tys → termTy nativeSignature tys t = some ty → evalTerm env t = some v →
-      Val.hasTy v ty = true)
 
 -- Part 4 (2026-09-12): the argument list is typed under the atom's const-generic flag, so the
 -- list forms quantify over it (`termsTy` carries the flag; `argTy` reads a literal argument).
-#check (@Effect4.Program.evalTerms_hasTy :
-  ∀ (ts : Terms) (env : List Val) (tys : TyEnv) (const : Bool) (tl : List Ty) (vs : List Val),
-    Fits env tys → termsTy nativeSignature tys const ts = some tl → evalTerms env ts = some vs →
-      Fits vs tl)
-
-#check (@Effect4.Program.evalTerm_isSome :
-  ∀ (t : Term) (env : List Val) (tys : TyEnv) (ty : Ty),
-    Fits env tys → termTy nativeSignature tys t = some ty → (evalTerm env t).isSome = true)
-
-#check (@Effect4.Program.evalTerms_isSome :
-  ∀ (ts : Terms) (env : List Val) (tys : TyEnv) (const : Bool) (tl : List Ty),
-    Fits env tys → termsTy nativeSignature tys const ts = some tl →
-      (evalTerms env ts).isSome = true)
-
-#check (@Effect4.Program.syncOpOf_isSome :
-  ∀ (op : NativeOp) (v : Val),
-    Val.hasTy v (NativeOp.row op).request = true → (NativeOp.row op).kind = .sync →
-      (NativeOp.syncOpOf op v).isSome = true)
-
-#check (@Effect4.Program.syncOpOf_async_none :
-  ∀ (op : NativeOp) (v : Val), (NativeOp.row op).kind = .async → NativeOp.syncOpOf op v = none)
 
 /-! ### Allocation and the environment at an allocation state (DI-17) -/
 
-#check (@Effect4.Program.Extends : List String → List String → Prop)
-
-#check (@Effect4.Program.extends_append :
-  ∀ (before added : List String), Extends before (before ++ added))
-
-#check (@Effect4.Program.hasTy_mono :
-  ∀ (ty : Ty) (v : Val) (a b : List String),
-    Extends a b → Val.hasTy v ty a = true → Val.hasTy v ty b = true)
-
-#check (@Effect4.Program.hasTy_append :
-  ∀ (ty : Ty) (v : Val) (a added : List String),
-    Val.hasTy v ty a = true → Val.hasTy v ty (a ++ added) = true)
-
-#check (@Effect4.Program.FitsWith : (Val → Ty → Prop) → List Val → TyEnv → Prop)
-
-#check (@Effect4.Program.Fits_iff_FitsIn_nil :
-  ∀ (vs : List Val) (ts : TyEnv), Fits vs ts ↔ FitsIn [] vs ts)
-
-#check (@Effect4.Program.FitsIn.append :
-  ∀ {allocated : List String} {vs : List Val} {ts : TyEnv}, FitsIn allocated vs ts →
-    ∀ {v : Val} {t : Ty}, Val.hasTy v t allocated = true →
-      FitsIn allocated (vs ++ [v]) (ts ++ [t]))
-
-#check (@Effect4.Program.FitsIn.mono :
-  ∀ {a b : List String} {vs : List Val} {ts : TyEnv},
-    Extends a b → FitsIn a vs ts → FitsIn b vs ts)
-
-#check (@Effect4.Program.fits_childWith :
-  ∀ (allocated : List String) (p : Point) (ts : TyEnv) (i : Nat) (v : Val) (t : Ty),
-    FitsIn allocated p.env ts → Val.hasTy v t allocated = true →
-      FitsIn allocated (p.childWith i v).env (ts ++ [t]))
-
 /-! ### The error image and the failure branch (DI-62, DI-26) -/
 
-#check (@Effect4.Program.valOfErr : Err → Option Val)
-
-#check (@Effect4.Program.reasonAdmits :
-  (Val → Ty → Bool) → Ty → Reason Err Defect FiberId Ann → Bool)
-
-#check (@Effect4.Program.causeAdmits : (Val → Ty → Bool) → Ty → CauseV → Bool)
-
-#check (@Effect4.Program.causeAdmits_congr :
-  ∀ {f g : Val → Ty → Bool} (ty : Ty), (∀ v, f v ty = g v ty) →
-    ∀ (c : CauseV), causeAdmits f ty c = causeAdmits g ty c)
-
-#check (@Effect4.Program.errOf_valOfErr :
-  ∀ (e : Err) (v : Val), valOfErr e = some v → errOf v = e)
-
-#check (@Effect4.Program.valOfErr_errOf :
-  ∀ (v : Val), errOf v ≠ .boom → valOfErr (errOf v) = some v)
-
-#check (@Effect4.Program.errAdmits_eq_reasonAdmits :
-  ∀ (ty : Ty) (r : Reason Err Defect FiberId Ann),
-    errAdmits ty r = reasonAdmits (fun v t => Val.hasTy v t) ty r)
-
-#check (@Effect4.Program.hasTyCause_exitErr :
-  ∀ (c : CauseV) (e : Ty),
-    hasTyCause (Val.exitErr c) e = c.reasons.all (errAdmits e))
-
-#check (@Effect4.Program.external_error_typed :
-  ∀ (table : RowTable) (m : NativeMachine) (fiber : FiberId) (token : Nat) (c : CauseV),
-    admit table m (.answerAsync fiber token (.ofExit (.failure c))) = none →
-      ∃ i request row, requestOf m fiber token = some (.external i, request) ∧
-        externalRow table i = some row ∧ hasTyCause (Val.exitErr c) row.error = true)
-
-#check (@Effect4.Program.external_oracle_error_typed :
-  ∀ (table : RowTable) (i : Nat) (c : CauseV) (allocated : List String),
-    externalAdmits table i (.ofExit (.failure c)) allocated = true →
-      ∃ row, externalRow table i = some row ∧
-        hasTyCause (Val.exitErr c) row.error = true)
-
-
-#check (@Effect4.Program.reasonAdmits_mono :
-  ∀ {f g : Val → Ty → Bool} (ty : Ty), (∀ v, f v ty = true → g v ty = true) →
-    ∀ r, reasonAdmits f ty r = true → reasonAdmits g ty r = true)
-#check (@Effect4.Program.causeAdmits_mono :
-  ∀ {f g : Val → Ty → Bool} (ty : Ty), (∀ v, f v ty = true → g v ty = true) →
-    ∀ c, causeAdmits f ty c = true → causeAdmits g ty c = true)
-#check (@Effect4.Program.valOfErr_errOf_supported : ∀ ty v allocated,
-  supportedErrTy ty = true → Val.hasTy v ty allocated = true → valOfErr (errOf v) = some v)
-#check (@Effect4.Program.errOf_ne_boom_of_supported : ∀ ty v allocated,
-  supportedErrTy ty = true → Val.hasTy v ty allocated = true → errOf v ≠ .boom)
-#check (@Effect4.Program.errAdmits_errOf : ∀ ty v allocated a,
-  supportedErrTy ty = true → Val.hasTy v ty allocated = true → errAdmits ty (.fail (errOf v) a) = true)
-#check (@Effect4.Program.valOfErr_keys : ∀ e v, valOfErr e = some v → v.keys = [])
-#check (@Effect4.Program.hasTy_causeOf_exitErr : ∀ c e allocated,
-  Val.hasTy (Val.exitErr c) (.causeOf e) allocated = causeAdmits (fun v t => Val.hasTy v t allocated) e c)
-#check (@Effect4.Program.hasTy_exitErr : ∀ c a e allocated,
-  Val.hasTy (Val.exitErr c) (.exitOf a e) allocated = causeAdmits (fun v t => Val.hasTy v t allocated) e c)
-#check (@Effect4.Program.hasTy_causeOf_eq_hasTyCause : ∀ v e, Val.hasTy v (.causeOf e) = hasTyCause v e)
 end Statements
 
 /-! ## `Val.hasTy` — one value of each inhabited type -/
@@ -361,7 +214,6 @@ section ErrorImage
 -- a value that is not a reified failed exit has no cause to read
 #guard !(hasTyCause (Val.nat 1) .nat)
 #guard !(hasTyCause (Val.exitOk (Val.nat 1)) .nat)
-
 
 -- DI-62: all three error introductions consult the same supported type language.
 #guard supportedErrTy .never

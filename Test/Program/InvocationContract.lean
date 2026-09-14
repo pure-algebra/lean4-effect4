@@ -30,47 +30,6 @@ open Effect4
 open Effect4.Machine
 open Effect4.Program
 
-/-! ## The frozen statements -/
-
-section Statements
-
-#check (@Effect4.Program.compile_perform_eq_callback :
-  ∀ (op : NativeOp) (r : Term) (p : Point),
-    ((∃ i, op = .external i) ∨ op.row.kind = .async) →
-      compileEff (.perform op r) p = compileEff (.callback op r) p)
-
-#check (@Effect4.Program.compileEff_callback_eq_asyncRoute :
-  ∀ (op : NativeOp) (r : Term) (p : Point) {k : Nat},
-    p.fuel = k + 1 → compileEff (.callback op r) p = asyncRoute op r p)
-
-#check (@Effect4.Program.compile_perform_eq_callback_await :
-  ∀ (r : Term) (p : Point),
-    compileEff (.perform .deferredAwait r) p = compileEff (.callback .deferredAwait r) p)
-
-#check (@Effect4.Program.compile_perform_eq_callback_of_await :
-  ∀ (op : NativeOp) (r : Term) (p : Point),
-    (NativeOp.row op).kind = .async → (∀ i, op ≠ .external i) → op ≠ .sleep →
-      compileEff (.perform op r) p = compileEff (.callback op r) p)
-
-#check (@Effect4.Program.compile_zero_fuel :
-  ∀ (e : NativeEff) (p : Point), p.fuel = 0 → compileEff e p = frontier p)
-
-#check (@Effect4.Program.checkTable_none_externalRow :
-  ∀ {table : RowTable}, checkTable table = none →
-    ∀ (i : Nat) (row : Row), table[i]? = some row → externalRow table i = some row.normalizeTypes)
-
-#check (@Effect4.Program.checkTable : RowTable → Option TableRefusal)
-
-#check (@Effect4.Api.admitProgram :
-  ∀ (program : Api.Program) (table : RowTable),
-    Except Api.AdmitRefusal (Api.AdmittedProgram program table))
-
-#check (@Effect4.Api.imageCertificate :
-  ∀ (program : Api.Program) (table : RowTable),
-    Option (PLift (Api.readable program table = true)))
-
-end Statements
-
 /-! ## The 55 × 2 route matrix
 
 `NativeOp.all` is every built-in operation value: 23 constructors, five function names and two

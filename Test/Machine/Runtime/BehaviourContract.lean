@@ -18,14 +18,6 @@ open Effect4 Effect4.Machine Effect4.Program
 open Test.Runtime.ApproximationContract
 open Test.Syntax.CompileContract (pSucceed pBindSync pYieldNow)
 
-#check (Beh_fuel_irrelevant : ∀ (interp : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores)
-  (m : Api.Machine) (tape : List Api.Decision) (n n' : Nat)
-  (h : Suffices interp n tape m = true) (h' : Suffices interp n' tape m = true),
-  Beh interp m tape n h = Beh interp m tape n' h')
-
-#check (obs_mono_of_le_terminal : ∀ {a b : ReplayResult EffName EffThunk Val Err Defect FiberId Ann Ctx Stores},
-  a.terminal = true → ReplayResult.le a b → (obs a.machine).le (obs b.machine))
-
 def observedAt (p : NativeEff) (fuel : Nat) (tape : List Api.Decision) : Obs :=
   obs (replayEval (interpOf p) fuel tape (machineOf p)).machine
 

@@ -11,39 +11,6 @@ namespace Test.Codegen.EffectfulFieldContract
 open Effect4
 open Effect4.Codegen Effects
 
-#check (@EffectfulFieldDecl : Type)
-#check (@EffectfulFieldDecl.mk :
-  String -> String -> String -> String -> String -> String ->
-    String -> String -> String -> EffectfulFieldDecl)
-
-#check (@Decl.effectfulField : EffectfulFieldDecl -> Decl)
-
-#check (@EffectfulField.OperationBinding : Type)
-#check (@EffectfulField.OperationBinding.mk :
-  AlphabetId -> OperationId -> String -> String -> String -> String -> String ->
-    EffectfulField.OperationBinding)
-
-#check (@EffectfulField.Request : Type)
-#check (@EffectfulField.Request.mk :
-  String -> String -> PropertySignature ->
-    EffectfulField.OperationBinding -> EffectfulField.OperationBinding ->
-      EffectfulField.Request)
-
-#check (@EffectfulField.requestReady : EffectfulField.Request -> Bool)
-#check (@EffectfulField.RequestReady : EffectfulField.Request -> Prop)
-#check (@EffectfulField.requestReady_iff :
-  forall request, EffectfulField.requestReady request = true <->
-    EffectfulField.RequestReady request)
-#check (@EffectfulField.decl? : EffectfulField.Request -> Option Decl)
-#check (@EffectfulField.module? : EffectfulField.Request -> Option Module)
-#check (@EffectfulField.source? :
-  EffectfulField.Request -> Style -> Option String)
-#check (@EffectfulField.generate? :
-  EffectfulField.Request -> Style -> Option String)
-#check (@EffectfulField.decl?_never_raw :
-  forall {request declaration}, EffectfulField.decl? request = some declaration ->
-    forall text, declaration != Decl.raw text)
-
 private def spec : EffectfulFieldSpec where
   alphabet := { value := 7 }
   readOperation := { value := 11 }

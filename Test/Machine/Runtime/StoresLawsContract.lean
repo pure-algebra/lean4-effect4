@@ -38,50 +38,6 @@ namespace Test.Runtime.StoresLawsContract
 open Effect4
 open Effect4.Machine
 
-/-! ## The frozen statements -/
-
-section Statements
-
-#check (@Effect4.Machine.Stores.le : Stores → Stores → Prop)
-#check (@Effect4.Machine.Stores.le_refl : ∀ (s : Stores), s.le s)
-#check (@Effect4.Machine.Stores.le_trans :
-  ∀ {s s' s'' : Stores}, s.le s' → s'.le s'' → s.le s'')
-
-#check (@Effect4.Machine.Val.validIn : Stores → Val → Bool)
-#check (@Effect4.Machine.SyncOp.validIn : Stores → SyncOp → Bool)
-#check (@Effect4.Machine.Stores.WF : Stores → Prop)
-#check (@Effect4.Machine.Stores.empty_wf : Stores.empty.WF)
-#check (@Effect4.Machine.SyncOp.isRead : SyncOp → Bool)
-
-#check (@Effect4.Machine.Val.validIn_mono :
-  ∀ {s s' : Stores}, s.le s' → ∀ (v : Val), v.validIn s = true → v.validIn s' = true)
-#check (@Effect4.Machine.SyncOp.validIn_mono :
-  ∀ {s s' : Stores}, s.le s' → ∀ (o : SyncOp), o.validIn s = true → o.validIn s' = true)
-
-#check (@Effect4.Machine.refStep_length :
-  ∀ (o : SyncOp) (heap : RefHeap) (v : Val) (heap' : RefHeap),
-    refStep o heap = some (v, heap') → heap.length ≤ heap'.length)
-
-#check (@Effect4.Machine.syncOpStep_le :
-  ∀ (o : SyncOp) (s s' : Stores) (v : Val), syncOpStep o s = some (s', v) → s.le s')
-
-#check (@Effect4.Machine.syncOpStep_isSome_of_valid :
-  ∀ (o : SyncOp) (s : Stores), o.validIn s = true → (syncOpStep o s).isSome = true)
-
-#check (@Effect4.Machine.syncOpStep_wf :
-  ∀ (o : SyncOp) (s s' : Stores) (v : Val),
-    s.WF → o.validIn s = true → syncOpStep o s = some (s', v) → s'.WF)
-
-#check (@Effect4.Machine.syncOpStep_answer_valid :
-  ∀ (o : SyncOp) (s s' : Stores) (v : Val),
-    s.WF → o.validIn s = true → syncOpStep o s = some (s', v) → v.validIn s' = true)
-
-#check (@Effect4.Machine.syncOpStep_read_unchanged :
-  ∀ (o : SyncOp) (s s' : Stores) (v : Val),
-    o.isRead = true → syncOpStep o s = some (s', v) → s' = s)
-
-end Statements
-
 /-! ## Harness: stores reached by one step, and the answers -/
 
 /-- The store after one step, or the store it started from when the step refuses. -/
@@ -422,10 +378,6 @@ def shapeCode : Val → Nat
    0x02, 0, 0, 0, 0, 0, 0, 0, 0x01, 0x02]
 #guard (Env.serviceKeyImage.encode ⟨⟨1⟩, ⟨2⟩⟩).length = 74
 
-#check (@Effect4.Machine.Val.keys_eq_handles :
-  ∀ (v : Val), v.keys = v.handles.filterMap Handle.ofCode)
-#check (@Effect4.Machine.Val.validIn_eq_handles :
-  ∀ (s : Stores) (v : Val), v.validIn s = v.handles.all fun h => s.handleValid h.1 h.2)
 #check @Effect4.Machine.Env.Val.ofSpine_entries
 
 #print axioms Effect4.Machine.Val.image

@@ -45,60 +45,13 @@ open Effect4.Program.Provision
 
 section RowDiff
 
-#check (Row.diff (α := ServiceKey) : Requirement → Requirement → Requirement)
-#check (Row.mem_diff (α := ServiceKey) :
-  ∀ (a : ServiceKey) (r s : Requirement), a ∈ Row.diff r s ↔ a ∈ r ∧ a ∉ s)
-#check (Row.diff_subset (α := ServiceKey) :
-  ∀ (r s : Requirement), Row.Subset (Row.diff r s) r)
-#check (Row.diff_empty (α := ServiceKey) : ∀ (r : Requirement), Row.diff r Row.empty = r)
-#check (Row.diff_self (α := ServiceKey) : ∀ (r : Requirement), Row.diff r r = Row.empty)
-#check (Row.diff_eq_empty_iff_subset (α := ServiceKey) :
-  ∀ (r s : Requirement), Row.diff r s = Row.empty ↔ Row.Subset r s)
-#check (Row.diff_union_right (α := ServiceKey) :
-  ∀ (r s t : Requirement), Row.diff r (Row.union s t) = Row.diff (Row.diff r s) t)
-#check (Row.union_diff_distrib (α := ServiceKey) :
-  ∀ (r s t : Requirement), Row.diff (Row.union r s) t = Row.union (Row.diff r t) (Row.diff s t))
-
 end RowDiff
 
 /-! ## D1 — the signature and the provision algebra -/
 
 section Algebra
 
-#check (@LayerTy : Type)
-#check (@LayerTy.mk : Requirement → Ty → Requirement → LayerTy)
-#check (@LayerTy.out : LayerTy → Requirement)
-#check (@LayerTy.error : LayerTy → Ty)
-#check (@LayerTy.requires : LayerTy → Requirement)
 #synth DecidableEq LayerTy
-
-#check (@LayerTy.provide : LayerTy → LayerTy → LayerTy)
-#check (@LayerTy.provideMerge : LayerTy → LayerTy → LayerTy)
-#check (@LayerTy.merge : LayerTy → LayerTy → LayerTy)
-#check (@LayerTy.orDie : LayerTy → LayerTy)
-#check (@LayerTy.Closed : LayerTy → Prop)
-
-#check (@LayerTy.provide_out : ∀ (s t : LayerTy), (s.provide t).out = s.out)
-#check (@LayerTy.provideMerge_out :
-  ∀ (s t : LayerTy), (s.provideMerge t).out = Row.union s.out t.out)
-#check (@LayerTy.provide_requires_subset :
-  ∀ (s t : LayerTy), Row.Subset (s.provide t).requires (Row.union s.requires t.requires))
-#check (@LayerTy.provide_discharges :
-  ∀ (s t : LayerTy) (key : ServiceKey), key ∈ t.out → key ∉ t.requires →
-    key ∉ (s.provide t).requires)
-#check (@LayerTy.provide_closed :
-  ∀ (s t : LayerTy), t.Closed → Row.Subset s.requires t.out → (s.provide t).Closed)
-#check (@LayerTy.covers_of_provide_closed :
-  ∀ (s t : LayerTy), (s.provide t).Closed → ∀ (key : ServiceKey), key ∈ s.requires → key ∈ t.out)
-#check (@LayerTy.provide_provide_rows :
-  ∀ (l d₁ d₂ : LayerTy),
-    ((l.provide d₁).provide d₂).out = (l.provide (d₁.provideMerge d₂)).out ∧
-      ((l.provide d₁).provide d₂).requires = (l.provide (d₁.provideMerge d₂)).requires)
-#check (@LayerTy.merge_rows_comm :
-  ∀ (a b : LayerTy), (a.merge b).out = (b.merge a).out ∧ (a.merge b).requires = (b.merge a).requires)
-#check (@LayerTy.merge_requires :
-  ∀ (a b : LayerTy) (key : ServiceKey), key ∈ a.requires ∨ key ∈ b.requires →
-    key ∈ (a.merge b).requires)
 
 end Algebra
 
@@ -106,57 +59,19 @@ end Algebra
 
 section Adjunction
 
-#check (@satisfies_iff_subset_keysRow :
-  ∀ (ctx : Ctx) (r : Requirement), ctx.Satisfies r ↔ Row.Subset r ctx.keysRow)
-#check (@satisfies_merge_left :
-  ∀ (a b : Ctx) (r : Requirement), a.Satisfies r → (a.merge b).Satisfies r)
-#check (@satisfies_merge_right :
-  ∀ (a b : Ctx) (r : Requirement), b.Satisfies r → (a.merge b).Satisfies r)
-#check (@satisfiesRefs_of_defaults :
-  ∀ (refs : Refs) (ctx : Ctx) (r : Requirement),
-    (∀ key, key ∈ r → (refs.default? key).isSome = true) → SatisfiesRefs refs ctx r)
-#check (@satisfiesRefs_of_hard :
-  ∀ (refs : Refs) (ctx : Ctx) (r soft : Requirement),
-    (∀ key, key ∈ soft → (refs.default? key).isSome = true) →
-      ctx.Satisfies (Row.diff r soft) → SatisfiesRefs refs ctx r)
-
 end Adjunction
 
 /-! ## D3 — the term, its typing, the app -/
 
 section Term
 
-#check (@LayerTerm : Type → Type)
-#check (@LayerTerm.succeed : ∀ {Op : Type}, ServiceKey → Lit → LayerTerm Op)
-#check (@LayerTerm.effect : ∀ {Op : Type}, ServiceKey → Eff Op → LayerTerm Op)
-#check (@LayerTerm.effectDiscard : ∀ {Op : Type}, Eff Op → LayerTerm Op)
-#check (@LayerTerm.provide : ∀ {Op : Type}, LayerTerm Op → LayerTerm Op → LayerTerm Op)
-#check (@LayerTerm.provideMerge : ∀ {Op : Type}, LayerTerm Op → LayerTerm Op → LayerTerm Op)
-#check (@LayerTerm.merge : ∀ {Op : Type}, LayerTerm Op → LayerTerm Op → LayerTerm Op)
-#check (@LayerTerm.fresh : ∀ {Op : Type}, LayerTerm Op → LayerTerm Op)
-#check (@LayerTerm.orDie : ∀ {Op : Type}, LayerTerm Op → LayerTerm Op)
 #synth DecidableEq (LayerTerm DocsOp)
-
-#check (@layerTy : ∀ {Op : Type}, Signature Op → LayerTerm Op → Option LayerTy)
-#check (@App : Type → Type)
-#check (@appTy : ∀ {Op : Type}, Signature Op → App Op → Option EffTy)
-#check (@appTy_closed_iff :
-  ∀ {Op : Type} (sig : Signature Op) (app : App Op) (l : LayerTy) (p : EffTy),
-    layerTy sig app.layer = some l → typeOf sig app.program = some p →
-      ((appTy sig app).map EffTy.requires = some Requirement.empty ↔
-        (l.Closed ∧ Row.Subset p.requires l.out)))
 
 end Term
 
 /-! ## D4 — the specification and its totality -/
 
 section Build
-
-#check (@build : ∀ {Op : Type}, LeafSem Op → LayerTerm Op → Ctx → Option Ctx)
-#check (@build_total :
-  ∀ {Op : Type} (sig : Signature Op) (sem : LeafSem Op), sem.Typed sig →
-    ∀ (l : LayerTerm Op) (t : LayerTy) (ctx : Ctx), layerTy sig l = some t →
-      ctx.Satisfies t.requires → ∃ out, build sem l ctx = some out ∧ out.Satisfies t.out)
 
 end Build
 

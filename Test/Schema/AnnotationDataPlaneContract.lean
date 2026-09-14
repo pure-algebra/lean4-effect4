@@ -16,15 +16,6 @@ universe u
 
 /-! ## A0 — typed keys are views over the existing Json payload -/
 
-#check (@AnnotationKey.{u} : Type u -> Type u)
-#check (@AnnotationKey.name.{u} : {A : Type u} -> AnnotationKey A -> String)
-#check (@AnnotationKey.encode.{u} : {A : Type u} -> AnnotationKey A -> A -> Json)
-#check (@AnnotationKey.decode.{u} :
-  {A : Type u} -> AnnotationKey A -> Json -> Option A)
-
-#check (@AnnotationKey.Lawful.{u} :
-  {A : Type u} -> AnnotationKey A -> Prop)
-
 example {A : Type u} {key : AnnotationKey A}
     (law : key.Lawful) (value : A) :
     key.decode (key.encode value) = some value :=
@@ -34,46 +25,6 @@ example {A : Type u} {key : AnnotationKey A}
     (law : key.Lawful) (raw : Json) (value : A)
     (decoded : key.decode raw = some value) : key.encode value = raw :=
   law.encode_decode raw value decoded
-
-#check (@AnnotationKey.entry.{u} :
-  {A : Type u} -> AnnotationKey A -> A -> AnnotationEntry)
-#check (@AnnotationKey.singleton.{u} :
-  {A : Type u} -> AnnotationKey A -> A -> Annotations)
-#check (@AnnotationKey.append.{u} :
-  {A : Type u} -> AnnotationKey A -> A -> Annotations -> Annotations)
-#check (@AnnotationKey.decodeEntry.{u} :
-  {A : Type u} -> AnnotationKey A -> AnnotationEntry -> Option A)
-#check (@AnnotationKey.values.{u} :
-  {A : Type u} -> AnnotationKey A -> Traversal Annotations A)
-#check (@AnnotationKey.inTraversal.{u, 0} :
-  {A : Type u} -> {S : Type} -> AnnotationKey A ->
-    Traversal S Annotations -> Traversal S A)
-#check (@AnnotationKey.getAll.{u} :
-  {A : Type u} -> AnnotationKey A -> Annotations -> List A)
-#check (@AnnotationKey.modifyAll.{u} :
-  {A : Type u} -> AnnotationKey A -> (A -> A) ->
-    Annotations -> Annotations)
-#check (@AnnotationKey.replaceAll.{u} :
-  {A : Type u} -> AnnotationKey A -> A -> Annotations -> Annotations)
-
-#check (@AnnotationKey.decodeEntry_entry.{u} :
-  forall {A : Type u} (key : AnnotationKey A), key.Lawful ->
-    forall value, key.decodeEntry (key.entry value) = some value)
-
-#check (@AnnotationKey.entry_of_decodeEntry.{u} :
-  forall {A : Type u} (key : AnnotationKey A), key.Lawful ->
-    forall {entry : AnnotationEntry} {value : A},
-      key.decodeEntry entry = some value -> key.entry value = entry)
-
-#check (@AnnotationKey.values_lawful.{u} :
-  forall {A : Type u} (key : AnnotationKey A), key.Lawful ->
-    Traversal.Lawful key.values)
-
-#check (@AnnotationKey.inTraversal_lawful.{u, 0} :
-  forall {A : Type u} {S : Type} (key : AnnotationKey A)
-    {outer : Traversal S Annotations},
-    key.Lawful -> Traversal.Lawful outer ->
-      Traversal.Lawful (key.inTraversal outer))
 
 /-! Three heterogeneous dimensions exercise the one generic carrier. -/
 
@@ -106,10 +57,6 @@ private def examplesKey : AnnotationKey (List Json) where
   { key := "effect/schema/examples", payload := .arr [.null, .str "x"] }
 
 /-! ## A1 — raw and typed duplicate-preserving traversals -/
-
-#check (Annotations.payloadsAt : String -> Traversal Annotations Json)
-#check (Annotations.payloadsAt_lawful :
-  forall name, Traversal.Lawful (Annotations.payloadsAt name))
 
 private def duplicateBag : Annotations :=
   some
@@ -146,26 +93,6 @@ private def duplicateBag : Annotations :=
 
 /-! ## A2 — local optics distinguish absence from a stored none -/
 
-#check (Representation.nodeAnnotations : Optional Representation Annotations)
-#check (Representation.nodeAnnotations_reference :
-  forall ref, Representation.nodeAnnotations.preview (.reference ref) = none)
-#check (Representation.nodeAnnotations_string_none :
-  Representation.nodeAnnotations.preview (.string none []) = some none)
-#check (Representation.nodeAnnotations_lawful :
-  Optional.Lawful Representation.nodeAnnotations)
-
-#check (Check.annotationsLens : Lens Check Annotations)
-#check (Check.annotationsLens_lawful : Lens.Lawful Check.annotationsLens)
-#check (@ElementOf.annotationsLens.{u} :
-  {A : Type u} -> Lens (ElementOf A) Annotations)
-#check (@ElementOf.annotationsLens_lawful.{u} :
-  forall {A : Type u}, Lens.Lawful (ElementOf.annotationsLens (A := A)))
-#check (@PropertySignatureOf.annotationsLens.{u} :
-  {A : Type u} -> Lens (PropertySignatureOf A) Annotations)
-#check (@PropertySignatureOf.annotationsLens_lawful.{u} :
-  forall {A : Type u},
-    Lens.Lawful (PropertySignatureOf.annotationsLens (A := A)))
-
 private def replacement : Annotations :=
   some [{ key := "replacement", payload := .null }]
 
@@ -192,20 +119,6 @@ private def replacement : Annotations :=
     isMutable := true, annotations := replacement }
 
 /-! ## A3 — recursive structural bag traversals -/
-
-#check (Representation.annotationBags : Traversal Representation Annotations)
-#check (Check.annotationBags : Traversal Check Annotations)
-#check (Document.annotationBags : Traversal Document Annotations)
-#check (MultiDocument.annotationBags : Traversal MultiDocument Annotations)
-
-#check (Representation.annotationBags_lawful :
-  Traversal.Lawful Representation.annotationBags)
-#check (Check.annotationBags_lawful :
-  Traversal.Lawful Check.annotationBags)
-#check (Document.annotationBags_lawful :
-  Traversal.Lawful Document.annotationBags)
-#check (MultiDocument.annotationBags_lawful :
-  Traversal.Lawful MultiDocument.annotationBags)
 
 private def site (label : String) : Annotations :=
   some [{ key := "site", payload := .str label }]

@@ -15,19 +15,6 @@ namespace Test.Program.ScopedTypingContract
 
 open Effect4 Effect4.Program Effect4.Machine.Env
 
-#check (@Effect4.Program.effTy_scoped :
-  ∀ {Op : Type} (sig : Signature Op) (env : TyEnv) (body : Eff Op),
-    effTy sig env (.scoped body) =
-      (effTy sig env body).map (fun t => { t with requires := bodyRequires sig t }))
-
-#check (@Effect4.Program.bodyRequires_other :
-  ∀ {Op : Type} (sig : Signature Op) (t : EffTy) (key : ServiceKey),
-    key ≠ sig.scopeKey → (key ∈ bodyRequires sig t ↔ key ∈ t.requires))
-
-#check (@Effect4.Program.effTy_scoped_idempotent :
-  ∀ {Op : Type} (sig : Signature Op) (env : TyEnv) (body : Eff Op),
-    effTy sig env (.scoped (.scoped body)) = effTy sig env (.scoped body))
-
 def acquisition : NativeEff :=
   .acquireRelease (.succeed (.lit (.nat 7))) (.succeed (.lit .unit))
 

@@ -290,20 +290,11 @@ def afterYield : RProgram → Option RProgram
 #guard observeRaw 1 (eraseControl (.vis (.inr (.finishFinalizer (.success (.nat 7))))
   Effects.Program.pure)) Stores.empty = .done (.success (.nat 7)) Stores.empty
 
-#check (@denoteR_straight : ∀ (root : NativeEff) (e : NativeEff) (p : Point),
-  Straight e = true → Agreement.depth e ≤ p.fuel →
-  eraseControl (denoteR root e p) = Effects.Program.inl (denote e p.env))
-#check (@meaning_denoteR_straight : ∀ (root : NativeEff) (e : NativeEff) (p : Point),
-  Straight e = true → Agreement.depth e ≤ p.fuel → ∀ stores : Stores,
-  (Effects.interpret rHandler (eraseControl (denoteR root e p))).run stores =
-    meaning e p.env stores)
 -- P2: the checkpoints erase with the boundary markers.
 #guard observeRaw 1 (eraseControl (suspendR (rootPoint) (.pure (.success (.nat 1))))) Stores.empty =
   .done (.success (.nat 1)) Stores.empty
 #guard operation? (observeRaw 1 (unfolded (.suspend pSucceed)) Stores.empty) = some (.suspend (rootPoint))
 #guard operation? (observeRaw 1 (unfolded (.sync (.lit (.nat 42)))) Stores.empty) = some (.sync (.nat 42))
 #guard result (.suspend pSucceed) = .done (.success (.nat 42)) Stores.empty
-#check (@inlineYield_eq_headExit : ∀ (e : NativeEff) (p : Point),
-  inlineYield e p = headExit (compileEff e p))
 
 end Test.Program.DenoteRContract

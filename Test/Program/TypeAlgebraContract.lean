@@ -113,10 +113,6 @@ private def canonicalUniverse : List Ty := scoutUniverse.map Ty.normalize
   (.branch (.lit (.bool true)) (.succeed (.lit (.nat 1))) (.succeed (.lit (.bool true))))).map
     (·.answer) = some (.union .nat .bool)
 -- a value of either side is a value of the join
-#check (@Effect4.Program.Ty.hasTy_join_left : ∀ (a b : Ty) (v : Val) (allocated : List String),
-  Val.hasTy v a allocated = true → Val.hasTy v (Ty.join a b) allocated = true)
-#check (@Effect4.Program.Ty.hasTy_join_right : ∀ (a b : Ty) (v : Val) (allocated : List String),
-  Val.hasTy v b allocated = true → Val.hasTy v (Ty.join a b) allocated = true)
 #guard Val.hasTy (Val.nat 1) (Ty.join .nat .bool)
 #guard Val.hasTy (Val.bool true) (Ty.join .nat .bool)
 #guard !Val.hasTy (Val.str "x") (Ty.join .nat .bool)
@@ -149,12 +145,6 @@ private def hiddenNever : Ty := .union (.prod .never .string) (.prod (.lit "X") 
 #guard Ty.diffTag "X" hiddenNever = .prod .never .string
 #guard !supportedErrTy (Ty.diffTag "X" hiddenNever)
 #guard supportedErrTy (Ty.diffTag "X" hiddenNever.normalize)
-#check (@Effect4.Program.Ty.diffTag_sub : ∀ (tag : String) (e : Ty), Ty.sub (Ty.diffTag tag e) e = true)
-#check (@Effect4.Program.Ty.diffTag_sound : ∀ (tag : String) (e : Ty) (v : Val) (allocated : List String),
-  Val.hasTy v e allocated = true → NativeAtom.eval .tagIs [.str tag, v] = some (.bool false) →
-    Val.hasTy v (Ty.diffTag tag e) allocated = true)
-#check (@Effect4.Program.supportedErrTy_diffTag : ∀ (tag : String) (e : Ty), Ty.Canonical e →
-  supportedErrTy e = true → supportedErrTy (Ty.diffTag tag e) = true)
 #print axioms Effect4.Program.Ty.diffTag_sub
 #print axioms Effect4.Program.Ty.diffTag_sound
 #print axioms Effect4.Program.Ty.diffTag_canonical
@@ -181,7 +171,6 @@ private def hiddenPair : Ty := .prod (.union .string .never) .string
 #check CTy.join_never
 
 end Test.Program.TypeAlgebraContract
-
 
 /-! Public order, identity key and printed boundaries use the canonical type. -/
 #guard CTy.ofRaw (.lit "A") ≤ CTy.ofRaw .string

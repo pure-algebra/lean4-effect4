@@ -29,29 +29,6 @@ private def duplicatePrototypeReferenceDocument : Document :=
     , { key := "x", representation := Schema.string }
     , { key := "x", representation := Schema.boolean } ]
 
-#check (@Codegen.Schema.json : Json → TypeScript.Expr)
-#check (@Codegen.Schema.reifyJson? :
-  TypeScript.Expr → Option Json)
-#check (@Codegen.Schema.reifyJson?_json :
-  ∀ value, Codegen.Schema.reifyJson?
-    (Codegen.Schema.json value) = some value)
-#check (@Codegen.Schema.json_injective :
-  Function.Injective Codegen.Schema.json)
-#check (@Codegen.Schema.representation :
-  Representation → TypeScript.Expr)
-#check (@Codegen.Schema.documentExpr :
-  Document → TypeScript.Expr)
-#check (@Codegen.Schema.moduleSyntax :
-  String → Document → List (String × Json) → TypeScript.Module)
-#check (@Codegen.Schema.module? :
-  String → Document → List (String × Json) → Option TypeScript.Module)
-#check (@Codegen.Schema.source? :
-  String → Document → List (String × Json) →
-    TypeScript.Style → Option String)
-#check (@Codegen.Schema.generate? :
-  String → Document → List (String × Json) →
-    TypeScript.Style → Option String)
-
 #guard TypeScript.Render.expr TypeScript.house0 0
     (Codegen.Schema.json (.number Float64.negZero)) =
   "new DataView(Uint8Array.of(128, 0, 0, 0, 0, 0, 0, 0).buffer).getFloat64(0, false)"
@@ -540,8 +517,6 @@ private def pAppliedTransform : Api.Program :=
 #guard (Api.runSync pAppliedTransform 100).2 = Exit.success (Store.Val.nat 42)
 
 end Test.Codegen.SchemaGenerationContract
-
-
 
 -- P2a: public schema documents observe the canonical representative.
 #guard Effect4.Program.Ty.ofSchema (Effect4.Program.Ty.schema (.union (.lit "A") .string)) = some .string

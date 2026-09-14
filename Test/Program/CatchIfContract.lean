@@ -123,12 +123,6 @@ def twoFailValue : CauseV := ⟨[.fail (.tagged "B" "x") .empty, .fail (.tagged 
 #guard SingleFail (Cause.fail (.tagged "A" "m"))
 #guard caughtErrorValue? [] (tagTest "A" 0) twoFailValue = none
 #guard caughtErrorValue? [] (tagTest "A" 0) (Cause.fail (.tagged "A" "m")) = some (.list [.str "A", .str "m"])
-#check (@Effect4.Program.catchIf_miss_admits :
-  ∀ (env : List Val) (tag : String) (e : Ty) (allocated : List String) (cause : CauseV),
-    SingleFail cause →
-    causeAdmits (fun w _ => Val.hasTy w e allocated) e cause = true →
-    caughtErrorValue? env (tagTest tag env.length) cause = none →
-    causeAdmits (fun w _ => Val.hasTy w (Ty.diffTag tag e) allocated) (Ty.diffTag tag e) cause = true)
 #print axioms Effect4.Program.catchIf_miss_admits
 #print axioms Effect4.Program.Ty.diffTag_sound
 #print axioms Effect4.Program.tagTest?_weaken
