@@ -216,11 +216,11 @@ theorem tupleLawful : LawfulSpelling tupleSig tupleSpell where
 #guard readEff tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple") [.ident "a0", .int 7]) =
   .ok (.perform false (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))
 
--- Trailing names are matched exactly and in order: a misordered suffix is no row, so the
--- call is read as an atom application and refused on its first non-term.
+-- Trailing names are matched exactly and in order: a misordered suffix is no row, and a call
+-- that is no row and no head is refused by its head (since DI-72 it is no atom application).
 #guard readEff tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple")
     [.ident "a0", .int 7, .ident "second", .ident "first"]) =
-  .error (.unknownIdent "second")
+  .error (.unknownHead "Fixture.tuple")
 
 -- The former one-request call, a one-argument call with trailing names, and three
 -- plain arguments are not tuple readings.
@@ -230,23 +230,24 @@ theorem tupleLawful : LawfulSpelling tupleSig tupleSpell where
 #guard readEff tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple")
     [.ident "a0", .ident "first", .ident "second"]) = .error (.arity "Fixture.tuple")
 
+-- three plain arguments are no row call, and since DI-72 no atom application either
 #guard readEff tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple") [.ident "a0", .int 7, .int 8]) =
-  .ok (.yieldError (.app "Fixture.tuple"
-    (.cons (.var 0) (.cons (.lit (.nat 7)) (.cons (.lit (.nat 8)) .nil)))))
+  .error (.unknownHead "Fixture.tuple")
 
 -- A call row does not accept the tuple reading.
 #guard readEff sig spell 1 (.call (.ident "Ref.get") [.ident "a0", .int 1]) =
   .error (.arity "Ref.get")
 
--- The former wrapper is an unknown atom whose first argument is no term.
+-- The former wrapper is a call whose head is no reserved name and no row: refused before its
+-- arguments are read.
 #guard readEff tupleSig tupleSpell 1 (.call (.ident "Reflect.apply")
     [.ident "Fixture.tuple", .ident "undefined", .ident "a0"]) =
-  .error (.unknownIdent "Fixture.tuple")
+  .error (.unknownHead "Reflect.apply")
 
 #guard readEff tupleSig tupleSpell 0 (.ident "Reflect.apply") =
   .error (.unknownIdent "Reflect.apply")
 
-#guard readable tupleSig tupleSpell 0 (.yieldError (.app "Reflect.apply" .nil)) = true
+#guard readable tupleSig tupleSpell 0 (.yieldError (.app "Reflect.apply" .nil)) = false
 
 -- Every old native one-request tuple call is rejected by the row parser.
 #guard [NativeOp.refSet, .refGetAndSet, .refSetAndGet, .deferredSucceed, .deferredFail].all
@@ -282,16 +283,25 @@ open Effect4.Api in
   = .ok (.failCause (.both (.fail (.lit (.str "l")))
       (.both (.die (.lit (.nat 2))) (.both (.interrupt none) (.interrupt (some (.lit (.nat 7))))))))
 
-#guard roundTrip sig spell 1 (.yieldError (.var 0)) = .ok (.yieldError (.var 0))
+-- DI-72 (2026-09-13): `yieldError e` prints as `Effect.fail(e)`, the failure it means, and
+-- reads back as `fail e`; the constructor is outside `readable`, and a bare value in effect
+-- position is a tree the printer never emits.
+#guard roundTrip sig spell 1 (.yieldError (.var 0)) = .ok (.fail (.var 0))
 
-#guard roundTrip sig spell 0 (.yieldError (.lit .unit))
-  = .ok (.yieldError (.lit .unit))
+#guard roundTrip sig spell 0 (.yieldError (.lit .unit)) = .ok (.fail (.lit .unit))
 
-#guard roundTrip sig spell 0 (.yieldError (.lit (.nat 3)))
-  = .ok (.yieldError (.lit (.nat 3)))
+#guard roundTrip sig spell 0 (.yieldError (.lit (.nat 3))) = .ok (.fail (.lit (.nat 3)))
 
 #guard roundTrip sig spell 1 (.yieldError (.app "succ" (.cons (.var 0) .nil)))
-  = .ok (.yieldError (.app "succ" (.cons (.var 0) .nil)))
+  = .ok (.fail (.app "succ" (.cons (.var 0) .nil)))
+
+#guard readable sig spell 1 (.yieldError (.var 0)) = false
+#guard readable sig spell 0 (.yieldError (.lit (.nat 3))) = false
+#guard readEff sig spell 0 (.int 3) = .error (.shape "bare value")
+#guard readEff sig spell 0 (.str "hi") = .error (.shape "bare value")
+#guard readEff sig spell 0 (.ident "undefined") = .error (.shape "bare value")
+#guard readEff sig spell 1 (.ident "a0") = .error (.shape "bare binder")
+#guard readEff sig spell 1 (.call (.ident "succ") [.ident "a0"]) = .error (.unknownHead "succ")
 
 #guard roundTrip sig spell 1 (.sync (.app "succ" (.cons (.var 0) .nil)))
   = .ok (.sync (.app "succ" (.cons (.var 0) .nil)))
@@ -564,11 +574,9 @@ one comes back unchanged, so on this corpus `readable` is exact, not merely suff
 
 #guard (Test.Program.Gen.corpus 400 4).length = 400
 
--- S3's constructor draw reseeds the corpus: 335 readable, measured separately from
--- the retained pre-append wire/admission comparison (wave2-delivery/s3/admission.log).
--- Request erasure and scoped-fork daemon erasure remain unchanged.
-#guard ((Test.Program.Gen.corpus 400 4).filter Effect4.Api.readable).length = 335
-
+-- Which programs are readable is the committed corpus index (`generated/corpus-index.tsv`,
+-- one row per program, held by `make check-gen`), not a count pinned here; the law below is
+-- the property: a readable program comes back as itself.
 #guard (Test.Program.Gen.corpus 400 4).all fun p =>
   !Effect4.Api.readable p || decide (Effect4.Api.roundTrip p = .ok p)
 

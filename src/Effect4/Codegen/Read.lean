@@ -17,7 +17,8 @@ program reads back to that program. `read_exact`: what the reader accepts prints
 exactly the tree it read. `Readable` is what the printer loses and the reader cannot
 recover — a variable out of scope, the request of a `unit`-request row (the printer drops
 it), the `daemon` flag of a scoped fork (the fork options object has no such field), the
-kind of a row (a `perform` and a `callback` on the same row print alike). `LawfulSpelling`
+kind of a row (a `perform` and a `callback` on the same row print alike), and `yieldError`,
+which prints as the `fail` it means (DI-72). `LawfulSpelling`
 is what the reader needs of a signature: `spell` inverts the row table on
 (spelling, trailing names), and no spelling or trailing name collides with a binder name,
 `undefined`, or a reserved head.
@@ -344,31 +345,34 @@ def readCatchTest (n : Nat) : Expr → Except ReadRefusal Term
 
 mutual
   /-- `readEff sig spell n x` is `x` as a program at environment length `n`, in the order
-  of the printer's table: a bare identifier is a binder, then `Effect.fiberId` or
-  `undefined`, then a value row; a call is a reserved combinator, then a call row, then an
-  atom application; a literal is a yielded error. -/
+  of the printer's table: a bare identifier is `Effect.fiberId` or a value row; a call is a
+  reserved combinator, then a call row. A bare value in effect position — a literal,
+  `undefined`, a binder — or an application of a name that is no head and no row is a tree
+  the printer never emits, refused by shape or by its head: `yieldError e` prints as
+  `Effect.fail(e)` and reads back as `fail e` (DI-72, 2026-09-13). The `match` shape of the
+  refused arms is kept as it was so that `readEff.induct`'s cases keep their numbering. -/
   def readEff (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
       (x : Expr) : Except ReadRefusal (Eff Op) :=
     match x with
     | .ident s =>
       match Var.read n s with
-      | some i => .ok (.yieldError (.var i))
+      | some _ => .error (.shape "bare binder")
       | none =>
         match headOf s with
         | some .fiberId => .ok (.withFiber .getId)
-        | some .undefined => .ok (.yieldError (.lit .unit))
+        | some .undefined => .error (.shape "bare value")
         | some _ => .error (.unknownHead s)
         | none => readRowValue sig spell s
-    | .int k => if 0 ≤ k then .ok (.yieldError (.lit (.nat k.toNat))) else .error (.negative k)
-    | .bool b => .ok (.yieldError (.lit (.bool b)))
-    | .str s => .ok (.yieldError (.lit (.str s)))
+    | .int k => if 0 ≤ k then .error (.shape "bare value") else .error (.negative k)
+    | .bool _ => .error (.shape "bare value")
+    | .str _ => .error (.shape "bare value")
     | .call (.ident s) args =>
       match headOf s with
       | some h => readHead sig spell n h args
       | none =>
         match readRowCall sig spell n s [] args with
         | some answer => answer
-        | none => (readTerms n args).map fun ts => .yieldError (.app s ts)
+        | none => .error (.unknownHead s)
     -- a call carrying explicit type arguments is a row call and nothing else: no reserved
     -- head and no atom application is printed with them. An *empty* argument list is not a
     -- spelling the printer emits, so it falls through to the shape refusal
@@ -736,16 +740,14 @@ def requestReadable (row : Row) (n : Nat) (request : Term) : Bool :=
 mutual
   /-- The program is one the printer keeps whole: variables in scope, rows performed on the
   kind their row declares, requests the row prints, atoms that are no head and no row, no
-  internal fiber action, and no `daemon` on a scoped fork. -/
+  internal fiber action, no `daemon` on a scoped fork, and no `yieldError`, which prints as
+  the `fail` it means (DI-72). -/
   def readable (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat) :
       Eff Op → Bool
     | .succeed value => value.scoped n
     | .fail error => error.scoped n
     | .failCause cause => cause.scoped n
-    | .yieldError (.var index) => decide (index < n)
-    | .yieldError (.lit _) => true
-    | .yieldError (.app atom args) =>
-      (headOf atom).isNone && noRow spell atom args && Terms.scoped n args
+    | .yieldError _ => false
     | .sync thunk => thunk.scoped n
     | .suspend body => readable sig spell n body
     | .perform op request =>
@@ -1310,11 +1312,7 @@ theorem readCatchTest_exact {n : Nat} {predicate : Expr} {test : Term}
 theorem print_not_cond {sig : Signature Op} {n : Nat} {e : Eff Op} {t a b : Expr}
     (hp : print sig n e = .ok (.cond t a b)) : False := by
   cases e
-  case yieldError v =>
-    cases v with
-    | var i => simp [print, printTerm] at hp
-    | lit l => cases l <;> simp [print, printTerm, printLit] at hp
-    | app atom args => simp [print, printTerm] at hp
+  case yieldError v => simp [print] at hp
   case perform op r =>
     simp only [print, printRow, Except.ok.injEq] at hp
     split at hp
@@ -1678,26 +1676,7 @@ theorem read_print {sig : Signature Op} {spell : String → List String → Opti
     simp only [print, Except.ok.injEq] at hp; subst hp
     unfold readEff readHead
     simp [headOf_lit .failCause "Effect.failCause" rfl, readCause_printCause c hr]
-  | .yieldError t, hr, hp => by
-    simp only [print, Except.ok.injEq] at hp; subst hp
-    cases t with
-    | var i =>
-      simp only [readable, decide_eq_true_eq] at hr
-      unfold readEff; simp [printTerm, Var.read_name hr]
-    | lit v =>
-      cases v with
-      | unit =>
-        unfold readEff
-        simp [printTerm, printLit, Var.read_none Var.name_ne_undefined,
-          headOf_lit .undefined "undefined" rfl]
-      | nat k => unfold readEff; simp [printTerm, printLit]
-      | bool b => unfold readEff; simp [printTerm, printLit]
-      | str s => unfold readEff; simp [printTerm, printLit]
-    | app atom args =>
-      simp only [readable, Bool.and_eq_true, Option.isNone_iff_eq_none] at hr
-      obtain ⟨⟨hhead, hnorow⟩, hsc⟩ := hr
-      unfold readEff
-      simp [printTerm, hhead, readRowCall_none hnorow, readTerms_printTerms args hsc]
+  | .yieldError _, hr, _ => by simp [readable] at hr
   | .sync t, hr, hp => by
     simp only [readable] at hr
     simp only [print, Except.ok.injEq] at hp; subst hp
@@ -2250,19 +2229,18 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
     (motive_6 := fun n stmts => ∀ ss, readStmts sig spell n stmts = .ok ss →
       printStmts sig n ss = .ok stmts)
   -- readEff
+  -- the refused arms (DI-72): a bare binder, `undefined`, a literal, an application of a
+  -- name that is no head and no row; each hypothesis is a refusal, never an acceptance
   case case1 =>
     intro n s i hi e h
-    unfold readEff at h; simp only [hi] at h; cases h
-    obtain ⟨hs, _⟩ := Var.read_exact hi
-    simp [print, printTerm, hs]
+    unfold readEff at h; simp [hi] at h
   case case2 =>
     intro n s hr hh e h
     unfold readEff at h; simp only [hr, hh] at h; cases h
     simp [print, printAction, headOf_exact hh, Head.spelling]
   case case3 =>
     intro n s hr hh e h
-    unfold readEff at h; simp only [hr, hh] at h; cases h
-    simp [print, printTerm, printLit, headOf_exact hh, Head.spelling]
+    unfold readEff at h; simp [hr, hh] at h
   case case4 =>
     intro n s hr val h1 h2 hh e h
     unfold readEff at h; simp only [hr, hh] at h
@@ -2283,17 +2261,16 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
     · cases h
   case case6 =>
     intro n k hk e h
-    unfold readEff at h; simp only [hk, if_true] at h; cases h
-    simp [print, printTerm, printLit, Int.toNat_of_nonneg hk]
+    unfold readEff at h; simp [hk] at h
   case case7 =>
     intro n k hk e h
     unfold readEff at h; simp [hk] at h
   case case8 =>
     intro n b e h
-    unfold readEff at h; simp at h; subst h; simp [print, printTerm, printLit]
+    unfold readEff at h; simp at h
   case case9 =>
     intro n s e h
-    unfold readEff at h; simp at h; subst h; simp [print, printTerm, printLit]
+    unfold readEff at h; simp at h
   case case10 =>
     intro n atom args hd hh ih e h
     unfold readEff at h; simp only [hh] at h
@@ -2348,9 +2325,7 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
       · cases hrow
   case case12 =>
     intro n atom args hh hrow e h
-    unfold readEff at h; simp only [hh, hrow, map_eq_ok] at h
-    obtain ⟨ts, hts, rfl⟩ := h
-    simp [print, printTerm, readTerms_exact args hts]
+    unfold readEff at h; simp [hh, hrow] at h
   -- the generic-head call arm: a row call carrying the row's own type arguments
   -- (`E4-CHECK-CE-013`). It prints back through `printRowHead`'s non-empty branch.
   case case13 =>
@@ -3217,12 +3192,7 @@ mutual
       (hl : LawfulSpelling sig spell) {cut n : Nat} (hc : cut ≤ n) (program : Eff Op) :
       readable sig spell (n + 1) (Eff.weaken cut program) = readable sig spell n program :=
     match program with
-    | .yieldError error => by
-      cases error with
-      | var index => exact Term.scoped_weaken hc (.var index)
-      | lit _ => rfl
-      | app atom args => simp only [Eff.weaken, Term.weaken, readable,
-          noRow_weaken hl, Terms.scoped_weaken hc]
+    | .yieldError _ => rfl
     | .succeed _ | .fail _ | .failCause _ | .sync _ | .suspend _ | .perform _ _
     | .bind _ _ | .gen _ | .catchCause _ _ | .catchIf _ _ _ | .matchCause _ _ _ | .onExit _ _ | .exit _
     | .uninterruptible _ | .interruptible _ | .branch _ _ _ | .whileLoop _ _ _ _

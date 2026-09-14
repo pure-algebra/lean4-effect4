@@ -40,10 +40,14 @@ describe("exits and literals", () => {
   test("Effect.succeed(42) is the wire golden p42", () => {
     expect(json("Effect.succeed(42)")).toBe('["succeed",["lit",["nat",42]]]')
   })
-  test("a bare literal is a yielded error", () => {
-    expect(json("2")).toBe('["yieldError",["lit",["nat",2]]]')
-    expect(json('"hi"')).toBe('["yieldError",["lit",["str","hi"]]]')
-    expect(json("undefined")).toBe('["yieldError",["lit",["unit"]]]')
+  test("a bare value is no effect: the printer never emits one (DI-72)", () => {
+    // `yieldError e` prints as `Effect.fail(e)` and reads back as `fail e`; a bare value in
+    // effect position is a tree the printer never produces, refused by shape.
+    expect(refusal("2")).toEqual({ _tag: "shape", what: "bare value" })
+    expect(refusal('"hi"')).toEqual({ _tag: "shape", what: "bare value" })
+    expect(refusal("undefined")).toEqual({ _tag: "shape", what: "bare value" })
+    expect(refusal("Effect.flatMap(Effect.succeed(1), (a0) => a0)")).toEqual({ _tag: "shape", what: "bare binder" })
+    expect(json("Effect.fail(2)")).toBe('["fail",["lit",["nat",2]]]')
   })
   test("Effect.fiberId is the getId action", () => {
     expect(json("Effect.fiberId")).toBe('["withFiber",["getId"]]')
@@ -92,9 +96,10 @@ describe("rows: the shape the grammar could not decide", () => {
   test("a reserved head with type arguments is not a row call", () => {
     expect(refusal("Effect.succeed<number>(1)")).toEqual({ _tag: "unknownHead", name: "Effect.succeed" })
   })
-  test("an unknown call whose arguments are all terms is an atom application, yielded", () => {
-    expect(json("add(1, 2)")).toBe('["yieldError",["app","add",["cons",["lit",["nat",1]],["cons",["lit",["nat",2]],["nil"]]]]]')
-    expect(json("Effect.map(1)")).toBe('["yieldError",["app","Effect.map",["cons",["lit",["nat",1]],["nil"]]]]')
+  test("an unknown call in effect position is an unknown head, not a yielded atom application", () => {
+    expect(refusal("add(1, 2)")).toEqual({ _tag: "unknownHead", name: "add" })
+    expect(refusal("Effect.map(1)")).toEqual({ _tag: "unknownHead", name: "Effect.map" })
+    expect(json("Effect.fail(add(1, 2))")).toBe('["fail",["app","add",["cons",["lit",["nat",1]],["cons",["lit",["nat",2]],["nil"]]]]]')
   })
 })
 
@@ -116,7 +121,9 @@ describe("tuple calls", () => {
       expect(refusal(`${spelling}(pair(1, 7))`)).toEqual({ _tag: "arity", head: spelling })
     })
     test(`${spelling} refuses the former Reflect.apply wrapper`, () => {
-      expect(refusal(`Reflect.apply(${spelling}, undefined, pair(1, 7))`)).toEqual({ _tag: "unknownIdent", name: spelling })
+      // `Reflect.apply` is no head and no row, so the call refuses before its arguments are
+      // read (since DI-72 a call in effect position is never an atom application).
+      expect(refusal(`Reflect.apply(${spelling}, undefined, pair(1, 7))`)).toEqual({ _tag: "unknownHead", name: "Reflect.apply" })
     })
   }
 
@@ -139,18 +146,14 @@ describe("tuple calls", () => {
   test("a call row does not accept the tuple reading", () => {
     expect(refusal("Ref.get(1, 2)")).toEqual({ _tag: "arity", head: "Ref.get" })
   })
-  test("three plain arguments are an atom application, not a row", () => {
-    expect(JSON.parse(json("Ref.set(1, 7, 8)"))).toEqual([
-      "yieldError", ["app", "Ref.set", ["cons", ["lit", ["nat", 1]], ["cons", ["lit", ["nat", 7]], ["cons", ["lit", ["nat", 8]], ["nil"]]]]],
-    ])
+  test("three plain arguments are no row and no effect", () => {
+    expect(refusal("Ref.set(1, 7, 8)")).toEqual({ _tag: "unknownHead", name: "Ref.set" })
   })
   test("Reflect.apply is no head: a bare mention is an unknown identifier", () => {
     expect(refusal("Reflect.apply")).toEqual({ _tag: "unknownIdent", name: "Reflect.apply" })
   })
-  test("ordinary dotted atom calls retain their existing reading", () => {
-    expect(JSON.parse(json("foo.concat(1)"))).toEqual([
-      "yieldError", ["app", "foo.concat", ["cons", ["lit", ["nat", 1]], ["nil"]]],
-    ])
+  test("an ordinary dotted call in effect position is an unknown head", () => {
+    expect(refusal("foo.concat(1)")).toEqual({ _tag: "unknownHead", name: "foo.concat" })
   })
 })
 
@@ -214,8 +217,8 @@ describe("heads out of position", () => {
   test("Cause.fail outside a cause", () => {
     expect(refusal("Cause.fail(1)")).toEqual({ _tag: "unknownHead", name: "Cause.fail" })
   })
-  test("an unknown Effect export is tried as an atom application, so its lambda refuses as a term", () => {
-    expect(refusal("Effect.map(Effect.succeed(1), (a0) => a0)")).toEqual({ _tag: "shape", what: "term" })
+  test("an unknown Effect export is an unknown head in effect position", () => {
+    expect(refusal("Effect.map(Effect.succeed(1), (a0) => a0)")).toEqual({ _tag: "unknownHead", name: "Effect.map" })
   })
 })
 
@@ -510,10 +513,10 @@ describe("supplied tables and method rows", () => {
   })
   test("under the empty table the same spellings are no rows", () => {
     expect(refusal("Effect.flatMap(Effect.succeed(9), (a0) => a0.read(3))")).toEqual({ _tag: "unknownHead", name: "read" })
-    // A dotted call that no table names falls to the atom-application reading, as in Lean
-    // (`readEff`'s last arm): a different program from the table's, which is why the corpus
+    // A dotted call that no table names is an unknown head in effect position, as in Lean
+    // (`readEff`'s call arm): a refusal, not the table's program, which is why the corpus
     // gate must read a truth fixture under its own table.
-    expect(json("Host.acquire()")).toBe('["yieldError",["app","Host.acquire",["nil"]]]')
+    expect(refusal("Host.acquire()")).toEqual({ _tag: "unknownHead", name: "Host.acquire" })
   })
   test("the truth fixture pAcquireHandle reads to Lean's program under its table", () => {
     const source =

@@ -133,7 +133,9 @@ def sig : Signature (Fin 3) :=
     (expr house0 0)
   = .ok "Effect.failCause(Cause.combine(Cause.fail(\"l\"), Cause.interrupt()))"
 
-#guard (print sig 1 (.yieldError (.var 0))).map (expr house0 0) = .ok "a0"
+-- DI-72: a yieldable error prints as the failure it means, never as a bare value
+#guard (print sig 1 (.yieldError (.var 0))).map (expr house0 0) = .ok "Effect.fail(a0)"
+#guard (print sig 0 (.yieldError (.lit (.nat 19)))).map (expr house0 0) = .ok "Effect.fail(19)"
 
 #guard (print sig 1 (.sync (.app "succ" (.cons (.var 0) .nil)))).map (expr house0 0)
   = .ok "Effect.sync(() => succ(a0))"

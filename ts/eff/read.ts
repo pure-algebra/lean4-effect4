@@ -586,12 +586,14 @@ const programModuleOf = (program: Node): Read<Module> => {
 /* ============================================================ § 3  the fragment → Eff  (Read.lean) */
 
 // `readEff(n, x)` reads `x` as a program at environment length `n`, in the order of the
-// printer's table: a bare identifier is a binder, then `Effect.fiberId` or `undefined`, then
-// a value row; a call is a reserved head, then a call row, then an atom application; a
-// literal is a yielded error. Every reserved head has its own reader in `headReaders`; the
-// heads with no reading in that position refuse by name. Binders are depths: the k-th nested
-// lambda binds `a<k>`, and `varRead` recovers a variable by comparing names from the newest
-// binder down, never by decoding digits.
+// printer's table: a bare identifier is `Effect.fiberId` or a value row; a call is a reserved
+// head, then a call row. A bare value (a literal, `undefined`, a binder) or an atom
+// application in effect position is refused: the printer never emits one there, since
+// `yieldError e` prints as `Effect.fail(e)` (DI-72, 2026-09-13) and reads back as `fail e`.
+// Every reserved head has its own reader in `headReaders`; the heads with no reading in that
+// position refuse by name. Binders are depths: the k-th nested lambda binds `a<k>`, and
+// `varRead` recovers a variable by comparing names from the newest binder down, never by
+// decoding digits.
 
 /** The binder minted for environment position `index`: `a0`, `a1`, … (`Var.name`). */
 const varName = (index: number): string => `a${index}`
@@ -929,21 +931,20 @@ export const readEff = (n: number, x: Expr): Read<Eff> => {
   switch (x._tag) {
     case "ident": {
       const i = varRead(n, x.name)
-      if (i !== undefined) return ok({ _tag: "yieldError", error: { _tag: "var", index: i } })
+      if (i !== undefined) return refuse({ _tag: "shape", what: "bare binder" })
       const head = headOf(x.name)
       if (head === "Effect.fiberId") return ok({ _tag: "withFiber", action: { _tag: "getId" } })
-      if (head === "undefined") return ok({ _tag: "yieldError", error: unit })
+      if (head === "undefined") return refuse({ _tag: "shape", what: "bare value" })
       if (head !== undefined) return refuse({ _tag: "unknownHead", name: x.name })
       return readRowValue(x.name)
     }
     case "int":
       return x.value >= 0
-        ? ok({ _tag: "yieldError", error: { _tag: "lit", value: { _tag: "nat", value: x.value } } })
+        ? refuse({ _tag: "shape", what: "bare value" })
         : refuse({ _tag: "negative", value: x.value })
     case "bool":
-      return ok({ _tag: "yieldError", error: { _tag: "lit", value: { _tag: "bool", value: x.value } } })
     case "str":
-      return ok({ _tag: "yieldError", error: { _tag: "lit", value: { _tag: "str", value: x.value } } })
+      return refuse({ _tag: "shape", what: "bare value" })
     case "call": {
       // A call carrying explicit type arguments is a row call and nothing else: no reserved
       // head and no atom application is printed with them, and an empty list is not a
@@ -963,7 +964,7 @@ export const readEff = (n: number, x: Expr): Read<Eff> => {
       if (head !== undefined) return headReaders[head](n, x.args)
       const asRow = readRowCall(n, s, [], x.args)
       if (asRow !== undefined) return asRow
-      return Result.map(readTerms(n, x.args), (args): Eff => ({ _tag: "yieldError", error: { _tag: "app", atom: s, args } }))
+      return refuse({ _tag: "unknownHead", name: s })
     }
     // `receiver.spelling(args)`: a method row (Lean `readMethod`, reached from `readEff`'s
     // catch-all); a `pipe` in effect position falls through this to `unknownHead`, as in Lean.

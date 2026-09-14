@@ -105,7 +105,8 @@ def read (expression : TypeScript.Expr) (table : RowTable := []) : Except ReadRe
   Program.readEff (nativeSignature table) (nativeSpell table) 0 expression
 
 /-- Whether the printer keeps the program whole, so that `read` of its printing is the program
-itself; what it loses is documented on `Effect4.Program.readable`. -/
+itself; what it loses is documented on `Effect4.Program.readable` (a `perform` on an async row
+reads back as `callback`, a `yieldError` as the `fail` it means, DI-72). -/
 def readable (program : Program) (table : RowTable := []) : Bool :=
   Program.readable (nativeSignature table) (nativeSpell table) 0 program
 
