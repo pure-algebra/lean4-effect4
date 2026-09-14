@@ -280,6 +280,18 @@ class Recorder {
 
   /** The `Tracer.context` hook (`internal/effect.ts:653-655`). */
   context = (primitive: any, fiber: FiberLike): unknown => {
+    // A fiber whose first primitive runs while another fiber's primitive is on the stack is
+    // an immediately started child of that fiber: `forkUnsafe` evaluates it inside the
+    // parent's `withFiber` (`internal/effect.ts:5279`), before it is registered as a child
+    // (`:5280-5281`), so `scanChildren` could see it only later, or never when it exits at
+    // once. Its fork is observed here, at its first step, as the machine emits it: `forked`
+    // then `started`, daemon or not (DI-75; the manifest's `reduce` keeps the same forks).
+    if (!this.index.has(fiber) && this.current.length > 0) {
+      const parent = this.currentFiber()
+      const child = this.see(fiber)
+      this.push(this.events, `forked ${parent}->${child}`)
+      this.push(this.schedule, `forked ${parent} ${child}`)
+    }
     const idx = this.see(fiber)
     this.scanChildren(fiber, idx)
     const state = this.state.get(idx)
@@ -573,8 +585,8 @@ const runPromiseEntry = async (main: any): Promise<Observation> => {
   const settled = new Promise<unknown>((resolve) => fiber.addObserver(resolve))
   const deadline = Symbol("deadline")
   const first = await Promise.race([settled, sleep(timeoutMs).then(() => deadline)])
-  recorder.freeze()
   if (first === deadline) {
+    recorder.freeze()
     fiber.interruptUnsafe()
     await settled
     tape.sink = null
@@ -583,6 +595,18 @@ const runPromiseEntry = async (main: any): Promise<Observation> => {
       frames: recorder.frames, late: recorder.late, settledLater: null, tape: rows
     }
   }
+  // `Api.run` runs its flush rounds until nothing is runnable, so a daemon child that outlives
+  // the root is part of the machine's schedule. The observation ends when the queue is quiet
+  // (no new event across a macrotask boundary, which drains the microtasks and runs the due
+  // timers), within the deadline (DI-75).
+  const settledAt = Date.now()
+  let seen = recorder.events.length
+  while (Date.now() - settledAt < timeoutMs) {
+    await sleep(5)
+    if (recorder.events.length === seen) break
+    seen = recorder.events.length
+  }
+  recorder.freeze()
   tape.sink = null
   return {
     entry: "runPromiseExit", exit: recorder.exitJson(first), parked: false, schedule: recorder.schedule,

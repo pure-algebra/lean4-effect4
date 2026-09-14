@@ -56,7 +56,7 @@ several layers, and the kind is what makes its cost visible.
 | layer | what it holds | state |
 | --- | --- | --- |
 | L1 reference semantics | the machine (fibers, scopes, the wake list, stores, the layer memo) and the algebra it denotes into; the run API and its refusals | solid; its open rows are about the *reach* of the agreement, not its content |
-| L2 the type layer | the `Eff` object language, `Ty`, the row and table discipline, the error and requirement channels, the typing algorithm and the value typing | routed faithfully, coarse in content; no declarative system, no subtyping, one uninhabited binder type |
+| L2 the type layer | the `Eff` object language, `Ty`, the row and table discipline, the error and requirement channels, the typing algorithm, the declarative system it is proved equal to, and the value typing | routed faithfully; since part 4 (2026-09-12) a declarative system (`HasTy`, sound and complete for `effTy`), a subtype relation with subsumption at rows, provision and atom arguments, and the canonical union as the answer join; `int` is the one uninhabited constructor (DI-67); no whole-program type-soundness theorem for execution yet (`Typing/Check.lean`) |
 | L3 representations and bytes | the value carrier, canonical bytes and the content-addressed store, the wire and its ordinals, the JSON forms, the World description and its OCaml and TypeScript projections, the goldens, the stamps | the rank-one rework risks live here: identity, ordinals, four independent reflections of one description |
 | L4 the faces | the printer and readers between `Eff` and TypeScript source, the foreign ingest with its two contracts, the truth harness and its tapes, the OCaml face as a conformance suite, the runtime coverage census | its claims are stated in `Test/contracts/faces.contract.md` (DI-50), which names the batteries that exist and adds none; classification by rule order; the printed image never type-checked |
 | L5 process | the generators and their families, the stamps and gates, the one-compiler lane, the basis and the register | the drift-removal machinery; two stamp protocols; five families carried by hand |
@@ -106,21 +106,25 @@ the `.ty` goldens — were retired with the checking refactor; the goldens stay 
 checker's expected output under `make check-gen`.)
 
 Guarantees: weakening in all six forms; syntactic soundness for the term language; row
-preservation for the sync route and for the external route's success branch. Non-guarantees,
-each named: no declarative rule system, so no rule can be cited or inverted, and the two
-typing faces can only be compared by goldens — and already disagree on a program Lean accepts
-(DI-54); no subtype relation, so the answer column is discrete where the error and requirement
-columns are semilattices (DI-38); the union's canonicalisation is one level deep, so `Ty`
-equality is finer than the target's below the top level (DI-53); four of fifteen `Ty`
-constructors are uninhabited, and one of them, `causeOf`, is what a catch handler's binder is
-typed at, so the value-typing invariant fails at every handler point and preservation for
-programs cannot yet be stated (DI-09, DI-17); the failure branch of an external answer gained its
-theorem on 2026-09-09 (`external_error_typed`, `external_oracle_error_typed`, in `23e5717`),
-while `errAdmits` is still not inverse to `errOf` until S2's admissible image lands (DI-26,
-DI-62). The error channel is write-only for a program until the elimination form and the cause
-atoms land (DI-09); the error's content is
-the DB-15 pair, ruled as the reason tag and the driver message (DI-00), and a literal type
-(`Ty.lit`) with a subtype relation is the designed next step (DI-15, DI-55).
+preservation for the sync route and for the external route's success branch. (Amended
+2026-09-13, after the audit found the sentences below stale.) The non-guarantees as first
+written — no declarative rule system, no subtype relation, a one-level canonicalisation, an
+uninhabited handler binder type, a write-only error channel — were closed one by one:
+`HasTy` (`src/Effect4/Laws/Program/Typing/HasTy.lean`) is the declarative system, proved
+sound and complete for `effTy` (`effTy_sound`, `effTy_complete`, `effTy_eq_hasTy`), and the
+typing consults `Signature.dom` (DI-54); `Ty.sub` is the subtype relation, respected by the
+value typing (`hasTy_sub`) and applied at rows, provision and atom arguments, with the
+canonical union `Ty.join` as the answer join (DI-38, DI-15, part 4); normalization is
+idempotent and `CTy` is the canonical carrier (DI-53); a reified cause inhabits `causeOf` and
+is checked by the shared cause fold (DI-62, DI-17); `errAdmits` is inverse to `errOf` on the
+supported error types (`valOfErr_errOf_supported`, DI-26, DI-62); the elimination forms and
+the cause atoms landed (DI-09). What remains named: `int` is uninhabited (DI-67); no theorem
+carries `Fits` from the root's `HasTy` to every compiled point, so a whole-program
+type-soundness statement for execution is still owed (`Typing/Check.lean`); and the host's
+own type discipline is weaker than this one where the printed key carries no nominal identity
+(DI-24, the `types mismatch-R` rows of the corpus results) and where `unit` renders as `void`
+while the host infers `undefined` for the printed value (DI-77). The error's content is the
+DB-15 pair, ruled as the reason tag and the driver message (DI-00).
 
 Drift points: the atom table (fourteen copies, three stale — DI-40); `Ty` (twenty copies,
 thirteen hand-written, no count guard); the typing algorithm written three times; the package

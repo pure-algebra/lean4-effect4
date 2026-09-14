@@ -72,6 +72,24 @@ def pStrBind : Program := .bind (.succeed (.lit (.str "a"))) (.succeed (.var 0))
 
 #guard expr house0 0 (jsonExpr (.arr [])) = "[]"
 
+/-! ## DI-73: a fiber id is a number the two faces assign differently
+
+`Effect.flatMap(Effect.fiberId, (a0) => Effect.succeed(eq(a0, 0)))` answers `true` here (the
+root is fiber `0`) and `false` on the pinned rc.112, whose ids are the runtime's own counter.
+The witness of the 2026-09-13 audit, kept so that a change to what `getId` answers, or to
+its type, is a deliberate ruling: renumbering the *output* cannot repair a Boolean decided
+during the run, so DI-73's earlier "compare ids up to renumbering" is withdrawn. -/
+
+def pIdIsZero : Program :=
+  .bind (.withFiber .getId)
+    (.succeed (.app "eq" (.cons (.var 0) (.cons (.lit (.nat 0)) .nil))))
+
+#guard wellTyped pIdIsZero
+#guard (run pIdIsZero 100).exit = some (Exit.success (Val.bool true))
+#guard (runSync pIdIsZero 100).2 = Exit.success (Val.bool true)
+#guard (print pIdIsZero).map (expr house0 0)
+  = .ok "Effect.flatMap(Effect.fiberId, (a0) => Effect.succeed(eq(a0, 0)))"
+
 /-! ## Codegen, through the face: an artefact and its bytes -/
 
 -- the one crossing to bytes, kept inside the guard

@@ -461,14 +461,11 @@ def observable : Event → Option String
   | _ => none
 
 /-- The reduced schedule alphabet the runner can observe on rc.112: fiber starts, exits (by
-kind), forks, parks and resumes, and the dispatcher's scheduling and runs. Tokens, priorities'
-tasks and exit values are erased; fiber ids are the machine's (root `0`, children in fork
-order), which the runner reproduces by first-seen order. -/
+kind), forks (`reduce` decides which), parks and resumes, and the dispatcher's scheduling and
+runs. Tokens, priorities' tasks and exit values are erased; fiber ids are the machine's (root
+`0`, children in fork order), which the runner reproduces by first-seen order. -/
 def reduced : Event → Option String
-  -- a daemon fork is invisible to the runner: only a non-daemon child joins `fiber._children`
-  -- (`internal/effect.ts:5279-5281`), which is where the runner sees forks; `events` keeps it
-  | .forked _ _ true => none
-  | .forked p c false => some s!"forked {p.value} {c.value}"
+  | .forked _ _ _ => none   -- `reduce` decides forks
   | .started f => some s!"started {f.value}"
   | .scheduledTask o p _ => some s!"scheduled {o.value} {p}"
   | .ranTask o _ => some s!"ran {o.value}"
@@ -476,6 +473,73 @@ def reduced : Event → Option String
   | .resumedWith f _ _ => some s!"resumed {f.value}"
   | .exited f e => some s!"exited {f.value} {exitKind e}"
   | _ => none
+
+/-- The fiber an observable event belongs to, for the immediacy test below. -/
+def eventFiber : Event → Option FiberId
+  | .started f => some f
+  | .scheduledTask o _ _ => some o
+  | .ranTask o _ => some o
+  | .yieldInjected f _ => some f
+  | .parkedOn f _ => some f
+  | .resumedWith f _ _ => some f
+  | .exited f _ => some f
+  | _ => none
+
+/-- Was the fork of `c` by `p` immediate: `c` starts before `p`'s next observable event that
+is not another fork. `forkUnsafe` runs an immediate child inside the parent's primitive
+(`internal/effect.ts:5279`), so the parent emits nothing until the child yields or exits; a
+scheduled child's fork is followed at once by the parent's `scheduledTask`. Other forks are
+read through because the machine's parallel close spawns every finalizer before running the
+first (`Fibers.lean`, `closePar`, `forkFinalizers`), where rc.112 forks and runs each in turn
+(`:3820`): the batch is a modeling shortcut visible in `events`, and the reduced schedule
+below places each immediate fork where the runner observes it. -/
+def immediateFork (p c : FiberId) : List Event → Bool
+  | [] => false
+  | .started f :: rest => if f.value = c.value then true else immediateFork p c rest
+  | .forked _ _ _ :: rest => immediateFork p c rest
+  | e :: rest =>
+    match eventFiber e with
+    | some f => if f.value = p.value then false else immediateFork p c rest
+    | none => immediateFork p c rest
+
+/-- The reduced schedule: `reduced` row by row, over the fiber states the runner observes
+(DI-75, 2026-09-13).
+
+* A `started f` row is a fiber's transition into running — fresh, or parked and resumed —
+  which is what the recorder's `context` hook can see. The machine's `started` event is its
+  evaluation loop entering a fiber, and the loop re-enters the parent after a fork's
+  commands (`Cmd.evaluate` on a fiber the residue marked not running, `Fibers.lean`), an
+  internal re-entry rc.112's `runLoop` has no counterpart for; a `started` of a fiber that
+  is already running is therefore no row.
+* A fork appears exactly where the runner can observe it. An *immediate* child's fork is
+  placed at the child's first step, daemon or not: the recorder attributes a fresh fiber's
+  first primitive to the fiber on the stack. A *scheduled* non-daemon child joins
+  `fiber._children` before it runs (`:5280-5281`) and is seen at the parent's next
+  primitive, so its fork stays where the machine emits it. A scheduled daemon child is never
+  registered and starts from the scheduler with no parent on the stack, so its fork stays in
+  `events` only. -/
+def reduce (trace : List Event) : List String :=
+  go trace [] []
+where
+  go : List Event → List (FiberId × FiberId) → List Nat → List String
+    | [], _, _ => []
+    | .forked p c daemon :: rest, pending, running =>
+      if immediateFork p c rest then go rest ((c, p) :: pending) running
+      else (if daemon then [] else [s!"forked {p.value} {c.value}"]) ++ go rest pending running
+    | .started f :: rest, pending, running =>
+      if running.contains f.value then go rest pending running
+      else
+        let running := f.value :: running
+        match pending.find? (fun x => x.1.value = f.value) with
+        | some (_, p) =>
+          s!"forked {p.value} {f.value}" :: s!"started {f.value}" ::
+            go rest (pending.filter (fun x => x.1.value ≠ f.value)) running
+        | none => s!"started {f.value}" :: go rest pending running
+    | .parkedOn f t :: rest, pending, running =>
+      (reduced (.parkedOn f t)).toList ++ go rest pending (running.filter (· ≠ f.value))
+    | .exited f e :: rest, pending, running =>
+      (reduced (.exited f e)).toList ++ go rest pending (running.filter (· ≠ f.value))
+    | e :: rest, pending, running => (reduced e).toList ++ go rest pending running
 
 /-- The events that are neither observable nor frame rows: recorded, never compared. -/
 def internal : Event → Option String
@@ -548,7 +612,7 @@ def runJson (p : Api.Program) (fuel : Nat) (table : RowTable := [])
     , ("fiberCount", toJson r.fiberCount)
     , ("fibers", Lean.Json.arr (r.machine.fibers.map fiberJson).toArray)
     , ("events", strings (trace.filterMap observable))
-    , ("schedule", strings (trace.filterMap reduced))
+    , ("schedule", strings (reduce trace))
     , ("internal", strings (trace.filterMap internal))
     , ("frames", toJson (trace.filter isFrame).length) ]
 

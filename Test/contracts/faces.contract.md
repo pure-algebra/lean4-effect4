@@ -57,7 +57,10 @@ Side conditions, each of which is a real restriction:
 2. `readable sig spell n e = true` — **the program must be in the reader's image.**
    `readable` is *print reconstruction*, not executable validity: a program can be well typed,
    admitted and runnable and still not readable (`pAwait` is the standing example — settlement
-   v2 R2c). This is why the law is not "every program round-trips".
+   v2 R2c; since DI-72, 2026-09-13, `yieldError e` is another: it prints as `Effect.fail(e)`,
+   the failure it means, and reads back as `fail e`, so a bare value in effect position is a
+   tree the printer never emits and the reader refuses). This is why the law is not "every
+   program round-trips".
 3. `print sig n e = .ok x` — the printer may refuse (§5.1's refused row of `Print.lean`).
 4. `n` is the environment length; the law is stated at every `n`, not only at 0.
 
@@ -122,16 +125,32 @@ The claim held by face 8 is bounded on five axes, and every one of them is part 
    fiber ran.
 3. **A pinned host.** `effect@4.0.0-rc.112` and `@effect/sql-sqlite-bun@4.0.0-rc.112` on bun;
    `scripts/check-truth.py` refuses to run without them. The claim is about those bytes.
-4. **31 programs, 6 tapes** at the 2026-09-10 corpus. The corpus is frozen and listed in
+4. **A hand corpus and a generated one.** The hand corpus is listed in
    `harness/truth/Truth.lean`, which cuts `harness/truth/corpus.json`; the program count is
    that file's `programs` length, and no gate compares this sentence to it, so read the file
-   for the count of the day. Six programs perform package rows and have tapes. The gate
-   re-records all six on every run and refuses a byte that moved, so a committed tape is the
-   answer rc.112 just gave.
+   for the count of the day (34 on 2026-09-13). The programs that perform package rows have
+   tapes; the gate re-records them on every run and refuses a byte that moved, so a committed
+   tape is the answer rc.112 just gave. Since 2026-09-13 the 400 programs of
+   `Test/Program/Gen.lean` are a second differential (`make check-corpus`): every printable
+   program's module compiled, the admitted ones run, the sync exit, the schedule and the
+   independently inferred type compared, one row per program in
+   `harness/truth/corpus-results.tsv`, each disagreement registered by program, dimension and
+   outcome in `harness/truth/corpus-known-differences.md` with the design issue that explains
+   it. That register is the list of the language's known differences from rc.112.
 5. **It is a differential, not a bisimulation.** Exits are compared exactly for a success
-   value and a `fail` payload, and by kind for a `die` and an `interrupt`; schedules are
-   compared row by row with `scheduled` rows dropped on both faces. Nothing here claims
-   denotational equivalence for all programs.
+   value, a `fail` payload and a represented defect, and by kind otherwise; schedules are
+   compared row by row with `scheduled` rows dropped on both faces, over the reduced alphabet
+   `harness/truth/Truth.lean` (`reduce`) states: a fork appears when the runner can observe it
+   (an immediate child at its first step, a scheduled non-daemon child at the parent's next
+   primitive; a scheduled daemon fork on neither face), and the observation of a run ends when
+   the queue is quiet after the root's exit, as `Api.run`'s flush rounds do (DI-75). Nothing
+   here claims denotational equivalence for all programs.
+6. **A fiber id is a position, not a value with cross-face meaning.** The machine numbers
+   fibers from `0` in allocation order; rc.112's ids are its own counter. A handle or exit the
+   recorder wires is renumbered in first-seen order, which is why exits agree; a bare id that a
+   program observes (`getId` compared to a literal) is a named limitation (DI-73; the witness
+   `pIdIsZero` in `Test/Api/ApiContract.lean` answers `true` here and `false` there), not a
+   claim of the differential.
 
 Since DI-59 a sixth quantifier is worth stating with them: **one error value.** A row whose
 declared error column is the DB-15 pair projects at the adapter, before the printed program
