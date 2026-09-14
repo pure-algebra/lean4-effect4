@@ -267,6 +267,27 @@ def pDie : NativeEff := .failCause (.die (.lit (.nat 3)))
 #guard exitOf (replayEff pDie [evaluateRoot]) 0
   = some (Exit.failure (Cause.die (Defect.user 3)))
 
+/-- DI-74 (corpus programs `g242`, `g382`, 2026-09-13): a `die` of an admitted string and an
+interrupt of a computed number evaluate to what rc.112 raises for `Cause.die("hi")` and
+`Cause.interrupt(2)`; a `die` of a value outside the error alphabet is ill-typed, as a `fail`
+of it is, instead of typing and evaluating to `badName`. -/
+def pDieText : NativeEff := .failCause (.die (.lit (.str "hi")))
+def pInterruptComputed : NativeEff :=
+  .failCause (.interrupt (some (.app "add" (.cons (.lit (.nat 1)) (.cons (.lit (.nat 1)) .nil)))))
+
+#guard (typeOf nativeSignature pDieText).isSome
+#guard (typeOf nativeSignature pInterruptComputed).isSome
+#guard exitOf (replayEff pDieText [evaluateRoot]) 0
+  = some (Exit.failure (Cause.die (Defect.error (.text "hi"))))
+#guard exitOf (replayEff pInterruptComputed [evaluateRoot]) 0
+  = some (Exit.failure (Cause.interrupt (some ⟨2⟩)))
+#guard typeOf nativeSignature (.failCause (.die (.lit (.bool true)))) = none
+#guard typeOf nativeSignature (.failCause (.die (.lit .unit))) = none
+#guard typeOf nativeSignature (.failCause (.interrupt (some (.lit (.str "x"))))) = none
+#guard Defect.ofError (errOf (Val.str "hi")) = Defect.error (.text "hi")
+#guard Defect.ofError (errOf (Val.nat 3)) = Defect.user 3
+#guard Defect.ofError (errOf (Val.bool true)) = Defect.badName
+
 /-! ## Refs -/
 
 /-- `Ref.make(5)`, `Ref.set(ref, 7)`, `Ref.get(ref)`. -/

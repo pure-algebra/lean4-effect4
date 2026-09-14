@@ -86,6 +86,17 @@ inductive Defect
   | error (payload : Err)
 deriving DecidableEq, Repr
 
+/-- The defect a represented error becomes, whether promoted by `orDie`
+(`internal/effect.ts:3289`, DI-31) or spelled directly as `Cause.die` of an admitted error
+value (DI-74): a numeric error keeps its number as a user defect, a text or package error keeps
+its exact payload, and the payload-less `boom` is the wrong-shape defect. The one owner of
+that conversion, used by both sites in `Program/Compile.lean` (`orDieCause`, `causeOf`). -/
+def Defect.ofError : Err → Defect
+  | .tag code => .user code
+  | .boom => .badName
+  | .tagged tag message => .error (.tagged tag message)
+  | .text message => .error (.text message)
+
 /-- The cause-annotation value alphabet; `stackAnnotations` contributes none
 (`internal/effect.ts:579-580` is `fiberStackAnnotations`, host stack data). -/
 abbrev Ann := Unit

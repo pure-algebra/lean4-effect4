@@ -143,12 +143,16 @@ theorem argTy_cases (sig : Signature Op) (env : TyEnv) (const : Bool) (head : Te
   | app atom args => exact Or.inr h
 
 /-- The error type a cause carries: its `fail` reasons; defects and interrupts contribute
-none (`Cause.die` and `Cause.interrupt` are outside `E`). -/
+none (`Cause.die` and `Cause.interrupt` are outside `E`). A `die` carries an admitted error
+value, the same domain as `fail` (DI-74: what is admitted here is what `causeOf` evaluates,
+`src/Effect4/Program/Compile.lean`); an interruptor is a natural, rc.112's fiber id. -/
 def causeTy (sig : Signature Op) (env : TyEnv) : CauseTerm → Option Ty
   | .fail error => do
     let e ← termTy sig env error
     if admittedErrTy e then some e else none
-  | .die defect => (termTy sig env defect).map fun _ => .never
+  | .die defect => do
+    let d ← termTy sig env defect
+    if admittedErrTy d then some .never else none
   | .interrupt none => some .never
   | .interrupt (some who) => do
     let t ← termTy sig env who

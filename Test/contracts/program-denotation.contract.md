@@ -120,6 +120,19 @@ each `CauseTerm.fail`) require that predicate. The admitted value's `errOf` conv
 must have the exact inverse `valOfErr`, for every allocation table; unsupported raw
 execution remains defined and can still collapse to `boom`.
 
+Cause-term amendment (2026-09-13, DI-74; found by the generated corpus, `g242` and
+`g382`): `CauseTerm.die` requires the same `supportedErrTy` predicate as the three failure
+introductions, and `causeOf` evaluates it to `Cause.die (Defect.ofError (errOf v))` — the one
+conversion `orDieCause` applies (`Machine.Defect.ofError`): a natural stays a `user` defect, a
+string is the text defect rc.112 raises for `Cause.die("hi")`. `CauseTerm.interrupt (some who)`
+evaluates the natural `who` types at into the interruptor (`Cause.interrupt(fiberId?: number)`);
+the former `Val.fiber` arm, which no typed term reached, is gone. `badName` and a `none` from
+`causeOf` are therefore the answers to an ill-typed cause term only: under `Fits`, an admitted
+cause term evaluates (`causeOf_isSome_of_causeTy`), its `fail` reasons inhabit the declared
+error type (`causeOf_admits`) and a `die` never converts to `badName` (`causeOf_die_typed`), all
+in `src/Effect4/Laws/Program/Admit.lean`. `meaning (.failCause c)` is unchanged: it names
+`causeOf` symbolically.
+
 `Val.hasTy` now checks every failure reason inside `.causeOf e` and failed `.exitOf a e`
 through the shared parameterized cause fold. Defects and interruptions remain outside
 `E`. The public two-argument `hasTyCause` wrapper stays fixed; its bridge to the new

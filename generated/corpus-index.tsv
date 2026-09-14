@@ -69,7 +69,7 @@ g65	false	false	308
 g66	true	true	22
 g67	false	true	16
 g68	true	true	32
-g69	true	false	393
+g69	false	false	393
 g70	false	false	31
 g71	false	true	368
 g72	true	true	14
@@ -376,7 +376,7 @@ g372	false	true	67
 g373	true	true	20
 g374	false	false	293
 g375	true	true	17
-g376	true	false	566
+g376	false	false	566
 g377	false	true	286
 g378	false	true	442
 g379	false	false	406

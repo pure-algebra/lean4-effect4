@@ -412,17 +412,20 @@ def badShape : NCode := Prim.failure (Cause.die Defect.badName)
 /-- A live frontier: what the compile answers at fuel zero. -/
 def frontier (p : Point) : NCode := Prim.suspend (EffThunk.body p)
 
-/-- The cause a cause term spells. -/
+/-- The cause a cause term spells. A `die` carries its value's error image as the defect
+(`Defect.ofError (errOf v)`, the conversion `orDie` also applies), so `die (lit "hi")` is the
+text defect rc.112 raises for `Cause.die("hi")` and `die (lit 3)` the user defect `3`; an
+interruptor is the number the term evaluates to (`Cause.interrupt(fiberId?: number)`), the
+`nat` its typing rule requires. DI-74: every payload `causeTy` admits evaluates here without
+a wrong-shape defect (`causeOf_isSome_of_causeTy`, `causeOf_admits`,
+`src/Effect4/Laws/Program/Admit.lean`); `none` and `badName` remain the ill-typed answers. -/
 def causeOf (env : List Val) : CauseTerm → Option CauseV
   | .fail error => (evalTerm env error).map fun v => Cause.fail (errOf v)
-  | .die defect =>
-    (evalTerm env defect).map fun
-      | Val.nat n => Cause.die (Defect.user n)
-      | _ => Cause.die Defect.badName
+  | .die defect => (evalTerm env defect).map fun v => Cause.die (Defect.ofError (errOf v))
   | .interrupt none => some (Cause.interrupt none)
   | .interrupt (some who) =>
     match evalTerm env who with
-    | some (Val.fiber ⟨id⟩) => some (Cause.interrupt (some ⟨id⟩))
+    | some (Val.nat id) => some (Cause.interrupt (some ⟨id⟩))
     | _ => none
   | .both left right => do
     let l ← causeOf env left
@@ -467,15 +470,12 @@ def updateKeepsIdentity : Env.ContextUpdate → Env.Ctx → Bool
   | _, _ => false
 
 /-- `catch_(self, die)` (`internal/effect.ts:3289`, `:2558-2572`): the first typed error
-becomes the defect, alone; a cause with no typed error passes through. Numeric errors retain
-`user`; represented text and package errors retain their exact payload under `error` (DI-31).
-The raw unrepresented `boom` continues to become `badName`. -/
+becomes the defect, alone, through `Defect.ofError` (numeric errors retain `user`, represented
+text and package errors their exact payload under `error`, DI-31; the raw unrepresented `boom`
+becomes `badName`); a cause with no typed error passes through. -/
 def orDieCause (cause : CauseV) : CauseV :=
   match cause.reasons.findSome? (fun | .fail e _ => some e | _ => none) with
-  | some (Err.tag code) => Cause.die (Defect.user code)
-  | some Err.boom => Cause.die Defect.badName
-  | some (Err.tagged t m) => Cause.die (Defect.error (.tagged t m))
-  | some (Err.text s) => Cause.die (Defect.error (.text s))
+  | some e => Cause.die (Defect.ofError e)
   | none => cause
 
 /-- The contexts of a list of reified exits, when every one succeeded with a context. -/

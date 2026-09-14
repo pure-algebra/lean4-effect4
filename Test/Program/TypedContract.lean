@@ -215,6 +215,11 @@ section ErrorImage
 #guard effTy nativeSignature [] (.fail (.lit (.bool true))) = none
 #guard effTy nativeSignature [] (.yieldError (.lit (.bool true))) = none
 #guard effTy nativeSignature [] (.failCause (.fail (.lit (.bool true)))) = none
+-- DI-74: a `die` carries an admitted error value, the same domain as `fail`
+#guard effTy nativeSignature [] (.failCause (.die (.lit (.str "hi")))) = some ⟨.never, .never, .empty⟩
+#guard effTy nativeSignature [] (.failCause (.die (.lit (.nat 3)))) = some ⟨.never, .never, .empty⟩
+#guard effTy nativeSignature [] (.failCause (.die (.lit (.bool true)))) = none
+#guard effTy nativeSignature [Ty.scope] (.failCause (.die (.var 0))) = none
 #guard effTy nativeSignature [Ty.scope] (.fail (.var 0)) = none
 #guard effTy nativeSignature []
   (.failCause (.both (.fail (.lit (.nat 1))) (.fail (.lit (.bool true))))) = none

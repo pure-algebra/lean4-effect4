@@ -581,4 +581,171 @@ theorem fits_childWith (allocated : List String) (p : Point) (ts : TyEnv) (i : N
     FitsIn allocated (p.childWith i v).env (ts ++ [t]) :=
   FitsIn.append hf hv
 
+/-! ## Cause terms: what the checker admits, the evaluator evaluates (DI-74)
+
+`causeTy` (`src/Effect4/Program/Typing.lean`) and `causeOf` (`src/Effect4/Program/Compile.lean`)
+are two readings of one cause term. Under `Fits`, a cause term the checker admits evaluates
+(`causeOf_isSome_of_causeTy`), every `fail` reason it evaluates to inhabits the declared error
+type (`causeOf_admits`), and a `die` never evaluates to the wrong-shape defect
+(`causeOf_die_typed`): `badName` answers an ill-typed cause term only, which is what the
+row-preservation reading of `Progress.lean` assumes of it. Found by the generated corpus on
+2026-09-13: `die (lit "hi")` and `interrupt (app add [1, 1])` typed and evaluated to
+`badName`, while rc.112 raised the text defect and the interrupt. -/
+
+theorem causeTy_fail (sig : Signature Op) (env : TyEnv) (error : Term) :
+    causeTy sig env (.fail error) =
+      (termTy sig env error).bind fun e => if admittedErrTy e then some e else none := rfl
+
+theorem causeTy_die (sig : Signature Op) (env : TyEnv) (defect : Term) :
+    causeTy sig env (.die defect) =
+      (termTy sig env defect).bind fun d => if admittedErrTy d then some .never else none := rfl
+
+theorem causeTy_interrupt_some (sig : Signature Op) (env : TyEnv) (who : Term) :
+    causeTy sig env (.interrupt (some who)) =
+      (termTy sig env who).bind fun t => if t = .nat then some .never else none := rfl
+
+theorem causeTy_both (sig : Signature Op) (env : TyEnv) (left right : CauseTerm) :
+    causeTy sig env (.both left right) =
+      (causeTy sig env left).bind fun l => (causeTy sig env right).bind fun r => some (l.join r) := rfl
+
+theorem causeOf_both (env : List Val) (left right : CauseTerm) :
+    causeOf env (.both left right) =
+      (causeOf env left).bind fun l => (causeOf env right).bind fun r => some (Cause.combine l r) := rfl
+
+/-- A value of a type is a value of the type's join with any other, on either side:
+`join` is the normalized union, and normalization keeps membership (`hasTy_normalize`). -/
+theorem hasTy_join_left (a b : Ty) (v : Val) (h : Val.hasTy v a = true) :
+    Val.hasTy v (a.join b) = true := by
+  show Val.hasTy v (Ty.normalize (.union a b)) [] = true
+  rw [hasTy_normalize]
+  simp [Val.hasTy, h]
+
+theorem hasTy_join_right (a b : Ty) (v : Val) (h : Val.hasTy v b = true) :
+    Val.hasTy v (a.join b) = true := by
+  show Val.hasTy v (Ty.normalize (.union a b)) [] = true
+  rw [hasTy_normalize]
+  simp [Val.hasTy, h]
+
+/-- A well-typed supported error value never converts to the wrong-shape defect: its image
+inverts (`valOfErr_errOf_supported`), so it is not `boom`. -/
+theorem ofError_errOf_ne_badName (ty : Ty) (v : Val) (hs : supportedErrTy ty = true)
+    (hv : Val.hasTy v ty = true) : Defect.ofError (errOf v) ≠ Defect.badName := by
+  have hval := valOfErr_errOf_supported ty v [] hs hv
+  cases herr : errOf v with
+  | boom => rw [herr] at hval; exact absurd hval (by simp [valOfErr])
+  | tag n => simp [Defect.ofError]
+  | tagged t m => simp [Defect.ofError]
+  | text s => simp [Defect.ofError]
+
+/-- Under `Fits`, a cause term the checker admits evaluates (ENSURES 7 for cause terms). -/
+theorem causeOf_isSome_of_causeTy (tys : TyEnv) (env : List Val) (hfit : Fits env tys)
+    (c : CauseTerm) (t : Ty) (h : causeTy nativeSignature tys c = some t) :
+    (causeOf env c).isSome = true := by
+  induction c generalizing t with
+  | fail error =>
+    rw [causeTy_fail] at h
+    obtain ⟨e, he, _⟩ := Option.bind_eq_some_iff.mp h
+    obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp (evalTerm_isSome error env tys e hfit he)
+    simp [causeOf, hv]
+  | die defect =>
+    rw [causeTy_die] at h
+    obtain ⟨d, hd, _⟩ := Option.bind_eq_some_iff.mp h
+    obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp (evalTerm_isSome defect env tys d hfit hd)
+    simp [causeOf, hv]
+  | interrupt who =>
+    cases who with
+    | none => rfl
+    | some who =>
+      rw [causeTy_interrupt_some] at h
+      obtain ⟨w, hw, ht⟩ := Option.bind_eq_some_iff.mp h
+      have hnat : w = .nat := by
+        by_cases hn : w = .nat
+        · exact hn
+        · simp [hn] at ht
+      subst hnat
+      obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp (evalTerm_isSome who env tys .nat hfit hw)
+      obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv (evalTerm_hasTy who env tys .nat v hfit hw hv)
+      simp [causeOf, hv]
+  | both left right ihl ihr =>
+    rw [causeTy_both] at h
+    obtain ⟨lt, hl, h'⟩ := Option.bind_eq_some_iff.mp h
+    obtain ⟨rt, hr, _⟩ := Option.bind_eq_some_iff.mp h'
+    obtain ⟨cl, hcl⟩ := Option.isSome_iff_exists.mp (ihl lt hl)
+    obtain ⟨cr, hcr⟩ := Option.isSome_iff_exists.mp (ihr rt hr)
+    rw [causeOf_both, hcl]
+    simp [hcr]
+
+/-- Under `Fits`, the cause an admitted cause term evaluates to stays inside its declared
+error type: each `fail` reason's payload inverts to a value of that type, defects and
+interrupts are outside `E` by construction, and a `both` joins the two sides. -/
+theorem causeOf_admits (tys : TyEnv) (env : List Val) (hfit : Fits env tys)
+    (c : CauseTerm) (t : Ty) (h : causeTy nativeSignature tys c = some t)
+    (cause : CauseV) (hc : causeOf env c = some cause) :
+    causeAdmits (fun v ty => Val.hasTy v ty) t cause = true := by
+  induction c generalizing t cause with
+  | fail error =>
+    rw [causeTy_fail] at h
+    obtain ⟨e, he, ht⟩ := Option.bind_eq_some_iff.mp h
+    have hadm : admittedErrTy e = true := by
+      by_cases ha : admittedErrTy e = true
+      · exact ha
+      · simp [ha] at ht
+    rw [if_pos hadm] at ht
+    cases ht
+    simp only [causeOf] at hc
+    obtain ⟨v, hv, rfl⟩ := Option.map_eq_some_iff.mp hc
+    have hvt := evalTerm_hasTy error env tys t v hfit he hv
+    simp [causeAdmits, Cause.fail_reasons, reasonAdmits, valOfErr_errOf_supported t v [] hadm hvt, hvt]
+  | die defect =>
+    simp only [causeOf] at hc
+    obtain ⟨v, hv, rfl⟩ := Option.map_eq_some_iff.mp hc
+    simp [causeAdmits, Cause.die_reasons, reasonAdmits]
+  | interrupt who =>
+    cases who with
+    | none =>
+      cases hc
+      simp [causeAdmits, Cause.interrupt_reasons, reasonAdmits]
+    | some who =>
+      simp only [causeOf] at hc
+      split at hc
+      · cases hc
+        simp [causeAdmits, Cause.interrupt_reasons, reasonAdmits]
+      · cases hc
+  | both left right ihl ihr =>
+    rw [causeTy_both] at h
+    obtain ⟨lt, hl, h'⟩ := Option.bind_eq_some_iff.mp h
+    obtain ⟨rt, hr, ht⟩ := Option.bind_eq_some_iff.mp h'
+    cases ht
+    rw [causeOf_both] at hc
+    obtain ⟨cl, hcl, hc'⟩ := Option.bind_eq_some_iff.mp hc
+    obtain ⟨cr, hcr, hcc⟩ := Option.bind_eq_some_iff.mp hc'
+    cases hcc
+    have hal := ihl lt hl cl hcl
+    have har := ihr rt hr cr hcr
+    apply List.all_eq_true.mpr
+    intro reason hmem
+    rcases (Cause.mem_combine reason cl cr).mp hmem with hm | hm
+    · exact reasonAdmits_mono_sub (fun w hw => hasTy_join_left lt rt w hw) reason
+        (List.all_eq_true.mp hal reason hm)
+    · exact reasonAdmits_mono_sub (fun w hw => hasTy_join_right lt rt w hw) reason
+        (List.all_eq_true.mp har reason hm)
+
+/-- A `die` the checker admits evaluates to the defect image of its value, and that image is
+never the wrong-shape defect: `die (lit "hi")` is the text defect, `die (lit 3)` the user
+defect `3`, and `badName` is unreachable from a typed `die`. -/
+theorem causeOf_die_typed (tys : TyEnv) (env : List Val) (hfit : Fits env tys)
+    (defect : Term) (t : Ty) (h : causeTy nativeSignature tys (.die defect) = some t) :
+    ∃ v, evalTerm env defect = some v ∧
+      causeOf env (.die defect) = some (Cause.die (Defect.ofError (errOf v))) ∧
+      Defect.ofError (errOf v) ≠ Defect.badName := by
+  rw [causeTy_die] at h
+  obtain ⟨d, hd, ht⟩ := Option.bind_eq_some_iff.mp h
+  have hadm : admittedErrTy d = true := by
+    by_cases ha : admittedErrTy d = true
+    · exact ha
+    · simp [ha] at ht
+  obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp (evalTerm_isSome defect env tys d hfit hd)
+  refine ⟨v, hv, by simp [causeOf, hv], ?_⟩
+  exact ofError_errOf_ne_badName d v hadm (evalTerm_hasTy defect env tys d v hfit hd hv)
+
 end Effect4.Program
