@@ -11612,6 +11612,15 @@ let program_compile (root : native_op eff) (fuel : int) (tape : bool list) : (ef
 
 
 
+(* LCNF mono: Effect4.Api.compile (program : Effect4.Program.Eff Effect4.Program.NativeOp) (fuel : Nat) : Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit *)
+
+let api_compile (program : native_op eff) (fuel : int) : (eff_name, eff_thunk, val_, err, defect, int, unit) prim =
+  let _x_1 = [] in
+  let _x_2 = program_compile program fuel _x_1 in
+  _x_2
+
+
+
 (* LCNF mono: Effect4.FrameFiber.start._redArg (current : Effect4.Prim lcAny lcAny lcAny lcAny lcAny lcAny lcAny) : Effect4.FrameFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny *)
 
 let frame_fiber_start (current : (_, _, _, _, _, _, _) prim) : (_, _, _, _, _, _, _) frame_fiber =
@@ -11653,9 +11662,9 @@ let run_fiber_make_at_spawn_at_launch_entrant_at_drive_step_at_drive_state_at_st
 
 
 
-(* LCNF mono: Effect4.Api.load (program : Effect4.Program.Eff Effect4.Program.NativeOp) (compileFuel : Nat) (choices : List Bool) (answers : List (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Effect4.Machine.RunMachine Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx Effect4.Machine.Stores (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) *)
+(* LCNF mono: Effect4.Api.load (program : Effect4.Program.Eff Effect4.Program.NativeOp) (compileFuel : Nat) (answers : List (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Effect4.Machine.RunMachine Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx Effect4.Machine.Stores (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) *)
 
-let api_load (program : native_op eff) (compile_fuel : int) (choices : bool list) (answers : (val_, err, defect, int, unit) completion list) : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) run_machine =
+let api_load (program : native_op eff) (compile_fuel : int) (answers : (val_, err, defect, int, unit) completion list) : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) run_machine =
   let _x_1 = stores_empty in
   match (_x_1 : stores) with
     | _ -> (let _x_2 = [] in
@@ -11680,7 +11689,7 @@ let api_load (program : native_op eff) (compile_fuel : int) (choices : bool list
             | { state = state; _ } -> (let _x_19 = false in
               let _x_20 = empty_ctx in
               let _x_21 = budget_of _x_20 in
-              let _x_22 = program_compile program compile_fuel choices in
+              let _x_22 = api_compile program compile_fuel in
               let _x_23 = true in
               let _x_24 = run_fiber_make_at_spawn_at_launch_entrant_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_12_spec_19_spec_24 _x_5 _x_22 _x_23 _x_21 _x_20 in
               let _x_25 = _x_24 :: _x_2 in
@@ -16217,11 +16226,11 @@ let api_frontier_reasons (why : exhaustion) (m : (eff_name, eff_thunk, val_, err
 
 
 
-(* LCNF mono: Effect4.Api.replay (program : Effect4.Program.Eff Effect4.Program.NativeOp) (fuel : Nat) (tape : List (Effect4.Machine.RunDecision Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (choices : List Bool) (answers : List (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (table : List Effect4.Program.Row) (compileFuel : Nat) : Effect4.Api.Run *)
+(* LCNF mono: Effect4.Api.replay (program : Effect4.Program.Eff Effect4.Program.NativeOp) (fuel : Nat) (tape : List (Effect4.Machine.RunDecision Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (answers : List (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (table : List Effect4.Program.Row) (compileFuel : Nat) : Effect4.Api.Run *)
 
-let api_replay (program : native_op eff) (fuel : int) (tape : (eff_name, eff_thunk, val_, err, defect, int, unit) run_decision list) (choices : bool list) (answers : (val_, err, defect, int, unit) completion list) (table : row list) (compile_fuel : int) : run =
+let api_replay (program : native_op eff) (fuel : int) (tape : (eff_name, eff_thunk, val_, err, defect, int, unit) run_decision list) (answers : (val_, err, defect, int, unit) completion list) (table : row list) (compile_fuel : int) : run =
   let _x_1 = program_interp_of program table in
-  let _x_2 = api_load program compile_fuel choices answers in
+  let _x_2 = api_load program compile_fuel answers in
   let _x_3 = replay_eval_at_program_replay_checked_from_spec_0 program table _x_1 fuel tape _x_2 in
   match (_x_3 : (_, _, _, _, _, _, _, _, _, _, _, _) replay_result) with
     | ReplayResult_finished machine_4 -> (let _x_5 = Outcome_finished in
@@ -16239,15 +16248,15 @@ let api_replay (program : native_op eff) (fuel : int) (tape : (eff_name, eff_thu
 
 
 
-(* LCNF mono: Effect4.Api.run (program : Effect4.Program.Eff Effect4.Program.NativeOp) (fuel : Nat) (choices : List Bool) (answers : List (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (table : List Effect4.Program.Row) (compileFuel : Nat) : Effect4.Api.Run *)
+(* LCNF mono: Effect4.Api.run (program : Effect4.Program.Eff Effect4.Program.NativeOp) (fuel : Nat) (answers : List (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (table : List Effect4.Program.Row) (compileFuel : Nat) : Effect4.Api.Run *)
 
-let api_run (program : native_op eff) (fuel : int) (choices : bool list) (answers : (val_, err, defect, int, unit) completion list) (table : row list) (compile_fuel : int) : run =
+let api_run (program : native_op eff) (fuel : int) (answers : (val_, err, defect, int, unit) completion list) (table : row list) (compile_fuel : int) : run =
   let _x_1 = api_evaluate in
   let _x_2 = RunDecision_flush in
   let _x_3 = [] in
   let _x_4 = _x_2 :: _x_3 in
   let _x_5 = _x_1 :: _x_4 in
-  let _x_6 = api_replay program fuel _x_5 choices answers table compile_fuel in
+  let _x_6 = api_replay program fuel _x_5 answers table compile_fuel in
   _x_6
 
 

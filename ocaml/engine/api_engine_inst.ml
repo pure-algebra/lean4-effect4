@@ -62,8 +62,8 @@ type program = native_op eff
 
 let interp_of (p : program) : interp = program_interp_of p []
 
-let load (p : program) ~(fuel : int) ~(choices : bool list) : machine =
-  sh_api_load program_compile empty_ctx stores p fuel choices []
+let load (p : program) ~(fuel : int) : machine =
+  sh_api_load program_compile empty_ctx stores p fuel []
 
 (* `Effect4.Machine.stepDecisionState` at `Api.replay`'s specialisation (api_engine.ml:11424);
    the bool is `Effect4.Machine.settled` (:11330), which api_replay reads at :11503. *)
@@ -71,8 +71,8 @@ let step (p : program) (i : interp) ~(fuel : int) (m : machine) (d : decision)
   : machine * bool =
   step_decision_state_at_program_replay_checked_from_spec_1 p [] i fuel m d
 
-let run_api (p : program) ~(fuel : int) ~(choices : bool list) : outcome * machine =
-  let r = api_run p fuel choices [] [] fuel in
+let run_api (p : program) ~(fuel : int) : outcome * machine =
+  let r = api_run p fuel [] [] fuel in
   (r.outcome, r.machine)
 
 (* -- the free rows -------------------------------------------------------------------- *)

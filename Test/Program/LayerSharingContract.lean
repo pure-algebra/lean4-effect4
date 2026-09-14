@@ -73,8 +73,8 @@ theorem run_of_ticks (p : Api.Program) (n : Nat) (s : State)
     (h : ticks p n ((Api.load p 16, [Cmd.evaluate Api.root, Cmd.drainDue]) : State) = s)
     (hcmd : s.2 = []) (harm : s.1.armed = [])
     (hstuck : s.1.stuck = none) (hfinished : s.1.finished = true) :
-    (Api.run p n [] [] [] 16).outcome = .finished ∧
-    (Api.run p n [] [] [] 16).machine = s.1 := by
+    (Api.run p n [] [] 16).outcome = .finished ∧
+    (Api.run p n [] [] 16).machine = s.1 := by
   have hr := replay_of_ticks p n s h hcmd harm hstuck hfinished
   simp [Api.run, Api.replay, hr]
 
@@ -136,21 +136,21 @@ theorem twice_refs : twice_s300.1.state.refs = [.nat 1] := rfl
 #print axioms twice_exit
 #print axioms twice_refs
 
-theorem once_run : (Api.run once 216 [] [] [] 16).outcome = .finished ∧
-    (Api.run once 216 [] [] [] 16).machine = once_s216.1 :=
+theorem once_run : (Api.run once 216 [] [] 16).outcome = .finished ∧
+    (Api.run once 216 [] [] 16).machine = once_s216.1 :=
   run_of_ticks once 216 once_s216
     ((congrArg (ticks once 216) once_s0_eq).trans once_prefix216)
     once_commands_done rfl rfl rfl
 
-theorem twice_run : (Api.run twice 300 [] [] [] 16).outcome = .finished ∧
-    (Api.run twice 300 [] [] [] 16).machine = twice_s300.1 :=
+theorem twice_run : (Api.run twice 300 [] [] 16).outcome = .finished ∧
+    (Api.run twice 300 [] [] 16).machine = twice_s300.1 :=
   run_of_ticks twice 300 twice_s300
     ((congrArg (ticks twice 300) twice_s0_eq).trans twice_prefix300)
     twice_commands_done rfl rfl rfl
 
-theorem once_count : (Api.run once 216 [] [] [] 16).outcome = .finished ∧
-    (Api.run once 216 [] [] [] 16).exit = some (.success (.nat 1)) ∧
-    (Api.run once 216 [] [] [] 16).stores.refs = [.nat 1] := by
+theorem once_count : (Api.run once 216 [] [] 16).outcome = .finished ∧
+    (Api.run once 216 [] [] 16).exit = some (.success (.nat 1)) ∧
+    (Api.run once 216 [] [] 16).stores.refs = [.nat 1] := by
   refine ⟨once_run.1, ?_, ?_⟩
   · unfold Api.Run.exit
     rw [once_run.2]
@@ -159,9 +159,9 @@ theorem once_count : (Api.run once 216 [] [] [] 16).outcome = .finished ∧
     rw [once_run.2]
     exact once_refs
 
-theorem twice_count : (Api.run twice 300 [] [] [] 16).outcome = .finished ∧
-    (Api.run twice 300 [] [] [] 16).exit = some (.success (.nat 1)) ∧
-    (Api.run twice 300 [] [] [] 16).stores.refs = [.nat 1] := by
+theorem twice_count : (Api.run twice 300 [] [] 16).outcome = .finished ∧
+    (Api.run twice 300 [] [] 16).exit = some (.success (.nat 1)) ∧
+    (Api.run twice 300 [] [] 16).stores.refs = [.nat 1] := by
   refine ⟨twice_run.1, ?_, ?_⟩
   · unfold Api.Run.exit
     rw [twice_run.2]
@@ -171,16 +171,16 @@ theorem twice_count : (Api.run twice 300 [] [] [] 16).outcome = .finished ∧
     exact twice_refs
 
 theorem provide_ref_twice (fuel : Nat) (hf : 300 ≤ fuel) :
-    (Api.run once fuel [] [] [] 16).outcome = .finished ∧
-    (Api.run twice fuel [] [] [] 16).outcome = .finished ∧
-    (Api.run twice fuel [] [] [] 16).exit = (Api.run once fuel [] [] [] 16).exit ∧
-    (Api.run once fuel [] [] [] 16).stores.refs = [.nat 1] ∧
-    (Api.run twice fuel [] [] [] 16).stores.refs = [.nat 1] := by
-  have onceStable : Api.run once fuel [] [] [] 16 = Api.run once 216 [] [] [] 16 :=
-    Api.finished_mono_fuel once 216 fuel [Api.evaluate, Api.flush] [] [] [] 16
+    (Api.run once fuel [] [] 16).outcome = .finished ∧
+    (Api.run twice fuel [] [] 16).outcome = .finished ∧
+    (Api.run twice fuel [] [] 16).exit = (Api.run once fuel [] [] 16).exit ∧
+    (Api.run once fuel [] [] 16).stores.refs = [.nat 1] ∧
+    (Api.run twice fuel [] [] 16).stores.refs = [.nat 1] := by
+  have onceStable : Api.run once fuel [] [] 16 = Api.run once 216 [] [] 16 :=
+    Api.finished_mono_fuel once 216 fuel [Api.evaluate, Api.flush] [] [] 16
       once_count.1 (Nat.le_trans (by decide) hf)
-  have twiceStable : Api.run twice fuel [] [] [] 16 = Api.run twice 300 [] [] [] 16 :=
-    Api.finished_mono_fuel twice 300 fuel [Api.evaluate, Api.flush] [] [] [] 16 twice_count.1 hf
+  have twiceStable : Api.run twice fuel [] [] 16 = Api.run twice 300 [] [] 16 :=
+    Api.finished_mono_fuel twice 300 fuel [Api.evaluate, Api.flush] [] [] 16 twice_count.1 hf
   rw [onceStable, twiceStable]
   exact ⟨once_count.1, twice_count.1, twice_count.2.1.trans once_count.2.1.symm,
     once_count.2.2, twice_count.2.2⟩

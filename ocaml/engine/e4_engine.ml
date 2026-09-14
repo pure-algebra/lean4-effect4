@@ -189,9 +189,9 @@ module type INSTANCE = sig
 
   val api_evaluate : decision
   val interp_of : program -> interp
-  val load : program -> fuel:int -> choices:bool list -> machine
+  val load : program -> fuel:int -> machine
   val step : program -> interp -> fuel:int -> machine -> decision -> machine * bool
-  val run_api : program -> fuel:int -> choices:bool list -> outcome * machine
+  val run_api : program -> fuel:int -> outcome * machine
   val fibers : machine -> (fiber_id * fiber) list
   val fiber_count : machine -> int
   val trace : machine -> event list
@@ -316,7 +316,7 @@ module Make (I : INSTANCE) = struct
 
   let load_program (p : program) ~(fuel : int) : t =
     { program = p; interp = I.interp_of p; fuel_ = fuel;
-      m = I.load p ~fuel ~choices:[]; settled = true }
+      m = I.load p ~fuel; settled = true }
 
   let load (p : Eff_types.eff) ~(fuel : int) : t = load_program (compile p) ~fuel
 
@@ -658,7 +658,7 @@ module Make (I : INSTANCE) = struct
       (ids (I.armed_of t.m))
 
   let api_run (p : program) ~(fuel : int) : string =
-    let o, _ = I.run_api p ~fuel ~choices:[] in
+    let o, _ = I.run_api p ~fuel in
     show_outcome o
 end
 

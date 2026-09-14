@@ -53,9 +53,9 @@ def termOutcome : RReplay → Api.Outcome
   | .frontier _ _ => .frontier
   | .stuck why _ => .stuck why
 
-def agrees (program : NativeEff) (tape : List Api.Decision) (choices : List Bool := []) : Bool :=
-  let reference := RuntimeRReference.run program tape choices
-  let term := replayR program budget tape choices
+def agrees (program : NativeEff) (tape : List Api.Decision) : Bool :=
+  let reference := RuntimeRReference.run program tape
+  let term := replayR program budget tape
   decide (obsR term.machine = obs reference.machine ∧
     termOutcome term = reference.outcome ∧
     termControl term.machine = frameControl reference.machine ∧
@@ -829,9 +829,9 @@ theorem store_step_rel (root : NativeEff) (m : Api.Machine) (m' : RState)
   rcases syncOpStep op m'.state with _ | ⟨state, value⟩ <;> simp [prepareIterR, cmdShape, hs]
 
 -- The loaded state uses the existing generic observation and first-order tape.
-example (program : NativeEff) (fuel : Nat) (choices : List Bool) :
-    obsR (loadR program fuel choices) = ⟨[(Api.root, none)], Stores.empty⟩ :=
-  obsR_load program fuel choices
+example (program : NativeEff) (fuel : Nat) :
+    obsR (loadR program fuel) = ⟨[(Api.root, none)], Stores.empty⟩ :=
+  obsR_load program fuel
 
 example (program : NativeEff) (answer : Completion Val Err Defect FiberId Ann) :
     (interpR program).answerCode answer = denoteCompletion answer :=

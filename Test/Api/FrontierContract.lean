@@ -25,11 +25,11 @@ theorem command_exhaustion : exhaustionTag 0 [Api.evaluate] = 0 := by decide
 theorem tape_exhaustion : exhaustionTag 40 [] = 1 := by decide
 
 #guard exhaustionTag 40 [Api.evaluate] = 2
-#guard (Api.replay nested 100 [Api.evaluate] [] [] [] 1).outcome = .frontier
-#guard (Api.replay nested 100 [Api.evaluate] [] [] [] 32).exit = some (.success (.nat 42))
-#guard (Api.replay program 0 [Api.evaluate] [] [] [] 32).outcome = .frontier
-#guard (Api.run nested 100 [] [] [] 32).exit = some (.success (.nat 42))
-#guard (Api.runSync nested 100 [] [] [] 32).2 = .success (.nat 42)
+#guard (Api.replay nested 100 [Api.evaluate] [] [] 1).outcome = .frontier
+#guard (Api.replay nested 100 [Api.evaluate] [] [] 32).exit = some (.success (.nat 42))
+#guard (Api.replay program 0 [Api.evaluate] [] [] 32).outcome = .frontier
+#guard (Api.run nested 100 [] [] 32).exit = some (.success (.nat 42))
+#guard (Api.runSync nested 100 [] [] 32).2 = .success (.nat 42)
 
 #print axioms command_exhaustion
 #print axioms tape_exhaustion
@@ -38,16 +38,16 @@ def waiting : Api.Program := .callback (.external 0) (.lit (.nat 7))
 def waitTable : RowTable := [Profile.Scalar.waitRow]
 
 #guard (Api.run sleeping 100).reasons = [.awaitTimer Api.root 4]
-#guard (Api.run waiting 100 [] [] waitTable).reasons = [.awaitHost ⟨Api.root, 0⟩]
+#guard (Api.run waiting 100 [] waitTable).reasons = [.awaitHost ⟨Api.root, 0⟩]
 #guard (Api.replay program 100 []).reasons = [.awaitDecision]
-#guard (Api.replay program 0 [Api.evaluate] [] [] [] 32).reasons = [.commandFuel]
-#guard (Api.replay nested 100 [Api.evaluate] [] [] [] 1).reasons =
+#guard (Api.replay program 0 [Api.evaluate] [] [] 32).reasons = [.commandFuel]
+#guard (Api.replay nested 100 [Api.evaluate] [] [] 1).reasons =
   [.commandFuel, .compileFuel Api.root]
 #guard (Api.run program 100).reasons = []
-#guard (Api.replay waiting 100 [Api.evaluate, Api.evaluate] [] [] waitTable).reasons =
+#guard (Api.replay waiting 100 [Api.evaluate, Api.evaluate] [] waitTable).reasons =
   [.awaitHost ⟨Api.root, 0⟩]
 #guard Api.HostProtocol.observe (Api.run sleeping 100).machine = .parked
-#guard Api.HostProtocol.observe (Api.run waiting 100 [] [] waitTable).machine = .awaitingAsync
+#guard Api.HostProtocol.observe (Api.run waiting 100 [] waitTable).machine = .awaitingAsync
 #guard Api.HostProtocol.observe (Api.replay program 100 []).machine = .idle
 #guard Api.HostProtocol.observe (Api.run program 100).machine = .terminated
 

@@ -285,9 +285,9 @@ module type INSTANCE = sig
   (** `Effect4.Api.evaluate`, the first row of `Api.run`'s tape. *)
 
   val interp_of : program -> interp
-  val load : program -> fuel:int -> choices:bool list -> machine
+  val load : program -> fuel:int -> machine
   val step : program -> interp -> fuel:int -> machine -> decision -> machine * bool
-  val run_api : program -> fuel:int -> choices:bool list -> outcome * machine
+  val run_api : program -> fuel:int -> outcome * machine
 
   (** The free rows. *)
 

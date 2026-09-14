@@ -61,7 +61,7 @@ theorem draft_zero_not_straight : (Effects.Program.pure outsideExit : RProgram) 
   intro h
   cases h
 
-#guard compile pSucceed 0 [] = frontier ⟨[], [], 0, [], [], 0⟩
+#guard compile pSucceed 0 = frontier ⟨[], [], 0, [], [], 0⟩
 
 -- Async completion and a scoped fork can deliver failures through the caller's handlers.
 example : completionPrim (.ofExit (.failure (Cause.fail Err.boom))) =

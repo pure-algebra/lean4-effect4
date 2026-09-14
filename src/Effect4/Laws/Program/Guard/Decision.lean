@@ -72,15 +72,15 @@ theorem guardState_executePrefix (p : NativeEff) (table : RowTable)
     exact ih _ (guardState_steppedBy p table entry.1 m entry.2 state)
 
 theorem guardState_reachable (p : NativeEff) (table : RowTable) (compileFuel : Nat)
-    (choices : List Bool) (answers : List (Completion Val Err Defect FiberId Ann))
-    (m : NativeMachine) (reachable : Reachable p table compileFuel choices answers m) : GuardState m := by
+ (answers : List (Completion Val Err Defect FiberId Ann))
+    (m : NativeMachine) (reachable : Reachable p table compileFuel answers m) : GuardState m := by
   obtain ⟨history, rfl⟩ := reachable
-  exact guardState_executePrefix p table (Api.load p compileFuel choices answers) history
-    (guardState_load p compileFuel choices answers)
+  exact guardState_executePrefix p table (Api.load p compileFuel answers) history
+    (guardState_load p compileFuel answers)
 
 theorem requestsOwned_reachable (p : NativeEff) (table : RowTable) (compileFuel : Nat)
-    (choices : List Bool) (answers : List (Completion Val Err Defect FiberId Ann))
-    (m : NativeMachine) (reachable : Reachable p table compileFuel choices answers m) : RequestsOwned m :=
-  (guardState_reachable p table compileFuel choices answers m reachable).requestsOwned
+ (answers : List (Completion Val Err Defect FiberId Ann))
+    (m : NativeMachine) (reachable : Reachable p table compileFuel answers m) : RequestsOwned m :=
+  (guardState_reachable p table compileFuel answers m reachable).requestsOwned
 
 end Effect4.Program.Guard

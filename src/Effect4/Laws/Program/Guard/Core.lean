@@ -3,7 +3,7 @@ import Effect4.Api
 /-!
 DI-68 guard ownership for the owner-approved reachable-machine scope. A prefix is raw
 decision data with an explicit command budget for each step. The program, table,
-compile budget, initial choices and initial oracle answers stay fixed. No decision
+compile budget and initial oracle answers stay fixed. No decision
 admission or sufficiency assumption is built into reachability.
 
 Existing invariants reviewed: Machine.Book.MachineOk/PendingOk, the concrete
@@ -27,20 +27,20 @@ def executePrefix (p : NativeEff) (table : RowTable) (m : NativeMachine)
   history.foldl (fun m s => steppedBy p s.1 table m s.2) m
 
 def Reachable (p : NativeEff) (table : RowTable) (compileFuel : Nat)
-    (choices : List Bool) (answers : List (Completion Val Err Defect FiberId Ann))
+ (answers : List (Completion Val Err Defect FiberId Ann))
     (m : NativeMachine) : Prop :=
-  ∃ history : Prefix, m = executePrefix p table (Api.load p compileFuel choices answers) history
+  ∃ history : Prefix, m = executePrefix p table (Api.load p compileFuel answers) history
 
 theorem reachable_load (p : NativeEff) (table : RowTable) (compileFuel : Nat)
-    (choices : List Bool) (answers : List (Completion Val Err Defect FiberId Ann)) :
-    Reachable p table compileFuel choices answers (Api.load p compileFuel choices answers) :=
+ (answers : List (Completion Val Err Defect FiberId Ann)) :
+    Reachable p table compileFuel answers (Api.load p compileFuel answers) :=
   ⟨[], rfl⟩
 
 theorem reachable_step {p : NativeEff} {table : RowTable} {compileFuel : Nat}
-    {choices : List Bool} {answers : List (Completion Val Err Defect FiberId Ann)}
-    {m : NativeMachine} (h : Reachable p table compileFuel choices answers m)
+ {answers : List (Completion Val Err Defect FiberId Ann)}
+    {m : NativeMachine} (h : Reachable p table compileFuel answers m)
     (fuel : Nat) (d : NativeDecision) :
-    Reachable p table compileFuel choices answers (steppedBy p fuel table m d) := by
+    Reachable p table compileFuel answers (steppedBy p fuel table m d) := by
   obtain ⟨history, rfl⟩ := h
   refine ⟨history ++ [(fuel, d)], ?_⟩
   simp only [executePrefix, List.foldl_append, List.foldl_cons, List.foldl_nil]
@@ -99,9 +99,9 @@ theorem requestOf_shape {m : NativeMachine} {fiber : FiberId} {token : Nat}
     · simp [hf, hp, guard] at h
       cases h
 
-theorem requestOf_load (p : NativeEff) (compileFuel : Nat) (choices : List Bool)
+theorem requestOf_load (p : NativeEff) (compileFuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann)) (fiber : FiberId) (token : Nat) :
-    requestOf (Api.load p compileFuel choices answers) fiber token = none := by
+    requestOf (Api.load p compileFuel answers) fiber token = none := by
   unfold requestOf
   simp only [Api.load, RunMachine.fiber?, List.find?_cons, RunFiber.make, List.find?_nil]
   split <;> simp [guard]
@@ -142,20 +142,20 @@ def RequestsOwned (m : NativeMachine) : Prop :=
 def InternalKeysBelow (m : NativeMachine) : Prop :=
   ∀ k ∈ internalKeys m, k.2 < m.nextToken
 
-theorem internalKeys_load (p : NativeEff) (compileFuel : Nat) (choices : List Bool)
+theorem internalKeys_load (p : NativeEff) (compileFuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann)) :
-    internalKeys (Api.load p compileFuel choices answers) = [] := rfl
+    internalKeys (Api.load p compileFuel answers) = [] := rfl
 
-theorem requestsOwned_load (p : NativeEff) (compileFuel : Nat) (choices : List Bool)
+theorem requestsOwned_load (p : NativeEff) (compileFuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann)) :
-    RequestsOwned (Api.load p compileFuel choices answers) := by
+    RequestsOwned (Api.load p compileFuel answers) := by
   intro fiber token request h
   rw [requestOf_load] at h
   cases h
 
-theorem internalKeysBelow_load (p : NativeEff) (compileFuel : Nat) (choices : List Bool)
+theorem internalKeysBelow_load (p : NativeEff) (compileFuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann)) :
-    InternalKeysBelow (Api.load p compileFuel choices answers) := by
+    InternalKeysBelow (Api.load p compileFuel answers) := by
   intro k hk
   rw [internalKeys_load] at hk
   cases hk
@@ -1391,9 +1391,9 @@ theorem raceHostsPreserved_updateRace {m : NativeMachine} {race : NRace}
 def RaceIdsBelow (m : NativeMachine) : Prop :=
   ∀ race ∈ m.races, race.id < m.nextRace
 
-theorem raceIdsBelow_load (p : NativeEff) (compileFuel : Nat) (choices : List Bool)
+theorem raceIdsBelow_load (p : NativeEff) (compileFuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann)) :
-    RaceIdsBelow (Api.load p compileFuel choices answers) := by
+    RaceIdsBelow (Api.load p compileFuel answers) := by
   intro race hr
   cases hr
 
@@ -1517,16 +1517,16 @@ theorem guardQueue_nil (p : NativeEff) (table : RowTable) (m : NativeMachine) :
   · intro command h; cases h
   · intro command h; cases h
 
-theorem requestsBelow_load (p : NativeEff) (compileFuel : Nat) (choices : List Bool)
+theorem requestsBelow_load (p : NativeEff) (compileFuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann)) :
-    RequestsBelow (Api.load p compileFuel choices answers) := by
+    RequestsBelow (Api.load p compileFuel answers) := by
   intro fiber token request h
   rw [requestOf_load] at h
   cases h
 
-theorem guardState_load (p : NativeEff) (compileFuel : Nat) (choices : List Bool)
+theorem guardState_load (p : NativeEff) (compileFuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann)) :
-    GuardState (Api.load p compileFuel choices answers) := by
+    GuardState (Api.load p compileFuel answers) := by
   constructor
   · change ([⟨0⟩] : List FiberId).Nodup
     simp
@@ -1535,11 +1535,11 @@ theorem guardState_load (p : NativeEff) (compileFuel : Nat) (choices : List Bool
     subst f
     exact Nat.zero_lt_succ _
   · exact List.nodup_nil
-  · exact raceIdsBelow_load p compileFuel choices answers
+  · exact raceIdsBelow_load p compileFuel answers
   · intro race hr; cases hr
-  · exact internalKeysBelow_load p compileFuel choices answers
-  · exact requestsBelow_load p compileFuel choices answers
-  · exact requestsOwned_load p compileFuel choices answers
+  · exact internalKeysBelow_load p compileFuel answers
+  · exact requestsBelow_load p compileFuel answers
+  · exact requestsOwned_load p compileFuel answers
   · intro f hf
     have he := List.mem_singleton.mp hf
     subst f

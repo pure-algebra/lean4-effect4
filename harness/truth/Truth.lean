@@ -526,7 +526,7 @@ def strings (xs : List String) : J := Lean.Json.arr (xs.map Lean.Json.str).toArr
 
 def runJson (p : Api.Program) (fuel : Nat) (table : RowTable := [])
     (answers : List (Completion Val Err Defect FiberId Ann) := []) : J :=
-  let r := Api.run p fuel [] answers table
+  let r := Api.run p fuel answers table
   let trace := r.trace
   Lean.Json.mkObj
     [ ("outcome", Lean.Json.str (outcomeText r.outcome))
@@ -541,7 +541,7 @@ def runJson (p : Api.Program) (fuel : Nat) (table : RowTable := [])
 
 def runSyncJson (p : Api.Program) (fuel : Nat) (table : RowTable := [])
     (answers : List (Completion Val Err Defect FiberId Ann) := []) : J :=
-  let (_, exit) := Api.runSync p fuel [] answers table
+  let (_, exit) := Api.runSync p fuel answers table
   Lean.Json.mkObj
     [ ("exit", exitJson exit)
     , ("exitKind", Lean.Json.str (exitKind exit))
@@ -602,7 +602,7 @@ def corpusManifest (fuel count depth : Nat) : J :=
     , ("scopeKey", Tools.ProfileJson.flatKeyJson nativeScopeKey)
     , ("hostRows", Lean.Json.arr #[])
     , ("programs", Lean.Json.arr
-        ((corpusPrograms count depth).map fun (name, p) => entry fuel (fun _ => []) name p).toArray) ]
+        ((corpusPrograms count depth).map fun (name, p) => entry fuel (fun _ => []) name p).toArray)]
 
 /-! ## The tapes: rc.112's recorded answers, decoded into the oracle
 
@@ -777,9 +777,9 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 
 #guard LawfulTable acquireHandleTable
 #guard Api.wellTyped pAcquireHandle acquireHandleTable
-#guard (Api.run pAcquireHandle 1000 [] acquireHandleAnswers acquireHandleTable).exit =
+#guard (Api.run pAcquireHandle 1000 acquireHandleAnswers acquireHandleTable).exit =
   some (.success (.list [.handle 7 0, .nat 1]))
-#guard (Api.run pAcquireHandle 1000 [] acquireHandleAnswers acquireHandleTable).stores.externals.allocated =
+#guard (Api.run pAcquireHandle 1000 acquireHandleAnswers acquireHandleTable).stores.externals.allocated =
   ["Host.Resource"]
 
 /-- P2b finite check of the amended observation equations on a final machine. -/
@@ -794,14 +794,14 @@ def observesReasons (why : Exhaustion) (m : Api.Machine) : Bool :=
 
 #guard corpus.all fun (name, p) =>
   let (table, answers) := hostInputs name
-  let m := (Api.run p 1000 [] answers table).machine
+  let m := (Api.run p 1000 answers table).machine
   observesReasons .fuel m && observesReasons .tape m
 
 -- The universal law instantiates at every corpus member, for any actual host replies.
 example (p : Api.Program) (fuel : Nat) (answers : List Answer) (table : RowTable)
     (why : Exhaustion) :
-    Api.HostProtocol.observe (Api.run p fuel [] answers table).machine = .awaitingAsync ↔
-      ∃ key, .awaitHost key ∈ Api.frontierReasons why (Api.run p fuel [] answers table).machine :=
+    Api.HostProtocol.observe (Api.run p fuel answers table).machine = .awaitingAsync ↔
+      ∃ key, .awaitHost key ∈ Api.frontierReasons why (Api.run p fuel answers table).machine :=
   (Api.observe_of_reasons why _).1
 
 end OCaml5.Truth
@@ -838,7 +838,7 @@ def main (args : List String) : IO Unit := do
   let tapes ← readTapes tapeDir
   for (name, p) in OCaml5.Truth.corpus do
     let (table, builtIn) := OCaml5.Truth.hostInputs name
-    let m := (Effect4.Api.run p fuel [] (builtIn ++ tapes name) table).machine
+    let m := (Effect4.Api.run p fuel (builtIn ++ tapes name) table).machine
     unless OCaml5.Truth.observesReasons .fuel m && OCaml5.Truth.observesReasons .tape m do
       throw (IO.userError s!"observation reasons disagree for {name}")
   let text := (OCaml5.Truth.manifest fuel tapes).pretty 100 ++ "\n"

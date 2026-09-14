@@ -127,7 +127,7 @@ structure Result (program : Api.Program) (table : RowTable) where
 /-- Validate an explicit header and retain the indexed admission proof. Empty session IDs
 refuse. The expected profile is supplied by the binding's explicitly selected profile. -/
 def start (program : Api.Program) (table : RowTable) (expectedProfile : String)
-    (header : Header) (compileFuel : Nat) (choices : List Bool := []) :
+    (header : Header) (compileFuel : Nat) :
     Except Refusal (Session program table) :=
   if header.version ≠ version then .error .version
   else if header.session = "" then .error .session
@@ -135,7 +135,7 @@ def start (program : Api.Program) (table : RowTable) (expectedProfile : String)
   else if header.table ≠ table then .error .table
   else match admitProgram program table with
     | .error why => .error (.program why)
-    | .ok admitted => .ok { admitted, header, machine := Api.load program compileFuel choices [] }
+    | .ok admitted => .ok { admitted, header, machine := Api.load program compileFuel }
 
 def outstanding {program : Api.Program} {table : RowTable} (s : Session program table) :
     List Await := awaits s.machine

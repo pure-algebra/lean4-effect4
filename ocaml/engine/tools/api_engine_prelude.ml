@@ -111,10 +111,10 @@ let sh_run_fiber_make id current interruptible (budget : int * bool) context =
    `compile` (`Program.compile`), `ectx` (`emptyCtx`) and `interp` (`Machine.stores`) are
    generated and come AFTER this prelude, so the row hands them in at the call site; `emit`
    adds the emission-order edge that keeps each of them above its user. *)
-let sh_api_load compile ectx interp program fuel choices answers =
+let sh_api_load compile ectx interp program fuel answers =
   let stores = { sh_stores_empty with externals = { answers; allocated = []; rejected = None } } in
   let m = sh_machine_empty stores in
-  let root = sh_run_fiber_make 0 (compile program fuel choices) true (interp.budget_of ectx) ectx in
+  let root = sh_run_fiber_make 0 (compile program fuel []) true (interp.budget_of ectx) ectx in
   { m with fibers = F.add ~exit_of:sh_fiber_exit 0 root F.empty; next_id = 1 }
 
 (* Effect4.Machine.spawn, src/Effect4/Machine/Fibers.lean:863-878.  One row deletes both of

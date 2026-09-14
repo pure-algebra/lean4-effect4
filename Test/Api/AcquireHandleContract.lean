@@ -43,12 +43,12 @@ def program : NativeEff :=
 #guard Api.typeOf program table =
   some ⟨.nat, .never, Env.Requirement.empty⟩
 #guard Api.roundTrip program table = .ok program
-#guard (Api.run program 1000 [] [answer (.nat 0), answer (.nat 7), answer .unit] table).exit =
+#guard (Api.run program 1000 [answer (.nat 0), answer (.nat 7), answer .unit] table).exit =
   some (.success (.nat 7))
-#guard (Api.run program 1000 [] [answer (.nat 0), answer (.nat 7), answer .unit] table).stores.externals.allocated =
+#guard (Api.run program 1000 [answer (.nat 0), answer (.nat 7), answer .unit] table).stores.externals.allocated =
   [resource]
 
-def parked := (Api.replay acquire 1000 [Api.evaluate] [] [] table).machine
+def parked := (Api.replay acquire 1000 [Api.evaluate] [] table).machine
 #guard (prepareAsyncAnswer (interpOf acquire table) parked Api.root 1 (answer (.nat 0))).1.externals.allocated = []
 #guard (prepareAsyncAnswer (interpOf acquire table) parked Api.root 0 (answer (.nat 0))).1.externals.allocated = [resource]
 #guard letI := evaluatorFor acquire table
@@ -60,10 +60,10 @@ def parked := (Api.replay acquire 1000 [Api.evaluate] [] [] table).machine
   let (next, settled) := stepDecisionState (interpOf acquire table) 0 stopped
     (.answerAsync Api.root 0 (answer (.nat 0)))
   next.state.externals.allocated.isEmpty && settled
-#guard match Api.replayChecked acquire 1000 [Api.evaluate, .answerAsync Api.root 0 (answer (.nat 0))] [] [] table with
+#guard match Api.replayChecked acquire 1000 [Api.evaluate, .answerAsync Api.root 0 (answer (.nat 0))] [] table with
   | .inl run => run.exit = some (.success (.handle 7 0)) && run.stores.externals.allocated == [resource]
   | .inr _ => false
-#guard match Api.replayChecked acquire 1000 [Api.evaluate, .answerAsync Api.root 0 (answer (.nat 1))] [] [] table with
+#guard match Api.replayChecked acquire 1000 [Api.evaluate, .answerAsync Api.root 0 (answer (.nat 1))] [] table with
   | .inr (_, _, .answerType _ _ _, m) => m.state.externals.allocated.isEmpty
   | _ => false
 

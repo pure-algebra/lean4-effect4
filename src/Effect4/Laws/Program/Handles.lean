@@ -14,7 +14,7 @@ interpreter `interpOf root` of `Effect4.Program.Compile`, and states the result 
 API:
 
 * `Minted (m : Api.Machine)`: every handle in the declared positions exists (decidable);
-* `AnswersValid program fuel tape choices`: every `answerAsync` of the tape names handles
+* `AnswersValid program fuel tape`: every `answerAsync` of the tape names handles
   that exist in the machine it answers (decidable, the C15 `TapeAddressed` reading);
 * `load_minted`: a freshly loaded program holds no handle, so it is `Minted`;
 * `handles_minted`: `Minted (Api.load …) ∧ AnswersValid … → Minted (Api.replay …).machine`.
@@ -2378,33 +2378,33 @@ instance (m : Api.Machine) : Decidable (Minted m) :=
 /-- The valid-input premise (ruling on `E4-HANDLE-CE-001`): along the replay of `tape` from the
 loaded program, every `answerAsync` names handles that exist in the machine it answers.
 Decidable; replay admission is unchanged. -/
-def AnswersValid (program : Api.Program) (fuel : Nat) (tape : List Api.Decision) (choices : List Bool := []) :
+def AnswersValid (program : Api.Program) (fuel : Nat) (tape : List Api.Decision) :
     Prop :=
   letI := evaluatorFor program
-  AnswersValidAt (interpOf program) fuel tape (Api.load program fuel choices)
+  AnswersValidAt (interpOf program) fuel tape (Api.load program fuel)
 
-instance (program : Api.Program) (fuel : Nat) (tape : List Api.Decision) (choices : List Bool) :
-    Decidable (AnswersValid program fuel tape choices) := by
+instance (program : Api.Program) (fuel : Nat) (tape : List Api.Decision) :
+    Decidable (AnswersValid program fuel tape) := by
   unfold AnswersValid
   infer_instance
 
-theorem Api.replay_machine (program : Api.Program) (fuel : Nat) (tape : List Api.Decision) (choices : List Bool) :
+theorem Api.replay_machine (program : Api.Program) (fuel : Nat) (tape : List Api.Decision) :
     letI := evaluatorFor program
-    (Api.replay program fuel tape choices).machine =
-      (replayEval (interpOf program) fuel tape (Api.load program fuel choices)).machine := by
+    (Api.replay program fuel tape).machine =
+      (replayEval (interpOf program) fuel tape (Api.load program fuel)).machine := by
   letI := evaluatorFor program
   unfold Api.replay
-  cases replayEval (interpOf program) fuel tape (Api.load program fuel choices) <;> rfl
+  cases replayEval (interpOf program) fuel tape (Api.load program fuel) <;> rfl
 
 /-- A loaded program holds no handle: a literal is a unit, a number or a boolean, and the root
 point has nothing in scope. -/
-theorem load_minted (program : Api.Program) (fuel : Nat) (choices : List Bool := [])
+theorem load_minted (program : Api.Program) (fuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann) := []) :
-    Minted (Api.load program fuel choices answers) := by
-  have hcode : nativeKeys (compile program fuel choices) ⊆ [] := compileEff_keys program (rootPoint fuel choices)
-  have hmake := make_keys_subset (nk := EffName.keys) (sk := EffThunk.keys) Api.root (compile program fuel choices)
+    Minted (Api.load program fuel answers) := by
+  have hcode : nativeKeys (compile program fuel) ⊆ [] := compileEff_keys program (rootPoint fuel)
+  have hmake := make_keys_subset (nk := EffName.keys) (sk := EffThunk.keys) Api.root (compile program fuel)
     true (stores.budgetOf emptyCtx) emptyCtx
-  have hfiber : (RunFiber.make Api.root (compile program fuel choices) true (stores.budgetOf emptyCtx) emptyCtx :
+  have hfiber : (RunFiber.make Api.root (compile program fuel) true (stores.budgetOf emptyCtx) emptyCtx :
       RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx).keys EffName.keys EffThunk.keys ⊆ [] :=
     List.Subset.trans hmake (List.append_subset.mpr ⟨hcode, List.Subset.refl _⟩)
   unfold Minted MintedAt MintedIn
@@ -2416,9 +2416,9 @@ theorem load_minted (program : Api.Program) (fuel : Nat) (choices : List Bool :=
 
 /-- The handle invariant (C13, `handles_minted`): a minted machine replayed on a tape whose
 external answers are valid stays minted. -/
-theorem handles_minted (program : Api.Program) (fuel : Nat) (tape : List Api.Decision) (choices : List Bool)
-    (h : Minted (Api.load program fuel choices) ∧ AnswersValid program fuel tape choices) :
-    Minted (Api.replay program fuel tape choices).machine := by
+theorem handles_minted (program : Api.Program) (fuel : Nat) (tape : List Api.Decision)
+    (h : Minted (Api.load program fuel) ∧ AnswersValid program fuel tape) :
+    Minted (Api.replay program fuel tape).machine := by
   letI := evaluatorFor program
   rw [Api.replay_machine]
   exact (replayEval_minted_of_evaluator EffName.keys EffThunk.keys (interpOf_keyBounded program)
@@ -2427,20 +2427,20 @@ theorem handles_minted (program : Api.Program) (fuel : Nat) (tape : List Api.Dec
 /-- A run returned by checked replay has only live collected handles, for the supplied table
 and oracle. The unconsumed oracle remains input data; admission checks it before use. -/
 theorem checked_replay_minted (program : Api.Program) (fuel : Nat) (tape : List Api.Decision)
-    (choices : List Bool) (answers : List (Completion Val Err Defect FiberId Ann))
+ (answers : List (Completion Val Err Defect FiberId Ann))
     (table : RowTable) (run : Api.Run)
-    (h : Api.replayChecked program fuel tape choices answers table = .inl run) :
+    (h : Api.replayChecked program fuel tape answers table = .inl run) :
     Minted run.machine := by
   letI := evaluatorFor program table
   cases hc : replayCheckedFrom program fuel answers table 0 tape
-      (Api.load program fuel choices answers) with
+      (Api.load program fuel answers) with
   | inr refusal => simp [Api.replayChecked, hc] at h
   | inl result =>
     have hv := replayCheckedFrom_answersValid program fuel answers table 0 tape _ result hc
     have he := replayCheckedFrom_eq_replay program fuel answers table 0 tape _ result hc
     have hm := (replayEval_minted_of_evaluator EffName.keys EffThunk.keys
       (interpOf_keyBounded program table) (evaluatorFor_minted program table) fuel tape _ hv
-      (load_minted program fuel choices answers)).2
+      (load_minted program fuel answers)).2
     rw [← he] at hm
     cases result <;> simp only [Api.replayChecked, hc, Sum.inl.injEq] at h <;> cases h <;> exact hm
 

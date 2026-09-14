@@ -177,7 +177,7 @@ def resourceProgram : NativeEff :=
 def resourceAnswers : List (Completion Val Err Defect FiberId Ann) :=
   [.ofExit (.success (.nat 0)), .ofExit (.success (.nat 7)), .ofExit (.success .unit)]
 
-def resourceRun : Api.Run := Api.run resourceProgram 1000 [] resourceAnswers resourceTable
+def resourceRun : Api.Run := Api.run resourceProgram 1000 resourceAnswers resourceTable
 
 #guard resourceRun.exit = some (.success (.nat 7))
 #guard resourceRun.stores.externals.allocated = [Resource.target]
@@ -208,7 +208,7 @@ def program : NativeEff := .callback (.external 0) (.lit (.nat 7))
 def reply : Completion Val Err Defect FiberId Ann := .ofExit (.success (.nat 9))
 
 /-- The machine after one `evaluate`: the root is parked on the external registration. -/
-def parked : NativeMachine := (Api.replay program 40 [Api.evaluate] [] [] table).machine
+def parked : NativeMachine := (Api.replay program 40 [Api.evaluate] [] table).machine
 
 /-- The correct record of that call's reply. -/
 def record : RecordedReply := ⟨table, Api.root, 0, .external 0, .nat 7, reply⟩
@@ -263,7 +263,7 @@ section Frontier
 
 /-- The same program, the ordinary tape, and **no** recorded answer supplied to the oracle. -/
 def exhausted : Api.Run ⊕ (Nat × Api.Decision × Refusal × Api.Machine) :=
-  Api.replayChecked program 40 [Api.evaluate, Api.flush] [] [] table
+  Api.replayChecked program 40 [Api.evaluate, Api.flush] [] table
 
 -- the tape ran out with the call outstanding: a live frontier, and no refusal
 #guard match exhausted with
@@ -283,7 +283,7 @@ def exhausted : Api.Run ⊕ (Nat × Api.Decision × Refusal × Api.Machine) :=
 /-- The same run with the reply fed in as a decision: the frontier is not a dead end. -/
 def completed : Api.Run ⊕ (Nat × Api.Decision × Refusal × Api.Machine) :=
   Api.replayChecked program 40
-    [Api.evaluate, .answerAsync Api.root 0 reply, Api.flush] [] [] table
+    [Api.evaluate, .answerAsync Api.root 0 reply, Api.flush] [] table
 
 #guard match completed with
   | .inl run => run.outcome == Api.Outcome.finished
@@ -297,7 +297,7 @@ side of the rule: a valid prefix parks, a malformed envelope refuses. -/
 def refused : Api.Run ⊕ (Nat × Api.Decision × Refusal × Api.Machine) :=
   Api.replayChecked program 40
     [Api.evaluate, .answerAsync Api.root 0 (.ofExit (.success (.str "9"))), Api.flush]
-    [] [] table
+     [] table
 
 #guard match refused with
   | .inl _ => false

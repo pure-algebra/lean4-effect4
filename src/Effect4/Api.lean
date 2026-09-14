@@ -39,7 +39,13 @@ One module, the whole pipeline, small interface:
 * `replay` runs a program against an explicit host decision tape (the meaning is the
   relation over tapes; a run is its fuel-bounded simulator); `run` is the tape every
   ordinary program takes (evaluate the root, flush its dispatcher); `runSync` is
-  `Effect.runSyncExit`.
+  `Effect.runSyncExit`. These three are the raw, host-free runs.
+* Host replies reach a program through one route: the keyed session
+  `Effect4.Api.HostSession` (`start`, `bindCall`, `submit`, `advance`, `inspect`), which
+  binds a reply to the call it answers before the reply becomes a decision (DI-23, DI-58).
+  The `answers` list `load`, `replay`, `run` and `runSync` still accept is the legacy route
+  the session replaces; it stays only until the truth corpus runs on keyed tapes (DI-23's
+  amendment), and nothing new should use it.
 * The Schema half: a persisted document or representation as its `Schema.Struct({…})`
   syntax (`schemaDocument`, `schemaRepresentation`) and the JSON payload beside it
   (`jsonExpr`). Text generation with its module assembler is
@@ -146,10 +152,9 @@ def readModule (module : TypeScript.Module) (table : RowTable := []) : Except Re
 
 /-! ## Compiling and running -/
 
-/-- The compiled root: the program as a primitive of the frame alphabet, at `fuel` with the
-`choose` decisions on `choices`. -/
-def compile (program : Program) (fuel : Nat) (choices : List Bool := []) : NCode :=
-  Program.compile program fuel choices
+/-- The compiled root: the program as a primitive of the frame alphabet, at `fuel`. -/
+def compile (program : Program) (fuel : Nat) : NCode :=
+  Program.compile program fuel
 
 /-- The machine and the host decisions at the compile's alphabet. -/
 abbrev Machine := RunMachine EffName EffThunk Val Err Defect FiberId Ann Ctx Stores
@@ -160,10 +165,10 @@ def root : FiberId := ⟨0⟩
 
 /-- A fresh machine over the empty stores and the empty context, holding the compiled
 program as its root fiber, not yet evaluated. -/
-def load (program : Program) (compileFuel : Nat) (choices : List Bool := [])
+def load (program : Program) (compileFuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann) := []) : Machine :=
   { (RunMachine.empty { Stores.empty with externals := ExternalStore.ofAnswers answers } : Machine) with
-    fibers := [RunFiber.make root (compile program compileFuel choices) true
+    fibers := [RunFiber.make root (compile program compileFuel) true
       (stores.budgetOf emptyCtx) emptyCtx]
     nextId := 1 }
 
@@ -188,12 +193,12 @@ nothing. It does not type the program, does not check the supplied table's names
 `admitProgram` builds; `replayChecked` is a different check again — it admits the incoming
 *decisions*, not the program. Kept and named for fixtures, negative tests and the truth
 driver. -/
-def replay (program : Program) (fuel : Nat) (tape : List Decision) (choices : List Bool := [])
+def replay (program : Program) (fuel : Nat) (tape : List Decision)
     (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := [])
     (compileFuel : Nat := fuel) :
     Run :=
   letI := evaluatorFor program table
-  match replayEval (interpOf program table) fuel tape (load program compileFuel choices answers) with
+  match replayEval (interpOf program table) fuel tape (load program compileFuel answers) with
   | ReplayResult.finished m => ⟨Outcome.finished, m, []⟩
   | ReplayResult.frontier why m => ⟨Outcome.frontier, m, frontierReasons why m⟩
   | ReplayResult.stuck why m => ⟨Outcome.stuck why, m, []⟩
@@ -202,10 +207,10 @@ def replay (program : Program) (fuel : Nat) (tape : List Decision) (choices : Li
 It excludes outstanding host replies and a missing runnable decision; timers and
 exhaustion remain observable and this predicate does not assert termination. -/
 def Tape.Complete (program : Program) (table : RowTable) (tape : List Decision)
-    (fuel : Nat) (choices : List Bool := [])
+    (fuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann) := [])
     (compileFuel : Nat := fuel) : Prop :=
-  let reasons := (replay program fuel tape choices answers table compileFuel).reasons
+  let reasons := (replay program fuel tape answers table compileFuel).reasons
   (∀ key, FrontierReason.awaitHost key ∉ reasons) ∧ FrontierReason.awaitDecision ∉ reasons
 
 /-- The decision that starts every run: the root evaluated synchronously. -/
@@ -218,22 +223,22 @@ def flush : Decision := RunDecision.flush
 typing, no table check. `runAdmitted` is the checked one. It also takes no decision tape, so a
 program that parks on a clock cannot finish through it — a timed `sleep` needs
 `replay … [evaluate, .advance 1, flush]`. -/
-def run (program : Program) (fuel : Nat) (choices : List Bool := [])
+def run (program : Program) (fuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := [])
     (compileFuel : Nat := fuel) : Run :=
-  replay program fuel [evaluate, flush] choices answers table compileFuel
+  replay program fuel [evaluate, flush] answers table compileFuel
 
 /-- `Effect.runSyncExit`: the root evaluated on the caller's stack, its dispatcher flushed,
 and the `AsyncFiberError` defect when it has not exited. **Raw**, as `run` and `replay` are:
 it checks neither the program nor the table. There is no `runSyncAdmitted`; a caller that
 wants the certificate builds it with `admitProgram` and keeps it. -/
-def runSync (program : Program) (fuel : Nat) (choices : List Bool := [])
+def runSync (program : Program) (fuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := [])
     (compileFuel : Nat := fuel) : Machine × ExitV :=
   letI := evaluatorFor program table
   runSyncExit (interpOf program table) fuel
     (RunMachine.empty { Stores.empty with externals := ExternalStore.ofAnswers answers })
-    (compile program compileFuel choices) emptyCtx
+    (compile program compileFuel) emptyCtx
 
 /-- The root's exit; `none` while it is still live. -/
 def Run.exit (r : Run) : Option ExitV := (r.machine.fiber? root).bind RunFiber.exit
@@ -257,11 +262,11 @@ abbrev Refusal := Program.Refusal
 /-- Replay with admission. A refusal contains the decision position and the
 machine at the refusal; it is separate from the program's exit. -/
 def replayChecked (program : Program) (fuel : Nat) (tape : List Decision)
-    (choices : List Bool := [])
+
     (answers : List (Completion Val Err Defect FiberId Ann) := [])
     (table : RowTable := []) : Run ⊕ (Nat × Decision × Refusal × Machine) :=
   match Program.replayCheckedFrom program fuel answers table 0 tape
-      (load program fuel choices answers) with
+      (load program fuel answers) with
   | .inr refusal => .inr refusal
   | .inl (.finished m) => .inl ⟨.finished, m, []⟩
   | .inl (.frontier why m) => .inl ⟨.frontier, m, frontierReasons why m⟩
@@ -269,10 +274,10 @@ def replayChecked (program : Program) (fuel : Nat) (tape : List Decision)
 
 /-- The external frontiers after each decision, with their row and request. -/
 def replaySteps (program : Program) (fuel : Nat) (tape : List Decision)
-    (choices : List Bool := [])
+
     (answers : List (Completion Val Err Defect FiberId Ann) := [])
     (table : RowTable := []) : List (Nat × Decision × List Program.Await) :=
-  Program.replayStepsFrom program fuel table 0 tape (load program fuel choices answers)
+  Program.replayStepsFrom program fuel table 0 tape (load program fuel answers)
 
 /-! ## Admission: execution checks and reserved integer refusal
 
@@ -319,22 +324,22 @@ def imageCertificate (program : Program) (table : RowTable := []) :
 
 /-- The checked ordinary run: `run`, with the certificate consumed. -/
 def runAdmitted {program : Program} {table : RowTable}
-    (admitted : AdmittedProgram program table) (fuel : Nat) (choices : List Bool := [])
+    (admitted : AdmittedProgram program table) (fuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann) := [])
     (compileFuel : Nat := fuel) : Run :=
   let _ := admitted.ty
-  run program fuel choices answers table compileFuel
+  run program fuel answers table compileFuel
 
 /-- The checked replay: `replay`, with the certificate consumed. The tape is the caller's,
 as in `replay`; admission says nothing about which decisions are legal (that is
 `replayChecked`) and nothing about finishing. -/
 def replayAdmitted {program : Program} {table : RowTable}
     (admitted : AdmittedProgram program table) (fuel : Nat) (tape : List Decision)
-    (choices : List Bool := [])
+
     (answers : List (Completion Val Err Defect FiberId Ann) := [])
     (compileFuel : Nat := fuel) : Run :=
   let _ := admitted.ty
-  replay program fuel tape choices answers table compileFuel
+  replay program fuel tape answers table compileFuel
 
 /-! ## Schema, as syntax -/
 

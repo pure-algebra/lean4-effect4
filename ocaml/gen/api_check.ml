@@ -7,7 +7,7 @@
      pFork  = bind (withFiber (fork (bind (yieldNow 0) (succeed (lit (nat 7)))) opts))
                    (awaitFiber (var 0) awaitValue)
      pAwait = bind (perform deferredMake (lit unit)) (perform deferredAwait (var 0))
-   Each is run through `api_run` with fuel 1000 and no choices; the check is the root
+   Each is run through `api_run` with fuel 1000; the check is the root
    fiber's exit. Exit code 0 iff every check passed. *)
 
 open Effect4_gen
@@ -63,7 +63,7 @@ let root_exit (r : A.run) =
   | Some f -> f.A.exit_
 
 let run_and_show name (p : A.native_op A.eff) =
-  let r = A.api_run p 1000 [] [] [] 1000 in
+  let r = A.api_run p 1000 [] [] 1000 in
   let e = root_exit r in
   Printf.printf "  %s: outcome=%s fibers=%d exit=%s\n" name (show_outcome r.A.outcome)
     (List.length r.A.machine.A.fibers) (show_exit e);
@@ -90,7 +90,7 @@ let p_await : A.native_op A.eff =
       A.Eff_perform (A.NativeOp_deferredAwait, A.Term_var 0) )
 
 let () =
-  print_endline "== G0. the generated engine runs a program (Api.run, fuel 1000, no choices) ==";
+  print_endline "== G0. the generated engine runs a program (Api.run, fuel 1000) ==";
   let _, e = run_and_show "p42" p42 in
   check "p42 exits success 42" (e = Some (A.Exit_success (A.Val_nat 42)));
   (* `awaitFiber … awaitValue` answers the child's *reified exit*, `ctor 0 [nat 7]`, not a

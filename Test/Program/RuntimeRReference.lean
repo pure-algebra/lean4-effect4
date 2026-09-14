@@ -33,8 +33,8 @@ def interrupt : Api.Decision :=
 def reply (answer : Completion Val Err Defect FiberId Ann) (token : Nat := 0) :
     Api.Decision := .answerAsync Api.root token answer
 
-def run (program : NativeEff) (tape : List Api.Decision) (choices : List Bool := []) :
-    Api.Run := Api.replay program budget tape choices
+def run (program : NativeEff) (tape : List Api.Decision) :
+    Api.Run := Api.replay program budget tape
 
 def fiberExit (r : Api.Run) (id : Nat) : Option ExitV :=
   (r.machine.fiber? ⟨id⟩).bind RunFiber.exit

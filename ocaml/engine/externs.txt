@@ -72,7 +72,7 @@ elem Effect4.Machine.ScopeEntry M.t
 
 # ---- E1: the trace ------------------------------------------------------------------------
 fn Effect4.Machine.RunMachine.emit 2 sh_machine_emit
-fn Effect4.Api.load 4 sh_api_load program_compile empty_ctx stores
+fn Effect4.Api.load 3 sh_api_load program_compile empty_ctx stores
 # `RunMachine.empty` (Fibers.lean:612) and `Stores.empty` (Stores.lean:1987) have no row:
 # `Api.load` was their only caller in this closure, so externing it deletes them outright.
 # Their bodies are `sh_machine_empty` / `sh_stores_empty` in the prelude, called by

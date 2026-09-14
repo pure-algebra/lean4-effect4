@@ -191,11 +191,11 @@ def orphanWaiterStore : Stores :=
 
 theorem waiting_answered_minted :
     Minted (Api.replay waiting 80 [Api.evaluate, reply (.ofExit (.success (.nat 9)))]).machine :=
-  handles_minted waiting 80 _ [] ⟨load_minted waiting 80, by decide⟩
+  handles_minted waiting 80 _ ⟨load_minted waiting 80, by decide⟩
 
 theorem forkJoin_minted :
     Minted (Api.replay pForkJoin 80 [Api.evaluate, RunDecision.fire Api.root]).machine :=
-  handles_minted pForkJoin 80 _ [] ⟨load_minted pForkJoin 80, by decide⟩
+  handles_minted pForkJoin 80 _ ⟨load_minted pForkJoin 80, by decide⟩
 
 -- E4-CHECK-CE-010: numeric interruptor provenance is not a dereferenced handle.
 example (cell : DeferredKey) (id : FiberId) :

@@ -66,10 +66,10 @@ def sqliteAnswers : List (Completion Val Err Defect FiberId Ann) :=
 #guard !Api.wellTyped pSqlite
 #guard !Api.wellTyped pSqlite keyValueStoreMemory
 #guard Api.roundTrip pSqlite sqliteBun = .ok pSqlite
-#guard (Api.run pSqlite 1000 [] sqliteAnswers sqliteBun).exit = some (.success selected)
-#guard (Api.run pSqlite 1000 [] sqliteAnswers sqliteBun).stores.externals.allocated = [NativeOp.sqlTarget]
+#guard (Api.run pSqlite 1000 sqliteAnswers sqliteBun).exit = some (.success selected)
+#guard (Api.run pSqlite 1000 sqliteAnswers sqliteBun).stores.externals.allocated = [NativeOp.sqlTarget]
 -- a wrong-shaped row set is refused at the answer type: a cell that is not a pair
-#guard match Api.replayChecked pSqlite 1000 [Api.evaluate] [] [answer (.nat 0), answer (.list [.list [.str "a"]])] sqliteBun with
+#guard match Api.replayChecked pSqlite 1000 [Api.evaluate] [answer (.nat 0), answer (.list [.list [.str "a"]])] sqliteBun with
   | .inr (_, _, .oracleType _ _, _) => true
   | _ => false
 
@@ -101,7 +101,7 @@ def kvAnswers : List (Completion Val Err Defect FiberId Ann) :=
 #guard (Api.typeOf pKv keyValueStoreMemory).map (fun t => (t.answer, t.error)) =
   some (.prod (.option .string) .bool, kvError)
 #guard Api.roundTrip pKv keyValueStoreMemory = .ok pKv
-#guard (Api.run pKv 1000 [] kvAnswers keyValueStoreMemory).exit =
+#guard (Api.run pKv 1000 kvAnswers keyValueStoreMemory).exit =
   some (.success (.list [.some (.str "1"), .bool true]))
 
 #guard match Api.print pKv keyValueStoreMemory with
@@ -123,10 +123,10 @@ def kvAnswers : List (Completion Val Err Defect FiberId Ann) :=
 -- failed: u.a")` (observed 2026-09-09, `harness/truth/tapes/pSqlFail.jsonl`)
 def sqlFailed : Err := .tagged "UnknownError" "no such table: missing"
 def failed : Completion Val Err Defect FiberId Ann := .ofExit (.failure (Cause.fail sqlFailed))
-#guard (Api.run pSqlite 1000 [] [answer (.nat 0), failed, answer .unit] sqliteBun).exit =
+#guard (Api.run pSqlite 1000 [answer (.nat 0), failed, answer .unit] sqliteBun).exit =
   some (.failure (Cause.fail sqlFailed))
 -- without that answer the release parks at a frontier and the program has no exit yet
-#guard (Api.run pSqlite 1000 [] [answer (.nat 0), failed] sqliteBun).exit = none
+#guard (Api.run pSqlite 1000 [answer (.nat 0), failed] sqliteBun).exit = none
 
 /-- The failing statement under an open client the scope releases (`Truth.lean`'s
 `sqlClient`/`sqlMissing`, whose tapes carry the real answers). -/
@@ -144,22 +144,22 @@ def pSqlCatch : Api.Program :=
   sqlClient (.catchCause (.bind sqlMissing (.succeed (.lit (.str "rows")))) (.succeed (.lit (.str "recovered"))))
 #guard Api.wellTyped pSqlCatch sqliteBun
 #guard (Api.typeOf pSqlCatch sqliteBun).map (fun t => (t.answer, t.error)) = some (.string, .never)
-#guard (Api.run pSqlCatch 1000 [] sqlAnswers sqliteBun).exit = some (.success (.str "recovered"))
+#guard (Api.run pSqlCatch 1000 sqlAnswers sqliteBun).exit = some (.success (.str "recovered"))
 -- the failure reified is well typed at the exit type, and it escapes at the pair
 #guard (Api.typeOf (sqlClient (.exit sqlMissing)) sqliteBun).map (fun t => (t.answer, t.error)) =
   some (.exitOf sqlRows sqlError, .never)
 #guard (Api.typeOf (sqlClient sqlMissing) sqliteBun).map (fun t => (t.answer, t.error)) = some (sqlRows, sqlError)
 -- the failure reified: the program succeeds with the exit, the tagged pair its one reason
-#guard match (Api.run (sqlClient (.exit sqlMissing)) 1000 [] sqlAnswers sqliteBun).exit with
+#guard match (Api.run (sqlClient (.exit sqlMissing)) 1000 sqlAnswers sqliteBun).exit with
   | some (.success (Value.exitErr written)) =>
     (causeImage.ofVal written).map (·.reasons.map fun | .fail e _ => some e | _ => none) = some [some sqlFailed]
   | _ => false
 -- a failed answer is refused where the row's error channel is empty (the open row): at the
 -- oracle's position on the registration path, at the token on the delayed path
-#guard match Api.replayChecked (sqlClient sqlMissing) 1000 [Api.evaluate] [] [failed] sqliteBun with
+#guard match Api.replayChecked (sqlClient sqlMissing) 1000 [Api.evaluate] [failed] sqliteBun with
   | .inr (0, _, .oracleType 0 .never, _) => true
   | _ => false
-#guard match Api.replayChecked (sqlClient sqlMissing) 1000 [Api.evaluate, .answerAsync Api.root 0 failed] [] [] sqliteBun with
+#guard match Api.replayChecked (sqlClient sqlMissing) 1000 [Api.evaluate, .answerAsync Api.root 0 failed] [] sqliteBun with
   | .inr (1, _, .errorType _ 0 .never, _) => true
   | _ => false
 
@@ -171,8 +171,8 @@ def pSqlOrDie : Api.Program :=
         (.bind sqlMissing (.succeed (.lit (.nat 1)))))))
     false (.service (⟨⟨8⟩, ⟨4⟩⟩ : ServiceKey))
 #guard Api.wellTyped pSqlOrDie sqliteBun
-#guard (Api.run pSqlOrDie 1000 [] sqlAnswers sqliteBun).exit =
+#guard (Api.run pSqlOrDie 1000 sqlAnswers sqliteBun).exit =
   some (.failure (Cause.die (.error sqlFailed)))
-#guard (Api.run pSqlOrDie 1000 [] [answer (.nat 0), failed] sqliteBun).exit = none
+#guard (Api.run pSqlOrDie 1000 [answer (.nat 0), failed] sqliteBun).exit = none
 
 end Test.Api.PackagesContract

@@ -136,25 +136,25 @@ def callbackExternal : Api.Program := .callback (.external 0) (.lit (.nat 7))
 #guard LawfulTable [malformedRow]
 #guard (Api.typeOf performExternal [goodRow]).isSome
 #guard (Api.typeOf callbackExternal [goodRow]).isSome
-#guard (Api.run callbackExternal 100 [] [reply] [goodRow]).exit = some (.success (.nat 9))
+#guard (Api.run callbackExternal 100 [reply] [goodRow]).exit = some (.success (.nat 9))
 -- The wrong registration parks with the answer unused. A park is a frontier, not a refusal;
 -- `checkTable` is what refuses the table.
-#guard (Api.run callbackExternal 100 [] [reply] [malformedRow]).exit = none
+#guard (Api.run callbackExternal 100 [reply] [malformedRow]).exit = none
 -- Both spellings consume the reply. Removing the reply leaves a live frontier.
-#guard (Api.run performExternal 100 [] [reply] [goodRow]).exit = some (.success (.nat 9))
-#guard (Api.run performExternal 100 [] [reply] [goodRow]).stores.externals.answers.length = 0
-#guard (Api.run callbackExternal 100 [] [reply] [goodRow]).stores.externals.answers.length = 0
-#guard (Api.run performExternal 100 [] [] [goodRow]).exit = none
-#guard (Api.run callbackExternal 100 [] [] [goodRow]).exit = none
-#guard (Api.run performExternal 100 [] [] [goodRow]).outcome = .frontier
-#guard (Api.run callbackExternal 100 [] [] [goodRow]).outcome = .frontier
+#guard (Api.run performExternal 100 [reply] [goodRow]).exit = some (.success (.nat 9))
+#guard (Api.run performExternal 100 [reply] [goodRow]).stores.externals.answers.length = 0
+#guard (Api.run callbackExternal 100 [reply] [goodRow]).stores.externals.answers.length = 0
+#guard (Api.run performExternal 100 [] [goodRow]).exit = none
+#guard (Api.run callbackExternal 100 [] [goodRow]).exit = none
+#guard (Api.run performExternal 100 [] [goodRow]).outcome = .frontier
+#guard (Api.run callbackExternal 100 [] [goodRow]).outcome = .frontier
 #guard externalRow [goodRow] 0 = some goodRow
 
 /-- DI-61: API replay equality on the admitted scalar fixture, including its resulting
 machine and trace. This concrete tape/table receipt does not generalize `run_eq_ref`. -/
 theorem replay_perform_external_eq_callback :
-    Api.replay performExternal 100 [Api.evaluate, Api.flush] [] [reply] [goodRow] =
-      Api.replay callbackExternal 100 [Api.evaluate, Api.flush] [] [reply] [goodRow] := by
+    Api.replay performExternal 100 [Api.evaluate, Api.flush] [reply] [goodRow] =
+      Api.replay callbackExternal 100 [Api.evaluate, Api.flush] [reply] [goodRow] := by
   rfl
 
 /-! ## `checkTable`: the table decision `LawfulTable` does not make -/
@@ -267,21 +267,21 @@ certificate is consumed as an argument, so a caller cannot reach these without b
 def runAdmittedExit (program : Api.Program) (table : RowTable) (fuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann) := []) : Option ExitV :=
   match Api.admitProgram program table with
-  | .ok certificate => (Api.runAdmitted certificate fuel [] answers).exit
+  | .ok certificate => (Api.runAdmitted certificate fuel answers).exit
   | .error _ => none
 
 def replayAdmittedExit (program : Api.Program) (table : RowTable) (fuel : Nat)
     (tape : List Api.Decision)
     (answers : List (Completion Val Err Defect FiberId Ann) := []) : Option ExitV :=
   match Api.admitProgram program table with
-  | .ok certificate => (Api.replayAdmitted certificate fuel tape [] answers).exit
+  | .ok certificate => (Api.replayAdmitted certificate fuel tape answers).exit
   | .error _ => none
 
 #guard runAdmittedExit Wire.Corpus.pAwait [] 100 = (Api.run Wire.Corpus.pAwait 100).exit
 #guard runAdmittedExit performExternal [goodRow] 100 [reply]
-  = (Api.run performExternal 100 [] [reply] [goodRow]).exit
+  = (Api.run performExternal 100 [reply] [goodRow]).exit
 #guard runAdmittedExit callbackExternal [goodRow] 100 [reply]
-  = (Api.run callbackExternal 100 [] [reply] [goodRow]).exit
+  = (Api.run callbackExternal 100 [reply] [goodRow]).exit
 #guard runAdmittedExit performSleep [] 100 = (Api.run performSleep 100).exit
 #guard runAdmittedExit callbackSleep [] 100 = (Api.run callbackSleep 100).exit
 #guard replayAdmittedExit callbackSleep [] 100 sleepTape = some (.success .unit)
@@ -290,6 +290,6 @@ def replayAdmittedExit (program : Api.Program) (table : RowTable) (fuel : Nat)
 #guard replayAdmittedExit performSleep [] 100 sleepTape = some (.success .unit)
 #guard runAdmittedExit performExternal [goodRow] 100 [reply] = some (.success (.nat 9))
 #guard runAdmittedExit performExternal [goodRow] 0 [reply] = none
-#guard (Api.run performExternal 0 [] [reply] [goodRow]).outcome = .frontier
+#guard (Api.run performExternal 0 [reply] [goodRow]).outcome = .frontier
 
 end Test.Program.InvocationContract

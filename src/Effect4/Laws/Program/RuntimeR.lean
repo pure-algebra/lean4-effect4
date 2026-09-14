@@ -38,10 +38,10 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote
 abbrev RReplay := ReplayResult EffName EffThunk Val Err Defect FiberId Ann Ctx Stores RProgram RSaved Unit
 
 /-- `Api.load` with the structural term in place of compiled frame code. -/
-def loadR (program : NativeEff) (fuel : Nat) (choices : List Bool := [])
+def loadR (program : NativeEff) (fuel : Nat)
     (compileFuel : Nat := fuel) : RState :=
   { (RunMachine.empty Stores.empty : RState) with
-    fibers := [RunFiber.make Api.root (denoteR program program (rootPoint compileFuel choices)) true
+    fibers := [RunFiber.make Api.root (denoteR program program (rootPoint compileFuel)) true
       (stores.budgetOf emptyCtx) emptyCtx]
     nextId := 1 }
 
@@ -49,9 +49,9 @@ def obsR (m : RState) : Obs := obs m
 
 /-- The same Completion data and decision alphabet as `Api.replay`. -/
 def replayR (program : NativeEff) (fuel : Nat) (tape : List Api.Decision)
-    (choices : List Bool := []) (compileFuel : Nat := fuel) : RReplay :=
+ (compileFuel : Nat := fuel) : RReplay :=
   letI := termEvaluatorFor program
-  replayEval (interpR program) fuel tape (loadR program fuel choices compileFuel)
+  replayEval (interpR program) fuel tape (loadR program fuel compileFuel)
 
 /-- The loaded term stays fixed when comparing command budgets. -/
 def SufficientR (program : NativeEff) (commandFuel : Nat) (m : RState)
@@ -64,12 +64,12 @@ def BehR (program : NativeEff) (commandFuel : Nat) (m : RState)
   letI := termEvaluatorFor program
   Beh (interpR program) m tape commandFuel h
 
-theorem loadR_current (e : NativeEff) (fuel : Nat) (choices : List Bool) :
-    (loadR e fuel choices).fibers.map (fun f => f.frame.current) =
-      [denoteR e e (rootPoint fuel choices)] := rfl
+theorem loadR_current (e : NativeEff) (fuel : Nat) :
+    (loadR e fuel).fibers.map (fun f => f.frame.current) =
+      [denoteR e e (rootPoint fuel)] := rfl
 
-theorem obsR_load (e : NativeEff) (fuel : Nat) (choices : List Bool) :
-    obsR (loadR e fuel choices) = ⟨[(Api.root, none)], Stores.empty⟩ := rfl
+theorem obsR_load (e : NativeEff) (fuel : Nat) :
+    obsR (loadR e fuel) = ⟨[(Api.root, none)], Stores.empty⟩ := rfl
 
 theorem interpR_answerCode (e : NativeEff) (answer : Completion Val Err Defect FiberId Ann) :
     (interpR e).answerCode answer = denoteCompletion answer := rfl
@@ -146,30 +146,30 @@ def classify {κ φ η : Type} :
   | .stuck why _ => .stuck why
 
 /-- The loaded frame machine carries the invariant: empty stores, no park. -/
-theorem load_ok (e : NativeEff) (fuel : Nat) (choices : List Bool) :
-    MachineOk StoresOk (Api.load e fuel choices) :=
+theorem load_ok (e : NativeEff) (fuel : Nat) :
+    MachineOk StoresOk (Api.load e fuel) :=
   ⟨storesOk_empty, fun f hf => by
     rw [List.mem_singleton.mp hf]
     exact pendingOk_make _ _ _ _ _⟩
 
 /-- The two loads are in the book: the compiled root means the denoted root. -/
-theorem load_rel (e : NativeEff) (fuel : Nat) (choices : List Bool) :
-    BMeans e (Api.load e fuel choices) (loadR e fuel choices) :=
-  BMeans.mk' (ListRel.cons (fmeans_make e Api.root (compile_intro e fuel choices) true _ _) ListRel.nil)
+theorem load_rel (e : NativeEff) (fuel : Nat) :
+    BMeans e (Api.load e fuel) (loadR e fuel) :=
+  BMeans.mk' (ListRel.cons (fmeans_make e Api.root (compile_intro e fuel []) true _ _) ListRel.nil)
     ListRel.nil rfl rfl rfl rfl rfl rfl rfl
 
 /-- Every tape replays to related results, at any compile budget and any command budget. -/
 theorem replay_rel (e : NativeEff) (cfuel fuel : Nat) (tape : List Api.Decision)
-    (choices : List Bool) :
+ :
     letI := evaluatorFor e
     letI := termEvaluatorFor e
     ReplayRel (CodeMeans e) (Means e)
-      (replayEval (interpOf e) fuel tape (Api.load e cfuel choices))
-      (replayEval (interpR e) fuel tape (loadR e cfuel choices)) := by
+      (replayEval (interpOf e) fuel tape (Api.load e cfuel))
+      (replayEval (interpR e) fuel tape (loadR e cfuel)) := by
   letI := evaluatorFor e
   letI := termEvaluatorFor e
   exact book_replayEval (interpOf e) (interpR e) (stepAgrees e) (hooksAgree_of e) fuel tape _ _
-    (load_ok e cfuel choices) (load_rel e cfuel choices)
+    (load_ok e cfuel) (load_rel e cfuel)
 
 theorem replayRel_classify_obs {e : NativeEff} {r₁ : FReplay} {r₂ : RReplay}
     (h : ReplayRel (CodeMeans e) (Means e) r₁ r₂) :
@@ -180,23 +180,23 @@ theorem replayRel_classify_obs {e : NativeEff} {r₁ : FReplay} {r₂ : RReplay}
     | exact ⟨rfl, bookMeans_obs h.2⟩
     | exact ⟨congrArg Api.Outcome.stuck h.1, bookMeans_obs h.2⟩
 
-theorem replay_outcome (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) (choices : List Bool) :
-    (Api.replay e fuel tape choices).outcome =
+theorem replay_outcome (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) :
+    (Api.replay e fuel tape).outcome =
       classify (replayEval (evaluator := evaluatorFor e) (interpOf e) fuel tape
-        (Api.load e fuel choices)) := by
+        (Api.load e fuel)) := by
   unfold Api.replay
   split <;> rename_i heq <;> rw [heq] <;> rfl
 
-theorem replay_machine (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) (choices : List Bool) :
-    (Api.replay e fuel tape choices).machine =
+theorem replay_machine (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) :
+    (Api.replay e fuel tape).machine =
       (replayEval (evaluator := evaluatorFor e) (interpOf e) fuel tape
-        (Api.load e fuel choices)).machine := by
+        (Api.load e fuel)).machine := by
   unfold Api.replay
   split <;> rename_i heq <;> rw [heq] <;> rfl
 
 /-- **`run_eq_ref`.** The frame machine's replay and the term reference's replay of the
-same program, at the same compile and command budget, on the same `Completion` tape and
-choices, end the same way and observe the same thing: every fiber's exit and the whole
+same program, at the same compile and command budget, on the same `Completion` tape, end
+the same way and observe the same thing: every fiber's exit and the whole
 stores. No premise: the relation is inhabited at the load and preserved by every command.
 Nothing is said about an external host.
 
@@ -209,31 +209,31 @@ table-aware proposition is filed verbatim, with those four gaps at their `file:l
 `Test/contracts/machine-scheduler-core.contract.md`, "Table-aware agreement (DI-57)"; its
 proof is a later slice. -/
 theorem run_eq_ref (e : NativeEff) (fuel : Nat) (tape : List Api.Decision)
-    (choices : List Bool := []) :
-    (Api.replay e fuel tape choices).outcome = classify (replayR e fuel tape choices) ∧
-      obs (Api.replay e fuel tape choices).machine = obsR (replayR e fuel tape choices).machine := by
+ :
+    (Api.replay e fuel tape).outcome = classify (replayR e fuel tape) ∧
+      obs (Api.replay e fuel tape).machine = obsR (replayR e fuel tape).machine := by
   rw [replay_outcome, replay_machine]
-  exact replayRel_classify_obs (replay_rel e fuel fuel tape choices)
+  exact replayRel_classify_obs (replay_rel e fuel fuel tape)
 
 /-- Both sufficiency receipts agree, at any compile budget and any command budget. -/
 theorem suffices_eq_ref (e : NativeEff) (cfuel fuel : Nat) (tape : List Api.Decision)
-    (choices : List Bool) :
+ :
     letI := evaluatorFor e
-    Suffices (interpOf e) fuel tape (Api.load e cfuel choices) =
-      SufficientR e fuel (loadR e cfuel choices) tape := by
+    Suffices (interpOf e) fuel tape (Api.load e cfuel) =
+      SufficientR e fuel (loadR e cfuel) tape := by
   letI := evaluatorFor e
   letI := termEvaluatorFor e
   exact book_suffices (interpOf e) (interpR e) (stepAgrees e) (hooksAgree_of e) fuel tape _ _
-    (load_ok e cfuel choices) (load_rel e cfuel choices)
+    (load_ok e cfuel) (load_rel e cfuel)
 
 /-- The behaviour form of `run_eq_ref`: under either receipt the observations are one. -/
-theorem beh_eq_ref (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) (choices : List Bool)
-    (h₁ : letI := evaluatorFor e; Suffices (interpOf e) fuel tape (Api.load e fuel choices) = true)
-    (h₂ : SufficientR e fuel (loadR e fuel choices) tape = true) :
+theorem beh_eq_ref (e : NativeEff) (fuel : Nat) (tape : List Api.Decision)
+    (h₁ : letI := evaluatorFor e; Suffices (interpOf e) fuel tape (Api.load e fuel) = true)
+    (h₂ : SufficientR e fuel (loadR e fuel) tape = true) :
     letI := evaluatorFor e
-    Beh (interpOf e) (Api.load e fuel choices) tape fuel h₁ =
-      BehR e fuel (loadR e fuel choices) tape h₂ :=
-  (replayRel_classify_obs (replay_rel e fuel fuel tape choices)).2
+    Beh (interpOf e) (Api.load e fuel) tape fuel h₁ =
+      BehR e fuel (loadR e fuel) tape h₂ :=
+  (replayRel_classify_obs (replay_rel e fuel fuel tape)).2
 
 /-- The root's exit read on related machines. -/
 theorem BMeans.exitOf {root : NativeEff} {m₁ : FMachine} {m₂ : RState} (h : BMeans root m₁ m₂)
@@ -246,12 +246,12 @@ theorem BMeans.exitOf {root : NativeEff} {m₁ : FMachine} {m₂ : RState} (h : 
 
 /-- The root exits agree on every tape. -/
 theorem run_eq_ref_exit (e : NativeEff) (fuel : Nat) (tape : List Api.Decision)
-    (choices : List Bool := []) :
-    (Api.replay e fuel tape choices).exit =
-      ((replayR e fuel tape choices).machine.fiber? Api.root).bind RunFiber.exit := by
+ :
+    (Api.replay e fuel tape).exit =
+      ((replayR e fuel tape).machine.fiber? Api.root).bind RunFiber.exit := by
   unfold Api.Run.exit
   rw [replay_machine]
-  exact BMeans.exitOf (ReplayRel.machine (replay_rel e fuel fuel tape choices)) Api.root
+  exact BMeans.exitOf (ReplayRel.machine (replay_rel e fuel fuel tape)) Api.root
 
 /-! ## P4: the straight fragment on the reference, at the fixed budget
 
@@ -279,7 +279,7 @@ theorem straight_ref (e : NativeEff) (fuel : Nat) (hs : Straight e = true)
         ⟨[(Api.root, some (meaning e [] Stores.empty).1)], (meaning e [] Stores.empty).2⟩ := by
   have hpl : Plain e = true := by rw [Plain_eq_Straight]; exact hs
   obtain ⟨fr, k', tr', nt', hrep⟩ := replay_Mexit e fuel hpl hd hfuel
-  have h := replayRel_classify_obs (replay_rel e fuel fuel [Api.evaluate, Api.flush] [])
+  have h := replayRel_classify_obs (replay_rel e fuel fuel [Api.evaluate, Api.flush])
   rw [hrep] at h
   exact ⟨h.1.symm, h.2.symm⟩
 
@@ -292,7 +292,7 @@ theorem straight_sufficient (e : NativeEff) (fuel : Nat) (hs : Straight e = true
   letI := evaluatorFor e
   have hpl : Plain e = true := by rw [Plain_eq_Straight]; exact hs
   obtain ⟨fr, k', tr', nt', hrep⟩ := replay_Mexit e fuel hpl hd hfuel
-  rw [← suffices_eq_ref e fuel fuel [Api.evaluate, Api.flush] []]
+  rw [← suffices_eq_ref e fuel fuel [Api.evaluate, Api.flush]]
   refine Suffices_of_replay_terminal (interpOf e) fuel _ _ ?_
   rw [hrep]
   rfl

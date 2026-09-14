@@ -434,14 +434,14 @@ private def pCallGetUser (id : String) : Api.Program :=
 private def aliceAnswer : Machine.Completion Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann :=
   .ofExit (.success (Store.Val.list [Store.Val.str "User", Store.Val.str "Alice Smith"]))
 
-#guard (Api.run (pCallGetUser "alice") 1000 [] [aliceAnswer] userApi.toRowTable).exit =
+#guard (Api.run (pCallGetUser "alice") 1000 [aliceAnswer] userApi.toRowTable).exit =
   some (.success (Store.Val.list [Store.Val.str "User", Store.Val.str "Alice Smith"]))
 
 -- Refusal on wrong answer type
 private def wrongTypeAnswer : Machine.Completion Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann :=
   .ofExit (.success (Store.Val.nat 42))
 
-#guard match Api.replayChecked (pCallGetUser "alice") 1000 [Api.evaluate, .answerAsync Api.root 0 wrongTypeAnswer] [] [] userApi.toRowTable with
+#guard match Api.replayChecked (pCallGetUser "alice") 1000 [Api.evaluate, .answerAsync Api.root 0 wrongTypeAnswer] [] userApi.toRowTable with
   | .inr (_, _, why, _) => why == .answerType Api.root 0 (.prod (.lit "User") .string)
   | _ => false
 
@@ -449,7 +449,7 @@ private def wrongTypeAnswer : Machine.Completion Machine.Val Machine.Err Machine
 private def userNotFoundAnswer : Machine.Completion Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann :=
   .ofExit (.failure (Cause.fail (.text "User not found")))
 
-#guard (Api.run (pCallGetUser "alice") 1000 [] [userNotFoundAnswer] userApi.toRowTable).exit =
+#guard (Api.run (pCallGetUser "alice") 1000 [userNotFoundAnswer] userApi.toRowTable).exit =
   some (.failure (Cause.fail (.text "User not found")))
 
 -- 8. CAS Wire Serialization & Exact Deserialization

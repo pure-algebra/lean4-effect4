@@ -9,7 +9,7 @@
         the generated type -- give `finished ... success 42`, `finished fibers=2 success
         ctor 0 [7]` and `frontier fibers=1`; and `Fast` answers what `Ref` answers.
      2  The differential D1 in miniature: the 37 programs of ocaml/eff/goldens/*.bin,
-        decoded by `Eff_wire`, converted by `E4_program`, run at fuel 1000 with no choices
+        decoded by `Eff_wire`, converted by `E4_program`, run at fuel 1000
         on both instances.  Outcome, answer, exits, the fiber-table projection, the trace
         rows and the store row must be EQUAL between `Fast` and `Ref` for every one, and
         each instance's drive loop must agree with its own generated `Api.run`.
@@ -197,7 +197,7 @@ let differ (a : report) (b : report) : string list =
 (* ================================================================ 1. G0 *)
 
 let g0 () =
-  print_endline "== 1. G0 on both instances (fuel 1000, no choices) ==";
+  print_endline "== 1. G0 on both instances (fuel 1000) ==";
   let one name (p : E.eff) expect_outcome expect_fibers expect_root =
     match guard (fun () -> (RF.report p ~fuel:1000, RR.report p ~fuel:1000)) with
     | Error e -> fail_note ("G0 " ^ name) e

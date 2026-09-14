@@ -182,14 +182,14 @@ theorem replayRel_reasons_nonCompile {e : NativeEff} {r₁ : FReplay} {r₂ : RR
     | exact frontier_reasons_nonCompile h
 
 theorem replayReasons_eq_ref (e : NativeEff) (compileFuel fuel : Nat)
-    (tape : List Api.Decision) (choices : List Bool) :
+    (tape : List Api.Decision) :
     letI := evaluatorFor e
     letI := termEvaluatorFor e
-    (replayReasons (replayEval (interpOf e) fuel tape (Api.load e compileFuel choices))).filter nonCompile =
-      (replayReasonsR (replayR e fuel tape choices compileFuel)).filter nonCompile := by
+    (replayReasons (replayEval (interpOf e) fuel tape (Api.load e compileFuel))).filter nonCompile =
+      (replayReasonsR (replayR e fuel tape compileFuel)).filter nonCompile := by
   letI := evaluatorFor e
   letI := termEvaluatorFor e
-  exact replayRel_reasons_nonCompile (replay_rel e compileFuel fuel tape choices)
+  exact replayRel_reasons_nonCompile (replay_rel e compileFuel fuel tape)
 
 /-- The remaining per-fiber compile observation obligation, kept separate from BookMeans. -/
 def CompileBook (m : NativeMachine) (r : RState) : Prop :=
@@ -211,20 +211,20 @@ theorem book_reasons_eq_ref {e : NativeEff} {m : NativeMachine} {r : RState}
 
 /-- The public replay exposes the driver's reason projection. -/
 theorem replay_reasons (e : NativeEff) (fuel : Nat) (tape : List Api.Decision)
-    (choices : List Bool) (compileFuel : Nat) :
-    (Api.replay e fuel tape choices [] [] compileFuel).reasons =
+    (compileFuel : Nat) :
+    (Api.replay e fuel tape [] [] compileFuel).reasons =
       replayReasons (replayEval (evaluator := evaluatorFor e) (interpOf e) fuel tape
-        (Api.load e compileFuel choices)) := by
+        (Api.load e compileFuel)) := by
   unfold Api.replay
   split <;> rename_i heq <;> rw [heq] <;> rfl
 
 /-- At the empty table and oracle, the public run and reference agree on every
 reason except the separately stated per-fiber compile observation obligation. -/
 theorem reasons_eq_ref (e : NativeEff) (compileFuel fuel : Nat)
-    (tape : List Api.Decision) (choices : List Bool := []) :
-    ((Api.replay e fuel tape choices [] [] compileFuel).reasons).filter nonCompile =
-      (replayReasonsR (replayR e fuel tape choices compileFuel)).filter nonCompile := by
+    (tape : List Api.Decision) :
+    ((Api.replay e fuel tape [] [] compileFuel).reasons).filter nonCompile =
+      (replayReasonsR (replayR e fuel tape compileFuel)).filter nonCompile := by
   rw [replay_reasons]
-  exact replayReasons_eq_ref e compileFuel fuel tape choices
+  exact replayReasons_eq_ref e compileFuel fuel tape
 
 end Effect4.Program.Sched

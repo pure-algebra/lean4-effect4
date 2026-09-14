@@ -1033,10 +1033,10 @@ let sh_run_fiber_make id current interruptible (budget : int * bool) context =
    `compile` (`Program.compile`), `ectx` (`emptyCtx`) and `interp` (`Machine.stores`) are
    generated and come AFTER this prelude, so the row hands them in at the call site; `emit`
    adds the emission-order edge that keeps each of them above its user. *)
-let sh_api_load compile ectx interp program fuel choices answers =
+let sh_api_load compile ectx interp program fuel answers =
   let stores = { sh_stores_empty with externals = { answers; allocated = []; rejected = None } } in
   let m = sh_machine_empty stores in
-  let root = sh_run_fiber_make 0 (compile program fuel choices) true (interp.budget_of ectx) ectx in
+  let root = sh_run_fiber_make 0 (compile program fuel []) true (interp.budget_of ectx) ectx in
   { m with fibers = F.add ~exit_of:sh_fiber_exit 0 root F.empty; next_id = 1 }
 
 (* Effect4.Machine.spawn, src/Effect4/Machine/Fibers.lean:863-878.  One row deletes both of
@@ -14071,10 +14071,10 @@ and store_val__handles_list (x_1 : val_ list) : (int * int) list =
   let _x_2 = program_compile_eff root _x_1 in
   _x_2
   
-  (* LCNF mono: Effect4.Api.replay (program : Effect4.Program.Eff Effect4.Program.NativeOp) (fuel : Nat) (tape : List (Effect4.Machine.RunDecision Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (choices : List Bool) (answers : List (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (table : List Effect4.Program.Row) (compileFuel : Nat) : Effect4.Api.Run *)
-  let api_replay (program : native_op eff) (fuel : int) (tape : (eff_name, eff_thunk, val_, err, defect, int, unit) run_decision list) (choices : bool list) (answers : (val_, err, defect, int, unit) completion list) (table : row list) (compile_fuel : int) : run =
+  (* LCNF mono: Effect4.Api.replay (program : Effect4.Program.Eff Effect4.Program.NativeOp) (fuel : Nat) (tape : List (Effect4.Machine.RunDecision Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (answers : List (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (table : List Effect4.Program.Row) (compileFuel : Nat) : Effect4.Api.Run *)
+  let api_replay (program : native_op eff) (fuel : int) (tape : (eff_name, eff_thunk, val_, err, defect, int, unit) run_decision list) (answers : (val_, err, defect, int, unit) completion list) (table : row list) (compile_fuel : int) : run =
   let _x_1 = program_interp_of program table in
-  let _x_2 = sh_api_load program_compile empty_ctx stores program compile_fuel choices answers in
+  let _x_2 = sh_api_load program_compile empty_ctx stores program compile_fuel answers in
   let _x_3 = replay_eval_at_program_replay_checked_from_spec_0 program table _x_1 fuel tape _x_2 in
   match (_x_3 : (_, _, _, _, _, _, _, _, _, _, _, _) replay_result) with
     | ReplayResult_finished machine_4 -> (let _x_5 = Outcome_finished in
@@ -14090,14 +14090,14 @@ and store_val__handles_list (x_1 : val_ list) : (int * int) list =
       let _x_17 = ({ outcome = _x_15; machine = machine_14; reasons = _x_16 } : run) in
       _x_17)
   
-  (* LCNF mono: Effect4.Api.run (program : Effect4.Program.Eff Effect4.Program.NativeOp) (fuel : Nat) (choices : List Bool) (answers : List (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (table : List Effect4.Program.Row) (compileFuel : Nat) : Effect4.Api.Run *)
-  let api_run (program : native_op eff) (fuel : int) (choices : bool list) (answers : (val_, err, defect, int, unit) completion list) (table : row list) (compile_fuel : int) : run =
+  (* LCNF mono: Effect4.Api.run (program : Effect4.Program.Eff Effect4.Program.NativeOp) (fuel : Nat) (answers : List (Effect4.Machine.Completion Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (table : List Effect4.Program.Row) (compileFuel : Nat) : Effect4.Api.Run *)
+  let api_run (program : native_op eff) (fuel : int) (answers : (val_, err, defect, int, unit) completion list) (table : row list) (compile_fuel : int) : run =
   let _x_1 = api_evaluate in
   let _x_2 = RunDecision_flush in
   let _x_3 = [] in
   let _x_4 = _x_2 :: _x_3 in
   let _x_5 = _x_1 :: _x_4 in
-  let _x_6 = api_replay program fuel _x_5 choices answers table compile_fuel in
+  let _x_6 = api_replay program fuel _x_5 answers table compile_fuel in
   _x_6
   
   (* LCNF mono: Effect4.Machine.runloopTop._redArg (core : Effect4.Machine.FiberCore lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (f : Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) : Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny *)

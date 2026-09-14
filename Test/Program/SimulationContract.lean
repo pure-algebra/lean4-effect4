@@ -76,7 +76,7 @@ theorem ref_suffices (n : Nat) :
     letI := evaluatorFor waiting
     Suffices (interpOf waiting) n failureTape (Api.load waiting budget) =
       SufficientR waiting n (loadR waiting budget) failureTape :=
-  suffices_eq_ref waiting budget n failureTape []
+  suffices_eq_ref waiting budget n failureTape
 
 -- The receipts at three command budgets: short of the tape, at it, and past it.
 #guard decide (SufficientR waiting 1 (loadR waiting budget) failureTape =
@@ -88,7 +88,7 @@ theorem ref_suffices (n : Nat) :
 
 /-- The loaded machines are in the book (the introduction lemma at the root). -/
 theorem ref_load_related : BMeans waiting (Api.load waiting budget) (loadR waiting budget) :=
-  load_rel waiting budget []
+  load_rel waiting budget
 
 /-! ## P4 on the compile contract's straight programs, at the fixed budget -/
 

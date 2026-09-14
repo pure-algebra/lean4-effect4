@@ -35,12 +35,12 @@ def observeRaw : Nat → RProgram → Stores → Observation
 def observe (fuel : Nat) (program : RProgram) (stores : Stores) : Observation :=
   observeRaw fuel (eraseControl program) stores
 
-def rootPoint (fuel : Nat := 80) (env : List Val := []) (choices : List Bool := []) : Point :=
-  { path := [], env, fuel, tape := choices }
+def rootPoint (fuel : Nat := 80) (env : List Val := []) : Point :=
+  { path := [], env, fuel, tape := [] }
 
 def unfolded (e : NativeEff) (fuel : Nat := 80)
-    (env : List Val := []) (choices : List Bool := []) : RProgram :=
-  denoteR e e (rootPoint fuel env choices)
+    (env : List Val := []) : RProgram :=
+  denoteR e e (rootPoint fuel env)
 
 def result (e : NativeEff) : Observation := observe 200 (unfolded e) Stores.empty
 
@@ -245,12 +245,12 @@ theorem cleanup_boundary_distinct : unfolded ensured ≠ unfolded sequenced := b
   have h1 : operation? (observeRaw 1 (unfolded ensured) Stores.empty) =
       some (.guard_ (.onExit false)) := by
     unfold unfolded ensured
-    rw [denoteR_onExit _ _ _ (p := rootPoint 80 [] []) (by decide)]
+    rw [denoteR_onExit _ _ _ (p := rootPoint 80 []) (by decide)]
     rfl
   have h2 : operation? (observeRaw 1 (unfolded sequenced) Stores.empty) =
       some (.guard_ .onSuccess) := by
     unfold unfolded sequenced
-    rw [denoteR_bind _ _ _ (rootPoint 80 [] []) (by decide)]
+    rw [denoteR_bind _ _ _ (rootPoint 80 []) (by decide)]
     rfl
   simp only [h1, h2] at heads
   cases heads

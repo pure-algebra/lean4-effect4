@@ -18,7 +18,7 @@
                        ACTUALLY called -- counted, at k in {1, 8, 1024, infinity}.
      DF-3              QUERY AGREEMENT.  For the 37 byte goldens of ocaml/eff/goldens
                        (`Eff_wire` + `E4_program`, the loader copied from lane D's
-                       test_engine.ml) driven with no choices at fuel 1000: for every
+                       test_engine.ml) driven at fuel 1000: for every
                        i <= |tape|, `E4_query.at s i` equals what replaying the first i
                        decisions produces, on all thirteen `E4_diff` projections.  Two
                        tapes per program -- `Api.run`'s own `[evaluate 0; flush]` and an
@@ -418,7 +418,7 @@ let laws (p : E.eff) (name : string) (dtape : E4_diff.decision list) =
 
 let df3 () =
   print_endline "";
-  print_endline "== DF-3: query agreement over the 37 byte goldens (fuel 1000, no choices) ==";
+  print_endline "== DF-3: query agreement over the 37 byte goldens (fuel 1000) ==";
   match find_path [ "eff"; "goldens"; "p42.bin" ] "E4_EFF_GOLDENS" with
   | None -> fail_note "DF-3" "ocaml/eff/goldens not found from the cwd"
   | Some marker ->
