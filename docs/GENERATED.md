@@ -83,15 +83,19 @@ shows as a diff that names the programs it moved (DI-60), where the generator on
 counts.
 
 **The corpus on rc.112 and under `tsc`.** `make check-corpus` (`scripts/check-corpus.py`) writes
-the same 400 programs' manifest with `harness/truth/Truth.lean --corpus`, prints and runs each
-on the pinned runtime with the truth runner, type-checks the printed modules, and compares
-Lean's answer, error and requirement types with the compiler's (`tools/target/corpus.ts`),
-all under `harness/truth/corpus-check/` (ignored). What is committed is one row per program,
+the same 400 programs' manifest with `harness/truth/Truth.lean --corpus`, emits every
+printable program's module with the truth runner (the shipped block and the same block with
+no annotations), type-checks every shipped module, runs each admitted program on the pinned
+runtime in its own process, and compares Lean's answer, error and requirement types with the
+types the compiler infers for the unannotated module (`tools/target/corpus.ts`), all under
+`harness/truth/corpus-check/` (ignored). What is committed is one row per program,
 `harness/truth/corpus-results.tsv`: whether the program is in the straight-line fragment the
-machine agreement theorem covers, its Lean and rc.112 exits, the run outcome, the type
-outcome. A fresh run must equal it (`make gen-corpus-results` promotes), and a row that
-records a disagreement must be listed with its reason in
-`harness/truth/corpus-known-differences.md`.
+machine agreement theorem covers, which module exists and whether it compiles, the run, sync
+and type outcomes, both exits and both compared schedules in full. A fresh run must equal it
+(`make gen-corpus-results` promotes), and a row that records a disagreement must be listed by
+program, dimension and outcome with its reason in `harness/truth/corpus-known-differences.md`,
+which may list nothing that no longer occurs. `scripts/test-corpus-check.py`
+(`make check-tools`) plants the acceptance defects the checker must refuse.
 
 **Schema codec comparisons.** `make check-schema-codec` produces a temporary TypeScript
 data module from the public `Ty.encode` results for

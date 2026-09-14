@@ -160,7 +160,7 @@ export function query(repoRoot: string, queries: readonly Query[], profile = "ef
     if (!sf) issues.push({ code: "missing-query-source", message: q.id })
     if (globals.length) issues.push({ code: "dependency-diagnostic", message: "Compiler diagnostics in imported inputs; see globalDiagnostics" })
     const own = inSource.filter(d => resolve(d.file!.fileName) === resolve(repo, q.source))
-    if (own.length) issues.push({ code: "source-diagnostic", message: `${own.length} compiler diagnostic(s) in ${localPath(repo, resolve(repo, q.source))}: ${stableText(repo, ts.flattenDiagnosticMessageText(own[0]!.messageText, " "))}` })
+    if (own.length) issues.push({ code: "source-diagnostic", message: `${own.length} compiler diagnostic(s) (${[...new Set(own.map(d => `TS${d.code}`))].join(", ")}) in ${localPath(repo, resolve(repo, q.source))}: ${stableText(repo, ts.flattenDiagnosticMessageText(own[0]!.messageText, " "))}` })
     const columns: Observation["columns"] = {}
     const variables = new Map<string, ts.Identifier>(), aliases = new Map<string, ts.TypeAliasDeclaration>()
     const walk = (node: ts.Node) => {

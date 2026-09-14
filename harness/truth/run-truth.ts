@@ -8,6 +8,14 @@
  * (both GENERATED), prints the table, exits non-zero on any disagreement.
  *
  *     bun run <abs path>/harness/truth/run-truth.ts --manifest <corpus.json> [--out <dir>] [--timeout ms] [--only <name>]
+ *     bun run <abs path>/harness/truth/run-truth.ts --manifest <corpus.json> --out <dir> --emit
+ *
+ * `--emit` writes every printable program's modules and runs nothing: `generated/<name>.ts`
+ * (the declaration block as shipped, or the bare expression of an ill-typed program) and
+ * `inferred/<name>.ts` (the block with no annotations, for the type oracle), with
+ * `emitted.json` naming what was written for each program. The corpus lane emits once,
+ * compiles everything, and runs only the programs it selects, so no program is reported
+ * compiler-clean without having been compiled.
  *
  * Effect resolves through `harness/truth/node_modules`, selected by
  * `scripts/check-truth.py` (`make check-truth`); the current working directory does not select it.
@@ -115,6 +123,7 @@ interface Entry {
   expr: string | null
   exprRefusal: string | null
   decl: string | null
+  declInferred: string | null
   run: LeanRun
   runSync: { exit: Json; exitKind: string; sync: boolean }
 }
@@ -137,6 +146,8 @@ const tapeDir = option("--tape-out", path.join(outDir, "tapes"))
 /** Run one program of the manifest only (the corpus lane isolates each program in its own
  * process, so a printed program that loops forever on rc.112 is a timeout, not a hang). */
 const only = option("--only", "")
+/** Write every printable program's modules under `--out` and run nothing. */
+const emitOnly = argv.includes("--emit")
 
 // ---- the prelude self-test ----------------------------------------------------------
 /** Two refusals. Every case of the prelude's table must hold, and every atom the profile
@@ -168,6 +179,30 @@ const moduleFor = (entry: Entry): { text: string; source: "decl" | "expr" } | nu
   if (entry.decl !== null) return { text: importHeader + entry.decl, source: "decl" }
   if (entry.expr !== null) return { text: importHeader + `export const main = ${entry.expr}\n`, source: "expr" }
   return null
+}
+
+/** The declaration block with no type annotations (`declInferred`): the module whose `main`
+ * the type oracle reads, so that the host's compiler infers the program's type on its own. */
+const inferredModuleFor = (entry: Entry): string | null =>
+  entry.declInferred === null ? null : importHeader + entry.declInferred
+
+/** `--emit`: every printable program's modules, and an inventory of what was written. */
+const emitModules = (manifest: Manifest): number => {
+  const generatedDir = path.join(outDir, "generated"), inferredDir = path.join(outDir, "inferred")
+  fs.mkdirSync(generatedDir, { recursive: true })
+  fs.mkdirSync(inferredDir, { recursive: true })
+  const inventory: Record<string, { source: "decl" | "expr" | null; inferred: boolean; refusal: string | null }> = {}
+  for (const entry of manifest.programs) {
+    const module = moduleFor(entry)
+    if (module !== null) fs.writeFileSync(path.join(generatedDir, `${entry.name}.ts`), module.text)
+    const inferred = inferredModuleFor(entry)
+    if (inferred !== null) fs.writeFileSync(path.join(inferredDir, `${entry.name}.ts`), inferred)
+    inventory[entry.name] = { source: module?.source ?? null, inferred: inferred !== null, refusal: module === null ? entry.exprRefusal : null }
+  }
+  fs.writeFileSync(path.join(outDir, "emitted.json"), JSON.stringify(inventory, null, 2) + "\n")
+  const written = Object.values(inventory).filter((i) => i.source !== null).length
+  console.log(`emitted ${written} of ${manifest.programs.length} programs (${Object.values(inventory).filter((i) => i.inferred).length} with an unannotated block)`)
+  return 0
 }
 
 // ---- the recorder -------------------------------------------------------------------
@@ -337,10 +372,13 @@ class Recorder {
       case "Fail": return { fail: this.wire(reason.error) }
       case "Die": return { die: defectWire(reason.defect) }
       case "Interrupt": {
+        // The interruptor is a number on both faces: a fiber of this run is named by its
+        // index (the machine's numbering); any other number is the number the cause carries
+        // (`Cause.interrupt(2)` from a computed literal, DI-74), which Lean also wires as is.
         const who = reason.fiberId
         if (who === undefined || who === null) return { interrupt: null }
         for (const [fiber, idx] of this.index) if ((fiber as FiberLike).id === who) return { interrupt: idx }
-        return { interrupt: `host fiber ${who}` }
+        return { interrupt: typeof who === "number" && Number.isSafeInteger(who) ? who : `host fiber ${String(who)}` }
       }
       default: return { unknown: String(reason._tag) }
     }
@@ -690,6 +728,7 @@ const main = async (): Promise<number> => {
     console.error(`unexpected manifest format ${manifest.format}`)
     return 2
   }
+  if (emitOnly) return emitModules(manifest)
   const generatedDir = path.join(outDir, "generated")
   fs.mkdirSync(generatedDir, { recursive: true })
   const rows: Row[] = []
@@ -784,9 +823,12 @@ const main = async (): Promise<number> => {
   ].join("\n")
   console.log(table)
 
-  const disagreements = rows.filter((r) => r.exitAgree === false || r.scheduleAgree === false)
+  // Every compared dimension counts: the verdict entry's exit, the fork entry's schedule, and
+  // the sync entry's exit (a program whose `runSyncExit` disagrees is a disagreement, whatever
+  // the other two say).
+  const disagreements = rows.filter((r) => r.exitAgree === false || r.scheduleAgree === false || r.runSyncAgree === false)
   const summary = disagreements.length === 0
-    ? `PASS: ${rows.length} programs, exits and schedules agree with rc.112`
+    ? `PASS: ${rows.length} programs, exits, schedules and sync exits agree with rc.112`
     : `FAIL: ${disagreements.length} of ${rows.length} programs disagree with rc.112 (${disagreements.map((r) => r.program).join(", ")})`
   console.log(summary)
 

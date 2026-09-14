@@ -286,13 +286,18 @@ $(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard har
 	$(PY) scripts/check-truth.py
 	@mkdir -p $(CHK) && touch $@
 
-# The corpus lanes: every program of the generated corpus (Test/Program/Gen.lean, 400 at
-# depth 4) printed, run on rc.112 and type-checked, its rc.112 exit compared with the machine's
-# and its tsc type with Lean's, one row per program in harness/truth/corpus-results.tsv (the
-# committed expected file; `make gen-corpus-results` promotes a fresh run). The work
-# directory is harness/truth/corpus-check (ignored), beside the prelude the modules import.
+# The corpus lane: every program of the generated corpus (Test/Program/Gen.lean, 400 at
+# depth 4) printed and type-checked, the admitted ones run on rc.112, its rc.112 exit,
+# schedule and sync exit compared with the machine's and its inferred tsc type with Lean's,
+# one row per program in harness/truth/corpus-results.tsv (the committed expected file;
+# `make gen-corpus-results` promotes a fresh run; harness/truth/corpus-known-differences.md
+# registers each disagreement by program, dimension and outcome). The work directory is
+# harness/truth/corpus-check (ignored), beside the prelude and session sources the modules
+# import; everything the lane reads is a prerequisite.
 CORPUS_LANE := scripts/check-corpus.py scripts/lib/truth_host.py tools/target/corpus.ts tools/target/oracle.ts tools/target/profile.ts \
-  harness/truth/corpus-results.tsv harness/truth/corpus-known-differences.md Test/fixtures/target/selection.json
+  harness/truth/corpus-results.tsv harness/truth/corpus-known-differences.md Test/fixtures/target/selection.json \
+  harness/truth/tsconfig.json harness/truth/prelude-inventory.ts $(wildcard harness/truth/session/*.ts) \
+  ts/eff/profile.gen.ts ts/eff/eff.gen.ts ts/eff/packages.gen.ts ts/eff/tsconfig.json
 $(CHK)/corpus: $(CORE) $(LAWS) .lake/build/lib/lean/Test/Program/Gen.trace $(TRUTH_SOURCES) $(CORPUS_LANE) ts/eff/node_modules | build harness/truth/node_modules
 	$(PY) scripts/check-corpus.py
 	@mkdir -p $(CHK) && touch $@
@@ -307,6 +312,7 @@ gen-corpus-results: | build harness/truth/node_modules ## promote a fresh corpus
 # and the toolchain file; each is a prerequisite so a change to any of them re-runs it.
 $(CHK)/target: $(TRUTH_GENERATED) harness/truth/prelude.ts Test/fixtures/target/selection.json $(wildcard tools/target/*.ts tools/target/*.json) \
   ts/eff/profile.gen.ts ts/eff/eff.gen.ts ts/eff/packages.gen.ts ts/eff/tsconfig.json ts/eff/node_modules lean-toolchain
+	$(BUN) test tools/target
 	$(BUN) tools/target/cli.ts --repo .
 	@mkdir -p $(CHK) && touch $@
 
@@ -388,6 +394,7 @@ $(CHK)/tools: $(SELFTEST_SOURCES) | build
 	$(PY) scripts/test-conform-report.py
 	$(PY) scripts/test-program-structure.py
 	$(PY) scripts/test-compatibility.py
+	$(PY) scripts/test-corpus-check.py
 	@mkdir -p $(CHK) && touch $@
 
 # ---------------------------------------------------------------------------- help

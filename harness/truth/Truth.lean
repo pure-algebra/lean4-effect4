@@ -41,6 +41,8 @@ Manifest (`format: effect4-truth-manifest-v1`), one entry per program:
   `TypeScript.Render.expr house0 0`), or `null` with `exprRefusal` naming the refusal;
 * `decl`: the exported constant `Api.printDecl "main"` rendered by
   `TypeScript.Render.constDecl house0`, or `null` (ill-typed, or refused);
+* `declInferred`: the same block with no type annotation on any declaration, the module the
+  type oracle reads so that the host's compiler infers the program's type on its own;
 * `run`: `Api.run p fuel` — `outcome` (`finished`, `frontier`, `stuck …`), `exit` (the root's
   exit in the wire below, `null` while the root is live), `fibers` (id, exited, parked token),
   `events` (the machine events with an rc.112 counterpart, in order), `schedule` (the same
@@ -503,11 +505,22 @@ def outcomeText : Api.Outcome → String
   | .frontier => "frontier"
   | .stuck why => s!"stuck {repr why}"
 
-def typeJson (ty : EffTy) : J :=
+/-- One required key, with the shape the signature types it at: a key printed as
+`Context.Service<shape>("k<name>_<service>")` is, on the host, a requirement of exactly that
+shape type (rc.112 `Context.Service<Identifier, Shape = Identifier>`), which is what the type
+oracle binds the key to (DI-76). `null` when the signature does not type the key. -/
+def requireJson (sig : Signature NativeOp) (key : ServiceKey) : J :=
+  Lean.Json.mkObj
+    [ ("name", toJson key.name.value), ("service", toJson key.service.value)
+    , ("shape", match sig.serviceTy key with
+        | some t => Lean.Json.str t.render
+        | none => Lean.Json.null) ]
+
+def typeJson (sig : Signature NativeOp) (ty : EffTy) : J :=
   Lean.Json.mkObj
     [ ("answer", Lean.Json.str ty.answer.render)
     , ("error", Lean.Json.str ty.error.render)
-    , ("requires", Lean.Json.arr (ty.requires.elems.map Tools.ProfileJson.flatKeyJson).toArray)
+    , ("requires", Lean.Json.arr (ty.requires.elems.map (requireJson sig)).toArray)
     , ("requiresEmpty", Lean.Json.bool (decide (ty.requires = Machine.Env.Requirement.empty))) ]
 
 def refusalText : PrintRefusal → String
@@ -547,6 +560,12 @@ def runSyncJson (p : Api.Program) (fuel : Nat) (table : RowTable := [])
     , ("exitKind", Lean.Json.str (exitKind exit))
     , ("sync", Lean.Json.bool (!isAsyncFiberDefect exit)) ]
 
+/-- A declaration with its type annotation removed: the same initializer, typed by the host's
+compiler alone. -/
+def unannotated : TypeScript.Decl → TypeScript.Decl
+  | .const c => .const { c with type := none }
+  | d => d
+
 def entry (fuel : Nat) (tapes : String → List (Completion Val Err Defect FiberId Ann))
     (name : String) (p : Api.Program) : J :=
   let (table, builtIn) := hostInputs name
@@ -555,13 +574,18 @@ def entry (fuel : Nat) (tapes : String → List (Completion Val Err Defect Fiber
   let printed := Api.print p table
   -- the declaration block (`Api.printModule`, the host rows slice): one `const L_<path>` per
   -- referenced layer target, then `main`; one declaration for a program with no references
-  let decl := (Api.printModule "main" p table).map fun m =>
-    String.join (m.decls.map (TypeScript.Render.decl house0))
+  let module := Api.printModule "main" p table
+  let decl := module.map fun m => String.join (m.decls.map (TypeScript.Render.decl house0))
+  -- the same block with every annotation removed: what the host's compiler infers for the
+  -- printed program on its own, which the type oracle compares with Lean's rendered type
+  -- (an annotated `main` would only hand Lean's type back to itself)
+  let declInferred := module.map fun m =>
+    String.join (m.decls.map fun d => TypeScript.Render.decl house0 (unannotated d))
   Lean.Json.mkObj
     [ ("name", Lean.Json.str name)
     , ("wellTyped", Lean.Json.bool ty.isSome)
     , ("straight", Lean.Json.bool (Effect4.Program.Denote.Straight p))
-    , ("type", match ty with | some t => typeJson t | none => Lean.Json.null)
+    , ("type", match ty with | some t => typeJson (nativeSignature table) t | none => Lean.Json.null)
     , ("expr", match printed with
         | .ok e => Lean.Json.str (TypeScript.Render.expr house0 0 e)
         | .error _ => Lean.Json.null)
@@ -569,6 +593,9 @@ def entry (fuel : Nat) (tapes : String → List (Completion Val Err Defect Fiber
         | .ok _ => Lean.Json.null
         | .error why => Lean.Json.str (refusalText why))
     , ("decl", match decl with
+        | some text => Lean.Json.str text
+        | none => Lean.Json.null)
+    , ("declInferred", match declInferred with
         | some text => Lean.Json.str text
         | none => Lean.Json.null)
     , ("run", runJson p fuel table answers)

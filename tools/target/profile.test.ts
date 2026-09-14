@@ -50,9 +50,11 @@ test("rendered canonical type bindings use syntax nodes and structured types pre
 test("selected IDs cannot vanish with absent metadata and unexpected inventory is refused", () => {
   const selection: unknown = JSON.parse(readFileSync(resolve(repo, "Test/fixtures/target/selection.json"), "utf8"))
   const queries = queriesFromInputs(repo, selection, { programs: [] }, [])
-  expect(queries).toHaveLength(42)
-  expect(new Set(queries.map(q => q.id)).size).toBe(42)
-  expect(queries.filter(q => q.id.startsWith("program/"))).toHaveLength(31)
+  // The selection's inventory: 34 programs and 11 rows (the three `tagIs` programs joined
+  // it on 2026-09-12). A changed count is a changed selection, to be reviewed here.
+  expect(queries).toHaveLength(45)
+  expect(new Set(queries.map(q => q.id)).size).toBe(45)
+  expect(queries.filter(q => q.id.startsWith("program/"))).toHaveLength(34)
   expect(queries.every(q => q.inputIssues?.length)).toBe(true)
   expect(queries.filter(q => q.id.startsWith("row/")).every(q => q.inputIssues?.some(i => i.code === "row-type-metadata"))).toBe(true)
   const minimal = { programs: ["p42"], handles: {}, rows: [] }

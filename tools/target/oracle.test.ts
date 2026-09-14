@@ -94,7 +94,12 @@ test("E4-CATCH-CE-001: an explicit absent fallback selects the data-first overlo
   }
   const bad = query(repo, [input("bad")])
   expect(bad.conforms).toBe(false)
-  expect(bad.globalDiagnostics.some(d => d.code === 2769)).toBe(true)
+  // A diagnostic inside the queried source refuses that query by name (`source-diagnostic`),
+  // and is not a global diagnostic: since the corpus lane, one module that does not type
+  // must not refuse every other query of the same program.
+  expect(bad.globalDiagnostics).toHaveLength(0)
+  expect(bad.observations[0]?.status).toBe("refused")
+  expect(bad.observations[0]?.issues.some(i => i.code === "source-diagnostic" && i.message.includes("TS2769"))).toBe(true)
   const good = query(repo, [input("good")])
   expect(good.conforms).toBe(true)
   expect(good.observations[0]?.status).toBe("agree")

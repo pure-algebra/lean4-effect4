@@ -19,6 +19,7 @@
    "name": "p42",
    "exprRefusal": null,
    "expr": "Effect.succeed(42)",
+   "declInferred": "export const main = Effect.succeed(42)\n",
    "decl": "export const main: Effect.Effect<number, never> = Effect.succeed(42)\n"},
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
@@ -37,6 +38,8 @@
    "name": "pBind",
    "exprRefusal": null,
    "expr": "Effect.flatMap(Effect.succeed(1), (a0) => Effect.succeed(succ(a0)))",
+   "declInferred":
+   "export const main = Effect.flatMap(Effect.succeed(1), (a0) => Effect.succeed(succ(a0)))\n",
    "decl":
    "export const main: Effect.Effect<number, never> = Effect.flatMap(Effect.succeed(1), (a0) => Effect.succeed(succ(a0)))\n"},
   {"wellTyped": true,
@@ -89,6 +92,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.flatMap(Effect.forkChild(Effect.flatMap(Effect.yieldNowWith(0), (a0) => Effect.succeed(7)), { startImmediately: false, uninterruptible: \"inherit\" }), (a0) => Fiber.await(a0))",
+   "declInferred":
+   "export const main = Effect.flatMap(Effect.forkChild(Effect.flatMap(Effect.yieldNowWith(0), (a0) => Effect.succeed(7)), { startImmediately: false, uninterruptible: \"inherit\" }), (a0) => Fiber.await(a0))\n",
    "decl":
    "export const main: Effect.Effect<Exit.Exit<number, never>, never> = Effect.flatMap(Effect.forkChild(Effect.flatMap(Effect.yieldNowWith(0), (a0) => Effect.succeed(7)), { startImmediately: false, uninterruptible: \"inherit\" }), (a0) => Fiber.await(a0))\n"},
   {"wellTyped": true,
@@ -109,6 +114,8 @@
    "name": "pAwait",
    "exprRefusal": null,
    "expr": "Effect.flatMap(Deferred.make<number, number>(), (a0) => Deferred.await(a0))",
+   "declInferred":
+   "export const main = Effect.flatMap(Deferred.make<number, number>(), (a0) => Deferred.await(a0))\n",
    "decl":
    "export const main: Effect.Effect<number, number> = Effect.flatMap(Deferred.make<number, number>(), (a0) => Deferred.await(a0))\n"},
   {"wellTyped": true,
@@ -129,6 +136,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.gen(function* () {\n  const a0 = yield* Effect.succeed(3)\n  if (isZero(a0)) {\n    return true\n  } else {\n    return false\n  }\n})",
+   "declInferred":
+   "export const main = Effect.gen(function* () {\n  const a0 = yield* Effect.succeed(3)\n  if (isZero(a0)) {\n    return true\n  } else {\n    return false\n  }\n})\n",
    "decl":
    "export const main: Effect.Effect<boolean, never> = Effect.gen(function* () {\n  const a0 = yield* Effect.succeed(3)\n  if (isZero(a0)) {\n    return true\n  } else {\n    return false\n  }\n})\n"},
   {"wellTyped": true,
@@ -149,6 +158,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.flatMap(Ref.make(0), (a0) => Effect.suspend(() => {\n  let a1 = 0\n  return Effect.whileLoop({\n    while: () => isZero(a1),\n    body: () => Ref.update(a0, incr),\n    step: (a2) => {\n      a1 = succ(a1)\n    },\n  })\n}))",
+   "declInferred":
+   "export const main = Effect.flatMap(Ref.make(0), (a0) => Effect.suspend(() => {\n  let a1 = 0\n  return Effect.whileLoop({\n    while: () => isZero(a1),\n    body: () => Ref.update(a0, incr),\n    step: (a2) => {\n      a1 = succ(a1)\n    },\n  })\n}))\n",
    "decl":
    "export const main: Effect.Effect<void, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.suspend(() => {\n  let a1 = 0\n  return Effect.whileLoop({\n    while: () => isZero(a1),\n    body: () => Ref.update(a0, incr),\n    step: (a2) => {\n      a1 = succ(a1)\n    },\n  })\n}))\n"},
   {"wellTyped": true,
@@ -169,6 +180,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.catchCause(Effect.failCause(Cause.combine(Cause.fail(1), Cause.interrupt())), (a0) => Effect.succeed(undefined))",
+   "declInferred":
+   "export const main = Effect.catchCause(Effect.failCause(Cause.combine(Cause.fail(1), Cause.interrupt())), (a0) => Effect.succeed(undefined))\n",
    "decl":
    "export const main: Effect.Effect<void, never> = Effect.catchCause(Effect.failCause(Cause.combine(Cause.fail(1), Cause.interrupt())), (a0) => Effect.succeed(undefined))\n"},
   {"wellTyped": true,
@@ -189,6 +202,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.scoped(Effect.flatMap(Scope.make(\"parallel\"), (a0) => Effect.flatMap(Effect.exit(Effect.succeed(1)), (a1) => Scope.close(a0, a1))))",
+   "declInferred":
+   "export const main = Effect.scoped(Effect.flatMap(Scope.make(\"parallel\"), (a0) => Effect.flatMap(Effect.exit(Effect.succeed(1)), (a1) => Scope.close(a0, a1))))\n",
    "decl":
    "export const main: Effect.Effect<void, never> = Effect.scoped(Effect.flatMap(Scope.make(\"parallel\"), (a0) => Effect.flatMap(Effect.exit(Effect.succeed(1)), (a1) => Scope.close(a0, a1))))\n"},
   {"wellTyped": true,
@@ -260,6 +275,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.flatMap(Effect.forkChild(Effect.flatMap(Effect.yieldNowWith(0), (a0) => Effect.succeed(1)), { startImmediately: false, uninterruptible: \"inherit\" }), (a0) => Effect.flatMap(Effect.forkChild(Effect.flatMap(Effect.yieldNowWith(0), (a1) => Effect.succeed(2)), { startImmediately: false, uninterruptible: \"inherit\" }), (a1) => Effect.flatMap(Fiber.await(a1), (a2) => Fiber.await(a1))))",
+   "declInferred":
+   "export const main = Effect.flatMap(Effect.forkChild(Effect.flatMap(Effect.yieldNowWith(0), (a0) => Effect.succeed(1)), { startImmediately: false, uninterruptible: \"inherit\" }), (a0) => Effect.flatMap(Effect.forkChild(Effect.flatMap(Effect.yieldNowWith(0), (a1) => Effect.succeed(2)), { startImmediately: false, uninterruptible: \"inherit\" }), (a1) => Effect.flatMap(Fiber.await(a1), (a2) => Fiber.await(a1))))\n",
    "decl":
    "export const main: Effect.Effect<Exit.Exit<number, never>, never> = Effect.flatMap(Effect.forkChild(Effect.flatMap(Effect.yieldNowWith(0), (a0) => Effect.succeed(1)), { startImmediately: false, uninterruptible: \"inherit\" }), (a0) => Effect.flatMap(Effect.forkChild(Effect.flatMap(Effect.yieldNowWith(0), (a1) => Effect.succeed(2)), { startImmediately: false, uninterruptible: \"inherit\" }), (a1) => Effect.flatMap(Fiber.await(a1), (a2) => Fiber.await(a1))))\n"},
   {"wellTyped": true,
@@ -281,6 +298,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Effect.scoped(Effect.acquireRelease(Effect.succeed(7), (a1, a2) => Ref.set(a0, a1))), (a1) => Ref.get(a0)))",
+   "declInferred":
+   "export const main = Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Effect.scoped(Effect.acquireRelease(Effect.succeed(7), (a1, a2) => Ref.set(a0, a1))), (a1) => Ref.get(a0)))\n",
    "decl":
    "export const main: Effect.Effect<number, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Effect.scoped(Effect.acquireRelease(Effect.succeed(7), (a1, a2) => Ref.set(a0, a1))), (a1) => Ref.get(a0)))\n"},
   {"wellTyped": true,
@@ -328,6 +347,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Effect.scoped(Effect.forkChild(Effect.acquireRelease(Effect.succeed(7), (a1, a2) => Ref.set(a0, a1)), { startImmediately: false, uninterruptible: \"inherit\" })), (a1) => Effect.flatMap(Fiber.await(a1), (a2) => Ref.get(a0))))",
+   "declInferred":
+   "export const main = Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Effect.scoped(Effect.forkChild(Effect.acquireRelease(Effect.succeed(7), (a1, a2) => Ref.set(a0, a1)), { startImmediately: false, uninterruptible: \"inherit\" })), (a1) => Effect.flatMap(Fiber.await(a1), (a2) => Ref.get(a0))))\n",
    "decl":
    "export const main: Effect.Effect<number, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Effect.scoped(Effect.forkChild(Effect.acquireRelease(Effect.succeed(7), (a1, a2) => Ref.set(a0, a1)), { startImmediately: false, uninterruptible: \"inherit\" })), (a1) => Effect.flatMap(Fiber.await(a1), (a2) => Ref.get(a0))))\n"},
   {"wellTyped": true,
@@ -360,6 +381,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.provide(Effect.service(Context.Service<number>(\"k4_4\")), Layer.effect(Context.Service<number>(\"k4_4\"), Effect.succeed(7)))",
+   "declInferred":
+   "export const main = Effect.provide(Effect.service(Context.Service<number>(\"k4_4\")), Layer.effect(Context.Service<number>(\"k4_4\"), Effect.succeed(7)))\n",
    "decl":
    "export const main: Effect.Effect<number, never> = Effect.provide(Effect.service(Context.Service<number>(\"k4_4\")), Layer.effect(Context.Service<number>(\"k4_4\"), Effect.succeed(7)))\n"},
   {"wellTyped": true,
@@ -442,6 +465,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.flatMap(Ref.make(0), (a0) => Effect.provideService(Effect.flatMap(Effect.scoped(Effect.provide(Effect.service(Context.Service<number>(\"k5_4\")), Layer.merge(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.acquireRelease(Effect.succeed(1), (a1, a2) => Ref.update(a0, incr)))), Layer.effect(Context.Service<number>(\"k5_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.acquireRelease(Effect.succeed(1), (a1, a2) => Ref.update(a0, incr))))))), (a1) => Ref.get(a0)), Context.Service<Ref.Ref<number>>(\"k6_7\"), a0))",
+   "declInferred":
+   "export const main = Effect.flatMap(Ref.make(0), (a0) => Effect.provideService(Effect.flatMap(Effect.scoped(Effect.provide(Effect.service(Context.Service<number>(\"k5_4\")), Layer.merge(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.acquireRelease(Effect.succeed(1), (a1, a2) => Ref.update(a0, incr)))), Layer.effect(Context.Service<number>(\"k5_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.acquireRelease(Effect.succeed(1), (a1, a2) => Ref.update(a0, incr))))))), (a1) => Ref.get(a0)), Context.Service<Ref.Ref<number>>(\"k6_7\"), a0))\n",
    "decl":
    "export const main: Effect.Effect<number, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.provideService(Effect.flatMap(Effect.scoped(Effect.provide(Effect.service(Context.Service<number>(\"k5_4\")), Layer.merge(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.acquireRelease(Effect.succeed(1), (a1, a2) => Ref.update(a0, incr)))), Layer.effect(Context.Service<number>(\"k5_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.acquireRelease(Effect.succeed(1), (a1, a2) => Ref.update(a0, incr))))))), (a1) => Ref.get(a0)), Context.Service<Ref.Ref<number>>(\"k6_7\"), a0))\n"},
   {"wellTyped": true,
@@ -518,6 +543,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.flatMap(Ref.make(0), (a0) => Effect.provideService(Effect.flatMap(Effect.provide(Effect.service(Context.Service<number>(\"k4_4\")), Layer.merge(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))), Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))))), (a1) => Ref.get(a0)), Context.Service<Ref.Ref<number>>(\"k6_7\"), a0))",
+   "declInferred":
+   "export const main = Effect.flatMap(Ref.make(0), (a0) => Effect.provideService(Effect.flatMap(Effect.provide(Effect.service(Context.Service<number>(\"k4_4\")), Layer.merge(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))), Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))))), (a1) => Ref.get(a0)), Context.Service<Ref.Ref<number>>(\"k6_7\"), a0))\n",
    "decl":
    "export const main: Effect.Effect<number, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.provideService(Effect.flatMap(Effect.provide(Effect.service(Context.Service<number>(\"k4_4\")), Layer.merge(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))), Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))))), (a1) => Ref.get(a0)), Context.Service<Ref.Ref<number>>(\"k6_7\"), a0))\n"},
   {"wellTyped": true,
@@ -569,6 +596,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.flatMap(Ref.make(0), (a0) => Effect.provideService(Effect.flatMap(Effect.provide(Effect.provide(Effect.provide(Effect.service(Context.Service<number>(\"k4_4\")), L_1_0_0_0), L_1_0_0_0), Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5))))), (a1) => Ref.get(a0)), Context.Service<Ref.Ref<number>>(\"k6_7\"), a0))",
+   "declInferred":
+   "export const L_1_0_0_0 = Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5))))\nexport const main = Effect.flatMap(Ref.make(0), (a0) => Effect.provideService(Effect.flatMap(Effect.provide(Effect.provide(Effect.provide(Effect.service(Context.Service<number>(\"k4_4\")), L_1_0_0_0), L_1_0_0_0), L_1_0_0_0), (a1) => Ref.get(a0)), Context.Service<Ref.Ref<number>>(\"k6_7\"), a0))\n",
    "decl":
    "export const L_1_0_0_0 = Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5))))\nexport const main: Effect.Effect<number, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.provideService(Effect.flatMap(Effect.provide(Effect.provide(Effect.provide(Effect.service(Context.Service<number>(\"k4_4\")), L_1_0_0_0), L_1_0_0_0), L_1_0_0_0), (a1) => Ref.get(a0)), Context.Service<Ref.Ref<number>>(\"k6_7\"), a0))\n"},
   {"wellTyped": true,
@@ -662,6 +691,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.flatMap(Ref.make(0), (a0) => Effect.provideService(Effect.flatMap(Effect.provide(Effect.service(Context.Service<number>(\"k7_4\")), Layer.mergeAll(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))), Layer.effect(Context.Service<number>(\"k5_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))), Layer.effect(Context.Service<number>(\"k7_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))))), (a1) => Ref.get(a0)), Context.Service<Ref.Ref<number>>(\"k6_7\"), a0))",
+   "declInferred":
+   "export const main = Effect.flatMap(Ref.make(0), (a0) => Effect.provideService(Effect.flatMap(Effect.provide(Effect.service(Context.Service<number>(\"k7_4\")), Layer.mergeAll(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))), Layer.effect(Context.Service<number>(\"k5_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))), Layer.effect(Context.Service<number>(\"k7_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))))), (a1) => Ref.get(a0)), Context.Service<Ref.Ref<number>>(\"k6_7\"), a0))\n",
    "decl":
    "export const main: Effect.Effect<number, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.provideService(Effect.flatMap(Effect.provide(Effect.service(Context.Service<number>(\"k7_4\")), Layer.mergeAll(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))), Layer.effect(Context.Service<number>(\"k5_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))), Layer.effect(Context.Service<number>(\"k7_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5)))))), (a1) => Ref.get(a0)), Context.Service<Ref.Ref<number>>(\"k6_7\"), a0))\n"},
   {"wellTyped": true,
@@ -688,6 +719,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.flatMap(Effect.scoped(Effect.acquireRelease(Host.acquire(), (a0, a1) => Host.close(a0))), (a0) => Effect.flatMap(Host.read(a0), (a1) => Effect.succeed(pair(a0, a1))))",
+   "declInferred":
+   "export const main = Effect.flatMap(Effect.scoped(Effect.acquireRelease(Host.acquire(), (a0, a1) => Host.close(a0))), (a0) => Effect.flatMap(Host.read(a0), (a1) => Effect.succeed(pair(a0, a1))))\n",
    "decl":
    "export const main: Effect.Effect<readonly [Host.Resource, number], never> = Effect.flatMap(Effect.scoped(Effect.acquireRelease(Host.acquire(), (a0, a1) => Host.close(a0))), (a0) => Effect.flatMap(Host.read(a0), (a1) => Effect.succeed(pair(a0, a1))))\n"},
   {"wellTyped": true,
@@ -719,6 +752,7 @@
    "name": "pFailTagged",
    "exprRefusal": null,
    "expr": "Effect.fail(pair(\"SqlError\", \"boom\"))",
+   "declInferred": "export const main = Effect.fail(pair(\"SqlError\", \"boom\"))\n",
    "decl":
    "export const main: Effect.Effect<never, readonly [\"SqlError\", \"boom\"]> = Effect.fail(pair(\"SqlError\", \"boom\"))\n"},
   {"wellTyped": true,
@@ -749,6 +783,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.flatMap(a0.unsafe(\"CREATE TABLE t (a INTEGER, b TEXT)\", strings()), (a1) => Effect.flatMap(a0.unsafe(\"INSERT INTO t (a, b) VALUES (?, ?)\", strings(\"7\", \"\\\"x\\\"\")), (a2) => a0.unsafe(\"SELECT a, b FROM t\", strings())))))",
+   "declInferred":
+   "export const main = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.flatMap(a0.unsafe(\"CREATE TABLE t (a INTEGER, b TEXT)\", strings()), (a1) => Effect.flatMap(a0.unsafe(\"INSERT INTO t (a, b) VALUES (?, ?)\", strings(\"7\", \"\\\"x\\\"\")), (a2) => a0.unsafe(\"SELECT a, b FROM t\", strings())))))\n",
    "decl":
    "export const main: Effect.Effect<ReadonlyArray<ReadonlyArray<readonly [string, string]>>, readonly [string, string]> = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.flatMap(a0.unsafe(\"CREATE TABLE t (a INTEGER, b TEXT)\", strings()), (a1) => Effect.flatMap(a0.unsafe(\"INSERT INTO t (a, b) VALUES (?, ?)\", strings(\"7\", \"\\\"x\\\"\")), (a2) => a0.unsafe(\"SELECT a, b FROM t\", strings())))))\n"},
   {"wellTyped": true,
@@ -774,6 +810,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.flatMap(Kv.make(), (a0) => Effect.flatMap(a0.set(\"k\", \"1\"), (a1) => Effect.flatMap(a0.get(\"k\"), (a2) => Effect.flatMap(a0.has(\"k\"), (a3) => Effect.flatMap(a0.remove(\"k\"), (a4) => Effect.succeed(pair(a2, a3)))))))",
+   "declInferred":
+   "export const main = Effect.flatMap(Kv.make(), (a0) => Effect.flatMap(a0.set(\"k\", \"1\"), (a1) => Effect.flatMap(a0.get(\"k\"), (a2) => Effect.flatMap(a0.has(\"k\"), (a3) => Effect.flatMap(a0.remove(\"k\"), (a4) => Effect.succeed(pair(a2, a3)))))))\n",
    "decl":
    "export const main: Effect.Effect<readonly [Option.Option<string>, boolean], readonly [string, string]> = Effect.flatMap(Kv.make(), (a0) => Effect.flatMap(a0.set(\"k\", \"1\"), (a1) => Effect.flatMap(a0.get(\"k\"), (a2) => Effect.flatMap(a0.has(\"k\"), (a3) => Effect.flatMap(a0.remove(\"k\"), (a4) => Effect.succeed(pair(a2, a3)))))))\n"},
   {"wellTyped": true,
@@ -808,6 +846,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => a0.unsafe(\"SELECT a FROM missing\", strings())))",
+   "declInferred":
+   "export const main = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => a0.unsafe(\"SELECT a FROM missing\", strings())))\n",
    "decl":
    "export const main: Effect.Effect<ReadonlyArray<ReadonlyArray<readonly [string, string]>>, readonly [string, string]> = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => a0.unsafe(\"SELECT a FROM missing\", strings())))\n"},
   {"wellTyped": true,
@@ -829,6 +869,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.catchCause(Effect.flatMap(a0.unsafe(\"SELECT a FROM missing\", strings()), (a1) => Effect.succeed(\"rows\")), (a1) => Effect.succeed(\"recovered\"))))",
+   "declInferred":
+   "export const main = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.catchCause(Effect.flatMap(a0.unsafe(\"SELECT a FROM missing\", strings()), (a1) => Effect.succeed(\"rows\")), (a1) => Effect.succeed(\"recovered\"))))\n",
    "decl":
    "export const main: Effect.Effect<string, never> = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.catchCause(Effect.flatMap(a0.unsafe(\"SELECT a FROM missing\", strings()), (a1) => Effect.succeed(\"rows\")), (a1) => Effect.succeed(\"recovered\"))))\n"},
   {"wellTyped": true,
@@ -868,6 +910,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.exit(a0.unsafe(\"SELECT a FROM missing\", strings()))))",
+   "declInferred":
+   "export const main = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.exit(a0.unsafe(\"SELECT a FROM missing\", strings()))))\n",
    "decl":
    "export const main: Effect.Effect<Exit.Exit<ReadonlyArray<ReadonlyArray<readonly [string, string]>>, readonly [string, string]>, never> = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.exit(a0.unsafe(\"SELECT a FROM missing\", strings()))))\n"},
   {"wellTyped": true,
@@ -912,6 +956,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.provide(Effect.service(Context.Service<number>(\"k8_4\")), Layer.orDie(Layer.effect(Context.Service<number>(\"k8_4\"), Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.flatMap(a0.unsafe(\"SELECT a FROM missing\", strings()), (a1) => Effect.succeed(1))))))",
+   "declInferred":
+   "export const main = Effect.provide(Effect.service(Context.Service<number>(\"k8_4\")), Layer.orDie(Layer.effect(Context.Service<number>(\"k8_4\"), Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.flatMap(a0.unsafe(\"SELECT a FROM missing\", strings()), (a1) => Effect.succeed(1))))))\n",
    "decl":
    "export const main: Effect.Effect<number, never> = Effect.provide(Effect.service(Context.Service<number>(\"k8_4\")), Layer.orDie(Layer.effect(Context.Service<number>(\"k8_4\"), Effect.flatMap(Effect.acquireRelease(Sql.open(\":memory:\"), (a0, a1) => Sql.close(a0)), (a0) => Effect.flatMap(a0.unsafe(\"SELECT a FROM missing\", strings()), (a1) => Effect.succeed(1))))))\n"},
   {"wellTyped": true,
@@ -936,6 +982,7 @@
    "name": "pFailText",
    "exprRefusal": null,
    "expr": "Effect.fail(\"lost\")",
+   "declInferred": "export const main = Effect.fail(\"lost\")\n",
    "decl": "export const main: Effect.Effect<never, string> = Effect.fail(\"lost\")\n"},
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "string", "answer": "never"},
@@ -959,6 +1006,7 @@
    "name": "pFailBoomText",
    "exprRefusal": null,
    "expr": "Effect.fail(\"boom\")",
+   "declInferred": "export const main = Effect.fail(\"boom\")\n",
    "decl": "export const main: Effect.Effect<never, string> = Effect.fail(\"boom\")\n"},
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
@@ -995,6 +1043,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.provide(Effect.service(Context.Service<number>(\"k4_4\")), Layer.orDie(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.fail(\"lost\"), (a0) => Effect.succeed(1)))))",
+   "declInferred":
+   "export const main = Effect.provide(Effect.service(Context.Service<number>(\"k4_4\")), Layer.orDie(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.fail(\"lost\"), (a0) => Effect.succeed(1)))))\n",
    "decl":
    "export const main: Effect.Effect<number, never> = Effect.provide(Effect.service(Context.Service<number>(\"k4_4\")), Layer.orDie(Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.fail(\"lost\"), (a0) => Effect.succeed(1)))))\n"},
   {"wellTyped": true,
@@ -1014,6 +1064,7 @@
    "name": "pCatchError",
    "exprRefusal": null,
    "expr": "Effect.catch(Effect.fail(7), (a0) => Effect.succeed(a0))",
+   "declInferred": "export const main = Effect.catch(Effect.fail(7), (a0) => Effect.succeed(a0))\n",
    "decl":
    "export const main: Effect.Effect<number, never> = Effect.catch(Effect.fail(7), (a0) => Effect.succeed(a0))\n"},
   {"wellTyped": true,
@@ -1034,6 +1085,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(7), Cause.combine(Cause.die(3), Cause.fail(9)))), (a0) => eq(a0, 7), (a0) => Effect.succeed(a0), undefined)",
+   "declInferred":
+   "export const main = Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(7), Cause.combine(Cause.die(3), Cause.fail(9)))), (a0) => eq(a0, 7), (a0) => Effect.succeed(a0), undefined)\n",
    "decl":
    "export const main: Effect.Effect<number, number> = Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(7), Cause.combine(Cause.die(3), Cause.fail(9)))), (a0) => eq(a0, 7), (a0) => Effect.succeed(a0), undefined)\n"},
   {"wellTyped": true,
@@ -1063,6 +1116,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(7), Cause.combine(Cause.die(3), Cause.fail(9)))), (a0) => eq(a0, 9), (a0) => Effect.succeed(a0), undefined)",
+   "declInferred":
+   "export const main = Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(7), Cause.combine(Cause.die(3), Cause.fail(9)))), (a0) => eq(a0, 9), (a0) => Effect.succeed(a0), undefined)\n",
    "decl":
    "export const main: Effect.Effect<number, number> = Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(7), Cause.combine(Cause.die(3), Cause.fail(9)))), (a0) => eq(a0, 9), (a0) => Effect.succeed(a0), undefined)\n"},
   {"wellTyped": true,
@@ -1083,6 +1138,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.flatMap(Ref.make(1), (a0) => Effect.catchCause(Effect.catchIf(Effect.flatMap(Ref.set(a0, 9), (a1) => Effect.fail(7)), (a1) => false, (a1) => Ref.get(a0), undefined), (a1) => Ref.get(a0)))",
+   "declInferred":
+   "export const main = Effect.flatMap(Ref.make(1), (a0) => Effect.catchCause(Effect.catchIf(Effect.flatMap(Ref.set(a0, 9), (a1) => Effect.fail(7)), (a1) => false, (a1) => Ref.get(a0), undefined), (a1) => Ref.get(a0)))\n",
    "decl":
    "export const main: Effect.Effect<number, never> = Effect.flatMap(Ref.make(1), (a0) => Effect.catchCause(Effect.catchIf(Effect.flatMap(Ref.set(a0, 9), (a1) => Effect.fail(7)), (a1) => false, (a1) => Ref.get(a0), undefined), (a1) => Ref.get(a0)))\n"},
   {"wellTyped": true,
@@ -1103,6 +1160,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.catchIf(Effect.flatMap(Effect.suspend(() => true ? Effect.succeed(0) : Effect.fail(\"text\")), (a0) => Effect.fail(pair(\"A\", \"m\"))), (a0) => tagIs(\"A\", a0), (a0) => Effect.succeed(1), undefined)",
+   "declInferred":
+   "export const main = Effect.catchIf(Effect.flatMap(Effect.suspend(() => true ? Effect.succeed(0) : Effect.fail(\"text\")), (a0) => Effect.fail(pair(\"A\", \"m\"))), (a0) => tagIs(\"A\", a0), (a0) => Effect.succeed(1), undefined)\n",
    "decl":
    "export const main: Effect.Effect<number, string> = Effect.catchIf(Effect.flatMap(Effect.suspend(() => true ? Effect.succeed(0) : Effect.fail(\"text\")), (a0) => Effect.fail(pair(\"A\", \"m\"))), (a0) => tagIs(\"A\", a0), (a0) => Effect.succeed(1), undefined)\n"},
   {"wellTyped": true,
@@ -1132,6 +1191,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.catchIf(Effect.flatMap(Effect.suspend(() => true ? Effect.succeed(0) : Effect.fail(\"text\")), (a0) => Effect.fail(pair(\"A\", \"m\"))), (a0) => tagIs(\"B\", a0), (a0) => Effect.succeed(1), undefined)",
+   "declInferred":
+   "export const main = Effect.catchIf(Effect.flatMap(Effect.suspend(() => true ? Effect.succeed(0) : Effect.fail(\"text\")), (a0) => Effect.fail(pair(\"A\", \"m\"))), (a0) => tagIs(\"B\", a0), (a0) => Effect.succeed(1), undefined)\n",
    "decl":
    "export const main: Effect.Effect<number, string | readonly [\"A\", \"m\"]> = Effect.catchIf(Effect.flatMap(Effect.suspend(() => true ? Effect.succeed(0) : Effect.fail(\"text\")), (a0) => Effect.fail(pair(\"A\", \"m\"))), (a0) => tagIs(\"B\", a0), (a0) => Effect.succeed(1), undefined)\n"},
   {"wellTyped": true,
@@ -1162,6 +1223,8 @@
    "exprRefusal": null,
    "expr":
    "Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(pair(\"B\", \"x\")), Cause.fail(pair(\"A\", \"m\")))), (a0) => tagIs(\"A\", a0), (a0) => Effect.succeed(1), undefined)",
+   "declInferred":
+   "export const main = Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(pair(\"B\", \"x\")), Cause.fail(pair(\"A\", \"m\")))), (a0) => tagIs(\"A\", a0), (a0) => Effect.succeed(1), undefined)\n",
    "decl":
    "export const main: Effect.Effect<number, readonly [\"B\", \"x\"]> = Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(pair(\"B\", \"x\")), Cause.fail(pair(\"A\", \"m\")))), (a0) => tagIs(\"A\", a0), (a0) => Effect.succeed(1), undefined)\n"}],
  "hostRows":

@@ -39,4 +39,4 @@ effect 4.0.0-rc.112, bun 1.3.14, deadline 300 ms
 | pTagMiss | fail [{"fail":["A","m"]}] | fail [{"fail":["A","m"]}] | yes | yes | yes | runSyncExit | same failure reasons and payloads |
 | pTagTwoFail | fail [{"fail":["B","x"]},{"fail":["A","m"]}] | fail [{"fail":["B","x"]},{"fail":["A","m"]}] | yes | yes | yes | runSyncExit | same failure reasons and payloads |
 
-PASS: 34 programs, exits and schedules agree with rc.112
+PASS: 34 programs, exits, schedules and sync exits agree with rc.112
