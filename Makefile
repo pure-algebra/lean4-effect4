@@ -221,11 +221,11 @@ doctor: ## the tools and installs every tier needs, with their versions
 # ---------------------------------------------------------------------------- checks
 
 CHECKS := roots cases native ts-reader truth target schema-codec ocaml ingest ingest-smoke \
-  host-protocol census schema-ts schema-pins schema-host compat tools
+  host-protocol census schema-ts schema-pins schema-host compat tools corpus
 .PHONY: check check-host check-full check-gen check-gen-full check-citations clean-check $(addprefix check-,$(CHECKS))
 
 check: build check-roots check-gen check-cases check-native check-citations check-ts-reader ## after every change
-check-host: check check-truth check-target check-schema-codec check-ocaml check-ingest-smoke ## per slice: the outside oracles
+check-host: check check-truth check-corpus check-target check-schema-codec check-ocaml check-ingest-smoke ## per slice: the outside oracles
 check-full: check-host check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins check-schema-host ## everything
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
@@ -285,6 +285,21 @@ $(CHK)/ts-reader: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) $(TR
 $(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py | harness/truth/node_modules
 	$(PY) scripts/check-truth.py
 	@mkdir -p $(CHK) && touch $@
+
+# The corpus lanes: every program of the generated corpus (Test/Program/Gen.lean, 400 at
+# depth 4) printed, run on rc.112 and type-checked, its rc.112 exit compared with the machine's
+# and its tsc type with Lean's, one row per program in harness/truth/corpus-results.tsv (the
+# committed expected file; `make gen-corpus-results` promotes a fresh run). The work
+# directory is harness/truth/corpus-check (ignored), beside the prelude the modules import.
+CORPUS_LANE := scripts/check-corpus.py scripts/lib/truth_host.py tools/target/corpus.ts tools/target/oracle.ts tools/target/profile.ts \
+  harness/truth/corpus-results.tsv harness/truth/corpus-known-differences.md Test/fixtures/target/selection.json
+$(CHK)/corpus: $(CORE) $(LAWS) .lake/build/lib/lean/Test/Program/Gen.trace $(TRUTH_SOURCES) $(CORPUS_LANE) ts/eff/node_modules | build harness/truth/node_modules
+	$(PY) scripts/check-corpus.py
+	@mkdir -p $(CHK) && touch $@
+
+.PHONY: gen-corpus-results
+gen-corpus-results: | build harness/truth/node_modules ## promote a fresh corpus run to harness/truth/corpus-results.tsv
+	$(PY) scripts/check-corpus.py --promote
 
 # T0: the printed programs' answer, error and requirement types against the pinned
 # TypeScript compiler (tools/target). The oracle reads the truth modules and their
@@ -382,7 +397,7 @@ help: ## this list
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 	@echo
 	@echo '  check-<name>       one check: roots, cases, native, ts-reader, truth, target, schema-codec,'
-	@echo '                     ocaml, ingest, ingest-smoke, host-protocol, census, schema-ts,'
+	@echo '                     ocaml, ingest, ingest-smoke, host-protocol, census, schema-ts, corpus,'
 	@echo '                     schema-pins, schema-host, compat, tools'
 	@echo '                     (each skipped while its inputs are unchanged; -B forces)'
 	@echo '  gen-<group>        one generated group: derived, specs, eff, wire, cas, ts, readme, lcnf,'

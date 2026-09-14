@@ -1,0 +1,401 @@
+name	straight	wellTyped	tsc	run	lean	host	types	note
+g0	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g1	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g2	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g3	no	yes	clean	agree	success null	success null	agree	same value
+g4	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g5	yes	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g6	no	no	clean	untyped	{"failure":{"reasons":[{"fail":{"boom":null}}]}}	not run	untyped	
+g7	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g8	no	no	clean	untyped	{"success":null}	not run	untyped	
+g9	no	no	clean	untyped	{"success":"hi"}	not run	untyped	
+g10	no	no	clean	untyped	{"success":{"failure":{"reasons":[{"die":"badName"}]}}}	not run	untyped	
+g11	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	refused	same failure reasons and payloads
+g12	no	no	clean	untyped	{"failure":{"reasons":[{"fail":{"boom":null}}]}}	not run	untyped	
+g13	no	no	clean	untyped	{"success":null}	not run	untyped	
+g14	no	no	clean	untyped	{"success":{"fiber":1}}	not run	untyped	
+g15	no	yes	clean	agree	success {"fiber":1}	success {"fiber":1}	agree	same value
+g16	yes	yes	clean	agree	success null	success null	agree	same value
+g17	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g18	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g19	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g20	yes	yes	errors	host-load-error	fail [{"fail":19}]	main is not an Effect (number)	refused	
+g21	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	refused	same failure reasons and payloads
+g22	no	no	clean	untyped	{"success":null}	not run	untyped	
+g23	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g24	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g25	yes	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g26	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g27	yes	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g28	no	no	clean	untyped	{"success":null}	not run	untyped	
+g29	yes	no	clean	untyped	{"failure":{"reasons":[{"fail":{"boom":null}}]}}	not run	untyped	
+g30	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g31	yes	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g32	no	no	clean	untyped	{"success":null}	not run	untyped	
+g33	yes	yes	clean	agree	fail [{"fail":10}]	fail [{"fail":10}]	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
+g34	no	no	clean	untyped	{"failure":{"reasons":[{"fail":{"boom":null}}]}}	not run	untyped	
+g35	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g36	no	no	clean	untyped	{"success":{"fiber":3}}	not run	untyped	
+g37	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g38	no	yes	errors	agree	success {"context":true}	success {"context":true}	refused	same value
+g39	no	no	clean	untyped	{"success":{"fiber":1}}	not run	untyped	
+g40	no	no	clean	untyped	{"success":0}	not run	untyped	
+g41	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g42	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g43	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g44	yes	yes	clean	agree	interrupt [{"interrupt":null}]	interrupt [{"interrupt":null}]	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
+g45	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g46	no	no	clean	untyped	{"success":null}	not run	untyped	
+g47	no	no	clean	untyped	{"success":null}	not run	untyped	
+g48	no	no	clean	untyped	{"success":null}	not run	untyped	
+g49	yes	yes	clean	agree	fail [{"fail":12}]	fail [{"fail":12}]	agree	same failure reasons and payloads
+g50	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	refused	same failure reasons and payloads
+g51	no	no	clean	untyped	{"success":null}	not run	untyped	
+g52	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"},{"die":"missingService"}]}}	not run	untyped	
+g53	no	yes	clean	schedule-differs	success {"fiber":1}	success {"fiber":1}	agree	same value; schedule differ at row 1: Lean "forked 0 1", rc.112 "started 1"
+g54	no	yes	clean	agree	success {"fiber":1}	success {"fiber":1}	agree	same value
+g55	yes	yes	clean	agree	success null	success null	agree	same value
+g56	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g57	yes	yes	clean	agree	success 11	success 11	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same value
+g58	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"},{"die":"badName"}]}}	not run	untyped	
+g59	yes	yes	clean	agree	success 11	success 11	agree	same value
+g60	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g61	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g62	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"},{"die":"badName"}]}}	not run	untyped	
+g63	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g64	no	no	clean	untyped	{"success":null}	not run	untyped	
+g65	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g66	no	yes	clean	agree	success null	success null	agree	same value
+g67	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g68	yes	yes	clean	agree	fail [{"fail":10}]	fail [{"fail":10}]	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
+g69	no	yes	errors	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	refused	same failure reasons and payloads
+g70	yes	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g71	no	no	clean	untyped	{"success":null}	not run	untyped	
+g72	yes	yes	clean	agree	fail [{"fail":1}]	fail [{"fail":1}]	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
+g73	yes	yes	clean	agree	success {"success":"hi"}	success {"success":"hi"}	agree	same value
+g74	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	refused	same failure reasons and payloads
+g75	no	yes	clean	agree	success 9	success 9	agree	same value
+g76	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"},{"die":"badName"}]}}	not run	untyped	
+g77	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g78	no	yes	clean	schedule-differs	success {"fiber":1}	success {"fiber":1}	agree	same value; schedule differ at row 4: Lean "ran 1", rc.112 "∅"
+g79	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g80	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g81	no	yes	clean	differ	success 0	success 1	agree	same kind, values differ; runFork entry disagrees too: same kind, values differ
+g82	no	no	clean	untyped	{"success":{"fiber":1}}	not run	untyped	
+g83	yes	yes	errors	host-load-error	fail [{"fail":4}]	main is not an Effect (number)	refused	
+g84	no	no	clean	untyped	{"success":{"fiber":1}}	not run	untyped	
+g85	no	no	clean	untyped	{"success":null}	not run	untyped	
+g86	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g87	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g88	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g89	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	refused	same failure reasons and payloads
+g90	no	no	clean	untyped	{"success":4}	not run	untyped	
+g91	no	no	clean	untyped	{"success":{"fiber":2}}	not run	untyped	
+g92	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g93	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g94	yes	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g95	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g96	yes	yes	clean	agree	success 14	success 14	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same value
+g97	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g98	no	no	clean	untyped	{"failure":{"reasons":[{"die":{"user":2}},{"die":"badName"}]}}	not run	untyped	
+g99	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g100	yes	yes	clean	agree	success 14	success 14	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same value
+g101	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g102	no	yes	clean	differ	success {"fiber":5}	success {"fiber":2}	agree	same kind, values differ; runFork entry disagrees too: same kind, values differ; schedule differ at row 4: Lean "started 3", rc.112 "exited 2 die"
+g103	no	no	clean	untyped	{"success":{"failure":{"reasons":[{"fail":{"boom":null}}]}}}	not run	untyped	
+g104	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g105	no	yes	clean	agree	success null	success null	agree	same value
+g106	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g107	yes	no	clean	untyped	{"failure":{"reasons":[{"fail":{"boom":null}}]}}	not run	untyped	
+g108	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g109	no	yes	clean	agree	success null	success null	agree	same value
+g110	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g111	yes	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g112	no	no	clean	untyped	{"success":null}	not run	untyped	
+g113	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	refused	same failure reasons and payloads
+g114	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g115	no	no	clean	untyped	{"success":{"fiber":2}}	not run	untyped	
+g116	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g117	no	yes	clean	schedule-differs	success {"fiber":1}	success {"fiber":1}	agree	runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success {"fiber":1}; same value; schedule differ at row 1: Lean "forked 0 1", rc.112 "started 1"
+g118	no	yes	clean	agree	success 12	success 12	agree	same value
+g119	no	no	clean	untyped	{"success":{"fiber":4}}	not run	untyped	
+g120	no	yes	errors	differ	die [{"die":"missingService"}]	die [{"die":{"error":"Fiber.runLoop: Not a valid effect: (self) => body(self, ...arguments)"}}]	refused	represented-defect cause differs; runFork entry disagrees too: represented-defect cause differs
+g121	no	yes	clean	schedule-differs	success {"fiber":1}	success {"fiber":1}	agree	same value; schedule differ at row 1: Lean "forked 0 1", rc.112 "started 1"
+g122	yes	yes	errors	host-load-error	fail [{"fail":15}]	main is not an Effect (number)	refused	
+g123	no	yes	errors	schedule-differs	success {"fiber":1}	success {"fiber":1}	refused	same value; schedule differ at row 1: Lean "forked 0 1", rc.112 "started 1"
+g124	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g125	no	no	clean	untyped	{"success":{"failure":{"reasons":[{"die":"missingService"}]}}}	not run	untyped	
+g126	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g127	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g128	no	no	clean	untyped	{"failure":{"reasons":[{"fail":8}]}}	not run	untyped	
+g129	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g130	no	yes	clean	schedule-differs	success {"fiber":1}	success {"fiber":1}	agree	same value; schedule differ at row 2: Lean "started 0", rc.112 "started 1"
+g131	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g132	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g133	yes	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g134	no	no	clean	untyped	{"success":null}	not run	untyped	
+g135	yes	yes	clean	agree	fail [{"fail":18}]	fail [{"fail":18}]	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
+g136	no	yes	clean	agree	success {"success":null}	success {"success":null}	agree	same value
+g137	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	refused	same failure reasons and payloads
+g138	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g139	yes	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g140	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"},{"die":"missingService"}]}}	not run	untyped	
+g141	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g142	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"},{"fail":"hi"}]}}	not run	untyped	
+g143	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g144	no	yes	clean	differ	success 0	success 1	agree	same kind, values differ; runFork entry disagrees too: same kind, values differ
+g145	no	yes	errors	schedule-differs	success {"fiber":1}	success {"fiber":1}	refused	same value; schedule differ at row 2: Lean "started 0", rc.112 "started 1"
+g146	yes	yes	errors	host-load-error	fail [{"fail":9}]	main is not an Effect (number)	refused	
+g147	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g148	no	yes	clean	agree	success null	success null	agree	same value
+g149	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g150	yes	yes	clean	agree	interrupt [{"interrupt":null}]	interrupt [{"interrupt":null}]	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
+g151	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g152	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g153	no	no	clean	untyped	{"success":15}	not run	untyped	
+g154	no	no	clean	untyped	{"success":{"success":{"fiber":1}}}	not run	untyped	
+g155	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g156	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g157	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g158	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g159	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	refused	same failure reasons and payloads
+g160	no	yes	clean	schedule-differs	success {"fiber":1}	success {"fiber":1}	agree	same value; schedule differ at row 1: Lean "forked 0 1", rc.112 "started 1"
+g161	yes	yes	clean	agree	success 19	success 19	agree	same value
+g162	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g163	yes	yes	clean	agree	success 19	success 19	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same value
+g164	no	no	clean	untyped	{"success":null}	not run	untyped	
+g165	no	no	clean	untyped	{"success":19}	not run	untyped	
+g166	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g167	no	no	clean	untyped	{"failure":{"reasons":[{"fail":6}]}}	not run	untyped	
+g168	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g169	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g170	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g171	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g172	no	yes	clean	agree	success null	success null	agree	same value
+g173	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g174	yes	yes	clean	agree	fail [{"fail":9}]	fail [{"fail":9}]	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
+g175	no	yes	clean	agree	success {"success":null}	success {"success":null}	agree	same value
+g176	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	refused	same failure reasons and payloads
+g177	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g178	yes	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g179	yes	yes	clean	agree	success {"success":6}	success {"success":6}	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same value
+g180	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	refused	same failure reasons and payloads
+g181	no	yes	clean	agree	success 12	success 12	agree	same value
+g182	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g183	no	yes	errors	agree	success {"context":true}	success {"context":true}	refused	same value
+g184	no	yes	clean	schedule-differs	success {"fiber":1}	success {"fiber":1}	agree	same value; schedule differ at row 2: Lean "started 0", rc.112 "started 1"
+g185	yes	yes	errors	host-load-error	fail [{"fail":12}]	main is not an Effect (number)	refused	
+g186	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g187	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g188	no	no	clean	untyped	{"success":{"fiber":1}}	not run	untyped	
+g189	yes	yes	errors	host-load-error	fail [{"fail":0}]	main is not an Effect (number)	refused	
+g190	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g191	no	no	clean	untyped	{"success":null}	not run	untyped	
+g192	no	no	clean	untyped	{"success":null}	not run	untyped	
+g193	no	yes	errors	differ	success {"fiber":1}	die [{"die":{"error":"Fiber.runLoop: Not a valid effect: (self) => body(self, ...arguments)"}}]	refused	kind: Lean success, rc.112 die; runFork entry disagrees too: kind: Lean success, rc.112 die; schedule differ at row 1: Lean "started 1", rc.112 "exited 0 die"
+g194	no	no	clean	untyped	{"success":null}	not run	untyped	
+g195	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g196	yes	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g197	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g198	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g199	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	agree	same failure reasons and payloads
+g200	yes	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g201	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g202	yes	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g203	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g204	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g205	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g206	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g207	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"},{"die":"missingService"}]}}	not run	untyped	
+g208	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g209	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g210	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g211	no	yes	clean	agree	success null	success null	agree	same value
+g212	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g213	yes	yes	clean	agree	fail [{"fail":0}]	fail [{"fail":0}]	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
+g214	no	no	clean	untyped	{"success":{"fiber":1}}	not run	untyped	
+g215	no	no	clean	untyped	{"success":null}	not run	untyped	
+g216	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g217	yes	yes	clean	agree	interrupt [{"interrupt":null}]	interrupt [{"interrupt":null}]	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
+g218	yes	yes	clean	agree	success {"success":false}	success {"success":false}	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same value
+g219	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	refused	same failure reasons and payloads
+g220	no	yes	clean	agree	success false	success false	agree	same value
+g221	no	no	clean	untyped	{"success":{"fiber":3}}	not run	untyped	
+g222	no	yes	clean	agree	success 3	success 3	agree	same value
+g223	no	yes	clean	schedule-differs	success {"fiber":1}	success {"fiber":1}	agree	same value; schedule differ at row 2: Lean "started 0", rc.112 "parked 0"
+g224	yes	yes	clean	agree	success 3	success 3	agree	same value
+g225	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g226	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g227	no	no	clean	untyped	{"success":{"fiber":1}}	not run	untyped	
+g228	yes	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g229	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g230	no	no	clean	untyped	{"success":true}	not run	untyped	
+g231	no	no	clean	untyped	{"success":{"fiber":1}}	not run	untyped	
+g232	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g233	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g234	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g235	no	yes	clean	agree	success null	success null	agree	same value
+g236	no	yes	clean	agree	success {"fiber":1}	success {"fiber":1}	agree	same value
+g237	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g238	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	agree	same failure reasons and payloads
+g239	yes	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g240	no	no	clean	untyped	{"success":null}	not run	untyped	
+g241	yes	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g242	yes	yes	clean	differ	success {"failure":{"reasons":[{"die":"badName"}]}}	success {"failure":{"reasons":[{"die":{"error":"hi"}}]}}	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same kind, values differ; runFork entry disagrees too: same kind, values differ
+g243	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	refused	same failure reasons and payloads
+g244	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g245	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g246	no	no	clean	untyped	{"success":{"fiber":1}}	not run	untyped	
+g247	no	yes	clean	schedule-differs	success {"fiber":1}	success {"fiber":1}	agree	same value; runFork entry disagrees too: same kind, values differ; schedule differ at row 2: Lean "ran 0", rc.112 "∅"
+g248	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g249	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g250	no	yes	clean	differ	success 0	success 1	agree	same kind, values differ; runFork entry disagrees too: same kind, values differ
+g251	no	no	clean	untyped	{"success":{"fiber":1}}	not run	untyped	
+g252	yes	yes	errors	host-load-error	fail [{"fail":16}]	main is not an Effect (number)	refused	
+g253	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g254	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g255	no	no	clean	untyped	{"failure":{"reasons":[{"fail":{"boom":null}}]}}	not run	untyped	
+g256	yes	yes	clean	agree	interrupt [{"interrupt":null}]	interrupt [{"interrupt":null}]	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
+g257	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g258	no	no	clean	untyped	{"success":null}	not run	untyped	
+g259	no	no	clean	untyped	{"success":{"fiber":1}}	not run	untyped	
+g260	no	yes	clean	agree	success null	success null	agree	same value
+g261	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g262	no	no	clean	untyped	{"success":{"fiber":1}}	not run	untyped	
+g263	yes	yes	clean	agree	success 7	success 7	agree	same value
+g264	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g265	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g266	no	no	clean	untyped	{"success":{"fiber":1}}	not run	untyped	
+g267	yes	yes	clean	agree	success "hi"	success "hi"	agree	same value
+g268	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g269	yes	yes	clean	agree	success "hi"	success "hi"	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same value
+g270	no	no	clean	untyped	{"success":{"success":true}}	not run	untyped	
+g271	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g272	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g273	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g274	no	yes	clean	agree	success null	success null	agree	same value
+g275	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g276	no	yes	errors	agree	success {"context":true}	success {"context":true}	refused	same value
+g277	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g278	no	yes	clean	agree	success null	success null	agree	same value
+g279	no	no	clean	untyped	{"success":null}	not run	untyped	
+g280	yes	no	clean	untyped	{"failure":{"reasons":[{"fail":{"boom":null}}]}}	not run	untyped	
+g281	yes	no	clean	untyped	{"success":{"failure":{"reasons":[{"die":"badName"}]}}}	not run	untyped	
+g282	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	refused	same failure reasons and payloads
+g283	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g284	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"},{"die":"missingService"}]}}	not run	untyped	
+g285	no	no	clean	untyped	{"success":{"failure":{"reasons":[{"die":"badName"}]}}}	not run	untyped	
+g286	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	refused	same failure reasons and payloads
+g287	no	yes	clean	agree	success 12	success 12	agree	same value
+g288	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g289	no	yes	clean	differ	success 0	success 1	agree	same kind, values differ; runFork entry disagrees too: same kind, values differ
+g290	no	yes	clean	schedule-differs	success {"fiber":1}	success {"fiber":1}	refused	same value; runFork entry disagrees too: same kind, values differ; schedule differ at row 2: Lean "ran 0", rc.112 "∅"
+g291	yes	yes	errors	host-load-error	fail [{"fail":8}]	main is not an Effect (number)	refused	
+g292	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g293	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g294	no	no	clean	untyped	{"failure":{"reasons":[{"fail":{"boom":null}}]}}	not run	untyped	
+g295	yes	no	clean	untyped	{"failure":{"reasons":[{"fail":{"boom":null}}]}}	not run	untyped	
+g296	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g297	no	no	clean	untyped	{"success":true}	not run	untyped	
+g298	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g299	no	no	clean	untyped	{"success":null}	not run	untyped	
+g300	no	yes	clean	agree	fail [{"fail":17},{"fail":15}]	fail [{"fail":17},{"fail":15}]	agree	same failure reasons and payloads
+g301	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g302	yes	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g303	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g304	yes	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g305	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	agree	same failure reasons and payloads
+g306	yes	yes	clean	agree	success "hi"	success "hi"	agree	same value
+g307	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g308	yes	yes	clean	agree	success null	success null	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same value
+g309	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	refused	same failure reasons and payloads
+g310	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g311	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g312	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g313	no	yes	clean	differ	success 0	success 1	agree	same kind, values differ; runFork entry disagrees too: same kind, values differ
+g314	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g315	no	no	clean	untyped	{"success":0}	not run	untyped	
+g316	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g317	no	yes	clean	agree	success null	success null	agree	same value
+g318	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g319	yes	no	clean	untyped	{"failure":{"reasons":[{"fail":{"boom":null}}]}}	not run	untyped	
+g320	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g321	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g322	no	no	clean	untyped	{"success":0}	not run	untyped	
+g323	no	no	clean	untyped	{"success":null}	not run	untyped	
+g324	no	no	clean	untyped	{"success":{"failure":{"reasons":[{"die":"badName"}]}}}	not run	untyped	
+g325	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	refused	same failure reasons and payloads
+g326	no	no	clean	untyped	{"success":null}	not run	untyped	
+g327	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"},{"fail":17}]}}	not run	untyped	
+g328	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g329	no	no	clean	untyped	{"success":{"fiber":1}}	not run	untyped	
+g330	yes	yes	clean	agree	success "hi"	success "hi"	agree	same value
+g331	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g332	no	no	clean	untyped	{"failure":{"reasons":[{"fail":10}]}}	not run	untyped	
+g333	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g334	yes	yes	errors	host-load-error	fail [{"fail":19}]	main is not an Effect (number)	refused	
+g335	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g336	no	no	clean	untyped	{"success":null}	not run	untyped	
+g337	no	no	clean	untyped	frontier	not run	untyped	
+g338	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g339	no	no	clean	untyped	{"failure":{"reasons":[{"interrupt":null}]}}	not run	untyped	
+g340	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g341	yes	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g342	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g343	yes	no	clean	untyped	{"failure":{"reasons":[{"fail":{"boom":null}}]}}	not run	untyped	
+g344	no	yes	errors	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	refused	same failure reasons and payloads
+g345	yes	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g346	no	no	clean	untyped	{"success":null}	not run	untyped	
+g347	yes	yes	clean	agree	fail [{"fail":1}]	fail [{"fail":1}]	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
+g348	no	no	clean	untyped	{"success":{"failure":{"reasons":[{"fail":{"boom":null}}]}}}	not run	untyped	
+g349	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g350	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g351	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g352	no	yes	errors	agree	success {"context":true}	success {"context":true}	refused	same value
+g353	no	yes	clean	schedule-differs	success {"fiber":1}	success {"fiber":1}	agree	same value; schedule differ at row 1: Lean "forked 0 1", rc.112 "started 1"
+g354	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"},{"die":"badName"}]}}	not run	untyped	
+g355	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g356	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g357	no	no	clean	untyped	{"success":{"fiber":1}}	not run	untyped	
+g358	yes	yes	clean	agree	fail [{"fail":9}]	fail [{"fail":9}]	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
+g359	no	yes	clean	agree	success 10	success 10	agree	same value
+g360	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g361	no	no	clean	untyped	{"success":{"context":true}}	not run	untyped	
+g362	no	no	clean	untyped	{"success":{"fiber":1}}	not run	untyped	
+g363	no	yes	clean	agree	success null	success null	agree	same value
+g364	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g365	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g366	no	yes	clean	agree	fail [{"fail":20}]	fail [{"fail":20}]	agree	same failure reasons and payloads
+g367	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	agree	same failure reasons and payloads
+g368	no	yes	clean	schedule-differs	success {"fiber":1}	success {"fiber":1}	agree	same value; runFork entry disagrees too: same kind, values differ; schedule differ at row 2: Lean "ran 0", rc.112 "∅"
+g369	yes	yes	clean	agree	success "hi"	success "hi"	agree	same value
+g370	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g371	yes	yes	clean	agree	success 2	success 2	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same value
+g372	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g373	yes	yes	clean	agree	success 2	success 2	agree	same value
+g374	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g375	yes	yes	clean	agree	success 2	success 2	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same value
+g376	no	yes	clean	agree	success {"context":true}	success {"context":true}	refused	same value
+g377	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g378	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	
+g379	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g380	no	yes	clean	agree	success null	success null	agree	same value
+g381	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g382	yes	yes	clean	differ	die [{"die":"badName"}]	interrupt [{"interrupt":"host fiber 2"}]	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; kind: Lean die, rc.112 interrupt; runFork entry disagrees too: kind: Lean die, rc.112 interrupt; schedule differ at row 1: Lean "exited 0 die", rc.112 "exited 0 interrupt"
+g383	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g384	no	yes	clean	agree	success null	success null	agree	same value
+g385	no	no	clean	untyped	{"success":null}	not run	untyped	
+g386	yes	yes	clean	agree	fail [{"fail":13}]	fail [{"fail":13}]	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
+g387	no	no	clean	untyped	{"success":{"failure":{"reasons":[{"die":"badName"}]}}}	not run	untyped	
+g388	no	yes	clean	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	refused	same failure reasons and payloads
+g389	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g390	no	yes	errors	schedule-differs	success {"fiber":2}	success {"fiber":2}	refused	same value; schedule differ at row 2: Lean "forked 1 2", rc.112 "started 2"
+g391	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g392	no	yes	clean	agree	success {"fiber":1}	success {"fiber":1}	agree	same value
+g393	no	no	clean	untyped	{"failure":{"reasons":[{"die":{"user":1}}]}}	not run	untyped	
+g394	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g395	no	no	clean	untyped	{"failure":{"reasons":[{"die":"badName"}]}}	not run	untyped	
+g396	no	yes	clean	schedule-differs	success {"fiber":1}	success {"fiber":1}	agree	same value; schedule differ at row 1: Lean "forked 0 1", rc.112 "started 1"
+g397	yes	no	clean	untyped	{"failure":{"reasons":[{"fail":{"boom":null}}]}}	not run	untyped	
+g398	no	no	clean	untyped	{"failure":{"reasons":[{"fail":{"boom":null}}]}}	not run	untyped	
+g399	no	no	clean	untyped	{"failure":{"reasons":[{"die":"missingService"}]}}	not run	untyped	

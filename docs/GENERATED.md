@@ -82,6 +82,17 @@ per program with Lean's `wellTyped` and `readable` verdicts, so a typing or prin
 shows as a diff that names the programs it moved (DI-60), where the generator once pinned
 counts.
 
+**The corpus on rc.112 and under `tsc`.** `make check-corpus` (`scripts/check-corpus.py`) writes
+the same 400 programs' manifest with `harness/truth/Truth.lean --corpus`, prints and runs each
+on the pinned runtime with the truth runner, type-checks the printed modules, and compares
+Lean's answer, error and requirement types with the compiler's (`tools/target/corpus.ts`),
+all under `harness/truth/corpus-check/` (ignored). What is committed is one row per program,
+`harness/truth/corpus-results.tsv`: whether the program is in the straight-line fragment the
+machine agreement theorem covers, its Lean and rc.112 exits, the run outcome, the type
+outcome. A fresh run must equal it (`make gen-corpus-results` promotes), and a row that
+records a disagreement must be listed with its reason in
+`harness/truth/corpus-known-differences.md`.
+
 **Schema codec comparisons.** `make check-schema-codec` produces a temporary TypeScript
 data module from the public `Ty.encode` results for
 `Test/Codegen/SchemaGenerationContract.lean`'s representative cases

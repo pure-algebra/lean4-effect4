@@ -33,6 +33,7 @@ skills-lock.json
 /harness/truth/lean.out.log
 /harness/truth/lean.err.log
 /harness/truth/truth-check-*/
+/harness/truth/corpus-check/
 
 # The TypeScript estate (`ts/`) is tracked; its installs are not.
 /ts/**/node_modules

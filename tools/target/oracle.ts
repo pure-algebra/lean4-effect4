@@ -145,7 +145,13 @@ export function query(repoRoot: string, queries: readonly Query[], profile = "ef
       line: position ? position.line + 1 : 0, column: position ? position.character + 1 : 0,
       message: stableText(repo, ts.flattenDiagnosticMessageText(d.messageText, " ")) }
   }
-  const globals = allDiagnostics.filter(d => !d.file || !virtual.has(d.file.fileName))
+  // A diagnostic inside a query's own source refuses that query; a diagnostic anywhere else
+  // outside the virtual query files (the adapter, the package, a file no query names) refuses
+  // every query. The corpus lane queries hundreds of printed modules in one program, and one
+  // module that does not type must not refuse the others.
+  const sourceOf = new Map(queries.map(q => [resolve(repo, q.source), q.id]))
+  const inSource = allDiagnostics.filter(d => d.file && !virtual.has(d.file.fileName) && sourceOf.has(resolve(d.file.fileName)))
+  const globals = allDiagnostics.filter(d => !d.file || (!virtual.has(d.file.fileName) && !sourceOf.has(resolve(d.file.fileName))))
   const observations: Observation[] = queries.map(q => {
     const file = fileOf.get(q.id)!
     const sf = program.getSourceFile(file)
@@ -153,6 +159,8 @@ export function query(repoRoot: string, queries: readonly Query[], profile = "ef
     if (!existsSync(resolve(repo, q.source))) issues.push({ code: "missing-source", message: q.source })
     if (!sf) issues.push({ code: "missing-query-source", message: q.id })
     if (globals.length) issues.push({ code: "dependency-diagnostic", message: "Compiler diagnostics in imported inputs; see globalDiagnostics" })
+    const own = inSource.filter(d => resolve(d.file!.fileName) === resolve(repo, q.source))
+    if (own.length) issues.push({ code: "source-diagnostic", message: `${own.length} compiler diagnostic(s) in ${localPath(repo, resolve(repo, q.source))}: ${stableText(repo, ts.flattenDiagnosticMessageText(own[0]!.messageText, " "))}` })
     const columns: Observation["columns"] = {}
     const variables = new Map<string, ts.Identifier>(), aliases = new Map<string, ts.TypeAliasDeclaration>()
     const walk = (node: ts.Node) => {

@@ -7,7 +7,7 @@
  * and observable schedule with the Lean machine's. Writes `result.json` and `result.md`
  * (both GENERATED), prints the table, exits non-zero on any disagreement.
  *
- *     bun run <abs path>/harness/truth/run-truth.ts --manifest <corpus.json> [--out <dir>] [--timeout ms]
+ *     bun run <abs path>/harness/truth/run-truth.ts --manifest <corpus.json> [--out <dir>] [--timeout ms] [--only <name>]
  *
  * Effect resolves through `harness/truth/node_modules`, selected by
  * `scripts/check-truth.py` (`make check-truth`); the current working directory does not select it.
@@ -134,6 +134,9 @@ const timeoutMs = Number(option("--timeout", "300"))
 /** Where the recorded tapes go (host rows step 6): one JSON Lines file per program that
  * performed a package row, `<name>.jsonl`, beside a `.cut-from` sidecar. */
 const tapeDir = option("--tape-out", path.join(outDir, "tapes"))
+/** Run one program of the manifest only (the corpus lane isolates each program in its own
+ * process, so a printed program that loops forever on rc.112 is a timeout, not a hang). */
+const only = option("--only", "")
 
 // ---- the prelude self-test ----------------------------------------------------------
 /** Two refusals. Every case of the prelude's table must hold, and every atom the profile
@@ -358,6 +361,11 @@ const describe = (value: unknown): string => {
  * pairOf; a raw object here stays diagnostic rather than acquiring an invented Err value. */
 const defectWire = (defect: unknown): Json => {
   if (Cause.isAsyncFiberError(defect)) return "asyncFiber"
+  // A service the program asks for and nothing provides: rc.112 dies with an `Error` whose
+  // message names the key (`internal/effect.ts`, `Service not found: <key>`); the machine dies
+  // with `Defect.missingService`, which carries no key. One value on both faces, as the
+  // generated corpus needs (its programs ask for services the empty context never provides).
+  if (defect instanceof Error && defect.message.startsWith("Service not found")) return "missingService"
   // Machine.Defect.user / Truth.defectJson retain a natural defect as numeric data.
   if (typeof defect === "number" && Number.isSafeInteger(defect) && defect >= 0 && !Object.is(defect, -0)) return { user: defect }
   if (typeof defect === "string") return { error: defect }
@@ -687,6 +695,7 @@ const main = async (): Promise<number> => {
   const rows: Row[] = []
 
   for (const entry of manifest.programs) {
+    if (only !== "" && entry.name !== only) continue
     const notes: string[] = []
     const module = moduleFor(entry)
     if (module === null) {
@@ -711,6 +720,16 @@ const main = async (): Promise<number> => {
       continue
     }
     const program = loaded.main
+    // A printed module whose `main` is not an Effect cannot be run; rc.112's own `effectIsExit`
+    // would throw on it. Recorded as its own outcome (the generated corpus: `yieldError` of a
+    // literal prints the bare literal, `src/Effect4/Codegen/Print.lean:301`).
+    if (!Effect.isEffect(program)) {
+      rows.push({
+        program: entry.name, leanExit: leanVerdict(entry.run).text, hostExit: `main is not an Effect (${typeof program})`,
+        entry: "—", exitAgree: false, scheduleAgree: null, runSyncAgree: null, notes, host: null, hostSync: null
+      })
+      continue
+    }
 
     // The sync entry always, for the `runSync` column.
     const hostSync = await runSyncEntry(program)

@@ -5,8 +5,9 @@ against type metadata generated from Lean. It writes `.lake/target/report.json` 
 0 only when every selected comparison agrees, 1 on mismatch/refusal, and 2 on an unreadable
 or invalid top-level tool input. It neither runs Lean nor regenerates inputs.
 
-The independent finite selection in `Test/fixtures/target/selection.json` lists 31 truth
-programs and 11 adapter rows (8 package rows plus 3 truth Host rows). It contains identities
+The independent finite selection in `Test/fixtures/target/selection.json` lists the 34 truth
+programs and 11 adapter rows (8 package rows plus 3 truth Host rows). `corpus.ts` runs the
+same comparison over every well-typed program of a corpus manifest, for `make check-corpus`. It contains identities
 and explicit target symbol bindings, never expected signatures. Additions/removals in the
 source inventories require a reviewed selection change; selected missing entries are refused.
 Expected program A/E strings and full requirement keys come from `harness/truth/corpus.json`.
