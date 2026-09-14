@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Fresh T-09/T-12 projection, typed host execution, checked replay, and mutation gate.
-Every run regenerates small fixtures. Large doc-example caching belongs to check-streams.
+Every run regenerates small fixtures.
 """
 from pathlib import Path
 import json

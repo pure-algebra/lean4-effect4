@@ -58,22 +58,6 @@ open Effect4
 open Effect4.Machine
 open Effect4.Program
 
-/-! ## The frozen statements -/
-
-section Statements
-
--- The ratified host-rows step 4 adds the allocation table. Pin the full signature
--- and keep the original two-argument call at its default empty table.
-
--- Part 4 (2026-09-12): the argument list is typed under the atom's const-generic flag, so the
--- list forms quantify over it (`termsTy` carries the flag; `argTy` reads a literal argument).
-
-/-! ### Allocation and the environment at an allocation state (DI-17) -/
-
-/-! ### The error image and the failure branch (DI-62, DI-26) -/
-
-end Statements
-
 /-! ## `Val.hasTy` — one value of each inhabited type -/
 
 section Inhabited

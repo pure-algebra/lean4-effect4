@@ -1202,7 +1202,7 @@ lake env lean Test/Schema/PayloadContract.lean
 lake clean && lake build
 scripts/test-trust-gate.sh
 git:c407ab7:scripts/check-vendor-foldlab.sh
-scripts/check-schema-fields.sh <pinned SchemaRepresentation.ts>
+# the field-spelling pin script: retired 2026-09-13 (a lexical extraction against a table copied inside the script)
 # the payload-surface gate and its reaction test: retired 2026-09-13, see the amendment below
 ```
 

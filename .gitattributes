@@ -12,7 +12,7 @@
 #
 #   vendor/  is pinned against the upstream release by SHA-256
 #            (scripts/generate-effect-runtime-census.sh, 150 pins;
-#            scripts/check-schema-census.sh and check-schema-fields.sh).
+#            scripts/check-schema-census.sh).
 #   generated/  holds the census golden, compared byte for byte.
 vendor/** -text
 generated/** -text

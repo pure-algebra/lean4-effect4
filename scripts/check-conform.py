@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 """Build once, run fresh Conform profiles, validate every result, retain exact run receipts.
 
-    python3 scripts/check-conform.py [PROFILE ...]      default: models native types
+    python3 scripts/check-conform.py [PROFILE ...]      default: native
 
-`make check-cases` and `make check-native` run the `cases` and `native` profiles; the rest
-are run by name. Each profile is a producer that gets an empty directory and must write
-exactly its named files; `conform_report.fresh_run` validates the reports, refuses an
-input that changed during the run, and keeps the receipt under `.lake/conform/`. Two
-profiles are Python steps of this file (`--step`): `target` (the current Lean fixtures
-through the pinned TypeScript oracle) and `compiler` (one production compiler checkpoint:
+`make check-cases` and `make check-native` run the `cases` and `native` profiles; `compiler`
+runs by name (CI's OCaml job). Each profile is a producer that gets an empty directory and
+must write exactly its named files; `conform_report.fresh_run` validates the reports,
+refuses an input that changed during the run, and keeps the receipt under `.lake/conform/`.
+`compiler` is a Python step of this file (`--step`): one production compiler checkpoint,
 Lean-emitted OCaml for normalization, compiled and run against Lean's fixture list, plus
-one emitted-code mutation that must fail). The report refusal controls are
-`scripts/test-conform-report.py`, in `make check-tools`.
+one emitted-code mutation that must fail. The report refusal controls are
+`scripts/test-conform-report.py`, in `make check-tools`. The `models`, `types`, `layouts`
+and `target` profiles were retired on 2026-09-13: receipts of theorems the build already
+checks, a layout enumeration the wire theorems and the OCaml lane cover, and a subset of
+`make check-target`.
 """
 import argparse
 import json
@@ -30,16 +32,8 @@ SELF = "scripts/check-conform.py"
 PROFILES = {
     "compiler": ([sys.executable, SELF, "--step", "compiler", "{out}"],
                  ["normalization.json", "validity.json", "closure.json", "normalization.ml", "expected.txt", "actual.txt", "mutated.ml", "ocaml.json", "mutation.txt"]),
-    "target": ([sys.executable, SELF, "--step", "target", "{out}"],
-               ["target-fixtures.json", "target-oracle.json", "typing-target.json"]),
-    "types": (["lake", "env", "lean", "-M4096", "--run", "tools/Conform/Effect4/InspectTypes.lean", "{out}"],
-              ["types.json", "type-descriptions.json"]),
-    "models": (["lake", "env", "lean", "-M4096", "--run", "tools/Conform/Effect4/ModelsMain.lean", "{out}"],
-               ["models.json"]),
     "native": (["lake", "env", "lean", "-M4096", "--run", "tools/Conform/Effect4/NativeMain.lean", "{out}"],
                ["layout-lean-native.json", "native-layout.json"]),
-    "layouts": (["lake", "env", "lean", "-M4096", "--run", "tools/Conform/Effect4/LayoutMain.lean", "{out}"],
-                ["layout-x2-typescript.json", "layout-x2-typescript-corrected.json", "layout-canonical-wire.json", "layout-ocaml-eff.json"]),
     "cases": (["lake", "env", "lean", "-M4096", "--run", "tools/Conform/Cli/Audit.lean",
                "--config", "tools/Conform/Effect4/cases.json", "--out", "{out}/cases.json"],
               ["cases.json"]),
@@ -53,17 +47,6 @@ def run(command):
     if result.returncode:
         raise RuntimeError(f'{command[0]} exited {result.returncode}\n{result.stdout[-4000:]}\n{result.stderr[-4000:]}')
     return result
-
-
-def step_target(out):
-    """Fresh current-Lean fixture map followed by the pinned TypeScript oracle."""
-    out.mkdir(parents=True, exist_ok=True)
-    fixture = out / 'target-fixtures.json'
-    first = subprocess.run(['lake', 'env', 'lean', '-M4096', '--run',
-                            'tools/Conform/Effect4/TargetFixtures.lean', str(fixture)], cwd=ROOT)
-    if first.returncode:
-        return first.returncode
-    return subprocess.run(['bun', 'tools/target/conform.ts', str(fixture), str(out)], cwd=ROOT).returncode
 
 
 def step_compiler(out):
@@ -113,7 +96,7 @@ def step_compiler(out):
     return 0
 
 
-STEPS = {"target": step_target, "compiler": step_compiler}
+STEPS = {"compiler": step_compiler}
 
 
 # ---------------------------------------------------------------- the runner
@@ -130,7 +113,7 @@ def main():
         except (RuntimeError, OSError, ValueError) as error:
             print(error, file=sys.stderr)
             return 2
-    args.profiles = args.profiles or ["models", "native", "types"]
+    args.profiles = args.profiles or ["native"]
     unknown = set(args.profiles) - PROFILES.keys()
     if unknown:
         parser.error(f"unknown profiles: {sorted(unknown)}; choose from {list(PROFILES)}")

@@ -82,13 +82,6 @@ per program with Lean's `wellTyped` and `readable` verdicts, so a typing or prin
 shows as a diff that names the programs it moved (DI-60), where the generator once pinned
 counts.
 
-**Stream example outputs.** The stream example lane produces two ignored build artifacts
-under `harness/streams/`: `census.json` from `python3 scripts/generate-effect-stream-census.py`
-over the executable doc fences of the pinned Stream, Channel, Pull, Queue, Scope, Sink,
-PubSub and Fiber modules, and `result.json` from `bun harness/streams/run.ts`. The check is
-`make check-streams`: bounded host output agreement, separately reported type checking and
-execution without an output oracle; no Lean stream relation is claimed.
-
 **Schema codec comparisons.** `make check-schema-codec` produces a temporary TypeScript
 data module from the public `Ty.encode` results for
 `Test/Codegen/SchemaGenerationContract.lean`'s representative cases

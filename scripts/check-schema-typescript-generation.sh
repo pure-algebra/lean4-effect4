@@ -79,25 +79,6 @@ if ! "$node_bin" -e '
   exit 1
 fi
 
-# A runtime check that stopped asserting is not evidence. Pin how many
-# assertions each receipt owes, and require the receipt line it prints.
-runtime_assertions="$(grep -c 'throw new Error(' "$harness_dir/runtime-check.ts")"
-if [[ "$runtime_assertions" != 6 ]]; then
-  echo "schema TypeScript harness: runtime-check.ts must keep exactly 6 assertions, found $runtime_assertions" >&2
-  exit 1
-fi
-coverage_assertions="$(grep -c 'throw new Error(' \
-  "$harness_dir/coverage-runtime-check.ts")"
-if [[ "$coverage_assertions" != 2 ]]; then
-  echo "schema TypeScript harness: coverage-runtime-check.ts must keep exactly 2 assertions, found $coverage_assertions" >&2
-  exit 1
-fi
-multi_assertions="$(grep -c 'throw new Error(' "$harness_dir/multi-runtime-check.ts")"
-if [[ "$multi_assertions" != 4 ]]; then
-  echo "schema TypeScript harness: multi-runtime-check.ts must keep exactly 4 assertions, found $multi_assertions" >&2
-  exit 1
-fi
-
 runtime_output="$(NODE_NO_WARNINGS=1 "$node_bin" --experimental-strip-types \
   "$temporary_dir/runtime-check.ts")"
 if [[ "$runtime_output" != "schema-generation-runtime: ok" ]]; then

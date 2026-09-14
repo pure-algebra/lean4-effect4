@@ -42,3 +42,7 @@ scripts/generate-schema-structural-assurance.sh	removed 2026-09-13
 scripts/test-schema-structural-assurance-gate.sh	removed 2026-09-13
 generated/schema-structural-assurance.tsv	removed 2026-09-13
 scripts/lib/generate.py	moved to scripts/generate.py 2026-09-13
+# Removed 2026-09-13 (the superfluous checks): the field-spelling pin script, cited by a
+# packet's history and an attack index; the stream harness census script.
+scripts/check-schema-fields.sh	removed 2026-09-13
+scripts/generate-effect-stream-census.py	removed 2026-09-13

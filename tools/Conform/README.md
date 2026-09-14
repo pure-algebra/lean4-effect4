@@ -12,18 +12,17 @@ Makefile is the lane). The runner builds the selected tools once, then executes 
 requested profile once in an empty directory and keeps the receipt under `.lake/conform/`.
 
 ```sh
-python3 scripts/check-conform.py                      # models, native layouts, types
-python3 scripts/check-conform.py target               # current Lean fixtures against T0
+python3 scripts/check-conform.py                      # the native layout (make check-native)
 python3 scripts/check-conform.py compiler             # actual emitted OCaml checkpoint
 make check-cases                                      # compiled cases / mirrors / rules (python3 scripts/check-conform.py cases)
 make gen-specs                                        # ordinary checked specifications (python3 scripts/generate.py --only specs)
 ```
 
-`target` requires the pinned Bun/TypeScript installation; `compiler` requires `ocamlopt` from
-the `effect4` opam switch (or `OCAMLOPT`). `cases` and `layouts` retain their configured
-counterexamples and unresolved rows: they are inspection profiles, not promises of a green
-result. The routine sweep runs `models native types`. Run the compiler checkpoint when its
-source closure, emitter, layout or primitive profile changes.
+`compiler` requires `ocamlopt` from the `effect4` opam switch (or `OCAMLOPT`). `cases`
+retains its configured counterexamples and unresolved rows: it is an inspection profile, not
+a promise of a green result. Run the compiler checkpoint when its source closure, emitter,
+layout or primitive profile changes. The `models`, `types`, `layouts` and `target` profiles
+were retired on 2026-09-13 with the modules only they used.
 
 Each `.lake/conform/<profile>.json` run receipt records commands, source and compiled-input
 hashes, outputs, reports and process status. `artifactDirectory` points to retained generated
@@ -33,45 +32,6 @@ Missing, extra and duplicate results refuse. Exit 0 means those reported checks 
 is a counterexample/refusal; exit 2 is unresolved or an invalid report. Separate evidence
 methods are attached to each claim. There is no combined evidence ranking or universal
 certificate implied by a green finite run.
-
-## Describe a type
-
-`python3 scripts/check-conform.py types` emits `type-descriptions.json` for the selected Effect4
-families, and a report showing raw metadata, normalized metadata, type keys, target spelling
-and remaining connections. The generic API can describe another selected inductive:
-
-```lean
-import Conform.Source.Description
-import Effect4.Program.Ty
-open Lean Meta Conform.Source
-
-def describeTy : MetaM Family :=
-  readFamily { specs := [⟨`Effect4.Program.Ty, "ty", []⟩] }
-    ⟨`Effect4.Program.Ty, "ty", []⟩
-```
-
-The declaration must already be imported into the environment. `Tools.ProgramStructure`
-owns Effect4's ground instantiations and mutual-family ordering. Generic extraction reads
-constructor ordinals and bounded fields from Lean metadata. Unsupported value indices,
-function-valued fields and unconfigured applications refuse; they are not erased into a
-placeholder. Source shape, canonical wire shape and each target layout remain different views.
-
-## Compose a program-value model
-
-```lean
-import Effect4.Laws.Program.ValueModel
-open Effect4.Program
-
-def optionalRows := ValueModel.option (ValueModel.list ValueModel.nat)
-def resultPair := ValueModel.pair ValueModel.nat ValueModel.bool
-```
-
-Each model carries the existing `Image`, a normalized `CTy`, allocation requirements for the
-actual value, and a proof of program membership under those requirements. Options preserve
-`none` versus `some none`. Program pairs use the two-element tuple image; the historical
-`Image.pair` metadata bytes are unchanged. `Image.sum` and `Image.except` provide exact codecs;
-a tagged program sum still needs an admitted program type and its own membership law.
-`Test.Program.ValueModelContract` is the compiled example and regression set.
 
 ## Check a program and inspect the remaining work
 

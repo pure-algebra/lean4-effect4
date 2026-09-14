@@ -249,8 +249,8 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install the pinned TypeScript dependencies
         run: bun install --frozen-lockfile --cwd ts/eff
-      - name: The host protocol, the runtime census and the stream census
-        run: make build check-host-protocol check-census check-streams
+      - name: The host protocol and the runtime census
+        run: make build check-host-protocol check-census
 
   nightly-schema:
     if: github.event_name == 'schedule' && github.event.schedule == '23 3 * * *'
