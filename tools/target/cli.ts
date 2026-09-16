@@ -21,7 +21,7 @@ try {
   mkdirSync(dirname(file), { recursive: true })
   writeFileSync(file, JSON.stringify(report, null, 2) + "\n")
   console.log(`target conformance [${report.profile}]: ${report.conforms ? "PASS" : "FAIL"}; ${report.expected.length} expected, ${report.attempted.length} attempted, ${report.resolved.length} resolved, ${report.mismatching.length} mismatching, ${report.refused.length} refused`)
-  for (const observation of report.observations.filter(o => o.status !== "agree")) console.log(`${observation.status}: ${observation.id}; ${observation.issues.map(i => i.code).join(",") || Object.entries(observation.columns).filter(([, c]) => c.actualToExpected === false || c.expectedToActual === false).map(([axis]) => axis).join(",")}`)
+  for (const observation of report.observations.filter(o => o.status !== "agree")) console.log(`${observation.status}: ${observation.id}; ${observation.issues.map(i => i.code).join(",") || Object.entries(observation.columns).filter(([, c]) => c.agreement === "mismatch").map(([axis]) => axis).join(",")}`)
   console.log(`report: ${file}`)
   process.exitCode = report.conforms ? 0 : 1
 } catch (error) {

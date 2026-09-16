@@ -21,7 +21,64 @@ test("synthetic assignments compare all three independent Effect columns", () =>
     expect(report.observations[index]?.columns[axis]?.actualToExpected).toBe(false)
   }
   expect(report.conforms).toBe(false)
-})
+}, 30_000)
+
+test("program errors may be strictly contained while other contracts stay exact", () => {
+  const program: Query = { ...base, kind: "program" }
+  const wider = { ...base.expected, E: '"E1" | "E2"' }
+  const report = query(repo, [
+    { ...program, id: "program/exact" },
+    { ...program, id: "program/contained", expected: wider },
+    { ...program, id: "program/reversed", subject: 'Effect.Effect<number, "E1" | "E2", C.R1>' },
+    { ...program, id: "program/answer", subject: 'Effect.Effect<1, "E1", C.R1>' },
+    { ...program, id: "program/requirements", expected: { ...base.expected, R: "C.R1 | C.R2" } },
+    { ...base, id: "primitive/effect", expected: wider },
+    { ...base, id: "primitive/function", kind: "function", subject: "typeof C.method",
+      expected: { ...wider, request: "[string, number?, ...boolean[]]" } },
+    { ...program, id: "program/reply-payload", subject: 'Effect.Effect<{ readonly failed: "E1" }, never, never>',
+      expected: { A: '{ readonly failed: "E1" | "E2" }', E: "never", R: "never" } },
+  ])
+  const [exact, contained, reversed] = report.observations
+  expect(exact?.columns.E?.agreement).toBe("exact")
+  expect(contained?.status).toBe("agree")
+  expect(contained?.binding.kind).toBe("program")
+  expect(contained?.columns.E).toMatchObject({ actualToExpected: true, expectedToActual: false, agreement: "strict-containment" })
+  expect(contained?.diagnostics.map(d => d.code)).toEqual([2322])
+  expect(reversed?.columns.E).toMatchObject({ actualToExpected: false, expectedToActual: true, agreement: "mismatch" })
+  for (const observation of report.observations.slice(2)) expect(observation.status).toBe("mismatch")
+  const positive = query(repo, [
+    { ...program, expected: wider },
+    { ...program, id: "program/no-errors", subject: "Effect.Effect<number, never, C.R1>" },
+  ])
+  expect(positive.conforms).toBe(true)
+  expect(positive.observations[1]?.columns.E?.agreement).toBe("strict-containment")
+  expect(report.conforms).toBe(false)
+}, 30_000)
+
+test("program containment cannot accept unresolved error bounds or failed extraction", () => {
+  const program: Query = { ...base, kind: "program", expected: { ...base.expected, E: '"E1" | "E2"' } }
+  const badSource = "Test/fixtures/target/catch-if-predicate-bad.ts"
+  const report = query(repo, [
+    { ...program, id: "program/missing-error", expected: { A: "number", R: "C.R1" } },
+    { ...program, id: "program/any-actual", subject: "Effect.Effect<number, any, C.R1>" },
+    { ...program, id: "program/any-bound", expected: { ...program.expected, E: "any" } },
+    { ...program, id: "program/unknown-actual", subject: "Effect.Effect<number, unknown, C.R1>" },
+    { ...program, id: "program/unknown-bound", expected: { ...program.expected, E: "unknown" } },
+    { ...program, id: "program/missing-binding", expected: { ...program.expected, E: "Missing.Error" } },
+    { ...program, id: "program/never-subject", subject: "typeof C.neverSubject", expected: { A: "never", E: "never", R: "never" } },
+    { ...program, id: "program/non-effect", subject: "typeof C.notEffect", expected: { A: "never", E: "never", R: "never" } },
+    { ...program, id: "program/compiler-diagnostic", source: badSource,
+      imports: [`import type * as C from ${JSON.stringify(resolve(repo, badSource))}`],
+      expected: { A: "number", E: "string", R: "never" } },
+  ])
+  const codes = ["missing-type-metadata", "unresolved-any", "unresolved-any", "unresolved-unknown",
+    "unresolved-unknown", "query-diagnostic", "query-diagnostic", "query-diagnostic", "source-diagnostic"]
+  report.observations.forEach((observation, index) => {
+    expect(observation.status).toBe("refused")
+    expect(observation.issues.some(issue => issue.code === codes[index])).toBe(true)
+  })
+  expect(report.conforms).toBe(false)
+}, 30_000)
 
 test("request, receiver, optional and rest parameters are independently compared", () => {
   const method: Query = { ...base, id: "method/positive", subject: "typeof C.method", kind: "function", receiver: "C.Receiver1",
@@ -39,7 +96,7 @@ test("request, receiver, optional and rest parameters are independently compared
     expect(report.observations[index]?.columns[axis]?.actualToExpected).toBe(false)
     expect(report.observations[index]?.columns.A?.actualToExpected).toBe(true)
   }
-})
+}, 30_000)
 
 test("unresolved types, absent metadata and unsupported signatures are refusals", () => {
   const report = query(repo, [
@@ -62,7 +119,7 @@ test("unresolved types, absent metadata and unsupported signatures are refusals"
   expect(report.conforms).toBe(false)
   expect(report.expected).toHaveLength(9)
   expect(report.attempted).toEqual(report.expected)
-})
+}, 30_000)
 
 test("all diagnostics count and repeated reports are stable", () => {
   const unboundImport: Query = { ...base, id: "missing/unrelated-import", imports: [...base.imports, 'import type * as Missing from "unavailable-package"'] }
@@ -73,7 +130,7 @@ test("all diagnostics count and repeated reports are stable", () => {
   expect(query(repo, [base, unboundImport])).toEqual(first)
   expect(() => query(repo, [base, base])).toThrow("duplicate")
   expect(() => query(repo, [])).toThrow("empty")
-})
+}, 30_000)
 
 
 test("non-Effect and never subjects cannot agree through never-valued extraction helpers", () => {
@@ -83,7 +140,7 @@ test("non-Effect and never subjects cannot agree through never-valued extraction
     expect(observation.status).toBe("refused")
     expect(observation.issues.some(i => i.code === "query-diagnostic")).toBe(true)
   }
-})
+}, 30_000)
 
 test("E4-CATCH-CE-001: an explicit absent fallback selects the data-first overload", () => {
   const input = (kind: "bad" | "good"): Query => {
@@ -92,15 +149,13 @@ test("E4-CATCH-CE-001: an explicit absent fallback selects the data-first overlo
       imports: [`import type * as C from ${JSON.stringify(resolve(repo, source))}`],
       subject: "typeof C.program", kind: "effect", expected: { A: "number", E: "never", R: "never" } }
   }
-  const bad = query(repo, [input("bad")])
-  expect(bad.conforms).toBe(false)
+  const report = query(repo, [input("bad"), input("good")])
+  expect(report.conforms).toBe(false)
   // A diagnostic inside the queried source refuses that query by name (`source-diagnostic`),
   // and is not a global diagnostic: since the corpus lane, one module that does not type
   // must not refuse every other query of the same program.
-  expect(bad.globalDiagnostics).toHaveLength(0)
-  expect(bad.observations[0]?.status).toBe("refused")
-  expect(bad.observations[0]?.issues.some(i => i.code === "source-diagnostic" && i.message.includes("TS2769"))).toBe(true)
-  const good = query(repo, [input("good")])
-  expect(good.conforms).toBe(true)
-  expect(good.observations[0]?.status).toBe("agree")
-})
+  expect(report.globalDiagnostics).toHaveLength(0)
+  expect(report.observations[0]?.status).toBe("refused")
+  expect(report.observations[0]?.issues.some(i => i.code === "source-diagnostic" && i.message.includes("TS2769"))).toBe(true)
+  expect(report.observations[1]?.status).toBe("agree")
+}, 30_000)

@@ -69,7 +69,7 @@ for (const entry of manifest.programs as Array<Record<string, any>>) {
   const q: Query = {
     id: `program/${entry.name}`, source,
     imports: [...imports, `import type * as Program from ${JSON.stringify(source)}`],
-    subject: "typeof Program.main", kind: "effect", expected: {}, inputIssues: [],
+    subject: "typeof Program.main", kind: "program", expected: {}, inputIssues: [],
     provenance: { metadata: "corpus manifest", program: entry.name, type: entry.type, module: "inferred (unannotated)" }
   }
   if (entry.declInferred === null) q.inputIssues!.push({ code: "no-inferred-module", message: "the manifest has no unannotated block for a well-typed program" })

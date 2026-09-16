@@ -13,7 +13,8 @@ export interface Query {
   /** Import declarations and explicit bindings; no value assertions are generated. */
   imports: string[]
   subject: string
-  kind: "effect" | "function"
+  /** Only programs use an error bound; effect-valued and callable primitives stay exact. */
+  kind: "program" | "effect" | "function"
   receiver?: string
   expected: Partial<Record<Axis, string>>
   allowUnknown?: Axis[]
@@ -26,10 +27,11 @@ export interface Diagnostic {
 export interface Column {
   expected: string | null; actual: string | null
   actualToExpected: boolean | null; expectedToActual: boolean | null
+  agreement: "exact" | "strict-containment" | "mismatch" | null
 }
 export interface Observation {
   id: string; source: string; status: "agree" | "mismatch" | "refused"
-  binding: { subject: string; receiver: string | null; imports: string[]; unknownPolicy: Axis[] }
+  binding: { kind: Query["kind"]; subject: string; receiver: string | null; imports: string[]; unknownPolicy: Axis[] }
   columns: Partial<Record<Axis, Column>>
   issues: Issue[]; diagnostics: Diagnostic[]
   signatures: Array<{ text: string; parameters: Array<{ name: string; type: string; optional: boolean; rest: boolean }> }>
@@ -52,6 +54,9 @@ const axes: Axis[] = ["A", "E", "R", "request", "receiver"]
 const localPath = (repo: string, path: string) => relative(repo, path).replaceAll("\\", "/")
 const stableText = (repo: string, text: string) => text.replaceAll(repo, "<repo>")
 const bindingName = (axis: Axis, direction: string) => `__${axis}_${direction}`
+// Pinned compiler's assignment incompatibilities, including missing object properties and
+// exact optional properties. Every other diagnostic remains a refusal, even on a binding.
+const assignmentDiagnostics = new Set([2322, 2375, 2739, 2740, 2741])
 
 function querySource(q: Query): string {
   const lines = [
@@ -174,7 +179,8 @@ export function query(repoRoot: string, queries: readonly Query[], profile = "ef
       const id = variables.get(bindingName(axis, direction))
       return id !== undefined && d.start !== undefined && d.start >= id.parent.getStart() && d.start < id.parent.end
     }
-    const otherDiagnostics = ds.filter(d => !axes.some(axis => ["actualToExpected", "expectedToActual"].some(direction => onAssignment(d, axis, direction))))
+    const otherDiagnostics = ds.filter(d => !assignmentDiagnostics.has(d.code) ||
+      !axes.some(axis => ["actualToExpected", "expectedToActual"].some(direction => onAssignment(d, axis, direction))))
     if (otherDiagnostics.length) issues.push({ code: "query-diagnostic", message: "Unresolved or invalid query/type binding; see diagnostics" })
     const textOf = (type: ts.Type, at: ts.Node) => checker.typeToString(type, at, ts.TypeFormatFlags.NoTruncation | ts.TypeFormatFlags.InTypeAlias)
     for (const axis of axes) {
@@ -183,7 +189,7 @@ export function query(repoRoot: string, queries: readonly Query[], profile = "ef
       const expected = variables.get(`__${axis}_expected`)
       const actualType = checker.getTypeAtLocation(actual)
       const column: Column = { actual: textOf(actualType, actual), expected: q.expected[axis] ?? null,
-        actualToExpected: null, expectedToActual: null }
+        actualToExpected: null, expectedToActual: null, agreement: null }
       columns[axis] = column
       if (!expected) issues.push({ code: "missing-type-metadata", axis, message: `Missing expected ${axis}` })
       for (const [side, type] of [["actual", actualType], ...(expected ? [["expected", checker.getTypeAtLocation(expected)] as const] : [])] as const) {
@@ -191,9 +197,11 @@ export function query(repoRoot: string, queries: readonly Query[], profile = "ef
           issues.push({ code: `unresolved-${kind}`, axis, message: `${side} ${axis} contains ${kind}` })
         }
       }
-      if (expected && !globals.length && !otherDiagnostics.length && !issues.some(i => i.axis === axis)) {
+      if (expected && !globals.length && !own.length && !otherDiagnostics.length && !issues.some(i => i.axis === axis)) {
         column.actualToExpected = !ds.some(d => onAssignment(d, axis, "actualToExpected"))
         column.expectedToActual = !ds.some(d => onAssignment(d, axis, "expectedToActual"))
+        column.agreement = !column.actualToExpected ? "mismatch" : column.expectedToActual ? "exact" :
+          q.kind === "program" && axis === "E" ? "strict-containment" : "mismatch"
       }
     }
     const signatures: Observation["signatures"] = []
@@ -214,9 +222,9 @@ export function query(repoRoot: string, queries: readonly Query[], profile = "ef
       if (found.length !== 1) issues.push({ code: "unsupported-overloads", message: `Expected one concrete signature, found ${found.length}; signatures retained` })
       if (found.some(s => s.typeParameters?.length)) issues.push({ code: "unsupported-generic-signature", message: "Generic member requires an explicit instantiation query" })
     }
-    const mismatch = Object.values(columns).some(c => c.actualToExpected === false || c.expectedToActual === false)
+    const mismatch = Object.values(columns).some(c => c.agreement === "mismatch")
     return { id: q.id, source: q.source, status: issues.length ? "refused" : mismatch ? "mismatch" : "agree",
-      binding: { subject: q.subject, receiver: q.receiver ?? null, imports: q.imports.map(i => stableText(repo, i)), unknownPolicy: q.allowUnknown ?? [] },
+      binding: { kind: q.kind, subject: q.subject, receiver: q.receiver ?? null, imports: q.imports.map(i => stableText(repo, i)), unknownPolicy: q.allowUnknown ?? [] },
       columns, issues, diagnostics: ds.map(diagnostic), signatures, provenance: q.provenance ?? null }
   })
   const sourceHashes: Record<string, string> = {}
@@ -241,7 +249,7 @@ export function query(repoRoot: string, queries: readonly Query[], profile = "ef
     mismatching: observations.filter(o => o.status === "mismatch").map(o => o.id),
     refused: observations.filter(o => o.status === "refused").map(o => o.id),
     globalDiagnostics: globals.map(diagnostic), observations, sourceHashes,
-    limitations: ["Finite TypeScript mutual assignability under explicit target bindings; no Lean semantic equivalence claim.",
+    limitations: ["Finite TypeScript assignments under explicit target bindings: program E is an upper bound; every other column and primitive binding requires mutual assignability. No Lean semantic equivalence claim.",
       "Requirement carrier equality does not establish Lean service-key identity.",
       "Any/unknown inspection covers compared roots, generic payloads and local record fields; library implementation fields and class internals are opaque."],
     conforms: !globals.length && observations.every(o => o.status === "agree") }

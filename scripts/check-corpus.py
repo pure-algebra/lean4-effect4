@@ -103,8 +103,10 @@ def types_outcome(observation):
         return 'agree'
     if observation['status'] == 'refused':
         return 'refused'
+    # The target oracle owns the relation; a failed reverse E assignment can be
+    # accepted program containment and must not become a second mismatch here.
     axes = [axis for axis, column in observation['columns'].items()
-            if column['actualToExpected'] is False or column['expectedToActual'] is False]
+            if column['agreement'] == 'mismatch']
     return 'mismatch-' + ','.join(axes)
 
 

@@ -44,17 +44,22 @@ test("rendered canonical type bindings use syntax nodes and structured types pre
   expect(() => bindRendered("number |", bindings)).toThrow("syntax")
   expect(() => bindRendered("number; type Extra = string", bindings)).toThrow("expression")
   expect(renderTy({ _tag: "option", inner: { _tag: "list", inner: { _tag: "handle", target: "Host.Resource" } } }, bindings)).toBe("Option.Option<ReadonlyArray<Adapter.HostResource>>")
+  expect(renderTy({ _tag: "lit", value: 'A"B' }, bindings)).toBe('"A\\"B"')
   expect(() => renderTy({ _tag: "handle", target: "Missing.Handle" }, bindings)).toThrow("unbound")
 })
 
 test("selected IDs cannot vanish with absent metadata and unexpected inventory is refused", () => {
-  const selection: unknown = JSON.parse(readFileSync(resolve(repo, "Test/fixtures/target/selection.json"), "utf8"))
+  const selection = JSON.parse(readFileSync(resolve(repo, "Test/fixtures/target/selection.json"), "utf8"))
+  const corpus = JSON.parse(readFileSync(resolve(repo, "harness/truth/corpus.json"), "utf8"))
+  const programIds = corpus.programs.map((entry: { name: string }) => `program/${entry.name}`)
+  const rowIds = selection.rows.map((row: { table: string; name: string }) => `row/${row.table}/${row.name}`)
   const queries = queriesFromInputs(repo, selection, { programs: [] }, [])
-  // The selection's inventory: 34 programs and 11 rows (the three `tagIs` programs joined
-  // it on 2026-09-12). A changed count is a changed selection, to be reviewed here.
-  expect(queries).toHaveLength(45)
-  expect(new Set(queries.map(q => q.id)).size).toBe(45)
-  expect(queries.filter(q => q.id.startsWith("program/"))).toHaveLength(34)
+  // Exact identities come from the independent corpus and row selection, not a count pin.
+  expect(programIds.length).toBeGreaterThan(0)
+  expect(queries.map(q => q.id)).toEqual([...programIds, ...rowIds])
+  expect(new Set(queries.map(q => q.id)).size).toBe(queries.length)
+  expect(queries.filter(q => q.id.startsWith("program/")).every(q => q.kind === "program")).toBe(true)
+  expect(queries.filter(q => q.id.startsWith("row/")).every(q => q.kind === "function")).toBe(true)
   expect(queries.every(q => q.inputIssues?.length)).toBe(true)
   expect(queries.filter(q => q.id.startsWith("row/")).every(q => q.inputIssues?.some(i => i.code === "row-type-metadata"))).toBe(true)
   const minimal = { programs: ["p42"], handles: {}, rows: [] }

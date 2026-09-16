@@ -80,6 +80,7 @@ export function renderTy(ty: Ty, handles: ReadonlyMap<string, string>): string {
     case "unit": return "void"
     case "nat": case "int": return "number"
     case "string": return "string"
+    case "lit": return JSON.stringify(ty.value)
     case "bool": return "boolean"
     case "handle": {
       const bound = handles.get(ty.target)
@@ -144,7 +145,7 @@ export function queriesFromInputs(repo: string, selectionInput: unknown, corpusI
     if (!/^[A-Za-z_$][\w$]*$/.test(name)) throw new Error(`invalid program ID ${name}`)
     const source = `harness/truth/generated/${name}.ts`
     const q: Query = { id: `program/${name}`, source, imports: [...imports, `import type * as Program from ${JSON.stringify(resolve(repo, source))}`],
-      subject: "typeof Program.main", kind: "effect", expected: {}, inputIssues: [...inputIssues], provenance: { metadata: "harness/truth/corpus.json", program: name } }
+      subject: "typeof Program.main", kind: "program", expected: {}, inputIssues: [...inputIssues], provenance: { metadata: "harness/truth/corpus.json", program: name } }
     const entry = entries.find(p => p.name === name)
     q.provenance = { metadata: "harness/truth/corpus.json", program: name, type: entry?.type ?? null, scopeKey: scope ?? null, handles: Object.fromEntries(handles) }
     try {

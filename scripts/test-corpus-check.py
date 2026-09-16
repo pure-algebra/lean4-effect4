@@ -125,8 +125,18 @@ class CorpusCheckTests(unittest.TestCase):
         self.assertEqual(r['types'], 'refused')
         self.assertIn('types refused: unresolved-unknown/A', r['note'])
         mismatch = {'status': 'mismatch', 'issues': [], 'columns': {
-            'A': {'actualToExpected': True, 'expectedToActual': False}, 'E': {'actualToExpected': True, 'expectedToActual': True}}}
+            'A': {'actualToExpected': True, 'expectedToActual': False, 'agreement': 'mismatch'},
+            'E': {'actualToExpected': True, 'expectedToActual': True, 'agreement': 'exact'}}}
         self.assertEqual(self.one(observations={'g1': mismatch})['types'], 'mismatch-A')
+
+    def test_error_containment_is_not_an_extra_mismatching_column(self):
+        observation = {'status': 'mismatch', 'issues': [], 'columns': {
+            'A': {'actualToExpected': True, 'expectedToActual': False, 'agreement': 'mismatch'},
+            'E': {'actualToExpected': True, 'expectedToActual': False, 'agreement': 'strict-containment'}}}
+        self.assertEqual(self.one(observations={'g1': observation})['types'], 'mismatch-A')
+        observation['status'] = 'agree'
+        observation['columns']['A'] = {'actualToExpected': True, 'expectedToActual': True, 'agreement': 'exact'}
+        self.assertEqual(self.one(observations={'g1': observation})['types'], 'agree')
 
     def test_a_killed_process_is_a_hang(self):
         r = self.one(rows={}, hung={'g1'})

@@ -60,15 +60,11 @@ export const pair = <const A, const B>(a: A, b: B): readonly [A, B] => [a, b]
 export const fst = <P extends readonly [unknown, unknown]>(p: P): P[0] => p[0]
 /** `"snd", [exitCons _ (exitCons b _)] => b` */
 export const snd = <P extends readonly [unknown, unknown]>(p: P): P[1] => p[1]
-/** NativeAtom.tagIs (DI-39, part 4 commit 3): true exactly on a pair whose first component is
- * the tag (`.list [.str tag, _]`, `NativeAtom.tagHit`); false on a bare string, a number, a
- * pair with another tag. Declared as a type guard, not a `boolean`, because that is what
- * makes rc.112's `Effect.catchIf` take its refinement overload for the printed test
- * `(aN) => tagIs("A", aN)`: TypeScript 5.5+ infers the lambda as a type predicate and the
- * host's error column becomes `Exclude<E, EB>`, which is `Ty.diffTag` on a union column
- * (probe: `docs/research/2026-09-12-p4-subsumption-evidence/c3-tagIs-narrowing-probe.ts`).
- * With a `boolean` return the predicate overload is chosen and the host keeps the whole `E`. */
-export const tagIs = <const T extends string>(tag: T, e: unknown): e is readonly [T, unknown] =>
+/** NativeAtom.tagIs: true exactly on a pair whose first component is the tag
+ * (`.list [.str tag, _]`, `NativeAtom.tagHit`). This ordinary Boolean test carries no
+ * refinement promise. In particular, catchIf's first-failure test does not establish
+ * that every failure in a re-raised cause excludes this tag (DI-17, DI-39). */
+export const tagIs = (tag: string, e: unknown): boolean =>
   Array.isArray(e) && e.length === 2 && e[0] === tag
 
 // ---- FnName, total shape (Stores.lean:458-462 `FnName.total`) ------------------------
