@@ -163,5 +163,5 @@ if (mode === "inclusion-batch") {
     const run = spawnSync(process.execPath, [import.meta.filename, mode + "-batch", dir, String(at), "500"], { encoding: "utf8", maxBuffer: 2 ** 24 })
     if (run.status !== 0) { process.stderr.write(run.stderr); throw new Error(`corpus batch ${at} failed: ${run.status} ${run.error ?? ""}`) }
   }
-  console.log(`PASS ${mode}: ${names.length} exact JSON/wire comparisons on each independent reader${mode === "foreign" ? ", exact key tables and complete verdict agreement" : ""}; batch bound 500`)
+  console.log(`PASS ${mode}: ${names.length} exact JSON/wire comparisons on each parser with shared form lowering${mode === "foreign" ? ", exact key tables and complete verdict agreement" : ""}; batch bound 500`)
 }

@@ -1,6 +1,7 @@
 /** Retargeted from foldlab experiments/lift-harness/src/contract.ts at 4005d34f.
  * Verdict vocabulary and gate equality. Decoding validates without repairing data.
- * Recognition engines import these types only; their runtime reading logic is independent.
+ * Parser recognition remains independent; both engines consume the shared Lean-owned
+ * form templates and service-type profile when lowering recognized source.
  */
 import { Schema } from "effect"
 import { Decl } from "./census/census-contract.ts"

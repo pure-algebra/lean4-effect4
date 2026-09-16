@@ -282,6 +282,16 @@ end NativeOp
 /-- The `Scope` service key of the native signature. -/
 def nativeScopeKey : ServiceKey := ⟨⟨0⟩, ⟨0⟩⟩
 
+/-- Exact reserved service bindings. The native checker and generated readers consume
+this same table; reserved names do not acquire the ordinary code-based bindings. -/
+def nativeReservedServiceTypes : List (ServiceKey × Ty) := [(nativeScopeKey, .scope)]
+
+/-- Service carriers available under a free name. This is the finite owner of the
+code-to-carrier mapping, also projected into the source-reader profile. -/
+def nativeServiceTypes : List (Nat × Ty) :=
+  [(4, .nat), (5, .bool), (6, .unit), (7, NativeOp.refTy),
+   (8, NativeOp.sqlTy), (9, NativeOp.kvTy)]
+
 /-- The native signature's service table (the join, 2026-09-07), read off the key: the ambient
 `Scope` under its reserved key, nothing under the other reserved names (`Env.firstFreeName`:
 the scheduler's two references and `CurrentMemoMap` are the machine's, not a program's), and
@@ -290,17 +300,11 @@ a `Ref.Ref<number>` handle, `8` a `SqlClient.SqlClient` handle and `9` a
 `KeyValueStore.KeyValueStore` handle. A key is typed by its own data, which is what `Machine/Key.lean`
 means a `ServiceTypeCode` to be read as. -/
 def nativeServiceTy (key : ServiceKey) : Option Ty :=
-  if key = nativeScopeKey then some Ty.scope
-  else if key.name.value < Effect4.Machine.Env.firstFreeName then none
-  else
-    match key.service.value with
-    | 4 => some .nat
-    | 5 => some .bool
-    | 6 => some .unit
-    | 7 => some NativeOp.refTy
-    | 8 => some NativeOp.sqlTy
-    | 9 => some NativeOp.kvTy
-    | _ => none
+  match nativeReservedServiceTypes.find? (fun entry => entry.1 == key) with
+  | some (_, ty) => some ty
+  | none =>
+    if key.name.value < Effect4.Machine.Env.firstFreeName then none
+    else (nativeServiceTypes.find? (fun entry => entry.1 == key.service.value)).map Prod.snd
 
 def fnNames : List Effect4.Machine.FnName := [.incr, .double, .zeroWhenPositive, .noChange, .takeAndBump]
 

@@ -1,8 +1,9 @@
 // Compiler API engine, retargeted from foldlab experiments/lift-harness/src/lift.ts
-// at 4005d34f. Independent of read.ts and the oxc engine; shared tables are data only.
+// at 4005d34f. Syntax recognition is independent of read.ts and the oxc engine;
+// derived sequencing/handler forms consume the shared Lean-owned template fold.
 import ts from "typescript"
 import { decodeEff, type Eff, type Term, type Lit, type CauseTerm, type Stmt, type ActionTerm, type LayerTerm, type ServiceKey, type ForkOptions } from "../eff.gen.ts"
-import { rows } from "../profile.gen.ts"
+import { rows, serviceTypes, serviceTypeFor } from "../profile.gen.ts"
 
 class Decline extends Error {}
 const bad = (reason: string): never => { throw new Decline(reason) }
@@ -384,8 +385,9 @@ import { forms } from "../forms.gen.ts"
 import { encodeProgram } from "../wire.gen.ts"
 import type { Ty } from "../eff.gen.ts"
 import type { Package } from "../packages.gen.ts"
-import { bindText, isStringList, methodArgs, methodRow, packageByHead, packageByTarget, stringsTerm } from "./package-rows.ts"
+import { bindText, internServiceKey, isStringList, methodArgs, methodRow, packageByHead, stringsTerm } from "./package-rows.ts"
 import { foldSql, isRefusal, type Bind, type SqlArg, type SqlPart } from "./sql-fold.ts"
+import { expandForm, effectSlot, fixedEffect, type FormAlgebra, type FormArguments } from "./forms.ts"
 
 class ForeignRefusal extends Error {
   constructor(readonly code: RefusalCode, readonly value: string) { super(code) }
@@ -396,6 +398,19 @@ const knownHeads = new Set<string>([...heads, ...rows.map(r => r.row.spelling), 
 // own name list, emitted into `profile.gen.ts` by `tools/Tools/TsGen.lean` and checked there
 // against `nativeAtomTy`. An atom appended in Lean reaches this recognizer by regeneration.
 const atoms = atomNames
+
+const effForms: FormAlgebra<Eff, Term> = {
+  literal: value => ({ _tag: "lit", value }),
+  variable: index => ({ _tag: "var", index }),
+  succeed: value => ({ _tag: "succeed", value }),
+  bind: (first, rest) => ({ _tag: "bind", first, rest }),
+  onExit: (body, finalizer) => ({ _tag: "onExit", body, finalizer }),
+  matchCause: (body, onValue, onCause) => ({ _tag: "matchCause", body, onValue, onCause }),
+}
+const lowerForm = (name: string, depth: number, args: FormArguments<Eff, Term>): Eff => {
+  const result = expandForm(name, depth, args, effForms)
+  return result.ok ? result.value : refuseForeign("E-NODE", `form lowering: ${result.error}`)
+}
 
 class ForeignCompilerReader extends CompilerReader {
   readonly keys: Key[] = []
@@ -427,7 +442,7 @@ class ForeignCompilerReader extends CompilerReader {
       const old = oldKeys.find(k => k.ordinal === key.name.value)
       if (!old) return refuseForeign("E-REF-UNBOUND", "service key")
       let entry = this.keys.find(k => k.sourceId === old.sourceId)
-      if (!entry) { entry = { ...old, ordinal: this.keys.length + 4 }; this.keys.push(entry) }
+      if (!entry) { entry = { ...old, ordinal: this.keys.length + serviceTypes.firstFreeName }; this.keys.push(entry) }
       return { name: { value: entry.ordinal }, service: key.service }
     }, true))
   }
@@ -508,8 +523,9 @@ class ForeignCompilerReader extends CompilerReader {
     return packageByHead.get(head)
   }
   packageKey(pkg: Package): ServiceKey {
-    let entry = this.keys.find(k => k.sourceId === pkg.key)
-    if (!entry) { entry = { ordinal: this.keys.length + 4, service: pkg.service, sourceId: pkg.key }; this.keys.push(entry) }
+    const interned = internServiceKey(this.keys, pkg.key, pkg.service)
+    if (!interned.ok) return refuseForeign("E-TYPE-PARAM", "service identity has conflicting shapes")
+    const entry = interned.key
     return { name: { value: entry.ordinal }, service: { value: pkg.service } }
   }
   /** A method on a binder (`sql.unsafe(text, params)`, `store.get(k)`): a `method` row of the
@@ -621,14 +637,18 @@ class ForeignCompilerReader extends CompilerReader {
     const factory = ts.isCallExpression(inner) ? inner : c
     if (this.name(factory.expression) !== "Context.Service") return refuseForeign("E-OP-UNKNOWN", "key")
     this.arity(c.arguments, 1)
-    const shape = factory.typeArguments?.at(-1)?.getText(this.file)
-    const packaged = shape === undefined ? undefined : packageByTarget(shape)?.service
-    const service = shape === "number" ? 4 : shape === "boolean" ? 5 : shape === "void" || shape === "unknown" ? 6 : shape === "Ref.Ref<number>" ? 7 : packaged !== undefined ? packaged : refuseForeign("E-TYPE-PARAM", "service shape")
+    const shape = factory.typeArguments?.at(-1)?.getText(this.file) ?? ""
+    const [root, ...tail] = shape.split("."), binding = this.bindings.get(root!)
+    if (binding === "opaque") return refuseForeign("E-IMPORT-OPAQUE", shape)
+    const resolved = binding === undefined ? shape : [binding, ...tail].filter(Boolean).join(".")
+    const canonical = packageByHead.get(resolved)?.target ?? resolved
+    const service = serviceTypes.ordinary.find(entry => entry.rendered === canonical)?.code
+      ?? refuseForeign("E-TYPE-PARAM", "service shape")
     const id = this.literal(this.at(c.arguments, 0))
     if (id._tag !== "str") return refuseForeign("E-ARG-DYNAMIC", "service identifier")
-    let entry = this.keys.find(k => k.sourceId === id.value)
-    if (!entry) { entry = { ordinal: this.keys.length + 4, service, sourceId: id.value }; this.keys.push(entry) }
-    if (entry.service !== service) return refuseForeign("E-TYPE-PARAM", "service identity has conflicting shapes")
+    const interned = internServiceKey(this.keys, id.value, service)
+    if (!interned.ok) return refuseForeign("E-TYPE-PARAM", "service identity has conflicting shapes")
+    const entry = interned.key
     return { name: { value: entry.ordinal }, service: { value: service } }
   }
   segment(head: string, args: readonly ts.Expression[], first: Eff, env: readonly string[]): Eff {
@@ -657,17 +677,27 @@ class ForeignCompilerReader extends CompilerReader {
     if (head === "Effect.andThen" || head === "Effect.tap") {
       this.arity(args, 1)
       const x = this.unwrap(at(0))
-      let rest: Eff
-      if (ts.isArrowFunction(x)) rest = x.parameters.length ? cont(x) : this.eff(this.expression(x.body), [...env, "\u0000"])
-      else rest = this.eff(x, [...env, "\u0000"])
-      if (head === "Effect.tap") rest = { _tag: "bind", first: rest, rest: { _tag: "succeed", value: { _tag: "var", index: env.length } } }
-      return { _tag: "bind", first, rest }
+      const base = head === "Effect.tap" ? "tap" : "andThen"
+      if (ts.isArrowFunction(x) && x.parameters.length) {
+        const a = this.arrow(x, env, 1)
+        return lowerForm(`${base}Continuation`, env.length, { effects: [fixedEffect(first),
+          effectSlot(a.env, env.length, inner => this.eff(this.expression(a.body), inner))] })
+      }
+      const name = base === "andThen" && ts.isArrowFunction(x) ? "andThenThunk" : `${base}Effect`
+      const body = ts.isArrowFunction(x) ? this.expression(x.body) : x
+      return lowerForm(name, env.length, { effects: [fixedEffect(first),
+        effectSlot(env, env.length, inner => this.eff(body, inner))] })
     }
     if (head === "Effect.as" || head === "Effect.asVoid") {
       this.arity(args, head === "Effect.as" ? 1 : 0)
-      return { _tag: "bind", first, rest: { _tag: "succeed", value: head === "Effect.as" ? { _tag: "lit", value: this.literal(at(0)) } : unit } }
+      return lowerForm(head === "Effect.as" ? "as" : "asVoid", env.length,
+        { effects: [fixedEffect(first)], terms: head === "Effect.as" ? [{ _tag: "lit", value: this.literal(at(0)) }] : [] })
     }
-    if (head === "Effect.ensuring") { this.arity(args, 1); return { _tag: "onExit", body: first, finalizer: this.eff(at(0), [...env, "\u0000"]) } }
+    if (head === "Effect.ensuring") {
+      this.arity(args, 1)
+      return lowerForm("ensuring", env.length, { effects: [fixedEffect(first),
+        effectSlot(env, env.length, inner => this.eff(at(0), inner))] })
+    }
     if (["Effect.exit", "Effect.scoped", "Effect.interruptible", "Effect.uninterruptible"].includes(head)) {
       this.arity(args, 0)
       const tag = head === "Effect.exit" ? "exit" : head === "Effect.scoped" ? "scoped" : head === "Effect.interruptible" ? "interruptible" : "uninterruptible"
@@ -676,11 +706,21 @@ class ForeignCompilerReader extends CompilerReader {
     if (head === "Effect.matchCause" || head === "Effect.matchCauseEffect") {
       this.arity(args, 1); const m = this.fields(at(0))
       if (m.size !== 2) return refuseForeign("E-BIND-SHAPE", "match fields")
-      const arm = (key: string): Eff => {
+      const arm = (key: string) => {
         const a = this.arrow(this.field(m, key), env, 1), x = this.expression(a.body)
-        return head === "Effect.matchCause" ? { _tag: "succeed", value: this.term(x, a.env) } : this.eff(x, a.env)
+        return { value: x, env: a.env }
       }
-      return { _tag: "matchCause", body: first, onValue: arm("onSuccess"), onCause: arm("onFailure") }
+      if (head === "Effect.matchCause") {
+        const termArm = (name: string) => { const a = arm(name); return this.term(a.value, a.env) }
+        return lowerForm("matchCause", env.length, { effects: [fixedEffect(first)],
+          terms: [termArm("onSuccess"), termArm("onFailure")] })
+      }
+      const effectArm = (name: string) => (offset: number, count: number) => {
+        const a = arm(name)
+        return effectSlot(a.env, env.length, inner => this.eff(a.value, inner))(offset, count)
+      }
+      return lowerForm("matchCauseEffect", env.length, { effects: [fixedEffect(first),
+        effectArm("onSuccess"), effectArm("onFailure")] })
     }
     if (head === "Effect.provideService") { this.arity(args, 2); const key = this.key(at(0)); return { _tag: "provideService", body: first, key, value: { _tag: "lit", value: this.provided(key, at(1)) } } }
     if (head === "Effect.provide") {
@@ -776,8 +816,9 @@ class ForeignCompilerReader extends CompilerReader {
     return Number(top / bottom)
   }
   provided(key: ServiceKey, x: ts.Expression): Lit {
-    const value = this.literal(x), expected = key.service.value === 4 ? "nat" : key.service.value === 5 ? "bool" : key.service.value === 6 ? "unit" : "handle"
-    if (value._tag !== expected) return refuseForeign("E-ARG-DYNAMIC", "service literal shape")
+    const value = this.literal(x), expected = serviceTypeFor(key)?.ty._tag
+    const actual = value._tag === "str" ? "string" : value._tag
+    if (actual !== expected) return refuseForeign("E-ARG-DYNAMIC", "service literal shape")
     return value
   }
   override layer(x: ts.Expression): LayerTerm {

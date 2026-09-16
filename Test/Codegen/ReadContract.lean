@@ -27,6 +27,33 @@ Everything a pin evaluates is inlined; the definitions below hold the alphabet o
 
 namespace Test.Codegen.ReadContract
 
+/-- The shared finite service profile retains the former lookup on every key,
+including unknown codes and names reserved for the scheduler. -/
+theorem nativeServiceTy_profile (key : Effect4.ServiceKey) :
+    Effect4.Program.nativeServiceTy key =
+      if key = Effect4.Program.nativeScopeKey then some Effect4.Program.Ty.scope
+      else if key.name.value < Effect4.Machine.Env.firstFreeName then none
+      else match key.service.value with
+        | 4 => some .nat
+        | 5 => some .bool
+        | 6 => some .unit
+        | 7 => some Effect4.Program.NativeOp.refTy
+        | 8 => some Effect4.Program.NativeOp.sqlTy
+        | 9 => some Effect4.Program.NativeOp.kvTy
+        | _ => none := by
+  by_cases h : key = Effect4.Program.nativeScopeKey
+  · subst key
+    rfl
+  · have neq : (Effect4.Program.nativeScopeKey == key) = false := by
+      exact beq_eq_false_iff_ne.mpr (Ne.symm h)
+    simp only [Effect4.Program.nativeServiceTy, Effect4.Program.nativeReservedServiceTypes,
+      List.find?, neq, if_neg h]
+    split
+    · rfl
+    · generalize key.service.value = code
+      match code with
+      | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | code + 10 => rfl
+
 open Effect4.Program
 
 /-- The four rows: a call row on a handle request, a value row, an async row, and a
@@ -663,6 +690,7 @@ def nestedSharing : NativeEff :=
   root.restoreAll [([0], first), ([0], second)] !=
     root.restoreAll [([0], second), ([0], first)]
 
+#print axioms nativeServiceTy_profile
 #print axioms Effect4.Program.Eff.hoistAll_exists
 #print axioms Effect4.Program.readModule_printModule
 #print axioms Effect4.Program.Eff.restoreAll_hoistAll

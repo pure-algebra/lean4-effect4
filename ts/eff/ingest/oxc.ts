@@ -1,15 +1,17 @@
 // ESTree engine, independently adapted from foldlab's oxc-engine.mjs at 4005d34f.
-// This engine normalizes on its own parser walk, then uses the existing fragment reader.
+// This engine recognizes syntax on its own parser walk, then uses the existing
+// fragment reader. Derived forms consume the same Lean-owned template fold as CK.
 import { parseSync } from "oxc-parser"
 import { Result } from "effect"
 import { readEff, readLayer, restoreAll, exprOf, childrenOf, type IrNode, type Expr, type TsStmt } from "../read.ts"
 import { decodeEff, type Eff, type LayerTerm, type ServiceKey } from "../eff.gen.ts"
-import { atomNames, heads, rows } from "../profile.gen.ts"
+import { atomNames, heads, rows, serviceTypes, serviceTypeFor } from "../profile.gen.ts"
 import type { Ty } from "../eff.gen.ts"
 import type { Package } from "../packages.gen.ts"
 import { withTable } from "../read.ts"
-import { bindText, isStringList, methodArgs, methodRow, packageByHead, packageByTarget, packageTable } from "./package-rows.ts"
+import { bindText, internServiceKey, isStringList, methodArgs, methodRow, packageByHead, packageTable } from "./package-rows.ts"
 import { foldSql, isRefusal, type Bind, type SqlArg, type SqlPart } from "./sql-fold.ts"
+import { expandForm, effectSlot, fixedEffect, type FormAlgebra, type FormArguments } from "./forms.ts"
 
 /** The foreign readers read under the canonical package table (`Packages.table`). */
 const underTable = <A>(body: () => A): A => withTable(packageTable, body)
@@ -29,6 +31,26 @@ class Refuse extends Error { constructor(readonly code: RefusalCode, readonly va
 function reject(code: RefusalCode, value: string): never { throw new Refuse(code, value) }
 const id = (name: string): Expr => ({ _tag: "ident", name })
 const call = (name: string, args: readonly Expr[]): Expr => ({ _tag: "call", fn: id(name), args })
+const binder = (body: Expr, depth: number): Expr => ({ _tag: "lambda", params: [`a${depth}`], body })
+const exprForms: FormAlgebra<Expr, Expr> = {
+  literal: value => {
+    switch (value._tag) {
+      case "unit": return id("undefined")
+      case "nat": return { _tag: "int", value: value.value }
+      case "str": case "bool": return value
+    }
+  },
+  variable: index => id(`a${index}`),
+  succeed: value => call("Effect.succeed", [value]),
+  bind: (first, rest, depth) => call("Effect.flatMap", [first, binder(rest, depth)]),
+  onExit: (body, finalizer, depth) => call("Effect.onExit", [body, binder(finalizer, depth)]),
+  matchCause: (body, onValue, onCause, depth) => call("Effect.matchCauseEffect", [body,
+    { _tag: "object", fields: [["onFailure", binder(onCause, depth)], ["onSuccess", binder(onValue, depth)]] }]),
+}
+const lowerForm = (name: string, depth: number, args: FormArguments<Expr, Expr>): Expr => {
+  const result = expandForm(name, depth, args, exprForms)
+  return result.ok ? result.value : reject("E-NODE", `form lowering: ${result.error}`)
+}
 const admitted = new Set<string>([...heads, ...rows.map(r => r.row.spelling), ...forms.rows.map(r => r.head)])
 // The pure atoms are read, not copied (DI-40): `atomNames` above is
 // `Effect4.Program.nativeAtom`'s own name list from `profile.gen.ts`, checked at generation
@@ -74,7 +96,7 @@ class Normalize {
         const old = keys.find(k => k.ordinal === key.name.value)
         if (!old) return reject("E-REF-UNBOUND", "service key")
         let entry = this.keys.find(k => k.sourceId === old.sourceId)
-        if (!entry) { entry = { ...old, ordinal: this.keys.length + 4 }; this.keys.push(entry) }
+        if (!entry) { entry = { ...old, ordinal: this.keys.length + serviceTypes.firstFreeName }; this.keys.push(entry) }
         return { name: { value: entry.ordinal }, service: key.service }
       }
       // Layer constructors expose their key before their body; provision keys follow it.
@@ -147,8 +169,9 @@ class Normalize {
     return packageByHead.get(head)
   }
   packageKey(pkg: Package): Expr {
-    let entry = this.keys.find(k => k.sourceId === pkg.key)
-    if (!entry) { entry = { ordinal: this.keys.length + 4, service: pkg.service, sourceId: pkg.key }; this.keys.push(entry) }
+    const interned = internServiceKey(this.keys, pkg.key, pkg.service)
+    if (!interned.ok) return reject("E-TYPE-PARAM", "service identity has conflicting shapes")
+    const entry = interned.key
     return { _tag: "call", fn: { _tag: "generic", fn: id("Context.Service"), typeArgs: [pkg.target] }, args: [{ _tag: "str", value: `k${entry.ordinal}_${pkg.service}` }] }
   }
   /** A method on a binder, as the printer's fragment (`receiver.spelling(args)`, or
@@ -263,14 +286,18 @@ class Normalize {
     const types = list(node(factory, "typeArguments"), "params")
     const t = types.at(-1)
     const shape = t ? this.source.slice(offset(t, "start"), offset(t, "end")) : ""
-    const packaged = packageByTarget(shape)?.service
-    const service = shape === "number" ? 4 : shape === "boolean" ? 5 : shape === "void" || shape === "unknown" ? 6 : shape === "Ref.Ref<number>" ? 7 : packaged !== undefined ? packaged : reject("E-TYPE-PARAM", "service shape")
+    const [root, ...tail] = shape.split("."), binding = this.bindings.get(root!)
+    if (binding === "opaque") return reject("E-IMPORT-OPAQUE", shape)
+    const resolved = binding === undefined ? shape : [binding, ...tail].filter(Boolean).join(".")
+    const canonical = packageByHead.get(resolved)?.target ?? resolved
+    const entryType = serviceTypes.ordinary.find(entry => entry.rendered === canonical)
+    const service = entryType?.code ?? reject("E-TYPE-PARAM", "service shape")
     const sourceId = this.literal(a[0]!)
     if (sourceId._tag !== "str") return reject("E-ARG-DYNAMIC", "service identifier")
-    let entry = this.keys.find(k => k.sourceId === sourceId.value)
-    if (!entry) { entry = { ordinal: this.keys.length + 4, service, sourceId: sourceId.value }; this.keys.push(entry) }
-    if (entry.service !== service) return reject("E-TYPE-PARAM", "service identity has conflicting shapes")
-    return { _tag: "call", fn: { _tag: "generic", fn: id("Context.Service"), typeArgs: [service === 6 ? "void" : shape] }, args: [{ _tag: "str", value: `k${entry.ordinal}_${service}` }] }
+    const interned = internServiceKey(this.keys, sourceId.value, service)
+    if (!interned.ok) return reject("E-TYPE-PARAM", "service identity has conflicting shapes")
+    const entry = interned.key
+    return { _tag: "call", fn: { _tag: "generic", fn: id("Context.Service"), typeArgs: [canonical] }, args: [{ _tag: "str", value: `k${entry.ordinal}_${service}` }] }
   }
   term(n: Node, env: readonly string[]): Expr {
     n = unwrap(n)
@@ -376,7 +403,6 @@ class Normalize {
     const p = (i: number) => self && i === 0 ? self : this.program(arg(i), env)
     const t = (i: number) => this.term(arg(i), env)
     const k = (i: number, count = 1) => this.continuation(arg(i), env, count)
-    const bind = (body: Expr) => ({ _tag: "lambda" as const, params: [`a${env.length}`], body })
     if (h === "Effect.map") {
       arity(2); const first = p(0)
       try {
@@ -399,24 +425,41 @@ class Normalize {
     }
     if (h === "Effect.andThen" || h === "Effect.tap") {
       arity(2); const first = p(0), n = unwrap(arg(1))
-      let body: Expr
-      if (n.type === "ArrowFunctionExpression" && list(n, "params").length) { const fn = k(1); if (fn._tag !== "lambda") return reject("E-NODE", "continuation"); body = fn.body }
-      else body = this.program(n.type === "ArrowFunctionExpression" ? node(n, "body") : n, [...env, "\u0000"])
-      if (h === "Effect.tap") body = call("Effect.flatMap", [body, { _tag: "lambda", params: [`a${env.length + 1}`], body: call("Effect.succeed", [id(`a${env.length}`)]) }])
-      return call("Effect.flatMap", [first, bind(body)])
+      const base = h === "Effect.tap" ? "tap" : "andThen"
+      if (n.type === "ArrowFunctionExpression" && list(n, "params").length) {
+        const fn = k(1)
+        if (fn._tag !== "lambda") return reject("E-NODE", "continuation")
+        return lowerForm(`${base}Continuation`, env.length,
+          { effects: [fixedEffect(first), fixedEffect(fn.body)] })
+      }
+      const name = base === "andThen" && n.type === "ArrowFunctionExpression" ? "andThenThunk" : `${base}Effect`
+      const body = n.type === "ArrowFunctionExpression" ? node(n, "body") : n
+      return lowerForm(name, env.length, { effects: [fixedEffect(first),
+        effectSlot(env, env.length, inner => this.program(body, inner))] })
     }
-    if (h === "Effect.as" || h === "Effect.asVoid") { arity(h === "Effect.as" ? 2 : 1); return call("Effect.flatMap", [p(0), bind(call("Effect.succeed", [h === "Effect.as" ? this.literal(arg(1)) : id("undefined")]))]) }
-    if (h === "Effect.ensuring") { arity(2); return call("Effect.onExit", [p(0), bind(this.program(arg(1), [...env, "\u0000"]))]) }
+    if (h === "Effect.as" || h === "Effect.asVoid") {
+      arity(h === "Effect.as" ? 2 : 1)
+      return lowerForm(h === "Effect.as" ? "as" : "asVoid", env.length,
+        { effects: [fixedEffect(p(0))], terms: h === "Effect.as" ? [this.literal(arg(1))] : [] })
+    }
+    if (h === "Effect.ensuring") {
+      arity(2)
+      return lowerForm("ensuring", env.length, { effects: [fixedEffect(p(0)),
+        effectSlot(env, env.length, inner => this.program(arg(1), inner))] })
+    }
     if (h === "Effect.matchCause" || h === "Effect.matchCauseEffect") {
       arity(2); const first = p(0)
       const m = new Map(this.fields(arg(1), ["onFailure", "onSuccess"]))
       const result = (name: string) => {
         const fn = this.continuation(m.get(name)!, env, 1, h === "Effect.matchCause" ? "term" : "program")
         if (fn._tag !== "lambda") return reject("E-NODE", "match continuation")
-        return h === "Effect.matchCause" ? { ...fn, body: call("Effect.succeed", [fn.body]) } : fn
+        return fn.body
       }
       const onSuccess = result("onSuccess"), onFailure = result("onFailure")
-      return call("Effect.matchCauseEffect", [first, { _tag: "object", fields: [["onFailure", onFailure], ["onSuccess", onSuccess]] }])
+      return h === "Effect.matchCause"
+        ? lowerForm("matchCause", env.length, { effects: [fixedEffect(first)], terms: [onSuccess, onFailure] })
+        : lowerForm("matchCauseEffect", env.length,
+          { effects: [fixedEffect(first), fixedEffect(onSuccess), fixedEffect(onFailure)] })
     }
     if (["Effect.exit", "Effect.uninterruptible", "Effect.interruptible", "Effect.scoped"].includes(h)) { arity(1); return call(h, [p(0)]) }
     if (["Effect.forkChild", "Effect.forkDetach", "Effect.forkScoped", "Effect.forkIn"].includes(h)) {
@@ -481,9 +524,13 @@ class Normalize {
   provided(key: Expr, n: Node): Expr {
     const value = this.literal(n)
     if (key._tag !== "call" || key.args[0]?._tag !== "str") return reject("E-NODE", "key")
-    const service = Number(key.args[0].value.split("_")[1])
-    const actual = value._tag === "int" ? 4 : value._tag === "bool" ? 5 : value._tag === "ident" && value.name === "undefined" ? 6 : -1
-    if (service !== actual) return reject("E-ARG-DYNAMIC", "service literal shape")
+    const parts = /^k(0|[1-9][0-9]*)_(0|[1-9][0-9]*)$/.exec(key.args[0].value)
+    if (!parts) return reject("E-NODE", "key")
+    const expected = serviceTypeFor({ name: { value: Number(parts[1]) },
+      service: { value: Number(parts[2]) } })?.ty._tag
+    const actual = value._tag === "int" ? "nat" : value._tag === "bool" ? "bool"
+      : value._tag === "ident" && value.name === "undefined" ? "unit" : value._tag === "str" ? "string" : undefined
+    if (expected === undefined || actual !== expected) return reject("E-ARG-DYNAMIC", "service literal shape")
     return value
   }
   layer(n: Node): Expr {
@@ -659,10 +706,7 @@ class Normalize {
     }
     if (h === "Effect.provideService") {
       arity(3)
-      const body = this.program(arg(0), env), key = this.key(arg(1)), value = this.literal(arg(2))
-      if (key._tag !== "call" || key.args[0]?._tag !== "str") return reject("E-NODE", "key")
-      const shape = Number(key.args[0].value.split("_")[1]), actual = value._tag === "int" ? 4 : value._tag === "bool" ? 5 : value._tag === "ident" && value.name === "undefined" ? 6 : -1
-      if (shape !== actual) return reject("E-ARG-DYNAMIC", "service literal shape")
+      const body = this.program(arg(0), env), key = this.key(arg(1)), value = this.provided(key, arg(2))
       return call(h, [body, key, value])
     }
     if (h === "Effect.flatMap" || h === "Effect.catchCause" || h === "Effect.catch" || h === "Effect.onExit") { arity(2); return call(h, [this.program(arg(0), env), this.continuation(arg(1), env, 1)]) }

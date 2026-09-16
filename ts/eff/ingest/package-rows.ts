@@ -7,6 +7,21 @@
 // key, with the rc.112 key string as its `sourceId` and the service type code as its shape.
 import type { Row, Term, Ty } from "../eff.gen.ts"
 import { packages, type Package } from "../packages.gen.ts"
+import { serviceTypes } from "../profile.gen.ts"
+import type { Key } from "./contract.ts"
+
+/** Package and declared keys share one runtime string namespace. Reusing a name
+ * is allowed only at the same service shape, independently of encounter order.
+ * This does not handle the separate final traversal that renumbers printed keys. */
+export const internServiceKey = (keys: Key[], sourceId: string, service: number):
+  { readonly ok: true; readonly key: Key } | { readonly ok: false } => {
+  const existing = keys.find(key => key.sourceId === sourceId)
+  if (existing !== undefined) return existing.service === service
+    ? { ok: true, key: existing } : { ok: false }
+  const key = { ordinal: keys.length + serviceTypes.firstFreeName, service, sourceId }
+  keys.push(key)
+  return { ok: true, key }
+}
 
 /** The canonical table, package rows in package order; the index is `NativeOp.external i`. */
 export const packageTable: ReadonlyArray<Row> = packages.flatMap((p) => p.rows)
@@ -15,9 +30,6 @@ export const packageTable: ReadonlyArray<Row> = packages.flatMap((p) => p.rows)
 export const packageByHead: ReadonlyMap<string, Package> = new Map(
   packages.flatMap((p) => [[`${p.module}.${p.target}`, p] as const, [`${p.module}/${p.target}`, p] as const]),
 )
-
-/** The package whose handle target a `Context.Service<…>` shape names, if any. */
-export const packageByTarget = (shape: string): Package | undefined => packages.find((p) => p.target === shape)
 
 /** A method row by its spelling: the receiver is the first component of its request
  * (`RowShape.method`); trailing names are never printed on a method row. */

@@ -256,4 +256,20 @@ Arbitrary blocks of inserted binding slots preserve the complete checker result,
 including refusal. The `andThen`, `tap`, `as`/`asVoid`, and `ensuring` laws read the
 actual `Forms.all` expansions and state their argument environments explicitly.
 They establish core typing of those expansions, not source-parser correctness or
-host behavior. Making all readers consume that owner remains implementation work.
+host behavior. The compiler and OXC foreign readers now fold the generated templates
+for `andThen`, `tap`, `as`, `asVoid`, `ensuring` and both `matchCause` forms, using their
+own source recognition and lexical environments. The remaining form constructors
+still use their existing adapters. The canonical exact reader is unchanged.
+
+The native service type tables in `Program/Native.lean` now feed the core lookup and
+the generated reader profile. The canonical reader consumes the generated spelling;
+both foreign readers use it for service annotation recognition and literal checking.
+`nativeServiceTy_profile` in the existing reader battery proves agreement with the
+former native lookup for every key. Unsupported foreign service annotations, including
+`unknown`, refuse with `E-TYPE-PARAM`; they no longer acquire the unit service code.
+Both foreign readers also share the service-key allocation/conflict check: a package
+service and a declared service using one runtime name must have the same carrier,
+regardless of encounter order. Opposite-order rejection and same-carrier alias controls
+live in `ts/eff/ingest/test/services.test.ts`.
+This consolidates the existing carrier mapping, without resolving the separate nominal
+service identity or typed-module admission obligations.

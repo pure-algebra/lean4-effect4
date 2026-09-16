@@ -16,7 +16,7 @@ import { Result } from "effect"
 import { parseSync } from "oxc-parser"
 import type { ActionTerm, CauseTerm, Eff, ForkOptions, LayerTerm, Lit, Row, ServiceKey, Stmt, Term, Ty } from "./eff.gen.ts"
 import { decodeEff } from "./eff.gen.ts"
-import { heads, rows, type Entry, type Head } from "./profile.gen.ts"
+import { heads, rows, serviceTypeFor, type Entry, type Head } from "./profile.gen.ts"
 
 export type { Eff } from "./eff.gen.ts"
 
@@ -810,21 +810,6 @@ const readRowMethod = (n: number, receiver: Expr, s: string, typeArgs: ReadonlyA
   return ok(rowAnswer(spelled, { _tag: "app", atom: "pair", args: [recv.success, eff.request] }))
 }
 
-/** `nativeServiceTy` of Program/Native.lean:273-283, including the reserved Scope key. */
-const serviceType = (name: number, service: number): string | undefined => {
-  if (name === 0 && service === 0) return "Scope.Scope"
-  if (name < 4) return undefined
-  switch (service) {
-    case 4: return "number"
-    case 5: return "boolean"
-    case 6: return "void"
-    case 7: return "Ref.Ref<number>"
-    case 8: return "SqlClient.SqlClient"
-    case 9: return "KeyValueStore.KeyValueStore"
-    default: return undefined
-  }
-}
-
 /** The exact numeric spelling and type argument of Lean's `printKey`. */
 const readKey = (x: Expr): Read<ServiceKey> => {
   const bad = () => refuse({ _tag: "shape", what: "service key" })
@@ -834,7 +819,7 @@ const readKey = (x: Expr): Read<ServiceKey> => {
   const name = Number(fields[1])
   const service = Number(fields[2])
   if (!Number.isSafeInteger(name) || !Number.isSafeInteger(service)) return bad()
-  const ty = serviceType(name, service)
+  const ty = serviceTypeFor({ name: { value: name }, service: { value: service } })?.rendered
   if (ty === undefined) {
     if (x.fn._tag !== "ident" || x.fn.name !== "Context.Service") return bad()
   } else {

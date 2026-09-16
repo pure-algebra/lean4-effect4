@@ -31,7 +31,8 @@ Writes seven files, all `GENERATED`, none ever edited:
   (`Effect4.Program.reserved`, cross-checked against every `.ident "…"` literal of
   `Print.lean`), the pure atom set (`nativeAtom`/`nativeAtomTy`, name, arity and monomorphic
   signature, projected from `NativeAtom` — DI-40: the ingest engines and the
-  truth prelude read it instead of keeping copies), and one entry per built-in `NativeOp` value — the operation as a `NativeOp` node and
+  truth prelude read it instead of keeping copies), the native reserved/ordinary service
+  type tables and their spelling, and one entry per built-in `NativeOp` value — the operation as a `NativeOp` node and
   its `Row` as a `Row` node. No row type is written by hand: `Row`, `Ty`, `NativeOp` are
   families like any other. A stamp (FNV-1a 64 over the payload bytes) is recomputed at import.
 
@@ -538,11 +539,21 @@ def atomJs : String × Option Nat × Option (List Effect4.Program.Ty × Effect4.
 def atomRows : List (String × Option Nat × Option (List Effect4.Program.Ty × Effect4.Program.Ty)) :=
   Effect4.Program.NativeAtom.all.map fun atom => (atom.name, atom.arity, atom.mono)
 
-/-- The payload: address, heads, atoms and entries, as one line of JSON. -/
+/-- The service lookup's complete finite inputs, including reserved-name policy.
+Type spellings are produced by the same renderer that `printKey` uses. -/
+def servicesJs : String :=
+  obj [("firstFreeName", toString Effect4.Machine.Env.firstFreeName),
+    ("reserved", arr (Effect4.Program.nativeReservedServiceTypes.map fun (key, ty) =>
+      obj [("key", keyJs key), ("ty", tyJs ty), ("rendered", lit ty.render)])),
+    ("ordinary", arr (Effect4.Program.nativeServiceTypes.map fun (code, ty) =>
+      obj [("code", toString code), ("ty", tyJs ty), ("rendered", lit ty.render)]))]
+
+/-- The payload: address, heads, atoms, services and entries, as one line of JSON. -/
 def payload (address : String) : String :=
   obj [ ("address", lit address)
       , ("heads", arr (Effect4.Program.reserved.map lit))
       , ("atoms", arr (atomRows.map atomJs))
+      , ("services", servicesJs)
       , ("rows", arr (allNativeOps.map entryJs)) ]
 
 def emitProfile (address : String) : String :=
@@ -559,7 +570,7 @@ def emitProfile (address : String) : String :=
     toString atomRows.length ++ " atoms, " ++
     toString allNativeOps.length ++ " rows, content " ++ stamp ++ "\n\n" ++
   "import { Schema } from \"effect\"\n" ++
-  "import { NativeOp, Row, Ty } from \"./eff.gen.ts\"\n\n" ++
+  "import { NativeOp, Row, ServiceKey, Ty } from \"./eff.gen.ts\"\n\n" ++
   "export const address = " ++ lit address ++ "\n\n" ++
   "export const heads = [\n  " ++ ",\n  ".intercalate (Effect4.Program.reserved.map lit) ++ ",\n] as const\n" ++
   "export type Head = (typeof heads)[number]\n\n" ++
@@ -574,9 +585,15 @@ def emitProfile (address : String) : String :=
   "/** One native operation and its row. */\n" ++
   "export const Entry = Schema.Struct({ op: NativeOp, row: Row })\n" ++
   "export type Entry = typeof Entry.Type\n\n" ++
+  "/** The native service lookup, projected from its actual Lean tables. */\n" ++
+  "export const ServiceTypes = Schema.Struct({\n" ++
+  "  firstFreeName: Schema.Number,\n" ++
+  "  reserved: Schema.Array(Schema.Struct({ key: ServiceKey, ty: Ty, rendered: Schema.String })),\n" ++
+  "  ordinary: Schema.Array(Schema.Struct({ code: Schema.Number, ty: Ty, rendered: Schema.String })),\n})\n" ++
+  "export type ServiceTypes = typeof ServiceTypes.Type\n\n" ++
   "export const Profile = Schema.Struct({\n" ++
   "  address: Schema.String,\n  heads: Schema.Array(Schema.String),\n" ++
-  "  atoms: Schema.Array(Atom),\n  rows: Schema.Array(Entry),\n})\n" ++
+  "  atoms: Schema.Array(Atom),\n  services: ServiceTypes,\n  rows: Schema.Array(Entry),\n})\n" ++
   "export type Profile = typeof Profile.Type\n\n" ++
   "/** The payload as Lean wrote it; `stamp` is FNV-1a 64 over exactly these bytes. */\n" ++
   "const text = " ++ lit text ++ "\n" ++
@@ -593,7 +610,14 @@ def emitProfile (address : String) : String :=
   "export const atoms: ReadonlyArray<Atom> = profile.atoms\n" ++
   "/** The atom names as a set, for a reader deciding whether an identifier is an atom. */\n" ++
   "export const atomNames: ReadonlySet<string> = new Set(atoms.map((a) => a.name))\n\n" ++
-  "export const rows: ReadonlyArray<Entry> = profile.rows\n"
+  "export const rows: ReadonlyArray<Entry> = profile.rows\n" ++
+  "export const serviceTypes: ServiceTypes = profile.services\n\n" ++
+  "/** Same reserved-first lookup as Program.nativeServiceTy; no local type-code policy. */\n" ++
+  "export const serviceTypeFor = (key: ServiceKey): { readonly ty: Ty; readonly rendered: string } | undefined => {\n" ++
+  "  const reserved = serviceTypes.reserved.find(entry => entry.key.name.value === key.name.value && entry.key.service.value === key.service.value)\n" ++
+  "  if (reserved !== undefined) return reserved\n" ++
+  "  if (key.name.value < serviceTypes.firstFreeName) return undefined\n" ++
+  "  return serviceTypes.ordinary.find(entry => entry.code === key.service.value)\n}\n"
 
 
 /-! ## The package tables (`Effect4.Program.Packages.all`), rows through the `Row` schema -/
