@@ -177,7 +177,7 @@ mutual
   private theorem eff_refNames (sig : Signature Op)
       (spell : String → List String → Option Op) (node : Eff Op) (n : Nat) (path : List Nat)
       (hr : readable sig spell n node = true) : namesReadable (node.refSites path) = true := by
-    cases node <;> simp_all only [readable, Eff.refSites, List.all_append,
+    cases node <;> simp_all only [foldMapAt_eff, foldMapAt_stmts, foldMapAt_stmt, foldMapAt_effs, foldMapAt_action, foldMapAt_layer, foldMapAt_layers, LayerTerm.refSite, List.nil_append, List.append_nil, readable, Eff.refSites, List.all_append,
       Bool.and_eq_true, namesReadable, List.all_nil]
     all_goals repeat' apply And.intro
     all_goals close_ref_names
@@ -188,7 +188,7 @@ mutual
     cases node with
     | nil => rfl
     | cons head tail =>
-        cases head <;> simp_all only [readableStmts, Stmts.refSites, Stmt.refSites,
+        cases head <;> simp_all only [foldMapAt_eff, foldMapAt_stmts, foldMapAt_stmt, foldMapAt_effs, foldMapAt_action, foldMapAt_layer, foldMapAt_layers, LayerTerm.refSite, List.nil_append, List.append_nil, readableStmts, Stmts.refSites, Stmt.refSites,
           List.all_append, Bool.and_eq_true, namesReadable, List.all_nil]
         all_goals repeat' apply And.intro
         all_goals close_ref_names
@@ -196,14 +196,14 @@ mutual
   private theorem action_refNames (sig : Signature Op)
       (spell : String → List String → Option Op) (node : ActionTerm Op) (n : Nat) (path : List Nat)
       (hr : readableAction sig spell n node = true) : namesReadable (node.refSites path) = true := by
-    cases node <;> simp_all only [readableAction, ActionTerm.refSites, namesReadable,
+    cases node <;> simp_all only [foldMapAt_eff, foldMapAt_stmts, foldMapAt_stmt, foldMapAt_effs, foldMapAt_action, foldMapAt_layer, foldMapAt_layers, LayerTerm.refSite, List.nil_append, List.append_nil, readableAction, ActionTerm.refSites, namesReadable,
       List.all_nil, Bool.and_eq_true, Bool.false_eq_true]
     all_goals close_ref_names
 
   private theorem effs_refNames (sig : Signature Op)
       (spell : String → List String → Option Op) (node : Effs Op) (n : Nat) (path : List Nat)
       (hr : readableEffs sig spell n node = true) : namesReadable (node.refSites path) = true := by
-    cases node <;> simp_all only [readableEffs, Effs.refSites, List.all_append,
+    cases node <;> simp_all only [foldMapAt_eff, foldMapAt_stmts, foldMapAt_stmt, foldMapAt_effs, foldMapAt_action, foldMapAt_layer, foldMapAt_layers, LayerTerm.refSite, List.nil_append, List.append_nil, readableEffs, Effs.refSites, List.all_append,
       Bool.and_eq_true, namesReadable, List.all_nil]
     all_goals repeat' apply And.intro
     all_goals close_ref_names
@@ -211,7 +211,7 @@ mutual
   private theorem layer_refNames (sig : Signature Op)
       (spell : String → List String → Option Op) (node : LayerTerm Op) (path : List Nat)
       (hr : readableLayer sig spell node = true) : namesReadable (node.refSites path) = true := by
-    cases node <;> simp_all only [readableLayer, LayerTerm.refSites, List.all_append,
+    cases node <;> simp_all only [foldMapAt_eff, foldMapAt_stmts, foldMapAt_stmt, foldMapAt_effs, foldMapAt_action, foldMapAt_layer, foldMapAt_layers, LayerTerm.refSite, List.nil_append, List.append_nil, readableLayer, LayerTerm.refSites, List.all_append,
       Bool.and_eq_true, namesReadable, List.all_nil, List.all_cons, Bool.and_true]
     all_goals repeat' apply And.intro
     all_goals close_ref_names
@@ -219,7 +219,7 @@ mutual
   private theorem layers_refNames (sig : Signature Op)
       (spell : String → List String → Option Op) (node : LayerTerms Op) (path : List Nat)
       (hr : readableLayers sig spell node = true) : namesReadable (node.refSites path) = true := by
-    cases node <;> simp_all only [readableLayers, LayerTerms.refSites, List.all_append,
+    cases node <;> simp_all only [foldMapAt_eff, foldMapAt_stmts, foldMapAt_stmt, foldMapAt_effs, foldMapAt_action, foldMapAt_layer, foldMapAt_layers, LayerTerm.refSite, List.nil_append, List.append_nil, readableLayers, LayerTerms.refSites, List.all_append,
       Bool.and_eq_true, namesReadable, List.all_nil]
     all_goals repeat' apply And.intro
     all_goals close_ref_names

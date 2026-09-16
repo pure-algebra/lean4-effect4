@@ -3113,6 +3113,67 @@ def weakenAlg {Op : Type} (cut : Nat) : EffFrontierAlgebra Op (frontierSelfCarri
   frontierMap (Effect4.Program.Term.weaken cut) (Effect4.Program.CauseTerm.weaken cut)
 
 mutual
+def Eff.weaken {Op : Type} (cut : Nat) : Effect4.Program.Eff Op → Effect4.Program.Eff Op
+  | .succeed a0 => .succeed (Effect4.Program.Term.weaken cut a0)
+  | .fail a0 => .fail (Effect4.Program.Term.weaken cut a0)
+  | .failCause a0 => .failCause (Effect4.Program.CauseTerm.weaken cut a0)
+  | .yieldError a0 => .yieldError (Effect4.Program.Term.weaken cut a0)
+  | .sync a0 => .sync (Effect4.Program.Term.weaken cut a0)
+  | .suspend a0 => .suspend (Eff.weaken cut a0)
+  | .perform a0 a1 => .perform a0 (Effect4.Program.Term.weaken cut a1)
+  | .bind a0 a1 => .bind (Eff.weaken cut a0) (Eff.weaken cut a1)
+  | .gen a0 => .gen (Stmts.weaken cut a0)
+  | .catchCause a0 a1 => .catchCause (Eff.weaken cut a0) (Eff.weaken cut a1)
+  | .matchCause a0 a1 a2 => .matchCause (Eff.weaken cut a0) (Eff.weaken cut a1) (Eff.weaken cut a2)
+  | .onExit a0 a1 => .onExit (Eff.weaken cut a0) (Eff.weaken cut a1)
+  | .exit a0 => .exit (Eff.weaken cut a0)
+  | .uninterruptible a0 => .uninterruptible (Eff.weaken cut a0)
+  | .interruptible a0 => .interruptible (Eff.weaken cut a0)
+  | .branch a0 a1 a2 => .branch (Effect4.Program.Term.weaken cut a0) (Eff.weaken cut a1) (Eff.weaken cut a2)
+  | .whileLoop a0 a1 a2 a3 => .whileLoop (Effect4.Program.Term.weaken cut a0) (Effect4.Program.Term.weaken cut a1) (Effect4.Program.Term.weaken cut a2) (Eff.weaken cut a3)
+  | .yieldNow a0 => .yieldNow a0
+  | .callback a0 a1 => .callback a0 (Effect4.Program.Term.weaken cut a1)
+  | .awaitFiber a0 a1 => .awaitFiber (Effect4.Program.Term.weaken cut a0) a1
+  | .withFiber a0 => .withFiber (ActionTerm.weaken cut a0)
+  | .scoped a0 => .scoped (Eff.weaken cut a0)
+  | .acquireRelease a0 a1 => .acquireRelease (Eff.weaken cut a0) (Eff.weaken cut a1)
+  | .provideLayer a0 a1 a2 => .provideLayer a0 a1 (Eff.weaken cut a2)
+  | .service a0 => .service a0
+  | .provideService a0 a1 a2 => .provideService a0 (Effect4.Program.Term.weaken cut a1) (Eff.weaken cut a2)
+  | .catchIf a0 a1 a2 => .catchIf (Effect4.Program.Term.weaken cut a0) (Eff.weaken cut a1) (Eff.weaken cut a2)
+def Stmt.weaken {Op : Type} (cut : Nat) : Effect4.Program.Stmt Op → Effect4.Program.Stmt Op
+  | .bindYield a0 => .bindYield (Eff.weaken cut a0)
+  | .yieldDiscard a0 => .yieldDiscard (Eff.weaken cut a0)
+  | .ret a0 => .ret (Effect4.Program.Term.weaken cut a0)
+  | .ifElse a0 a1 a2 => .ifElse (Effect4.Program.Term.weaken cut a0) (Stmts.weaken cut a1) (Stmts.weaken cut a2)
+  | .whileTrue a0 => .whileTrue (Stmts.weaken cut a0)
+  | .breakLoop => .breakLoop
+def Stmts.weaken {Op : Type} (cut : Nat) : Effect4.Program.Stmts Op → Effect4.Program.Stmts Op
+  | .nil => .nil
+  | .cons a0 a1 => .cons (Stmt.weaken cut a0) (Stmts.weaken cut a1)
+def Effs.weaken {Op : Type} (cut : Nat) : Effect4.Program.Effs Op → Effect4.Program.Effs Op
+  | .nil => .nil
+  | .cons a0 a1 => .cons (Eff.weaken cut a0) (Effs.weaken cut a1)
+def ActionTerm.weaken {Op : Type} (cut : Nat) : Effect4.Program.ActionTerm Op → Effect4.Program.ActionTerm Op
+  | .fork a0 a1 => .fork (Eff.weaken cut a0) a1
+  | .forkIn a0 a1 a2 => .forkIn (Eff.weaken cut a0) a1 (Effect4.Program.Term.weaken cut a2)
+  | .forkScoped a0 a1 => .forkScoped (Eff.weaken cut a0) a1
+  | .runIn a0 a1 => .runIn (Effect4.Program.Term.weaken cut a0) (Effect4.Program.Term.weaken cut a1)
+  | .interrupt a0 => .interrupt (Effect4.Program.Term.weaken cut a0)
+  | .interruptScoped a0 => .interruptScoped (Effect4.Program.Term.weaken cut a0)
+  | .interruptAll a0 a1 => .interruptAll (Effect4.Program.Term.weaken cut a0) (a1.map (Effect4.Program.Term.weaken cut))
+  | .awaitAll a0 => .awaitAll (Effect4.Program.Term.weaken cut a0)
+  | .awaitAllFailFast a0 => .awaitAllFailFast (Effect4.Program.Term.weaken cut a0)
+  | .snapshotChildren => .snapshotChildren
+  | .awaitNewChildren a0 => .awaitNewChildren (Effect4.Program.Term.weaken cut a0)
+  | .raceAll a0 => .raceAll (Effs.weaken cut a0)
+  | .setContext a0 => .setContext (Effect4.Program.Term.weaken cut a0)
+  | .getContext => .getContext
+  | .getId => .getId
+  | .closeScope a0 a1 => .closeScope (Effect4.Program.Term.weaken cut a0) (Effect4.Program.Term.weaken cut a1)
+end
+
+mutual
 theorem weaken_eq_cata_eff {Op : Type} (cut : Nat) (node : Effect4.Program.Eff Op) :
     Effect4.Program.Eff.weaken cut node = cata_frontier_eff (weakenAlg cut) node := by
   match node with

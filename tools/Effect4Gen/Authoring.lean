@@ -22,6 +22,8 @@ constructor declarations from the Lean environment, and emits:
   variable below its level) is one `cata_eff`, with one `rfl` equation per constructor.
 * group `ScopedLaws` → `src/Effect4/Laws/Program/Authoring/Lifts.lean`: for every lift, the
   theorem that it preserves scope, with one proof script for all of them.
+* group `NodeLenses` → `src/Effect4/Program/NodeLenses.lean`: `Node.child` and
+  `Node.setChild`, one arm per node-typed constructor argument, from the declarations alone.
 
 Run by `tools/Effect4Gen/Driver.lean` like the other emitters:
 
@@ -595,6 +597,46 @@ def emitLiftLemmas (t : Table) (ctors : List Ctor) : MetaM (String × List Strin
       receipts := receipts ++ [name]
   return (text, receipts)
 
+/-! ## Group NodeLenses: the child lenses from the constructor declarations
+
+`Node.child` and `Node.setChild` address a node's node-typed arguments by their rank in
+declaration order, the same rank the lifts elaborate at and the path folds thread. One arm
+per (constructor, rank), from the reflection alone; no table. -/
+
+def emitNodeLenses (ctors : List Ctor) : MetaM (String × List String) := do
+  let mut childArms : List String := []
+  let mut setArms : List String := []
+  for c in ctors do
+    let some famKey := nodeCtorOf c.fam | continue
+    for (a, j) in c.args.zipIdx do
+      let .node childFam := a.kind | continue
+      let some childKey := nodeCtorOf childFam | continue
+      let some rank := nodeRank c j | continue
+      let childPat := String.intercalate " " (c.args.zipIdx.map fun (_, k) => if k == j then s!"a{j}" else "_")
+      childArms := childArms ++ [s!"  | {famKey} (.{c.short} {childPat}), {rank} => some ({childKey} a{j})"]
+      let setPat := String.intercalate " " (c.args.zipIdx.map fun (_, k) => if k == j then "_" else s!"a{k}")
+      let result := String.intercalate " " (c.args.zipIdx.map fun (_, k) => if k == j then "x" else s!"a{k}")
+      setArms := setArms ++ [s!"  | {famKey} (.{c.short} {setPat}), {rank}, {childKey} x => some ({famKey} (.{c.short} {result}))"]
+  let text := String.intercalate "\n" ([
+    "namespace Node",
+    "",
+    "variable {Op : Type}",
+    "",
+    "/-- The child at an index: the node-typed arguments of a constructor, in declaration order.",
+    "Terms are not nodes: only programs, statements, actions, layers and the two spines are",
+    "addressed. -/",
+    "def child : Node Op → Nat → Option (Node Op)"] ++ childArms ++ [
+    "  | _, _ => none",
+    "",
+    "/-- The node with the child at an index replaced by one of the same sort; `none` where",
+    "`child` is `none` or the sorts differ. -/",
+    "def setChild : Node Op → Nat → Node Op → Option (Node Op)"] ++ setArms ++ [
+    "  | _, _, _ => none",
+    "",
+    "end Node",
+    ""])
+  return (text, ["Effect4.Program.Node.child", "Effect4.Program.Node.setChild"])
+
 /-! ## The command line, as the driver spells it -/
 
 structure Args where
@@ -656,7 +698,10 @@ def run (args : Args) : MetaM (Array String) := do
     | "ScopedLaws" =>
       let (t, r) ← emitLiftLemmas table ctors
       pure ("namespace Effect4.Program.Authoring\n\nopen Effect4.Program\n\n" ++ t, r)
-    | g => throwError "unknown group {g}: Binders, Authoring, Scoped or ScopedLaws"
+    | "NodeLenses" =>
+      let (t, r) ← emitNodeLenses ctors
+      pure ("namespace Effect4.Program\n\n" ++ t, r)
+    | g => throwError "unknown group {g}: Binders, Authoring, Scoped, ScopedLaws or NodeLenses"
   lines := lines.push text
   lines := lines ++ #["/-! ## Receipts -/", ""]
   for r in receipts do

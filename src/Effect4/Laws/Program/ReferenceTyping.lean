@@ -39,51 +39,51 @@ mutual
   theorem eff_expandRound_eq_self {Op : Type} (orig : Node Op)
       (node : Eff Op) (path : List Nat) (h : node.refSites path = []) :
       Eff.expandRound orig node = node := by
-    cases node <;> simp_all only [Eff.refSites, List.append_eq_nil_iff]
-    all_goals simp only [Eff.expandRound]
+    cases node <;> simp_all only [foldMapAt_eff, foldMapAt_stmts, foldMapAt_stmt, foldMapAt_effs, foldMapAt_action, foldMapAt_layer, foldMapAt_layers, LayerTerm.refSite, List.nil_append, List.append_nil, Eff.refSites, List.append_eq_nil_iff]
+    all_goals simp only [cata_eff, cata_stmts, cata_stmt, cata_effs, cata_action, cata_layer, cata_layers, expandAlgebra, EffAlgebra.onRef, EffAlgebra.id, Eff.expandRound]
     all_goals congr 1 <;> close_ref_free
 
   theorem stmts_expandRound_eq_self {Op : Type} (orig : Node Op)
       (node : Stmts Op) (path : List Nat) (h : node.refSites path = []) :
       Stmts.expandRound orig node = node := by
-    cases node <;> simp_all only [Stmts.refSites, List.append_eq_nil_iff]
-    all_goals simp only [Stmts.expandRound]
+    cases node <;> simp_all only [foldMapAt_eff, foldMapAt_stmts, foldMapAt_stmt, foldMapAt_effs, foldMapAt_action, foldMapAt_layer, foldMapAt_layers, LayerTerm.refSite, List.nil_append, List.append_nil, Stmts.refSites, List.append_eq_nil_iff]
+    all_goals simp only [cata_eff, cata_stmts, cata_stmt, cata_effs, cata_action, cata_layer, cata_layers, expandAlgebra, EffAlgebra.onRef, EffAlgebra.id, Stmts.expandRound]
     all_goals congr 1 <;> close_ref_free
 
   theorem stmt_expandRound_eq_self {Op : Type} (orig : Node Op)
       (node : Stmt Op) (path : List Nat) (h : node.refSites path = []) :
       Stmt.expandRound orig node = node := by
-    cases node <;> simp_all only [Stmt.refSites, List.append_eq_nil_iff]
-    all_goals simp only [Stmt.expandRound]
+    cases node <;> simp_all only [foldMapAt_eff, foldMapAt_stmts, foldMapAt_stmt, foldMapAt_effs, foldMapAt_action, foldMapAt_layer, foldMapAt_layers, LayerTerm.refSite, List.nil_append, List.append_nil, Stmt.refSites, List.append_eq_nil_iff]
+    all_goals simp only [cata_eff, cata_stmts, cata_stmt, cata_effs, cata_action, cata_layer, cata_layers, expandAlgebra, EffAlgebra.onRef, EffAlgebra.id, Stmt.expandRound]
     all_goals congr 1 <;> close_ref_free
 
   theorem effs_expandRound_eq_self {Op : Type} (orig : Node Op)
       (node : Effs Op) (path : List Nat) (h : node.refSites path = []) :
       Effs.expandRound orig node = node := by
-    cases node <;> simp_all only [Effs.refSites, List.append_eq_nil_iff]
-    all_goals simp only [Effs.expandRound]
+    cases node <;> simp_all only [foldMapAt_eff, foldMapAt_stmts, foldMapAt_stmt, foldMapAt_effs, foldMapAt_action, foldMapAt_layer, foldMapAt_layers, LayerTerm.refSite, List.nil_append, List.append_nil, Effs.refSites, List.append_eq_nil_iff]
+    all_goals simp only [cata_eff, cata_stmts, cata_stmt, cata_effs, cata_action, cata_layer, cata_layers, expandAlgebra, EffAlgebra.onRef, EffAlgebra.id, Effs.expandRound]
     all_goals congr 1 <;> close_ref_free
 
   theorem action_expandRound_eq_self {Op : Type} (orig : Node Op)
       (node : ActionTerm Op) (path : List Nat) (h : node.refSites path = []) :
       ActionTerm.expandRound orig node = node := by
-    cases node <;> simp_all only [ActionTerm.refSites]
-    all_goals simp only [ActionTerm.expandRound]
+    cases node <;> simp_all only [foldMapAt_eff, foldMapAt_stmts, foldMapAt_stmt, foldMapAt_effs, foldMapAt_action, foldMapAt_layer, foldMapAt_layers, LayerTerm.refSite, List.nil_append, List.append_nil, ActionTerm.refSites]
+    all_goals simp only [cata_eff, cata_stmts, cata_stmt, cata_effs, cata_action, cata_layer, cata_layers, expandAlgebra, EffAlgebra.onRef, EffAlgebra.id, ActionTerm.expandRound]
     all_goals congr 1 <;> close_ref_free
 
   theorem layer_expandRound_eq_self {Op : Type} (orig : Node Op)
       (node : LayerTerm Op) (path : List Nat) (h : node.refSites path = []) :
       LayerTerm.expandRound orig node = node := by
-    cases node <;> simp_all only [LayerTerm.refSites, List.append_eq_nil_iff,
+    cases node <;> simp_all only [foldMapAt_eff, foldMapAt_stmts, foldMapAt_stmt, foldMapAt_effs, foldMapAt_action, foldMapAt_layer, foldMapAt_layers, LayerTerm.refSite, List.nil_append, List.append_nil, LayerTerm.refSites, List.append_eq_nil_iff,
       List.cons_ne_nil]
-    all_goals simp only [LayerTerm.expandRound]
+    all_goals simp only [cata_eff, cata_stmts, cata_stmt, cata_effs, cata_action, cata_layer, cata_layers, expandAlgebra, EffAlgebra.onRef, EffAlgebra.id, LayerTerm.expandRound]
     all_goals congr 1 <;> close_ref_free
 
   theorem layers_expandRound_eq_self {Op : Type} (orig : Node Op)
       (node : LayerTerms Op) (path : List Nat) (h : node.refSites path = []) :
       LayerTerms.expandRound orig node = node := by
-    cases node <;> simp_all only [LayerTerms.refSites, List.append_eq_nil_iff]
-    all_goals simp only [LayerTerms.expandRound]
+    cases node <;> simp_all only [foldMapAt_eff, foldMapAt_stmts, foldMapAt_stmt, foldMapAt_effs, foldMapAt_action, foldMapAt_layer, foldMapAt_layers, LayerTerm.refSite, List.nil_append, List.append_nil, LayerTerms.refSites, List.append_eq_nil_iff]
+    all_goals simp only [cata_eff, cata_stmts, cata_stmt, cata_effs, cata_action, cata_layer, cata_layers, expandAlgebra, EffAlgebra.onRef, EffAlgebra.id, LayerTerms.expandRound]
     all_goals congr 1 <;> close_ref_free
 end
 

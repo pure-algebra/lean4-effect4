@@ -124,6 +124,18 @@
       ]
     },
     {
+      "Note": "Node.child and Node.setChild from the constructor declarations: one arm per node-typed argument, the child scheme every consumer resolves against.",
+      "Name": "NodeLenses",
+      "Tool": "tools/Effect4Gen/Authoring.lean",
+      "Imports": "Effect4.Program.Node",
+      "Out": "src\\Effect4\\Program\\NodeLenses.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\nodelenses.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Eff"
+      ]
+    },
+    {
       "Note": "The binder table (review log B17): Node.binders, closedChild and childLevel from tools/Effect4Gen/binders.json, read by the hoisting proofs and the authoring lifts.",
       "Name": "Binders",
       "Tool": "tools/Effect4Gen/Authoring.lean",

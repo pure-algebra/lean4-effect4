@@ -373,6 +373,14 @@ def emitBlock (root : Name) : MetaM (String × List String) := do
 
   return (s, receipts)
 
+/-- A frontier slot under weakening at `cut`. -/
+def weakenOf (tyText : String) (arg : String) : String :=
+  if tyText == "Effect4.Program.Term" then s!"(Effect4.Program.Term.weaken cut {arg})"
+  else if tyText == "Effect4.Program.CauseTerm" then s!"(Effect4.Program.CauseTerm.weaken cut {arg})"
+  else if tyText == "Option Effect4.Program.Term" then
+    s!"({arg}.map (Effect4.Program.Term.weaken cut))"
+  else arg
+
 /-- A frontier slot under the maps: a term through `g`, a cause through `gc`, an optional
 term through `g` inside, anything else as it is. -/
 def mapOf (tyText : String) (arg : String) : String :=
@@ -458,6 +466,24 @@ def emitFrontier (root : Name) (frontier : List Name) : MetaM (String × List St
   s := s ++ "\n/-- Weakening at a cut is the frontier map of the term weakening. -/\n"
   s := s ++ "def weakenAlg {Op : Type} (cut : Nat) : EffFrontierAlgebra Op (frontierSelfCarrier Op) :=\n"
   s := s ++ "  frontierMap (Effect4.Program.Term.weaken cut) (Effect4.Program.CauseTerm.weaken cut)\n"
+  -- Weakening at each open sort, from the rows: the frontier's terms through `Term.weaken`,
+  -- the open children recursively, closed layers untouched. No hand-written arm; the
+  -- theorem below says it is the frontier fold of `weakenAlg`.
+  s := s ++ "\nmutual\n"
+  for (_, fam, rows) in block do
+    s := s ++ s!"def {shortName fam}.weaken \{Op : Type} (cut : Nat) : {fam} Op → {fam} Op\n"
+    for r in rows do
+      let binders := String.intercalate " " (r.args.map (·.name))
+      let pat := if r.args.isEmpty then s!"  | .{r.ctor} =>" else s!"  | .{r.ctor} {binders} =>"
+      let rhsArgs := r.args.map fun a =>
+        match a.recFam with
+        | some f =>
+          let childFam := ((block.find? (·.1 == f)).map (·.2.1)).getD fam
+          s!"({shortName childFam}.weaken cut {a.name})"
+        | none => weakenOf a.tyText a.name
+      let rhs := if rhsArgs.isEmpty then "" else " " ++ String.intercalate " " rhsArgs
+      s := s ++ pat ++ s!" .{r.ctor}{rhs}\n"
+  s := s ++ "end\n"
   s := s ++ "\nmutual\n"
   let mut receipts := []
   for (label, fam, rows) in block do
