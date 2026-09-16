@@ -79,6 +79,7 @@ import Test.Program.SimulationContract
 import Test.Program.ProvisionContract
 import Test.Program.ConfigContract
 import Test.Api.ApiContract
+import Test.Api.TestClockContract
 import Test.Program.ScopedTypingContract
 import Test.Program.NativeAtomContract
 import Test.Program.ErrorQueriesContract
