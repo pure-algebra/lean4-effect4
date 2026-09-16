@@ -358,4 +358,39 @@ same frame shape. Each refusal names itself, so a refusal is data rather than a 
 #guard declarationTypeRepresentable
     ⟨.handle "not a type !", .never, Requirement.empty⟩ = false
 
+/-! ## `printEntry`: an export name the reader can tell from everything it decodes
+
+`E4-TARGET-NAME-CE-001`. The declaration printer used to accept any export name, so a block
+could export `a0` (a printed binder the reader recovers by comparison), `Effect.succeed` (a
+reserved head) or `L_0` (a layer reference name), and be misread. The entry printer now
+refuses all three by name, before it looks at the row table. -/
+
+#guard match printEntry [] nativeSignature "a0" ⟨.nat, .never, Requirement.empty⟩
+    (.succeed (.lit (.nat 1))) with
+  | .error (.unsafeName spelling) => spelling == "a0"
+  | _ => false
+
+#guard match printEntry [] nativeSignature "Effect.succeed" ⟨.nat, .never, Requirement.empty⟩
+    (.succeed (.lit (.nat 1))) with
+  | .error (.unsafeName spelling) => spelling == "Effect.succeed"
+  | _ => false
+
+#guard match printEntry [] nativeSignature "L_0" ⟨.nat, .never, Requirement.empty⟩
+    (.succeed (.lit (.nat 1))) with
+  | .error (.unsafeName spelling) => spelling == "L_0"
+  | _ => false
+
+#guard exportNameSafe "main" = true
+#guard exportNameSafe "a0" = false
+#guard exportNameSafe "Effect.succeed" = false
+#guard exportNameSafe "L_0" = false
+#guard exportNameSafe "export" = false
+#guard (printEntry [] nativeSignature "main" ⟨.nat, .never, Requirement.empty⟩
+    (.succeed (.lit (.nat 1)))).isOk
+
+#print axioms Effect4.Program.exportNameSafe
+#print axioms Effect4.Program.declarationType
+#print axioms Effect4.Program.printDecl_fields
+#print axioms Effect4.Program.printEntry_ok
+
 end Test.Syntax.PrintContract

@@ -86,8 +86,11 @@ private theorem safeTable (lawful : LawfulTable table = true) :
   simp [safe]
 
 /-- Every checked program in the established printable domain produces a retained
-emission. Successful output is a conclusion, not a condition of this theorem. -/
+emission. The export name is part of that domain: the entry printer refuses a name that
+collides with a printed binder, a reserved head or a layer reference name.
+Successful output is a conclusion, not a condition of this theorem. -/
 theorem emitModule_complete (typing : TypedProgram (nativeSignature table) program)
+    (safe : exportNameSafe name = true)
     (lawful : LawfulTable table = true)
     (readable : Program.readable (nativeSignature table) (nativeSpell table) 0 program = true)
     (types : declarationTypeRepresentable typing.ty = true) :
@@ -96,7 +99,7 @@ theorem emitModule_complete (typing : TypedProgram (nativeSignature table) progr
     typing.layerRefsWF name typing.ty types
   have generated : Program.printEntry table (nativeSignature table) name typing.ty program =
       .ok decls := by
-    simpa [Program.printEntry, safeTable lawful] using printed
+    simpa [Program.printEntry, safe, safeTable lawful] using printed
   let emission : ModuleEmission program table name := ⟨typing, decls, generated⟩
   exact ⟨emission, emission.recheck⟩
 
@@ -108,8 +111,7 @@ theorem ModuleEmission.readModule (emission : ModuleEmission program table name)
     (readable : Program.readable (nativeSignature table) (nativeSpell table) 0 program = true) :
     Program.readModule (nativeSignature table) (nativeSpell table) emission.module.decls =
       .ok program := by
-  have printed := emission.generated
-  simp only [Program.printEntry, safeTable lawful] at printed
+  obtain ⟨_, _, printed⟩ := Program.printEntry_ok emission.generated
   exact Program.readModule_printModule_readable (nativeLawful table lawful)
     readable emission.typing.layerRefsWF printed
 

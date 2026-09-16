@@ -62,12 +62,13 @@ legacy handle strings do not follow from core typing alone. -/
 theorem printModule_roundTrip (name : String) (program : Program) (table : RowTable)
     (lawful : LawfulTable table = true) {ty : EffTy}
     (typed : typeOf program table = some ty) (hr : readable program table = true)
-    (types : declarationTypeRepresentable ty = true) :
+    (types : declarationTypeRepresentable ty = true)
+    (safe : Effect4.Program.exportNameSafe name = true) :
     ∃ module, printModule name program table = some module ∧
       readModule module table = .ok program := by
   let typing : TypedProgram (nativeSignature table) program := ⟨ty, typed⟩
   obtain ⟨emission, emitted⟩ := Effect4.Codegen.emitModule_complete
-    (name := name) typing lawful hr types
+    (name := name) typing safe lawful hr types
   exact ⟨emission.module,
     by simp only [printModule, emitted, Except.toOption, Option.map],
     emission.readModule lawful hr⟩

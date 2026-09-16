@@ -733,6 +733,7 @@ def nestedSharing : NativeEff :=
 #print axioms Effect4.Program.readable_layerAt
 #print axioms Effect4.Program.readable_replaceLayerAt
 #print axioms Effect4.Program.printModule_readable
+#print axioms Effect4.Program.printModule_shape
 #print axioms Effect4.Program.readModule_printModule_readable
 #print axioms Effect4.Program.checkTypedProgram
 #print axioms Effect4.Program.checkTypedProgram_type

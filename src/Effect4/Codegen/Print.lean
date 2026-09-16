@@ -1,4 +1,5 @@
 import Effect4.Program.Typing
+import Effect4.Codegen.Names
 import Effect4.Codegen.Types
 import TypeScript
 
@@ -139,6 +140,13 @@ def reserved : List String := heads.map Head.spelling
 def rowNamesSafe (row : Row) : Bool :=
   firstByte row.spelling != some 97 && !reserved.contains row.spelling &&
     row.trailing.all (fun name => firstByte name != some 97 && name != "undefined")
+
+/-- A legal export name for the main declaration: a legal binder that is no printed binder
+(`a…`), no reserved head, and no layer reference name (`L_…`), so a declaration block's own
+names stay distinct from everything the reader decodes by name. -/
+def exportNameSafe (name : String) : Bool :=
+  Effect4.Codegen.Names.binderName name && firstByte name != some 97 &&
+    !reserved.contains name && (LayerTerm.readRefName name).isNone
 
 
 /-- The binder minted for environment position `index`: `a0`, `a1`, … The environment is
@@ -552,7 +560,7 @@ mutual
       .ok (.call (.ident "Scope.close") [printTerm scope, printTerm exit])
 end
 
-/-- The printed program as an exported constant.
+/-- The declared type of the main declaration, as target syntax.
 
 **What this does today.** The declared type is `Effect.Effect<A, E>` — the two parameters
 `EffTy` spells — exactly when the requirement row is empty. A program *with* a requirement has
@@ -568,19 +576,26 @@ so is not implemented here, is the *spelling* of `R`: the requirement row is a s
 types, which is the same open question as the class spelling of keys in `printLayer` above.
 Until that spelling is fixed under `tsc` on the truth harness, this arm stays two-parameter
 and a requirement-carrying program stays untyped in its printed image; the reader
-(`Codegen/Read.lean`) reads both shapes. -/
+(`Codegen/Read.lean`) reads both shapes.
+
+This function decides that annotation, and the reading boundary
+(`Codegen/Admit.lean`) compares a declared annotation with its answer, so the rule has
+exactly one owner and DI-24's omission or a later `R` spelling changes one place. -/
+def declarationType (ty : EffTy) : Except PrintRefusal (Option TypeScript.TypeRef) :=
+  if ty.requires = Requirement.empty then do
+    let answer ← match Effect4.Codegen.Types.ofTy ty.answer with
+      | some target => .ok target
+      | none => .error (.typeSpelling ty.answer.render)
+    let error ← match Effect4.Codegen.Types.ofTy ty.error with
+      | some target => .ok target
+      | none => .error (.typeSpelling ty.error.render)
+    .ok (some (.name ["Effect", "Effect"] [answer, error]))
+  else .ok none
+
+/-- The printed program as an exported constant carrying `declarationType`'s annotation. -/
 def printDecl (name : String) (ty : EffTy) (body : TypeScript.Expr) :
     Except PrintRefusal TypeScript.ConstDecl := do
-  let annotation ←
-    if ty.requires = Requirement.empty then do
-      let answer ← match Effect4.Codegen.Types.ofTy ty.answer with
-        | some target => .ok target
-        | none => .error (.typeSpelling ty.answer.render)
-      let error ← match Effect4.Codegen.Types.ofTy ty.error with
-        | some target => .ok target
-        | none => .error (.typeSpelling ty.error.render)
-      .ok (some (.name ["Effect", "Effect"] [answer, error]))
-    else .ok none
+  let annotation ← declarationType ty
   .ok { doc := [], name := name, value := body, type := annotation }
 
 /-- The raw declaration printer can represent its emitted annotation. This is
@@ -591,11 +606,10 @@ def declarationTypeRepresentable (ty : EffTy) : Bool :=
 
 /-- Legacy malformed type strings now refuse instead of becoming raw target text.
 The representability premise states that change in the declaration printer's domain. -/
-theorem printDecl_readable (name : String) (ty : EffTy) (body : TypeScript.Expr)
-    (hr : declarationTypeRepresentable ty = true) :
-    ∃ decl, printDecl name ty body = .ok decl := by
+theorem declarationType_ok {ty : EffTy} (hr : declarationTypeRepresentable ty = true) :
+    ∃ annotation, declarationType ty = .ok annotation := by
   unfold declarationTypeRepresentable at hr
-  unfold printDecl
+  unfold declarationType
   split
   · rename_i h
     simp only [h, bne_self_eq_false, Bool.false_or, Bool.and_eq_true] at hr
@@ -603,16 +617,34 @@ theorem printDecl_readable (name : String) (ty : EffTy) (body : TypeScript.Expr)
       cases he : Effect4.Codegen.Types.ofTy ty.error <;> simp_all [bind, Except.bind]
   · exact ⟨_, rfl⟩
 
+/-- Everything a successful declaration retains: its requested name, its body unchanged,
+its export flag, and the annotation this type's one owner decided. -/
+theorem printDecl_fields {name : String} {ty : EffTy} {body : TypeScript.Expr}
+    {decl : TypeScript.ConstDecl} (hp : printDecl name ty body = .ok decl) :
+    decl.name = name ∧ decl.value = body ∧ decl.exported = true ∧
+      declarationType ty = .ok decl.type := by
+  unfold printDecl at hp
+  cases h : declarationType ty with
+  | error why => simp [h, bind, Except.bind] at hp
+  | ok annotation =>
+    rw [h] at hp
+    simp only [bind, Except.bind] at hp
+    cases hp
+    exact ⟨rfl, rfl, rfl, rfl⟩
+
 /-- A successful raw declaration retains its expression exactly. -/
 theorem printDecl_value {name : String} {ty : EffTy} {body : TypeScript.Expr}
     {decl : TypeScript.ConstDecl} (hp : printDecl name ty body = .ok decl) :
-    decl.value = body := by
-  unfold printDecl at hp
-  split at hp
-  · cases ha : Effect4.Codegen.Types.ofTy ty.answer <;>
-      cases he : Effect4.Codegen.Types.ofTy ty.error <;> simp_all [bind, Except.bind]
-    cases hp; rfl
-  · cases hp; rfl
+    decl.value = body :=
+  (printDecl_fields hp).2.1
+
+/-- A representable declaration type prints, at every name and body. -/
+theorem printDecl_readable (name : String) (ty : EffTy) (body : TypeScript.Expr)
+    (hr : declarationTypeRepresentable ty = true) :
+    ∃ decl, printDecl name ty body = .ok decl := by
+  obtain ⟨annotation, ha⟩ := declarationType_ok hr
+  refine ⟨{ doc := [], name := name, value := body, type := annotation }, ?_⟩
+  simp only [printDecl, ha, bind, Except.bind]
 
 /-- The printed program as a declaration block (the host rows slice): one
 `const L_<path> = …` per referenced layer target, in declaration order (`Path.declBefore`: a
@@ -637,13 +669,36 @@ def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
     let declaration ← printDecl name ty m
     .ok (ds ++ [declaration])
 
-/-- Print an admitted program against its row table. Refuses by name if any row
-carries an unsafe name (colliding with printed binders `a0`, `a1`, ... or reserved heads). -/
+/-- Print an admitted program against its row table. Refuses by name if the requested
+export name is unsafe (a printed binder `a0`, a reserved head, a layer reference name, or
+no legal binding at all), and then if any row carries an unsafe name. Refusing the export
+name here is what lets the reading boundary compare names at all: a block exporting `a0`
+would be read back as a binder. -/
 def printEntry (table : List Row) (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
     Except PrintRefusal (List TypeScript.ConstDecl) :=
-  match table.find? (fun row => !rowNamesSafe row) with
-  | some row => .error (.unsafeName row.spelling)
-  | none => printModule sig name ty e
+  if !exportNameSafe name then .error (.unsafeName name)
+  else
+    match table.find? (fun row => !rowNamesSafe row) with
+    | some row => .error (.unsafeName row.spelling)
+    | none => printModule sig name ty e
+
+/-- Everything a successful entry establishes: the export name and every row name are
+safe, and the block is exactly what the module printer produced. -/
+theorem printEntry_ok {table : List Row} {sig : Signature Op} {name : String} {ty : EffTy}
+    {e : Eff Op} {decls : List TypeScript.ConstDecl}
+    (h : printEntry table sig name ty e = .ok decls) :
+    exportNameSafe name = true ∧ table.find? (fun row => !rowNamesSafe row) = none ∧
+      printModule sig name ty e = .ok decls := by
+  unfold printEntry at h
+  split at h
+  · simp at h
+  · rename_i unsafe?
+    have safe : exportNameSafe name = true := by
+      simpa using unsafe?
+    split at h
+    · simp at h
+    · rename_i clean
+      exact ⟨safe, clean, h⟩
 
 end Effect4.Program
 

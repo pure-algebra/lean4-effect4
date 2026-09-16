@@ -162,6 +162,20 @@ Accordingly `printModule_readable` and `Api.printModule_roundTrip` acquire the n
 representability premise. Successful-print reconstruction and exact-image reading
 retain their conclusions; no source typing or host agreement follows from parsing.
 
+**Export-name hygiene (2026-09-16, `E4-TARGET-NAME-CE-001`).** `Program.exportNameSafe`
+is the one predicate deciding which name a declaration block may export: a legal binding
+name (`Codegen.Names.binderName`, shared with the lexical source check) that is no printed
+binder `a…`, no reserved head and no layer reference name `L_…`. `printEntry` refuses an
+unsafe name as `PrintRefusal.unsafeName` before it examines the row table, and the reading
+boundary's envelope refuses the same names, so the two sides cannot drift. Because the
+printer now refuses, `emitModule_complete` and `Api.printModule_roundTrip` carry
+`exportNameSafe name = true` as an explicit premise beside the representability premise;
+neither theorem claims anything about names it refuses. `Program.declarationType` is the
+single owner of the emitted annotation (`printDecl` is that function plus the record), and
+`printDecl_fields` states exactly what a successful declaration retains — its name, its
+body, its export flag, and that annotation. `printModule_shape` states the block's shape:
+plain exported layer constants, then the one main declaration.
+
 The bridge accepts qualified names and generic arguments, literal strings, tuples,
 parentheses and unions under its documented lexical restrictions. It does not resolve
 names or check generic arity. Core unit still maps to `void`, and natural/integer

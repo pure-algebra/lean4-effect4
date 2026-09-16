@@ -203,6 +203,61 @@ theorem readModule_printModule {sig : Signature Op}
     | none => .error (.shape "module")) = .ok root
   simp only [hm, ok_bind, hd, restored]
 
+/-- A property every successful element of a traversal carries, carried to the list. -/
+private theorem mapM_ok_forall {α β ε : Type} (f : α → Except ε β) (P : β → Prop)
+    (step : ∀ a d, f a = .ok d → P d) (l : List α) {ds : List β}
+    (h : l.mapM f = .ok ds) : ∀ d ∈ ds, P d := by
+  induction l generalizing ds with
+  | nil =>
+    cases h
+    intro d mem
+    cases mem
+  | cons a rest ih =>
+    simp only [List.mapM_cons] at h
+    obtain ⟨b, hb, htail⟩ := bind_eq_ok.mp h
+    obtain ⟨bs, hbs, heq⟩ := bind_eq_ok.mp htail
+    cases heq
+    intro d mem
+    rcases List.mem_cons.mp mem with rfl | rest'
+    · exact step a d hb
+    · exact ih hbs d rest'
+
+/-- Every emitted layer declaration is plain: no annotation, exported. -/
+private theorem printCaptured_plain {sig : Signature Op} {history : History Op}
+    (target : List Nat) (decl : TypeScript.ConstDecl)
+    (printed : printCaptured sig history target = .ok decl) :
+    decl.type = none ∧ decl.exported = true := by
+  unfold printCaptured at printed
+  split at printed
+  · obtain ⟨_, _, heq⟩ := bind_eq_ok.mp printed
+    cases heq
+    exact ⟨rfl, rfl⟩
+  · simp at printed
+
+/-- The shape of a successful declaration block, read off the printer itself: the layer
+declarations first, each plain and exported, then the one main declaration the declaration
+printer produced. The reading boundary compares a block against exactly this shape. -/
+theorem printModule_shape {sig : Signature Op} {name : String} {ty : EffTy} {root : Eff Op}
+    {block : List TypeScript.ConstDecl} (printed : printModule sig name ty root = .ok block) :
+    ∃ layers main body, block = layers ++ [main] ∧
+      (∀ decl ∈ layers, decl.type = none ∧ decl.exported = true) ∧
+      printDecl name ty body = .ok main := by
+  unfold printModule at printed
+  cases hoisted : root.hoistAll with
+  | error target => rw [hoisted] at printed; simp at printed
+  | ok pair =>
+    obtain ⟨main, history⟩ := pair
+    rw [hoisted] at printed
+    change ((Path.sortBy Path.declBefore (history.map Prod.fst)).mapM
+      (printCaptured sig history) >>= fun ds => print sig 0 main >>= fun body =>
+      printDecl name ty body >>= fun decl => .ok (ds ++ [decl])) = .ok block at printed
+    obtain ⟨ds, hp, hmain⟩ := bind_eq_ok.mp printed
+    obtain ⟨body, _, hdecl⟩ := bind_eq_ok.mp hmain
+    obtain ⟨decl, declaration, heq⟩ := bind_eq_ok.mp hdecl
+    cases heq
+    exact ⟨ds, decl, body, rfl,
+      mapM_ok_forall _ _ (fun t d hd => printCaptured_plain t d hd) _ hp, declaration⟩
+
 private theorem printCaptured_exists {sig : Signature Op}
     {spell : String → List String → Option Op} {history : History Op}
     (layers : ∀ entry ∈ history, readableLayer sig spell entry.2 = true)
