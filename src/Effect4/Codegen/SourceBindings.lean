@@ -1,4 +1,5 @@
 import Effect4.Codegen.Bindings
+import Effect4.Codegen.Names
 import Effect4.Store.Utf8
 
 /-!
@@ -69,9 +70,9 @@ def nameUse (env : List Binding) (space : Space) (name : String) : Analysis :=
   | some root => rootUse env space root
   | none => invalid
 
-/-- Binding names exclude source keywords and reserved ambient values. -/
-def binderName (name : String) : Bool :=
-  targetIdentifier name && !["arguments", "eval", "undefined", "NaN", "Infinity"].contains name
+/-- Binding names exclude source keywords and reserved ambient values. The rule itself
+lives in `Codegen.Names`, so this check and the printer's export-name check cannot drift. -/
+def binderName (name : String) : Bool := Names.binderName name
 
 /-- Empty named imports have no binding to validate; this profile refuses them.
 Imported names render verbatim, whereas module paths are quoted by the renderer. -/
