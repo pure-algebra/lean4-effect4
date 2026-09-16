@@ -163,6 +163,14 @@ def serviceClass (heritage : Expr) : TypeScript.Module :=
         !check allowed { module with imports := [.named ["Effect", "Layer"] "effect"] }
   | none => false
 
+-- One owner for the legal binding-name rule: the lexical check reads the same function
+-- the printer's export-name check reads.
+example : binderName = Effect4.Codegen.Names.binderName := rfl
+#guard Effect4.Codegen.Names.binderName "main"
+#guard !Effect4.Codegen.Names.binderName "undefined"
+#guard !Effect4.Codegen.Names.binderName "export"
+
+#print axioms Effect4.Codegen.Names.binderName
 #print axioms Effect4.Api.checkSourceBindings
 #print axioms Effect4.Api.checkSourceBindings_iff
 #print axioms Effect4.Codegen.Bindings.resolve_iff

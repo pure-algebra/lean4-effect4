@@ -586,6 +586,10 @@ to tell "annotated, not admitted here" from "wrong shape".
 #guard readEff nativeSignature nativeSpell 0
     (.call (.ident "Effect.gen") [.generator [.letDefinite "x" (.name ["number"] [])]]) =
   .error .unsupportedStmt
+
+#print axioms Effect4.Program.annotationSite
+#print axioms Effect4.Program.callRefusal
+#print axioms Effect4.Program.stmtRefusal
 #guard roundTrip nativeSignature nativeSpell 0
     (.bind (.succeed (.lit (.nat 1))) (.succeed (.var 0))) =
   .ok (.bind (.succeed (.lit (.nat 1))) (.succeed (.var 0)))
@@ -764,9 +768,14 @@ def nestedSharing : NativeEff :=
 #print axioms Effect4.Api.printModule_roundTrip
 #print axioms Effect4.Codegen.envelopeCheck_iff
 #print axioms Effect4.Codegen.layersPlain_iff
+#print axioms Effect4.Codegen.mainConst_eq_some
 #print axioms Effect4.Codegen.ModuleReading.recheck
 #print axioms Effect4.Codegen.ModuleReading.unique
+#print axioms Effect4.Codegen.ModuleReading.typing_eq
+#print axioms Effect4.Codegen.admitModule_module
 #print axioms Effect4.Codegen.admitModule_typed
+#print axioms Effect4.Codegen.admitModule_read
+#print axioms Effect4.Codegen.admitModule_bound
 #print axioms Effect4.Codegen.admitModule_envelope
 #print axioms Effect4.Codegen.admitModule_complete
 #print axioms Effect4.Codegen.ModuleEmission.admit
