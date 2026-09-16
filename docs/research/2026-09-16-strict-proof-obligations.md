@@ -1,0 +1,90 @@
+# Strict proof obligations: what the plan has, what it lacks, and the foundation to freeze
+
+Written on the owner's question of 2026-09-16 ("lay the foundation for the strict form of these proofs with full proof obligation; is that in the planned works?"), against the plan's §3.9 table and §4 narrative, S4c, S8 and S9 as they read at `f3667f2`, the faces contract §7, and the Laws tree. Every status line was checked against the tree; "planned" means the plan names the obligation, "frozen" means a Lean statement exists, "proved" means it compiles at `[propext, Quot.sound]`.
+
+## 0. The answer in one paragraph
+
+Partly. The plan distinguishes two grades everywhere: **executable certificates** (computed `Prop` fields, finite receipts, translation validation, "allowed initially") and **universal theorems** (the strict form). The strict *semantic* obligations are scheduled: S8a (straight composition safety), S8a-L (conditional catch, option and tag cases, the unified loop's equations and its bounded interpretation, the unit-loop migration), S8b (reference configuration safety and transfer), S8c (table and reply extension), S8d (P5); §3.7 freezes the loop laws by name; S4c requires declarative/checker agreement and compiler/reference clauses per construct. The strict *surface* obligations are named (§3.9's seven rows, §4's module chain and elaboration premises) but only three have frozen statements, all landed today: `restoreAll_hoistAll`, `hoistAll_exists`, and `readModule_printModule` with side premises. What no packet states as a theorem, and what this note freezes: readability transport (the missing link of the module chain), adequacy of the printable domain from the certificate, the type round trip on its admitted domain, the machine's typed-state invariant (the premise every strict semantic theorem and the elaboration transport need, today present only fragment by fragment), the elaboration statements themselves, source validation as its own theorem, the observation carrier, and the per-constructor composition principle that keeps all of these from being re-proved per fragment. §2 gives the definitions to freeze first; §3 gives the one brick that can be laid now with nothing else in the way.
+
+## 1. The obligation table
+
+| # | Obligation (strict form) | Statement | Status at `f3667f2` | Plan location |
+| --- | --- | --- | --- | --- |
+| O1 | Core typing is one algorithm with its declarative graph | `effTy_sound`, `effTy_complete`, `typeOfProgram_expandRefs` | proved | §3.9 row 1 |
+| O2 | Types agree by projection (restated 10:05, B19; no inverse) | `ofTy` respects `normalize` (`ofTy_normalize`) and lands in canonical target types; `readModule module … = ok tm → module's declaration = Effect.Effect<ofTy A, ofTy E>` of `tm.typed.val` | `ofTy`, `ofTy_normalize` in the tree (`Codegen/Types.lean`, standard ceiling); canonical unions and the reader's declaration check open; `readTy`, `AdmittedTy` retired | §3.8, §4 "annotations have a grammar" |
+| O3 | Typed reading is a certificate | `readModule m name = ok tm → typeOfProgram … tm.program = some tm.typed.val` (a projection) | open: `Api.readModule` returns the raw program and `checkTyping` certifies it in a second call (`9eb223b`); the one-call certificate with B19's declared-type comparison is the next packet | §3.9 row 2 |
+| O4 | Source validation is its own theorem | `readSource src = ok (tm, receipt) → EnvelopeValid src receipt` (imports, binders, hoists, export marker, annotations at every admitted site) | unstated (needs D4) | §3.9 review correction |
+| O5 | Module reconstruction | `readModule (printModule tm) = ok tm` | proved in certificate form: `ModuleEmission.readModule` (`9eb223b`) with `readable` and the lawful table as premises; `readModule_printModule_readable` and `Api.printModule_roundTrip` (statement unchanged, re-proved through the producer) | §3.9 row 4, §4 |
+| O6 | Readability transport | `readable root → root.hoistAll = ok (main, decls) → readable main ∧ ∀ (t, l) ∈ decls, readableLayer l ∧ readRefName (refName t) = some t` | proved (`readable_hoistAll`, `Laws/Codegen/HoistingReadable.lean`, 09:15, in the tree) | §4 |
+| O7 | Adequacy of the printable domain | `∀ tm : TypedModule, ∃ module, printModule tm = ok module` | proved in certificate form: `emitModule_complete` (`9eb223b`) on the readable, lawful, representable domain; `printModule_readable` underneath | §3.9 row 5 |
+| O8 | Checked emission | `printModule` takes only `TypedModule`; binder annotations come from `effTy` at the node's `TyEnv` under a profile flag | half: `emitTypedModule` takes only `TypedProgram` and no producer accepts a claimed `EffTy` (`9eb223b`); binder annotations under a profile flag unstated (cost to be measured per §4) | §3.9 row 3 |
+| O9 | Typed-state invariant of the machine | `TypedState root table s` preserved by every step from `Api.load` of an admitted program; corollaries: no `badShape` on admitted runs, every failure delivered to a guard fits its body's column (DI-17) | fragment-wise only (`Progress.lean` for sync rows and straight bodies; `Guard/*` for keys and ownership); no whole-machine statement | S8a, S8b (implicit premise of §3.8, §4) |
+| O10 | Elaboration is typing-preserving | `effTy sig env (e.elaborate sig env) = effTy sig env e` | unstated (needs D7) | §4, §3.9 "behavior" row |
+| O11 | Elaboration is behaviour-preserving | per rule `elaborate_step` under O9; once `elaborate_run` over `ObsFull` with compile fuel, command fuel and tape explicit | unstated; two counterexamples fix its shape (raw `denoteR` equality false; outer-program relation insufficient) | §4 (premises listed, no statement) |
+| O12 | Loop laws | `iter_succ`, `iter_uniform`, `denoteB_bind_none`, `denoteB_straight`, `denoteB_mono`, machine agreement as `∃ fuel, ∀ larger, same exit and stores` | unstated (needs D8) | §3.7 (named), S8a-L |
+| O13 | Decision safety | `Decision.decide_typed` (a typed scrutinee decides, the bound value has the arm's type) | unstated (needs D9); its option half is `hasTy_option_inv_at` (proved) | S4c |
+| O14 | Per-construct clauses for `select` and `iterate` | `inv_*`, `effTy_sound` arm, `effTy_weaken` alternative, `suspendBodyAt_*`, `intro_*`, `meaning_*`, `Straight`/`depth`/`steps` arms, `readable`/`read_print`/`print_readable` arms, `typedState_step_*` | unstated; the packet lists every site | S4c |
+| O15 | Forms: expansion typed, recognizer inverse | `Template.{argument,bind,onExit}_typed` (proved, `34ee1af`); `expand_recognize` on the image (unstated) | half | §3.8 idiomatic printing, S9b |
+| O16 | Requirements by full service identity | `R` in the certificate and the declaration is the set of full keys (S3c), never the carrier union | unstated; DI-24's union is superseded by the review correction | S3c, §3.3 |
+| O17 | Target typing and host execution | external evidence only: strict `tsc` on the unannotated module, the oracle's exact A and R with contained E | as designed | §3.9 rows 6 and 7 |
+
+## 2. The foundation: definitions to freeze before the statements can be written
+
+Each definition below is the smallest object that lets a row above be *stated*; each names what it reuses and what it replaces.
+
+**D1, retired (10:05, B19).** No admitted type domain is needed: the surface compares projections in the target language and never inverts, so `int`-freedom and registered handle names are not premises of any surface theorem. The only type predicate is representability, `declarationTypeReadable` in the tree (`ofTy` succeeds on `A` and `E`), computed, and it fails exactly on legacy handle text outside the transient grammar (B18).
+
+**D2, types as syntax.** `TypeRef` in the pinned carrier and `ofTy := ofNormalized ∘ normalize` (the analysis's `printTy`). Reuses `Ty.normalize`, `CTy`, the renderer's escaping. Replaces `Ty.renderRaw` as a string producer and the second renderer in `tools/target/profile.ts`. *Status 10:05:* the carrier exists (lean4-typescript `6afc9b8`, v0.6.0; re-pinned in the working tree, tag pending); `ofTy` and `ofTy_normalize` are in the tree (`Codegen/Types.lean`, at the standard ceiling, over the UTF-8 bytes with the store's decoder for the legacy string bridge `parseLegacy`, B18's transient); `readTy` retired by B19; canonical target unions still owed.
+
+**D3, one typed certificate.** `Typed program table := {ty // typeOfProgram (nativeSignature table) program = some ty}`; `AdmittedProgram` re-expressed as `Typed` plus the runner receipts; `TypedModule` as `Typed` plus `spelled : LawfulTable`, `representable`, `readable`. Reuses the A6 pattern and `Program.readable`. Replaces the caller-supplied `EffTy` of `printEntry`. O3, O5 (without side premises), O7 and O8 become stateable. *Status 10:03:* landed as `TypedProgram`/`checkTypedProgram`, `AdmittedProgram extends TypedProgram`, and `Codegen.ModuleEmission`/`emitModule` (`9eb223b`); reconstruction keeps `readable` as a premise rather than a field (B4 closed by that route); the reading certificate remains.
+
+**D4, the source envelope.** `SourceEnvelope` (imports with value/type distinction, the export marker and name, hoisted declarations, annotations at admitted sites) and `EnvelopeValid`; `readSource : Module → Except SurfaceRefusal (TypedModule × EnvelopeReceipt)`. The review correction is right that a producer's `typedModule name program table` after erasing the envelope proves nothing about the source; O4 is stated on the envelope, separately from O3, and the two compose in `readSource`.
+
+**D5, the typed-state invariant.** `TypedState root table : NativeMachine → Prop`: every frame's continuation typed at the environment its point carries (the same `TyEnv` discipline as `effTy`), every pending guard reply's failures fitting the guarded body's column, stores valid (`Val.validIn`), keys owned per `Guard/Contract.lean`'s `DriverContract`, which is reused, not re-proved. With `typedState_init` (from `AdmittedProgram`) and `typedState_step` proved **per constructor** (§4 below), O9 is one statement rather than one per fragment, and it is the premise O11 and S8a-L both need. Today `Progress.lean` proves the sync-row and straight-body halves; those become the first two constructor lemmas of the family.
+
+**D6, the observation carrier.** `ObsFull`: outcome category, exits, stores, frontier reasons, trace, scheduling decisions consumed. Reuses `classify`, `obsR`, `reasonsR`. O11 is stated over it so that "the same observation" means what the scheduler observes, as §4 demands; `obs` remains the coarse view.
+
+**D7, elaboration as a path-preserving rewrite.** `Rewrite := Point → Eff → Option Eff` with `PathPreserving` (child indices and binder conventions of the replaced node unchanged), `Eff.elaborate` as the fold of a rule set, first rule the all-caught `catchIf`. O10 is one theorem over the fold; O11 is one local step lemma per rule plus one transfer lemma over D5 and D6. `expandRefs` commutation is stated with it.
+
+**D8, the loop carriers.** `LoopNext κ β` and the two interpreter fields (the packet §2.1), `iter` in the free monad, `denoteB` answering `Option ExitV`. O12 becomes stateable and S8a-L's bounded interpretation has its carrier.
+
+**D9, the decision carrier.** `Decision` with `decide` and `arms` (the packet §1.1). O13 is one theorem; O14's typing clauses read `arms`, its compile and reference clauses read `decide`.
+
+## 3. The brick that can be laid now: readability transport (O6)
+
+Nothing in O6 waits on the carrier or on S1. `readable` is structural (`Read.lean:745-830`), `hoistAll` replaces a layer at a path with `.ref t` (`Refs.lean:461-470`), and the reader accepts a reference exactly when its printed name reads back. So O6 is two lemmas in the shape of the ones that landed today:
+
+```lean
+/-- Replacing a layer at a path by a readable layer keeps the program readable. -/
+theorem readable_replaceLayerAt (hr : readable sig spell n root = true)
+    (hl : readableLayer sig spell l' = true)
+    (h : (Node.eff root).replaceLayerAt t l' = some (Node.eff root')) :
+    readable sig spell n root' = true            -- induction on `t`, the `setChild` arms
+
+/-- A captured layer of a readable program is readable, and its name reads back. -/
+theorem readable_hoistAll (hr : readable sig spell 0 root = true)
+    (h : root.hoistAll = .ok (main, decls)) :
+    readable sig spell 0 main = true ∧
+      ∀ entry ∈ decls, readableLayer sig spell entry.2 = true ∧
+        LayerTerm.readRefName (LayerTerm.refName entry.1) = some entry.1
+```
+
+The second follows the capture fold as `captureFold_undo` does (`Hoisting.lean`), with `readableLayer (.ref t)` discharged by the name lemma (`readRefName_refName`, in the shape of `readKey_printKey`). With O6, `readModule_printModule`'s three side premises are derived from `TypedModule.readable`, O5 becomes the certificate statement, and O7 composes from `hoistAll_exists`, `print_readable` and `printLayer_readable`. That is the first strict statement of the surface with no premise outside the certificate.
+
+## 4. The composition principle, stated once
+
+Every semantic theorem family in the tree is already one lemma per constructor: `intro_*` (`Intro.lean`) for compile-versus-reference, `suspendBodyAt_*` and `meaning_*` for the decided forms, the `readable`/`read_print`/`print_readable` arms, `Straight`/`depth`/`steps`. The strict form of "prove safety for the fragment" is therefore not a fragment theorem but the constructor lemmas of `typedState_step` (D5): a fragment's safety is the conjunction of its constructors' lemmas, and a new constructor adds its lemmas and re-proves nothing (the adversarial review's A9 checklist, now with the invariant to attach it to). S4c's acceptance for `select` and `iterate` is exactly that list (O14). S8a's "straight composition safety" is then the corollary for the straight constructors, and S8a-L's "conditional catch, option and tag cases, unified loop" is the same family extended, not a second proof of the fragment. This is the one change of *method* the plan needs to make the strict form tractable: state the invariant first, then never prove safety per fragment again.
+
+## 5. What stays external, and how the strict statements bound it
+
+The host's typing and execution are evidence, not theorems (O17): the strict statements say exactly what Lean claims (the certificate's type, the printed image, the read-back equality, the elaborated program's machine behaviour), and the host is compared against those claims by the pinned compiler on the unannotated module and by the target oracle's per-column comparison. A `TypedModule` is the object both sides talk about; nothing in the strict form promises the host.
+
+## 6. Order
+
+1. **Now, no dependencies:** O6 (readability transport), then O5 and O7 from it; D5's statement (the invariant can be written against today's machine; its first two constructor lemmas are `Progress.lean`'s), D6's statement; D3's `Typed` refactor of `AdmittedProgram`.
+2. **With the carrier (lean4-typescript v0.6.0):** D2 (landed 10:05) and O2 as restated by B19, then O3, O4, O8 through `TypedModule` and `readSource`; D1 retired.
+3. **With S4c:** D8, D9, O12, O13, O14 as the packet's acceptance; the per-constructor lemmas of D5 for `select` and `iterate` land with them.
+4. **S8:** D7, O10, O11 for the all-caught rule first, then the migration rules; the invariant's remaining constructor lemmas.
+5. **S3c:** O16.
+
+Everything in 1 is pure Lean over definitions that exist; it is the foundation the question asks for, and it is not in the plan as statements today. The rest is planned in substance and needs only the definitions of §2 to be stated strictly.
