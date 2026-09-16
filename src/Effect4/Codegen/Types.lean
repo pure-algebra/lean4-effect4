@@ -165,10 +165,17 @@ private def unionParts : TypeRef → List TypeRef
   | .union members => members
   | value => [value]
 
-private def finishUnion (reversed : List TypeRef) : TypeRef :=
-  match reversed with
+/-- Union members in canonical target form: flattened, without duplicates, and a single
+member standing alone. Distinct core types can share one target spelling (`nat` and
+`int` are both `number`), so this identification is the target's, not the core's; it is
+what lets a declared type be compared with a projected one by structural equality. -/
+private def unionOf (members : List TypeRef) : TypeRef :=
+  match members.eraseDups with
   | [value] => value
-  | _ => .union (reversed.reverse.flatMap unionParts)
+  | canonical => .union canonical
+
+private def finishUnion (reversed : List TypeRef) : TypeRef :=
+  unionOf (reversed.reverse.flatMap unionParts)
 
 mutual
   private def readType : Nat → Bytes → Option (TypeRef × Bytes)
@@ -294,11 +301,13 @@ private def ofNormalized : Program.Ty → Option TypeRef
   | .union left right => do
       let a ← ofNormalized left
       let b ← ofNormalized right
-      pure (.union (unionParts a ++ unionParts b))
+      pure (unionOf (unionParts a ++ unionParts b))
 
 /-- Normalize the program type once, then project its target structure.
 Opaque legacy spellings may be refused. Naturals and integers intentionally
-share a target spelling, so this operation is not an injective type codec. -/
+share a target spelling, so this operation is not an injective type codec; a
+union whose members collapse in the target (`nat | int`) projects to the one
+member (`number`). -/
 def ofTy (type : Program.Ty) : Option TypeRef := ofNormalized type.normalize
 
 /-- The projection depends on the existing canonical program type, so applying

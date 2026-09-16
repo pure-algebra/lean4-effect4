@@ -155,7 +155,7 @@ Legacy `Row.typeArgs` and `Ty.handle` strings retain their stored representation
 another core type checker. Row calls and service keys refuse unsupported target
 spellings with `PrintRefusal.typeSpelling`. Readability includes that conversion's
 domain wherever the expression emits a type; bare value rows emit no type arguments.
-`declarationTypeReadable` separately states that a declaration's emitted type is
+`declarationTypeRepresentable` separately states that a declaration's emitted type is
 representable. A raw answer type `handle "not a type !"` used to become unchecked
 annotation text; it now refuses. `Test/Codegen/PrintContract.lean` retains this witness.
 Accordingly `printModule_readable` and `Api.printModule_roundTrip` acquire the named

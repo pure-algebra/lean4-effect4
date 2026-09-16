@@ -355,7 +355,7 @@ same frame shape. Each refusal names itself, so a refusal is data rather than a 
     (.call (.ident "Effect.succeed") [.int 1]) with
   | .error (.typeSpelling spelling) => spelling == "not a type !"
   | _ => false
-#guard declarationTypeReadable
+#guard declarationTypeRepresentable
     ⟨.handle "not a type !", .never, Requirement.empty⟩ = false
 
 end Test.Syntax.PrintContract

@@ -239,7 +239,7 @@ it does not check the caller's declared type, source imports or target execution
 theorem printModule_readable {sig : Signature Op}
     {spell : String → List String → Option Op} {root : Eff Op}
     (hr : readable sig spell 0 root = true) (valid : root.layerRefsWF = true)
-    (name : String) (ty : EffTy) (types : declarationTypeReadable ty = true) :
+    (name : String) (ty : EffTy) (types : declarationTypeRepresentable ty = true) :
     ∃ decls, printModule sig name ty root = .ok decls := by
   obtain ⟨main, history, hoisted⟩ := root.hoistAll_exists valid
   obtain ⟨hm, pieces⟩ := readable_hoistAll hr hoisted

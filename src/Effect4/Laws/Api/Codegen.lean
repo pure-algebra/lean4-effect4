@@ -62,7 +62,7 @@ legacy handle strings do not follow from core typing alone. -/
 theorem printModule_roundTrip (name : String) (program : Program) (table : RowTable)
     (lawful : LawfulTable table = true) {ty : EffTy}
     (typed : typeOf program table = some ty) (hr : readable program table = true)
-    (types : declarationTypeReadable ty = true) :
+    (types : declarationTypeRepresentable ty = true) :
     ∃ module, printModule name program table = some module ∧
       readModule module table = .ok program := by
   let typing : TypedProgram (nativeSignature table) program := ⟨ty, typed⟩

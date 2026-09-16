@@ -79,24 +79,24 @@ structure AdmittedProgram (program : NativeEff) (table : RowTable)
   intFreeTable : findIntInTable table = none
   intFreeType : findIntInEffTy ty = none
 
-/-- Decide admission by scanning raw table types, inferring the program type, scanning
-its columns, then checking names and registrations. Each certificate field records
-the exact check that admitted it. -/
+/-- Decide admission by scanning raw table types, taking the one typing certificate
+(`checkTypedProgram`, shared with code generation), scanning its columns, then checking
+names and registrations. Each certificate field records the exact check that admitted it. -/
 def admitProgram (program : NativeEff) (table : RowTable := []) :
     Except AdmitRefusal (AdmittedProgram program table) :=
   match htable : findIntInTable table with
   | some pos => .error (.uninhabited pos)
   | none =>
-    match htyped : typeOfProgram (nativeSignature table) program with
+    match checkTypedProgram (nativeSignature table) program with
     | none => .error .illTyped
-    | some ty =>
-      match htype : findIntInEffTy ty with
+    | some typing =>
+      match htype : findIntInEffTy typing.ty with
       | some pos => .error (.uninhabited pos)
       | none =>
         if hlawful : Table.lawful table = true then
           match hrunnable : checkTable table with
           | some why => .error (.table why)
-          | none => .ok ⟨⟨ty, htyped⟩, hlawful, hrunnable, htable, htype⟩
+          | none => .ok ⟨typing, hlawful, hrunnable, htable, htype⟩
         else
           match Table.checkLawful table with
           | some (.duplicateKey k) => .error (.duplicateKey k)
@@ -166,16 +166,18 @@ theorem admitProgram_type_int (program : NativeEff) (table : RowTable) (ty : Eff
   split
   · simp_all
   · split
-    · simp_all
-    · rename_i ty' hty'
-      have heq : ty' = ty := by injection (hty'.symm.trans hTy)
-      subst heq
+    · rename_i hnone
+      unfold checkTypedProgram at hnone
+      split at hnone <;> simp_all
+    · rename_i typing _
+      have heq : typing.ty = ty := Option.some.inj (typing.typed.symm.trans hTy)
       split
       · rename_i pos' hpos'
+        rw [heq] at hpos'
         have hpos : pos' = pos := by injection (hpos'.symm.trans hInt)
         rw [hpos]
       · rename_i hnone
-        rw [hInt] at hnone
+        rw [heq, hInt] at hnone
         contradiction
 
 end Effect4.Program

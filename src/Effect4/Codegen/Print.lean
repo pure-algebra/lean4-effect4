@@ -585,16 +585,16 @@ def printDecl (name : String) (ty : EffTy) (body : TypeScript.Expr) :
 
 /-- The raw declaration printer can represent its emitted annotation. This is
 not target type checking: requirement-bearing declarations still omit it. -/
-def declarationTypeReadable (ty : EffTy) : Bool :=
+def declarationTypeRepresentable (ty : EffTy) : Bool :=
   ty.requires != Requirement.empty ||
     (Effect4.Codegen.Types.ofTy ty.answer).isSome && (Effect4.Codegen.Types.ofTy ty.error).isSome
 
 /-- Legacy malformed type strings now refuse instead of becoming raw target text.
 The representability premise states that change in the declaration printer's domain. -/
 theorem printDecl_readable (name : String) (ty : EffTy) (body : TypeScript.Expr)
-    (hr : declarationTypeReadable ty = true) :
+    (hr : declarationTypeRepresentable ty = true) :
     ∃ decl, printDecl name ty body = .ok decl := by
-  unfold declarationTypeReadable at hr
+  unfold declarationTypeRepresentable at hr
   unfold printDecl
   split
   · rename_i h

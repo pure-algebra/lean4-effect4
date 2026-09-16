@@ -82,6 +82,15 @@ private def sampleModule : Module :=
   some (.union [.name ["Box"] [.tuple [.name ["number"] [], .literal "tag"] true],
     .name ["never"] []])
 #guard Effect4.Codegen.Types.parseLegacy "'\\uD83D\\uDE42'" == some (.literal "🙂")
+
+-- Projected and parsed unions are canonical in the target: members that collapse to one
+-- spelling collapse to one member, so a declared `number` compares equal to the projection
+-- of `nat | int` (breaker finding B19).
+#guard Effect4.Codegen.Types.ofTy (.union .nat .int) == some (.name ["number"] [])
+#guard (Effect4.Codegen.Types.ofTy (.union (.union .nat .int) .string)).map (Render.type house0)
+  = some "number | string"
+#guard Effect4.Codegen.Types.parseLegacy "A | A" == some (.name ["A"] [])
+#guard Effect4.Codegen.Types.parseLegacy "A | (B | A)" == some (.union [.name ["A"] [], .name ["B"] []])
 #guard ["", "A<>", "number<string>", "void.X", "default", "true", "A.1",
     "'\\uD800'", "number); injected("].all
   (fun text => (Effect4.Codegen.Types.parseLegacy text).isNone)

@@ -90,7 +90,7 @@ emission. Successful output is a conclusion, not a condition of this theorem. -/
 theorem emitModule_complete (typing : TypedProgram (nativeSignature table) program)
     (lawful : LawfulTable table = true)
     (readable : Program.readable (nativeSignature table) (nativeSpell table) 0 program = true)
-    (types : declarationTypeReadable typing.ty = true) :
+    (types : declarationTypeRepresentable typing.ty = true) :
     ∃ emission, emitModule name program table = .ok emission := by
   obtain ⟨decls, printed⟩ := Program.printModule_readable readable
     typing.layerRefsWF name typing.ty types
