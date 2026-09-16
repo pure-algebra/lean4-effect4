@@ -58,7 +58,7 @@ several layers, and the kind is what makes its cost visible.
 | L1 reference semantics | the machine (fibers, scopes, the wake list, stores, the layer memo) and the algebra it denotes into; the run API and its refusals | solid; its open rows are about the *reach* of the agreement, not its content |
 | L2 the type layer | the `Eff` object language, `Ty`, the row and table discipline, the error and requirement channels, the typing algorithm, the declarative system it is proved equal to, and the value typing | routed faithfully; since part 4 (2026-09-12) a declarative system (`HasTy`, sound and complete for `effTy`), a subtype relation with subsumption at rows, provision and atom arguments, and the canonical union as the answer join; `int` is the one uninhabited constructor (DI-67); no whole-program type-soundness theorem for execution yet (`Typing/Check.lean`) |
 | L3 representations and bytes | the value carrier, canonical bytes and the content-addressed store, the wire and its ordinals, the JSON forms, the World description and its OCaml and TypeScript projections, the goldens, the stamps | the rank-one rework risks live here: identity, ordinals, four independent reflections of one description |
-| L4 the faces | the printer and readers between `Eff` and TypeScript source, the foreign ingest with its two contracts, the truth harness and its tapes, the OCaml face as a conformance suite, the runtime coverage census | its claims are stated in `Test/contracts/faces.contract.md` (DI-50), which names the batteries that exist and adds none; classification by rule order; the printed image never type-checked |
+| L4 the faces | the printer and readers between `Eff` and TypeScript source, the foreign ingest with its two contracts, the truth harness and its tapes, the OCaml face as a conformance suite, the runtime coverage census | expression-AST reconstruction proved under its profile; module/annotation integration remains open; hand and generated corpus target checks are finite evidence; exact boundaries in `Test/contracts/faces.contract.md` (DI-50) |
 | L5 process | the generators and their families, the stamps and gates, the one-compiler lane, the basis and the register | the drift-removal machinery; two stamp protocols; five families carried by hand |
 
 ## L1 — the reference semantics
@@ -211,9 +211,11 @@ CIDs, Unison, Nix); build provenance (Mokhov, Mitchell and Peyton Jones, 2018).
 ## L4 — the faces
 
 One `Eff` program has several representations that must agree, and each pair is held by a
-different kind of evidence. The Lean printer and the Lean reader are a partial isomorphism:
-both round-trip laws are theorems (`read_print_native`, `read_exact_native`, premised on
-`LawfulTable`), and the reader's refusal alphabet names the places rc.112's surface genuinely
+different kind of evidence. The Lean expression printer and reader are a partial isomorphism:
+both expression-AST round-trip laws are theorems (`read_print_native`, `read_exact_native`,
+premised on `LawfulTable` and their stated image conditions). These do not establish
+module reconstruction, annotation checking or target typing; the precise open connections
+are in `Test/contracts/faces.contract.md` §7. The reader's refusal alphabet names where the surface
 loses information, which is why a reader that guessed would be wrong rather than unproved. The
 TypeScript printer-image reader is a third implementation of the same relation, held by byte
 comparison against Lean-produced oracles over a generated corpus, with its head coverage held
@@ -227,7 +229,8 @@ discipline, the service-key numbering — which is a ruling, not an implementati
 (DI-37). The truth harness is a bounded differential against rc.112 over a frozen corpus at a
 pinned host, single-fiber, with recorded tapes as a two-way byte obligation (DI-23); it is not
 a bisimulation. The OCaml face is a conformance suite: a second implementation of the wire, the
-JSON and the typing, checked against goldens the Lean side cuts, with a generator that refuses
+JSON, checked against goldens the Lean side cuts. Its independent typing implementation
+was retired; core typing verdicts are generated outputs, not another checker. Its generator refuses
 to write when the corpus fails to reach a constructor — the model the OCaml engine's
 acceptance test should follow (DI-19). The runtime coverage census is the traceability matrix
 for rc.112's runtime, not for this layer.

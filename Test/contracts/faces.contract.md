@@ -20,15 +20,15 @@ holds it, and where the battery is.
 
 | # | face | what it is | evidence | where |
 | --- | --- | --- | --- | --- |
-| 1 | the Lean printer | `Api.print` / `Api.printModule`: an `Eff` to one TypeScript expression, or a declaration block with one `const L_<path>` per hoisted layer | proved (§2), tested | `src/Effect4/Codegen/Print.lean`; `Test/Codegen/PrintContract.lean` |
-| 2 | the Lean reader | `Api.readModule` / `readEff`: the partial inverse, with a closed refusal alphabet | proved (§2), tested | `src/Effect4/Codegen/Read.lean`; `Test/Codegen/ReadContract.lean` |
+| 1 | the Lean printer | `Api.print` / `Api.printModule`: an `Eff` to one TypeScript expression, or a declaration block with one `const L_<path>` per hoisted layer | expression reconstruction proved (§2); modules tested | `src/Effect4/Codegen/Print.lean`; `Test/Codegen/PrintContract.lean` |
+| 2 | the Lean reader | `readEff`: the partial expression inverse; `Api.readModule`: module reconstruction with a closed refusal alphabet | expression reconstruction proved (§2); modules tested | `src/Effect4/Codegen/Read.lean`; `Test/Codegen/ReadContract.lean` |
 | 3 | the TypeScript printer-image reader | `ts/eff/read.ts`: a third implementation of face 2's relation, in the target language | tested (byte equality against Lean-cut oracles over the generated corpus), reproduced (its head union is generated, so `tsc` holds head coverage) | `ts/eff/read.ts`, `ts/eff/check.ts`; `ts/eff/test/read.test.ts`, `tables.test.ts`; `make check-ts-reader` |
 | 4 | the foreign recognizer `ck` | `ts/eff/ingest/ck.ts` over the TypeScript compiler API: an island recognizer of a sub-language of rc.112 | tested (agreement with face 5; equality with Lean where an oracle exists) | `ts/eff/ingest/ck.ts`; `ts/eff/ingest/test/foreign.test.ts`, `gate.test.ts`, `refusals.test.ts` |
 | 5 | the foreign recognizer `oxc` | `ts/eff/ingest/oxc.ts` over oxc 0.147.0, sharing **no** recognition code with face 4 | tested (the same) | `ts/eff/ingest/oxc.ts`; the same batteries |
 | 6 | the canonical wire | the byte encoding of a program, in three implementations: `Effect4.Program.Wire`, `ts/eff/wire.gen.ts`, `ocaml/eff/eff_wire.ml` | proved (`decode_encode`, `decode_exact`, `encode_injective`), reproduced (goldens), tested | `src/Effect4/Program/Wire.lean`; `ocaml/goldens/eff`; `ts/eff/test/wire.test.ts`, `ocaml/eff/test/test_lean_wire.ml`, `prop_wire.ml` |
 | 7 | the JSON projection | the same program as JSON, in three implementations: `OCaml5.Eff.effV.json`, `ts/eff/json.gen.ts`, `ocaml/eff/eff_json.ml` | reproduced (byte comparison against the Lean-cut oracle), tested | `src/OCaml5/Eff/Goldens.lean`; `ts/eff/json.gen.ts`; `ocaml/eff/test/test_eff.ml` |
 | 8 | the executed image on rc.112 | the truth harness: the printed module *run* under the pinned host, its exit and observable schedule compared with the Lean machine's | tested (a bounded differential over a frozen corpus), reproduced (the gate regenerates the modules, the result and the tapes and compares bytes), stamped | `harness/truth/`; `scripts/check-truth.py`; the `#guard`s of `harness/truth/Truth.lean` |
-| 9 | the OCaml conformance face | `ocaml/eff`: a second implementation of the families, the wire, the JSON and the typing, checked against goldens the Lean side cuts | reproduced (goldens), tested (`dune-tests`), stamped | `ocaml/eff/`; `bash scripts/check-ocaml.sh dune-tests`; `src/OCaml5/Tools/EffGen.lean` |
+| 9 | the OCaml conformance face | `ocaml/eff`: generated families, wire and JSON implementations; core typing verdicts retained as goldens, with no independent OCaml type checker | reproduced (goldens), tested (`dune-tests`) | `ocaml/eff/`; `bash scripts/check-ocaml.sh dune-tests`; `src/OCaml5/Tools/EffGen.lean` |
 
 **Not a face of this layer.** The runtime coverage census is the traceability matrix for
 rc.112's runtime, not a representation of an `Eff` program (`docs/DESIGN-MAP.md` §L4).
@@ -77,9 +77,18 @@ reader is itself the hypothesis. Together R1 and R2 make printer and reader a **
 isomorphism**, not a bijection: the domain of R1 is `readable`, the domain of R2 is the
 reader's acceptance, and neither is all of `Eff`.
 
-**What the round trip does not say.** Nothing about faces 3–5: the TypeScript reader and the
-two foreign engines implement the same relation but are held by byte comparison and mutual
-agreement, not by these theorems.
+**What the round trip does not say (clarified 2026-09-16).** These laws concern
+`TypeScript.Expr`, not complete declaration blocks or rendered text. They do not prove
+the module hoist/restore relation, source parser adequacy, annotation validity or host
+typing/execution. Lean `readModule` currently ignores declared types and export names;
+`Api.readModule` also ignores module imports/header. The TypeScript reader drops imports
+and the outer annotation. Thus accepting a module is not a typed-source certificate.
+Faces 3–5 remain held by finite byte comparisons and mutual agreement, not these theorems.
+
+`Api.printDecl`/`printModule` already consult `typeOfProgram`; it types the expanded
+reference tree. That fact alone neither types the emitted target expression nor proves
+that erasing shared layer references is an execution-preserving transformation. The
+existing expression proofs retain their full statements and premises.
 
 ---
 
@@ -196,6 +205,26 @@ proved — no theorem relates an OCaml function to a Lean one.
   `Effect.scoped` is `Exclude<R, Scope>`.
 - The refusal taxonomy's classification is a function of rule order rather than of the input
   (DI-48).
-- The printed image is type-checked only for the truth corpus (DI-49,
-  `harness/truth/tsconfig.json`); the generated printed corpus is executed and parsed but not
-  type-checked, and it is deliberately not all well typed (152 of 400).
+- The hand truth corpus and every emitted generated-corpus module are type-checked
+  (DI-49, `scripts/check-truth.py`, `scripts/check-corpus.py`). Deliberately ill-typed
+  inputs retain compiler diagnostics. Independent inferred-type comparison is a finite
+  target check, not a universal theorem about emitted code. It keeps A/R exact and
+  accepts host E only within the declared core bound, with primitive-row comparisons
+  retaining their exact contract.
+
+## 7. Required typed-surface connection (2026-09-16)
+
+Reader/printer integration must reuse the core checker and judgment. Executable
+certificates stay below Laws; declarative consequences live in Laws. Codegen admission
+requires spelling hygiene and the target profile, but not the runner's external/async
+row restrictions. Its type fact concerns `typeOfProgram` and hence `HasTy` on the checked
+expanded tree; its module reconstruction fact must recover the original sharing tree.
+
+The remaining obligations are a canonical admitted annotation grammar with a round-trip
+law, annotation/import validation before erasure, genuinely type-directed lowering,
+module reconstruction including hoists, and completeness on the advertised printable
+domain. A normalization needs its own typing and behavior relation. A read-and-check
+wrapper or a target annotation does not discharge those obligations. Current source
+parsing, core typing, target typing and host behavior remain distinct evidence boundaries.
+The consolidated foundational implementation plan specifies the staged repair; this
+section records the claim boundary and does not declare the repair implemented.
