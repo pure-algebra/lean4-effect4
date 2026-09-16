@@ -264,10 +264,11 @@ Arbitrary blocks of inserted binding slots preserve the complete checker result,
 including refusal. The `andThen`, `tap`, `as`/`asVoid`, and `ensuring` laws read the
 actual `Forms.all` expansions and state their argument environments explicitly.
 They establish core typing of those expansions, not source-parser correctness or
-host behavior. The compiler and OXC foreign readers now fold the generated templates
-for `andThen`, `tap`, `as`, `asVoid`, `ensuring` and both `matchCause` forms, using their
-own source recognition and lexical environments. The remaining form constructors
-still use their existing adapters. The canonical exact reader is unchanged.
+host behavior. The compiler and OXC foreign readers now fold all nineteen generated
+form rows, using their own source recognition and lexical environments. That includes
+default fork options, yielded services, and one-parameter resource release with the
+missing exit slot inserted after the resource. Explicit fork options and two-parameter
+release retain their canonical primitive adapters. The canonical exact reader is unchanged.
 
 The native service type tables in `Program/Native.lean` now feed the core lookup and
 the generated reader profile. The canonical reader consumes the generated spelling;

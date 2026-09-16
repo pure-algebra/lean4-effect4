@@ -1,6 +1,6 @@
 // Compiler API engine, retargeted from foldlab experiments/lift-harness/src/lift.ts
 // at 4005d34f. Syntax recognition is independent of read.ts and the oxc engine;
-// derived sequencing/handler forms consume the shared Lean-owned template fold.
+// derived forms consume the shared Lean-owned template fold.
 import ts from "typescript"
 import { decodeEff, type Eff, type Term, type Lit, type CauseTerm, type Stmt, type ActionTerm, type LayerTerm, type ServiceKey, type ForkOptions } from "../eff.gen.ts"
 import { rows, serviceTypes, serviceTypeFor } from "../profile.gen.ts"
@@ -399,15 +399,22 @@ const knownHeads = new Set<string>([...heads, ...rows.map(r => r.row.spelling), 
 // against `nativeAtomTy`. An atom appended in Lean reaches this recognizer by regeneration.
 const atoms = atomNames
 
-const effForms: FormAlgebra<Eff, Term> = {
+const effForms: FormAlgebra<Eff, Term, ServiceKey> = {
   literal: value => ({ _tag: "lit", value }),
   variable: index => ({ _tag: "var", index }),
   succeed: value => ({ _tag: "succeed", value }),
+  die: defect => ({ _tag: "failCause", cause: { _tag: "die", defect } }),
   bind: (first, rest) => ({ _tag: "bind", first, rest }),
   onExit: (body, finalizer) => ({ _tag: "onExit", body, finalizer }),
   matchCause: (body, onValue, onCause) => ({ _tag: "matchCause", body, onValue, onCause }),
+  service: key => ({ _tag: "service", key }),
+  yieldNow: priority => ({ _tag: "yieldNow", priority }),
+  fork: (program, options) => ({ _tag: "withFiber", action: { _tag: "fork", program, options } }),
+  forkIn: (program, scope, options) => ({ _tag: "withFiber", action: { _tag: "forkIn", program, scope, options } }),
+  forkScoped: (program, options) => ({ _tag: "withFiber", action: { _tag: "forkScoped", program, options } }),
+  acquireRelease: (acquire, release) => ({ _tag: "acquireRelease", acquire, release }),
 }
-const lowerForm = (name: string, depth: number, args: FormArguments<Eff, Term>): Eff => {
+const lowerForm = (name: string, depth: number, args: FormArguments<Eff, Term, ServiceKey>): Eff => {
   const result = expandForm(name, depth, args, effForms)
   return result.ok ? result.value : refuseForeign("E-NODE", `form lowering: ${result.error}`)
 }
@@ -735,7 +742,9 @@ class ForeignCompilerReader extends CompilerReader {
       const inScope = head === "Effect.forkIn", index = inScope ? 1 : 0
       const daemon = head !== "Effect.forkChild"
       if (args.length !== index && args.length !== index + 1) return refuseForeign("E-BIND-SHAPE", "arity")
-      const options = args[index] ? this.options(at(index), daemon) : { startImmediately: false, daemon, maskMode: "inherit" as const }
+      if (args.length === index) return lowerForm(`${head.slice("Effect.".length)}Default`, env.length,
+        { effects: [fixedEffect(first)], terms: inScope ? [this.term(at(0), env)] : [] })
+      const options = this.options(at(index), daemon)
       return { _tag: "withFiber", action: inScope ? { _tag: "forkIn", program: first, scope: this.term(at(0), env), options } : head === "Effect.forkScoped" ? { _tag: "forkScoped", program: first, options } : { _tag: "fork", program: first, options } }
     }
     if (!knownHeads.has(head)) return refuseForeign("E-OP-UNKNOWN", head)
@@ -860,7 +869,7 @@ class ForeignCompilerReader extends CompilerReader {
     // property of a binder (`sql.reserve`) is a head the table does not carry.
     if (!ts.isCallExpression(x)) {
       const pkg = this.packageOf(x)
-      if (pkg) return { _tag: "service", key: this.packageKey(pkg) }
+      if (pkg) return lowerForm("yieldKey", env.length, { effects: [], keys: [this.packageKey(pkg)] })
       if (ts.isPropertyAccessExpression(x) && this.variable(x.expression, env) !== undefined) return refuseForeign("E-OP-UNKNOWN", x.name.text)
     }
     // `sql\`…\`` on a client binder is the derived form; a tag bound to an import refuses with
@@ -874,7 +883,7 @@ class ForeignCompilerReader extends CompilerReader {
     }
     if (ts.isIdentifier(x) && this.variable(x, env) === undefined && x.text !== "undefined" && !this.bindings.has(x.text)) {
       const decl = this.unwrap(this.declaration(x))
-      if (ts.isCallExpression(decl) && this.name(ts.isCallExpression(this.unwrap(decl.expression)) ? this.call(decl.expression).expression : decl.expression) === "Context.Service") return { _tag: "service", key: this.key(x) }
+      if (ts.isCallExpression(decl) && this.name(ts.isCallExpression(this.unwrap(decl.expression)) ? this.call(decl.expression).expression : decl.expression) === "Context.Service") return lowerForm("yieldKey", env.length, { effects: [], keys: [this.key(x)] })
       const previous = this.referenceCut
       this.referenceCut = this.declarations.get(x.text)!.at
       try { return this.eff(decl, env) }
@@ -920,7 +929,11 @@ class ForeignCompilerReader extends CompilerReader {
         const release = this.unwrap(this.at(x.arguments, 1))
         if (!ts.isArrowFunction(release) || release.parameters.length < 1 || release.parameters.length > 2) return refuseForeign("E-ARG-CLOSURE", "release")
         const fn = this.arrow(release, env, release.parameters.length)
-        return { _tag: "acquireRelease", acquire: this.eff(this.at(x.arguments, 0), env), release: this.eff(this.expression(fn.body), release.parameters.length === 1 ? [...fn.env, "\u0000"] : fn.env) }
+        const acquire = this.eff(this.at(x.arguments, 0), env)
+        if (release.parameters.length === 1) return lowerForm("releaseOne", env.length,
+          { effects: [fixedEffect(acquire), effectSlot(fn.env, env.length,
+            inner => this.eff(this.expression(fn.body), inner))] })
+        return { _tag: "acquireRelease", acquire, release: this.eff(this.expression(fn.body), fn.env) }
       }
       if (h === "Effect.sleep") {
         this.arity(x.arguments, 1)
@@ -932,7 +945,7 @@ class ForeignCompilerReader extends CompilerReader {
         let value: Lit
         try { value = this.literal(this.at(x.arguments, 0)) } catch { return refuseForeign("E-FAIL-NOT-DOCUMENTED", "literal required") }
         const t: Term = { _tag: "lit", value }
-        return h === "Effect.fail" ? { _tag: "fail", error: t } : { _tag: "failCause", cause: { _tag: "die", defect: t } }
+        return h === "Effect.fail" ? { _tag: "fail", error: t } : lowerForm("die", env.length, { effects: [], terms: [t] })
       }
       if (h === "Effect.provideService") {
         this.arity(x.arguments, 3)
@@ -954,8 +967,7 @@ class ForeignCompilerReader extends CompilerReader {
     }
     if (!ts.isCallExpression(x) && (ts.isIdentifier(x) || ts.isPropertyAccessExpression(x))) {
       const h = this.name(x)
-      if (h === "Effect.void") return { _tag: "succeed", value: unit }
-      if (h === "Effect.yieldNow") return { _tag: "yieldNow", priority: 0 }
+      if (h === "Effect.void" || h === "Effect.yieldNow") return lowerForm(h.slice("Effect.".length), env.length, { effects: [] })
     }
     return super.eff(x, env)
   }

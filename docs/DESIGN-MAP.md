@@ -224,7 +224,7 @@ TypeScript printer-image reader is a third implementation of the same relation, 
 comparison against Lean-produced oracles over a generated corpus, with its head coverage held
 by the type checker because its head union is generated. The two foreign engines are island
 recognizers of a sub-language of rc.112, with independent parser recognition and shared
-lowering of the covered Lean-owned form templates and service-type profile. Their results
+lowering of all Lean-owned form templates and the service-type profile. Their results
 are held by agreement with each other plus, where an oracle exists, equality with Lean;
 their refusals are a closed,
 exhaustive, injectively coded taxonomy owned in Lean whose classification is still a function
