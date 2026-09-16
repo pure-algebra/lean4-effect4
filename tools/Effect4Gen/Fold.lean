@@ -158,6 +158,65 @@ def emitBlock (root : Name) : MetaM (String × List String) := do
     receipts := receipts ++ [s!"hom_eq_cata_{label}"]
   if isMutual then s := s ++ "end\n\n" else s := s ++ "\n"
 
+  -- The self carrier and the identity algebra: the fold that rebuilds the tree. A rewrite
+  -- is one override of it (`onRef`, and `frontierMap` on the frontier), and `cata_id_*`
+  -- says the identity algebra folds to the identity.
+  s := s ++ s!"abbrev {blockName}SelfCarrier {opParam}: {famType} → Type\n"
+  for (label, fam, _) in block do
+    s := s ++ s!"  | .{label} => {fam}{opApp}\n"
+  s := s ++ "\n"
+  s := s ++ s!"def {algType}.id {opParam}: {algType}{opApp} ({blockName}SelfCarrier{opApp}) where\n"
+  for (_, fam, rows) in block do
+    for r in rows do
+      let binders := String.intercalate " " (r.args.map (·.name))
+      let lhs := if r.args.isEmpty then "" else " " ++ binders
+      s := s ++ s!"  {r.field}{lhs} := {fam}.{r.ctor}{lhs}\n"
+  s := s ++ "\n"
+  if isMutual then s := s ++ "mutual\n"
+  for (label, fam, rows) in block do
+    s := s ++ s!"@[simp] theorem cata_id_{label} {opArg}(node : {fam}{opApp}) :\n"
+    s := s ++ s!"    cata_{label} ({algType}.id{opApp}) node = node := by\n"
+    s := s ++ "  match node with\n"
+    for r in rows do
+      let binders := String.intercalate " " (r.args.map (·.name))
+      let pat := if r.args.isEmpty then s!"  | .{r.ctor} =>" else s!"  | .{r.ctor} {binders} =>"
+      let ihs := r.args.filterMap fun a => a.recFam.map fun f => s!"cata_id_{f} {a.name}"
+      let lemmas := String.intercalate ", " ([s!"cata_{label}"] ++ ihs)
+      s := s ++ pat ++ s!"\n    simp only [{lemmas}]\n    rfl\n"
+    s := s ++ "termination_by structural node\n"
+    receipts := receipts ++ [s!"cata_id_{label}"]
+  if isMutual then s := s ++ "end\n\n" else s := s ++ "\n"
+
+  if blockName == "Eff" then
+    s := s ++ "/-- The identity algebra with the reference slot replaced: every `LayerTerm.ref` rewritten\n"
+    s := s ++ "by one fold, everything else rebuilt as it was. -/\n"
+    s := s ++ "def EffAlgebra.onRef {Op : Type} (f : List Nat → Effect4.Program.LayerTerm Op) :\n"
+    s := s ++ "    EffAlgebra Op (EffSelfCarrier Op) :=\n  { EffAlgebra.id Op with layer_ref := f }\n\n"
+
+  -- The path fold: `foldMap` with the node's path threaded to every child, child `i` at
+  -- `p ++ [i]` in the order the recursive arguments are declared (`Node.child`'s index).
+  let fAtParams := String.intercalate " " (block.map fun (l, f, _) =>
+    s!"(f_{l} : {f}{opApp} → List Nat → M := fun _ _ => unit)")
+  let fAtArgs := String.intercalate " " (block.map fun (l, _, _) => s!"f_{l}")
+  if isMutual then s := s ++ "mutual\n"
+  for (label, fam, rows) in block do
+    s := s ++ s!"def foldMapAt_{label} {opArg}\{M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (node : {fam}{opApp})\n"
+    s := s ++ s!"    {fAtParams} : M :=\n"
+    s := s ++ "  match node with\n"
+    for r in rows do
+      let binders := String.intercalate " " (r.args.map (·.name))
+      let pat := if r.args.isEmpty then s!"  | .{r.ctor} =>" else s!"  | .{r.ctor} {binders} =>"
+      let recArgs := r.args.filter (·.recFam.isSome)
+      let childCalls := recArgs.zipIdx.map fun (a, i) =>
+        s!"(foldMapAt_{a.recFam.getD label} unit op (p ++ [{i}]) {a.name} {fAtArgs})"
+      let nodeExpr := if binders.isEmpty then s!".{r.ctor}" else s!".{r.ctor} {binders}"
+      let rhs := match childCalls with
+        | [] => s!"f_{label} ({nodeExpr}) p"
+        | _ => s!"op (f_{label} ({nodeExpr}) p) ({recComb childCalls})"
+      s := s ++ pat ++ s!"\n    {rhs}\n"
+    s := s ++ "termination_by structural node\n"
+  if isMutual then s := s ++ "end\n\n" else s := s ++ "\n"
+
   -- foldMap
   let fParams := String.intercalate " " (block.map fun (l, f, _) =>
     s!"(f_{l} : {f}{opApp} → M := fun _ => unit)")
@@ -314,11 +373,12 @@ def emitBlock (root : Name) : MetaM (String × List String) := do
 
   return (s, receipts)
 
-def weakenOf (tyText : String) (arg : String) : String :=
-  if tyText == "Effect4.Program.Term" then s!"(Effect4.Program.Term.weaken cut {arg})"
-  else if tyText == "Effect4.Program.CauseTerm" then s!"(Effect4.Program.CauseTerm.weaken cut {arg})"
-  else if tyText == "Option Effect4.Program.Term" then
-    s!"({arg}.map (Effect4.Program.Term.weaken cut))"
+/-- A frontier slot under the maps: a term through `g`, a cause through `gc`, an optional
+term through `g` inside, anything else as it is. -/
+def mapOf (tyText : String) (arg : String) : String :=
+  if tyText == "Effect4.Program.Term" then s!"(g {arg})"
+  else if tyText == "Effect4.Program.CauseTerm" then s!"(gc {arg})"
+  else if tyText == "Option Effect4.Program.Term" then s!"({arg}.map g)"
   else arg
 
 def emitFrontier (root : Name) (frontier : List Name) : MetaM (String × List String) := do
@@ -375,12 +435,16 @@ def emitFrontier (root : Name) (frontier : List Name) : MetaM (String × List St
     s := s ++ "termination_by structural node\n"
   s := s ++ "end\n\n"
 
-  s := s ++ "def frontierSelfCarrier (Op : Type) : EffFrontierFam → Type\n"
+  s := s ++ "abbrev frontierSelfCarrier (Op : Type) : EffFrontierFam → Type\n"
   for (label, fam, _) in block do
     s := s ++ s!"  | .{label} => {fam} Op\n"
   s := s ++ "\n"
 
-  s := s ++ "def weakenAlg {Op : Type} (cut : Nat) : EffFrontierAlgebra Op (frontierSelfCarrier Op) where\n"
+  s := s ++ "/-- The term frontier mapped: `g` on every term slot, `gc` on every cause slot, of the\n"
+  s := s ++ "open sorts; closed layers are constants of this signature and stay as they are. -/\n"
+  s := s ++ "def frontierMap {Op : Type} (g : Effect4.Program.Term → Effect4.Program.Term)\n"
+  s := s ++ "    (gc : Effect4.Program.CauseTerm → Effect4.Program.CauseTerm) :\n"
+  s := s ++ "    EffFrontierAlgebra Op (frontierSelfCarrier Op) where\n"
   for (_, _, rows) in block do
     for r in rows do
       let binders := String.intercalate " " (r.args.map (·.name))
@@ -388,9 +452,12 @@ def emitFrontier (root : Name) (frontier : List Name) : MetaM (String × List St
       let rhsArgs := r.args.map fun a =>
         match a.recFam with
         | some _ => a.name
-        | none => weakenOf a.tyText a.name
+        | none => mapOf a.tyText a.name
       let rhs := if rhsArgs.isEmpty then "" else " " ++ String.intercalate " " rhsArgs
       s := s ++ s!"  {r.field}{lhs} := .{r.ctor}{rhs}\n"
+  s := s ++ "\n/-- Weakening at a cut is the frontier map of the term weakening. -/\n"
+  s := s ++ "def weakenAlg {Op : Type} (cut : Nat) : EffFrontierAlgebra Op (frontierSelfCarrier Op) :=\n"
+  s := s ++ "  frontierMap (Effect4.Program.Term.weaken cut) (Effect4.Program.CauseTerm.weaken cut)\n"
   s := s ++ "\nmutual\n"
   let mut receipts := []
   for (label, fam, rows) in block do
@@ -404,7 +471,7 @@ def emitFrontier (root : Name) (frontier : List Name) : MetaM (String × List St
       let ihs := r.args.filterMap fun a =>
         a.recFam.map fun f => s!"weaken_eq_cata_{f} cut {a.name}"
       let lemmas := String.intercalate ", "
-        ([s!"{handName}", s!"cata_frontier_{label}", "weakenAlg"] ++ ihs)
+        ([s!"{handName}", s!"cata_frontier_{label}", "weakenAlg", "frontierMap"] ++ ihs)
       s := s ++ pat ++ s!"\n    simp only [{lemmas}]\n"
     s := s ++ "termination_by structural node\n"
     receipts := receipts ++ [s!"weaken_eq_cata_{label}"]

@@ -217,4 +217,17 @@ def depthEnv : List Nat := [7, 8, 9]
 #guard Id.run ((foldM_eff depthTraversal.alg sampleProgram).run depthEnv)
     == [depthEnv.length, depthEnv.length]
 
+/-! ## The identity algebra, one override of it, and the path fold -/
+
+#guard cata_eff (EffAlgebra.id Nat) pWeaken == pWeaken
+#guard cata_ty TyAlgebra.id (Ty.list Ty.unit) == Ty.list Ty.unit
+#guard (cata_eff (EffAlgebra.onRef fun _ => .effectDiscard (.succeed (.lit .unit)))
+    (.provideLayer (.ref [0]) false (.succeed (.lit .unit))) : Eff Unit)
+  == .provideLayer (.effectDiscard (.succeed (.lit .unit))) false (.succeed (.lit .unit))
+#guard foldMapAt_eff ([] : List (List Nat)) (· ++ ·) []
+    (.bind (.succeed (.lit .unit)) (.matchCause (.succeed (.lit .unit)) (.succeed (.lit .unit)) (.succeed (.lit .unit))) : Eff Unit)
+    (f_eff := fun _ p => [p])
+  == [[], [0], [1], [1, 0], [1, 1], [1, 2]]
+#guard (cata_frontier_eff (frontierMap id id) pWeaken : Eff Nat) == pWeaken
+
 end FoldAcceptance

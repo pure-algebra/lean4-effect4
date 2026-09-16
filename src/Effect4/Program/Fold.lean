@@ -124,6 +124,117 @@ theorem hom_eq_cata_ty {R : TyFam → Type u}
     simp only [cata_ty, hom.h_ty_lit a0]
 termination_by structural node
 
+abbrev TySelfCarrier : TyFam → Type
+  | .ty => Effect4.Program.Ty
+
+def TyAlgebra.id : TyAlgebra (TySelfCarrier) where
+  ty_never := Effect4.Program.Ty.never
+  ty_unit := Effect4.Program.Ty.unit
+  ty_nat := Effect4.Program.Ty.nat
+  ty_int := Effect4.Program.Ty.int
+  ty_string := Effect4.Program.Ty.string
+  ty_bool := Effect4.Program.Ty.bool
+  ty_handle a0 := Effect4.Program.Ty.handle a0
+  ty_option a0 := Effect4.Program.Ty.option a0
+  ty_list a0 := Effect4.Program.Ty.list a0
+  ty_prod a0 a1 := Effect4.Program.Ty.prod a0 a1
+  ty_except a0 a1 := Effect4.Program.Ty.except a0 a1
+  ty_exitOf a0 a1 := Effect4.Program.Ty.exitOf a0 a1
+  ty_causeOf a0 := Effect4.Program.Ty.causeOf a0
+  ty_fiberOf a0 a1 := Effect4.Program.Ty.fiberOf a0 a1
+  ty_union a0 a1 := Effect4.Program.Ty.union a0 a1
+  ty_lit a0 := Effect4.Program.Ty.lit a0
+
+@[simp] theorem cata_id_ty (node : Effect4.Program.Ty) :
+    cata_ty (TyAlgebra.id) node = node := by
+  match node with
+  | .never =>
+    simp only [cata_ty]
+    rfl
+  | .unit =>
+    simp only [cata_ty]
+    rfl
+  | .nat =>
+    simp only [cata_ty]
+    rfl
+  | .int =>
+    simp only [cata_ty]
+    rfl
+  | .string =>
+    simp only [cata_ty]
+    rfl
+  | .bool =>
+    simp only [cata_ty]
+    rfl
+  | .handle a0 =>
+    simp only [cata_ty]
+    rfl
+  | .option a0 =>
+    simp only [cata_ty, cata_id_ty a0]
+    rfl
+  | .list a0 =>
+    simp only [cata_ty, cata_id_ty a0]
+    rfl
+  | .prod a0 a1 =>
+    simp only [cata_ty, cata_id_ty a0, cata_id_ty a1]
+    rfl
+  | .except a0 a1 =>
+    simp only [cata_ty, cata_id_ty a0, cata_id_ty a1]
+    rfl
+  | .exitOf a0 a1 =>
+    simp only [cata_ty, cata_id_ty a0, cata_id_ty a1]
+    rfl
+  | .causeOf a0 =>
+    simp only [cata_ty, cata_id_ty a0]
+    rfl
+  | .fiberOf a0 a1 =>
+    simp only [cata_ty, cata_id_ty a0, cata_id_ty a1]
+    rfl
+  | .union a0 a1 =>
+    simp only [cata_ty, cata_id_ty a0, cata_id_ty a1]
+    rfl
+  | .lit a0 =>
+    simp only [cata_ty]
+    rfl
+termination_by structural node
+
+def foldMapAt_ty {M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (node : Effect4.Program.Ty)
+    (f_ty : Effect4.Program.Ty → List Nat → M := fun _ _ => unit) : M :=
+  match node with
+  | .never =>
+    f_ty (.never) p
+  | .unit =>
+    f_ty (.unit) p
+  | .nat =>
+    f_ty (.nat) p
+  | .int =>
+    f_ty (.int) p
+  | .string =>
+    f_ty (.string) p
+  | .bool =>
+    f_ty (.bool) p
+  | .handle a0 =>
+    f_ty (.handle a0) p
+  | .option a0 =>
+    op (f_ty (.option a0) p) ((foldMapAt_ty unit op (p ++ [0]) a0 f_ty))
+  | .list a0 =>
+    op (f_ty (.list a0) p) ((foldMapAt_ty unit op (p ++ [0]) a0 f_ty))
+  | .prod a0 a1 =>
+    op (f_ty (.prod a0 a1) p) (op (foldMapAt_ty unit op (p ++ [0]) a0 f_ty) ((foldMapAt_ty unit op (p ++ [1]) a1 f_ty)))
+  | .except a0 a1 =>
+    op (f_ty (.except a0 a1) p) (op (foldMapAt_ty unit op (p ++ [0]) a0 f_ty) ((foldMapAt_ty unit op (p ++ [1]) a1 f_ty)))
+  | .exitOf a0 a1 =>
+    op (f_ty (.exitOf a0 a1) p) (op (foldMapAt_ty unit op (p ++ [0]) a0 f_ty) ((foldMapAt_ty unit op (p ++ [1]) a1 f_ty)))
+  | .causeOf a0 =>
+    op (f_ty (.causeOf a0) p) ((foldMapAt_ty unit op (p ++ [0]) a0 f_ty))
+  | .fiberOf a0 a1 =>
+    op (f_ty (.fiberOf a0 a1) p) (op (foldMapAt_ty unit op (p ++ [0]) a0 f_ty) ((foldMapAt_ty unit op (p ++ [1]) a1 f_ty)))
+  | .union a0 a1 =>
+    op (f_ty (.union a0 a1) p) (op (foldMapAt_ty unit op (p ++ [0]) a0 f_ty) ((foldMapAt_ty unit op (p ++ [1]) a1 f_ty)))
+  | .lit a0 =>
+    f_ty (.lit a0) p
+termination_by structural node
+
 def foldMap_ty {M : Type u} (unit : M) (op : M → M → M) (node : Effect4.Program.Ty)
     (f_ty : Effect4.Program.Ty → M := fun _ => unit) : M :=
   match node with
@@ -445,6 +556,64 @@ theorem hom_eq_cata_terms {R : TermFam → Type u}
 termination_by structural node
 end
 
+abbrev TermSelfCarrier : TermFam → Type
+  | .term => Effect4.Program.Term
+  | .terms => Effect4.Program.Terms
+
+def TermAlgebra.id : TermAlgebra (TermSelfCarrier) where
+  term_var a0 := Effect4.Program.Term.var a0
+  term_lit a0 := Effect4.Program.Term.lit a0
+  term_app a0 a1 := Effect4.Program.Term.app a0 a1
+  terms_nil := Effect4.Program.Terms.nil
+  terms_cons a0 a1 := Effect4.Program.Terms.cons a0 a1
+
+mutual
+@[simp] theorem cata_id_term (node : Effect4.Program.Term) :
+    cata_term (TermAlgebra.id) node = node := by
+  match node with
+  | .var a0 =>
+    simp only [cata_term]
+    rfl
+  | .lit a0 =>
+    simp only [cata_term]
+    rfl
+  | .app a0 a1 =>
+    simp only [cata_term, cata_id_terms a1]
+    rfl
+termination_by structural node
+@[simp] theorem cata_id_terms (node : Effect4.Program.Terms) :
+    cata_terms (TermAlgebra.id) node = node := by
+  match node with
+  | .nil =>
+    simp only [cata_terms]
+    rfl
+  | .cons a0 a1 =>
+    simp only [cata_terms, cata_id_term a0, cata_id_terms a1]
+    rfl
+termination_by structural node
+end
+
+mutual
+def foldMapAt_term {M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (node : Effect4.Program.Term)
+    (f_term : Effect4.Program.Term → List Nat → M := fun _ _ => unit) (f_terms : Effect4.Program.Terms → List Nat → M := fun _ _ => unit) : M :=
+  match node with
+  | .var a0 =>
+    f_term (.var a0) p
+  | .lit a0 =>
+    f_term (.lit a0) p
+  | .app a0 a1 =>
+    op (f_term (.app a0 a1) p) ((foldMapAt_terms unit op (p ++ [0]) a1 f_term f_terms))
+termination_by structural node
+def foldMapAt_terms {M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (node : Effect4.Program.Terms)
+    (f_term : Effect4.Program.Term → List Nat → M := fun _ _ => unit) (f_terms : Effect4.Program.Terms → List Nat → M := fun _ _ => unit) : M :=
+  match node with
+  | .nil =>
+    f_terms (.nil) p
+  | .cons a0 a1 =>
+    op (f_terms (.cons a0 a1) p) (op (foldMapAt_term unit op (p ++ [0]) a0 f_term f_terms) ((foldMapAt_terms unit op (p ++ [1]) a1 f_term f_terms)))
+termination_by structural node
+end
+
 mutual
 def foldMap_term {M : Type u} (unit : M) (op : M → M → M) (node : Effect4.Program.Term)
     (f_term : Effect4.Program.Term → M := fun _ => unit) (f_terms : Effect4.Program.Terms → M := fun _ => unit) : M :=
@@ -624,6 +793,45 @@ theorem hom_eq_cata_cause {R : CauseTermFam → Type u}
     simp only [cata_cause, hom.h_cause_interrupt a0]
   | .both a0 a1 =>
     simp only [cata_cause, hom.h_cause_both a0 a1, hom_eq_cata_cause hom a0, hom_eq_cata_cause hom a1]
+termination_by structural node
+
+abbrev CauseTermSelfCarrier : CauseTermFam → Type
+  | .cause => Effect4.Program.CauseTerm
+
+def CauseTermAlgebra.id : CauseTermAlgebra (CauseTermSelfCarrier) where
+  cause_fail a0 := Effect4.Program.CauseTerm.fail a0
+  cause_die a0 := Effect4.Program.CauseTerm.die a0
+  cause_interrupt a0 := Effect4.Program.CauseTerm.interrupt a0
+  cause_both a0 a1 := Effect4.Program.CauseTerm.both a0 a1
+
+@[simp] theorem cata_id_cause (node : Effect4.Program.CauseTerm) :
+    cata_cause (CauseTermAlgebra.id) node = node := by
+  match node with
+  | .fail a0 =>
+    simp only [cata_cause]
+    rfl
+  | .die a0 =>
+    simp only [cata_cause]
+    rfl
+  | .interrupt a0 =>
+    simp only [cata_cause]
+    rfl
+  | .both a0 a1 =>
+    simp only [cata_cause, cata_id_cause a0, cata_id_cause a1]
+    rfl
+termination_by structural node
+
+def foldMapAt_cause {M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (node : Effect4.Program.CauseTerm)
+    (f_cause : Effect4.Program.CauseTerm → List Nat → M := fun _ _ => unit) : M :=
+  match node with
+  | .fail a0 =>
+    f_cause (.fail a0) p
+  | .die a0 =>
+    f_cause (.die a0) p
+  | .interrupt a0 =>
+    f_cause (.interrupt a0) p
+  | .both a0 a1 =>
+    op (f_cause (.both a0 a1) p) (op (foldMapAt_cause unit op (p ++ [0]) a0 f_cause) ((foldMapAt_cause unit op (p ++ [1]) a1 f_cause)))
 termination_by structural node
 
 def foldMap_cause {M : Type u} (unit : M) (op : M → M → M) (node : Effect4.Program.CauseTerm)
@@ -1131,6 +1339,475 @@ theorem hom_eq_cata_layers {Op : Type} {R : EffFam → Type u}
     simp only [cata_layers, hom.h_layers_nil]
   | .cons a0 a1 =>
     simp only [cata_layers, hom.h_layers_cons a0 a1, hom_eq_cata_layer hom a0, hom_eq_cata_layers hom a1]
+termination_by structural node
+end
+
+abbrev EffSelfCarrier (Op : Type) : EffFam → Type
+  | .eff => Effect4.Program.Eff Op
+  | .stmt => Effect4.Program.Stmt Op
+  | .stmts => Effect4.Program.Stmts Op
+  | .effs => Effect4.Program.Effs Op
+  | .action => Effect4.Program.ActionTerm Op
+  | .layer => Effect4.Program.LayerTerm Op
+  | .layers => Effect4.Program.LayerTerms Op
+
+def EffAlgebra.id (Op : Type) : EffAlgebra Op (EffSelfCarrier Op) where
+  eff_succeed a0 := Effect4.Program.Eff.succeed a0
+  eff_fail a0 := Effect4.Program.Eff.fail a0
+  eff_failCause a0 := Effect4.Program.Eff.failCause a0
+  eff_yieldError a0 := Effect4.Program.Eff.yieldError a0
+  eff_sync a0 := Effect4.Program.Eff.sync a0
+  eff_suspend a0 := Effect4.Program.Eff.suspend a0
+  eff_perform a0 a1 := Effect4.Program.Eff.perform a0 a1
+  eff_bind a0 a1 := Effect4.Program.Eff.bind a0 a1
+  eff_gen a0 := Effect4.Program.Eff.gen a0
+  eff_catchCause a0 a1 := Effect4.Program.Eff.catchCause a0 a1
+  eff_matchCause a0 a1 a2 := Effect4.Program.Eff.matchCause a0 a1 a2
+  eff_onExit a0 a1 := Effect4.Program.Eff.onExit a0 a1
+  eff_exit a0 := Effect4.Program.Eff.exit a0
+  eff_uninterruptible a0 := Effect4.Program.Eff.uninterruptible a0
+  eff_interruptible a0 := Effect4.Program.Eff.interruptible a0
+  eff_branch a0 a1 a2 := Effect4.Program.Eff.branch a0 a1 a2
+  eff_whileLoop a0 a1 a2 a3 := Effect4.Program.Eff.whileLoop a0 a1 a2 a3
+  eff_yieldNow a0 := Effect4.Program.Eff.yieldNow a0
+  eff_callback a0 a1 := Effect4.Program.Eff.callback a0 a1
+  eff_awaitFiber a0 a1 := Effect4.Program.Eff.awaitFiber a0 a1
+  eff_withFiber a0 := Effect4.Program.Eff.withFiber a0
+  eff_scoped a0 := Effect4.Program.Eff.scoped a0
+  eff_acquireRelease a0 a1 := Effect4.Program.Eff.acquireRelease a0 a1
+  eff_provideLayer a0 a1 a2 := Effect4.Program.Eff.provideLayer a0 a1 a2
+  eff_service a0 := Effect4.Program.Eff.service a0
+  eff_provideService a0 a1 a2 := Effect4.Program.Eff.provideService a0 a1 a2
+  eff_catchIf a0 a1 a2 := Effect4.Program.Eff.catchIf a0 a1 a2
+  stmt_bindYield a0 := Effect4.Program.Stmt.bindYield a0
+  stmt_yieldDiscard a0 := Effect4.Program.Stmt.yieldDiscard a0
+  stmt_ret a0 := Effect4.Program.Stmt.ret a0
+  stmt_ifElse a0 a1 a2 := Effect4.Program.Stmt.ifElse a0 a1 a2
+  stmt_whileTrue a0 := Effect4.Program.Stmt.whileTrue a0
+  stmt_breakLoop := Effect4.Program.Stmt.breakLoop
+  stmts_nil := Effect4.Program.Stmts.nil
+  stmts_cons a0 a1 := Effect4.Program.Stmts.cons a0 a1
+  effs_nil := Effect4.Program.Effs.nil
+  effs_cons a0 a1 := Effect4.Program.Effs.cons a0 a1
+  action_fork a0 a1 := Effect4.Program.ActionTerm.fork a0 a1
+  action_forkIn a0 a1 a2 := Effect4.Program.ActionTerm.forkIn a0 a1 a2
+  action_forkScoped a0 a1 := Effect4.Program.ActionTerm.forkScoped a0 a1
+  action_runIn a0 a1 := Effect4.Program.ActionTerm.runIn a0 a1
+  action_interrupt a0 := Effect4.Program.ActionTerm.interrupt a0
+  action_interruptScoped a0 := Effect4.Program.ActionTerm.interruptScoped a0
+  action_interruptAll a0 a1 := Effect4.Program.ActionTerm.interruptAll a0 a1
+  action_awaitAll a0 := Effect4.Program.ActionTerm.awaitAll a0
+  action_awaitAllFailFast a0 := Effect4.Program.ActionTerm.awaitAllFailFast a0
+  action_snapshotChildren := Effect4.Program.ActionTerm.snapshotChildren
+  action_awaitNewChildren a0 := Effect4.Program.ActionTerm.awaitNewChildren a0
+  action_raceAll a0 := Effect4.Program.ActionTerm.raceAll a0
+  action_setContext a0 := Effect4.Program.ActionTerm.setContext a0
+  action_getContext := Effect4.Program.ActionTerm.getContext
+  action_getId := Effect4.Program.ActionTerm.getId
+  action_closeScope a0 a1 := Effect4.Program.ActionTerm.closeScope a0 a1
+  layer_succeed a0 a1 := Effect4.Program.LayerTerm.succeed a0 a1
+  layer_effect a0 a1 := Effect4.Program.LayerTerm.effect a0 a1
+  layer_effectDiscard a0 := Effect4.Program.LayerTerm.effectDiscard a0
+  layer_provide a0 a1 := Effect4.Program.LayerTerm.provide a0 a1
+  layer_provideMerge a0 a1 := Effect4.Program.LayerTerm.provideMerge a0 a1
+  layer_merge a0 a1 := Effect4.Program.LayerTerm.merge a0 a1
+  layer_fresh a0 := Effect4.Program.LayerTerm.fresh a0
+  layer_orDie a0 := Effect4.Program.LayerTerm.orDie a0
+  layer_ref a0 := Effect4.Program.LayerTerm.ref a0
+  layer_mergeAll a0 := Effect4.Program.LayerTerm.mergeAll a0
+  layers_nil := Effect4.Program.LayerTerms.nil
+  layers_cons a0 a1 := Effect4.Program.LayerTerms.cons a0 a1
+
+mutual
+@[simp] theorem cata_id_eff {Op : Type} (node : Effect4.Program.Eff Op) :
+    cata_eff (EffAlgebra.id Op) node = node := by
+  match node with
+  | .succeed a0 =>
+    simp only [cata_eff]
+    rfl
+  | .fail a0 =>
+    simp only [cata_eff]
+    rfl
+  | .failCause a0 =>
+    simp only [cata_eff]
+    rfl
+  | .yieldError a0 =>
+    simp only [cata_eff]
+    rfl
+  | .sync a0 =>
+    simp only [cata_eff]
+    rfl
+  | .suspend a0 =>
+    simp only [cata_eff, cata_id_eff a0]
+    rfl
+  | .perform a0 a1 =>
+    simp only [cata_eff]
+    rfl
+  | .bind a0 a1 =>
+    simp only [cata_eff, cata_id_eff a0, cata_id_eff a1]
+    rfl
+  | .gen a0 =>
+    simp only [cata_eff, cata_id_stmts a0]
+    rfl
+  | .catchCause a0 a1 =>
+    simp only [cata_eff, cata_id_eff a0, cata_id_eff a1]
+    rfl
+  | .matchCause a0 a1 a2 =>
+    simp only [cata_eff, cata_id_eff a0, cata_id_eff a1, cata_id_eff a2]
+    rfl
+  | .onExit a0 a1 =>
+    simp only [cata_eff, cata_id_eff a0, cata_id_eff a1]
+    rfl
+  | .exit a0 =>
+    simp only [cata_eff, cata_id_eff a0]
+    rfl
+  | .uninterruptible a0 =>
+    simp only [cata_eff, cata_id_eff a0]
+    rfl
+  | .interruptible a0 =>
+    simp only [cata_eff, cata_id_eff a0]
+    rfl
+  | .branch a0 a1 a2 =>
+    simp only [cata_eff, cata_id_eff a1, cata_id_eff a2]
+    rfl
+  | .whileLoop a0 a1 a2 a3 =>
+    simp only [cata_eff, cata_id_eff a3]
+    rfl
+  | .yieldNow a0 =>
+    simp only [cata_eff]
+    rfl
+  | .callback a0 a1 =>
+    simp only [cata_eff]
+    rfl
+  | .awaitFiber a0 a1 =>
+    simp only [cata_eff]
+    rfl
+  | .withFiber a0 =>
+    simp only [cata_eff, cata_id_action a0]
+    rfl
+  | .scoped a0 =>
+    simp only [cata_eff, cata_id_eff a0]
+    rfl
+  | .acquireRelease a0 a1 =>
+    simp only [cata_eff, cata_id_eff a0, cata_id_eff a1]
+    rfl
+  | .provideLayer a0 a1 a2 =>
+    simp only [cata_eff, cata_id_layer a0, cata_id_eff a2]
+    rfl
+  | .service a0 =>
+    simp only [cata_eff]
+    rfl
+  | .provideService a0 a1 a2 =>
+    simp only [cata_eff, cata_id_eff a2]
+    rfl
+  | .catchIf a0 a1 a2 =>
+    simp only [cata_eff, cata_id_eff a1, cata_id_eff a2]
+    rfl
+termination_by structural node
+@[simp] theorem cata_id_stmt {Op : Type} (node : Effect4.Program.Stmt Op) :
+    cata_stmt (EffAlgebra.id Op) node = node := by
+  match node with
+  | .bindYield a0 =>
+    simp only [cata_stmt, cata_id_eff a0]
+    rfl
+  | .yieldDiscard a0 =>
+    simp only [cata_stmt, cata_id_eff a0]
+    rfl
+  | .ret a0 =>
+    simp only [cata_stmt]
+    rfl
+  | .ifElse a0 a1 a2 =>
+    simp only [cata_stmt, cata_id_stmts a1, cata_id_stmts a2]
+    rfl
+  | .whileTrue a0 =>
+    simp only [cata_stmt, cata_id_stmts a0]
+    rfl
+  | .breakLoop =>
+    simp only [cata_stmt]
+    rfl
+termination_by structural node
+@[simp] theorem cata_id_stmts {Op : Type} (node : Effect4.Program.Stmts Op) :
+    cata_stmts (EffAlgebra.id Op) node = node := by
+  match node with
+  | .nil =>
+    simp only [cata_stmts]
+    rfl
+  | .cons a0 a1 =>
+    simp only [cata_stmts, cata_id_stmt a0, cata_id_stmts a1]
+    rfl
+termination_by structural node
+@[simp] theorem cata_id_effs {Op : Type} (node : Effect4.Program.Effs Op) :
+    cata_effs (EffAlgebra.id Op) node = node := by
+  match node with
+  | .nil =>
+    simp only [cata_effs]
+    rfl
+  | .cons a0 a1 =>
+    simp only [cata_effs, cata_id_eff a0, cata_id_effs a1]
+    rfl
+termination_by structural node
+@[simp] theorem cata_id_action {Op : Type} (node : Effect4.Program.ActionTerm Op) :
+    cata_action (EffAlgebra.id Op) node = node := by
+  match node with
+  | .fork a0 a1 =>
+    simp only [cata_action, cata_id_eff a0]
+    rfl
+  | .forkIn a0 a1 a2 =>
+    simp only [cata_action, cata_id_eff a0]
+    rfl
+  | .forkScoped a0 a1 =>
+    simp only [cata_action, cata_id_eff a0]
+    rfl
+  | .runIn a0 a1 =>
+    simp only [cata_action]
+    rfl
+  | .interrupt a0 =>
+    simp only [cata_action]
+    rfl
+  | .interruptScoped a0 =>
+    simp only [cata_action]
+    rfl
+  | .interruptAll a0 a1 =>
+    simp only [cata_action]
+    rfl
+  | .awaitAll a0 =>
+    simp only [cata_action]
+    rfl
+  | .awaitAllFailFast a0 =>
+    simp only [cata_action]
+    rfl
+  | .snapshotChildren =>
+    simp only [cata_action]
+    rfl
+  | .awaitNewChildren a0 =>
+    simp only [cata_action]
+    rfl
+  | .raceAll a0 =>
+    simp only [cata_action, cata_id_effs a0]
+    rfl
+  | .setContext a0 =>
+    simp only [cata_action]
+    rfl
+  | .getContext =>
+    simp only [cata_action]
+    rfl
+  | .getId =>
+    simp only [cata_action]
+    rfl
+  | .closeScope a0 a1 =>
+    simp only [cata_action]
+    rfl
+termination_by structural node
+@[simp] theorem cata_id_layer {Op : Type} (node : Effect4.Program.LayerTerm Op) :
+    cata_layer (EffAlgebra.id Op) node = node := by
+  match node with
+  | .succeed a0 a1 =>
+    simp only [cata_layer]
+    rfl
+  | .effect a0 a1 =>
+    simp only [cata_layer, cata_id_eff a1]
+    rfl
+  | .effectDiscard a0 =>
+    simp only [cata_layer, cata_id_eff a0]
+    rfl
+  | .provide a0 a1 =>
+    simp only [cata_layer, cata_id_layer a0, cata_id_layer a1]
+    rfl
+  | .provideMerge a0 a1 =>
+    simp only [cata_layer, cata_id_layer a0, cata_id_layer a1]
+    rfl
+  | .merge a0 a1 =>
+    simp only [cata_layer, cata_id_layer a0, cata_id_layer a1]
+    rfl
+  | .fresh a0 =>
+    simp only [cata_layer, cata_id_layer a0]
+    rfl
+  | .orDie a0 =>
+    simp only [cata_layer, cata_id_layer a0]
+    rfl
+  | .ref a0 =>
+    simp only [cata_layer]
+    rfl
+  | .mergeAll a0 =>
+    simp only [cata_layer, cata_id_layers a0]
+    rfl
+termination_by structural node
+@[simp] theorem cata_id_layers {Op : Type} (node : Effect4.Program.LayerTerms Op) :
+    cata_layers (EffAlgebra.id Op) node = node := by
+  match node with
+  | .nil =>
+    simp only [cata_layers]
+    rfl
+  | .cons a0 a1 =>
+    simp only [cata_layers, cata_id_layer a0, cata_id_layers a1]
+    rfl
+termination_by structural node
+end
+
+/-- The identity algebra with the reference slot replaced: every `LayerTerm.ref` rewritten
+by one fold, everything else rebuilt as it was. -/
+def EffAlgebra.onRef {Op : Type} (f : List Nat → Effect4.Program.LayerTerm Op) :
+    EffAlgebra Op (EffSelfCarrier Op) :=
+  { EffAlgebra.id Op with layer_ref := f }
+
+mutual
+def foldMapAt_eff {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (node : Effect4.Program.Eff Op)
+    (f_eff : Effect4.Program.Eff Op → List Nat → M := fun _ _ => unit) (f_stmt : Effect4.Program.Stmt Op → List Nat → M := fun _ _ => unit) (f_stmts : Effect4.Program.Stmts Op → List Nat → M := fun _ _ => unit) (f_effs : Effect4.Program.Effs Op → List Nat → M := fun _ _ => unit) (f_action : Effect4.Program.ActionTerm Op → List Nat → M := fun _ _ => unit) (f_layer : Effect4.Program.LayerTerm Op → List Nat → M := fun _ _ => unit) (f_layers : Effect4.Program.LayerTerms Op → List Nat → M := fun _ _ => unit) : M :=
+  match node with
+  | .succeed a0 =>
+    f_eff (.succeed a0) p
+  | .fail a0 =>
+    f_eff (.fail a0) p
+  | .failCause a0 =>
+    f_eff (.failCause a0) p
+  | .yieldError a0 =>
+    f_eff (.yieldError a0) p
+  | .sync a0 =>
+    f_eff (.sync a0) p
+  | .suspend a0 =>
+    op (f_eff (.suspend a0) p) ((foldMapAt_eff unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .perform a0 a1 =>
+    f_eff (.perform a0 a1) p
+  | .bind a0 a1 =>
+    op (f_eff (.bind a0 a1) p) (op (foldMapAt_eff unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMapAt_eff unit op (p ++ [1]) a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers)))
+  | .gen a0 =>
+    op (f_eff (.gen a0) p) ((foldMapAt_stmts unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .catchCause a0 a1 =>
+    op (f_eff (.catchCause a0 a1) p) (op (foldMapAt_eff unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMapAt_eff unit op (p ++ [1]) a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers)))
+  | .matchCause a0 a1 a2 =>
+    op (f_eff (.matchCause a0 a1 a2) p) (op (foldMapAt_eff unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) (op (foldMapAt_eff unit op (p ++ [1]) a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMapAt_eff unit op (p ++ [2]) a2 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))))
+  | .onExit a0 a1 =>
+    op (f_eff (.onExit a0 a1) p) (op (foldMapAt_eff unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMapAt_eff unit op (p ++ [1]) a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers)))
+  | .exit a0 =>
+    op (f_eff (.exit a0) p) ((foldMapAt_eff unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .uninterruptible a0 =>
+    op (f_eff (.uninterruptible a0) p) ((foldMapAt_eff unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .interruptible a0 =>
+    op (f_eff (.interruptible a0) p) ((foldMapAt_eff unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .branch a0 a1 a2 =>
+    op (f_eff (.branch a0 a1 a2) p) (op (foldMapAt_eff unit op (p ++ [0]) a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMapAt_eff unit op (p ++ [1]) a2 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers)))
+  | .whileLoop a0 a1 a2 a3 =>
+    op (f_eff (.whileLoop a0 a1 a2 a3) p) ((foldMapAt_eff unit op (p ++ [0]) a3 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .yieldNow a0 =>
+    f_eff (.yieldNow a0) p
+  | .callback a0 a1 =>
+    f_eff (.callback a0 a1) p
+  | .awaitFiber a0 a1 =>
+    f_eff (.awaitFiber a0 a1) p
+  | .withFiber a0 =>
+    op (f_eff (.withFiber a0) p) ((foldMapAt_action unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .scoped a0 =>
+    op (f_eff (.scoped a0) p) ((foldMapAt_eff unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .acquireRelease a0 a1 =>
+    op (f_eff (.acquireRelease a0 a1) p) (op (foldMapAt_eff unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMapAt_eff unit op (p ++ [1]) a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers)))
+  | .provideLayer a0 a1 a2 =>
+    op (f_eff (.provideLayer a0 a1 a2) p) (op (foldMapAt_layer unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMapAt_eff unit op (p ++ [1]) a2 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers)))
+  | .service a0 =>
+    f_eff (.service a0) p
+  | .provideService a0 a1 a2 =>
+    op (f_eff (.provideService a0 a1 a2) p) ((foldMapAt_eff unit op (p ++ [0]) a2 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .catchIf a0 a1 a2 =>
+    op (f_eff (.catchIf a0 a1 a2) p) (op (foldMapAt_eff unit op (p ++ [0]) a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMapAt_eff unit op (p ++ [1]) a2 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers)))
+termination_by structural node
+def foldMapAt_stmt {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (node : Effect4.Program.Stmt Op)
+    (f_eff : Effect4.Program.Eff Op → List Nat → M := fun _ _ => unit) (f_stmt : Effect4.Program.Stmt Op → List Nat → M := fun _ _ => unit) (f_stmts : Effect4.Program.Stmts Op → List Nat → M := fun _ _ => unit) (f_effs : Effect4.Program.Effs Op → List Nat → M := fun _ _ => unit) (f_action : Effect4.Program.ActionTerm Op → List Nat → M := fun _ _ => unit) (f_layer : Effect4.Program.LayerTerm Op → List Nat → M := fun _ _ => unit) (f_layers : Effect4.Program.LayerTerms Op → List Nat → M := fun _ _ => unit) : M :=
+  match node with
+  | .bindYield a0 =>
+    op (f_stmt (.bindYield a0) p) ((foldMapAt_eff unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .yieldDiscard a0 =>
+    op (f_stmt (.yieldDiscard a0) p) ((foldMapAt_eff unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .ret a0 =>
+    f_stmt (.ret a0) p
+  | .ifElse a0 a1 a2 =>
+    op (f_stmt (.ifElse a0 a1 a2) p) (op (foldMapAt_stmts unit op (p ++ [0]) a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMapAt_stmts unit op (p ++ [1]) a2 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers)))
+  | .whileTrue a0 =>
+    op (f_stmt (.whileTrue a0) p) ((foldMapAt_stmts unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .breakLoop =>
+    f_stmt (.breakLoop) p
+termination_by structural node
+def foldMapAt_stmts {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (node : Effect4.Program.Stmts Op)
+    (f_eff : Effect4.Program.Eff Op → List Nat → M := fun _ _ => unit) (f_stmt : Effect4.Program.Stmt Op → List Nat → M := fun _ _ => unit) (f_stmts : Effect4.Program.Stmts Op → List Nat → M := fun _ _ => unit) (f_effs : Effect4.Program.Effs Op → List Nat → M := fun _ _ => unit) (f_action : Effect4.Program.ActionTerm Op → List Nat → M := fun _ _ => unit) (f_layer : Effect4.Program.LayerTerm Op → List Nat → M := fun _ _ => unit) (f_layers : Effect4.Program.LayerTerms Op → List Nat → M := fun _ _ => unit) : M :=
+  match node with
+  | .nil =>
+    f_stmts (.nil) p
+  | .cons a0 a1 =>
+    op (f_stmts (.cons a0 a1) p) (op (foldMapAt_stmt unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMapAt_stmts unit op (p ++ [1]) a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers)))
+termination_by structural node
+def foldMapAt_effs {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (node : Effect4.Program.Effs Op)
+    (f_eff : Effect4.Program.Eff Op → List Nat → M := fun _ _ => unit) (f_stmt : Effect4.Program.Stmt Op → List Nat → M := fun _ _ => unit) (f_stmts : Effect4.Program.Stmts Op → List Nat → M := fun _ _ => unit) (f_effs : Effect4.Program.Effs Op → List Nat → M := fun _ _ => unit) (f_action : Effect4.Program.ActionTerm Op → List Nat → M := fun _ _ => unit) (f_layer : Effect4.Program.LayerTerm Op → List Nat → M := fun _ _ => unit) (f_layers : Effect4.Program.LayerTerms Op → List Nat → M := fun _ _ => unit) : M :=
+  match node with
+  | .nil =>
+    f_effs (.nil) p
+  | .cons a0 a1 =>
+    op (f_effs (.cons a0 a1) p) (op (foldMapAt_eff unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMapAt_effs unit op (p ++ [1]) a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers)))
+termination_by structural node
+def foldMapAt_action {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (node : Effect4.Program.ActionTerm Op)
+    (f_eff : Effect4.Program.Eff Op → List Nat → M := fun _ _ => unit) (f_stmt : Effect4.Program.Stmt Op → List Nat → M := fun _ _ => unit) (f_stmts : Effect4.Program.Stmts Op → List Nat → M := fun _ _ => unit) (f_effs : Effect4.Program.Effs Op → List Nat → M := fun _ _ => unit) (f_action : Effect4.Program.ActionTerm Op → List Nat → M := fun _ _ => unit) (f_layer : Effect4.Program.LayerTerm Op → List Nat → M := fun _ _ => unit) (f_layers : Effect4.Program.LayerTerms Op → List Nat → M := fun _ _ => unit) : M :=
+  match node with
+  | .fork a0 a1 =>
+    op (f_action (.fork a0 a1) p) ((foldMapAt_eff unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .forkIn a0 a1 a2 =>
+    op (f_action (.forkIn a0 a1 a2) p) ((foldMapAt_eff unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .forkScoped a0 a1 =>
+    op (f_action (.forkScoped a0 a1) p) ((foldMapAt_eff unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .runIn a0 a1 =>
+    f_action (.runIn a0 a1) p
+  | .interrupt a0 =>
+    f_action (.interrupt a0) p
+  | .interruptScoped a0 =>
+    f_action (.interruptScoped a0) p
+  | .interruptAll a0 a1 =>
+    f_action (.interruptAll a0 a1) p
+  | .awaitAll a0 =>
+    f_action (.awaitAll a0) p
+  | .awaitAllFailFast a0 =>
+    f_action (.awaitAllFailFast a0) p
+  | .snapshotChildren =>
+    f_action (.snapshotChildren) p
+  | .awaitNewChildren a0 =>
+    f_action (.awaitNewChildren a0) p
+  | .raceAll a0 =>
+    op (f_action (.raceAll a0) p) ((foldMapAt_effs unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .setContext a0 =>
+    f_action (.setContext a0) p
+  | .getContext =>
+    f_action (.getContext) p
+  | .getId =>
+    f_action (.getId) p
+  | .closeScope a0 a1 =>
+    f_action (.closeScope a0 a1) p
+termination_by structural node
+def foldMapAt_layer {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (node : Effect4.Program.LayerTerm Op)
+    (f_eff : Effect4.Program.Eff Op → List Nat → M := fun _ _ => unit) (f_stmt : Effect4.Program.Stmt Op → List Nat → M := fun _ _ => unit) (f_stmts : Effect4.Program.Stmts Op → List Nat → M := fun _ _ => unit) (f_effs : Effect4.Program.Effs Op → List Nat → M := fun _ _ => unit) (f_action : Effect4.Program.ActionTerm Op → List Nat → M := fun _ _ => unit) (f_layer : Effect4.Program.LayerTerm Op → List Nat → M := fun _ _ => unit) (f_layers : Effect4.Program.LayerTerms Op → List Nat → M := fun _ _ => unit) : M :=
+  match node with
+  | .succeed a0 a1 =>
+    f_layer (.succeed a0 a1) p
+  | .effect a0 a1 =>
+    op (f_layer (.effect a0 a1) p) ((foldMapAt_eff unit op (p ++ [0]) a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .effectDiscard a0 =>
+    op (f_layer (.effectDiscard a0) p) ((foldMapAt_eff unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .provide a0 a1 =>
+    op (f_layer (.provide a0 a1) p) (op (foldMapAt_layer unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMapAt_layer unit op (p ++ [1]) a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers)))
+  | .provideMerge a0 a1 =>
+    op (f_layer (.provideMerge a0 a1) p) (op (foldMapAt_layer unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMapAt_layer unit op (p ++ [1]) a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers)))
+  | .merge a0 a1 =>
+    op (f_layer (.merge a0 a1) p) (op (foldMapAt_layer unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMapAt_layer unit op (p ++ [1]) a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers)))
+  | .fresh a0 =>
+    op (f_layer (.fresh a0) p) ((foldMapAt_layer unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .orDie a0 =>
+    op (f_layer (.orDie a0) p) ((foldMapAt_layer unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .ref a0 =>
+    f_layer (.ref a0) p
+  | .mergeAll a0 =>
+    op (f_layer (.mergeAll a0) p) ((foldMapAt_layers unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+termination_by structural node
+def foldMapAt_layers {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (node : Effect4.Program.LayerTerms Op)
+    (f_eff : Effect4.Program.Eff Op → List Nat → M := fun _ _ => unit) (f_stmt : Effect4.Program.Stmt Op → List Nat → M := fun _ _ => unit) (f_stmts : Effect4.Program.Stmts Op → List Nat → M := fun _ _ => unit) (f_effs : Effect4.Program.Effs Op → List Nat → M := fun _ _ => unit) (f_action : Effect4.Program.ActionTerm Op → List Nat → M := fun _ _ => unit) (f_layer : Effect4.Program.LayerTerm Op → List Nat → M := fun _ _ => unit) (f_layers : Effect4.Program.LayerTerms Op → List Nat → M := fun _ _ => unit) : M :=
+  match node with
+  | .nil =>
+    f_layers (.nil) p
+  | .cons a0 a1 =>
+    op (f_layers (.cons a0 a1) p) (op (foldMapAt_layer unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMapAt_layers unit op (p ++ [1]) a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers)))
 termination_by structural node
 end
 
@@ -2365,21 +3042,25 @@ def cata_frontier_action {Op : Type} {R : EffFrontierFam → Type u} (alg : EffF
 termination_by structural node
 end
 
-def frontierSelfCarrier (Op : Type) : EffFrontierFam → Type
+abbrev frontierSelfCarrier (Op : Type) : EffFrontierFam → Type
   | .eff => Effect4.Program.Eff Op
   | .stmt => Effect4.Program.Stmt Op
   | .stmts => Effect4.Program.Stmts Op
   | .effs => Effect4.Program.Effs Op
   | .action => Effect4.Program.ActionTerm Op
 
-def weakenAlg {Op : Type} (cut : Nat) : EffFrontierAlgebra Op (frontierSelfCarrier Op) where
-  eff_succeed a0 := .succeed (Effect4.Program.Term.weaken cut a0)
-  eff_fail a0 := .fail (Effect4.Program.Term.weaken cut a0)
-  eff_failCause a0 := .failCause (Effect4.Program.CauseTerm.weaken cut a0)
-  eff_yieldError a0 := .yieldError (Effect4.Program.Term.weaken cut a0)
-  eff_sync a0 := .sync (Effect4.Program.Term.weaken cut a0)
+/-- The term frontier mapped: `g` on every term slot, `gc` on every cause slot, of the
+open sorts; closed layers are constants of this signature and stay as they are. -/
+def frontierMap {Op : Type} (g : Effect4.Program.Term → Effect4.Program.Term)
+    (gc : Effect4.Program.CauseTerm → Effect4.Program.CauseTerm) :
+    EffFrontierAlgebra Op (frontierSelfCarrier Op) where
+  eff_succeed a0 := .succeed (g a0)
+  eff_fail a0 := .fail (g a0)
+  eff_failCause a0 := .failCause (gc a0)
+  eff_yieldError a0 := .yieldError (g a0)
+  eff_sync a0 := .sync (g a0)
   eff_suspend a0 := .suspend a0
-  eff_perform a0 a1 := .perform a0 (Effect4.Program.Term.weaken cut a1)
+  eff_perform a0 a1 := .perform a0 (g a1)
   eff_bind a0 a1 := .bind a0 a1
   eff_gen a0 := .gen a0
   eff_catchCause a0 a1 := .catchCause a0 a1
@@ -2388,22 +3069,22 @@ def weakenAlg {Op : Type} (cut : Nat) : EffFrontierAlgebra Op (frontierSelfCarri
   eff_exit a0 := .exit a0
   eff_uninterruptible a0 := .uninterruptible a0
   eff_interruptible a0 := .interruptible a0
-  eff_branch a0 a1 a2 := .branch (Effect4.Program.Term.weaken cut a0) a1 a2
-  eff_whileLoop a0 a1 a2 a3 := .whileLoop (Effect4.Program.Term.weaken cut a0) (Effect4.Program.Term.weaken cut a1) (Effect4.Program.Term.weaken cut a2) a3
+  eff_branch a0 a1 a2 := .branch (g a0) a1 a2
+  eff_whileLoop a0 a1 a2 a3 := .whileLoop (g a0) (g a1) (g a2) a3
   eff_yieldNow a0 := .yieldNow a0
-  eff_callback a0 a1 := .callback a0 (Effect4.Program.Term.weaken cut a1)
-  eff_awaitFiber a0 a1 := .awaitFiber (Effect4.Program.Term.weaken cut a0) a1
+  eff_callback a0 a1 := .callback a0 (g a1)
+  eff_awaitFiber a0 a1 := .awaitFiber (g a0) a1
   eff_withFiber a0 := .withFiber a0
   eff_scoped a0 := .scoped a0
   eff_acquireRelease a0 a1 := .acquireRelease a0 a1
   eff_provideLayer a0 a1 a2 := .provideLayer a0 a1 a2
   eff_service a0 := .service a0
-  eff_provideService a0 a1 a2 := .provideService a0 (Effect4.Program.Term.weaken cut a1) a2
-  eff_catchIf a0 a1 a2 := .catchIf (Effect4.Program.Term.weaken cut a0) a1 a2
+  eff_provideService a0 a1 a2 := .provideService a0 (g a1) a2
+  eff_catchIf a0 a1 a2 := .catchIf (g a0) a1 a2
   stmt_bindYield a0 := .bindYield a0
   stmt_yieldDiscard a0 := .yieldDiscard a0
-  stmt_ret a0 := .ret (Effect4.Program.Term.weaken cut a0)
-  stmt_ifElse a0 a1 a2 := .ifElse (Effect4.Program.Term.weaken cut a0) a1 a2
+  stmt_ret a0 := .ret (g a0)
+  stmt_ifElse a0 a1 a2 := .ifElse (g a0) a1 a2
   stmt_whileTrue a0 := .whileTrue a0
   stmt_breakLoop := .breakLoop
   stmts_nil := .nil
@@ -2411,148 +3092,152 @@ def weakenAlg {Op : Type} (cut : Nat) : EffFrontierAlgebra Op (frontierSelfCarri
   effs_nil := .nil
   effs_cons a0 a1 := .cons a0 a1
   action_fork a0 a1 := .fork a0 a1
-  action_forkIn a0 a1 a2 := .forkIn a0 a1 (Effect4.Program.Term.weaken cut a2)
+  action_forkIn a0 a1 a2 := .forkIn a0 a1 (g a2)
   action_forkScoped a0 a1 := .forkScoped a0 a1
-  action_runIn a0 a1 := .runIn (Effect4.Program.Term.weaken cut a0) (Effect4.Program.Term.weaken cut a1)
-  action_interrupt a0 := .interrupt (Effect4.Program.Term.weaken cut a0)
-  action_interruptScoped a0 := .interruptScoped (Effect4.Program.Term.weaken cut a0)
-  action_interruptAll a0 a1 := .interruptAll (Effect4.Program.Term.weaken cut a0) (a1.map (Effect4.Program.Term.weaken cut))
-  action_awaitAll a0 := .awaitAll (Effect4.Program.Term.weaken cut a0)
-  action_awaitAllFailFast a0 := .awaitAllFailFast (Effect4.Program.Term.weaken cut a0)
+  action_runIn a0 a1 := .runIn (g a0) (g a1)
+  action_interrupt a0 := .interrupt (g a0)
+  action_interruptScoped a0 := .interruptScoped (g a0)
+  action_interruptAll a0 a1 := .interruptAll (g a0) (a1.map g)
+  action_awaitAll a0 := .awaitAll (g a0)
+  action_awaitAllFailFast a0 := .awaitAllFailFast (g a0)
   action_snapshotChildren := .snapshotChildren
-  action_awaitNewChildren a0 := .awaitNewChildren (Effect4.Program.Term.weaken cut a0)
+  action_awaitNewChildren a0 := .awaitNewChildren (g a0)
   action_raceAll a0 := .raceAll a0
-  action_setContext a0 := .setContext (Effect4.Program.Term.weaken cut a0)
+  action_setContext a0 := .setContext (g a0)
   action_getContext := .getContext
   action_getId := .getId
-  action_closeScope a0 a1 := .closeScope (Effect4.Program.Term.weaken cut a0) (Effect4.Program.Term.weaken cut a1)
+  action_closeScope a0 a1 := .closeScope (g a0) (g a1)
+
+/-- Weakening at a cut is the frontier map of the term weakening. -/
+def weakenAlg {Op : Type} (cut : Nat) : EffFrontierAlgebra Op (frontierSelfCarrier Op) :=
+  frontierMap (Effect4.Program.Term.weaken cut) (Effect4.Program.CauseTerm.weaken cut)
 
 mutual
 theorem weaken_eq_cata_eff {Op : Type} (cut : Nat) (node : Effect4.Program.Eff Op) :
     Effect4.Program.Eff.weaken cut node = cata_frontier_eff (weakenAlg cut) node := by
   match node with
   | .succeed a0 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap]
   | .fail a0 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap]
   | .failCause a0 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap]
   | .yieldError a0 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap]
   | .sync a0 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap]
   | .suspend a0 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, weaken_eq_cata_eff cut a0]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a0]
   | .perform a0 a1 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap]
   | .bind a0 a1 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, weaken_eq_cata_eff cut a0, weaken_eq_cata_eff cut a1]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a0, weaken_eq_cata_eff cut a1]
   | .gen a0 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, weaken_eq_cata_stmts cut a0]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_stmts cut a0]
   | .catchCause a0 a1 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, weaken_eq_cata_eff cut a0, weaken_eq_cata_eff cut a1]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a0, weaken_eq_cata_eff cut a1]
   | .matchCause a0 a1 a2 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, weaken_eq_cata_eff cut a0, weaken_eq_cata_eff cut a1, weaken_eq_cata_eff cut a2]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a0, weaken_eq_cata_eff cut a1, weaken_eq_cata_eff cut a2]
   | .onExit a0 a1 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, weaken_eq_cata_eff cut a0, weaken_eq_cata_eff cut a1]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a0, weaken_eq_cata_eff cut a1]
   | .exit a0 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, weaken_eq_cata_eff cut a0]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a0]
   | .uninterruptible a0 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, weaken_eq_cata_eff cut a0]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a0]
   | .interruptible a0 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, weaken_eq_cata_eff cut a0]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a0]
   | .branch a0 a1 a2 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, weaken_eq_cata_eff cut a1, weaken_eq_cata_eff cut a2]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a1, weaken_eq_cata_eff cut a2]
   | .whileLoop a0 a1 a2 a3 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, weaken_eq_cata_eff cut a3]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a3]
   | .yieldNow a0 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap]
   | .callback a0 a1 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap]
   | .awaitFiber a0 a1 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap]
   | .withFiber a0 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, weaken_eq_cata_action cut a0]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_action cut a0]
   | .scoped a0 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, weaken_eq_cata_eff cut a0]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a0]
   | .acquireRelease a0 a1 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, weaken_eq_cata_eff cut a0, weaken_eq_cata_eff cut a1]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a0, weaken_eq_cata_eff cut a1]
   | .provideLayer a0 a1 a2 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, weaken_eq_cata_eff cut a2]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a2]
   | .service a0 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap]
   | .provideService a0 a1 a2 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, weaken_eq_cata_eff cut a2]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a2]
   | .catchIf a0 a1 a2 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, weaken_eq_cata_eff cut a1, weaken_eq_cata_eff cut a2]
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a1, weaken_eq_cata_eff cut a2]
 termination_by structural node
 theorem weaken_eq_cata_stmt {Op : Type} (cut : Nat) (node : Effect4.Program.Stmt Op) :
     Effect4.Program.Stmt.weaken cut node = cata_frontier_stmt (weakenAlg cut) node := by
   match node with
   | .bindYield a0 =>
-    simp only [Effect4.Program.Stmt.weaken, cata_frontier_stmt, weakenAlg, weaken_eq_cata_eff cut a0]
+    simp only [Effect4.Program.Stmt.weaken, cata_frontier_stmt, weakenAlg, frontierMap, weaken_eq_cata_eff cut a0]
   | .yieldDiscard a0 =>
-    simp only [Effect4.Program.Stmt.weaken, cata_frontier_stmt, weakenAlg, weaken_eq_cata_eff cut a0]
+    simp only [Effect4.Program.Stmt.weaken, cata_frontier_stmt, weakenAlg, frontierMap, weaken_eq_cata_eff cut a0]
   | .ret a0 =>
-    simp only [Effect4.Program.Stmt.weaken, cata_frontier_stmt, weakenAlg]
+    simp only [Effect4.Program.Stmt.weaken, cata_frontier_stmt, weakenAlg, frontierMap]
   | .ifElse a0 a1 a2 =>
-    simp only [Effect4.Program.Stmt.weaken, cata_frontier_stmt, weakenAlg, weaken_eq_cata_stmts cut a1, weaken_eq_cata_stmts cut a2]
+    simp only [Effect4.Program.Stmt.weaken, cata_frontier_stmt, weakenAlg, frontierMap, weaken_eq_cata_stmts cut a1, weaken_eq_cata_stmts cut a2]
   | .whileTrue a0 =>
-    simp only [Effect4.Program.Stmt.weaken, cata_frontier_stmt, weakenAlg, weaken_eq_cata_stmts cut a0]
+    simp only [Effect4.Program.Stmt.weaken, cata_frontier_stmt, weakenAlg, frontierMap, weaken_eq_cata_stmts cut a0]
   | .breakLoop =>
-    simp only [Effect4.Program.Stmt.weaken, cata_frontier_stmt, weakenAlg]
+    simp only [Effect4.Program.Stmt.weaken, cata_frontier_stmt, weakenAlg, frontierMap]
 termination_by structural node
 theorem weaken_eq_cata_stmts {Op : Type} (cut : Nat) (node : Effect4.Program.Stmts Op) :
     Effect4.Program.Stmts.weaken cut node = cata_frontier_stmts (weakenAlg cut) node := by
   match node with
   | .nil =>
-    simp only [Effect4.Program.Stmts.weaken, cata_frontier_stmts, weakenAlg]
+    simp only [Effect4.Program.Stmts.weaken, cata_frontier_stmts, weakenAlg, frontierMap]
   | .cons a0 a1 =>
-    simp only [Effect4.Program.Stmts.weaken, cata_frontier_stmts, weakenAlg, weaken_eq_cata_stmt cut a0, weaken_eq_cata_stmts cut a1]
+    simp only [Effect4.Program.Stmts.weaken, cata_frontier_stmts, weakenAlg, frontierMap, weaken_eq_cata_stmt cut a0, weaken_eq_cata_stmts cut a1]
 termination_by structural node
 theorem weaken_eq_cata_effs {Op : Type} (cut : Nat) (node : Effect4.Program.Effs Op) :
     Effect4.Program.Effs.weaken cut node = cata_frontier_effs (weakenAlg cut) node := by
   match node with
   | .nil =>
-    simp only [Effect4.Program.Effs.weaken, cata_frontier_effs, weakenAlg]
+    simp only [Effect4.Program.Effs.weaken, cata_frontier_effs, weakenAlg, frontierMap]
   | .cons a0 a1 =>
-    simp only [Effect4.Program.Effs.weaken, cata_frontier_effs, weakenAlg, weaken_eq_cata_eff cut a0, weaken_eq_cata_effs cut a1]
+    simp only [Effect4.Program.Effs.weaken, cata_frontier_effs, weakenAlg, frontierMap, weaken_eq_cata_eff cut a0, weaken_eq_cata_effs cut a1]
 termination_by structural node
 theorem weaken_eq_cata_action {Op : Type} (cut : Nat) (node : Effect4.Program.ActionTerm Op) :
     Effect4.Program.ActionTerm.weaken cut node = cata_frontier_action (weakenAlg cut) node := by
   match node with
   | .fork a0 a1 =>
-    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, weaken_eq_cata_eff cut a0]
+    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap, weaken_eq_cata_eff cut a0]
   | .forkIn a0 a1 a2 =>
-    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, weaken_eq_cata_eff cut a0]
+    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap, weaken_eq_cata_eff cut a0]
   | .forkScoped a0 a1 =>
-    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, weaken_eq_cata_eff cut a0]
+    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap, weaken_eq_cata_eff cut a0]
   | .runIn a0 a1 =>
-    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg]
+    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap]
   | .interrupt a0 =>
-    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg]
+    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap]
   | .interruptScoped a0 =>
-    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg]
+    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap]
   | .interruptAll a0 a1 =>
-    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg]
+    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap]
   | .awaitAll a0 =>
-    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg]
+    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap]
   | .awaitAllFailFast a0 =>
-    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg]
+    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap]
   | .snapshotChildren =>
-    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg]
+    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap]
   | .awaitNewChildren a0 =>
-    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg]
+    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap]
   | .raceAll a0 =>
-    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, weaken_eq_cata_effs cut a0]
+    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap, weaken_eq_cata_effs cut a0]
   | .setContext a0 =>
-    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg]
+    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap]
   | .getContext =>
-    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg]
+    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap]
   | .getId =>
-    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg]
+    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap]
   | .closeScope a0 a1 =>
-    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg]
+    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap]
 termination_by structural node
 end
 
@@ -2560,11 +3245,14 @@ end
 /-! ## Receipts -/
 
 #print axioms hom_eq_cata_ty
+#print axioms cata_id_ty
 #print axioms foldM_eq_cata_ty
 #print axioms foldM_id_ty
 #print axioms foldM_natural_ty
 #print axioms hom_eq_cata_term
 #print axioms hom_eq_cata_terms
+#print axioms cata_id_term
+#print axioms cata_id_terms
 #print axioms foldM_eq_cata_term
 #print axioms foldM_eq_cata_terms
 #print axioms foldM_id_term
@@ -2572,6 +3260,7 @@ end
 #print axioms foldM_natural_term
 #print axioms foldM_natural_terms
 #print axioms hom_eq_cata_cause
+#print axioms cata_id_cause
 #print axioms foldM_eq_cata_cause
 #print axioms foldM_id_cause
 #print axioms foldM_natural_cause
@@ -2582,6 +3271,13 @@ end
 #print axioms hom_eq_cata_action
 #print axioms hom_eq_cata_layer
 #print axioms hom_eq_cata_layers
+#print axioms cata_id_eff
+#print axioms cata_id_stmt
+#print axioms cata_id_stmts
+#print axioms cata_id_effs
+#print axioms cata_id_action
+#print axioms cata_id_layer
+#print axioms cata_id_layers
 #print axioms foldM_eq_cata_eff
 #print axioms foldM_eq_cata_stmt
 #print axioms foldM_eq_cata_stmts
@@ -2829,6 +3525,19 @@ def depthEnv : List Nat := [7, 8, 9]
 -- `sampleProgram` has two `Eff.succeed` nodes, so two readings of the same environment.
 #guard Id.run ((foldM_eff depthTraversal.alg sampleProgram).run depthEnv)
     == [depthEnv.length, depthEnv.length]
+
+/-! ## The identity algebra, one override of it, and the path fold -/
+
+#guard cata_eff (EffAlgebra.id Nat) pWeaken == pWeaken
+#guard cata_ty TyAlgebra.id (Ty.list Ty.unit) == Ty.list Ty.unit
+#guard (cata_eff (EffAlgebra.onRef fun _ => .effectDiscard (.succeed (.lit .unit)))
+    (.provideLayer (.ref [0]) false (.succeed (.lit .unit))) : Eff Unit)
+  == .provideLayer (.effectDiscard (.succeed (.lit .unit))) false (.succeed (.lit .unit))
+#guard foldMapAt_eff ([] : List (List Nat)) (· ++ ·) []
+    (.bind (.succeed (.lit .unit)) (.matchCause (.succeed (.lit .unit)) (.succeed (.lit .unit)) (.succeed (.lit .unit))) : Eff Unit)
+    (f_eff := fun _ p => [p])
+  == [[], [0], [1], [1, 0], [1, 1], [1, 2]]
+#guard (cata_frontier_eff (frontierMap id id) pWeaken : Eff Nat) == pWeaken
 
 end FoldAcceptance
 
