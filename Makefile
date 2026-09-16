@@ -226,7 +226,7 @@ CHECKS := roots cases native ts-reader truth target schema-codec ocaml ingest in
 
 check: build check-roots check-gen check-cases check-native check-citations check-ts-reader ## after every change
 check-host: check check-truth check-corpus check-target check-schema-codec check-ocaml check-ingest-smoke ## per slice: the outside oracles
-check-full: check-host check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins check-schema-host ## everything
+check-full: check-host check-tools check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins check-schema-host ## everything
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
 # generated file. `check-gen-full` re-cuts every group, the host-cut ones included,
@@ -385,7 +385,7 @@ $(CHK)/compat: $(CORE) scripts/check-compatibility.py scripts/lib/compatibility.
 	  status=$$?; rm -rf "$$(dirname "$$work")"; exit $$status
 	@mkdir -p $(CHK) && touch $@
 
-SELFTEST_SOURCES := $(wildcard scripts/test-*.sh scripts/test-*.py scripts/lib/*) Test/Audit/AxiomGate.lean \
+SELFTEST_SOURCES := $(wildcard scripts/test-*.sh scripts/test-*.py scripts/check-*.sh scripts/check-*.py scripts/lib/*) Test/Audit/AxiomGate.lean \
   $(shell find Test/fixtures/trust-gate Test/fixtures/internal-citations -type f)
 $(CHK)/tools: $(SELFTEST_SOURCES) | build
 	bash scripts/test-trust-gate.sh
