@@ -1,5 +1,6 @@
 import Effect4.Codegen.Read
 import Effect4.Api
+import Effect4.Laws.Program.Hoisting
 import Test.Program.Gen
 
 /-!
@@ -633,6 +634,25 @@ private def joinLayers : List (LayerTerm NativeOp) :=
 #guard readKey nativeSignature (printKey nativeSignature ⟨⟨12345678901234567890⟩, ⟨4⟩⟩) =
   .ok ⟨⟨12345678901234567890⟩, ⟨4⟩⟩
 
+-- The inner target is captured before the enclosing target; restoration must
+-- rebuild the enclosing layer before putting the inner target back.
+def nestedSharing : NativeEff :=
+  .bind
+    (.provideLayer
+      (.merge (.succeed ⟨⟨4⟩, ⟨4⟩⟩ (.nat 7)) (.ref [0, 0, 0]))
+      false (.succeed (.lit .unit)))
+    (.provideLayer (.ref [0, 0]) false (.succeed (.lit .unit)))
+
+#guard nestedSharing.layerRefsWF
+#guard match nestedSharing.hoistAll with
+  | .ok (main, declarations) =>
+    declarations.map Prod.fst == [[0, 0], [0, 0, 0]] &&
+      main.restoreAll declarations == some nestedSharing
+  | .error _ => false
+#guard (Effect4.Api.printModule "main" nestedSharing).map Effect4.Api.readModule =
+  some (.ok nestedSharing)
+
+#print axioms Effect4.Program.Eff.restoreAll_hoistAll
 #print axioms Effect4.Program.readKey_printKey
 #print axioms Effect4.Program.readKey_exact
 #print axioms Effect4.Program.read_print_layer

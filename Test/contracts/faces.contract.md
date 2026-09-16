@@ -90,6 +90,17 @@ reference tree. That fact alone neither types the emitted target expression nor 
 that erasing shared layer references is an execution-preserving transformation. The
 existing expression proofs retain their full statements and premises.
 
+**Structural layer reconstruction (2026-09-16).**
+`Eff.restoreAll_hoistAll` in `src/Effect4/Laws/Program/Hoisting.lean` proves, for
+every operation alphabet and program, that
+`root.hoistAll = .ok (main, declarations)` implies
+`main.restoreAll declarations = some root`. The proof reverses the capture history
+using addressed replacement laws and connects that history to the existing path sort.
+The conclusion recovers the original sharing references; it does not expand them.
+No typing or reference-validity assumption is required beyond successful hoisting.
+Hoisting success throughout the advertised domain, readability transport, and the
+composition through printed/read declarations remain separate module obligations.
+
 ---
 
 ## 3. The two ingest contracts, and the inclusion property
