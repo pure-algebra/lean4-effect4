@@ -239,3 +239,10 @@ wrapper or a target annotation does not discharge those obligations. Current sou
 parsing, core typing, target typing and host behavior remain distinct evidence boundaries.
 The consolidated foundational implementation plan specifies the staged repair; this
 section records the claim boundary and does not declare the repair implemented.
+
+The first shared-lowering typing laws are in `src/Effect4/Laws/Codegen/Forms.lean`.
+Arbitrary blocks of inserted binding slots preserve the complete checker result,
+including refusal. The `andThen`, `tap`, `as`/`asVoid`, and `ensuring` laws read the
+actual `Forms.all` expansions and state their argument environments explicitly.
+They establish core typing of those expansions, not source-parser correctness or
+host behavior. Making all readers consume that owner remains implementation work.

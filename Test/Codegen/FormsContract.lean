@@ -1,4 +1,5 @@
 import Effect4.Codegen.Styles
+import Effect4.Laws.Codegen.Forms
 
 /-! Finite receipts for relative form bindings, required slots, and the owner's
 unambiguous-lambda ruling. No source recognizer or host equivalence is claimed here. -/
@@ -42,6 +43,32 @@ def args (n : Nat) : Arguments :=
     | some (.call (.leaf (.ident "Effect.gen")) [.generator _]) => true
     | _ => false
   | none => false
+
+-- The second effect captures an outer Nat and introduces its own Nat binder.
+-- An omitted insertion would instead pass tap's Bool answer to `succ`.
+def capturedSecond : NativeEff :=
+  .bind (.succeed (.var 0)) (.succeed (.app "succ" (.cons (.var 1) .nil)))
+
+#guard ((all.find? (fun f => f.id == "tapEffect")).bind
+  (fun f => f.expansion.expand 1
+    { effects := [.succeed (.lit (.bool true)), capturedSecond] })).bind
+      (effTy nativeSignature [.nat]) = some (EffTy.pure .bool)
+#guard effTy nativeSignature [.nat]
+  (.bind (.succeed (.lit (.bool true)))
+    (.bind capturedSecond (.succeed (.var 1)))) = none
+
+-- The same captured finalizer is shifted beneath an exit, not a result value.
+#guard ((all.find? (fun f => f.id == "ensuring")).bind
+  (fun f => f.expansion.expand 1
+    { effects := [.succeed (.lit (.bool true)), capturedSecond] })).bind
+      (effTy nativeSignature [.nat]) = some (EffTy.pure .bool)
+#guard effTy nativeSignature [.nat]
+  (.onExit (.succeed (.lit (.bool true))) capturedSecond) = none
+
+-- Inserting slots cannot turn a rejected captured computation into a typed one.
+#guard effTy nativeSignature ([.nat] ++ [.bool, .unit] ++ [.string])
+  (insert 1 2 (.succeed (.app "succ" (.cons (.var 1) .nil)) : NativeEff)) = none
+
 #print axioms lambdaAtom_exact
 #print axioms Template.expand
 #print axioms expression
