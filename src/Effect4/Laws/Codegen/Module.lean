@@ -1,5 +1,7 @@
 import Effect4.Codegen.Read
 import Effect4.Laws.Program.Hoisting
+import Effect4.Laws.Program.HoistingTotal
+import Effect4.Laws.Codegen.HoistingReadable
 
 /-!
 # Declaration-block reconstruction
@@ -9,10 +11,11 @@ orders them for restoration. Unique capture paths make that change of order
 irrelevant to restoration. The module law below composes this fact with the
 existing expression and layer reader laws and the hoisting inverse.
 
-Its domain is explicit: successful hoisting, readable captured pieces, and
-readable emitted reference names. It does not assume a successful module read.
-Readability transport from the original program remains a separate obligation,
-as do target type checking, source-envelope validation, and host execution.
+The low-level composition law names successful hoisting, readable captured pieces,
+and readable emitted reference names. The final laws derive those premises from
+the original readable program with well-formed references, and prove successful
+printing on that domain. No law assumes a successful module read. Target typing,
+source-envelope validation and host execution remain separate obligations.
 -/
 
 namespace Effect4.Program
@@ -197,5 +200,71 @@ theorem readModule_printModule {sig : Signature Op}
     | some out => .ok out
     | none => .error (.shape "module")) = .ok root
   simp only [hm, ok_bind, hd, restored]
+
+private theorem printCaptured_exists {sig : Signature Op}
+    {spell : String → List String → Option Op} {history : History Op}
+    (layers : ∀ entry ∈ history, readableLayer sig spell entry.2 = true)
+    {target : List Nat} (member : target ∈ history.map Prod.fst) :
+    ∃ decl, printCaptured sig history target = .ok decl := by
+  cases found : history.find? (·.1 == target) with
+  | none =>
+    obtain ⟨entry, mem, key⟩ := List.mem_map.mp member
+    have missing := List.find?_eq_none.mp found entry mem
+    simp [key] at missing
+  | some entry =>
+    obtain ⟨body, printed⟩ := printLayer_readable sig spell entry.2
+      (layers entry (List.mem_of_find?_eq_some found))
+    exact ⟨{ doc := [], name := LayerTerm.refName target, value := body },
+      by simp [printCaptured, found, printed]⟩
+
+private theorem printCaptured_mapM_exists {sig : Signature Op}
+    {spell : String → List String → Option Op} {history : History Op}
+    (layers : ∀ entry ∈ history, readableLayer sig spell entry.2 = true)
+    (targets : List (List Nat)) (contained : ∀ target ∈ targets, target ∈ history.map Prod.fst) :
+    ∃ decls, targets.mapM (printCaptured sig history) = .ok decls := by
+  induction targets with
+  | nil => exact ⟨[], rfl⟩
+  | cons target targets ih =>
+    obtain ⟨decl, printed⟩ := printCaptured_exists layers (contained target (by simp))
+    obtain ⟨decls, rest⟩ := ih (fun t h => contained t (List.mem_cons_of_mem _ h))
+    exact ⟨decl :: decls, by simp only [List.mapM_cons, printed, ok_bind, rest]; rfl⟩
+
+/-- Every readable program with well-formed layer references prints as a declaration
+block. Successful hoisting or printing is not a premise. This is syntax-AST adequacy;
+it does not check the caller's declared type, source imports or target execution. -/
+theorem printModule_readable {sig : Signature Op}
+    {spell : String → List String → Option Op} {root : Eff Op}
+    (hr : readable sig spell 0 root = true) (valid : root.layerRefsWF = true)
+    (name : String) (ty : EffTy) :
+    ∃ decls, printModule sig name ty root = .ok decls := by
+  obtain ⟨main, history, hoisted⟩ := root.hoistAll_exists valid
+  obtain ⟨hm, pieces⟩ := readable_hoistAll hr hoisted
+  obtain ⟨body, printedMain⟩ := print_readable sig spell 0 main hm
+  have layers := fun entry mem => (pieces entry mem).1
+  obtain ⟨decls, printedLayers⟩ := printCaptured_mapM_exists layers
+    (Path.sortBy Path.declBefore (history.map Prod.fst))
+    (fun target mem => (Path.sortBy_perm Path.declBefore _).mem_iff.mp mem)
+  refine ⟨decls ++ [printDecl name ty body], ?_⟩
+  unfold printModule
+  rw [hoisted]
+  change ((Path.sortBy Path.declBefore (history.map Prod.fst)).mapM
+    (printCaptured sig history) >>= fun ds => print sig 0 main >>= fun body =>
+    .ok (ds ++ [printDecl name ty body])) = _
+  simp only [printedLayers, ok_bind, printedMain]
+
+/-- The module inverse on the original readable program and valid-reference domain.
+All captured-piece and name premises of `readModule_printModule` are derived from
+that original program. Declared annotations and source bindings remain unchecked. -/
+theorem readModule_printModule_readable {sig : Signature Op}
+    {spell : String → List String → Option Op} (lawful : LawfulSpelling sig spell)
+    {root : Eff Op} (hr : readable sig spell 0 root = true)
+    (valid : root.layerRefsWF = true)
+    {name : String} {ty : EffTy} {decls : List TypeScript.ConstDecl}
+    (printed : printModule sig name ty root = .ok decls) :
+    readModule sig spell (decls.map TypeScript.Decl.const) = .ok root := by
+  obtain ⟨main, history, hoisted⟩ := root.hoistAll_exists valid
+  obtain ⟨hm, pieces⟩ := readable_hoistAll hr hoisted
+  exact readModule_printModule lawful hoisted hm
+    (fun entry mem => (pieces entry mem).1) (fun entry mem => (pieces entry mem).2) printed
 
 end Effect4.Program

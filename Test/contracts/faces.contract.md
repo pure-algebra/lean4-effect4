@@ -108,9 +108,17 @@ printer/reader with the expression/layer laws and restoration. Its premises expl
 require lawful row spellings, a successful hoist and print, readable main/captured
 pieces, and readable emitted reference names. `Eff.restoreAll_perm` justifies the
 printer's declaration reorder when target paths are unique. A duplicate-path control
-demonstrates why that premise matters. Readability/name transport from the original
-program and full printable-domain adequacy remain open. None of these equations checks
-declared types, imports, rendered source bytes, or execution on the target.
+demonstrates why that premise matters.
+
+`readable_hoistAll` in `Laws/Codegen/HoistingReadable.lean` derives all main/piece/name
+premises from readability of the original program. `printModule_readable` proves
+successful printing for every readable program with well-formed layer references;
+`readModule_printModule_readable` reconstructs that original program under lawful
+spellings. `Api.printModule_roundTrip` composes these through the actual API: a typed,
+readable program under a lawful codegen table has an emitted module that reads back
+exactly, with no successful-output premise. These are module-AST adequacy and
+reconstruction on that domain. None checks source declarations, imports, rendered
+bytes, target typing or target execution.
 
 ---
 
@@ -244,8 +252,8 @@ expanded tree; its module reconstruction fact must recover the original sharing 
 
 The remaining obligations are a canonical admitted annotation grammar with a round-trip
 law, annotation/import validation before erasure, genuinely type-directed lowering,
-transport of the module theorem's premises from admission, and completeness on the advertised printable
-domain. A normalization needs its own typing and behavior relation. A read-and-check
+and the checked source profile connecting to the proved printable domain. A normalization
+needs its own typing and behavior relation. A read-and-check
 wrapper or a target annotation does not discharge those obligations. Current source
 parsing, core typing, target typing and host behavior remain distinct evidence boundaries.
 The consolidated foundational implementation plan specifies the staged repair; this

@@ -3,6 +3,7 @@ import Effect4.Api
 import Effect4.Laws.Program.Hoisting
 import Effect4.Laws.Program.HoistingTotal
 import Effect4.Laws.Codegen.Module
+import Effect4.Laws.Api.Codegen
 import Test.Program.Gen
 
 /-!
@@ -673,6 +674,8 @@ def nestedSharing : NativeEff :=
     (.provideLayer (.ref [0, 0]) false (.succeed (.lit .unit)))
 
 #guard nestedSharing.layerRefsWF
+#guard Effect4.Api.readable nestedSharing
+#guard (Effect4.Api.typeOf nestedSharing).isSome
 #guard match nestedSharing.hoistAll with
   | .ok (main, declarations) =>
     declarations.map Prod.fst == [[0, 0], [0, 0, 0]] &&
@@ -693,6 +696,12 @@ def nestedSharing : NativeEff :=
 #print axioms nativeServiceTy_profile
 #print axioms Effect4.Program.Eff.hoistAll_exists
 #print axioms Effect4.Program.readModule_printModule
+#print axioms Effect4.Program.readable_hoistAll
+#print axioms Effect4.Program.readable_layerAt
+#print axioms Effect4.Program.readable_replaceLayerAt
+#print axioms Effect4.Program.printModule_readable
+#print axioms Effect4.Program.readModule_printModule_readable
+#print axioms Effect4.Api.printModule_roundTrip
 #print axioms Effect4.Program.Eff.restoreAll_hoistAll
 #print axioms Effect4.Program.readKey_printKey
 #print axioms Effect4.Program.readKey_exact
