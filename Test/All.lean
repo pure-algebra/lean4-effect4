@@ -55,6 +55,7 @@ import Test.Store.ProbeContract
 import Test.Store.DerivedCheck
 import Test.Codegen.PrintContract
 import Test.Codegen.ReadContract
+import Test.Codegen.SourceBindingsContract
 import Test.Ingest.TaxonomyContract
 import Test.Codegen.FormsContract
 import Test.Program.Gen
