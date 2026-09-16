@@ -24,7 +24,7 @@ private def e0 : Eff Unit := .succeed (.lit .unit)
 #guard Node.childLevel 3 (.eff (.bind e0 e0)) 1 = 4
 #guard Node.childLevel 3 (.layer (.effectDiscard e0)) 0 = 0
 #guard Node.childLevel 3 (.eff (.suspend e0)) 0 = 3
-#guard readerOnlyHeads.length = 3
+#guard readerOnlyHeads.length = 2
 #guard machineOnlyHeads.length = 5
 
 end Effect4.Program.BindersGuards

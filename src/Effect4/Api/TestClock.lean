@@ -10,7 +10,8 @@ This machine has that clock already: `TimerStore` (`Machine/Timer.lean`) transcr
 line by line, and the decision `RunDecision.advance` is `adjust` driven from outside the
 program, which is where a test drives it here (the tape is the test). So the test clock's
 API is the tape: `adjust` names the decision, `tape` builds a run's decisions from a list
-of adjustments, `run` replays them.
+of adjustments, `run` replays them, `runSequential` replays the synthesized tape and
+`runDilated` the dilated program under its own.
 
 Two program transformations give tests instant time without a clock, each one override of
 the identity fold (`EffAlgebra.id`, `Program/Fold.lean`): `fastForward` replaces every
@@ -56,6 +57,13 @@ def sleepDeadlines (program : Program) : List Nat :=
 whose sleeps run in sequence. -/
 def synthesize (program : Program) : List Decision := tape (sleepDeadlines program)
 
+/-- The run under the synthesized tape: a program whose sleeps run in sequence finishes with
+the clock at the sum of its literal sleeps. -/
+def runSequential (program : Program) (fuel : Nat)
+    (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := [])
+    (compileFuel : Nat := fuel) : Run :=
+  run program fuel (sleepDeadlines program) answers table compileFuel
+
 /-- Every sleep an immediate success: the identity fold with the two sleep slots replaced. -/
 def fastForwardAlgebra : EffAlgebra NativeOp (EffSelfCarrier NativeOp) :=
   { EffAlgebra.id NativeOp with
@@ -81,5 +89,11 @@ def dilateAlgebra (k : Nat) : EffAlgebra NativeOp (EffSelfCarrier NativeOp) :=
 
 /-- The program with every literal sleep scaled by `k`. -/
 def dilateTime (k : Nat) (program : Program) : Program := cata_eff (dilateAlgebra k) program
+
+/-- The dilated program under its own synthesized tape: the caller scales nothing. -/
+def runDilated (k : Nat) (program : Program) (fuel : Nat)
+    (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := [])
+    (compileFuel : Nat := fuel) : Run :=
+  runSequential (dilateTime k program) fuel answers table compileFuel
 
 end Effect4.Api.TestClock

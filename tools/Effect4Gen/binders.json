@@ -15,7 +15,8 @@
     "extends the scope only after a binding yield). A constructor with no row binds nothing.",
     "",
     "The profile (DI-84): constructors with no lift. `readerOnly` is the reader's canonical form",
-    "for generator code and the retiring invocation forms; `machineOnly` is what the printer",
+    "for generator code and the retiring invocation forms (`callback` is not one: an async row",
+    "authors as the reader reads it, through the generated row wrappers); `machineOnly` is what the printer",
     "refuses as internal; `handWritten` is a name-resolving lift the core module writes itself.",
     "`renames` gives a lift another name when the constructor's is a Lean keyword."
   ],
@@ -37,7 +38,7 @@
       "Effect4.Program.CauseTerm"
     ],
     "readerOnly": [
-      "Effect4.Program.Eff.gen", "Effect4.Program.Eff.callback", "Effect4.Program.Eff.yieldError"
+      "Effect4.Program.Eff.gen", "Effect4.Program.Eff.yieldError"
     ],
     "machineOnly": [
       "Effect4.Program.ActionTerm.interruptScoped", "Effect4.Program.ActionTerm.awaitAllFailFast",

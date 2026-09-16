@@ -115,6 +115,12 @@ def whileLoop {Op : Type} (cursor : String) (answer : String) (initial : TermSrc
 def yieldNow {Op : Type} (priority : Nat) : Src Op :=
   fun _ _ => .ok (.yieldNow priority)
 
+/-- `Effect4.Program.Eff.callback`. -/
+def callback {Op : Type} (register : Op) (request : TermSrc) : Src Op :=
+  fun env p => do
+    let x1 ← request env p
+    .ok (.callback register x1)
+
 /-- `Effect4.Program.Eff.awaitFiber`. -/
 def awaitFiber {Op : Type} (fiber : TermSrc) (mode : Effect4.Supervision.ObserverMode) : Src Op :=
   fun env p => do
@@ -331,6 +337,7 @@ def Cause.both (left : CauseSrc) (right : CauseSrc) : CauseSrc :=
 #print axioms Effect4.Program.Authoring.branch
 #print axioms Effect4.Program.Authoring.whileLoop
 #print axioms Effect4.Program.Authoring.yieldNow
+#print axioms Effect4.Program.Authoring.callback
 #print axioms Effect4.Program.Authoring.awaitFiber
 #print axioms Effect4.Program.Authoring.withFiber
 #print axioms Effect4.Program.Authoring.scope

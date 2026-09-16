@@ -12,10 +12,12 @@ and emits:
 * group `Rows` → `src/Effect4/Program/Authoring/Rows.lean`: one `Src NativeOp` wrapper per
   row, named as the printed image spells it (`Ref.make`, `Deferred.await`), its request
   built as the shape says: nothing for a unit request, one term for a call, a `pair` of two
-  for a tuple call. The wrapper is `perform` of the operation on that request and nothing
-  else, so an authored row reads like the Effect it prints to (DI-89's native half).
+  for a tuple call. The wrapper is the operation on that request and nothing else, invoked
+  as the reader reads the row (`Codegen/Read.lean` `rowAnswer`): a `callback` on an `.async`
+  row, a `perform` otherwise, so an authored row lands in the printer's image whatever its
+  kind (DI-89's native half).
 * group `RowsLaws` → `src/Effect4/Laws/Program/Authoring/Rows.lean`: the scope lemma of
-  every wrapper, one application of `perform_scoped`.
+  every wrapper, one application of `perform_scoped` or `callback_scoped`.
 
     lake env lean -M 4096 --run tools/Effect4Gen/Rows.lean --group Rows
       --imports Effect4.Program.Authoring.Lifts --out src/Effect4/Program/Authoring/Rows.lean
@@ -71,7 +73,9 @@ def emitOne (op : NativeOp) (params : List (String × String)) : Option Emitted 
     (params.map fun (n, t) => s!"({n} : {t})") ++
     (if reqParams.isEmpty then [] else [s!"({String.intercalate " " reqParams} : TermSrc)"]))
   let header := if paramText.isEmpty then s!"def {defName} : Src NativeOp :=" else s!"def {defName} {paramText} : Src NativeOp :="
-  let wrapper := s!"/-- `{row.spelling}` (`{row.cite}`). -/\n{header}\n  perform {opTerm} {reqTerm}\n"
+  -- the lift follows the row's kind, as the reader's `rowAnswer` does
+  let lift := if row.kind == .async then "callback" else "perform"
+  let wrapper := s!"/-- `{row.spelling}` (`{row.cite}`). -/\n{header}\n  {lift} {opTerm} {reqTerm}\n"
   -- the lemma
   let hyps := reqParams.zipIdx.map fun (x, i) => s!"(h{i} : {x}.Scoped)"
   let implicitReq := if reqParams.isEmpty then "" else s!"\{{String.intercalate " " reqParams} : TermSrc} "
@@ -79,9 +83,9 @@ def emitOne (op : NativeOp) (params : List (String × String)) : Option Emitted 
   let lemmaParams := (if ctorParamText.isEmpty then "" else ctorParamText ++ " ") ++ implicitReq ++ String.intercalate " " hyps
   let app := String.intercalate " " ([defName] ++ params.map (·.1) ++ reqParams)
   let proof := match reqParams with
-    | [] => "perform_scoped _ unit_scoped"
-    | [_] => "perform_scoped _ h0"
-    | _ => "perform_scoped _ (app_scoped \"pair\" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))"
+    | [] => s!"{lift}_scoped _ unit_scoped"
+    | [_] => s!"{lift}_scoped _ h0"
+    | _ => s!"{lift}_scoped _ (app_scoped \"pair\" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))"
   let lemma := s!"theorem {defName}_scoped {lemmaParams} :\n    ({app}).Scoped :=\n  {proof}\n"
   let lemma := lemma.replace "theorem " "theorem " |>.replace "_scoped  :" "_scoped :"
   some { namespaceParts := nsParts, defName, wrapper, lemma,

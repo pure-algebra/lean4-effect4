@@ -6,8 +6,9 @@ import Effect4.Program.Authoring.Sugar
 
 `Api.TestClock` (`src/Effect4/Api/TestClock.lean`). A raw run parks at the first sleep; the
 same program under a tape that adjusts once per sleep finishes with the clock at the sum
-of the sleeps; `synthesize` writes that tape from the tree; `fastForward` finishes without
-a clock at time zero; `dilateTime k` needs the scaled tape and lands at `k` times the sum;
+of the sleeps; `synthesize` writes that tape from the tree and `runSequential` replays it;
+`fastForward` finishes without a clock at time zero; `dilateTime k` needs the scaled tape
+and lands at `k` times the sum (`runDilated` writes that tape itself);
 both warps fix a sleep-free program. The programs are written by name with the generated
 row wrappers and pinned against the trees written by level.
 -/
@@ -21,8 +22,8 @@ open Effect4.Program.Authoring
 
 /-- Sleep 100, sleep 50, read the clock. -/
 def twoSleeps : Api.Program :=
-  .bind (.perform .sleep (.lit (.nat 100)))
-    (.bind (.perform .sleep (.lit (.nat 50))) (.perform .clockNow (.lit .unit)))
+  .bind (.callback .sleep (.lit (.nat 100)))
+    (.bind (.callback .sleep (.lit (.nat 50))) (.perform .clockNow (.lit .unit)))
 
 def twoSleepsByName : Src NativeOp :=
   andThen (Effect.sleep (nat 100)) <| andThen (Effect.sleep (nat 50)) <| Effect.currentTimeMillis
@@ -36,6 +37,7 @@ def twoSleepsByName : Src NativeOp :=
 #guard (Api.run twoSleeps 100).outcome = .frontier
 #guard (TestClock.run twoSleeps 100 [100, 50]).exit = some (.success (.nat 150))
 #guard (Api.replay twoSleeps 100 (synthesize twoSleeps)).exit = some (.success (.nat 150))
+#guard (runSequential twoSleeps 100).exit = some (.success (.nat 150))
 -- One adjustment short: the second sleep is still pending.
 #guard (TestClock.run twoSleeps 100 [100]).outcome = .frontier
 -- One large adjustment fires both sleeps in deadline order: the sleeper reads the clock at
@@ -53,6 +55,8 @@ def twoSleepsByName : Src NativeOp :=
 #guard sleepDeadlines (dilateTime 2 twoSleeps) = [200, 100]
 #guard (Api.replay (dilateTime 2 twoSleeps) 100 (synthesize (dilateTime 2 twoSleeps))).exit
   = some (.success (.nat 300))
+#guard (runDilated 2 twoSleeps 100).exit = some (.success (.nat 300))
+#guard (runDilated 2 twoSleeps 100).stores.timers.now = 300
 -- The undilated tape is too short for the dilated program.
 #guard (TestClock.run (dilateTime 2 twoSleeps) 100 [100, 50]).outcome = .frontier
 #guard Api.wellTyped (dilateTime 2 twoSleeps)
@@ -63,8 +67,9 @@ def noSleep : Api.Program := .bind (.perform .refMake (.lit (.nat 1))) (.perform
 #guard fastForward noSleep = noSleep
 #guard dilateTime 7 noSleep = noSleep
 
--- The tree of a sleep is what the row wrapper says it is.
-#guard elaborate (Effect.sleep (nat 5) : Src NativeOp) = .ok (.perform .sleep (.lit (.nat 5)))
+-- The tree of a sleep is the reader's image of the row: async rows are callbacks.
+#guard elaborate (Effect.sleep (nat 5) : Src NativeOp) = .ok (.callback .sleep (.lit (.nat 5)))
+#guard Api.readable twoSleeps
 
 #print axioms Effect4.Api.TestClock.fastForward
 #print axioms Effect4.Api.TestClock.sleepDeadlines

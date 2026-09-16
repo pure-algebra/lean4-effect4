@@ -182,6 +182,15 @@ theorem yieldNow_scoped {Op : Type} (priority : Nat) :
   cases h
   simp
 
+theorem callback_scoped {Op : Type} (register : Op) {request : TermSrc} (h1 : request.Scoped) :
+    ((callback register request) : Src Op).Scoped := by
+  refine ⟨fun env p e h => ?_⟩
+  unfold callback at h
+  obtain ⟨x1, hx1, h⟩ := bind_ok h
+  cases h
+  have s1 := h1.holds _ _ _ hx1
+  simp [s1]
+
 theorem awaitFiber_scoped {Op : Type} {fiber : TermSrc} (mode : Effect4.Supervision.ObserverMode) (h0 : fiber.Scoped) :
     ((awaitFiber fiber mode) : Src Op).Scoped := by
   refine ⟨fun env p e h => ?_⟩
@@ -512,6 +521,7 @@ theorem Cause.both_scoped {left : CauseSrc} {right : CauseSrc} (h0 : left.Scoped
 #print axioms Effect4.Program.Authoring.branch_scoped
 #print axioms Effect4.Program.Authoring.whileLoop_scoped
 #print axioms Effect4.Program.Authoring.yieldNow_scoped
+#print axioms Effect4.Program.Authoring.callback_scoped
 #print axioms Effect4.Program.Authoring.awaitFiber_scoped
 #print axioms Effect4.Program.Authoring.withFiber_scoped
 #print axioms Effect4.Program.Authoring.scope_scoped
