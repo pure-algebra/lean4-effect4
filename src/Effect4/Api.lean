@@ -1,6 +1,7 @@
 import Effect4.Program.Admit
 import Effect4.Program.Admission
 import Effect4.Program.Table
+import Effect4.Program.Typing.Blame
 import Effect4.Api.Derived
 import Effect4.Program.Packages
 import Effect4.Program.Wire
@@ -30,7 +31,8 @@ One module, the whole pipeline, small interface:
 
 * `Program` is the Eff AST over the native operation alphabet (`src/Effect4/Program/Eff.lean`,
   `Native.lean`): first-order, decidable, no Lean function inside.
-* `typeOf` / `wellTyped` type a program against the native signature.
+* `typeOf` / `wellTyped` type a program against the native signature; `explain` / `blame`
+  locate and name a refusal (DI-86).
 * `print` / `printDecl` answer TypeScript **syntax** (`TypeScript.Expr`, `ConstDecl`),
   never text. Rendering to bytes is one call to the pinned package — `TypeScript.Render.expr
   house0 0 e` — kept outside this module on purpose: Lean's `String` folds reach
@@ -97,6 +99,21 @@ def checkTyping (program : Program) (table : RowTable := []) :
 
 /-- Whether the program is well-typed. -/
 def wellTyped (program : Program) (table : RowTable := []) : Bool := (typeOf program table).isSome
+
+/-- Where and why a program fails to type (DI-86): the checker's refusal, with the program's
+layer references resolved as `typeOf` resolves them (an ill-formed reference is refused at the
+root, a reference that survives expansion at its site). `none` exactly when the program is
+`wellTyped` (`Laws/Api/Blame.lean`). -/
+def explain (program : Program) (table : RowTable := []) : Option Effect4.Program.TypeRefusal :=
+  if program.layerRefsWF then
+    match program.expandRefs.refSites [] with
+    | (site, target) :: _ => some ⟨site, .layerReference target⟩
+    | [] => Effect4.Program.explain (nativeSignature table) [] program.expandRefs
+  else some ⟨[], .referencesIllFormed⟩
+
+/-- The path of the refusal alone: the deepest node whose own rule refuses. -/
+def blame (program : Program) (table : RowTable := []) : Option (List Nat) :=
+  (explain program table).map (·.path)
 
 /-- A program's boundary schema document (Decision 12 / S-4): computes the Document for
 any well-typed program, refusing when the program is ill-typed. -/

@@ -88,6 +88,7 @@ import Effect4.Codegen.Target
 import Effect4.Program.Eff
 import Effect4.Program.Fold
 import Effect4.Program.Typing
+import Effect4.Program.Typing.Blame
 import Effect4.Program.Binders
 import Effect4.Program.Scoped
 import Effect4.Program.Authoring
