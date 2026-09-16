@@ -19,7 +19,7 @@ Standard library only. OCaml 5.1.1 / dune 3.24 (opam switch `effect4`).
 | `eff_layout.ml` | **generated** | the wire families and their fields, as data |
 | `eff_wire.ml` | **generated** | `encode_*` / `decode_*` per family, `*_exact` at the top level |
 | `eff_json.ml` | **generated** | `print_*` per family (a printer only — there is no JSON parser anywhere) |
-| `eff_native.ml` | **generated** | the native alphabet as data: the atom names, the atom typing table `atom_ty` (its arms are checked against `nativeAtomTy` when it is generated), the 55 op values `all_ops` and their rows `row_of`, `scope_key`, the handle types |
+| `eff_native.ml` | **generated** | the native alphabet as data: atom names and const-generic metadata, the 55 op values `all_ops` and their rows `row_of`, `scope_key`, the handle types; typing remains in Lean |
 | `eff_manifest.txt` | **generated** | one line per family: name, OCaml type, constructors and their carriers, in order |
 | `program-structure.json` | **generated** | the constructor families the engine's layout check reads |
 | `goldens/` | **generated** | for 48 programs: `<name>.bin` (the canonical bytes), `<name>.json` (the Lean JSON printer's output), `<name>.ty` (Lean's `typeOf`); `corpus.txt` (each name with Lean's `wellTyped` verdict); `coverage.txt` (constructor counts over the corpus) |

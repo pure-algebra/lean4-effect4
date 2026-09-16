@@ -18,8 +18,8 @@ Writes into `<outdir>`:
                       constructor tag 10 with the index as a `Nat` frame) and its exact,
                       length-directed decoder, per type, over the hand-written `Eff_frame`;
 * `eff_json.ml`     — the JSON printer (a printer only) per type, over `Eff_json_text`;
-* `eff_native.ml`   — the native alphabet as data: the atom typing table (verified here against
-                      `nativeAtomTy` on probes), every built-in `NativeOp` value with its `Row`, the empty-table external placeholder, the
+* `eff_native.ml`   — the native alphabet as data: atom names and const-generic metadata,
+                      every built-in `NativeOp` value with its `Row`, the empty-table external placeholder, the
                       signature's scope key;
 * `eff_manifest.txt` — one line per family: constructor names, arities and argument carriers;
 * `goldens/<name>.{bin,json,ty}` and `goldens/corpus.txt` — the corpus below, encoded by the
@@ -35,8 +35,8 @@ What is derived and what is written by hand, precisely:
 * the corpus programs and their `V` conversions are written by hand, but every constructor
   name in a `V.ctor` is a `` ``double-backtick `` name resolved at elaboration time and its
   index is looked up in the environment at run time — no index is typed by hand;
-* the atom table is data in this file, checked against `nativeAtomTy` by evaluation on every
-  row and on refusal probes before anything is written; a disagreement aborts the run.
+* atom names and const-generic metadata project the complete `NativeAtom` inventory;
+  program typing is computed by Lean, with no OCaml typing implementation emitted.
 
 This is a tool (`IO`, `Lean.Meta`); it is not part of any audited library.
 
@@ -101,9 +101,6 @@ def main (args : List String) : IO Unit := do
   unless allOps.length == nul + fn * OCaml5.Eff.fnNames.length + st * FinalizerStrategy.all.length do
     throw (IO.userError s!"EffGen: allOps has {allOps.length} values, the constructor table implies {nul + fn * OCaml5.Eff.fnNames.length + st * FinalizerStrategy.all.length}")
   unless allOps.eraseDups.length == allOps.length do throw (IO.userError "EffGen: allOps repeats a value")
-  match checkAtoms with
-  | .ok () => pure ()
-  | .error e => throw (IO.userError s!"EffGen: {e}")
   -- the corpus: every constructor name resolves in the environment
   let trees := Corpus.corpus.map fun (nm, p) => (nm, p, effV p)
   for (nm, _, t) in trees do

@@ -3,7 +3,7 @@
 ; ocaml/ workspace — ocaml/engine, which forwards its framing to Eff_frame and converts
 ; Eff_types.eff — can name it; a private library is scoped to its own project.
 (package (name effect4_eff))
-; effect4_eff: the Eff program IR of lean4-effect4 as an OCaml library (typed embedding,
-; wire, checker). Its own project root, so it builds alone with `dune build --root .` from
+; effect4_eff: the Eff program IR of lean4-effect4 as an OCaml library (syntax,
+; wire and JSON codecs). Its own project root, so it builds alone with `dune build --root .` from
 ; inside ocaml/eff (its own ocaml/eff/_build, which does not contend with the ocaml/
 ; workspace another lane drives), and as `dune build eff` from the ocaml/ workspace root.

@@ -30,7 +30,7 @@ Writes seven files, all `GENERATED`, none ever edited:
   `typescript` revision read out of `lakefile.toml`), the reserved heads
   (`Effect4.Program.reserved`, cross-checked against every `.ident "…"` literal of
   `Print.lean`), the pure atom set (`nativeAtom`/`nativeAtomTy`, name, arity and monomorphic
-  signature, checked against `nativeAtomTy` at generation — DI-40: the ingest engines and the
+  signature, projected from `NativeAtom` — DI-40: the ingest engines and the
   truth prelude read it instead of keeping copies), and one entry per built-in `NativeOp` value — the operation as a `NativeOp` node and
   its `Row` as a `Row` node. No row type is written by hand: `Row`, `Ty`, `NativeOp` are
   families like any other. A stamp (FNV-1a 64 over the payload bytes) is recomputed at import.
@@ -522,9 +522,9 @@ def entryJs (op : Effect4.Program.NativeOp) : String :=
 finite atom inventory, exhaustive typing/evaluation, names, arities and monomorphic
 metadata. Both foreign readers and the prelude coverage check read its generated projection.
 
-`OCaml5.Eff.checkAtoms` checks target arm coverage against the complete enum, then checks
-each concrete target row/probe against `nativeAtomTy`. Its scheme implementations remain
-finite checked transcriptions; a passing probe is not a universal translation theorem.
+`atomRows` projects that complete inventory directly. `NativeAtom.all_complete` and
+`NativeAtom.typeOf_mono` supply the inventory and monomorphic-signature laws; this
+profile emits metadata, not a second implementation of polymorphic typing.
 `arity` is null for a variadic atom, and `args`/`answer` are null for schemes. -/
 
 def atomJs : String × Option Nat × Option (List Effect4.Program.Ty × Effect4.Program.Ty) → String
@@ -782,11 +782,6 @@ def main (args : List String) : IO Unit := do
   let tsRev := (revOf lakefile "typescript").getD "UNKNOWN"
   let address := " + ".intercalate
     (Effect4.Codegen.Profile.hostPin.libraries ++ ["lean4-typescript@" ++ tsRev])
-  -- the atom set is data here (DI-40); `checkAtoms` evaluates every row and probe against
-  -- `nativeAtomTy`, so a drifted name or signature aborts rather than being emitted
-  match OCaml5.Eff.checkAtoms with
-  | .error e => throw (IO.userError s!"TsGen: the atom table disagrees with nativeAtomTy: {e}")
-  | .ok _ => pure ()
   let printed := identLiterals (← IO.FS.readFile "src/Effect4/Codegen/Print.lean")
   -- readRunIn consumes Effect.void only as its fixed block return, not as an
   -- effect head, and printTupleArgs spells a saved tuple request's components with

@@ -6,8 +6,8 @@ import OCaml5.Eff.World
 **What it is.** The OCaml text of the `eff/` library, one function per generated file:
 `emitTypes` (`eff_types.ml`), `emitWire` (`eff_wire.ml`: the canonical byte encoding and its
 exact, length-directed decoder over the hand-written `Eff_frame`), `emitJson` (`eff_json.ml`),
-`manifest` (`eff_manifest.txt`) and `emitNative` (`eff_native.ml`: the native alphabet as data,
-with `checkAtoms` verifying the atom table against `nativeAtomTy` before anything is written).
+`manifest` (`eff_manifest.txt`) and `emitNative` (`eff_native.ml`: the native atom names,
+const-generic metadata and operation rows as data). Program typing remains in Lean.
 
 **Depends on.** `OCaml5.Eff.World`.
 
@@ -350,112 +350,17 @@ def allOps : List NativeOp :=
   -- the timer (A4, 2026-09-08)
   [.sleep, .clockNow]
 
-/-- Monomorphic rows projected from the complete native inventory. -/
-def monoAtoms : List (String × List Ty × Ty) :=
-  NativeAtom.all.filterMap fun atom => atom.mono.map fun (args, answer) =>
-    (atom.name, args, answer)
-
-/-- The polymorphic and variadic atoms (`pair`, `fst`, `snd`, `strings`, `eq`, the cause
-queries) as OCaml arms, and the probes that check them and the refusals against
-`nativeAtomTy`. The emitted `atom_ty` takes the subtype relation `sub` as its first
-parameter (part 4, DI-15: a fixed-signature atom accepts an argument at a subtype of its
-parameter, `NativeAtom.typeOf`), so the generated module never re-states `Ty.sub`. (The
-hand-written OCaml checker that used to pass it was retired on 2026-09-13; the table stays
-a projection of the Lean atom inventory, DI-40, and the probes below are what check the
-emitted arms against `nativeAtomTy`.) -/
-def polyArm (atom : NativeAtom) : Option String :=
-  match atom with
-  | .pair => some s!"  | {ostr atom.name}, [a; b] -> Some ({octor "ty" "prod"} (a, b))"
-  | .fst => some s!"  | {ostr atom.name}, [{octor "ty" "prod"} (a, _)] -> Some a"
-  | .snd => some s!"  | {ostr atom.name}, [{octor "ty" "prod"} (_, b)] -> Some b"
-  | .strings => some s!"  | {ostr atom.name}, tys when List.for_all (fun t -> sub t {octor "ty" "string"}) tys -> Some ({octor "ty" "list"} {octor "ty" "string"})"
-  | .eq => some s!"  | {ostr atom.name}, [a; b] when (sub a {octor "ty" "nat"} && sub b {octor "ty" "nat"}) || (sub a {octor "ty" "string"} && sub b {octor "ty" "string"}) -> Some {octor "ty" "bool"}"
-  | .causeIsFail | .causeIsDie | .causeIsInterrupt =>
-    some s!"  | {ostr atom.name}, [{octor "ty" "causeOf"} _] | {ostr atom.name}, [{octor "ty" "exitOf"} (_, _)] -> Some {octor "ty" "bool"}"
-  | .causeError =>
-    some s!"  | {ostr atom.name}, [{octor "ty" "causeOf"} e] | {ostr atom.name}, [{octor "ty" "exitOf"} (_, e)] -> Some ({octor "ty" "option"} e)"
-  -- the tag test (DI-39): a string tag, any tested value
-  | .tagIs => some s!"  | {ostr atom.name}, [t; _] when sub t {octor "ty" "string"} -> Some {octor "ty" "bool"}"
-  | .succ | .pred | .isZero | .boolNot | .add | .lt | .boolOr | .boolAnd => none
-
-def polyArms : List String := NativeAtom.all.filterMap polyArm
-
-/-- A monomorphic row as an OCaml arm: one pattern variable per parameter, each guarded by
-`sub` against the parameter's type (`NativeAtom.typeOf_mono`). -/
-def monoArm (n : String) (args : List Ty) (ans : Ty) : String :=
-  let vars := (List.range args.length).map fun i => s!"a{i}"
-  let guards := (vars.zip args).map fun (v, t) => s!"sub {v} {tyO t}"
-  let guard := if guards.isEmpty then "" else " when " ++ " && ".intercalate guards
-  s!"  | {ostr n}, [{"; ".intercalate vars}]{guard} -> Some {tyO ans}"
-
 /-- The const-generic atoms by name (`NativeAtom.constGeneric`, the literal rule's flag). -/
 def constAtomNames : List String :=
   (NativeAtom.all.filter NativeAtom.constGeneric).map NativeAtom.name
 
-/-- Independent consumer omission check: the authority is the full native enum. -/
-def checkAtomCoverage (consumerNames : List String) : Except String Unit := do
-  for atom in NativeAtom.all do
-    unless consumerNames.contains atom.name do
-      throw s!"native atom consumer omits {atom.name}"
-
-def atomProbes : List (String × List Ty × Option Ty) :=
-  [ ("pair", [.nat, .bool], some (.prod .nat .bool)), ("pair", [.nat, .nat], some (.prod .nat .nat))
-  , ("fst", [.prod .nat .bool], some .nat), ("snd", [.prod .nat .bool], some .bool)
-  , ("strings", [], some (.list .string)), ("strings", [.string], some (.list .string))
-  , ("strings", [.string, .string], some (.list .string)), ("strings", [.nat], none)
-  , ("strings", [.string, .nat], none)
-  , ("fst", [.nat], none), ("snd", [.nat, .nat], none), ("pair", [.nat], none), ("pair", [], none)
-  , ("succ", [.bool], none), ("succ", [], none), ("succ", [.nat, .nat], none), ("add", [.nat], none)
-  , ("mul", [.nat, .nat], none), ("not", [.nat], none), ("eq", [.bool, .bool], none)
-  , ("lt", [.nat, .bool], none), ("isZero", [.bool], none), ("pred", [.nat, .nat], none)
-  , ("eq", [.nat, .nat], some .bool), ("eq", [.string, .string], some .bool)
-  , ("eq", [.string, .nat], none), ("eq", [], none)
-  -- subsumption at fixed-signature atoms (part 4, DI-15): a subtype of the parameter is
-  -- accepted, so a literal is an `eq` string and `never` is anything
-  , ("eq", [.lit "a", .lit "b"], some .bool), ("eq", [.lit "a", .string], some .bool)
-  , ("eq", [.lit "a", .nat], none), ("succ", [.never], some .nat)
-  , ("add", [.never, .nat], some .nat), ("strings", [.lit "x", .string], some (.list .string))
-  , ("not", [.never], some .bool), ("lt", [.nat, .string], none)
-  -- the tag test (DI-39): a string or literal tag, any tested value; not a natural tag
-  , ("tagIs", [.string, .nat], some .bool), ("tagIs", [.lit "A", .prod (.lit "A") .string], some .bool)
-  , ("tagIs", [.string, .union (.prod (.lit "A") .string) .string], some .bool)
-  , ("tagIs", [.nat, .string], none), ("tagIs", [.string], none), ("tagIs", [], none)
-  , ("causeIsFail", [.causeOf .string], some .bool), ("causeIsFail", [.exitOf .nat .string], some .bool)
-  , ("causeIsDie", [.causeOf .never], some .bool), ("causeIsDie", [.exitOf .nat .never], some .bool)
-  , ("causeIsInterrupt", [.causeOf .never], some .bool), ("causeIsInterrupt", [.exitOf .nat .never], some .bool)
-  , ("causeError", [.causeOf .string], some (.option .string))
-  , ("causeError", [.exitOf .nat (.prod .string .string)], some (.option (.prod .string .string)))
-  , ("causeIsFail", [.nat], none), ("causeIsDie", [], none)
-  , ("causeIsInterrupt", [.causeOf .never, .causeOf .never], none), ("causeError", [.string], none) ]
-
-def checkAtoms : Except String Unit := do
-  let monoNames := monoAtoms.map (·.1)
-  let polyNames := NativeAtom.all.filterMap fun atom => (polyArm atom).map fun _ => atom.name
-  checkAtomCoverage (monoNames ++ polyNames)
-  for atom in NativeAtom.all do
-    unless atom.mono.isSome != (polyArm atom).isSome do
-      throw s!"native atom requires exactly one target typing arm: {atom.name}"
-  for (n, args, ans) in monoAtoms do
-    unless nativeAtomTy n args = some ans do
-      throw s!"atom table disagrees with nativeAtomTy on {n}"
-    -- every monomorphic row refuses one argument too many and one too few
-    unless nativeAtomTy n (args ++ [.nat]) = none do throw s!"nativeAtomTy accepts {n} with an extra argument"
-    unless nativeAtomTy n args.tail = none do throw s!"nativeAtomTy accepts {n} with a missing argument"
-  for (n, args, ans) in atomProbes do
-    unless nativeAtomTy n args = ans do
-      throw s!"atom probe disagrees with nativeAtomTy on {n} {repr args}"
-
 def emitNative (nullaryOps fnOps stratOps : Nat) : String :=
-  header "Eff_native: the native alphabet as data. atom names and monomorphic metadata project the complete NativeAtom inventory (src/Effect4/Program/NativeAtom.lean). atom_ty is checked against nativeAtomTy: every enum member requires exactly one target arm, monomorphic rows are evaluated, and scheme arms are checked on finite probes (a disagreement or omission aborts). row_of is NativeOp.row evaluated on the finite built-in alphabet, with the empty-table placeholder for external indices (the constructor table checks both classes). scope_key is nativeScopeKey." ++
+  header "Eff_native: the native alphabet as data. atom names and const-generic metadata project the complete NativeAtom inventory (src/Effect4/Program/NativeAtom.lean). Typing remains in Lean; no second atom checker is emitted. row_of is NativeOp.row evaluated on the finite built-in alphabet, with the empty-table placeholder for external indices (the constructor table checks both classes). scope_key is nativeScopeKey." ++
   "open Eff_types\n\n" ++
   "let atom_names : string list = " ++ listO (NativeAtom.names.map ostr) ++ "\n\n" ++
   "(* The const-generic atoms (NativeAtom.constGeneric): a string literal argument keeps its literal type (the literal rule, DI-15). *)\n" ++
   "let const_atoms : string list = " ++ listO (constAtomNames.map ostr) ++ "\n" ++
   "let const_atom (name : string) : bool = List.mem name const_atoms\n\n" ++
-  "(* A fixed-signature atom accepts each argument at a subtype of its parameter (NativeAtom.typeOf, DI-15); the subtype relation is the caller's parameter, so this module never restates Ty.sub. *)\n" ++
-  "let atom_ty (sub : ty -> ty -> bool) (name : string) (args : ty list) : ty option =\n  match name, args with\n" ++
-  "\n".intercalate (monoAtoms.map fun (n, args, ans) => monoArm n args ans) ++ "\n" ++
-  "\n".intercalate polyArms ++ "\n  | _ -> None\n\n" ++
   s!"(* {nullaryOps} nullary operations, {fnOps} over every fn_name, {stratOps} over every finalizer_strategy: {allOps.length} values. *)\n" ++
   "let all_ops : native_op list =\n  [ " ++ "\n  ; ".intercalate (allOps.map opO) ++ " ]\n\n" ++
   "let row_of : native_op -> row = function\n" ++
