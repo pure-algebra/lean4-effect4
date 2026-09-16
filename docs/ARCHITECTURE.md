@@ -106,6 +106,17 @@ syntax. Checker/declarative connections and production/reconstruction theorems l
 in `Laws/Program/CheckedTyping.lean` and `Laws/Codegen/Checked.lean`. These are proof
 views of the same program and printer, not a second language or source validator.
 
+`Codegen/Bindings.lean` owns import origins, aliases, value/type availability and
+nearest-name resolution. `Codegen/SourceBindings.lean` traverses the original target
+syntax and records each use with its lexical scope. `Api.checkSourceBindings` returns
+evidence indexed by that unchanged module and the caller's permitted import origins.
+The corresponding Laws modules connect the computed check to the independent
+`Bindings.Resolves` relation. This conservative profile masks local declarations at
+block entry, exposes their capabilities after the initializer, and refuses forward
+references, opaque declarations and unsafe verbatim name spellings. It is a component
+of source admission; annotation agreement and expected package-head origins still
+need validation before raw reconstruction can become typed source admission.
+
 `Program/Fragment.lean` owns executable membership in the existing straight
 fragment. Both ordinary application admission and `Laws/Program/Denote.lean`
 use that same definition. `admitStraightProgram` adds its membership proof to

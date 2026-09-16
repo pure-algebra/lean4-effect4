@@ -6,6 +6,7 @@ import Effect4.Program.Packages
 import Effect4.Program.Wire
 import Effect4.Codegen.Print
 import Effect4.Codegen.Checked
+import Effect4.Codegen.SourceBindings
 import Effect4.Codegen.Read
 import Effect4.Codegen.Schema
 import Effect4.Codegen.Target
@@ -161,6 +162,15 @@ Use `checkTyping` on the recovered program for core typing; that check alone doe
 not validate the original source envelope. -/
 def readModule (module : TypeScript.Module) (table : RowTable := []) : Except ReadRefusal Program :=
   Program.readModule (nativeSignature table) (nativeSpell table) module.decls
+
+/-- Check imports and lexical bindings on the original module, retaining its exact
+syntax in the certificate's index. The caller supplies permitted import origins.
+This is a prerequisite of typed source admission: it does not check annotation
+agreement, resolve package exports or validate the origin expected by a core head. -/
+def checkSourceBindings (module : TypeScript.Module)
+    (allowed : List Effect4.Codegen.Bindings.Origin) :
+    Option (Effect4.Codegen.SourceBindings.Checked allowed module) :=
+  Effect4.Codegen.SourceBindings.validate allowed module
 
 /-! ## Compiling and running -/
 

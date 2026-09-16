@@ -1,5 +1,6 @@
 import Effect4.Api
 import Effect4.Laws.Codegen.Checked
+import Effect4.Laws.Codegen.SourceBindings
 
 /-!
 # The application module face on its readable, typed domain
@@ -14,6 +15,14 @@ or of the currently empty import envelope, and not host typing or execution.
 namespace Effect4.Api
 
 open Effect4.Program
+
+/-- The public original-source check returns evidence exactly on the lexical
+profile proved by SourceBindings, before core reconstruction erases metadata. -/
+theorem checkSourceBindings_iff (module : TypeScript.Module)
+    (allowed : List Effect4.Codegen.Bindings.Origin) :
+    (∃ checked, checkSourceBindings module allowed = some checked) ↔
+      Effect4.Codegen.SourceBindings.WellBound allowed module :=
+  Effect4.Codegen.SourceBindings.validate_iff allowed module
 
 /-- The shared certificate exposes precisely the existing application type result. -/
 theorem checkTyping_type (program : Program) (table : RowTable) :

@@ -308,6 +308,33 @@ parsing, core typing, target typing and host behavior remain distinct evidence b
 The consolidated foundational implementation plan specifies the staged repair; this
 section records the claim boundary and does not declare the repair implemented.
 
+The lexical prerequisite is now executable as `Api.checkSourceBindings` on the
+original `TypeScript.Module` and an explicit permitted-origin list. Its Laws theorem
+`checkSourceBindings_iff` states exactly `SourceBindings.WellBound`: the original
+imports have unique legal bindings with permitted origins, the retained syntax
+meets the conservative shape restrictions, and every collected value/type reference
+has a `Bindings.Resolves` derivation in its actual occurrence scope. That relation
+selects the nearest name before testing its capability; it cannot skip a shadowing
+local or type-only import. Local names mask the outer scope for their whole block,
+including preceding statements, and become available after their declaration.
+The profile refuses deferred forward references as well as immediate ones; it does
+not implement TypeScript declaration merging. Child blocks do not export locals.
+
+The traversal covers structural type children, parameter/local annotations,
+class heritage and renderer-introduced references. Opaque declarations/class
+members, empty named imports and unsafe verbatim names refuse. The finite controls
+are in `Test/Codegen/ReadContract.lean`, including actual printed scalar, service and
+layer modules supplied with imports. `Checked.use_binding` exposes the unique
+resolution for every collected occurrence; `resolve_pending` proves that pending
+locals cannot expose same-named enclosing bindings.
+
+This certificate does not establish annotation agreement, expected origins for
+specific core heads, package exports, generic arity, export selection, assignment
+or control-flow typing, comment rendering safety, or target execution. For example,
+a local value named `Effect` resolves lexically, but that is not evidence that it
+implements the pinned Effect namespace. Raw `Api.readModule` remains unchanged;
+combining it with the lexical check and core typing alone is not full source admission.
+
 The first shared-lowering typing laws are in `src/Effect4/Laws/Codegen/Forms.lean`.
 Arbitrary blocks of inserted binding slots preserve the complete checker result,
 including refusal. The `andThen`, `tap`, `as`/`asVoid`, and `ensuring` laws read the
