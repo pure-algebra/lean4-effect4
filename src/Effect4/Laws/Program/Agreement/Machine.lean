@@ -280,21 +280,20 @@ theorem plainCode_suspendBodyAt {root : NativeEff} (hroot : Straight root = true
     · cases n with
       | eff e =>
         have he : Straight e = true := plain_at q.path (Node.eff root) e hroot h
-        cases e with
-        | suspend b =>
-          rw [suspendBodyAt_suspend hf h]
-          exact plainCode_resolve hroot _
-        | branch t a b =>
-          rcases hbo : boolOf (evalTerm q.env t) with _ | flag
-          · rw [suspendBodyAt_branch_bad hf h (boolOf_none hbo)]; rfl
-          · have ht := boolOf_some hbo
-            cases flag
-            · rw [suspendBodyAt_branch_false hf h ht]; exact plainCode_resolve hroot _
-            · rw [suspendBodyAt_branch_true hf h ht]; exact plainCode_resolve hroot _
-        | _ =>
-          rw [suspendBodyAt_of_at hf h (by intro _ _ _ hbad; cases hbad) (Straight.not_gen he)
-            (Straight.not_whileLoop he) (by intro _ hbad; cases hbad) (Straight.not_provideLayer he)]
+        rcases hd : e.suspendDecided with _ | _
+        · -- outside the decided heads: the body is the node compiled at its point
+          rw [suspendBodyAt_of_at hf h hd]
           exact plainCode_compileEff _ q he
+        · -- a straight decided head is a source suspension or a branch
+          rcases (Straight.suspendDecided_iff he).mp hd with ⟨b, rfl⟩ | ⟨t, a, b, rfl⟩
+          · rw [suspendBodyAt_suspend hf h]
+            exact plainCode_resolve hroot _
+          · rcases hbo : boolOf (evalTerm q.env t) with _ | flag
+            · rw [suspendBodyAt_branch_bad hf h (boolOf_none hbo)]; rfl
+            · have ht := boolOf_some hbo
+              cases flag
+              · rw [suspendBodyAt_branch_false hf h ht]; exact plainCode_resolve hroot _
+              · rw [suspendBodyAt_branch_true hf h ht]; exact plainCode_resolve hroot _
       | stmts _ => rw [suspendBodyAt_other hf h (fun _ h => by cases h)]; rfl
       | stmt _ => rw [suspendBodyAt_other hf h (fun _ h => by cases h)]; rfl
       | action _ => rw [suspendBodyAt_other hf h (fun _ h => by cases h)]; rfl

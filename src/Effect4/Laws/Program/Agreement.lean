@@ -1302,18 +1302,14 @@ theorem suspendBodyAt_suspend {root : NativeEff} {q : Point} {k : Nat} {b : Nati
     suspendBodyAt root (EffThunk.body q) = resolve root (q.child 0) := by
   simp only [suspendBodyAt, hf, h]
 
+/-- The law of the complement of `Eff.suspendDecided`: outside the heads the suspension
+decides itself, the thunk body is the node compiled at its point. -/
 theorem suspendBodyAt_of_at {root : NativeEff} {q : Point} {k : Nat} {e : NativeEff}
     (hf : q.fuel = k + 1) (h : Node.at_ (Node.eff root) q.path = some (Node.eff e))
-    (hnb : ∀ t a b, e ≠ .branch t a b) (hng : ∀ ss, e ≠ .gen ss)
-    (hnw : ∀ i t s b, e ≠ .whileLoop i t s b) (hns : ∀ b, e ≠ .suspend b)
-    (hnl : ∀ l i b, e ≠ .provideLayer l i b) :
+    (hnd : e.suspendDecided = false) :
     suspendBodyAt root (EffThunk.body q) = compileEff e q := by
   cases e <;> first
-    | exact absurd rfl (hnb _ _ _)
-    | exact absurd rfl (hng _)
-    | exact absurd rfl (hnw _ _ _ _)
-    | exact absurd rfl (hns _)
-    | exact absurd rfl (hnl _ _ _)
+    | (simp [Eff.suspendDecided] at hnd; done)
     | simp [suspendBodyAt, hf, h]
 
 /-- `Effect.provide`'s suspension answers the scope allocation (the join). -/
@@ -1465,24 +1461,7 @@ theorem step_ofExit_exitFrame (root : NativeEff) (ex : ExitV) (body : NCode) (K 
       .running (fiberOf (Prim.success (reifyExitVal ex)) K i) s := by
   cases ex <;> cases i <;> rfl
 
-/-! ## Two classifiers, so the case splits stay decidable -/
-
-/-- Whether a program is a `branch`: the one plain constructor `suspend` compiles through
-without a thunk of its own (`Compile.lean:604-611`). -/
-def isBranch : NativeEff → Bool
-  | .branch _ _ _ => true
-  | _ => false
-
-theorem not_branch_of_isBranch_false {e : NativeEff} (h : isBranch e = false) :
-    ∀ t a b, e ≠ .branch t a b := by
-  intro t a b heq
-  subst heq
-  simp [isBranch] at h
-
-theorem eq_branch_of_isBranch {e : NativeEff} (h : isBranch e = true) :
-    ∃ t a b, e = .branch t a b := by
-  cases e <;> simp [isBranch] at h
-  exact ⟨_, _, _, rfl⟩
+/-! ## The test's boolean, so the branch case splits stay decidable -/
 
 /-- The boolean a test evaluated to, if it evaluated to one. -/
 def boolOf : Option Val → Option Bool

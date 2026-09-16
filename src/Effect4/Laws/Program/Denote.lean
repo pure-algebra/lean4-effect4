@@ -168,22 +168,15 @@ theorem Straight.perform_sync {op : NativeOp} {r : Term} (h : Straight (.perform
   revert h
   cases (NativeOp.row op).kind <;> simp
 
-theorem Straight.not_gen {e : NativeEff} (h : Straight e = true) : ∀ ss, e ≠ .gen ss := by
-  intro ss heq
-  subst heq
-  simp [Straight] at h
-
-theorem Straight.not_whileLoop {e : NativeEff} (h : Straight e = true) :
-    ∀ i t s b, e ≠ .whileLoop i t s b := by
-  intro i t s b heq
-  subst heq
-  simp [Straight] at h
-
-theorem Straight.not_provideLayer {e : NativeEff} (h : Straight e = true) :
-    ∀ l i b, e ≠ .provideLayer l i b := by
-  intro l i b heq
-  subst heq
-  simp [Straight] at h
+/-- Where the straight fragment meets the heads whose suspension body the compile decides
+itself (`Eff.suspendDecided`, `Program/Compile.lean`): at a source suspension and at a
+branch, nowhere else. The other decided heads (`gen`, `whileLoop`, `provideLayer`) are
+outside the fragment. `plainCode_suspendBodyAt` (`Agreement/Machine.lean`) splits on the
+classifier and this lemma names the two straight cases; the `select` slice changes the
+right-hand side and nothing else. -/
+theorem Straight.suspendDecided_iff {e : NativeEff} (hs : Straight e = true) :
+    e.suspendDecided = true ↔ (∃ b, e = .suspend b) ∨ (∃ t a b, e = .branch t a b) := by
+  cases e <;> simp [Eff.suspendDecided, Straight] at hs ⊢
 
 /-! ## The equations of the meaning -/
 

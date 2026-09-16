@@ -186,7 +186,8 @@ Lane 2, `Effect4.Machine`:
 Lane 3, `Effect4.Program.Denote`:
 
 18. `StoreSig := ⟨SyncOp, fun _ => Val⟩`.
-19. `Straight`, closed under subprograms (`Straight.bind` and the six other closure lemmas).
+19. `Straight`, closed under subprograms (`Straight.bind` and the six other closure lemmas); `Straight.suspendDecided_iff`, where the fragment meets
+    the compile's decided heads (B6).
 20. `denote`, one arm per fragment constructor, each docstring naming the `compileEff` arm
     and hook it mirrors; `sync` answers `getD Val.unit`, `succeed` answers `badShapeExit`
     (`E4-DEN-CE-001`).
@@ -215,8 +216,8 @@ The agreement, `Effect4.Program.Agreement` (two modules, landed with the lanes):
     exit has that exit as its meaning at unchanged stores, which is what the fold case of
     `localRun_compile` reaches. The same correction (`E4-CHECK-CE-002`, `-003`) compiles
     `gen` and `whileLoop` to a `Suspend` at their point, answered by `suspendBodyAt`;
-    neither is plain, so `suspendBodyAt_of_at` excludes them
-    (`Straight.not_gen`, `Straight.not_whileLoop`). The authorized `E4-CHECK-CE-008`
+    neither is straight; both are `Eff.suspendDecided`, and
+    `suspendBodyAt_of_at` is the law of that Boolean's complement (B6). The authorized `E4-CHECK-CE-008`
     correction makes a source `suspend` name its own point. Its thunk returns
     `resolve root (p.child 0)` by `suspendBodyAt_suspend`, retaining any suspension
     in the child. `suspendBodyAt_of_at` excludes source `suspend` too; the

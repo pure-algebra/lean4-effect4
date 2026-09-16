@@ -1241,6 +1241,16 @@ def syncValueAt (root : NativeEff) : EffThunk → Val
     | _ => Val.unit
   | _ => Val.unit
 
+/-- The heads whose suspension body `suspendBodyAt` decides itself instead of compiling the
+node at its point: a source `suspend`, the value-decided `branch`, the two iterators `gen` and
+`whileLoop`, and `provideLayer`'s scope allocation. The match below is the definition; this
+Boolean names the set it decides, and `Agreement.suspendBodyAt_of_at` is the law of the
+complement (every other head's body is `compileEff` at the point), which stops building the
+moment the match gains an arm this list lacks. -/
+def Eff.suspendDecided {Op : Type} : Eff Op → Bool
+  | .suspend _ | .branch _ _ _ | .gen _ | .whileLoop _ _ _ _ | .provideLayer _ _ _ => true
+  | _ => false
+
 /-- What a `suspend` thunk returns: a body compiled at its point, a branch decided by its
 point's environment, the iterator of a generator (`Effect.gen`'s `fromIteratorUnsafe`,
 `internal/effect.ts:1175-1196`), or the loop frame of a `whileLoop` with its initial cursor
