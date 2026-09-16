@@ -306,20 +306,45 @@ def termDrive (e : NativeEff) (cmdFuel : Nat) (b : Nat := 2048) :=
   letI := termEvaluatorFor e
   driveState (interpR e) cmdFuel (termLoad e 40 b) startCmdsR
 
-def frameCount (e : NativeEff) : List Nat := (frameDrive e 400).1.fibers.map (·.currentOpCount)
-def termCount (e : NativeEff) : List Nat := (termDrive e 400).1.fibers.map (·.currentOpCount)
-
 def cap : Nat := 400
-def frameCmds (e : NativeEff) : Option Nat := go cap 0
-where
-  go : Nat → Nat → Option Nat
-    | 0, _ => none
-    | k + 1, i => if settled (frameDrive e i) then some i else go k (i + 1)
-def termCmds (e : NativeEff) : Option Nat := go cap 0
-where
-  go : Nat → Nat → Option Nat
-    | 0, _ => none
-    | k + 1, i => if settled (termDrive e i) then some i else go k (i + 1)
+
+/-- One drive of the start, counting commands: the least budget that settles it (the
+command count when the queue first empties or the machine first sticks, `settled`), and
+the machine there, whose fibers carry the counted operations. One pass replaces the
+`0 .. cap` search of settling budgets that re-drove the machine at every budget. -/
+def frameStats (e : NativeEff) : Option Nat × List Nat :=
+  letI := evaluatorFor e
+  let interp := interpOf e
+  let rec go : Nat → Api.Machine → List (Cmd EffName EffThunk Val Err Defect FiberId Ann NCode) →
+      Nat → Option Nat × Api.Machine
+    | 0, m, _, _ => (none, m)
+    | _ + 1, m, [], i => (some i, m)
+    | k + 1, m, cmd :: rest, i =>
+      if m.stuck.isSome then (some i, m)
+      else
+        let next := driveStep interp m cmd rest
+        go k next.1 next.2 (i + 1)
+  let (n, m) := go cap (frameLoad e 40 2048) startCmds 0
+  (n, m.fibers.map (·.currentOpCount))
+
+def termStats (e : NativeEff) : Option Nat × List Nat :=
+  letI := termEvaluatorFor e
+  let interp := interpR e
+  let rec go : Nat → RState → List RCmd → Nat → Option Nat × RState
+    | 0, m, _, _ => (none, m)
+    | _ + 1, m, [], i => (some i, m)
+    | k + 1, m, cmd :: rest, i =>
+      if m.stuck.isSome then (some i, m)
+      else
+        let next := driveStep interp m cmd rest
+        go k next.1 next.2 (i + 1)
+  let (n, m) := go cap (termLoad e 40 2048) startCmdsR 0
+  (n, m.fibers.map (·.currentOpCount))
+
+def frameCount (e : NativeEff) : List Nat := (frameStats e).2
+def termCount (e : NativeEff) : List Nat := (termStats e).2
+def frameCmds (e : NativeEff) : Option Nat := (frameStats e).1
+def termCmds (e : NativeEff) : Option Nat := (termStats e).1
 
 def frameRun (e : NativeEff) (t : List Api.Decision) (b : Nat := 2048) :=
   letI := evaluatorFor e
@@ -333,9 +358,12 @@ def frameObs (e : NativeEff) (t : List Api.Decision := [Api.evaluate, Api.flush]
 def termObs (e : NativeEff) (t : List Api.Decision := [Api.evaluate, Api.flush]) : Obs :=
   obs (termRun e t).machine
 
-/-- Observation, counted operations and the least settling command budget agree. -/
+/-- Observation, counted operations and the least settling command budget agree: two
+replays and two counting drives per program. -/
 def lockstep (e : NativeEff) : Bool :=
-  termObs e = frameObs e && termCount e = frameCount e && termCmds e = frameCmds e
+  let fs := frameStats e
+  let ts := termStats e
+  termObs e = frameObs e && ts.2 = fs.2 && ts.1 = fs.1
 
 -- E4-CHECK-CE-005: source construction can fold a completed join. A join
 -- constructed while live keeps its Async form through a later mask/fork entry.
@@ -744,13 +772,16 @@ def chain : Nat → NativeEff
 def chainRun (n fuel cmdFuel : Nat) (t : List Api.Decision) :=
   (obs (replayEval (interpOf (chain n)) cmdFuel t (Api.load (chain n) fuel)).machine,
    obs (replayEval (interpR (chain n)) cmdFuel t (loadR (chain n) fuel)).machine)
-#guard (chainRun 1100 1200 8000 [Api.evaluate]).1 = (chainRun 1100 1200 8000 [Api.evaluate]).2
-#guard (chainRun 1100 1200 8000 [Api.evaluate]).2.exits = [(Api.root, none)]
--- Counts one to 2047 run before the injected yield; the allocations sit at the even counts.
-#guard (chainRun 1100 1200 8000 [Api.evaluate]).2.stores.refs.length = 1023
-#guard (chainRun 1100 1200 8000 [Api.evaluate, Api.flush]).1 =
-  (chainRun 1100 1200 8000 [Api.evaluate, Api.flush]).2
-#guard (chainRun 1100 1200 8000 [Api.evaluate, Api.flush]).2.stores.refs.length = 1100
+-- Each scenario is run once and its three facts read off that one run. Counts one to 2047
+-- run before the injected yield; the allocations sit at the even counts.
+def chainEvaluate : Bool :=
+  let r := chainRun 1100 1200 8000 [Api.evaluate]
+  r.1 = r.2 && r.2.exits = [(Api.root, none)] && r.2.stores.refs.length = 1023
+def chainFlush : Bool :=
+  let r := chainRun 1100 1200 8000 [Api.evaluate, Api.flush]
+  r.1 = r.2 && r.2.stores.refs.length = 1100
+#guard chainEvaluate
+#guard chainFlush
 
 -- Scanner exhaustion and the compile frontier stay unanswered on the term.
 #guard rootExit (replayEval (interpR genInline) 400 [Api.evaluate] (termLoad genInline 1)) = none
