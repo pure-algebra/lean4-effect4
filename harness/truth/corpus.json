@@ -1160,7 +1160,11 @@
    "decl":
    "export const main: Effect.Effect<number, never> = Effect.flatMap(Ref.make(1), (a0) => Effect.catchCause(Effect.catchIf(Effect.flatMap(Ref.set(a0, 9), (a1) => Effect.fail(7)), (a1) => false, (a1) => Ref.get(a0), undefined), (a1) => Ref.get(a0)))\n"},
   {"wellTyped": true,
-   "type": {"requiresEmpty": true, "requires": [], "error": "string", "answer": "number"},
+   "type":
+   {"requiresEmpty": true,
+    "requires": [],
+    "error": "string | readonly [\"A\", \"m\"]",
+    "answer": "number"},
    "straight": false,
    "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 1}},
    "run":
@@ -1180,7 +1184,7 @@
    "declInferred":
    "export const main = Effect.catchIf(Effect.flatMap(Effect.suspend(() => true ? Effect.succeed(0) : Effect.fail(\"text\")), (a0) => Effect.fail(pair(\"A\", \"m\"))), (a0) => tagIs(\"A\", a0), (a0) => Effect.succeed(1), undefined)\n",
    "decl":
-   "export const main: Effect.Effect<number, string> = Effect.catchIf(Effect.flatMap(Effect.suspend(() => true ? Effect.succeed(0) : Effect.fail(\"text\")), (a0) => Effect.fail(pair(\"A\", \"m\"))), (a0) => tagIs(\"A\", a0), (a0) => Effect.succeed(1), undefined)\n"},
+   "export const main: Effect.Effect<number, string | readonly [\"A\", \"m\"]> = Effect.catchIf(Effect.flatMap(Effect.suspend(() => true ? Effect.succeed(0) : Effect.fail(\"text\")), (a0) => Effect.fail(pair(\"A\", \"m\"))), (a0) => tagIs(\"A\", a0), (a0) => Effect.succeed(1), undefined)\n"},
   {"wellTyped": true,
    "type":
    {"requiresEmpty": true,
@@ -1214,7 +1218,10 @@
    "export const main: Effect.Effect<number, string | readonly [\"A\", \"m\"]> = Effect.catchIf(Effect.flatMap(Effect.suspend(() => true ? Effect.succeed(0) : Effect.fail(\"text\")), (a0) => Effect.fail(pair(\"A\", \"m\"))), (a0) => tagIs(\"B\", a0), (a0) => Effect.succeed(1), undefined)\n"},
   {"wellTyped": true,
    "type":
-   {"requiresEmpty": true, "requires": [], "error": "readonly [\"B\", \"x\"]", "answer": "number"},
+   {"requiresEmpty": true,
+    "requires": [],
+    "error": "readonly [\"A\", \"m\"] | readonly [\"B\", \"x\"]",
+    "answer": "number"},
    "straight": false,
    "runSync":
    {"sync": true,
@@ -1243,7 +1250,7 @@
    "declInferred":
    "export const main = Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(pair(\"B\", \"x\")), Cause.fail(pair(\"A\", \"m\")))), (a0) => tagIs(\"A\", a0), (a0) => Effect.succeed(1), undefined)\n",
    "decl":
-   "export const main: Effect.Effect<number, readonly [\"B\", \"x\"]> = Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(pair(\"B\", \"x\")), Cause.fail(pair(\"A\", \"m\")))), (a0) => tagIs(\"A\", a0), (a0) => Effect.succeed(1), undefined)\n"}],
+   "export const main: Effect.Effect<number, readonly [\"A\", \"m\"] | readonly [\"B\", \"x\"]> = Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(pair(\"B\", \"x\")), Cause.fail(pair(\"A\", \"m\")))), (a0) => tagIs(\"A\", a0), (a0) => Effect.succeed(1), undefined)\n"}],
  "hostRows":
  [{"typeArgs": [],
    "trailing": [],

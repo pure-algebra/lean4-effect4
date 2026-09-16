@@ -5,10 +5,9 @@ import Effect4.Laws.Program.TypeAlgebra
 /-!
 # Laws.Program.Residual — the tag residual and the single-failure law (part 4, 2026-09-12)
 
-Rows DI-39 (the tag test is the native atom `tagIs`; a `catchIf` whose test is that atom
-types its error column as the residual `Ty.diffTag tag` joined with the handler's error) and
-DI-17 (the residual is a fidelity claim to rc.112's printed type; its adequacy statement
-carries the single-`Fail` premise). What is proved:
+DI-17 constrains every failure in a cause. The checker removes a tag column only when
+the residual is empty; mixed columns remain joined unless a separate execution bound is
+established. Selection still uses the first failure (DI-09). What is proved:
 
 * `Ty.diffTag_sub` — the residual is below the column it was cut from, on every type;
 * `Ty.diffTag_sound` — a value of the column on which the tag test is false is a value of
@@ -161,8 +160,8 @@ theorem Ty.diffTag_sound (tag : String) (e : Ty) (v : Val) (allocated : List Str
 def failCount (c : CauseV) : Nat :=
   (c.reasons.filter fun r => (Reason.error? r).isSome).length
 
-/-- Exactly one `Fail` reason (DI-17's premise for the tag residual): every cause the
-straight-line fragment produces satisfies it, and it is checkable on a tape. -/
+/-- Exactly one `Fail` reason. This is a property of a cause, not a guarantee of the
+Straight fragment: combined causes and failing finalizers can contain multiple failures. -/
 def SingleFail (c : CauseV) : Prop := failCount c = 1
 
 instance (c : CauseV) : Decidable (SingleFail c) := by unfold SingleFail; infer_instance
@@ -200,12 +199,12 @@ theorem evalTerm_tagTest (env : List Val) (tag : String) (w : Val) :
   simp only [tagTest, evalTerm, evalTerms, Lit.toVal, List.getElem?_concat_length, nativeAtom]
   rfl
 
-/-- `catchIf_miss_admits` (DI-17, the tag residual's adequacy under the single-`Fail`
-premise): a cause with exactly one `Fail`, admitted at the body's column `e`, on which the
+/-- With at most one failure, a missed cause retains membership in the tag residual.
+A cause admitted at the body's column `e`, on which the
 tag test misses on the compile route (`caughtErrorValue?` answers `none`, so the whole cause
 is re-raised), is admitted at the residual. -/
-theorem catchIf_miss_admits (env : List Val) (tag : String) (e : Ty) (allocated : List String)
-    (cause : CauseV) (hsingle : SingleFail cause)
+theorem catchIf_miss_admits_of_le_one (env : List Val) (tag : String) (e : Ty) (allocated : List String)
+    (cause : CauseV) (hcount : failCount cause ≤ 1)
     (hadmits : causeAdmits (fun w _ => Val.hasTy w e allocated) e cause = true)
     (hmiss : caughtErrorValue? env (tagTest tag env.length) cause = none) :
     causeAdmits (fun w _ => Val.hasTy w (Ty.diffTag tag e) allocated) (Ty.diffTag tag e) cause
@@ -225,7 +224,7 @@ theorem catchIf_miss_admits (env : List Val) (tag : String) (e : Ty) (allocated 
       rw [hval] at hradmit
       -- the miss: the first (and only) `Fail` is this one, and the test is false on `w`
       have hfirst : firstFailure? cause = some err :=
-        findSome?_error?_of_le_one cause.reasons (by unfold SingleFail failCount at hsingle; omega)
+        findSome?_error?_of_le_one cause.reasons hcount
           (.fail err ann) hr err rfl
       have hvalue : firstErrorValue? cause = some w := by
         simp only [firstErrorValue?, hfirst, Option.bind_some, hval]
@@ -238,5 +237,134 @@ theorem catchIf_miss_admits (env : List Val) (tag : String) (e : Ty) (allocated 
           simp at hmiss
       exact Ty.diffTag_sound tag e w allocated hradmit
         (by rw [NativeAtom.eval_tagIs, hfalse])
+
+/-- Recognition never confuses a test on another value with the caught-error binder. -/
+theorem tagTest?_sound (test : Term) (caught : Nat) (tag : String)
+    (h : tagTest? test caught = some tag) : test = tagTest tag caught := by
+  unfold tagTest? at h
+  split at h
+  · rename_i atom actual index
+    split at h
+    · rename_i hshape
+      rcases hshape with ⟨rfl, rfl⟩
+      cases Option.some.inj h
+      rfl
+    · cases h
+  · cases h
+
+/-- The historical exactly-one statement is a corollary of the at-most-one law. -/
+theorem catchIf_miss_admits (env : List Val) (tag : String) (e : Ty) (allocated : List String)
+    (cause : CauseV) (hsingle : SingleFail cause)
+    (hadmits : causeAdmits (fun w _ => Val.hasTy w e allocated) e cause = true)
+    (hmiss : caughtErrorValue? env (tagTest tag env.length) cause = none) :
+    causeAdmits (fun w _ => Val.hasTy w (Ty.diffTag tag e) allocated) (Ty.diffTag tag e) cause
+      = true :=
+  catchIf_miss_admits_of_le_one env tag e allocated cause
+    (by unfold SingleFail at hsingle; omega) hadmits hmiss
+
+/-- A represented cause with no selected failure has no typed failures at all.
+Defects and interruptions remain admissible at any error type. -/
+theorem causeAdmits_of_firstErrorValue_none (cause : CauseV) (e target : Ty)
+    (allocated : List String)
+    (hadmits : causeAdmits (fun w _ => Val.hasTy w e allocated) e cause = true)
+    (hnone : firstErrorValue? cause = none) :
+    causeAdmits (fun w _ => Val.hasTy w target allocated) target cause = true := by
+  cases hfirst : firstFailure? cause with
+  | none =>
+    apply List.all_eq_true.mpr
+    intro reason hmem
+    have hno := List.findSome?_eq_none_iff.mp hfirst reason hmem
+    cases reason with
+    | fail _ _ => cases hno
+    | die _ _ => rfl
+    | interrupt _ _ => rfl
+  | some error =>
+    obtain ⟨reason, hmem, hreason⟩ := List.exists_of_findSome?_eq_some hfirst
+    have hfit := List.all_eq_true.mp hadmits reason hmem
+    cases reason with
+    | die _ _ => cases hreason
+    | interrupt _ _ => cases hreason
+    | fail actual annotations =>
+      have heq : actual = error := Option.some.inj hreason
+      subst actual
+      cases hval : valOfErr error with
+      | none => simp only [reasonAdmits, hval] at hfit; cases hfit
+      | some value =>
+        simp only [firstErrorValue?, hfirst, Option.bind_some, hval] at hnone
+        cases hnone
+
+/-- Removing an entire tagged error column is valid for any number of failures.
+If the test misses, the original cause contains only defects/interruptions. -/
+theorem catchIf_miss_allCaught (env : List Val) (tag : String) (e : Ty)
+    (allocated : List String) (cause : CauseV) (hall : Ty.diffTag tag e = .never)
+    (hadmits : causeAdmits (fun w _ => Val.hasTy w e allocated) e cause = true)
+    (hmiss : caughtErrorValue? env (tagTest tag env.length) cause = none) :
+    causeAdmits (fun w _ => Val.hasTy w .never allocated) .never cause = true := by
+  cases hvalue : firstErrorValue? cause with
+  | none => exact causeAdmits_of_firstErrorValue_none cause e .never allocated hadmits hvalue
+  | some value =>
+    have hv := firstErrorValue?_typed cause e allocated value hadmits hvalue
+    simp only [caughtErrorValue?, hvalue, Option.bind_eq_bind, Option.bind_some,
+      evalTerm_tagTest] at hmiss
+    have hfalse : NativeAtom.tagHit tag value = false := by
+      cases h : NativeAtom.tagHit tag value
+      · rfl
+      · rw [h] at hmiss
+        simp at hmiss
+    have hbad := Ty.diffTag_sound tag e value allocated hv
+      (by rw [NativeAtom.eval_tagIs, hfalse])
+    rw [hall] at hbad
+    cases hbad
+
+/-- Every failure retained by a missed conditional handler fits the checker's actual
+error bound. No restriction on cause multiplicity or predicate shape is assumed. -/
+theorem catchIf_miss_error_admits (env : List Val) (test : Term) (bodyError handlerError : Ty)
+    (allocated : List String) (cause : CauseV)
+    (hadmits : causeAdmits (fun w _ => Val.hasTy w bodyError allocated) bodyError cause = true)
+    (hmiss : caughtErrorValue? env test cause = none) :
+    causeAdmits (fun w _ => Val.hasTy w
+      (catchIfError test env.length bodyError handlerError) allocated)
+      (catchIfError test env.length bodyError handlerError) cause = true := by
+  unfold catchIfError
+  split
+  · rename_i htrue
+    apply causeAdmits_of_firstErrorValue_none cause bodyError handlerError allocated hadmits
+    cases hvalue : firstErrorValue? cause with
+    | none => rfl
+    | some value =>
+      simp [caughtErrorValue?, hvalue, htrue, evalTerm, Lit.toVal] at hmiss
+  · split
+    · rename_i tag htag
+      split
+      · rename_i hall
+        have hn : causeAdmits (fun w _ => Val.hasTy w bodyError.normalize allocated)
+            bodyError.normalize cause = true :=
+          causeAdmits_mono_sub (fun w hw => (hasTy_normalize bodyError w allocated).trans hw)
+            cause hadmits
+        have htest := tagTest?_sound test env.length tag htag
+        have hnever := catchIf_miss_allCaught env tag bodyError.normalize allocated cause hall hn
+          (htest ▸ hmiss)
+        exact causeAdmits_mono_sub (fun _ hw => by cases hw) cause hnever
+      · exact causeAdmits_mono_sub
+          (fun w hw => Ty.hasTy_join_left bodyError handlerError w allocated hw) cause hadmits
+    · exact causeAdmits_mono_sub
+        (fun w hw => Ty.hasTy_join_left bodyError handlerError w allocated hw) cause hadmits
+
+/-- A handler's failures also fit the same bound, whichever branch-selection rule is used. -/
+theorem catchIf_handler_error_admits (test : Term) (caught : Nat) (bodyError handlerError : Ty)
+    (allocated : List String) (cause : CauseV)
+    (hadmits : causeAdmits (fun w _ => Val.hasTy w handlerError allocated) handlerError cause = true) :
+    causeAdmits (fun w _ => Val.hasTy w (catchIfError test caught bodyError handlerError) allocated)
+      (catchIfError test caught bodyError handlerError) cause = true := by
+  unfold catchIfError
+  split
+  · exact hadmits
+  · split
+    · split
+      · exact hadmits
+      · exact causeAdmits_mono_sub
+          (fun w hw => Ty.hasTy_join_right bodyError handlerError w allocated hw) cause hadmits
+    · exact causeAdmits_mono_sub
+        (fun w hw => Ty.hasTy_join_right bodyError handlerError w allocated hw) cause hadmits
 
 end Effect4.Program

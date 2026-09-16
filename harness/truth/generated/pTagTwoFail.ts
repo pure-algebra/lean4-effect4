@@ -2,4 +2,4 @@
 // Regenerate: make gen-truth
 import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope } from "effect"
 import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, incr, double, takeAndBump, zeroWhenPositive, noChange, Host, Sql, Kv } from "../prelude.ts"
-export const main: Effect.Effect<number, readonly ["B", "x"]> = Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(pair("B", "x")), Cause.fail(pair("A", "m")))), (a0) => tagIs("A", a0), (a0) => Effect.succeed(1), undefined)
+export const main: Effect.Effect<number, readonly ["A", "m"] | readonly ["B", "x"]> = Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(pair("B", "x")), Cause.fail(pair("A", "m")))), (a0) => tagIs("A", a0), (a0) => Effect.succeed(1), undefined)

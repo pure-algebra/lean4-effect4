@@ -75,14 +75,10 @@ def retained (test : Term) : NativeEff :=
 
 /-! ## The tag residual (DI-39, DI-17; part 4 commit 3, 2026-09-12)
 
-A `catchIf` whose test is `tagIs("A", a0)` on the caught error types its error column as the
-residual `Ty.diffTag "A"` of the body's canonical column joined with the handler's; every
-other test keeps the join. The three shapes are the truth fixtures' (`harness/truth/Truth.lean`
-`pTagHit`, `pTagMiss`, `pTagTwoFail`): a hit on a union column, a miss with another tag (the
-whole cause re-raised), and a two-`Fail` cause that misses on its first `Fail` and re-raises
-whole — the retained cause still carries the caught tag, so it is **not** admitted at the
-residual: `E4-RESID-CE-001`, the witness of the `SingleFail` premise of
-`catchIf_miss_admits` (`Laws/Program/Residual.lean`). -/
+Every retained failure must fit the inferred column. Mixed columns remain joined unless
+an execution premise establishes a stronger bound; an empty residual can be removed even
+with multiple failures. The historical two-failure miss still refutes unconditional
+subtraction, while the repaired checker admits the whole retained cause. -/
 
 def tagged (t m : String) : Term :=
   .app "pair" (.cons (.lit (.str t)) (.cons (.lit (.str m)) .nil))
@@ -101,11 +97,13 @@ def twoFailValue : CauseV := ⟨[.fail (.tagged "B" "x") .empty, .fail (.tagged 
 #guard tagTest? (tagTest "A" 0) 1 = none
 #guard tagTest? eqSeven 0 = none
 #guard tagTest? yes 0 = none
--- the residual: the tag's members leave the column; the rest stays
-#guard typeOf nativeSignature tagHit = some ⟨.nat, .string, .empty⟩
+-- Mixed columns retain every possible failure, including a later caught tag.
+#guard typeOf nativeSignature tagHit =
+  some ⟨.nat, .union .string (.prod (.lit "A") (.lit "m")), .empty⟩
 #guard typeOf nativeSignature tagMiss =
   some ⟨.nat, .union .string (.prod (.lit "A") (.lit "m")), .empty⟩
-#guard typeOf nativeSignature twoFailTag = some ⟨.nat, .prod (.lit "B") (.lit "x"), .empty⟩
+#guard typeOf nativeSignature twoFailTag =
+  some ⟨.nat, .union (.prod (.lit "A") (.lit "m")) (.prod (.lit "B") (.lit "x")), .empty⟩
 -- a predicate that is not the tag test keeps the join (DI-09)
 #guard typeOf nativeSignature (.catchIf (.app "eq" (.cons (.var 0) (.cons (.lit (.str "A")) .nil)))
   (.fail (.lit (.str "A"))) (.succeed (n 1))) = some ⟨.nat, .string, .empty⟩
@@ -127,5 +125,43 @@ def twoFailValue : CauseV := ⟨[.fail (.tagged "B" "x") .empty, .fail (.tagged 
 #print axioms Effect4.Program.Ty.diffTag_sound
 #print axioms Effect4.Program.tagTest?_weaken
 #print axioms Effect4.Program.catchIfError_weaken
+
+
+-- Catching an entire tagged column does not require a single failure.
+def allCaught : NativeEff := .catchIf (tagTest "A" 0)
+  (.failCause (.both (.fail (tagged "A" "one")) (.fail (tagged "A" "two"))))
+  (.succeed (n 7))
+def tagHandlerFails : NativeEff := .catchIf (tagTest "A" 0)
+  (.failCause (.both (.fail (tagged "A" "one")) (.fail (tagged "A" "two"))))
+  (.fail (tagged "B" "handler"))
+#guard typeOf nativeSignature allCaught = some ⟨.nat, .never, .empty⟩
+#guard (Api.run allCaught 300).exit = some (.success (.nat 7))
+#guard typeOf nativeSignature tagHandlerFails =
+  some ⟨.never, .prod (.lit "B") (.lit "handler"), .empty⟩
+#guard (Api.run tagHandlerFails 300).exit = some (.failure (.fail (.tagged "B" "handler")))
+#guard match typeOf nativeSignature twoFailTag with
+  | some t => causeAdmits (fun w _ => Val.hasTy w t.error) t.error twoFailValue
+  | none => false
+-- A hit replaces the whole combined cause, even when a later error has another tag.
+def twoFailHit : NativeEff := .catchIf (tagTest "A" 0)
+  (.failCause (.both (.fail (tagged "A" "m")) (.fail (tagged "B" "x"))))
+  (.succeed (n 7))
+#guard typeOf nativeSignature twoFailHit =
+  some ⟨.nat, .union (.prod (.lit "A") (.lit "m")) (.prod (.lit "B") (.lit "x")), .empty⟩
+#guard (Api.run twoFailHit 300).exit = some (.success (.nat 7))
+-- No typed failure: recognized tag tests retain defects and interruptions at E = never.
+def tagDefect : NativeEff := .catchIf (tagTest "A" 0)
+  (.failCause (.die (n 3))) (.succeed (n 7))
+def tagInterrupt : NativeEff := .catchIf (tagTest "A" 0)
+  (.failCause (.interrupt none)) (.succeed (n 7))
+#guard typeOf nativeSignature tagDefect = some ⟨.nat, .never, .empty⟩
+#guard typeOf nativeSignature tagInterrupt = some ⟨.nat, .never, .empty⟩
+#guard (Api.run tagDefect 300).exit = some (.failure (.die (.user 3)))
+#guard (Api.run tagInterrupt 300).exit = some (.failure (.interrupt none))
+
+#print axioms Effect4.Program.catchIf_miss_admits_of_le_one
+#print axioms Effect4.Program.catchIf_miss_allCaught
+#print axioms Effect4.Program.catchIf_miss_error_admits
+#print axioms Effect4.Program.catchIf_handler_error_admits
 
 end Test.Program.CatchIfContract

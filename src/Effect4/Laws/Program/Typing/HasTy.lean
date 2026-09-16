@@ -124,13 +124,9 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
       EffTy.joinAnswer b.answer h.answer = some answer →
       HasTy sig env (.catchCause body handler)
         ⟨answer, h.error, b.requires.union h.requires⟩
-  /-- DI-09: first-failure value binder. The error column is `catchIfError` (DI-39): the
-  handler's alone under the literal `true` test, the tag residual `Ty.diffTag` of the body's
-  canonical column joined with the handler's under the tag test `tagIs("A", aN)` on the caught
-  error (`.var env.length`), and the join of both columns under every other predicate —
-  predicates do not assert a refinement, and the residual is a fidelity claim to rc.112's
-  printed type whose preservation law carries the single-`Fail` premise (DI-17,
-  `Laws/Program/Residual.lean`). The two answers join as the least upper bound (S4c). -/
+  /-- DI-09's first-failure binder with DI-17's all-reason bound. `catchIfError`
+  removes the body's errors only for literal true or an empty tag residual. Mixed columns
+  remain joined, since a miss re-raises every reason. The answer is the joined bound. -/
   | catchIf {env : TyEnv} {test : Term} {body handler : Eff Op} {b h : EffTy} {answer : Ty} :
       HasTy sig env body b →
       termTy sig (env ++ [b.error]) test = some .bool →

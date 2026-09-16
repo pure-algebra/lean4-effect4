@@ -189,14 +189,13 @@ def fiberTy : Ty → Option (Ty × Ty)
 
 /-! ## The tag residual of `catchIf` (DI-39, DI-17; part 4 commit 3, 2026-09-12)
 
-rc.112's `catchTag` removes the caught tag from `E`. Here the tag test is the native atom
-`tagIs` applied to a string literal and the caught error variable, printed as
-`Effect.catchIf(body, (aN) => tagIs("A", aN), handler)`; when a `catchIf`'s test has exactly
-that shape its error column is the residual `Ty.diffTag tag` of the body's canonical column,
-joined with the handler's. Every other test keeps the join of both columns, and the literal
-`true` test (`Effect.catch`) keeps the handler's alone. The residual is a fidelity claim to the
-printed type; its preservation law carries the single-`Fail` premise
-(`Laws/Program/Residual.lean`, `catchIf_miss_admits`). -/
+The first failure determines the branch, but every failure in a retained cause must fit E.
+An unconditional tag subtraction is therefore invalid for a mixed error column. A canonical
+tag test can remove the body's column when its residual is empty: every typed failure then
+matches, even when the cause contains several of them. Otherwise keep both error columns.
+Literal `true` also keeps the handler's alone. The general miss/handler membership laws are
+in `Laws/Program/Residual.lean`. Its single-failure residual theorem remains available for
+future precision whose execution premise has actually been established. -/
 
 /-- The tag test `tagIs("A", aN)` on the caught error variable `caught`. -/
 def tagTest (tag : String) (caught : Nat) : Term :=
@@ -214,13 +213,14 @@ theorem tagTest?_tagTest (tag : String) (caught : Nat) :
     tagTest? (tagTest tag caught) caught = some tag := by
   simp [tagTest?, tagTest]
 
-/-- The error column of `catchIf test body handler` (DI-09, DI-39): the handler's alone under
-the literal `true` test; the tag residual of the body's canonical column joined with the
-handler's under the tag test on the caught error; the join of both columns otherwise. -/
+/-- DI-17: all failures fit the error column, including later failures in a retained cause.
+Remove the body's column only for literal true or a tag test whose residual is empty.
+Neither rule assumes a bound on the number of failures. -/
 def catchIfError (test : Term) (caught : Nat) (bodyError handlerError : Ty) : Ty :=
   if test = .lit (.bool true) then handlerError
   else match tagTest? test caught with
-    | some tag => (Ty.diffTag tag bodyError.normalize).join handlerError
+    | some tag => if Ty.diffTag tag bodyError.normalize = .never then handlerError
+        else bodyError.join handlerError
     | none => bodyError.join handlerError
 
 /-! ## The layer signature (the join, 2026-09-07; before it `Program/Provision.lean`)
@@ -316,9 +316,8 @@ mutual
       let h ← effTy sig (env ++ [.causeOf b.error]) handler
       let answer ← EffTy.joinAnswer b.answer h.answer
       some ⟨answer, h.error, b.requires.union h.requires⟩
-    -- the error column is `catchIfError` (DI-09, DI-39): the handler's under `true`, the tag
-    -- residual under `tagIs("A", aN)` on the caught error (`.var env.length`), the join
-    -- otherwise
+    -- `catchIfError` keeps every retained failure; only a proved all-caught column leaves E.
+    -- The handler is checked under the original first-failure value type.
     | .catchIf test body handler => do
       let b ← effTy sig env body
       let predicate ← termTy sig (env ++ [b.error]) test

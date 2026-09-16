@@ -298,3 +298,22 @@ enclosing maps unchanged. Independently invoked nested program-level
 `provideLayer` operations may select an ambient memo map and are outside this
 claim. The checked counterexample and approval are retained in the P2b receipt;
 `freshThen`, the compiler, and rc.112 behavior remain unchanged.
+
+
+## Foundational implementation amendment: all retained failures (2026-09-16)
+
+The owner-authorized consolidated foundational-language implementation supersedes the
+unconditional tag residual with DI-17's all-reason guarantee. The first-failure runtime
+rule is unchanged. `catchIfError` removes the body column for literal true or when the
+recognized tag test has an empty residual of the normalized body error; otherwise it
+joins body and handler errors. No single-failure restriction is added to host replies.
+
+The proof obligations for this first semantic slice are universal local membership
+statements, not finite batteries: an admitted missed cause fits `catchIfError`; an
+admitted handler failure fits that same bound; an empty tag residual makes a missed
+admitted cause free of typed failures, regardless of multiplicity. The existing
+exactly-one residual theorem remains as a corollary of an at-most-one law. The checker
+and declarative judgment must still agree. Runtime effects, stores, causes and bytes
+are unchanged; some inferred error bounds deliberately widen. Further selected-binder
+and summary-based precision requires its own established premises, not a claim that
+all Straight programs have one failure.
