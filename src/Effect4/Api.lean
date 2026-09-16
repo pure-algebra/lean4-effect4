@@ -2,6 +2,7 @@ import Effect4.Program.Admit
 import Effect4.Program.Admission
 import Effect4.Program.Table
 import Effect4.Program.Typing.Blame
+import Effect4.Program.Authoring
 import Effect4.Api.Derived
 import Effect4.Program.Packages
 import Effect4.Program.Wire
@@ -33,6 +34,10 @@ One module, the whole pipeline, small interface:
   `Native.lean`): first-order, decidable, no Lean function inside.
 * `typeOf` / `wellTyped` type a program against the native signature; `explain` / `blame`
   locate and name a refusal (DI-86).
+* Certificate first (DI-85): `check` answers the typing certificate or the located, named
+  refusal, `Typed` carries a program with its certificate into `Typed.run`, `Typed.replay`,
+  `Typed.runSync` and `Typed.emit` under a `Budget` with defaults, and `author` takes a named
+  source (`Program.Authoring.Src`) to a `Typed` in one call.
 * `print` / `printDecl` answer TypeScript **syntax** (`TypeScript.Expr`, `ConstDecl`),
   never text. Rendering to bytes is one call to the pinned package — `TypeScript.Render.expr
   house0 0 e` — kept outside this module on purpose: Lean's `String` folds reach
@@ -114,6 +119,19 @@ def explain (program : Program) (table : RowTable := []) : Option Effect4.Progra
 /-- The path of the refusal alone: the deepest node whose own rule refuses. -/
 def blame (program : Program) (table : RowTable := []) : Option (List Nat) :=
   (explain program table).map (·.path)
+
+/-- The facade's refusal is the checker's (DI-86): `explain` answers `none` exactly when the
+program is `wellTyped`, the layer references resolved the same way on both sides. -/
+theorem explain_none_iff (program : Program) (table : RowTable) :
+    explain program table = none ↔ wellTyped program table = true := by
+  unfold explain wellTyped typeOf Program.typeOfProgram Program.typeOf
+  split
+  · split <;> simp_all [Program.explain_none_iff]
+  · simp_all
+
+theorem blame_none_iff (program : Program) (table : RowTable) :
+    blame program table = none ↔ wellTyped program table = true := by
+  simp [blame, ← explain_none_iff]
 
 /-- A program's boundary schema document (Decision 12 / S-4): computes the Document for
 any well-typed program, refusing when the program is ill-typed. -/
@@ -402,6 +420,86 @@ def replayAdmitted {program : Program} {table : RowTable}
     (compileFuel : Nat := fuel) : Run :=
   let _ := admitted.ty
   replay program fuel tape answers table compileFuel
+
+/-! ## Certificate first (DI-85)
+
+A program is checked once; what runs, prints or emits afterwards takes the certificate, not the
+raw program. `check` is total by `explain_none_iff`: no program is refused without a located
+reason. `author` is the agent's one call from a named source. -/
+
+/-- A program with its typing certificate against a table. -/
+structure Typed (table : RowTable) where
+  program : Program
+  certificate : Effect4.Program.TypedProgram (nativeSignature table) program
+
+/-- Certificate first: the checker's evidence, or its located and named refusal (DI-86). -/
+def check (program : Program) (table : RowTable := []) :
+    Except Effect4.Program.TypeRefusal (Typed table) :=
+  match h : explain program table with
+  | some refusal => .error refusal
+  | none =>
+    match h2 : Program.typeOfProgram (nativeSignature table) program with
+    | some ty => .ok ⟨program, ⟨ty, h2⟩⟩
+    | none => absurd ((explain_none_iff program table).mp h) (by simp [wellTyped, typeOf, h2])
+
+/-- The command and compile budgets of a run; the defaults are the truth corpus's. -/
+structure Budget where
+  fuel : Nat := 1000
+  compileFuel : Nat := 1000
+deriving DecidableEq, Repr
+
+namespace Typed
+
+variable {table : RowTable}
+
+/-- The certified type. -/
+def ty (t : Typed table) : EffTy := t.certificate.ty
+
+/-- `replay` on the certified program. -/
+def replay (t : Typed table) (tape : List Decision) (budget : Budget := {}) : Run :=
+  Api.replay t.program budget.fuel tape [] table budget.compileFuel
+
+/-- `run` on the certified program: evaluate the root, flush. -/
+def run (t : Typed table) (budget : Budget := {}) : Run :=
+  Api.run t.program budget.fuel [] table budget.compileFuel
+
+/-- `Effect.runSyncExit` on the certified program: the exit alone. -/
+def runSync (t : Typed table) (budget : Budget := {}) : ExitV :=
+  (Api.runSync t.program budget.fuel [] table budget.compileFuel).2
+
+/-- The printed syntax of the certified program. -/
+def print (t : Typed table) : Except PrintRefusal TypeScript.Expr := Api.print t.program table
+
+/-- The certified module emission under a declaration name. -/
+def emit (t : Typed table) (name : String) :
+    Except Effect4.Codegen.EmissionRefusal (Effect4.Codegen.ModuleEmission t.program table name) :=
+  Api.emitModule name t.program table
+
+/-- The canonical bytes: the program's identity for a store and a host. -/
+def bytes (t : Typed table) : Store.Bytes := bytesOf t.program
+
+end Typed
+
+/-- Why an authored source is refused: at a name (the scope reader's refusal at its path) or
+at a type (the checker's located refusal). -/
+inductive AuthorRefusal
+  | scope (refusal : Effect4.Program.Authoring.Refusal)
+  | typing (refusal : Effect4.Program.TypeRefusal)
+deriving DecidableEq
+
+/-- The agent's one call: a named source elaborated at the empty scope, then checked. -/
+def author (src : Effect4.Program.Authoring.Src NativeOp) (table : RowTable := []) :
+    Except AuthorRefusal (Typed table) :=
+  match Effect4.Program.Authoring.elaborate src with
+  | .error refusal => .error (.scope refusal)
+  | .ok program => (check program table).mapError .typing
+
+/-- `author` for a module with shared layers by name. -/
+def authorModule (m : Effect4.Program.Authoring.Module NativeOp) (table : RowTable := []) :
+    Except AuthorRefusal (Typed table) :=
+  match Effect4.Program.Authoring.elaborateModule m with
+  | .error refusal => .error (.scope refusal)
+  | .ok program => (check program table).mapError .typing
 
 /-! ## Schema, as syntax -/
 

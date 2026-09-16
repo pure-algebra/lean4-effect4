@@ -1,5 +1,5 @@
 import Effect4.Api
-import Effect4.Laws.Api.Blame
+import Effect4.Program.Authoring.Sugar
 
 /-!
 # Blame contract — the refusal is located and named (DI-86)
@@ -7,15 +7,16 @@ import Effect4.Laws.Api.Blame
 `Api.explain` (`src/Effect4/Api.lean`) projects the one checker: the path of the deepest node
 whose own rule refuses, and that rule's reason (`TypeReason`, `Program/Typing/Blame.lean`).
 The pins walk a refusal down through `bind`, `suspend`, `catchCause`, `branch` and a generator
-body, and the law `Api.explain_none_iff` (`Laws/Api/Blame.lean`) is what makes the projection
-the checker's rather than a second checker.
+body, and the law `Api.explain_none_iff` is what makes the projection the checker's rather
+than a second checker. `Api.check` and `Api.author` (DI-85) answer the certificate or that
+refusal: a refused program never comes back without a reason.
 -/
 
 set_option autoImplicit false
 
 namespace Test.Program.BlameContract
 
-open Effect4 Effect4.Program Effect4.Api
+open Effect4 Effect4.Program Effect4.Api Effect4.Program.Authoring
 
 /-- The root fails at a type the error alphabet does not admit. -/
 def refused : Api.Program := .fail (.lit (.bool true))
@@ -57,7 +58,34 @@ def typed : Api.Program := .bind (.perform .refMake (.lit (.nat 1))) (.perform .
 #guard Api.explain typed = none
 #guard Api.blame typed = none
 
+/-! ## Certificate first: `check` and `author` -/
+
+#guard (Api.check typed).toOption.map (·.ty.answer) = some .nat
+#guard (Api.check typed).toOption.map (fun t => (t.run).exit) = some (some (.success (.nat 1)))
+#guard (Api.check typed).toOption.map (·.runSync) = some (.success (.nat 1))
+-- A certificate has no decidable equality; a refusal is compared as data.
+def refusalOf {table : RowTable} : Except TypeRefusal (Api.Typed table) → Option TypeRefusal
+  | .error r => some r
+  | .ok _ => none
+
+def authorRefusalOf {table : RowTable} : Except Api.AuthorRefusal (Api.Typed table) → Option Api.AuthorRefusal
+  | .error r => some r
+  | .ok _ => none
+
+#guard refusalOf (Api.check refused) = some ⟨[], .errorNotAdmitted .bool⟩
+#guard refusalOf (Api.check (.bind (.succeed (.lit (.nat 1))) refused)) = some ⟨[1], .errorNotAdmitted .bool⟩
+
+-- One call from a named source: a scope refusal names the unbound name at its path, a typing
+-- refusal is the checker's, and a typed source runs.
+#guard (Api.author (bind "r" (Ref.make (nat 1)) (Ref.get (var "r")))).toOption.map (·.runSync)
+  = some (.success (.nat 1))
+#guard authorRefusalOf (Api.author (Ref.get (var "r"))) = some (.scope ⟨[], .unbound "r"⟩)
+#guard authorRefusalOf (Api.author (bind "r" (Ref.make (nat 1)) (Authoring.fail (bool true))))
+  = some (.typing ⟨[1], .errorNotAdmitted .bool⟩)
+
 #print axioms Effect4.Api.explain_none_iff
+#print axioms Effect4.Api.check
+#print axioms Effect4.Api.author
 #print axioms Effect4.Program.explain_none_iff
 
 end Test.Program.BlameContract
