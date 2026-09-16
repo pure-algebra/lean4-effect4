@@ -1,5 +1,5 @@
 import Effect4.Program.Table
-import Effect4.Program.Typing
+import Effect4.Program.CheckedTyping
 import Effect4.Program.Native
 import Effect4.Program.Fragment
 
@@ -72,9 +72,8 @@ deriving DecidableEq, Repr
 /-- A program admitted to run against a table: its type, the execution checks, and
 the successful integer scans. The fields are proofs, so an `AdmittedProgram` cannot be forged by
 building the structure with the wrong table — the table and the program are its indices. -/
-structure AdmittedProgram (program : NativeEff) (table : RowTable) where
-  ty : EffTy
-  typed : typeOfProgram (nativeSignature table) program = some ty
+structure AdmittedProgram (program : NativeEff) (table : RowTable)
+    extends TypedProgram (nativeSignature table) program where
   lawful : Table.lawful table = true
   runnable : checkTable table = none
   intFreeTable : findIntInTable table = none
@@ -97,7 +96,7 @@ def admitProgram (program : NativeEff) (table : RowTable := []) :
         if hlawful : Table.lawful table = true then
           match hrunnable : checkTable table with
           | some why => .error (.table why)
-          | none => .ok ⟨ty, htyped, hlawful, hrunnable, htable, htype⟩
+          | none => .ok ⟨⟨ty, htyped⟩, hlawful, hrunnable, htable, htype⟩
         else
           match Table.checkLawful table with
           | some (.duplicateKey k) => .error (.duplicateKey k)

@@ -1,5 +1,5 @@
 import Effect4.Api
-import Effect4.Laws.Codegen.Module
+import Effect4.Laws.Codegen.Checked
 
 /-!
 # The application module face on its readable, typed domain
@@ -15,6 +15,37 @@ namespace Effect4.Api
 
 open Effect4.Program
 
+/-- The shared certificate exposes precisely the existing application type result. -/
+theorem checkTyping_type (program : Program) (table : RowTable) :
+    (checkTyping program table).map TypedProgram.ty = typeOf program table :=
+  checkTypedProgram_type _ _
+
+/-- Evidence retention does not alter any prior module output or refusal. -/
+theorem printModule_erasure (name : String) (program : Program) (table : RowTable) :
+    printModule name program table =
+      match typeOf program table with
+      | some ty =>
+        match Effect4.Program.printEntry table (nativeSignature table) name ty program with
+        | .ok decls => some { header := [], imports := [], decls := decls.map .const }
+        | .error _ => none
+      | none => none :=
+  Effect4.Codegen.emitModule_erasure name program table
+
+/-- Evidence retention also leaves the declaration interface unchanged. -/
+theorem printDecl_erasure (name : String) (program : Program) (table : RowTable) :
+    printDecl name program table =
+      match typeOf program table, print program table with
+      | some ty, .ok body => (Effect4.Program.printDecl name ty body).toOption
+      | _, _ => none := by
+  cases checked : checkTypedProgram (nativeSignature table) program with
+  | none =>
+    have typed := checkTypedProgram_refusal_iff.mp checked
+    cases body : print program table <;>
+      simp [printDecl, checkTyping, checked, typeOf, typed, body]
+  | some typing =>
+    cases body : print program table <;>
+      simp [printDecl, checkTyping, checked, typeOf, typing.typed, body]
+
 /-- A typed readable program under a lawful codegen table has an API module whose
 reading is the original program, including its explicit layer-sharing references.
 The emitted declaration type must have a structural target reading; arbitrary
@@ -25,19 +56,11 @@ theorem printModule_roundTrip (name : String) (program : Program) (table : RowTa
     (types : declarationTypeReadable ty = true) :
     ∃ module, printModule name program table = some module ∧
       readModule module table = .ok program := by
-  have valid : program.layerRefsWF = true := by
-    cases h : program.layerRefsWF with
-    | false => simp [typeOf, Effect4.Program.typeOfProgram, h] at typed
-    | true => rfl
-  obtain ⟨decls, printed⟩ := Effect4.Program.printModule_readable hr valid name ty types
-  have safe : table.find? (fun row => !rowNamesSafe row) = none := by
-    apply List.find?_eq_none.mpr
-    intro row mem
-    have h := (lawfulTable_member table lawful row mem).2.2
-    simp [h]
-  refine ⟨{ header := [], imports := [], decls := decls.map .const }, ?_, ?_⟩
-  · simp only [printModule, typed, Effect4.Program.printEntry, safe, printed]
-  · exact Effect4.Program.readModule_printModule_readable
-      (nativeLawful table lawful) hr valid printed
+  let typing : TypedProgram (nativeSignature table) program := ⟨ty, typed⟩
+  obtain ⟨emission, emitted⟩ := Effect4.Codegen.emitModule_complete
+    (name := name) typing lawful hr types
+  exact ⟨emission.module,
+    by simp only [printModule, emitted, Except.toOption, Option.map],
+    emission.readModule lawful hr⟩
 
 end Effect4.Api

@@ -97,6 +97,15 @@ retained; source-module ownership keeps them in the library axiom audit. `Std.Ta
 is used in Laws only; runtime code does not import the proof tools. The six owed encoders (DI-41) go through
 `tools/Effect4Gen`, and the `deriving Canonical` handler stays a pilot for later families.
 
+`Program/CheckedTyping.lean` owns the computed `TypedProgram` evidence for the
+existing whole-program checker. Execution admission extends it; code generation
+reuses it without runner registration limits. `Codegen/Checked.lean` owns module
+production receipts indexed by program, row table and export name. The application
+module exposes those receipts through `emitModule`, while `printModule` projects
+syntax. Checker/declarative connections and production/reconstruction theorems live
+in `Laws/Program/CheckedTyping.lean` and `Laws/Codegen/Checked.lean`. These are proof
+views of the same program and printer, not a second language or source validator.
+
 `Program/Fragment.lean` owns executable membership in the existing straight
 fragment. Both ordinary application admission and `Laws/Program/Denote.lean`
 use that same definition. `admitStraightProgram` adds its membership proof to

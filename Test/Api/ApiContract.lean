@@ -87,6 +87,40 @@ def productUnion : Program := .bind
 #print axioms Effect4.Program.admitStraightProgram_ok
 #print axioms Effect4.Program.admitStraightProgram_outside
 
+/-! Checked production keeps typing failures separate from printing failures and
+uses the same type evidence as execution admission, without inheriting its limits. -/
+#guard (checkTyping p42).map (·.ty) = typeOf p42
+#guard match emitModule "main" pBind with
+  | .ok emitted => emitted.typing.ty == (.pure .nat) &&
+      (readModule emitted.module == .ok pBind)
+  | .error _ => false
+#guard (print (.succeed (.var 0))).isOk
+#guard match emitModule "main" (.succeed (.var 0)) with
+  | .error .illTyped => true
+  | _ => false
+#guard wellTyped (.withFiber .snapshotChildren)
+#guard match emitModule "main" (.withFiber .snapshotChildren) with
+  | .error (.print (.internalAction "snapshotChildren")) => true
+  | _ => false
+
+def syncSourceTable : Effect4.Program.RowTable :=
+  [{ name := "query", spelling := "Host.query", kind := .sync,
+     registration := .external, request := .unit, answer := .nat,
+     error := .never, cite := "" }]
+def syncSource : Program := .perform (.external 0) (.lit .unit)
+#guard match admitProgram syncSource syncSourceTable with
+  | .error (.table (.notAsync 0)) => true
+  | _ => false
+#guard match emitModule "main" syncSource syncSourceTable with
+  | .ok emitted => emitted.typing.ty == (.pure .nat) &&
+      (readModule emitted.module syncSourceTable == .ok syncSource)
+  | _ => false
+def malformedSourceTable : Effect4.Program.RowTable :=
+  syncSourceTable.map fun row => { row with answer := .handle "not a type !" }
+#guard match emitModule "main" syncSource malformedSourceTable with
+  | .error (.print (.typeSpelling text)) => text == "not a type !"
+  | _ => false
+
 /-! ## Running -/
 
 #guard (run p42 100).outcome = Outcome.finished

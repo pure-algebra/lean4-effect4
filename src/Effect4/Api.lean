@@ -5,6 +5,7 @@ import Effect4.Api.Derived
 import Effect4.Program.Packages
 import Effect4.Program.Wire
 import Effect4.Codegen.Print
+import Effect4.Codegen.Checked
 import Effect4.Codegen.Read
 import Effect4.Codegen.Schema
 import Effect4.Codegen.Target
@@ -86,6 +87,12 @@ references are resolved first (`Program.typeOfProgram`: well-formed, then expand
 targets), so a program with a diamond types as its inlined twin does. -/
 def typeOf (program : Program) (table : RowTable := []) : Option EffTy := Program.typeOfProgram (nativeSignature table) program
 
+/-- Compute the shared typing certificate without the runner's registration checks.
+The result refers to this exact program and table; declarations use the same evidence. -/
+def checkTyping (program : Program) (table : RowTable := []) :
+    Option (Effect4.Program.TypedProgram (nativeSignature table) program) :=
+  Effect4.Program.checkTypedProgram (nativeSignature table) program
+
 /-- Whether the program is well-typed. -/
 def wellTyped (program : Program) (table : RowTable := []) : Bool := (typeOf program table).isSome
 
@@ -129,8 +136,8 @@ def ofBytes (bytes : Store.Bytes) : Option Program := Wire.decodeProgram bytes
 /-- The program as an exported constant with its `Effect.Effect<A, E>` type; `none` when it
 is ill-typed or the printer refuses it. -/
 def printDecl (name : String) (program : Program) (table : RowTable := []) : Option TypeScript.ConstDecl :=
-  match typeOf program table, print program table with
-  | some ty, Except.ok body => (Program.printDecl name ty body).toOption
+  match checkTyping program table, print program table with
+  | some typing, Except.ok body => (Program.printDecl name typing.ty body).toOption
   | _, _ => none
 
 /-- The program as a declaration block: one `const L_<path> = …` per referenced layer target
@@ -139,15 +146,19 @@ is ill-typed or the printer refuses it. The block is what a host must run for a 
 a layer reference: rc.112 keys its memo map on the layer object (`Layer.ts:411`), and the one
 `const` is the one object. -/
 def printModule (name : String) (program : Program) (table : RowTable := []) : Option TypeScript.Module :=
-  match typeOf program table with
-  | some ty =>
-    match Program.printEntry table (nativeSignature table) name ty program with
-    | Except.ok decls => some { header := [], imports := [], decls := decls.map .const }
-    | Except.error _ => none
-  | none => none
+  ((Effect4.Codegen.emitModule name program table).toOption).map (·.module)
 
-/-- A program back from a declaration block: the inverse of `printModule` on the blocks it
-prints (`Program.readModule`), a `ReadRefusal` on every other. -/
+/-- The module together with its core typing and exact production receipt. Consumers
+that need the proof connection retain this result; `printModule` projects its syntax.
+This does not validate source imports or establish target typing/execution. -/
+def emitModule (name : String) (program : Program) (table : RowTable := []) :
+    Except Effect4.Codegen.EmissionRefusal (Effect4.Codegen.ModuleEmission program table name) :=
+  Effect4.Codegen.emitModule name program table
+
+/-- Raw reconstruction from a declaration block. This recovers programs in the
+printer's readable image, but ignores imports, outer annotations and export names.
+Use `checkTyping` on the recovered program for core typing; that check alone does
+not validate the original source envelope. -/
 def readModule (module : TypeScript.Module) (table : RowTable := []) : Except ReadRefusal Program :=
   Program.readModule (nativeSignature table) (nativeSpell table) module.decls
 

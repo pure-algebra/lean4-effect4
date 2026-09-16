@@ -122,6 +122,27 @@ successful-output premise. These are module-AST adequacy and
 reconstruction on that domain. None checks source declarations, imports, rendered
 bytes, target typing or target execution.
 
+**Shared typing and production evidence (2026-09-16).**
+`Program.TypedProgram` retains the existing `typeOfProgram` equation for the exact
+program and signature. `AdmittedProgram` extends it with the existing execution
+checks; `Codegen.ModuleEmission` uses it without those runner restrictions. The
+module producer records the successful `printEntry` equation and constructs its
+syntax from the recorded declarations. `Api.emitModule` exposes that result;
+`Api.printModule` projects its syntax. `Api.printDecl` uses the same computed typing
+certificate. Neither producer accepts a separate claimed answer/error type.
+
+`checkTypedProgram_type`, `checkTypedProgram_refusal_iff` and
+`TypedProgram.hasTy` relate the evidence to the one checker and the declarative
+judgment on `expandRefs`. `emitModule_erasure` and `Api.printDecl_erasure` retain
+every previous output/refusal without restricting their inputs.
+`emitModule_complete` establishes production on the same readable/lawful/representable
+domain; `ModuleEmission.readModule` reconstructs the original program there, and
+`ModuleEmission.unique` rules out two different certified outputs for one input.
+The existing `Api.printModule_roundTrip` statement is unchanged and now composes
+those results. Original source annotations/imports, nominal service requirements,
+contextual target annotations and target typing/execution remain separate obligations.
+This addition does not turn raw `Api.readModule` into typed source admission.
+
 **Structural type amendment (2026-09-16, `E4-TARGET-TYPE-CE-001`).** The target
 carrier now retains type syntax, parameter and local annotations, import aliases,
 type-only markers and export presence. The canonical expression reader requires
