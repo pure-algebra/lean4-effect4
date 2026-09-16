@@ -168,6 +168,23 @@ theorem Straight.perform_sync {op : NativeOp} {r : Term} (h : Straight (.perform
   revert h
   cases (NativeOp.row op).kind <;> simp
 
+theorem Straight.not_gen {e : NativeEff} (h : Straight e = true) : ∀ ss, e ≠ .gen ss := by
+  intro ss heq
+  subst heq
+  simp [Straight] at h
+
+theorem Straight.not_whileLoop {e : NativeEff} (h : Straight e = true) :
+    ∀ i t s b, e ≠ .whileLoop i t s b := by
+  intro i t s b heq
+  subst heq
+  simp [Straight] at h
+
+theorem Straight.not_provideLayer {e : NativeEff} (h : Straight e = true) :
+    ∀ l i b, e ≠ .provideLayer l i b := by
+  intro l i b heq
+  subst heq
+  simp [Straight] at h
+
 /-! ## The equations of the meaning -/
 
 theorem meaning_succeed_some (v : Term) (env : List Val) (s : Stores) {x : Val}

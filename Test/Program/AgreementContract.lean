@@ -8,7 +8,7 @@ Packet: `Test/contracts/program-denotation.contract.md`; plan
 `docs/research/2026-09-05-slice-1-compile-ground.md` §9. `run_eq_meaning`
 (`src/Effect4/Laws/Program/Agreement/Machine.lean`) says: a straight-line program, with fuel for
 its depth and its commands, runs to its meaning's exit and stores, under the op budget or
-past it. These guards pin, one program at a time, what the theorem consumes — `Plain`,
+past it. These guards pin, one program at a time, what the theorem consumes — `Straight`,
 `depth`, `steps`, the local run of `Agreement.lean` — and the two roads of the run: the
 exit within one loop entry, and the yield at the budget, the park, and the rounds of `flush`
 (`pLong`, two yields deep). The oracle over `Api.run` itself is
@@ -29,27 +29,27 @@ open Test.Syntax.CompileContract (fuel pSucceed pBindSync pFail pCatch pMatchVal
 
 /-! ## The fragment: plain is straight minus `onExit` -/
 
-#guard Plain pSucceed = true
-#guard Plain pBindSync = true
-#guard Plain pFail = true
-#guard Plain pCatch = true
-#guard Plain pMatchValue = true
-#guard Plain pMatchCause = true
-#guard Plain pMatchCauseReified = true
-#guard Plain pExit = true
-#guard Plain pDie = true
-#guard Plain pRefSet = true
-#guard Plain pRefUpdate = true
-#guard Plain pRefModify = true
-#guard Plain pBranchTrue = true
-#guard Plain pBranchFalse = true
+#guard Straight pSucceed = true
+#guard Straight pBindSync = true
+#guard Straight pFail = true
+#guard Straight pCatch = true
+#guard Straight pMatchValue = true
+#guard Straight pMatchCause = true
+#guard Straight pMatchCauseReified = true
+#guard Straight pExit = true
+#guard Straight pDie = true
+#guard Straight pRefSet = true
+#guard Straight pRefUpdate = true
+#guard Straight pRefModify = true
+#guard Straight pBranchTrue = true
+#guard Straight pBranchFalse = true
 
 -- E4-DEN-CE-004, repaired the same day: `onExit` was straight (its meaning stated) but not
 -- plain (its run not proved), because the `OnExit` frame's finalizer runs under a mask whose
 -- restoring frame the pop leaves on the stack (`Frames.lean`, `ensure`). The local run now
--- models the mask (`maskStack`, the fiber's interruptible flag) and `Plain` is `Straight`.
+-- models the mask (`maskStack`, the fiber's interruptible flag); the theorem is stated on
+-- `Straight` (`Plain`, its duplicate, was deleted 2026-09-16, B5).
 #guard Straight pOnExit = true
-#guard Plain pOnExit = true
 
 /-- `Effect.onExit` inside a finalizer: the inner frame is met while the fiber is already
 masked, so no second restoring frame is pushed (`maskStack false`). -/
@@ -61,15 +61,15 @@ def pNestedFinalizer : NativeEff :=
 failure, on both sides (`restoreAfterFinalizer`). -/
 def pOnExitFails : NativeEff := .onExit (.succeed (.lit (.nat 1))) (.fail (.lit (.nat 8)))
 
-#guard Plain pNestedFinalizer = true
-#guard Plain pOnExitFails = true
+#guard Straight pNestedFinalizer = true
+#guard Straight pOnExitFails = true
 #guard maskStack true [] = [Prim.setInterruptible true]
 #guard maskStack false [] = []
 
-#guard Plain pDeferred = false
-#guard Plain pForkJoin = false
-#guard Plain pYieldNow = false
-#guard Plain pMasked = false
+#guard Straight pDeferred = false
+#guard Straight pForkJoin = false
+#guard Straight pYieldNow = false
+#guard Straight pMasked = false
 
 /-! ## The two measures the theorem's fuel and budget hypotheses read -/
 

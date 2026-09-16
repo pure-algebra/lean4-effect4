@@ -61,9 +61,9 @@ theorem run_eq_meaning (e : NativeEff) (fuel : Nat) (hs : Straight e = true)
 ```
 
 whose executable oracle, one program at a time, is the guard set of
-`Test/Program/DenoteContract.lean`. The first landing stated it on `Plain`, `Straight`
-without `onExit` (`E4-DEN-CE-004`); the repair the same evening put `onExit` in, and
-`Plain_eq_Straight` lets the theorem read `Straight`. `depth` and `steps` are the two
+`Test/Program/DenoteContract.lean`. The first landing stated it on `Plain`, a copy of `Straight`
+without `onExit` (`E4-DEN-CE-004`); the repair the same evening put `onExit` in, and the
+copy was deleted on 2026-09-16 (B5): the theorem and the agreement read `Straight` itself. `depth` and `steps` are the two
 computable structural measures of
 `src/Effect4/Laws/Program/Agreement.lean` — the fuel the compile's children cost, and a bound on
 the local steps a plain program takes. The op budget is not a hypothesis: the first landing
@@ -199,7 +199,8 @@ Lane 3, `Effect4.Program.Denote`:
 
 The agreement, `Effect4.Program.Agreement` (two modules, landed with the lanes):
 
-25. `Plain`, `depth`, `steps`; `Plain` closed under subprograms; `1 ≤ depth e`.
+25. `depth`, `steps` over `Straight` (`Program/Fragment.lean`; closed under subprograms in
+    `Laws/Program/Denote.lean`); `1 ≤ depth e`.
 26. `localStep`, `localRun`: the frame machine's `step` over the stores, with a store `sync`
     answered through `syncOpStep` and the machine's `Val.unit` fallback; `localRun_mono`.
 27. `localRun_compile`: a plain program compiled at an address of a root, run from any
@@ -215,7 +216,7 @@ The agreement, `Effect4.Program.Agreement` (two modules, landed with the lanes):
     `localRun_compile` reaches. The same correction (`E4-CHECK-CE-002`, `-003`) compiles
     `gen` and `whileLoop` to a `Suspend` at their point, answered by `suspendBodyAt`;
     neither is plain, so `suspendBodyAt_of_at` excludes them
-    (`Plain.not_gen`, `Plain.not_whileLoop`). The authorized `E4-CHECK-CE-008`
+    (`Straight.not_gen`, `Straight.not_whileLoop`). The authorized `E4-CHECK-CE-008`
     correction makes a source `suspend` name its own point. Its thunk returns
     `resolve root (p.child 0)` by `suspendBodyAt_suspend`, retaining any suspension
     in the child. `suspendBodyAt_of_at` excludes source `suspend` too; the
@@ -235,8 +236,8 @@ The agreement, `Effect4.Program.Agreement` (two modules, landed with the lanes):
     yield with the rest of the run still to do (`Owes` records the bound from
     its incoming count). After the D7 resume step, each further round removes
     at least `defaultBudget - 2` local steps.
-31. `run_eq_meaning`, above — since the same evening on `Straight` itself: `Plain` gained
-    `onExit` and `Plain_eq_Straight`; the local step's exit arm `exitFrom` mirrors the
+31. `run_eq_meaning`, above — since the same evening on `Straight` itself (`Plain`, the
+    copy, gained `onExit` that evening and was deleted 2026-09-16, B5); the local step's exit arm `exitFrom` mirrors the
     machine's `finalizerOr`, the fiber carries its interruptible flag, and `maskStack` is the
     restoring frame the mask leaves (`E4-DEN-CE-004` repaired). And since the same night
     with no budget hypothesis (`E4-DEN-CE-005` repaired): `drive_loop_yield` — at the loop
@@ -338,7 +339,7 @@ appears only in the batteries.
 | `E4-DEN-CE-003` | SEEDED | The denotation and the machine agree on the trace | the trace of `Api.run pBindSync 400` holds `frame` events; `denote` performs only store operations | `run_eq_meaning` is stated on exit and stores; trace agreement is a later row under a mask |
 | `E4-STORES-CE-003` | SEEDED | `Stores.WF` covers the program a completed Deferred stores | `deferredCompleteWith ⟨0⟩ (Completion.ofRefGet ⟨9⟩)` on a fresh cell is valid, steps, and leaves a `WF` store whose stored program reads a cell the heap never minted | `WF` is not widened (`STORES-FB-COMPLETION`) |
 | `E4-STORES-CE-004` | SEEDED | The memo world's refcount law holds by store steps alone | it needs the build-after-miss protocol (`Stores.MemoKeysNodup`); a second `memoBuild` on a present layer leaves an unobserved entry after a release (`StoresLawsContract` §Rows) |
-| `E4-DEN-CE-004` | SEEDED | `run_eq_meaning` covers the whole straight-line fragment | `Straight pOnExit = true`; `Plain pOnExit` was `false` at the first landing and is `true` since the repair (`Plain_eq_Straight`) | the finalizer mask is modelled (`exitFrom`, `maskStack`); the theorem is stated on `Straight` |
+| `E4-DEN-CE-004` | SEEDED | `run_eq_meaning` covers the whole straight-line fragment | `Straight pOnExit = true`; the copy `Plain pOnExit` was `false` at the first landing and `true` since the repair; `Plain` deleted 2026-09-16 (B5) | the finalizer mask is modelled (`exitFrom`, `maskStack`); the theorem is stated on `Straight` |
 | `E4-PROGRESS-CE-001` | SEEDED | `answer_typed` needs no more than `Stores.WF` | the heap `[Val.bool true]` is `WF`; `refGet ⟨0⟩` answers `Val.bool true`, not a `.nat` | `answer_typed` carries `Stores.HeapNat` |
 | `E4-PROGRESS-CE-002` | SEEDED | `HeapNat` is preserved by every valid step | `refMake (Val.bool true)` is valid on the empty store, steps, and leaves a heap that is not `HeapNat` | `step_heapNat` is stated on a typed request |
 | `E4-DEN-CE-005` | SEEDED | The command loop never yields on a plain program | under `[yieldVerdict root true, evaluate, flush]` the first iteration injects a yield and the run still finishes with the meaning; `pLong` (`2100` binds, `4200` steps) yields twice under the ordinary run and still finishes with the meaning | repaired: the theorem carries no budget hypothesis; the yield, the park, the fire and the rounds of `flush` are on the proved path (ENSURES 30–31), `pLong_agrees` is the instance |
@@ -352,7 +353,7 @@ change both guards.
 
 ## S3 conditional-handler extension (2026-09-10)
 
-`Eff.catchIf` stays outside `Denote.Straight` and `Agreement.Plain` (DI-07).
+`Eff.catchIf` stays outside `Denote.Straight` (DI-07).
 Its compiler/reference connection is the existing `Sched.code_intro`, with the same
 `run_eq_ref` decision-tape, fuel and empty-table/no-oracle scope. The extension supplies
 no `run_eq_meaning` instance and no general bind law. `Test/Program/CatchIfContract.lean`

@@ -129,7 +129,7 @@ theorem compileEff_zero {p : Point} (e : NativeEff) (hf : p.fuel = 0) :
   unfold compileEff
   simp only [hf]
 
-theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), Plain e = true →
+theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), Straight e = true →
     PlainCode (compileEff e p) = true
   | .succeed v, p, _ => by
     rcases hf : p.fuel with _ | k
@@ -158,14 +158,14 @@ theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), Plain e = true �
   | .perform op r, p, hpl => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; rfl
-    · rw [compileEff_perform_sync op r hf (Plain.perform_sync hpl)]
+    · rw [compileEff_perform_sync op r hf (Straight.perform_sync hpl)]
       split <;> (try split) <;> rfl
   | .bind a b, p, hpl => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; rfl
     · rw [compileEff_bind a b hf]
       simp only [PlainCode, PlainName, Bool.and_true]
-      exact plainCode_compileEff a (p.child 0) (Plain.bind hpl).1
+      exact plainCode_compileEff a (p.child 0) (Straight.bind hpl).1
   | .branch t a b, p, _ => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; rfl
@@ -175,25 +175,25 @@ theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), Plain e = true �
     · rw [compileEff_zero _ hf]; rfl
     · rcases hx : (compileEff b (p.child 0)).asExit? with _ | ex
       · rw [compileEff_exit_frame b hf hx]
-        exact plainCode_compileEff b (p.child 0) (Plain.exit hpl)
+        exact plainCode_compileEff b (p.child 0) (Straight.exit hpl)
       · rw [compileEff_exit_fold b hf hx]; rfl
   | .catchCause b h, p, hpl => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; rfl
     · rw [compileEff_catchCause b h hf]
       simp only [PlainCode, PlainName, Bool.and_true]
-      exact plainCode_compileEff b (p.child 0) (Plain.catchCause hpl).1
+      exact plainCode_compileEff b (p.child 0) (Straight.catchCause hpl).1
   | .matchCause b v c, p, hpl => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; rfl
     · rw [compileEff_matchCause b v c hf]
       simp only [PlainCode, PlainName, Bool.and_true]
-      exact plainCode_compileEff b (p.child 0) (Plain.matchCause hpl).1
+      exact plainCode_compileEff b (p.child 0) (Straight.matchCause hpl).1
   | .onExit b f, p, hpl => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; rfl
     · rw [compileEff_onExit b f hf]
-      exact plainCode_compileEff b (p.child 0) (Plain.onExit hpl).1
+      exact plainCode_compileEff b (p.child 0) (Straight.onExit hpl).1
   | .gen _, _, hpl
   | .uninterruptible _, _, hpl
   | .interruptible _, _, hpl
@@ -207,25 +207,25 @@ theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), Plain e = true �
   | .provideLayer _ _ _, _, hpl
   | .service _, _, hpl
   | .provideService _ _ _, _, hpl
-  | .catchIf _ _ _, _, hpl => by simp [Plain] at hpl
+  | .catchIf _ _ _, _, hpl => by simp [Straight] at hpl
 
 /-! ### Every subterm of a straight-line program is straight-line -/
 
 /-- A node that is a straight-line program. -/
 def NodePlain : Node NativeOp → Prop
-  | Node.eff e => Plain e = true
+  | Node.eff e => Straight e = true
   | _ => False
 
-theorem child_plain {r : NativeEff} (hr : Plain r = true) {i : Nat} {m : Node NativeOp}
+theorem child_plain {r : NativeEff} (hr : Straight r = true) {i : Nat} {m : Node NativeOp}
     (h : (Node.eff r).child i = some m) : NodePlain m := by
   -- a constructor that is not plain is refuted by `hr` before its children are looked at
   cases r <;> first
-    | (simp [Plain] at hr; done)
+    | (simp [Straight] at hr; done)
     | (rcases i with _ | _ | _ | i <;> simp [Node.child] at h <;> subst h <;>
-        simp_all [NodePlain, Plain])
+        simp_all [NodePlain, Straight])
 
 theorem plain_at : ∀ (path : List Nat) (n : Node NativeOp) (e : NativeEff), NodePlain n →
-    Node.at_ n path = some (Node.eff e) → Plain e = true
+    Node.at_ n path = some (Node.eff e) → Straight e = true
   | [], n, e, hn, h => by
     simp only [Node.at_, Option.some.injEq] at h
     subst h
@@ -242,7 +242,7 @@ theorem plain_at : ∀ (path : List Nat) (n : Node NativeOp) (e : NativeEff), No
         all_goals simp [NodePlain] at hn
       exact plain_at rest m e hm h
 
-theorem plainCode_resolve {root : NativeEff} (hroot : Plain root = true) (q : Point) :
+theorem plainCode_resolve {root : NativeEff} (hroot : Straight root = true) (q : Point) :
     PlainCode (resolve root q) = true := by
   unfold resolve
   rcases h : Node.at_ (Node.eff root) q.path with _ | n
@@ -271,7 +271,7 @@ theorem suspendBodyAt_other {root : NativeEff} {q : Point} {k : Nat} {n : Node N
   · exact absurd rfl (hn _)
   all_goals simp [suspendBodyAt, hf, h]
 
-theorem plainCode_suspendBodyAt {root : NativeEff} (hroot : Plain root = true) (q : Point) :
+theorem plainCode_suspendBodyAt {root : NativeEff} (hroot : Straight root = true) (q : Point) :
     PlainCode (suspendBodyAt root (EffThunk.body q)) = true := by
   rcases hf : q.fuel with _ | k
   · rw [suspendBodyAt_zero hf]; rfl
@@ -279,7 +279,7 @@ theorem plainCode_suspendBodyAt {root : NativeEff} (hroot : Plain root = true) (
     · rw [suspendBodyAt_missing hf h]; rfl
     · cases n with
       | eff e =>
-        have he : Plain e = true := plain_at q.path (Node.eff root) e hroot h
+        have he : Straight e = true := plain_at q.path (Node.eff root) e hroot h
         cases e with
         | suspend b =>
           rw [suspendBodyAt_suspend hf h]
@@ -292,8 +292,8 @@ theorem plainCode_suspendBodyAt {root : NativeEff} (hroot : Plain root = true) (
             · rw [suspendBodyAt_branch_false hf h ht]; exact plainCode_resolve hroot _
             · rw [suspendBodyAt_branch_true hf h ht]; exact plainCode_resolve hroot _
         | _ =>
-          rw [suspendBodyAt_of_at hf h (by intro _ _ _ hbad; cases hbad) (Plain.not_gen he)
-            (Plain.not_whileLoop he) (by intro _ hbad; cases hbad) (Plain.not_provideLayer he)]
+          rw [suspendBodyAt_of_at hf h (by intro _ _ _ hbad; cases hbad) (Straight.not_gen he)
+            (Straight.not_whileLoop he) (by intro _ hbad; cases hbad) (Straight.not_provideLayer he)]
           exact plainCode_compileEff _ q he
       | stmts _ => rw [suspendBodyAt_other hf h (fun _ h => by cases h)]; rfl
       | stmt _ => rw [suspendBodyAt_other hf h (fun _ h => by cases h)]; rfl
@@ -305,7 +305,7 @@ theorem plainCode_suspendBodyAt {root : NativeEff} (hroot : Plain root = true) (
 theorem plainCode_ofExit (ex : ExitV) : PlainCode (Prim.ofExit ex) = true := by
   cases ex <;> rfl
 
-theorem plainCode_contAOf {root : NativeEff} (hroot : Plain root = true) {n : EffName}
+theorem plainCode_contAOf {root : NativeEff} (hroot : Straight root = true) {n : EffName}
     (hn : PlainName n = true) (v : Val) : PlainCode (contAOf root n v) = true := by
   cases n <;> simp [PlainName] at hn
   all_goals first
@@ -313,7 +313,7 @@ theorem plainCode_contAOf {root : NativeEff} (hroot : Plain root = true) {n : Ef
     | exact plainCode_resolve hroot _
     | exact plainCode_ofExit _
 
-theorem plainCode_contEOf {root : NativeEff} (hroot : Plain root = true) {n : EffName}
+theorem plainCode_contEOf {root : NativeEff} (hroot : Straight root = true) {n : EffName}
     (hn : PlainName n = true) (c : CauseV) : PlainCode (contEOf root n c) = true := by
   cases n <;> simp [PlainName] at hn
   all_goals first
@@ -322,7 +322,7 @@ theorem plainCode_contEOf {root : NativeEff} (hroot : Plain root = true) {n : Ef
     | exact plainCode_ofExit _
 
 /-- Fresh source callbacks still answer plain code at any captured point. -/
-theorem plainCode_contAAt {root : NativeEff} (hroot : Plain root = true) {n : EffName}
+theorem plainCode_contAAt {root : NativeEff} (hroot : Straight root = true) {n : EffName}
     (hn : PlainName n = true) (v : Val) : PlainCode ((interpAt root []).contA n v) = true := by
   cases n <;> simp [PlainName] at hn
   all_goals first
@@ -330,7 +330,7 @@ theorem plainCode_contAAt {root : NativeEff} (hroot : Plain root = true) {n : Ef
     | exact plainCode_resolve hroot _
     | exact plainCode_ofExit _
 
-theorem plainCode_contEAt {root : NativeEff} (hroot : Plain root = true) {n : EffName}
+theorem plainCode_contEAt {root : NativeEff} (hroot : Straight root = true) {n : EffName}
     (hn : PlainName n = true) (c : CauseV) : PlainCode ((interpAt root []).contE n c) = true := by
   cases n <;> simp [PlainName] at hn
   all_goals first
@@ -378,7 +378,7 @@ theorem localStep_other (root : NativeEff) (cur : NCode) (K : List NCode) (i : B
 /-! ### The local step keeps the fiber plain -/
 
 set_option linter.unusedSimpArgs false in
-theorem localStep_success_plain {root : NativeEff} (hroot : Plain root = true)
+theorem localStep_success_plain {root : NativeEff} (hroot : Straight root = true)
     (v : Val) (K : List NCode) (i : Bool) (s : Stores) (fr' : NFiber) (s' : Stores)
     (hK : PlainStack K)
     (h : localStep root (fiberOf (Prim.success v) K i) s = .running fr' s') :
@@ -419,7 +419,7 @@ theorem localStep_success_plain {root : NativeEff} (hroot : Plain root = true)
       exact ih true hK' h
 
 set_option linter.unusedSimpArgs false in
-theorem localStep_failure_plain {root : NativeEff} (hroot : Plain root = true)
+theorem localStep_failure_plain {root : NativeEff} (hroot : Straight root = true)
     (c : CauseV) (K : List NCode) (i : Bool) (s : Stores) (fr' : NFiber) (s' : Stores)
     (hK : PlainStack K)
     (h : localStep root (fiberOf (Prim.failure c) K i) s = .running fr' s') :
@@ -462,7 +462,7 @@ theorem localStep_failure_plain {root : NativeEff} (hroot : Plain root = true)
 -- The `PlainFrame` argument is spent in some branches of the frame case split and not in
 -- others; the linter reports the latter.
 set_option linter.unusedSimpArgs false in
-theorem localStep_plain {root : NativeEff} (hroot : Plain root = true) :
+theorem localStep_plain {root : NativeEff} (hroot : Straight root = true) :
     ∀ (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (fr' : NFiber) (s' : Stores),
       PlainCode cur = true → PlainStack K →
       localStep root (fiberOf cur K i) s = .running fr' s' →
@@ -1554,7 +1554,7 @@ theorem Owes.yield (root : NativeEff) {n : Nat} {cur : NCode} {K : List NCode} {
 finishes within `n` steps with `ex` over `s'`, the loop, from any count and any token,
 either reaches the exit path of `ex` over `s'` within `2n` commands, or reaches the budget
 first and parks the root on a yield with the rest of the run to do (`Owes`). -/
-theorem drive_localRun (root : NativeEff) (hroot : Plain root = true) :
+theorem drive_localRun (root : NativeEff) (hroot : Straight root = true) :
     ∀ (n : Nat) (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (k : Nat) (tr : NTrace)
       (nt : Nat) (rest : List NCmd) (d : Bool) (ex : ExitV) (s' : Stores),
       PlainCode cur = true → PlainStack K → Quiet s →
@@ -1670,7 +1670,7 @@ theorem drive_localRun (root : NativeEff) (hroot : Plain root = true) :
 and the loop runs on to the exit path or to the next yield; a round that yields again has
 lost at least `defaultBudget - 2` steps of the run, so the rounds the fuel allows are
 enough. -/
-theorem flushAll_Myield (root : NativeEff) (hroot : Plain root = true) :
+theorem flushAll_Myield (root : NativeEff) (hroot : Straight root = true) :
     ∀ (rounds n : Nat) (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (k : Nat)
       (tr : NTrace) (nt : Nat) (ex : ExitV) (s' : Stores) (fuel : Nat),
       PlainCode cur = true → PlainStack K → Quiet s →
@@ -1731,7 +1731,7 @@ theorem replayEval_nil_finished
 /-- The ordinary run ends in the exited machine of the meaning, whatever the road: under the
 op budget, `evaluate` runs the root to its exit and `flush` finds nothing armed; past it,
 the root yields, parks, and `flush` fires its dispatcher round after round until the exit. -/
-theorem replay_Mexit (e : NativeEff) (fuel : Nat) (hpl : Plain e = true)
+theorem replay_Mexit (e : NativeEff) (fuel : Nat) (hpl : Straight e = true)
     (hd : depth e ≤ fuel) (hfuel : 2 * steps e + 6 ≤ fuel) :
     ∃ fr k' tr' nt', replayEval (evaluator := evaluatorFor e) (interpOf e) fuel [Api.evaluate, Api.flush] (Api.load e fuel) =
       ReplayResult.finished
@@ -1804,7 +1804,7 @@ theorem run_eq_meaning (e : NativeEff) (fuel : Nat) (hs : Straight e = true)
     (Api.run e fuel).outcome = Api.Outcome.finished ∧
       (Api.run e fuel).exit = some (meaning e [] Stores.empty).1 ∧
       (Api.run e fuel).stores = (meaning e [] Stores.empty).2 := by
-  have hpl : Plain e = true := by rw [Plain_eq_Straight]; exact hs
+  have hpl : Straight e = true := hs
   obtain ⟨fr, k', tr', nt', hrep⟩ := replay_Mexit e fuel hpl hd hfuel
   have hrun_eq : Api.run e fuel =
       ⟨Api.Outcome.finished,

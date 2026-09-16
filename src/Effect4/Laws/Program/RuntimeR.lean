@@ -277,7 +277,7 @@ theorem straight_ref (e : NativeEff) (fuel : Nat) (hs : Straight e = true)
     classify (replayR e fuel [Api.evaluate, Api.flush]) = .finished ∧
       obsR (replayR e fuel [Api.evaluate, Api.flush]).machine =
         ⟨[(Api.root, some (meaning e [] Stores.empty).1)], (meaning e [] Stores.empty).2⟩ := by
-  have hpl : Plain e = true := by rw [Plain_eq_Straight]; exact hs
+  have hpl : Straight e = true := hs
   obtain ⟨fr, k', tr', nt', hrep⟩ := replay_Mexit e fuel hpl hd hfuel
   have h := replayRel_classify_obs (replay_rel e fuel fuel [Api.evaluate, Api.flush])
   rw [hrep] at h
@@ -290,7 +290,7 @@ theorem straight_sufficient (e : NativeEff) (fuel : Nat) (hs : Straight e = true
     (hd : depth e ≤ fuel) (hfuel : 2 * steps e + 6 ≤ fuel) :
     SufficientR e fuel (loadR e fuel) [Api.evaluate, Api.flush] = true := by
   letI := evaluatorFor e
-  have hpl : Plain e = true := by rw [Plain_eq_Straight]; exact hs
+  have hpl : Straight e = true := hs
   obtain ⟨fr, k', tr', nt', hrep⟩ := replay_Mexit e fuel hpl hd hfuel
   rw [← suffices_eq_ref e fuel fuel [Api.evaluate, Api.flush]]
   refine Suffices_of_replay_terminal (interpOf e) fuel _ _ ?_

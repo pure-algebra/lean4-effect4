@@ -10,8 +10,8 @@ over the stores from *any* outer stack `K`, reaches the exit and the stores its 
 predicts, and continues from there exactly as the run from that exit would. The machine's
 command loop over one fiber is related to this local run in `Program/Agreement/Machine.lean`.
 
-`Plain` is `Denote.Straight`, including `onExit`. Its finalizer runs under a mask,
-then the restoring frame returns to the body's interruption mode.
+The fragment is `Denote.Straight` (`Program/Fragment.lean`), including `onExit`: its
+finalizer runs under a mask, then the restoring frame returns to the body's interruption mode.
 
 The local step is the machine's `evaluatePrim` on a fiber of the fragment: a `sync` thunk
 answers through the store (`Fibers.lean:831-843`), and every other plain primitive is the
@@ -26,89 +26,7 @@ namespace Effect4.Program.Agreement
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote
 
-/-! ## The fragment -/
-
-/-- The straight-line fragment, spelled here so its closure lemmas and measures live with the
-run; `Plain_eq_Straight` says it is `Denote.Straight`. -/
-def Plain : NativeEff → Bool
-  | .succeed _ => true
-  | .fail _ => true
-  | .failCause _ => true
-  | .yieldError _ => true
-  | .sync _ => true
-  | .suspend b => Plain b
-  | .perform op _ =>
-    match (NativeOp.row op).kind with
-    | .sync => true
-    | _ => false
-  | .bind a b => Plain a && Plain b
-  | .branch _ a b => Plain a && Plain b
-  | .exit b => Plain b
-  | .catchCause b h => Plain b && Plain h
-  | .matchCause b v c => Plain b && Plain v && Plain c
-  | .onExit b f => Plain b && Plain f
-  | _ => false
-
-theorem Plain_eq_Straight : ∀ e : NativeEff, Plain e = Straight e
-  | .suspend b => by simp only [Plain, Straight, Plain_eq_Straight b]
-  | .bind a b => by simp only [Plain, Straight, Plain_eq_Straight a, Plain_eq_Straight b]
-  | .branch _ a b => by simp only [Plain, Straight, Plain_eq_Straight a, Plain_eq_Straight b]
-  | .exit b => by simp only [Plain, Straight, Plain_eq_Straight b]
-  | .catchCause b h => by simp only [Plain, Straight, Plain_eq_Straight b, Plain_eq_Straight h]
-  | .matchCause b v c => by
-    simp only [Plain, Straight, Plain_eq_Straight b, Plain_eq_Straight v, Plain_eq_Straight c]
-  | .onExit b f => by simp only [Plain, Straight, Plain_eq_Straight b, Plain_eq_Straight f]
-  | .succeed _ | .fail _ | .failCause _ | .yieldError _ | .sync _ | .perform _ _ | .gen _
-  | .uninterruptible _ | .interruptible _ | .whileLoop _ _ _ _ | .yieldNow _ | .callback _ _
-  | .awaitFiber _ _ | .withFiber _ | .scoped _ | .acquireRelease _ _
-  | .provideLayer _ _ _ | .service _ | .provideService _ _ _ | .catchIf _ _ _ => rfl
-
-theorem Plain.suspend {b : NativeEff} (h : Plain (.suspend b) = true) : Plain b = true := h
-
-theorem Plain.onExit {b f : NativeEff} (h : Plain (.onExit b f) = true) :
-    Plain b = true ∧ Plain f = true := by
-  simpa [Plain, Bool.and_eq_true] using h
-
-theorem Plain.bind {a b : NativeEff} (h : Plain (.bind a b) = true) :
-    Plain a = true ∧ Plain b = true := by
-  simpa [Plain, Bool.and_eq_true] using h
-
-theorem Plain.branch {t : Term} {a b : NativeEff} (h : Plain (.branch t a b) = true) :
-    Plain a = true ∧ Plain b = true := by
-  simpa [Plain, Bool.and_eq_true] using h
-
-theorem Plain.exit {b : NativeEff} (h : Plain (.exit b) = true) : Plain b = true := h
-
-theorem Plain.catchCause {b h' : NativeEff} (h : Plain (.catchCause b h') = true) :
-    Plain b = true ∧ Plain h' = true := by
-  simpa [Plain, Bool.and_eq_true] using h
-
-theorem Plain.matchCause {b v c : NativeEff} (h : Plain (.matchCause b v c) = true) :
-    Plain b = true ∧ Plain v = true ∧ Plain c = true := by
-  simpa [Plain, Bool.and_eq_true, and_assoc] using h
-
-theorem Plain.perform_sync {op : NativeOp} {r : Term} (h : Plain (.perform op r) = true) :
-    (NativeOp.row op).kind = .sync := by
-  unfold Plain at h
-  revert h
-  cases (NativeOp.row op).kind <;> simp
-
-theorem Plain.not_gen {e : NativeEff} (h : Plain e = true) : ∀ ss, e ≠ .gen ss := by
-  intro ss heq
-  subst heq
-  simp [Plain] at h
-
-theorem Plain.not_whileLoop {e : NativeEff} (h : Plain e = true) :
-    ∀ i t s b, e ≠ .whileLoop i t s b := by
-  intro i t s b heq
-  subst heq
-  simp [Plain] at h
-
-theorem Plain.not_provideLayer {e : NativeEff} (h : Plain e = true) :
-    ∀ l i b, e ≠ .provideLayer l i b := by
-  intro l i b heq
-  subst heq
-  simp [Plain] at h
+/-! ## The measures of the fragment (`Denote.Straight`, `Program/Fragment.lean`) -/
 
 /-- The depth the compile's fuel must cover: every child costs one (`Compile.lean:113`). -/
 def depth : NativeEff → Nat
@@ -1410,7 +1328,7 @@ theorem suspendBodyAt_provideLayer {root : NativeEff} {q : Point} {k : Nat}
 /-- A plain body whose compiled head is already an exit has that exit as its meaning, at
 unchanged stores: the fold of `compileEff_exit_fold` is the body's meaning. -/
 theorem meaning_of_asExit : ∀ (b : NativeEff) (q : Point) (s : Stores) {exit : ExitV},
-    Plain b = true → (compileEff b q).asExit? = some exit → meaning b q.env s = (exit, s)
+    Straight b = true → (compileEff b q).asExit? = some exit → meaning b q.env s = (exit, s)
   | .succeed v, q, s, exit, _, h => by
     rcases hf : q.fuel with _ | k
     · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
@@ -1462,7 +1380,7 @@ theorem meaning_of_asExit : ∀ (b : NativeEff) (q : Point) (s : Stores) {exit :
     · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
     · rw [compileEff_suspend b hf] at h; simp [Prim.asExit?] at h
   | .perform op r, q, s, exit, hpl, h => by
-    have hk := Plain.perform_sync hpl
+    have hk := Straight.perform_sync hpl
     rcases hf : q.fuel with _ | k
     · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
     · rw [compileEff_perform_sync op r hf hk] at h
@@ -1492,7 +1410,7 @@ theorem meaning_of_asExit : ∀ (b : NativeEff) (q : Point) (s : Stores) {exit :
         simp only [Prim.asExit?_success, Option.some.injEq] at h
         subst h
         have hb : meaning b q.env s = (inner, s) :=
-          meaning_of_asExit b (q.child 0) s (Plain.exit hpl) hx
+          meaning_of_asExit b (q.child 0) s (Straight.exit hpl) hx
         rw [meaning_exit, hb]
   | .catchCause b hh, q, s, exit, _, h => by
     rcases hf : q.fuel with _ | k
@@ -1513,7 +1431,7 @@ theorem meaning_of_asExit : ∀ (b : NativeEff) (q : Point) (s : Stores) {exit :
   | .«scoped» _, _, _, _, hpl, _ | .acquireRelease _ _, _, _, _, hpl, _
   | .provideLayer _ _ _, _, _, _, hpl, _
   | .service _, _, _, _, hpl, _ | .provideService _ _ _, _, _, _, hpl, _
-  | .catchIf _ _ _, _, _, _, hpl, _ => by simp [Plain] at hpl
+  | .catchIf _ _ _, _, _, _, hpl, _ => by simp [Straight] at hpl
 
 theorem contAOf_cont (root : NativeEff) (p : Point) (v : Val) :
     contAOf root (EffName.cont p) v = resolve root (p.childWith 1 v) := rfl
@@ -1635,7 +1553,7 @@ its meaning's stores, and continues from there as that fiber would. The count `c
 the run actually takes; `steps e` bounds it. -/
 theorem localRun_compile (root : NativeEff) :
     ∀ (e : NativeEff) (p : Point) (K : List NCode) (i : Bool) (s : Stores),
-      Plain e = true → Node.at_ (Node.eff root) p.path = some (Node.eff e) →
+      Straight e = true → Node.at_ (Node.eff root) p.path = some (Node.eff e) →
       depth e ≤ p.fuel →
       ∃ c, c ≤ steps e ∧
         Reaches root c (fiberOf (compileEff e p) K i) s
@@ -1683,7 +1601,7 @@ theorem localRun_compile (root : NativeEff) :
       show depth b ≤ p.fuel - 1
       simp only [depth] at hd
       omega
-    obtain ⟨c, hc, hr⟩ := localRun_compile root b ({ p with completed := [] }.child 0) K i s (Plain.suspend hpl) hb hdb
+    obtain ⟨c, hc, hr⟩ := localRun_compile root b ({ p with completed := [] }.child 0) K i s (Straight.suspend hpl) hb hdb
     rw [Point.child_env] at hr
     rw [meaning_suspend, compileEff_suspend b (fuel_succ hd)]
     have hs := step_suspend root (EffThunk.body p) K i s
@@ -1691,7 +1609,7 @@ theorem localRun_compile (root : NativeEff) :
     rw [suspendBodyAt_suspend (q := { p with completed := [] }) (fuel_succ hd) h, resolve_of_at hb] at hs
     exact ⟨1 + c, by simp only [steps]; omega, (Reaches.step hs).trans hr⟩
   | .perform op r, p, K, i, s, hpl, _, hd => by
-    have hkind := Plain.perform_sync hpl
+    have hkind := Straight.perform_sync hpl
     rw [compileEff_perform_sync op r (fuel_succ hd) hkind]
     rcases hx : evalTerm p.env r with _ | x
     · rw [meaning_perform_noEval op r p.env s hkind hx]
@@ -1709,7 +1627,7 @@ theorem localRun_compile (root : NativeEff) :
         · simp only [hstep] at hs
           exact ⟨1, Nat.le_refl _, Reaches.step hs⟩
   | .bind a b, p, K, i, s, hpl, h, hd => by
-    obtain ⟨hpa, hpb⟩ := Plain.bind hpl
+    obtain ⟨hpa, hpb⟩ := Straight.bind hpl
     have ha : Node.at_ (Node.eff root) (p.child 0).path = some (Node.eff a) := at_child h 0
     have hfa : depth a ≤ (p.child 0).fuel := by
       show depth a ≤ p.fuel - 1
@@ -1746,7 +1664,7 @@ theorem localRun_compile (root : NativeEff) :
         step_failure_pass_onSuccess root c (compileEff a (p.child 0)) (EffName.cont p) K i s)
       exact ⟨1 + ca + 0, by simp only [steps]; omega, (hpush.trans hra).trans hpass⟩
   | .branch t a b, p, K, i, s, hpl, h, hd => by
-    obtain ⟨hpa, hpb⟩ := Plain.branch hpl
+    obtain ⟨hpa, hpb⟩ := Straight.branch hpl
     have ha : Node.at_ (Node.eff root) ({ p with completed := [] }.child 0).path = some (Node.eff a) := at_child h 0
     have hb : Node.at_ (Node.eff root) ({ p with completed := [] }.child 1).path = some (Node.eff b) := at_child h 1
     have hfa : depth a ≤ ({ p with completed := [] }.child 0).fuel := by
@@ -1788,7 +1706,7 @@ theorem localRun_compile (root : NativeEff) :
     rcases hx : (compileEff b (p.child 0)).asExit? with _ | ex
     · rw [compileEff_exit_frame b (fuel_succ hd) hx, meaning_exit]
       obtain ⟨cb, hcb, hrb⟩ := localRun_compile root b (p.child 0)
-        (Prim.exitFrame (compileEff b (p.child 0)) :: K) i s (Plain.exit hpl) hb hfb
+        (Prim.exitFrame (compileEff b (p.child 0)) :: K) i s (Straight.exit hpl) hb hfb
       rw [Point.child_env] at hrb
       have hpush := Reaches.step (step_push_exitFrame root (compileEff b (p.child 0)) K i s)
       rcases hmb : meaning b p.env s with ⟨ex, s'⟩
@@ -1796,12 +1714,12 @@ theorem localRun_compile (root : NativeEff) :
       have hpop := Reaches.step (step_ofExit_exitFrame root ex (compileEff b (p.child 0)) K i s')
       exact ⟨1 + cb + 1, by simp only [steps]; omega, (hpush.trans hrb).trans hpop⟩
     · -- the fold: the compiled program already is the meaning's exit (row D1)
-      have hmb := meaning_of_asExit b (p.child 0) s (Plain.exit hpl) hx
+      have hmb := meaning_of_asExit b (p.child 0) s (Straight.exit hpl) hx
       rw [Point.child_env] at hmb
       rw [compileEff_exit_fold b (fuel_succ hd) hx, meaning_exit, hmb]
       exact ⟨0, Nat.zero_le _, Reaches.refl root _ s⟩
   | .catchCause b hh, p, K, i, s, hpl, h, hd => by
-    obtain ⟨hpb, hph⟩ := Plain.catchCause hpl
+    obtain ⟨hpb, hph⟩ := Straight.catchCause hpl
     have hb : Node.at_ (Node.eff root) (p.child 0).path = some (Node.eff b) := at_child h 0
     have hfb : depth b ≤ (p.child 0).fuel := by
       show depth b ≤ p.fuel - 1
@@ -1839,7 +1757,7 @@ theorem localRun_compile (root : NativeEff) :
       exact ⟨1 + cb + 1 + ch, by simp only [steps]; omega,
         ((hpush.trans hrb).trans hpop).trans hrh⟩
   | .matchCause b v c, p, K, i, s, hpl, h, hd => by
-    obtain ⟨hpb, hpv, hpc⟩ := Plain.matchCause hpl
+    obtain ⟨hpb, hpv, hpc⟩ := Straight.matchCause hpl
     have hb : Node.at_ (Node.eff root) (p.child 0).path = some (Node.eff b) := at_child h 0
     have hfb : depth b ≤ (p.child 0).fuel := by
       show depth b ≤ p.fuel - 1
@@ -1892,7 +1810,7 @@ theorem localRun_compile (root : NativeEff) :
       exact ⟨1 + cb + 1 + cc, by simp only [steps]; omega,
         ((hpush.trans hrb).trans hpop).trans hrc⟩
   | .onExit b f, p, K, i, s, hpl, h, hd => by
-    obtain ⟨hpb, hpf⟩ := Plain.onExit hpl
+    obtain ⟨hpb, hpf⟩ := Straight.onExit hpl
     have hb : Node.at_ (Node.eff root) (p.child 0).path = some (Node.eff b) := at_child h 0
     have hfb : depth b ≤ (p.child 0).fuel := by
       show depth b ≤ p.fuel - 1
@@ -2001,11 +1919,11 @@ theorem localRun_compile (root : NativeEff) :
   | .provideLayer _ _ _, _, _, _, _, hpl, _, _
   | .service _, _, _, _, _, hpl, _, _
   | .provideService _ _ _, _, _, _, _, hpl, _, _
-  | .catchIf _ _ _, _, _, _, _, hpl, _, _ => by simp [Plain] at hpl
+  | .catchIf _ _ _, _, _, _, _, hpl, _, _ => by simp [Straight] at hpl
 
 /-- At the root, on the empty stack, from the empty stores: the local run finishes with the
 meaning inside `steps e + 1` steps (the last one is the exit leaving the empty stack). -/
-theorem localRun_root (e : NativeEff) (fuel : Nat) (hpl : Plain e = true)
+theorem localRun_root (e : NativeEff) (fuel : Nat) (hpl : Straight e = true)
     (hd : depth e ≤ fuel) :
     localRun e (steps e + 1) (fiberOf (compile e fuel) []) Stores.empty =
       some (meaning e [] Stores.empty) := by
