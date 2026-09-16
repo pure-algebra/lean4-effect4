@@ -172,6 +172,16 @@
       ]
     },
     {
+      "Note": "The native rows as authoring wrappers, named as the printed image spells them, from NativeOp.all and the NativeOp declarations (DI-89's native half).",
+      "Name": "Rows",
+      "Tool": "tools/Effect4Gen/Rows.lean",
+      "Imports": "Effect4.Program.Authoring.Lifts",
+      "Out": "src\\Effect4\\Program\\Authoring\\Rows.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\rows.lean",
+      "Kinds": [],
+      "Types": []
+    },
+    {
       "Note": "The scope-preservation lemma of every authoring lift, from the same rows; the base and the tactic are hand-written in Laws/Program/Authoring.lean.",
       "Name": "ScopedLaws",
       "Tool": "tools/Effect4Gen/Authoring.lean",
@@ -182,6 +192,16 @@
       "Types": [
         "Effect4.Program.Eff"
       ]
+    },
+    {
+      "Note": "The scope lemma of every row wrapper.",
+      "Name": "RowsLaws",
+      "Tool": "tools/Effect4Gen/Rows.lean",
+      "Imports": "Effect4.Laws.Program.Authoring.Lifts,Effect4.Program.Authoring.Rows",
+      "Out": "src\\Effect4\\Laws\\Program\\Authoring\\Rows.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\rowslaws.lean",
+      "Kinds": [],
+      "Types": []
     }
   ]
 }
