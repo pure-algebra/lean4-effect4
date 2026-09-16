@@ -136,12 +136,36 @@
       ]
     },
     {
+      "Note": "The scope predicate (every variable below its level) as the binder table's algebra on the carrier Nat -> Bool, run by the fold; one equation per constructor.",
+      "Name": "Scoped",
+      "Tool": "tools/Effect4Gen/Authoring.lean",
+      "Imports": "Effect4.Program.Fold,Effect4.Program.Refs",
+      "Out": "src\\Effect4\\Program\\Scoped.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\scoped.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Eff"
+      ]
+    },
+    {
       "Note": "The authoring lifts (DI-83, DI-84): one per constructor an author may write, from the same table.",
       "Name": "Authoring",
       "Tool": "tools/Effect4Gen/Authoring.lean",
       "Imports": "Effect4.Program.Authoring",
       "Out": "src\\Effect4\\Program\\Authoring\\Lifts.lean",
       "Guards": "tools\\Effect4Gen\\guards\\authoring.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Eff"
+      ]
+    },
+    {
+      "Note": "The scope-preservation lemma of every authoring lift, from the same rows; the base and the tactic are hand-written in Laws/Program/Authoring.lean.",
+      "Name": "ScopedLaws",
+      "Tool": "tools/Effect4Gen/Authoring.lean",
+      "Imports": "Effect4.Laws.Program.Authoring,Effect4.Program.Authoring.Lifts",
+      "Out": "src\\Effect4\\Laws\\Program\\Authoring\\Lifts.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\scopedlaws.lean",
       "Kinds": [],
       "Types": [
         "Effect4.Program.Eff"

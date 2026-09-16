@@ -58,6 +58,9 @@ import Effect4.Laws.Store.CanonicalSpec
 import Effect4.Laws.Schema.Codec
 import Effect4.Laws.Schema.Image
 import Effect4.Laws.Schema.Transform
+import Effect4.Laws.Program.Authoring
+import Effect4.Laws.Program.Authoring.Lifts
+import Effect4.Laws.Program.Authoring.Sugar
 
 /-!
 # Effect4 proof graph

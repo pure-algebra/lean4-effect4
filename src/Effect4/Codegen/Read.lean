@@ -711,24 +711,6 @@ def roundTrip (sig : Signature Op) (spell : String → List String → Option Op
 
 /-! ## What the printer loses -/
 
-mutual
-  /-- Every variable of the term is in scope at `n`. -/
-  def Term.scoped (n : Nat) : Term → Bool
-    | .var index => decide (index < n)
-    | .lit _ => true
-    | .app _ args => Terms.scoped n args
-  def Terms.scoped (n : Nat) : Terms → Bool
-    | .nil => true
-    | .cons head tail => Term.scoped n head && Terms.scoped n tail
-end
-
-def CauseTerm.scoped (n : Nat) : CauseTerm → Bool
-  | .fail error => error.scoped n
-  | .die defect => defect.scoped n
-  | .interrupt none => true
-  | .interrupt (some who) => who.scoped n
-  | .both left right => left.scoped n && right.scoped n
-
 /-- The identifiers an argument list prints as, when every argument prints as one: a
 variable as its binder, the unit literal as `undefined`. -/
 def Terms.names? : Terms → Option (List String)

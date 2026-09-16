@@ -202,7 +202,7 @@ def Action.interrupt {Op : Type} (target : TermSrc) : ActionSrc Op :=
 def Action.interruptAll {Op : Type} (targets : TermSrc) (interruptor : Option TermSrc) : ActionSrc Op :=
   fun env p => do
     let x0 ← targets env p
-    let x1 ← (match interruptor with | none => pure none | some t => (some ·) <$> t env p)
+    let x1 ← elabOption interruptor env p
     .ok (.interruptAll x0 x1)
 
 /-- `Effect4.Program.ActionTerm.awaitAll`. -/
@@ -214,8 +214,8 @@ def Action.awaitAll {Op : Type} (targets : TermSrc) : ActionSrc Op :=
 /-- `Effect4.Program.ActionTerm.raceAll`. -/
 def Action.raceAll {Op : Type} (entrants : List (Src Op)) : ActionSrc Op :=
   fun env p => do
-    let x0 ← entrants.zipIdx.mapM fun (e, i) => e env (p ++ [0] ++ List.replicate i 1 ++ [0])
-    .ok (.raceAll (effsOfList x0))
+    let x0 ← elabEffs entrants env (p ++ [0])
+    .ok (.raceAll x0)
 
 /-- `Effect4.Program.ActionTerm.getContext`. -/
 def Action.getContext {Op : Type} : ActionSrc Op :=
@@ -284,8 +284,8 @@ def Layer.orDie {Op : Type} (inner : LayerSrc Op) : LayerSrc Op :=
 /-- `Effect4.Program.LayerTerm.mergeAll`. -/
 def Layer.mergeAll {Op : Type} (layers : List (LayerSrc Op)) : LayerSrc Op :=
   fun env p => do
-    let x0 ← layers.zipIdx.mapM fun (l, i) => l env (p ++ [0] ++ List.replicate i 1 ++ [0])
-    .ok (.mergeAll (LayerTerms.ofList x0))
+    let x0 ← elabLayers layers env (p ++ [0])
+    .ok (.mergeAll x0)
 
 /-- `Effect4.Program.CauseTerm.fail`. -/
 def Cause.fail (error : TermSrc) : CauseSrc :=
@@ -302,7 +302,7 @@ def Cause.die (defect : TermSrc) : CauseSrc :=
 /-- `Effect4.Program.CauseTerm.interrupt`. -/
 def Cause.interrupt (interruptor : Option TermSrc) : CauseSrc :=
   fun env p => do
-    let x0 ← (match interruptor with | none => pure none | some t => (some ·) <$> t env p)
+    let x0 ← elabOption interruptor env p
     .ok (.interrupt x0)
 
 /-- `Effect4.Program.CauseTerm.both`. -/

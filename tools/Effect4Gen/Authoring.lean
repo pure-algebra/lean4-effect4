@@ -17,6 +17,11 @@ constructor declarations from the Lean environment, and emits:
   (DI-83): one definition per constructor, its slot names as `String` parameters, each
   argument elaborated under exactly the binders the table gives it, at the child path
   `Node.child` assigns it.
+* group `Scoped` → `src/Effect4/Program/Scoped.lean`: the same table as an algebra of the
+  program signature (`Fold.lean`) on the carrier `Nat → Bool`, so `Eff.scopedAt n e` (every
+  variable below its level) is one `cata_eff`, with one `rfl` equation per constructor.
+* group `ScopedLaws` → `src/Effect4/Laws/Program/Authoring/Lifts.lean`: for every lift, the
+  theorem that it preserves scope, with one proof script for all of them.
 
 Run by `tools/Effect4Gen/Driver.lean` like the other emitters:
 
@@ -310,16 +315,16 @@ def emitLift (t : Table) (c : Ctor) : MetaM (Option (String × String)) := do
       | .node fam =>
         let some rank := nodeRank c j | return none
         if fam == `Effect4.Program.Effs then
-          lines := lines ++ [s!"    let {x} ← {a.name}.zipIdx.mapM fun (e, i) => e {scopeOf j} (p ++ [{rank}] ++ List.replicate i 1 ++ [0])"]
-          results := results ++ [s!"(effsOfList {x})"]
+          lines := lines ++ [s!"    let {x} ← elabEffs {a.name} {scopeOf j} (p ++ [{rank}])"]
+          results := results ++ [x]
         else if fam == `Effect4.Program.LayerTerms then
-          lines := lines ++ [s!"    let {x} ← {a.name}.zipIdx.mapM fun (l, i) => l {scopeOf j} (p ++ [{rank}] ++ List.replicate i 1 ++ [0])"]
-          results := results ++ [s!"(LayerTerms.ofList {x})"]
+          lines := lines ++ [s!"    let {x} ← elabLayers {a.name} {scopeOf j} (p ++ [{rank}])"]
+          results := results ++ [x]
         else
           lines := lines ++ [s!"    let {x} ← {a.name} {scopeOf j} (p ++ [{rank}])"]
           results := results ++ [x]
       | .optionTerm =>
-        lines := lines ++ [s!"    let {x} ← (match {a.name} with | none => pure none | some t => (some ·) <$> t {scopeOf j} p)"]
+        lines := lines ++ [s!"    let {x} ← elabOption {a.name} {scopeOf j} p"]
         results := results ++ [x]
       | _ =>
         lines := lines ++ [s!"    let {x} ← {a.name} {scopeOf j} p"]
@@ -345,6 +350,247 @@ def emitLifts (t : Table) (ctors : List Ctor) : MetaM (String × List String) :=
   let mut receipts := []
   for c in ctors do
     if let some (d, name) ← emitLift t c then
+      text := text ++ d ++ "\n"
+      receipts := receipts ++ [name]
+  return (text, receipts)
+
+/-! ## Group Scoped: the binder table as an algebra on the carrier `Nat → Bool`
+
+The scope predicate is not a second recursion over the seven sorts: it is the program
+signature's algebra (`Fold.lean`, `EffAlgebra`) on the carrier `Nat → Bool`, one field per
+constructor, each argument checked at the level its row gives it, run by `cata_eff`. The one
+head-dependent row (`whenHead`: a statement list's tail is one deeper after a `bindYield`)
+is carried as a flag in that family's carrier. One equation lemma per constructor, `rfl`,
+is what consumers rewrite with. -/
+
+/-- The level an argument is checked at, from its row: `0` for a closed child, `n + k` under
+`k` binders, `n` otherwise. -/
+def levelText (row? : Option Row) (j : Nat) : String :=
+  match row? with
+  | none => "n"
+  | some r =>
+    if r.closed.contains j then "0"
+    else match r.args[j]? with
+      | some ixs => if ixs.isEmpty then "n" else s!"(n + {ixs.length})"
+      | none => "n"
+
+/-- The family whose carrier carries a flag, and the head the flag means. -/
+structure Flag where
+  fam : Name
+  head : Name
+
+def flagOf (t : Table) : MetaM (Option Flag) := do
+  match t.rows.find? (·.whenHead.isSome) with
+  | none => return none
+  | some r =>
+    let some h := r.whenHead | return none
+    let ci ← getConstInfoCtor h
+    return some { fam := ci.induct, head := h }
+
+def isLayerFam (fam : Name) : Bool :=
+  fam == `Effect4.Program.LayerTerm || fam == `Effect4.Program.LayerTerms
+
+def emitScoped (t : Table) (ctors : List Ctor) : MetaM (String × List String) := do
+  let flag? ← flagOf t
+  let flagged (fam : Name) : Bool := flag?.any (·.fam == fam)
+  let mut fields : List String := []
+  let mut eqns : List String := []
+  for c in ctors do
+    let some famKey := nodeCtorOf c.fam | continue
+    let row? ← match rowOf t c with | .ok r => pure r | .error e => throwError e
+    let headRow := row?.any (·.whenHead.isSome)
+    -- the sibling whose head decides a `whenHead` row's binders: the flagged family's argument
+    let headArg? : Option Nat :=
+      if headRow then (c.args.zipIdx.find? fun (a, _) => match a.kind with
+        | .node f => flagged f | _ => false).map (·.2) else none
+    let plainRow? := if headRow then none else row?
+    let lvl (j : Nat) (algebra : Bool) : String :=
+      match row?, headArg? with
+      | some r, some k =>
+        match r.args[j]? with
+        | some ixs =>
+          if ixs.isEmpty then "n"
+          else s!"(if a{k}{if algebra then ".2" else ".bindsNext"} then n + {ixs.length} else n)"
+        | none => "n"
+      | _, _ => levelText plainRow? j
+    let parts (algebra : Bool) : List String := c.args.zipIdx.filterMap fun (a, j) =>
+      let l := lvl j algebra
+      match a.kind with
+      | .term => some s!"a{j}.scoped {l}"
+      | .optionTerm => some s!"a{j}.all (·.scoped {l})"
+      | .cause => some s!"a{j}.scoped {l}"
+      | .node fam =>
+        if algebra then
+          if isLayerFam fam then some s!"a{j} 0"
+          else if flagged fam then some s!"a{j}.1 {l}"
+          else some s!"a{j} {l}"
+        else
+          if isLayerFam fam then some s!"{shortName fam}.scoped a{j}"
+          else some s!"{shortName fam}.scopedAt {l} a{j}"
+      | .other => none
+    let conj (algebra : Bool) : String :=
+      let ps := parts algebra
+      if ps.isEmpty then "true" else String.intercalate " && " ps
+    let usesN (body : String) : Bool := (body.splitOn "n ").length > 1 || body.endsWith "n" || (body.splitOn "n)").length > 1
+    let binders := String.intercalate " " (c.args.zipIdx.map fun (a, j) =>
+      match a.kind with | .other => "_" | _ => s!"a{j}")
+    let lam (body : String) : String :=
+      let nb := if isLayerFam c.fam || !usesN body then "_" else "n"
+      if binders.isEmpty then s!"fun {nb} => {body}" else s!"fun {binders} {nb} => {body}"
+    let field := s!"{famKey}_{c.short}"
+    if flagged c.fam then
+      let body := conj true
+      let inner := if usesN body then s!"fun n => {body}" else s!"fun _ => {body}"
+      let pair := s!"({inner}, {if c.name == (flag?.map (·.head)).getD .anonymous then "true" else "false"})"
+      fields := fields ++ [s!"  {field} := " ++ (if binders.isEmpty then pair else s!"fun {binders} => {pair}")]
+    else
+      fields := fields ++ [s!"  {field} := {lam (conj true)}"]
+    -- the equation lemma
+    let params := String.intercalate " " (c.args.zipIdx.map fun (a, j) => s!"(a{j} : {a.tyText})")
+    let app := if c.args.isEmpty then s!".{c.short}" else s!".{c.short} " ++ String.intercalate " " (c.args.zipIdx.map fun (_, j) => s!"a{j}")
+    let famShort := shortName c.fam
+    let lhs := if isLayerFam c.fam then s!"{famShort}.scoped (({app} : {famShort} Op))" else s!"{famShort}.scopedAt n (({app} : {famShort} Op))"
+    let nParam := if isLayerFam c.fam then "" else "(n : Nat) "
+    let rhs := conj false
+    let rhs := if rhs == "true" then rhs else s!"({rhs})"
+    let lemma := if isLayerFam c.fam then "scoped" else "scopedAt"
+    eqns := eqns ++ [s!"@[simp] theorem {famShort}.{lemma}_{c.short} \{Op : Type} {nParam}{params} :\n    {lhs} = {rhs} := rfl"]
+    if flagged c.fam then
+      let v := if c.name == (flag?.map (·.head)).getD .anonymous then "true" else "false"
+      eqns := eqns ++ [s!"@[simp] theorem {famShort}.bindsNext_{c.short} \{Op : Type} {params} :\n    {famShort}.bindsNext (({app} : {famShort} Op)) = {v} := rfl"]
+  let carrier := match flag? with
+    | some f =>
+      let key := (nodeCtorOf f.fam).getD "stmt"
+      s!"abbrev ScopeCarrier : EffFam → Type\n  | .{key} => (Nat → Bool) × Bool\n  | _ => Nat → Bool"
+    | none => "abbrev ScopeCarrier : EffFam → Type := fun _ => Nat → Bool"
+  let flagDefs := match flag? with
+    | some f =>
+      let fs := shortName f.fam
+      let key := (nodeCtorOf f.fam).getD "stmt"
+      s!"def {fs}.scopedAt \{Op : Type} (n : Nat) (s : {fs} Op) : Bool := (cata_{key} (scopedAlgebra Op) s).1 n\n" ++
+      s!"/-- Whether the statement binds the one after it: the head the table's `whenHead` row names. -/\n" ++
+      s!"def {fs}.bindsNext \{Op : Type} (s : {fs} Op) : Bool := (cata_{key} (scopedAlgebra Op) s).2\n"
+    | none => "def Stmt.scopedAt {Op : Type} (n : Nat) (s : Stmt Op) : Bool := cata_stmt (scopedAlgebra Op) s n\n"
+  let text := String.intercalate "\n" ([
+    "/-- The carrier: at every sort the scope test at a level; the flagged family also says",
+    "whether it binds the sibling after it (the table's one `whenHead` row). -/",
+    carrier,
+    "",
+    "/-- The binder table as an algebra: each argument checked at the level its row gives it. -/",
+    "def scopedAlgebra (Op : Type) : EffAlgebra Op ScopeCarrier where"] ++ fields ++ [
+    "",
+    "/-- Every variable in scope at `n`, read off the tree by the one fold (`scoped` is the",
+    "constructor, Effect's `scoped` combinator). -/",
+    "def Eff.scopedAt {Op : Type} (n : Nat) (e : Eff Op) : Bool := cata_eff (scopedAlgebra Op) e n",
+    flagDefs,
+    "def Stmts.scopedAt {Op : Type} (n : Nat) (ss : Stmts Op) : Bool := cata_stmts (scopedAlgebra Op) ss n",
+    "def Effs.scopedAt {Op : Type} (n : Nat) (es : Effs Op) : Bool := cata_effs (scopedAlgebra Op) es n",
+    "def ActionTerm.scopedAt {Op : Type} (n : Nat) (a : ActionTerm Op) : Bool := cata_action (scopedAlgebra Op) a n",
+    "/-- A layer is closed: its bodies are checked at level `0`. -/",
+    "def LayerTerm.scoped {Op : Type} (l : LayerTerm Op) : Bool := cata_layer (scopedAlgebra Op) l 0",
+    "def LayerTerms.scoped {Op : Type} (ls : LayerTerms Op) : Bool := cata_layers (scopedAlgebra Op) ls 0",
+    "",
+    "def Node.scopedAt {Op : Type} (n : Nat) : Node Op → Bool",
+    "  | .eff e => e.scopedAt n",
+    "  | .stmts ss => ss.scopedAt n",
+    "  | .stmt s => s.scopedAt n",
+    "  | .action a => a.scopedAt n",
+    "  | .effs es => es.scopedAt n",
+    "  | .layer l => l.scoped",
+    "  | .layers ls => ls.scoped",
+    "",
+    "/-! ## The equations, one per constructor -/",
+    ""] ++ eqns ++ [""])
+  return (text, ["Effect4.Program.scopedAlgebra", "Effect4.Program.Eff.scopedAt",
+                 "Effect4.Program.Node.scopedAt"])
+
+/-! ## Group ScopedLaws: one preservation lemma per lift, from the same rows
+
+Each lift elaborates its arguments under the binders its row gives it; its lemma says that
+if every source argument is scoped, the result is scoped (`Laws/Program/Authoring.lean`
+holds the predicates and the base). The proof is the same for every lift: open the `do`
+chain (`bind_ok` once per elaborated argument), read each argument's scope at the depth the
+row pushed, and close with the constructor's equation of the scope algebra
+(`Program/Scoped.lean`). -/
+
+def hypOf (kind : ArgKind) (name : String) : Option String :=
+  match kind with
+  | .node `Effect4.Program.Effs => some s!"∀ s ∈ {name}, s.Scoped"
+  | .node `Effect4.Program.LayerTerms => some s!"∀ s ∈ {name}, s.Scoped"
+  | .node _ => some s!"{name}.Scoped"
+  | .term => some s!"{name}.Scoped"
+  | .cause => some s!"{name}.Scoped"
+  | .optionTerm => some s!"∀ t ∈ {name}, t.Scoped"
+  | .other => none
+
+def emitLiftLemma (t : Table) (c : Ctor) : MetaM (Option (String × String)) := do
+  if !t.profile.families.contains c.fam then return none
+  if (t.profile.readerOnly ++ t.profile.machineOnly ++ t.profile.handWritten).contains c.name then
+    return none
+  let row? ← match rowOf t c with
+    | .ok r => pure r
+    | .error e => throwError e
+  let row? := row?.bind fun r => if r.whenHead.isSome then none else some r
+  let slots := (row?.map (·.slots)).getD []
+  let closedArg (j : Nat) : Bool := match row? with
+    | none => false
+    | some r => r.closed.contains j
+  let pushedArg (j : Nat) : Bool := match row? with
+    | none => false
+    | some r => (r.args[j]?).any (fun ixs => !ixs.isEmpty)
+  let defName := (t.profile.renames.find? (·.1 == c.name)).map (·.2) |>.getD c.short
+  let fullName := liftPrefix c.fam ++ defName
+  let isCause := c.fam == `Effect4.Program.CauseTerm
+  let mut params : List String :=
+    (if isCause then [] else ["{Op : Type}"]) ++ slots.map fun s => s!"({s} : String)"
+  let mut hyps : List String := []
+  let mut appArgs : List String := slots
+  let mut steps : List String := []
+  let mut haves : List String := []
+  let mut ss : List String := []
+  let mut optionArg : Option Nat := none
+  for (a, j) in c.args.zipIdx do
+    appArgs := appArgs ++ [a.name]
+    match a.kind with
+    | .other => params := params ++ [s!"({a.name} : {a.tyText})"]
+    | kind =>
+      let some ty := srcTypeOf kind | return none
+      let some hyp := hypOf kind a.name | return none
+      params := params ++ [s!"\{{a.name} : {ty}}"]
+      hyps := hyps ++ [s!"(h{j} : {hyp})"]
+      steps := steps ++ [s!"  obtain ⟨x{j}, hx{j}, h⟩ := bind_ok h"]
+      let derive := match kind with
+        | .node `Effect4.Program.Effs => s!"elabEffs_scoped h{j} hx{j}"
+        | .node `Effect4.Program.LayerTerms => s!"elabLayers_scoped h{j} hx{j}"
+        | .optionTerm => s!"elabOption_scoped h{j} hx{j}"
+        | _ => s!"h{j}.holds _ _ _ hx{j}"
+      haves := haves ++ [s!"  have s{j} := {derive}"]
+      if kind == .optionTerm then optionArg := some j
+      if closedArg j then
+        haves := haves ++ [s!"  simp only [Env.closed_length] at s{j}"]
+      else if pushedArg j then
+        haves := haves ++ [s!"  simp only [Env.push_length, List.length_cons, List.length_nil] at s{j}"]
+      ss := ss ++ [s!"s{j}"]
+  let app := String.intercalate " " ([fullName] ++ appArgs)
+  let finish :=
+    if isCause then
+      match optionArg with
+      | some j => s!"  cases x{j} <;> simp_all [CauseTerm.scoped]"
+      | none => "  simp [CauseTerm.scoped" ++ (if ss.isEmpty then "]" else ", " ++ String.intercalate ", " ss ++ "]")
+    else if ss.isEmpty then "  simp" else "  simp [" ++ String.intercalate ", " ss ++ "]"
+  let sig := String.intercalate " " (params ++ hyps)
+  let text := String.intercalate "\n" ([
+    s!"theorem {fullName}_scoped {sig} :",
+    s!"    (({app}) : {resultTypeOf c.fam}).Scoped := by",
+    "  refine ⟨fun env p e h => ?_⟩",
+    s!"  unfold {fullName} at h"] ++ steps ++ ["  cases h"] ++ haves ++ [finish, ""])
+  return some (text, s!"Effect4.Program.Authoring.{fullName}_scoped")
+
+def emitLiftLemmas (t : Table) (ctors : List Ctor) : MetaM (String × List String) := do
+  let mut text := ""
+  let mut receipts := []
+  for c in ctors do
+    if let some (d, name) ← emitLiftLemma t c then
       text := text ++ d ++ "\n"
       receipts := receipts ++ [name]
   return (text, receipts)
@@ -404,12 +650,19 @@ def run (args : Args) : MetaM (Array String) := do
     | "Authoring" =>
       let (t, r) ← emitLifts table ctors
       pure ("namespace Effect4.Program.Authoring\n\nopen Effect4.Program\n\n" ++ t, r)
-    | g => throwError "unknown group {g}: Binders or Authoring"
+    | "Scoped" =>
+      let (t, r) ← emitScoped table ctors
+      pure ("namespace Effect4.Program\n\n" ++ t, r)
+    | "ScopedLaws" =>
+      let (t, r) ← emitLiftLemmas table ctors
+      pure ("namespace Effect4.Program.Authoring\n\nopen Effect4.Program\n\n" ++ t, r)
+    | g => throwError "unknown group {g}: Binders, Authoring, Scoped or ScopedLaws"
   lines := lines.push text
   lines := lines ++ #["/-! ## Receipts -/", ""]
   for r in receipts do
     lines := lines.push s!"#print axioms {r}"
-  let ns := if args.group == "Binders" then "Effect4.Program" else "Effect4.Program.Authoring"
+  let ns := if args.group == "Authoring" || args.group == "ScopedLaws" then "Effect4.Program.Authoring"
+    else "Effect4.Program"
   lines := lines ++ #["", s!"end {ns}", ""]
   if let some p := args.append then
     let txt ← IO.FS.readFile p

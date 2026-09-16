@@ -1,5 +1,6 @@
 import Effect4.Api
 import Effect4.Program.Authoring.Sugar
+import Effect4.Laws.Program.Authoring.Sugar
 import Test.Program.LayerSharingContract
 
 /-!
@@ -15,8 +16,9 @@ target, so the placement rule (first use in program order) is checked against pr
 runtime already certifies.
 
 Every pin is a `#guard`: finite evidence that each lift extends the scope by the names its
-constructor binds. The universal statement, that every lift preserves scope safety against
-the one binder table, is the next commit (`Node.binders`, step 0 of the constructs packet).
+constructor binds. The universal statement is `Laws/Program/Authoring/Lifts.lean`: every
+lift preserves `Src.Scoped` against the one binder table, and `authoring_scoped` discharges
+it for the programs below, so a wrong lift fails a proof rather than a program.
 -/
 
 set_option autoImplicit false
@@ -185,6 +187,25 @@ def rendezvous : Src NativeOp :=
 
 #guard (elaborate rendezvous).toOption.map Api.wellTyped = some true
 
+/-! ## Scope safety by construction: the named programs are scoped, and so are their trees -/
+
+theorem writeThenRead_scoped : Src.Scoped writeThenRead := by
+  unfold writeThenRead; authoring_scoped
+
+theorem counter_scoped : LayerSrc.Scoped counter := by
+  unfold counter; authoring_scoped
+
+theorem rendezvous_scoped : Src.Scoped rendezvous := by
+  unfold rendezvous; authoring_scoped
+
+#guard (elaborate writeThenRead).toOption.map (Eff.scopedAt 0) = some true
+#guard (elaborate rendezvous).toOption.map (Eff.scopedAt 0) = some true
+#guard (elaborateModule twiceByName).toOption.map (Eff.scopedAt 0) = some true
+
+#print axioms writeThenRead_scoped
+#print axioms rendezvous_scoped
+#print axioms Effect4.Program.Authoring.elaborate_scoped
+#print axioms Effect4.Program.Authoring.Node.scopedAt_child
 #print axioms Effect4.Program.Authoring.elaborate
 #print axioms Effect4.Program.Authoring.elaborateModule
 #print axioms Effect4.Program.Authoring.bind

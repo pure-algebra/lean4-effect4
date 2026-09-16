@@ -89,6 +89,7 @@ import Effect4.Program.Eff
 import Effect4.Program.Fold
 import Effect4.Program.Typing
 import Effect4.Program.Binders
+import Effect4.Program.Scoped
 import Effect4.Program.Authoring
 import Effect4.Program.Authoring.Lifts
 import Effect4.Program.Authoring.Sugar

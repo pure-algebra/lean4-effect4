@@ -100,6 +100,33 @@ def effsOfList {Op : Type} : List (Eff Op) → Effs Op
   | [] => .nil
   | e :: es => .cons e (effsOfList es)
 
+/-! ## Spines and options, elaborated in order
+
+A list argument is a spine (`Effs`, `LayerTerms`): entry `i` lives at the spine path
+`p ++ [rank] ++ replicate i 1 ++ [0]`, one `cons` per index (`Node.child`). These three
+helpers are what the generated lifts call, so a proof about a lift meets a named function
+and not a `mapM` over an index. -/
+
+def elabEffs {Op : Type} : List (Src Op) → Env → List Nat → Except Refusal (Effs Op)
+  | [], _, _ => .ok .nil
+  | e :: es, env, spine => do
+    let x ← e env (spine ++ [0])
+    let xs ← elabEffs es env (spine ++ [1])
+    .ok (.cons x xs)
+
+def elabLayers {Op : Type} : List (LayerSrc Op) → Env → List Nat → Except Refusal (LayerTerms Op)
+  | [], _, _ => .ok .nil
+  | l :: ls, env, spine => do
+    let x ← l env (spine ++ [0])
+    let xs ← elabLayers ls env (spine ++ [1])
+    .ok (.cons x xs)
+
+def elabOption : Option TermSrc → Env → List Nat → Except Refusal (Option Term)
+  | none, _, _ => .ok none
+  | some t, env, p => do
+    let x ← t env p
+    .ok (some x)
+
 /-! ## Terms: the one name-resolving operation, and the two that resolve nothing -/
 
 /-- A variable by name: the level of its nearest binder. -/

@@ -87,6 +87,8 @@ needs the exemption fails the gate, so an entry cannot outlive its reason.
 private def auditImplementationModules : List Name :=
   [ `Test.Audit.AxiomGate
   , `Test.Audit.RuntimeCoverage
+  -- The authoring scope tactic: a tactic elaborator, meta code, no theorem in the module.
+  , `Effect4.Laws.Program.Authoring.Tactic
   ]
 
 /--
