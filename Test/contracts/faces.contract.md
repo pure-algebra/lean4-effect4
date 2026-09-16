@@ -20,8 +20,8 @@ holds it, and where the battery is.
 
 | # | face | what it is | evidence | where |
 | --- | --- | --- | --- | --- |
-| 1 | the Lean printer | `Api.print` / `Api.printModule`: an `Eff` to one TypeScript expression, or a declaration block with one `const L_<path>` per hoisted layer | expression reconstruction proved (§2); modules tested | `src/Effect4/Codegen/Print.lean`; `Test/Codegen/PrintContract.lean` |
-| 2 | the Lean reader | `readEff`: the partial expression inverse; `Api.readModule`: module reconstruction with a closed refusal alphabet | expression reconstruction proved (§2); modules tested | `src/Effect4/Codegen/Read.lean`; `Test/Codegen/ReadContract.lean` |
+| 1 | the Lean printer | `Api.print` / `Api.printModule`: an `Eff` to one TypeScript expression, or a declaration block with one `const L_<path>` per hoisted layer | expression and declaration-block reconstruction proved on the stated readable domains (§2); module admission remains open | `src/Effect4/Codegen/Print.lean`; `src/Effect4/Laws/Codegen/Module.lean`; `Test/Codegen/PrintContract.lean` |
+| 2 | the Lean reader | `readEff`: the partial expression inverse; `Api.readModule`: module reconstruction with a closed refusal alphabet | expression and declaration-block reconstruction proved on the stated readable domains (§2); module admission remains open | `src/Effect4/Codegen/Read.lean`; `src/Effect4/Laws/Codegen/Module.lean`; `Test/Codegen/ReadContract.lean` |
 | 3 | the TypeScript printer-image reader | `ts/eff/read.ts`: a third implementation of face 2's relation, in the target language | tested (byte equality against Lean-cut oracles over the generated corpus), reproduced (its head union is generated, so `tsc` holds head coverage) | `ts/eff/read.ts`, `ts/eff/check.ts`; `ts/eff/test/read.test.ts`, `tables.test.ts`; `make check-ts-reader` |
 | 4 | the foreign recognizer `ck` | `ts/eff/ingest/ck.ts` over the TypeScript compiler API: an island recognizer of a sub-language of rc.112 | tested (agreement with face 5; equality with Lean where an oracle exists) | `ts/eff/ingest/ck.ts`; `ts/eff/ingest/test/foreign.test.ts`, `gate.test.ts`, `refusals.test.ts` |
 | 5 | the foreign recognizer `oxc` | `ts/eff/ingest/oxc.ts` over oxc 0.147.0, sharing **no** recognition code with face 4 | tested (the same) | `ts/eff/ingest/oxc.ts`; the same batteries |
@@ -98,8 +98,19 @@ every operation alphabet and program, that
 using addressed replacement laws and connects that history to the existing path sort.
 The conclusion recovers the original sharing references; it does not expand them.
 No typing or reference-validity assumption is required beyond successful hoisting.
-Hoisting success throughout the advertised domain, readability transport, and the
-composition through printed/read declarations remain separate module obligations.
+`Eff.hoistAll_exists` in `Laws/Program/HoistingTotal.lean` additionally proves hoisting
+succeeds for every program satisfying `layerRefsWF`; the more general
+`Eff.hoistAll_exists_of_targets` needs only that referenced targets exist.
+`Eff.hoistAll_restoreAll` composes success and restoration.
+
+`readModule_printModule` in `Laws/Codegen/Module.lean` composes the actual declaration
+printer/reader with the expression/layer laws and restoration. Its premises explicitly
+require lawful row spellings, a successful hoist and print, readable main/captured
+pieces, and readable emitted reference names. `Eff.restoreAll_perm` justifies the
+printer's declaration reorder when target paths are unique. A duplicate-path control
+demonstrates why that premise matters. Readability/name transport from the original
+program and full printable-domain adequacy remain open. None of these equations checks
+declared types, imports, rendered source bytes, or execution on the target.
 
 ---
 
@@ -233,7 +244,7 @@ expanded tree; its module reconstruction fact must recover the original sharing 
 
 The remaining obligations are a canonical admitted annotation grammar with a round-trip
 law, annotation/import validation before erasure, genuinely type-directed lowering,
-module reconstruction including hoists, and completeness on the advertised printable
+transport of the module theorem's premises from admission, and completeness on the advertised printable
 domain. A normalization needs its own typing and behavior relation. A read-and-check
 wrapper or a target annotation does not discharge those obligations. Current source
 parsing, core typing, target typing and host behavior remain distinct evidence boundaries.

@@ -12,6 +12,49 @@ set_option autoImplicit false
 
 namespace Effect4.Program.Path
 
+/-- Constructive reflexivity for path components. Open this proof scope when
+working with path equality: the generic Ord route reaches `Classical.choice`
+on the pinned toolchain. This does not install a global replacement instance. -/
+scoped instance instReflBEqNat : ReflBEq Nat where
+  rfl := (beq_iff_eq).mpr rfl
+
+section
+
+/-- Removing repeated target paths produces distinct paths. -/
+theorem eraseDups_nodup (paths : List (List Nat)) : paths.eraseDups.Nodup := by
+  cases paths with
+  | nil => simp
+  | cons head tail =>
+    rw [List.eraseDups_cons]
+    apply List.nodup_cons.mpr
+    constructor
+    · simp [List.mem_eraseDups]
+    · exact eraseDups_nodup (tail.filter (fun p => !p == head))
+termination_by paths.length
+decreasing_by
+  exact Nat.lt_succ_of_le (List.length_filter_le _ _)
+
+/-- Looking up a member by its path key returns that exact entry when the keys
+are distinct. The payload has no equality requirement. -/
+theorem findEntry_of_mem {α : Type} {entries : List (List Nat × α)}
+    (unique : (entries.map Prod.fst).Nodup) {entry : List Nat × α}
+    (mem : entry ∈ entries) : entries.find? (fun item => item.1 == entry.1) = some entry := by
+  induction entries with
+  | nil => cases mem
+  | cons head tail ih =>
+    simp only [List.map_cons, List.nodup_cons] at unique
+    rcases List.mem_cons.mp mem with rfl | mem
+    · simp
+    · have different : head.1 ≠ entry.1 := by
+        intro equal
+        apply unique.1
+        exact List.mem_map.mpr ⟨entry, mem, equal.symm⟩
+      have distinct : (head.1 == entry.1) = false := by
+        simpa only [beq_eq_false_iff_ne] using different
+      simpa [List.find?, distinct] using ih unique.2 mem
+
+end
+
 private theorem lt_cons_iff (a b : Nat) (as bs : List Nat) :
     lt (a :: as) (b :: bs) = true ↔ a < b ∨ a = b ∧ lt as bs = true := by
   by_cases hab : a < b

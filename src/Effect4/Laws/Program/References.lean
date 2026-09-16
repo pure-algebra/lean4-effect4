@@ -26,6 +26,22 @@ theorem setChild_spec {node result replacement : Node Op} {index : Nat}
   all_goals refine ⟨rfl, rfl, ?_⟩
   all_goals intro old found; cases found; rfl
 
+/-- Updating one immediate child leaves every different child unchanged. -/
+theorem child_setChild_ne {node result replacement : Node Op} {index other : Nat}
+    (updated : node.setChild index replacement = some result) (distinct : other ≠ index) :
+    result.child other = node.child other := by
+  unfold setChild at updated
+  split at updated <;> cases updated
+  all_goals cases other with
+    | zero => first | exact False.elim (distinct rfl) | rfl
+    | succ other =>
+      cases other with
+      | zero => first | exact False.elim (distinct rfl) | rfl
+      | succ other =>
+        cases other with
+        | zero => first | exact False.elim (distinct rfl) | rfl
+        | succ other => rfl
+
 /-- A child can be replaced by any node of the same sort. -/
 theorem setChild_exists {node old replacement : Node Op} {index : Nat}
     (found : node.child index = some old)
@@ -117,5 +133,43 @@ theorem replaceLayerAt_eff_exists {program : Eff Op} {path : List Nat}
   obtain ⟨result, updated, sameSort⟩ := replaceLayerAt_exists found replacement
   cases result <;> cases sameSort
   exact ⟨_, updated⟩
+
+/-- Replacing a later layer retains an earlier layer's existence. The earlier
+layer may enclose the update, so its value need not remain equal. -/
+theorem layerAt_exists_before_replaceLayerAt {node result : Node Op}
+    {path earlier : List Nat} {old replacement : LayerTerm Op}
+    (before : Path.lt earlier path = true)
+    (found : node.layerAt earlier = some old)
+    (updated : node.replaceLayerAt path replacement = some result) :
+    ∃ layer, result.layerAt earlier = some layer := by
+  induction path generalizing node result earlier with
+  | nil => cases earlier <;> simp [Path.lt] at before
+  | cons index path ih =>
+      cases earlier with
+      | nil =>
+          have sameSort := (replaceLayerAt_spec updated).2.1
+          cases node <;> cases found
+          cases result <;> cases sameSort
+          exact ⟨_, rfl⟩
+      | cons other rest =>
+          cases first : node.child index with
+          | none => simp [replaceLayerAt, first] at updated
+          | some next =>
+              cases changed : next.replaceLayerAt path replacement with
+              | none => simp [replaceLayerAt, first, changed] at updated
+              | some next' =>
+                  have set : node.setChild index next' = some result := by
+                    simpa [replaceLayerAt, first, changed] using updated
+                  by_cases sameIndex : other = index
+                  · subst other
+                    have before' : Path.lt rest path = true := by
+                      simpa [Path.lt] using before
+                    have found' : next.layerAt rest = some old := by
+                      simpa [layerAt_cons, first] using found
+                    obtain ⟨layer, survives⟩ := ih before' found' changed
+                    refine ⟨layer, ?_⟩
+                    simpa [layerAt_cons, (setChild_spec set).1] using survives
+                  · refine ⟨old, ?_⟩
+                    simpa only [layerAt_cons, child_setChild_ne set sameIndex] using found
 
 end Effect4.Program.Node

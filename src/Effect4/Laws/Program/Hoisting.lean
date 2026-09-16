@@ -15,10 +15,7 @@ namespace Effect4.Program
 
 variable {Op : Type}
 
--- Use equality's constructive reflexivity instance directly. The generic Ord
--- route to ReflBEq Nat reaches Classical.choice on the pinned toolchain.
-local instance : ReflBEq Nat where
-  rfl := (beq_iff_eq).mpr rfl
+open scoped Effect4.Program.Path
 
 private abbrev History (Op : Type) := List (List Nat × LayerTerm Op)
 
@@ -90,23 +87,6 @@ private theorem captureFold_keys (targets : List (List Nat))
       rw [ih ht, captureStep_keys hs]
       simp [List.reverse_cons, List.append_assoc]
 
-private theorem findHistory {history : History Op}
-    (unique : (history.map Prod.fst).Nodup) {entry : List Nat × LayerTerm Op}
-    (mem : entry ∈ history) : history.find? (fun item => item.1 == entry.1) = some entry := by
-  induction history with
-  | nil => cases mem
-  | cons head tail ih =>
-    simp only [List.map_cons, List.nodup_cons] at unique
-    rcases List.mem_cons.mp mem with rfl | mem
-    · simp
-    · have different : head.1 ≠ entry.1 := by
-        intro equal
-        apply unique.1
-        exact List.mem_map.mpr ⟨entry, mem, equal.symm⟩
-      have distinct : (head.1 == entry.1) = false := by
-        simpa only [beq_eq_false_iff_ne] using different
-      simpa [List.find?, distinct] using ih unique.2 mem
-
 private theorem restoreFold_eq_undo (all rest : History Op)
     (unique : (all.map Prod.fst).Nodup) (contained : ∀ entry ∈ rest, entry ∈ all)
     (root : Eff Op) :
@@ -117,7 +97,7 @@ private theorem restoreFold_eq_undo (all rest : History Op)
   induction rest generalizing root with
   | nil => rfl
   | cons entry rest ih =>
-    have hf := findHistory unique (contained entry (by simp))
+    have hf := Path.findEntry_of_mem unique (contained entry (by simp))
     simp only [List.map_cons, List.foldlM_cons, hf, Option.map_some,
       undoHistory, undoStep]
     congr 1
@@ -135,26 +115,13 @@ private theorem restoreAll_eq_undo (root : Eff Op) (history : History Op)
   rw [Path.sortBy_lt_eq_self ordered]
   exact restoreFold_eq_undo history history unique (fun _ h => h) root
 
-private theorem eraseDups_nodup (paths : List (List Nat)) : paths.eraseDups.Nodup := by
-  cases paths with
-  | nil => simp
-  | cons head tail =>
-    rw [List.eraseDups_cons]
-    apply List.nodup_cons.mpr
-    constructor
-    · simp [List.mem_eraseDups]
-    · exact eraseDups_nodup (tail.filter (fun p => !p == head))
-termination_by paths.length
-decreasing_by
-  exact Nat.lt_succ_of_le (List.length_filter_le _ _)
-
 /-- A successful hoist returns its capture history in ascending path order.
 This is the reverse of the replacement order, not the source declaration order. -/
 theorem Eff.hoistAll_ordered {root main : Eff Op} {history : History Op}
     (h : root.hoistAll = .ok (main, history)) :
     (history.map Prod.fst).Pairwise (fun a b => Path.lt a b = true) := by
   have unique : root.refTargets.Nodup :=
-    Path.sortBy_nodup Path.declBefore (eraseDups_nodup _)
+    Path.sortBy_nodup Path.declBefore (Path.eraseDups_nodup _)
   have keys := captureFold_keys
     (Path.sortBy (fun a b => Path.lt b a) root.refTargets) h
   simp only [List.map_nil, List.append_nil] at keys

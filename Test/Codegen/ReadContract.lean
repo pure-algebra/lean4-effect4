@@ -1,6 +1,8 @@
 import Effect4.Codegen.Read
 import Effect4.Api
 import Effect4.Laws.Program.Hoisting
+import Effect4.Laws.Program.HoistingTotal
+import Effect4.Laws.Codegen.Module
 import Test.Program.Gen
 
 /-!
@@ -652,6 +654,17 @@ def nestedSharing : NativeEff :=
 #guard (Effect4.Api.printModule "main" nestedSharing).map Effect4.Api.readModule =
   some (.ok nestedSharing)
 
+-- Reordering declarations is justified only when their target paths are unique.
+-- With duplicate paths, restoration deliberately reads the first matching entry.
+#guard
+  let root : NativeEff := .provideLayer (.ref [0]) false (.succeed (.lit .unit))
+  let first : LayerTerm NativeOp := .succeed ⟨⟨4⟩, ⟨4⟩⟩ (.nat 1)
+  let second : LayerTerm NativeOp := .succeed ⟨⟨4⟩, ⟨4⟩⟩ (.nat 2)
+  root.restoreAll [([0], first), ([0], second)] !=
+    root.restoreAll [([0], second), ([0], first)]
+
+#print axioms Effect4.Program.Eff.hoistAll_exists
+#print axioms Effect4.Program.readModule_printModule
 #print axioms Effect4.Program.Eff.restoreAll_hoistAll
 #print axioms Effect4.Program.readKey_printKey
 #print axioms Effect4.Program.readKey_exact
