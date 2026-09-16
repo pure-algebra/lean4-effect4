@@ -15,7 +15,7 @@ for a tabular envelope. Exit status is 0 for agreement, 1 for disagreement and 2
 when the command cannot run. `--cache DIR` enables the private content/pins memo;
 unchanged size and modification time locate a cached digest without reading source.
 Use `--force` to bypass that index. Gates always read fresh inputs. Workers process
-at most 500 files and are replaced. Bun 1.3.14 and Node 22.23.2 are checked at entry.
+at most 500 files and are replaced. Bun 1.4.2 and Node 22.23.2 are checked at entry.
 For Node, pass `--experimental-transform-types --disable-warning=ExperimentalWarning`.
 
 `bash scripts/check-ingest.sh` freshly constructs the printer and foreign corpora,
