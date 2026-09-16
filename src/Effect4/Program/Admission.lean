@@ -1,6 +1,7 @@
 import Effect4.Program.Table
 import Effect4.Program.Typing
 import Effect4.Program.Native
+import Effect4.Program.Fragment
 
 /-!
 # Program.Admission — static verification and admission certificates
@@ -14,6 +15,10 @@ A program is admitted to run when:
 All four requirements are verified by `admitProgram`, producing a certified `AdmittedProgram`
 whose fields witness each check. If admission fails, an exact `AdmitRefusal` reports the failure.
 Admission depends strictly on the program plane and never imports codegen.
+
+`admitStraightProgram` adds membership in the existing straight fragment to that
+same admission result. It does not re-run a second typing judgment or claim an
+application behavior; execution and safety results remain in the Laws graph.
 -/
 
 namespace Effect4.Program
@@ -99,6 +104,52 @@ def admitProgram (program : NativeEff) (table : RowTable := []) :
           | some (.builtinCollision k) => .error (.builtinCollision k)
           | some (.valueRowTrailing k) => .error (.valueRowTrailing k)
           | none => .error (.duplicateKey ("", []))
+
+/-- Failure of ordinary admission, or a program outside the proved straight fragment.
+Outside-fragment refusal does not mean that the program is ill-typed. -/
+inductive StraightAdmitRefusal
+  | admission (why : AdmitRefusal)
+  | outsideFragment
+deriving DecidableEq, Repr
+
+/-- Ordinary admission plus executable membership in the straight fragment. The
+existing runtime certificate remains available to the admitted run entry points.
+No denotation, safety theorem or user specification is stored in this package. -/
+structure AdmittedStraightProgram (program : NativeEff) (table : RowTable) where
+  admitted : AdmittedProgram program table
+  straight : Denote.Straight program = true
+
+/-- Compute ordinary admission first, preserving its refusal, then check membership
+in the existing straight fragment. The successful package records those two checks. -/
+def admitStraightProgram (program : NativeEff) (table : RowTable := []) :
+    Except StraightAdmitRefusal (AdmittedStraightProgram program table) :=
+  match admitProgram program table with
+  | .error why => .error (.admission why)
+  | .ok admitted =>
+    if h : Denote.Straight program = true then .ok ⟨admitted, h⟩
+    else .error .outsideFragment
+
+/-- Fragment admission retains every ordinary admission refusal. -/
+theorem admitStraightProgram_admission_error (program : NativeEff) (table : RowTable)
+    (why : AdmitRefusal) (h : admitProgram program table = .error why) :
+    admitStraightProgram program table = .error (.admission why) := by
+  simp [admitStraightProgram, h]
+
+/-- An admitted member carries the same admission certificate and its membership proof. -/
+theorem admitStraightProgram_ok (program : NativeEff) (table : RowTable)
+    (admitted : AdmittedProgram program table)
+    (hAdmit : admitProgram program table = .ok admitted)
+    (hStraight : Denote.Straight program = true) :
+    admitStraightProgram program table = .ok ⟨admitted, hStraight⟩ := by
+  simp [admitStraightProgram, hAdmit, hStraight]
+
+/-- A well-admitted program outside the fragment receives the distinct domain refusal. -/
+theorem admitStraightProgram_outside (program : NativeEff) (table : RowTable)
+    (admitted : AdmittedProgram program table)
+    (hAdmit : admitProgram program table = .ok admitted)
+    (hStraight : Denote.Straight program = false) :
+    admitStraightProgram program table = .error .outsideFragment := by
+  simp [admitStraightProgram, hAdmit, hStraight]
 
 /-- Integer syntax in any supplied table row is refused with its exact path. -/
 theorem admitProgram_table_int (program : NativeEff) (table : RowTable) (pos : Path)

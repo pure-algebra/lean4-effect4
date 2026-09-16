@@ -93,6 +93,12 @@ retained; source-module ownership keeps them in the library axiom audit. `Std.Ta
 is used in Laws only; runtime code does not import the proof tools. The six owed encoders (DI-41) go through
 `tools/Effect4Gen`, and the `deriving Canonical` handler stays a pilot for later families.
 
+`Program/Fragment.lean` owns executable membership in the existing straight
+fragment. Both ordinary application admission and `Laws/Program/Denote.lean`
+use that same definition. `admitStraightProgram` adds its membership proof to
+the existing admission certificate; it does not certify a user specification
+or provide whole-program type safety. Execution theorems stay in Laws.
+
 Tests mirror these areas under `Test/`; durable attacks live under
 `Test/Counterexamples/` with their stable IDs in
 `Test/Counterexamples/REGISTER.md` and their contracts under `Test/contracts/`.

@@ -1,4 +1,5 @@
 import Effect4.Program.Compile
+import Effect4.Program.Fragment
 import Effects.Algebra.Laws
 
 /-!
@@ -57,29 +58,6 @@ def finVoid : ExitV → VoidExitV
 def seqExit (k : Val → Effects.Program StoreSig ExitV) : ExitV → Effects.Program StoreSig ExitV
   | Exit.success v => k v
   | Exit.failure c => pure (Exit.failure c)
-
-/-! ## The fragment -/
-
-/-- The straight-line fragment: one fiber, no park, no fork, no loop, no tape. A `perform`
-is in the fragment exactly when its row is a `sync` row. -/
-def Straight : NativeEff → Bool
-  | .succeed _ => true
-  | .fail _ => true
-  | .failCause _ => true
-  | .yieldError _ => true
-  | .sync _ => true
-  | .suspend b => Straight b
-  | .perform op _ =>
-    match (NativeOp.row op).kind with
-    | .sync => true
-    | _ => false
-  | .bind a b => Straight a && Straight b
-  | .branch _ a b => Straight a && Straight b
-  | .exit b => Straight b
-  | .catchCause b h => Straight b && Straight h
-  | .matchCause b v c => Straight b && Straight v && Straight c
-  | .onExit b f => Straight b && Straight f
-  | _ => false
 
 /-! ## The denotation -/
 

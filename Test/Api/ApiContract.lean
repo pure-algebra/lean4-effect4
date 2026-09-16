@@ -56,6 +56,23 @@ def pStrBind : Program := .bind (.succeed (.lit (.str "a"))) (.succeed (.var 0))
 #guard (run pStrBind 100).exit = some (Exit.success (Val.str "a"))
 #guard (runSync pStr 100).2 = Exit.success (Val.str "x")
 
+/-! Computed fragment admission uses the ordinary API without a Laws import. -/
+#guard (admitStraightProgram p42).isOk
+#guard match admitStraightProgram (.succeed (.var 0)) with
+  | .error (.admission .illTyped) => true
+  | _ => false
+#guard match admitStraightProgram (.gen .nil) with
+  | .error .outsideFragment => true
+  | _ => false
+#guard match admitStraightProgram (.bind p42 (.gen .nil)) with
+  | .error .outsideFragment => true
+  | _ => false
+
+#print axioms Effect4.Program.admitStraightProgram
+#print axioms Effect4.Program.admitStraightProgram_admission_error
+#print axioms Effect4.Program.admitStraightProgram_ok
+#print axioms Effect4.Program.admitStraightProgram_outside
+
 /-! ## Running -/
 
 #guard (run p42 100).outcome = Outcome.finished
