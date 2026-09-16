@@ -150,6 +150,16 @@ unannotated binders and locals where the raw printer emits none; it must not era
 an annotation to satisfy `read_exact`. A future typed-source reader may validate
 and normalize more source forms above that exact-image reader.
 
+**The annotation refusal (2026-09-16, `E4-CHECK-CE-017`).** That refusal is now named
+`ReadRefusal.annotation site` rather than reported as `arity` or `unsupportedStmt`, which
+mean different things (an argument list the row table does not print; a statement form with
+no reading). The alphabet is data consumers route on, so the distinction is part of the
+claim. `annotationSite` decides the position, and `callRefusal`/`stmtRefusal` sit inside the
+reader's existing wildcard arms: no arm is added, the accepted domain is unchanged, and
+`read_print`, `read_exact` and `read_exact_all` keep their statements and proofs. The
+TypeScript printer-image reader (`ts/eff/read.ts`) still reports the older constructors for
+annotated input; the two faces agree that such input refuses, not yet on its name.
+
 Legacy `Row.typeArgs` and `Ty.handle` strings retain their stored representation.
 `Codegen.Types.parseLegacy` is a fallible bridge for the documented subset, not
 another core type checker. Row calls and service keys refuse unsupported target

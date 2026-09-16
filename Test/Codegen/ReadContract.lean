@@ -545,30 +545,46 @@ open Effect4.Api in
 /-! ## Explicit annotations are retained at the carrier boundary
 
 The raw reader accepts the printer's unannotated local image. It refuses
-annotations here instead of dropping source evidence before checked ingestion.
+annotations here instead of dropping source evidence before checked ingestion,
+and it names the refusal `annotation` with the position: an annotation is not an
+argument list the row table does not print (`arity`) and not a statement form with
+no reading (`unsupportedStmt`), and a consumer routing on the alphabet must be able
+to tell "annotated, not admitted here" from "wrong shape".
 -/
 
 #guard readEff nativeSignature nativeSpell 0
     (.call (.ident "Effect.sync") [.arrow (some (.name ["number"] [])) (.int 1)]) =
-  .error (.arity "Effect.sync")
+  .error (.annotation "Effect.sync thunk return")
 #guard readEff nativeSignature nativeSpell 0
     (.call (.ident "Effect.suspend") [.arrow (some (.name ["number"] []))
       (.call (.ident "Effect.succeed") [.int 1])]) =
-  .error (.arity "Effect.suspend")
+  .error (.annotation "Effect.suspend thunk return")
 #guard readEff nativeSignature nativeSpell 0
     (.call (.ident "Effect.flatMap") [.call (.ident "Effect.succeed") [.int 1],
       .lambda [⟨"a0", some (.name ["number"] [])⟩]
         (.call (.ident "Effect.succeed") [.ident "a0"]) none]) =
-  .error (.arity "Effect.flatMap")
+  .error (.annotation "Effect.flatMap parameter")
 #guard readEff nativeSignature nativeSpell 0
     (.call (.ident "Effect.flatMap") [.call (.ident "Effect.succeed") [.int 1],
       .lambda [⟨"a0", none⟩] (.call (.ident "Effect.succeed") [.ident "a0"])
         (some (.name ["number"] []))]) =
-  .error (.arity "Effect.flatMap")
+  .error (.annotation "Effect.flatMap return")
 #guard readEff nativeSignature nativeSpell 0
     (.call (.ident "Effect.gen") [.generator
       [.constYield "a0" (.call (.ident "Effect.succeed") [.int 1])
         (some (.name ["number"] [])), .ret (.ident "a0")]]) =
+  .error (.annotation "yielded const")
+#guard readEff nativeSignature nativeSpell 0
+    (.call (.ident "Effect.gen") [.generator
+      [.letInit "a0" (.int 1) (some (.name ["number"] [])), .ret (.ident "a0")]]) =
+  .error (.annotation "local const")
+-- The two refusals the new constructor must not swallow: an argument list no arm reads,
+-- and a statement form with no reading at all.
+#guard readEff nativeSignature nativeSpell 2
+    (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]) =
+  .error (.arity "Fiber.runIn")
+#guard readEff nativeSignature nativeSpell 0
+    (.call (.ident "Effect.gen") [.generator [.letDefinite "x" (.name ["number"] [])]]) =
   .error .unsupportedStmt
 #guard roundTrip nativeSignature nativeSpell 0
     (.bind (.succeed (.lit (.nat 1))) (.succeed (.var 0))) =

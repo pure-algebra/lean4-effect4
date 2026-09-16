@@ -59,7 +59,41 @@ inductive ReadRefusal
   | negative (value : Int)
   /-- A statement form the printer never emits. -/
   | unsupportedStmt
+  /-- A binder, return or local annotation the raw printer never emits; `site` names the
+  position. This is not `arity` (an argument list the row table does not print) and not
+  `unsupportedStmt` (a statement form with no reading): a consumer routing on the alphabet
+  must be able to tell "annotated, not admitted here" from "wrong shape". -/
+  | annotation (site : String)
 deriving DecidableEq, Repr
+
+/-! ## Annotations the raw reader does not admit
+
+The raw reader accepts the unannotated image the printer emits. Where a tree carries an
+annotation in a position the printer leaves bare, the refusal says so by name instead of
+falling through to the arity or statement-shape refusal. These two functions sit in the
+reader's wildcard arms, so no arm is added and `readEff.induct` keeps its case numbering. -/
+
+/-- The annotated position of an expression the printer would have emitted bare. -/
+def annotationSite : Expr → Option String
+  | .arrow (some _) _ => some "thunk return"
+  | .lambda params _ type | .arrowBlock params _ type =>
+    if params.any (fun param => param.type.isSome) then some "parameter"
+    else if type.isSome then some "return" else none
+  | _ => none
+
+/-- The refusal of a reserved head applied to an argument list no arm reads: an annotation
+where the printer emits none, otherwise the argument list itself. -/
+def callRefusal (head : Head) (args : List Expr) : ReadRefusal :=
+  match args.findSome? annotationSite with
+  | some site => .annotation (head.spelling ++ " " ++ site)
+  | none => .arity head.spelling
+
+/-- The refusal of a statement the generator reader does not read: an annotated local or
+yielded constant by name, otherwise the statement form. -/
+def stmtRefusal : TypeScript.Stmt → ReadRefusal
+  | .constYield _ _ (some _) => .annotation "yielded const"
+  | .letInit _ _ (some _) => .annotation "local const"
+  | _ => .unsupportedStmt
 
 /-! ## Binders -/
 
@@ -538,7 +572,7 @@ mutual
     | .layerMerge, _ => .error (.unknownHead Head.layerMerge.spelling)
     | .layerFresh, _ => .error (.unknownHead Head.layerFresh.spelling)
     | .layerOrDie, _ => .error (.unknownHead Head.layerOrDie.spelling)
-    | h, _ => .error (.arity h.spelling)
+    | h, args => .error (callRefusal h args)
   termination_by structural args
 
   /-- A generator body, statement by statement, with the binder counts of `printStmts`. -/
@@ -573,7 +607,7 @@ mutual
     | .breakTo none :: rest => do
       let tail ← readStmts sig spell n rest
       .ok (.cons .breakLoop tail)
-    | _ :: _ => .error .unsupportedStmt
+    | stmt :: _ => .error (stmtRefusal stmt)
   termination_by structural stmts
 
   /-- The race entrants, each at the same environment length. -/
