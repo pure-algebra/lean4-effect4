@@ -1,6 +1,8 @@
 import Effect4.Api
 import Effect4.Program.Authoring.Sugar
 import Effect4.Laws.Program.Authoring.Sugar
+import Effect4.Program.Authoring.Forms
+import Effect4.Laws.Program.Authoring.Forms
 import Test.Program.LayerSharingContract
 
 /-!
@@ -186,6 +188,30 @@ def rendezvous : Src NativeOp :=
   awaitFiber (var "f") .joinEffect
 
 #guard (elaborate rendezvous).toOption.map Api.wellTyped = some true
+
+/-! ## The derived forms by name: `Effect.tap` and `Effect.ensuring` are what they print as -/
+
+/-- `Effect.tap(Ref.make(0), (r) => Ref.set(r, 1))`, then `Effect.ensuring` a read. -/
+def tapped : Src NativeOp :=
+  Forms.ensuring
+    (Forms.tapContinuation "r" (Ref.make (nat 0)) (Ref.set (var "r") (nat 1)))
+    (succeed (nat 9))
+
+#guard elaborate tapped
+  = .ok (.onExit
+      (.bind (.perform .refMake (.lit (.nat 0)))
+        (.bind (.perform .refSet (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 1)) .nil))))
+          (.succeed (.var 0))))
+      (.succeed (.lit (.nat 9))))
+#guard (elaborate tapped).toOption.map Api.wellTyped = some true
+-- The canonical image (`Api.print`) spells the constructors; the forms are what the styled
+-- route recognizes them back into (`Codegen/Forms`), and the generated module pins each
+-- form's reading against that expansion.
+#guard (elaborate tapped).toOption.map (fun e => (Api.print e).map (expr house0 0))
+  = some (.ok "Effect.onExit(Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Ref.set(a0, 1), (a1) => Effect.succeed(a0))), (a0) => Effect.succeed(9))")
+
+theorem tapped_scoped : Src.Scoped tapped := by
+  unfold tapped; authoring_scoped
 
 /-! ## Scope safety by construction: the named programs are scoped, and so are their trees -/
 

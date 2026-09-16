@@ -182,6 +182,16 @@
       "Types": []
     },
     {
+      "Note": "The derived forms as authoring combinators, from Codegen.Forms.all: each template read on the scope reader, with a drift guard per form against the printer's Template.expand.",
+      "Name": "Forms",
+      "Tool": "tools/Effect4Gen/Forms.lean",
+      "Imports": "Effect4.Program.Authoring.Lifts,Effect4.Codegen.Forms",
+      "Out": "src\\Effect4\\Program\\Authoring\\Forms.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": []
+    },
+    {
       "Note": "The scope-preservation lemma of every authoring lift, from the same rows; the base and the tactic are hand-written in Laws/Program/Authoring.lean.",
       "Name": "ScopedLaws",
       "Tool": "tools/Effect4Gen/Authoring.lean",
@@ -200,6 +210,16 @@
       "Imports": "Effect4.Laws.Program.Authoring.Lifts,Effect4.Program.Authoring.Rows",
       "Out": "src\\Effect4\\Laws\\Program\\Authoring\\Rows.lean",
       "Guards": "tools\\Effect4Gen\\guards\\rowslaws.lean",
+      "Kinds": [],
+      "Types": []
+    },
+    {
+      "Note": "The scope lemma of every form combinator.",
+      "Name": "FormsLaws",
+      "Tool": "tools/Effect4Gen/Forms.lean",
+      "Imports": "Effect4.Laws.Program.Authoring.Lifts,Effect4.Program.Authoring.Forms,Effect4.Codegen.Forms",
+      "Out": "src\\Effect4\\Laws\\Program\\Authoring\\Forms.lean",
+      "Guards": "",
       "Kinds": [],
       "Types": []
     }

@@ -5,9 +5,11 @@ import Effect4.Program.Authoring.Rows
 # Program.Authoring.Sugar — binders over a fresh name, and derived forms
 
 The native rows' wrappers (`Ref.make`, `Deferred.await`) are generated from the row table
-(`Authoring/Rows.lean`); this module is the binders over a fresh name and the derived forms,
-`Src`-level functions over the generated lifts: no constructor, no second expansion owner
-(`Codegen/Forms` prints them by recognition).
+(`Authoring/Rows.lean`) and the derived forms (`Forms.tapContinuation`, `Forms.ensuring`)
+from the form table (`Authoring/Forms.lean`, each pinned against the printer's expansion);
+this module is the five conveniences that are neither: the binders over a fresh name and
+the short spellings `flatMap`, `andThen`, `map`, `ifElse`, `Src`-level functions over the
+generated lifts with no constructor and no second expansion owner.
 -/
 
 namespace Effect4.Program.Authoring
