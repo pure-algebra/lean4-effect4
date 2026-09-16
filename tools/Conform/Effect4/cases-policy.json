@@ -302,49 +302,24 @@
           ]
         },
         {
-          "sites": [
-            {
-              "mode": "default",
-              "cover": [
-                "never",
-                "unit",
-                "nat",
-                "int",
-                "string",
-                "bool",
-                "handle",
-                "option",
-                "list",
-                "except",
-                "exitOf",
-                "causeOf",
-                "fiberOf",
-                "union",
-                "lit"
-              ]
-            },
-            {
-              "mode": "default",
-              "cover": [
-                "never",
-                "unit",
-                "nat",
-                "int",
-                "string",
-                "bool",
-                "handle",
-                "option",
-                "list",
-                "except",
-                "exitOf",
-                "causeOf",
-                "fiberOf",
-                "union",
-                "lit"
-              ]
-            }
+          "name": "Effect4.Program.NativeAtom.projectProduct",
+          "mode": "default",
+          "cover": [
+            "unit",
+            "nat",
+            "int",
+            "string",
+            "bool",
+            "handle",
+            "option",
+            "list",
+            "except",
+            "exitOf",
+            "causeOf",
+            "fiberOf",
+            "lit"
           ],
-          "name": "Effect4.Program.NativeAtom.typeOf"
+          "note": "Both projections delegate to this one classifier. Products, unions and never have explicit arms; every listed alternative refuses. Its value-membership theorem is NativeAtom.projectProduct_typed."
         },
         {
           "sites": [
@@ -968,6 +943,27 @@
             "provideService",
             "catchIf"
           ]
+        },
+        {
+          "name": "Effect4.Program.Denote.Straight",
+          "mode": "default",
+          "cover": [
+            "gen",
+            "uninterruptible",
+            "interruptible",
+            "whileLoop",
+            "yieldNow",
+            "callback",
+            "awaitFiber",
+            "withFiber",
+            "scoped",
+            "acquireRelease",
+            "provideLayer",
+            "service",
+            "provideService",
+            "catchIf"
+          ],
+          "note": "The existing classifier now lives in Program/Fragment and is reachable from the runtime API. These constructors remain outside the fragment; moving the owner does not widen admission."
         }
       ]
     },
@@ -1217,6 +1213,15 @@
         {
           "name": "Effect4.Program.RowKind.ctorIdx",
           "mode": "exhaustive"
+        },
+        {
+          "name": "Effect4.Program.Denote.Straight",
+          "mode": "default",
+          "cover": [
+            "async",
+            "program"
+          ],
+          "note": "Straight admits only built-in synchronous operations; asynchronous and program rows are refused."
         }
       ]
     },
