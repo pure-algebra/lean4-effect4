@@ -45,7 +45,7 @@ def updateRow : Row :=
   ⟨"update", "Ref.update", .call, ["incr"], .sync, .handle "Ref.Ref<number>", .unit, .never, [],
     "Ref.ts:1273-1276", [], .deferred⟩
 
-#guard expr house0 0 (printRow updateRow (.var 0)) = "Ref.update(a0, incr)"
+#guard (printRow updateRow (.var 0)).map (expr house0 0) = .ok "Ref.update(a0, incr)"
 
 /-- A tuple-call fixture with two ordered trailing names. Native tuple calls currently
 have no trailing names; this fixture checks the generic row convention. -/
@@ -61,37 +61,46 @@ def genericRow : Row :=
     .handle "Deferred.Deferred<number, number>", .never, [], "vendor/effect-4.0.0-rc.112/src/Deferred.ts:171",
     ["number", "number"], .deferred⟩
 
-#guard expr house0 0 (printRow genericRow (.lit .unit)) = "Deferred.make<number, number>()"
+#guard (printRow genericRow (.lit .unit)).map (expr house0 0) = .ok "Deferred.make<number, number>()"
+
+#guard match printRow genericRow (.lit .unit) with
+  | .ok expression => expression ==
+      .call (.generic (.ident "Deferred.make") [.name ["number"] [], .name ["number"] []]) []
+  | .error _ => false
+
+#guard match printRow { genericRow with typeArgs := ["number); injected("] } (.lit .unit) with
+  | .error (.typeSpelling spelling) => spelling == genericRow.spelling
+  | _ => false
 
 -- A saved tuple is read once per component; a `pair` prints its components
 -- (source-repairs §18).
-#guard expr house0 0 (printRow tupleRow (.var 0)) =
-  "Fixture.tuple(fst(a0), snd(a0), first, second)"
+#guard (printRow tupleRow (.var 0)).map (expr house0 0) =
+  .ok "Fixture.tuple(fst(a0), snd(a0), first, second)"
 
-#guard expr house0 0 (printRow tupleRow
-    (.app "pair" (.cons (.lit (.nat 2)) (.cons (.lit (.nat 7)) .nil)))) =
-  "Fixture.tuple(2, 7, first, second)"
+#guard (printRow tupleRow
+    (.app "pair" (.cons (.lit (.nat 2)) (.cons (.lit (.nat 7)) .nil)))).map (expr house0 0) =
+  .ok "Fixture.tuple(2, 7, first, second)"
 
 -- A request that is neither a pair nor a variable is outside the readable image and
 -- still prints, once per component.
-#guard expr house0 0 (printRow tupleRow (.app "requestOnce" .nil)) =
-  "Fixture.tuple(fst(requestOnce()), snd(requestOnce()), first, second)"
+#guard (printRow tupleRow (.app "requestOnce" .nil)).map (expr house0 0) =
+  .ok "Fixture.tuple(fst(requestOnce()), snd(requestOnce()), first, second)"
 
 -- A product request does not change the calling convention of an ordinary call row.
-#guard expr house0 0 (printRow { tupleRow with shape := .call }
-    (.app "pair" (.cons (.lit (.nat 2)) (.cons (.lit (.nat 7)) .nil)))) =
-  "Fixture.tuple(pair(2, 7), first, second)"
+#guard (printRow { tupleRow with shape := .call }
+    (.app "pair" (.cons (.lit (.nat 2)) (.cons (.lit (.nat 7)) .nil)))).map (expr house0 0) =
+  .ok "Fixture.tuple(pair(2, 7), first, second)"
 
 -- All five corrected native exports receive the pair's components as their two
 -- arguments, the pinned two-argument signatures the host infers its types from.
 #guard ([NativeOp.refSet, .refGetAndSet, .refSetAndGet, .deferredSucceed, .deferredFail].map
-    fun op => expr house0 0 (printRow op.row
-      (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))) =
-  [ "Ref.set(a0, 7)"
-  , "Ref.getAndSet(a0, 7)"
-  , "Ref.setAndGet(a0, 7)"
-  , "Deferred.succeed(a0, 7)"
-  , "Deferred.fail(a0, 7)" ]
+    fun op => (printRow op.row
+      (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil)))).map (expr house0 0)) =
+  [ .ok "Ref.set(a0, 7)"
+  , .ok "Ref.getAndSet(a0, 7)"
+  , .ok "Ref.setAndGet(a0, 7)"
+  , .ok "Deferred.succeed(a0, 7)"
+  , .ok "Deferred.fail(a0, 7)" ]
 
 -- The tuple may be saved in a variable; its components are read from the binder.
 #guard (print nativeSignature 0
@@ -331,14 +340,22 @@ same frame shape. Each refusal names itself, so a refusal is data rather than a 
 
 /-! ## `printDecl`: the two-parameter type exactly when the requirement is empty -/
 
-#guard constDecl house0
-    (printDecl "program" ⟨.nat, .never, Requirement.empty⟩
-      (.call (.ident "Effect.succeed") [.int 1]))
-  = "export const program: Effect.Effect<number, never> = Effect.succeed(1)\n"
+#guard (printDecl "program" ⟨.nat, .never, Requirement.empty⟩
+      (.call (.ident "Effect.succeed") [.int 1])).map (constDecl house0)
+  = .ok "export const program: Effect.Effect<number, never> = Effect.succeed(1)\n"
 
-#guard constDecl house0
-    (printDecl "program" ⟨.nat, .never, Requirement.single ⟨⟨1⟩, ⟨2⟩⟩⟩
-      (.call (.ident "Effect.succeed") [.int 1]))
-  = "export const program = Effect.succeed(1)\n"
+#guard (printDecl "program" ⟨.nat, .never, Requirement.single ⟨⟨1⟩, ⟨2⟩⟩⟩
+      (.call (.ident "Effect.succeed") [.int 1])).map (constDecl house0)
+  = .ok "export const program = Effect.succeed(1)\n"
+
+-- The raw declaration printer now exposes its type domain. A closed body
+-- alone cannot make an arbitrary legacy handle spelling representable.
+#guard match printDecl "program"
+    ⟨.handle "not a type !", .never, Requirement.empty⟩
+    (.call (.ident "Effect.succeed") [.int 1]) with
+  | .error (.typeSpelling spelling) => spelling == "not a type !"
+  | _ => false
+#guard declarationTypeReadable
+    ⟨.handle "not a type !", .never, Requirement.empty⟩ = false
 
 end Test.Syntax.PrintContract

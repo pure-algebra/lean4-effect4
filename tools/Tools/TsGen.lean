@@ -540,7 +540,8 @@ def atomRows : List (String × Option Nat × Option (List Effect4.Program.Ty × 
   Effect4.Program.NativeAtom.all.map fun atom => (atom.name, atom.arity, atom.mono)
 
 /-- The service lookup's complete finite inputs, including reserved-name policy.
-Type spellings are produced by the same renderer that `printKey` uses. -/
+The legacy text profile retains `Ty.render`; the printer separately converts the
+same core types to structural TypeScript syntax. -/
 def servicesJs : String :=
   obj [("firstFreeName", toString Effect4.Machine.Env.firstFreeName),
     ("reserved", arr (Effect4.Program.nativeReservedServiceTypes.map fun (key, ty) =>

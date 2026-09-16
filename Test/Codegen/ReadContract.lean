@@ -133,8 +133,8 @@ def genericSpell (s : String) (names : List String) : Option Bool :=
   if s = "Deferred.make" ∧ names = [] then some true else none
 
 -- the printed head carries the declared arguments, and reads back to the row
-#guard TypeScript.Render.expr TypeScript.house0 0
-  (printRow (genericSig.rowOf true) (.lit .unit)) = "Deferred.make<number, number>()"
+#guard (printRow (genericSig.rowOf true) (.lit .unit)).map
+  (TypeScript.Render.expr TypeScript.house0 0) = .ok "Deferred.make<number, number>()"
 
 #guard roundTrip genericSig genericSpell 0 (.perform true (.lit .unit))
   = .ok (.perform true (.lit .unit))
@@ -146,13 +146,13 @@ def genericSpell (s : String) (names : List String) : Option Bool :=
 
 -- wrong type arguments, and an empty argument list, are refused
 #guard (readEff genericSig genericSpell 0
-  (.call (.generic (.ident "Deferred.make") ["number"]) [])).isOk = false
+  (.call (.generic (.ident "Deferred.make") [.name ["number"] []]) [])).isOk = false
 #guard (readEff genericSig genericSpell 0
   (.call (.generic (.ident "Deferred.make") []) [])).isOk = false
 
 -- and a row that declares none still refuses a call that carries some
 #guard (readEff sig spell 1
-  (.call (.generic (.ident "Ref.get") ["number"]) [.ident "a0"])).isOk = false
+  (.call (.generic (.ident "Ref.get") [.name ["number"] []]) [.ident "a0"])).isOk = false
 
 def tupleRowOf : Bool → Row
   | false => ⟨"tuple", "Fixture.tuple", .tupleCall, [], .sync,
@@ -538,8 +538,40 @@ open Effect4.Api in
 
 #guard readEff sig spell 0 (.int (-1)) = .error (.negative (-1))
 
-#guard readEff sig spell 0 (.call (.ident "Effect.gen") [.generator [.letDefinite "x" "number"]])
+#guard readEff sig spell 0 (.call (.ident "Effect.gen") [.generator [.letDefinite "x" (.name ["number"] [])]])
   = .error .unsupportedStmt
+
+/-! ## Explicit annotations are retained at the carrier boundary
+
+The raw reader accepts the printer's unannotated local image. It refuses
+annotations here instead of dropping source evidence before checked ingestion.
+-/
+
+#guard readEff nativeSignature nativeSpell 0
+    (.call (.ident "Effect.sync") [.arrow (some (.name ["number"] [])) (.int 1)]) =
+  .error (.arity "Effect.sync")
+#guard readEff nativeSignature nativeSpell 0
+    (.call (.ident "Effect.suspend") [.arrow (some (.name ["number"] []))
+      (.call (.ident "Effect.succeed") [.int 1])]) =
+  .error (.arity "Effect.suspend")
+#guard readEff nativeSignature nativeSpell 0
+    (.call (.ident "Effect.flatMap") [.call (.ident "Effect.succeed") [.int 1],
+      .lambda [⟨"a0", some (.name ["number"] [])⟩]
+        (.call (.ident "Effect.succeed") [.ident "a0"]) none]) =
+  .error (.arity "Effect.flatMap")
+#guard readEff nativeSignature nativeSpell 0
+    (.call (.ident "Effect.flatMap") [.call (.ident "Effect.succeed") [.int 1],
+      .lambda [⟨"a0", none⟩] (.call (.ident "Effect.succeed") [.ident "a0"])
+        (some (.name ["number"] []))]) =
+  .error (.arity "Effect.flatMap")
+#guard readEff nativeSignature nativeSpell 0
+    (.call (.ident "Effect.gen") [.generator
+      [.constYield "a0" (.call (.ident "Effect.succeed") [.int 1])
+        (some (.name ["number"] [])), .ret (.ident "a0")]]) =
+  .error .unsupportedStmt
+#guard roundTrip nativeSignature nativeSpell 0
+    (.bind (.succeed (.lit (.nat 1))) (.succeed (.var 0))) =
+  .ok (.bind (.succeed (.lit (.nat 1))) (.succeed (.var 0)))
 
 /-! ## What the printer loses
 
@@ -655,14 +687,14 @@ private def joinLayers : List (LayerTerm NativeOp) :=
 #guard [Effect4.ServiceKey.mk ⟨0⟩ ⟨0⟩, ⟨⟨1⟩, ⟨4⟩⟩, ⟨⟨4⟩, ⟨4⟩⟩,
     ⟨⟨5⟩, ⟨5⟩⟩, ⟨⟨6⟩, ⟨6⟩⟩, ⟨⟨7⟩, ⟨7⟩⟩].all fun key =>
   decide (roundTrip nativeSignature nativeSpell 0 (.service key) = .ok (.service key))
-#guard readKey nativeSignature (.call (.generic (.ident "Context.Service") ["boolean"])
+#guard readKey nativeSignature (.call (.generic (.ident "Context.Service") [.name ["boolean"] []])
   [.str "k4_4"]) = .error (.shape "service key")
-#guard readKey nativeSignature (.call (.generic (.ident "Context.Service") ["number"])
+#guard readKey nativeSignature (.call (.generic (.ident "Context.Service") [.name ["number"] []])
   [.str "k04_4"]) = .error (.shape "service key")
 #guard readKey nativeSignature (.call (.ident "Context.Service") [.str "k4_4"]) =
   .error (.shape "service key")
-#guard readKey nativeSignature (printKey nativeSignature ⟨⟨12345678901234567890⟩, ⟨4⟩⟩) =
-  .ok ⟨⟨12345678901234567890⟩, ⟨4⟩⟩
+#guard (printKey nativeSignature ⟨⟨12345678901234567890⟩, ⟨4⟩⟩).map (readKey nativeSignature) =
+  .ok (.ok ⟨⟨12345678901234567890⟩, ⟨4⟩⟩)
 
 -- The inner target is captured before the enclosing target; restoration must
 -- rebuild the enclosing layer before putting the inner target back.

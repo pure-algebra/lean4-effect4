@@ -37,21 +37,23 @@ mutual
     | call (fn : Expr) (args : List Expr)
     | method (target : Expr) (name : String) (args : List Expr)
     | member (target : Expr) (name : String)
-    | generic (fn : Expr) (types : List String)
+    | generic (fn : Expr) (types : List TypeScript.TypeRef)
     | object (fields : List (String × Expr))
     | arr (items : List Expr)
-    | lambda (params : List String) (body : Expr)
+    | lambda (params : List TypeScript.Parameter) (body : Expr)
+        (returnType : Option TypeScript.TypeRef := none)
     | generator (body : List Stmt)
-    | arrowBlock (params : List String) (body : List Stmt)
+    | arrowBlock (params : List TypeScript.Parameter) (body : List Stmt)
+        (returnType : Option TypeScript.TypeRef := none)
     | cond (test thenB elseB : Expr)
     | atomLambda (shape : LambdaShape)
   inductive Stmt
-    | constYield (name : String) (value : Expr)
+    | constYield (name : String) (value : Expr) (type : Option TypeScript.TypeRef := none)
     | yieldDiscard (value : Expr)
     | ret (value : Expr)
     | ifElse (test : Expr) (thenB elseB : List Stmt) (omitElse : Bool)
     | whileTrue (label : Option String) (body : List Stmt)
-    | letInit (name : String) (value : Expr)
+    | letInit (name : String) (value : Expr) (type : Option TypeScript.TypeRef := none)
     | assign (name : String) (value : Expr)
     | expr (value : Expr)
     | leaf (value : TypeScript.Stmt)
@@ -100,10 +102,10 @@ mutual
     | .ident s => s == name
     | .call f xs => mentions name f || mentionsList name xs
     | .method x _ xs => mentions name x || mentionsList name xs
-    | .member x _ | .generic x _ | .arrow _ x | .lambda _ x => mentions name x
+    | .member x _ | .generic x _ | .arrow _ x | .lambda _ x _ => mentions name x
     | .object fs | .objectML fs | .objectQuoted fs | .objectQuotedML fs | .objectFromEntries fs => mentionsFields name fs
     | .arr xs => mentionsList name xs
-    | .generator ss | .arrowBlock _ ss => mentionsStmts name ss
+    | .generator ss | .arrowBlock _ ss _ => mentionsStmts name ss
     | .cond a b c => mentions name a || mentions name b || mentions name c
     | _ => false
   def mentionsList (name : String) : List TypeScript.Expr → Bool
@@ -113,7 +115,7 @@ mutual
   def mentionsStmts (name : String) : List TypeScript.Stmt → Bool
     | [] => false | x :: xs => mentionsStmt name x || mentionsStmts name xs
   def mentionsStmt (name : String) : TypeScript.Stmt → Bool
-    | .constYield _ x | .ret x | .yieldDiscard x | .letInit _ x | .assign _ x | .exprStmt x => mentions name x
+    | .constYield _ x _ | .ret x | .yieldDiscard x | .letInit _ x _ | .assign _ x | .exprStmt x => mentions name x
     | .ifElse t a b => mentions name t || mentionsStmts name a || mentionsStmts name b
     | .whileTrue _ ss | .labelled _ ss => mentionsStmts name ss
     | .scopedGen _ ss x | .scopedGenMasked _ ss x => mentionsStmts name ss || mentions name x
@@ -139,9 +141,11 @@ mutual
       else head style s
     | .call (.ident "Effect.sleep") [.int (.ofNat n)] =>
         .call (head style "Effect.sleep") [duration style n]
-    | .call (.ident "Effect.acquireRelease") [acquire, .lambda [resource, exit] body] =>
+    | .call (.ident "Effect.acquireRelease") [acquire, .lambda [resource, exit] body returnType] =>
         .call (head style "Effect.acquireRelease") [expression style acquire,
-          .lambda (if style.releaseOne && !mentions exit body then [resource] else [resource, exit]) (expression style body)]
+          -- An explicit exit annotation is retained even when the value is unused.
+          .lambda (if style.releaseOne && exit.type.isNone && !mentions exit.name body
+            then [resource] else [resource, exit]) (expression style body) returnType]
     | .call (.ident name) args =>
         let changed := expressions style args
         let skipOptions :=  style.omitOptions &&
@@ -157,10 +161,10 @@ mutual
     | .object fs | .objectML fs | .objectQuoted fs | .objectQuotedML fs =>
         .object (if style.reverseFields then (fields style fs).reverse else fields style fs)
     | .arr xs => .arr (expressions style xs)
-    | .arrow _ body => .lambda [] (expression style body)
-    | .lambda params body => .lambda params (expression style body)
+    | .arrow returnType body => .lambda [] (expression style body) returnType
+    | .lambda params body returnType => .lambda params (expression style body) returnType
     | .generator body => .generator (statements style body)
-    | .arrowBlock params body => .arrowBlock params (statements style body)
+    | .arrowBlock params body returnType => .arrowBlock params (statements style body) returnType
     | .cond t a b => .cond (expression style t) (expression style a) (expression style b)
     | x => .leaf x
   def expressions (style : Style) : List TypeScript.Expr → List Expr
@@ -168,12 +172,12 @@ mutual
   def fields (style : Style) : List (String × TypeScript.Expr) → List (String × Expr)
     | [] => [] | (name, x) :: xs => (name, expression style x) :: fields style xs
   def statement (style : Style) : TypeScript.Stmt → Stmt
-    | .constYield name x => .constYield name (expression style x)
+    | .constYield name x type => .constYield name (expression style x) type
     | .yieldDiscard x => .yieldDiscard (expression style x)
     | .ret x => .ret (expression style x)
     | .ifElse t a b => .ifElse (expression style t) (statements style a) (statements style b) (style.omitElse && b.isEmpty)
     | .whileTrue label body => .whileTrue label (statements style body)
-    | .letInit name x => .letInit name (expression style x)
+    | .letInit name x type => .letInit name (expression style x) type
     | .assign name x => .assign name (expression style x)
     | .exprStmt x => .expr (expression style x)
     | x => .leaf x

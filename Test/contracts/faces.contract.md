@@ -112,13 +112,41 @@ demonstrates why that premise matters.
 
 `readable_hoistAll` in `Laws/Codegen/HoistingReadable.lean` derives all main/piece/name
 premises from readability of the original program. `printModule_readable` proves
-successful printing for every readable program with well-formed layer references;
+successful printing for every readable program with well-formed layer references
+and a structurally representable emitted declaration type;
 `readModule_printModule_readable` reconstructs that original program under lawful
 spellings. `Api.printModule_roundTrip` composes these through the actual API: a typed,
-readable program under a lawful codegen table has an emitted module that reads back
-exactly, with no successful-output premise. These are module-AST adequacy and
+readable program under a lawful codegen table, with the same declaration-type
+representability premise, has an emitted module that reads back exactly, with no
+successful-output premise. These are module-AST adequacy and
 reconstruction on that domain. None checks source declarations, imports, rendered
 bytes, target typing or target execution.
+
+**Structural type amendment (2026-09-16, `E4-TARGET-TYPE-CE-001`).** The target
+carrier now retains type syntax, parameter and local annotations, import aliases,
+type-only markers and export presence. The canonical expression reader requires
+unannotated binders and locals where the raw printer emits none; it must not erase
+an annotation to satisfy `read_exact`. A future typed-source reader may validate
+and normalize more source forms above that exact-image reader.
+
+Legacy `Row.typeArgs` and `Ty.handle` strings retain their stored representation.
+`Codegen.Types.parseLegacy` is a fallible bridge for the documented subset, not
+another core type checker. Row calls and service keys refuse unsupported target
+spellings with `PrintRefusal.typeSpelling`. Readability includes that conversion's
+domain wherever the expression emits a type; bare value rows emit no type arguments.
+`declarationTypeReadable` separately states that a declaration's emitted type is
+representable. A raw answer type `handle "not a type !"` used to become unchecked
+annotation text; it now refuses. `Test/Codegen/PrintContract.lean` retains this witness.
+Accordingly `printModule_readable` and `Api.printModule_roundTrip` acquire the named
+representability premise. Successful-print reconstruction and exact-image reading
+retain their conclusions; no source typing or host agreement follows from parsing.
+
+The bridge accepts qualified names and generic arguments, literal strings, tuples,
+parentheses and unions under its documented lexical restrictions. It does not resolve
+names or check generic arity. Core unit still maps to `void`, and natural/integer
+columns still share `number`; no injective core-type codec is claimed. Requirement
+columns still omit the raw declaration annotation. Complete typed source admission,
+nominal service requirements and the coupled unit repair remain separate obligations.
 
 ---
 

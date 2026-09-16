@@ -16,17 +16,20 @@ namespace Effect4.Api
 open Effect4.Program
 
 /-- A typed readable program under a lawful codegen table has an API module whose
-reading is the original program, including its explicit layer-sharing references. -/
+reading is the original program, including its explicit layer-sharing references.
+The emitted declaration type must have a structural target reading; arbitrary
+legacy handle strings do not follow from core typing alone. -/
 theorem printModule_roundTrip (name : String) (program : Program) (table : RowTable)
     (lawful : LawfulTable table = true) {ty : EffTy}
-    (typed : typeOf program table = some ty) (hr : readable program table = true) :
+    (typed : typeOf program table = some ty) (hr : readable program table = true)
+    (types : declarationTypeReadable ty = true) :
     ∃ module, printModule name program table = some module ∧
       readModule module table = .ok program := by
   have valid : program.layerRefsWF = true := by
     cases h : program.layerRefsWF with
     | false => simp [typeOf, Effect4.Program.typeOfProgram, h] at typed
     | true => rfl
-  obtain ⟨decls, printed⟩ := Effect4.Program.printModule_readable hr valid name ty
+  obtain ⟨decls, printed⟩ := Effect4.Program.printModule_readable hr valid name ty types
   have safe : table.find? (fun row => !rowNamesSafe row) = none := by
     apply List.find?_eq_none.mpr
     intro row mem

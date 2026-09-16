@@ -130,7 +130,7 @@ def ofBytes (bytes : Store.Bytes) : Option Program := Wire.decodeProgram bytes
 is ill-typed or the printer refuses it. -/
 def printDecl (name : String) (program : Program) (table : RowTable := []) : Option TypeScript.ConstDecl :=
   match typeOf program table, print program table with
-  | some ty, Except.ok body => some (Program.printDecl name ty body)
+  | some ty, Except.ok body => (Program.printDecl name ty body).toOption
   | _, _ => none
 
 /-- The program as a declaration block: one `const L_<path> = …` per referenced layer target

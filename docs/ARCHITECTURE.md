@@ -40,7 +40,11 @@ existing value images; `Api` imports that boundary, and its proofs live under
 `Laws/Schema/Codec`. Machine does not import the boundary. The external packages are pinned
 by exact commit in `lakefile.toml` (`effects`, `typescript`, and `hash` for the
 store's SHA-256). Effect4 depends on them, never conversely, and re-declares
-none of their carriers.
+none of their carriers. `Codegen.Types` projects normalized core types into the
+dependency's structural `TypeRef` and parses the supported legacy type strings at
+that boundary. It does not import the renderer; stored `Ty` and `Row` data remain
+unchanged. The target carrier retains source annotations and binding distinctions
+for validation above the canonical expression reader.
 
 ## Source tree
 

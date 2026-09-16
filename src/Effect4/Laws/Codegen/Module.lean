@@ -179,10 +179,12 @@ theorem readModule_printModule {sig : Signature Op}
   rw [hoisted] at printed
   change ((Path.sortBy Path.declBefore (history.map Prod.fst)).mapM
     (printCaptured sig history) >>= fun ds => print sig 0 main >>= fun body =>
-    .ok (ds ++ [printDecl name ty body])) = .ok decls at printed
+    printDecl name ty body >>= fun decl => .ok (ds ++ [decl])) = .ok decls at printed
   obtain ⟨ds, hp, hmain⟩ := bind_eq_ok.mp printed
-  obtain ⟨body, hbody, heq⟩ := bind_eq_ok.mp hmain
+  obtain ⟨body, hbody, hdecl⟩ := bind_eq_ok.mp hmain
+  obtain ⟨decl, declaration, heq⟩ := bind_eq_ok.mp hdecl
   cases heq
+  have value := printDecl_value declaration
   have hm := read_print lawful main mainReadable hbody
   have hd := readCaptured_mapM lawful layersReadable namesReadable _ hp
   have restored : main.restoreAll
@@ -193,7 +195,7 @@ theorem readModule_printModule {sig : Signature Op}
     exact Eff.restoreAll_hoistAll hoisted
   simp only [List.map_append, List.map_cons, List.map_nil, readModule,
     List.getLast?_append, List.getLast?_singleton, Option.some_or,
-    List.dropLast_append_cons, List.dropLast_singleton, List.append_nil]
+    List.dropLast_append_cons, List.dropLast_singleton, List.append_nil, value]
   change (readEff sig spell 0 body >>= fun e =>
     (ds.map TypeScript.Decl.const).mapM (readCaptured sig spell) >>= fun entries =>
     match e.restoreAll entries with
@@ -229,13 +231,15 @@ private theorem printCaptured_mapM_exists {sig : Signature Op}
     obtain ⟨decls, rest⟩ := ih (fun t h => contained t (List.mem_cons_of_mem _ h))
     exact ⟨decl :: decls, by simp only [List.mapM_cons, printed, ok_bind, rest]; rfl⟩
 
-/-- Every readable program with well-formed layer references prints as a declaration
-block. Successful hoisting or printing is not a premise. This is syntax-AST adequacy;
+/-- Every readable program with well-formed layer references and a representable
+emitted annotation prints as a declaration block. Malformed legacy type strings now
+refuse; the explicit type-domain premise replaces the former raw-string assumption.
+Successful hoisting or printing is not a premise. This is syntax-AST adequacy;
 it does not check the caller's declared type, source imports or target execution. -/
 theorem printModule_readable {sig : Signature Op}
     {spell : String → List String → Option Op} {root : Eff Op}
     (hr : readable sig spell 0 root = true) (valid : root.layerRefsWF = true)
-    (name : String) (ty : EffTy) :
+    (name : String) (ty : EffTy) (types : declarationTypeReadable ty = true) :
     ∃ decls, printModule sig name ty root = .ok decls := by
   obtain ⟨main, history, hoisted⟩ := root.hoistAll_exists valid
   obtain ⟨hm, pieces⟩ := readable_hoistAll hr hoisted
@@ -244,13 +248,14 @@ theorem printModule_readable {sig : Signature Op}
   obtain ⟨decls, printedLayers⟩ := printCaptured_mapM_exists layers
     (Path.sortBy Path.declBefore (history.map Prod.fst))
     (fun target mem => (Path.sortBy_perm Path.declBefore _).mem_iff.mp mem)
-  refine ⟨decls ++ [printDecl name ty body], ?_⟩
+  obtain ⟨declaration, printedDecl⟩ := printDecl_readable name ty body types
+  refine ⟨decls ++ [declaration], ?_⟩
   unfold printModule
   rw [hoisted]
   change ((Path.sortBy Path.declBefore (history.map Prod.fst)).mapM
     (printCaptured sig history) >>= fun ds => print sig 0 main >>= fun body =>
-    .ok (ds ++ [printDecl name ty body])) = _
-  simp only [printedLayers, ok_bind, printedMain]
+    printDecl name ty body >>= fun decl => .ok (ds ++ [decl])) = _
+  simp only [printedLayers, ok_bind, printedMain, printedDecl]
 
 /-- The module inverse on the original readable program and valid-reference domain.
 All captured-piece and name premises of `readModule_printModule` are derived from

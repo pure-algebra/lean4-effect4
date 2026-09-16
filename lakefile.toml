@@ -123,12 +123,11 @@ git = "https://github.com/pure-algebra/lean4-effects"
 rev = "a4ee7a14248ee5976039b73039319efa87834986"
 
 # TypeScript as a target: syntax, renderer, identifier profile, host pins.
-# Exact commit of v0.5.0 of pure-algebra/lean4-typescript (`Expr.generator`, `Expr.cond`,
-# `Expr.arrowBlock`, the formers the Eff printer needs).
+# Version 0.6.0 carrier: structural type annotations and retained source bindings.
 [[require]]
 name = "typescript"
 git = "https://github.com/pure-algebra/lean4-typescript"
-rev = "71bad1252ee8a1b243ed283320ededcb7d0a93c4"
+rev = "6afc9b841603796c16b266c0b8b92ded37a9445c"
 
 # Proved SHA-256 for content addresses (src/Effect4/Store/Digest.lean): exact commit of
 # pure-algebra/lean4-hash main. Its SHA-256 family is audited at zero declarations

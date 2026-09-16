@@ -14,7 +14,7 @@ produces. `ReadRefusal` is the closed refusal alphabet; a refusal is data, never
 
 Two theorems state the relation. `read_print`: what the printer prints of a readable
 program reads back to that program. `read_exact`: what the reader accepts prints back to
-exactly the tree it read. `Readable` is what the printer loses and the reader cannot
+exactly the tree it read. `readable` excludes what the printer loses and the reader cannot
 recover — a variable out of scope, the request of a `unit`-request row (the printer drops
 it), the `daemon` flag of a scoped fork (the fork options object has no such field), the
 kind of a row (a `perform` and a `callback` on the same row print alike), and `yieldError`,
@@ -28,7 +28,12 @@ Binders are recovered by comparison, never by decoding: `Var.read n s` is the po
 kin reach `Classical.choice` on this toolchain); the injectivity of `Var.name` is proved
 from the bytes of `Nat.repr`, which are a `List UInt8` the digits decode from.
 Service keys decode those decimal bytes and check the full canonical spelling,
-including the type argument supplied by the signature.
+including the structural type argument supplied by the signature. Legacy row and
+service type text must convert through `Codegen.Types` before it can be printed;
+`requestReadable` and `keyReadable` state that domain explicitly. The raw reader only
+accepts unannotated parameters, returns and locals where the printer emits them. It never
+discards a source annotation to establish `read_exact`; checked source admission is a
+separate boundary.
 -/
 
 namespace Effect4.Program
@@ -222,14 +227,14 @@ names otherwise; a tuple-call row's is its two request arguments followed by the
 names. The three readings are tried in that order, and `LawfulSpelling` is what makes at
 most one succeed. -/
 def readRowCall (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
-    (s : String) (typeArgs : List String) (args : List Expr) : Option (Except ReadRefusal (Eff Op)) :=
+    (s : String) (typeArgs : List TypeScript.TypeRef) (args : List Expr) : Option (Except ReadRefusal (Eff Op)) :=
   -- the call's type arguments must be exactly the ones the row declares: a row that needs
   -- them refuses a bare call, and a row that declares none refuses a call that carries any
   -- (`E4-CHECK-CE-013`)
   match (idents? args).bind (spell s) with
   | some op =>
     some (if (sig.rowOf op).shape = .call ∧ (sig.rowOf op).request = Ty.unit ∧
-        (sig.rowOf op).typeArgs = typeArgs then
+        rowTypeArgs (sig.rowOf op) = some typeArgs then
       .ok (rowAnswer (sig.rowOf op) op (.lit .unit))
     else .error (.arity s))
   | none =>
@@ -238,7 +243,7 @@ def readRowCall (sig : Signature Op) (spell : String → List String → Option 
       match (idents? rest).bind (spell s) with
       | some op =>
         some (if (sig.rowOf op).shape = .call ∧ (sig.rowOf op).request ≠ Ty.unit ∧
-            (sig.rowOf op).typeArgs = typeArgs then
+            rowTypeArgs (sig.rowOf op) = some typeArgs then
           (readTerm n request).map (rowAnswer (sig.rowOf op) op)
         else .error (.arity s))
       | none =>
@@ -247,7 +252,7 @@ def readRowCall (sig : Signature Op) (spell : String → List String → Option 
           match (idents? names).bind (spell s) with
           | some op =>
             some (if (sig.rowOf op).shape = .tupleCall ∧
-                (sig.rowOf op).typeArgs = typeArgs then
+                rowTypeArgs (sig.rowOf op) = some typeArgs then
               (readTupleArgs n request second).map (rowAnswer (sig.rowOf op) op)
             else .error (.arity s))
           | none => none
@@ -268,7 +273,7 @@ def addReceiver (sig : Signature Op) (receiver : Term) : Eff Op → Except ReadR
 
 /-- Method arguments use the same three arity readings as ordinary row calls. -/
 def readRowMethod (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
-    (receiver : Expr) (s : String) (typeArgs : List String) (args : List Expr) :
+    (receiver : Expr) (s : String) (typeArgs : List TypeScript.TypeRef) (args : List Expr) :
     Except ReadRefusal (Eff Op) := do
   let recv ← readTerm n receiver
   let body ← (readRowCall (methodSignature sig) spell n s typeArgs args).getD
@@ -288,7 +293,7 @@ def readMethod (sig : Signature Op) (spell : String → List String → Option O
 callback adds no binder, links the fiber once, and returns the unit effect. -/
 def readRunIn (n : Nat) (args : List Expr) : Except ReadRefusal (Eff Op) :=
   match args with
-  | [.arrowBlock [] [.exprStmt (.call (.ident runIn) [target, scope]), .ret (.ident unit)]] =>
+  | [.arrowBlock [] [.exprStmt (.call (.ident runIn) [target, scope]), .ret (.ident unit)] none] =>
     if runIn = "Fiber.runIn" ∧ unit = "Effect.void" then do
       let t ← readTerm n target
       let s ← readTerm n scope
@@ -322,7 +327,7 @@ def readKey {Op : Type} (sig : Signature Op) : Expr → Except ReadRefusal Servi
     let key := keyFromText text
     match sig.serviceTy key with
     | some ty =>
-      if head = "Context.Service" ∧ arg = ty.render ∧ text = keyText key then
+      if head = "Context.Service" ∧ Effect4.Codegen.Types.ofTy ty = some arg ∧ text = keyText key then
         .ok key
       else .error (.shape "service key")
     | none => .error (.shape "service key")
@@ -398,9 +403,9 @@ mutual
       let elseB ← readEff sig spell n b
       .ok (.branch test thenB elseB)
     | .suspend, [.arrow none body] => (readEff sig spell n body).map .suspend
-    | .suspend, [.arrowBlock [] [.letInit cursor initial,
+    | .suspend, [.arrowBlock [] [.letInit cursor initial none,
         .ret (.call (.ident loop) [.object [(fw, .arrow none test), (fb, .arrow none body),
-          (fs, .arrowBlock [answer] [.assign cursor' step])]])]] =>
+          (fs, .arrowBlock [⟨answer, none⟩] [.assign cursor' step] none)]])] none] =>
       if loop = "Effect.whileLoop" ∧ fw = "while" ∧ fb = "body" ∧ fs = "step"
           ∧ cursor = Var.name n ∧ cursor' = Var.name n ∧ answer = Var.name (n + 1) then do
         let i ← readTerm n initial
@@ -409,40 +414,40 @@ mutual
         let b ← readEff sig spell (n + 1) body
         .ok (.whileLoop i t s b)
       else .error (.shape "whileLoop")
-    | .flatMap, [first, .lambda [x] rest] =>
+    | .flatMap, [first, .lambda [⟨x, none⟩] rest none] =>
       if x = Var.name n then do
         let f ← readEff sig spell n first
         let r ← readEff sig spell (n + 1) rest
         .ok (.bind f r)
       else .error (.binder (Var.name n))
     | .gen, [.generator body] => (readStmts sig spell n body).map .gen
-    | .catchCause, [body, .lambda [x] handler] =>
+    | .catchCause, [body, .lambda [⟨x, none⟩] handler none] =>
       if x = Var.name n then do
         let b ← readEff sig spell n body
         let h ← readEff sig spell (n + 1) handler
         .ok (.catchCause b h)
       else .error (.binder (Var.name n))
-    | .catchError, [body, .lambda [x] handler] =>
+    | .catchError, [body, .lambda [⟨x, none⟩] handler none] =>
       if x = Var.name n then do
         let b ← readEff sig spell n body
         let h ← readEff sig spell (n + 1) handler
         .ok (.catchIf (.lit (.bool true)) b h)
       else .error (.binder (Var.name n))
-    | .catchIf, [body, .lambda [x] predicate, .lambda [y] handler, .ident fallback] =>
+    | .catchIf, [body, .lambda [⟨x, none⟩] predicate none, .lambda [⟨y, none⟩] handler none, .ident fallback] =>
       if x = Var.name n ∧ y = Var.name n ∧ fallback = "undefined" then do
         let b ← readEff sig spell n body
         let t ← readCatchTest (n + 1) predicate
         let h ← readEff sig spell (n + 1) handler
         .ok (.catchIf t b h)
       else .error (.shape "catchIf binders or absent fallback")
-    | .matchCauseEffect, [body, .object [(ff, .lambda [x] onCause), (fs, .lambda [y] onValue)]] =>
+    | .matchCauseEffect, [body, .object [(ff, .lambda [⟨x, none⟩] onCause none), (fs, .lambda [⟨y, none⟩] onValue none)]] =>
       if ff = "onFailure" ∧ fs = "onSuccess" ∧ x = Var.name n ∧ y = Var.name n then do
         let b ← readEff sig spell n body
         let v ← readEff sig spell (n + 1) onValue
         let c ← readEff sig spell (n + 1) onCause
         .ok (.matchCause b v c)
       else .error (.shape "matchCause")
-    | .onExit, [body, .lambda [x] finalizer] =>
+    | .onExit, [body, .lambda [⟨x, none⟩] finalizer none] =>
       if x = Var.name n then do
         let b ← readEff sig spell n body
         let f ← readEff sig spell (n + 1) finalizer
@@ -494,7 +499,7 @@ mutual
       let e ← readTerm n exit
       .ok (.withFiber (.closeScope s e))
     | .scoped, [body] => (readEff sig spell n body).map .scoped
-    | .acquireRelease, [acquire, .lambda [x, y] release] =>
+    | .acquireRelease, [acquire, .lambda [⟨x, none⟩, ⟨y, none⟩] release none] =>
       if x = Var.name n ∧ y = Var.name (n + 1) then do
         let a ← readEff sig spell n acquire
         let r ← readEff sig spell (n + 2) release
@@ -541,7 +546,7 @@ mutual
       (stmts : List TypeScript.Stmt) : Except ReadRefusal (Stmts Op) :=
     match stmts with
     | [] => .ok .nil
-    | .constYield x value :: rest =>
+    | .constYield x value none :: rest =>
       if x = Var.name n then do
         let e ← readEff sig spell n value
         let tail ← readStmts sig spell (n + 1) rest
@@ -637,7 +642,10 @@ end
 /-- A declaration block back to the program (the host rows slice): every
 `const L_<path> = <layer>` read as a layer at the path its name carries and put back at that
 path (`Refs.lean` `restoreAll`, ancestors first), the last declaration the main program.
-The inverse of `printModule` on the blocks it prints; `shape "module"` on every other. -/
+The program reconstruction law applies to successfully printed modules under its stated
+readability and hoisting premises. This raw reader ignores declaration type annotations,
+export flags and the main declaration's name; it is not exact source-module admission.
+Malformed declaration forms, layer paths and failed restoration return `shape "module"`. -/
 def readModule (sig : Signature Op) (spell : String → List String → Option Op)
     (decls : List TypeScript.Decl) : Except ReadRefusal (Eff Op) :=
   match decls.getLast?, decls.dropLast with
@@ -722,14 +730,24 @@ def tupleRequestReadable (n : Nat) (request : Term) : Bool :=
       | .lit .unit => true
       | _ => false
 
+/-- A service key can be printed exactly when its optional signature type has a
+structural target representation. This premise replaces the old total string spelling. -/
+def keyReadable (sig : Signature Op) (key : ServiceKey) : Bool :=
+  match sig.serviceTy key with
+  | none => true
+  | some ty => (Effect4.Codegen.Types.ofTy ty).isSome
+
+/-- The raw printed-image domain includes structural type-argument representability
+for call and method rows. Value rows do not print their type arguments. -/
 def requestReadable (row : Row) (n : Nat) (request : Term) : Bool :=
   match row.shape with
   | .value => decide (request = .lit .unit)
   | .call =>
-    if row.request = Ty.unit then decide (request = .lit .unit) else request.scoped n
-  | .tupleCall => tupleRequestReadable n request
+    (rowTypeArgs row).isSome &&
+      if row.request = Ty.unit then decide (request = .lit .unit) else request.scoped n
+  | .tupleCall => (rowTypeArgs row).isSome && tupleRequestReadable n request
   | .method =>
-    match pairArgs? request with
+    (rowTypeArgs row).isSome && match pairArgs? request with
     | some (receiver, args) =>
       receiver.scoped n &&
         if (methodArgsRow row).shape = .tupleCall then tupleRequestReadable n args
@@ -779,8 +797,9 @@ mutual
     | .acquireRelease acquire release =>
       readable sig spell n acquire && readable sig spell (n + 2) release
     | .provideLayer layer _ body => readableLayer sig spell layer && readable sig spell n body
-    | .service _ => true
-    | .provideService _ value body => value.scoped n && readable sig spell n body
+    | .service key => keyReadable sig key
+    | .provideService key value body =>
+      keyReadable sig key && value.scoped n && readable sig spell n body
 
   /-- The layer's closed effects must retain their printed form. A reference is readable
   exactly when its identifier decodes back to its path (`LayerTerm.readRefName` after
@@ -788,8 +807,9 @@ mutual
   that binds the identifier is a declaration block's (`printModule`/`readModule`). -/
   def readableLayer (sig : Signature Op) (spell : String → List String → Option Op) :
       LayerTerm Op → Bool
-    | .succeed _ _ => true
-    | .effect _ body | .effectDiscard body => readable sig spell 0 body
+    | .succeed key _ => keyReadable sig key
+    | .effect key body => keyReadable sig key && readable sig spell 0 body
+    | .effectDiscard body => readable sig spell 0 body
     | .provide self that | .provideMerge self that | .merge self that =>
       readableLayer sig spell self && readableLayer sig spell that
     | .fresh inner | .orDie inner => readableLayer sig spell inner
@@ -939,16 +959,16 @@ theorem decodeBytes_repr (n : Nat) : decodeBytes (Nat.repr n).toByteArray.data.t
   exact decodeBytes_toDigitsCore (n + 1) n (Nat.lt_succ_self n)
 
 theorem readKey_exact {Op : Type} {sig : Signature Op} {x : Expr} {key : ServiceKey}
-    (h : readKey sig x = .ok key) : printKey sig key = x := by
+    (h : readKey sig x = .ok key) : printKey sig key = .ok x := by
   unfold readKey at h
   split at h
   · dsimp only at h
     split at h
     · rename_i heq
       cases h
-      rw [printKey, heq.2.1]
-      change Expr.call (.ident "Context.Service") [.str (keyText _)] = _
-      rw [← heq.2.2, heq.1]
+      simp only [printKey, heq.2.1, ok_bind, heq.1, Except.ok.injEq,
+        Expr.call.injEq, List.cons.injEq, Expr.str.injEq, and_true, true_and]
+      exact heq.2.2.symm
     · cases h
   · dsimp only at h
     split at h
@@ -956,9 +976,9 @@ theorem readKey_exact {Op : Type} {sig : Signature Op} {x : Expr} {key : Service
       split at h
       · rename_i heq
         cases h
-        rw [printKey, hty]
-        change Expr.call (.generic (.ident "Context.Service") [ty.render]) [.str (keyText _)] = _
-        rw [← heq.2.2, heq.1, heq.2.1]
+        simp only [printKey, hty, heq.2.1, ok_bind, heq.1, Except.ok.injEq,
+          Expr.call.injEq, List.cons.injEq, Expr.str.injEq, and_true, true_and]
+        exact heq.2.2.symm
       · cases h
     · cases h
   · cases h
@@ -1028,12 +1048,32 @@ theorem keyFromText_print (name service : Nat) :
   simp only [List.drop_succ_cons, List.drop_zero, decodeBytes_repr]
 
 
-theorem readKey_printKey {Op : Type} (sig : Signature Op) (key : ServiceKey) :
-    readKey sig (printKey sig key) = .ok key := by
+/-- The successful structural key image reads back. Unsupported legacy type text
+now refuses printing, so success is explicit instead of assuming a total string printer. -/
+theorem readKey_printKey {Op : Type} (sig : Signature Op) (key : ServiceKey)
+    {x : Expr} (hp : printKey sig key = .ok x) : readKey sig x = .ok key := by
   obtain ⟨⟨name⟩, ⟨service⟩⟩ := key
-  cases ht : sig.serviceTy ⟨⟨name⟩, ⟨service⟩⟩ <;>
-    simp only [printKey, ht, readKey, keyFromText_print, keyText, and_self, if_true]
+  cases ht : sig.serviceTy ⟨⟨name⟩, ⟨service⟩⟩ with
+  | none =>
+    simp only [printKey, ht, ok_bind, Except.ok.injEq] at hp
+    subst x
+    simp only [readKey, keyFromText_print, ht, keyText, and_self, if_true]
+  | some ty =>
+    cases hty : Effect4.Codegen.Types.ofTy ty with
+    | none => simp [printKey, ht, hty, bind_eq_ok] at hp
+    | some target =>
+      simp only [printKey, ht, hty, ok_bind, Except.ok.injEq] at hp
+      subst x
+      simp only [readKey, keyFromText_print, ht, hty, keyText, and_self, if_true]
 
+theorem printKey_readable (sig : Signature Op) (key : ServiceKey)
+    (hr : keyReadable sig key = true) : ∃ x, printKey sig key = .ok x := by
+  cases ht : sig.serviceTy key with
+  | none => exact ⟨_, by simp only [printKey, ht, ok_bind]; rfl⟩
+  | some ty =>
+    simp only [keyReadable, ht, Option.isSome_iff_exists] at hr
+    obtain ⟨target, htarget⟩ := hr
+    exact ⟨_, by simp only [printKey, ht, htarget, ok_bind]; rfl⟩
 
 theorem repr_inj {a b : Nat} (h : Nat.repr a = Nat.repr b) : a = b := by
   have := congrArg (fun s => decodeBytes s.toByteArray.data.toList) h
@@ -1309,24 +1349,23 @@ theorem readCatchTest_exact {n : Nat} {predicate : Expr} {test : Term}
   rw [← hp, ht]
   rfl
 
+private theorem printRow_not_cond {row : Row} {r : Term} {t a b : Expr}
+    (hp : printRow row r = .ok (.cond t a b)) : False := by
+  unfold printRow at hp
+  split at hp
+  · cases hp
+  · obtain ⟨head, _, hp⟩ := bind_eq_ok.mp hp
+    split at hp <;> cases hp
+  · obtain ⟨head, _, hp⟩ := bind_eq_ok.mp hp
+    cases hp
+  · split at hp <;> unfold printMethod at hp <;> split at hp <;> cases hp
+
 theorem print_not_cond {sig : Signature Op} {n : Nat} {e : Eff Op} {t a b : Expr}
     (hp : print sig n e = .ok (.cond t a b)) : False := by
   cases e
   case yieldError v => simp [print] at hp
-  case perform op r =>
-    simp only [print, printRow, Except.ok.injEq] at hp
-    split at hp
-    · simp at hp
-    · split at hp <;> simp at hp
-    · simp at hp
-    · split at hp <;> unfold printMethod at hp <;> split at hp <;> cases hp
-  case callback op r =>
-    simp only [print, printRow, Except.ok.injEq] at hp
-    split at hp
-    · simp at hp
-    · split at hp <;> simp at hp
-    · simp at hp
-    · split at hp <;> unfold printMethod at hp <;> split at hp <;> cases hp
+  case perform op r => exact printRow_not_cond hp
+  case callback op r => exact printRow_not_cond hp
   case catchIf test body handler =>
     by_cases ht : test = .lit (.bool true) <;> simp [print, ht, bind_eq_ok] at hp
   case awaitFiber f m => cases m <;> simp [print] at hp
@@ -1364,18 +1403,22 @@ theorem readRowCall_none {sig : Signature Op} {spell : String → List String �
 
 theorem readRowCall_unit {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true)
-    (hshape : (sig.rowOf op).shape = .call) (hreq : (sig.rowOf op).request = Ty.unit) :
-    readRowCall sig spell n (sig.rowOf op).spelling (sig.rowOf op).typeArgs
+    (hshape : (sig.rowOf op).shape = .call) (hreq : (sig.rowOf op).request = Ty.unit)
+    {typeArgs : List TypeScript.TypeRef}
+    (hta : rowTypeArgs (sig.rowOf op) = some typeArgs) :
+    readRowCall sig spell n (sig.rowOf op).spelling typeArgs
         ((sig.rowOf op).trailing.map Expr.ident)
       = some (.ok (rowAnswer (sig.rowOf op) op (.lit .unit))) := by
   unfold readRowCall
   rw [idents?_map, Option.bind_some, hl.spell_row op hd]
-  simp [hshape, hreq]
+  simp [hshape, hreq, hta]
 
 theorem readRowCall_request {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true) (r : Term)
-    (hshape : (sig.rowOf op).shape = .call) (hreq : (sig.rowOf op).request ≠ Ty.unit) :
-    readRowCall sig spell n (sig.rowOf op).spelling (sig.rowOf op).typeArgs
+    (hshape : (sig.rowOf op).shape = .call) (hreq : (sig.rowOf op).request ≠ Ty.unit)
+    {typeArgs : List TypeScript.TypeRef}
+    (hta : rowTypeArgs (sig.rowOf op) = some typeArgs) :
+    readRowCall sig spell n (sig.rowOf op).spelling typeArgs
         (printTerm r :: (sig.rowOf op).trailing.map Expr.ident)
       = some ((readTerm n (printTerm r)).map (rowAnswer (sig.rowOf op) op)) := by
   have key : ∀ x, (∀ op', x ∉ (sig.rowOf op').trailing) →
@@ -1403,13 +1446,13 @@ theorem readRowCall_request {sig : Signature Op} {spell : String → List String
   rw [hA]
   dsimp only
   rw [idents?_map, Option.bind_some, hl.spell_row op hd]
-  simp [hshape, hreq]
+  simp [hshape, hreq, hta]
 
 /-! ## `read_print`: what the printer prints of a readable program reads back to it -/
 
 theorem readable_row_unit {row : Row} {n : Nat} {r : Term} (hshape : row.shape = .call)
     (hreq : row.request = Ty.unit) (h : requestReadable row n r = true) : r = .lit .unit := by
-  simp only [requestReadable, hshape, hreq, if_true, decide_eq_true_eq] at h; exact h
+  simp only [requestReadable, hshape, hreq, if_true, Bool.and_eq_true, decide_eq_true_eq] at h; exact h.2
 
 theorem readable_row_value {row : Row} {n : Nat} {r : Term} (hshape : row.shape = .value)
     (h : requestReadable row n r = true) : r = .lit .unit := by
@@ -1417,7 +1460,7 @@ theorem readable_row_value {row : Row} {n : Nat} {r : Term} (hshape : row.shape 
 
 theorem readable_row_request {row : Row} {n : Nat} {r : Term} (hshape : row.shape = .call)
     (hreq : row.request ≠ Ty.unit) (h : requestReadable row n r = true) : r.scoped n = true := by
-  simp only [requestReadable, hshape, hreq, if_false] at h; exact h
+  simp only [requestReadable, hshape, hreq, if_false, Bool.and_eq_true] at h; exact h.2
 
 /-- A printed term is an identifier only as a binder or as `undefined`, never as a trailing
 name of any row. -/
@@ -1444,8 +1487,9 @@ theorem readRowCall_tuple {sig : Signature Op} {spell : String → List String �
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true) (x y : Expr)
     (hshape : (sig.rowOf op).shape = .tupleCall)
     (hx : ∀ op' v, x = .ident v → v ∉ (sig.rowOf op').trailing)
-    (hy : ∀ op' v, y = .ident v → v ∉ (sig.rowOf op').trailing) :
-    readRowCall sig spell n (sig.rowOf op).spelling (sig.rowOf op).typeArgs
+    (hy : ∀ op' v, y = .ident v → v ∉ (sig.rowOf op').trailing) {typeArgs : List TypeScript.TypeRef}
+    (hta : rowTypeArgs (sig.rowOf op) = some typeArgs) :
+    readRowCall sig spell n (sig.rowOf op).spelling typeArgs
         (x :: y :: (sig.rowOf op).trailing.map Expr.ident)
       = some ((readTupleArgs n x y).map (rowAnswer (sig.rowOf op) op)) := by
   have key : ∀ (names : List String) (v : String), (∀ op', v ∉ (sig.rowOf op').trailing) →
@@ -1480,14 +1524,15 @@ theorem readRowCall_tuple {sig : Signature Op} {spell : String → List String �
   rw [hB]
   dsimp only
   rw [idents?_map, Option.bind_some, hl.spell_row op hd]
-  simp [hshape]
+  simp [hshape, hta]
 
 /-- The tuple request round trip is shared by free calls and receiver methods. -/
 theorem readRowCall_printTupleArgs {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true)
     (hshape : (sig.rowOf op).shape = .tupleCall) (r : Term)
-    (h : tupleRequestReadable n r = true) :
-    readRowCall sig spell n (sig.rowOf op).spelling (sig.rowOf op).typeArgs
+    (h : tupleRequestReadable n r = true) {typeArgs : List TypeScript.TypeRef}
+    (hta : rowTypeArgs (sig.rowOf op) = some typeArgs) :
+    readRowCall sig spell n (sig.rowOf op).spelling typeArgs
       (printTupleArgs r ++ (sig.rowOf op).trailing.map Expr.ident) =
       some (.ok (rowAnswer (sig.rowOf op) op r)) := by
   simp only [tupleRequestReadable] at h
@@ -1498,7 +1543,7 @@ theorem readRowCall_printTupleArgs {sig : Signature Op} {spell : String → List
       simp only at h
       simp only [printTupleArgs, hpa, printTerm, List.cons_append, List.nil_append]
       rw [readRowCall_tuple hl op hd _ _ hshape
-        (fun _ _ hx => by cases hx) (fun _ _ hy => by cases hy)]
+        (fun _ _ hx => by cases hx) (fun _ _ hy => by cases hy) hta]
       have hv : readTerm n (.ident (Var.name i)) = .ok (.var i) :=
         readTerm_printTerm (.var i) h
       simp [readTupleArgs, savedVar?, hv]
@@ -1507,7 +1552,7 @@ theorem readRowCall_printTupleArgs {sig : Signature Op} {spell : String → List
       | unit =>
         simp only [printTupleArgs, hpa, printTerm, printLit, List.cons_append, List.nil_append]
         rw [readRowCall_tuple hl op hd _ _ hshape
-          (fun _ _ hx => by cases hx) (fun _ _ hy => by cases hy)]
+          (fun _ _ hx => by cases hx) (fun _ _ hy => by cases hy) hta]
         have hv : readTerm n (.ident "undefined") = .ok (.lit .unit) :=
           readTerm_printTerm (.lit .unit) rfl
         simp [readTupleArgs, savedVar?, hv]
@@ -1519,7 +1564,7 @@ theorem readRowCall_printTupleArgs {sig : Signature Op} {spell : String → List
     simp only [printTupleArgs, hpa, List.cons_append, List.nil_append]
     rw [readRowCall_tuple hl op hd _ _ hshape
       (fun op' v hv => printTerm_ident_not_trailing hl x op' v hv)
-      (fun op' v hv => printTerm_ident_not_trailing hl y op' v hv)]
+      (fun op' v hv => printTerm_ident_not_trailing hl y op' v hv) hta]
     simp [readTupleArgs, hsv, readTerm_printTerm x hx, readTerm_printTerm y hy]
 
 /-- Method projection keeps the same row identities and name hygiene. -/
@@ -1541,8 +1586,9 @@ theorem readRowCall_methodArgs {sig : Signature Op} {spell : String → List Str
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true) (args : Term)
     (h : (if (methodArgsRow (sig.rowOf op)).shape = .tupleCall then tupleRequestReadable n args
       else if (methodArgsRow (sig.rowOf op)).request = Ty.unit then decide (args = .lit .unit)
-      else args.scoped n) = true) :
-    readRowCall (methodSignature sig) spell n (sig.rowOf op).spelling (sig.rowOf op).typeArgs
+      else args.scoped n) = true) {typeArgs : List TypeScript.TypeRef}
+    (hta : rowTypeArgs (sig.rowOf op) = some typeArgs) :
+    readRowCall (methodSignature sig) spell n (sig.rowOf op).spelling typeArgs
       (printMethodArgs (sig.rowOf op) args) = some (.ok (rowAnswer (sig.rowOf op) op args)) := by
   have hm := methodLawful hl
   rcases methodArgsRow_shape (sig.rowOf op) with hs | hs
@@ -1551,19 +1597,19 @@ theorem readRowCall_methodArgs {sig : Signature Op} {spell : String → List Str
     · simp only [ht, if_true, decide_eq_true_eq] at h
       subst args
       simp only [printMethodArgs, hs, reduceCtorEq, if_false, ht, if_true]
-      have result := readRowCall_unit (n := n) hm op hd hs ht
+      have result := readRowCall_unit (n := n) hm op hd hs ht hta
       dsimp +instances only [methodSignature, methodArgsRow, rowAnswer] at result ⊢
       exact result
     · simp only [ht, if_false] at h
       simp only [printMethodArgs, hs, reduceCtorEq, if_false, ht]
-      have result := readRowCall_request (n := n) hm op hd args hs ht
+      have result := readRowCall_request (n := n) hm op hd args hs ht hta
       rw [readTerm_printTerm args h] at result
       simp only [map_ok] at result
       dsimp +instances only [methodSignature, methodArgsRow, rowAnswer] at result ⊢
       exact result
   · simp only [hs, if_true] at h
     simp only [printMethodArgs, hs, if_true]
-    have result := readRowCall_printTupleArgs (n := n) hm op hd hs args h
+    have result := readRowCall_printTupleArgs (n := n) hm op hd hs args h hta
     dsimp +instances only [methodSignature, methodArgsRow, rowAnswer] at result ⊢
     exact result
 
@@ -1573,18 +1619,19 @@ theorem readRowMethod_print {sig : Signature Op} {spell : String → List String
     (hr : receiver.scoped n = true)
     (ha : (if (methodArgsRow (sig.rowOf op)).shape = .tupleCall then tupleRequestReadable n args
       else if (methodArgsRow (sig.rowOf op)).request = Ty.unit then decide (args = .lit .unit)
-      else args.scoped n) = true) :
-    readRowMethod sig spell n (printTerm receiver) (sig.rowOf op).spelling (sig.rowOf op).typeArgs
+      else args.scoped n) = true) {typeArgs : List TypeScript.TypeRef}
+    (hta : rowTypeArgs (sig.rowOf op) = some typeArgs) :
+    readRowMethod sig spell n (printTerm receiver) (sig.rowOf op).spelling typeArgs
       (printMethodArgs (sig.rowOf op) args) =
       .ok (rowAnswer (sig.rowOf op) op (.app "pair" (.cons receiver (.cons args .nil)))) := by
   simp only [readRowMethod, readTerm_printTerm receiver hr, ok_bind,
-    readRowCall_methodArgs hl op hd args ha, Option.getD_some]
+    readRowCall_methodArgs hl op hd args ha hta, Option.getD_some]
   unfold rowAnswer
   split <;> simp [addReceiver, hs, rowAnswer, *]
 
 /-- The printed form of a row answer is independent of the synchronous/asynchronous choice. -/
 theorem print_rowAnswer {sig : Signature Op} {n : Nat} (op : Op) (r : Term) :
-    print sig n (rowAnswer (sig.rowOf op) op r) = .ok (printRow (sig.rowOf op) r) := by
+    print sig n (rowAnswer (sig.rowOf op) op r) = printRow (sig.rowOf op) r := by
   unfold rowAnswer
   split <;> rfl
 
@@ -1594,69 +1641,94 @@ route to `readRowCall` at the row's own type arguments (`E4-CHECK-CE-013`). -/
 theorem readEff_printRowHead {sig : Signature Op} {spell : String → List String → Option Op}
     {n : Nat} (op : Op) (args : List Expr) (answer : Except ReadRefusal (Eff Op))
     (hhead : headOf (sig.rowOf op).spelling = none)
-    (hrow : readRowCall sig spell n (sig.rowOf op).spelling (sig.rowOf op).typeArgs args
-      = some answer) :
-    readEff sig spell n (.call (printRowHead (sig.rowOf op)) args) = answer := by
-  unfold printRowHead
-  cases htargs : (sig.rowOf op).typeArgs with
+    {typeArgs : List TypeScript.TypeRef} (hta : rowTypeArgs (sig.rowOf op) = some typeArgs)
+    (hrow : readRowCall sig spell n (sig.rowOf op).spelling typeArgs args = some answer)
+    {head : Expr} (hp : printRowHead (sig.rowOf op) = .ok head) :
+    readEff sig spell n (.call head args) = answer := by
+  cases typeArgs with
   | nil =>
-    rw [htargs] at hrow
+    simp only [printRowHead, hta, Except.ok.injEq] at hp
+    subst head
     unfold readEff
     rw [hhead]
     dsimp only
     rw [hrow]
   | cons a rest =>
-    rw [htargs] at hrow
+    simp only [printRowHead, hta, Except.ok.injEq] at hp
+    subst head
     unfold readEff
     rw [hrow]
 
-/-- A row prints and reads back to `rowAnswer`. -/
+/-- A successfully printed readable row reads back to its row answer. -/
 theorem read_printRow {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true) (r : Term)
-    (h : requestReadable (sig.rowOf op) n r = true) :
-    readEff sig spell n (printRow (sig.rowOf op) r) = .ok (rowAnswer (sig.rowOf op) op r) := by
+    (h : requestReadable (sig.rowOf op) n r = true)
+    {x : Expr} (hp : printRow (sig.rowOf op) r = .ok x) :
+    readEff sig spell n x = .ok (rowAnswer (sig.rowOf op) op r) := by
   have hname : ∀ i, Var.name i ≠ (sig.rowOf op).spelling := fun i => (hl.spelling_ne_name op i).symm
   have hhead : headOf (sig.rowOf op).spelling = none := headOf_none (hl.spelling_not_reserved op)
   cases hshape : (sig.rowOf op).shape with
   | value =>
-    rw [readable_row_value hshape h]
+    have hr := readable_row_value hshape h
+    subst r
     have htr := hl.value_trailing op hshape
     have hsp := hl.spell_row op hd
     rw [htr] at hsp
-    simp only [printRow, hshape]
+    simp only [printRow, hshape, Except.ok.injEq] at hp
+    subst x
     unfold readEff
     simp [Var.read_none hname, hhead, readRowValue, hsp, hshape]
   | call =>
+    have htypes : (rowTypeArgs (sig.rowOf op)).isSome = true := by
+      simp only [requestReadable, hshape, Bool.and_eq_true] at h
+      exact h.1
+    obtain ⟨typeArgs, hta⟩ := Option.isSome_iff_exists.mp htypes
+    simp only [printRow, hshape, bind_eq_ok] at hp
+    obtain ⟨head, hprint, hp⟩ := hp
     by_cases hreq : (sig.rowOf op).request = Ty.unit
-    · rw [readable_row_unit hshape hreq h]
-      simp only [printRow, hshape, hreq, if_true]
-      rw [readEff_printRowHead op _ _ hhead (readRowCall_unit hl op hd hshape hreq)]
-    · simp only [printRow, hshape, hreq, if_false]
-      rw [readEff_printRowHead op _ _ hhead (readRowCall_request hl op hd r hshape hreq)]
+    · have hr := readable_row_unit hshape hreq h
+      subst r
+      simp only [hreq, if_true, Except.ok.injEq] at hp
+      subst x
+      exact readEff_printRowHead op _ _ hhead hta
+        (readRowCall_unit hl op hd hshape hreq hta) hprint
+    · simp only [hreq, if_false, Except.ok.injEq] at hp
+      subst x
+      rw [readEff_printRowHead op _ _ hhead hta
+        (readRowCall_request hl op hd r hshape hreq hta) hprint]
       simp [readTerm_printTerm r (readable_row_request hshape hreq h)]
   | tupleCall =>
-    simp only [requestReadable, hshape] at h
-    simp only [printRow, hshape]
-    exact readEff_printRowHead op _ _ hhead (readRowCall_printTupleArgs hl op hd hshape r h)
+    simp only [requestReadable, hshape, Bool.and_eq_true] at h
+    obtain ⟨typeArgs, hta⟩ := Option.isSome_iff_exists.mp h.1
+    simp only [printRow, hshape, bind_eq_ok] at hp
+    obtain ⟨head, hprint, hp⟩ := hp
+    simp only [Except.ok.injEq] at hp
+    subst x
+    exact readEff_printRowHead op _ _ hhead hta
+      (readRowCall_printTupleArgs hl op hd hshape r h.2 hta) hprint
   | method =>
-    simp only [requestReadable, hshape] at h
-    cases hp : pairArgs? r with
-    | none => simp [hp] at h
+    simp only [requestReadable, hshape, Bool.and_eq_true] at h
+    obtain ⟨typeArgs, hta⟩ := Option.isSome_iff_exists.mp h.1
+    have h := h.2
+    cases hpair : pairArgs? r with
+    | none => simp [hpair] at h
     | some parts =>
       obtain ⟨receiver, args⟩ := parts
-      simp only [hp, Bool.and_eq_true_iff] at h
+      simp only [hpair, Bool.and_eq_true_iff] at h
       obtain ⟨hr, ha⟩ := h
-      have hm := readRowMethod_print hl op hd receiver args hshape hr ha
-      obtain rfl := pairArgs?_some hp
-      cases ht : (sig.rowOf op).typeArgs with
+      have hm := readRowMethod_print hl op hd receiver args hshape hr ha hta
+      obtain rfl := pairArgs?_some hpair
+      cases typeArgs with
       | nil =>
-        simp only [ht] at hm
-        simp [printRow, hshape, pairArgs?, printMethod, ht, readEff, readMethod, hm,
-          print_rowAnswer]
+        simp only [printRow, hshape, pairArgs?, ↓reduceIte, printMethod, hta,
+          Except.ok.injEq] at hp
+        subst x
+        simp [readEff, readMethod, hm]
       | cons t ts =>
-        simp only [ht] at hm
-        simp [printRow, hshape, pairArgs?, printMethod, ht, readEff, readMethod, hm,
-          print_rowAnswer]
+        simp only [printRow, hshape, pairArgs?, ↓reduceIte, printMethod, hta,
+          Except.ok.injEq] at hp
+        subst x
+        simp [readEff, readMethod, hm]
 
 mutual
 theorem read_print {sig : Signature Op} {spell : String → List String → Option Op}
@@ -1692,8 +1764,8 @@ theorem read_print {sig : Signature Op} {spell : String → List String → Opti
   | .perform op r, hr, hp => by
     simp only [readable, Bool.and_eq_true, decide_eq_true_eq] at hr
     obtain ⟨⟨hkind, hd⟩, hreq⟩ := hr
-    simp only [print, Except.ok.injEq] at hp; subst hp
-    rw [read_printRow hl op hd r hreq]
+    simp only [print] at hp
+    rw [read_printRow hl op hd r hreq hp]
     simp [rowAnswer, hkind]
   | .bind first rest, hr, hp => by
     simp only [readable, Bool.and_eq_true] at hr
@@ -1795,8 +1867,8 @@ theorem read_print {sig : Signature Op} {spell : String → List String → Opti
   | .callback op r, hr, hp => by
     simp only [readable, Bool.and_eq_true, decide_eq_true_eq] at hr
     obtain ⟨⟨hkind, hd⟩, hreq⟩ := hr
-    simp only [print, Except.ok.injEq] at hp; subst hp
-    rw [read_printRow hl op hd r hreq]
+    simp only [print] at hp
+    rw [read_printRow hl op hd r hreq hp]
     simp [rowAnswer, hkind]
   | .awaitFiber f mode, hr, hp => by
     simp only [readable] at hr
@@ -1834,17 +1906,19 @@ theorem read_print {sig : Signature Op} {spell : String → List String → Opti
       simp [headOf_lit .provide "Effect.provide" rfl,
         read_print hl body hr.2 hb, read_print_layer hl layer hr.1 hlayer]
   | .service key, _, hp => by
-    simp only [print, Except.ok.injEq] at hp; subst hp
+    simp only [print, bind_eq_ok] at hp
+    obtain ⟨k, hk, hx⟩ := hp
+    simp only [Except.ok.injEq] at hx; subst x
     unfold readEff readHead
-    simp [headOf_lit .service "Effect.service" rfl, readKey_printKey]
+    simp [headOf_lit .service "Effect.service" rfl, readKey_printKey sig key hk]
   | .provideService key value body, hr, hp => by
     simp only [readable, Bool.and_eq_true] at hr
     simp only [print, bind_eq_ok] at hp
-    obtain ⟨b, hb, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
+    obtain ⟨b, hb, k, hk, hx⟩ := hp
+    simp only [Except.ok.injEq] at hx; subst x
     unfold readEff readHead
     simp [headOf_lit .provideService "Effect.provideService" rfl,
-      read_print hl body hr.2 hb, readKey_printKey, readTerm_printTerm value hr.1]
+      read_print hl body hr.2 hb, readKey_printKey sig key hk, readTerm_printTerm value hr.1.2]
 termination_by structural e
 
 theorem read_print_layer {sig : Signature Op} {spell : String → List String → Option Op}
@@ -1853,14 +1927,16 @@ theorem read_print_layer {sig : Signature Op} {spell : String → List String �
     (hp : printLayer sig layer = .ok x) : readLayer sig spell x = .ok layer :=
   match layer, hr, hp with
   | .succeed key value, _, hp => by
-    simp only [printLayer, Except.ok.injEq] at hp; subst hp
-    simp [readLayer, readKey_printKey, readLiteral_print]
-  | .effect key body, hr, hp => by
-    simp only [readableLayer] at hr
     simp only [printLayer, bind_eq_ok] at hp
-    obtain ⟨b, hb, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    simp [readLayer, readKey_printKey, read_print hl body hr hb]
+    obtain ⟨k, hk, hx⟩ := hp
+    simp only [Except.ok.injEq] at hx; subst x
+    simp [readLayer, readKey_printKey sig key hk, readLiteral_print]
+  | .effect key body, hr, hp => by
+    simp only [readableLayer, Bool.and_eq_true] at hr
+    simp only [printLayer, bind_eq_ok] at hp
+    obtain ⟨b, hb, k, hk, hx⟩ := hp
+    simp only [Except.ok.injEq] at hx; subst x
+    simp [readLayer, readKey_printKey sig key hk, read_print hl body hr.2 hb]
   | .effectDiscard body, hr, hp => by
     simp only [readableLayer] at hr
     simp only [printLayer, bind_eq_ok] at hp
@@ -2116,11 +2192,11 @@ local macro "close_arm" h:ident : tactic => `(tactic| first
 
 /-- The call reader recovers the method's row identity and exactly its argument syntax. -/
 theorem readRowCall_method_parts {sig : Signature Op} {spell : String → List String → Option Op}
-    (hl : LawfulSpelling sig spell) {n : Nat} {s : String} {ta : List String} {args : List Expr}
+    (hl : LawfulSpelling sig spell) {n : Nat} {s : String} {ta : List TypeScript.TypeRef} {args : List Expr}
     {e : Eff Op}
     (h : readRowCall (methodSignature sig) spell n s ta args = some (.ok e)) :
     ∃ op r, e = rowAnswer (sig.rowOf op) op r ∧ (sig.rowOf op).spelling = s ∧
-      (sig.rowOf op).typeArgs = ta ∧ printMethodArgs (sig.rowOf op) r = args := by
+      rowTypeArgs (sig.rowOf op) = some ta ∧ printMethodArgs (sig.rowOf op) r = args := by
   unfold readRowCall at h
   split at h
   · rename_i op hA
@@ -2179,7 +2255,7 @@ theorem addReceiver_rowAnswer (sig : Signature Op) (receiver : Term) (op : Op) (
 
 theorem readRowMethod_exact {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} {receiver : Expr} {s : String}
-    {ta : List String} {args : List Expr} {e : Eff Op}
+    {ta : List TypeScript.TypeRef} {args : List Expr} {e : Eff Op}
     (h : readRowMethod sig spell n receiver s ta args = .ok e) :
     print sig n e = .ok (match ta with
       | [] => .method receiver s args
@@ -2805,9 +2881,11 @@ theorem read_exact_all {sig : Signature Op} {spell : String → List String → 
     intro n head tail
     intros
     rename_i ss h
-    rcases head with ⟨x, v⟩ | ⟨v⟩ | ⟨v⟩ | ⟨a, b⟩ | ⟨a, b⟩ | ⟨a, b⟩ | ⟨_ | _, b⟩ | ⟨a, b⟩ | ⟨a, b, c⟩
+    rcases head with ⟨x, v, _ | _⟩ | ⟨v⟩ | ⟨v⟩ | ⟨a, b⟩ | ⟨a, b, _⟩ | ⟨a, b⟩ | ⟨_ | _, b⟩ | ⟨a, b⟩ | ⟨a, b, c⟩
       | ⟨a, b⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨_ | _⟩ | ⟨_⟩ | ⟨_⟩ <;>
-      unfold readStmts at h <;> (try dsimp only at h) <;> close_arm h
+      first
+      | (exfalso; subst_vars; simp_all [readStmts]; done)
+      | (unfold readStmts at h; dsimp only at h; close_arm h)
 
 
 /-- `read_exact`: what the reader accepts prints back to exactly the tree it read. -/
@@ -3177,7 +3255,7 @@ private theorem requestReadable_weaken {cut n : Nat} (hc : cut ≤ n) (row : Row
   | call =>
     simp only [requestReadable, hs]
     split <;> simp only [weaken_eq_unit, Term.scoped_weaken hc]
-  | tupleCall => simpa only [requestReadable, hs] using tupleRequestReadable_weaken hc request
+  | tupleCall => simp only [requestReadable, hs, tupleRequestReadable_weaken hc]
   | method =>
     simp only [requestReadable, hs, pairArgs_weaken]
     cases hp : pairArgs? request with
@@ -3240,14 +3318,27 @@ mutual
         readable_weaken hl hc, readableEffs_weaken hl hc]
 end
 
+/-- A readable request has all the structural type data needed by its row printer. -/
+theorem printRow_readable (row : Row) (n : Nat) (request : Term)
+    (hr : requestReadable row n request = true) : ∃ x, printRow row request = .ok x := by
+  cases hs : row.shape with
+  | value => exact ⟨_, by simp only [printRow, hs]; rfl⟩
+  | call | tupleCall | method =>
+    simp only [requestReadable, hs, Bool.and_eq_true] at hr
+    obtain ⟨typeArgs, ht⟩ := Option.isSome_iff_exists.mp hr.1
+    cases typeArgs <;> simp only [printRow, hs, printRowHead, printMethod, ht]
+    all_goals repeat first | split | exact ⟨_, rfl⟩
+
 mutual
   /-- Every program in the readable domain has a printed expression. -/
   theorem print_readable (sig : Signature Op) (spell : String → List String → Option Op)
       (n : Nat) (program : Eff Op) (hr : readable sig spell n program = true) :
       ∃ x, print sig n program = .ok x :=
     match program with
-    | .succeed _ | .fail _ | .failCause _ | .yieldError _ | .sync _ | .perform _ _
-    | .yieldNow _ | .callback _ _ => ⟨_, rfl⟩
+    | .succeed _ | .fail _ | .failCause _ | .yieldError _ | .sync _
+    | .yieldNow _ => ⟨_, rfl⟩
+    | .perform op request | .callback op request =>
+      printRow_readable (sig.rowOf op) n request (Bool.and_eq_true_iff.mp hr).2
     | .suspend body | .exit body | .uninterruptible body | .interruptible body | .scoped body => by
       obtain ⟨b, hb⟩ := print_readable sig spell n body hr
       exact ⟨_, by simp only [print, hb] <;> rfl⟩
@@ -3289,22 +3380,33 @@ mutual
       obtain ⟨a, ha⟩ := print_readable sig spell n acquire hs.1
       obtain ⟨r, hrel⟩ := print_readable sig spell (n + 2) release hs.2
       exact ⟨_, by simp only [print, ha, hrel] <;> rfl⟩
-    | .service _ => ⟨_, rfl⟩
+    | .service key => by
+      obtain ⟨k, hk⟩ := printKey_readable sig key hr
+      exact ⟨_, by simp only [print, hk, ok_bind]; rfl⟩
     | .provideLayer layer _ body => by
       have hs := Bool.and_eq_true_iff.mp hr
       obtain ⟨b, hb⟩ := print_readable sig spell n body hs.2
       obtain ⟨l, hlayer⟩ := printLayer_readable sig spell layer hs.1
       exact ⟨_, by simp only [print, hb, hlayer] <;> rfl⟩
-    | .provideService _ _ body => by
-      obtain ⟨b, hb⟩ := print_readable sig spell n body (Bool.and_eq_true_iff.mp hr).2
-      exact ⟨_, by simp only [print, hb] <;> rfl⟩
+    | .provideService key _ body => by
+      have hs := Bool.and_eq_true_iff.mp hr
+      obtain ⟨k, hk⟩ := printKey_readable sig key (Bool.and_eq_true_iff.mp hs.1).1
+      obtain ⟨b, hb⟩ := print_readable sig spell n body hs.2
+      exact ⟨_, by simp only [print, hb, hk, ok_bind]; rfl⟩
 
   theorem printLayer_readable (sig : Signature Op) (spell : String → List String → Option Op)
       (layer : LayerTerm Op) (hr : readableLayer sig spell layer = true) :
       ∃ x, printLayer sig layer = .ok x :=
     match layer with
-    | .succeed _ _ => ⟨_, rfl⟩
-    | .effect _ body | .effectDiscard body => by
+    | .succeed key _ => by
+      obtain ⟨k, hk⟩ := printKey_readable sig key hr
+      exact ⟨_, by simp only [printLayer, hk, ok_bind]; rfl⟩
+    | .effect key body => by
+      have hs := Bool.and_eq_true_iff.mp hr
+      obtain ⟨k, hk⟩ := printKey_readable sig key hs.1
+      obtain ⟨b, hb⟩ := print_readable sig spell 0 body hs.2
+      exact ⟨_, by simp only [printLayer, hb, hk, ok_bind]; rfl⟩
+    | .effectDiscard body => by
       obtain ⟨b, hb⟩ := print_readable sig spell 0 body hr
       exact ⟨_, by simp only [printLayer, hb] <;> rfl⟩
     | .provide self that | .provideMerge self that | .merge self that => by

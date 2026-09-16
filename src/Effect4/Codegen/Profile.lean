@@ -1,4 +1,5 @@
 import TypeScript
+import Effect4.Codegen.Types
 
 /-!
 # Codegen.Profile — the pinned Effect v4 host, and a service as rows
@@ -19,13 +20,14 @@ Idiom pins, stated once:
 What was here and is gone (`docs/research/2026-09-04-codegen-api-design.md`, F5): the
 straight-line `Script`/`PureTerm`/`Lowering` fragment, the `AtomRow` and its module, the
 wire decoder `OfVal`, and the `Spelling` type language — all of the archived
-`effect_program`/`effect_atoms` route. `Effect4.Program.Ty` is the type language now, and
-its `render` is the TypeScript spelling.
+`effect_program`/`effect_atoms` route. `Effect4.Program.Ty` is the core type language.
+Legacy operation-row spellings are parsed once into the structural TypeScript carrier;
+unsupported or malformed spellings refuse generation rather than enter a raw type fragment.
 
 The three string-traversing helpers (`mentions`, `namespacesOf`, `neededNamespaces`) and the
 two renderers that reach them (`ServiceRow.receiver` through `String.decapitalize`,
 `ServiceRow.sheet`) reach `Classical.choice` and are admitted by exact name in the axiom
-gate; the rows themselves are `String`-free data.
+gate. Structural service construction does not call those rendering helpers.
 -/
 
 open TypeScript
@@ -71,9 +73,8 @@ not re-bind one of them: a caller that already imports `Option` as a type-only b
 otherwise get a duplicate identifier. -/
 def importedNames : List Import → List String
   | [] => []
-  | .all name _ :: rest => name :: importedNames rest
-  | .named names _ :: rest => names ++ importedNames rest
-  | .types names _ :: rest => names ++ importedNames rest
+  | .all name _ _ :: rest => name :: importedNames rest
+  | .named bindings _ _ :: rest => bindings.map (·.localName) ++ importedNames rest
 
 /-- The `effect` namespaces a module must import for its own rows, minus the ones the
 supplied imports already bind. -/
@@ -104,8 +105,8 @@ structure OpRow where
   deriving Repr, BEq, Inhabited
 
 /-- An aborting operation's method carries its error in `E`: `Effect.Effect<A, E>`. -/
-def errorAbort (answer error : String) : String :=
-  "Effect.Effect<" ++ answer ++ ", " ++ error ++ ">"
+def errorAbort (answer error : TypeRef) : TypeRef :=
+  .name ["Effect", "Effect"] [answer, error]
 
 /-- One service as data. The name is the Effect service class name. -/
 structure ServiceRow where
@@ -123,30 +124,41 @@ def receiver (rows : ServiceRow) : String :=
   rows.name.decapitalize
 
 /-- `(params) => Effect.Effect<Answer>`; a nullary operation is an Effect value,
-`Effect.Effect<Answer>`, because Effect is already lazy (tsgo rule `lazyEffect`). -/
-def methodType (row : OpRow) : String :=
-  let effect := match row.error with
-    | some (_, e) => errorAbort row.tsAnswer e
-    | none => "Effect.Effect<" ++ row.tsAnswer ++ ">"
-  if row.tsParams.isEmpty then effect
+`Effect.Effect<Answer>`, because Effect is already lazy (tsgo rule `lazyEffect`).
+Legacy type strings must parse completely within `Types.parseLegacy`'s admitted
+grammar, and function binders must be legal. -/
+def methodType (row : OpRow) : Option TypeRef := do
+  let answer ← Types.parseLegacy row.tsAnswer
+  let effect ← match row.error with
+    | some (_, error) => do
+        let errorType ← Types.parseLegacy error
+        pure (errorAbort answer errorType)
+    | none => pure (.name ["Effect", "Effect"] [answer])
+  let params ← row.tsParams.mapM fun (name, spelling) => do
+    if !bindingName name then none
+    else return (name, ← Types.parseLegacy spelling)
+  if params.isEmpty then pure effect
+  else pure (.function params effect)
+
+/-- The service shape, one readonly method per operation. Any unsupported or malformed
+legacy operation type refuses the entire shape. -/
+def shapeType (rows : ServiceRow) : Option TypeRef := do
+  let fields ← rows.ops.mapM fun row => do
+    let method ← methodType row
+    pure (row.name, true, method)
+  pure (.object fields)
+
+/-- `export class X extends Context.Service<X, Shape>()("X") {}`. Invalid class
+names or unsupported operation type spellings return `none`. -/
+def classDecl (rows : ServiceRow) : Option Decl := do
+  if !bindingName rows.name then none
   else
-    let params := String.intercalate ", " (row.tsParams.map fun (x, t) => x ++ ": " ++ t)
-    "(" ++ params ++ ") => " ++ effect
-
-/-- The service shape, one readonly method per operation. -/
-def shapeType (rows : ServiceRow) : String :=
-  "{\n" ++
-    String.intercalate "\n"
-      (rows.ops.map fun row => "  readonly " ++ row.name ++ ": " ++ methodType row) ++
-    "\n}"
-
-/-- `export class X extends Context.Service<X, Shape>()("X") {}`. -/
-def classDecl (rows : ServiceRow) : Decl :=
-  .classDecl
-    { doc := ["Service `" ++ rows.name ++ "`: one method per operation."]
-      name := rows.name
-      heritage := some (.call (.call (.generic (.ident "Context.Service")
-        [rows.name, rows.shapeType]) []) [.str rows.name]) }
+    let shape ← rows.shapeType
+    pure (.classDecl
+      { doc := ["Service `" ++ rows.name ++ "`: one method per operation."]
+        name := rows.name
+        heritage := some (.call (.call (.generic (.ident "Context.Service")
+          [.name [rows.name] [], shape]) []) [.str rows.name]) })
 
 /-- `export const XRows = { "get": { params: 0, answer: "number" }, … }`: the operation rows
 as data, so a harness can read arities and answer spellings off the module. `answerArity` is

@@ -1,4 +1,5 @@
 import Effect4.Program.Typing
+import Effect4.Codegen.Types
 import TypeScript
 
 /-!
@@ -40,6 +41,8 @@ inductive PrintRefusal
   | layerRef (target : List Nat)
   /-- A row table carries an unsafe spelling (colliding with binders or reserved heads). -/
   | unsafeName (spelling : String)
+  /-- A legacy target type has no structural reading in the supported profile. -/
+  | typeSpelling (text : String)
 deriving DecidableEq, Repr
 
 /-- The first UTF-8 byte; no traversal of a `String` enters the proof graph. -/
@@ -205,10 +208,14 @@ def printTupleArgs (request : Term) : List TypeScript.Expr :=
 /-- A row's called head: its `spelling`, applied to the declared type arguments when it has
 any. rc.112's `Deferred.make` has defaulted type parameters, so the arguments alone do not
 determine the handle's types and the call must carry them (`E4-CHECK-CE-013`). -/
-def printRowHead (row : Row) : TypeScript.Expr :=
-  match row.typeArgs with
-  | [] => .ident row.spelling
-  | args => .generic (.ident row.spelling) args
+def rowTypeArgs (row : Row) : Option (List TypeScript.TypeRef) :=
+  row.typeArgs.mapM Effect4.Codegen.Types.parseLegacy
+
+def printRowHead (row : Row) : Except PrintRefusal TypeScript.Expr :=
+  match rowTypeArgs row with
+  | none => .error (.typeSpelling row.spelling)
+  | some [] => .ok (.ident row.spelling)
+  | some args => .ok (.generic (.ident row.spelling) args)
 
 /-- The arguments of a method use the ordinary call or tuple-call convention.
 The receiver is the first component of the original request. -/
@@ -237,25 +244,29 @@ def printMethodArgs (row : Row) (args : Term) : List TypeScript.Expr :=
   else if (methodArgsRow row).request = Ty.unit then trailing
   else printTerm args :: trailing
 
-def printMethod (row : Row) (receiver args : Term) : TypeScript.Expr :=
-  match row.typeArgs with
-  | [] => .method (printTerm receiver) row.spelling (printMethodArgs row args)
-  | typeArgs => .call (.generic (.member (printTerm receiver) row.spelling) typeArgs)
-      (printMethodArgs row args)
+def printMethod (row : Row) (receiver args : Term) : Except PrintRefusal TypeScript.Expr :=
+  match rowTypeArgs row with
+  | none => .error (.typeSpelling row.spelling)
+  | some [] => .ok (.method (printTerm receiver) row.spelling (printMethodArgs row args))
+  | some typeArgs => .ok (.call (.generic (.member (printTerm receiver) row.spelling) typeArgs)
+      (printMethodArgs row args))
 
 /-- A row's operation, by the row's declared shape and request type: a value row is the
 bare `spelling` (the service route's nullary rows), a call row on a `unit` request is
 `spelling()`, and every other call row is `spelling(request)`. A tuple-call row receives
 `printTupleArgs` of its request as two ordinary arguments, then the declared trailing
 names. A row that declares type arguments carries them on the head. -/
-def printRow (row : Row) (request : Term) : TypeScript.Expr :=
+def printRow (row : Row) (request : Term) : Except PrintRefusal TypeScript.Expr := do
   let trailing := row.trailing.map TypeScript.Expr.ident
   match row.shape with
-  | .value => .ident row.spelling
+  | .value => .ok (.ident row.spelling)
   | .call =>
-    if row.request = Ty.unit then .call (printRowHead row) trailing
-    else .call (printRowHead row) (printTerm request :: trailing)
-  | .tupleCall => .call (printRowHead row) (printTupleArgs request ++ trailing)
+    let head ← printRowHead row
+    if row.request = Ty.unit then .ok (.call head trailing)
+    else .ok (.call head (printTerm request :: trailing))
+  | .tupleCall =>
+    let head ← printRowHead row
+    .ok (.call head (printTupleArgs request ++ trailing))
   | .method =>
     match pairArgs? request with
     | some (receiver, args) => printMethod row receiver args
@@ -280,12 +291,13 @@ variable {Op : Type}
 (`:219`, so two spellings of one key are one service), with its carrier from the signature's
 service table as the type argument when the table has one. Minted from the key's own data,
 as `Var.name` mints a binder from its position: the printer invents no name. -/
-def printKey (sig : Signature Op) (key : ServiceKey) : TypeScript.Expr :=
-  let head : TypeScript.Expr :=
-    match sig.serviceTy key with
-    | some ty => .generic (.ident "Context.Service") [ty.render]
-    | none => .ident "Context.Service"
-  .call head [.str ("k" ++ toString key.name.value ++ "_" ++ toString key.service.value)]
+def printKey (sig : Signature Op) (key : ServiceKey) : Except PrintRefusal TypeScript.Expr := do
+  let head ← match sig.serviceTy key with
+    | some ty => match Effect4.Codegen.Types.ofTy ty with
+      | some target => .ok (.generic (.ident "Context.Service") [target])
+      | none => .error (.typeSpelling ty.render)
+    | none => .ok (.ident "Context.Service")
+  .ok (.call head [.str ("k" ++ toString key.name.value ++ "_" ++ toString key.service.value)])
 
 mutual
   /-- `print sig n e` is `e` as one TypeScript expression, with `n` the environment's
@@ -307,7 +319,7 @@ mutual
     | .suspend body => do
       let b ← print sig n body
       .ok (.call (.ident "Effect.suspend") [.arrow none b])
-    | .perform op request => .ok (printRow (sig.rowOf op) request)
+    | .perform op request => printRow (sig.rowOf op) request
     | .bind first rest => do
       let f ← print sig n first
       let r ← print sig (n + 1) rest
@@ -367,7 +379,7 @@ mutual
                         [.assign (Var.name n) (printTerm step)]) ] ]) ] ])
     | .yieldNow priority =>
       .ok (.call (.ident "Effect.yieldNowWith") [.int (Int.ofNat priority)])
-    | .callback register request => .ok (printRow (sig.rowOf register) request)
+    | .callback register request => printRow (sig.rowOf register) request
     | .awaitFiber fiber mode =>
       match mode with
       | .joinEffect => .ok (.call (.ident "Fiber.join") [printTerm fiber])
@@ -389,11 +401,14 @@ mutual
       .ok (.call (.ident "Effect.provide")
         (if isLocal then [b, l, .object [("local", .bool true)]] else [b, l]))
     -- `Effect.service(key)` (`internal/effect.ts:2059`)
-    | .service key => .ok (.call (.ident "Effect.service") [printKey sig key])
+    | .service key => do
+      let k ← printKey sig key
+      .ok (.call (.ident "Effect.service") [k])
     -- `Effect.provideService(self, key, value)` (`internal/effect.ts:2202`)
     | .provideService key value body => do
       let b ← print sig n body
-      .ok (.call (.ident "Effect.provideService") [b, printKey sig key, printTerm value])
+      let k ← printKey sig key
+      .ok (.call (.ident "Effect.provideService") [b, k, printTerm value])
 
   /-- A layer term as the rc.112 combinators it transcribes, one arm per `Layer.ts` export
   (the join, 2026-09-07). A body is closed — the layer's own scope is its ambient one
@@ -409,11 +424,13 @@ mutual
   has never existed (DI-51: the citation evaded `scripts/check-source-citations.py` because it
   carried no repository root). -/
   def printLayer (sig : Signature Op) : LayerTerm Op → Except PrintRefusal TypeScript.Expr
-    | .succeed key value =>
-      .ok (.call (.ident "Layer.succeed") [printKey sig key, printLit value])
+    | .succeed key value => do
+      let k ← printKey sig key
+      .ok (.call (.ident "Layer.succeed") [k, printLit value])
     | .effect key body => do
       let b ← print sig 0 body
-      .ok (.call (.ident "Layer.effect") [printKey sig key, b])
+      let k ← printKey sig key
+      .ok (.call (.ident "Layer.effect") [k, b])
     | .effectDiscard body => do
       let b ← print sig 0 body
       .ok (.call (.ident "Layer.effectDiscard") [b])
@@ -552,15 +569,50 @@ types, which is the same open question as the class spelling of keys in `printLa
 Until that spelling is fixed under `tsc` on the truth harness, this arm stays two-parameter
 and a requirement-carrying program stays untyped in its printed image; the reader
 (`Codegen/Read.lean`) reads both shapes. -/
-def printDecl (name : String) (ty : EffTy) (body : TypeScript.Expr) : TypeScript.ConstDecl :=
-  { doc := []
-  , name := name
-  , value := body
-  , type :=
-      if ty.requires = Requirement.empty then
-        some ("Effect.Effect<" ++ ty.answer.render ++ ", " ++ ty.error.render ++ ">")
-      else
-        none }
+def printDecl (name : String) (ty : EffTy) (body : TypeScript.Expr) :
+    Except PrintRefusal TypeScript.ConstDecl := do
+  let annotation ←
+    if ty.requires = Requirement.empty then do
+      let answer ← match Effect4.Codegen.Types.ofTy ty.answer with
+        | some target => .ok target
+        | none => .error (.typeSpelling ty.answer.render)
+      let error ← match Effect4.Codegen.Types.ofTy ty.error with
+        | some target => .ok target
+        | none => .error (.typeSpelling ty.error.render)
+      .ok (some (.name ["Effect", "Effect"] [answer, error]))
+    else .ok none
+  .ok { doc := [], name := name, value := body, type := annotation }
+
+/-- The raw declaration printer can represent its emitted annotation. This is
+not target type checking: requirement-bearing declarations still omit it. -/
+def declarationTypeReadable (ty : EffTy) : Bool :=
+  ty.requires != Requirement.empty ||
+    (Effect4.Codegen.Types.ofTy ty.answer).isSome && (Effect4.Codegen.Types.ofTy ty.error).isSome
+
+/-- Legacy malformed type strings now refuse instead of becoming raw target text.
+The representability premise states that change in the declaration printer's domain. -/
+theorem printDecl_readable (name : String) (ty : EffTy) (body : TypeScript.Expr)
+    (hr : declarationTypeReadable ty = true) :
+    ∃ decl, printDecl name ty body = .ok decl := by
+  unfold declarationTypeReadable at hr
+  unfold printDecl
+  split
+  · rename_i h
+    simp only [h, bne_self_eq_false, Bool.false_or, Bool.and_eq_true] at hr
+    cases ha : Effect4.Codegen.Types.ofTy ty.answer <;>
+      cases he : Effect4.Codegen.Types.ofTy ty.error <;> simp_all [bind, Except.bind]
+  · exact ⟨_, rfl⟩
+
+/-- A successful raw declaration retains its expression exactly. -/
+theorem printDecl_value {name : String} {ty : EffTy} {body : TypeScript.Expr}
+    {decl : TypeScript.ConstDecl} (hp : printDecl name ty body = .ok decl) :
+    decl.value = body := by
+  unfold printDecl at hp
+  split at hp
+  · cases ha : Effect4.Codegen.Types.ofTy ty.answer <;>
+      cases he : Effect4.Codegen.Types.ofTy ty.error <;> simp_all [bind, Except.bind]
+    cases hp; rfl
+  · cases hp; rfl
 
 /-- The printed program as a declaration block (the host rows slice): one
 `const L_<path> = …` per referenced layer target, in declaration order (`Path.declBefore`: a
@@ -582,7 +634,8 @@ def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
         .ok ({ doc := [], name := LayerTerm.refName t, value := x } : TypeScript.ConstDecl)
       | none => .error (.layerRef t)
     let m ← print sig 0 main
-    .ok (ds ++ [printDecl name ty m])
+    let declaration ← printDecl name ty m
+    .ok (ds ++ [declaration])
 
 /-- Print an admitted program against its row table. Refuses by name if any row
 carries an unsafe name (colliding with printed binders `a0`, `a1`, ... or reserved heads). -/

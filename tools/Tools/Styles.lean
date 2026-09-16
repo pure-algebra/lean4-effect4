@@ -17,12 +17,18 @@ mutual
     | .call f xs => render f ++ "(" ++ ", ".intercalate (renders xs) ++ ")"
     | .method x n xs => "(" ++ render x ++ ")." ++ n ++ "(" ++ ", ".intercalate (renders xs) ++ ")"
     | .member x n => "(" ++ render x ++ ")." ++ n
-    | .generic f ts => render f ++ "<" ++ ", ".intercalate ts ++ ">"
+    | .generic f ts => render f ++ "<" ++
+        ", ".intercalate (ts.map (TypeScript.Render.type TypeScript.house0)) ++ ">"
     | .object fs => "({ " ++ ", ".intercalate (renderFields fs) ++ " })"
     | .arr xs => "[" ++ ", ".intercalate (renders xs) ++ "]"
-    | .lambda ps e => "(" ++ ", ".intercalate ps ++ ") => " ++ render e
+    | .lambda ps e returnType => "(" ++
+        ", ".intercalate (ps.map (TypeScript.Render.parameter TypeScript.house0)) ++ ")" ++
+        TypeScript.Render.annotation TypeScript.house0 returnType ++ " => " ++ render e
     | .generator ss => "function* () {\n" ++ String.join (renderStmts ss) ++ "}"
-    | .arrowBlock ps ss => "(" ++ ", ".intercalate ps ++ ") => {\n" ++ String.join (renderStmts ss) ++ "}"
+    | .arrowBlock ps ss returnType => "(" ++
+        ", ".intercalate (ps.map (TypeScript.Render.parameter TypeScript.house0)) ++ ")" ++
+        TypeScript.Render.annotation TypeScript.house0 returnType ++ " => {\n" ++
+        String.join (renderStmts ss) ++ "}"
     | .cond t a b => "(" ++ render t ++ " ? " ++ render a ++ " : " ++ render b ++ ")"
     | .atomLambda .addOne => "(x) => x + 1"
     | .atomLambda .multiplyTwo => "(x) => x * 2"
@@ -33,13 +39,15 @@ mutual
   def renderFields : List (String × Expr) → List String
     | [] => [] | (name, x) :: xs => (name ++ ": " ++ render x) :: renderFields xs
   def renderStmt : Stmt → String
-    | .constYield n x => "const " ++ n ++ " = yield* " ++ render x ++ ";\n"
+    | .constYield n x type => "const " ++ n ++ TypeScript.Render.annotation TypeScript.house0 type ++
+        " = yield* " ++ render x ++ ";\n"
     | .yieldDiscard x => "yield* " ++ render x ++ ";\n"
     | .ret x => "return " ++ render x ++ ";\n"
     | .ifElse t a b skipElse => "if (" ++ render t ++ ") {\n" ++ String.join (renderStmts a) ++ "}" ++
         (if skipElse then "\n" else " else {\n" ++ String.join (renderStmts b) ++ "}\n")
     | .whileTrue label body => (label.map (· ++ ": ")).getD "" ++ "while (true) {\n" ++ String.join (renderStmts body) ++ "}\n"
-    | .letInit n x => "let " ++ n ++ " = " ++ render x ++ ";\n"
+    | .letInit n x type => "let " ++ n ++ TypeScript.Render.annotation TypeScript.house0 type ++
+        " = " ++ render x ++ ";\n"
     | .assign n x => n ++ " = " ++ render x ++ ";\n"
     | .expr x => render x ++ ";\n"
     | .leaf s => TypeScript.Render.stmt TypeScript.house0 0 s ++ ";\n"

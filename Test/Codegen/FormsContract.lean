@@ -36,13 +36,57 @@ def args (n : Nat) : Arguments :=
 -- Every depth-n example includes its n enclosing bindings in the emitted source data.
 #guard all.all fun f =>
   match Form.foreign f {} 1 with
-  | some (.call _ [_, .lambda ["a0"] _]) => true
+  | some (.call _ [_, .lambda [⟨"a0", none⟩] _ none]) => true
   | _ => false
 #guard match all.find? (fun f => f.id == "yieldKey") with
   | some f => match Form.foreign f {} 0 with
     | some (.call (.leaf (.ident "Effect.gen")) [.generator _]) => true
     | _ => false
   | none => false
+
+-- Restyling retains every explicit local type. These compare structural
+-- fields rather than rendered strings or projected binder names.
+private def numberType : TypeScript.TypeRef := .name ["number"] []
+
+#guard match expression {} (.lambda [⟨"x", some numberType⟩] (.ident "x") (some numberType)) with
+  | .lambda [⟨"x", some parameterType⟩] (.leaf (.ident "x")) (some resultType) =>
+      parameterType == numberType && resultType == numberType
+  | _ => false
+#guard match expression {} (.arrow (some numberType) (.int 1)) with
+  | .lambda [] (.leaf (.int 1)) (some resultType) => resultType == numberType
+  | _ => false
+#guard match expression {} (.arrowBlock [⟨"x", some numberType⟩]
+    [.ret (.ident "x")] (some numberType)) with
+  | .arrowBlock [⟨"x", some parameterType⟩] [.ret (.leaf (.ident "x"))] (some resultType) =>
+      parameterType == numberType && resultType == numberType
+  | _ => false
+#guard match statement {} (.constYield "x" (.ident "program") (some numberType)) with
+  | .constYield "x" (.leaf (.ident "program")) (some declaredType) => declaredType == numberType
+  | _ => false
+#guard match statement {} (.letInit "x" (.int 1) (some numberType)) with
+  | .letInit "x" (.leaf (.int 1)) (some declaredType) => declaredType == numberType
+  | _ => false
+#guard match expression {} (.generic (.ident "f") [numberType]) with
+  | .generic (.leaf (.ident "f")) [argumentType] => argumentType == numberType
+  | _ => false
+
+-- An unused exit can be omitted only when it has no annotation. A return
+-- annotation remains present in either spelling.
+#guard match expression { releaseOne := true }
+    (.call (.ident "Effect.acquireRelease") [.ident "acquire",
+      .lambda [⟨"resource", some numberType⟩, ⟨"exit", some numberType⟩]
+        (.ident "release") (some numberType)]) with
+  | .call _ [_, .lambda [⟨"resource", some resourceType⟩, ⟨"exit", some exitType⟩]
+      _ (some resultType)] =>
+      resourceType == numberType && exitType == numberType && resultType == numberType
+  | _ => false
+#guard match expression { releaseOne := true }
+    (.call (.ident "Effect.acquireRelease") [.ident "acquire",
+      .lambda [⟨"resource", some numberType⟩, ⟨"exit", none⟩]
+        (.ident "release") (some numberType)]) with
+  | .call _ [_, .lambda [⟨"resource", some resourceType⟩] _ (some resultType)] =>
+      resourceType == numberType && resultType == numberType
+  | _ => false
 
 -- The second effect captures an outer Nat and introduces its own Nat binder.
 -- An omitted insertion would instead pass tap's Bool answer to `succ`.

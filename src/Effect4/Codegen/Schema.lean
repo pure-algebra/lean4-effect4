@@ -421,7 +421,7 @@ private def exprKeysUnique : Expr → Bool
   | .arr items => exprListKeysUnique items
   | .arrow _ body => exprKeysUnique body
   | .generic fn _ => exprKeysUnique fn
-  | .lambda _ body => exprKeysUnique body
+  | .lambda _ body _ => exprKeysUnique body
   | .method target _ arguments => exprKeysUnique target && exprListKeysUnique arguments
   | .member target _ => exprKeysUnique target
   | .cond test thenBranch elseBranch =>
@@ -429,7 +429,7 @@ private def exprKeysUnique : Expr → Bool
   -- The statement-bearing formers (lean4-typescript v0.5.0, for the `Eff` printer) are
   -- not schema content: the admission refuses them rather than skipping their bodies.
   | .generator _ => false
-  | .arrowBlock _ _ => false
+  | .arrowBlock _ _ _ => false
 termination_by value => sizeOf value
 decreasing_by all_goals decreasing_tactic
 
@@ -482,7 +482,7 @@ def rawDocumentDecl (name : String) (document : Document) : Decl :=
     { doc := ["Raw Effect Schema document."]
       name := name ++ "Json"
       value := documentExpr document
-      type := some "Schema.Json" }
+      type := some (.name ["Schema", "Json"] []) }
 
 /-- Decode the generated raw value through Effect's own pinned document codec.
 The host typechecker therefore sees a `SchemaRepresentation.Document`, not only
@@ -493,7 +493,7 @@ def documentDecl (name : String) : Decl :=
       name
       value := .call (.ident "SchemaRepresentation.fromJson")
         [.ident (name ++ "Json")]
-      type := some "SchemaRepresentation.Document" }
+      type := some (.name ["SchemaRepresentation", "Document"] []) }
 
 /-- One exported first-order datum carried beside a generated schema. -/
 def dataDecl (name : String) (value : Json) : Decl :=
@@ -501,7 +501,7 @@ def dataDecl (name : String) (value : Json) : Decl :=
     { doc := ["Data associated with the generated schema."]
       name
       value := json value
-      type := some "Schema.Json" }
+      type := some (.name ["Schema", "Json"] []) }
 
 /-- Build a complete target module without asking callers to assemble target
 syntax or invoke the low-level renderer themselves. -/

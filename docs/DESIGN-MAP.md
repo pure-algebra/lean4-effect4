@@ -215,10 +215,11 @@ different kind of evidence. The Lean expression printer and reader are a partial
 both expression-AST round-trip laws are theorems (`read_print_native`, `read_exact_native`,
 premised on `LawfulTable` and their stated image conditions). The separate
 `readModule_printModule_readable` theorem reconstructs declaration blocks on the original
-readable, valid-reference domain; `printModule_readable` proves printing succeeds there.
+readable, valid-reference domain; `printModule_readable` proves printing succeeds there
+when the emitted declaration type is structurally representable.
 `Api.printModule_roundTrip` connects both facts to the typed application API under a
-lawful codegen table. Source-envelope validation, annotation checking and target typing
-remain open in `Test/contracts/faces.contract.md` §7. The reader's refusal alphabet names where the surface
+lawful codegen table and that explicit type-domain premise. Source-envelope validation,
+annotation checking and target typing remain open in `Test/contracts/faces.contract.md` §7. The reader's refusal alphabet names where the surface
 loses information, which is why a reader that guessed would be wrong rather than unproved. The
 TypeScript printer-image reader is a third implementation of the same relation, held by byte
 comparison against Lean-produced oracles over a generated corpus, with its head coverage held
