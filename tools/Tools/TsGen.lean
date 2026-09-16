@@ -5,7 +5,6 @@ import OCaml5.Eff.World
 import OCaml5.Eff.Emit
 import Effect4.Program.Native
 import Effect4.Program.Packages
-import Effect4.Codegen.Profile
 import Effect4.Codegen.Read
 import Effect4.Ingest.Taxonomy
 import Effect4.Codegen.Forms
@@ -754,6 +753,14 @@ def emitForms : String :=
 
 /-! ## The address, and the cross-check against the printer -/
 
+/-- The exact host every generated module is checked against. Its library pins are the
+first half of the address every generated file is stamped with. -/
+private def hostPin : TypeScript.HostPin :=
+  { typescript := "7.0.2"
+    languageService := some "@effect/tsgo@0.38.0"
+    runtime := "node 22 --experimental-strip-types"
+    libraries := ["effect@4.0.0-rc.112"] }
+
 def stripSpace (s : String) : String :=
   String.ofList (s.toList.dropWhile (fun c => c == ' ' || c == '\t' || c == '\r')
     |>.reverse.dropWhile (fun c => c == ' ' || c == '\t' || c == '\r') |>.reverse)
@@ -805,8 +812,7 @@ def main (args : List String) : IO Unit := do
   -- the address, and the heads against the printer's literals
   let lakefile ← IO.FS.readFile "lakefile.toml"
   let tsRev := (revOf lakefile "typescript").getD "UNKNOWN"
-  let address := " + ".intercalate
-    (Effect4.Codegen.Profile.hostPin.libraries ++ ["lean4-typescript@" ++ tsRev])
+  let address := " + ".intercalate (hostPin.libraries ++ ["lean4-typescript@" ++ tsRev])
   let printed := identLiterals (← IO.FS.readFile "src/Effect4/Codegen/Print.lean")
   -- readRunIn consumes Effect.void only as its fixed block return, not as an
   -- effect head, and printTupleArgs spells a saved tuple request's components with

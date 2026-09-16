@@ -1,5 +1,5 @@
 import TypeScript
-import Effect4.Codegen.Profile
+import Effect4.Codegen.Types
 
 /-!
 Contract packet: `Test/contracts/typescript-target-expr.contract.md`
@@ -94,39 +94,5 @@ private def sampleModule : Module :=
 #guard ["", "A<>", "number<string>", "void.X", "default", "true", "A.1",
     "'\\uD800'", "number); injected("].all
   (fun text => (Effect4.Codegen.Types.parseLegacy text).isNone)
-
--- Legacy row strings cross once into structural types; malformed input is
--- refused before a service declaration is produced.
-private def getRow : Effect4.Codegen.Profile.OpRow :=
-  { name := "get", index := 0, params := [], tsParams := [],
-    answer := "Nat", tsAnswer := "number" }
-
-private def cellRows : Effect4.Codegen.Profile.ServiceRow :=
-  { name := "Cell", ops := [getRow] }
-
-#guard Effect4.Codegen.Profile.ServiceRow.methodType getRow ==
-  some (.name ["Effect", "Effect"] [.name ["number"] []])
-
-#guard Effect4.Codegen.Profile.ServiceRow.methodType
-    { getRow with tsParams := [("key", "string")], error := some ("String", "string") } ==
-  some (.function [("key", .name ["string"] [])]
-    (.name ["Effect", "Effect"] [.name ["number"] [], .name ["string"] []]))
-
-#guard cellRows.shapeType ==
-  some (.object [("get", true, .name ["Effect", "Effect"] [.name ["number"] []])])
-
-#guard cellRows.classDecl.isSome
-#guard ({ cellRows with name := "not valid" }.classDecl).isNone
-#guard ({ cellRows with ops := [{ getRow with tsAnswer := "number); injected(" }] }.classDecl).isNone
-#guard ({ cellRows with ops := [{ getRow with tsParams := [("key", "Array<")] }] }.classDecl).isNone
-#guard ({ cellRows with ops := [{ getRow with error := some ("Bad", "Result.Result<") }] }.classDecl).isNone
-#guard ({ cellRows with ops := [{ getRow with tsParams := [("not valid", "string")] }] }.classDecl).isNone
-
--- Import de-duplication follows the local binding, including aliases and
--- declaration-level or specifier-level type-only imports.
-#guard Effect4.Codegen.Profile.importedNames
-    [.named [{ imported := "Effect", localName := "E" },
-             { imported := "Option", localName := "O", typeOnly := true }] "effect",
-     .all "Fiber" "effect/Fiber" true] == ["E", "O", "Fiber"]
 
 end Test.Codegen.ExprContract

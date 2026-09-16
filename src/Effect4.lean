@@ -62,9 +62,7 @@ import Effect4.Machine.Frames
 -- Fiber ids and the supervision vocabulary the machine speaks.
 import Effect4.Machine.Fiber
 import Effect4.Machine.Supervision
--- The Effect TypeScript target: the pinned v4 profile (spellings, service
--- rows), and the Schema and annotated-field generators.
-import Effect4.Codegen.Profile
+-- The Effect TypeScript target: the Schema and annotated-field generators.
 import Effect4.Codegen.Schema
 import Effect4.Codegen.EffectfulField
 -- The reference machine (docs/research/2026-09-03-deep-plan.md): one

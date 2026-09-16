@@ -46,3 +46,7 @@ scripts/lib/generate.py	moved to scripts/generate.py 2026-09-13
 # packet's history and an attack index; the stream harness census script.
 scripts/check-schema-fields.sh	removed 2026-09-13
 scripts/generate-effect-stream-census.py	removed 2026-09-13
+# Removed 2026-09-16 (breaker items B20 and B21): the Codegen profile module. Its one live
+# definition, the host pin, moved to tools/Tools/TsGen.lean; the rest was the archived DSL's
+# remnant with no producer. Cited by the dispatch that removed it, which is history.
+src/Effect4/Codegen/Profile.lean	removed 2026-09-16 (the host pin moved to tools/Tools/TsGen.lean)

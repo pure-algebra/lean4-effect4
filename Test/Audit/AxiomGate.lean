@@ -145,16 +145,6 @@ private def choiceImplementationDeclarations : List Name :=
   , ``Effect4.Codegen.EffectfulField.source?
   , ``Effect4.Codegen.EffectfulField.generate?
   , ``Effect4.Codegen.EffectfulField.source_contains_directional_rows
-  -- The Effect v4 profile: the service receiver (`String.decapitalize`), the LLM sheet
-  -- rendered from it, and the `effect` namespace set computed over rendered spellings
-  -- (`String.splitOn`). The profile's row *data* is `String`-free and is not here.
-  , ``Effect4.Codegen.Profile.ServiceRow.namespaces
-  , ``Effect4.Codegen.Profile.ServiceRow.receiver
-  , ``Effect4.Codegen.Profile.ServiceRow.sheet
-  , ``Effect4.Codegen.Profile.ServiceRow.usesResult
-  , ``Effect4.Codegen.Profile.mentions
-  , ``Effect4.Codegen.Profile.namespacesOf
-  , ``Effect4.Codegen.Profile.neededNamespaces
   -- The codegen crossing to bytes (`docs/research/2026-09-04-codegen-api-design.md` §3.1):
   -- JSON text folds over `String`s for escaping, and the artefact renderer is one call to
   -- the pinned package's renderer or to it. `JsonText.number` is deliberately not here: it
