@@ -221,12 +221,13 @@ doctor: ## the tools and installs every tier needs, with their versions
 
 # ---------------------------------------------------------------------------- checks
 
-CHECKS := roots cases native ts-reader truth target schema-codec ocaml ingest ingest-smoke \
+CHECKS := roots citations cases native ts-reader truth target schema-codec ocaml ingest ingest-smoke \
   host-protocol census schema-ts schema-pins schema-host compat tools corpus
-.PHONY: check check-host check-full check-gen check-gen-full check-citations clean-check $(addprefix check-,$(CHECKS))
+.PHONY: check check-host check-full check-gen check-gen-full clean-check FORCE $(addprefix check-,$(CHECKS))
+FORCE:
 
-check: build check-roots check-gen check-cases check-native check-citations check-ts-reader ## after every change
-check-host: check check-truth check-corpus check-target check-schema-codec check-ocaml check-ingest-smoke ## per slice: the outside oracles
+check: build check-roots check-gen check-cases check-native check-ts-reader ## after every change
+check-host: check check-citations check-truth check-corpus check-target check-schema-codec check-ocaml check-ingest-smoke ## per slice: the outside oracles and the citation scans
 check-full: check-host check-tools check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins check-schema-host ## everything
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
@@ -254,8 +255,13 @@ clean-check: ## forget the check markers (the next `make check` runs every check
 
 # A fresh elaboration of Test/All.lean sees a new orphan source file even when Lake's
 # roots are cached; the compiled import graph and the source inventory are AxiomGate's.
-$(CHK)/roots: $(LEAN_SOURCES) lakefile.toml lean-toolchain | build
-	$(LAKE) build Test
+# The audit itself already runs inside `lake build` (Test.All re-elaborates whenever a
+# module it imports changed), so the fresh elaboration is keyed on the source inventory:
+# it re-runs when a file is added, removed or renamed, not on every edit.
+$(CHK)/inventory: FORCE
+	@mkdir -p $(CHK); printf '%s\n' $(sort $(LEAN_SOURCES)) > $@.new; \
+	  if cmp -s $@.new $@; then rm -f $@.new; else mv $@.new $@; fi
+$(CHK)/roots: $(CHK)/inventory lakefile.toml lean-toolchain | build
 	$(LAKE) env lean Test/All.lean
 	@echo 'PASS library-roots: fresh module, root-closure and axiom audit'
 	@mkdir -p $(CHK) && touch $@
@@ -269,9 +275,16 @@ $(CHK)/native: $(CORE) $(CONFORM_SOURCES)
 	$(PY) scripts/check-conform.py native
 	@mkdir -p $(CHK) && touch $@
 
-check-citations: ## every cited path exists; no line-numbered citation into a mutable document
+# The two citation scans read every text file of the nine trees both scripts name, with
+# `vendor`, `node_modules`, `_copy`, `research`, `_build` and `.lake` pruned as the scripts
+# prune them; the marker names those files, so the scans run when one of them changes and
+# not otherwise. Every cited path exists; no line-numbered citation into a mutable document.
+CITATION_TREES := src Test tools ocaml ts docs scripts harness generated
+CITATION_SOURCES := $(shell find $(CITATION_TREES) \( -type d \( -name vendor -o -name node_modules -o -name _copy -o -name research -o -name _build -o -name .lake \) -prune \) -o -type f -print)
+$(CHK)/citations: scripts/check-source-citations.py scripts/check-internal-citations.sh scripts/source-citations-allowed.txt $(CITATION_SOURCES)
 	$(PY) scripts/check-source-citations.py
 	bash scripts/check-internal-citations.sh
+	@mkdir -p $(CHK) && touch $@
 
 # The TypeScript reader against Lean's reader: every `.ts` of the corpus and of the truth
 # lane's exported modules must read back to the JSON Lean's own reader kept (`--oracle`),
