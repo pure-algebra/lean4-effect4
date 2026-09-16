@@ -65,12 +65,13 @@ build-tools: build ## the generator and checker roots (Tools, OCaml5, Conform, E
 # the TypeScript tables the ingest README renders. Each marker depends on the previous
 # one, so a regenerated upstream group re-cuts everything downstream of it.
 
-DERIVED_SOURCES := $(wildcard tools/Effect4Gen/*.lean tools/Effect4Gen/guards/*.lean) tools/Effect4Gen/manifest.json
+DERIVED_SOURCES := $(wildcard tools/Effect4Gen/*.lean tools/Effect4Gen/guards/*.lean) tools/Effect4Gen/manifest.json tools/Effect4Gen/binders.json
 DERIVED_TRACES := $(addprefix $(TRACE)/,Store/Canonical.trace Program/Native.trace Store/RowCanonical.trace \
-  Store/Pin.trace Store/Node.trace Api/Frontier.trace Program/Eff.trace Program/Ty.trace)
+  Store/Pin.trace Store/Node.trace Api/Frontier.trace Program/Eff.trace Program/Ty.trace Program/Refs.trace \
+  Program/Authoring.trace)
 DERIVED_OUT := src/Effect4/Store/Derived/Json.lean src/Effect4/Store/Derived/Schema.lean \
   src/Effect4/Program/Derived.lean src/Effect4/Store/PinDerived.lean src/Effect4/Api/Derived.lean \
-  src/Effect4/Program/Fold.lean
+  src/Effect4/Program/Fold.lean src/Effect4/Program/Binders.lean src/Effect4/Program/Authoring/Lifts.lean
 
 $(GEN)/derived: $(DERIVED_SOURCES) $(DERIVED_TRACES) | build
 	$(PY) scripts/generate.py --only derived

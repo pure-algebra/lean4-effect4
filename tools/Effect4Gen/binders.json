@@ -1,0 +1,50 @@
+{
+  "format": "effect4gen-binders-v1",
+  "comment": [
+    "The one binder table of the program algebra (review log B17): which argument of which",
+    "constructor is elaborated under which additional binders. Everything that used to encode",
+    "this separately derives from it: `Node.binders`, `Node.closedChild` and `Node.childLevel`",
+    "(group Binders, src/Effect4/Program/Binders.lean) and the authoring lifts of every",
+    "constructor an author may write (group Authoring, src/Effect4/Program/Authoring/Lifts.lean).",
+    "`effTy` keeps the binder *types*; the agreement between the two is a theorem, not a copy.",
+    "",
+    "A row names a constructor by its full name, the slots it binds in order, and for each of",
+    "its arguments in declaration order the slot indices in scope for that argument. `closed`",
+    "lists the arguments elaborated in the empty scope (a layer body). `whenHead` restricts a",
+    "row to the case where the constructor's first argument has that head (a statement list",
+    "extends the scope only after a binding yield). A constructor with no row binds nothing.",
+    "",
+    "The profile (DI-84): constructors with no lift. `readerOnly` is the reader's canonical form",
+    "for generator code and the retiring invocation forms; `machineOnly` is what the printer",
+    "refuses as internal; `handWritten` is a name-resolving lift the core module writes itself.",
+    "`renames` gives a lift another name when the constructor's is a Lean keyword."
+  ],
+  "rows": [
+    { "ctor": "Effect4.Program.Eff.bind", "slots": ["answer"], "args": [[], [0]] },
+    { "ctor": "Effect4.Program.Eff.catchCause", "slots": ["cause"], "args": [[], [0]] },
+    { "ctor": "Effect4.Program.Eff.catchIf", "slots": ["error"], "args": [[0], [], [0]] },
+    { "ctor": "Effect4.Program.Eff.matchCause", "slots": ["value", "cause"], "args": [[], [0], [1]] },
+    { "ctor": "Effect4.Program.Eff.onExit", "slots": ["exit"], "args": [[], [0]] },
+    { "ctor": "Effect4.Program.Eff.whileLoop", "slots": ["cursor", "answer"], "args": [[], [0], [0, 1], [0]] },
+    { "ctor": "Effect4.Program.Eff.acquireRelease", "slots": ["resource", "exit"], "args": [[], [0, 1]] },
+    { "ctor": "Effect4.Program.LayerTerm.effect", "slots": [], "args": [[], []], "closed": [1] },
+    { "ctor": "Effect4.Program.LayerTerm.effectDiscard", "slots": [], "args": [[]], "closed": [0] },
+    { "ctor": "Effect4.Program.Stmts.cons", "slots": ["yield"], "args": [[], [0]], "whenHead": "Effect4.Program.Stmt.bindYield" }
+  ],
+  "profile": {
+    "families": [
+      "Effect4.Program.Eff", "Effect4.Program.ActionTerm", "Effect4.Program.LayerTerm",
+      "Effect4.Program.CauseTerm"
+    ],
+    "readerOnly": [
+      "Effect4.Program.Eff.gen", "Effect4.Program.Eff.callback", "Effect4.Program.Eff.yieldError"
+    ],
+    "machineOnly": [
+      "Effect4.Program.ActionTerm.interruptScoped", "Effect4.Program.ActionTerm.awaitAllFailFast",
+      "Effect4.Program.ActionTerm.snapshotChildren", "Effect4.Program.ActionTerm.awaitNewChildren",
+      "Effect4.Program.ActionTerm.setContext"
+    ],
+    "handWritten": ["Effect4.Program.LayerTerm.ref"],
+    "renames": { "Effect4.Program.Eff.scoped": "scope" }
+  }
+}

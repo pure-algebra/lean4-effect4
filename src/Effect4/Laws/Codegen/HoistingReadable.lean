@@ -1,4 +1,5 @@
 import Effect4.Codegen.Read
+import Effect4.Program.Binders
 import Effect4.Laws.Program.Hoisting
 
 /-!
@@ -41,20 +42,9 @@ private def bindsNext : Node Op → Bool
   | .stmt (.bindYield _) => true
   | _ => false
 
-/-- Binder count at an addressed immediate child, using the existing child scheme. -/
-private def childLevel (n : Nat) : Node Op → Nat → Nat
-  | .eff (.bind _ _), 1 => n + 1
-  | .eff (.catchCause _ _), 1 => n + 1
-  | .eff (.catchIf _ _ _), 1 => n + 1
-  | .eff (.matchCause _ _ _), 1 => n + 1
-  | .eff (.matchCause _ _ _), 2 => n + 1
-  | .eff (.onExit _ _), 1 => n + 1
-  | .eff (.whileLoop _ _ _ _), 0 => n + 1
-  | .eff (.acquireRelease _ _), 1 => n + 2
-  | .layer (.effect _ _), 0 => 0
-  | .layer (.effectDiscard _), 0 => 0
-  | .stmts (.cons (.bindYield _) _), 1 => n + 1
-  | _, _ => n
+/-- The level of an addressed immediate child: the generated binder table's (`Node.childLevel`,
+`Program/Binders.lean`, from `tools/Effect4Gen/binders.json`). -/
+private abbrev childLevel (n : Nat) (node : Node Op) (i : Nat) : Nat := Node.childLevel n node i
 
 private theorem bindsNext_setChild {node result replacement : Node Op} {index : Nat}
     (updated : node.setChild index replacement = some result) :
@@ -86,10 +76,10 @@ private theorem nodeReadable_child (sig : Signature Op)
     nodeReadable sig spell (childLevel n node index) child = true := by
   unfold Node.child at found
   split at found <;> cases found
-  all_goals try { simp_all [nodeReadable, childLevel, readable, readableLayer,
+  all_goals try { simp_all [nodeReadable, childLevel, Node.childLevel, Node.closedChild, Node.binders, readable, readableLayer,
     readableLayers, readableStmts, readableAction, readableEffs] }
   all_goals rename_i head tail
-  all_goals cases head <;> simp_all [nodeReadable, childLevel, readableStmts]
+  all_goals cases head <;> simp_all [nodeReadable, childLevel, Node.childLevel, Node.closedChild, Node.binders, readableStmts]
 
 private theorem nodeReadable_setChild (sig : Signature Op)
     (spell : String → List String → Option Op) (n : Nat)
@@ -104,14 +94,14 @@ private theorem nodeReadable_setChild (sig : Signature Op)
   split at updated <;> cases updated
   all_goals simp only [Node.child, Option.some.injEq] at found
   all_goals subst old
-  all_goals try { simp_all [nodeReadable, childLevel, readable, readableLayer,
+  all_goals try { simp_all [nodeReadable, childLevel, Node.childLevel, Node.closedChild, Node.binders, readable, readableLayer,
     readableLayers, readableStmts, readableAction, readableEffs] }
 
   · rename_i head tail replacement
     cases head <;> cases replacement <;>
-      simp_all [nodeReadable, childLevel, bindsNext, readableStmts]
+      simp_all [nodeReadable, childLevel, Node.childLevel, Node.closedChild, Node.binders, bindsNext, readableStmts]
   · rename_i head oldTail newTail
-    cases head <;> simp_all [nodeReadable, childLevel, readableStmts]
+    cases head <;> simp_all [nodeReadable, childLevel, Node.childLevel, Node.closedChild, Node.binders, readableStmts]
 
 private theorem nodeReadable_layerAt (sig : Signature Op)
     (spell : String → List String → Option Op) (n : Nat)

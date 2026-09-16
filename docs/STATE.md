@@ -6,10 +6,11 @@ One page: what is true at HEAD, the ratified plan, what is next, what the owner 
 
 An agent-first language of algebraic effects whose engine is reified in Lean. One machine, three faces: Lean proves it (the reference, the machine, the certificates), OCaml runs it natively (the same machine compiled through LCNF, the reified Effect runtime as a fast, low-level platform outside any JavaScript host), TypeScript interoperates with the Effect ecosystem (the printer and readers). Programs are data: a canonical `Eff` tree with a digest, a computed typing certificate, folds, a tape-driven run with replay, and a printed image that reads back. Any Effect code the profile covers reads into `Eff`; coverage grows by data (generated rows, proved forms), and an unregistered head refuses by name.
 
-## True at `670f76ab` (2026-09-16)
+## True at `b531d33e` plus the authoring landing (2026-09-16, uncommitted until its check passes)
 
 - Branch `refactor/phase1-phase3`. `make check` green: 308 modules, 53,998 declarations at `[propext, Quot.sound]`; the `Classical.choice` boundary is 2 modules, 29 declarations. The reader lane matches Lean's oracle on all 416 programs. The host lanes (`make check-host`) were last run by Codex before `1a97c37`.
 - Landed today: the typed surface (one typing certificate `TypedProgram`, certified emission `ModuleEmission`, certified reading `ModuleReading` and `Api.admitModule`, hoisting and reconstruction proofs, typed derived forms, the lexical certificate, one owner each for binding names and the declaration annotation), and seat 2's deletion of the profile module (net −246 lines, seven axiom exemptions gone).
+- The authoring surface is in the tree as generated code over one table: `tools/Effect4Gen/binders.json` (the binding signature: which argument of which constructor abstracts which binders), the emitter `tools/Effect4Gen/Authoring.lean`, and its two outputs `src/Effect4/Program/Binders.lean` (`Node.binders`, `closedChild`, `childLevel`; the hoisting proofs now read it) and `src/Effect4/Program/Authoring/Lifts.lean` (48 lifts of the constructors an author may write, on the scope-reader carrier of `src/Effect4/Program/Authoring.lean`). `Authoring/Sugar.lean` holds `bindWith`, `flatMap`, `andThen`, `map`, `ifElse` and the Effect-spelled native rows. `Test/Program/AuthoringContract.lean` pins named programs against level trees, typing, runs, the printed image, refusals at paths, and the dogfood's shared-layer modules. `elaborate`, `bind`, `var` use no axioms; `elaborateModule` uses `propext`.
 - Of the language's four halves, the engine, the interop boundary and program-as-data exist; the agent-facing authoring surface has no commits. It is the focus now.
 
 ## The ratified plan (owner, 2026-09-16 evening; rulings DI-79 to DI-90 in `docs/DESIGN-ISSUES.md`)
@@ -28,10 +29,10 @@ An agent-first language of algebraic effects whose engine is reified in Lean. On
 
 ## Next, in order
 
-1. Commit this record. Drop seat 2's step-2 stash.
-2. The authoring elaborator, the profile table and the refusal projection, in the main session, one Lean process at a time, each as its own commit after `make check`.
-3. The facade's additive half.
-4. Step 0 of the constructs packet, then S1, then the `Eff` series.
+1. Commit the authoring landing once `make check` is green (this also lands step 0(a) of the constructs packet: the binder table).
+2. Scope safety as a theorem: one generic "every level is in scope" predicate over `Node.child` and `Node.binders`, and per-lift preservation lemmas, so a wrong lift fails a proof rather than a program; then the agreement lemma between `Node.binders` and `effTy`'s environment extensions.
+3. The rest of the authoring surface as generated data, so nothing is guessed: row wrappers from the row tables (native now, packages by DI-89), derived-form combinators from `Codegen/Forms.all` (one `Src` function per template, printed back by recognition), and the checker's refusal projection (DI-86).
+4. The facade's additive half (DI-85), then step 0(b) and 0(c) of the constructs packet (`Plain`, `suspendDecided`), then S1, then the `Eff` series.
 
 ## Owner decisions open
 
@@ -41,6 +42,7 @@ None blocking. Standing asks 1 (the `Effects` package) and 2 (DI-39's amendment)
 
 - Speed over ceremony: edit with whatever is fastest, including shell edits; build what you touch; `make check` once per step; `make check-host` per slice; nothing pushed without the owner.
 - One Lean process at a time. A parallel seat runs only in its own worktree on disjoint files, with a brief the owner has seen. Fable seats need the owner's word each time.
+- One session per checkout. A forked session that edits the same files is not a seat; it stands down and hands over (2026-09-16 evening: a fork and this session wrote the same authoring files for an hour before the owner ruled that this session leads).
 - Generated modules stay self-contained on `effect` alone unless the `select .tag` narrowing probe fails (DI-85).
 - The current authorities under `docs/research/` are tracked (the plan, the two open packets, the obligations note, the algebraic-reading ruling, the review log); the rest of the directory stays untracked.
 

@@ -24,7 +24,10 @@
       "Out": "src\\Effect4\\Store\\Derived\\Json.lean",
       "Guards": "tools\\Effect4Gen\\guards\\json.lean",
       "Kinds": [],
-      "Types": ["Effect4.Float64", "Effect4.Json"]
+      "Types": [
+        "Effect4.Float64",
+        "Effect4.Json"
+      ]
     },
     {
       "Note": "The Schema carriers hold `Json` and `Float64` fields, whose instances are the Json group's.",
@@ -34,10 +37,19 @@
       "Guards": "tools\\Effect4Gen\\guards\\schema.lean",
       "Kinds": [],
       "Types": [
-        "Effect4.ReferenceKey", "Effect4.GlobalSymbolKey", "Effect4.AnnotationEntry",
-        "Effect4.LiteralValue", "Effect4.EnumValue", "Effect4.EnumEntry", "Effect4.PropertyKey",
-        "Effect4.RepresentationAnnotation", "Effect4.UnionMode", "Effect4.Representation",
-        "Effect4.ReferenceEntry", "Effect4.Document", "Effect4.MultiDocument"
+        "Effect4.ReferenceKey",
+        "Effect4.GlobalSymbolKey",
+        "Effect4.AnnotationEntry",
+        "Effect4.LiteralValue",
+        "Effect4.EnumValue",
+        "Effect4.EnumEntry",
+        "Effect4.PropertyKey",
+        "Effect4.RepresentationAnnotation",
+        "Effect4.UnionMode",
+        "Effect4.Representation",
+        "Effect4.ReferenceEntry",
+        "Effect4.Document",
+        "Effect4.MultiDocument"
       ]
     },
     {
@@ -47,14 +59,25 @@
       "Guards": "tools\\Effect4Gen\\guards\\program.lean",
       "Kinds": [],
       "Types": [
-        "Effect4.Program.Lit", "Effect4.Machine.FnName", "Effect4.FinalizerStrategy",
-        "Effect4.Supervision.MaskMode", "Effect4.Supervision.ObserverMode",
-        "Effect4.Program.NativeOp", "Effect4.Supervision.ForkOptions", "Effect4.Program.Term",
+        "Effect4.Program.Lit",
+        "Effect4.Machine.FnName",
+        "Effect4.FinalizerStrategy",
+        "Effect4.Supervision.MaskMode",
+        "Effect4.Supervision.ObserverMode",
+        "Effect4.Program.NativeOp",
+        "Effect4.Supervision.ForkOptions",
+        "Effect4.Program.Term",
         "Effect4.Program.CauseTerm",
-        "Effect4.ServiceName", "Effect4.ServiceTypeCode", "Effect4.ServiceKey",
+        "Effect4.ServiceName",
+        "Effect4.ServiceTypeCode",
+        "Effect4.ServiceKey",
         "Effect4.Program.Eff@Effect4.Program.NativeOp",
-        "Effect4.Program.Ty", "Effect4.Program.RowKind", "Effect4.Program.RowShape",
-        "Effect4.Program.Registration", "Effect4.Program.Row", "Effect4.Program.EffTy"
+        "Effect4.Program.Ty",
+        "Effect4.Program.RowKind",
+        "Effect4.Program.RowShape",
+        "Effect4.Program.Registration",
+        "Effect4.Program.Row",
+        "Effect4.Program.EffTy"
       ]
     },
     {
@@ -63,8 +86,15 @@
       "Imports": "Effect4.Store.Pin,Effect4.Store.Node",
       "Out": "src\\Effect4\\Store\\PinDerived.lean",
       "Guards": "tools\\Effect4Gen\\guards\\pin.lean",
-      "Kinds": ["Effect4.Store.Pin=source", "Effect4.Store.Tree=tree"],
-      "Types": ["Effect4.Store.PinRole", "Effect4.Store.Pin", "Effect4.Store.Tree"]
+      "Kinds": [
+        "Effect4.Store.Pin=source",
+        "Effect4.Store.Tree=tree"
+      ],
+      "Types": [
+        "Effect4.Store.PinRole",
+        "Effect4.Store.Pin",
+        "Effect4.Store.Tree"
+      ]
     },
     {
       "Name": "Api",
@@ -87,8 +117,34 @@
       "Guards": "tools\\Effect4Gen\\guards\\fold.lean",
       "Kinds": [],
       "Types": [
-        "Effect4.Program.Ty", "Effect4.Program.Term",
-        "Effect4.Program.CauseTerm", "Effect4.Program.Eff"
+        "Effect4.Program.Ty",
+        "Effect4.Program.Term",
+        "Effect4.Program.CauseTerm",
+        "Effect4.Program.Eff"
+      ]
+    },
+    {
+      "Note": "The binder table (review log B17): Node.binders, closedChild and childLevel from tools/Effect4Gen/binders.json, read by the hoisting proofs and the authoring lifts.",
+      "Name": "Binders",
+      "Tool": "tools/Effect4Gen/Authoring.lean",
+      "Imports": "Effect4.Program.Refs",
+      "Out": "src\\Effect4\\Program\\Binders.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\binders.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Eff"
+      ]
+    },
+    {
+      "Note": "The authoring lifts (DI-83, DI-84): one per constructor an author may write, from the same table.",
+      "Name": "Authoring",
+      "Tool": "tools/Effect4Gen/Authoring.lean",
+      "Imports": "Effect4.Program.Authoring",
+      "Out": "src\\Effect4\\Program\\Authoring\\Lifts.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\authoring.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Eff"
       ]
     }
   ]

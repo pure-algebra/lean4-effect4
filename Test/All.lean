@@ -62,6 +62,7 @@ import Test.Program.Gen
 import Test.Program.CompileContract
 import Test.Program.TypedContract
 import Test.Program.WeakenContract
+import Test.Program.AuthoringContract
 import Test.Program.DenoteContract
 import Test.Program.AgreementContract
 import Test.Program.ProgressContract
