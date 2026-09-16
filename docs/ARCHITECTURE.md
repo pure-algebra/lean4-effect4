@@ -114,8 +114,16 @@ The corresponding Laws modules connect the computed check to the independent
 `Bindings.Resolves` relation. This conservative profile masks local declarations at
 block entry, exposes their capabilities after the initializer, and refuses forward
 references, opaque declarations and unsafe verbatim name spellings. It is a component
-of source admission; annotation agreement and expected package-head origins still
+of source admission; binder-annotation agreement and expected package-head origins still
 need validation before raw reconstruction can become typed source admission.
+
+`Codegen/Names.lean` owns what a legal target binding name is, for both the lexical
+source check and the printer's export-name check. `Codegen/Admit.lean` is the reading
+half of the module boundary: `admitModule` composes the lexical check, the raw
+reconstruction, the shared `TypedProgram` certificate and a declaration-envelope
+comparison against `Program.declarationType` — the printer's own annotation rule — and
+keeps all four as `ModuleReading`, indexed by the exact module read. `Laws/Codegen/Admit.lean`
+holds the envelope reflection theorem, uniqueness, and the composition with the producer.
 
 `Program/Fragment.lean` owns executable membership in the existing straight
 fragment. Both ordinary application admission and `Laws/Program/Denote.lean`

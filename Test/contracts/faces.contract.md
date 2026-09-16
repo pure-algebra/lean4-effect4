@@ -176,6 +176,41 @@ single owner of the emitted annotation (`printDecl` is that function plus the re
 body, its export flag, and that annotation. `printModule_shape` states the block's shape:
 plain exported layer constants, then the one main declaration.
 
+**Checked reading (2026-09-16).** `Api.admitModule` is the reading half of the module
+boundary, beside the raw `Api.readModule` the way `emitModule` sits beside `printModule`.
+`Codegen.ModuleReading table name allowed ambient` carries, for exactly the module it
+indexes: a `SourceBindings.Checked` for that module with the host's ambient prelude
+prepended, the raw reconstruction equation, the shared `Program.TypedProgram` certificate,
+and `envelopeCheck name typing.ty module.decls = none`. `SurfaceRefusal` is the closed
+alphabet, nesting `ReadRefusal` and `PrintRefusal` rather than re-listing them.
+
+The theorems. `envelopeCheck_iff` is the envelope's reflection: the computed answer agrees
+exactly with `EnvelopeValid` — a safe export name, a last declaration that is the exported
+main constant under that name with `declarationType ty = .ok main.type`, and every earlier
+declaration a plain exported constant (`layersPlain_iff`). `admitModule_typed` is the typing
+projection (the core checker's own equation), `admitModule_read` the raw reader's,
+`admitModule_bound` the lexical check's, `admitModule_envelope` the envelope's as a Prop.
+`ModuleReading.recheck` says the boundary returns what a certificate holds, and
+`ModuleReading.unique` that a module has one reading. `ModuleEmission.admit`, exposed as
+`Api.admitModule_emitModule`, is the round trip in certificate form: the module the checked
+producer emitted for a readable program under a lawful table is admitted, at the same
+program and the same recorded type, once the host supplies the bindings its prelude
+provides. Its premises are the emission itself, `LawfulTable`, `readable`, and that
+`SourceBindings.Checked`; the export-name and representability facts are read off
+`printEntry_ok` and `printDecl_fields` rather than assumed. `admitModule_complete` names the
+recorded type rather than the certificate because two certificates for one program are equal
+only by `TypedProgram.unique`, which `ModuleReading.typing_eq` states.
+
+What checked reading does **not** claim. It does not widen a declared type: the comparison
+is equality with the printer's own annotation, because the core has no subsumption at a
+program's top type (DI-15), so a wider source declaration is refused by design. It admits no
+binder, return or local annotation; the raw reader still refuses those, and the annotated
+profile is a later packet. It gives the `effect` package no meaning: a resolved `Effect` is a
+lexical fact about the supplied origins, not evidence that the host namespace is the pinned
+rc.112 one, and the expected origin of a particular head is still unchecked. It is not target
+type checking and not execution. Twelve controls in `Test/Api/ApiContract.lean` separate the
+refusals one fact at a time; the axiom receipts are in `Test/Codegen/ReadContract.lean`.
+
 The bridge accepts qualified names and generic arguments, literal strings, tuples,
 parentheses and unions under its documented lexical restrictions. It does not resolve
 names or check generic arity. Core unit still maps to `void`, and natural/integer
@@ -314,8 +349,12 @@ row restrictions. Its type fact concerns `typeOfProgram` and hence `HasTy` on th
 expanded tree; its module reconstruction fact must recover the original sharing tree.
 
 The remaining obligations are a canonical admitted annotation grammar with a round-trip
-law, annotation/import validation before erasure, genuinely type-directed lowering,
-and the checked source profile connecting to the proved printable domain. A normalization
+law, binder/return/local annotation validation, the expected package origin of each core
+head, genuinely type-directed lowering, and the checked source profile connecting to the
+proved printable domain. The declaration's own annotation and the module's import
+bindings are no longer owed: `Api.admitModule` checks both before erasure (§2, checked
+reading), and its envelope compares the declaration against the printer's own annotation
+rule rather than a second encoding of it. A normalization
 needs its own typing and behavior relation. A read-and-check
 wrapper or a target annotation does not discharge those obligations. Current source
 parsing, core typing, target typing and host behavior remain distinct evidence boundaries.

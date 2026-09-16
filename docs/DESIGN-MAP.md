@@ -218,8 +218,13 @@ premised on `LawfulTable` and their stated image conditions). The separate
 readable, valid-reference domain; `printModule_readable` proves printing succeeds there
 when the emitted declaration type is structurally representable.
 `Api.printModule_roundTrip` connects both facts to the typed application API under a
-lawful codegen table and that explicit type-domain premise. Source-envelope validation,
-annotation checking and target typing remain open in `Test/contracts/faces.contract.md` §7. The reader's refusal alphabet names where the surface
+lawful codegen table, that explicit type-domain premise and a safe export name.
+`Codegen/Admit.lean` adds the checked reading beside the raw one: `Api.admitModule`
+returns a certificate carrying the lexical binding check, the raw reconstruction, the
+shared typing certificate and a declaration envelope compared against the printer's own
+annotation rule, and `Api.admitModule_emitModule` says the producer's output is admitted
+at the same program and type. Binder annotations, the expected package origin of a head
+and target typing remain open in `Test/contracts/faces.contract.md` §7. The reader's refusal alphabet names where the surface
 loses information, which is why a reader that guessed would be wrong rather than unproved. The
 TypeScript printer-image reader is a third implementation of the same relation, held by byte
 comparison against Lean-produced oracles over a generated corpus, with its head coverage held

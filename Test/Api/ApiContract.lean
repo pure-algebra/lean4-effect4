@@ -16,6 +16,7 @@ namespace Test.Api.ApiContract
 
 open Effect4 Effect4.Api
 open Effect4.Api (Val)
+open Effect4.Codegen (effectOrigins)
 open TypeScript (house0)
 open TypeScript.Render (expr)
 
@@ -120,6 +121,133 @@ def malformedSourceTable : Effect4.Program.RowTable :=
 #guard match emitModule "main" syncSource malformedSourceTable with
   | .error (.print (.typeSpelling text)) => text == "not a type !"
   | _ => false
+
+/-! ## Checked reading: one control per check of the module boundary
+
+`admitModule` is the reading half of the module face: the lexical bindings of the original
+module against permitted origins, the raw reconstruction, the one whole-program checker, and
+the declaration envelope compared with what the printer emits for the checked type. The
+emitted module of `pBind` admits once the host supplies the prelude its free names need
+(`Effect`, and the `succ` atom); each control below changes exactly one fact and names the
+refusal it causes. Nothing here claims the host's `effect` namespace is the pinned one. -/
+
+/-- Permitted origins: the `effect` namespaces, the module the `succ` atom comes from, and
+the host package of the external row. -/
+def hostOrigins : List Effect4.Codegen.Bindings.Origin :=
+  effectOrigins ++ [.imported "./atoms" (some "succ"), .imported "host" (some "Host")]
+
+/-- The prelude an embedding host wraps a declaration block in. -/
+def hostAmbient : List TypeScript.Import :=
+  [.named ["Effect", "Layer", "Context", "Fiber"] "effect", .named ["succ"] "./atoms"]
+
+/-- Replace the block's main declaration, keeping every layer declaration. -/
+def patchMain (module : TypeScript.Module) (f : TypeScript.ConstDecl → TypeScript.ConstDecl) :
+    TypeScript.Module :=
+  { module with decls := module.decls.dropLast ++ (module.decls.getLast?.map fun d =>
+      match d with | .const c => TypeScript.Decl.const (f c) | other => other).toList }
+
+/-- Replace the block's first declaration, a layer constant when the block has one. -/
+def patchFirst (module : TypeScript.Module) (f : TypeScript.ConstDecl → TypeScript.ConstDecl) :
+    TypeScript.Module :=
+  { module with decls := match module.decls with
+      | .const c :: rest => .const (f c) :: rest
+      | other => other }
+
+/-- Two shared layer references, so the emitted block carries `L_…` declarations. -/
+def sharedLayers : Program :=
+  .bind
+    (.provideLayer (.merge (.succeed ⟨⟨4⟩, ⟨4⟩⟩ (.nat 7)) (.ref [0, 0, 0])) false
+      (.succeed (.lit .unit)))
+    (.provideLayer (.ref [0, 0]) false (.succeed (.lit .unit)))
+
+/-- `Effect.Effect<string, never>`: a declared type the checked program does not have. -/
+def stringEffect : TypeScript.TypeRef :=
+  .name ["Effect", "Effect"] [.name ["string"] [], .name ["never"] []]
+
+-- 1. What the producer emitted is admitted, at the same program and the same recorded type.
+#guard match emitModule "main" pBind with
+  | .ok e => match admitModule "main" e.module [] hostOrigins hostAmbient with
+    | .ok r => (r.program == pBind) && (r.typing.ty == (.pure .nat))
+    | .error _ => false
+  | .error _ => false
+
+-- 2. A declared type the core does not give the program: no widening, so it refuses.
+#guard match emitModule "main" pBind with
+  | .ok e => match admitModule "main"
+      (patchMain e.module (fun c => { c with type := some stringEffect })) []
+      hostOrigins hostAmbient with
+    | .error (.declaredType _ actual) => actual == some stringEffect
+    | _ => false
+  | .error _ => false
+
+-- 3. The annotation removed while the requirement is empty: still a disagreement.
+#guard match emitModule "main" pBind with
+  | .ok e => match admitModule "main"
+      (patchMain e.module (fun c => { c with type := none })) [] hostOrigins hostAmbient with
+    | .error (.declaredType expected actual) => expected.isSome && actual == none
+    | _ => false
+  | .error _ => false
+
+-- 4. The main declaration not exported.
+#guard match emitModule "main" pBind with
+  | .ok e => match admitModule "main"
+      (patchMain e.module (fun c => { c with exported := false })) [] hostOrigins hostAmbient with
+    | .error (.notExported name) => name == "main"
+    | _ => false
+  | .error _ => false
+
+-- 5. Admitted under a name the block does not export.
+#guard match emitModule "main" pBind with
+  | .ok e => match admitModule "program" e.module [] hostOrigins hostAmbient with
+    | .error (.exportName expected actual) => expected == "program" && actual == "main"
+    | _ => false
+  | .error _ => false
+
+-- 6. The same block with no ambient prelude: `succ` and `Effect` are unbound.
+#guard match emitModule "main" pBind with
+  | .ok e => match admitModule "main" e.module [] hostOrigins [] with
+    | .error .unbound => true
+    | _ => false
+  | .error _ => false
+
+-- 7. A layer declaration carrying an annotation is not the plain constant the printer emits.
+#guard match emitModule "main" sharedLayers with
+  | .ok e => (admitModule "main" e.module [] hostOrigins hostAmbient).isOk
+  | .error _ => false
+#guard match emitModule "main" sharedLayers with
+  | .ok e => match admitModule "main"
+      (patchFirst e.module (fun c => { c with type := some (.name ["number"] []) })) []
+      hostOrigins hostAmbient with
+    | .error (.layerDeclaration name) => name == "L_0_0_0"
+    | _ => false
+  | .error _ => false
+
+-- 8. A checked type with no target annotation: the envelope has nothing to compare.
+def hostQueryModule : TypeScript.Module :=
+  { header := [], imports := [],
+    decls := [.const { doc := [], name := "main", value := .call (.ident "Host.query") [] }] }
+#guard match admitModule "main" hostQueryModule malformedSourceTable hostOrigins
+    [.named ["Host"] "host"] with
+  | .error (.unrepresentable (.typeSpelling text)) => text == "not a type !"
+  | _ => false
+
+-- 9. Readable, lexically bound, and ill-typed: a fiber action on a number.
+def joinNumberModule : TypeScript.Module :=
+  { header := [], imports := [],
+    decls := [.const { doc := [], name := "main", value := .call (.ident "Fiber.join") [.int 1] }] }
+#guard (readModule joinNumberModule).isOk
+#guard match admitModule "main" joinNumberModule [] hostOrigins [.named ["Fiber"] "effect"] with
+  | .error .illTyped => true
+  | _ => false
+
+-- 10. The producer refuses an unsafe export name before anything can read it back.
+#guard match emitModule "a0" pBind with
+  | .error (.print (.unsafeName name)) => name == "a0"
+  | _ => false
+
+#print axioms Effect4.Codegen.admitModule
+#print axioms Effect4.Codegen.envelopeCheck
+#print axioms Effect4.Api.admitModule
 
 /-! ## Running -/
 

@@ -8,6 +8,7 @@ import Effect4.Codegen.Print
 import Effect4.Codegen.Checked
 import Effect4.Codegen.SourceBindings
 import Effect4.Codegen.Read
+import Effect4.Codegen.Admit
 import Effect4.Codegen.Schema
 import Effect4.Codegen.Target
 import Effect4.Store.Cascade
@@ -171,6 +172,27 @@ def checkSourceBindings (module : TypeScript.Module)
     (allowed : List Effect4.Codegen.Bindings.Origin) :
     Option (Effect4.Codegen.SourceBindings.Checked allowed module) :=
   Effect4.Codegen.SourceBindings.validate allowed module
+
+/-- Checked reading of a declaration block, the boundary `readModule` is the raw half of.
+It checks four things and keeps all four: the original module's imports and lexical bindings
+against the permitted origins (with a host's `ambient` prelude prepended), the raw
+reconstruction of the program, the one whole-program type checker, and the declaration
+envelope — a safe export name, the last declaration exported under that name and annotated
+exactly as `printDecl` annotates the checked type, and every earlier declaration a plain
+exported layer constant.
+
+What it does **not** check. It does not widen a declared type: the comparison is equality
+with the printer's own annotation, because the core has no subsumption at a program's top
+type. It admits no binder, return or local annotation; the raw reader still refuses those.
+It gives the `effect` package no meaning: a resolved `Effect` is a lexical fact, not
+evidence that the host's namespace is the pinned one. It is neither target type checking
+nor execution. -/
+def admitModule (name : String) (module : TypeScript.Module) (table : RowTable := [])
+    (allowed : List Effect4.Codegen.Bindings.Origin := Effect4.Codegen.effectOrigins)
+    (ambient : List TypeScript.Import := []) :
+    Except Effect4.Codegen.SurfaceRefusal
+      (Effect4.Codegen.ModuleReading table name allowed ambient) :=
+  Effect4.Codegen.admitModule name module table allowed ambient
 
 /-! ## Compiling and running -/
 
