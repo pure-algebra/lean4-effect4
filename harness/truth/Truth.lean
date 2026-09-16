@@ -345,6 +345,19 @@ def pTagMiss : Api.Program := .catchIf (tagTest "B" 0) tagBody (.succeed (.lit (
 def pTagTwoFail : Api.Program := .catchIf (tagTest "A" 0)
   (.failCause (.both (.fail (tagged "B" "x")) (.fail (tagged "A" "m")))) (.succeed (.lit (.nat 1)))
 
+/-- DI-78: one optional error value is consumed for presence and payload selection.
+Both branches have the same declared error column, so the empty case has a real
+payload bound rather than inferring one from its fallback. -/
+def optionResult (present : Bool) : Api.Program :=
+  .bind (.exit (.branch (.lit (.bool present)) (.fail (.lit (.nat 7)))
+      (.succeed (.lit (.nat 0)))))
+    (.bind (.succeed (.app "causeError" (.cons (.var 0) .nil)))
+      (.succeed (.app "pair"
+        (.cons (.app "isSome" (.cons (.var 1) .nil))
+          (.cons (.app "getOrElse" (.cons (.var 1) (.cons (.lit (.nat 9)) .nil))) .nil)))))
+def pOptionSome : Api.Program := optionResult true
+def pOptionNone : Api.Program := optionResult false
+
 /-- The programs checked: the original wire, control, layer and host fixtures, followed by
 the S2 error-image, S3 handler and part-4 residual fixtures. Every listed program contributes
 one manifest entry. -/
@@ -356,7 +369,7 @@ def corpus : List (String × Api.Program) :=
     ("pSqlFail", pSqlFail), ("pSqlCatch", pSqlCatch), ("pSqlExit", pSqlExit), ("pSqlOrDie", pSqlOrDie),
     ("pFailText", pFailText), ("pFailBoomText", pFailBoomText), ("pTextOrDie", pTextOrDie), ("pCatchError", pCatchError),
     ("pCatchIfHit", pCatchIfHit), ("pCatchIfMiss", pCatchIfMiss), ("pCatchIfRetained", pCatchIfRetained),
-    ("pTagHit", pTagHit), ("pTagMiss", pTagMiss), ("pTagTwoFail", pTagTwoFail)]
+    ("pTagHit", pTagHit), ("pTagMiss", pTagMiss), ("pTagTwoFail", pTagTwoFail), ("pOptionSome", pOptionSome), ("pOptionNone", pOptionNone)]
 
 /-! ## The value wire -/
 
@@ -762,14 +775,17 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 
 /-! ## Receipts -/
 
-#guard corpus.length = 34
 #guard (corpus.map (·.1)).eraseDups.length = corpus.length
 #guard (corpus.map (·.1)) =
   ["p42", "pBind", "pFork", "pAwait", "pGen", "pLoop", "pCatch", "pScope", "pTwo", "pAcquire",
    "pAcquireClosed", "pProvide", "pProvideMerge", "pProvideTwice", "pDiamond", "pMergeAll", "pAcquireHandle",
    "pFailTagged", "pSqlite", "pKv", "pSqlFail", "pSqlCatch", "pSqlExit", "pSqlOrDie",
    "pFailText", "pFailBoomText", "pTextOrDie", "pCatchError", "pCatchIfHit", "pCatchIfMiss", "pCatchIfRetained",
-   "pTagHit", "pTagMiss", "pTagTwoFail"]
+   "pTagHit", "pTagMiss", "pTagTwoFail", "pOptionSome", "pOptionNone"]
+#guard Api.typeOf pOptionSome = some ⟨.prod .bool .nat, .never, Env.Requirement.empty⟩
+#guard Api.typeOf pOptionNone = Api.typeOf pOptionSome
+#guard (Api.run pOptionSome 1000).exit = some (.success (.list [.bool true, .nat 7]))
+#guard (Api.run pOptionNone 1000).exit = some (.success (.list [.bool false, .nat 9]))
 -- DI-17: mixed columns retain every possible failure; runtime selection is unchanged.
 #guard Api.typeOf pTagHit =
   some ⟨.nat, .union .string (.prod (.lit "A") (.lit "m")), Env.Requirement.empty⟩

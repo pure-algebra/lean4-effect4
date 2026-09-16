@@ -44,6 +44,25 @@ namespace Effect4.Program
 
 open Effect4 Effect4.Machine
 
+/-! ## Pure option selection retains store validity -/
+
+/-- A presence test constructs only a Boolean; raw malformed option inputs refuse. -/
+theorem NativeAtom.isSome_validIn (s : Stores) (input result : Val)
+    (heval : NativeAtom.eval .isSome [input] = some result) :
+    Val.validIn s result = true := by
+  cases input <;> simp only [NativeAtom.eval, reduceCtorEq] at heval
+  all_goals cases heval; rfl
+
+/-- Option selection retains store validity of the selected argument. This does not
+replace the separate minted-fiber invariant, which uses the machine's whole handle world. -/
+theorem NativeAtom.getOrElse_validIn (s : Stores) (input fallback result : Val)
+    (hinput : Val.validIn s input = true) (hfallback : Val.validIn s fallback = true)
+    (heval : NativeAtom.eval .getOrElse [input, fallback] = some result) :
+    Val.validIn s result = true := by
+  cases input <;> simp only [NativeAtom.eval, reduceCtorEq] at heval
+  all_goals cases heval
+  all_goals first | exact hfallback | exact hinput
+
 /-! ## The heap holds numbers -/
 
 /-- Every cell of the heap holds a `.nat`: the typing half of the heap invariant, beside lane

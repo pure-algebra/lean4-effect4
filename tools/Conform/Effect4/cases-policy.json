@@ -322,6 +322,52 @@
           "note": "Both projections delegate to this one classifier. Products, unions and never have explicit arms; every listed alternative refuses. Its value-membership theorem is NativeAtom.projectProduct_typed."
         },
         {
+          "name": "Effect4.Program.NativeAtom.typeOf",
+          "sites": [
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            }
+          ],
+          "note": "DI-78: the isSome and getOrElse argument patterns accept a syntactic option; every listed non-option type refuses. Both sites and their complete refusal sets are intentional."
+        },
+        {
           "sites": [
             {
               "mode": "default",

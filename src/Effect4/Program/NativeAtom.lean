@@ -33,6 +33,8 @@ inductive NativeAtom
   it prints as `tagIs("A", aN)` through the atom printer with `tagIs` in the prelude. Atoms
   are spelled by name on the wire, so appending it moves no ordinal and no byte. -/
   | tagIs
+  /-- Pure option elimination; applications remain named terms on the wire (DI-78). -/
+  | isSome | getOrElse
   deriving DecidableEq, BEq
 
 namespace NativeAtom
@@ -40,7 +42,7 @@ namespace NativeAtom
 /-- Declaration order is the existing generated profile order. -/
 def all : List NativeAtom :=
   [.succ, .pred, .isZero, .boolNot, .add, .lt, .eq, .pair, .fst, .snd, .strings,
-   .causeIsFail, .causeError, .causeIsDie, .causeIsInterrupt, .boolOr, .boolAnd, .tagIs]
+   .causeIsFail, .causeError, .causeIsDie, .causeIsInterrupt, .boolOr, .boolAnd, .tagIs, .isSome, .getOrElse]
 
 theorem all_complete (atom : NativeAtom) : atom ∈ all := by
   cases atom <;> simp [all]
@@ -53,6 +55,7 @@ def name : NativeAtom → String
   | .causeIsDie => "causeIsDie" | .causeIsInterrupt => "causeIsInterrupt"
   | .boolOr => "or" | .boolAnd => "and"
   | .tagIs => "tagIs"
+  | .isSome => "isSome" | .getOrElse => "getOrElse"
 
 def names : List String := all.map name
 
@@ -88,8 +91,8 @@ theorem covers_iff (consumerNames : List String) :
 
 def arity : NativeAtom → Option Nat
   | .succ | .pred | .isZero | .boolNot | .fst | .snd
-  | .causeIsFail | .causeError | .causeIsDie | .causeIsInterrupt => some 1
-  | .add | .lt | .eq | .pair | .boolOr | .boolAnd | .tagIs => some 2
+  | .causeIsFail | .causeError | .causeIsDie | .causeIsInterrupt | .isSome => some 1
+  | .add | .lt | .eq | .pair | .boolOr | .boolAnd | .tagIs | .getOrElse => some 2
   | .strings => none
 
 /-- Whether the atom's parameters are const-generic (DI-55, the prelude's
@@ -100,7 +103,7 @@ def constGeneric : NativeAtom → Bool
   | .pair => true
   | .succ | .pred | .isZero | .boolNot | .add | .lt | .eq | .fst | .snd | .strings
   | .causeIsFail | .causeError | .causeIsDie | .causeIsInterrupt | .boolOr | .boolAnd
-  | .tagIs => false
+  | .tagIs | .isSome | .getOrElse => false
 
 /-- Monomorphic metadata for generated interfaces. Polymorphic schemes are `none`;
 `typeOf` remains their single executable typing owner. -/
@@ -112,7 +115,8 @@ def mono : NativeAtom → Option (List Ty × Ty)
   | .lt => some ([.nat, .nat], .bool)
   | .boolOr | .boolAnd => some ([.bool, .bool], .bool)
   | .eq | .pair | .fst | .snd | .strings
-  | .causeIsFail | .causeError | .causeIsDie | .causeIsInterrupt | .tagIs => none
+  | .causeIsFail | .causeError | .causeIsDie | .causeIsInterrupt | .tagIs
+  | .isSome | .getOrElse => none
 
 /-- The tag test on a value (DI-39): true exactly on a pair whose first component is the
 tag; false on every other value. Total, so `tagIs` never answers `none` on a string tag. -/
@@ -140,10 +144,14 @@ def eval : NativeAtom → List Val → Option Val
   | .boolOr, [Val.bool a, Val.bool b] => some (Val.bool (a || b))
   | .boolAnd, [Val.bool a, Val.bool b] => some (Val.bool (a && b))
   | .tagIs, [Val.str tag, v] => some (Val.bool (tagHit tag v))
+  | .isSome, [Store.Val.none] => some (Val.bool false)
+  | .isSome, [Store.Val.some _] => some (Val.bool true)
+  | .getOrElse, [Store.Val.none, fallback] => some fallback
+  | .getOrElse, [Store.Val.some value, _] => some value
   | .succ, _ | .pred, _ | .isZero, _ | .boolNot, _ | .add, _ | .lt, _ | .eq, _
   | .pair, _ | .fst, _ | .snd, _
   | .causeIsFail, _ | .causeError, _ | .causeIsDie, _ | .causeIsInterrupt, _
-  | .boolOr, _ | .boolAnd, _ | .tagIs, _ => none
+  | .boolOr, _ | .boolAnd, _ | .tagIs, _ | .isSome, _ | .getOrElse, _ => none
 
 /-- The selected column of a product or a union of products. `second = false` selects
 the first column. Bottom contributes no value; every other non-product alternative
@@ -166,7 +174,9 @@ and `eq` takes two naturals or two strings and therefore two string literals —
 `pair` is polymorphic and answers the product of exactly the types it is given; `fst`/`snd`
 project products and join the selected columns of product unions; `strings` takes any
 number of string-typed arguments; the cause queries
-take a `causeOf`/`exitOf` and are unchanged. -/
+take a `causeOf`/`exitOf` and are unchanged. `isSome` accepts an option;
+`getOrElse` keeps its payload type and checks the default by canonical subsumption.
+Both are eager pure applications; they introduce no branch refinement. -/
 def typeOf : NativeAtom → List Ty → Option Ty
   | .succ, [a] => if a.sub .nat then some .nat else none
   | .pred, [a] => if a.sub .nat then some .nat else none
@@ -186,10 +196,12 @@ def typeOf : NativeAtom → List Ty → Option Ty
   | .boolOr, [a, b] | .boolAnd, [a, b] => if a.sub .bool && b.sub .bool then some .bool else none
   -- the tag is a string (a literal is one); the tested value is anything (`unknown` on the host)
   | .tagIs, [t, _] => if t.sub .string then some .bool else none
+  | .isSome, [.option _] => some .bool
+  | .getOrElse, [.option a, b] => if b.normalize.sub a.normalize then some a else none
   | .succ, _ | .pred, _ | .isZero, _ | .boolNot, _ | .add, _ | .lt, _ | .eq, _
   | .pair, _ | .fst, _ | .snd, _
   | .causeIsFail, _ | .causeError, _ | .causeIsDie, _ | .causeIsInterrupt, _
-  | .boolOr, _ | .boolAnd, _ | .tagIs, _ => none
+  | .boolOr, _ | .boolAnd, _ | .tagIs, _ | .isSome, _ | .getOrElse, _ => none
 
 /-- A monomorphic row's typing is exactly argument-wise subsumption (`mono`, `typeOf`). -/
 theorem typeOf_mono (atom : NativeAtom) (args answer : _) (h : atom.mono = some (args, answer))

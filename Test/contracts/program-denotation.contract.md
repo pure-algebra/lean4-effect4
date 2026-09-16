@@ -357,3 +357,31 @@ Its compiler/reference connection is the existing `Sched.code_intro`, with the s
 `run_eq_ref` decision-tape, fuel and empty-table/no-oracle scope. The extension supplies
 no `run_eq_meaning` instance and no general bind law. `Test/Program/CatchIfContract.lean`
 checks first-Fail selection, the whole-cause miss, replacement on hit and retained writes.
+
+## Pure option elimination amendment (2026-09-16, DI-78)
+
+Two named `NativeAtom` operations extend ordinary `Term.app`; no stored syntax or
+wire constructor is added. `isSome` accepts exactly one `option A`, answers Boolean,
+and returns false for `none` and true for `some v`. `getOrElse` accepts an
+`option A` and a default of type B with `B.normalize ≤ A.normalize`, answers A,
+and returns the default for `none` or the payload for `some v`. Other argument
+shapes refuse. A raw value with a malformed option wrapper refuses; typed
+membership excludes it. No branch refinement is implied by `isSome`.
+
+These operations serve pure term positions, including a loop's test, step and result;
+the planned effectful option binder serves program positions. The payload-bound default
+rule is deliberately narrower than rc.112's `A | B` inference: an incompatible default
+refuses rather than widening the result. In particular, `option never` with a numeric
+default refuses. This matches the chosen `option A × A → A` core contract.
+
+Both arguments to `getOrElse` are eager pure terms. The target helper takes an
+already evaluated default and calls the pinned Option eliminator; no stored host
+callback is introduced. The existing term typing/totality theorems must compile
+with the extended inventory. New option membership/selected-value lemmas retain
+the allocation table. Existing term handle-containment/validity proofs must
+compile: selection may retain an input handle but cannot mint one. General runtime
+collection iteration and an effectful option binder remain separate obligations.
+
+Acceptance: none/some equations, nested options, subtype defaults, invalid default
+and non-option refusals, allocated handle payloads, eager malformed-default refusal,
+and target type/runtime controls. This amendment supplies no whole-host theorem.

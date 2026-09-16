@@ -99,14 +99,20 @@ theorem Val.hasTy_lit_inv {v : Val} {s : String} (h : Val.hasTy v (.lit s) = tru
     rfl
   · exact nomatch h
 
-/-- An `.option t` is `none` or a `some` of a `t` (DB-15). -/
-theorem Val.hasTy_option_inv {v : Val} {t : Ty} (h : Val.hasTy v (.option t) = true) :
-    v = Store.Val.none ∨ ∃ x, v = Store.Val.some x ∧ Val.hasTy x t = true := by
+/-- Option inversion retains the allocation table of its payload. -/
+theorem Val.hasTy_option_inv_at {v : Val} {t : Ty} {allocated : List String}
+    (h : Val.hasTy v (.option t) allocated = true) :
+    v = Store.Val.none ∨ ∃ x, v = Store.Val.some x ∧ Val.hasTy x t allocated = true := by
   simp only [Val.hasTy] at h
   split at h
   · exact Or.inl rfl
   · next x => exact Or.inr ⟨x, rfl, h⟩
   · exact nomatch h
+
+/-- An `.option t` is `none` or a `some` of a `t` (DB-15). -/
+theorem Val.hasTy_option_inv {v : Val} {t : Ty} (h : Val.hasTy v (.option t) = true) :
+    v = Store.Val.none ∨ ∃ x, v = Store.Val.some x ∧ Val.hasTy x t = true :=
+  Val.hasTy_option_inv_at h
 
 /-- A `NativeOp.refTy` is a `Val.cell`: the other handle spellings and the context's differ
 from `"Ref.Ref<number>"`, decided on the literals; the kind byte is the cell's by
@@ -546,6 +552,40 @@ theorem NativeAtom.projectProduct_typed (second : Bool) (input output : Ty)
           exact ⟨result, heval, Ty.hasTy_join_right left right result allocated htyped⟩
   | _ => simp only [NativeAtom.projectProduct, reduceCtorEq] at hproject
 
+/-- DI-78 option equations describe selection, independently of typing. -/
+theorem NativeAtom.isSome_none : NativeAtom.eval .isSome [Store.Val.none] = some (.bool false) := rfl
+theorem NativeAtom.isSome_some (v : Val) :
+    NativeAtom.eval .isSome [Store.Val.some v] = some (.bool true) := rfl
+theorem NativeAtom.getOrElse_none (fallback : Val) :
+    NativeAtom.eval .getOrElse [Store.Val.none, fallback] = some fallback := rfl
+theorem NativeAtom.getOrElse_some (v fallback : Val) :
+    NativeAtom.eval .getOrElse [Store.Val.some v, fallback] = some v := rfl
+
+/-- Testing option presence is total on typed options, including allocated payloads. -/
+theorem NativeAtom.isSome_typed (input : Val) (payload : Ty) (allocated : List String)
+    (h : Val.hasTy input (.option payload) allocated = true) :
+    ∃ result, NativeAtom.eval .isSome [input] = some result ∧
+      Val.hasTy result .bool allocated = true := by
+  rcases Val.hasTy_option_inv_at h with rfl | ⟨value, rfl, _⟩
+  · exact ⟨Val.bool false, rfl, rfl⟩
+  · exact ⟨Val.bool true, rfl, rfl⟩
+
+/-- Option selection preserves the promised payload type at its actual allocation table.
+The fallback may have a narrower canonical type; it does not widen the result. -/
+theorem NativeAtom.getOrElse_typed (input fallback : Val) (payload defaultTy : Ty)
+    (allocated : List String)
+    (hinput : Val.hasTy input (.option payload) allocated = true)
+    (hfallback : Val.hasTy fallback defaultTy allocated = true)
+    (hsub : defaultTy.normalize.sub payload.normalize = true) :
+    ∃ result, NativeAtom.eval .getOrElse [input, fallback] = some result ∧
+      Val.hasTy result payload allocated = true := by
+  rcases Val.hasTy_option_inv_at hinput with rfl | ⟨value, rfl, hvalue⟩
+  · refine ⟨fallback, rfl, ?_⟩
+    rw [← hasTy_normalize payload fallback allocated]
+    apply hasTy_sub defaultTy.normalize payload.normalize fallback allocated hsub
+    rwa [hasTy_normalize]
+  · exact ⟨value, rfl, hvalue⟩
+
 /-- A typed atom application answers a value of the answer type (`nativeAtomTy`,
 `Native.lean:73-84`, against `nativeAtom`, `:59-70`; plan §2.2, ENSURES 5). `pair` answers
 `Val.tuple [a, b]`, the `.prod` shape of `hasTy`; `fst` and `snd` read that shape back. -/
@@ -699,6 +739,17 @@ theorem nativeAtom_typed (atom : String) (tys : List Ty) (ty : Ty) (vs : List Va
       obtain ⟨x, y, rfl, hx, _⟩ := hfit.pair_inv
       obtain ⟨tag, rfl⟩ := Val.hasTy_string_inv (hasTy_sub _ _ x [] hsub hx)
       exact ⟨_, rfl, by simp [Val.hasTy]⟩
+    · cases hty
+  · -- option presence
+    cases hty
+    obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
+    exact NativeAtom.isSome_typed value _ [] hv
+  · -- option payload or a default of a canonical subtype
+    split at hty
+    · next hsub =>
+      cases hty
+      obtain ⟨value, fallback, rfl, hv, hd⟩ := hfit.pair_inv
+      exact NativeAtom.getOrElse_typed value fallback _ _ [] hv hd hsub
     · cases hty
   -- Each constructor has its own exhaustive argument-shape refusal.
   all_goals cases hty

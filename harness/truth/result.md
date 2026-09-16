@@ -38,5 +38,7 @@ effect 4.0.0-rc.112, bun 1.3.14, deadline 300 ms
 | pTagHit | success 1 | success 1 | yes | yes | yes | runSyncExit | same value |
 | pTagMiss | fail [{"fail":["A","m"]}] | fail [{"fail":["A","m"]}] | yes | yes | yes | runSyncExit | same failure reasons and payloads |
 | pTagTwoFail | fail [{"fail":["B","x"]},{"fail":["A","m"]}] | fail [{"fail":["B","x"]},{"fail":["A","m"]}] | yes | yes | yes | runSyncExit | same failure reasons and payloads |
+| pOptionSome | success [true,7] | success [true,7] | yes | yes | yes | runSyncExit | same value |
+| pOptionNone | success [false,9] | success [false,9] | yes | yes | yes | runSyncExit | same value |
 
-PASS: 34 programs, exits, schedules and sync exits agree with rc.112
+PASS: 36 programs, exits, schedules and sync exits agree with rc.112

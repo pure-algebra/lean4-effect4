@@ -15,7 +15,8 @@ open Effect4.Program
 
 #guard NativeAtom.names =
   ["succ", "pred", "isZero", "not", "add", "lt", "eq", "pair", "fst", "snd", "strings",
-   "causeIsFail", "causeError", "causeIsDie", "causeIsInterrupt", "or", "and", "tagIs"]
+   "causeIsFail", "causeError", "causeIsDie", "causeIsInterrupt", "or", "and", "tagIs",
+   "isSome", "getOrElse"]
 -- the tag test (DI-39, part 4 commit 3): a string or literal tag, any tested value; total on
 -- values — true exactly on a pair whose first component is the tag
 #guard NativeAtom.arity .tagIs = some 2
@@ -55,6 +56,39 @@ open Effect4.Program
 #guard !nativeConstAtom "eq"
 #guard NativeAtom.constGeneric .pair
 #guard !NativeAtom.constGeneric .fst
+
+-- Option elimination uses ordinary eager terms. The default must fit the existing
+-- payload type; it cannot widen that type, even when the option is empty.
+#guard NativeAtom.arity .isSome = some 1
+#guard NativeAtom.arity .getOrElse = some 2
+#guard NativeAtom.mono .isSome = none
+#guard NativeAtom.mono .getOrElse = none
+#guard !NativeAtom.constGeneric .isSome
+#guard !NativeAtom.constGeneric .getOrElse
+#guard nativeAtomTy "isSome" [.option .never] = some .bool
+#guard nativeAtomTy "isSome" [.nat] = none
+#guard nativeAtomTy "isSome" [] = none
+#guard nativeAtomTy "isSome" [.option .nat, .nat] = none
+#guard nativeAtomTy "getOrElse" [.option .nat, .nat] = some .nat
+#guard nativeAtomTy "getOrElse" [.option .string, .lit "fallback"] = some .string
+#guard nativeAtomTy "getOrElse" [.option (.union .nat .never), .nat] =
+  some (.union .nat .never)
+#guard nativeAtomTy "getOrElse" [.option .nat, .string] = none
+#guard nativeAtomTy "getOrElse" [.option .never, .nat] = none
+#guard nativeAtomTy "getOrElse" [.nat, .nat] = none
+#guard nativeAtomTy "getOrElse" [.option .nat] = none
+#guard nativeAtomTy "getOrElse" [.option .nat, .nat, .nat] = none
+#guard nativeAtom "isSome" [.none] = some (.bool false)
+#guard nativeAtom "isSome" [.some .none] = some (.bool true)
+#guard nativeAtom "isSome" [.nat 0] = none
+#guard nativeAtom "isSome" [.none, .nat 0] = none
+#guard nativeAtom "getOrElse" [.none, .nat 9] = some (.nat 9)
+#guard nativeAtom "getOrElse" [.some (.nat 3), .nat 9] = some (.nat 3)
+#guard nativeAtom "getOrElse" [.nat 3, .nat 9] = none
+#guard nativeAtom "getOrElse" [.some (.nat 3)] = none
+#guard nativeAtom "getOrElse" [.none, .nat 9, .nat 10] = none
+#guard !NativeAtom.covers (NativeAtom.names.filter (· != "isSome"))
+#guard !NativeAtom.covers (NativeAtom.names.filter (· != "getOrElse"))
 
 /-- Every successful native typing names an inventoried atom, for arbitrary input types. -/
 theorem typed_name_known (name : String) (args : List Ty) (answer : Ty)

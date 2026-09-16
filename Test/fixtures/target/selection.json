@@ -33,7 +33,9 @@
     "pCatchIfRetained",
     "pTagHit",
     "pTagMiss",
-    "pTagTwoFail"
+    "pTagTwoFail",
+    "pOptionSome",
+    "pOptionNone"
   ],
   "handles": {
     "Host.Resource": "Adapter.HostResource",

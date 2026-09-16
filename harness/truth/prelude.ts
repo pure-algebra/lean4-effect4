@@ -60,6 +60,14 @@ export const pair = <const A, const B>(a: A, b: B): readonly [A, B] => [a, b]
 export const fst = <P extends readonly [unknown, unknown]>(p: P): P[0] => p[0]
 /** `"snd", [exitCons _ (exitCons b _)] => b` */
 export const snd = <P extends readonly [unknown, unknown]>(p: P): P[1] => p[1]
+/** NativeAtom.isSome: presence only, with no TypeScript branch refinement. */
+export const isSome = <A>(value: Option.Option<A>): boolean => Option.isSome(value)
+/** NativeAtom.getOrElse: the payload type fixes the default and result. Both call
+ * arguments are evaluated eagerly; this thunk captures only the already evaluated default.
+ * Pinned implementations: vendor/effect-4.0.0-rc.112/src/Option.ts (isSome, getOrElse). */
+export const getOrElse = <A>(value: Option.Option<A>, fallback: NoInfer<A>): A =>
+  Option.getOrElse(value, () => fallback)
+
 /** NativeAtom.tagIs: true exactly on a pair whose first component is the tag
  * (`.list [.str tag, _]`, `NativeAtom.tagHit`). This ordinary Boolean test carries no
  * refinement promise. In particular, catchIf's first-failure test does not establish
@@ -143,6 +151,11 @@ export const selfTestCases: ReadonlyArray<{
   { atom: "tagIs", name: "tagIs misses another tag", apply: () => tagIs("A", pair("B", "m")), expected: false },
   { atom: "tagIs", name: "tagIs is false on a bare string", apply: () => tagIs("A", "A"), expected: false },
   { atom: "tagIs", name: "tagIs is false on a number", apply: () => tagIs("A", 7), expected: false },
+  { atom: "isSome", name: "none has no payload", apply: () => isSome(Option.none<number>()), expected: false },
+  { atom: "isSome", name: "some unit is present", apply: () => isSome(Option.some(undefined)), expected: true },
+  { atom: "getOrElse", name: "none selects the default", apply: () => getOrElse(Option.none<number>(), 9), expected: 9 },
+  { atom: "getOrElse", name: "some selects its payload", apply: () => getOrElse(Option.some(7), 9), expected: 7 },
+  { atom: "getOrElse", name: "nested none remains a payload", apply: () => Option.isNone(getOrElse(Option.some(Option.none<number>()), Option.some(9))), expected: true },
   { atom: "incr", name: "incr 1", apply: () => incr(1), expected: 2 },
   { atom: "double", name: "double 4", apply: () => double(4), expected: 8 },
   { atom: "takeAndBump", name: "takeAndBump 4", apply: () => takeAndBump(4), expected: 5 },

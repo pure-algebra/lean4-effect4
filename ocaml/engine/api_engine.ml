@@ -885,6 +885,8 @@ and native_atom =
   | NativeAtom_boolOr
   | NativeAtom_boolAnd
   | NativeAtom_tagIs
+  | NativeAtom_isSome
+  | NativeAtom_getOrElse
 and reason_tag = ReasonTag_fail | ReasonTag_die | ReasonTag_interrupt
 and memo_map = { id : memo_map_id; parent : memo_map_id option; entries : memo_entry L.t }
 and 'u reference = { key : service_key; default : 'u }
@@ -1825,26 +1827,30 @@ let sh_dispatcher_mk buckets armed =
   let _x_16 = NativeAtom_boolOr in
   let _x_17 = NativeAtom_boolAnd in
   let _x_18 = NativeAtom_tagIs in
-  let _x_19 = [] in
-  let _x_20 = _x_18 :: _x_19 in
-  let _x_21 = _x_17 :: _x_20 in
-  let _x_22 = _x_16 :: _x_21 in
-  let _x_23 = _x_15 :: _x_22 in
-  let _x_24 = _x_14 :: _x_23 in
-  let _x_25 = _x_13 :: _x_24 in
-  let _x_26 = _x_12 :: _x_25 in
-  let _x_27 = _x_11 :: _x_26 in
-  let _x_28 = _x_10 :: _x_27 in
-  let _x_29 = _x_9 :: _x_28 in
-  let _x_30 = _x_8 :: _x_29 in
-  let _x_31 = _x_7 :: _x_30 in
-  let _x_32 = _x_6 :: _x_31 in
-  let _x_33 = _x_5 :: _x_32 in
-  let _x_34 = _x_4 :: _x_33 in
-  let _x_35 = _x_3 :: _x_34 in
-  let _x_36 = _x_2 :: _x_35 in
-  let _x_37 = _x_1 :: _x_36 in
-  _x_37
+  let _x_19 = NativeAtom_isSome in
+  let _x_20 = NativeAtom_getOrElse in
+  let _x_21 = [] in
+  let _x_22 = _x_20 :: _x_21 in
+  let _x_23 = _x_19 :: _x_22 in
+  let _x_24 = _x_18 :: _x_23 in
+  let _x_25 = _x_17 :: _x_24 in
+  let _x_26 = _x_16 :: _x_25 in
+  let _x_27 = _x_15 :: _x_26 in
+  let _x_28 = _x_14 :: _x_27 in
+  let _x_29 = _x_13 :: _x_28 in
+  let _x_30 = _x_12 :: _x_29 in
+  let _x_31 = _x_11 :: _x_30 in
+  let _x_32 = _x_10 :: _x_31 in
+  let _x_33 = _x_9 :: _x_32 in
+  let _x_34 = _x_8 :: _x_33 in
+  let _x_35 = _x_7 :: _x_34 in
+  let _x_36 = _x_6 :: _x_35 in
+  let _x_37 = _x_5 :: _x_36 in
+  let _x_38 = _x_4 :: _x_37 in
+  let _x_39 = _x_3 :: _x_38 in
+  let _x_40 = _x_2 :: _x_39 in
+  let _x_41 = _x_1 :: _x_40 in
+  _x_41
   
   (* LCNF mono: Effect4.Program.NativeAtom.name (x.1 : Effect4.Program.NativeAtom) : String *)
   let program_native_atom_name (x_1 : native_atom) : string =
@@ -1885,6 +1891,10 @@ let sh_dispatcher_mk buckets armed =
       _x_18)
     | NativeAtom_tagIs -> (let _x_19 = "tagIs" in
       _x_19)
+    | NativeAtom_isSome -> (let _x_20 = "isSome" in
+      _x_20)
+    | NativeAtom_getOrElse -> (let _x_21 = "getOrElse" in
+      _x_21)
   
   (* LCNF mono: List.find?._at_.Effect4.Program.NativeAtom.ofName?.spec_0 (value : String) (x.1 : List Effect4.Program.NativeAtom) : Option Effect4.Program.NativeAtom *)
   let rec list_find_opt_at_program_native_atom_of_name_opt_spec_0 (value : string) (x_1 : native_atom list) : native_atom option =
@@ -3055,6 +3065,48 @@ let sh_dispatcher_mk buckets armed =
               _x_193))
         | _ -> (let _x_194 = None in
           _x_194))
+    | NativeAtom_isSome -> (match x_2 with
+        | head_195 :: tail_196 -> (match (head_195 : val_) with
+            | Val_none -> (match tail_196 with
+                | [] -> (let _x_197 = false in
+                  let _x_198 = Val_bool _x_197 in
+                  let _x_199 = Some _x_198 in
+                  _x_199)
+                | _ -> (let _x_200 = None in
+                  _x_200))
+            | Val_some _ -> (match tail_196 with
+                | [] -> (let _x_202 = true in
+                  let _x_203 = Val_bool _x_202 in
+                  let _x_204 = Some _x_203 in
+                  _x_204)
+                | _ -> (let _x_205 = None in
+                  _x_205))
+            | _ -> (let _x_206 = None in
+              _x_206))
+        | _ -> (let _x_207 = None in
+          _x_207))
+    | NativeAtom_getOrElse -> (match x_2 with
+        | head_208 :: tail_209 -> (match (head_208 : val_) with
+            | Val_none -> (match tail_209 with
+                | head_210 :: tail_211 -> (match tail_211 with
+                    | [] -> (let _x_212 = Some head_210 in
+                      _x_212)
+                    | _ -> (let _x_213 = None in
+                      _x_213))
+                | _ -> (let _x_214 = None in
+                  _x_214))
+            | Val_some a_215 -> (match tail_209 with
+                | _ :: tail_217 -> (match tail_217 with
+                    | [] -> (let _x_218 = Some a_215 in
+                      _x_218)
+                    | _ -> (let _x_219 = None in
+                      _x_219))
+                | _ -> (let _x_220 = None in
+                  _x_220))
+            | _ -> (let _x_221 = None in
+              _x_221))
+        | _ -> (let _x_222 = None in
+          _x_222))
   
   (* LCNF mono: Effect4.Program.nativeAtom (name : String) (values : List Effect4.Store.Val) : Option Effect4.Store.Val *)
   let program_native_atom (name : string) (values : val_ list) : val_ option =

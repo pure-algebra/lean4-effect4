@@ -366,6 +366,54 @@ const-generic prelude `pair` types at `readonly ["SqlError", "boom"]`. -/
 #guard evalTerm [Val.str "A"]
   (.app "tagIs" (.cons (.lit (.str "A")) (.cons (.var 0) .nil))) = some (Val.bool false)
 
+/-! ### Eager option elimination (DI-78)
+
+These controls use the ordinary term evaluator and its environment. An option's selected
+payload keeps its shape and allocation identity; a default must inhabit the payload type.
+The malformed-default control distinguishes eager application from a lazy callback. -/
+
+private def optionDefault : Term := .app "getOrElse" (.cons (.var 0) (.cons (.var 1) .nil))
+
+#guard termTy nativeSignature [.option .nat] (.app "isSome" (.cons (.var 0) .nil)) = some .bool
+#guard evalTerm [Store.Val.none] (.app "isSome" (.cons (.var 0) .nil)) = some (.bool false)
+#guard evalTerm [Store.Val.some (.nat 3)] (.app "isSome" (.cons (.var 0) .nil)) = some (.bool true)
+#guard termTy nativeSignature [.option .nat, .nat] optionDefault = some .nat
+#guard evalTerm [Store.Val.none, .nat 9] optionDefault = some (.nat 9)
+#guard evalTerm [Store.Val.some (.nat 3), .nat 9] optionDefault = some (.nat 3)
+#guard termTy nativeSignature [.option .string, .lit "fallback"] optionDefault = some .string
+#guard evalTerm [Store.Val.none, .str "fallback"] optionDefault = some (.str "fallback")
+#guard termTy nativeSignature [.option .nat, .string] optionDefault = none
+#guard termTy nativeSignature [.option .never, .nat] optionDefault = none
+
+-- Nested options are retained as values, including an inner None selected from Some.
+#guard termTy nativeSignature [.option (.option .nat), .option .nat] optionDefault =
+  some (.option .nat)
+#guard evalTerm [Store.Val.some Store.Val.none, Store.Val.some (.nat 9)] optionDefault =
+  some Store.Val.none
+#guard evalTerm [Store.Val.none, Store.Val.some (.nat 9)] optionDefault =
+  some (Store.Val.some (.nat 9))
+
+-- Extraction retains an existing external handle; membership still needs its allocation.
+#guard termTy nativeSignature [.option (.handle "Host.Resource"), .handle "Host.Resource"]
+  optionDefault = some (.handle "Host.Resource")
+#guard evalTerm [Store.Val.some (Value.external 0), Value.external 1] optionDefault =
+  some (Value.external 0)
+#guard evalTerm [Store.Val.none, Value.external 1] optionDefault = some (Value.external 1)
+#guard match evalTerm [Store.Val.some (Value.external 0), Value.external 1] optionDefault with
+  | some value => Val.hasTy value (.handle "Host.Resource") ["Host.Resource", "Host.Resource"]
+  | none => false
+#guard match evalTerm [Store.Val.some (Value.external 0), Value.external 1] optionDefault with
+  | some value => !Val.hasTy value (.handle "Host.Resource") []
+  | none => false
+
+-- Even a present value cannot hide a malformed fallback application.
+#guard evalTerm [Store.Val.some (.nat 3)]
+  (.app "getOrElse" (.cons (.var 0)
+    (.cons (.app "succ" (.cons (.lit (.bool true)) .nil)) .nil))) = none
+#guard termTy nativeSignature [.option .nat]
+  (.app "getOrElse" (.cons (.var 0)
+    (.cons (.app "succ" (.cons (.lit (.bool true)) .nil)) .nil))) = none
+
 end Atoms
 
 /-! ## `NativeOp.syncOpOf` on each sync row's request shape (`Native.lean:145-232`) -/

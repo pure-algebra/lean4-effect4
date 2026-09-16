@@ -2,4 +2,4 @@
 // Regenerate: make gen-truth
 import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope } from "effect"
 import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, incr, double, takeAndBump, zeroWhenPositive, noChange, Host, Sql, Kv } from "../prelude.ts"
-export const main: Effect.Effect<string, never> = Effect.scoped(Effect.flatMap(Effect.acquireRelease(Sql.open(":memory:"), (a0, a1) => Sql.close(a0)), (a0) => Effect.catchCause(Effect.flatMap(a0.unsafe("SELECT a FROM missing", strings()), (a1) => Effect.succeed("rows")), (a1) => Effect.succeed("recovered"))))
+export const main: Effect.Effect<readonly [boolean, number], never> = Effect.flatMap(Effect.exit(Effect.suspend(() => true ? Effect.fail(7) : Effect.succeed(0))), (a0) => Effect.flatMap(Effect.succeed(causeError(a0)), (a1) => Effect.succeed(pair(isSome(a1), getOrElse(a1, 9)))))

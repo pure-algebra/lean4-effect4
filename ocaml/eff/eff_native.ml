@@ -4,7 +4,7 @@
 
 open Eff_types
 
-let atom_names : string list = ["succ"; "pred"; "isZero"; "not"; "add"; "lt"; "eq"; "pair"; "fst"; "snd"; "strings"; "causeIsFail"; "causeError"; "causeIsDie"; "causeIsInterrupt"; "or"; "and"; "tagIs"]
+let atom_names : string list = ["succ"; "pred"; "isZero"; "not"; "add"; "lt"; "eq"; "pair"; "fst"; "snd"; "strings"; "causeIsFail"; "causeError"; "causeIsDie"; "causeIsInterrupt"; "or"; "and"; "tagIs"; "isSome"; "getOrElse"]
 
 (* The const-generic atoms (NativeAtom.constGeneric): a string literal argument keeps its literal type (the literal rule, DI-15). *)
 let const_atoms : string list = ["pair"]

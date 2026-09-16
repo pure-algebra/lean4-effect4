@@ -8,7 +8,12 @@
                    (awaitFiber (var 0) awaitValue)
      pAwait = bind (perform deferredMake (lit unit)) (perform deferredAwait (var 0))
    Each is run through `api_run` with fuel 1000; the check is the root
-   fiber's exit. Exit code 0 iff every check passed. *)
+   fiber's exit. Exit code 0 iff every check passed.
+
+   Properties (tested): these three program outcomes and the option atoms' none/some
+   selection, nested option preservation, malformed outer-shape refusal and handle
+   identity preservation. The option checks call the generated atom evaluator directly;
+   they are bounded generated-runtime checks, not Lean proofs. *)
 
 open Effect4_gen
 module A = Api_gen
@@ -101,6 +106,40 @@ let () =
     && List.length r.A.machine.A.fibers = 2);
   let _, e = run_and_show "pAwait" p_await in
   check "pAwait parks on the deferred (no exit, frontier)" (e = None)
+
+let () =
+  print_endline "== generated option atoms (bounded smoke checks) ==";
+  check "isSome none is false"
+    (A.program_native_atom_eval A.NativeAtom_isSome [ A.Val_none ]
+    = Some (A.Val_bool false));
+  check "isSome some unit is true"
+    (A.program_native_atom_eval A.NativeAtom_isSome [ A.Val_some A.Val_unit ]
+    = Some (A.Val_bool true));
+  check "getOrElse none selects the default"
+    (A.program_native_atom_eval A.NativeAtom_getOrElse [ A.Val_none; A.Val_nat 9 ]
+    = Some (A.Val_nat 9));
+  check "getOrElse some selects its payload"
+    (A.program_native_atom_eval A.NativeAtom_getOrElse
+       [ A.Val_some (A.Val_nat 3); A.Val_nat 9 ]
+    = Some (A.Val_nat 3));
+  check "getOrElse retains a nested none payload"
+    (A.program_native_atom_eval A.NativeAtom_getOrElse
+       [ A.Val_some A.Val_none; A.Val_some (A.Val_nat 9) ]
+    = Some A.Val_none);
+  check "isSome refuses a malformed outer shape"
+    (A.program_native_atom_eval A.NativeAtom_isSome [ A.Val_nat 3 ] = None);
+  check "getOrElse refuses a malformed outer shape"
+    (A.program_native_atom_eval A.NativeAtom_getOrElse [ A.Val_nat 3; A.Val_nat 9 ]
+    = None);
+  let kind = A.handle_kind_byte A.HandleKind_external in
+  let payload = A.Val_handle (kind, 41) in
+  let fallback = A.Val_handle (kind, 77) in
+  check "getOrElse preserves the selected payload handle"
+    (A.program_native_atom_eval A.NativeAtom_getOrElse [ A.Val_some payload; fallback ]
+    = Some payload);
+  check "getOrElse preserves the selected default handle"
+    (A.program_native_atom_eval A.NativeAtom_getOrElse [ A.Val_none; fallback ]
+    = Some fallback)
 
 let () =
   Printf.printf "== %s: %d failure(s) ==\n" (if !failures = 0 then "ALL PASS" else "FAILED")

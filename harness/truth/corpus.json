@@ -1250,7 +1250,59 @@
    "declInferred":
    "export const main = Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(pair(\"B\", \"x\")), Cause.fail(pair(\"A\", \"m\")))), (a0) => tagIs(\"A\", a0), (a0) => Effect.succeed(1), undefined)\n",
    "decl":
-   "export const main: Effect.Effect<number, readonly [\"A\", \"m\"] | readonly [\"B\", \"x\"]> = Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(pair(\"B\", \"x\")), Cause.fail(pair(\"A\", \"m\")))), (a0) => tagIs(\"A\", a0), (a0) => Effect.succeed(1), undefined)\n"}],
+   "export const main: Effect.Effect<number, readonly [\"A\", \"m\"] | readonly [\"B\", \"x\"]> = Effect.catchIf(Effect.failCause(Cause.combine(Cause.fail(pair(\"B\", \"x\")), Cause.fail(pair(\"A\", \"m\")))), (a0) => tagIs(\"A\", a0), (a0) => Effect.succeed(1), undefined)\n"},
+  {"wellTyped": true,
+   "type":
+   {"requiresEmpty": true,
+    "requires": [],
+    "error": "never",
+    "answer": "readonly [boolean, number]"},
+   "straight": true,
+   "runSync": {"sync": true, "exitKind": "success", "exit": {"success": [true, 7]}},
+   "run":
+   {"schedule": ["started 0", "exited 0 success"],
+    "outcome": "finished",
+    "internal": [],
+    "frames": 7,
+    "fibers": [{"parkedToken": null, "id": 0, "exited": true, "exit": {"success": [true, 7]}}],
+    "fiberCount": 1,
+    "exitKind": "success",
+    "exit": {"success": [true, 7]},
+    "events": ["started 0", "exited 0 {\"success\":[true,7]}"]},
+   "name": "pOptionSome",
+   "exprRefusal": null,
+   "expr":
+   "Effect.flatMap(Effect.exit(Effect.suspend(() => true ? Effect.fail(7) : Effect.succeed(0))), (a0) => Effect.flatMap(Effect.succeed(causeError(a0)), (a1) => Effect.succeed(pair(isSome(a1), getOrElse(a1, 9)))))",
+   "declInferred":
+   "export const main = Effect.flatMap(Effect.exit(Effect.suspend(() => true ? Effect.fail(7) : Effect.succeed(0))), (a0) => Effect.flatMap(Effect.succeed(causeError(a0)), (a1) => Effect.succeed(pair(isSome(a1), getOrElse(a1, 9)))))\n",
+   "decl":
+   "export const main: Effect.Effect<readonly [boolean, number], never> = Effect.flatMap(Effect.exit(Effect.suspend(() => true ? Effect.fail(7) : Effect.succeed(0))), (a0) => Effect.flatMap(Effect.succeed(causeError(a0)), (a1) => Effect.succeed(pair(isSome(a1), getOrElse(a1, 9)))))\n"},
+  {"wellTyped": true,
+   "type":
+   {"requiresEmpty": true,
+    "requires": [],
+    "error": "never",
+    "answer": "readonly [boolean, number]"},
+   "straight": true,
+   "runSync": {"sync": true, "exitKind": "success", "exit": {"success": [false, 9]}},
+   "run":
+   {"schedule": ["started 0", "exited 0 success"],
+    "outcome": "finished",
+    "internal": [],
+    "frames": 7,
+    "fibers": [{"parkedToken": null, "id": 0, "exited": true, "exit": {"success": [false, 9]}}],
+    "fiberCount": 1,
+    "exitKind": "success",
+    "exit": {"success": [false, 9]},
+    "events": ["started 0", "exited 0 {\"success\":[false,9]}"]},
+   "name": "pOptionNone",
+   "exprRefusal": null,
+   "expr":
+   "Effect.flatMap(Effect.exit(Effect.suspend(() => false ? Effect.fail(7) : Effect.succeed(0))), (a0) => Effect.flatMap(Effect.succeed(causeError(a0)), (a1) => Effect.succeed(pair(isSome(a1), getOrElse(a1, 9)))))",
+   "declInferred":
+   "export const main = Effect.flatMap(Effect.exit(Effect.suspend(() => false ? Effect.fail(7) : Effect.succeed(0))), (a0) => Effect.flatMap(Effect.succeed(causeError(a0)), (a1) => Effect.succeed(pair(isSome(a1), getOrElse(a1, 9)))))\n",
+   "decl":
+   "export const main: Effect.Effect<readonly [boolean, number], never> = Effect.flatMap(Effect.exit(Effect.suspend(() => false ? Effect.fail(7) : Effect.succeed(0))), (a0) => Effect.flatMap(Effect.succeed(causeError(a0)), (a1) => Effect.succeed(pair(isSome(a1), getOrElse(a1, 9)))))\n"}],
  "hostRows":
  [{"typeArgs": [],
    "trailing": [],
