@@ -28,6 +28,7 @@ skills-lock.json
 /harness/*
 !/harness/truth/
 !/harness/schema-host/
+!/harness/tsdiag/
 /harness/truth/node_modules
 /harness/truth/archive/
 /harness/truth/lean.out.log

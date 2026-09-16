@@ -63,6 +63,32 @@ inductive TypeReason
   | literalOutsideAlphabet (value : Lit)
 deriving DecidableEq
 
+/-- The constructor's name: the reason as one word, for tables and reports. -/
+def TypeReason.head : TypeReason → String
+  | .term _ => "term"
+  | .cause _ => "cause"
+  | .errorNotAdmitted _ => "errorNotAdmitted"
+  | .outsideDomain _ => "outsideDomain"
+  | .notAsync _ => "notAsync"
+  | .requestNotSubtype _ _ _ => "requestNotSubtype"
+  | .predicateNotBool _ => "predicateNotBool"
+  | .stepNotCursor _ _ => "stepNotCursor"
+  | .notFiber _ => "notFiber"
+  | .scopeExpected _ => "scopeExpected"
+  | .natExpected _ => "natExpected"
+  | .listOfFibersExpected _ => "listOfFibersExpected"
+  | .contextExpected _ => "contextExpected"
+  | .snapshotExpected _ => "snapshotExpected"
+  | .exitExpected _ => "exitExpected"
+  | .serviceUnknown _ => "serviceUnknown"
+  | .valueNotSubtype _ _ _ => "valueNotSubtype"
+  | .layerReference _ => "layerReference"
+  | .referencesIllFormed => "referencesIllFormed"
+  | .mergeAllEmpty => "mergeAllEmpty"
+  | .returnNotLast => "returnNotLast"
+  | .breakOutsideLoop => "breakOutsideLoop"
+  | .literalOutsideAlphabet _ => "literalOutsideAlphabet"
+
 /-- A refusal at a path of the tree. -/
 structure TypeRefusal where
   path : List Nat

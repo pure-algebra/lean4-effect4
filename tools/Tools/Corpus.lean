@@ -4,6 +4,7 @@ import OCaml5.Eff.Goldens
 import TypeScript.Render
 import Tools.Styles
 import Tools.ForeignCorpus
+import Effect4.Codegen.Diagnostics
 
 /-!
 # Tools.Corpus — the printed corpus, with the programs beside it
@@ -52,10 +53,27 @@ def writeProgram (dir name : String) (p : Eff NativeOp) : IO (Option String) := 
   match Api.print p, Api.roundTrip p with
   | .ok e, .ok kept =>
     let text := TypeScript.Render.expr TypeScript.house0 0 e
+    -- The printed image is ASCII: the host's UTF-16 offsets and Lean's byte offsets agree.
+    unless text.toList.all (fun ch => ch.toNat < 128) do
+      throw (IO.userError s!"corpus: {name} prints a non-ASCII character")
     IO.FS.writeFile (dir ++ "/" ++ name ++ ".ts") (text ++ "\n")
     IO.FS.writeFile (dir ++ "/" ++ name ++ ".json") ((OCaml5.Eff.effV kept).json ++ "\n")
     IO.FS.writeBinFile (dir ++ "/" ++ name ++ ".eff") ⟨(Wire.encodeProgram kept).toArray⟩
-    return some s!"{name}\t{Api.wellTyped p}\t{Api.readable p}\t{text.length}\n"
+    -- A program with layer references is typed after expansion (`typeOfProgram`); the
+    -- diagnostics lane checks that same tree, so its module has no undeclared `L_<path>`.
+    if p.expandRefs != p then
+      if let .ok expanded := Api.print p.expandRefs then
+        IO.FS.createDirAll (dir ++ "/expanded")
+        IO.FS.writeFile (dir ++ "/expanded/" ++ name ++ ".ts")
+          (TypeScript.Render.expr TypeScript.house0 0 expanded ++ "\n")
+    -- The checker's located refusal (DI-86) and the codes the host is expected to report.
+    let (reason, path, codes) := match Api.explain p with
+      | none => ("-", "-", "-")
+      | some r =>
+        let path := if r.path.isEmpty then "." else String.intercalate "." (r.path.map toString)
+        let codes := Effect4.Codegen.codesOf Effect4.Codegen.HostConfig.pinned r.reason
+        (r.reason.head, path, if codes.isEmpty then "-" else String.intercalate "|" (codes.map toString))
+    return some s!"{name}\t{Api.wellTyped p}\t{Api.readable p}\t{text.length}\t{reason}\t{path}\t{codes}\n"
   | _, _ => return none
 
 def main (args : List String) : IO Unit := do
@@ -93,4 +111,8 @@ def main (args : List String) : IO Unit := do
       kept := kept + 1
       if Api.readable p then readable := readable + 1
   IO.FS.writeFile (dir ++ "/index.tsv") index
+  -- The host configuration the diagnostics lane checks the corpus under (Codegen/Diagnostics.lean).
+  IO.FS.writeFile (dir ++ "/tsconfig.json")
+    (Effect4.Codegen.HostConfig.pinned.tsconfig ["prelude.ts", "programs", "session"])
+  IO.FS.writeFile (dir ++ "/host-config.json") Effect4.Codegen.HostConfig.pinned.pinsJson
   IO.println s!"kept {kept} (readable {readable}) refused {refused} (dir {dir}, depth {depth}, generated {count}, wire corpus {Wire.Corpus.all.length})"

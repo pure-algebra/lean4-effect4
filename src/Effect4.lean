@@ -98,6 +98,7 @@ import Effect4.Program.Authoring.Forms
 import Effect4.Api.TestClock
 import Effect4.Program.Authoring.Sugar
 import Effect4.Codegen.Print
+import Effect4.Codegen.Diagnostics
 import Effect4.Codegen.Read
 import Effect4.Program.Native
 import Effect4.Program.Compile

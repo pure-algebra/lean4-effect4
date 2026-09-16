@@ -1,5 +1,6 @@
 import Effect4.Api
 import Effect4.Program.Authoring.Sugar
+import Effect4.Codegen.Diagnostics
 
 /-!
 # Blame contract — the refusal is located and named (DI-86)
@@ -82,6 +83,15 @@ def authorRefusalOf {table : RowTable} : Except Api.AuthorRefusal (Api.Typed tab
 #guard authorRefusalOf (Api.author (Ref.get (var "r"))) = some (.scope ⟨[], .unbound "r"⟩)
 #guard authorRefusalOf (Api.author (bind "r" (Ref.make (nat 1)) (Authoring.fail (bool true))))
   = some (.typing ⟨[1], .errorNotAdmitted .bool⟩)
+
+/-! ## The host's codes for a reason (Codegen/Diagnostics.lean) -/
+
+#guard TypeReason.head (.errorNotAdmitted .bool) = "errorNotAdmitted"
+#guard Effect4.Codegen.codesOf .pinned (.term (.var 0)) = [2304]
+#guard Effect4.Codegen.codesOf .pinned (.errorNotAdmitted .bool) = []
+#guard Effect4.Codegen.codesOf .pinned .breakOutsideLoop = [1107]
+#guard (Effect4.Codegen.codesOf { exactOptionalPropertyTypes := false } (.valueNotSubtype ⟨⟨0⟩, ⟨0⟩⟩ .nat .string)).contains 2375 = false
+#guard (Effect4.Codegen.HostConfig.pinned.tsconfig ["programs"]).startsWith "{\n  \"compilerOptions\": {"
 
 #print axioms Effect4.Api.explain_none_iff
 #print axioms Effect4.Api.check

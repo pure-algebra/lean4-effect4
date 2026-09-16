@@ -1431,6 +1431,10 @@
       "name": "Effect4.Program.Term",
       "functions": [
         {
+         "name": "Effect4.Codegen.codesOf",
+         "mode": "exhaustive"
+        },
+        {
           "sites": [
             {
               "mode": "default",
