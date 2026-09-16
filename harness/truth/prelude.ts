@@ -57,9 +57,9 @@ export const eq = (a: number | string, b: number | string): boolean => a === b
  * under `litArgTy`; a `string` variable stays `string`. The runtime body is unchanged. */
 export const pair = <const A, const B>(a: A, b: B): readonly [A, B] => [a, b]
 /** `"fst", [exitCons a _] => a` */
-export const fst = <A, B>(p: readonly [A, B]): A => p[0]
+export const fst = <P extends readonly [unknown, unknown]>(p: P): P[0] => p[0]
 /** `"snd", [exitCons _ (exitCons b _)] => b` */
-export const snd = <A, B>(p: readonly [A, B]): B => p[1]
+export const snd = <P extends readonly [unknown, unknown]>(p: P): P[1] => p[1]
 /** NativeAtom.tagIs (DI-39, part 4 commit 3): true exactly on a pair whose first component is
  * the tag (`.list [.str tag, _]`, `NativeAtom.tagHit`); false on a bare string, a number, a
  * pair with another tag. Declared as a type guard, not a `boolean`, because that is what

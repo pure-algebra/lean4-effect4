@@ -102,7 +102,8 @@ def constGeneric : NativeAtom → Bool
   | .causeIsFail | .causeError | .causeIsDie | .causeIsInterrupt | .boolOr | .boolAnd
   | .tagIs => false
 
-/-- Schemes are explicit none; generators must supply and check their target arms. -/
+/-- Monomorphic metadata for generated interfaces. Polymorphic schemes are `none`;
+`typeOf` remains their single executable typing owner. -/
 def mono : NativeAtom → Option (List Ty × Ty)
   | .succ | .pred => some ([.nat], .nat)
   | .isZero => some ([.nat], .bool)
@@ -144,13 +145,27 @@ def eval : NativeAtom → List Val → Option Val
   | .causeIsFail, _ | .causeError, _ | .causeIsDie, _ | .causeIsInterrupt, _
   | .boolOr, _ | .boolAnd, _ | .tagIs, _ => none
 
+/-- The selected column of a product or a union of products. `second = false` selects
+the first column. Bottom contributes no value; every other non-product alternative
+refuses, including lists whose values may happen to have two elements. Direct products
+retain their existing component type, and unions use the shared canonical join. -/
+def projectProduct (second : Bool) : Ty → Option Ty
+  | .prod a b => some (if second then b else a)
+  | .union a b => do
+    let left ← projectProduct second a
+    let right ← projectProduct second b
+    some (Ty.join left right)
+  | .never => some .never
+  | _ => none
+
 /-- The typing of an application by its argument types (DI-40; DI-15, the 2026-09-12 clause).
 A fixed-signature atom accepts each argument at a subtype of its parameter (`Ty.sub`:
 TypeScript assignability at a call site), so `succ` takes a `nat` and therefore a `never`,
 and `eq` takes two naturals or two strings and therefore two string literals — which is what
 `eq (fst (pair "A" m)) "A"` needs once `pair`'s literal arguments type at their literals.
 `pair` is polymorphic and answers the product of exactly the types it is given; `fst`/`snd`
-project a product; `strings` takes any number of string-typed arguments; the cause queries
+project products and join the selected columns of product unions; `strings` takes any
+number of string-typed arguments; the cause queries
 take a `causeOf`/`exitOf` and are unchanged. -/
 def typeOf : NativeAtom → List Ty → Option Ty
   | .succ, [a] => if a.sub .nat then some .nat else none
@@ -162,8 +177,8 @@ def typeOf : NativeAtom → List Ty → Option Ty
   | .eq, [a, b] =>
     if (a.sub .nat && b.sub .nat) || (a.sub .string && b.sub .string) then some .bool else none
   | .pair, [a, b] => some (.prod a b)
-  | .fst, [.prod a _] => some a
-  | .snd, [.prod _ b] => some b
+  | .fst, [a] => projectProduct false a
+  | .snd, [a] => projectProduct true a
   | .strings, tys => if tys.all (·.sub .string) then some (.list .string) else none
   | .causeIsFail, [input] | .causeIsDie, [input] | .causeIsInterrupt, [input] =>
       (causeInputError? input).map fun _ => .bool

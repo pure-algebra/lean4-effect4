@@ -1,6 +1,7 @@
 import Effect4.Program.Typed
 import Effect4.Program.ErrorImage
 import Effect4.Laws.Program.ErrorQueries
+import Effect4.Laws.Program.TypeAlgebra
 
 /-!
 # Program.Typed — the value typing of the native cut (slice 1, lane 1)
@@ -137,14 +138,21 @@ theorem Val.hasTy_deferredTy_inv {v : Val} (h : Val.hasTy v NativeOp.deferredTy 
     · exact nomatch h
   · exact absurd (Bool.and_eq_true_iff.mp h).1 (by decide)
 
-/-- A `.prod a b` is the two-cell list (`Val.tuple`) of an `a` and a `b`. (U1: the two cells
-were `exitCons x (exitCons y exitNil)`; they are the carrier's `list [x, y]`.) -/
-theorem Val.hasTy_prod_inv {v : Val} {a b : Ty} (h : Val.hasTy v (.prod a b) = true) :
-    ∃ x y, v = Val.tuple [x, y] ∧ Val.hasTy x a = true ∧ Val.hasTy y b = true := by
+/-- Product membership retains the allocation table of both component values. -/
+theorem Val.hasTy_prod_inv_at {v : Val} {a b : Ty} {allocated : List String}
+    (h : Val.hasTy v (.prod a b) allocated = true) :
+    ∃ x y, v = Val.tuple [x, y] ∧
+      Val.hasTy x a allocated = true ∧ Val.hasTy y b allocated = true := by
   simp only [Val.hasTy] at h
   split at h
   · next x y => exact ⟨x, y, rfl, (Bool.and_eq_true_iff.mp h).1, (Bool.and_eq_true_iff.mp h).2⟩
   · exact nomatch h
+
+/-- A `.prod a b` is the two-cell list (`Val.tuple`) of an `a` and a `b`. (U1: the two cells
+were `exitCons x (exitCons y exitNil)`; they are the carrier's `list [x, y]`.) -/
+theorem Val.hasTy_prod_inv {v : Val} {a b : Ty} (h : Val.hasTy v (.prod a b) = true) :
+    ∃ x y, v = Val.tuple [x, y] ∧ Val.hasTy x a = true ∧ Val.hasTy y b = true :=
+  Val.hasTy_prod_inv_at h
 
 /-! ## Allocation
 
@@ -502,6 +510,42 @@ theorem Lit.toVal_hasTy_arg (const : Bool) (l : Lit) (v : Val) (h : l.toVal = so
 
 /-! ## Atoms -/
 
+/-- Projecting a typed product union uses the existing evaluator and retains membership
+at the same allocation table. The bottom case is vacuous, not a fabricated value. -/
+theorem NativeAtom.projectProduct_typed (second : Bool) (input output : Ty)
+    (v : Val) (allocated : List String)
+    (hproject : NativeAtom.projectProduct second input = some output)
+    (hv : Val.hasTy v input allocated = true) :
+    ∃ result, NativeAtom.eval (if second then .snd else .fst) [v] = some result ∧
+      Val.hasTy result output allocated = true := by
+  induction input generalizing output with
+  | never => simp only [Val.hasTy, Bool.false_eq_true] at hv
+  | prod a b =>
+    simp only [NativeAtom.projectProduct] at hproject
+    cases hproject
+    obtain ⟨x, y, rfl, hx, hy⟩ := Val.hasTy_prod_inv_at hv
+    cases second
+    · exact ⟨x, rfl, hx⟩
+    · exact ⟨y, rfl, hy⟩
+  | union a b iha ihb =>
+    cases hleft : NativeAtom.projectProduct second a with
+    | none => simp only [NativeAtom.projectProduct, hleft, Option.bind_eq_bind, Option.bind_none,
+        reduceCtorEq] at hproject
+    | some left =>
+      cases hright : NativeAtom.projectProduct second b with
+      | none => simp only [NativeAtom.projectProduct, hleft, hright,
+          Option.bind_eq_bind, Option.bind_some, Option.bind_none, reduceCtorEq] at hproject
+      | some right =>
+        simp only [NativeAtom.projectProduct, hleft, hright, Option.bind_eq_bind,
+          Option.bind_some] at hproject
+        cases hproject
+        rcases Bool.or_eq_true_iff.mp hv with ha | hb
+        · obtain ⟨result, heval, htyped⟩ := iha left hleft ha
+          exact ⟨result, heval, Ty.hasTy_join_left left right result allocated htyped⟩
+        · obtain ⟨result, heval, htyped⟩ := ihb right hright hb
+          exact ⟨result, heval, Ty.hasTy_join_right left right result allocated htyped⟩
+  | _ => simp only [NativeAtom.projectProduct, reduceCtorEq] at hproject
+
 /-- A typed atom application answers a value of the answer type (`nativeAtomTy`,
 `Native.lean:73-84`, against `nativeAtom`, `:59-70`; plan §2.2, ENSURES 5). `pair` answers
 `Val.tuple [a, b]`, the `.prod` shape of `hasTy`; `fst` and `snd` read that shape back. -/
@@ -585,15 +629,11 @@ theorem nativeAtom_typed (atom : String) (tys : List Ty) (ty : Ty) (vs : List Va
     obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
     exact ⟨_, rfl, by simp [Val.hasTy, hx, hy]⟩
   · -- fst
-    cases hty
     obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
-    obtain ⟨x, y, rfl, hx, _⟩ := Val.hasTy_prod_inv hv
-    exact ⟨x, rfl, hx⟩
+    exact NativeAtom.projectProduct_typed false _ _ v [] hty hv
   · -- snd
-    cases hty
     obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
-    obtain ⟨x, y, rfl, _, hy⟩ := Val.hasTy_prod_inv hv
-    exact ⟨y, rfl, hy⟩
+    exact NativeAtom.projectProduct_typed true _ _ v [] hty hv
   · -- strings: every argument fits a subtype of `.string`, so every value is a `str` and the
     -- list types
     split at hty

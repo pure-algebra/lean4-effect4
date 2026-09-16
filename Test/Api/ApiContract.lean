@@ -68,6 +68,20 @@ def pStrBind : Program := .bind (.succeed (.lit (.str "a"))) (.succeed (.var 0))
   | .error .outsideFragment => true
   | _ => false
 
+/-- Runtime-selected tuples expose joined fields without an unchecked projection. -/
+def productUnion : Program := .bind
+  (.branch (.lit (.bool true))
+    (.succeed (.app "pair" (.cons (.lit (.str "Search")) (.cons (.lit (.nat 3)) .nil))))
+    (.succeed (.app "pair" (.cons (.lit (.str "Done")) (.cons (.lit (.str "ok")) .nil)))))
+  (.succeed (.app "snd" (.cons (.var 0) .nil)))
+#guard typeOf productUnion = some ⟨.union .nat (.lit "ok"), .never, .empty⟩
+#guard (run productUnion 100).exit = some (.success (.nat 3))
+#guard roundTrip productUnion = .ok productUnion
+#guard Effect4.Program.NativeAtom.projectProduct false
+  (.union (.prod .nat .bool) (.prod .string .nat)) = some (.union .nat .string)
+#guard Effect4.Program.NativeAtom.projectProduct true
+  (.union (.prod .nat .bool) (.list .nat)) = none
+#guard Effect4.Program.NativeAtom.projectProduct true (.list (.fiberOf .nat .never)) = none
 #print axioms Effect4.Program.admitStraightProgram
 #print axioms Effect4.Program.admitStraightProgram_admission_error
 #print axioms Effect4.Program.admitStraightProgram_ok
