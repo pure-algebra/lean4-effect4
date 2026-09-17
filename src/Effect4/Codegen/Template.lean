@@ -24,6 +24,10 @@ A captured argument is sorted (`Arg`): an expression, an expression list (the va
 `raceAll` and `mergeAll`), a string (`caseTag`'s tag), an integer (`yieldNow`'s priority), or a
 type annotation (the annotated loop's cursor, DI-91).
 
+The reader's measure is here too, because a definition's termination needs it: what a match
+captures is within the size of what it matched (`match_within`), and strictly below it under a
+rigid top (`match_below`).
+
 This module imports the syntax carrier only. It knows nothing of `Eff`; the table of rows is
 `Codegen/Templates.lean`.
 -/
@@ -299,5 +303,388 @@ end
 def Linear (t : Tpl) : Prop := (holes t).Nodup
 
 instance (t : Tpl) : Decidable (Linear t) := by unfold Linear; infer_instance
+
+/-! ## What a match captures is no larger than what it matched
+
+The measure of the generic reader: it recurses on the expressions a row's skeleton captured, and
+a skeleton with a rigid top (every row's but the two transparent ones) captures only proper
+sub-expressions. -/
+
+/-- A capture is within a bound: an expression's size, or an expression list's; the other sorts
+hold no expression. (A predicate, not a size function: `sizeOf` has no compiled code.) -/
+def Arg.Within (bound : Nat) : Arg → Prop
+  | .expr e => sizeOf e ≤ bound
+  | .exprs es => sizeOf es ≤ bound
+  | _ => True
+
+theorem Arg.Within.mono {a b : Nat} (hab : a ≤ b) : ∀ {x : Arg}, x.Within a → x.Within b
+  | .expr _, h => Nat.le_trans h hab
+  | .exprs _, h => Nat.le_trans h hab
+  | .str _, _ => trivial
+  | .int _, _ => trivial
+  | .type _, _ => trivial
+
+/-- Every capture of `σ` is within `bound`. -/
+def Within (bound : Nat) (σ : Subst) : Prop := ∀ p ∈ σ, p.2.Within bound
+
+theorem Within.nil (bound : Nat) : Within bound [] := fun _ hp => absurd hp List.not_mem_nil
+
+theorem Within.single {bound i : Nat} {a : Arg} (h : a.Within bound) : Within bound [(i, a)] := by
+  intro p hp
+  rw [List.mem_singleton] at hp
+  subst hp
+  exact h
+
+theorem Within.mono {a b : Nat} {σ : Subst} (hab : a ≤ b) (h : Within a σ) : Within b σ :=
+  fun p hp => (h p hp).mono hab
+
+theorem Within.append {bound : Nat} {x y : Subst} (hx : Within bound x) (hy : Within bound y) :
+    Within bound (x ++ y) := by
+  intro p hp
+  rw [List.mem_append] at hp
+  cases hp with
+  | inl h => exact hx p h
+  | inr h => exact hy p h
+
+theorem matchAnn_within (bound : Nat) : ∀ (ann : Option Nat) (ty : Option TypeRef) (σ : Subst),
+    matchAnn ann ty = some σ → Within bound σ
+  | none, none, σ, h => by
+    simp only [matchAnn, Option.some.injEq] at h
+    subst h
+    exact Within.nil bound
+  | some i, some t, σ, h => by
+    simp only [matchAnn, Option.some.injEq] at h
+    subst h
+    exact Within.single trivial
+
+mutual
+  theorem match_within (n : Nat) : ∀ (t : Tpl) (e : Expr) (σ : Subst),
+      matchT n t e = some σ → Within (sizeOf e) σ
+    | .hole i, e, σ, h => by
+      simp only [matchT, Option.some.injEq] at h
+      subst h
+      exact Within.single (show sizeOf e ≤ sizeOf e from Nat.le_refl _)
+    | .strHole i, .str s, σ, h => by
+      simp only [matchT, Option.some.injEq] at h
+      subst h
+      exact Within.single trivial
+    | .intHole i, .int v, σ, h => by
+      simp only [matchT, Option.some.injEq] at h
+      subst h
+      exact Within.single trivial
+    | .arrHole i, .arr es, σ, h => by
+      simp only [matchT, Option.some.injEq] at h
+      subst h
+      have hsz : sizeOf (Expr.arr es) = 1 + sizeOf es := Expr.arr.sizeOf_spec es
+      exact Within.single (show sizeOf es ≤ sizeOf (Expr.arr es) by omega)
+    | .binderRef k, .ident s, σ, h => by
+      simp only [matchT] at h
+      split at h
+      · simp only [Option.some.injEq] at h
+        subst h
+        exact Within.nil _
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+    | .ident s, .ident s', σ, h => by
+      simp only [matchT] at h
+      split at h
+      · simp only [Option.some.injEq] at h
+        subst h
+        exact Within.nil _
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+    | .str s, .str s', σ, h => by
+      simp only [matchT] at h
+      split at h
+      · simp only [Option.some.injEq] at h
+        subst h
+        exact Within.nil _
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+    | .int v, .int v', σ, h => by
+      simp only [matchT] at h
+      split at h
+      · simp only [Option.some.injEq] at h
+        subst h
+        exact Within.nil _
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+    | .bool b, .bool b', σ, h => by
+      simp only [matchT] at h
+      split at h
+      · simp only [Option.some.injEq] at h
+        subst h
+        exact Within.nil _
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+    | .call hd args, .call hd' args', σ, h => by
+      simp only [matchT, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+      obtain ⟨a, ha, b, hb, rfl⟩ := h
+      have hsz : sizeOf (Expr.call hd' args') = 1 + sizeOf hd' + sizeOf args' :=
+        Expr.call.sizeOf_spec hd' args'
+      exact Within.append ((match_within n hd hd' a ha).mono (by omega))
+        ((matchs_within n args args' b hb).mono (by omega))
+    | .callSpread hd i, .call hd' es, σ, h => by
+      simp only [matchT, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+      obtain ⟨a, ha, rfl⟩ := h
+      have hsz : sizeOf (Expr.call hd' es) = 1 + sizeOf hd' + sizeOf es :=
+        Expr.call.sizeOf_spec hd' es
+      exact Within.append ((match_within n hd hd' a ha).mono (by omega))
+        (Within.single (show sizeOf es ≤ sizeOf (Expr.call hd' es) by omega))
+    | .arr items, .arr items', σ, h => by
+      simp only [matchT] at h
+      have hsz : sizeOf (Expr.arr items') = 1 + sizeOf items' := Expr.arr.sizeOf_spec items'
+      exact (matchs_within n items items' σ h).mono (by omega)
+    | .object fields, .object fields', σ, h => by
+      simp only [matchT] at h
+      have hsz : sizeOf (Expr.object fields') = 1 + sizeOf fields' := Expr.object.sizeOf_spec fields'
+      exact (matchFields_within n fields fields' σ h).mono (by omega)
+    | .arrow b, .arrow none b', σ, h => by
+      simp only [matchT] at h
+      have hsz := Expr.arrow.sizeOf_spec none b'
+      exact (match_within n b b' σ h).mono (by omega)
+    | .lambda bs b, .lambda ps b' none, σ, h => by
+      simp only [matchT] at h
+      split at h
+      · have hsz := Expr.lambda.sizeOf_spec ps b' none
+        exact (match_within n b b' σ h).mono (by omega)
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+    | .cond t a b, .cond t' a' b', σ, h => by
+      simp only [matchT, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+      obtain ⟨x, hx, y, hy, z, hz, rfl⟩ := h
+      have hsz := Expr.cond.sizeOf_spec t' a' b'
+      exact Within.append ((match_within n t t' x hx).mono (by omega))
+        (Within.append ((match_within n a a' y hy).mono (by omega))
+          ((match_within n b b' z hz).mono (by omega)))
+    | .method target name args, .method target' name' args', σ, h => by
+      simp only [matchT] at h
+      split at h
+      · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+        obtain ⟨a, ha, b, hb, rfl⟩ := h
+        have hsz := Expr.method.sizeOf_spec target' name' args'
+        exact Within.append ((match_within n target target' a ha).mono (by omega))
+          ((matchs_within n args args' b hb).mono (by omega))
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+    | .arrowBlock bs body, .arrowBlock ps body' none, σ, h => by
+      simp only [matchT] at h
+      split at h
+      · have hsz := Expr.arrowBlock.sizeOf_spec ps body' none
+        exact (matchStmts_within n body body' σ h).mono (by omega)
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+  theorem matchs_within (n : Nat) : ∀ (ts : Tpls) (es : List Expr) (σ : Subst),
+      matchTs n ts es = some σ → Within (sizeOf es) σ
+    | .nil, [], σ, h => by
+      simp only [matchTs, Option.some.injEq] at h
+      subst h
+      exact Within.nil _
+    | .cons hd tl, e :: es, σ, h => by
+      simp only [matchTs, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+      obtain ⟨a, ha, b, hb, rfl⟩ := h
+      have hsz : sizeOf (e :: es) = 1 + sizeOf e + sizeOf es := List.cons.sizeOf_spec e es
+      exact Within.append ((match_within n hd e a ha).mono (by omega))
+        ((matchs_within n tl es b hb).mono (by omega))
+  theorem matchFields_within (n : Nat) : ∀ (fs : Fields) (es : List (String × Expr)) (σ : Subst),
+      matchFields n fs es = some σ → Within (sizeOf es) σ
+    | .nil, [], σ, h => by
+      simp only [matchFields, Option.some.injEq] at h
+      subst h
+      exact Within.nil _
+    | .cons key v tl, (key', e) :: es, σ, h => by
+      simp only [matchFields] at h
+      split at h
+      · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+        obtain ⟨a, ha, b, hb, rfl⟩ := h
+        have hsz : sizeOf ((key', e) :: es) = 1 + sizeOf (key', e) + sizeOf es :=
+          List.cons.sizeOf_spec (key', e) es
+        have hpair : sizeOf (key', e) = 1 + sizeOf key' + sizeOf e := Prod.mk.sizeOf_spec key' e
+        exact Within.append ((match_within n v e a ha).mono (by omega))
+          ((matchFields_within n tl es b hb).mono (by omega))
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+  theorem matchStmt_within (n : Nat) : ∀ (t : StmtTpl) (s : Stmt) (σ : Subst),
+      matchStmt n t s = some σ → Within (sizeOf s) σ
+    | .letInit k v ann, .letInit name e ty, σ, h => by
+      simp only [matchStmt] at h
+      split at h
+      · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+        obtain ⟨a, ha, b, hb, rfl⟩ := h
+        have hsz := Stmt.letInit.sizeOf_spec name e ty
+        exact Within.append ((match_within n v e a ha).mono (by omega))
+          (matchAnn_within _ ann ty b hb)
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+    | .assign k v, .assign name e, σ, h => by
+      simp only [matchStmt] at h
+      split at h
+      · have hsz := Stmt.assign.sizeOf_spec name e
+        exact (match_within n v e σ h).mono (by omega)
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+    | .ret v, .ret e, σ, h => by
+      simp only [matchStmt] at h
+      have hsz := Stmt.ret.sizeOf_spec e
+      exact (match_within n v e σ h).mono (by omega)
+    | .exprStmt v, .exprStmt e, σ, h => by
+      simp only [matchStmt] at h
+      have hsz := Stmt.exprStmt.sizeOf_spec e
+      exact (match_within n v e σ h).mono (by omega)
+  theorem matchStmts_within (n : Nat) : ∀ (ts : StmtTpls) (ss : List Stmt) (σ : Subst),
+      matchStmts n ts ss = some σ → Within (sizeOf ss) σ
+    | .nil, [], σ, h => by
+      simp only [matchStmts, Option.some.injEq] at h
+      subst h
+      exact Within.nil _
+    | .cons hd tl, s :: ss, σ, h => by
+      simp only [matchStmts, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+      obtain ⟨a, ha, b, hb, rfl⟩ := h
+      have hsz : sizeOf (s :: ss) = 1 + sizeOf s + sizeOf ss := List.cons.sizeOf_spec s ss
+      exact Within.append ((matchStmt_within n hd s a ha).mono (by omega))
+        ((matchStmts_within n tl ss b hb).mono (by omega))
+end
+
+/-! ## Strictly smaller, under a rigid top -/
+
+/-- A skeleton with a rigid top: anything but a bare expression hole. A row with a bare hole is
+transparent (`withFiber` prints as its action, a layer reference as its name). -/
+def Tpl.rigid : Tpl → Bool
+  | .hole _ => false
+  | _ => true
+
+def Arg.Below (bound : Nat) : Arg → Prop
+  | .expr e => sizeOf e < bound
+  | .exprs es => sizeOf es < bound
+  | _ => True
+
+/-- Every capture of `σ` is strictly below `bound`. -/
+def Below (bound : Nat) (σ : Subst) : Prop := ∀ p ∈ σ, p.2.Below bound
+
+theorem Arg.Within.below {a b : Nat} (hab : a < b) : ∀ {x : Arg}, x.Within a → x.Below b
+  | .expr _, h => Nat.lt_of_le_of_lt h hab
+  | .exprs _, h => Nat.lt_of_le_of_lt h hab
+  | .str _, _ => trivial
+  | .int _, _ => trivial
+  | .type _, _ => trivial
+
+theorem Within.below {a b : Nat} {σ : Subst} (hab : a < b) (h : Within a σ) : Below b σ :=
+  fun p hp => (h p hp).below hab
+
+theorem Below.nil (bound : Nat) : Below bound [] := fun _ hp => absurd hp List.not_mem_nil
+
+theorem Below.single {bound i : Nat} {a : Arg} (h : a.Below bound) : Below bound [(i, a)] := by
+  intro p hp
+  rw [List.mem_singleton] at hp
+  subst hp
+  exact h
+
+theorem Below.append {bound : Nat} {x y : Subst} (hx : Below bound x) (hy : Below bound y) :
+    Below bound (x ++ y) := by
+  intro p hp
+  rw [List.mem_append] at hp
+  cases hp with
+  | inl h => exact hx p h
+  | inr h => exact hy p h
+
+/-- An element of a captured list is below whatever the list is below. -/
+theorem Arg.Below.elem {bound : Nat} {es : List Expr} (h : (Arg.exprs es).Below bound)
+    {y : Expr} (hy : y ∈ es) : sizeOf y < bound :=
+  Nat.lt_trans (List.sizeOf_lt_of_mem hy) h
+
+/-- The reader's measure: a rigid skeleton captures only proper sub-expressions. -/
+theorem match_below (n : Nat) : ∀ (t : Tpl) (e : Expr) (σ : Subst),
+    t.rigid = true → matchT n t e = some σ → Below (sizeOf e) σ
+  | .strHole i, .str s, σ, _, h => by
+    simp only [matchT, Option.some.injEq] at h
+    subst h
+    exact Below.single trivial
+  | .intHole i, .int v, σ, _, h => by
+    simp only [matchT, Option.some.injEq] at h
+    subst h
+    exact Below.single trivial
+  | .arrHole i, .arr es, σ, _, h => by
+    simp only [matchT, Option.some.injEq] at h
+    subst h
+    have hsz : sizeOf (Expr.arr es) = 1 + sizeOf es := Expr.arr.sizeOf_spec es
+    exact Below.single (show sizeOf es < sizeOf (Expr.arr es) by omega)
+  | .binderRef k, .ident s, σ, _, h => by
+    simp only [matchT] at h
+    split at h
+    · simp only [Option.some.injEq] at h
+      subst h
+      exact Below.nil _
+    · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+  | .ident s, .ident s', σ, _, h => by
+    simp only [matchT] at h
+    split at h
+    · simp only [Option.some.injEq] at h
+      subst h
+      exact Below.nil _
+    · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+  | .str s, .str s', σ, _, h => by
+    simp only [matchT] at h
+    split at h
+    · simp only [Option.some.injEq] at h
+      subst h
+      exact Below.nil _
+    · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+  | .int v, .int v', σ, _, h => by
+    simp only [matchT] at h
+    split at h
+    · simp only [Option.some.injEq] at h
+      subst h
+      exact Below.nil _
+    · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+  | .bool b, .bool b', σ, _, h => by
+    simp only [matchT] at h
+    split at h
+    · simp only [Option.some.injEq] at h
+      subst h
+      exact Below.nil _
+    · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+  | .call hd args, .call hd' args', σ, _, h => by
+    simp only [matchT, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨a, ha, b, hb, rfl⟩ := h
+    have hsz : sizeOf (Expr.call hd' args') = 1 + sizeOf hd' + sizeOf args' :=
+      Expr.call.sizeOf_spec hd' args'
+    exact Below.append ((match_within n hd hd' a ha).below (by omega))
+      ((matchs_within n args args' b hb).below (by omega))
+  | .callSpread hd i, .call hd' es, σ, _, h => by
+    simp only [matchT, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨a, ha, rfl⟩ := h
+    have hsz : sizeOf (Expr.call hd' es) = 1 + sizeOf hd' + sizeOf es :=
+      Expr.call.sizeOf_spec hd' es
+    exact Below.append ((match_within n hd hd' a ha).below (by omega))
+      (Below.single (show sizeOf es < sizeOf (Expr.call hd' es) by omega))
+  | .arr items, .arr items', σ, _, h => by
+    simp only [matchT] at h
+    have hsz : sizeOf (Expr.arr items') = 1 + sizeOf items' := Expr.arr.sizeOf_spec items'
+    exact (matchs_within n items items' σ h).below (by omega)
+  | .object fields, .object fields', σ, _, h => by
+    simp only [matchT] at h
+    have hsz : sizeOf (Expr.object fields') = 1 + sizeOf fields' := Expr.object.sizeOf_spec fields'
+    exact (matchFields_within n fields fields' σ h).below (by omega)
+  | .arrow b, .arrow none b', σ, _, h => by
+    simp only [matchT] at h
+    have hsz := Expr.arrow.sizeOf_spec none b'
+    exact (match_within n b b' σ h).below (by omega)
+  | .lambda bs b, .lambda ps b' none, σ, _, h => by
+    simp only [matchT] at h
+    split at h
+    · have hsz := Expr.lambda.sizeOf_spec ps b' none
+      exact (match_within n b b' σ h).below (by omega)
+    · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+  | .cond t a b, .cond t' a' b', σ, _, h => by
+    simp only [matchT, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨x, hx, y, hy, z, hz, rfl⟩ := h
+    have hsz := Expr.cond.sizeOf_spec t' a' b'
+    exact Below.append ((match_within n t t' x hx).below (by omega))
+      (Below.append ((match_within n a a' y hy).below (by omega))
+        ((match_within n b b' z hz).below (by omega)))
+  | .method target name args, .method target' name' args', σ, _, h => by
+    simp only [matchT] at h
+    split at h
+    · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+      obtain ⟨a, ha, b, hb, rfl⟩ := h
+      have hsz := Expr.method.sizeOf_spec target' name' args'
+      exact Below.append ((match_within n target target' a ha).below (by omega))
+        ((matchs_within n args args' b hb).below (by omega))
+    · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+  | .arrowBlock bs body, .arrowBlock ps body' none, σ, _, h => by
+    simp only [matchT] at h
+    split at h
+    · have hsz := Expr.arrowBlock.sizeOf_spec ps body' none
+      exact (matchStmts_within n body body' σ h).below (by omega)
+    · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
 
 end Effect4.Codegen.Template
