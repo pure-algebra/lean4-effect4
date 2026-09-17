@@ -262,8 +262,8 @@ check-gen-full: ## regenerate every group from scratch (host runtime included) a
 
 # one check: make check-roots, make check-truth, ...
 $(addprefix check-,$(CHECKS)): check-%: $(CHK)/%
-clean-check: ## forget the check markers (the next `make check` runs every check)
-	rm -rf $(CHK)
+clean-check: ## forget the check markers (the next `make check` runs every check) and any interrupted truth run
+	rm -rf $(CHK) harness/truth/truth-check-*
 
 # A fresh elaboration of Test/All.lean sees a new orphan source file even when Lake's
 # roots are cached; the compiled import graph and the source inventory are AxiomGate's.
