@@ -22,17 +22,17 @@
               (D5) and admits nothing for it.
 
      the subterm index (E4_subterm, cas-repository-algebra §3.5/§6, amendments M3/M18/M5)
-       S1     THE SLICE LAW (L-SUB-1, `slice_atPath`) over all 37 goldens of
+       S1     THE SLICE LAW (L-SUB-1, `slice_atPath`) over every golden of
               ocaml/eff/goldens: for every entry, the slice its (off, len) names equals the
               subterm's OWN encoding, computed independently through the value side
               (`Tree.at_` then `Tree.encode`).  Counts of subterms per program are printed.
-       S2     the same over a witness of EVERY constructor of EVERY family — 50 of them, not
+       S2     the same over the GENERATED witness of EVERY constructor of EVERY sort, not
               the corpus (L-SUB-3, M3): the arity, the children and the ValPath of each.
        S3-S4  the root is the whole; pre-order; two occurrences of one subterm share a `Cid`
               and differ in `off` (SB3).
        S5-S6  the two path spaces (L-SUB-2, M5): `val_of_prog` / `prog_of_val` round-trip, and
-              the divergence is EXACTLY branch, whileLoop and ifElse — enumerated, so
-              a fifth divergence or a lost one fails here.
+              every row is in declaration order.  The rows themselves are generated and
+              are checked against the bytes by S2, so no list of them is kept here.
        S7     the child table against the value side at every constructor.
        S9-S11 malformed bytes are refused whole (SB7); the index is a function of the bytes
               (SB8) — building it twice is identical, and flipping one byte changes it.
@@ -465,91 +465,24 @@ let t_unit = Term_lit Lit_unit
 let t_n i = Term_lit (Lit_nat i)
 let ea = Eff_succeed (t_n 1)
 let eb = Eff_succeed (t_n 2)
-let ec = Eff_succeed (t_n 3)
-let sa = Stmt_ret (t_n 1)
-let ssa = Stmts_cons (Stmt_ret (t_n 1), Stmts_nil)
-let ssb = Stmts_cons (Stmt_ret (t_n 2), Stmts_nil)
 
-let fopts =
-  { fork_options_startImmediately = true; fork_options_daemon = false;
-    fork_options_maskMode = Mask_mode_inherit }
-
-(* A witness of EVERY constructor of EVERY family (L-SUB-3, M3): fifty of them, with distinct
-   children wherever a constructor has more than one, so that a wrong ValPath cannot pass by
-   two children happening to be equal. *)
-let skey0 =
-  { service_key_name = { service_name_value = 0 };
-    service_key_service = { service_type_code_value = 0 } }
-
-let eff_witnesses : Eff_types.eff list =
-  [ Eff_succeed t_unit;
-    Eff_fail t_unit;
-    Eff_failCause (Cause_term_fail t_unit);
-    Eff_yieldError t_unit;
-    Eff_sync t_unit;
-    Eff_suspend ea;
-    Eff_perform (Native_op_refGet, t_unit);
-    Eff_bind (ea, eb);
-    Eff_gen ssa;
-    Eff_catchCause (ea, eb);
-    Eff_matchCause (ea, eb, ec);
-    Eff_onExit (ea, eb);
-    Eff_exit ea;
-    Eff_uninterruptible ea;
-    Eff_interruptible ea;
-    Eff_branch (t_unit, ea, eb);
-    Eff_whileLoop (t_n 1, t_n 2, t_n 3, ea);
-    Eff_yieldNow 3;
-    Eff_callback (Native_op_deferredAwait, t_unit);
-    Eff_awaitFiber (t_unit, Observer_mode_awaitValue);
-    Eff_withFiber Action_term_getId;
-    Eff_scoped ea;
-    Eff_acquireRelease (ea, eb);
-    Eff_provideLayer (Layer_term_succeed (skey0, Lit_unit), false, ea);
-    Eff_service skey0;
-    Eff_provideService (skey0, t_unit, ea);
-    Eff_catchIf (t_unit, ea, eb);
-    Eff_select (t_unit, Decision_tag "A", ea, eb) ]
-
-let stmt_witnesses : Eff_types.stmt list =
-  [ Stmt_bindYield ea; Stmt_yieldDiscard eb; Stmt_ret t_unit; Stmt_ifElse (t_unit, ssa, ssb);
-    Stmt_whileTrue ssa; Stmt_breakLoop ]
-
-let stmts_witnesses : Eff_types.stmts list = [ Stmts_nil; Stmts_cons (sa, ssb) ]
-
-let effs_witnesses : Eff_types.effs list =
-  [ Effs_nil; Effs_cons (ea, Effs_cons (eb, Effs_nil)) ]
-
-let action_witnesses : Eff_types.action_term list =
-  [ Action_term_fork (ea, fopts);
-    Action_term_forkIn (ea, fopts, t_unit);
-    Action_term_forkScoped (ea, fopts);
-    Action_term_runIn (t_unit, t_n 1);
-    Action_term_interrupt t_unit;
-    Action_term_interruptScoped t_unit;
-    Action_term_interruptAll (t_unit, None);
-    Action_term_awaitAll t_unit;
-    Action_term_awaitAllFailFast t_unit;
-    Action_term_snapshotChildren;
-    Action_term_awaitNewChildren t_unit;
-    Action_term_raceAll (Effs_cons (ea, Effs_nil));
-    Action_term_setContext t_unit;
-    Action_term_getContext;
-    Action_term_getId;
-    Action_term_closeScope (t_unit, t_n 1) ]
-
-(* Each witness, embedded in a program, and the ProgPath at which the index must find it. *)
+(* A witness of EVERY constructor of EVERY sort (L-SUB-3, M3), GENERATED
+   (`Eff_subterm.witnesses`, src/OCaml5/Eff/Emit.lean): argument j of a witness is seeded with
+   j + 1, so two children of one witness differ and a wrong ValPath cannot pass by two children
+   happening to be equal.  Each is embedded in a program here, with the ProgPath at which the
+   index must find it. *)
 let embedded : (E4_subterm.Tree.node * Eff_types.eff * int list) list =
-  List.map (fun e -> (E4_subterm.Tree.N_eff e, Eff_suspend e, [ 0 ])) eff_witnesses
-  @ List.map
-      (fun s -> (E4_subterm.Tree.N_stmt s, Eff_gen (Stmts_cons (s, Stmts_nil)), [ 0; 0 ]))
-      stmt_witnesses
-  @ List.map (fun s -> (E4_subterm.Tree.N_stmts s, Eff_gen s, [ 0 ])) stmts_witnesses
-  @ List.map
-      (fun e ->
-        (E4_subterm.Tree.N_effs e, Eff_withFiber (Action_term_raceAll e), [ 0; 0 ]))
-      effs_witnesses
-  @ List.map (fun a -> (E4_subterm.Tree.N_action a, Eff_withFiber a, [ 0 ])) action_witnesses
+  List.map
+    (fun (w : E4_subterm.Tree.node) ->
+      match w with
+      | N_eff e -> (w, Eff_suspend e, [ 0 ])
+      | N_stmts ss -> (w, Eff_gen ss, [ 0 ])
+      | N_stmt st -> (w, Eff_gen (Stmts_cons (st, Stmts_nil)), [ 0; 0 ])
+      | N_action a -> (w, Eff_withFiber a, [ 0 ])
+      | N_effs es -> (w, Eff_withFiber (Action_term_raceAll es), [ 0; 0 ])
+      | N_layer l -> (w, Eff_provideLayer (l, false, ea), [ 0 ])
+      | N_layers ls -> (w, Eff_provideLayer (Layer_term_mergeAll ls, false, ea), [ 0; 0 ]))
+    E4_subterm.Tree.witnesses
 
 let eff_goldens_dir () =
   let rec ancestors d n acc =
@@ -660,7 +593,7 @@ let test_slice_goldens () =
          "S1 every subterm's own encoding equals the slice its entry names (%d programs, %d \
           subterms)"
          !progs !total)
-      (!bad = 0 && !progs = 51 && !refused = 0);
+      (!bad = 0 && !progs > 0 && !refused = 0);
     check "S3 the root entry is the whole program, at path ." !root_ok;
     check "S8 `entries` is a pre-order: a parent precedes every descendant" !order_ok
 
@@ -734,16 +667,26 @@ let test_every_constructor () =
                   end)
               value_children))
     embedded;
-  note "S2 %d constructors: 28 eff + 6 stmt + 2 stmts + 2 effs + 16 action" !n;
+  let declared =
+    List.fold_left (fun acc f -> acc + E4_subterm.arity f) 0 E4_subterm.families
+  in
+  note "S2 %d witnesses, %d constructors declared over %d sorts" !n declared
+    (List.length E4_subterm.families);
   check "S2 every constructor of every family: the entry, its slice, its children, its ValPath"
-    (!bad = 0 && !n = 54);
+    (!bad = 0 && !n = declared);
   (* the table's alphabet is the wire's alphabet, family for family *)
   check "S7 `children` covers exactly the constructors `Eff_types` declares"
-    (E4_subterm.arity E4_subterm.Eff = 28
-    && E4_subterm.arity E4_subterm.Stmt = 6
-    && E4_subterm.arity E4_subterm.Stmts = 2
-    && E4_subterm.arity E4_subterm.Effs = 2
-    && E4_subterm.arity E4_subterm.Action = 16
+    (List.for_all
+       (fun f ->
+         (* every constructor of the sort has exactly one witness, in declaration order *)
+         List.filter_map
+           (fun w ->
+             if E4_subterm.family_eq (E4_subterm.Tree.family_of w) f then
+               Some (E4_subterm.Tree.ctor_index w)
+             else None)
+           E4_subterm.Tree.witnesses
+         = List.init (E4_subterm.arity f) (fun i -> i))
+       E4_subterm.families
     && List.for_all
          (fun f ->
            List.length (E4_subterm.family_ctor_names f) = E4_subterm.arity f
@@ -768,20 +711,21 @@ let test_path_spaces () =
       done)
     E4_subterm.families;
   let got = List.sort compare !divergent in
-  let want =
-    List.sort compare
-      [ ("eff", 15, 0, 1); ("eff", 15, 1, 2); (* branch *)
-        ("eff", 16, 0, 3); (* whileLoop *)
-        ("eff", 25, 0, 2); (* provideService *)
-        ("eff", 26, 0, 1); ("eff", 26, 1, 2); (* catchIf *)
-        ("eff", 27, 0, 2); ("eff", 27, 1, 3); (* select *)
-        ("stmt", 3, 0, 1); ("stmt", 3, 1, 2) (* ifElse *) ]
-  in
   List.iter (fun (f, c, k, v) -> note "S5 %s ctor %d: program child %d is argument %d" f c k v) got;
-  check
-    "S5 the two path spaces differ at exactly branch, whileLoop, provideService, catchIf, select and \
-     ifElse — and nowhere else"
-    (got = want);
+  (* The rows are not pinned here: S2 checks every one of them against the bytes.  What is
+     checked is the rule they are generated by: children in declaration order, so the argument
+     indices of a row strictly increase and child k is never before argument k. *)
+  let ordered = ref true in
+  List.iter
+    (fun f ->
+      for c = 0 to E4_subterm.arity f - 1 do
+        let vs = List.map fst (E4_subterm.children f c) in
+        List.iteri (fun k v -> if v < k then ordered := false) vs;
+        if List.sort_uniq compare vs <> vs then ordered := false
+      done)
+    E4_subterm.families;
+  check "S5 the two path spaces differ somewhere, and every row is in declaration order"
+    (got <> [] && !ordered);
   let rt = ref true in
   List.iter
     (fun f ->

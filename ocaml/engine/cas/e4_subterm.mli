@@ -11,34 +11,26 @@
    test checks on all 37 goldens of `ocaml/eff/goldens` and on every constructor of every
    family.
 
-   Why it is built from the wire and not from a Lean emitter.  Amendment M18 rules that the
-   subterm index is `TreeSig`-driven — a rose-tree signature the generator can emit as
-   `effSig`, retiring M3's hand table.  That emitter does not exist in the tree today
-   (the planned `Effect4.Program.Subterm` module is commit 6 of the CAS packet and is not landed), so
-   this module carries the `TreeSig` children function by hand, transcribed from
-   `Effect4.Program.Node.child` (src/Effect4/Program/Compile.lean:65-115), and golden G9 —
-   "for each constructor of each family, the `ProgPath -> ValPath` mapping and one
-   `(path, off, len, cid)` entry with the slice equal to the subterm's own bytes" (A2 §4.1) —
-   is what will pin it against Lean.  Until G9 is cut, the evidence is this module's own
-   double-entry: the BYTE side walks the frames of the encoded program, the VALUE side
-   (`Tree`) walks the decoded `Eff_types` tree with a separately written `child`, and the test
-   requires them to agree at every node of every golden.
+   Where the table comes from.  Amendment M18 rules that the subterm index is
+   `TreeSig`-driven, a rose-tree signature the generator emits, retiring M3's hand table.
+   That emitter is `emitSubterm` (src/OCaml5/Eff/Emit.lean), and its output is
+   `ocaml/eff/eff_subterm.ml`: the node sorts read off `Effect4.Program.Node`, and for every
+   constructor its node-typed arguments in declaration order, which is the rule Lean's own
+   generated `Node.child` follows (src/Effect4/Program/NodeLenses.lean).  The hand table this
+   file carried until 2026-09-17 had no row for `provideLayer` and no layer sorts at all; the
+   generated one has them because the declarations do.  What the double entry still checks:
+   the BYTE side walks the frames of the encoded program by the `children` rows, the VALUE
+   side (`Tree`) walks the decoded `Eff_types` tree by the `child` arms, the two are emitted
+   by separate code from the same declarations, and the test requires them to agree at every
+   node of every golden.  Golden G9 is what will pin both against Lean.
 
    THE TWO PATH SPACES (amendment M5, and the reason this module exists at all).  A `ProgPath`
    is a list of child indices in `Node.child`; a `ValPath` is a list of argument indices in the
    encoded tree.  They are NOT equal, and M3 records that `Node.argIndex`'s fallback "program
-   child i = value argument i" is wrong.  In the alphabet `ocaml/eff/eff_types.ml` carries they
-   differ at exactly three constructors:
-
-     eff  branch    (term, eff, eff)          prog 0,1 -> val 1,2
-     eff  whileLoop (term, term, term, eff)   prog 0   -> val 3
-     stmt ifElse    (term, stmts, stmts)      prog 0,1 -> val 1,2
-
-   (Lean's `Eff` has three arms this wire does not — `provideLayer`, `service`,
-   `provideService` — and `provideService` is M3's own example of the broken fallback.  They
-   are absent from `Eff_types` (`ocaml/engine/e4_program.mli` P3: the wire's constructors are a
-   PREFIX of the engine's, 24 against 27), so no entry of this table can name them; when they
-   join the wire, `children` gains three rows and G9 catches their absence.)
+   child i = value argument i" is wrong.  They differ at every constructor that has an
+   argument which is not a node before one which is (`branch`, `whileLoop`, `select`,
+   `provideLayer`, `provideService`, `catchIf`, `ifElse`, the layer's `effect`); the generated
+   rows state each one, and test S5 prints them.
 
    Depends on: E4_addr, E4_sha256 (ocaml/engine, lane M), Eff_frame / Eff_types / Eff_wire
    (ocaml/eff, read-only).  It writes no second framing reader: `Eff_frame.read_frame` and
@@ -83,25 +75,18 @@
    D2  §1.6 says `of_program : string -> t` and does not say what a malformed program does.
        `of_program` raises and `of_program_opt` is added (SB7); nothing in this estate should
        be building an index of bytes that are not a program.
-   D3  `Tree` is added: the VALUE side of the index — `Node.child` (Compile.lean:65-115) and
-       the family encoders of `Eff_wire`, as OCaml.  It is the second, independent computation
-       SB1 is checked against, and it is `effSig`'s `children` half (M18) in the shape a
-       generator will later emit.  When the planned `Effect4.Program.Subterm` module lands, `Tree.child`
-       becomes the thing G9 pins and this file's hand table is deleted.
+   D3  `Tree` is added: the VALUE side of the index, `Node.child` and the family encoders of
+       `Eff_wire`, as OCaml.  It is the second computation SB1 is checked against, and it is
+       `effSig`'s `children` half (M18), GENERATED (`Eff_subterm`).
    D4  Added beside §1.6's list: `count`, `root`, `bytes`, `slice_of`, `at_val_path`,
        `entries_at_family`, `children`, `arity`, `family_ctor_names`, `prog_of_val`,
        `val_of_prog`, `cid_of_bytes`, and `family_name` / `path_to_string` for messages. *)
 
 (* ============================================================ families and paths *)
 
-type family =
-  | Eff
-  | Stmt
-  | Stmts
-  | Effs
-  | Action
-      (** The five node families of `Effect4.Program.Node` (Compile.lean:51-59) that this wire
-          carries.  `layer` is Lean's sixth and has no carrier in `Eff_types`. *)
+type family = Eff_subterm.family = Eff | Stmts | Stmt | Action | Effs | Layer | Layers
+(** The node sorts of `Effect4.Program.Node`, in its declaration order (GENERATED,
+    `ocaml/eff/eff_subterm.ml`). *)
 
 val family_name : family -> string
 val family_eq : family -> family -> bool
@@ -109,7 +94,7 @@ val families : family list
 
 val family_ctor_names : family -> string list
 (** `Eff_types.ctor_names_<t>` for the family: the alphabet the index is table-driven over
-    (SB5).  24 / 6 / 2 / 2 / 16. *)
+    (SB5). *)
 
 val arity : family -> int
 (** The number of constructors of the family — `List.length (family_ctor_names f)`. *)
@@ -123,8 +108,9 @@ val children : family -> int -> (int * family) list
 (** [children f c] is the children of constructor [c] of family [f], in `ProgPath` order: the
     k-th element is program child k, and it is `(value argument index, the child's family)`.
     `[]` for a constructor with no addressed children.  Out-of-range constructor indices answer
-    `[]`.  This is the whole table (SB5), transcribed from `Node.child`
-    (src/Effect4/Program/Compile.lean:65-115); there is no fallback (M3). *)
+    `[]`.  This is the whole table (SB5), generated from the declarations by the rule
+    `Node.child` follows (node-typed arguments in declaration order); there is no fallback
+    (M3). *)
 
 val val_of_prog : family -> int -> int -> int option
 (** [val_of_prog f ctor k] is the value-argument index of program child [k] (SB4). *)
@@ -183,18 +169,24 @@ module Tree : sig
       the family encoders of `Eff_wire`.  This is the second computation SB1 is checked
       against, and `effSig`'s `children`/`rebuild` half (amendment M18). *)
 
-  type node =
+  type node = Eff_subterm.node =
     | N_eff of Eff_types.eff
-    | N_stmt of Eff_types.stmt
     | N_stmts of Eff_types.stmts
-    | N_effs of Eff_types.effs
+    | N_stmt of Eff_types.stmt
     | N_action of Eff_types.action_term
+    | N_effs of Eff_types.effs
+    | N_layer of Eff_types.layer_term
+    | N_layers of Eff_types.layer_terms
 
   val family_of : node -> family
   val ctor_index : node -> int
 
   val child : node -> int -> node option
-  (** `Node.child` (Compile.lean:65-115), verbatim, over the constructors this wire has. *)
+  (** `Node.child`, generated from the declarations. *)
+
+  val witnesses : node list
+  (** One least inhabitant of every constructor of every sort, in sort then declaration
+      order (GENERATED). *)
 
   val at_ : node -> int list -> node option
   (** `Node.at_` (Compile.lean:118-120). *)

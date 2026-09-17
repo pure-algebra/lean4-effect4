@@ -1,6 +1,7 @@
 import Lean
 import Tools.ProgramStructure
 import Effect4.Program.Native
+import Effect4.Program.Node
 
 /-!
 # OCaml5.Eff.World
@@ -137,6 +138,23 @@ def projectFamily (family : Tools.ProgramStructure.Family) : MetaM Family := do
 
 def readBlocks : MetaM (List (List Family)) := do
   (← Tools.ProgramStructure.readBlocks).mapM (·.mapM projectFamily)
+
+/-- The node sorts, read off `Effect4.Program.Node`: each constructor's short name with the
+label of the family its one field carries, in `Node`'s declaration order. -/
+def readNodeSorts : MetaM (List (String × String)) := do
+  let some (.inductInfo node) := (← getEnv).find? ``Effect4.Program.Node
+    | throwError "EffGen: Effect4.Program.Node is not an inductive"
+  node.ctors.mapM fun ctorName => do
+    let ctor ← getConstInfoCtor ctorName
+    forallTelescope ctor.type fun xs _ => do
+      unless xs.size == ctor.numParams + 1 do
+        throwError "EffGen: {ctorName} does not carry exactly one field"
+      let head := (← whnfR (← inferType xs[ctor.numParams]!)).getAppFn
+      let some family := head.constName?
+        | throwError "EffGen: the field of {ctorName} names no family"
+      let some spec := Tools.ProgramStructure.allSpecs.find? (·.leanName == family)
+        | throwError "EffGen: {ctorName} carries the unselected family {family}"
+      pure (shortName ctorName, spec.label)
 
 
 end OCaml5.Eff

@@ -18,6 +18,7 @@ Standard library only. OCaml 5.1.1 / dune 3.24 (opam switch `effect4`).
 | `eff_types.ml` | **generated** | one OCaml variant/record per Lean inductive/structure, constructor order pinned, `ctor_index_*` / `ctor_name_*` / `ctor_names_*` per family |
 | `eff_layout.ml` | **generated** | the wire families and their fields, as data |
 | `eff_wire.ml` | **generated** | `encode_*` / `decode_*` per family, `*_exact` at the top level |
+| `eff_subterm.ml` | **generated** | the node sorts of `Effect4.Program.Node`, each constructor's children as (value argument index, child sort), the one-step `child`, and one witness per constructor with pairwise different children |
 | `eff_json.ml` | **generated** | `print_*` per family (a printer only — there is no JSON parser anywhere) |
 | `eff_native.ml` | **generated** | the native alphabet as data: atom names and const-generic metadata, the 55 op values `all_ops` and their rows `row_of`, `scope_key`, the handle types; typing remains in Lean |
 | `eff_manifest.txt` | **generated** | one line per family: name, OCaml type, constructors and their carriers, in order |

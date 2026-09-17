@@ -228,6 +228,114 @@ def emitJson (bs : List (List Family)) : String :=
     String.join (b.map fun f =>
       s!"let print_{f.spec.oname} (v : {f.spec.oname}) : string = Eff_json_text.render (json_{f.spec.oname} v)\n"))
 
+/-! ## eff_subterm.ml: the children table, the node sum and one witness per constructor -/
+
+/-- The mark a seeded value carries where its number goes. -/
+def seedMark : String := "§"
+
+/-- A value of a carrier: numbers are `number`, a family is what `base` says. -/
+partial def valueOf (number : String) (base : String → Option String) : OTy → Option String
+  | .int => some number
+  | .bool => some "false"
+  | .string => some "\"\""
+  | .unit => some "()"
+  | .option _ => some "None"
+  | .list _ => some "[]"
+  | .requirements => some "[]"
+  | .prod a b => do
+    let x ← valueOf number base a
+    let y ← valueOf number base b
+    some s!"({x}, {y})"
+  | .named n => base n
+
+/-- A constructor (or a record) applied to the given arguments. -/
+def applied (f : Family) (c : Ctor) (args : List String) : String :=
+  if f.isStruct then
+    let fields := (c.args.zip args).map fun ((nm, _), v) => s!"{ofield f.spec.oname nm} = {v}"
+    "{ Eff_types." ++ "; ".intercalate fields ++ " }"
+  else
+    "(Eff_types." ++ ctorApp f.spec.oname c args ++ ")"
+
+/-- A constructor applied to the least value of every argument. -/
+def inhabitant (base : String → Option String) (f : Family) (c : Ctor) : Option String := do
+  some (applied f c (← c.args.mapM fun (_, t) => valueOf "0" base t))
+
+/-- A fixpoint over the families, one round per family. -/
+def closeOver (fs : List Family) (step : List (String × String) → Family → Option String) :
+    List (String × String) :=
+  fs.foldl (init := []) fun table _ =>
+    fs.foldl (init := table) fun table f =>
+      if (List.lookup f.spec.oname table).isSome then table
+      else match step table f with
+        | some v => table ++ [(f.spec.oname, v)]
+        | none => table
+
+/-- The least value of every family. -/
+def leastValues (fs : List Family) : List (String × String) :=
+  closeOver fs fun table f => f.ctors.findSome? (inhabitant (List.lookup · table) f)
+
+/-- For every family that can carry a number, a value with `seedMark` where the number goes:
+two such values at different numbers are different values. -/
+def seededValues (fs : List Family) (least : List (String × String)) : List (String × String) :=
+  closeOver fs fun table f => f.ctors.findSome? fun c => do
+    let base (n : String) := (List.lookup n table).orElse fun _ => List.lookup n least
+    let v := applied f c (← c.args.mapM fun (_, t) => valueOf seedMark base t)
+    if (v.splitOn seedMark).length > 1 then some v else none
+
+/-- The witness of a constructor: argument `j` is seeded with `j + 1`, so the children of a
+witness are pairwise different wherever their family can carry a number. -/
+def witnessOf (least seeded : List (String × String)) (f : Family) (c : Ctor) : Option String := do
+  let args ← (enumL c.args).mapM fun (j, (_, t)) => do
+    let base (n : String) := (List.lookup n seeded).orElse fun _ => List.lookup n least
+    let v ← valueOf seedMark base t
+    some (v.replace seedMark (toString (j + 1)))
+  some (applied f c args)
+
+def emitSubterm (sorts : List (String × String)) (bs : List (List Family)) : Except String String := do
+  let fs := bs.flatten
+  let sortFamilies ← sorts.mapM fun (short, label) =>
+    match fs.find? (·.spec.oname == label) with
+    | some f => pure (short, f)
+    | none => throw s!"EffGen: node sort {short} names the unread family {label}"
+  let sortOf (t : OTy) : Option String :=
+    match t with
+    | .named n => (sorts.find? (·.2 == n)).map (·.1)
+    | _ => none
+  let least := leastValues fs
+  let seeded := seededValues fs least
+  let childRows := sortFamilies.flatMap fun (short, f) => (enumL f.ctors).filterMap fun (i, c) =>
+    let kids := (enumL c.args).filterMap fun (j, (_, t)) => (sortOf t).map fun s => s!"({j}, {s.capitalize})"
+    if kids.isEmpty then none
+    else some s!"  | {short.capitalize}, {i} -> [ {"; ".intercalate kids} ] (* {c.short} *)"
+  let childArms := sortFamilies.flatMap fun (short, f) => f.ctors.flatMap fun c =>
+    let kids := (enumL c.args).filterMap fun (j, (_, t)) => (sortOf t).map fun s => (j, s)
+    (enumL kids).map fun (k, (j, s)) =>
+      let pats := (List.range c.args.length).map fun i => if i == j then s!"a{i}" else "_"
+      s!"  | N_{short} (Eff_types.{ctorApp f.spec.oname c pats}), {k} -> Some (N_{s} a{j})"
+  let witnesses ← sortFamilies.mapM fun (short, f) => f.ctors.mapM fun c =>
+    match witnessOf least seeded f c with
+    | some v => pure s!"  N_{short} {v};"
+    | none => throw s!"EffGen: no witness of {c.name}: an argument's family has no least value"
+  let perSort (line : String → Family → String) :=
+    "\n".intercalate (sortFamilies.map fun (short, f) => line short f)
+  pure <| header "Eff_subterm: the node sorts of Effect4.Program.Node, the children of every constructor as (value argument index, child sort) in program-child order (a node's children are its node-typed arguments in declaration order, Program/Node.lean), the one-step child function, and one witness of every constructor of every sort, its arguments seeded with different numbers so that two children of one witness differ." ++
+    "type family = " ++ " | ".intercalate (sorts.map (·.1.capitalize)) ++ "\n\n" ++
+    "let families = [ " ++ "; ".intercalate (sorts.map (·.1.capitalize)) ++ " ]\n\n" ++
+    "let family_name = function\n" ++ perSort (fun short _ => s!"  | {short.capitalize} -> {ostr short}") ++ "\n\n" ++
+    "let family_ctor_names = function\n" ++
+    perSort (fun short f => s!"  | {short.capitalize} -> Eff_types.ctor_names_{f.spec.oname}") ++ "\n\n" ++
+    "let children (f : family) (c : int) : (int * family) list =\n  match f, c with\n" ++
+    "\n".intercalate childRows ++ "\n  | _, _ -> []\n\n" ++
+    "type node =\n" ++ perSort (fun short f => s!"  | N_{short} of Eff_types.{f.spec.oname}") ++ "\n\n" ++
+    "let family_of = function\n" ++ perSort (fun short _ => s!"  | N_{short} _ -> {short.capitalize}") ++ "\n\n" ++
+    "let ctor_index = function\n" ++
+    perSort (fun short f => s!"  | N_{short} v -> Eff_types.ctor_index_{f.spec.oname} v") ++ "\n\n" ++
+    "let encode = function\n" ++
+    perSort (fun short f => s!"  | N_{short} v -> Eff_wire.encode_{f.spec.oname} v") ++ "\n\n" ++
+    "let child (n : node) (i : int) : node option =\n  match n, i with\n" ++
+    "\n".intercalate childArms ++ "\n  | _, _ -> None\n\n" ++
+    "let witnesses : node list = [\n" ++ "\n".intercalate witnesses.flatten ++ "\n]\n"
+
 /-! ## eff_manifest.txt -/
 
 def manifest (bs : List (List Family)) : String :=

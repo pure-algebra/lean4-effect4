@@ -74,6 +74,10 @@ def main (args : List String) : IO Unit := do
   let ctx : Core.Context := { fileName := "<effgen>", fileMap := default }
   let (bs, _) ← ((readBlocks.run' {}).toIO ctx { env := env })
   let (sourceBlocks, _) ← ((Tools.ProgramStructure.readBlocks.run' {}).toIO ctx { env := env })
+  let (sorts, _) ← ((readNodeSorts.run' {}).toIO ctx { env := env })
+  let subtermText ← match emitSubterm sorts bs with
+    | .ok text => pure text
+    | .error message => throw (IO.userError message)
   let sourceJson ← match Tools.ProgramStructure.descriptorJson sourceBlocks with
     | .ok json => pure json
     | .error message => throw (IO.userError message)
@@ -148,6 +152,7 @@ def main (args : List String) : IO Unit := do
   IO.FS.writeFile (out / "goldens" / "coverage-metadata.txt") ("\n".intercalate metadataRows ++ "\n")
   IO.FS.writeFile (out / "eff_types.ml") ("(* " ++ stamp ++ " *)\n" ++ emitTypes bs)
   IO.FS.writeFile (out / "eff_wire.ml") ("(* " ++ stamp ++ " *)\n" ++ emitWire bs)
+  IO.FS.writeFile (out / "eff_subterm.ml") ("(* " ++ stamp ++ " *)\n" ++ subtermText)
   IO.FS.writeFile (out / "eff_json.ml") ("(* " ++ stamp ++ " *)\n" ++ emitJson bs)
   IO.FS.writeFile (out / "eff_native.ml") ("(* " ++ stamp ++ " *)\n" ++ emitNative nul fn st)
   IO.FS.writeFile (out / "eff_manifest.txt") (manifest bs)
