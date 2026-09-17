@@ -1,4 +1,5 @@
 import Effect4.Codegen.Read
+import Effect4.Laws.Auto.Inversion
 import Effect4.Laws.Codegen.Template
 
 /-!
@@ -203,19 +204,9 @@ theorem find?_of_findIdx? {α : Type} (p : α → Bool) : ∀ (l : List α) (k :
     l.findIdx? p = some k → l[k]? = some a → l.find? p = some a
   | [], _, _, h, _ => by simp only [List.findIdx?_nil, reduceCtorEq] at h
   | x :: xs, k, a, h, ha => by
+    have ih := find?_of_findIdx? p xs
     rw [List.findIdx?_cons] at h
-    by_cases hx : p x = true
-    · simp only [hx, ↓reduceIte, Option.some.injEq] at h
-      subst h
-      simp only [List.getElem?_cons_zero, Option.some.injEq] at ha
-      subst ha
-      simp only [List.find?_cons, hx]
-    · simp only [hx, Bool.false_eq_true, ↓reduceIte, Option.map_eq_some_iff] at h
-      obtain ⟨j, hj, rfl⟩ := h
-      simp only [List.getElem?_cons_succ] at ha
-      have hx' : p x = false := by simpa only [Bool.not_eq_true] using hx
-      simp only [List.find?_cons, hx']
-      exact find?_of_findIdx? p xs j a hj ha
+    aesop (add safe forward ih)
 
 /-! ## The classifier looks at leaves, so folding the children does not move it -/
 
@@ -293,60 +284,24 @@ theorem lookup_of_captured : ∀ (σ : Subst) (i : Nat) (a : Arg) (h : (i, a) �
 
 /-! ## The leaves: what a leaf reader accepts prints back to what it read -/
 
+attribute [aesop safe forward] readTerm_exact readCause_exact readLiteral_exact readKey_exact
+  readForkOptions_exact
+
+set_option maxRecDepth 4096 in
 /-- A leaf read has the sort it was read at, and prints back, at any depth, to what was read. -/
 theorem readLeaf_exact {sig : Signature Op} {d : Nat} {daemon : Bool} {s : ArgSort} {a : Arg}
     {v : ArgF Op (EffSelfCarrier Op)} (h : readLeaf sig d daemon s a = .ok v) :
     argSortOf v = s ∧ ∀ d', printArg sig d' (ArgF.fold (printAlg sig) v) = .ok (some a) := by
   unfold readLeaf at h
-  split at h
-  · obtain ⟨t, ht, rfl⟩ := map_eq_ok.mp h
-    exact ⟨rfl, fun _ => by simp only [ArgF.fold, printArg, readTerm_exact _ ht]⟩
-  · obtain ⟨t, ht, rfl⟩ := map_eq_ok.mp h
-    exact ⟨rfl, fun _ => by simp only [ArgF.fold, printArg, readTerm_exact _ ht]⟩
-  · obtain ⟨c, hc, rfl⟩ := map_eq_ok.mp h
-    exact ⟨rfl, fun _ => by simp only [ArgF.fold, printArg, readCause_exact _ hc]⟩
-  · obtain ⟨l, hl, rfl⟩ := map_eq_ok.mp h
-    exact ⟨rfl, fun _ => by simp only [ArgF.fold, printArg, readLiteral_exact hl]⟩
-  · obtain ⟨key, hk, rfl⟩ := map_eq_ok.mp h
-    exact ⟨rfl, fun _ => by simp only [ArgF.fold, printArg, readKey_exact hk, ok_bind]; rfl⟩
-  · obtain ⟨o, ho, rfl⟩ := map_eq_ok.mp h
-    exact ⟨rfl, fun _ => by simp only [ArgF.fold, printArg, (readForkOptions_exact ho).1]⟩
-  · cases h
-    exact ⟨rfl, fun _ => rfl⟩
-  · split at h
-    · rename_i hv
-      cases h
-      refine ⟨rfl, fun _ => ?_⟩
-      simp only [ArgF.fold, printArg]
-      rw [show Int.ofNat _ = _ from Int.toNat_of_nonneg hv]
-    · cases h
-  · split at h
-    · split at h
-      · rename_i hname
-        cases h
-        exact ⟨rfl, fun _ => by simp only [ArgF.fold, printArg, hname]⟩
-      · cases h
-    · cases h
-  · cases h
-  · cases h
+  aesop (add norm simp [ArgF.fold, printArg, argSortOf, Int.toNat_of_nonneg],
+    safe apply Int.max_eq_left)
 
 /-! ## What `readArgs` read, `printArgs` prints back -/
-
-theorem mapError_eq_ok {ε ε' α : Type} {f : ε → ε'} {x : Except ε α} {a : α} :
-    x.mapError f = .ok a ↔ x = .ok a := by
-  cases x with
-  | error e => simp only [Except.mapError, reduceCtorEq]
-  | ok b =>
-    constructor
-    · intro h; cases h; rfl
-    · intro h; cases h; rfl
 
 theorem lookup_cons_ne (i j : Nat) (a : Arg) (rest : Subst) (h : i ≠ j) :
     lookup ((i, a) :: rest) j = lookup rest j := by
   unfold lookup
-  have hne : ((i, a).1 == j) = false := by
-    simp only [beq_eq_false_iff_ne, ne_eq]; exact h
-  rw [List.find?_cons_of_neg (by simp only [hne, Bool.false_eq_true, not_false_eq_true])]
+  aesop
 
 /-- A node prints to a capture at a depth: what the reader's recursion must establish of each
 child it read, and what the theorem establishes of the whole tree. -/
@@ -360,44 +315,17 @@ def PrintsTo (sig : Signature Op) (d : Nat) :
   | .stmts, v, .stmts ss => cata_stmts (printAlg sig) v d = .ok ss
   | _, _, _ => False
 
-theorem printArg_child (sig : Signature Op) (d : Nat) : ∀ (fam : EffFam)
-    (v : EffSelfCarrier Op fam) (a : Arg), PrintsTo sig d fam v a →
-    printArg sig d (ArgF.fold (printAlg sig) (.child fam v)) = .ok (some a)
-  | .eff, v, .expr y, h => by
-    simp only [ArgF.fold, cataFam, printArg, show cata_eff (printAlg sig) v d = .ok y from h,
-      ok_bind]
-    rfl
-  | .action, v, .expr y, h => by
-    simp only [ArgF.fold, cataFam, printArg, show cata_action (printAlg sig) v d = .ok y from h,
-      ok_bind]
-    rfl
-  | .layer, v, .expr y, h => by
-    simp only [ArgF.fold, cataFam, printArg, show cata_layer (printAlg sig) v d = .ok y from h,
-      ok_bind]
-    rfl
-  | .effs, v, .exprs ys, h => by
-    simp only [ArgF.fold, cataFam, printArg, show cata_effs (printAlg sig) v d = .ok ys from h,
-      ok_bind]
-    rfl
-  | .layers, v, .exprs ys, h => by
-    simp only [ArgF.fold, cataFam, printArg, show cata_layers (printAlg sig) v d = .ok ys from h,
-      ok_bind]
-    rfl
-  | .stmts, v, .stmts ss, h => by
-    simp only [ArgF.fold, cataFam, printArg, show cata_stmts (printAlg sig) v d = .ok ss from h,
-      ok_bind]
-    rfl
+theorem printArg_child (sig : Signature Op) (d : Nat) (fam : EffFam)
+    (v : EffSelfCarrier Op fam) (a : Arg) (h : PrintsTo sig d fam v a) :
+    printArg sig d (ArgF.fold (printAlg sig) (.child fam v)) = .ok (some a) := by
+  cases fam <;> cases a <;>
+    aesop (add norm simp [PrintsTo, ArgF.fold, cataFam, printArg, bind, Except.bind, pure,
+      Except.pure])
 
 /-- An argument the classifier fixes prints (to a capture no hole asks for, or to none). -/
 theorem printArg_fixed (sig : Signature Op) (d : Nat) (v : Fixed) :
     ∃ x, printArg sig d (ArgF.fold (printAlg sig) (v.arg (Op := Op))) = .ok x := by
-  cases v with
-  | term t => exact ⟨_, rfl⟩
-  | bool b => exact ⟨_, rfl⟩
-  | mode m => exact ⟨_, rfl⟩
-  | decision dec => cases dec <;> exact ⟨_, rfl⟩
-  | noTerm => exact ⟨_, rfl⟩
-  | noTy => exact ⟨_, rfl⟩
+  cases v <;> aesop (add norm simp [Templates.Fixed.arg, ArgF.fold, printArg], safe cases Decision)
 
 /-- The sort of a folded argument is the argument's. -/
 theorem argSortOf_fold {R : EffFam → Type} (alg : EffAlgebra Op R)
@@ -426,7 +354,7 @@ theorem readCapture_exact
     argSortOf v = s ∧ printArg sig d (ArgF.fold (printAlg sig) v) = .ok (some a) := by
   have leaf : ∀ {a' : Arg}, (readLeaf sig d daemon s a').mapError ReadFailure.here = .ok v →
       argSortOf v = s ∧ printArg sig d (ArgF.fold (printAlg sig) v) = .ok (some a') :=
-    fun hl => let ⟨hs, hp⟩ := readLeaf_exact (mapError_eq_ok.mp hl); ⟨hs, hp d⟩
+    fun hl => let ⟨hs, hp⟩ := readLeaf_exact (Laws.Auto.mapError_eq_ok.mp hl); ⟨hs, hp d⟩
   cases a with
   | expr y =>
     simp only [readCapture] at h
@@ -518,7 +446,7 @@ theorem readArgs_exact
     simp only [readArgs, bind_eq_ok, Except.ok.injEq] at h
     obtain ⟨a, ha, rest, hrest, rfl⟩ := h
     obtain ⟨x, hx, hhole⟩ := readArg_exact sig n row σ hchild hchildren hblock hfixed s i a
-      (mapError_eq_ok.mp ha)
+      (Laws.Auto.mapError_eq_ok.mp ha)
     obtain ⟨τ, hτ, hagree⟩ := readArgs_exact hchild hchildren hblock hfixed ss (i + 1) rest hrest
     have below : ∀ j, i ≤ j → j < i + (s :: ss).length → j ≠ i → j ∈ row.out.holes →
         lookup τ j = lookup σ j := fun j h1 h2 hji hj =>
@@ -571,14 +499,7 @@ theorem buildRow_ok {fam : EffFam} {ctor : String} {args : List (ArgF Op (EffSel
     {k : Nat} {e : EffSelfCarrier Op fam} (h : buildRow fam ctor args k = .ok e) :
     printedRow fam ctor args k = true ∧ build fam ctor args = some e := by
   unfold buildRow at h
-  split at h
-  · rename_i hp
-    split at h
-    · rename_i e' hb
-      cases h
-      exact ⟨hp, hb⟩
-    · cases h
-  · cases h
+  aesop
 
 /-- One argument, printed. -/
 theorem printArgs_single {fam : EffFam} {n : Nat} {out : RowOut} {a : ArgF Op Carrier} {c : Arg}
@@ -627,12 +548,6 @@ theorem accepted_prints {n : Nat} {row : Templates.Row} {k : Nat} (hk : table[k]
     · exact .inr (.inl hf)
     · exact .inr (.inr hf)) hcata hrow
 
-theorem toOption_eq_some {ε α : Type} {e : Except ε α} {a : α} (h : e.toOption = some a) :
-    e = .ok a := by
-  cases e with
-  | error _ => cases h
-  | ok b => cases h; rfl
-
 /-- What one row read, the printer prints: the row law of `read_exact`, with the recursion as
 hypotheses (`readRow` has none of its own). -/
 theorem readRow_exact (hl : LawfulSpelling sig spell) {fam : EffFam} {n : Nat} {x : Expr}
@@ -665,7 +580,7 @@ theorem readRow_exact (hl : LawfulSpelling sig spell) {fam : EffFam} {n : Nat} {
     cases fam with
     | eff =>
       simp only [Option.some.injEq] at h
-      exact readPerform_exact hl (mapError_eq_ok.mp h)
+      exact readPerform_exact hl (Laws.Auto.mapError_eq_ok.mp h)
     | stmt => cases h
     | stmts => cases h
     | effs => cases h
@@ -728,12 +643,33 @@ theorem readRow_exact (hl : LawfulSpelling sig spell) {fam : EffFam} {n : Nat} {
               · rename_i a ha
                 obtain ⟨e, hb, h⟩ := Option.map_eq_some_iff.mp h
                 cases h
-                exact accepted_prints hk hout (toOption_eq_some hb)
+                exact accepted_prints hk hout (Laws.Auto.toOption_eq_some.mp hb)
                   (printArgs_single ((readLeaf_exact ha).2 _))
                   (by simp only [inst, lookup_cons_self])
               · cases h
             · cases h
           | _ => exact absurd rfl hrigid
+
+/-- What a statement row that read a statement went through. (`aesop` inverts the definition.) -/
+theorem readStmtRow_inv {n : Nat} {s : TypeScript.Stmt} {row : Templates.Row} {k : Nat}
+    {child : (fam' : EffFam) → Nat → (y : Expr) → sizeOf y < sizeOf s →
+      Except ReadFailure (EffSelfCarrier Op fam')}
+    {children : (fam' : EffFam) → Nat → (ys : List Expr) → sizeOf ys < sizeOf s →
+      Except ReadFailure (EffSelfCarrier Op fam')}
+    {block : Nat → (ss : List TypeScript.Stmt) → sizeOf ss < sizeOf s →
+      Except ReadFailure (EffSelfCarrier Op .stmts)}
+    {st : Program.Stmt Op} {declared : Nat}
+    (h : readStmtRow sig n s row k child children block = some (.ok (st, declared))) :
+    row.fam = .stmt ∧ ∃ t σ, ∃ hσ : matchStmt n t s = some σ, ∃ sorts args,
+      row.out = .stmt t ∧ argSorts .stmt row.ctor = some sorts ∧
+      readArgs sig n row σ
+        (fun fam' d y i hy => child fam' d y (matchStmt_below n t s σ hσ (i, .expr y) hy))
+        (fun fam' d ys i hy => children fam' d ys (matchStmt_below n t s σ hσ (i, .exprs ys) hy))
+        (fun d body i hy => block d body (matchStmt_below n t s σ hσ (i, .stmts body) hy))
+        sorts 0 = .ok args ∧
+      buildRow .stmt row.ctor args k = .ok st ∧ declared = t.declares := by
+  unfold readStmtRow at h
+  aesop
 
 /-- What one statement row read, the printer prints, with the binders it declares. -/
 theorem readStmtRow_exact {n : Nat} {s : TypeScript.Stmt} {row : Templates.Row} {k : Nat}
@@ -752,47 +688,29 @@ theorem readStmtRow_exact {n : Nat} {s : TypeScript.Stmt} {row : Templates.Row} 
     (h : readStmtRow sig n s row k child children block = some (.ok (st, declared))) :
     cata_stmt (printAlg sig) st n = .ok (s, declared) := by
   obtain ⟨hnodup, hfixed, hholes⟩ := table_row (List.mem_of_getElem? hk)
-  unfold readStmtRow at h
-  split at h
-  case isFalse => cases h
-  rename_i hfam
-  split at h
-  · rename_i t hout
-    rw [hout] at hnodup hholes
-    split at h
-    · cases h
-    · rename_i σ hσ
-      split at h
-      · cases h
-      · rename_i sorts hsorts
-        have hlt := hholes sorts (hfam ▸ hsorts)
-        simp only [Option.some.injEq] at h
-        obtain ⟨args, hargs, h⟩ := bind_eq_ok.mp h
-        obtain ⟨e, hb, h⟩ := bind_eq_ok.mp h
-        simp only [Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        obtain ⟨hp, hbuild⟩ := buildRow_ok hb
-        obtain ⟨τ, hτ, hagree⟩ := readArgs_exact sig n row σ
-          (fun fam' d y i hy c hc => hchild fam' d y _ c hc)
-          (fun fam' d ys i hy c hc => hchildren fam' d ys _ c hc)
-          (fun d ss i hy c hc => hblock d ss _ c hc) hfixed sorts 0 args hargs
-        rw [hout, hfam] at hτ
-        rw [hout] at hagree
-        have hinst : instStmt n τ t = some s := by
-          rw [instStmt_congr n τ σ t fun j hj =>
-            hagree j (Nat.zero_le j) (by simpa only [Nat.zero_add] using hlt j hj) hj]
-          exact instStmt_of_match n t s σ hσ hnodup
-        have hfind := find?_selects_of_printedRow sig hp hk
-        have hcata : cataFam (printAlg sig) .stmt e =
-            tableLayer sig .stmt row.ctor (args.map (ArgF.fold (printAlg sig))) :=
-          cata_build (tableLayer sig) .stmt row.ctor args e hbuild
-        show cata_stmt (printAlg sig) e n = .ok (s, t.declares)
-        rw [show cata_stmt (printAlg sig) e = _ from hcata]
-        obtain ⟨rfam, rctor, rfixed, rout⟩ := row
-        simp only at hout
-        subst hout
-        simp only [tableLayer, hfind, hτ, ok_bind, hinst]
-  · cases h
+  obtain ⟨hfam, t, σ, hσ, sorts, args, hout, hsorts, hargs, hb, rfl⟩ := readStmtRow_inv h
+  obtain ⟨hp, hbuild⟩ := buildRow_ok hb
+  rw [hout] at hnodup hholes
+  obtain ⟨τ, hτ, hagree⟩ := readArgs_exact sig n row σ
+    (fun fam' d y i hy c hc => hchild fam' d y _ c hc)
+    (fun fam' d ys i hy c hc => hchildren fam' d ys _ c hc)
+    (fun d ss i hy c hc => hblock d ss _ c hc) hfixed sorts 0 args hargs
+  rw [hout, hfam] at hτ
+  rw [hout] at hagree
+  have hinst : instStmt n τ t = some s := by
+    rw [instStmt_congr n τ σ t fun j hj =>
+      hagree j (Nat.zero_le j)
+        (by simpa only [Nat.zero_add] using hholes sorts (hfam ▸ hsorts) j hj) hj]
+    exact instStmt_of_match n t s σ hσ hnodup
+  have hcata : cataFam (printAlg sig) .stmt st =
+      tableLayer sig .stmt row.ctor (args.map (ArgF.fold (printAlg sig))) :=
+    cata_build (tableLayer sig) .stmt row.ctor args st hbuild
+  show cata_stmt (printAlg sig) st n = .ok (s, t.declares)
+  rw [show cata_stmt (printAlg sig) st = _ from hcata]
+  obtain ⟨rfam, rctor, rfixed, rout⟩ := row
+  simp only at hout
+  subst hout
+  simp only [tableLayer, find?_selects_of_printedRow sig hp hk, hτ, ok_bind, hinst]
 
 end Row
 
@@ -801,12 +719,6 @@ end Row
 section Exact
 
 variable {sig : Signature Op} {spell : String → List String → Option Op}
-
-theorem getD_eq_ok {ε α : Type} {o : Option (Except ε α)} {err : ε} {a : α}
-    (h : o.getD (.error err) = .ok a) : o = some (.ok a) := by
-  cases o with
-  | none => cases h
-  | some r => exact congrArg some h
 
 /-- The spines print item by item; the statement spine threads what each statement declares. -/
 theorem cata_effs_cons (e : Eff Op) (es : Effs Op) (n : Nat) :
@@ -845,7 +757,7 @@ theorem below {m : Nat} (ih : ∀ m', m' < m → ExactUpTo sig spell m') {bound 
     (∀ d (ss : List TypeScript.Stmt) (_ : sizeOf ss < bound) c,
       readStmts sig spell d ss = .ok c → PrintsTo sig d .stmts c (.stmts ss)) :=
   ⟨fun fam' d y hlt c hc =>
-      (ih (sizeOf y) (by omega)).1 fam' d y c (Nat.le_refl _) (getD_eq_ok hc),
+      (ih (sizeOf y) (by omega)).1 fam' d y c (Nat.le_refl _) (Laws.Auto.getD_error_eq_ok.mp hc),
    fun fam' d ys hlt c hc => (ih (sizeOf ys) (by omega)).2.1 fam' d ys c (Nat.le_refl _) hc,
    fun d ss hlt c hc => (ih (sizeOf ss) (by omega)).2.2 d ss c (Nat.le_refl _) hc⟩
 
@@ -882,8 +794,8 @@ theorem readSpine_exact_step {m : Nat} (ih : ∀ m', m' < m → ExactUpTo sig sp
     obtain ⟨es, hes, h⟩ := bind_eq_ok.mp h
     cases h
     have h1 := (ih (sizeOf y) (by omega)).1 .eff n y e (Nat.le_refl _)
-      (getD_eq_ok (mapError_eq_ok.mp he))
-    have h2 := readSpine_exact_step ih .effs n rest es (by omega) (mapError_eq_ok.mp hes)
+      (Laws.Auto.getD_error_eq_ok.mp (Laws.Auto.mapError_eq_ok.mp he))
+    have h2 := readSpine_exact_step ih .effs n rest es (by omega) (Laws.Auto.mapError_eq_ok.mp hes)
     show cata_effs (printAlg sig) (.cons e es) n = .ok (y :: rest)
     rw [cata_effs_cons, show cata_eff (printAlg sig) e n = .ok y from h1,
       show cata_effs (printAlg sig) es n = .ok rest from h2]
@@ -899,8 +811,8 @@ theorem readSpine_exact_step {m : Nat} (ih : ∀ m', m' < m → ExactUpTo sig sp
     obtain ⟨ls, hls, h⟩ := bind_eq_ok.mp h
     cases h
     have h1 := (ih (sizeOf y) (by omega)).1 .layer n y l (Nat.le_refl _)
-      (getD_eq_ok (mapError_eq_ok.mp hl'))
-    have h2 := readSpine_exact_step ih .layers n rest ls (by omega) (mapError_eq_ok.mp hls)
+      (Laws.Auto.getD_error_eq_ok.mp (Laws.Auto.mapError_eq_ok.mp hl'))
+    have h2 := readSpine_exact_step ih .layers n rest ls (by omega) (Laws.Auto.mapError_eq_ok.mp hls)
     show cata_layers (printAlg sig) (.cons l ls) n = .ok (y :: rest)
     rw [cata_layers_cons, show cata_layer (printAlg sig) l n = .ok y from h1,
       show cata_layers (printAlg sig) ls n = .ok rest from h2]
@@ -946,12 +858,12 @@ theorem readStmts_exact_step {m : Nat} (ih : ∀ m', m' < m → ExactUpTo sig sp
       obtain ⟨⟨st, declared⟩, hst, h⟩ := bind_eq_ok.mp h
       obtain ⟨tail, htail, h⟩ := bind_eq_ok.mp h
       cases h
-      have hr : r = .ok (st, declared) := mapError_eq_ok.mp hst
+      have hr : r = .ok (st, declared) := Laws.Auto.mapError_eq_ok.mp hst
       subst hr
       obtain ⟨hchild, hchildren, hblock⟩ := below ih (bound := sizeOf s) (by omega)
       have h1 := readStmtRow_exact (sig := sig) hk hchild hchildren hblock hrow
       have h2 := readStmts_exact_step ih (n + declared) rest tail (by omega)
-        (mapError_eq_ok.mp htail)
+        (Laws.Auto.mapError_eq_ok.mp htail)
       show cata_stmts (printAlg sig) (.cons st tail) n = .ok (s :: rest)
       rw [cata_stmts_cons, h1]
       simp only [ok_bind]
@@ -976,13 +888,13 @@ theorem exactUpTo (hl : LawfulSpelling sig spell) (m : Nat) : ExactUpTo sig spel
 theorem read_exact (hl : LawfulSpelling sig spell) {n : Nat} {x : Expr} {e : Eff Op}
     (h : readEff sig spell n x = .ok e) : print sig n e = .ok x :=
   (exactUpTo hl (sizeOf x)).1 .eff n x e (Nat.le_refl _)
-    (getD_eq_ok (mapError_eq_ok.mp h))
+    (Laws.Auto.getD_error_eq_ok.mp (Laws.Auto.mapError_eq_ok.mp h))
 
 /-- The same of a layer: a layer is closed, so it is read, and printed, at depth `0`. -/
 theorem readLayer_exact (hl : LawfulSpelling sig spell) {x : Expr} {l : LayerTerm Op}
     (h : readLayer sig spell x = .ok l) : printLayer sig l = .ok x :=
   (exactUpTo hl (sizeOf x)).1 .layer 0 x l (Nat.le_refl _)
-    (getD_eq_ok (mapError_eq_ok.mp h))
+    (Laws.Auto.getD_error_eq_ok.mp (Laws.Auto.mapError_eq_ok.mp h))
 
 end Exact
 
