@@ -59,6 +59,7 @@ import Test.Codegen.SourceBindingsContract
 import Test.Ingest.TaxonomyContract
 import Test.Codegen.FormsContract
 import Test.Codegen.TemplateContract
+import Test.Codegen.TemplatesContract
 import Test.Program.Gen
 import Test.Program.CompileContract
 import Test.Program.TypedContract

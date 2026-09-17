@@ -82,9 +82,18 @@ def layerSamples : List (LayerTerm NativeOp) :=
 
 /-! ## The refusals are the hand printer's, and the table's own defect never shows -/
 
+/-- Is the refusal the table's own defect, for some constructor of some family? Compared whole
+against `tableDefect`: a prefix test on the string would bring `Classical.choice` through the
+string library, and the axiom gate audits this battery too. -/
 def isTableDefect : Except PrintRefusal TypeScript.Expr → Bool
-  | .error (.internalAction name) => name.startsWith "table:"
-  | _ => false
+  | .error refusal =>
+    [EffFam.eff, .stmt, .stmts, .effs, .action, .layer, .layers].any fun fam =>
+      (ctorNames fam).any fun ctor => decide (refusal = tableDefect ctor)
+  | .ok _ => false
+
+-- the defect is recognised when it is there
+#guard isTableDefect (.error (tableDefect "bind"))
+#guard !isTableDefect (.error (.internalAction "setContext"))
 
 #guard same (printT sig 0 (.withFiber (.setContext t))) (.error (.internalAction "setContext"))
 #guard same (printT sig 0 (.iterate (some (.handle "no such spelling")) t t t t u))
