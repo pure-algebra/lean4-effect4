@@ -5,6 +5,7 @@ import Test.Schema.AnnotationDataPlaneContract
 import Test.Schema.EffectfulFieldContract
 import Test.Schema.EffectfulFieldPropertiesContract
 import Test.Schema.AuthoringContract
+import Test.Schema.DialectContract
 import Test.Counterexamples.Codegen.TypeScriptRender
 import Test.Counterexamples.Schema.CensusCoverage
 import Test.Counterexamples.Schema.KindAlphabetSeparation
