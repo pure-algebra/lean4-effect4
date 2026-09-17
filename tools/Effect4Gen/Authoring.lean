@@ -644,7 +644,8 @@ def emitLiftLemmaCore (t : Table) (c : Ctor) (row? : Option Row) (fixed? : Optio
     if let some (k, hc) := fixed? then
       if j == k then
         params := params ++ hc.args.map fun f => s!"({f.name} : {f.tyText})"
-        appArgs := appArgs ++ [headTerm hc]
+        -- the lift takes the head's fields, not the head: the lemma applies it the same way
+        appArgs := appArgs ++ hc.args.map (·.name)
         continue
     appArgs := appArgs ++ [a.name]
     match a.kind with

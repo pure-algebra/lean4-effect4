@@ -274,6 +274,48 @@ theorem catchIf_scoped {Op : Type} (error : String) {test : TermSrc} {body : Src
   simp only [Env.push_length, List.length_cons, List.length_nil] at s2
   simp [s0, s1, s2]
 
+theorem selectBool_scoped {Op : Type} {scrutinee : TermSrc} {arm0 : Src Op} {arm1 : Src Op} (h0 : scrutinee.Scoped) (h2 : arm0.Scoped) (h3 : arm1.Scoped) :
+    ((selectBool scrutinee arm0 arm1) : Src Op).Scoped := by
+  refine ⟨fun env p e h => ?_⟩
+  unfold selectBool at h
+  obtain ⟨x0, hx0, h⟩ := bind_ok h
+  obtain ⟨x2, hx2, h⟩ := bind_ok h
+  obtain ⟨x3, hx3, h⟩ := bind_ok h
+  cases h
+  have s0 := h0.holds _ _ _ hx0
+  have s2 := h2.holds _ _ _ hx2
+  have s3 := h3.holds _ _ _ hx3
+  simp [s0, s2, s3]
+
+theorem selectOption_scoped {Op : Type} (bound : String) {scrutinee : TermSrc} {arm0 : Src Op} {arm1 : Src Op} (h0 : scrutinee.Scoped) (h2 : arm0.Scoped) (h3 : arm1.Scoped) :
+    ((selectOption bound scrutinee arm0 arm1) : Src Op).Scoped := by
+  refine ⟨fun env p e h => ?_⟩
+  unfold selectOption at h
+  obtain ⟨x0, hx0, h⟩ := bind_ok h
+  obtain ⟨x2, hx2, h⟩ := bind_ok h
+  obtain ⟨x3, hx3, h⟩ := bind_ok h
+  cases h
+  have s0 := h0.holds _ _ _ hx0
+  have s2 := h2.holds _ _ _ hx2
+  have s3 := h3.holds _ _ _ hx3
+  simp only [Env.push_length, List.length_cons, List.length_nil] at s3
+  simp [s0, s2, s3]
+
+theorem selectTag_scoped {Op : Type} (payload : String) (rest : String) {scrutinee : TermSrc} (tag : String) {arm0 : Src Op} {arm1 : Src Op} (h0 : scrutinee.Scoped) (h2 : arm0.Scoped) (h3 : arm1.Scoped) :
+    ((selectTag payload rest scrutinee tag arm0 arm1) : Src Op).Scoped := by
+  refine ⟨fun env p e h => ?_⟩
+  unfold selectTag at h
+  obtain ⟨x0, hx0, h⟩ := bind_ok h
+  obtain ⟨x2, hx2, h⟩ := bind_ok h
+  obtain ⟨x3, hx3, h⟩ := bind_ok h
+  cases h
+  have s0 := h0.holds _ _ _ hx0
+  have s2 := h2.holds _ _ _ hx2
+  simp only [Env.push_length, List.length_cons, List.length_nil] at s2
+  have s3 := h3.holds _ _ _ hx3
+  simp only [Env.push_length, List.length_cons, List.length_nil] at s3
+  simp [s0, s2, s3]
+
 theorem Action.fork_scoped {Op : Type} {program : Src Op} (options : Effect4.Supervision.ForkOptions) (h0 : program.Scoped) :
     ((Action.fork program options) : ActionSrc Op).Scoped := by
   refine ⟨fun env p e h => ?_⟩
@@ -530,6 +572,9 @@ theorem Cause.both_scoped {left : CauseSrc} {right : CauseSrc} (h0 : left.Scoped
 #print axioms Effect4.Program.Authoring.service_scoped
 #print axioms Effect4.Program.Authoring.provideService_scoped
 #print axioms Effect4.Program.Authoring.catchIf_scoped
+#print axioms Effect4.Program.Authoring.selectBool_scoped
+#print axioms Effect4.Program.Authoring.selectOption_scoped
+#print axioms Effect4.Program.Authoring.selectTag_scoped
 #print axioms Effect4.Program.Authoring.Action.fork_scoped
 #print axioms Effect4.Program.Authoring.Action.forkIn_scoped
 #print axioms Effect4.Program.Authoring.Action.forkScoped_scoped

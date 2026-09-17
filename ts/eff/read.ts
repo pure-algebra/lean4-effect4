@@ -1253,6 +1253,10 @@ const headReaders: Record<Head, HeadReader> = {
   "Cause.interrupt": notHere("Cause.interrupt"),
   "Cause.combine": notHere("Cause.combine"),
   "undefined": notHere("undefined"),
+  // `select`'s printed heads: refused as `Read.lean` refuses them (its `callRefusal` arm),
+  // until the generic reader from the template table reads them back (R5)
+  "optionCase": () => arity("optionCase"),
+  "caseTag": () => arity("caseTag"),
   "Effect.withFiber": readRunIn,
   // Keys and layers are read only in their dedicated argument positions, as in Read.lean
   "Context.Service": notHere("Context.Service"),

@@ -10,7 +10,7 @@
 // nowhere else: a family whose constructors are exactly `nil` and `cons head tail` is
 // ReadonlyArray<head>; a family whose constructors are all nullary is a union of string literals.
 // Nat is number, Option is `| null`, List is ReadonlyArray.
-import type { Ty, Lit, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, FnName, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, Row, EffTy } from "./eff.gen.ts"
+import type { Ty, Lit, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, FnName, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, Row, EffTy } from "./eff.gen.ts"
 
 // The frame algebra of Store.Val. Work is scheduled explicitly: nested programs and
 // inductive lists do not consume the JavaScript call stack. Frame lengths are patched
@@ -286,6 +286,19 @@ export const serviceKeyWire = (v: ServiceKey): Uint8Array => {
   return w.finish(() => writeServiceKey(w, v))
 }
 
+const writeDecision = (w: Writer, v: Decision): void => {
+  switch (v._tag) {
+    case "bool": return w.ctor(0, [])
+    case "option": return w.ctor(1, [])
+    case "tag": return w.ctor(2, [() => w.str(v.tag)])
+    default: throw new TypeError("wire Decision constructor")
+  }
+}
+export const decisionWire = (v: Decision): Uint8Array => {
+  const w = new Writer()
+  return w.finish(() => writeDecision(w, v))
+}
+
 const writeEff = (w: Writer, v: Eff): void => {
   switch (v._tag) {
     case "succeed": return w.ctor(0, [() => writeTerm(w, v.value)])
@@ -315,6 +328,7 @@ const writeEff = (w: Writer, v: Eff): void => {
     case "service": return w.ctor(24, [() => writeServiceKey(w, v.key)])
     case "provideService": return w.ctor(25, [() => writeServiceKey(w, v.key), () => writeTerm(w, v.value), () => writeEff(w, v.body)])
     case "catchIf": return w.ctor(26, [() => writeTerm(w, v.test), () => writeEff(w, v.body), () => writeEff(w, v.handler)])
+    case "select": return w.ctor(27, [() => writeTerm(w, v.scrutinee), () => writeDecision(w, v.decision), () => writeEff(w, v.arm0), () => writeEff(w, v.arm1)])
     default: throw new TypeError("wire Eff constructor")
   }
 }

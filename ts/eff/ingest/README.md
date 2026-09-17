@@ -107,6 +107,8 @@ The following tables are generated from the profile, forms and taxonomy.
 | Layer.mergeAll |
 | Effect.catch |
 | Effect.catchIf |
+| optionCase |
+| caseTag |
 
 ## Native rows
 

@@ -136,6 +136,14 @@ let rec json_service_key (r : service_key) : Eff_json_text.t =
 
 let print_service_key (v : service_key) : string = Eff_json_text.render (json_service_key v)
 
+let rec json_decision (v : decision) : Eff_json_text.t =
+  match v with
+  | Decision_bool -> Eff_json_text.Array [Eff_json_text.String "bool"]
+  | Decision_option -> Eff_json_text.Array [Eff_json_text.String "option"]
+  | Decision_tag a0 -> Eff_json_text.Array [Eff_json_text.String "tag"; Eff_json_text.String a0]
+
+let print_decision (v : decision) : string = Eff_json_text.render (json_decision v)
+
 let rec json_eff (v : eff) : Eff_json_text.t =
   match v with
   | Eff_succeed a0 -> Eff_json_text.Array [Eff_json_text.String "succeed"; json_term a0]
@@ -165,6 +173,7 @@ let rec json_eff (v : eff) : Eff_json_text.t =
   | Eff_service a0 -> Eff_json_text.Array [Eff_json_text.String "service"; json_service_key a0]
   | Eff_provideService (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "provideService"; json_service_key a0; json_term a1; json_eff a2]
   | Eff_catchIf (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "catchIf"; json_term a0; json_eff a1; json_eff a2]
+  | Eff_select (a0, a1, a2, a3) -> Eff_json_text.Array [Eff_json_text.String "select"; json_term a0; json_decision a1; json_eff a2; json_eff a3]
 and json_stmt (v : stmt) : Eff_json_text.t =
   match v with
   | Stmt_bindYield a0 -> Eff_json_text.Array [Eff_json_text.String "bindYield"; json_eff a0]

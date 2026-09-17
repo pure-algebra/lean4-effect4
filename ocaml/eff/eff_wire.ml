@@ -534,6 +534,32 @@ let rec decode_service_key (s : string) (pos : int) (limit : int) : (service_key
 
 let decode_service_key_exact (s : string) : service_key option = Eff_frame.exact decode_service_key s
 
+let rec emit_decision (b : Buffer.t) (v : decision) : unit =
+  match v with
+  | Decision_bool -> Eff_frame.emit_ctor b 0 (fun _ -> ())
+  | Decision_option -> Eff_frame.emit_ctor b 1 (fun _ -> ())
+  | Decision_tag a0 -> Eff_frame.emit_ctor b 2 (fun b -> Eff_frame.emit_string b a0)
+
+let encode_decision (v : decision) : string = Eff_frame.to_string emit_decision v
+
+let rec decode_decision (s : string) (pos : int) (limit : int) : (decision * int) option =
+  match Eff_frame.read_ctor s pos limit with
+  | None -> None
+  | Some (i, p, e, next) ->
+    (match i with
+    | 0 ->
+      if p = e then Some (Decision_bool, next) else None
+    | 1 ->
+      if p = e then Some (Decision_option, next) else None
+    | 2 ->
+      (match Eff_frame.decode_string s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Decision_tag a0, next) else None)
+    | _ -> None)
+
+let decode_decision_exact (s : string) : decision option = Eff_frame.exact decode_decision s
+
 let rec emit_eff (b : Buffer.t) (v : eff) : unit =
   match v with
   | Eff_succeed a0 -> Eff_frame.emit_ctor b 0 (fun b -> emit_term b a0)
@@ -563,6 +589,7 @@ let rec emit_eff (b : Buffer.t) (v : eff) : unit =
   | Eff_service a0 -> Eff_frame.emit_ctor b 24 (fun b -> emit_service_key b a0)
   | Eff_provideService (a0, a1, a2) -> Eff_frame.emit_ctor b 25 (fun b -> emit_service_key b a0; emit_term b a1; emit_eff b a2)
   | Eff_catchIf (a0, a1, a2) -> Eff_frame.emit_ctor b 26 (fun b -> emit_term b a0; emit_eff b a1; emit_eff b a2)
+  | Eff_select (a0, a1, a2, a3) -> Eff_frame.emit_ctor b 27 (fun b -> emit_term b a0; emit_decision b a1; emit_eff b a2; emit_eff b a3)
 and emit_stmt (b : Buffer.t) (v : stmt) : unit =
   match v with
   | Stmt_bindYield a0 -> Eff_frame.emit_ctor b 0 (fun b -> emit_eff b a0)
@@ -822,6 +849,20 @@ let rec decode_eff (s : string) (pos : int) (limit : int) : (eff * int) option =
            | None -> None
            | Some (a2, p) ->
             if p = e then Some (Eff_catchIf (a0, a1, a2), next) else None)))
+    | 27 ->
+      (match decode_term s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match decode_decision s p e with
+         | None -> None
+         | Some (a1, p) ->
+          (match decode_eff s p e with
+           | None -> None
+           | Some (a2, p) ->
+            (match decode_eff s p e with
+             | None -> None
+             | Some (a3, p) ->
+              if p = e then Some (Eff_select (a0, a1, a2, a3), next) else None))))
     | _ -> None)
 and decode_stmt (s : string) (pos : int) (limit : int) : (stmt * int) option =
   match Eff_frame.read_ctor s pos limit with

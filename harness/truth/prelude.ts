@@ -75,6 +75,36 @@ export const getOrElse = <A>(value: Option.Option<A>, fallback: NoInfer<A>): A =
 export const tagIs = (tag: string, e: unknown): boolean =>
   Array.isArray(e) && e.length === 2 && e[0] === tag
 
+// ---- `select`'s printed heads (`Codegen/Print.lean`, `Head.optionCase`/`Head.caseTag`) ----
+
+/** `Eff.select s .option a0 a1`: `none` runs the first arm, `some a` the second with `a`
+ * bound (`Decision.decide .option`). The scrutinee is evaluated once, by the caller; the
+ * chosen arm is built inside the suspension, as `branch`'s printed image does. */
+export const optionCase = <S, A0, E0, R0, A1, E1, R1>(
+  scrutinee: Option.Option<S>,
+  onNone: () => Effect.Effect<A0, E0, R0>,
+  onSome: (value: S) => Effect.Effect<A1, E1, R1>
+): Effect.Effect<A0 | A1, E0 | E1, R0 | R1> =>
+  Effect.suspend((): Effect.Effect<A0 | A1, E0 | E1, R0 | R1> =>
+    Option.match(scrutinee, { onNone, onSome }))
+
+/** `Eff.select s (.tag t) a0 a1`: a pair `[t, payload]` runs the first arm on the payload,
+ * every other value the second arm on the whole value (`Decision.decide (.tag t)`,
+ * `Val.tagPayload?`). The test only selects; the arm types come from the conditional types
+ * on `T`: `Extract` is the selected members, its `[1]` is `Ty.payloadTy`, `Exclude` is
+ * `Ty.diffTag`. They narrow exactly on a union of literal-tagged pairs and scalars
+ * (`Ty.taggedColumn`). */
+export const caseTag = <T, K extends string, A0, E0, R0, A1, E1, R1>(
+  value: T,
+  tag: K,
+  hit: (payload: Extract<T, readonly [K, unknown]>[1]) => Effect.Effect<A0, E0, R0>,
+  miss: (rest: Exclude<T, readonly [K, unknown]>) => Effect.Effect<A1, E1, R1>
+): Effect.Effect<A0 | A1, E0 | E1, R0 | R1> =>
+  Effect.suspend((): Effect.Effect<A0 | A1, E0 | E1, R0 | R1> =>
+    Array.isArray(value) && value.length === 2 && value[0] === tag
+      ? hit((value as any)[1])
+      : miss(value as any))
+
 // ---- FnName, total shape (Stores.lean:458-462 `FnName.total`) ------------------------
 
 /** `FnName.incr`: `a ↦ a + 1`. */

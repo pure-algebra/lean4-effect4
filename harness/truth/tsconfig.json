@@ -23,6 +23,7 @@
   },
   "include": [
     "prelude.ts",
+    "select-controls.ts",
     "generated",
     "run-truth.ts",
     "session/*.ts"

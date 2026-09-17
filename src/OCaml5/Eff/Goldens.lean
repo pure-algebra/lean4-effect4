@@ -180,6 +180,11 @@ def keyV (k : ServiceKey) : V :=
     [ ("name", .struct ``Effect4.ServiceName [("value", .nat k.name.value)])
     , ("service", .struct ``Effect4.ServiceTypeCode [("value", .nat k.service.value)]) ]
 
+def decisionV : Decision → V
+  | .bool => .ctor ``Decision.bool []
+  | .option => .ctor ``Decision.option []
+  | .tag t => .ctor ``Decision.tag [.str t]
+
 mutual
 partial def effV : Eff NativeOp → V
   | .succeed v => .ctor ``Eff.succeed [termV v]
@@ -199,6 +204,7 @@ partial def effV : Eff NativeOp → V
   | .uninterruptible b => .ctor ``Eff.uninterruptible [effV b]
   | .interruptible b => .ctor ``Eff.interruptible [effV b]
   | .branch t a b => .ctor ``Eff.branch [termV t, effV a, effV b]
+  | .select s d a0 a1 => .ctor ``Eff.select [termV s, decisionV d, effV a0, effV a1]
   | .whileLoop i t s b => .ctor ``Eff.whileLoop [termV i, termV t, termV s, effV b]
   | .yieldNow p => .ctor ``Eff.yieldNow [.nat p]
   | .callback op r => .ctor ``Eff.callback [opV op, termV r]
@@ -298,6 +304,12 @@ def pOnExit : P := .onExit (.succeed (n 1)) (.yieldNow 1)
 def pExit : P := .exit (.fail (n 9))
 def pMasks : P := .uninterruptible (.interruptible (.succeed (n 1)))
 def pBranch : P := .branch (.lit (.bool true)) (.succeed (n 1)) (.fail (n 2))
+def pSelectBool : P := .select (.lit (.bool false)) .bool (.succeed (n 1)) (.succeed (n 2))
+def pSelectOption : P :=
+  .catchCause (.fail (n 7))
+    (.select (.app "causeError" (ts [v 0])) .option (.succeed (n 0)) (.succeed (v 1)))
+def pSelectTag : P :=
+  .select (.app "pair" (ts [.lit (.str "A"), n 5])) (.tag "A") (.succeed (v 0)) (.succeed (n 0))
 def pCallback : P := .bind (.perform .deferredMake u) (.callback .deferredAwait (v 0))
 def pJoin : P := .bind (.withFiber (.fork child ⟨false, true, .uninterruptible⟩)) (.awaitFiber (v 0) .joinEffect)
 def pScoped : P :=
@@ -427,6 +439,7 @@ def corpus : List (String × P) :=
   , ("pGen", pGen), ("pWhile", pWhile), ("pCatch", pCatch), ("pStr", pStr), ("pFailCause", pFailCause)
   , ("pYieldError", pYieldError), ("pSync", pSync), ("pSuspend", pSuspend), ("pMatch", pMatch)
   , ("pOnExit", pOnExit), ("pExit", pExit), ("pMasks", pMasks), ("pBranch", pBranch)
+  , ("pSelectBool", pSelectBool), ("pSelectOption", pSelectOption), ("pSelectTag", pSelectTag)
   , ("pCallback", pCallback), ("pJoin", pJoin), ("pScoped", pScoped), ("pAcquire", pAcquire)
   , ("pPair", pPair), ("pStmts", pStmts), ("pActions", pActions), ("pOps", pOps)
   , ("pIll", pIll), ("pIllRet", pIllRet), ("pIllReq", pIllReq), ("pIllBreak", pIllBreak)

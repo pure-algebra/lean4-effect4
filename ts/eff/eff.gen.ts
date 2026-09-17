@@ -25,7 +25,8 @@
 //   ServiceName (Effect4.ServiceName, struct): mk(value: number)
 //   ServiceTypeCode (Effect4.ServiceTypeCode, struct): mk(value: number)
 //   ServiceKey (Effect4.ServiceKey, struct): mk(name: ServiceName, service: ServiceTypeCode)
-//   Eff (Effect4.Program.Eff, tagged union): succeed(value: Term) fail(error: Term) failCause(cause: CauseTerm) yieldError(error: Term) sync(thunk: Term) suspend(body: Eff) perform(op: NativeOp, request: Term) bind(first: Eff, rest: Eff) gen(body: ReadonlyArray<Stmt>) catchCause(body: Eff, handler: Eff) matchCause(body: Eff, onValue: Eff, onCause: Eff) onExit(body: Eff, finalizer: Eff) exit(body: Eff) uninterruptible(body: Eff) interruptible(body: Eff) branch(test: Term, thenB: Eff, elseB: Eff) whileLoop(initial: Term, test: Term, step: Term, body: Eff) yieldNow(priority: number) callback(register: NativeOp, request: Term) awaitFiber(fiber: Term, mode: ObserverMode) withFiber(action: ActionTerm) scoped(body: Eff) acquireRelease(acquire: Eff, release: Eff) provideLayer(layer: LayerTerm, isLocal: boolean, body: Eff) service(key: ServiceKey) provideService(key: ServiceKey, value: Term, body: Eff) catchIf(test: Term, body: Eff, handler: Eff)
+//   Decision (Effect4.Program.Decision, tagged union): bool option tag(tag: string)
+//   Eff (Effect4.Program.Eff, tagged union): succeed(value: Term) fail(error: Term) failCause(cause: CauseTerm) yieldError(error: Term) sync(thunk: Term) suspend(body: Eff) perform(op: NativeOp, request: Term) bind(first: Eff, rest: Eff) gen(body: ReadonlyArray<Stmt>) catchCause(body: Eff, handler: Eff) matchCause(body: Eff, onValue: Eff, onCause: Eff) onExit(body: Eff, finalizer: Eff) exit(body: Eff) uninterruptible(body: Eff) interruptible(body: Eff) branch(test: Term, thenB: Eff, elseB: Eff) whileLoop(initial: Term, test: Term, step: Term, body: Eff) yieldNow(priority: number) callback(register: NativeOp, request: Term) awaitFiber(fiber: Term, mode: ObserverMode) withFiber(action: ActionTerm) scoped(body: Eff) acquireRelease(acquire: Eff, release: Eff) provideLayer(layer: LayerTerm, isLocal: boolean, body: Eff) service(key: ServiceKey) provideService(key: ServiceKey, value: Term, body: Eff) catchIf(test: Term, body: Eff, handler: Eff) select(scrutinee: Term, decision: Decision, arm0: Eff, arm1: Eff)
 //   Stmt (Effect4.Program.Stmt, tagged union): bindYield(effect: Eff) yieldDiscard(effect: Eff) ret(value: Term) ifElse(test: Term, thenB: ReadonlyArray<Stmt>, elseB: ReadonlyArray<Stmt>) whileTrue(body: ReadonlyArray<Stmt>) breakLoop
 //   Stmts (Effect4.Program.Stmts, ReadonlyArray<Stmt>): nil cons(head: Stmt, tail: ReadonlyArray<Stmt>)
 //   Effs (Effect4.Program.Effs, ReadonlyArray<Eff>): nil cons(head: Eff, tail: ReadonlyArray<Eff>)
@@ -202,6 +203,17 @@ export const ServiceKey = Schema.Struct({
 })
 export type ServiceKey = typeof ServiceKey.Type
 
+export type Decision =
+  | { readonly _tag: "bool" }
+  | { readonly _tag: "option" }
+  | { readonly _tag: "tag"; readonly tag: string }
+
+export const Decision = Schema.TaggedUnion({
+  bool: {},
+  option: {},
+  tag: { tag: Schema.String },
+})
+
 export type Eff =
   | { readonly _tag: "succeed"; readonly value: Term }
   | { readonly _tag: "fail"; readonly error: Term }
@@ -230,6 +242,7 @@ export type Eff =
   | { readonly _tag: "service"; readonly key: ServiceKey }
   | { readonly _tag: "provideService"; readonly key: ServiceKey; readonly value: Term; readonly body: Eff }
   | { readonly _tag: "catchIf"; readonly test: Term; readonly body: Eff; readonly handler: Eff }
+  | { readonly _tag: "select"; readonly scrutinee: Term; readonly decision: Decision; readonly arm0: Eff; readonly arm1: Eff }
 
 export const Eff = Schema.TaggedUnion({
   succeed: { value: Schema.suspend((): Schema.Codec<Term> => Term) },
@@ -259,6 +272,7 @@ export const Eff = Schema.TaggedUnion({
   service: { key: ServiceKey },
   provideService: { key: ServiceKey, value: Schema.suspend((): Schema.Codec<Term> => Term), body: Schema.suspend((): Schema.Codec<Eff> => Eff) },
   catchIf: { test: Schema.suspend((): Schema.Codec<Term> => Term), body: Schema.suspend((): Schema.Codec<Eff> => Eff), handler: Schema.suspend((): Schema.Codec<Eff> => Eff) },
+  select: { scrutinee: Schema.suspend((): Schema.Codec<Term> => Term), decision: Schema.suspend((): Schema.Codec<Decision> => Decision), arm0: Schema.suspend((): Schema.Codec<Eff> => Eff), arm1: Schema.suspend((): Schema.Codec<Eff> => Eff) },
 })
 
 export type Stmt =

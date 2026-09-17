@@ -16,6 +16,9 @@ pOnExit	well-typed
 pExit	well-typed
 pMasks	well-typed
 pBranch	well-typed
+pSelectBool	well-typed
+pSelectOption	well-typed
+pSelectTag	well-typed
 pCallback	well-typed
 pJoin	well-typed
 pScoped	well-typed

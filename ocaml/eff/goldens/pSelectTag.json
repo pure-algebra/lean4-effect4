@@ -1,0 +1,1 @@
+["select",["app","pair",["cons",["lit",["str","A"]],["cons",["lit",["nat",5]],["nil"]]]],["tag","A"],["succeed",["var",0]],["succeed",["lit",["nat",0]]]]

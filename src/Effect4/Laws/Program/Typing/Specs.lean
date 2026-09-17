@@ -1316,6 +1316,30 @@ theorem Effect4.Spec.Option.of_triple :
               h)))
       o (@Eq.symm.{1} (Option.{0} α) o (@Option.some.{0} α a) ha) h
 
+@[spec] theorem Effect4.Program.Decision.arms_reflect :
+  ∀ (a : Effect4.Program.Decision) (a_1 : Effect4.Program.Ty),
+    @Std.Do.Triple.{0, 0} Option.{0} (Std.Do.PostShape.except.{0} PUnit.{1} Std.Do.PostShape.pure.{0})
+      Std.Do.Option.instWP.{0} (Prod.{0, 0} (List.{0} Effect4.Program.Ty) (List.{0} Effect4.Program.Ty)) (a.arms a_1)
+      (@Std.Do.SPred.pure.{0} (Std.Do.PostShape.except.{0} PUnit.{1} Std.Do.PostShape.pure.{0}).args True)
+      (@Prod.mk.{0, 0}
+        (Prod.{0, 0} (List.{0} Effect4.Program.Ty) (List.{0} Effect4.Program.Ty) →
+          Std.Do.Assertion.{0} (Std.Do.PostShape.except.{0} PUnit.{1} Std.Do.PostShape.pure.{0}))
+        (Std.Do.ExceptConds.{0} (Std.Do.PostShape.except.{0} PUnit.{1} Std.Do.PostShape.pure.{0}))
+        (fun a_2 =>
+          @Std.Do.SPred.pure.{0} (Std.Do.PostShape.except.{0} PUnit.{1} Std.Do.PostShape.pure.{0}).args
+            (@Eq.{1} (Option.{0} (Prod.{0, 0} (List.{0} Effect4.Program.Ty) (List.{0} Effect4.Program.Ty))) (a.arms a_1)
+              (@Option.some.{0} (Prod.{0, 0} (List.{0} Effect4.Program.Ty) (List.{0} Effect4.Program.Ty)) a_2)))
+        (@Prod.mk.{0, 0} (PUnit.{1} → Std.Do.Assertion.{0} Std.Do.PostShape.pure.{0})
+          (Std.Do.ExceptConds.{0} Std.Do.PostShape.pure.{0})
+          (fun x =>
+            @Std.Do.SPred.pure.{0} Std.Do.PostShape.pure.{0}.args
+              (@Eq.{1} (Option.{0} (Prod.{0, 0} (List.{0} Effect4.Program.Ty) (List.{0} Effect4.Program.Ty))) (a.arms a_1)
+                (@Option.none.{0} (Prod.{0, 0} (List.{0} Effect4.Program.Ty) (List.{0} Effect4.Program.Ty)))))
+          Unit.unit)) :=
+  fun a a_1 =>
+    @Effect4.Spec.Option.spec_reflect (Prod.{0, 0} (List.{0} Effect4.Program.Ty) (List.{0} Effect4.Program.Ty))
+      (a.arms a_1)
+
 @[spec] theorem Effect4.Program.layerTy_reflect :
   ∀ {Op : Type} (sig : Effect4.Program.Signature Op) (a : Effect4.Program.LayerTerm Op),
     @Std.Do.Triple.{0, 0} Option.{0} (Std.Do.PostShape.except.{0} PUnit.{1} Std.Do.PostShape.pure.{0})

@@ -788,7 +788,7 @@
             "provideLayer",
             "service",
             "provideService",
-            "catchIf"
+            "catchIf", "select"
           ]
         },
         {
@@ -820,7 +820,7 @@
             "provideLayer",
             "service",
             "provideService",
-            "catchIf"
+            "catchIf", "select"
           ]
         },
         {
@@ -852,7 +852,7 @@
             "provideLayer",
             "service",
             "provideService",
-            "catchIf"
+            "catchIf", "select"
           ]
         },
         {
@@ -884,7 +884,8 @@
             "acquireRelease",
             "provideLayer",
             "service",
-            "provideService"
+            "provideService",
+            "select"
           ]
         },
         {
@@ -923,7 +924,8 @@
             "gen",
             "branch",
             "whileLoop",
-            "provideLayer"
+            "provideLayer",
+            "select"
           ]
         },
         {
@@ -955,7 +957,7 @@
             "provideLayer",
             "service",
             "provideService",
-            "catchIf"
+            "catchIf", "select"
           ]
         },
         {
@@ -987,7 +989,7 @@
             "acquireRelease",
             "service",
             "provideService",
-            "catchIf"
+            "catchIf", "select"
           ]
         },
         {
@@ -1017,7 +1019,7 @@
             "provideLayer",
             "service",
             "provideService",
-            "catchIf"
+            "catchIf", "select"
           ]
         },
         {
@@ -1053,7 +1055,7 @@
             "provideLayer",
             "service",
             "provideService",
-            "catchIf"
+            "catchIf", "select"
           ]
         },
         {

@@ -12,7 +12,7 @@
 // ReadonlyArray<head>; a family whose constructors are all nullary is a union of string literals.
 // Nat is number, Option is `| null`, List is ReadonlyArray.
 
-import type { Ty, Lit, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, FnName, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, Row, EffTy } from "./eff.gen.ts"
+import type { Ty, Lit, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, FnName, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, Row, EffTy } from "./eff.gen.ts"
 
 export type Json = string | number | boolean | null | ReadonlyArray<Json> | { readonly [key: string]: Json }
 
@@ -123,6 +123,14 @@ export const serviceKeyJson = (v: ServiceKey): Json => ({
   service: serviceTypeCodeJson(v.service),
 })
 
+export const decisionJson = (v: Decision): Json => {
+  switch (v._tag) {
+    case "bool": return ["bool"]
+    case "option": return ["option"]
+    case "tag": return ["tag", v.tag]
+  }
+}
+
 export const effJson = (v: Eff): Json => {
   switch (v._tag) {
     case "succeed": return ["succeed", termJson(v.value)]
@@ -152,6 +160,7 @@ export const effJson = (v: Eff): Json => {
     case "service": return ["service", serviceKeyJson(v.key)]
     case "provideService": return ["provideService", serviceKeyJson(v.key), termJson(v.value), effJson(v.body)]
     case "catchIf": return ["catchIf", termJson(v.test), effJson(v.body), effJson(v.handler)]
+    case "select": return ["select", termJson(v.scrutinee), decisionJson(v.decision), effJson(v.arm0), effJson(v.arm1)]
   }
 }
 

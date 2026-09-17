@@ -306,6 +306,22 @@ let ctor_names_service_key : string list = ["mk"]
 let field_names_service_key : string list = ["name"; "service"]
 
 
+type decision =
+  | Decision_bool
+  | Decision_option
+  | Decision_tag of string
+
+let ctor_index_decision : decision -> int = function
+  | Decision_bool -> 0
+  | Decision_option -> 1
+  | Decision_tag _ -> 2
+let ctor_name_decision : decision -> string = function
+  | Decision_bool -> "bool"
+  | Decision_option -> "option"
+  | Decision_tag _ -> "tag"
+let ctor_names_decision : string list = ["bool"; "option"; "tag"]
+
+
 type eff =
   | Eff_succeed of term
   | Eff_fail of term
@@ -334,6 +350,7 @@ type eff =
   | Eff_service of service_key
   | Eff_provideService of service_key * term * eff
   | Eff_catchIf of term * eff * eff
+  | Eff_select of term * decision * eff * eff
 
 and stmt =
   | Stmt_bindYield of eff
@@ -413,6 +430,7 @@ let ctor_index_eff : eff -> int = function
   | Eff_service _ -> 24
   | Eff_provideService _ -> 25
   | Eff_catchIf _ -> 26
+  | Eff_select _ -> 27
 let ctor_name_eff : eff -> string = function
   | Eff_succeed _ -> "succeed"
   | Eff_fail _ -> "fail"
@@ -441,7 +459,8 @@ let ctor_name_eff : eff -> string = function
   | Eff_service _ -> "service"
   | Eff_provideService _ -> "provideService"
   | Eff_catchIf _ -> "catchIf"
-let ctor_names_eff : string list = ["succeed"; "fail"; "failCause"; "yieldError"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "branch"; "whileLoop"; "yieldNow"; "callback"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"]
+  | Eff_select _ -> "select"
+let ctor_names_eff : string list = ["succeed"; "fail"; "failCause"; "yieldError"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "branch"; "whileLoop"; "yieldNow"; "callback"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"]
 
 let ctor_index_stmt : stmt -> int = function
   | Stmt_bindYield _ -> 0
