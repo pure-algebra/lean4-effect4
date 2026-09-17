@@ -299,6 +299,51 @@ mutual
     | .cons h t => holesStmt h ++ holesStmts t
 end
 
+/-! ## The binders in scope at each hole
+
+A skeleton shows its own binding structure: a lambda or a block arrow brings its slots into
+scope for its body, and a `let` brings its slot into scope for the statements after it. Slots
+count from the node's own depth, so a hole at level `k` is printed, and read, at `n + k`. A
+table row therefore states no depth: it is read off the skeleton. -/
+
+/-- The scope after binding the slots `bs`: slot `b` in scope means `b + 1` binders are. -/
+def scopeWith (k : Nat) (bs : List Nat) : Nat := bs.foldl (fun acc b => max acc (b + 1)) k
+
+mutual
+  /-- Each hole with the number of binders in scope at it, `k` being in scope outside. -/
+  def levels (k : Nat) : Tpl → List (Nat × Nat)
+    | .hole i | .strHole i | .intHole i | .arrHole i => [(i, k)]
+    | .binderRef _ | .ident _ | .str _ | .int _ | .bool _ => []
+    | .call h args => levels k h ++ levelsTs k args
+    | .callSpread h i => levels k h ++ [(i, k)]
+    | .arr items => levelsTs k items
+    | .object fields => levelsFields k fields
+    | .arrow b => levels k b
+    | .lambda bs b => levels (scopeWith k bs) b
+    | .cond t a b => levels k t ++ (levels k a ++ levels k b)
+    | .method target _ args => levels k target ++ levelsTs k args
+    | .arrowBlock bs body => levelsStmts (scopeWith k bs) body
+  def levelsTs (k : Nat) : Tpls → List (Nat × Nat)
+    | .nil => []
+    | .cons h t => levels k h ++ levelsTs k t
+  def levelsFields (k : Nat) : Fields → List (Nat × Nat)
+    | .nil => []
+    | .cons _ v t => levels k v ++ levelsFields k t
+  /-- A statement list: a `let` of slot `s` is in scope for the statements after it. -/
+  def levelsStmts (k : Nat) : StmtTpls → List (Nat × Nat)
+    | .nil => []
+    | .cons (.letInit s v ann) t =>
+      levels k v ++ (holesAnn ann).map (·, k) ++ levelsStmts (max k (s + 1)) t
+    | .cons (.assign _ v) t | .cons (.ret v) t | .cons (.exprStmt v) t =>
+      levels k v ++ levelsStmts k t
+end
+
+/-- The binders in scope at hole `i` of a skeleton; `0` for a hole it does not have. -/
+def levelAt (t : Tpl) (i : Nat) : Nat :=
+  match (levels 0 t).find? (·.1 == i) with
+  | some (_, k) => k
+  | none => 0
+
 /-- A skeleton whose holes are pairwise distinct: what `inst_of_match` asks of a table row. -/
 def Linear (t : Tpl) : Prop := (holes t).Nodup
 

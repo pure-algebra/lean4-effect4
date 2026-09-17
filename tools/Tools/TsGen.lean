@@ -837,9 +837,12 @@ def argPatJs : ArgPat → Except String String
   | .optTySome => .ok (tagged "optTySome" [])
   | .daemon b => .ok (tagged "daemon" [("value", toString b)])
 
-def depthJs : Depth → String
-  | .rel k => tagged "rel" [("k", toString k)]
-  | .closed => tagged "closed" []
+/-- The depth an argument is read at, as `Templates.argDepth` decides it: closed for an argument
+of a layer family, otherwise under the binders its hole is under (`Template.levelAt`). -/
+def depthJs (sort : Effect4.Program.ArgSort) (level : Nat) : String :=
+  match sort with
+  | .child .layer | .child .layers => tagged "closed" []
+  | _ => tagged "rel" [("k", toString level)]
 
 def famJs : Effect4.Program.EffFam → String
   | .eff => "eff" | .stmt => "stmt" | .stmts => "stmts" | .effs => "effs"
@@ -859,8 +862,12 @@ def rowJs' (row : Effect4.Codegen.Templates.Row) : Except String String := do
   let out := match row.out with
     | .tpl t => tagged "tpl" [("tpl", tplJs t)]
     | .refuse name => tagged "refuse" [("name", lit name)]
+  let sorts := (Effect4.Program.argSorts row.fam row.ctor).getD []
+  let depth := sorts.zipIdx.map fun (sort, i) => match row.out with
+    | .tpl t => depthJs sort (levelAt t i)
+    | .refuse _ => depthJs sort 0
   pure (obj [("fam", lit (famJs row.fam)), ("ctor", lit row.ctor), ("fixed", arr fixed),
-    ("depth", arr (row.depth.map depthJs)), ("out", out)])
+    ("depth", arr depth), ("out", out)])
 
 /-- The three families read from one expression, with their Lean names in the closed world. -/
 def readFamilies : List (Effect4.Program.EffFam × Name) :=

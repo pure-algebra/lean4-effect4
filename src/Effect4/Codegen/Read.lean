@@ -412,10 +412,10 @@ def rowDaemon (row : Templates.Row) : Bool :=
   | some b => b
   | none => true
 
-/-- The arguments of a row from what its skeleton captured, in declaration order. An argument
-the classifier determines is supplied; a child is handed to the recursion with the fact that it
+/-- The arguments of a row from what its skeleton captured, in declaration order, each at the
+depth its hole is under (`Template.levelAt`). An argument the classifier determines is supplied; a child is handed to the recursion with the fact that it
 is one of the captures; a leaf goes through its own reader. -/
-def readArgs (sig : Signature Op) (n : Nat) (row : Templates.Row) (σ : Subst)
+def readArgs (sig : Signature Op) (n : Nat) (row : Templates.Row) (t : Template.Tpl) (σ : Subst)
     (child : (fam : EffFam) → Nat → (y : Expr) → (i : Nat) → (i, Arg.expr y) ∈ σ →
       Except ReadRefusal (EffSelfCarrier Op fam))
     (children : (fam : EffFam) → Nat → (ys : List Expr) → (i : Nat) → (i, Arg.exprs ys) ∈ σ →
@@ -423,7 +423,7 @@ def readArgs (sig : Signature Op) (n : Nat) (row : Templates.Row) (σ : Subst)
     List ArgSort → Nat → Except ReadRefusal (List (ArgF Op (EffSelfCarrier Op)))
   | [], _ => .ok []
   | s :: ss, i => do
-    let d := (row.depth.getD i (.rel 0)).at n
+    let d := Templates.argDepth s n (Template.levelAt t i)
     let a ← match (row.fixed.find? (·.1 == i)).bind (·.2.supplies) with
       | some a => .ok a
       | none => match s, captured σ i with
@@ -431,7 +431,7 @@ def readArgs (sig : Signature Op) (n : Nat) (row : Templates.Row) (σ : Subst)
         | .child fam, some ⟨.exprs ys, h⟩ => (children fam d ys i h).map (.child fam)
         | s, some ⟨a, _⟩ => readLeaf sig d (rowDaemon row) s a
         | _, none => .error readDefect
-    let rest ← readArgs sig n row σ child children ss (i + 1)
+    let rest ← readArgs sig n row t σ child children ss (i + 1)
     .ok (a :: rest)
 
 /-- The reserved names that head a program's printed clause: the heads of the table's program
@@ -501,7 +501,7 @@ mutual
             | some sorts =>
               if hr : t.rigid = true then
                 some do
-                  let args ← readArgs sig n row σ
+                  let args ← readArgs sig n row t σ
                     (fun fam' d y i hy =>
                       have : sizeOf y < sizeOf x := match_below n t x σ hr hσ (i, .expr y) hy
                       (readT sig spell fam' d y).getD (.error (unread fam')))
@@ -519,7 +519,7 @@ mutual
                 match sorts with
                 | [.child fam'] =>
                   if _hk : famRank fam' < famRank fam then
-                    (readT sig spell fam' ((row.depth.getD 0 (.rel 0)).at n) x).map fun r => do
+                    (readT sig spell fam' (Templates.argDepth (.child fam') n 0) x).map fun r => do
                       let c ← r
                       match build fam row.ctor [.child fam' c] with
                       | some e => .ok e

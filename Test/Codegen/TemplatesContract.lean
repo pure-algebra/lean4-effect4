@@ -1,4 +1,5 @@
 import Effect4.Codegen.Templates
+import Effect4.Program.Binders
 import Test.Program.Gen
 
 /-!
@@ -8,7 +9,7 @@ import Test.Program.Gen
 (2026-09-17) this battery was their agreement: equal, refusals included, on the samples below at
 two environment lengths and on the 400 seeded programs. What it pins now is what no other battery
 does: every skeleton has distinct holes (what `inst_of_match` asks), every row names a real
-constructor with a depth per argument, every constructor is covered, the refusals are the named
+constructor, the binders a skeleton shows are the binder table's, every constructor is covered, the refusals are the named
 ones, and no program ever reaches the table-defect refusal. The printed bytes are pinned by
 `Test/Codegen/PrintContract.lean` and the corpus goldens.
 -/
@@ -92,10 +93,49 @@ def isTableDefect : Except PrintRefusal TypeScript.Expr → Bool
   | .tpl tp => decide (Linear tp)
   | .refuse _ => true
 
--- every row names a constructor of its family, with one depth per argument
-#guard table.all fun row => match argSorts row.fam row.ctor with
-  | some sorts => sorts.length == row.depth.length
-  | none => false
+-- every row names a constructor of its family
+#guard table.all fun row => (argSorts row.fam row.ctor).isSome
+
+/-! ## The skeleton's binders are the binder table's
+
+A row states no depth: `Template.levelAt` reads it off the skeleton. The scope side has its own
+source, `tools/Effect4Gen/binders.json`, as `Node.binders` (`Program/Binders.lean`). On every
+sample the two agree, child by child: the binders a skeleton puts a child under are the binders
+the scope rules put it under. (A child of a layer family is closed by `argDepth`, so it is left
+out; `Node.closedChild` says the same of a layer's body.) -/
+
+/-- Per child of the top node, in order: the level its row's skeleton gives it, `none` for a
+child of a layer family. -/
+def skeletonLevels : (fam : EffFam) → String → List (ArgF NativeOp fun _ => Unit) → List (Option Nat)
+  | fam, ctor, args =>
+    match table.find? fun row => row.selects fam ctor args with
+    | some ⟨_, _, _, .tpl tp⟩ =>
+      (args.zipIdx.filterMap fun (a, i) => match a with
+        | .child .layer _ | .child .layers _ => some none
+        | .child _ _ => some (some (levelAt tp i))
+        | _ => none)
+    | _ => []
+
+def topLevels (e : Eff NativeOp) : List (Option Nat) :=
+  -- the fold's carrier forgets the children; the layer function sees the top node's arguments
+  (cata_eff (EffAlgebra.ofLayer (R := fun _ => List (Option Nat))
+    fun fam ctor args => skeletonLevels fam ctor (args.map fun
+      | .child f _ => .child f ()
+      | .term v => .term v | .cause v => .cause v | .op v => .op v | .nat v => .nat v
+      | .mode v => .mode v | .bool v => .bool v | .key v => .key v | .decision v => .decision v
+      | .optTy v => .optTy v | .forkOptions v => .forkOptions v | .optTerm v => .optTerm v
+      | .lit v => .lit v | .path v => .path v)) e)
+
+def agreesWithBinders (e : Eff NativeOp) : Bool :=
+  (topLevels e).zipIdx.all fun (level, j) => match level with
+    | some k => k == Node.binders (.eff e) j
+    | none => true
+
+#guard (effSamples.filter fun e => match e with | .perform .. | .gen .. | .withFiber .. => false | _ => true).all
+  agreesWithBinders
+-- and it is not vacuous: the samples put children under one and under two binders
+#guard effSamples.any fun e => (topLevels e).contains (some 1)
+#guard effSamples.any fun e => (topLevels e).contains (some 2)
 
 -- every constructor of the three skeleton families has a row, except the two hand fields
 #guard ((ctorNames .eff).filter fun c => !(table.any fun row => row.fam == .eff && row.ctor == c))
