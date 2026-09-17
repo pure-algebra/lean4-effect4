@@ -67,6 +67,53 @@ signature, an algebra per transform, `fold` to apply, `Hom` to compose (fusion s
 cost one traversal). Nothing else is needed, and nothing else should be added until a
 consumer asks for it. That is the simplicity rule in one sentence.
 
+### 1b. Folding through closures: context down, types up (owner's question, same night)
+
+A closure is a child with a binder, so the catamorphism recurses through it like any other
+child; what changes at the binder is the context, and the binder table says how. Three
+carriers give three levels of power, all over the one generated `cata_eff`:
+
+| carrier `R` | what the algebra sees | existing instance |
+| --- | --- | --- |
+| `X` | the children's results only | `Straight`, the codecs, `weaken` |
+| `Ctx → X` | a context flowing down: path, depth, binders, the enclosing scope or fork | the scope-safety algebra (`scopedAlgebra` through `cata_eff`, depth-indexed), `foldMapAt_eff` (path-indexed), `print` (depth) |
+| `(TyEnv → Option EffTy) × (Ctx → X)` | the types the checker computes at this node, and the context | `layoutAlg` on `Doc` has this shape (`layout_info` by fusion); for `Eff` it is `effTy` paired with a user algebra |
+
+The third is the one the owner is pointing at: decisions made at a node from how nested it
+is and what types it sees. In Lean, with the generated names:
+
+```lean
+structure Ctx where
+  path : List Nat        -- how nested, and where
+  scoped : Nat           -- how many `scoped` frames enclose this node
+  inFork : Bool          -- inside a forked child
+
+abbrev Policy := Ctx → List Finding
+
+def policy (sig : Signature Op) : EffAlgebra Op (fun _ => (TyEnv → Option EffTy) × Policy) where
+  eff_bind := fun first rest => ⟨typing.eff_bind first.1 rest.1,
+    fun ctx =>
+      first.2 { ctx with path := ctx.path ++ [0] } ++
+      rest.2 { ctx with path := ctx.path ++ [1] }⟩       -- rest's env gains first's answer
+  eff_scoped := fun body => ⟨typing.eff_scoped body.1,
+    fun ctx => body.2 { ctx with scoped := ctx.scoped + 1, path := ctx.path ++ [0] }⟩
+  eff_withFiber := fun action => ⟨typing.eff_withFiber action.1,
+    fun ctx =>
+      let findings := action.2 { ctx with inFork := true, path := ctx.path ++ [0] }
+      -- a fork three scopes deep whose error column is not `never`: a finding
+      if ctx.scoped ≥ 3 ∧ (action.1 env).any (·.error ≠ .never) then finding ctx :: findings
+      else findings⟩
+  -- one field per constructor; the typing half is the generated `effTy` algebra
+```
+
+`cata_eff (policy sig) program` walks the whole program, closures included, with the
+context extended exactly where the binder table says a binder is, and the typing half is
+the checker's own fold, so the fusion lemma (`cata_eff_fusion`, once generated) says the
+first component equals `effTy` and nothing in the policy can disagree with the checker. The
+same algebra is one object literal on the host through `algebra.gen.ts`, running over the
+same data. What TypeScript cannot do is this over its own source, because its programs are
+not data with a binder table and a typing fold; ours are.
+
 ## 2. The medium: jumping between Effect and static data
 
 ```
@@ -250,6 +297,46 @@ semantics", it is one store (the queue: a buffer, its strategy, parked takers an
 `end` and `done`) and one row (`pull`), with every other module's meaning derived as a
 program over them by the fold that already gives programs their meaning. That is cheap
 because everything reduces to `pull`, and it is not now.
+
+### 5b. Why `Val` and `Ty` inside, and schema at every edge (owner's question, same night)
+
+The owner: why are we seeing `Val` and not schema; we need schema combinators, because we
+almost always want to end with the schema; author everything and have the schema come
+through at the end, and combine schemas the ways we expect.
+
+**What each carrier is for.** `Val` is the machine's value: what a running program holds
+and what the tape records. `Ty` is the checker's type: canonical, decidable, with the join,
+the subtype order and the residual that `effTy_sound`/`effTy_complete` are proved over.
+`Representation`/`Document` is the schema: the boundary's contract, the thing a host, a
+model or a client reads. The three are related by two maps that already exist and one
+theorem: `Ty.schema : Ty → Representation` and `Ty.ofSchema : Representation → Option Ty`
+with the retraction `ofSchema_schema` (`Schema/Bridge.lean:114`), and `Val.hasTy v t` as
+the check that a value inhabits a type. A certificate already projects to a schema:
+`effDocument : EffTy → Document` (`Bridge.lean:162`) gives the answer, error and
+requirements of a typed program as a document, and `rowDocument` does the same for a row.
+So the schema does come through at the end today; what is missing is the front.
+
+**What is missing, in order.**
+
+1. **Schema combinators in Lean**, mirroring Effect's `Schema.*` constructors over
+   `Representation`: `string`, `number`, `boolean`, `literal`, `struct`, `tuple`, `union`,
+   `option`, `array`, `taggedStruct`, `suspend`; the same names, so a schema authored in
+   Lean and one read from TypeScript are the same document. (`Schema/Authoring.lean` today
+   holds predicate conveniences, not this.)
+2. **Schemas at the authoring surface.** A term, a scrutinee or a row is typed from a
+   schema by `ofSchema`, never by hand-writing a `Ty`: `caseTag` takes the column as a
+   schema, `Decision.ofSchema` derives the decision from the scrutinee's shape (an option
+   schema is `.option`, a union of literal-tagged tuples is `.tag`), and `Api.author`
+   refuses a schema `ofSchema` cannot express, with its path. `Typed.schema` exposes
+   `effDocument` on the facade so the schema is the certificate's public face.
+3. **Combination as expected.** Union of schemas is `Ty.join` under the bridge, a struct of
+   schemas is a struct document, a tagged union is `taggedColumn` under the bridge; the laws
+   are the bridge's retraction applied to each combinator (one `rfl`-shaped lemma each).
+4. **The entries.** The surface entries of §5 are `(input : Schema, output : Schema)`, the
+   inspection protocol's tools publish object-typed success schemas, and the typed client
+   is generated from them: the same combinators, read rather than written.
+
+None of this widens `Val` or `Ty`; it puts the schema in front of them and behind them.
 
 ## 6. What exists and what is missing, per host
 

@@ -357,13 +357,82 @@ def denoteB (k : Nat) : NativeEff → List Val → Effects.Program StoreSig (Opt
 - `Val.hasTy_option_inv_at` at the allocation-aware form is `Decision.option`'s half of `decide_typed`; keep it exactly as it is in the working tree.
 - `typeOf` for `.isSome` and `.getOrElse` match `.option _` syntactically, while `Decision.option.arms` matches `t.normalize`; `union (option a) never` and a bare `never` type through one and not the other. `| .isSome, [a] => match a.normalize with | .option _ => some .bool | _ => none`, and `getOrElse` on `a.normalize`, make the atoms and the eliminator agree on what an option type is. The checker admits more, never less, so nothing typed today changes. Optional in this slice; one line each.
 
+## 3b. The semantics of `select`, concretely, and what the fold gives for free (added 2026-09-16, late night)
+
+The owner's standing rule: wherever a catamorphism, a fold or a homomorphism gives a piece for free, take it; and say what the semantics actually is. Here it is in five equations, then the ledger of free against hand-written.
+
+**One program, three decisions.** `select s d a0 a1` evaluates the term `s` once in the fork's environment, asks `d.decide` which child runs and what it binds, and runs that child with the bound value (if any) pushed as variable 0.
+
+```
+.bool      : s ? a0 : a1                          decide (bool b)        = (b, nothing)
+.option    : Option.match(s, {onNone: a0,        decide none            = (child 0, nothing)
+                            onSome: (x) => a1})   decide (some x)        = (child 1, x)
+.tag "A"   : caseTag(s, "A", (p) => a0,           decide ["A", p]        = (child 0, p)
+                             (r) => a1)           decide r (any other)   = (child 1, r)
+```
+
+**Typing** (`effTy`, the `HasTy` rule): the scrutinee has type `t`; `d.arms t` says what each child's environment gains (`.bool`: nothing and nothing; `.option a`: nothing and `a`; `.tag "A"` on a tagged column `c`: the payload type of the `"A"` members, and the residual `diffTag "A" c`); each child is typed in its extended environment; the answers join as the least upper bound, the errors join, the requirements union. So `select` is typed exactly as `bind` is typed (an environment extension per child) plus a join, and `branch` is literally the `.bool` instance.
+
+**Meaning** (`denote`, on the straight fragment): one equation and one refusal.
+
+```
+meaning (select s d a0 a1) env st = meaning (if first then a0 else a1) (env ++ bound) st
+                                              when (evalTerm env s).bind d.decide = some (first, bound)
+meaning (select s d a0 a1) env st = (badShapeExit, st)   when it is none
+```
+
+`decide_typed` says the second line never happens on an admitted program: a scrutinee of type `t` with `arms t = some _` always decides, and the bound value has the arm's type. That single theorem, proved once by cases on the three decisions, is the whole "no `badShape`" story for the construct.
+
+**Machine** (`compileEff`, `suspendBodyAt`): `select` compiles to a suspension whose body, when forced at a point, evaluates the scrutinee, decides, and resolves the chosen child at `childBind i bound` (the child's point, with the value bound when there is one). The reference (`denoteR`) does the same under `suspendR`. `intro_select` is the one simulation step: the machine's frame after forcing equals the reference's, which is `branch`'s proof with `cases first; cases bound` in place of `split`.
+
+**Printing and reading**: the three images above, each a row of the template table once R4 exists; until then three hand arms in `Print.lean` and `Read.lean` plus the same in `read.ts`. `readable` on `select` is `s.scoped n && readable n a0 && readable (n + binds.1) a1` with the binder counts from `Decision.binds`, which `arms_length` ties to the checker's environment extension so the two cannot drift.
+
+**The ledger.** Free, because generated from the inductive or the binder table the moment the constructor exists: the `EffAlgebra` field `eff_select`, `cata_eff`'s arm, `hom_eq_cata`/`cata_id`, `Node.child`/`Node.at_`/the lenses, `weaken`, `refSites`, `layerPaths`, `expandRound`, `frontierMap`, the `Derived` instances (`DecidableEq`, `Repr`, wire, JSON, canonical bytes), `eff.gen.ts` and `eff_types.ml` shapes, the `Node.binders` row, the authoring lift and its 48-style `_scoped` lemma with the dispatcher tactic, the OCaml engine's projection of the new arm through LCNF. Hand-written, one arm each, because they are the components of an algebra instance that no generator knows: `effTy`, `compileEff`, `denote`, `denoteR`, `Straight`, `print`, `read`, and the lemma families (`inv_select`, the `sound` arm, the `weaken` alternative, `suspendBodyAt_select_{of_decide,bad}`, `meaning_select_{of_decide,bad}`, `denoteR_select`, `intro_select`, the three reader lemmas' arms). What the algebra says about that hand list: each of those lemma families is one component of a homomorphism condition between two folds (the meaning and the machine, the printer and the reader), so their *statements* are uniform in the constructor and can be generated the way the scope lemmas' statements are (the `*_scoped` family, with `authoring_scoped` as the dispatcher); only the proofs are per constructor. Generating those statements is the "for free" that is still on the table, and it belongs to the fold generator, not to this packet.
+
+**Closures, and values that are not scalars** (the owner's question of the same night). In `Eff` a closure is never a value. It is a child with binders: `bind`'s second child sees variable 0, `select`'s arms see what `Decision.arms` gives them, `catchIf`'s handler sees the error, `whileLoop`'s body sees the cursor; the binder table (`binders.json`, `Node.binders`) is the complete list, and the authoring lifts are generated from it. So the question "what do we do about closures" has one answer on every fold: the carrier is a function of the environment, `Env → R`. `denote` runs at `List Val → Program`, `effTy` at `TyEnv → Option EffTy`, the host `run` instance at `(env) => Effect`, and a template's hole under a binder is the same thing at the printer. That is closure conversion done by the catamorphism, once, instead of a lambda value in `Val` that every owner would have to interpret. At the boundary a closure is spelled as the host's lambda (`(x) => …`), which is why holes under binders are the one place the template calculus needs a cut. Values that are not the carrier's scalars (`nat`, `str`, `bool`, lists, pairs, options, `ctor`) are handles into the store with a schema on the handle (`Ty.handle`, and `Ty.app` once the surface is imported); `Val` does not widen for them, the schema is their meaning, and the host checker is their oracle. Which is what makes the owner's sentence true: the API to a program is a fold over it, a session is a fold over a list or stream of its steps, and the authoring surface is sugar over the same fold.
+
+## 3c. The authoring layer over `select` and `iterate` (owner's direction, same night)
+
+The owner's words: nobody wants to see nodes and arms; follow the flow, the concurrency, the
+nesting; type safe; match combinators, fall-throughs, retries; composable and clean; "I wish
+we could have another program be in for the lambda". Rulings taken:
+
+- **A lambda is another program, already.** Every child with a binder is a closure whose body
+  is a program: `bind`'s rest sees variable 0, `select`'s arms see what `arms` gives, the loop
+  body sees the cursor. `Val` and `Term` do not widen for closures; `Ty` widens only with
+  `Ty.app` for the imported surface (the workshop note §5). The authoring layer names the
+  binder with a Lean function, as `bindWith` does today: `fun x => …` is the lambda, and the
+  lift turns it into the indexed child.
+- **Both constructors get the per-decision binder rule now.** The generator learns that a
+  constructor's binder count may depend on a non-recursive argument (`select` on its
+  `Decision`, `iterate` on nothing yet, but the rule is written once); `Node.binders` already
+  reads the node, and the lift reads the same table. No maximal slot list, no hidden unused
+  name.
+- **The sugar, as folds over the lifts, in the order they are needed:**
+
+  ```lean
+  ifElse test a0 a1                                       -- select t .bool
+  optionCase s (onNone := a0) (onSome := fun x => a1)     -- select s .option
+  caseTag s "A" (hit := fun p => a0) (miss := fun r => a1) -- select s (.tag "A")
+  matchTag s [("A", fun p => …), ("B", fun p => …)] (fallthrough := fun rest => …)
+      -- foldr over caseTag; each miss is typed at the residual so far; a `never`
+      -- residual makes the fallthrough refusable, a repeated tag joins its payloads
+  retry policy body                                       -- iterate over an attempt counter or
+      -- a schedule cursor, the failure caught by `catchIf`/`catchCause` and fed back as the
+      -- next cursor; a form over `iterate`, never a constructor
+  ```
+
+  Each is a definition in `Authoring/Sugar.lean` over the generated lifts, so a new pattern
+  costs a definition and a `#guard`, never an arm in an owner. `Api.author` certifies the
+  result as it certifies everything else.
+
 ## 4. Order
 
 0. **Three refactors on the tree as it is, before the constructor exists**, each its own commit, built and checked before the next (ruling of 2026-09-16, `2026-09-16-algebraic-reading-assessment-and-order-ruling.md`; the register's B17, B5 and B6 attached them to this slice, and doing them first means `select` pays one row each instead of one arm each).
    - (a) B17, the binder table. It already exists: `childLevel` in `Laws/Codegen/HoistingReadable.lean:45`, private, eleven rows over `Node`, one consumer (`nodeReadable_child` and the two lemmas after it). Promote it to `Node.binders : Node Op → Nat → Nat` in `Program/Refs.lean` beside `Node.child` (values bound at child `i`), with the layer reset stated as its own fact (`Node.resetsLevel`, true for `layer (.effect _ _)` and `layer (.effectDiscard _)` at child 0), so that `childLevel n node i = if resetsLevel node i then 0 else n + binders node i` is the definition `HoistingReadable.lean` keeps. `select` adds one row: child 1 binds `decision.arms`' count (0 for `.bool`, 1 for `.option` and `.tag`). Owners that count binders (`readable`, `readEff`, `print`, `Test/Program/Gen.lean`, `Point.childBind`) read the table in every arm touched from now on, starting with `select`'s; `effTy` keeps the types and `Point.childWith` the values, each with one length lemma against the table. Do not rewrite the untouched literal arms (46 sites in `Read.lean`, 11 in `Print.lean`, 8 in `Gen.lean`) in this commit; state the residual count in the commit body.
    - (b) B5, delete `Plain`. `Agreement.lean:33` defines it and `:52` proves `Plain_eq_Straight`; `Straight` (`Fragment.lean:20`) is the one classifier and `Denote.lean:140-168` already has `Straight.suspend`, `.bind`, `.branch`, `.exit`, `.catchCause`, `.matchCause`, `.onExit`, `.perform_sync`. Port the three that have no twin (`Plain.not_gen`, `.not_whileLoop`, `.not_provideLayer`) to `Straight.*`, rewrite the consumer sites (`Agreement.lean`, about 20; `Agreement/Machine.lean`, about 25, including `plainCode_compileEff` and `NodePlain`; `RuntimeR.lean:280,293` and `Machine.lean:1807`, where the `rw [Plain_eq_Straight]` bridges disappear), and delete the definition, the equation and the eleven `Plain.*` lemmas. `PlainCode`, `PlainFrame`, `PlainStack`, `PlainName`, `NodePlain`, `PlainHead` (`Simulation/Evaluate.lean:455`) and `layersPlain` (`Codegen/Admit.lean:48`) are code-level and declaration-level predicates, not copies of `Straight`; they stay.
    - (c) B6, `Eff.suspendDecided : NativeEff → Bool`, true exactly for the forms `suspendBodyAt` decides itself (`suspend`, `branch`, `gen`, `whileLoop`, `provideLayer`; `select` joins when it lands), used inside `suspendBodyAt`'s match and as the single premise of `suspendBodyAt_of_at` (`Agreement.lean:1389`) in place of its five negative premises; `isBranch` (`:1555`) and `not_branch_of_isBranch_false` deleted; the two call sites that spell the five premises (`Agreement/Machine.lean:295-296` and the one in `Agreement.lean`) shrink to one argument.
-1. `Decision`, `Val.tagPayload?`, the tag algebra, `decide_typed`. Pure, no machine, one new value lemma.
+1. `Decision`, `Val.tagPayload?`, the tag algebra, `decide_typed`. Pure, no machine, one new value lemma. **Landed 2026-09-16 late night**: `Program/Decision.lean` (`Decision`, `decide`, `arms`, `binds`, `arms_length`, `Val.tagPayload?`), `Ty.taggedColumn`/`payloadOf`/`payloadTy` beside `diffTag`, `Laws/Program/Decision.lean` (`NativeAtom.tagHit_eq`, `Ty.payload_hasTy`, `Decision.decide_typed` with `BoundTyped` in place of a `Forall₂` the core lacks), `Test/Program/DecisionContract.lean`; all four laws at `[propext, Quot.sound]`. Two lessons: `by_cases` and a Boolean `==` under `simp` both reach `Classical.choice` (use `cases b == c` and propositional `if t = tag`); `nomatch` under `try` is unsafe because its error is recovered with a `sorry` (use `exact absurd h Bool.false_ne_true`). The conformance policy names `Decision.arms` and `Ty.payloadOf` with their absorbed sets.
 2. The constructor, `weaken`, the typing arm, the `HasTy` rule, `inv_select`, the `sound` arm, the `effTy_weaken` alternative; the `Node.binders` row, the `Straight` arm, the `suspendDecided` arm.
 3. `childBind` (over the table's entry), compile, reference, meaning, the lemma families (two each), `intro_select`, the fragment and agreement arms.
 4. Print, the two readers, `make gen`, the three controls for the tag print under strict type-check.

@@ -591,6 +591,30 @@ head) this is a member filter and the result is canonical (`diffTag_canonical`,
 def diffTag (tag : String) (t : Ty) : Ty :=
   ofMembers (t.members.filter fun m => !isTagged tag m)
 
+/-- A column a tag decision can select on: every member is a literal-tagged pair or a
+scalar (`unit`, `nat`, `int`, `string`, `bool`, a literal). Nothing else, so that a two-cell
+list value can inhabit only the tagged pairs (`payload_hasTy`, `Laws/Program/Decision.lean`)
+and the host's `Extract`/`Exclude` narrowing agrees with `payloadTy` and `diffTag` exactly on
+these columns (`select` packet §1.8). -/
+def taggedColumn (t : Ty) : Bool :=
+  t.members.all fun m =>
+    match m with
+    | .prod (.lit _) _ => true
+    | .unit | .nat | .int | .string | .bool | .lit _ => true
+    | _ => false
+
+/-- The payload of a member carrying `tag`; `none` for every other member. -/
+def payloadOf (tag : String) : Ty → Option Ty
+  | .prod (.lit t) p => if t = tag then some p else none
+  | _ => none
+
+/-- The union of the payloads of the members carrying `tag`, canonical; `none` when no
+member does. What child 0 of a tag decision binds; `diffTag` is what child 1 binds. -/
+def payloadTy (tag : String) (t : Ty) : Option Ty :=
+  match t.members.filterMap (payloadOf tag) with
+  | [] => none
+  | ps => some (normalize (ofMembers ps))
+
 /-- The API witness means equality with the computed canonical representative. -/
 def Canonical (t : Ty) : Prop := normalize t = t
 

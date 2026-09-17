@@ -5,6 +5,72 @@
       "name": "Effect4.Program.Ty",
       "functions": [
         {
+          "name": "Effect4.Program.Decision.arms",
+          "mode": "default",
+          "cover": [
+            "never",
+            "unit",
+            "nat",
+            "int",
+            "string",
+            "bool",
+            "handle",
+            "list",
+            "prod",
+            "except",
+            "exitOf",
+            "causeOf",
+            "fiberOf",
+            "union",
+            "lit"
+          ]
+        },
+        {
+          "name": "Effect4.Program.Ty.payloadOf",
+          "sites": [
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union",
+                "lit"
+              ]
+            },
+            {
+              "mode": "default",
+              "cover": [
+                "never",
+                "unit",
+                "nat",
+                "int",
+                "string",
+                "bool",
+                "handle",
+                "option",
+                "list",
+                "prod",
+                "except",
+                "exitOf",
+                "causeOf",
+                "fiberOf",
+                "union"
+              ]
+            }
+          ]
+        },
+        {
           "name": "Effect4.Program.Ty.factors",
           "mode": "default",
           "cover": [
