@@ -5,9 +5,8 @@ import Test.Program.LoopSoundContract
 # Loop agreement contract (layer A)
 
 The local machine run on the loop programs: it finishes with the budgeted meaning's exit and
-stores, which is what `localRun_rootB` proves for `LoopedSeq`. The guards also run the forms
-the theorem does not cover yet (a loop under a decision, a handler, a finalizer, a reified
-exit): the agreement holds of them too, and the proof is owed.
+stores, which is what `localRun_rootB` proves for every program of `Looped`: a loop alone,
+nested, under a decision, a handler, a finalizer and a reified exit.
 -/
 
 set_option autoImplicit false
@@ -26,11 +25,13 @@ def localAgrees (e : NativeEff) : Bool :=
   | some (ex, s), (some ex', s') => ex == ex' && s == s'
   | _, _ => false
 
-def covered : List NativeEff := [pIterateCount, pIterateAnswer, pIterateRef, pIterateWide, pLoopNested]
-def owed : List NativeEff := [pLoopUnderSelect, pLoopCaught, pLoopExit, pLoopFinalizer]
+def covered : List NativeEff :=
+  [pIterateCount, pIterateAnswer, pIterateRef, pIterateWide, pLoopNested, pLoopUnderSelect,
+   pLoopCaught, pLoopExit, pLoopFinalizer]
 
-#guard covered.all fun e => LoopedSeq e && depthB e ≤ 40 && localAgrees e
-#guard owed.all fun e => Looped e && !LoopedSeq e && localAgrees e
+#guard covered.all fun e => Looped e && depthB e ≤ 40 && localAgrees e
+/-- info: 'Effect4.Program.Agreement.straight_of_asExit' depends on axioms: [propext] -/
+#guard_msgs in #print axioms straight_of_asExit
 
 /-- info: 'Effect4.Program.Agreement.loop_reaches' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms loop_reaches

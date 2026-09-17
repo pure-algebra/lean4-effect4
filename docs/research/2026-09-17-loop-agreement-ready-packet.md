@@ -90,12 +90,12 @@ Steps 1 and 2 on `LoopedSeq` (loops, nested loops, sequences, suspensions, strai
 `Laws/Program/Agreement/Loop.lean`. The four step lemmas, `loop_reaches` (rounds of `iter` are
 rounds of the frame, by induction on the budget, the body's agreement a hypothesis),
 `localRun_compileB` and `localRun_rootB`, all at `[propext, Quot.sound]`. Two things differed
-from the plan above: `depth` was left alone and `depthB` defined beside it, so nothing in the
-straight files changed; and the statement is over `LoopedSeq`, not `Looped`. The six remaining
-arms (a loop under `branch`, `select`, `exit`, `catchCause`, `matchCause`, `onExit`) are the
-straight arms with `runP_thenB_inv` where those rewrite with `meaning_*`; the contract runs
-them and they agree. Layer B (steps 3 and 4) is untouched, so this is a theorem about the local
-machine until then.
+from the plan above: `depth` was left alone and `depthB` defined beside it (`depthB_straight`:
+they agree on straight programs), so nothing in the straight files changed; and a folded `exit`
+is handled by showing its body straight (`straight_of_asExit`) instead of a budgeted copy of
+`meaning_of_asExit`. The first landing was on loops, sequences and suspensions; the six
+composite arms followed the same day, so layer A is on all of `Looped`. Layer B (steps 3 and
+4) is untouched, so this is a theorem about the local machine until then.
 
 ## 5. What stays out
 

@@ -2,6 +2,7 @@ import Effect4.Laws.Program.Agreement
 import Effect4.Laws.Program.DenoteB
 import Effect4.Laws.Program.LoopAgreement
 import Effect4.Laws.Program.Intro.Weight
+import Effect4.Laws.Program.LoopSound
 
 /-!
 # The loop agreement, layer A: the local run and the budgeted meaning
@@ -18,15 +19,17 @@ loops, against the budgeted meaning `denoteB` (the packet
   under the loop's frame, a finished budgeted loop from a cursor is reached by the machine from
   the loop's next decision at that cursor. Induction on the budget; `iterateStep` was written
   arm for arm as `loopNextAt`/`loopResumeAt`/`loopFinishAt`, and this is where that pays.
-* **The agreement** (`localRun_compileB`, `localRun_rootB`) on `LoopedSeq`: loops, nested
-  loops, sequences and suspensions over straight programs, the straight leaves through
-  `localRun_compile`. There is no step bound: a loop's count is its rounds, so the statement
-  is existential, as `LoopAgreement` is.
+* **The agreement** (`localRun_compileB`, `localRun_rootB`) on all of `Looped`: a loop under
+  a sequence, a suspension, a decision, a handler, a finalizer, a reified exit, or another loop.
+  The composite arms are the straight proof's with `runP_thenB_inv` splitting the hypothesis
+  where that proof rewrites with `meaning_*`; the straight leaves go through
+  `localRun_compile`; a folded `exit` is straight (`straight_of_asExit`). There is no step
+  bound: a loop's count is its rounds, so the statement is existential, as `LoopAgreement` is.
+  Compile fuel is by depth, never by round (`depthB`, which is `depth` on straight programs).
 
-Not here yet: a loop under a decision, a handler, a finalizer or a reified exit (the straight
-proof's arms restated over `runP_thenB_inv`; no new idea), and layer B, the real machine's
-command loop over the local run (`Agreement/Machine.lean`, whose plain invariant must learn
-the loop frame). Until layer B, this is a theorem about the local machine.
+Not here yet: layer B, the real machine's command loop over the local run
+(`Agreement/Machine.lean`, whose plain invariant must learn the loop frame). Until layer B,
+this is a theorem about the local machine.
 -/
 
 set_option autoImplicit false
@@ -316,31 +319,50 @@ theorem loop_reaches (k : Nat) (q : Point) (hq : loopPoint q = q) {cty : Ty}
 
 /-! ## The agreement of the local run with the budgeted meaning -/
 
-/-- Loops, sequences and suspensions over straight programs: the forms that carry what is new.
-A loop under a decision, a handler, a finalizer or a reified exit is `Looped` and not yet
-here; those arms are the straight proof's, restated. -/
-def LoopedSeq : NativeEff → Bool
-  | .iterate _ _ _ _ _ body => LoopedSeq body
-  | .suspend b => LoopedSeq b
-  | .bind a b => LoopedSeq a && LoopedSeq b
-  | e => Straight e
-
-/-- The compile fuel a program of `LoopedSeq` needs: by depth, never by round. -/
+/-- The compile fuel a program of `Looped` needs: by depth, never by round. It is `depth` with
+the loop's arm. -/
 def depthB : NativeEff → Nat
   | .iterate _ _ _ _ _ body => depthB body + 1
   | .suspend b => depthB b + 1
   | .bind a b => max (depthB a) (depthB b) + 1
-  | e => depth e
+  | .branch _ a b => max (depthB a) (depthB b) + 1
+  | .select _ _ a b => max (depthB a) (depthB b) + 1
+  | .exit b => depthB b + 1
+  | .catchCause b h => max (depthB b) (depthB h) + 1
+  | .matchCause b v c => max (depthB b) (max (depthB v) (depthB c)) + 1
+  | .onExit b f => max (depthB b) (depthB f) + 1
+  | _ => 1
 
-theorem depthB_pos : ∀ (e : NativeEff), 1 ≤ depthB e
-  | .iterate _ _ _ _ _ _ => by rw [depthB]; omega
-  | .suspend _ => by rw [depthB]; omega
-  | .bind _ _ => by rw [depthB]; omega
-  | .succeed _ | .fail _ | .failCause _ | .yieldError _ | .sync _ | .perform _ _ | .gen _
-  | .catchCause _ _ | .matchCause _ _ _ | .onExit _ _ | .exit _ | .uninterruptible _
-  | .interruptible _ | .branch _ _ _ | .select _ _ _ _ | .whileLoop _ _ _ _ | .yieldNow _
-  | .callback _ _ | .awaitFiber _ _ | .withFiber _ | .scoped _ | .acquireRelease _ _
-  | .provideLayer _ _ _ | .service _ | .provideService _ _ _ | .catchIf _ _ _ => depth_pos _
+theorem depthB_pos (e : NativeEff) : 1 ≤ depthB e := by
+  cases e <;> simp only [depthB] <;> omega
+
+/-- On the straight fragment the two depths agree. -/
+theorem depthB_straight : ∀ (e : NativeEff), Straight e = true → depthB e = depth e
+  | .suspend b, h => by rw [depthB, depth, depthB_straight b (Straight.suspend h)]
+  | .exit b, h => by rw [depthB, depth, depthB_straight b (Straight.exit h)]
+  | .bind a b, h => by
+    rw [depthB, depth, depthB_straight a (Straight.bind h).1, depthB_straight b (Straight.bind h).2]
+  | .branch _ a b, h => by
+    rw [depthB, depth, depthB_straight a (Straight.branch h).1,
+      depthB_straight b (Straight.branch h).2]
+  | .select _ _ a b, h => by
+    rw [depthB, depth, depthB_straight a (Straight.select h).1,
+      depthB_straight b (Straight.select h).2]
+  | .catchCause a b, h => by
+    rw [depthB, depth, depthB_straight a (Straight.catchCause h).1,
+      depthB_straight b (Straight.catchCause h).2]
+  | .onExit a b, h => by
+    rw [depthB, depth, depthB_straight a (Straight.onExit h).1,
+      depthB_straight b (Straight.onExit h).2]
+  | .matchCause a b c, h => by
+    rw [depthB, depth, depthB_straight a (Straight.matchCause h).1,
+      depthB_straight b (Straight.matchCause h).2.1, depthB_straight c (Straight.matchCause h).2.2]
+  | .iterate _ _ _ _ _ _, h => absurd h Bool.false_ne_true
+  | .succeed _, _ | .fail _, _ | .failCause _, _ | .yieldError _, _ | .sync _, _
+  | .perform _ _, _ | .gen _, _ | .uninterruptible _, _ | .interruptible _, _
+  | .whileLoop _ _ _ _, _ | .yieldNow _, _ | .callback _ _, _ | .awaitFiber _ _, _
+  | .withFiber _, _ | .scoped _, _ | .acquireRelease _ _, _ | .provideLayer _ _ _, _
+  | .service _, _ | .provideService _ _ _, _ | .catchIf _ _ _, _ => rfl
 
 theorem fuel_succB {e : NativeEff} {p : Point} (hd : depthB e ≤ p.fuel) :
     p.fuel = (p.fuel - 1) + 1 := by
@@ -350,9 +372,10 @@ theorem fuel_succB {e : NativeEff} {p : Point} (hd : depthB e ≤ p.fuel) :
 /-- A straight leaf: the straight theorem, read at the budgeted meaning. -/
 theorem localRun_compileB_straight (k : Nat) (e : NativeEff) (p : Point) (K : List NCode)
     (i : Bool) (s : Stores) (ex : ExitV) (s' : Stores) (hs : Straight e = true)
-    (h : Node.at_ (Node.eff root) p.path = some (Node.eff e)) (hd : depth e ≤ p.fuel)
+    (h : Node.at_ (Node.eff root) p.path = some (Node.eff e)) (hd : depthB e ≤ p.fuel)
     (hm : meaningB k e p.env s = (some ex, s')) :
     ∃ c, Reaches root c (fiberOf (compileEff e p) K i) s (fiberOf (Prim.ofExit ex) K i) s' := by
+  rw [depthB_straight e hs] at hd
   rw [meaningB_straight k e p.env s hs] at hm
   obtain ⟨hex, hss⟩ := Prod.mk.inj hm
   cases hex
@@ -360,18 +383,70 @@ theorem localRun_compileB_straight (k : Nat) (e : NativeEff) (p : Point) (K : Li
   obtain ⟨c, _, hr⟩ := localRun_compile root e p K i s hs h hd
   exact ⟨c, hr⟩
 
-/-- **The local run agrees with the budgeted meaning.** A program of `LoopedSeq` compiled at an
+/-- A program of the fragment whose compile is already an exit is straight: a loop compiles to
+a suspension, and every composite but a folded `exit` to a frame. -/
+theorem straight_of_asExit : ∀ (b : NativeEff) (q : Point) {exit : ExitV},
+    Looped b = true → (compileEff b q).asExit? = some exit → Straight b = true
+  | .exit b', q, exit, hl, h => by
+    rcases hf : q.fuel with _ | n
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_exit b' hf] at h
+      cases hx : (compileEff b' (q.child 0)).asExit? with
+      | none => rw [hx] at h; simp [Prim.asExit?] at h
+      | some e' => exact straight_of_asExit b' (q.child 0) (Looped.exit hl) hx
+  | .iterate c i t st r b', q, exit, _, h => by
+    rcases hf : q.fuel with _ | n
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_iterate c i t st r b' hf] at h; simp [Prim.asExit?] at h
+  | .suspend b', q, exit, _, h => by
+    rcases hf : q.fuel with _ | n
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_suspend b' hf] at h; simp [Prim.asExit?] at h
+  | .bind a b', q, exit, _, h => by
+    rcases hf : q.fuel with _ | n
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_bind a b' hf] at h; simp [Prim.asExit?] at h
+  | .branch t a b', q, exit, _, h => by
+    rcases hf : q.fuel with _ | n
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_branch t a b' hf] at h; simp [Prim.asExit?] at h
+  | .select t d a b', q, exit, _, h => by
+    rcases hf : q.fuel with _ | n
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_select t d a b' hf] at h; simp [Prim.asExit?] at h
+  | .catchCause a b', q, exit, _, h => by
+    rcases hf : q.fuel with _ | n
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_catchCause a b' hf] at h; simp [Prim.asExit?] at h
+  | .matchCause a b' c, q, exit, _, h => by
+    rcases hf : q.fuel with _ | n
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_matchCause a b' c hf] at h; simp [Prim.asExit?] at h
+  | .onExit a b', q, exit, _, h => by
+    rcases hf : q.fuel with _ | n
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_onExit a b' hf] at h; simp [Prim.asExit?] at h
+  | .succeed _, _, _, hl, _ | .fail _, _, _, hl, _ | .failCause _, _, _, hl, _
+  | .yieldError _, _, _, hl, _ | .sync _, _, _, hl, _ | .perform _ _, _, _, hl, _
+  | .gen _, _, _, hl, _ | .uninterruptible _, _, _, hl, _ | .interruptible _, _, _, hl, _
+  | .whileLoop _ _ _ _, _, _, hl, _ | .yieldNow _, _, _, hl, _ | .callback _ _, _, _, hl, _
+  | .awaitFiber _ _, _, _, hl, _ | .withFiber _, _, _, hl, _ | .scoped _, _, _, hl, _
+  | .acquireRelease _ _, _, _, hl, _ | .provideLayer _ _ _, _, _, hl, _
+  | .service _, _, _, hl, _ | .provideService _ _ _, _, _, hl, _
+  | .catchIf _ _ _, _, _, hl, _ => hl
+
+/-- **The local run agrees with the budgeted meaning.** A program of `Looped` compiled at an
 address of the root, run by the local machine from any outer stack, reaches the fiber holding
 its finished budgeted exit over the budgeted stores. No step bound: a loop's count is its
 rounds. -/
 theorem localRun_compileB (k : Nat) :
     ∀ (e : NativeEff) (p : Point) (K : List NCode) (i : Bool) (s : Stores) (ex : ExitV)
-      (s' : Stores), LoopedSeq e = true →
+      (s' : Stores), Looped e = true →
       Node.at_ (Node.eff root) p.path = some (Node.eff e) → depthB e ≤ p.fuel →
       meaningB k e p.env s = (some ex, s') →
       ∃ c, Reaches root c (fiberOf (compileEff e p) K i) s (fiberOf (Prim.ofExit ex) K i) s'
   | .iterate cty init test step result body, p, K, i, s, ex, s', hl, h, hd, hm => by
-    have hlb : LoopedSeq body = true := by rw [LoopedSeq] at hl; exact hl
+    have hlb : Looped body = true := Looped.iterate hl
     have hdb : depthB body ≤ p.fuel - 1 := by rw [depthB] at hd; omega
     have hq : Node.at_ (Node.eff root) (loopPoint p).path =
         some (Node.eff (.iterate cty init test step result body)) := h
@@ -408,7 +483,7 @@ theorem localRun_compileB (k : Nat) :
       obtain ⟨n, hn⟩ := loop_reaches root k (loopPoint p) rfl hq K i hbody k c₀ s ex s' hm
       exact ⟨1 + 1 + n, ((Reaches.step hs).trans henter).trans hn⟩
   | .suspend b, p, K, i, s, ex, s', hl, h, hd, hm => by
-    have hlb : LoopedSeq b = true := by rw [LoopedSeq] at hl; exact hl
+    have hlb : Looped b = true := Looped.suspend hl
     have hb : Node.at_ (Node.eff root) ({ p with completed := [] }.child 0).path =
         some (Node.eff b) := at_child h 0
     have hdb : depthB b ≤ ({ p with completed := [] }.child 0).fuel := by
@@ -427,8 +502,7 @@ theorem localRun_compileB (k : Nat) :
       resolve_of_at hb] at hs
     exact ⟨1 + c, (Reaches.step hs).trans hr⟩
   | .bind a b, p, K, i, s, ex, s', hl, h, hd, hm => by
-    have hlab : LoopedSeq a = true ∧ LoopedSeq b = true := by
-      rw [LoopedSeq, Bool.and_eq_true] at hl; exact hl
+    have hlab : Looped a = true ∧ Looped b = true := Looped.bind hl
     have ha : Node.at_ (Node.eff root) (p.child 0).path = some (Node.eff a) := at_child h 0
     have hfa : depthB a ≤ (p.child 0).fuel := by
       show depthB a ≤ p.fuel - 1
@@ -470,17 +544,363 @@ theorem localRun_compileB (k : Nat) :
       have hpass := Reaches.same s₁ (fun s₀ =>
         step_failure_pass_onSuccess root c (compileEff a (p.child 0)) (EffName.cont p) K i s₀)
       exact ⟨1 + ca + 0, (hpush.trans hra).trans hpass⟩
+  | .branch t a b, p, K, i, s, ex, s', hl, h, hd, hm => by
+    obtain ⟨hla, hlb⟩ := Looped.branch hl
+    have ha : Node.at_ (Node.eff root) ({ p with completed := [] }.child 0).path =
+        some (Node.eff a) := at_child h 0
+    have hb : Node.at_ (Node.eff root) ({ p with completed := [] }.child 1).path =
+        some (Node.eff b) := at_child h 1
+    have hfa : depthB a ≤ ({ p with completed := [] }.child 0).fuel := by
+      show depthB a ≤ p.fuel - 1
+      rw [depthB] at hd
+      have := Nat.le_max_left (depthB a) (depthB b)
+      omega
+    have hfb : depthB b ≤ ({ p with completed := [] }.child 1).fuel := by
+      show depthB b ≤ p.fuel - 1
+      rw [depthB] at hd
+      have := Nat.le_max_right (depthB a) (depthB b)
+      omega
+    rw [compileEff_branch t a b (fuel_succB hd)]
+    have hs := step_suspend root (EffThunk.body p) K i s
+    simp only [interpAt] at hs
+    unfold meaningB at hm
+    rw [denoteB] at hm
+    have hbadCase : (∀ flag, evalTerm p.env t ≠ some (Val.bool flag)) →
+        runP (pure (some badShapeExit)) s = (some ex, s') →
+        ∃ c, Reaches root c (fiberOf (Prim.suspend (EffThunk.body p)) K i) s
+          (fiberOf (Prim.ofExit ex) K i) s' := by
+      intro hbad hm'
+      obtain ⟨hex, hss⟩ := Prod.mk.inj hm'
+      cases hex
+      subst hss
+      rw [suspendBodyAt_branch_bad (q := { p with completed := [] }) (fuel_succB hd) h hbad] at hs
+      exact ⟨1, Reaches.step hs⟩
+    cases ht : evalTerm p.env t with
+    | none =>
+      rw [ht] at hm
+      exact hbadCase (fun flag hh => by rw [ht] at hh; cases hh) hm
+    | some tv =>
+      rw [ht] at hm
+      cases tv with
+      | bool flag =>
+        cases flag with
+        | true =>
+          have hm' : meaningB k a ({ p with completed := [] }.child 0).env s = (some ex, s') := hm
+          obtain ⟨c, hr⟩ := localRun_compileB k a ({ p with completed := [] }.child 0) K i s ex s'
+            hla ha hfa hm'
+          rw [suspendBodyAt_branch_true (q := { p with completed := [] }) (fuel_succB hd) h ht,
+            resolve_of_at ha] at hs
+          exact ⟨1 + c, (Reaches.step hs).trans hr⟩
+        | false =>
+          have hm' : meaningB k b ({ p with completed := [] }.child 1).env s = (some ex, s') := hm
+          obtain ⟨c, hr⟩ := localRun_compileB k b ({ p with completed := [] }.child 1) K i s ex s'
+            hlb hb hfb hm'
+          rw [suspendBodyAt_branch_false (q := { p with completed := [] }) (fuel_succB hd) h ht,
+            resolve_of_at hb] at hs
+          exact ⟨1 + c, (Reaches.step hs).trans hr⟩
+      | _ => exact hbadCase (fun flag hh => by rw [ht] at hh; cases hh) hm
+  | .select t d a b, p, K, i, s, ex, s', hl, h, hd, hm => by
+    obtain ⟨hla, hlb⟩ := Looped.select hl
+    have hda : depthB a ≤ p.fuel - 1 := by
+      rw [depthB] at hd
+      have := Nat.le_max_left (depthB a) (depthB b)
+      omega
+    have hdb : depthB b ≤ p.fuel - 1 := by
+      rw [depthB] at hd
+      have := Nat.le_max_right (depthB a) (depthB b)
+      omega
+    rw [compileEff_select t d a b (fuel_succB hd)]
+    have hs := step_suspend root (EffThunk.body p) K i s
+    simp only [interpAt] at hs
+    unfold meaningB at hm
+    rw [denoteB] at hm
+    rcases hdec : (evalTerm p.env t).bind d.decide with _ | ⟨first, bound⟩
+    · rw [hdec] at hm
+      obtain ⟨hex, hss⟩ := Prod.mk.inj hm
+      cases hex
+      subst hss
+      rw [suspendBodyAt_select_bad (q := { p with completed := [] }) (fuel_succB hd) h hdec] at hs
+      exact ⟨1, Reaches.step hs⟩
+    · rw [hdec] at hm
+      rw [suspendBodyAt_select_of_decide (q := { p with completed := [] }) (fuel_succB hd) h
+        hdec] at hs
+      cases first with
+      | true =>
+        cases bound with
+        | none =>
+          have ha : Node.at_ (Node.eff root) ({ p with completed := [] }.child 0).path =
+              some (Node.eff a) := at_child h 0
+          have hm' : meaningB k a ({ p with completed := [] }.child 0).env s = (some ex, s') := by
+            simp only [Option.toList, List.append_nil] at hm
+            exact hm
+          obtain ⟨c, hr⟩ := localRun_compileB k a ({ p with completed := [] }.child 0) K i s ex s'
+            hla ha hda hm'
+          simp only [Bool.cond_true, Point.childBind] at hs
+          rw [resolve_of_at ha] at hs
+          exact ⟨1 + c, (Reaches.step hs).trans hr⟩
+        | some v =>
+          have ha : Node.at_ (Node.eff root) ({ p with completed := [] }.childWith 0 v).path =
+              some (Node.eff a) := at_childWith h 0 v
+          have hm' : meaningB k a ({ p with completed := [] }.childWith 0 v).env s =
+              (some ex, s') := hm
+          obtain ⟨c, hr⟩ := localRun_compileB k a ({ p with completed := [] }.childWith 0 v) K i s
+            ex s' hla ha hda hm'
+          simp only [Bool.cond_true, Point.childBind] at hs
+          rw [resolve_of_at ha] at hs
+          exact ⟨1 + c, (Reaches.step hs).trans hr⟩
+      | false =>
+        cases bound with
+        | none =>
+          have hb : Node.at_ (Node.eff root) ({ p with completed := [] }.child 1).path =
+              some (Node.eff b) := at_child h 1
+          have hm' : meaningB k b ({ p with completed := [] }.child 1).env s = (some ex, s') := by
+            simp only [Option.toList, List.append_nil] at hm
+            exact hm
+          obtain ⟨c, hr⟩ := localRun_compileB k b ({ p with completed := [] }.child 1) K i s ex s'
+            hlb hb hdb hm'
+          simp only [Bool.cond_false, Point.childBind] at hs
+          rw [resolve_of_at hb] at hs
+          exact ⟨1 + c, (Reaches.step hs).trans hr⟩
+        | some v =>
+          have hb : Node.at_ (Node.eff root) ({ p with completed := [] }.childWith 1 v).path =
+              some (Node.eff b) := at_childWith h 1 v
+          have hm' : meaningB k b ({ p with completed := [] }.childWith 1 v).env s =
+              (some ex, s') := hm
+          obtain ⟨c, hr⟩ := localRun_compileB k b ({ p with completed := [] }.childWith 1 v) K i s
+            ex s' hlb hb hdb hm'
+          simp only [Bool.cond_false, Point.childBind] at hs
+          rw [resolve_of_at hb] at hs
+          exact ⟨1 + c, (Reaches.step hs).trans hr⟩
+  | .exit b, p, K, i, s, ex, s', hl, h, hd, hm => by
+    have hlb := Looped.exit hl
+    have hb : Node.at_ (Node.eff root) (p.child 0).path = some (Node.eff b) := at_child h 0
+    have hfb : depthB b ≤ (p.child 0).fuel := by
+      show depthB b ≤ p.fuel - 1
+      rw [depthB] at hd
+      omega
+    rcases hx : (compileEff b (p.child 0)).asExit? with _ | folded
+    · rw [compileEff_exit_frame b (fuel_succB hd) hx]
+      unfold meaningB at hm
+      rw [denoteB] at hm
+      obtain ⟨exb, s₁, hmb, hrest⟩ := runP_thenB_inv hm
+      obtain ⟨hex, hss⟩ := Prod.mk.inj hrest
+      cases hex
+      subst hss
+      have hmb' : meaningB k b (p.child 0).env s = (some exb, s₁) := hmb
+      obtain ⟨cb, hrb⟩ := localRun_compileB k b (p.child 0)
+        (Prim.exitFrame (compileEff b (p.child 0)) :: K) i s exb s₁ hlb hb hfb hmb'
+      have hpush := Reaches.step (step_push_exitFrame root (compileEff b (p.child 0)) K i s)
+      have hpop := Reaches.step (step_ofExit_exitFrame root exb (compileEff b (p.child 0)) K i s₁)
+      exact ⟨1 + cb + 1, (hpush.trans hrb).trans hpop⟩
+    · -- the fold: the body's compile is already an exit, so the body is straight
+      have hsb : Straight (.exit b) = true := straight_of_asExit b (p.child 0) hlb hx
+      exact localRun_compileB_straight root k _ p K i s ex s' hsb h hd hm
+  | .catchCause b hh, p, K, i, s, ex, s', hl, h, hd, hm => by
+    obtain ⟨hlb, hlh⟩ := Looped.catchCause hl
+    have hb : Node.at_ (Node.eff root) (p.child 0).path = some (Node.eff b) := at_child h 0
+    have hfb : depthB b ≤ (p.child 0).fuel := by
+      show depthB b ≤ p.fuel - 1
+      rw [depthB] at hd
+      have := Nat.le_max_left (depthB b) (depthB hh)
+      omega
+    rw [compileEff_catchCause b hh (fuel_succB hd)]
+    unfold meaningB at hm
+    rw [denoteB] at hm
+    obtain ⟨exb, s₁, hmb, hrest⟩ := runP_thenB_inv hm
+    have hmb' : meaningB k b (p.child 0).env s = (some exb, s₁) := hmb
+    obtain ⟨cb, hrb⟩ := localRun_compileB k b (p.child 0)
+      (Prim.onFailure (compileEff b (p.child 0)) (EffName.caught p) :: K) i s exb s₁ hlb hb hfb
+      hmb'
+    have hpush := Reaches.step
+      (step_push_onFailure root (compileEff b (p.child 0)) (EffName.caught p) K i s)
+    cases exb with
+    | success v =>
+      obtain ⟨hex, hss⟩ := Prod.mk.inj hrest
+      cases hex
+      subst hss
+      have hpass := Reaches.same s₁ (fun s₀ =>
+        step_success_pass_onFailure root v (compileEff b (p.child 0)) (EffName.caught p) K i s₀)
+      exact ⟨1 + cb + 0, (hpush.trans hrb).trans hpass⟩
+    | failure c =>
+      have hh' : Node.at_ (Node.eff root)
+          ({ p with completed := [] }.childWith 1 (Val.exitErr c)).path = some (Node.eff hh) :=
+        at_childWith h 1 (Val.exitErr c)
+      have hfh : depthB hh ≤ ({ p with completed := [] }.childWith 1 (Val.exitErr c)).fuel := by
+        show depthB hh ≤ p.fuel - 1
+        rw [depthB] at hd
+        have := Nat.le_max_right (depthB b) (depthB hh)
+        omega
+      have hmh : meaningB k hh ({ p with completed := [] }.childWith 1 (Val.exitErr c)).env s₁ =
+          (some ex, s') := hrest
+      obtain ⟨ch, hrh⟩ := localRun_compileB k hh
+        ({ p with completed := [] }.childWith 1 (Val.exitErr c)) K i s₁ ex s' hlh hh' hfh hmh
+      have hpop := Reaches.step
+        (step_failure_onFailure root c (compileEff b (p.child 0)) (EffName.caught p) K i s₁)
+      simp only [interpAt] at hpop
+      rw [contEOf_caught, resolve_of_at hh'] at hpop
+      exact ⟨1 + cb + 1 + ch, ((hpush.trans hrb).trans hpop).trans hrh⟩
+  | .matchCause b v c, p, K, i, s, ex, s', hl, h, hd, hm => by
+    obtain ⟨hlb, hlv, hlc⟩ := Looped.matchCause hl
+    have hb : Node.at_ (Node.eff root) (p.child 0).path = some (Node.eff b) := at_child h 0
+    have hfb : depthB b ≤ (p.child 0).fuel := by
+      show depthB b ≤ p.fuel - 1
+      rw [depthB] at hd
+      have := Nat.le_max_left (depthB b) (max (depthB v) (depthB c))
+      omega
+    rw [compileEff_matchCause b v c (fuel_succB hd)]
+    unfold meaningB at hm
+    rw [denoteB] at hm
+    obtain ⟨exb, s₁, hmb, hrest⟩ := runP_thenB_inv hm
+    have hmb' : meaningB k b (p.child 0).env s = (some exb, s₁) := hmb
+    obtain ⟨cb, hrb⟩ := localRun_compileB k b (p.child 0)
+      (Prim.onSuccessAndFailure (compileEff b (p.child 0)) (EffName.onValue p)
+        (EffName.onCause p) :: K) i s exb s₁ hlb hb hfb hmb'
+    have hpush := Reaches.step (step_push_onSuccessAndFailure root (compileEff b (p.child 0))
+      (EffName.onValue p) (EffName.onCause p) K i s)
+    cases exb with
+    | success x =>
+      have hv' : Node.at_ (Node.eff root) ({ p with completed := [] }.childWith 1 x).path =
+          some (Node.eff v) := at_childWith h 1 x
+      have hfv : depthB v ≤ ({ p with completed := [] }.childWith 1 x).fuel := by
+        show depthB v ≤ p.fuel - 1
+        rw [depthB] at hd
+        have h₁ := Nat.le_max_right (depthB b) (max (depthB v) (depthB c))
+        have h₂ := Nat.le_max_left (depthB v) (depthB c)
+        omega
+      have hmv : meaningB k v ({ p with completed := [] }.childWith 1 x).env s₁ = (some ex, s') :=
+        hrest
+      obtain ⟨cv, hrv⟩ := localRun_compileB k v ({ p with completed := [] }.childWith 1 x) K i s₁
+        ex s' hlv hv' hfv hmv
+      have hpop := Reaches.step (step_success_onSuccessAndFailure root x
+        (compileEff b (p.child 0)) (EffName.onValue p) (EffName.onCause p) K i s₁)
+      simp only [interpAt] at hpop
+      rw [contAOf_onValue, resolve_of_at hv'] at hpop
+      exact ⟨1 + cb + 1 + cv, ((hpush.trans hrb).trans hpop).trans hrv⟩
+    | failure cause =>
+      have hc' : Node.at_ (Node.eff root)
+          ({ p with completed := [] }.childWith 2 (Val.exitErr cause)).path = some (Node.eff c) :=
+        at_childWith h 2 (Val.exitErr cause)
+      have hfc : depthB c ≤ ({ p with completed := [] }.childWith 2 (Val.exitErr cause)).fuel := by
+        show depthB c ≤ p.fuel - 1
+        rw [depthB] at hd
+        have h₁ := Nat.le_max_right (depthB b) (max (depthB v) (depthB c))
+        have h₂ := Nat.le_max_right (depthB v) (depthB c)
+        omega
+      have hmc : meaningB k c ({ p with completed := [] }.childWith 2 (Val.exitErr cause)).env s₁ =
+          (some ex, s') := hrest
+      obtain ⟨cc, hrc⟩ := localRun_compileB k c
+        ({ p with completed := [] }.childWith 2 (Val.exitErr cause)) K i s₁ ex s' hlc hc' hfc hmc
+      have hpop := Reaches.step (step_failure_onSuccessAndFailure root cause
+        (compileEff b (p.child 0)) (EffName.onValue p) (EffName.onCause p) K i s₁)
+      simp only [interpAt] at hpop
+      rw [contEOf_onCause, resolve_of_at hc'] at hpop
+      exact ⟨1 + cb + 1 + cc, ((hpush.trans hrb).trans hpop).trans hrc⟩
+  | .onExit b f, p, K, i, s, ex, s', hl, h, hd, hm => by
+    obtain ⟨hlb, hlf⟩ := Looped.onExit hl
+    have hb : Node.at_ (Node.eff root) (p.child 0).path = some (Node.eff b) := at_child h 0
+    have hfb : depthB b ≤ (p.child 0).fuel := by
+      show depthB b ≤ p.fuel - 1
+      rw [depthB] at hd
+      have := Nat.le_max_left (depthB b) (depthB f)
+      omega
+    rw [compileEff_onExit b f (fuel_succB hd)]
+    unfold meaningB at hm
+    rw [denoteB] at hm
+    obtain ⟨exb, s₁, hmb, hrest⟩ := runP_thenB_inv hm
+    obtain ⟨fex, s₂, hmf, hlast⟩ := runP_thenB_inv hrest
+    obtain ⟨hex, hss⟩ := Prod.mk.inj hlast
+    cases hex
+    subst hss
+    have hmb' : meaningB k b (p.child 0).env s = (some exb, s₁) := hmb
+    obtain ⟨cb, hrb⟩ := localRun_compileB k b (p.child 0)
+      (Prim.onExit (compileEff b (p.child 0)) (EffName.fin p) false :: K) i s exb s₁ hlb hb hfb
+      hmb'
+    have hpush := Reaches.step
+      (step_push_onExit root (compileEff b (p.child 0)) (EffName.fin p) false K i s)
+    -- the body's exit meets the frame: the finalizer runs under the mask
+    have hf' : Node.at_ (Node.eff root)
+        ({ p with completed := [] }.childWith 1 (reifyExitVal exb)).path = some (Node.eff f) :=
+      at_childWith h 1 (reifyExitVal exb)
+    have hff : depthB f ≤ ({ p with completed := [] }.childWith 1 (reifyExitVal exb)).fuel := by
+      show depthB f ≤ p.fuel - 1
+      rw [depthB] at hd
+      have := Nat.le_max_right (depthB b) (depthB f)
+      omega
+    have hmf' : meaningB k f ({ p with completed := [] }.childWith 1 (reifyExitVal exb)).env s₁ =
+        (some fex, s₂) := hmf
+    have hmeet := Reaches.step (step_ofExit_onExit root exb (compileEff b (p.child 0)) p K i s₁)
+    rw [resolve_of_at hf'] at hmeet
+    have hunmask (result : ExitV) (state : Stores) : Reaches root 0
+        (fiberOf (Prim.ofExit result) (maskStack i K) false) state
+        (fiberOf (Prim.ofExit result) K i) state := by
+      cases i
+      · exact Reaches.refl root _ state
+      · exact Reaches.same state (fun s => step_ofExit_pass_setInterruptible root _ K false s)
+    cases exb with
+    | success value =>
+      let program := compileEff f ({ p with completed := [] }.childWith 1
+        (reifyExitVal (.success value)))
+      let restore := EffName.restore (.success value)
+      have hpush₂ := Reaches.step
+        (step_push_onSuccess root program restore (maskStack i K) false s₁)
+      obtain ⟨cf, hrf⟩ := localRun_compileB k f
+        ({ p with completed := [] }.childWith 1 (reifyExitVal (.success value)))
+        (Prim.onSuccess program restore :: maskStack i K) false s₁ fex s₂ hlf hf' hff hmf'
+      cases fex with
+      | success finValue =>
+        have hfin := Reaches.step
+          (step_success_onSuccess root finValue program restore (maskStack i K) false s₂)
+        change Reaches root 1 _ s₂ (fiberOf (Prim.success value) (maskStack i K) false) s₂ at hfin
+        exact ⟨1 + cb + 1 + 1 + cf + 1 + 0,
+          (((((hpush.trans hrb).trans hmeet).trans hpush₂).trans hrf).trans hfin).trans
+            (hunmask (.success value) s₂)⟩
+      | failure finCause =>
+        have hpass := Reaches.same s₂ (fun s =>
+          step_failure_pass_onSuccess root finCause program restore (maskStack i K) false s)
+        exact ⟨1 + cb + 1 + 1 + cf + 0 + 0,
+          (((((hpush.trans hrb).trans hmeet).trans hpush₂).trans hrf).trans hpass).trans
+            (hunmask (.failure finCause) s₂)⟩
+    | failure cause =>
+      let program := compileEff f ({ p with completed := [] }.childWith 1
+        (reifyExitVal (.failure cause)))
+      let restore := EffName.restore (.failure cause)
+      let merge := EffName.merge (.failure cause)
+      let outer := Prim.onSuccess (Prim.onFailure program merge) restore
+      have hpush₂ := Reaches.step
+        (step_push_onSuccess root (Prim.onFailure program merge) restore (maskStack i K) false s₁)
+      have hpush₃ := Reaches.step
+        (step_push_onFailure root program merge (outer :: maskStack i K) false s₁)
+      obtain ⟨cf, hrf⟩ := localRun_compileB k f
+        ({ p with completed := [] }.childWith 1 (reifyExitVal (.failure cause)))
+        (Prim.onFailure program merge :: outer :: maskStack i K) false s₁ fex s₂ hlf hf' hff hmf'
+      cases fex with
+      | success finValue =>
+        have hpass := Reaches.same s₂ (fun s =>
+          step_success_pass_onFailure root finValue program merge (outer :: maskStack i K) false s)
+        have hfin := Reaches.step (step_success_onSuccess root finValue
+          (Prim.onFailure program merge) restore (maskStack i K) false s₂)
+        change Reaches root 1 _ s₂ (fiberOf (Prim.failure cause) (maskStack i K) false) s₂ at hfin
+        exact ⟨1 + cb + 1 + 1 + 1 + cf + 0 + 1 + 0,
+          (((((((hpush.trans hrb).trans hmeet).trans hpush₂).trans hpush₃).trans hrf).trans
+            hpass).trans hfin).trans (hunmask (.failure cause) s₂)⟩
+      | failure finCause =>
+        have hmerge := Reaches.step
+          (step_failure_onFailure root finCause program merge (outer :: maskStack i K) false s₂)
+        change Reaches root 1 _ s₂
+          (fiberOf (Prim.failure (Cause.combine cause finCause)) (outer :: maskStack i K) false)
+            s₂ at hmerge
+        have hpass := Reaches.same s₂ (fun s => step_failure_pass_onSuccess root
+          (Cause.combine cause finCause) (Prim.onFailure program merge) restore (maskStack i K)
+          false s)
+        exact ⟨1 + cb + 1 + 1 + 1 + cf + 1 + 0 + 0,
+          (((((((hpush.trans hrb).trans hmeet).trans hpush₂).trans hpush₃).trans hrf).trans
+            hmerge).trans hpass).trans (hunmask (.failure (Cause.combine cause finCause)) s₂)⟩
   | .succeed _, p, K, i, s, ex, s', hl, h, hd, hm | .fail _, p, K, i, s, ex, s', hl, h, hd, hm
   | .failCause _, p, K, i, s, ex, s', hl, h, hd, hm
   | .yieldError _, p, K, i, s, ex, s', hl, h, hd, hm | .sync _, p, K, i, s, ex, s', hl, h, hd, hm
   | .perform _ _, p, K, i, s, ex, s', hl, h, hd, hm | .gen _, p, K, i, s, ex, s', hl, h, hd, hm
-  | .catchCause _ _, p, K, i, s, ex, s', hl, h, hd, hm
-  | .matchCause _ _ _, p, K, i, s, ex, s', hl, h, hd, hm
-  | .onExit _ _, p, K, i, s, ex, s', hl, h, hd, hm | .exit _, p, K, i, s, ex, s', hl, h, hd, hm
   | .uninterruptible _, p, K, i, s, ex, s', hl, h, hd, hm
   | .interruptible _, p, K, i, s, ex, s', hl, h, hd, hm
-  | .branch _ _ _, p, K, i, s, ex, s', hl, h, hd, hm
-  | .select _ _ _ _, p, K, i, s, ex, s', hl, h, hd, hm
   | .whileLoop _ _ _ _, p, K, i, s, ex, s', hl, h, hd, hm
   | .yieldNow _, p, K, i, s, ex, s', hl, h, hd, hm | .callback _ _, p, K, i, s, ex, s', hl, h, hd, hm
   | .awaitFiber _ _, p, K, i, s, ex, s', hl, h, hd, hm
@@ -492,10 +912,10 @@ theorem localRun_compileB (k : Nat) :
   | .catchIf _ _ _, p, K, i, s, ex, s', hl, h, hd, hm =>
     localRun_compileB_straight root k _ p K i s ex s' hl h hd hm
 
-/-- **At the root.** When the budgeted meaning of a `LoopedSeq` program finishes, the local run
+/-- **At the root.** When the budgeted meaning of a `Looped` program finishes, the local run
 from the empty stack and the empty stores finishes with that exit and those stores, at some
 step count and at every larger one. -/
-theorem localRun_rootB (e : NativeEff) (fuel k : Nat) (hl : LoopedSeq e = true)
+theorem localRun_rootB (e : NativeEff) (fuel k : Nat) (hl : Looped e = true)
     (hd : depthB e ≤ fuel) {ex : ExitV} {s' : Stores}
     (hm : meaningB k e [] Stores.empty = (some ex, s')) :
     ∃ n, ∀ m, localRun e (n + m) (fiberOf (compile e fuel) []) Stores.empty = some (ex, s') := by
