@@ -14,6 +14,7 @@ import Effect4.Laws.Machine.Witnesses
 import Effect4.Laws.Program.Denote
 import Effect4.Laws.Program.Iter
 import Effect4.Laws.Program.DenoteB
+import Effect4.Laws.Program.LoopAgreement
 import Effect4.Laws.Program.Agreement
 import Effect4.Laws.Program.Agreement.Machine
 import Effect4.Laws.Program.Sched
