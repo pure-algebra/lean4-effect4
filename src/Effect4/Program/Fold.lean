@@ -953,7 +953,6 @@ structure EffAlgebra (Op : Type) (R : EffFam → Type u) where
   eff_exit : R .eff → R .eff
   eff_uninterruptible : R .eff → R .eff
   eff_interruptible : R .eff → R .eff
-  eff_branch : (Effect4.Program.Term) → R .eff → R .eff → R .eff
   eff_whileLoop : (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → R .eff → R .eff
   eff_yieldNow : (Nat) → R .eff
   eff_callback : (Op) → (Effect4.Program.Term) → R .eff
@@ -1025,7 +1024,6 @@ def cata_eff {Op : Type} {R : EffFam → Type u} (alg : EffAlgebra Op R)
   | .exit a0 => alg.eff_exit (cata_eff alg a0)
   | .uninterruptible a0 => alg.eff_uninterruptible (cata_eff alg a0)
   | .interruptible a0 => alg.eff_interruptible (cata_eff alg a0)
-  | .branch a0 a1 a2 => alg.eff_branch a0 (cata_eff alg a1) (cata_eff alg a2)
   | .whileLoop a0 a1 a2 a3 => alg.eff_whileLoop a0 a1 a2 (cata_eff alg a3)
   | .yieldNow a0 => alg.eff_yieldNow a0
   | .callback a0 a1 => alg.eff_callback a0 a1
@@ -1127,7 +1125,6 @@ structure EffHom {Op : Type} {R : EffFam → Type u} (alg : EffAlgebra Op R) whe
   h_eff_exit : ∀ a0, f_eff (.exit a0) = alg.eff_exit (f_eff a0)
   h_eff_uninterruptible : ∀ a0, f_eff (.uninterruptible a0) = alg.eff_uninterruptible (f_eff a0)
   h_eff_interruptible : ∀ a0, f_eff (.interruptible a0) = alg.eff_interruptible (f_eff a0)
-  h_eff_branch : ∀ a0 a1 a2, f_eff (.branch a0 a1 a2) = alg.eff_branch a0 (f_eff a1) (f_eff a2)
   h_eff_whileLoop : ∀ a0 a1 a2 a3, f_eff (.whileLoop a0 a1 a2 a3) = alg.eff_whileLoop a0 a1 a2 (f_eff a3)
   h_eff_yieldNow : ∀ a0, f_eff (.yieldNow a0) = alg.eff_yieldNow a0
   h_eff_callback : ∀ a0 a1, f_eff (.callback a0 a1) = alg.eff_callback a0 a1
@@ -1215,8 +1212,6 @@ theorem hom_eq_cata_eff {Op : Type} {R : EffFam → Type u}
     simp only [cata_eff, hom.h_eff_uninterruptible a0, hom_eq_cata_eff hom a0]
   | .interruptible a0 =>
     simp only [cata_eff, hom.h_eff_interruptible a0, hom_eq_cata_eff hom a0]
-  | .branch a0 a1 a2 =>
-    simp only [cata_eff, hom.h_eff_branch a0 a1 a2, hom_eq_cata_eff hom a1, hom_eq_cata_eff hom a2]
   | .whileLoop a0 a1 a2 a3 =>
     simp only [cata_eff, hom.h_eff_whileLoop a0 a1 a2 a3, hom_eq_cata_eff hom a3]
   | .yieldNow a0 =>
@@ -1377,7 +1372,6 @@ def EffAlgebra.id (Op : Type) : EffAlgebra Op (EffSelfCarrier Op) where
   eff_exit a0 := Effect4.Program.Eff.exit a0
   eff_uninterruptible a0 := Effect4.Program.Eff.uninterruptible a0
   eff_interruptible a0 := Effect4.Program.Eff.interruptible a0
-  eff_branch a0 a1 a2 := Effect4.Program.Eff.branch a0 a1 a2
   eff_whileLoop a0 a1 a2 a3 := Effect4.Program.Eff.whileLoop a0 a1 a2 a3
   eff_yieldNow a0 := Effect4.Program.Eff.yieldNow a0
   eff_callback a0 a1 := Effect4.Program.Eff.callback a0 a1
@@ -1478,9 +1472,6 @@ mutual
     rfl
   | .interruptible a0 =>
     simp only [cata_eff, cata_id_eff a0]
-    rfl
-  | .branch a0 a1 a2 =>
-    simp only [cata_eff, cata_id_eff a1, cata_id_eff a2]
     rfl
   | .whileLoop a0 a1 a2 a3 =>
     simp only [cata_eff, cata_id_eff a3]
@@ -1702,8 +1693,6 @@ def foldMapAt_eff {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (p : 
     op (f_eff (.uninterruptible a0) p) ((foldMapAt_eff unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
   | .interruptible a0 =>
     op (f_eff (.interruptible a0) p) ((foldMapAt_eff unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
-  | .branch a0 a1 a2 =>
-    op (f_eff (.branch a0 a1 a2) p) (op (foldMapAt_eff unit op (p ++ [0]) a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMapAt_eff unit op (p ++ [1]) a2 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers)))
   | .whileLoop a0 a1 a2 a3 =>
     op (f_eff (.whileLoop a0 a1 a2 a3) p) ((foldMapAt_eff unit op (p ++ [0]) a3 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
   | .yieldNow a0 =>
@@ -1867,8 +1856,6 @@ def foldMap_eff {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (node :
     op (f_eff (.uninterruptible a0)) ((foldMap_eff unit op a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
   | .interruptible a0 =>
     op (f_eff (.interruptible a0)) ((foldMap_eff unit op a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
-  | .branch a0 a1 a2 =>
-    op (f_eff (.branch a0 a1 a2)) (op (foldMap_eff unit op a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMap_eff unit op a2 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers)))
   | .whileLoop a0 a1 a2 a3 =>
     op (f_eff (.whileLoop a0 a1 a2 a3)) ((foldMap_eff unit op a3 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
   | .yieldNow a0 =>
@@ -2014,7 +2001,6 @@ structure EffMAlgebra (Op : Type) (M : Type u → Type v) (R : EffFam → Type u
   eff_exit : R .eff → M (R .eff)
   eff_uninterruptible : R .eff → M (R .eff)
   eff_interruptible : R .eff → M (R .eff)
-  eff_branch : (Effect4.Program.Term) → R .eff → R .eff → M (R .eff)
   eff_whileLoop : (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → R .eff → M (R .eff)
   eff_yieldNow : (Nat) → M (R .eff)
   eff_callback : (Op) → (Effect4.Program.Term) → M (R .eff)
@@ -2084,7 +2070,6 @@ def EffAlgebra.toM {Op : Type} {M : Type u → Type v} [Monad M] {R : EffFam →
   eff_exit a0 := pure (alg.eff_exit a0)
   eff_uninterruptible a0 := pure (alg.eff_uninterruptible a0)
   eff_interruptible a0 := pure (alg.eff_interruptible a0)
-  eff_branch a0 a1 a2 := pure (alg.eff_branch a0 a1 a2)
   eff_whileLoop a0 a1 a2 a3 := pure (alg.eff_whileLoop a0 a1 a2 a3)
   eff_yieldNow a0 := pure (alg.eff_yieldNow a0)
   eff_callback a0 a1 := pure (alg.eff_callback a0 a1)
@@ -2155,7 +2140,6 @@ def EffMAlgebra.map {Op : Type} {M : Type u → Type v} {N : Type u → Type w}
   eff_exit a0 := φ (alg.eff_exit a0)
   eff_uninterruptible a0 := φ (alg.eff_uninterruptible a0)
   eff_interruptible a0 := φ (alg.eff_interruptible a0)
-  eff_branch a0 a1 a2 := φ (alg.eff_branch a0 a1 a2)
   eff_whileLoop a0 a1 a2 a3 := φ (alg.eff_whileLoop a0 a1 a2 a3)
   eff_yieldNow a0 := φ (alg.eff_yieldNow a0)
   eff_callback a0 a1 := φ (alg.eff_callback a0 a1)
@@ -2249,10 +2233,6 @@ def EffMAlgebra.toSeq {Op : Type} {M : Type u → Type v} [Monad M]
   eff_interruptible a0 := do
     let x0 ← a0
     alg.eff_interruptible x0
-  eff_branch a0 a1 a2 := do
-    let x1 ← a1
-    let x2 ← a2
-    alg.eff_branch a0 x1 x2
   eff_whileLoop a0 a1 a2 a3 := do
     let x3 ← a3
     alg.eff_whileLoop a0 a1 a2 x3
@@ -2414,10 +2394,6 @@ def foldM_eff {Op : Type} {M : Type u → Type v} [Monad M] {R : EffFam → Type
   | .interruptible a0 => do
       let x0 ← foldM_eff alg a0
       alg.eff_interruptible x0
-  | .branch a0 a1 a2 => do
-      let x1 ← foldM_eff alg a1
-      let x2 ← foldM_eff alg a2
-      alg.eff_branch a0 x1 x2
   | .whileLoop a0 a1 a2 a3 => do
       let x3 ← foldM_eff alg a3
       alg.eff_whileLoop a0 a1 a2 x3
@@ -2598,8 +2574,6 @@ theorem foldM_eq_cata_eff {Op : Type} {M : Type u → Type v} [Monad M]
     simp only [foldM_eff, cata_eff, EffMAlgebra.toSeq, foldM_eq_cata_eff alg a0]
   | .interruptible a0 =>
     simp only [foldM_eff, cata_eff, EffMAlgebra.toSeq, foldM_eq_cata_eff alg a0]
-  | .branch a0 a1 a2 =>
-    simp only [foldM_eff, cata_eff, EffMAlgebra.toSeq, foldM_eq_cata_eff alg a1, foldM_eq_cata_eff alg a2]
   | .whileLoop a0 a1 a2 a3 =>
     simp only [foldM_eff, cata_eff, EffMAlgebra.toSeq, foldM_eq_cata_eff alg a3]
   | .yieldNow a0 =>
@@ -2813,8 +2787,6 @@ theorem foldM_natural_eff {Op : Type} {M : Type u → Type v} {N : Type u → Ty
     simp only [foldM_eff, EffMAlgebra.map, φ.map_bind, foldM_natural_eff φ alg a0]
   | .interruptible a0 =>
     simp only [foldM_eff, EffMAlgebra.map, φ.map_bind, foldM_natural_eff φ alg a0]
-  | .branch a0 a1 a2 =>
-    simp only [foldM_eff, EffMAlgebra.map, φ.map_bind, foldM_natural_eff φ alg a1, foldM_natural_eff φ alg a2]
   | .whileLoop a0 a1 a2 a3 =>
     simp only [foldM_eff, EffMAlgebra.map, φ.map_bind, foldM_natural_eff φ alg a3]
   | .yieldNow a0 =>
@@ -2981,7 +2953,6 @@ structure EffFrontierAlgebra (Op : Type) (R : EffFrontierFam → Type u) where
   eff_exit : R .eff → R .eff
   eff_uninterruptible : R .eff → R .eff
   eff_interruptible : R .eff → R .eff
-  eff_branch : (Effect4.Program.Term) → R .eff → R .eff → R .eff
   eff_whileLoop : (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → R .eff → R .eff
   eff_yieldNow : (Nat) → R .eff
   eff_callback : (Op) → (Effect4.Program.Term) → R .eff
@@ -3041,7 +3012,6 @@ def cata_frontier_eff {Op : Type} {R : EffFrontierFam → Type u} (alg : EffFron
   | .exit a0 => alg.eff_exit (cata_frontier_eff alg a0)
   | .uninterruptible a0 => alg.eff_uninterruptible (cata_frontier_eff alg a0)
   | .interruptible a0 => alg.eff_interruptible (cata_frontier_eff alg a0)
-  | .branch a0 a1 a2 => alg.eff_branch a0 (cata_frontier_eff alg a1) (cata_frontier_eff alg a2)
   | .whileLoop a0 a1 a2 a3 => alg.eff_whileLoop a0 a1 a2 (cata_frontier_eff alg a3)
   | .yieldNow a0 => alg.eff_yieldNow a0
   | .callback a0 a1 => alg.eff_callback a0 a1
@@ -3127,7 +3097,6 @@ def frontierMap {Op : Type} (g : Effect4.Program.Term → Effect4.Program.Term)
   eff_exit a0 := .exit a0
   eff_uninterruptible a0 := .uninterruptible a0
   eff_interruptible a0 := .interruptible a0
-  eff_branch a0 a1 a2 := .branch (g a0) a1 a2
   eff_whileLoop a0 a1 a2 a3 := .whileLoop (g a0) (g a1) (g a2) a3
   eff_yieldNow a0 := .yieldNow a0
   eff_callback a0 a1 := .callback a0 (g a1)
@@ -3189,7 +3158,6 @@ def Eff.weaken {Op : Type} (cut : Nat) : Effect4.Program.Eff Op → Effect4.Prog
   | .exit a0 => .exit (Eff.weaken cut a0)
   | .uninterruptible a0 => .uninterruptible (Eff.weaken cut a0)
   | .interruptible a0 => .interruptible (Eff.weaken cut a0)
-  | .branch a0 a1 a2 => .branch (Effect4.Program.Term.weaken cut a0) (Eff.weaken cut a1) (Eff.weaken cut a2)
   | .whileLoop a0 a1 a2 a3 => .whileLoop (Effect4.Program.Term.weaken cut a0) (Effect4.Program.Term.weaken cut a1) (Effect4.Program.Term.weaken cut a2) (Eff.weaken cut a3)
   | .yieldNow a0 => .yieldNow a0
   | .callback a0 a1 => .callback a0 (Effect4.Program.Term.weaken cut a1)
@@ -3269,8 +3237,6 @@ theorem weaken_eq_cata_eff {Op : Type} (cut : Nat) (node : Effect4.Program.Eff O
     simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a0]
   | .interruptible a0 =>
     simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a0]
-  | .branch a0 a1 a2 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a1, weaken_eq_cata_eff cut a2]
   | .whileLoop a0 a1 a2 a3 =>
     simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a3]
   | .yieldNow a0 =>
@@ -3555,7 +3521,6 @@ def EffTraversal.alg {Op : Type} {M : Type → Type} {A : Type} [Monad M]
   eff_exit x0 := s.acc s.atEff [x0]
   eff_uninterruptible x0 := s.acc s.atEff [x0]
   eff_interruptible x0 := s.acc s.atEff [x0]
-  eff_branch _ x1 x2 := s.acc s.atEff [x1, x2]
   eff_whileLoop _ _ _ x3 := s.acc s.atEff [x3]
   eff_yieldNow _ := s.acc s.atEff []
   eff_callback _ _ := s.acc s.atEff []

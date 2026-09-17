@@ -32,7 +32,6 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote
 def depth : NativeEff → Nat
   | .suspend b => depth b + 1
   | .bind a b => max (depth a) (depth b) + 1
-  | .branch _ a b => max (depth a) (depth b) + 1
   | .select _ _ a b => max (depth a) (depth b) + 1
   | .exit b => depth b + 1
   | .catchCause b h => max (depth b) (depth h) + 1
@@ -47,7 +46,6 @@ def steps : NativeEff → Nat
   | .perform _ _ => 1
   | .suspend b => steps b + 1
   | .bind a b => steps a + steps b + 2
-  | .branch _ a b => steps a + steps b + 1
   | .select _ _ a b => steps a + steps b + 1
   | .exit b => steps b + 2
   | .catchCause b h => steps b + steps h + 2
@@ -546,10 +544,6 @@ theorem compileEff_perform_sync (op : NativeOp) (r : Term) (hf : p.fuel = k + 1)
 theorem compileEff_bind (a b : NativeEff) (hf : p.fuel = k + 1) :
     compileEff (.bind a b) p =
       Prim.onSuccess (compileEff a (p.child 0)) (EffName.cont p) := by
-  simp [compileEff, hf]
-
-theorem compileEff_branch (t : Term) (a b : NativeEff) (hf : p.fuel = k + 1) :
-    compileEff (.branch t a b) p = Prim.suspend (EffThunk.body p) := by
   simp [compileEff, hf]
 
 theorem compileEff_select (s : Term) (d : Decision) (a b : NativeEff) (hf : p.fuel = k + 1) :
@@ -1342,34 +1336,7 @@ theorem syncValueAt_pure {root : NativeEff} {p : Point} {t : Term}
     syncValueAt root (EffThunk.pure p) = (evalTerm p.env t).getD Val.unit := by
   simp [syncValueAt, h]
 
-theorem suspendBodyAt_branch_true {root : NativeEff} {q : Point} {k : Nat} {t : Term}
-    {a b : NativeEff} (hf : q.fuel = k + 1)
-    (h : Node.at_ (Node.eff root) q.path = some (Node.eff (.branch t a b)))
-    (ht : evalTerm q.env t = some (Val.bool true)) :
-    suspendBodyAt root (EffThunk.body q) = resolve root (q.child 0) := by
-  simp [suspendBodyAt, hf, h, ht]
-
-theorem suspendBodyAt_branch_false {root : NativeEff} {q : Point} {k : Nat} {t : Term}
-    {a b : NativeEff} (hf : q.fuel = k + 1)
-    (h : Node.at_ (Node.eff root) q.path = some (Node.eff (.branch t a b)))
-    (ht : evalTerm q.env t = some (Val.bool false)) :
-    suspendBodyAt root (EffThunk.body q) = resolve root (q.child 1) := by
-  simp [suspendBodyAt, hf, h, ht]
-
-theorem suspendBodyAt_branch_bad {root : NativeEff} {q : Point} {k : Nat} {t : Term}
-    {a b : NativeEff} (hf : q.fuel = k + 1)
-    (h : Node.at_ (Node.eff root) q.path = some (Node.eff (.branch t a b)))
-    (ht : ∀ flag, evalTerm q.env t ≠ some (Val.bool flag)) :
-    suspendBodyAt root (EffThunk.body q) = badShape := by
-  rcases hv : evalTerm q.env t with _ | v
-  · simp [suspendBodyAt, hf, h, hv]
-  · cases v
-    all_goals first
-      | exact absurd hv (ht _)
-      | simp [suspendBodyAt, hf, h, hv]
-
-/-- `select`: the decision chooses the arm and the value it binds; two lemmas replace
-`branch`'s three. -/
+/-- `select`: the decision chooses the arm and the value it binds. -/
 theorem suspendBodyAt_select_of_decide {root : NativeEff} {q : Point} {k : Nat} {s : Term}
     {d : Decision} {a b : NativeEff} {first : Bool} {bound : Option Val} (hf : q.fuel = k + 1)
     (h : Node.at_ (Node.eff root) q.path = some (Node.eff (.select s d a b)))
@@ -1482,10 +1449,6 @@ theorem meaning_of_asExit : ∀ (b : NativeEff) (q : Point) (s : Stores) {exit :
     rcases hf : q.fuel with _ | k
     · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
     · rw [compileEff_bind a b hf] at h; simp [Prim.asExit?] at h
-  | .branch t a b, q, s, exit, _, h => by
-    rcases hf : q.fuel with _ | k
-    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
-    · rw [compileEff_branch t a b hf] at h; simp [Prim.asExit?] at h
   | .select t d a b, q, s, exit, _, h => by
     rcases hf : q.fuel with _ | k
     · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
@@ -1553,26 +1516,6 @@ theorem step_ofExit_exitFrame (root : NativeEff) (ex : ExitV) (body : NCode) (K 
     localStep root (fiberOf (Prim.ofExit ex) (Prim.exitFrame body :: K) i) s =
       .running (fiberOf (Prim.success (reifyExitVal ex)) K i) s := by
   cases ex <;> cases i <;> rfl
-
-/-! ## The test's boolean, so the branch case splits stay decidable -/
-
-/-- The boolean a test evaluated to, if it evaluated to one. -/
-def boolOf : Option Val → Option Bool
-  | some (Val.bool flag) => some flag
-  | _ => none
-
-theorem boolOf_some {x : Option Val} {flag : Bool} (h : boolOf x = some flag) :
-    x = some (Val.bool flag) := by
-  rcases x with _ | v
-  · simp [boolOf] at h
-  · cases v <;> simp [boolOf] at h
-    rw [h]
-
-theorem boolOf_none {x : Option Val} (h : boolOf x = none) (flag : Bool) :
-    x ≠ some (Val.bool flag) := by
-  intro hx
-  rw [hx] at h
-  simp [boolOf] at h
 
 /-! ## Reaching: the local run from one fiber is, after `c` steps, the run from another -/
 
@@ -1735,40 +1678,6 @@ theorem localRun_compile (root : NativeEff) :
       have hpass := Reaches.same s' (fun s =>
         step_failure_pass_onSuccess root c (compileEff a (p.child 0)) (EffName.cont p) K i s)
       exact ⟨1 + ca + 0, by simp only [steps]; omega, (hpush.trans hra).trans hpass⟩
-  | .branch t a b, p, K, i, s, hpl, h, hd => by
-    obtain ⟨hpa, hpb⟩ := Straight.branch hpl
-    have ha : Node.at_ (Node.eff root) ({ p with completed := [] }.child 0).path = some (Node.eff a) := at_child h 0
-    have hb : Node.at_ (Node.eff root) ({ p with completed := [] }.child 1).path = some (Node.eff b) := at_child h 1
-    have hfa : depth a ≤ ({ p with completed := [] }.child 0).fuel := by
-      show depth a ≤ p.fuel - 1
-      simp only [depth] at hd
-      have := Nat.le_max_left (depth a) (depth b)
-      omega
-    have hfb : depth b ≤ ({ p with completed := [] }.child 1).fuel := by
-      show depth b ≤ p.fuel - 1
-      simp only [depth] at hd
-      have := Nat.le_max_right (depth a) (depth b)
-      omega
-    rw [compileEff_branch t a b (fuel_succ hd)]
-    have hs := step_suspend root (EffThunk.body p) K i s
-    simp only [interpAt] at hs
-    rcases hbo : boolOf (evalTerm p.env t) with _ | flag
-    · have hbad := boolOf_none hbo
-      rw [suspendBodyAt_branch_bad (q := { p with completed := [] }) (fuel_succ hd) h hbad] at hs
-      rw [meaning_branch_bad t a b p.env s hbad]
-      exact ⟨1, by simp only [steps]; omega, Reaches.step hs⟩
-    · have ht := boolOf_some hbo
-      cases flag
-      · obtain ⟨c, hc, hr⟩ := localRun_compile root b ({ p with completed := [] }.child 1) K i s hpb hb hfb
-        rw [Point.child_env] at hr
-        rw [suspendBodyAt_branch_false (q := { p with completed := [] }) (fuel_succ hd) h ht, resolve_of_at hb] at hs
-        rw [meaning_branch_false t a b p.env s ht]
-        exact ⟨1 + c, by simp only [steps]; omega, (Reaches.step hs).trans hr⟩
-      · obtain ⟨c, hc, hr⟩ := localRun_compile root a ({ p with completed := [] }.child 0) K i s hpa ha hfa
-        rw [Point.child_env] at hr
-        rw [suspendBodyAt_branch_true (q := { p with completed := [] }) (fuel_succ hd) h ht, resolve_of_at ha] at hs
-        rw [meaning_branch_true t a b p.env s ht]
-        exact ⟨1 + c, by simp only [steps]; omega, (Reaches.step hs).trans hr⟩
   | .select t d a b, p, K, i, s, hpl, h, hd => by
     obtain ⟨hpa, hpb⟩ := Straight.select hpl
     have hda : depth a ≤ p.fuel - 1 := by

@@ -170,10 +170,6 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
     rcases hf : p.fuel with _ | k
     · rw [compileEff_at_zero _ hf]; exact frontier_keys p
     · rw [compileEff_interruptible b hf]; exact List.Subset.refl _
-  | .branch t a b, p => by
-    rcases hf : p.fuel with _ | k
-    · rw [compileEff_at_zero _ hf]; exact frontier_keys p
-    · rw [compileEff_branch t a b hf]; exact List.Subset.refl _
   | .select s d a b, p => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_at_zero _ hf]; exact frontier_keys p

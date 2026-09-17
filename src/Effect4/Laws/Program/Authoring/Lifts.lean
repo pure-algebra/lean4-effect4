@@ -144,19 +144,6 @@ theorem interruptible_scoped {Op : Type} {body : Src Op} (h0 : body.Scoped) :
   have s0 := h0.holds _ _ _ hx0
   simp [s0]
 
-theorem branch_scoped {Op : Type} {test : TermSrc} {thenB : Src Op} {elseB : Src Op} (h0 : test.Scoped) (h1 : thenB.Scoped) (h2 : elseB.Scoped) :
-    ((branch test thenB elseB) : Src Op).Scoped := by
-  refine ⟨fun env p e h => ?_⟩
-  unfold branch at h
-  obtain ⟨x0, hx0, h⟩ := bind_ok h
-  obtain ⟨x1, hx1, h⟩ := bind_ok h
-  obtain ⟨x2, hx2, h⟩ := bind_ok h
-  cases h
-  have s0 := h0.holds _ _ _ hx0
-  have s1 := h1.holds _ _ _ hx1
-  have s2 := h2.holds _ _ _ hx2
-  simp [s0, s1, s2]
-
 theorem whileLoop_scoped {Op : Type} (cursor : String) (answer : String) {initial : TermSrc} {test : TermSrc} {step : TermSrc} {body : Src Op} (h0 : initial.Scoped) (h1 : test.Scoped) (h2 : step.Scoped) (h3 : body.Scoped) :
     ((whileLoop cursor answer initial test step body) : Src Op).Scoped := by
   refine ⟨fun env p e h => ?_⟩
@@ -581,7 +568,6 @@ theorem Cause.both_scoped {left : CauseSrc} {right : CauseSrc} (h0 : left.Scoped
 #print axioms Effect4.Program.Authoring.exit_scoped
 #print axioms Effect4.Program.Authoring.uninterruptible_scoped
 #print axioms Effect4.Program.Authoring.interruptible_scoped
-#print axioms Effect4.Program.Authoring.branch_scoped
 #print axioms Effect4.Program.Authoring.whileLoop_scoped
 #print axioms Effect4.Program.Authoring.yieldNow_scoped
 #print axioms Effect4.Program.Authoring.callback_scoped

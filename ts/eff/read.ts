@@ -1019,7 +1019,7 @@ const readSync: HeadReader = (n, args) => {
 }
 
 /**
- * `Effect.suspend` carries three shapes: `() => t ? a : b` is a value-decided `branch`,
+ * `Effect.suspend` carries three shapes: `() => t ? a : b` is `select` under the `bool` decision,
  * `() => body` is `suspend`, and the block `() => { let a<n> = i; return Effect.whileLoop({
  * while, body, step }) }` is `whileLoop` with the cursor at `n` and the body's answer at `n+1`.
  */
@@ -1034,7 +1034,7 @@ const readSuspend: HeadReader = (n, args) => {
       if (failed(thenB)) return again(thenB)
       const elseB = readEff(n, arg.body.elseBranch)
       if (failed(elseB)) return again(elseB)
-      return ok({ _tag: "branch", test: test.success, thenB: thenB.success, elseB: elseB.success })
+      return ok({ _tag: "select", scrutinee: test.success, decision: { _tag: "bool" }, arm0: thenB.success, arm1: elseB.success })
     }
     return Result.map(readEff(n, arg.body), (body): Eff => ({ _tag: "suspend", body }))
   }
@@ -1451,8 +1451,8 @@ export const childrenOf = (n: IrNode): ReadonlyArray<Child> => {
         case "exit": return [atEff(e.body, (body) => kEff({ ...e, body }))]
         case "uninterruptible": return [atEff(e.body, (body) => kEff({ ...e, body }))]
         case "interruptible": return [atEff(e.body, (body) => kEff({ ...e, body }))]
-        case "branch":
-          return [atEff(e.thenB, (thenB) => kEff({ ...e, thenB })), atEff(e.elseB, (elseB) => kEff({ ...e, elseB }))]
+        case "select":
+          return [atEff(e.arm0, (arm0) => kEff({ ...e, arm0 })), atEff(e.arm1, (arm1) => kEff({ ...e, arm1 }))]
         case "whileLoop": return [atEff(e.body, (body) => kEff({ ...e, body }))]
         case "withFiber": return [atAction(e.action, (action) => kEff({ ...e, action }))]
         case "scoped": return [atEff(e.body, (body) => kEff({ ...e, body }))]

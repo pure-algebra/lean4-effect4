@@ -107,7 +107,12 @@ let build (b : string) : t =
       ~(limit : int) : unit =
     match Eff_frame.read_ctor b pos limit with
     | None -> raise Malformed
-    | Some (ci, after_index, payload_end, next) ->
+    | Some (tag, after_index, payload_end, next) ->
+      (* The bytes carry a wire tag; the entry and the children table speak declaration
+         positions (`Tree.ctor_index`). The two differ once a constructor has retired. *)
+      let ci =
+        match Eff_subterm.position_of_tag family tag with Some p -> p | None -> raise Malformed
+      in
       let len = next - pos in
       if len <= 0 then raise Malformed;
       let e =

@@ -336,7 +336,7 @@ example (v : Store.Val) (hv : Program.Val.hasTy v (.lit "User") = true) :
 
 -- 1. Branching & Pure Terms
 private def pBranch (cond : Bool) : Api.Program :=
-  .branch (.lit (.bool cond)) (.succeed (.lit (.nat 10))) (.succeed (.lit (.nat 20)))
+  .select (.lit (.bool cond)) .bool (.succeed (.lit (.nat 10))) (.succeed (.lit (.nat 20)))
 
 #guard Api.wellTyped (pBranch true)
 #guard Api.wellTyped (pBranch false)

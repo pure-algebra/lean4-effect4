@@ -110,7 +110,7 @@ private def canonicalUniverse : List Ty := scoutUniverse.map Ty.normalize
 #guard EffTy.joinAnswer .nat .never = some .nat
 #guard EffTy.joinAnswer (.union .bool .nat) .nat = some (.union .nat .bool)
 #guard (typeOf nativeSignature
-  (.branch (.lit (.bool true)) (.succeed (.lit (.nat 1))) (.succeed (.lit (.bool true))))).map
+  (.select (.lit (.bool true)) .bool (.succeed (.lit (.nat 1))) (.succeed (.lit (.bool true))))).map
     (·.answer) = some (.union .nat .bool)
 -- a value of either side is a value of the join
 #guard Val.hasTy (Val.nat 1) (Ty.join .nat .bool)

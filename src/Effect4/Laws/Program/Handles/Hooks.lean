@@ -455,10 +455,6 @@ theorem suspendBodyAt_keys (root : NativeEff) (t : EffThunk) : nativeKeys (suspe
     · split
       · exact resolve_keys root (p.child 0)
       · split
-        · exact resolve_keys root (p.child 0)
-        · exact resolve_keys root (p.child 1)
-        · exact List.nil_subset _
-      · split
         · next first bound heq =>
           apply List.Subset.trans (resolve_keys root _)
           apply Point.childBind_keys_subset

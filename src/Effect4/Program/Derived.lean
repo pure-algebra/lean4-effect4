@@ -1292,8 +1292,6 @@ def EffShape : Shape :=
       ("exit", 12, [("body", .named "Eff")]),
       ("uninterruptible", 13, [("body", .named "Eff")]),
       ("interruptible", 14, [("body", .named "Eff")]),
-      ("branch", 15, [("test", (shape _root_.Effect4.Program.Term).root),
-        ("thenB", .named "Eff"), ("elseB", .named "Eff")]),
       ("whileLoop", 16, [("initial", (shape _root_.Effect4.Program.Term).root),
         ("test", (shape _root_.Effect4.Program.Term).root),
         ("step", (shape _root_.Effect4.Program.Term).root), ("body", .named "Eff")]),
@@ -1417,7 +1415,6 @@ def toValEff : @_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp) →
   | .exit a0 => .ctor 12 [toValEff a0]
   | .uninterruptible a0 => .ctor 13 [toValEff a0]
   | .interruptible a0 => .ctor 14 [toValEff a0]
-  | .branch a0 a1 a2 => .ctor 15 [Canonical.toVal a0, toValEff a1, toValEff a2]
   | .whileLoop a0 a1 a2 a3 => .ctor 16 [Canonical.toVal a0, Canonical.toVal a1,
       Canonical.toVal a2, toValEff a3]
   | .yieldNow a0 => .ctor 17 [Canonical.toVal a0]
@@ -1546,10 +1543,6 @@ def rawEff : Val → Option (@_root_.Effect4.Program.Eff (_root_.Effect4.Program
     match rawEff v0 with
     | some a0 => some (.interruptible a0)
     | _ => none
-  | .ctor 15 [v0, v1, v2] =>
-    match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0, rawEff v1, rawEff v2 with
-    | some a0, some a1, some a2 => some (.branch a0 a1 a2)
-    | _, _, _ => none
   | .ctor 16 [v0, v1, v2, v3] =>
     match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0,
         Canonical.ofVal (α := _root_.Effect4.Program.Term) v1,
@@ -1800,8 +1793,6 @@ theorem rawEff_toValEff (a : @_root_.Effect4.Program.Eff (_root_.Effect4.Program
     simp [toValEff, rawEff, rawEff_toValEff a0]
   | «interruptible» a0 =>
     simp [toValEff, rawEff, rawEff_toValEff a0]
-  | «branch» a0 a1 a2 =>
-    simp [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a1, rawEff_toValEff a2]
   | «whileLoop» a0 a1 a2 a3 =>
     simp [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a3]
   | «yieldNow» a0 =>
@@ -2086,11 +2077,6 @@ theorem fitsEff (a : @_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeO
   | «interruptible» a0 =>
     exact acceptsAt_sum _ _ _ 14 "interruptible" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (fitsEff a0) (acceptsFields_nil _))
-  | «branch» a0 a1 a2 =>
-    exact acceptsAt_sum _ _ _ 15 "branch" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_Term a0)
-        (acceptsFields_cons _ _ _ _ _ _ (fitsEff a1)
-          (acceptsFields_cons _ _ _ _ _ _ (fitsEff a2) (acceptsFields_nil _))))
   | «whileLoop» a0 a1 a2 a3 =>
     exact acceptsAt_sum _ _ _ 16 "whileLoop" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_Term a0)
@@ -2814,8 +2800,23 @@ open Effect4.Program
 retired one or one never given, refuses at the root and nested inside a retained constructor,
 in the value tree and in the bytes. A retirement adds its tag to `unheld`. -/
 
-/-- Tags of `Eff` that no active constructor holds. -/
-def unheld : List Nat := [29, 255]
+/-- Tags of `Eff` that no active constructor holds: 15 is the retired `branch`, the other two
+were never given. -/
+def unheld : List Nat := [15, 29, 255]
+
+-- Old bytes of a `branch` refuse: tag 15 with `branch`'s three fields, at the root and nested.
+def oldBranch : Val :=
+  .ctor 15 [Canonical.toVal (Term.lit (.bool true)),
+    Canonical.toVal (Eff.succeed (Op := NativeOp) (.lit .unit)),
+    Canonical.toVal (Eff.succeed (Op := NativeOp) (.lit .unit))]
+#guard Canonical.ofVal (α := Eff NativeOp) oldBranch = none
+#guard Canonical.decode (α := Eff NativeOp) (Val.encode oldBranch) = none
+#guard Canonical.decode (α := Eff NativeOp) (Val.encode (.ctor 5 [oldBranch])) = none
+-- The same program as a `select` under `.bool` reads back.
+#guard Canonical.decode (α := Eff NativeOp) (Canonical.encode
+    (Eff.select (Op := NativeOp) (.lit (.bool true)) .bool (.succeed (.lit .unit))
+      (.succeed (.lit .unit)))) =
+  some (.select (.lit (.bool true)) .bool (.succeed (.lit .unit)) (.succeed (.lit .unit)))
 
 /-- `bind` (tag 7) around a first child carrying the tag, and a well-formed second child. -/
 def nested (tag : Nat) : Val :=

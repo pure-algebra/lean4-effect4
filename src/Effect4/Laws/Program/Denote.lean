@@ -9,7 +9,7 @@ Plan: `docs/research/2026-09-05-slice-1-compile-ground.md` §4; packet
 `Test/contracts/program-denotation.contract.md`; battery `Test/Program/DenoteContract.lean`.
 
 `denote` sends the straight-line fragment of `Eff` (`Straight`: exits, `sync`, `suspend`,
-the `sync` rows, `bind`, `branch`, `exit`, `catchCause`, `matchCause`, `onExit`) into
+the `sync` rows, `bind`, `select`, `exit`, `catchCause`, `matchCause`, `onExit`) into
 `Effects.Program` over the store signature `StoreSig` (every `SyncOp`, answered by one
 `Val`), and `storeHandler` interprets that signature into `StateT Stores Id` by `syncOpStep`
 with the machine's own fallback. `meaning e env s` is the exit and the stores the algebra
@@ -97,12 +97,6 @@ def denote : NativeEff → List Val → Effects.Program StoreSig ExitV
   -- `:319` and `contAOf (.cont p)` (`:553`): the rest at `env ++ [v]`; a failure passes the
   -- `OnSuccess` frame.
   | .bind a b, env => Effects.Program.bind (denote a env) (seqExit fun v => denote b (env ++ [v]))
-  -- `:329` and `suspendBodyAt` (`:608-612`): the branch the environment decides.
-  | .branch t a b, env =>
-    match evalTerm env t with
-    | some (Val.bool true) => denote a env
-    | some (Val.bool false) => denote b env
-    | _ => pure badShapeExit
   -- `select`: the decision chooses the arm and the value it binds (`suspendBodyAt`'s arm)
   | .select t d a b, env =>
     match (evalTerm env t).bind d.decide with
@@ -150,10 +144,6 @@ theorem Straight.bind {a b : NativeEff} (h : Straight (.bind a b) = true) :
     Straight a = true ∧ Straight b = true := by
   simpa [Straight, Bool.and_eq_true] using h
 
-theorem Straight.branch {t : Term} {a b : NativeEff} (h : Straight (.branch t a b) = true) :
-    Straight a = true ∧ Straight b = true := by
-  simpa [Straight, Bool.and_eq_true] using h
-
 theorem Straight.select {t : Term} {d : Decision} {a b : NativeEff}
     (h : Straight (.select t d a b) = true) : Straight a = true ∧ Straight b = true := by
   simpa [Straight, Bool.and_eq_true] using h
@@ -180,13 +170,12 @@ theorem Straight.perform_sync {op : NativeOp} {r : Term} (h : Straight (.perform
 
 /-- Where the straight fragment meets the heads whose suspension body the compile decides
 itself (`Eff.suspendDecided`, `Program/Compile.lean`): at a source suspension and at a
-branch, nowhere else. The other decided heads (`gen`, `whileLoop`, `provideLayer`) are
+`select`, nowhere else. The other decided heads (`gen`, `whileLoop`, `provideLayer`) are
 outside the fragment. `plainCode_suspendBodyAt` (`Agreement/Machine.lean`) splits on the
-classifier and this lemma names the two straight cases; the `select` slice changes the
-right-hand side and nothing else. -/
+classifier and this lemma names the two straight cases. -/
 theorem Straight.suspendDecided_iff {e : NativeEff} (hs : Straight e = true) :
     e.suspendDecided = true ↔
-      (∃ b, e = .suspend b) ∨ (∃ t a b, e = .branch t a b) ∨ (∃ s d a b, e = .select s d a b) := by
+      (∃ b, e = .suspend b) ∨ (∃ s d a b, e = .select s d a b) := by
   cases e <;> simp [Eff.suspendDecided, Straight] at hs ⊢
 
 /-! ## The equations of the meaning -/
@@ -273,25 +262,6 @@ theorem meaning_bind (a b : NativeEff) (env : List Val) (s : Stores) :
   rw [denote, Effects.interpret_bind, StateT.run_bind]
   rcases h : (Effects.interpret storeHandler (denote a env)).run s with ⟨ex, s'⟩
   cases ex <;> rfl
-
-theorem meaning_branch_true (t : Term) (a b : NativeEff) (env : List Val) (s : Stores)
-    (ht : evalTerm env t = some (Val.bool true)) :
-    meaning (.branch t a b) env s = meaning a env s := by
-  unfold meaning; simp only [denote, ht]
-
-theorem meaning_branch_false (t : Term) (a b : NativeEff) (env : List Val) (s : Stores)
-    (ht : evalTerm env t = some (Val.bool false)) :
-    meaning (.branch t a b) env s = meaning b env s := by
-  unfold meaning; simp only [denote, ht]
-
-theorem meaning_branch_bad (t : Term) (a b : NativeEff) (env : List Val) (s : Stores)
-    (ht : ∀ flag, evalTerm env t ≠ some (Val.bool flag)) :
-    meaning (.branch t a b) env s = (badShapeExit, s) := by
-  unfold meaning
-  rcases h : evalTerm env t with _ | v
-  · simp only [denote, h]; rfl
-  · cases v <;> simp only [denote, h] <;> (try rfl)
-    all_goals exact absurd h (ht _)
 
 /-- `select`: the chosen arm's meaning at the environment extended by the bound value;
 the wrong shape is `badShape`, which `Decision.decide_typed` rules out on an admitted

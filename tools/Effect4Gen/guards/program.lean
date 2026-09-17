@@ -103,8 +103,23 @@ open Effect4.Program
 retired one or one never given, refuses at the root and nested inside a retained constructor,
 in the value tree and in the bytes. A retirement adds its tag to `unheld`. -/
 
-/-- Tags of `Eff` that no active constructor holds. -/
-def unheld : List Nat := [29, 255]
+/-- Tags of `Eff` that no active constructor holds: 15 is the retired `branch`, the other two
+were never given. -/
+def unheld : List Nat := [15, 29, 255]
+
+-- Old bytes of a `branch` refuse: tag 15 with `branch`'s three fields, at the root and nested.
+def oldBranch : Val :=
+  .ctor 15 [Canonical.toVal (Term.lit (.bool true)),
+    Canonical.toVal (Eff.succeed (Op := NativeOp) (.lit .unit)),
+    Canonical.toVal (Eff.succeed (Op := NativeOp) (.lit .unit))]
+#guard Canonical.ofVal (α := Eff NativeOp) oldBranch = none
+#guard Canonical.decode (α := Eff NativeOp) (Val.encode oldBranch) = none
+#guard Canonical.decode (α := Eff NativeOp) (Val.encode (.ctor 5 [oldBranch])) = none
+-- The same program as a `select` under `.bool` reads back.
+#guard Canonical.decode (α := Eff NativeOp) (Canonical.encode
+    (Eff.select (Op := NativeOp) (.lit (.bool true)) .bool (.succeed (.lit .unit))
+      (.succeed (.lit .unit)))) =
+  some (.select (.lit (.bool true)) .bool (.succeed (.lit .unit)) (.succeed (.lit .unit)))
 
 /-- `bind` (tag 7) around a first child carrying the tag, and a well-formed second child. -/
 def nested (tag : Nat) : Val :=

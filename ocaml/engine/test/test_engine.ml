@@ -333,7 +333,6 @@ let sample_effs =
     E.Eff_exit u;
     E.Eff_uninterruptible u;
     E.Eff_interruptible u;
-    E.Eff_branch (a_term, u, u);
     E.Eff_whileLoop (a_term, a_term, a_term, u);
     E.Eff_yieldNow 0;
     E.Eff_callback (E.Native_op_refMake, a_term);

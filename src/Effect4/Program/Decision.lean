@@ -34,7 +34,7 @@ def Val.tagPayload? (tag : String) : Val → Option Val
 
 /-- How a value-decided fork selects its arm, and what the arm binds. -/
 inductive Decision
-  /-- `true` runs child 0, `false` child 1; neither binds. Today's `branch`. -/
+  /-- `true` runs child 0, `false` child 1; neither binds: the conditional `t ? a : b`. -/
   | bool
   /-- `none` runs child 0; `some a` runs child 1 with `a` bound. -/
   | option
@@ -46,7 +46,7 @@ deriving DecidableEq, Repr
 namespace Decision
 
 /-- The runtime selection: whether child 0 was chosen, and the value that child binds.
-`none` is the wrong shape (`badShape`, as `branch` refuses a non-Boolean today). -/
+`none` is the wrong shape (`badShape`; under `.bool`, a test that is not a Boolean). -/
 def decide : Decision → Val → Option (Bool × Option Val)
   | .bool, .bool b => some (b, none)
   | .bool, _ => none
@@ -59,7 +59,8 @@ def decide : Decision → Val → Option (Bool × Option Val)
     | none => some (false, some v)
 
 /-- What child 0 and child 1 bind, from the scrutinee's type; `none` refuses the scrutinee.
-`.bool` keeps `branch`'s syntactic test so the S4 retirement is an equality. -/
+`.bool` tests the type syntactically (`t = .bool`), the rule the retired `branch` had, which
+made its retirement an equality of typing. -/
 def arms : Decision → Ty → Option (List Ty × List Ty)
   | .bool, t => if t = .bool then some ([], []) else none
   | .option, t =>

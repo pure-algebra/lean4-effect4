@@ -1,1 +1,1 @@
-["branch",["lit",["bool",true]],["succeed",["lit",["nat",1]]],["fail",["lit",["nat",2]]]]
+["select",["lit",["bool",true]],["bool"],["succeed",["lit",["nat",1]]],["fail",["lit",["nat",2]]]]

@@ -322,8 +322,8 @@ mutual
     -- masks
     | uninterruptible (body : Eff Op)
     | interruptible (body : Eff Op)
-    -- control by value
-    | branch (test : Term) (thenB elseB : Eff Op)
+    -- control by value (the fork is `select`, below; `branch` retired into `select … .bool`,
+    -- wire tag 15 is never given again)
     /-- `Effect.whileLoop({ while, body, step })` (`Effect.ts:1282-1286`): rc.112 keeps the
     cursor in a closure variable; here it is the next variable, initialised by `initial`.
     `test` is a term over the environment extended by the cursor, `body` a program over it,
@@ -358,7 +358,7 @@ mutual
     the whole cause; a hit replaces it. DI-09's boom policy is `CATCH-FB-BOOM`.
     Body is child 0 and handler child 1; this form remains outside Straight/Plain. -/
     | catchIf (test : Term) (body handler : Eff Op)
-    /-- A value-decided fork, `branch` generalized: the scrutinee is evaluated once at the
+    /-- The value-decided fork: the scrutinee is evaluated once at the
     fork's environment, `decision.decide` selects child 0 or child 1 and the value that
     child binds (`Decision`, `Program/Decision.lean`). Child 0 and child 1 are typed at the
     environment extended by `decision.arms`. Printed as `t ? a : b`,
@@ -539,7 +539,6 @@ def arms : List Arm :=
   , ⟨"exit", "Effect.exit", "Prim.exitFrame", "internal/effect.ts:2320"⟩
   , ⟨"uninterruptible", "Effect.uninterruptible", "WithFiberAction.setInterruptible false", "internal/effect.ts:4302-4310"⟩
   , ⟨"interruptible", "Effect.interruptible", "WithFiberAction.setInterruptible true", "internal/effect.ts:4331-4352"⟩
-  , ⟨"branch", "if in a generator body", "decided by the environment at compile", "E4-FLOW-CE-029"⟩
   , ⟨"whileLoop", "Effect.whileLoop", "Prim.whileLoop", "internal/effect.ts:4628"⟩
   , ⟨"yieldNow", "Effect.yieldNowWith", "Prim.yieldNowWith", "internal/effect.ts:982-990"⟩
   , ⟨"callback", "the row's export (Deferred.await)", "Prim.async (+ Prim.asyncFinalizer when the store returns a cancel)", "internal/effect.ts:1109-1143"⟩
@@ -557,12 +556,12 @@ def arms : List Arm :=
 /-- Every constructor has one arm and every arm one constructor. -/
 def constructorNames : List String :=
   ["succeed", "fail", "failCause", "yieldError", "sync", "suspend", "perform", "bind", "gen",
-   "catchCause", "matchCause", "onExit", "exit", "uninterruptible", "interruptible", "branch",
+   "catchCause", "matchCause", "onExit", "exit", "uninterruptible", "interruptible",
    "whileLoop", "yieldNow", "callback", "awaitFiber", "withFiber", "scoped", "acquireRelease",
    "provideLayer", "service", "provideService", "catchIf", "select", "iterate"]
 
 #guard arms.map Arm.constructor = constructorNames
-#guard constructorNames.length = 29
+#guard constructorNames.length = 28
 
 /-! ## The separation-4 receipts: first-order, decidable throughout -/
 

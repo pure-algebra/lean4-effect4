@@ -125,7 +125,7 @@ type entry = {
   prog_path : int list;  (** child indices in `Node.child` — a `ProgPath` (M5) *)
   val_path : int list;  (** argument indices in the encoded tree — a `ValPath` (M5) *)
   family : family;  (** the family of the node this entry addresses (D1) *)
-  ctor : int;  (** its constructor index in that family *)
+  ctor : int;  (** its constructor's declaration position in that family (not its wire tag) *)
   off : int;  (** the first byte of its frame, in the whole program's bytes *)
   len : int;  (** the length of its frame *)
   cid : E4_addr.Cid.t;  (** sha256 of the slice (SB3) *)

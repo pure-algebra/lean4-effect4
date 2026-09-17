@@ -43,7 +43,6 @@ mutual
     | .exit a => return .exit (← program a)
     | .uninterruptible a => return .uninterruptible (← program a)
     | .interruptible a => return .interruptible (← program a)
-    | .branch t a b => return .branch t (← program a) (← program b)
     | .select t d a b => return .select t d (← program a) (← program b)
     | .whileLoop i t s b => return .whileLoop i t s (← program b)
     | .iterate c i t s r b => return .iterate c i t s r (← program b)

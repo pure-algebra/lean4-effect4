@@ -148,7 +148,6 @@ export const effJson = (v: Eff): Json => {
     case "exit": return ["exit", effJson(v.body)]
     case "uninterruptible": return ["uninterruptible", effJson(v.body)]
     case "interruptible": return ["interruptible", effJson(v.body)]
-    case "branch": return ["branch", termJson(v.test), effJson(v.thenB), effJson(v.elseB)]
     case "whileLoop": return ["whileLoop", termJson(v.initial), termJson(v.test), termJson(v.step), effJson(v.body)]
     case "yieldNow": return ["yieldNow", v.priority]
     case "callback": return ["callback", nativeOpJson(v.register), termJson(v.request)]

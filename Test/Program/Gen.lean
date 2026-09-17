@@ -252,7 +252,8 @@ def genEffStep (prev : Nat → M (Eff NativeOp)) (prevStmts : Nat → Nat → M 
     | 16 => pure (.exit (← prev n))
     | 17 => pure (.uninterruptible (← prev n))
     | 18 => pure (.interruptible (← prev n))
-    | 19 => pure (.branch (← genTerm n 1) (← prev n) (← prev n))
+    -- the conditional: `select` under `.bool`, drawn as `branch` was (the same three draws)
+    | 19 => pure (.select (← genTerm n 1) .bool (← prev n) (← prev n))
     | 20 =>
       pure (.whileLoop (← genTerm n 1) (← genTerm (n + 1) 1) (← genTerm (n + 1) 1)
         (← prev (n + 1)))
@@ -410,9 +411,11 @@ def casesOf (family : String) : Effect4.Store.Shape → List (Head × String)
 def refusedActions : List String :=
   ["interruptScoped", "awaitAllFailFast", "snapshotChildren", "awaitNewChildren", "setContext"]
 
-/-- Forms kept out of the round-trip corpus until R5 (`docs/research/2026-09-16-select-and-iterate-ready-packet.md` §1.8). -/
+/-- Forms kept out of the round-trip corpus until R5 (`docs/research/2026-09-16-select-and-iterate-ready-packet.md` §1.8).
+`select` left this list when `branch` retired into it: the corpus draws it under `.bool`, the
+conditional the reader reads; its `.option` and `.tag` forms are still not drawn. -/
 def pendingEffs : List String :=
-  ["select", "iterate"]
+  ["iterate"]
 
 /-- Every case the printer accepts and the corpus currently draws. -/
 def expected : List (Head × String) :=

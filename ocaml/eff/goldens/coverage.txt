@@ -47,7 +47,7 @@ Effect4.Program.NativeOp.scopeMake	4
 Effect4.Program.NativeOp.sleep	1
 Effect4.Program.NativeOp.clockNow	1
 Effect4.Program.NativeOp.external	2
-Effect4.Program.Decision.bool	1
+Effect4.Program.Decision.bool	4
 Effect4.Program.Decision.option	1
 Effect4.Program.Decision.tag	1
 Effect4.Program.Eff.succeed	44
@@ -65,7 +65,6 @@ Effect4.Program.Eff.onExit	1
 Effect4.Program.Eff.exit	2
 Effect4.Program.Eff.uninterruptible	1
 Effect4.Program.Eff.interruptible	1
-Effect4.Program.Eff.branch	3
 Effect4.Program.Eff.whileLoop	2
 Effect4.Program.Eff.yieldNow	11
 Effect4.Program.Eff.callback	5
@@ -77,7 +76,7 @@ Effect4.Program.Eff.provideLayer	3
 Effect4.Program.Eff.service	5
 Effect4.Program.Eff.provideService	1
 Effect4.Program.Eff.catchIf	3
-Effect4.Program.Eff.select	3
+Effect4.Program.Eff.select	6
 Effect4.Program.Eff.iterate	2
 Effect4.Program.Stmt.bindYield	2
 Effect4.Program.Stmt.yieldDiscard	1

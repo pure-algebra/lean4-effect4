@@ -69,7 +69,6 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
   | exit b => exact intro_exit root n b p k hf hpos hw0 h ih
   | uninterruptible b => exact intro_uninterruptible root n b p k hf hpos hw0 h hres
   | interruptible b => exact intro_interruptible root n b p k hf hpos hw0 h hres
-  | branch t a b => exact intro_branch root n t a b p k hf hpos hwc h ih
   | select s d a0 a1 => exact intro_select root n s d a0 a1 p k hf hpos hwc hwcw h ih
   | whileLoop i t s b => exact intro_whileLoop root i t s b p k hf hpos h
   | iterate c i t s r b => exact intro_iterate root c i t s r b p k hf hpos h

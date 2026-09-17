@@ -130,7 +130,7 @@ theorem denoteB_straight (k : Nat) :
   | .succeed _, env, h | .fail _, env, h | .failCause _, env, h | .yieldError _, env, h
   | .sync _, env, h | .suspend _, env, h | .perform _ _, env, h | .gen _, env, h
   | .catchCause _ _, env, h | .matchCause _ _ _, env, h | .onExit _ _, env, h | .exit _, env, h
-  | .uninterruptible _, env, h | .interruptible _, env, h | .branch _ _ _, env, h
+  | .uninterruptible _, env, h | .interruptible _, env, h
   | .whileLoop _ _ _ _, env, h | .yieldNow _, env, h | .callback _ _, env, h
   | .awaitFiber _ _, env, h | .withFiber _, env, h | .scoped _, env, h
   | .acquireRelease _ _, env, h | .provideLayer _ _ _, env, h | .service _, env, h
@@ -225,7 +225,7 @@ theorem denoteB_mono :
   | .catchCause _ _, k, env, s, x, s', h | .matchCause _ _ _, k, env, s, x, s', h
   | .onExit _ _, k, env, s, x, s', h | .exit _, k, env, s, x, s', h
   | .uninterruptible _, k, env, s, x, s', h | .interruptible _, k, env, s, x, s', h
-  | .branch _ _ _, k, env, s, x, s', h | .whileLoop _ _ _ _, k, env, s, x, s', h
+  | .whileLoop _ _ _ _, k, env, s, x, s', h
   | .yieldNow _, k, env, s, x, s', h | .callback _ _, k, env, s, x, s', h
   | .awaitFiber _ _, k, env, s, x, s', h | .withFiber _, k, env, s, x, s', h
   | .scoped _, k, env, s, x, s', h | .acquireRelease _ _, k, env, s, x, s', h

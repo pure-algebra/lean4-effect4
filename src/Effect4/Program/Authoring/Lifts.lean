@@ -94,14 +94,6 @@ def interruptible {Op : Type} (body : Src Op) : Src Op :=
     let x0 ← body env (p ++ [0])
     .ok (.interruptible x0)
 
-/-- `Effect4.Program.Eff.branch`. -/
-def branch {Op : Type} (test : TermSrc) (thenB : Src Op) (elseB : Src Op) : Src Op :=
-  fun env p => do
-    let x0 ← test env p
-    let x1 ← thenB env (p ++ [0])
-    let x2 ← elseB env (p ++ [1])
-    .ok (.branch x0 x1 x2)
-
 /-- `Effect4.Program.Eff.whileLoop`: `test` sees `cursor`; `step` sees `cursor`, `answer`; `body` sees `cursor`. -/
 def whileLoop {Op : Type} (cursor : String) (answer : String) (initial : TermSrc) (test : TermSrc) (step : TermSrc) (body : Src Op) : Src Op :=
   fun env p => do
@@ -368,7 +360,6 @@ def Cause.both (left : CauseSrc) (right : CauseSrc) : CauseSrc :=
 #print axioms Effect4.Program.Authoring.exit
 #print axioms Effect4.Program.Authoring.uninterruptible
 #print axioms Effect4.Program.Authoring.interruptible
-#print axioms Effect4.Program.Authoring.branch
 #print axioms Effect4.Program.Authoring.whileLoop
 #print axioms Effect4.Program.Authoring.yieldNow
 #print axioms Effect4.Program.Authoring.callback

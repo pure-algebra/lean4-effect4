@@ -3,7 +3,7 @@ import Effect4.Laws.Program.Intro.Elementary
 /-!
 # Intro.Sequential: the sequential and loop family
 
-The introductions of `suspend`, `bind`, `gen`, `branch`, `select`, `whileLoop`, `iterate` and
+The introductions of `suspend`, `bind`, `gen`, `select`, `whileLoop`, `iterate` and
 `onExit`.
 -/
 
@@ -63,38 +63,6 @@ theorem intro_gen (root : NativeEff) (ss : Stmts NativeOp) (p : Point) (k : Nat)
     (prepareR completed (.vis (.inr (.gen p)) Effects.Program.pure))
   rw [suspendBodyAt_gen (q := { p with completed }) hf h]
   exact CodeMeans.genEntry p _ _ ⟨rfl, rfl, rfl, rfl, rfl⟩ delivers_pure
-
-theorem intro_branch (root : NativeEff) (n : Nat) (t : Term) (a b : NativeEff) (p : Point) (k : Nat)
-    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
-    (hwc : ∀ (c : List (FiberId × ExitV)) (i : Nat),
-      (({ p with completed := c } : Point).child i).weight < n)
-    (h : Node.at_ (.eff root) p.path = some (.eff (.branch t a b)))
-    (ih : ∀ (p : Point), p.weight < n → ∀ (e : NativeEff),
-      Node.at_ (.eff root) p.path = some (.eff e) → CodeMeans root (compileEff e p) (denoteR root e p)) :
-    CodeMeans root (compileEff (.branch t a b) p) (denoteR root (.branch t a b) p) := by
-  rw [compileEff_branch t a b hf, denoteR_branch root t a b p hpos]
-  refine CodeMeans.suspendBody p _ fun completed => ?_
-  show CodeMeans root (suspendBodyAt root (.body { p with completed })) (prepareR completed (constructR _))
-  simp only [prepareR_constructR]
-  rcases hv : evalTerm p.env t with _ | v
-  · rw [suspendBodyAt_branch_bad (q := { p with completed }) hf h
-      (fun flag heq => by rw [hv] at heq; cases heq)]
-    exact codeMeans_badShape root
-  · cases v with
-    | bool flag =>
-      cases flag
-      · have hb := at_child_of (p := { p with completed }) h 1
-        rw [suspendBodyAt_branch_false (q := { p with completed }) hf h hv, resolve_of_at hb]
-        simp only [prepareR_denoteR]
-        exact ih _ (hwc completed 1) b hb
-      · have hb := at_child_of (p := { p with completed }) h 0
-        rw [suspendBodyAt_branch_true (q := { p with completed }) hf h hv, resolve_of_at hb]
-        simp only [prepareR_denoteR]
-        exact ih _ (hwc completed 0) a hb
-    | _ =>
-      rw [suspendBodyAt_branch_bad (q := { p with completed }) hf h
-        (fun flag heq => by rw [hv] at heq; cases heq)]
-      exact codeMeans_badShape root
 
 theorem intro_select (root : NativeEff) (n : Nat) (s : Term) (d : Decision) (a0 a1 : NativeEff) (p : Point) (k : Nat)
     (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)

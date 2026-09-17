@@ -138,15 +138,6 @@ theorem inv_interruptible (sig : Signature Op) (env : TyEnv) (body : Eff Op) :
   refine Option.of_triple ?_
   simp only [effTy]; mvcgen; all_goals simp_all
 
-theorem inv_branch (sig : Signature Op) (env : TyEnv) (test : Term) (thenB elseB : Eff Op) :
-    ∀ t, effTy sig env (.branch test thenB elseB) = some t →
-      termTy sig env test = some .bool ∧ ∃ a b answer,
-        effTy sig env thenB = some a ∧ effTy sig env elseB = some b ∧
-        EffTy.joinAnswer a.answer b.answer = some answer ∧
-        t = ⟨answer, a.error.join b.error, a.requires.union b.requires⟩ := by
-  refine Option.of_triple ?_
-  simp only [effTy]; mvcgen; all_goals simp_all
-
 theorem inv_select (sig : Signature Op) (env : TyEnv) (s : Term) (d : Decision) (a0 a1 : Eff Op) :
     ∀ t, effTy sig env (.select s d a0 a1) = some t →
       ∃ ty e0 e1 t0 t1 answer, termTy sig env s = some ty ∧ d.arms ty = some (e0, e1) ∧
@@ -586,7 +577,6 @@ theorem inv_layers_cons (sig : Signature Op) (head next : LayerTerm Op)
 #print axioms inv_exit
 #print axioms inv_uninterruptible
 #print axioms inv_interruptible
-#print axioms inv_branch
 #print axioms inv_select
 #print axioms inv_whileLoop
 #print axioms inv_yieldNow

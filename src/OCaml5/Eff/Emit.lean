@@ -316,13 +316,17 @@ def emitSubterm (sorts : List (String × String)) (bs : List (List Family)) : Ex
     (enumL kids).map fun (k, (j, s)) =>
       let pats := (List.range c.args.length).map fun i => if i == j then s!"a{i}" else "_"
       s!"  | N_{short} (Eff_types.{ctorApp f.spec.oname c pats}), {k} -> Some (N_{s} a{j})"
+  -- A byte walker reads a wire tag; the children table is keyed by declaration position. The
+  -- two numbers differ once a constructor has retired, so the walker asks for the position.
+  let tagRows := sortFamilies.flatMap fun (short, f) => (enumL f.ctors).map fun (i, c) =>
+    s!"  | {short.capitalize}, {c.tag} -> Some {i} (* {c.short} *)"
   let witnesses ← sortFamilies.mapM fun (short, f) => f.ctors.mapM fun c =>
     match witnessOf least seeded f c with
     | some v => pure s!"  N_{short} {v};"
     | none => throw s!"EffGen: no witness of {c.name}: an argument's family has no least value"
   let perSort (line : String → Family → String) :=
     "\n".intercalate (sortFamilies.map fun (short, f) => line short f)
-  pure <| header "Eff_subterm: the node sorts of Effect4.Program.Node, the children of every constructor as (value argument index, child sort) in program-child order (a node's children are its node-typed arguments in declaration order, Program/Node.lean), the one-step child function, and one witness of every constructor of every sort, its arguments seeded with different numbers so that two children of one witness differ." ++
+  pure <| header "Eff_subterm: the node sorts of Effect4.Program.Node, the children of every constructor as (value argument index, child sort) in program-child order (a node's children are its node-typed arguments in declaration order, Program/Node.lean), keyed by declaration position, the map from a wire tag to that position, the one-step child function, and one witness of every constructor of every sort, its arguments seeded with different numbers so that two children of one witness differ." ++
     "type family = " ++ " | ".intercalate (sorts.map (·.1.capitalize)) ++ "\n\n" ++
     "let families = [ " ++ "; ".intercalate (sorts.map (·.1.capitalize)) ++ " ]\n\n" ++
     "let family_name = function\n" ++ perSort (fun short _ => s!"  | {short.capitalize} -> {ostr short}") ++ "\n\n" ++
@@ -330,6 +334,10 @@ def emitSubterm (sorts : List (String × String)) (bs : List (List Family)) : Ex
     perSort (fun short f => s!"  | {short.capitalize} -> Eff_types.ctor_names_{f.spec.oname}") ++ "\n\n" ++
     "let children (f : family) (c : int) : (int * family) list =\n  match f, c with\n" ++
     "\n".intercalate childRows ++ "\n  | _, _ -> []\n\n" ++
+    "(* The declaration position of the constructor a wire tag names (tools/Effect4Gen/wire-tags.json);\n" ++
+    "   None for a tag no active constructor holds. `children` and `ctor_index` speak positions. *)\n" ++
+    "let position_of_tag (f : family) (tag : int) : int option =\n  match f, tag with\n" ++
+    "\n".intercalate tagRows ++ "\n  | _, _ -> None\n\n" ++
     "type node =\n" ++ perSort (fun short f => s!"  | N_{short} of Eff_types.{f.spec.oname}") ++ "\n\n" ++
     "let family_of = function\n" ++ perSort (fun short _ => s!"  | N_{short} _ -> {short.capitalize}") ++ "\n\n" ++
     "let ctor_index = function\n" ++

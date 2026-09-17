@@ -60,7 +60,7 @@ function walkProgram(program: Eff, onLayer: (l: LayerTerm, path: readonly number
       case "catchCause": return { ...e, body: eff(e.body, child(0)), handler: eff(e.handler, child(1)) }
       case "matchCause": return { ...e, body: eff(e.body, child(0)), onValue: eff(e.onValue, child(1)), onCause: eff(e.onCause, child(2)) }
       case "onExit": return { ...e, body: eff(e.body, child(0)), finalizer: eff(e.finalizer, child(1)) }
-      case "branch": return { ...e, thenB: eff(e.thenB, child(0)), elseB: eff(e.elseB, child(1)) }
+      case "select": return { ...e, arm0: eff(e.arm0, child(0)), arm1: eff(e.arm1, child(1)) }
       case "withFiber": return { ...e, action: action(e.action, child(0)) }
       case "acquireRelease": return { ...e, acquire: eff(e.acquire, child(0)), release: eff(e.release, child(1)) }
       case "provideLayer": {
@@ -250,7 +250,7 @@ class CompilerReader {
         this.arity(a, 1); const fn = this.arrow(arg(0), env, 0)
         if (ts.isBlock(fn.body)) return this.loop(fn.body, env)
         const b = this.unwrap(fn.body)
-        if (ts.isConditionalExpression(b)) return { _tag: "branch", test: this.term(b.condition, env), thenB: this.eff(b.whenTrue, env), elseB: this.eff(b.whenFalse, env) }
+        if (ts.isConditionalExpression(b)) return { _tag: "select", scrutinee: this.term(b.condition, env), decision: { _tag: "bool" }, arm0: this.eff(b.whenTrue, env), arm1: this.eff(b.whenFalse, env) }
         return { _tag: "suspend", body: this.eff(b, env) }
       }
       case "Effect.flatMap": this.arity(a, 2); return { _tag: "bind", first: e(0), rest: k(1) }

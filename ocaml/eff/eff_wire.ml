@@ -577,7 +577,6 @@ let rec emit_eff (b : Buffer.t) (v : eff) : unit =
   | Eff_exit a0 -> Eff_frame.emit_ctor b 12 (fun b -> emit_eff b a0)
   | Eff_uninterruptible a0 -> Eff_frame.emit_ctor b 13 (fun b -> emit_eff b a0)
   | Eff_interruptible a0 -> Eff_frame.emit_ctor b 14 (fun b -> emit_eff b a0)
-  | Eff_branch (a0, a1, a2) -> Eff_frame.emit_ctor b 15 (fun b -> emit_term b a0; emit_eff b a1; emit_eff b a2)
   | Eff_whileLoop (a0, a1, a2, a3) -> Eff_frame.emit_ctor b 16 (fun b -> emit_term b a0; emit_term b a1; emit_term b a2; emit_eff b a3)
   | Eff_yieldNow a0 -> Eff_frame.emit_ctor b 17 (fun b -> Eff_frame.emit_nat b a0)
   | Eff_callback (a0, a1) -> Eff_frame.emit_ctor b 18 (fun b -> emit_native_op b a0; emit_term b a1)
@@ -748,17 +747,6 @@ let rec decode_eff (s : string) (pos : int) (limit : int) : (eff * int) option =
        | None -> None
        | Some (a0, p) ->
         if p = e then Some (Eff_interruptible a0, next) else None)
-    | 15 ->
-      (match decode_term s p e with
-       | None -> None
-       | Some (a0, p) ->
-        (match decode_eff s p e with
-         | None -> None
-         | Some (a1, p) ->
-          (match decode_eff s p e with
-           | None -> None
-           | Some (a2, p) ->
-            if p = e then Some (Eff_branch (a0, a1, a2), next) else None)))
     | 16 ->
       (match decode_term s p e with
        | None -> None

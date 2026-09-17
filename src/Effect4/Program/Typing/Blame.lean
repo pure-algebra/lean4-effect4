@@ -40,8 +40,9 @@ inductive TypeReason
   | requestNotSubtype (row : String) (request expected : Ty)
   | predicateNotBool (t : Ty)
   /-- A `select` whose decision cannot select on the scrutinee's type (`Decision.arms`
-  answers `none`): a non-Boolean under `.bool`, a non-option under `.option`, a column
-  that is not tagged or carries no member of the tag under `.tag`. -/
+  answers `none`): a non-option under `.option`, a column that is not tagged or carries no
+  member of the tag under `.tag`. Under `.bool` the refusal is `predicateNotBool`, the
+  conditional's own reason (`selectRefusal`). -/
   | notSelectable (decision : Decision) (scrutinee : Ty)
   /-- A loop's step does not have the cursor's type. -/
   | stepNotCursor (step cursor : Ty)
@@ -109,6 +110,14 @@ variable {Op : Type}
 def termRefusal (sig : Signature Op) (env : TyEnv) (p : List Nat) (t : Term) : Option TypeRefusal :=
   if (termTy sig env t).isSome then none else some ⟨p, .term t⟩
 
+/-- Why a `select` refuses its scrutinee's type: under `.bool` it is the conditional on a
+non-Boolean, which TypeScript accepts (no diagnostic); under the other two decisions the
+argument is not assignable. -/
+def selectRefusal : Decision → Ty → TypeReason
+  | .bool, t => .predicateNotBool t
+  | .option, t => .notSelectable .option t
+  | .tag name, t => .notSelectable (.tag name) t
+
 mutual
   /-- The checker's refusal under a program, located; `none` exactly when `effTy` answers. -/
   def explainEff (sig : Signature Op) (env : TyEnv) (p : List Nat) : Eff Op → Option TypeRefusal
@@ -164,21 +173,12 @@ mutual
     | .exit body => explainEff sig env (p ++ [0]) body
     | .uninterruptible body => explainEff sig env (p ++ [0]) body
     | .interruptible body => explainEff sig env (p ++ [0]) body
-    | .branch test thenB elseB =>
-      match termTy sig env test with
-      | none => some ⟨p, .term test⟩
-      | some t =>
-        if t = .bool then
-          match effTy sig env thenB with
-          | none => explainEff sig env (p ++ [0]) thenB
-          | some _ => explainEff sig env (p ++ [1]) elseB
-        else some ⟨p, .predicateNotBool t⟩
     | .select s d a0 a1 =>
       match termTy sig env s with
       | none => some ⟨p, .term s⟩
       | some t =>
         match d.arms t with
-        | none => some ⟨p, .notSelectable d t⟩
+        | none => some ⟨p, selectRefusal d t⟩
         | some (e0, e1) =>
           match effTy sig (env ++ e0) a0 with
           | none => explainEff sig (env ++ e0) (p ++ [0]) a0
@@ -540,12 +540,6 @@ mutual
     (repeat' split) <;> simp_all [EffTy.joinAnswer]
   | .interruptible b =>
     intro env pth
-    have ih_b := explainEff_none_iff sig b
-    simp only [explainEff, effTy, termRefusal, explainStmts, stmtsTy, explainEffs, effsTy, explainAction, actionTy, explainLayer, layerTy, explainLayers, layersTy]
-    (repeat' split) <;> simp_all [EffTy.joinAnswer]
-  | .branch t a b =>
-    intro env pth
-    have ih_a := explainEff_none_iff sig a
     have ih_b := explainEff_none_iff sig b
     simp only [explainEff, effTy, termRefusal, explainStmts, stmtsTy, explainEffs, effsTy, explainAction, actionTy, explainLayer, layerTy, explainLayers, layersTy]
     (repeat' split) <;> simp_all [EffTy.joinAnswer]

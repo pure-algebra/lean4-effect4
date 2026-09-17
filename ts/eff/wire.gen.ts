@@ -316,7 +316,6 @@ const writeEff = (w: Writer, v: Eff): void => {
     case "exit": return w.ctor(12, [() => writeEff(w, v.body)])
     case "uninterruptible": return w.ctor(13, [() => writeEff(w, v.body)])
     case "interruptible": return w.ctor(14, [() => writeEff(w, v.body)])
-    case "branch": return w.ctor(15, [() => writeTerm(w, v.test), () => writeEff(w, v.thenB), () => writeEff(w, v.elseB)])
     case "whileLoop": return w.ctor(16, [() => writeTerm(w, v.initial), () => writeTerm(w, v.test), () => writeTerm(w, v.step), () => writeEff(w, v.body)])
     case "yieldNow": return w.ctor(17, [() => w.nat(v.priority)])
     case "callback": return w.ctor(18, [() => writeNativeOp(w, v.register), () => writeTerm(w, v.request)])

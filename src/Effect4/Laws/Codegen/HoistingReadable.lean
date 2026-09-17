@@ -77,7 +77,7 @@ private theorem nodeReadable_child (sig : Signature Op)
   unfold Node.child at found
   split at found <;> cases found
   all_goals try { simp_all [nodeReadable, childLevel, Node.childLevel, Node.closedChild, Node.binders, readable, readableLayer,
-    readableLayers, readableStmts, readableAction, readableEffs] }
+    readableLayers, readableStmts, readableAction, readableEffs, readable_select_iff, Decision.binds] }
   all_goals rename_i head tail
   all_goals cases head <;> simp_all [nodeReadable, childLevel, Node.childLevel, Node.closedChild, Node.binders, readableStmts]
 
@@ -98,10 +98,9 @@ private theorem nodeReadable_setChild (sig : Signature Op)
   split at updated <;> cases updated
   all_goals simp only [Node.child, Option.some.injEq] at found
   all_goals subst old
-  -- a `select` is outside the readable domain: its hypothesis is `false = true`
-  all_goals try (simp only [nodeReadable, readable, Bool.false_eq_true] at hr; done)
+  -- a readable `select` is the conditional (`readable_select_iff`): its decision is `.bool`
   all_goals try { simp_all [nodeReadable, childLevel, Node.childLevel, Node.closedChild, Node.binders, readable, readableLayer,
-    readableLayers, readableStmts, readableAction, readableEffs] }
+    readableLayers, readableStmts, readableAction, readableEffs, readable_select_iff, Decision.binds] }
 
   · rename_i head tail replacement
     cases head <;> cases replacement <;>
@@ -183,7 +182,7 @@ mutual
   private theorem eff_refNames (sig : Signature Op)
       (spell : String → List String → Option Op) (node : Eff Op) (n : Nat) (path : List Nat)
       (hr : readable sig spell n node = true) : namesReadable (node.refSites path) = true := by
-    cases node <;> simp_all only [foldMapAt_eff, foldMapAt_stmts, foldMapAt_stmt, foldMapAt_effs, foldMapAt_action, foldMapAt_layer, foldMapAt_layers, LayerTerm.refSite, List.nil_append, List.append_nil, readable, Eff.refSites, List.all_append,
+    cases node <;> simp_all only [foldMapAt_eff, foldMapAt_stmts, foldMapAt_stmt, foldMapAt_effs, foldMapAt_action, foldMapAt_layer, foldMapAt_layers, LayerTerm.refSite, List.nil_append, List.append_nil, readable, readable_select_iff, Eff.refSites, List.all_append,
       Bool.and_eq_true, namesReadable, List.all_nil, Bool.false_eq_true]
     all_goals repeat' apply And.intro
     all_goals close_ref_names

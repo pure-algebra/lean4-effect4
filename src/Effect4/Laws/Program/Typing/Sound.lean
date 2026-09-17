@@ -114,10 +114,6 @@ theorem effTy_sound (sig : Signature Op) (e : Eff Op) :
   | interruptible body =>
     intro env t h
     exact .interruptible (effTy_sound sig body env t (inv_interruptible sig env body t h))
-  | branch test thenB elseB =>
-    intro env t h
-    obtain ⟨htest, a, b, answer, ha, hb, hj, rfl⟩ := inv_branch sig env test thenB elseB t h
-    exact .branch htest (effTy_sound sig thenB env a ha) (effTy_sound sig elseB env b hb) hj
   | whileLoop initial test step body =>
     intro env t h
     obtain ⟨cursor, b, hinit, htest, hbody, hstep, rfl⟩ :=
@@ -457,11 +453,6 @@ theorem effTy_complete (sig : Signature Op) (e : Eff Op) :
   | interruptible body =>
     intro env t hd; cases hd
     have ih := effTy_complete sig body _ _ ‹HasTy sig _ body _›
-    simp_all [effTy]
-  | branch test thenB elseB =>
-    intro env t hd; cases hd
-    have iha := effTy_complete sig thenB _ _ ‹HasTy sig _ thenB _›
-    have ihb := effTy_complete sig elseB _ _ ‹HasTy sig _ elseB _›
     simp_all [effTy]
   | whileLoop initial test step body =>
     intro env t hd; cases hd

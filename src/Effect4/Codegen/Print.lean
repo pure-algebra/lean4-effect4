@@ -14,7 +14,7 @@ so the printer is byte-deterministic without a width heuristic anywhere in it.
 
 Three formers of lean4-typescript v0.5.0 carry the shapes the fragment lacked before, and
 each has exactly one consumer here: `Expr.generator` (`function* () { … }`) is what
-`Effect.gen` takes, `Expr.cond` (`t ? a : b`) is the value-decided `branch`, and
+`Effect.gen` takes, `Expr.cond` (`t ? a : b`) is the value-decided `select` under `.bool`, and
 `Expr.arrowBlock` (`(a) => { … }`) is the suspended block and the `step` of a
 `whileLoop`.
 
@@ -380,11 +380,7 @@ mutual
     | .interruptible body => do
       let b ← print sig n body
       .ok (.call (.ident "Effect.interruptible") [b])
-    | .branch test thenB elseB => do
-      let a ← print sig n thenB
-      let b ← print sig n elseB
-      .ok (.call (.ident "Effect.suspend") [.arrow none (.cond (printTerm test) a b)])
-    -- `select`: `branch`'s image under `.bool`; `Option.match` with the some-value bound
+    -- `select`: the conditional `t ? a : b` under `.bool`; `Option.match` with the some-value bound
     -- under `.option`; the prelude's `caseTag` with the payload and the rest bound under
     -- `.tag` (the `select` packet §1.8)
     | .select s .bool a0 a1 => do

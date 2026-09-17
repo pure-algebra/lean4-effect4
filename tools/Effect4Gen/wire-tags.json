@@ -75,8 +75,8 @@
       "retired": {}
     },
     "Effect4.Program.Eff": {
-      "active": {"succeed": 0, "fail": 1, "failCause": 2, "yieldError": 3, "sync": 4, "suspend": 5, "perform": 6, "bind": 7, "gen": 8, "catchCause": 9, "matchCause": 10, "onExit": 11, "exit": 12, "uninterruptible": 13, "interruptible": 14, "branch": 15, "whileLoop": 16, "yieldNow": 17, "callback": 18, "awaitFiber": 19, "withFiber": 20, "scoped": 21, "acquireRelease": 22, "provideLayer": 23, "service": 24, "provideService": 25, "catchIf": 26, "select": 27, "iterate": 28},
-      "retired": {}
+      "active": {"succeed": 0, "fail": 1, "failCause": 2, "yieldError": 3, "sync": 4, "suspend": 5, "perform": 6, "bind": 7, "gen": 8, "catchCause": 9, "matchCause": 10, "onExit": 11, "exit": 12, "uninterruptible": 13, "interruptible": 14, "whileLoop": 16, "yieldNow": 17, "callback": 18, "awaitFiber": 19, "withFiber": 20, "scoped": 21, "acquireRelease": 22, "provideLayer": 23, "service": 24, "provideService": 25, "catchIf": 26, "select": 27, "iterate": 28},
+      "retired": {"branch": 15}
     },
     "Effect4.Program.Stmt": {
       "active": {"bindYield": 0, "yieldDiscard": 1, "ret": 2, "ifElse": 3, "whileTrue": 4, "breakLoop": 5},

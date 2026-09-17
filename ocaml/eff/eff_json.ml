@@ -161,7 +161,6 @@ let rec json_eff (v : eff) : Eff_json_text.t =
   | Eff_exit a0 -> Eff_json_text.Array [Eff_json_text.String "exit"; json_eff a0]
   | Eff_uninterruptible a0 -> Eff_json_text.Array [Eff_json_text.String "uninterruptible"; json_eff a0]
   | Eff_interruptible a0 -> Eff_json_text.Array [Eff_json_text.String "interruptible"; json_eff a0]
-  | Eff_branch (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "branch"; json_term a0; json_eff a1; json_eff a2]
   | Eff_whileLoop (a0, a1, a2, a3) -> Eff_json_text.Array [Eff_json_text.String "whileLoop"; json_term a0; json_term a1; json_term a2; json_eff a3]
   | Eff_yieldNow a0 -> Eff_json_text.Array [Eff_json_text.String "yieldNow"; Eff_json_text.Int a0]
   | Eff_callback (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "callback"; json_native_op a0; json_term a1]
