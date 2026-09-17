@@ -3,7 +3,7 @@
 2026-09-17. Owner's direction of the day: `gen` stays, the alphabet is settled, the line is R4,
 R5, R6, and the generic reader is what is wanted most. Design authority:
 `docs/research/2026-09-16-printer-reader-positions-design.md` §3, §10, §14. This packet fixes the
-declarations, the order, the gates, and one decision the owner owes. Nothing here is implemented
+declarations, the order, the gates, and one decision the owner owes (DI-91). Nothing here is implemented
 except the probe of §2.
 
 ## 0. What is being replaced, measured
@@ -98,38 +98,46 @@ largest thing left.
    `check-ts-reader` byte-identical on every oracle, loops included; DI-88's LCNF-to-TypeScript
    reader backend is cancelled, as the design says.
 
-## 5. The decision the owner owes
+## 5. The decision the owner owes (DI-91)
 
-**D1, how `iterate`'s annotation is read.** The printed loop carries `let aN: T = initial`, a
-`TypeRef`, and the reader has to produce a `Ty`.
+**D1′, how the reader obtains `iterate`'s cursor type.** Scouted
+(`docs/research/2026-09-17-scout-bidirectional-types-and-iterate-ergonomics.md` §2 to §4); the
+claims below marked compiled were re-run by the coordinator.
 
-The rule in force is B19 (`docs/research/2026-09-16-implementation-review-log.md`, entry of
-10:05): types meet source by projection only. `ofTy : Ty → Option TypeRef` is the view map, a
-declared type is compared with `ofTy` of the computed one, and nothing reads a `TypeRef` back,
-"never a section". The reason is that `ofTy` is not injective, checked on the tree today:
-`ofTy nat = ofTy int` (both `number`) and `ofTy (union nat int) = ofTy nat`. So the text
-`let a1: number = 0` does not say whether the cursor is `nat` or `int`, and no `readTy` with
-`readTy (ofTy t) = some t` exists. (The first cut of this packet recommended exactly that law; it
-is false and is withdrawn.)
+The rule in force is B19 (`docs/research/2026-09-16-implementation-review-log.md`, 10:05): types
+meet source by projection only; `ofTy : Ty → Option TypeRef` is the view map and nothing reads a
+`TypeRef` back, "never a section". The reason is that `ofTy` is not injective. Compiled:
+`ofTy nat = ofTy int = ofTy (handle "number")`, and `ofTy (union nat int) = ofTy nat`. Compiled
+too: `effTy` does not respect that kernel (the counting loop types at cursor `nat` and is refused
+at cursor `handle "number"`), so a reader that canonizes and a round trip "up to the kernel" would
+change which programs type. No `readTy` with `readTy (ofTy t) = some t` exists; the first cut of
+this packet recommended that law and it is withdrawn.
 
-What can exist:
+**Recommended, (d′): make the annotation optional.** `Eff.iterate (cursorTy : Option Ty)`.
+`none` means the cursor's type is `termTy env initial`; it prints as the unannotated
+`let aN = initial`, which is the image the loop had before `37ff9b21` and both readers read; it
+reads back. `some t` is the widened cursor; it prints `let aN: T` and is not readable, the status
+`select … .option` has today. B19 stays literally whole. The `type` hole sort of §2 goes away
+and step R5.3 no longer waits on a ruling. The generator already writes exactly the synthesized
+type, so all 45 loop rows return. The annotation has no runtime meaning (every compile and
+meaning site binds it as `_`), so the loop proofs do not move. Cost: the field, one `let` in
+`effTy` and in the blame, one premise in each of `HasTy`, `Inversion`, `Sound`, the printer's and
+`readable`'s `iterate` clauses, the OCaml translation arm; the rest regenerated; tag 28's layout
+changes (one day old, no retained vector, the compat policy names it).
 
-- (a) a chosen representative: `readTy : TypeRef → Option Ty` with the law in the other
-  direction, `ofTy (readTy r) = some r` on `ofTy`'s image, and `readable (iterate c …)` asking
-  `readTy (ofTy c) = some c`, that is, that `c` is the representative of its own image. A loop
-  over an `int` cursor then prints and is not readable, as an unreadable scoped `daemon` fork is
-  today. This is a section, so it amends B19's "never a section" for this one reader clause; the
-  comparisons keep B19.
-- (b) a typed reader: the reader carries a `TyEnv`, computes candidates from `initial` and
-  `step`, and accepts the annotation by projection, `ofTy candidate = annotation`, which is
-  B19's own mechanism. It keeps B19 whole. It makes the reader an elaborator (it must type every
-  `bind` to know the environment), and where two candidates project alike it still has to choose.
-- (c) the annotation kept as syntax in `Eff`. Pulls the target's syntax into the core alphabet.
+Fallback, (a): a chosen representative `readTy` with `ofTy (readTy r) = some r` on the image and
+`readable` asking `readTy (ofTy c) = some c`. Additive behind (d′) for `some c`; a section, so it
+needs a written amendment to B19 for that one clause. The other routes (a typed reader, a
+`TypeRef` in `Eff`, the quotient round trip, a subtype field) are priced in the scout's table and
+are dearer or unsound.
 
-Recommended: (a), stated as an amendment to B19 and confined to `iterate`'s clause, because it is
-one function with one equation and leaves the reader untyped. (b) is the principled route if the
-owner wants B19 kept without exception; it is a larger reader. Steps 1 to 5 of §4 do not depend
-on the answer.
+With it, two rulings the scout asks for: whether a unit-result loop prints as the bare
+`Effect.whileLoop` with no `Effect.map` (restores the pre-retirement bytes; moves goldens), and
+the loop sugar as authoring-only definitions (`iterateWith` with minted binders and the result
+defaulting to the cursor, `whileLoop`, `forever`, `countTo`). rc.112 has no `Effect.iterate` and
+no `Effect.loop`, so there is no idiomatic head to print; `forEach` and `reduce` wait on one atom,
+`uncons`. Found on the way and filed as DI-92: `admitProgram`'s `int` ban does not see a `Ty`
+inside the program tree (compiled: a program with `Ty.int` as a cursor annotation is admitted).
 
 ## 5b. The reader as an authored `Eff` program (the owner's question; scouted 2026-09-17)
 
