@@ -80,6 +80,7 @@ import Effect4.Machine.Context
 import Effect4.Arch.Accepts
 -- The codegen target and artefact definitions with the one crossing to bytes.
 import Effect4.Codegen.Target
+import Effect4.Codegen.Template
 -- The AST relation (docs/research/2026-09-04-ast-relation-plan.md), lane A1:
 -- the Effect TS program syntax `Eff` and its typing, first-order and
 -- decidable throughout; the printer, the compile and the parser follow. `Eff`
