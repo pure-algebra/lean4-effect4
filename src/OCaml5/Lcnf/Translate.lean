@@ -307,6 +307,20 @@ structure St where
   usedOps : Array String := #[]
   /-- `carg` rows this declaration used, by the declaration the row names. -/
   usedCargs : Array Name := #[]
+  /-- Parameters of local functions and join points, by the local's variable: what a jump
+  needs to find the parameter it hands an argument to. -/
+  localParams : Std.HashMap FVarId (Array FVarId) := {}
+  /-- Parameters of local functions and join points known, from an earlier pass over this
+  declaration, to be handed a carrier. A join point is translated before the jumps to it, so
+  the jumps of one pass seed the parameters of the next (`translateDecl`). -/
+  localSeeds : Std.HashMap FVarId String := {}
+  /-- Parameters of local functions and join points this pass saw handed a carrier. -/
+  localWanted : Array (FVarId × String) := #[]
+  /-- Parameters of generated callees that were handed a carrier which has no `to_list`
+  operation and which no `carg` row covers: `(callee, position, carrier key)`. Such a carrier
+  cannot be copied back into a list, so the parameter carries it; `translateClosureInferring`
+  turns each into a row and translates again. -/
+  wantedCargs : Array (Name × Nat × String) := #[]
   /-- Every place a carrier had to be turned back into the Lean list, as `<site>`. Each one is
   an O(depth) copy; the report prints them so a missing `carg` row is visible rather than
   silently slow. -/
@@ -457,6 +471,16 @@ def argCarrier? : Arg .pure → TM (Option String)
 def setCarrier (id : FVarId) (c : String) : TM Unit :=
   modify fun s => { s with carrier := s.carrier.insert id c }
 
+/-- Note the carriers a jump or a local call hands to the parameters of `f`. -/
+def noteLocalArgs (f : FVarId) (args : Array (Arg .pure)) : TM Unit := do
+  let some ps := (← get).localParams[f]? | return
+  for i in [:args.size] do
+    if let some c ← argCarrier? args[i]! then
+      if let some p := ps[i]? then
+        modify fun s =>
+          { s with localWanted := if s.localWanted.contains (p, c) then s.localWanted
+                                  else s.localWanted.push (p, c) }
+
 /-- One operation of a carrier, applied; `none` when the table has no row for it. -/
 def carrierOp? (c op : String) (args : List Ml.Expr) : TM (Option Ml.Expr) := do
   let ex ← readExterns
@@ -490,6 +514,12 @@ def argFor (g : Name) (i : Nat) (a : Arg .pure) : TM Ml.Expr := do
   | some c =>
     let ex ← readExterns
     if ex.cargAt? g i == some c then return e
+    else if (ex.op? c "to_list").isNone && (ex.cargAt? g i).isNone then
+      -- no way back to the list: the callee's parameter is the carrier (inferred)
+      modify fun s =>
+        { s with wantedCargs := if s.wantedCargs.contains (g, i, c) then s.wantedCargs
+                                else s.wantedCargs.push (g, i, c) }
+      return e
     else useAsList s!"{g} #{i}" c e
 
 /-- Every argument of a generated callee, by position. -/
@@ -669,6 +699,7 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option 
     -- a rename carries the carrier with it; a local call (a join point) takes it raw, and
     -- OCaml infers the join point's parameter type from the call
     if args.isEmpty then return (fv, ← carrierOfId? f)
+    noteLocalArgs f args
     return (.app fv (← args.toList.mapM argExpr), none)
   | .const n _ args =>
     let env ← readEnv
@@ -802,6 +833,7 @@ partial def code (declName : Name) (c : Code .pure) : TM Ml.Expr := do
   | .jmp j args =>
     let jv := Ml.Expr.var (← nameOf j)
     if args.isEmpty then return .app jv [.unit]
+    noteLocalArgs j args
     return .app jv (← args.toList.mapM argExpr)
   | .return x => return .var (← nameOf x)
   | .unreach _ => return .assertE (.bool false)
@@ -843,6 +875,9 @@ partial def code (declName : Name) (c : Code .pure) : TM Ml.Expr := do
 partial def localFun (declName : Name) (decl : FunDecl .pure) (k : Code .pure) : TM Ml.Expr := do
   let f ← bindVar decl.fvarId decl.binderName
   let ps ← decl.params.toList.mapM fun p => bindVar p.fvarId p.binderName
+  modify fun s => { s with localParams := s.localParams.insert decl.fvarId (decl.params.map (·.fvarId)) }
+  for p in decl.params do
+    if let some c := (← get).localSeeds[p.fvarId]? then setCarrier p.fvarId c
   let ps := if ps.isEmpty then ["()"] else ps
   let recursive := decl.value.collectUsed.contains decl.fvarId
   let body ← code declName decl.value
@@ -924,7 +959,21 @@ def translateDecl (env : Environment) (d : LCNF.Decl .pure) (userName : Name) (o
     return { leanName := d.name, userName := userName, ocamlName := ocamlName, bind := b,
              callees := callees, externDeps := (← get).externDeps, signature := sig,
              recursive := d.recursive || callees.contains d.name }
-  Id.run ((act { env := env, tn := tn, ex := ex }).run {})
+  -- A join point is translated before the jumps to it, so which of its parameters are handed
+  -- a carrier is known only after a pass: translate again with those parameters seeded until
+  -- a pass finds nothing new. The variables are the declaration's own, so they are the same
+  -- in every pass.
+  let run (seeds : Std.HashMap FVarId String) : Translated × St :=
+    Id.run ((act { env := env, tn := tn, ex := ex }).run { localSeeds := seeds })
+  Id.run do
+    let mut seeds : Std.HashMap FVarId String := {}
+    let mut out := run seeds
+    for _ in [:16] do
+      let fresh := out.2.localWanted.filter fun (p, _) => !seeds.contains p
+      if fresh.isEmpty then break
+      for (p, c) in fresh do seeds := seeds.insert p c
+      out := run seeds
+    return out
 
 /-- What the closure produced. -/
 structure Closure where
@@ -944,6 +993,8 @@ structure Closure where
   usedOps : Array String := #[]
   /-- `carg` rows a declaration used. -/
   usedCargs : Array Name := #[]
+  /-- Carrier parameters the call sites ask for and no row states (`St.wantedCargs`). -/
+  wantedCargs : Array (Name × Nat × String) := #[]
   /-- Every place a carrier was turned back into the Lean list. -/
   toLists : Array String := #[]
 
@@ -996,6 +1047,7 @@ def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {
       usedExterns := st.usedExterns.foldl pushNew c.usedExterns,
       usedOps := st.usedOps.foldl (fun a o => if a.contains o then a else a.push o) c.usedOps,
       usedCargs := st.usedCargs.foldl pushNew c.usedCargs,
+      wantedCargs := st.wantedCargs.foldl (fun a w => if a.contains w then a else a.push w) c.wantedCargs,
       toLists := c.toLists ++ st.toLists,
       todos := c.todos ++ st.todos }
     for callee in st.calls do
@@ -1006,6 +1058,31 @@ def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {
             c := { c with wrapperRefs := pushNew c.wrapperRefs callee }
         queue := queue.push callee
   return c
+
+/-- `translateClosure`, with the carrier parameters inferred. A carrier that has no `to_list`
+operation can only be passed on as itself, so a generated callee that is handed one takes it as
+a carrier: that is the inter-procedural fact a `carg` row states, read off the call sites. Each
+round adds the rows the last one asked for and translates again, because a callee learns that
+its parameter is a carrier only once its row exists, and only then hands it on. The answer is
+the closure, the table with the inferred rows added, and the inferred rows as the table would
+spell them. A wrong inference is an `ocamlopt` type error, as a wrong hand row is. -/
+def translateClosureInferring (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
+    (ex : Externs := {}) : CoreM (Closure × Externs × Array String) := do
+  let mut ex := ex
+  let mut inferred : Array String := #[]
+  let mut closure ← translateClosure roots cap tn ex
+  for _ in [:64] do
+    if closure.wantedCargs.isEmpty then break
+    for (g, i, c) in closure.wantedCargs do
+      let key := (ex.cargRowKey? g).getD g
+      let prev := ex.cargs.getD key []
+      unless prev.any (fun row => row.1 == CargParam.pos i) do
+        ex := { ex with cargs := ex.cargs.insert key (prev ++ [(CargParam.pos i, [c])]) }
+        inferred := inferred.push s!"carg {key} {i} {c}"
+    closure ← translateClosure roots cap tn ex
+  unless closure.wantedCargs.isEmpty do
+    throwError "carrier parameters still unsettled after 64 rounds: {closure.wantedCargs}"
+  return (closure, ex, inferred)
 
 /-! ## Emission: strongly connected components, dependencies first -/
 

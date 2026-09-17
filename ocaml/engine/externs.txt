@@ -145,20 +145,14 @@ fn Effect4.Program.Point.redirect 2 sh_point_redirect program_node_child
 # extra generator root, because `P.snoc` needs it.
 
 # ---- G2: the parameters that carry the environment ----------------------------------------
-# A `carg` row states what an inter-procedural analysis would infer: these parameters are
-# handed a carrier by their callers.  The index counts the OCaml parameters of the generated
-# signature, from 0.  Each row also drops that declaration's RESULT annotation, because
-# `blockExit`/`loopExit` return `Option (Prod (List Nat) (List Val))` — a carrier at a nested
-# position no chain can spell — and OCaml infers it.
-carg Effect4.Program.evalTerm 0 E.t
-carg Effect4.Program.evalTerms 0 E.t
-carg Effect4.Program.causeOf 0 E.t
-carg Effect4.Program.caughtErrorValue? 0 E.t
-carg Effect4.Program.blockEnv 4 E.t
-carg Effect4.Program.blockExit 3 E.t
-carg Effect4.Program.loopExit 4 E.t
-carg Effect4.Program.runStmts 4 E.t
-carg Effect4.Program.runStmts.yieldOf 6 E.t
+# No rows.  `E.t` has no `to_list` operation, so a value of it can only be passed on as itself:
+# a generated declaration that is handed one takes it as a carrier.  The generator reads that
+# off the call sites (`translateClosureInferring`, src/OCaml5/Lcnf/Translate.lean), round by
+# round until nothing new is asked for, and prints the rows it inferred in its report
+# (`carg rows inferred from the call sites`).  Each inferred row also drops that declaration's
+# RESULT annotation, because `blockExit`/`loopExit` return `Option (Prod (List Nat) (List Val))`
+# — a carrier at a nested position no chain can spell — and OCaml infers it.  A `carg` row can
+# still be written here by hand; it is then an override and the stale-ledger check covers it.
 
 # ---- Q6: Lean's division on a zero divisor ------------------------------------------------
 # `Translate.builtin?` emits raw `/` and `mod`, which RAISE where Lean answers 0 and n
