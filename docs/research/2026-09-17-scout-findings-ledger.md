@@ -87,3 +87,33 @@ with `select-controls.ts` now compiled; `make check-tools` with the repaired fix
 for `Representation` and `Shape`), C-P7 (the checker written once), E-B2 (the reader's proofs
 under `Laws/`), C-P4 (the generated fragment recursor), C-P2 (line numbers in the citation gate),
 C-P11 (the schema tree's unconsumed declarations); then the reader line R4.1.
+
+## Rulings and dispatch, later on 2026-09-17 (owner: "go with your recommendations")
+
+1. **C-P8 scope:** `Representation` in; `Store/Shape.lean` out (two of its six traversals recurse on
+   a value and a shape together; the rest are exhaustive matches); the monadic half for nested
+   families is not emitted until something consumes it. Seat dispatched on
+   `docs/research/2026-09-17-generated-nested-fold-ready-packet.md` (`a317d502`). Found while
+   writing the packet: the nine-helper recursion is hand-written four MORE times
+   (`Schema/Check.lean` three, `Codegen/Schema.lean` one); they are the packet's step 4.
+2. **E-B2 withdrawn.** The hand reader is to be deleted, not reorganised: `Codegen/Read.lean` and
+   its 2,571 proof lines go in one commit when the generic reader passes `ReadContract` (R5.2);
+   until then the file is frozen (compile fixes only).
+3. **Seat order after C-P8, one at a time:** C-P7 (packet
+   `docs/research/2026-09-17-checker-once-ready-packet.md`, probe beside it), C-P4, C-P6, C-P11,
+   then R4.1.
+4. **C-P7's design changed from the scout's.** `effTy := toOption ∘ checkEff` would change the
+   unfolding under 66 `mvcgen` inversion lemmas, the specs generator's six `Option` roots and the
+   LCNF rule reader's `refusal: Option.none`. The packet's design is one checker generic in the
+   carrier of refusals (`Refusing`: `refuse`, `under`), instantiated at `Option` (today's `effTy`,
+   old equations by `rfl`) and at `Except TypeRefusal`; the law is naturality, one `simp only` per
+   arm. Probe green. About 360 lines net rather than 520. Two unknowns need the project compiled
+   (the specs harvest, `check-cases`); they are the seat's bounded step 0, with a named fallback.
+5. **C-P11's rule:** code with no reference anywhere (tests included) is deleted; a theorem stays
+   only if a contract packet or a test names it or something uses it.
+6. **DI-73** ruled as answered by DI-81; **DI-93** fixed (`f51b2fcb`): one binding rule inside
+   `requirements`, the dead adapter branch deleted, the hand-selection lane binds keys by shape.
+7. **Parked, unchanged:** the five option/list atoms and any new `Decision` constructor wait for
+   `Ty.data`; generate the `Ty` arms before `Ty.data`; both after the reader line. The three
+   orphan `.test.ts` files: delete unless one covers what no gate covers (each to be read first).
+   The corpus baseline is promoted in the same move that widens the generator's atom list.
