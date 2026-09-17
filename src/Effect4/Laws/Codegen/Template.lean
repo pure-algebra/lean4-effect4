@@ -1,4 +1,5 @@
 import Effect4.Codegen.Template
+import Effect4.Laws.Auto.Inversion
 
 /-!
 # Laws.Codegen.Template — the two engine lemmas of the printed boundary (R4.1)
@@ -81,131 +82,76 @@ theorem matchAnn_instAnn (σ : Subst) : ∀ (ann : Option Nat) (ty : Option Type
       simp only [matchAnn, holesAnn, along_single σ i _ hl]
     · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
 
+/-! The cases below are closed by `aesop` (`Laws/Auto/Inversion.lean`): the definitions of the
+calculus are unfolded at the former in hand, the successful instantiation is inverted, and the
+induction hypotheses, introduced by hand as its README asks, do the rest. A statement case first
+states what the instantiation gives and substitutes it: rewriting the statement VARIABLE under
+`matchStmt`'s dependent matcher makes `simp` build a term the kernel rejects. -/
+
+attribute [local simp] inst insts instFields instStmt instStmts matchT matchTs matchFields
+  matchStmt matchStmts holes holesTs holesFields holesStmt holesStmts along_append along_nil
+  along_single
+
 mutual
   theorem match_inst (n : Nat) (σ : Subst) : ∀ (t : Tpl) (e : Expr),
       inst n σ t = some e → matchT n t e = along σ (holes t)
-    | .hole i, e, h => by
-      simp only [inst] at h
-      split at h
-      · rename_i e' hl
-        simp only [Option.some.injEq] at h
-        subst h
-        simp only [matchT, holes, along_single σ i _ hl]
-      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
-    | .strHole i, e, h => by
-      simp only [inst] at h
-      split at h
-      · rename_i s hl
-        simp only [Option.some.injEq] at h
-        subst h
-        simp only [matchT, holes, along_single σ i _ hl]
-      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
-    | .intHole i, e, h => by
-      simp only [inst] at h
-      split at h
-      · rename_i v hl
-        simp only [Option.some.injEq] at h
-        subst h
-        simp only [matchT, holes, along_single σ i _ hl]
-      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
-    | .arrHole i, e, h => by
-      simp only [inst] at h
-      split at h
-      · rename_i es hl
-        simp only [Option.some.injEq] at h
-        subst h
-        simp only [matchT, holes, along_single σ i _ hl]
-      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
-    | .binderRef k, e, h => by
-      simp only [inst, Option.some.injEq] at h
-      subst h
-      simp only [matchT, holes, along_nil, ↓reduceIte]
-    | .ident s, e, h => by
-      simp only [inst, Option.some.injEq] at h
-      subst h
-      simp only [matchT, holes, along_nil, ↓reduceIte]
-    | .str s, e, h => by
-      simp only [inst, Option.some.injEq] at h
-      subst h
-      simp only [matchT, holes, along_nil, ↓reduceIte]
-    | .int v, e, h => by
-      simp only [inst, Option.some.injEq] at h
-      subst h
-      simp only [matchT, holes, along_nil, ↓reduceIte]
-    | .bool b, e, h => by
-      simp only [inst, Option.some.injEq] at h
-      subst h
-      simp only [matchT, holes, along_nil, ↓reduceIte]
+    | .hole i, e, h => by aesop
+    | .strHole i, e, h => by aesop
+    | .intHole i, e, h => by aesop
+    | .arrHole i, e, h => by aesop
+    | .binderRef k, e, h => by aesop
+    | .ident s, e, h => by aesop
+    | .str s, e, h => by aesop
+    | .int v, e, h => by aesop
+    | .bool b, e, h => by aesop
     | .call hd args, e, h => by
-      simp only [inst, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨h', hh, a', ha, rfl⟩ := h
-      simp only [matchT, holes, along_append, match_inst n σ hd h' hh, matchs_inst n σ args a' ha]
+      have ih1 := match_inst n σ hd
+      have ih2 := matchs_inst n σ args
+      aesop
     | .callSpread hd i, e, h => by
-      simp only [inst, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
-      obtain ⟨h', hh, hm⟩ := h
-      split at hm
-      · rename_i es hl
-        simp only [Option.some.injEq] at hm
-        subst hm
-        simp only [matchT, holes, along_append, match_inst n σ hd h' hh, along_single σ i _ hl]
-        cases along σ (holes hd) <;> rfl
-      · exact absurd hm (by simp only [reduceCtorEq, not_false_eq_true])
+      have ih1 := match_inst n σ hd
+      aesop
     | .arr items, e, h => by
-      simp only [inst, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨a', ha, rfl⟩ := h
-      simp only [matchT, holes, matchs_inst n σ items a' ha]
+      have ih := matchs_inst n σ items
+      aesop
     | .object fields, e, h => by
-      simp only [inst, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨a', ha, rfl⟩ := h
-      simp only [matchT, holes, matchFields_inst n σ fields a' ha]
+      have ih := matchFields_inst n σ fields
+      aesop
     | .arrow b, e, h => by
-      simp only [inst, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨b', hb, rfl⟩ := h
-      simp only [matchT, holes, match_inst n σ b b' hb]
+      have ih := match_inst n σ b
+      aesop
     | .lambda bs b, e, h => by
-      simp only [inst, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨b', hb, rfl⟩ := h
-      simp only [matchT, holes, ↓reduceIte, match_inst n σ b b' hb]
+      have ih := match_inst n σ b
+      aesop
     | .cond t a b, e, h => by
-      simp only [inst, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨t', ht, a', ha, b', hb, rfl⟩ := h
-      simp only [matchT, holes, along_append, match_inst n σ t t' ht, match_inst n σ a a' ha,
-        match_inst n σ b b' hb]
-      cases along σ (holes t) <;> cases along σ (holes a) <;> cases along σ (holes b) <;> rfl
+      have ih1 := match_inst n σ t
+      have ih2 := match_inst n σ a
+      have ih3 := match_inst n σ b
+      aesop
     | .method target name args, e, h => by
-      simp only [inst, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨t', ht, a', ha, rfl⟩ := h
-      simp only [matchT, holes, along_append, ↓reduceIte, match_inst n σ target t' ht,
-        matchs_inst n σ args a' ha]
+      have ih1 := match_inst n σ target
+      have ih2 := matchs_inst n σ args
+      aesop
     | .arrowBlock bs body, e, h => by
-      simp only [inst, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨b', hb, rfl⟩ := h
-      simp only [matchT, holes, ↓reduceIte, matchStmts_inst n σ body b' hb]
+      have ih := matchStmts_inst n σ body
+      aesop
     | .generator body, e, h => by
-      simp only [inst, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨b', hb, rfl⟩ := h
-      simp only [matchT, holes, matchStmts_inst n σ body b' hb]
+      have ih := matchStmts_inst n σ body
+      aesop
   theorem matchs_inst (n : Nat) (σ : Subst) : ∀ (ts : Tpls) (es : List Expr),
       insts n σ ts = some es → matchTs n ts es = along σ (holesTs ts)
-    | .nil, es, h => by
-      simp only [insts, Option.some.injEq] at h
-      subst h
-      simp only [matchTs, holesTs, along_nil]
+    | .nil, es, h => by aesop
     | .cons hd tl, es, h => by
-      simp only [insts, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨h', hh, t', ht, rfl⟩ := h
-      simp only [matchTs, holesTs, along_append, match_inst n σ hd h' hh, matchs_inst n σ tl t' ht]
+      have ih1 := match_inst n σ hd
+      have ih2 := matchs_inst n σ tl
+      aesop
   theorem matchFields_inst (n : Nat) (σ : Subst) : ∀ (fs : Fields) (es : List (String × Expr)),
       instFields n σ fs = some es → matchFields n fs es = along σ (holesFields fs)
-    | .nil, es, h => by
-      simp only [instFields, Option.some.injEq] at h
-      subst h
-      simp only [matchFields, holesFields, along_nil]
+    | .nil, es, h => by aesop
     | .cons key v tl, es, h => by
-      simp only [instFields, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨v', hv, t', ht, rfl⟩ := h
-      simp only [matchFields, holesFields, along_append, ↓reduceIte, match_inst n σ v v' hv,
-        matchFields_inst n σ tl t' ht]
+      have ih1 := match_inst n σ v
+      have ih2 := matchFields_inst n σ tl
+      aesop
   theorem matchStmt_inst (n : Nat) (σ : Subst) : ∀ (t : StmtTpl) (s : Stmt),
       instStmt n σ t = some s → matchStmt n t s = along σ (holesStmt t)
     | .letInit k v ann, s, h => by
@@ -214,58 +160,51 @@ mutual
       simp only [matchStmt, holesStmt, along_append, ↓reduceIte, match_inst n σ v v' hv,
         matchAnn_instAnn σ ann ann' hann]
     | .assign k v, s, h => by
-      simp only [instStmt, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨v', hv, rfl⟩ := h
-      simp only [matchStmt, holesStmt, ↓reduceIte, match_inst n σ v v' hv]
+      have ih := match_inst n σ v
+      obtain ⟨v', hv, rfl⟩ : ∃ v', inst n σ v = some v' ∧ Stmt.assign (varName (n + k)) v' = s := by
+        aesop
+      aesop
     | .ret v, s, h => by
-      simp only [instStmt, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨v', hv, rfl⟩ := h
-      simp only [matchStmt, holesStmt, match_inst n σ v v' hv]
+      have ih := match_inst n σ v
+      obtain ⟨v', hv, rfl⟩ : ∃ v', inst n σ v = some v' ∧ Stmt.ret v' = s := by aesop
+      aesop
     | .exprStmt v, s, h => by
-      simp only [instStmt, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨v', hv, rfl⟩ := h
-      simp only [matchStmt, holesStmt, match_inst n σ v v' hv]
+      have ih := match_inst n σ v
+      obtain ⟨v', hv, rfl⟩ : ∃ v', inst n σ v = some v' ∧ Stmt.exprStmt v' = s := by aesop
+      aesop
     | .constYield k v, s, h => by
-      simp only [instStmt, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨v', hv, rfl⟩ := h
-      simp only [matchStmt, holesStmt, ↓reduceIte, match_inst n σ v v' hv]
+      have ih := match_inst n σ v
+      obtain ⟨v', hv, rfl⟩ :
+          ∃ v', inst n σ v = some v' ∧ Stmt.constYield (varName (n + k)) v' none = s := by aesop
+      aesop
     | .yieldDiscard v, s, h => by
-      simp only [instStmt, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨v', hv, rfl⟩ := h
-      simp only [matchStmt, holesStmt, match_inst n σ v v' hv]
+      have ih := match_inst n σ v
+      obtain ⟨v', hv, rfl⟩ : ∃ v', inst n σ v = some v' ∧ Stmt.yieldDiscard v' = s := by aesop
+      aesop
     | .ifElse t a b, s, h => by
-      simp only [instStmt, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨t', ht, a', ha, b', hb, rfl⟩ := h
-      simp only [matchStmt, holesStmt, along_append, match_inst n σ t t' ht,
-        matchStmts_inst n σ a a' ha, matchStmts_inst n σ b b' hb]
-      cases along σ (holes t) <;> cases along σ (holesStmts a) <;> cases along σ (holesStmts b) <;> rfl
+      have ih1 := match_inst n σ t
+      have ih2 := matchStmts_inst n σ a
+      have ih3 := matchStmts_inst n σ b
+      obtain ⟨t', a', b', ht, ha, hb, rfl⟩ : ∃ t' a' b', inst n σ t = some t' ∧
+          instStmts n σ a = some a' ∧ instStmts n σ b = some b' ∧ Stmt.ifElse t' a' b' = s := by
+        aesop
+      aesop
     | .whileTrue body, s, h => by
-      simp only [instStmt, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨b', hb, rfl⟩ := h
-      simp only [matchStmt, holesStmt, matchStmts_inst n σ body b' hb]
+      have ih := matchStmts_inst n σ body
+      obtain ⟨b', hb, rfl⟩ : ∃ b', instStmts n σ body = some b' ∧ Stmt.whileTrue none b' = s := by
+        aesop
+      aesop
     | .breakTo, s, h => by
-      simp only [instStmt, Option.some.injEq] at h
-      subst h
-      simp only [matchStmt, holesStmt, along_nil]
+      obtain rfl : Stmt.breakTo none = s := by aesop
+      aesop
   theorem matchStmts_inst (n : Nat) (σ : Subst) : ∀ (ts : StmtTpls) (ss : List Stmt),
       instStmts n σ ts = some ss → matchStmts n ts ss = along σ (holesStmts ts)
-    | .hole i, ss, h => by
-      simp only [instStmts] at h
-      split at h
-      · rename_i ss' hl
-        simp only [Option.some.injEq] at h
-        subst h
-        simp only [matchStmts, holesStmts, along_single σ i _ hl]
-      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
-    | .nil, ss, h => by
-      simp only [instStmts, Option.some.injEq] at h
-      subst h
-      simp only [matchStmts, holesStmts, along_nil]
+    | .hole i, ss, h => by aesop
+    | .nil, ss, h => by aesop
     | .cons hd tl, ss, h => by
-      simp only [instStmts, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨h', hh, t', ht, rfl⟩ := h
-      simp only [matchStmts, holesStmts, along_append, matchStmt_inst n σ hd h' hh,
-        matchStmts_inst n σ tl t' ht]
+      have ih1 := matchStmt_inst n σ hd
+      have ih2 := matchStmts_inst n σ tl
+      aesop
 end
 
 /-! ## What a match collects is keyed by the holes, left to right -/
@@ -281,181 +220,123 @@ theorem matchAnn_keys : ∀ (ann : Option Nat) (ty : Option TypeRef) (σ : Subst
     subst h
     rfl
 
+/-! Here an induction hypothesis names a tree its conclusion does not mention, so it cannot act
+as a rewrite: it is given to `aesop` as a forward rule. -/
+
+attribute [local simp] keys_append keys matchAnn
+
 mutual
   theorem match_keys (n : Nat) : ∀ (t : Tpl) (e : Expr) (σ : Subst),
       matchT n t e = some σ → keys σ = holes t
     | .hole i, e, σ, h => by
-      simp only [matchT, Option.some.injEq] at h
-      subst h
-      rfl
+      aesop
     | .strHole i, .str s, σ, h => by
-      simp only [matchT, Option.some.injEq] at h
-      subst h
-      rfl
+      aesop
     | .intHole i, .int v, σ, h => by
-      simp only [matchT, Option.some.injEq] at h
-      subst h
-      rfl
+      aesop
     | .arrHole i, .arr es, σ, h => by
-      simp only [matchT, Option.some.injEq] at h
-      subst h
-      rfl
+      aesop
     | .binderRef k, .ident s, σ, h => by
-      simp only [matchT] at h
-      split at h
-      · simp only [Option.some.injEq] at h
-        subst h
-        rfl
-      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+      aesop
     | .ident s, .ident s', σ, h => by
-      simp only [matchT] at h
-      split at h
-      · simp only [Option.some.injEq] at h
-        subst h
-        rfl
-      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+      aesop
     | .str s, .str s', σ, h => by
-      simp only [matchT] at h
-      split at h
-      · simp only [Option.some.injEq] at h
-        subst h
-        rfl
-      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+      aesop
     | .int v, .int v', σ, h => by
-      simp only [matchT] at h
-      split at h
-      · simp only [Option.some.injEq] at h
-        subst h
-        rfl
-      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+      aesop
     | .bool b, .bool b', σ, h => by
-      simp only [matchT] at h
-      split at h
-      · simp only [Option.some.injEq] at h
-        subst h
-        rfl
-      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+      aesop
     | .call hd args, .call hd' args', σ, h => by
-      simp only [matchT, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨a, ha, b, hb, rfl⟩ := h
-      simp only [keys_append, holes, match_keys n hd hd' a ha, matchs_keys n args args' b hb]
+      have ih1 := match_keys n hd
+      have ih2 := matchs_keys n args
+      aesop (add safe forward [ih1, ih2])
     | .callSpread hd i, .call hd' es, σ, h => by
-      simp only [matchT, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨a, ha, rfl⟩ := h
-      simp only [keys_append, holes, match_keys n hd hd' a ha]
-      rfl
+      have ih1 := match_keys n hd
+      aesop (add safe forward [ih1])
     | .arr items, .arr items', σ, h => by
-      simp only [matchT] at h
-      simp only [holes, matchs_keys n items items' σ h]
+      have ih1 := matchs_keys n items
+      aesop (add safe forward [ih1])
     | .object fields, .object fields', σ, h => by
-      simp only [matchT] at h
-      simp only [holes, matchFields_keys n fields fields' σ h]
+      have ih1 := matchFields_keys n fields
+      aesop (add safe forward [ih1])
     | .arrow b, .arrow none b', σ, h => by
-      simp only [matchT] at h
-      simp only [holes, match_keys n b b' σ h]
+      have ih1 := match_keys n b
+      aesop (add safe forward [ih1])
     | .lambda bs b, .lambda ps b' none, σ, h => by
-      simp only [matchT] at h
-      split at h
-      · simp only [holes, match_keys n b b' σ h]
-      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+      have ih1 := match_keys n b
+      aesop (add safe forward [ih1])
     | .cond t a b, .cond t' a' b', σ, h => by
-      simp only [matchT, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨x, hx, y, hy, z, hz, rfl⟩ := h
-      simp only [keys_append, holes, match_keys n t t' x hx, match_keys n a a' y hy,
-        match_keys n b b' z hz]
+      have ih1 := match_keys n t
+      have ih2 := match_keys n a
+      have ih3 := match_keys n b
+      aesop (add safe forward [ih1, ih2, ih3])
     | .method target name args, .method target' name' args', σ, h => by
-      simp only [matchT] at h
-      split at h
-      · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-        obtain ⟨a, ha, b, hb, rfl⟩ := h
-        simp only [keys_append, holes, match_keys n target target' a ha,
-          matchs_keys n args args' b hb]
-      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+      have ih1 := match_keys n target
+      have ih2 := matchs_keys n args
+      aesop (add safe forward [ih1, ih2])
     | .generator body, .generator body', σ, h => by
-      simp only [matchT] at h
-      simp only [holes, matchStmts_keys n body body' σ h]
+      have ih1 := matchStmts_keys n body
+      aesop (add safe forward [ih1])
     | .arrowBlock bs body, .arrowBlock ps body' none, σ, h => by
-      simp only [matchT] at h
-      split at h
-      · simp only [holes, matchStmts_keys n body body' σ h]
-      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+      have ih1 := matchStmts_keys n body
+      aesop (add safe forward [ih1])
   theorem matchs_keys (n : Nat) : ∀ (ts : Tpls) (es : List Expr) (σ : Subst),
       matchTs n ts es = some σ → keys σ = holesTs ts
     | .nil, [], σ, h => by
-      simp only [matchTs, Option.some.injEq] at h
-      subst h
-      rfl
+      aesop
     | .cons hd tl, e :: es, σ, h => by
-      simp only [matchTs, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨a, ha, b, hb, rfl⟩ := h
-      simp only [keys_append, holesTs, match_keys n hd e a ha, matchs_keys n tl es b hb]
+      have ih1 := match_keys n hd
+      have ih2 := matchs_keys n tl
+      aesop (add safe forward [ih1, ih2])
   theorem matchFields_keys (n : Nat) : ∀ (fs : Fields) (es : List (String × Expr)) (σ : Subst),
       matchFields n fs es = some σ → keys σ = holesFields fs
     | .nil, [], σ, h => by
-      simp only [matchFields, Option.some.injEq] at h
-      subst h
-      rfl
+      aesop
     | .cons key v tl, (key', e) :: es, σ, h => by
-      simp only [matchFields] at h
-      split at h
-      · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-        obtain ⟨a, ha, b, hb, rfl⟩ := h
-        simp only [keys_append, holesFields, match_keys n v e a ha, matchFields_keys n tl es b hb]
-      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+      have ih1 := match_keys n v
+      have ih2 := matchFields_keys n tl
+      aesop (add safe forward [ih1, ih2])
   theorem matchStmt_keys (n : Nat) : ∀ (t : StmtTpl) (s : Stmt) (σ : Subst),
       matchStmt n t s = some σ → keys σ = holesStmt t
     | .letInit k v ann, .letInit name e ty, σ, h => by
-      simp only [matchStmt] at h
-      split at h
-      · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-        obtain ⟨a, ha, b, hb, rfl⟩ := h
-        simp only [keys_append, holesStmt, match_keys n v e a ha, matchAnn_keys ann ty b hb]
-      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+      have ih1 := match_keys n v
+      have ih2 := matchAnn_keys ann
+      aesop (add safe forward [ih1, ih2])
     | .assign k v, .assign name e, σ, h => by
-      simp only [matchStmt] at h
-      split at h
-      · simp only [holesStmt, match_keys n v e σ h]
-      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+      have ih1 := match_keys n v
+      aesop (add safe forward [ih1])
     | .ret v, .ret e, σ, h => by
-      simp only [matchStmt] at h
-      simp only [holesStmt, match_keys n v e σ h]
+      have ih1 := match_keys n v
+      aesop (add safe forward [ih1])
     | .exprStmt v, .exprStmt e, σ, h => by
-      simp only [matchStmt] at h
-      simp only [holesStmt, match_keys n v e σ h]
+      have ih1 := match_keys n v
+      aesop (add safe forward [ih1])
     | .constYield k v, .constYield name e none, σ, h => by
-      simp only [matchStmt] at h
-      split at h
-      · simp only [holesStmt, match_keys n v e σ h]
-      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+      have ih1 := match_keys n v
+      aesop (add safe forward [ih1])
     | .yieldDiscard v, .yieldDiscard e, σ, h => by
-      simp only [matchStmt] at h
-      simp only [holesStmt, match_keys n v e σ h]
+      have ih1 := match_keys n v
+      aesop (add safe forward [ih1])
     | .ifElse t a b, .ifElse t' a' b', σ, h => by
-      simp only [matchStmt, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨x, hx, y, hy, z, hz, rfl⟩ := h
-      simp only [keys_append, holesStmt, match_keys n t t' x hx, matchStmts_keys n a a' y hy,
-        matchStmts_keys n b b' z hz]
+      have ih1 := match_keys n t
+      have ih2 := matchStmts_keys n a
+      have ih3 := matchStmts_keys n b
+      aesop (add safe forward [ih1, ih2, ih3])
     | .whileTrue body, .whileTrue none body', σ, h => by
-      simp only [matchStmt] at h
-      simp only [holesStmt, matchStmts_keys n body body' σ h]
+      have ih1 := matchStmts_keys n body
+      aesop (add safe forward [ih1])
     | .breakTo, .breakTo none, σ, h => by
-      simp only [matchStmt, Option.some.injEq] at h
-      subst h
-      rfl
+      aesop
   theorem matchStmts_keys (n : Nat) : ∀ (ts : StmtTpls) (ss : List Stmt) (σ : Subst),
       matchStmts n ts ss = some σ → keys σ = holesStmts ts
     | .hole i, ss, σ, h => by
-      simp only [matchStmts, Option.some.injEq] at h
-      subst h
-      rfl
+      aesop
     | .nil, [], σ, h => by
-      simp only [matchStmts, Option.some.injEq] at h
-      subst h
-      rfl
+      aesop
     | .cons hd tl, s :: ss, σ, h => by
-      simp only [matchStmts, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
-      obtain ⟨a, ha, b, hb, rfl⟩ := h
-      simp only [keys_append, holesStmts, matchStmt_keys n hd s a ha, matchStmts_keys n tl ss b hb]
+      have ih1 := matchStmt_keys n hd
+      have ih2 := matchStmts_keys n tl
+      aesop (add safe forward [ih1, ih2])
 end
 
 /-! ## Law 12's engine: a match of a skeleton with distinct holes instantiates back -/

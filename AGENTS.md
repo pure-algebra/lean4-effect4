@@ -86,12 +86,21 @@ number in a report behind a command; `ocaml/README.md` is its map.
   commits, never `git add`s, and never edits `src/Effect4.lean`,
   `Test/All.lean`, `Test/Audit/AxiomGate.lean` or `lakefile.toml`.
 - One `lake` at a time in a working tree.
-- In `src/Effect4/Laws/**` a proof closes with tactics that say what they use: no `simp_all`,
-  no `first | …`, no `try`, no `aesop`; `simp` names its lemmas as `simp only [...]` in new or
-  touched proofs (older bare `simp` calls are tolerated until their file is next edited). A
-  search tactic that fails silently into an unsolved goal hides a missing lemma, and an
-  unbounded `simp` is the usual reason a law module builds slowly. Outside `Laws/` the rule is
-  advisory.
+- In `src/Effect4/Laws/**` proof search is `aesop`
+  (`https://github.com/leanprover-community/aesop`, a dependency of the law graph only; the core
+  root never imports it). Use it as its README says: register lemmas as rules in its default
+  rule set (`@[aesop norm simp]`, `safe`/`unsafe` with the builder that fits the fact:
+  `constructors`/`cases` for an inductive predicate, `forward`/`destruct` for an implication,
+  `unfold` for a definition), introduce induction hypotheses by hand and hand them to the call
+  (`aesop (add safe forward [ih1, ih2])`), and keep a rule that creates metavariables (a
+  transitivity) in the call that needs it, never in a rule set. Shared rules live in
+  `src/Effect4/Laws/Auto/`; `#auto_census Some.Module using aesop` (`Laws/Auto/Census.lean`)
+  reports which theorems of a module the search already closes from their statements. Prefer a
+  short searched proof to a long unpacked one: the search runs once per build and is cached.
+  The axiom gate holds a searched proof to `[propext, Quot.sound]` like any other. Still not
+  used there: `simp_all`, `first | …` and `try` written by hand (a hand-written fallback that
+  fails silently into an unsolved goal hides a missing lemma); a hand-written `simp` names its
+  lemmas as `simp only [...]` in new or touched proofs. Outside `Laws/` these rules are advisory.
 - Verification is narrow per step and swept per wave: build the modules a change touches
   (`lake build <module>`, or `lake env lean <file>` for a test), and run `make check` and
   `make check-host` once when a wave closes. A docstring or comment edit cannot break a

@@ -135,3 +135,14 @@ rev = "6afc9b841603796c16b266c0b8b92ded37a9445c"
 name = "hash"
 git = "https://github.com/pure-algebra/lean4-hash"
 rev = "c906b15dc3e94ebac0c10056270fbb345a1d2b6e"
+
+
+# Proof search for the law graph (`src/Effect4/Laws/**`) and the batteries: nothing under the
+# core root `Effect4` imports it, so the core's import closure (and the LCNF/OCaml pipeline cut
+# from it) is unchanged. Used as its README describes (AGENTS.md; shared rules in
+# `src/Effect4/Laws/Auto/`). Pinned at the release for this toolchain (v4.33.0); it brings
+# `batteries`.
+[[require]]
+name = "aesop"
+git = "https://github.com/leanprover-community/aesop"
+rev = "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e"
