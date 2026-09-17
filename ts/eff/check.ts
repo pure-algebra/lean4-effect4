@@ -14,7 +14,7 @@ import * as path from "node:path"
 import { Result } from "effect"
 import { encodeProgram } from "./wire.gen.ts"
 import { toJson } from "./json.gen.ts"
-import { readTypeScript, showRefusal } from "./read.ts"
+import { readTypeScript, showFailure } from "./read.ts"
 
 const args = process.argv.slice(2)
 const dirs: string[] = []
@@ -50,7 +50,7 @@ for (const dir of dirs) {
     const oracle = fs.existsSync(beside) ? beside : inOracle && fs.existsSync(inOracle) ? inOracle : undefined
     const result = readTypeScript(fs.readFileSync(file, "utf8"), name)
     if (Result.isFailure(result)) {
-      const shown = showRefusal(result.failure)
+      const shown = showFailure(result.failure)
       refusalKinds.set(result.failure._tag, (refusalKinds.get(result.failure._tag) ?? 0) + 1)
       if (oracle) {
         refusedWithOracle++

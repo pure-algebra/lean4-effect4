@@ -381,6 +381,34 @@ def captured : (σ : Subst) → (i : Nat) → Option {a : Arg // (i, a) ∈ σ}
     if h : j = i then some ⟨a, h ▸ List.mem_cons_self⟩
     else (captured rest i).map fun ⟨b, hb⟩ => ⟨b, List.mem_cons_of_mem _ hb⟩
 
+/-- A refusal with where it happened. `path` is the constructor and argument index at each step
+from the root down to the node that refused, outermost first (a list's items are its `cons`
+cells: argument `0` the item, `1` the rest). `expected` is set when a reserved head matched no
+row: the steps down the nearest row's skeleton to where the tree parts from it, and what the
+skeleton has there. The refusal itself stays flat, so nothing that compares refusals moves. -/
+structure ReadFailure where
+  path : List (String × Nat) := []
+  why : ReadRefusal
+  expected : Option (List String × String) := none
+deriving DecidableEq, Repr
+
+/-- A refusal at the node being read. -/
+def ReadFailure.here (why : ReadRefusal) : ReadFailure := { why }
+
+/-- The same failure, seen from the argument `i` of a `ctor` node above it. -/
+def ReadFailure.under (ctor : String) (i : Nat) (f : ReadFailure) : ReadFailure :=
+  { f with path := (ctor, i) :: f.path }
+
+/-- For a person: `bind.1 > succeed.0: unknownIdent a1`, and what was expected where. -/
+def ReadFailure.render (f : ReadFailure) : String :=
+  let at_ := " > ".intercalate (f.path.map fun (ctor, i) => ctor ++ "." ++ toString i)
+  let why := reprStr f.why
+  let expected := match f.expected with
+    | some (steps, what) =>
+      "; expected " ++ what ++ (if steps.isEmpty then "" else " at " ++ " > ".intercalate steps)
+    | none => ""
+  (if at_.isEmpty then "" else at_ ++ ": ") ++ why ++ expected
+
 /-- A table that does not fit the constructor declarations (no `build` for what a row read, a
 sort no capture fills). It is a defect of the table, never of the tree read. -/
 def readDefect : ReadRefusal := .shape "table"
@@ -418,23 +446,26 @@ determines is supplied; a child is handed to the recursion with the fact that it
 captures (what the recursion's measure is stated over); a leaf goes through its own reader. -/
 def readArgs (sig : Signature Op) (n : Nat) (row : Templates.Row) (σ : Subst)
     (child : (fam : EffFam) → Nat → (y : Expr) → (i : Nat) → (i, Arg.expr y) ∈ σ →
-      Except ReadRefusal (EffSelfCarrier Op fam))
+      Except ReadFailure (EffSelfCarrier Op fam))
     (children : (fam : EffFam) → Nat → (ys : List Expr) → (i : Nat) → (i, Arg.exprs ys) ∈ σ →
-      Except ReadRefusal (EffSelfCarrier Op fam))
+      Except ReadFailure (EffSelfCarrier Op fam))
     (block : Nat → (ss : List TypeScript.Stmt) → (i : Nat) → (i, Arg.stmts ss) ∈ σ →
-      Except ReadRefusal (EffSelfCarrier Op .stmts)) :
-    List ArgSort → Nat → Except ReadRefusal (List (ArgF Op (EffSelfCarrier Op)))
+      Except ReadFailure (EffSelfCarrier Op .stmts)) :
+    List ArgSort → Nat → Except ReadFailure (List (ArgF Op (EffSelfCarrier Op)))
   | [], _ => .ok []
   | s :: ss, i => do
     let d := Templates.argDepth row.fam s n (row.out.levelAt i)
-    let a ← match (row.fixed.find? (·.1 == i)).bind (·.2.supplies) with
+    let read : Except ReadFailure (ArgF Op (EffSelfCarrier Op)) :=
+      match (row.fixed.find? (·.1 == i)).bind (·.2.supplies) with
       | some a => .ok a
       | none => match s, captured σ i with
         | .child fam, some ⟨.expr y, h⟩ => (child fam d y i h).map (.child fam)
         | .child fam, some ⟨.exprs ys, h⟩ => (children fam d ys i h).map (.child fam)
         | .child .stmts, some ⟨.stmts body, h⟩ => (block d body i h).map (.child .stmts)
-        | s, some ⟨a, _⟩ => readLeaf sig d (rowDaemon row) s a
-        | _, none => .error readDefect
+        | s, some ⟨a, _⟩ => (readLeaf sig d (rowDaemon row) s a).mapError .here
+        | _, none => .error (.here readDefect)
+    -- a failure below is seen from this argument of this constructor
+    let a ← read.mapError (·.under row.ctor i)
     let rest ← readArgs sig n row σ child children block ss (i + 1)
     .ok (a :: rest)
 
@@ -491,13 +522,30 @@ def famRank : EffFam → Nat
   | .eff => 1
   | _ => 0
 
+/-- The name at the head of a tree, as `Tpl.head?` is of a skeleton. -/
+def exprHead? : Expr → Option String
+  | .ident name => some name
+  | .call (.ident name) _ => some name
+  | _ => none
+
+/-- Where `x` parts from the nearest row of the families a program is read through: the first
+row with `x`'s head. For a refusal's message; it decides nothing. -/
+def nearestRow (n : Nat) (x : Expr) : Option (List String × String) :=
+  match exprHead? x with
+  | none => none
+  | some head =>
+    Templates.table.findSome? fun row =>
+      match row.out with
+      | .tpl t => if t.head? = some head then Template.explainT n t x else none
+      | _ => none
+
 mutual
   /-- `readT sig spell fam n x`: the first row of `fam` whose skeleton matches `x`, its
   arguments read; `none` when no row matches. A transparent row (a bare hole: `withFiber` over
   its action) hands the same expression to its child's family and matches when that does. The
   row call of `perform` is a row too, the last of the program rows, read by `readPerform`. -/
   def readT (sig : Signature Op) (spell : String → List String → Option Op) (fam : EffFam)
-      (n : Nat) (x : Expr) : Option (Except ReadRefusal (EffSelfCarrier Op fam)) :=
+      (n : Nat) (x : Expr) : Option (Except ReadFailure (EffSelfCarrier Op fam)) :=
     let byRow := Templates.table.zipIdx.findSome? fun (row, k) =>
       if row.fam = fam then
         match row.out with
@@ -505,7 +553,8 @@ mutual
         -- the row call stands last among the program rows: a tree is one when it is nothing else
         | .rowCall =>
           match fam with
-          | .eff => some (readPerform sig spell n x)
+          | .eff => some ((readPerform sig spell n x).mapError fun why =>
+              { why, expected := nearestRow n x })
           | _ => none
         | .tpl t =>
           match hσ : matchT n t x with
@@ -519,7 +568,7 @@ mutual
                   let args ← readArgs sig n row σ
                     (fun fam' d y i hy =>
                       have : sizeOf y < sizeOf x := match_below n t x σ hr hσ (i, .expr y) hy
-                      (readT sig spell fam' d y).getD (.error (unread fam')))
+                      (readT sig spell fam' d y).getD (.error (.here (unread fam'))))
                     (fun fam' d ys i hy =>
                       have : sizeOf ys < sizeOf x := match_below n t x σ hr hσ (i, .exprs ys) hy
                       readSpine sig spell fam' d ys)
@@ -530,17 +579,17 @@ mutual
                   if printedRow fam row.ctor args k then
                     match build fam row.ctor args with
                     | some e => .ok e
-                    | none => .error readDefect
-                  else .error (.shape "not the printed row")
+                    | none => .error (.here readDefect)
+                  else .error (.here (.shape "not the printed row"))
               else
                 match sorts with
                 | [.child fam'] =>
                   if _hk : famRank fam' < famRank fam then
                     (readT sig spell fam' (Templates.argDepth fam (.child fam') n 0) x).map fun r => do
-                      let c ← r
+                      let c ← r.mapError (·.under row.ctor 0)
                       match build fam row.ctor [.child fam' c] with
                       | some e => .ok e
-                      | none => .error readDefect
+                      | none => .error (.here readDefect)
                   else none
                 | [sort] =>
                   match readLeaf (R := EffSelfCarrier Op) sig n true sort (.expr x) with
@@ -553,26 +602,28 @@ mutual
 
   /-- A spine of programs or of layers, item by item. -/
   def readSpine (sig : Signature Op) (spell : String → List String → Option Op) (fam : EffFam)
-      (n : Nat) (xs : List Expr) : Except ReadRefusal (EffSelfCarrier Op fam) :=
+      (n : Nat) (xs : List Expr) : Except ReadFailure (EffSelfCarrier Op fam) :=
     match fam, xs with
     | .effs, [] => .ok .nil
     | .effs, y :: rest => do
-      let e ← (readT sig spell .eff n y).getD (.error (unread .eff))
-      let es ← readSpine sig spell .effs n rest
+      let e ← ((readT sig spell .eff n y).getD (.error (.here (unread .eff)))).mapError
+        (·.under "cons" 0)
+      let es ← (readSpine sig spell .effs n rest).mapError (·.under "cons" 1)
       .ok (.cons e es)
     | .layers, [] => .ok .nil
     | .layers, y :: rest => do
-      let l ← (readT sig spell .layer n y).getD (.error (unread .layer))
-      let ls ← readSpine sig spell .layers n rest
+      let l ← ((readT sig spell .layer n y).getD (.error (.here (unread .layer)))).mapError
+        (·.under "cons" 0)
+      let ls ← (readSpine sig spell .layers n rest).mapError (·.under "cons" 1)
       .ok (.cons l ls)
-    | _, _ => .error readDefect
+    | _, _ => .error (.here readDefect)
   termination_by (sizeOf xs, 0)
 
   /-- The spine of statements: each statement through the first statement row whose skeleton
   matches it, the rest under the binders that row's skeleton declares (`StmtTpl.declares`), as
   the printer's spine threads them. -/
   def readStmts (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
-      (stmts : List TypeScript.Stmt) : Except ReadRefusal (Stmts Op) :=
+      (stmts : List TypeScript.Stmt) : Except ReadFailure (Stmts Op) :=
     match stmts with
     | [] => .ok .nil
     | s :: rest =>
@@ -591,7 +642,7 @@ mutual
                     (fun fam' d y i hy =>
                       have : sizeOf y < sizeOf s :=
                         Template.matchStmt_below n t s σ hσ (i, .expr y) hy
-                      (readT sig spell fam' d y).getD (.error (unread fam')))
+                      (readT sig spell fam' d y).getD (.error (.here (unread fam'))))
                     (fun fam' d ys i hy =>
                       have : sizeOf ys < sizeOf s :=
                         Template.matchStmt_below n t s σ hσ (i, .exprs ys) hy
@@ -604,28 +655,37 @@ mutual
                   if printedRow .stmt row.ctor args k then
                     match build .stmt row.ctor args with
                     | some st => .ok (st, t.declares)
-                    | none => .error readDefect
-                  else .error (.shape "not the printed row")
+                    | none => .error (.here readDefect)
+                  else .error (.here (.shape "not the printed row"))
           | _ => none
         else none
       match byRow with
       | some r => do
-        let (st, declared) ← r
-        let tail ← readStmts sig spell (n + declared) rest
+        let (st, declared) ← r.mapError (·.under "cons" 0)
+        let tail ← (readStmts sig spell (n + declared) rest).mapError (·.under "cons" 1)
         .ok (.cons st tail)
-      | none => .error (stmtRefusal s)
+      | none => .error ((ReadFailure.here (stmtRefusal s)).under "cons" 0)
   termination_by (sizeOf stmts, 0)
 end
 
 /-- A program from a tree, at environment length `n`. -/
+def readEffAt (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
+    (x : Expr) : Except ReadFailure (Eff Op) :=
+  (readT sig spell .eff n x).getD (.error (.here (unread .eff)))
+
+/-- The same with the refusal alone: where it happened is `readEffAt`'s. -/
 def readEff (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
     (x : Expr) : Except ReadRefusal (Eff Op) :=
-  (readT sig spell .eff n x).getD (.error (unread .eff))
+  (readEffAt sig spell n x).mapError (·.why)
 
 /-- A layer from a tree. A layer is closed: its bodies are read at environment length `0`. -/
+def readLayerAt (sig : Signature Op) (spell : String → List String → Option Op)
+    (x : Expr) : Except ReadFailure (LayerTerm Op) :=
+  (readT sig spell .layer 0 x).getD (.error (.here (unread .layer)))
+
 def readLayer (sig : Signature Op) (spell : String → List String → Option Op)
     (x : Expr) : Except ReadRefusal (LayerTerm Op) :=
-  (readT sig spell .layer 0 x).getD (.error (unread .layer))
+  (readLayerAt sig spell x).mapError (·.why)
 
 end TableReader
 

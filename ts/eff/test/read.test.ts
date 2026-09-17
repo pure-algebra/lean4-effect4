@@ -8,7 +8,7 @@ import { Result } from "effect"
 import { isEff, type Eff, type LayerTerm, type Row, type Term, type Ty } from "../eff.gen.ts"
 import { toJson } from "../json.gen.ts"
 import { heads, rows } from "../profile.gen.ts"
-import { readTypeScript, type Refusal } from "../read.ts"
+import { readTypeScript, type Refusal, locate, showFailure } from "../read.ts"
 
 const json = (source: string): string => {
   const r = readTypeScript(source)
@@ -586,5 +586,31 @@ describe("the images only the table reader reads", () => {
   test("exactness is the printer's own choice of row", () => {
     expect(refusal("Effect.catchIf(Effect.fail(7), (a0) => true, (a0) => Effect.succeed(a0), undefined)")).toEqual(
       { _tag: "shape", what: "not the printed row" })
+  })
+})
+
+// A refusal says where, and what the nearest row expected. The same five inputs are pinned for
+// Lean's `readEffAt` in Test/Codegen/ReadContract.lean, with the same answers. The location is
+// kept beside the refusal (`locate`), so every refusal pinned above is unchanged.
+describe("a refusal says where", () => {
+  test("a wrong binder: the row with that head says what it has where the tree parts", () => {
+    const r = refusal("Effect.flatMap(Effect.succeed(1), (b0) => b0)")
+    expect(r).toEqual({ _tag: "arity", head: "Effect.flatMap" })
+    expect(locate(r)).toEqual({ path: [], expected: { at: ["argument 1", "parameters"], what: "a0" } })
+    expect(showFailure(r)).toBe("arity Effect.flatMap; expected a0 at argument 1 > parameters")
+  })
+  test("one argument too many", () => {
+    expect(locate(refusal("Effect.succeed(1, 2)")).expected).toEqual({ at: [], what: "1 arguments" })
+  })
+  test("a variable out of scope two levels down", () => {
+    const r = refusal("Effect.flatMap(Effect.succeed(1), (a0) => Effect.succeed(a5))")
+    expect(r).toEqual({ _tag: "unknownIdent", name: "a5" })
+    expect(locate(r).path).toEqual([["bind", 1], ["succeed", 0]])
+    expect(showFailure(r)).toBe("bind.1 > succeed.0: unknownIdent a5")
+  })
+  test("inside a generator: the body, its second statement, that statement's value", () => {
+    const r = refusal("Effect.gen(function* () { const a0 = yield* Effect.succeed(1); return a9 })")
+    expect(r).toEqual({ _tag: "unknownIdent", name: "a9" })
+    expect(locate(r).path).toEqual([["gen", 0], ["cons", 1], ["cons", 0], ["ret", 0]])
   })
 })

@@ -86,6 +86,42 @@ export const showRefusal = (r: Refusal): string => {
   }
 }
 
+/**
+ * Where a refusal happened (Lean's `ReadFailure`): the constructor and argument index at each
+ * step from the root down to the node that refused, outermost first (a list's items are its
+ * `cons` cells: argument 0 the item, 1 the rest); and, when a reserved head matched no row,
+ * the steps down the nearest row's skeleton to where the tree parts from it, with what the
+ * skeleton has there. It is kept BESIDE the refusal, keyed by the refusal object, so the
+ * refusal stays flat and nothing that compares refusals moves.
+ */
+export interface Location {
+  readonly path: ReadonlyArray<readonly [string, number]>
+  readonly expected?: { readonly at: ReadonlyArray<string>; readonly what: string } | undefined
+}
+
+const locations = new WeakMap<Refusal, { path: Array<readonly [string, number]>; expected?: Location["expected"] }>()
+
+/** Where a refusal this reader returned happened. */
+export const locate = (r: Refusal): Location => locations.get(r) ?? { path: [] }
+
+/** The same failure, seen from argument `i` of a `ctor` node above it (`ReadFailure.under`). */
+const under = <A>(r: Read<A>, ctor: string, i: number): Read<A> => {
+  if (Result.isFailure(r)) {
+    const at = locations.get(r.failure) ?? { path: [] }
+    at.path.unshift([ctor, i])
+    locations.set(r.failure, at)
+  }
+  return r
+}
+
+/** For a person: `bind.1 > succeed.0: unknownIdent a5`, and what was expected where. */
+export const showFailure = (r: Refusal): string => {
+  const { path, expected } = locate(r)
+  const at = path.map(([ctor, i]) => `${ctor}.${i}`).join(" > ")
+  const wanted = expected === undefined ? "" : `; expected ${expected.what}${expected.at.length === 0 ? "" : ` at ${expected.at.join(" > ")}`}`
+  return `${at === "" ? "" : `${at}: `}${showRefusal(r)}${wanted}`
+}
+
 const ok = <A>(value: A): Read<A> => Result.succeed(value)
 const refuse = (refusal: Refusal): Result.Result<never, Refusal> => Result.fail(refusal)
 const failed = <A>(r: Read<A>): r is Result.Failure<A, Refusal> => Result.isFailure(r)
@@ -932,6 +968,149 @@ const matchStmt = (n: number, t: StmtTpl, s: TsStmt, captured: Subst): boolean =
   }
 }
 
+/* Where a tree parts from a skeleton (Lean `Template.explainT`): for a refusal's message only.
+ * `matchT` is the definition of matching; this walks the same cases and names the first
+ * difference: the steps down the skeleton, and what the skeleton has there. */
+
+type Difference = { readonly at: ReadonlyArray<string>; readonly what: string } | undefined
+
+const binderNames = (n: number, bs: ReadonlyArray<number>): string => bs.map((k) => varName(n + k)).join(", ")
+
+const describe = (n: number, t: Tpl): string => {
+  switch (t._tag) {
+    case "hole": return "an expression"
+    case "strHole": return "a string literal"
+    case "intHole": return "an integer literal"
+    case "arrHole": case "arr": return "an array"
+    case "binderRef": return varName(n + t.k)
+    case "ident": return t.name
+    case "str": return `the string ${t.value}`
+    case "int": case "bool": return String(t.value)
+    case "call": case "callSpread": return "a call"
+    case "object": return "an object"
+    case "arrow": return "a function of no parameter"
+    case "lambda": return `a function of ${binderNames(n, t.binders)}`
+    case "cond": return "a conditional"
+    case "method": return `a call of .${t.name}`
+    case "arrowBlock": return `a block function of (${binderNames(n, t.binders)})`
+    case "generator": return "a generator function"
+  }
+}
+
+const describeStmt = (n: number, t: StmtTpl): string => {
+  switch (t._tag) {
+    case "letInit": return `let ${varName(n + t.k)}`
+    case "assign": return `an assignment to ${varName(n + t.k)}`
+    case "ret": return "a return"
+    case "exprStmt": return "an expression statement"
+    case "constYield": return `const ${varName(n + t.k)} = yield*`
+    case "yieldDiscard": return "yield*"
+    case "ifElse": return "if/else"
+    case "whileTrue": return "while (true)"
+    case "breakTo": return "break"
+  }
+}
+
+const below = (step: string, d: Difference): Difference => (d === undefined ? undefined : { at: [step, ...d.at], what: d.what })
+const here = (what: string): Difference => ({ at: [], what })
+
+const explainT = (n: number, t: Tpl, e: Expr): Difference => {
+  switch (t._tag) {
+    case "hole": return undefined
+    case "strHole": return e._tag === "str" ? undefined : here(describe(n, t))
+    case "intHole": return e._tag === "int" ? undefined : here(describe(n, t))
+    case "arrHole": return e._tag === "arr" ? undefined : here(describe(n, t))
+    case "binderRef": return e._tag === "ident" && e.name === varName(n + t.k) ? undefined : here(varName(n + t.k))
+    case "ident": return e._tag === "ident" && e.name === t.name ? undefined : here(t.name)
+    case "str": return e._tag === "str" && e.value === t.value ? undefined : here(describe(n, t))
+    case "int": return e._tag === "int" && e.value === t.value ? undefined : here(String(t.value))
+    case "bool": return e._tag === "bool" && e.value === t.value ? undefined : here(String(t.value))
+    case "call":
+      if (e._tag !== "call") return here(describe(n, t))
+      return below("head", explainT(n, t.head, e.fn)) ?? explainTs(n, t.args, e.args)
+    case "callSpread": return e._tag === "call" ? below("head", explainT(n, t.head, e.fn)) : here(describe(n, t))
+    case "arr": return e._tag === "arr" ? explainTs(n, t.items, e.items) : here(describe(n, t))
+    case "object": {
+      if (e._tag !== "object") return here(describe(n, t))
+      for (let j = 0; j < t.fields.length; j++) {
+        const [key, value] = t.fields[j]!
+        const field = e.fields[j]
+        if (field === undefined || field[0] !== key) return here(`the field ${key}`)
+        const d = below(`field ${key}`, explainT(n, value, field[1]))
+        if (d !== undefined) return d
+      }
+      return e.fields.length > t.fields.length ? here("no further field") : undefined
+    }
+    case "arrow": return e._tag === "arrow" ? below("body", explainT(n, t.body, e.body)) : here(describe(n, t))
+    case "lambda":
+      if (e._tag !== "lambda") return here(describe(n, t))
+      return sameParams(n, t.binders, e.params) ? below("body", explainT(n, t.body, e.body)) : { at: ["parameters"], what: binderNames(n, t.binders) }
+    case "cond":
+      if (e._tag !== "cond") return here(describe(n, t))
+      return below("test", explainT(n, t.test, e.test)) ?? below("then", explainT(n, t.yes, e.thenBranch)) ?? below("else", explainT(n, t.no, e.elseBranch))
+    case "method":
+      if (e._tag !== "method" || e.name !== t.name) return here(describe(n, t))
+      return below("receiver", explainT(n, t.target, e.base)) ?? explainTs(n, t.args, e.args)
+    case "arrowBlock":
+      if (e._tag !== "arrowBlock") return here(describe(n, t))
+      return sameParams(n, t.binders, e.params) ? explainStmts(n, t.body, e.body) : { at: ["parameters"], what: binderNames(n, t.binders) }
+    case "generator": return e._tag === "generator" ? explainStmts(n, t.body, e.body) : here(describe(n, t))
+  }
+}
+
+const explainTs = (n: number, ts: ReadonlyArray<Tpl>, es: ReadonlyArray<Expr>): Difference => {
+  for (let j = 0; j < ts.length; j++) {
+    if (es[j] === undefined) return here(`an argument ${j}`)
+    const d = below(`argument ${j}`, explainT(n, ts[j]!, es[j]!))
+    if (d !== undefined) return d
+  }
+  return es.length > ts.length ? here(`${ts.length} arguments`) : undefined
+}
+
+const explainStmt = (n: number, t: StmtTpl, s: TsStmt): Difference => {
+  switch (t._tag) {
+    case "letInit":
+      if (s._tag !== "letInit" || s.name !== varName(n + t.k)) return here(describeStmt(n, t))
+      return below("value", explainT(n, t.value, s.value)) ?? (t.ann === null ? undefined : here("an annotation"))
+    case "assign": return s._tag === "assign" && s.name === varName(n + t.k) ? below("value", explainT(n, t.value, s.value)) : here(describeStmt(n, t))
+    case "ret": return s._tag === "ret" ? below("value", explainT(n, t.value, s.value)) : here(describeStmt(n, t))
+    case "exprStmt": return s._tag === "exprStmt" ? below("value", explainT(n, t.value, s.value)) : here(describeStmt(n, t))
+    case "constYield": return s._tag === "constYield" && s.name === varName(n + t.k) ? below("value", explainT(n, t.value, s.value)) : here(describeStmt(n, t))
+    case "yieldDiscard": return s._tag === "yieldDiscard" ? below("value", explainT(n, t.value, s.value)) : here(describeStmt(n, t))
+    case "ifElse":
+      if (s._tag !== "ifElse") return here(describeStmt(n, t))
+      return below("test", explainT(n, t.test, s.condition)) ?? below("then", explainStmts(n, t.thenB, s.thenBranch)) ?? below("else", explainStmts(n, t.elseB, s.elseBranch))
+    case "whileTrue": return s._tag === "whileTrue" ? below("body", explainStmts(n, t.body, s.body)) : here(describeStmt(n, t))
+    case "breakTo": return s._tag === "breakTo" ? undefined : here(describeStmt(n, t))
+  }
+}
+
+const explainStmts = (n: number, ts: StmtTpls, ss: ReadonlyArray<TsStmt>): Difference => {
+  if (!Array.isArray(ts)) return undefined
+  const items = ts as ReadonlyArray<StmtTpl>
+  for (let j = 0; j < items.length; j++) {
+    if (ss[j] === undefined) return here(describeStmt(n, items[j]!))
+    const d = below(`statement ${j}`, explainStmt(n, items[j]!, ss[j]!))
+    if (d !== undefined) return d
+  }
+  return ss.length > items.length ? here(`${items.length} statements`) : undefined
+}
+
+/** Where `x` parts from the nearest row: the first row with `x`'s head (`nearestRow`). */
+const nearestRow = (n: number, x: Expr): Difference => {
+  const head = x._tag === "ident" ? x.name : x._tag === "call" && x.fn._tag === "ident" ? x.fn.name : undefined
+  if (head === undefined) return undefined
+  for (const row of tableRows) {
+    if (row.out._tag !== "tpl") continue
+    const t = row.out.tpl
+    const rowHead = t._tag === "ident" ? t.name : (t._tag === "call" || t._tag === "callSpread") && t.head._tag === "ident" ? t.head.name : undefined
+    if (rowHead !== head) continue
+    const d = explainT(n, t, x)
+    if (d !== undefined) return d
+  }
+  return undefined
+}
+
 const sameJson = (a: unknown, b: unknown): boolean => {
   if (a === b) return true
   if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false
@@ -1022,7 +1201,9 @@ const readSpine = (fam: Fam, n: number, xs: ReadonlyArray<Expr>): Read<unknown> 
   if (item === undefined) return tableDefect()
   const out: unknown[] = []
   for (const x of xs) {
-    const r = readT(item, n, x) ?? unread(item)
+    // item j of a list is `cons.1` j times, then `cons.0`
+    let r: Read<unknown> = under(readT(item, n, x) ?? unread(item), "cons", 0)
+    for (let j = 0; j < out.length; j++) r = under(r, "cons", 1)
     if (failed(r)) return again(r)
     out.push(r.success)
   }
@@ -1030,7 +1211,10 @@ const readSpine = (fam: Fam, n: number, xs: ReadonlyArray<Expr>): Read<unknown> 
 }
 
 /** One argument of a row: supplied by the classifier, a child handed to the recursion, or a leaf. */
-const readArg = (n: number, row: TemplateRow, captured: Subst, i: number, sort: ArgSort): Read<unknown> => {
+const readArg = (n: number, row: TemplateRow, captured: Subst, i: number, sort: ArgSort): Read<unknown> =>
+  under(readArgHere(n, row, captured, i, sort), row.ctor, i)
+
+const readArgHere = (n: number, row: TemplateRow, captured: Subst, i: number, sort: ArgSort): Read<unknown> => {
   const pattern = row.fixed.find(([j]) => j === i)?.[1]
   const supplied = pattern === undefined ? undefined : supplies(pattern)
   if (supplied !== undefined) return ok(supplied.value)
@@ -1091,7 +1275,15 @@ const readT = (fam: Fam, n: number, x: Expr): Read<unknown> | undefined => {
     const row = tableRows[k]!
     if (row.fam !== fam) continue
     // the row call stands last among the program rows: a tree is one when it is nothing else
-    if (row.out._tag === "rowCall") return fam === "eff" ? readPerform(n, x) : undefined
+    if (row.out._tag === "rowCall") {
+      if (fam !== "eff") return undefined
+      const r = readPerform(n, x)
+      if (failed(r)) {
+        const expected = nearestRow(n, x)
+        if (expected !== undefined) locations.set(r.failure, { path: [], expected })
+      }
+      return r
+    }
     if (row.out._tag !== "tpl") continue // a statement row is read by `readStmts`
     const sorts = argSortsOf(fam, row.ctor)
     const names = argNamesOf(fam, row.ctor)
@@ -1105,7 +1297,8 @@ const readT = (fam: Fam, n: number, x: Expr): Read<unknown> | undefined => {
         if (famRank(child) >= famRank(fam)) continue
         const inner = readT(child, depthAt(n, row.depth[0]), x)
         if (inner === undefined) continue
-        return failed(inner) ? again(inner) : ok(build(row.ctor, names, [inner.success]))
+        if (failed(inner)) return again(under(inner, row.ctor, 0) as Result.Failure<unknown, Refusal>)
+        return ok(build(row.ctor, names, [inner.success]))
       }
       const leaf = readLeaf(n, true, sorts[0]!, { _tag: "expr", e: x })
       if (failed(leaf)) continue
@@ -1145,13 +1338,16 @@ const readStmts = (n: number, stmts: ReadonlyArray<TsStmt>): Read<ReadonlyArray<
       if (sorts === undefined || names === undefined) continue
       const captured: Subst = new Map()
       if (!matchStmt(depth, row.out.stmt, s, captured)) continue
-      const node = readRow(k, row, depth, sorts, names, captured)
+      let node = under(readRow(k, row, depth, sorts, names, captured), "cons", 0)
+      for (let j = 0; j < out.length; j++) node = under(node, "cons", 1)
       if (failed(node)) return again(node)
       out.push(node.success as Stmt)
       depth += row.out.declares
       continue next
     }
-    return refuse({ _tag: "unsupportedStmt" })
+    let none: Read<never> = under(refuse({ _tag: "unsupportedStmt" }), "cons", 0)
+    for (let j = 0; j < out.length; j++) none = under(none, "cons", 1)
+    return none
   }
   return ok(out)
 }

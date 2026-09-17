@@ -692,6 +692,45 @@ private def holdsAnnotatedLoop (p : Eff NativeOp) : Bool :=
 #guard ((Test.Program.Gen.corpus 400 4).filter fun p =>
   !Effect4.Api.readable p && decide (Effect4.Api.roundTrip p = .ok p)).length = 0
 
+/-! ## A refusal says where, and what the nearest row expected
+
+`readEffAt` is `readEff` with the location kept. The refusal itself is unchanged (every pin
+above still holds); beside it go the path down to the node that refused, and, when a reserved
+head matched no row, where the nearest row's skeleton and the tree part. -/
+
+-- a wrong binder: no row matches, and the row with that head says what it has there
+#guard readEffAt sig spell 0 (.call (.ident "Effect.flatMap")
+    [.call (.ident "Effect.succeed") [.int 1], .lambda ["b0"] (.ident "b0")]) =
+  .error { why := .arity "Effect.flatMap", expected := some (["argument 1", "parameters"], "a0") }
+
+-- one argument too many
+#guard readEffAt sig spell 0 (.call (.ident "Effect.succeed") [.int 1, .int 2]) =
+  .error { why := .arity "Effect.succeed", expected := some ([], "1 arguments") }
+
+-- a variable out of scope two levels down: the second argument of the bind, the first of the succeed
+#guard readEffAt sig spell 0 (.call (.ident "Effect.flatMap")
+    [.call (.ident "Effect.succeed") [.int 1],
+      .lambda ["a0"] (.call (.ident "Effect.succeed") [.ident "a5"])]) =
+  .error { path := [("bind", 1), ("succeed", 0)], why := .unknownIdent "a5" }
+
+-- inside a generator: the body, its second statement, that statement's value
+#guard readEffAt sig spell 0 (.call (.ident "Effect.gen") [.generator
+    [.constYield "a0" (.call (.ident "Effect.succeed") [.int 1]) none, .ret (.ident "a9")]]) =
+  .error { path := [("gen", 0), ("cons", 1), ("cons", 0), ("ret", 0)], why := .unknownIdent "a9" }
+
+-- the location never changes the refusal
+#guard readEff sig spell 0 (.call (.ident "Effect.flatMap")
+    [.call (.ident "Effect.succeed") [.int 1],
+      .lambda ["a0"] (.call (.ident "Effect.succeed") [.ident "a5"])]) =
+  .error (.unknownIdent "a5")
+
+-- for a person
+#guard (match readEffAt sig spell 0 (.call (.ident "Effect.flatMap")
+    [.call (.ident "Effect.succeed") [.int 1], .lambda ["b0"] (.ident "b0")]) with
+  | .error f => f.render
+  | .ok _ => "") =
+  "Effect4.Program.ReadRefusal.arity \"Effect.flatMap\"; expected a0 at argument 1 > parameters"
+
 /-! ## The join: keys and all eight layer forms
 
 Layer effects have their own empty environment, even when provision occurs below

@@ -150,6 +150,13 @@ table is owed, R5.2). -/
 def read (expression : TypeScript.Expr) (table : RowTable := []) : Except ReadRefusal Program :=
   Program.readEff (nativeSignature table) (nativeSpell table) 0 expression
 
+/-- `read`, with where a refusal happened: the path of constructors and argument indices down to
+the node that refused, and, when a reserved head matched no row, what the nearest row's skeleton
+has where the tree parts from it (`Effect4.Program.ReadFailure`; `.render` for a person). -/
+def readAt (expression : TypeScript.Expr) (table : RowTable := []) :
+    Except Program.ReadFailure Program :=
+  Program.readEffAt (nativeSignature table) (nativeSpell table) 0 expression
+
 /-- Whether `read` of the program's printing is the program itself: the round trip, decided by
 running it. What the printer loses is listed in `Codegen/Read.lean`'s module note (a variable
 out of scope, a dropped `unit` request, the `daemon` flag of a scoped fork, a loop's cursor

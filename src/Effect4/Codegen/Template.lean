@@ -306,6 +306,151 @@ mutual
     | _, _ => none
 end
 
+/-! ## Where a tree parts from a skeleton
+
+For a refusal's message only. `matchT` is the definition of matching; `explainT` walks the same
+cases and says where the first difference is: the steps down the skeleton, and what the
+skeleton has there. It answers `none` where `matchT` would go on. -/
+
+/-- The binders `bs` at depth `n`, as written. -/
+def binderNames (n : Nat) (bs : List Nat) : String :=
+  ", ".intercalate (bs.map fun k => varName (n + k))
+
+/-- What a skeleton has at its top, in words. -/
+def Tpl.describe (n : Nat) : Tpl → String
+  | .hole _ => "an expression"
+  | .strHole _ => "a string literal"
+  | .intHole _ => "an integer literal"
+  | .arrHole _ | .arr _ => "an array"
+  | .binderRef k => varName (n + k)
+  | .ident s => s
+  | .str s => "the string " ++ s
+  | .int v => toString v
+  | .bool b => toString b
+  | .call _ _ | .callSpread _ _ => "a call"
+  | .object _ => "an object"
+  | .arrow _ => "a function of no parameter"
+  | .lambda bs _ => "a function of " ++ binderNames n bs
+  | .cond _ _ _ => "a conditional"
+  | .method _ name _ => "a call of ." ++ name
+  | .arrowBlock bs _ => "a block function of (" ++ binderNames n bs ++ ")"
+  | .generator _ => "a generator function"
+
+def StmtTpl.describe (n : Nat) : StmtTpl → String
+  | .letInit k _ _ => "let " ++ varName (n + k)
+  | .assign k _ => "an assignment to " ++ varName (n + k)
+  | .ret _ => "a return"
+  | .exprStmt _ => "an expression statement"
+  | .constYield k _ => "const " ++ varName (n + k) ++ " = yield*"
+  | .yieldDiscard _ => "yield*"
+  | .ifElse _ _ _ => "if/else"
+  | .whileTrue _ => "while (true)"
+  | .breakTo => "break"
+
+/-- A difference: the steps down the skeleton to it, and what the skeleton has there. -/
+abbrev Difference := List String × String
+
+/-- Put a step in front of a difference found below it. -/
+def Difference.under (step : String) : Option Difference → Option Difference
+  | some (path, expected) => some (step :: path, expected)
+  | none => none
+
+mutual
+  def explainT (n : Nat) : Tpl → Expr → Option Difference
+    | .hole _, _ => none
+    | .strHole _, .str _ => none
+    | .intHole _, .int _ => none
+    | .arrHole _, .arr _ => none
+    | .binderRef k, .ident s => if s = varName (n + k) then none else some ([], varName (n + k))
+    | .ident s, .ident s' => if s' = s then none else some ([], s)
+    | .str s, .str s' => if s' = s then none else some ([], "the string " ++ s)
+    | .int v, .int v' => if v' = v then none else some ([], toString v)
+    | .bool b, .bool b' => if b' = b then none else some ([], toString b)
+    | .call h args, .call h' args' =>
+      match explainT n h h' with
+      | some d => Difference.under "head" (some d)
+      | none => explainTs n 0 args args'
+    | .callSpread h _, .call h' _ => Difference.under "head" (explainT n h h')
+    | .arr items, .arr items' => explainTs n 0 items items'
+    | .object fields, .object fields' => explainFields n fields fields'
+    | .arrow b, .arrow none b' => Difference.under "body" (explainT n b b')
+    | .lambda bs b, .lambda ps b' none =>
+      if ps = params n bs then Difference.under "body" (explainT n b b')
+      else some (["parameters"], binderNames n bs)
+    | .cond t a b, .cond t' a' b' =>
+      match explainT n t t' with
+      | some d => Difference.under "test" (some d)
+      | none => match explainT n a a' with
+        | some d => Difference.under "then" (some d)
+        | none => Difference.under "else" (explainT n b b')
+    | .method target name args, .method target' name' args' =>
+      if name' = name then
+        match explainT n target target' with
+        | some d => Difference.under "receiver" (some d)
+        | none => explainTs n 0 args args'
+      else some ([], "a call of ." ++ name)
+    | .arrowBlock bs body, .arrowBlock ps body' none =>
+      if ps = params n bs then explainStmts n 0 body body'
+      else some (["parameters"], binderNames n bs)
+    | .generator body, .generator body' => explainStmts n 0 body body'
+    | t, _ => some ([], t.describe n)
+  def explainTs (n : Nat) (j : Nat) : Tpls → List Expr → Option Difference
+    | .nil, [] => none
+    | .cons h t, e :: es =>
+      match explainT n h e with
+      | some d => Difference.under ("argument " ++ toString j) (some d)
+      | none => explainTs n (j + 1) t es
+    | .nil, _ :: _ => some ([], toString j ++ " arguments")
+    | .cons _ _, [] => some ([], "an argument " ++ toString j)
+  def explainFields (n : Nat) : Fields → List (String × Expr) → Option Difference
+    | .nil, [] => none
+    | .cons key v t, (key', e) :: es =>
+      if key' = key then
+        match explainT n v e with
+        | some d => Difference.under ("field " ++ key) (some d)
+        | none => explainFields n t es
+      else some ([], "the field " ++ key)
+    | .nil, _ :: _ => some ([], "no further field")
+    | .cons key _ _, [] => some ([], "the field " ++ key)
+  def explainStmt (n : Nat) : StmtTpl → Stmt → Option Difference
+    | .letInit k v ann, .letInit name e ty =>
+      if name = varName (n + k) then
+        match explainT n v e with
+        | some d => Difference.under "value" (some d)
+        | none => match ann, ty with
+          | none, some _ => some ([], "no annotation")
+          | some _, none => some ([], "an annotation")
+          | _, _ => none
+      else some ([], "let " ++ varName (n + k))
+    | .assign k v, .assign name e =>
+      if name = varName (n + k) then Difference.under "value" (explainT n v e)
+      else some ([], "an assignment to " ++ varName (n + k))
+    | .ret v, .ret e => Difference.under "value" (explainT n v e)
+    | .exprStmt v, .exprStmt e => Difference.under "value" (explainT n v e)
+    | .constYield k v, .constYield name e none =>
+      if name = varName (n + k) then Difference.under "value" (explainT n v e)
+      else some ([], "const " ++ varName (n + k) ++ " = yield*")
+    | .yieldDiscard v, .yieldDiscard e => Difference.under "value" (explainT n v e)
+    | .ifElse t a b, .ifElse t' a' b' =>
+      match explainT n t t' with
+      | some d => Difference.under "test" (some d)
+      | none => match explainStmts n 0 a a' with
+        | some d => Difference.under "then" (some d)
+        | none => Difference.under "else" (explainStmts n 0 b b')
+    | .whileTrue body, .whileTrue none body' => Difference.under "body" (explainStmts n 0 body body')
+    | .breakTo, .breakTo none => none
+    | t, _ => some ([], t.describe n)
+  def explainStmts (n : Nat) (j : Nat) : StmtTpls → List Stmt → Option Difference
+    | .hole _, _ => none
+    | .nil, [] => none
+    | .cons h t, s :: ss =>
+      match explainStmt n h s with
+      | some d => Difference.under ("statement " ++ toString j) (some d)
+      | none => explainStmts n (j + 1) t ss
+    | .nil, _ :: _ => some ([], toString j ++ " statements")
+    | .cons h _, [] => some ([], h.describe n)
+end
+
 /-! ## The holes of a skeleton, left to right -/
 
 def holesAnn : Option Nat → List Nat
