@@ -71,6 +71,7 @@ import Test.Program.InvocationContract
 import Test.Program.HostSpecContract
 import Test.Program.HostBoundaryContract
 import Test.Api.HostSessionContract
+import Test.Api.PlayerContract
 import Test.Api.KeyedHostContract
 import Test.Program.SchedContract
 import Test.Program.DenoteRContract

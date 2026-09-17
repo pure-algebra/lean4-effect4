@@ -96,6 +96,26 @@ a per-target optimisation checked against it by byte equality of `inspect`.
 
 The differential across targets is then one rule: same bytes in, same bytes out.
 
+**Landed (2026-09-17): the typed session API and its algebra.** `src/Effect4/Api/Player.lean`
+and `src/Effect4/Laws/Api/Player.lean`, over `HostSession`'s checked transitions and adding no
+semantics. `Command` is a journal row (`bind`, `submit`, `apply`, `control`); `Player` packs
+the program, the table, the session they index and the job's step fuel; `step : Player →
+Command → Player × Phase` is total; `replay` folds it and keeps every phase; `inspect`,
+`observe` and `outstanding` are the reads. Laws, all at `[propext, Quot.sound]`:
+`step_refused` (a refused row leaves the player unchanged, from one lemma per transition),
+`replay_append` (journals act), the monoid of plays with `replayPlay` a homomorphism into it,
+`replay_unique` (journals are the free monoid, so `replay` is the only such map),
+`behaviour_cons` (behaviour unfolds along `step`, the map into the final Mealy machine), and
+`replay_skip_refused` with `behaviour_skip_refused`: a refused row is the unit, so a journal
+has a normal form without refused rows, which is what a compaction may keep. Contract:
+`Test/Api/PlayerContract.lean` plays the two-call scenario as one journal. At this level the
+stuck caveat of §1 disappears: `step` is total and a refusal is a row like any other.
+
+Still owed for the table above: the bytes boundary. `Command`, `Phase`, `Refusal`, `Header`,
+`Call`, `Reply`, `NativeDecision`, `Completion` and `Api.Run` need `Canonical` instances from
+the generator (the `Api` group derives four types today), then `stepBytes`, `inspectBytes` and
+`schemaOf` are one line each, and the player joins the LCNF roots.
+
 ## 4b. The holder: what keeps a player running (owner, same day)
 
 A player is pure, so something must hold it: keep its events, answer its parks, expose it.

@@ -133,6 +133,7 @@ import Effect4.Program.Wire
 import Effect4.Api
 import Effect4.Program.Stream
 import Effect4.Api.HostSession
+import Effect4.Api.Player
 -- Foreign-source ingestion tables and constructed target spellings.
 import Effect4.Ingest.Taxonomy
 import Effect4.Codegen.Forms
