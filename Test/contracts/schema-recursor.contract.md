@@ -1,12 +1,30 @@
 # Schema representation recursor contract packet
 
+> **Amendment 2026-09-17 (ledger C-P8).** The fold this packet froze is now *generated*:
+> `src/Effect4/Schema/Fold.lean`, emitted by `tools/Effect4Gen/Fold.lean` for the
+> `SchemaFold` group. Every obligation below is still owed, at new names; the sections
+> marked *amended* carry them. Two things changed that the freeze did not anticipate:
+> the algebra is indexed by the family sort (`RepresentationAlgebra (R : RepresentationFam
+> → Type u)`) instead of carrying two type parameters, and the generator also emits the
+> homomorphism carrier and its uniqueness theorem that "Rejected designs" item 7 had
+> excluded from the first edge. The breaker-owned battery
+> `git:a317d50:Test/Schema/RepresentationFoldContract.lean` was deleted: it restated, as `example`s,
+> declarations the generator now emits with those exact types, and a copy of a generated
+> statement pins nothing the generator's own file does not. Its behavioural share moved to
+> `tools/Effect4Gen/guards/schemafold.lean`, appended verbatim into the generated module.
+> The retained executable attack `Test/Counterexamples/Schema/RecursiveElimination.lean`
+> was ported to the generated names and is still the falsifier for
+> `E4-SCHEMA-CE-043`. **Owner decision owed:** the freeze receipt below names the SHA-256
+> of a file that no longer exists; either re-freeze this packet against the generated
+> module or mark it superseded.
+
 Status: **Pass-B FROZEN; implementation REQUIRED-BLOCKED**. The production
 fence is the `SC-REP-03-RECURSOR` addition to
-`src/Effect4/Schema/Representation.lean`. The breaker-owned Lean battery is
-`Test/Schema/RepresentationFoldContract.lean`; the retained executable
+`src/Effect4/Schema/Fold.lean` (amended: it was the `SC-REP-03-RECURSOR` addition to
+`src/Effect4/Schema/Representation.lean` until 2026-09-17). The retained executable
 attack is
 `Test/Counterexamples/Schema/RecursiveElimination.lean`. A builder must
-make both files green without editing this packet, the battery, or the attack.
+make it green without editing this packet or the attack.
 
 This packet closes only the general nondependent-elimination share of
 `SC-REP-03`. It does not define Schema denotation, document reference meaning,
@@ -46,53 +64,47 @@ same `Type` universe as the existing workshop signature; this packet does not
 silently widen that already-tested public surface:
 
 ```lean
-structure Effect4.Representation.FoldAlgebra
-    (rho kappa : Type) where
-  declaration : RepresentationAnnotation -> Annotations ->
-    List rho -> List kappa -> rho
-  reference : ReferenceKey -> rho
-  suspend : Annotations -> List kappa -> rho -> rho
-  null : Annotations -> List kappa -> rho
-  undefined : Annotations -> List kappa -> rho
-  void : Annotations -> List kappa -> rho
-  never : Annotations -> List kappa -> rho
-  unknown : Annotations -> List kappa -> rho
-  any : Annotations -> List kappa -> rho
-  string : Annotations -> List kappa -> rho
-  number : Annotations -> List kappa -> rho
-  boolean : Annotations -> List kappa -> rho
-  bigint : Annotations -> List kappa -> rho
-  symbol : Annotations -> List kappa -> rho
-  literal : Annotations -> List kappa -> LiteralValue -> rho
-  uniqueSymbol : Annotations -> List kappa -> GlobalSymbolKey -> rho
-  objectKeyword : Annotations -> List kappa -> rho
-  enum : Annotations -> List kappa -> List EnumEntry -> rho
-  templateLiteral : Annotations -> List kappa -> List rho -> rho
-  arrays : Annotations -> List kappa -> List (ElementOf rho) ->
-    List rho -> rho
-  objects : Annotations -> List kappa -> List (PropertySignatureOf rho) ->
-    List (IndexSignatureOf rho) -> rho
-  union : Annotations -> List kappa -> List rho -> UnionMode -> rho
-  filter : CheckRepresentationAnnotationOf rho -> Annotations -> Bool -> kappa
-  filterGroup : Option (CheckRepresentationAnnotationOf rho) ->
-    Annotations -> List kappa -> kappa
+-- amended 2026-09-17: the generated names. `R .representation` is the old `rho`,
+-- `R .check` the old `kappa`; the slots' argument types are unchanged.
+inductive Effect4.RepresentationFam where
+  | representation
+  | check
 
-Effect4.Representation.fold :
-  Representation.FoldAlgebra rho kappa -> Representation -> rho
+structure Effect4.RepresentationAlgebra (R : RepresentationFam -> Type u) where
+  representation_declaration : RepresentationAnnotation -> Annotations ->
+    List (R .representation) -> List (R .check) -> R .representation
+  representation_reference : ReferenceKey -> R .representation
+  representation_suspend : Annotations -> List (R .check) ->
+    R .representation -> R .representation
+  -- the twelve keyword slots, `literal`, `uniqueSymbol`, `objectKeyword`, `enum`,
+  -- `templateLiteral`, `arrays`, `objects`, `union`, `check_filter` and
+  -- `check_filterGroup` keep the argument types this packet froze, with `R .representation`
+  -- for `rho` and `R .check` for `kappa`.
 
-Effect4.Check.fold :
-  Representation.FoldAlgebra rho kappa -> Check -> kappa
+Effect4.cata_representation :
+  RepresentationAlgebra R -> Representation -> R .representation
 
-Effect4.Representation.FoldAlgebra.rebuild :
-  Representation.FoldAlgebra Representation Check
+Effect4.cata_check :
+  RepresentationAlgebra R -> Check -> R .check
 
-Effect4.Representation.fold_rebuild :
-  forall representation,
-    Representation.fold Representation.FoldAlgebra.rebuild representation = representation
+Effect4.RepresentationSelfCarrier : RepresentationFam -> Type   -- the old `rebuild` carrier
 
-Effect4.Check.fold_rebuild :
-  forall check, Check.fold Representation.FoldAlgebra.rebuild check = check
+Effect4.RepresentationAlgebra.id : RepresentationAlgebra RepresentationSelfCarrier
+
+Effect4.cata_id_representation :
+  forall node, cata_representation RepresentationAlgebra.id node = node
+
+Effect4.cata_id_check :
+  forall node, cata_check RepresentationAlgebra.id node = node
 ```
+
+Emitted beside them, and not frozen by the original packet: `RepresentationHom` with
+`hom_eq_cata_representation` / `hom_eq_cata_check` (uniqueness), `foldMap_representation`
+and `foldMap_check` (the monoid fold), the four one-parameter records' functor maps
+(`ElementOf.map`, `PropertySignatureOf.map`, `IndexSignatureOf.map`,
+`CheckRepresentationAnnotationOf.map`) with their composition laws, and eleven position
+helpers with the lemma that each is the container's own map of the fold. A block whose
+children sit under containers emits no monadic half and no `foldMapAt`.
 
 There are no public list, option, annotation, element, property, or index fold
 helpers. Those are implementation details. The public equations below are
@@ -127,9 +139,13 @@ general fold may not silently assume admitted input.
 ## Computation laws
 
 The public equation theorems are named and marked `[simp]`:
-`Representation.fold_<constructor>` and `Check.fold_<constructor>`, with all
-twenty-four constructor names represented. The fixed battery states their
-complete Lean types. Writing `F = Representation.fold algebra` and
+`cata_representation_<constructor>` and `cata_check_<constructor>` (amended
+2026-09-17; they were `Representation.fold_<constructor>` and
+`Check.fold_<constructor>`), with all twenty-four constructor names represented. The
+generated module states their complete Lean types, and
+`tools/Effect4Gen/guards/schemafold.lean` hands all twenty-four to the twenty-four fields
+of `RepresentationHom`, so a mismatch between the two emitted shapes is a type error in
+the generated file itself. Writing `F = Representation.fold algebra` and
 `G = Check.fold algebra`, their content is:
 
 ```text
@@ -229,7 +245,10 @@ SCHEMA-PG-PAYLOAD / SC-REP-03-RECURSOR
   recursion     -> R1 through R13, finite structural decrease
   counterexample -> E4-SCHEMA-CE-043 retained
   trust         -> axiom receipts for all equation theorems
-  coverage      -> fixed battery (the generated structural-assurance join was retired 2026-09-13)
+  coverage      -> the generated module's own `#print axioms` receipts and the
+                   acceptance guards appended to it (amended 2026-09-17; the fixed
+                   battery was deleted, the generated structural-assurance join was
+                   retired 2026-09-13)
 ```
 
 A proof graph is required here because this is a nontrivial mutual recursive
@@ -256,6 +275,11 @@ recursions receive no separate graph.
    this first edge: none is needed to state exhaustive elimination,
    computation, or reconstruction. A later optimization can contract a fusion
    theorem without enlarging the foundational carrier now.
+   *Amended 2026-09-17:* the generator emits `RepresentationHom` and its uniqueness
+   theorem for every family it folds, and the annotation traversal's four laws
+   (`src/Effect4/Schema/Annotations.lean`) are now proved from it rather than by a
+   case analysis over the twenty-four constructors. The rejection stands as a
+   statement about what the *first* edge owed, not about what the module may carry.
 
 ## Decrease, frame, and trust
 
@@ -282,10 +306,16 @@ The current production fence has no fold declarations. The breaker command is:
 
 ```text
 lake env lean -DmaxErrors=10000 --json \
-  Test/Schema/RepresentationFoldContract.lean
-lake env lean -DmaxErrors=10000 --json \
   Test/Counterexamples/Schema/RecursiveElimination.lean
 ```
+
+(Amended 2026-09-17: the battery command was
+`lake env lean -DmaxErrors=10000 --json` on
+`git:a317d50:Test/Schema/RepresentationFoldContract.lean`;
+that file was deleted with this packet's first obligation moved into the generated
+module. The generated module's own command is
+`python3 docs/research/2026-09-17-regen-groups.py SchemaFold` followed by
+`lake build Effect4.Schema.Fold`.)
 
 At freeze both commands must exit nonzero because the public algebra, folds,
 and equation theorems are absent. The high error cap is mandatory so the

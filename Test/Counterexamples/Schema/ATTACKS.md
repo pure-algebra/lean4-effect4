@@ -678,7 +678,8 @@ index records. The retained declaration places fourteen marked properties
 through those routes. Its exact summary fixes the existing fold's order; a
 root-only scan returns the empty list.
 
-The collector is an algebra over `Representation.fold`, not another recursive
+The collector is an algebra over `cata_representation` (the generated fold; it was
+`Representation.fold` until 2026-09-17), not another recursive
 Schema function. Route exhaustion remains owned by the general fold's public
 constructor equations and rebuild theorem.
 

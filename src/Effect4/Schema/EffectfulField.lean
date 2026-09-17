@@ -770,65 +770,69 @@ private def checkAnnotationRows
   | none => []
   | some schemas => representationRows schemas
 
+/-- The rebuilt carrier beside its rows, at each of the family's two sorts. -/
+private abbrev effectfulFieldCarrier : RepresentationFam → Type
+  | .representation => RepresentationWithEffectfulFields
+  | .check => CheckWithEffectfulFields
+
 private def effectfulFieldPropertyAlgebra :
-    Representation.FoldAlgebra RepresentationWithEffectfulFields
-      CheckWithEffectfulFields where
-  declaration := fun representation annotations typeParameters checks =>
+    RepresentationAlgebra effectfulFieldCarrier where
+  representation_declaration := fun representation annotations typeParameters checks =>
     ( .declaration representation annotations (typeParameters.map Prod.fst)
         (checks.map Prod.fst)
     , representationRows typeParameters ++ checkRows checks )
-  reference := fun key => (.reference key, [])
-  suspend := fun annotations checks thunk =>
+  representation_reference := fun key => (.reference key, [])
+  representation_suspend := fun annotations checks thunk =>
     (.suspend annotations (checks.map Prod.fst) thunk.1,
       checkRows checks ++ thunk.2)
-  null := fun annotations checks =>
+  representation_null := fun annotations checks =>
     (.null annotations (checks.map Prod.fst), checkRows checks)
-  undefined := fun annotations checks =>
+  representation_undefined := fun annotations checks =>
     (.undefined annotations (checks.map Prod.fst), checkRows checks)
-  void := fun annotations checks =>
+  representation_void := fun annotations checks =>
     (.void annotations (checks.map Prod.fst), checkRows checks)
-  never := fun annotations checks =>
+  representation_never := fun annotations checks =>
     (.never annotations (checks.map Prod.fst), checkRows checks)
-  unknown := fun annotations checks =>
+  representation_unknown := fun annotations checks =>
     (.unknown annotations (checks.map Prod.fst), checkRows checks)
-  any := fun annotations checks =>
+  representation_any := fun annotations checks =>
     (.any annotations (checks.map Prod.fst), checkRows checks)
-  string := fun annotations checks =>
+  representation_string := fun annotations checks =>
     (.string annotations (checks.map Prod.fst), checkRows checks)
-  number := fun annotations checks =>
+  representation_number := fun annotations checks =>
     (.number annotations (checks.map Prod.fst), checkRows checks)
-  boolean := fun annotations checks =>
+  representation_boolean := fun annotations checks =>
     (.boolean annotations (checks.map Prod.fst), checkRows checks)
-  bigint := fun annotations checks =>
+  representation_bigint := fun annotations checks =>
     (.bigint annotations (checks.map Prod.fst), checkRows checks)
-  symbol := fun annotations checks =>
+  representation_symbol := fun annotations checks =>
     (.symbol annotations (checks.map Prod.fst), checkRows checks)
-  literal := fun annotations checks value =>
+  representation_literal := fun annotations checks value =>
     (.literal annotations (checks.map Prod.fst) value, checkRows checks)
-  uniqueSymbol := fun annotations checks key =>
+  representation_uniqueSymbol := fun annotations checks key =>
     (.uniqueSymbol annotations (checks.map Prod.fst) key, checkRows checks)
-  objectKeyword := fun annotations checks =>
+  representation_objectKeyword := fun annotations checks =>
     (.objectKeyword annotations (checks.map Prod.fst), checkRows checks)
-  enum := fun annotations checks entries =>
+  representation_enum := fun annotations checks entries =>
     (.enum annotations (checks.map Prod.fst) entries, checkRows checks)
-  templateLiteral := fun annotations checks parts =>
+  representation_templateLiteral := fun annotations checks parts =>
     ( .templateLiteral annotations (checks.map Prod.fst) (parts.map Prod.fst)
     , checkRows checks ++ representationRows parts )
-  arrays := fun annotations checks elements rest =>
+  representation_arrays := fun annotations checks elements rest =>
     ( .arrays annotations (checks.map Prod.fst)
         (elements.map rebuildElement) (rest.map Prod.fst)
     , checkRows checks ++ elementRows elements ++ representationRows rest )
-  objects := fun annotations checks properties indexes =>
+  representation_objects := fun annotations checks properties indexes =>
     ( .objects annotations (checks.map Prod.fst)
         (properties.map rebuildProperty) (indexes.map rebuildIndex)
     , checkRows checks ++ propertyRows properties ++ indexRows indexes )
-  union := fun annotations checks types mode =>
+  representation_union := fun annotations checks types mode =>
     ( .union annotations (checks.map Prod.fst) (types.map Prod.fst) mode
     , checkRows checks ++ representationRows types )
-  filter := fun representation annotations aborted =>
+  check_filter := fun representation annotations aborted =>
     ( .filter (rebuildCheckAnnotation representation) annotations aborted
     , checkAnnotationRows representation )
-  filterGroup := fun representation annotations checks =>
+  check_filterGroup := fun representation annotations checks =>
     let rebuilt := representation.map rebuildCheckAnnotation
     let representationRows :=
       match representation with
@@ -838,10 +842,11 @@ private def effectfulFieldPropertyAlgebra :
       representationRows ++ checkRows checks)
 
 /-- Discover every exactly marked property through the existing exhaustive
-Schema fold, retaining structural preorder and duplicate occurrences. -/
+Schema fold (the generated `cata_representation`), retaining structural preorder and
+duplicate occurrences. -/
 def Representation.effectfulFieldProperties (representation : Representation) :
     List (PropertySignature × EffectfulFieldSpec) :=
-  (Representation.fold effectfulFieldPropertyAlgebra representation).2
+  (cata_representation effectfulFieldPropertyAlgebra representation).2
 
 /-- Resolution of portable operation identities into one existing signature. -/
 structure FieldEffectOps

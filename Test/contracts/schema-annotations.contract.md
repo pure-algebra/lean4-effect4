@@ -21,7 +21,9 @@ The data plane reuses, without wrapping or copying:
 - `Representation` and `Check` as the mutually recursive payload;
 - `ElementOf` and `PropertySignatureOf` as annotation-bearing child records;
 - `Document`, `MultiDocument`, and every `ReferenceEntry`; and
-- the closed `Representation.fold`/`Check.fold` recursion edge.
+- the closed recursion edge, now the generated `cata_representation`/`cata_check`
+  (`src/Effect4/Schema/Fold.lean`; it was the hand-written `Representation.fold` /
+  `Check.fold` until 2026-09-17).
 
 Module ownership is acyclic and frozen. `Data/Optic` owns the three generic
 carriers and laws. `Schema/Annotations` imports `Schema/Representation` and

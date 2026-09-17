@@ -24,12 +24,12 @@ optic, effect program, path, service, refusal, or generated-code carrier.
 | --- | --- |
 | authored field | `PropertySignatureOf A`; `PropertySignature` at the recursive Schema face |
 | raw metadata | `Annotations` and `EffectfulFieldSpec` |
-| recursive elimination | `Representation.fold` and `Representation.FoldAlgebra` |
+| recursive elimination | `cata_representation` and `RepresentationAlgebra` (generated; `Representation.fold` and `Representation.FoldAlgebra` until 2026-09-17) |
 | inventory row | ordinary product `PropertySignature × EffectfulFieldSpec` |
 | inventory | ordinary `List` in stored structural order |
 
 The recursive implementation MUST be an algebra passed to the existing
-`Representation.fold`. A second recursive function over `Representation`, a
+`cata_representation`. A second recursive function over `Representation`, a
 second property carrier, or a collector derived from node annotation bags is
 outside this packet.
 
@@ -67,7 +67,7 @@ The inventory order is structural preorder specialized to property sites:
 2. each object property in stored order, emitting the property itself before
    recursively collected properties in its `type`;
 3. each index signature in stored order, parameter before result type;
-4. all other recursive children in their existing `Representation.fold`
+4. all other recursive children in their existing `cata_representation`
    constructor order.
 
 Only a property whose own annotations pass `EffectfulFieldSpec.check` is
@@ -99,4 +99,4 @@ lake env lean Test/Counterexamples/Schema/EffectfulFieldProperties.lean
 Before production these commands must fail only because the four frozen
 declarations are absent. After production both files must elaborate, the
 ground guards must reduce in the kernel, and the recursive collector must be
-visibly implemented through `Representation.fold`.
+visibly implemented through `cata_representation`.

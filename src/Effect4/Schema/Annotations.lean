@@ -1,5 +1,6 @@
 import Effect4.Data.Optic
 import Effect4.Schema.Representation
+import Effect4.Schema.Fold
 
 /-!
 # Schema annotation data plane
@@ -544,10 +545,12 @@ end PropertySignatureOf
 /-!
 ## Recursive annotation data
 
-The two payload traversals below are algebras over the existing closed
-`Representation.fold` / `Check.fold`.  The collection algebra returns the
-preorder list of bags.  The update algebra reconstructs the existing carrier
-while applying one bag endomorphism at every annotation-bearing site.
+The two payload traversals below are algebras over the generated fold of the
+carrier (`Effect4.Schema.Fold`, the `SchemaFold` group).  The collection algebra
+returns the preorder list of bags.  The update algebra reconstructs the existing
+carrier while applying one bag endomorphism at every annotation-bearing site.
+The four traversal laws are proved from the generated identity and uniqueness
+theorems, not by a case analysis over the twenty-four constructors.
 -/
 
 namespace AnnotationTraversal
@@ -603,1664 +606,615 @@ private def indexBags :
   | [] => []
   | index :: tail => index.parameter ++ index.type ++ indexBags tail
 
-private def collectAlgebra :
-    Representation.FoldAlgebra (List Annotations) (List Annotations) where
-  declaration _ annotations parameters checks :=
+/-- The preorder list of every annotation bag, as an algebra on the constant carrier. -/
+private def collectAlgebra : RepresentationAlgebra (fun _ => List Annotations) where
+  representation_declaration _ annotations parameters checks :=
     annotations :: (appendMany parameters ++ appendMany checks)
-  reference _ := []
-  suspend annotations checks thunk :=
+  representation_reference _ := []
+  representation_suspend annotations checks thunk :=
     annotations :: (appendMany checks ++ thunk)
-  null annotations checks := annotations :: appendMany checks
-  undefined annotations checks := annotations :: appendMany checks
-  void annotations checks := annotations :: appendMany checks
-  never annotations checks := annotations :: appendMany checks
-  unknown annotations checks := annotations :: appendMany checks
-  any annotations checks := annotations :: appendMany checks
-  string annotations checks := annotations :: appendMany checks
-  number annotations checks := annotations :: appendMany checks
-  boolean annotations checks := annotations :: appendMany checks
-  bigint annotations checks := annotations :: appendMany checks
-  symbol annotations checks := annotations :: appendMany checks
-  literal annotations checks _ := annotations :: appendMany checks
-  uniqueSymbol annotations checks _ := annotations :: appendMany checks
-  objectKeyword annotations checks := annotations :: appendMany checks
-  enum annotations checks _ := annotations :: appendMany checks
-  templateLiteral annotations checks parts :=
+  representation_null annotations checks := annotations :: appendMany checks
+  representation_undefined annotations checks := annotations :: appendMany checks
+  representation_void annotations checks := annotations :: appendMany checks
+  representation_never annotations checks := annotations :: appendMany checks
+  representation_unknown annotations checks := annotations :: appendMany checks
+  representation_any annotations checks := annotations :: appendMany checks
+  representation_string annotations checks := annotations :: appendMany checks
+  representation_number annotations checks := annotations :: appendMany checks
+  representation_boolean annotations checks := annotations :: appendMany checks
+  representation_bigint annotations checks := annotations :: appendMany checks
+  representation_symbol annotations checks := annotations :: appendMany checks
+  representation_literal annotations checks _ := annotations :: appendMany checks
+  representation_uniqueSymbol annotations checks _ := annotations :: appendMany checks
+  representation_objectKeyword annotations checks := annotations :: appendMany checks
+  representation_enum annotations checks _ := annotations :: appendMany checks
+  representation_templateLiteral annotations checks parts :=
     annotations :: (appendMany checks ++ appendMany parts)
-  arrays annotations checks elements rest :=
+  representation_arrays annotations checks elements rest :=
     annotations :: (appendMany checks ++ elementBags elements ++ appendMany rest)
-  objects annotations checks properties indexes :=
+  representation_objects annotations checks properties indexes :=
     annotations :: (appendMany checks ++ propertyBags properties ++ indexBags indexes)
-  union annotations checks types _ :=
+  representation_union annotations checks types _ :=
     annotations :: (appendMany checks ++ appendMany types)
-  filter representation annotations _ :=
+  check_filter representation annotations _ :=
     annotations :: checkSchemas representation
-  filterGroup representation annotations checks :=
+  check_filterGroup representation annotations checks :=
     annotations :: (checkSchemasOptional representation ++ appendMany checks)
 
+
+/-- The rebuild algebra with one endomorphism at every annotation-bearing site: the node's
+own bag, and the bags the tuple elements and the object properties carry. -/
 private def modifyAlgebra (f : Annotations → Annotations) :
-    Representation.FoldAlgebra Representation Check where
-  declaration representation annotations parameters checks :=
+    RepresentationAlgebra RepresentationSelfCarrier where
+  representation_declaration representation annotations parameters checks :=
     .declaration representation (f annotations) parameters checks
-  reference := .reference
-  suspend annotations checks thunk := .suspend (f annotations) checks thunk
-  null annotations checks := .null (f annotations) checks
-  undefined annotations checks := .undefined (f annotations) checks
-  void annotations checks := .void (f annotations) checks
-  never annotations checks := .never (f annotations) checks
-  unknown annotations checks := .unknown (f annotations) checks
-  any annotations checks := .any (f annotations) checks
-  string annotations checks := .string (f annotations) checks
-  number annotations checks := .number (f annotations) checks
-  boolean annotations checks := .boolean (f annotations) checks
-  bigint annotations checks := .bigint (f annotations) checks
-  symbol annotations checks := .symbol (f annotations) checks
-  literal annotations checks value := .literal (f annotations) checks value
-  uniqueSymbol annotations checks key := .uniqueSymbol (f annotations) checks key
-  objectKeyword annotations checks := .objectKeyword (f annotations) checks
-  enum annotations checks entries := .enum (f annotations) checks entries
-  templateLiteral annotations checks parts :=
+  representation_reference := .reference
+  representation_suspend annotations checks thunk := .suspend (f annotations) checks thunk
+  representation_null annotations checks := .null (f annotations) checks
+  representation_undefined annotations checks := .undefined (f annotations) checks
+  representation_void annotations checks := .void (f annotations) checks
+  representation_never annotations checks := .never (f annotations) checks
+  representation_unknown annotations checks := .unknown (f annotations) checks
+  representation_any annotations checks := .any (f annotations) checks
+  representation_string annotations checks := .string (f annotations) checks
+  representation_number annotations checks := .number (f annotations) checks
+  representation_boolean annotations checks := .boolean (f annotations) checks
+  representation_bigint annotations checks := .bigint (f annotations) checks
+  representation_symbol annotations checks := .symbol (f annotations) checks
+  representation_literal annotations checks value := .literal (f annotations) checks value
+  representation_uniqueSymbol annotations checks key := .uniqueSymbol (f annotations) checks key
+  representation_objectKeyword annotations checks := .objectKeyword (f annotations) checks
+  representation_enum annotations checks entries := .enum (f annotations) checks entries
+  representation_templateLiteral annotations checks parts :=
     .templateLiteral (f annotations) checks parts
-  arrays annotations checks elements rest :=
+  representation_arrays annotations checks elements rest :=
     .arrays (f annotations) checks
       (elements.map fun element => { element with annotations := f element.annotations })
       rest
-  objects annotations checks properties indexes :=
+  representation_objects annotations checks properties indexes :=
     .objects (f annotations) checks
       (properties.map fun property =>
         { property with annotations := f property.annotations })
       indexes
-  union annotations checks types mode := .union (f annotations) checks types mode
-  filter representation annotations aborted :=
+  representation_union annotations checks types mode := .union (f annotations) checks types mode
+  check_filter representation annotations aborted :=
     .filter representation (f annotations) aborted
-  filterGroup representation annotations checks :=
+  check_filterGroup representation annotations checks :=
     .filterGroup representation (f annotations) checks
 
-private def collectRepresentation (representation : Representation) :
-    List Annotations :=
-  Representation.fold collectAlgebra representation
+
+
+/-- The collection again, with one endomorphism applied to every bag it emits. Both
+`collectRepresentation` after `modifyRepresentation f` and `List.map f` after
+`collectRepresentation` are homomorphisms of this one algebra, which is how the fourth
+traversal law is proved below. -/
+private def collectMappedAlgebra (f : Annotations → Annotations) :
+    RepresentationAlgebra (fun _ => List Annotations) where
+  representation_declaration _ annotations parameters checks :=
+    f annotations :: (appendMany parameters ++ appendMany checks)
+  representation_reference _ := []
+  representation_suspend annotations checks thunk :=
+    f annotations :: (appendMany checks ++ thunk)
+  representation_null annotations checks := f annotations :: appendMany checks
+  representation_undefined annotations checks := f annotations :: appendMany checks
+  representation_void annotations checks := f annotations :: appendMany checks
+  representation_never annotations checks := f annotations :: appendMany checks
+  representation_unknown annotations checks := f annotations :: appendMany checks
+  representation_any annotations checks := f annotations :: appendMany checks
+  representation_string annotations checks := f annotations :: appendMany checks
+  representation_number annotations checks := f annotations :: appendMany checks
+  representation_boolean annotations checks := f annotations :: appendMany checks
+  representation_bigint annotations checks := f annotations :: appendMany checks
+  representation_symbol annotations checks := f annotations :: appendMany checks
+  representation_literal annotations checks _ := f annotations :: appendMany checks
+  representation_uniqueSymbol annotations checks _ := f annotations :: appendMany checks
+  representation_objectKeyword annotations checks := f annotations :: appendMany checks
+  representation_enum annotations checks _ := f annotations :: appendMany checks
+  representation_templateLiteral annotations checks parts :=
+    f annotations :: (appendMany checks ++ appendMany parts)
+  representation_arrays annotations checks elements rest :=
+    f annotations :: (appendMany checks ++ elementBags (elements.map fun element =>
+      { element with annotations := f element.annotations }) ++ appendMany rest)
+  representation_objects annotations checks properties indexes :=
+    f annotations :: (appendMany checks ++ propertyBags (properties.map fun property =>
+      { property with annotations := f property.annotations }) ++ indexBags indexes)
+  representation_union annotations checks types _ :=
+    f annotations :: (appendMany checks ++ appendMany types)
+  check_filter representation annotations _ :=
+    f annotations :: checkSchemas representation
+  check_filterGroup representation annotations checks :=
+    f annotations :: (checkSchemasOptional representation ++ appendMany checks)
+
+
+
+private def collectRepresentation (representation : Representation) : List Annotations :=
+  cata_representation collectAlgebra representation
 
 private def collectCheck (check : Check) : List Annotations :=
-  Check.fold collectAlgebra check
+  cata_check collectAlgebra check
 
 private def modifyRepresentation (f : Annotations → Annotations)
     (representation : Representation) : Representation :=
-  Representation.fold (modifyAlgebra f) representation
+  cata_representation (modifyAlgebra f) representation
 
 private def modifyCheck (f : Annotations → Annotations) (check : Check) : Check :=
-  Check.fold (modifyAlgebra f) check
+  cata_check (modifyAlgebra f) check
 
-mutual
+/-! ### The bags under a map
+
+`appendMany`, `elementBags`, `propertyBags`, `indexBags` and the two check-annotation
+readers each commute with `List.map` over the collected bags. Every one is stated in the
+direction the traversal proofs rewrite: the map moves inside. -/
+
+private theorem appendMany_map (f : Annotations → Annotations)
+    (bags : List (List Annotations)) :
+    (appendMany bags).map f = appendMany (bags.map (List.map f)) := by
+  induction bags with
+  | nil => rfl
+  | cons head tail ih => simp only [appendMany, List.map_cons, map_append_exact, ih]
+
+private theorem elementBags_map (f : Annotations → Annotations)
+    (elements : List (ElementOf (List Annotations))) :
+    (elementBags elements).map f =
+      elementBags (elements.map fun element =>
+        { element with type := element.type.map f, annotations := f element.annotations }) := by
+  induction elements with
+  | nil => rfl
+  | cons head tail ih =>
+    simp only [List.map_cons, elementBags, map_append_exact, ih]
+
+private theorem propertyBags_map (f : Annotations → Annotations)
+    (properties : List (PropertySignatureOf (List Annotations))) :
+    (propertyBags properties).map f =
+      propertyBags (properties.map fun property =>
+        { property with
+          type := property.type.map f
+          annotations := f property.annotations }) := by
+  induction properties with
+  | nil => rfl
+  | cons head tail ih =>
+    simp only [List.map_cons, propertyBags, map_append_exact, ih]
+
+private theorem indexBags_map (f : Annotations → Annotations)
+    (indexes : List (IndexSignatureOf (List Annotations))) :
+    (indexBags indexes).map f =
+      indexBags (indexes.map (IndexSignatureOf.map (List.map f))) := by
+  induction indexes with
+  | nil => rfl
+  | cons head tail ih =>
+    simp only [List.map_cons, indexBags, IndexSignatureOf.map, map_append_exact, ih]
+
+private theorem checkSchemas_map (f : Annotations → Annotations)
+    (annotation : CheckRepresentationAnnotationOf (List Annotations)) :
+    (checkSchemas annotation).map f =
+      checkSchemas (CheckRepresentationAnnotationOf.map (List.map f) annotation) := by
+  cases annotation with
+  | mk name payload schemas =>
+    cases schemas with
+    | none => rfl
+    | some values => simp only [checkSchemas, CheckRepresentationAnnotationOf.map,
+        Option.map_some, appendMany_map]
+
+private theorem checkSchemasOptional_map (f : Annotations → Annotations)
+    (annotation : Option (CheckRepresentationAnnotationOf (List Annotations))) :
+    (checkSchemasOptional annotation).map f =
+      checkSchemasOptional
+        (annotation.map (CheckRepresentationAnnotationOf.map (List.map f))) := by
+  cases annotation with
+  | none => rfl
+  | some value => simp only [Option.map_some, checkSchemasOptional, checkSchemas_map]
+
+/-! ### Law 1: the identity
+
+`modifyAlgebra id` *is* the generated identity algebra -- the annotation endomorphism is the
+only thing it changes, and `List.map_id'` retires the two record maps -- so the law is the
+generated `cata_id_*` and no case analysis at all. -/
+
+private theorem modifyAlgebra_id : modifyAlgebra id = RepresentationAlgebra.id := by
+  unfold modifyAlgebra RepresentationAlgebra.id
+  simp only [id_eq, List.map_id']
 
 private theorem modifyRepresentation_id (representation : Representation) :
     modifyRepresentation id representation = representation := by
-  cases representation with
-  | declaration rep annotations parameters checks =>
-      rw [modifyRepresentation, Representation.fold_declaration]
-      change Representation.declaration rep annotations
-          (parameters.map (Representation.fold (modifyAlgebra id)))
-          (checks.map (Check.fold (modifyAlgebra id))) = _
-      rw [modifyRepresentationList_id, modifyCheckList_id]
-  | reference ref => rfl
-  | suspend annotations checks thunk =>
-      rw [modifyRepresentation, Representation.fold_suspend]
-      change Representation.suspend annotations
-          (checks.map (Check.fold (modifyAlgebra id)))
-          (Representation.fold (modifyAlgebra id) thunk) = _
-      have thunkId : Representation.fold (modifyAlgebra id) thunk = thunk :=
-        modifyRepresentation_id thunk
-      rw [modifyCheckList_id, thunkId]
-  | null annotations checks =>
-      rw [modifyRepresentation, Representation.fold_null]
-      change Representation.null annotations
-          (checks.map (Check.fold (modifyAlgebra id))) = _
-      rw [modifyCheckList_id]
-  | undefined annotations checks =>
-      rw [modifyRepresentation, Representation.fold_undefined]
-      change Representation.undefined annotations
-          (checks.map (Check.fold (modifyAlgebra id))) = _
-      rw [modifyCheckList_id]
-  | void annotations checks =>
-      rw [modifyRepresentation, Representation.fold_void]
-      change Representation.void annotations
-          (checks.map (Check.fold (modifyAlgebra id))) = _
-      rw [modifyCheckList_id]
-  | never annotations checks =>
-      rw [modifyRepresentation, Representation.fold_never]
-      change Representation.never annotations
-          (checks.map (Check.fold (modifyAlgebra id))) = _
-      rw [modifyCheckList_id]
-  | unknown annotations checks =>
-      rw [modifyRepresentation, Representation.fold_unknown]
-      change Representation.unknown annotations
-          (checks.map (Check.fold (modifyAlgebra id))) = _
-      rw [modifyCheckList_id]
-  | any annotations checks =>
-      rw [modifyRepresentation, Representation.fold_any]
-      change Representation.any annotations
-          (checks.map (Check.fold (modifyAlgebra id))) = _
-      rw [modifyCheckList_id]
-  | string annotations checks =>
-      rw [modifyRepresentation, Representation.fold_string]
-      change Representation.string annotations
-          (checks.map (Check.fold (modifyAlgebra id))) = _
-      rw [modifyCheckList_id]
-  | number annotations checks =>
-      rw [modifyRepresentation, Representation.fold_number]
-      change Representation.number annotations
-          (checks.map (Check.fold (modifyAlgebra id))) = _
-      rw [modifyCheckList_id]
-  | boolean annotations checks =>
-      rw [modifyRepresentation, Representation.fold_boolean]
-      change Representation.boolean annotations
-          (checks.map (Check.fold (modifyAlgebra id))) = _
-      rw [modifyCheckList_id]
-  | bigint annotations checks =>
-      rw [modifyRepresentation, Representation.fold_bigint]
-      change Representation.bigint annotations
-          (checks.map (Check.fold (modifyAlgebra id))) = _
-      rw [modifyCheckList_id]
-  | symbol annotations checks =>
-      rw [modifyRepresentation, Representation.fold_symbol]
-      change Representation.symbol annotations
-          (checks.map (Check.fold (modifyAlgebra id))) = _
-      rw [modifyCheckList_id]
-  | literal annotations checks value =>
-      rw [modifyRepresentation, Representation.fold_literal]
-      change Representation.literal annotations
-          (checks.map (Check.fold (modifyAlgebra id))) value = _
-      rw [modifyCheckList_id]
-  | uniqueSymbol annotations checks key =>
-      rw [modifyRepresentation, Representation.fold_uniqueSymbol]
-      change Representation.uniqueSymbol annotations
-          (checks.map (Check.fold (modifyAlgebra id))) key = _
-      rw [modifyCheckList_id]
-  | objectKeyword annotations checks =>
-      rw [modifyRepresentation, Representation.fold_objectKeyword]
-      change Representation.objectKeyword annotations
-          (checks.map (Check.fold (modifyAlgebra id))) = _
-      rw [modifyCheckList_id]
-  | enum annotations checks entries =>
-      rw [modifyRepresentation, Representation.fold_enum]
-      change Representation.enum annotations
-          (checks.map (Check.fold (modifyAlgebra id))) entries = _
-      rw [modifyCheckList_id]
-  | templateLiteral annotations checks parts =>
-      rw [modifyRepresentation, Representation.fold_templateLiteral]
-      change Representation.templateLiteral annotations
-          (checks.map (Check.fold (modifyAlgebra id)))
-          (parts.map (Representation.fold (modifyAlgebra id))) = _
-      rw [modifyCheckList_id, modifyRepresentationList_id]
-  | arrays annotations checks elements rest =>
-      rw [modifyRepresentation, Representation.fold_arrays]
-      change Representation.arrays annotations
-          (checks.map (Check.fold (modifyAlgebra id)))
-          ((elements.map fun element =>
-            ElementOf.mk element.isOptional
-              (Representation.fold (modifyAlgebra id) element.type)
-              element.annotations).map fun element =>
-                ElementOf.mk element.isOptional element.type (id element.annotations))
-          (rest.map (Representation.fold (modifyAlgebra id))) = _
-      rw [modifyCheckList_id, modifyElements_id, modifyRepresentationList_id]
-  | objects annotations checks properties indexes =>
-      rw [modifyRepresentation, Representation.fold_objects]
-      change Representation.objects annotations
-          (checks.map (Check.fold (modifyAlgebra id)))
-          ((properties.map fun property =>
-            PropertySignatureOf.mk property.name
-              (Representation.fold (modifyAlgebra id) property.type)
-              property.isOptional property.isMutable property.annotations).map
-                fun property => PropertySignatureOf.mk property.name property.type
-                  property.isOptional property.isMutable (id property.annotations))
-          (indexes.map fun index => IndexSignatureOf.mk
-            (Representation.fold (modifyAlgebra id) index.parameter)
-            (Representation.fold (modifyAlgebra id) index.type)) = _
-      rw [modifyCheckList_id, modifyProperties_id, modifyIndexes_id]
-  | union annotations checks types mode =>
-      rw [modifyRepresentation, Representation.fold_union]
-      change Representation.union annotations
-          (checks.map (Check.fold (modifyAlgebra id)))
-          (types.map (Representation.fold (modifyAlgebra id))) mode = _
-      rw [modifyCheckList_id, modifyRepresentationList_id]
-termination_by structural representation
+  rw [modifyRepresentation, modifyAlgebra_id, cata_id_representation]
 
-private theorem modifyCheck_id (check : Check) :
-    modifyCheck id check = check := by
-  cases check with
-  | filter representation annotations aborted =>
-      rw [modifyCheck, Check.fold_filter]
-      change Check.filter
-          { id := representation.id
-            payload := representation.payload
-            schemas := representation.schemas.map
-              (List.map (Representation.fold (modifyAlgebra id))) }
-          annotations aborted = _
-      rw [modifyCheckAnnotation_id]
-  | filterGroup representation annotations checks =>
-      rw [modifyCheck, Check.fold_filterGroup]
-      change Check.filterGroup
-          (representation.map fun value =>
-            { id := value.id
-              payload := value.payload
-              schemas := value.schemas.map
-                (List.map (Representation.fold (modifyAlgebra id))) })
-          annotations (checks.map (Check.fold (modifyAlgebra id))) = _
-      rw [modifyCheckAnnotationOptional_id, modifyCheckList_id]
-termination_by structural check
+private theorem modifyCheck_id (check : Check) : modifyCheck id check = check := by
+  rw [modifyCheck, modifyAlgebra_id, cata_id_check]
 
-private theorem modifyRepresentationList_id (representations : List Representation) :
-    representations.map (Representation.fold (modifyAlgebra id)) = representations := by
-  cases representations with
-  | nil => rfl
-  | cons head tail =>
-      change Representation.fold (modifyAlgebra id) head ::
-          tail.map (Representation.fold (modifyAlgebra id)) = head :: tail
-      have headId : Representation.fold (modifyAlgebra id) head = head :=
-        modifyRepresentation_id head
-      rw [headId, modifyRepresentationList_id tail]
-termination_by structural representations
+/-! ### Law 2: congruence
 
-private theorem modifyCheckList_id (checks : List Check) :
-    checks.map (Check.fold (modifyAlgebra id)) = checks := by
-  cases checks with
-  | nil => rfl
-  | cons head tail =>
-      change Check.fold (modifyAlgebra id) head ::
-          tail.map (Check.fold (modifyAlgebra id)) = head :: tail
-      have headId : Check.fold (modifyAlgebra id) head = head := modifyCheck_id head
-      rw [headId, modifyCheckList_id tail]
-termination_by structural checks
+Two pointwise equal endomorphisms build the same algebra, so they fold to the same tree. -/
 
-private theorem modifyElements_id (elements : List (ElementOf Representation)) :
-    (elements.map fun element =>
-      ElementOf.mk element.isOptional
-        (Representation.fold (modifyAlgebra id) element.type)
-        element.annotations).map (fun element =>
-          ElementOf.mk element.isOptional element.type (id element.annotations)) =
-      elements := by
-  cases elements with
-  | nil => rfl
-  | cons head tail =>
-      cases head with
-      | mk isOptional type annotations =>
-          change ElementOf.mk isOptional
-                (Representation.fold (modifyAlgebra id) type) annotations ::
-              ((tail.map fun element => ElementOf.mk element.isOptional
-                (Representation.fold (modifyAlgebra id) element.type)
-                element.annotations).map fun element =>
-                  ElementOf.mk element.isOptional element.type
-                    (id element.annotations)) =
-            ElementOf.mk isOptional type annotations :: tail
-          have typeId : Representation.fold (modifyAlgebra id) type = type :=
-            modifyRepresentation_id type
-          rw [typeId, modifyElements_id tail]
-termination_by structural elements
-
-private theorem modifyProperties_id
-    (properties : List (PropertySignatureOf Representation)) :
-    (properties.map fun property => PropertySignatureOf.mk property.name
-      (Representation.fold (modifyAlgebra id) property.type)
-      property.isOptional property.isMutable property.annotations).map
-        (fun property => PropertySignatureOf.mk property.name property.type
-          property.isOptional property.isMutable (id property.annotations)) = properties := by
-  cases properties with
-  | nil => rfl
-  | cons head tail =>
-      cases head with
-      | mk name type isOptional isMutable annotations =>
-          change PropertySignatureOf.mk name
-                (Representation.fold (modifyAlgebra id) type)
-                isOptional isMutable annotations ::
-              ((tail.map fun property => PropertySignatureOf.mk property.name
-                (Representation.fold (modifyAlgebra id) property.type)
-                property.isOptional property.isMutable property.annotations).map
-                  fun property => PropertySignatureOf.mk property.name property.type
-                    property.isOptional property.isMutable (id property.annotations)) =
-            PropertySignatureOf.mk name type isOptional isMutable annotations :: tail
-          have typeId : Representation.fold (modifyAlgebra id) type = type :=
-            modifyRepresentation_id type
-          rw [typeId, modifyProperties_id tail]
-termination_by structural properties
-
-private theorem modifyIndexes_id
-    (indexes : List (IndexSignatureOf Representation)) :
-    indexes.map (fun (index : IndexSignatureOf Representation) =>
-      { parameter := Representation.fold (modifyAlgebra id) index.parameter
-        type := Representation.fold (modifyAlgebra id) index.type }) = indexes := by
-  cases indexes with
-  | nil => rfl
-  | cons head tail =>
-      cases head with
-      | mk parameter type =>
-          change IndexSignatureOf.mk
-                (Representation.fold (modifyAlgebra id) parameter)
-                (Representation.fold (modifyAlgebra id) type) ::
-              tail.map (fun (index : IndexSignatureOf Representation) =>
-                { parameter := Representation.fold (modifyAlgebra id) index.parameter
-                  type := Representation.fold (modifyAlgebra id) index.type }) =
-            IndexSignatureOf.mk parameter type :: tail
-          have parameterId : Representation.fold (modifyAlgebra id) parameter = parameter :=
-            modifyRepresentation_id parameter
-          have typeId : Representation.fold (modifyAlgebra id) type = type :=
-            modifyRepresentation_id type
-          rw [parameterId, typeId, modifyIndexes_id tail]
-termination_by structural indexes
-
-private theorem modifySchemas_id (schemas : Option (List Representation)) :
-    schemas.map (List.map (Representation.fold (modifyAlgebra id))) = schemas := by
-  cases schemas with
-  | none => rfl
-  | some values =>
-      change some (values.map (Representation.fold (modifyAlgebra id))) = some values
-      rw [modifyRepresentationList_id values]
-termination_by structural schemas
-
-private theorem modifyCheckAnnotation_id
-    (annotation : CheckRepresentationAnnotationOf Representation) :
-    { id := annotation.id
-      payload := annotation.payload
-      schemas := annotation.schemas.map
-        (List.map (Representation.fold (modifyAlgebra id))) } = annotation := by
-  cases annotation with
-  | mk name payload schemas =>
-      change CheckRepresentationAnnotationOf.mk name payload
-          (schemas.map (List.map (Representation.fold (modifyAlgebra id)))) =
-        CheckRepresentationAnnotationOf.mk name payload schemas
-      rw [modifySchemas_id schemas]
-termination_by structural annotation
-
-private theorem modifyCheckAnnotationOptional_id
-    (annotation : Option (CheckRepresentationAnnotationOf Representation)) :
-    annotation.map (fun value =>
-      { id := value.id
-        payload := value.payload
-        schemas := value.schemas.map
-          (List.map (Representation.fold (modifyAlgebra id))) }) = annotation := by
-  cases annotation with
-  | none => rfl
-  | some value =>
-      change some
-          { id := value.id
-            payload := value.payload
-            schemas := value.schemas.map
-              (List.map (Representation.fold (modifyAlgebra id))) } = some value
-      rw [modifyCheckAnnotation_id value]
-termination_by structural annotation
-
-end
-
-mutual
-
-private theorem modifyRepresentation_congr
-    {first second : Annotations → Annotations}
+private theorem modifyRepresentation_congr {first second : Annotations → Annotations}
     (pointwise : ∀ annotations, first annotations = second annotations)
     (representation : Representation) :
     modifyRepresentation first representation =
       modifyRepresentation second representation := by
-  cases representation with
-  | declaration rep annotations parameters checks =>
-      rw [modifyRepresentation, Representation.fold_declaration,
-        modifyRepresentation, Representation.fold_declaration]
-      change Representation.declaration rep (first annotations)
-          (parameters.map (Representation.fold (modifyAlgebra first)))
-          (checks.map (Check.fold (modifyAlgebra first))) =
-        Representation.declaration rep (second annotations)
-          (parameters.map (Representation.fold (modifyAlgebra second)))
-          (checks.map (Check.fold (modifyAlgebra second)))
-      rw [pointwise, modifyRepresentationList_congr pointwise,
-        modifyCheckList_congr pointwise]
-  | reference ref => rfl
-  | suspend annotations checks thunk =>
-      rw [modifyRepresentation, Representation.fold_suspend,
-        modifyRepresentation, Representation.fold_suspend]
-      change Representation.suspend (first annotations)
-          (checks.map (Check.fold (modifyAlgebra first)))
-          (modifyRepresentation first thunk) =
-        Representation.suspend (second annotations)
-          (checks.map (Check.fold (modifyAlgebra second)))
-          (modifyRepresentation second thunk)
-      rw [pointwise, modifyCheckList_congr pointwise,
-        modifyRepresentation_congr pointwise thunk]
-  | null annotations checks =>
-      rw [modifyRepresentation, Representation.fold_null,
-        modifyRepresentation, Representation.fold_null]
-      change Representation.null (first annotations)
-          (checks.map (Check.fold (modifyAlgebra first))) =
-        Representation.null (second annotations)
-          (checks.map (Check.fold (modifyAlgebra second)))
-      rw [pointwise, modifyCheckList_congr pointwise]
-  | undefined annotations checks =>
-      rw [modifyRepresentation, Representation.fold_undefined,
-        modifyRepresentation, Representation.fold_undefined]
-      change Representation.undefined (first annotations)
-          (checks.map (Check.fold (modifyAlgebra first))) =
-        Representation.undefined (second annotations)
-          (checks.map (Check.fold (modifyAlgebra second)))
-      rw [pointwise, modifyCheckList_congr pointwise]
-  | void annotations checks =>
-      rw [modifyRepresentation, Representation.fold_void,
-        modifyRepresentation, Representation.fold_void]
-      change Representation.void (first annotations)
-          (checks.map (Check.fold (modifyAlgebra first))) =
-        Representation.void (second annotations)
-          (checks.map (Check.fold (modifyAlgebra second)))
-      rw [pointwise, modifyCheckList_congr pointwise]
-  | never annotations checks =>
-      rw [modifyRepresentation, Representation.fold_never,
-        modifyRepresentation, Representation.fold_never]
-      change Representation.never (first annotations)
-          (checks.map (Check.fold (modifyAlgebra first))) =
-        Representation.never (second annotations)
-          (checks.map (Check.fold (modifyAlgebra second)))
-      rw [pointwise, modifyCheckList_congr pointwise]
-  | unknown annotations checks =>
-      rw [modifyRepresentation, Representation.fold_unknown,
-        modifyRepresentation, Representation.fold_unknown]
-      change Representation.unknown (first annotations)
-          (checks.map (Check.fold (modifyAlgebra first))) =
-        Representation.unknown (second annotations)
-          (checks.map (Check.fold (modifyAlgebra second)))
-      rw [pointwise, modifyCheckList_congr pointwise]
-  | any annotations checks =>
-      rw [modifyRepresentation, Representation.fold_any,
-        modifyRepresentation, Representation.fold_any]
-      change Representation.any (first annotations)
-          (checks.map (Check.fold (modifyAlgebra first))) =
-        Representation.any (second annotations)
-          (checks.map (Check.fold (modifyAlgebra second)))
-      rw [pointwise, modifyCheckList_congr pointwise]
-  | string annotations checks =>
-      rw [modifyRepresentation, Representation.fold_string,
-        modifyRepresentation, Representation.fold_string]
-      change Representation.string (first annotations)
-          (checks.map (Check.fold (modifyAlgebra first))) =
-        Representation.string (second annotations)
-          (checks.map (Check.fold (modifyAlgebra second)))
-      rw [pointwise, modifyCheckList_congr pointwise]
-  | number annotations checks =>
-      rw [modifyRepresentation, Representation.fold_number,
-        modifyRepresentation, Representation.fold_number]
-      change Representation.number (first annotations)
-          (checks.map (Check.fold (modifyAlgebra first))) =
-        Representation.number (second annotations)
-          (checks.map (Check.fold (modifyAlgebra second)))
-      rw [pointwise, modifyCheckList_congr pointwise]
-  | boolean annotations checks =>
-      rw [modifyRepresentation, Representation.fold_boolean,
-        modifyRepresentation, Representation.fold_boolean]
-      change Representation.boolean (first annotations)
-          (checks.map (Check.fold (modifyAlgebra first))) =
-        Representation.boolean (second annotations)
-          (checks.map (Check.fold (modifyAlgebra second)))
-      rw [pointwise, modifyCheckList_congr pointwise]
-  | bigint annotations checks =>
-      rw [modifyRepresentation, Representation.fold_bigint,
-        modifyRepresentation, Representation.fold_bigint]
-      change Representation.bigint (first annotations)
-          (checks.map (Check.fold (modifyAlgebra first))) =
-        Representation.bigint (second annotations)
-          (checks.map (Check.fold (modifyAlgebra second)))
-      rw [pointwise, modifyCheckList_congr pointwise]
-  | symbol annotations checks =>
-      rw [modifyRepresentation, Representation.fold_symbol,
-        modifyRepresentation, Representation.fold_symbol]
-      change Representation.symbol (first annotations)
-          (checks.map (Check.fold (modifyAlgebra first))) =
-        Representation.symbol (second annotations)
-          (checks.map (Check.fold (modifyAlgebra second)))
-      rw [pointwise, modifyCheckList_congr pointwise]
-  | literal annotations checks value =>
-      rw [modifyRepresentation, Representation.fold_literal,
-        modifyRepresentation, Representation.fold_literal]
-      change Representation.literal (first annotations)
-          (checks.map (Check.fold (modifyAlgebra first))) value =
-        Representation.literal (second annotations)
-          (checks.map (Check.fold (modifyAlgebra second))) value
-      rw [pointwise, modifyCheckList_congr pointwise]
-  | uniqueSymbol annotations checks key =>
-      rw [modifyRepresentation, Representation.fold_uniqueSymbol,
-        modifyRepresentation, Representation.fold_uniqueSymbol]
-      change Representation.uniqueSymbol (first annotations)
-          (checks.map (Check.fold (modifyAlgebra first))) key =
-        Representation.uniqueSymbol (second annotations)
-          (checks.map (Check.fold (modifyAlgebra second))) key
-      rw [pointwise, modifyCheckList_congr pointwise]
-  | objectKeyword annotations checks =>
-      rw [modifyRepresentation, Representation.fold_objectKeyword,
-        modifyRepresentation, Representation.fold_objectKeyword]
-      change Representation.objectKeyword (first annotations)
-          (checks.map (Check.fold (modifyAlgebra first))) =
-        Representation.objectKeyword (second annotations)
-          (checks.map (Check.fold (modifyAlgebra second)))
-      rw [pointwise, modifyCheckList_congr pointwise]
-  | enum annotations checks entries =>
-      rw [modifyRepresentation, Representation.fold_enum,
-        modifyRepresentation, Representation.fold_enum]
-      change Representation.enum (first annotations)
-          (checks.map (Check.fold (modifyAlgebra first))) entries =
-        Representation.enum (second annotations)
-          (checks.map (Check.fold (modifyAlgebra second))) entries
-      rw [pointwise, modifyCheckList_congr pointwise]
-  | templateLiteral annotations checks parts =>
-      rw [modifyRepresentation, Representation.fold_templateLiteral,
-        modifyRepresentation, Representation.fold_templateLiteral]
-      change Representation.templateLiteral (first annotations)
-          (checks.map (Check.fold (modifyAlgebra first)))
-          (parts.map (Representation.fold (modifyAlgebra first))) =
-        Representation.templateLiteral (second annotations)
-          (checks.map (Check.fold (modifyAlgebra second)))
-          (parts.map (Representation.fold (modifyAlgebra second)))
-      rw [pointwise, modifyCheckList_congr pointwise,
-        modifyRepresentationList_congr pointwise]
-  | arrays annotations checks elements rest =>
-      rw [modifyRepresentation, Representation.fold_arrays,
-        modifyRepresentation, Representation.fold_arrays]
-      change Representation.arrays (first annotations)
-          (checks.map (Check.fold (modifyAlgebra first)))
-          ((elements.map fun element =>
-            ElementOf.mk element.isOptional
-              (Representation.fold (modifyAlgebra first) element.type)
-              element.annotations).map fun element =>
-                ElementOf.mk element.isOptional element.type
-                  (first element.annotations))
-          (rest.map (Representation.fold (modifyAlgebra first))) =
-        Representation.arrays (second annotations)
-          (checks.map (Check.fold (modifyAlgebra second)))
-          ((elements.map fun element =>
-            ElementOf.mk element.isOptional
-              (Representation.fold (modifyAlgebra second) element.type)
-              element.annotations).map fun element =>
-                ElementOf.mk element.isOptional element.type
-                  (second element.annotations))
-          (rest.map (Representation.fold (modifyAlgebra second)))
-      rw [pointwise, modifyCheckList_congr pointwise,
-        modifyElements_congr pointwise, modifyRepresentationList_congr pointwise]
-  | objects annotations checks properties indexes =>
-      rw [modifyRepresentation, Representation.fold_objects,
-        modifyRepresentation, Representation.fold_objects]
-      change Representation.objects (first annotations)
-          (checks.map (Check.fold (modifyAlgebra first)))
-          ((properties.map fun property => PropertySignatureOf.mk property.name
-            (Representation.fold (modifyAlgebra first) property.type)
-            property.isOptional property.isMutable property.annotations).map
-              fun property => PropertySignatureOf.mk property.name property.type
-                property.isOptional property.isMutable (first property.annotations))
-          (indexes.map fun index => IndexSignatureOf.mk
-            (Representation.fold (modifyAlgebra first) index.parameter)
-            (Representation.fold (modifyAlgebra first) index.type)) =
-        Representation.objects (second annotations)
-          (checks.map (Check.fold (modifyAlgebra second)))
-          ((properties.map fun property => PropertySignatureOf.mk property.name
-            (Representation.fold (modifyAlgebra second) property.type)
-            property.isOptional property.isMutable property.annotations).map
-              fun property => PropertySignatureOf.mk property.name property.type
-                property.isOptional property.isMutable (second property.annotations))
-          (indexes.map fun index => IndexSignatureOf.mk
-            (Representation.fold (modifyAlgebra second) index.parameter)
-            (Representation.fold (modifyAlgebra second) index.type))
-      rw [pointwise, modifyCheckList_congr pointwise,
-        modifyProperties_congr pointwise, modifyIndexes_congr pointwise]
-  | union annotations checks types mode =>
-      rw [modifyRepresentation, Representation.fold_union,
-        modifyRepresentation, Representation.fold_union]
-      change Representation.union (first annotations)
-          (checks.map (Check.fold (modifyAlgebra first)))
-          (types.map (Representation.fold (modifyAlgebra first))) mode =
-        Representation.union (second annotations)
-          (checks.map (Check.fold (modifyAlgebra second)))
-          (types.map (Representation.fold (modifyAlgebra second))) mode
-      rw [pointwise, modifyCheckList_congr pointwise,
-        modifyRepresentationList_congr pointwise]
-termination_by structural representation
+  rw [modifyRepresentation, modifyRepresentation, funext pointwise]
 
-private theorem modifyCheck_congr
-    {first second : Annotations → Annotations}
-    (pointwise : ∀ annotations, first annotations = second annotations)
-    (check : Check) :
+private theorem modifyCheck_congr {first second : Annotations → Annotations}
+    (pointwise : ∀ annotations, first annotations = second annotations) (check : Check) :
     modifyCheck first check = modifyCheck second check := by
-  cases check with
-  | filter representation annotations aborted =>
-      rw [modifyCheck, Check.fold_filter, modifyCheck, Check.fold_filter]
-      change Check.filter
-          (CheckRepresentationAnnotationOf.mk representation.id
-            representation.payload
-            (representation.schemas.map
-              (List.map (Representation.fold (modifyAlgebra first)))))
-          (first annotations) aborted =
-        Check.filter
-          (CheckRepresentationAnnotationOf.mk representation.id
-            representation.payload
-            (representation.schemas.map
-              (List.map (Representation.fold (modifyAlgebra second)))))
-          (second annotations) aborted
-      rw [modifyCheckAnnotation_congr pointwise, pointwise]
-  | filterGroup representation annotations checks =>
-      rw [modifyCheck, Check.fold_filterGroup,
-        modifyCheck, Check.fold_filterGroup]
-      change Check.filterGroup
-          (representation.map fun value => CheckRepresentationAnnotationOf.mk
-            value.id value.payload
-            (value.schemas.map
-              (List.map (Representation.fold (modifyAlgebra first)))))
-          (first annotations) (checks.map (Check.fold (modifyAlgebra first))) =
-        Check.filterGroup
-          (representation.map fun value => CheckRepresentationAnnotationOf.mk
-            value.id value.payload
-            (value.schemas.map
-              (List.map (Representation.fold (modifyAlgebra second)))))
-          (second annotations) (checks.map (Check.fold (modifyAlgebra second)))
-      rw [modifyCheckAnnotationOptional_congr pointwise, pointwise,
-        modifyCheckList_congr pointwise]
-termination_by structural check
+  rw [modifyCheck, modifyCheck, funext pointwise]
 
-private theorem modifyRepresentationList_congr
-    {first second : Annotations → Annotations}
-    (pointwise : ∀ annotations, first annotations = second annotations)
-    (representations : List Representation) :
-    representations.map (Representation.fold (modifyAlgebra first)) =
-      representations.map (Representation.fold (modifyAlgebra second)) := by
-  cases representations with
-  | nil => rfl
-  | cons head tail =>
-      simp only [List.map]
-      change modifyRepresentation first head ::
-          tail.map (Representation.fold (modifyAlgebra first)) =
-        modifyRepresentation second head ::
-          tail.map (Representation.fold (modifyAlgebra second))
-      rw [modifyRepresentation_congr pointwise head,
-        modifyRepresentationList_congr pointwise tail]
-termination_by structural representations
+/-! ### Law 3: composition
 
-private theorem modifyCheckList_congr
-    {first second : Annotations → Annotations}
-    (pointwise : ∀ annotations, first annotations = second annotations)
-    (checks : List Check) :
-    checks.map (Check.fold (modifyAlgebra first)) =
-      checks.map (Check.fold (modifyAlgebra second)) := by
-  cases checks with
-  | nil => rfl
-  | cons head tail =>
-      simp only [List.map]
-      change modifyCheck first head ::
-          tail.map (Check.fold (modifyAlgebra first)) =
-        modifyCheck second head ::
-          tail.map (Check.fold (modifyAlgebra second))
-      rw [modifyCheck_congr pointwise head, modifyCheckList_congr pointwise tail]
-termination_by structural checks
+The two folds composed satisfy the composite algebra's constructor equations, and the
+generated uniqueness theorem says the fold is the only family that does. No induction over
+the twenty-four constructors is written here: each equation is one rewrite. -/
 
-private theorem modifyElements_congr
-    {first second : Annotations → Annotations}
-    (pointwise : ∀ annotations, first annotations = second annotations)
-    (elements : List (ElementOf Representation)) :
-    (elements.map fun element =>
-      ElementOf.mk element.isOptional
-        (Representation.fold (modifyAlgebra first) element.type)
-        element.annotations).map (fun element =>
-          ElementOf.mk element.isOptional element.type (first element.annotations)) =
-      (elements.map fun element =>
-        ElementOf.mk element.isOptional
-          (Representation.fold (modifyAlgebra second) element.type)
-          element.annotations).map (fun element =>
-            ElementOf.mk element.isOptional element.type (second element.annotations)) := by
-  cases elements with
-  | nil => rfl
-  | cons head tail =>
-      cases head with
-      | mk isOptional type annotations =>
-          change ElementOf.mk isOptional
-                (modifyRepresentation first type)
-                (first annotations) :: _ =
-            ElementOf.mk isOptional
-                (modifyRepresentation second type)
-                (second annotations) :: _
-          rw [modifyRepresentation_congr pointwise type, pointwise,
-            modifyElements_congr pointwise tail]
-termination_by structural elements
-
-private theorem modifyProperties_congr
-    {first second : Annotations → Annotations}
-    (pointwise : ∀ annotations, first annotations = second annotations)
-    (properties : List (PropertySignatureOf Representation)) :
-    (properties.map fun property => PropertySignatureOf.mk property.name
-      (Representation.fold (modifyAlgebra first) property.type)
-      property.isOptional property.isMutable property.annotations).map
-        (fun property => PropertySignatureOf.mk property.name property.type
-          property.isOptional property.isMutable (first property.annotations)) =
-      (properties.map fun property => PropertySignatureOf.mk property.name
-        (Representation.fold (modifyAlgebra second) property.type)
-        property.isOptional property.isMutable property.annotations).map
-          (fun property => PropertySignatureOf.mk property.name property.type
-            property.isOptional property.isMutable (second property.annotations)) := by
-  cases properties with
-  | nil => rfl
-  | cons head tail =>
-      cases head with
-      | mk name type isOptional isMutable annotations =>
-          change PropertySignatureOf.mk name
-                (modifyRepresentation first type)
-                isOptional isMutable (first annotations) :: _ =
-            PropertySignatureOf.mk name
-                (modifyRepresentation second type)
-                isOptional isMutable (second annotations) :: _
-          rw [modifyRepresentation_congr pointwise type, pointwise,
-            modifyProperties_congr pointwise tail]
-termination_by structural properties
-
-private theorem modifyIndexes_congr
-    {first second : Annotations → Annotations}
-    (pointwise : ∀ annotations, first annotations = second annotations)
-    (indexes : List (IndexSignatureOf Representation)) :
-    indexes.map (fun index => IndexSignatureOf.mk
-        (Representation.fold (modifyAlgebra first) index.parameter)
-        (Representation.fold (modifyAlgebra first) index.type)) =
-      indexes.map (fun index => IndexSignatureOf.mk
-        (Representation.fold (modifyAlgebra second) index.parameter)
-        (Representation.fold (modifyAlgebra second) index.type)) := by
-  cases indexes with
-  | nil => rfl
-  | cons head tail =>
-      cases head with
-      | mk parameter type =>
-          change IndexSignatureOf.mk
-                (modifyRepresentation first parameter)
-                (modifyRepresentation first type) :: _ =
-            IndexSignatureOf.mk
-                (modifyRepresentation second parameter)
-                (modifyRepresentation second type) :: _
-          rw [modifyRepresentation_congr pointwise parameter,
-            modifyRepresentation_congr pointwise type,
-            modifyIndexes_congr pointwise tail]
-termination_by structural indexes
-
-private theorem modifySchemas_congr
-    {first second : Annotations → Annotations}
-    (pointwise : ∀ annotations, first annotations = second annotations)
-    (schemas : Option (List Representation)) :
-    schemas.map (List.map (Representation.fold (modifyAlgebra first))) =
-      schemas.map (List.map (Representation.fold (modifyAlgebra second))) := by
-  cases schemas with
-  | none => rfl
-  | some values =>
-      simp only [Option.map]
-      rw [modifyRepresentationList_congr pointwise values]
-termination_by structural schemas
-
-private theorem modifyCheckAnnotation_congr
-    {first second : Annotations → Annotations}
-    (pointwise : ∀ annotations, first annotations = second annotations)
-    (annotation : CheckRepresentationAnnotationOf Representation) :
-    CheckRepresentationAnnotationOf.mk annotation.id annotation.payload
-        (annotation.schemas.map
-          (List.map (Representation.fold (modifyAlgebra first)))) =
-      CheckRepresentationAnnotationOf.mk annotation.id annotation.payload
-        (annotation.schemas.map
-          (List.map (Representation.fold (modifyAlgebra second)))) := by
-  cases annotation with
-  | mk name payload schemas =>
-      rw [modifySchemas_congr pointwise schemas]
-termination_by structural annotation
-
-private theorem modifyCheckAnnotationOptional_congr
-    {first second : Annotations → Annotations}
-    (pointwise : ∀ annotations, first annotations = second annotations)
-    (annotation : Option (CheckRepresentationAnnotationOf Representation)) :
-    annotation.map (fun value =>
-      CheckRepresentationAnnotationOf.mk value.id value.payload
-        (value.schemas.map
-          (List.map (Representation.fold (modifyAlgebra first))))) =
-      annotation.map (fun value =>
-        CheckRepresentationAnnotationOf.mk value.id value.payload
-          (value.schemas.map
-            (List.map (Representation.fold (modifyAlgebra second))))) := by
-  cases annotation with
-  | none => rfl
-  | some value =>
-      exact congrArg some (modifyCheckAnnotation_congr pointwise value)
-termination_by structural annotation
-
-end
-
-mutual
+private def compHom (first second : Annotations → Annotations) :
+    RepresentationHom (modifyAlgebra (second ∘ first)) where
+  f_representation := fun representation =>
+    modifyRepresentation second (modifyRepresentation first representation)
+  f_check := fun check => modifyCheck second (modifyCheck first check)
+  h_representation_declaration := by
+    intro a0 a1 a2 a3
+    simp only [modifyRepresentation, modifyCheck, cata_representation_declaration,
+      modifyAlgebra, List.map_map, Function.comp_def]
+  h_representation_reference := by
+    intro a0
+    simp only [modifyRepresentation, cata_representation_reference, modifyAlgebra,
+      Function.comp_def]
+  h_representation_suspend := by
+    intro a0 a1 a2
+    simp only [modifyRepresentation, modifyCheck, cata_representation_suspend, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_null := by
+    intro a0 a1
+    simp only [modifyRepresentation, modifyCheck, cata_representation_null, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_undefined := by
+    intro a0 a1
+    simp only [modifyRepresentation, modifyCheck, cata_representation_undefined, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_void := by
+    intro a0 a1
+    simp only [modifyRepresentation, modifyCheck, cata_representation_void, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_never := by
+    intro a0 a1
+    simp only [modifyRepresentation, modifyCheck, cata_representation_never, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_unknown := by
+    intro a0 a1
+    simp only [modifyRepresentation, modifyCheck, cata_representation_unknown, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_any := by
+    intro a0 a1
+    simp only [modifyRepresentation, modifyCheck, cata_representation_any, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_string := by
+    intro a0 a1
+    simp only [modifyRepresentation, modifyCheck, cata_representation_string, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_number := by
+    intro a0 a1
+    simp only [modifyRepresentation, modifyCheck, cata_representation_number, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_boolean := by
+    intro a0 a1
+    simp only [modifyRepresentation, modifyCheck, cata_representation_boolean, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_bigint := by
+    intro a0 a1
+    simp only [modifyRepresentation, modifyCheck, cata_representation_bigint, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_symbol := by
+    intro a0 a1
+    simp only [modifyRepresentation, modifyCheck, cata_representation_symbol, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_literal := by
+    intro a0 a1 a2
+    simp only [modifyRepresentation, modifyCheck, cata_representation_literal, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_uniqueSymbol := by
+    intro a0 a1 a2
+    simp only [modifyRepresentation, modifyCheck, cata_representation_uniqueSymbol,
+      modifyAlgebra, List.map_map, Function.comp_def]
+  h_representation_objectKeyword := by
+    intro a0 a1
+    simp only [modifyRepresentation, modifyCheck, cata_representation_objectKeyword,
+      modifyAlgebra, List.map_map, Function.comp_def]
+  h_representation_enum := by
+    intro a0 a1 a2
+    simp only [modifyRepresentation, modifyCheck, cata_representation_enum, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_templateLiteral := by
+    intro a0 a1 a2
+    simp only [modifyRepresentation, modifyCheck, cata_representation_templateLiteral,
+      modifyAlgebra, List.map_map, Function.comp_def]
+  h_representation_arrays := by
+    intro a0 a1 a2 a3
+    simp only [modifyRepresentation, modifyCheck, cata_representation_arrays, modifyAlgebra,
+      ElementOf.map, List.map_map, Function.comp_def]
+  h_representation_objects := by
+    intro a0 a1 a2 a3
+    simp only [modifyRepresentation, modifyCheck, cata_representation_objects, modifyAlgebra,
+      PropertySignatureOf.map, IndexSignatureOf.map_map, List.map_map, Function.comp_def]
+  h_representation_union := by
+    intro a0 a1 a2 a3
+    simp only [modifyRepresentation, modifyCheck, cata_representation_union, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_check_filter := by
+    intro a0 a1 a2
+    simp only [modifyRepresentation, modifyCheck, cata_check_filter, modifyAlgebra,
+      CheckRepresentationAnnotationOf.map, List.map_map, Option.map_map, Function.comp_def]
+  h_check_filterGroup := by
+    intro a0 a1 a2
+    simp only [modifyRepresentation, modifyCheck, cata_check_filterGroup, modifyAlgebra,
+      CheckRepresentationAnnotationOf.map_map, Option.map_map, List.map_map, Function.comp_def]
 
 private theorem modifyRepresentation_comp (representation : Representation)
     (first second : Annotations → Annotations) :
     modifyRepresentation second (modifyRepresentation first representation) =
       modifyRepresentation (second ∘ first) representation := by
-  cases representation with
-  | declaration rep annotations parameters checks =>
-      simp only [modifyRepresentation, Representation.fold_declaration, modifyAlgebra]
-      change Representation.declaration rep (second (first annotations))
-          ((parameters.map (Representation.fold (modifyAlgebra first))).map
-            (Representation.fold (modifyAlgebra second)))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second))) =
-        Representation.declaration rep ((second ∘ first) annotations)
-          (parameters.map (Representation.fold (modifyAlgebra (second ∘ first))))
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first))))
-      rw [modifyRepresentationList_comp parameters first second,
-        modifyCheckList_comp checks first second]
-      rw [Function.comp_apply]
-  | reference ref => rfl
-  | suspend annotations checks thunk =>
-      simp only [modifyRepresentation, Representation.fold_suspend, modifyAlgebra]
-      change Representation.suspend (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second)))
-          (modifyRepresentation second (modifyRepresentation first thunk)) =
-        Representation.suspend ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first))))
-          (modifyRepresentation (second ∘ first) thunk)
-      rw [modifyCheckList_comp checks first second,
-        modifyRepresentation_comp thunk first second]
-      rw [Function.comp_apply]
-  | null annotations checks =>
-      simp only [modifyRepresentation, Representation.fold_null, modifyAlgebra]
-      change Representation.null (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second))) =
-        Representation.null ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first))))
-      rw [modifyCheckList_comp checks first second]
-      rw [Function.comp_apply]
-  | undefined annotations checks =>
-      simp only [modifyRepresentation, Representation.fold_undefined, modifyAlgebra]
-      change Representation.undefined (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second))) =
-        Representation.undefined ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first))))
-      rw [modifyCheckList_comp checks first second]
-      rw [Function.comp_apply]
-  | void annotations checks =>
-      simp only [modifyRepresentation, Representation.fold_void, modifyAlgebra]
-      change Representation.void (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second))) =
-        Representation.void ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first))))
-      rw [modifyCheckList_comp checks first second]
-      rw [Function.comp_apply]
-  | never annotations checks =>
-      simp only [modifyRepresentation, Representation.fold_never, modifyAlgebra]
-      change Representation.never (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second))) =
-        Representation.never ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first))))
-      rw [modifyCheckList_comp checks first second]
-      rw [Function.comp_apply]
-  | unknown annotations checks =>
-      simp only [modifyRepresentation, Representation.fold_unknown, modifyAlgebra]
-      change Representation.unknown (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second))) =
-        Representation.unknown ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first))))
-      rw [modifyCheckList_comp checks first second]
-      rw [Function.comp_apply]
-  | any annotations checks =>
-      simp only [modifyRepresentation, Representation.fold_any, modifyAlgebra]
-      change Representation.any (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second))) =
-        Representation.any ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first))))
-      rw [modifyCheckList_comp checks first second]
-      rw [Function.comp_apply]
-  | string annotations checks =>
-      simp only [modifyRepresentation, Representation.fold_string, modifyAlgebra]
-      change Representation.string (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second))) =
-        Representation.string ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first))))
-      rw [modifyCheckList_comp checks first second]
-      rw [Function.comp_apply]
-  | number annotations checks =>
-      simp only [modifyRepresentation, Representation.fold_number, modifyAlgebra]
-      change Representation.number (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second))) =
-        Representation.number ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first))))
-      rw [modifyCheckList_comp checks first second]
-      rw [Function.comp_apply]
-  | boolean annotations checks =>
-      simp only [modifyRepresentation, Representation.fold_boolean, modifyAlgebra]
-      change Representation.boolean (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second))) =
-        Representation.boolean ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first))))
-      rw [modifyCheckList_comp checks first second]
-      rw [Function.comp_apply]
-  | bigint annotations checks =>
-      simp only [modifyRepresentation, Representation.fold_bigint, modifyAlgebra]
-      change Representation.bigint (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second))) =
-        Representation.bigint ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first))))
-      rw [modifyCheckList_comp checks first second]
-      rw [Function.comp_apply]
-  | symbol annotations checks =>
-      simp only [modifyRepresentation, Representation.fold_symbol, modifyAlgebra]
-      change Representation.symbol (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second))) =
-        Representation.symbol ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first))))
-      rw [modifyCheckList_comp checks first second]
-      rw [Function.comp_apply]
-  | literal annotations checks value =>
-      simp only [modifyRepresentation, Representation.fold_literal, modifyAlgebra]
-      change Representation.literal (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second))) value =
-        Representation.literal ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first)))) value
-      rw [modifyCheckList_comp checks first second]
-      rw [Function.comp_apply]
-  | uniqueSymbol annotations checks key =>
-      simp only [modifyRepresentation, Representation.fold_uniqueSymbol, modifyAlgebra]
-      change Representation.uniqueSymbol (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second))) key =
-        Representation.uniqueSymbol ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first)))) key
-      rw [modifyCheckList_comp checks first second]
-      rw [Function.comp_apply]
-  | objectKeyword annotations checks =>
-      simp only [modifyRepresentation, Representation.fold_objectKeyword, modifyAlgebra]
-      change Representation.objectKeyword (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second))) =
-        Representation.objectKeyword ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first))))
-      rw [modifyCheckList_comp checks first second]
-      rw [Function.comp_apply]
-  | enum annotations checks entries =>
-      simp only [modifyRepresentation, Representation.fold_enum, modifyAlgebra]
-      change Representation.enum (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second))) entries =
-        Representation.enum ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first)))) entries
-      rw [modifyCheckList_comp checks first second]
-      rw [Function.comp_apply]
-  | templateLiteral annotations checks parts =>
-      simp only [modifyRepresentation, Representation.fold_templateLiteral, modifyAlgebra]
-      change Representation.templateLiteral (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second)))
-          ((parts.map (Representation.fold (modifyAlgebra first))).map
-            (Representation.fold (modifyAlgebra second))) =
-        Representation.templateLiteral ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first))))
-          (parts.map (Representation.fold (modifyAlgebra (second ∘ first))))
-      rw [modifyCheckList_comp checks first second,
-        modifyRepresentationList_comp parts first second]
-      rw [Function.comp_apply]
-  | arrays annotations checks elements rest =>
-      simp only [modifyRepresentation, Representation.fold_arrays, modifyAlgebra]
-      change Representation.arrays (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second)))
-          ((((elements.map (fun element => ElementOf.mk element.isOptional
-              (Representation.fold (modifyAlgebra first) element.type)
-              element.annotations)).map (fun element =>
-                ElementOf.mk element.isOptional element.type
-                  (first element.annotations))).map (fun element =>
-            ElementOf.mk element.isOptional
-              (Representation.fold (modifyAlgebra second) element.type)
-              element.annotations)).map (fun element =>
-                ElementOf.mk element.isOptional element.type
-                  (second element.annotations)))
-          ((rest.map (Representation.fold (modifyAlgebra first))).map
-            (Representation.fold (modifyAlgebra second))) =
-        Representation.arrays ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first))))
-          ((elements.map (fun element => ElementOf.mk element.isOptional
-            (Representation.fold (modifyAlgebra (second ∘ first)) element.type)
-            element.annotations)).map (fun element =>
-              ElementOf.mk element.isOptional element.type
-                ((second ∘ first) element.annotations)))
-          (rest.map (Representation.fold (modifyAlgebra (second ∘ first))))
-      rw [modifyCheckList_comp checks first second,
-        modifyElements_comp elements first second,
-        modifyRepresentationList_comp rest first second]
-      rw [Function.comp_apply]
-  | objects annotations checks properties indexes =>
-      simp only [modifyRepresentation, Representation.fold_objects, modifyAlgebra]
-      change Representation.objects (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second)))
-          ((((properties.map (fun property => PropertySignatureOf.mk property.name
-              (Representation.fold (modifyAlgebra first) property.type)
-              property.isOptional property.isMutable property.annotations)).map
-                (fun property => PropertySignatureOf.mk property.name property.type
-                  property.isOptional property.isMutable
-                  (first property.annotations))).map (fun property =>
-              PropertySignatureOf.mk property.name
-                (Representation.fold (modifyAlgebra second) property.type)
-                property.isOptional property.isMutable property.annotations)).map
-                  (fun property => PropertySignatureOf.mk property.name property.type
-                    property.isOptional property.isMutable
-                    (second property.annotations)))
-          ((indexes.map (fun index => IndexSignatureOf.mk
-              (Representation.fold (modifyAlgebra first) index.parameter)
-              (Representation.fold (modifyAlgebra first) index.type))).map (fun index =>
-            IndexSignatureOf.mk
-              (Representation.fold (modifyAlgebra second) index.parameter)
-              (Representation.fold (modifyAlgebra second) index.type))) =
-        Representation.objects ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first))))
-          ((properties.map (fun property => PropertySignatureOf.mk property.name
-            (Representation.fold (modifyAlgebra (second ∘ first)) property.type)
-            property.isOptional property.isMutable property.annotations)).map
-              (fun property => PropertySignatureOf.mk property.name property.type
-                property.isOptional property.isMutable
-                ((second ∘ first) property.annotations)))
-          (indexes.map (fun index => IndexSignatureOf.mk
-            (Representation.fold (modifyAlgebra (second ∘ first)) index.parameter)
-            (Representation.fold (modifyAlgebra (second ∘ first)) index.type)))
-      rw [modifyCheckList_comp checks first second,
-        modifyProperties_comp properties first second,
-        modifyIndexes_comp indexes first second]
-      rw [Function.comp_apply]
-  | union annotations checks types mode =>
-      simp only [modifyRepresentation, Representation.fold_union, modifyAlgebra]
-      change Representation.union (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second)))
-          ((types.map (Representation.fold (modifyAlgebra first))).map
-            (Representation.fold (modifyAlgebra second))) mode =
-        Representation.union ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first))))
-          (types.map (Representation.fold (modifyAlgebra (second ∘ first)))) mode
-      rw [modifyCheckList_comp checks first second,
-        modifyRepresentationList_comp types first second]
-      rw [Function.comp_apply]
-  all_goals rfl
-termination_by structural representation
+  exact hom_eq_cata_representation (compHom first second) representation
 
 private theorem modifyCheck_comp (check : Check)
     (first second : Annotations → Annotations) :
-    modifyCheck second (modifyCheck first check) =
-      modifyCheck (second ∘ first) check := by
-  cases check with
-  | filter representation annotations aborted =>
-      simp only [modifyCheck, Check.fold_filter, modifyAlgebra]
-      change Check.filter
-          (CheckRepresentationAnnotationOf.mk representation.id
-            representation.payload
-            ((representation.schemas.map
-              (List.map (Representation.fold (modifyAlgebra first)))).map
-                (List.map (Representation.fold (modifyAlgebra second)))))
-          (second (first annotations)) aborted =
-        Check.filter
-          (CheckRepresentationAnnotationOf.mk representation.id
-            representation.payload
-            (representation.schemas.map
-              (List.map (Representation.fold (modifyAlgebra (second ∘ first))))))
-          ((second ∘ first) annotations) aborted
-      rw [modifySchemas_comp representation.schemas first second]
-      rw [Function.comp_apply]
-  | filterGroup representation annotations checks =>
-      simp only [modifyCheck, Check.fold_filterGroup, modifyAlgebra]
-      change Check.filterGroup
-          ((representation.map fun value => CheckRepresentationAnnotationOf.mk
-            value.id value.payload
-            (value.schemas.map
-              (List.map (Representation.fold (modifyAlgebra first))))).map
-                fun value => CheckRepresentationAnnotationOf.mk value.id value.payload
-                  (value.schemas.map
-                    (List.map (Representation.fold (modifyAlgebra second)))))
-          (second (first annotations))
-          ((checks.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second))) =
-        Check.filterGroup
-          (representation.map fun value => CheckRepresentationAnnotationOf.mk
-            value.id value.payload
-            (value.schemas.map
-              (List.map (Representation.fold (modifyAlgebra (second ∘ first))))))
-          ((second ∘ first) annotations)
-          (checks.map (Check.fold (modifyAlgebra (second ∘ first))))
-      rw [modifyCheckAnnotationOptional_comp representation first second,
-        modifyCheckList_comp checks first second]
-      rw [Function.comp_apply]
-  all_goals rfl
-termination_by structural check
+    modifyCheck second (modifyCheck first check) = modifyCheck (second ∘ first) check := by
+  exact hom_eq_cata_check (compHom first second) check
 
-private theorem modifyRepresentationList_comp (representations : List Representation)
-    (first second : Annotations → Annotations) :
-    (representations.map (Representation.fold (modifyAlgebra first))).map
-        (Representation.fold (modifyAlgebra second)) =
-      representations.map
-        (Representation.fold (modifyAlgebra (second ∘ first))) := by
-  cases representations with
-  | nil => rfl
-  | cons head tail =>
-      change modifyRepresentation second (modifyRepresentation first head) ::
-          ((tail.map (Representation.fold (modifyAlgebra first))).map
-            (Representation.fold (modifyAlgebra second))) =
-        modifyRepresentation (second ∘ first) head ::
-          tail.map (Representation.fold (modifyAlgebra (second ∘ first)))
-      rw [modifyRepresentation_comp head first second,
-        modifyRepresentationList_comp tail first second]
-termination_by structural representations
+/-! ### Law 4: collection after modification
 
-private theorem modifyCheckList_comp (checks : List Check)
-    (first second : Annotations → Annotations) :
-    (checks.map (Check.fold (modifyAlgebra first))).map
-        (Check.fold (modifyAlgebra second)) =
-      checks.map (Check.fold (modifyAlgebra (second ∘ first))) := by
-  cases checks with
-  | nil => rfl
-  | cons head tail =>
-      change modifyCheck second (modifyCheck first head) ::
-          ((tail.map (Check.fold (modifyAlgebra first))).map
-            (Check.fold (modifyAlgebra second))) =
-        modifyCheck (second ∘ first) head ::
-          tail.map (Check.fold (modifyAlgebra (second ∘ first)))
-      rw [modifyCheck_comp head first second, modifyCheckList_comp tail first second]
-termination_by structural checks
+Collecting after modifying, and mapping after collecting, are two homomorphisms of the one
+algebra `collectMappedAlgebra`; uniqueness identifies them. -/
 
-private theorem modifyElements_comp (elements : List (ElementOf Representation))
-    (first second : Annotations → Annotations) :
-    (((elements.map fun element => ElementOf.mk element.isOptional
-        (Representation.fold (modifyAlgebra first) element.type)
-        element.annotations).map fun element =>
-          ElementOf.mk element.isOptional element.type
-            (first element.annotations)).map fun element =>
-      ElementOf.mk element.isOptional
-        (Representation.fold (modifyAlgebra second) element.type)
-        element.annotations).map (fun element =>
-          ElementOf.mk element.isOptional element.type
-            (second element.annotations)) =
-      (elements.map fun element => ElementOf.mk element.isOptional
-        (Representation.fold (modifyAlgebra (second ∘ first)) element.type)
-        element.annotations).map fun element =>
-          ElementOf.mk element.isOptional element.type
-            ((second ∘ first) element.annotations) := by
-  cases elements with
-  | nil => rfl
-  | cons head tail =>
-      cases head with
-      | mk isOptional type annotations =>
-          change ElementOf.mk isOptional
-                (modifyRepresentation second (modifyRepresentation first type))
-                (second (first annotations)) :: _ =
-            ElementOf.mk isOptional (modifyRepresentation (second ∘ first) type)
-                ((second ∘ first) annotations) :: _
-          rw [modifyRepresentation_comp type first second,
-            modifyElements_comp tail first second]
-          rw [Function.comp_apply]
-  all_goals rfl
-termination_by structural elements
+private def collectAfterModify (f : Annotations → Annotations) :
+    RepresentationHom (collectMappedAlgebra f) where
+  f_representation := fun representation =>
+    collectRepresentation (modifyRepresentation f representation)
+  f_check := fun check => collectCheck (modifyCheck f check)
+  h_representation_declaration := by
+    intro a0 a1 a2 a3
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_declaration, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_reference := by
+    intro a0
+    simp only [collectRepresentation, modifyRepresentation, cata_representation_reference,
+      collectAlgebra, collectMappedAlgebra, modifyAlgebra]
+  h_representation_suspend := by
+    intro a0 a1 a2
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_suspend, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_null := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_null, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_undefined := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_undefined, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_void := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_void, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_never := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_never, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_unknown := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_unknown, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_any := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_any, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_string := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_string, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_number := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_number, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_boolean := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_boolean, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_bigint := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_bigint, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_symbol := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_symbol, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_literal := by
+    intro a0 a1 a2
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_literal, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_uniqueSymbol := by
+    intro a0 a1 a2
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_uniqueSymbol, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_objectKeyword := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_objectKeyword, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_enum := by
+    intro a0 a1 a2
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_enum, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_templateLiteral := by
+    intro a0 a1 a2
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_templateLiteral, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_representation_arrays := by
+    intro a0 a1 a2 a3
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_arrays, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, ElementOf.map, Function.comp_def]
+  h_representation_objects := by
+    intro a0 a1 a2 a3
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_objects, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, PropertySignatureOf.map, IndexSignatureOf.map_map, Function.comp_def]
+  h_representation_union := by
+    intro a0 a1 a2 a3
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_representation_union, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, Function.comp_def]
+  h_check_filter := by
+    intro a0 a1 a2
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_check_filter, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      CheckRepresentationAnnotationOf.map_map]
+  h_check_filterGroup := by
+    intro a0 a1 a2
+    simp only [collectRepresentation, collectCheck, modifyRepresentation, modifyCheck,
+      cata_check_filterGroup, collectAlgebra, collectMappedAlgebra, modifyAlgebra,
+      List.map_map, Option.map_map, CheckRepresentationAnnotationOf.map_map, Function.comp_def]
 
-private theorem modifyProperties_comp
-    (properties : List (PropertySignatureOf Representation))
-    (first second : Annotations → Annotations) :
-    (((properties.map fun property => PropertySignatureOf.mk property.name
-        (Representation.fold (modifyAlgebra first) property.type)
-        property.isOptional property.isMutable property.annotations).map
-          fun property => PropertySignatureOf.mk property.name property.type
-            property.isOptional property.isMutable
-            (first property.annotations)).map fun property =>
-      PropertySignatureOf.mk property.name
-        (Representation.fold (modifyAlgebra second) property.type)
-        property.isOptional property.isMutable property.annotations).map
-          (fun property => PropertySignatureOf.mk property.name property.type
-            property.isOptional property.isMutable
-            (second property.annotations)) =
-      (properties.map fun property => PropertySignatureOf.mk property.name
-        (Representation.fold (modifyAlgebra (second ∘ first)) property.type)
-        property.isOptional property.isMutable property.annotations).map
-          fun property => PropertySignatureOf.mk property.name property.type
-            property.isOptional property.isMutable
-            ((second ∘ first) property.annotations) := by
-  cases properties with
-  | nil => rfl
-  | cons head tail =>
-      cases head with
-      | mk name type isOptional isMutable annotations =>
-          change PropertySignatureOf.mk name
-                (modifyRepresentation second (modifyRepresentation first type))
-                isOptional isMutable (second (first annotations)) :: _ =
-            PropertySignatureOf.mk name (modifyRepresentation (second ∘ first) type)
-                isOptional isMutable ((second ∘ first) annotations) :: _
-          rw [modifyRepresentation_comp type first second,
-            modifyProperties_comp tail first second]
-          rw [Function.comp_apply]
-  all_goals rfl
-termination_by structural properties
+private def mapAfterCollect (f : Annotations → Annotations) :
+    RepresentationHom (collectMappedAlgebra f) where
+  f_representation := fun representation => (collectRepresentation representation).map f
+  f_check := fun check => (collectCheck check).map f
+  h_representation_declaration := by
+    intro a0 a1 a2 a3
+    simp only [collectRepresentation, collectCheck, cata_representation_declaration,
+      collectAlgebra, collectMappedAlgebra, List.map_cons, map_append_exact, appendMany_map,
+      List.map_map, Function.comp_def]
+  h_representation_reference := by
+    intro a0
+    simp only [collectRepresentation, cata_representation_reference, collectAlgebra,
+      collectMappedAlgebra, List.map_nil]
+  h_representation_suspend := by
+    intro a0 a1 a2
+    simp only [collectRepresentation, collectCheck, cata_representation_suspend,
+      collectAlgebra, collectMappedAlgebra, List.map_cons, map_append_exact, appendMany_map,
+      List.map_map, Function.comp_def]
+  h_representation_null := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, cata_representation_null, collectAlgebra,
+      collectMappedAlgebra, List.map_cons, appendMany_map, List.map_map, Function.comp_def]
+  h_representation_undefined := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, cata_representation_undefined,
+      collectAlgebra, collectMappedAlgebra, List.map_cons, appendMany_map, List.map_map,
+      Function.comp_def]
+  h_representation_void := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, cata_representation_void, collectAlgebra,
+      collectMappedAlgebra, List.map_cons, appendMany_map, List.map_map, Function.comp_def]
+  h_representation_never := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, cata_representation_never, collectAlgebra,
+      collectMappedAlgebra, List.map_cons, appendMany_map, List.map_map, Function.comp_def]
+  h_representation_unknown := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, cata_representation_unknown,
+      collectAlgebra, collectMappedAlgebra, List.map_cons, appendMany_map, List.map_map,
+      Function.comp_def]
+  h_representation_any := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, cata_representation_any, collectAlgebra,
+      collectMappedAlgebra, List.map_cons, appendMany_map, List.map_map, Function.comp_def]
+  h_representation_string := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, cata_representation_string, collectAlgebra,
+      collectMappedAlgebra, List.map_cons, appendMany_map, List.map_map, Function.comp_def]
+  h_representation_number := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, cata_representation_number, collectAlgebra,
+      collectMappedAlgebra, List.map_cons, appendMany_map, List.map_map, Function.comp_def]
+  h_representation_boolean := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, cata_representation_boolean,
+      collectAlgebra, collectMappedAlgebra, List.map_cons, appendMany_map, List.map_map,
+      Function.comp_def]
+  h_representation_bigint := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, cata_representation_bigint, collectAlgebra,
+      collectMappedAlgebra, List.map_cons, appendMany_map, List.map_map, Function.comp_def]
+  h_representation_symbol := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, cata_representation_symbol, collectAlgebra,
+      collectMappedAlgebra, List.map_cons, appendMany_map, List.map_map, Function.comp_def]
+  h_representation_literal := by
+    intro a0 a1 a2
+    simp only [collectRepresentation, collectCheck, cata_representation_literal,
+      collectAlgebra, collectMappedAlgebra, List.map_cons, appendMany_map, List.map_map,
+      Function.comp_def]
+  h_representation_uniqueSymbol := by
+    intro a0 a1 a2
+    simp only [collectRepresentation, collectCheck, cata_representation_uniqueSymbol,
+      collectAlgebra, collectMappedAlgebra, List.map_cons, appendMany_map, List.map_map,
+      Function.comp_def]
+  h_representation_objectKeyword := by
+    intro a0 a1
+    simp only [collectRepresentation, collectCheck, cata_representation_objectKeyword,
+      collectAlgebra, collectMappedAlgebra, List.map_cons, appendMany_map, List.map_map,
+      Function.comp_def]
+  h_representation_enum := by
+    intro a0 a1 a2
+    simp only [collectRepresentation, collectCheck, cata_representation_enum, collectAlgebra,
+      collectMappedAlgebra, List.map_cons, appendMany_map, List.map_map, Function.comp_def]
+  h_representation_templateLiteral := by
+    intro a0 a1 a2
+    simp only [collectRepresentation, collectCheck, cata_representation_templateLiteral,
+      collectAlgebra, collectMappedAlgebra, List.map_cons, map_append_exact, appendMany_map,
+      List.map_map, Function.comp_def]
+  h_representation_arrays := by
+    intro a0 a1 a2 a3
+    simp only [collectRepresentation, collectCheck, cata_representation_arrays, collectAlgebra,
+      collectMappedAlgebra, List.map_cons, map_append_exact, appendMany_map, elementBags_map,
+      List.map_map, ElementOf.map, Function.comp_def]
+  h_representation_objects := by
+    intro a0 a1 a2 a3
+    simp only [collectRepresentation, collectCheck, cata_representation_objects,
+      collectAlgebra, collectMappedAlgebra, List.map_cons, map_append_exact, appendMany_map,
+      propertyBags_map, indexBags_map, List.map_map, PropertySignatureOf.map,
+      IndexSignatureOf.map_map, Function.comp_def]
+  h_representation_union := by
+    intro a0 a1 a2 a3
+    simp only [collectRepresentation, collectCheck, cata_representation_union, collectAlgebra,
+      collectMappedAlgebra, List.map_cons, map_append_exact, appendMany_map, List.map_map,
+      Function.comp_def]
+  h_check_filter := by
+    intro a0 a1 a2
+    simp only [collectRepresentation, collectCheck, cata_check_filter, collectAlgebra,
+      collectMappedAlgebra, List.map_cons, checkSchemas_map,
+      CheckRepresentationAnnotationOf.map_map]
+  h_check_filterGroup := by
+    intro a0 a1 a2
+    simp only [collectRepresentation, collectCheck, cata_check_filterGroup, collectAlgebra,
+      collectMappedAlgebra, List.map_cons, map_append_exact, appendMany_map,
+      checkSchemasOptional_map, List.map_map, Option.map_map,
+      CheckRepresentationAnnotationOf.map_map, Function.comp_def]
 
-private theorem modifyIndexes_comp
-    (indexes : List (IndexSignatureOf Representation))
-    (first second : Annotations → Annotations) :
-    (indexes.map (fun index => IndexSignatureOf.mk
-      (Representation.fold (modifyAlgebra first) index.parameter)
-      (Representation.fold (modifyAlgebra first) index.type))).map
-        (fun index => IndexSignatureOf.mk
-          (Representation.fold (modifyAlgebra second) index.parameter)
-          (Representation.fold (modifyAlgebra second) index.type)) =
-      indexes.map (fun index => IndexSignatureOf.mk
-        (Representation.fold (modifyAlgebra (second ∘ first)) index.parameter)
-        (Representation.fold (modifyAlgebra (second ∘ first)) index.type)) := by
-  cases indexes with
-  | nil => rfl
-  | cons head tail =>
-      cases head with
-      | mk parameter type =>
-          change IndexSignatureOf.mk
-                (modifyRepresentation second (modifyRepresentation first parameter))
-                (modifyRepresentation second (modifyRepresentation first type)) :: _ =
-            IndexSignatureOf.mk (modifyRepresentation (second ∘ first) parameter)
-                (modifyRepresentation (second ∘ first) type) :: _
-          rw [modifyRepresentation_comp parameter first second,
-            modifyRepresentation_comp type first second,
-            modifyIndexes_comp tail first second]
-termination_by structural indexes
-
-private theorem modifySchemas_comp (schemas : Option (List Representation))
-    (first second : Annotations → Annotations) :
-    (schemas.map (List.map (Representation.fold (modifyAlgebra first)))).map
-        (List.map (Representation.fold (modifyAlgebra second))) =
-      schemas.map
-        (List.map (Representation.fold (modifyAlgebra (second ∘ first)))) := by
-  cases schemas with
-  | none => rfl
-  | some values =>
-      exact congrArg some (modifyRepresentationList_comp values first second)
-termination_by structural schemas
-
-private theorem modifyCheckAnnotationOptional_comp
-    (annotation : Option (CheckRepresentationAnnotationOf Representation))
-    (first second : Annotations → Annotations) :
-    (annotation.map fun value => CheckRepresentationAnnotationOf.mk
-      value.id value.payload
-      (value.schemas.map
-        (List.map (Representation.fold (modifyAlgebra first))))).map
-          (fun value => CheckRepresentationAnnotationOf.mk
-            value.id value.payload
-            (value.schemas.map
-              (List.map (Representation.fold (modifyAlgebra second))))) =
-      annotation.map fun value => CheckRepresentationAnnotationOf.mk
-        value.id value.payload
-        (value.schemas.map
-          (List.map (Representation.fold (modifyAlgebra (second ∘ first))))) := by
-  cases annotation with
-  | none => rfl
-  | some value =>
-      cases value with
-      | mk name payload schemas =>
-          change some (CheckRepresentationAnnotationOf.mk name payload
-              ((schemas.map
-                (List.map (Representation.fold (modifyAlgebra first)))).map
-                  (List.map (Representation.fold (modifyAlgebra second))))) =
-            some (CheckRepresentationAnnotationOf.mk name payload
-              (schemas.map (List.map
-                (Representation.fold (modifyAlgebra (second ∘ first))))))
-          rw [modifySchemas_comp schemas first second]
-termination_by structural annotation
-
-end
-
-mutual
 
 private theorem collect_modifyRepresentation (representation : Representation)
     (f : Annotations → Annotations) :
     collectRepresentation (modifyRepresentation f representation) =
       (collectRepresentation representation).map f := by
-  cases representation with
-  | reference ref => rfl
-  | declaration rep annotations parameters checks =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_declaration, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact, map_append_exact]
-      have parametersLaw := collect_modifyRepresentationList parameters f
-      have checksLaw := collect_modifyCheckList checks f
-      simp only [collectAlgebra, modifyAlgebra] at parametersLaw checksLaw
-      rw [parametersLaw, checksLaw]
-  | suspend annotations checks thunk =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_suspend, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact, map_append_exact]
-      have thunkLaw := collect_modifyRepresentation thunk f
-      have checksLaw := collect_modifyCheckList checks f
-      simp only [collectRepresentation, modifyRepresentation,
-        collectAlgebra, modifyAlgebra] at thunkLaw checksLaw
-      rw [checksLaw, thunkLaw]
-  | null annotations checks =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_null, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact]
-      have checksLaw := collect_modifyCheckList checks f
-      simp only [collectAlgebra, modifyAlgebra] at checksLaw
-      rw [checksLaw]
-  | undefined annotations checks =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_undefined, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact]
-      have checksLaw := collect_modifyCheckList checks f
-      simp only [collectAlgebra, modifyAlgebra] at checksLaw
-      rw [checksLaw]
-  | void annotations checks =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_void, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact]
-      have checksLaw := collect_modifyCheckList checks f
-      simp only [collectAlgebra, modifyAlgebra] at checksLaw
-      rw [checksLaw]
-  | never annotations checks =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_never, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact]
-      have checksLaw := collect_modifyCheckList checks f
-      simp only [collectAlgebra, modifyAlgebra] at checksLaw
-      rw [checksLaw]
-  | unknown annotations checks =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_unknown, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact]
-      have checksLaw := collect_modifyCheckList checks f
-      simp only [collectAlgebra, modifyAlgebra] at checksLaw
-      rw [checksLaw]
-  | any annotations checks =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_any, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact]
-      have checksLaw := collect_modifyCheckList checks f
-      simp only [collectAlgebra, modifyAlgebra] at checksLaw
-      rw [checksLaw]
-  | string annotations checks =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_string, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact]
-      have checksLaw := collect_modifyCheckList checks f
-      simp only [collectAlgebra, modifyAlgebra] at checksLaw
-      rw [checksLaw]
-  | number annotations checks =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_number, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact]
-      have checksLaw := collect_modifyCheckList checks f
-      simp only [collectAlgebra, modifyAlgebra] at checksLaw
-      rw [checksLaw]
-  | boolean annotations checks =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_boolean, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact]
-      have checksLaw := collect_modifyCheckList checks f
-      simp only [collectAlgebra, modifyAlgebra] at checksLaw
-      rw [checksLaw]
-  | bigint annotations checks =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_bigint, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact]
-      have checksLaw := collect_modifyCheckList checks f
-      simp only [collectAlgebra, modifyAlgebra] at checksLaw
-      rw [checksLaw]
-  | symbol annotations checks =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_symbol, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact]
-      have checksLaw := collect_modifyCheckList checks f
-      simp only [collectAlgebra, modifyAlgebra] at checksLaw
-      rw [checksLaw]
-  | literal annotations checks value =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_literal, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact]
-      have checksLaw := collect_modifyCheckList checks f
-      simp only [collectAlgebra, modifyAlgebra] at checksLaw
-      rw [checksLaw]
-  | uniqueSymbol annotations checks key =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_uniqueSymbol, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact]
-      have checksLaw := collect_modifyCheckList checks f
-      simp only [collectAlgebra, modifyAlgebra] at checksLaw
-      rw [checksLaw]
-  | objectKeyword annotations checks =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_objectKeyword, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact]
-      have checksLaw := collect_modifyCheckList checks f
-      simp only [collectAlgebra, modifyAlgebra] at checksLaw
-      rw [checksLaw]
-  | enum annotations checks entries =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_enum, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact]
-      have checksLaw := collect_modifyCheckList checks f
-      simp only [collectAlgebra, modifyAlgebra] at checksLaw
-      rw [checksLaw]
-  | templateLiteral annotations checks parts =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_templateLiteral, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact, map_append_exact]
-      have checksLaw := collect_modifyCheckList checks f
-      have partsLaw := collect_modifyRepresentationList parts f
-      simp only [collectAlgebra, modifyAlgebra] at checksLaw partsLaw
-      rw [checksLaw, partsLaw]
-  | arrays annotations checks elements rest =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_arrays, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact, map_append_exact]
-      have checksLaw := collect_modifyCheckList checks f
-      have elementsLaw := collect_modifyElements elements f
-      have restLaw := collect_modifyRepresentationList rest f
-      simp only [collectRepresentation, modifyRepresentation,
-        collectAlgebra, modifyAlgebra, map_map_exact]
-        at checksLaw elementsLaw restLaw
-      rw [checksLaw, elementsLaw, restLaw]
-  | objects annotations checks properties indexes =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_objects, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact, map_append_exact]
-      have checksLaw := collect_modifyCheckList checks f
-      have propertiesLaw := collect_modifyProperties properties f
-      have indexesLaw := collect_modifyIndexes indexes f
-      simp only [collectRepresentation, modifyRepresentation,
-        collectAlgebra, modifyAlgebra, map_map_exact]
-        at checksLaw propertiesLaw indexesLaw
-      rw [checksLaw, propertiesLaw, indexesLaw]
-  | union annotations checks types mode =>
-      simp only [collectRepresentation, modifyRepresentation,
-        Representation.fold_union, collectAlgebra, modifyAlgebra,
-        List.map_cons, map_map_exact, map_append_exact]
-      have checksLaw := collect_modifyCheckList checks f
-      have typesLaw := collect_modifyRepresentationList types f
-      simp only [collectAlgebra, modifyAlgebra] at checksLaw typesLaw
-      rw [checksLaw, typesLaw]
-termination_by structural representation
+  exact (hom_eq_cata_representation (collectAfterModify f) representation).trans
+    (hom_eq_cata_representation (mapAfterCollect f) representation).symm
 
-private theorem collect_modifyCheck (check : Check)
-    (f : Annotations → Annotations) :
+private theorem collect_modifyCheck (check : Check) (f : Annotations → Annotations) :
     collectCheck (modifyCheck f check) = (collectCheck check).map f := by
-  cases check with
-  | filter representation annotations aborted =>
-      simp only [collectCheck, modifyCheck, Check.fold_filter,
-        collectAlgebra, modifyAlgebra, List.map_cons]
-      have representationLaw := collect_modifyCheckAnnotation representation f
-      simp only [collectAlgebra, modifyAlgebra] at representationLaw
-      rw [representationLaw]
-  | filterGroup representation annotations checks =>
-      simp only [collectCheck, modifyCheck, Check.fold_filterGroup,
-        collectAlgebra, modifyAlgebra, List.map_cons, map_map_exact,
-        map_append_exact]
-      have representationLaw :=
-        collect_modifyCheckAnnotationOptional representation f
-      have checksLaw := collect_modifyCheckList checks f
-      simp only [collectAlgebra, modifyAlgebra] at representationLaw checksLaw
-      rw [representationLaw, checksLaw]
-termination_by structural check
-
-private theorem collect_modifyRepresentationList
-    (representations : List Representation) (f : Annotations → Annotations) :
-    appendMany
-        (representations.map
-          (Representation.fold collectAlgebra ∘
-            Representation.fold (modifyAlgebra f))) =
-      (appendMany
-        (representations.map (Representation.fold collectAlgebra))).map f := by
-  cases representations with
-  | nil => rfl
-  | cons head tail =>
-      simp only [List.map_cons, appendMany, map_append_exact,
-        Function.comp_apply]
-      have headLaw := collect_modifyRepresentation head f
-      simp only [collectRepresentation, modifyRepresentation] at headLaw
-      rw [headLaw, collect_modifyRepresentationList tail f]
-termination_by structural representations
-
-private theorem collect_modifyCheckList (checks : List Check)
-    (f : Annotations → Annotations) :
-    appendMany
-        (checks.map
-          (Check.fold collectAlgebra ∘ Check.fold (modifyAlgebra f))) =
-      (appendMany (checks.map (Check.fold collectAlgebra))).map f := by
-  cases checks with
-  | nil => rfl
-  | cons head tail =>
-      simp only [List.map_cons, appendMany, map_append_exact,
-        Function.comp_apply]
-      have headLaw := collect_modifyCheck head f
-      simp only [collectCheck, modifyCheck] at headLaw
-      rw [headLaw, collect_modifyCheckList tail f]
-termination_by structural checks
-
-private theorem collect_modifyElements
-    (elements : List (ElementOf Representation))
-    (f : Annotations → Annotations) :
-    elementBags
-        ((elements.map fun element =>
-          ElementOf.mk element.isOptional
-            (modifyRepresentation f element.type) element.annotations).map
-              (fun element => ElementOf.mk element.isOptional element.type
-                (f element.annotations)) |>.map
-            fun element =>
-              ElementOf.mk element.isOptional
-                (collectRepresentation element.type) element.annotations) =
-      (elementBags
-        (elements.map fun element =>
-          ElementOf.mk element.isOptional
-            (collectRepresentation element.type) element.annotations)).map f := by
-  cases elements with
-  | nil => rfl
-  | cons head tail =>
-      cases head with
-      | mk isOptional type annotations =>
-          simp only [List.map_cons, elementBags, map_append_exact]
-          rw [collect_modifyRepresentation type f,
-            collect_modifyElements tail f]
-termination_by structural elements
-
-private theorem collect_modifyProperties
-    (properties : List (PropertySignatureOf Representation))
-    (f : Annotations → Annotations) :
-    propertyBags
-        ((properties.map fun property =>
-          PropertySignatureOf.mk property.name
-            (modifyRepresentation f property.type) property.isOptional
-            property.isMutable property.annotations).map
-              (fun property => PropertySignatureOf.mk property.name property.type
-                property.isOptional property.isMutable
-                (f property.annotations)) |>.map
-            fun property =>
-              PropertySignatureOf.mk property.name
-                (collectRepresentation property.type) property.isOptional
-                property.isMutable property.annotations) =
-      (propertyBags
-        (properties.map fun property =>
-          PropertySignatureOf.mk property.name
-            (collectRepresentation property.type) property.isOptional
-            property.isMutable property.annotations)).map f := by
-  cases properties with
-  | nil => rfl
-  | cons head tail =>
-      cases head with
-      | mk name type isOptional isMutable annotations =>
-          simp only [List.map_cons, propertyBags, map_append_exact]
-          rw [collect_modifyRepresentation type f,
-            collect_modifyProperties tail f]
-termination_by structural properties
-
-private theorem collect_modifyIndexes
-    (indexes : List (IndexSignatureOf Representation))
-    (f : Annotations → Annotations) :
-    indexBags
-        ((indexes.map fun index =>
-          IndexSignatureOf.mk (modifyRepresentation f index.parameter)
-            (modifyRepresentation f index.type)).map fun index =>
-              IndexSignatureOf.mk (collectRepresentation index.parameter)
-                (collectRepresentation index.type)) =
-      (indexBags
-        (indexes.map fun index =>
-          IndexSignatureOf.mk (collectRepresentation index.parameter)
-            (collectRepresentation index.type))).map f := by
-  cases indexes with
-  | nil => rfl
-  | cons head tail =>
-      cases head with
-      | mk parameter type =>
-          simp only [List.map_cons, indexBags, map_append_exact]
-          rw [collect_modifyRepresentation parameter f,
-            collect_modifyRepresentation type f,
-            collect_modifyIndexes tail f]
-termination_by structural indexes
-
-private theorem collect_modifyCheckAnnotation
-    (annotation : CheckRepresentationAnnotationOf Representation)
-    (f : Annotations → Annotations) :
-    checkSchemas
-        { id := annotation.id
-          payload := annotation.payload
-          schemas := (annotation.schemas.map
-            (List.map (Representation.fold (modifyAlgebra f)))).map
-              (List.map (Representation.fold collectAlgebra)) } =
-      (checkSchemas
-        { id := annotation.id
-          payload := annotation.payload
-          schemas := annotation.schemas.map
-            (List.map (Representation.fold collectAlgebra)) }).map f := by
-  cases annotation with
-  | mk name payload schemas =>
-      simp only [checkSchemas]
-      cases schemas with
-      | none => rfl
-      | some values =>
-          simp only [Option.map, map_map_exact]
-          exact collect_modifyRepresentationList values f
-termination_by structural annotation
-
-private theorem collect_modifyCheckAnnotationOptional
-    (annotation : Option (CheckRepresentationAnnotationOf Representation))
-    (f : Annotations → Annotations) :
-    checkSchemasOptional
-        ((annotation.map fun value =>
-          CheckRepresentationAnnotationOf.mk value.id value.payload
-            (value.schemas.map
-              (List.map (Representation.fold (modifyAlgebra f))))).map
-                (fun value =>
-                  CheckRepresentationAnnotationOf.mk value.id value.payload
-                    (value.schemas.map
-                      (List.map (Representation.fold collectAlgebra))))) =
-      (checkSchemasOptional
-        (annotation.map fun value =>
-          CheckRepresentationAnnotationOf.mk value.id value.payload
-            (value.schemas.map
-              (List.map (Representation.fold collectAlgebra))))).map f := by
-  cases annotation with
-  | none => rfl
-  | some value =>
-      simp only [Option.map, checkSchemasOptional]
-      exact collect_modifyCheckAnnotation value f
-termination_by structural annotation
-
-end
+  exact (hom_eq_cata_check (collectAfterModify f) check).trans
+    (hom_eq_cata_check (mapAfterCollect f) check).symm
 
 end AnnotationTraversal
 

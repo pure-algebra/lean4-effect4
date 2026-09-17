@@ -8,7 +8,7 @@ algebra makes omission, duplication, and reordering observable without
 assigning Schema denotation.
 -/
 
-import Effect4.Schema.Representation
+import Effect4.Schema.Fold
 
 namespace Test.Counterexamples.Schema.RecursiveElimination
 
@@ -31,37 +31,36 @@ Preorder labels for every representation and check node reached by the fold.
 Child list order is retained, and the two fields of an index are observed in
 parameter-then-type order.
 -/
-def routeTraceAlgebra :
-    Representation.FoldAlgebra (List String) (List String) where
-  declaration := fun _ _ types checks => node "Declaration" (types ++ checks)
-  reference := fun _ => node "Reference" []
-  suspend := fun _ checks thunk => node "Suspend" (checks ++ [thunk])
-  null := fun _ checks => node "Null" checks
-  undefined := fun _ checks => node "Undefined" checks
-  void := fun _ checks => node "Void" checks
-  never := fun _ checks => node "Never" checks
-  unknown := fun _ checks => node "Unknown" checks
-  any := fun _ checks => node "Any" checks
-  string := fun _ checks => node "String" checks
-  number := fun _ checks => node "Number" checks
-  boolean := fun _ checks => node "Boolean" checks
-  bigint := fun _ checks => node "BigInt" checks
-  symbol := fun _ checks => node "Symbol" checks
-  literal := fun _ checks _ => node "Literal" checks
-  uniqueSymbol := fun _ checks _ => node "UniqueSymbol" checks
-  objectKeyword := fun _ checks => node "ObjectKeyword" checks
-  enum := fun _ checks _ => node "Enum" checks
-  templateLiteral := fun _ checks parts => node "TemplateLiteral" (checks ++ parts)
-  arrays := fun _ checks elements rest =>
+def routeTraceAlgebra : RepresentationAlgebra (fun _ => List String) where
+  representation_declaration := fun _ _ types checks => node "Declaration" (types ++ checks)
+  representation_reference := fun _ => node "Reference" []
+  representation_suspend := fun _ checks thunk => node "Suspend" (checks ++ [thunk])
+  representation_null := fun _ checks => node "Null" checks
+  representation_undefined := fun _ checks => node "Undefined" checks
+  representation_void := fun _ checks => node "Void" checks
+  representation_never := fun _ checks => node "Never" checks
+  representation_unknown := fun _ checks => node "Unknown" checks
+  representation_any := fun _ checks => node "Any" checks
+  representation_string := fun _ checks => node "String" checks
+  representation_number := fun _ checks => node "Number" checks
+  representation_boolean := fun _ checks => node "Boolean" checks
+  representation_bigint := fun _ checks => node "BigInt" checks
+  representation_symbol := fun _ checks => node "Symbol" checks
+  representation_literal := fun _ checks _ => node "Literal" checks
+  representation_uniqueSymbol := fun _ checks _ => node "UniqueSymbol" checks
+  representation_objectKeyword := fun _ checks => node "ObjectKeyword" checks
+  representation_enum := fun _ checks _ => node "Enum" checks
+  representation_templateLiteral := fun _ checks parts => node "TemplateLiteral" (checks ++ parts)
+  representation_arrays := fun _ checks elements rest =>
     node "Arrays" (checks ++ elements.map ElementOf.type ++ rest)
-  objects := fun _ checks properties indexes =>
+  representation_objects := fun _ checks properties indexes =>
     node "Objects"
       (checks ++ properties.map PropertySignatureOf.type ++
         indexes.flatMap fun index => [index.parameter, index.type])
-  union := fun _ checks types _ => node "Union" (checks ++ types)
-  filter := fun representation _ _ =>
+  representation_union := fun _ checks types _ => node "Union" (checks ++ types)
+  check_filter := fun representation _ _ =>
     node "Filter" (schemaTraces representation.schemas)
-  filterGroup := fun representation _ checks =>
+  check_filterGroup := fun representation _ checks =>
     node "FilterGroup" (optionalAnnotationTraces representation ++ checks)
 
 /--
@@ -86,7 +85,7 @@ def shallowRootAndCheckTrace : Representation -> List String
 
 /- The general fold must also observe the schema nested in the filter. -/
 theorem nestedFilterSchema_trace :
-    Representation.fold routeTraceAlgebra nestedFilterSchema =
+    cata_representation routeTraceAlgebra nestedFilterSchema =
       ["String", "Filter", "Number"] := by
   decide
 
@@ -129,7 +128,7 @@ Every recursive route has a distinct label. Any omission, duplication, or
 route-order change alters this exact trace.
 -/
 theorem allRecursiveRoutes_trace :
-    Representation.fold routeTraceAlgebra allRecursiveRoutes =
+    cata_representation routeTraceAlgebra allRecursiveRoutes =
       [ "Declaration"
       , "Arrays", "Null", "Undefined"
       , "Objects", "Void", "Never", "Unknown"
