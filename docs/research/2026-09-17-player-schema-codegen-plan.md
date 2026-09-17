@@ -116,6 +116,26 @@ Still owed for the table above: the bytes boundary. `Command`, `Phase`, `Refusal
 the generator (the `Api` group derives four types today), then `stepBytes`, `inspectBytes` and
 `schemaOf` are one line each, and the player joins the LCNF roots.
 
+**To settle when the bytes boundary is designed** (raised while reading the landed API with
+the owner, 2026-09-17; none blocks anything built so far):
+
+1. **The row table travels by value.** `Header` and every `Call` carry the whole `RowTable`, and
+   the session compares them. On the wire that repeats the table in every call row. It should
+   be an address (a reference to the table's node), so the check compares two addresses. This
+   needs the store's `get`, so it waits for §6.
+2. **`Phase` is a verdict, and the name says stage.** `bound`, `preflight`, `applied`,
+   `progressed`, `frontier`, `refused why`. The player API may rename it (`Verdict`) at the
+   boundary and keep `HostSession`'s name inside.
+3. **`frontier` is the one phase with no law.** A refused row leaves the player unchanged; a
+   `frontier` row moved the machine and did not consume the call, and the holder plays the same
+   row again or the job gets more fuel. What a journal records for that (the same row twice,
+   or one row with the fuel it took) is a journal-format decision, and it decides whether two
+   holders with different fuel write the same journal. Recommended: fuel is the job's and
+   fixed, so a `frontier` row is recorded as played and replays identically.
+4. **Header fields are claims checked once and then on every row** (version, session, profile,
+   table). That is what makes a row in the wrong journal a refusal and not a state change; the
+   journal format should keep rows self-describing for the same reason.
+
 ## 4b. The holder: what keeps a player running (owner, same day)
 
 A player is pure, so something must hold it: keep its events, answer its parks, expose it.
