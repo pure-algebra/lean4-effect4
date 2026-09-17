@@ -131,29 +131,37 @@ one function with one equation and leaves the reader untyped. (b) is the princip
 owner wants B19 kept without exception; it is a larger reader. Steps 1 to 5 of §4 do not depend
 on the answer.
 
-## 5b. Open question from the owner: the reader as an `Eff` program
+## 5b. The reader as an authored `Eff` program (the owner's question; scouted 2026-09-17)
 
-Looked at against the tree on 2026-09-17, not designed yet.
+Scout note: `docs/research/2026-09-17-scout-reader-as-eff-program.md`, eight compiled probes; the
+coordinator re-ran probes 1 and 2 and got the note's results. The coordinator's first assessment
+was wrong on two points and the owner was right: the authoring layer is a Lean-hosted builder, so
+a Lean function over the table authors the reader.
 
-- What one layer of reading is: match one node against a finite table of bounded-depth
-  templates. That is a finite decision tree on tags and arities, which is what `select … (.tag t)`
-  with `pair`, `fst`, `snd`, `isSome` expresses, in the straight fragment, where `run_eq_meaning`
-  already relates the machine to the meaning.
-- What it is not: the recursion over the tree. `Eff` has no recursive definitions and no
-  function values; its only iteration is `iterate` over a cursor. The recursion stays the
-  generic fold, with the layer reader as its step.
-- What is missing today: a `TypeScript.Expr` has no encoding as a `Val` (an `Image` instance
-  would be generated, as for the core families); argument lists need list atoms, which the
-  language lacks (`Val.list` exists, no `head`, `tail` or `length` atom; already a recorded gap).
-- What it would buy: R6 for free. The host reader would be the layer reader printed by this
-  repository's own printer as Effect TypeScript, not a second matcher hand-written in
-  `ts/eff/read.ts`; the OCaml engine would run the same program. One definition on every face.
-- What it costs: the round-trip laws become statements about `denote` of a generated program,
-  where `match_inst` is a structural induction on templates. The cheap way to keep both is a
-  compile theorem, `denote (compileLayer table) node = matchLayer table node`, proved once, so
-  the laws stay on `matchT`.
-- Where it fits: after R5.2, as the way to do R6, if list atoms land first. It does not change
-  steps 1 to 5.
+- **It works today with no language addition.** One layer of the reader, folded out of a table by
+  a Lean function with the existing sugar (`selectTag`, `ifElse`, `app "eq"`, `fst`, `snd`), is in
+  `Straight`, its meaning equals a Lean `matchLayer` on hits and misses, the machine agrees at
+  `run_eq_meaning`'s budget, and it prints through this repository's printer using prelude names
+  that already exist. A 38-row layer is 46 KB on the wire.
+- **List atoms are not needed**: a cons list as tagged pairs is taken apart by `select … (.tag
+  "cons")` with `fst` and `snd`. The real gap is elsewhere: the generated `Image` of a type is
+  `Val.ctor index args`, and no atom or decision can see a `Val.ctor`. So the input is encoded as
+  tagged pairs (free), or two atoms land (`ctorIndex`, `ctorArg`; about the `isSome`/`getOrElse`
+  cascade, raw programs only).
+- **The recursion stays outside.** Authoring-time unrolling grows by the table's total arity per
+  level (measured; tens of megabytes at depth 3 for the real table). A worklist under `iterate`
+  runs and does not type. The layer as a program under the generic fold is the shape.
+- **Two limits.** `Ty` has no recursive type, so a general reader is a raw program with no typed
+  module; and `run_eq_meaning` and the loop agreement are stated at the empty environment, so
+  they do not cover a program with a free node variable (a closed program per node does type and
+  emit).
+- **It is circular until R5**: the authored reader is built from `select … (.tag _)`, which
+  `readable` refuses until the generic reader lands. So it cannot precede R5.
+- **Verdict, accepted:** R6 as §4 step 7 says (export the table, one matcher in TypeScript: one
+  new artefact against three). The reader as a program follows R5.2 as a worked demonstration of
+  a compiler written in the language, in three small slices (the real table folded into a `Src`
+  with per-row guards; one compile theorem against `matchLayer`, so the laws stay on `matchT`;
+  the closed variant printed and run on the host). Steps 1 to 5 do not wait for it.
 
 ## 6. What this does not do
 
