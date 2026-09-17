@@ -426,6 +426,74 @@ we could have another program be in for the lambda". Rulings taken:
   costs a definition and a `#guard`, never an arm in an owner. `Api.author` certifies the
   result as it certifies everything else.
 
+**Abstractions proposed (2026-09-16 late night, on the owner's "think of clean useful
+abstractions").** In the order I would take them.
+
+1. **The environment-indexed catamorphism, generated once.** `cata_env E ext` is `cata_eff`
+   at the carrier `E → R` where the extension at every binder is read from the binder
+   table for any `E`: types (`effTy`), values (`denote`), names (the authoring reader),
+   levels (`scopedAt`), depth (`print`). The five owners that thread an environment by hand
+   become instances, the extension's agreement with `Node.binders` is one generated lemma
+   per constructor instead of five hand-kept invariants, and the advisory's "uniform
+   environment extension functor" is this object.
+2. **`Decision` as a typed prism.** `decide` is a prism `Val ⇀ Bool × Option Val`, `arms`
+   its image on types, `decide_typed` the prism's typing law; `catchIf`'s test is the same
+   shape. Every eliminator the language will want (`optionCase`, `caseTag`, a `listCase` on
+   `[]` and `x :: xs`, an `exitCase` on success and failure) is one more typed prism in
+   `Data/Optic.lean`'s vocabulary and one constructor of `Decision`, never a constructor of
+   `Eff`. This is the owner's optics steer landing where it pays.
+3. **Match compilation as a fold with the residual as the checker.** `matchTag` is a
+   `foldr` over arms into nested `select`; exhaustiveness is "the residual is `never`" and
+   redundancy is "`payloadTy` is `none` at this arm", both read off `arms`, so the
+   Maranget-style checks a compiler hand-writes come free, and a fallthrough on a `never`
+   residual is refusable with a path.
+4. **The `eff` notation, now that `select` exists** (the macro `docs/STATE.md` deferred).
+   A `do`-shaped surface over `Src Op` expanded by `macro_rules` into the lifts:
+
+   ```lean
+   eff do
+     let r ← Ref.make (nat 1)
+     let v ← Ref.get r
+     match v with
+     | tag "A" p => succeed p
+     | tag "B" q => fail q
+     | rest      => succeed rest
+     loop c from (nat 0) while (lt c (nat 3)) step (succ c) do
+       Ref.set r c
+     try body catch tag "Timeout" e => recover e
+   ```
+
+   `let x ← e` is `bind`, `match … with | tag … | some … | none … | rest …` is a `matchTag`
+   or `optionCase` fold, `if … then … else …` is `select … .bool`, `loop` is `iterate`,
+   `try … catch tag` is `catchIf`, `fork`/`scoped` are their lifts. The expansion is data
+   under `Api.author`, so a legible program and a certified one are the same thing.
+5. **Schedules as an algebra folded into `iterate`.** A `Schedule` data type (`recurs n`,
+   `spaced d`, `exponential b`, `andThen`, `whileInput p`, `upTo n`) with `retry policy
+   body` and `repeat policy body` as folds into `iterate` whose cursor is the schedule
+   state, the failure caught by `catchIf`/`catchCause` and fed back as the next cursor.
+   That is how Effect's `Schedule` is built (a state machine), and it lands the Schedule
+   module of the imported surface as forms, not rows.
+6. **Sessions as list folds.** A session is a list of steps folded by the same lifts, so
+   the inspection protocol's `evaluate` takes a list-shaped program and the `gen`
+   retirement's target (`Stmt`s read into `bind`, `select`, `iterate`) is the same list
+   fold: one shape for what a model sends, what a generator body reads to, and what the
+   authoring layer builds.
+7. **Generated statements for the hand-lemma families.** Each family in the ledger of §3b
+   is a component of a homomorphism condition, so its statements (`suspendBodyAt_X_*`,
+   `meaning_X_*`, `intro_X`, `denoteR_X`) are uniform in the constructor and can be emitted
+   as the scope lemmas' are, with a dispatcher tactic; the `Decision`-shaped constructs then
+   get one proof through `decide_typed`.
+8. **Typed holes at authoring** (Q23 of the layout note): `hole T` in the authoring layer,
+   refused as "hole at path p has type T", so a model is told what to fill rather than
+   refused whole.
+
+**On the binder rule's two spellings.** The advisory's `| .eff (.select _ d _ _), 0 =>
+d.binds.1` and the packet's per-head rows compute the same table; the rows were taken
+because the lifts must push exactly the names each decision binds, and a lift over a
+concrete head is a plain lift whose scope lemma reduces by `rfl`, while a lift over
+`(d.binds).1` would push `slots.take` and need a `take` lemma in every scope proof. The
+agreement `Node.binders (.select s d a0 a1) i = (d.binds).i` is one `cases d <;> rfl`.
+
 ## 4. Order
 
 0. **Three refactors on the tree as it is, before the constructor exists**, each its own commit, built and checked before the next (ruling of 2026-09-16, `2026-09-16-algebraic-reading-assessment-and-order-ruling.md`; the register's B17, B5 and B6 attached them to this slice, and doing them first means `select` pays one row each instead of one arm each).

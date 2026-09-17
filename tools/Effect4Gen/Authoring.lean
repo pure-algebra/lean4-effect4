@@ -50,6 +50,12 @@ structure Row where
   args : List (List Nat)
   closed : List Nat
   whenHead : Option Name
+  /-- The argument whose head `whenHead` names: `0` unless the row says otherwise. A row
+  conditioned on a data argument (`select` on its `Decision`) is one of several for the
+  constructor, one per head, and each gets its own lift (`lift`). -/
+  whenArg : Nat
+  /-- The lift's name for a head-conditioned row on a data argument. -/
+  lift : Option String
 
 structure Profile where
   families : List Name
@@ -82,8 +88,14 @@ def parseRow (j : Json) : Except String Row := do
   let whenHead ← match j.getObjVal? "whenHead" with
     | .ok v => do let s ← v.getStr?; pure (some s.toName)
     | .error _ => pure none
+  let whenArg ← match j.getObjVal? "whenArg" with
+    | .ok v => v.getNat?
+    | .error _ => pure 0
+  let lift ← match j.getObjVal? "lift" with
+    | .ok v => do let s ← v.getStr?; pure (some s)
+    | .error _ => pure none
   return { ctor := ctor.toName, slots := slots.toList, args := args.toList,
-           closed := closed.toList, whenHead }
+           closed := closed.toList, whenHead, whenArg, lift }
 
 def parseTable (text : String) : Except String Table := do
   let j ← Json.parse text
@@ -182,6 +194,37 @@ def rowOf (t : Table) (c : Ctor) : Except String (Option Row) := do
       throw s!"binders.json: {c.name} has {c.args.length} arguments, the row lists {r.args.length}"
     return some r
 
+/-- The head-conditioned rows of a constructor whose conditioning argument is a data
+argument (not a node): one per head, each with its own binder counts and lift. -/
+def dataHeadRowsOf (t : Table) (c : Ctor) : Except String (List Row) := do
+  let rs := t.rows.filter fun r =>
+    r.ctor == c.name && r.whenHead.isSome && (c.args[r.whenArg]?).any (·.kind == .other)
+  for r in rs do
+    if r.args.length != c.args.length then
+      throw s!"binders.json: {c.name} has {c.args.length} arguments, the row lists {r.args.length}"
+    if r.lift.isNone then
+      throw s!"binders.json: the head-conditioned row of {c.name} on argument {r.whenArg} names no lift"
+  return rs
+
+/-- The constructor of a data type applied to its fields, as a pattern (`(.tag _)`) or as a
+term over named fields (`(.tag tag)`). -/
+def headPattern (h : Name) (numFields : Nat) : String :=
+  if numFields == 0 then s!".{shortName h}" else s!"(.{shortName h}{wild numFields})"
+
+/-- The binder count each head of a data argument gives argument `j`, as a `match` over
+every head of the data type (a head with no row binds nothing). -/
+def headCountMatch (rows : List Row) (condArg : Nat) (j : Nat) : MetaM (Option String) := do
+  let some r0 := rows.head? | return none
+  let some h0 := r0.whenHead | return none
+  let ci ← getConstInfoCtor h0
+  let ind ← getConstInfoInduct ci.induct
+  let counts ← ind.ctors.mapM fun h => do
+    let hc ← getConstInfoCtor h
+    let count := (rows.find? (·.whenHead == some h)).bind (fun r => r.args[j]?) |>.map (·.length) |>.getD 0
+    return s!"| {headPattern h hc.numFields} => {count}"
+  if counts.all (·.endsWith "=> 0") then return none
+  return some s!"(n + match a{condArg} with {String.intercalate " " counts})"
+
 /-! ## Group Binders -/
 
 def emitBinders (t : Table) (ctors : List Ctor) : MetaM (String × List String) := do
@@ -199,7 +242,7 @@ def emitBinders (t : Table) (ctors : List Ctor) : MetaM (String × List String) 
       | none => pure s!".{nodeCtor} (.{c.short}{wild c.numFields})"
       | some h =>
         let hc ← getConstInfoCtor h
-        pure s!".{nodeCtor} (.{c.short} (.{shortName h}{wild hc.numFields}){wild (c.numFields - 1)})"
+        pure s!".{nodeCtor} (.{c.short}{wild r.whenArg} (.{shortName h}{wild hc.numFields}){wild (c.numFields - r.whenArg - 1)})"
     for (scope, j) in r.args.zipIdx do
       match nodeRank c j with
       | some rank =>
@@ -274,16 +317,25 @@ def resultTypeOf : Name → String
 def quoteList (xs : List String) : String :=
   "[" ++ String.intercalate ", " (xs.map fun s => s!"\"{s}\"") ++ "]"
 
-/-- One lift. `none` when the constructor has an argument no lift can take. -/
-def emitLift (t : Table) (c : Ctor) : MetaM (Option (String × String)) := do
-  -- Only the lifted families get lifts; the spines and statements are read for the table alone.
-  if !t.profile.families.contains c.fam then return none
-  if (t.profile.readerOnly ++ t.profile.machineOnly ++ t.profile.handWritten).contains c.name then
-    return none
-  let row? ← match rowOf t c with
-    | .ok r => pure r
-    | .error e => throwError e
-  let row? := row?.bind fun r => if r.whenHead.isSome then none else some r
+/-- Whether a constructor gets a lift at all: only the lifted families, and none of the
+profile's reader-only, machine-only or hand-written heads. -/
+def liftable (t : Table) (c : Ctor) : Bool :=
+  t.profile.families.contains c.fam &&
+    !(t.profile.readerOnly ++ t.profile.machineOnly ++ t.profile.handWritten).contains c.name
+
+def liftDefName (t : Table) (c : Ctor) : String :=
+  (t.profile.renames.find? (·.1 == c.name)).map (·.2) |>.getD c.short
+
+/-- The head of a data argument applied to its fields, as a term over the field names. -/
+def headTerm (hc : Ctor) : String :=
+  if hc.args.isEmpty then s!".{hc.short}"
+  else "(." ++ hc.short ++ " " ++ String.intercalate " " (hc.args.map (·.name)) ++ ")"
+
+/-- One lift over a row. `none` when the constructor has an argument no lift can take.
+`fixed?` names a data argument fixed to a head, whose fields become the lift's parameters:
+the head-conditioned rows' lifts (`selectOption`, `selectTag`). -/
+def emitLiftCore (t : Table) (c : Ctor) (row? : Option Row) (fixed? : Option (Nat × Ctor))
+    (defName : String) : MetaM (Option (String × String)) := do
   let slots := (row?.map (·.slots)).getD []
   let scopeOf (j : Nat) : String :=
     match row? with
@@ -294,7 +346,6 @@ def emitLift (t : Table) (c : Ctor) : MetaM (Option (String × String)) := do
         | some ixs => if ixs.isEmpty then "env"
             else "(env.push [" ++ String.intercalate ", " (ixs.filterMap fun i => slots[i]?) ++ "])"
         | none => "env"
-  let defName := (t.profile.renames.find? (·.1 == c.name)).map (·.2) |>.getD c.short
   let fullName := liftPrefix c.fam ++ defName
   let opParam := if c.fam == `Effect4.Program.CauseTerm then "" else "{Op : Type} "
   -- Parameters.
@@ -303,6 +354,11 @@ def emitLift (t : Table) (c : Ctor) : MetaM (Option (String × String)) := do
   let mut results : List String := []
   let mut usesEnv := false
   for (a, j) in c.args.zipIdx do
+    if let some (k, hc) := fixed? then
+      if j == k then
+        params := params ++ hc.args.map fun f => s!"({f.name} : {f.tyText})"
+        results := results ++ [headTerm hc]
+        continue
     match a.kind with
     | .other =>
       params := params ++ [s!"({a.name} : {a.tyText})"]
@@ -347,11 +403,33 @@ def emitLift (t : Table) (c : Ctor) : MetaM (Option (String × String)) := do
     else s!"  fun _ _ => .ok ({ctorApp})"
   return some (doc ++ "\n" ++ header ++ "\n" ++ body ++ "\n", "Effect4.Program.Authoring." ++ fullName)
 
+/-- The one lift of a constructor with a plain row (or no row). -/
+def emitLift (t : Table) (c : Ctor) : MetaM (Option (String × String)) := do
+  if !liftable t c then return none
+  let row? ← match rowOf t c with
+    | .ok r => pure r
+    | .error e => throwError e
+  let row? := row?.bind fun r => if r.whenHead.isSome then none else some r
+  emitLiftCore t c row? none (liftDefName t c)
+
+/-- The lift of one head-conditioned row on a data argument: the head's fields are
+parameters and the argument is the head applied to them. -/
+def emitLiftRow (t : Table) (c : Ctor) (r : Row) : MetaM (Option (String × String)) := do
+  let some h := r.whenHead | return none
+  let hc ← readCtor [] h
+  emitLiftCore t c (some r) (some (r.whenArg, hc)) (r.lift.getD c.short)
+
 def emitLifts (t : Table) (ctors : List Ctor) : MetaM (String × List String) := do
   let mut text := ""
   let mut receipts := []
   for c in ctors do
-    if let some (d, name) ← emitLift t c then
+    let dataRows ← match dataHeadRowsOf t c with | .ok rs => pure rs | .error e => throwError e
+    if !dataRows.isEmpty && liftable t c then
+      for r in dataRows do
+        if let some (d, name) ← emitLiftRow t c r then
+          text := text ++ d ++ "\n"
+          receipts := receipts ++ [name]
+    else if let some (d, name) ← emitLift t c then
       text := text ++ d ++ "\n"
       receipts := receipts ++ [name]
   return (text, receipts)
@@ -400,6 +478,15 @@ def emitScoped (t : Table) (ctors : List Ctor) : MetaM (String × List String) :
   for c in ctors do
     let some famKey := nodeCtorOf c.fam | continue
     let row? ← match rowOf t c with | .ok r => pure r | .error e => throwError e
+    -- a table conditioned on a data argument: each argument's level is a `match` on the head
+    let dataRows ← match dataHeadRowsOf t c with | .ok rs => pure rs | .error e => throwError e
+    let condArg? : Option Nat := dataRows.head?.map (·.whenArg)
+    let mut dataLevels : Array (Option String) := #[]
+    for j in [0:c.args.length] do
+      dataLevels := dataLevels.push (← match condArg? with
+        | some k => headCountMatch dataRows k j
+        | none => pure none)
+    let row? := if dataRows.isEmpty then row? else none
     let headRow := row?.any (·.whenHead.isSome)
     -- the sibling whose head decides a `whenHead` row's binders: the flagged family's argument
     let headArg? : Option Nat :=
@@ -407,6 +494,9 @@ def emitScoped (t : Table) (ctors : List Ctor) : MetaM (String × List String) :
         | .node f => flagged f | _ => false).map (·.2) else none
     let plainRow? := if headRow then none else row?
     let lvl (j : Nat) (algebra : Bool) : String :=
+      match dataLevels[j]? with
+      | some (some s) => s
+      | _ =>
       match row?, headArg? with
       | some r, some k =>
         match r.args[j]? with
@@ -435,7 +525,9 @@ def emitScoped (t : Table) (ctors : List Ctor) : MetaM (String × List String) :
       if ps.isEmpty then "true" else String.intercalate " && " ps
     let usesN (body : String) : Bool := (body.splitOn "n ").length > 1 || body.endsWith "n" || (body.splitOn "n)").length > 1
     let binders := String.intercalate " " (c.args.zipIdx.map fun (a, j) =>
-      match a.kind with | .other => "_" | _ => s!"a{j}")
+      match a.kind with
+      | .other => if condArg? == some j then s!"a{j}" else "_"
+      | _ => s!"a{j}")
     let lam (body : String) : String :=
       let nb := if isLayerFam c.fam || !usesN body then "_" else "n"
       if binders.isEmpty then s!"fun {nb} => {body}" else s!"fun {binders} {nb} => {body}"
@@ -525,14 +617,8 @@ def hypOf (kind : ArgKind) (name : String) : Option String :=
   | .optionTerm => some s!"∀ t ∈ {name}, t.Scoped"
   | .other => none
 
-def emitLiftLemma (t : Table) (c : Ctor) : MetaM (Option (String × String)) := do
-  if !t.profile.families.contains c.fam then return none
-  if (t.profile.readerOnly ++ t.profile.machineOnly ++ t.profile.handWritten).contains c.name then
-    return none
-  let row? ← match rowOf t c with
-    | .ok r => pure r
-    | .error e => throwError e
-  let row? := row?.bind fun r => if r.whenHead.isSome then none else some r
+def emitLiftLemmaCore (t : Table) (c : Ctor) (row? : Option Row) (fixed? : Option (Nat × Ctor))
+    (defName : String) : MetaM (Option (String × String)) := do
   let slots := (row?.map (·.slots)).getD []
   let closedArg (j : Nat) : Bool := match row? with
     | none => false
@@ -540,7 +626,6 @@ def emitLiftLemma (t : Table) (c : Ctor) : MetaM (Option (String × String)) := 
   let pushedArg (j : Nat) : Bool := match row? with
     | none => false
     | some r => (r.args[j]?).any (fun ixs => !ixs.isEmpty)
-  let defName := (t.profile.renames.find? (·.1 == c.name)).map (·.2) |>.getD c.short
   let fullName := liftPrefix c.fam ++ defName
   let isCause := c.fam == `Effect4.Program.CauseTerm
   let mut params : List String :=
@@ -552,6 +637,11 @@ def emitLiftLemma (t : Table) (c : Ctor) : MetaM (Option (String × String)) := 
   let mut ss : List String := []
   let mut optionArg : Option Nat := none
   for (a, j) in c.args.zipIdx do
+    if let some (k, hc) := fixed? then
+      if j == k then
+        params := params ++ hc.args.map fun f => s!"({f.name} : {f.tyText})"
+        appArgs := appArgs ++ [headTerm hc]
+        continue
     appArgs := appArgs ++ [a.name]
     match a.kind with
     | .other => params := params ++ [s!"({a.name} : {a.tyText})"]
@@ -588,11 +678,30 @@ def emitLiftLemma (t : Table) (c : Ctor) : MetaM (Option (String × String)) := 
     s!"  unfold {fullName} at h"] ++ steps ++ ["  cases h"] ++ haves ++ [finish, ""])
   return some (text, s!"Effect4.Program.Authoring.{fullName}_scoped")
 
+def emitLiftLemma (t : Table) (c : Ctor) : MetaM (Option (String × String)) := do
+  if !liftable t c then return none
+  let row? ← match rowOf t c with
+    | .ok r => pure r
+    | .error e => throwError e
+  let row? := row?.bind fun r => if r.whenHead.isSome then none else some r
+  emitLiftLemmaCore t c row? none (liftDefName t c)
+
+def emitLiftLemmaRow (t : Table) (c : Ctor) (r : Row) : MetaM (Option (String × String)) := do
+  let some h := r.whenHead | return none
+  let hc ← readCtor [] h
+  emitLiftLemmaCore t c (some r) (some (r.whenArg, hc)) (r.lift.getD c.short)
+
 def emitLiftLemmas (t : Table) (ctors : List Ctor) : MetaM (String × List String) := do
   let mut text := ""
   let mut receipts := []
   for c in ctors do
-    if let some (d, name) ← emitLiftLemma t c then
+    let dataRows ← match dataHeadRowsOf t c with | .ok rs => pure rs | .error e => throwError e
+    if !dataRows.isEmpty && liftable t c then
+      for r in dataRows do
+        if let some (d, name) ← emitLiftLemmaRow t c r then
+          text := text ++ d ++ "\n"
+          receipts := receipts ++ [name]
+    else if let some (d, name) ← emitLiftLemma t c then
       text := text ++ d ++ "\n"
       receipts := receipts ++ [name]
   return (text, receipts)
