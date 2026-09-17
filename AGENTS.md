@@ -86,6 +86,16 @@ number in a report behind a command; `ocaml/README.md` is its map.
   commits, never `git add`s, and never edits `src/Effect4.lean`,
   `Test/All.lean`, `Test/Audit/AxiomGate.lean` or `lakefile.toml`.
 - One `lake` at a time in a working tree.
+- In `src/Effect4/Laws/**` a proof closes with tactics that say what they use: no `simp_all`,
+  no `first | …`, no `try`, no `aesop`; `simp` names its lemmas as `simp only [...]` in new or
+  touched proofs (older bare `simp` calls are tolerated until their file is next edited). A
+  search tactic that fails silently into an unsolved goal hides a missing lemma, and an
+  unbounded `simp` is the usual reason a law module builds slowly. Outside `Laws/` the rule is
+  advisory.
+- Verification is narrow per step and swept per wave: build the modules a change touches
+  (`lake build <module>`, or `lake env lean <file>` for a test), and run `make check` and
+  `make check-host` once when a wave closes. A docstring or comment edit cannot break a
+  dependent module and needs no build of it.
 - On Windows the shell is PowerShell; the bash gate scripts run through WSL.
 - A proof graph is mandatory only for admission or refusal, judgments or
   denotations, interpreters or handlers, reification or generated-code
