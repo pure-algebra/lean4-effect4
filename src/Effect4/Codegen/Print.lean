@@ -62,6 +62,9 @@ inductive Head
   | layerMerge | layerFresh | layerOrDie
   | layerMergeAll
   | catchError | catchIf
+  /-- The prelude's two `select` heads (the `select` packet §1.8): `optionCase(s, onNone,
+  onSome)` and `caseTag(s, "tag", hit, miss)`, each suspending internally. -/
+  | optionCase | caseTag
 deriving DecidableEq, Repr
 
 /-- The spelling of each head, exactly as `print` emits it. -/
@@ -76,6 +79,8 @@ def Head.spelling : Head → String
   | .catchCause => "Effect.catchCause"
   | .catchError => "Effect.catch"
   | .catchIf => "Effect.catchIf"
+  | .optionCase => "optionCase"
+  | .caseTag => "caseTag"
   | .matchCauseEffect => "Effect.matchCauseEffect"
   | .onExit => "Effect.onExit"
   | .exit => "Effect.exit"
@@ -130,7 +135,8 @@ def heads : List Head :=
   , .causeCombine, .undefined, .withFiber
   , .contextService, .provide, .service, .provideService
   , .layerSucceed, .layerEffect, .layerEffectDiscard, .layerProvide, .layerProvideMerge
-  , .layerMerge, .layerFresh, .layerOrDie, .layerMergeAll, .catchError, .catchIf ]
+  , .layerMerge, .layerFresh, .layerOrDie, .layerMergeAll, .catchError, .catchIf
+  , .optionCase, .caseTag ]
 
 /-- Every spelling the printer reserves: a row's spelling and a term's atom must avoid
 these. -/
@@ -374,6 +380,23 @@ mutual
       let a ← print sig n thenB
       let b ← print sig n elseB
       .ok (.call (.ident "Effect.suspend") [.arrow none (.cond (printTerm test) a b)])
+    -- `select`: `branch`'s image under `.bool`; `Option.match` with the some-value bound
+    -- under `.option`; the prelude's `caseTag` with the payload and the rest bound under
+    -- `.tag` (the `select` packet §1.8)
+    | .select s .bool a0 a1 => do
+      let a ← print sig n a0
+      let b ← print sig n a1
+      .ok (.call (.ident "Effect.suspend") [.arrow none (.cond (printTerm s) a b)])
+    | .select s .option a0 a1 => do
+      let a ← print sig n a0
+      let b ← print sig (n + 1) a1
+      .ok (.call (.ident "optionCase")
+        [ printTerm s, .arrow none a, .lambda [⟨Var.name n, none⟩] b ])
+    | .select s (.tag t) a0 a1 => do
+      let a ← print sig (n + 1) a0
+      let b ← print sig (n + 1) a1
+      .ok (.call (.ident "caseTag")
+        [ printTerm s, .str t, .lambda [⟨Var.name n, none⟩] a, .lambda [⟨Var.name n, none⟩] b ])
     | .whileLoop initial test step body => do
       let b ← print sig (n + 1) body
       .ok (.call (.ident "Effect.suspend")

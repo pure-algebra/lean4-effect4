@@ -96,6 +96,9 @@ def codesOf (c : HostConfig) : TypeReason → List Nat
   -- A conditional accepts any type in TypeScript; the always-truthy advice (2872, 2873) is the
   -- nearest thing, and it is advisory.
   | .predicateNotBool _ => []
+  -- `Option.match` or the prelude's `caseTag` on a value of the wrong shape: the argument
+  -- is not assignable (2345); a `t ? a : b` on a non-Boolean is accepted by TypeScript.
+  | .notSelectable _ _ => [2345]
   | .stepNotCursor _ _ => []
   | .notFiber _ => [2345]
   | .scopeExpected _ => [2345]

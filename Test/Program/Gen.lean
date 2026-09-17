@@ -411,9 +411,14 @@ def casesOf (family : String) : Effect4.Store.Shape → List (Head × String)
 def refusedActions : List String :=
   ["interruptScoped", "awaitAllFailFast", "snapshotChildren", "awaitNewChildren", "setContext"]
 
-/-- Every case the printer accepts. -/
+/-- Forms kept out of the round-trip corpus until R5 (`docs/research/2026-09-16-select-and-iterate-ready-packet.md` §1.8). -/
+def pendingEffs : List String :=
+  ["select"]
+
+/-- Every case the printer accepts and the corpus currently draws. -/
 def expected : List (Head × String) :=
-  casesOf "Eff" EffShape ++ casesOf "Stmt" StmtShape ++
+  (casesOf "Eff" EffShape).filter (fun c => !pendingEffs.contains c.2) ++
+    casesOf "Stmt" StmtShape ++
     (casesOf "ActionTerm" ActionTermShape).filter (fun c => !refusedActions.contains c.2) ++
     casesOf "LayerTerm" LayerTermShape
 
@@ -430,6 +435,10 @@ def refusedDrawn : List String :=
 behind the filter. -/
 def refusedUnknown : List String :=
   refusedActions.filter fun n => !(casesOf "ActionTerm" ActionTermShape).any (·.2 == n)
+
+/-- The pending names that are not constructors of `Eff`. -/
+def pendingEffsUnknown : List String :=
+  pendingEffs.filter fun n => !(casesOf "Eff" EffShape).any (·.2 == n)
 
 /-- Whether some program node of the corpus satisfies `p`, through the fold. -/
 def coversEff (p : Eff NativeOp → Bool) : Bool :=
@@ -454,6 +463,7 @@ DI-60 asks of a narrowing commit. -/
 #guard missing = []
 #guard refusedDrawn = []
 #guard refusedUnknown = []
+#guard pendingEffsUnknown = []
 
 /-! ### The printer refuses none of it; every drawn layer reference is well formed -/
 

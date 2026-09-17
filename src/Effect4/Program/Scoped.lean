@@ -45,6 +45,7 @@ def scopedAlgebra (Op : Type) : EffAlgebra Op ScopeCarrier where
   eff_service := fun _ _ => true
   eff_provideService := fun _ a1 a2 n => a1.scoped n && a2 n
   eff_catchIf := fun a0 a1 a2 n => a0.scoped (n + 1) && a1 n && a2 (n + 1)
+  eff_select := fun a0 a1 a2 a3 n => a0.scoped n && a2 (n + match a1 with | .bool => 0 | .option => 0 | (.tag _) => 1) && a3 (n + match a1 with | .bool => 0 | .option => 1 | (.tag _) => 1)
   action_fork := fun a0 _ n => a0 n
   action_forkIn := fun a0 _ a2 n => a0 n && a2.scoped n
   action_forkScoped := fun a0 _ n => a0 n
@@ -163,6 +164,8 @@ def Node.scopedAt {Op : Type} (n : Nat) : Node Op → Bool
     Eff.scopedAt n ((.provideService a0 a1 a2 : Eff Op)) = (a1.scoped n && Eff.scopedAt n a2) := rfl
 @[simp] theorem Eff.scopedAt_catchIf {Op : Type} (n : Nat) (a0 : Effect4.Program.Term) (a1 : Effect4.Program.Eff Op) (a2 : Effect4.Program.Eff Op) :
     Eff.scopedAt n ((.catchIf a0 a1 a2 : Eff Op)) = (a0.scoped (n + 1) && Eff.scopedAt n a1 && Eff.scopedAt (n + 1) a2) := rfl
+@[simp] theorem Eff.scopedAt_select {Op : Type} (n : Nat) (a0 : Effect4.Program.Term) (a1 : Effect4.Program.Decision) (a2 : Effect4.Program.Eff Op) (a3 : Effect4.Program.Eff Op) :
+    Eff.scopedAt n ((.select a0 a1 a2 a3 : Eff Op)) = (a0.scoped n && Eff.scopedAt (n + match a1 with | .bool => 0 | .option => 0 | (.tag _) => 1) a2 && Eff.scopedAt (n + match a1 with | .bool => 0 | .option => 1 | (.tag _) => 1) a3) := rfl
 @[simp] theorem ActionTerm.scopedAt_fork {Op : Type} (n : Nat) (a0 : Effect4.Program.Eff Op) (a1 : Effect4.Supervision.ForkOptions) :
     ActionTerm.scopedAt n ((.fork a0 a1 : ActionTerm Op)) = (Eff.scopedAt n a0) := rfl
 @[simp] theorem ActionTerm.scopedAt_forkIn {Op : Type} (n : Nat) (a0 : Effect4.Program.Eff Op) (a1 : Effect4.Supervision.ForkOptions) (a2 : Effect4.Program.Term) :
@@ -281,6 +284,13 @@ private def u : Eff Unit := .succeed (.lit .unit)
 #guard Eff.scopedAt 0 (.bind (v 0) u) = false
 #guard Eff.scopedAt 0 (.matchCause u (v 0) (v 0)) = true
 #guard Eff.scopedAt 0 (.catchIf (.var 0) u (v 0)) = true
+-- `select`: the arms are one deeper exactly where the decision binds
+#guard Eff.scopedAt 0 (.select (.lit .unit) .bool u u) = true
+#guard Eff.scopedAt 0 (.select (.lit .unit) .bool u (v 0)) = false
+#guard Eff.scopedAt 0 (.select (.lit .unit) .option u (v 0)) = true
+#guard Eff.scopedAt 0 (.select (.lit .unit) .option (v 0) u) = false
+#guard Eff.scopedAt 0 (.select (.lit .unit) (.tag "A") (v 0) (v 0)) = true
+#guard Eff.scopedAt 0 (.select (.var 0) (.tag "A") u u) = false
 #guard Eff.scopedAt 0 (.acquireRelease u (v 1)) = true
 #guard Eff.scopedAt 0 (.acquireRelease u (v 2)) = false
 #guard Eff.scopedAt 0 (.whileLoop (.lit .unit) (.var 0) (.var 1) (v 0)) = true

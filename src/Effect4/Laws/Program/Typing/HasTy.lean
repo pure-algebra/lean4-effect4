@@ -134,6 +134,18 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
       EffTy.joinAnswer b.answer h.answer = some answer →
       HasTy sig env (.catchIf test body handler)
         ⟨answer, catchIfError test env.length b.error h.error, b.requires.union h.requires⟩
+  /-- A value-decided fork: the arms are typed at the environments `Decision.arms` gives,
+  their answers join as the least upper bound, both arms' errors and requirements are in the
+  conclusion. `branch` is the `.bool` instance. -/
+  | select {env : TyEnv} {s : Term} {d : Decision} {a0 a1 : Eff Op} {t : Ty}
+      {e0 e1 : List Ty} {t0 t1 : EffTy} {answer : Ty} :
+      termTy sig env s = some t →
+      d.arms t = some (e0, e1) →
+      HasTy sig (env ++ e0) a0 t0 →
+      HasTy sig (env ++ e1) a1 t1 →
+      EffTy.joinAnswer t0.answer t1.answer = some answer →
+      HasTy sig env (.select s d a0 a1)
+        ⟨answer, t0.error.join t1.error, t0.requires.union t1.requires⟩
   /-- `Effect.matchCauseEffect` (`:2645`): the success branch sees the answer, the failure
   branch the cause; both branches' answers join as the least upper bound and both branches'
   errors survive. -/

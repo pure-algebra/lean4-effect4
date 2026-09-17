@@ -230,6 +230,7 @@ theorem Node.scopedAt_child {Op : Type} {n : Nat} {node c : Node Op} {i : Nat}
     Node.scopedAt (Node.childLevel n node i) c = true := by
   unfold Node.child at hc
   split at hc <;> cases hc <;> (try simp only [Node.childLevel_stmts_cons]) <;>
+    (try cases ‹Decision›) <;>
     simp_all [Node.scopedAt, Node.childLevel, Node.binders, Node.closedChild]
 
 end Effect4.Program.Authoring

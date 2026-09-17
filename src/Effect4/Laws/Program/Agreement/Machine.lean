@@ -170,6 +170,10 @@ theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), Straight e = tru
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; rfl
     · rw [compileEff_branch t a b hf]; rfl
+  | .select s d a b, p, _ => by
+    rcases hf : p.fuel with _ | k
+    · rw [compileEff_zero _ hf]; rfl
+    · rw [compileEff_select s d a b hf]; rfl
   | .exit b, p, hpl => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; rfl
@@ -284,8 +288,8 @@ theorem plainCode_suspendBodyAt {root : NativeEff} (hroot : Straight root = true
         · -- outside the decided heads: the body is the node compiled at its point
           rw [suspendBodyAt_of_at hf h hd]
           exact plainCode_compileEff _ q he
-        · -- a straight decided head is a source suspension or a branch
-          rcases (Straight.suspendDecided_iff he).mp hd with ⟨b, rfl⟩ | ⟨t, a, b, rfl⟩
+        · -- a straight decided head is a source suspension, branch, or select
+          rcases (Straight.suspendDecided_iff he).mp hd with ⟨b, rfl⟩ | ⟨t, a, b, rfl⟩ | ⟨s, d, a, b, rfl⟩
           · rw [suspendBodyAt_suspend hf h]
             exact plainCode_resolve hroot _
           · rcases hbo : boolOf (evalTerm q.env t) with _ | flag
@@ -294,6 +298,10 @@ theorem plainCode_suspendBodyAt {root : NativeEff} (hroot : Straight root = true
               cases flag
               · rw [suspendBodyAt_branch_false hf h ht]; exact plainCode_resolve hroot _
               · rw [suspendBodyAt_branch_true hf h ht]; exact plainCode_resolve hroot _
+          · rcases hdec : (evalTerm q.env s).bind d.decide with _ | ⟨first, bound⟩
+            · rw [suspendBodyAt_select_bad hf h hdec]; rfl
+            · rw [suspendBodyAt_select_of_decide hf h hdec]
+              exact plainCode_resolve hroot _
       | stmts _ => rw [suspendBodyAt_other hf h (fun _ h => by cases h)]; rfl
       | stmt _ => rw [suspendBodyAt_other hf h (fun _ h => by cases h)]; rfl
       | action _ => rw [suspendBodyAt_other hf h (fun _ h => by cases h)]; rfl

@@ -172,6 +172,30 @@ def catchIf {Op : Type} (error : String) (test : TermSrc) (body : Src Op) (handl
     let x2 ← handler (env.push [error]) (p ++ [1])
     .ok (.catchIf x0 x1 x2)
 
+/-- `Effect4.Program.Eff.select`: . -/
+def selectBool {Op : Type} (scrutinee : TermSrc) (arm0 : Src Op) (arm1 : Src Op) : Src Op :=
+  fun env p => do
+    let x0 ← scrutinee env p
+    let x2 ← arm0 env (p ++ [0])
+    let x3 ← arm1 env (p ++ [1])
+    .ok (.select x0 .bool x2 x3)
+
+/-- `Effect4.Program.Eff.select`: `arm1` sees `bound`. -/
+def selectOption {Op : Type} (bound : String) (scrutinee : TermSrc) (arm0 : Src Op) (arm1 : Src Op) : Src Op :=
+  fun env p => do
+    let x0 ← scrutinee env p
+    let x2 ← arm0 env (p ++ [0])
+    let x3 ← arm1 (env.push [bound]) (p ++ [1])
+    .ok (.select x0 .option x2 x3)
+
+/-- `Effect4.Program.Eff.select`: `arm0` sees `payload`; `arm1` sees `rest`. -/
+def selectTag {Op : Type} (payload : String) (rest : String) (scrutinee : TermSrc) (tag : String) (arm0 : Src Op) (arm1 : Src Op) : Src Op :=
+  fun env p => do
+    let x0 ← scrutinee env p
+    let x2 ← arm0 (env.push [payload]) (p ++ [0])
+    let x3 ← arm1 (env.push [rest]) (p ++ [1])
+    .ok (.select x0 (.tag tag) x2 x3)
+
 /-- `Effect4.Program.ActionTerm.fork`. -/
 def Action.fork {Op : Type} (program : Src Op) (options : Effect4.Supervision.ForkOptions) : ActionSrc Op :=
   fun env p => do
@@ -346,6 +370,9 @@ def Cause.both (left : CauseSrc) (right : CauseSrc) : CauseSrc :=
 #print axioms Effect4.Program.Authoring.service
 #print axioms Effect4.Program.Authoring.provideService
 #print axioms Effect4.Program.Authoring.catchIf
+#print axioms Effect4.Program.Authoring.selectBool
+#print axioms Effect4.Program.Authoring.selectOption
+#print axioms Effect4.Program.Authoring.selectTag
 #print axioms Effect4.Program.Authoring.Action.fork
 #print axioms Effect4.Program.Authoring.Action.forkIn
 #print axioms Effect4.Program.Authoring.Action.forkScoped
@@ -396,6 +423,20 @@ open Effect4.Program Effect4.Program.Authoring
 
 #guard elaborate (provideLayer (Layer.effectDiscard (succeed (var "r"))) false (succeed (nat 1)) : Src NativeOp)
   = .error ⟨[0, 0], .unbound "r"⟩
+
+-- `select`: one lift per decision, the bound names first as every lift spells them; a name
+-- bound after `o` is level 1 (variables are levels from the front of the environment)
+#guard elaborate (selectOption "x" (var "o") (succeed (nat 0)) (succeed (var "x")) : Src NativeOp)
+  = .error ⟨[], .unbound "o"⟩
+
+#guard elaborate (bind "o" (succeed (nat 0)) (selectOption "x" (var "o") (succeed (nat 0)) (succeed (var "x"))) : Src NativeOp)
+  = .ok (.bind (.succeed (.lit (.nat 0))) (.select (.var 0) .option (.succeed (.lit (.nat 0))) (.succeed (.var 1))))
+
+#guard elaborate (bind "o" (succeed (nat 0)) (selectTag "p" "r" (var "o") "A" (succeed (var "p")) (succeed (var "r"))) : Src NativeOp)
+  = .ok (.bind (.succeed (.lit (.nat 0))) (.select (.var 0) (.tag "A") (.succeed (.var 1)) (.succeed (.var 1))))
+
+#guard elaborate (selectBool (bool true) (succeed (nat 1)) (succeed (nat 2)) : Src NativeOp)
+  = .ok (.select (.lit (.bool true)) .bool (.succeed (.lit (.nat 1))) (.succeed (.lit (.nat 2))))
 
 #guard elaborate (withFiber (Action.raceAll [succeed (nat 1), succeed (nat 2)]) : Src NativeOp)
   = .ok (.withFiber (.raceAll (.cons (.succeed (.lit (.nat 1))) (.cons (.succeed (.lit (.nat 2))) .nil))))

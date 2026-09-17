@@ -97,6 +97,12 @@ def childWith (p : Point) (i : Nat) (v : Val) : Point :=
 def childWith2 (p : Point) (i : Nat) (v w : Val) : Point :=
   { p with path := p.path ++ [i], env := p.env ++ [v, w], fuel := p.fuel - 1 }
 
+/-- The point of child `i` with an optional value bound: `child` or `childWith`. What a
+`select` resolves its chosen arm at, with the value `Decision.decide` bound. -/
+def childBind (p : Point) (i : Nat) : Option Val → Point
+  | none => p.child i
+  | some v => p.childWith i v
+
 /-- The point of layer `i` of a `mergeAll` at this point: the `layers` spine is child `0`,
 each further element one `cons` down (child `1`), and the element itself the spine's
 child `0` (`Node.child`, `Refs.lean`); every step is a `child`, so the fuel accounting is a
@@ -601,6 +607,7 @@ def compileEff : NativeEff → Point → NCode
       | .uninterruptible _ => Prim.withFiber (EffThunk.act p)
       | .interruptible _ => Prim.withFiber (EffThunk.act p)
       | .branch _ _ _ => Prim.suspend (EffThunk.body p)
+      | .select _ _ _ _ => Prim.suspend (EffThunk.body p)
       -- the printed loop is `Effect.suspend(() => { let a0 = initial; return
       -- Effect.whileLoop({…}) })` (`Codegen/Print.lean:158-168`): the cursor is read and the
       -- `While` frame built when the suspension runs, by `suspendBodyAt`.
@@ -884,15 +891,20 @@ def blockAt (root : NativeEff) (p : Point) (block : List Nat) : Option (Stmts Na
   | some (Node.stmts ss) => some ss
   | _ => none
 
+/-- The environment on leaving a block: the block's local bindings dropped from the end. -/
+def blockEnv (root : NativeEff) (p : Point) (block : List Nat) (k : Nat) (env : List Val) :
+    List Val :=
+  match blockAt root p block with
+  | some ss => env.take (env.length - localBinds ss k)
+  | none => env
+
 /-- Leave the block at `pc` (its statements exhausted): the environment loses the block's
 bindings, and control continues after the enclosing statement — or at the head of the
 enclosing `while` again. `none` is the end of the generator's body. -/
 def blockExit (root : NativeEff) (p : Point) (pc : List Nat) (env : List Val) :
     Option (List Nat × List Val) :=
   let (block, k) := splitPc pc
-  let env := match blockAt root p block with
-    | some ss => env.take (env.length - localBinds ss k)
-    | none => env
+  let env := blockEnv root p block k env
   match block.reverse with
   | _ :: 0 :: outer =>
     let base := outer.reverse
@@ -908,9 +920,7 @@ def loopExit (root : NativeEff) : Nat → Point → List Nat → List Val →
   | 0, _, _, _ => none
   | depth + 1, p, pc, env =>
     let (block, k) := splitPc pc
-    let env := match blockAt root p block with
-      | some ss => env.take (env.length - localBinds ss k)
-      | none => env
+    let env := blockEnv root p block k env
     match block.reverse with
     | _ :: 0 :: outer =>
       let base := outer.reverse
@@ -1248,7 +1258,8 @@ Boolean names the set it decides, and `Agreement.suspendBodyAt_of_at` is the law
 complement (every other head's body is `compileEff` at the point), which stops building the
 moment the match gains an arm this list lacks. -/
 def Eff.suspendDecided {Op : Type} : Eff Op → Bool
-  | .suspend _ | .branch _ _ _ | .gen _ | .whileLoop _ _ _ _ | .provideLayer _ _ _ => true
+  | .suspend _ | .branch _ _ _ | .select _ _ _ _ | .gen _ | .whileLoop _ _ _ _
+  | .provideLayer _ _ _ => true
   | _ => false
 
 /-- What a `suspend` thunk returns: a body compiled at its point, a branch decided by its
@@ -1267,6 +1278,13 @@ def suspendBodyAt (root : NativeEff) : EffThunk → NCode
         | some (Val.bool true) => resolve root (p.child 0)
         | some (Val.bool false) => resolve root (p.child 1)
         | _ => badShape
+      -- `select`: the scrutinee evaluated once here, the decision choosing the arm and the
+      -- value it binds; the wrong shape is `badShape`, which `decide_typed` rules out on an
+      -- admitted program
+      | some (Node.eff (.select s d _ _)) =>
+        match (evalTerm p.env s).bind d.decide with
+        | some (first, bound) => resolve root (p.childBind (cond first 0 1) bound)
+        | none => badShape
       | some (Node.eff (.gen _)) => Prim.iterator (EffName.gen p [] false) Val.unit
       | some (Node.eff (.whileLoop initial _ _ _)) =>
         match evalTerm p.env initial with

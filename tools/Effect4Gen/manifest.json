@@ -64,6 +64,7 @@
         "Effect4.FinalizerStrategy",
         "Effect4.Supervision.MaskMode",
         "Effect4.Supervision.ObserverMode",
+        "Effect4.Program.Decision",
         "Effect4.Program.NativeOp",
         "Effect4.Supervision.ForkOptions",
         "Effect4.Program.Term",

@@ -17,6 +17,12 @@ private def e0 : Eff Unit := .succeed (.lit .unit)
 #guard Node.binders (.eff (.acquireRelease e0 e0)) 1 = 2
 #guard Node.binders (.eff (.whileLoop (.lit .unit) (.lit .unit) (.lit .unit) e0)) 0 = 1
 #guard Node.binders (.eff (.suspend e0)) 0 = 0
+-- `select` binds by its decision: nothing, the some-value, the payload and the rest
+#guard Node.binders (.eff (.select (.lit .unit) .bool e0 e0)) 1 = 0
+#guard Node.binders (.eff (.select (.lit .unit) .option e0 e0)) 0 = 0
+#guard Node.binders (.eff (.select (.lit .unit) .option e0 e0)) 1 = 1
+#guard Node.binders (.eff (.select (.lit .unit) (.tag "A") e0 e0)) 0 = 1
+#guard Node.binders (.eff (.select (.lit .unit) (.tag "A") e0 e0)) 1 = 1
 #guard Node.binders (.stmts (.cons (.bindYield e0) .nil)) 1 = 1
 #guard Node.binders (.stmts (.cons (.yieldDiscard e0) .nil)) 1 = 0
 #guard Node.closedChild (.layer (.effectDiscard e0)) 0 = true

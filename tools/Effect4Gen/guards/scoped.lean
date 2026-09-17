@@ -19,6 +19,13 @@ private def u : Eff Unit := .succeed (.lit .unit)
 #guard Eff.scopedAt 0 (.bind (v 0) u) = false
 #guard Eff.scopedAt 0 (.matchCause u (v 0) (v 0)) = true
 #guard Eff.scopedAt 0 (.catchIf (.var 0) u (v 0)) = true
+-- `select`: the arms are one deeper exactly where the decision binds
+#guard Eff.scopedAt 0 (.select (.lit .unit) .bool u u) = true
+#guard Eff.scopedAt 0 (.select (.lit .unit) .bool u (v 0)) = false
+#guard Eff.scopedAt 0 (.select (.lit .unit) .option u (v 0)) = true
+#guard Eff.scopedAt 0 (.select (.lit .unit) .option (v 0) u) = false
+#guard Eff.scopedAt 0 (.select (.lit .unit) (.tag "A") (v 0) (v 0)) = true
+#guard Eff.scopedAt 0 (.select (.var 0) (.tag "A") u u) = false
 #guard Eff.scopedAt 0 (.acquireRelease u (v 1)) = true
 #guard Eff.scopedAt 0 (.acquireRelease u (v 2)) = false
 #guard Eff.scopedAt 0 (.whileLoop (.lit .unit) (.var 0) (.var 1) (v 0)) = true

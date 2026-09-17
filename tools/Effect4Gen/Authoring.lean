@@ -460,12 +460,16 @@ structure Flag where
   head : Name
 
 def flagOf (t : Table) : MetaM (Option Flag) := do
-  match t.rows.find? (·.whenHead.isSome) with
-  | none => return none
-  | some r =>
-    let some h := r.whenHead | return none
+  -- the flag is a node family's head (a statement list's tail after a `bindYield`); rows
+  -- conditioned on a data argument's head (`select` on its `Decision`) are not flags
+  let mut found : Option Flag := none
+  for r in t.rows do
+    if found.isSome then break
+    let some h := r.whenHead | continue
     let ci ← getConstInfoCtor h
-    return some { fam := ci.induct, head := h }
+    if (nodeCtorOf ci.induct).isSome then
+      found := some { fam := ci.induct, head := h }
+  return found
 
 def isLayerFam (fam : Name) : Bool :=
   fam == `Effect4.Program.LayerTerm || fam == `Effect4.Program.LayerTerms

@@ -33,6 +33,7 @@ def depth : NativeEff → Nat
   | .suspend b => depth b + 1
   | .bind a b => max (depth a) (depth b) + 1
   | .branch _ a b => max (depth a) (depth b) + 1
+  | .select _ _ a b => max (depth a) (depth b) + 1
   | .exit b => depth b + 1
   | .catchCause b h => max (depth b) (depth h) + 1
   | .matchCause b v c => max (depth b) (max (depth v) (depth c)) + 1
@@ -47,6 +48,7 @@ def steps : NativeEff → Nat
   | .suspend b => steps b + 1
   | .bind a b => steps a + steps b + 2
   | .branch _ a b => steps a + steps b + 1
+  | .select _ _ a b => steps a + steps b + 1
   | .exit b => steps b + 2
   | .catchCause b h => steps b + steps h + 2
   | .matchCause b v c => steps b + steps v + steps c + 2
@@ -503,8 +505,26 @@ theorem compileEff_provideService (key : ServiceKey) (value : Term) (b : NativeE
        | some v =>
          updateContextAt (Env.ContextUpdate.provideService key v) (Region.program (p.child 0))
        | none => badShape) := by
-  simp [compileEff, hf]
-  try rfl
+  simp only [compileEff, hf]
+  rfl
+
+/-- `perform` at positive fuel: an external index registers; a built-in dispatches on its
+row's kind. Every arm of `compileEff` that `simp` cannot reach through the row table. -/
+theorem compileEff_perform (op : NativeOp) (r : Term) (hf : p.fuel = k + 1) :
+    compileEff (.perform op r) p =
+      (match op with
+       | .external _ => asyncRoute op r p
+       | _ => match (NativeOp.row op).kind with
+         | .sync =>
+           match evalTerm p.env r with
+           | some val =>
+             match NativeOp.syncOpOf op val with
+             | some operation => Prim.sync (EffThunk.op operation)
+             | none => badShape
+           | none => badShape
+         | .async => asyncRoute op r p
+         | .program => frontier p) := by
+  cases op <;> unfold compileEff <;> rw [hf] <;> rfl
 
 theorem compileEff_perform_sync (op : NativeOp) (r : Term) (hf : p.fuel = k + 1)
     (hkind : (NativeOp.row op).kind = .sync) :
@@ -515,10 +535,13 @@ theorem compileEff_perform_sync (op : NativeOp) (r : Term) (hf : p.fuel = k + 1)
          | some operation => Prim.sync (EffThunk.op operation)
          | none => badShape
        | none => badShape) := by
+  rw [compileEff_perform op r hf]
   cases op with
-  | scopeMake strategy => cases strategy <;> simp [compileEff, hf, NativeOp.row] <;> rfl
-  | external _ => cases hkind
-  | _ => simp_all [NativeOp.row, compileEff, hf] <;> rfl
+  | scopeMake strategy => cases strategy <;> rfl
+  | external i => cases hkind
+  | deferredAwait => cases hkind
+  | sleep => cases hkind
+  | _ => rfl
 
 theorem compileEff_bind (a b : NativeEff) (hf : p.fuel = k + 1) :
     compileEff (.bind a b) p =
@@ -529,6 +552,10 @@ theorem compileEff_branch (t : Term) (a b : NativeEff) (hf : p.fuel = k + 1) :
     compileEff (.branch t a b) p = Prim.suspend (EffThunk.body p) := by
   simp [compileEff, hf]
 
+theorem compileEff_select (s : Term) (d : Decision) (a b : NativeEff) (hf : p.fuel = k + 1) :
+    compileEff (.select s d a b) p = Prim.suspend (EffThunk.body p) := by
+  simp [compileEff, hf]
+
 /-- `Effect.exit` folds a body that is already an exit (`internal/effect.ts:3621-3622`,
 P0 record row D1); otherwise it pushes the `exitFrame`. -/
 theorem compileEff_exit (b : NativeEff) (hf : p.fuel = k + 1) :
@@ -536,7 +563,8 @@ theorem compileEff_exit (b : NativeEff) (hf : p.fuel = k + 1) :
       (match (compileEff b (p.child 0)).asExit? with
        | some exit => Prim.success (reifyExitVal exit)
        | none => Prim.exitFrame (compileEff b (p.child 0))) := by
-  simp [compileEff, hf] <;> rfl
+  simp only [compileEff, hf]
+  rfl
 
 theorem compileEff_exit_fold (b : NativeEff) (hf : p.fuel = k + 1) {exit : ExitV}
     (h : (compileEff b (p.child 0)).asExit? = some exit) :
@@ -574,7 +602,144 @@ theorem compileEff_onExit (b f : NativeEff) (hf : p.fuel = k + 1) :
       Prim.onExit (compileEff b (p.child 0)) (EffName.fin p) false := by
   simp [compileEff, hf]
 
+/-! The arms outside the straight fragment, once for every module that reads the compile. -/
+
+theorem compileEff_gen (ss : Stmts NativeOp) (hf : p.fuel = k + 1) :
+    compileEff (.gen ss) p = Prim.suspend (EffThunk.body p) := by
+  simp only [compileEff, hf]
+
+theorem compileEff_uninterruptible (b : NativeEff) (hf : p.fuel = k + 1) :
+    compileEff (.uninterruptible b) p = Prim.withFiber (EffThunk.act p) := by
+  simp only [compileEff, hf]
+
+theorem compileEff_interruptible (b : NativeEff) (hf : p.fuel = k + 1) :
+    compileEff (.interruptible b) p = Prim.withFiber (EffThunk.act p) := by
+  simp only [compileEff, hf]
+
+theorem compileEff_whileLoop (initial test step : Term) (b : NativeEff) (hf : p.fuel = k + 1) :
+    compileEff (.whileLoop initial test step b) p = Prim.suspend (EffThunk.body p) := by
+  simp only [compileEff, hf]
+
+theorem compileEff_yieldNow (priority : Nat) (hf : p.fuel = k + 1) :
+    compileEff (.yieldNow priority) p = Prim.yieldNowWith priority := by
+  simp only [compileEff, hf]
+
+/-- DI-61: `callback` is the shared async dispatcher at positive fuel. -/
+theorem compileEff_callback (op : NativeOp) (r : Term) (hf : p.fuel = k + 1) :
+    compileEff (.callback op r) p = asyncRoute op r p := by
+  simp only [compileEff, hf]
+
+theorem compileEff_awaitFiber (fiber : Term) (mode : Supervision.ObserverMode) (hf : p.fuel = k + 1) :
+    compileEff (.awaitFiber fiber mode) p =
+      (match evalTerm p.env fiber with
+       | some (Val.fiber ⟨id⟩) =>
+         match p.awaitExit ⟨id⟩ mode with
+         | some exit => Prim.ofExit exit
+         | none => Prim.suspend (EffThunk.park (ParkKind.join ⟨id⟩ mode))
+       | _ => badShape) := by
+  simp only [compileEff, hf]
+  rfl
+
+/-- Every action but `forkScoped` compiles to its `WithFiber` at the point. -/
+theorem compileEff_withFiber (a : ActionTerm NativeOp) (hf : p.fuel = k + 1)
+    (hnot : ∀ child options, a ≠ .forkScoped child options) :
+    compileEff (.withFiber a) p = Prim.withFiber (EffThunk.act p) := by
+  cases a with
+  | forkScoped child options => exact absurd rfl (hnot child options)
+  | _ => simp only [compileEff, hf]
+
+/-- `forkScoped` is `flatMap(scope, scope => forkIn(self, scope, options))`
+(`internal/effect.ts:5381-5406`, source-repairs §20): the counted `Service` read at the
+action under the wrapper's `OnSuccess`, whose continuation is `forkIn` on the handle
+(`contAOf_forkScopedIn`). census: fork.scoped -/
+theorem compileEff_forkScoped (child : NativeEff) (options : Supervision.ForkOptions)
+    (hf : p.fuel = k + 1) :
+    compileEff (.withFiber (.forkScoped child options)) p =
+      Prim.onSuccess (Prim.withFiber (EffThunk.act p)) (EffName.forkScopedIn p) := by
+  simp only [compileEff, hf]
+
+theorem compileEff_scoped (b : NativeEff) (hf : p.fuel = k + 1) :
+    compileEff (.scoped b) p = Prim.withFiber (EffThunk.act p) := by
+  simp only [compileEff, hf]
+
+/-- `acquireRelease` compiles to the context read, the rest named (`contAOf`).
+census: scope.acquire-release -/
+theorem compileEff_acquireRelease (a r : NativeEff) (hf : p.fuel = k + 1) :
+    compileEff (.acquireRelease a r) p =
+      Prim.onSuccess (Prim.withFiber EffThunk.getCtx) (EffName.acquireCtx p) := by
+  simp only [compileEff, hf]
+
 end compile
+
+/-! ### `forkScoped`'s and `acquireRelease`'s continuations, one equation per arm
+
+The handle-reading names have their handle equation and their wrong-shape equation; the
+latter is the table's own equation lemma, its side condition discharged by the refutation. -/
+
+section scopeConts
+
+variable (root : NativeEff) {p : Point}
+
+/-- The wrapper's continuation on the handle the service read answered is `forkIn` on it
+(§20). census: fork.scoped -/
+theorem contAOf_forkScopedIn (scope : Nat) :
+    Program.contAOf root (EffName.forkScopedIn p) (Val.scopeHandle scope) =
+      Prim.withFiber (EffThunk.forkInAt p scope) := rfl
+
+/-- The `forkScoped` wrapper's continuation on anything but a scope handle is the wrong
+shape. -/
+theorem contAOf_forkScopedIn_other (v : Val) (hne : ∀ s, v ≠ Val.scopeHandle s) :
+    Program.contAOf root (.forkScopedIn p) v = badShape := by
+  simp only [Program.contAOf, hne]
+
+/-- The `forkIn` half reads the child, the options and the point's fuel off the `forkScoped`
+node, on the handle the read answered (§20). census: fork.scoped -/
+theorem withFiberOf_forkInAt (scope : Nat) :
+    (interpOf root).withFiberOf (EffThunk.forkInAt p scope) = forkScopedAt root p scope := rfl
+
+/-! The `acquireRelease` names (`Compile.lean`; V1). The value patterns are variables except
+`acquireIn`'s, whose wrong-shape row is `contAOf_acquireIn_other`. -/
+
+theorem contAOf_acquireCtx (v : Val) :
+    Program.contAOf root (.acquireCtx p) v =
+      match Val.context? v with
+      | some ctx => Prim.withFiber (EffThunk.acquireMasked p ctx)
+      | none => badShape := rfl
+
+theorem contAOf_acquireIn_scope (ctx : Ctx) (s : Nat) :
+    Program.contAOf root (.acquireIn p ctx) (Val.scopeHandle s) =
+      Prim.onSuccess (resolve root (p.child 0)) (.acquired p ctx s) := rfl
+
+theorem contAOf_acquireIn_other (ctx : Ctx) (v : Val) (hne : ∀ s, v ≠ Val.scopeHandle s) :
+    Program.contAOf root (.acquireIn p ctx) v = badShape := by
+  simp only [Program.contAOf, hne]
+
+theorem contAOf_acquired (ctx : Ctx) (s : Nat) (a : Val) :
+    Program.contAOf root (.acquired p ctx s) a =
+      Prim.onSuccess
+        (Prim.sync (EffThunk.op (SyncOp.scopeAdd s (FinName.foreign (p.capture a ctx)))))
+        (.afterScopeAdd a (FinName.foreign (p.capture a ctx))) := rfl
+
+theorem contAOf_afterScopeAdd (a : Val) (fin : FinName) (v : Val) :
+    Program.contAOf root (.afterScopeAdd a fin) v =
+      if v = Val.unit then Prim.success a
+      else
+        match exitOfVal v with
+        | some exit => Prim.onSuccess (embed (finProgram fin exit)) (.constant a)
+        | none => badShape := rfl
+
+theorem contAOf_releaseUnder (ctx : Ctx) (exit : ExitV) (v : Val) :
+    Program.contAOf root (.releaseUnder p ctx exit) v =
+      match Val.context? v with
+      | some previous =>
+        Prim.onSuccess (Prim.withFiber (EffThunk.setCtx ctx)) (.releaseBody p exit previous)
+      | none => badShape := rfl
+
+theorem contAOf_releaseBody (exit : ExitV) (previous : Ctx) (v : Val) :
+    Program.contAOf root (.releaseBody p exit previous) v =
+      Prim.withFiber (EffThunk.releaseMasked (p.childWith 1 (reifyExitVal exit)) previous) := rfl
+
+end scopeConts
 
 /-! ### The join's continuations, one equation per arm
 
@@ -592,14 +757,7 @@ theorem contAOf_provideLayerWith_scope (p : Point) (scope : Nat) :
 
 theorem contAOf_provideLayerWith_other (p : Point) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
     Program.contAOf root (.provideLayerWith p) v = badShape := by
-  unfold Program.contAOf
-  revert hne
-  split <;> intro hne <;> first
-    | rfl
-    | contradiction
-    | exact absurd rfl (hne _)
-    | (rename_i heq; exact absurd heq (hne _))
-    | simp_all
+  simp only [Program.contAOf, hne]
 
 theorem contAOf_provideLayerBody (p : Point) (v : Val) :
     Program.contAOf root (.provideLayerBody p) v = provideLayerBodyK root p v := rfl
@@ -622,14 +780,8 @@ theorem contAOf_withMemoMapThen_memoMap (q : Point) (scope : Nat) (id : MemoMapI
 
 theorem contAOf_withMemoMapThen_other (q : Point) (scope : Nat) (v : Val) (hne : ∀ x, v ≠ Val.memoMap x) :
     Program.contAOf root (.withMemoMapThen q scope) v = badShape := by
-  unfold Program.contAOf
-  revert hne
-  split <;> intro hne <;> first
-    | rfl
-    | contradiction
-    | exact absurd rfl (hne _)
-    | (rename_i heq; exact absurd heq (hne _))
-    | simp_all
+  have hne' : ∀ x, v ≠ Val.handle 5 x := fun x => hne ⟨x⟩
+  simp only [Program.contAOf, hne']
 
 theorem contAOf_addCurrentMemoMap (m : MemoMapId) (v : Val) :
     Program.contAOf root (.addCurrentMemoMap m) v = addCurrentMemoMapK m v := rfl
@@ -641,14 +793,7 @@ theorem contAOf_fromBuildThen_scope (q : Point) (m : MemoMapId) (child : Nat) :
 
 theorem contAOf_fromBuildThen_other (q : Point) (m : MemoMapId) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
     Program.contAOf root (.fromBuildThen q m) v = badShape := by
-  unfold Program.contAOf
-  revert hne
-  split <;> intro hne <;> first
-    | rfl
-    | contradiction
-    | exact absurd rfl (hne _)
-    | (rename_i heq; exact absurd heq (hne _))
-    | simp_all
+  simp only [Program.contAOf, hne]
 
 theorem contAOf_memoize_hit (q : Point) (m : MemoMapId) (scope : Nat) (cell : DeferredKey)
     (owner : MemoMapId) :
@@ -664,16 +809,8 @@ theorem contAOf_memoize_unit (q : Point) (m : MemoMapId) (scope : Nat) :
 theorem contAOf_memoize_other (q : Point) (m : MemoMapId) (scope : Nat) (v : Val)
     (hhit : ∀ c o, v ≠ .pair (Val.promise c) (Val.memoMap o)) (hunit : v ≠ Val.unit) :
     Program.contAOf root (.memoize q m scope) v = badShape := by
-  unfold Program.contAOf
-  revert hhit hunit
-  split <;> intro hhit hunit <;> first
-    | rfl
-    | contradiction
-    | exact absurd rfl (hhit _ _)
-    | exact absurd rfl hunit
-    | (rename_i heq; exact absurd heq (hhit _ _))
-    | (rename_i heq; exact absurd heq hunit)
-    | simp_all
+  have hhit' : ∀ c o, v ≠ .pair (Val.handle 3 c) (Val.handle 5 o) := fun c o => hhit ⟨c⟩ ⟨o⟩
+  simp only [Program.contAOf, hhit', hunit]
 
 theorem contAOf_awaitPromise (cell : DeferredKey) (v : Val) :
     Program.contAOf root (.awaitPromise cell) v =
@@ -686,14 +823,7 @@ theorem contAOf_buildIntoLayerScope_scope (q : Point) (m : MemoMapId) (scope lay
 
 theorem contAOf_buildIntoLayerScope_other (q : Point) (m : MemoMapId) (scope : Nat) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
     Program.contAOf root (.buildIntoLayerScope q m scope) v = badShape := by
-  unfold Program.contAOf
-  revert hne
-  split <;> intro hne <;> first
-    | rfl
-    | contradiction
-    | exact absurd rfl (hne _)
-    | (rename_i heq; exact absurd heq (hne _))
-    | simp_all
+  simp only [Program.contAOf, hne]
 
 theorem contAOf_thenBuildInto (q : Point) (m : MemoMapId) (layerScope : Nat) (v : Val) :
     Program.contAOf root (.thenBuildInto q m layerScope) v =
@@ -706,14 +836,8 @@ theorem contAOf_freshThen_memoMap (q : Point) (scope : Nat) (id : MemoMapId) :
 
 theorem contAOf_freshThen_other (q : Point) (scope : Nat) (v : Val) (hne : ∀ x, v ≠ Val.memoMap x) :
     Program.contAOf root (.freshThen q scope) v = badShape := by
-  unfold Program.contAOf
-  revert hne
-  split <;> intro hne <;> first
-    | rfl
-    | contradiction
-    | exact absurd rfl (hne _)
-    | (rename_i heq; exact absurd heq (hne _))
-    | simp_all
+  have hne' : ∀ x, v ≠ Val.handle 5 x := fun x => hne ⟨x⟩
+  simp only [Program.contAOf, hne']
 
 theorem contAOf_provideThen (q : Point) (m : MemoMapId) (scope : Nat) (mode : CombineMode)
     (v : Val) :
@@ -730,14 +854,7 @@ theorem contAOf_mergeChildren_scope (q : Point) (m : MemoMapId) (parent : Nat) :
 
 theorem contAOf_mergeChildren_other (q : Point) (m : MemoMapId) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
     Program.contAOf root (.mergeChildren q m) v = badShape := by
-  unfold Program.contAOf
-  revert hne
-  split <;> intro hne <;> first
-    | rfl
-    | contradiction
-    | exact absurd rfl (hne _)
-    | (rename_i heq; exact absurd heq (hne _))
-    | simp_all
+  simp only [Program.contAOf, hne]
 
 theorem contAOf_mergeForkOne_scope (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
     (forked : List FiberId) (child : Nat) :
@@ -748,19 +865,7 @@ theorem contAOf_mergeForkOne_scope (q : Point) (i : Nat) (m : MemoMapId) (parent
 theorem contAOf_mergeForkOne_other (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
     (forked : List FiberId) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
     Program.contAOf root (.mergeForkOne q i m parent forked) v = badShape := by
-  unfold Program.contAOf
-  revert hne
-  -- the table's catch-all row carries "the wrong-shape row did not match", refuted at the
-  -- row's own arguments (five of them: past what `simp_all` instantiates)
-  split <;> intro hne <;> first
-    | rfl
-    | contradiction
-    | exact absurd rfl (hne _)
-    | (rename_i heq; exact absurd heq (hne _))
-    | exact (‹∀ (a : Point) (b : Nat) (c : MemoMapId) (d : Nat) (e : List FiberId),
-        EffName.mergeForkOne q i m parent forked = EffName.mergeForkOne a b c d e → False›
-        q i m parent forked rfl).elim
-    | simp_all
+  simp only [Program.contAOf, hne]
 
 theorem contAOf_mergeForkNext_fiber (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
     (forked : List FiberId) (id : FiberId) :
@@ -777,19 +882,8 @@ theorem contAOf_mergeForkNext_fiber (q : Point) (i : Nat) (m : MemoMapId) (paren
 theorem contAOf_mergeForkNext_other (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
     (forked : List FiberId) (v : Val) (hne : ∀ x, v ≠ Val.fiber x) :
     Program.contAOf root (.mergeForkNext q i m parent forked) v = badShape := by
-  unfold Program.contAOf
-  revert hne
-  -- the table's catch-all row carries "the wrong-shape row did not match", refuted at the
-  -- row's own arguments (five of them: past what `simp_all` instantiates)
-  split <;> intro hne <;> first
-    | rfl
-    | contradiction
-    | exact absurd rfl (hne _)
-    | (rename_i heq; exact absurd heq (hne _))
-    | exact (‹∀ (a : Point) (b : Nat) (c : MemoMapId) (d : Nat) (e : List FiberId),
-        EffName.mergeForkNext q i m parent forked = EffName.mergeForkNext a b c d e → False›
-        q i m parent forked rfl).elim
-    | simp_all
+  have hne' : ∀ x, v ≠ Val.handle 1 x := fun x => hne ⟨x⟩
+  simp only [Program.contAOf, hne']
 
 /-! The n-ary merge's three names (the host rows slice): the same protocol over the
 `layers` spine, the sibling count read off the node at `q` (`mergeAllCount`). -/
@@ -806,14 +900,7 @@ theorem contAOf_mergeAllChildren_scope (q : Point) (m : MemoMapId) (parent : Nat
 theorem contAOf_mergeAllChildren_other (q : Point) (m : MemoMapId) (v : Val)
     (hne : ∀ x, v ≠ Val.scopeHandle x) :
     Program.contAOf root (.mergeAllChildren q m) v = badShape := by
-  unfold Program.contAOf
-  revert hne
-  split <;> intro hne <;> first
-    | rfl
-    | contradiction
-    | exact absurd rfl (hne _)
-    | (rename_i heq; exact absurd heq (hne _))
-    | simp_all
+  simp only [Program.contAOf, hne]
 
 theorem contAOf_mergeAllForkOne_scope (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
     (forked : List FiberId) (child : Nat) :
@@ -824,17 +911,7 @@ theorem contAOf_mergeAllForkOne_scope (q : Point) (i : Nat) (m : MemoMapId) (par
 theorem contAOf_mergeAllForkOne_other (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
     (forked : List FiberId) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
     Program.contAOf root (.mergeAllForkOne q i m parent forked) v = badShape := by
-  unfold Program.contAOf
-  revert hne
-  split <;> intro hne <;> first
-    | rfl
-    | contradiction
-    | exact absurd rfl (hne _)
-    | (rename_i heq; exact absurd heq (hne _))
-    | exact (‹∀ (a : Point) (b : Nat) (c : MemoMapId) (d : Nat) (e : List FiberId),
-        EffName.mergeAllForkOne q i m parent forked = EffName.mergeAllForkOne a b c d e → False›
-        q i m parent forked rfl).elim
-    | simp_all
+  simp only [Program.contAOf, hne]
 
 theorem contAOf_mergeAllForkNext_fiber (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
     (forked : List FiberId) (id : FiberId) :
@@ -851,17 +928,8 @@ theorem contAOf_mergeAllForkNext_fiber (q : Point) (i : Nat) (m : MemoMapId) (pa
 theorem contAOf_mergeAllForkNext_other (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
     (forked : List FiberId) (v : Val) (hne : ∀ x, v ≠ Val.fiber x) :
     Program.contAOf root (.mergeAllForkNext q i m parent forked) v = badShape := by
-  unfold Program.contAOf
-  revert hne
-  split <;> intro hne <;> first
-    | rfl
-    | contradiction
-    | exact absurd rfl (hne _)
-    | (rename_i heq; exact absurd heq (hne _))
-    | exact (‹∀ (a : Point) (b : Nat) (c : MemoMapId) (d : Nat) (e : List FiberId),
-        EffName.mergeAllForkNext q i m parent forked = EffName.mergeAllForkNext a b c d e → False›
-        q i m parent forked rfl).elim
-    | simp_all
+  have hne' : ∀ x, v ≠ Val.handle 1 x := fun x => hne ⟨x⟩
+  simp only [Program.contAOf, hne']
 
 theorem contAOf_mergeContexts (v : Val) :
     Program.contAOf root .mergeContexts v = mergeContextsK v := rfl
@@ -1295,6 +1363,22 @@ theorem suspendBodyAt_branch_bad {root : NativeEff} {q : Point} {k : Nat} {t : T
       | exact absurd hv (ht _)
       | simp [suspendBodyAt, hf, h, hv]
 
+/-- `select`: the decision chooses the arm and the value it binds; two lemmas replace
+`branch`'s three. -/
+theorem suspendBodyAt_select_of_decide {root : NativeEff} {q : Point} {k : Nat} {s : Term}
+    {d : Decision} {a b : NativeEff} {first : Bool} {bound : Option Val} (hf : q.fuel = k + 1)
+    (h : Node.at_ (Node.eff root) q.path = some (Node.eff (.select s d a b)))
+    (hd : (evalTerm q.env s).bind d.decide = some (first, bound)) :
+    suspendBodyAt root (EffThunk.body q) = resolve root (q.childBind (cond first 0 1) bound) := by
+  simp [suspendBodyAt, hf, h, hd]
+
+theorem suspendBodyAt_select_bad {root : NativeEff} {q : Point} {k : Nat} {s : Term}
+    {d : Decision} {a b : NativeEff} (hf : q.fuel = k + 1)
+    (h : Node.at_ (Node.eff root) q.path = some (Node.eff (.select s d a b)))
+    (hd : (evalTerm q.env s).bind d.decide = none) :
+    suspendBodyAt root (EffThunk.body q) = badShape := by
+  simp [suspendBodyAt, hf, h, hd]
+
 /-- A source suspension returns the whole child program; it does not execute the
 child's own suspension. The child lookup is established independently by `at_child`. -/
 theorem suspendBodyAt_suspend {root : NativeEff} {q : Point} {k : Nat} {b : NativeEff}
@@ -1397,6 +1481,10 @@ theorem meaning_of_asExit : ∀ (b : NativeEff) (q : Point) (s : Stores) {exit :
     rcases hf : q.fuel with _ | k
     · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
     · rw [compileEff_branch t a b hf] at h; simp [Prim.asExit?] at h
+  | .select t d a b, q, s, exit, _, h => by
+    rcases hf : q.fuel with _ | k
+    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
+    · rw [compileEff_select t d a b hf] at h; simp [Prim.asExit?] at h
   | .exit b, q, s, exit, hpl, h => by
     rcases hf : q.fuel with _ | k
     · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
@@ -1676,6 +1764,63 @@ theorem localRun_compile (root : NativeEff) :
         rw [suspendBodyAt_branch_true (q := { p with completed := [] }) (fuel_succ hd) h ht, resolve_of_at ha] at hs
         rw [meaning_branch_true t a b p.env s ht]
         exact ⟨1 + c, by simp only [steps]; omega, (Reaches.step hs).trans hr⟩
+  | .select t d a b, p, K, i, s, hpl, h, hd => by
+    obtain ⟨hpa, hpb⟩ := Straight.select hpl
+    have hda : depth a ≤ p.fuel - 1 := by
+      simp only [depth] at hd
+      have := Nat.le_max_left (depth a) (depth b)
+      omega
+    have hdb : depth b ≤ p.fuel - 1 := by
+      simp only [depth] at hd
+      have := Nat.le_max_right (depth a) (depth b)
+      omega
+    rw [compileEff_select t d a b (fuel_succ hd)]
+    have hs := step_suspend root (EffThunk.body p) K i s
+    simp only [interpAt] at hs
+    rcases hdec : (evalTerm p.env t).bind d.decide with _ | ⟨first, bound⟩
+    · rw [suspendBodyAt_select_bad (q := { p with completed := [] }) (fuel_succ hd) h hdec] at hs
+      rw [meaning_select_bad t d a b p.env s hdec]
+      exact ⟨1, by simp only [steps]; omega, Reaches.step hs⟩
+    · rw [suspendBodyAt_select_of_decide (q := { p with completed := [] }) (fuel_succ hd) h hdec] at hs
+      cases first with
+      | true =>
+        rw [meaning_select_true t d a b p.env s hdec]
+        cases bound with
+        | none =>
+          have ha : Node.at_ (Node.eff root) ({ p with completed := [] }.child 0).path = some (Node.eff a) := at_child h 0
+          obtain ⟨c, hc, hr⟩ := localRun_compile root a ({ p with completed := [] }.child 0) K i s hpa ha hda
+          rw [Point.child_env] at hr
+          simp only [Bool.cond_true, Point.childBind] at hs
+          rw [resolve_of_at ha] at hs
+          simp only [Option.toList, List.append_nil]
+          exact ⟨1 + c, by simp only [steps]; omega, (Reaches.step hs).trans hr⟩
+        | some v =>
+          have ha : Node.at_ (Node.eff root) ({ p with completed := [] }.childWith 0 v).path = some (Node.eff a) := at_childWith h 0 v
+          obtain ⟨c, hc, hr⟩ := localRun_compile root a ({ p with completed := [] }.childWith 0 v) K i s hpa ha hda
+          rw [Point.childWith_env] at hr
+          simp only [Bool.cond_true, Point.childBind] at hs
+          rw [resolve_of_at ha] at hs
+          simp only [Option.toList]
+          exact ⟨1 + c, by simp only [steps]; omega, (Reaches.step hs).trans hr⟩
+      | false =>
+        rw [meaning_select_false t d a b p.env s hdec]
+        cases bound with
+        | none =>
+          have hb : Node.at_ (Node.eff root) ({ p with completed := [] }.child 1).path = some (Node.eff b) := at_child h 1
+          obtain ⟨c, hc, hr⟩ := localRun_compile root b ({ p with completed := [] }.child 1) K i s hpb hb hdb
+          rw [Point.child_env] at hr
+          simp only [Bool.cond_false, Point.childBind] at hs
+          rw [resolve_of_at hb] at hs
+          simp only [Option.toList, List.append_nil]
+          exact ⟨1 + c, by simp only [steps]; omega, (Reaches.step hs).trans hr⟩
+        | some v =>
+          have hb : Node.at_ (Node.eff root) ({ p with completed := [] }.childWith 1 v).path = some (Node.eff b) := at_childWith h 1 v
+          obtain ⟨c, hc, hr⟩ := localRun_compile root b ({ p with completed := [] }.childWith 1 v) K i s hpb hb hdb
+          rw [Point.childWith_env] at hr
+          simp only [Bool.cond_false, Point.childBind] at hs
+          rw [resolve_of_at hb] at hs
+          simp only [Option.toList]
+          exact ⟨1 + c, by simp only [steps]; omega, (Reaches.step hs).trans hr⟩
   | .exit b, p, K, i, s, hpl, h, hd => by
     have hb : Node.at_ (Node.eff root) (p.child 0).path = some (Node.eff b) := at_child h 0
     have hfb : depth b ≤ (p.child 0).fuel := by

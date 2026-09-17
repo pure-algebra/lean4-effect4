@@ -1,6 +1,7 @@
 import Effect4.Machine.Key
 import Effect4.Machine.Supervision
 import Effect4.Program.Ty
+import Effect4.Program.Decision
 
 /-!
 # Syntax.Eff — the Effect TS program AST (lane A1 of the AST relation)
@@ -357,6 +358,13 @@ mutual
     the whole cause; a hit replaces it. DI-09's boom policy is `CATCH-FB-BOOM`.
     Body is child 0 and handler child 1; this form remains outside Straight/Plain. -/
     | catchIf (test : Term) (body handler : Eff Op)
+    /-- A value-decided fork, `branch` generalized: the scrutinee is evaluated once at the
+    fork's environment, `decision.decide` selects child 0 or child 1 and the value that
+    child binds (`Decision`, `Program/Decision.lean`). Child 0 and child 1 are typed at the
+    environment extended by `decision.arms`. Printed as `t ? a : b`,
+    `Option.match(s, { onNone, onSome })` or the prelude's `caseTag(s, "A", hit, miss)` by
+    the decision. -/
+    | select (scrutinee : Term) (decision : Decision) (arm0 arm1 : Eff Op)
   /-- A statement of a generator body. -/
   inductive Stmt (Op : Type)
     /-- `const aN = yield* e`: binds the answer as the next variable. -/
@@ -533,17 +541,18 @@ def arms : List Arm :=
   , ⟨"provideLayer", "Effect.provide", "scoped layer build + provideContext region", "internal/layer.ts:8-22"⟩
   , ⟨"service", "Effect.service", "Prim.onSuccess (Prim.withFiber getCtx) serviceLookup", "internal/effect.ts:2059"⟩
   , ⟨"provideService", "Effect.provideService", "updateContext region", "internal/effect.ts:2202-2232"⟩
-  , ⟨"catchIf", "Effect.catchIf", "Prim.onFailure", "internal/effect.ts:2798-2810"⟩ ]
+  , ⟨"catchIf", "Effect.catchIf", "Prim.onFailure", "internal/effect.ts:2798-2810"⟩
+  , ⟨"select", "t ? a : b | Option.match | caseTag (by the decision)", "decided by the environment at compile", "select packet §1"⟩ ]
 
 /-- Every constructor has one arm and every arm one constructor. -/
 def constructorNames : List String :=
   ["succeed", "fail", "failCause", "yieldError", "sync", "suspend", "perform", "bind", "gen",
    "catchCause", "matchCause", "onExit", "exit", "uninterruptible", "interruptible", "branch",
    "whileLoop", "yieldNow", "callback", "awaitFiber", "withFiber", "scoped", "acquireRelease",
-   "provideLayer", "service", "provideService", "catchIf"]
+   "provideLayer", "service", "provideService", "catchIf", "select"]
 
 #guard arms.map Arm.constructor = constructorNames
-#guard constructorNames.length = 27
+#guard constructorNames.length = 28
 
 /-! ## The separation-4 receipts: first-order, decidable throughout -/
 

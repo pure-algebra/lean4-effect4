@@ -147,6 +147,22 @@ theorem inv_branch (sig : Signature Op) (env : TyEnv) (test : Term) (thenB elseB
   refine Option.of_triple ?_
   simp only [effTy]; mvcgen; all_goals simp_all
 
+theorem inv_select (sig : Signature Op) (env : TyEnv) (s : Term) (d : Decision) (a0 a1 : Eff Op) :
+    ∀ t, effTy sig env (.select s d a0 a1) = some t →
+      ∃ ty e0 e1 t0 t1 answer, termTy sig env s = some ty ∧ d.arms ty = some (e0, e1) ∧
+        effTy sig (env ++ e0) a0 = some t0 ∧ effTy sig (env ++ e1) a1 = some t1 ∧
+        EffTy.joinAnswer t0.answer t1.answer = some answer ∧
+        t = ⟨answer, t0.error.join t1.error, t0.requires.union t1.requires⟩ := by
+  -- the pair pattern `let (e0, e1) ← d.arms t` stops `mvcgen`; the binds are opened by hand
+  intro t h
+  simp only [effTy, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+  obtain ⟨ty, hs, arms, harms, h⟩ := h
+  rcases arms with ⟨e0, e1⟩
+  obtain ⟨t0, ht0, t1, ht1, answer, hans, ht⟩ := h
+  dsimp only at ht0 ht1
+  subst ht
+  exact ⟨ty, e0, e1, t0, t1, answer, hs, harms, ht0, ht1, hans, rfl⟩
+
 theorem inv_whileLoop (sig : Signature Op) (env : TyEnv) (initial test step : Term)
     (body : Eff Op) :
     ∀ t, effTy sig env (.whileLoop initial test step body) = some t →
@@ -557,6 +573,7 @@ theorem inv_layers_cons (sig : Signature Op) (head next : LayerTerm Op)
 #print axioms inv_uninterruptible
 #print axioms inv_interruptible
 #print axioms inv_branch
+#print axioms inv_select
 #print axioms inv_whileLoop
 #print axioms inv_yieldNow
 #print axioms inv_callback

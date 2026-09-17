@@ -30,6 +30,7 @@ def Straight : NativeEff → Bool
     | _ => false
   | .bind a b => Straight a && Straight b
   | .branch _ a b => Straight a && Straight b
+  | .select _ _ a b => Straight a && Straight b
   | .exit b => Straight b
   | .catchCause b h => Straight b && Straight h
   | .matchCause b v c => Straight b && Straight v && Straight c

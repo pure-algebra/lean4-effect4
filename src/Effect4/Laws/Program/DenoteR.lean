@@ -615,6 +615,12 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
       | some (.bool true) => rec a ({ p with completed }.child 0)
       | some (.bool false) => rec b ({ p with completed }.child 1)
       | _ => .pure badShapeExit)
+  -- `select`: the decision chooses the arm and the value it binds (`suspendBodyAt`'s arm).
+  | .select s d a0 a1, p => suspendR p (constructR fun completed =>
+      match (evalTerm p.env s).bind d.decide with
+      | some (true, bound) => rec a0 ({ p with completed }.childBind 0 bound)
+      | some (false, bound) => rec a1 ({ p with completed }.childBind 1 bound)
+      | none => .pure badShapeExit)
   -- `Effect.exit` folds an immediate exit; otherwise the both-arm boundary.
   | .exit b, p =>
     match inlineYield b (p.child 0) with
@@ -809,6 +815,9 @@ def denoteLayer (root : NativeEff) (l : LayerTerm NativeOp) (q : Point) (m : Mem
 /-- A child point's fuel is one less: the budget of every child call. -/
 theorem Point.child_fuel (p : Point) (i : Nat) : (p.child i).fuel = p.fuel - 1 := rfl
 theorem Point.childWith_fuel (p : Point) (i : Nat) (v : Val) : (p.childWith i v).fuel = p.fuel - 1 := rfl
+theorem Point.childBind_fuel (p : Point) (i : Nat) (v : Option Val) :
+    (p.childBind i v).fuel = p.fuel - 1 := by
+  cases v <;> rfl
 theorem Point.redirect_fuel (p : Point) (target : List Nat) : (p.redirect target).fuel = p.fuel - 1 := rfl
 theorem Point.completed_fuel (p : Point) (completed : List (FiberId × ExitV)) :
     ({ p with completed } : Point).fuel = p.fuel := rfl
@@ -819,7 +828,8 @@ theorem Point.completed_fuel (p : Point) (completed : List (FiberId × ExitV)) :
 predecessor, which at a positive fuel `f + 1` is `f`. -/
 local macro "budget" hf:ident : tactic => `(tactic|
   simp only [denoteR, denoteLayer, $hf:ident, Point.child_fuel, Point.childWith_fuel,
-    Point.completed_fuel, Point.redirect_fuel, Nat.add_sub_cancel, denoteRWith, denoteEffBody])
+    Point.childBind_fuel, Point.completed_fuel, Point.redirect_fuel, Nat.add_sub_cancel,
+    denoteRWith, denoteEffBody])
 
 theorem denoteR_zero (root e : NativeEff) (p : Point) (h : p.fuel = 0) :
     denoteR root e p = pending .compileFuel p := by
@@ -848,6 +858,18 @@ theorem denoteR_branch (root : NativeEff) (t : Term) (a b : NativeEff) (p : Poin
         | some (.bool true) => denoteR root a ({ p with completed }.child 0)
         | some (.bool false) => denoteR root b ({ p with completed }.child 1)
         | _ => .pure badShapeExit) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf
+
+theorem denoteR_select (root : NativeEff) (s : Term) (d : Decision) (a0 a1 : NativeEff) (p : Point)
+    (h : p.fuel ≠ 0) :
+    denoteR root (.select s d a0 a1) p =
+      suspendR p (constructR fun completed =>
+        match (evalTerm p.env s).bind d.decide with
+        | some (true, bound) => denoteR root a0 ({ p with completed }.childBind 0 bound)
+        | some (false, bound) => denoteR root a1 ({ p with completed }.childBind 1 bound)
+        | none => .pure badShapeExit) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
   | succ f => budget hf
@@ -1311,8 +1333,9 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
       cases evalTerm p.env value <;> rfl
     | sync _ | suspend _ | bind _ _ | gen _ | catchCause _ _ | catchIf _ _ _ | matchCause _ _ _
-    | onExit _ _ | uninterruptible _ | interruptible _ | branch _ _ _ | whileLoop _ _ _ _
-    | yieldNow _ | «scoped» _ | acquireRelease _ _ | provideLayer _ _ _ | service _ =>
+    | onExit _ _ | uninterruptible _ | interruptible _ | branch _ _ _ | select _ _ _ _
+    | whileLoop _ _ _ _ | yieldNow _ | «scoped» _ | acquireRelease _ _ | provideLayer _ _ _
+    | service _ =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte, headExit, frontier]
 termination_by structural e
 
@@ -1392,7 +1415,7 @@ theorem denote_of_inlineYield : ∀ (b : NativeEff) (q : Point) {exit : ExitV},
         rw [denote, hd]
         rfl
   | .sync _, q, exit, _, h | .suspend _, q, exit, _, h | .bind _ _, q, exit, _, h
-  | .branch _ _ _, q, exit, _, h | .catchCause _ _, q, exit, _, h
+  | .branch _ _ _, q, exit, _, h | .select _ _ _ _, q, exit, _, h | .catchCause _ _, q, exit, _, h
   | .matchCause _ _ _, q, exit, _, h | .onExit _ _, q, exit, _, h => by
     simp [inlineYield] at h
   | .gen _, _, _, hs, _ | .uninterruptible _, _, _, hs, _ | .interruptible _, _, _, hs, _
@@ -1489,6 +1512,33 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
       · contradiction
       · contradiction
       · rfl
+  | .select s d a0 a1, p, hs, hp => by
+    have hpos : p.fuel ≠ 0 := by have := Agreement.depth_pos (.select s d a0 a1); omega
+    have hab := Straight.select hs
+    rw [denoteR_select root s d a0 a1 p hpos, eraseControl_suspendR, eraseControl_constructR, denote]
+    rcases hd : (evalTerm p.env s).bind d.decide with _ | ⟨first, bound⟩
+    · rfl
+    · cases first with
+      | true =>
+        cases bound with
+        | none =>
+          simp only [Point.childBind, Option.toList, List.append_nil]
+          exact denoteR_straight root a0 ({ p with completed := [] }.child 0) hab.1
+            (by simp only [Agreement.depth] at hp; simp only [Point.child]; omega)
+        | some v =>
+          simp only [Point.childBind, Option.toList]
+          exact denoteR_straight root a0 ({ p with completed := [] }.childWith 0 v) hab.1
+            (by simp only [Agreement.depth] at hp; simp only [Point.childWith]; omega)
+      | false =>
+        cases bound with
+        | none =>
+          simp only [Point.childBind, Option.toList, List.append_nil]
+          exact denoteR_straight root a1 ({ p with completed := [] }.child 1) hab.2
+            (by simp only [Agreement.depth] at hp; simp only [Point.child]; omega)
+        | some v =>
+          simp only [Point.childBind, Option.toList]
+          exact denoteR_straight root a1 ({ p with completed := [] }.childWith 1 v) hab.2
+            (by simp only [Agreement.depth] at hp; simp only [Point.childWith]; omega)
   | .exit b, p, hs, hp => by
     have hpos : p.fuel ≠ 0 := by have := Agreement.depth_pos (.exit b); omega
     have hb := denoteR_straight root b (p.child 0) hs

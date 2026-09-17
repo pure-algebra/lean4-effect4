@@ -49,6 +49,11 @@ theorem effTy_sound (sig : Signature Op) (e : Eff Op) :
     intro env t h
     obtain ⟨ty, hty, rfl⟩ := inv_succeed sig env value t h
     exact .succeed hty
+  | select s d a0 a1 =>
+    intro env t h
+    obtain ⟨ty, e0, e1, t0, t1, answer, hs, harms, h0, h1, hj, rfl⟩ :=
+      inv_select sig env s d a0 a1 t h
+    exact .select hs harms (effTy_sound sig a0 _ t0 h0) (effTy_sound sig a1 _ t1 h1) hj
   | fail error =>
     intro env t h
     obtain ⟨ty, hty, herr, rfl⟩ := inv_fail sig env error t h
@@ -387,6 +392,11 @@ theorem effTy_complete (sig : Signature Op) (e : Eff Op) :
   cases e with
   | succeed value =>
     intro env t hd; cases hd; simp_all [effTy]
+  | select s d a0 a1 =>
+    intro env t hd; cases hd
+    have ih0 := effTy_complete sig a0 _ _ ‹HasTy sig _ a0 _›
+    have ih1 := effTy_complete sig a1 _ _ ‹HasTy sig _ a1 _›
+    simp_all [effTy]
   | fail error =>
     intro env t hd; cases hd; simp_all [effTy]
   | failCause cause =>

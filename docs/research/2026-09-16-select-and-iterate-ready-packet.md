@@ -247,6 +247,40 @@ theorem meaning_select_bad … (hd : (evalTerm env s).bind d.decide = none) :
   printed `Effect.suspend(() => caseTag(s, "A", (aN) => hit, (aN) => miss))`. The host's `Extract` is the selected members, its `[1]` is `payloadTy` (a union of payloads), `Exclude` is `diffTag`; they narrow exactly when `T` is a union of literal-tagged tuples and scalars, which is `taggedColumn`. The plan's preflight correction (`Array.isArray` refines to a mutable `any[]`) is the reason the types come from the conditional types on `T` and not from the runtime test: the test only selects, `Extract`/`Exclude` narrow. Confirm on the two-tag, repeated-tag and bare-scalar controls under strict type-check before freezing the row; those three are the target rule's evidence. The readers match the head `caseTag` with a string literal and two one-parameter lambdas at `n`.
 - `Read.lean` proofs (`readable_weaken :3198`, `read_print :1774`, `print_readable :3277`): the `branch` arms with the binder depths from `Decision.binds`.
 
+**The split taken while landing (2026-09-16, late night, the owner's call).** `select`
+prints (`branch`'s image under `.bool`; the prelude heads `optionCase(s, () => a0, (x) => a1)`
+and `caseTag(s, "A", (p) => a0, (r) => a1)`, each suspending internally, reserved in `Head`)
+but `readable` is `false` on every `select`, so the hand-written reader (`Read.lean`, 3500
+lines, its exactness proof organised by `readEff.induct`'s numbered cases) is untouched and
+every round-trip proof closes on `readable`. Two attempts to teach it the shapes were
+measured and withdrawn: arms under `Effect.suspend` overlapped the generic suspend arm, and
+arms keyed on the new heads grew the head matcher so that every existing `read_print` arm
+timed out and the exactness proof's cases renumbered. Reading `select` back is R5's, the
+generic reader from the template table, which retires this reader rather than extending it;
+`Option.match` inline was given up for `optionCase` for the same reason, one head per form.
+Until R5, corpus programs with `select` join the typing, machine and `tsgo` lanes and stay
+out of the round-trip lanes.
+
+**Landed (2026-09-16, night, step 2).** The constructor, `childBind`, the typing arm and
+rule with `inv_select`, the compile (`suspendBodyAt` decides through `decide`), the meaning
+(`denote`, `Straight.select`, the three `meaning_select_*` equations, `localRun_compile`),
+the reference (`denoteR_select`, `intro_select`), the handle bound (`Decision.decide_bound_keys`,
+`Point.childBind_keys_subset`), the printed image and `readable = false`, with the corpus
+keeping `select` out of the round-trip draws (`Test/Program/Gen.lean` `pendingEffs`). The
+laws root builds. Landed with it, because the two proof modules the step touched were the
+two largest: `Laws/Program/Intro.lean` is now an umbrella over `Intro/*.lean` (the guards and
+`prepareR`, the `perform` route, the identity on a denotation, the weight and the reading
+lemmas of `actionAt`, `acquireRelease`, the join's regions, memo and merges, the layer build,
+and one module per constructor family) and `Laws/Program/Handles.lean` over `Handles/*.lean`
+(alphabet, terms, compile, layer, hooks, evaluation); the compile arms both spelled twice and
+the `acquireRelease`/`forkScoped` continuation equations live once in `Agreement.lean`
+(`compileEff_perform` is the general equation, the sync and non-sync arms read off it); every
+wrong-shape row of a continuation is the table's own equation lemma with the refutation
+discharged (`simp only [Program.contAOf, hne]`), no `split`-and-cascade; `actionAt_shape`'s
+seven-way conjunction became seven reading lemmas; `blockEnv` names the environment a block
+leaves. A registered simp set for the key searches was tried and withdrawn: the trust gate
+refuses the bodyless `opaque` that `register_simp_attr` initialises.
+
 ### 1.9 What S4 then deletes
 
 `branch t a b ↦ select t .bool a b` is an equality of typing (`arms .bool` is `branch`'s test verbatim), of meaning (`decide .bool` is `branch`'s match), and of printed image; only the canonical bytes move (ctor 15 to 27), a wire re-pin under S1 policy. After it, the 71 `branch` lines and the ten lemma families named in §0 go, and the tree has one fork.

@@ -39,6 +39,10 @@ inductive TypeReason
   /-- The request is not a subtype of the row's request (DI-15). -/
   | requestNotSubtype (row : String) (request expected : Ty)
   | predicateNotBool (t : Ty)
+  /-- A `select` whose decision cannot select on the scrutinee's type (`Decision.arms`
+  answers `none`): a non-Boolean under `.bool`, a non-option under `.option`, a column
+  that is not tagged or carries no member of the tag under `.tag`. -/
+  | notSelectable (decision : Decision) (scrutinee : Ty)
   /-- A loop's step does not have the cursor's type. -/
   | stepNotCursor (step cursor : Ty)
   | notFiber (t : Ty)
@@ -72,6 +76,7 @@ def TypeReason.head : TypeReason → String
   | .notAsync _ => "notAsync"
   | .requestNotSubtype _ _ _ => "requestNotSubtype"
   | .predicateNotBool _ => "predicateNotBool"
+  | .notSelectable _ _ => "notSelectable"
   | .stepNotCursor _ _ => "stepNotCursor"
   | .notFiber _ => "notFiber"
   | .scopeExpected _ => "scopeExpected"
@@ -165,6 +170,16 @@ mutual
           | none => explainEff sig env (p ++ [0]) thenB
           | some _ => explainEff sig env (p ++ [1]) elseB
         else some ⟨p, .predicateNotBool t⟩
+    | .select s d a0 a1 =>
+      match termTy sig env s with
+      | none => some ⟨p, .term s⟩
+      | some t =>
+        match d.arms t with
+        | none => some ⟨p, .notSelectable d t⟩
+        | some (e0, e1) =>
+          match effTy sig (env ++ e0) a0 with
+          | none => explainEff sig (env ++ e0) (p ++ [0]) a0
+          | some _ => explainEff sig (env ++ e1) (p ++ [1]) a1
     | .whileLoop initial test step body =>
       match termTy sig env initial with
       | none => some ⟨p, .term initial⟩
@@ -504,6 +519,12 @@ mutual
     simp only [explainEff, effTy, termRefusal, explainStmts, stmtsTy, explainEffs, effsTy, explainAction, actionTy, explainLayer, layerTy, explainLayers, layersTy]
     (repeat' split) <;> simp_all [EffTy.joinAnswer]
   | .branch t a b =>
+    intro env pth
+    have ih_a := explainEff_none_iff sig a
+    have ih_b := explainEff_none_iff sig b
+    simp only [explainEff, effTy, termRefusal, explainStmts, stmtsTy, explainEffs, effsTy, explainAction, actionTy, explainLayer, layerTy, explainLayers, layersTy]
+    (repeat' split) <;> simp_all [EffTy.joinAnswer]
+  | .select s d a b =>
     intro env pth
     have ih_a := explainEff_none_iff sig a
     have ih_b := explainEff_none_iff sig b

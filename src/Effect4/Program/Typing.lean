@@ -326,6 +326,15 @@ mutual
         let answer ← EffTy.joinAnswer b.answer h.answer
         some ⟨answer, catchIfError test env.length b.error h.error, b.requires.union h.requires⟩
       else none
+    -- `select`: the arms are typed at the environments the decision gives from the
+    -- scrutinee's type; their answers join, both errors and requirements are kept.
+    | .select s d a0 a1 => do
+      let t ← termTy sig env s
+      let (e0, e1) ← d.arms t
+      let t0 ← effTy sig (env ++ e0) a0
+      let t1 ← effTy sig (env ++ e1) a1
+      let answer ← EffTy.joinAnswer t0.answer t1.answer
+      some ⟨answer, t0.error.join t1.error, t0.requires.union t1.requires⟩
     | .matchCause body onValue onCause => do
       let b ← effTy sig env body
       let v ← effTy sig (env ++ [b.answer]) onValue
@@ -688,7 +697,7 @@ mutual
     | .onExit _ _ | .exit _ | .uninterruptible _ | .interruptible _ | .branch _ _ _
     | .whileLoop _ _ _ _ | .yieldNow _ | .callback _ _ | .awaitFiber _ _
     | .withFiber _ | .scoped _ | .acquireRelease _ _
-    | .provideLayer _ _ _ | .service _ | .provideService _ _ _ => by
+    | .provideLayer _ _ _ | .service _ | .provideService _ _ _ | .select _ _ _ _ => by
       simp only [Eff.weaken, effTy, termTy_weaken, causeTy_weaken, Term.weaken_eq_lit,
         catchIfError_weaken, List.append_assoc, List.cons_append, effTy_weaken, stmtsTy_weaken,
         actionTy_weaken]

@@ -103,6 +103,12 @@ def denote : NativeEff → List Val → Effects.Program StoreSig ExitV
     | some (Val.bool true) => denote a env
     | some (Val.bool false) => denote b env
     | _ => pure badShapeExit
+  -- `select`: the decision chooses the arm and the value it binds (`suspendBodyAt`'s arm)
+  | .select t d a b, env =>
+    match (evalTerm env t).bind d.decide with
+    | some (true, bound) => denote a (env ++ bound.toList)
+    | some (false, bound) => denote b (env ++ bound.toList)
+    | none => pure badShapeExit
   -- `:326` and the `exitFrame` arm of `armA`/`armE`: the body's exit as a value.
   | .exit b, env =>
     Effects.Program.bind (denote b env) fun ex => pure (Exit.success (reifyExitVal ex))
@@ -148,6 +154,10 @@ theorem Straight.branch {t : Term} {a b : NativeEff} (h : Straight (.branch t a 
     Straight a = true ∧ Straight b = true := by
   simpa [Straight, Bool.and_eq_true] using h
 
+theorem Straight.select {t : Term} {d : Decision} {a b : NativeEff}
+    (h : Straight (.select t d a b) = true) : Straight a = true ∧ Straight b = true := by
+  simpa [Straight, Bool.and_eq_true] using h
+
 theorem Straight.exit {b : NativeEff} (h : Straight (.exit b) = true) : Straight b = true := h
 
 theorem Straight.catchCause {b h' : NativeEff} (h : Straight (.catchCause b h') = true) :
@@ -175,7 +185,8 @@ outside the fragment. `plainCode_suspendBodyAt` (`Agreement/Machine.lean`) split
 classifier and this lemma names the two straight cases; the `select` slice changes the
 right-hand side and nothing else. -/
 theorem Straight.suspendDecided_iff {e : NativeEff} (hs : Straight e = true) :
-    e.suspendDecided = true ↔ (∃ b, e = .suspend b) ∨ (∃ t a b, e = .branch t a b) := by
+    e.suspendDecided = true ↔
+      (∃ b, e = .suspend b) ∨ (∃ t a b, e = .branch t a b) ∨ (∃ s d a b, e = .select s d a b) := by
   cases e <;> simp [Eff.suspendDecided, Straight] at hs ⊢
 
 /-! ## The equations of the meaning -/
@@ -280,8 +291,25 @@ theorem meaning_branch_bad (t : Term) (a b : NativeEff) (env : List Val) (s : St
   rcases h : evalTerm env t with _ | v
   · simp only [denote, h]; rfl
   · cases v <;> simp only [denote, h] <;> (try rfl)
-    rename_i flag
-    cases flag <;> exact absurd h (ht _)
+    all_goals exact absurd h (ht _)
+
+/-- `select`: the chosen arm's meaning at the environment extended by the bound value;
+the wrong shape is `badShape`, which `Decision.decide_typed` rules out on an admitted
+program. -/
+theorem meaning_select_true (t : Term) (d : Decision) (a b : NativeEff) (env : List Val)
+    (s : Stores) {bound : Option Val} (hd : (evalTerm env t).bind d.decide = some (true, bound)) :
+    meaning (.select t d a b) env s = meaning a (env ++ bound.toList) s := by
+  unfold meaning; simp only [denote, hd]
+
+theorem meaning_select_false (t : Term) (d : Decision) (a b : NativeEff) (env : List Val)
+    (s : Stores) {bound : Option Val} (hd : (evalTerm env t).bind d.decide = some (false, bound)) :
+    meaning (.select t d a b) env s = meaning b (env ++ bound.toList) s := by
+  unfold meaning; simp only [denote, hd]
+
+theorem meaning_select_bad (t : Term) (d : Decision) (a b : NativeEff) (env : List Val)
+    (s : Stores) (hd : (evalTerm env t).bind d.decide = none) :
+    meaning (.select t d a b) env s = (badShapeExit, s) := by
+  unfold meaning; simp only [denote, hd]; rfl
 
 theorem meaning_exit (b : NativeEff) (env : List Val) (s : Stores) :
     meaning (.exit b) env s =
