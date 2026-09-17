@@ -95,10 +95,9 @@ private def canonicalUniverse : List Ty := scoutUniverse.map Ty.normalize
 -- Normalization at both row comparisons preserves domain, shape and request refusals.
 #guard (effTy nativeSignature [.union .nat .never] (.perform .refMake (.var 0))).isSome
 #guard (effTy nativeSignature [.union NativeOp.deferredTy .never]
-  (.callback .deferredAwait (.var 0))).isSome
+  (.perform .deferredAwait (.var 0))).isSome
 #guard (effTy nativeSignature [.union .bool .never] (.perform .refMake (.var 0))).isNone
-#guard (effTy nativeSignature [.union .nat .never] (.callback .deferredAwait (.var 0))).isNone
-#guard (effTy nativeSignature [.nat] (.callback .refMake (.var 0))).isNone
+#guard (effTy nativeSignature [.union .nat .never] (.perform .deferredAwait (.var 0))).isNone
 #guard (effTy nativeSignature [.never] (.perform (.external 999) (.var 0))).isNone
 
 #guard (effTy nativeSignature [.union Ty.scope .never]

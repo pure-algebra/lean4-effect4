@@ -144,39 +144,12 @@ theorem interruptible_scoped {Op : Type} {body : Src Op} (h0 : body.Scoped) :
   have s0 := h0.holds _ _ _ hx0
   simp [s0]
 
-theorem whileLoop_scoped {Op : Type} (cursor : String) (answer : String) {initial : TermSrc} {test : TermSrc} {step : TermSrc} {body : Src Op} (h0 : initial.Scoped) (h1 : test.Scoped) (h2 : step.Scoped) (h3 : body.Scoped) :
-    ((whileLoop cursor answer initial test step body) : Src Op).Scoped := by
-  refine ⟨fun env p e h => ?_⟩
-  unfold whileLoop at h
-  obtain ⟨x0, hx0, h⟩ := bind_ok h
-  obtain ⟨x1, hx1, h⟩ := bind_ok h
-  obtain ⟨x2, hx2, h⟩ := bind_ok h
-  obtain ⟨x3, hx3, h⟩ := bind_ok h
-  cases h
-  have s0 := h0.holds _ _ _ hx0
-  have s1 := h1.holds _ _ _ hx1
-  simp only [Env.push_length, List.length_cons, List.length_nil] at s1
-  have s2 := h2.holds _ _ _ hx2
-  simp only [Env.push_length, List.length_cons, List.length_nil] at s2
-  have s3 := h3.holds _ _ _ hx3
-  simp only [Env.push_length, List.length_cons, List.length_nil] at s3
-  simp [s0, s1, s2, s3]
-
 theorem yieldNow_scoped {Op : Type} (priority : Nat) :
     ((yieldNow priority) : Src Op).Scoped := by
   refine ⟨fun env p e h => ?_⟩
   unfold yieldNow at h
   cases h
   simp
-
-theorem callback_scoped {Op : Type} (register : Op) {request : TermSrc} (h1 : request.Scoped) :
-    ((callback register request) : Src Op).Scoped := by
-  refine ⟨fun env p e h => ?_⟩
-  unfold callback at h
-  obtain ⟨x1, hx1, h⟩ := bind_ok h
-  cases h
-  have s1 := h1.holds _ _ _ hx1
-  simp [s1]
 
 theorem awaitFiber_scoped {Op : Type} {fiber : TermSrc} (mode : Effect4.Supervision.ObserverMode) (h0 : fiber.Scoped) :
     ((awaitFiber fiber mode) : Src Op).Scoped := by
@@ -568,9 +541,7 @@ theorem Cause.both_scoped {left : CauseSrc} {right : CauseSrc} (h0 : left.Scoped
 #print axioms Effect4.Program.Authoring.exit_scoped
 #print axioms Effect4.Program.Authoring.uninterruptible_scoped
 #print axioms Effect4.Program.Authoring.interruptible_scoped
-#print axioms Effect4.Program.Authoring.whileLoop_scoped
 #print axioms Effect4.Program.Authoring.yieldNow_scoped
-#print axioms Effect4.Program.Authoring.callback_scoped
 #print axioms Effect4.Program.Authoring.awaitFiber_scoped
 #print axioms Effect4.Program.Authoring.withFiber_scoped
 #print axioms Effect4.Program.Authoring.scope_scoped
@@ -629,7 +600,7 @@ example : Src.Scoped (Op := Unit)
   authoring_scoped
 
 example : Src.Scoped (Op := Unit)
-    (whileLoop "i" "a" (nat 0) (app "lt" [var "i", nat 3]) (var "a") (succeed (var "i"))) := by
+    (iterate "i" "a" .nat (nat 0) (app "lt" [var "i", nat 3]) (var "a") (var "i") (succeed (var "i"))) := by
   authoring_scoped
 
 example : Src.Scoped (Op := Unit)

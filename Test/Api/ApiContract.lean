@@ -357,7 +357,7 @@ open Effect4 Effect4.Program Effect4.Api
 def row (answer : Ty) (request : Ty := .nat) (error : Ty := .never) : Effect4.Program.Row :=
   { name := "query", spelling := "Host.query", request, answer, error,
     kind := .async, registration := .external, cite := "" }
-def program : Api.Program := .callback (.external 0) (.lit (.nat 1))
+def program : Api.Program := .perform (.external 0) (.lit (.nat 1))
 def refusal (p : Api.Program) (table : RowTable) : Option AdmitRefusal :=
   match admitProgram p table with
   | .error why => some why

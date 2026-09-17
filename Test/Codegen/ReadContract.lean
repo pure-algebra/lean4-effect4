@@ -196,16 +196,16 @@ theorem tupleLawful : LawfulSpelling tupleSig tupleSpell where
 #guard roundTrip tupleSig tupleSpell 1 (.perform false (.var 0)) =
   .ok (.perform false (.var 0))
 
-#guard roundTrip tupleSig tupleSpell 1 (.callback true (.var 0)) =
-  .ok (.callback true (.var 0))
+#guard roundTrip tupleSig tupleSpell 1 (.perform true (.var 0)) =
+  .ok (.perform true (.var 0))
 
 #guard roundTrip tupleSig tupleSpell 0
     (.perform false (.app "pair" (.cons (.lit (.nat 2)) (.cons (.lit (.nat 7)) .nil)))) =
   .ok (.perform false (.app "pair" (.cons (.lit (.nat 2)) (.cons (.lit (.nat 7)) .nil))))
 
 #guard roundTrip tupleSig tupleSpell 1
-    (.callback true (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil)))) =
-  .ok (.callback true (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))
+    (.perform true (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil)))) =
+  .ok (.perform true (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))
 
 -- A pair of one variable's components prints as the variable and reads back as it:
 -- outside the readable image, by `requestReadable`.
@@ -237,7 +237,7 @@ theorem tupleLawful : LawfulSpelling tupleSig tupleSpell where
 #guard readEff tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple")
     [.call (.ident "fst") [.ident "a0"], .call (.ident "snd") [.ident "a0"],
       .ident "first", .ident "second"]) =
-  .ok (.callback true (.var 0))
+  .ok (.perform true (.var 0))
 
 -- Components of two different identifiers are an ordinary pair.
 #guard readEff tupleSig tupleSpell 2 (.call (.ident "Fixture.tuple")
@@ -346,7 +346,7 @@ open Effect4.Api in
 
 #guard roundTrip sig spell 1 (.perform 3 (.var 0)) = .ok (.perform 3 (.var 0))
 
-#guard roundTrip sig spell 1 (.callback 2 (.var 0)) = .ok (.callback 2 (.var 0))
+#guard roundTrip sig spell 1 (.perform 2 (.var 0)) = .ok (.perform 2 (.var 0))
 
 /-! ## Sequencing -/
 
@@ -396,10 +396,6 @@ open Effect4.Api in
 #guard roundTrip sig spell 0 (.select (.lit (.bool true)) .bool (.succeed (.lit (.nat 1)))
       (.succeed (.lit .unit)))
   = .ok (.select (.lit (.bool true)) .bool (.succeed (.lit (.nat 1))) (.succeed (.lit .unit)))
-
-#guard roundTrip sig spell 0 (.whileLoop (.lit (.nat 0)) (.var 0) (.app "succ" (.cons (.var 1) .nil))
-      (.succeed (.var 0)))
-  = .ok (.whileLoop (.lit (.nat 0)) (.var 0) (.app "succ" (.cons (.var 1) .nil)) (.succeed (.var 0)))
 
 #guard roundTrip sig spell 0 (.yieldNow 2) = .ok (.yieldNow 2)
 
@@ -612,10 +608,6 @@ answers the program the printer kept. -/
 #guard roundTrip sig spell 1 (.withFiber (.forkIn (.succeed (.lit (.nat 1))) ⟨true, false, .inherit⟩ (.var 0)))
   = .ok (.withFiber (.forkIn (.succeed (.lit (.nat 1))) ⟨true, true, .inherit⟩ (.var 0)))
 
-#guard readable sig spell 1 (.callback 0 (.var 0)) = false
-
-#guard roundTrip sig spell 1 (.callback 0 (.var 0)) = .ok (.perform 0 (.var 0))
-
 #guard readable sig spell 0 (.perform 1 (.lit (.nat 5))) = false
 
 #guard roundTrip sig spell 0 (.perform 1 (.lit (.nat 5))) = .ok (.perform 1 (.lit .unit))
@@ -634,13 +626,13 @@ open Effect4.Api in
   = .ok (.bind (.perform (.scopeMake .parallel) (.lit .unit)) (.perform (.scopeMake .sequential) (.lit .unit)))
 
 open Effect4.Api in
-#guard roundTrip (.bind (.perform .deferredMake (.lit .unit)) (.callback .deferredAwait (.var 0)))
-  = .ok (.bind (.perform .deferredMake (.lit .unit)) (.callback .deferredAwait (.var 0)))
+#guard roundTrip (.bind (.perform .deferredMake (.lit .unit)) (.perform .deferredAwait (.var 0)))
+  = .ok (.bind (.perform .deferredMake (.lit .unit)) (.perform .deferredAwait (.var 0)))
 -- the timer (A4): `Effect.sleep(5)` is the async row's callback, `Effect.currentTimeMillis`
 -- the value row
 open Effect4.Api in
-#guard roundTrip (.bind (.callback .sleep (.lit (.nat 5))) (.perform .clockNow (.lit .unit)))
-  = .ok (.bind (.callback .sleep (.lit (.nat 5))) (.perform .clockNow (.lit .unit)))
+#guard roundTrip (.bind (.perform .sleep (.lit (.nat 5))) (.perform .clockNow (.lit .unit)))
+  = .ok (.bind (.perform .sleep (.lit (.nat 5))) (.perform .clockNow (.lit .unit)))
 
 /-! ## The corpus: every program the generator writes, through `Api.print` and `Api.read`
 
@@ -649,7 +641,8 @@ open Effect4.Api in
 constructor the printer accepts. Four pins: how many are `readable` (the generator draws a
 request for every row, so a `unit`-request row loses it; a scoped fork with `daemon` loses
 that); every readable one comes back as itself (`read_print`, executed); every one of the 400
-comes back as a program that prints the same tree (`read_exact`, executed); and no unreadable
+that holds no loop comes back as a program that prints the same tree (`read_exact`, executed),
+and the ones that hold a loop are refused (`iterate` is read back at R5); and no unreadable
 one comes back unchanged, so on this corpus `readable` is exact, not merely sufficient. -/
 
 #guard (Test.Program.Gen.corpus 400 4).length = 400
@@ -660,10 +653,20 @@ one comes back unchanged, so on this corpus `readable` is exact, not merely suff
 #guard (Test.Program.Gen.corpus 400 4).all fun p =>
   !Effect4.Api.readable p || decide (Effect4.Api.roundTrip p = .ok p)
 
+/-- Whether a program holds a loop anywhere. `iterate` prints and is read back at R5, so until
+then the hand reader refuses the image of any program that holds one. -/
+private def holdsLoop (p : Eff NativeOp) : Bool :=
+  foldMap_eff false (· || ·) p (f_eff := fun | .iterate .. => true | _ => false)
+
 #guard (Test.Program.Gen.corpus 400 4).all fun p =>
   match Effect4.Api.roundTrip p with
   | .ok q => (Effect4.Api.print q).toOption == (Effect4.Api.print p).toOption
-  | .error _ => false
+  | .error _ => holdsLoop p
+
+-- The refusals are exactly the loops: R5 turns this pin into the guard above with no
+-- `.error` arm.
+#guard (Test.Program.Gen.corpus 400 4).all fun p =>
+  holdsLoop p == !(Effect4.Api.roundTrip p).toOption.isSome
 
 #guard ((Test.Program.Gen.corpus 400 4).filter fun p =>
   !Effect4.Api.readable p && decide (Effect4.Api.roundTrip p = .ok p)).length = 0

@@ -33,7 +33,7 @@ const v = (i: number): unknown => ({ _tag: "var", index: i })
 const str = (value: string): unknown => ({ _tag: "lit", value: { _tag: "str", value } })
 const pair = (a: unknown, b: unknown): unknown => ({ _tag: "app", atom: "pair", args: [a, b] })
 const strings = (...texts: string[]): unknown => ({ _tag: "app", atom: "strings", args: texts.map(str) })
-const external = (spelling: string, request: unknown): unknown => ({ _tag: "callback", register: { _tag: "external", index: index(spelling) }, request })
+const external = (spelling: string, request: unknown): unknown => ({ _tag: "perform", op: { _tag: "external", index: index(spelling) }, request })
 const sqlKey: unknown = { name: { value: 4 }, service: { value: 8 } }
 const kvKey: unknown = { name: { value: 4 }, service: { value: 9 } }
 

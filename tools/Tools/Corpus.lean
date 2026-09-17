@@ -26,7 +26,10 @@ request of a `unit`-request row are what the printer drops, and no reader of the
 recover them. A reader in any language is therefore checked by reading the `.ts` and comparing
 bytes with the `.json`, which is a differential against Lean's reader. `<dir>/index.tsv` has
 one `name`, `wellTyped`, `readable`, `chars` row per program written; a program the printer
-refuses is counted and not written.
+or Lean's reader refuses is counted and not written. Since `whileLoop` retired into `iterate`
+the reader refuses every program that holds a loop (`iterate` prints and is read back at R5),
+so until R5 this directory holds no loop; the corpus lane (`scripts/check-corpus.py`) draws
+from the generator itself and still runs them.
 
 Each oracle also has canonical `.eff` bytes from `Wire.encodeProgram`. With `--styles`,
 Tools.Styles constructs the foreign spelling corpus and its JSON/wire oracles; `counts.tsv`
@@ -48,7 +51,7 @@ A tool (`lakefile.toml`, the `Tools` library): outside the axiom gate, imported 
 open Effect4 Effect4.Program Effect4.Api
 
 /-- Write `<dir>/<name>.ts` and `<dir>/<name>.json`; the index row, or `none` when the
-printer refuses the program. -/
+printer or the reader refuses the program. -/
 def writeProgram (dir name : String) (p : Eff NativeOp) : IO (Option String) := do
   match Api.print p, Api.roundTrip p with
   | .ok e, .ok kept =>

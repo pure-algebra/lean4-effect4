@@ -1,1 +1,1 @@
-["bind",["perform",["refMake"],["lit",["nat",0]]],["callback",["refGet"],["var",0]]]
+["bind",["perform",["refMake"],["lit",["nat",0]]],["perform",["refGet"],["var",0]]]

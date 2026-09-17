@@ -13,7 +13,7 @@ open Effect4.Api.HostSession
 
 def table : RowTable := [Profile.Scalar.waitRow]
 def program : Api.Program :=
-  .bind (.callback (.external 0) (.lit (.nat 2))) (.callback (.external 0) (.lit (.nat 3)))
+  .bind (.perform (.external 0) (.lit (.nat 2))) (.perform (.external 0) (.lit (.nat 3)))
 def header : Header := ⟨2, "session-A", "serial-root-scalar-v1", table⟩
 def admitted : Api.AdmittedProgram program table where
   ty := ⟨.nat, .prod .string .string, .empty⟩

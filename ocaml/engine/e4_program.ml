@@ -236,12 +236,9 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Eff_interruptible e -> A.Eff_interruptible (of_eff e)
     | Eff_types.Eff_select (t, d, a, b) ->
       A.Eff_select (of_term t, of_decision d, of_eff a, of_eff b)
-    | Eff_types.Eff_whileLoop (t1, t2, t3, e) ->
-      A.Eff_whileLoop (of_term t1, of_term t2, of_term t3, of_eff e)
     | Eff_types.Eff_iterate (c, t1, t2, t3, t4, e) ->
       A.Eff_iterate (of_ty c, of_term t1, of_term t2, of_term t3, of_term t4, of_eff e)
     | Eff_types.Eff_yieldNow n -> A.Eff_yieldNow n
-    | Eff_types.Eff_callback (op, t) -> A.Eff_callback (of_native_op op, of_term t)
     | Eff_types.Eff_awaitFiber (t, m) -> A.Eff_awaitFiber (of_term t, of_observer_mode m)
     | Eff_types.Eff_withFiber a -> A.Eff_withFiber (of_action_term a)
     | Eff_types.Eff_scoped e -> A.Eff_scoped (of_eff e)
@@ -384,19 +381,17 @@ module Make (A : PROGRAM_TYPES) = struct
     | A.Eff_exit _ -> 11
     | A.Eff_uninterruptible _ -> 12
     | A.Eff_interruptible _ -> 13
-    | A.Eff_whileLoop _ -> 14
-    | A.Eff_yieldNow _ -> 15
-    | A.Eff_callback _ -> 16
-    | A.Eff_awaitFiber _ -> 17
-    | A.Eff_withFiber _ -> 18
-    | A.Eff_scoped _ -> 19
-    | A.Eff_acquireRelease _ -> 20
-    | A.Eff_provideLayer _ -> 21
-    | A.Eff_service _ -> 22
-    | A.Eff_provideService _ -> 23
-    | A.Eff_catchIf _ -> 24
-    | A.Eff_select _ -> 25
-    | A.Eff_iterate _ -> 26
+    | A.Eff_yieldNow _ -> 14
+    | A.Eff_awaitFiber _ -> 15
+    | A.Eff_withFiber _ -> 16
+    | A.Eff_scoped _ -> 17
+    | A.Eff_acquireRelease _ -> 18
+    | A.Eff_provideLayer _ -> 19
+    | A.Eff_service _ -> 20
+    | A.Eff_provideService _ -> 21
+    | A.Eff_catchIf _ -> 22
+    | A.Eff_select _ -> 23
+    | A.Eff_iterate _ -> 24
 
   let ctor_index_stmt : 'op A.stmt -> int = function
     | A.Stmt_bindYield _ -> 0 | A.Stmt_yieldDiscard _ -> 1 | A.Stmt_ret _ -> 2

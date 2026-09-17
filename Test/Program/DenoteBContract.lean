@@ -58,7 +58,7 @@ rounds and is unfinished; the ref holds 2, not 0 and not 3. -/
 #guard (meaningB 0 pSucceed [] Stores.empty).1 = some (meaning pSucceed [] Stores.empty).1
 #guard (meaningB 0 pBindSync [] Stores.empty) =
   ((some (meaning pBindSync [] Stores.empty).1), (meaning pBindSync [] Stores.empty).2)
-#guard (meaningB 9 pWhileLoop [] Stores.empty).1 = some (Exit.failure (Cause.die Defect.notImplemented))
+#guard agreesAt 9 pWhileLoop
 
 /-! ## The ceilings -/
 

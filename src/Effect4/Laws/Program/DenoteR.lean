@@ -507,7 +507,6 @@ def inlineYield : NativeEff → Point → Option ExitV
           | some _ => none | none => some badShapeExit
         | .async => inlineAsyncYield op request p
         | .program => none
-    | .callback op request => inlineAsyncYield op request p
     | .awaitFiber target mode => match evalTerm p.env target with
       | some (Val.fiber ⟨id⟩) => p.awaitExit ⟨id⟩ mode | _ => some badShapeExit
     | .exit b => (inlineYield b (p.child 0)).map fun ex => .success (reifyExitVal ex)
@@ -637,18 +636,13 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
         rec fin ({ p with completed }.childWith 1 (reifyExitVal ex))
   -- `Prim.suspend (body p)` then `Prim.iterator (gen p [] false) unit`: the entry.
   | .gen _, p => suspendR p (.vis (.inr (.gen p)) Effects.Program.pure)
-  -- `Prim.suspend (body p)` then `Prim.whileLoop (loop p) cursor`: the entry.
-  | .whileLoop initial _ _ _, p => suspendR p (match evalTerm p.env initial with
-      | some cursor => .vis (.inr (.loop p cursor)) Effects.Program.pure
-      | none => .pure badShapeExit)
-  -- the same entry: `iterate` is the same loop frame, finished by its result term.
+  -- the loop entry: `iterate` is the loop frame, finished by its result term.
   | .iterate _ initial _ _ _ _, p => suspendR p (match evalTerm p.env initial with
       | some cursor => .vis (.inr (.loop p cursor)) Effects.Program.pure
       | none => .pure badShapeExit)
   -- `Prim.yieldNowWith`: the park answers the void value, which the continuation passes
   -- on (the frame resumes with `success void`; an answer is never discarded)
   | .yieldNow priority, _ => .vis (.inr (.yieldNow priority)) fun v => .pure (.success v)
-  | .callback op request, p => denoteAsyncRoute op request p
   | .awaitFiber target mode, p =>
     match evalTerm p.env target with
     | some (Val.fiber ⟨id⟩) =>
@@ -882,16 +876,6 @@ theorem denoteR_gen (root : NativeEff) (body : Stmts NativeOp) (p : Point) (h : 
   | zero => exact (h hf).elim
   | succ f => budget hf
 
-theorem denoteR_whileLoop (root : NativeEff) (initial test step : Term) (body : NativeEff)
-    (p : Point) (h : p.fuel ≠ 0) :
-    denoteR root (.whileLoop initial test step body) p =
-      suspendR p (match evalTerm p.env initial with
-        | some cursor => .vis (.inr (.loop p cursor)) Effects.Program.pure
-        | none => .pure badShapeExit) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => budget hf
-
 theorem denoteR_iterate (root : NativeEff) (cursorTy : Ty) (initial test step result : Term)
     (body : NativeEff) (p : Point) (h : p.fuel ≠ 0) :
     denoteR root (.iterate cursorTy initial test step result body) p =
@@ -1015,18 +999,6 @@ theorem denoteR_yieldNow (priority : Nat) (h : p.fuel ≠ 0) :
   cases hf : p.fuel with
   | zero => exact (h hf).elim
   | succ f => budget hf; try rfl
-
-theorem denoteR_callback (op : NativeOp) (r : Term) (h : p.fuel ≠ 0) :
-    denoteR root (.callback op r) p =
-      (match op with
-       | .external _ => denoteForeign op r p
-       | .sleep => denoteSleep r p
-       | _ => match (NativeOp.row op).kind with
-         | .async => denoteAsync r p
-         | _ => .pure badShapeExit) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => cases op <;> (budget hf; try rfl)
 
 theorem denoteR_awaitFiber (t : Term) (mode : Supervision.ObserverMode) (h : p.fuel ≠ 0) :
     denoteR root (.awaitFiber t mode) p =
@@ -1277,9 +1249,6 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
       all_goals first
         | exact inlineSyncYield_eq_headExit _ request p
         | (rename_i strategy; cases strategy <;> exact inlineSyncYield_eq_headExit _ request p)
-    | callback op request =>
-      simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
-      exact inlineAsyncYield_eq_headExit op request p
     | succeed t | fail t =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
       cases evalTerm p.env t <;> rfl
@@ -1318,7 +1287,7 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
       cases evalTerm p.env value <;> rfl
     | sync _ | suspend _ | bind _ _ | gen _ | catchCause _ _ | catchIf _ _ _ | matchCause _ _ _
     | onExit _ _ | uninterruptible _ | interruptible _ | select _ _ _ _
-    | whileLoop _ _ _ _ | iterate _ _ _ _ _ _ | yieldNow _ | «scoped» _ | acquireRelease _ _
+    | iterate _ _ _ _ _ _ | yieldNow _ | «scoped» _ | acquireRelease _ _
     | provideLayer _ _ _ | service _ =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte, headExit, frontier]
 termination_by structural e
@@ -1393,7 +1362,7 @@ theorem denote_of_inlineYield : ∀ (b : NativeEff) (q : Point) {exit : ExitV},
   | .matchCause _ _ _, q, exit, _, h | .onExit _ _, q, exit, _, h => by
     simp [inlineYield] at h
   | .gen _, _, _, hs, _ | .uninterruptible _, _, _, hs, _ | .interruptible _, _, _, hs, _
-  | .whileLoop _ _ _ _, _, _, hs, _ | .yieldNow _, _, _, hs, _ | .callback _ _, _, _, hs, _
+  | .iterate _ _ _ _ _ _, _, _, hs, _ | .yieldNow _, _, _, hs, _
   | .awaitFiber _ _, _, _, hs, _ | .withFiber _, _, _, hs, _ | .«scoped» _, _, _, hs, _
   | .acquireRelease _ _, _, _, hs, _
   | .provideLayer _ _ _, _, _, hs, _ | .service _, _, _, hs, _
@@ -1569,7 +1538,7 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
       rw [eraseControl_constructR, hfin, Effects.Program.inl_bind]
       rfl
   | .gen _, _, hs, _ | .uninterruptible _, _, hs, _ | .interruptible _, _, hs, _
-  | .whileLoop _ _ _ _, _, hs, _ | .yieldNow _, _, hs, _ | .callback _ _, _, hs, _
+  | .iterate _ _ _ _ _ _, _, hs, _ | .yieldNow _, _, hs, _
   | .awaitFiber _ _, _, hs, _ | .withFiber _, _, hs, _ | .«scoped» _, _, hs, _
   | .acquireRelease _ _, _, hs, _
   | .provideLayer _ _ _, _, hs, _ | .service _, _, hs, _

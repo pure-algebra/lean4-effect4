@@ -37,7 +37,6 @@ def foldMono {Op : Type} {M : Type u} (mono : EffMonoAlgebra Op M) (eff : Eff Op
 def operations {Op : Type} [DecidableEq Op] (eff : Eff Op) : List Op :=
   foldMap_eff [] (fun a b => (a ++ b).eraseDups) eff (f_eff := fun
     | .perform op _ => [op]
-    | .callback op _ => [op]
     | _ => [])
 
 def serviceKeys {Op : Type} (eff : Eff Op) : List ServiceKey :=
@@ -118,9 +117,7 @@ def EffTraversal.alg {Op : Type} {M : Type → Type} {A : Type} [Monad M]
   eff_exit x0 := s.acc s.atEff [x0]
   eff_uninterruptible x0 := s.acc s.atEff [x0]
   eff_interruptible x0 := s.acc s.atEff [x0]
-  eff_whileLoop _ _ _ x3 := s.acc s.atEff [x3]
   eff_yieldNow _ := s.acc s.atEff []
-  eff_callback _ _ := s.acc s.atEff []
   eff_awaitFiber _ _ := s.acc s.atEff []
   eff_withFiber x0 := s.acc s.atEff [x0]
   eff_scoped x0 := s.acc s.atEff [x0]

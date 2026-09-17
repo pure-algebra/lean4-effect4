@@ -419,9 +419,7 @@ type eff =
   | Eff_exit of eff
   | Eff_uninterruptible of eff
   | Eff_interruptible of eff
-  | Eff_whileLoop of term * term * term * eff
   | Eff_yieldNow of int
-  | Eff_callback of native_op * term
   | Eff_awaitFiber of term * observer_mode
   | Eff_withFiber of action_term
   | Eff_scoped of eff
@@ -498,19 +496,17 @@ let ctor_index_eff : eff -> int = function
   | Eff_exit _ -> 11
   | Eff_uninterruptible _ -> 12
   | Eff_interruptible _ -> 13
-  | Eff_whileLoop _ -> 14
-  | Eff_yieldNow _ -> 15
-  | Eff_callback _ -> 16
-  | Eff_awaitFiber _ -> 17
-  | Eff_withFiber _ -> 18
-  | Eff_scoped _ -> 19
-  | Eff_acquireRelease _ -> 20
-  | Eff_provideLayer _ -> 21
-  | Eff_service _ -> 22
-  | Eff_provideService _ -> 23
-  | Eff_catchIf _ -> 24
-  | Eff_select _ -> 25
-  | Eff_iterate _ -> 26
+  | Eff_yieldNow _ -> 14
+  | Eff_awaitFiber _ -> 15
+  | Eff_withFiber _ -> 16
+  | Eff_scoped _ -> 17
+  | Eff_acquireRelease _ -> 18
+  | Eff_provideLayer _ -> 19
+  | Eff_service _ -> 20
+  | Eff_provideService _ -> 21
+  | Eff_catchIf _ -> 22
+  | Eff_select _ -> 23
+  | Eff_iterate _ -> 24
 let wire_tag_eff : eff -> int = function
   | Eff_succeed _ -> 0
   | Eff_fail _ -> 1
@@ -526,9 +522,7 @@ let wire_tag_eff : eff -> int = function
   | Eff_exit _ -> 12
   | Eff_uninterruptible _ -> 13
   | Eff_interruptible _ -> 14
-  | Eff_whileLoop _ -> 16
   | Eff_yieldNow _ -> 17
-  | Eff_callback _ -> 18
   | Eff_awaitFiber _ -> 19
   | Eff_withFiber _ -> 20
   | Eff_scoped _ -> 21
@@ -554,9 +548,7 @@ let ctor_name_eff : eff -> string = function
   | Eff_exit _ -> "exit"
   | Eff_uninterruptible _ -> "uninterruptible"
   | Eff_interruptible _ -> "interruptible"
-  | Eff_whileLoop _ -> "whileLoop"
   | Eff_yieldNow _ -> "yieldNow"
-  | Eff_callback _ -> "callback"
   | Eff_awaitFiber _ -> "awaitFiber"
   | Eff_withFiber _ -> "withFiber"
   | Eff_scoped _ -> "scoped"
@@ -567,7 +559,7 @@ let ctor_name_eff : eff -> string = function
   | Eff_catchIf _ -> "catchIf"
   | Eff_select _ -> "select"
   | Eff_iterate _ -> "iterate"
-let ctor_names_eff : string list = ["succeed"; "fail"; "failCause"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "whileLoop"; "yieldNow"; "callback"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"]
+let ctor_names_eff : string list = ["succeed"; "fail"; "failCause"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "yieldNow"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"]
 
 let ctor_index_stmt : stmt -> int = function
   | Stmt_bindYield _ -> 0

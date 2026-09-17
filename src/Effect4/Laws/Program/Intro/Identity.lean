@@ -75,17 +75,8 @@ theorem prepareR_denoteR (root : NativeEff) (e : NativeEff) (p : Point)
       | interruptible b =>
         rw [denoteR_interruptible root b hpos]; exact prepareR_denoteAction root p completed
       | select s d a0 a1 => rw [denoteR_select root s d a0 a1 p hpos]; rfl
-      | whileLoop i t s b => rw [denoteR_whileLoop root i t s b p hpos]; rfl
       | iterate c i t s r b => rw [denoteR_iterate root c i t s r b p hpos]; rfl
       | yieldNow priority => rw [denoteR_yieldNow root priority hpos]; rfl
-      | callback op r =>
-        rw [denoteR_callback root op r hpos]
-        cases op with
-        | external i => exact prepareR_denoteForeign (.external i) r p completed
-        | sleep => exact prepareR_denoteSleep r p completed
-        | deferredAwait => exact prepareR_denoteAsync r p completed
-        | scopeMake strategy => cases strategy <;> rfl
-        | _ => rfl
       | awaitFiber t mode =>
         rw [denoteR_awaitFiber root t mode hpos]
         cases evalTerm p.env t with

@@ -15,8 +15,8 @@ so the printer is byte-deterministic without a width heuristic anywhere in it.
 Three formers of lean4-typescript v0.5.0 carry the shapes the fragment lacked before, and
 each has exactly one consumer here: `Expr.generator` (`function* () { … }`) is what
 `Effect.gen` takes, `Expr.cond` (`t ? a : b`) is the value-decided `select` under `.bool`, and
-`Expr.arrowBlock` (`(a) => { … }`) is the suspended block and the `step` of a
-`whileLoop`.
+`Expr.arrowBlock` (`(a) => { … }`) is the suspended block and the `step` of an
+`iterate`.
 
 The `Nat` every printing function carries is the environment's length (decision D1: a
 positional environment, the flows' convention), so the next binder minted is
@@ -322,7 +322,7 @@ mutual
   length. Every binder the shape introduces is `Var.name` of the position it occupies:
   `bind`'s answer at `n`, `catchCause`'s cause at `n`, `matchCause`'s two arms each at `n`,
   `onExit`'s exit at `n`, `acquireRelease`'s resource and exit at `n` and `n + 1`, and
-  `whileLoop`'s cursor at `n` with the body's answer at `n + 1`. The refusals are §5.1's
+  `iterate`'s cursor at `n` with the body's answer at `n + 1`. The refusals are §5.1's
   refused row. -/
   def print (sig : Signature Op) (n : Nat) : Eff Op → Except PrintRefusal TypeScript.Expr
     | .succeed value => .ok (.call (.ident "Effect.succeed") [printTerm value])
@@ -392,17 +392,6 @@ mutual
       let b ← print sig (n + 1) a1
       .ok (.call (.ident "caseTag")
         [ printTerm s, .str t, .lambda [⟨Var.name n, none⟩] a, .lambda [⟨Var.name n, none⟩] b ])
-    | .whileLoop initial test step body => do
-      let b ← print sig (n + 1) body
-      .ok (.call (.ident "Effect.suspend")
-        [ .arrowBlock []
-            [ .letInit (Var.name n) (printTerm initial)
-            , .ret (.call (.ident "Effect.whileLoop")
-                [ .object
-                    [ ("while", .arrow none (printTerm test))
-                    , ("body", .arrow none b)
-                    , ("step", .arrowBlock [Var.name (n + 1)]
-                        [.assign (Var.name n) (printTerm step)]) ] ]) ] ])
     -- `reduce`'s shape at the pin (`internal/effect.ts:4450-4470`): the cursor declared at
     -- its annotation, the loop, and the loop mapped to the result over the last cursor.
     | .iterate cursor initial test step result body => do
@@ -423,7 +412,6 @@ mutual
                 , .arrow none (printTerm result) ]) ] ])
     | .yieldNow priority =>
       .ok (.call (.ident "Effect.yieldNowWith") [.int (Int.ofNat priority)])
-    | .callback register request => printRow (sig.rowOf register) request
     | .awaitFiber fiber mode =>
       match mode with
       | .joinEffect => .ok (.call (.ident "Fiber.join") [printTerm fiber])

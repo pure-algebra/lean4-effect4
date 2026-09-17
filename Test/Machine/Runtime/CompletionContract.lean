@@ -19,7 +19,7 @@ namespace Test.Runtime.CompletionContract
 open Effect4 Effect4.Machine Effect4.Program
 
 def waiting : NativeEff :=
-  .bind (.perform .deferredMake (.lit .unit)) (.callback .deferredAwait (.var 0))
+  .bind (.perform .deferredMake (.lit .unit)) (.perform .deferredAwait (.var 0))
 
 def reply (answer : Completion Val Err Defect FiberId Ann) (token : Nat := 0) : Api.Decision :=
   .answerAsync Api.root token answer

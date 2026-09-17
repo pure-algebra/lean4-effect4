@@ -16,11 +16,11 @@ def table : RowTable :=
   , { name := "read", spelling := "Host.read", kind := .async,
       registration := .external, request := .handle resource, answer := .nat, error := .never, cite := "" } ]
 
-def acquire : NativeEff := .callback (.external 0) (.lit .unit)
+def acquire : NativeEff := .perform (.external 0) (.lit .unit)
 def answer (v : Val) : Completion Val Err Defect FiberId Ann := .ofExit (.success v)
 def program : NativeEff :=
-  .scoped (.bind (.acquireRelease acquire (.callback (.external 1) (.var 0)))
-    (.callback (.external 2) (.var 0)))
+  .scoped (.bind (.acquireRelease acquire (.perform (.external 1) (.var 0)))
+    (.perform (.external 2) (.var 0)))
 
 #guard HandleKind.external.byte = 7
 #guard HandleKind.ofByte? 6 = none

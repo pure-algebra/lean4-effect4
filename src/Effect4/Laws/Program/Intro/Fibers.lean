@@ -45,12 +45,6 @@ theorem intro_yieldNow (root : NativeEff) (priority : Nat) (p : Point) (k : Nat)
   rw [compileEff_yieldNow priority hf, denoteR_yieldNow root priority hpos]
   exact CodeMeans.yieldNow priority _ delivers_seqR_pure
 
-theorem intro_callback (root : NativeEff) (op : NativeOp) (r : Term) (p : Point) (k : Nat)
-    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) :
-    CodeMeans root (compileEff (.callback op r) p) (denoteR root (.callback op r) p) := by
-  rw [compileEff_callback op r hf, denoteR_callback root op r hpos]
-  exact asyncRoute_means root op r p
-
 theorem intro_awaitFiber (root : NativeEff) (t : Term) (mode : Supervision.ObserverMode) (p : Point) (k : Nat)
     (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) :
     CodeMeans root (compileEff (.awaitFiber t mode) p) (denoteR root (.awaitFiber t mode) p) := by

@@ -37,7 +37,9 @@
   ],
   "constructor_retirements": [
     "Effect4.Program.Eff.branch",
-    "Effect4.Program.Eff.yieldError"
+    "Effect4.Program.Eff.yieldError",
+    "Effect4.Program.Eff.callback",
+    "Effect4.Program.Eff.whileLoop"
   ],
   "family_additions": [
     "Effect4.Program.Decision"
@@ -85,6 +87,14 @@
     "eff/goldens/pYieldError.bin",
     "eff/goldens/pDiamond.bin",
     "eff/goldens/pMergeAll.bin",
-    "eff/goldens/pProvide.bin"
+    "eff/goldens/pProvide.bin",
+    "eff/goldens/pCallback.bin",
+    "eff/goldens/pExternal.bin",
+    "eff/goldens/pIllCallback.bin",
+    "eff/goldens/pOps.bin",
+    "eff/goldens/pSleep.bin",
+    "eff/goldens/pWhile.bin",
+    "eff/goldens/pIllStep.bin",
+    "goldens/eff/pLoop.hex"
   ]
 }

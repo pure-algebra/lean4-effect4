@@ -3,7 +3,7 @@ import Effect4.Laws.Program.Intro.Elementary
 /-!
 # Intro.Sequential: the sequential and loop family
 
-The introductions of `suspend`, `bind`, `gen`, `select`, `whileLoop`, `iterate` and
+The introductions of `suspend`, `bind`, `gen`, `select`, `iterate` and
 `onExit`.
 -/
 
@@ -113,25 +113,7 @@ theorem intro_select (root : NativeEff) (n : Nat) (s : Term) (d : Decision) (a0 
         rw [resolve_of_at hb]
         simp only [prepareR_denoteR]
         exact ih _ (hwcw completed 0 v) a0 hb
-
-theorem intro_whileLoop (root : NativeEff) (i t s : Term) (b : NativeEff) (p : Point) (k : Nat)
-    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
-    (h : Node.at_ (.eff root) p.path = some (.eff (.whileLoop i t s b))) :
-    CodeMeans root (compileEff (.whileLoop i t s b) p) (denoteR root (.whileLoop i t s b) p) := by
-  rw [compileEff_whileLoop i t s b hf, denoteR_whileLoop root i t s b p hpos]
-  refine CodeMeans.suspendBody p _ fun completed => ?_
-  show CodeMeans root (suspendBodyAt root (.body { p with completed }))
-    (prepareR completed (match evalTerm p.env i with
-      | some cursor => .vis (.inr (.loop p cursor)) Effects.Program.pure
-      | none => .pure badShapeExit))
-  rw [suspendBodyAt_whileLoop (q := { p with completed }) hf h]
-  dsimp only
-  rcases hv : evalTerm p.env i with _ | cursor
-  · exact codeMeans_badShape root
-  · exact CodeMeans.loopEntry p _ cursor _ ⟨rfl, rfl, rfl, rfl, rfl⟩ delivers_pure
-
-/-- `iterate` enters the same loop frame as `whileLoop`; what differs is the loop's end, which
-the hooks answer (`loopFinishAt` against `loopFinishRAt`). -/
+/-- `iterate` enters the loop frame: the hooks answer (`loopFinishAt` against `loopFinishRAt`). -/
 theorem intro_iterate (root : NativeEff) (c : Ty) (i t s r : Term) (b : NativeEff) (p : Point)
     (k : Nat) (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
     (h : Node.at_ (.eff root) p.path = some (.eff (.iterate c i t s r b))) :

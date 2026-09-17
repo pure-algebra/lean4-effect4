@@ -91,7 +91,7 @@ def fail (x0 x1 : TermSrc) : Src NativeOp :=
 
 /-- `Deferred.await` (`vendor/effect-4.0.0-rc.112/src/Deferred.ts:173-186`). -/
 def await (request : TermSrc) : Src NativeOp :=
-  callback .deferredAwait request
+  perform .deferredAwait request
 
 end Deferred
 
@@ -107,7 +107,7 @@ namespace Effect
 
 /-- `Effect.sleep` (`vendor/effect-4.0.0-rc.112/src/internal/effect.ts:6114-6116`). -/
 def sleep (request : TermSrc) : Src NativeOp :=
-  callback .sleep request
+  perform .sleep request
 
 /-- `Effect.currentTimeMillis` (`vendor/effect-4.0.0-rc.112/src/internal/effect.ts:6118`). -/
 def currentTimeMillis : Src NativeOp :=
@@ -158,8 +158,8 @@ open Effect4.Program Effect4.Program.Authoring
   = .ok (.bind (.perform .refMake (.lit (.nat 0)))
           (.perform .refSet (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 1)) .nil)))))
 #guard elaborate (Ref.update .incr (nat 0)) = .ok (.perform (.refUpdate .incr) (.lit (.nat 0)))
--- An async row is the reader's image: a `callback`, never a `perform` (`Read.lean` `rowAnswer`).
-#guard elaborate (Effect.sleep (nat 5)) = .ok (.callback .sleep (.lit (.nat 5)))
+-- An async row authors as the reader reads it: a `perform`, the one invocation form.
+#guard elaborate (Effect.sleep (nat 5)) = .ok (.perform .sleep (.lit (.nat 5)))
 #guard elaborate Deferred.make = .ok (.perform .deferredMake (.lit .unit))
 
 end Effect4.Program.AuthoringRowsGuards

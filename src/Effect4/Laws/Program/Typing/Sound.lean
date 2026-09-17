@@ -110,11 +110,6 @@ theorem effTy_sound (sig : Signature Op) (e : Eff Op) :
   | interruptible body =>
     intro env t h
     exact .interruptible (effTy_sound sig body env t (inv_interruptible sig env body t h))
-  | whileLoop initial test step body =>
-    intro env t h
-    obtain ⟨cursor, b, hinit, htest, hbody, hstep, rfl⟩ :=
-      inv_whileLoop sig env initial test step body t h
-    exact .whileLoop hinit htest (effTy_sound sig body _ b hbody) hstep
   | iterate cursor initial test step result body =>
     intro env t h
     obtain ⟨c0, c1, d, b, hinit, htest, hbody, hstep, hresult, hsub0, hsub1, rfl⟩ :=
@@ -124,10 +119,6 @@ theorem effTy_sound (sig : Signature Op) (e : Eff Op) :
     intro env t h
     obtain rfl := inv_yieldNow sig env priority t h
     exact .yieldNow priority
-  | callback register request =>
-    intro env t h
-    obtain ⟨requestTy, hdom, hkind, hreq, heq, rfl⟩ := inv_callback sig env register request t h
-    exact .callback hdom hkind hreq heq
   | awaitFiber fiber mode =>
     intro env t h
     cases mode with
@@ -448,17 +439,11 @@ theorem effTy_complete (sig : Signature Op) (e : Eff Op) :
     intro env t hd; cases hd
     have ih := effTy_complete sig body _ _ ‹HasTy sig _ body _›
     simp_all [effTy]
-  | whileLoop initial test step body =>
-    intro env t hd; cases hd
-    have ih := effTy_complete sig body _ _ ‹HasTy sig _ body _›
-    simp_all [effTy]
   | iterate cursor initial test step result body =>
     intro env t hd; cases hd
     have ih := effTy_complete sig body _ _ ‹HasTy sig _ body _›
     simp_all [effTy]
   | yieldNow priority =>
-    intro env t hd; cases hd; simp_all [effTy]
-  | callback register request =>
     intro env t hd; cases hd; simp_all [effTy]
   | awaitFiber fiber mode =>
     intro env t hd

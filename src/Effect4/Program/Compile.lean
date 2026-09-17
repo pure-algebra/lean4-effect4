@@ -35,7 +35,7 @@ constructor suggests (P0 record, `docs/research/2026-09-06-p0-fable-record.md`, 
 exit, because `Effect.exit` returns `exitSucceed(self)` for an `Exit`
 (`vendor/effect-4.0.0-rc.112/src/internal/effect.ts:3621-3622`); `gen` compiles to a
 `Suspend`, because `Effect.gen` is `suspend(() => fromIteratorUnsafe(…))` (`:1175-1196`);
-`whileLoop` compiles to a `Suspend`, because the printer wraps `Effect.whileLoop` in
+`iterate` compiles to a `Suspend`, because the printer wraps it in
 `Effect.suspend` so that every run starts from the initial cursor
 (`src/Effect4/Codegen/Print.lean:158-168`). `suspendBodyAt` answers the iterator or the
 loop frame at that point, as it answers the arm a `select` decides.
@@ -603,16 +603,10 @@ def compileEff : NativeEff → Point → NCode
       | .uninterruptible _ => Prim.withFiber (EffThunk.act p)
       | .interruptible _ => Prim.withFiber (EffThunk.act p)
       | .select _ _ _ _ => Prim.suspend (EffThunk.body p)
-      -- the printed loop is `Effect.suspend(() => { let a0 = initial; return
-      -- Effect.whileLoop({…}) })` (`Codegen/Print.lean:158-168`): the cursor is read and the
-      -- `While` frame built when the suspension runs, by `suspendBodyAt`.
-      | .whileLoop _ _ _ _ => Prim.suspend (EffThunk.body p)
-      -- `iterate` prints inside the same suspension (`let aN: T = initial` then the loop
-      -- mapped to `result`), so it is the same frame, read by `suspendBodyAt`.
+      -- `iterate` prints inside a suspension (`let aN: T = initial` then the loop
+      -- mapped to `result`), so it is a `While` frame read by `suspendBodyAt`.
       | .iterate _ _ _ _ _ _ => Prim.suspend (EffThunk.body p)
       | .yieldNow priority => Prim.yieldNowWith priority
-      -- The shared dispatcher, unchanged in what it compiles for every operation.
-      | .callback register request => asyncRoute register request p
       | .awaitFiber fiber mode =>
         match evalTerm p.env fiber with
         | some (Val.fiber ⟨id⟩) =>
@@ -1251,19 +1245,19 @@ def syncValueAt (root : NativeEff) : EffThunk → Val
 
 /-- The heads whose suspension body `suspendBodyAt` decides itself instead of compiling the
 node at its point: a source `suspend`, the value-decided `select`, the two iterators `gen` and
-`whileLoop`, and `provideLayer`'s scope allocation. The match below is the definition; this
+`iterate`, and `provideLayer`'s scope allocation. The match below is the definition; this
 Boolean names the set it decides, and `Agreement.suspendBodyAt_of_at` is the law of the
 complement (every other head's body is `compileEff` at the point), which stops building the
 moment the match gains an arm this list lacks. -/
 def Eff.suspendDecided {Op : Type} : Eff Op → Bool
-  | .suspend _ | .select _ _ _ _ | .gen _ | .whileLoop _ _ _ _
+  | .suspend _ | .select _ _ _ _ | .gen _
   | .iterate _ _ _ _ _ _ | .provideLayer _ _ _ => true
   | _ => false
 
 /-- What a `suspend` thunk returns: a body compiled at its point, a branch decided by its
 point's environment, the iterator of a generator (`Effect.gen`'s `fromIteratorUnsafe`,
-`internal/effect.ts:1175-1196`), or the loop frame of a `whileLoop` with its initial cursor
-read now (the printed `let a0 = initial` inside the suspension, `Codegen/Print.lean:158-168`). -/
+`internal/effect.ts:1175-1196`), or the loop frame of an `iterate` with its initial cursor
+read now (the printed `let aN: T = initial` inside the suspension, `Codegen/Print.lean:158-168`). -/
 def suspendBodyAt (root : NativeEff) : EffThunk → NCode
   | .body p =>
     match p.fuel with
@@ -1279,10 +1273,6 @@ def suspendBodyAt (root : NativeEff) : EffThunk → NCode
         | some (first, bound) => resolve root (p.childBind (cond first 0 1) bound)
         | none => badShape
       | some (Node.eff (.gen _)) => Prim.iterator (EffName.gen p [] false) Val.unit
-      | some (Node.eff (.whileLoop initial _ _ _)) =>
-        match evalTerm p.env initial with
-        | some cursor => Prim.whileLoop (EffName.loop p) cursor
-        | none => badShape
       | some (Node.eff (.iterate _ initial _ _ _ _)) =>
         match evalTerm p.env initial with
         | some cursor => Prim.whileLoop (EffName.loop p) cursor
@@ -1305,29 +1295,28 @@ def suspendBodyAt (root : NativeEff) : EffThunk → NCode
       (EffName.releaseUnder (Point.ofCapture capture) capture.ctx exit)
   | _ => Prim.failure (Cause.die Defect.notImplemented)
 
-/-- The loop at a point, `whileLoop` or `iterate`: its test, step and body. -/
+/-- The loop at a point (`iterate`): its test, step and body. -/
 def loopAt (root : NativeEff) (p : Point) : Option (Term × Term × NativeEff) :=
   match Node.at_ (Node.eff root) p.path with
-  | some (Node.eff (.whileLoop _ test step body)) => some (test, step, body)
   | some (Node.eff (.iterate _ _ test step _ body)) => some (test, step, body)
   | _ => none
 
-/-- The result term of the loop at a point: an `iterate`'s; a `whileLoop` has none. -/
+/-- The result term of the loop at a point. -/
 def loopResultAt (root : NativeEff) (p : Point) : Option Term :=
   match Node.at_ (Node.eff root) p.path with
   | some (Node.eff (.iterate _ _ _ _ result _)) => some result
   | _ => none
 
-/-- What the loop at a point answers at the cursor that failed its test: an `iterate`'s
-`result` over that cursor, the wrong shape when it does not evaluate (the raw-program rule,
-with no silent fallback); `unit` for a `whileLoop` (`exitVoid`, rc.112). -/
+/-- What the loop at a point answers at the cursor that failed its test: its `result` over
+that cursor, the wrong shape when it does not evaluate (the raw-program rule, with no silent
+fallback). No loop at the point is the wrong shape too, as it is for `loopNextAt`. -/
 def loopFinishAt (root : NativeEff) (p : Point) (cursor : Val) : NCode :=
   match loopResultAt root p with
   | some result =>
     match evalTerm (p.env ++ [cursor]) result with
     | some answer => Prim.success answer
     | none => badShape
-  | none => Prim.success Val.unit
+  | none => badShape
 
 /-- The loop at a point from a cursor: the test chooses the body at `childWith 0 cursor` or
 the loop's end (`loopFinishAt`); a test that is not a Boolean, or no loop at the point,

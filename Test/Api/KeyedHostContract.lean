@@ -13,8 +13,8 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Api.HostSession
 def table : RowTable := [Profile.Scalar.waitRow]
 def opts : Supervision.ForkOptions := { daemon := false, startImmediately := true, maskMode := .inherit }
 def program : Api.Program :=
-  .bind (.withFiber (.fork (.callback (.external 0) (.lit (.nat 2))) opts))
-    (.bind (.withFiber (.fork (.callback (.external 0) (.lit (.nat 3))) opts))
+  .bind (.withFiber (.fork (.perform (.external 0) (.lit (.nat 2))) opts))
+    (.bind (.withFiber (.fork (.perform (.external 0) (.lit (.nat 3))) opts))
       (.bind (.awaitFiber (.var 0) .awaitValue) (.awaitFiber (.var 1) .awaitValue)))
 def initial : Session program table where
   admitted := {
@@ -73,7 +73,7 @@ def cancelled := (advance ab 1000 (.interruptFrom none .empty ⟨1⟩)).session
 
 -- E4-HOST-CE-005: applying independent-key answers resumes shared effects, so AB ≠ BA.
 def pair (x y : Term) : Term := .app "pair" (.cons x (.cons y .nil))
-def child (n : Nat) : Api.Program := .bind (.callback (.external 0) (.lit (.nat n)))
+def child (n : Nat) : Api.Program := .bind (.perform (.external 0) (.lit (.nat n)))
   (.perform .refSet (pair (.var 0) (.lit (.nat n))))
 def shared : Api.Program := .bind (.perform .refMake (.lit (.nat 0)))
   (.bind (.withFiber (.fork (child 1) opts))

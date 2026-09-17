@@ -1,5 +1,6 @@
 # Planned module never written
 src/Effect4/Surface/Handler.lean	Test/contracts/
+src/Effect4/Codegen/Casify.lean	docs/CAS-IFIED-APIS-AND-SCHEMAS.md
 # Removed 2026-09-13 (wave 1 of the checking refactor): the provenance-label gate and its
 # library, the separate TypeScript drift gate, and the avatar-copy test. Cited by ruled
 # register rows and a landed dispatch, which are history.

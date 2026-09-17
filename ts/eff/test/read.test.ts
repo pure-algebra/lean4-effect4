@@ -73,9 +73,9 @@ describe("rows: the shape the grammar could not decide", () => {
       '["bind",["perform",["refMake"],["lit",["nat",0]]],["perform",["refUpdate",["incr"]],["var",0]]]',
     )
   })
-  test("an async row reads back as callback", () => {
+  test("an async row reads back as perform", () => {
     expect(json("Effect.flatMap(Deferred.make<number, number>(), (a0) => Deferred.await(a0))")).toBe(
-      '["bind",["perform",["deferredMake"],["lit",["unit"]]],["callback",["deferredAwait"],["var",0]]]',
+      '["bind",["perform",["deferredMake"],["lit",["unit"]]],["perform",["deferredAwait"],["var",0]]]',
     )
   })
   // E4-CHECK-CE-013: a row that declares type arguments is read at exactly that spelling
@@ -495,7 +495,7 @@ describe("supplied tables and method rows", () => {
   const natLit = (value: number): Term => ({ _tag: "lit", value: { _tag: "nat", value } })
   const unitLit: Term = { _tag: "lit", value: { _tag: "unit" } }
   const pair = (a: Term, b: Term): Term => ({ _tag: "app", atom: "pair", args: [a, b] })
-  const external = (index: number, request: Term): Eff => ({ _tag: "callback", register: { _tag: "external", index }, request })
+  const external = (index: number, request: Term): Eff => ({ _tag: "perform", op: { _tag: "external", index }, request })
   const after9 = (rest: Eff): Eff => ({ _tag: "bind", first: { _tag: "succeed", value: natLit(9) }, rest })
 
   test("zero, one and two arguments, and explicit type arguments (Lean methodPrograms)", () => {

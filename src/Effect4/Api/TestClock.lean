@@ -50,7 +50,6 @@ needs adjusted, one per sleep. The monoid fold over the tree. -/
 def sleepDeadlines (program : Program) : List Nat :=
   foldMap_eff [] (· ++ ·) program (f_eff := fun
     | .perform .sleep (.lit (.nat d)) => [d]
-    | .callback .sleep (.lit (.nat d)) => [d]
     | _ => [])
 
 /-- The tape that adjusts once per literal sleep, in program order. Exact for a program
@@ -64,28 +63,22 @@ def runSequential (program : Program) (fuel : Nat)
     (compileFuel : Nat := fuel) : Run :=
   run program fuel (sleepDeadlines program) answers table compileFuel
 
-/-- Every sleep an immediate success: the identity fold with the two sleep slots replaced. -/
+/-- Every sleep an immediate success: the identity fold with the invocation slot replaced. -/
 def fastForwardAlgebra : EffAlgebra NativeOp (EffSelfCarrier NativeOp) :=
   { EffAlgebra.id NativeOp with
     eff_perform := fun op req => match op with
       | .sleep => .succeed (.lit .unit)
-      | _ => .perform op req
-    eff_callback := fun op req => match op with
-      | .sleep => .succeed (.lit .unit)
-      | _ => .callback op req }
+      | _ => .perform op req }
 
 /-- The program with every sleep an immediate success. -/
 def fastForward (program : Program) : Program := cata_eff fastForwardAlgebra program
 
-/-- Every literal sleep scaled by `k`: the identity fold with the two sleep slots replaced. -/
+/-- Every literal sleep scaled by `k`: the identity fold with the invocation slot replaced. -/
 def dilateAlgebra (k : Nat) : EffAlgebra NativeOp (EffSelfCarrier NativeOp) :=
   { EffAlgebra.id NativeOp with
     eff_perform := fun op req => match op, req with
       | .sleep, .lit (.nat d) => .perform .sleep (.lit (.nat (d * k)))
-      | _, _ => .perform op req
-    eff_callback := fun op req => match op, req with
-      | .sleep, .lit (.nat d) => .callback .sleep (.lit (.nat (d * k)))
-      | _, _ => .callback op req }
+      | _, _ => .perform op req }
 
 /-- The program with every literal sleep scaled by `k`. -/
 def dilateTime (k : Nat) (program : Program) : Program := cata_eff (dilateAlgebra k) program

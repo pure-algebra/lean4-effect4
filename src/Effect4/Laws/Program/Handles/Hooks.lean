@@ -468,9 +468,6 @@ theorem suspendBodyAt_keys (root : NativeEff) (t : EffThunk) : nativeKeys (suspe
       · split
         · next cursor hcursor => sub_tac using (evalTerm_point_keys _ p cursor hcursor)
         · exact List.nil_subset _
-      · split
-        · next cursor hcursor => sub_tac using (evalTerm_point_keys _ p cursor hcursor)
-        · exact List.nil_subset _
       · sub_tac
       · exact compileEff_keys _ p
       · exact List.nil_subset _

@@ -33,8 +33,8 @@ theorem tape_exhaustion : exhaustionTag 40 [] = 1 := by decide
 
 #print axioms command_exhaustion
 #print axioms tape_exhaustion
-def sleeping : Api.Program := .callback .sleep (.lit (.nat 4))
-def waiting : Api.Program := .callback (.external 0) (.lit (.nat 7))
+def sleeping : Api.Program := .perform .sleep (.lit (.nat 4))
+def waiting : Api.Program := .perform (.external 0) (.lit (.nat 7))
 def waitTable : RowTable := [Profile.Scalar.waitRow]
 
 #guard (Api.run sleeping 100).reasons = [.awaitTimer Api.root 4]

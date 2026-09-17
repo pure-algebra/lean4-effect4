@@ -152,7 +152,7 @@ def genOpts : M Effect4.Supervision.ForkOptions := do
 
 /-- A native row: the thirteen `Ref` rows, the five `Deferred` rows the printer prints as
 calls, and `Scope.make` at both finalizer strategies. `deferredAwait` is not drawn here — it
-is the `callback` arm's row. -/
+is the asynchronous leaf arm's row. -/
 def genOp : M NativeOp := do
   match ← pick 20 with
   | 0 => pure .refMake
@@ -222,7 +222,8 @@ def genEffLeaf (n : Nat) : Nat → M (Eff NativeOp)
   | 6 => do pure (.yieldNow (← pick 3))
   | _ => do
     match ← pick 3 with
-    | 0 => pure (.callback .deferredAwait (← genTerm n 1))
+    -- the asynchronous row, a `perform` like every other since `callback` retired (same draw)
+    | 0 => pure (.perform .deferredAwait (← genTerm n 1))
     | 1 => pure (.withFiber .getId)
     | _ => pure (.withFiber .getContext)
 
@@ -255,8 +256,12 @@ def genEffStep (prev : Nat → M (Eff NativeOp)) (prevStmts : Nat → Nat → M 
     | 18 => pure (.interruptible (← prev n))
     -- the conditional: `select` under `.bool`, drawn as `branch` was (the same three draws)
     | 19 => pure (.select (← genTerm n 1) .bool (← prev n) (← prev n))
-    | 20 =>
-      pure (.whileLoop (← genTerm n 1) (← genTerm (n + 1) 1) (← genTerm (n + 1) 1)
+    -- the loop: `iterate` answering `unit`, drawn as `whileLoop` was (the same four draws);
+    -- the cursor's annotation is a literal initial's own type, `nat` otherwise
+    | 20 => do
+      let initial ← genTerm n 1
+      let cursor := match initial with | .lit value => value.ty | _ => .nat
+      pure (.iterate cursor initial (← genTerm (n + 1) 1) (← genTerm (n + 1) 1) (.lit .unit)
         (← prev (n + 1)))
     | 21 =>
       pure (.awaitFiber (← genTerm n 1) (if (← pick 2) == 0 then .awaitValue else .joinEffect))

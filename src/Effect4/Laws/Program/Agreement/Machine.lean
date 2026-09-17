@@ -193,9 +193,7 @@ theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), Straight e = tru
   | .gen _, _, hpl
   | .uninterruptible _, _, hpl
   | .interruptible _, _, hpl
-  | .whileLoop _ _ _ _, _, hpl
   | .yieldNow _, _, hpl
-  | .callback _ _, _, hpl
   | .awaitFiber _ _, _, hpl
   | .withFiber _, _, hpl
   | .scoped _, _, hpl

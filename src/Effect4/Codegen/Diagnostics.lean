@@ -91,7 +91,6 @@ def codesOf (c : HostConfig) : TypeReason → List Nat
   | .cause _ => []
   | .errorNotAdmitted _ => []
   | .outsideDomain _ => []
-  | .notAsync _ => []
   | .requestNotSubtype _ _ _ => [2345, 2769]
   -- A conditional accepts any type in TypeScript; the always-truthy advice (2872, 2873) is the
   -- nearest thing, and it is advisory.

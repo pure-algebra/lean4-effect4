@@ -104,8 +104,8 @@ retired one or one never given, refuses at the root and nested inside a retained
 in the value tree and in the bytes. A retirement adds its tag to `unheld`. -/
 
 /-- Tags of `Eff` that no active constructor holds: 3 is the retired `yieldError`, 15 the retired
-`branch`, the other two were never given. -/
-def unheld : List Nat := [3, 15, 29, 255]
+`branch`, 16 the retired `whileLoop`, 18 the retired `callback`, the other two were never given. -/
+def unheld : List Nat := [3, 15, 16, 18, 29, 255]
 
 -- Old bytes of a `yieldError` refuse: tag 3 with its one term, at the root and nested.
 def oldYieldError : Val := .ctor 3 [Canonical.toVal (Term.lit (.str "lost"))]
@@ -126,6 +126,33 @@ def oldBranch : Val :=
     (Eff.select (Op := NativeOp) (.lit (.bool true)) .bool (.succeed (.lit .unit))
       (.succeed (.lit .unit)))) =
   some (.select (.lit (.bool true)) .bool (.succeed (.lit .unit)) (.succeed (.lit .unit)))
+
+-- Old bytes of a `whileLoop` refuse: tag 16 with its four fields, at the root and nested.
+def oldWhileLoop : Val :=
+  .ctor 16 [Canonical.toVal (Term.lit (.nat 0)),
+    Canonical.toVal (Term.lit (.bool false)),
+    Canonical.toVal (Term.lit (.nat 1)),
+    Canonical.toVal (Eff.succeed (Op := NativeOp) (.lit .unit))]
+#guard Canonical.ofVal (α := Eff NativeOp) oldWhileLoop = none
+#guard Canonical.decode (α := Eff NativeOp) (Val.encode oldWhileLoop) = none
+#guard Canonical.decode (α := Eff NativeOp) (Val.encode (.ctor 5 [oldWhileLoop])) = none
+-- The same program as an `iterate` reads back.
+#guard Canonical.decode (α := Eff NativeOp) (Canonical.encode
+    (Eff.iterate (Op := NativeOp) .nat (.lit (.nat 0)) (.lit (.bool false)) (.lit (.nat 1)) (.lit .unit)
+      (.succeed (.lit .unit)))) =
+  some (.iterate .nat (.lit (.nat 0)) (.lit (.bool false)) (.lit (.nat 1)) (.lit .unit)
+    (.succeed (.lit .unit)))
+
+-- Old bytes of a `callback` refuse: tag 18 with its op and term, at the root and nested.
+def oldCallback : Val :=
+  .ctor 18 [Canonical.toVal NativeOp.sleep, Canonical.toVal (Term.lit (.nat 1))]
+#guard Canonical.ofVal (α := Eff NativeOp) oldCallback = none
+#guard Canonical.decode (α := Eff NativeOp) (Val.encode oldCallback) = none
+#guard Canonical.decode (α := Eff NativeOp) (Val.encode (.ctor 5 [oldCallback])) = none
+-- The same program as a `perform` reads back.
+#guard Canonical.decode (α := Eff NativeOp) (Canonical.encode
+    (Eff.perform (Op := NativeOp) .sleep (.lit (.nat 1)))) =
+  some (.perform .sleep (.lit (.nat 1)))
 
 /-- `bind` (tag 7) around a first child carrying the tag, and a well-formed second child. -/
 def nested (tag : Nat) : Val :=

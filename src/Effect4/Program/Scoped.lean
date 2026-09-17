@@ -32,9 +32,7 @@ def scopedAlgebra (Op : Type) : EffAlgebra Op ScopeCarrier where
   eff_exit := fun a0 n => a0 n
   eff_uninterruptible := fun a0 n => a0 n
   eff_interruptible := fun a0 n => a0 n
-  eff_whileLoop := fun a0 a1 a2 a3 n => a0.scoped n && a1.scoped (n + 1) && a2.scoped (n + 2) && a3 (n + 1)
   eff_yieldNow := fun _ _ => true
-  eff_callback := fun _ a1 n => a1.scoped n
   eff_awaitFiber := fun a0 _ n => a0.scoped n
   eff_withFiber := fun a0 n => a0 n
   eff_scoped := fun a0 n => a0 n
@@ -137,12 +135,8 @@ def Node.scopedAt {Op : Type} (n : Nat) : Node Op → Bool
     Eff.scopedAt n ((.uninterruptible a0 : Eff Op)) = (Eff.scopedAt n a0) := rfl
 @[simp] theorem Eff.scopedAt_interruptible {Op : Type} (n : Nat) (a0 : Effect4.Program.Eff Op) :
     Eff.scopedAt n ((.interruptible a0 : Eff Op)) = (Eff.scopedAt n a0) := rfl
-@[simp] theorem Eff.scopedAt_whileLoop {Op : Type} (n : Nat) (a0 : Effect4.Program.Term) (a1 : Effect4.Program.Term) (a2 : Effect4.Program.Term) (a3 : Effect4.Program.Eff Op) :
-    Eff.scopedAt n ((.whileLoop a0 a1 a2 a3 : Eff Op)) = (a0.scoped n && a1.scoped (n + 1) && a2.scoped (n + 2) && Eff.scopedAt (n + 1) a3) := rfl
 @[simp] theorem Eff.scopedAt_yieldNow {Op : Type} (n : Nat) (a0 : Nat) :
     Eff.scopedAt n ((.yieldNow a0 : Eff Op)) = true := rfl
-@[simp] theorem Eff.scopedAt_callback {Op : Type} (n : Nat) (a0 : Op) (a1 : Effect4.Program.Term) :
-    Eff.scopedAt n ((.callback a0 a1 : Eff Op)) = (a1.scoped n) := rfl
 @[simp] theorem Eff.scopedAt_awaitFiber {Op : Type} (n : Nat) (a0 : Effect4.Program.Term) (a1 : Effect4.Supervision.ObserverMode) :
     Eff.scopedAt n ((.awaitFiber a0 a1 : Eff Op)) = (a0.scoped n) := rfl
 @[simp] theorem Eff.scopedAt_withFiber {Op : Type} (n : Nat) (a0 : Effect4.Program.ActionTerm Op) :
@@ -290,8 +284,6 @@ private def u : Eff Unit := .succeed (.lit .unit)
 #guard Eff.scopedAt 0 (.select (.var 0) (.tag "A") u u) = false
 #guard Eff.scopedAt 0 (.acquireRelease u (v 1)) = true
 #guard Eff.scopedAt 0 (.acquireRelease u (v 2)) = false
-#guard Eff.scopedAt 0 (.whileLoop (.lit .unit) (.var 0) (.var 1) (v 0)) = true
-#guard Eff.scopedAt 0 (.whileLoop (.var 0) (.lit .unit) (.lit .unit) u) = false
 #guard Eff.scopedAt 0 (.iterate .nat (.lit .unit) (.var 0) (.var 1) (.var 0) (v 0)) = true
 #guard Eff.scopedAt 0 (.iterate .nat (.var 0) (.lit .unit) (.lit .unit) (.lit .unit) u) = false
 #guard Eff.scopedAt 0 (.iterate .nat (.lit .unit) (.lit .unit) (.lit .unit) (.var 1) u) = false

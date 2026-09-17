@@ -147,17 +147,6 @@ theorem inv_select (sig : Signature Op) (env : TyEnv) (s : Term) (d : Decision) 
   subst ht
   exact ⟨ty, e0, e1, t0, t1, answer, hs, harms, ht0, ht1, hans, rfl⟩
 
-theorem inv_whileLoop (sig : Signature Op) (env : TyEnv) (initial test step : Term)
-    (body : Eff Op) :
-    ∀ t, effTy sig env (.whileLoop initial test step body) = some t →
-      ∃ cursor b, termTy sig env initial = some cursor ∧
-        termTy sig (env ++ [cursor]) test = some .bool ∧
-        effTy sig (env ++ [cursor]) body = some b ∧
-        termTy sig (env ++ [cursor, b.answer]) step = some cursor ∧
-        t = ⟨.unit, b.error, b.requires⟩ := by
-  refine Option.of_triple ?_
-  simp only [effTy]; mvcgen; all_goals simp_all
-
 theorem inv_iterate (sig : Signature Op) (env : TyEnv) (cursor : Ty)
     (initial test step result : Term) (body : Eff Op) :
     ∀ t, effTy sig env (.iterate cursor initial test step result body) = some t →
@@ -174,16 +163,6 @@ theorem inv_iterate (sig : Signature Op) (env : TyEnv) (cursor : Ty)
 
 theorem inv_yieldNow (sig : Signature Op) (env : TyEnv) (priority : Nat) :
     ∀ t, effTy sig env (.yieldNow priority) = some t → t = EffTy.pure .unit := by
-  refine Option.of_triple ?_
-  simp only [effTy]; mvcgen; all_goals simp_all
-
-theorem inv_callback (sig : Signature Op) (env : TyEnv) (register : Op) (request : Term) :
-    ∀ t, effTy sig env (.callback register request) = some t →
-      ∃ requestTy, sig.dom register = true ∧ (sig.rowOf register).kind = .async ∧
-        termTy sig env request = some requestTy ∧
-        Ty.sub requestTy.normalize (sig.rowOf register).request.normalize = true ∧
-        t = ⟨(sig.rowOf register).answer, (sig.rowOf register).error,
-              Requirement.ofList (sig.rowOf register).requires⟩ := by
   refine Option.of_triple ?_
   simp only [effTy]; mvcgen; all_goals simp_all
 
@@ -570,9 +549,8 @@ theorem inv_layers_cons (sig : Signature Op) (head next : LayerTerm Op)
 #print axioms inv_uninterruptible
 #print axioms inv_interruptible
 #print axioms inv_select
-#print axioms inv_whileLoop
+#print axioms inv_iterate
 #print axioms inv_yieldNow
-#print axioms inv_callback
 #print axioms inv_awaitFiber_join
 #print axioms inv_awaitFiber_await
 #print axioms inv_withFiber

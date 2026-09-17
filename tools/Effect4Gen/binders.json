@@ -15,8 +15,7 @@
     "extends the scope only after a binding yield). A constructor with no row binds nothing.",
     "",
     "The profile (DI-84): constructors with no lift. `readerOnly` is the reader's canonical form",
-    "for generator code and the retiring invocation forms (`callback` is not one: an async row",
-    "authors as the reader reads it, through the generated row wrappers); `machineOnly` is what the printer",
+    "for generator code; `machineOnly` is what the printer",
     "refuses as internal; `handWritten` is a name-resolving lift the core module writes itself.",
     "`renames` gives a lift another name when the constructor's is a Lean keyword."
   ],
@@ -29,7 +28,6 @@
     { "ctor": "Effect4.Program.Eff.select", "whenArg": 1, "whenHead": "Effect4.Program.Decision.tag", "lift": "selectTag", "slots": ["payload", "rest"], "args": [[], [], [0], [1]] },
     { "ctor": "Effect4.Program.Eff.matchCause", "slots": ["value", "cause"], "args": [[], [0], [1]] },
     { "ctor": "Effect4.Program.Eff.onExit", "slots": ["exit"], "args": [[], [0]] },
-    { "ctor": "Effect4.Program.Eff.whileLoop", "slots": ["cursor", "answer"], "args": [[], [0], [0, 1], [0]] },
     { "ctor": "Effect4.Program.Eff.iterate", "slots": ["cursor", "answer"], "args": [[], [], [0], [0, 1], [0], [0]] },
     { "ctor": "Effect4.Program.Eff.acquireRelease", "slots": ["resource", "exit"], "args": [[], [0, 1]] },
     { "ctor": "Effect4.Program.LayerTerm.effect", "slots": [], "args": [[], []], "closed": [1] },

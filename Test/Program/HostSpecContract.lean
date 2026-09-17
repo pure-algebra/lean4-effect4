@@ -170,9 +170,9 @@ def resourceTable : RowTable :=
       cite := "Test/Program/HostSpecContract.lean" } ]
 
 def resourceProgram : NativeEff :=
-  .scoped (.bind (.acquireRelease (.callback (.external 0) (.lit .unit))
-      (.callback (.external 1) (.var 0)))
-    (.callback (.external 2) (.var 0)))
+  .scoped (.bind (.acquireRelease (.perform (.external 0) (.lit .unit))
+      (.perform (.external 1) (.var 0)))
+    (.perform (.external 2) (.var 0)))
 
 def resourceAnswers : List (Completion Val Err Defect FiberId Ann) :=
   [.ofExit (.success (.nat 0)), .ofExit (.success (.nat 7)), .ofExit (.success .unit)]
@@ -203,7 +203,7 @@ def scalarRow (name : String) : Row :=
 def table : RowTable := [scalarRow "first", scalarRow "second"]
 
 /-- One registered external call, and nothing else. -/
-def program : NativeEff := .callback (.external 0) (.lit (.nat 7))
+def program : NativeEff := .perform (.external 0) (.lit (.nat 7))
 
 def reply : Completion Val Err Defect FiberId Ann := .ofExit (.success (.nat 9))
 

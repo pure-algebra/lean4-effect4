@@ -22,22 +22,22 @@ def forkPair (left right : Api.Program) (env : Nat) : Api.Program :=
       (.bind (.awaitFiber (.var env) .awaitValue)
         (.bind (.awaitFiber (.var (env + 1)) .awaitValue)
           (.succeed (pair (.var (env + 2)) (.var (env + 3)))))))
-def two : Api.Program := forkPair (.callback (.external 0) (.lit (.nat 2)))
-  (.callback (.external 0) (.lit (.nat 3))) 0
+def two : Api.Program := forkPair (.perform (.external 0) (.lit (.nat 2)))
+  (.perform (.external 0) (.lit (.nat 3))) 0
 
 def sharedChild (value : Nat) : Api.Program :=
-  .bind (.callback (.external 0) (.lit (.nat value)))
+  .bind (.perform (.external 0) (.lit (.nat value)))
     (.perform .refSet (pair (.var 0) (.lit (.nat value))))
 def shared : Api.Program :=
   .bind (.perform .refMake (.lit (.nat 0)))
     (.bind (forkPair (sharedChild 1) (sharedChild 2) 1) (.perform .refGet (.var 0)))
 
 def kv : Api.Program :=
-  .bind (.callback (.external 0) (.lit .unit))
-    (.bind (.callback (.external 2) (pair (.var 0) (pair (.lit (.str "a")) (.lit (.str "A")))))
-      (.bind (.callback (.external 2) (pair (.var 0) (pair (.lit (.str "b")) (.lit (.str "B")))))
-        (forkPair (.callback (.external 1) (pair (.var 0) (.lit (.str "a"))))
-          (.callback (.external 1) (pair (.var 0) (.lit (.str "b")))) 3)))
+  .bind (.perform (.external 0) (.lit .unit))
+    (.bind (.perform (.external 2) (pair (.var 0) (pair (.lit (.str "a")) (.lit (.str "A")))))
+      (.bind (.perform (.external 2) (pair (.var 0) (pair (.lit (.str "b")) (.lit (.str "B")))))
+        (forkPair (.perform (.external 1) (pair (.var 0) (.lit (.str "a"))))
+          (.perform (.external 1) (pair (.var 0) (.lit (.str "b")))) 3)))
 
 def streamTarget : String := "Host.Stream"
 def streamTable : RowTable := Stream.table streamTarget .nat (.prod .string .string)

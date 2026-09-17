@@ -507,7 +507,7 @@ def scopedCompletionInterrupt : NativeEff :=
       (.scoped (.perform .deferredSucceed (.app "pair" (.cons (.var 0) (.cons one .nil)))))
       { immediateDaemon with startImmediately := false }))
       (.bind (.withFiber (.fork
-        (.bind (.callback .deferredAwait (.var 0)) (.withFiber (.interrupt (.var 1))))
+        (.bind (.perform .deferredAwait (.var 0)) (.withFiber (.interrupt (.var 1))))
         immediateDaemon))
         (.awaitFiber (.var 1) .joinEffect)))
 
@@ -564,14 +564,14 @@ def genFail : NativeEff :=
 def genDiscard : NativeEff :=
   .gen (.cons (.yieldDiscard store) (.cons (.bindYield (.succeed (.lit (.nat 5)))) (.cons (.ret (.var 0)) .nil)))
 def whileThree : NativeEff :=
-  .whileLoop (.lit (.nat 0)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
-    (.app "succ" (.cons (.var 0) .nil)) (.succeed (.lit .unit))
+  .iterate .nat (.lit (.nat 0)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
+    (.app "succ" (.cons (.var 0) .nil)) (.lit .unit) (.succeed (.lit .unit))
 def whileZero : NativeEff :=
-  .whileLoop (.lit (.nat 5)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
-    (.app "succ" (.cons (.var 0) .nil)) (.succeed (.lit .unit))
+  .iterate .nat (.lit (.nat 5)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
+    (.app "succ" (.cons (.var 0) .nil)) (.lit .unit) (.succeed (.lit .unit))
 def whileFailing : NativeEff :=
-  .whileLoop (.lit (.nat 0)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
-    (.app "succ" (.cons (.var 0) .nil)) (.fail (.lit (.nat 7)))
+  .iterate .nat (.lit (.nat 0)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
+    (.app "succ" (.cons (.var 0) .nil)) (.lit .unit) (.fail (.lit (.nat 7)))
 def yieldNowThen : NativeEff := .bind (.yieldNow 0) (.succeed (.lit (.nat 5)))
 
 -- The shapes of the P0 prototype, the ten local command pairs and the corrected forms.
@@ -752,7 +752,7 @@ def injectedInterruptTape : List Api.Decision :=
 -- Completion, then a sync; both machines now finish.
 def withBudgetProgram : NativeEff :=
   .bind (.perform .deferredMake (.lit .unit))
-    (.bind (.callback .deferredAwait (.var 0))
+    (.bind (.perform .deferredAwait (.var 0))
       (.bind (.withFiber (.setContext (.var 1))) (.sync (.lit (.nat 5)))))
 def budgetTape (n : Nat) : List Api.Decision :=
   [Api.evaluate, .answerAsync Api.root 0
@@ -929,21 +929,21 @@ count, and the close of a scope whose one finalizer the finished child already r
 def forkScopedDone : NativeEff := .scoped (.withFiber (.forkScoped (.succeed one) scopedDaemon))
 /-- One live scoped child: the close runs its one finalizer directly. -/
 def seqOne : NativeEff := .scoped (.bind (.perform .deferredMake (.lit .unit))
-  (.bind (.withFiber (.forkScoped (.callback .deferredAwait (.var 0)) scopedDaemon))
+  (.bind (.withFiber (.forkScoped (.perform .deferredAwait (.var 0)) scopedDaemon))
     (.succeed (.lit .unit))))
 /-- Two live scoped children: the close walks two finalizers through the sequential
 generator, each under the `Exit` primitive. -/
 def seqTwo : NativeEff := .scoped (.bind (.perform .deferredMake (.lit .unit))
-  (.bind (.withFiber (.forkScoped (.callback .deferredAwait (.var 0)) scopedDaemon))
-    (.bind (.withFiber (.forkScoped (.callback .deferredAwait (.var 0)) scopedDaemon))
+  (.bind (.withFiber (.forkScoped (.perform .deferredAwait (.var 0)) scopedDaemon))
+    (.bind (.withFiber (.forkScoped (.perform .deferredAwait (.var 0)) scopedDaemon))
       (.succeed (.lit .unit)))))
 /-- A parallel scope with two live `forkIn` children closed with an exit value: one generator
 step forks both finalizers as immediate daemons and awaits them. -/
 def parTwo : NativeEff :=
   .bind (.perform (.scopeMake .parallel) (.lit .unit))
     (.bind (.perform .deferredMake (.lit .unit))
-      (.bind (.withFiber (.forkIn (.callback .deferredAwait (.var 1)) scopedDaemon (.var 0)))
-        (.bind (.withFiber (.forkIn (.callback .deferredAwait (.var 1)) scopedDaemon (.var 0)))
+      (.bind (.withFiber (.forkIn (.perform .deferredAwait (.var 1)) scopedDaemon (.var 0)))
+        (.bind (.withFiber (.forkIn (.perform .deferredAwait (.var 1)) scopedDaemon (.var 0)))
           (.bind (.exit (.succeed (.lit .unit))) (.withFiber (.closeScope (.var 0) (.var 4)))))))
 
 def sourceRepairs20Rows : List NativeEff := [forkScopedDone, seqOne, seqTwo, parTwo]

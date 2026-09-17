@@ -96,19 +96,20 @@ def writeThenRead : Src NativeOp :=
           (.perform .refSet (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 9)) .nil)))))
 
 #guard elaborate
-    (whileLoop "i" "_" (nat 0) (app "lt" [var "i", nat 3]) (app "add" [var "i", nat 1])
-      (Ref.make (var "i")) : Src NativeOp)
-  = .ok (.whileLoop (.lit (.nat 0))
+    (iterate "i" "_" .nat (nat 0) (app "lt" [var "i", nat 3]) (app "add" [var "i", nat 1])
+      (var "i") (Ref.make (var "i")) : Src NativeOp)
+  = .ok (.iterate .nat (.lit (.nat 0))
           (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
           (.app "add" (.cons (.var 0) (.cons (.lit (.nat 1)) .nil)))
+          (.var 0)
           (.perform .refMake (.var 0)))
 
 -- The loop's step sees the body's answer at the level after the cursor.
 #guard elaborate
-    (whileLoop "i" "a" (nat 0) (app "lt" [var "i", nat 3]) (var "a") (succeed (var "i")) : Src NativeOp)
-  = .ok (.whileLoop (.lit (.nat 0))
+    (iterate "i" "a" .nat (nat 0) (app "lt" [var "i", nat 3]) (var "a") (var "i") (succeed (var "i")) : Src NativeOp)
+  = .ok (.iterate .nat (.lit (.nat 0))
           (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
-          (.var 1) (.succeed (.var 0)))
+          (.var 1) (.var 0) (.succeed (.var 0)))
 
 -- `bindWith`: a binder as a Lean function over a fresh name.
 #guard elaborate (bindWith (Ref.make (nat 0)) fun r => Ref.get r : Src NativeOp)

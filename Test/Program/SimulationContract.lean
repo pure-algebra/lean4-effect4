@@ -160,10 +160,11 @@ open Test.Program.RuntimeRContract
 
 def repeated (n : Nat) : NativeEff :=
   .scoped (.bind (.perform .deferredMake (.lit .unit))
-    (.whileLoop (.lit (.nat 0))
+    (.iterate .nat (.lit (.nat 0))
       (.app "lt" (.cons (.var 1) (.cons (.lit (.nat n)) .nil)))
       (.app "succ" (.cons (.var 1) .nil))
-      (.withFiber (.forkScoped (.callback .deferredAwait (.var 0))
+      (.var 1)
+      (.withFiber (.forkScoped (.perform .deferredAwait (.var 0))
         ⟨true, true, .inherit⟩))))
 
 -- Finite typing receipts as `#guard`s (part 4, 2026-09-12): the typing now consults `Ty.sub`

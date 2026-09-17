@@ -52,7 +52,7 @@ function walkProgram(program: Eff, onLayer: (l: LayerTerm, path: readonly number
   const eff = (e: Eff, path: readonly number[]): Eff => {
     const child = (i: number) => [...path, i]
     switch (e._tag) {
-      case "suspend": case "exit": case "uninterruptible": case "interruptible": case "whileLoop": case "scoped":
+      case "suspend": case "exit": case "uninterruptible": case "interruptible": case "iterate": case "scoped":
         return { ...e, body: eff(e.body, child(0)) }
       case "bind": return { ...e, first: eff(e.first, child(0)), rest: eff(e.rest, child(1)) }
       case "gen": return { ...e, body: spine(e.body, child(0), stmt) }
@@ -232,7 +232,7 @@ class CompilerReader {
         const h = this.name(x)
         if (h === "Effect.fiberId") return { _tag: "withFiber", action: { _tag: "getId" } }
         const row = rows.find(r => r.row.spelling === h && r.row.shape === "value")
-        if (row) return row.row.kind === "async" ? { _tag: "callback", register: row.op, request: unit } : { _tag: "perform", op: row.op, request: unit }
+        if (row) return { _tag: "perform", op: row.op, request: unit }
       }
       return { _tag: "fail", error: this.term(x, env) }
     }
@@ -325,25 +325,49 @@ class CompilerReader {
         }
         request = saved ? this.term(saved, env) : { _tag: "app", atom: "pair", args: [left, right] }
       }
-      return r.row.kind === "async" ? { _tag: "callback", register: r.op, request } : { _tag: "perform", op: r.op, request }
+      return { _tag: "perform", op: r.op, request }
     }
     return { _tag: "fail", error: this.term(x, env) }
+  }
+  typeNode(t?: ts.TypeNode): Ty {
+    if (!t) return { _tag: "unit" }
+    if (t.kind === ts.SyntaxKind.NumberKeyword) return { _tag: "nat" }
+    if (t.kind === ts.SyntaxKind.BooleanKeyword) return { _tag: "bool" }
+    if (t.kind === ts.SyntaxKind.StringKeyword) return { _tag: "string" }
+    if (t.kind === ts.SyntaxKind.VoidKeyword || t.kind === ts.SyntaxKind.UndefinedKeyword) return { _tag: "unit" }
+    if (t.kind === ts.SyntaxKind.NeverKeyword) return { _tag: "never" }
+    if (ts.isTypeReferenceNode(t)) {
+      const name = t.typeName.getText(this.file)
+      if (name === "Option.Option" && t.typeArguments?.length === 1) return { _tag: "option", inner: this.typeNode(t.typeArguments[0]) }
+      if (name === "ReadonlyArray" && t.typeArguments?.length === 1) return { _tag: "list", inner: this.typeNode(t.typeArguments[0]) }
+      return { _tag: "handle", target: name }
+    }
+    if (ts.isTupleTypeNode(t) && t.elements.length === 2) {
+      return { _tag: "prod", left: this.typeNode(t.elements[0] as ts.TypeNode), right: this.typeNode(t.elements[1] as ts.TypeNode) }
+    }
+    return bad("type node")
   }
   loop(block: ts.Block, env: readonly string[]): Eff {
     const [init, ret] = block.statements
     if (block.statements.length !== 2 || !init || !ts.isVariableStatement(init) || !ret || !ts.isReturnStatement(ret) || !ret.expression) return bad("loop")
     const decl = init.declarationList.declarations[0]
     if (!decl || init.declarationList.declarations.length !== 1 || !ts.isIdentifier(decl.name) || !decl.initializer) return bad("cursor")
-    const c = this.call(ret.expression); this.arity(c.arguments, 1)
+    const mapCall = this.call(ret.expression); this.arity(mapCall.arguments, 2)
+    if (this.name(mapCall.expression) !== "Effect.map") return bad("loop map head")
+    const c = this.call(this.at(mapCall.arguments, 0)); this.arity(c.arguments, 1)
     if (this.name(c.expression) !== "Effect.whileLoop") return bad("loop head")
+    const resultArrow = this.arrow(this.at(mapCall.arguments, 1), env, 0)
+    const result = this.term(this.expression(resultArrow.body), resultArrow.env)
     const m = this.fields(this.at(c.arguments, 0)), inner = [...env, decl.name.text]
     if (m.size !== 3) return bad("loop fields")
     const test = this.arrow(this.field(m, "while"), inner, 0), body = this.arrow(this.field(m, "body"), inner, 0), step = this.arrow(this.field(m, "step"), inner, 1)
     if (!ts.isBlock(step.body) || step.body.statements.length !== 1) return bad("step")
     const s = step.body.statements[0]
     if (!s || !ts.isExpressionStatement(s) || !ts.isBinaryExpression(s.expression) || s.expression.operatorToken.kind !== ts.SyntaxKind.EqualsToken || s.expression.left.getText(this.file) !== decl.name.text) return bad("step assignment")
-    return { _tag: "whileLoop", initial: this.term(decl.initializer, env), test: this.term(this.expression(test.body), inner), body: this.eff(this.expression(body.body), inner), step: this.term(s.expression.right, step.env) }
+    const cursorTy: Ty = decl.type ? this.typeNode(decl.type) : { _tag: "unit" }
+    return { _tag: "iterate", cursorTy, initial: this.term(decl.initializer, env), test: this.term(this.expression(test.body), inner), body: this.eff(this.expression(body.body), inner), step: this.term(s.expression.right, step.env), result }
   }
+
 }
 
 /** Explicit printer-image test seam. Never called by foreign recognition. */
@@ -551,7 +575,7 @@ class ForeignCompilerReader extends CompilerReader {
     const request: Term = count === 0 ? unit : count === 1 ? arg(0) : { _tag: "app", atom: "pair", args: [arg(0), arg(1)] }
     const full: Term = { _tag: "app", atom: "pair", args: [{ _tag: "var", index: receiver }, request] }
     const op = { _tag: "external" as const, index: found.index }
-    return found.row.kind === "async" ? { _tag: "callback", register: op, request: full } : { _tag: "perform", op, request: full }
+    return { _tag: "perform", op, request: full }
   }
   /** A bind-parameter list is an array literal of bind literals, carried as JSON text through
    * `strings` (DB-15); anything else there, and every other position, is a term. */
@@ -583,7 +607,7 @@ class ForeignCompilerReader extends CompilerReader {
     if (!found) return refuseForeign("E-OP-UNKNOWN", "unsafe")
     const text: Term = { _tag: "lit", value: { _tag: "str", value: folded.text } }
     const request: Term = { _tag: "app", atom: "pair", args: [{ _tag: "var", index: receiver }, { _tag: "app", atom: "pair", args: [text, stringsTerm(folded.params)] }] }
-    return { _tag: "callback", register: { _tag: "external", index: found.index }, request }
+    return { _tag: "perform", op: { _tag: "external", index: found.index }, request }
   }
   sqlParts(x: ts.TaggedTemplateExpression, tag: string, env: readonly string[]): SqlPart & { kind: "template" } {
     const t = x.template
@@ -938,7 +962,7 @@ class ForeignCompilerReader extends CompilerReader {
       if (h === "Effect.sleep") {
         this.arity(x.arguments, 1)
         const r = rows.find(r => r.row.spelling === h)!
-        return { _tag: "callback", register: r.op, request: { _tag: "lit", value: { _tag: "nat", value: this.duration(this.at(x.arguments, 0)) } } }
+        return { _tag: "perform", op: r.op, request: { _tag: "lit", value: { _tag: "nat", value: this.duration(this.at(x.arguments, 0)) } } }
       }
       if (h === "Effect.fail" || h === "Effect.die") {
         this.arity(x.arguments, 1)
@@ -959,7 +983,7 @@ class ForeignCompilerReader extends CompilerReader {
           const trailing = x.arguments.slice(count).map(a => ts.isArrowFunction(this.unwrap(a)) ? this.lambdaAtom(a) : this.name(a))
           if (!r.row.trailing.every((name, i) => trailing[i] === name)) continue
           const request = count === 0 ? unit : count === 1 ? this.term(this.at(x.arguments, 0), env) : { _tag: "app" as const, atom: "pair", args: [this.term(this.at(x.arguments, 0), env), this.term(this.at(x.arguments, 1), env)] }
-          return r.row.kind === "async" ? { _tag: "callback", register: r.op, request } : { _tag: "perform", op: r.op, request }
+          return { _tag: "perform", op: r.op, request }
         }
         return refuseForeign("E-ARG-CLOSURE", "lambda atom")
       }

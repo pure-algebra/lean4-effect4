@@ -347,12 +347,6 @@ mutual
       some ⟨.exitOf b.answer b.error, .never, b.requires⟩
     | .uninterruptible body => effTy sig env body
     | .interruptible body => effTy sig env body
-    | .whileLoop initial test step body => do
-      let cursor ← termTy sig env initial
-      let t ← termTy sig (env ++ [cursor]) test
-      let b ← effTy sig (env ++ [cursor]) body
-      let s ← termTy sig (env ++ [cursor, b.answer]) step
-      if t = .bool ∧ s = cursor then some ⟨.unit, b.error, b.requires⟩ else none
     -- `iterate`: the cursor is typed at its annotation; `initial` and `step` are under it by
     -- subsumption (both sides normalized, as the annotation is stored raw), so the body, the
     -- test and the result see one cursor type across every round. The answer is `result`'s.
@@ -370,13 +364,6 @@ mutual
     -- out-of-range external index has the placeholder's `kind = .program`, but a *supplied*
     -- table can make an in-range row async while the index is still outside the domain of a
     -- different signature.
-    | .callback register request => do
-      let row := sig.rowOf register
-      let r ← termTy sig env request
-      if sig.dom register = true ∧ row.kind = .async ∧
-          Ty.sub r.normalize row.request.normalize = true then
-        some ⟨row.answer, row.error, Requirement.ofList row.requires⟩
-      else none
     | .awaitFiber fiber mode => do
       let t ← termTy sig env fiber
       let (value, error) ← fiberTy t
@@ -696,7 +683,7 @@ mutual
     | .succeed _ | .fail _ | .failCause _ | .sync _ | .suspend _
     | .perform _ _ | .bind _ _ | .gen _ | .catchCause _ _ | .catchIf _ _ _ | .matchCause _ _ _
     | .onExit _ _ | .exit _ | .uninterruptible _ | .interruptible _
-    | .whileLoop _ _ _ _ | .yieldNow _ | .callback _ _ | .awaitFiber _ _
+    | .yieldNow _ | .awaitFiber _ _
     | .withFiber _ | .scoped _ | .acquireRelease _ _
     | .provideLayer _ _ _ | .service _ | .provideService _ _ _ | .select _ _ _ _
     | .iterate _ _ _ _ _ _ => by

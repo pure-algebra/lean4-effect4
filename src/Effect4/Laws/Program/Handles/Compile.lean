@@ -170,10 +170,6 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
     rcases hf : p.fuel with _ | k
     · rw [compileEff_at_zero _ hf]; exact frontier_keys p
     · rw [compileEff_select s d a b hf]; exact List.Subset.refl _
-  | .whileLoop initial test step b, p => by
-    rcases hf : p.fuel with _ | k
-    · rw [compileEff_at_zero _ hf]; exact frontier_keys p
-    · rw [compileEff_whileLoop initial test step b hf]; exact frontier_keys p
   | .iterate cursor initial test step result b, p => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_at_zero _ hf]; exact frontier_keys p
@@ -182,11 +178,6 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
     rcases hf : p.fuel with _ | k
     · rw [compileEff_at_zero _ hf]; exact frontier_keys p
     · rw [compileEff_yieldNow priority hf]; exact List.nil_subset _
-  | .callback register r, p => by
-    rcases hf : p.fuel with _ | k
-    · rw [compileEff_at_zero _ hf]; exact frontier_keys p
-    · rw [compileEff_callback register r hf]
-      exact asyncRoute_keys register r p
   | .awaitFiber fiber mode, p => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_at_zero _ hf]; exact frontier_keys p

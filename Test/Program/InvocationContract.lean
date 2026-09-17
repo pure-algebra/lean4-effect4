@@ -4,9 +4,9 @@ import Effect4.Laws.Program.Invocation
 /-!
 # Invocation contract — shared asynchronous routing and admitted tables
 
-DI-54 and DI-61. The production compiler shares `asyncRoute` between `perform` and
-`callback` for asynchronous built-ins and external rows. The universal compiler theorem
-is ascribed below; the 55 × 2 route matrix is an independently written finite table.
+DI-54 and DI-61. The production compiler routes asynchronous built-ins and
+external rows through `asyncRoute` under `perform`. The universal compiler theorem
+is ascribed below; the 55-operation route matrix is an independently written finite table.
 
 The domain counterexample remains independent of the generated corpus and is now also an
 actual `.ty` golden (`OCaml5.Eff.Corpus.pIllExternalDomain`). Existing historical corpus
@@ -57,36 +57,29 @@ def route : NCode → Route
   | .failure _ => .defect
   | _ => .other
 
-def observed (callback : Bool) (op : NativeOp) : Route :=
+def observed (op : NativeOp) : Route :=
   let p := { rootPoint 100 with env := [requestFor op] }
-  route (compileEff (if callback then .callback op (.var 0) else .perform op (.var 0)) p)
+  route (compileEff (.perform op (.var 0)) p)
 
-/-- Written from the row declarations: synchronous rows use `perform` only;
-`Deferred.await`, sleep and external rows register under both invocation forms. -/
-def expected (callback : Bool) : NativeOp → Route
+/-- Written from the row declarations: synchronous rows compile to `.sync`;
+`Deferred.await`, sleep and external rows compile to `.async`. -/
+def expected : NativeOp → Route
   | .deferredAwait => .async
   | .sleep => .async
   | .external _ => .async
-  | _ => if callback then .defect else .sync
+  | _ => .sync
 
 #guard NativeOp.all.all (fun op => Val.hasTy (requestFor op) op.row.request)
-#guard NativeOp.all.all (fun op => observed false op == expected false op)
-#guard NativeOp.all.all (fun op => observed true op == expected true op)
-#guard (NativeOp.all.filter (fun op => observed false op == .sync)).length = 53
-#guard (NativeOp.all.filter (fun op => observed true op == .defect)).length = 53
--- Both asynchronous built-ins register under either spelling.
-#guard (NativeOp.all.filter (fun op => observed true op == .async)).length = 2
+#guard NativeOp.all.all (fun op => observed op == expected op)
+#guard (NativeOp.all.filter (fun op => observed op == .sync)).length = 53
+-- Both asynchronous built-ins compile to .async.
 #guard (NativeOp.all.filter (fun op => (NativeOp.row op).kind == .async)).length = 2
-#guard (NativeOp.all.filter (fun op => observed false op == .async)).length = 2
-#guard observed false .sleep == .async
-#guard observed true .sleep == .async
-#guard observed false (.external 0) == .async
-#guard observed true (.external 0) == .async
--- No built-in reaches an unclassified shape under `callback`.
-#guard (NativeOp.all.filter (fun op => observed true op == .other)).length = 0
--- The two forms agree on both asynchronous built-ins, among all 55.
-#guard (NativeOp.all.filter (fun op => observed false op == observed true op)).length = 2
-#guard observed false .deferredAwait == observed true .deferredAwait
+#guard (NativeOp.all.filter (fun op => observed op == .async)).length = 2
+#guard observed .sleep == .async
+#guard observed (.external 0) == .async
+#guard observed .deferredAwait == .async
+-- No built-in reaches an unclassified shape.
+#guard (NativeOp.all.filter (fun op => observed op == .other)).length = 0
 
 /-! ## The timed sleep: raw `run` parks, `replay` with an advance finishes
 
@@ -94,7 +87,7 @@ def expected (callback : Bool) : NativeOp → Route
 frontier there — a frontier, never a failure. The decision that finishes it is `.advance`. -/
 
 def performSleep : Api.Program := .perform .sleep (.lit (.nat 1))
-def callbackSleep : Api.Program := .callback .sleep (.lit (.nat 1))
+def callbackSleep : Api.Program := .perform .sleep (.lit (.nat 1))
 
 def sleepTape : List Api.Decision := [Api.evaluate, .advance 1, Api.flush]
 
@@ -103,7 +96,7 @@ def sleepTape : List Api.Decision := [Api.evaluate, .advance 1, Api.flush]
 #guard (Api.run callbackSleep 100).exit = none
 #guard (Api.replay callbackSleep 100 sleepTape).exit = some (.success .unit)
 -- Zero millis is the immediate yield.
-#guard (Api.run (.callback .sleep (.lit (.nat 0))) 100).exit = some (.success .unit)
+#guard (Api.run (.perform .sleep (.lit (.nat 0))) 100).exit = some (.success .unit)
 -- Both source spellings print the same call and now have the same timer behavior.
 theorem sleep_print_same : Api.print performSleep = Api.print callbackSleep := rfl
 #guard (Api.run performSleep 100).exit = none
@@ -130,7 +123,7 @@ def syncRow : Row := { goodRow with kind := .sync }
 def reply : Completion Val Err Defect FiberId Ann := .ofExit (.success (.nat 9))
 
 def performExternal : Api.Program := .perform (.external 0) (.lit (.nat 7))
-def callbackExternal : Api.Program := .callback (.external 0) (.lit (.nat 7))
+def callbackExternal : Api.Program := .perform (.external 0) (.lit (.nat 7))
 
 #guard LawfulTable [goodRow]
 #guard LawfulTable [malformedRow]
@@ -181,7 +174,7 @@ negative, the reminder that a valid row is not a certificate for the request ter
 #guard externalRow [{ goodRow with kind := .program }] 0 = none
 #guard (Api.typeOf callbackExternal [goodRow]) = some ⟨.nat, .nat, .empty⟩
 -- A good row does not make a wrong request term typed.
-#guard (Api.typeOf (.callback (.external 0) (.lit .unit)) [goodRow]).isNone
+#guard (Api.typeOf (.perform (.external 0) (.lit .unit)) [goodRow]).isNone
 
 /-! ## DI-54: the domain counterexample and the two arms
 
@@ -204,20 +197,17 @@ def counterexample : Api.Program :=
 -- In domain and typed, once the table supplies the row.
 #guard (Api.typeOf (.bind (.fail (.lit (.nat 1))) (.perform (.external 0) (.lit (.nat 7))))
   [goodRow]).isSome
--- Out of domain under both forms at the empty table, whatever the request term.
+-- Out of domain at the empty table, whatever the request term.
 #guard (Api.typeOf (.perform (.external 0) (.lit (.nat 7)))).isNone
-#guard (Api.typeOf (.callback (.external 0) (.lit (.nat 7)))).isNone
 #guard (Api.typeOf (.perform (.external 1) (.lit (.nat 7))) [goodRow]).isNone
-#guard (Api.typeOf (.callback (.external 1) (.lit (.nat 7))) [goodRow]).isNone
 -- Built-ins are always in domain; the guards changed nothing for them.
 #guard (Api.typeOf (.perform .deferredMake (.lit .unit))).isSome
 #guard (Api.typeOf Wire.Corpus.pAwait).isSome
 
-/-! ## Admission and the print-image certificate are separate
+/-! ## Admission and the print-image certificate
 
-`Wire.Corpus.pAwait` is the historical wire program that justifies the unification: it spells
-`perform` on an async row, so the reader canonicalises it to `callback` and `readable` refuses
-it — while it types, admits and runs. -/
+`Wire.Corpus.pAwait` is the historical wire program: it spells `perform` on an async row.
+With `perform` unified as the one invocation form, it is admitted and readable. -/
 
 def admitted (program : Api.Program) (table : RowTable := []) : Bool :=
   match Api.admitProgram program table with
@@ -230,18 +220,16 @@ def refusal (program : Api.Program) (table : RowTable := []) : Option Api.AdmitR
   | .error why => some why
 
 #guard admitted Wire.Corpus.pAwait
-#guard !Api.readable Wire.Corpus.pAwait
-#guard (Api.imageCertificate Wire.Corpus.pAwait []).isNone
+#guard Api.readable Wire.Corpus.pAwait
+#guard (Api.imageCertificate Wire.Corpus.pAwait []).isSome
 #guard (Api.imageCertificate callbackSleep []).isSome
-#guard !Api.readable performSleep
-#guard (Api.imageCertificate performSleep []).isNone
--- The three refusals, one fixture each.
+#guard Api.readable performSleep
+#guard (Api.imageCertificate performSleep []).isSome
+-- The refusals, one fixture each.
 #guard refusal counterexample = some .illTyped
 #guard refusal callbackExternal [malformedRow] = some (.table (.notExternal 0))
--- A sync row is refused by the *typing* under `callback` (the kind check, which runs first)
--- and by the *table* under `perform`, which types against it. Both refusals are real; the
--- order of `admitProgram`'s checks is what picks which one is reported.
-#guard refusal callbackExternal [syncRow] = some .illTyped
+-- A sync row is refused by the table under perform, which types against it.
+#guard refusal callbackExternal [syncRow] = some (.table (.notAsync 0))
 #guard refusal performExternal [syncRow] = some (.table (.notAsync 0))
 #guard refusal (.succeed (.lit (.nat 1))) [{ goodRow with spelling := "Ref.get" }]
   = some (.builtinCollision ("Ref.get", []))

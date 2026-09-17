@@ -18,7 +18,7 @@ def table : RowTable := [row "query" .nat, row "cell" NativeOp.refTy,
 
 #guard LawfulTable table
 
-def program (i : Nat := 0) : NativeEff := .callback (.external i) (.lit (.nat 1))
+def program (i : Nat := 0) : NativeEff := .perform (.external i) (.lit (.nat 1))
 
 def accepted : Completion Val Err Defect FiberId Ann := .ofExit (.success (.nat 7))
 def wrong : Completion Val Err Defect FiberId Ann := .ofExit (.success (.bool true))
@@ -45,7 +45,7 @@ def refusal (p : NativeEff) (tape : List Api.Decision)
 #guard refusal (program 0) [.answerAsync Api.root 0 accepted] = some (.notParked Api.root)
 #guard refusal (program 0) [Api.evaluate, .answerAsync Api.root 1 accepted] =
   some (.staleToken Api.root 0 1)
-#guard refusal (.callback .sleep (.lit (.nat 5)))
+#guard refusal (.perform .sleep (.lit (.nat 5)))
   [Api.evaluate, .answerAsync Api.root 0 accepted] = some (.notExternal Api.root 0)
 #guard refusal (program 0) [Api.evaluate, .answerAsync Api.root 0 wrong] =
   some (.answerType Api.root 0 .nat)
@@ -83,7 +83,7 @@ def methodTable : RowTable :=
 
 def pair (a b : Term) : Term := .app "pair" (.cons a (.cons b .nil))
 def methodProgram (i : Nat) (args : Term) : NativeEff :=
-  .bind (.succeed (.lit (.nat 9))) (.callback (.external i) (pair (.var 0) args))
+  .bind (.succeed (.lit (.nat 9))) (.perform (.external i) (pair (.var 0) args))
 def methodPrograms : List NativeEff :=
   [methodProgram 0 (.lit .unit), methodProgram 1 (.lit (.nat 3)),
    methodProgram 2 (pair (.lit (.nat 3)) (.lit (.str "x"))), methodProgram 3 (.lit (.nat 3))]

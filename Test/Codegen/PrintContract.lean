@@ -157,7 +157,7 @@ def sig : Signature (Fin 3) :=
 
 #guard (print sig 0 (.perform 1 (.lit .unit))).map (expr house0 0) = .ok "cell.count"
 
-#guard (print sig 1 (.callback 2 (.var 0))).map (expr house0 0) = .ok "Deferred.await(a0)"
+#guard (print sig 1 (.perform 2 (.var 0))).map (expr house0 0) = .ok "Deferred.await(a0)"
 
 /-! ## Sequencing: the two frame shapes of §2.1 -/
 
@@ -221,11 +221,11 @@ def sig : Signature (Fin 3) :=
       (.succeed (.lit .unit)))).map (expr house0 0)
   = .ok "Effect.suspend(() => true ? Effect.succeed(1) : Effect.succeed(undefined))"
 
-#guard (print sig 0 (.whileLoop (.lit (.nat 0)) (.var 0) (.app "succ" (.cons (.var 1) .nil))
-      (.succeed (.var 0)))).map (expr house0 0)
-  = .ok ("Effect.suspend(() => {\n  let a0 = 0\n  return Effect.whileLoop({\n"
+#guard (print sig 0 (.iterate .nat (.lit (.nat 0)) (.var 0) (.app "succ" (.cons (.var 1) .nil))
+      (.var 0) (.succeed (.var 0)))).map (expr house0 0)
+  = .ok ("Effect.suspend(() => {\n  let a0: number = 0\n  return Effect.map(Effect.whileLoop({\n"
       ++ "    while: () => a0,\n    body: () => Effect.succeed(a0),\n"
-      ++ "    step: (a1) => {\n      a0 = succ(a1)\n    },\n  })\n})")
+      ++ "    step: (a1) => {\n      a0 = succ(a1)\n    },\n  }), () => a0)\n})")
 
 #guard (print sig 0 (.yieldNow 2)).map (expr house0 0) = .ok "Effect.yieldNowWith(2)"
 

@@ -25,7 +25,6 @@ def binders : Node Op → Nat → Nat
   | .eff (.matchCause _ _ _), 1 => 1
   | .eff (.matchCause _ _ _), 2 => 1
   | .eff (.onExit _ _), 1 => 1
-  | .eff (.whileLoop _ _ _ _), 0 => 1
   | .eff (.iterate _ _ _ _ _ _), 0 => 1
   | .eff (.acquireRelease _ _), 1 => 2
   | .stmts (.cons (.bindYield _) _), 1 => 1
@@ -77,7 +76,6 @@ private def e0 : Eff Unit := .succeed (.lit .unit)
 #guard Node.binders (.eff (.bind e0 e0)) 1 = 1
 #guard Node.binders (.eff (.matchCause e0 e0 e0)) 2 = 1
 #guard Node.binders (.eff (.acquireRelease e0 e0)) 1 = 2
-#guard Node.binders (.eff (.whileLoop (.lit .unit) (.lit .unit) (.lit .unit) e0)) 0 = 1
 #guard Node.binders (.eff (.iterate .nat (.lit .unit) (.lit .unit) (.lit .unit) (.lit .unit) e0)) 0 = 1
 #guard Node.binders (.eff (.suspend e0)) 0 = 0
 -- `select` binds by its decision: nothing, the some-value, the payload and the rest

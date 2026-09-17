@@ -391,8 +391,10 @@
           "0:OnSuccess",
           "0:Sync",
           "0:Suspend",
+          "0:OnSuccess",
           "0:While",
           "0:Sync",
+          "0:Success",
           "0:Success"
         ],
         "late": [],
@@ -416,8 +418,10 @@
           "0:OnSuccess",
           "0:Sync",
           "0:Suspend",
+          "0:OnSuccess",
           "0:While",
           "0:Sync",
+          "0:Success",
           "0:Success"
         ],
         "late": [],

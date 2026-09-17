@@ -16,7 +16,7 @@ let wire_families = [
   ("ServiceTypeCode", ["value"]);
   ("ServiceKey", ["name"; "service"]);
   ("Decision", ["bool"; "option"; "tag"]);
-  ("Eff", ["succeed"; "fail"; "failCause"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "whileLoop"; "yieldNow"; "callback"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"]);
+  ("Eff", ["succeed"; "fail"; "failCause"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "yieldNow"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"]);
   ("Stmt", ["bindYield"; "yieldDiscard"; "ret"; "ifElse"; "whileTrue"; "breakLoop"]);
   ("Stmts", ["nil"; "cons"]);
   ("Effs", ["nil"; "cons"]);
@@ -44,7 +44,7 @@ let wire_tags = [
   ("FnName", [("incr", 0); ("double", 1); ("zeroWhenPositive", 2); ("noChange", 3); ("takeAndBump", 4)]);
   ("NativeOp", [("refMake", 0); ("refGet", 1); ("refSet", 2); ("refGetAndSet", 3); ("refSetAndGet", 4); ("refUpdate", 5); ("refGetAndUpdate", 6); ("refUpdateAndGet", 7); ("refUpdateSome", 8); ("refGetAndUpdateSome", 9); ("refUpdateSomeAndGet", 10); ("refModify", 11); ("refModifySome", 12); ("deferredMake", 13); ("deferredIsDone", 14); ("deferredPoll", 15); ("deferredSucceed", 16); ("deferredFail", 17); ("deferredAwait", 18); ("scopeMake", 19); ("sleep", 20); ("clockNow", 21); ("external", 22)]);
   ("Decision", [("bool", 0); ("option", 1); ("tag", 2)]);
-  ("Eff", [("succeed", 0); ("fail", 1); ("failCause", 2); ("sync", 4); ("suspend", 5); ("perform", 6); ("bind", 7); ("gen", 8); ("catchCause", 9); ("matchCause", 10); ("onExit", 11); ("exit", 12); ("uninterruptible", 13); ("interruptible", 14); ("whileLoop", 16); ("yieldNow", 17); ("callback", 18); ("awaitFiber", 19); ("withFiber", 20); ("scoped", 21); ("acquireRelease", 22); ("provideLayer", 23); ("service", 24); ("provideService", 25); ("catchIf", 26); ("select", 27); ("iterate", 28)]);
+  ("Eff", [("succeed", 0); ("fail", 1); ("failCause", 2); ("sync", 4); ("suspend", 5); ("perform", 6); ("bind", 7); ("gen", 8); ("catchCause", 9); ("matchCause", 10); ("onExit", 11); ("exit", 12); ("uninterruptible", 13); ("interruptible", 14); ("yieldNow", 17); ("awaitFiber", 19); ("withFiber", 20); ("scoped", 21); ("acquireRelease", 22); ("provideLayer", 23); ("service", 24); ("provideService", 25); ("catchIf", 26); ("select", 27); ("iterate", 28)]);
   ("Stmt", [("bindYield", 0); ("yieldDiscard", 1); ("ret", 2); ("ifElse", 3); ("whileTrue", 4); ("breakLoop", 5)]);
   ("Stmts", [("nil", 0); ("cons", 1)]);
   ("Effs", [("nil", 0); ("cons", 1)]);

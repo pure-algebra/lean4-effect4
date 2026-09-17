@@ -17,7 +17,7 @@ example : Src.Scoped (Op := Unit)
   authoring_scoped
 
 example : Src.Scoped (Op := Unit)
-    (whileLoop "i" "a" (nat 0) (app "lt" [var "i", nat 3]) (var "a") (succeed (var "i"))) := by
+    (iterate "i" "a" .nat (nat 0) (app "lt" [var "i", nat 3]) (var "a") (var "i") (succeed (var "i"))) := by
   authoring_scoped
 
 example : Src.Scoped (Op := Unit)

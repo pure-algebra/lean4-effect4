@@ -51,11 +51,11 @@ def answer (v : Val) : Completion Val Err Defect FiberId Ann := .ofExit (.succes
 
 /-- The sqlite fixture: open, create, insert, select, close (the scope's release). -/
 def pSqlite : Api.Program :=
-  .scoped (.bind (.acquireRelease (.callback (.external 0) (.lit (.str ":memory:")))
-                                  (.callback (.external 2) (.var 0)))
-    (.bind (.callback (.external 1) (pair (.var 0) (pair (.lit (.str "CREATE TABLE t (a INTEGER, b TEXT)")) (strs []))))
-      (.bind (.callback (.external 1) (pair (.var 0) (pair (.lit (.str "INSERT INTO t (a, b) VALUES (?, ?)")) (strs ["7", "\"x\""]))))
-        (.callback (.external 1) (pair (.var 0) (pair (.lit (.str "SELECT a, b FROM t")) (strs [])))))))
+  .scoped (.bind (.acquireRelease (.perform (.external 0) (.lit (.str ":memory:")))
+                                  (.perform (.external 2) (.var 0)))
+    (.bind (.perform (.external 1) (pair (.var 0) (pair (.lit (.str "CREATE TABLE t (a INTEGER, b TEXT)")) (strs []))))
+      (.bind (.perform (.external 1) (pair (.var 0) (pair (.lit (.str "INSERT INTO t (a, b) VALUES (?, ?)")) (strs ["7", "\"x\""]))))
+        (.perform (.external 1) (pair (.var 0) (pair (.lit (.str "SELECT a, b FROM t")) (strs [])))))))
 
 def selected : Val := .list [.list [.list [.str "a", .str "7"], .list [.str "b", .str "\"x\""]]]
 def sqliteAnswers : List (Completion Val Err Defect FiberId Ann) :=
@@ -87,11 +87,11 @@ def sqliteAnswers : List (Completion Val Err Defect FiberId Ann) :=
 
 /-- The key-value fixture: make, set, get, has, remove; the answer is the (get, has) pair. -/
 def pKv : Api.Program :=
-  .bind (.callback (.external 0) (.lit .unit))
-    (.bind (.callback (.external 2) (pair (.var 0) (pair (.lit (.str "k")) (.lit (.str "1")))))
-      (.bind (.callback (.external 1) (pair (.var 0) (.lit (.str "k"))))
-        (.bind (.callback (.external 4) (pair (.var 0) (.lit (.str "k"))))
-          (.bind (.callback (.external 3) (pair (.var 0) (.lit (.str "k"))))
+  .bind (.perform (.external 0) (.lit .unit))
+    (.bind (.perform (.external 2) (pair (.var 0) (pair (.lit (.str "k")) (.lit (.str "1")))))
+      (.bind (.perform (.external 1) (pair (.var 0) (.lit (.str "k"))))
+        (.bind (.perform (.external 4) (pair (.var 0) (.lit (.str "k"))))
+          (.bind (.perform (.external 3) (pair (.var 0) (.lit (.str "k"))))
             (.succeed (pair (.var 2) (.var 3)))))))
 
 def kvAnswers : List (Completion Val Err Defect FiberId Ann) :=
@@ -131,10 +131,10 @@ def failed : Completion Val Err Defect FiberId Ann := .ofExit (.failure (Cause.f
 /-- The failing statement under an open client the scope releases (`Truth.lean`'s
 `sqlClient`/`sqlMissing`, whose tapes carry the real answers). -/
 def sqlMissing : Api.Program :=
-  .callback (.external 1) (pair (.var 0) (pair (.lit (.str "SELECT a FROM missing")) (strs [])))
+  .perform (.external 1) (pair (.var 0) (pair (.lit (.str "SELECT a FROM missing")) (strs [])))
 def sqlClient (body : Api.Program) : Api.Program :=
-  .scoped (.bind (.acquireRelease (.callback (.external 0) (.lit (.str ":memory:")))
-                                  (.callback (.external 2) (.var 0)))
+  .scoped (.bind (.acquireRelease (.perform (.external 0) (.lit (.str ":memory:")))
+                                  (.perform (.external 2) (.var 0)))
     body)
 def sqlAnswers : List (Completion Val Err Defect FiberId Ann) := [answer (.nat 0), failed, answer .unit]
 
@@ -166,8 +166,8 @@ def pSqlCatch : Api.Program :=
 /-- DI-31: the actual package pair survives layer orDie, after its client is released. -/
 def pSqlOrDie : Api.Program :=
   .provideLayer (.orDie (.effect (⟨⟨8⟩, ⟨4⟩⟩ : ServiceKey)
-      (.bind (.acquireRelease (.callback (.external 0) (.lit (.str ":memory:")))
-                              (.callback (.external 2) (.var 0)))
+      (.bind (.acquireRelease (.perform (.external 0) (.lit (.str ":memory:")))
+                              (.perform (.external 2) (.var 0)))
         (.bind sqlMissing (.succeed (.lit (.nat 1)))))))
     false (.service (⟨⟨8⟩, ⟨4⟩⟩ : ServiceKey))
 #guard Api.wellTyped pSqlOrDie sqliteBun

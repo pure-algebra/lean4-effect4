@@ -51,15 +51,15 @@ def chunk? : Val → Option (Option (List Val))
 both chunk boundaries and the clean-end marker; it makes no flattening claim. -/
 def pulls (handleIndex envSize : Nat) : Nat → NativeEff
   | 0 => .succeed (.lit .unit)
-  | n + 1 => .bind (.callback (.external 1) (.var handleIndex))
+  | n + 1 => .bind (.perform (.external 1) (.var handleIndex))
       (.bind (pulls handleIndex (envSize + 1) n)
         (.succeed (.app "pair" (.cons (.var envSize) (.cons (.var (envSize + 1)) .nil)))))
 
 /-- The open/pull/close kernel as ordinary scoped Eff composition. -/
 def scopedPulls (source count : Nat) : NativeEff :=
   .scoped (.bind
-    (.acquireRelease (.callback (.external 0) (.lit (.nat source)))
-      (.callback (.external 2) (.var 0)))
+    (.acquireRelease (.perform (.external 0) (.lit (.nat source)))
+      (.perform (.external 2) (.var 0)))
     (pulls 0 1 count))
 
 end Effect4.Program.Stream

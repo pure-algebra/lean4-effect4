@@ -94,24 +94,9 @@ def interruptible {Op : Type} (body : Src Op) : Src Op :=
     let x0 ← body env (p ++ [0])
     .ok (.interruptible x0)
 
-/-- `Effect4.Program.Eff.whileLoop`: `test` sees `cursor`; `step` sees `cursor`, `answer`; `body` sees `cursor`. -/
-def whileLoop {Op : Type} (cursor : String) (answer : String) (initial : TermSrc) (test : TermSrc) (step : TermSrc) (body : Src Op) : Src Op :=
-  fun env p => do
-    let x0 ← initial env p
-    let x1 ← test (env.push [cursor]) p
-    let x2 ← step (env.push [cursor, answer]) p
-    let x3 ← body (env.push [cursor]) (p ++ [0])
-    .ok (.whileLoop x0 x1 x2 x3)
-
 /-- `Effect4.Program.Eff.yieldNow`. -/
 def yieldNow {Op : Type} (priority : Nat) : Src Op :=
   fun _ _ => .ok (.yieldNow priority)
-
-/-- `Effect4.Program.Eff.callback`. -/
-def callback {Op : Type} (register : Op) (request : TermSrc) : Src Op :=
-  fun env p => do
-    let x1 ← request env p
-    .ok (.callback register x1)
 
 /-- `Effect4.Program.Eff.awaitFiber`. -/
 def awaitFiber {Op : Type} (fiber : TermSrc) (mode : Effect4.Supervision.ObserverMode) : Src Op :=
@@ -360,9 +345,7 @@ def Cause.both (left : CauseSrc) (right : CauseSrc) : CauseSrc :=
 #print axioms Effect4.Program.Authoring.exit
 #print axioms Effect4.Program.Authoring.uninterruptible
 #print axioms Effect4.Program.Authoring.interruptible
-#print axioms Effect4.Program.Authoring.whileLoop
 #print axioms Effect4.Program.Authoring.yieldNow
-#print axioms Effect4.Program.Authoring.callback
 #print axioms Effect4.Program.Authoring.awaitFiber
 #print axioms Effect4.Program.Authoring.withFiber
 #print axioms Effect4.Program.Authoring.scope

@@ -1291,12 +1291,7 @@ def EffShape : Shape :=
       ("exit", 12, [("body", .named "Eff")]),
       ("uninterruptible", 13, [("body", .named "Eff")]),
       ("interruptible", 14, [("body", .named "Eff")]),
-      ("whileLoop", 16, [("initial", (shape _root_.Effect4.Program.Term).root),
-        ("test", (shape _root_.Effect4.Program.Term).root),
-        ("step", (shape _root_.Effect4.Program.Term).root), ("body", .named "Eff")]),
       ("yieldNow", 17, [("priority", (shape _root_.Nat).root)]),
-      ("callback", 18, [("register", (shape _root_.Effect4.Program.NativeOp).root),
-        ("request", (shape _root_.Effect4.Program.Term).root)]),
       ("awaitFiber", 19, [("fiber", (shape _root_.Effect4.Program.Term).root),
         ("mode", (shape _root_.Effect4.Supervision.ObserverMode).root)]),
       ("withFiber", 20, [("action", .named "ActionTerm")]),
@@ -1413,10 +1408,7 @@ def toValEff : @_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp) →
   | .exit a0 => .ctor 12 [toValEff a0]
   | .uninterruptible a0 => .ctor 13 [toValEff a0]
   | .interruptible a0 => .ctor 14 [toValEff a0]
-  | .whileLoop a0 a1 a2 a3 => .ctor 16 [Canonical.toVal a0, Canonical.toVal a1,
-      Canonical.toVal a2, toValEff a3]
   | .yieldNow a0 => .ctor 17 [Canonical.toVal a0]
-  | .callback a0 a1 => .ctor 18 [Canonical.toVal a0, Canonical.toVal a1]
   | .awaitFiber a0 a1 => .ctor 19 [Canonical.toVal a0, Canonical.toVal a1]
   | .withFiber a0 => .ctor 20 [toValActionTerm a0]
   | .scoped a0 => .ctor 21 [toValEff a0]
@@ -1537,21 +1529,10 @@ def rawEff : Val → Option (@_root_.Effect4.Program.Eff (_root_.Effect4.Program
     match rawEff v0 with
     | some a0 => some (.interruptible a0)
     | _ => none
-  | .ctor 16 [v0, v1, v2, v3] =>
-    match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0,
-        Canonical.ofVal (α := _root_.Effect4.Program.Term) v1,
-        Canonical.ofVal (α := _root_.Effect4.Program.Term) v2, rawEff v3 with
-    | some a0, some a1, some a2, some a3 => some (.whileLoop a0 a1 a2 a3)
-    | _, _, _, _ => none
   | .ctor 17 [v0] =>
     match Canonical.ofVal (α := _root_.Nat) v0 with
     | some a0 => some (.yieldNow a0)
     | _ => none
-  | .ctor 18 [v0, v1] =>
-    match Canonical.ofVal (α := _root_.Effect4.Program.NativeOp) v0,
-        Canonical.ofVal (α := _root_.Effect4.Program.Term) v1 with
-    | some a0, some a1 => some (.callback a0 a1)
-    | _, _ => none
   | .ctor 19 [v0, v1] =>
     match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0,
         Canonical.ofVal (α := _root_.Effect4.Supervision.ObserverMode) v1 with
@@ -1785,11 +1766,7 @@ theorem rawEff_toValEff (a : @_root_.Effect4.Program.Eff (_root_.Effect4.Program
     simp [toValEff, rawEff, rawEff_toValEff a0]
   | «interruptible» a0 =>
     simp [toValEff, rawEff, rawEff_toValEff a0]
-  | «whileLoop» a0 a1 a2 a3 =>
-    simp [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a3]
   | «yieldNow» a0 =>
-    simp [toValEff, rawEff, Canonical.ofVal_toVal]
-  | «callback» a0 a1 =>
     simp [toValEff, rawEff, Canonical.ofVal_toVal]
   | «awaitFiber» a0 a1 =>
     simp [toValEff, rawEff, Canonical.ofVal_toVal]
@@ -2066,19 +2043,9 @@ theorem fitsEff (a : @_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeO
   | «interruptible» a0 =>
     exact acceptsAt_sum _ _ _ 14 "interruptible" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (fitsEff a0) (acceptsFields_nil _))
-  | «whileLoop» a0 a1 a2 a3 =>
-    exact acceptsAt_sum _ _ _ 16 "whileLoop" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_Term a0)
-        (acceptsFields_cons _ _ _ _ _ _ (lift_Term a1)
-          (acceptsFields_cons _ _ _ _ _ _ (lift_Term a2)
-            (acceptsFields_cons _ _ _ _ _ _ (fitsEff a3) (acceptsFields_nil _)))))
   | «yieldNow» a0 =>
     exact acceptsAt_sum _ _ _ 17 "yieldNow" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0) (acceptsFields_nil _))
-  | «callback» a0 a1 =>
-    exact acceptsAt_sum _ _ _ 18 "callback" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_NativeOp a0)
-        (acceptsFields_cons _ _ _ _ _ _ (lift_Term a1) (acceptsFields_nil _)))
   | «awaitFiber» a0 a1 =>
     exact acceptsAt_sum _ _ _ 19 "awaitFiber" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_Term a0)
@@ -2790,8 +2757,8 @@ retired one or one never given, refuses at the root and nested inside a retained
 in the value tree and in the bytes. A retirement adds its tag to `unheld`. -/
 
 /-- Tags of `Eff` that no active constructor holds: 3 is the retired `yieldError`, 15 the retired
-`branch`, the other two were never given. -/
-def unheld : List Nat := [3, 15, 29, 255]
+`branch`, 16 the retired `whileLoop`, 18 the retired `callback`, the other two were never given. -/
+def unheld : List Nat := [3, 15, 16, 18, 29, 255]
 
 -- Old bytes of a `yieldError` refuse: tag 3 with its one term, at the root and nested.
 def oldYieldError : Val := .ctor 3 [Canonical.toVal (Term.lit (.str "lost"))]
@@ -2812,6 +2779,33 @@ def oldBranch : Val :=
     (Eff.select (Op := NativeOp) (.lit (.bool true)) .bool (.succeed (.lit .unit))
       (.succeed (.lit .unit)))) =
   some (.select (.lit (.bool true)) .bool (.succeed (.lit .unit)) (.succeed (.lit .unit)))
+
+-- Old bytes of a `whileLoop` refuse: tag 16 with its four fields, at the root and nested.
+def oldWhileLoop : Val :=
+  .ctor 16 [Canonical.toVal (Term.lit (.nat 0)),
+    Canonical.toVal (Term.lit (.bool false)),
+    Canonical.toVal (Term.lit (.nat 1)),
+    Canonical.toVal (Eff.succeed (Op := NativeOp) (.lit .unit))]
+#guard Canonical.ofVal (α := Eff NativeOp) oldWhileLoop = none
+#guard Canonical.decode (α := Eff NativeOp) (Val.encode oldWhileLoop) = none
+#guard Canonical.decode (α := Eff NativeOp) (Val.encode (.ctor 5 [oldWhileLoop])) = none
+-- The same program as an `iterate` reads back.
+#guard Canonical.decode (α := Eff NativeOp) (Canonical.encode
+    (Eff.iterate (Op := NativeOp) .nat (.lit (.nat 0)) (.lit (.bool false)) (.lit (.nat 1)) (.lit .unit)
+      (.succeed (.lit .unit)))) =
+  some (.iterate .nat (.lit (.nat 0)) (.lit (.bool false)) (.lit (.nat 1)) (.lit .unit)
+    (.succeed (.lit .unit)))
+
+-- Old bytes of a `callback` refuse: tag 18 with its op and term, at the root and nested.
+def oldCallback : Val :=
+  .ctor 18 [Canonical.toVal NativeOp.sleep, Canonical.toVal (Term.lit (.nat 1))]
+#guard Canonical.ofVal (α := Eff NativeOp) oldCallback = none
+#guard Canonical.decode (α := Eff NativeOp) (Val.encode oldCallback) = none
+#guard Canonical.decode (α := Eff NativeOp) (Val.encode (.ctor 5 [oldCallback])) = none
+-- The same program as a `perform` reads back.
+#guard Canonical.decode (α := Eff NativeOp) (Canonical.encode
+    (Eff.perform (Op := NativeOp) .sleep (.lit (.nat 1)))) =
+  some (.perform .sleep (.lit (.nat 1)))
 
 /-- `bind` (tag 7) around a first child carrying the tag, and a well-formed second child. -/
 def nested (tag : Nat) : Val :=

@@ -1,22 +1,23 @@
 import Effect4.Program.Compile
 
 /-!
-# Invocation — the two syntactic forms of one asynchronous call (DI-61)
+# Invocation — one invocation form, routed by the row's kind (DI-61)
 
-`compile_perform_eq_callback` proves the production compiler emits identical code for
-`perform` and `callback` on every external index or asynchronous built-in, at every point
-and fuel. `compile_zero_fuel` retains the live-frontier boundary. The older await-only
-statements remain available as corollaries.
+`perform` is the one invocation form. An external index or an asynchronous built-in compiles
+to the shared dispatcher `asyncRoute`, at every point and positive fuel
+(`compileEff_perform_eq_asyncRoute`); a synchronous row takes the synchronous route.
+`compile_zero_fuel` retains the live-frontier boundary.
+
+Until the `Eff` series retired it, a second spelling `callback` compiled to the same dispatcher,
+and DI-61's theorem `compile_perform_eq_callback` was the equality of the two on exactly this
+domain. It justified the retirement (checked at `478ed4b7`) and left with the constructor;
+what remains is the statement of the route itself.
 
 `checkTable_none_externalRow` connects the table check to the registration lookup. Neither
 code equality nor table registration alone establishes host conformance, completion, or
-resource liveness. The independent 55 × 2 matrix and timed/external executions live in
+resource liveness. The independent matrix and the timed and external executions live in
 `Test/Program/InvocationContract.lean`; the external replay equality there is a bounded
 fixture, not the table-aware reference theorem reserved by DI-57.
-
-The sync `perform` route remains distinct: `callback` on a sync row is still `badShape`.
-The compiler's reference denotation and its head/key proofs change with this routing;
-`run_eq_ref` retains its empty-table, no-oracle statement.
 -/
 
 namespace Effect4.Program
@@ -25,44 +26,27 @@ open Effect4 Effect4.Machine
 
 /-! ## The shared dispatcher -/
 
-/-- Fuel zero is the live frontier in both forms, before any operation is looked at
-(`Compile.lean`, `compileEff`'s first match). -/
+/-- Fuel zero is the live frontier, before any operation is looked at (`Compile.lean`,
+`compileEff`'s first match). -/
 theorem compile_zero_fuel (e : NativeEff) (p : Point) (h : p.fuel = 0) :
     compileEff e p = frontier p := by
   unfold compileEff
   rw [h]
 
-/-- The extraction is exact: at positive fuel `callback` compiles to the shared dispatcher,
-for every operation and every request term. -/
-theorem compileEff_callback_eq_asyncRoute (op : NativeOp) (r : Term) (p : Point) {k : Nat}
-    (hf : p.fuel = k + 1) : compileEff (.callback op r) p = asyncRoute op r p := by
+/-- DI-61. An external call or an asynchronous built-in compiles to the shared dispatcher, at
+every point and positive fuel. The external case is independent of any supplied table:
+registration reads that table when the code executes. -/
+theorem compileEff_perform_eq_asyncRoute (op : NativeOp) (r : Term) (p : Point) {k : Nat}
+    (hf : p.fuel = k + 1) (h : (∃ i, op = .external i) ∨ op.row.kind = .async) :
+    compileEff (.perform op r) p = asyncRoute op r p := by
   unfold compileEff
   rw [hf]
-
-/-- DI-61. External calls and asynchronous built-ins compile identically under the two
-invocation spellings, for every point and fuel. The external case is independent of any
-supplied table: registration reads that table when the code executes. -/
-theorem compile_perform_eq_callback (op : NativeOp) (r : Term) (p : Point)
-    (h : (∃ i, op = .external i) ∨ op.row.kind = .async) :
-    compileEff (.perform op r) p = compileEff (.callback op r) p := by
   cases op with
+  | external i => rfl
+  | sleep => rfl
+  | deferredAwait => rfl
   | scopeMake strategy => cases strategy <;> simp [NativeOp.row] at h
-  | _ => first
-    | (unfold compileEff; cases p.fuel <;> rfl)
-    | (simp [NativeOp.row] at h)
-
-/-- `Deferred.await` retains the historical wire spelling as a compatible invocation. -/
-theorem compile_perform_eq_callback_await (r : Term) (p : Point) :
-    compileEff (.perform .deferredAwait r) p = compileEff (.callback .deferredAwait r) p :=
-  compile_perform_eq_callback .deferredAwait r p (.inr rfl)
-
-/-- The original restricted statement, retained for callers; DI-61 removes its exclusions
-in `compile_perform_eq_callback`. -/
-theorem compile_perform_eq_callback_of_await (op : NativeOp) (r : Term) (p : Point)
-    (hkind : (NativeOp.row op).kind = .async) (hne : ∀ i, op ≠ .external i) (hns : op ≠ .sleep) :
-    compileEff (.perform op r) p = compileEff (.callback op r) p := by
-  clear hne hns
-  exact compile_perform_eq_callback op r p (.inr hkind)
+  | _ => simp [NativeOp.row] at h
 
 /-! ## The table check and the registration lookup -/
 

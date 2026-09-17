@@ -1,9 +1,9 @@
-Effect4.Program.Lit.unit	11
+Effect4.Program.Lit.unit	13
 Effect4.Program.Lit.nat	70
 Effect4.Program.Lit.bool	15
 Effect4.Program.Lit.str	3
 Effect4.Program.Term.var	62
-Effect4.Program.Term.lit	95
+Effect4.Program.Term.lit	97
 Effect4.Program.Term.app	22
 Effect4.Program.Terms.nil	22
 Effect4.Program.Terms.cons	35
@@ -55,7 +55,7 @@ Effect4.Program.Eff.fail	11
 Effect4.Program.Eff.failCause	3
 Effect4.Program.Eff.sync	1
 Effect4.Program.Eff.suspend	1
-Effect4.Program.Eff.perform	31
+Effect4.Program.Eff.perform	36
 Effect4.Program.Eff.bind	56
 Effect4.Program.Eff.gen	4
 Effect4.Program.Eff.catchCause	2
@@ -64,9 +64,7 @@ Effect4.Program.Eff.onExit	1
 Effect4.Program.Eff.exit	2
 Effect4.Program.Eff.uninterruptible	1
 Effect4.Program.Eff.interruptible	1
-Effect4.Program.Eff.whileLoop	2
 Effect4.Program.Eff.yieldNow	11
-Effect4.Program.Eff.callback	5
 Effect4.Program.Eff.awaitFiber	4
 Effect4.Program.Eff.withFiber	20
 Effect4.Program.Eff.scoped	1
@@ -76,7 +74,7 @@ Effect4.Program.Eff.service	5
 Effect4.Program.Eff.provideService	1
 Effect4.Program.Eff.catchIf	3
 Effect4.Program.Eff.select	6
-Effect4.Program.Eff.iterate	2
+Effect4.Program.Eff.iterate	4
 Effect4.Program.Stmt.bindYield	2
 Effect4.Program.Stmt.yieldDiscard	1
 Effect4.Program.Stmt.ret	4

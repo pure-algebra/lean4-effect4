@@ -84,15 +84,6 @@ theorem suspendBodyAt_gen {root : NativeEff} {q : Point} {k : Nat} {ss : Stmts N
     suspendBodyAt root (EffThunk.body q) = Prim.iterator (EffName.gen q [] false) Val.unit := by
   simp [suspendBodyAt, hf, h]
 
-theorem suspendBodyAt_whileLoop {root : NativeEff} {q : Point} {k : Nat} {i t s : Term}
-    {b : NativeEff} (hf : q.fuel = k + 1)
-    (h : Node.at_ (Node.eff root) q.path = some (Node.eff (.whileLoop i t s b))) :
-    suspendBodyAt root (EffThunk.body q) =
-      (match evalTerm q.env i with
-       | some cursor => Prim.whileLoop (EffName.loop q) cursor
-       | none => badShape) := by
-  simp [suspendBodyAt, hf, h]; rfl
-
 theorem suspendBodyAt_iterate {root : NativeEff} {q : Point} {k : Nat} {c : Ty}
     {i t s r : Term} {b : NativeEff} (hf : q.fuel = k + 1)
     (h : Node.at_ (Node.eff root) q.path = some (Node.eff (.iterate c i t s r b))) :

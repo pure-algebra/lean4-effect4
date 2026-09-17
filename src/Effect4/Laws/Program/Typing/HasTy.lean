@@ -173,16 +173,6 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
   | interruptible {env : TyEnv} {body : Eff Op} {t : EffTy} :
       HasTy sig env body t →
       HasTy sig env (.interruptible body) t
-  /-- `Effect.whileLoop` (`:4628`): the cursor is the next variable, initialised by `initial`;
-  the test is a `bool` over the cursor, the body runs over the cursor, and the step must give
-  back a term of the **cursor's own type** — the loop's invariant, stated as an equation. The
-  answer is `void`: the cursor is not returned. -/
-  | whileLoop {env : TyEnv} {initial test step : Term} {body : Eff Op} {cursor : Ty} {b : EffTy} :
-      termTy sig env initial = some cursor →
-      termTy sig (env ++ [cursor]) test = some .bool →
-      HasTy sig (env ++ [cursor]) body b →
-      termTy sig (env ++ [cursor, b.answer]) step = some cursor →
-      HasTy sig env (.whileLoop initial test step body) ⟨.unit, b.error, b.requires⟩
   /-- `iterate`: the cursor has its annotation's type in the test, the body, the step and the
   result; `initial` and `step` are under the annotation by subsumption, which is what carries
   the cursor's membership across rounds (`hasTy_sub`). The answer is the result's type. -/
@@ -199,18 +189,6 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
   /-- `Effect.yieldNowWith` (`:982-990`): pure `void`, whatever the priority. -/
   | yieldNow {env : TyEnv} (priority : Nat) :
       HasTy sig env (.yieldNow priority) (EffTy.pure .unit)
-  /-- The row's export as an `Async` (`:1109-1143`). Three premises: the domain check of
-  `perform` (DI-54), the row's kind is `async` — a *kind* check, which is not the domain check:
-  a supplied table can make an in-range row async while the index is outside another
-  signature's domain — and the request term's type. -/
-  | callback {env : TyEnv} {register : Op} {request : Term} {requestTy : Ty} :
-      sig.dom register = true →
-      (sig.rowOf register).kind = .async →
-      termTy sig env request = some requestTy →
-      Ty.sub requestTy.normalize (sig.rowOf register).request.normalize = true →
-      HasTy sig env (.callback register request)
-        ⟨(sig.rowOf register).answer, (sig.rowOf register).error,
-          Requirement.ofList (sig.rowOf register).requires⟩
   /-- `Fiber.join` (`:5291`): the handle's value and error columns become the program's, and
   the failure is observable — so `E` is the fiber's error. -/
   | awaitFiber_join {env : TyEnv} {fiber : Term} {handle : Ty} {value error : Ty} :

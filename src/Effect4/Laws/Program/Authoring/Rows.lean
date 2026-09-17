@@ -92,7 +92,7 @@ theorem fail_scoped {x0 x1 : TermSrc} (h0 : x0.Scoped) (h1 : x1.Scoped) :
 
 theorem await_scoped {request : TermSrc} (h0 : request.Scoped) :
     (await request).Scoped :=
-  callback_scoped _ h0
+  perform_scoped _ h0
 
 end Deferred
 
@@ -108,7 +108,7 @@ namespace Effect
 
 theorem sleep_scoped {request : TermSrc} (h0 : request.Scoped) :
     (sleep request).Scoped :=
-  callback_scoped _ h0
+  perform_scoped _ h0
 
 theorem currentTimeMillis_scoped :
     (currentTimeMillis).Scoped :=

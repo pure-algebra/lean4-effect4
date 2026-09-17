@@ -165,7 +165,7 @@ theorem Straight.perform_sync {op : NativeOp} {r : Term} (h : Straight (.perform
 
 /-- Where the straight fragment meets the heads whose suspension body the compile decides
 itself (`Eff.suspendDecided`, `Program/Compile.lean`): at a source suspension and at a
-`select`, nowhere else. The other decided heads (`gen`, `whileLoop`, `provideLayer`) are
+`select`, nowhere else. The other decided heads (`gen`, `iterate`, `provideLayer`) are
 outside the fragment. `plainCode_suspendBodyAt` (`Agreement/Machine.lean`) splits on the
 classifier and this lemma names the two straight cases. -/
 theorem Straight.suspendDecided_iff {e : NativeEff} (hs : Straight e = true) :

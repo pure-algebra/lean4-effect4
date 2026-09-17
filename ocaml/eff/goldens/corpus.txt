@@ -36,7 +36,7 @@ pIllBreak	ill-typed
 pIllBranch	ill-typed
 pIllJoin	well-typed
 pIllVar	ill-typed
-pIllCallback	ill-typed
+pIllCallback	well-typed
 pIllStep	ill-typed
 pIllInterruptor	ill-typed
 pProvide	well-typed

@@ -603,10 +603,6 @@ theorem compileEff_interruptible (b : NativeEff) (hf : p.fuel = k + 1) :
     compileEff (.interruptible b) p = Prim.withFiber (EffThunk.act p) := by
   simp only [compileEff, hf]
 
-theorem compileEff_whileLoop (initial test step : Term) (b : NativeEff) (hf : p.fuel = k + 1) :
-    compileEff (.whileLoop initial test step b) p = Prim.suspend (EffThunk.body p) := by
-  simp only [compileEff, hf]
-
 theorem compileEff_iterate (cursor : Ty) (initial test step result : Term) (b : NativeEff)
     (hf : p.fuel = k + 1) :
     compileEff (.iterate cursor initial test step result b) p = Prim.suspend (EffThunk.body p) := by
@@ -614,11 +610,6 @@ theorem compileEff_iterate (cursor : Ty) (initial test step result : Term) (b : 
 
 theorem compileEff_yieldNow (priority : Nat) (hf : p.fuel = k + 1) :
     compileEff (.yieldNow priority) p = Prim.yieldNowWith priority := by
-  simp only [compileEff, hf]
-
-/-- DI-61: `callback` is the shared async dispatcher at positive fuel. -/
-theorem compileEff_callback (op : NativeOp) (r : Term) (hf : p.fuel = k + 1) :
-    compileEff (.callback op r) p = asyncRoute op r p := by
   simp only [compileEff, hf]
 
 theorem compileEff_awaitFiber (fiber : Term) (mode : Supervision.ObserverMode) (hf : p.fuel = k + 1) :
@@ -1461,8 +1452,8 @@ theorem meaning_of_asExit : ∀ (b : NativeEff) (q : Point) (s : Stores) {exit :
     · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
     · rw [compileEff_onExit b f hf] at h; simp [Prim.asExit?] at h
   | .gen _, _, _, _, hpl, _ | .uninterruptible _, _, _, _, hpl, _
-  | .interruptible _, _, _, _, hpl, _ | .whileLoop _ _ _ _, _, _, _, hpl, _
-  | .yieldNow _, _, _, _, hpl, _ | .callback _ _, _, _, _, hpl, _
+  | .interruptible _, _, _, _, hpl, _
+  | .yieldNow _, _, _, _, hpl, _
   | .awaitFiber _ _, _, _, _, hpl, _ | .withFiber _, _, _, _, hpl, _
   | .«scoped» _, _, _, _, hpl, _ | .acquireRelease _ _, _, _, _, hpl, _
   | .provideLayer _ _ _, _, _, _, hpl, _
@@ -1923,9 +1914,7 @@ theorem localRun_compile (root : NativeEff) :
   | .gen _, _, _, _, _, hpl, _, _
   | .uninterruptible _, _, _, _, _, hpl, _, _
   | .interruptible _, _, _, _, _, hpl, _, _
-  | .whileLoop _ _ _ _, _, _, _, _, hpl, _, _
   | .yieldNow _, _, _, _, _, hpl, _, _
-  | .callback _ _, _, _, _, _, hpl, _, _
   | .awaitFiber _ _, _, _, _, _, hpl, _, _
   | .withFiber _, _, _, _, _, hpl, _, _
   | .scoped _, _, _, _, _, hpl, _, _

@@ -73,7 +73,7 @@ def fireTape : List Api.Decision := [evaluate, fire]
 
 -- 2. Failure exits and success carrying an error-shaped value remain distinct.
 def waiting : NativeEff :=
-  .bind (.perform .deferredMake (.lit .unit)) (.callback .deferredAwait (.var 0))
+  .bind (.perform .deferredMake (.lit .unit)) (.perform .deferredAwait (.var 0))
 def failureTape : List Api.Decision := [evaluate, reply (.ofExit (.failure failure))]
 def errorValueTape : List Api.Decision :=
   [evaluate, reply (.ofExit (.success (.exitErr failure)))]
@@ -90,7 +90,7 @@ def wrongTokenTape : List Api.Decision :=
 -- 3. ofRefGet executes a store read as the suspended fiber resumes.
 def waitingWithRef : NativeEff :=
   .bind (.perform .refMake (.lit (.nat 8)))
-    (.bind (.perform .deferredMake (.lit .unit)) (.callback .deferredAwait (.var 1)))
+    (.bind (.perform .deferredMake (.lit .unit)) (.perform .deferredAwait (.var 1)))
 def refAnswerTape : List Api.Decision := [evaluate, reply (.ofRefGet ⟨0⟩)]
 
 #guard (run waitingWithRef startTape).stores.refs = [.nat 8]
@@ -102,7 +102,7 @@ def immediateDeferred : NativeEff :=
   .bind (.perform .deferredMake (.lit .unit))
     (.bind (.perform .deferredSucceed
       (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))
-      (.callback .deferredAwait (.var 0)))
+      (.perform .deferredAwait (.var 0)))
 
 #guard (run immediateDeferred startTape).exit = some (.success (.nat 7))
 #guard waiterCount (run immediateDeferred startTape) = some 0
@@ -112,7 +112,7 @@ def immediateDeferred : NativeEff :=
 def dueDeferred : NativeEff := Test.Syntax.CompileContract.pDeferred
 def dueDeferredFailure : NativeEff :=
   .bind (.perform .deferredMake (.lit .unit))
-    (.bind (.withFiber (.fork (.callback .deferredAwait (.var 0)) immediateDaemon))
+    (.bind (.withFiber (.fork (.perform .deferredAwait (.var 0)) immediateDaemon))
       (.bind (.perform .deferredFail
         (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))
         (.awaitFiber (.var 1) .joinEffect)))
@@ -141,7 +141,7 @@ def interruptTape : List Api.Decision := [evaluate, interrupt]
 def asyncCleanup : NativeEff :=
   .bind (.perform .deferredMake (.lit .unit))
     (.onExit (.succeed (.lit (.nat 7)))
-      (.bind (.callback .deferredAwait (.var 0))
+      (.bind (.perform .deferredAwait (.var 0))
         (.perform .refMake (.lit (.nat 9)))))
 def cleanupAnswerTape : List Api.Decision :=
   [evaluate, interrupt, reply (.ofExit (.success .unit))]
@@ -197,7 +197,7 @@ def closeChildren (strategy : FinalizerStrategy) : NativeEff :=
 -- 11. A successful race settles only after interrupting its parked loser.
 def raceWinner : NativeEff :=
   .bind (.perform .deferredMake (.lit .unit))
-    (.withFiber (.raceAll (.cons (.callback .deferredAwait (.var 0))
+    (.withFiber (.raceAll (.cons (.perform .deferredAwait (.var 0))
       (.cons (.succeed (.lit (.nat 2))) .nil))))
 
 #guard (run raceWinner startTape).exit = some (.success (.nat 2))
@@ -210,7 +210,7 @@ def raceWinner : NativeEff :=
 -- 12. Canceling a pending race interrupts its child and removes the waiter.
 def racePending : NativeEff :=
   .bind (.perform .deferredMake (.lit .unit))
-    (.withFiber (.raceAll (.cons (.callback .deferredAwait (.var 0)) .nil)))
+    (.withFiber (.raceAll (.cons (.perform .deferredAwait (.var 0)) .nil)))
 
 #guard (run racePending startTape).exit = none
 #guard waiterCount (run racePending startTape) = some 1
@@ -256,16 +256,16 @@ def orderedInterrupt : NativeEff :=
   .bind (.perform .deferredMake (.lit .unit))
     (.bind (.perform .deferredMake (.lit .unit))
       (.bind (.withFiber (.fork
-          (.onExit (.callback .deferredAwait (.var 1))
+          (.onExit (.perform .deferredAwait (.var 1))
             (.perform .deferredSucceed (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 9)) .nil)))))
           immediateDaemon))
-        (.bind (.withFiber (.fork (.callback .deferredAwait (.var 0)) immediateDaemon))
+        (.bind (.withFiber (.fork (.perform .deferredAwait (.var 0)) immediateDaemon))
           (.withFiber (.interruptAll (.app "pair" (.cons (.var 2) (.cons (.var 3) .nil))) none)))))
 /-- A parent exits with a live tracked child (`forkChild`): the child-exit middleware
 re-enters the parent, which interrupts and awaits the child before its exit is published. -/
 def middlewareChild : NativeEff :=
   .bind (.perform .deferredMake (.lit .unit))
-    (.bind (.withFiber (.fork (.callback .deferredAwait (.var 0)) ⟨true, false, .inherit⟩))
+    (.bind (.withFiber (.fork (.perform .deferredAwait (.var 0)) ⟨true, false, .inherit⟩))
       (.succeed (.lit .unit)))
 
 #guard (run interruptDone startTape).exit = some (.success .unit)
@@ -294,20 +294,20 @@ def forkScopedDone : NativeEff :=
   .scoped (.withFiber (.forkScoped (.succeed (.lit (.nat 1))) scopedDaemon))
 /-- One live scoped child, interrupted by the closing root through its one finalizer. -/
 def seqOne : NativeEff := .scoped (.bind (.perform .deferredMake (.lit .unit))
-  (.bind (.withFiber (.forkScoped (.callback .deferredAwait (.var 0)) scopedDaemon))
+  (.bind (.withFiber (.forkScoped (.perform .deferredAwait (.var 0)) scopedDaemon))
     (.succeed (.lit .unit))))
 /-- Two live scoped children, interrupted in close order by the root's sequential walk. -/
 def seqTwo : NativeEff := .scoped (.bind (.perform .deferredMake (.lit .unit))
-  (.bind (.withFiber (.forkScoped (.callback .deferredAwait (.var 0)) scopedDaemon))
-    (.bind (.withFiber (.forkScoped (.callback .deferredAwait (.var 0)) scopedDaemon))
+  (.bind (.withFiber (.forkScoped (.perform .deferredAwait (.var 0)) scopedDaemon))
+    (.bind (.withFiber (.forkScoped (.perform .deferredAwait (.var 0)) scopedDaemon))
       (.succeed (.lit .unit)))))
 /-- A parallel scope closed with an exit value: the two finalizer daemons (3 and 4, forked in
 close order) interrupt the second and the first child respectively, then both are awaited. -/
 def parTwo : NativeEff :=
   .bind (.perform (.scopeMake .parallel) (.lit .unit))
     (.bind (.perform .deferredMake (.lit .unit))
-      (.bind (.withFiber (.forkIn (.callback .deferredAwait (.var 1)) scopedDaemon (.var 0)))
-        (.bind (.withFiber (.forkIn (.callback .deferredAwait (.var 1)) scopedDaemon (.var 0)))
+      (.bind (.withFiber (.forkIn (.perform .deferredAwait (.var 1)) scopedDaemon (.var 0)))
+        (.bind (.withFiber (.forkIn (.perform .deferredAwait (.var 1)) scopedDaemon (.var 0)))
           (.bind (.exit (.succeed (.lit .unit))) (.withFiber (.closeScope (.var 0) (.var 4)))))))
 
 #guard (run forkScopedDone startTape).exit = some (.success (.fiber ⟨1⟩))

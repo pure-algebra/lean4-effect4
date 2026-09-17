@@ -203,9 +203,9 @@ def acquireHandleTable : RowTable :=
       registration := .external, request := .handle "Host.Resource", answer := .nat, error := .never, cite := "" } ]
 
 def pAcquireHandle : Api.Program :=
-  .bind (.scoped (.acquireRelease (.callback (.external 0) (.lit .unit))
-      (.callback (.external 1) (.var 0))))
-    (.bind (.callback (.external 2) (.var 0))
+  .bind (.scoped (.acquireRelease (.perform (.external 0) (.lit .unit))
+      (.perform (.external 1) (.var 0))))
+    (.bind (.perform (.external 2) (.var 0))
       (.succeed (.app "pair" (.cons (.var 0) (.cons (.var 1) .nil)))))
 
 def acquireHandleAnswers : List (Completion Val Err Defect FiberId Ann) :=
@@ -219,20 +219,20 @@ def pairT (a b : Term) : Term := .app "pair" (.cons a (.cons b .nil))
 host before binding), select, and close at the scope's end. The answers come from the tape
 rc.112 recorded (`harness/truth/tapes/pSqlite.jsonl`), never from a Lean-side list. -/
 def pSqlite : Api.Program :=
-  .scoped (.bind (.acquireRelease (.callback (.external 0) (.lit (.str ":memory:")))
-                                  (.callback (.external 2) (.var 0)))
-    (.bind (.callback (.external 1) (pairT (.var 0) (pairT (.lit (.str "CREATE TABLE t (a INTEGER, b TEXT)")) (strs []))))
-      (.bind (.callback (.external 1) (pairT (.var 0) (pairT (.lit (.str "INSERT INTO t (a, b) VALUES (?, ?)")) (strs ["7", "\"x\""]))))
-        (.callback (.external 1) (pairT (.var 0) (pairT (.lit (.str "SELECT a, b FROM t")) (strs [])))))))
+  .scoped (.bind (.acquireRelease (.perform (.external 0) (.lit (.str ":memory:")))
+                                  (.perform (.external 2) (.var 0)))
+    (.bind (.perform (.external 1) (pairT (.var 0) (pairT (.lit (.str "CREATE TABLE t (a INTEGER, b TEXT)")) (strs []))))
+      (.bind (.perform (.external 1) (pairT (.var 0) (pairT (.lit (.str "INSERT INTO t (a, b) VALUES (?, ?)")) (strs ["7", "\"x\""]))))
+        (.perform (.external 1) (pairT (.var 0) (pairT (.lit (.str "SELECT a, b FROM t")) (strs [])))))))
 
 /-- The key-value fixture over the canonical `KeyValueStoreMemory` table: make, set, get,
 has, remove; the answer is the `(get, has)` pair. Answers from `tapes/pKv.jsonl`. -/
 def pKv : Api.Program :=
-  .bind (.callback (.external 0) (.lit .unit))
-    (.bind (.callback (.external 2) (pairT (.var 0) (pairT (.lit (.str "k")) (.lit (.str "1")))))
-      (.bind (.callback (.external 1) (pairT (.var 0) (.lit (.str "k"))))
-        (.bind (.callback (.external 4) (pairT (.var 0) (.lit (.str "k"))))
-          (.bind (.callback (.external 3) (pairT (.var 0) (.lit (.str "k"))))
+  .bind (.perform (.external 0) (.lit .unit))
+    (.bind (.perform (.external 2) (pairT (.var 0) (pairT (.lit (.str "k")) (.lit (.str "1")))))
+      (.bind (.perform (.external 1) (pairT (.var 0) (.lit (.str "k"))))
+        (.bind (.perform (.external 4) (pairT (.var 0) (.lit (.str "k"))))
+          (.bind (.perform (.external 3) (pairT (.var 0) (.lit (.str "k"))))
             (.succeed (pairT (.var 2) (.var 3)))))))
 
 /-! ### The error paths (2026-09-09, after the slice): what a real `SqlError` does
@@ -250,12 +250,12 @@ come from `tapes/pSql*.jsonl`. -/
 
 /-- The statement that fails: no table `missing`. -/
 def sqlMissing (handle : Term) : Api.Program :=
-  .callback (.external 1) (pairT handle (pairT (.lit (.str "SELECT a FROM missing")) (strs [])))
+  .perform (.external 1) (pairT handle (pairT (.lit (.str "SELECT a FROM missing")) (strs [])))
 
 /-- `body` under an open client (`.var 0`) that the scope's end releases, as `pSqlite`. -/
 def sqlClient (body : Api.Program) : Api.Program :=
-  .scoped (.bind (.acquireRelease (.callback (.external 0) (.lit (.str ":memory:")))
-                                  (.callback (.external 2) (.var 0)))
+  .scoped (.bind (.acquireRelease (.perform (.external 0) (.lit (.str ":memory:")))
+                                  (.perform (.external 2) (.var 0)))
     body)
 
 def pSqlFail : Api.Program := sqlClient (sqlMissing (.var 0))
@@ -273,8 +273,8 @@ releases when the failed build's scope closes; `Layer.orDie` turns the tagged fa
 defect on both faces. -/
 def pSqlOrDie : Api.Program :=
   .provideLayer (.orDie (.effect kSql
-      (.bind (.acquireRelease (.callback (.external 0) (.lit (.str ":memory:")))
-                              (.callback (.external 2) (.var 0)))
+      (.bind (.acquireRelease (.perform (.external 0) (.lit (.str ":memory:")))
+                              (.perform (.external 2) (.var 0)))
         (.bind (sqlMissing (.var 0)) (.succeed (.lit (.nat 1)))))))
     false (.service kSql)
 

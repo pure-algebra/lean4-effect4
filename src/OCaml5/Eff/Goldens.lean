@@ -204,11 +204,9 @@ partial def effV : Eff NativeOp → V
   | .uninterruptible b => .ctor ``Eff.uninterruptible [effV b]
   | .interruptible b => .ctor ``Eff.interruptible [effV b]
   | .select s d a0 a1 => .ctor ``Eff.select [termV s, decisionV d, effV a0, effV a1]
-  | .whileLoop i t s b => .ctor ``Eff.whileLoop [termV i, termV t, termV s, effV b]
   | .iterate c i t s r b =>
     .ctor ``Eff.iterate [tyV c, termV i, termV t, termV s, termV r, effV b]
   | .yieldNow p => .ctor ``Eff.yieldNow [.nat p]
-  | .callback op r => .ctor ``Eff.callback [opV op, termV r]
   | .awaitFiber f m => .ctor ``Eff.awaitFiber [termV f, modeV m]
   | .withFiber a => .ctor ``Eff.withFiber [actionV a]
   | .scoped b => .ctor ``Eff.scoped [effV b]
@@ -292,7 +290,9 @@ def pTwo : P :=
          .awaitFiber (v 0) .awaitValue] (.awaitFiber (v 1) .awaitValue)
 def pAwait : P := .bind (.perform .deferredMake u) (.perform .deferredAwait (v 0))
 def pGen : P := .gen (st [.bindYield (.succeed (n 1)), .ret (.app "succ" (ts [v 0]))])
-def pWhile : P := .whileLoop (n 0) (.app "lt" (ts [v 0, n 3])) (.app "succ" (ts [v 0])) (.yieldNow 0)
+/-- Kept under its name (DI-60: no fixture is renamed). `whileLoop` retired into `iterate`:
+the same loop written with `iterate .nat` and answering `.lit .unit`. -/
+def pWhile : P := .iterate .nat (n 0) (.app "lt" (ts [v 0, n 3])) (.app "succ" (ts [v 0])) u (.yieldNow 0)
 def pCatch : P := .catchCause (.fail (n 1)) (.succeed (n 0))
 def pStr : P := .succeed (.lit (.str "hi \"there\"\n"))
 def pFailCause : P :=
@@ -319,7 +319,9 @@ def pSelectOption : P :=
     (.select (.app "causeError" (ts [v 0])) .option (.succeed (n 0)) (.succeed (v 1)))
 def pSelectTag : P :=
   .select (.app "pair" (ts [.lit (.str "A"), n 5])) (.tag "A") (.succeed (v 0)) (.succeed (n 0))
-def pCallback : P := .bind (.perform .deferredMake u) (.callback .deferredAwait (v 0))
+/-- Kept under its name (DI-60). `callback` retired into `perform`, the one invocation form;
+the asynchronous row is invoked like every other. -/
+def pCallback : P := .bind (.perform .deferredMake u) (.perform .deferredAwait (v 0))
 def pJoin : P := .bind (.withFiber (.fork child ⟨false, true, .uninterruptible⟩)) (.awaitFiber (v 0) .joinEffect)
 def pScoped : P :=
   .scoped (.bind (.perform (.scopeMake .parallel) u)
@@ -350,7 +352,7 @@ def pActions : P :=
     , .exit (.succeed (n 1))                                              -- v14 : exitOf nat never
     , .withFiber (.closeScope (v 1) (v 14)) ]                             -- v15
     (.withFiber (.raceAll (es [child, .succeed (n 3)])))
-/-- Every native operation, one after another; the async row through `callback` last. -/
+/-- Every native operation, one after another; the asynchronous row last. -/
 def pOps : P :=
   binds
     [ .perform .refMake (n 1)                                             -- v0 : ref
@@ -373,7 +375,7 @@ def pOps : P :=
     , .perform .deferredFail (.app "pair" (ts [v 13, n 2]))               -- v17
     , .perform (.scopeMake .sequential) u                                 -- v18
     , .perform (.scopeMake .parallel) u ]                                 -- v19
-    (.callback .deferredAwait (v 13))
+    (.perform .deferredAwait (v 13))
 
 -- ill-typed
 def pIll : P := .succeed (.app "succ" (ts [.lit (.bool true)]))
@@ -390,8 +392,14 @@ test column. -/
 def pIllJoin : P :=
   .select (.lit (.bool true)) .bool (.succeed (n 1)) (.succeed (.lit (.bool true)))
 def pIllVar : P := .succeed (v 0)
-def pIllCallback : P := .bind (.perform .refMake (n 0)) (.callback .refGet (v 0))
-def pIllStep : P := .whileLoop (n 0) (.app "lt" (ts [v 0, n 3])) (.lit (.bool true)) (.yieldNow 0)
+/-- Kept under its name and its place (DI-60), and no longer ill typed. It was a `callback`
+on the synchronous row `refGet`, which the checker refused by the row's kind. `callback`
+retired into `perform`, whose row kind selects the route, so the same invocation is the
+ordinary synchronous read and is typed. -/
+def pIllCallback : P := .bind (.perform .refMake (n 0)) (.perform .refGet (v 0))
+/-- Kept under its name (DI-60: no fixture is renamed). `whileLoop` retired into `iterate`:
+the step term is ill-typed (boolean instead of nat). -/
+def pIllStep : P := .iterate .nat (n 0) (.app "lt" (ts [v 0, n 3])) (.lit (.bool true)) u (.yieldNow 0)
 def pIllInterruptor : P := .failCause (.interrupt (some (.lit (.bool true))))
 
 /-- The join (2026-09-07): a layer of every constructor, provided to a body that reads a
@@ -408,7 +416,7 @@ def pProvide : P :=
   .provideLayer layerAll false (.bind (.service kA) (.provideService kB (n 2) (.service kB)))
 
 /-- The timer (A4, 2026-09-08): a sleep, then the clock read. -/
-def pSleep : P := .bind (.callback .sleep (n 3)) (.perform .clockNow u)
+def pSleep : P := .bind (.perform .sleep (n 3)) (.perform .clockNow u)
 
 def ls (xs : List (LayerTerm NativeOp)) : LayerTerms NativeOp := xs.foldr .cons .nil
 
@@ -425,9 +433,9 @@ def pMergeAll : P :=
     (.mergeAll (ls [.succeed kB (.nat 1), .effect kA (.succeed (n 7)), .succeed kC (.bool true)]))
     false (.bind (.service kA) (.service kC))
 
-/-- External constructor coverage. A supplied row table types this callback; the empty
+/-- External constructor coverage. A supplied row table types this invocation; the empty
 built-in table deliberately does not. -/
-def pExternal : P := .callback (.external 0) u
+def pExternal : P := .perform (.external 0) u
 
 /-- DI-54: the bound `never` used to satisfy an out-of-domain external placeholder.
 Both checkers must refuse this program at the empty row table. -/

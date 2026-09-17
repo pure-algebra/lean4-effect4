@@ -34,8 +34,6 @@ inductive TypeReason
   | errorNotAdmitted (error : Ty)
   /-- The row is outside the signature's domain (DI-54). -/
   | outsideDomain (row : String)
-  /-- A `callback` on a row that is not `async`. -/
-  | notAsync (row : String)
   /-- The request is not a subtype of the row's request (DI-15). -/
   | requestNotSubtype (row : String) (request expected : Ty)
   | predicateNotBool (t : Ty)
@@ -76,7 +74,6 @@ def TypeReason.head : TypeReason → String
   | .cause _ => "cause"
   | .errorNotAdmitted _ => "errorNotAdmitted"
   | .outsideDomain _ => "outsideDomain"
-  | .notAsync _ => "notAsync"
   | .requestNotSubtype _ _ _ => "requestNotSubtype"
   | .predicateNotBool _ => "predicateNotBool"
   | .notSelectable _ _ => "notSelectable"
@@ -179,22 +176,6 @@ mutual
           match effTy sig (env ++ e0) a0 with
           | none => explainEff sig (env ++ e0) (p ++ [0]) a0
           | some _ => explainEff sig (env ++ e1) (p ++ [1]) a1
-    | .whileLoop initial test step body =>
-      match termTy sig env initial with
-      | none => some ⟨p, .term initial⟩
-      | some cursor =>
-        match termTy sig (env ++ [cursor]) test with
-        | none => some ⟨p, .term test⟩
-        | some t =>
-          match effTy sig (env ++ [cursor]) body with
-          | none => explainEff sig (env ++ [cursor]) (p ++ [0]) body
-          | some b =>
-            match termTy sig (env ++ [cursor, b.answer]) step with
-            | none => some ⟨p, .term step⟩
-            | some s =>
-              if t = .bool ∧ s = cursor then none
-              else if t = .bool then some ⟨p, .stepNotCursor s cursor⟩
-              else some ⟨p, .predicateNotBool t⟩
     | .iterate cursor initial test step result body =>
       match termTy sig env initial with
       | none => some ⟨p, .term initial⟩
@@ -218,15 +199,6 @@ mutual
                   some ⟨p, .stepNotCursor c1 cursor⟩
                 else some ⟨p, .initialNotCursor c0 cursor⟩
     | .yieldNow _ => none
-    | .callback register request =>
-      match termTy sig env request with
-      | none => some ⟨p, .term request⟩
-      | some r =>
-        let row := sig.rowOf register
-        if sig.dom register = false then some ⟨p, .outsideDomain row.name⟩
-        else if row.kind ≠ .async then some ⟨p, .notAsync row.name⟩
-        else if Ty.sub r.normalize row.request.normalize then none
-        else some ⟨p, .requestNotSubtype row.name r row.request⟩
     | .awaitFiber fiber _ =>
       match termTy sig env fiber with
       | none => some ⟨p, .term fiber⟩
@@ -546,16 +518,7 @@ mutual
     have ih_b := explainEff_none_iff sig b
     simp only [explainEff, effTy, termRefusal, explainStmts, stmtsTy, explainEffs, effsTy, explainAction, actionTy, explainLayer, layerTy, explainLayers, layersTy]
     (repeat' split) <;> simp_all [EffTy.joinAnswer]
-  | .whileLoop i t s b =>
-    intro env pth
-    have ih_b := explainEff_none_iff sig b
-    simp only [explainEff, effTy, termRefusal, explainStmts, stmtsTy, explainEffs, effsTy, explainAction, actionTy, explainLayer, layerTy, explainLayers, layersTy]
-    (repeat' split) <;> simp_all [EffTy.joinAnswer]
   | .yieldNow n =>
-    intro env pth
-    simp only [explainEff, effTy, termRefusal, explainStmts, stmtsTy, explainEffs, effsTy, explainAction, actionTy, explainLayer, layerTy, explainLayers, layersTy]
-    (repeat' split) <;> simp_all [EffTy.joinAnswer]
-  | .callback op r =>
     intro env pth
     simp only [explainEff, effTy, termRefusal, explainStmts, stmtsTy, explainEffs, effsTy, explainAction, actionTy, explainLayer, layerTy, explainLayers, layersTy]
     (repeat' split) <;> simp_all [EffTy.joinAnswer]

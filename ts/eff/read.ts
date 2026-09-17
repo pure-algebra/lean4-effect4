@@ -695,9 +695,8 @@ const namesOf = (args: ReadonlyArray<Expr>): ReadonlyArray<string> | undefined =
   return names
 }
 
-/** The reading of a row: a `callback` on an `async` row, a `perform` otherwise. */
-const rowAnswer = (e: Entry, request: Term): Eff =>
-  e.row.kind === "async" ? { _tag: "callback", register: e.op, request } : { _tag: "perform", op: e.op, request }
+/** The reading of a row: a `perform`, the one invocation form. The row's kind selects the route at the compile. */
+const rowAnswer = (e: Entry, request: Term): Eff => ({ _tag: "perform", op: e.op, request })
 
 /** A bare identifier as a value row. */
 const readRowValue = (s: string): Read<Eff> => {
@@ -804,7 +803,7 @@ const readRowMethod = (n: number, receiver: Expr, s: string, typeArgs: ReadonlyA
   if (body === undefined) return refuse({ _tag: "unknownHead", name: s })
   if (failed(body)) return again(body)
   const eff = body.success
-  if (spelled === undefined || spelled.row.shape !== "method" || (eff._tag !== "perform" && eff._tag !== "callback")) {
+  if (spelled === undefined || spelled.row.shape !== "method" || eff._tag !== "perform") {
     return refuse({ _tag: "shape", what: "method row" })
   }
   return ok(rowAnswer(spelled, { _tag: "app", atom: "pair", args: [recv.success, eff.request] }))
@@ -1019,9 +1018,9 @@ const readSync: HeadReader = (n, args) => {
 }
 
 /**
- * `Effect.suspend` carries three shapes: `() => t ? a : b` is `select` under the `bool` decision,
- * `() => body` is `suspend`, and the block `() => { let a<n> = i; return Effect.whileLoop({
- * while, body, step }) }` is `whileLoop` with the cursor at `n` and the body's answer at `n+1`.
+ * `Effect.suspend` carries two shapes: `() => t ? a : b` is `select` under the `bool` decision,
+ * and `() => body` is `suspend`. (`iterate` prints through `Effect.whileLoop` mapped to its
+ * result and is read back at R5).
  */
 const readSuspend: HeadReader = (n, args) => {
   const [arg] = args
@@ -1038,33 +1037,9 @@ const readSuspend: HeadReader = (n, args) => {
     }
     return Result.map(readEff(n, arg.body), (body): Eff => ({ _tag: "suspend", body }))
   }
-  if (arg._tag === "arrowBlock" && arg.params.length === 0 && arg.body.length === 2) {
-    const [init, ret] = arg.body as [TsStmt, TsStmt]
-    if (init._tag !== "letInit" || ret._tag !== "ret") return arity("Effect.suspend")
-    const call = ret.value
-    if (call._tag !== "call" || call.fn._tag !== "ident" || call.args.length !== 1) return arity("Effect.suspend")
-    const [options] = call.args as [Expr]
-    if (options._tag !== "object" || options.fields.length !== 3) return arity("Effect.suspend")
-    const [[fw, testArrow], [fb, bodyArrow], [fs, stepBlock]] = options.fields as [readonly [string, Expr], readonly [string, Expr], readonly [string, Expr]]
-    if (testArrow._tag !== "arrow" || bodyArrow._tag !== "arrow" || stepBlock._tag !== "arrowBlock") return arity("Effect.suspend")
-    if (stepBlock.params.length !== 1 || stepBlock.body.length !== 1) return arity("Effect.suspend")
-    const [assign] = stepBlock.body as [TsStmt]
-    if (assign._tag !== "assign") return arity("Effect.suspend")
-    const named = call.fn.name === "Effect.whileLoop" && fw === "while" && fb === "body" && fs === "step" &&
-      init.name === varName(n) && assign.name === varName(n) && stepBlock.params[0] === varName(n + 1)
-    if (!named) return refuse({ _tag: "shape", what: "whileLoop" })
-    const initial = readTerm(n, init.value)
-    if (failed(initial)) return again(initial)
-    const test = readTerm(n + 1, testArrow.body)
-    if (failed(test)) return again(test)
-    const step = readTerm(n + 2, assign.value)
-    if (failed(step)) return again(step)
-    const body = readEff(n + 1, bodyArrow.body)
-    if (failed(body)) return again(body)
-    return ok({ _tag: "whileLoop", initial: initial.success, test: test.success, step: step.success, body: body.success })
-  }
   return arity("Effect.suspend")
 }
+
 
 const readFlatMap: HeadReader = withContinuation("Effect.flatMap", (first, rest) => ({ _tag: "bind", first, rest }))
 const readGen: HeadReader = (n, args) => {
@@ -1453,7 +1428,7 @@ export const childrenOf = (n: IrNode): ReadonlyArray<Child> => {
         case "interruptible": return [atEff(e.body, (body) => kEff({ ...e, body }))]
         case "select":
           return [atEff(e.arm0, (arm0) => kEff({ ...e, arm0 })), atEff(e.arm1, (arm1) => kEff({ ...e, arm1 }))]
-        case "whileLoop": return [atEff(e.body, (body) => kEff({ ...e, body }))]
+        case "iterate": return [atEff(e.body, (body) => kEff({ ...e, body }))]
         case "withFiber": return [atAction(e.action, (action) => kEff({ ...e, action }))]
         case "scoped": return [atEff(e.body, (body) => kEff({ ...e, body }))]
         case "acquireRelease":

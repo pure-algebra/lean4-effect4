@@ -110,7 +110,7 @@ def closeTerm : NativeEff := .withFiber (.closeScope (.var 0) (.var 1))
   some (.closeScope 3 (.failure (Cause.fail Err.boom)))
 
 def awaitTerm (mode : Supervision.ObserverMode) : NativeEff := .awaitFiber (.var 0) mode
-def asyncTerm : NativeEff := .callback .deferredAwait (.var 0)
+def asyncTerm : NativeEff := .perform .deferredAwait (.var 0)
 
 /-- A code-construction view, with a result handle outside the caller's environment.
 This checks the eager fold, not the later runtime refresh rule. -/
@@ -158,8 +158,8 @@ theorem prepare_suspend_retains (completed : List (FiberId × ExitV)) (p : Point
   some (.await ⟨2⟩ .joinEffect)
 #guard operation? (observe 5 (unfolded asyncTerm 8 [.promise ⟨0⟩]) Stores.empty) =
   some (.async (.registerAwait ⟨0⟩) (.promise ⟨0⟩))
-#guard result (.callback .deferredAwait (.lit (.nat 0))) = .done badShapeExit Stores.empty
-#guard result (.callback .refGet (.lit .unit)) = .done badShapeExit Stores.empty
+#guard result (.perform .deferredAwait (.lit (.nat 0))) = .done badShapeExit Stores.empty
+#guard result (.perform .refGet (.lit .unit)) = .done badShapeExit Stores.empty
 
 /-- Feed an explicit exit only to operations whose contract answers with an exit. -/
 def replyExit (program : RProgram) (ex : ExitV) : Observation :=
@@ -210,11 +210,11 @@ def resumedGen : NativeEff :=
 #guard inlineYield (.exit pSucceed) (rootPoint) = some (.success (.exitOk (.nat 42)))
 #guard inlineYield pExit (rootPoint) = some (.success (.exitErr (Cause.fail (Err.tag 7))))
 #guard inlineYield (.exit (.sync (.lit (.nat 42)))) (rootPoint) = none
-#guard inlineYield (.whileLoop (.lit (.nat 0)) (.lit (.bool true)) (.var 0) pSucceed) (rootPoint) = none
+#guard inlineYield (.iterate .nat (.lit (.nat 0)) (.lit (.bool true)) (.var 0) (.lit .unit) pSucceed) (rootPoint) = none
 #guard result (.exit pSucceed) = .done (.success (.exitOk (.nat 42))) Stores.empty
 #guard operation? (observeRaw 1 (unfolded (.exit pSucceed)) Stores.empty) = none
 
-def endlessLoop : NativeEff := .whileLoop (.lit (.nat 0)) (.lit (.bool true)) (.var 0) pSucceed
+def endlessLoop : NativeEff := .iterate .nat (.lit (.nat 0)) (.lit (.bool true)) (.var 0) (.lit .unit) pSucceed
 #guard operation? (observe 30 (unfolded endlessLoop) Stores.empty) =
   some (.loop (rootPoint) (.nat 0))
 

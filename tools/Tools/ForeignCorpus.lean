@@ -32,7 +32,6 @@ mutual
     | .sync t => pure (.sync t)
     | .suspend b => return .suspend (← program b)
     | .perform op t => pure (.perform op t)
-    | .callback op t => pure (.callback op t)
     | .bind a b => return .bind (← program a) (← program b)
     | .gen b => return .gen (← statements b)
     | .catchCause a b => return .catchCause (← program a) (← program b)
@@ -43,7 +42,6 @@ mutual
     | .uninterruptible a => return .uninterruptible (← program a)
     | .interruptible a => return .interruptible (← program a)
     | .select t d a b => return .select t d (← program a) (← program b)
-    | .whileLoop i t s b => return .whileLoop i t s (← program b)
     | .iterate c i t s r b => return .iterate c i t s r (← program b)
     | .yieldNow n => pure (.yieldNow n)
     | .awaitFiber t m => pure (.awaitFiber t m)
@@ -108,7 +106,7 @@ def nativeProbes : List (String × Eff NativeOp) :=
       | .nat => .lit (.nat 0)
       | .prod _ _ => .app "pair" (.cons (.var 0) (.cons (.lit (.nat 0)) .nil))
       | _ => .var 0
-    let p := if row.kind == .async then Eff.callback op request else Eff.perform op request
+    let p := if row.kind == .async then Eff.perform op request else Eff.perform op request
     let p := match row.request with
       | .handle name => .bind (.perform (if name == NativeOp.refTarget then .refMake else .deferredMake) (.lit (.nat 1))) p
       | .prod (.handle name) _ => .bind (.perform (if name == NativeOp.refTarget then .refMake else .deferredMake) (.lit (.nat 1))) p

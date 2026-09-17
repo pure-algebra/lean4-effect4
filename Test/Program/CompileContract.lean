@@ -321,7 +321,7 @@ finds the child already exited. -/
 
 def pDeferred : NativeEff :=
   .bind (.perform .deferredMake (.lit .unit))
-    (.bind (.withFiber (.fork (.callback .deferredAwait (.var 0)) immediateChild))
+    (.bind (.withFiber (.fork (.perform .deferredAwait (.var 0)) immediateChild))
       (.bind (.perform .deferredSucceed
                 (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))
         (.awaitFiber (.var 1) Supervision.ObserverMode.joinEffect)))
@@ -392,7 +392,7 @@ parent's exit interrupts the child whether or not the tape installs it. -/
 
 def pMiddleware : NativeEff :=
   .bind (.perform .deferredMake (.lit .unit))
-    (.bind (.withFiber (.fork (.callback .deferredAwait (.var 0)) immediateChild))
+    (.bind (.withFiber (.fork (.perform .deferredAwait (.var 0)) immediateChild))
       (.succeed (.lit .unit)))
 
 #guard (typeOf nativeSignature pMiddleware).isSome
@@ -415,7 +415,7 @@ def middlewareTape : List DC := [RunDecision.installMiddleware, evaluateRoot]
 exit (`forkDaemon`). -/
 def pDaemon : NativeEff :=
   .bind (.perform .deferredMake (.lit .unit))
-    (.bind (.withFiber (.fork (.callback .deferredAwait (.var 0)) daemonChild))
+    (.bind (.withFiber (.fork (.perform .deferredAwait (.var 0)) daemonChild))
       (.succeed (.lit .unit)))
 
 #guard (typeOf nativeSignature pDaemon).isSome
@@ -435,7 +435,7 @@ this registration (`E4-CHECK-CE-016`, `internal/effect.ts:5366`): the scoped ent
 
 def pScoped : NativeEff :=
   .scoped (.bind (.perform .deferredMake (.lit .unit))
-    (.withFiber (.forkScoped (.callback .deferredAwait (.var 0)) scopedChild)))
+    (.withFiber (.forkScoped (.perform .deferredAwait (.var 0)) scopedChild)))
 
 #guard (typeOf nativeSignature pScoped).isSome
 #guard scopeRows (replayEff pScoped [evaluateRoot]) = [[0, 0, 0, 1, 1]]
@@ -562,9 +562,10 @@ cursor and the body's answer in the step. -/
 
 def pWhileLoop : NativeEff :=
   .bind (.perform .refMake (.lit (.nat 0)))
-    (.bind (.whileLoop (.lit (.nat 0))
+    (.bind (.iterate .nat (.lit (.nat 0))
               (.app "lt" (.cons (.var 1) (.cons (.lit (.nat 3)) .nil)))
               (.app "succ" (.cons (.var 1) .nil))
+              (.var 1)
               (.perform (.refUpdate FnName.incr) (.var 0)))
       (.perform .refGet (.var 0)))
 
@@ -576,13 +577,13 @@ def pWhileLoop : NativeEff :=
 
 `Effect.exit` of a body that is already an `Exit` is `exitSucceed(self)`
 (`internal/effect.ts:3621-3622`); `Effect.gen` is a `Suspend` around the iterator
-(`:1175-1196`); the printed `whileLoop` is a `Suspend` around the `While` frame
-(`Codegen/Print.lean:158-168`). The compile follows the host, and `suspendBodyAt` answers
+(`:1175-1196`); the printed loop is a `Suspend` around the `While` frame
+(`Codegen/Print.lean`). The compile follows the host, and `suspendBodyAt` answers
 the iterator or the loop frame; the exits of every program above are unchanged. -/
 
 def pLoopBare : NativeEff :=
-  .whileLoop (.lit (.nat 0)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
-    (.app "succ" (.cons (.var 0) .nil)) (.succeed (.lit .unit))
+  .iterate .nat (.lit (.nat 0)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
+    (.app "succ" (.cons (.var 0) .nil)) (.lit .unit) (.succeed (.lit .unit))
 
 #guard compile (.exit pSucceed) fuel = Prim.success (Val.exitOk (Val.nat 42))
 #guard compile pExit fuel = Prim.success (Val.exitErr (Cause.fail (Err.tag 7)))
@@ -689,7 +690,7 @@ restoring frame when the park is answered (W2's and W10's shape). -/
 
 def pMasked : NativeEff :=
   .bind (.perform .deferredMake (.lit .unit))
-    (.bind (.withFiber (.fork (.uninterruptible (.callback .deferredAwait (.var 0)))
+    (.bind (.withFiber (.fork (.uninterruptible (.perform .deferredAwait (.var 0)))
               daemonChild))
       (.succeed (.lit .unit)))
 
@@ -708,7 +709,7 @@ def maskTapeAnswered : List DC :=
 /-- The same child under `Effect.interruptible`: the interrupt applies at once. -/
 def pUnmasked : NativeEff :=
   .bind (.perform .deferredMake (.lit .unit))
-    (.bind (.withFiber (.fork (.interruptible (.callback .deferredAwait (.var 0)))
+    (.bind (.withFiber (.fork (.interruptible (.perform .deferredAwait (.var 0)))
               daemonChild))
       (.succeed (.lit .unit)))
 
@@ -797,10 +798,10 @@ DB-14). `Effect.currentTimeMillis` reads the clock. The two shapes the machine-l
 fixtures could not spell (`SchedulerCoreContract` §Timer): a woken fiber reads the staged
 clock, and a woken fiber's sleep fires in the same advance (finding 4 of the timer note). -/
 
-def pSleep : NativeEff := .callback .sleep (.lit (.nat 5))
-def pSleepZero : NativeEff := .callback .sleep (.lit (.nat 0))
-def pSleepNow : NativeEff := .bind (.callback .sleep (.lit (.nat 3))) (.perform .clockNow (.lit .unit))
-def pSleepTwice : NativeEff := .bind (.callback .sleep (.lit (.nat 1))) (.callback .sleep (.lit (.nat 1)))
+def pSleep : NativeEff := .perform .sleep (.lit (.nat 5))
+def pSleepZero : NativeEff := .perform .sleep (.lit (.nat 0))
+def pSleepNow : NativeEff := .bind (.perform .sleep (.lit (.nat 3))) (.perform .clockNow (.lit .unit))
+def pSleepTwice : NativeEff := .bind (.perform .sleep (.lit (.nat 1))) (.perform .sleep (.lit (.nat 1)))
 def pClockNow : NativeEff := .perform .clockNow (.lit .unit)
 
 #guard (typeOf nativeSignature pSleep).isSome ∧ (typeOf nativeSignature pSleepNow).isSome

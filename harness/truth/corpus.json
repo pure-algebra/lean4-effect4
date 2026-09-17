@@ -157,11 +157,11 @@
    "name": "pLoop",
    "exprRefusal": null,
    "expr":
-   "Effect.flatMap(Ref.make(0), (a0) => Effect.suspend(() => {\n  let a1 = 0\n  return Effect.whileLoop({\n    while: () => isZero(a1),\n    body: () => Ref.update(a0, incr),\n    step: (a2) => {\n      a1 = succ(a1)\n    },\n  })\n}))",
+   "Effect.flatMap(Ref.make(0), (a0) => Effect.suspend(() => {\n  let a1: number = 0\n  return Effect.map(Effect.whileLoop({\n    while: () => isZero(a1),\n    body: () => Ref.update(a0, incr),\n    step: (a2) => {\n      a1 = succ(a1)\n    },\n  }), () => undefined)\n}))",
    "declInferred":
-   "export const main = Effect.flatMap(Ref.make(0), (a0) => Effect.suspend(() => {\n  let a1 = 0\n  return Effect.whileLoop({\n    while: () => isZero(a1),\n    body: () => Ref.update(a0, incr),\n    step: (a2) => {\n      a1 = succ(a1)\n    },\n  })\n}))\n",
+   "export const main = Effect.flatMap(Ref.make(0), (a0) => Effect.suspend(() => {\n  let a1: number = 0\n  return Effect.map(Effect.whileLoop({\n    while: () => isZero(a1),\n    body: () => Ref.update(a0, incr),\n    step: (a2) => {\n      a1 = succ(a1)\n    },\n  }), () => undefined)\n}))\n",
    "decl":
-   "export const main: Effect.Effect<void, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.suspend(() => {\n  let a1 = 0\n  return Effect.whileLoop({\n    while: () => isZero(a1),\n    body: () => Ref.update(a0, incr),\n    step: (a2) => {\n      a1 = succ(a1)\n    },\n  })\n}))\n"},
+   "export const main: Effect.Effect<void, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.suspend(() => {\n  let a1: number = 0\n  return Effect.map(Effect.whileLoop({\n    while: () => isZero(a1),\n    body: () => Ref.update(a0, incr),\n    step: (a2) => {\n      a1 = succ(a1)\n    },\n  }), () => undefined)\n}))\n"},
   {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "void"},
    "straight": true,

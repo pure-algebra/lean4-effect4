@@ -703,7 +703,7 @@ theorem loopFinishAt_means (root : NativeEff) (q : Point) (cursor : Val) :
     CodeMeans root (loopFinishAt root q cursor) (loopFinishRAt root q cursor) := by
   unfold loopFinishAt loopFinishRAt
   cases loopResultAt root q with
-  | none => exact CodeMeans.success _
+  | none => exact codeMeans_badShape root
   | some result =>
     dsimp only
     cases evalTerm (q.env ++ [cursor]) result with

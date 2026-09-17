@@ -16,23 +16,23 @@ namespace HostSessionTool
 
 def table : RowTable := [Profile.Scalar.waitRow]
 def resourceFailure : Api.Program := .scoped
-  (.bind (.acquireRelease (.callback (.external 0) (.lit .unit)) (.callback (.external 2) (.var 0)))
-    (.bind (.callback (.external 1) (.var 0))
-      (.bind (.callback (.external 1) (.var 0)) (.callback (.external 1) (.var 0)))))
+  (.bind (.acquireRelease (.perform (.external 0) (.lit .unit)) (.perform (.external 2) (.var 0)))
+    (.bind (.perform (.external 1) (.var 0))
+      (.bind (.perform (.external 1) (.var 0)) (.perform (.external 1) (.var 0)))))
 def resourceSuccess : Api.Program := .scoped
-  (.bind (.acquireRelease (.callback (.external 0) (.lit .unit)) (.callback (.external 2) (.var 0)))
-    (.callback (.external 1) (.var 0)))
+  (.bind (.acquireRelease (.perform (.external 0) (.lit .unit)) (.perform (.external 2) (.var 0)))
+    (.perform (.external 1) (.var 0)))
 def resourceClosed : Api.Program :=
-  .bind (.callback (.external 0) (.lit .unit))
-    (.bind (.callback (.external 2) (.var 0)) (.callback (.external 1) (.var 0)))
+  .bind (.perform (.external 0) (.lit .unit))
+    (.bind (.perform (.external 2) (.var 0)) (.perform (.external 1) (.var 0)))
 def isResource (name : String) : Bool := ["resourceFailure", "resourceSuccess", "resourceClosed"].contains name
 def tableFor (name : String) : RowTable := if isResource name then [Profile.Resource.acquireRow, Profile.Resource.useRow, Profile.Resource.releaseRow] else table
 def profileFor (name : String) : String := if isResource name then "serial-root-resource-v1" else "serial-root-scalar-v1"
 
 def program (name : String) : Except String Api.Program :=
-  if name = "two" then .ok (.bind (.callback (.external 0) (.lit (.nat 2)))
-    (.callback (.external 0) (.lit (.nat 3))))
-  else if name = "failure" then .ok (.callback (.external 0) (.lit (.nat 7)))
+  if name = "two" then .ok (.bind (.perform (.external 0) (.lit (.nat 2)))
+    (.perform (.external 0) (.lit (.nat 3))))
+  else if name = "failure" then .ok (.perform (.external 0) (.lit (.nat 7)))
   else if name = "resourceFailure" then .ok resourceFailure
   else if name = "resourceSuccess" then .ok resourceSuccess
   else if name = "resourceClosed" then .ok resourceClosed

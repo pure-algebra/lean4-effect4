@@ -324,16 +324,12 @@ mutual
     | interruptible (body : Eff Op)
     -- control by value (the fork is `select`, below; `branch` retired into `select … .bool`,
     -- wire tag 15 is never given again)
-    /-- `Effect.whileLoop({ while, body, step })` (`Effect.ts:1282-1286`): rc.112 keeps the
-    cursor in a closure variable; here it is the next variable, initialised by `initial`.
-    `test` is a term over the environment extended by the cursor, `body` a program over it,
-    and `step` a term over the cursor and the body's answer, giving the next cursor. -/
-    | whileLoop (initial test step : Term) (body : Eff Op)
+    -- (`whileLoop` retired into `iterate`: tag 16 is never given again)
     -- scheduling and parking
     | yieldNow (priority : Nat)
-    /-- An `Async` whose registration is the row's (`Deferred.await`): the store decides
-    whether the registration returns a cancel, so the cancel is not syntax. -/
-    | callback (register : Op) (request : Term)
+    -- (`callback` retired into `perform`, the one invocation form: the row's kind selects the
+    -- route, and an asynchronous row's registration is the store's, so the cancel is not
+    -- syntax; wire tag 18 is never given again)
     | awaitFiber (fiber : Term) (mode : Effect4.Supervision.ObserverMode)
     -- fibers and scopes
     | withFiber (action : ActionTerm Op)
@@ -538,9 +534,7 @@ def arms : List Arm :=
   , ⟨"exit", "Effect.exit", "Prim.exitFrame", "internal/effect.ts:2320"⟩
   , ⟨"uninterruptible", "Effect.uninterruptible", "WithFiberAction.setInterruptible false", "internal/effect.ts:4302-4310"⟩
   , ⟨"interruptible", "Effect.interruptible", "WithFiberAction.setInterruptible true", "internal/effect.ts:4331-4352"⟩
-  , ⟨"whileLoop", "Effect.whileLoop", "Prim.whileLoop", "internal/effect.ts:4628"⟩
   , ⟨"yieldNow", "Effect.yieldNowWith", "Prim.yieldNowWith", "internal/effect.ts:982-990"⟩
-  , ⟨"callback", "the row's export (Deferred.await)", "Prim.async (+ Prim.asyncFinalizer when the store returns a cancel)", "internal/effect.ts:1109-1143"⟩
   , ⟨"awaitFiber", "Fiber.join | Fiber.await", "Prim.sync (ParkKind.join)", "internal/effect.ts:5291, :5304"⟩
   , ⟨"withFiber", "Effect.withFiber", "Prim.withFiber", "internal/effect.ts:1147"⟩
   , ⟨"scoped", "Effect.scoped", "the region frames of compileRegion", "internal/effect.ts:3960"⟩
@@ -556,11 +550,11 @@ def arms : List Arm :=
 def constructorNames : List String :=
   ["succeed", "fail", "failCause", "sync", "suspend", "perform", "bind", "gen",
    "catchCause", "matchCause", "onExit", "exit", "uninterruptible", "interruptible",
-   "whileLoop", "yieldNow", "callback", "awaitFiber", "withFiber", "scoped", "acquireRelease",
+   "yieldNow", "awaitFiber", "withFiber", "scoped", "acquireRelease",
    "provideLayer", "service", "provideService", "catchIf", "select", "iterate"]
 
 #guard arms.map Arm.constructor = constructorNames
-#guard constructorNames.length = 27
+#guard constructorNames.length = 25
 
 /-! ## The separation-4 receipts: first-order, decidable throughout -/
 

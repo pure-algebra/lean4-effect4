@@ -405,11 +405,11 @@ private def pMissCatch : Api.Program :=
 #guard (Api.run pHitCatch 100).exit = some (Exit.success (Store.Val.nat 7))
 #guard (Api.run pMissCatch 100).exit = some (Exit.failure (.fail (.tag 7)))
 
--- 6. Loop iteration (whileLoop with Ref mutation)
+-- 6. Loop iteration (iterate with Ref mutation)
 private def pLoopProg : Api.Program :=
   .bind (.perform .refMake (.lit (.nat 0)))
-    (.whileLoop (.lit (.nat 0)) (.app "isZero" (.cons (.var 1) .nil))
-      (.app "succ" (.cons (.var 1) .nil)) (.perform (.refUpdate .incr) (.var 0)))
+    (.iterate .nat (.lit (.nat 0)) (.app "isZero" (.cons (.var 1) .nil))
+      (.app "succ" (.cons (.var 1) .nil)) (.lit .unit) (.perform (.refUpdate .incr) (.var 0)))
 
 #guard Api.wellTyped pLoopProg
 #guard Api.typeOf pLoopProg = some (.pure .unit)
@@ -418,7 +418,7 @@ private def pLoopProg : Api.Program :=
 
 -- 7. Schema-Backed Endpoint Invocation (Endpoint -> RowTable -> Eff)
 private def pCallGetUser (id : String) : Api.Program :=
-  .callback (.external 0) (.lit (.str id))
+  .perform (.external 0) (.lit (.str id))
 
 #guard Api.wellTyped (pCallGetUser "alice") userApi.toRowTable
 #guard Api.typeOf (pCallGetUser "alice") userApi.toRowTable =

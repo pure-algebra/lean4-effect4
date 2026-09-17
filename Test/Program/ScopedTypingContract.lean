@@ -45,7 +45,7 @@ def requirementRow : Row :=
 #guard sameCodeOtherName ≠ nativeScopeKey
 #guard sameCodeOtherName.service = nativeScopeKey.service
 #guard typeOf (nativeSignature [requirementRow])
-    (.scoped (.callback (.external 0) (.lit .unit))) =
+    (.scoped (.perform (.external 0) (.lit .unit))) =
   some ⟨.nat, .never, Requirement.single sameCodeOtherName⟩
 
 #print axioms Effect4.Program.effTy_scoped

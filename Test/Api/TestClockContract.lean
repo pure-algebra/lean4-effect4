@@ -22,8 +22,8 @@ open Effect4.Program.Authoring
 
 /-- Sleep 100, sleep 50, read the clock. -/
 def twoSleeps : Api.Program :=
-  .bind (.callback .sleep (.lit (.nat 100)))
-    (.bind (.callback .sleep (.lit (.nat 50))) (.perform .clockNow (.lit .unit)))
+  .bind (.perform .sleep (.lit (.nat 100)))
+    (.bind (.perform .sleep (.lit (.nat 50))) (.perform .clockNow (.lit .unit)))
 
 def twoSleepsByName : Src NativeOp :=
   andThen (Effect.sleep (nat 100)) <| andThen (Effect.sleep (nat 50)) <| Effect.currentTimeMillis
@@ -68,7 +68,7 @@ def noSleep : Api.Program := .bind (.perform .refMake (.lit (.nat 1))) (.perform
 #guard dilateTime 7 noSleep = noSleep
 
 -- The tree of a sleep is the reader's image of the row: async rows are callbacks.
-#guard elaborate (Effect.sleep (nat 5) : Src NativeOp) = .ok (.callback .sleep (.lit (.nat 5)))
+#guard elaborate (Effect.sleep (nat 5) : Src NativeOp) = .ok (.perform .sleep (.lit (.nat 5)))
 #guard Api.readable twoSleeps
 
 #print axioms Effect4.Api.TestClock.fastForward

@@ -108,7 +108,7 @@ def sources : List NativeEff := [pSucceed, pBindSync, pFail, pCatch, pMatchValue
   pRefModify, pGenTwoYields, pGenIfThen, pGenIfElse, pGenFail, pGenElseEnds,
   pGenThenEnds, pGenLoop, pGenLoopBreakInElse, pWhileLoop, pBranchTrue,
   pBranchFalse, Test.Program.DenoteRContract.writeThenFail,
-  .succeed (.var 0), .sync (.var 0), .callback .refGet (.lit .unit)]
+  .succeed (.var 0), .sync (.var 0), .perform .refGet (.lit .unit)]
 def sourceAgrees (source : NativeEff) : Bool :=
   decide (obsR (replayR source 400 tape).machine = obs (Api.replay source 400 tape).machine)
 #guard sources.all sourceAgrees
@@ -129,7 +129,7 @@ def interruptedAgrees (source : NativeEff) : Bool :=
 -- child interrupts the completing parent, so its later write must not run and
 -- its finalizer must run. This exercises the `answered`/`deliver` split itself.
 def dueInterrupt : NativeEff :=
-  let child : NativeEff := .bind (.callback .deferredAwait (.var 0))
+  let child : NativeEff := .bind (.perform .deferredAwait (.var 0))
     (.withFiber (.interrupt (.var 1)))
   let done : NativeEff := .perform .deferredSucceed
     (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 1)) .nil)))
