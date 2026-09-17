@@ -29,3 +29,29 @@ let wire_families = [
   ("Row", ["name"; "spelling"; "shape"; "trailing"; "kind"; "request"; "answer"; "error"; "requires"; "cite"; "typeArgs"; "registration"]);
   ("EffTy", ["answer"; "error"; "requires"])
 ]
+
+(* The wire tag of every constructor of every inductive family, from
+   tools/Effect4Gen/wire-tags.json. A tag is not a declaration position. *)
+let wire_tags = [
+  ("Ty", [("never", 0); ("unit", 1); ("nat", 2); ("int", 3); ("string", 4); ("bool", 5); ("handle", 6); ("option", 7); ("list", 8); ("prod", 9); ("except", 10); ("exitOf", 11); ("causeOf", 12); ("fiberOf", 13); ("union", 14); ("lit", 15)]);
+  ("Lit", [("unit", 0); ("nat", 1); ("bool", 2); ("str", 3)]);
+  ("Term", [("var", 0); ("lit", 1); ("app", 2)]);
+  ("Terms", [("nil", 0); ("cons", 1)]);
+  ("CauseTerm", [("fail", 0); ("die", 1); ("interrupt", 2); ("both", 3)]);
+  ("MaskMode", [("interruptible", 0); ("uninterruptible", 1); ("inherit", 2)]);
+  ("ObserverMode", [("awaitValue", 0); ("joinEffect", 1)]);
+  ("FinalizerStrategy", [("sequential", 0); ("parallel", 1)]);
+  ("FnName", [("incr", 0); ("double", 1); ("zeroWhenPositive", 2); ("noChange", 3); ("takeAndBump", 4)]);
+  ("NativeOp", [("refMake", 0); ("refGet", 1); ("refSet", 2); ("refGetAndSet", 3); ("refSetAndGet", 4); ("refUpdate", 5); ("refGetAndUpdate", 6); ("refUpdateAndGet", 7); ("refUpdateSome", 8); ("refGetAndUpdateSome", 9); ("refUpdateSomeAndGet", 10); ("refModify", 11); ("refModifySome", 12); ("deferredMake", 13); ("deferredIsDone", 14); ("deferredPoll", 15); ("deferredSucceed", 16); ("deferredFail", 17); ("deferredAwait", 18); ("scopeMake", 19); ("sleep", 20); ("clockNow", 21); ("external", 22)]);
+  ("Decision", [("bool", 0); ("option", 1); ("tag", 2)]);
+  ("Eff", [("succeed", 0); ("fail", 1); ("failCause", 2); ("yieldError", 3); ("sync", 4); ("suspend", 5); ("perform", 6); ("bind", 7); ("gen", 8); ("catchCause", 9); ("matchCause", 10); ("onExit", 11); ("exit", 12); ("uninterruptible", 13); ("interruptible", 14); ("branch", 15); ("whileLoop", 16); ("yieldNow", 17); ("callback", 18); ("awaitFiber", 19); ("withFiber", 20); ("scoped", 21); ("acquireRelease", 22); ("provideLayer", 23); ("service", 24); ("provideService", 25); ("catchIf", 26); ("select", 27); ("iterate", 28)]);
+  ("Stmt", [("bindYield", 0); ("yieldDiscard", 1); ("ret", 2); ("ifElse", 3); ("whileTrue", 4); ("breakLoop", 5)]);
+  ("Stmts", [("nil", 0); ("cons", 1)]);
+  ("Effs", [("nil", 0); ("cons", 1)]);
+  ("ActionTerm", [("fork", 0); ("forkIn", 1); ("forkScoped", 2); ("runIn", 3); ("interrupt", 4); ("interruptScoped", 5); ("interruptAll", 6); ("awaitAll", 7); ("awaitAllFailFast", 8); ("snapshotChildren", 9); ("awaitNewChildren", 10); ("raceAll", 11); ("setContext", 12); ("getContext", 13); ("getId", 14); ("closeScope", 15)]);
+  ("LayerTerm", [("succeed", 0); ("effect", 1); ("effectDiscard", 2); ("provide", 3); ("provideMerge", 4); ("merge", 5); ("fresh", 6); ("orDie", 7); ("ref", 8); ("mergeAll", 9)]);
+  ("LayerTerms", [("nil", 0); ("cons", 1)]);
+  ("RowKind", [("sync", 0); ("async", 1); ("program", 2)]);
+  ("RowShape", [("call", 0); ("value", 1); ("tupleCall", 2); ("method", 3)]);
+  ("Registration", [("deferred", 0); ("external", 1)])
+]

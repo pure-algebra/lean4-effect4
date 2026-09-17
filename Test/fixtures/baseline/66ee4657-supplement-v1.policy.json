@@ -1,0 +1,77 @@
+{
+  "format": "effect4-compatibility-policy-v1",
+  "baseline": "66ee4657-supplement-v1",
+  "comment": [
+    "Every difference between the retained baseline 66ee4657-supplement-v1 and the working tree,",
+    "named. `make check-compat` refuses a difference that is not named here and a name here that",
+    "matches no difference. A change to this file is a review event.",
+    "",
+    "constructor_additions: a new constructor. Its tag was never held in the baseline.",
+    "constructor_retirements: a constructor that left. Its row moved to the retired rows of",
+    "tools/Effect4Gen/wire-tags.json at the same tag, and the tag is never given again.",
+    "family_additions: a family newly reached from the retained roots.",
+    "consumer_additions: a family newly selected by a codec group or by the program world.",
+    "vector_removals and vector_migrations: retained byte vectors (paths of",
+    "66ee4657/golden-digests.sha256, relative to ocaml/) that no longer exist or changed bytes.",
+    "",
+    "historical_renumbering: the one reuse of tags, from before tags were assigned. At 75d75fdb",
+    "`Eff.choose` (tag 23) was removed and the three constructors after it moved down by one,",
+    "so `catchIf`, appended earlier at 27, landed on 26. Programs that use `provideLayer`,",
+    "`service`, `provideService` or `catchIf` encoded before that commit do not decode to the",
+    "same program today. Three retained vectors moved with it and the `choose` vector went.",
+    "Since S1 the tags are assigned in tools/Effect4Gen/wire-tags.json and this cannot recur."
+  ],
+  "constructor_additions": [
+    "Effect4.Program.Eff.catchIf",
+    "Effect4.Program.Eff.select",
+    "Effect4.Program.Eff.iterate",
+    "Effect4.Program.Ty.lit",
+    "Effect4.Machine.Err.text",
+    "Effect4.Machine.Defect.error"
+  ],
+  "constructor_retirements": [],
+  "family_additions": [
+    "Effect4.Program.Decision"
+  ],
+  "consumer_additions": [
+    "wire:Effect4.Program.Ty",
+    "wire:Effect4.ServiceName",
+    "wire:Effect4.ServiceTypeCode",
+    "wire:Effect4.Program.Decision",
+    "wire:Effect4.Program.RowKind",
+    "wire:Effect4.Program.RowShape",
+    "wire:Effect4.Program.Registration",
+    "wire:Effect4.Program.Row",
+    "wire:Effect4.Program.EffTy",
+    "deriving:Program:Effect4.Program.Decision",
+    "deriving:Program:Effect4.Program.Ty",
+    "deriving:Program:Effect4.Program.RowKind",
+    "deriving:Program:Effect4.Program.RowShape",
+    "deriving:Program:Effect4.Program.Registration",
+    "deriving:Program:Effect4.Program.Row",
+    "deriving:Program:Effect4.Program.EffTy",
+    "deriving:Api:Effect4.FiberId",
+    "deriving:Api:Effect4.Api.HostProtocol.Key",
+    "deriving:Api:Effect4.Machine.Exhaustion",
+    "deriving:Api:Effect4.Api.FrontierReason",
+    "ocaml-world:Effect4.Program.Decision"
+  ],
+  "historical_renumbering": [
+    {
+      "family": "Effect4.Program.Eff",
+      "commit": "75d75fdb",
+      "reason": "Eff.choose was removed while a tag was a declaration position",
+      "removed": {"choose": 23},
+      "moved": {"provideLayer": [24, 23], "service": [25, 24], "provideService": [26, 25]},
+      "reused": {"catchIf": 26}
+    }
+  ],
+  "vector_removals": [
+    "eff/goldens/pChoose.bin"
+  ],
+  "vector_migrations": [
+    "eff/goldens/pDiamond.bin",
+    "eff/goldens/pMergeAll.bin",
+    "eff/goldens/pProvide.bin"
+  ]
+}

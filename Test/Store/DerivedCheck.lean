@@ -4,8 +4,9 @@ Contract: the projection guard on every generated `Canonical` instance
 
 Frozen: every `shapeDoc` in a generated file still projects an inductive that is actually in
 the environment — the same case names in the same order, the same field names in the same
-order inside each case, and a `toVal` clause writing each constructor's declaration position.
-A reordered constructor upstream, a renamed field, a dropped case or a hand edit inside a
+order inside each case, and a `toVal` clause writing each constructor's wire tag, the one the
+assignment `tools/Effect4Gen/wire-tags.json` gives it and the shape states.
+A changed tag, a renamed field, a dropped case or a hand edit inside a
 generated file is a build failure here rather than a silent change of every address in the
 store.
 

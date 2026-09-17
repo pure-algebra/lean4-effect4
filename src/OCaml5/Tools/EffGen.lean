@@ -34,7 +34,8 @@ What is derived and what is written by hand, precisely:
   (`InductiveVal.ctors`, `forallTelescope` on each constructor's type);
 * the corpus programs and their `V` conversions are written by hand, but every constructor
   name in a `V.ctor` is a `` ``double-backtick `` name resolved at elaboration time and its
-  index is looked up in the environment at run time — no index is typed by hand;
+  wire tag is looked up at run time in the one assignment (`tools/Effect4Gen/wire-tags.json`,
+  through `OCaml5.Eff.World`) — no tag is typed by hand, and no tag is a declaration position;
 * atom names and const-generic metadata project the complete `NativeAtom` inventory;
   program typing is computed by Lean, with no OCaml typing implementation emitted.
 
@@ -82,13 +83,14 @@ def main (args : List String) : IO Unit := do
     | .ok json => pure json
     | .error message => throw (IO.userError message)
   let families := bs.flatten
-  -- constructor indices, by full name, from the environment; a structure's tree names the
-  -- type (`V.struct`), normalised here to its one constructor
+  -- wire tags, by full constructor name, from the one assignment (`World.readBlocks` read
+  -- `tools/Effect4Gen/wire-tags.json`); a structure's tree names the type (`V.struct`),
+  -- normalised here to its one constructor, whose tag is 0
   let mut idx : NameMap Nat := {}
   let mut structCtor : NameMap Name := {}
   for f in families do
-    for (i, c) in enumL f.ctors do
-      idx := idx.insert c.name i
+    for c in f.ctors do
+      idx := idx.insert c.name c.tag
     if f.isStruct then structCtor := structCtor.insert f.spec.leanName f.ctors.head!.name
   let norm (n : Name) : Name := (structCtor.find? n).getD n
   let famOf (n : Name) : Option Family := families.find? (·.spec.leanName == n)
@@ -145,9 +147,15 @@ def main (args : List String) : IO Unit := do
   let wireFamilies := bs.flatten.map fun f =>
     let fields := if f.isStruct then f.ctors.head!.args.map (·.1) else f.ctors.map (·.short)
     "(" ++ ostr f.spec.leanName.getString! ++ ", [" ++ "; ".intercalate (fields.map ostr) ++ "])"
+  let wireTags := (bs.flatten.filter (!·.isStruct)).map fun f =>
+    "(" ++ ostr f.spec.leanName.getString! ++ ", [" ++ "; ".intercalate
+      (f.ctors.map fun c => "(" ++ ostr c.short ++ ", " ++ toString c.tag ++ ")") ++ "])"
   IO.FS.writeFile (out / "eff_layout.ml") ("(* " ++ stamp ++ " *)\n" ++
     "(* GENERATED source-structure view; no runtime or execution-permission claim. *)\n" ++
-    "let wire_families = [\n  " ++ ";\n  ".intercalate wireFamilies ++ "\n]\n")
+    "let wire_families = [\n  " ++ ";\n  ".intercalate wireFamilies ++ "\n]\n\n" ++
+    "(* The wire tag of every constructor of every inductive family, from\n" ++
+    "   tools/Effect4Gen/wire-tags.json. A tag is not a declaration position. *)\n" ++
+    "let wire_tags = [\n  " ++ ";\n  ".intercalate wireTags ++ "\n]\n")
   IO.FS.writeFile (out / "goldens" / "metadata.tsv") ("\n".intercalate metadataLines ++ "\n")
   IO.FS.writeFile (out / "goldens" / "coverage-metadata.txt") ("\n".intercalate metadataRows ++ "\n")
   IO.FS.writeFile (out / "eff_types.ml") ("(* " ++ stamp ++ " *)\n" ++ emitTypes bs)

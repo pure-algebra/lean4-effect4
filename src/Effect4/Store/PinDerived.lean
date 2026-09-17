@@ -28,8 +28,8 @@ namespace PinRoleC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "PinRole"
-     [("public", []),
-      ("internal", [])],
+     [("public", 0, []),
+      ("internal", 1, [])],
    []⟩
 
 def toVal : _root_.Effect4.Store.PinRole → Val
@@ -67,6 +67,9 @@ theorem fits (a : _root_.Effect4.Store.PinRole) : shapeDoc.accepts (toVal a) = t
 
 instance instCanonical : Canonical (_root_.Effect4.Store.PinRole) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
 
 end PinRoleC
 
@@ -168,6 +171,9 @@ instance instCanonical : Canonical (_root_.Effect4.Store.Pin) :=
 /-- Every node carrying a `Pin` files under kind `source`. -/
 instance instContent : Content (_root_.Effect4.Store.Pin) := ⟨.source⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end PinC
 
 namespace TreeC
@@ -223,6 +229,9 @@ instance instCanonical : Canonical (_root_.Effect4.Store.Tree) :=
 
 /-- Every node carrying a `Tree` files under kind `tree`. -/
 instance instContent : Content (_root_.Effect4.Store.Tree) := ⟨.tree⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
 
 end TreeC
 

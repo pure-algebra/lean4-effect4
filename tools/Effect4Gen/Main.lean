@@ -1,5 +1,6 @@
 import Tools.GeneratedStamp
 import Tools.ProgramStructure
+import Tools.WireTags
 import Lean
 
 /-!
@@ -13,9 +14,10 @@ the spike), and, where a group asks for it, the `Content` instance that files th
 its kind.
 
 The rules it follows are the facts note's Q2 and Q5, not choices: a structure is constructor 0
-with its fields in declaration order; an inductive's constructors are numbered in declaration
-order; a field goes through its own type's `Canonical` instance and is never inlined; a mutual
-block is one `ShapeDoc` whose `defs` bind every member by name and whose members refer to each
+with its fields in declaration order; an inductive's constructors carry the wire tags of the
+one assignment (`tools/Effect4Gen/wire-tags.json`, read through `Tools.WireTags`; a family the
+file does not list carries its declaration positions); a field goes through its own type's
+`Canonical` instance and is never inlined; a mutual block is one `ShapeDoc` whose `defs` bind every member by name and whose members refer to each
 other through `.named`.
 
     lake env lean -M 4096 --run tools\Effect4Gen\Main.lean --group Json \
@@ -90,6 +92,8 @@ deriving Inhabited
 structure CtorInfo where
   /-- The constructor's last name component. -/
   name : String
+  /-- The wire tag the constructor carries: the assignment's, never the loop counter. -/
+  tag : Nat
   args : Array (String × Slot)
 deriving Inhabited
 
@@ -295,7 +299,7 @@ partial def classify (t : Expr) : GenM Slot := do
 
 /-- Build the item: the members with their classified constructors, the foreign types, the
 container companions. -/
-def buildItem (seed : Expr) : MetaM (St × Bool) := do
+def buildItem (tags : Tools.WireTags.Assignment) (seed : Expr) : MetaM (St × Bool) := do
   let tys ← blockMembers seed
   let env ← getEnv
   let mut st : St := {}
@@ -314,11 +318,16 @@ def buildItem (seed : Expr) : MetaM (St × Bool) := do
     for i in [0:tys.size] do
       let t := tys[i]!
       let mut ctors : Array CtorInfo := #[]
-      for c in ← ctorNamesOf t do
+      let names ← ctorNamesOf t
+      let .const family _ := t.getAppFn | throwError "not a constant head: {t}"
+      let wire ← match Tools.WireTags.tagsOf tags family (isStructure env family) names with
+        | .ok ws => pure ws
+        | .error e => throwError e
+      for (c, tag) in names.zip wire do
         let mut args : Array (String × Slot) := #[]
         for (nm, ft) in ← ctorFields t c do
           args := args.push (nm, ← classify ft)
-        ctors := ctors.push { name := shortName c, args }
+        ctors := ctors.push { name := shortName c, tag, args }
       modify fun s => { s with members := s.members.set! i { s.members[i]! with ctors } }
   let (_, final) ← act.run st
   let recursive := final.members.size > 1 || final.members.any fun m =>
@@ -480,7 +489,7 @@ def emitMemberShape (st : St) (m : MemberInfo) (head cont tail : String) : EmitM
       let c := m.ctors[i]!
       let opener := if i == 0 then "[" else " "
       let closer := if i + 1 == n then "])]" ++ tail else "]),"
-      emitJoin (cont ++ opener ++ s!"(\"{c.name}\", [")
+      emitJoin (cont ++ opener ++ s!"(\"{c.name}\", {c.tag}, [")
         (c.args.toList.map fun (nm, sl) => s!"(\"{nm}\", {shapeOf st sl})") ", " closer
         (cont ++ "   ")
 
@@ -543,9 +552,8 @@ def emitRecursive (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit :
   emit "mutual"
   for m in st.members do
     emitTwo "" s!"def toVal{m.ident} :" s!"{m.tyText} → Val"
-    for ci in [0:m.ctors.size] do
-      let c := m.ctors[ci]!
-      emitJoin s!"  | .{c.name}{argBinders c} => .ctor {ci} ["
+    for c in m.ctors do
+      emitJoin s!"  | .{c.name}{argBinders c} => .ctor {c.tag} ["
         (c.args.toList.mapIdx fun i (_, sl) => toValOf st sl s!"a{i}") ", " "]" "      "
   for i in [0:st.auxes.size] do
     let a := st.auxes[i]!
@@ -570,12 +578,11 @@ def emitRecursive (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit :
   emit "mutual"
   for m in st.members do
     emitTwo "" s!"def raw{m.ident} :" s!"Val → Option ({m.tyText})"
-    for ci in [0:m.ctors.size] do
-      let c := m.ctors[ci]!
+    for c in m.ctors do
       if c.args.isEmpty then
-        emit s!"  | .ctor {ci} [] => some .{c.name}"
+        emit s!"  | .ctor {c.tag} [] => some .{c.name}"
       else
-        emitJoin s!"  | .ctor {ci} ["
+        emitJoin s!"  | .ctor {c.tag} ["
           (c.args.toList.mapIdx fun i (_, sl) => rawPat st sl s!"v{i}") ", " "] =>" "      "
         emitJoin "    match "
           (c.args.toList.mapIdx fun i (_, sl) => rawOf st sl s!"v{i}") ", " " with" "        "
@@ -686,12 +693,11 @@ def emitRecursive (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit :
     emit s!"    acceptsIn defs (.named \"{m.shapeName}\") (toVal{m.ident} a) = true := by"
     emit s!"  apply accepts_named_of_mem _ _ {m.ident}Shape _ mem_{m.ident}"
     emit "  cases a with"
-    for ci in [0:m.ctors.size] do
-      let c := m.ctors[ci]!
+    for c in m.ctors do
       let head :=
         if m.isStruct && m.ctors.size == 1 then "acceptsAt_struct _ _ _ _"
-        else if c.args.isEmpty then s!"acceptsAt_sum _ _ _ {ci} \"{c.name}\" [] [] rfl"
-        else s!"acceptsAt_sum _ _ _ {ci} \"{c.name}\" _ _ rfl"
+        else if c.args.isEmpty then s!"acceptsAt_sum _ _ _ {c.tag} \"{c.name}\" [] [] rfl"
+        else s!"acceptsAt_sum _ _ _ {c.tag} \"{c.name}\" _ _ rfl"
       emit s!"  | «{c.name}»{argBinders c} =>"
       emitFitsChain "    " head (c.args.toList.mapIdx fun i (_, sl) => fitsOf st sl s!"a{i}")
     emit "termination_by structural a"
@@ -741,6 +747,9 @@ def emitRecursive (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit :
     emit ""
     if let some k := kindFor kinds m then
       emitContent s!"instContent{m.ident}" m k
+  emit "-- No sum of the block's table gives one wire tag to two cases."
+  emit "#guard wellTaggedFields defs"
+  emit ""
   emit s!"end {ns}"
   emit ""
 
@@ -756,9 +765,9 @@ def emitPlain (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit := do
   emitForeignDefs st "⟩"
   emit ""
   emit s!"def toVal : {m.tyText} → Val"
-  for ci in [0:m.ctors.size] do
-    let c := m.ctors[ci]!
-    emitJoin s!"  | .{c.name}{argBinders c} => .ctor {ci} ["
+  for c in m.ctors do
+    let tag := if m.isStruct && m.ctors.size == 1 then 0 else c.tag
+    emitJoin s!"  | .{c.name}{argBinders c} => .ctor {tag} ["
       (c.args.toList.mapIdx fun i (_, sl) => toValOf st sl s!"a{i}") ", " "]" "      "
   emit ""
   emit s!"def ofVal : Val → Option ({m.tyText})"
@@ -775,17 +784,16 @@ def emitPlain (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit := do
     emitJoin "    | " (c.args.toList.map fun _ => "_") ", " " => none" "      "
     emit "  | _ => none"
   else
-    for ci in [0:m.ctors.size] do
-      let c := m.ctors[ci]!
+    for c in m.ctors do
       if c.args.isEmpty then
-        emit s!"  | .ctor {ci} [] => some .{c.name}"
+        emit s!"  | .ctor {c.tag} [] => some .{c.name}"
       else if c.args.size == 1 then
-        emit s!"  | .ctor {ci} [v0] => ({rawOf st c.args[0]!.2 "v0"}).map .{c.name}"
+        emit s!"  | .ctor {c.tag} [v0] => ({rawOf st c.args[0]!.2 "v0"}).map .{c.name}"
       else
         -- A case of arity two or more reads like the recursive emitter's `raw` (above): one
         -- `match` over every argument's reader. Found by lane X on `Effect4.Char.Evidence`
         -- (2026-09-05): the single-argument form was emitted whatever the arity.
-        emitJoin s!"  | .ctor {ci} ["
+        emitJoin s!"  | .ctor {c.tag} ["
           (c.args.toList.mapIdx fun i (_, sl) => rawPat st sl s!"v{i}") ", " "] =>" "      "
         emitJoin "    match "
           (c.args.toList.mapIdx fun i (_, sl) => rawOf st sl s!"v{i}") ", " " with" "        "
@@ -876,11 +884,10 @@ def emitPlain (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit := do
     emitFitsChain "  " "" (c.args.toList.mapIdx fun i (_, sl) => fitsOf st sl s!"a{i}")
   else
     emit "  cases a with"
-    for ci in [0:m.ctors.size] do
-      let c := m.ctors[ci]!
+    for c in m.ctors do
       let head :=
-        if c.args.isEmpty then s!"accepts_sum _ _ _ {ci} \"{c.name}\" [] [] rfl"
-        else s!"accepts_sum _ _ _ {ci} \"{c.name}\" _ _ rfl"
+        if c.args.isEmpty then s!"accepts_sum _ _ _ {c.tag} \"{c.name}\" [] [] rfl"
+        else s!"accepts_sum _ _ _ {c.tag} \"{c.name}\" _ _ rfl"
       emit s!"  | «{c.name}»{argBinders c} =>"
       emitFitsChain "    " head (c.args.toList.mapIdx fun i (_, sl) => fitsOf st sl s!"a{i}")
   emit ""
@@ -889,6 +896,9 @@ def emitPlain (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit := do
   emit ""
   if let some k := kindFor kinds m then
     emitContent "instContent" m k
+  emit "-- No sum of the document gives one wire tag to two cases."
+  emit "#guard shapeDoc.wellTagged"
+  emit ""
   emit s!"end {ns}"
   emit ""
 
@@ -967,6 +977,7 @@ partial def parseArgs : List String → Args → Except String Args
 
 def run (args : Args) : MetaM (Array String) := do
   let env ← getEnv
+  let tags ← Tools.WireTags.load
   let mut out : Out := {}
   -- The regenerating command, wrapped over `--`-comment lines so that no header line runs long.
   let outPath := (args.headerOut.orElse (fun _ => args.out) |>.getD "<stdout>").replace "\\" "/"
@@ -1028,7 +1039,7 @@ def run (args : Args) : MetaM (Array String) := do
   let mut receipts : Array String := #[]
   for s in seeds do
     if done.any (fun d => d == s) then continue
-    let (st, recursive) ← buildItem s
+    let (st, recursive) ← buildItem tags s
     for m in st.members do
       done := done.push m.ty
     let ns := st.members[0]!.ident ++ "C"

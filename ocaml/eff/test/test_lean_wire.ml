@@ -10,6 +10,9 @@
    Checks:
    L1  the Lean manifest's constructor order is this library's, family by family, and its
        tag numbers are Eff_frame's;
+   L1b wire-tags.txt, the wire tag Lean's own codec states for every constructor of every
+       inductive family, is this library's table (Eff_layout.wire_tags, cut from
+       tools/Effect4Gen/wire-tags.json), and no family gives one tag to two constructors;
    L2  every <name>.hex decodes exactly (no trailing bytes, no repairs);
    L3  re-encoding the decoded program reproduces Lean's bytes exactly;
    L4  the JSON printer runs on it;
@@ -134,6 +137,36 @@ let () =
        = [ ("bool", tag_bool); ("nat", tag_nat); ("string", tag_string); ("list", tag_list);
            ("pair", tag_pair); ("none", tag_none); ("some", tag_some); ("bytes", tag_bytes);
            ("unit", tag_unit); ("ctor", tag_ctor); ("ref", tag_ref); ("handle", tag_handle) ]);
+
+    (* ---- L1b: the wire tags ---- *)
+    let tag_lines =
+      read_file (Filename.concat dir "wire-tags.txt")
+      |> String.split_on_char '\n'
+      |> List.filter (fun l -> String.trim l <> "")
+    in
+    let tag_line (key : string) : (string * int) list option =
+      let k = key ^ ":" in
+      let n = String.length k in
+      match List.find_opt (fun l -> String.length l >= n && String.sub l 0 n = k) tag_lines with
+      | None -> None
+      | Some l ->
+        Some
+          (List.filter_map
+             (fun w ->
+               match String.split_on_char '=' w with
+               | [ c; v ] -> Some (c, int_of_string v)
+               | _ -> None)
+             (words (String.sub l n (String.length l - n))))
+    in
+    check "wire-tags.txt covers every inductive family of this library"
+      (List.length tag_lines = List.length Eff_layout.wire_tags);
+    List.iter
+      (fun (name, rows) ->
+        check (Printf.sprintf "wire tags of %s are Lean's" name) (tag_line name = Some rows);
+        let tags = List.map snd rows in
+        check (Printf.sprintf "wire tags of %s are pairwise distinct" name)
+          (List.length (List.sort_uniq compare tags) = List.length tags))
+      Eff_layout.wire_tags;
 
     (* ---- L2..L5: the programs ---- *)
     let names =

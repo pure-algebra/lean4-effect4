@@ -29,6 +29,10 @@ refuses('unknown type shape', e='type foo = Foo_a | Foo_b of int -> int\n')
 refuses('no selected target', e='type other = Other_x\n')
 bad = copy.deepcopy(descriptor); bad['blocks'][0][0]['constructors'][1]['ordinal']=0
 refuses('duplicate source ordinal',bad)
+# The ordinal is the compiled declaration position. A sparse wire tag
+# (tools/Effect4Gen/wire-tags.json) in its place is refused: the layout check reads layout.
+bad = copy.deepcopy(descriptor); bad['blocks'][0][0]['constructors'][1]['ordinal']=4
+refuses('a sparse wire tag in place of the declaration position',bad)
 bad = copy.deepcopy(descriptor); bad['blocks'][0].append(copy.deepcopy(family))
 refuses('duplicate source family',bad)
 bad = copy.deepcopy(descriptor); bad['phase']='mono-lcnf'

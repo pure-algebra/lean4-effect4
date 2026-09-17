@@ -71,6 +71,9 @@ theorem fits (a : _root_.Effect4.Float64) : shapeDoc.accepts (toVal a) = true :=
 instance instCanonical : Canonical (_root_.Effect4.Float64) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end Float64C
 
 namespace JsonC
@@ -79,12 +82,12 @@ namespace JsonC
 
 def JsonShape : Shape :=
   .sum "Json"
-     [("null", []),
-      ("bool", [("value", (shape _root_.Bool).root)]),
-      ("number", [("value", (shape _root_.Effect4.Float64).root)]),
-      ("str", [("value", (shape _root_.String).root)]),
-      ("arr", [("elements", .list (.named "Json"))]),
-      ("obj", [("entries", .list (.pair ((shape _root_.String).root) (.named "Json")))])]
+     [("null", 0, []),
+      ("bool", 1, [("value", (shape _root_.Bool).root)]),
+      ("number", 2, [("value", (shape _root_.Effect4.Float64).root)]),
+      ("str", 3, [("value", (shape _root_.String).root)]),
+      ("arr", 4, [("elements", .list (.named "Json"))]),
+      ("obj", 5, [("entries", .list (.pair ((shape _root_.String).root) (.named "Json")))])]
 
 /-- One table for the block, then the field types' tables. -/
 def defs : List (String × Shape) :=
@@ -283,6 +286,9 @@ instance instCanonicalJson : Canonical (_root_.Effect4.Json) :=
   ⟨⟨.named "Json", defs⟩, toValJson, guarded toValJson rawJson,
     fun a => guarded_toVal _ _ a (rawJson_toValJson a), fun h => guarded_exact h,
     fitsJson⟩
+
+-- No sum of the block's table gives one wire tag to two cases.
+#guard wellTaggedFields defs
 
 end JsonC
 

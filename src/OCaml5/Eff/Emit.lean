@@ -96,18 +96,21 @@ def emitTypeTables (f : Family) : String :=
   if f.isStruct then
     let c := f.ctors.head!
     s!"let ctor_index_{o} (_ : {o}) : int = 0\n" ++
+    s!"let wire_tag_{o} (_ : {o}) : int = 0\n" ++
     s!"let ctor_name_{o} (_ : {o}) : string = {ostr c.short}\n" ++
     s!"let ctor_names_{o} : string list = [{ostr c.short}]\n" ++
     s!"let field_names_{o} : string list = [" ++ "; ".intercalate (c.args.map fun (nm, _) => ostr nm) ++ "]\n\n"
   else
     let idx := (enumL f.ctors).map fun (i, c) => s!"  | {ctorPat o c} -> {i}"
+    let tags := f.ctors.map fun c => s!"  | {ctorPat o c} -> {c.tag}"
     let nms := f.ctors.map fun c => s!"  | {ctorPat o c} -> {ostr c.short}"
     s!"let ctor_index_{o} : {o} -> int = function\n" ++ "\n".intercalate idx ++ "\n" ++
+    s!"let wire_tag_{o} : {o} -> int = function\n" ++ "\n".intercalate tags ++ "\n" ++
     s!"let ctor_name_{o} : {o} -> string = function\n" ++ "\n".intercalate nms ++ "\n" ++
     s!"let ctor_names_{o} : string list = [" ++ "; ".intercalate (f.ctors.map fun c => ostr c.short) ++ "]\n\n"
 
 def emitTypes (bs : List (List Family)) : String :=
-  header "Eff_types: the Eff program IR of lean4-effect4 (src/Effect4/Program/{Eff,Native,Typing}.lean, Machine/Supervision.lean, Machine/Scope.lean, Machine/Stores.lean, Machine/Key.lean) as OCaml variants and records. Constructor order is the Lean declaration order and ctor_index_<t> is that order (by construction: read from InductiveVal.ctors). Constructors are named <Type>_<leanCtor>, record fields <type>_<leanField>. Lean Nat is OCaml int: values above max_int (2^62 - 1) have no carrier here." ++
+  header "Eff_types: the Eff program IR of lean4-effect4 (src/Effect4/Program/{Eff,Native,Typing}.lean, Machine/Supervision.lean, Machine/Scope.lean, Machine/Stores.lean, Machine/Key.lean) as OCaml variants and records. Constructor order is the Lean declaration order and ctor_index_<t> is that order (by construction: read from InductiveVal.ctors). wire_tag_<t> is the number the constructor carries in the canonical bytes, read from tools/Effect4Gen/wire-tags.json; the two agree only while no constructor of the family has been retired or reordered. Constructors are named <Type>_<leanCtor>, record fields <type>_<leanField>. Lean Nat is OCaml int: values above max_int (2^62 - 1) have no carrier here." ++
   "\n".intercalate (bs.map fun b =>
     "\n".intercalate ((enumL b).map fun (i, f) => emitTypeDecl (i == 0) f) ++ "\n" ++
     String.join (b.map emitTypeTables))
@@ -145,7 +148,8 @@ def emitEmitter (first : Bool) (f : Family) : String :=
     let body := if c.args.isEmpty then "()" else body
     s!"{kw} emit_{o} (b : Buffer.t) (r : {o}) : unit =\n  Eff_frame.emit_ctor b 0 (fun b -> {body})\n"
   else
-    let arms := (enumL f.ctors).map fun (i, c) =>
+    let arms := f.ctors.map fun c =>
+      let i := c.tag
       let names := argNames c
       let body := "; ".intercalate ((c.args.zip names).map fun ((_, t), a) => emitOf t a)
       if c.args.isEmpty then s!"  | {octor o c.short} -> Eff_frame.emit_ctor b {i} (fun _ -> ())"
@@ -174,13 +178,13 @@ def emitDecoder (first : Bool) (f : Family) : String :=
       [decodeArm 0 c fun names =>
         if c.args.isEmpty then "()"
         else "{ " ++ "; ".intercalate ((c.args.zip names).map fun ((nm, _), a) => s!"{ofield o nm} = {a}") ++ " }"]
-    else (enumL f.ctors).map fun (i, c) => decodeArm i c (ctorApp o c)
+    else f.ctors.map fun c => decodeArm c.tag c (ctorApp o c)
   s!"{kw} decode_{o} (s : string) (pos : int) (limit : int) : ({o} * int) option =\n" ++
   "  match Eff_frame.read_ctor s pos limit with\n  | None -> None\n  | Some (i, p, e, next) ->\n    (match i with\n" ++
   "\n".intercalate arms ++ "\n    | _ -> None)\n"
 
 def emitWire (bs : List (List Family)) : String :=
-  header "Eff_wire: the canonical bytes of every carrier of Eff_types, and the exact decoder. Rule (src/Effect4/Store/Canonical.lean): framed tag payload = tag :: be64 (length payload) ++ payload; Unit 9 [], Bool 1 [0|1], Nat 2 base-256 big-endian no leading zero, String 3 utf8, List 4 concat, none 6 [] / some 7 x, pair 5 a++b, constructor i of an inductive 10 (encode i ++ args), a structure as constructor 0 with its fields in order. Decoding is length-directed and exact: a wrong tag, a bad index, a non-canonical Nat, invalid UTF-8, a short or long payload, or (for the _exact forms) trailing bytes are refusals (by construction: every arm checks p = e; tested: goldens, property test). encode_<t> raises Invalid_argument on a negative int or a string that is not valid UTF-8 (values outside the Lean image)." ++
+  header "Eff_wire: the canonical bytes of every carrier of Eff_types, and the exact decoder. Rule (src/Effect4/Store/Canonical.lean): framed tag payload = tag :: be64 (length payload) ++ payload; Unit 9 [], Bool 1 [0|1], Nat 2 base-256 big-endian no leading zero, String 3 utf8, List 4 concat, none 6 [] / some 7 x, pair 5 a++b, a constructor of an inductive 10 (encode t ++ args) where t is the constructor's wire tag from tools/Effect4Gen/wire-tags.json (Eff_types.wire_tag_<t>; not its declaration position, and a retired tag decodes as a refusal), a structure as constructor 0 with its fields in order. Decoding is length-directed and exact: a wrong tag, a bad index, a non-canonical Nat, invalid UTF-8, a short or long payload, or (for the _exact forms) trailing bytes are refusals (by construction: every arm checks p = e; tested: goldens, property test). encode_<t> raises Invalid_argument on a negative int or a string that is not valid UTF-8 (values outside the Lean image)." ++
   "open Eff_types\n\n" ++
   "\n".intercalate (bs.map fun b =>
     String.join ((enumL b).map fun (i, f) => emitEmitter (i == 0) f) ++ "\n" ++

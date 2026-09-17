@@ -382,12 +382,12 @@ section Coverage
 open Effect4.Store.ProgramGen.EffC (toValEff toValStmt toValActionTerm toValLayerTerm
   EffShape StmtShape ActionTermShape LayerTermShape)
 
-/-- The constructor ordinal of a node's canonical value. -/
+/-- The wire tag of a node's canonical value. -/
 def ordinal : Effect4.Store.Val → Option Nat
   | .ctor i _ => some i
   | _ => none
 
-/-- A family with a constructor ordinal: `("Eff", 7)` is `bind`. -/
+/-- A family with a wire tag: `("Eff", 7)` is `bind`. -/
 abbrev Head := String × Nat
 
 /-- Every head a program uses, through the fold and the projection. -/
@@ -403,8 +403,7 @@ def covered : List Head := (sample.flatMap heads).eraseDups
 
 /-- The cases of a derived sum, each as its head and its constructor name. -/
 def casesOf (family : String) : Effect4.Store.Shape → List (Head × String)
-  | .sum _ cases =>
-    ((List.range cases.length).zip (cases.map (·.1))).map fun (i, n) => ((family, i), n)
+  | .sum _ cases => cases.map fun (n, tag, _) => ((family, tag), n)
   | _ => []
 
 /-- The five internal fiber actions the printer refuses (`src/Effect4/Codegen/Print.lean`). -/

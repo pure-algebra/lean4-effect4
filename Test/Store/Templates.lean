@@ -50,8 +50,8 @@ namespace ExportKind
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "ExportKind"
-    [("const", []), ("function", []), ("class_", []), ("interface", []), ("type", []),
-     ("namespace_", [])], []⟩
+    [("const", 0, []), ("function", 1, []), ("class_", 2, []), ("interface", 3, []),
+     ("type", 4, []), ("namespace_", 5, [])], []⟩
 
 def toVal : ExportKind → Val
   | .const => .ctor 0 []
@@ -179,10 +179,10 @@ deriving instance DecidableEq for Tree, Forest
 namespace TreeForest
 
 def treeShape : Shape :=
-  .sum "Tree" [("node", [("label", (shape Nat).root), ("children", .named "Forest")])]
+  .sum "Tree" [("node", 0, [("label", (shape Nat).root), ("children", .named "Forest")])]
 
 def forestShape : Shape :=
-  .sum "Forest" [("nil", []), ("cons", [("t", .named "Tree"), ("f", .named "Forest")])]
+  .sum "Forest" [("nil", 0, []), ("cons", 1, [("t", .named "Tree"), ("f", .named "Forest")])]
 
 /-- One table for the block, then the field types' tables. -/
 def defs : List (String × Shape) :=

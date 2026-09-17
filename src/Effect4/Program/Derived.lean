@@ -35,10 +35,10 @@ namespace LitC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "Lit"
-     [("unit", []),
-      ("nat", [("value", (shape _root_.Nat).root)]),
-      ("bool", [("value", (shape _root_.Bool).root)]),
-      ("str", [("value", (shape _root_.String).root)])],
+     [("unit", 0, []),
+      ("nat", 1, [("value", (shape _root_.Nat).root)]),
+      ("bool", 2, [("value", (shape _root_.Bool).root)]),
+      ("str", 3, [("value", (shape _root_.String).root)])],
    (shape _root_.Nat).defs ++ (shape _root_.Bool).defs ++ (shape _root_.String).defs⟩
 
 def toVal : _root_.Effect4.Program.Lit → Val
@@ -101,17 +101,20 @@ theorem fits (a : _root_.Effect4.Program.Lit) : shapeDoc.accepts (toVal a) = tru
 instance instCanonical : Canonical (_root_.Effect4.Program.Lit) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end LitC
 
 namespace FnNameC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "FnName"
-     [("incr", []),
-      ("double", []),
-      ("zeroWhenPositive", []),
-      ("noChange", []),
-      ("takeAndBump", [])],
+     [("incr", 0, []),
+      ("double", 1, []),
+      ("zeroWhenPositive", 2, []),
+      ("noChange", 3, []),
+      ("takeAndBump", 4, [])],
    []⟩
 
 def toVal : _root_.Effect4.Machine.FnName → Val
@@ -162,14 +165,17 @@ theorem fits (a : _root_.Effect4.Machine.FnName) : shapeDoc.accepts (toVal a) = 
 instance instCanonical : Canonical (_root_.Effect4.Machine.FnName) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end FnNameC
 
 namespace FinalizerStrategyC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "FinalizerStrategy"
-     [("sequential", []),
-      ("parallel", [])],
+     [("sequential", 0, []),
+      ("parallel", 1, [])],
    []⟩
 
 def toVal : _root_.Effect4.FinalizerStrategy → Val
@@ -208,15 +214,18 @@ theorem fits (a : _root_.Effect4.FinalizerStrategy) : shapeDoc.accepts (toVal a)
 instance instCanonical : Canonical (_root_.Effect4.FinalizerStrategy) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end FinalizerStrategyC
 
 namespace MaskModeC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "MaskMode"
-     [("interruptible", []),
-      ("uninterruptible", []),
-      ("inherit", [])],
+     [("interruptible", 0, []),
+      ("uninterruptible", 1, []),
+      ("inherit", 2, [])],
    []⟩
 
 def toVal : _root_.Effect4.Supervision.MaskMode → Val
@@ -259,14 +268,17 @@ theorem fits (a : _root_.Effect4.Supervision.MaskMode) : shapeDoc.accepts (toVal
 instance instCanonical : Canonical (_root_.Effect4.Supervision.MaskMode) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end MaskModeC
 
 namespace ObserverModeC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "ObserverMode"
-     [("awaitValue", []),
-      ("joinEffect", [])],
+     [("awaitValue", 0, []),
+      ("joinEffect", 1, [])],
    []⟩
 
 def toVal : _root_.Effect4.Supervision.ObserverMode → Val
@@ -305,15 +317,18 @@ theorem fits (a : _root_.Effect4.Supervision.ObserverMode) : shapeDoc.accepts (t
 instance instCanonical : Canonical (_root_.Effect4.Supervision.ObserverMode) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end ObserverModeC
 
 namespace DecisionC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "Decision"
-     [("bool", []),
-      ("option", []),
-      ("tag", [("tag", (shape _root_.String).root)])],
+     [("bool", 0, []),
+      ("option", 1, []),
+      ("tag", 2, [("tag", (shape _root_.String).root)])],
    (shape _root_.String).defs⟩
 
 def toVal : _root_.Effect4.Program.Decision → Val
@@ -362,35 +377,38 @@ theorem fits (a : _root_.Effect4.Program.Decision) : shapeDoc.accepts (toVal a) 
 instance instCanonical : Canonical (_root_.Effect4.Program.Decision) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end DecisionC
 
 namespace NativeOpC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "NativeOp"
-     [("refMake", []),
-      ("refGet", []),
-      ("refSet", []),
-      ("refGetAndSet", []),
-      ("refSetAndGet", []),
-      ("refUpdate", [("f", (shape _root_.Effect4.Machine.FnName).root)]),
-      ("refGetAndUpdate", [("f", (shape _root_.Effect4.Machine.FnName).root)]),
-      ("refUpdateAndGet", [("f", (shape _root_.Effect4.Machine.FnName).root)]),
-      ("refUpdateSome", [("f", (shape _root_.Effect4.Machine.FnName).root)]),
-      ("refGetAndUpdateSome", [("f", (shape _root_.Effect4.Machine.FnName).root)]),
-      ("refUpdateSomeAndGet", [("f", (shape _root_.Effect4.Machine.FnName).root)]),
-      ("refModify", [("f", (shape _root_.Effect4.Machine.FnName).root)]),
-      ("refModifySome", [("f", (shape _root_.Effect4.Machine.FnName).root)]),
-      ("deferredMake", []),
-      ("deferredIsDone", []),
-      ("deferredPoll", []),
-      ("deferredSucceed", []),
-      ("deferredFail", []),
-      ("deferredAwait", []),
-      ("scopeMake", [("strategy", (shape _root_.Effect4.FinalizerStrategy).root)]),
-      ("sleep", []),
-      ("clockNow", []),
-      ("external", [("index", (shape _root_.Nat).root)])],
+     [("refMake", 0, []),
+      ("refGet", 1, []),
+      ("refSet", 2, []),
+      ("refGetAndSet", 3, []),
+      ("refSetAndGet", 4, []),
+      ("refUpdate", 5, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
+      ("refGetAndUpdate", 6, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
+      ("refUpdateAndGet", 7, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
+      ("refUpdateSome", 8, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
+      ("refGetAndUpdateSome", 9, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
+      ("refUpdateSomeAndGet", 10, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
+      ("refModify", 11, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
+      ("refModifySome", 12, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
+      ("deferredMake", 13, []),
+      ("deferredIsDone", 14, []),
+      ("deferredPoll", 15, []),
+      ("deferredSucceed", 16, []),
+      ("deferredFail", 17, []),
+      ("deferredAwait", 18, []),
+      ("scopeMake", 19, [("strategy", (shape _root_.Effect4.FinalizerStrategy).root)]),
+      ("sleep", 20, []),
+      ("clockNow", 21, []),
+      ("external", 22, [("index", (shape _root_.Nat).root)])],
    (shape _root_.Effect4.Machine.FnName).defs ++ (shape _root_.Effect4.FinalizerStrategy).defs ++
      (shape _root_.Nat).defs⟩
 
@@ -539,6 +557,9 @@ theorem fits (a : _root_.Effect4.Program.NativeOp) : shapeDoc.accepts (toVal a) 
 instance instCanonical : Canonical (_root_.Effect4.Program.NativeOp) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end NativeOpC
 
 namespace ForkOptionsC
@@ -599,6 +620,9 @@ theorem fits (a : _root_.Effect4.Supervision.ForkOptions) : shapeDoc.accepts (to
 instance instCanonical : Canonical (_root_.Effect4.Supervision.ForkOptions) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end ForkOptionsC
 
 namespace TermC
@@ -607,14 +631,14 @@ namespace TermC
 
 def TermShape : Shape :=
   .sum "Term"
-     [("var", [("index", (shape _root_.Nat).root)]),
-      ("lit", [("value", (shape _root_.Effect4.Program.Lit).root)]),
-      ("app", [("atom", (shape _root_.String).root), ("args", .named "Terms")])]
+     [("var", 0, [("index", (shape _root_.Nat).root)]),
+      ("lit", 1, [("value", (shape _root_.Effect4.Program.Lit).root)]),
+      ("app", 2, [("atom", (shape _root_.String).root), ("args", .named "Terms")])]
 
 def TermsShape : Shape :=
   .sum "Terms"
-     [("nil", []),
-      ("cons", [("head", .named "Term"), ("tail", .named "Terms")])]
+     [("nil", 0, []),
+      ("cons", 1, [("head", .named "Term"), ("tail", .named "Terms")])]
 
 /-- One table for the block, then the field types' tables. -/
 def defs : List (String × Shape) :=
@@ -742,6 +766,9 @@ instance instCanonicalTerms : Canonical (_root_.Effect4.Program.Terms) :=
     fun a => guarded_toVal _ _ a (rawTerms_toValTerms a), fun h => guarded_exact h,
     fitsTerms⟩
 
+-- No sum of the block's table gives one wire tag to two cases.
+#guard wellTaggedFields defs
+
 end TermC
 
 namespace CauseTermC
@@ -750,11 +777,11 @@ namespace CauseTermC
 
 def CauseTermShape : Shape :=
   .sum "CauseTerm"
-     [("fail", [("error", (shape _root_.Effect4.Program.Term).root)]),
-      ("die", [("defect", (shape _root_.Effect4.Program.Term).root)]),
-      ("interrupt", [
+     [("fail", 0, [("error", (shape _root_.Effect4.Program.Term).root)]),
+      ("die", 1, [("defect", (shape _root_.Effect4.Program.Term).root)]),
+      ("interrupt", 2, [
         ("interruptor", (shape (@_root_.Option (_root_.Effect4.Program.Term))).root)]),
-      ("both", [("left", .named "CauseTerm"), ("right", .named "CauseTerm")])]
+      ("both", 3, [("left", .named "CauseTerm"), ("right", .named "CauseTerm")])]
 
 /-- One table for the block, then the field types' tables. -/
 def defs : List (String × Shape) :=
@@ -856,6 +883,9 @@ instance instCanonicalCauseTerm : Canonical (_root_.Effect4.Program.CauseTerm) :
     fun a => guarded_toVal _ _ a (rawCauseTerm_toValCauseTerm a), fun h => guarded_exact h,
     fitsCauseTerm⟩
 
+-- No sum of the block's table gives one wire tag to two cases.
+#guard wellTaggedFields defs
+
 end CauseTermC
 
 namespace ServiceNameC
@@ -906,6 +936,9 @@ theorem fits (a : _root_.Effect4.ServiceName) : shapeDoc.accepts (toVal a) = tru
 instance instCanonical : Canonical (_root_.Effect4.ServiceName) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end ServiceNameC
 
 namespace ServiceTypeCodeC
@@ -955,6 +988,9 @@ theorem fits (a : _root_.Effect4.ServiceTypeCode) : shapeDoc.accepts (toVal a) =
 
 instance instCanonical : Canonical (_root_.Effect4.ServiceTypeCode) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
 
 end ServiceTypeCodeC
 
@@ -1014,6 +1050,9 @@ theorem fits (a : _root_.Effect4.ServiceKey) : shapeDoc.accepts (toVal a) = true
 instance instCanonical : Canonical (_root_.Effect4.ServiceKey) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end ServiceKeyC
 
 namespace TyC
@@ -1022,22 +1061,22 @@ namespace TyC
 
 def TyShape : Shape :=
   .sum "Ty"
-     [("never", []),
-      ("unit", []),
-      ("nat", []),
-      ("int", []),
-      ("string", []),
-      ("bool", []),
-      ("handle", [("target", (shape _root_.String).root)]),
-      ("option", [("inner", .named "Ty")]),
-      ("list", [("inner", .named "Ty")]),
-      ("prod", [("left", .named "Ty"), ("right", .named "Ty")]),
-      ("except", [("error", .named "Ty"), ("value", .named "Ty")]),
-      ("exitOf", [("value", .named "Ty"), ("error", .named "Ty")]),
-      ("causeOf", [("error", .named "Ty")]),
-      ("fiberOf", [("value", .named "Ty"), ("error", .named "Ty")]),
-      ("union", [("left", .named "Ty"), ("right", .named "Ty")]),
-      ("lit", [("value", (shape _root_.String).root)])]
+     [("never", 0, []),
+      ("unit", 1, []),
+      ("nat", 2, []),
+      ("int", 3, []),
+      ("string", 4, []),
+      ("bool", 5, []),
+      ("handle", 6, [("target", (shape _root_.String).root)]),
+      ("option", 7, [("inner", .named "Ty")]),
+      ("list", 8, [("inner", .named "Ty")]),
+      ("prod", 9, [("left", .named "Ty"), ("right", .named "Ty")]),
+      ("except", 10, [("error", .named "Ty"), ("value", .named "Ty")]),
+      ("exitOf", 11, [("value", .named "Ty"), ("error", .named "Ty")]),
+      ("causeOf", 12, [("error", .named "Ty")]),
+      ("fiberOf", 13, [("value", .named "Ty"), ("error", .named "Ty")]),
+      ("union", 14, [("left", .named "Ty"), ("right", .named "Ty")]),
+      ("lit", 15, [("value", (shape _root_.String).root)])]
 
 /-- One table for the block, then the field types' tables. -/
 def defs : List (String × Shape) :=
@@ -1225,6 +1264,9 @@ instance instCanonicalTy : Canonical (_root_.Effect4.Program.Ty) :=
     fun a => guarded_toVal _ _ a (rawTy_toValTy a), fun h => guarded_exact h,
     fitsTy⟩
 
+-- No sum of the block's table gives one wire tag to two cases.
+#guard wellTaggedFields defs
+
 end TyC
 
 namespace EffC
@@ -1233,47 +1275,47 @@ namespace EffC
 
 def EffShape : Shape :=
   .sum "Eff"
-     [("succeed", [("value", (shape _root_.Effect4.Program.Term).root)]),
-      ("fail", [("error", (shape _root_.Effect4.Program.Term).root)]),
-      ("failCause", [("cause", (shape _root_.Effect4.Program.CauseTerm).root)]),
-      ("yieldError", [("error", (shape _root_.Effect4.Program.Term).root)]),
-      ("sync", [("thunk", (shape _root_.Effect4.Program.Term).root)]),
-      ("suspend", [("body", .named "Eff")]),
-      ("perform", [("op", (shape _root_.Effect4.Program.NativeOp).root),
+     [("succeed", 0, [("value", (shape _root_.Effect4.Program.Term).root)]),
+      ("fail", 1, [("error", (shape _root_.Effect4.Program.Term).root)]),
+      ("failCause", 2, [("cause", (shape _root_.Effect4.Program.CauseTerm).root)]),
+      ("yieldError", 3, [("error", (shape _root_.Effect4.Program.Term).root)]),
+      ("sync", 4, [("thunk", (shape _root_.Effect4.Program.Term).root)]),
+      ("suspend", 5, [("body", .named "Eff")]),
+      ("perform", 6, [("op", (shape _root_.Effect4.Program.NativeOp).root),
         ("request", (shape _root_.Effect4.Program.Term).root)]),
-      ("bind", [("first", .named "Eff"), ("rest", .named "Eff")]),
-      ("gen", [("body", .named "Stmts")]),
-      ("catchCause", [("body", .named "Eff"), ("handler", .named "Eff")]),
-      ("matchCause", [("body", .named "Eff"), ("onValue", .named "Eff"),
+      ("bind", 7, [("first", .named "Eff"), ("rest", .named "Eff")]),
+      ("gen", 8, [("body", .named "Stmts")]),
+      ("catchCause", 9, [("body", .named "Eff"), ("handler", .named "Eff")]),
+      ("matchCause", 10, [("body", .named "Eff"), ("onValue", .named "Eff"),
         ("onCause", .named "Eff")]),
-      ("onExit", [("body", .named "Eff"), ("finalizer", .named "Eff")]),
-      ("exit", [("body", .named "Eff")]),
-      ("uninterruptible", [("body", .named "Eff")]),
-      ("interruptible", [("body", .named "Eff")]),
-      ("branch", [("test", (shape _root_.Effect4.Program.Term).root), ("thenB", .named "Eff"),
-        ("elseB", .named "Eff")]),
-      ("whileLoop", [("initial", (shape _root_.Effect4.Program.Term).root),
+      ("onExit", 11, [("body", .named "Eff"), ("finalizer", .named "Eff")]),
+      ("exit", 12, [("body", .named "Eff")]),
+      ("uninterruptible", 13, [("body", .named "Eff")]),
+      ("interruptible", 14, [("body", .named "Eff")]),
+      ("branch", 15, [("test", (shape _root_.Effect4.Program.Term).root),
+        ("thenB", .named "Eff"), ("elseB", .named "Eff")]),
+      ("whileLoop", 16, [("initial", (shape _root_.Effect4.Program.Term).root),
         ("test", (shape _root_.Effect4.Program.Term).root),
         ("step", (shape _root_.Effect4.Program.Term).root), ("body", .named "Eff")]),
-      ("yieldNow", [("priority", (shape _root_.Nat).root)]),
-      ("callback", [("register", (shape _root_.Effect4.Program.NativeOp).root),
+      ("yieldNow", 17, [("priority", (shape _root_.Nat).root)]),
+      ("callback", 18, [("register", (shape _root_.Effect4.Program.NativeOp).root),
         ("request", (shape _root_.Effect4.Program.Term).root)]),
-      ("awaitFiber", [("fiber", (shape _root_.Effect4.Program.Term).root),
+      ("awaitFiber", 19, [("fiber", (shape _root_.Effect4.Program.Term).root),
         ("mode", (shape _root_.Effect4.Supervision.ObserverMode).root)]),
-      ("withFiber", [("action", .named "ActionTerm")]),
-      ("scoped", [("body", .named "Eff")]),
-      ("acquireRelease", [("acquire", .named "Eff"), ("release", .named "Eff")]),
-      ("provideLayer", [("layer", .named "LayerTerm"), ("isLocal", (shape _root_.Bool).root),
+      ("withFiber", 20, [("action", .named "ActionTerm")]),
+      ("scoped", 21, [("body", .named "Eff")]),
+      ("acquireRelease", 22, [("acquire", .named "Eff"), ("release", .named "Eff")]),
+      ("provideLayer", 23, [("layer", .named "LayerTerm"), ("isLocal", (shape _root_.Bool).root),
         ("body", .named "Eff")]),
-      ("service", [("key", (shape _root_.Effect4.ServiceKey).root)]),
-      ("provideService", [("key", (shape _root_.Effect4.ServiceKey).root),
+      ("service", 24, [("key", (shape _root_.Effect4.ServiceKey).root)]),
+      ("provideService", 25, [("key", (shape _root_.Effect4.ServiceKey).root),
         ("value", (shape _root_.Effect4.Program.Term).root), ("body", .named "Eff")]),
-      ("catchIf", [("test", (shape _root_.Effect4.Program.Term).root), ("body", .named "Eff"),
-        ("handler", .named "Eff")]),
-      ("select", [("scrutinee", (shape _root_.Effect4.Program.Term).root),
+      ("catchIf", 26, [("test", (shape _root_.Effect4.Program.Term).root),
+        ("body", .named "Eff"), ("handler", .named "Eff")]),
+      ("select", 27, [("scrutinee", (shape _root_.Effect4.Program.Term).root),
         ("decision", (shape _root_.Effect4.Program.Decision).root), ("arm0", .named "Eff"),
         ("arm1", .named "Eff")]),
-      ("iterate", [("cursorTy", (shape _root_.Effect4.Program.Ty).root),
+      ("iterate", 28, [("cursorTy", (shape _root_.Effect4.Program.Ty).root),
         ("initial", (shape _root_.Effect4.Program.Term).root),
         ("test", (shape _root_.Effect4.Program.Term).root),
         ("step", (shape _root_.Effect4.Program.Term).root),
@@ -1281,68 +1323,68 @@ def EffShape : Shape :=
 
 def StmtShape : Shape :=
   .sum "Stmt"
-     [("bindYield", [("effect", .named "Eff")]),
-      ("yieldDiscard", [("effect", .named "Eff")]),
-      ("ret", [("value", (shape _root_.Effect4.Program.Term).root)]),
-      ("ifElse", [("test", (shape _root_.Effect4.Program.Term).root), ("thenB", .named "Stmts"),
-        ("elseB", .named "Stmts")]),
-      ("whileTrue", [("body", .named "Stmts")]),
-      ("breakLoop", [])]
+     [("bindYield", 0, [("effect", .named "Eff")]),
+      ("yieldDiscard", 1, [("effect", .named "Eff")]),
+      ("ret", 2, [("value", (shape _root_.Effect4.Program.Term).root)]),
+      ("ifElse", 3, [("test", (shape _root_.Effect4.Program.Term).root),
+        ("thenB", .named "Stmts"), ("elseB", .named "Stmts")]),
+      ("whileTrue", 4, [("body", .named "Stmts")]),
+      ("breakLoop", 5, [])]
 
 def StmtsShape : Shape :=
   .sum "Stmts"
-     [("nil", []),
-      ("cons", [("head", .named "Stmt"), ("tail", .named "Stmts")])]
+     [("nil", 0, []),
+      ("cons", 1, [("head", .named "Stmt"), ("tail", .named "Stmts")])]
 
 def EffsShape : Shape :=
   .sum "Effs"
-     [("nil", []),
-      ("cons", [("head", .named "Eff"), ("tail", .named "Effs")])]
+     [("nil", 0, []),
+      ("cons", 1, [("head", .named "Eff"), ("tail", .named "Effs")])]
 
 def ActionTermShape : Shape :=
   .sum "ActionTerm"
-     [("fork", [("program", .named "Eff"),
+     [("fork", 0, [("program", .named "Eff"),
         ("options", (shape _root_.Effect4.Supervision.ForkOptions).root)]),
-      ("forkIn", [("program", .named "Eff"),
+      ("forkIn", 1, [("program", .named "Eff"),
         ("options", (shape _root_.Effect4.Supervision.ForkOptions).root),
         ("scope", (shape _root_.Effect4.Program.Term).root)]),
-      ("forkScoped", [("program", .named "Eff"),
+      ("forkScoped", 2, [("program", .named "Eff"),
         ("options", (shape _root_.Effect4.Supervision.ForkOptions).root)]),
-      ("runIn", [("target", (shape _root_.Effect4.Program.Term).root),
+      ("runIn", 3, [("target", (shape _root_.Effect4.Program.Term).root),
         ("scope", (shape _root_.Effect4.Program.Term).root)]),
-      ("interrupt", [("target", (shape _root_.Effect4.Program.Term).root)]),
-      ("interruptScoped", [("target", (shape _root_.Effect4.Program.Term).root)]),
-      ("interruptAll", [("targets", (shape _root_.Effect4.Program.Term).root),
+      ("interrupt", 4, [("target", (shape _root_.Effect4.Program.Term).root)]),
+      ("interruptScoped", 5, [("target", (shape _root_.Effect4.Program.Term).root)]),
+      ("interruptAll", 6, [("targets", (shape _root_.Effect4.Program.Term).root),
         ("interruptor", (shape (@_root_.Option (_root_.Effect4.Program.Term))).root)]),
-      ("awaitAll", [("targets", (shape _root_.Effect4.Program.Term).root)]),
-      ("awaitAllFailFast", [("targets", (shape _root_.Effect4.Program.Term).root)]),
-      ("snapshotChildren", []),
-      ("awaitNewChildren", [("snapshot", (shape _root_.Effect4.Program.Term).root)]),
-      ("raceAll", [("entrants", .named "Effs")]),
-      ("setContext", [("context", (shape _root_.Effect4.Program.Term).root)]),
-      ("getContext", []),
-      ("getId", []),
-      ("closeScope", [("scope", (shape _root_.Effect4.Program.Term).root),
+      ("awaitAll", 7, [("targets", (shape _root_.Effect4.Program.Term).root)]),
+      ("awaitAllFailFast", 8, [("targets", (shape _root_.Effect4.Program.Term).root)]),
+      ("snapshotChildren", 9, []),
+      ("awaitNewChildren", 10, [("snapshot", (shape _root_.Effect4.Program.Term).root)]),
+      ("raceAll", 11, [("entrants", .named "Effs")]),
+      ("setContext", 12, [("context", (shape _root_.Effect4.Program.Term).root)]),
+      ("getContext", 13, []),
+      ("getId", 14, []),
+      ("closeScope", 15, [("scope", (shape _root_.Effect4.Program.Term).root),
         ("exit", (shape _root_.Effect4.Program.Term).root)])]
 
 def LayerTermShape : Shape :=
   .sum "LayerTerm"
-     [("succeed", [("key", (shape _root_.Effect4.ServiceKey).root),
+     [("succeed", 0, [("key", (shape _root_.Effect4.ServiceKey).root),
         ("value", (shape _root_.Effect4.Program.Lit).root)]),
-      ("effect", [("key", (shape _root_.Effect4.ServiceKey).root), ("body", .named "Eff")]),
-      ("effectDiscard", [("body", .named "Eff")]),
-      ("provide", [("self", .named "LayerTerm"), ("that", .named "LayerTerm")]),
-      ("provideMerge", [("self", .named "LayerTerm"), ("that", .named "LayerTerm")]),
-      ("merge", [("left", .named "LayerTerm"), ("right", .named "LayerTerm")]),
-      ("fresh", [("inner", .named "LayerTerm")]),
-      ("orDie", [("inner", .named "LayerTerm")]),
-      ("ref", [("target", (shape (@_root_.List (_root_.Nat))).root)]),
-      ("mergeAll", [("layers", .named "LayerTerms")])]
+      ("effect", 1, [("key", (shape _root_.Effect4.ServiceKey).root), ("body", .named "Eff")]),
+      ("effectDiscard", 2, [("body", .named "Eff")]),
+      ("provide", 3, [("self", .named "LayerTerm"), ("that", .named "LayerTerm")]),
+      ("provideMerge", 4, [("self", .named "LayerTerm"), ("that", .named "LayerTerm")]),
+      ("merge", 5, [("left", .named "LayerTerm"), ("right", .named "LayerTerm")]),
+      ("fresh", 6, [("inner", .named "LayerTerm")]),
+      ("orDie", 7, [("inner", .named "LayerTerm")]),
+      ("ref", 8, [("target", (shape (@_root_.List (_root_.Nat))).root)]),
+      ("mergeAll", 9, [("layers", .named "LayerTerms")])]
 
 def LayerTermsShape : Shape :=
   .sum "LayerTerms"
-     [("nil", []),
-      ("cons", [("head", .named "LayerTerm"), ("tail", .named "LayerTerms")])]
+     [("nil", 0, []),
+      ("cons", 1, [("head", .named "LayerTerm"), ("tail", .named "LayerTerms")])]
 
 /-- One table for the block, then the field types' tables. -/
 def defs : List (String × Shape) :=
@@ -2309,15 +2351,18 @@ instance instCanonicalLayerTerms :
     fun a => guarded_toVal _ _ a (rawLayerTerms_toValLayerTerms a), fun h => guarded_exact h,
     fitsLayerTerms⟩
 
+-- No sum of the block's table gives one wire tag to two cases.
+#guard wellTaggedFields defs
+
 end EffC
 
 namespace RowKindC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "RowKind"
-     [("sync", []),
-      ("async", []),
-      ("program", [])],
+     [("sync", 0, []),
+      ("async", 1, []),
+      ("program", 2, [])],
    []⟩
 
 def toVal : _root_.Effect4.Program.RowKind → Val
@@ -2360,16 +2405,19 @@ theorem fits (a : _root_.Effect4.Program.RowKind) : shapeDoc.accepts (toVal a) =
 instance instCanonical : Canonical (_root_.Effect4.Program.RowKind) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end RowKindC
 
 namespace RowShapeC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "RowShape"
-     [("call", []),
-      ("value", []),
-      ("tupleCall", []),
-      ("method", [])],
+     [("call", 0, []),
+      ("value", 1, []),
+      ("tupleCall", 2, []),
+      ("method", 3, [])],
    []⟩
 
 def toVal : _root_.Effect4.Program.RowShape → Val
@@ -2416,14 +2464,17 @@ theorem fits (a : _root_.Effect4.Program.RowShape) : shapeDoc.accepts (toVal a) 
 instance instCanonical : Canonical (_root_.Effect4.Program.RowShape) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end RowShapeC
 
 namespace RegistrationC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "Registration"
-     [("deferred", []),
-      ("external", [])],
+     [("deferred", 0, []),
+      ("external", 1, [])],
    []⟩
 
 def toVal : _root_.Effect4.Program.Registration → Val
@@ -2461,6 +2512,9 @@ theorem fits (a : _root_.Effect4.Program.Registration) : shapeDoc.accepts (toVal
 
 instance instCanonical : Canonical (_root_.Effect4.Program.Registration) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
 
 end RegistrationC
 
@@ -2583,6 +2637,9 @@ theorem fits (a : _root_.Effect4.Program.Row) : shapeDoc.accepts (toVal a) = tru
 instance instCanonical : Canonical (_root_.Effect4.Program.Row) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end RowC
 
 namespace EffTyC
@@ -2644,6 +2701,9 @@ theorem fits (a : _root_.Effect4.Program.EffTy) : shapeDoc.accepts (toVal a) = t
 
 instance instCanonical : Canonical (_root_.Effect4.Program.EffTy) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
 
 end EffTyC
 
@@ -2746,6 +2806,32 @@ def row : Effect4.Row Effect4.ServiceKey := ⟨[key1, key2], by decide⟩
 #guard Canonical.ofVal (α := Ty) (.ctor 2 [.unit]) = none
 
 end MetadataAcceptance
+
+namespace WireTagAcceptance
+open Effect4.Program
+
+/-! The wire tags of `tools/Effect4Gen/wire-tags.json`. A tag no active constructor holds, a
+retired one or one never given, refuses at the root and nested inside a retained constructor,
+in the value tree and in the bytes. A retirement adds its tag to `unheld`. -/
+
+/-- Tags of `Eff` that no active constructor holds. -/
+def unheld : List Nat := [29, 255]
+
+/-- `bind` (tag 7) around a first child carrying the tag, and a well-formed second child. -/
+def nested (tag : Nat) : Val :=
+  .ctor 7 [.ctor tag [], Canonical.toVal (Eff.succeed (Op := NativeOp) (.lit .unit))]
+
+#guard Canonical.ofVal (α := Eff NativeOp) (nested 0) = none  -- `succeed` needs its argument
+#guard unheld.all fun tag => Canonical.ofVal (α := Eff NativeOp) (.ctor tag []) = none
+#guard unheld.all fun tag => Canonical.ofVal (α := Eff NativeOp) (nested tag) = none
+#guard unheld.all fun tag => Canonical.decode (α := Eff NativeOp) (Val.encode (nested tag)) = none
+#guard unheld.all fun tag => (Canonical.shape (Eff NativeOp)).accepts (nested tag) = false
+-- The same tree with a held tag in the hole reads back, so the refusal is the tag's.
+#guard (Canonical.ofVal (α := Eff NativeOp)
+  (.ctor 7 [Canonical.toVal (Eff.yieldNow (Op := NativeOp) 0),
+    Canonical.toVal (Eff.succeed (Op := NativeOp) (.lit .unit))])).isSome
+
+end WireTagAcceptance
 
 /-! ## Receipts -/
 

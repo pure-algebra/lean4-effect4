@@ -156,17 +156,17 @@ theorem accepts_struct (defs : List (String × Shape)) (name : String)
   exact acceptsAt_struct defs name fields args h
 
 theorem acceptsAt_sum (defs : List (String × Shape)) (name : String)
-    (cases : List (String × List (String × Shape))) (i : Nat) (caseName : String)
+    (cases : List (String × Nat × List (String × Shape))) (i : Nat) (caseName : String)
     (fields : List (String × Shape)) (args : List Val)
-    (hi : cases[i]? = some (caseName, fields)) (h : acceptsFields defs fields args = true) :
+    (hi : caseAt i cases = some (caseName, fields)) (h : acceptsFields defs fields args = true) :
     acceptsAt defs (.ctor i args) (.sum name cases) = true := by
   simp only [acceptsAt, hi]
   exact h
 
 theorem accepts_sum (defs : List (String × Shape)) (name : String)
-    (cases : List (String × List (String × Shape))) (i : Nat) (caseName : String)
+    (cases : List (String × Nat × List (String × Shape))) (i : Nat) (caseName : String)
     (fields : List (String × Shape)) (args : List Val)
-    (hi : cases[i]? = some (caseName, fields)) (h : acceptsFields defs fields args = true) :
+    (hi : caseAt i cases = some (caseName, fields)) (h : acceptsFields defs fields args = true) :
     acceptsIn defs (.sum name cases) (.ctor i args) = true := by
   rw [acceptsIn_of_not_named defs (.sum name cases) (.ctor i args) (fun _ h => nomatch h)]
   exact acceptsAt_sum defs name cases i caseName fields args hi h
@@ -366,7 +366,7 @@ def ofVal : Val → Option Int
   | _ => none
 
 def shapeDoc : ShapeDoc :=
-  ⟨.sum "Int" [("ofNat", [("n", .nat)]), ("negSucc", [("n", .nat)])], []⟩
+  ⟨.sum "Int" [("ofNat", 0, [("n", .nat)]), ("negSucc", 1, [("n", .nat)])], []⟩
 
 theorem ofVal_toVal (a : Int) : ofVal (toVal a) = some a := by
   cases a <;> rfl

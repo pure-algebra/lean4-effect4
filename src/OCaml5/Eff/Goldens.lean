@@ -26,8 +26,9 @@ namespace OCaml5.Eff
 
 /-! ## Goldens: a generic value tree, serialised by the wire rule and by the JSON rule -/
 
-/-- A Lean value as the wire sees it. `ctor` carries the constructor's full name; its index
-is looked up in the environment when the bytes are written. -/
+/-- A Lean value as the wire sees it. `ctor` carries the constructor's full name; its wire tag
+is looked up in the one assignment (`tools/Effect4Gen/wire-tags.json`) when the bytes are
+written, so this tree never restates a number. -/
 inductive V
   | unit
   | bool (b : Bool)
