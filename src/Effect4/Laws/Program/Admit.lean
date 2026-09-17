@@ -2,6 +2,7 @@ import Effect4.Program.Admit
 import Effect4.Laws.Machine.Handles
 import Effect4.Laws.Program.Typed
 import Effect4.Laws.Program.TypeAlgebra
+import Effect4.Laws.Auto.Inversion
 
 /-!
 # Program.Admit — what a checked decision and a checked replay establish
@@ -339,12 +340,7 @@ the reason list rather than by `funext` on the predicate, so it stays at `[prope
 do the two failure-branch theorems below. -/
 theorem causeAdmits_hasTy (ty : Ty) (c : CauseV) :
     causeAdmits (fun v t => Val.hasTy v t) ty c = c.reasons.all (errAdmits ty) := by
-  unfold causeAdmits
-  generalize c.reasons = rs
-  induction rs with
-  | nil => rfl
-  | cons r rest ih =>
-    rw [List.all_cons, List.all_cons, ih, errAdmits_eq_reasonAdmits]
+  aesop
 
 /-- On a reified failed exit the fold is applied to the cause it was built from. -/
 theorem hasTyCause_exitErr_fold (c : CauseV) (e : Ty) :

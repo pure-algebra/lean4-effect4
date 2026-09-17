@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.Sched
 import Effect4.Laws.Program.Agreement
+import Effect4.Laws.Auto.Inversion
 
 /-!
 # Structural denotation over stores and fibers (R2, restated by P2)
@@ -1206,11 +1207,7 @@ theorem inlineSyncYield_eq_headExit (op : NativeOp) (request : Term) (p : Point)
           | some operation => Prim.sync (EffThunk.op operation)
           | none => badShape
         | none => badShape) := by
-  cases hv : evalTerm p.env request with
-  | none => rfl
-  | some value =>
-    dsimp only [Option.bind]
-    cases NativeOp.syncOpOf op value <;> rfl
+  aesop
 
 /-- The shared route's source classifier agrees with its immediate compiled exit. -/
 theorem inlineAsyncYield_eq_headExit (op : NativeOp) (request : Term) (p : Point) :

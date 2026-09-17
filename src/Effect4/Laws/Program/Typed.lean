@@ -2,6 +2,7 @@ import Effect4.Program.Typed
 import Effect4.Program.ErrorImage
 import Effect4.Laws.Program.ErrorQueries
 import Effect4.Laws.Program.TypeAlgebra
+import Effect4.Laws.Auto.Inversion
 
 /-!
 # Program.Typed — the value typing of the native cut (slice 1, lane 1)
@@ -269,14 +270,7 @@ theorem hasTy_exitErr (c : CauseV) (a e : Ty) (allocated : List String) :
 /-- The retained public wrapper is the default-allocation cause membership arm. -/
 theorem hasTy_causeOf_eq_hasTyCause (v : Val) (e : Ty) :
     Val.hasTy v (.causeOf e) = hasTyCause v e := by
-  change (match Val.cause? v with
-    | some c => causeAdmits (fun w _ => Val.hasTy w e) e c
-    | none => false) = (match Val.cause? v with
-    | some c => causeAdmits (fun w t => Val.hasTy w t) e c
-    | none => false)
-  cases hc : Val.cause? v with
-  | none => rfl
-  | some c => exact causeAdmits_congr e (fun _ => rfl) c
+  aesop
 
 /-- Membership is monotone in the allocation table at every type. The type induction
 uses the shared pointwise cause-fold law for causes and failed exits; only external handle

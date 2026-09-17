@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Simulation.Actions
+import Effect4.Laws.Auto.Inversion
 
 /-!
 # The parks the frame evaluator creates (P3, step 4f)
@@ -134,11 +135,7 @@ theorem forkScoped_pendingOk (program : NCode) (options : Supervision.ForkOption
 theorem runIn_pendingOk (target : FiberId) (scope : Nat) {a : FAnswer}
     (ha : ∀ g v, PendingOk g → PendingOk (a g v)) :
     PendingOk (FiberAction.runIn i m f y target scope a).fiber := by
-  unfold FiberAction.runIn
-  generalize linkScope i m Supervision.ScopeMode.fiberRunIn scope target (some target)
-    ReasonAnnotations.empty = r
-  obtain ⟨rm, rc⟩ := r
-  exact ha _ _ hf
+  aesop
 
 theorem awaitAll_pendingOk (targets : List FiberId) (failFast : Bool) :
     PendingOk (FiberAction.awaitAll i m f y targets failFast).fiber := by
@@ -161,10 +158,7 @@ theorem awaitNewChildren_pendingOk (snapshot : List FiberId) :
 
 theorem closePar_pendingOk (finalizers : List NCode) :
     PendingOk (FiberAction.closePar i m f y finalizers).fiber := by
-  unfold FiberAction.closePar
-  generalize forkFinalizers i m f finalizers = r
-  obtain ⟨rm, rc⟩ := r
-  exact hf
+  aesop
 
 end Actions
 

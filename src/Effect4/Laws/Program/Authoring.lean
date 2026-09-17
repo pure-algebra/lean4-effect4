@@ -2,6 +2,7 @@ import Effect4.Program.Scoped
 import Effect4.Program.Binders
 import Effect4.Program.Authoring
 import Effect4.Laws.Program.Authoring.Tactic
+import Effect4.Laws.Auto.Inversion
 
 /-!
 # Laws.Program.Authoring — scope safety of the authoring surface
@@ -56,9 +57,7 @@ structure LayerSrc.Scoped {Op : Type} (l : LayerSrc Op) : Prop where
 /-- A successful `do` step: the first action succeeded with some value the rest consumed. -/
 theorem bind_ok {ε α β : Type} {x : Except ε α} {f : α → Except ε β} {b : β}
     (h : (x >>= f) = .ok b) : ∃ a, x = .ok a ∧ f a = .ok b := by
-  cases x with
-  | error e => simp [Bind.bind, Except.bind] at h
-  | ok a => exact ⟨a, rfl, by simpa [Bind.bind, Except.bind] using h⟩
+  aesop
 
 @[simp] theorem Env.push_length (env : Env) (xs : List String) :
     (env.push xs).names.length = env.names.length + xs.length := by

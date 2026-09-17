@@ -28,9 +28,29 @@ def axiomsOf (e : Expr) : CoreM (Array Name) := do
       unless out.contains a do out := out.push a
   return out.qsort (·.toString < ·.toString)
 
+/-- The source line a constant of the current module is declared at: its own, or that of the
+declaration it was generated from (`foo.eq_1`, `foo.match_1`, … carry no range of their own). -/
+partial def declaredAt (name : Name) : CoreM (Option Nat) := do
+  if let some r ← findDeclarationRanges? name then return some r.range.pos.line
+  match name with
+  | .str p _ => declaredAt p
+  | _ => return none
+
+/-- Does `proof`, found for a theorem declared at line `first` of module `modIdx`, use that
+theorem itself or anything of the module declared after it? In place, the proof would have
+neither. -/
+def usesWhatFollows (proof : Expr) (modIdx : ModuleIdx) (first : Nat) : CoreM Bool := do
+  let env ← getEnv
+  for c in proof.getUsedConstants do
+    if env.getModuleIdxFor? c == some modIdx then
+      if let some line ← declaredAt c then
+        if line ≥ first then return true
+  return false
+
 /-- One attempt, rolled back: the axioms of the proof `tac` finds for `type`, if it finds one
-within `cap` heartbeats. -/
-def attempt (type : Expr) (tac : Syntax) (cap : Nat) : TermElabM (Option (Array Name)) :=
+within `cap` heartbeats that the theorem could carry in place. -/
+def attempt (type : Expr) (tac : Syntax) (cap : Nat) (modIdx : ModuleIdx) (first : Nat) :
+    TermElabM (Option (Array Name)) :=
   withoutModifyingState do
     -- a search that runs out of heartbeats is a runtime exception: it is an answer ("no"),
     -- not a failure of the census
@@ -41,6 +61,7 @@ def attempt (type : Expr) (tac : Syntax) (cap : Nat) : TermElabM (Option (Array 
         unless rest.isEmpty do return none
         let proof ← instantiateMVars goal
         if proof.hasExprMVar || proof.hasSorry then return none
+        if ← usesWhatFollows proof modIdx first then return none
         return some (← axiomsOf proof))
       (fun _ => return none)
 
@@ -63,19 +84,20 @@ syntax (name := autoCensus)
     | _ => acc
   -- only what a person wrote: a theorem with a source range of its own (equation and
   -- congruence lemmas the elaborator generates have none)
-  let mut written : Array (Nat × Name × Expr) := #[]
+  let mut written : Array (Nat × Nat × Name × Expr) := #[]
   for (name, type) in theorems do
     if let some r ← findDeclarationRanges? name then
-      written := written.push (r.range.endPos.line - r.range.pos.line + 1, name, type)
-  let mut found : Array (Nat × Name × Array Name) := #[]
-  for (lines, name, type) in written do
-    if let some axioms ← liftTermElabM (attempt type tac cap) then
-      found := found.push (lines, name, axioms)
-  let sorted := found.qsort fun a b => a.1 > b.1
+      written := written.push (r.range.pos.line, r.range.endPos.line, name, type)
+  let mut found : Array (Nat × Nat × Name × Array Name) := #[]
+  for (first, last, name, type) in written do
+    if let some axioms ← liftTermElabM (attempt type tac cap modIdx first) then
+      found := found.push (first, last, name, axioms)
+  let sorted := found.qsort fun a b => a.2.1 - a.1 > b.2.1 - b.1
   let mut report := m!"{modName}: {found.size} of {written.size} theorems closed from their \
-    statements; {sorted.foldl (fun n r => n + r.1) 0} source lines they now take"
-  for (lines, name, axioms) in sorted do
-    report := report ++ m!"\n  {lines}\t{name}\t{axioms}"
+    statements; {sorted.foldl (fun n r => n + (r.2.1 - r.1 + 1)) 0} source lines they now take"
+  -- one row per theorem: lines, first-last line of the declaration, name, axioms of the found proof
+  for (first, last, name, axioms) in sorted do
+    report := report ++ m!"\n  {last - first + 1}\t{first}-{last}\t{name}\t{axioms}"
   logInfo report
 
 end Effect4.Laws.Auto

@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Denote
+import Effect4.Laws.Auto.Inversion
 
 /-!
 # Program.Agreement — the compile agrees with the denotation, one fiber at a time
@@ -383,18 +384,14 @@ theorem step_failure_pass_onSuccess (c : CauseV) (body : NCode) (n : EffName) (K
     (i : Bool) (s : Stores) :
     localStep root (fiberOf (Prim.failure c) (Prim.onSuccess body n :: K) i) s =
       localStep root (fiberOf (Prim.failure c) K i) s := by
-  have hpop := popFrom_pass Effect4.Arm.contE true (Prim.onSuccess body n) K (Prim.failure c) i
-    rfl rfl
-  exact exitFrom_ext root _ s hpop.1 hpop.2
+  aesop
 
 /-- A value passes an `OnFailure` frame: the step is the step without the frame. -/
 theorem step_success_pass_onFailure (v : Val) (body : NCode) (n : EffName) (K : List NCode)
     (i : Bool) (s : Stores) :
     localStep root (fiberOf (Prim.success v) (Prim.onFailure body n :: K) i) s =
       localStep root (fiberOf (Prim.success v) K i) s := by
-  have hpop := popFrom_pass Effect4.Arm.contA false (Prim.onFailure body n) K (Prim.success v) i
-    rfl rfl
-  exact exitFrom_ext root _ s hpop.1 hpop.2
+  aesop
 
 /-- A value passes the restoring frame a mask left: the fiber is interruptible again. -/
 theorem step_success_pass_setInterruptible (v : Val) (K : List NCode) (i : Bool) (s : Stores) :

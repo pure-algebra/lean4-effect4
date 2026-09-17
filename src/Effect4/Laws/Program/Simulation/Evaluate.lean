@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Simulation.Actions
+import Effect4.Laws.Auto.Inversion
 
 /-!
 # The concrete evaluator agreement (P3, step 4e)
@@ -346,19 +347,12 @@ theorem countdownPark_stuck (i : FInterp) (m : FMachine) (f : FRun) (targets : L
     split <;> rfl
 
 theorem bool_eq_false_of_not {b : Bool} (h : ¬ b = true) : b = false := by
-  cases b
-  · rfl
-  · exact absurd rfl h
+  aesop
 
 theorem point_refresh {p p' : Point}
     (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
     (cv : List (FiberId × ExitV)) : ({ p' with completed := cv } : Point) = { p with completed := cv } := by
-  obtain ⟨h1, h2, h3, h4, h5⟩ := hp
-  cases p
-  cases p'
-  dsimp only at h1 h2 h3 h4 h5
-  subst h1 h2 h3 h4 h5
-  rfl
+  aesop
 
 theorem iterNext_gen_congr (root : NativeEff) (cv : List (FiberId × ExitV)) {p p' : Point}
     (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root) :

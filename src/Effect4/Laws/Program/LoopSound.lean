@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.MeaningSound
+import Effect4.Laws.Auto.Inversion
 
 /-!
 # Type soundness of the budgeted meaning: loops
@@ -46,16 +47,7 @@ theorem iterateStepWith_badShape (body : List Val → Effects.Program StoreSig (
     (env : List Val) (test step result : Term) (c : Val) :
     iterateStepWith badShapeExit body env test step result c =
       iterateStep body env test step result c := by
-  unfold iterateStepWith iterateStep
-  cases evalTerm (env ++ [c]) test with
-  | none => rfl
-  | some tv =>
-    cases tv with
-    | bool flag =>
-      cases flag with
-      | true => rfl
-      | false => cases evalTerm (env ++ [c]) result <;> rfl
-    | _ => rfl
+  aesop
 
 /-- `denoteB`, with the wrong-shape exit as a parameter. -/
 def denoteBWith (bad : ExitV) (k : Nat) :
