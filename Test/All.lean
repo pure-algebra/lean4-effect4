@@ -64,6 +64,7 @@ import Test.Program.TypedContract
 import Test.Program.WeakenContract
 import Test.Program.AuthoringContract
 import Test.Program.LoopSugarContract
+import Test.Program.FragmentCensusContract
 import Test.Program.DenoteContract
 import Test.Program.DenoteBContract
 import Test.Program.MeaningSoundContract
