@@ -183,3 +183,16 @@ C-P11 (the schema tree's unconsumed declarations); then the reader line R4.1.
     under one binder; the loop's test, step and result under one, two and one): the printer
     never read them, the reader does.
 
+13. **The printer cutover** (`d1c58906`, the same ruling). `print` and `printLayer` are the fold
+    over the table; the six mutual hand printers are deleted (270 lines); the leaves, the row
+    printer, the refusals and the reserved heads moved below the table to
+    `Codegen/PrintLeaf.lean`. `Codegen/Print.lean` 731 to 191 lines. The agreement battery had
+    been green on every constructor, classifier and the corpus; its agreement guards are removed
+    (they would compare a function with itself) and it keeps the table's shape guards.
+    The printer and the reader now have NO clause per constructor anywhere: the 57 rows of
+    `Codegen/Templates.lean` are the only place a printed form is written. Both cutovers
+    together: 4,535 lines of hand recursion and its proofs down to 2,670 across four modules.
+    Coordinator's error, corrected by the owner: two whole-tree builds were run for these
+    cutovers where narrow builds of the consumers and the four batteries would have shown the
+    same. Narrow builds only until the wave closes.
+
