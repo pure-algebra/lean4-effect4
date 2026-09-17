@@ -6,6 +6,9 @@ open TypeScript
 
 namespace ExprEqualityTrustRegression
 
+/-- A bare name as a target type: the fixture writes type arguments as names. -/
+private instance : Coe String TypeScript.TypeRef := ⟨fun s => .name [s] []⟩
+
 -- These are finite behavioral checks of the existing public equality.
 private def samples : List Expr := [
   .ident "name",

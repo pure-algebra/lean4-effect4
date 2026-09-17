@@ -293,7 +293,7 @@ def pTwo : P :=
 def pAwait : P := .bind (.perform .deferredMake u) (.perform .deferredAwait (v 0))
 def pGen : P := .gen (st [.bindYield (.succeed (n 1)), .ret (.app "succ" (ts [v 0]))])
 /-- Kept under its name (DI-60: no fixture is renamed). `whileLoop` retired into `iterate`:
-the same loop written with `iterate .nat` and answering `.lit .unit`. -/
+the same loop written with `iterate` at no cursor annotation (DI-91) and answering `.lit .unit`. -/
 def pWhile : P := .iterate none (n 0) (.app "lt" (ts [v 0, n 3])) (.app "succ" (ts [v 0])) u (.yieldNow 0)
 def pCatch : P := .catchCause (.fail (n 1)) (.succeed (n 0))
 def pStr : P := .succeed (.lit (.str "hi \"there\"\n"))

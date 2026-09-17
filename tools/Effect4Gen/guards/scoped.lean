@@ -3,7 +3,7 @@
 Appended verbatim by `--append tools/Effect4Gen/guards/scoped.lean` into
 `src/Effect4/Program/Scoped.lean`. One row of each binding shape, checked at the level the
 table gives it; the universal statements are the per-lift preservation lemmas of
-`Laws/Program/Authoring/Scoped.lean`. -/
+`src/Effect4/Laws/Program/Authoring/Lifts.lean`. -/
 
 namespace Effect4.Program.ScopedGuards
 

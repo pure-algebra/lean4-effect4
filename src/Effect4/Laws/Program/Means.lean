@@ -25,7 +25,8 @@ same work:
 * `Means root f₁ f₂` is the saved-state relation `S` of the book: the three control bits
   equal, the currents in `CodeMeans`, the stacks in `StackMeans`.
 
-Nothing here runs a machine; `Simulation.lean` discharges the step obligation against it.
+Nothing here runs a machine; the modules of `Laws/Program/Simulation/` discharge the step
+obligation against it.
 -/
 
 set_option autoImplicit false

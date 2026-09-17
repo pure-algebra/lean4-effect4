@@ -555,7 +555,7 @@ def pGenLoopBreakInElse : NativeEff :=
 #guard exitOf (replayEff pGenLoopBreakInElse [evaluateRoot]) 0 = some (Exit.success (Val.nat 3))
 #guard refsOf (replayEff pGenLoopBreakInElse [evaluateRoot]) = [Val.nat 3]
 
-/-! ## `whileLoop`
+/-! ## The loop (`iterate`; the fixture keeps its `whileLoop` name, DI-60)
 
 The cursor is the frame's `β`: `var 1` in the test and in the body, `var 1`/`var 2` the
 cursor and the body's answer in the step. -/

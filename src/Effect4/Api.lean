@@ -108,7 +108,7 @@ def wellTyped (program : Program) (table : RowTable := []) : Bool := (typeOf pro
 /-- Where and why a program fails to type (DI-86): the checker's refusal, with the program's
 layer references resolved as `typeOf` resolves them (an ill-formed reference is refused at the
 root, a reference that survives expansion at its site). `none` exactly when the program is
-`wellTyped` (`Laws/Api/Blame.lean`). -/
+`wellTyped` (`Api.explain_none_iff`, below). -/
 def explain (program : Program) (table : RowTable := []) : Option Effect4.Program.TypeRefusal :=
   if program.layerRefsWF then
     match program.expandRefs.refSites [] with
@@ -149,8 +149,9 @@ def read (expression : TypeScript.Expr) (table : RowTable := []) : Except ReadRe
   Program.readEff (nativeSignature table) (nativeSpell table) 0 expression
 
 /-- Whether the printer keeps the program whole, so that `read` of its printing is the program
-itself; what it loses is documented on `Effect4.Program.readable` (a `perform` on an async row
-reads back as `callback`). -/
+itself; what it loses is documented on `Effect4.Program.readable` (a loop and the two
+non-Boolean decisions, until R5 reads them; the internal fiber actions; a `daemon` on a scoped
+fork). -/
 def readable (program : Program) (table : RowTable := []) : Bool :=
   Program.readable (nativeSignature table) (nativeSpell table) 0 program
 
@@ -376,11 +377,11 @@ P2a additionally scans every raw table type and both inferred program columns fo
 a refusal identifies the exact constructor path.
 
 `readable` is **not** among them. It means "printing this program and reading it back gives
-this program", which is a property of the *print image*, not of execution: the historical wire
-program `Wire.Corpus.pAwait` is typed and runs, and is not readable (it spells `perform` on an
-async row, which the reader canonicalises to `callback`). Bundling it would have refused the
-compatibility case the invocation unification exists for, so it is a separate optional
-certificate, `imageCertificate`.
+this program", which is a property of the *print image*, not of execution: a program can be
+typed and run and still not be one the printer keeps whole (today every loop, until R5 reads
+`iterate`). Admission certifies execution and `readable` certifies reconstruction, so it is a
+separate optional certificate, `imageCertificate`. (The example this paragraph once gave,
+`Wire.Corpus.pAwait`, became readable when `callback` retired into `perform`.)
 
 None of this is a completion claim: an admitted program may park at a live frontier, and a
 frontier is never a refusal (`AGENTS.md`, representation rules). -/

@@ -761,9 +761,9 @@ def requestReadable (row : Row) (n : Nat) (request : Term) : Bool :=
     | none => false
 
 mutual
-  /-- The program is one the printer keeps whole: variables in scope, rows performed on the
-  kind their row declares, requests the row prints, atoms that are no head and no row, no
-  internal fiber action, no `daemon` on a scoped fork. -/
+  /-- The program is one the printer keeps whole: variables in scope, requests the row prints,
+  atoms that are no head and no row, no internal fiber action, no `daemon` on a scoped fork,
+  and, until the generic reader (R5), no loop and no `optionCase`/`caseTag` decision. -/
   def readable (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat) :
       Eff Op → Bool
     | .succeed value => value.scoped n
@@ -3126,14 +3126,6 @@ private theorem names_cons_spell_none {sig : Signature Op}
       | (cases ht : Terms.names? tail <;>
           simp [Terms.names?, ht, noHead "undefined" hl.trailing_ne_undefined])
   | app _ _ => rfl
-
-private theorem names_spell_weaken {sig : Signature Op}
-    {spell : String → List String → Option Op} (hl : LawfulSpelling sig spell)
-    (cut : Nat) (atom : String) (args : Terms) :
-    ((Terms.weaken cut args).names?).bind (spell atom) = (args.names?).bind (spell atom) := by
-  cases args with
-  | nil => rfl
-  | cons _ _ => simp only [Terms.weaken, names_cons_spell_none hl]
 
 private theorem savedVar_weaken (cut : Nat) (x y : Term) :
     (savedVar? (printTerm (Term.weaken cut x)) (printTerm (Term.weaken cut y))).isNone =

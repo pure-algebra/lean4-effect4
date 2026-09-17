@@ -37,7 +37,7 @@ exit, because `Effect.exit` returns `exitSucceed(self)` for an `Exit`
 `Suspend`, because `Effect.gen` is `suspend(() => fromIteratorUnsafe(…))` (`:1175-1196`);
 `iterate` compiles to a `Suspend`, because the printer wraps it in
 `Effect.suspend` so that every run starts from the initial cursor
-(`src/Effect4/Codegen/Print.lean:158-168`). `suspendBodyAt` answers the iterator or the
+(`src/Effect4/Codegen/Print.lean`, `print`'s `.iterate` arm). `suspendBodyAt` answers the iterator or the
 loop frame at that point, as it answers the arm a `select` decides.
 -/
 
@@ -1257,7 +1257,8 @@ def Eff.suspendDecided {Op : Type} : Eff Op → Bool
 /-- What a `suspend` thunk returns: a body compiled at its point, a branch decided by its
 point's environment, the iterator of a generator (`Effect.gen`'s `fromIteratorUnsafe`,
 `internal/effect.ts:1175-1196`), or the loop frame of an `iterate` with its initial cursor
-read now (the printed `let aN: T = initial` inside the suspension, `Codegen/Print.lean:158-168`). -/
+read now (the printed `let aN = initial` inside the suspension, `print`'s `.iterate` arm in
+`src/Effect4/Codegen/Print.lean`). -/
 def suspendBodyAt (root : NativeEff) : EffThunk → NCode
   | .body p =>
     match p.fuel with

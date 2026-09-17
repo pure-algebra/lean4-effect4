@@ -87,25 +87,17 @@ def expected : NativeOp → Route
 frontier there — a frontier, never a failure. The decision that finishes it is `.advance`. -/
 
 def performSleep : Api.Program := .perform .sleep (.lit (.nat 1))
-def callbackSleep : Api.Program := .perform .sleep (.lit (.nat 1))
 
 def sleepTape : List Api.Decision := [Api.evaluate, .advance 1, Api.flush]
 
 #guard (Api.typeOf performSleep).isSome
-#guard (Api.typeOf callbackSleep).isSome
-#guard (Api.run callbackSleep 100).exit = none
-#guard (Api.replay callbackSleep 100 sleepTape).exit = some (.success .unit)
+#guard (Api.run performSleep 100).exit = none
+#guard (Api.replay performSleep 100 sleepTape).exit = some (.success .unit)
 -- Zero millis is the immediate yield.
 #guard (Api.run (.perform .sleep (.lit (.nat 0))) 100).exit = some (.success .unit)
--- Both source spellings print the same call and now have the same timer behavior.
-theorem sleep_print_same : Api.print performSleep = Api.print callbackSleep := rfl
-#guard (Api.run performSleep 100).exit = none
 #guard (Api.run performSleep 100).outcome = .frontier
-#guard (Api.run callbackSleep 100).outcome = .frontier
-#guard (Api.replay performSleep 100 sleepTape).exit = some (.success .unit)
-#guard (Api.run (.perform .sleep (.lit (.nat 0))) 100).exit = some (.success .unit)
 
-/-! ## An external call consumes its reply under both spellings
+/-! ## An external call consumes its reply
 
 The row and the reply are `docs/research/foundation-probes/Admission.lean:9-13`. -/
 
@@ -123,32 +115,23 @@ def syncRow : Row := { goodRow with kind := .sync }
 def reply : Completion Val Err Defect FiberId Ann := .ofExit (.success (.nat 9))
 
 def performExternal : Api.Program := .perform (.external 0) (.lit (.nat 7))
-def callbackExternal : Api.Program := .perform (.external 0) (.lit (.nat 7))
 
 #guard LawfulTable [goodRow]
 #guard LawfulTable [malformedRow]
 #guard (Api.typeOf performExternal [goodRow]).isSome
-#guard (Api.typeOf callbackExternal [goodRow]).isSome
-#guard (Api.run callbackExternal 100 [reply] [goodRow]).exit = some (.success (.nat 9))
+#guard (Api.run performExternal 100 [reply] [goodRow]).exit = some (.success (.nat 9))
 -- The wrong registration parks with the answer unused. A park is a frontier, not a refusal;
 -- `checkTable` is what refuses the table.
-#guard (Api.run callbackExternal 100 [reply] [malformedRow]).exit = none
--- Both spellings consume the reply. Removing the reply leaves a live frontier.
-#guard (Api.run performExternal 100 [reply] [goodRow]).exit = some (.success (.nat 9))
+#guard (Api.run performExternal 100 [reply] [malformedRow]).exit = none
+-- The reply is consumed. Removing it leaves a live frontier.
 #guard (Api.run performExternal 100 [reply] [goodRow]).stores.externals.answers.length = 0
-#guard (Api.run callbackExternal 100 [reply] [goodRow]).stores.externals.answers.length = 0
 #guard (Api.run performExternal 100 [] [goodRow]).exit = none
-#guard (Api.run callbackExternal 100 [] [goodRow]).exit = none
 #guard (Api.run performExternal 100 [] [goodRow]).outcome = .frontier
-#guard (Api.run callbackExternal 100 [] [goodRow]).outcome = .frontier
 #guard externalRow [goodRow] 0 = some goodRow
 
-/-- DI-61: API replay equality on the admitted scalar fixture, including its resulting
-machine and trace. This concrete tape/table receipt does not generalize `run_eq_ref`. -/
-theorem replay_perform_external_eq_callback :
-    Api.replay performExternal 100 [Api.evaluate, Api.flush] [reply] [goodRow] =
-      Api.replay callbackExternal 100 [Api.evaluate, Api.flush] [reply] [goodRow] := by
-  rfl
+-- DI-61's two-spelling receipts (`sleep_print_same`, `replay_perform_external_eq_callback`)
+-- retired with `callback`: there is one invocation form, so they had become `x = x`. The
+-- compile-side twin is recorded the same way in `src/Effect4/Laws/Program/Invocation.lean`.
 
 /-! ## `checkTable`: the table decision `LawfulTable` does not make -/
 
@@ -166,13 +149,12 @@ theorem replay_perform_external_eq_callback :
 refuses — out of range, empty, wrong registration, sync row, program row — and, as the sixth
 negative, the reminder that a valid row is not a certificate for the request term. -/
 
-#guard externalRow [goodRow] 0 = some goodRow
 #guard externalRow [goodRow] 1 = none
 #guard externalRow [] 0 = none
 #guard externalRow [malformedRow] 0 = none
 #guard externalRow [syncRow] 0 = none
 #guard externalRow [{ goodRow with kind := .program }] 0 = none
-#guard (Api.typeOf callbackExternal [goodRow]) = some ⟨.nat, .nat, .empty⟩
+#guard (Api.typeOf performExternal [goodRow]) = some ⟨.nat, .nat, .empty⟩
 -- A good row does not make a wrong request term typed.
 #guard (Api.typeOf (.perform (.external 0) (.lit .unit)) [goodRow]).isNone
 
@@ -222,14 +204,12 @@ def refusal (program : Api.Program) (table : RowTable := []) : Option Api.AdmitR
 #guard admitted Wire.Corpus.pAwait
 #guard Api.readable Wire.Corpus.pAwait
 #guard (Api.imageCertificate Wire.Corpus.pAwait []).isSome
-#guard (Api.imageCertificate callbackSleep []).isSome
-#guard Api.readable performSleep
 #guard (Api.imageCertificate performSleep []).isSome
+#guard Api.readable performSleep
 -- The refusals, one fixture each.
 #guard refusal counterexample = some .illTyped
-#guard refusal callbackExternal [malformedRow] = some (.table (.notExternal 0))
+#guard refusal performExternal [malformedRow] = some (.table (.notExternal 0))
 -- A sync row is refused by the table under perform, which types against it.
-#guard refusal callbackExternal [syncRow] = some (.table (.notAsync 0))
 #guard refusal performExternal [syncRow] = some (.table (.notAsync 0))
 #guard refusal (.succeed (.lit (.nat 1))) [{ goodRow with spelling := "Ref.get" }]
   = some (.builtinCollision ("Ref.get", []))
@@ -244,7 +224,6 @@ def refusal (program : Api.Program) (table : RowTable := []) : Option Api.AdmitR
   | .error (.unsafeName "Effect.succeed") => true
   | _ => false
 #guard (Api.printModule "main" (.succeed (.lit .unit)) [{ goodRow with spelling := "a1" }]).isNone
-#guard admitted callbackExternal [goodRow]
 #guard admitted performExternal [goodRow]
 
 /-! ## The checked entry points run what the raw ones run
@@ -268,15 +247,10 @@ def replayAdmittedExit (program : Api.Program) (table : RowTable) (fuel : Nat)
 #guard runAdmittedExit Wire.Corpus.pAwait [] 100 = (Api.run Wire.Corpus.pAwait 100).exit
 #guard runAdmittedExit performExternal [goodRow] 100 [reply]
   = (Api.run performExternal 100 [reply] [goodRow]).exit
-#guard runAdmittedExit callbackExternal [goodRow] 100 [reply]
-  = (Api.run callbackExternal 100 [reply] [goodRow]).exit
 #guard runAdmittedExit performSleep [] 100 = (Api.run performSleep 100).exit
-#guard runAdmittedExit callbackSleep [] 100 = (Api.run callbackSleep 100).exit
-#guard replayAdmittedExit callbackSleep [] 100 sleepTape = some (.success .unit)
-#guard runAdmittedExit callbackExternal [goodRow] 100 [reply] = some (.success (.nat 9))
--- The admitted entry points exercise the same positive routing behavior.
 #guard replayAdmittedExit performSleep [] 100 sleepTape = some (.success .unit)
 #guard runAdmittedExit performExternal [goodRow] 100 [reply] = some (.success (.nat 9))
+-- The admitted entry points exercise the same positive routing behavior.
 #guard runAdmittedExit performExternal [goodRow] 0 [reply] = none
 #guard (Api.run performExternal 0 [reply] [goodRow]).outcome = .frontier
 
