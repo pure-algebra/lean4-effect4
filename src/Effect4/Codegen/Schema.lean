@@ -198,172 +198,108 @@ private def keyword (tag : String) (annotations : Annotations)
     .objectQuoted fields
   else .objectQuotedML fields
 
-@[simp] private theorem elementType_sizeOf_lt (element : Element) :
-    sizeOf element.type < sizeOf element := by
-  cases element
-  simp +arith
-
-@[simp] private theorem propertyType_sizeOf_lt (property : PropertySignature) :
-    sizeOf property.type < sizeOf property := by
-  cases property
-  simp +arith
-
-@[simp] private theorem indexParameter_sizeOf_lt (index : IndexSignature) :
-    sizeOf index.parameter < sizeOf index := by
-  cases index
-  simp +arith
-
-@[simp] private theorem indexType_sizeOf_lt (index : IndexSignature) :
-    sizeOf index.type < sizeOf index := by
-  cases index
-  simp +arith
-
-@[simp] private theorem annotationSchemas_sizeOf_lt
-    (annotation : CheckRepresentationAnnotation) :
-    sizeOf annotation.schemas < sizeOf annotation := by
-  cases annotation
-  simp +arith
-
-mutual
-
-/-- Raw rc.112 JSON syntax for one representation. Field order follows the
-pinned codec declarations. -/
-def representation : Representation → Expr
-  | .declaration rep annotations typeParameters checks =>
-      .objectQuotedML
-        ([ ("_tag", .str "Declaration")
-         , ("representation", representationAnnotation rep) ] ++
-         annotationFields annotations ++
-         [ ("typeParameters", .arr (representationList typeParameters))
-         , ("checks", .arr (checkList checks)) ])
-  | .reference key =>
-      .objectQuoted [("_tag", .str "Reference"), ("$ref", .str key.value)]
-  | .suspend annotations checks thunk =>
-      .objectQuotedML
-        ([("_tag", .str "Suspend")] ++ annotationFields annotations ++
-         [("checks", .arr (checkList checks)), ("thunk", representation thunk)])
-  | .null annotations checks => keyword "Null" annotations (checkList checks)
-  | .undefined annotations checks => keyword "Undefined" annotations (checkList checks)
-  | .void annotations checks => keyword "Void" annotations (checkList checks)
-  | .never annotations checks => keyword "Never" annotations (checkList checks)
-  | .unknown annotations checks => keyword "Unknown" annotations (checkList checks)
-  | .any annotations checks => keyword "Any" annotations (checkList checks)
-  | .string annotations checks => keyword "String" annotations (checkList checks)
-  | .number annotations checks => keyword "Number" annotations (checkList checks)
-  | .boolean annotations checks => keyword "Boolean" annotations (checkList checks)
-  | .bigint annotations checks => keyword "BigInt" annotations (checkList checks)
-  | .symbol annotations checks => keyword "Symbol" annotations (checkList checks)
-  | .literal annotations checks value =>
-      keyword "Literal" annotations (checkList checks) [("literal", literalValue value)]
-  | .uniqueSymbol annotations checks value =>
-      keyword "UniqueSymbol" annotations (checkList checks)
-        [("symbol", .str ("Symbol(" ++ value.key ++ ")"))]
-  | .objectKeyword annotations checks =>
-      keyword "ObjectKeyword" annotations (checkList checks)
-  | .enum annotations checks entries =>
-      keyword "Enum" annotations (checkList checks)
-        [("enums", .arr (entries.map fun entry =>
-          .arr [.str entry.name, enumValue entry.value]))]
-  | .templateLiteral annotations checks parts =>
-      keyword "TemplateLiteral" annotations (checkList checks)
-        [("parts", .arr (representationList parts))]
-  | .arrays annotations checks elements rest =>
-      keyword "Arrays" annotations (checkList checks)
-        [ ("elements", .arr (elementList elements))
-        , ("rest", .arr (representationList rest)) ]
-  | .objects annotations checks properties indexes =>
-      keyword "Objects" annotations (checkList checks)
-        [ ("propertySignatures", .arr (propertyList properties))
-        , ("indexSignatures", .arr (indexList indexes)) ]
-  | .union annotations checks types mode =>
-      keyword "Union" annotations (checkList checks)
-        [ ("types", .arr (representationList types))
-        , ("mode", .str mode.modeName) ]
-termination_by value => sizeOf value
-decreasing_by all_goals decreasing_tactic
-
-def check : Check → Expr
-  | .filter rep annotations aborted =>
-      .objectQuotedML
-        ([ ("_tag", .str "Filter")
-         , ("representation", checkRepresentationAnnotation rep) ] ++
-         annotationFields annotations ++ [("aborted", .bool aborted)])
-  | .filterGroup rep annotations checks =>
-      .objectQuotedML
-        ([ ("_tag", .str "FilterGroup") ] ++
-         (match rep with
-          | none => []
-          | some value => [("representation", checkRepresentationAnnotation value)]) ++
-         annotationFields annotations ++ [("checks", .arr (checkList checks))])
-termination_by value => sizeOf value
-decreasing_by all_goals decreasing_tactic
-
-private def checkRepresentationAnnotation :
-    CheckRepresentationAnnotation → Expr
+/-- A check's representation annotation, its referenced schemas already printed. -/
+private def checkRepresentationAnnotation : CheckRepresentationAnnotationOf Expr → Expr
   | ⟨id, payload, none⟩ =>
       .objectQuoted [("id", .str id), ("payload", json payload)]
   | ⟨id, payload, some schemas⟩ =>
       .objectQuotedML
         [ ("id", .str id)
         , ("payload", json payload)
-        , ("schemas", .arr (representationList schemas)) ]
-termination_by annotation => sizeOf annotation
-decreasing_by all_goals decreasing_tactic
+        , ("schemas", .arr schemas) ]
 
-private def representationList : List Representation → List Expr
-  | [] => []
-  | first :: rest => representation first :: representationList rest
-termination_by values => sizeOf values
-decreasing_by all_goals decreasing_tactic
+/-- One tuple element, its type already printed. -/
+private def elementExpr (element : ElementOf Expr) : Expr :=
+  .objectQuotedML
+    ([ ("isOptional", .bool element.isOptional)
+     , ("type", element.type) ] ++
+     annotationFields element.annotations)
 
-private def checkList : List Check → List Expr
-  | [] => []
-  | first :: rest => check first :: checkList rest
-termination_by values => sizeOf values
-decreasing_by all_goals decreasing_tactic
+/-- One property signature, its type already printed. -/
+private def propertyExpr (property : PropertySignatureOf Expr) : Expr :=
+  .objectQuotedML
+    ([ ("name", propertyKey property.name)
+     , ("type", property.type)
+     , ("isOptional", .bool property.isOptional)
+     , ("isMutable", .bool property.isMutable) ] ++
+     annotationFields property.annotations)
 
-private def elementList : List Element → List Expr
-  | [] => []
-  | first :: rest =>
-      .objectQuotedML
-        ([ ("isOptional", .bool first.isOptional)
-         , ("type", representation first.type) ] ++
-         annotationFields first.annotations) :: elementList rest
-termination_by values => sizeOf values
-decreasing_by
-  all_goals first
-    | decreasing_tactic
-    | exact Nat.lt_trans (elementType_sizeOf_lt _) (by simp +arith)
+/-- One index signature, both positions already printed. -/
+private def indexExpr (index : IndexSignatureOf Expr) : Expr :=
+  .objectQuoted [("parameter", index.parameter), ("type", index.type)]
 
-private def propertyList : List PropertySignature → List Expr
-  | [] => []
-  | first :: rest =>
-      .objectQuotedML
-        ([ ("name", propertyKey first.name)
-         , ("type", representation first.type)
-         , ("isOptional", .bool first.isOptional)
-         , ("isMutable", .bool first.isMutable) ] ++
-         annotationFields first.annotations) :: propertyList rest
-termination_by values => sizeOf values
-decreasing_by
-  all_goals first
-    | decreasing_tactic
-    | exact Nat.lt_trans (propertyType_sizeOf_lt _) (by simp +arith)
+/-- Raw rc.112 JSON syntax, as an algebra of the generated fold
+(`src/Effect4/Schema/Fold.lean`) on the constant carrier `Expr`: a field receives its children
+already printed and says only how this node is spelled. Field order follows the pinned codec
+declarations. Before 2026-09-17 this was a well-founded recursion of nine helpers over `sizeOf`
+with five size lemmas; the fold's recursion is structural and generated. -/
+private def printAlgebra : RepresentationAlgebra (fun _ => Expr) where
+  representation_declaration rep annotations typeParameters checks :=
+    .objectQuotedML
+      ([ ("_tag", .str "Declaration")
+       , ("representation", representationAnnotation rep) ] ++
+       annotationFields annotations ++
+       [ ("typeParameters", .arr typeParameters)
+       , ("checks", .arr checks) ])
+  representation_reference key :=
+    .objectQuoted [("_tag", .str "Reference"), ("$ref", .str key.value)]
+  representation_suspend annotations checks thunk :=
+    .objectQuotedML
+      ([("_tag", .str "Suspend")] ++ annotationFields annotations ++
+       [("checks", .arr checks), ("thunk", thunk)])
+  representation_null annotations checks := keyword "Null" annotations checks
+  representation_undefined annotations checks := keyword "Undefined" annotations checks
+  representation_void annotations checks := keyword "Void" annotations checks
+  representation_never annotations checks := keyword "Never" annotations checks
+  representation_unknown annotations checks := keyword "Unknown" annotations checks
+  representation_any annotations checks := keyword "Any" annotations checks
+  representation_string annotations checks := keyword "String" annotations checks
+  representation_number annotations checks := keyword "Number" annotations checks
+  representation_boolean annotations checks := keyword "Boolean" annotations checks
+  representation_bigint annotations checks := keyword "BigInt" annotations checks
+  representation_symbol annotations checks := keyword "Symbol" annotations checks
+  representation_literal annotations checks value :=
+    keyword "Literal" annotations checks [("literal", literalValue value)]
+  representation_uniqueSymbol annotations checks value :=
+    keyword "UniqueSymbol" annotations checks
+      [("symbol", .str ("Symbol(" ++ value.key ++ ")"))]
+  representation_objectKeyword annotations checks := keyword "ObjectKeyword" annotations checks
+  representation_enum annotations checks entries :=
+    keyword "Enum" annotations checks
+      [("enums", .arr (entries.map fun entry =>
+        .arr [.str entry.name, enumValue entry.value]))]
+  representation_templateLiteral annotations checks parts :=
+    keyword "TemplateLiteral" annotations checks [("parts", .arr parts)]
+  representation_arrays annotations checks elements rest :=
+    keyword "Arrays" annotations checks
+      [ ("elements", .arr (elements.map elementExpr))
+      , ("rest", .arr rest) ]
+  representation_objects annotations checks properties indexes :=
+    keyword "Objects" annotations checks
+      [ ("propertySignatures", .arr (properties.map propertyExpr))
+      , ("indexSignatures", .arr (indexes.map indexExpr)) ]
+  representation_union annotations checks types mode :=
+    keyword "Union" annotations checks
+      [ ("types", .arr types)
+      , ("mode", .str mode.modeName) ]
+  check_filter rep annotations aborted :=
+    .objectQuotedML
+      ([ ("_tag", .str "Filter")
+       , ("representation", checkRepresentationAnnotation rep) ] ++
+       annotationFields annotations ++ [("aborted", .bool aborted)])
+  check_filterGroup rep annotations checks :=
+    .objectQuotedML
+      ([ ("_tag", .str "FilterGroup") ] ++
+       (match rep with
+        | none => []
+        | some value => [("representation", checkRepresentationAnnotation value)]) ++
+       annotationFields annotations ++ [("checks", .arr checks)])
 
-private def indexList : List IndexSignature → List Expr
-  | [] => []
-  | first :: rest =>
-      .objectQuoted
-        [ ("parameter", representation first.parameter)
-        , ("type", representation first.type) ] :: indexList rest
-termination_by values => sizeOf values
-decreasing_by
-  all_goals first
-    | decreasing_tactic
-    | exact Nat.lt_trans (indexParameter_sizeOf_lt _) (by simp +arith)
-    | exact Nat.lt_trans (indexType_sizeOf_lt _) (by simp +arith)
+/-- Raw rc.112 JSON syntax for one representation. -/
+def representation (value : Representation) : Expr := cata_representation printAlgebra value
 
-end
+/-- Raw rc.112 JSON syntax for one check. -/
+def check (value : Check) : Expr := cata_check printAlgebra value
 
 /-! ## Documents, data, and generation entry points -/
 
