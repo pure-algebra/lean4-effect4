@@ -101,20 +101,59 @@ largest thing left.
 ## 5. The decision the owner owes
 
 **D1, how `iterate`'s annotation is read.** The printed loop carries `let aN: T = initial`, a
-`TypeRef`. B19 rules out a `TypeRef → Ty` inverse for the surface's type comparisons. The reader
-still has to produce a `Ty`. Three ways:
+`TypeRef`, and the reader has to produce a `Ty`.
 
-- (a) a section on the canonical image: `readTy : TypeRef → Option Ty` with `readTy (ofTy t) =
-  some t` for normal `t`, used by the reader alone; `readable (iterate c …)` then asks that `c`
-  is normal. B19 stays the rule for comparisons, which still never invert.
-- (b) a typed reader: the reader is handed a typing environment and recomputes the cursor type
-  from `initial`. Loses loops whose annotation is wider than the initial's type, which is the
-  reason `iterate` has an annotation at all.
-- (c) the annotation kept as syntax in `Eff` (`iterate` holds a `TypeRef`). Pulls the target's
-  syntax into the core alphabet.
+The rule in force is B19 (`docs/research/2026-09-16-implementation-review-log.md`, entry of
+10:05): types meet source by projection only. `ofTy : Ty → Option TypeRef` is the view map, a
+declared type is compared with `ofTy` of the computed one, and nothing reads a `TypeRef` back,
+"never a section". The reason is that `ofTy` is not injective, checked on the tree today:
+`ofTy nat = ofTy int` (both `number`) and `ofTy (union nat int) = ofTy nat`. So the text
+`let a1: number = 0` does not say whether the cursor is `nat` or `int`, and no `readTy` with
+`readTy (ofTy t) = some t` exists. (The first cut of this packet recommended exactly that law; it
+is false and is withdrawn.)
 
-Recommended: (a). It is a function on the image only, its law is one equation, and it is the
-smallest change that reads every printed loop.
+What can exist:
+
+- (a) a chosen representative: `readTy : TypeRef → Option Ty` with the law in the other
+  direction, `ofTy (readTy r) = some r` on `ofTy`'s image, and `readable (iterate c …)` asking
+  `readTy (ofTy c) = some c`, that is, that `c` is the representative of its own image. A loop
+  over an `int` cursor then prints and is not readable, as an unreadable scoped `daemon` fork is
+  today. This is a section, so it amends B19's "never a section" for this one reader clause; the
+  comparisons keep B19.
+- (b) a typed reader: the reader carries a `TyEnv`, computes candidates from `initial` and
+  `step`, and accepts the annotation by projection, `ofTy candidate = annotation`, which is
+  B19's own mechanism. It keeps B19 whole. It makes the reader an elaborator (it must type every
+  `bind` to know the environment), and where two candidates project alike it still has to choose.
+- (c) the annotation kept as syntax in `Eff`. Pulls the target's syntax into the core alphabet.
+
+Recommended: (a), stated as an amendment to B19 and confined to `iterate`'s clause, because it is
+one function with one equation and leaves the reader untyped. (b) is the principled route if the
+owner wants B19 kept without exception; it is a larger reader. Steps 1 to 5 of §4 do not depend
+on the answer.
+
+## 5b. Open question from the owner: the reader as an `Eff` program
+
+Looked at against the tree on 2026-09-17, not designed yet.
+
+- What one layer of reading is: match one node against a finite table of bounded-depth
+  templates. That is a finite decision tree on tags and arities, which is what `select … (.tag t)`
+  with `pair`, `fst`, `snd`, `isSome` expresses, in the straight fragment, where `run_eq_meaning`
+  already relates the machine to the meaning.
+- What it is not: the recursion over the tree. `Eff` has no recursive definitions and no
+  function values; its only iteration is `iterate` over a cursor. The recursion stays the
+  generic fold, with the layer reader as its step.
+- What is missing today: a `TypeScript.Expr` has no encoding as a `Val` (an `Image` instance
+  would be generated, as for the core families); argument lists need list atoms, which the
+  language lacks (`Val.list` exists, no `head`, `tail` or `length` atom; already a recorded gap).
+- What it would buy: R6 for free. The host reader would be the layer reader printed by this
+  repository's own printer as Effect TypeScript, not a second matcher hand-written in
+  `ts/eff/read.ts`; the OCaml engine would run the same program. One definition on every face.
+- What it costs: the round-trip laws become statements about `denote` of a generated program,
+  where `match_inst` is a structural induction on templates. The cheap way to keep both is a
+  compile theorem, `denote (compileLayer table) node = matchLayer table node`, proved once, so
+  the laws stay on `matchT`.
+- Where it fits: after R5.2, as the way to do R6, if list atoms land first. It does not change
+  steps 1 to 5.
 
 ## 6. What this does not do
 
