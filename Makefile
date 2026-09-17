@@ -308,7 +308,13 @@ $(CHK)/ts-reader: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) $(TR
 	cd ts/eff && $(BUN) test
 	@mkdir -p $(CHK) && touch $@
 
-$(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py | harness/truth/node_modules
+# The host controls beside the lane: rc.112's `catchIf` clause, the prelude's cause queries,
+# and the inventory guard (every generated atom has a prelude case that runs). Named one by
+# one: `bun test harness/truth` would also pick up the lane's work directories.
+TRUTH_HOST_TESTS := harness/truth/catch-if.test.ts harness/truth/native-queries.test.ts harness/truth/prelude-inventory.test.ts
+$(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py \
+    $(TRUTH_HOST_TESTS) harness/truth/prelude-inventory.ts ts/eff/profile.gen.ts | harness/truth/node_modules
+	$(BUN) test $(TRUTH_HOST_TESTS)
 	$(PY) scripts/check-truth.py
 	@mkdir -p $(CHK) && touch $@
 

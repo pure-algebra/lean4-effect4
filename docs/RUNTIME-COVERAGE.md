@@ -124,6 +124,10 @@ census v1 and the model that closes each:
 
 The three `foreignBoundary` rows (`op.WithFiber`, `op.YieldableError`,
 `cause.annotations`) close with a registered boundary identity and a refusal
-theorem, not a behavioural model.
+theorem, not a behavioural model. Since the `Eff` series retired `yieldError`
+(DI-79, wire tag 3 retired), no program constructor compiles to
+`Prim.yieldableError` and no store program builds one (`Program/Compile.lean`'s
+`embed` only passes one through): the primitive stays in the machine's alphabet
+with its step lemma and its census row, reachable from a hand-built frame only.
 
 Take the exact current row counts from the census, never from this table.
