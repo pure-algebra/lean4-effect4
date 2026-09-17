@@ -1,1 +1,1 @@
-["iterate",["nat"],["lit",["nat",0]],["app","lt",["cons",["var",0],["cons",["lit",["nat",3]],["nil"]]]],["app","succ",["cons",["var",0],["nil"]]],["lit",["unit"]],["yieldNow",0]]
+["iterate",null,["lit",["nat",0]],["app","lt",["cons",["var",0],["cons",["lit",["nat",3]],["nil"]]]],["app","succ",["cons",["var",0],["nil"]]],["lit",["unit"]],["yieldNow",0]]

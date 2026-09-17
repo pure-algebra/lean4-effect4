@@ -138,9 +138,9 @@ def oldWhileLoop : Val :=
 #guard Canonical.decode (α := Eff NativeOp) (Val.encode (.ctor 5 [oldWhileLoop])) = none
 -- The same program as an `iterate` reads back.
 #guard Canonical.decode (α := Eff NativeOp) (Canonical.encode
-    (Eff.iterate (Op := NativeOp) .nat (.lit (.nat 0)) (.lit (.bool false)) (.lit (.nat 1)) (.lit .unit)
+    (Eff.iterate (Op := NativeOp) none (.lit (.nat 0)) (.lit (.bool false)) (.lit (.nat 1)) (.lit .unit)
       (.succeed (.lit .unit)))) =
-  some (.iterate .nat (.lit (.nat 0)) (.lit (.bool false)) (.lit (.nat 1)) (.lit .unit)
+  some (.iterate none (.lit (.nat 0)) (.lit (.bool false)) (.lit (.nat 1)) (.lit .unit)
     (.succeed (.lit .unit)))
 
 -- Old bytes of a `callback` refuse: tag 18 with its op and term, at the root and nested.

@@ -876,7 +876,7 @@ theorem denoteR_gen (root : NativeEff) (body : Stmts NativeOp) (p : Point) (h : 
   | zero => exact (h hf).elim
   | succ f => budget hf
 
-theorem denoteR_iterate (root : NativeEff) (cursorTy : Ty) (initial test step result : Term)
+theorem denoteR_iterate (root : NativeEff) (cursorTy : Option Ty) (initial test step result : Term)
     (body : NativeEff) (p : Point) (h : p.fuel ≠ 0) :
     denoteR root (.iterate cursorTy initial test step result body) p =
       suspendR p (match evalTerm p.env initial with

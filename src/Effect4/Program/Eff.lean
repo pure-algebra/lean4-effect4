@@ -364,12 +364,14 @@ mutual
     /-- The loop with a typed cursor and an answer, `whileLoop` generalized (the `select` and
     `iterate` packet §2.2): `initial` over the environment; `test` and `result` over the
     environment extended by the cursor, `body` a program over the same; `step` over the cursor
-    and the body's answer. `cursorTy` is the cursor's annotation: `initial` and `step` are
-    typed under it by subsumption, so a cursor whose members grow (an accumulator that starts
-    empty) has one stated type. The loop answers `result` at the cursor that failed the test.
+    and the body's answer. The cursor's type is `initial`'s when `cursorTy` is `none`, the
+    common case; `some t` states a wider one, and `initial` and `step` are then typed under it
+    by subsumption, so a cursor whose members grow (an accumulator that starts empty) has one
+    stated type (DI-91). The loop answers `result` at the cursor that failed the test.
     Printed as `reduce`'s shape at the pin (`internal/effect.ts:4450-4470`): a suspension that
-    declares `let aN: T = initial` and maps the `Effect.whileLoop` to `result`. -/
-    | iterate (cursorTy : Ty) (initial test step result : Term) (body : Eff Op)
+    declares `let aN = initial` (`let aN: T = initial` under `some t`) and maps the
+    `Effect.whileLoop` to `result`. The annotation has no meaning at run time. -/
+    | iterate (cursorTy : Option Ty) (initial test step result : Term) (body : Eff Op)
   /-- A statement of a generator body. -/
   inductive Stmt (Op : Type)
     /-- `const aN = yield* e`: binds the answer as the next variable. -/

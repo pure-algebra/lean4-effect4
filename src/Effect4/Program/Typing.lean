@@ -347,11 +347,13 @@ mutual
       some ⟨.exitOf b.answer b.error, .never, b.requires⟩
     | .uninterruptible body => effTy sig env body
     | .interruptible body => effTy sig env body
-    -- `iterate`: the cursor is typed at its annotation; `initial` and `step` are under it by
-    -- subsumption (both sides normalized, as the annotation is stored raw), so the body, the
-    -- test and the result see one cursor type across every round. The answer is `result`'s.
-    | .iterate cursor initial test step result body => do
+    -- `iterate`: the cursor is typed at its annotation, or at `initial`'s type when there is
+    -- none (DI-91); `initial` and `step` are under it by subsumption (both sides normalized, as
+    -- the annotation is stored raw), so the body, the test and the result see one cursor type
+    -- across every round. The answer is `result`'s.
+    | .iterate cursorTy initial test step result body => do
       let c0 ← termTy sig env initial
+      let cursor := cursorTy.getD c0
       let t ← termTy sig (env ++ [cursor]) test
       let b ← effTy sig (env ++ [cursor]) body
       let c1 ← termTy sig (env ++ [cursor, b.answer]) step

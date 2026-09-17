@@ -562,7 +562,7 @@ cursor and the body's answer in the step. -/
 
 def pWhileLoop : NativeEff :=
   .bind (.perform .refMake (.lit (.nat 0)))
-    (.bind (.iterate .nat (.lit (.nat 0))
+    (.bind (.iterate none (.lit (.nat 0))
               (.app "lt" (.cons (.var 1) (.cons (.lit (.nat 3)) .nil)))
               (.app "succ" (.cons (.var 1) .nil))
               (.var 1)
@@ -582,7 +582,7 @@ def pWhileLoop : NativeEff :=
 the iterator or the loop frame; the exits of every program above are unchanged. -/
 
 def pLoopBare : NativeEff :=
-  .iterate .nat (.lit (.nat 0)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
+  .iterate none (.lit (.nat 0)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
     (.app "succ" (.cons (.var 0) .nil)) (.lit .unit) (.succeed (.lit .unit))
 
 #guard compile (.exit pSucceed) fuel = Prim.success (Val.exitOk (Val.nat 42))
@@ -607,39 +607,39 @@ term over the cursor that failed the test (the `select` and `iterate` packet §2
 
 /-- Count to three and answer the cursor. -/
 def pIterateCount : NativeEff :=
-  .iterate .nat (.lit (.nat 0)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
+  .iterate none (.lit (.nat 0)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
     (.app "succ" (.cons (.var 0) .nil)) (.var 0) (.succeed (.lit .unit))
 
 /-- One round: the step takes the body's answer; the result is the stepped cursor. -/
 def pIterateAnswer : NativeEff :=
-  .iterate .nat (.lit (.nat 0)) (.app "isZero" (.cons (.var 0) .nil)) (.var 1) (.var 0)
+  .iterate none (.lit (.nat 0)) (.app "isZero" (.cons (.var 0) .nil)) (.var 1) (.var 0)
     (.succeed (.lit (.nat 7)))
 
 /-- The loop under a binder, with stores: the cursor is `var 1`, the ref `var 0`. -/
 def pIterateRef : NativeEff :=
   .bind (.perform .refMake (.lit (.nat 0)))
-    (.iterate .nat (.lit (.nat 0))
+    (.iterate none (.lit (.nat 0))
       (.app "lt" (.cons (.var 1) (.cons (.lit (.nat 3)) .nil)))
       (.app "succ" (.cons (.var 1) .nil)) (.var 1)
       (.perform (.refUpdate FnName.incr) (.var 0)))
 
 /-- The annotation is wider than the initial cursor: `nat` under `nat | string`. -/
 def pIterateWide : NativeEff :=
-  .iterate (.union .nat .string) (.lit (.nat 0)) (.lit (.bool false)) (.var 0) (.var 0)
+  .iterate (some (.union .nat .string)) (.lit (.nat 0)) (.lit (.bool false)) (.var 0) (.var 0)
     (.succeed (.lit .unit))
 
 /-- Refused: the initial cursor is outside the annotation. -/
 def pIterateIllInitial : NativeEff :=
-  .iterate .string (.lit (.nat 0)) (.lit (.bool false)) (.var 0) (.var 0) (.succeed (.lit .unit))
+  .iterate (some .string) (.lit (.nat 0)) (.lit (.bool false)) (.var 0) (.var 0) (.succeed (.lit .unit))
 
 /-- Refused: the step (the body's answer, a string) is outside the annotation. -/
 def pIterateIllStep : NativeEff :=
-  .iterate .nat (.lit (.nat 0)) (.lit (.bool false)) (.var 1) (.var 0)
+  .iterate none (.lit (.nat 0)) (.lit (.bool false)) (.var 1) (.var 0)
     (.succeed (.lit (.str "x")))
 
 /-- A result that does not evaluate (an open variable) is the wrong shape, not `unit`. -/
 def pIterateBadResult : NativeEff :=
-  .iterate .nat (.lit (.nat 0)) (.lit (.bool false)) (.var 0) (.var 9) (.succeed (.lit .unit))
+  .iterate none (.lit (.nat 0)) (.lit (.bool false)) (.var 0) (.var 9) (.succeed (.lit .unit))
 
 #guard (typeOf nativeSignature pIterateCount).map (·.answer) = some .nat
 #guard (typeOf nativeSignature pIterateAnswer).map (·.answer) = some .nat

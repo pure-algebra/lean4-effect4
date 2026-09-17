@@ -564,13 +564,13 @@ def genFail : NativeEff :=
 def genDiscard : NativeEff :=
   .gen (.cons (.yieldDiscard store) (.cons (.bindYield (.succeed (.lit (.nat 5)))) (.cons (.ret (.var 0)) .nil)))
 def whileThree : NativeEff :=
-  .iterate .nat (.lit (.nat 0)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
+  .iterate none (.lit (.nat 0)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
     (.app "succ" (.cons (.var 0) .nil)) (.lit .unit) (.succeed (.lit .unit))
 def whileZero : NativeEff :=
-  .iterate .nat (.lit (.nat 5)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
+  .iterate none (.lit (.nat 5)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
     (.app "succ" (.cons (.var 0) .nil)) (.lit .unit) (.succeed (.lit .unit))
 def whileFailing : NativeEff :=
-  .iterate .nat (.lit (.nat 0)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
+  .iterate none (.lit (.nat 0)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
     (.app "succ" (.cons (.var 0) .nil)) (.lit .unit) (.fail (.lit (.nat 7)))
 def yieldNowThen : NativeEff := .bind (.yieldNow 0) (.succeed (.lit (.nat 5)))
 

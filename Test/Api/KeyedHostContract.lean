@@ -23,6 +23,7 @@ def initial : Session program table where
     lawful := by decide
     runnable := by decide
     intFreeTable := by decide
+    intFreeProgram := by decide
     intFreeType := by decide }
   header := ⟨version, "multi", "keyed-v2", table⟩
   machine := Api.load program 1000

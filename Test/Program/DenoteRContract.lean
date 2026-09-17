@@ -210,11 +210,11 @@ def resumedGen : NativeEff :=
 #guard inlineYield (.exit pSucceed) (rootPoint) = some (.success (.exitOk (.nat 42)))
 #guard inlineYield pExit (rootPoint) = some (.success (.exitErr (Cause.fail (Err.tag 7))))
 #guard inlineYield (.exit (.sync (.lit (.nat 42)))) (rootPoint) = none
-#guard inlineYield (.iterate .nat (.lit (.nat 0)) (.lit (.bool true)) (.var 0) (.lit .unit) pSucceed) (rootPoint) = none
+#guard inlineYield (.iterate none (.lit (.nat 0)) (.lit (.bool true)) (.var 0) (.lit .unit) pSucceed) (rootPoint) = none
 #guard result (.exit pSucceed) = .done (.success (.exitOk (.nat 42))) Stores.empty
 #guard operation? (observeRaw 1 (unfolded (.exit pSucceed)) Stores.empty) = none
 
-def endlessLoop : NativeEff := .iterate .nat (.lit (.nat 0)) (.lit (.bool true)) (.var 0) (.lit .unit) pSucceed
+def endlessLoop : NativeEff := .iterate none (.lit (.nat 0)) (.lit (.bool true)) (.var 0) (.lit .unit) pSucceed
 #guard operation? (observe 30 (unfolded endlessLoop) Stores.empty) =
   some (.loop (rootPoint) (.nat 0))
 

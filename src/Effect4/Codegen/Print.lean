@@ -392,16 +392,19 @@ mutual
       let b ← print sig (n + 1) a1
       .ok (.call (.ident "caseTag")
         [ printTerm s, .str t, .lambda [⟨Var.name n, none⟩] a, .lambda [⟨Var.name n, none⟩] b ])
-    -- `reduce`'s shape at the pin (`internal/effect.ts:4450-4470`): the cursor declared at
-    -- its annotation, the loop, and the loop mapped to the result over the last cursor.
-    | .iterate cursor initial test step result body => do
+    -- `reduce`'s shape at the pin (`internal/effect.ts:4450-4470`): the cursor declared, at
+    -- its annotation when it has one (DI-91), the loop, and the loop mapped to the result over
+    -- the last cursor.
+    | .iterate cursorTy initial test step result body => do
       let b ← print sig (n + 1) body
-      let annotation ← match Effect4.Codegen.Types.ofTy cursor with
-        | some target => .ok target
-        | none => .error (.typeSpelling cursor.render)
+      let annotation ← match cursorTy with
+        | none => .ok none
+        | some cursor => match Effect4.Codegen.Types.ofTy cursor with
+          | some target => .ok (some target)
+          | none => .error (.typeSpelling cursor.render)
       .ok (.call (.ident "Effect.suspend")
         [ .arrowBlock []
-            [ .letInit (Var.name n) (printTerm initial) (some annotation)
+            [ .letInit (Var.name n) (printTerm initial) annotation
             , .ret (.call (.ident "Effect.map")
                 [ .call (.ident "Effect.whileLoop")
                     [ .object

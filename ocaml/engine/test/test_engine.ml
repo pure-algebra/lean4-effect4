@@ -332,7 +332,8 @@ let sample_effs =
     E.Eff_exit u;
     E.Eff_uninterruptible u;
     E.Eff_interruptible u;
-    E.Eff_iterate (E.Ty_unit, a_term, a_term, a_term, a_term, u);
+    E.Eff_iterate (None, a_term, a_term, a_term, a_term, u);
+    E.Eff_iterate (Some E.Ty_unit, a_term, a_term, a_term, a_term, u);
     E.Eff_yieldNow 0;
     E.Eff_awaitFiber (a_term, E.Observer_mode_awaitValue);
     E.Eff_withFiber E.Action_term_getId;

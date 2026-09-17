@@ -86,7 +86,7 @@ module type PROGRAM_TYPES = sig
   | Eff_provideService of service_key * term * 'op eff
   | Eff_catchIf of term * 'op eff * 'op eff
   | Eff_select of term * decision * 'op eff * 'op eff
-  | Eff_iterate of ty * term * term * term * term * 'op eff
+  | Eff_iterate of ty option * term * term * term * term * 'op eff
   and 'op stmt = | Stmt_bindYield of 'op eff
   | Stmt_yieldDiscard of 'op eff
   | Stmt_ret of term

@@ -96,9 +96,9 @@ def writeThenRead : Src NativeOp :=
           (.perform .refSet (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 9)) .nil)))))
 
 #guard elaborate
-    (iterate "i" "_" .nat (nat 0) (app "lt" [var "i", nat 3]) (app "add" [var "i", nat 1])
+    (iterate "i" "_" none (nat 0) (app "lt" [var "i", nat 3]) (app "add" [var "i", nat 1])
       (var "i") (Ref.make (var "i")) : Src NativeOp)
-  = .ok (.iterate .nat (.lit (.nat 0))
+  = .ok (.iterate none (.lit (.nat 0))
           (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
           (.app "add" (.cons (.var 0) (.cons (.lit (.nat 1)) .nil)))
           (.var 0)
@@ -106,8 +106,8 @@ def writeThenRead : Src NativeOp :=
 
 -- The loop's step sees the body's answer at the level after the cursor.
 #guard elaborate
-    (iterate "i" "a" .nat (nat 0) (app "lt" [var "i", nat 3]) (var "a") (var "i") (succeed (var "i")) : Src NativeOp)
-  = .ok (.iterate .nat (.lit (.nat 0))
+    (iterate "i" "a" none (nat 0) (app "lt" [var "i", nat 3]) (var "a") (var "i") (succeed (var "i")) : Src NativeOp)
+  = .ok (.iterate none (.lit (.nat 0))
           (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
           (.var 1) (.var 0) (.succeed (.var 0)))
 

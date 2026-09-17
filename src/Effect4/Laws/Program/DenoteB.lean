@@ -159,7 +159,7 @@ theorem Looped.suspend {b : NativeEff} (h : Looped (.suspend b) = true) : Looped
 theorem Looped.exit {b : NativeEff} (h : Looped (.exit b) = true) : Looped b = true := by
   simpa [Looped] using h
 
-theorem Looped.iterate {c : Ty} {i t st r : Term} {b : NativeEff}
+theorem Looped.iterate {c : Option Ty} {i t st r : Term} {b : NativeEff}
     (h : Looped (.iterate c i t st r b) = true) : Looped b = true := by
   simpa [Looped] using h
 

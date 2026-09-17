@@ -63,14 +63,14 @@ theorem iter_run_inr {f : Val → Effects.Program StoreSig (Option ExitV ⊕ Val
   rw [iter_succ, runP_map, runP_bind, h,
     show iterNext (iter f j) (Sum.inr c') = iter f j c' from rfl, runP_map]
 
-theorem loopAt_iterate {q : Point} {cty : Ty} {init test step result : Term} {body : NativeEff}
+theorem loopAt_iterate {q : Point} {cty : Option Ty} {init test step result : Term} {body : NativeEff}
     (h : Node.at_ (Node.eff root) q.path =
       some (Node.eff (.iterate cty init test step result body))) :
     loopAt root q = some (test, step, body) := by
   unfold loopAt
   rw [h]
 
-theorem loopResultAt_iterate {q : Point} {cty : Ty} {init test step result : Term}
+theorem loopResultAt_iterate {q : Point} {cty : Option Ty} {init test step result : Term}
     {body : NativeEff}
     (h : Node.at_ (Node.eff root) q.path =
       some (Node.eff (.iterate cty init test step result body))) :
@@ -81,7 +81,7 @@ theorem loopResultAt_iterate {q : Point} {cty : Ty} {init test step result : Ter
 /-- **Rounds of `iter` are rounds of the loop frame.** Given the body's agreement under the
 loop's frame, a finished budgeted loop from the cursor `c` is reached by the machine from the
 loop's next decision at `c`. -/
-theorem loop_reaches (k : Nat) (q : Point) (hq : loopPoint q = q) {cty : Ty}
+theorem loop_reaches (k : Nat) (q : Point) (hq : loopPoint q = q) {cty : Option Ty}
     {init test step result : Term} {body : NativeEff}
     (h : Node.at_ (Node.eff root) q.path =
       some (Node.eff (.iterate cty init test step result body)))

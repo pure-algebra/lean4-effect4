@@ -276,7 +276,7 @@ theorem selectTag_scoped {Op : Type} (payload : String) (rest : String) {scrutin
   simp only [Env.push_length, List.length_cons, List.length_nil] at s3
   simp [s0, s2, s3]
 
-theorem iterate_scoped {Op : Type} (cursor : String) (answer : String) (cursorTy : Effect4.Program.Ty) {initial : TermSrc} {test : TermSrc} {step : TermSrc} {result : TermSrc} {body : Src Op} (h1 : initial.Scoped) (h2 : test.Scoped) (h3 : step.Scoped) (h4 : result.Scoped) (h5 : body.Scoped) :
+theorem iterate_scoped {Op : Type} (cursor : String) (answer : String) (cursorTy : Option Effect4.Program.Ty) {initial : TermSrc} {test : TermSrc} {step : TermSrc} {result : TermSrc} {body : Src Op} (h1 : initial.Scoped) (h2 : test.Scoped) (h3 : step.Scoped) (h4 : result.Scoped) (h5 : body.Scoped) :
     ((iterate cursor answer cursorTy initial test step result body) : Src Op).Scoped := by
   refine ⟨fun env p e h => ?_⟩
   unfold iterate at h
@@ -600,7 +600,7 @@ example : Src.Scoped (Op := Unit)
   authoring_scoped
 
 example : Src.Scoped (Op := Unit)
-    (iterate "i" "a" .nat (nat 0) (app "lt" [var "i", nat 3]) (var "a") (var "i") (succeed (var "i"))) := by
+    (iterate "i" "a" none (nat 0) (app "lt" [var "i", nat 3]) (var "a") (var "i") (succeed (var "i"))) := by
   authoring_scoped
 
 example : Src.Scoped (Op := Unit)

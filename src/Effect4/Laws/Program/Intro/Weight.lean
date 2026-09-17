@@ -84,7 +84,7 @@ theorem suspendBodyAt_gen {root : NativeEff} {q : Point} {k : Nat} {ss : Stmts N
     suspendBodyAt root (EffThunk.body q) = Prim.iterator (EffName.gen q [] false) Val.unit := by
   simp [suspendBodyAt, hf, h]
 
-theorem suspendBodyAt_iterate {root : NativeEff} {q : Point} {k : Nat} {c : Ty}
+theorem suspendBodyAt_iterate {root : NativeEff} {q : Point} {k : Nat} {c : Option Ty}
     {i t s r : Term} {b : NativeEff} (hf : q.fuel = k + 1)
     (h : Node.at_ (Node.eff root) q.path = some (Node.eff (.iterate c i t s r b))) :
     suspendBodyAt root (EffThunk.body q) =

@@ -586,7 +586,7 @@ let rec emit_eff (b : Buffer.t) (v : eff) : unit =
   | Eff_provideService (a0, a1, a2) -> Eff_frame.emit_ctor b 25 (fun b -> emit_service_key b a0; emit_term b a1; emit_eff b a2)
   | Eff_catchIf (a0, a1, a2) -> Eff_frame.emit_ctor b 26 (fun b -> emit_term b a0; emit_eff b a1; emit_eff b a2)
   | Eff_select (a0, a1, a2, a3) -> Eff_frame.emit_ctor b 27 (fun b -> emit_term b a0; emit_decision b a1; emit_eff b a2; emit_eff b a3)
-  | Eff_iterate (a0, a1, a2, a3, a4, a5) -> Eff_frame.emit_ctor b 28 (fun b -> emit_ty b a0; emit_term b a1; emit_term b a2; emit_term b a3; emit_term b a4; emit_eff b a5)
+  | Eff_iterate (a0, a1, a2, a3, a4, a5) -> Eff_frame.emit_ctor b 28 (fun b -> Eff_frame.emit_option b (fun b y -> emit_ty b y) a0; emit_term b a1; emit_term b a2; emit_term b a3; emit_term b a4; emit_eff b a5)
 and emit_stmt (b : Buffer.t) (v : stmt) : unit =
   match v with
   | Stmt_bindYield a0 -> Eff_frame.emit_ctor b 0 (fun b -> emit_eff b a0)
@@ -823,7 +823,7 @@ let rec decode_eff (s : string) (pos : int) (limit : int) : (eff * int) option =
              | Some (a3, p) ->
               if p = e then Some (Eff_select (a0, a1, a2, a3), next) else None))))
     | 28 ->
-      (match decode_ty s p e with
+      (match (Eff_frame.decode_option decode_ty) s p e with
        | None -> None
        | Some (a0, p) ->
         (match decode_term s p e with

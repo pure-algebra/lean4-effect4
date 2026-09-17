@@ -147,16 +147,16 @@ theorem inv_select (sig : Signature Op) (env : TyEnv) (s : Term) (d : Decision) 
   subst ht
   exact ⟨ty, e0, e1, t0, t1, answer, hs, harms, ht0, ht1, hans, rfl⟩
 
-theorem inv_iterate (sig : Signature Op) (env : TyEnv) (cursor : Ty)
+theorem inv_iterate (sig : Signature Op) (env : TyEnv) (cursorTy : Option Ty)
     (initial test step result : Term) (body : Eff Op) :
-    ∀ t, effTy sig env (.iterate cursor initial test step result body) = some t →
+    ∀ t, effTy sig env (.iterate cursorTy initial test step result body) = some t →
       ∃ c0 c1 d b, termTy sig env initial = some c0 ∧
-        termTy sig (env ++ [cursor]) test = some .bool ∧
-        effTy sig (env ++ [cursor]) body = some b ∧
-        termTy sig (env ++ [cursor, b.answer]) step = some c1 ∧
-        termTy sig (env ++ [cursor]) result = some d ∧
-        Ty.sub c0.normalize cursor.normalize = true ∧
-        Ty.sub c1.normalize cursor.normalize = true ∧
+        termTy sig (env ++ [cursorTy.getD c0]) test = some .bool ∧
+        effTy sig (env ++ [cursorTy.getD c0]) body = some b ∧
+        termTy sig (env ++ [cursorTy.getD c0, b.answer]) step = some c1 ∧
+        termTy sig (env ++ [cursorTy.getD c0]) result = some d ∧
+        Ty.sub c0.normalize (cursorTy.getD c0).normalize = true ∧
+        Ty.sub c1.normalize (cursorTy.getD c0).normalize = true ∧
         t = ⟨d, b.error, b.requires⟩ := by
   refine Option.of_triple ?_
   simp only [effTy]; mvcgen; all_goals simp_all

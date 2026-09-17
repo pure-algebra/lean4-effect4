@@ -66,7 +66,7 @@ def pLoopUnderSelect : NativeEff :=
 /-- A loop whose body fails on the third round, caught: the handler answers 5. -/
 def pLoopCaught : NativeEff :=
   .catchCause
-    (.iterate .nat (.lit (.nat 0)) (.lit (.bool true)) (.app "succ" (.cons (.var 0) .nil)) (.var 0)
+    (.iterate none (.lit (.nat 0)) (.lit (.bool true)) (.app "succ" (.cons (.var 0) .nil)) (.var 0)
       (.select (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 2)) .nil))) .bool
         (.succeed (.lit .unit)) (.fail (.lit (.nat 4)))))
     (.succeed (.lit (.nat 5)))
@@ -82,9 +82,9 @@ def pLoopExit : NativeEff := .exit pIterateCount
 
 /-- Two rounds of an outer loop, each running the three-round inner loop. -/
 def pLoopNested : NativeEff :=
-  .iterate .nat (.lit (.nat 0)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 2)) .nil)))
+  .iterate none (.lit (.nat 0)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 2)) .nil)))
     (.app "succ" (.cons (.var 0) .nil)) (.var 0)
-    (.iterate .nat (.lit (.nat 0)) (.app "lt" (.cons (.var 1) (.cons (.lit (.nat 3)) .nil)))
+    (.iterate none (.lit (.nat 0)) (.app "lt" (.cons (.var 1) (.cons (.lit (.nat 3)) .nil)))
       (.app "succ" (.cons (.var 1) .nil)) (.var 1) (.succeed (.lit .unit)))
 
 #guard [pLoopUnderSelect, pLoopCaught, pLoopOnExit, pLoopExit, pLoopNested].all Looped

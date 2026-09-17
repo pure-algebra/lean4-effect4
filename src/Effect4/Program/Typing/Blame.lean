@@ -176,10 +176,11 @@ mutual
           match effTy sig (env ++ e0) a0 with
           | none => explainEff sig (env ++ e0) (p ++ [0]) a0
           | some _ => explainEff sig (env ++ e1) (p ++ [1]) a1
-    | .iterate cursor initial test step result body =>
+    | .iterate cursorTy initial test step result body =>
       match termTy sig env initial with
       | none => some ⟨p, .term initial⟩
       | some c0 =>
+        let cursor := cursorTy.getD c0
         match termTy sig (env ++ [cursor]) test with
         | none => some ⟨p, .term test⟩
         | some t =>

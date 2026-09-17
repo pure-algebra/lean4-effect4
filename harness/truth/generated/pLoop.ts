@@ -3,7 +3,7 @@
 import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope } from "effect"
 import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, incr, double, takeAndBump, zeroWhenPositive, noChange, Host, Sql, Kv } from "../prelude.ts"
 export const main: Effect.Effect<void, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.suspend(() => {
-  let a1: number = 0
+  let a1 = 0
   return Effect.map(Effect.whileLoop({
     while: () => isZero(a1),
     body: () => Ref.update(a0, incr),

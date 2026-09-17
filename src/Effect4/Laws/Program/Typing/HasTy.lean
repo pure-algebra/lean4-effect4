@@ -173,19 +173,20 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
   | interruptible {env : TyEnv} {body : Eff Op} {t : EffTy} :
       HasTy sig env body t →
       HasTy sig env (.interruptible body) t
-  /-- `iterate`: the cursor has its annotation's type in the test, the body, the step and the
-  result; `initial` and `step` are under the annotation by subsumption, which is what carries
-  the cursor's membership across rounds (`hasTy_sub`). The answer is the result's type. -/
-  | iterate {env : TyEnv} {cursor : Ty} {initial test step result : Term} {body : Eff Op}
-      {c0 c1 d : Ty} {b : EffTy} :
+  /-- `iterate`: the cursor has its annotation's type, or `initial`'s when there is none
+  (DI-91), in the test, the body, the step and the result; `initial` and `step` are under it by
+  subsumption, which is what carries the cursor's membership across rounds (`hasTy_sub`). The
+  answer is the result's type. -/
+  | iterate {env : TyEnv} {cursorTy : Option Ty} {initial test step result : Term}
+      {body : Eff Op} {c0 c1 d : Ty} {b : EffTy} :
       termTy sig env initial = some c0 →
-      termTy sig (env ++ [cursor]) test = some .bool →
-      HasTy sig (env ++ [cursor]) body b →
-      termTy sig (env ++ [cursor, b.answer]) step = some c1 →
-      termTy sig (env ++ [cursor]) result = some d →
-      Ty.sub c0.normalize cursor.normalize = true →
-      Ty.sub c1.normalize cursor.normalize = true →
-      HasTy sig env (.iterate cursor initial test step result body) ⟨d, b.error, b.requires⟩
+      termTy sig (env ++ [cursorTy.getD c0]) test = some .bool →
+      HasTy sig (env ++ [cursorTy.getD c0]) body b →
+      termTy sig (env ++ [cursorTy.getD c0, b.answer]) step = some c1 →
+      termTy sig (env ++ [cursorTy.getD c0]) result = some d →
+      Ty.sub c0.normalize (cursorTy.getD c0).normalize = true →
+      Ty.sub c1.normalize (cursorTy.getD c0).normalize = true →
+      HasTy sig env (.iterate cursorTy initial test step result body) ⟨d, b.error, b.requires⟩
   /-- `Effect.yieldNowWith` (`:982-990`): pure `void`, whatever the priority. -/
   | yieldNow {env : TyEnv} (priority : Nat) :
       HasTy sig env (.yieldNow priority) (EffTy.pure .unit)

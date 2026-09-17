@@ -2,6 +2,7 @@ import Effect4.Program.Table
 import Effect4.Program.CheckedTyping
 import Effect4.Program.Native
 import Effect4.Program.Fragment
+import Effect4.Program.Fold
 
 /-!
 # Program.Admission — static verification and admission certificates
@@ -53,6 +54,17 @@ where
 def findIntInEffTy (ty : EffTy) : Option Path :=
   findInt ["program", "answer"] ty.answer <|> findInt ["program", "error"] ty.error
 
+/-- A type stated inside the program tree is the third place the reserved constructor can
+hide (DI-92): an `iterate`'s cursor annotation. The columns of the certificate do not see it,
+since a cursor's type need not reach the answer or the error. The path is the node's, then
+`cursorTy`. -/
+def findIntInProgram (program : NativeEff) : Option Path :=
+  foldMapAt_eff (M := Option Path) none (· <|> ·) [] program
+    (f_eff := fun e p => match e with
+      | .iterate (some t) _ _ _ _ _ =>
+        findInt ("program" :: p.map toString ++ ["cursorTy"]) t
+      | _ => none)
+
 /-- Admission refusals, reporting the exact failure reason. -/
 inductive AdmitRefusal
   /-- `Program.typeOf` answered `none` against this table. -/
@@ -65,7 +77,8 @@ inductive AdmitRefusal
   | valueRowTrailing (key : String × List String)
   /-- This runner cannot register a supplied row, with its position. -/
   | table (why : TableRefusal)
-  /-- A raw table or inferred program type mentions the reserved integer constructor. -/
+  /-- A raw table, the program tree or the inferred program type mentions the reserved
+  integer constructor. -/
   | uninhabited («at» : Path)
 deriving DecidableEq, Repr
 
@@ -77,6 +90,7 @@ structure AdmittedProgram (program : NativeEff) (table : RowTable)
   lawful : Table.lawful table = true
   runnable : checkTable table = none
   intFreeTable : findIntInTable table = none
+  intFreeProgram : findIntInProgram program = none
   intFreeType : findIntInEffTy ty = none
 
 /-- Decide admission by scanning raw table types, taking the one typing certificate
@@ -87,6 +101,9 @@ def admitProgram (program : NativeEff) (table : RowTable := []) :
   match htable : findIntInTable table with
   | some pos => .error (.uninhabited pos)
   | none =>
+    match hprogram : findIntInProgram program with
+    | some pos => .error (.uninhabited pos)
+    | none =>
     match checkTypedProgram (nativeSignature table) program with
     | none => .error .illTyped
     | some typing =>
@@ -96,7 +113,7 @@ def admitProgram (program : NativeEff) (table : RowTable := []) :
         if hlawful : Table.lawful table = true then
           match hrunnable : checkTable table with
           | some why => .error (.table why)
-          | none => .ok ⟨typing, hlawful, hrunnable, htable, htype⟩
+          | none => .ok ⟨typing, hlawful, hrunnable, htable, hprogram, htype⟩
         else
           match Table.checkLawful table with
           | some (.duplicateKey k) => .error (.duplicateKey k)
@@ -157,27 +174,40 @@ theorem admitProgram_table_int (program : NativeEff) (table : RowTable) (pos : P
   unfold admitProgram
   split <;> simp_all
 
-/-- An inferred integer occurrence is refused after the table scan succeeds. -/
+/-- Integer syntax stated inside the program tree is refused with its exact path, after the
+table scan succeeds (DI-92). -/
+theorem admitProgram_program_int (program : NativeEff) (table : RowTable) (pos : Path)
+    (hTable : findIntInTable table = none) (h : findIntInProgram program = some pos) :
+    admitProgram program table = .error (.uninhabited pos) := by
+  unfold admitProgram
+  split
+  · simp_all
+  · split <;> simp_all
+
+/-- An inferred integer occurrence is refused after the table and the tree scans succeed. -/
 theorem admitProgram_type_int (program : NativeEff) (table : RowTable) (ty : EffTy) (pos : Path)
-    (hTable : findIntInTable table = none) (hTy : typeOfProgram (nativeSignature table) program = some ty)
+    (hTable : findIntInTable table = none) (hProgram : findIntInProgram program = none)
+    (hTy : typeOfProgram (nativeSignature table) program = some ty)
     (hInt : findIntInEffTy ty = some pos) :
     admitProgram program table = .error (.uninhabited pos) := by
   unfold admitProgram
   split
   · simp_all
   · split
-    · rename_i hnone
-      unfold checkTypedProgram at hnone
-      split at hnone <;> simp_all
-    · rename_i typing _
-      have heq : typing.ty = ty := Option.some.inj (typing.typed.symm.trans hTy)
-      split
-      · rename_i pos' hpos'
-        rw [heq] at hpos'
-        have hpos : pos' = pos := by injection (hpos'.symm.trans hInt)
-        rw [hpos]
+    · simp_all
+    · split
       · rename_i hnone
-        rw [heq, hInt] at hnone
-        contradiction
+        unfold checkTypedProgram at hnone
+        split at hnone <;> simp_all
+      · rename_i typing _
+        have heq : typing.ty = ty := Option.some.inj (typing.typed.symm.trans hTy)
+        split
+        · rename_i pos' hpos'
+          rw [heq] at hpos'
+          have hpos : pos' = pos := by injection (hpos'.symm.trans hInt)
+          rw [hpos]
+        · rename_i hnone
+          rw [heq, hInt] at hnone
+          contradiction
 
 end Effect4.Program

@@ -603,7 +603,7 @@ theorem compileEff_interruptible (b : NativeEff) (hf : p.fuel = k + 1) :
     compileEff (.interruptible b) p = Prim.withFiber (EffThunk.act p) := by
   simp only [compileEff, hf]
 
-theorem compileEff_iterate (cursor : Ty) (initial test step result : Term) (b : NativeEff)
+theorem compileEff_iterate (cursor : Option Ty) (initial test step result : Term) (b : NativeEff)
     (hf : p.fuel = k + 1) :
     compileEff (.iterate cursor initial test step result b) p = Prim.suspend (EffThunk.body p) := by
   simp only [compileEff, hf]

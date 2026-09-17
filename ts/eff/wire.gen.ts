@@ -325,7 +325,7 @@ const writeEff = (w: Writer, v: Eff): void => {
     case "provideService": return w.ctor(25, [() => writeServiceKey(w, v.key), () => writeTerm(w, v.value), () => writeEff(w, v.body)])
     case "catchIf": return w.ctor(26, [() => writeTerm(w, v.test), () => writeEff(w, v.body), () => writeEff(w, v.handler)])
     case "select": return w.ctor(27, [() => writeTerm(w, v.scrutinee), () => writeDecision(w, v.decision), () => writeEff(w, v.arm0), () => writeEff(w, v.arm1)])
-    case "iterate": return w.ctor(28, [() => writeTy(w, v.cursorTy), () => writeTerm(w, v.initial), () => writeTerm(w, v.test), () => writeTerm(w, v.step), () => writeTerm(w, v.result), () => writeEff(w, v.body)])
+    case "iterate": return w.ctor(28, [() => w.option(v.cursorTy, (y) => writeTy(w, y)), () => writeTerm(w, v.initial), () => writeTerm(w, v.test), () => writeTerm(w, v.step), () => writeTerm(w, v.result), () => writeEff(w, v.body)])
     default: throw new TypeError("wire Eff constructor")
   }
 }

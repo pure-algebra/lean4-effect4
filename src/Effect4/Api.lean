@@ -386,7 +386,8 @@ None of this is a completion claim: an admitted program may park at a live front
 frontier is never a refusal (`AGENTS.md`, representation rules). -/
 
 export Effect4.Program (TableRefusal checkTable rowKey AdmittedProgram AdmitRefusal admitProgram
-  admitProgram_table_int admitProgram_type_int Path findInt findIntInTable findIntInEffTy
+  admitProgram_table_int admitProgram_program_int admitProgram_type_int Path findInt findIntInTable
+  findIntInProgram findIntInEffTy
   AdmittedStraightProgram StraightAdmitRefusal admitStraightProgram)
 
 namespace Table

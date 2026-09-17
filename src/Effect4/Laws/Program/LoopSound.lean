@@ -305,10 +305,12 @@ theorem soundB (bad : ExitV) (k : Nat) : ∀ (e : NativeEff) (tys : TyEnv) (env 
     (s : Stores) (t : EffTy), Looped e = true → effTy nativeSignature tys e = some t →
     TypedAt tys env s →
     SoundB (denoteBWith bad k e env) (denoteB k e env) s t.answer t.error
-  | .iterate cursor initial test step result body, tys, env, s, t, hl, hty, hat => by
+  | .iterate cursorTy initial test step result body, tys, env, s, t, hl, hty, hat => by
     have hlb := Looped.iterate hl
     obtain ⟨c0, c1, d, b, hinit, htest, hbody, hstepTy, hres, hsub0, hsub1, rfl⟩ :=
-      inv_iterate nativeSignature tys cursor initial test step result body t hty
+      inv_iterate nativeSignature tys cursorTy initial test step result body t hty
+    -- the cursor's type: the annotation, or the initial value's (DI-91)
+    generalize cursorTy.getD c0 = cursor at htest hbody hstepTy hres hsub0 hsub1
     obtain ⟨x₀, hx₀⟩ :=
       Option.isSome_iff_exists.mp (evalTerm_isSome initial env tys c0 hat.fits hinit)
     have hx₀ty := hasTy_of_sub_normalize hsub0 (evalTerm_hasTy initial env tys c0 x₀ hat.fits hinit hx₀)

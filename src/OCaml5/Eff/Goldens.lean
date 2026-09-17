@@ -205,7 +205,9 @@ partial def effV : Eff NativeOp → V
   | .interruptible b => .ctor ``Eff.interruptible [effV b]
   | .select s d a0 a1 => .ctor ``Eff.select [termV s, decisionV d, effV a0, effV a1]
   | .iterate c i t s r b =>
-    .ctor ``Eff.iterate [tyV c, termV i, termV t, termV s, termV r, effV b]
+    .ctor ``Eff.iterate
+      [match c with | none => .none | some ty => .some (tyV ty), termV i, termV t, termV s,
+        termV r, effV b]
   | .yieldNow p => .ctor ``Eff.yieldNow [.nat p]
   | .awaitFiber f m => .ctor ``Eff.awaitFiber [termV f, modeV m]
   | .withFiber a => .ctor ``Eff.withFiber [actionV a]
@@ -292,7 +294,7 @@ def pAwait : P := .bind (.perform .deferredMake u) (.perform .deferredAwait (v 0
 def pGen : P := .gen (st [.bindYield (.succeed (n 1)), .ret (.app "succ" (ts [v 0]))])
 /-- Kept under its name (DI-60: no fixture is renamed). `whileLoop` retired into `iterate`:
 the same loop written with `iterate .nat` and answering `.lit .unit`. -/
-def pWhile : P := .iterate .nat (n 0) (.app "lt" (ts [v 0, n 3])) (.app "succ" (ts [v 0])) u (.yieldNow 0)
+def pWhile : P := .iterate none (n 0) (.app "lt" (ts [v 0, n 3])) (.app "succ" (ts [v 0])) u (.yieldNow 0)
 def pCatch : P := .catchCause (.fail (n 1)) (.succeed (n 0))
 def pStr : P := .succeed (.lit (.str "hi \"there\"\n"))
 def pFailCause : P :=
@@ -309,10 +311,10 @@ def pMasks : P := .uninterruptible (.interruptible (.succeed (n 1)))
 def pBranch : P := .select (.lit (.bool true)) .bool (.succeed (n 1)) (.fail (n 2))
 /-- Count to three and answer the cursor. -/
 def pIterate : P :=
-  .iterate .nat (n 0) (.app "lt" (ts [v 0, n 3])) (.app "succ" (ts [v 0])) (v 0) (.yieldNow 0)
+  .iterate none (n 0) (.app "lt" (ts [v 0, n 3])) (.app "succ" (ts [v 0])) (v 0) (.yieldNow 0)
 /-- One round: the step takes the body's answer, and the result is the stepped cursor. -/
 def pIterateAnswer : P :=
-  .iterate .nat (n 0) (.app "isZero" (ts [v 0])) (v 1) (v 0) (.succeed (n 7))
+  .iterate none (n 0) (.app "isZero" (ts [v 0])) (v 1) (v 0) (.succeed (n 7))
 def pSelectBool : P := .select (.lit (.bool false)) .bool (.succeed (n 1)) (.succeed (n 2))
 def pSelectOption : P :=
   .catchCause (.fail (n 7))
@@ -399,7 +401,7 @@ ordinary synchronous read and is typed. -/
 def pIllCallback : P := .bind (.perform .refMake (n 0)) (.perform .refGet (v 0))
 /-- Kept under its name (DI-60: no fixture is renamed). `whileLoop` retired into `iterate`:
 the step term is ill-typed (boolean instead of nat). -/
-def pIllStep : P := .iterate .nat (n 0) (.app "lt" (ts [v 0, n 3])) (.lit (.bool true)) u (.yieldNow 0)
+def pIllStep : P := .iterate none (n 0) (.app "lt" (ts [v 0, n 3])) (.lit (.bool true)) u (.yieldNow 0)
 def pIllInterruptor : P := .failCause (.interrupt (some (.lit (.bool true))))
 
 /-- The join (2026-09-07): a layer of every constructor, provided to a body that reads a

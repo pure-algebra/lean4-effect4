@@ -221,9 +221,17 @@ def sig : Signature (Fin 3) :=
       (.succeed (.lit .unit)))).map (expr house0 0)
   = .ok "Effect.suspend(() => true ? Effect.succeed(1) : Effect.succeed(undefined))"
 
-#guard (print sig 0 (.iterate .nat (.lit (.nat 0)) (.var 0) (.app "succ" (.cons (.var 1) .nil))
+-- no annotation: the cursor has its initial value's type and the declaration carries none (DI-91)
+#guard (print sig 0 (.iterate none (.lit (.nat 0)) (.var 0) (.app "succ" (.cons (.var 1) .nil))
       (.var 0) (.succeed (.var 0)))).map (expr house0 0)
-  = .ok ("Effect.suspend(() => {\n  let a0: number = 0\n  return Effect.map(Effect.whileLoop({\n"
+  = .ok ("Effect.suspend(() => {\n  let a0 = 0\n  return Effect.map(Effect.whileLoop({\n"
+      ++ "    while: () => a0,\n    body: () => Effect.succeed(a0),\n"
+      ++ "    step: (a1) => {\n      a0 = succ(a1)\n    },\n  }), () => a0)\n})")
+
+-- a stated, wider cursor prints its annotation
+#guard (print sig 0 (.iterate (some (.union .nat .string)) (.lit (.nat 0)) (.var 0)
+      (.app "succ" (.cons (.var 1) .nil)) (.var 0) (.succeed (.var 0)))).map (expr house0 0)
+  = .ok ("Effect.suspend(() => {\n  let a0: number | string = 0\n  return Effect.map(Effect.whileLoop({\n"
       ++ "    while: () => a0,\n    body: () => Effect.succeed(a0),\n"
       ++ "    step: (a1) => {\n      a0 = succ(a1)\n    },\n  }), () => a0)\n})")
 

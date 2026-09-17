@@ -113,6 +113,7 @@ theorem admitProgram_eq_ok {program : NativeEff} {table : RowTable}
     (admitted : AdmittedProgram program table) :
     admitProgram program table = .ok admitted := by
   have tableFree := admitted.intFreeTable
+  have programFree := admitted.intFreeProgram
   have typeFree := admitted.intFreeType
   have lawful := admitted.lawful
   have runnable := admitted.runnable
@@ -122,16 +123,18 @@ theorem admitProgram_eq_ok {program : NativeEff} {table : RowTable}
   · simp_all
   · split
     · simp_all
-    · rename_i typing htyping
-      have same : typing = admitted.toTypedProgram :=
-        Option.some.inj (htyping.symm.trans checked)
-      subst same
-      split
+    · split
       · simp_all
-      · simp only [lawful, dite_true]
+      · rename_i typing htyping
+        have same : typing = admitted.toTypedProgram :=
+          Option.some.inj (htyping.symm.trans checked)
+        subst same
         split
         · simp_all
-        · cases admitted
-          rfl
+        · simp only [lawful, dite_true]
+          split
+          · simp_all
+          · cases admitted
+            rfl
 
 end Effect4.Program

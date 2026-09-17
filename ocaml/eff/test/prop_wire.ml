@@ -95,7 +95,7 @@ let rec rand_eff d =
     | 13 -> Eff_uninterruptible (e ())
     | 14 -> Eff_interruptible (e ())
     | 15 -> Eff_select (t (), Decision_bool, e (), e ())
-    | 16 -> Eff_iterate (Ty_nat, t (), t (), t (), t (), e ())
+    | 16 -> Eff_iterate ((if rb () then None else Some Ty_nat), t (), t (), t (), t (), e ())
     | 17 -> Eff_yieldNow (rand_nat ())
     | 18 -> Eff_perform (rand_op (), t ())
     | 19 -> Eff_awaitFiber (t (), rand_mode ())

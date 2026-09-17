@@ -160,7 +160,7 @@ open Test.Program.RuntimeRContract
 
 def repeated (n : Nat) : NativeEff :=
   .scoped (.bind (.perform .deferredMake (.lit .unit))
-    (.iterate .nat (.lit (.nat 0))
+    (.iterate none (.lit (.nat 0))
       (.app "lt" (.cons (.var 1) (.cons (.lit (.nat n)) .nil)))
       (.app "succ" (.cons (.var 1) .nil))
       (.var 1)

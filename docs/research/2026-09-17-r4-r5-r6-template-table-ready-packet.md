@@ -46,8 +46,9 @@ The module extends the probe with what the printer's clauses use and nothing mor
   `arrowBlock` with the three statement formers the image uses (`letInit` with an annotation,
   `assign`, `ret`, `exprStmt`);
 - sorted holes. A captured argument is one of `expr`, `exprs` (the variadic `raceAll` and
-  `mergeAll`), `type` (`iterate`'s annotation), `str` (`caseTag`'s tag), `int` (`yieldNow`'s
-  priority), so `Subst` is `List (Nat × Arg)` over that sum;
+  `mergeAll`), `str` (`caseTag`'s tag), `int` (`yieldNow`'s priority), so `Subst` is
+  `List (Nat × Arg)` over that sum. There is no `type` hole: under DI-91 the readable loop
+  carries no annotation, and the annotated one is outside `readable`;
 - the second engine lemma, owed and not yet probed: for a template whose holes are distinct,
   `matchT n t e = some σ → inst n σ t = some e`. It is `read_exact`'s engine as `match_inst`
   is `read_print`'s.
@@ -89,7 +90,7 @@ largest thing left.
 5. **R5.2** the laws through the two engine lemmas: `read_print` (law 11), `read_exact` with no
    `readable` premise, as today (law 12). `readable` keeps its name and is guarded by a Boolean
    equality against today's definition on the corpus before it is redefined.
-6. **R5.3** `iterate` is read (needs D1 below). `holdsLoop` in `ReadContract` turns back into the
+6. **R5.3** `iterate` is read (the unannotated form, DI-91). `holdsLoop` in `ReadContract` turns back into the
    plain guard; `tools/Tools/Corpus.lean` writes loops again; `generated/corpus-index.tsv` and
    `generated/tsdiag-agreement.tsv` regain the 45 rows. `Read.lean` is `readable`, the leaf
    readers and the table.
@@ -98,7 +99,7 @@ largest thing left.
    `check-ts-reader` byte-identical on every oracle, loops included; DI-88's LCNF-to-TypeScript
    reader backend is cancelled, as the design says.
 
-## 5. The decision the owner owes (DI-91)
+## 5. The decision that was owed (DI-91): ruled and landed 2026-09-17
 
 **D1′, how the reader obtains `iterate`'s cursor type.** Scouted
 (`docs/research/2026-09-17-scout-bidirectional-types-and-iterate-ergonomics.md` §2 to §4); the
@@ -113,7 +114,7 @@ at cursor `handle "number"`), so a reader that canonizes and a round trip "up to
 change which programs type. No `readTy` with `readTy (ofTy t) = some t` exists; the first cut of
 this packet recommended that law and it is withdrawn.
 
-**Recommended, (d′): make the annotation optional.** `Eff.iterate (cursorTy : Option Ty)`.
+**Ruled by the owner, (d′): make the annotation optional** (landed with DI-92's fix). `Eff.iterate (cursorTy : Option Ty)`.
 `none` means the cursor's type is `termTy env initial`; it prints as the unannotated
 `let aN = initial`, which is the image the loop had before `37ff9b21` and both readers read; it
 reads back. `some t` is the widened cursor; it prints `let aN: T` and is not readable, the status
@@ -131,9 +132,9 @@ needs a written amendment to B19 for that one clause. The other routes (a typed 
 `TypeRef` in `Eff`, the quotient round trip, a subtype field) are priced in the scout's table and
 are dearer or unsound.
 
-With it, two rulings the scout asks for: whether a unit-result loop prints as the bare
-`Effect.whileLoop` with no `Effect.map` (restores the pre-retirement bytes; moves goldens), and
-the loop sugar as authoring-only definitions (`iterateWith` with minted binders and the result
+Ruled with it: a unit-result loop does NOT print as the bare `Effect.whileLoop`; the loop keeps
+its one printed shape and nothing just retired is refurbished. Still open: the loop sugar as
+authoring-only definitions (`iterateWith` with minted binders and the result
 defaulting to the cursor, `whileLoop`, `forever`, `countTo`). rc.112 has no `Effect.iterate` and
 no `Effect.loop`, so there is no idiomatic head to print; `forEach` and `reduce` wait on one atom,
 `uncons`. Found on the way and filed as DI-92: `admitProgram`'s `int` ban does not see a `Ty`

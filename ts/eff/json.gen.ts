@@ -157,7 +157,7 @@ export const effJson = (v: Eff): Json => {
     case "provideService": return ["provideService", serviceKeyJson(v.key), termJson(v.value), effJson(v.body)]
     case "catchIf": return ["catchIf", termJson(v.test), effJson(v.body), effJson(v.handler)]
     case "select": return ["select", termJson(v.scrutinee), decisionJson(v.decision), effJson(v.arm0), effJson(v.arm1)]
-    case "iterate": return ["iterate", tyJson(v.cursorTy), termJson(v.initial), termJson(v.test), termJson(v.step), termJson(v.result), effJson(v.body)]
+    case "iterate": return ["iterate", (v.cursorTy === null ? null : tyJson(v.cursorTy)), termJson(v.initial), termJson(v.test), termJson(v.step), termJson(v.result), effJson(v.body)]
   }
 }
 

@@ -429,7 +429,7 @@ type eff =
   | Eff_provideService of service_key * term * eff
   | Eff_catchIf of term * eff * eff
   | Eff_select of term * decision * eff * eff
-  | Eff_iterate of ty * term * term * term * term * eff
+  | Eff_iterate of ty option * term * term * term * term * eff
 
 and stmt =
   | Stmt_bindYield of eff

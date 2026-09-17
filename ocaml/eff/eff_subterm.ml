@@ -250,7 +250,7 @@ let witnesses : node list = [
   N_eff (Eff_types.Eff_provideService ({ Eff_types.service_key_name = { Eff_types.service_name_value = 1 }; service_key_service = { Eff_types.service_type_code_value = 1 } }, (Eff_types.Term_var 2), (Eff_types.Eff_succeed (Eff_types.Term_var 3))));
   N_eff (Eff_types.Eff_catchIf ((Eff_types.Term_var 1), (Eff_types.Eff_succeed (Eff_types.Term_var 2)), (Eff_types.Eff_succeed (Eff_types.Term_var 3))));
   N_eff (Eff_types.Eff_select ((Eff_types.Term_var 1), (Eff_types.Decision_bool), (Eff_types.Eff_succeed (Eff_types.Term_var 3)), (Eff_types.Eff_succeed (Eff_types.Term_var 4))));
-  N_eff (Eff_types.Eff_iterate ((Eff_types.Ty_never), (Eff_types.Term_var 2), (Eff_types.Term_var 3), (Eff_types.Term_var 4), (Eff_types.Term_var 5), (Eff_types.Eff_succeed (Eff_types.Term_var 6))));
+  N_eff (Eff_types.Eff_iterate (None, (Eff_types.Term_var 2), (Eff_types.Term_var 3), (Eff_types.Term_var 4), (Eff_types.Term_var 5), (Eff_types.Eff_succeed (Eff_types.Term_var 6))));
   N_stmts (Eff_types.Stmts_nil);
   N_stmts (Eff_types.Stmts_cons ((Eff_types.Stmt_bindYield (Eff_types.Eff_succeed (Eff_types.Term_var 1))), (Eff_types.Stmts_cons ((Eff_types.Stmt_bindYield (Eff_types.Eff_succeed (Eff_types.Term_var 2))), (Eff_types.Stmts_nil)))));
   N_stmt (Eff_types.Stmt_bindYield (Eff_types.Eff_succeed (Eff_types.Term_var 1)));

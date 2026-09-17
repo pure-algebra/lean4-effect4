@@ -373,6 +373,16 @@ def refusal (p : Api.Program) (table : RowTable) : Option AdmitRefusal :=
   some (.uninhabited ["table", "0", "error", "right"])
 #guard refusal program [row .nat] = none
 
+-- DI-92: a type stated inside the tree. The cursor's type reaches neither column (the handler
+-- binds `never`, and `never` is under every type), so only the walk of the tree sees it.
+def smuggled : Api.Program :=
+  .catchIf (.lit (.bool true)) (.succeed (.lit (.nat 0)))
+    (.iterate (some .int) (.var 0) (.lit (.bool false)) (.var 0) (.lit .unit) (.succeed (.lit .unit)))
+#guard (typeOf smuggled []).isSome
+#guard refusal smuggled [] = some (.uninhabited ["program", "1", "cursorTy"])
+#guard refusal (.iterate (some (.option .int)) (.lit (.nat 0)) (.lit (.bool false)) (.var 0) (.lit .unit)
+    (.succeed (.lit .unit))) [] = some (.uninhabited ["program", "cursorTy", "inner"])
+
 -- The foreign Schema.Int representation still parses; its resulting program refuses.
 def foreignInt : Representation := .number none [Schema.Check.int]
 #guard Ty.ofSchema foreignInt = some .int

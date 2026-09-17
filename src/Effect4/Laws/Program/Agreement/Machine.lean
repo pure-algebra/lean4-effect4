@@ -274,7 +274,7 @@ theorem suspendBodyAt_other {root : NativeEff} {q : Point} {k : Nat} {n : Node N
   all_goals simp [suspendBodyAt, hf, h]
 
 /-- A loop's suspension answers the loop primitive at the initial cursor. -/
-theorem suspendBodyAt_iterate_at {root : NativeEff} {q : Point} {k : Nat} {c : Ty}
+theorem suspendBodyAt_iterate_at {root : NativeEff} {q : Point} {k : Nat} {c : Option Ty}
     {i t s r : Term} {b : NativeEff} (hf : q.fuel = k + 1)
     (h : Node.at_ (Node.eff root) q.path = some (Node.eff (.iterate c i t s r b))) :
     suspendBodyAt root (EffThunk.body q) =

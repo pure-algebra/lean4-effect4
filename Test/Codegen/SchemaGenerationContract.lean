@@ -408,7 +408,7 @@ private def pMissCatch : Api.Program :=
 -- 6. Loop iteration (iterate with Ref mutation)
 private def pLoopProg : Api.Program :=
   .bind (.perform .refMake (.lit (.nat 0)))
-    (.iterate .nat (.lit (.nat 0)) (.app "isZero" (.cons (.var 1) .nil))
+    (.iterate none (.lit (.nat 0)) (.app "isZero" (.cons (.var 1) .nil))
       (.app "succ" (.cons (.var 1) .nil)) (.lit .unit) (.perform (.refUpdate .incr) (.var 0)))
 
 #guard Api.wellTyped pLoopProg

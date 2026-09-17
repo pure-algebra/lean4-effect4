@@ -237,7 +237,7 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Eff_select (t, d, a, b) ->
       A.Eff_select (of_term t, of_decision d, of_eff a, of_eff b)
     | Eff_types.Eff_iterate (c, t1, t2, t3, t4, e) ->
-      A.Eff_iterate (of_ty c, of_term t1, of_term t2, of_term t3, of_term t4, of_eff e)
+      A.Eff_iterate (Option.map of_ty c, of_term t1, of_term t2, of_term t3, of_term t4, of_eff e)
     | Eff_types.Eff_yieldNow n -> A.Eff_yieldNow n
     | Eff_types.Eff_awaitFiber (t, m) -> A.Eff_awaitFiber (of_term t, of_observer_mode m)
     | Eff_types.Eff_withFiber a -> A.Eff_withFiber (of_action_term a)

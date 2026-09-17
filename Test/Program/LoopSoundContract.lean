@@ -31,7 +31,7 @@ def neverWrongAt (k : Nat) (e : NativeEff) : Bool :=
 so the loop's cursor is `var 1` and its body's answer `var 2`. -/
 def pLoopFinalizer : NativeEff :=
   .onExit pIterateCount
-    (.iterate .nat (.lit (.nat 0)) (.app "isZero" (.cons (.var 1) .nil)) (.var 2) (.var 1)
+    (.iterate none (.lit (.nat 0)) (.app "isZero" (.cons (.var 1) .nil)) (.var 2) (.var 1)
       (.succeed (.lit (.nat 7))))
 
 def typedLoops : List NativeEff :=

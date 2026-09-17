@@ -1307,7 +1307,7 @@ def EffShape : Shape :=
       ("select", 27, [("scrutinee", (shape _root_.Effect4.Program.Term).root),
         ("decision", (shape _root_.Effect4.Program.Decision).root), ("arm0", .named "Eff"),
         ("arm1", .named "Eff")]),
-      ("iterate", 28, [("cursorTy", (shape _root_.Effect4.Program.Ty).root),
+      ("iterate", 28, [("cursorTy", (shape (@_root_.Option (_root_.Effect4.Program.Ty))).root),
         ("initial", (shape _root_.Effect4.Program.Term).root),
         ("test", (shape _root_.Effect4.Program.Term).root),
         ("step", (shape _root_.Effect4.Program.Term).root),
@@ -1387,7 +1387,7 @@ def defs : List (String × Shape) :=
       (shape _root_.Effect4.Program.NativeOp).defs ++ (shape _root_.Nat).defs ++
       (shape _root_.Effect4.Supervision.ObserverMode).defs ++ (shape _root_.Bool).defs ++
       (shape _root_.Effect4.ServiceKey).defs ++ (shape _root_.Effect4.Program.Decision).defs ++
-      (shape _root_.Effect4.Program.Ty).defs ++
+      (shape (@_root_.Option (_root_.Effect4.Program.Ty))).defs ++
       (shape _root_.Effect4.Supervision.ForkOptions).defs ++
       (shape (@_root_.Option (_root_.Effect4.Program.Term))).defs ++
       (shape _root_.Effect4.Program.Lit).defs ++ (shape (@_root_.List (_root_.Nat))).defs)
@@ -1573,7 +1573,7 @@ def rawEff : Val → Option (@_root_.Effect4.Program.Eff (_root_.Effect4.Program
     | some a0, some a1, some a2, some a3 => some (.select a0 a1 a2 a3)
     | _, _, _, _ => none
   | .ctor 28 [v0, v1, v2, v3, v4, v5] =>
-    match Canonical.ofVal (α := _root_.Effect4.Program.Ty) v0,
+    match Canonical.ofVal (α := (@_root_.Option (_root_.Effect4.Program.Ty))) v0,
         Canonical.ofVal (α := _root_.Effect4.Program.Term) v1,
         Canonical.ofVal (α := _root_.Effect4.Program.Term) v2,
         Canonical.ofVal (α := _root_.Effect4.Program.Term) v3,
@@ -1916,7 +1916,7 @@ theorem mem_tail {p : String × Shape}
       (shape _root_.Effect4.Program.NativeOp).defs ++ (shape _root_.Nat).defs ++
       (shape _root_.Effect4.Supervision.ObserverMode).defs ++ (shape _root_.Bool).defs ++
       (shape _root_.Effect4.ServiceKey).defs ++ (shape _root_.Effect4.Program.Decision).defs ++
-      (shape _root_.Effect4.Program.Ty).defs ++
+      (shape (@_root_.Option (_root_.Effect4.Program.Ty))).defs ++
       (shape _root_.Effect4.Supervision.ForkOptions).defs ++
       (shape (@_root_.Option (_root_.Effect4.Program.Term))).defs ++
       (shape _root_.Effect4.Program.Lit).defs ++
@@ -1964,8 +1964,9 @@ theorem lift_Decision (x : _root_.Effect4.Program.Decision) :
   acceptsIn_mono_of_subset
     (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))
     _ _ (Canonical.fits x)
-theorem lift_Ty (x : _root_.Effect4.Program.Ty) :
-    acceptsIn defs (shape _root_.Effect4.Program.Ty).root (Canonical.toVal x) = true :=
+theorem lift_OptionTy (x : (@_root_.Option (_root_.Effect4.Program.Ty))) :
+    acceptsIn defs (shape (@_root_.Option (_root_.Effect4.Program.Ty))).root
+      (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset
     (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))
     _ _ (Canonical.fits x)
@@ -2086,7 +2087,7 @@ theorem fitsEff (a : @_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeO
             (acceptsFields_cons _ _ _ _ _ _ (fitsEff a3) (acceptsFields_nil _)))))
   | «iterate» a0 a1 a2 a3 a4 a5 =>
     exact acceptsAt_sum _ _ _ 28 "iterate" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a0)
+      (acceptsFields_cons _ _ _ _ _ _ (lift_OptionTy a0)
         (acceptsFields_cons _ _ _ _ _ _ (lift_Term a1)
           (acceptsFields_cons _ _ _ _ _ _ (lift_Term a2)
             (acceptsFields_cons _ _ _ _ _ _ (lift_Term a3)
@@ -2791,9 +2792,9 @@ def oldWhileLoop : Val :=
 #guard Canonical.decode (α := Eff NativeOp) (Val.encode (.ctor 5 [oldWhileLoop])) = none
 -- The same program as an `iterate` reads back.
 #guard Canonical.decode (α := Eff NativeOp) (Canonical.encode
-    (Eff.iterate (Op := NativeOp) .nat (.lit (.nat 0)) (.lit (.bool false)) (.lit (.nat 1)) (.lit .unit)
+    (Eff.iterate (Op := NativeOp) none (.lit (.nat 0)) (.lit (.bool false)) (.lit (.nat 1)) (.lit .unit)
       (.succeed (.lit .unit)))) =
-  some (.iterate .nat (.lit (.nat 0)) (.lit (.bool false)) (.lit (.nat 1)) (.lit .unit)
+  some (.iterate none (.lit (.nat 0)) (.lit (.bool false)) (.lit (.nat 1)) (.lit .unit)
     (.succeed (.lit .unit)))
 
 -- Old bytes of a `callback` refuse: tag 18 with its op and term, at the root and nested.

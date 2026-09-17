@@ -962,7 +962,7 @@ structure EffAlgebra (Op : Type) (R : EffFam → Type u) where
   eff_provideService : (Effect4.ServiceKey) → (Effect4.Program.Term) → R .eff → R .eff
   eff_catchIf : (Effect4.Program.Term) → R .eff → R .eff → R .eff
   eff_select : (Effect4.Program.Term) → (Effect4.Program.Decision) → R .eff → R .eff → R .eff
-  eff_iterate : (Effect4.Program.Ty) → (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → R .eff → R .eff
+  eff_iterate : (Option Effect4.Program.Ty) → (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → R .eff → R .eff
   stmt_bindYield : R .eff → R .stmt
   stmt_yieldDiscard : R .eff → R .stmt
   stmt_ret : (Effect4.Program.Term) → R .stmt
@@ -1971,7 +1971,7 @@ structure EffMAlgebra (Op : Type) (M : Type u → Type v) (R : EffFam → Type u
   eff_provideService : (Effect4.ServiceKey) → (Effect4.Program.Term) → R .eff → M (R .eff)
   eff_catchIf : (Effect4.Program.Term) → R .eff → R .eff → M (R .eff)
   eff_select : (Effect4.Program.Term) → (Effect4.Program.Decision) → R .eff → R .eff → M (R .eff)
-  eff_iterate : (Effect4.Program.Ty) → (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → R .eff → M (R .eff)
+  eff_iterate : (Option Effect4.Program.Ty) → (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → R .eff → M (R .eff)
   stmt_bindYield : R .eff → M (R .stmt)
   stmt_yieldDiscard : R .eff → M (R .stmt)
   stmt_ret : (Effect4.Program.Term) → M (R .stmt)
@@ -2892,7 +2892,7 @@ structure EffFrontierAlgebra (Op : Type) (R : EffFrontierFam → Type u) where
   eff_provideService : (Effect4.ServiceKey) → (Effect4.Program.Term) → R .eff → R .eff
   eff_catchIf : (Effect4.Program.Term) → R .eff → R .eff → R .eff
   eff_select : (Effect4.Program.Term) → (Effect4.Program.Decision) → R .eff → R .eff → R .eff
-  eff_iterate : (Effect4.Program.Ty) → (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → R .eff → R .eff
+  eff_iterate : (Option Effect4.Program.Ty) → (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → R .eff → R .eff
   stmt_bindYield : R .eff → R .stmt
   stmt_yieldDiscard : R .eff → R .stmt
   stmt_ret : (Effect4.Program.Term) → R .stmt

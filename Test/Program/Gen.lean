@@ -257,12 +257,10 @@ def genEffStep (prev : Nat → M (Eff NativeOp)) (prevStmts : Nat → Nat → M 
     -- the conditional: `select` under `.bool`, drawn as `branch` was (the same three draws)
     | 19 => pure (.select (← genTerm n 1) .bool (← prev n) (← prev n))
     -- the loop: `iterate` answering `unit`, drawn as `whileLoop` was (the same four draws);
-    -- the cursor's annotation is a literal initial's own type, `nat` otherwise
-    | 20 => do
-      let initial ← genTerm n 1
-      let cursor := match initial with | .lit value => value.ty | _ => .nat
-      pure (.iterate cursor initial (← genTerm (n + 1) 1) (← genTerm (n + 1) 1) (.lit .unit)
-        (← prev (n + 1)))
+    -- no annotation, so the cursor has its initial value's type (DI-91)
+    | 20 =>
+      pure (.iterate none (← genTerm n 1) (← genTerm (n + 1) 1) (← genTerm (n + 1) 1)
+        (.lit .unit) (← prev (n + 1)))
     | 21 =>
       pure (.awaitFiber (← genTerm n 1) (if (← pick 2) == 0 then .awaitValue else .joinEffect))
     | 22 | 23 => pure (.withFiber (.fork (← prev n) (← genOpts)))

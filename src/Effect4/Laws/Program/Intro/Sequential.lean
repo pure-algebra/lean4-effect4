@@ -114,7 +114,7 @@ theorem intro_select (root : NativeEff) (n : Nat) (s : Term) (d : Decision) (a0 
         simp only [prepareR_denoteR]
         exact ih _ (hwcw completed 0 v) a0 hb
 /-- `iterate` enters the loop frame: the hooks answer (`loopFinishAt` against `loopFinishRAt`). -/
-theorem intro_iterate (root : NativeEff) (c : Ty) (i t s r : Term) (b : NativeEff) (p : Point)
+theorem intro_iterate (root : NativeEff) (c : Option Ty) (i t s r : Term) (b : NativeEff) (p : Point)
     (k : Nat) (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
     (h : Node.at_ (.eff root) p.path = some (.eff (.iterate c i t s r b))) :
     CodeMeans root (compileEff (.iterate c i t s r b) p)

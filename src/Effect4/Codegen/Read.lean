@@ -1389,9 +1389,12 @@ theorem print_not_cond {sig : Signature Op} {n : Nat} {e : Eff Op} {t a b : Expr
     by_cases ht : test = .lit (.bool true) <;> simp [print, ht, bind_eq_ok] at hp
   case select s d a0 a1 => cases d <;> simp [print, bind_eq_ok] at hp
   case iterate c i t s r b =>
-    simp only [print, bind_eq_ok] at hp
-    obtain ⟨_, _, hp⟩ := hp
-    split at hp <;> cases hp
+    cases c with
+    | none => simp [print, bind_eq_ok] at hp
+    | some ty =>
+      simp only [print, bind_eq_ok] at hp
+      obtain ⟨_, _, hp⟩ := hp
+      split at hp <;> simp [bind_eq_ok] at hp
   case awaitFiber f m => cases m <;> simp [print] at hp
   case withFiber act =>
     cases act
