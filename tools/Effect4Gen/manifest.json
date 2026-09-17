@@ -168,6 +168,18 @@
       ]
     },
     {
+      "Note": "The one-layer view of the program family, from the constructor declarations: an argument by sort (ArgF), a generic layer function as an EffAlgebra (ofLayer), the argument sorts and constructor names, and build with one rfl equation per constructor. What a table-driven printer and reader stand on (R4.2).",
+      "Name": "LayerView",
+      "Tool": "tools/Effect4Gen/LayerView.lean",
+      "Imports": "Effect4.Program.Fold",
+      "Out": "src\\Effect4\\Program\\LayerView.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\layerview.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Eff"
+      ]
+    },
+    {
       "Note": "Node.child and Node.setChild from the constructor declarations: one arm per node-typed argument, the child scheme every consumer resolves against.",
       "Name": "NodeLenses",
       "Tool": "tools/Effect4Gen/Authoring.lean",
