@@ -413,16 +413,15 @@ theorem iteration_nested (p : NativeEff) (table : RowTable)
     letI := evaluatorFor p table
     Nested p table (iteration (interpOf p table) m f yielding) := by
   letI := evaluatorFor p table
-  have top : Effect4.Program.Guard.FrameOwned.FrameCodeOwned m (countOp (runloopTop f)) :=
-    Effect4.Program.Guard.FrameOwned.runloopTop_owned m f ((frameDraft_owned_iff m f).mpr owned)
+  have top : FrameCodeOwned m (countOp (runloopTop f)) :=
+    Effect4.Program.Guard.FrameOwned.runloopTop_owned m f owned
   cases hi : injectYield m (countOp (runloopTop f)) yielding with
   | none =>
-    simpa only [iteration, hi] using evaluateNative_nested p table m _ yielding
-      ((frameDraft_owned_iff _ _).mp top)
+    simpa only [iteration, hi] using evaluateNative_nested p table m _ yielding top
   | some it =>
     have injected := Effect4.Program.Guard.FrameOwned.injectYield_owned m _ yielding it top hi
     simpa only [iteration, hi] using evaluateNative_nested p table it.machine it.fiber it.yielding
-      ((frameDraft_owned_iff _ _).mp injected.1)
+      injected.1
 
 theorem injectYield_present (m : NativeMachine) (f : NFiber) (yielding : Bool)
     (id : FiberId) (it : NIter) (present : Present m id)
