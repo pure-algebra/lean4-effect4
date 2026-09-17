@@ -27,7 +27,8 @@ import Effect4.Laws.Program.Residual
 import Effect4.Laws.Program.Decision
 import Effect4.Laws.Program.HostBoundary
 import Effect4.Laws.Api.HostSession
-import Effect4.Laws.Api.Player
+import Effect4.Laws.Api.Runner
+import Effect4.Laws.Api.RunnerBytes
 import Effect4.Laws.Api.Frontier
 import Effect4.Laws.Api.Fuel
 import Effect4.Laws.Api.Guard
