@@ -57,9 +57,6 @@ def Predicate.each {α : Type u} (predicate : α → Bool) : List α → Bool :=
 code reads `Schema.check predicate value`. -/
 def check {α : Type u} (predicate : α → Bool) (value : α) : Bool := predicate value
 
-theorem check_eq {α : Type u} (predicate : α → Bool) (value : α) :
-    check predicate value = predicate value := rfl
-
 theorem Predicate.and_eq_true {α : Type u} (left right : α → Bool) (value : α) :
     Predicate.and left right value = true ↔
       left value = true ∧ right value = true := by
@@ -78,18 +75,6 @@ theorem Predicate.not_eq_true {α : Type u} (predicate : α → Bool) (value : �
     (project : β → α) (predicate : α → Bool) (value : β) :
     Predicate.contramap project predicate value = predicate (project value) := rfl
 
-theorem Predicate.contramap_id {α : Type u} (predicate : α → Bool) :
-    Predicate.contramap id predicate = predicate := by
-  funext value
-  rfl
-
-theorem Predicate.contramap_comp {α : Type u} {β : Type v} {γ : Type _}
-    (first : β → α) (second : γ → β) (predicate : α → Bool) :
-    Predicate.contramap second (Predicate.contramap first predicate) =
-      Predicate.contramap (first ∘ second) predicate := by
-  funext value
-  rfl
-
 theorem Predicate.all_eq_true {α : Type u}
     (predicates : List (α → Bool)) (value : α) :
     Predicate.all predicates value = true ↔
@@ -101,12 +86,6 @@ theorem Predicate.any_eq_true {α : Type u}
     Predicate.any predicates value = true ↔
       ∃ predicate ∈ predicates, predicate value = true := by
   simp [Predicate.any]
-
-theorem Predicate.each_eq_true {α : Type u}
-    (predicate : α → Bool) (values : List α) :
-    Predicate.each predicate values = true ↔
-      ∀ value ∈ values, predicate value = true := by
-  simp [Predicate.each]
 
 /-! ## Registered, persisted check descriptions -/
 
@@ -127,15 +106,9 @@ def Check.group (first : Check) (rest : List Check := [])
   .filterGroup representation annotations (first :: rest)
 
 def Check.trimmed : Check := Check.named "effect/schema/isTrimmed"
-def Check.stringFinite : Check := Check.named "effect/schema/isStringFinite"
-def Check.stringBigInt : Check := Check.named "effect/schema/isStringBigInt"
-def Check.stringSymbol : Check := Check.named "effect/schema/isStringSymbol"
 def Check.finite : Check := Check.named "effect/schema/isFinite"
 def Check.int : Check := Check.named "effect/schema/isInt"
-def Check.uppercased : Check := Check.named "effect/schema/isUppercased"
 def Check.lowercased : Check := Check.named "effect/schema/isLowercased"
-def Check.capitalized : Check := Check.named "effect/schema/isCapitalized"
-def Check.uncapitalized : Check := Check.named "effect/schema/isUncapitalized"
 def Check.unique : Check := Check.named "effect/schema/isUnique"
 
 def Check.pattern (source : String) (flags : String := "") : Check :=
@@ -264,15 +237,5 @@ def withChecks? (newChecks : List Check) : Representation → Option Representat
 def withCheck (representation : Representation) (first : Check)
     (rest : List Check := []) : Option Representation :=
   withChecks? (first :: rest) representation
-
-theorem withCheck_reference (key : String) (first : Check) (rest : List Check) :
-    withCheck (reference key) first rest = none := rfl
-
-theorem withCheck_suspend (thunk : Representation) (first : Check) (rest : List Check) :
-    withCheck (suspend thunk) first rest = none := rfl
-
-theorem withCheck_string (first : Check) (rest : List Check) :
-    withCheck string first rest = some (.string none (first :: rest)) := by
-  simp [withCheck, withChecks?, string]
 
 end Effect4.Schema

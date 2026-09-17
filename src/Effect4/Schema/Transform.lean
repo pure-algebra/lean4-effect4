@@ -74,9 +74,6 @@ def andThen (f : Transform σ Γ A B E₁ R₁) (g : Transform σ Γ B C E₂ R�
 def mapInput (f : PureMap σ Γ A B) (g : Transform σ Γ B C E R) :=
   (pure f).andThen g
 
-def mapOutput (f : Transform σ Γ A B E R) (g : PureMap σ Γ B C) :=
-  f.andThen (pure g)
-
 def dimap (before : PureMap σ Γ A B) (f : Transform σ Γ B C E R)
     {D : Ty} (after : PureMap σ Γ C D) :=
   ((pure before).andThen f).andThen (pure after)

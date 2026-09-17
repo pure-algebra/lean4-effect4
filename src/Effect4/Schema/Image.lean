@@ -37,11 +37,6 @@ def list (I : ProgramImage α a) : ProgramImage (List α) (.list a) where
     | nil => rfl
     | cons x xs ih => simp [Image.list, Image.toList, Val.hasTy, I.fits]
 
-def imap (I : ProgramImage α a) (f : α → β) (g : β → α)
-    (fg : ∀ b, f (g b) = b) (gf : ∀ a, g (f a) = a) : ProgramImage β a where
-  toImage := I.toImage.equiv f g fg gf
-  fits b := I.fits (g b)
-
 def refine (I : ProgramImage α a) (p : α → Prop) [DecidablePred p] :
     ProgramImage {x // p x} a where
   toImage := I.toImage.subtype p

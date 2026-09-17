@@ -159,10 +159,6 @@ def withOutput (ep : Endpoint) (t : Ty) : Endpoint :=
 def withError (ep : Endpoint) (t : Ty) : Endpoint :=
   { ep with error := t }
 
-/-- Set the service requirements. -/
-def withRequires (ep : Endpoint) (keys : List ServiceKey) : Endpoint :=
-  { ep with requires := keys }
-
 /-- Choose the existing external asynchronous row boundary without changing its type columns. -/
 def external (ep : Endpoint) : Endpoint :=
   { ep with rowKind := .async, registration := .external }
@@ -179,17 +175,9 @@ def withTitle (s : String) (ep : Endpoint) : Endpoint :=
 def withDescription (s : String) (ep : Endpoint) : Endpoint :=
   ep.withAnnotation descriptionKey s
 
-/-- Set documentation. -/
-def withDocumentation (s : String) (ep : Endpoint) : Endpoint :=
-  ep.withAnnotation documentationKey s
-
 /-- Configure HTTP binding (method and path). -/
 def withHttp (method path : String) (ep : Endpoint) : Endpoint :=
   (ep.withAnnotation httpMethodKey method).withAnnotation httpPathKey path
-
-/-- Mark endpoint as deprecated. -/
-def withDeprecated (dep : Bool := true) (ep : Endpoint) : Endpoint :=
-  ep.withAnnotation deprecatedKey dep
 
 /-- Project this Endpoint into an operative `Row` for execution in `Eff`. -/
 def toRow (ep : Endpoint) : Row :=
