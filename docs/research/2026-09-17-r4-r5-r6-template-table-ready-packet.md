@@ -49,9 +49,16 @@ The module extends the probe with what the printer's clauses use and nothing mor
   `mergeAll`), `str` (`caseTag`'s tag), `int` (`yieldNow`'s priority), so `Subst` is
   `List (Nat × Arg)` over that sum. There is no `type` hole: under DI-91 the readable loop
   carries no annotation, and the annotated one is outside `readable`;
-- the second engine lemma, owed and not yet probed: for a template whose holes are distinct,
-  `matchT n t e = some σ → inst n σ t = some e`. It is `read_exact`'s engine as `match_inst`
-  is `read_print`'s.
+- the second engine lemma, **proved in the probe (2026-09-17, evening)**: for a template whose
+  holes are distinct, `inst_of_match : matchT n t e = some σ → (holes t).Nodup → inst n σ t =
+  some e`, at `[propext, Quot.sound]`. It is `read_exact`'s engine as `match_inst` is
+  `read_print`'s. The proof's shape, for the module: state it with a context on both sides
+  (`inst n (pre ++ σ ++ post) t`, with the template's holes fresh for `keys pre`), so every
+  compound case is re-association; it needs `match_keys` (what a match collects is keyed by the
+  holes, left to right) and one fact about `lookup` past a block that does not hold the key.
+  One trap: `beq_self_eq_true` in a `simp only` set brings `Classical.choice` and breaks the
+  axiom ceiling; use `decide_eq_true rfl` for `(i == i) = true`. A table row's template must
+  therefore have distinct holes: one more generated per-row guard (`decide`).
 
 ## 3. The table (`src/Effect4/Codegen/Templates.lean`, new)
 
@@ -75,7 +82,8 @@ largest thing left.
 
 ## 4. Order, each step gated and committed before the next
 
-1. **R4.1** `Template.lean`: the calculus of §2 with `match_inst` and the converse. Gate: builds
+1. **R4.1** `Template.lean`: the calculus of §2 with `match_inst` and the converse (both proved in
+   the probe for the seven first formers; the module extends them to the rest). Gate: builds
    under the axiom ceiling; `make check`.
 2. **R4.2** `Templates.lean`: the table with its per-row guards. Gate: the guards; `make check`
    (the conformance policy names any new default arm).
