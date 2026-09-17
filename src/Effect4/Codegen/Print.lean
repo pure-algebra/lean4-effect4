@@ -328,11 +328,6 @@ mutual
     | .succeed value => .ok (.call (.ident "Effect.succeed") [printTerm value])
     | .fail error => .ok (.call (.ident "Effect.fail") [printTerm error])
     | .failCause cause => .ok (.call (.ident "Effect.failCause") [printCause cause])
-    -- a yieldable error is an Effect only when the value is one of rc.112's yieldable error
-    -- objects, which no term value is; printed as the failure it means (`Frames.lean`'s
-    -- `step_yieldableError`, `Denote.lean`'s `meaning_yieldError_some`), so the reader gets
-    -- `fail error` back and `readable` excludes the constructor (DI-72, 2026-09-13)
-    | .yieldError error => .ok (.call (.ident "Effect.fail") [printTerm error])
     | .sync thunk => .ok (.call (.ident "Effect.sync") [.arrow none (printTerm thunk)])
     | .suspend body => do
       let b ← print sig n body

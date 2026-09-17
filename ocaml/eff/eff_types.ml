@@ -408,7 +408,6 @@ type eff =
   | Eff_succeed of term
   | Eff_fail of term
   | Eff_failCause of cause_term
-  | Eff_yieldError of term
   | Eff_sync of term
   | Eff_suspend of eff
   | Eff_perform of native_op * term
@@ -488,36 +487,34 @@ let ctor_index_eff : eff -> int = function
   | Eff_succeed _ -> 0
   | Eff_fail _ -> 1
   | Eff_failCause _ -> 2
-  | Eff_yieldError _ -> 3
-  | Eff_sync _ -> 4
-  | Eff_suspend _ -> 5
-  | Eff_perform _ -> 6
-  | Eff_bind _ -> 7
-  | Eff_gen _ -> 8
-  | Eff_catchCause _ -> 9
-  | Eff_matchCause _ -> 10
-  | Eff_onExit _ -> 11
-  | Eff_exit _ -> 12
-  | Eff_uninterruptible _ -> 13
-  | Eff_interruptible _ -> 14
-  | Eff_whileLoop _ -> 15
-  | Eff_yieldNow _ -> 16
-  | Eff_callback _ -> 17
-  | Eff_awaitFiber _ -> 18
-  | Eff_withFiber _ -> 19
-  | Eff_scoped _ -> 20
-  | Eff_acquireRelease _ -> 21
-  | Eff_provideLayer _ -> 22
-  | Eff_service _ -> 23
-  | Eff_provideService _ -> 24
-  | Eff_catchIf _ -> 25
-  | Eff_select _ -> 26
-  | Eff_iterate _ -> 27
+  | Eff_sync _ -> 3
+  | Eff_suspend _ -> 4
+  | Eff_perform _ -> 5
+  | Eff_bind _ -> 6
+  | Eff_gen _ -> 7
+  | Eff_catchCause _ -> 8
+  | Eff_matchCause _ -> 9
+  | Eff_onExit _ -> 10
+  | Eff_exit _ -> 11
+  | Eff_uninterruptible _ -> 12
+  | Eff_interruptible _ -> 13
+  | Eff_whileLoop _ -> 14
+  | Eff_yieldNow _ -> 15
+  | Eff_callback _ -> 16
+  | Eff_awaitFiber _ -> 17
+  | Eff_withFiber _ -> 18
+  | Eff_scoped _ -> 19
+  | Eff_acquireRelease _ -> 20
+  | Eff_provideLayer _ -> 21
+  | Eff_service _ -> 22
+  | Eff_provideService _ -> 23
+  | Eff_catchIf _ -> 24
+  | Eff_select _ -> 25
+  | Eff_iterate _ -> 26
 let wire_tag_eff : eff -> int = function
   | Eff_succeed _ -> 0
   | Eff_fail _ -> 1
   | Eff_failCause _ -> 2
-  | Eff_yieldError _ -> 3
   | Eff_sync _ -> 4
   | Eff_suspend _ -> 5
   | Eff_perform _ -> 6
@@ -546,7 +543,6 @@ let ctor_name_eff : eff -> string = function
   | Eff_succeed _ -> "succeed"
   | Eff_fail _ -> "fail"
   | Eff_failCause _ -> "failCause"
-  | Eff_yieldError _ -> "yieldError"
   | Eff_sync _ -> "sync"
   | Eff_suspend _ -> "suspend"
   | Eff_perform _ -> "perform"
@@ -571,7 +567,7 @@ let ctor_name_eff : eff -> string = function
   | Eff_catchIf _ -> "catchIf"
   | Eff_select _ -> "select"
   | Eff_iterate _ -> "iterate"
-let ctor_names_eff : string list = ["succeed"; "fail"; "failCause"; "yieldError"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "whileLoop"; "yieldNow"; "callback"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"]
+let ctor_names_eff : string list = ["succeed"; "fail"; "failCause"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "whileLoop"; "yieldNow"; "callback"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"]
 
 let ctor_index_stmt : stmt -> int = function
   | Stmt_bindYield _ -> 0

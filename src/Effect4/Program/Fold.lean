@@ -941,7 +941,6 @@ structure EffAlgebra (Op : Type) (R : EffFam → Type u) where
   eff_succeed : (Effect4.Program.Term) → R .eff
   eff_fail : (Effect4.Program.Term) → R .eff
   eff_failCause : (Effect4.Program.CauseTerm) → R .eff
-  eff_yieldError : (Effect4.Program.Term) → R .eff
   eff_sync : (Effect4.Program.Term) → R .eff
   eff_suspend : R .eff → R .eff
   eff_perform : (Op) → (Effect4.Program.Term) → R .eff
@@ -1012,7 +1011,6 @@ def cata_eff {Op : Type} {R : EffFam → Type u} (alg : EffAlgebra Op R)
   | .succeed a0 => alg.eff_succeed a0
   | .fail a0 => alg.eff_fail a0
   | .failCause a0 => alg.eff_failCause a0
-  | .yieldError a0 => alg.eff_yieldError a0
   | .sync a0 => alg.eff_sync a0
   | .suspend a0 => alg.eff_suspend (cata_eff alg a0)
   | .perform a0 a1 => alg.eff_perform a0 a1
@@ -1113,7 +1111,6 @@ structure EffHom {Op : Type} {R : EffFam → Type u} (alg : EffAlgebra Op R) whe
   h_eff_succeed : ∀ a0, f_eff (.succeed a0) = alg.eff_succeed a0
   h_eff_fail : ∀ a0, f_eff (.fail a0) = alg.eff_fail a0
   h_eff_failCause : ∀ a0, f_eff (.failCause a0) = alg.eff_failCause a0
-  h_eff_yieldError : ∀ a0, f_eff (.yieldError a0) = alg.eff_yieldError a0
   h_eff_sync : ∀ a0, f_eff (.sync a0) = alg.eff_sync a0
   h_eff_suspend : ∀ a0, f_eff (.suspend a0) = alg.eff_suspend (f_eff a0)
   h_eff_perform : ∀ a0 a1, f_eff (.perform a0 a1) = alg.eff_perform a0 a1
@@ -1188,8 +1185,6 @@ theorem hom_eq_cata_eff {Op : Type} {R : EffFam → Type u}
     simp only [cata_eff, hom.h_eff_fail a0]
   | .failCause a0 =>
     simp only [cata_eff, hom.h_eff_failCause a0]
-  | .yieldError a0 =>
-    simp only [cata_eff, hom.h_eff_yieldError a0]
   | .sync a0 =>
     simp only [cata_eff, hom.h_eff_sync a0]
   | .suspend a0 =>
@@ -1360,7 +1355,6 @@ def EffAlgebra.id (Op : Type) : EffAlgebra Op (EffSelfCarrier Op) where
   eff_succeed a0 := Effect4.Program.Eff.succeed a0
   eff_fail a0 := Effect4.Program.Eff.fail a0
   eff_failCause a0 := Effect4.Program.Eff.failCause a0
-  eff_yieldError a0 := Effect4.Program.Eff.yieldError a0
   eff_sync a0 := Effect4.Program.Eff.sync a0
   eff_suspend a0 := Effect4.Program.Eff.suspend a0
   eff_perform a0 a1 := Effect4.Program.Eff.perform a0 a1
@@ -1435,9 +1429,6 @@ mutual
     simp only [cata_eff]
     rfl
   | .failCause a0 =>
-    simp only [cata_eff]
-    rfl
-  | .yieldError a0 =>
     simp only [cata_eff]
     rfl
   | .sync a0 =>
@@ -1669,8 +1660,6 @@ def foldMapAt_eff {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (p : 
     f_eff (.fail a0) p
   | .failCause a0 =>
     f_eff (.failCause a0) p
-  | .yieldError a0 =>
-    f_eff (.yieldError a0) p
   | .sync a0 =>
     f_eff (.sync a0) p
   | .suspend a0 =>
@@ -1832,8 +1821,6 @@ def foldMap_eff {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (node :
     f_eff (.fail a0)
   | .failCause a0 =>
     f_eff (.failCause a0)
-  | .yieldError a0 =>
-    f_eff (.yieldError a0)
   | .sync a0 =>
     f_eff (.sync a0)
   | .suspend a0 =>
@@ -1989,7 +1976,6 @@ structure EffMAlgebra (Op : Type) (M : Type u → Type v) (R : EffFam → Type u
   eff_succeed : (Effect4.Program.Term) → M (R .eff)
   eff_fail : (Effect4.Program.Term) → M (R .eff)
   eff_failCause : (Effect4.Program.CauseTerm) → M (R .eff)
-  eff_yieldError : (Effect4.Program.Term) → M (R .eff)
   eff_sync : (Effect4.Program.Term) → M (R .eff)
   eff_suspend : R .eff → M (R .eff)
   eff_perform : (Op) → (Effect4.Program.Term) → M (R .eff)
@@ -2058,7 +2044,6 @@ def EffAlgebra.toM {Op : Type} {M : Type u → Type v} [Monad M] {R : EffFam →
   eff_succeed a0 := pure (alg.eff_succeed a0)
   eff_fail a0 := pure (alg.eff_fail a0)
   eff_failCause a0 := pure (alg.eff_failCause a0)
-  eff_yieldError a0 := pure (alg.eff_yieldError a0)
   eff_sync a0 := pure (alg.eff_sync a0)
   eff_suspend a0 := pure (alg.eff_suspend a0)
   eff_perform a0 a1 := pure (alg.eff_perform a0 a1)
@@ -2128,7 +2113,6 @@ def EffMAlgebra.map {Op : Type} {M : Type u → Type v} {N : Type u → Type w}
   eff_succeed a0 := φ (alg.eff_succeed a0)
   eff_fail a0 := φ (alg.eff_fail a0)
   eff_failCause a0 := φ (alg.eff_failCause a0)
-  eff_yieldError a0 := φ (alg.eff_yieldError a0)
   eff_sync a0 := φ (alg.eff_sync a0)
   eff_suspend a0 := φ (alg.eff_suspend a0)
   eff_perform a0 a1 := φ (alg.eff_perform a0 a1)
@@ -2198,7 +2182,6 @@ def EffMAlgebra.toSeq {Op : Type} {M : Type u → Type v} [Monad M]
   eff_succeed a0 := alg.eff_succeed a0
   eff_fail a0 := alg.eff_fail a0
   eff_failCause a0 := alg.eff_failCause a0
-  eff_yieldError a0 := alg.eff_yieldError a0
   eff_sync a0 := alg.eff_sync a0
   eff_suspend a0 := do
     let x0 ← a0
@@ -2359,7 +2342,6 @@ def foldM_eff {Op : Type} {M : Type u → Type v} [Monad M] {R : EffFam → Type
   | .succeed a0 => alg.eff_succeed a0
   | .fail a0 => alg.eff_fail a0
   | .failCause a0 => alg.eff_failCause a0
-  | .yieldError a0 => alg.eff_yieldError a0
   | .sync a0 => alg.eff_sync a0
   | .suspend a0 => do
       let x0 ← foldM_eff alg a0
@@ -2549,8 +2531,6 @@ theorem foldM_eq_cata_eff {Op : Type} {M : Type u → Type v} [Monad M]
   | .fail a0 =>
     simp only [foldM_eff, cata_eff, EffMAlgebra.toSeq]
   | .failCause a0 =>
-    simp only [foldM_eff, cata_eff, EffMAlgebra.toSeq]
-  | .yieldError a0 =>
     simp only [foldM_eff, cata_eff, EffMAlgebra.toSeq]
   | .sync a0 =>
     simp only [foldM_eff, cata_eff, EffMAlgebra.toSeq]
@@ -2763,8 +2743,6 @@ theorem foldM_natural_eff {Op : Type} {M : Type u → Type v} {N : Type u → Ty
     simp only [foldM_eff, EffMAlgebra.map]
   | .failCause a0 =>
     simp only [foldM_eff, EffMAlgebra.map]
-  | .yieldError a0 =>
-    simp only [foldM_eff, EffMAlgebra.map]
   | .sync a0 =>
     simp only [foldM_eff, EffMAlgebra.map]
   | .suspend a0 =>
@@ -2941,7 +2919,6 @@ structure EffFrontierAlgebra (Op : Type) (R : EffFrontierFam → Type u) where
   eff_succeed : (Effect4.Program.Term) → R .eff
   eff_fail : (Effect4.Program.Term) → R .eff
   eff_failCause : (Effect4.Program.CauseTerm) → R .eff
-  eff_yieldError : (Effect4.Program.Term) → R .eff
   eff_sync : (Effect4.Program.Term) → R .eff
   eff_suspend : R .eff → R .eff
   eff_perform : (Op) → (Effect4.Program.Term) → R .eff
@@ -3000,7 +2977,6 @@ def cata_frontier_eff {Op : Type} {R : EffFrontierFam → Type u} (alg : EffFron
   | .succeed a0 => alg.eff_succeed a0
   | .fail a0 => alg.eff_fail a0
   | .failCause a0 => alg.eff_failCause a0
-  | .yieldError a0 => alg.eff_yieldError a0
   | .sync a0 => alg.eff_sync a0
   | .suspend a0 => alg.eff_suspend (cata_frontier_eff alg a0)
   | .perform a0 a1 => alg.eff_perform a0 a1
@@ -3085,7 +3061,6 @@ def frontierMap {Op : Type} (g : Effect4.Program.Term → Effect4.Program.Term)
   eff_succeed a0 := .succeed (g a0)
   eff_fail a0 := .fail (g a0)
   eff_failCause a0 := .failCause (gc a0)
-  eff_yieldError a0 := .yieldError (g a0)
   eff_sync a0 := .sync (g a0)
   eff_suspend a0 := .suspend a0
   eff_perform a0 a1 := .perform a0 (g a1)
@@ -3146,7 +3121,6 @@ def Eff.weaken {Op : Type} (cut : Nat) : Effect4.Program.Eff Op → Effect4.Prog
   | .succeed a0 => .succeed (Effect4.Program.Term.weaken cut a0)
   | .fail a0 => .fail (Effect4.Program.Term.weaken cut a0)
   | .failCause a0 => .failCause (Effect4.Program.CauseTerm.weaken cut a0)
-  | .yieldError a0 => .yieldError (Effect4.Program.Term.weaken cut a0)
   | .sync a0 => .sync (Effect4.Program.Term.weaken cut a0)
   | .suspend a0 => .suspend (Eff.weaken cut a0)
   | .perform a0 a1 => .perform a0 (Effect4.Program.Term.weaken cut a1)
@@ -3212,8 +3186,6 @@ theorem weaken_eq_cata_eff {Op : Type} (cut : Nat) (node : Effect4.Program.Eff O
   | .fail a0 =>
     simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap]
   | .failCause a0 =>
-    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap]
-  | .yieldError a0 =>
     simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap]
   | .sync a0 =>
     simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap]
@@ -3509,7 +3481,6 @@ def EffTraversal.alg {Op : Type} {M : Type → Type} {A : Type} [Monad M]
   eff_succeed a0 := s.acc (s.atSucceed a0) []
   eff_fail _ := s.acc s.atEff []
   eff_failCause _ := s.acc s.atEff []
-  eff_yieldError _ := s.acc s.atEff []
   eff_sync _ := s.acc s.atEff []
   eff_suspend x0 := s.acc s.atEff [x0]
   eff_perform a0 a1 := s.acc (s.atPerform a0 a1) []

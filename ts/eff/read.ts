@@ -589,7 +589,7 @@ const programModuleOf = (program: Node): Read<Module> => {
 // printer's table: a bare identifier is `Effect.fiberId` or a value row; a call is a reserved
 // head, then a call row. A bare value (a literal, `undefined`, a binder) or an atom
 // application in effect position is refused: the printer never emits one there, since
-// `yieldError e` prints as `Effect.fail(e)` (DI-72, 2026-09-13) and reads back as `fail e`.
+// `Effect.fail(e)` reads as `fail e` (`yieldError`, which printed the same image, retired into it).
 // Every reserved head has its own reader in `headReaders`; the heads with no reading in that
 // position refuse by name. Binders are depths: the k-th nested lambda binds `a<k>`, and
 // `varRead` recovers a variable by comparing names from the newest binder down, never by

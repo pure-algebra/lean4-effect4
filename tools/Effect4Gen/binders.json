@@ -42,7 +42,7 @@
       "Effect4.Program.CauseTerm"
     ],
     "readerOnly": [
-      "Effect4.Program.Eff.gen", "Effect4.Program.Eff.yieldError"
+      "Effect4.Program.Eff.gen"
     ],
     "machineOnly": [
       "Effect4.Program.ActionTerm.interruptScoped", "Effect4.Program.ActionTerm.awaitAllFailFast",

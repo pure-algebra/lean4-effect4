@@ -565,7 +565,6 @@ let rec emit_eff (b : Buffer.t) (v : eff) : unit =
   | Eff_succeed a0 -> Eff_frame.emit_ctor b 0 (fun b -> emit_term b a0)
   | Eff_fail a0 -> Eff_frame.emit_ctor b 1 (fun b -> emit_term b a0)
   | Eff_failCause a0 -> Eff_frame.emit_ctor b 2 (fun b -> emit_cause_term b a0)
-  | Eff_yieldError a0 -> Eff_frame.emit_ctor b 3 (fun b -> emit_term b a0)
   | Eff_sync a0 -> Eff_frame.emit_ctor b 4 (fun b -> emit_term b a0)
   | Eff_suspend a0 -> Eff_frame.emit_ctor b 5 (fun b -> emit_eff b a0)
   | Eff_perform (a0, a1) -> Eff_frame.emit_ctor b 6 (fun b -> emit_native_op b a0; emit_term b a1)
@@ -669,11 +668,6 @@ let rec decode_eff (s : string) (pos : int) (limit : int) : (eff * int) option =
        | None -> None
        | Some (a0, p) ->
         if p = e then Some (Eff_failCause a0, next) else None)
-    | 3 ->
-      (match decode_term s p e with
-       | None -> None
-       | Some (a0, p) ->
-        if p = e then Some (Eff_yieldError a0, next) else None)
     | 4 ->
       (match decode_term s p e with
        | None -> None

@@ -1,6 +1,4 @@
 import Effect4.Program.Typing
-import Effect4.Program.Fold
-import Effect4.Laws.Program.Denote
 import Effect4.Laws.Program.Invocation
 
 /-!
@@ -19,10 +17,10 @@ and meaning equations) was checked at `438b93f2` and left with the constructor.
 `whileLoop` retires into `iterate`. Its rewrite needs the cursor's type, so it is stated at a
 node: `effTy_iterate_of_whileLoop`.
 
-`yieldError` retires into `fail`. `retireYieldError` is the identity fold with one slot
-replaced; `effTy_retireYieldError` keeps the checker's whole answer at every sort and in every
-environment; `denote_yieldError` is the node's meaning equation. The two differ in one place
-only: the machine takes one step from a yieldable error to its failure, and none from `fail`.
+`yieldError` retired into `fail`, the failure it meant. Its half (`retireYieldError`,
+`effTy_retireYieldError` over whole programs, `denote_yieldError` at a node) was checked at
+`478ed4b7` and left with the constructor. The machine differed in one place only: it took one
+step from a yieldable error to its failure, and takes none from `fail`.
 
 `callback` retires into `perform`, the one invocation form, whose row kind selects the route
 (the plan's §3.4). `effTy_perform_of_callback`: a typed `callback` is a typed `perform` at the
@@ -78,104 +76,6 @@ theorem effTy_iterate_of_whileLoop (sig : Signature Op) (env : TyEnv) (initial t
               Ty.sub_refl, and_self, if_true]
             exact h
           · exact absurd h nofun
-
-/-! ## `yieldError` into `fail` -/
-
-/-- One node: `yieldError` types exactly as `fail` does. -/
-theorem effTy_yieldError (sig : Signature Op) (env : TyEnv) (error : Term) :
-    effTy sig env (.yieldError error) = effTy sig env (.fail error) := by
-  simp only [effTy]
-
-/-- `yieldError` rewritten to `fail`, everywhere in a program. Reducible, so that a slot
-applied to its arguments reduces under `simp` without the algebra being unfolded where the
-fold still holds it. -/
-@[reducible] def retireYieldErrorAlgebra (Op : Type) : EffAlgebra Op (EffSelfCarrier Op) :=
-  { EffAlgebra.id Op with eff_yieldError := fun error => .fail error }
-
-/-- The rewrite of a whole program: the identity fold with the `yieldError` slot replaced. -/
-def retireYieldError (program : Eff Op) : Eff Op := cata_eff (retireYieldErrorAlgebra Op) program
-
-mutual
-  /-- The rewrite keeps the checker's whole answer at a program, refusals included. -/
-  theorem effTy_retireYieldError (sig : Signature Op) (env : TyEnv) (program : Eff Op) :
-      effTy sig env (cata_eff (retireYieldErrorAlgebra Op) program) = effTy sig env program :=
-    match program with
-    | .yieldError error => by
-      simp only [cata_eff]
-      exact (effTy_yieldError sig env error).symm
-    | .succeed _ | .fail _ | .failCause _ | .sync _ | .suspend _
-    | .perform _ _ | .bind _ _ | .gen _ | .catchCause _ _ | .catchIf _ _ _ | .matchCause _ _ _
-    | .onExit _ _ | .exit _ | .uninterruptible _ | .interruptible _
-    | .whileLoop _ _ _ _ | .yieldNow _ | .callback _ _ | .awaitFiber _ _
-    | .withFiber _ | .scoped _ | .acquireRelease _ _
-    | .provideLayer _ _ _ | .service _ | .provideService _ _ _ | .select _ _ _ _
-    | .iterate _ _ _ _ _ _ => by
-      simp only [cata_eff, EffAlgebra.id, effTy, effTy_retireYieldError,
-        stmtsTy_retireYieldError, actionTy_retireYieldError, layerTy_retireYieldError]
-
-  theorem layerTy_retireYieldError (sig : Signature Op) (layer : LayerTerm Op) :
-      layerTy sig (cata_layer (retireYieldErrorAlgebra Op) layer) = layerTy sig layer :=
-    match layer with
-    | .succeed _ _ | .effect _ _ | .effectDiscard _ | .provide _ _ | .provideMerge _ _
-    | .merge _ _ | .fresh _ | .orDie _ | .ref _ | .mergeAll _ => by
-      simp only [cata_layer, EffAlgebra.id, layerTy, effTy_retireYieldError,
-        layerTy_retireYieldError, layersTy_retireYieldError]
-
-  theorem layersTy_retireYieldError (sig : Signature Op) (layers : LayerTerms Op) :
-      layersTy sig (cata_layers (retireYieldErrorAlgebra Op) layers) = layersTy sig layers :=
-    match layers with
-    | .nil => rfl
-    | .cons _ .nil => by
-      simp only [cata_layers, EffAlgebra.id, layersTy, layerTy_retireYieldError]
-    | .cons _ (.cons next rest) => by
-      -- The tail is a `cons` again, so its fold is restated at the unfolded spelling.
-      have ih := layersTy_retireYieldError sig (.cons next rest)
-      simp only [cata_layers, EffAlgebra.id] at ih
-      simp only [cata_layers, EffAlgebra.id, layersTy, layerTy_retireYieldError, ih]
-
-  theorem stmtsTy_retireYieldError (sig : Signature Op) (env : TyEnv) (inLoop : Bool)
-      (body : Stmts Op) :
-      stmtsTy sig env inLoop (cata_stmts (retireYieldErrorAlgebra Op) body) =
-        stmtsTy sig env inLoop body :=
-    match body with
-    | .nil => rfl
-    | .cons (.ret _) rest => by
-      cases rest <;> simp only [cata_stmts, cata_stmt, EffAlgebra.id, stmtsTy]
-    | .cons (.bindYield _) _ | .cons (.yieldDiscard _) _
-    | .cons (.ifElse _ _ _) _ | .cons (.whileTrue _) _ | .cons .breakLoop _ => by
-      simp only [cata_stmts, cata_stmt, EffAlgebra.id, stmtsTy, effTy_retireYieldError,
-        stmtsTy_retireYieldError]
-
-  theorem effsTy_retireYieldError (sig : Signature Op) (env : TyEnv) (entrants : Effs Op) :
-      effsTy sig env (cata_effs (retireYieldErrorAlgebra Op) entrants) =
-        effsTy sig env entrants :=
-    match entrants with
-    | .nil | .cons _ _ => by
-      simp only [cata_effs, EffAlgebra.id, effsTy, effTy_retireYieldError,
-        effsTy_retireYieldError]
-
-  theorem actionTy_retireYieldError (sig : Signature Op) (env : TyEnv) (action : ActionTerm Op) :
-      actionTy sig env (cata_action (retireYieldErrorAlgebra Op) action) =
-        actionTy sig env action :=
-    match action with
-    | .fork _ _ | .forkIn _ _ _ | .forkScoped _ _ | .runIn _ _ | .interrupt _
-    | .interruptScoped _ | .interruptAll _ _ | .awaitAll _ | .awaitAllFailFast _
-    | .snapshotChildren | .awaitNewChildren _ | .raceAll _ | .setContext _ | .getContext
-    | .getId | .closeScope _ _ => by
-      simp only [cata_action, EffAlgebra.id, actionTy, effTy_retireYieldError,
-        effsTy_retireYieldError]
-end
-
-/-- The rewrite keeps a program's type, and refuses exactly the programs the checker refused. -/
-theorem typeOf_retireYieldError (sig : Signature Op) (program : Eff Op) :
-    typeOf sig (retireYieldError program) = typeOf sig program :=
-  effTy_retireYieldError sig [] program
-
-open Effect4 Effect4.Machine Effect4.Program.Denote in
-/-- One node's meaning: `yieldError` means exactly what `fail` means. -/
-theorem denote_yieldError (error : Term) (env : List Val) :
-    denote (.yieldError error) env = denote (.fail error) env := by
-  simp only [denote]
 
 /-! ## `callback` into `perform` -/
 

@@ -321,7 +321,6 @@ let sample_effs =
   [ E.Eff_succeed a_term;
     E.Eff_fail a_term;
     E.Eff_failCause (E.Cause_term_fail a_term);
-    E.Eff_yieldError a_term;
     E.Eff_sync a_term;
     E.Eff_suspend u;
     E.Eff_perform (E.Native_op_refMake, a_term);
@@ -452,7 +451,7 @@ let ordinals () =
      | Ok () -> check "eff_manifest.txt = Eff_types = the engine (the content table)" true
      | Error e -> fail_note "E4_program.check_manifest" e));
   (* the mutation: transpose two same-arity arms of `eff` in a copy of the manifest and the
-     pin must refuse it.  `fail(term)` and `yieldError(term)` are ordinals 1 and 3, and both
+     pin must refuse it.  `succeed(term)` and `fail(term)` are positions 0 and 1, and both
      carry one `term`, so nothing but the ORDER distinguishes them -- this is exactly the
      transposition hole a structural map leaves open (A1 §2.2, U-a's risk). *)
   (match find_path [ "eff"; "eff_manifest.txt" ] "E4_EFF_MANIFEST" with
@@ -461,7 +460,7 @@ let ordinals () =
      let text = read_file path in
      let swapped =
        replace_first "succeed(term) fail(term) failCause"
-         "succeed(term) yieldError(term) failCause" text
+         "fail(term) succeed(term) failCause" text
      in
      let tmp = Filename.temp_file "e4_manifest" ".txt" in
      let oc = open_out_bin tmp in

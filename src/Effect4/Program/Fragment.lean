@@ -21,7 +21,6 @@ def Straight : NativeEff → Bool
   | .succeed _ => true
   | .fail _ => true
   | .failCause _ => true
-  | .yieldError _ => true
   | .sync _ => true
   | .suspend b => Straight b
   | .perform op _ =>

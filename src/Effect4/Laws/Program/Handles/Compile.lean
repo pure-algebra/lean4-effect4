@@ -92,10 +92,6 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
     rcases hf : p.fuel with _ | k
     · rw [compileEff_at_zero _ hf]; exact frontier_keys p
     · rw [compileEff_failCause c hf]; split <;> exact List.nil_subset _
-  | .yieldError e, p => by
-    rcases hf : p.fuel with _ | k
-    · rw [compileEff_at_zero _ hf]; exact frontier_keys p
-    · rw [compileEff_yieldError e hf]; split <;> exact List.nil_subset _
   | .sync t, p => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_at_zero _ hf]; exact frontier_keys p

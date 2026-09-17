@@ -143,10 +143,6 @@ theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), Straight e = tru
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; rfl
     · rw [compileEff_failCause c hf]; split <;> rfl
-  | .yieldError e, p, _ => by
-    rcases hf : p.fuel with _ | k
-    · rw [compileEff_zero _ hf]; rfl
-    · rw [compileEff_yieldError e hf]; split <;> rfl
   | .sync t, p, _ => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_zero _ hf]; rfl

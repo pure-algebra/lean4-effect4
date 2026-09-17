@@ -1278,7 +1278,6 @@ def EffShape : Shape :=
      [("succeed", 0, [("value", (shape _root_.Effect4.Program.Term).root)]),
       ("fail", 1, [("error", (shape _root_.Effect4.Program.Term).root)]),
       ("failCause", 2, [("cause", (shape _root_.Effect4.Program.CauseTerm).root)]),
-      ("yieldError", 3, [("error", (shape _root_.Effect4.Program.Term).root)]),
       ("sync", 4, [("thunk", (shape _root_.Effect4.Program.Term).root)]),
       ("suspend", 5, [("body", .named "Eff")]),
       ("perform", 6, [("op", (shape _root_.Effect4.Program.NativeOp).root),
@@ -1403,7 +1402,6 @@ def toValEff : @_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp) →
   | .succeed a0 => .ctor 0 [Canonical.toVal a0]
   | .fail a0 => .ctor 1 [Canonical.toVal a0]
   | .failCause a0 => .ctor 2 [Canonical.toVal a0]
-  | .yieldError a0 => .ctor 3 [Canonical.toVal a0]
   | .sync a0 => .ctor 4 [Canonical.toVal a0]
   | .suspend a0 => .ctor 5 [toValEff a0]
   | .perform a0 a1 => .ctor 6 [Canonical.toVal a0, Canonical.toVal a1]
@@ -1493,10 +1491,6 @@ def rawEff : Val → Option (@_root_.Effect4.Program.Eff (_root_.Effect4.Program
   | .ctor 2 [v0] =>
     match Canonical.ofVal (α := _root_.Effect4.Program.CauseTerm) v0 with
     | some a0 => some (.failCause a0)
-    | _ => none
-  | .ctor 3 [v0] =>
-    match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0 with
-    | some a0 => some (.yieldError a0)
     | _ => none
   | .ctor 4 [v0] =>
     match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0 with
@@ -1769,8 +1763,6 @@ theorem rawEff_toValEff (a : @_root_.Effect4.Program.Eff (_root_.Effect4.Program
     simp [toValEff, rawEff, Canonical.ofVal_toVal]
   | «failCause» a0 =>
     simp [toValEff, rawEff, Canonical.ofVal_toVal]
-  | «yieldError» a0 =>
-    simp [toValEff, rawEff, Canonical.ofVal_toVal]
   | «sync» a0 =>
     simp [toValEff, rawEff, Canonical.ofVal_toVal]
   | «suspend» a0 =>
@@ -2035,9 +2027,6 @@ theorem fitsEff (a : @_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeO
   | «failCause» a0 =>
     exact acceptsAt_sum _ _ _ 2 "failCause" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_CauseTerm a0) (acceptsFields_nil _))
-  | «yieldError» a0 =>
-    exact acceptsAt_sum _ _ _ 3 "yieldError" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_Term a0) (acceptsFields_nil _))
   | «sync» a0 =>
     exact acceptsAt_sum _ _ _ 4 "sync" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_Term a0) (acceptsFields_nil _))
@@ -2800,9 +2789,15 @@ open Effect4.Program
 retired one or one never given, refuses at the root and nested inside a retained constructor,
 in the value tree and in the bytes. A retirement adds its tag to `unheld`. -/
 
-/-- Tags of `Eff` that no active constructor holds: 15 is the retired `branch`, the other two
-were never given. -/
-def unheld : List Nat := [15, 29, 255]
+/-- Tags of `Eff` that no active constructor holds: 3 is the retired `yieldError`, 15 the retired
+`branch`, the other two were never given. -/
+def unheld : List Nat := [3, 15, 29, 255]
+
+-- Old bytes of a `yieldError` refuse: tag 3 with its one term, at the root and nested.
+def oldYieldError : Val := .ctor 3 [Canonical.toVal (Term.lit (.str "lost"))]
+#guard Canonical.ofVal (α := Eff NativeOp) oldYieldError = none
+#guard Canonical.decode (α := Eff NativeOp) (Val.encode oldYieldError) = none
+#guard Canonical.decode (α := Eff NativeOp) (Val.encode (.ctor 5 [oldYieldError])) = none
 
 -- Old bytes of a `branch` refuse: tag 15 with `branch`'s three fields, at the root and nested.
 def oldBranch : Val :=

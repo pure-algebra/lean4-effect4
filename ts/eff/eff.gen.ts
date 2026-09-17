@@ -26,7 +26,7 @@
 //   ServiceTypeCode (Effect4.ServiceTypeCode, struct): mk(value: number)
 //   ServiceKey (Effect4.ServiceKey, struct): mk(name: ServiceName, service: ServiceTypeCode)
 //   Decision (Effect4.Program.Decision, tagged union): bool option tag(tag: string)
-//   Eff (Effect4.Program.Eff, tagged union): succeed(value: Term) fail(error: Term) failCause(cause: CauseTerm) yieldError(error: Term) sync(thunk: Term) suspend(body: Eff) perform(op: NativeOp, request: Term) bind(first: Eff, rest: Eff) gen(body: ReadonlyArray<Stmt>) catchCause(body: Eff, handler: Eff) matchCause(body: Eff, onValue: Eff, onCause: Eff) onExit(body: Eff, finalizer: Eff) exit(body: Eff) uninterruptible(body: Eff) interruptible(body: Eff) whileLoop(initial: Term, test: Term, step: Term, body: Eff) yieldNow(priority: number) callback(register: NativeOp, request: Term) awaitFiber(fiber: Term, mode: ObserverMode) withFiber(action: ActionTerm) scoped(body: Eff) acquireRelease(acquire: Eff, release: Eff) provideLayer(layer: LayerTerm, isLocal: boolean, body: Eff) service(key: ServiceKey) provideService(key: ServiceKey, value: Term, body: Eff) catchIf(test: Term, body: Eff, handler: Eff) select(scrutinee: Term, decision: Decision, arm0: Eff, arm1: Eff) iterate(cursorTy: Ty, initial: Term, test: Term, step: Term, result: Term, body: Eff)
+//   Eff (Effect4.Program.Eff, tagged union): succeed(value: Term) fail(error: Term) failCause(cause: CauseTerm) sync(thunk: Term) suspend(body: Eff) perform(op: NativeOp, request: Term) bind(first: Eff, rest: Eff) gen(body: ReadonlyArray<Stmt>) catchCause(body: Eff, handler: Eff) matchCause(body: Eff, onValue: Eff, onCause: Eff) onExit(body: Eff, finalizer: Eff) exit(body: Eff) uninterruptible(body: Eff) interruptible(body: Eff) whileLoop(initial: Term, test: Term, step: Term, body: Eff) yieldNow(priority: number) callback(register: NativeOp, request: Term) awaitFiber(fiber: Term, mode: ObserverMode) withFiber(action: ActionTerm) scoped(body: Eff) acquireRelease(acquire: Eff, release: Eff) provideLayer(layer: LayerTerm, isLocal: boolean, body: Eff) service(key: ServiceKey) provideService(key: ServiceKey, value: Term, body: Eff) catchIf(test: Term, body: Eff, handler: Eff) select(scrutinee: Term, decision: Decision, arm0: Eff, arm1: Eff) iterate(cursorTy: Ty, initial: Term, test: Term, step: Term, result: Term, body: Eff)
 //   Stmt (Effect4.Program.Stmt, tagged union): bindYield(effect: Eff) yieldDiscard(effect: Eff) ret(value: Term) ifElse(test: Term, thenB: ReadonlyArray<Stmt>, elseB: ReadonlyArray<Stmt>) whileTrue(body: ReadonlyArray<Stmt>) breakLoop
 //   Stmts (Effect4.Program.Stmts, ReadonlyArray<Stmt>): nil cons(head: Stmt, tail: ReadonlyArray<Stmt>)
 //   Effs (Effect4.Program.Effs, ReadonlyArray<Eff>): nil cons(head: Eff, tail: ReadonlyArray<Eff>)
@@ -218,7 +218,6 @@ export type Eff =
   | { readonly _tag: "succeed"; readonly value: Term }
   | { readonly _tag: "fail"; readonly error: Term }
   | { readonly _tag: "failCause"; readonly cause: CauseTerm }
-  | { readonly _tag: "yieldError"; readonly error: Term }
   | { readonly _tag: "sync"; readonly thunk: Term }
   | { readonly _tag: "suspend"; readonly body: Eff }
   | { readonly _tag: "perform"; readonly op: NativeOp; readonly request: Term }
@@ -248,7 +247,6 @@ export const Eff = Schema.TaggedUnion({
   succeed: { value: Schema.suspend((): Schema.Codec<Term> => Term) },
   fail: { error: Schema.suspend((): Schema.Codec<Term> => Term) },
   failCause: { cause: Schema.suspend((): Schema.Codec<CauseTerm> => CauseTerm) },
-  yieldError: { error: Schema.suspend((): Schema.Codec<Term> => Term) },
   sync: { thunk: Schema.suspend((): Schema.Codec<Term> => Term) },
   suspend: { body: Schema.suspend((): Schema.Codec<Eff> => Eff) },
   perform: { op: Schema.suspend((): Schema.Codec<NativeOp> => NativeOp), request: Schema.suspend((): Schema.Codec<Term> => Term) },

@@ -226,7 +226,7 @@ class CompilerReader {
   eff(x: ts.Expression, env: readonly string[]): Eff {
     x = this.unwrap(x)
     const variable = this.variable(x, env)
-    if (variable !== undefined) return { _tag: "yieldError", error: { _tag: "var", index: variable } }
+    if (variable !== undefined) return { _tag: "fail", error: { _tag: "var", index: variable } }
     if (!ts.isCallExpression(x)) {
       if (ts.isIdentifier(x) || ts.isPropertyAccessExpression(x)) {
         const h = this.name(x)
@@ -234,7 +234,7 @@ class CompilerReader {
         const row = rows.find(r => r.row.spelling === h && r.row.shape === "value")
         if (row) return row.row.kind === "async" ? { _tag: "callback", register: row.op, request: unit } : { _tag: "perform", op: row.op, request: unit }
       }
-      return { _tag: "yieldError", error: this.term(x, env) }
+      return { _tag: "fail", error: this.term(x, env) }
     }
     const h = this.name(x.expression), a = x.arguments
     const arg = (i: number) => this.at(a, i)
@@ -327,7 +327,7 @@ class CompilerReader {
       }
       return r.row.kind === "async" ? { _tag: "callback", register: r.op, request } : { _tag: "perform", op: r.op, request }
     }
-    return { _tag: "yieldError", error: this.term(x, env) }
+    return { _tag: "fail", error: this.term(x, env) }
   }
   loop(block: ts.Block, env: readonly string[]): Eff {
     const [init, ret] = block.statements

@@ -149,7 +149,6 @@ let rec json_eff (v : eff) : Eff_json_text.t =
   | Eff_succeed a0 -> Eff_json_text.Array [Eff_json_text.String "succeed"; json_term a0]
   | Eff_fail a0 -> Eff_json_text.Array [Eff_json_text.String "fail"; json_term a0]
   | Eff_failCause a0 -> Eff_json_text.Array [Eff_json_text.String "failCause"; json_cause_term a0]
-  | Eff_yieldError a0 -> Eff_json_text.Array [Eff_json_text.String "yieldError"; json_term a0]
   | Eff_sync a0 -> Eff_json_text.Array [Eff_json_text.String "sync"; json_term a0]
   | Eff_suspend a0 -> Eff_json_text.Array [Eff_json_text.String "suspend"; json_eff a0]
   | Eff_perform (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "perform"; json_native_op a0; json_term a1]

@@ -74,11 +74,6 @@ def denote : NativeEff → List Val → Effects.Program StoreSig ExitV
   -- `:294-297`: `failCause c` is `Prim.failure (causeOf c)`, or `badShape`.
   | .failCause c, env =>
     pure (match causeOf env c with | some cause => Exit.failure cause | none => badShapeExit)
-  -- `:298-301`: `yieldError e` is `Prim.yieldableError (errOf val)`, which steps to
-  -- `Prim.failure (Cause.fail error)` (`Frames.lean`, `step`).
-  | .yieldError e, env =>
-    pure (match evalTerm env e with
-      | some x => Exit.failure (Cause.fail (errOf x)) | none => badShapeExit)
   -- `:302` and `syncValueAt` (`:593-598`): the term's value, `Val.unit` when it has none.
   | .sync t, env => pure (Exit.success ((evalTerm env t).getD Val.unit))
   -- `:303` and `suspendBodyAt` (`:602-614`): the body at the child point.
@@ -205,15 +200,6 @@ theorem meaning_failCause_some (c : CauseTerm) (env : List Val) (s : Stores) {ca
 theorem meaning_failCause_none (c : CauseTerm) (env : List Val) (s : Stores)
     (hc : causeOf env c = none) : meaning (.failCause c) env s = (badShapeExit, s) := by
   unfold meaning; simp only [denote, hc]; rfl
-
-theorem meaning_yieldError_some (e : Term) (env : List Val) (s : Stores) {x : Val}
-    (hx : evalTerm env e = some x) :
-    meaning (.yieldError e) env s = (Exit.failure (Cause.fail (errOf x)), s) := by
-  unfold meaning; simp only [denote, hx]; rfl
-
-theorem meaning_yieldError_none (e : Term) (env : List Val) (s : Stores)
-    (hx : evalTerm env e = none) : meaning (.yieldError e) env s = (badShapeExit, s) := by
-  unfold meaning; simp only [denote, hx]; rfl
 
 theorem meaning_sync (t : Term) (env : List Val) (s : Stores) :
     meaning (.sync t) env s = (Exit.success ((evalTerm env t).getD Val.unit), s) := rfl

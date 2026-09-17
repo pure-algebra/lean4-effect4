@@ -17,8 +17,7 @@ program reads back to that program. `read_exact`: what the reader accepts prints
 exactly the tree it read. `readable` excludes what the printer loses and the reader cannot
 recover — a variable out of scope, the request of a `unit`-request row (the printer drops
 it), the `daemon` flag of a scoped fork (the fork options object has no such field), the
-kind of a row (a `perform` and a `callback` on the same row print alike), and `yieldError`,
-which prints as the `fail` it means (DI-72). `LawfulSpelling`
+kind of a row (a `perform` and a `callback` on the same row print alike). `LawfulSpelling`
 is what the reader needs of a signature: `spell` inverts the row table on
 (spelling, trailing names), and no spelling or trailing name collides with a binder name,
 `undefined`, or a reserved head.
@@ -387,8 +386,7 @@ mutual
   of the printer's table: a bare identifier is `Effect.fiberId` or a value row; a call is a
   reserved combinator, then a call row. A bare value in effect position — a literal,
   `undefined`, a binder — or an application of a name that is no head and no row is a tree
-  the printer never emits, refused by shape or by its head: `yieldError e` prints as
-  `Effect.fail(e)` and reads back as `fail e` (DI-72, 2026-09-13). The `match` shape of the
+  the printer never emits, refused by shape or by its head. The `match` shape of the
   refused arms is kept as it was so that `readEff.induct`'s cases keep their numbering. -/
   def readEff (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
       (x : Expr) : Except ReadRefusal (Eff Op) :=
@@ -776,14 +774,12 @@ def requestReadable (row : Row) (n : Nat) (request : Term) : Bool :=
 mutual
   /-- The program is one the printer keeps whole: variables in scope, rows performed on the
   kind their row declares, requests the row prints, atoms that are no head and no row, no
-  internal fiber action, no `daemon` on a scoped fork, and no `yieldError`, which prints as
-  the `fail` it means (DI-72). -/
+  internal fiber action, no `daemon` on a scoped fork. -/
   def readable (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat) :
       Eff Op → Bool
     | .succeed value => value.scoped n
     | .fail error => error.scoped n
     | .failCause cause => cause.scoped n
-    | .yieldError _ => false
     | .sync thunk => thunk.scoped n
     | .suspend body => readable sig spell n body
     | .perform op request =>
@@ -1405,7 +1401,6 @@ private theorem printRow_not_cond {row : Row} {r : Term} {t a b : Expr}
 theorem print_not_cond {sig : Signature Op} {n : Nat} {e : Eff Op} {t a b : Expr}
     (hp : print sig n e = .ok (.cond t a b)) : False := by
   cases e
-  case yieldError v => simp [print] at hp
   case perform op r => exact printRow_not_cond hp
   case callback op r => exact printRow_not_cond hp
   case catchIf test body handler =>
@@ -1795,7 +1790,6 @@ theorem read_print {sig : Signature Op} {spell : String → List String → Opti
     simp only [print, Except.ok.injEq] at hp; subst hp
     unfold readEff readHead
     simp [headOf_lit .failCause "Effect.failCause" rfl, readCause_printCause c hr]
-  | .yieldError _, hr, _ => by simp [readable] at hr
   | .sync t, hr, hp => by
     simp only [readable] at hr
     simp only [print, Except.ok.injEq] at hp; subst hp
@@ -3320,7 +3314,6 @@ mutual
       (hl : LawfulSpelling sig spell) {cut n : Nat} (hc : cut ≤ n) (program : Eff Op) :
       readable sig spell (n + 1) (Eff.weaken cut program) = readable sig spell n program :=
     match program with
-    | .yieldError _ => rfl
     | .select _ .option _ _ | .select _ (.tag _) _ _ => by simp only [Eff.weaken, readable]
     | .iterate _ _ _ _ _ _ => by simp only [Eff.weaken, readable]
     | .select _ .bool _ _
@@ -3388,7 +3381,7 @@ mutual
       (n : Nat) (program : Eff Op) (hr : readable sig spell n program = true) :
       ∃ x, print sig n program = .ok x :=
     match program with
-    | .succeed _ | .fail _ | .failCause _ | .yieldError _ | .sync _
+    | .succeed _ | .fail _ | .failCause _ | .sync _
     | .yieldNow _ => ⟨_, rfl⟩
     | .perform op request | .callback op request =>
       printRow_readable (sig.rowOf op) n request (Bool.and_eq_true_iff.mp hr).2

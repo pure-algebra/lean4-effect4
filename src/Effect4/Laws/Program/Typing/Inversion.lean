@@ -42,13 +42,6 @@ theorem inv_failCause (sig : Signature Op) (env : TyEnv) (cause : CauseTerm) :
   refine Option.of_triple ?_
   simp only [effTy]; mvcgen; all_goals simp_all
 
-theorem inv_yieldError (sig : Signature Op) (env : TyEnv) (error : Term) :
-    ∀ t, effTy sig env (.yieldError error) = some t →
-      ∃ ty, termTy sig env error = some ty ∧ admittedErrTy ty = true ∧
-        t = ⟨.never, ty, Requirement.empty⟩ := by
-  refine Option.of_triple ?_
-  simp only [effTy]; mvcgen; all_goals simp_all
-
 theorem inv_sync (sig : Signature Op) (env : TyEnv) (thunk : Term) :
     ∀ t, effTy sig env (.sync thunk) = some t →
       ∃ ty, termTy sig env thunk = some ty ∧ t = EffTy.pure ty := by
@@ -565,7 +558,6 @@ theorem inv_layers_cons (sig : Signature Op) (head next : LayerTerm Op)
 #print axioms inv_succeed
 #print axioms inv_fail
 #print axioms inv_failCause
-#print axioms inv_yieldError
 #print axioms inv_sync
 #print axioms inv_suspend
 #print axioms inv_perform

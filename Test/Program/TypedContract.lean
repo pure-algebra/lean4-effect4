@@ -210,10 +210,8 @@ section ErrorImage
 #guard !(supportedErrTy (.prod .string .nat))
 #guard !(supportedErrTy (.handle "Db"))
 #guard (effTy nativeSignature [] (.fail (.lit (.str "lost")))).isSome
-#guard (effTy nativeSignature [] (.yieldError (.lit (.str "lost")))).isSome
 #guard (effTy nativeSignature [] (.failCause (.fail (.lit (.str "lost"))))).isSome
 #guard effTy nativeSignature [] (.fail (.lit (.bool true))) = none
-#guard effTy nativeSignature [] (.yieldError (.lit (.bool true))) = none
 #guard effTy nativeSignature [] (.failCause (.fail (.lit (.bool true)))) = none
 -- DI-74: a `die` carries an admitted error value, the same domain as `fail`
 #guard effTy nativeSignature [] (.failCause (.die (.lit (.str "hi")))) = some ⟨.never, .never, .empty⟩

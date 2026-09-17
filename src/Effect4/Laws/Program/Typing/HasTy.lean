@@ -76,11 +76,6 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
   | failCause {env : TyEnv} {cause : CauseTerm} {ty : Ty} :
       causeTy sig env cause = some ty →
       HasTy sig env (.failCause cause) ⟨.never, ty, Requirement.empty⟩
-  /-- `yield* new E()` (`:1226`): a yieldable error, typed as `fail`. -/
-  | yieldError {env : TyEnv} {error : Term} {ty : Ty} :
-      termTy sig env error = some ty →
-      admittedErrTy ty = true →
-      HasTy sig env (.yieldError error) ⟨.never, ty, Requirement.empty⟩
   /-- `Effect.sync` (`:929`): the thunk's type, no error — a `sync` that throws is a defect. -/
   | sync {env : TyEnv} {thunk : Term} {ty : Ty} :
       termTy sig env thunk = some ty →

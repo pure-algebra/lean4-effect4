@@ -23,7 +23,9 @@
     "",
     "The Eff series (DI-79). `branch` retired into `select` under the `bool` decision: tag 15 is",
     "retired, old bytes of a `branch` refuse, and the three retained vectors that held one",
-    "(pBranch, pIllBranch, pIllJoin) are the same programs written with `select`."
+    "(pBranch, pIllBranch, pIllJoin) are the same programs written with `select`.",
+    "`yieldError` retired into `fail`, the failure it meant: tag 3 is retired, old bytes refuse,",
+    "and pYieldError is the same program written with `fail`."
   ],
   "constructor_additions": [
     "Effect4.Program.Eff.catchIf",
@@ -34,7 +36,8 @@
     "Effect4.Machine.Defect.error"
   ],
   "constructor_retirements": [
-    "Effect4.Program.Eff.branch"
+    "Effect4.Program.Eff.branch",
+    "Effect4.Program.Eff.yieldError"
   ],
   "family_additions": [
     "Effect4.Program.Decision"
@@ -79,6 +82,7 @@
     "eff/goldens/pBranch.bin",
     "eff/goldens/pIllBranch.bin",
     "eff/goldens/pIllJoin.bin",
+    "eff/goldens/pYieldError.bin",
     "eff/goldens/pDiamond.bin",
     "eff/goldens/pMergeAll.bin",
     "eff/goldens/pProvide.bin"

@@ -30,7 +30,7 @@ inductive TypeReason
   refuses at these argument types, a literal outside the value alphabet. -/
   | term (t : Term)
   | cause (c : CauseTerm)
-  /-- `fail` or `yieldError` at a type the error alphabet does not admit. -/
+  /-- `fail` at a type the error alphabet does not admit. -/
   | errorNotAdmitted (error : Ty)
   /-- The row is outside the signature's domain (DI-54). -/
   | outsideDomain (row : String)
@@ -127,10 +127,6 @@ mutual
       | none => some ⟨p, .term error⟩
       | some e => if admittedErrTy e then none else some ⟨p, .errorNotAdmitted e⟩
     | .failCause cause => if (causeTy sig env cause).isSome then none else some ⟨p, .cause cause⟩
-    | .yieldError error =>
-      match termTy sig env error with
-      | none => some ⟨p, .term error⟩
-      | some e => if admittedErrTy e then none else some ⟨p, .errorNotAdmitted e⟩
     | .sync thunk => termRefusal sig env p thunk
     | .suspend body => explainEff sig env (p ++ [0]) body
     | .perform op request =>
@@ -472,10 +468,6 @@ mutual
     simp only [explainEff, effTy, termRefusal, explainStmts, stmtsTy, explainEffs, effsTy, explainAction, actionTy, explainLayer, layerTy, explainLayers, layersTy]
     (repeat' split) <;> simp_all [EffTy.joinAnswer]
   | .failCause c =>
-    intro env pth
-    simp only [explainEff, effTy, termRefusal, explainStmts, stmtsTy, explainEffs, effsTy, explainAction, actionTy, explainLayer, layerTy, explainLayers, layersTy]
-    (repeat' split) <;> simp_all [EffTy.joinAnswer]
-  | .yieldError e =>
     intro env pth
     simp only [explainEff, effTy, termRefusal, explainStmts, stmtsTy, explainEffs, effsTy, explainAction, actionTy, explainLayer, layerTy, explainLayers, layersTy]
     (repeat' split) <;> simp_all [EffTy.joinAnswer]

@@ -279,8 +279,6 @@ theorem tupleLawful : LawfulSpelling tupleSig tupleSpell where
 #guard readEff tupleSig tupleSpell 0 (.ident "Reflect.apply") =
   .error (.unknownIdent "Reflect.apply")
 
-#guard readable tupleSig tupleSpell 0 (.yieldError (.app "Reflect.apply" .nil)) = false
-
 -- Every old native one-request tuple call is rejected by the row parser.
 #guard [NativeOp.refSet, .refGetAndSet, .refSetAndGet, .deferredSucceed, .deferredFail].all
     fun op => decide (readEff nativeSignature nativeSpell 1
@@ -315,20 +313,20 @@ open Effect4.Api in
   = .ok (.failCause (.both (.fail (.lit (.str "l")))
       (.both (.die (.lit (.nat 2))) (.both (.interrupt none) (.interrupt (some (.lit (.nat 7))))))))
 
--- DI-72 (2026-09-13): `yieldError e` prints as `Effect.fail(e)`, the failure it means, and
--- reads back as `fail e`; the constructor is outside `readable`, and a bare value in effect
--- position is a tree the printer never emits.
-#guard roundTrip sig spell 1 (.yieldError (.var 0)) = .ok (.fail (.var 0))
+-- DI-72 (2026-09-13), then the `Eff` series: `yieldError e` printed as `Effect.fail(e)`, the
+-- failure it meant, and retired into `fail`. `fail` reads back as itself, and a bare value in
+-- effect position is a tree the printer never emits.
+#guard roundTrip sig spell 1 (.fail (.var 0)) = .ok (.fail (.var 0))
 
-#guard roundTrip sig spell 0 (.yieldError (.lit .unit)) = .ok (.fail (.lit .unit))
+#guard roundTrip sig spell 0 (.fail (.lit .unit)) = .ok (.fail (.lit .unit))
 
-#guard roundTrip sig spell 0 (.yieldError (.lit (.nat 3))) = .ok (.fail (.lit (.nat 3)))
+#guard roundTrip sig spell 0 (.fail (.lit (.nat 3))) = .ok (.fail (.lit (.nat 3)))
 
-#guard roundTrip sig spell 1 (.yieldError (.app "succ" (.cons (.var 0) .nil)))
+#guard roundTrip sig spell 1 (.fail (.app "succ" (.cons (.var 0) .nil)))
   = .ok (.fail (.app "succ" (.cons (.var 0) .nil)))
 
-#guard readable sig spell 1 (.yieldError (.var 0)) = false
-#guard readable sig spell 0 (.yieldError (.lit (.nat 3))) = false
+#guard readable sig spell 1 (.fail (.var 0)) = true
+#guard readable sig spell 0 (.fail (.lit (.nat 3))) = true
 #guard readEff sig spell 0 (.int 3) = .error (.shape "bare value")
 #guard readEff sig spell 0 (.str "hi") = .error (.shape "bare value")
 #guard readEff sig spell 0 (.ident "undefined") = .error (.shape "bare value")
@@ -499,8 +497,6 @@ open Effect4.Api in
     [.arrowBlock [] [.exprStmt (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]),
       .ret (.ident "Effect.void")]]) = .error (.unknownIdent "a0")
 
-#guard readable sig spell 0 (.yieldError (.app "Effect.withFiber" .nil)) = false
-
 #guard roundTrip sig spell 1 (.withFiber (.interrupt (.var 0)))
   = .ok (.withFiber (.interrupt (.var 0)))
 
@@ -624,7 +620,7 @@ answers the program the printer kept. -/
 
 #guard roundTrip sig spell 0 (.perform 1 (.lit (.nat 5))) = .ok (.perform 1 (.lit .unit))
 
-#guard readable sig spell 0 (.yieldError (.var 3)) = false
+#guard readable sig spell 0 (.fail (.var 3)) = false
 
 /-! ## The native profile through `Api`: trailing names and the two `Scope.make` rows -/
 

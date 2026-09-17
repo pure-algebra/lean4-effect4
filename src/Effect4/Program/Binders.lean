@@ -46,7 +46,7 @@ end Node
 /-! ## The authoring profile (DI-84): heads with no authoring lift -/
 
 /-- The reader's canonical forms for generator code and the retiring invocation forms. -/
-def readerOnlyHeads : List String := ["gen", "yieldError"]
+def readerOnlyHeads : List String := ["gen"]
 
 /-- The fiber actions the printer refuses as internal. -/
 def machineOnlyHeads : List String := ["interruptScoped", "awaitAllFailFast", "snapshotChildren", "awaitNewChildren", "setContext"]
@@ -93,7 +93,8 @@ private def e0 : Eff Unit := .succeed (.lit .unit)
 #guard Node.childLevel 3 (.eff (.bind e0 e0)) 1 = 4
 #guard Node.childLevel 3 (.layer (.effectDiscard e0)) 0 = 0
 #guard Node.childLevel 3 (.eff (.suspend e0)) 0 = 3
-#guard readerOnlyHeads.length = 2
+-- `gen` alone since `yieldError` retired into `fail`
+#guard readerOnlyHeads.length = 1
 #guard machineOnlyHeads.length = 5
 
 end Effect4.Program.BindersGuards

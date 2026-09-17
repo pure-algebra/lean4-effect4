@@ -136,7 +136,6 @@ export const effJson = (v: Eff): Json => {
     case "succeed": return ["succeed", termJson(v.value)]
     case "fail": return ["fail", termJson(v.error)]
     case "failCause": return ["failCause", causeTermJson(v.cause)]
-    case "yieldError": return ["yieldError", termJson(v.error)]
     case "sync": return ["sync", termJson(v.thunk)]
     case "suspend": return ["suspend", effJson(v.body)]
     case "perform": return ["perform", nativeOpJson(v.op), termJson(v.request)]

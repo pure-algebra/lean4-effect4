@@ -739,18 +739,24 @@ let test_path_spaces () =
     E4_subterm.families;
   check "S6 `val_of_prog` and `prog_of_val` are inverse where both are defined" !rt;
   check "S6b a value argument that is not an addressed child has no program index"
-    (* declaration positions, not wire tags: 15 whileLoop (three terms before its body),
-       24 provideService (a key and a term), 25 catchIf (a term), 26 select (a term and a
-       decision) *)
-    (E4_subterm.prog_of_val E4_subterm.Eff 15 0 = None
-    && E4_subterm.prog_of_val E4_subterm.Eff 15 1 = None
-    && E4_subterm.prog_of_val E4_subterm.Eff 15 2 = None
-    && E4_subterm.prog_of_val E4_subterm.Eff 24 0 = None
-    && E4_subterm.prog_of_val E4_subterm.Eff 24 1 = None
-    && E4_subterm.prog_of_val E4_subterm.Eff 25 0 = None
-    && E4_subterm.prog_of_val E4_subterm.Eff 26 0 = None
-    && E4_subterm.prog_of_val E4_subterm.Eff 26 1 = None
-    && E4_subterm.val_of_prog E4_subterm.Eff 0 0 = None)
+    (* A constructor is found by its name, so that a retirement elsewhere in the family moves
+       nothing here. The number is a declaration position, not a wire tag: iterate has a type
+       and four terms before its body, provideService a key and a term, catchIf a term,
+       select a term and a decision. *)
+    (let pos (name : string) : int =
+       let rec go i = function
+         | [] -> invalid_arg ("no eff constructor " ^ name)
+         | n :: rest -> if String.equal n name then i else go (i + 1) rest
+       in
+       go 0 (E4_subterm.family_ctor_names E4_subterm.Eff)
+     in
+     let term_arg name j = E4_subterm.prog_of_val E4_subterm.Eff (pos name) j = None in
+     term_arg "iterate" 0 && term_arg "iterate" 1 && term_arg "iterate" 2 && term_arg "iterate" 3
+     && term_arg "iterate" 4
+     && term_arg "provideService" 0 && term_arg "provideService" 1
+     && term_arg "catchIf" 0
+     && term_arg "select" 0 && term_arg "select" 1
+     && E4_subterm.val_of_prog E4_subterm.Eff (pos "succeed") 0 = None)
 
 (* ---- S4, S9-S11: cids, refusals, and the index as a function of the bytes ---- *)
 

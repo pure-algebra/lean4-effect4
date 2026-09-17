@@ -564,10 +564,6 @@ def compileEff : NativeEff → Point → NCode
         match causeOf p.env c with
         | some cause => Prim.failure cause
         | none => badShape
-      | .yieldError e =>
-        match evalTerm p.env e with
-        | some val => Prim.yieldableError (errOf val)
-        | none => badShape
       | .sync _ => Prim.sync (EffThunk.pure p)
       -- The thunk names this suspension, not its child: executing the outer
       -- `suspend` must return the child's complete code, including any suspension

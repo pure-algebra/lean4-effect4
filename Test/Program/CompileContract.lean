@@ -187,15 +187,12 @@ def pFailTagged : NativeEff :=
 #guard errOf (Val.bool true) = Err.boom
 
 
-/-- DI-62: text remains text through ordinary and generator-style failure. -/
+/-- DI-62: text remains text through a failure and through a failed cause. -/
 def pFailText : NativeEff := .fail (.lit (.str "lost"))
-def pYieldText : NativeEff := .yieldError (.lit (.str "lost"))
 def pCauseText : NativeEff := .failCause (.fail (.lit (.str "lost")))
 #guard (typeOf nativeSignature pFailText).isSome
-#guard (typeOf nativeSignature pYieldText).isSome
 #guard (typeOf nativeSignature pCauseText).isSome
 #guard exitOf (replayEff pFailText [evaluateRoot]) 0 = some (.failure (Cause.fail (.text "lost")))
-#guard exitOf (replayEff pYieldText [evaluateRoot]) 0 = some (.failure (Cause.fail (.text "lost")))
 #guard exitOf (replayEff pCauseText [evaluateRoot]) 0 = some (.failure (Cause.fail (.text "lost")))
 #guard orDieCause (Cause.fail (.text "lost")) = Cause.die (.error (.text "lost"))
 #guard orDieCause (Cause.fail (.tagged "SqlError" "boom")) = Cause.die (.error (.tagged "SqlError" "boom"))

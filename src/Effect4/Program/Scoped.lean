@@ -21,7 +21,6 @@ def scopedAlgebra (Op : Type) : EffAlgebra Op ScopeCarrier where
   eff_succeed := fun a0 n => a0.scoped n
   eff_fail := fun a0 n => a0.scoped n
   eff_failCause := fun a0 n => a0.scoped n
-  eff_yieldError := fun a0 n => a0.scoped n
   eff_sync := fun a0 n => a0.scoped n
   eff_suspend := fun a0 n => a0 n
   eff_perform := fun _ a1 n => a1.scoped n
@@ -116,8 +115,6 @@ def Node.scopedAt {Op : Type} (n : Nat) : Node Op → Bool
     Eff.scopedAt n ((.fail a0 : Eff Op)) = (a0.scoped n) := rfl
 @[simp] theorem Eff.scopedAt_failCause {Op : Type} (n : Nat) (a0 : Effect4.Program.CauseTerm) :
     Eff.scopedAt n ((.failCause a0 : Eff Op)) = (a0.scoped n) := rfl
-@[simp] theorem Eff.scopedAt_yieldError {Op : Type} (n : Nat) (a0 : Effect4.Program.Term) :
-    Eff.scopedAt n ((.yieldError a0 : Eff Op)) = (a0.scoped n) := rfl
 @[simp] theorem Eff.scopedAt_sync {Op : Type} (n : Nat) (a0 : Effect4.Program.Term) :
     Eff.scopedAt n ((.sync a0 : Eff Op)) = (a0.scoped n) := rfl
 @[simp] theorem Eff.scopedAt_suspend {Op : Type} (n : Nat) (a0 : Effect4.Program.Eff Op) :

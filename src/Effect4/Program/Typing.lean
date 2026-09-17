@@ -287,9 +287,6 @@ mutual
       let e ← termTy sig env error
       if admittedErrTy e then some ⟨.never, e, Requirement.empty⟩ else none
     | .failCause cause => (causeTy sig env cause).map fun e => ⟨.never, e, Requirement.empty⟩
-    | .yieldError error => do
-      let e ← termTy sig env error
-      if admittedErrTy e then some ⟨.never, e, Requirement.empty⟩ else none
     | .sync thunk => (termTy sig env thunk).map EffTy.pure
     | .suspend body => effTy sig env body
     -- The operation must be in the signature's domain (`Signature.dom`, DI-54): an external
@@ -696,7 +693,7 @@ mutual
       effTy sig (pre ++ inserted :: post) (Eff.weaken pre.length program) =
         effTy sig (pre ++ post) program :=
     match program with
-    | .succeed _ | .fail _ | .failCause _ | .yieldError _ | .sync _ | .suspend _
+    | .succeed _ | .fail _ | .failCause _ | .sync _ | .suspend _
     | .perform _ _ | .bind _ _ | .gen _ | .catchCause _ _ | .catchIf _ _ _ | .matchCause _ _ _
     | .onExit _ _ | .exit _ | .uninterruptible _ | .interruptible _
     | .whileLoop _ _ _ _ | .yieldNow _ | .callback _ _ | .awaitFiber _ _

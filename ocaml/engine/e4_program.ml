@@ -221,7 +221,6 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Eff_succeed t -> A.Eff_succeed (of_term t)
     | Eff_types.Eff_fail t -> A.Eff_fail (of_term t)
     | Eff_types.Eff_failCause c -> A.Eff_failCause (of_cause_term c)
-    | Eff_types.Eff_yieldError t -> A.Eff_yieldError (of_term t)
     | Eff_types.Eff_sync t -> A.Eff_sync (of_term t)
     | Eff_types.Eff_suspend e -> A.Eff_suspend (of_eff e)
     | Eff_types.Eff_perform (op, t) -> A.Eff_perform (of_native_op op, of_term t)
@@ -374,31 +373,30 @@ module Make (A : PROGRAM_TYPES) = struct
     | A.Eff_succeed _ -> 0
     | A.Eff_fail _ -> 1
     | A.Eff_failCause _ -> 2
-    | A.Eff_yieldError _ -> 3
-    | A.Eff_sync _ -> 4
-    | A.Eff_suspend _ -> 5
-    | A.Eff_perform _ -> 6
-    | A.Eff_bind _ -> 7
-    | A.Eff_gen _ -> 8
-    | A.Eff_catchCause _ -> 9
-    | A.Eff_matchCause _ -> 10
-    | A.Eff_onExit _ -> 11
-    | A.Eff_exit _ -> 12
-    | A.Eff_uninterruptible _ -> 13
-    | A.Eff_interruptible _ -> 14
-    | A.Eff_whileLoop _ -> 15
-    | A.Eff_yieldNow _ -> 16
-    | A.Eff_callback _ -> 17
-    | A.Eff_awaitFiber _ -> 18
-    | A.Eff_withFiber _ -> 19
-    | A.Eff_scoped _ -> 20
-    | A.Eff_acquireRelease _ -> 21
-    | A.Eff_provideLayer _ -> 22
-    | A.Eff_service _ -> 23
-    | A.Eff_provideService _ -> 24
-    | A.Eff_catchIf _ -> 25
-    | A.Eff_select _ -> 26
-    | A.Eff_iterate _ -> 27
+    | A.Eff_sync _ -> 3
+    | A.Eff_suspend _ -> 4
+    | A.Eff_perform _ -> 5
+    | A.Eff_bind _ -> 6
+    | A.Eff_gen _ -> 7
+    | A.Eff_catchCause _ -> 8
+    | A.Eff_matchCause _ -> 9
+    | A.Eff_onExit _ -> 10
+    | A.Eff_exit _ -> 11
+    | A.Eff_uninterruptible _ -> 12
+    | A.Eff_interruptible _ -> 13
+    | A.Eff_whileLoop _ -> 14
+    | A.Eff_yieldNow _ -> 15
+    | A.Eff_callback _ -> 16
+    | A.Eff_awaitFiber _ -> 17
+    | A.Eff_withFiber _ -> 18
+    | A.Eff_scoped _ -> 19
+    | A.Eff_acquireRelease _ -> 20
+    | A.Eff_provideLayer _ -> 21
+    | A.Eff_service _ -> 22
+    | A.Eff_provideService _ -> 23
+    | A.Eff_catchIf _ -> 24
+    | A.Eff_select _ -> 25
+    | A.Eff_iterate _ -> 26
 
   let ctor_index_stmt : 'op A.stmt -> int = function
     | A.Stmt_bindYield _ -> 0 | A.Stmt_yieldDiscard _ -> 1 | A.Stmt_ret _ -> 2

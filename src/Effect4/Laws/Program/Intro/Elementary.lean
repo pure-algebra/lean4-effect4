@@ -4,7 +4,7 @@ import Effect4.Laws.Program.Intro.Layer
 # Intro.Elementary: the async dispatcher and the pure and elementary family
 
 `asyncRoute_means` (DI-61) and the introductions of `succeed`, `fail`, `failCause`,
-`yieldError`, `sync` and `perform`.
+`sync` and `perform`.
 -/
 
 set_option autoImplicit false
@@ -68,14 +68,6 @@ theorem intro_failCause (root : NativeEff) (c : CauseTerm) (p : Point) (k : Nat)
   rw [compileEff_failCause c hf, denoteR_failCause root c hpos]
   cases causeOf p.env c with
   | some cause => exact CodeMeans.failure _
-  | none => exact codeMeans_badShape root
-
-theorem intro_yieldError (root : NativeEff) (t : Term) (p : Point) (k : Nat)
-    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) :
-    CodeMeans root (compileEff (.yieldError t) p) (denoteR root (.yieldError t) p) := by
-  rw [compileEff_yieldError t hf, denoteR_yieldError root t hpos]
-  cases evalTerm p.env t with
-  | some v => exact CodeMeans.yieldError p (errOf v) _ fun _ => CodeMeans.failure _
   | none => exact codeMeans_badShape root
 
 theorem intro_sync (root : NativeEff) (t : Term) (p : Point) (k : Nat)

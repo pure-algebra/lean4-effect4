@@ -531,7 +531,6 @@ def uninterruptibleOne : NativeEff := .uninterruptible (.succeed one)
 def interruptibleOne : NativeEff := .interruptible (.succeed one)
 def maskedInner : NativeEff := .uninterruptible (.interruptible (.succeed one))
 def branchT : NativeEff := .select (.lit (.bool true)) .bool (.succeed one) (.succeed (.lit (.nat 2)))
-def yieldErr : NativeEff := .yieldError (.lit (.nat 3))
 def getIdP : NativeEff := .withFiber .getId
 /-- E4-CHECK-CE-010: Effect.fiberId is a number, so admitted arithmetic can use it.
 Pinned `internal/effect.ts:1092–1100`. Logical root ID is Api.root = 0. -/
@@ -596,7 +595,6 @@ def yieldNowThen : NativeEff := .bind (.yieldNow 0) (.succeed (.lit (.nat 5)))
 #guard lockstep interruptibleOne
 #guard lockstep maskedInner
 #guard lockstep branchT
-#guard lockstep yieldErr
 #guard lockstep getIdP
 #guard lockstep genInline
 #guard lockstep genResumed

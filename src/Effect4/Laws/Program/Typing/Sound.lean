@@ -62,10 +62,6 @@ theorem effTy_sound (sig : Signature Op) (e : Eff Op) :
     intro env t h
     obtain ⟨ty, hty, rfl⟩ := inv_failCause sig env cause t h
     exact .failCause hty
-  | yieldError error =>
-    intro env t h
-    obtain ⟨ty, hty, herr, rfl⟩ := inv_yieldError sig env error t h
-    exact .yieldError hty herr
   | sync thunk =>
     intro env t h
     obtain ⟨ty, hty, rfl⟩ := inv_sync sig env thunk t h
@@ -401,8 +397,6 @@ theorem effTy_complete (sig : Signature Op) (e : Eff Op) :
   | fail error =>
     intro env t hd; cases hd; simp_all [effTy]
   | failCause cause =>
-    intro env t hd; cases hd; simp_all [effTy]
-  | yieldError error =>
     intro env t hd; cases hd; simp_all [effTy]
   | sync thunk =>
     intro env t hd; cases hd; simp_all [effTy]

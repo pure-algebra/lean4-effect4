@@ -191,7 +191,6 @@ partial def effV : Eff NativeOp → V
   | .succeed v => .ctor ``Eff.succeed [termV v]
   | .fail e => .ctor ``Eff.fail [termV e]
   | .failCause c => .ctor ``Eff.failCause [causeV c]
-  | .yieldError e => .ctor ``Eff.yieldError [termV e]
   | .sync t => .ctor ``Eff.sync [termV t]
   | .suspend b => .ctor ``Eff.suspend [effV b]
   | .perform op r => .ctor ``Eff.perform [opV op, termV r]
@@ -298,7 +297,9 @@ def pCatch : P := .catchCause (.fail (n 1)) (.succeed (n 0))
 def pStr : P := .succeed (.lit (.str "hi \"there\"\n"))
 def pFailCause : P :=
   .failCause (.both (.fail (n 1)) (.both (.die (n 2)) (.both (.interrupt (some (n 3))) (.interrupt none))))
-def pYieldError : P := .yieldError (.lit (.bool true))
+/-- Kept under its name (DI-60: no fixture is renamed). `yieldError` retired into `fail`, the
+failure it meant; this is the same program written with `fail`. -/
+def pYieldError : P := .fail (.lit (.bool true))
 def pSync : P := .sync (.app "add" (ts [n 2, n 3]))
 def pSuspend : P := .suspend (.succeed u)
 def pMatch : P := .matchCause (.succeed (n 1)) (.succeed (.app "isZero" (ts [v 0]))) (.succeed (.lit (.bool false)))

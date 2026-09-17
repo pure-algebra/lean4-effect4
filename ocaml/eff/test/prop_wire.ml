@@ -82,7 +82,7 @@ let rec rand_eff d =
     | 0 -> Eff_succeed (t ())
     | 1 -> Eff_fail (t ())
     | 2 -> Eff_failCause (rand_cause (d - 1))
-    | 3 -> Eff_yieldError (t ())
+    | 3 -> Eff_fail (t ())
     | 4 -> Eff_sync (t ())
     | 5 -> Eff_suspend (e ())
     | 6 -> Eff_perform (rand_op (), t ())

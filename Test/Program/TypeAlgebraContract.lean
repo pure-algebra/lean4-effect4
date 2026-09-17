@@ -155,7 +155,6 @@ private def hiddenPair : Ty := .prod (.union .string .never) .string
 #guard supportedErrTy hiddenPair
 #guard admittedErrTy hiddenPair
 #guard (effTy nativeSignature [hiddenPair] (.fail (.var 0))).isSome
-#guard (effTy nativeSignature [hiddenPair] (.yieldError (.var 0))).isSome
 #guard (effTy nativeSignature [hiddenPair] (.failCause (.fail (.var 0)))).isSome
 #guard (effTy nativeSignature [.prod (.union .string .bool) .string] (.fail (.var 0))).isNone
 

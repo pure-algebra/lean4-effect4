@@ -103,9 +103,15 @@ open Effect4.Program
 retired one or one never given, refuses at the root and nested inside a retained constructor,
 in the value tree and in the bytes. A retirement adds its tag to `unheld`. -/
 
-/-- Tags of `Eff` that no active constructor holds: 15 is the retired `branch`, the other two
-were never given. -/
-def unheld : List Nat := [15, 29, 255]
+/-- Tags of `Eff` that no active constructor holds: 3 is the retired `yieldError`, 15 the retired
+`branch`, the other two were never given. -/
+def unheld : List Nat := [3, 15, 29, 255]
+
+-- Old bytes of a `yieldError` refuse: tag 3 with its one term, at the root and nested.
+def oldYieldError : Val := .ctor 3 [Canonical.toVal (Term.lit (.str "lost"))]
+#guard Canonical.ofVal (α := Eff NativeOp) oldYieldError = none
+#guard Canonical.decode (α := Eff NativeOp) (Val.encode oldYieldError) = none
+#guard Canonical.decode (α := Eff NativeOp) (Val.encode (.ctor 5 [oldYieldError])) = none
 
 -- Old bytes of a `branch` refuse: tag 15 with `branch`'s three fields, at the root and nested.
 def oldBranch : Val :=

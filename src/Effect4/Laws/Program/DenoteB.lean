@@ -127,7 +127,7 @@ theorem denoteB_straight (k : Nat) :
     | success v => exact denoteB_straight k b (env ++ [v]) hb
     | failure c => exact (map_pure _ _).symm
   | .iterate _ _ _ _ _ _, _, h => absurd h Bool.false_ne_true
-  | .succeed _, env, h | .fail _, env, h | .failCause _, env, h | .yieldError _, env, h
+  | .succeed _, env, h | .fail _, env, h | .failCause _, env, h
   | .sync _, env, h | .suspend _, env, h | .perform _ _, env, h | .gen _, env, h
   | .catchCause _ _, env, h | .matchCause _ _ _, env, h | .onExit _ _, env, h | .exit _, env, h
   | .uninterruptible _, env, h | .interruptible _, env, h
@@ -219,7 +219,7 @@ theorem denoteB_mono :
               rw [hb', runP_bind, hb]
         | _ => rfl
   | .succeed _, k, env, s, x, s', h | .fail _, k, env, s, x, s', h
-  | .failCause _, k, env, s, x, s', h | .yieldError _, k, env, s, x, s', h
+  | .failCause _, k, env, s, x, s', h
   | .sync _, k, env, s, x, s', h | .suspend _, k, env, s, x, s', h
   | .perform _ _, k, env, s, x, s', h | .gen _, k, env, s, x, s', h
   | .catchCause _ _, k, env, s, x, s', h | .matchCause _ _ _, k, env, s, x, s', h

@@ -41,7 +41,6 @@ def depth : NativeEff → Nat
 
 /-- A bound on the local steps a plain program takes before it is its exit. -/
 def steps : NativeEff → Nat
-  | .yieldError _ => 1
   | .sync _ => 1
   | .perform _ _ => 1
   | .suspend b => steps b + 1
@@ -469,12 +468,6 @@ theorem compileEff_fail (e : Term) (hf : p.fuel = k + 1) :
 theorem compileEff_failCause (c : CauseTerm) (hf : p.fuel = k + 1) :
     compileEff (.failCause c) p =
       (match causeOf p.env c with | some cause => Prim.failure cause | none => badShape) := by
-  simp [compileEff, hf]; rfl
-
-theorem compileEff_yieldError (e : Term) (hf : p.fuel = k + 1) :
-    compileEff (.yieldError e) p =
-      (match evalTerm p.env e with
-       | some val => Prim.yieldableError (errOf val) | none => badShape) := by
   simp [compileEff, hf]; rfl
 
 theorem compileEff_sync (t : Term) (hf : p.fuel = k + 1) :
@@ -1414,15 +1407,6 @@ theorem meaning_of_asExit : ∀ (b : NativeEff) (q : Point) (s : Stores) {exit :
       · simp only [hc, Prim.asExit?_failure, Option.some.injEq] at h
         subst h
         exact meaning_failCause_some c q.env s hc
-  | .yieldError e, q, s, exit, _, h => by
-    rcases hf : q.fuel with _ | k
-    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
-    · rw [compileEff_yieldError e hf] at h
-      rcases hx : evalTerm q.env e with _ | x
-      · simp only [hx, badShape, Prim.asExit?_failure, Option.some.injEq] at h
-        subst h
-        exact meaning_yieldError_none e q.env s hx
-      · simp [hx, Prim.asExit?] at h
   | .sync t, q, s, exit, _, h => by
     rcases hf : q.fuel with _ | k
     · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
@@ -1597,14 +1581,6 @@ theorem localRun_compile (root : NativeEff) :
     · rw [compileEff_failCause c (fuel_succ hd), meaning_failCause_some c p.env s hc]
       simp only [hc]
       exact ⟨0, Nat.zero_le _, Reaches.refl root _ s⟩
-  | .yieldError e, p, K, i, s, _, _, hd => by
-    rcases hx : evalTerm p.env e with _ | x
-    · rw [compileEff_yieldError e (fuel_succ hd), meaning_yieldError_none e p.env s hx]
-      simp only [hx]
-      exact ⟨0, Nat.zero_le _, Reaches.refl root _ s⟩
-    · rw [compileEff_yieldError e (fuel_succ hd), meaning_yieldError_some e p.env s hx]
-      simp only [hx]
-      exact ⟨1, Nat.le_refl _, Reaches.step (step_yieldableError root (errOf x) K i s)⟩
   | .sync t, p, K, i, s, _, h, hd => by
     rw [compileEff_sync t (fuel_succ hd), meaning_sync]
     have hs := step_sync_pure root p K i s

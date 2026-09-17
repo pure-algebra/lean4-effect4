@@ -485,7 +485,7 @@ def inlineAsyncYield (op : NativeOp) (request : Term) (p : Point) : Option ExitV
     | _ => some badShapeExit
 
 /-- A yielded source form with an immediate `Prim.success` or `Prim.failure` head.
-`sync`, `yieldError` with a valid argument, and compound frames are not inline exits;
+`sync` and compound frames are not inline exits;
 `exit` of an immediate exit is that exit's success (`internal/effect.ts:3621-3622`), and
 a loop never is (its compile is a `Suspend`). The definition inspects source data and the point's captured completed exits;
 its compiler-head equation is checked below. -/
@@ -499,8 +499,6 @@ def inlineYield : NativeEff → Point → Option ExitV
       | some v => .failure (Cause.fail (errOf v)) | none => badShapeExit)
     | .failCause t => some (match causeOf p.env t with
       | some c => .failure c | none => badShapeExit)
-    | .yieldError t => match evalTerm p.env t with
-      | some _ => none | none => some badShapeExit
     | .perform op request =>
       match op with
       | .external _ => inlineAsyncYield op request p
@@ -588,10 +586,6 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
       | some v => .failure (Cause.fail (errOf v)) | none => badShapeExit)
   | .failCause t, p => .pure (match causeOf p.env t with
       | some c => .failure c | none => badShapeExit)
-  -- `Prim.yieldableError`: one counted step, then the failure.
-  | .yieldError t, p => match evalTerm p.env t with
-      | some v => suspendR p (.pure (.failure (Cause.fail (errOf v))))
-      | none => .pure badShapeExit
   -- `Prim.sync (pure p)`: the value through the `answered` phase.
   | .sync t, p => .vis (.inr (.sync ((evalTerm p.env t).getD Val.unit))) fun v => .pure (.success v)
   -- `Prim.suspend (body child)`: the counted step, then the body.
@@ -935,15 +929,6 @@ theorem denoteR_fail (t : Term) (h : p.fuel ≠ 0) :
 theorem denoteR_failCause (c : CauseTerm) (h : p.fuel ≠ 0) :
     denoteR root (.failCause c) p =
       .pure (match causeOf p.env c with | some cause => .failure cause | none => badShapeExit) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => budget hf; try rfl
-
-theorem denoteR_yieldError (t : Term) (h : p.fuel ≠ 0) :
-    denoteR root (.yieldError t) p =
-      (match evalTerm p.env t with
-       | some v => suspendR p (.pure (.failure (Cause.fail (errOf v))))
-       | none => .pure badShapeExit) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
   | succ f => budget hf; try rfl
@@ -1295,7 +1280,7 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
     | callback op request =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
       exact inlineAsyncYield_eq_headExit op request p
-    | succeed t | fail t | yieldError t =>
+    | succeed t | fail t =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
       cases evalTerm p.env t <;> rfl
     | failCause c =>
@@ -1375,16 +1360,6 @@ theorem denote_of_inlineYield : ∀ (b : NativeEff) (q : Point) {exit : ExitV},
     · simp only [Option.some.injEq] at h
       subst h
       rfl
-  | .yieldError t, q, exit, _, h => by
-    simp only [inlineYield] at h
-    split at h
-    · cases h
-    · rcases hx : evalTerm q.env t with _ | x
-      · simp only [hx, Option.some.injEq] at h
-        subst h
-        simp only [denote, hx]
-        rfl
-      · simp [hx] at h
   | .perform op r, q, exit, hs, h => by
     have hk := Straight.perform_sync hs
     rw [inlineYield_perform_sync op r q hk] at h
@@ -1451,13 +1426,6 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
     cases hf : p.fuel with
     | zero => exact (fuel_ne_zero_of_depth hp hf).elim
     | succ f => simp only [denoteR, hf, denoteRWith, denoteEffBody]; rw [denote]; rfl
-  | .yieldError t, p, _, hp => by
-    cases hf : p.fuel with
-    | zero => exact (fuel_ne_zero_of_depth hp hf).elim
-    | succ f =>
-      simp only [denoteR, hf, denoteRWith, denoteEffBody]
-      rw [denote]
-      cases hx : evalTerm p.env t <;> rfl
   | .sync t, p, _, hp => by
     cases hf : p.fuel with
     | zero => exact (fuel_ne_zero_of_depth hp hf).elim

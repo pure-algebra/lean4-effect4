@@ -306,7 +306,7 @@ mutual
     | succeed (value : Term)
     | fail (error : Term)
     | failCause (cause : CauseTerm)
-    | yieldError (error : Term)
+    -- (`yieldError` retired into `fail`, the failure it meant; wire tag 3 is never given again)
     -- thunks
     | sync (thunk : Term)
     | suspend (body : Eff Op)
@@ -527,7 +527,6 @@ def arms : List Arm :=
   [ ⟨"succeed", "Effect.succeed", "Prim.success", "internal/effect.ts:1275"⟩
   , ⟨"fail", "Effect.fail", "Prim.failure (Cause.fail e)", "internal/effect.ts:1322"⟩
   , ⟨"failCause", "Effect.failCause", "Prim.failure", "internal/effect.ts:1330"⟩
-  , ⟨"yieldError", "yield* new E()", "Prim.yieldableError", "internal/effect.ts:1226"⟩
   , ⟨"sync", "Effect.sync", "Prim.sync", "internal/effect.ts:929"⟩
   , ⟨"suspend", "Effect.suspend", "Prim.suspend", "internal/effect.ts:1093"⟩
   , ⟨"perform", "yield* op(x) (by the row's kind)", "Prim.sync | Prim.async | a nested body", "git:62c04d9:src/Effect4/StdLib/Links.lean"⟩
@@ -555,13 +554,13 @@ def arms : List Arm :=
 
 /-- Every constructor has one arm and every arm one constructor. -/
 def constructorNames : List String :=
-  ["succeed", "fail", "failCause", "yieldError", "sync", "suspend", "perform", "bind", "gen",
+  ["succeed", "fail", "failCause", "sync", "suspend", "perform", "bind", "gen",
    "catchCause", "matchCause", "onExit", "exit", "uninterruptible", "interruptible",
    "whileLoop", "yieldNow", "callback", "awaitFiber", "withFiber", "scoped", "acquireRelease",
    "provideLayer", "service", "provideService", "catchIf", "select", "iterate"]
 
 #guard arms.map Arm.constructor = constructorNames
-#guard constructorNames.length = 28
+#guard constructorNames.length = 27
 
 /-! ## The separation-4 receipts: first-order, decidable throughout -/
 

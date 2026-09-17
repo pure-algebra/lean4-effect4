@@ -304,7 +304,6 @@ const writeEff = (w: Writer, v: Eff): void => {
     case "succeed": return w.ctor(0, [() => writeTerm(w, v.value)])
     case "fail": return w.ctor(1, [() => writeTerm(w, v.error)])
     case "failCause": return w.ctor(2, [() => writeCauseTerm(w, v.cause)])
-    case "yieldError": return w.ctor(3, [() => writeTerm(w, v.error)])
     case "sync": return w.ctor(4, [() => writeTerm(w, v.thunk)])
     case "suspend": return w.ctor(5, [() => writeEff(w, v.body)])
     case "perform": return w.ctor(6, [() => writeNativeOp(w, v.op), () => writeTerm(w, v.request)])

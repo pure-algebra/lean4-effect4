@@ -38,9 +38,6 @@ theorem prepareR_denoteR (root : NativeEff) (e : NativeEff) (p : Point)
       | succeed t => rw [denoteR_succeed root t hpos]; rfl
       | fail t => rw [denoteR_fail root t hpos]; rfl
       | failCause c => rw [denoteR_failCause root c hpos]; rfl
-      | yieldError t =>
-        rw [denoteR_yieldError root t hpos]
-        cases evalTerm p.env t <;> rfl
       | sync t => rw [denoteR_sync root t hpos]; rfl
       | suspend b => rw [denoteR_suspend root b p hpos]; rfl
       | perform op r =>

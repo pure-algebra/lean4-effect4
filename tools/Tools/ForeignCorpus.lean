@@ -28,7 +28,6 @@ mutual
   def program : Eff NativeOp → Build (Eff NativeOp)
     | .succeed t => pure (.succeed t)
     | .fail t => pure (.fail (.lit (literal t)))
-    | .yieldError t => pure (.yieldError t)
     | .failCause c => pure (.failCause c)
     | .sync t => pure (.sync t)
     | .suspend b => return .suspend (← program b)
