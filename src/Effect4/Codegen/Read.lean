@@ -3166,16 +3166,6 @@ private theorem names_spell_weaken {sig : Signature Op}
   | nil => rfl
   | cons _ _ => simp only [Terms.weaken, names_cons_spell_none hl]
 
-private theorem noRow_weaken {sig : Signature Op}
-    {spell : String → List String → Option Op} (hl : LawfulSpelling sig spell)
-    (cut : Nat) (atom : String) (args : Terms) :
-    noRow spell atom (Terms.weaken cut args) = noRow spell atom args := by
-  cases args with
-  | nil => rfl
-  | cons head tail =>
-    cases tail <;> simp only [Terms.weaken, noRow, names_cons_spell_none hl,
-      names_spell_weaken hl]
-
 private theorem savedVar_weaken (cut : Nat) (x y : Term) :
     (savedVar? (printTerm (Term.weaken cut x)) (printTerm (Term.weaken cut y))).isNone =
       (savedVar? (printTerm x) (printTerm y)).isNone := by

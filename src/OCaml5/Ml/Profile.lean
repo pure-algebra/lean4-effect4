@@ -78,11 +78,6 @@ def allConstructs : List String :=
    "decl.moduleAliasD", "decl.moduleTypeD", "decl.attrD", "decl.floatingAttrD", "decl.letPatD",
    "decl.blank"]
 
-private def tyTag : Ty → String
-  | .var _ => "ty.var" | .con _ _ => "ty.con" | .arrow _ _ => "ty.arrow"
-  | .tuple _ => "ty.tuple" | .larrow _ _ _ => "ty.larrow"
-  | .polyVariant _ _ => "ty.polyVariant" | .anon => "ty.anon" | .asVar _ _ => "ty.asVar"
-
 private def patTag : Pat → String
   | .wild => "pat.wild" | .var _ => "pat.var" | .int _ => "pat.int" | .str _ => "pat.str"
   | .ctor _ _ => "pat.ctor" | .record _ => "pat.record" | .tuple _ => "pat.tuple"

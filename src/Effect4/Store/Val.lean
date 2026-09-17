@@ -299,11 +299,6 @@ def children : Val → List Val
   | .ctor _ args => args
   | _ => []
 
-/-- Whether a tree is a `list` frame. -/
-def isList : Val → Bool
-  | .list _ => true
-  | _ => false
-
 mutual
 /-- The live handles a tree carries, in payload order: every `handle` frame's kind byte and
 index. A tree with none is content; a tree with one names a running machine's store and is

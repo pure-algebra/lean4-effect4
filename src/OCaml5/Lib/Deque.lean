@@ -340,17 +340,6 @@ theorem enqueue_unfold_nil (a : Bool) (p : Nat) (t : Task ν σ β ε δ ι α) 
     ((Effect4.Machine.Dispatcher.mk [] a).enqueue p t).buckets
       = [(⟨p, [t]⟩ : Bucket ν σ β ε δ ι α)] := rfl
 
-private theorem findIn_none_of_lt_head (p : Nat) :
-    ∀ {bs : List (Bucket ν σ β ε δ ι α)}, strictAsc (bucketPairs bs) = true →
-      (∀ b ∈ bs, p < b.priority) →
-      findIn p (bucketPairs bs) = none := by
-  intro bs _ h
-  refine findIn_none_of_all_lt (fun x hx => ?_)
-  obtain ⟨b, hb, hbx⟩ := List.mem_map.mp hx
-  have := h b hb
-  rw [← hbx]
-  exact natCmp_lt_iff.mpr this
-
 /-- **`Effect4.Machine.Dispatcher.enqueue` is `Buckets.enqueue`.** -/
 theorem bucketPairs_enqueue (a : Bool) (p : Nat) (t : Task ν σ β ε δ ι α) :
     ∀ bs : List (Bucket ν σ β ε δ ι α), strictAsc (bucketPairs bs) = true →

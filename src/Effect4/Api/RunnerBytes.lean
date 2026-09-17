@@ -67,10 +67,6 @@ def replayRows (p : Runner) : List Bytes → Runner × List (Option Phase)
 def replayBytes (p : Runner) (rows : List Bytes) : Runner × List Bytes :=
   ((replayRows p rows).1, (replayRows p rows).2.map verdictBytes)
 
-/-- The header of a job as content, and back. -/
-def headerBytes (h : Header) : Bytes := Canonical.encode h
-def headerOf (bytes : Bytes) : Option Header := Canonical.decode bytes
-
 /-- What a holder schedules by, as content. -/
 def observeBytes (p : Runner) : Bytes := Canonical.encode (observe p)
 

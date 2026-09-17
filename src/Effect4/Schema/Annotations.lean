@@ -1907,15 +1907,6 @@ termination_by structural annotation
 
 end
 
-private theorem appendMany_map (lists : List (List Annotations))
-    (f : Annotations → Annotations) :
-    appendMany (lists.map (List.map f)) = (appendMany lists).map f := by
-  induction lists with
-  | nil => rfl
-  | cons head tail ih =>
-      simp only [List.map_cons, appendMany]
-      rw [map_append_exact, ih]
-
 mutual
 
 private theorem collect_modifyRepresentation (representation : Representation)
@@ -2221,22 +2212,6 @@ private theorem collect_modifyIndexes
             collect_modifyIndexes tail f]
 termination_by structural indexes
 
-private theorem collect_modifySchemas
-    (schemas : Option (List Representation))
-    (f : Annotations → Annotations) :
-    (match schemas with
-      | none => []
-      | some values =>
-          appendMany
-            (values.map fun value =>
-              collectRepresentation (modifyRepresentation f value))) =
-      (match schemas with
-        | none => []
-        | some values =>
-            appendMany (values.map collectRepresentation)).map f := by
-  cases schemas with
-  | none => rfl
-  | some values => exact collect_modifyRepresentationList values f
 private theorem collect_modifyCheckAnnotation
     (annotation : CheckRepresentationAnnotationOf Representation)
     (f : Annotations → Annotations) :

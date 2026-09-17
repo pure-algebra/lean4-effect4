@@ -75,13 +75,6 @@ def HostConfig.pinsJson (c : HostConfig) : String :=
   "{\"compiler\": " ++ jsonString c.compiler ++ ", \"version\": " ++ jsonString c.version ++
     ", \"effectVersion\": " ++ jsonString c.effectVersion ++ "}\n"
 
-/-- Codes the host reports at file level for the module system, never about the program. -/
-def fileLevelCodes : List Nat := [1287, 1295, 1479]
-
-/-- Codes the host reports as advice on a condition that is always true or false; no refusal of
-this checker corresponds to them. -/
-def advisoryCodes : List Nat := [2872, 2873]
-
 /-- The codes TypeScript reports where this checker refuses for the reason, under `c`. Empty
 when no observation exists yet or when TypeScript has no counterpart. -/
 def codesOf (c : HostConfig) : TypeReason → List Nat

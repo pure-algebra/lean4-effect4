@@ -31,7 +31,7 @@ referring type's instance can be derived, and types are emitted in the order giv
 lists its targets first. `tools/Effect4Gen/Driver.lean` reads `tools/Effect4Gen/manifest.json` and runs this
 once per group.
 
-The environment walk is `src/OCaml5/Tools/Describe.lean`'s (`getConstInfoInduct`,
+The environment walk is `git:bb807c93:src/OCaml5/Tools/Describe.lean`'s (`getConstInfoInduct`,
 `forallTelescope`, `isStructure`, `InductiveVal.all`); the "generated Lean text with a guard"
 pattern is `src/OCaml5/Lib/Derived.lean`'s.
 
