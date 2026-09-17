@@ -1,37 +1,42 @@
 import Effect4.Codegen.Print
+import Effect4.Codegen.Templates
 import Effect4.Program.Native
 import Effect4.Program.Table
 
 /-!
-# Codegen.Read — the printer's image back into `Eff` (lane A4 of the AST relation)
+# Codegen.Read — the printer's image back into `Eff`, read from the table the printer prints from
 
-Plan: `docs/research/2026-09-04-a4-reader-plan.md`, under
-`docs/research/2026-09-04-ast-relation-plan.md` §5.2. `readEff` is the inverse of `print`
-(`src/Effect4/Codegen/Print.lean`) constructor by constructor, over the same target fragment
-(`TypeScript.Expr`, `TypeScript.Stmt`): it takes a tree the printer could have produced
-back to the `Eff` that produced it, and refuses by name every tree the printer never
-produces. `ReadRefusal` is the closed refusal alphabet; a refusal is data, never a guess.
+`readT` is ONE generic step over the table of printed clauses (`Codegen/Templates.lean`): the
+first row of a family whose skeleton matches the tree (`Template.matchT`), its arguments read by
+sort from what the skeleton captured, and the constructor rebuilt by the generated `build`
+(`Program/LayerView.lean`). A child is read by the same step, so the reader has no arm per
+constructor. It recurses on the size of the tree: a rigid skeleton captures only proper
+sub-expressions (`Template.match_below`), and a transparent row (`withFiber`, a bare hole over
+its action) hands the same tree to a strictly lower family. This is proved for ANY table; what a
+good table adds is the laws, not totality.
 
-Two theorems state the relation. `read_print`: what the printer prints of a readable
-program reads back to that program. `read_exact`: what the reader accepts prints back to
-exactly the tree it read. `readable` excludes what the printer loses and the reader cannot
-recover — a variable out of scope, the request of a `unit`-request row (the printer drops
-it), the `daemon` flag of a scoped fork (the fork options object has no such field).
-`LawfulSpelling` is what the reader needs of a signature: `spell` inverts the row table on
-(spelling, trailing names), and no spelling or trailing name collides with a binder name,
-`undefined`, or a reserved head.
+What is not a skeleton is read as the printer's hand fields print it: a generator's statements,
+and the row call of `perform` (the inverse of the signature's `spell`). The leaf readers (terms,
+causes, keys, fork options, literals, rows) are below with their round trips.
 
-Binders are recovered by comparison, never by decoding: `Var.read n s` is the position
-`i < n` with `Var.name i = s`. Nothing here folds over a string (`String.toList` and its
-kin reach `Classical.choice` on this toolchain); the injectivity of `Var.name` is proved
-from the bytes of `Nat.repr`, which are a `List UInt8` the digits decode from.
-Service keys decode those decimal bytes and check the full canonical spelling,
-including the structural type argument supplied by the signature. Legacy row and
-service type text must convert through `Codegen.Types` before it can be printed;
-`requestReadable` and `keyReadable` state that domain explicitly. The raw reader only
-accepts unannotated parameters, returns and locals where the printer emits them. It never
-discards a source annotation to establish `read_exact`; checked source admission is a
-separate boundary.
+A row is accepted only when the printer would choose it for the arguments read
+(`Row.selects`), so what is read prints back to the tree read: `Effect.catchIf` with a literal
+`true` test is refused, because the printer writes that program as `Effect.catch`.
+
+`readable` is the round trip itself: printing the program and reading it back gives the program.
+What it excludes is what the printer loses and no reader can recover: a variable out of scope,
+the request of a `unit`-request row (the printer drops it), the `daemon` flag of a scoped fork
+(the options object has no such field), a loop's cursor annotation (no reader of types exists,
+B19). `LawfulSpelling` is what the row reader needs of a signature.
+
+Binders are recovered by comparison, never by decoding: `Var.read n s` is the position `i < n`
+with `Var.name i = s`. Nothing here folds over a string (`String.toList` and its kin reach
+`Classical.choice` on this toolchain).
+
+Owed (R5.2): `read_print` and `read_exact` over the table, through the engine lemmas
+`match_inst` and `inst_of_match` (`Laws/Codegen/Template.lean`). The hand reader they were
+proved for is deleted; on the seeded corpus the table reader agrees with it wherever it read,
+reads 44 more images, and is exact on all 400.
 -/
 
 namespace Effect4.Program
@@ -69,7 +74,7 @@ deriving DecidableEq, Repr
 The raw reader accepts the unannotated image the printer emits. Where a tree carries an
 annotation in a position the printer leaves bare, the refusal says so by name instead of
 falling through to the arity or statement-shape refusal. These two functions sit in the
-reader's wildcard arms, so no arm is added and `readEff.induct` keeps its case numbering. -/
+row reader's refusal arms. -/
 
 /-- The annotated position of an expression the printer would have emitted bare. -/
 def annotationSite : Expr → Option String
@@ -322,18 +327,6 @@ def readMethod (sig : Signature Op) (spell : String → List String → Option O
     readRowMethod sig spell n receiver s (ta :: tas) args
   | _ => .error (.shape "expression")
 
-/-- The canonical adapter for the synchronous rc.112 `Fiber.runIn` export. The
-callback adds no binder, links the fiber once, and returns the unit effect. -/
-def readRunIn (n : Nat) (args : List Expr) : Except ReadRefusal (Eff Op) :=
-  match args with
-  | [.arrowBlock [] [.exprStmt (.call (.ident runIn) [target, scope]), .ret (.ident unit)] none] =>
-    if runIn = "Fiber.runIn" ∧ unit = "Effect.void" then do
-      let t ← readTerm n target
-      let s ← readTerm n scope
-      .ok (.withFiber (.runIn t s))
-    else .error (.shape "runIn")
-  | _ => .error (.shape "runIn")
-
 /-- The digit a byte spells, `'0'` as `0`. -/
 def digitOfByte (b : UInt8) : Nat := b.toNat - 48
 
@@ -373,210 +366,207 @@ def readLiteral (x : Expr) : Except ReadRefusal Lit := do
   | .lit value => .ok value
   | _ => .error (.shape "literal")
 
-/-! ## Effects -/
+/-! ## The reader: one generic step over the table -/
 
-/-- The conditional spelling excludes the canonical literal-true Effect.catch form.
-Keep this leaf independent of the recursive reader's target-shape matcher. -/
-def readCatchTest (n : Nat) : Expr → Except ReadRefusal Term
-  | .bool true => .error (.shape "unconditional catchIf uses Effect.catch")
-  | predicate => readTerm n predicate
+section TableReader
+
+open Effect4.Codegen.Template (Arg Subst matchT match_below)
+open Effect4.Codegen
+
+/-- The capture at hole `i`, with the fact that it is one of `σ`'s (what the recursion's measure
+is stated over). -/
+def captured : (σ : Subst) → (i : Nat) → Option {a : Arg // (i, a) ∈ σ}
+  | [], _ => none
+  | (j, a) :: rest, i =>
+    if h : j = i then some ⟨a, h ▸ List.mem_cons_self⟩
+    else (captured rest i).map fun ⟨b, hb⟩ => ⟨b, List.mem_cons_of_mem _ hb⟩
+
+/-- A table that does not fit the constructor declarations (no `build` for what a row read, a
+sort no capture fills). It is a defect of the table, never of the tree read. -/
+def readDefect : ReadRefusal := .shape "table"
+
+/-- A leaf argument from its capture, by sort, at the depth its row gives it. A scoped fork's
+options object carries no `daemon` field: the row's pattern decides it for a plain fork, and
+`forkIn` / `forkScoped` fork a daemon at the pin (`internal/effect.ts:5366`, `:5406`). -/
+def readLeaf {R : EffFam → Type} (sig : Signature Op) (d : Nat) (daemon : Bool) :
+    ArgSort → Arg → Except ReadRefusal (ArgF Op R)
+  | .term, .expr y => (readTerm d y).map .term
+  | .optTerm, .expr y => (readTerm d y).map fun t => .optTerm (some t)
+  | .cause, .expr y => (readCause d y).map .cause
+  | .lit, .expr y => (readLiteral y).map .lit
+  | .key, .expr y => (readKey sig y).map .key
+  | .forkOptions, .expr y => (readForkOptions daemon y).map .forkOptions
+  | .decision, .str t => .ok (.decision (.tag t))
+  | .nat, .int v => if 0 ≤ v then .ok (.nat v.toNat) else .error (.negative v)
+  | .path, .expr (.ident s) =>
+    match LayerTerm.readRefName s with
+    | some target => if LayerTerm.refName target = s then .ok (.path target) else .error (.shape "layer")
+    | none => .error (.shape "layer")
+  -- no reader of types exists, by design (B19): the annotated loop prints and is not read
+  | .optTy, .type _ => .error (.annotation "local const")
+  | _, _ => .error (.shape "argument")
+
+/-- The daemon flag a row reads a fork's options under. -/
+def rowDaemon (row : Templates.Row) : Bool :=
+  match row.fixed.findSome? fun (_, p) => match p with | .daemon b => some b | _ => none with
+  | some b => b
+  | none => true
+
+/-- The arguments of a row from what its skeleton captured, in declaration order. An argument
+the classifier determines is supplied; a child is handed to the recursion with the fact that it
+is one of the captures; a leaf goes through its own reader. -/
+def readArgs (sig : Signature Op) (n : Nat) (row : Templates.Row) (σ : Subst)
+    (child : (fam : EffFam) → Nat → (y : Expr) → (i : Nat) → (i, Arg.expr y) ∈ σ →
+      Except ReadRefusal (EffSelfCarrier Op fam))
+    (children : (fam : EffFam) → Nat → (ys : List Expr) → (i : Nat) → (i, Arg.exprs ys) ∈ σ →
+      Except ReadRefusal (EffSelfCarrier Op fam)) :
+    List ArgSort → Nat → Except ReadRefusal (List (ArgF Op (EffSelfCarrier Op)))
+  | [], _ => .ok []
+  | s :: ss, i => do
+    let d := (row.depth.getD i (.rel 0)).at n
+    let a ← match (row.fixed.find? (·.1 == i)).bind (·.2.supplies) with
+      | some a => .ok a
+      | none => match s, captured σ i with
+        | .child fam, some ⟨.expr y, h⟩ => (child fam d y i h).map (.child fam)
+        | .child fam, some ⟨.exprs ys, h⟩ => (children fam d ys i h).map (.child fam)
+        | s, some ⟨a, _⟩ => readLeaf sig d (rowDaemon row) s a
+        | _, none => .error readDefect
+    let rest ← readArgs sig n row σ child children ss (i + 1)
+    .ok (a :: rest)
+
+/-- The reserved names that head a program's printed clause: the heads of the table's program
+and action rows, and the generator. A reserved name that heads none of them has no reading in
+program position (`Cause.fail` outside a cause, `Layer.merge` outside a layer). -/
+def programHeads : List String :=
+  "Effect.gen" :: Templates.table.filterMap fun row =>
+    if row.fam = .eff ∨ row.fam = .action then
+      match row.out with
+      | .tpl (.call (.ident s) _) => some s
+      | .tpl (.callSpread (.ident s) _) => some s
+      | _ => none
+    else none
+
+/-- What is not a skeleton, read as the hand fields print it: a bare identifier as a value row,
+a call as a call row, a method call as a method row. A reserved head no row matched is refused
+by its argument list when it heads a program clause, and by its name otherwise. -/
+def readPerform (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
+    (x : Expr) : Except ReadRefusal (Eff Op) :=
+  match x with
+  | .ident s =>
+    match Var.read n s with
+    | some _ => .error (.shape "bare binder")
+    | none =>
+      match headOf s with
+      | some .undefined => .error (.shape "bare value")
+      | some _ => .error (.unknownHead s)
+      | none => readRowValue sig spell s
+  | .int k => if 0 ≤ k then .error (.shape "bare value") else .error (.negative k)
+  | .bool _ => .error (.shape "bare value")
+  | .str _ => .error (.shape "bare value")
+  | .call (.ident s) args =>
+    match headOf s with
+    | some h => if s ∈ programHeads then .error (callRefusal h args) else .error (.unknownHead s)
+    | none => (readRowCall sig spell n s [] args).getD (.error (.unknownHead s))
+  | .call (.generic (.ident s) (ta :: tas)) args =>
+    (readRowCall sig spell n s (ta :: tas) args).getD (.error (.unknownHead s))
+  | _ => readMethod sig spell n x
+
+/-- A family a transparent row may hand the same expression to: strictly lower. -/
+def famRank : EffFam → Nat
+  | .eff => 1
+  | _ => 0
 
 mutual
-  /-- `readEff sig spell n x` is `x` as a program at environment length `n`, in the order
-  of the printer's table: a bare identifier is `Effect.fiberId` or a value row; a call is a
-  reserved combinator, then a call row. A bare value in effect position — a literal,
-  `undefined`, a binder — or an application of a name that is no head and no row is a tree
-  the printer never emits, refused by shape or by its head. The `match` shape of the
-  refused arms is kept as it was so that `readEff.induct`'s cases keep their numbering. -/
-  def readEff (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
-      (x : Expr) : Except ReadRefusal (Eff Op) :=
-    match x with
-    | .ident s =>
-      match Var.read n s with
-      | some _ => .error (.shape "bare binder")
-      | none =>
-        match headOf s with
-        | some .fiberId => .ok (.withFiber .getId)
-        | some .undefined => .error (.shape "bare value")
-        | some _ => .error (.unknownHead s)
-        | none => readRowValue sig spell s
-    | .int k => if 0 ≤ k then .error (.shape "bare value") else .error (.negative k)
-    | .bool _ => .error (.shape "bare value")
-    | .str _ => .error (.shape "bare value")
-    | .call (.ident s) args =>
-      match headOf s with
-      | some h => readHead sig spell n h args
-      | none =>
-        match readRowCall sig spell n s [] args with
-        | some answer => answer
-        | none => .error (.unknownHead s)
-    -- a call carrying explicit type arguments is a row call and nothing else: no reserved
-    -- head and no atom application is printed with them. An *empty* argument list is not a
-    -- spelling the printer emits, so it falls through to the shape refusal
-    -- (`E4-CHECK-CE-013`).
-    | .call (.generic (.ident s) (ta :: tas)) args =>
-      match readRowCall sig spell n s (ta :: tas) args with
-      | some answer => answer
-      | none => .error (.unknownHead s)
-    | _ => readMethod sig spell n x
-  termination_by structural x
+  /-- `readT sig spell fam n x`: the first row of `fam` whose skeleton matches `x`, its
+  arguments read; `none` when no row matches. A transparent row (a bare hole: `withFiber` over
+  its action) hands the same expression to its child's family and matches when that does. For a
+  program, what no row matches is a generator or a row call. -/
+  def readT (sig : Signature Op) (spell : String → List String → Option Op) (fam : EffFam)
+      (n : Nat) (x : Expr) : Option (Except ReadRefusal (EffSelfCarrier Op fam)) :=
+    let byRow := Templates.table.zipIdx.findSome? fun (row, k) =>
+      if row.fam = fam then
+        match row.out with
+        | .refuse _ => none
+        | .tpl t =>
+          match hσ : matchT n t x with
+          | none => none
+          | some σ =>
+            match argSorts fam row.ctor with
+            | none => none
+            | some sorts =>
+              if hr : t.rigid = true then
+                some do
+                  let args ← readArgs sig n row σ
+                    (fun fam' d y i hy =>
+                      have : sizeOf y < sizeOf x := match_below n t x σ hr hσ (i, .expr y) hy
+                      (readT sig spell fam' d y).getD (.error (.shape "expression")))
+                    (fun fam' d ys i hy =>
+                      have : sizeOf ys < sizeOf x := match_below n t x σ hr hσ (i, .exprs ys) hy
+                      readSpine sig spell fam' d ys)
+                    sorts 0
+                  -- exactness: the printer would choose this row for what was read
+                  if Templates.table.findIdx? (fun r => r.selects fam row.ctor args) = some k then
+                    match build fam row.ctor args with
+                    | some e => .ok e
+                    | none => .error readDefect
+                  else .error (.shape "not the printed row")
+              else
+                match sorts with
+                | [.child fam'] =>
+                  if _hk : famRank fam' < famRank fam then
+                    (readT sig spell fam' ((row.depth.getD 0 (.rel 0)).at n) x).map fun r => do
+                      let c ← r
+                      match build fam row.ctor [.child fam' c] with
+                      | some e => .ok e
+                      | none => .error readDefect
+                  else none
+                | [sort] =>
+                  match readLeaf (R := EffSelfCarrier Op) sig n true sort (.expr x) with
+                  | .ok a => (build fam row.ctor [a]).map .ok
+                  | .error _ => none
+                | _ => none
+      else none
+    match byRow with
+    | some r => some r
+    | none =>
+      match fam with
+      | .eff => some (
+          match x with
+          | .call (.ident "Effect.gen") [.generator body] => (readStmts sig spell n body).map .gen
+          | _ => readPerform sig spell n x)
+      | _ => none
+  termination_by (sizeOf x, famRank fam)
 
-  /-- A reserved head applied to its arguments, one arm per row of the printer's table. -/
-  def readHead (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
-      (h : Head) (args : List Expr) : Except ReadRefusal (Eff Op) :=
-    match h, args with
-    | .succeed, [v] => (readTerm n v).map .succeed
-    | .fail, [e] => (readTerm n e).map .fail
-    | .failCause, [c] => (readCause n c).map .failCause
-    | .sync, [.arrow none t] => (readTerm n t).map .sync
-    | .suspend, [.arrow none (.cond t a b)] => do
-      let test ← readTerm n t
-      let thenB ← readEff sig spell n a
-      let elseB ← readEff sig spell n b
-      .ok (.select test .bool thenB elseB)
-    | .suspend, [.arrow none body] => (readEff sig spell n body).map .suspend
-    | .flatMap, [first, .lambda [⟨x, none⟩] rest none] =>
-      if x = Var.name n then do
-        let f ← readEff sig spell n first
-        let r ← readEff sig spell (n + 1) rest
-        .ok (.bind f r)
-      else .error (.binder (Var.name n))
-    | .gen, [.generator body] => (readStmts sig spell n body).map .gen
-    | .catchCause, [body, .lambda [⟨x, none⟩] handler none] =>
-      if x = Var.name n then do
-        let b ← readEff sig spell n body
-        let h ← readEff sig spell (n + 1) handler
-        .ok (.catchCause b h)
-      else .error (.binder (Var.name n))
-    | .catchError, [body, .lambda [⟨x, none⟩] handler none] =>
-      if x = Var.name n then do
-        let b ← readEff sig spell n body
-        let h ← readEff sig spell (n + 1) handler
-        .ok (.catchIf (.lit (.bool true)) b h)
-      else .error (.binder (Var.name n))
-    | .catchIf, [body, .lambda [⟨x, none⟩] predicate none, .lambda [⟨y, none⟩] handler none, .ident fallback] =>
-      if x = Var.name n ∧ y = Var.name n ∧ fallback = "undefined" then do
-        let b ← readEff sig spell n body
-        let t ← readCatchTest (n + 1) predicate
-        let h ← readEff sig spell (n + 1) handler
-        .ok (.catchIf t b h)
-      else .error (.shape "catchIf binders or absent fallback")
-    | .matchCauseEffect, [body, .object [(ff, .lambda [⟨x, none⟩] onCause none), (fs, .lambda [⟨y, none⟩] onValue none)]] =>
-      if ff = "onFailure" ∧ fs = "onSuccess" ∧ x = Var.name n ∧ y = Var.name n then do
-        let b ← readEff sig spell n body
-        let v ← readEff sig spell (n + 1) onValue
-        let c ← readEff sig spell (n + 1) onCause
-        .ok (.matchCause b v c)
-      else .error (.shape "matchCause")
-    | .onExit, [body, .lambda [⟨x, none⟩] finalizer none] =>
-      if x = Var.name n then do
-        let b ← readEff sig spell n body
-        let f ← readEff sig spell (n + 1) finalizer
-        .ok (.onExit b f)
-      else .error (.binder (Var.name n))
-    | .exit, [body] => (readEff sig spell n body).map .exit
-    | .uninterruptible, [body] => (readEff sig spell n body).map .uninterruptible
-    | .interruptible, [body] => (readEff sig spell n body).map .interruptible
-    | .yieldNowWith, [.int k] =>
-      if 0 ≤ k then .ok (.yieldNow k.toNat) else .error (.negative k)
-    | .join, [fiber] => (readTerm n fiber).map (.awaitFiber · .joinEffect)
-    | .await, [fiber] => (readTerm n fiber).map (.awaitFiber · .awaitValue)
-    | .forkChild, [program, options] => do
-      let p ← readEff sig spell n program
-      let o ← readForkOptions false options
-      .ok (.withFiber (.fork p o))
-    | .forkDetach, [program, options] => do
-      let p ← readEff sig spell n program
-      let o ← readForkOptions true options
-      .ok (.withFiber (.fork p o))
-    -- `forkIn` and `forkScoped` are *daemon* forks in rc.112: `internal/effect.ts:5366`
-    -- passes `true` for `forkUnsafe`'s `daemon` parameter (`:5264-5269`), and `forkScoped`
-    -- is `flatMap(scope, scope => forkIn(self, scope, options))` (`:5406`). The printed
-    -- options object therefore carries no daemon field to recover — the export's own
-    -- meaning fixes it. `E4-CHECK-CE-015`.
-    | .forkIn, [program, scope, options] => do
-      let p ← readEff sig spell n program
-      let s ← readTerm n scope
-      let o ← readForkOptions true options
-      .ok (.withFiber (.forkIn p o s))
-    | .forkScoped, [program, options] => do
-      let p ← readEff sig spell n program
-      let o ← readForkOptions true options
-      .ok (.withFiber (.forkScoped p o))
-    | .withFiber, args => readRunIn n args
-    | .interrupt, [target] => (readTerm n target).map fun t => .withFiber (.interrupt t)
-    | .interruptAll, [targets] =>
-      (readTerm n targets).map fun t => .withFiber (.interruptAll t none)
-    | .interruptAllAs, [targets, who] => do
-      let t ← readTerm n targets
-      let w ← readTerm n who
-      .ok (.withFiber (.interruptAll t (some w)))
-    | .awaitAll, [targets] => (readTerm n targets).map fun t => .withFiber (.awaitAll t)
-    | .raceAll, [.arr entrants] =>
-      (readEffs sig spell n entrants).map fun es => .withFiber (.raceAll es)
-    | .context, [] => .ok (.withFiber .getContext)
-    | .scopeClose, [scope, exit] => do
-      let s ← readTerm n scope
-      let e ← readTerm n exit
-      .ok (.withFiber (.closeScope s e))
-    | .scoped, [body] => (readEff sig spell n body).map .scoped
-    | .acquireRelease, [acquire, .lambda [⟨x, none⟩, ⟨y, none⟩] release none] =>
-      if x = Var.name n ∧ y = Var.name (n + 1) then do
-        let a ← readEff sig spell n acquire
-        let r ← readEff sig spell (n + 2) release
-        .ok (.acquireRelease a r)
-      else .error (.binder (Var.name n))
-    | .provide, [body, layer] => do
-      let b ← readEff sig spell n body
-      let l ← readLayer sig spell layer
-      .ok (.provideLayer l false b)
-    | .provide, [body, layer, .object [(field, .bool true)]] =>
-      if field = "local" then do
-        let b ← readEff sig spell n body
-        let l ← readLayer sig spell layer
-        .ok (.provideLayer l true b)
-      else .error (.shape "provide options")
-    | .service, [key] => (readKey sig key).map .service
-    | .provideService, [body, key, value] => do
-      let b ← readEff sig spell n body
-      let k ← readKey sig key
-      let v ← readTerm n value
-      .ok (.provideService k v b)
-    | .whileLoop, _ => .error (.unknownHead Head.whileLoop.spelling)
-    | .fiberId, _ => .error (.unknownHead Head.fiberId.spelling)
-    | .causeFail, _ => .error (.unknownHead Head.causeFail.spelling)
-    | .causeDie, _ => .error (.unknownHead Head.causeDie.spelling)
-    | .causeInterrupt, _ => .error (.unknownHead Head.causeInterrupt.spelling)
-    | .causeCombine, _ => .error (.unknownHead Head.causeCombine.spelling)
-    | .undefined, _ => .error (.unknownHead Head.undefined.spelling)
-    -- A layer or key does not stand alone in program position.
-    | .contextService, _ => .error (.unknownHead Head.contextService.spelling)
-    | .layerSucceed, _ => .error (.unknownHead Head.layerSucceed.spelling)
-    | .layerEffect, _ => .error (.unknownHead Head.layerEffect.spelling)
-    | .layerEffectDiscard, _ => .error (.unknownHead Head.layerEffectDiscard.spelling)
-    | .layerProvide, _ => .error (.unknownHead Head.layerProvide.spelling)
-    | .layerProvideMerge, _ => .error (.unknownHead Head.layerProvideMerge.spelling)
-    | .layerMerge, _ => .error (.unknownHead Head.layerMerge.spelling)
-    | .layerFresh, _ => .error (.unknownHead Head.layerFresh.spelling)
-    | .layerOrDie, _ => .error (.unknownHead Head.layerOrDie.spelling)
-    -- `optionCase` and `caseTag` (the `select` images) are refused here: `select` prints and
-    -- is read back by the generic reader from the template table (R5), not by this one
-    | h, args => .error (callRefusal h args)
-  termination_by structural args
+  /-- A spine of programs or of layers, item by item. -/
+  def readSpine (sig : Signature Op) (spell : String → List String → Option Op) (fam : EffFam)
+      (n : Nat) (xs : List Expr) : Except ReadRefusal (EffSelfCarrier Op fam) :=
+    match fam, xs with
+    | .effs, [] => .ok .nil
+    | .effs, y :: rest => do
+      let e ← (readT sig spell .eff n y).getD (.error (.shape "expression"))
+      let es ← readSpine sig spell .effs n rest
+      .ok (.cons e es)
+    | .layers, [] => .ok .nil
+    | .layers, y :: rest => do
+      let l ← (readT sig spell .layer n y).getD (.error (.shape "layer"))
+      let ls ← readSpine sig spell .layers n rest
+      .ok (.cons l ls)
+    | _, _ => .error readDefect
+  termination_by (sizeOf xs, 0)
 
-  /-- A generator body, statement by statement, with the binder counts of `printStmts`. -/
+  /-- A generator body, statement by statement, with the binder counts of the printer. -/
   def readStmts (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
       (stmts : List TypeScript.Stmt) : Except ReadRefusal (Stmts Op) :=
     match stmts with
     | [] => .ok .nil
     | .constYield x value none :: rest =>
       if x = Var.name n then do
-        let e ← readEff sig spell n value
+        let e ← (readT sig spell .eff n value).getD (.error (.shape "expression"))
         let tail ← readStmts sig spell (n + 1) rest
         .ok (.cons (.bindYield e) tail)
       else .error (.binder (Var.name n))
     | .yieldDiscard value :: rest => do
-      let e ← readEff sig spell n value
+      let e ← (readT sig spell .eff n value).getD (.error (.shape "expression"))
       let tail ← readStmts sig spell n rest
       .ok (.cons (.yieldDiscard e) tail)
     | .ret value :: rest => do
@@ -597,70 +587,20 @@ mutual
       let tail ← readStmts sig spell n rest
       .ok (.cons .breakLoop tail)
     | stmt :: _ => .error (stmtRefusal stmt)
-  termination_by structural stmts
-
-  /-- The race entrants, each at the same environment length. -/
-  def readEffs (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
-      (items : List Expr) : Except ReadRefusal (Effs Op) :=
-    match items with
-    | [] => .ok .nil
-    | x :: rest => do
-      let e ← readEff sig spell n x
-      let es ← readEffs sig spell n rest
-      .ok (.cons e es)
-  termination_by structural items
-
-  /-- The ten printed layer forms. Layer effect bodies have an empty environment. A bare
-  identifier in layer position is a reference to the path its name carries
-  (`LayerTerm.readRefName`, `Refs.lean`), admitted only when the name is exactly that path's
-  spelling, so what is read is what `printLayer` prints. -/
-  def readLayer (sig : Signature Op) (spell : String → List String → Option Op)
-      (x : Expr) : Except ReadRefusal (LayerTerm Op) :=
-    match x with
-    | .ident s =>
-      match LayerTerm.readRefName s with
-      | some target =>
-        if LayerTerm.refName target = s then .ok (.ref target) else .error (.shape "layer")
-      | none => .error (.shape "layer")
-    | .call (.ident "Layer.mergeAll") items => (readLayers sig spell items).map .mergeAll
-    | .call (.ident "Layer.succeed") [key, value] => do
-      let k ← readKey sig key
-      let v ← readLiteral value
-      .ok (.succeed k v)
-    | .call (.ident "Layer.effect") [key, body] => do
-      let k ← readKey sig key
-      let b ← readEff sig spell 0 body
-      .ok (.effect k b)
-    | .call (.ident "Layer.effectDiscard") [body] =>
-      (readEff sig spell 0 body).map .effectDiscard
-    | .method self "pipe" [.call (.ident "Layer.provide") [that]] => do
-      let s ← readLayer sig spell self
-      let t ← readLayer sig spell that
-      .ok (.provide s t)
-    | .method self "pipe" [.call (.ident "Layer.provideMerge") [that]] => do
-      let s ← readLayer sig spell self
-      let t ← readLayer sig spell that
-      .ok (.provideMerge s t)
-    | .call (.ident "Layer.merge") [left, right] => do
-      let l ← readLayer sig spell left
-      let r ← readLayer sig spell right
-      .ok (.merge l r)
-    | .call (.ident "Layer.fresh") [inner] => (readLayer sig spell inner).map .fresh
-    | .call (.ident "Layer.orDie") [inner] => (readLayer sig spell inner).map .orDie
-    | _ => .error (.shape "layer")
-  termination_by structural x
-
-  /-- The layers of a `mergeAll`. -/
-  def readLayers (sig : Signature Op) (spell : String → List String → Option Op)
-      (items : List Expr) : Except ReadRefusal (LayerTerms Op) :=
-    match items with
-    | [] => .ok .nil
-    | x :: rest => do
-      let l ← readLayer sig spell x
-      let ls ← readLayers sig spell rest
-      .ok (.cons l ls)
-  termination_by structural items
+  termination_by (sizeOf stmts, 0)
 end
+
+/-- A program from a tree, at environment length `n`. -/
+def readEff (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
+    (x : Expr) : Except ReadRefusal (Eff Op) :=
+  (readT sig spell .eff n x).getD (.error (.shape "expression"))
+
+/-- A layer from a tree. A layer is closed: its bodies are read at environment length `0`. -/
+def readLayer (sig : Signature Op) (spell : String → List String → Option Op)
+    (x : Expr) : Except ReadRefusal (LayerTerm Op) :=
+  (readT sig spell .layer 0 x).getD (.error (.shape "layer"))
+
+end TableReader
 
 /-- A declaration block back to the program (the host rows slice): every
 `const L_<path> = <layer>` read as a layer at the path its name carries and put back at that
@@ -697,6 +637,44 @@ def roundTrip (sig : Signature Op) (spell : String → List String → Option Op
   match print sig n e with
   | .ok x => readEff sig spell n x
   | .error _ => .error (.shape "printer")
+
+/-- The program comes back from its own printing: the domain of the round trip, as the round
+trip. What it excludes is listed in the module note. -/
+def readable [DecidableEq Op] (sig : Signature Op) (spell : String → List String → Option Op)
+    (n : Nat) (e : Eff Op) : Bool :=
+  match roundTrip sig spell n e with
+  | .ok e' => decide (e' = e)
+  | .error _ => false
+
+/-- `readable` is the round trip. -/
+theorem roundTrip_eq [DecidableEq Op] {sig : Signature Op}
+    {spell : String → List String → Option Op} {n : Nat} {e : Eff Op}
+    (hr : readable sig spell n e = true) : roundTrip sig spell n e = .ok e := by
+  unfold readable at hr
+  split at hr
+  · rename_i e' he
+    rw [he, of_decide_eq_true hr]
+  · cases hr
+
+/-- The program reads back from whatever the printer prints of it: the premise the module law
+composes, stated of any reader. -/
+def ReadsBack (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
+    (e : Eff Op) : Prop :=
+  ∀ x, print sig n e = .ok x → readEff sig spell n x = .ok e
+
+/-- The same of a layer. -/
+def LayerTerm.ReadsBack (sig : Signature Op) (spell : String → List String → Option Op)
+    (l : LayerTerm Op) : Prop :=
+  ∀ x, printLayer sig l = .ok x → readLayer sig spell x = .ok l
+
+theorem ReadsBack.of_readable [DecidableEq Op] {sig : Signature Op}
+    {spell : String → List String → Option Op} {n : Nat} {e : Eff Op}
+    (hr : readable sig spell n e = true) : ReadsBack sig spell n e := by
+  intro x hp
+  have h := roundTrip_eq hr
+  unfold roundTrip at h
+  rw [hp] at h
+  exact h
 
 /-! ## What the printer loses -/
 
@@ -759,137 +737,6 @@ def requestReadable (row : Row) (n : Nat) (request : Term) : Bool :=
         else if (methodArgsRow row).request = Ty.unit then decide (args = .lit .unit)
         else args.scoped n
     | none => false
-
-mutual
-  /-- The program is one the printer keeps whole: variables in scope, requests the row prints,
-  atoms that are no head and no row, no internal fiber action, no `daemon` on a scoped fork,
-  and, until the generic reader (R5), no loop and no `optionCase`/`caseTag` decision. -/
-  def readable (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat) :
-      Eff Op → Bool
-    | .succeed value => value.scoped n
-    | .fail error => error.scoped n
-    | .failCause cause => cause.scoped n
-    | .sync thunk => thunk.scoped n
-    | .suspend body => readable sig spell n body
-    | .perform op request => sig.dom op && requestReadable (sig.rowOf op) n request
-    | .bind first rest => readable sig spell n first && readable sig spell (n + 1) rest
-    | .gen body => readableStmts sig spell n body
-    | .catchCause body handler =>
-      readable sig spell n body && readable sig spell (n + 1) handler
-    | .catchIf test body handler =>
-      test.scoped (n + 1) && readable sig spell n body && readable sig spell (n + 1) handler
-    | .matchCause body onValue onCause =>
-      readable sig spell n body && readable sig spell (n + 1) onValue
-        && readable sig spell (n + 1) onCause
-    | .onExit body finalizer => readable sig spell n body && readable sig spell (n + 1) finalizer
-    | .exit body => readable sig spell n body
-    | .uninterruptible body => readable sig spell n body
-    | .interruptible body => readable sig spell n body
-    -- `select` under `.bool` is the conditional `t ? a : b`, which this reader reads.
-    | .select test .bool thenB elseB =>
-      test.scoped n && readable sig spell n thenB && readable sig spell n elseB
-    -- The other two decisions print (`optionCase`, `caseTag`) and are read back by the generic
-    -- reader from the template table (R5); this reader leaves them outside its domain. One arm
-    -- per decision, so that every equation of `readable` is unconditional.
-    | .select _ .option _ _ => false
-    | .select _ (.tag _) _ _ => false
-    -- `iterate` prints (`reduce`'s shape, with the cursor's annotation) and is read back by
-    -- the generic reader with the annotation grammar (R5); outside this reader's domain
-    | .iterate _ _ _ _ _ _ => false
-    | .yieldNow _ => true
-    | .awaitFiber fiber _ => fiber.scoped n
-    | .withFiber action => readableAction sig spell n action
-    | .scoped body => readable sig spell n body
-    | .acquireRelease acquire release =>
-      readable sig spell n acquire && readable sig spell (n + 2) release
-    | .provideLayer layer _ body => readableLayer sig spell layer && readable sig spell n body
-    | .service key => keyReadable sig key
-    | .provideService key value body =>
-      keyReadable sig key && value.scoped n && readable sig spell n body
-
-  /-- The layer's closed effects must retain their printed form. A reference is readable
-  exactly when its identifier decodes back to its path (`LayerTerm.readRefName` after
-  `refName`), which is the executed fact the reader's identifier arm relies on; the `const`
-  that binds the identifier is a declaration block's (`printModule`/`readModule`). -/
-  def readableLayer (sig : Signature Op) (spell : String → List String → Option Op) :
-      LayerTerm Op → Bool
-    | .succeed key _ => keyReadable sig key
-    | .effect key body => keyReadable sig key && readable sig spell 0 body
-    | .effectDiscard body => readable sig spell 0 body
-    | .provide self that | .provideMerge self that | .merge self that =>
-      readableLayer sig spell self && readableLayer sig spell that
-    | .fresh inner | .orDie inner => readableLayer sig spell inner
-    | .ref target =>
-      decide (LayerTerm.readRefName (LayerTerm.refName target) = some target)
-    | .mergeAll layers => readableLayers sig spell layers
-
-  /-- Every layer of a `mergeAll`. -/
-  def readableLayers (sig : Signature Op) (spell : String → List String → Option Op) :
-      LayerTerms Op → Bool
-    | .nil => true
-    | .cons head tail => readableLayer sig spell head && readableLayers sig spell tail
-
-
-  def readableStmts (sig : Signature Op) (spell : String → List String → Option Op)
-      (n : Nat) : Stmts Op → Bool
-    | .nil => true
-    | .cons (.bindYield effect) rest =>
-      readable sig spell n effect && readableStmts sig spell (n + 1) rest
-    | .cons (.yieldDiscard effect) rest =>
-      readable sig spell n effect && readableStmts sig spell n rest
-    | .cons (.ret value) rest => value.scoped n && readableStmts sig spell n rest
-    | .cons (.ifElse test thenB elseB) rest =>
-      test.scoped n && readableStmts sig spell n thenB && readableStmts sig spell n elseB
-        && readableStmts sig spell n rest
-    | .cons (.whileTrue body) rest =>
-      readableStmts sig spell n body && readableStmts sig spell n rest
-    | .cons .breakLoop rest => readableStmts sig spell n rest
-
-  def readableEffs (sig : Signature Op) (spell : String → List String → Option Op)
-      (n : Nat) : Effs Op → Bool
-    | .nil => true
-    | .cons head tail => readable sig spell n head && readableEffs sig spell n tail
-
-  def readableAction (sig : Signature Op) (spell : String → List String → Option Op)
-      (n : Nat) : ActionTerm Op → Bool
-    | .fork program _ => readable sig spell n program
-    -- rc.112's `forkIn`/`forkScoped` fork a daemon (`internal/effect.ts:5366`, `:5406`), so
-    -- the readable image is the one the export means: `daemon = true`. A non-daemon
-    -- `forkIn` action has no rc.112 spelling and stays outside the readable domain
-    -- (`E4-CHECK-CE-015`).
-    | .forkIn program options scope =>
-      readable sig spell n program && options.daemon && scope.scoped n
-    | .forkScoped program options => readable sig spell n program && options.daemon
-    | .runIn target scope => target.scoped n && scope.scoped n
-    | .interrupt target => target.scoped n
-    | .interruptScoped _ => false
-    | .interruptAll targets none => targets.scoped n
-    | .interruptAll targets (some who) => targets.scoped n && who.scoped n
-    | .awaitAll targets => targets.scoped n
-    | .awaitAllFailFast _ => false
-    | .snapshotChildren => false
-    | .awaitNewChildren _ => false
-    | .raceAll entrants => readableEffs sig spell n entrants
-    | .setContext _ => false
-    | .getContext => true
-    | .getId => true
-    | .closeScope scope exit => scope.scoped n && exit.scoped n
-end
-
-/-- A readable `select` is the conditional: its decision is `.bool`, its test is in scope and
-both arms are readable. Stated once for a decision that is a variable, where `readable`'s own
-equations (one per decision) do not apply. -/
-theorem readable_select_iff (sig : Signature Op) (spell : String → List String → Option Op)
-    (n : Nat) (s : Term) (d : Decision) (a0 a1 : Eff Op) :
-    readable sig spell n (.select s d a0 a1) = true ↔
-      d = .bool ∧ s.scoped n = true ∧ readable sig spell n a0 = true ∧
-        readable sig spell n a1 = true := by
-  cases d with
-  | bool => simp only [readable, Bool.and_eq_true, true_and, and_assoc]
-  | option => simp only [readable, Bool.false_eq_true, false_iff, reduceCtorEq, false_and,
-      not_false_eq_true]
-  | tag t => simp only [readable, Bool.false_eq_true, false_iff, reduceCtorEq, false_and,
-      not_false_eq_true]
 
 /-! ## What the reader needs of a signature -/
 
@@ -1342,34 +1189,6 @@ theorem printTerm_eq_bool (term : Term) (value : Bool) :
   | app _ _ => simp [printTerm]
   | lit literal => cases literal <;> simp [printTerm, printLit]
 
-theorem readCatchTest_of_ne (n : Nat) (predicate : Expr) (hp : predicate ≠ .bool true) :
-    readCatchTest n predicate = readTerm n predicate := by
-  cases predicate <;> try rfl
-  rename_i value
-  cases value
-  · rfl
-  · exact (hp rfl).elim
-
-theorem readCatchTest_print (test : Term) {n : Nat} (hs : test.scoped n = true)
-    (ht : test ≠ .lit (.bool true)) : readCatchTest n (printTerm test) = .ok test := by
-  have hp : printTerm test ≠ .bool true := fun h => ht ((printTerm_eq_bool test true).mp h)
-  rw [readCatchTest_of_ne n (printTerm test) hp, readTerm_printTerm test hs]
-
-theorem readCatchTest_exact {n : Nat} {predicate : Expr} {test : Term}
-    (h : readCatchTest n predicate = .ok test) :
-    printTerm test = predicate ∧ test ≠ .lit (.bool true) := by
-  have hn : predicate ≠ .bool true := by
-    intro he
-    subst he
-    simp [readCatchTest] at h
-  rw [readCatchTest_of_ne n predicate hn] at h
-  have hp := readTerm_exact predicate h
-  refine ⟨hp, ?_⟩
-  intro ht
-  apply hn
-  rw [← hp, ht]
-  rfl
-
 private theorem printRow_not_cond {row : Row} {r : Term} {t a b : Expr}
     (hp : printRow row r = .ok (.cond t a b)) : False := by
   unfold printRow at hp
@@ -1663,33 +1482,29 @@ theorem print_rowAnswer {sig : Signature Op} {n : Nat} (op : Op) (r : Term) :
 /-- The reader's two call arms agree on a row's printed head: with no declared type
 arguments it is a plain `spelling(...)` call, and with them a `spelling<T…>(...)` call; both
 route to `readRowCall` at the row's own type arguments (`E4-CHECK-CE-013`). -/
-theorem readEff_printRowHead {sig : Signature Op} {spell : String → List String → Option Op}
+theorem readPerform_printRowHead {sig : Signature Op} {spell : String → List String → Option Op}
     {n : Nat} (op : Op) (args : List Expr) (answer : Except ReadRefusal (Eff Op))
     (hhead : headOf (sig.rowOf op).spelling = none)
     {typeArgs : List TypeScript.TypeRef} (hta : rowTypeArgs (sig.rowOf op) = some typeArgs)
     (hrow : readRowCall sig spell n (sig.rowOf op).spelling typeArgs args = some answer)
     {head : Expr} (hp : printRowHead (sig.rowOf op) = .ok head) :
-    readEff sig spell n (.call head args) = answer := by
+    readPerform sig spell n (.call head args) = answer := by
   cases typeArgs with
   | nil =>
     simp only [printRowHead, hta, Except.ok.injEq] at hp
     subst head
-    unfold readEff
-    rw [hhead]
-    dsimp only
-    rw [hrow]
+    simp only [readPerform, hhead, hrow, Option.getD_some]
   | cons a rest =>
     simp only [printRowHead, hta, Except.ok.injEq] at hp
     subst head
-    unfold readEff
-    rw [hrow]
+    simp only [readPerform, hrow, Option.getD_some]
 
 /-- A successfully printed readable row reads back to its row answer. -/
 theorem read_printRow {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true) (r : Term)
     (h : requestReadable (sig.rowOf op) n r = true)
     {x : Expr} (hp : printRow (sig.rowOf op) r = .ok x) :
-    readEff sig spell n x = .ok (rowAnswer (sig.rowOf op) op r) := by
+    readPerform sig spell n x = .ok (rowAnswer (sig.rowOf op) op r) := by
   have hname : ∀ i, Var.name i ≠ (sig.rowOf op).spelling := fun i => (hl.spelling_ne_name op i).symm
   have hhead : headOf (sig.rowOf op).spelling = none := headOf_none (hl.spelling_not_reserved op)
   cases hshape : (sig.rowOf op).shape with
@@ -1701,8 +1516,7 @@ theorem read_printRow {sig : Signature Op} {spell : String → List String → O
     rw [htr] at hsp
     simp only [printRow, hshape, Except.ok.injEq] at hp
     subst x
-    unfold readEff
-    simp [Var.read_none hname, hhead, readRowValue, hsp, hshape]
+    simp [readPerform, Var.read_none hname, hhead, readRowValue, hsp, hshape]
   | call =>
     have htypes : (rowTypeArgs (sig.rowOf op)).isSome = true := by
       simp only [requestReadable, hshape, Bool.and_eq_true] at h
@@ -1715,11 +1529,11 @@ theorem read_printRow {sig : Signature Op} {spell : String → List String → O
       subst r
       simp only [hreq, if_true, Except.ok.injEq] at hp
       subst x
-      exact readEff_printRowHead op _ _ hhead hta
+      exact readPerform_printRowHead op _ _ hhead hta
         (readRowCall_unit hl op hd hshape hreq hta) hprint
     · simp only [hreq, if_false, Except.ok.injEq] at hp
       subst x
-      rw [readEff_printRowHead op _ _ hhead hta
+      rw [readPerform_printRowHead op _ _ hhead hta
         (readRowCall_request hl op hd r hshape hreq hta) hprint]
       simp [readTerm_printTerm r (readable_row_request hshape hreq h)]
   | tupleCall =>
@@ -1729,7 +1543,7 @@ theorem read_printRow {sig : Signature Op} {spell : String → List String → O
     obtain ⟨head, hprint, hp⟩ := hp
     simp only [Except.ok.injEq] at hp
     subst x
-    exact readEff_printRowHead op _ _ hhead hta
+    exact readPerform_printRowHead op _ _ hhead hta
       (readRowCall_printTupleArgs hl op hd hshape r h.2 hta) hprint
   | method =>
     simp only [requestReadable, hshape, Bool.and_eq_true] at h
@@ -1748,410 +1562,13 @@ theorem read_printRow {sig : Signature Op} {spell : String → List String → O
         simp only [printRow, hshape, pairArgs?, ↓reduceIte, printMethod, hta,
           Except.ok.injEq] at hp
         subst x
-        simp [readEff, readMethod, hm]
+        simp [readPerform, readMethod, hm]
       | cons t ts =>
         simp only [printRow, hshape, pairArgs?, ↓reduceIte, printMethod, hta,
           Except.ok.injEq] at hp
         subst x
-        simp [readEff, readMethod, hm]
+        simp [readPerform, readMethod, hm]
 
-mutual
-theorem read_print {sig : Signature Op} {spell : String → List String → Option Op}
-    (hl : LawfulSpelling sig spell) {n : Nat} (e : Eff Op) (hr : readable sig spell n e = true)
-    {x : Expr} (hp : print sig n e = .ok x) : readEff sig spell n x = .ok e :=
-  match e, hr, hp with
-  | .succeed v, hr, hp => by
-    simp only [readable] at hr
-    simp only [print, Except.ok.injEq] at hp; subst hp
-    unfold readEff readHead; simp [headOf_lit .succeed "Effect.succeed" rfl, readTerm_printTerm v hr]
-  | .fail v, hr, hp => by
-    simp only [readable] at hr
-    simp only [print, Except.ok.injEq] at hp; subst hp
-    unfold readEff readHead; simp [headOf_lit .fail "Effect.fail" rfl, readTerm_printTerm v hr]
-  | .failCause c, hr, hp => by
-    simp only [readable] at hr
-    simp only [print, Except.ok.injEq] at hp; subst hp
-    unfold readEff readHead
-    simp [headOf_lit .failCause "Effect.failCause" rfl, readCause_printCause c hr]
-  | .sync t, hr, hp => by
-    simp only [readable] at hr
-    simp only [print, Except.ok.injEq] at hp; subst hp
-    unfold readEff readHead; simp [headOf_lit .sync "Effect.sync" rfl, readTerm_printTerm t hr]
-  | .suspend body, hr, hp => by
-    simp only [readable] at hr
-    simp only [print, bind_eq_ok] at hp
-    obtain ⟨pb, hpb, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    have ih := read_print hl body hr hpb
-    unfold readEff; simp only [headOf_lit .suspend "Effect.suspend" rfl]
-    cases pb <;> first | exact (print_not_cond hpb).elim | (unfold readHead; simp [ih])
-  | .perform op r, hr, hp => by
-    simp only [readable, Bool.and_eq_true] at hr
-    obtain ⟨hd, hreq⟩ := hr
-    simp only [print] at hp
-    rw [read_printRow hl op hd r hreq hp]
-    simp only [rowAnswer]
-  | .bind first rest, hr, hp => by
-    simp only [readable, Bool.and_eq_true] at hr
-    simp only [print, bind_eq_ok] at hp
-    obtain ⟨f, hf, r, hr', hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    unfold readEff readHead
-    simp [headOf_lit .flatMap "Effect.flatMap" rfl, read_print hl first hr.1 hf,
-      read_print hl rest hr.2 hr']
-  | .gen body, hr, hp => by
-    simp only [readable] at hr
-    simp only [print, bind_eq_ok] at hp
-    obtain ⟨ss, hss, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    unfold readEff readHead
-    simp [headOf_lit .gen "Effect.gen" rfl, read_print_stmts hl body hr hss]
-  | .catchCause body handler, hr, hp => by
-    simp only [readable, Bool.and_eq_true] at hr
-    simp only [print, bind_eq_ok] at hp
-    obtain ⟨b, hb, h, hh, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    unfold readEff readHead
-    simp [headOf_lit .catchCause "Effect.catchCause" rfl, read_print hl body hr.1 hb,
-      read_print hl handler hr.2 hh]
-  | .catchIf test body handler, hr, hp => by
-    simp only [readable, Bool.and_eq_true] at hr
-    obtain ⟨⟨htest, hbody⟩, hhandler⟩ := hr
-    simp only [print, bind_eq_ok] at hp
-    obtain ⟨b, hb, h, hh, hx⟩ := hp
-    by_cases ht : test = .lit (.bool true)
-    · simp only [ht, if_pos, Except.ok.injEq] at hx
-      subst hx
-      unfold readEff readHead
-      simp [headOf_lit .catchError "Effect.catch" rfl, read_print hl body hbody hb,
-        read_print hl handler hhandler hh, ht]
-    · simp only [ht, if_false, Except.ok.injEq] at hx
-      subst hx
-      unfold readEff readHead
-      simp [headOf_lit .catchIf "Effect.catchIf" rfl, read_print hl body hbody hb,
-        read_print hl handler hhandler hh, readCatchTest_print test htest ht]
-  | .matchCause body onValue onCause, hr, hp => by
-    simp only [readable, Bool.and_eq_true] at hr
-    obtain ⟨⟨h1, h2⟩, h3⟩ := hr
-    simp only [print, bind_eq_ok] at hp
-    obtain ⟨b, hb, v, hv, c, hc, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    unfold readEff readHead
-    simp [headOf_lit .matchCauseEffect "Effect.matchCauseEffect" rfl, read_print hl body h1 hb,
-      read_print hl onValue h2 hv, read_print hl onCause h3 hc]
-  | .onExit body finalizer, hr, hp => by
-    simp only [readable, Bool.and_eq_true] at hr
-    simp only [print, bind_eq_ok] at hp
-    obtain ⟨b, hb, f, hf, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    unfold readEff readHead
-    simp [headOf_lit .onExit "Effect.onExit" rfl, read_print hl body hr.1 hb,
-      read_print hl finalizer hr.2 hf]
-  | .exit body, hr, hp => by
-    simp only [readable] at hr
-    simp only [print, bind_eq_ok] at hp
-    obtain ⟨b, hb, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    unfold readEff readHead; simp [headOf_lit .exit "Effect.exit" rfl, read_print hl body hr hb]
-  | .uninterruptible body, hr, hp => by
-    simp only [readable] at hr
-    simp only [print, bind_eq_ok] at hp
-    obtain ⟨b, hb, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    unfold readEff readHead
-    simp [headOf_lit .uninterruptible "Effect.uninterruptible" rfl, read_print hl body hr hb]
-  | .interruptible body, hr, hp => by
-    simp only [readable] at hr
-    simp only [print, bind_eq_ok] at hp
-    obtain ⟨b, hb, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    unfold readEff readHead
-    simp [headOf_lit .interruptible "Effect.interruptible" rfl, read_print hl body hr hb]
-  | .select test .bool thenB elseB, hr, hp => by
-    simp only [readable, Bool.and_eq_true] at hr
-    obtain ⟨⟨h1, h2⟩, h3⟩ := hr
-    simp only [print, bind_eq_ok] at hp
-    obtain ⟨a, ha, b, hb, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    unfold readEff readHead
-    simp [headOf_lit .suspend "Effect.suspend" rfl, readTerm_printTerm test h1,
-      read_print hl thenB h2 ha, read_print hl elseB h3 hb]
-  | .select _ .option _ _, hr, _ => by simp [readable] at hr
-  | .select _ (.tag _) _ _, hr, _ => by simp [readable] at hr
-  | .iterate _ _ _ _ _ _, hr, _ => by simp [readable] at hr
-  | .yieldNow p, _, hp => by
-    simp only [print, Except.ok.injEq] at hp; subst hp
-    unfold readEff readHead; simp [headOf_lit .yieldNowWith "Effect.yieldNowWith" rfl]
-  | .awaitFiber f mode, hr, hp => by
-    simp only [readable] at hr
-    cases mode with
-    | joinEffect =>
-      simp only [print, Except.ok.injEq] at hp; subst hp
-      unfold readEff readHead; simp [headOf_lit .join "Fiber.join" rfl, readTerm_printTerm f hr]
-    | awaitValue =>
-      simp only [print, Except.ok.injEq] at hp; subst hp
-      unfold readEff readHead; simp [headOf_lit .await "Fiber.await" rfl, readTerm_printTerm f hr]
-  | .withFiber a, hr, hp => by
-    simp only [readable] at hr
-    simp only [print] at hp
-    exact read_print_action hl a hr hp
-  | .scoped body, hr, hp => by
-    simp only [readable] at hr
-    simp only [print, bind_eq_ok] at hp
-    obtain ⟨b, hb, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    unfold readEff readHead; simp [headOf_lit .scoped "Effect.scoped" rfl, read_print hl body hr hb]
-  | .acquireRelease acquire release, hr, hp => by
-    simp only [readable, Bool.and_eq_true] at hr
-    simp only [print, bind_eq_ok] at hp
-    obtain ⟨a, ha, r, hr', hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    unfold readEff readHead
-    simp [headOf_lit .acquireRelease "Effect.acquireRelease" rfl, read_print hl acquire hr.1 ha,
-      read_print hl release hr.2 hr']
-  | .provideLayer layer isLocal body, hr, hp => by
-    simp only [readable, Bool.and_eq_true] at hr
-    simp only [print, bind_eq_ok] at hp
-    obtain ⟨b, hb, l, hlayer, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    cases isLocal <;> unfold readEff readHead <;>
-      simp [headOf_lit .provide "Effect.provide" rfl,
-        read_print hl body hr.2 hb, read_print_layer hl layer hr.1 hlayer]
-  | .service key, _, hp => by
-    simp only [print, bind_eq_ok] at hp
-    obtain ⟨k, hk, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst x
-    unfold readEff readHead
-    simp [headOf_lit .service "Effect.service" rfl, readKey_printKey sig key hk]
-  | .provideService key value body, hr, hp => by
-    simp only [readable, Bool.and_eq_true] at hr
-    simp only [print, bind_eq_ok] at hp
-    obtain ⟨b, hb, k, hk, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst x
-    unfold readEff readHead
-    simp [headOf_lit .provideService "Effect.provideService" rfl,
-      read_print hl body hr.2 hb, readKey_printKey sig key hk, readTerm_printTerm value hr.1.2]
-termination_by structural e
-
-theorem read_print_layer {sig : Signature Op} {spell : String → List String → Option Op}
-    (hl : LawfulSpelling sig spell) (layer : LayerTerm Op)
-    (hr : readableLayer sig spell layer = true) {x : Expr}
-    (hp : printLayer sig layer = .ok x) : readLayer sig spell x = .ok layer :=
-  match layer, hr, hp with
-  | .succeed key value, _, hp => by
-    simp only [printLayer, bind_eq_ok] at hp
-    obtain ⟨k, hk, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst x
-    simp [readLayer, readKey_printKey sig key hk, readLiteral_print]
-  | .effect key body, hr, hp => by
-    simp only [readableLayer, Bool.and_eq_true] at hr
-    simp only [printLayer, bind_eq_ok] at hp
-    obtain ⟨b, hb, k, hk, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst x
-    simp [readLayer, readKey_printKey sig key hk, read_print hl body hr.2 hb]
-  | .effectDiscard body, hr, hp => by
-    simp only [readableLayer] at hr
-    simp only [printLayer, bind_eq_ok] at hp
-    obtain ⟨b, hb, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    simp [readLayer, read_print hl body hr hb]
-  | .provide self that, hr, hp | .provideMerge self that, hr, hp | .merge self that, hr, hp => by
-    simp only [readableLayer, Bool.and_eq_true] at hr
-    simp only [printLayer, bind_eq_ok] at hp
-    obtain ⟨a, ha, b, hb, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    simp [readLayer, read_print_layer hl self hr.1 ha, read_print_layer hl that hr.2 hb]
-  | .fresh inner, hr, hp | .orDie inner, hr, hp => by
-    simp only [readableLayer] at hr
-    simp only [printLayer, bind_eq_ok] at hp
-    obtain ⟨i, hi, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    simp [readLayer, read_print_layer hl inner hr hi]
-  | .ref target, hr, hp => by
-    simp only [readableLayer, decide_eq_true_eq] at hr
-    simp only [printLayer, Except.ok.injEq] at hp; subst hp
-    simp [readLayer, hr]
-  | .mergeAll layers, hr, hp => by
-    simp only [readableLayer] at hr
-    simp only [printLayer, bind_eq_ok] at hp
-    obtain ⟨items, hitems, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    simp [readLayer, read_print_layers hl layers hr hitems]
-termination_by structural layer
-
-theorem read_print_layers {sig : Signature Op} {spell : String → List String → Option Op}
-    (hl : LawfulSpelling sig spell) (layers : LayerTerms Op)
-    (hr : readableLayers sig spell layers = true) {items : List Expr}
-    (hp : printLayers sig layers = .ok items) : readLayers sig spell items = .ok layers :=
-  match layers, hr, hp with
-  | .nil, _, hp => by
-    simp only [printLayers, Except.ok.injEq] at hp; subst hp; rfl
-  | .cons head tail, hr, hp => by
-    simp only [readableLayers, Bool.and_eq_true] at hr
-    simp only [printLayers, bind_eq_ok] at hp
-    obtain ⟨h, hh, t, ht, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    simp [readLayers, read_print_layer hl head hr.1 hh, read_print_layers hl tail hr.2 ht]
-termination_by structural layers
-
-theorem read_print_stmts {sig : Signature Op} {spell : String → List String → Option Op}
-    (hl : LawfulSpelling sig spell) {n : Nat} (ss : Stmts Op)
-    (hr : readableStmts sig spell n ss = true) {xs : List TypeScript.Stmt}
-    (hp : printStmts sig n ss = .ok xs) : readStmts sig spell n xs = .ok ss :=
-  match ss, hr, hp with
-  | .nil, _, hp => by
-    simp only [printStmts, Except.ok.injEq] at hp; subst hp; rfl
-  | .cons (.bindYield e) rest, hr, hp => by
-    simp only [readableStmts, Bool.and_eq_true] at hr
-    simp only [printStmts, bind_eq_ok] at hp
-    obtain ⟨v, hv, t, ht, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    unfold readStmts; simp [read_print hl e hr.1 hv, read_print_stmts hl rest hr.2 ht]
-  | .cons (.yieldDiscard e) rest, hr, hp => by
-    simp only [readableStmts, Bool.and_eq_true] at hr
-    simp only [printStmts, bind_eq_ok] at hp
-    obtain ⟨v, hv, t, ht, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    unfold readStmts; simp [read_print hl e hr.1 hv, read_print_stmts hl rest hr.2 ht]
-  | .cons (.ret v) rest, hr, hp => by
-    simp only [readableStmts, Bool.and_eq_true] at hr
-    simp only [printStmts, bind_eq_ok] at hp
-    obtain ⟨t, ht, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    unfold readStmts; simp [readTerm_printTerm v hr.1, read_print_stmts hl rest hr.2 ht]
-  | .cons (.ifElse test thenB elseB) rest, hr, hp => by
-    simp only [readableStmts, Bool.and_eq_true] at hr
-    obtain ⟨⟨⟨h1, h2⟩, h3⟩, h4⟩ := hr
-    simp only [printStmts, bind_eq_ok] at hp
-    obtain ⟨a, ha, b, hb, t, ht, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    unfold readStmts
-    simp [readTerm_printTerm test h1, read_print_stmts hl thenB h2 ha,
-      read_print_stmts hl elseB h3 hb, read_print_stmts hl rest h4 ht]
-  | .cons (.whileTrue body) rest, hr, hp => by
-    simp only [readableStmts, Bool.and_eq_true] at hr
-    simp only [printStmts, bind_eq_ok] at hp
-    obtain ⟨b, hb, t, ht, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    unfold readStmts; simp [read_print_stmts hl body hr.1 hb, read_print_stmts hl rest hr.2 ht]
-  | .cons .breakLoop rest, hr, hp => by
-    simp only [readableStmts] at hr
-    simp only [printStmts, bind_eq_ok] at hp
-    obtain ⟨t, ht, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    unfold readStmts; simp [read_print_stmts hl rest hr ht]
-termination_by structural ss
-
-theorem read_print_effs {sig : Signature Op} {spell : String → List String → Option Op}
-    (hl : LawfulSpelling sig spell) {n : Nat} (es : Effs Op)
-    (hr : readableEffs sig spell n es = true) {xs : List Expr}
-    (hp : printEffs sig n es = .ok xs) : readEffs sig spell n xs = .ok es :=
-  match es, hr, hp with
-  | .nil, _, hp => by
-    simp only [printEffs, Except.ok.injEq] at hp; subst hp; rfl
-  | .cons e rest, hr, hp => by
-    simp only [readableEffs, Bool.and_eq_true] at hr
-    simp only [printEffs, bind_eq_ok] at hp
-    obtain ⟨h, hh, t, ht, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    unfold readEffs; simp [read_print hl e hr.1 hh, read_print_effs hl rest hr.2 ht]
-termination_by structural es
-
-theorem read_print_action {sig : Signature Op} {spell : String → List String → Option Op}
-    (hl : LawfulSpelling sig spell) {n : Nat} (a : ActionTerm Op)
-    (hr : readableAction sig spell n a = true) {x : Expr}
-    (hp : printAction sig n a = .ok x) : readEff sig spell n x = .ok (.withFiber a) :=
-  match a, hr, hp with
-  | .fork program options, hr, hp => by
-    simp only [readableAction] at hr
-    simp only [printAction, bind_eq_ok] at hp
-    obtain ⟨p, hpp, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    obtain ⟨s, d, m⟩ := options
-    have ih := read_print hl program hr hpp
-    have ho := readForkOptions_print ⟨s, d, m⟩
-    cases d with
-    | false =>
-      unfold readEff readHead
-      simp [headOf_lit .forkChild "Effect.forkChild" rfl, ih, ho]
-    | true =>
-      unfold readEff readHead
-      simp [headOf_lit .forkDetach "Effect.forkDetach" rfl, ih, ho]
-  | .forkIn program options scope, hr, hp => by
-    simp only [readableAction, Bool.and_eq_true, Bool.not_eq_true'] at hr
-    obtain ⟨⟨h1, hd⟩, h3⟩ := hr
-    simp only [printAction, bind_eq_ok] at hp
-    obtain ⟨p, hpp, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    have ho := readForkOptions_print options
-    rw [hd] at ho
-    unfold readEff readHead
-    simp [headOf_lit .forkIn "Effect.forkIn" rfl, read_print hl program h1 hpp,
-      readTerm_printTerm scope h3, ho]
-  | .forkScoped program options, hr, hp => by
-    simp only [readableAction, Bool.and_eq_true, Bool.not_eq_true'] at hr
-    obtain ⟨h1, hd⟩ := hr
-    simp only [printAction, bind_eq_ok] at hp
-    obtain ⟨p, hpp, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    have ho := readForkOptions_print options
-    rw [hd] at ho
-    unfold readEff readHead
-    simp [headOf_lit .forkScoped "Effect.forkScoped" rfl, read_print hl program h1 hpp, ho]
-  | .runIn target scope, hr, hp => by
-    simp only [readableAction, Bool.and_eq_true] at hr
-    simp only [printAction, Except.ok.injEq] at hp; subst hp
-    unfold readEff readHead
-    simp [headOf_lit .withFiber "Effect.withFiber" rfl, readRunIn,
-      readTerm_printTerm target hr.1, readTerm_printTerm scope hr.2]
-  | .interrupt target, hr, hp => by
-    simp only [readableAction] at hr
-    simp only [printAction, Except.ok.injEq] at hp; subst hp
-    unfold readEff readHead
-    simp [headOf_lit .interrupt "Fiber.interrupt" rfl, readTerm_printTerm target hr]
-  | .interruptScoped _, _, hp => by simp [printAction] at hp
-  | .interruptAll targets none, hr, hp => by
-    simp only [readableAction] at hr
-    simp only [printAction, Except.ok.injEq] at hp; subst hp
-    unfold readEff readHead
-    simp [headOf_lit .interruptAll "Fiber.interruptAll" rfl, readTerm_printTerm targets hr]
-  | .interruptAll targets (some who), hr, hp => by
-    simp only [readableAction, Bool.and_eq_true] at hr
-    simp only [printAction, Except.ok.injEq] at hp; subst hp
-    unfold readEff readHead
-    simp [headOf_lit .interruptAllAs "Fiber.interruptAllAs" rfl, readTerm_printTerm targets hr.1,
-      readTerm_printTerm who hr.2]
-  | .awaitAll targets, hr, hp => by
-    simp only [readableAction] at hr
-    simp only [printAction, Except.ok.injEq] at hp; subst hp
-    unfold readEff readHead
-    simp [headOf_lit .awaitAll "Fiber.awaitAll" rfl, readTerm_printTerm targets hr]
-  | .awaitAllFailFast _, _, hp => by simp [printAction] at hp
-  | .snapshotChildren, _, hp => by simp [printAction] at hp
-  | .awaitNewChildren _, _, hp => by simp [printAction] at hp
-  | .raceAll entrants, hr, hp => by
-    simp only [readableAction] at hr
-    simp only [printAction, bind_eq_ok] at hp
-    obtain ⟨items, hitems, hx⟩ := hp
-    simp only [Except.ok.injEq] at hx; subst hx
-    unfold readEff readHead
-    simp [headOf_lit .raceAll "Effect.raceAll" rfl, read_print_effs hl entrants hr hitems]
-  | .setContext _, _, hp => by simp [printAction] at hp
-  | .getContext, _, hp => by
-    simp only [printAction, Except.ok.injEq] at hp; subst hp
-    unfold readEff readHead; simp [headOf_lit .context "Effect.context" rfl]
-  | .getId, _, hp => by
-    simp only [printAction, Except.ok.injEq] at hp; subst hp
-    unfold readEff
-    simp [Var.read_none Var.name_ne_fiberId, headOf_lit .fiberId "Effect.fiberId" rfl]
-  | .closeScope scope exit, hr, hp => by
-    simp only [readableAction, Bool.and_eq_true] at hr
-    simp only [printAction, Except.ok.injEq] at hp; subst hp
-    unfold readEff readHead
-    simp [headOf_lit .scopeClose "Scope.close" rfl, readTerm_printTerm scope hr.1,
-      readTerm_printTerm exit hr.2]
-termination_by structural a
-end
 
 
 
@@ -2174,24 +1591,6 @@ theorem readTupleArgs_exact {n : Nat} {x y : Expr} {r : Term}
     obtain ⟨a, ha, b, hb, he⟩ := h
     cases he
     simp [printTupleArgs, pairArgs?, readTerm_exact x ha, readTerm_exact y hb]
-
-/-- An accepted runIn adapter reconstructs both scoped terms and its exact block. -/
-theorem readRunIn_exact {sig : Signature Op} {n : Nat} {args : List Expr} {e : Eff Op}
-    (h : readRunIn n args = .ok e) :
-    print sig n e = .ok (.call (.ident "Effect.withFiber") args) := by
-  unfold readRunIn at h
-  split at h
-  · rename_i runIn target scope unit
-    split at h
-    · rename_i heads
-      obtain ⟨rfl, rfl⟩ := heads
-      simp only [bind_eq_ok] at h
-      obtain ⟨t, ht, s, hs, he⟩ := h
-      cases he
-      simp [print, printAction, readTerm_exact target ht, readTerm_exact scope hs]
-    · cases h
-  · cases h
-
 
 section ReadExact
 
@@ -2299,600 +1698,6 @@ theorem readMethod_exact {sig : Signature Op} {spell : String → List String �
   · exact readRowMethod_exact hl h
   · cases h
 
-/-- The exactness of the reader, over the six mutual readers at once, by the functional
-induction principle Lean generates for `readEff`: one case per arm of the reader. -/
-theorem read_exact_all {sig : Signature Op} {spell : String → List String → Option Op}
-    (hl : LawfulSpelling sig spell) (n : Nat) (x : Expr) :
-    ∀ e, readEff sig spell n x = .ok e → print sig n e = .ok x := by
-  apply readEff.induct sig spell
-    (motive_1 := fun n x => ∀ e, readEff sig spell n x = .ok e → print sig n e = .ok x)
-    (motive_2 := fun n h args => ∀ e, readHead sig spell n h args = .ok e →
-      print sig n e = .ok (.call (.ident h.spelling) args))
-    (motive_3 := fun x => ∀ layer, readLayer sig spell x = .ok layer →
-      printLayer sig layer = .ok x)
-    (motive_4 := fun items => ∀ ls, readLayers sig spell items = .ok ls →
-      printLayers sig ls = .ok items)
-    (motive_5 := fun n items => ∀ es, readEffs sig spell n items = .ok es →
-      printEffs sig n es = .ok items)
-    (motive_6 := fun n stmts => ∀ ss, readStmts sig spell n stmts = .ok ss →
-      printStmts sig n ss = .ok stmts)
-  -- readEff
-  -- the refused arms (DI-72): a bare binder, `undefined`, a literal, an application of a
-  -- name that is no head and no row; each hypothesis is a refusal, never an acceptance
-  case case1 =>
-    intro n s i hi e h
-    unfold readEff at h; simp [hi] at h
-  case case2 =>
-    intro n s hr hh e h
-    unfold readEff at h; simp only [hr, hh] at h; cases h
-    simp [print, printAction, headOf_exact hh, Head.spelling]
-  case case3 =>
-    intro n s hr hh e h
-    unfold readEff at h; simp [hr, hh] at h
-  case case4 =>
-    intro n s hr val h1 h2 hh e h
-    unfold readEff at h; simp only [hr, hh] at h
-    cases val <;> simp_all
-  case case5 =>
-    intro n s hr hh e h
-    unfold readEff at h; simp only [hr, hh] at h
-    unfold readRowValue at h
-    split at h
-    · rename_i op hsp
-      split at h
-      · rename_i hshape
-        cases h
-        obtain ⟨hs, _⟩ := hl.row_of_spell _ _ _ hsp
-        rw [print_rowAnswer]
-        simp [printRow, hshape, hs]
-      · cases h
-    · cases h
-  case case6 =>
-    intro n k hk e h
-    unfold readEff at h; simp [hk] at h
-  case case7 =>
-    intro n k hk e h
-    unfold readEff at h; simp [hk] at h
-  case case8 =>
-    intro n b e h
-    unfold readEff at h; simp at h
-  case case9 =>
-    intro n s e h
-    unfold readEff at h; simp at h
-  case case10 =>
-    intro n atom args hd hh ih e h
-    unfold readEff at h; simp only [hh] at h
-    rw [headOf_exact hh]
-    exact ih e h
-  case case11 =>
-    intro n atom args hh answer hrow e h
-    unfold readEff at h; simp only [hh, hrow] at h
-    subst h
-    unfold readRowCall at hrow
-    split at hrow
-    · rename_i op hA
-      simp only [Option.some.injEq] at hrow
-      split at hrow
-      · rename_i hc
-        cases hrow
-        obtain ⟨names, hnames, hsp⟩ := Option.bind_eq_some_iff.mp hA
-        obtain ⟨hs, htr⟩ := hl.row_of_spell _ _ _ hsp
-        rw [print_rowAnswer, idents?_exact hnames]
-        simp [printRow, printRowHead, hc.1, hc.2.1, hc.2.2, hs, htr]
-      · cases hrow
-    · split at hrow
-      · split at hrow
-        · simp only [Option.some.injEq] at hrow
-          split at hrow
-          · rename_i hc
-            simp only [map_eq_ok] at hrow
-            obtain ⟨r, hr, he⟩ := hrow
-            subst he
-            obtain ⟨names, hnames, hsp⟩ :=
-              Option.bind_eq_some_iff.mp ‹(idents? _).bind (spell atom) = some _›
-            obtain ⟨hs, htr⟩ := hl.row_of_spell _ _ _ hsp
-            rw [print_rowAnswer, idents?_exact hnames]
-            simp [printRow, printRowHead, hc.1, hc.2.1, hc.2.2, hs, htr, readTerm_exact _ hr]
-          · cases hrow
-        · split at hrow
-          · split at hrow
-            · simp only [Option.some.injEq] at hrow
-              split at hrow
-              · rename_i hshape
-                simp only [map_eq_ok] at hrow
-                obtain ⟨r, hr, he⟩ := hrow
-                subst he
-                obtain ⟨names, hnames, hsp⟩ :=
-                  Option.bind_eq_some_iff.mp ‹(idents? _).bind (spell atom) = some _›
-                obtain ⟨hs, htr⟩ := hl.row_of_spell _ _ _ hsp
-                rw [print_rowAnswer, idents?_exact hnames]
-                simp [printRow, printRowHead, hshape.1, hshape.2, hs, htr, readTupleArgs_exact hr]
-              · cases hrow
-            · cases hrow
-          · cases hrow
-      · cases hrow
-  case case12 =>
-    intro n atom args hh hrow e h
-    unfold readEff at h; simp [hh, hrow] at h
-  -- the generic-head call arm: a row call carrying the row's own type arguments
-  -- (`E4-CHECK-CE-013`). It prints back through `printRowHead`'s non-empty branch.
-  case case13 =>
-    intro n atom ta tas args answer hrow e h
-    unfold readEff at h; simp only [hrow] at h
-    subst h
-    unfold readRowCall at hrow
-    split at hrow
-    · rename_i op hA
-      simp only [Option.some.injEq] at hrow
-      split at hrow
-      · rename_i hc
-        cases hrow
-        obtain ⟨names, hnames, hsp⟩ := Option.bind_eq_some_iff.mp hA
-        obtain ⟨hs, htr⟩ := hl.row_of_spell _ _ _ hsp
-        rw [print_rowAnswer, idents?_exact hnames]
-        simp [printRow, printRowHead, hc.1, hc.2.1, hc.2.2, hs, htr]
-      · cases hrow
-    · split at hrow
-      · split at hrow
-        · simp only [Option.some.injEq] at hrow
-          split at hrow
-          · rename_i hc
-            simp only [map_eq_ok] at hrow
-            obtain ⟨r, hr, he⟩ := hrow
-            subst he
-            obtain ⟨names, hnames, hsp⟩ :=
-              Option.bind_eq_some_iff.mp ‹(idents? _).bind (spell atom) = some _›
-            obtain ⟨hs, htr⟩ := hl.row_of_spell _ _ _ hsp
-            rw [print_rowAnswer, idents?_exact hnames]
-            simp [printRow, printRowHead, hc.1, hc.2.1, hc.2.2, hs, htr, readTerm_exact _ hr]
-          · cases hrow
-        · split at hrow
-          · split at hrow
-            · simp only [Option.some.injEq] at hrow
-              split at hrow
-              · rename_i hshape
-                simp only [map_eq_ok] at hrow
-                obtain ⟨r, hr, he⟩ := hrow
-                subst he
-                obtain ⟨names, hnames, hsp⟩ :=
-                  Option.bind_eq_some_iff.mp ‹(idents? _).bind (spell atom) = some _›
-                obtain ⟨hs, htr⟩ := hl.row_of_spell _ _ _ hsp
-                rw [print_rowAnswer, idents?_exact hnames]
-                simp [printRow, printRowHead, hshape.1, hshape.2, hs, htr, readTupleArgs_exact hr]
-              · cases hrow
-            · cases hrow
-          · cases hrow
-      · cases hrow
-  -- no row of the table has this head with type arguments: the reader refuses, so there is
-  -- nothing to print back
-  case case14 =>
-    intro n atom ta tas args hrow e h
-    unfold readEff at h; simp only [hrow] at h
-    cases h
-  case case15 =>
-    intros
-    rename_i e h
-    unfold readEff at h
-    split at h <;> first | exact readMethod_exact hl h | close_arm h
-  -- readHead
-  case case29 =>
-    intro n v e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨t, ht, rfl⟩ := h
-    simp [print, readTerm_exact v ht, Head.spelling]
-  case case30 =>
-    intro n v e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨t, ht, rfl⟩ := h
-    simp [print, readTerm_exact v ht, Head.spelling]
-  case case31 =>
-    intro n c e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨t, ht, rfl⟩ := h
-    simp [print, readCause_exact c ht, Head.spelling]
-  case case32 =>
-    intro n t e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨t', ht, rfl⟩ := h
-    simp [print, readTerm_exact t ht, Head.spelling]
-  case case33 =>
-    intro n t a b iha ihb e h
-    unfold readHead at h; simp only [bind_eq_ok] at h
-    obtain ⟨test, htest, x, hx, y, hy, he⟩ := h
-    cases he
-    simp [print, iha x hx, ihb y hy, readTerm_exact t htest, Head.spelling]
-  case case34 =>
-    intro n body hnc ih e h
-    unfold readHead at h
-    cases body <;> first
-      | exact (hnc _ _ _ rfl).elim
-      | (simp only [map_eq_ok] at h; obtain ⟨b', hb', rfl⟩ := h; simp [print, ih _ hb', Head.spelling])
-  case case35 =>
-    intro n first rest ih1 ih2 e h
-    unfold readHead at h
-    simp only [if_true, bind_eq_ok] at h
-    obtain ⟨f, hf, r, hr, he⟩ := h
-    cases he
-    simp [print, ih1 f hf, ih2 r hr, Head.spelling]
-  case case36 =>
-    intro n first x rest hx e h
-    unfold readHead at h; simp [hx] at h
-  case case37 =>
-    intro n body ih e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨ss, hss, rfl⟩ := h
-    simp [print, ih ss hss, Head.spelling]
-  case case38 =>
-    intro n body handler ih1 ih2 e h
-    unfold readHead at h
-    simp only [if_true, bind_eq_ok] at h
-    obtain ⟨b, hb, hd, hhd, he⟩ := h
-    cases he
-    simp [print, ih1 b hb, ih2 hd hhd, Head.spelling]
-  case case39 =>
-    intro n body x handler hx e h
-    unfold readHead at h; simp [hx] at h
-  case case40 =>
-    intro n body handler ih1 ih2 e h
-    unfold readHead at h
-    simp only [if_true, bind_eq_ok] at h
-    obtain ⟨b, hb, hd, hhd, he⟩ := h
-    cases he
-    simp [print, ih1 b hb, ih2 hd hhd, Head.spelling]
-  case case41 =>
-    intro n body x handler hx e h
-    unfold readHead at h; simp [hx] at h
-  case case42 =>
-    intro n body x predicate y handler fallback hc ih1 ih2 e h
-    obtain ⟨rfl, rfl, rfl⟩ := hc
-    unfold readHead at h
-    simp only [and_self, if_true, bind_eq_ok] at h
-    obtain ⟨b, hb, t, ht, hd, hhd, he⟩ := h
-    cases he
-    obtain ⟨hp, htrue⟩ := readCatchTest_exact ht
-    simp [print, htrue, ih1 b hb, ih2 hd hhd, hp, Head.spelling]
-  case case43 =>
-    intro n body x predicate y handler fallback hc e h
-    unfold readHead at h
-    simp [hc] at h
-  case case44 =>
-    intro n body ff x onCause fs y onValue hc ih1 ih2 ih3 e h
-    obtain ⟨rfl, rfl, rfl, rfl⟩ := hc
-    unfold readHead at h
-    simp only [and_self, if_true, bind_eq_ok] at h
-    obtain ⟨b, hb, v, hv, c, hc, he⟩ := h
-    cases he
-    simp [print, ih1 b hb, ih2 v hv, ih3 c hc, Head.spelling]
-  case case45 =>
-    intro n body ff x onCause fs y onValue hc e h
-    unfold readHead at h; simp [hc] at h
-  case case46 =>
-    intro n body finalizer ih1 ih2 e h
-    unfold readHead at h
-    simp only [if_true, bind_eq_ok] at h
-    obtain ⟨b, hb, f, hf, he⟩ := h
-    cases he
-    simp [print, ih1 b hb, ih2 f hf, Head.spelling]
-  case case47 =>
-    intro n body x finalizer hx e h
-    unfold readHead at h; simp [hx] at h
-  case case48 =>
-    intro n body ih e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨b, hb, rfl⟩ := h
-    simp [print, ih b hb, Head.spelling]
-  case case49 =>
-    intro n body ih e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨b, hb, rfl⟩ := h
-    simp [print, ih b hb, Head.spelling]
-  case case50 =>
-    intro n body ih e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨b, hb, rfl⟩ := h
-    simp [print, ih b hb, Head.spelling]
-  case case51 =>
-    intro n k hk e h
-    unfold readHead at h; simp only [hk, if_true] at h; cases h
-    simp [print, Int.toNat_of_nonneg hk, Head.spelling]
-  case case52 =>
-    intro n k hk e h
-    unfold readHead at h; simp [hk] at h
-  case case53 =>
-    intro n fiber e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨t, ht, rfl⟩ := h
-    simp [print, readTerm_exact fiber ht, Head.spelling]
-  case case54 =>
-    intro n fiber e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨t, ht, rfl⟩ := h
-    simp [print, readTerm_exact fiber ht, Head.spelling]
-  case case55 =>
-    intro n program options ih e h
-    unfold readHead at h; simp only [bind_eq_ok] at h
-    obtain ⟨p, hp, o, ho, he⟩ := h
-    cases he
-    obtain ⟨hpo, hd⟩ := readForkOptions_exact ho
-    simp [print, printAction, ih p hp, hpo, hd, Head.spelling]
-  case case56 =>
-    intro n program options ih e h
-    unfold readHead at h; simp only [bind_eq_ok] at h
-    obtain ⟨p, hp, o, ho, he⟩ := h
-    cases he
-    obtain ⟨hpo, hd⟩ := readForkOptions_exact ho
-    simp [print, printAction, ih p hp, hpo, hd, Head.spelling]
-  case case57 =>
-    intro n program scope options ih e h
-    unfold readHead at h; simp only [bind_eq_ok] at h
-    obtain ⟨p, hp, s, hs, o, ho, he⟩ := h
-    cases he
-    obtain ⟨hpo, _⟩ := readForkOptions_exact ho
-    simp [print, printAction, ih p hp, readTerm_exact scope hs, hpo, Head.spelling]
-  case case58 =>
-    intro n program options ih e h
-    unfold readHead at h; simp only [bind_eq_ok] at h
-    obtain ⟨p, hp, o, ho, he⟩ := h
-    cases he
-    obtain ⟨hpo, _⟩ := readForkOptions_exact ho
-    simp [print, printAction, ih p hp, hpo, Head.spelling]
-  case case59 =>
-    intro n args e h
-    simp only [readHead] at h
-    exact readRunIn_exact h
-  case case60 =>
-    intro n target e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨t, ht, rfl⟩ := h
-    simp [print, printAction, readTerm_exact target ht, Head.spelling]
-  case case61 =>
-    intro n targets e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨t, ht, rfl⟩ := h
-    simp [print, printAction, readTerm_exact targets ht, Head.spelling]
-  case case62 =>
-    intro n targets who e h
-    unfold readHead at h; simp only [bind_eq_ok] at h
-    obtain ⟨t, ht, w, hw, he⟩ := h
-    cases he
-    simp [print, printAction, readTerm_exact targets ht, readTerm_exact who hw, Head.spelling]
-  case case63 =>
-    intro n targets e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨t, ht, rfl⟩ := h
-    simp [print, printAction, readTerm_exact targets ht, Head.spelling]
-  case case64 =>
-    intro n entrants ih e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨es, hes, rfl⟩ := h
-    simp [print, printAction, ih es hes, Head.spelling]
-  case case65 =>
-    intro n e h
-    unfold readHead at h; simp at h; subst h
-    simp [print, printAction, Head.spelling]
-  case case66 =>
-    intro n scope exit e h
-    unfold readHead at h; simp only [bind_eq_ok] at h
-    obtain ⟨s, hs, x, hx, he⟩ := h
-    cases he
-    simp [print, printAction, readTerm_exact scope hs, readTerm_exact exit hx, Head.spelling]
-  case case67 =>
-    intro n body ih e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨b, hb, rfl⟩ := h
-    simp [print, ih b hb, Head.spelling]
-  case case68 =>
-    intro n acquire x y release hxy ih1 ih2 e h
-    obtain ⟨rfl, rfl⟩ := hxy
-    unfold readHead at h
-    simp only [and_self, if_true, bind_eq_ok] at h
-    obtain ⟨a, ha, r, hr, he⟩ := h
-    cases he
-    simp [print, ih1 a ha, ih2 r hr, Head.spelling]
-  case case69 =>
-    intro n acquire x y release hne e h
-    unfold readHead at h; simp [hne] at h
-  case case70 =>
-    intro n body layer ihb ihl e h
-    unfold readHead at h; simp only [bind_eq_ok] at h
-    obtain ⟨b, hb, l, hlayer, he⟩ := h
-    cases he
-    simp [print, ihb b hb, ihl l hlayer, Head.spelling]
-  case case71 =>
-    intro n body layer ihb ihl e h
-    unfold readHead at h; simp only [if_true, bind_eq_ok] at h
-    obtain ⟨b, hb, l, hlayer, he⟩ := h
-    cases he
-    simp [print, ihb b hb, ihl l hlayer, Head.spelling]
-  case case72 =>
-    intro n body layer field hfield e h
-    unfold readHead at h; simp [hfield] at h
-  case case73 =>
-    intro n key e h
-    unfold readHead at h; simp only [map_eq_ok] at h
-    obtain ⟨k, hk, rfl⟩ := h
-    simp [print, readKey_exact hk, Head.spelling]
-  case case74 =>
-    intro n body key value ih e h
-    unfold readHead at h; simp only [bind_eq_ok] at h
-    obtain ⟨b, hb, k, hk, v, hv, he⟩ := h
-    cases he
-    simp [print, ih b hb, readKey_exact hk, readTerm_exact value hv, Head.spelling]
-  case case75 => intro t n e h; unfold readHead at h; simp at h
-  case case76 => intro t n e h; unfold readHead at h; simp at h
-  case case77 => intro t n e h; unfold readHead at h; simp at h
-  case case78 => intro t n e h; unfold readHead at h; simp at h
-  case case79 => intro t n e h; unfold readHead at h; simp at h
-  case case80 => intro t n e h; unfold readHead at h; simp at h
-  case case81 => intro t n e h; unfold readHead at h; simp at h
-  case case82 => intro t n e h; unfold readHead at h; simp at h
-  case case83 => intro t n e h; unfold readHead at h; simp at h
-  case case84 => intro t n e h; unfold readHead at h; simp at h
-  case case85 => intro t n e h; unfold readHead at h; simp at h
-  case case86 => intro t n e h; unfold readHead at h; simp at h
-  case case87 => intro t n e h; unfold readHead at h; simp at h
-  case case88 => intro t n e h; unfold readHead at h; simp at h
-  case case89 => intro t n e h; unfold readHead at h; simp at h
-  case case90 => intro t n e h; unfold readHead at h; simp at h
-  case case91 =>
-    intro n hd t
-    intros
-    rename_i e h
-    unfold readHead at h
-    split at h <;> close_arm h
-  -- readLayer: a reference by the identifier that carries its path (the host rows slice);
-  -- the reader admits the name only when it is exactly the path's spelling, so the printer's
-  -- identifier is recovered by that very equation
-  case case16 =>
-    intro target hread layer h
-    unfold readLayer at h
-    simp [hread] at h
-    subst h
-    rfl
-  case case17 =>
-    intro s target hread hne layer h
-    unfold readLayer at h
-    simp [hread, hne] at h
-  case case18 =>
-    intro s hread layer h
-    unfold readLayer at h
-    simp [hread] at h
-  case case19 =>
-    intro items ih layer h
-    unfold readLayer at h; simp only [map_eq_ok] at h
-    obtain ⟨ls, hls, rfl⟩ := h
-    simp [printLayer, ih ls hls]
-  case case20 =>
-    intro key value layer h
-    unfold readLayer at h; simp only [bind_eq_ok] at h
-    obtain ⟨k, hk, v, hv, hlayer⟩ := h
-    cases hlayer
-    simp [printLayer, readKey_exact hk, readLiteral_exact hv]
-  case case21 =>
-    intro key body ih layer h
-    unfold readLayer at h; simp only [bind_eq_ok] at h
-    obtain ⟨k, hk, b, hb, hlayer⟩ := h
-    cases hlayer
-    simp [printLayer, readKey_exact hk, ih b hb]
-  case case22 =>
-    intro body ih layer h
-    unfold readLayer at h; simp only [map_eq_ok] at h
-    obtain ⟨b, hb, rfl⟩ := h
-    simp [printLayer, ih b hb]
-  case case23 =>
-    intro self that ihs iht layer h
-    unfold readLayer at h; simp only [bind_eq_ok] at h
-    obtain ⟨s, hs, t, ht, hlayer⟩ := h
-    cases hlayer
-    simp [printLayer, ihs s hs, iht t ht]
-  case case24 =>
-    intro self that ihs iht layer h
-    unfold readLayer at h; simp only [bind_eq_ok] at h
-    obtain ⟨s, hs, t, ht, hlayer⟩ := h
-    cases hlayer
-    simp [printLayer, ihs s hs, iht t ht]
-  case case25 =>
-    intro left right ihl ihr layer h
-    unfold readLayer at h; simp only [bind_eq_ok] at h
-    obtain ⟨l, hl, r, hr, hlayer⟩ := h
-    cases hlayer
-    simp [printLayer, ihl l hl, ihr r hr]
-  case case26 =>
-    intro inner ih layer h
-    unfold readLayer at h; simp only [map_eq_ok] at h
-    obtain ⟨i, hi, rfl⟩ := h
-    simp [printLayer, ih i hi]
-  case case27 =>
-    intro inner ih layer h
-    unfold readLayer at h; simp only [map_eq_ok] at h
-    obtain ⟨i, hi, rfl⟩ := h
-    simp [printLayer, ih i hi]
-  case case28 =>
-    intro x
-    intros
-    rename_i layer h
-    unfold readLayer at h
-    split at h <;> close_arm h
-  -- readEffs
-  case case94 =>
-    intro n es h
-    unfold readEffs at h; simp at h; subst h; rfl
-  case case95 =>
-    intro n x rest ih1 ih2 es h
-    unfold readEffs at h; simp only [bind_eq_ok] at h
-    obtain ⟨e, he, es', hes', hes⟩ := h
-    cases hes
-    simp [printEffs, ih1 e he, ih2 es' hes']
-  -- readLayers
-  case case92 =>
-    intro ls h
-    unfold readLayers at h; simp at h; subst h; rfl
-  case case93 =>
-    intro x rest ih1 ih2 ls h
-    unfold readLayers at h; simp only [bind_eq_ok] at h
-    obtain ⟨l, hl, ls', hls', hls⟩ := h
-    cases hls
-    simp [printLayers, ih1 l hl, ih2 ls' hls']
-  -- readStmts
-  case case96 =>
-    intro n ss h
-    unfold readStmts at h; simp at h; subst h; rfl
-  case case97 =>
-    intro n value rest ih1 ih2 ss h
-    unfold readStmts at h
-    simp only [if_true, bind_eq_ok] at h
-    obtain ⟨e, he, tail, htail, hss⟩ := h
-    cases hss
-    simp [printStmts, ih1 e he, ih2 tail htail]
-  case case98 =>
-    intro n x value rest hx ss h
-    unfold readStmts at h; simp [hx] at h
-  case case99 =>
-    intro n value rest ih1 ih2 ss h
-    unfold readStmts at h; simp only [bind_eq_ok] at h
-    obtain ⟨e, he, tail, htail, hss⟩ := h
-    cases hss
-    simp [printStmts, ih1 e he, ih2 tail htail]
-  case case100 =>
-    intro n value rest ih ss h
-    unfold readStmts at h; simp only [bind_eq_ok] at h
-    obtain ⟨v, hv, tail, htail, hss⟩ := h
-    cases hss
-    simp [printStmts, readTerm_exact value hv, ih tail htail]
-  case case101 =>
-    intro n test thenB elseB rest ih1 ih2 ih3 ss h
-    unfold readStmts at h; simp only [bind_eq_ok] at h
-    obtain ⟨t, ht, a, ha, b, hb, tail, htail, hss⟩ := h
-    cases hss
-    simp [printStmts, readTerm_exact test ht, ih1 a ha, ih2 b hb, ih3 tail htail]
-  case case102 =>
-    intro n body rest ih1 ih2 ss h
-    unfold readStmts at h; simp only [bind_eq_ok] at h
-    obtain ⟨b, hb, tail, htail, hss⟩ := h
-    cases hss
-    simp [printStmts, ih1 b hb, ih2 tail htail]
-  case case103 =>
-    intro n rest ih ss h
-    unfold readStmts at h; simp only [bind_eq_ok] at h
-    obtain ⟨tail, htail, hss⟩ := h
-    cases hss
-    simp [printStmts, ih tail htail]
-  case case104 =>
-    intro n head tail
-    intros
-    rename_i ss h
-    rcases head with ⟨x, v, _ | _⟩ | ⟨v⟩ | ⟨v⟩ | ⟨a, b⟩ | ⟨a, b, _⟩ | ⟨a, b⟩ | ⟨_ | _, b⟩ | ⟨a, b⟩ | ⟨a, b, c⟩
-      | ⟨a, b⟩ | ⟨a, b, c⟩ | ⟨a, b, c⟩ | ⟨_ | _⟩ | ⟨_⟩ | ⟨_⟩ <;>
-      first
-      | (exfalso; subst_vars; simp_all [readStmts]; done)
-      | (unfold readStmts at h; dsimp only at h; close_arm h)
-
-
-/-- `read_exact`: what the reader accepts prints back to exactly the tree it read. -/
-theorem read_exact {sig : Signature Op} {spell : String → List String → Option Op}
-    (hl : LawfulSpelling sig spell) {n : Nat} {x : Expr} {e : Eff Op}
-    (h : readEff sig spell n x = .ok e) : print sig n e = .ok x :=
-  read_exact_all hl n x e h
 
 end ReadExact
 
@@ -3030,470 +1835,5 @@ theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := b
     simp only [rowNamesSafe, Bool.and_eq_true] at hn
     have ht := List.all_eq_true.mp hn.2 "undefined" hm
     simp at ht
-
- theorem read_print_native (table : RowTable := []) (h : LawfulTable table = true := by decide)
-    {n : Nat} (e : NativeEff)
-    (hr : readable (nativeSignature table) (nativeSpell table) n e = true) {x : Expr}
-    (hp : print (nativeSignature table) n e = .ok x) :
-    readEff (nativeSignature table) (nativeSpell table) n x = .ok e :=
-  read_print (nativeLawful table h) e hr hp
-
-/-- `read_print` as the round trip: a readable program that prints comes back as itself. -/
-theorem roundTrip_eq {sig : Signature Op} {spell : String → List String → Option Op}
-    (hl : LawfulSpelling sig spell) {n : Nat} {e : Eff Op}
-    (hr : readable sig spell n e = true) {x : Expr} (hp : print sig n e = .ok x) :
-    roundTrip sig spell n e = .ok e := by
-  unfold roundTrip; rw [hp]; exact read_print hl e hr hp
-
-theorem read_exact_native (table : RowTable := []) (ht : LawfulTable table = true := by decide)
-    {n : Nat} {x : Expr} {e : NativeEff}
-    (h : readEff (nativeSignature table) (nativeSpell table) n x = .ok e) :
-    print (nativeSignature table) n e = .ok x :=
-  read_exact (nativeLawful table ht) h
-
-/-! ## Compatibility with positional weakening -/
-
-private theorem weaken_index_inj (cut i j : Nat) :
-    Var.weaken cut i = Var.weaken cut j ↔ i = j := by
-  constructor
-  · intro h
-    by_cases hi : i < cut <;> by_cases hj : j < cut <;>
-      simp only [Var.weaken, hi, hj, if_true, if_false] at h <;> omega
-  · intro h
-    subst j
-    rfl
-
-private theorem weaken_name_eq (cut i j : Nat) :
-    Var.name (Var.weaken cut i) = Var.name (Var.weaken cut j) ↔ Var.name i = Var.name j := by
-  constructor
-  · intro h
-    exact congrArg Var.name ((weaken_index_inj cut i j).mp (Var.name_inj h))
-  · intro h
-    rw [Var.name_inj h]
-
-mutual
-  theorem Term.scoped_weaken {cut n : Nat} (hc : cut ≤ n) (term : Term) :
-      (Term.weaken cut term).scoped (n + 1) = term.scoped n :=
-    match term with
-    | .var index => by
-      simp only [Term.weaken, Term.scoped]
-      have hi : Var.weaken cut index < n + 1 ↔ index < n := by
-        by_cases h : index < cut
-        · rw [Var.weaken, if_pos h]
-          exact iff_of_true (Nat.lt_succ_of_lt (Nat.lt_of_lt_of_le h hc))
-            (Nat.lt_of_lt_of_le h hc)
-        · rw [Var.weaken, if_neg h]
-          exact Nat.add_lt_add_iff_right
-      simp only [hi]
-    | .lit _ => rfl
-    | .app _ args => Terms.scoped_weaken hc args
-
-  theorem Terms.scoped_weaken {cut n : Nat} (hc : cut ≤ n) (terms : Terms) :
-      (Terms.weaken cut terms).scoped (n + 1) = terms.scoped n :=
-    match terms with
-    | .nil => rfl
-    | .cons head tail => by
-      simp only [Terms.weaken, Terms.scoped, Term.scoped_weaken hc head,
-        Terms.scoped_weaken hc tail]
-end
-
-theorem CauseTerm.scoped_weaken {cut n : Nat} (hc : cut ≤ n) (cause : CauseTerm) :
-    (CauseTerm.weaken cut cause).scoped (n + 1) = cause.scoped n := by
-  induction cause with
-  | fail _ | die _ => simp only [CauseTerm.weaken, CauseTerm.scoped, Term.scoped_weaken hc]
-  | interrupt who => cases who <;> simp only [CauseTerm.weaken, CauseTerm.scoped,
-      Option.map, Term.scoped_weaken hc]
-  | both _ _ ihl ihr => simp only [CauseTerm.weaken, CauseTerm.scoped, ihl, ihr]
-
-private theorem names_cons_spell_none {sig : Signature Op}
-    {spell : String → List String → Option Op} (hl : LawfulSpelling sig spell)
-    (atom : String) (head : Term) (tail : Terms) :
-    ((Terms.names? (.cons head tail)).bind (spell atom)) = none := by
-  have noHead (v : String) (hv : ∀ op, v ∉ (sig.rowOf op).trailing) (names : List String) :
-      spell atom (v :: names) = none := by
-    cases hs : spell atom (v :: names) with
-    | none => rfl
-    | some op =>
-      have ht := (hl.row_of_spell atom (v :: names) op hs).2
-      exact False.elim (hv op (by rw [ht]; simp))
-  cases head with
-  | var i =>
-    cases ht : Terms.names? tail <;>
-      simp [Terms.names?, ht, noHead (Var.name i) (fun op => hl.trailing_ne_name op i)]
-  | lit value =>
-    cases value <;> first
-      | rfl
-      | (cases ht : Terms.names? tail <;>
-          simp [Terms.names?, ht, noHead "undefined" hl.trailing_ne_undefined])
-  | app _ _ => rfl
-
-private theorem savedVar_weaken (cut : Nat) (x y : Term) :
-    (savedVar? (printTerm (Term.weaken cut x)) (printTerm (Term.weaken cut y))).isNone =
-      (savedVar? (printTerm x) (printTerm y)).isNone := by
-  cases x with
-  | var _ => rfl
-  | lit value => cases value <;> rfl
-  | app f xs =>
-    cases xs with
-    | nil => rfl
-    | cons x xs =>
-      cases x with
-      | app _ _ => rfl
-      | lit value =>
-        cases value <;> try rfl
-        cases xs with
-        | cons _ _ => rfl
-        | nil =>
-          cases y with
-          | var _ => rfl
-          | lit value => cases value <;> rfl
-          | app g ys =>
-            cases ys with
-            | nil => rfl
-            | cons y ys =>
-              cases y with
-              | app _ _ => rfl
-              | lit value =>
-                cases value <;> try rfl
-                cases ys with
-                | cons _ _ => rfl
-                | nil =>
-                  simp only [Term.weaken, Terms.weaken, printTerm, printTerms, printLit, savedVar?]
-                  all_goals first | rfl | (split <;> rfl)
-              | var _ =>
-                cases ys with
-                | cons _ _ => rfl
-                | nil =>
-                  simp only [Term.weaken, Terms.weaken, printTerm, printTerms, printLit,
-                    savedVar?, Ne.symm (Var.name_ne_undefined _)]
-                  all_goals first | rfl | (split <;> rfl)
-      | var _ =>
-        cases xs with
-        | cons _ _ => rfl
-        | nil =>
-          cases y with
-          | var _ => rfl
-          | lit value => cases value <;> rfl
-          | app g ys =>
-            cases ys with
-            | nil => rfl
-            | cons y ys =>
-              cases y with
-              | app _ _ => rfl
-              | lit value =>
-                cases value <;> try rfl
-                cases ys with
-                | cons _ _ => rfl
-                | nil =>
-                  simp only [Term.weaken, Terms.weaken, printTerm, printTerms, printLit,
-                    savedVar?, Var.name_ne_undefined]
-                  all_goals first | rfl | (split <;> rfl)
-              | var _ =>
-                cases ys with
-                | cons _ _ => rfl
-                | nil =>
-                  simp only [Term.weaken, Terms.weaken, printTerm, printTerms, savedVar?, weaken_name_eq]
-                  all_goals first | rfl | (split <;> rfl)
-
-private theorem pairArgs_weaken (cut : Nat) (request : Term) :
-    pairArgs? (Term.weaken cut request) =
-      (pairArgs? request).map (fun (x, y) => (Term.weaken cut x, Term.weaken cut y)) := by
-  cases request with
-  | var _ | lit _ => rfl
-  | app atom args =>
-    cases args with
-    | nil => rfl
-    | cons x rest =>
-      cases rest with
-      | nil => rfl
-      | cons y rest =>
-        cases rest with
-        | cons _ _ => rfl
-        | nil => simp only [Term.weaken, Terms.weaken, pairArgs?]; split <;> rfl
-
-private theorem weaken_eq_unit (cut : Nat) (request : Term) :
-    Term.weaken cut request = .lit .unit ↔ request = .lit .unit := by
-  cases request <;> simp only [Term.weaken, reduceCtorEq]
-
-private theorem tupleRequestReadable_weaken {cut n : Nat} (hc : cut ≤ n) (request : Term) :
-    tupleRequestReadable (n + 1) (Term.weaken cut request) = tupleRequestReadable n request := by
-  simp only [tupleRequestReadable]
-  rw [pairArgs_weaken]
-  cases hp : pairArgs? request with
-  | some xy =>
-    obtain ⟨x, y⟩ := xy
-    simp only [Option.map, Term.scoped_weaken hc, savedVar_weaken]
-  | none =>
-    cases request with
-    | var index => exact Term.scoped_weaken hc (.var index)
-    | lit value => cases value <;> rfl
-    | app _ _ => rfl
-
-private theorem requestReadable_weaken {cut n : Nat} (hc : cut ≤ n) (row : Row)
-    (request : Term) :
-    requestReadable row (n + 1) (Term.weaken cut request) = requestReadable row n request := by
-  cases hs : row.shape with
-  | value => simp only [requestReadable, hs, weaken_eq_unit]
-  | call =>
-    simp only [requestReadable, hs]
-    split <;> simp only [weaken_eq_unit, Term.scoped_weaken hc]
-  | tupleCall => simp only [requestReadable, hs, tupleRequestReadable_weaken hc]
-  | method =>
-    simp only [requestReadable, hs, pairArgs_weaken]
-    cases hp : pairArgs? request with
-    | none => rfl
-    | some parts =>
-      obtain ⟨receiver, args⟩ := parts
-      simp only [Option.map, Term.scoped_weaken hc, tupleRequestReadable_weaken hc, weaken_eq_unit]
-
-mutual
-  /-- Inserting an unused environment slot retains exactly the readable domain. -/
-  theorem readable_weaken {sig : Signature Op} {spell : String → List String → Option Op}
-      (hl : LawfulSpelling sig spell) {cut n : Nat} (hc : cut ≤ n) (program : Eff Op) :
-      readable sig spell (n + 1) (Eff.weaken cut program) = readable sig spell n program :=
-    match program with
-    | .select _ .option _ _ | .select _ (.tag _) _ _ => by simp only [Eff.weaken, readable]
-    | .iterate _ _ _ _ _ _ => by simp only [Eff.weaken, readable]
-    | .select _ .bool _ _
-    | .succeed _ | .fail _ | .failCause _ | .sync _ | .suspend _ | .perform _ _
-    | .bind _ _ | .gen _ | .catchCause _ _ | .catchIf _ _ _ | .matchCause _ _ _ | .onExit _ _ | .exit _
-    | .uninterruptible _ | .interruptible _
-    | .yieldNow _ | .awaitFiber _ _ | .withFiber _ | .scoped _
-    | .acquireRelease _ _ | .provideLayer _ _ _ | .service _
-    | .provideService _ _ _ => by
-      have hc1 : cut ≤ n + 1 := Nat.le_trans hc (Nat.le_add_right n 1)
-      have hc2 : cut ≤ n + 2 := Nat.le_trans hc (Nat.le_add_right n 2)
-      simp only [Eff.weaken, readable, Term.scoped_weaken hc,
-        CauseTerm.scoped_weaken hc, requestReadable_weaken hc,
-        readable_weaken hl hc, readable_weaken hl hc1, readable_weaken hl hc2,
-        readableStmts_weaken hl hc, readableAction_weaken hl hc,
-        Term.scoped_weaken hc1, Nat.add_right_comm n 1 2, Term.scoped_weaken hc2]
-
-  theorem readableStmts_weaken {sig : Signature Op} {spell : String → List String → Option Op}
-      (hl : LawfulSpelling sig spell) {cut n : Nat} (hc : cut ≤ n) (stmts : Stmts Op) :
-      readableStmts sig spell (n + 1) (Stmts.weaken cut stmts) = readableStmts sig spell n stmts :=
-    match stmts with
-    | .nil => rfl
-    | .cons stmt rest => by
-      have hc1 : cut ≤ n + 1 := Nat.le_trans hc (Nat.le_add_right n 1)
-      cases stmt <;> simp only [Stmts.weaken, Stmt.weaken, readableStmts,
-        Term.scoped_weaken hc, readable_weaken hl hc,
-        readableStmts_weaken hl hc, readableStmts_weaken hl hc1]
-
-  theorem readableEffs_weaken {sig : Signature Op} {spell : String → List String → Option Op}
-      (hl : LawfulSpelling sig spell) {cut n : Nat} (hc : cut ≤ n) (effects : Effs Op) :
-      readableEffs sig spell (n + 1) (Effs.weaken cut effects) = readableEffs sig spell n effects :=
-    match effects with
-    | .nil => rfl
-    | .cons head tail => by
-      simp only [Effs.weaken, readableEffs, readable_weaken hl hc, readableEffs_weaken hl hc]
-
-  theorem readableAction_weaken {sig : Signature Op} {spell : String → List String → Option Op}
-      (hl : LawfulSpelling sig spell) {cut n : Nat} (hc : cut ≤ n) (action : ActionTerm Op) :
-      readableAction sig spell (n + 1) (ActionTerm.weaken cut action) = readableAction sig spell n action :=
-    match action with
-    | .interruptAll _ who => by
-      cases who <;> simp only [ActionTerm.weaken, readableAction, Option.map, Term.scoped_weaken hc]
-    | .fork _ _ | .forkIn _ _ _ | .forkScoped _ _ | .runIn _ _ | .interrupt _
-    | .interruptScoped _ | .awaitAll _ | .awaitAllFailFast _ | .snapshotChildren
-    | .awaitNewChildren _ | .raceAll _ | .setContext _ | .getContext | .getId
-    | .closeScope _ _ => by
-      simp only [ActionTerm.weaken, readableAction, Term.scoped_weaken hc,
-        readable_weaken hl hc, readableEffs_weaken hl hc]
-end
-
-/-- A readable request has all the structural type data needed by its row printer. -/
-theorem printRow_readable (row : Row) (n : Nat) (request : Term)
-    (hr : requestReadable row n request = true) : ∃ x, printRow row request = .ok x := by
-  cases hs : row.shape with
-  | value => exact ⟨_, by simp only [printRow, hs]; rfl⟩
-  | call | tupleCall | method =>
-    simp only [requestReadable, hs, Bool.and_eq_true] at hr
-    obtain ⟨typeArgs, ht⟩ := Option.isSome_iff_exists.mp hr.1
-    cases typeArgs <;> simp only [printRow, hs, printRowHead, printMethod, ht]
-    all_goals repeat first | split | exact ⟨_, rfl⟩
-
-mutual
-  /-- Every program in the readable domain has a printed expression. -/
-  theorem print_readable (sig : Signature Op) (spell : String → List String → Option Op)
-      (n : Nat) (program : Eff Op) (hr : readable sig spell n program = true) :
-      ∃ x, print sig n program = .ok x :=
-    match program with
-    | .succeed _ | .fail _ | .failCause _ | .sync _
-    | .yieldNow _ => ⟨_, rfl⟩
-    | .perform op request =>
-      printRow_readable (sig.rowOf op) n request (Bool.and_eq_true_iff.mp hr).2
-    | .suspend body | .exit body | .uninterruptible body | .interruptible body | .scoped body => by
-      obtain ⟨b, hb⟩ := print_readable sig spell n body hr
-      exact ⟨_, by simp only [print, hb] <;> rfl⟩
-    | .catchIf test body handler => by
-      have hs := Bool.and_eq_true_iff.mp hr
-      have hb := (Bool.and_eq_true_iff.mp hs.1).2
-      obtain ⟨b, hbody⟩ := print_readable sig spell n body hb
-      obtain ⟨h, hhandler⟩ := print_readable sig spell (n + 1) handler hs.2
-      by_cases ht : test = .lit (.bool true)
-      · exact ⟨.call (.ident "Effect.catch") [b, .lambda [Var.name n] h], by simp [print, hbody, hhandler, ht]⟩
-      · exact ⟨.call (.ident "Effect.catchIf") [b, .lambda [Var.name n] (printTerm test), .lambda [Var.name n] h, .ident "undefined"], by simp [print, hbody, hhandler, ht]⟩
-    | .bind first rest | .catchCause first rest | .onExit first rest => by
-      have hs := Bool.and_eq_true_iff.mp hr
-      obtain ⟨f, hf⟩ := print_readable sig spell n first hs.1
-      obtain ⟨r, hrest⟩ := print_readable sig spell (n + 1) rest hs.2
-      exact ⟨_, by simp only [print, hf, hrest] <;> rfl⟩
-    | .gen body => by
-      obtain ⟨b, hb⟩ := printStmts_readable sig spell n body hr
-      exact ⟨_, by simp only [print, hb] <;> rfl⟩
-    | .matchCause body onValue onCause => by
-      have hs := Bool.and_eq_true_iff.mp hr
-      have hbv := Bool.and_eq_true_iff.mp hs.1
-      obtain ⟨b, hb⟩ := print_readable sig spell n body hbv.1
-      obtain ⟨v, hv⟩ := print_readable sig spell (n + 1) onValue hbv.2
-      obtain ⟨c, hc⟩ := print_readable sig spell (n + 1) onCause hs.2
-      exact ⟨_, by simp only [print, hb, hv, hc] <;> rfl⟩
-    | .select _ .bool thenB elseB => by
-      have hs := Bool.and_eq_true_iff.mp hr
-      obtain ⟨a, ha⟩ := print_readable sig spell n thenB (Bool.and_eq_true_iff.mp hs.1).2
-      obtain ⟨b, hb⟩ := print_readable sig spell n elseB hs.2
-      exact ⟨_, by simp only [print, ha, hb] <;> rfl⟩
-    | .select _ .option _ _ => by simp [readable] at hr
-    | .select _ (.tag _) _ _ => by simp [readable] at hr
-    | .iterate _ _ _ _ _ _ => by simp [readable] at hr
-    | .awaitFiber _ mode => by cases mode <;> exact ⟨_, rfl⟩
-    | .withFiber action => printAction_readable sig spell n action hr
-    | .acquireRelease acquire release => by
-      have hs := Bool.and_eq_true_iff.mp hr
-      obtain ⟨a, ha⟩ := print_readable sig spell n acquire hs.1
-      obtain ⟨r, hrel⟩ := print_readable sig spell (n + 2) release hs.2
-      exact ⟨_, by simp only [print, ha, hrel] <;> rfl⟩
-    | .service key => by
-      obtain ⟨k, hk⟩ := printKey_readable sig key hr
-      exact ⟨_, by simp only [print, hk, ok_bind]; rfl⟩
-    | .provideLayer layer _ body => by
-      have hs := Bool.and_eq_true_iff.mp hr
-      obtain ⟨b, hb⟩ := print_readable sig spell n body hs.2
-      obtain ⟨l, hlayer⟩ := printLayer_readable sig spell layer hs.1
-      exact ⟨_, by simp only [print, hb, hlayer] <;> rfl⟩
-    | .provideService key _ body => by
-      have hs := Bool.and_eq_true_iff.mp hr
-      obtain ⟨k, hk⟩ := printKey_readable sig key (Bool.and_eq_true_iff.mp hs.1).1
-      obtain ⟨b, hb⟩ := print_readable sig spell n body hs.2
-      exact ⟨_, by simp only [print, hb, hk, ok_bind]; rfl⟩
-
-  theorem printLayer_readable (sig : Signature Op) (spell : String → List String → Option Op)
-      (layer : LayerTerm Op) (hr : readableLayer sig spell layer = true) :
-      ∃ x, printLayer sig layer = .ok x :=
-    match layer with
-    | .succeed key _ => by
-      obtain ⟨k, hk⟩ := printKey_readable sig key hr
-      exact ⟨_, by simp only [printLayer, hk, ok_bind]; rfl⟩
-    | .effect key body => by
-      have hs := Bool.and_eq_true_iff.mp hr
-      obtain ⟨k, hk⟩ := printKey_readable sig key hs.1
-      obtain ⟨b, hb⟩ := print_readable sig spell 0 body hs.2
-      exact ⟨_, by simp only [printLayer, hb, hk, ok_bind]; rfl⟩
-    | .effectDiscard body => by
-      obtain ⟨b, hb⟩ := print_readable sig spell 0 body hr
-      exact ⟨_, by simp only [printLayer, hb] <;> rfl⟩
-    | .provide self that | .provideMerge self that | .merge self that => by
-      have hs := Bool.and_eq_true_iff.mp hr
-      obtain ⟨a, ha⟩ := printLayer_readable sig spell self hs.1
-      obtain ⟨b, hb⟩ := printLayer_readable sig spell that hs.2
-      exact ⟨_, by simp only [printLayer, ha, hb] <;> rfl⟩
-    | .fresh inner | .orDie inner => by
-      obtain ⟨i, hi⟩ := printLayer_readable sig spell inner hr
-      exact ⟨_, by simp only [printLayer, hi] <;> rfl⟩
-    | .ref _ => ⟨_, rfl⟩
-    | .mergeAll layers => by
-      obtain ⟨items, hi⟩ := printLayers_readable sig spell layers hr
-      exact ⟨_, by simp only [printLayer, hi] <;> rfl⟩
-
-  theorem printLayers_readable (sig : Signature Op) (spell : String → List String → Option Op)
-      (layers : LayerTerms Op) (hr : readableLayers sig spell layers = true) :
-      ∃ x, printLayers sig layers = .ok x :=
-    match layers with
-    | .nil => ⟨_, rfl⟩
-    | .cons head tail => by
-      have hs := Bool.and_eq_true_iff.mp hr
-      obtain ⟨h, hh⟩ := printLayer_readable sig spell head hs.1
-      obtain ⟨t, ht⟩ := printLayers_readable sig spell tail hs.2
-      exact ⟨_, by simp only [printLayers, hh, ht] <;> rfl⟩
-
-  theorem printStmts_readable (sig : Signature Op) (spell : String → List String → Option Op)
-      (n : Nat) (stmts : Stmts Op) (hr : readableStmts sig spell n stmts = true) :
-      ∃ x, printStmts sig n stmts = .ok x :=
-    match stmts with
-    | .nil => ⟨_, rfl⟩
-    | .cons (.bindYield effect) rest => by
-      have hs := Bool.and_eq_true_iff.mp hr
-      obtain ⟨e, he⟩ := print_readable sig spell n effect hs.1
-      obtain ⟨r, hrest⟩ := printStmts_readable sig spell (n + 1) rest hs.2
-      exact ⟨_, by simp only [printStmts, he, hrest] <;> rfl⟩
-    | .cons (.yieldDiscard effect) rest => by
-      have hs := Bool.and_eq_true_iff.mp hr
-      obtain ⟨e, he⟩ := print_readable sig spell n effect hs.1
-      obtain ⟨r, hrest⟩ := printStmts_readable sig spell n rest hs.2
-      exact ⟨_, by simp only [printStmts, he, hrest] <;> rfl⟩
-    | .cons (.ret _) rest => by
-      obtain ⟨r, hrest⟩ := printStmts_readable sig spell n rest (Bool.and_eq_true_iff.mp hr).2
-      exact ⟨_, by simp only [printStmts, hrest] <;> rfl⟩
-    | .cons (.ifElse _ thenB elseB) rest => by
-      have hs := Bool.and_eq_true_iff.mp hr
-      have hab := Bool.and_eq_true_iff.mp hs.1
-      obtain ⟨a, ha⟩ := printStmts_readable sig spell n thenB (Bool.and_eq_true_iff.mp hab.1).2
-      obtain ⟨b, hb⟩ := printStmts_readable sig spell n elseB hab.2
-      obtain ⟨r, hrest⟩ := printStmts_readable sig spell n rest hs.2
-      exact ⟨_, by simp only [printStmts, ha, hb, hrest] <;> rfl⟩
-    | .cons (.whileTrue body) rest => by
-      have hs := Bool.and_eq_true_iff.mp hr
-      obtain ⟨b, hb⟩ := printStmts_readable sig spell n body hs.1
-      obtain ⟨r, hrest⟩ := printStmts_readable sig spell n rest hs.2
-      exact ⟨_, by simp only [printStmts, hb, hrest] <;> rfl⟩
-    | .cons .breakLoop rest => by
-      obtain ⟨r, hrest⟩ := printStmts_readable sig spell n rest hr
-      exact ⟨_, by simp only [printStmts, hrest] <;> rfl⟩
-
-  theorem printEffs_readable (sig : Signature Op) (spell : String → List String → Option Op)
-      (n : Nat) (effects : Effs Op) (hr : readableEffs sig spell n effects = true) :
-      ∃ x, printEffs sig n effects = .ok x :=
-    match effects with
-    | .nil => ⟨_, rfl⟩
-    | .cons head tail => by
-      have hs := Bool.and_eq_true_iff.mp hr
-      obtain ⟨h, hh⟩ := print_readable sig spell n head hs.1
-      obtain ⟨t, ht⟩ := printEffs_readable sig spell n tail hs.2
-      exact ⟨_, by simp only [printEffs, hh, ht] <;> rfl⟩
-
-  theorem printAction_readable (sig : Signature Op) (spell : String → List String → Option Op)
-      (n : Nat) (action : ActionTerm Op) (hr : readableAction sig spell n action = true) :
-      ∃ x, printAction sig n action = .ok x :=
-    match action with
-    | .fork program _ => by
-      obtain ⟨p, hp⟩ := print_readable sig spell n program hr
-      exact ⟨_, by simp only [printAction, hp] <;> rfl⟩
-    | .forkIn program _ _ => by
-      obtain ⟨p, hp⟩ := print_readable sig spell n program (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp hr).1).1
-      exact ⟨_, by simp only [printAction, hp] <;> rfl⟩
-    | .forkScoped program _ => by
-      obtain ⟨p, hp⟩ := print_readable sig spell n program (Bool.and_eq_true_iff.mp hr).1
-      exact ⟨_, by simp only [printAction, hp] <;> rfl⟩
-    | .runIn _ _ | .interrupt _ | .awaitAll _ | .getContext | .getId | .closeScope _ _ => ⟨_, rfl⟩
-    | .interruptAll _ who => by cases who <;> exact ⟨_, rfl⟩
-    | .raceAll entrants => by
-      obtain ⟨es, hes⟩ := printEffs_readable sig spell n entrants hr
-      exact ⟨_, by simp only [printAction, hes] <;> rfl⟩
-    | .interruptScoped _ | .awaitAllFailFast _ | .snapshotChildren | .awaitNewChildren _
-    | .setContext _ => by cases hr
-end
-
-/-- A readable program shifted into an environment with one inserted slot prints
-and reads back as exactly the shifted program. This is an AST round trip under
-`LawfulSpelling`; it makes no claim about execution by a TypeScript host. -/
-theorem roundTrip_weaken {sig : Signature Op} {spell : String → List String → Option Op}
-    (hl : LawfulSpelling sig spell) {cut n : Nat} (hc : cut ≤ n) (program : Eff Op)
-    (hr : readable sig spell n program = true) :
-    roundTrip sig spell (n + 1) (Eff.weaken cut program) = .ok (Eff.weaken cut program) := by
-  have hw : readable sig spell (n + 1) (Eff.weaken cut program) = true := by
-    rw [readable_weaken hl hc, hr]
-  obtain ⟨x, hp⟩ := print_readable sig spell (n + 1) (Eff.weaken cut program) hw
-  exact roundTrip_eq hl hw hp
 
 end Effect4.Program

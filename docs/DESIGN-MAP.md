@@ -15,7 +15,7 @@ Every claim that two representations agree is held by exactly one of four things
 vocabulary is the build-systems one (Mokhov, Mitchell and Peyton Jones, *Build Systems à la
 Carte*, 2018):
 
-1. **A theorem** — `decode_encode`, `read_print`, `answer_typed`, an `Image` law.
+1. **A theorem** — `decode_encode`, `match_inst`, `answer_typed`, an `Image` law.
 2. **A constructive check** — a gate that regenerates and compares bytes, or a corpus
    differential against an oracle: the hex and `.bin`/`.json`/`.ty` goldens, the printed-corpus
    comparison, the truth column's exit and schedule agreement.
@@ -211,14 +211,19 @@ CIDs, Unison, Nix); build provenance (Mokhov, Mitchell and Peyton Jones, 2018).
 ## L4 — the faces
 
 One `Eff` program has several representations that must agree, and each pair is held by a
-different kind of evidence. The Lean expression printer and reader are a partial isomorphism:
-both expression-AST round-trip laws are theorems (`read_print_native`, `read_exact_native`,
-premised on `LawfulTable` and their stated image conditions). The separate
-`readModule_printModule_readable` theorem reconstructs declaration blocks on the original
-readable, valid-reference domain; `printModule_readable` proves printing succeeds there
-when the emitted declaration type is structurally representable.
-`Api.printModule_roundTrip` connects both facts to the typed application API under a
-lawful codegen table, that explicit type-domain premise and a safe export name.
+different kind of evidence. The Lean expression printer and reader are both run from ONE table
+of printed clauses (`Codegen/Templates.lean`): the printer is the generated fold of one
+table-driven layer function, the reader (`Codegen/Read.lean`, `readT`) one generic step over
+the same rows. The hand reader and the two theorems proved for it (`read_print`, `read_exact`)
+were deleted at the cutover (2026-09-17); over the table they are owed (R5.2) through the two
+engine lemmas that are proved (`match_inst`, `inst_of_match`, `Laws/Codegen/Template.lean`),
+and until then the relation is *tested* (the reader battery and the seeded corpus: exact on
+all 400). What is proved now: `readable` is the round trip by definition (`roundTrip_eq`); the
+leaf and row round trips; and `readModule_printModule`, the declaration-block law, composed
+from hoisting's inverse and the premise that each piece reads back (`ReadsBack`). Printing
+succeeds on a structural domain (`printModule_readable`) and the API-level corollary
+(`Api.printModule_roundTrip`) went with the hand reader's structural `readable` and are owed
+with it.
 `Codegen/Admit.lean` adds the checked reading beside the raw one: `Api.admitModule`
 returns a certificate carrying the lexical binding check, the raw reconstruction, the
 shared typing certificate and a declaration envelope compared against the printer's own

@@ -34,9 +34,7 @@ private def closedLayer : LayerTerm NativeOp :=
     (.cons (.bindYield (.succeed (.var 0))) (.cons (.ret (.var 1)) .nil)) =
   .cons (.bindYield (.succeed (.var 0))) (.cons (.ret (.var 2)) .nil)
 
-example : roundTrip nativeSignature nativeSpell 1 (Eff.weaken 0 nested) =
-    .ok (Eff.weaken 0 nested) :=
-  roundTrip_weaken nativeLawful (Nat.le_refl 0) nested (by decide)
+#guard roundTrip nativeSignature nativeSpell 1 (Eff.weaken 0 nested) = .ok (Eff.weaken 0 nested)
 
 private def tupleRequest : Term :=
   .app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))
@@ -56,8 +54,5 @@ private def savedPair : Term :=
 
 #print axioms Effect4.Program.typeOf_weaken
 #print axioms Effect4.Program.effTy_weaken
-#print axioms Effect4.Program.readable_weaken
-#print axioms Effect4.Program.print_readable
-#print axioms Effect4.Program.roundTrip_weaken
 
 end Test.Program.WeakenContract

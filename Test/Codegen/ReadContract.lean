@@ -463,31 +463,31 @@ open Effect4.Api in
       .ret (.ident "Effect.void")]]) = .ok (.withFiber (.runIn (.var 0) (.var 1)))
 
 #guard readEff sig spell 2 (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]) =
-  .error (.arity "Fiber.runIn")
+  .error (.unknownHead "Fiber.runIn")
 
 #guard readEff sig spell 2 (.call (.ident "Effect.withFiber")
     [.arrowBlock ["a2"] [.exprStmt (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]),
-      .ret (.ident "Effect.void")]]) = .error (.shape "runIn")
+      .ret (.ident "Effect.void")]]) = .error (.arity "Effect.withFiber")
 
 #guard readEff sig spell 2 (.call (.ident "Effect.withFiber")
     [.arrowBlock [] [.exprStmt (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]),
-      .exprStmt (.ident "extra"), .ret (.ident "Effect.void")]]) = .error (.shape "runIn")
+      .exprStmt (.ident "extra"), .ret (.ident "Effect.void")]]) = .error (.arity "Effect.withFiber")
 
 #guard readEff sig spell 2 (.call (.ident "Effect.withFiber")
     [.arrowBlock [] [.exprStmt (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]),
-      .ret (.ident "undefined")]]) = .error (.shape "runIn")
+      .ret (.ident "undefined")]]) = .error (.arity "Effect.withFiber")
 
 #guard readEff sig spell 2 (.call (.ident "Effect.withFiber")
     [.arrowBlock [] [.exprStmt (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]),
-      .ret (.call (.ident "Effect.succeed") [.ident "undefined"])]]) = .error (.shape "runIn")
+      .ret (.call (.ident "Effect.succeed") [.ident "undefined"])]]) = .error (.arity "Effect.withFiber")
 
 #guard readEff sig spell 2 (.call (.ident "Effect.withFiber")
     [.arrowBlock [] [.exprStmt (.call (.ident "Fiber.other") [.ident "a0", .ident "a1"]),
-      .ret (.ident "Effect.void")]]) = .error (.shape "runIn")
+      .ret (.ident "Effect.void")]]) = .error (.arity "Effect.withFiber")
 
 #guard readEff sig spell 2 (.call (.ident "Effect.withFiber")
     [.arrow none (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"])]) =
-  .error (.shape "runIn")
+  .error (.arity "Effect.withFiber")
 
 #guard readEff sig spell 0 (.call (.ident "Effect.withFiber")
     [.arrowBlock [] [.exprStmt (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]),
@@ -523,7 +523,7 @@ open Effect4.Api in
 
 #guard readEff sig spell 0 (.call (.ident "Effect.flatMap")
     [.call (.ident "Effect.succeed") [.int 1], .lambda ["b0"] (.ident "b0")])
-  = .error (.binder "a0")
+  = .error (.arity "Effect.flatMap")
 
 #guard readEff sig spell 0 (.call (.ident "Effect.forkChild")
     [.call (.ident "Effect.succeed") [.int 1], .object []])
@@ -574,7 +574,7 @@ to tell "annotated, not admitted here" from "wrong shape".
 -- and a statement form with no reading at all.
 #guard readEff nativeSignature nativeSpell 2
     (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]) =
-  .error (.arity "Fiber.runIn")
+  .error (.unknownHead "Fiber.runIn")
 #guard readEff nativeSignature nativeSpell 0
     (.call (.ident "Effect.gen") [.generator [.letDefinite "x" (.name ["number"] [])]]) =
   .error .unsupportedStmt
@@ -653,20 +653,41 @@ one comes back unchanged, so on this corpus `readable` is exact, not merely suff
 #guard (Test.Program.Gen.corpus 400 4).all fun p =>
   !Effect4.Api.readable p || decide (Effect4.Api.roundTrip p = .ok p)
 
-/-- Whether a program holds a loop anywhere. `iterate` prints and is read back at R5, so until
-then the hand reader refuses the image of any program that holds one. -/
-private def holdsLoop (p : Eff NativeOp) : Bool :=
-  foldMap_eff false (· || ·) p (f_eff := fun | .iterate .. => true | _ => false)
+/-- Whether a program holds a loop whose cursor is annotated. Its image carries a type, and no
+reader of types exists by design (B19), so the table reader refuses it by name. -/
+private def holdsAnnotatedLoop (p : Eff NativeOp) : Bool :=
+  foldMap_eff false (· || ·) p (f_eff := fun | .iterate (some _) .. => true | _ => false)
 
+-- What the reader gives back prints as the program did; it refuses only an annotated loop.
 #guard (Test.Program.Gen.corpus 400 4).all fun p =>
-  match Effect4.Api.roundTrip p with
-  | .ok q => (Effect4.Api.print q).toOption == (Effect4.Api.print p).toOption
-  | .error _ => holdsLoop p
+  match Effect4.Api.print p, Effect4.Api.roundTrip p with
+  | .ok x, .ok q => (Effect4.Api.print q).toOption == some x
+  | .ok _, .error _ => holdsAnnotatedLoop p
+  | .error _, _ => true
 
--- The refusals are exactly the loops: R5 turns this pin into the guard above with no
--- `.error` arm.
-#guard (Test.Program.Gen.corpus 400 4).all fun p =>
-  holdsLoop p == !(Effect4.Api.roundTrip p).toOption.isSome
+-- The loop image is read: the corpus holds unannotated loops, and they come back.
+#guard ((Test.Program.Gen.corpus 400 4).filter fun p =>
+  foldMap_eff false (· || ·) p (f_eff := fun | .iterate none .. => true | _ => false) &&
+    Effect4.Api.readable p).length > 0
+
+-- The two non-Boolean decisions are read (the seeded generator emits neither, so by sample):
+-- the option's second arm and both of the tag's arms are under one binder.
+#guard roundTrip nativeSignature nativeSpell 1
+    (.select (.var 0) .option (.succeed (.lit .unit)) (.succeed (.var 1))) =
+  .ok (.select (.var 0) .option (.succeed (.lit .unit)) (.succeed (.var 1)))
+#guard roundTrip nativeSignature nativeSpell 1
+    (.select (.var 0) (.tag "cons") (.succeed (.var 1)) (.succeed (.var 1))) =
+  .ok (.select (.var 0) (.tag "cons") (.succeed (.var 1)) (.succeed (.var 1)))
+-- a binder out of scope in the option's first arm (it is under none) is refused
+#guard (readEff nativeSignature nativeSpell 1 (.call (.ident "optionCase")
+    [.ident "a0", .arrow none (.call (.ident "Effect.succeed") [.ident "a1"]),
+      .lambda ["a1"] (.call (.ident "Effect.succeed") [.ident "a1"])])) =
+  .error (.unknownIdent "a1")
+-- exactness by the printer's own choice of row: a literal-true `catchIf` is `Effect.catch`
+#guard (readEff nativeSignature nativeSpell 0 (.call (.ident "Effect.catchIf")
+    [ .call (.ident "Effect.succeed") [.int 1], .lambda ["a0"] (.bool true)
+    , .lambda ["a0"] (.call (.ident "Effect.succeed") [.int 2]), .ident "undefined" ])) =
+  .error (.shape "not the printed row")
 
 #guard ((Test.Program.Gen.corpus 400 4).filter fun p =>
   !Effect4.Api.readable p && decide (Effect4.Api.roundTrip p = .ok p)).length = 0
@@ -748,23 +769,15 @@ def nestedSharing : NativeEff :=
 #print axioms nativeServiceTy_profile
 #print axioms Effect4.Program.Eff.hoistAll_exists
 #print axioms Effect4.Program.readModule_printModule
-#print axioms Effect4.Program.readable_hoistAll
-#print axioms Effect4.Program.readable_layerAt
-#print axioms Effect4.Program.readable_replaceLayerAt
-#print axioms Effect4.Program.printModule_readable
 #print axioms Effect4.Program.printModule_shape
-#print axioms Effect4.Program.readModule_printModule_readable
 #print axioms Effect4.Program.checkTypedProgram
 #print axioms Effect4.Program.checkTypedProgram_type
 #print axioms Effect4.Program.checkTypedProgram_refusal_iff
 #print axioms Effect4.Program.TypedProgram.hasTy
 #print axioms Effect4.Codegen.emitModule
 #print axioms Effect4.Codegen.emitModule_erasure
-#print axioms Effect4.Codegen.emitModule_complete
-#print axioms Effect4.Codegen.ModuleEmission.readModule
 #print axioms Effect4.Codegen.ModuleEmission.unique
 #print axioms Effect4.Api.printDecl_erasure
-#print axioms Effect4.Api.printModule_roundTrip
 #print axioms Effect4.Codegen.envelopeCheck_iff
 #print axioms Effect4.Codegen.layersPlain_iff
 #print axioms Effect4.Codegen.mainConst_eq_some
@@ -783,10 +796,6 @@ def nestedSharing : NativeEff :=
 #print axioms Effect4.Program.Eff.restoreAll_hoistAll
 #print axioms Effect4.Program.readKey_printKey
 #print axioms Effect4.Program.readKey_exact
-#print axioms Effect4.Program.read_print_layer
-#print axioms Effect4.Program.read_print
-#print axioms Effect4.Program.read_exact
 #print axioms Effect4.Program.roundTrip_eq
-#print axioms Effect4.Program.roundTrip_weaken
 
 end Test.Codegen.ReadContract

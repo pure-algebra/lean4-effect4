@@ -63,24 +63,6 @@ theorem printDecl_erasure (name : String) (program : Program) (table : RowTable)
     cases body : print program table <;>
       simp [printDecl, checkTyping, checked, typeOf, typing.typed, body]
 
-/-- A typed readable program under a lawful codegen table has an API module whose
-reading is the original program, including its explicit layer-sharing references.
-The emitted declaration type must have a structural target reading; arbitrary
-legacy handle strings do not follow from core typing alone. -/
-theorem printModule_roundTrip (name : String) (program : Program) (table : RowTable)
-    (lawful : LawfulTable table = true) {ty : EffTy}
-    (typed : typeOf program table = some ty) (hr : readable program table = true)
-    (types : declarationTypeRepresentable ty = true)
-    (safe : Effect4.Program.exportNameSafe name = true) :
-    ∃ module, printModule name program table = some module ∧
-      readModule module table = .ok program := by
-  let typing : TypedProgram (nativeSignature table) program := ⟨ty, typed⟩
-  obtain ⟨emission, emitted⟩ := Effect4.Codegen.emitModule_complete
-    (name := name) typing safe lawful hr types
-  exact ⟨emission.module,
-    by simp only [printModule, emitted, Except.toOption, Option.map],
-    emission.readModule lawful hr⟩
-
 /-- O3 through the application face: an admitted module's program carries the type the
 certificate records, by the one whole-program checker the rest of the tree uses. -/
 theorem admitModule_typed {name : String} {module : TypeScript.Module} {table : RowTable}
@@ -91,18 +73,18 @@ theorem admitModule_typed {name : String} {module : TypeScript.Module} {table : 
   Effect4.Codegen.admitModule_typed admitted
 
 /-- The certificate round trip through the application face: the module the checked
-producer emitted for a readable program under a lawful table is admitted by the checked
+producer emitted, when it reads back to its program, is admitted by the checked
 reader, at the same program and the same recorded type, once the embedding host's ambient
 bindings are supplied. Nothing here claims the host's `effect` namespace is the pinned one. -/
 theorem admitModule_emitModule {name : String} {program : Program} {table : RowTable}
     {e : Effect4.Codegen.ModuleEmission program table name}
     (_ : emitModule name program table = .ok e)
-    (lawful : LawfulTable table = true) (hr : readable program table = true)
+    (read : readModule e.module table = .ok program)
     {allowed : List Effect4.Codegen.Bindings.Origin} {ambient : List TypeScript.Import}
     (bound : Effect4.Codegen.SourceBindings.Checked allowed
       (Effect4.Codegen.withAmbient ambient e.module)) :
     ∃ r, admitModule name e.module table allowed ambient = .ok r ∧
       r.program = program ∧ r.typing.ty = e.typing.ty :=
-  Effect4.Codegen.ModuleEmission.admit e lawful hr bound
+  Effect4.Codegen.ModuleEmission.admit e read bound
 
 end Effect4.Api

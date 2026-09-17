@@ -78,43 +78,6 @@ theorem emitModule_illTyped_iff :
     simp only [emitModule, checked, emitTypedModule]
     split <;> simp [typing.typed]
 
-private theorem safeTable (lawful : LawfulTable table = true) :
-    table.find? (fun row => !rowNamesSafe row) = none := by
-  apply List.find?_eq_none.mpr
-  intro row mem
-  have safe := (lawfulTable_member table lawful row mem).2.2
-  simp [safe]
-
-/-- Every checked program in the established printable domain produces a retained
-emission. The export name is part of that domain: the entry printer refuses a name that
-collides with a printed binder, a reserved head or a layer reference name.
-Successful output is a conclusion, not a condition of this theorem. -/
-theorem emitModule_complete (typing : TypedProgram (nativeSignature table) program)
-    (safe : exportNameSafe name = true)
-    (lawful : LawfulTable table = true)
-    (readable : Program.readable (nativeSignature table) (nativeSpell table) 0 program = true)
-    (types : declarationTypeRepresentable typing.ty = true) :
-    ∃ emission, emitModule name program table = .ok emission := by
-  obtain ⟨decls, printed⟩ := Program.printModule_readable readable
-    typing.layerRefsWF name typing.ty types
-  have generated : Program.printEntry table (nativeSignature table) name typing.ty program =
-      .ok decls := by
-    simpa [Program.printEntry, safe, safeTable lawful] using printed
-  let emission : ModuleEmission program table name := ⟨typing, decls, generated⟩
-  exact ⟨emission, emission.recheck⟩
-
-/-- Reading the emitted declaration block recovers its indexed program under the
-existing canonical readability and table premises. This reconstructs the same
-sharing references; it does not execute their expansion or validate source imports. -/
-theorem ModuleEmission.readModule (emission : ModuleEmission program table name)
-    (lawful : LawfulTable table = true)
-    (readable : Program.readable (nativeSignature table) (nativeSpell table) 0 program = true) :
-    Program.readModule (nativeSignature table) (nativeSpell table) emission.module.decls =
-      .ok program := by
-  obtain ⟨_, _, printed⟩ := Program.printEntry_ok emission.generated
-  exact Program.readModule_printModule_readable (nativeLawful table lawful)
-    readable emission.typing.layerRefsWF printed
-
 /-- The same core typing judgment belongs to the emitted program's certificate.
 This is the declarative program judgment, not a TypeScript judgment. -/
 theorem ModuleEmission.hasTy (emission : ModuleEmission program table name) :

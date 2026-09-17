@@ -68,7 +68,9 @@ structure Row where
   ctor : String
   /-- The classifier: argument index and the pattern it must satisfy. -/
   fixed : List (Nat × ArgPat) := []
-  /-- Per argument, in declaration order. A leaf argument's depth is not read. -/
+  /-- Per argument, in declaration order, as the scope algebra gives it (`Program/Scoped.lean`).
+  The printer reads a child's depth only (a term prints its variables by position); the reader
+  reads a term at its depth too, because a binder is in scope only below it. -/
   depth : List Depth
   out : RowOut
 
@@ -131,7 +133,7 @@ def effRows : List Row :=
   , ⟨.eff, "catchCause", [], [r0, r1], .tpl (call "Effect.catchCause" [h 0, lam (h 1)])⟩
   , ⟨.eff, "catchIf", [(0, .term (.lit (.bool true)))], [r0, r0, r1],
       .tpl (call "Effect.catch" [h 1, lam (h 2)])⟩
-  , ⟨.eff, "catchIf", [], [r0, r0, r1],
+  , ⟨.eff, "catchIf", [], [r1, r0, r1],
       .tpl (call "Effect.catchIf" [h 1, lam (h 0), lam (h 2), .ident "undefined"])⟩
   , ⟨.eff, "matchCause", [], [r0, r1, r1],
       .tpl (call "Effect.matchCauseEffect"
@@ -146,8 +148,8 @@ def effRows : List Row :=
       .tpl (call "optionCase" [h 0, .arrow (h 2), lam (h 3)])⟩
   , ⟨.eff, "select", [(1, .decisionTag)], [r0, r0, r1, r1],
       .tpl (call "caseTag" [h 0, .strHole 1, lam (h 2), lam (h 3)])⟩
-  , ⟨.eff, "iterate", [(0, .optTyNone)], [r0, r0, r0, r0, r0, r1], .tpl (iterateTpl none)⟩
-  , ⟨.eff, "iterate", [(0, .optTySome)], [r0, r0, r0, r0, r0, r1], .tpl (iterateTpl (some 0))⟩
+  , ⟨.eff, "iterate", [(0, .optTyNone)], [r0, r0, r1, .rel 2, r1, r1], .tpl (iterateTpl none)⟩
+  , ⟨.eff, "iterate", [(0, .optTySome)], [r0, r0, r1, .rel 2, r1, r1], .tpl (iterateTpl (some 0))⟩
   , ⟨.eff, "suspend", [], [r0], .tpl (call "Effect.suspend" [.arrow (h 0)])⟩
   , ⟨.eff, "yieldNow", [], [r0], .tpl (call "Effect.yieldNowWith" [.intHole 0])⟩
   , ⟨.eff, "awaitFiber", [(1, .mode .joinEffect)], [r0, r0], .tpl (call "Fiber.join" [h 0])⟩
@@ -219,7 +221,9 @@ abbrev Carrier (fam : EffFam) : Type := Nat → Except PrintRefusal (Out fam)
 
 variable {Op : Type}
 
-def ArgPat.holds : ArgPat → ArgF Op Carrier → Bool
+/-- Whether an argument satisfies a pattern. Patterns look at leaf arguments only, so this holds
+at any carrier: the printer asks it of folded children, the reader of the arguments it read. -/
+def ArgPat.holds {R : EffFam → Type} : ArgPat → ArgF Op R → Bool
   | .term t, .term t' => t' == t
   | .bool b, .bool b' => b' == b
   | .mode m, .mode m' => decide (m' = m)
@@ -233,7 +237,21 @@ def ArgPat.holds : ArgPat → ArgF Op Carrier → Bool
   | .daemon b, .forkOptions o => o.daemon == b
   | _, _ => false
 
-def Row.selects (row : Row) (fam : EffFam) (ctor : String) (args : List (ArgF Op Carrier)) : Bool :=
+/-- The argument a pattern determines, when it determines one: what a reader supplies for an
+argument the skeleton does not carry. The other patterns choose the row while a hole still
+carries the content, and a reader checks them against what it read (`Row.selects`). -/
+def ArgPat.supplies {R : EffFam → Type} : ArgPat → Option (ArgF Op R)
+  | .term t => some (.term t)
+  | .bool b => some (.bool b)
+  | .mode m => some (.mode m)
+  | .decisionBool => some (.decision .bool)
+  | .decisionOption => some (.decision .option)
+  | .optTermNone => some (.optTerm none)
+  | .optTyNone => some (.optTy none)
+  | .decisionTag | .optTermSome | .optTySome | .daemon _ => none
+
+def Row.selects {R : EffFam → Type} (row : Row) (fam : EffFam) (ctor : String)
+    (args : List (ArgF Op R)) : Bool :=
   row.fam == fam && row.ctor == ctor &&
     row.fixed.all fun (i, p) => match args[i]? with
       | some a => p.holds a

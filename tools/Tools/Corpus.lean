@@ -21,15 +21,16 @@ Beside each `.ts`, `<name>.json` is the program *the printer kept* — `Api.roun
 own reader after its printer — in the one JSON shape the estate shares with OCaml and
 TypeScript (`OCaml5.Eff.Goldens`: `effV`, `V.json`; `ts/eff/json.gen.ts`). For a `readable`
 program that is the program itself (`Effect4.Program.roundTrip_eq`); otherwise it is the
-program that prints the same bytes (`read_exact`): the `daemon` flag of a scoped fork and the
+program the reader gives back for the same bytes: the `daemon` flag of a scoped fork and the
 request of a `unit`-request row are what the printer drops, and no reader of the bytes can
 recover them. A reader in any language is therefore checked by reading the `.ts` and comparing
 bytes with the `.json`, which is a differential against Lean's reader. `<dir>/index.tsv` has
 one `name`, `wellTyped`, `readable`, `chars` row per program written; a program the printer
-or Lean's reader refuses is counted and not written. Since `whileLoop` retired into `iterate`
-the reader refuses every program that holds a loop (`iterate` prints and is read back at R5),
-so until R5 this directory holds no loop; the corpus lane (`scripts/check-corpus.py`) draws
-from the generator itself and still runs them.
+or Lean's reader refuses is counted and not written. The reader is the table reader
+(`Codegen/Read.lean`): it reads the loop image and the two non-Boolean decisions, so this
+directory holds them again; a loop whose cursor is annotated prints and is not read (no reader
+of types exists). The TypeScript reader (`ts/eff/read.ts`) is a port of the retired hand reader
+and does not read those images until it becomes a matcher over the exported table (R6).
 
 Each oracle also has canonical `.eff` bytes from `Wire.encodeProgram`. With `--styles`,
 Tools.Styles constructs the foreign spelling corpus and its JSON/wire oracles; `counts.tsv`

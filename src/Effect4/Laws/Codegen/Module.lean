@@ -1,7 +1,6 @@
 import Effect4.Codegen.Read
 import Effect4.Laws.Program.Hoisting
 import Effect4.Laws.Program.HoistingTotal
-import Effect4.Laws.Codegen.HoistingReadable
 
 /-!
 # Declaration-block reconstruction
@@ -11,11 +10,11 @@ orders them for restoration. Unique capture paths make that change of order
 irrelevant to restoration. The module law below composes this fact with the
 existing expression and layer reader laws and the hoisting inverse.
 
-The low-level composition law names successful hoisting, readable captured pieces,
-and readable emitted reference names. The final laws derive those premises from
-the original readable program with well-formed references, and prove successful
-printing on that domain. No law assumes a successful module read. Target typing,
-source-envelope validation and host execution remain separate obligations.
+The composition law names successful hoisting, pieces that read back from their own printing,
+and emitted reference names that decode. No law assumes a successful module read. Owed with
+the structural domain of the table reader (R5.2): deriving the pieces' premises from the
+original program's, and successful printing on that domain. Target typing, source-envelope
+validation and host execution remain separate obligations.
 -/
 
 namespace Effect4.Program
@@ -110,9 +109,9 @@ private def readCaptured (sig : Signature Op) (spell : String → List String �
   | _ => .error (.shape "module")
 
 private theorem readCaptured_printCaptured {sig : Signature Op}
-    {spell : String → List String → Option Op} (lawful : LawfulSpelling sig spell)
+    {spell : String → List String → Option Op}
     {history : History Op}
-    (layers : ∀ entry ∈ history, readableLayer sig spell entry.2 = true)
+    (layers : ∀ entry ∈ history, entry.2.ReadsBack sig spell)
     (names : ∀ entry ∈ history,
       LayerTerm.readRefName (LayerTerm.refName entry.1) = some entry.1)
     {target : List Nat} {entry : List Nat × LayerTerm Op} {decl : TypeScript.ConstDecl}
@@ -125,13 +124,13 @@ private theorem readCaptured_printCaptured {sig : Signature Op}
   simp only [printCaptured, found] at printed
   obtain ⟨body, hp, heq⟩ := bind_eq_ok.mp printed
   cases heq
-  have hr := read_print_layer lawful entry.2 (layers entry mem) hp
+  have hr := layers entry mem _ hp
   simp [readCaptured, ← key, names entry mem, hr]
 
 private theorem readCaptured_mapM {sig : Signature Op}
-    {spell : String → List String → Option Op} (lawful : LawfulSpelling sig spell)
+    {spell : String → List String → Option Op}
     {history : History Op}
-    (layers : ∀ entry ∈ history, readableLayer sig spell entry.2 = true)
+    (layers : ∀ entry ∈ history, entry.2.ReadsBack sig spell)
     (names : ∀ entry ∈ history,
       LayerTerm.readRefName (LayerTerm.refName entry.1) = some entry.1)
     (targets : List (List Nat)) {decls : List TypeScript.ConstDecl}
@@ -148,23 +147,24 @@ private theorem readCaptured_mapM {sig : Signature Op}
     cases found : history.find? (·.1 == target) with
     | none => simp [printCaptured, found] at hp
     | some entry =>
-      have hr := readCaptured_printCaptured lawful layers names found hp
+      have hr := readCaptured_printCaptured layers names found hp
       simp [List.mapM_cons, hr, ih hrest, selectHistory, found]
       rfl
 
-/-- Reading the declaration block produced by the existing module printer recovers
-the original program, including shared-layer references. The assumptions expose the
-current spelling/readability domain for the pieces produced by successful hoisting.
-They concern core syntax and emitted names, never the desired module read result.
+/-- Reading the declaration block produced by the module printer recovers the original
+program, including shared-layer references, when each piece successful hoisting produced
+reads back from its own printing (`ReadsBack`, which `readable` gives) and the emitted
+reference names decode. The premises concern the pieces, never the module read itself, and
+they are stated of any expression reader: this law is the hoisting inverse composed with them.
 
 This is a structural AST equation: it does not validate the declaration's claimed
 type, imports, rendered TypeScript bytes, or target execution. -/
 theorem readModule_printModule {sig : Signature Op}
-    {spell : String → List String → Option Op} (lawful : LawfulSpelling sig spell)
+    {spell : String → List String → Option Op}
     {root main : Eff Op} {history : List (List Nat × LayerTerm Op)}
     (hoisted : root.hoistAll = .ok (main, history))
-    (mainReadable : readable sig spell 0 main = true)
-    (layersReadable : ∀ entry ∈ history, readableLayer sig spell entry.2 = true)
+    (mainReadable : ReadsBack sig spell 0 main)
+    (layersReadable : ∀ entry ∈ history, entry.2.ReadsBack sig spell)
     (namesReadable : ∀ entry ∈ history,
       LayerTerm.readRefName (LayerTerm.refName entry.1) = some entry.1)
     {name : String} {ty : EffTy} {decls : List TypeScript.ConstDecl}
@@ -185,8 +185,8 @@ theorem readModule_printModule {sig : Signature Op}
   obtain ⟨decl, declaration, heq⟩ := bind_eq_ok.mp hdecl
   cases heq
   have value := printDecl_value declaration
-  have hm := read_print lawful main mainReadable hbody
-  have hd := readCaptured_mapM lawful layersReadable namesReadable _ hp
+  have hm := mainReadable _ hbody
+  have hd := readCaptured_mapM layersReadable namesReadable _ hp
   have restored : main.restoreAll
       (selectHistory history (Path.sortBy Path.declBefore (history.map Prod.fst))) =
       some root := by
@@ -257,74 +257,5 @@ theorem printModule_shape {sig : Signature Op} {name : String} {ty : EffTy} {roo
     cases heq
     exact ⟨ds, decl, body, rfl,
       mapM_ok_forall _ _ (fun t d hd => printCaptured_plain t d hd) _ hp, declaration⟩
-
-private theorem printCaptured_exists {sig : Signature Op}
-    {spell : String → List String → Option Op} {history : History Op}
-    (layers : ∀ entry ∈ history, readableLayer sig spell entry.2 = true)
-    {target : List Nat} (member : target ∈ history.map Prod.fst) :
-    ∃ decl, printCaptured sig history target = .ok decl := by
-  cases found : history.find? (·.1 == target) with
-  | none =>
-    obtain ⟨entry, mem, key⟩ := List.mem_map.mp member
-    have missing := List.find?_eq_none.mp found entry mem
-    simp [key] at missing
-  | some entry =>
-    obtain ⟨body, printed⟩ := printLayer_readable sig spell entry.2
-      (layers entry (List.mem_of_find?_eq_some found))
-    exact ⟨{ doc := [], name := LayerTerm.refName target, value := body },
-      by simp [printCaptured, found, printed]⟩
-
-private theorem printCaptured_mapM_exists {sig : Signature Op}
-    {spell : String → List String → Option Op} {history : History Op}
-    (layers : ∀ entry ∈ history, readableLayer sig spell entry.2 = true)
-    (targets : List (List Nat)) (contained : ∀ target ∈ targets, target ∈ history.map Prod.fst) :
-    ∃ decls, targets.mapM (printCaptured sig history) = .ok decls := by
-  induction targets with
-  | nil => exact ⟨[], rfl⟩
-  | cons target targets ih =>
-    obtain ⟨decl, printed⟩ := printCaptured_exists layers (contained target (by simp))
-    obtain ⟨decls, rest⟩ := ih (fun t h => contained t (List.mem_cons_of_mem _ h))
-    exact ⟨decl :: decls, by simp only [List.mapM_cons, printed, ok_bind, rest]; rfl⟩
-
-/-- Every readable program with well-formed layer references and a representable
-emitted annotation prints as a declaration block. Malformed legacy type strings now
-refuse; the explicit type-domain premise replaces the former raw-string assumption.
-Successful hoisting or printing is not a premise. This is syntax-AST adequacy;
-it does not check the caller's declared type, source imports or target execution. -/
-theorem printModule_readable {sig : Signature Op}
-    {spell : String → List String → Option Op} {root : Eff Op}
-    (hr : readable sig spell 0 root = true) (valid : root.layerRefsWF = true)
-    (name : String) (ty : EffTy) (types : declarationTypeRepresentable ty = true) :
-    ∃ decls, printModule sig name ty root = .ok decls := by
-  obtain ⟨main, history, hoisted⟩ := root.hoistAll_exists valid
-  obtain ⟨hm, pieces⟩ := readable_hoistAll hr hoisted
-  obtain ⟨body, printedMain⟩ := print_readable sig spell 0 main hm
-  have layers := fun entry mem => (pieces entry mem).1
-  obtain ⟨decls, printedLayers⟩ := printCaptured_mapM_exists layers
-    (Path.sortBy Path.declBefore (history.map Prod.fst))
-    (fun target mem => (Path.sortBy_perm Path.declBefore _).mem_iff.mp mem)
-  obtain ⟨declaration, printedDecl⟩ := printDecl_readable name ty body types
-  refine ⟨decls ++ [declaration], ?_⟩
-  unfold printModule
-  rw [hoisted]
-  change ((Path.sortBy Path.declBefore (history.map Prod.fst)).mapM
-    (printCaptured sig history) >>= fun ds => print sig 0 main >>= fun body =>
-    printDecl name ty body >>= fun decl => .ok (ds ++ [decl])) = _
-  simp only [printedLayers, ok_bind, printedMain, printedDecl]
-
-/-- The module inverse on the original readable program and valid-reference domain.
-All captured-piece and name premises of `readModule_printModule` are derived from
-that original program. Declared annotations and source bindings remain unchecked. -/
-theorem readModule_printModule_readable {sig : Signature Op}
-    {spell : String → List String → Option Op} (lawful : LawfulSpelling sig spell)
-    {root : Eff Op} (hr : readable sig spell 0 root = true)
-    (valid : root.layerRefsWF = true)
-    {name : String} {ty : EffTy} {decls : List TypeScript.ConstDecl}
-    (printed : printModule sig name ty root = .ok decls) :
-    readModule sig spell (decls.map TypeScript.Decl.const) = .ok root := by
-  obtain ⟨main, history, hoisted⟩ := root.hoistAll_exists valid
-  obtain ⟨hm, pieces⟩ := readable_hoistAll hr hoisted
-  exact readModule_printModule lawful hoisted hm
-    (fun entry mem => (pieces entry mem).1) (fun entry mem => (pieces entry mem).2) printed
 
 end Effect4.Program

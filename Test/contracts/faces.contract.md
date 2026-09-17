@@ -421,3 +421,36 @@ regardless of encounter order. Opposite-order rejection and same-carrier alias c
 live in `ts/eff/ingest/test/services.test.ts`.
 This consolidates the existing carrier mapping, without resolving the separate nominal
 service identity or typed-module admission obligations.
+
+---
+
+## Amendment, 2026-09-17: the hand reader is retired; faces 1 and 2 are run from one table
+
+The owner ruled a fast cutover. What this changes in the packet above, and nothing else:
+
+- **Face 2 is the table reader.** `readEff` and `readLayer` are `readT`
+  (`src/Effect4/Codegen/Read.lean`): the first row of `Codegen/Templates.lean` whose skeleton
+  matches, its arguments read by sort, the constructor rebuilt by the generated `build`. It
+  terminates for any table (`Template.match_below`). It reads what the hand reader read, and
+  also the loop image and the two non-Boolean decisions; a loop whose cursor is annotated
+  prints and is refused by name (no reader of types, B19).
+- **Deleted with the hand reader:** `read_print`, `read_print_layer`, `read_exact`,
+  `read_exact_all`, `read_print_native`, `read_exact_native`, `roundTrip_weaken`, the structural
+  `readable` and `Laws/Codegen/HoistingReadable.lean` (`readable_hoistAll` and its lemmas),
+  `printModule_readable`, `readModule_printModule_readable`, `emitModule_complete`,
+  `ModuleEmission.readModule`, `Api.printModule_roundTrip`.
+- **Evidence for faces 1 and 2, now.** *Proved*: `readable` is the round trip
+  (`roundTrip_eq`, by definition); the leaf and row round trips (`readTerm`, `readCause`,
+  `readKey`, `readForkOptions`, `read_printRow`, `readMethod_exact`); `readModule_printModule`
+  over the premise that each hoisted piece reads back (`ReadsBack`); `ModuleEmission.admit` and
+  `Api.admitModule_emitModule` over the premise that the emitted module reads back; the two
+  engine lemmas of the calculus (`match_inst`, `inst_of_match`). *Tested*: on the 400 seeded
+  programs the table reader agrees with the hand reader wherever that one read (356), reads 44
+  images it refused, and what it reads prints back to the same tree on all 400
+  (`Test/Codegen/ReadContract.lean`, `TemplatesContract.lean`).
+- **Owed (R5.2):** `read_print` and `read_exact` over the table, the structural domain of
+  `readable`, and with it the four module-level corollaries above.
+- **Face 3** (`ts/eff/read.ts`) is still a port of the retired hand reader: it does not read the
+  loop image or the two non-Boolean decisions until it becomes a matcher over the exported
+  table (R6). `make check-ts-reader` is expected to differ on exactly those oracles until then.
+

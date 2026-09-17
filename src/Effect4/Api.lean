@@ -142,22 +142,23 @@ def schemaOf (program : Program) (table : RowTable := []) : Option Effect4.Docum
 def print (program : Program) (table : RowTable := []) : Except PrintRefusal TypeScript.Expr :=
   Program.print (nativeSignature table) 0 program
 
-/-- A program back from one TypeScript expression, at the empty environment: the inverse of
-`print` on the trees `print` produces (`src/Effect4/Codegen/Read.lean`, `read_print` and
-`read_exact`), a `ReadRefusal` on every other tree. -/
+/-- A program back from one TypeScript expression, at the empty environment: read through the
+table the printer prints from (`src/Effect4/Codegen/Read.lean`, `readT`), a `ReadRefusal` on a
+tree no row matches. A row is accepted only when the printer would choose it for what was
+read, so what is read prints back to the tree read (guarded on the corpus; the theorem over the
+table is owed, R5.2). -/
 def read (expression : TypeScript.Expr) (table : RowTable := []) : Except ReadRefusal Program :=
   Program.readEff (nativeSignature table) (nativeSpell table) 0 expression
 
-/-- Whether the printer keeps the program whole, so that `read` of its printing is the program
-itself; what it loses is documented on `Effect4.Program.readable` (a loop and the two
-non-Boolean decisions, until R5 reads them; the internal fiber actions; a `daemon` on a scoped
-fork). -/
+/-- Whether `read` of the program's printing is the program itself: the round trip, decided by
+running it. What the printer loses is listed in `Codegen/Read.lean`'s module note (a variable
+out of scope, a dropped `unit` request, the `daemon` flag of a scoped fork, a loop's cursor
+annotation, the internal fiber actions). -/
 def readable (program : Program) (table : RowTable := []) : Bool :=
   Program.readable (nativeSignature table) (nativeSpell table) 0 program
 
-/-- `read` after `print`: the program itself when it is `readable` and the printer accepts
-it (`Effect4.Program.roundTrip_eq`), and otherwise the program the printer kept, which prints
-the same (`read_exact`). -/
+/-- `read` after `print`: the program itself exactly when it is `readable`
+(`Effect4.Program.roundTrip_eq`), and otherwise the program the printer kept. -/
 def roundTrip (program : Program) (table : RowTable := []) : Except ReadRefusal Program :=
   Program.roundTrip (nativeSignature table) (nativeSpell table) 0 program
 
@@ -378,8 +379,8 @@ a refusal identifies the exact constructor path.
 
 `readable` is **not** among them. It means "printing this program and reading it back gives
 this program", which is a property of the *print image*, not of execution: a program can be
-typed and run and still not be one the printer keeps whole (today every loop, until R5 reads
-`iterate`). Admission certifies execution and `readable` certifies reconstruction, so it is a
+typed and run and still not be one the printer keeps whole (a loop whose cursor is annotated:
+no reader of types exists). Admission certifies execution and `readable` certifies reconstruction, so it is a
 separate optional certificate, `imageCertificate`. (The example this paragraph once gave,
 `Wire.Corpus.pAwait`, became readable when `callback` retired into `perform`.)
 

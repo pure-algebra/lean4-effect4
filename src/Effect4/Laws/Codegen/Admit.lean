@@ -280,17 +280,18 @@ theorem ModuleReading.unique (left right : ModuleReading table name allowed ambi
 
 /-! ## The producer's output is admitted -/
 
-/-- The round trip in certificate form: what the checked producer emitted is admitted by the
-checked reader, to the same program and the same typing certificate. The host supplies the
-bindings its prelude provides; everything else is read off the printer's own equations. -/
+/-- The round trip in certificate form: what the checked producer emitted, when it reads
+back to its program, is admitted by the checked reader to the same program and the same typing
+certificate. The host supplies the bindings its prelude provides; everything else is read off
+the printer's own equations. (`readModule_printModule` gives the reading from the pieces'.) -/
 theorem ModuleEmission.admit {program : NativeEff} {table : RowTable} {name : String}
-    (e : ModuleEmission program table name) (lawful : LawfulTable table = true)
-    (readable : Program.readable (nativeSignature table) (nativeSpell table) 0 program = true)
+    (e : ModuleEmission program table name)
+    (read : Program.readModule (nativeSignature table) (nativeSpell table) e.module.decls =
+      .ok program)
     {allowed : List Bindings.Origin} {ambient : List TypeScript.Import}
     (bound : SourceBindings.Checked allowed (withAmbient ambient e.module)) :
     ∃ r, admitModule name e.module table allowed ambient = .ok r ∧
       r.program = program ∧ r.typing.ty = e.typing.ty := by
-  have read := e.readModule lawful readable
   obtain ⟨safe, _, printed⟩ := Program.printEntry_ok e.generated
   obtain ⟨layers, main, body, shape, plain, declaration⟩ := Program.printModule_shape printed
   obtain ⟨hname, _, hexported, htype⟩ := Program.printDecl_fields declaration

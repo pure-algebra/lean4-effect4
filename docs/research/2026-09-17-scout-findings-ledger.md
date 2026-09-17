@@ -38,7 +38,7 @@ The coordinator's own note: `2026-09-17-loop-sugar-and-list-elimination.md`.
 | E-A | E | List A: the red `check-tools` fixture (one coercion), three stale docstrings on `readable`, 18 duplicate guards and two `x = x` theorems in `InvocationContract`, one dead private lemma, stale printer line ranges, four dangling module citations, a Goldens docstring, a test heading. | each re-read; the fixture compiled; the contract rebuilt | **landed** `4a0af845` | this ledger |
 | E-C2 | E | `cases-policy-complete.json` and `audit-complete.json` (1,393 lines) run by nothing and stale by four constructors. | grep: no caller | **landed** `1a973c18` (deleted), with the six abandoned `truth-check-*` runs and `clean-check` sweeping the prefix | this ledger |
 | E-B1 | E | `Guard/Core.lean` and `Guard/FrameOwned.lean` each declared the same 59 race-ownership declarations; `Guard/Settle.lean` held three lemmas proving the copies equal. | script: 59 textually identical | **landed** `b3ea5a5d`: `Guard/RaceSites.lean` holds them once, the bridge lemmas are gone (511 lines net; `lake build Effect4.Laws.Program.Guard` green) | this ledger |
-| E-B2 | E | `Codegen/Read.lean`: 2,571 of 3,507 lines are proof (90 theorems) inside an implementation module; no core module names any of them. | read | queued: move under `src/Effect4/Laws/Codegen/Read.lean` | scout E's note B-2 |
+| E-B2 | E | `Codegen/Read.lean`: 2,571 of 3,507 lines are proof (90 theorems) inside an implementation module; no core module names any of them. | read | **moot**: the owner withdrew the move; the hand reader and the proofs about it are deleted (item 12), and the leaf round trips that remain are what R5.2 builds on | item 12 |
 | E-B3 | E | `Laws/Program/Invocation.lean` states one equation a third time. | read | queued | scout E's note B-3 |
 | E-B4 | E | `Typing/Blame.lean:431-765`: 51 copies of one tactic line. | read | superseded by C-P7 (the checker written once makes the whole proof a lemma about `Except`) | C-P7 |
 | E-B5 | E | Sixteen hand-enumerated leaf lists for the loop fragment; every alphabet change edits all of them. | read; C compiled the generated recursor | queued as C-P4 | C-P4 |
@@ -144,9 +144,10 @@ C-P11 (the schema tree's unconsumed declarations); then the reader line R4.1.
 
 11. **Dead names across the hand-written source, measured** (one linear `grep -F -w -o -f` pass per
     file over `src`, `Test`, `tools` and the top-level docs; generated files left out). In the
-    schema tree: 38, deleted in one pass (219 lines), except that the three annotation-key
-    lawfulness theorems it caught were restored: `AnnotationKey.Lawful` is an obligation every key
-    owes (as `Store/Shape.lean`'s keys prove theirs), and their keys are in use or exported.
+    schema tree: 38 found, 35 deleted (198 lines, `79bd2ab5`; whole tree green after it). The three
+    annotation-key lawfulness theorems the pass caught were restored: `AnnotationKey.Lawful` is an
+    obligation every key owes (as `Store/Shape.lean`'s keys prove theirs), and their keys are in
+    use or exported.
     Everywhere else: **no dead code** (one definition, `Store.putOr`, and one private theorem in
     the hand reader), and **532 public theorems that no file, test, contract packet or top-level
     document names**, 313 of them under `Laws/` (most in `Laws/Machine/Witnesses.lean` 33,
@@ -154,3 +155,31 @@ C-P11 (the schema tree's unconsumed declarations); then the reader line R4.1.
     By ruling 5 as written they would go; the coordinator has NOT deleted them, because a law is
     often the product and not a step, and a script cannot tell a headline from an orphan. They
     are the owner's call, module by module.
+
+12. **The reader cutover (R5.1 and R5.3 at once, by the owner's ruling: fast, no ceremony, a
+    temporary loss of theorems accepted).** `Codegen/Read.lean` is the table reader: `readT`, one
+    generic step over `Templates.table` (first row whose skeleton matches; arguments by sort;
+    an argument the classifier determines is supplied; the generated `build`), well-founded on
+    the tree's size through `match_below`, total for ANY table; a generator's statements and the
+    row call of `perform` stay hand fields, as in the printer. A row is accepted only when the
+    printer would choose it for what was read (`Row.selects`), which replaces the hand reader's
+    special `catchIf` test. `readable` is the round trip itself, so `roundTrip_eq` is by
+    definition. 3,499 lines to 1,810; `Laws/Codegen/HoistingReadable.lean` deleted (305);
+    `Laws/Codegen/Module.lean` 330 to 261 with `readModule_printModule` restated over
+    `ReadsBack` (any reader); `ModuleEmission.admit` and `Api.admitModule_emitModule` restated
+    over "the emitted module reads back".
+    Measured before the swap, on the 400 seeded programs: the table reader agrees with the hand
+    reader on 356, reads 44 images it refused (loops), never the reverse, never differently;
+    exact on 400; round trips 298 to 335.
+    **Deleted and owed (R5.2):** `read_print`, `read_exact` (and `_all`, `_native`, `_layer`),
+    `roundTrip_weaken`, the structural `readable` with `readable_hoistAll`,
+    `printModule_readable`, `readModule_printModule_readable`, `emitModule_complete`,
+    `ModuleEmission.readModule`, `Api.printModule_roundTrip`. The faces contract and the design
+    map say so (amendment of 2026-09-17).
+    **Expected red until R6:** `make check-ts-reader` (the TypeScript reader is a port of the
+    hand reader; the corpus directory now holds loops it does not read), and the corpus index
+    and tsdiag agreement files regain the loop rows on their next regeneration.
+    The table's depth column now carries term depths from the scope algebra (`catchIf`'s test
+    under one binder; the loop's test, step and result under one, two and one): the printer
+    never read them, the reader does.
+
