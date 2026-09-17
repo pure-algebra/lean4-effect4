@@ -33,7 +33,25 @@ test("full requirement keys have explicit, bounded and injective target bindings
   expect(() => requirements(undefined, scope)).toThrow("full requires")
   expect(() => key({ name: Number.MAX_SAFE_INTEGER + 1, service: 2 })).toThrow("safe natural")
   expect(() => key({ name: -1, service: 2 })).toThrow("safe natural")
-  expect(() => requirements([{ name: 1, service: 3 }, { name: 2, service: 3 }], scope, new Map([["1:3", "C.Service"], ["2:3", "C.Service"]]))).toThrow("noninjective")
+  expect(() => requirements([{ name: 1, service: 3, shape: "C.Service" }, { name: 2, service: 3, shape: "C.Service" }], scope)).toThrow("noninjective")
+})
+
+test("a required key is bound by the shape its manifest entry carries, in both lanes (DI-93)", () => {
+  const scope = { name: 0, service: 0 }
+  // by its shape, as the printed `Context.Service<shape>("k<name>_<service>")` requires it
+  expect(requirements([{ name: 8, service: 4, shape: "number" }], scope)).toBe("(number)")
+  // a handle-shaped key goes through the same handle binding as the answer and error axes
+  expect(requirements([{ name: 12, service: 8, shape: "SqlClient.SqlClient" }], scope, new Map([["SqlClient.SqlClient", "Adapter.SqlHandle"]]))).toBe("(Adapter.SqlHandle)")
+  // no shape, no binding: `null` is what the manifest writes for a key the signature does not type
+  expect(() => requirements([{ name: 8, service: 4, shape: null }], scope)).toThrow("unbound")
+  // red control for the defect: a handle keyed by "<name>:<service>" binds nothing
+  expect(() => requirements([{ name: 8, service: 4 }], scope, new Map([["8:4", "Adapter.SqlHandle"]]))).toThrow("unbound")
+  // the hand-selection lane binds a program's key the same way the corpus lane does
+  const selection = { programs: ["p1"], handles: {}, rows: [] }
+  const corpus = { scopeKey: scope, programs: [{ name: "p1", type: { answer: "number", error: "never", requires: [{ name: 8, service: 4, shape: "number" }] } }] }
+  const [q] = queriesFromInputs(repo, selection, corpus, [])
+  expect(q?.expected.R).toBe("(number)")
+  expect(q?.inputIssues).toEqual([])
 })
 
 test("rendered canonical type bindings use syntax nodes and structured types preserve nesting", () => {

@@ -14,12 +14,10 @@
  * annotated block would hand Lean's rendered type back to the comparison (the annotation *is*
  * that type), which the audit of 2026-09-13 showed reports agreement on a widened annotation.
  *
- * A required service key is bound the way the printed program spells it: a key printed as
- * `Context.Service<shape>("k<name>_<service>")` is, on rc.112, a requirement of exactly its
- * shape type (`Context.Service<Identifier, Shape = Identifier>`), so the manifest's per-key
- * `shape` is its carrier. The selection's adapter handles take precedence for the keys they
- * name. Two keys of one shape collapse into one host type; that is a `noninjective` refusal,
- * reported by reason, never an agreement (DI-24, DI-76).
+ * A required service key is bound by the shape the manifest renders beside it, by the one rule
+ * both type lanes share (`requirements` in `profile.ts`, DI-93). Two keys of one shape collapse
+ * into one host type; that is a `noninjective` refusal, reported by reason, never an agreement
+ * (DI-24, DI-76).
  *
  * A program the printer refused, or whose requirement row names a key with no binding, is
  * reported as `refused` with the reason; an ill-typed program is not queried.
@@ -50,18 +48,6 @@ const imports = [
   'import type { Option, Result, Exit, Cause, Fiber, Scope, Context, Ref, Deferred } from "effect"',
   `import type * as Adapter from ${JSON.stringify(resolve(repo, "harness/truth/prelude.ts"))}`
 ]
-/** The carrier of each required key: the adapter handle the selection binds it to, else the
- * shape the manifest renders for it (the host's own requirement type for the printed key). */
-const bindings = (requires: Array<Record<string, unknown>>): Map<string, string> => {
-  const bound = new Map<string, string>()
-  for (const item of requires) {
-    const k = key(item), id = `${k.name}:${k.service}`
-    const adapter = handles.get(id)
-    if (adapter !== undefined) bound.set(id, adapter)
-    else if (typeof item.shape === "string") bound.set(id, item.shape)
-  }
-  return bound
-}
 const queries: Query[] = []
 for (const entry of manifest.programs as Array<Record<string, any>>) {
   if (!entry.wellTyped || entry.decl === null) continue
@@ -76,7 +62,7 @@ for (const entry of manifest.programs as Array<Record<string, any>>) {
   try {
     q.expected.A = bindRendered(entry.type.answer, handles)
     q.expected.E = bindRendered(entry.type.error, handles)
-    q.expected.R = requirements(entry.type.requires, scope, bindings(entry.type.requires))
+    q.expected.R = requirements(entry.type.requires, scope, handles)
   } catch (error) {
     q.inputIssues!.push({ code: "program-type-metadata", message: String(error) })
   }

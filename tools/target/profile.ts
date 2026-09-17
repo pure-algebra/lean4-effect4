@@ -31,11 +31,20 @@ export function key(x: unknown): Key {
   return { name: o.name as number, service: o.service as number }
 }
 const keyId = (k: Key) => `${k.name}:${k.service}`
-export function requirements(raw: unknown, scope: Key | undefined, bindings: ReadonlyMap<string, string> = new Map()): string {
+/** The requirement row as the host's type, the one binding rule of both type lanes (DI-93).
+ * The scope key is `Scope.Scope`. Any other key is bound the way the printed program spells it:
+ * a key printed as `Context.Service<shape>("k<name>_<service>")` is, on rc.112, a requirement of
+ * exactly its shape type (`Context.Service<Identifier, Shape = Identifier>`), so the carrier is
+ * the `shape` the manifest renders beside the key (`harness/truth/Truth.lean`, `requireJson`),
+ * with handle names bound as on the answer and error axes. A key with no shape is unbound: an
+ * input issue, never a fallback from the service code. Two keys of one carrier collapse into one
+ * host type: a `noninjective` refusal, never an agreement (DI-24, DI-76). */
+export function requirements(raw: unknown, scope: Key | undefined, handles: ReadonlyMap<string, string> = new Map()): string {
   const carriers = new Map<string, string>()
   for (const item of array(raw, "full requires metadata")) {
-    const k = key(item), id = keyId(k)
-    const carrier = scope && keyId(scope) === id ? "Scope.Scope" : bindings.get(id)
+    const k = key(item), id = keyId(k), shape = object(item, "service key").shape
+    const carrier = scope && keyId(scope) === id ? "Scope.Scope"
+      : typeof shape === "string" && shape.trim() ? bindRendered(shape, handles) : undefined
     if (!carrier) throw new Error(`unbound service key ${id}; no fallback from service code alone`)
     const prior = carriers.get(carrier)
     if (prior && prior !== id) throw new Error(`noninjective service binding: ${prior} and ${id} both map to ${carrier}`)
@@ -153,7 +162,7 @@ export function queriesFromInputs(repo: string, selectionInput: unknown, corpusI
       for (const [axis, field] of [["A", "answer"], ["E", "error"]] as const) {
         q.expected[axis] = bindRendered(string(types[field], `${name}.${field}`), handles)
       }
-      q.expected.R = requirements(types.requires, scope)
+      q.expected.R = requirements(types.requires, scope, handles)
     } catch (e) { q.inputIssues!.push({ code: "program-type-metadata", message: String(e) }) }
     return q
   })
