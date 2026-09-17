@@ -397,6 +397,14 @@ def denoteB (k : Nat) : NativeEff → List Val → Effects.Program StoreSig (Opt
 
 (`iter` at `Y := Option ExitV`, so an unfinished inner body is `.inl none` and stops the outer loop unfinished.) Three lemmas carry everything the plan's nesting clause asks for, and none of them mentions two loops: `denoteB_bind_none` (an unfinished first program leaves the sequence unfinished at the first program's stores, by the `bind` arm), `denoteB_straight` (`Straight e → denoteB k e env = (denote e env).map some`, so every straight-fragment theorem is a corollary, as the plan requires), and `denoteB_mono` (a `some` answer at `k` is the same `some` at every larger `k`, by induction on `iter`, the end-state note's `runLoop_mono` at this carrier). The relation to the machine stays existential (`Suffices_mono`: a fuel from which every larger fuel gives the same exit and stores); no syntactic step formula is claimed for nested loops.
 
+**Landed (2026-09-17).** `Laws/Program/Iter.lean` and `Laws/Program/DenoteB.lean`, as written above with three changes the compiler forced or the proofs wanted:
+
+- `iter`'s continuation is the named `iterNext`, so `iter_succ` is `rfl` and `iter_uniform` is one `bind_congr`. `iter_congr` (two equal step functions) is `iter_uniform` at `h := id`.
+- The loop arm is `Option.join <$> iter (iterateStep …) k c₀`: `iter` at `Y := Option ExitV` answers `Option (Option ExitV)`, and the join is what makes "budget ended" and "inner body unfinished" the same `none`. One round is the named `iterateStep`, which takes the body's meaning as a function; the sequence's continuation is the named `seqB`.
+- The fallback arm's equation is conditional in Lean (not `bind`, not `iterate`), so it is stated once as `denoteB_other` and used by both lemmas.
+
+`denoteB_mono` is stated at the run (`meaningB k e env s = (some x, s') → meaningB (k + 1) e env s = (some x, s')`, stores included) and rests on `iter_mono`: if a larger budget changes no finished round, a finished `iter f k` is the same `iter g (k + 1)`. All four laws are at `[propext, Quot.sound]`. `Test/Program/DenoteBContract.lean`: counting to three is unfinished at budget 3 and answers 3 at 4 and above; an unfinished loop at budget 2 has the ref at 2; agreement with `Api.run` on four loop programs; the straight fragment equals `denote` at budget 0; `whileLoop` is outside. Not done: the fragment is `bind`, `iterate` and straight programs only, as the packet defines it; a loop under `select`, `catchCause` or `onExit` is outside until those arms are added (each costs one case in the two recursive lemmas).
+
 ## 3. Two lines for the option-atoms slice in flight
 
 - `Val.hasTy_option_inv_at` at the allocation-aware form is `Decision.option`'s half of `decide_typed`; keep it exactly as it is in the working tree.
