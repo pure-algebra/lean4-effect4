@@ -2,14 +2,15 @@ import Effect4.Codegen.Templates
 import Test.Program.Gen
 
 /-!
-# Test.Codegen.TemplatesContract — the table-driven printer prints what the hand printer prints
+# Test.Codegen.TemplatesContract — the table of printed clauses: its shape, and that it has no gap
 
-`Codegen/Templates.lean` stands beside `Codegen/Print.lean` until their agreement is a theorem
-(R4.3). Until then this battery is the agreement: `printT = print`, the refusals included, on a
-sample of every constructor of the three skeleton families under every classifier, at more than
-one environment length, and on the 400 programs of the seeded corpus. It also pins the table's own
-shape: every skeleton has distinct holes (what `inst_of_match` asks), every row names a real
-constructor with a depth per argument, and no program ever reaches the table-defect refusal.
+`Codegen/Print.lean`'s `print` is the fold over this table. Before the hand printer was deleted
+(2026-09-17) this battery was their agreement: equal, refusals included, on the samples below at
+two environment lengths and on the 400 seeded programs. What it pins now is what no other battery
+does: every skeleton has distinct holes (what `inst_of_match` asks), every row names a real
+constructor with a depth per argument, every constructor is covered, the refusals are the named
+ones, and no program ever reaches the table-defect refusal. The printed bytes are pinned by
+`Test/Codegen/PrintContract.lean` and the corpus goldens.
 -/
 
 namespace Test.Codegen.TemplatesContract
@@ -19,16 +20,6 @@ open Effect4.Codegen.Template
 open Effect4.Codegen.Templates
 
 def sig : Signature NativeOp := nativeSignature
-
-/-- Agreement of two printings: the same expression, or the same refusal. -/
-def same : Except PrintRefusal TypeScript.Expr → Except PrintRefusal TypeScript.Expr → Bool
-  | .ok a, .ok b => a == b
-  | .error a, .error b => decide (a = b)
-  | _, _ => false
-
-def agrees (n : Nat) (e : Eff NativeOp) : Bool := same (printT sig n e) (print sig n e)
-
-def agreesLayer (l : LayerTerm NativeOp) : Bool := same (printLayerT sig l) (printLayer sig l)
 
 private def u : Eff NativeOp := .succeed (.lit .unit)
 private def v : Eff NativeOp := .bind u (.succeed (.var 0))
@@ -69,18 +60,7 @@ def layerSamples : List (LayerTerm NativeOp) :=
   , .ref [1, 0, 0], .mergeAll (.cons (.effectDiscard u) (.cons (.effectDiscard v) .nil))
   , .mergeAll .nil ]
 
-/-! ## The agreement -/
-
-#guard effSamples.all (agrees 0)
-#guard effSamples.all (agrees 5)
-#guard actionSamples.all fun a => agrees 0 (.withFiber a) && agrees 2 (.withFiber a)
-#guard layerSamples.all agreesLayer
-#guard layerSamples.all fun l => agrees 3 (.provideLayer l false u)
-
--- the corpus: every program the seeded generator writes
-#guard (Test.Program.Gen.corpus 400 4).all (agrees 0)
-
-/-! ## The refusals are the hand printer's, and the table's own defect never shows -/
+/-! ## The refusals are the named ones, and the table's own defect never shows -/
 
 /-- Is the refusal the table's own defect, for some constructor of some family? Compared whole
 against `tableDefect`: a prefix test on the string would bring `Classical.choice` through the
@@ -95,9 +75,12 @@ def isTableDefect : Except PrintRefusal TypeScript.Expr → Bool
 #guard isTableDefect (.error (tableDefect "bind"))
 #guard !isTableDefect (.error (.internalAction "setContext"))
 
-#guard same (printT sig 0 (.withFiber (.setContext t))) (.error (.internalAction "setContext"))
-#guard same (printT sig 0 (.iterate (some (.handle "no such spelling")) t t t t u))
-  (print sig 0 (.iterate (some (.handle "no such spelling")) t t t t u))
+#guard printT sig 0 (.withFiber (.setContext t)) matches .error (.internalAction "setContext")
+#guard printT sig 0 (.iterate (some (.handle "no such spelling")) t t t t u) matches
+  .error (.typeSpelling _)
+-- every sample prints or is refused by a named refusal, at two environment lengths
+#guard layerSamples.all fun l => !isTableDefect (printLayerT sig l)
+#guard !(effSamples.any fun e => isTableDefect (printT sig 5 e))
 #guard !(effSamples.any fun e => isTableDefect (printT sig 0 e))
 #guard !(actionSamples.any fun a => isTableDefect (printT sig 0 (.withFiber a)))
 #guard !((Test.Program.Gen.corpus 400 4).any fun e => isTableDefect (printT sig 0 e))

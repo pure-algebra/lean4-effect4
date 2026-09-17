@@ -1189,38 +1189,8 @@ theorem printTerm_eq_bool (term : Term) (value : Bool) :
   | app _ _ => simp [printTerm]
   | lit literal => cases literal <;> simp [printTerm, printLit]
 
-private theorem printRow_not_cond {row : Row} {r : Term} {t a b : Expr}
-    (hp : printRow row r = .ok (.cond t a b)) : False := by
-  unfold printRow at hp
-  split at hp
-  · cases hp
-  · obtain ⟨head, _, hp⟩ := bind_eq_ok.mp hp
-    split at hp <;> cases hp
-  · obtain ⟨head, _, hp⟩ := bind_eq_ok.mp hp
-    cases hp
-  · split at hp <;> unfold printMethod at hp <;> split at hp <;> cases hp
-
-theorem print_not_cond {sig : Signature Op} {n : Nat} {e : Eff Op} {t a b : Expr}
-    (hp : print sig n e = .ok (.cond t a b)) : False := by
-  cases e
-  case perform op r => exact printRow_not_cond hp
-  case catchIf test body handler =>
-    by_cases ht : test = .lit (.bool true) <;> simp [print, ht, bind_eq_ok] at hp
-  case select s d a0 a1 => cases d <;> simp [print, bind_eq_ok] at hp
-  case iterate c i t s r b =>
-    cases c with
-    | none => simp [print, bind_eq_ok] at hp
-    | some ty =>
-      simp only [print, bind_eq_ok] at hp
-      obtain ⟨_, _, hp⟩ := hp
-      split at hp <;> simp [bind_eq_ok] at hp
-  case awaitFiber f m => cases m <;> simp [print] at hp
-  case withFiber act =>
-    cases act
-    case interruptAll targets who => cases who <;> simp [print, printAction] at hp
-    all_goals simp [print, printAction, bind_eq_ok] at hp
-  all_goals simp [print, bind_eq_ok] at hp
-
+/-- An atom application that is no row reads as no row call, so the caller may read it as a
+term. -/
 theorem readRowCall_none {sig : Signature Op} {spell : String → List String → Option Op} {n : Nat}
     {atom : String} {args : Terms} (h : noRow spell atom args = true) :
     readRowCall sig spell n atom [] (printTerms args) = none := by
@@ -1477,7 +1447,7 @@ theorem readRowMethod_print {sig : Signature Op} {spell : String → List String
 /-- The printed form of a row answer is the row's printed call. -/
 theorem print_rowAnswer {sig : Signature Op} {n : Nat} (op : Op) (r : Term) :
     print sig n (rowAnswer (sig.rowOf op) op r) = printRow (sig.rowOf op) r := by
-  simp only [rowAnswer, print]
+  simp only [rowAnswer, print_perform]
 
 /-- The reader's two call arms agree on a row's printed head: with no declared type
 arguments it is a plain `spelling(...)` call, and with them a `spelling<T…>(...)` call; both

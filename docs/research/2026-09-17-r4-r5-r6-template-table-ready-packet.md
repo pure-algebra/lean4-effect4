@@ -157,6 +157,32 @@ What the real family added to the probe's design:
 4. **The annotated loop prints and is not read**: its hole has sort `type`, and no reader of types
    exists by design (B19). That is `readable`'s present domain, now visible in the table.
 
+## 3d. The cutover (2026-09-17, late): both hand recursions are deleted
+
+The owner ruled a fast cutover: temporary loss of theorems accepted, no agreement theorem first.
+
+- **Reader** (`4e28669a`): `Codegen/Read.lean` is `readT`, one generic step over the table,
+  well-founded on the tree's size through `match_below`, total for any table. It is as §3b
+  item 4 planned, with three things the real family decided: an argument the classifier
+  determines is SUPPLIED (`ArgPat.supplies`); a row is accepted only when the printer would
+  choose it for what was read (`Row.selects` over the read arguments, the first selecting row
+  being this one), which is the whole of exactness's special cases; a transparent row hands the
+  same tree to a strictly lower family and matches when that does. `readable` is the round trip
+  itself. The depth column carries term depths (from the scope algebra), which only the reader
+  reads. Measured against the hand reader before it went: agrees on 356 of 400, reads 44 more,
+  never the reverse; exact on 400.
+- **Printer** (the commit after): `Codegen/Print.lean`'s `print` and `printLayer` ARE the fold
+  (`Templates.printT`); the six mutual hand printers are deleted; the leaves and the row printer
+  moved below the table to `Codegen/PrintLeaf.lean`. The agreement battery had been green on
+  every constructor, classifier and the corpus; it now pins the table's shape and that no
+  program reaches the table-defect refusal.
+- **What §4 still owes, re-cut:** R5.2 (the laws over the table: `read_print`, `read_exact`,
+  the structural domain of `readable`, the four module-level corollaries; ingredients (a) to (d)
+  of §3b, with the leaf round trips kept in `Read.lean`); R6 (the table exported, `ts/eff/read.ts`
+  as one matcher over it; `check-ts-reader` is expected red on loops and the two non-Boolean
+  decisions until then); the per-row guard of the depth column against `Node.childLevel`.
+  Steps 3 to 6 of §4 below are otherwise done or moot.
+
 ## 4. Order, each step gated and committed before the next
 
 1. **R4.1** `Template.lean`: the calculus of §2 with `match_inst` and the converse (both proved in

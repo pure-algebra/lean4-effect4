@@ -1,5 +1,5 @@
 import Effect4.Codegen.Template
-import Effect4.Codegen.Print
+import Effect4.Codegen.PrintLeaf
 import Effect4.Program.LayerView
 
 /-!
@@ -19,8 +19,10 @@ What is not a skeleton stays a hand field of the algebra, overriding the table's
 `perform` (its inverse is the signature's `spell`), `gen` with its statements (a second table over
 `TypeScript.Stmt` when it is the largest thing left), and the two spines.
 
-This module stands BESIDE `Codegen/Print.lean` until the agreement is a theorem: the guard
-`printT = print` on every constructor and on the corpus is `Test/Codegen/TemplatesContract.lean`.
+`Codegen/Print.lean`'s `print` IS this fold (the hand printer, one clause per constructor, was
+deleted once the two agreed on every constructor, classifier and the seeded corpus), and
+`Codegen/Read.lean` reads through the same rows. A leaf goes through its own printer
+(`Codegen/PrintLeaf.lean`).
 -/
 
 set_option autoImplicit false
@@ -264,7 +266,7 @@ def Depth.at (n : Nat) : Depth → Nat
 
 /-- One argument as what its hole captures, by sort; `none` for an argument that is only a
 classifier. A child is its folded printer applied at the row's depth; a leaf goes through its own
-printer (`Codegen/Print.lean`). -/
+printer (`Codegen/PrintLeaf.lean`). -/
 def printArg (sig : Signature Op) (n : Nat) (d : Depth) :
     ArgF Op Carrier → Except PrintRefusal (Option Arg)
   | .child .eff r | .child .action r | .child .layer r => do return some (.expr (← r (d.at n)))
@@ -298,8 +300,8 @@ def printArgs (sig : Signature Op) (n : Nat) :
   | _, _, _ => .ok []
 
 /-- A table that has no row for a constructor, or a skeleton with a hole no argument fills, is a
-defect of the table, not a refusal of the program. It is named so a guard can see it; the
-agreement with `print` shows it does not occur. -/
+defect of the table, not a refusal of the program. It is named so a guard can see it
+(`Test/Codegen/TemplatesContract.lean` shows it does not occur). -/
 def tableDefect (ctor : String) : PrintRefusal := .internalAction ("table:" ++ ctor)
 
 /-- The whole printer of the three skeleton families, per layer. -/
