@@ -704,479 +704,175 @@ normalized any of them away would pass its own refusal tests and silently make
 four reserved counterexample rows unprovable.
 -/
 
-mutual
+/-- The referenced schemas of a check's annotation, already folded: absent, or all admissible. -/
+private def schemasAdmissible : Option (List Bool) → Bool
+  | none => true
+  | some children => children.all id
+
+/-- The clause of a check's representation annotation: a non-empty `id`, a finite payload, and
+every referenced schema admissible. -/
+private def annotationAdmissible (annotation : CheckRepresentationAnnotationOf Bool) : Bool :=
+  annotation.id != "" && Json.numbersFinite annotation.payload &&
+    schemasAdmissible annotation.schemas
+
+/-- The optional annotation of a `FilterGroup`: absent, or its clause. -/
+private def optionalAnnotationAdmissible :
+    Option (CheckRepresentationAnnotationOf Bool) → Bool
+  | none => true
+  | some value => annotationAdmissible value
+
+/--
+Field admission, written ONCE: an algebra of the generated fold
+(`src/Effect4/Schema/Fold.lean`) on the carrier `Bool`. A field is the node's own clause
+conjoined with its children's answers, which arrive already folded; the fold visits every
+child route by construction, the `Filter.representation.schemas` route included, because the
+routes are read off the constructor declarations and not listed here (`E4-SCHEMA-CE-033`).
+
+Before 2026-09-17 this was three hand-written mutual recursions of nine helpers each (the
+proposition, its Boolean companion, and their agreement). The proposition is now the Boolean
+fold's truth, and the per-constructor equations below remain the specification that fixes it.
+-/
+def fieldAdmissibleAlgebra : RepresentationAlgebra (fun _ => Bool) where
+  representation_declaration rep ann tps cs :=
+    rep.id != "" && Json.numbersFinite rep.payload && Annotations.fieldAdmissible ann &&
+      tps.all id && cs.all id
+  representation_reference key := key.value != ""
+  representation_suspend ann cs th := Annotations.fieldAdmissible ann && cs.isEmpty && th
+  representation_null ann cs := Annotations.fieldAdmissible ann && cs.all id
+  representation_undefined ann cs := Annotations.fieldAdmissible ann && cs.all id
+  representation_void ann cs := Annotations.fieldAdmissible ann && cs.all id
+  representation_never ann cs := Annotations.fieldAdmissible ann && cs.all id
+  representation_unknown ann cs := Annotations.fieldAdmissible ann && cs.all id
+  representation_any ann cs := Annotations.fieldAdmissible ann && cs.all id
+  representation_string ann cs := Annotations.fieldAdmissible ann && cs.all id
+  representation_number ann cs := Annotations.fieldAdmissible ann && cs.all id
+  representation_boolean ann cs := Annotations.fieldAdmissible ann && cs.all id
+  representation_bigint ann cs := Annotations.fieldAdmissible ann && cs.all id
+  representation_symbol ann cs := Annotations.fieldAdmissible ann && cs.all id
+  representation_literal ann cs value :=
+    Annotations.fieldAdmissible ann &&
+      (match value with
+        | .number datum => Float64.isFinite datum
+        | _ => true) && cs.all id
+  representation_uniqueSymbol ann cs _ := Annotations.fieldAdmissible ann && cs.all id
+  representation_objectKeyword ann cs := Annotations.fieldAdmissible ann && cs.all id
+  representation_enum ann cs _ := Annotations.fieldAdmissible ann && cs.all id
+  representation_templateLiteral ann cs ps :=
+    Annotations.fieldAdmissible ann && cs.all id && ps.all id
+  representation_arrays ann cs els rs :=
+    Annotations.fieldAdmissible ann && cs.all id &&
+      (els.all fun element => Annotations.fieldAdmissible element.annotations && element.type) &&
+      rs.all id
+  representation_objects ann cs props idxs :=
+    Annotations.fieldAdmissible ann && cs.all id &&
+      (props.all fun property =>
+        Annotations.fieldAdmissible property.annotations && property.type) &&
+      idxs.all fun index => index.parameter && index.type
+  representation_union ann cs ts _ := Annotations.fieldAdmissible ann && cs.all id && ts.all id
+  check_filter annotation ann _ :=
+    annotation.id != "" && Json.numbersFinite annotation.payload &&
+      Annotations.fieldAdmissible ann && schemasAdmissible annotation.schemas
+  check_filterGroup annotation ann cs :=
+    !cs.isEmpty && Annotations.fieldAdmissible ann && cs.all id &&
+      optionalAnnotationAdmissible annotation
+
+/-- The decision procedure: the fold of `fieldAdmissibleAlgebra`. -/
+def Representation.fieldAdmissible (representation : Representation) : Bool :=
+  cata_representation fieldAdmissibleAlgebra representation
+
+/-- The decision procedure on checks. -/
+def Check.fieldAdmissible (check : Check) : Bool :=
+  cata_check fieldAdmissibleAlgebra check
 
 /-- Every rc.112 field clause holds at this node and everywhere below it. -/
-def Representation.FieldAdmissible : Representation → Prop
-  | .declaration rep ann tps cs =>
-      rep.id ≠ "" ∧ Json.NumbersFinite rep.payload ∧
-        Annotations.FieldAdmissible ann ∧ Representation.FieldAdmissibleList tps ∧
-        Check.FieldAdmissibleList cs
-  | .reference key =>
-      key.value ≠ ""
-  | .suspend ann cs th =>
-      Annotations.FieldAdmissible ann ∧ cs = [] ∧
-        Representation.FieldAdmissible th
-  | .null ann cs =>
-      Annotations.FieldAdmissible ann ∧ Check.FieldAdmissibleList cs
-  | .undefined ann cs =>
-      Annotations.FieldAdmissible ann ∧ Check.FieldAdmissibleList cs
-  | .void ann cs =>
-      Annotations.FieldAdmissible ann ∧ Check.FieldAdmissibleList cs
-  | .never ann cs =>
-      Annotations.FieldAdmissible ann ∧ Check.FieldAdmissibleList cs
-  | .unknown ann cs =>
-      Annotations.FieldAdmissible ann ∧ Check.FieldAdmissibleList cs
-  | .any ann cs =>
-      Annotations.FieldAdmissible ann ∧ Check.FieldAdmissibleList cs
-  | .string ann cs =>
-      Annotations.FieldAdmissible ann ∧ Check.FieldAdmissibleList cs
-  | .number ann cs =>
-      Annotations.FieldAdmissible ann ∧ Check.FieldAdmissibleList cs
-  | .boolean ann cs =>
-      Annotations.FieldAdmissible ann ∧ Check.FieldAdmissibleList cs
-  | .bigint ann cs =>
-      Annotations.FieldAdmissible ann ∧ Check.FieldAdmissibleList cs
-  | .symbol ann cs =>
-      Annotations.FieldAdmissible ann ∧ Check.FieldAdmissibleList cs
-  | .literal ann cs (.number value) =>
-      Annotations.FieldAdmissible ann ∧ Float64.isFinite value = true ∧
-        Check.FieldAdmissibleList cs
-  | .literal ann cs _ =>
-      Annotations.FieldAdmissible ann ∧ Check.FieldAdmissibleList cs
-  | .uniqueSymbol ann cs _ =>
-      Annotations.FieldAdmissible ann ∧ Check.FieldAdmissibleList cs
-  | .objectKeyword ann cs =>
-      Annotations.FieldAdmissible ann ∧ Check.FieldAdmissibleList cs
-  | .enum ann cs _ =>
-      Annotations.FieldAdmissible ann ∧ Check.FieldAdmissibleList cs
-  | .templateLiteral ann cs ps =>
-      Annotations.FieldAdmissible ann ∧ Check.FieldAdmissibleList cs ∧
-        Representation.FieldAdmissibleList ps
-  | .arrays ann cs els rs =>
-      Annotations.FieldAdmissible ann ∧ Check.FieldAdmissibleList cs ∧
-        Representation.FieldAdmissibleElements els ∧
-        Representation.FieldAdmissibleList rs
-  | .objects ann cs props idxs =>
-      Annotations.FieldAdmissible ann ∧ Check.FieldAdmissibleList cs ∧
-        Representation.FieldAdmissibleProperties props ∧
-        Representation.FieldAdmissibleIndexes idxs
-  | .union ann cs ts _ =>
-      Annotations.FieldAdmissible ann ∧ Check.FieldAdmissibleList cs ∧
-        Representation.FieldAdmissibleList ts
-
-/-- Field admission over an ordered list of representations. -/
-private def Representation.FieldAdmissibleList : List Representation → Prop
-  | [] => True
-  | head :: tail =>
-      Representation.FieldAdmissible head ∧ Representation.FieldAdmissibleList tail
-
-/-- Field admission over an ordered list of tuple elements. -/
-private def Representation.FieldAdmissibleElements :
-    List (ElementOf Representation) → Prop
-  | [] => True
-  | ⟨_, ty, ann⟩ :: tail =>
-      (Annotations.FieldAdmissible ann ∧ Representation.FieldAdmissible ty) ∧
-        Representation.FieldAdmissibleElements tail
-
-/-- Field admission over an ordered list of property signatures. -/
-private def Representation.FieldAdmissibleProperties :
-    List (PropertySignatureOf Representation) → Prop
-  | [] => True
-  | ⟨_, ty, _, _, ann⟩ :: tail =>
-      (Annotations.FieldAdmissible ann ∧ Representation.FieldAdmissible ty) ∧
-        Representation.FieldAdmissibleProperties tail
-
-/-- Field admission over an ordered list of index signatures. -/
-private def Representation.FieldAdmissibleIndexes :
-    List (IndexSignatureOf Representation) → Prop
-  | [] => True
-  | ⟨par, ty⟩ :: tail =>
-      (Representation.FieldAdmissible par ∧ Representation.FieldAdmissible ty) ∧
-        Representation.FieldAdmissibleIndexes tail
-
-/-- Field admission over the representations a check references. -/
-private def Representation.FieldAdmissibleSchemas : Option (List Representation) → Prop
-  | none => True
-  | some schemas => Representation.FieldAdmissibleList schemas
+def Representation.FieldAdmissible (representation : Representation) : Prop :=
+  Representation.fieldAdmissible representation = true
 
 /-- Every rc.112 field clause holds at this check and everywhere below it. -/
-def Check.FieldAdmissible : Check → Prop
-  | .filter ⟨id, payload, schemas⟩ ann _ =>
-      id ≠ "" ∧ Json.NumbersFinite payload ∧ Annotations.FieldAdmissible ann ∧
-        Representation.FieldAdmissibleSchemas schemas
-  | .filterGroup rep ann cs =>
-      cs ≠ [] ∧ Annotations.FieldAdmissible ann ∧ Check.FieldAdmissibleList cs ∧
-        Check.AnnotationFieldAdmissible rep
-
-/-- Field admission over an ordered list of checks. -/
-private def Check.FieldAdmissibleList : List Check → Prop
-  | [] => True
-  | head :: tail => Check.FieldAdmissible head ∧ Check.FieldAdmissibleList tail
-
-/-- Field admission over a `FilterGroup`'s optional representation annotation. -/
-private def Check.AnnotationFieldAdmissible :
-    Option (CheckRepresentationAnnotationOf Representation) → Prop
-  | none => True
-  | some ⟨id, payload, schemas⟩ =>
-      id ≠ "" ∧ Json.NumbersFinite payload ∧
-        Representation.FieldAdmissibleSchemas schemas
-
-end
-
-mutual
-
-/-- The decidable companion of `Representation.FieldAdmissible`. -/
-def Representation.fieldAdmissible : Representation → Bool
-  | .declaration rep ann tps cs =>
-      rep.id != "" && Json.numbersFinite rep.payload &&
-        Annotations.fieldAdmissible ann && Representation.fieldAdmissibleList tps &&
-        Check.fieldAdmissibleList cs
-  | .reference key =>
-      key.value != ""
-  | .suspend ann cs th =>
-      Annotations.fieldAdmissible ann && cs.isEmpty &&
-        Representation.fieldAdmissible th
-  | .null ann cs =>
-      Annotations.fieldAdmissible ann && Check.fieldAdmissibleList cs
-  | .undefined ann cs =>
-      Annotations.fieldAdmissible ann && Check.fieldAdmissibleList cs
-  | .void ann cs =>
-      Annotations.fieldAdmissible ann && Check.fieldAdmissibleList cs
-  | .never ann cs =>
-      Annotations.fieldAdmissible ann && Check.fieldAdmissibleList cs
-  | .unknown ann cs =>
-      Annotations.fieldAdmissible ann && Check.fieldAdmissibleList cs
-  | .any ann cs =>
-      Annotations.fieldAdmissible ann && Check.fieldAdmissibleList cs
-  | .string ann cs =>
-      Annotations.fieldAdmissible ann && Check.fieldAdmissibleList cs
-  | .number ann cs =>
-      Annotations.fieldAdmissible ann && Check.fieldAdmissibleList cs
-  | .boolean ann cs =>
-      Annotations.fieldAdmissible ann && Check.fieldAdmissibleList cs
-  | .bigint ann cs =>
-      Annotations.fieldAdmissible ann && Check.fieldAdmissibleList cs
-  | .symbol ann cs =>
-      Annotations.fieldAdmissible ann && Check.fieldAdmissibleList cs
-  | .literal ann cs (.number value) =>
-      Annotations.fieldAdmissible ann && Float64.isFinite value &&
-        Check.fieldAdmissibleList cs
-  | .literal ann cs _ =>
-      Annotations.fieldAdmissible ann && Check.fieldAdmissibleList cs
-  | .uniqueSymbol ann cs _ =>
-      Annotations.fieldAdmissible ann && Check.fieldAdmissibleList cs
-  | .objectKeyword ann cs =>
-      Annotations.fieldAdmissible ann && Check.fieldAdmissibleList cs
-  | .enum ann cs _ =>
-      Annotations.fieldAdmissible ann && Check.fieldAdmissibleList cs
-  | .templateLiteral ann cs ps =>
-      Annotations.fieldAdmissible ann && Check.fieldAdmissibleList cs &&
-        Representation.fieldAdmissibleList ps
-  | .arrays ann cs els rs =>
-      Annotations.fieldAdmissible ann && Check.fieldAdmissibleList cs &&
-        Representation.fieldAdmissibleElements els &&
-        Representation.fieldAdmissibleList rs
-  | .objects ann cs props idxs =>
-      Annotations.fieldAdmissible ann && Check.fieldAdmissibleList cs &&
-        Representation.fieldAdmissibleProperties props &&
-        Representation.fieldAdmissibleIndexes idxs
-  | .union ann cs ts _ =>
-      Annotations.fieldAdmissible ann && Check.fieldAdmissibleList cs &&
-        Representation.fieldAdmissibleList ts
-
-/-- The decidable companion of `Representation.FieldAdmissibleList`. -/
-private def Representation.fieldAdmissibleList : List Representation → Bool
-  | [] => true
-  | head :: tail =>
-      Representation.fieldAdmissible head && Representation.fieldAdmissibleList tail
-
-/-- The decidable companion of `Representation.FieldAdmissibleElements`. -/
-private def Representation.fieldAdmissibleElements :
-    List (ElementOf Representation) → Bool
-  | [] => true
-  | ⟨_, ty, ann⟩ :: tail =>
-      (Annotations.fieldAdmissible ann && Representation.fieldAdmissible ty) &&
-        Representation.fieldAdmissibleElements tail
-
-/-- The decidable companion of `Representation.FieldAdmissibleProperties`. -/
-private def Representation.fieldAdmissibleProperties :
-    List (PropertySignatureOf Representation) → Bool
-  | [] => true
-  | ⟨_, ty, _, _, ann⟩ :: tail =>
-      (Annotations.fieldAdmissible ann && Representation.fieldAdmissible ty) &&
-        Representation.fieldAdmissibleProperties tail
-
-/-- The decidable companion of `Representation.FieldAdmissibleIndexes`. -/
-private def Representation.fieldAdmissibleIndexes :
-    List (IndexSignatureOf Representation) → Bool
-  | [] => true
-  | ⟨par, ty⟩ :: tail =>
-      (Representation.fieldAdmissible par && Representation.fieldAdmissible ty) &&
-        Representation.fieldAdmissibleIndexes tail
-
-/-- The decidable companion of `Representation.FieldAdmissibleSchemas`. -/
-private def Representation.fieldAdmissibleSchemas : Option (List Representation) → Bool
-  | none => true
-  | some schemas => Representation.fieldAdmissibleList schemas
-
-/-- The decidable companion of `Check.FieldAdmissible`. -/
-def Check.fieldAdmissible : Check → Bool
-  | .filter ⟨id, payload, schemas⟩ ann _ =>
-      (id != "") && Json.numbersFinite payload && Annotations.fieldAdmissible ann &&
-        Representation.fieldAdmissibleSchemas schemas
-  | .filterGroup rep ann cs =>
-      !cs.isEmpty && Annotations.fieldAdmissible ann && Check.fieldAdmissibleList cs &&
-        Check.annotationFieldAdmissible rep
-
-/-- The decidable companion of `Check.FieldAdmissibleList`. -/
-private def Check.fieldAdmissibleList : List Check → Bool
-  | [] => true
-  | head :: tail => Check.fieldAdmissible head && Check.fieldAdmissibleList tail
-
-/-- The decidable companion of `Check.AnnotationFieldAdmissible`. -/
-private def Check.annotationFieldAdmissible :
-    Option (CheckRepresentationAnnotationOf Representation) → Bool
-  | none => true
-  | some ⟨id, payload, schemas⟩ =>
-      (id != "") && Json.numbersFinite payload &&
-        Representation.fieldAdmissibleSchemas schemas
-
-end
-
-/-!
-## Membership forms of the list clauses
-
-The recursive list predicates above are what the structural recursion needs;
-the membership forms are what the contract states. These bridges keep the two
-readings from drifting apart.
--/
-
-/-- List admission is admission of every member. -/
-private theorem Representation.fieldAdmissibleList_forall (representations : List Representation) :
-    Representation.FieldAdmissibleList representations ↔
-      ∀ child ∈ representations, Representation.FieldAdmissible child := by
-  induction representations with
-  | nil => simp [Representation.FieldAdmissibleList]
-  | cons _ _ ih => simp [Representation.FieldAdmissibleList, ih]
-
-/-- Element admission is admission of every element's annotations and type. -/
-private theorem Representation.fieldAdmissibleElements_forall
-    (elements : List (ElementOf Representation)) :
-    Representation.FieldAdmissibleElements elements ↔
-      ∀ element ∈ elements,
-        Annotations.FieldAdmissible element.annotations ∧
-          Representation.FieldAdmissible element.type := by
-  induction elements with
-  | nil => simp [Representation.FieldAdmissibleElements]
-  | cons _ _ ih => simp [Representation.FieldAdmissibleElements, ih]
-
-/-- Property admission is admission of every signature's annotations and type. -/
-private theorem Representation.fieldAdmissibleProperties_forall
-    (properties : List (PropertySignatureOf Representation)) :
-    Representation.FieldAdmissibleProperties properties ↔
-      ∀ property ∈ properties,
-        Annotations.FieldAdmissible property.annotations ∧
-          Representation.FieldAdmissible property.type := by
-  induction properties with
-  | nil => simp [Representation.FieldAdmissibleProperties]
-  | cons _ _ ih => simp [Representation.FieldAdmissibleProperties, ih]
-
-/-- Index admission is admission of every signature's parameter and type. -/
-private theorem Representation.fieldAdmissibleIndexes_forall
-    (indexes : List (IndexSignatureOf Representation)) :
-    Representation.FieldAdmissibleIndexes indexes ↔
-      ∀ index ∈ indexes,
-        Representation.FieldAdmissible index.parameter ∧
-          Representation.FieldAdmissible index.type := by
-  induction indexes with
-  | nil => simp [Representation.FieldAdmissibleIndexes]
-  | cons _ _ ih => simp [Representation.FieldAdmissibleIndexes, ih]
-
-/-- Referenced-schema admission, in the form the contract states it. -/
-private theorem Representation.fieldAdmissibleSchemas_forall
-    (schemas : Option (List Representation)) :
-    Representation.FieldAdmissibleSchemas schemas ↔
-      ∀ list : List Representation, schemas = some list →
-        ∀ child ∈ list, Representation.FieldAdmissible child := by
-  cases schemas with
-  | none => simp [Representation.FieldAdmissibleSchemas]
-  | some list =>
-      simp [Representation.FieldAdmissibleSchemas,
-        Representation.fieldAdmissibleList_forall]
-
-/-- Check-list admission is admission of every member. -/
-private theorem Check.fieldAdmissibleList_forall (checks : List Check) :
-    Check.FieldAdmissibleList checks ↔
-      ∀ check ∈ checks, Check.FieldAdmissible check := by
-  induction checks with
-  | nil => simp [Check.FieldAdmissibleList]
-  | cons _ _ ih => simp [Check.FieldAdmissibleList, ih]
-
-/-- The optional check annotation clause, in the form the contract states it. -/
-private theorem Check.annotationFieldAdmissible_forall
-    (annotation : Option (CheckRepresentationAnnotationOf Representation)) :
-    Check.AnnotationFieldAdmissible annotation ↔
-      ∀ value : CheckRepresentationAnnotationOf Representation,
-        annotation = some value →
-          value.id ≠ "" ∧ Json.NumbersFinite value.payload ∧
-            ∀ list : List Representation, value.schemas = some list →
-              ∀ child ∈ list, Representation.FieldAdmissible child := by
-  cases annotation with
-  | none => simp [Check.AnnotationFieldAdmissible]
-  | some value =>
-      obtain ⟨_, _, _⟩ := value
-      simp [Check.AnnotationFieldAdmissible,
-        Representation.fieldAdmissibleSchemas_forall]
+def Check.FieldAdmissible (check : Check) : Prop :=
+  Check.fieldAdmissible check = true
 
 /-!
 ## Boolean and propositional agreement
 
-The Boolean decision procedure and the proposition are written separately and
-proved to agree, so neither is the other's definition. Agreement alone is not a
-specification — both sides could be constant — which is why the per-constructor
-equations below are separate obligations.
+The proposition is the decision procedure's truth, so agreement is definitional. That alone is
+not a specification (both could be constant), which is why the per-constructor equations below
+are separate obligations: they fix the proposition on every constructor and every route.
 -/
-
-mutual
 
 /-- Boolean and propositional field admission agree on representations. -/
 theorem Representation.fieldAdmissible_iff (representation : Representation) :
     Representation.fieldAdmissible representation = true ↔
-      Representation.FieldAdmissible representation := by
-  cases representation
-  case suspend ann cs th =>
-    simp [Representation.fieldAdmissible, Representation.FieldAdmissible,
-      Annotations.fieldAdmissible_iff, Representation.fieldAdmissible_iff th,
-      List.isEmpty_iff, and_assoc]
-  case literal ann cs value =>
-    cases value <;>
-      simp [Representation.fieldAdmissible, Representation.FieldAdmissible,
-        Annotations.fieldAdmissible_iff, Check.fieldAdmissibleList_iff cs, and_assoc]
-  all_goals
-    simp [Representation.fieldAdmissible, Representation.FieldAdmissible,
-      Annotations.fieldAdmissible_iff, Json.numbersFinite_iff,
-      Representation.fieldAdmissibleList_iff, Check.fieldAdmissibleList_iff,
-      Representation.fieldAdmissibleElements_iff,
-      Representation.fieldAdmissibleProperties_iff,
-      Representation.fieldAdmissibleIndexes_iff, and_assoc]
-termination_by structural representation
-
-/-- Agreement for an ordered list of representations. -/
-private theorem Representation.fieldAdmissibleList_iff (representations : List Representation) :
-    Representation.fieldAdmissibleList representations = true ↔
-      Representation.FieldAdmissibleList representations := by
-  match representations with
-  | [] =>
-      simp [Representation.fieldAdmissibleList, Representation.FieldAdmissibleList]
-  | head :: tail =>
-      simp [Representation.fieldAdmissibleList, Representation.FieldAdmissibleList,
-        Representation.fieldAdmissible_iff head,
-        Representation.fieldAdmissibleList_iff tail]
-termination_by structural representations
-
-/-- Agreement for an ordered list of tuple elements. -/
-private theorem Representation.fieldAdmissibleElements_iff
-    (elements : List (ElementOf Representation)) :
-    Representation.fieldAdmissibleElements elements = true ↔
-      Representation.FieldAdmissibleElements elements := by
-  match elements with
-  | [] =>
-      simp [Representation.fieldAdmissibleElements,
-        Representation.FieldAdmissibleElements]
-  | ⟨_, ty, _⟩ :: tail =>
-      simp [Representation.fieldAdmissibleElements,
-        Representation.FieldAdmissibleElements, Annotations.fieldAdmissible_iff,
-        Representation.fieldAdmissible_iff ty,
-        Representation.fieldAdmissibleElements_iff tail, and_assoc]
-termination_by structural elements
-
-/-- Agreement for an ordered list of property signatures. -/
-private theorem Representation.fieldAdmissibleProperties_iff
-    (properties : List (PropertySignatureOf Representation)) :
-    Representation.fieldAdmissibleProperties properties = true ↔
-      Representation.FieldAdmissibleProperties properties := by
-  match properties with
-  | [] =>
-      simp [Representation.fieldAdmissibleProperties,
-        Representation.FieldAdmissibleProperties]
-  | ⟨_, ty, _, _, _⟩ :: tail =>
-      simp [Representation.fieldAdmissibleProperties,
-        Representation.FieldAdmissibleProperties, Annotations.fieldAdmissible_iff,
-        Representation.fieldAdmissible_iff ty,
-        Representation.fieldAdmissibleProperties_iff tail, and_assoc]
-termination_by structural properties
-
-/-- Agreement for an ordered list of index signatures. -/
-private theorem Representation.fieldAdmissibleIndexes_iff
-    (indexes : List (IndexSignatureOf Representation)) :
-    Representation.fieldAdmissibleIndexes indexes = true ↔
-      Representation.FieldAdmissibleIndexes indexes := by
-  match indexes with
-  | [] =>
-      simp [Representation.fieldAdmissibleIndexes,
-        Representation.FieldAdmissibleIndexes]
-  | ⟨par, ty⟩ :: tail =>
-      simp [Representation.fieldAdmissibleIndexes,
-        Representation.FieldAdmissibleIndexes,
-        Representation.fieldAdmissible_iff par, Representation.fieldAdmissible_iff ty,
-        Representation.fieldAdmissibleIndexes_iff tail, and_assoc]
-termination_by structural indexes
-
-/-- Agreement for the representations a check references. -/
-private theorem Representation.fieldAdmissibleSchemas_iff
-    (schemas : Option (List Representation)) :
-    Representation.fieldAdmissibleSchemas schemas = true ↔
-      Representation.FieldAdmissibleSchemas schemas := by
-  match schemas with
-  | none =>
-      simp [Representation.fieldAdmissibleSchemas,
-        Representation.FieldAdmissibleSchemas]
-  | some list =>
-      simp [Representation.fieldAdmissibleSchemas,
-        Representation.FieldAdmissibleSchemas,
-        Representation.fieldAdmissibleList_iff list]
-termination_by structural schemas
+      Representation.FieldAdmissible representation := Iff.rfl
 
 /-- Boolean and propositional field admission agree on checks. -/
 theorem Check.fieldAdmissible_iff (check : Check) :
-    Check.fieldAdmissible check = true ↔ Check.FieldAdmissible check := by
-  match check with
-  | .filter ⟨_, _, schemas⟩ ann _ =>
-      simp [Check.fieldAdmissible, Check.FieldAdmissible,
-        Annotations.fieldAdmissible_iff, Json.numbersFinite_iff,
-        Representation.fieldAdmissibleSchemas_iff schemas, and_assoc]
-  | .filterGroup rep ann cs =>
-      simp [Check.fieldAdmissible, Check.FieldAdmissible,
-        Annotations.fieldAdmissible_iff, Check.fieldAdmissibleList_iff cs,
-        Check.annotationFieldAdmissible_iff rep, and_assoc]
-termination_by structural check
+    Check.fieldAdmissible check = true ↔ Check.FieldAdmissible check := Iff.rfl
 
-/-- Agreement for an ordered list of checks. -/
-private theorem Check.fieldAdmissibleList_iff (checks : List Check) :
-    Check.fieldAdmissibleList checks = true ↔ Check.FieldAdmissibleList checks := by
-  match checks with
-  | [] => simp [Check.fieldAdmissibleList, Check.FieldAdmissibleList]
-  | head :: tail =>
-      simp [Check.fieldAdmissibleList, Check.FieldAdmissibleList,
-        Check.fieldAdmissible_iff head, Check.fieldAdmissibleList_iff tail]
-termination_by structural checks
+/-- The fold, named at function level, so a mapped child folds back to the decision procedure
+instead of unfolding the algebra under it. -/
+private theorem Representation.fieldAdmissible_fold :
+    cata_representation fieldAdmissibleAlgebra = Representation.fieldAdmissible := rfl
 
-/-- Agreement for a `FilterGroup`'s optional representation annotation. -/
-private theorem Check.annotationFieldAdmissible_iff
+private theorem Check.fieldAdmissible_fold :
+    cata_check fieldAdmissibleAlgebra = Check.fieldAdmissible := rfl
+
+/-- The referenced-schemas clause, in the membership form the contract states. -/
+private theorem schemasAdmissible_iff (schemas : Option (List Representation)) :
+    schemasAdmissible (schemas.map (List.map Representation.fieldAdmissible)) = true ↔
+      ∀ list : List Representation, schemas = some list →
+        ∀ child ∈ list, Representation.FieldAdmissible child := by
+  cases schemas with
+  | none => simp [schemasAdmissible]
+  | some list => simp [schemasAdmissible, Representation.FieldAdmissible]
+
+/-- A check annotation's clause, in the membership form the contract states. -/
+private theorem annotationAdmissible_iff
+    (annotation : CheckRepresentationAnnotationOf Representation) :
+    annotationAdmissible (annotation.map Representation.fieldAdmissible) = true ↔
+      annotation.id ≠ "" ∧ Json.NumbersFinite annotation.payload ∧
+        ∀ list : List Representation, annotation.schemas = some list →
+          ∀ child ∈ list, Representation.FieldAdmissible child := by
+  simp [annotationAdmissible, CheckRepresentationAnnotationOf.map, schemasAdmissible_iff,
+    Json.numbersFinite_iff, and_assoc]
+
+/-- The optional annotation's clause, in the membership form the contract states. -/
+private theorem optionalAnnotationAdmissible_iff
     (annotation : Option (CheckRepresentationAnnotationOf Representation)) :
-    Check.annotationFieldAdmissible annotation = true ↔
-      Check.AnnotationFieldAdmissible annotation := by
-  match annotation with
-  | none =>
-      simp [Check.annotationFieldAdmissible, Check.AnnotationFieldAdmissible]
-  | some ⟨_, _, schemas⟩ =>
-      simp [Check.annotationFieldAdmissible, Check.AnnotationFieldAdmissible,
-        Json.numbersFinite_iff, Representation.fieldAdmissibleSchemas_iff schemas,
-        and_assoc]
-termination_by structural annotation
+    optionalAnnotationAdmissible
+        (annotation.map (CheckRepresentationAnnotationOf.map Representation.fieldAdmissible)) =
+          true ↔
+      ∀ value : CheckRepresentationAnnotationOf Representation, annotation = some value →
+        value.id ≠ "" ∧ Json.NumbersFinite value.payload ∧
+          ∀ list : List Representation, value.schemas = some list →
+            ∀ child ∈ list, Representation.FieldAdmissible child := by
+  cases annotation with
+  | none => simp [optionalAnnotationAdmissible]
+  | some value => simp [optionalAnnotationAdmissible, annotationAdmissible_iff]
 
-end
+/- Every proof of a per-constructor equation, in three moves: unfold the proposition to the fold
+and take the generated constructor equation; fold the mapped children back to the decision
+procedure; read the algebra's field and turn the Boolean conjunction and the `all`s over mapped
+children into the membership form the contract states. -/
+local macro "field_admission" : tactic =>
+  `(tactic| (
+    simp only [Representation.FieldAdmissible, Check.FieldAdmissible,
+      Representation.fieldAdmissible, Check.fieldAdmissible,
+      cata_representation_declaration, cata_representation_reference,
+      cata_representation_suspend, cata_representation_null, cata_representation_undefined,
+      cata_representation_void, cata_representation_never, cata_representation_unknown,
+      cata_representation_any, cata_representation_string, cata_representation_number,
+      cata_representation_boolean, cata_representation_bigint, cata_representation_symbol,
+      cata_representation_literal, cata_representation_uniqueSymbol,
+      cata_representation_objectKeyword, cata_representation_enum,
+      cata_representation_templateLiteral, cata_representation_arrays,
+      cata_representation_objects, cata_representation_union, cata_check_filter,
+      cata_check_filterGroup]
+    simp only [Representation.fieldAdmissible_fold, Check.fieldAdmissible_fold]
+    simp [fieldAdmissibleAlgebra, schemasAdmissible_iff, optionalAnnotationAdmissible_iff,
+      Annotations.fieldAdmissible_iff, Json.numbersFinite_iff, ElementOf.map,
+      PropertySignatureOf.map, IndexSignatureOf.map, CheckRepresentationAnnotationOf.map,
+      Representation.FieldAdmissible, Check.FieldAdmissible, and_assoc]))
 
 /-!
 ## The compositional specification
@@ -1198,14 +894,13 @@ theorem Representation.fieldAdmissible_declaration_iff
       Annotations.FieldAdmissible annotations ∧
       (∀ child ∈ types, Representation.FieldAdmissible child) ∧
       (∀ check ∈ checks, Check.FieldAdmissible check) := by
-  simp [Representation.FieldAdmissible, Representation.fieldAdmissibleList_forall,
-    Check.fieldAdmissibleList_forall]
+  field_admission
 
 /-- `Reference`: exactly the non-empty `$ref` clause. -/
 theorem Representation.fieldAdmissible_reference_iff (key : ReferenceKey) :
     Representation.FieldAdmissible (Representation.reference key) ↔
       key.value ≠ "" := by
-  simp [Representation.FieldAdmissible]
+  simp [Representation.FieldAdmissible, Representation.fieldAdmissible, fieldAdmissibleAlgebra]
 
 /-- `Suspend`: its `checks` are present and exactly empty. -/
 theorem Representation.fieldAdmissible_suspend_iff (annotations : Annotations)
@@ -1214,7 +909,7 @@ theorem Representation.fieldAdmissible_suspend_iff (annotations : Annotations)
         (Representation.suspend annotations checks thunk) ↔
       Annotations.FieldAdmissible annotations ∧
       checks = [] ∧ Representation.FieldAdmissible thunk := by
-  simp [Representation.FieldAdmissible]
+  field_admission
 
 /-- The `null` keyword: annotations and checks only. -/
 theorem Representation.fieldAdmissible_null_iff (annotations : Annotations)
@@ -1222,7 +917,7 @@ theorem Representation.fieldAdmissible_null_iff (annotations : Annotations)
     Representation.FieldAdmissible (Representation.null annotations checks) ↔
       Annotations.FieldAdmissible annotations ∧
       ∀ check ∈ checks, Check.FieldAdmissible check := by
-  simp [Representation.FieldAdmissible, Check.fieldAdmissibleList_forall]
+  field_admission
 
 /-- The `undefined` keyword: annotations and checks only. -/
 theorem Representation.fieldAdmissible_undefined_iff (annotations : Annotations)
@@ -1230,7 +925,7 @@ theorem Representation.fieldAdmissible_undefined_iff (annotations : Annotations)
     Representation.FieldAdmissible (Representation.undefined annotations checks) ↔
       Annotations.FieldAdmissible annotations ∧
       ∀ check ∈ checks, Check.FieldAdmissible check := by
-  simp [Representation.FieldAdmissible, Check.fieldAdmissibleList_forall]
+  field_admission
 
 /-- The `void` keyword: annotations and checks only. -/
 theorem Representation.fieldAdmissible_void_iff (annotations : Annotations)
@@ -1238,7 +933,7 @@ theorem Representation.fieldAdmissible_void_iff (annotations : Annotations)
     Representation.FieldAdmissible (Representation.void annotations checks) ↔
       Annotations.FieldAdmissible annotations ∧
       ∀ check ∈ checks, Check.FieldAdmissible check := by
-  simp [Representation.FieldAdmissible, Check.fieldAdmissibleList_forall]
+  field_admission
 
 /-- The `never` keyword: annotations and checks only. -/
 theorem Representation.fieldAdmissible_never_iff (annotations : Annotations)
@@ -1246,7 +941,7 @@ theorem Representation.fieldAdmissible_never_iff (annotations : Annotations)
     Representation.FieldAdmissible (Representation.never annotations checks) ↔
       Annotations.FieldAdmissible annotations ∧
       ∀ check ∈ checks, Check.FieldAdmissible check := by
-  simp [Representation.FieldAdmissible, Check.fieldAdmissibleList_forall]
+  field_admission
 
 /-- The `unknown` keyword: annotations and checks only. -/
 theorem Representation.fieldAdmissible_unknown_iff (annotations : Annotations)
@@ -1254,7 +949,7 @@ theorem Representation.fieldAdmissible_unknown_iff (annotations : Annotations)
     Representation.FieldAdmissible (Representation.unknown annotations checks) ↔
       Annotations.FieldAdmissible annotations ∧
       ∀ check ∈ checks, Check.FieldAdmissible check := by
-  simp [Representation.FieldAdmissible, Check.fieldAdmissibleList_forall]
+  field_admission
 
 /-- The `any` keyword: annotations and checks only. -/
 theorem Representation.fieldAdmissible_any_iff (annotations : Annotations)
@@ -1262,7 +957,7 @@ theorem Representation.fieldAdmissible_any_iff (annotations : Annotations)
     Representation.FieldAdmissible (Representation.any annotations checks) ↔
       Annotations.FieldAdmissible annotations ∧
       ∀ check ∈ checks, Check.FieldAdmissible check := by
-  simp [Representation.FieldAdmissible, Check.fieldAdmissibleList_forall]
+  field_admission
 
 /-- The `string` keyword: annotations and checks only. -/
 theorem Representation.fieldAdmissible_string_iff (annotations : Annotations)
@@ -1270,7 +965,7 @@ theorem Representation.fieldAdmissible_string_iff (annotations : Annotations)
     Representation.FieldAdmissible (Representation.string annotations checks) ↔
       Annotations.FieldAdmissible annotations ∧
       ∀ check ∈ checks, Check.FieldAdmissible check := by
-  simp [Representation.FieldAdmissible, Check.fieldAdmissibleList_forall]
+  field_admission
 
 /-- The `number` keyword: annotations and checks only. -/
 theorem Representation.fieldAdmissible_number_iff (annotations : Annotations)
@@ -1278,7 +973,7 @@ theorem Representation.fieldAdmissible_number_iff (annotations : Annotations)
     Representation.FieldAdmissible (Representation.number annotations checks) ↔
       Annotations.FieldAdmissible annotations ∧
       ∀ check ∈ checks, Check.FieldAdmissible check := by
-  simp [Representation.FieldAdmissible, Check.fieldAdmissibleList_forall]
+  field_admission
 
 /-- The `boolean` keyword: annotations and checks only. -/
 theorem Representation.fieldAdmissible_boolean_iff (annotations : Annotations)
@@ -1286,7 +981,7 @@ theorem Representation.fieldAdmissible_boolean_iff (annotations : Annotations)
     Representation.FieldAdmissible (Representation.boolean annotations checks) ↔
       Annotations.FieldAdmissible annotations ∧
       ∀ check ∈ checks, Check.FieldAdmissible check := by
-  simp [Representation.FieldAdmissible, Check.fieldAdmissibleList_forall]
+  field_admission
 
 /-- The `bigint` keyword: annotations and checks only. -/
 theorem Representation.fieldAdmissible_bigint_iff (annotations : Annotations)
@@ -1294,7 +989,7 @@ theorem Representation.fieldAdmissible_bigint_iff (annotations : Annotations)
     Representation.FieldAdmissible (Representation.bigint annotations checks) ↔
       Annotations.FieldAdmissible annotations ∧
       ∀ check ∈ checks, Check.FieldAdmissible check := by
-  simp [Representation.FieldAdmissible, Check.fieldAdmissibleList_forall]
+  field_admission
 
 /-- The `symbol` keyword: annotations and checks only. -/
 theorem Representation.fieldAdmissible_symbol_iff (annotations : Annotations)
@@ -1302,7 +997,7 @@ theorem Representation.fieldAdmissible_symbol_iff (annotations : Annotations)
     Representation.FieldAdmissible (Representation.symbol annotations checks) ↔
       Annotations.FieldAdmissible annotations ∧
       ∀ check ∈ checks, Check.FieldAdmissible check := by
-  simp [Representation.FieldAdmissible, Check.fieldAdmissibleList_forall]
+  field_admission
 
 /-- A string literal carries no value clause. -/
 theorem Representation.fieldAdmissible_literal_string_iff
@@ -1311,7 +1006,7 @@ theorem Representation.fieldAdmissible_literal_string_iff
         (Representation.literal annotations checks (LiteralValue.string value)) ↔
       Annotations.FieldAdmissible annotations ∧
       ∀ check ∈ checks, Check.FieldAdmissible check := by
-  simp [Representation.FieldAdmissible, Check.fieldAdmissibleList_forall]
+  field_admission
 
 /-- The `Literal` number leg is `Schema.Finite`; the other three legs are not
 constrained. -/
@@ -1322,7 +1017,7 @@ theorem Representation.fieldAdmissible_literal_number_iff
       Annotations.FieldAdmissible annotations ∧
       Float64.isFinite value = true ∧
       (∀ check ∈ checks, Check.FieldAdmissible check) := by
-  simp [Representation.FieldAdmissible, Check.fieldAdmissibleList_forall]
+  field_admission
 
 /--
 Finiteness enters at admission, not at the embedding.
@@ -1368,7 +1063,7 @@ theorem Representation.fieldAdmissible_literal_bigint_iff
         (Representation.literal annotations checks (LiteralValue.bigint value)) ↔
       Annotations.FieldAdmissible annotations ∧
       ∀ check ∈ checks, Check.FieldAdmissible check := by
-  simp [Representation.FieldAdmissible, Check.fieldAdmissibleList_forall]
+  field_admission
 
 /-- A boolean literal carries no value clause. -/
 theorem Representation.fieldAdmissible_literal_boolean_iff
@@ -1377,7 +1072,7 @@ theorem Representation.fieldAdmissible_literal_boolean_iff
         (Representation.literal annotations checks (LiteralValue.boolean value)) ↔
       Annotations.FieldAdmissible annotations ∧
       ∀ check ∈ checks, Check.FieldAdmissible check := by
-  simp [Representation.FieldAdmissible, Check.fieldAdmissibleList_forall]
+  field_admission
 
 /-- `UniqueSymbol`: the symbol key carries no clause. -/
 theorem Representation.fieldAdmissible_uniqueSymbol_iff (annotations : Annotations)
@@ -1386,7 +1081,7 @@ theorem Representation.fieldAdmissible_uniqueSymbol_iff (annotations : Annotatio
         (Representation.uniqueSymbol annotations checks key) ↔
       Annotations.FieldAdmissible annotations ∧
       ∀ check ∈ checks, Check.FieldAdmissible check := by
-  simp [Representation.FieldAdmissible, Check.fieldAdmissibleList_forall]
+  field_admission
 
 /-- The `object` keyword: annotations and checks only. -/
 theorem Representation.fieldAdmissible_objectKeyword_iff (annotations : Annotations)
@@ -1395,7 +1090,7 @@ theorem Representation.fieldAdmissible_objectKeyword_iff (annotations : Annotati
         (Representation.objectKeyword annotations checks) ↔
       Annotations.FieldAdmissible annotations ∧
       ∀ check ∈ checks, Check.FieldAdmissible check := by
-  simp [Representation.FieldAdmissible, Check.fieldAdmissibleList_forall]
+  field_admission
 
 /-- `Enum`: entries carry no clause at all, so aliases and non-finite values
 survive. -/
@@ -1405,7 +1100,7 @@ theorem Representation.fieldAdmissible_enum_iff (annotations : Annotations)
         (Representation.enum annotations checks entries) ↔
       Annotations.FieldAdmissible annotations ∧
       ∀ check ∈ checks, Check.FieldAdmissible check := by
-  simp [Representation.FieldAdmissible, Check.fieldAdmissibleList_forall]
+  field_admission
 
 /-- `TemplateLiteral`: every part is visited. -/
 theorem Representation.fieldAdmissible_templateLiteral_iff
@@ -1416,8 +1111,7 @@ theorem Representation.fieldAdmissible_templateLiteral_iff
       Annotations.FieldAdmissible annotations ∧
       (∀ check ∈ checks, Check.FieldAdmissible check) ∧
       (∀ part ∈ parts, Representation.FieldAdmissible part) := by
-  simp [Representation.FieldAdmissible, Representation.fieldAdmissibleList_forall,
-    Check.fieldAdmissibleList_forall]
+  field_admission
 
 /-- `Arrays`: element annotations and element types are both visited. -/
 theorem Representation.fieldAdmissible_arrays_iff (annotations : Annotations)
@@ -1431,9 +1125,7 @@ theorem Representation.fieldAdmissible_arrays_iff (annotations : Annotations)
         Annotations.FieldAdmissible element.annotations ∧
         Representation.FieldAdmissible element.type) ∧
       (∀ child ∈ rest, Representation.FieldAdmissible child) := by
-  simp [Representation.FieldAdmissible, Representation.fieldAdmissibleList_forall,
-    Check.fieldAdmissibleList_forall,
-    Representation.fieldAdmissibleElements_forall]
+  field_admission
 
 /-- `Objects`: property annotations, property types, and both index positions. -/
 theorem Representation.fieldAdmissible_objects_iff (annotations : Annotations)
@@ -1450,9 +1142,7 @@ theorem Representation.fieldAdmissible_objects_iff (annotations : Annotations)
       (∀ index ∈ indexes,
         Representation.FieldAdmissible index.parameter ∧
         Representation.FieldAdmissible index.type) := by
-  simp [Representation.FieldAdmissible, Check.fieldAdmissibleList_forall,
-    Representation.fieldAdmissibleProperties_forall,
-    Representation.fieldAdmissibleIndexes_forall]
+  field_admission
 
 /-- `Union`: every member is visited; the mode carries no clause. -/
 theorem Representation.fieldAdmissible_union_iff (annotations : Annotations)
@@ -1462,8 +1152,7 @@ theorem Representation.fieldAdmissible_union_iff (annotations : Annotations)
       Annotations.FieldAdmissible annotations ∧
       (∀ check ∈ checks, Check.FieldAdmissible check) ∧
       (∀ child ∈ types, Representation.FieldAdmissible child) := by
-  simp [Representation.FieldAdmissible, Representation.fieldAdmissibleList_forall,
-    Check.fieldAdmissibleList_forall]
+  field_admission
 
 /-- `Filter`: route 1, the referenced schemas of a required annotation. -/
 theorem Check.fieldAdmissible_filter_iff
@@ -1476,7 +1165,7 @@ theorem Check.fieldAdmissible_filter_iff
       (∀ schemas : List Representation, annotation.schemas = some schemas →
         ∀ child ∈ schemas, Representation.FieldAdmissible child) := by
   obtain ⟨_, _, _⟩ := annotation
-  simp [Check.FieldAdmissible, Representation.fieldAdmissibleSchemas_forall]
+  field_admission
 
 /-- `FilterGroup`: routes 2 and 3, the optional annotation and the check list. -/
 theorem Check.fieldAdmissible_filterGroup_iff
@@ -1492,8 +1181,7 @@ theorem Check.fieldAdmissible_filterGroup_iff
           Json.NumbersFinite value.payload ∧
           (∀ schemas : List Representation, value.schemas = some schemas →
             ∀ child ∈ schemas, Representation.FieldAdmissible child)) := by
-  simp [Check.FieldAdmissible, Check.fieldAdmissibleList_forall,
-    Check.annotationFieldAdmissible_forall]
+  field_admission
 
 /-!
 ## Documents
@@ -1598,11 +1286,11 @@ diagnostic vocabulary or scan order.
 section Witnesses
 
 attribute [local simp]
-  Annotations.FieldAdmissible Representation.FieldAdmissible
-  Representation.FieldAdmissibleList Representation.FieldAdmissibleElements
-  Representation.FieldAdmissibleProperties Representation.FieldAdmissibleIndexes
-  Representation.FieldAdmissibleSchemas Check.FieldAdmissible
-  Check.FieldAdmissibleList Check.AnnotationFieldAdmissible
+  Annotations.FieldAdmissible Annotations.fieldAdmissible_iff Json.numbersFinite_iff
+  Representation.FieldAdmissible Check.FieldAdmissible
+  Representation.fieldAdmissible Check.fieldAdmissible fieldAdmissibleAlgebra
+  schemasAdmissible annotationAdmissible optionalAnnotationAdmissible
+  ElementOf.map PropertySignatureOf.map IndexSignatureOf.map CheckRepresentationAnnotationOf.map
   Document.FieldAdmissible MultiDocument.FieldAdmissible
 
 /--
