@@ -24,6 +24,17 @@ theorem bindWith_scoped {Op : Type} {first : Src Op} {rest : TermSrc → Src Op}
     (bindWith first rest).Scoped :=
   ⟨fun env p e h => (bind_scoped _ h0 (h1 _ (var_scoped _))).holds env p e h⟩
 
+theorem bindName_scoped {Op : Type} (name : String) {first : Src Op} {rest : TermSrc → Src Op}
+    (h0 : first.Scoped) (h1 : ∀ r : TermSrc, r.Scoped → (rest r).Scoped) :
+    (bindName name first rest).Scoped :=
+  ⟨fun env p e h => (bind_scoped name h0 (h1 _ (var_scoped name))).holds env p e h⟩
+
+theorem OfNat.ofNat_scoped {n : Nat} : (OfNat.ofNat n : TermSrc).Scoped := nat_scoped n
+
+theorem ite_scoped {Op : Type} (c : Prop) [Decidable c] {t e : Src Op}
+    (ht : t.Scoped) (he : e.Scoped) : (if c then t else e).Scoped :=
+  if h : c then by rw [if_pos h]; exact ht else by rw [if_neg h]; exact he
+
 theorem flatMap_scoped {Op : Type} (answer : String) {first rest : Src Op}
     (h0 : first.Scoped) (h1 : rest.Scoped) : (flatMap answer first rest).Scoped :=
   bind_scoped answer h0 h1

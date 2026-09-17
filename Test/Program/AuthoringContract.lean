@@ -54,6 +54,68 @@ def writeThenRead : Src NativeOp :=
 #guard (elaborate writeThenRead).toOption.map (fun e => (Api.print e).map (expr house0 0))
   = some (.ok "Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Ref.set(a0, 1), (a1) => Ref.get(a0)))")
 
+/-! ## The same program via `eff` authoring macro -/
+
+/-- `eff { ... }` bracketed sequence with semicolons and implicit trailing expression. -/
+def writeThenReadEff : Src NativeOp := eff {
+  let r ← Ref.make 0;
+  Ref.set r 1;
+  Ref.get r
+}
+
+#guard elaborate writeThenReadEff = .ok writeThenReadTree
+#guard (elaborate writeThenReadEff).toOption.map Api.wellTyped = some true
+#guard (elaborate writeThenReadEff).toOption.map (fun e => (Api.runSync e 100).2)
+  = some (Exit.success (Val.nat 1))
+
+/-- `eff do ...` indented sequence with no semicolons. -/
+def writeThenReadEffDo : Src NativeOp := eff do
+  let r ← Ref.make 0
+  Ref.set r 1
+  Ref.get r
+
+#guard elaborate writeThenReadEffDo = .ok writeThenReadTree
+#guard (elaborate writeThenReadEffDo).toOption.map Api.wellTyped = some true
+#guard (elaborate writeThenReadEffDo).toOption.map (fun e => (Api.runSync e 100).2)
+  = some (Exit.success (Val.nat 1))
+
+/-- `eff` block with pure `let :=` binding and `return`. -/
+def writeThenReadWithLetAndReturn : Src NativeOp := eff {
+  let r ← Ref.make 0;
+  let val := 42;
+  Ref.set r val;
+  return val
+}
+
+#guard (elaborate writeThenReadWithLetAndReturn).toOption.map (fun e => (Api.runSync e 100).2)
+  = some (Exit.success (Val.nat 42))
+
+/-- `eff` block with wildcard `_ ←` bindings and unit return. -/
+def wildcardBindingProg : Src NativeOp := eff {
+  _ ← Ref.make 0;
+  let _ ← Ref.make 1;
+  return ()
+}
+
+#guard elaborate wildcardBindingProg =
+  elaborate (andThen (Ref.make (nat 0)) (andThen (Ref.make (nat 1)) (succeed unit)))
+
+/-- `eff` block composing conditionals and nested blocks. -/
+def conditionalBranchProg (b : Bool) : Src NativeOp := eff {
+  let r ← Ref.make 0;
+  if b then eff {
+    Ref.set r 1
+  } else eff {
+    Ref.set r 2
+  };
+  Ref.get r
+}
+
+#guard (elaborate (conditionalBranchProg true)).toOption.map (fun e => (Api.runSync e 100).2)
+  = some (Exit.success (Val.nat 1))
+#guard (elaborate (conditionalBranchProg false)).toOption.map (fun e => (Api.runSync e 100).2)
+  = some (Exit.success (Val.nat 2))
+
 /-! ## Refusals name the path and the name -/
 
 #guard elaborate (bind "r" (Ref.make (nat 0)) (Ref.get (var "q")) : Src NativeOp)
@@ -219,6 +281,15 @@ theorem tapped_scoped : Src.Scoped tapped := by
 theorem writeThenRead_scoped : Src.Scoped writeThenRead := by
   unfold writeThenRead; authoring_scoped
 
+theorem writeThenReadEff_scoped : Src.Scoped writeThenReadEff := by
+  unfold writeThenReadEff; authoring_scoped
+
+theorem writeThenReadEffDo_scoped : Src.Scoped writeThenReadEffDo := by
+  unfold writeThenReadEffDo; authoring_scoped
+
+theorem conditionalBranchProg_scoped (b : Bool) : Src.Scoped (conditionalBranchProg b) := by
+  cases b <;> unfold conditionalBranchProg <;> authoring_scoped
+
 theorem counter_scoped : LayerSrc.Scoped counter := by
   unfold counter; authoring_scoped
 
@@ -226,10 +297,17 @@ theorem rendezvous_scoped : Src.Scoped rendezvous := by
   unfold rendezvous; authoring_scoped
 
 #guard (elaborate writeThenRead).toOption.map (Eff.scopedAt 0) = some true
+#guard (elaborate writeThenReadEff).toOption.map (Eff.scopedAt 0) = some true
+#guard (elaborate writeThenReadEffDo).toOption.map (Eff.scopedAt 0) = some true
+#guard (elaborate (conditionalBranchProg true)).toOption.map (Eff.scopedAt 0) = some true
+#guard (elaborate (conditionalBranchProg false)).toOption.map (Eff.scopedAt 0) = some true
 #guard (elaborate rendezvous).toOption.map (Eff.scopedAt 0) = some true
 #guard (elaborateModule twiceByName).toOption.map (Eff.scopedAt 0) = some true
 
 #print axioms writeThenRead_scoped
+#print axioms writeThenReadEff_scoped
+#print axioms writeThenReadEffDo_scoped
+#print axioms conditionalBranchProg_scoped
 #print axioms rendezvous_scoped
 #print axioms Effect4.Program.Authoring.elaborate_scoped
 #print axioms Effect4.Program.Authoring.Node.scopedAt_child
