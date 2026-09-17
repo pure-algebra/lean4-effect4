@@ -53,6 +53,53 @@ rounds and is unfinished; the ref holds 2, not 0 and not 3. -/
 #guard (meaningB 2 pIterateRef [] Stores.empty).2.refs = [Val.nat 2]
 #guard (meaningB 8 pIterateRef [] Stores.empty).2.refs = [Val.nat 3]
 
+/-! ## A loop under every composite form of the fragment
+
+The budgeted meaning descends through a decision, a handler, a reified exit, a finalizer and
+another loop's body; at a sufficient budget each agrees with the machine, and an unfinished
+inner loop leaves the whole unfinished. -/
+
+/-- A loop in the arm a decision chooses. -/
+def pLoopUnderSelect : NativeEff :=
+  .select (.lit (.bool true)) .bool pIterateCount (.succeed (.lit (.nat 9)))
+
+/-- A loop whose body fails on the third round, caught: the handler answers 5. -/
+def pLoopCaught : NativeEff :=
+  .catchCause
+    (.iterate .nat (.lit (.nat 0)) (.lit (.bool true)) (.app "succ" (.cons (.var 0) .nil)) (.var 0)
+      (.select (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 2)) .nil))) .bool
+        (.succeed (.lit .unit)) (.fail (.lit (.nat 4)))))
+    (.succeed (.lit (.nat 5)))
+
+/-- A loop as the body of a finalizer's scope, and a loop in the finalizer. -/
+def pLoopOnExit : NativeEff := .onExit pIterateCount pIterateAnswer
+
+/-- A loop's exit as a value. -/
+def pLoopExit : NativeEff := .exit pIterateCount
+
+/-- Two rounds of an outer loop, each running the three-round inner loop. -/
+def pLoopNested : NativeEff :=
+  .iterate .nat (.lit (.nat 0)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 2)) .nil)))
+    (.app "succ" (.cons (.var 0) .nil)) (.var 0)
+    (.iterate .nat (.lit (.nat 0)) (.app "lt" (.cons (.var 1) (.cons (.lit (.nat 3)) .nil)))
+      (.app "succ" (.cons (.var 1) .nil)) (.var 1) (.succeed (.lit .unit)))
+
+#guard [pLoopUnderSelect, pLoopCaught, pLoopOnExit, pLoopExit, pLoopNested].all Looped
+#guard Looped pWhileLoop = false
+
+#guard agreesAt 4 pLoopUnderSelect
+#guard agreesAt 3 pLoopCaught
+#guard agreesAt 4 pLoopOnExit
+#guard agreesAt 4 pLoopExit
+#guard agreesAt 4 pLoopNested
+#guard (meaningB 3 pLoopCaught [] Stores.empty).1 = some (Exit.success (Val.nat 5))
+#guard (meaningB 4 pLoopNested [] Stores.empty).1 = some (Exit.success (Val.nat 2))
+-- One budget bounds every loop: the inner loop needs four rounds, so three leave the whole
+-- unfinished although the outer loop needs only three.
+#guard (meaningB 3 pLoopNested [] Stores.empty).1 = none
+#guard (meaningB 3 pLoopUnderSelect [] Stores.empty).1 = none
+#guard (meaningB 3 pLoopOnExit [] Stores.empty).1 = none
+
 /-! ## The straight fragment is `denote`, at every budget; the old loop is outside -/
 
 #guard (meaningB 0 pSucceed [] Stores.empty).1 = some (meaning pSucceed [] Stores.empty).1
@@ -70,5 +117,7 @@ rounds and is unfinished; the ref holds 2, not 0 and not 3. -/
 #guard_msgs in #print axioms denoteB_straight
 /-- info: 'Effect4.Program.Denote.denoteB_mono' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms denoteB_mono
+/-- info: 'Effect4.Program.Denote.meaningB_unique' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms meaningB_unique
 
 end Test.Program.DenoteBContract
