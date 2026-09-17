@@ -865,22 +865,23 @@ mutual
     | .hole _ => false
 end
 
-/-- A classifier pattern. A term pattern is a literal in every row; any other term is refused
+/-- A classifier pattern. A fixed term is a literal in every row; any other term is refused
 here, by name, so that a new row cannot slip a pattern past the TypeScript reader. -/
 def argPatJs : ArgPat → Except String String
-  | .term (.lit value) =>
+  | .is (.term (.lit value)) =>
     .ok (tagged "term" [("value", tagged "lit" [("value", literalJs value)])])
-  | .term _ => .error "a term pattern that is not a literal"
-  | .bool b => .ok (tagged "bool" [("value", toString b)])
-  | .mode .joinEffect => .ok (tagged "mode" [("value", lit "joinEffect")])
-  | .mode .awaitValue => .ok (tagged "mode" [("value", lit "awaitValue")])
-  | .decisionBool => .ok (tagged "decisionBool" [])
-  | .decisionOption => .ok (tagged "decisionOption" [])
+  | .is (.term _) => .error "a fixed term that is not a literal"
+  | .is (.bool b) => .ok (tagged "bool" [("value", toString b)])
+  | .is (.mode .joinEffect) => .ok (tagged "mode" [("value", lit "joinEffect")])
+  | .is (.mode .awaitValue) => .ok (tagged "mode" [("value", lit "awaitValue")])
+  | .is (.decision .bool) => .ok (tagged "decisionBool" [])
+  | .is (.decision .option) => .ok (tagged "decisionOption" [])
+  | .is (.decision (.tag _)) => .error "a fixed tag decision (the tag is a hole: use `decisionTag`)"
+  | .is .noTerm => .ok (tagged "optTermNone" [])
+  | .is .noTy => .ok (tagged "optTyNone" [])
   | .decisionTag => .ok (tagged "decisionTag" [])
-  | .optTermNone => .ok (tagged "optTermNone" [])
-  | .optTermSome => .ok (tagged "optTermSome" [])
-  | .optTyNone => .ok (tagged "optTyNone" [])
-  | .optTySome => .ok (tagged "optTySome" [])
+  | .someTerm => .ok (tagged "optTermSome" [])
+  | .someTy => .ok (tagged "optTySome" [])
   | .daemon b => .ok (tagged "daemon" [("value", toString b)])
 
 /-- The depth an argument is read at, as `Templates.argDepth` decides it: closed for an argument

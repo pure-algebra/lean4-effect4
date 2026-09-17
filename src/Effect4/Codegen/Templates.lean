@@ -39,20 +39,27 @@ open Effect4.Codegen.Template
 
 /-! ## Rows -/
 
-/-- A classifier's pattern on one argument. A pattern that determines the argument lets a reader
-supply it; the others (`decisionTag`, `optTermSome`, `optTySome`, `daemon`) say which row an
-argument selects while a hole still carries its content. -/
-inductive ArgPat where
+/-- A leaf value a classifier fixes. The argument is then no part of the image: the skeleton has
+no hole for it, the printer chose the row by it, and a reader supplies it. -/
+inductive Fixed where
   | term (t : Term)
   | bool (b : Bool)
   | mode (m : Effect4.Supervision.ObserverMode)
-  | decisionBool
-  | decisionOption
+  | decision (d : Decision)
+  | noTerm
+  | noTy
+deriving DecidableEq
+
+/-- A classifier's pattern on one argument: it FIXES the argument (`is`), or it only chooses the
+row while a hole still carries the content (the tag's string, the interruptor, the cursor's
+annotation, the options object whose `daemon` flag the head spells). The split is in the type,
+so what a reader supplies and what the printer tested cannot come apart
+(`Fixed.holds_arg`). -/
+inductive ArgPat where
+  | is (v : Fixed)
   | decisionTag
-  | optTermNone
-  | optTermSome
-  | optTyNone
-  | optTySome
+  | someTerm
+  | someTy
   | daemon (b : Bool)
 deriving DecidableEq
 
@@ -133,7 +140,7 @@ def effRows : List Row :=
   , ⟨.eff, "sync", [], .tpl (call "Effect.sync" [.arrow (h 0)])⟩
   , ⟨.eff, "bind", [], .tpl (call "Effect.flatMap" [h 0, lam (h 1)])⟩
   , ⟨.eff, "catchCause", [], .tpl (call "Effect.catchCause" [h 0, lam (h 1)])⟩
-  , ⟨.eff, "catchIf", [(0, .term (.lit (.bool true)))],
+  , ⟨.eff, "catchIf", [(0, .is (.term (.lit (.bool true))))],
       .tpl (call "Effect.catch" [h 1, lam (h 2)])⟩
   , ⟨.eff, "catchIf", [],
       .tpl (call "Effect.catchIf" [h 1, lam (h 0), lam (h 2), .ident "undefined"])⟩
@@ -144,24 +151,24 @@ def effRows : List Row :=
   , ⟨.eff, "exit", [], .tpl (call "Effect.exit" [h 0])⟩
   , ⟨.eff, "uninterruptible", [], .tpl (call "Effect.uninterruptible" [h 0])⟩
   , ⟨.eff, "interruptible", [], .tpl (call "Effect.interruptible" [h 0])⟩
-  , ⟨.eff, "select", [(1, .decisionBool)],
+  , ⟨.eff, "select", [(1, .is (.decision .bool))],
       .tpl (call "Effect.suspend" [.arrow (.cond (h 0) (h 2) (h 3))])⟩
-  , ⟨.eff, "select", [(1, .decisionOption)],
+  , ⟨.eff, "select", [(1, .is (.decision .option))],
       .tpl (call "optionCase" [h 0, .arrow (h 2), lam (h 3)])⟩
   , ⟨.eff, "select", [(1, .decisionTag)],
       .tpl (call "caseTag" [h 0, .strHole 1, lam (h 2), lam (h 3)])⟩
-  , ⟨.eff, "iterate", [(0, .optTyNone)], .tpl (iterateTpl none)⟩
-  , ⟨.eff, "iterate", [(0, .optTySome)], .tpl (iterateTpl (some 0))⟩
+  , ⟨.eff, "iterate", [(0, .is .noTy)], .tpl (iterateTpl none)⟩
+  , ⟨.eff, "iterate", [(0, .someTy)], .tpl (iterateTpl (some 0))⟩
   , ⟨.eff, "suspend", [], .tpl (call "Effect.suspend" [.arrow (h 0)])⟩
   , ⟨.eff, "yieldNow", [], .tpl (call "Effect.yieldNowWith" [.intHole 0])⟩
-  , ⟨.eff, "awaitFiber", [(1, .mode .joinEffect)], .tpl (call "Fiber.join" [h 0])⟩
-  , ⟨.eff, "awaitFiber", [(1, .mode .awaitValue)], .tpl (call "Fiber.await" [h 0])⟩
+  , ⟨.eff, "awaitFiber", [(1, .is (.mode .joinEffect))], .tpl (call "Fiber.join" [h 0])⟩
+  , ⟨.eff, "awaitFiber", [(1, .is (.mode .awaitValue))], .tpl (call "Fiber.await" [h 0])⟩
   , ⟨.eff, "scoped", [], .tpl (call "Effect.scoped" [h 0])⟩
   , ⟨.eff, "acquireRelease", [],
       .tpl (call "Effect.acquireRelease" [h 0, .lambda [0, 1] (h 1)])⟩
-  , ⟨.eff, "provideLayer", [(1, .bool true)],
+  , ⟨.eff, "provideLayer", [(1, .is (.bool true))],
       .tpl (call "Effect.provide" [h 2, h 0, .object (fieldsOf [("local", .bool true)])])⟩
-  , ⟨.eff, "provideLayer", [(1, .bool false)],
+  , ⟨.eff, "provideLayer", [(1, .is (.bool false))],
       .tpl (call "Effect.provide" [h 2, h 0])⟩
   , ⟨.eff, "service", [], .tpl (call "Effect.service" [h 0])⟩
   , ⟨.eff, "provideService", [],
@@ -180,8 +187,8 @@ def actionRows : List Row :=
             (stmtsOf [.exprStmt (call "Fiber.runIn" [h 0, h 1]), .ret (.ident "Effect.void")]) ])⟩
   , ⟨.action, "interrupt", [], .tpl (call "Fiber.interrupt" [h 0])⟩
   , ⟨.action, "interruptScoped", [], .refuse "interruptScoped"⟩
-  , ⟨.action, "interruptAll", [(1, .optTermNone)], .tpl (call "Fiber.interruptAll" [h 0])⟩
-  , ⟨.action, "interruptAll", [(1, .optTermSome)],
+  , ⟨.action, "interruptAll", [(1, .is .noTerm)], .tpl (call "Fiber.interruptAll" [h 0])⟩
+  , ⟨.action, "interruptAll", [(1, .someTerm)],
       .tpl (call "Fiber.interruptAllAs" [h 0, h 1])⟩
   , ⟨.action, "awaitAll", [], .tpl (call "Fiber.awaitAll" [h 0])⟩
   , ⟨.action, "awaitAllFailFast", [], .refuse "awaitAllFailFast"⟩
@@ -234,34 +241,57 @@ abbrev Carrier (fam : EffFam) : Type := Nat → Except PrintRefusal (Out fam)
 
 variable {Op : Type}
 
-/-- Whether an argument satisfies a pattern. Patterns look at leaf arguments only, so this holds
-at any carrier: the printer asks it of folded children, the reader of the arguments it read. -/
-def ArgPat.holds {R : EffFam → Type} : ArgPat → ArgF Op R → Bool
-  | .term t, .term t' => t' == t
-  | .bool b, .bool b' => b' == b
+/-- The argument a fixed value is. -/
+def Fixed.arg {R : EffFam → Type} : Fixed → ArgF Op R
+  | .term t => .term t
+  | .bool b => .bool b
+  | .mode m => .mode m
+  | .decision d => .decision d
+  | .noTerm => .optTerm none
+  | .noTy => .optTy none
+
+/-- Whether an argument is the fixed value. Fixed values are leaves, so this holds at any
+carrier: the printer asks it of folded children, the reader of the arguments it read. -/
+def Fixed.holds {R : EffFam → Type} : Fixed → ArgF Op R → Bool
+  | .term t, .term t' => decide (t' = t)
+  | .bool b, .bool b' => decide (b' = b)
   | .mode m, .mode m' => decide (m' = m)
-  | .decisionBool, .decision .bool => true
-  | .decisionOption, .decision .option => true
+  | .decision d, .decision d' => decide (d' = d)
+  | .noTerm, .optTerm none => true
+  | .noTy, .optTy none => true
+  | _, _ => false
+
+/-- What a reader supplies, the printer would have tested true. -/
+theorem Fixed.holds_arg {R : EffFam → Type} (v : Fixed) :
+    v.holds (v.arg (Op := Op) (R := R)) = true := by
+  cases v <;> first | rfl | exact decide_eq_true rfl
+
+/-- Whether an argument satisfies a pattern. -/
+def ArgPat.holds {R : EffFam → Type} : ArgPat → ArgF Op R → Bool
+  | .is v, a => v.holds a
   | .decisionTag, .decision (.tag _) => true
-  | .optTermNone, .optTerm none => true
-  | .optTermSome, .optTerm (some _) => true
-  | .optTyNone, .optTy none => true
-  | .optTySome, .optTy (some _) => true
-  | .daemon b, .forkOptions o => o.daemon == b
+  | .someTerm, .optTerm (some _) => true
+  | .someTy, .optTy (some _) => true
+  | .daemon b, .forkOptions o => decide (o.daemon = b)
   | _, _ => false
 
 /-- The argument a pattern determines, when it determines one: what a reader supplies for an
-argument the skeleton does not carry. The other patterns choose the row while a hole still
-carries the content, and a reader checks them against what it read (`Row.selects`). -/
+argument the skeleton does not carry. -/
 def ArgPat.supplies {R : EffFam → Type} : ArgPat → Option (ArgF Op R)
-  | .term t => some (.term t)
-  | .bool b => some (.bool b)
-  | .mode m => some (.mode m)
-  | .decisionBool => some (.decision .bool)
-  | .decisionOption => some (.decision .option)
-  | .optTermNone => some (.optTerm none)
-  | .optTyNone => some (.optTy none)
-  | .decisionTag | .optTermSome | .optTySome | .daemon _ => none
+  | .is v => some v.arg
+  | _ => none
+
+theorem ArgPat.holds_of_supplies {R : EffFam → Type} {p : ArgPat} {a : ArgF Op R}
+    (h : p.supplies = some a) : p.holds a = true := by
+  cases p with
+  | is v =>
+    simp only [ArgPat.supplies, Option.some.injEq] at h
+    subst h
+    exact v.holds_arg
+  | decisionTag => cases h
+  | someTerm => cases h
+  | someTy => cases h
+  | daemon b => cases h
 
 def Row.selects {R : EffFam → Type} (row : Row) (fam : EffFam) (ctor : String)
     (args : List (ArgF Op R)) : Bool :=
