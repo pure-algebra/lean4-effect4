@@ -190,45 +190,66 @@ from LCNF" then has a precise answer per class: D, C and P are generated from th
 and the equations, M and G from LCNF, X is the builtin table; the census tool prints the
 counts, and the owner reads a number, not a hope.
 
-## 5. The whole Effect through the same construct
+## 5. The entire Effect surface, ingested once, as types with a schema input and output
 
-Queue, PubSub and the rest of the module surface (rc.112 ships `Queue.ts` with 35 exports,
-`PubSub.ts` with 26, and `Channel`, `Stream`, `Sink`, `Schedule`, `Semaphore`, `Latch`, the
-`Tx*` variants) have no Lean representation today; `Mailbox` is v3's name for what rc.112
-calls `Queue` with `end` and `done`. The mechanism they use exists: a package is a service
-with a key, a module path, a service type code, a handle target and a `RowTable`
-(`Program/Packages.lean`; `SqliteBun` and `KeyValueStoreMemory` are the two), and a row is
-data (`Row`: name, spelling, shape, kind sync/async/program, request, answer, error,
-requires, cite, type arguments, registration), printed by its spelling, read by the
-generated row answer, typed by `effTy`, answered by the machine or the tape.
+The owner's standing requirement, restated tonight: ingest the entire Effect API surface for
+codegen and have it representable as types, where each entry "is a type with a schema input
+and output". Not one module at a time, not one model per module, and no semantics in Lean
+("they don't; we just render them as TypeScript, like we would Mailbox or EventLog").
 
-Through the medium this is one more signature import and one row table per module, with
-the host runtime as the semantics:
+**The entry.** Every export of the pinned package becomes one value of one shape:
 
-1. **The module surface as a document (R8).** `tsgo`'s API reads `Queue.ts`'s declarations
-   from the pinned package (names, type parameters, parameter and return types) into a P2
-   document; the same importer that reads the syntax table. Nothing is typed by hand.
-2. **Classification, decided per export.** A value-returning function of first-order
-   arguments is a sync row; one returning `Effect` that may suspend (`take`, `offer` on a
-   bounded queue) is an async row; one whose argument is a function (`Queue.make` with a
-   strategy is data, but `PubSub.subscribe` returns a scoped `Queue`) is a program row or a
-   form; anything higher-order beyond the forms is refused with its reason listed. The
-   classification is a fold over the surface document into `Option Row`.
-3. **No machine semantics in Lean.** The owner's ruling, same night: "they don't; we just
-   render them as TypeScript, like we would Mailbox or EventLog." A queue or pubsub row is
-   rendered as the host call its spelling names, executed by the Effect runtime, and
-   answered by the tape on replay: the external-row mechanism (`NativeOp.external`, the
-   recorder tape) the two existing packages already use. The machine's semantics of such a
-   row is the tape; Lean holds its typing (request, answer, error, requirements from the
-   surface document), its spelling, and nothing else. No store, no strategy model, no
-   coverage witnesses.
-4. **The lanes.** R0 for the printed rows under `tsgo` (a row that TypeScript refuses is a
-   surface-import defect); the recorder tape's schema for the row's answers on replay.
+```
+Entry := { module, name, typeParams : List Name,
+           input  : Schema,            -- the parameters, as one schema (a struct)
+           output : Schema,            -- the result; for an Effect: answer, error, requires
+           cite : String }             -- the declaration's location and doc comment
+```
 
-The order inside this: `Queue` first (it is what `Mailbox` became, and `Stream` and
-`Channel` are built on it), `PubSub` second, then `Semaphore` and `Latch` (small stores),
-then `Schedule` (data, no store), then `Stream`, `Sink` and `Channel`, which are the large
-ones and whose higher-order operations decide how far the forms must grow.
+A schema is a P2 document (`Representation`), with what the surface needs and the model
+already half has: type-constructor application with parameters (`Effect<A, E, R>`,
+`Queue<A, E>`, `Stream<A, E, R>`), function-typed parameters as an entry one level down
+(`input → output` again, which is what a hole under a binder is), and type parameters as
+holes filled at use sites (a schema with holes is a template, the same object as §1's
+`Build`). This is the shape Effect itself uses for everything it exposes over a boundary
+(`HttpApi` endpoints, `AiToolkit` tools, `Rpc` definitions: a payload schema and a success
+schema) and the shape of R12's tool table, so there is one entry type for the library
+surface, the tool surface and the inspection protocol, and one emitter family over it.
+
+**The mechanism, R8 pulled forward as the medium's first foreign signature.**
+
+1. **Import.** `tsgo`'s AST API reads every declaration of `vendor/effect-4.0.0-rc.112/src`
+   (the modules and `unstable/*`) into entries: names, type parameters, parameter and return
+   types, doc comments. The same importer that reads the syntax table (R2); the type nodes
+   are kinds of that table, so the type syntax is already imported data. Nothing is typed by
+   hand, and the two hand-written packages (`SqliteBun`, `KeyValueStoreMemory`) are
+   regenerated from their entries and must come out byte-identical: that is the guard.
+2. **Classify.** A fold over the entries into rows, forms and refusals: a first-order input
+   and output is a row (`Row`'s request, answer, error and requirements are projections of
+   the two schemas; sync, async or program by the output's shape); a function-typed input is
+   a form (a template with holes, the closure the owner asked holes for); anything beyond
+   the forms is refused with a listed reason. The classification is itself a document in
+   the store, and the census over it (entries, rows, forms, refusals, per module) is the
+   number that says how much of Effect a program can use.
+3. **Represent in `Ty`.** `Ty` stays the core language's projection of types and gains
+   type-constructor application, `Ty.app name args`, of which `Ty.handle target` is the
+   nullary case; the surface document supplies the constructors and their arities.
+   Assignability between foreign constructors is the host checker's verdict (O17, R0's
+   lane), external evidence by design, never re-implemented in Lean.
+4. **Render, do not model.** A row prints as the host call its spelling names, runs on the
+   Effect runtime, and is answered by the tape on replay (`NativeOp.external`, the recorder
+   tape, exactly as the two packages today). Lean holds typing, spelling and citation,
+   nothing else. The lanes: R0 for every printed row under `tsgo` (a row TypeScript refuses
+   is an import defect), the tape schema for answers on replay.
+
+**Later, a reification, and what it would cost.** rc.112's own structure (read from the
+source tonight): `Channel` is an `Effect` producing a `Pull`, `Stream` wraps a `Channel`,
+`Pull` is an `Effect` that yields an element or halts with the done value, and `Queue`
+implements `take` and `offer`. So when the owner wants "our own reification of these
+semantics", it is one store (the queue: a buffer, its strategy, parked takers and offerers,
+`end` and `done`) and one row (`pull`), with every other module's meaning derived as a
+program over them by the fold that already gives programs their meaning. That is cheap
+because everything reduces to `pull`, and it is not now.
 
 ## 6. What exists and what is missing, per host
 
@@ -242,7 +263,7 @@ ones and whose higher-order operations decide how far the forms must grow.
 | codecs | `Wire`, `Canonical` | `json.gen.ts`, `wire.gen.ts` | `eff_json.ml`, `eff_wire.ml` |
 | `run` | the machine | **missing** | the engine |
 | `print`, `read` | hand-written; R4, R5 | `read.ts` hand-written; R6 | **missing**; the template table's emitter |
-| the module surface | two packages by hand | `packages.gen.ts` projected | projected |
+| the surface as entries (input schema, output schema) | two packages by hand; the importer missing | `packages.gen.ts` projected | projected |
 | the inspection server | none | **missing**: generated Effect MCP on bun | serves the same protocol document |
 
 ## 7. The order, simple first
@@ -261,7 +282,8 @@ ones and whose higher-order operations decide how far the forms must grow.
 5. **The equation-lemma emitter** for C and P, starting with `Straight` and `effTy`, so the
    host types programs without Lean in the loop; then `explain` as its projection.
 6. **The same five emitters for the next signatures**: `InspectOp` (the MCP server on bun),
-   `Tree` and `Doc` (R2), the module surface (§5, `Queue` first).
+   `Tree` and `Doc` (R2), and the entire Effect surface as entries (§5), rows and forms
+   derived, the two packages regenerated byte-identical as the guard.
 7. **`cata_eff_fusion` and `AlgMap`** in the Lean generator, so two-stage pipelines are one
    traversal by theorem and the naturality of the compile plan (layout note §4.12) is
    statable.
@@ -295,10 +317,10 @@ equations, then `explain`? Or `print` first (which R4 makes rows anyway)? Recomm
 writes or a generator emits in the same form? Recommended: yes; no combinator library on
 top until a consumer needs one.
 
-**Q-F, the module surface's order and depth.** `Queue` first, then `PubSub`, `Semaphore`,
-`Latch`, `Schedule`, then `Stream`, `Sink`, `Channel`; refuse higher-order operations
-beyond the forms with a listed reason rather than growing the forms first? Recommended:
-that order and that rule; the refusal list is the design input for the forms' next step.
+**Q-F, refusals over the surface.** Entries whose inputs are higher-order beyond the forms
+are refused with a listed reason and the list is the design input for the forms' next
+step, rather than growing the forms before the census exists? Recommended: yes; the census
+first, then the forms grow against real numbers.
 
 **Q-G, the bun server.** The inspection server as generated Effect TypeScript over the
 `InspectOp` signature on bun, with `check` shelling to node for `tsgo` (bun cannot host the
