@@ -168,6 +168,18 @@
       ]
     },
     {
+      "Note": "The fold of the persisted schema carrier: Representation and Check together, their children under List, Option and the four one-parameter records included. A block with a composite position emits no monadic half and no foldMapAt: a foldM over a nested position needs a sequence per position type and has no consumer on this family.",
+      "Name": "SchemaFold",
+      "Tool": "tools/Effect4Gen/Fold.lean",
+      "Imports": "Effect4.Schema.Representation",
+      "Out": "src\\Effect4\\Schema\\Fold.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\schemafold.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Representation"
+      ]
+    },
+    {
       "Note": "The one-layer view of the program family, from the constructor declarations: an argument by sort (ArgF), a generic layer function as an EffAlgebra (ofLayer), the argument sorts and constructor names, and build with one rfl equation per constructor. What a table-driven printer and reader stand on (R4.2).",
       "Name": "LayerView",
       "Tool": "tools/Effect4Gen/LayerView.lean",
