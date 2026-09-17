@@ -80,6 +80,50 @@ whose inverse is the signature's `spell`, law `LawfulSpelling`). `Stmts` under `
 hand-written in the first cut and becomes a second table over `TypeScript.Stmt` when it is the
 largest thing left.
 
+## 3b. How the table is run: a fold of one layer function (probed 2026-09-17, evening)
+
+**R4.1 is landed** (`a008cd97`): `src/Effect4/Codegen/Template.lean` (the calculus: 18 expression
+formers, the four loop statements, five sorts of hole), `src/Effect4/Laws/Codegen/Template.lean`
+(`match_inst`, `match_keys`, `inst_of_match`, all at `[propext, Quot.sound]`),
+`Test/Codegen/TemplateContract.lean` (the printer's own shapes as skeletons, every sort of hole
+round-tripped, six red controls).
+
+The architecture for R4.2 to R5.1 is probed in `docs/research/2026-09-17-template-table-probe.lean`
+(imports only the landed calculus; every guard green). It starts from what the algebra gives:
+
+1. **What a generator emits from the inductive** (a new group beside `NodeLenses`, nothing
+   hand-listed): the one-layer view `ArgF R` (a constructor's arguments by sort, children at a
+   carrier `R`), `sorts : ctor → List Sort`, the inverse `build : ctor → List (ArgF (Eff Op)) →
+   Option (Eff Op)`, and an algebra former that turns ONE generic layer function
+   `ctor → List (ArgF R) → R` into an `EffAlgebra`, so that `cata_eff` (already generated) does the
+   recursion. The law `build` owes is `build (layer e) = some e`, by cases, `rfl` per constructor.
+2. **The table is first-order Lean data**: a row is `ctor`, `fixed` (the classifier: arguments the
+   row fixes, which do not occur in the skeleton and which the reader supplies, e.g. `catchIf`'s
+   `test = true` for `Effect.catch`), `depth` (per argument, the binders it is printed under:
+   `Node.childLevel`'s column), and `tpl`. **Hole `i` is the constructor's argument `i`**, so a row
+   needs no separate hole map. Order matters only where rows share a head (the conditional before
+   the plain suspension; a fixed-argument row before its general row).
+3. **The printer is `cata` of one generic function** (`printLayer`): find the first row for the
+   constructor whose fixed arguments hold, print each argument by its sort at `n + depth` (a child
+   is its folded printer applied at that depth; a leaf goes through its hand printer), `inst`.
+   Carrier: `Nat → Except PrintRefusal Expr`. Structural recursion is the generated fold's; the
+   printer itself has no recursion and no per-constructor arm.
+4. **The reader is one generic step** (`readLayer`): the first row whose skeleton matches, its
+   holes read by sort, children returned as seeds `(depth, expression)`; `readT` iterates it and
+   `build`s. The probe iterates on fuel; the module should recurse on the expression's size, which
+   needs one more lemma over skeletons (`matchT n t e = some σ` with `t` not a bare hole puts
+   only proper sub-expressions in `σ`), in the shape of `match_keys`.
+5. **The probe shows, by guard:** binders named from the depth the table gives; the `catch` /
+   `catchIf` classifier in both directions; the `Effect.suspend` group read correctly by row
+   order; a string hole; and the domain of exactness (the general row's image at the fixed test
+   reads back to a program that prints as the OTHER row, which is why `readable` stays).
+
+Not yet proved, and what R5.2 consists of: (a) the chosen row matches its own instance
+(`match_inst`, landed); (b) no EARLIER row matches that image (heads rigid and distinct, decided
+over the table once; the shared-head group by the top former of a printed child, which is
+never `cond` nor a block arrow: `inst` keeps a skeleton's top former); (c) `readArgs` over
+`along σ (holes tpl)` gives back the layer's arguments; (d) the measure.
+
 ## 4. Order, each step gated and committed before the next
 
 1. **R4.1** `Template.lean`: the calculus of §2 with `match_inst` and the converse (both proved in
