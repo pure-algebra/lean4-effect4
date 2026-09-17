@@ -17,6 +17,7 @@ import Effect4.Laws.Program.DenoteB
 import Effect4.Laws.Program.LoopAgreement
 import Effect4.Laws.Program.MeaningSound
 import Effect4.Laws.Program.LoopSound
+import Effect4.Laws.Program.TypedRun
 import Effect4.Laws.Program.Agreement
 import Effect4.Laws.Program.Agreement.Machine
 import Effect4.Laws.Program.Sched

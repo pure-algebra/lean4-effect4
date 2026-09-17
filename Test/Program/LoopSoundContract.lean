@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.LoopSound
+import Effect4.Laws.Program.TypedRun
 import Test.Program.DenoteBContract
 
 /-!
@@ -62,5 +63,18 @@ def typedLoops : List NativeEff :=
 #guard_msgs in #print axioms meaningB_typed
 /-- info: 'Effect4.Program.Denote.meaningB_stores' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms meaningB_stores
+
+/-! ## On the certificate a caller holds -/
+
+-- The whole-program checker and `effTy` agree on every fragment program of this battery.
+#guard (typedLoops ++ [pLoopOnExit, pIterateBadResult]).all fun e =>
+  Api.typeOf e == effTy nativeSignature [] e
+
+/-- info: 'Effect4.Program.Denote.typeOfProgram_looped' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms typeOfProgram_looped
+/-- info: 'Effect4.Program.Denote.TypedProgram.run_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms TypedProgram.run_sound
+/-- info: 'Effect4.Program.Denote.TypedProgram.run_sound_of_agreement' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms TypedProgram.run_sound_of_agreement
 
 end Test.Program.LoopSoundContract
