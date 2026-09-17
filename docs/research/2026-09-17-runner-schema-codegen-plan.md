@@ -1,4 +1,4 @@
-# The player, the schema layer and the one codegen API: a plan
+# The runner, the schema layer and the one codegen API: a plan
 
 2026-09-17, written against `f93b3040`. It follows the owner's direction of the same day:
 an engine instance is a way to play Eff programs; the same API on WASM as on OCaml;
@@ -10,7 +10,7 @@ its item A with something smaller and better, and gives items B, C and F a home.
 
 ## 1. What is settled
 
-1. **An instance is a player.** It takes a program's canonical bytes and a tape and answers
+1. **An instance is a runner.** It takes a program's canonical bytes and a tape and answers
    canonical bytes. Replay is deterministic, so tapes under concatenation act on machines and
    every instance is the same action (on the accepted prefix: a stuck machine absorbs, and
    fuel belongs to the job, never to the instance).
@@ -74,9 +74,9 @@ Three primitives have no row: `Char.ofNatAux`, `ByteArray.emptyWithCapacity`,
 Programs are hundreds of bytes, so correctness first; a `Bytes` carrier (an OCaml `string`
 behind the same operations) is one more row in the carrier table when a benchmark asks.
 
-## 4. The player
+## 4. The runner
 
-The player is `Effect4.Api.HostSession` with a bytes boundary. Its whole surface:
+The runner is `Effect4.Api.HostSession` with a bytes boundary. Its whole surface:
 
 | function | input | output |
 | --- | --- | --- |
@@ -86,35 +86,83 @@ The player is `Effect4.Api.HostSession` with a bytes boundary. Its whole surface
 | `inspect` | nothing | the run, as bytes under its schema |
 | `schemaOf` | a boundary name | the `ShapeDoc` of that boundary, as bytes |
 
-`schemaOf` is what makes it self-describing: a host or an agent asks the player what shape
+`schemaOf` is what makes it self-describing: a host or an agent asks the runner what shape
 `inspect` answers in and gets a schema, itself content. The MCP tools of R12 (start, step,
 reply, inspect, trace, blame) are these functions with JSON printed by `ShapeDoc.print`.
 
-Inside a player the carriers are private. The list carriers are Lean's own definitions, so a
-player with **zero extern rows** is correct by construction on every target; fast carriers are
+Inside a runner the carriers are private. The list carriers are Lean's own definitions, so a
+runner with **zero extern rows** is correct by construction on every target; fast carriers are
 a per-target optimisation checked against it by byte equality of `inspect`.
 
 The differential across targets is then one rule: same bytes in, same bytes out.
 
-**Landed (2026-09-17): the typed session API and its algebra.** `src/Effect4/Api/Player.lean`
-and `src/Effect4/Laws/Api/Player.lean`, over `HostSession`'s checked transitions and adding no
-semantics. `Command` is a journal row (`bind`, `submit`, `apply`, `control`); `Player` packs
-the program, the table, the session they index and the job's step fuel; `step : Player →
-Command → Player × Phase` is total; `replay` folds it and keeps every phase; `inspect`,
+**Landed (2026-09-17): the typed session API and its algebra.** `src/Effect4/Api/Runner.lean`
+and `src/Effect4/Laws/Api/Runner.lean`, over `HostSession`'s checked transitions and adding no
+semantics. `Command` is a journal row (`bind`, `submit`, `apply`, `control`); `Runner` packs
+the program, the table, the session they index and the job's step fuel; `step : Runner →
+Command → Runner × Phase` is total; `replay` folds it and keeps every phase; `inspect`,
 `observe` and `outstanding` are the reads. Laws, all at `[propext, Quot.sound]`:
-`step_refused` (a refused row leaves the player unchanged, from one lemma per transition),
+`step_refused` (a refused row leaves the runner unchanged, from one lemma per transition),
 `replay_append` (journals act), the monoid of plays with `replayPlay` a homomorphism into it,
 `replay_unique` (journals are the free monoid, so `replay` is the only such map),
 `behaviour_cons` (behaviour unfolds along `step`, the map into the final Mealy machine), and
 `replay_skip_refused` with `behaviour_skip_refused`: a refused row is the unit, so a journal
 has a normal form without refused rows, which is what a compaction may keep. Contract:
-`Test/Api/PlayerContract.lean` plays the two-call scenario as one journal. At this level the
+`Test/Api/RunnerContract.lean` plays the two-call scenario as one journal. At this level the
 stuck caveat of §1 disappears: `step` is total and a refusal is a row like any other.
 
-Still owed for the table above: the bytes boundary. `Command`, `Phase`, `Refusal`, `Header`,
-`Call`, `Reply`, `NativeDecision`, `Completion` and `Api.Run` need `Canonical` instances from
-the generator (the `Api` group derives four types today), then `stepBytes`, `inspectBytes` and
-`schemaOf` are one line each, and the player joins the LCNF roots.
+**Landed (2026-09-17): the bytes boundary.** (The module was named `Player` until the owner
+renamed it `Runner` this day; the repository's prose already said "this runner".) Two generator
+groups and one hand instance, on branch `player/bytes-boundary`:
+
+* Group `Value` (`src/Effect4/Store/Derived/Value.lean`): `Val`, `Kind`, `Shape` and
+  `ShapeDoc` written as content. A schema now crosses a boundary as canonical bytes, and the
+  schema of schemas accepts itself (a guard). This is also §3's input: these are the
+  declarations the OCaml schema AST compiles from.
+* **A value inside a row travels as its description.** `Store/Shape.lean` proves a shape
+  accepts no live handle, so `Canonical Val` cannot be the identity: `fits` would fail on a
+  handle. The instance is the generated sum over `Val`'s own constructors, as `Json`'s is. A
+  described handle is two numbers and is never a handle in content. Cost: a value's bytes
+  inside a row are larger than its own frame. The refinement is a row-typed shape (`Ty` to
+  `Shape`), which replaces the generic `Value` schema per row and is not built.
+* `src/Effect4/Store/AnnotationsCanonical.lean`: `ReasonAnnotations` has a proof field, which
+  the generator cannot carry. The instance reuses the machine's `Value.annotations` image, so
+  reading decides the key condition again and refuses a duplicate key.
+* Group `Runner` (`src/Effect4/Api/RunnerDerived.lean`): nineteen types, among them `Command`,
+  `Phase`, `Refusal`, `Header`, `Call`, `Reply`, the decision alphabet, `Completion`, `Exit`,
+  `Cause`, `HostProtocol.State` and `Api.Outcome`. Every applied carrier is listed before the
+  type that holds it.
+* `src/Effect4/Api/RunnerBytes.lean`: `commandBytes`/`commandOf`, `stepRow`/`stepBytes`,
+  `replayRows`/`replayBytes`, `observeBytes`, `outstandingBytes`, and `schemas`/`schemaOf`/
+  `schemaBytes` (eight named schemas). A row that is not a command has the verdict `none` and
+  leaves the runner alone; it is not a session refusal, because the session saw no command.
+* Laws (`src/Effect4/Laws/Api/RunnerBytes.lean`, all `[propext, Quot.sound]`):
+  `commandOf_exact` and `row_unique` (one command, one row), `stepRow_command`,
+  `stepRow_unreadable`, `replayRows_append` (rows act as commands do), `replayRows_eq_replay`
+  (a journal whose rows all read replays as `Runner.replay` of the commands, so every law
+  above holds at the boundary) and `replayRows_commandBytes`. The forward direction carries
+  `Val.WF` (every payload under `2^64` bytes), as `Canonical.decode_encode` does.
+
+Not built: `Api.Run` holds the whole machine and has no instance (the machine codec is item C
+of the engine note), so there is no `inspectBytes`; a holder reads `observeBytes` and
+`outstandingBytes`. The runner is not yet among the LCNF roots.
+
+**Melded with S1 (stable wire tags), 2026-09-17.** The agent's S1 (`a9c0d913`), its rewrite
+record and the `branch` retirement are merged into this branch. Both groups regenerate through
+the tag-reading generator, and the merged tree builds with every law of this note unchanged.
+Two facts from the merge:
+
+* **The families are not listed in `tools/Effect4Gen/wire-tags.json` yet, on purpose.** The
+  compatibility gate refuses a listed family that is not in the baseline's reflected world, so
+  listing them freezes the journal's byte format. The questions below are still open, so that
+  is premature. An unlisted family carries its declaration positions; regenerating with and
+  without the listing gave byte-identical files. **Owed when the boundary is ratified:** list
+  the seventeen sum families of the two groups, add them to the compatibility snapshot, and
+  name that in the policy, in one step. From then on a journal written today reads forever.
+* **The derived types are named in the compatibility policy** as 23 consumer additions
+  (`Test/fixtures/baseline/66ee4657-supplement-v1.policy.json`). That records that these types
+  have derived codecs; it freezes no tag. The policy file calls a change to it a review event,
+  so it is flagged for the owner.
 
 **To settle when the bytes boundary is designed** (raised while reading the landed API with
 the owner, 2026-09-17; none blocks anything built so far):
@@ -124,9 +172,9 @@ the owner, 2026-09-17; none blocks anything built so far):
    be an address (a reference to the table's node), so the check compares two addresses. This
    needs the store's `get`, so it waits for §6.
 2. **`Phase` is a verdict, and the name says stage.** `bound`, `preflight`, `applied`,
-   `progressed`, `frontier`, `refused why`. The player API may rename it (`Verdict`) at the
+   `progressed`, `frontier`, `refused why`. The runner API may rename it (`Verdict`) at the
    boundary and keep `HostSession`'s name inside.
-3. **`frontier` is the one phase with no law.** A refused row leaves the player unchanged; a
+3. **`frontier` is the one phase with no law.** A refused row leaves the runner unchanged; a
    `frontier` row moved the machine and did not consume the call, and the holder plays the same
    row again or the job gets more fuel. What a journal records for that (the same row twice,
    or one row with the fuel it took) is a journal-format decision, and it decides whether two
@@ -136,32 +184,32 @@ the owner, 2026-09-17; none blocks anything built so far):
    table). That is what makes a row in the wrong journal a refusal and not a state change; the
    journal format should keep rows self-describing for the same reason.
 
-## 4b. The holder: what keeps a player running (owner, same day)
+## 4b. The holder: what keeps a runner running (owner, same day)
 
-A player is pure, so something must hold it: keep its events, answer its parks, expose it.
+A runner is pure, so something must hold it: keep its events, answer its parks, expose it.
 The owner's direction: an event construct, Eio or similar on OCaml, an event source holding
-the WASM player, built from Effect's own types (its event log for persistence), everything
-under a schema, a state machine, MCP on top. That is event sourcing with the player as the
+the WASM runner, built from Effect's own types (its event log for persistence), everything
+under a schema, a state machine, MCP on top. That is event sourcing with the runner as the
 reducer, and the pieces exist on both sides.
 
-**One shape on every host: journal, player, reactor.**
+**One shape on every host: journal, runner, reactor.**
 
 | part | what it does | OCaml | TypeScript or WASM host |
 | --- | --- | --- | --- |
 | journal | append-only rows per job: `(kind, index, canonical bytes)`; read from an index; subscribe | `cas/e4_wal` (rows are already opaque canonical bytes plus a kind byte) | rc.112 `EventJournal` (`unstable/eventlog`): `write { event, primaryKey, payload: Uint8Array, effect }`, `entries`, `changes`; layers for memory, IndexedDB and SQL |
-| player | `state' = step state decision`, pure | generated | generated TypeScript, or the WASM module |
+| runner | `state' = step state decision`, pure | generated | generated TypeScript, or the WASM module |
 | reactor | turns the world into decisions: timers, I/O, external rows, an agent's reply | Eio fibers and streams (the Lean models are in `OCaml5/Lib/Eio`), inside one owner domain per machine as `e4_sched` requires | Effect fibers, `Schedule`, `PubSub`; the journal's `changes` is the subscription |
 
 **The one rule: journal first.** A decision is appended before it is applied. State is the fold
-of the player over the journal, recovery is replay, and the reactor can be anything because
+of the runner over the journal, recovery is replay, and the reactor can be anything because
 replay never calls it. `EventJournal.write` has this shape already: it takes the payload and
-the `effect` to run on the committed entry, so "commit, then step the player" is one call.
+the `effect` to run on the committed entry, so "commit, then step the runner" is one call.
 
 **Events are schemas.** An rc.112 `Event` is `{ tag, primaryKey, payload: Schema, success:
 Schema, error: Schema }`. The decision alphabet maps onto it directly: one `Event` per
 decision constructor, `primaryKey` the job, `payload` the decision's schema (printed from its
 `ShapeDoc` by the schema printer, R7), `success` the observation's schema, `error` the
-refusal's. An `EventGroup` of them is a typed client for a player, and it is also exactly the
+refusal's. An `EventGroup` of them is a typed client for a runner, and it is also exactly the
 MCP tool list (R12): one tool per event, arguments and results under the same schemas.
 
 **The state machine** is the session's, already in Lean: `HostSession.Phase` with refusal as a
@@ -240,9 +288,9 @@ Questions the store API must answer before it is built:
 
 1. Is the API the Lean `Store.Store` compiled through the same pipeline, with the OCaml pack
    as its carrier? (Recommended: yes; it is the carrier pattern again.)
-2. What does a player see of it: `get : address → bytes` and `put : bytes → address` only, or
+2. What does a runner see of it: `get : address → bytes` and `put : bytes → address` only, or
    typed `Ref α` with the schema check at the boundary?
-3. Who owns roots when there is one authority and several players?
+3. Who owns roots when there is one authority and several runners?
 4. Are checkpoints content (a generated codec for `RunMachine`, item C) or only tape positions?
 5. What is the retention rule for the log against the trace?
 
@@ -254,15 +302,15 @@ Questions the store API must answer before it is built:
 2. **Schema AST out.** Add the `Val`, `Shape` and `ShapeDoc` roots; check the compiled
    `Val.encode`/`decode` against `eff_frame.ml` on every golden, then make the hand kernel the
    carrier behind it or delete it; replace `e4_shape.ml`'s table with the shape walk.
-3. **The player.** `HostSession` roots with the bytes boundary and `schemaOf`; zero extern
+3. **The runner.** `HostSession` roots with the bytes boundary and `schemaOf`; zero extern
    rows first, byte-equal to `Fast` and `Ref` on the differential corpus.
 4. **The neutral core.** Split `Translate.lean` into lowering and OCaml printing over
    `Target.Expr` extended; output byte-identical to today's. No new target yet.
 5. **TypeScript printer** over the same core (`lean4-typescript` has the syntax and the
-   renderer); the player in TypeScript, byte-equal on the corpus.
-6. **WASM** by `wasm_of_ocaml` on the OCaml player first (31-bit profile); a direct Wasm GC
+   renderer); the runner in TypeScript, byte-equal on the corpus.
+6. **WASM** by `wasm_of_ocaml` on the OCaml runner first (31-bit profile); a direct Wasm GC
    printer only if a reason appears.
-7. **The holder** (§4b): journal, player, reactor, journal first; on OCaml over `e4_wal` with Eio, on the TypeScript host over rc.112 `EventJournal`, which also holds the WASM player.
+7. **The holder** (§4b): journal, runner, reactor, journal first; on OCaml over `e4_wal` with Eio, on the TypeScript host over rc.112 `EventJournal`, which also holds the WASM runner.
 8. **MCP driver**: the event group of the decision alphabet as the tool list (R12).
 
 Steps 1 to 3 need no new API and remove hand code at each step. Step 4 is the API. Steps 5

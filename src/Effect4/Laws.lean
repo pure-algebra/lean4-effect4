@@ -14,6 +14,11 @@ import Effect4.Laws.Machine.Witnesses
 import Effect4.Laws.Program.Denote
 import Effect4.Laws.Program.Iter
 import Effect4.Laws.Program.DenoteB
+import Effect4.Laws.Program.LoopAgreement
+import Effect4.Laws.Program.MeaningSound
+import Effect4.Laws.Program.LoopSound
+import Effect4.Laws.Program.TypedRun
+import Effect4.Laws.Program.Agreement.Loop
 import Effect4.Laws.Program.Agreement
 import Effect4.Laws.Program.Agreement.Machine
 import Effect4.Laws.Program.Sched
@@ -27,7 +32,8 @@ import Effect4.Laws.Program.Residual
 import Effect4.Laws.Program.Decision
 import Effect4.Laws.Program.HostBoundary
 import Effect4.Laws.Api.HostSession
-import Effect4.Laws.Api.Player
+import Effect4.Laws.Api.Runner
+import Effect4.Laws.Api.RunnerBytes
 import Effect4.Laws.Api.Frontier
 import Effect4.Laws.Api.Fuel
 import Effect4.Laws.Api.Guard

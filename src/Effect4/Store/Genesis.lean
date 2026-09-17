@@ -50,13 +50,4 @@ theorem metaSchema_fits : (shape Document).accepts (toVal metaSchema) = true := 
 
 /-! ## Receipts -/
 
-#print axioms instContentDocument
-#print axioms kind_document
-#print axioms nodeOf_metaSchema'
-#print axioms nodeOf_document'
-#print axioms metaSchema_fits
-#print axioms specOf_document
-#print axioms address_eq_or_collision
-#print axioms address_inj
-
 end Effect4.Store

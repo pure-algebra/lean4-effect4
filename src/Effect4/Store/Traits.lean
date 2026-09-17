@@ -352,33 +352,4 @@ def traitStore : Store :=
 
 /-! ## Receipts -/
 
-#print axioms Annotation.prevToVal
-#print axioms Annotation.prevOfVal
-#print axioms Annotation.prevOfVal_prevToVal
-#print axioms Annotation.prevOfVal_exact
-#print axioms Annotation.shapeDoc
-#print axioms Annotation.toVal
-#print axioms Annotation.ofVal
-#print axioms Annotation.ofVal_toVal
-#print axioms Annotation.ofVal_exact
-#print axioms Annotation.fits
-#print axioms instCanonicalAnnotation
-#print axioms instContentAnnotation
-#print axioms Node.subjectOf
-#print axioms Node.prevOf
-#print axioms Store.annotationsOf
-#print axioms Store.superseded
-#print axioms Store.traitsOf
-#print axioms Store.headsUnder
-#print axioms Store.effective
-#print axioms nodeBytes_trait_free
-#print axioms trait_put_preserves
-#print axioms trait_get_preserves
-#print axioms effective_deterministic
-#print axioms superseded_perm
-#print axioms annotationsOf_perm
-#print axioms traitsOf_perm
-#print axioms headsUnder_perm
-#print axioms traitStore
-
 end Effect4.Store

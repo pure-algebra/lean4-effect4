@@ -571,40 +571,4 @@ theorem decodeString_toUTF8 (s : String) : decodeString s.toUTF8.data.toList = s
 
 /-! ## Receipts -/
 
-#print axioms utf8Bytes
-#print axioms utf8Bytes_cons
-#print axioms utf8Encode_data_toList
-#print axioms char_valid
-#print axioms toNat_ofNat_valid
-#print axioms encodeChar_one
-#print axioms encodeChar_two
-#print axioms encodeChar_three
-#print axioms encodeChar_four
-#print axioms contBits
-#print axioms contBits_eq_some
-#print axioms contBits_of_range
-#print axioms utf8Chars
-#print axioms utf8Chars_nil
-#print axioms utf8Chars_one
-#print axioms utf8Chars_two
-#print axioms utf8Chars_three
-#print axioms utf8Chars_four
-#print axioms utf8Chars_encodeChar
-#print axioms utf8Chars_utf8Bytes
-#print axioms length_utf8EncodeChar_pos
-#print axioms length_le_utf8Bytes
-#print axioms utf8Chars_complete
-#print axioms utf8Chars_complete'
-#print axioms bytes_one
-#print axioms bytes_two
-#print axioms bytes_three
-#print axioms bytes_four
-#print axioms utf8Chars_sound
-#print axioms utf8Chars_sound'
-#print axioms toByteArray_eq_utf8Encode
-#print axioms decodeString
-#print axioms decodeString_exact
-#print axioms decodeString_encode
-#print axioms decodeString_toUTF8
-
 end Effect4.Store

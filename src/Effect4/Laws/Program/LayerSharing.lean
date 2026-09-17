@@ -50,7 +50,6 @@ theorem memoize_hit (root : NativeEff) (q : Point) (map : MemoMapId) (scope : Na
         (EffName.awaitPromise entry.deferred) :=
   Effect4.Program.Agreement.contAOf_memoize_hit (root := root) q map scope entry.deferred owner
 
-
 /-- The store hit and the continuation agree on the stored deferred and owner. -/
 theorem memoGet_memoize_hit (root : NativeEff) (s : Stores) (q : Point)
     (map : MemoMapId) (scope : Nat) (entry : MemoEntry) (owner : MemoMapId)
@@ -296,23 +295,4 @@ theorem fresh_never_shares (inside : List MemoMapId) (s fresh after : Stores)
       exact hdisjoint m facts.1
     exact (result.2 id hout).trans hm
 
-#print axioms lookup_parentless
-#print axioms get_parentless
-#print axioms mapAt_setMap_other
-#print axioms memoize_hit
-#print axioms memoGet_memoize_hit
-#print axioms fresh_forks_without_parent
-#print axioms lookup_owner_inside
-#print axioms mapAt_updateEntry_other
-#print axioms mapAt_insertEntry_other
-#print axioms mapAt_deleteEntry_other
-#print axioms isolated_setMap
-#print axioms isolated_updateEntry
-#print axioms isolated_insertEntry
-#print axioms isolated_deleteEntry
-#print axioms isolated_append
-#print axioms mapAt_append_other
-#print axioms local_step
-#print axioms localSteps_frame
-#print axioms fresh_never_shares
 end Effect4.Program.LayerSharing

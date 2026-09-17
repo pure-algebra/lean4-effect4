@@ -58,7 +58,4 @@ theorem guard_persists_single_tape {f : Guard.NFiber}
     (fun entry member => ⟨(Guard.SingleGuard.noCancel_iff entry.2).mpr (noCancel entry member),
       other entry member⟩)
 
-#print axioms guard_persists
-#print axioms guard_persists_single
-#print axioms guard_persists_single_tape
 end Effect4.Api

@@ -65,13 +65,16 @@ import Test.Program.WeakenContract
 import Test.Program.AuthoringContract
 import Test.Program.DenoteContract
 import Test.Program.DenoteBContract
+import Test.Program.MeaningSoundContract
+import Test.Program.LoopSoundContract
+import Test.Program.LoopAgreementContract
 import Test.Program.AgreementContract
 import Test.Program.ProgressContract
 import Test.Program.InvocationContract
 import Test.Program.HostSpecContract
 import Test.Program.HostBoundaryContract
 import Test.Api.HostSessionContract
-import Test.Api.PlayerContract
+import Test.Api.RunnerContract
 import Test.Api.KeyedHostContract
 import Test.Program.SchedContract
 import Test.Program.DenoteRContract

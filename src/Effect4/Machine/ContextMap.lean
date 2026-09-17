@@ -296,12 +296,6 @@ def getOrElse (refs : References U) (self : Context U) (key : ServiceKey)
     (orElse : ServiceKey.Carrier U key) : ServiceKey.Carrier U key :=
   (getOption refs self key).getD orElse
 
-/-- `Context.get`/`getUnsafe` (`Context.ts:1480`) as a partial read: `none` is the thrown
-"service not found" of a missing non-reference key. -/
-def getUnsafe? (refs : References U) (self : Context U) (key : ServiceKey) :
-    Option (ServiceKey.Carrier U key) :=
-  getOption refs self key
-
 theorem getOption_of_get? (refs : References U) (self : Context U) (key : ServiceKey)
     (value : ServiceKey.Carrier U key) (h : self.get? key = some value) :
     getOption refs self key = some value := by

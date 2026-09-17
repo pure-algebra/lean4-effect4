@@ -347,13 +347,6 @@ private theorem skipPop_prefix (frame : Prim ν σ β ε δ ι α)
   cases flag : result.fiber.interrupted <;> cases answer : result.answer <;>
     simp [skipPop, prefixPop, flag, answer, List.append_assoc]
 
-private theorem with_same_stack (fiber : FrameFiber ν σ β ε δ ι α)
-    (stack : List (Prim ν σ β ε δ ι α)) (same : fiber.stack = stack) :
-    { fiber with stack := stack } = fiber := by
-  cases fiber
-  cases same
-  rfl
-
 private theorem popLive_stack_while_aux (demand : Arm) :
     forall (fuel : Nat) (stack : List (Prim ν σ β ε δ ι α))
       (fiber : FrameFiber ν σ β ε δ ι α),

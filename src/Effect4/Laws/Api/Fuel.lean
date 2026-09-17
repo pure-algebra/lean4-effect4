@@ -25,5 +25,4 @@ theorem finished_mono_fuel (p : Api.Program) (f f' : Nat)
   unfold Api.replay
   rw [replay_stable (interpOf p table) f tape (Api.load p cf answers) hs k]
 
-#print axioms finished_mono_fuel
 end Effect4.Api

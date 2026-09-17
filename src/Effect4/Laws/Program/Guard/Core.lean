@@ -51,13 +51,6 @@ def Interrupted (f : NFiber) : Prop :=
 def InterruptedAt (m : NativeMachine) (fiber : FiberId) : Prop :=
   ∃ f, m.fiber? fiber = some f ∧ Interrupted f
 
-/-- The exact one-step conclusion, with interruption read after the step. -/
-def GuardPersistsAt (p : NativeEff) (table : RowTable) (m : NativeMachine)
-    (fiber : FiberId) (token : Nat) (request : NativeOp × Val)
-    (fuel : Nat) (d : NativeDecision) : Prop :=
-  requestOf (steppedBy p fuel table m d) fiber token = some request ∨
-    InterruptedAt (steppedBy p fuel table m d) fiber
-
 /-- Both guard laws exclude exactly the answer addressed to this key. -/
 def NotKeyAnswer (fiber : FiberId) (token : Nat) (d : NativeDecision) : Prop :=
   ∀ answer, d ≠ .answerAsync fiber token answer

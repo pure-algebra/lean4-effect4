@@ -54,8 +54,4 @@ def Json.ofNat (n : Nat) : Json := .number ⟨binary64OfNat n⟩
 
 /-! ## Receipts -/
 
-#print axioms highestBit
-#print axioms binary64OfNat
-#print axioms Json.ofNat
-
 end Effect4.Arch

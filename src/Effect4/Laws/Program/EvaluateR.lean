@@ -146,8 +146,6 @@ def saveAnswerR (f : RFiber) (next : ExitV → RProgram) : RFiber := pushR f (.a
 def answerR (f : RFiber) (code : RProgram) : RFiber :=
   { f with frame := { f.frame with current := code } }
 
-def answerValueR (f : RFiber) (value : Val) : RFiber := answerR f (.pure (.success value))
-
 /-- How the term installs a value answer: the operation's continuation applied to it. -/
 def answerWith (next : Val → RProgram) :
     FiberAction.Answer EffName EffThunk Val Err Defect FiberId Ann Ctx RProgram RSaved :=

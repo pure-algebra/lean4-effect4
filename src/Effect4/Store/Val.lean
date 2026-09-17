@@ -125,11 +125,6 @@ theorem bytes_distinct : (codes.map Code.byte).Nodup := by decide
 
 def all : List (String × UInt8) := codes.map fun code => (code.spelling, code.byte)
 
-#print axioms mem_codes
-#print axioms ofByte_byte
-#print axioms byte_injective
-#print axioms bytes_distinct
-
 end Tag
 
 /-- The tag is the first byte of every frame. -/
@@ -298,11 +293,6 @@ def children : Val → List Val
   | .some a => [a]
   | .ctor _ args => args
   | _ => []
-
-/-- Whether a tree is a `list` frame. -/
-def isList : Val → Bool
-  | .list _ => true
-  | _ => false
 
 mutual
 /-- The live handles a tree carries, in payload order: every `handle` frame's kind byte and
@@ -1241,49 +1231,5 @@ def sampleEntry : Val :=
 #guard (Val.encode? sampleEntry).bind Val.decode = some sampleEntry
 
 /-! ## Receipts -/
-
-#print axioms framed
-#print axioms framed_length
-#print axioms framed_inj
-#print axioms Val.encode
-#print axioms Val.encodeList_eq_flatten
-#print axioms Val.encode_eq
-#print axioms Val.ind
-#print axioms Val.WF
-#print axioms Val.wf
-#print axioms Val.wf_iff
-#print axioms Val.decWF
-#print axioms Val.WF_payload_lt
-#print axioms Val.WF_child
-#print axioms Val.length_encode_child
-#print axioms Val.length_le_encodeList
-#print axioms readFrame
-#print axioms readFrame_append
-#print axioms readFrame_exact
-#print axioms decodeSeq
-#print axioms decodeSeq_encodeList
-#print axioms decodeSeq_exact
-#print axioms decodeBody
-#print axioms decodeBody_ctor
-#print axioms decodeBody_unknown
-#print axioms decodeBody_encode
-#print axioms decodeBody_exact
-#print axioms decodeOne
-#print axioms decodeOne_encode
-#print axioms decodeOne_exact
-#print axioms Val.decode
-#print axioms Val.decode_encode
-#print axioms Val.decode_exact
-#print axioms Val.encode_injective
-#print axioms Val.ne_of_encode_ne
-#print axioms Val.handles
-#print axioms Val.handlesList_eq_flatMap
-#print axioms decodeBody_handle
-#print axioms Val.encode?
-#print axioms Val.decode_encode?
-#print axioms Val.encode?_of_decode
-#print axioms Val.beq
-#print axioms Val.beq_iff
-#print axioms Val.instDecidableEq
 
 end Effect4.Store

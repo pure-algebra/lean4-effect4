@@ -111,6 +111,49 @@
       ]
     },
     {
+      "Note": "A value tree, a shape and a shape document written as content: what lets a schema and a plain value cross a boundary as canonical bytes.",
+      "Name": "Value",
+      "Imports": "Effect4.Store.Canonical",
+      "Out": "src\\Effect4\\Store\\Derived\\Value.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\value.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Store.Val",
+        "Effect4.Store.Kind",
+        "Effect4.Store.Shape",
+        "Effect4.Store.ShapeDoc"
+      ]
+    },
+    {
+      "Note": "The runner's byte boundary: a journal row, its verdict and what a holder observes. `ReasonAnnotations` has a proof field, so its instance is the hand one in Store/AnnotationsCanonical.lean; every applied carrier is listed before the type that holds it.",
+      "Name": "Runner",
+      "Imports": "Effect4.Api.Runner,Effect4.Store.Derived.Value,Effect4.Store.AnnotationsCanonical,Effect4.Program.Derived,Effect4.Api.Derived",
+      "Out": "src\\Effect4\\Api\\RunnerDerived.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\runner.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Machine.RefKey",
+        "Effect4.Machine.Err",
+        "Effect4.Machine.Defect",
+        "Effect4.Reason@Effect4.Machine.Err@Effect4.Machine.Defect@Effect4.FiberId@Unit",
+        "Effect4.Cause@Effect4.Machine.Err@Effect4.Machine.Defect@Effect4.FiberId@Unit",
+        "Effect4.Exit@Effect4.Store.Val@Effect4.Machine.Err@Effect4.Machine.Defect@Effect4.FiberId@Unit",
+        "Effect4.Machine.Completion@Effect4.Store.Val@Effect4.Machine.Err@Effect4.Machine.Defect@Effect4.FiberId@Unit",
+        "Effect4.Machine.RunDecision@Effect4.Program.EffName@Effect4.Program.EffThunk@Effect4.Store.Val@Effect4.Machine.Err@Effect4.Machine.Defect@Effect4.FiberId@Unit",
+        "Effect4.Program.TableRefusal",
+        "Effect4.Program.AdmitRefusal",
+        "Effect4.Api.HostSession.Header",
+        "Effect4.Api.HostSession.Call",
+        "Effect4.Api.HostSession.Reply",
+        "Effect4.Api.HostSession.Refusal",
+        "Effect4.Api.HostSession.Phase",
+        "Effect4.Api.Runner.Command",
+        "Effect4.Api.HostProtocol.State",
+        "Effect4.Machine.Stuck",
+        "Effect4.Api.Outcome"
+      ]
+    },
+    {
       "Name": "Fold",
       "Tool": "tools/Effect4Gen/Fold.lean",
       "Imports": "Effect4.Program.Eff,Effect4.Program.Ty",

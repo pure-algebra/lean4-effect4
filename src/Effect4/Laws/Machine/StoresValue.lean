@@ -142,10 +142,4 @@ theorem Val.handles_eq_keys_code (v : Val) (hall : ∀ h ∈ v.handles, (Handle.
 #guard Handle.image.ofVal (Val.cell ⟨2⟩) = some (Handle.cell ⟨2⟩)
 #guard (exitImage.encode? (Exit.success (Val.fibers [⟨1⟩]))).isSome
 
-#print axioms Handle.image
-#print axioms Val.keys_eq_handles
-#print axioms Val.handles_eq_keys_code
-#print axioms exitImage
-#print axioms reifyExitVal_eq_exitImage
-
 end Effect4.Machine

@@ -64,13 +64,4 @@ private def key12 : Store.Val := .ctor 0 [.ctor 0 [.nat 1], .ctor 0 [.nat 2]]
 #guard exitImage.ofVal (Val.exitErr (Cause.fail (Err.tag 3))) =
   some (Exit.failure (Cause.fail (Err.tag 3)))
 
-#print axioms Err.image
-#print axioms Defect.image
-#print axioms serviceKeyImage
-#print axioms causeImage
-#print axioms Val.image
-#print axioms Val.ofSpine_entries
-#print axioms exitImage
-#print axioms decode_encode
-
 end Effect4.Machine.Env

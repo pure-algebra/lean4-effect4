@@ -537,21 +537,4 @@ end Image
 
 /-! ## Receipts -/
 
-#print axioms Image.toVal_injective
-#print axioms Image.ofVal_eq_of_toVal_eq
-#print axioms Image.decode_encode
-#print axioms Image.decode_exact
-#print axioms Image.decode_encode?
-#print axioms Image.encode?_of_decode
-#print axioms Image.equiv
-#print axioms Image.subtype
-#print axioms Image.option
-#print axioms Image.pair
-#print axioms Image.list
-#print axioms Image.ctor1
-#print axioms Image.ctor2
-#print axioms Image.ctor3
-#print axioms Image.list_handleFree
-#print axioms Image.ctor3_handleFree
-
 end Effect4.Store

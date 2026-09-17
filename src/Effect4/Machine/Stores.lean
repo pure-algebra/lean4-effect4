@@ -332,18 +332,6 @@ theorem causeImage_handleFree : Image.HandleFree causeImage :=
   Value.cause_handleFree _ _ _ _ Err.image_handleFree Defect.image_handleFree
     Value.fiberIdentity_handleFree Image.unit_handleFree
 
-/-- A `Ref` cell as a value (`Value.cell`, kind 2). -/
-def cellHandle : Image RefKey :=
-  (HandleKind.handleOf .cell).equiv RefKey.mk RefKey.index (fun _ => rfl) (fun _ => rfl)
-
-/-- A `Deferred` cell as a value (`Value.promise`, kind 3). -/
-def promiseHandle : Image DeferredKey :=
-  (HandleKind.handleOf .promise).equiv DeferredKey.mk DeferredKey.index (fun _ => rfl)
-    (fun _ => rfl)
-
-/-- A scope-store key as a value (`Value.scope`, kind 4). -/
-def scopeKeyHandle : Image Nat := HandleKind.handleOf .scope
-
 /-- A context read off a `fiberContext` frame: the service spine at `Env.decode`, and the two
 caches as written; any other shape is no context. -/
 def ofCtx : Store.Val → Option Ctx
@@ -1703,13 +1691,6 @@ def forkChild (self : ScopeStore) (parentKey childKey sharedKey : Nat)
 def status (self : ScopeStore) (key : Nat) : Option (Option ExitV) :=
   (self.entryAt key).map (fun e => e.scope.closingExit?)
 
-/-- The close order: the materialised registration list, backwards
-(`internal/effect.ts:3815`). -/
-def closeOrderOf (self : ScopeStore) (key : Nat) : List FinName :=
-  match self.entryAt key with
-  | none => []
-  | some entry => entry.scope.closeOrder
-
 /-- The state half of `scopeCloseUnsafe` (`internal/effect.ts:3778-3798`): state first, so the
 written state cannot depend on what any finalizer does. -/
 def closeState (self : ScopeStore) (key : Nat) (exit : ExitV) : ScopeStore :=
@@ -1717,13 +1698,6 @@ def closeState (self : ScopeStore) (key : Nat) (exit : ExitV) : ScopeStore :=
   | none => self
   | some entry =>
     self.setEntry { entry with scope := Effect4.Scope.closeState entry.scope exit }
-
-/-- The purely computed close result of `Effect4.Scope` (`Scope.lean:796-803`), retained so the
-merge the machine observes can be compared with it. -/
-def closeResultOf (self : ScopeStore) (key : Nat) (exit : ExitV) : VoidExitV :=
-  match self.entryAt key with
-  | none => Exit.void
-  | some entry => Effect4.Scope.closeResult finExit entry.scope exit
 
 /-! ### The registration-key bound
 
@@ -1744,20 +1718,6 @@ theorem KeysBelow.mono {self : ScopeStore} {n m : Nat} (h : KeysBelow self n) (h
 theorem KeysBelow.fresh {self : ScopeStore} {n : Nat} (h : KeysBelow self n) :
     ∀ e ∈ self.entries, n ∉ e.scope.finalizerKeys :=
   fun e he hmem => Nat.lt_irrefl _ (h e he n hmem)
-
-/-- A scope carrying no closing exit is not closed. -/
-private theorem not_closed_of_closingExit_none {sc : ScopeV} (h : sc.closingExit? = none) :
-    sc.isClosed = false := by
-  show sc.state.isClosed = false
-  cases hstate : sc.state with
-  | empty => rfl
-  | openEmpty => rfl
-  | openInline _ _ => rfl
-  | openMap _ => rfl
-  | closed ex =>
-    rw [show sc.closingExit? = some ex by
-      show sc.state.closingExit? = _; rw [hstate]; rfl] at h
-    cases h
 
 /-- An entry of a `setEntry` result is the replacement or one of the originals. -/
 theorem mem_setEntry {self : ScopeStore} {entry e : ScopeEntry}

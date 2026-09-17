@@ -140,7 +140,7 @@ def isTyVar (s : String) : Bool := isIdent s
 /-! ## The mangling
 
 `mangleField` is **total** and **injective**; `unmangleField` is an exhibited left inverse, and
-`MlTest` runs the round trip over every field name the estate's descriptions render plus a row of
+`git:ddb51b6c:src/OCaml5/MlTest.lean` ran the round trip over every field name the estate's descriptions render plus a row of
 adversarial ones. The code, character by character:
 
 | source | image |

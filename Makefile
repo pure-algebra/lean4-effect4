@@ -75,9 +75,11 @@ DERIVED_SOURCES := $(wildcard tools/Effect4Gen/*.lean tools/Effect4Gen/guards/*.
   $(WIRE_TAGS) tools/Tools/WireTags.lean
 DERIVED_TRACES := $(addprefix $(TRACE)/,Store/Canonical.trace Program/Native.trace Store/RowCanonical.trace \
   Store/Pin.trace Store/Node.trace Api/Frontier.trace Program/Eff.trace Program/Ty.trace Program/Refs.trace \
-  Program/Authoring.trace Laws/Program/Authoring.trace Program/Node.trace)
+  Program/Authoring.trace Laws/Program/Authoring.trace Program/Node.trace \
+  Api/Runner.trace Store/AnnotationsCanonical.trace)
 DERIVED_OUT := src/Effect4/Store/Derived/Json.lean src/Effect4/Store/Derived/Schema.lean \
   src/Effect4/Program/Derived.lean src/Effect4/Store/PinDerived.lean src/Effect4/Api/Derived.lean \
+  src/Effect4/Store/Derived/Value.lean src/Effect4/Api/RunnerDerived.lean \
   src/Effect4/Program/Fold.lean src/Effect4/Program/NodeLenses.lean src/Effect4/Program/Binders.lean src/Effect4/Program/Scoped.lean \
   src/Effect4/Program/Authoring/Lifts.lean src/Effect4/Laws/Program/Authoring/Lifts.lean \
   src/Effect4/Program/Authoring/Rows.lean src/Effect4/Laws/Program/Authoring/Rows.lean \

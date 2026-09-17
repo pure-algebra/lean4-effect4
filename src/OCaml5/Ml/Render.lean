@@ -741,7 +741,7 @@ def Module.fileName (m : Module) : String := m.name ++ ".ml"
 /-! ## Checks
 
 The rendering is checked three ways: by `#guard` here on the shapes whose bytes are pinned, by
-`OCaml5.MlTest` on a fixture that exercises every constructor, and by `ocaml/tools/ml-check.sh`, which
+`git:ddb51b6c:src/OCaml5/MlTest.lean` (removed 2026-09-17) on a fixture that exercises every constructor, and by `git:ddb51b6c:ocaml/tools/ml-check.sh`, which
 compiles that fixture with `ocamlc`. Only the last can say the text is *OCaml*; the first two say
 it is the text this file is supposed to produce. -/
 

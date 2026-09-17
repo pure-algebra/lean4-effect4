@@ -148,11 +148,4 @@ end Corpus
 
 /-! ## Receipts -/
 
-#print axioms encodeProgram
-#print axioms decodeProgram
-#print axioms decode_encode
-#print axioms decode_exact
-#print axioms encode_injective
-#print axioms hexOf
-
 end Effect4.Program.Wire

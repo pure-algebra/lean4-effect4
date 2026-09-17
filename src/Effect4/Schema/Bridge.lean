@@ -199,10 +199,6 @@ namespace Effect4.Program.EffTy
 abbrev document (eff : Effect4.Program.EffTy) : Effect4.Document :=
   Effect4.Schema.Bridge.effDocument eff
 
-/-- As a plain object: the Schema Document describing the successful answer alone. -/
-abbrev objectDocument (eff : Effect4.Program.EffTy) : Effect4.Document :=
-  Effect4.Schema.Bridge.effObjectDocument eff
-
 end Effect4.Program.EffTy
 
 namespace Effect4.Program.Row
