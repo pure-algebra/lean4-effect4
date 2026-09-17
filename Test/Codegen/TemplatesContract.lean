@@ -93,7 +93,7 @@ def isTableDefect : Except PrintRefusal TypeScript.Expr → Bool
 #guard table.all fun row => match row.out with
   | .tpl tp => decide (Linear tp)
   | .stmt tp => decide (holesStmt tp).Nodup
-  | .refuse _ => true
+  | .rowCall | .refuse _ => true
 
 -- every row names a constructor of its family
 #guard table.all fun row => (argSorts row.fam row.ctor).isSome
@@ -145,9 +145,13 @@ def agreesWithBinders (e : Eff NativeOp) : Bool :=
 #guard effSamples.any fun e => (topLevels e).contains (some 1)
 #guard effSamples.any fun e => (topLevels e).contains (some 2)
 
--- every constructor of the four row families has a row, except the one hand field
-#guard ((ctorNames .eff).filter fun c => !(table.any fun row => row.fam == .eff && row.ctor == c))
+-- every constructor of the four row families has a row
+#guard (ctorNames .eff).all fun c => table.any fun row => row.fam == .eff && row.ctor == c
+-- one row is not a skeleton: the row call, and it is the last program row (a tree is a row call
+-- when it is nothing else), after the transparent row
+#guard (table.filter fun row => match row.out with | .rowCall => true | _ => false).map (·.ctor)
   == ["perform"]
+#guard (effRows.getLast?.map (·.ctor)) == some "perform"
 #guard (ctorNames .stmt).all fun c => table.any fun row => row.fam == .stmt && row.ctor == c
 -- a statement row prints a statement, and no other row does
 #guard table.all fun row => (row.fam == .stmt) == (match row.out with | .stmt _ => true | _ => false)

@@ -6,9 +6,9 @@ import Effect4.Codegen.Templates
 `print` has no clause of its own. It is `cata_eff` of ONE table-driven layer function
 (`Templates.printAlg`): choose the row of `Codegen/Templates.lean` for the constructor and its
 classifier, print each argument by sort at the depth the row gives it, instantiate the row's
-skeleton. What is not a skeleton is a hand field of that algebra: the row call of `perform`
-(`printRow`, `Codegen/PrintLeaf.lean`), a generator's statements, and the two spines. The
-reader (`Codegen/Read.lean`) runs the same rows the other way.
+skeleton. Every constructor has a row; the row call of `perform` is the one row that is a codec
+and not a skeleton (`printRow`, `Codegen/PrintLeaf.lean`), and the three spines are the
+algebra's only hand fields. The reader (`Codegen/Read.lean`) runs the same rows the other way.
 
 The target is the pinned lean4-typescript fragment (`TypeScript.Expr`, `TypeScript.Stmt`), which
 `TypeScript.Render.expr house0 0` renders at a fixed layout: equal syntax is equal bytes, so the
@@ -42,7 +42,7 @@ length `0`. -/
 def printLayer (sig : Signature Op) (l : LayerTerm Op) : Except PrintRefusal TypeScript.Expr :=
   Effect4.Codegen.Templates.printLayerT sig l
 
-/-- A row's invocation prints as its row call: the one hand field of a program's clauses. -/
+/-- A row's invocation prints as its row call: the table's `rowCall` row, by computation. -/
 theorem print_perform (sig : Signature Op) (n : Nat) (op : Op) (request : Term) :
     print sig n (.perform op request) = printRow (sig.rowOf op) request := rfl
 

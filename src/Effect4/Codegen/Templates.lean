@@ -17,10 +17,10 @@ first row for the constructor whose classifier holds, print each argument by its
 depth, instantiate the skeleton. `EffAlgebra.ofLayer` (generated from the constructor
 declarations) makes it an algebra, and the generated fold `cata_eff` does the recursion.
 
-What is not a skeleton stays a hand field of the algebra, overriding the table's: the row call of
-`perform` (its inverse is the signature's `spell`) and the three spines (programs, layers, and
-statements, which thread the binders a statement declares). A generator and its six statements
-are rows like any other.
+Every constructor of the four row families has a row. One row is not a skeleton: the row call
+of `perform` (`RowOut.rowCall`), a codec parametrised by the signature whose inverse is the
+signature's `spell`. The algebra's only hand fields are the three spines (programs, layers, and
+statements, which thread the binders a statement declares): list structure, not clauses.
 
 `Codegen/Print.lean`'s `print` IS this fold (the hand printer, one clause per constructor, was
 deleted once the two agreed on every constructor, classifier and the seeded corpus), and
@@ -68,13 +68,17 @@ family), or the refusal of an action with no public export. -/
 inductive RowOut where
   | tpl (t : Tpl)
   | stmt (t : StmtTpl)
+  /-- The row call of `perform`: printed by the signature's row (`printRow`), read by its
+  inverse. It is a codec with its own round trip, parametrised by the signature, and not a
+  skeleton; the row says where in the reading order it stands. -/
+  | rowCall
   | refuse (name : String)
 
 /-- The binders in scope at argument `i` of a row, read off its skeleton. -/
 def RowOut.levelAt : RowOut → Nat → Nat
   | .tpl t, i => Template.levelAt t i
   | .stmt t, i => t.levelAt i
-  | .refuse _, _ => 0
+  | .rowCall, _ | .refuse _, _ => 0
 
 structure Row where
   fam : EffFam
@@ -131,7 +135,8 @@ Order is read by the READER only (the printer chooses by constructor and classif
 overlap). First match wins, so where skeletons overlap the more specific comes first: within the
 `Effect.suspend` group the conditional and the two loop images come before the plain suspension
 (whose body hole would take any of them), and the two transparent rows, a bare hole each
-(`withFiber` prints as its action, a layer reference as its name), close their family. -/
+(`withFiber` prints as its action, a layer reference as its name), close their family. The row
+call of `perform` is the last program row: a tree is a row call when it is nothing else. -/
 
 def effRows : List Row :=
   [ ⟨.eff, "succeed", [], .tpl (call "Effect.succeed" [h 0])⟩
@@ -174,7 +179,8 @@ def effRows : List Row :=
   , ⟨.eff, "provideService", [],
       .tpl (call "Effect.provideService" [h 2, h 0, h 1])⟩
   , ⟨.eff, "gen", [], .tpl (call genHead [.generator (.hole 0)])⟩
-  , ⟨.eff, "withFiber", [], .tpl (h 0)⟩ ]
+  , ⟨.eff, "withFiber", [], .tpl (h 0)⟩
+  , ⟨.eff, "perform", [], .rowCall⟩ ]
 
 def actionRows : List Row :=
   [ ⟨.action, "fork", [(1, .daemon true)], .tpl (call "Effect.forkDetach" [h 0, h 1])⟩
@@ -385,17 +391,19 @@ where
     | some row => match row.out with
       | .refuse name => .error (.internalAction name)
       | .stmt _ => .error (tableDefect ctor)
+      | .rowCall => match args with
+        | [.op op, .term request] => printRow (sig.rowOf op) request
+        | _ => .error (tableDefect ctor)
       | .tpl t => do
         let σ ← printArgs sig fam n (.tpl t) args 0
         match inst n σ t with
         | some e => .ok e
         | none => .error (tableDefect ctor)
 
-/-- The algebra: the table's layer function, with the hand fields for what is not a skeleton:
-the row call and the spines. -/
+/-- The algebra: the table's layer function for every constructor, and the three spines (which
+are list structure, not clauses). -/
 def printAlg (sig : Signature Op) : EffAlgebra Op Carrier :=
   { EffAlgebra.ofLayer (tableLayer sig) with
-    eff_perform := fun op request _ => printRow (sig.rowOf op) request
     stmts_nil := fun _ => .ok []
     stmts_cons := fun head tail n => do
       let (s, k) ← head n

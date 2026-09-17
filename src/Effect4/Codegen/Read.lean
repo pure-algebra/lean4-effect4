@@ -494,14 +494,19 @@ def famRank : EffFam → Nat
 mutual
   /-- `readT sig spell fam n x`: the first row of `fam` whose skeleton matches `x`, its
   arguments read; `none` when no row matches. A transparent row (a bare hole: `withFiber` over
-  its action) hands the same expression to its child's family and matches when that does. For a
-  program, what no row matches is a row call. -/
+  its action) hands the same expression to its child's family and matches when that does. The
+  row call of `perform` is a row too, the last of the program rows, read by `readPerform`. -/
   def readT (sig : Signature Op) (spell : String → List String → Option Op) (fam : EffFam)
       (n : Nat) (x : Expr) : Option (Except ReadRefusal (EffSelfCarrier Op fam)) :=
     let byRow := Templates.table.zipIdx.findSome? fun (row, k) =>
       if row.fam = fam then
         match row.out with
         | .refuse _ | .stmt _ => none
+        -- the row call stands last among the program rows: a tree is one when it is nothing else
+        | .rowCall =>
+          match fam with
+          | .eff => some (readPerform sig spell n x)
+          | _ => none
         | .tpl t =>
           match hσ : matchT n t x with
           | none => none
@@ -543,12 +548,7 @@ mutual
                   | .error _ => none
                 | _ => none
       else none
-    match byRow with
-    | some r => some r
-    | none =>
-      match fam with
-      | .eff => some (readPerform sig spell n x)
-      | _ => none
+    byRow
   termination_by (sizeOf x, famRank fam)
 
   /-- A spine of programs or of layers, item by item. -/

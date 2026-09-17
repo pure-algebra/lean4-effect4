@@ -845,7 +845,7 @@ const readLiteral = (x: Expr): Read<Lit> => {
  * `true` test is refused: the printer writes that program as `Effect.catch`). A transparent
  * row (a bare hole: `withFiber` over its action) hands the same tree to its child's family and
  * matches when that does. A generator is a row, and so is each of its statements (`readStmts`).
- * What no row matches is, for a program, a row call.
+ * The row call of `perform` is a row too, the last of the program rows (`readPerform`).
  */
 
 type Arg =
@@ -1089,7 +1089,10 @@ const readPerform = (n: number, x: Expr): Read<Eff> => {
 const readT = (fam: Fam, n: number, x: Expr): Read<unknown> | undefined => {
   for (let k = 0; k < tableRows.length; k++) {
     const row = tableRows[k]!
-    if (row.fam !== fam || row.out._tag !== "tpl") continue // a statement row is read by `readStmts`
+    if (row.fam !== fam) continue
+    // the row call stands last among the program rows: a tree is one when it is nothing else
+    if (row.out._tag === "rowCall") return fam === "eff" ? readPerform(n, x) : undefined
+    if (row.out._tag !== "tpl") continue // a statement row is read by `readStmts`
     const sorts = argSortsOf(fam, row.ctor)
     const names = argNamesOf(fam, row.ctor)
     if (sorts === undefined || names === undefined) continue
@@ -1112,7 +1115,7 @@ const readT = (fam: Fam, n: number, x: Expr): Read<unknown> | undefined => {
     if (!matchT(n, t, x, captured)) continue
     return readRow(k, row, n, sorts, names, captured)
   }
-  return fam === "eff" ? readPerform(n, x) : undefined
+  return undefined
 }
 
 /** The arguments of a matched row, the exactness check, and the node (shared by both steps). */
