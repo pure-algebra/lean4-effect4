@@ -292,36 +292,232 @@ Steps 1 to 3 are days, not weeks; nothing in them touches an alphabet or a proof
 
 ## 8. Questions to workshop
 
-**Q-A, the starting schema.** Is the signature the Lean environment (today) or a persisted
-document the environment is checked against, so that the TypeScript and OCaml generators
-run without Lean and the document is itself inspectable? Recommended: the document, with
-the drift check every generated file already has.
+Each question in plain words: what is being decided, what the two ways look like on a real
+example, the recommendation, and what it costs.
 
-**Q-B, the `run` instance's answers.** `Eff.bind`'s answer is a de Bruijn variable, so the
-run algebra threads an environment: the exponential carrier `Env → Effect`, as `denote` has
-it. Take that (one parameter, the same shape as `denote`, so the tape lane compares like
-with like), or a host-native encoding with JavaScript closures, which reads better and
-proves nothing? Recommended: the environment, as `denote`.
+### Q-A. Where does the generator's input live?
 
-**Q-C, where C and P bodies come from.** The equation lemmas (readable instances, a small
-new emitter that refuses what it does not recognise) for C and P, LCNF for G? Or LCNF for
-everything, accepting unreadable instances? Recommended: equation lemmas for C and P, LCNF
-for G, the census decides the counts.
+**The decision.** Every generator needs the list of families, constructors and fields (the
+signature). Today each generator reads it off the Lean environment at run time
+(`OCaml5.Eff.World.readBlocks`), so nothing can be generated without a Lean build, and
+nobody can look at the signature as a thing. The alternative is to write the signature out
+once as a document and have every generator read that file.
 
-**Q-D, the first instances on the host.** `run` first, then `Straight` and `effTy` from the
-equations, then `explain`? Or `print` first (which R4 makes rows anyway)? Recommended:
-`run`, `effTy`, `explain`; `print` arrives as the template table.
+**What it looks like.** A file `generated/sig/eff.json`, written by one Lean tool, one
+entry per constructor, in declaration order:
 
-**Q-E, the surface of the generated TypeScript.** Exactly five names per signature
-(`Schema`, `Algebra`, `fold`, `Hom` guards, `Build`), everything else an instance a user
-writes or a generator emits in the same form? Recommended: yes; no combinator library on
-top until a consumer needs one.
+```json
+{ "families": [
+  { "name": "Eff", "kind": "union", "constructors": [
+    { "name": "succeed", "fields": [ { "name": "value", "carrier": "Term" } ] },
+    { "name": "bind",    "fields": [ { "name": "first", "carrier": "Eff" },
+                                     { "name": "rest",  "carrier": "Eff" } ] },
+    { "name": "gen",     "fields": [ { "name": "body",  "carrier": "Stmts" } ] } ] },
+  { "name": "Stmts", "kind": "list", "element": "Stmt" } ] }
+```
 
-**Q-F, refusals over the surface.** Entries whose inputs are higher-order beyond the forms
-are refused with a listed reason and the list is the design input for the forms' next
-step, rather than growing the forms before the census exists? Recommended: yes; the census
-first, then the forms grow against real numbers.
+`TsGen`, `EffGen` and the `Effect4Gen` generators read this file instead of the
+environment. A guard rebuilds it from the environment and fails if the two differ, the
+same drift check every generated file already has (`make check-gen`).
 
-**Q-G, the bun server.** The inspection server as generated Effect TypeScript over the
-`InspectOp` signature on bun, with `check` shelling to node for `tsgo` (bun cannot host the
-native client's sync pipe)? Recommended: yes.
+**Recommendation.** The document. Three reasons: the TypeScript and OCaml generators can
+run on any machine without Lean; the signature becomes inspectable through the protocol
+like any other document; and there is exactly one input for every generator, so a new
+constructor is one edit in Lean and one regenerated file, never a hunt through tools.
+
+**Cost.** One small Lean tool that writes the file, one guard, and a one-line change in
+each generator to read it. A day.
+
+### Q-B. How does the host `run` instance handle variables?
+
+**The decision.** In `Eff`, the result of one step is not named. `bind(first, rest)` means
+"run `first`, then run `rest` with the result available as variable 0"; a variable is a
+number counting back through the binds (de Bruijn). So an instance that runs a program on
+the Effect runtime has to keep an environment of earlier results. Two ways: thread an
+environment explicitly, exactly as the Lean meaning `denote` does (`denote : NativeEff →
+List Val → …`), or try to use JavaScript closures so that the code reads like ordinary
+Effect.
+
+**What it looks like.** The program "let x = 3; return x" is data:
+
+```ts
+const p: Eff = { _tag: "bind",
+  first: { _tag: "succeed", value: { _tag: "lit", value: { _tag: "nat", value: 3 } } },
+  rest:  { _tag: "succeed", value: { _tag: "var", index: 0 } } }
+```
+
+With an environment the carrier is a function of the environment, and `bind` extends it:
+
+```ts
+type Run = { eff: (env: ReadonlyArray<Val>) => Effect.Effect<Val, Failure>, /* other families */ }
+const runAlgebra: EffAlgebra<Run> = {
+  eff_succeed: (value) => (env) => Effect.succeed(evalTerm(value, env)),
+  eff_bind: (first, rest) => (env) =>
+    Effect.flatMap(first(env), (v) => rest([v, ...env])),   // variable 0 is now v
+  eff_perform: (op, request) => (env) => nativeRow(op)(evalTerm(request, env)),
+  // one case per constructor
+}
+export const run = (p: Eff) => fold(runAlgebra)(p)([])
+```
+
+The closure version cannot exist as a fold: `rest` is data that says `var 0`, not a
+JavaScript function that could close over `v`. Closures only appear when the program is
+printed as TypeScript text, and that is the printer, not the runner.
+
+**Recommendation.** The environment, as `denote` has it. Then the tape lane compares like
+with like: the Lean meaning, the OCaml engine and the host runner all thread the same
+list, and a disagreement points at one constructor's case.
+
+**Cost.** Nothing beyond the instance itself; the shape is forced by the data.
+
+### Q-C. Where do the case bodies come from when we generate instances from Lean?
+
+**The decision.** A Lean function like `Straight` (is this program in the straight
+fragment?) is a fold: one case per constructor. We can generate the TypeScript instance
+either from the function's equation lemmas (Lean produces `Straight.eq_1`, `eq_2`, … one
+equation per constructor, at the level of named Lean terms) or from LCNF (the compiler's
+intermediate form after ANF conversion, closure conversion and type erasure, which the
+OCaml path already consumes).
+
+**What it looks like.** From the equations, the instance is readable and looks like what a
+person would write:
+
+```ts
+export const straightAlgebra: EffAlgebra<{ eff: boolean; stmt: boolean; stmts: boolean; effs: boolean; action: boolean; layer: boolean; layers: boolean }> = {
+  eff_succeed:   (_value)                 => true,
+  eff_bind:      (first, rest)            => first && rest,
+  eff_perform:   (op, _request)           => isSync(op),
+  eff_whileLoop: (_init, _test, _step, _b) => false,
+  // …
+}
+export const straight = fold(straightAlgebra)
+```
+
+From LCNF it comes out the way `ocaml/gen/api_gen.ml` does today: one big recursive
+function with numbered temporaries, complete, correct, and not something anyone reads or
+extends. The equation route needs a small recogniser: a case body must be built from the
+children's results, the non-recursive fields, and calls to known functions; anything else
+is refused with a message naming the definition and the equation, and that definition
+stays on the LCNF route.
+
+**Recommendation.** Equations for the fold-shaped definitions (the structural ones and
+the ones with a parameter such as `effTy`'s environment), LCNF for the general ones (the
+machine, the scheduler). The census tool prints how many definitions land on each route,
+so the choice is measured, not guessed.
+
+**Cost.** The recogniser and emitter, a few hundred lines of Lean in `Tools`, and the
+census tool beside it.
+
+### Q-D. Which instances first on the host?
+
+**The decision.** The order in which generated instances arrive in TypeScript. The
+candidates are `run` (execute a program as data), `Straight` (the fragment predicate),
+`effTy` (the typing) with `explain` (why a program is refused), and `print`.
+
+**What it looks like.** `effTy` is a fold with an environment of types, so its instance has
+the same shape as `run`:
+
+```ts
+type Typing = { eff: (env: TyEnv) => EffTy | null, /* … */ }
+const typingAlgebra: EffAlgebra<Typing> = {
+  eff_succeed: (value) => (env) => ({ answer: termTy(value, env), error: NEVER, requires: [] }),
+  eff_bind: (first, rest) => (env) => {
+    const a = first(env); if (a === null) return null
+    const b = rest(extend(env, a.answer)); if (b === null) return null
+    return { answer: b.answer, error: union(a.error, b.error), requires: merge(a.requires, b.requires) }
+  },
+  // …
+}
+```
+
+With that in the host, the inspection server answers `explain` without Lean in the loop,
+and the answer agrees with Lean by the tape lane. `print` is not on this list because the
+template table (R4) makes it rows; generating it twice would be waste.
+
+**Recommendation.** `run` first (the medium's proof of life, and what `evaluate` runs),
+then `effTy` and `explain` from the equations, then `Straight` because it is the smallest
+and a good first test of the emitter.
+
+**Cost.** `run` is written by hand in the algebra form; the other three come from Q-C's
+emitter.
+
+### Q-E. How big is the generated TypeScript surface?
+
+**The decision.** Per signature the generator can emit exactly five things (the schema of
+terms, the algebra type, `fold`, the law guards, the builder) and nothing else, or it can
+also emit conveniences (mapping, traversals, pattern helpers).
+
+**What it looks like.** A user file with the five names and nothing more:
+
+```ts
+import { Eff, EffAlgebra, fold, Build } from "./eff"        // Schema types, Algebra, fold, Build
+const performs: EffAlgebra<{ eff: number; stmt: number; stmts: number; effs: number; action: number; layer: number; layers: number }> = {
+  eff_perform: () => 1, eff_bind: (a, b) => a + b, eff_succeed: () => 0, /* … */
+}
+const p = Build.Eff.bind(Build.Eff.succeed(lit(3)), Build.Eff.succeed(v(0)))
+fold(performs)(p)   // 0
+```
+
+Everything a user might want beyond that is an instance written in the same shape, and
+the law guards (`fold(id)` is the identity on every corpus program) are generated tests.
+
+**Recommendation.** Five names, no combinator library. The moment a second consumer wants
+the same helper, it becomes a generated instance, not a hand-written utility.
+
+**Cost.** None; this is the cheaper option.
+
+### Q-F. What happens to surface entries the forms cannot express?
+
+**The decision.** When the entire Effect surface is ingested as entries (input schema,
+output schema), some entries have function-typed inputs. The forms (templates with holes)
+cover some of those shapes today. Either refuse what the forms cannot express, list the
+refusals, and grow the forms against that list; or grow the forms first.
+
+**What it looks like.** Three entries from rc.112 and their fate:
+
+```
+Queue.offer(self: Enqueue<A, E>, message: A): Effect<boolean>
+  → a row: input { self: handle Queue<A,E>, message: A }, output Effect<boolean>
+Stream.map(self: Stream<A, E, R>, f: (a: A) => B): Stream<B, E, R>
+  → a form: one lambda with a first-order body; the hole is the closure
+Effect.callback(register: (resume: (effect: Effect<A, E>) => void) => void)
+  → refused: a function that takes a function; reason listed with the citation
+```
+
+The census over all entries prints, per module: entries, rows, forms, refused. The refusal
+list is then the specification for the forms' next step, with real counts behind it.
+
+**Recommendation.** Refuse and list first; grow the forms second. Growing first means
+designing holes for shapes nobody has counted.
+
+**Cost.** The classifier is one fold over the entries; the census is a table it writes.
+
+### Q-G. What runs the inspection server?
+
+**The decision.** The inspection protocol is served over MCP. It can be generated Effect
+TypeScript (rc.112's `McpServer`, `Tool`, `Toolkit`) running on bun over stdio, with one
+detail: the `check` command needs `tsgo`, whose JavaScript client only runs under node, so
+`check` spawns node for that one call.
+
+**What it looks like.** One generated tool per command, every success an object (MCP
+publishes an output schema only for object-typed successes, `McpServer.ts:1535`):
+
+```ts
+const Explain = Tool.make("explain", {
+  parameters: Schema.Struct({ program: EffSchema }),
+  success: Schema.Struct({ refusal: Schema.NullOr(TypeRefusalSchema), codes: Schema.Array(Schema.Number) })
+})
+const Window = Tool.make("window", {
+  parameters: Schema.Struct({ handle: Digest, offset: Schema.Number, lines: Schema.Number, width: Schema.Number }),
+  success: Schema.Struct({ text: Schema.String, spans: Schema.Array(SpanSchema) })
+})
+const server = McpServer.layerStdio({ name: "effect4", version: PROFILE_STAMP, toolkit: Toolkit.make(Explain, Window, /* … */) })
+```
+
+`explain` calls the generated typing instance of Q-D; `window` calls the layout fold; the
+handlers are instances, the server is the signature's emitter.
+
+**Recommendation.** Yes: generated, on bun, node only for `tsgo`.
+
+**Cost.** The emitter over the inspection signature, and the profile stamp on the
+initialize response so a client refuses a mismatched grammar.
