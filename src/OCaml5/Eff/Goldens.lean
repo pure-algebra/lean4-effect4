@@ -26,8 +26,9 @@ namespace OCaml5.Eff
 
 /-! ## Goldens: a generic value tree, serialised by the wire rule and by the JSON rule -/
 
-/-- A Lean value as the wire sees it. `ctor` carries the constructor's full name; its index
-is looked up in the environment when the bytes are written. -/
+/-- A Lean value as the wire sees it. `ctor` carries the constructor's full name; its wire tag
+is looked up in the one assignment (`tools/Effect4Gen/wire-tags.json`) when the bytes are
+written, so this tree never restates a number. -/
 inductive V
   | unit
   | bool (b : Bool)
@@ -203,7 +204,6 @@ partial def effV : Eff NativeOp → V
   | .exit b => .ctor ``Eff.exit [effV b]
   | .uninterruptible b => .ctor ``Eff.uninterruptible [effV b]
   | .interruptible b => .ctor ``Eff.interruptible [effV b]
-  | .branch t a b => .ctor ``Eff.branch [termV t, effV a, effV b]
   | .select s d a0 a1 => .ctor ``Eff.select [termV s, decisionV d, effV a0, effV a1]
   | .whileLoop i t s b => .ctor ``Eff.whileLoop [termV i, termV t, termV s, effV b]
   | .iterate c i t s r b =>
@@ -305,7 +305,7 @@ def pMatch : P := .matchCause (.succeed (n 1)) (.succeed (.app "isZero" (ts [v 0
 def pOnExit : P := .onExit (.succeed (n 1)) (.yieldNow 1)
 def pExit : P := .exit (.fail (n 9))
 def pMasks : P := .uninterruptible (.interruptible (.succeed (n 1)))
-def pBranch : P := .branch (.lit (.bool true)) (.succeed (n 1)) (.fail (n 2))
+def pBranch : P := .select (.lit (.bool true)) .bool (.succeed (n 1)) (.fail (n 2))
 /-- Count to three and answer the cursor. -/
 def pIterate : P :=
   .iterate .nat (n 0) (.app "lt" (ts [v 0, n 3])) (.app "succ" (ts [v 0])) (v 0) (.yieldNow 0)
@@ -379,14 +379,15 @@ def pIll : P := .succeed (.app "succ" (ts [.lit (.bool true)]))
 def pIllRet : P := .gen (st [.ret (n 1), .ret (n 2)])
 def pIllReq : P := .perform .refGet (n 1)
 def pIllBreak : P := .gen (st [.breakLoop])
-def pIllBranch : P := .branch (n 1) (.succeed (n 1)) (.succeed (n 2))
+def pIllBranch : P := .select (n 1) .bool (.succeed (n 1)) (.succeed (n 2))
 /-- Well-typed since part 4 commit 2 (2026-09-12, S4c: answer joining is the least upper
 bound, `EffTy.joinAnswer a b = some (Ty.join a b)`): its arms answer `nat` and `bool`, which
 join to `union nat bool`. It was ill-typed only because two distinct answers refused to join.
 Kept under its name (DI-60: no fixture is renamed) and listed with the ill programs below so
 the corpus order is unchanged; `pIllBranch`, whose test is a `nat`, stays the negative for the
 test column. -/
-def pIllJoin : P := .branch (.lit (.bool true)) (.succeed (n 1)) (.succeed (.lit (.bool true)))
+def pIllJoin : P :=
+  .select (.lit (.bool true)) .bool (.succeed (n 1)) (.succeed (.lit (.bool true)))
 def pIllVar : P := .succeed (v 0)
 def pIllCallback : P := .bind (.perform .refMake (n 0)) (.callback .refGet (v 0))
 def pIllStep : P := .whileLoop (n 0) (.app "lt" (ts [v 0, n 3])) (.lit (.bool true)) (.yieldNow 0)

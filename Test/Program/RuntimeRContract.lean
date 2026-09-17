@@ -530,7 +530,7 @@ def exitSync : NativeEff := .exit pureSync
 def uninterruptibleOne : NativeEff := .uninterruptible (.succeed one)
 def interruptibleOne : NativeEff := .interruptible (.succeed one)
 def maskedInner : NativeEff := .uninterruptible (.interruptible (.succeed one))
-def branchT : NativeEff := .branch (.lit (.bool true)) (.succeed one) (.succeed (.lit (.nat 2)))
+def branchT : NativeEff := .select (.lit (.bool true)) .bool (.succeed one) (.succeed (.lit (.nat 2)))
 def yieldErr : NativeEff := .yieldError (.lit (.nat 3))
 def getIdP : NativeEff := .withFiber .getId
 /-- E4-CHECK-CE-010: Effect.fiberId is a number, so admitted arithmetic can use it.

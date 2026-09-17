@@ -73,6 +73,9 @@ theorem fits (a : _root_.Effect4.FiberId) : shapeDoc.accepts (toVal a) = true :=
 instance instCanonical : Canonical (_root_.Effect4.FiberId) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end FiberIdC
 
 namespace KeyC
@@ -130,14 +133,17 @@ theorem fits (a : _root_.Effect4.Api.HostProtocol.Key) : shapeDoc.accepts (toVal
 instance instCanonical : Canonical (_root_.Effect4.Api.HostProtocol.Key) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end KeyC
 
 namespace ExhaustionC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "Exhaustion"
-     [("fuel", []),
-      ("tape", [])],
+     [("fuel", 0, []),
+      ("tape", 1, [])],
    []⟩
 
 def toVal : _root_.Effect4.Machine.Exhaustion → Val
@@ -176,18 +182,21 @@ theorem fits (a : _root_.Effect4.Machine.Exhaustion) : shapeDoc.accepts (toVal a
 instance instCanonical : Canonical (_root_.Effect4.Machine.Exhaustion) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end ExhaustionC
 
 namespace FrontierReasonC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "FrontierReason"
-     [("commandFuel", []),
-      ("compileFuel", [("fiber", (shape _root_.Effect4.FiberId).root)]),
-      ("awaitHost", [("key", (shape _root_.Effect4.Api.HostProtocol.Key).root)]),
-      ("awaitTimer", [("fiber", (shape _root_.Effect4.FiberId).root),
+     [("commandFuel", 0, []),
+      ("compileFuel", 1, [("fiber", (shape _root_.Effect4.FiberId).root)]),
+      ("awaitHost", 2, [("key", (shape _root_.Effect4.Api.HostProtocol.Key).root)]),
+      ("awaitTimer", 3, [("fiber", (shape _root_.Effect4.FiberId).root),
         ("wakeAt", (shape _root_.Nat).root)]),
-      ("awaitDecision", [])],
+      ("awaitDecision", 4, [])],
    (shape _root_.Effect4.FiberId).defs ++ (shape _root_.Effect4.Api.HostProtocol.Key).defs ++
      (shape _root_.Nat).defs⟩
 
@@ -268,6 +277,9 @@ theorem fits (a : _root_.Effect4.Api.FrontierReason) : shapeDoc.accepts (toVal a
 
 instance instCanonical : Canonical (_root_.Effect4.Api.FrontierReason) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
 
 end FrontierReasonC
 

@@ -33,7 +33,6 @@ def scopedAlgebra (Op : Type) : EffAlgebra Op ScopeCarrier where
   eff_exit := fun a0 n => a0 n
   eff_uninterruptible := fun a0 n => a0 n
   eff_interruptible := fun a0 n => a0 n
-  eff_branch := fun a0 a1 a2 n => a0.scoped n && a1 n && a2 n
   eff_whileLoop := fun a0 a1 a2 a3 n => a0.scoped n && a1.scoped (n + 1) && a2.scoped (n + 2) && a3 (n + 1)
   eff_yieldNow := fun _ _ => true
   eff_callback := fun _ a1 n => a1.scoped n
@@ -141,8 +140,6 @@ def Node.scopedAt {Op : Type} (n : Nat) : Node Op → Bool
     Eff.scopedAt n ((.uninterruptible a0 : Eff Op)) = (Eff.scopedAt n a0) := rfl
 @[simp] theorem Eff.scopedAt_interruptible {Op : Type} (n : Nat) (a0 : Effect4.Program.Eff Op) :
     Eff.scopedAt n ((.interruptible a0 : Eff Op)) = (Eff.scopedAt n a0) := rfl
-@[simp] theorem Eff.scopedAt_branch {Op : Type} (n : Nat) (a0 : Effect4.Program.Term) (a1 : Effect4.Program.Eff Op) (a2 : Effect4.Program.Eff Op) :
-    Eff.scopedAt n ((.branch a0 a1 a2 : Eff Op)) = (a0.scoped n && Eff.scopedAt n a1 && Eff.scopedAt n a2) := rfl
 @[simp] theorem Eff.scopedAt_whileLoop {Op : Type} (n : Nat) (a0 : Effect4.Program.Term) (a1 : Effect4.Program.Term) (a2 : Effect4.Program.Term) (a3 : Effect4.Program.Eff Op) :
     Eff.scopedAt n ((.whileLoop a0 a1 a2 a3 : Eff Op)) = (a0.scoped n && a1.scoped (n + 1) && a2.scoped (n + 2) && Eff.scopedAt (n + 1) a3) := rfl
 @[simp] theorem Eff.scopedAt_yieldNow {Op : Type} (n : Nat) (a0 : Nat) :

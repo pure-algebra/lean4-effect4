@@ -662,13 +662,13 @@ def pIterateBadResult : NativeEff :=
 #guard exitOf (replayEff pIterateBadResult [evaluateRoot]) 0 =
   exitOf (replayEff (.succeed (.var 9)) [evaluateRoot]) 0
 
-/-! ## Control by value: `branch` and `choose` -/
+/-! ## Control by value: `select` under `.bool` -/
 
 def pBranchTrue : NativeEff :=
-  .branch (.lit (.bool true)) (.succeed (.lit (.nat 1))) (.succeed (.lit (.nat 2)))
+  .select (.lit (.bool true)) .bool (.succeed (.lit (.nat 1))) (.succeed (.lit (.nat 2)))
 
 def pBranchFalse : NativeEff :=
-  .branch (.lit (.bool false)) (.succeed (.lit (.nat 1))) (.succeed (.lit (.nat 2)))
+  .select (.lit (.bool false)) .bool (.succeed (.lit (.nat 1))) (.succeed (.lit (.nat 2)))
 
 #guard (typeOf nativeSignature pBranchTrue).isSome
 #guard (typeOf nativeSignature pBranchFalse).isSome

@@ -29,19 +29,19 @@ namespace ValC
 
 def ValShape : Shape :=
   .sum "Val"
-     [("unit", []),
-      ("bool", [("b", (shape _root_.Bool).root)]),
-      ("nat", [("n", (shape _root_.Nat).root)]),
-      ("str", [("s", (shape _root_.String).root)]),
-      ("bytes", [("bs", (shape (@_root_.List (_root_.UInt8))).root)]),
-      ("list", [("xs", .list (.named "Val"))]),
-      ("pair", [("a", .named "Val"), ("b", .named "Val")]),
-      ("none", []),
-      ("some", [("a", .named "Val")]),
-      ("ctor", [("index", (shape _root_.Nat).root), ("args", .list (.named "Val"))]),
-      ("ref", [("kind", (shape _root_.UInt8).root),
+     [("unit", 0, []),
+      ("bool", 1, [("b", (shape _root_.Bool).root)]),
+      ("nat", 2, [("n", (shape _root_.Nat).root)]),
+      ("str", 3, [("s", (shape _root_.String).root)]),
+      ("bytes", 4, [("bs", (shape (@_root_.List (_root_.UInt8))).root)]),
+      ("list", 5, [("xs", .list (.named "Val"))]),
+      ("pair", 6, [("a", .named "Val"), ("b", .named "Val")]),
+      ("none", 7, []),
+      ("some", 8, [("a", .named "Val")]),
+      ("ctor", 9, [("index", (shape _root_.Nat).root), ("args", .list (.named "Val"))]),
+      ("ref", 10, [("kind", (shape _root_.UInt8).root),
         ("digest", (shape (@_root_.List (_root_.UInt8))).root)]),
-      ("handle", [("kind", (shape _root_.UInt8).root), ("key", (shape _root_.Nat).root)])]
+      ("handle", 11, [("kind", (shape _root_.UInt8).root), ("key", (shape _root_.Nat).root)])]
 
 /-- One table for the block, then the field types' tables. -/
 def defs : List (String × Shape) :=
@@ -260,27 +260,30 @@ instance instCanonicalVal : Canonical (_root_.Effect4.Store.Val) :=
     fun a => guarded_toVal _ _ a (rawVal_toValVal a), fun h => guarded_exact h,
     fitsVal⟩
 
+-- No sum of the block's table gives one wire tag to two cases.
+#guard wellTaggedFields defs
+
 end ValC
 
 namespace KindC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "Kind"
-     [("source", []),
-      ("export", []),
-      ("type", []),
-      ("schema", []),
-      ("program", []),
-      ("annotation", []),
-      ("entry", []),
-      ("query", []),
-      ("result", []),
-      ("chunk", []),
-      ("tree", []),
-      ("manifest", []),
-      ("component", []),
-      ("vector", []),
-      ("fiber", [])],
+     [("source", 0, []),
+      ("export", 1, []),
+      ("type", 2, []),
+      ("schema", 3, []),
+      ("program", 4, []),
+      ("annotation", 5, []),
+      ("entry", 6, []),
+      ("query", 7, []),
+      ("result", 8, []),
+      ("chunk", 9, []),
+      ("tree", 10, []),
+      ("manifest", 11, []),
+      ("component", 12, []),
+      ("vector", 13, []),
+      ("fiber", 14, [])],
    []⟩
 
 def toVal : _root_.Effect4.Store.Kind → Val
@@ -371,6 +374,9 @@ theorem fits (a : _root_.Effect4.Store.Kind) : shapeDoc.accepts (toVal a) = true
 instance instCanonical : Canonical (_root_.Effect4.Store.Kind) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end KindC
 
 namespace ShapeC
@@ -379,27 +385,28 @@ namespace ShapeC
 
 def ShapeShape : Shape :=
   .sum "Shape"
-     [("unit", []),
-      ("bool", []),
-      ("nat", []),
-      ("string", []),
-      ("bytes", []),
-      ("digest", []),
-      ("list", [("item", .named "Shape")]),
-      ("option", [("item", .named "Shape")]),
-      ("pair", [("fst", .named "Shape"), ("snd", .named "Shape")]),
-      ("struct", [("name", (shape _root_.String).root),
+     [("unit", 0, []),
+      ("bool", 1, []),
+      ("nat", 2, []),
+      ("string", 3, []),
+      ("bytes", 4, []),
+      ("digest", 5, []),
+      ("list", 6, [("item", .named "Shape")]),
+      ("option", 7, [("item", .named "Shape")]),
+      ("pair", 8, [("fst", .named "Shape"), ("snd", .named "Shape")]),
+      ("struct", 9, [("name", (shape _root_.String).root),
         ("fields", .list (.pair ((shape _root_.String).root) (.named "Shape")))]),
-      ("sum", [("name", (shape _root_.String).root),
-        ("cases", .list (.pair ((shape _root_.String).root) (.list (.pair ((shape _root_.String).root) (.named "Shape")))))]),
-      ("ref", [("kind", (shape _root_.Effect4.Store.Kind).root)]),
-      ("anyRef", []),
-      ("named", [("name", (shape _root_.String).root)])]
+      ("sum", 10, [("name", (shape _root_.String).root),
+        ("cases", .list (.pair ((shape _root_.String).root) (.pair ((shape _root_.Nat).root) (.list (.pair ((shape _root_.String).root) (.named "Shape"))))))]),
+      ("ref", 11, [("kind", (shape _root_.Effect4.Store.Kind).root)]),
+      ("anyRef", 12, []),
+      ("named", 13, [("name", (shape _root_.String).root)])]
 
 /-- One table for the block, then the field types' tables. -/
 def defs : List (String × Shape) :=
   ("Shape", ShapeShape) ::
-    ((shape _root_.String).defs ++ (shape _root_.Effect4.Store.Kind).defs)
+    ((shape _root_.String).defs ++ (shape _root_.Nat).defs ++
+      (shape _root_.Effect4.Store.Kind).defs)
 
 mutual
 def toValShape : _root_.Effect4.Store.Shape → Val
@@ -413,7 +420,7 @@ def toValShape : _root_.Effect4.Store.Shape → Val
   | .option a0 => .ctor 7 [toValShape a0]
   | .pair a0 a1 => .ctor 8 [toValShape a0, toValShape a1]
   | .struct a0 a1 => .ctor 9 [Canonical.toVal a0, .list (toValL1 a1)]
-  | .sum a0 a1 => .ctor 10 [Canonical.toVal a0, .list (toValL3 a1)]
+  | .sum a0 a1 => .ctor 10 [Canonical.toVal a0, .list (toValL4 a1)]
   | .ref a0 => .ctor 11 [Canonical.toVal a0]
   | .anyRef => .ctor 12 []
   | .named a0 => .ctor 13 [Canonical.toVal a0]
@@ -422,11 +429,13 @@ def toValP0 : @_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape) → Val
 def toValL1 : @_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape)) → List Val
   | [] => []
   | x :: xs => toValP0 x :: toValL1 xs
-def toValP2 : @_root_.Prod (_root_.String) (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape))) → Val
+def toValP2 : @_root_.Prod (_root_.Nat) (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape))) → Val
   | (x, y) => .pair (Canonical.toVal x) (.list (toValL1 y))
-def toValL3 : @_root_.List (@_root_.Prod (_root_.String) (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape)))) → List Val
+def toValP3 : @_root_.Prod (_root_.String) (@_root_.Prod (_root_.Nat) (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape)))) → Val
+  | (x, y) => .pair (Canonical.toVal x) (toValP2 y)
+def toValL4 : @_root_.List (@_root_.Prod (_root_.String) (@_root_.Prod (_root_.Nat) (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape))))) → List Val
   | [] => []
-  | x :: xs => toValP2 x :: toValL3 xs
+  | x :: xs => toValP3 x :: toValL4 xs
 end
 
 /-! The structural readers. Exactness is bought by the re-encode guard, so a reader
@@ -457,7 +466,7 @@ def rawShape : Val → Option (_root_.Effect4.Store.Shape)
     | some a0, some a1 => some (.struct a0 a1)
     | _, _ => none
   | .ctor 10 [v0, (.list v1)] =>
-    match Canonical.ofVal (α := _root_.String) v0, rawL3 v1 with
+    match Canonical.ofVal (α := _root_.String) v0, rawL4 v1 with
     | some a0, some a1 => some (.sum a0 a1)
     | _, _ => none
   | .ctor 11 [v0] =>
@@ -482,16 +491,22 @@ def rawL1 : List Val → Option (@_root_.List (@_root_.Prod (_root_.String) (_ro
     match rawP0 v, rawL1 vs with
     | some x, some xs => some (x :: xs)
     | _, _ => none
-def rawP2 : Val → Option (@_root_.Prod (_root_.String) (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape))))
+def rawP2 : Val → Option (@_root_.Prod (_root_.Nat) (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape))))
   | .pair v (.list w) =>
-    match Canonical.ofVal (α := _root_.String) v, rawL1 w with
+    match Canonical.ofVal (α := _root_.Nat) v, rawL1 w with
     | some x, some y => some (x, y)
     | _, _ => none
   | _ => none
-def rawL3 : List Val → Option (@_root_.List (@_root_.Prod (_root_.String) (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape)))))
+def rawP3 : Val → Option (@_root_.Prod (_root_.String) (@_root_.Prod (_root_.Nat) (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape)))))
+  | .pair v w =>
+    match Canonical.ofVal (α := _root_.String) v, rawP2 w with
+    | some x, some y => some (x, y)
+    | _, _ => none
+  | _ => none
+def rawL4 : List Val → Option (@_root_.List (@_root_.Prod (_root_.String) (@_root_.Prod (_root_.Nat) (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape))))))
   | [] => some []
   | v :: vs =>
-    match rawP2 v, rawL3 vs with
+    match rawP3 v, rawL4 vs with
     | some x, some xs => some (x :: xs)
     | _, _ => none
 end
@@ -515,7 +530,7 @@ theorem rawShape_toValShape (a : _root_.Effect4.Store.Shape) :
   | «struct» a0 a1 =>
     simp [toValShape, rawShape, Canonical.ofVal_toVal, rawL1_toValL1 a1]
   | «sum» a0 a1 =>
-    simp [toValShape, rawShape, Canonical.ofVal_toVal, rawL3_toValL3 a1]
+    simp [toValShape, rawShape, Canonical.ofVal_toVal, rawL4_toValL4 a1]
   | «ref» a0 =>
     simp [toValShape, rawShape, Canonical.ofVal_toVal]
   | «anyRef» => rfl
@@ -535,18 +550,24 @@ theorem rawL1_toValL1 (xs : @_root_.List (@_root_.Prod (_root_.String) (_root_.E
   | x :: xs =>
     simp [toValL1, rawL1, rawP0_toValP0 x, rawL1_toValL1 xs]
 termination_by structural xs
-theorem rawP2_toValP2 (p : @_root_.Prod (_root_.String) (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape)))) :
+theorem rawP2_toValP2 (p : @_root_.Prod (_root_.Nat) (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape)))) :
     rawP2 (toValP2 p) = some p := by
   match p with
   | (x, y) =>
     simp [toValP2, rawP2, Canonical.ofVal_toVal, rawL1_toValL1 y]
 termination_by structural p
-theorem rawL3_toValL3 (xs : @_root_.List (@_root_.Prod (_root_.String) (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape))))) :
-    rawL3 (toValL3 xs) = some xs := by
+theorem rawP3_toValP3 (p : @_root_.Prod (_root_.String) (@_root_.Prod (_root_.Nat) (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape))))) :
+    rawP3 (toValP3 p) = some p := by
+  match p with
+  | (x, y) =>
+    simp [toValP3, rawP3, Canonical.ofVal_toVal, rawP2_toValP2 y]
+termination_by structural p
+theorem rawL4_toValL4 (xs : @_root_.List (@_root_.Prod (_root_.String) (@_root_.Prod (_root_.Nat) (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape)))))) :
+    rawL4 (toValL4 xs) = some xs := by
   match xs with
   | [] => rfl
   | x :: xs =>
-    simp [toValL3, rawL3, rawP2_toValP2 x, rawL3_toValL3 xs]
+    simp [toValL4, rawL4, rawP3_toValP3 x, rawL4_toValL4 xs]
 termination_by structural xs
 end
 
@@ -556,12 +577,17 @@ theorem mem_Shape : ("Shape", ShapeShape) ∈ defs := List.Mem.head _
 
 /-- Into the appended tail of the block's table. -/
 theorem mem_tail {p : String × Shape}
-    (h : p ∈ (shape _root_.String).defs ++ (shape _root_.Effect4.Store.Kind).defs) : p ∈ defs :=
+    (h : p ∈ (shape _root_.String).defs ++ (shape _root_.Nat).defs ++
+      (shape _root_.Effect4.Store.Kind).defs) : p ∈ defs :=
   List.Mem.tail _ (h)
 
 theorem lift_String (x : _root_.String) :
     acceptsIn defs (shape _root_.String).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_tail (mem_append_of_left (hp)))
+  acceptsIn_mono_of_subset (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (hp))))
+    _ _ (Canonical.fits x)
+theorem lift_Nat (x : _root_.Nat) :
+    acceptsIn defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_right (hp))))
     _ _ (Canonical.fits x)
 theorem lift_Kind (x : _root_.Effect4.Store.Kind) :
     acceptsIn defs (shape _root_.Effect4.Store.Kind).root (Canonical.toVal x) = true :=
@@ -602,7 +628,7 @@ theorem fitsShape (a : _root_.Effect4.Store.Shape) :
   | «sum» a0 a1 =>
     exact acceptsAt_sum _ _ _ 10 "sum" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a0)
-        (acceptsFields_cons _ _ _ _ _ _ (accepts_list _ _ _ (fitsL3 a1)) (acceptsFields_nil _)))
+        (acceptsFields_cons _ _ _ _ _ _ (accepts_list _ _ _ (fitsL4 a1)) (acceptsFields_nil _)))
   | «ref» a0 =>
     exact acceptsAt_sum _ _ _ 11 "ref" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_Kind a0) (acceptsFields_nil _))
@@ -634,27 +660,35 @@ theorem fitsL1 (xs : @_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.
     · exact fitsP0 x
     · exact fitsL1 xs v hv
 termination_by structural xs
-theorem fitsP2 (p : @_root_.Prod (_root_.String) (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape)))) :
-    acceptsIn defs (.pair ((shape _root_.String).root) (.list (.pair ((shape _root_.String).root) (.named "Shape"))))
+theorem fitsP2 (p : @_root_.Prod (_root_.Nat) (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape)))) :
+    acceptsIn defs (.pair ((shape _root_.Nat).root) (.list (.pair ((shape _root_.String).root) (.named "Shape"))))
       (toValP2 p) = true := by
   match p with
   | (x, y) =>
     exact accepts_pair _ _ _ _ _
-      (lift_String x) (accepts_list _ _ _ (fitsL1 y))
+      (lift_Nat x) (accepts_list _ _ _ (fitsL1 y))
 termination_by structural p
-theorem fitsL3 (xs : @_root_.List (@_root_.Prod (_root_.String) (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape))))) :
-    ∀ v ∈ toValL3 xs,
-      acceptsIn defs (.pair ((shape _root_.String).root) (.list (.pair ((shape _root_.String).root) (.named "Shape")))) v = true := by
+theorem fitsP3 (p : @_root_.Prod (_root_.String) (@_root_.Prod (_root_.Nat) (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape))))) :
+    acceptsIn defs (.pair ((shape _root_.String).root) (.pair ((shape _root_.Nat).root) (.list (.pair ((shape _root_.String).root) (.named "Shape")))))
+      (toValP3 p) = true := by
+  match p with
+  | (x, y) =>
+    exact accepts_pair _ _ _ _ _
+      (lift_String x) (fitsP2 y)
+termination_by structural p
+theorem fitsL4 (xs : @_root_.List (@_root_.Prod (_root_.String) (@_root_.Prod (_root_.Nat) (@_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Store.Shape)))))) :
+    ∀ v ∈ toValL4 xs,
+      acceptsIn defs (.pair ((shape _root_.String).root) (.pair ((shape _root_.Nat).root) (.list (.pair ((shape _root_.String).root) (.named "Shape"))))) v = true := by
   match xs with
   | [] =>
     intro v hv
     exact nomatch hv
   | x :: xs =>
     intro v hv
-    simp only [toValL3, List.mem_cons] at hv
+    simp only [toValL4, List.mem_cons] at hv
     rcases hv with rfl | hv
-    · exact fitsP2 x
-    · exact fitsL3 xs v hv
+    · exact fitsP3 x
+    · exact fitsL4 xs v hv
 termination_by structural xs
 end
 
@@ -662,6 +696,9 @@ instance instCanonicalShape : Canonical (_root_.Effect4.Store.Shape) :=
   ⟨⟨.named "Shape", defs⟩, toValShape, guarded toValShape rawShape,
     fun a => guarded_toVal _ _ a (rawShape_toValShape a), fun h => guarded_exact h,
     fitsShape⟩
+
+-- No sum of the block's table gives one wire tag to two cases.
+#guard wellTaggedFields defs
 
 end ShapeC
 
@@ -722,6 +759,9 @@ theorem fits (a : _root_.Effect4.Store.ShapeDoc) : shapeDoc.accepts (toVal a) = 
 instance instCanonical : Canonical (_root_.Effect4.Store.ShapeDoc) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end ShapeDocC
 
 end ValueGen
@@ -741,11 +781,11 @@ def values : List Val :=
 def shapes : List Shape :=
   [.unit, .bool, .nat, .string, .bytes, .digest, .list .nat, .option (.list .string),
    .pair .nat (.named "T"), .struct "S" [("a", .nat), ("b", .named "T")],
-   .sum "T" [("leaf", []), ("node", [("left", .named "T"), ("right", .named "T")])],
+   .sum "T" [("leaf", 0, []), ("node", 1, [("left", .named "T"), ("right", .named "T")])],
    .ref .program, .anyRef, .named "T"]
 
 def docs : List ShapeDoc :=
-  [⟨.nat, []⟩, ⟨.named "T", [("T", .sum "T" [("leaf", []), ("node", [("next", .named "T")])])]⟩,
+  [⟨.nat, []⟩, ⟨.named "T", [("T", .sum "T" [("leaf", 0, []), ("node", 3, [("next", .named "T")])])]⟩,
    Canonical.shape Val, Canonical.shape Shape, Canonical.shape ShapeDoc]
 
 #guard values.all fun x => Canonical.decode (α := Val) (Canonical.encode x) = some x

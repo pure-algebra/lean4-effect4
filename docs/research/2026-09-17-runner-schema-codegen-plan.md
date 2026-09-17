@@ -147,12 +147,22 @@ Not built: `Api.Run` holds the whole machine and has no instance (the machine co
 of the engine note), so there is no `inspectBytes`; a holder reads `observeBytes` and
 `outstandingBytes`. The runner is not yet among the LCNF roots.
 
-**Melding with S1 (stable wire tags).** S1 gives every sum case an explicit tag from
-`tools/Effect4Gen/wire-tags.json`, keyed by the inductive's name, and `Shape.sum` carries the
-tag per case. These groups go through the same generator. At the rebase: list the families of
-both groups in that file at their declaration positions (no byte changes), regenerate, and
-give the hand-written `Shape.sum` literals in `tools/Effect4Gen/guards/value.lean` their tags.
-A journal is persistent content, so its families must be listed, not left to positions.
+**Melded with S1 (stable wire tags), 2026-09-17.** The agent's S1 (`a9c0d913`), its rewrite
+record and the `branch` retirement are merged into this branch. Both groups regenerate through
+the tag-reading generator, and the merged tree builds with every law of this note unchanged.
+Two facts from the merge:
+
+* **The families are not listed in `tools/Effect4Gen/wire-tags.json` yet, on purpose.** The
+  compatibility gate refuses a listed family that is not in the baseline's reflected world, so
+  listing them freezes the journal's byte format. The questions below are still open, so that
+  is premature. An unlisted family carries its declaration positions; regenerating with and
+  without the listing gave byte-identical files. **Owed when the boundary is ratified:** list
+  the seventeen sum families of the two groups, add them to the compatibility snapshot, and
+  name that in the policy, in one step. From then on a journal written today reads forever.
+* **The derived types are named in the compatibility policy** as 23 consumer additions
+  (`Test/fixtures/baseline/66ee4657-supplement-v1.policy.json`). That records that these types
+  have derived codecs; it freezes no tag. The policy file calls a change to it a review event,
+  so it is flagged for the owner.
 
 **To settle when the bytes boundary is designed** (raised while reading the landed API with
 the owner, 2026-09-17; none blocks anything built so far):

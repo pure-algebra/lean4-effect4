@@ -331,17 +331,17 @@ def wireRuntime : String :=
     , "    if (value === null) this.frame(6, [])"
     , "    else this.frame(7, [() => each(value)])"
     , "  }"
-    , "  ctor(index: number, children: ReadonlyArray<() => void>): void {"
-    , "    this.frame(10, [() => this.nat(index), ...children])"
+    , "  ctor(tag: number, children: ReadonlyArray<() => void>): void {"
+    , "    this.frame(10, [() => this.nat(tag), ...children])"
     , "  }"
     , "  list<A>(items: ReadonlyArray<A>, each: (a: A) => void): void {"
     , "    if (!Array.isArray(items)) throw new TypeError(\"wire List\")"
     , "    this.frame(4, items.map(a => () => each(a)))"
     , "  }"
-    , "  cons<A>(items: ReadonlyArray<A>, each: (a: A) => void, at = 0): void {"
+    , "  cons<A>(items: ReadonlyArray<A>, each: (a: A) => void, nil: number, cons: number, at = 0): void {"
     , "    if (!Array.isArray(items)) throw new TypeError(\"wire inductive list\")"
-    , "    if (at === items.length) this.ctor(0, [])"
-    , "    else this.ctor(1, [() => each(items[at]!), () => this.cons(items, each, at + 1)])"
+    , "    if (at === items.length) this.ctor(nil, [])"
+    , "    else this.ctor(cons, [() => each(items[at]!), () => this.cons(items, each, nil, cons, at + 1)])"
     , "  }"
     , "  finish(write: () => void): Uint8Array {"
     , "    this.tasks.push(write)"
@@ -373,25 +373,32 @@ def wireOf (fs : List Family) : OTy → String → String
 
 def emitFamilyWire (fs : List Family) (f : Family) : String :=
   let name := match kindOf f with | .consList elem => "ReadonlyArray<" ++ tsTy fs elem ++ ">" | _ => tsName f
-  let ctor (index : Nat) (c : Ctor) :=
-    s!"w.ctor({index}, [" ++ ", ".intercalate (c.args.map fun (nm, t) =>
+  -- The number written is the constructor's wire tag (`Ctor.tag`, from the one assignment
+  -- `tools/Effect4Gen/wire-tags.json`), never its position in the declaration.
+  let ctor (tag : Nat) (c : Ctor) :=
+    s!"w.ctor({tag}, [" ++ ", ".intercalate (c.args.map fun (nm, t) =>
       "() => " ++ wireOf fs t ("v." ++ nm)) ++ "])"
   let body := match kindOf f with
     | .enum =>
-      "  switch (v) {\n" ++ "\n".intercalate (f.ctors.zipIdx.map fun ((c, i) : Ctor × Nat) =>
-        s!"    case {lit c.short}: return w.ctor({i}, [])") ++
+      "  switch (v) {\n" ++ "\n".intercalate (f.ctors.map fun (c : Ctor) =>
+        s!"    case {lit c.short}: return w.ctor({c.tag}, [])") ++
       s!"\n    default: throw new TypeError({lit ("wire " ++ name ++ " constructor")})\n  }"
     | .struct => "  " ++ ctor 0 f.ctors.head!
-    | .consList elem => "  w.cons(v, (y) => " ++ wireOf fs elem "y" ++ ")"
+    | .consList elem =>
+      let tagOf (short : String) : Nat :=
+        match f.ctors.find? (fun (c : Ctor) => c.short == short) with
+        | some c => c.tag
+        | none => 0
+      "  w.cons(v, (y) => " ++ wireOf fs elem "y" ++ s!", {tagOf "nil"}, {tagOf "cons"})"
     | .tagged =>
-      "  switch (v._tag) {\n" ++ "\n".intercalate (f.ctors.zipIdx.map fun ((c, i) : Ctor × Nat) =>
-        s!"    case {lit c.short}: return {ctor i c}") ++
+      "  switch (v._tag) {\n" ++ "\n".intercalate (f.ctors.map fun (c : Ctor) =>
+        s!"    case {lit c.short}: return {ctor c.tag c}") ++
       s!"\n    default: throw new TypeError({lit ("wire " ++ name ++ " constructor")})\n  }"
   s!"const {writeFn f} = (w: Writer, v: {name}): void => \{\n{body}\n}\n" ++
   s!"export const {wireFn f} = (v: {name}): Uint8Array => \{\n  const w = new Writer()\n  return w.finish(() => {writeFn f}(w, v))\n}\n"
 
 def emitWire (fs : List Family) : String :=
-  header "Canonical byte writers for every family; Store.Val framing and declaration-order constructor tags." ++
+  header "Canonical byte writers for every family; Store.Val framing and the wire tags of tools/Effect4Gen/wire-tags.json." ++
   "import type { " ++ ", ".intercalate (fs.filterMap fun f => match kindOf f with | .consList _ => none | _ => some (tsName f)) ++ " } from \"./eff.gen.ts\"\n\n" ++
   wireRuntime ++ "\n".intercalate (fs.map (emitFamilyWire fs)) ++
   "\nexport const encodeProgram = effWire\n"

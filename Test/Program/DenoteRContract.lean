@@ -84,7 +84,7 @@ def writeThenFail : NativeEff :=
 
 -- The false branch is child 1; the action and child are two further address components.
 def branchFork : NativeEff :=
-  .branch (.lit (.bool false)) pFail (.withFiber (.fork pSucceed deferredChild))
+  .select (.lit (.bool false)) .bool pFail (.withFiber (.fork pSucceed deferredChild))
 #guard operation? (result branchFork) =
   some (.fork (.at_ ⟨[1, 0, 0], [], 77, [], [], 0⟩) deferredChild)
 

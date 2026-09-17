@@ -7,7 +7,7 @@ import Effect4.Codegen.Diagnostics
 
 `Api.explain` (`src/Effect4/Api.lean`) projects the one checker: the path of the deepest node
 whose own rule refuses, and that rule's reason (`TypeReason`, `Program/Typing/Blame.lean`).
-The pins walk a refusal down through `bind`, `suspend`, `catchCause`, `branch` and a generator
+The pins walk a refusal down through `bind`, `suspend`, `catchCause`, `select` and a generator
 body, and the law `Api.explain_none_iff` is what makes the projection the checker's rather
 than a second checker. `Api.check` and `Api.author` (DI-85) answer the certificate or that
 refusal: a refused program never comes back without a reason.
@@ -31,13 +31,13 @@ def refused : Api.Program := .fail (.lit (.bool true))
 #guard Api.blame (.bind (.succeed (.lit (.nat 1))) refused) = some [1]
 #guard Api.blame (.catchCause (.suspend refused) (.succeed (.lit .unit))) = some [0, 0]
 #guard Api.blame (.catchCause (.succeed (.lit .unit)) refused) = some [1]
-#guard Api.blame (.branch (.lit (.bool true)) (.succeed (.lit .unit)) refused) = some [1]
+#guard Api.blame (.select (.lit (.bool true)) .bool (.succeed (.lit .unit)) refused) = some [1]
 #guard Api.blame (.onExit (.succeed (.lit .unit)) (.bind refused (.succeed (.lit .unit)))) = some [1, 0]
 
 /-! ## The reason is the node's own rule -/
 
 #guard Api.explain (.succeed (.var 0)) = some ⟨[], .term (.var 0)⟩
-#guard Api.explain (.branch (.lit (.nat 1)) (.succeed (.lit .unit)) (.succeed (.lit .unit)))
+#guard Api.explain (.select (.lit (.nat 1)) .bool (.succeed (.lit .unit)) (.succeed (.lit .unit)))
   = some ⟨[], .predicateNotBool .nat⟩
 #guard match Api.explain (.perform .refGet (.lit (.nat 1))) with
   | some ⟨[], .requestNotSubtype _ _ _⟩ => true

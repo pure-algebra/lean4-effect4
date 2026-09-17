@@ -67,7 +67,12 @@ build-tools: build ## the generator and checker roots (Tools, OCaml5, Conform, E
 # the TypeScript tables the ingest README renders. Each marker depends on the previous
 # one, so a regenerated upstream group re-cuts everything downstream of it.
 
-DERIVED_SOURCES := $(wildcard tools/Effect4Gen/*.lean tools/Effect4Gen/guards/*.lean) tools/Effect4Gen/manifest.json tools/Effect4Gen/binders.json
+# The one assignment of wire tags. Every producer of canonical bytes reads it: the Lean
+# codecs (derived), the OCaml codec and the golden bytes (eff), the wire manifest (wire) and
+# the TypeScript writer (ts).
+WIRE_TAGS := tools/Effect4Gen/wire-tags.json
+DERIVED_SOURCES := $(wildcard tools/Effect4Gen/*.lean tools/Effect4Gen/guards/*.lean) tools/Effect4Gen/manifest.json tools/Effect4Gen/binders.json \
+  $(WIRE_TAGS) tools/Tools/WireTags.lean
 DERIVED_TRACES := $(addprefix $(TRACE)/,Store/Canonical.trace Program/Native.trace Store/RowCanonical.trace \
   Store/Pin.trace Store/Node.trace Api/Frontier.trace Program/Eff.trace Program/Ty.trace Program/Refs.trace \
   Program/Authoring.trace Laws/Program/Authoring.trace Program/Node.trace \
@@ -88,7 +93,7 @@ $(GEN)/specs: $(GEN)/derived tools/Conform/Cli/EmitSpecs.lean tools/Conform/Effe
 	$(PY) scripts/generate.py --only specs
 	@mkdir -p $(GEN) && touch $@
 
-EFF_SOURCES := src/OCaml5/Tools/EffGen.lean $(wildcard src/OCaml5/Eff/*.lean) \
+EFF_SOURCES := src/OCaml5/Tools/EffGen.lean $(wildcard src/OCaml5/Eff/*.lean) $(WIRE_TAGS) \
   scripts/generate-engine-structure.py scripts/lib/program_structure.py ocaml/engine/api_engine.ml
 $(GEN)/eff: $(GEN)/specs $(EFF_SOURCES) $(CORE)
 	$(PY) scripts/generate.py --only eff
@@ -102,7 +107,7 @@ $(GEN)/cas: $(GEN)/wire src/OCaml5/Tools/CasGoldens.lean $(CORE)
 	$(PY) scripts/generate.py --only cas
 	@mkdir -p $(GEN) && touch $@
 
-TS_SOURCES := $(wildcard tools/Tools/*.lean) src/Effect4/Codegen/Print.lean lakefile.toml \
+TS_SOURCES := $(wildcard tools/Tools/*.lean) $(WIRE_TAGS) src/Effect4/Codegen/Print.lean lakefile.toml \
   vendor/effect-4.0.0-rc.112/src/unstable/sql/SqlClient.ts vendor/effect-4.0.0-rc.112/src/unstable/sql/Statement.ts \
   vendor/effect-4.0.0-rc.112/src/unstable/persistence/KeyValueStore.ts
 $(GEN)/ts: $(GEN)/cas $(TS_SOURCES) $(CORE)
@@ -412,13 +417,25 @@ $(CHK)/schema-host: $(SCHEMA_SOURCES) $(shell find harness/schema-annotations ha
 # repository and compare its constructor shapes with the promoted baseline. Joins
 # `check` once the baseline is re-promoted at the freeze commit (the current one
 # predates the removal of `choose`).
-COMPAT_BASELINE ?= Test/fixtures/baseline/66ee4657-supplement-v1/snapshot.json
-$(CHK)/compat: $(CORE) scripts/check-compatibility.py scripts/lib/compatibility.py tools/Compatibility/Extract.lean $(COMPAT_BASELINE)
+# The compatibility lane: the working tree's reflected families, with their wire tags from
+# $(WIRE_TAGS), against the retained baseline under the named policy beside it, and the
+# retained byte vectors against their recorded digests under the same policy. A difference
+# the policy does not name fails; so does a policy entry that matches no difference.
+COMPAT_NAME ?= 66ee4657-supplement-v1
+COMPAT_BASELINE ?= Test/fixtures/baseline/$(COMPAT_NAME)/snapshot.json
+COMPAT_POLICY ?= Test/fixtures/baseline/$(COMPAT_NAME).policy.json
+COMPAT_VECTORS ?= Test/fixtures/baseline/66ee4657/golden-digests.sha256
+$(CHK)/compat: $(CORE) scripts/check-compatibility.py scripts/lib/compatibility.py tools/Compatibility/Extract.lean \
+  $(COMPAT_BASELINE) $(COMPAT_POLICY) $(COMPAT_VECTORS) $(WIRE_TAGS) tools/Tools/ProgramStructure.lean tools/Effect4Gen/manifest.json \
+  $(wildcard ocaml/goldens/eff/*.hex ocaml/eff/goldens/*.bin)
+	$(PY) scripts/test-compatibility.py
 	@work="$$(mktemp -d "$${TMPDIR:-/tmp}/effect4-compat.XXXXXX")/tree"; \
 	  $(PY) scripts/check-compatibility.py prepare --work "$$work" --working-tree && \
 	  $(PY) scripts/check-compatibility.py reflect --work "$$work" && \
-	  $(PY) scripts/check-compatibility.py compare --baseline $(COMPAT_BASELINE) --candidate "$$work/snapshot.json"; \
-	  status=$$?; rm -rf "$$(dirname "$$work")"; exit $$status
+	  $(PY) scripts/check-compatibility.py compare --baseline $(COMPAT_BASELINE) --candidate "$$work/snapshot.json" \
+	    --policy $(COMPAT_POLICY) --vectors $(COMPAT_VECTORS) --vector-root ocaml > "$$work/report.json"; \
+	  status=$$?; $(PY) scripts/check-compatibility.py summary --report "$$work/report.json"; \
+	  rm -rf "$$(dirname "$$work")"; exit $$status
 	@mkdir -p $(CHK) && touch $@
 
 SELFTEST_SOURCES := $(wildcard scripts/test-*.sh scripts/test-*.py scripts/check-*.sh scripts/check-*.py scripts/lib/*) Test/Audit/AxiomGate.lean \

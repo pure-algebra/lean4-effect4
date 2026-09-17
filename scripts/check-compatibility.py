@@ -3,8 +3,11 @@
 
 `prepare` and `reflect` operate only in a separate temporary checkout. `reflect`
 runs Lake: hold the repository's one-Lean lane before invoking it. `promote`
-creates a new supplement directory and refuses to overwrite any existing one.
-The original baseline is never a destination of any command.
+creates a new baseline directory from a named immutable revision and refuses to
+overwrite any existing one. A working-tree capture can be compared, never promoted.
+The original baseline is never a destination of any command. `compare` holds the
+candidate to the baseline under a named policy, and with `--vectors` holds the
+retained byte vectors to their recorded digests under the same policy.
 """
 import argparse
 import json
@@ -37,11 +40,16 @@ def main():
     promote = sub.add_parser('promote')
     promote.add_argument('--work', required=True, type=Path)
     promote.add_argument('--destination', required=True, type=Path)
+    promote.add_argument('--name', required=True, help='the baseline name; the destination directory must carry it')
     check = sub.add_parser('compare')
     check.add_argument('--baseline', required=True, type=Path)
     check.add_argument('--candidate', required=True, type=Path)
     check.add_argument('--policy', type=Path)
+    check.add_argument('--vectors', type=Path, help='a retained `shasum -a 256` listing of byte vectors')
+    check.add_argument('--vector-root', type=Path, help='the directory the listing is relative to')
     check.add_argument('--out', type=Path)
+    summary = sub.add_parser('summary', help='print the verdict, the errors and the counts of a written report')
+    summary.add_argument('--report', required=True, type=Path)
     observations = sub.add_parser('compare-observations')
     observations.add_argument('--dimension', required=True, choices=['admission', 'execution_permission'])
     observations.add_argument('--before', required=True, type=Path)
@@ -61,7 +69,8 @@ def main():
                 else (lambda path: c.git_bytes(c.ROOT, revision, path)))
         closure = c.source_closure(read)
         args.work.mkdir(parents=True)
-        paths = sorted(set([x['path'] for x in closure] + c.BUILD_INPUTS + c.LAYOUT_INPUTS))
+        present = [path for path in c.OPTIONAL_LAYOUT_INPUTS if c.optional(read, path) is not None]
+        paths = sorted(set([x['path'] for x in closure] + c.BUILD_INPUTS + c.LAYOUT_INPUTS + present))
         captured = []
         for path in paths:
             target = args.work / path
@@ -124,10 +133,18 @@ def main():
         destination = args.destination.resolve()
         parent = (c.ROOT / 'Test/fixtures/baseline').resolve()
         if destination.parent != parent or destination.name == '66ee4657' or destination.exists():
-            raise ValueError('promotion requires a new sibling supplement directory')
+            raise ValueError('promotion requires a new sibling baseline directory')
+        c.baseline_name(args.name)
+        if destination.name != args.name:
+            raise ValueError('promotion: the destination directory must carry the baseline name')
         source = load(args.work / 'source.json')
-        if source.get('origin', 'git') != 'git' or source['revision'] != c.BASE:
-            raise ValueError('only the immutable original revision can be promoted as this supplement')
+        if source.get('origin', 'git') != 'git':
+            raise ValueError('a working-tree capture cannot be promoted; prepare a committed revision')
+        # The revision must still name the same commit: a moved branch is not an immutable origin.
+        if c.resolve_revision(c.ROOT, source['revision']) != source['revision'] or len(source['revision']) != 40:
+            raise ValueError('promotion requires a full immutable commit identity')
+        if not args.name.startswith(source['revision'][:8]):
+            raise ValueError('promotion: the baseline name must begin with the first eight digits of its revision')
         for path, expected in [('Extract.lean', source['extractor_sha256']),
                                ('inventory.json', source['inventory_sha256'])]:
             if c.digest((args.work / path).read_bytes()) != expected:
@@ -140,8 +157,23 @@ def main():
         write(destination / 'snapshot.json', snapshot)
         # Retained recipe text is not a Test module or a new audited import.
         shutil.copyfile(args.work / 'Extract.lean', destination / 'Extract.lean.txt')
-        write(destination / 'extraction.json', source)
-        print('promoted new supplement; review this new directory: ' + str(destination))
+        write(destination / 'extraction.json', dict(source, name=args.name))
+        print('promoted new baseline; review this new directory: ' + str(destination))
+    elif args.command == 'summary':
+        if not args.report.is_file():
+            print('FAIL check-compat: no report was written; the capture or the reflection failed')
+            return 1
+        report = load(args.report)
+        failed = False
+        for part in ('structural_wire', 'retained_vectors'):
+            row = report[part]
+            failed = failed or row['status'] == 'fail'
+            extra = f', {row["unchanged"]} vectors unchanged' if 'unchanged' in row else ''
+            print(f'{part}: {row["status"]} ({len(row.get("changes", []))} named changes, {len(row.get("errors", []))} errors{extra})')
+            for error in row.get('errors', []):
+                print('  ' + error)
+        print(('FAIL' if failed else 'PASS') + ' check-compat: the working tree against the retained baseline under its named policy')
+        return int(failed)
     elif args.command == 'compare-observations':
         report = c.policy_delta(load(args.before), load(args.after), load(args.expected), args.dimension)
         report['inputs'] = {name: c.digest(getattr(args, name).read_bytes()) for name in ('before', 'after', 'expected')}
@@ -152,8 +184,14 @@ def main():
         print(c.canonical(report), end='')
         return int(report['status'] != 'pass')
     else:
+        policy = load(args.policy) if args.policy else None
+        if (args.vectors is None) != (args.vector_root is None):
+            raise ValueError('--vectors and --vector-root go together')
+        vectors = (c.retained_vectors(args.vectors.read_text(), args.vector_root, policy) if args.vectors
+                   else {'status': 'not_run', 'reason': 'no retained vector listing was given'})
         report = {
-            'structural_wire': c.compare(load(args.baseline), load(args.candidate), load(args.policy) if args.policy else None),
+            'structural_wire': c.compare(load(args.baseline), load(args.candidate), policy),
+            'retained_vectors': vectors,
             'decoding': {'status': 'not_run', 'reason': 'shape comparison does not execute a decoder'},
             'admission': {'status': 'not_run', 'reason': 'shape comparison does not execute a checker'},
             'execution_permission': {'status': 'not_run', 'reason': 'shape equality grants no permission'},
@@ -163,7 +201,7 @@ def main():
                 raise ValueError('comparison cannot write baseline fixtures')
             write(args.out, report)
         print(c.canonical(report), end='')
-        return int(report['structural_wire']['status'] != 'pass')
+        return int(report['structural_wire']['status'] != 'pass' or report['retained_vectors']['status'] == 'fail')
     return 0
 
 

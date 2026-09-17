@@ -20,7 +20,7 @@ admit the two first-order synthesized `Body` shapes used by store finalization. 
 markers retain continuation boundaries across suspension. Four operations are the
 checkpoints the pinned host counts and the frame machine spends where the term has no
 store or fiber work of its own (P2, rows of the P0 record §2): `suspend` is the counted
-step that returns code (`Suspend`, a decided `branch`, a yieldable error's failure, and
+step that returns code (`Suspend`, a decided `select`, a yieldable error's failure, and
 the wrapper the host puts in front of a generator and of a loop); `sync` is a pure
 thunk's value delivered through the `answered` phase; `gen` and `loop` are the initial
 entries of a generator and of a cursor loop, whose later iterations run inside the body's

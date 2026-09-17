@@ -338,7 +338,7 @@ remove a retained error (`E4-RESID-CE-001`). Runtime selection is unchanged. -/
 def tagged (t m : String) : Term :=
   .app "pair" (.cons (.lit (.str t)) (.cons (.lit (.str m)) .nil))
 def tagBody : Api.Program :=
-  .bind (.branch (.lit (.bool true)) (.succeed (.lit (.nat 0))) (.fail (.lit (.str "text"))))
+  .bind (.select (.lit (.bool true)) .bool (.succeed (.lit (.nat 0))) (.fail (.lit (.str "text"))))
     (.fail (tagged "A" "m"))
 def pTagHit : Api.Program := .catchIf (tagTest "A" 0) tagBody (.succeed (.lit (.nat 1)))
 def pTagMiss : Api.Program := .catchIf (tagTest "B" 0) tagBody (.succeed (.lit (.nat 1)))
@@ -349,7 +349,7 @@ def pTagTwoFail : Api.Program := .catchIf (tagTest "A" 0)
 Both branches have the same declared error column, so the empty case has a real
 payload bound rather than inferring one from its fallback. -/
 def optionResult (present : Bool) : Api.Program :=
-  .bind (.exit (.branch (.lit (.bool present)) (.fail (.lit (.nat 7)))
+  .bind (.exit (.select (.lit (.bool present)) .bool (.fail (.lit (.nat 7)))
       (.succeed (.lit (.nat 0)))))
     (.bind (.succeed (.app "causeError" (.cons (.var 0) .nil)))
       (.succeed (.app "pair"

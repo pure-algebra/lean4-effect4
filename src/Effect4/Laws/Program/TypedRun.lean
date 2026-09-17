@@ -43,10 +43,6 @@ theorem Looped.refSites_nil : ∀ (e : NativeEff) (p : List Nat), Looped e = tru
     show Eff.refSites _ a ++ Eff.refSites _ b = []
     rw [Looped.refSites_nil a _ (Looped.bind h).1, Looped.refSites_nil b _ (Looped.bind h).2]
     rfl
-  | .branch _ a b, p, h => by
-    show Eff.refSites _ a ++ Eff.refSites _ b = []
-    rw [Looped.refSites_nil a _ (Looped.branch h).1, Looped.refSites_nil b _ (Looped.branch h).2]
-    rfl
   | .select _ _ a b, p, h => by
     show Eff.refSites _ a ++ Eff.refSites _ b = []
     rw [Looped.refSites_nil a _ (Looped.select h).1, Looped.refSites_nil b _ (Looped.select h).2]

@@ -40,7 +40,7 @@ theorem map_scoped {Op : Type} (atom : String) {effect : Src Op} (h : effect.Sco
 theorem ifElse_scoped {Op : Type} {test : TermSrc} {thenB elseB : Src Op}
     (h0 : test.Scoped) (h1 : thenB.Scoped) (h2 : elseB.Scoped) :
     (ifElse test thenB elseB).Scoped :=
-  branch_scoped h0 h1 h2
+  selectBool_scoped h0 h1 h2
 
 /-- Scope safety by construction: a program that elaborates is closed at level `0`. -/
 theorem elaborate_scoped {Op : Type} {src : Src Op} (h : src.Scoped) {e : Eff Op}

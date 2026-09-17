@@ -17,7 +17,7 @@ function eff(v: unknown): void {
     case "suspend": case "exit": case "uninterruptible": case "interruptible": case "scoped": eff(a[1]); break
     case "bind": case "catchCause": case "onExit": case "acquireRelease": eff(a[1]); eff(a[2]); break
     case "matchCause": eff(a[1]); eff(a[2]); eff(a[3]); break
-    case "branch": eff(a[2]); eff(a[3]); break
+    case "select": eff(a[3]); eff(a[4]); break
     case "whileLoop": eff(a[4]); break
     case "gen": chain(a[1], stmt); break
     case "withFiber": action(a[1]); break

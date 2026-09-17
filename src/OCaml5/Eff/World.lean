@@ -1,5 +1,6 @@
 import Lean
 import Tools.ProgramStructure
+import Tools.WireTags
 import Effect4.Program.Native
 import Effect4.Program.Node
 
@@ -17,8 +18,11 @@ family's constructors and their carriers off the Lean environment (`Effect4.Prog
 **Properties.**
 * **Closed.** A field whose type has no carrier is an error at generation time, never a hole in
   the output — *by construction* (`ocamlTy` throws).
-* **Declaration order.** Constructors come in the environment's order, so `ctor_index_<t>` is the
-  wire tag `Effect4.Store.Canonical` assigns — *by construction*.
+* **Two numbers per constructor.** Constructors come in the environment's order, and
+  `ctor_index_<t>` is that compiled position. The wire tag is a different number: `Ctor.tag` is
+  read from the one assignment (`tools/Effect4Gen/wire-tags.json`, through `Tools.WireTags`), and
+  only the byte codec, the golden bytes and the wire manifest use it. Every inductive family of
+  the program world must be listed there — *by construction* (`readBlocks` refuses).
 * **`Effect4.Row α` is carried as `α list`**, the one non-structural rule — *by construction*.
 -/
 
@@ -116,6 +120,8 @@ def projectShape (path : String) : Tools.ProgramStructure.Shape → Except Strin
 structure Ctor where
   name : Name
   short : String
+  /-- The wire tag: the assignment's number, not the position in `Family.ctors`. -/
+  tag : Nat
   args : List (String × OTy)
 deriving Inhabited
 
@@ -127,17 +133,30 @@ structure Family where
 /-- `Effect4.Program.Term`, unambiguous beside `Lean.Term`. -/
 abbrev PTerm := Effect4.Program.Term
 
-def projectFamily (family : Tools.ProgramStructure.Family) : MetaM Family := do
-  let ctors ← family.constructors.mapM fun ctor => do
+def projectFamily (tags : Tools.WireTags.Assignment)
+    (family : Tools.ProgramStructure.Family) : MetaM Family := do
+  let wire ← match Tools.WireTags.tagsOf tags family.spec.leanName family.isStruct
+      (family.constructors.map (·.name)) with
+    | .ok ws => pure ws
+    | .error message => throwError message
+  let ctors ← (family.constructors.zip wire).mapM fun (ctor, tag) => do
     let args ← ctor.fields.mapM fun field =>
       match projectShape s!"{family.spec.leanName}.{field.name}" field.shape with
       | .ok shape => pure (field.name, shape)
       | .error message => throwError message
-    pure { name := ctor.name, short := shortName ctor.name, args : Ctor }
+    pure { name := ctor.name, short := shortName ctor.name, tag, args : Ctor }
   pure { spec := projectSpec family.spec, isStruct := family.isStruct, ctors }
 
+/-- The program world with its wire tags. The assignment is read once; an inductive family of
+the world that the assignment does not list is refused, so no tag here is a silent default. -/
 def readBlocks : MetaM (List (List Family)) := do
-  (← Tools.ProgramStructure.readBlocks).mapM (·.mapM projectFamily)
+  let tags ← Tools.WireTags.load
+  let source ← Tools.ProgramStructure.readBlocks
+  let inductives := (source.flatten.filter (!·.isStruct)).map (·.spec.leanName)
+  match Tools.WireTags.requireListed tags inductives with
+  | .ok () => pure ()
+  | .error message => throwError message
+  source.mapM (·.mapM (projectFamily tags))
 
 /-- The node sorts, read off `Effect4.Program.Node`: each constructor's short name with the
 label of the family its one field carries, in `Node`'s declaration order. -/

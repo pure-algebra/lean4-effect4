@@ -610,11 +610,7 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
   | .bind a b, p => (guardR .onSuccess (rec a (p.child 0))).bind
       (seqR fun v => constructR fun completed =>
         rec b ({ p with completed }.childWith 1 v))
-  -- `Prim.suspend (body p)`, decided by `suspendBodyAt`: the counted step, then the branch.
-  | .branch test a b, p => suspendR p (constructR fun completed => match evalTerm p.env test with
-      | some (.bool true) => rec a ({ p with completed }.child 0)
-      | some (.bool false) => rec b ({ p with completed }.child 1)
-      | _ => .pure badShapeExit)
+  -- `Prim.suspend (body p)`, decided by `suspendBodyAt`: the counted step, then the arm.
   -- `select`: the decision chooses the arm and the value it binds (`suspendBodyAt`'s arm).
   | .select s d a0 a1, p => suspendR p (constructR fun completed =>
       match (evalTerm p.env s).bind d.decide with
@@ -851,17 +847,6 @@ theorem denoteR_bind (root : NativeEff) (a b : NativeEff) (p : Point) (h : p.fue
 theorem denoteR_suspend (root : NativeEff) (b : NativeEff) (p : Point) (h : p.fuel ≠ 0) :
     denoteR root (.suspend b) p = suspendR p (constructR fun completed =>
       denoteR root b ({ p with completed }.child 0)) := by
-  cases hf : p.fuel with
-  | zero => exact (h hf).elim
-  | succ f => budget hf
-
-theorem denoteR_branch (root : NativeEff) (t : Term) (a b : NativeEff) (p : Point)
-    (h : p.fuel ≠ 0) :
-    denoteR root (.branch t a b) p =
-      suspendR p (constructR fun completed => match evalTerm p.env t with
-        | some (.bool true) => denoteR root a ({ p with completed }.child 0)
-        | some (.bool false) => denoteR root b ({ p with completed }.child 1)
-        | _ => .pure badShapeExit) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
   | succ f => budget hf
@@ -1347,7 +1332,7 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
       cases evalTerm p.env value <;> rfl
     | sync _ | suspend _ | bind _ _ | gen _ | catchCause _ _ | catchIf _ _ _ | matchCause _ _ _
-    | onExit _ _ | uninterruptible _ | interruptible _ | branch _ _ _ | select _ _ _ _
+    | onExit _ _ | uninterruptible _ | interruptible _ | select _ _ _ _
     | whileLoop _ _ _ _ | iterate _ _ _ _ _ _ | yieldNow _ | «scoped» _ | acquireRelease _ _
     | provideLayer _ _ _ | service _ =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte, headExit, frontier]
@@ -1429,7 +1414,7 @@ theorem denote_of_inlineYield : ∀ (b : NativeEff) (q : Point) {exit : ExitV},
         rw [denote, hd]
         rfl
   | .sync _, q, exit, _, h | .suspend _, q, exit, _, h | .bind _ _, q, exit, _, h
-  | .branch _ _ _, q, exit, _, h | .select _ _ _ _, q, exit, _, h | .catchCause _ _, q, exit, _, h
+  | .select _ _ _ _, q, exit, _, h | .catchCause _ _, q, exit, _, h
   | .matchCause _ _ _, q, exit, _, h | .onExit _ _, q, exit, _, h => by
     simp [inlineYield] at h
   | .gen _, _, _, hs, _ | .uninterruptible _, _, _, hs, _ | .interruptible _, _, _, hs, _
@@ -1509,23 +1494,6 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
     | success v =>
       exact denoteR_straight root b ({ p with completed := [] }.childWith 1 v) hab.2
         (by simp only [Agreement.depth] at hp; simp only [Point.childWith]; omega)
-  | .branch test a b, p, hs, hp => by
-    have hpos : p.fuel ≠ 0 := by have := Agreement.depth_pos (.branch test a b); omega
-    have hab := Straight.branch hs
-    rw [denoteR_branch root test a b p hpos, eraseControl_suspendR, eraseControl_constructR, denote]
-    split
-    · rename_i ht
-      rw [ht]
-      exact denoteR_straight root a ({ p with completed := [] }.child 0) hab.1
-        (by simp only [Agreement.depth] at hp; simp only [Point.child]; omega)
-    · rename_i ht
-      rw [ht]
-      exact denoteR_straight root b ({ p with completed := [] }.child 1) hab.2
-        (by simp only [Agreement.depth] at hp; simp only [Point.child]; omega)
-    · split
-      · contradiction
-      · contradiction
-      · rfl
   | .select s d a0 a1, p, hs, hp => by
     have hpos : p.fuel ≠ 0 := by have := Agreement.depth_pos (.select s d a0 a1); omega
     have hab := Straight.select hs

@@ -85,7 +85,7 @@ def tagged (t m : String) : Term :=
 -- the union column is built by `bind` (the truth fixture's shape): the conditional could fail
 -- with text, then the tagged pair fails
 def unionBody : NativeEff :=
-  .bind (.branch yes (.succeed (n 0)) (.fail (.lit (.str "text")))) (.fail (tagged "A" "m"))
+  .bind (.select yes .bool (.succeed (n 0)) (.fail (.lit (.str "text")))) (.fail (tagged "A" "m"))
 def tagHit : NativeEff := .catchIf (tagTest "A" 0) unionBody (.succeed (n 1))
 def tagMiss : NativeEff := .catchIf (tagTest "B" 0) unionBody (.succeed (n 1))
 def twoFailTag : NativeEff := .catchIf (tagTest "A" 0)

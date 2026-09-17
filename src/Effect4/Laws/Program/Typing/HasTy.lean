@@ -135,8 +135,11 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
       HasTy sig env (.catchIf test body handler)
         ⟨answer, catchIfError test env.length b.error h.error, b.requires.union h.requires⟩
   /-- A value-decided fork: the arms are typed at the environments `Decision.arms` gives,
-  their answers join as the least upper bound, both arms' errors and requirements are in the
-  conclusion. `branch` is the `.bool` instance. -/
+  their answers join as the least upper bound (S4c: `succeed 1` beside `succeed true` is
+  `nat | bool`), and **both** arms' errors and requirements are in the conclusion. Under
+  `.bool` this is `if` in a generator body (`E4-FLOW-CE-029`). (The row that is not this one,
+  child 0's requirements alone, which rc.112's printed `Effect.suspend` head infers, is the
+  red control `tools/conform-red/RulesNeg.lean`.) -/
   | select {env : TyEnv} {s : Term} {d : Decision} {a0 a1 : Eff Op} {t : Ty}
       {e0 e1 : List Ty} {t0 t1 : EffTy} {answer : Ty} :
       termTy sig env s = some t →
@@ -175,18 +178,6 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
   | interruptible {env : TyEnv} {body : Eff Op} {t : EffTy} :
       HasTy sig env body t →
       HasTy sig env (.interruptible body) t
-  /-- `if` in a generator body (`E4-FLOW-CE-029`): the test is a `bool` term, the two arms'
-  answers join as the least upper bound (S4c: `succeed 1` beside `succeed true` is
-  `nat | bool`), and **both** arms' requirements are in the conclusion. (The row that is
-  not this one — the `then` arm's alone, which rc.112's printed `Effect.suspend` head infers —
-  is the red control `tools/conform-red/RulesNeg.lean`.) -/
-  | branch {env : TyEnv} {test : Term} {thenB elseB : Eff Op} {a b : EffTy} {answer : Ty} :
-      termTy sig env test = some .bool →
-      HasTy sig env thenB a →
-      HasTy sig env elseB b →
-      EffTy.joinAnswer a.answer b.answer = some answer →
-      HasTy sig env (.branch test thenB elseB)
-        ⟨answer, a.error.join b.error, a.requires.union b.requires⟩
   /-- `Effect.whileLoop` (`:4628`): the cursor is the next variable, initialised by `initial`;
   the test is a `bool` over the cursor, the body runs over the cursor, and the step must give
   back a term of the **cursor's own type** — the loop's invariant, stated as an equation. The

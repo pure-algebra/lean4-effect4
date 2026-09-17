@@ -65,11 +65,6 @@ def denoteWith (bad : ExitV) : NativeEff → List Val → Effects.Program StoreS
     | _ => pure outsideExit
   | .bind a b, env =>
     Effects.Program.bind (denoteWith bad a env) (seqExit fun v => denoteWith bad b (env ++ [v]))
-  | .branch t a b, env =>
-    match evalTerm env t with
-    | some (Val.bool true) => denoteWith bad a env
-    | some (Val.bool false) => denoteWith bad b env
-    | _ => pure bad
   | .select t d a b, env =>
     match (evalTerm env t).bind d.decide with
     | some (true, bound) => denoteWith bad a (env ++ bound.toList)
@@ -112,17 +107,6 @@ theorem denoteWith_badShape : ∀ (e : NativeEff) (env : List Val),
     cases ex with
     | success v => exact denoteWith_badShape b (env ++ [v])
     | failure c => rfl
-  | .branch t a b, env => by
-    rw [denoteWith, denote]
-    cases evalTerm env t with
-    | none => rfl
-    | some tv =>
-      cases tv with
-      | bool flag =>
-        cases flag with
-        | true => exact denoteWith_badShape a env
-        | false => exact denoteWith_badShape b env
-      | _ => rfl
   | .select t d a b, env => by
     rw [denoteWith, denote]
     cases (evalTerm env t).bind d.decide with
@@ -557,26 +541,6 @@ theorem sound (bad : ExitV) : ∀ (e : NativeEff) (tys : TyEnv) (env : List Val)
     show SoundP _ _ s _ _
     rw [denoteWith, denote, hcause]
     exact SoundP.pure hat.wf hat.heap _ (causeOf_admits tys env hat.fits c ty hc cause hcause)
-  | .branch test a b, tys, env, s, t, hs, hty, hat => by
-    obtain ⟨ha, hb⟩ := Straight.branch hs
-    obtain ⟨htest, ta, tb, answer, hta, htb, hans, rfl⟩ :=
-      inv_branch nativeSignature tys test a b t hty
-    obtain ⟨x, hx⟩ :=
-      Option.isSome_iff_exists.mp (evalTerm_isSome test env tys .bool hat.fits htest)
-    obtain ⟨flag, rfl⟩ := Val.hasTy_bool_inv (evalTerm_hasTy test env tys .bool x hat.fits htest hx)
-    rw [EffTy.joinAnswer_eq] at hans
-    cases hans
-    show SoundP _ _ s _ _
-    rw [denoteWith, denote, hx]
-    cases flag with
-    | true =>
-      exact (sound bad a tys env s ta ha hta hat).widen
-        (fun w h => Ty.hasTy_join_left ta.answer tb.answer w [] h)
-        (fun w h => Ty.hasTy_join_left ta.error tb.error w [] h)
-    | false =>
-      exact (sound bad b tys env s tb hb htb hat).widen
-        (fun w h => Ty.hasTy_join_right ta.answer tb.answer w [] h)
-        (fun w h => Ty.hasTy_join_right ta.error tb.error w [] h)
   | .exit b, tys, env, s, t, hs, hty, hat => by
     obtain ⟨tb, htb, rfl⟩ := inv_exit nativeSignature tys b t hty
     have ih := sound bad b tys env s tb (Straight.exit hs) htb hat

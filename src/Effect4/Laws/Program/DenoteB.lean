@@ -124,7 +124,6 @@ def Looped : NativeEff → Bool
   | .iterate _ _ _ _ _ body => Looped body
   | .suspend b => Looped b
   | .bind a b => Looped a && Looped b
-  | .branch _ a b => Looped a && Looped b
   | .select _ _ a b => Looped a && Looped b
   | .exit b => Looped b
   | .catchCause b h => Looped b && Looped h
@@ -135,10 +134,6 @@ def Looped : NativeEff → Bool
 /-! ## The fragment's subprograms -/
 
 theorem Looped.bind {a b : NativeEff} (h : Looped (.bind a b) = true) :
-    Looped a = true ∧ Looped b = true := by
-  simpa [Looped, Bool.and_eq_true] using h
-
-theorem Looped.branch {t : Term} {a b : NativeEff} (h : Looped (.branch t a b) = true) :
     Looped a = true ∧ Looped b = true := by
   simpa [Looped, Bool.and_eq_true] using h
 
@@ -169,16 +164,16 @@ theorem Looped.iterate {c : Ty} {i t st r : Term} {b : NativeEff}
   simpa [Looped] using h
 
 /-- Where the fragment meets the heads whose suspension body the compile decides itself: a
-source suspension, a branch, a decision, and a loop. -/
+source suspension, a decision, and a loop. -/
 theorem Looped.suspendDecided_iff {e : NativeEff} (hl : Looped e = true) :
     e.suspendDecided = true ↔
-      (∃ b, e = .suspend b) ∨ (∃ t a b, e = .branch t a b) ∨ (∃ s d a b, e = .select s d a b) ∨
+      (∃ b, e = .suspend b) ∨ (∃ s d a b, e = .select s d a b) ∨
         (∃ c i t st r b, e = .iterate c i t st r b) := by
   cases e <;> simp [Eff.suspendDecided, Looped, Straight] at hl ⊢
 
 /-- The forms the budgeted meaning descends into. Every other form is a leaf. -/
 def composite : NativeEff → Bool
-  | .iterate _ _ _ _ _ _ | .suspend _ | .bind _ _ | .branch _ _ _ | .select _ _ _ _ | .exit _
+  | .iterate _ _ _ _ _ _ | .suspend _ | .bind _ _ | .select _ _ _ _ | .exit _
   | .catchCause _ _ | .matchCause _ _ _ | .onExit _ _ => true
   | _ => false
 
@@ -199,11 +194,6 @@ def denoteB (k : Nat) : NativeEff → List Val → Effects.Program StoreSig (Opt
   | .bind a b, env => thenB (denoteB k a env) fun
     | Exit.success v => denoteB k b (env ++ [v])
     | Exit.failure c => pure (some (Exit.failure c))
-  | .branch t a b, env =>
-    match evalTerm env t with
-    | some (Val.bool true) => denoteB k a env
-    | some (Val.bool false) => denoteB k b env
-    | _ => pure (some badShapeExit)
   | .select t d a b, env =>
     match (evalTerm env t).bind d.decide with
     | some (true, bound) => denoteB k a (env ++ bound.toList)
@@ -244,10 +234,6 @@ theorem Looped.of_straight : ∀ (e : NativeEff), Straight e = true → Looped e
   | .suspend b, h => by rw [Looped]; exact Looped.of_straight b (Straight.suspend h)
   | .bind a b, h => by
     rw [Looped, Looped.of_straight a (Straight.bind h).1, Looped.of_straight b (Straight.bind h).2]
-    rfl
-  | .branch _ a b, h => by
-    rw [Looped, Looped.of_straight a (Straight.branch h).1,
-      Looped.of_straight b (Straight.branch h).2]
     rfl
   | .select _ _ a b, h => by
     rw [Looped, Looped.of_straight a (Straight.select h).1,
@@ -294,18 +280,6 @@ theorem denoteB_straight (k : Nat) :
     cases ex with
     | success v => exact denoteB_straight k b (env ++ [v]) hb
     | failure c => exact (map_pure _ _).symm
-  | .branch t a b, env, h => by
-    obtain ⟨ha, hb⟩ := Straight.branch h
-    rw [denoteB, denote]
-    cases ht : evalTerm env t with
-    | none => exact (map_pure _ _).symm
-    | some tv =>
-      cases tv with
-      | bool flag =>
-        cases flag with
-        | true => exact denoteB_straight k a env ha
-        | false => exact denoteB_straight k b env hb
-      | _ => exact (map_pure _ _).symm
   | .select t d a b, env, h => by
     obtain ⟨ha, hb⟩ := Straight.select h
     rw [denoteB, denote]
@@ -436,19 +410,6 @@ theorem denoteB_mono :
     cases ex with
     | success v => exact denoteB_mono b k (env ++ [v]) s₁ x s' hrest
     | failure c => exact hrest
-  | .branch t a b, k, env, s, x, s', h => by
-    unfold meaningB at h ⊢
-    rw [denoteB] at h ⊢
-    cases ht : evalTerm env t with
-    | none => rw [ht] at h; exact h
-    | some tv =>
-      rw [ht] at h
-      cases tv with
-      | bool flag =>
-        cases flag with
-        | true => exact denoteB_mono a k env s x s' h
-        | false => exact denoteB_mono b k env s x s' h
-      | _ => exact h
   | .select t d a b, k, env, s, x, s', h => by
     unfold meaningB at h ⊢
     rw [denoteB] at h ⊢

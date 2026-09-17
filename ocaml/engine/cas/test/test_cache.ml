@@ -739,13 +739,17 @@ let test_path_spaces () =
     E4_subterm.families;
   check "S6 `val_of_prog` and `prog_of_val` are inverse where both are defined" !rt;
   check "S6b a value argument that is not an addressed child has no program index"
+    (* declaration positions, not wire tags: 15 whileLoop (three terms before its body),
+       24 provideService (a key and a term), 25 catchIf (a term), 26 select (a term and a
+       decision) *)
     (E4_subterm.prog_of_val E4_subterm.Eff 15 0 = None
-    && E4_subterm.prog_of_val E4_subterm.Eff 16 0 = None
-    && E4_subterm.prog_of_val E4_subterm.Eff 16 1 = None
-    && E4_subterm.prog_of_val E4_subterm.Eff 16 2 = None
+    && E4_subterm.prog_of_val E4_subterm.Eff 15 1 = None
+    && E4_subterm.prog_of_val E4_subterm.Eff 15 2 = None
+    && E4_subterm.prog_of_val E4_subterm.Eff 24 0 = None
+    && E4_subterm.prog_of_val E4_subterm.Eff 24 1 = None
     && E4_subterm.prog_of_val E4_subterm.Eff 25 0 = None
-    && E4_subterm.prog_of_val E4_subterm.Eff 25 1 = None
     && E4_subterm.prog_of_val E4_subterm.Eff 26 0 = None
+    && E4_subterm.prog_of_val E4_subterm.Eff 26 1 = None
     && E4_subterm.val_of_prog E4_subterm.Eff 0 0 = None)
 
 (* ---- S4, S9-S11: cids, refusals, and the index as a function of the bytes ---- *)
@@ -985,9 +989,11 @@ let test_mutations (b : built) =
            (fun (x : E4_subterm.entry) (y : E4_subterm.entry) ->
              E4_addr.Addr.equal x.E4_subterm.cid y.E4_subterm.cid)
            (E4_subterm.entries ix) (E4_subterm.entries ix2)));
-  (* X3: the child table is falsifiable — a wrong ValPath for `branch` picks a term frame. *)
-  check "X3 the ValPath of `branch` is falsifiable: argument 0 is a term, not an eff"
-    (let p = Eff_wire.encode_program (Eff_branch (t_unit, ea, eb)) in
+  (* X3: the child table is falsifiable — a wrong ValPath for `catchIf` picks a term frame.
+     (`branch` held this control until it retired into `select`; `catchIf` has the same shape,
+     a term first and two programs after it.) *)
+  check "X3 the ValPath of `catchIf` is falsifiable: argument 0 is a term, not an eff"
+    (let p = Eff_wire.encode_program (Eff_catchIf (t_unit, ea, eb)) in
      let i = E4_subterm.of_program p in
      match E4_subterm.at_prog_path i [ 0 ] with
      | None -> false

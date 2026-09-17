@@ -13,11 +13,11 @@ def values : List Val :=
 def shapes : List Shape :=
   [.unit, .bool, .nat, .string, .bytes, .digest, .list .nat, .option (.list .string),
    .pair .nat (.named "T"), .struct "S" [("a", .nat), ("b", .named "T")],
-   .sum "T" [("leaf", []), ("node", [("left", .named "T"), ("right", .named "T")])],
+   .sum "T" [("leaf", 0, []), ("node", 1, [("left", .named "T"), ("right", .named "T")])],
    .ref .program, .anyRef, .named "T"]
 
 def docs : List ShapeDoc :=
-  [⟨.nat, []⟩, ⟨.named "T", [("T", .sum "T" [("leaf", []), ("node", [("next", .named "T")])])]⟩,
+  [⟨.nat, []⟩, ⟨.named "T", [("T", .sum "T" [("leaf", 0, []), ("node", 3, [("next", .named "T")])])]⟩,
    Canonical.shape Val, Canonical.shape Shape, Canonical.shape ShapeDoc]
 
 #guard values.all fun x => Canonical.decode (α := Val) (Canonical.encode x) = some x

@@ -216,7 +216,7 @@ def sig : Signature (Fin 3) :=
 
 /-! ## Control by value, scheduling and parking -/
 
-#guard (print sig 0 (.branch (.lit (.bool true)) (.succeed (.lit (.nat 1)))
+#guard (print sig 0 (.select (.lit (.bool true)) .bool (.succeed (.lit (.nat 1)))
       (.succeed (.lit .unit)))).map (expr house0 0)
   = .ok "Effect.suspend(() => true ? Effect.succeed(1) : Effect.succeed(undefined))"
 

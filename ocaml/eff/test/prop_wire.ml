@@ -94,7 +94,7 @@ let rec rand_eff d =
     | 12 -> Eff_exit (e ())
     | 13 -> Eff_uninterruptible (e ())
     | 14 -> Eff_interruptible (e ())
-    | 15 -> Eff_branch (t (), e (), e ())
+    | 15 -> Eff_select (t (), Decision_bool, e (), e ())
     | 16 -> Eff_whileLoop (t (), t (), t (), e ())
     | 17 -> Eff_yieldNow (rand_nat ())
     | 18 -> Eff_callback (rand_op (), t ())

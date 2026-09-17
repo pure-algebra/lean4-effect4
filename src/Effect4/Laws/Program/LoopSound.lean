@@ -71,11 +71,6 @@ def denoteBWith (bad : ExitV) (k : Nat) :
   | .bind a b, env => thenB (denoteBWith bad k a env) fun
     | Exit.success v => denoteBWith bad k b (env ++ [v])
     | Exit.failure c => pure (some (Exit.failure c))
-  | .branch t a b, env =>
-    match evalTerm env t with
-    | some (Val.bool true) => denoteBWith bad k a env
-    | some (Val.bool false) => denoteBWith bad k b env
-    | _ => pure (some bad)
   | .select t d a b, env =>
     match (evalTerm env t).bind d.decide with
     | some (true, bound) => denoteBWith bad k a (env ++ bound.toList)
@@ -127,17 +122,6 @@ theorem denoteBWith_badShape (k : Nat) : ∀ (e : NativeEff) (env : List Val),
     cases ex with
     | success v => exact denoteBWith_badShape k b (env ++ [v])
     | failure c => rfl
-  | .branch t a b, env => by
-    rw [denoteBWith, denoteB]
-    cases evalTerm env t with
-    | none => rfl
-    | some tv =>
-      cases tv with
-      | bool flag =>
-        cases flag with
-        | true => exact denoteBWith_badShape k a env
-        | false => exact denoteBWith_badShape k b env
-      | _ => rfl
   | .select t d a b, env => by
     rw [denoteBWith, denoteB]
     cases (evalTerm env t).bind d.decide with
@@ -415,25 +399,6 @@ theorem soundB (bad : ExitV) (k : Nat) : ∀ (e : NativeEff) (tys : TyEnv) (env 
     | failure c =>
       exact SoundB.pure iha.stores.wf iha.stores.heap _
         (causeAdmits_of_forall (fun w h => Ty.hasTy_join_left f.error r.error w [] h) c hok)
-  | .branch test a b, tys, env, s, t, hl, hty, hat => by
-    obtain ⟨ha, hb⟩ := Looped.branch hl
-    obtain ⟨htest, ta, tb, answer, hta, htb, hans, rfl⟩ :=
-      inv_branch nativeSignature tys test a b t hty
-    obtain ⟨x, hx⟩ :=
-      Option.isSome_iff_exists.mp (evalTerm_isSome test env tys .bool hat.fits htest)
-    obtain ⟨flag, rfl⟩ := Val.hasTy_bool_inv (evalTerm_hasTy test env tys .bool x hat.fits htest hx)
-    rw [EffTy.joinAnswer_eq] at hans
-    cases hans
-    rw [denoteBWith, denoteB, hx]
-    cases flag with
-    | true =>
-      exact (soundB bad k a tys env s ta ha hta hat).widen
-        (fun w h => Ty.hasTy_join_left ta.answer tb.answer w [] h)
-        (fun w h => Ty.hasTy_join_left ta.error tb.error w [] h)
-    | false =>
-      exact (soundB bad k b tys env s tb hb htb hat).widen
-        (fun w h => Ty.hasTy_join_right ta.answer tb.answer w [] h)
-        (fun w h => Ty.hasTy_join_right ta.error tb.error w [] h)
   | .select test d a b, tys, env, s, t, hl, hty, hat => by
     obtain ⟨ha, hb⟩ := Looped.select hl
     obtain ⟨ty, e0, e1, t0, t1, answer, htest, harms, ht0, ht1, hans, rfl⟩ :=

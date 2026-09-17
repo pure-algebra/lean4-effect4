@@ -234,7 +234,6 @@ def depthB : NativeEff → Nat
   | .iterate _ _ _ _ _ body => depthB body + 1
   | .suspend b => depthB b + 1
   | .bind a b => max (depthB a) (depthB b) + 1
-  | .branch _ a b => max (depthB a) (depthB b) + 1
   | .select _ _ a b => max (depthB a) (depthB b) + 1
   | .exit b => depthB b + 1
   | .catchCause b h => max (depthB b) (depthB h) + 1
@@ -251,9 +250,6 @@ theorem depthB_straight : ∀ (e : NativeEff), Straight e = true → depthB e = 
   | .exit b, h => by rw [depthB, depth, depthB_straight b (Straight.exit h)]
   | .bind a b, h => by
     rw [depthB, depth, depthB_straight a (Straight.bind h).1, depthB_straight b (Straight.bind h).2]
-  | .branch _ a b, h => by
-    rw [depthB, depth, depthB_straight a (Straight.branch h).1,
-      depthB_straight b (Straight.branch h).2]
   | .select _ _ a b, h => by
     rw [depthB, depth, depthB_straight a (Straight.select h).1,
       depthB_straight b (Straight.select h).2]
@@ -281,7 +277,6 @@ def boundB (k : Nat) : NativeEff → Nat
   | .iterate _ _ _ _ _ body => 2 + k * (boundB k body + 1)
   | .suspend b => boundB k b + 1
   | .bind a b => boundB k a + boundB k b + 2
-  | .branch _ a b => boundB k a + boundB k b + 1
   | .select _ _ a b => boundB k a + boundB k b + 1
   | .exit b => boundB k b + 2
   | .catchCause b h => boundB k b + boundB k h + 2
@@ -300,10 +295,6 @@ theorem steps_le_boundB (k : Nat) : ∀ (e : NativeEff), Straight e = true → s
   | .bind a b, h => by
     have := steps_le_boundB k a (Straight.bind h).1
     have := steps_le_boundB k b (Straight.bind h).2
-    simp only [steps, boundB]; omega
-  | .branch _ a b, h => by
-    have := steps_le_boundB k a (Straight.branch h).1
-    have := steps_le_boundB k b (Straight.branch h).2
     simp only [steps, boundB]; omega
   | .select _ _ a b, h => by
     have := steps_le_boundB k a (Straight.select h).1
@@ -372,10 +363,6 @@ theorem straight_of_asExit : ∀ (b : NativeEff) (q : Point) {exit : ExitV},
     rcases hf : q.fuel with _ | n
     · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
     · rw [compileEff_bind a b' hf] at h; simp [Prim.asExit?] at h
-  | .branch t a b', q, exit, _, h => by
-    rcases hf : q.fuel with _ | n
-    · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
-    · rw [compileEff_branch t a b' hf] at h; simp [Prim.asExit?] at h
   | .select t d a b', q, exit, _, h => by
     rcases hf : q.fuel with _ | n
     · rw [compileEff_at_zero _ hf] at h; simp [frontier, Prim.asExit?] at h
@@ -512,62 +499,6 @@ theorem localRun_compileB (k : Nat) :
       have hpass := Reaches.same s₁ (fun s₀ =>
         step_failure_pass_onSuccess root c (compileEff a (p.child 0)) (EffName.cont p) K i s₀)
       exact ⟨1 + ca + 0, by simp only [boundB]; omega, (hpush.trans hra).trans hpass⟩
-  | .branch t a b, p, K, i, s, ex, s', hl, h, hd, hm => by
-    obtain ⟨hla, hlb⟩ := Looped.branch hl
-    have ha : Node.at_ (Node.eff root) ({ p with completed := [] }.child 0).path =
-        some (Node.eff a) := at_child h 0
-    have hb : Node.at_ (Node.eff root) ({ p with completed := [] }.child 1).path =
-        some (Node.eff b) := at_child h 1
-    have hfa : depthB a ≤ ({ p with completed := [] }.child 0).fuel := by
-      show depthB a ≤ p.fuel - 1
-      rw [depthB] at hd
-      have := Nat.le_max_left (depthB a) (depthB b)
-      omega
-    have hfb : depthB b ≤ ({ p with completed := [] }.child 1).fuel := by
-      show depthB b ≤ p.fuel - 1
-      rw [depthB] at hd
-      have := Nat.le_max_right (depthB a) (depthB b)
-      omega
-    rw [compileEff_branch t a b (fuel_succB hd)]
-    have hs := step_suspend root (EffThunk.body p) K i s
-    simp only [interpAt] at hs
-    unfold meaningB at hm
-    rw [denoteB] at hm
-    have hbadCase : (∀ flag, evalTerm p.env t ≠ some (Val.bool flag)) →
-        runP (pure (some badShapeExit)) s = (some ex, s') →
-        ∃ c, c ≤ boundB k (.branch t a b) ∧
-          Reaches root c (fiberOf (Prim.suspend (EffThunk.body p)) K i) s
-            (fiberOf (Prim.ofExit ex) K i) s' := by
-      intro hbad hm'
-      obtain ⟨hex, hss⟩ := Prod.mk.inj hm'
-      cases hex
-      subst hss
-      rw [suspendBodyAt_branch_bad (q := { p with completed := [] }) (fuel_succB hd) h hbad] at hs
-      exact ⟨1, by simp only [boundB]; omega, Reaches.step hs⟩
-    cases ht : evalTerm p.env t with
-    | none =>
-      rw [ht] at hm
-      exact hbadCase (fun flag hh => by rw [ht] at hh; cases hh) hm
-    | some tv =>
-      rw [ht] at hm
-      cases tv with
-      | bool flag =>
-        cases flag with
-        | true =>
-          have hm' : meaningB k a ({ p with completed := [] }.child 0).env s = (some ex, s') := hm
-          obtain ⟨c, hle_c, hr⟩ := localRun_compileB k a ({ p with completed := [] }.child 0) K i s ex s'
-            hla ha hfa hm'
-          rw [suspendBodyAt_branch_true (q := { p with completed := [] }) (fuel_succB hd) h ht,
-            resolve_of_at ha] at hs
-          exact ⟨1 + c, by simp only [boundB]; omega, (Reaches.step hs).trans hr⟩
-        | false =>
-          have hm' : meaningB k b ({ p with completed := [] }.child 1).env s = (some ex, s') := hm
-          obtain ⟨c, hle_c, hr⟩ := localRun_compileB k b ({ p with completed := [] }.child 1) K i s ex s'
-            hlb hb hfb hm'
-          rw [suspendBodyAt_branch_false (q := { p with completed := [] }) (fuel_succB hd) h ht,
-            resolve_of_at hb] at hs
-          exact ⟨1 + c, by simp only [boundB]; omega, (Reaches.step hs).trans hr⟩
-      | _ => exact hbadCase (fun flag hh => by rw [ht] at hh; cases hh) hm
   | .select t d a b, p, K, i, s, ex, s', hl, h, hd, hm => by
     obtain ⟨hla, hlb⟩ := Looped.select hl
     have hda : depthB a ≤ p.fuel - 1 := by

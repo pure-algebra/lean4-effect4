@@ -17,6 +17,11 @@ several derivations: `ShapeDoc.accepts` is the `fits` checker of the class, `Sha
 the spec (the Q5 rendering table, fixed under version byte 0), `ShapeDoc.print` the printer
 (the same table read the other way; hex lowercase, one printer).
 
+A `sum` names each case's wire tag, the number a value of the case carries. The tags come from
+the one assignment `tools/Effect4Gen/wire-tags.json`; they are not declaration positions, and
+they may be sparse, since a retired constructor keeps its tag out of use for good. `caseAt`
+finds a case by its tag, and `ShapeDoc.wellTagged` refuses a repeated tag.
+
 `accepts` is structural on the value (`acceptsAt : Val → Shape → Bool`), so the fuel is the
 value's own size. A `named n` shape is resolved through `defs`: `candidates` lists every
 binding of `n`, and a value fits `named n` when it fits one of them. For a document with unique
@@ -65,8 +70,10 @@ inductive Shape where
   | pair (fst snd : Shape)
   /-- A structure: constructor 0 with its fields in declaration order. -/
   | struct (name : String) (fields : List (String × Shape))
-  /-- A sum: one case per constructor in declaration order, each with its fields. -/
-  | sum (name : String) (cases : List (String × List (String × Shape)))
+  /-- A sum: one case per active constructor, each with its name, its wire tag and its fields.
+  The tag is the number a value of the case carries on the wire. Tags may be sparse: a retired
+  constructor leaves a hole that no case fills, and a value carrying it fits nothing. -/
+  | sum (name : String) (cases : List (String × Nat × List (String × Shape)))
   /-- A reference that must resolve at one kind. -/
   | ref (kind : Kind)
   /-- A reference at any registered kind, carried with its kind byte. -/
@@ -100,10 +107,10 @@ def render : Shape → String
 def renderFields : List (String × Shape) → List String
   | [] => []
   | (n, s) :: rest => s!"({n.quote}, {render s})" :: renderFields rest
-def renderCases : List (String × List (String × Shape)) → List String
+def renderCases : List (String × Nat × List (String × Shape)) → List String
   | [] => []
-  | (n, fields) :: rest =>
-    s!"({n.quote}, [{", ".intercalate (renderFields fields)}])" :: renderCases rest
+  | (n, tag, fields) :: rest =>
+    s!"({n.quote}, {tag}, [{", ".intercalate (renderFields fields)}])" :: renderCases rest
 end
 
 instance instRepr : Repr Shape := ⟨fun s _ => Std.Format.text (render s)⟩
@@ -127,8 +134,24 @@ def candidates (defs : List (String × Shape)) : Shape → List Shape
   | s => [s]
 
 /-- Whether every case of a sum carries no field: the rule that renders it as string literals. -/
-def allNullary (cases : List (String × List (String × Shape))) : Bool :=
-  cases.all fun c => c.2.isEmpty
+def allNullary (cases : List (String × Nat × List (String × Shape))) : Bool :=
+  cases.all fun c => c.2.2.isEmpty
+
+/-- The case a wire tag names: its name and its fields. The first case carrying the tag; a tag
+no case carries (a retired one, or one never assigned) names nothing. -/
+def caseAt (tag : Nat) :
+    List (String × Nat × List (String × Shape)) → Option (String × List (String × Shape))
+  | [] => none
+  | (n, t, fields) :: rest => if t = tag then some (n, fields) else caseAt tag rest
+
+/-- The wire tags of a sum's cases, in case order. -/
+def caseTags (cases : List (String × Nat × List (String × Shape))) : List Nat :=
+  cases.map fun c => c.2.1
+
+/-- Whether a list of numbers repeats none of them. -/
+def distinctNats : List Nat → Bool
+  | [] => true
+  | t :: rest => !rest.contains t && distinctNats rest
 
 /-! ## The checker -/
 
@@ -149,7 +172,7 @@ def acceptsAt (defs : List (String × Shape)) : Val → Shape → Bool
   | .some a, .option item => (candidates defs item).any (acceptsAt defs a)
   | .ctor i args, .struct _ fields => decide (i = 0) && acceptsFields defs fields args
   | .ctor i args, .sum _ cases =>
-    match cases[i]? with
+    match caseAt i cases with
     | some (_, fields) => acceptsFields defs fields args
     | none => false
   | .ref b d, .ref k => decide (b = k.byte) && decide (d.length = 32)
@@ -173,6 +196,36 @@ def acceptsIn (defs : List (String × Shape)) (s : Shape) (v : Val) : Bool :=
 
 /-- The `fits` checker of the class: the value fits the root in the document's table. -/
 def ShapeDoc.accepts (doc : ShapeDoc) (v : Val) : Bool := acceptsIn doc.defs doc.root v
+
+/-! ## The wire tags of a document are valid
+
+A sum's tags may be sparse, but no two cases of one sum may carry the same tag: `caseAt` would
+answer the first and the second could never be read. `wellTagged` checks every sum a shape
+contains; `ShapeDoc.wellTagged` checks the root and every definition of the table. The
+generator guards it on every document it writes. -/
+
+mutual
+/-- Every sum inside the shape carries pairwise distinct tags. -/
+def Shape.wellTagged : Shape → Bool
+  | .list item => item.wellTagged
+  | .option item => item.wellTagged
+  | .pair f g => f.wellTagged && g.wellTagged
+  | .struct _ fields => wellTaggedFields fields
+  | .sum _ cases => distinctNats (caseTags cases) && wellTaggedCases cases
+  | _ => true
+/-- Every field's shape is well tagged. -/
+def wellTaggedFields : List (String × Shape) → Bool
+  | [] => true
+  | (_, s) :: fields => s.wellTagged && wellTaggedFields fields
+/-- Every case's fields are well tagged. -/
+def wellTaggedCases : List (String × Nat × List (String × Shape)) → Bool
+  | [] => true
+  | (_, _, fields) :: cases => wellTaggedFields fields && wellTaggedCases cases
+end
+
+/-- The root and every definition of the table are well tagged. -/
+def ShapeDoc.wellTagged (doc : ShapeDoc) : Bool :=
+  doc.root.wellTagged && wellTaggedFields doc.defs
 
 /-! ## Monotonicity in the table -/
 
@@ -395,9 +448,9 @@ def renderFields : List (String × Shape) → List PropertySignature
   | [] => []
   | (n, s) :: fields => Schema.property n (render s) :: renderFields fields
 /-- The tagged structs of a sum with arguments, in declaration order. -/
-def renderCases : List (String × List (String × Shape)) → List Representation
+def renderCases : List (String × Nat × List (String × Shape)) → List Representation
   | [] => []
-  | (n, fields) :: cases => Schema.tagged n (renderFields fields) :: renderCases cases
+  | (n, _, fields) :: cases => Schema.tagged n (renderFields fields) :: renderCases cases
 end
 
 /-- Give a rendered definition its key as `identifier`, unless it carries one already (a named
@@ -460,7 +513,7 @@ def printIn (defs : List (String × Shape)) : Shape → Val → Json
     match headShape defs s with
     | .struct _ fields => .obj (printFields defs fields args)
     | .sum _ cases =>
-      match cases[i]? with
+      match caseAt i cases with
       | some (name, fields) =>
         if allNullary cases then .str name
         else .obj (("_tag", .str name) :: printFields defs fields args)
@@ -492,8 +545,14 @@ def entryDoc : ShapeDoc :=
   { root := .struct "Entry"
       [("module", .string), ("name", .string), ("kind", .named "ExportKind"), ("line", .nat)]
     defs := [("ExportKind", .sum "ExportKind"
-      [("const", []), ("function", []), ("class_", []), ("interface", []), ("type", []),
-       ("namespace_", [])])] }
+      [("const", 0, []), ("function", 1, []), ("class_", 2, []), ("interface", 3, []),
+       ("type", 4, []), ("namespace_", 5, [])])] }
+
+/-- A sum with a hole: tag 1 is retired, so `b` keeps tag 2 and nothing answers to 1. -/
+def sparseDoc : ShapeDoc :=
+  { root := .named "Sparse"
+    defs := [("Sparse", .sum "Sparse"
+      [("a", 0, []), ("b", 2, [("inner", .named "Sparse")]), ("c", 5, [("n", .nat)])])] }
 
 #guard entryDoc.accepts sampleEntry = true
 #guard entryDoc.accepts (.ctor 0 [.str "Effect", .str "gen", .ctor 6 [], .nat 1947]) = false
@@ -518,7 +577,25 @@ def entryDoc : ShapeDoc :=
 #guard (ShapeDoc.mk (.named "X") [("X", .named "Y"), ("Y", .nat)]).accepts (.nat 1) = false
 #guard entryDoc.document.references.length = 1
 #guard (entryDoc.document.representation).tag = .objects
-#guard (render (.sum "ExportKind" [("const", []), ("function", [])])).tag = .union
+#guard (render (.sum "ExportKind" [("const", 0, []), ("function", 1, [])])).tag = .union
+#guard entryDoc.wellTagged = true
+#guard sparseDoc.wellTagged = true
+#guard sparseDoc.accepts (.ctor 2 [.ctor 0 []]) = true
+#guard sparseDoc.accepts (.ctor 5 [.nat 3]) = true
+-- The retired tag refuses at the root and nested inside a retained case; so does the
+-- position a case would have had in a dense numbering.
+#guard sparseDoc.accepts (.ctor 1 []) = false
+#guard sparseDoc.accepts (.ctor 1 [.ctor 0 []]) = false
+#guard sparseDoc.accepts (.ctor 2 [.ctor 1 []]) = false
+#guard sparseDoc.accepts (.ctor 2 [.ctor 2 [.ctor 1 [.ctor 0 []]]]) = false
+#guard sparseDoc.accepts (.ctor 3 [.nat 3]) = false
+-- The printer names a case by its tag, never by its position.
+#guard sparseDoc.print (.ctor 5 [.nat 3]) = .obj [("_tag", .str "c"), ("n", Json.ofNat 3)]
+-- A repeated tag is an invalid document, at the root or inside a definition.
+#guard (ShapeDoc.mk (.sum "Bad" [("a", 0, []), ("b", 0, [])]) []).wellTagged = false
+#guard (ShapeDoc.mk (.named "Bad") [("Bad", .sum "Bad" [("a", 3, []), ("b", 3, [])])]).wellTagged
+  = false
+#guard (ShapeDoc.mk (.list (.sum "Bad" [("a", 1, []), ("b", 1, [])])) []).wellTagged = false
 #guard (render .nat).tag = .number
 
 /-! ## Receipts -/

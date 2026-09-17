@@ -74,6 +74,9 @@ theorem fits (a : _root_.Effect4.ReferenceKey) : shapeDoc.accepts (toVal a) = tr
 instance instCanonical : Canonical (_root_.Effect4.ReferenceKey) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end ReferenceKeyC
 
 namespace GlobalSymbolKeyC
@@ -123,6 +126,9 @@ theorem fits (a : _root_.Effect4.GlobalSymbolKey) : shapeDoc.accepts (toVal a) =
 
 instance instCanonical : Canonical (_root_.Effect4.GlobalSymbolKey) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
 
 end GlobalSymbolKeyC
 
@@ -181,16 +187,19 @@ theorem fits (a : _root_.Effect4.AnnotationEntry) : shapeDoc.accepts (toVal a) =
 instance instCanonical : Canonical (_root_.Effect4.AnnotationEntry) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end AnnotationEntryC
 
 namespace LiteralValueC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "LiteralValue"
-     [("string", [("value", (shape _root_.String).root)]),
-      ("number", [("value", (shape _root_.Effect4.Float64).root)]),
-      ("bigint", [("value", (shape _root_.Int).root)]),
-      ("boolean", [("value", (shape _root_.Bool).root)])],
+     [("string", 0, [("value", (shape _root_.String).root)]),
+      ("number", 1, [("value", (shape _root_.Effect4.Float64).root)]),
+      ("bigint", 2, [("value", (shape _root_.Int).root)]),
+      ("boolean", 3, [("value", (shape _root_.Bool).root)])],
    (shape _root_.String).defs ++ (shape _root_.Effect4.Float64).defs ++
      (shape _root_.Int).defs ++ (shape _root_.Bool).defs⟩
 
@@ -259,14 +268,17 @@ theorem fits (a : _root_.Effect4.LiteralValue) : shapeDoc.accepts (toVal a) = tr
 instance instCanonical : Canonical (_root_.Effect4.LiteralValue) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end LiteralValueC
 
 namespace EnumValueC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "EnumValue"
-     [("string", [("value", (shape _root_.String).root)]),
-      ("number", [("value", (shape _root_.Effect4.Float64).root)])],
+     [("string", 0, [("value", (shape _root_.String).root)]),
+      ("number", 1, [("value", (shape _root_.Effect4.Float64).root)])],
    (shape _root_.String).defs ++ (shape _root_.Effect4.Float64).defs⟩
 
 def toVal : _root_.Effect4.EnumValue → Val
@@ -315,6 +327,9 @@ theorem fits (a : _root_.Effect4.EnumValue) : shapeDoc.accepts (toVal a) = true 
 
 instance instCanonical : Canonical (_root_.Effect4.EnumValue) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
 
 end EnumValueC
 
@@ -373,15 +388,18 @@ theorem fits (a : _root_.Effect4.EnumEntry) : shapeDoc.accepts (toVal a) = true 
 instance instCanonical : Canonical (_root_.Effect4.EnumEntry) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end EnumEntryC
 
 namespace PropertyKeyC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "PropertyKey"
-     [("string", [("value", (shape _root_.String).root)]),
-      ("number", [("value", (shape _root_.Effect4.Float64).root)]),
-      ("globalSymbol", [("value", (shape _root_.Effect4.GlobalSymbolKey).root)])],
+     [("string", 0, [("value", (shape _root_.String).root)]),
+      ("number", 1, [("value", (shape _root_.Effect4.Float64).root)]),
+      ("globalSymbol", 2, [("value", (shape _root_.Effect4.GlobalSymbolKey).root)])],
    (shape _root_.String).defs ++ (shape _root_.Effect4.Float64).defs ++
      (shape _root_.Effect4.GlobalSymbolKey).defs⟩
 
@@ -442,6 +460,9 @@ theorem fits (a : _root_.Effect4.PropertyKey) : shapeDoc.accepts (toVal a) = tru
 instance instCanonical : Canonical (_root_.Effect4.PropertyKey) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end PropertyKeyC
 
 namespace RepresentationAnnotationC
@@ -499,14 +520,17 @@ theorem fits (a : _root_.Effect4.RepresentationAnnotation) : shapeDoc.accepts (t
 instance instCanonical : Canonical (_root_.Effect4.RepresentationAnnotation) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end RepresentationAnnotationC
 
 namespace UnionModeC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "UnionMode"
-     [("anyOf", []),
-      ("oneOf", [])],
+     [("anyOf", 0, []),
+      ("oneOf", 1, [])],
    []⟩
 
 def toVal : _root_.Effect4.UnionMode → Val
@@ -545,6 +569,9 @@ theorem fits (a : _root_.Effect4.UnionMode) : shapeDoc.accepts (toVal a) = true 
 instance instCanonical : Canonical (_root_.Effect4.UnionMode) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end UnionModeC
 
 namespace RepresentationC
@@ -553,84 +580,85 @@ namespace RepresentationC
 
 def RepresentationShape : Shape :=
   .sum "Representation"
-     [("declaration", [("representation", (shape _root_.Effect4.RepresentationAnnotation).root),
+     [("declaration", 0, [
+        ("representation", (shape _root_.Effect4.RepresentationAnnotation).root),
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("typeParameters", .list (.named "Representation")), ("checks", .list (.named "Check"))]),
-      ("reference", [("ref", (shape _root_.Effect4.ReferenceKey).root)]),
-      ("suspend", [
+      ("reference", 1, [("ref", (shape _root_.Effect4.ReferenceKey).root)]),
+      ("suspend", 2, [
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check")), ("thunk", .named "Representation")]),
-      ("null", [
+      ("null", 3, [
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check"))]),
-      ("undefined", [
+      ("undefined", 4, [
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check"))]),
-      ("void", [
+      ("void", 5, [
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check"))]),
-      ("never", [
+      ("never", 6, [
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check"))]),
-      ("unknown", [
+      ("unknown", 7, [
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check"))]),
-      ("any", [
+      ("any", 8, [
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check"))]),
-      ("string", [
+      ("string", 9, [
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check"))]),
-      ("number", [
+      ("number", 10, [
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check"))]),
-      ("boolean", [
+      ("boolean", 11, [
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check"))]),
-      ("bigint", [
+      ("bigint", 12, [
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check"))]),
-      ("symbol", [
+      ("symbol", 13, [
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check"))]),
-      ("literal", [
+      ("literal", 14, [
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check")),
         ("literal", (shape _root_.Effect4.LiteralValue).root)]),
-      ("uniqueSymbol", [
+      ("uniqueSymbol", 15, [
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check")),
         ("symbol", (shape _root_.Effect4.GlobalSymbolKey).root)]),
-      ("objectKeyword", [
+      ("objectKeyword", 16, [
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check"))]),
-      ("enum", [
+      ("enum", 17, [
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check")),
         ("enums", (shape (@_root_.List (_root_.Effect4.EnumEntry))).root)]),
-      ("templateLiteral", [
+      ("templateLiteral", 18, [
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check")), ("parts", .list (.named "Representation"))]),
-      ("arrays", [
+      ("arrays", 19, [
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check")), ("elements", .list (.named "ElementOf")),
         ("rest", .list (.named "Representation"))]),
-      ("objects", [
+      ("objects", 20, [
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check")),
         ("propertySignatures", .list (.named "PropertySignatureOf")),
         ("indexSignatures", .list (.named "IndexSignatureOf"))]),
-      ("union", [
+      ("union", 21, [
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check")), ("types", .list (.named "Representation")),
         ("mode", (shape _root_.Effect4.UnionMode).root)])]
 
 def CheckShape : Shape :=
   .sum "Check"
-     [("filter", [("representation", .named "CheckRepresentationAnnotationOf"),
+     [("filter", 0, [("representation", .named "CheckRepresentationAnnotationOf"),
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("aborted", (shape _root_.Bool).root)]),
-      ("filterGroup", [("representation", .option (.named "CheckRepresentationAnnotationOf")),
+      ("filterGroup", 1, [("representation", .option (.named "CheckRepresentationAnnotationOf")),
         ("annotations", (shape (@_root_.Option (@_root_.List (_root_.Effect4.AnnotationEntry)))).root),
         ("checks", .list (.named "Check"))])]
 
@@ -1512,6 +1540,9 @@ instance instCanonicalIndexSignatureOf :
     fun a => guarded_toVal _ _ a (rawIndexSignatureOf_toValIndexSignatureOf a), fun h => guarded_exact h,
     fitsIndexSignatureOf⟩
 
+-- No sum of the block's table gives one wire tag to two cases.
+#guard wellTaggedFields defs
+
 end RepresentationC
 
 namespace ReferenceEntryC
@@ -1569,6 +1600,9 @@ theorem fits (a : _root_.Effect4.ReferenceEntry) : shapeDoc.accepts (toVal a) = 
 
 instance instCanonical : Canonical (_root_.Effect4.ReferenceEntry) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
 
 end ReferenceEntryC
 
@@ -1630,6 +1664,9 @@ theorem fits (a : _root_.Effect4.Document) : shapeDoc.accepts (toVal a) = true :
 instance instCanonical : Canonical (_root_.Effect4.Document) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end DocumentC
 
 namespace MultiDocumentC
@@ -1690,6 +1727,9 @@ theorem fits (a : _root_.Effect4.MultiDocument) : shapeDoc.accepts (toVal a) = t
 
 instance instCanonical : Canonical (_root_.Effect4.MultiDocument) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
 
 end MultiDocumentC
 

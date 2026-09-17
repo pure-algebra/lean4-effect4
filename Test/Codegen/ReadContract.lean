@@ -395,9 +395,9 @@ open Effect4.Api in
 
 /-! ## Control by value, scheduling and parking -/
 
-#guard roundTrip sig spell 0 (.branch (.lit (.bool true)) (.succeed (.lit (.nat 1)))
+#guard roundTrip sig spell 0 (.select (.lit (.bool true)) .bool (.succeed (.lit (.nat 1)))
       (.succeed (.lit .unit)))
-  = .ok (.branch (.lit (.bool true)) (.succeed (.lit (.nat 1))) (.succeed (.lit .unit)))
+  = .ok (.select (.lit (.bool true)) .bool (.succeed (.lit (.nat 1))) (.succeed (.lit .unit)))
 
 #guard roundTrip sig spell 0 (.whileLoop (.lit (.nat 0)) (.var 0) (.app "succ" (.cons (.var 1) .nil))
       (.succeed (.var 0)))

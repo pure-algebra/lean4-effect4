@@ -37,6 +37,7 @@ def map {Op : Type} (atom : String) (effect : Src Op) : Src Op :=
   bindWith effect fun v => succeed (app atom [v])
 
 /-- `Effect.if`: `if` is a Lean keyword. -/
-def ifElse {Op : Type} (test : TermSrc) (thenB elseB : Src Op) : Src Op := branch test thenB elseB
+def ifElse {Op : Type} (test : TermSrc) (thenB elseB : Src Op) : Src Op :=
+  selectBool test thenB elseB
 
 end Effect4.Program.Authoring

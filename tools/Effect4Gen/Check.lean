@@ -1,3 +1,4 @@
+import Tools.WireTags
 import Lean
 
 /-!
@@ -7,10 +8,12 @@ Owner: the check that a generated file still projects the environment it was gen
 
 It re-derives the constructor and field lists of every carrier out of the Lean environment and
 compares them with what the generated file actually says: the case names and their order in
-each `shapeDoc`, the field names and their order and arity inside each case, and the
-constructor index each `toVal` clause writes. It refuses on any difference, which is what makes
-a hand edit inside a generated file, a reordered constructor upstream, a renamed field or a
-dropped case a build failure rather than a silent change of every address in the store.
+each `shapeDoc`, the field names and their order and arity inside each case, the wire tag each
+case states, and the wire tag each `toVal` clause writes. The expected tag is the assignment's
+(`tools/Effect4Gen/wire-tags.json`, read through `Tools.WireTags`), not the declaration
+position. It refuses on any difference, which is what makes a hand edit inside a generated
+file, a changed tag, a renamed field or a dropped case a build failure rather than a silent
+change of every address in the store.
 
     lake env lean -M 4096 --run tools\Effect4Gen\Check.lean src\Effect4\Program\Derived.lean
 
@@ -33,13 +36,16 @@ open Lean Meta
 
 namespace Effect4Check
 
-/-- One case of a shape: a constructor's short name and its field names, in order. -/
+/-- One case of a shape: a constructor's short name, its wire tag and its field names, in
+order. A structure's one case has tag 0. -/
 structure Case where
   name : String
+  tag : Nat := 0
   fields : List String
 deriving BEq, Inhabited
 
-def Case.render (c : Case) : String := c.name ++ "(" ++ String.intercalate ", " c.fields ++ ")"
+def Case.render (c : Case) : String :=
+  c.name ++ "@" ++ toString c.tag ++ "(" ++ String.intercalate ", " c.fields ++ ")"
 
 /-- A shape as the generated file states it, or as the environment says it should be. -/
 structure Skeleton where
@@ -86,7 +92,9 @@ where
           go rest d' (some { name := "·", fields := (cur.map (·.fields)).getD [] ++ [name] }) acc
         else go rest d' cur acc
       else if d == 1 then
-        go rest d' (some { name := name, fields := [] }) (acc ++ cur.toList)
+        -- A case reads `("name", tag, [fields])`: the tag is the number after the name.
+        let tag := (((tail.dropWhile (fun c => !c.isDigit)).takeWhile Char.isDigit).toString).toNat!
+        go rest d' (some { name := name, tag := tag, fields := [] }) (acc ++ cur.toList)
       else if d == 2 then
         go rest d' (cur.map fun k => { k with fields := k.fields ++ [name] }) acc
       else go rest d' cur acc
@@ -154,12 +162,16 @@ def fileImports (lines : Array String) : List String :=
 
 /-! ## Reading the environment -/
 
-/-- The constructor and field lists of an inductive, in declaration order. -/
-def envSkeleton (n : Name) : MetaM Skeleton := do
+/-- The constructor and field lists of an inductive, in declaration order, each constructor
+with the wire tag the assignment gives it. -/
+def envSkeleton (tags : Tools.WireTags.Assignment) (n : Name) : MetaM Skeleton := do
   let env ← getEnv
   let info ← getConstInfoInduct n
+  let wire ← match Tools.WireTags.tagsOf tags n (isStructure env n) info.ctors with
+    | .ok ws => pure ws
+    | .error e => throwError e
   let mut cases : List Case := []
-  for c in info.ctors do
+  for (c, tag) in info.ctors.zip wire do
     let ci ← getConstInfoCtor c
     let fields ← forallTelescope ci.type fun xs _ => do
       let mut fs : List String := []
@@ -168,7 +180,7 @@ def envSkeleton (n : Name) : MetaM Skeleton := do
         fs := fs ++ [if s.isEmpty || s.any (fun ch => ch == '✝' || ch == '.')
           then s!"arg{i - ci.numParams}" else s]
       return fs
-    cases := cases ++ [{ name := (c.toString.splitOn ".").getLast!, fields }]
+    cases := cases ++ [{ name := (c.toString.splitOn ".").getLast!, tag, fields }]
   return { isStruct := isStructure env n, name := (n.toString.splitOn ".").getLast!, cases }
 
 /-- Every inductive in the environment whose last name component is `short`. -/
@@ -183,6 +195,7 @@ def candidates (short : String) : MetaM (Array Name) := do
 /-- Check one generated file. Returns `true` when it refused. -/
 def checkFile (path : String) : MetaM Bool := do
   let text ← IO.FS.readFile path
+  let tags ← Tools.WireTags.load
   let lines := (text.splitOn "\n").toArray.map (·.replace "\r" "")
   let shapes := fileShapes lines
   let indices := fileCtorIndices lines
@@ -195,7 +208,7 @@ def checkFile (path : String) : MetaM Bool := do
     let mut agreed : Option Name := none
     let mut report : Array String := #[]
     for c in cands do
-      let e ← envSkeleton c
+      let e ← envSkeleton tags c
       if e.agrees s then agreed := some c else report := report.push s!"      {c}: {e.render}"
     match agreed with
     | some c => IO.println s!"ok      {path}: {s.name} projects {c} ({s.cases.length} cases)"
@@ -204,15 +217,15 @@ def checkFile (path : String) : MetaM Bool := do
       IO.println s!"        generated: {s.render}"
       for r in report do IO.println r
       failed := true
-    -- Every `toVal` clause must write its constructor's declaration position.
+    -- Every `toVal` clause must write the wire tag its case states, which `agrees` has
+    -- already held to the assignment.
     unless s.isStruct do
-      for i in [0:s.cases.length] do
-        let c := s.cases[i]!
+      for c in s.cases do
         match indices.find? (fun p => p.1 == s.name && p.2.1 == c.name) with
         | some (_, _, j) =>
-          if j != i then
+          if j != c.tag then
             IO.println s!"REFUSED {path}: toVal writes .ctor {j} for {s.name}.{c.name}, \
-which is constructor {i}"
+whose wire tag is {c.tag}"
             failed := true
         | none =>
           IO.println s!"REFUSED {path}: no toVal clause for {s.name}.{c.name}"

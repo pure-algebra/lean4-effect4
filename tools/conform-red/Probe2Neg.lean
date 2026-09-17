@@ -3,7 +3,8 @@ import Effect4.Laws.Program.Typing.Inversion
 /-!
 # conform-red/Probe2Neg — the red control (outside the `Conform` glob: this file must fail)
 
-A deliberately **wrong** postcondition for the `.branch` arm: it claims the requirement row is
+A deliberately **wrong** postcondition for the `.select` arm under `.bool` (the conditional;
+stated on `.branch` until that constructor retired): it claims the requirement row is
 the `then` arm's alone, which is what the printed `Effect.suspend(() => t ? a : b)` head
 actually infers on rc.112 (types seat §3.4) and what `effTy` does *not* do. This file must
 **fail to compile**; its failure is the evidence that the generated proofs are not vacuous.
@@ -19,11 +20,11 @@ open Effect4.Spec
 
 theorem effTy_branch_wrong {Op : Type} (sig : Signature Op) (env : TyEnv)
     (test : Term) (thenB elseB : Eff Op) :
-    ⦃⌜True⌝⦄ effTy sig env (.branch test thenB elseB)
+    ⦃⌜True⌝⦄ effTy sig env (.select test .bool thenB elseB)
     ⦃(fun t => ⌜∃ a b, effTy sig env thenB = some a ∧ effTy sig env elseB = some b ∧
         t.requires = a.requires⌝,
       fun _ => ⌜True⌝, ())⦄ := by
-  simp only [effTy]
+  simp only [effTy, Decision.arms]
   mvcgen [termTy_reflect, effTy_reflect, EffTy.joinAnswer_reflect]
   all_goals simp_all
 

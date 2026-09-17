@@ -38,7 +38,7 @@ exit, because `Effect.exit` returns `exitSucceed(self)` for an `Exit`
 `whileLoop` compiles to a `Suspend`, because the printer wraps `Effect.whileLoop` in
 `Effect.suspend` so that every run starts from the initial cursor
 (`src/Effect4/Codegen/Print.lean:158-168`). `suspendBodyAt` answers the iterator or the
-loop frame at that point, as it answers the branch a `branch` decides.
+loop frame at that point, as it answers the arm a `select` decides.
 -/
 
 namespace Effect4.Program
@@ -606,7 +606,6 @@ def compileEff : NativeEff → Point → NCode
         | none => Prim.exitFrame (compileEff body (p.child 0))
       | .uninterruptible _ => Prim.withFiber (EffThunk.act p)
       | .interruptible _ => Prim.withFiber (EffThunk.act p)
-      | .branch _ _ _ => Prim.suspend (EffThunk.body p)
       | .select _ _ _ _ => Prim.suspend (EffThunk.body p)
       -- the printed loop is `Effect.suspend(() => { let a0 = initial; return
       -- Effect.whileLoop({…}) })` (`Codegen/Print.lean:158-168`): the cursor is read and the
@@ -1255,13 +1254,13 @@ def syncValueAt (root : NativeEff) : EffThunk → Val
   | _ => Val.unit
 
 /-- The heads whose suspension body `suspendBodyAt` decides itself instead of compiling the
-node at its point: a source `suspend`, the value-decided `branch`, the two iterators `gen` and
+node at its point: a source `suspend`, the value-decided `select`, the two iterators `gen` and
 `whileLoop`, and `provideLayer`'s scope allocation. The match below is the definition; this
 Boolean names the set it decides, and `Agreement.suspendBodyAt_of_at` is the law of the
 complement (every other head's body is `compileEff` at the point), which stops building the
 moment the match gains an arm this list lacks. -/
 def Eff.suspendDecided {Op : Type} : Eff Op → Bool
-  | .suspend _ | .branch _ _ _ | .select _ _ _ _ | .gen _ | .whileLoop _ _ _ _
+  | .suspend _ | .select _ _ _ _ | .gen _ | .whileLoop _ _ _ _
   | .iterate _ _ _ _ _ _ | .provideLayer _ _ _ => true
   | _ => false
 
@@ -1276,11 +1275,6 @@ def suspendBodyAt (root : NativeEff) : EffThunk → NCode
     | _ + 1 =>
       match Node.at_ (Node.eff root) p.path with
       | some (Node.eff (.suspend _)) => resolve root (p.child 0)
-      | some (Node.eff (.branch test _ _)) =>
-        match evalTerm p.env test with
-        | some (Val.bool true) => resolve root (p.child 0)
-        | some (Val.bool false) => resolve root (p.child 1)
-        | _ => badShape
       -- `select`: the scrutinee evaluated once here, the decision choosing the arm and the
       -- value it binds; the wrong shape is `badShape`, which `decide_typed` rules out on an
       -- admitted program

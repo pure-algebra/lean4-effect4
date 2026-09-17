@@ -26,7 +26,7 @@
 //   ServiceTypeCode (Effect4.ServiceTypeCode, struct): mk(value: number)
 //   ServiceKey (Effect4.ServiceKey, struct): mk(name: ServiceName, service: ServiceTypeCode)
 //   Decision (Effect4.Program.Decision, tagged union): bool option tag(tag: string)
-//   Eff (Effect4.Program.Eff, tagged union): succeed(value: Term) fail(error: Term) failCause(cause: CauseTerm) yieldError(error: Term) sync(thunk: Term) suspend(body: Eff) perform(op: NativeOp, request: Term) bind(first: Eff, rest: Eff) gen(body: ReadonlyArray<Stmt>) catchCause(body: Eff, handler: Eff) matchCause(body: Eff, onValue: Eff, onCause: Eff) onExit(body: Eff, finalizer: Eff) exit(body: Eff) uninterruptible(body: Eff) interruptible(body: Eff) branch(test: Term, thenB: Eff, elseB: Eff) whileLoop(initial: Term, test: Term, step: Term, body: Eff) yieldNow(priority: number) callback(register: NativeOp, request: Term) awaitFiber(fiber: Term, mode: ObserverMode) withFiber(action: ActionTerm) scoped(body: Eff) acquireRelease(acquire: Eff, release: Eff) provideLayer(layer: LayerTerm, isLocal: boolean, body: Eff) service(key: ServiceKey) provideService(key: ServiceKey, value: Term, body: Eff) catchIf(test: Term, body: Eff, handler: Eff) select(scrutinee: Term, decision: Decision, arm0: Eff, arm1: Eff) iterate(cursorTy: Ty, initial: Term, test: Term, step: Term, result: Term, body: Eff)
+//   Eff (Effect4.Program.Eff, tagged union): succeed(value: Term) fail(error: Term) failCause(cause: CauseTerm) yieldError(error: Term) sync(thunk: Term) suspend(body: Eff) perform(op: NativeOp, request: Term) bind(first: Eff, rest: Eff) gen(body: ReadonlyArray<Stmt>) catchCause(body: Eff, handler: Eff) matchCause(body: Eff, onValue: Eff, onCause: Eff) onExit(body: Eff, finalizer: Eff) exit(body: Eff) uninterruptible(body: Eff) interruptible(body: Eff) whileLoop(initial: Term, test: Term, step: Term, body: Eff) yieldNow(priority: number) callback(register: NativeOp, request: Term) awaitFiber(fiber: Term, mode: ObserverMode) withFiber(action: ActionTerm) scoped(body: Eff) acquireRelease(acquire: Eff, release: Eff) provideLayer(layer: LayerTerm, isLocal: boolean, body: Eff) service(key: ServiceKey) provideService(key: ServiceKey, value: Term, body: Eff) catchIf(test: Term, body: Eff, handler: Eff) select(scrutinee: Term, decision: Decision, arm0: Eff, arm1: Eff) iterate(cursorTy: Ty, initial: Term, test: Term, step: Term, result: Term, body: Eff)
 //   Stmt (Effect4.Program.Stmt, tagged union): bindYield(effect: Eff) yieldDiscard(effect: Eff) ret(value: Term) ifElse(test: Term, thenB: ReadonlyArray<Stmt>, elseB: ReadonlyArray<Stmt>) whileTrue(body: ReadonlyArray<Stmt>) breakLoop
 //   Stmts (Effect4.Program.Stmts, ReadonlyArray<Stmt>): nil cons(head: Stmt, tail: ReadonlyArray<Stmt>)
 //   Effs (Effect4.Program.Effs, ReadonlyArray<Eff>): nil cons(head: Eff, tail: ReadonlyArray<Eff>)
@@ -230,7 +230,6 @@ export type Eff =
   | { readonly _tag: "exit"; readonly body: Eff }
   | { readonly _tag: "uninterruptible"; readonly body: Eff }
   | { readonly _tag: "interruptible"; readonly body: Eff }
-  | { readonly _tag: "branch"; readonly test: Term; readonly thenB: Eff; readonly elseB: Eff }
   | { readonly _tag: "whileLoop"; readonly initial: Term; readonly test: Term; readonly step: Term; readonly body: Eff }
   | { readonly _tag: "yieldNow"; readonly priority: number }
   | { readonly _tag: "callback"; readonly register: NativeOp; readonly request: Term }
@@ -261,7 +260,6 @@ export const Eff = Schema.TaggedUnion({
   exit: { body: Schema.suspend((): Schema.Codec<Eff> => Eff) },
   uninterruptible: { body: Schema.suspend((): Schema.Codec<Eff> => Eff) },
   interruptible: { body: Schema.suspend((): Schema.Codec<Eff> => Eff) },
-  branch: { test: Schema.suspend((): Schema.Codec<Term> => Term), thenB: Schema.suspend((): Schema.Codec<Eff> => Eff), elseB: Schema.suspend((): Schema.Codec<Eff> => Eff) },
   whileLoop: { initial: Schema.suspend((): Schema.Codec<Term> => Term), test: Schema.suspend((): Schema.Codec<Term> => Term), step: Schema.suspend((): Schema.Codec<Term> => Term), body: Schema.suspend((): Schema.Codec<Eff> => Eff) },
   yieldNow: { priority: Schema.Int },
   callback: { register: Schema.suspend((): Schema.Codec<NativeOp> => NativeOp), request: Schema.suspend((): Schema.Codec<Term> => Term) },

@@ -71,7 +71,7 @@ def pStrBind : Program := .bind (.succeed (.lit (.str "a"))) (.succeed (.var 0))
 
 /-- Runtime-selected tuples expose joined fields without an unchecked projection. -/
 def productUnion : Program := .bind
-  (.branch (.lit (.bool true))
+  (.select (.lit (.bool true)) .bool
     (.succeed (.app "pair" (.cons (.lit (.str "Search")) (.cons (.lit (.nat 3)) .nil))))
     (.succeed (.app "pair" (.cons (.lit (.str "Done")) (.cons (.lit (.str "ok")) .nil)))))
   (.succeed (.app "snd" (.cons (.var 0) .nil)))

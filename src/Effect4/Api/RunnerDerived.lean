@@ -84,16 +84,20 @@ theorem fits (a : _root_.Effect4.Machine.RefKey) : shapeDoc.accepts (toVal a) = 
 instance instCanonical : Canonical (_root_.Effect4.Machine.RefKey) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end RefKeyC
 
 namespace ErrC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "Err"
-     [("boom", []),
-      ("tag", [("code", (shape _root_.Nat).root)]),
-      ("tagged", [("tag", (shape _root_.String).root), ("message", (shape _root_.String).root)]),
-      ("text", [("message", (shape _root_.String).root)])],
+     [("boom", 0, []),
+      ("tag", 1, [("code", (shape _root_.Nat).root)]),
+      ("tagged", 2, [("tag", (shape _root_.String).root),
+        ("message", (shape _root_.String).root)]),
+      ("text", 3, [("message", (shape _root_.String).root)])],
    (shape _root_.Nat).defs ++ (shape _root_.String).defs⟩
 
 def toVal : _root_.Effect4.Machine.Err → Val
@@ -164,18 +168,21 @@ theorem fits (a : _root_.Effect4.Machine.Err) : shapeDoc.accepts (toVal a) = tru
 instance instCanonical : Canonical (_root_.Effect4.Machine.Err) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end ErrC
 
 namespace DefectC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "Defect"
-     [("notImplemented", []),
-      ("asyncFiber", []),
-      ("badName", []),
-      ("missingService", []),
-      ("user", [("payload", (shape _root_.Nat).root)]),
-      ("error", [("payload", (shape _root_.Effect4.Machine.Err).root)])],
+     [("notImplemented", 0, []),
+      ("asyncFiber", 1, []),
+      ("badName", 2, []),
+      ("missingService", 3, []),
+      ("user", 4, [("payload", (shape _root_.Nat).root)]),
+      ("error", 5, [("payload", (shape _root_.Effect4.Machine.Err).root)])],
    (shape _root_.Nat).defs ++ (shape _root_.Effect4.Machine.Err).defs⟩
 
 def toVal : _root_.Effect4.Machine.Defect → Val
@@ -241,17 +248,20 @@ theorem fits (a : _root_.Effect4.Machine.Defect) : shapeDoc.accepts (toVal a) = 
 instance instCanonical : Canonical (_root_.Effect4.Machine.Defect) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end DefectC
 
 namespace ReasonC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "Reason"
-     [("fail", [("error", (shape _root_.Effect4.Machine.Err).root),
+     [("fail", 0, [("error", (shape _root_.Effect4.Machine.Err).root),
         ("annotations", (shape (@_root_.Effect4.ReasonAnnotations (_root_.Unit))).root)]),
-      ("die", [("defect", (shape _root_.Effect4.Machine.Defect).root),
+      ("die", 1, [("defect", (shape _root_.Effect4.Machine.Defect).root),
         ("annotations", (shape (@_root_.Effect4.ReasonAnnotations (_root_.Unit))).root)]),
-      ("interrupt", [("interruptor", (shape (@_root_.Option (_root_.Effect4.FiberId))).root),
+      ("interrupt", 2, [("interruptor", (shape (@_root_.Option (_root_.Effect4.FiberId))).root),
         ("annotations", (shape (@_root_.Effect4.ReasonAnnotations (_root_.Unit))).root)])],
    (shape _root_.Effect4.Machine.Err).defs ++
      (shape (@_root_.Effect4.ReasonAnnotations (_root_.Unit))).defs ++
@@ -344,6 +354,9 @@ theorem fits (a : @_root_.Effect4.Reason (_root_.Effect4.Machine.Err) (_root_.Ef
 instance instCanonical : Canonical (@_root_.Effect4.Reason (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Unit)) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end ReasonC
 
 namespace CauseC
@@ -397,14 +410,17 @@ theorem fits (a : @_root_.Effect4.Cause (_root_.Effect4.Machine.Err) (_root_.Eff
 instance instCanonical : Canonical (@_root_.Effect4.Cause (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Unit)) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end CauseC
 
 namespace ExitC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "Exit"
-     [("success", [("value", (shape _root_.Effect4.Store.Val).root)]),
-      ("failure", [
+     [("success", 0, [("value", (shape _root_.Effect4.Store.Val).root)]),
+      ("failure", 1, [
         ("cause", (shape (@_root_.Effect4.Cause (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Unit))).root)])],
    (shape _root_.Effect4.Store.Val).defs ++
      (shape (@_root_.Effect4.Cause (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Unit))).defs⟩
@@ -457,15 +473,18 @@ theorem fits (a : @_root_.Effect4.Exit (_root_.Effect4.Store.Val) (_root_.Effect
 instance instCanonical : Canonical (@_root_.Effect4.Exit (_root_.Effect4.Store.Val) (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Unit)) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end ExitC
 
 namespace CompletionC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "Completion"
-     [("ofExit", [
+     [("ofExit", 0, [
         ("exit", (shape (@_root_.Effect4.Exit (_root_.Effect4.Store.Val) (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Unit))).root)]),
-      ("ofRefGet", [("cell", (shape _root_.Effect4.Machine.RefKey).root)])],
+      ("ofRefGet", 1, [("cell", (shape _root_.Effect4.Machine.RefKey).root)])],
    (shape (@_root_.Effect4.Exit (_root_.Effect4.Store.Val) (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Unit))).defs ++
      (shape _root_.Effect4.Machine.RefKey).defs⟩
 
@@ -518,25 +537,29 @@ theorem fits (a : @_root_.Effect4.Machine.Completion (_root_.Effect4.Store.Val) 
 instance instCanonical : Canonical (@_root_.Effect4.Machine.Completion (_root_.Effect4.Store.Val) (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Unit)) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end CompletionC
 
 namespace RunDecisionC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "RunDecision"
-     [("fire", [("owner", (shape _root_.Effect4.FiberId).root)]),
-      ("flush", []),
-      ("evaluate", [("fiber", (shape _root_.Effect4.FiberId).root)]),
-      ("yieldVerdict", [("fiber", (shape _root_.Effect4.FiberId).root),
+     [("fire", 0, [("owner", (shape _root_.Effect4.FiberId).root)]),
+      ("flush", 1, []),
+      ("evaluate", 2, [("fiber", (shape _root_.Effect4.FiberId).root)]),
+      ("yieldVerdict", 3, [("fiber", (shape _root_.Effect4.FiberId).root),
         ("verdict", (shape _root_.Bool).root)]),
-      ("answerAsync", [("fiber", (shape _root_.Effect4.FiberId).root),
+      ("answerAsync", 4, [("fiber", (shape _root_.Effect4.FiberId).root),
         ("token", (shape _root_.Nat).root),
         ("answer", (shape (@_root_.Effect4.Machine.Completion (_root_.Effect4.Store.Val) (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Unit))).root)]),
-      ("interruptFrom", [("interruptor", (shape (@_root_.Option (_root_.Effect4.FiberId))).root),
+      ("interruptFrom", 5, [
+        ("interruptor", (shape (@_root_.Option (_root_.Effect4.FiberId))).root),
         ("annotations", (shape (@_root_.Effect4.ReasonAnnotations (_root_.Unit))).root),
         ("target", (shape _root_.Effect4.FiberId).root)]),
-      ("installMiddleware", []),
-      ("advance", [("millis", (shape _root_.Nat).root)])],
+      ("installMiddleware", 6, []),
+      ("advance", 7, [("millis", (shape _root_.Nat).root)])],
    (shape _root_.Effect4.FiberId).defs ++ (shape _root_.Bool).defs ++ (shape _root_.Nat).defs ++
      (shape (@_root_.Effect4.Machine.Completion (_root_.Effect4.Store.Val) (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Unit))).defs ++
      (shape (@_root_.Option (_root_.Effect4.FiberId))).defs ++
@@ -671,14 +694,17 @@ theorem fits (a : @_root_.Effect4.Machine.RunDecision (_root_.Effect4.Program.Ef
 instance instCanonical : Canonical (@_root_.Effect4.Machine.RunDecision (_root_.Effect4.Program.EffName) (_root_.Effect4.Program.EffThunk) (_root_.Effect4.Store.Val) (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Unit)) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end RunDecisionC
 
 namespace TableRefusalC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "TableRefusal"
-     [("notExternal", [("index", (shape _root_.Nat).root)]),
-      ("notAsync", [("index", (shape _root_.Nat).root)])],
+     [("notExternal", 0, [("index", (shape _root_.Nat).root)]),
+      ("notAsync", 1, [("index", (shape _root_.Nat).root)])],
    (shape _root_.Nat).defs⟩
 
 def toVal : _root_.Effect4.Program.TableRefusal → Val
@@ -724,21 +750,24 @@ theorem fits (a : _root_.Effect4.Program.TableRefusal) : shapeDoc.accepts (toVal
 instance instCanonical : Canonical (_root_.Effect4.Program.TableRefusal) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end TableRefusalC
 
 namespace AdmitRefusalC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "AdmitRefusal"
-     [("illTyped", []),
-      ("duplicateKey", [
+     [("illTyped", 0, []),
+      ("duplicateKey", 1, [
         ("key", (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))).root)]),
-      ("builtinCollision", [
+      ("builtinCollision", 2, [
         ("key", (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))).root)]),
-      ("valueRowTrailing", [
+      ("valueRowTrailing", 3, [
         ("key", (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))).root)]),
-      ("table", [("why", (shape _root_.Effect4.Program.TableRefusal).root)]),
-      ("uninhabited", [("at", (shape (@_root_.List (_root_.String))).root)])],
+      ("table", 4, [("why", (shape _root_.Effect4.Program.TableRefusal).root)]),
+      ("uninhabited", 5, [("at", (shape (@_root_.List (_root_.String))).root)])],
    (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))).defs ++
      (shape _root_.Effect4.Program.TableRefusal).defs ++
      (shape (@_root_.List (_root_.String))).defs⟩
@@ -816,6 +845,9 @@ theorem fits (a : _root_.Effect4.Program.AdmitRefusal) : shapeDoc.accepts (toVal
 instance instCanonical : Canonical (_root_.Effect4.Program.AdmitRefusal) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end AdmitRefusalC
 
 namespace HeaderC
@@ -884,6 +916,9 @@ theorem fits (a : _root_.Effect4.Api.HostSession.Header) : shapeDoc.accepts (toV
 
 instance instCanonical : Canonical (_root_.Effect4.Api.HostSession.Header) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
 
 end HeaderC
 
@@ -979,6 +1014,9 @@ theorem fits (a : _root_.Effect4.Api.HostSession.Call) : shapeDoc.accepts (toVal
 instance instCanonical : Canonical (_root_.Effect4.Api.HostSession.Call) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end CallC
 
 namespace ReplyC
@@ -1057,28 +1095,31 @@ theorem fits (a : _root_.Effect4.Api.HostSession.Reply) : shapeDoc.accepts (toVa
 instance instCanonical : Canonical (_root_.Effect4.Api.HostSession.Reply) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end ReplyC
 
 namespace RefusalC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "Refusal"
-     [("version", []),
-      ("session", []),
-      ("profile", []),
-      ("table", []),
-      ("program", [("reason", (shape _root_.Effect4.Program.AdmitRefusal).root)]),
-      ("duplicateCall", []),
-      ("protocol", []),
-      ("selectionRequired", []),
-      ("pendingReply", []),
-      ("callOrder", []),
-      ("noCall", []),
-      ("staleCall", []),
-      ("envelope", []),
-      ("directAnswer", []),
-      ("pendingControl", []),
-      ("stuck", [])],
+     [("version", 0, []),
+      ("session", 1, []),
+      ("profile", 2, []),
+      ("table", 3, []),
+      ("program", 4, [("reason", (shape _root_.Effect4.Program.AdmitRefusal).root)]),
+      ("duplicateCall", 5, []),
+      ("protocol", 6, []),
+      ("selectionRequired", 7, []),
+      ("pendingReply", 8, []),
+      ("callOrder", 9, []),
+      ("noCall", 10, []),
+      ("staleCall", 11, []),
+      ("envelope", 12, []),
+      ("directAnswer", 13, []),
+      ("pendingControl", 14, []),
+      ("stuck", 15, [])],
    (shape _root_.Effect4.Program.AdmitRefusal).defs⟩
 
 def toVal : _root_.Effect4.Api.HostSession.Refusal → Val
@@ -1180,18 +1221,21 @@ theorem fits (a : _root_.Effect4.Api.HostSession.Refusal) : shapeDoc.accepts (to
 instance instCanonical : Canonical (_root_.Effect4.Api.HostSession.Refusal) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end RefusalC
 
 namespace PhaseC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "Phase"
-     [("bound", []),
-      ("preflight", []),
-      ("applied", []),
-      ("progressed", []),
-      ("frontier", []),
-      ("refused", [("reason", (shape _root_.Effect4.Api.HostSession.Refusal).root)])],
+     [("bound", 0, []),
+      ("preflight", 1, []),
+      ("applied", 2, []),
+      ("progressed", 3, []),
+      ("frontier", 4, []),
+      ("refused", 5, [("reason", (shape _root_.Effect4.Api.HostSession.Refusal).root)])],
    (shape _root_.Effect4.Api.HostSession.Refusal).defs⟩
 
 def toVal : _root_.Effect4.Api.HostSession.Phase → Val
@@ -1253,17 +1297,20 @@ theorem fits (a : _root_.Effect4.Api.HostSession.Phase) : shapeDoc.accepts (toVa
 instance instCanonical : Canonical (_root_.Effect4.Api.HostSession.Phase) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end PhaseC
 
 namespace CommandC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "Command"
-     [("bind", [("call", (shape _root_.Effect4.Api.HostSession.Call).root),
+     [("bind", 0, [("call", (shape _root_.Effect4.Api.HostSession.Call).root),
         ("token", (shape _root_.Nat).root)]),
-      ("submit", [("reply", (shape _root_.Effect4.Api.HostSession.Reply).root)]),
-      ("apply", [("key", (shape _root_.Effect4.Api.HostProtocol.Key).root)]),
-      ("control", [
+      ("submit", 1, [("reply", (shape _root_.Effect4.Api.HostSession.Reply).root)]),
+      ("apply", 2, [("key", (shape _root_.Effect4.Api.HostProtocol.Key).root)]),
+      ("control", 3, [
         ("decision", (shape (@_root_.Effect4.Machine.RunDecision (_root_.Effect4.Program.EffName) (_root_.Effect4.Program.EffThunk) (_root_.Effect4.Machine.Val) (_root_.Effect4.Machine.Err) (_root_.Effect4.Machine.Defect) (_root_.Effect4.FiberId) (_root_.Effect4.Machine.Ann))).root)])],
    (shape _root_.Effect4.Api.HostSession.Call).defs ++ (shape _root_.Nat).defs ++
      (shape _root_.Effect4.Api.HostSession.Reply).defs ++
@@ -1356,16 +1403,19 @@ theorem fits (a : _root_.Effect4.Api.Runner.Command) : shapeDoc.accepts (toVal a
 instance instCanonical : Canonical (_root_.Effect4.Api.Runner.Command) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end CommandC
 
 namespace StateC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "State"
-     [("idle", []),
-      ("awaitingAsync", []),
-      ("parked", []),
-      ("terminated", [])],
+     [("idle", 0, []),
+      ("awaitingAsync", 1, []),
+      ("parked", 2, []),
+      ("terminated", 3, [])],
    []⟩
 
 def toVal : _root_.Effect4.Api.HostProtocol.State → Val
@@ -1412,15 +1462,18 @@ theorem fits (a : _root_.Effect4.Api.HostProtocol.State) : shapeDoc.accepts (toV
 instance instCanonical : Canonical (_root_.Effect4.Api.HostProtocol.State) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end StateC
 
 namespace StuckC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "Stuck"
-     [("unknownFiber", [("id", (shape _root_.Effect4.FiberId).root)]),
-      ("unknownScope", [("scope", (shape _root_.Nat).root)]),
-      ("unknownRace", [("race", (shape _root_.Nat).root)])],
+     [("unknownFiber", 0, [("id", (shape _root_.Effect4.FiberId).root)]),
+      ("unknownScope", 1, [("scope", (shape _root_.Nat).root)]),
+      ("unknownRace", 2, [("race", (shape _root_.Nat).root)])],
    (shape _root_.Effect4.FiberId).defs ++ (shape _root_.Nat).defs⟩
 
 def toVal : _root_.Effect4.Machine.Stuck → Val
@@ -1475,15 +1528,18 @@ theorem fits (a : _root_.Effect4.Machine.Stuck) : shapeDoc.accepts (toVal a) = t
 instance instCanonical : Canonical (_root_.Effect4.Machine.Stuck) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
 
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
 end StuckC
 
 namespace OutcomeC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "Outcome"
-     [("finished", []),
-      ("frontier", []),
-      ("stuck", [("why", (shape _root_.Effect4.Machine.Stuck).root)])],
+     [("finished", 0, []),
+      ("frontier", 1, []),
+      ("stuck", 2, [("why", (shape _root_.Effect4.Machine.Stuck).root)])],
    (shape _root_.Effect4.Machine.Stuck).defs⟩
 
 def toVal : _root_.Effect4.Api.Outcome → Val
@@ -1532,6 +1588,9 @@ theorem fits (a : _root_.Effect4.Api.Outcome) : shapeDoc.accepts (toVal a) = tru
 
 instance instCanonical : Canonical (_root_.Effect4.Api.Outcome) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
 
 end OutcomeC
 

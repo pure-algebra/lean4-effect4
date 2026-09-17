@@ -30,6 +30,7 @@ import Effect4.Laws.Program.ScopedTyping
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Program.Residual
 import Effect4.Laws.Program.Decision
+import Effect4.Laws.Program.Retire
 import Effect4.Laws.Program.HostBoundary
 import Effect4.Laws.Api.HostSession
 import Effect4.Laws.Api.Runner

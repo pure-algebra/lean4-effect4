@@ -350,14 +350,6 @@ mutual
       some ⟨.exitOf b.answer b.error, .never, b.requires⟩
     | .uninterruptible body => effTy sig env body
     | .interruptible body => effTy sig env body
-    | .branch test thenB elseB => do
-      let t ← termTy sig env test
-      if t = .bool then
-        let a ← effTy sig env thenB
-        let b ← effTy sig env elseB
-        let answer ← EffTy.joinAnswer a.answer b.answer
-        some ⟨answer, a.error.join b.error, a.requires.union b.requires⟩
-      else none
     | .whileLoop initial test step body => do
       let cursor ← termTy sig env initial
       let t ← termTy sig (env ++ [cursor]) test
@@ -706,7 +698,7 @@ mutual
     match program with
     | .succeed _ | .fail _ | .failCause _ | .yieldError _ | .sync _ | .suspend _
     | .perform _ _ | .bind _ _ | .gen _ | .catchCause _ _ | .catchIf _ _ _ | .matchCause _ _ _
-    | .onExit _ _ | .exit _ | .uninterruptible _ | .interruptible _ | .branch _ _ _
+    | .onExit _ _ | .exit _ | .uninterruptible _ | .interruptible _
     | .whileLoop _ _ _ _ | .yieldNow _ | .callback _ _ | .awaitFiber _ _
     | .withFiber _ | .scoped _ | .acquireRelease _ _
     | .provideLayer _ _ _ | .service _ | .provideService _ _ _ | .select _ _ _ _

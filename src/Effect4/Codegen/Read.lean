@@ -435,7 +435,7 @@ mutual
       let test ← readTerm n t
       let thenB ← readEff sig spell n a
       let elseB ← readEff sig spell n b
-      .ok (.branch test thenB elseB)
+      .ok (.select test .bool thenB elseB)
     | .suspend, [.arrow none body] => (readEff sig spell n body).map .suspend
     | .suspend, [.arrowBlock [] [.letInit cursor initial none,
         .ret (.call (.ident loop) [.object [(fw, .arrow none test), (fb, .arrow none body),
@@ -801,11 +801,14 @@ mutual
     | .exit body => readable sig spell n body
     | .uninterruptible body => readable sig spell n body
     | .interruptible body => readable sig spell n body
-    | .branch test thenB elseB =>
+    -- `select` under `.bool` is the conditional `t ? a : b`, which this reader reads.
+    | .select test .bool thenB elseB =>
       test.scoped n && readable sig spell n thenB && readable sig spell n elseB
-    -- `select` prints (`branch`'s image, `optionCase`, `caseTag`) and is read back by the
-    -- generic reader from the template table (R5); this reader leaves it outside its domain
-    | .select _ _ _ _ => false
+    -- The other two decisions print (`optionCase`, `caseTag`) and are read back by the generic
+    -- reader from the template table (R5); this reader leaves them outside its domain. One arm
+    -- per decision, so that every equation of `readable` is unconditional.
+    | .select _ .option _ _ => false
+    | .select _ (.tag _) _ _ => false
     -- `iterate` prints (`reduce`'s shape, with the cursor's annotation) and is read back by
     -- the generic reader with the annotation grammar (R5); outside this reader's domain
     | .iterate _ _ _ _ _ _ => false
@@ -893,6 +896,21 @@ mutual
     | .getId => true
     | .closeScope scope exit => scope.scoped n && exit.scoped n
 end
+
+/-- A readable `select` is the conditional: its decision is `.bool`, its test is in scope and
+both arms are readable. Stated once for a decision that is a variable, where `readable`'s own
+equations (one per decision) do not apply. -/
+theorem readable_select_iff (sig : Signature Op) (spell : String → List String → Option Op)
+    (n : Nat) (s : Term) (d : Decision) (a0 a1 : Eff Op) :
+    readable sig spell n (.select s d a0 a1) = true ↔
+      d = .bool ∧ s.scoped n = true ∧ readable sig spell n a0 = true ∧
+        readable sig spell n a1 = true := by
+  cases d with
+  | bool => simp only [readable, Bool.and_eq_true, true_and, and_assoc]
+  | option => simp only [readable, Bool.false_eq_true, false_iff, reduceCtorEq, false_and,
+      not_false_eq_true]
+  | tag t => simp only [readable, Bool.false_eq_true, false_iff, reduceCtorEq, false_and,
+      not_false_eq_true]
 
 /-! ## What the reader needs of a signature -/
 
@@ -1872,7 +1890,7 @@ theorem read_print {sig : Signature Op} {spell : String → List String → Opti
     simp only [Except.ok.injEq] at hx; subst hx
     unfold readEff readHead
     simp [headOf_lit .interruptible "Effect.interruptible" rfl, read_print hl body hr hb]
-  | .branch test thenB elseB, hr, hp => by
+  | .select test .bool thenB elseB, hr, hp => by
     simp only [readable, Bool.and_eq_true] at hr
     obtain ⟨⟨h1, h2⟩, h3⟩ := hr
     simp only [print, bind_eq_ok] at hp
@@ -1881,7 +1899,8 @@ theorem read_print {sig : Signature Op} {spell : String → List String → Opti
     unfold readEff readHead
     simp [headOf_lit .suspend "Effect.suspend" rfl, readTerm_printTerm test h1,
       read_print hl thenB h2 ha, read_print hl elseB h3 hb]
-  | .select _ _ _ _, hr, _ => by simp [readable] at hr
+  | .select _ .option _ _, hr, _ => by simp [readable] at hr
+  | .select _ (.tag _) _ _, hr, _ => by simp [readable] at hr
   | .iterate _ _ _ _ _ _, hr, _ => by simp [readable] at hr
   | .whileLoop initial test step body, hr, hp => by
     simp only [readable, Bool.and_eq_true] at hr
@@ -3292,11 +3311,12 @@ mutual
       readable sig spell (n + 1) (Eff.weaken cut program) = readable sig spell n program :=
     match program with
     | .yieldError _ => rfl
-    | .select _ _ _ _ => by simp only [Eff.weaken, readable]
+    | .select _ .option _ _ | .select _ (.tag _) _ _ => by simp only [Eff.weaken, readable]
     | .iterate _ _ _ _ _ _ => by simp only [Eff.weaken, readable]
+    | .select _ .bool _ _
     | .succeed _ | .fail _ | .failCause _ | .sync _ | .suspend _ | .perform _ _
     | .bind _ _ | .gen _ | .catchCause _ _ | .catchIf _ _ _ | .matchCause _ _ _ | .onExit _ _ | .exit _
-    | .uninterruptible _ | .interruptible _ | .branch _ _ _ | .whileLoop _ _ _ _
+    | .uninterruptible _ | .interruptible _ | .whileLoop _ _ _ _
     | .yieldNow _ | .callback _ _ | .awaitFiber _ _ | .withFiber _ | .scoped _
     | .acquireRelease _ _ | .provideLayer _ _ _ | .service _
     | .provideService _ _ _ => by
@@ -3388,12 +3408,13 @@ mutual
       obtain ⟨v, hv⟩ := print_readable sig spell (n + 1) onValue hbv.2
       obtain ⟨c, hc⟩ := print_readable sig spell (n + 1) onCause hs.2
       exact ⟨_, by simp only [print, hb, hv, hc] <;> rfl⟩
-    | .branch _ thenB elseB => by
+    | .select _ .bool thenB elseB => by
       have hs := Bool.and_eq_true_iff.mp hr
       obtain ⟨a, ha⟩ := print_readable sig spell n thenB (Bool.and_eq_true_iff.mp hs.1).2
       obtain ⟨b, hb⟩ := print_readable sig spell n elseB hs.2
       exact ⟨_, by simp only [print, ha, hb] <;> rfl⟩
-    | .select _ _ _ _ => by simp [readable] at hr
+    | .select _ .option _ _ => by simp [readable] at hr
+    | .select _ (.tag _) _ _ => by simp [readable] at hr
     | .iterate _ _ _ _ _ _ => by simp [readable] at hr
     | .whileLoop _ _ _ body => by
       obtain ⟨b, hb⟩ := print_readable sig spell (n + 1) body (Bool.and_eq_true_iff.mp hr).2
