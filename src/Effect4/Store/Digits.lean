@@ -315,28 +315,4 @@ theorem natBytes_zero : natBytes 0 = [] := rfl
 
 /-! ## Receipts -/
 
-#print axioms natOfDigits
-#print axioms toDigits
-#print axioms digitCount
-#print axioms be64
-#print axioms natBytes
-#print axioms length_toDigits
-#print axioms length_be64
-#print axioms foldl_digits
-#print axioms natOfDigits_cons
-#print axioms natOfDigits_lt
-#print axioms mod_mul_decomp
-#print axioms natOfDigits_toDigits
-#print axioms toDigits_add_mul
-#print axioms toDigits_natOfDigits
-#print axioms be64_eq_shifts
-#print axioms natOfDigits_be64
-#print axioms be64_natOfDigits
-#print axioms digitCount_go_spec
-#print axioms digitCount_spec
-#print axioms digitCount_unique
-#print axioms natOfDigits_natBytes
-#print axioms natBytes_head
-#print axioms natBytes_natOfDigits
-
 end Effect4.Store

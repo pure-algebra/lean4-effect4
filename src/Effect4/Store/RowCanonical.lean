@@ -29,7 +29,4 @@ instance instCanonicalRow : Canonical (Effect4.Row α) where
   ofVal_exact := rowImage.ofVal_exact
   fits r := Canonical.fits r.elems
 
-#print axioms rowImage
-#print axioms instCanonicalRow
-
 end Effect4.Store

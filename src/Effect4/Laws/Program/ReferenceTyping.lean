@@ -108,17 +108,6 @@ theorem typeOfProgram_expandRefs {Op : Type} (sig : Signature Op) (p : Eff Op)
   have hwf' := layerRefsWF_of_refSites_nil p.expandRefs hrefs
   simp [typeOfProgram, hwf, hempty, hfixed, hwf']
 
-#print axioms eff_expandRound_eq_self
-#print axioms stmts_expandRound_eq_self
-#print axioms stmt_expandRound_eq_self
-#print axioms effs_expandRound_eq_self
-#print axioms action_expandRound_eq_self
-#print axioms layer_expandRound_eq_self
-#print axioms layers_expandRound_eq_self
-#print axioms expandRefs_eq_self_of_refSites_nil
-#print axioms layerRefsWF_of_refSites_nil
-#print axioms typeOfProgram_expandRefs
-
 #check (typeOfProgram_expandRefs :
   ∀ {Op : Type} (sig : Signature Op) (p : Eff Op),
     p.layerRefsWF = true → (p.expandRefs.refSites []).isEmpty = true →

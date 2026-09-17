@@ -425,14 +425,4 @@ end Value
 #guard Value.fiberHandle.ofVal (Value.cell 7) = none
 #guard Value.fiberIdentity.ofVal (Value.fiber 7) = none
 
-#print axioms HandleKind.ofByte?_exact
-#print axioms HandleKind.handleOf
-#print axioms Value.fiberHandle
-#print axioms Value.fiberIdentity
-#print axioms Value.annotations
-#print axioms Value.reason
-#print axioms Value.cause
-#print axioms Value.exit
-#print axioms Value.cause_handleFree
-
 end Effect4.Machine

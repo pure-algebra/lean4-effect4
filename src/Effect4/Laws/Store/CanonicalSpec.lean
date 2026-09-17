@@ -25,6 +25,4 @@ Option/bind specifications. A successful decode reconstructs the whole input, in
     mvcgen [ofVal_spec, ih]
     all_goals simp_all
 
-#print axioms ofVal_spec
-#print axioms mapM_ofVal_spec
 end Effect4.Store

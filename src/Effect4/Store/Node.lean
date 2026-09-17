@@ -468,47 +468,4 @@ private def sampleNode : Node := ⟨0, .«export», zeroDigest, sampleEntry⟩
 
 /-! ## Receipts -/
 
-#print axioms Ref.ext
-#print axioms Ref.instDecidableEq
-#print axioms instDecidableEqAnyRef
-#print axioms instCanonicalRef
-#print axioms instCanonicalAnyRef
-#print axioms instDecidableEqNode
-#print axioms Node.encode
-#print axioms Node.decode
-#print axioms Node.length_encode
-#print axioms Node.decode_encode
-#print axioms Node.decode_exact
-#print axioms Node.encode_injective
-#print axioms Val.refs
-#print axioms Val.malformedRef
-#print axioms zeroDigest
-#print axioms Node.refsOf
-#print axioms Node.malformedRef
-#print axioms Node.edges
-#print axioms Node.IsGenesis
-#print axioms Node.instDecidableIsGenesis
-#print axioms Node.checkedEdges
-#print axioms Node.checkedEdges_of_genesis
-#print axioms Node.checkedEdges_of_not_genesis
-#print axioms Node.mem_checkedEdges_of_mem_refsOf
-#print axioms metaSchema
-#print axioms genesisNode
-#print axioms genesisAddress
-#print axioms schemaNode
-#print axioms specOf
-#print axioms specFor
-#print axioms nodeOf
-#print axioms address
-#print axioms metaSchema_accepts
-#print axioms schemaNode_metaSchema
-#print axioms specOf_document
-#print axioms nodeOf_metaSchema
-#print axioms nodeOf_document
-#print axioms address_congr
-#print axioms nodeOf_encode_injective
-#print axioms address_eq_or_collision
-#print axioms address_inj
-#print axioms sampleNode
-
 end Effect4.Store

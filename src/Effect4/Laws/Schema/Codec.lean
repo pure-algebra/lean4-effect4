@@ -104,22 +104,4 @@ theorem encode_bool (b : Bool) : encode .bool (.bool b) = some (.bool b) := by
 theorem encode_unit : encode .unit .unit = some .null := by
   simp [encode, Ty.normalize, Val.hasTy, Codec.layout, Codec.encodeRaw, Codec.decodeRaw]
 
-#print axioms Codec.nat?
-#print axioms Codec.encodeRaw
-#print axioms Codec.decodeRaw
-#print axioms Codec.isValue
-#print axioms encode
-#print axioms decode
-#print axioms encode_eq_some
-#print axioms encode_isSome_iff
-#print axioms encode_of_hasTy
-#print axioms decode_of_encode
-#print axioms decode_encode
-#print axioms hasTy_decode
-#print axioms encode_sub
-#print axioms encode_injective
-#print axioms encode_string
-#print axioms encode_bool
-#print axioms encode_unit
-
 end Effect4.Schema

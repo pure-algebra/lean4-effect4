@@ -143,7 +143,4 @@ end Val
 #guard Val.ofStore (.pair (.str "a") (.list [])) = Option.none
 #guard Val.ofStore (.some (.ctor 0 [.nat 1])) = Option.none
 
-#print axioms Val.image
-#print axioms Val.image_handleFree
-
 end Effect4.Program.Config

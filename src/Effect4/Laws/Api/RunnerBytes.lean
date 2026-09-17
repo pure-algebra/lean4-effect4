@@ -102,11 +102,4 @@ theorem replayRows_commandBytes (p : Runner) (commands : List Command)
       ih (fun c' hc' => h c' (List.mem_cons_of_mem _ hc'))]
     rfl
 
-#print axioms commandOf_exact
-#print axioms row_unique
-#print axioms stepRow_command
-#print axioms replayRows_append
-#print axioms replayRows_eq_replay
-#print axioms replayRows_commandBytes
-
 end Effect4.Api.Runner

@@ -340,34 +340,4 @@ theorem Digest.ofBytes?_exact {bs : Bytes} {d : Digest} (h : Digest.ofBytes? bs 
 
 /-! ## Receipts -/
 
-#print axioms Digest.ext
-#print axioms Digest.instDecidableEq
-#print axioms Digest.ofBytes?
-#print axioms Digest.ofBytes?_bytes
-#print axioms Digest.ofBytes?_exact
-#print axioms sha256_bytes_length
-#print axioms sha256
-#print axioms hexDigit
-#print axioms hexVal
-#print axioms hexCodes
-#print axioms bytesOfHexCodes
-#print axioms hexVal_hexDigit
-#print axioms hexVal_some
-#print axioms hexCodes_lt
-#print axioms length_hexCodes
-#print axioms bytesOfHexCodes_hexCodes
-#print axioms hexCodes_of_bytesOfHexCodes
-#print axioms hexOfBytes
-#print axioms bytesOfHex
-#print axioms bytesOfHex_hexOfBytes
-#print axioms hexOfBytes_bytesOfHex
-#print axioms utf8Bytes_map_ofNat
-#print axioms map_toNat_map_ofNat
-#print axioms Digest.hex
-#print axioms Digest.ofHex?
-#print axioms Digest.sha256_length
-#print axioms Digest.hex_bytes
-#print axioms Digest.ofHex?_hex
-#print axioms Digest.ofHex?_exact
-
 end Effect4.Store

@@ -133,11 +133,4 @@ end Pin
 
 /-! ## Receipts -/
 
-#print axioms PinRole.spelling
-#print axioms Pin.spanBytes
-#print axioms Pin.isWellFormed
-#print axioms Pin.spanDigest_eq_of_wellFormed
-#print axioms Pin.holds_or_collision
-#print axioms Pin.holds_of_injective
-
 end Effect4.Store

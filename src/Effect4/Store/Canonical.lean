@@ -685,46 +685,4 @@ open Canonical in
 
 /-! ## Receipts -/
 
-#print axioms Canonical.toVal_injective
-#print axioms Canonical.encode
-#print axioms Canonical.decode
-#print axioms Canonical.decode_encode
-#print axioms Canonical.decode_exact
-#print axioms Canonical.encode_injective
-#print axioms Canonical.ne_of_encode_ne
-#print axioms Canonical.digest
-#print axioms Canonical.document
-#print axioms Canonical.print
-#print axioms accepts_mk_of_not_named
-#print axioms acceptsList_of_forall
-#print axioms acceptsFields_cons
-#print axioms accepts_struct
-#print axioms accepts_sum
-#print axioms acceptsIn_named
-#print axioms accepts_option_some
-#print axioms accepts_list
-#print axioms accepts_pair
-#print axioms mem_lookupAll
-#print axioms acceptsIn_mono_of_subset
-#print axioms accepts_named_of_mem
-#print axioms guarded
-#print axioms guarded_toVal
-#print axioms guarded_exact
-#print axioms instCanonicalUnit
-#print axioms instCanonicalBool
-#print axioms instCanonicalNat
-#print axioms instCanonicalString
-#print axioms IntCanonical.ofVal_exact
-#print axioms IntCanonical.fits
-#print axioms instCanonicalInt
-#print axioms instCanonicalUInt8
-#print axioms instCanonicalUInt64
-#print axioms instCanonicalDigest
-#print axioms mapM_ofVal_map_toVal
-#print axioms mapM_ofVal_exact
-#print axioms instCanonicalList
-#print axioms instCanonicalOption
-#print axioms instCanonicalProd
-#print axioms instCanonicalBytes
-
 end Effect4.Store

@@ -523,29 +523,4 @@ def entryDoc : ShapeDoc :=
 
 /-! ## Receipts -/
 
-#print axioms lookupAll
-#print axioms candidates
-#print axioms acceptsAt
-#print axioms acceptsIn
-#print axioms ShapeDoc.accepts
-#print axioms lookupAll_append
-#print axioms mem_candidates_append_right
-#print axioms mem_candidates_append_left
-#print axioms any_mono
-#print axioms acceptsAt_mono
-#print axioms acceptsIn_mono
-#print axioms acceptsIn_append_right
-#print axioms acceptsIn_append_left
-#print axioms acceptsIn_of_not_named
-#print axioms identifierKey
-#print axioms identifierKey_lawful
-#print axioms refKey
-#print axioms refKey_lawful
-#print axioms render
-#print axioms renderDef
-#print axioms ShapeDoc.document
-#print axioms hexString
-#print axioms printIn
-#print axioms ShapeDoc.print
-
 end Effect4.Store

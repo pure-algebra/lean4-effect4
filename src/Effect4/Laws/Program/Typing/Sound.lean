@@ -742,26 +742,4 @@ theorem hasTy_weaken_closed (sig : Signature Op) (inserted : Ty) (program : Eff 
 
 /-! ## Axioms: the ceiling is `[propext, Quot.sound]` for all twenty-one -/
 
-#print axioms effTy_sound
-#print axioms stmtsTy_sound
-#print axioms effsTy_sound
-#print axioms actionTy_sound
-#print axioms layerTy_sound
-#print axioms layersTy_sound
-#print axioms effTy_complete
-#print axioms stmtsTy_complete
-#print axioms effsTy_complete
-#print axioms actionTy_complete
-#print axioms layerTy_complete
-#print axioms layersTy_complete
-#print axioms effTy_eq_hasTy
-#print axioms wellTyped_iff
-#print axioms hasTy_unique
-#print axioms stmtsHasTy_unique
-#print axioms effsHasTy_unique
-#print axioms actionHasTy_unique
-#print axioms layerHasTy_unique
-#print axioms hasTy_weaken
-#print axioms hasTy_weaken_closed
-
 end Conform.Effect4.Typing

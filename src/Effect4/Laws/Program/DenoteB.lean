@@ -480,8 +480,4 @@ theorem meaningB_unique (e : NativeEff) (env : List Val) (s : Stores) {k k' : Na
   cases b
   exact ⟨rfl, rfl⟩
 
-#print axioms denoteB_straight
-#print axioms denoteB_mono
-#print axioms meaningB_unique
-
 end Effect4.Program.Denote

@@ -159,19 +159,4 @@ end Kind
 
 /-! ## Receipts -/
 
-#print axioms Kind.byte
-#print axioms Kind.name
-#print axioms Kind.ofByte?
-#print axioms Kind.ofName?
-#print axioms Kind.all_length
-#print axioms Kind.mem_all
-#print axioms Kind.ofByte?_byte
-#print axioms Kind.byte_ofByte?
-#print axioms Kind.byte_injective
-#print axioms Kind.ofName?_name
-#print axioms Kind.name_ofName?
-#print axioms Kind.name_injective
-#print axioms Kind.byte_pos
-#print axioms Kind.byte_le
-
 end Effect4.Store

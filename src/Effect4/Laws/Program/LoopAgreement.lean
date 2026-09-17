@@ -48,6 +48,4 @@ theorem loopAgreement_of_straight (e : NativeEff) (hs : Straight e = true) :
   exact run_eq_meaning e fuel hs (Nat.le_trans (Nat.le_max_left _ _) hfuel)
     (Nat.le_trans (Nat.le_max_right _ _) hfuel)
 
-#print axioms loopAgreement_of_straight
-
 end Effect4.Program.Agreement

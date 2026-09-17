@@ -43,7 +43,4 @@ instance instCanonicalReasonAnnotations : Canonical (Effect4.ReasonAnnotations Î
     apply accepts_struct
     exact acceptsFields_cons _ _ _ _ _ _ (Canonical.fits r.entries) (acceptsFields_nil _)
 
-#print axioms annotationsImage
-#print axioms instCanonicalReasonAnnotations
-
 end Effect4.Store
