@@ -4,6 +4,7 @@ import Effect4.Api
 import Effect4.Laws.Program.Hoisting
 import Effect4.Laws.Program.HoistingTotal
 import Effect4.Laws.Codegen.Module
+import Effect4.Laws.Codegen.Read
 import Effect4.Laws.Api.Codegen
 import Test.Program.Gen
 
@@ -808,6 +809,10 @@ def nestedSharing : NativeEff :=
 #print axioms nativeServiceTy_profile
 #print axioms Effect4.Program.Eff.hoistAll_exists
 #print axioms Effect4.Program.readModule_printModule
+#print axioms Effect4.Program.read_exact
+#print axioms Effect4.Program.readLayer_exact
+#print axioms Effect4.Program.readRow_exact
+#print axioms Effect4.Program.readPerform_exact
 #print axioms Effect4.Program.printModule_shape
 #print axioms Effect4.Program.checkTypedProgram
 #print axioms Effect4.Program.checkTypedProgram_type

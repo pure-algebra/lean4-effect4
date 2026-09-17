@@ -1298,10 +1298,12 @@ const readT = (fam: Fam, n: number, x: Expr): Read<unknown> | undefined => {
         const inner = readT(child, depthAt(n, row.depth[0]), x)
         if (inner === undefined) continue
         if (failed(inner)) return again(under(inner, row.ctor, 0) as Result.Failure<unknown, Refusal>)
+        // exactness, as for every row: the printer would choose this row
+        if (chosenRow(fam, row.ctor, [inner.success]) !== k) return refuse({ _tag: "shape", what: "not the printed row" })
         return ok(build(row.ctor, names, [inner.success]))
       }
       const leaf = readLeaf(n, true, sorts[0]!, { _tag: "expr", e: x })
-      if (failed(leaf)) continue
+      if (failed(leaf) || chosenRow(fam, row.ctor, [leaf.success]) !== k) continue
       return ok(build(row.ctor, names, [leaf.success]))
     }
     const captured: Subst = new Map()

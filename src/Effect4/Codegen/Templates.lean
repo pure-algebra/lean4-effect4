@@ -301,12 +301,16 @@ theorem ArgPat.holds_of_supplies {R : EffFam → Type} {p : ArgPat} {a : ArgF Op
   | someTy => cases h
   | daemon b => cases h
 
+/-- Whether the argument at `i` satisfies a pattern; an argument that is not there satisfies
+none. -/
+def patternAt {R : EffFam → Type} (args : List (ArgF Op R)) (i : Nat) (p : ArgPat) : Bool :=
+  match args[i]? with
+  | some a => p.holds a
+  | none => false
+
 def Row.selects {R : EffFam → Type} (row : Row) (fam : EffFam) (ctor : String)
     (args : List (ArgF Op R)) : Bool :=
-  row.fam == fam && row.ctor == ctor &&
-    row.fixed.all fun (i, p) => match args[i]? with
-      | some a => p.holds a
-      | none => false
+  row.fam == fam && row.ctor == ctor && row.fixed.all fun p => patternAt args p.1 p.2
 
 /-- The environment length an argument is printed and read at, from the binders its hole is
 under. A layer is closed (its bodies are typed in the empty scope): every argument of a layer

@@ -440,10 +440,56 @@ def rowDaemon (row : Templates.Row) : Bool :=
   | some b => b
   | none => true
 
-/-- The arguments of a row from what its skeleton captured, in declaration order, each at the
-depth its hole is under (`RowOut.levelAt`, `Templates.argDepth`). An argument the classifier
-determines is supplied; a child is handed to the recursion with the fact that it is one of the
-captures (what the recursion's measure is stated over); a leaf goes through its own reader. -/
+/-- One capture as the argument of sort `s`: a child is handed to the recursion with the fact
+that it is one of the captures (what the recursion's measure is stated over); anything else goes
+through the leaf reader of its sort. -/
+def readCapture (sig : Signature Op) (row : Templates.Row) (σ : Subst)
+    (child : (fam : EffFam) → Nat → (y : Expr) → (i : Nat) → (i, Arg.expr y) ∈ σ →
+      Except ReadFailure (EffSelfCarrier Op fam))
+    (children : (fam : EffFam) → Nat → (ys : List Expr) → (i : Nat) → (i, Arg.exprs ys) ∈ σ →
+      Except ReadFailure (EffSelfCarrier Op fam))
+    (block : Nat → (ss : List TypeScript.Stmt) → (i : Nat) → (i, Arg.stmts ss) ∈ σ →
+      Except ReadFailure (EffSelfCarrier Op .stmts))
+    (d : Nat) (s : ArgSort) (i : Nat) :
+    (a : Arg) → (i, a) ∈ σ → Except ReadFailure (ArgF Op (EffSelfCarrier Op))
+  | .expr y, h =>
+    match s with
+    | .child fam => (child fam d y i h).map (.child fam)
+    | s => (readLeaf sig d (rowDaemon row) s (.expr y)).mapError .here
+  | .exprs ys, h =>
+    match s with
+    | .child fam => (children fam d ys i h).map (.child fam)
+    | s => (readLeaf sig d (rowDaemon row) s (.exprs ys)).mapError .here
+  | .stmts body, h =>
+    match s with
+    | .child .stmts => (block d body i h).map (.child .stmts)
+    | s => (readLeaf sig d (rowDaemon row) s (.stmts body)).mapError .here
+  | .str v, _ => (readLeaf sig d (rowDaemon row) s (.str v)).mapError .here
+  | .int v, _ => (readLeaf sig d (rowDaemon row) s (.int v)).mapError .here
+  | .type t, _ => (readLeaf sig d (rowDaemon row) s (.type t)).mapError .here
+
+/-- The argument at position `i`, of sort `s`, at the depth its hole is under
+(`RowOut.levelAt`, `Templates.argDepth`): supplied when the classifier fixes it, otherwise read
+from what the skeleton captured there. -/
+def readArg (sig : Signature Op) (n : Nat) (row : Templates.Row) (σ : Subst)
+    (child : (fam : EffFam) → Nat → (y : Expr) → (i : Nat) → (i, Arg.expr y) ∈ σ →
+      Except ReadFailure (EffSelfCarrier Op fam))
+    (children : (fam : EffFam) → Nat → (ys : List Expr) → (i : Nat) → (i, Arg.exprs ys) ∈ σ →
+      Except ReadFailure (EffSelfCarrier Op fam))
+    (block : Nat → (ss : List TypeScript.Stmt) → (i : Nat) → (i, Arg.stmts ss) ∈ σ →
+      Except ReadFailure (EffSelfCarrier Op .stmts))
+    (s : ArgSort) (i : Nat) : Except ReadFailure (ArgF Op (EffSelfCarrier Op)) :=
+  match (row.fixed.find? (·.1 == i)).bind (·.2.supplies) with
+  | some a => .ok a
+  | none =>
+    match captured σ i with
+    | some ⟨a, h⟩ =>
+      readCapture sig row σ child children block
+        (Templates.argDepth row.fam s n (row.out.levelAt i)) s i a h
+    | none => .error (.here readDefect)
+
+/-- The arguments of a row, in declaration order. A failure below an argument is seen from that
+argument of the row's constructor. -/
 def readArgs (sig : Signature Op) (n : Nat) (row : Templates.Row) (σ : Subst)
     (child : (fam : EffFam) → Nat → (y : Expr) → (i : Nat) → (i, Arg.expr y) ∈ σ →
       Except ReadFailure (EffSelfCarrier Op fam))
@@ -454,18 +500,7 @@ def readArgs (sig : Signature Op) (n : Nat) (row : Templates.Row) (σ : Subst)
     List ArgSort → Nat → Except ReadFailure (List (ArgF Op (EffSelfCarrier Op)))
   | [], _ => .ok []
   | s :: ss, i => do
-    let d := Templates.argDepth row.fam s n (row.out.levelAt i)
-    let read : Except ReadFailure (ArgF Op (EffSelfCarrier Op)) :=
-      match (row.fixed.find? (·.1 == i)).bind (·.2.supplies) with
-      | some a => .ok a
-      | none => match s, captured σ i with
-        | .child fam, some ⟨.expr y, h⟩ => (child fam d y i h).map (.child fam)
-        | .child fam, some ⟨.exprs ys, h⟩ => (children fam d ys i h).map (.child fam)
-        | .child .stmts, some ⟨.stmts body, h⟩ => (block d body i h).map (.child .stmts)
-        | s, some ⟨a, _⟩ => (readLeaf sig d (rowDaemon row) s a).mapError .here
-        | _, none => .error (.here readDefect)
-    -- a failure below is seen from this argument of this constructor
-    let a ← read.mapError (·.under row.ctor i)
+    let a ← (readArg sig n row σ child children block s i).mapError (·.under row.ctor i)
     let rest ← readArgs sig n row σ child children block ss (i + 1)
     .ok (a :: rest)
 
@@ -473,7 +508,7 @@ def readArgs (sig : Signature Op) (n : Nat) (row : Templates.Row) (σ : Subst)
 prints back to the tree read. -/
 def printedRow (fam : EffFam) (ctor : String) (args : List (ArgF Op (EffSelfCarrier Op)))
     (k : Nat) : Bool :=
-  Templates.table.findIdx? (fun r => r.selects fam ctor args) == some k
+  decide (Templates.table.findIdx? (fun r => r.selects fam ctor args) = some k)
 
 
 /-- The reserved names that head a program's printed clause: the heads (`Tpl.head?`) of the
@@ -590,13 +625,15 @@ def readRow (sig : Signature Op) (spell : String → List String → Option Op) 
               if hk : famRank fam' < famRank fam then
                 (same fam' hk (Templates.argDepth fam (.child fam') n 0)).map fun r => do
                   let c ← r.mapError (·.under row.ctor 0)
-                  match build fam row.ctor [.child fam' c] with
-                  | some e => .ok e
-                  | none => .error (.here readDefect)
+                  if printedRow fam row.ctor [.child fam' c] k then
+                    match build fam row.ctor [.child fam' c] with
+                    | some e => .ok e
+                    | none => .error (.here readDefect)
+                  else .error (.here (.shape "not the printed row"))
               else none
             | [sort] =>
               match readLeaf (R := EffSelfCarrier Op) sig n true sort (.expr x) with
-              | .ok a => (build fam row.ctor [a]).map .ok
+              | .ok a => if printedRow fam row.ctor [a] k then (build fam row.ctor [a]).map .ok else none
               | .error _ => none
             | _ => none
   else none
@@ -1778,6 +1815,119 @@ theorem readMethod_exact {sig : Signature Op} {spell : String → List String �
   · exact readRowMethod_exact hl h
   · cases h
 
+
+/-- What a row call reads from: `spelling(args)`, or `spelling<T…>(args)` when the row declares
+type arguments. -/
+def rowCallImage (s : String) (ta : List TypeScript.TypeRef) (args : List Expr) : Expr :=
+  match ta with
+  | [] => .call (.ident s) args
+  | ta => .call (.generic (.ident s) ta) args
+
+/-- The three readings of a row call, each printed back. One script closes them all: the row
+the spelling names, its shape and type arguments from the reading's own test, the trailing names
+from `idents?_exact`, and the request from its reader's exactness. -/
+theorem readRowCall_exact {sig : Signature Op} {spell : String → List String → Option Op}
+    (hl : LawfulSpelling sig spell) {n : Nat} {s : String} {ta : List TypeScript.TypeRef}
+    {args : List Expr} {e : Eff Op} (h : readRowCall sig spell n s ta args = some (.ok e)) :
+    print sig n e = .ok (rowCallImage s ta args) := by
+  unfold readRowCall at h
+  split at h
+  · rename_i op hA
+    simp only [Option.some.injEq] at h
+    split at h
+    · rename_i hc
+      cases h
+      obtain ⟨names, hnames, hsp⟩ := Option.bind_eq_some_iff.mp hA
+      obtain ⟨hs, htr⟩ := hl.row_of_spell _ _ _ hsp
+      rw [print_rowAnswer, idents?_exact hnames]
+      cases ta <;> simp [rowCallImage, printRow, printRowHead, hc.1, hc.2.1, hc.2.2, hs, htr]
+    · cases h
+  · split at h
+    · split at h
+      · simp only [Option.some.injEq] at h
+        split at h
+        · rename_i hc
+          simp only [map_eq_ok] at h
+          obtain ⟨r, hr, he⟩ := h
+          subst he
+          obtain ⟨names, hnames, hsp⟩ :=
+            Option.bind_eq_some_iff.mp ‹(idents? _).bind (spell s) = some _›
+          obtain ⟨hs, htr⟩ := hl.row_of_spell _ _ _ hsp
+          rw [print_rowAnswer, idents?_exact hnames]
+          cases ta <;>
+            simp [rowCallImage, printRow, printRowHead, hc.1, hc.2.1, hc.2.2, hs, htr,
+              readTerm_exact _ hr]
+        · cases h
+      · split at h
+        · split at h
+          · simp only [Option.some.injEq] at h
+            split at h
+            · rename_i hshape
+              simp only [map_eq_ok] at h
+              obtain ⟨r, hr, he⟩ := h
+              subst he
+              obtain ⟨names, hnames, hsp⟩ :=
+                Option.bind_eq_some_iff.mp ‹(idents? _).bind (spell s) = some _›
+              obtain ⟨hs, htr⟩ := hl.row_of_spell _ _ _ hsp
+              rw [print_rowAnswer, idents?_exact hnames]
+              cases ta <;>
+                simp [rowCallImage, printRow, printRowHead, hshape.1, hshape.2, hs, htr,
+                  readTupleArgs_exact hr]
+            · cases h
+          · cases h
+        · cases h
+    · cases h
+
+/-- A bare identifier read as a value row prints back. -/
+theorem readRowValue_exact {sig : Signature Op} {spell : String → List String → Option Op}
+    (hl : LawfulSpelling sig spell) {n : Nat} {s : String} {e : Eff Op}
+    (h : readRowValue sig spell s = .ok e) : print sig n e = .ok (.ident s) := by
+  unfold readRowValue at h
+  split at h
+  · rename_i op hsp
+    split at h
+    · rename_i hshape
+      cases h
+      obtain ⟨hs, _⟩ := hl.row_of_spell _ _ _ hsp
+      rw [print_rowAnswer]
+      simp [printRow, hshape, hs]
+    · cases h
+  · cases h
+
+/-- The row call of `perform`: what `readPerform` accepts prints back to the tree it read. -/
+theorem readPerform_exact {sig : Signature Op} {spell : String → List String → Option Op}
+    (hl : LawfulSpelling sig spell) {n : Nat} {x : Expr} {e : Eff Op}
+    (h : readPerform sig spell n x = .ok e) : print sig n e = .ok x := by
+  unfold readPerform at h
+  split at h
+  · split at h
+    · cases h
+    · split at h
+      · cases h
+      · cases h
+      · exact readRowValue_exact hl h
+  · split at h <;> cases h
+  · cases h
+  · cases h
+  · split at h
+    · split at h <;> cases h
+    · rename_i s args _ _
+      cases hrow : readRowCall sig spell n s [] args with
+      | none => rw [hrow] at h; cases h
+      | some answer =>
+        rw [hrow] at h
+        simp only [Option.getD_some] at h
+        subst h
+        exact readRowCall_exact hl hrow
+  · rename_i s ta tas args
+    cases hrow : readRowCall sig spell n s (ta :: tas) args with
+    | none => rw [hrow] at h; cases h
+    | some answer =>
+      rw [hrow] at h
+      simp only [Option.getD_some] at h
+      subst h
+      exact readRowCall_exact hl hrow
+  · exact readMethod_exact hl h
 
 end ReadExact
 
