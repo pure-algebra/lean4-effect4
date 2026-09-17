@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.LoopSound
 import Effect4.Laws.Program.LoopAgreement
+import Effect4.Laws.Program.Agreement.Loop
 import Effect4.Laws.Program.ReferenceTyping
 import Effect4.Program.CheckedTyping
 
@@ -12,9 +13,12 @@ a caller holds is a `TypedProgram`: the result of the one whole-program checker
 fragment has no layer reference (`Looped.refSites_nil`), so the checker's answer is `effTy`'s
 (`typeOfProgram_looped`), and every soundness theorem reads on the certificate.
 
-`TypedProgram.run_sound` is the statement for the machine on the straight fragment.
-`TypedProgram.run_sound_of_agreement` is the statement for loops, from `LoopAgreement e`: the
-one premise still open (obligation O12). When that is proved for `Looped`, the premise goes.
+`TypedProgram.run_sound` is the statement for the machine on the straight fragment, at a fixed
+budget. `TypedProgram.run_soundB` is the statement for the whole loop-bearing fragment: when a
+certified program's budgeted meaning finishes, its exit has the type, and the machine finishes
+with that exit and those stores at every fuel past a bound (`Agreement.loopAgreement`, O12).
+`run_sound_of_agreement` is the same statement from the agreement as a premise; it is kept
+because it is how the next fragment will be stated before its agreement is proved.
 -/
 
 set_option autoImplicit false
@@ -105,5 +109,17 @@ theorem TypedProgram.run_sound_of_agreement {e : NativeEff}
     rw [← typeOfProgram_looped nativeSignature e hl]
     exact tp.typed
   exact ⟨meaningB_typed k e tp.ty hl hty h, hagree k ex s' h⟩
+
+/-- **A certified loop-bearing program runs on the machine to an exit of its type.** When its
+budgeted meaning finishes, the exit has the program's type, and the machine's ordinary run
+finishes with that exit and those stores at every fuel past a bound. -/
+theorem TypedProgram.run_soundB {e : NativeEff} (tp : TypedProgram nativeSignature e)
+    (hl : Looped e = true) {k : Nat} {ex : ExitV} {s' : Stores}
+    (h : meaningB k e [] Stores.empty = (some ex, s')) :
+    ExitOk tp.ty.answer tp.ty.error s' ex ∧
+      ∃ bound, ∀ fuel, bound ≤ fuel →
+        (Api.run e fuel).outcome = Api.Outcome.finished ∧
+          (Api.run e fuel).exit = some ex ∧ (Api.run e fuel).stores = s' :=
+  TypedProgram.run_sound_of_agreement tp hl (Agreement.loopAgreement e hl) h
 
 end Effect4.Program.Denote

@@ -132,6 +132,50 @@ def Looped : NativeEff → Bool
   | .onExit b f => Looped b && Looped f
   | e => Straight e
 
+/-! ## The fragment's subprograms -/
+
+theorem Looped.bind {a b : NativeEff} (h : Looped (.bind a b) = true) :
+    Looped a = true ∧ Looped b = true := by
+  simpa [Looped, Bool.and_eq_true] using h
+
+theorem Looped.branch {t : Term} {a b : NativeEff} (h : Looped (.branch t a b) = true) :
+    Looped a = true ∧ Looped b = true := by
+  simpa [Looped, Bool.and_eq_true] using h
+
+theorem Looped.select {t : Term} {d : Decision} {a b : NativeEff}
+    (h : Looped (.select t d a b) = true) : Looped a = true ∧ Looped b = true := by
+  simpa [Looped, Bool.and_eq_true] using h
+
+theorem Looped.catchCause {b h' : NativeEff} (h : Looped (.catchCause b h') = true) :
+    Looped b = true ∧ Looped h' = true := by
+  simpa [Looped, Bool.and_eq_true] using h
+
+theorem Looped.matchCause {b v c : NativeEff} (h : Looped (.matchCause b v c) = true) :
+    Looped b = true ∧ Looped v = true ∧ Looped c = true := by
+  simpa [Looped, Bool.and_eq_true, and_assoc] using h
+
+theorem Looped.onExit {b f : NativeEff} (h : Looped (.onExit b f) = true) :
+    Looped b = true ∧ Looped f = true := by
+  simpa [Looped, Bool.and_eq_true] using h
+
+theorem Looped.suspend {b : NativeEff} (h : Looped (.suspend b) = true) : Looped b = true := by
+  simpa [Looped] using h
+
+theorem Looped.exit {b : NativeEff} (h : Looped (.exit b) = true) : Looped b = true := by
+  simpa [Looped] using h
+
+theorem Looped.iterate {c : Ty} {i t st r : Term} {b : NativeEff}
+    (h : Looped (.iterate c i t st r b) = true) : Looped b = true := by
+  simpa [Looped] using h
+
+/-- Where the fragment meets the heads whose suspension body the compile decides itself: a
+source suspension, a branch, a decision, and a loop. -/
+theorem Looped.suspendDecided_iff {e : NativeEff} (hl : Looped e = true) :
+    e.suspendDecided = true ↔
+      (∃ b, e = .suspend b) ∨ (∃ t a b, e = .branch t a b) ∨ (∃ s d a b, e = .select s d a b) ∨
+        (∃ c i t st r b, e = .iterate c i t st r b) := by
+  cases e <;> simp [Eff.suspendDecided, Looped, Straight] at hl ⊢
+
 /-- The forms the budgeted meaning descends into. Every other form is a leaf. -/
 def composite : NativeEff → Bool
   | .iterate _ _ _ _ _ _ | .suspend _ | .bind _ _ | .branch _ _ _ | .select _ _ _ _ | .exit _

@@ -303,42 +303,6 @@ theorem iter_soundB {fw fd : Val → Effects.Program StoreSig (Option ExitV ⊕ 
       · rw [eD, hn]
         exact ⟨Stores.le_trans hst.le ih.stores.le, ih.stores.wf, ih.stores.heap⟩
 
-/-! ## The fragment's subprograms -/
-
-theorem Looped.bind {a b : NativeEff} (h : Looped (.bind a b) = true) :
-    Looped a = true ∧ Looped b = true := by
-  simpa [Looped, Bool.and_eq_true] using h
-
-theorem Looped.branch {t : Term} {a b : NativeEff} (h : Looped (.branch t a b) = true) :
-    Looped a = true ∧ Looped b = true := by
-  simpa [Looped, Bool.and_eq_true] using h
-
-theorem Looped.select {t : Term} {d : Decision} {a b : NativeEff}
-    (h : Looped (.select t d a b) = true) : Looped a = true ∧ Looped b = true := by
-  simpa [Looped, Bool.and_eq_true] using h
-
-theorem Looped.catchCause {b h' : NativeEff} (h : Looped (.catchCause b h') = true) :
-    Looped b = true ∧ Looped h' = true := by
-  simpa [Looped, Bool.and_eq_true] using h
-
-theorem Looped.matchCause {b v c : NativeEff} (h : Looped (.matchCause b v c) = true) :
-    Looped b = true ∧ Looped v = true ∧ Looped c = true := by
-  simpa [Looped, Bool.and_eq_true, and_assoc] using h
-
-theorem Looped.onExit {b f : NativeEff} (h : Looped (.onExit b f) = true) :
-    Looped b = true ∧ Looped f = true := by
-  simpa [Looped, Bool.and_eq_true] using h
-
-theorem Looped.suspend {b : NativeEff} (h : Looped (.suspend b) = true) : Looped b = true := by
-  simpa [Looped] using h
-
-theorem Looped.exit {b : NativeEff} (h : Looped (.exit b) = true) : Looped b = true := by
-  simpa [Looped] using h
-
-theorem Looped.iterate {c : Ty} {i t st r : Term} {b : NativeEff}
-    (h : Looped (.iterate c i t st r b) = true) : Looped b = true := by
-  simpa [Looped] using h
-
 /-! ## The main theorem -/
 
 /-- A value of a subtype, through the normal forms the typing rule compares. -/

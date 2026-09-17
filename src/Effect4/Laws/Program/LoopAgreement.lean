@@ -11,10 +11,10 @@ depends on its rounds, and no step formula is claimed. By `meaningB_unique` the 
 stores do not depend on the budget that found them, so the statement names one answer.
 
 Proved here: the statement on the straight fragment (`loopAgreement_of_straight`), from
-`run_eq_meaning` and `denoteB_straight`, with the bound `run_eq_meaning` names. Open: the
-statement on the rest of `Looped`, which needs the frame machine's loop frame in the plain
-invariant of `Agreement/Machine.lean`. Until then its oracle is executable:
-`Test/Program/DenoteBContract.lean` checks `agreesAt` on a loop in every position.
+`run_eq_meaning` and `denoteB_straight`, with the bound `run_eq_meaning` names. The statement
+on all of `Looped` is `Agreement.loopAgreement` (`Laws/Program/Agreement/Loop.lean`), which
+imports this module. `Test/Program/LoopAgreementContract.lean` runs the machine on a loop in
+every position.
 -/
 
 set_option autoImplicit false

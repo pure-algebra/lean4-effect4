@@ -1,8 +1,9 @@
 import Effect4.Laws.Program.Agreement.Loop
+import Effect4.Laws.Program.TypedRun
 import Test.Program.LoopSoundContract
 
 /-!
-# Loop agreement contract (layer A)
+# Loop agreement contract
 
 The local machine run on the loop programs: it finishes with the budgeted meaning's exit and
 stores, which is what `localRun_rootB` proves for every program of `Looped`: a loop alone,
@@ -39,5 +40,27 @@ def covered : List NativeEff :=
 #guard_msgs in #print axioms localRun_compileB
 /-- info: 'Effect4.Program.Agreement.localRun_rootB' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms localRun_rootB
+/-- info: 'Effect4.Program.Agreement.replay_Mexit_of_localRun' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms replay_Mexit_of_localRun
+/-- info: 'Effect4.Program.Agreement.loopAgreement' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms loopAgreement
+/-- info: 'Effect4.Program.Denote.TypedProgram.run_soundB' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Effect4.Program.Denote.TypedProgram.run_soundB
+
+/-! ## The machine itself, on every loop program of the battery
+
+`loopAgreement` says the machine finishes with the budgeted meaning's answer past a bound. The
+guard reads it at one fuel: the ordinary run of each program agrees with the meaning at
+budget 9, exit and stores. -/
+
+def machineAgrees (e : NativeEff) : Bool :=
+  let r := Api.run e 400
+  match meaningB 9 e [] Stores.empty with
+  | (some ex, s) => r.outcome == Api.Outcome.finished && r.exit == some ex && r.stores == s
+  | _ => false
+
+#guard covered.all machineAgrees
+-- The fuel bound the theorem names is a number one can compute.
+#guard covered.all fun e => max (depthB e) (2 * (boundB 9 e + 1) + 4) ≤ 400
 
 end Test.Program.LoopAgreementContract

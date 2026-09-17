@@ -94,8 +94,19 @@ from the plan above: `depth` was left alone and `depthB` defined beside it (`dep
 they agree on straight programs), so nothing in the straight files changed; and a folded `exit`
 is handled by showing its body straight (`straight_of_asExit`) instead of a budgeted copy of
 `meaning_of_asExit`. The first landing was on loops, sequences and suspensions; the six
-composite arms followed the same day, so layer A is on all of `Looped`. Layer B (steps 3 and
-4) is untouched, so this is a theorem about the local machine until then.
+composite arms followed the same day, so layer A is on all of `Looped`.
+
+Steps 3 and 4 landed the same day too. Layer B needed four new cases and no new simulation:
+adding the loop primitive and its frame to `PlainCode`, `PlainFrame` and `StepShape` broke four
+lemmas of 1,800 lines (the two plainness lemmas of an exit meeting a frame, the plainness of
+one local step, and the scope protocol's pop), each fixed by one bullet from the step lemmas
+(now `Agreement/LoopSteps.lean`, below both layers). `Straight root` became `Looped root`.
+One thing the plan missed: the machine compiles and runs at one fuel, so `∀ fuel ≥ bound` needs
+a local step count that does not read the fuel. `boundB k e` is that (a loop runs at most `k`
+rounds), threaded through every arm as `steps` is in the straight proof.
+`replay_Mexit_of_localRun` is the closing step for any finished local run; `replay_Mexit` is
+its corollary. `loopAgreement : Looped e → LoopAgreement e`, and `TypedProgram.run_soundB`
+has no premise.
 
 ## 5. What stays out
 
