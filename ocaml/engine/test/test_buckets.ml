@@ -2,7 +2,7 @@
 
    What it checks, and against what:
      P-B1..P-B6  the property statements of docs/research/2026-09-08-engine-a3-queue-query.md
-                 §2.1, one per Lean theorem in src/OCaml5/Lib/Deque.lean, over pseudo-random
+                 §2.1, one per Lean theorem in git:ddb51b6c:src/OCaml5/Lib/Deque.lean, over pseudo-random
                  states (a fixed LCG, so the run is reproducible);
      B6, B7      the armed flag (a host fact with no Lean counterpart, refusal W4-DEQ-ARMED)
                  and persistence;

@@ -709,7 +709,7 @@ def rawSites (m : Module) : Nat :=
 `OCaml5.Ml.Profile` says which constructs and which library values are representable in the Lean
 model. `Check.profile` decides membership, and `Check.lawReport` says which of the profile's
 named laws a module has come to depend on — the list seat W4 is proving under
-`src/OCaml5/Lib/`. -/
+`git:ddb51b6c:src/OCaml5/Lib/`. -/
 
 namespace Check
 

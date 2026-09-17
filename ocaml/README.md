@@ -31,19 +31,16 @@ engine that replaces the daemon is owed by the host-rows slice.
 | `engine/` | the host engine under the generated machine: `api_engine.ml` (the same LCNF projection over the engine's carriers), the carriers (fibers view, trace, memo, ppath, table), the scheduler over domains (`e4_sched`), the mailbox, triggers, admission, the CAS (`cas/`), the query, the differential against `gen/` over the goldens, the truth corpus and the Lean corpus `make corpus` prints | `dune build engine` | `make check-ocaml` (`dune test engine` with the corpus under `E4_LEAN_CORPUS`); `engine/tools/gen-check.sh` | `docs/research/2026-09-08-engine-brief.md` (untracked working note), the `.mli` headers |
 | `eff/` | the `Eff` IR as an OCaml library: generated `eff_types`/`eff_layout`/`eff_wire`/`eff_subterm`/`eff_json`/`eff_native` (`make gen-eff`, `src/OCaml5/Tools/EffGen.lean`) over a hand-written framing kernel, and the goldens Lean cut | `dune build eff` | `dune test eff`: goldens byte-identical and JSON equal, the wire property test, the differential against Lean's own encoder | `eff/README.md` |
 | `goldens/eff/` | the canonical bytes of the Lean program corpus, written by `src/OCaml5/Tools/EffWire.lean` through `Effect4.Program.Wire` | — | compared with `eff/goldens` | `eff/REPORT.md` |
-| `tools/` | `ml-check.sh` (the language model's battery), `lib/toolchain.sh` | — | — | the scripts' headers |
+| `tools/` | `lib/toolchain.sh` | — | — | the script's header |
 
 The Lean half, `src/OCaml5/`:
 
 | module | what it is |
 | --- | --- |
-| `Runtime/Effect` | the OCaml 5 `Stdlib.Effect` handler machine (65 arms): the model `Lib/Eio` and `Lib/Picos` build on and the site `Ml/Profile` cites for the effect primitives |
-| `Runtime/Value` | backend-relative values (`Sys.int_size` per host), the carrier `Ml/Profile` cites |
-| `Ml/*` | the OCaml language model: typed syntax, the canonical printer, the profile checker (an allowlist of constructs and library signatures), Lean structure/inductive → OCaml type reflection, the `{ f with }` → mutation pass; `MlTest` is its battery |
-| `Lib/*` | Lean carriers with laws for the libraries the engine uses (`Map`, `Set`, `Deque`, `Order`, `Sexp`, `Stream`, `Eio`, `Picos`, `Derived`); `Lib/Deque` projects onto `Effect4.Machine.Dispatcher` by `rfl` |
+| `Ml/*` | the part of the OCaml language model the LCNF backend prints through: typed syntax, the canonical printer, the profile (an allowlist of constructs and library signatures) and its checker. The runtime reification, the library carriers, the type reflection, the mutation pass and `MlTest` were removed on 2026-09-17 (owner rule: only what is made directly from LCNF stays); they are at `git:ddb51b6c` |
 | `Eff/*` | the `Eff` program IR as OCaml: the closed world read off the environment (`World`), the emitters of the `eff/` library (`Emit`), the goldens and corpus (`Goldens`) |
 | `Lcnf/*` | the LCNF → OCaml backend: dump, naming, types, the translation rules and the builtin table |
-| `Tools/*` | the `--run` drivers, each a thin `main` over a library module: `LcnfDump`/`LcnfGen` (route 2 and the engine), `EffGen` (over `Eff`), `EffWire` (the wire goldens), `CasGoldens` (the CAS goldens), `Describe` (derives a description of a Machine inductive from the environment; its avatar outputs are archived, and `tools/Effect4Gen` borrows its environment walk) |
+| `Tools/*` | the `--run` drivers, each a thin `main` over a library module: `LcnfDump`/`LcnfGen` (route 2 and the engine), `EffGen` (over `Eff`), `EffWire` (the wire goldens), `CasGoldens` (the CAS goldens) |
 
 The rest of the OCaml 5 reification (the handler machine's invariants and witnesses, the
 js_of_ocaml machine and the native ≈ jsoo relation, jsoo's block IR, the Term → Code

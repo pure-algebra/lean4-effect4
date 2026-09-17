@@ -42,6 +42,6 @@ let arm d = { d with armed = true }
 let disarm d = { d with armed = false }
 
 (* The observation the differential compares: `Dispatcher.bucketPairs` with each `Deque` read
-   as its `toList` (src/OCaml5/Lib/Deque.lean:320-322). *)
+   as its `toList` (git:ddb51b6c:src/OCaml5/Lib/Deque.lean:320-322). *)
 let to_list d = List.map (fun b -> (b.priority, b.tasks)) d.buckets
 let armed d = d.armed
