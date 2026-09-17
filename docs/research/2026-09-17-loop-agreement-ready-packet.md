@@ -84,6 +84,19 @@ Do this after the S1 agent's retirements land and this branch is rebased: both l
 `branch` arms that the retirement deletes, and the loop frame survives it (`iterate` reuses
 `Prim.whileLoop`).
 
+## 4b. Landed (2026-09-17, same day)
+
+Steps 1 and 2 on `LoopedSeq` (loops, nested loops, sequences, suspensions, straight leaves):
+`Laws/Program/Agreement/Loop.lean`. The four step lemmas, `loop_reaches` (rounds of `iter` are
+rounds of the frame, by induction on the budget, the body's agreement a hypothesis),
+`localRun_compileB` and `localRun_rootB`, all at `[propext, Quot.sound]`. Two things differed
+from the plan above: `depth` was left alone and `depthB` defined beside it, so nothing in the
+straight files changed; and the statement is over `LoopedSeq`, not `Looped`. The six remaining
+arms (a loop under `branch`, `select`, `exit`, `catchCause`, `matchCause`, `onExit`) are the
+straight arms with `runP_thenB_inv` where those rewrite with `meaning_*`; the contract runs
+them and they agree. Layer B (steps 3 and 4) is untouched, so this is a theorem about the local
+machine until then.
+
 ## 5. What stays out
 
 Nested budgets are already handled by the answer type (`inl none`), so no loop-in-loop lemma is
