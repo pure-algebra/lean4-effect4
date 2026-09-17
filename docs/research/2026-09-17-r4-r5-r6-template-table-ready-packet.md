@@ -124,6 +124,39 @@ over the table once; the shared-head group by the top former of a printed child,
 never `cond` nor a block arrow: `inst` keeps a skeleton's top former); (c) `readArgs` over
 `along σ (holes tpl)` gives back the layer's arguments; (d) the measure.
 
+### 3c. Built the same evening, and what the real family taught
+
+- `ede32728`: the generated layer view (`tools/Effect4Gen/LayerView.lean` →
+  `src/Effect4/Program/LayerView.lean`): `ArgF`, `EffAlgebra.ofLayer`, `argSorts`, `ctorNames`,
+  `build` with 63 `rfl` equations. Thirteen leaf sorts; an argument type with no sort is refused
+  by name.
+- `ecbedb7a`: the reader's measure in the calculus module (`match_within`, `match_below`).
+- In the tree, awaiting one re-run of its battery once the C-P8 seat's rebuild has finished:
+  `src/Effect4/Codegen/Templates.lean` (57 rows over `Eff`, `ActionTerm`, `LayerTerm`; the
+  classifier as patterns on arguments; `Depth` as `rel k` or `closed`; a row prints a skeleton or
+  refuses by name; `printT := cata_eff (printAlg sig)`; hand fields only for `perform`, `gen`, the
+  six statements and the two spines) and `Test/Codegen/TemplatesContract.lean` (`printT = print`
+  on a sample per constructor and classifier at two depths, every action, every layer, the 400
+  corpus programs; the refusals equal; the table-defect refusal never shows; every skeleton
+  linear; every row a real constructor with one depth per argument; every constructor covered
+  but the two hand ones; no hole past the arity).
+
+What the real family added to the probe's design:
+
+1. **A classifier pattern is not always a fixed value.** `decisionTag`, `optTermSome`, `optTySome`
+   and `daemon b` choose the row while a hole still carries the content (the tag string, the
+   interruptor, the annotation, the whole options object). A reader supplies an argument only
+   from a pattern that determines it, and CHECKS the others against what it read.
+2. **Two rows are transparent** (a bare hole): `withFiber` prints as its action and a layer
+   reference as its name. They close their family, and the reader's measure is lexicographic
+   (the expression's size, then the family) because `withFiber` hands the SAME expression to the
+   action rows.
+3. **Order is the reader's business only.** The printer chooses by constructor and classifier,
+   which never overlap. For the reader: conditional and loop images before the plain suspension;
+   rigid rows, then `gen`, then the action rows (as `withFiber`), then the row call of `perform`.
+4. **The annotated loop prints and is not read**: its hole has sort `type`, and no reader of types
+   exists by design (B19). That is `readable`'s present domain, now visible in the table.
+
 ## 4. Order, each step gated and committed before the next
 
 1. **R4.1** `Template.lean`: the calculus of §2 with `match_inst` and the converse (both proved in
