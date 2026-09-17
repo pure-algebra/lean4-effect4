@@ -415,14 +415,17 @@ theorem Decision.decide_bound_keys (d : Decision) (v : Val) (first : Bool) (w : 
     (h : d.decide v = some (first, some w)) : Val.keys w ⊆ Val.keys v := by
   cases d with
   | bool =>
-    cases v <;> simp [decide] at h
+    cases v <;>
+      simp only [decide, Option.some.injEq, Prod.mk.injEq, reduceCtorEq, and_false] at h
   | option =>
     cases v with
     | some a =>
       simp only [decide, Option.some.injEq, Prod.mk.injEq] at h
       cases h.2
       exact List.Subset.refl _
-    | _ => simp [decide] at h
+    | _ =>
+      simp only [decide, Option.some.injEq, Prod.mk.injEq, Bool.true_eq, reduceCtorEq,
+        and_false] at h
   | tag t =>
     simp only [decide] at h
     rcases hp : Val.tagPayload? t v with _ | payload
@@ -519,12 +522,12 @@ theorem externalAdmits_keys (table : RowTable) (i : Nat)
     | failure cause => rfl
     | success value =>
       cases hr : externalRow table i with
-      | none => simp [externalAdmits, hr] at h
+      | none => simp only [externalAdmits, hr, Bool.false_eq_true] at h
       | some row =>
         simp only [externalAdmits, hr, Bool.and_eq_true_iff, List.isEmpty_iff] at h
         simp only [Completion.keys, exitKeys, Val.keys_eq_handles, h.2, List.filterMap_nil]
   | ofRefGet cell =>
-    cases hr : externalRow table i <;> simp [externalAdmits, hr] at h
+    cases hr : externalRow table i <;> simp only [externalAdmits, hr, Bool.false_eq_true] at h
 
 /-- A converted reply grows only the external allocation list; every returned handle
 is either an already valid input or the fresh index just appended. -/

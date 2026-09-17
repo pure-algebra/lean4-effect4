@@ -336,7 +336,7 @@ theorem checked_replay_minted (program : Api.Program) (fuel : Nat) (tape : List 
   letI := evaluatorFor program table
   cases hc : replayCheckedFrom program fuel answers table 0 tape
       (Api.load program fuel answers) with
-  | inr refusal => simp [Api.replayChecked, hc] at h
+  | inr refusal => simp only [Api.replayChecked, hc, reduceCtorEq] at h
   | inl result =>
     have hv := replayCheckedFrom_answersValid program fuel answers table 0 tape _ result hc
     have he := replayCheckedFrom_eq_replay program fuel answers table 0 tape _ result hc
