@@ -71,7 +71,10 @@ def pLoopCaught : NativeEff :=
         (.succeed (.lit .unit)) (.fail (.lit (.nat 4)))))
     (.succeed (.lit (.nat 5)))
 
-/-- A loop as the body of a finalizer's scope, and a loop in the finalizer. -/
+/-- A loop as the body of a finalizer's scope, and a loop in the finalizer. A raw program: the
+finalizer's loop reads `var 0`, which under `onExit` is the reified exit, so it is ill-typed and
+both sides go wrong alike (`Test/Program/LoopSoundContract.lean` pins that; the typed form is
+`pLoopFinalizer` there). Agreement is stated on raw programs, so the guard stays. -/
 def pLoopOnExit : NativeEff := .onExit pIterateCount pIterateAnswer
 
 /-- A loop's exit as a value. -/

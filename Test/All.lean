@@ -66,6 +66,7 @@ import Test.Program.AuthoringContract
 import Test.Program.DenoteContract
 import Test.Program.DenoteBContract
 import Test.Program.MeaningSoundContract
+import Test.Program.LoopSoundContract
 import Test.Program.AgreementContract
 import Test.Program.ProgressContract
 import Test.Program.InvocationContract
