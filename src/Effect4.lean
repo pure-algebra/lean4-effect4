@@ -53,7 +53,6 @@ import Effect4.Schema.EffectfulField
 import Effect4.Schema.Document
 import Effect4.Schema.Check
 import Effect4.Schema.Authoring
-import Effect4.Schema.Dimension
 -- Service keys, the rc.112 scope state machine, the frame alphabet (`Prim`,
 -- `PrimInterp`, `FrameFiber`).
 import Effect4.Machine.Key

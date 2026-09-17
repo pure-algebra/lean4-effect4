@@ -16,7 +16,7 @@ only of the printers, and the printers outlive the alphabet. The namespace stays
 `StdLib/Entry.lean:68`), and the store's own printer (`Store/Shape.lean`) reads them
 the same way. The law that is not here: `binary64OfNat` is exact below 2^53 and truncates
 toward zero above it, so it is not injective on `Nat` (`Surface/Annotate.lean:58`); its
-inverse and that theorem are owed (`Schema/Dimension.lean:21`).
+inverse and that theorem are owed.
 -/
 
 set_option autoImplicit false
