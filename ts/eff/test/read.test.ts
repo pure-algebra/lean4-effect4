@@ -165,7 +165,8 @@ describe("the synchronous runIn adapter", () => {
     ])
   })
   test("the former raw synchronous call stays reserved and refused", () => {
-    expect(refusal("Fiber.runIn(1, 2)")).toEqual({ _tag: "arity", head: "Fiber.runIn" })
+    // reserved, and it heads no program clause (it occurs inside the adapter's skeleton only)
+    expect(refusal("Fiber.runIn(1, 2)")).toEqual({ _tag: "unknownHead", name: "Fiber.runIn" })
   })
   test("the wrapper preserves scope checking", () => {
     expect(refusal("Effect.withFiber(() => { Fiber.runIn(a0, 2); return Effect.void })")).toEqual({ _tag: "unknownIdent", name: "a0" })
@@ -183,7 +184,8 @@ describe("the synchronous runIn adapter", () => {
     "() => { Fiber.runIn(1, 2); return Effect.void }, 0",
   ]) {
     test(`refuses a different callback shape: ${callback}`, () => {
-      expect(refusal(`Effect.withFiber(${callback})`)).toEqual({ _tag: "shape", what: "runIn" })
+      // no row's skeleton matches: a program head applied to an argument list no row reads
+      expect(refusal(`Effect.withFiber(${callback})`)).toEqual({ _tag: "arity", head: "Effect.withFiber" })
     })
   }
   test("adding expression statements does not admit them in a generator", () => {
@@ -197,8 +199,8 @@ describe("binders are depths", () => {
       '["bind",["succeed",["lit",["nat",1]]],["succeed",["var",0]]]',
     )
   })
-  test("a wrong binder name is refused by the name expected", () => {
-    expect(refusal("Effect.flatMap(Effect.succeed(1), (b) => Effect.succeed(b))")).toEqual({ _tag: "binder", expected: "a0" })
+  test("a wrong binder name matches no row: the head's argument list is refused", () => {
+    expect(refusal("Effect.flatMap(Effect.succeed(1), (b) => Effect.succeed(b))")).toEqual({ _tag: "arity", head: "Effect.flatMap" })
   })
   test("a variable out of scope is an unknown identifier", () => {
     expect(refusal("Effect.succeed(a0)")).toEqual({ _tag: "unknownIdent", name: "a0" })
@@ -219,8 +221,8 @@ describe("heads out of position", () => {
   })
   test("an unknown Effect export is an unknown head in effect position", () => {
     expect(refusal("Effect.tap(Effect.succeed(1), (a0) => a0)")).toEqual({ _tag: "unknownHead", name: "Effect.tap" })
-    // `Effect.map` is `iterate`'s printed head since 2026-09-17: known, and refused here until R5
-    expect(refusal("Effect.map(Effect.succeed(1), (a0) => a0)")).toEqual({ _tag: "arity", head: "Effect.map" })
+    // `Effect.map` is reserved (it occurs inside `iterate`'s skeleton) and heads no program clause
+    expect(refusal("Effect.map(Effect.succeed(1), (a0) => a0)")).toEqual({ _tag: "unknownHead", name: "Effect.map" })
   })
 })
 
@@ -546,14 +548,43 @@ describe("conditional handlers", () => {
   test("predicate and handler both see only their own binder", () => {
     const source = "Effect.catchIf(Effect.fail(7), (a0) => eq(a0, 7), (a0) => Effect.succeed(a0), undefined)"
     expect(JSON.parse(json(source))[0]).toBe("catchIf")
-    expect(refusal(source.replace("(a0) => eq", "(a1) => eq"))._tag).toBe("binder")
-    expect(refusal(source.replace("(a0) => Effect.succeed", "(a1) => Effect.succeed"))._tag).toBe("binder")
+    expect(refusal(source.replace("(a0) => eq", "(a1) => eq"))._tag).toBe("arity")
+    expect(refusal(source.replace("(a0) => Effect.succeed", "(a1) => Effect.succeed"))._tag).toBe("arity")
   })
   test("the exact reader requires an absent fallback", () => {
     expect(refusal("Effect.catchIf(Effect.fail(7), (a0) => false, (a0) => Effect.succeed(a0))")._tag).toBe("arity")
-    expect(refusal("Effect.catchIf(Effect.fail(7), (a0) => false, (a0) => Effect.succeed(a0), extra)")._tag).toBe("shape")
+    expect(refusal("Effect.catchIf(Effect.fail(7), (a0) => false, (a0) => Effect.succeed(a0), extra)")._tag).toBe("arity")
   })
   test("the noncanonical unconditional spelling stays outside the exact print image", () => {
     expect(refusal("Effect.catchIf(Effect.fail(7), (a0) => true, (a0) => Effect.succeed(a0), undefined)")._tag).toBe("shape")
+  })
+})
+
+// The reader is one matcher over the table Lean prints from (`templates.gen.ts`). These are
+// images the retired hand reader refused; each expected JSON is Lean's own reader's
+// (`Api.roundTrip`, `OCaml5.Eff.effV`) for the same program.
+describe("the images only the table reader reads", () => {
+  test("the option decision: its second arm is under one binder", () => {
+    expect(json("Effect.flatMap(Effect.succeed(1), (a0) => optionCase(a0, () => Effect.succeed(undefined), (a1) => Effect.succeed(a1)))")).toBe(
+      '["bind",["succeed",["lit",["nat",1]]],["select",["var",0],["option"],["succeed",["lit",["unit"]]],["succeed",["var",1]]]]')
+    // the first arm is under none
+    expect(refusal("Effect.flatMap(Effect.succeed(1), (a0) => optionCase(a0, () => Effect.succeed(a1), (a1) => Effect.succeed(a1)))")).toEqual(
+      { _tag: "unknownIdent", name: "a1" })
+  })
+  test("the tag decision: the tag is a string hole, both arms under one binder", () => {
+    expect(json('Effect.flatMap(Effect.succeed(1), (a0) => caseTag(a0, "cons", (a1) => Effect.succeed(a1), (a1) => Effect.succeed(a1)))')).toBe(
+      '["bind",["succeed",["lit",["nat",1]]],["select",["var",0],["tag","cons"],["succeed",["var",1]],["succeed",["var",1]]]]')
+  })
+  test("the loop image, and the scope of each of its terms", () => {
+    const loop = (test: string, step: string, result: string) =>
+      `Effect.suspend(() => {\n  let a0 = 0\n  return Effect.map(Effect.whileLoop({\n    while: () => ${test},\n    body: () => Effect.succeed(a0),\n    step: (a1) => {\n      a0 = ${step}\n    },\n  }), () => ${result})\n})`
+    expect(JSON.parse(json(loop("lt(a0, 3)", "add(a0, a1)", "a0")))[0]).toBe("iterate")
+    // the test and the result see the cursor only; the step sees the body's answer too
+    expect(refusal(loop("lt(a1, 3)", "add(a0, 1)", "a0"))).toEqual({ _tag: "unknownIdent", name: "a1" })
+    expect(refusal(loop("lt(a0, 3)", "add(a0, 1)", "a1"))).toEqual({ _tag: "unknownIdent", name: "a1" })
+  })
+  test("exactness is the printer's own choice of row", () => {
+    expect(refusal("Effect.catchIf(Effect.fail(7), (a0) => true, (a0) => Effect.succeed(a0), undefined)")).toEqual(
+      { _tag: "shape", what: "not the printed row" })
   })
 })

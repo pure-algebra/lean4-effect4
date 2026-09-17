@@ -438,7 +438,7 @@ def readArgs (sig : Signature Op) (n : Nat) (row : Templates.Row) (σ : Subst)
 and action rows, and the generator. A reserved name that heads none of them has no reading in
 program position (`Cause.fail` outside a cause, `Layer.merge` outside a layer). -/
 def programHeads : List String :=
-  "Effect.gen" :: Templates.table.filterMap fun row =>
+  Templates.genHead :: Templates.table.filterMap fun row =>
     if row.fam = .eff ∨ row.fam = .action then
       match row.out with
       | .tpl (.call (.ident s) _) => some s
@@ -471,6 +471,11 @@ def readPerform (sig : Signature Op) (spell : String → List String → Option 
     (readRowCall sig spell n s (ta :: tas) args).getD (.error (.unknownHead s))
   | _ => readMethod sig spell n x
 
+/-- The refusal of a tree that no row of its family matches, named by the family. -/
+def unread : EffFam → ReadRefusal
+  | .layer | .layers => .shape "layer"
+  | _ => .shape "expression"
+
 /-- A family a transparent row may hand the same expression to: strictly lower. -/
 def famRank : EffFam → Nat
   | .eff => 1
@@ -499,7 +504,7 @@ mutual
                   let args ← readArgs sig n row σ
                     (fun fam' d y i hy =>
                       have : sizeOf y < sizeOf x := match_below n t x σ hr hσ (i, .expr y) hy
-                      (readT sig spell fam' d y).getD (.error (.shape "expression")))
+                      (readT sig spell fam' d y).getD (.error (unread fam')))
                     (fun fam' d ys i hy =>
                       have : sizeOf ys < sizeOf x := match_below n t x σ hr hσ (i, .exprs ys) hy
                       readSpine sig spell fam' d ys)
@@ -532,7 +537,9 @@ mutual
       match fam with
       | .eff => some (
           match x with
-          | .call (.ident "Effect.gen") [.generator body] => (readStmts sig spell n body).map .gen
+          | .call (.ident s) [.generator body] =>
+            if s = Templates.genHead then (readStmts sig spell n body).map .gen
+            else readPerform sig spell n x
           | _ => readPerform sig spell n x)
       | _ => none
   termination_by (sizeOf x, famRank fam)
@@ -543,12 +550,12 @@ mutual
     match fam, xs with
     | .effs, [] => .ok .nil
     | .effs, y :: rest => do
-      let e ← (readT sig spell .eff n y).getD (.error (.shape "expression"))
+      let e ← (readT sig spell .eff n y).getD (.error (unread .eff))
       let es ← readSpine sig spell .effs n rest
       .ok (.cons e es)
     | .layers, [] => .ok .nil
     | .layers, y :: rest => do
-      let l ← (readT sig spell .layer n y).getD (.error (.shape "layer"))
+      let l ← (readT sig spell .layer n y).getD (.error (unread .layer))
       let ls ← readSpine sig spell .layers n rest
       .ok (.cons l ls)
     | _, _ => .error readDefect
@@ -593,12 +600,12 @@ end
 /-- A program from a tree, at environment length `n`. -/
 def readEff (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
     (x : Expr) : Except ReadRefusal (Eff Op) :=
-  (readT sig spell .eff n x).getD (.error (.shape "expression"))
+  (readT sig spell .eff n x).getD (.error (unread .eff))
 
 /-- A layer from a tree. A layer is closed: its bodies are read at environment length `0`. -/
 def readLayer (sig : Signature Op) (spell : String → List String → Option Op)
     (x : Expr) : Except ReadRefusal (LayerTerm Op) :=
-  (readT sig spell .layer 0 x).getD (.error (.shape "layer"))
+  (readT sig spell .layer 0 x).getD (.error (unread .layer))
 
 end TableReader
 

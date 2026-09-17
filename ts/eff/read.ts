@@ -4,19 +4,21 @@
 //     │ parseSync           text → oxc's ESTree                             (oxc-parser)
 //     │ programModuleOf     the declarations and the one program a file holds § 2
 //     │ exprOf              ESTree → the fragment the Lean printer emits      § 2
-//     │ readEff(0, ·)       fragment → Eff, src/Effect4/Codegen/Read.lean clause for clause   § 3
+//     │ readEff(0, ·)       fragment → Eff: one matcher over the table Lean prints from     § 3
 //     │ readModule          the hoisted layers put back at their paths        § 4
 //     └ decodeEff           the node checked against the schema             (eff.gen.ts)
 //
 // Everything else in this package is generated from Lean: the nodes (eff.gen.ts), their
-// JSON (json.gen.ts), the operation table (profile.gen.ts). This file holds the two things
-// that are logic and not data: what oxc calls things (§ 2), and the reading rules (§ 3).
+// JSON (json.gen.ts), the operation table (profile.gen.ts), the table of printed clauses
+// (templates.gen.ts). This file holds what is logic and not data: what oxc calls things (§ 2),
+// the generic reading step over the table, and the leaf and row readers (§ 3).
 
 import { Result } from "effect"
 import { parseSync } from "oxc-parser"
 import type { ActionTerm, CauseTerm, Eff, ForkOptions, LayerTerm, Lit, Row, ServiceKey, Stmt, Term, Ty } from "./eff.gen.ts"
 import { decodeEff } from "./eff.gen.ts"
 import { heads, rows, serviceTypeFor, type Entry, type Head } from "./profile.gen.ts"
+import { argNamesOf, argSortsOf, genHead, programHeads, templates, type ArgPat, type ArgSort, type Depth, type Fam, type StmtTpl, type TemplateRow, type Tpl } from "./templates.gen.ts"
 
 export type { Eff } from "./eff.gen.ts"
 
@@ -583,17 +585,15 @@ const programModuleOf = (program: Node): Read<Module> => {
   return main ? ok({ declarations, main: main.value }) : refuse({ _tag: "program", what: last.type })
 }
 
-/* ============================================================ § 3  the fragment → Eff  (Read.lean) */
+/* ============================================================ § 3  the fragment → Eff  (Read.lean, over templates.gen.ts) */
 
-// `readEff(n, x)` reads `x` as a program at environment length `n`, in the order of the
-// printer's table: a bare identifier is `Effect.fiberId` or a value row; a call is a reserved
-// head, then a call row. A bare value (a literal, `undefined`, a binder) or an atom
-// application in effect position is refused: the printer never emits one there, since
-// `Effect.fail(e)` reads as `fail e` (`yieldError`, which printed the same image, retired into it).
-// Every reserved head has its own reader in `headReaders`; the heads with no reading in that
-// position refuse by name. Binders are depths: the k-th nested lambda binds `a<k>`, and
-// `varRead` recovers a variable by comparing names from the newest binder down, never by
-// decoding digits.
+// `readEff(n, x)` reads `x` as a program at environment length `n`. It is Lean's `readT`
+// (`src/Effect4/Codegen/Read.lean`): the first row of `templates.gen.ts` whose skeleton matches,
+// then a generator, then a row call. There is no reader per head; a printed form is written in
+// one place, Lean's `Codegen/Templates.lean`. A bare value (a literal, `undefined`, a binder) or
+// an atom application in effect position is refused: the printer never emits one there.
+// Binders are depths: the k-th nested lambda binds `a<k>`, and `varRead` recovers a variable by
+// comparing names from the newest binder down, never by decoding digits.
 
 /** The binder minted for environment position `index`: `a0`, `a1`, … (`Var.name`). */
 const varName = (index: number): string => `a${index}`
@@ -834,124 +834,230 @@ const readLiteral = (x: Expr): Read<Lit> => {
   return term.success._tag === "lit" ? ok(term.success.value) : refuse({ _tag: "shape", what: "literal" })
 }
 
-/**
- * The ten printed Layer forms; every effect body starts at environment length zero. A bare
- * identifier is a reference to the path its name carries (§ 4, `LayerTerm.readRefName` of
- * `src/Effect4/Program/Refs.lean`), admitted only when the name is exactly that path's
- * spelling, so what is read is what `printLayer` prints: `L_01` and `L_1_` are refused.
+/* ---------- the one generic step over the table (Lean `readT`, src/Effect4/Codegen/Read.lean) ----------
+ *
+ * There is no clause per head. `readT(fam, n, x)` takes the rows of `templates.gen.ts` (Lean's
+ * `Codegen/Templates.lean`, the table the printer prints from) in order: the first row of the
+ * family whose skeleton matches `x`, its arguments read by sort from what the skeleton
+ * captured, an argument the row's classifier determines supplied, and the node built from the
+ * constructor's field names. A row is accepted only when the printer would choose it for the
+ * arguments read, so what is read prints back to the tree read (`Effect.catchIf` with a literal
+ * `true` test is refused: the printer writes that program as `Effect.catch`). A transparent
+ * row (a bare hole: `withFiber` over its action) hands the same tree to its child's family and
+ * matches when that does. What no row matches is, for a program, a generator or a row call.
  */
-export const readLayer = (x: Expr): Read<LayerTerm> => {
-  const bad = () => refuse({ _tag: "shape", what: "layer" })
-  if (x._tag === "ident") {
-    const target = readRefName(x.name)
-    return target !== undefined && refName(target) === x.name ? ok({ _tag: "ref", target }) : bad()
-  }
-  if (x._tag === "method") {
-    const segment = x.args[0]
-    if (x.name !== "pipe" || x.args.length !== 1 || segment?._tag !== "call" ||
-      segment.fn._tag !== "ident" || segment.args.length !== 1 ||
-      (segment.fn.name !== "Layer.provide" && segment.fn.name !== "Layer.provideMerge")) return bad()
-    const self = readLayer(x.base)
-    if (failed(self)) return again(self)
-    const that = readLayer(segment.args[0]!)
-    if (failed(that)) return again(that)
-    return ok({ _tag: segment.fn.name === "Layer.provide" ? "provide" : "provideMerge",
-      self: self.success, that: that.success })
-  }
-  if (x._tag !== "call" || x.fn._tag !== "ident") return bad()
-  const [first, second] = x.args
-  switch (x.fn.name) {
-    case "Layer.succeed": {
-      if (x.args.length !== 2 || first === undefined || second === undefined) return bad()
-      const key = readKey(first)
-      if (failed(key)) return again(key)
-      const value = readLiteral(second)
-      return failed(value) ? again(value) : ok({ _tag: "succeed", key: key.success, value: value.success })
-    }
-    case "Layer.effect": {
-      if (x.args.length !== 2 || first === undefined || second === undefined) return bad()
-      const key = readKey(first)
-      if (failed(key)) return again(key)
-      const body = readEff(0, second)
-      return failed(body) ? again(body) : ok({ _tag: "effect", key: key.success, body: body.success })
-    }
-    case "Layer.effectDiscard": {
-      if (x.args.length !== 1 || first === undefined) return bad()
-      return Result.map(readEff(0, first), (body): LayerTerm => ({ _tag: "effectDiscard", body }))
-    }
-    case "Layer.merge": {
-      if (x.args.length !== 2 || first === undefined || second === undefined) return bad()
-      const left = readLayer(first)
-      if (failed(left)) return again(left)
-      const right = readLayer(second)
-      return failed(right) ? again(right) : ok({ _tag: "merge", left: left.success, right: right.success })
-    }
-    // the n-ary merge takes any number of layers, none included; `Layer.merge` and
-    // `Layer.mergeAll` build different scope trees and are never read as each other
-    case "Layer.mergeAll":
-      return Result.map(readLayers(x.args), (layers): LayerTerm => ({ _tag: "mergeAll", layers }))
-    case "Layer.fresh":
-    case "Layer.orDie": {
-      if (x.args.length !== 1 || first === undefined) return bad()
-      const inner = readLayer(first)
-      return failed(inner) ? again(inner) : ok({ _tag: x.fn.name === "Layer.fresh" ? "fresh" : "orDie", inner: inner.success })
-    }
-    default: return bad()
+
+type Arg =
+  | { readonly _tag: "expr"; readonly e: Expr }
+  | { readonly _tag: "exprs"; readonly es: ReadonlyArray<Expr> }
+  | { readonly _tag: "str"; readonly s: string }
+  | { readonly _tag: "int"; readonly v: number }
+
+type Subst = Map<number, Arg>
+
+const arity = (head: string): Read<never> => refuse({ _tag: "arity", head })
+const binder = (expected: string): Read<never> => refuse({ _tag: "binder", expected })
+const tableDefect = (): Read<never> => refuse({ _tag: "shape", what: "table" })
+
+const sameParams = (n: number, binders: ReadonlyArray<number>, params: ReadonlyArray<string>): boolean =>
+  params.length === binders.length && binders.every((k, j) => params[j] === varName(n + k))
+
+/** Match a tree against a skeleton at depth `n`, collecting the holes (`Template.matchT`). */
+const matchT = (n: number, t: Tpl, e: Expr, captured: Subst): boolean => {
+  switch (t._tag) {
+    case "hole": captured.set(t.i, { _tag: "expr", e }); return true
+    case "strHole": if (e._tag !== "str") return false; captured.set(t.i, { _tag: "str", s: e.value }); return true
+    case "intHole": if (e._tag !== "int") return false; captured.set(t.i, { _tag: "int", v: e.value }); return true
+    case "arrHole": if (e._tag !== "arr") return false; captured.set(t.i, { _tag: "exprs", es: e.items }); return true
+    case "binderRef": return e._tag === "ident" && e.name === varName(n + t.k)
+    case "ident": return e._tag === "ident" && e.name === t.name
+    case "str": return e._tag === "str" && e.value === t.value
+    case "int": return e._tag === "int" && e.value === t.value
+    case "bool": return e._tag === "bool" && e.value === t.value
+    case "call": return e._tag === "call" && matchT(n, t.head, e.fn, captured) && matchTs(n, t.args, e.args, captured)
+    case "callSpread":
+      if (e._tag !== "call" || !matchT(n, t.head, e.fn, captured)) return false
+      captured.set(t.i, { _tag: "exprs", es: e.args })
+      return true
+    case "arr": return e._tag === "arr" && matchTs(n, t.items, e.items, captured)
+    case "object":
+      return e._tag === "object" && e.fields.length === t.fields.length &&
+        t.fields.every(([key, value], j) => e.fields[j]![0] === key && matchT(n, value, e.fields[j]![1], captured))
+    case "arrow": return e._tag === "arrow" && matchT(n, t.body, e.body, captured)
+    case "lambda": return e._tag === "lambda" && sameParams(n, t.binders, e.params) && matchT(n, t.body, e.body, captured)
+    case "cond":
+      return e._tag === "cond" && matchT(n, t.test, e.test, captured) &&
+        matchT(n, t.yes, e.thenBranch, captured) && matchT(n, t.no, e.elseBranch, captured)
+    case "method":
+      return e._tag === "method" && e.name === t.name && matchT(n, t.target, e.base, captured) &&
+        matchTs(n, t.args, e.args, captured)
+    case "arrowBlock":
+      return e._tag === "arrowBlock" && sameParams(n, t.binders, e.params) &&
+        e.body.length === t.body.length && t.body.every((s, j) => matchStmt(n, s, e.body[j]!, captured))
   }
 }
 
-/** The layers of a `mergeAll`, in order, each closed. */
-const readLayers = (xs: ReadonlyArray<Expr>): Read<ReadonlyArray<LayerTerm>> => {
-  const out: LayerTerm[] = []
+const matchTs = (n: number, ts: ReadonlyArray<Tpl>, es: ReadonlyArray<Expr>, captured: Subst): boolean =>
+  ts.length === es.length && ts.every((t, j) => matchT(n, t, es[j]!, captured))
+
+/** The four statements of the loop image. An annotated `let` never reaches this fragment (§ 2
+ * refuses it), so a skeleton that captures an annotation matches nothing here: the annotated
+ * loop prints and is not read, as in Lean (no reader of types exists). */
+const matchStmt = (n: number, t: StmtTpl, s: TsStmt, captured: Subst): boolean => {
+  switch (t._tag) {
+    case "letInit":
+      return t.ann === null && s._tag === "letInit" && s.name === varName(n + t.k) && matchT(n, t.value, s.value, captured)
+    case "assign": return s._tag === "assign" && s.name === varName(n + t.k) && matchT(n, t.value, s.value, captured)
+    case "ret": return s._tag === "ret" && matchT(n, t.value, s.value, captured)
+    case "exprStmt": return s._tag === "exprStmt" && matchT(n, t.value, s.value, captured)
+  }
+}
+
+const sameJson = (a: unknown, b: unknown): boolean => {
+  if (a === b) return true
+  if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false
+  if (Array.isArray(a) !== Array.isArray(b)) return false
+  const ka = Object.keys(a), kb = Object.keys(b)
+  return ka.length === kb.length && ka.every((k) => sameJson((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]))
+}
+
+/** Whether an argument satisfies a classifier pattern (`ArgPat.holds`). */
+const holds = (p: ArgPat, v: unknown): boolean => {
+  switch (p._tag) {
+    case "term": return sameJson(p.value, v)
+    case "bool": case "mode": return v === p.value
+    case "decisionBool": return (v as { _tag?: string } | null)?._tag === "bool"
+    case "decisionOption": return (v as { _tag?: string } | null)?._tag === "option"
+    case "decisionTag": return (v as { _tag?: string } | null)?._tag === "tag"
+    case "optTermNone": case "optTyNone": return v === null
+    case "optTermSome": case "optTySome": return v !== null && v !== undefined
+    case "daemon": return (v as { daemon?: boolean } | null)?.daemon === p.value
+  }
+}
+
+/** The argument a pattern determines, when it determines one (`ArgPat.supplies`). */
+const supplies = (p: ArgPat): { readonly value: unknown } | undefined => {
+  switch (p._tag) {
+    case "term": case "bool": case "mode": return { value: p.value }
+    case "decisionBool": return { value: { _tag: "bool" } }
+    case "decisionOption": return { value: { _tag: "option" } }
+    case "optTermNone": case "optTyNone": return { value: null }
+    default: return undefined
+  }
+}
+
+const tableRows = templates.rows as ReadonlyArray<TemplateRow>
+
+/** The row the printer chooses for a constructor's arguments (`Row.selects`, first in order). */
+const chosenRow = (fam: Fam, ctor: string, args: ReadonlyArray<unknown>): number =>
+  tableRows.findIndex((row) => row.fam === fam && row.ctor === ctor &&
+    row.fixed.every(([i, p]) => i < args.length && holds(p, args[i])))
+
+const depthAt = (n: number, d: Depth | undefined): number => (d === undefined ? n : d._tag === "rel" ? n + d.k : 0)
+
+/** The daemon flag a row reads a fork's options under: the row's pattern for a plain fork, and
+ * `true` otherwise (`forkIn` and `forkScoped` fork a daemon at the pin). */
+const rowDaemon = (row: TemplateRow): boolean => {
+  for (const [, p] of row.fixed) if (p._tag === "daemon") return p.value
+  return true
+}
+
+/** A leaf argument from its capture, by sort, at the depth its row gives it (`readLeaf`). */
+const readLeaf = (d: number, daemon: boolean, sort: ArgSort, a: Arg): Read<unknown> => {
+  if (a._tag === "expr") {
+    switch (sort) {
+      case "term": case "optTerm": return readTerm(d, a.e)
+      case "cause": return readCause(d, a.e)
+      case "lit": return readLiteral(a.e)
+      case "key": return readKey(a.e)
+      case "forkOptions": return readForkOptions(daemon, a.e)
+      case "path": {
+        const target = a.e._tag === "ident" ? readRefName(a.e.name) : undefined
+        return target !== undefined && a.e._tag === "ident" && refName(target) === a.e.name
+          ? ok(target) : refuse({ _tag: "shape", what: "layer" })
+      }
+      default: break
+    }
+  }
+  if (sort === "decision" && a._tag === "str") return ok({ _tag: "tag", tag: a.s })
+  if (sort === "nat" && a._tag === "int") return a.v >= 0 ? ok(a.v) : refuse({ _tag: "negative", value: a.v })
+  return refuse({ _tag: "shape", what: "argument" })
+}
+
+/** The refusal of a tree that no row of its family matches, named by the family (`unread`). */
+const unread = (fam: Fam): Read<never> => refuse({ _tag: "shape", what: fam === "layer" || fam === "layers" ? "layer" : "expression" })
+
+const famRank = (fam: Fam): number => (fam === "eff" ? 1 : 0)
+
+const childFam = (sort: ArgSort): Fam | undefined => (sort.startsWith("child:") ? (sort.slice(6) as Fam) : undefined)
+
+const build = (ctor: string, names: ReadonlyArray<string>, args: ReadonlyArray<unknown>): unknown => {
+  const node: Record<string, unknown> = { _tag: ctor }
+  names.forEach((name, i) => { node[name] = args[i] })
+  return node
+}
+
+/** A spine of programs or of layers, item by item (`readSpine`). */
+const readSpine = (fam: Fam, n: number, xs: ReadonlyArray<Expr>): Read<unknown> => {
+  const item: Fam | undefined = fam === "effs" ? "eff" : fam === "layers" ? "layer" : undefined
+  if (item === undefined) return tableDefect()
+  const out: unknown[] = []
   for (const x of xs) {
-    const l = readLayer(x)
-    if (failed(l)) return again(l)
-    out.push(l.success)
+    const r = readT(item, n, x) ?? unread(item)
+    if (failed(r)) return again(r)
+    out.push(r.success)
   }
   return ok(out)
 }
 
-export const readEff = (n: number, x: Expr): Read<Eff> => {
+/** One argument of a row: supplied by the classifier, a child handed to the recursion, or a leaf. */
+const readArg = (n: number, row: TemplateRow, captured: Subst, i: number, sort: ArgSort): Read<unknown> => {
+  const pattern = row.fixed.find(([j]) => j === i)?.[1]
+  const supplied = pattern === undefined ? undefined : supplies(pattern)
+  if (supplied !== undefined) return ok(supplied.value)
+  const d = depthAt(n, row.depth[i])
+  const a = captured.get(i)
+  if (a === undefined) return tableDefect()
+  const fam = childFam(sort)
+  if (fam !== undefined && a._tag === "expr") return readT(fam, d, a.e) ?? unread(fam)
+  if (fam !== undefined && a._tag === "exprs") return readSpine(fam, d, a.es)
+  return readLeaf(d, rowDaemon(row), sort, a)
+}
+
+/** What is not a skeleton, read as the printer's hand fields print it (`readPerform`): a bare
+ * identifier as a value row, a call as a call row, a method call as a method row. A reserved
+ * head no row matched is refused by its argument list when it heads a program clause, and by
+ * its name otherwise. */
+const readPerform = (n: number, x: Expr): Read<Eff> => {
   switch (x._tag) {
     case "ident": {
-      const i = varRead(n, x.name)
-      if (i !== undefined) return refuse({ _tag: "shape", what: "bare binder" })
+      if (varRead(n, x.name) !== undefined) return refuse({ _tag: "shape", what: "bare binder" })
       const head = headOf(x.name)
-      if (head === "Effect.fiberId") return ok({ _tag: "withFiber", action: { _tag: "getId" } })
       if (head === "undefined") return refuse({ _tag: "shape", what: "bare value" })
       if (head !== undefined) return refuse({ _tag: "unknownHead", name: x.name })
       return readRowValue(x.name)
     }
     case "int":
-      return x.value >= 0
-        ? refuse({ _tag: "shape", what: "bare value" })
-        : refuse({ _tag: "negative", value: x.value })
+      return x.value >= 0 ? refuse({ _tag: "shape", what: "bare value" }) : refuse({ _tag: "negative", value: x.value })
     case "bool":
     case "str":
       return refuse({ _tag: "shape", what: "bare value" })
     case "call": {
       // A call carrying explicit type arguments is a row call and nothing else: no reserved
       // head and no atom application is printed with them, and an empty list is not a
-      // spelling the printer emits (Lean `readEff`, `E4-CHECK-CE-013`).
+      // spelling the printer emits (`E4-CHECK-CE-013`).
       if (x.fn._tag === "generic") {
         if (x.fn.typeArgs.length === 0) return refuse({ _tag: "shape", what: "expression" })
-        // `receiver.spelling<T>(args)`: a typed method call (Lean `readMethod`).
         if (x.fn.fn._tag === "member") return readRowMethod(n, x.fn.fn.base, x.fn.fn.name, x.fn.typeArgs, x.args)
         if (x.fn.fn._tag !== "ident") return refuse({ _tag: "shape", what: "expression" })
         const s = x.fn.fn.name
-        const asRow = readRowCall(n, s, x.fn.typeArgs, x.args)
-        return asRow !== undefined ? asRow : refuse({ _tag: "unknownHead", name: s })
+        return readRowCall(n, s, x.fn.typeArgs, x.args) ?? refuse({ _tag: "unknownHead", name: s })
       }
       if (x.fn._tag !== "ident") return refuse({ _tag: "shape", what: "expression" })
       const s = x.fn.name
-      const head = headOf(s)
-      if (head !== undefined) return headReaders[head](n, x.args)
-      const asRow = readRowCall(n, s, [], x.args)
-      if (asRow !== undefined) return asRow
-      return refuse({ _tag: "unknownHead", name: s })
+      if (headOf(s) !== undefined) return programHeads.includes(s) ? arity(s) : refuse({ _tag: "unknownHead", name: s })
+      return readRowCall(n, s, [], x.args) ?? refuse({ _tag: "unknownHead", name: s })
     }
-    // `receiver.spelling(args)`: a method row (Lean `readMethod`, reached from `readEff`'s
-    // catch-all); a `pipe` in effect position falls through this to `unknownHead`, as in Lean.
     case "method":
       return readRowMethod(n, x.base, x.name, [], x.args)
     default:
@@ -959,297 +1065,56 @@ export const readEff = (n: number, x: Expr): Read<Eff> => {
   }
 }
 
-type HeadReader = (n: number, args: ReadonlyArray<Expr>) => Read<Eff>
-
-const arity = (head: Head): Read<never> => refuse({ _tag: "arity", head })
-const binder = (expected: string): Read<never> => refuse({ _tag: "binder", expected })
-const notHere = (head: Head): HeadReader => () => refuse({ _tag: "unknownHead", name: head })
-
-/** `head(body)`: one program argument, wrapped by `wrap`. */
-const unary = (head: Head, wrap: (body: Eff) => Eff): HeadReader => (n, args) =>
-  args.length === 1 ? Result.map(readEff(n, args[0]!), wrap) : arity(head)
-
-/** `head(body, (a<n>) => k)`: a program, then a one-binder continuation at `n + 1`. */
-const withContinuation = (head: Head, make: (body: Eff, k: Eff) => Eff): HeadReader => (n, args) => {
-  const [body, k] = args
-  if (args.length !== 2 || body === undefined || k === undefined || k._tag !== "lambda" || k.params.length !== 1) return arity(head)
-  if (k.params[0] !== varName(n)) return binder(varName(n))
-  const b = readEff(n, body)
-  if (failed(b)) return again(b)
-  const r = readEff(n + 1, k.body)
-  if (failed(r)) return again(r)
-  return ok(make(b.success, r.success))
-}
-
-/** `head(term)`: one pure term. */
-const term = (head: Head, make: (t: Term) => Eff): HeadReader => (n, args) =>
-  args.length === 1 ? Result.map(readTerm(n, args[0]!), make) : arity(head)
-
-/** `head(term, term)`: two pure terms. */
-const terms2 = (head: Head, make: (a: Term, b: Term) => Eff): HeadReader => (n, args) => {
-  if (args.length !== 2) return arity(head)
-  const a = readTerm(n, args[0]!)
-  if (failed(a)) return again(a)
-  const b = readTerm(n, args[1]!)
-  if (failed(b)) return again(b)
-  return ok(make(a.success, b.success))
-}
-
-const withFiber = (action: ActionTerm): Eff => ({ _tag: "withFiber", action })
-
-/** `head(program, options)`: a fork with its options object; `daemon` is the head's. */
-const fork = (head: Head, daemon: boolean, make: (program: Eff, options: ForkOptions) => ActionTerm): HeadReader => (n, args) => {
-  if (args.length !== 2) return arity(head)
-  const p = readEff(n, args[0]!)
-  if (failed(p)) return again(p)
-  const o = readForkOptions(daemon, args[1]!)
-  if (failed(o)) return again(o)
-  return ok(withFiber(make(p.success, o.success)))
-}
-
-const readSucceed: HeadReader = term("Effect.succeed", (value) => ({ _tag: "succeed", value }))
-const readFail: HeadReader = term("Effect.fail", (error) => ({ _tag: "fail", error }))
-const readFailCause: HeadReader = (n, args) =>
-  args.length === 1 ? Result.map(readCause(n, args[0]!), (cause): Eff => ({ _tag: "failCause", cause })) : arity("Effect.failCause")
-const readSync: HeadReader = (n, args) => {
-  const [thunk] = args
-  if (args.length !== 1 || thunk === undefined || thunk._tag !== "arrow") return arity("Effect.sync")
-  return Result.map(readTerm(n, thunk.body), (t): Eff => ({ _tag: "sync", thunk: t }))
-}
-
-/**
- * `Effect.suspend` carries two shapes: `() => t ? a : b` is `select` under the `bool` decision,
- * and `() => body` is `suspend`. (`iterate` prints through `Effect.whileLoop` mapped to its
- * result and is read back at R5).
- */
-const readSuspend: HeadReader = (n, args) => {
-  const [arg] = args
-  if (args.length !== 1 || arg === undefined) return arity("Effect.suspend")
-  if (arg._tag === "arrow") {
-    if (arg.body._tag === "cond") {
-      const test = readTerm(n, arg.body.test)
-      if (failed(test)) return again(test)
-      const thenB = readEff(n, arg.body.thenBranch)
-      if (failed(thenB)) return again(thenB)
-      const elseB = readEff(n, arg.body.elseBranch)
-      if (failed(elseB)) return again(elseB)
-      return ok({ _tag: "select", scrutinee: test.success, decision: { _tag: "bool" }, arm0: thenB.success, arm1: elseB.success })
+/** `undefined` when no row of the family matches. */
+const readT = (fam: Fam, n: number, x: Expr): Read<unknown> | undefined => {
+  for (let k = 0; k < tableRows.length; k++) {
+    const row = tableRows[k]!
+    if (row.fam !== fam || row.out._tag !== "tpl") continue
+    const sorts = argSortsOf(fam, row.ctor)
+    const names = argNamesOf(fam, row.ctor)
+    if (sorts === undefined || names === undefined) continue
+    const t = row.out.tpl
+    if (t._tag === "hole") {
+      // a transparent row: the same tree at the child's family, or one leaf read of the whole tree
+      if (sorts.length !== 1) continue
+      const child = childFam(sorts[0]!)
+      if (child !== undefined) {
+        if (famRank(child) >= famRank(fam)) continue
+        const inner = readT(child, depthAt(n, row.depth[0]), x)
+        if (inner === undefined) continue
+        return failed(inner) ? again(inner) : ok(build(row.ctor, names, [inner.success]))
+      }
+      const leaf = readLeaf(n, true, sorts[0]!, { _tag: "expr", e: x })
+      if (failed(leaf)) continue
+      return ok(build(row.ctor, names, [leaf.success]))
     }
-    return Result.map(readEff(n, arg.body), (body): Eff => ({ _tag: "suspend", body }))
+    const captured: Subst = new Map()
+    if (!matchT(n, t, x, captured)) continue
+    const args: unknown[] = []
+    for (let i = 0; i < sorts.length; i++) {
+      const a = readArg(n, row, captured, i, sorts[i]!)
+      if (failed(a)) return again(a)
+      args.push(a.success)
+    }
+    // exactness: the printer would choose this row for what was read
+    if (chosenRow(fam, row.ctor, args) !== k) return refuse({ _tag: "shape", what: "not the printed row" })
+    return ok(build(row.ctor, names, args))
   }
-  return arity("Effect.suspend")
+  if (fam !== "eff") return undefined
+  if (x._tag === "call" && x.fn._tag === "ident" && x.fn.name === genHead && x.args.length === 1 && x.args[0]!._tag === "generator")
+    return Result.map(readStmts(n, x.args[0]!.body), (body): Eff => ({ _tag: "gen", body }))
+  return readPerform(n, x)
 }
 
+/** A program from a tree, at environment length `n`. The node is checked against the schema by
+ * `decodeEff` at the boundary (§ 0), so the generic build is typed there, once. */
+export const readEff = (n: number, x: Expr): Read<Eff> =>
+  (readT("eff", n, x) ?? unread("eff")) as Read<Eff>
 
-const readFlatMap: HeadReader = withContinuation("Effect.flatMap", (first, rest) => ({ _tag: "bind", first, rest }))
-const readGen: HeadReader = (n, args) => {
-  const [body] = args
-  if (args.length !== 1 || body === undefined || body._tag !== "generator") return arity("Effect.gen")
-  return Result.map(readStmts(n, body.body), (stmts): Eff => ({ _tag: "gen", body: stmts }))
-}
-const readCatchCause: HeadReader = withContinuation("Effect.catchCause", (body, handler) => ({ _tag: "catchCause", body, handler }))
+/** A layer from a tree. A layer is closed: its bodies are read at environment length `0`. */
+export const readLayer = (x: Expr): Read<LayerTerm> =>
+  (readT("layer", 0, x) ?? unread("layer")) as Read<LayerTerm>
 
-const readCatchError: HeadReader = withContinuation("Effect.catch", (body, handler) =>
-  ({ _tag: "catchIf", test: { _tag: "lit", value: { _tag: "bool", value: true } }, body, handler }))
-const readCatchIf: HeadReader = (n, args) => {
-  const [body, predicate, handler, fallback] = args
-  if (args.length !== 4 || body === undefined || predicate?._tag !== "lambda" || handler?._tag !== "lambda" ||
-    predicate.params.length !== 1 || handler.params.length !== 1) return arity("Effect.catchIf")
-  if (fallback?._tag !== "ident" || fallback.name !== "undefined")
-    return refuse({ _tag: "shape", what: "catchIf requires an absent fallback" })
-  const test = predicate.body
-  if (test._tag === "bool" && test.value) return refuse({ _tag: "shape", what: "unconditional catchIf uses Effect.catch" })
-  if (predicate.params[0] !== varName(n) || handler.params[0] !== varName(n)) return refuse({ _tag: "binder", expected: varName(n) })
-  const b = readEff(n, body)
-  if (failed(b)) return again(b)
-  const t = readTerm(n + 1, test)
-  if (failed(t)) return again(t)
-  const h = readEff(n + 1, handler.body)
-  if (failed(h)) return again(h)
-  return ok({ _tag: "catchIf", test: t.success, body: b.success, handler: h.success })
-}
-
-/** `Effect.matchCauseEffect(body, { onFailure: (a<n>) => c, onSuccess: (a<n>) => v })`. */
-const readMatchCauseEffect: HeadReader = (n, args) => {
-  const [body, arms] = args
-  if (args.length !== 2 || body === undefined || arms === undefined || arms._tag !== "object" || arms.fields.length !== 2) {
-    return arity("Effect.matchCauseEffect")
-  }
-  const [[ff, onCause], [fs, onValue]] = arms.fields as [readonly [string, Expr], readonly [string, Expr]]
-  if (onCause._tag !== "lambda" || onCause.params.length !== 1 || onValue._tag !== "lambda" || onValue.params.length !== 1) {
-    return arity("Effect.matchCauseEffect")
-  }
-  if (ff !== "onFailure" || fs !== "onSuccess" || onCause.params[0] !== varName(n) || onValue.params[0] !== varName(n)) {
-    return refuse({ _tag: "shape", what: "matchCause" })
-  }
-  const b = readEff(n, body)
-  if (failed(b)) return again(b)
-  const v = readEff(n + 1, onValue.body)
-  if (failed(v)) return again(v)
-  const c = readEff(n + 1, onCause.body)
-  if (failed(c)) return again(c)
-  return ok({ _tag: "matchCause", body: b.success, onValue: v.success, onCause: c.success })
-}
-
-const readOnExit: HeadReader = withContinuation("Effect.onExit", (body, finalizer) => ({ _tag: "onExit", body, finalizer }))
-const readExit: HeadReader = unary("Effect.exit", (body) => ({ _tag: "exit", body }))
-const readUninterruptible: HeadReader = unary("Effect.uninterruptible", (body) => ({ _tag: "uninterruptible", body }))
-const readInterruptible: HeadReader = unary("Effect.interruptible", (body) => ({ _tag: "interruptible", body }))
-const readYieldNowWith: HeadReader = (_n, args) => {
-  const [k] = args
-  if (args.length !== 1 || k === undefined || k._tag !== "int") return arity("Effect.yieldNowWith")
-  return k.value >= 0 ? ok({ _tag: "yieldNow", priority: k.value }) : refuse({ _tag: "negative", value: k.value })
-}
-const readJoin: HeadReader = term("Fiber.join", (fiber) => ({ _tag: "awaitFiber", fiber, mode: "joinEffect" }))
-const readAwait: HeadReader = term("Fiber.await", (fiber) => ({ _tag: "awaitFiber", fiber, mode: "awaitValue" }))
-const readForkChild: HeadReader = fork("Effect.forkChild", false, (program, options) => ({ _tag: "fork", program, options }))
-const readForkDetach: HeadReader = fork("Effect.forkDetach", true, (program, options) => ({ _tag: "fork", program, options }))
-const readForkIn: HeadReader = (n, args) => {
-  if (args.length !== 3) return arity("Effect.forkIn")
-  const p = readEff(n, args[0]!)
-  if (failed(p)) return again(p)
-  const s = readTerm(n, args[1]!)
-  if (failed(s)) return again(s)
-  const o = readForkOptions(true, args[2]!)
-  if (failed(o)) return again(o)
-  return ok(withFiber({ _tag: "forkIn", program: p.success, options: o.success, scope: s.success }))
-}
-const readForkScoped: HeadReader = fork("Effect.forkScoped", true, (program, options) => ({ _tag: "forkScoped", program, options }))
-/** The callback binds nothing and contains exactly one synchronous link, then Effect.void. */
-const readRunIn: HeadReader = (n, args) => {
-  const shape = refuse({ _tag: "shape", what: "runIn" })
-  const [callback] = args
-  if (args.length !== 1 || callback?._tag !== "arrowBlock" || callback.params.length !== 0 ||
-      callback.body.length !== 2) return shape
-  const [link, done] = callback.body
-  if (link?._tag !== "exprStmt" || link.value._tag !== "call" || link.value.fn._tag !== "ident" ||
-      link.value.fn.name !== "Fiber.runIn" || link.value.args.length !== 2 || done?._tag !== "ret" ||
-      done.value._tag !== "ident" || done.value.name !== "Effect.void") return shape
-  const target = readTerm(n, link.value.args[0]!)
-  if (failed(target)) return again(target)
-  const scope = readTerm(n, link.value.args[1]!)
-  if (failed(scope)) return again(scope)
-  return ok(withFiber({ _tag: "runIn", target: target.success, scope: scope.success }))
-}
-const readInterrupt: HeadReader = term("Fiber.interrupt", (target) => withFiber({ _tag: "interrupt", target }))
-const readInterruptAll: HeadReader = term("Fiber.interruptAll", (targets) => withFiber({ _tag: "interruptAll", targets, interruptor: null }))
-const readInterruptAllAs: HeadReader = terms2("Fiber.interruptAllAs", (targets, who) => withFiber({ _tag: "interruptAll", targets, interruptor: who }))
-const readAwaitAll: HeadReader = term("Fiber.awaitAll", (targets) => withFiber({ _tag: "awaitAll", targets }))
-const readRaceAll: HeadReader = (n, args) => {
-  const [entrants] = args
-  if (args.length !== 1 || entrants === undefined || entrants._tag !== "arr") return arity("Effect.raceAll")
-  return Result.map(readEffs(n, entrants.items), (es) => withFiber({ _tag: "raceAll", entrants: es }))
-}
-const readContext: HeadReader = (_n, args) => (args.length === 0 ? ok(withFiber({ _tag: "getContext" })) : arity("Effect.context"))
-const readScopeClose: HeadReader = terms2("Scope.close", (scope, exit) => withFiber({ _tag: "closeScope", scope, exit }))
-const readScoped: HeadReader = unary("Effect.scoped", (body) => ({ _tag: "scoped", body }))
-
-/** `Effect.acquireRelease(acquire, (a<n>, a<n+1>) => release)`: the resource and the exit. */
-const readAcquireRelease: HeadReader = (n, args) => {
-  const [acquire, release] = args
-  if (args.length !== 2 || acquire === undefined || release === undefined || release._tag !== "lambda" || release.params.length !== 2) {
-    return arity("Effect.acquireRelease")
-  }
-  if (release.params[0] !== varName(n) || release.params[1] !== varName(n + 1)) return binder(varName(n))
-  const a = readEff(n, acquire)
-  if (failed(a)) return again(a)
-  const r = readEff(n + 2, release.body)
-  if (failed(r)) return again(r)
-  return ok({ _tag: "acquireRelease", acquire: a.success, release: r.success })
-}
-
-const readProvide: HeadReader = (n, args) => {
-  const [body, layer, options] = args
-  if (body === undefined || layer === undefined || (args.length !== 2 && args.length !== 3)) return arity("Effect.provide")
-  const isLocal = args.length === 3
-  if (isLocal) {
-    if (options?._tag !== "object" || options.fields.length !== 1 ||
-      options.fields[0]?.[1]._tag !== "bool" || options.fields[0][1].value !== true) return arity("Effect.provide")
-    if (options.fields[0][0] !== "local") return refuse({ _tag: "shape", what: "provide options" })
-  }
-  const b = readEff(n, body)
-  if (failed(b)) return again(b)
-  const l = readLayer(layer)
-  return failed(l) ? again(l) : ok({ _tag: "provideLayer", layer: l.success, isLocal, body: b.success })
-}
-
-const readService: HeadReader = (_n, args) =>
-  args.length === 1 ? Result.map(readKey(args[0]!), (key): Eff => ({ _tag: "service", key })) : arity("Effect.service")
-
-const readProvideService: HeadReader = (n, args) => {
-  if (args.length !== 3) return arity("Effect.provideService")
-  const body = readEff(n, args[0]!)
-  if (failed(body)) return again(body)
-  const key = readKey(args[1]!)
-  if (failed(key)) return again(key)
-  const value = readTerm(n, args[2]!)
-  return failed(value) ? again(value) : ok({ _tag: "provideService", key: key.success, value: value.success, body: body.success })
-}
-
-/** One reader per reserved head. The keys are the generated `Head` type, so a head added to
- * the profile without a reader here is a compile error. */
-const headReaders: Record<Head, HeadReader> = {
-  "Effect.succeed": readSucceed,
-  "Effect.fail": readFail,
-  "Effect.failCause": readFailCause,
-  "Effect.sync": readSync,
-  "Effect.suspend": readSuspend,
-  "Effect.flatMap": readFlatMap,
-  "Effect.gen": readGen,
-  "Effect.catchCause": readCatchCause,
-  "Effect.catch": readCatchError,
-  "Effect.catchIf": readCatchIf,
-  "Effect.matchCauseEffect": readMatchCauseEffect,
-  "Effect.onExit": readOnExit,
-  "Effect.exit": readExit,
-  "Effect.uninterruptible": readUninterruptible,
-  "Effect.interruptible": readInterruptible,
-  "Effect.whileLoop": notHere("Effect.whileLoop"),
-  "Effect.yieldNowWith": readYieldNowWith,
-  "Fiber.join": readJoin,
-  "Fiber.await": readAwait,
-  "Effect.forkChild": readForkChild,
-  "Effect.forkDetach": readForkDetach,
-  "Effect.forkIn": readForkIn,
-  "Effect.forkScoped": readForkScoped,
-  "Fiber.runIn": () => arity("Fiber.runIn"),
-  "Fiber.interrupt": readInterrupt,
-  "Fiber.interruptAll": readInterruptAll,
-  "Fiber.interruptAllAs": readInterruptAllAs,
-  "Fiber.awaitAll": readAwaitAll,
-  "Effect.raceAll": readRaceAll,
-  "Effect.context": readContext,
-  "Effect.fiberId": notHere("Effect.fiberId"),
-  "Scope.close": readScopeClose,
-  "Effect.scoped": readScoped,
-  "Effect.acquireRelease": readAcquireRelease,
-  "Cause.fail": notHere("Cause.fail"),
-  "Cause.die": notHere("Cause.die"),
-  "Cause.interrupt": notHere("Cause.interrupt"),
-  "Cause.combine": notHere("Cause.combine"),
-  "undefined": notHere("undefined"),
-  // `select`'s printed heads: refused as `Read.lean` refuses them (its `callRefusal` arm),
-  // until the generic reader from the template table reads them back (R5)
-  "optionCase": () => arity("optionCase"),
-  "caseTag": () => arity("caseTag"),
-  // `iterate`'s printed head (the loop mapped to its result): refused the same way until R5
-  "Effect.map": () => arity("Effect.map"),
-  "Effect.withFiber": readRunIn,
-  // Keys and layers are read only in their dedicated argument positions, as in Read.lean
-  "Context.Service": notHere("Context.Service"),
-  "Effect.provide": readProvide,
-  "Effect.service": readService,
-  "Effect.provideService": readProvideService,
-  "Layer.succeed": notHere("Layer.succeed"),
-  "Layer.effect": notHere("Layer.effect"),
-  "Layer.effectDiscard": notHere("Layer.effectDiscard"),
-  "Layer.provide": notHere("Layer.provide"),
-  "Layer.provideMerge": notHere("Layer.provideMerge"),
-  "Layer.merge": notHere("Layer.merge"),
-  "Layer.fresh": notHere("Layer.fresh"),
-  "Layer.orDie": notHere("Layer.orDie"),
-  "Layer.mergeAll": notHere("Layer.mergeAll"),
-}
 
 /** A generator body, statement by statement, with the binder counts of the printer. */
 const readStmts = (n: number, stmts: ReadonlyArray<TsStmt>): Read<ReadonlyArray<Stmt>> => {

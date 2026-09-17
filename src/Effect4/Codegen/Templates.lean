@@ -327,13 +327,17 @@ where
         | some e => .ok e
         | none => .error (tableDefect ctor)
 
+/-- The head of a generator, the one reserved name a hand field writes (the printer's and the
+reader's, and the generated TypeScript profile's cross-check, all read it from here). -/
+def genHead : String := "Effect.gen"
+
 /-- The algebra: the table's layer function, with the hand fields for what is not a skeleton. -/
 def printAlg (sig : Signature Op) : EffAlgebra Op Carrier :=
   { EffAlgebra.ofLayer (tableLayer sig) with
     eff_perform := fun op request _ => printRow (sig.rowOf op) request
     eff_gen := fun body n => do
       let statements ← body n
-      .ok (.call (.ident "Effect.gen") [.generator statements])
+      .ok (.call (.ident genHead) [.generator statements])
     stmt_bindYield := fun effect n => do return (.constYield (Var.name n) (← effect n), 1)
     stmt_yieldDiscard := fun effect n => do return (.yieldDiscard (← effect n), 0)
     stmt_ret := fun value _ => .ok (.ret (printTerm value), 0)

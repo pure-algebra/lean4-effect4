@@ -6,6 +6,7 @@ import OCaml5.Eff.Emit
 import Effect4.Program.Native
 import Effect4.Program.Packages
 import Effect4.Codegen.Read
+import Effect4.Codegen.Templates
 import Effect4.Ingest.Taxonomy
 import Effect4.Codegen.Forms
 
@@ -14,7 +15,7 @@ import Effect4.Codegen.Forms
 
     lake env lean -M4096 --run tools/Tools/TsGen.lean ts/eff
 
-Writes seven files, all `GENERATED`, none ever edited:
+Writes eight files, all `GENERATED`, none ever edited:
 
 * `eff.gen.ts` — one Effect Schema per family of the closed world `OCaml5.Eff.World.blocks`
   reads off the environment (the same world `ocaml/eff` is generated from): `Schema.TaggedUnion`
@@ -39,6 +40,11 @@ Writes seven files, all `GENERATED`, none ever edited:
   dual-call metadata and unambiguous lambda shapes, as stamped literal data.
 * `wire.gen.ts` — the canonical byte writer for every closed-world family, with an
   explicit work stack and frame-length patching instead of recursive concatenation.
+* `templates.gen.ts` — the table of printed clauses (`Effect4.Codegen.Templates.table`), each
+  constructor's argument sorts and field names, and the reserved names that head a program
+  clause: what `ts/eff/read.ts`'s one matcher runs over, as Lean's `readT` does. The reserved
+  heads are cross-checked against the identifiers the table's skeletons write (data, not a
+  source scan), the generator head and `PrintLeaf.lean`'s literals.
 * `packages.gen.ts` — the canonical package tables (`Effect4.Program.Packages.all`, the host
   rows slice): per package its rc.112 key string, service type code, handle target and its
   rows in table order, decoded at import through the `Row` schema; the row at position `i` is
@@ -55,7 +61,7 @@ inductives out of the environment and refuses if their constructor lists moved. 
 printer here that disagrees with a generated schema fails the decode at import, loudly.
 
 `make gen-ts` (`scripts/generate.py --only ts`) runs this; `make check-gen` is the drift check
-over the seven files. A tool (`IO`, `Lean.Meta`; `lakefile.toml`, the `Tools`
+over the eight files. A tool (`IO`, `Lean.Meta`; `lakefile.toml`, the `Tools`
 library): outside the axiom gate, imported by nothing.
 -/
 
@@ -758,6 +764,207 @@ def emitForms : String :=
     ("duals", arr (duals.map fun (head, rule) => obj [("head", lit head), ("rule", dualJs rule)])),
     ("unaryRefs", arr (unaryRefs.map lit))])
 
+/-! ## The table of printed clauses (`Effect4.Codegen.Templates.table`), for the reader's one matcher
+
+The TypeScript reader has no clause per head: it matches a tree against these rows, as Lean's
+`readT` does (`src/Effect4/Codegen/Read.lean`). Beside the rows go what the generic step needs of
+the constructor declarations: each constructor's argument sorts (`Effect4.Program.argSorts`) and
+its field names in declaration order (the families above), and the reserved names that head a
+program clause (`Effect4.Program.programHeads`). -/
+
+section Templates
+open Effect4.Codegen.Template Effect4.Codegen.Templates
+
+mutual
+  def tplJs : Tpl → String
+    | .hole i => tagged "hole" [("i", toString i)]
+    | .strHole i => tagged "strHole" [("i", toString i)]
+    | .intHole i => tagged "intHole" [("i", toString i)]
+    | .arrHole i => tagged "arrHole" [("i", toString i)]
+    | .binderRef k => tagged "binderRef" [("k", toString k)]
+    | .ident name => tagged "ident" [("name", lit name)]
+    | .str value => tagged "str" [("value", lit value)]
+    | .int value => tagged "int" [("value", toString value)]
+    | .bool value => tagged "bool" [("value", toString value)]
+    | .call head args => tagged "call" [("head", tplJs head), ("args", "[" ++ tplsJs args ++ "]")]
+    | .callSpread head i => tagged "callSpread" [("head", tplJs head), ("i", toString i)]
+    | .arr items => tagged "arr" [("items", "[" ++ tplsJs items ++ "]")]
+    | .object fields => tagged "object" [("fields", "[" ++ fieldsJs fields ++ "]")]
+    | .arrow body => tagged "arrow" [("body", tplJs body)]
+    | .lambda binders body =>
+      tagged "lambda" [("binders", arr (binders.map toString)), ("body", tplJs body)]
+    | .cond test yes no => tagged "cond" [("test", tplJs test), ("yes", tplJs yes), ("no", tplJs no)]
+    | .method target name args =>
+      tagged "method" [("target", tplJs target), ("name", lit name), ("args", "[" ++ tplsJs args ++ "]")]
+    | .arrowBlock binders body =>
+      tagged "arrowBlock" [("binders", arr (binders.map toString)), ("body", "[" ++ stmtTplsJs body ++ "]")]
+  def tplsJs : Tpls → String
+    | .nil => ""
+    | .cons head .nil => tplJs head
+    | .cons head tail => tplJs head ++ "," ++ tplsJs tail
+  def fieldsJs : Fields → String
+    | .nil => ""
+    | .cons key value .nil => "[" ++ lit key ++ "," ++ tplJs value ++ "]"
+    | .cons key value tail => "[" ++ lit key ++ "," ++ tplJs value ++ "]," ++ fieldsJs tail
+  def stmtTplJs : StmtTpl → String
+    | .letInit k value ann =>
+      tagged "letInit" [("k", toString k), ("value", tplJs value),
+        ("ann", match ann with | some i => toString i | none => "null")]
+    | .assign k value => tagged "assign" [("k", toString k), ("value", tplJs value)]
+    | .ret value => tagged "ret" [("value", tplJs value)]
+    | .exprStmt value => tagged "exprStmt" [("value", tplJs value)]
+  def stmtTplsJs : StmtTpls → String
+    | .nil => ""
+    | .cons head .nil => stmtTplJs head
+    | .cons head tail => stmtTplJs head ++ "," ++ stmtTplsJs tail
+end
+
+/-- A classifier pattern. A term pattern is a literal in every row; any other term is refused
+here, by name, so that a new row cannot slip a pattern past the TypeScript reader. -/
+def argPatJs : ArgPat → Except String String
+  | .term (.lit value) =>
+    .ok (tagged "term" [("value", tagged "lit" [("value", literalJs value)])])
+  | .term _ => .error "a term pattern that is not a literal"
+  | .bool b => .ok (tagged "bool" [("value", toString b)])
+  | .mode .joinEffect => .ok (tagged "mode" [("value", lit "joinEffect")])
+  | .mode .awaitValue => .ok (tagged "mode" [("value", lit "awaitValue")])
+  | .decisionBool => .ok (tagged "decisionBool" [])
+  | .decisionOption => .ok (tagged "decisionOption" [])
+  | .decisionTag => .ok (tagged "decisionTag" [])
+  | .optTermNone => .ok (tagged "optTermNone" [])
+  | .optTermSome => .ok (tagged "optTermSome" [])
+  | .optTyNone => .ok (tagged "optTyNone" [])
+  | .optTySome => .ok (tagged "optTySome" [])
+  | .daemon b => .ok (tagged "daemon" [("value", toString b)])
+
+def depthJs : Depth → String
+  | .rel k => tagged "rel" [("k", toString k)]
+  | .closed => tagged "closed" []
+
+def famJs : Effect4.Program.EffFam → String
+  | .eff => "eff" | .stmt => "stmt" | .stmts => "stmts" | .effs => "effs"
+  | .action => "action" | .layer => "layer" | .layers => "layers"
+
+def argSortJs : Effect4.Program.ArgSort → String
+  | .child fam => lit ("child:" ++ famJs fam)
+  | .term => lit "term" | .cause => lit "cause" | .op => lit "op" | .nat => lit "nat"
+  | .mode => lit "mode" | .bool => lit "bool" | .key => lit "key" | .decision => lit "decision"
+  | .optTy => lit "optTy" | .forkOptions => lit "forkOptions" | .optTerm => lit "optTerm"
+  | .lit => lit "lit" | .path => lit "path"
+
+def rowJs' (row : Effect4.Codegen.Templates.Row) : Except String String := do
+  let fixed ← row.fixed.mapM fun (i, p) => do
+    let p ← (argPatJs p).mapError fun why => s!"row {row.ctor}: {why}"
+    pure ("[" ++ toString i ++ "," ++ p ++ "]")
+  let out := match row.out with
+    | .tpl t => tagged "tpl" [("tpl", tplJs t)]
+    | .refuse name => tagged "refuse" [("name", lit name)]
+  pure (obj [("fam", lit (famJs row.fam)), ("ctor", lit row.ctor), ("fixed", arr fixed),
+    ("depth", arr (row.depth.map depthJs)), ("out", out)])
+
+/-- The three families read from one expression, with their Lean names in the closed world. -/
+def readFamilies : List (Effect4.Program.EffFam × Name) :=
+  [(.eff, `Effect4.Program.Eff), (.action, `Effect4.Program.ActionTerm),
+   (.layer, `Effect4.Program.LayerTerm)]
+
+def templateTypes : String :=
+  "export type Fam = \"eff\" | \"stmt\" | \"stmts\" | \"effs\" | \"action\" | \"layer\" | \"layers\"\n" ++
+  "export type ArgSort = `child:${Fam}` | \"term\" | \"cause\" | \"op\" | \"nat\" | \"mode\" | \"bool\" | \"key\" | \"decision\" | \"optTy\" | \"forkOptions\" | \"optTerm\" | \"lit\" | \"path\"\n" ++
+  "export type Tpl =\n" ++
+  "  | { readonly _tag: \"hole\" | \"strHole\" | \"intHole\" | \"arrHole\"; readonly i: number }\n" ++
+  "  | { readonly _tag: \"binderRef\"; readonly k: number }\n" ++
+  "  | { readonly _tag: \"ident\"; readonly name: string }\n" ++
+  "  | { readonly _tag: \"str\"; readonly value: string }\n" ++
+  "  | { readonly _tag: \"int\"; readonly value: number }\n" ++
+  "  | { readonly _tag: \"bool\"; readonly value: boolean }\n" ++
+  "  | { readonly _tag: \"call\"; readonly head: Tpl; readonly args: ReadonlyArray<Tpl> }\n" ++
+  "  | { readonly _tag: \"callSpread\"; readonly head: Tpl; readonly i: number }\n" ++
+  "  | { readonly _tag: \"arr\"; readonly items: ReadonlyArray<Tpl> }\n" ++
+  "  | { readonly _tag: \"object\"; readonly fields: ReadonlyArray<readonly [string, Tpl]> }\n" ++
+  "  | { readonly _tag: \"arrow\"; readonly body: Tpl }\n" ++
+  "  | { readonly _tag: \"lambda\"; readonly binders: ReadonlyArray<number>; readonly body: Tpl }\n" ++
+  "  | { readonly _tag: \"cond\"; readonly test: Tpl; readonly yes: Tpl; readonly no: Tpl }\n" ++
+  "  | { readonly _tag: \"method\"; readonly target: Tpl; readonly name: string; readonly args: ReadonlyArray<Tpl> }\n" ++
+  "  | { readonly _tag: \"arrowBlock\"; readonly binders: ReadonlyArray<number>; readonly body: ReadonlyArray<StmtTpl> }\n" ++
+  "export type StmtTpl =\n" ++
+  "  | { readonly _tag: \"letInit\"; readonly k: number; readonly value: Tpl; readonly ann: number | null }\n" ++
+  "  | { readonly _tag: \"assign\"; readonly k: number; readonly value: Tpl }\n" ++
+  "  | { readonly _tag: \"ret\" | \"exprStmt\"; readonly value: Tpl }\n" ++
+  "export type ArgPat =\n" ++
+  "  | { readonly _tag: \"term\"; readonly value: unknown }\n" ++
+  "  | { readonly _tag: \"bool\" | \"daemon\"; readonly value: boolean }\n" ++
+  "  | { readonly _tag: \"mode\"; readonly value: \"joinEffect\" | \"awaitValue\" }\n" ++
+  "  | { readonly _tag: \"decisionBool\" | \"decisionOption\" | \"decisionTag\" | \"optTermNone\" | \"optTermSome\" | \"optTyNone\" | \"optTySome\" }\n" ++
+  "export type Depth = { readonly _tag: \"rel\"; readonly k: number } | { readonly _tag: \"closed\" }\n" ++
+  "export interface TemplateRow {\n" ++
+  "  readonly fam: Fam\n  readonly ctor: string\n" ++
+  "  readonly fixed: ReadonlyArray<readonly [number, ArgPat]>\n" ++
+  "  readonly depth: ReadonlyArray<Depth>\n" ++
+  "  readonly out: { readonly _tag: \"tpl\"; readonly tpl: Tpl } | { readonly _tag: \"refuse\"; readonly name: string }\n}\n" ++
+  "export const rowsOf = (fam: Fam): ReadonlyArray<TemplateRow> => (templates.rows as ReadonlyArray<TemplateRow>).filter((row) => row.fam === fam)\n" ++
+  "export const argSortsOf = (fam: Fam, ctor: string): ReadonlyArray<ArgSort> | undefined =>\n" ++
+  "  (templates.argSorts as Record<string, Record<string, ReadonlyArray<ArgSort>>>)[fam]?.[ctor]\n" ++
+  "export const argNamesOf = (fam: Fam, ctor: string): ReadonlyArray<string> | undefined =>\n" ++
+  "  (templates.argNames as Record<string, Record<string, ReadonlyArray<string>>>)[fam]?.[ctor]\n" ++
+  "export const programHeads: ReadonlyArray<string> = templates.programHeads\n" ++
+  "export const genHead: string = templates.genHead\n"
+
+def emitTemplates (fs : List Family) : Except String String := do
+  let rows ← table.mapM rowJs'
+  let perFamily (f : Effect4.Program.EffFam × Name → Except String (List (String × String))) :
+      Except String String := do
+    let entries ← readFamilies.mapM fun entry => do
+      pure (famJs entry.1, obj (← f entry))
+    pure (obj entries)
+  let sorts ← perFamily fun (fam, _) =>
+    (Effect4.Program.ctorNames fam).mapM fun ctor =>
+      match Effect4.Program.argSorts fam ctor with
+      | some sorts => .ok (ctor, arr (sorts.map argSortJs))
+      | none => .error s!"no argument sorts for {famJs fam}.{ctor}"
+  let names ← perFamily fun (fam, leanName) =>
+    match fs.find? (·.spec.leanName == leanName) with
+    | none => .error s!"{leanName} is not among the families"
+    | some family =>
+      if family.ctors.map (·.short) != Effect4.Program.ctorNames fam then
+        .error s!"{leanName}: the family's constructors are not `ctorNames`"
+      else .ok (family.ctors.map fun c => (c.short, arr (c.args.map fun (name, _) => lit name)))
+  pure (emitTable "templates" (obj [("rows", arr rows), ("argSorts", sorts), ("argNames", names),
+    ("programHeads", arr (Effect4.Program.programHeads.map lit)), ("genHead", lit genHead)]) ++
+    templateTypes)
+
+mutual
+  /-- The identifiers a skeleton writes: with the leaf printers' own, the printer's whole
+  vocabulary of reserved names. -/
+  def tplIdents : Tpl → List String
+    | .ident name => [name]
+    | .call head args | .method head _ args => tplIdents head ++ tplsIdents args
+    | .callSpread head _ => tplIdents head
+    | .arr items => tplsIdents items
+    | .object fields => fieldsIdents fields
+    | .arrow body | .lambda _ body => tplIdents body
+    | .cond test yes no => tplIdents test ++ tplIdents yes ++ tplIdents no
+    | .arrowBlock _ body => stmtTplsIdents body
+    | _ => []
+  def tplsIdents : Tpls → List String
+    | .nil => []
+    | .cons head tail => tplIdents head ++ tplsIdents tail
+  def fieldsIdents : Fields → List String
+    | .nil => []
+    | .cons _ value tail => tplIdents value ++ fieldsIdents tail
+  def stmtTplsIdents : StmtTpls → List String
+    | .nil => []
+    | .cons (.letInit _ value _) tail | .cons (.assign _ value) tail
+    | .cons (.ret value) tail | .cons (.exprStmt value) tail => tplIdents value ++ stmtTplsIdents tail
+end
+
+/-- Every identifier the table's skeletons write. -/
+def tableIdents : List String :=
+  (table.flatMap fun row => match row.out with
+    | .tpl t => tplIdents t
+    | .refuse _ => []).eraseDups
+
+end Templates
+
 /-! ## The address, and the cross-check against the printer -/
 
 /-- The exact host every generated module is checked against. Its library pins are the
@@ -820,7 +1027,10 @@ def main (args : List String) : IO Unit := do
   let lakefile ← IO.FS.readFile "lakefile.toml"
   let tsRev := (revOf lakefile "typescript").getD "UNKNOWN"
   let address := " + ".intercalate (hostPin.libraries ++ ["lean4-typescript@" ++ tsRev])
-  let printed := identLiterals (← IO.FS.readFile "src/Effect4/Codegen/Print.lean")
+  -- the printer's vocabulary: the identifiers the table's skeletons write (data), the leaf
+  -- printers' own literals, and the generator head, which is a hand field of the fold
+  let printed := (tableIdents ++ [Effect4.Codegen.Templates.genHead]
+    ++ identLiterals (← IO.FS.readFile "src/Effect4/Codegen/PrintLeaf.lean")).eraseDups
   -- readRunIn consumes Effect.void only as its fixed block return, not as an
   -- effect head, and printTupleArgs spells a saved tuple request's components with
   -- the fst/snd atoms (source-repairs §18). Check those nested literals in both
@@ -829,7 +1039,7 @@ def main (args : List String) : IO Unit := do
   let extraInPrint := missingFrom printed expectedIdents
   let extraInHeads := missingFrom expectedIdents printed
   unless extraInPrint.isEmpty && extraInHeads.isEmpty do
-    throw (IO.userError s!"TsGen: the reader's heads/nested return literal and Print.lean's `.ident` literals differ: in Print.lean only {extraInPrint}; in reserved only {extraInHeads}")
+    throw (IO.userError s!"TsGen: the reserved heads and the printer's identifiers (the table's skeletons, the generator head, PrintLeaf.lean) differ: printed only {extraInPrint}; in reserved only {extraInHeads}")
   -- the package tables transcribe pinned vendor sources; the Makefile's `gen-ts` rule names
   -- them as prerequisites, so a change under vendor/ re-cuts every file this tool writes
   let stamp := Tools.GeneratedStamp.note "tools/Tools/TsGen.lean"
@@ -846,7 +1056,10 @@ def main (args : List String) : IO Unit := do
   IO.FS.writeFile (out / "taxonomy.gen.ts") (stampHeader ++ emitTaxonomy)
   IO.FS.writeFile (out / "forms.gen.ts") (stampHeader ++ emitForms)
   IO.FS.writeFile (out / "packages.gen.ts") (stampHeader ++ emitPackages)
+  match emitTemplates fs with
+  | .ok text => IO.FS.writeFile (out / "templates.gen.ts") (stampHeader ++ text)
+  | .error why => throw (IO.userError s!"TsGen: templates: {why}")
   let kinds := fs.map fun f => match kindOf f with
     | .enum => "literals" | .struct => "struct" | .consList _ => "array" | .tagged => "tagged"
   IO.println s!"TsGen: {fs.length} families ({(kinds.filter (· == "tagged")).length} tagged, {(kinds.filter (· == "literals")).length} literals, {(kinds.filter (· == "struct")).length} struct, {(kinds.filter (· == "array")).length} array), {fs.foldl (fun n f => n + f.ctors.length) 0} constructors; profile {Effect4.Program.reserved.length} heads, {atomRows.length} atoms, {allNativeOps.length} rows; packages {Effect4.Program.Packages.all.length} tables, {Effect4.Program.Packages.all.foldl (fun n p => n + p.rows.length) 0} rows, address {address}"
-  IO.println s!"wrote eff.gen.ts, json.gen.ts, profile.gen.ts, taxonomy.gen.ts, forms.gen.ts, wire.gen.ts, packages.gen.ts under {out}"
+  IO.println s!"wrote eff.gen.ts, json.gen.ts, profile.gen.ts, taxonomy.gen.ts, forms.gen.ts, wire.gen.ts, packages.gen.ts, templates.gen.ts under {out}"
