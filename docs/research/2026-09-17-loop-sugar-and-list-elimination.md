@@ -48,10 +48,12 @@ Effect.suspend(() => {
 `Effect.whileLoop` in that text is rc.112's function, the host primitive our one loop prints
 through. No constructor of ours carries that name any more and none returns.
 
-Names are open. `whileEff` could be `repeatWhile`; `forRange`/`foldRange` could sit under a
-`Loop.` namespace. Home: `src/Effect4/Program/Authoring/Loops.lean`, hand-written like
-`Sugar.lean`, each definition with its scope lemma through `authoring_scoped` (the pattern
-`Authoring/Forms.lean` uses). Not yet written into the tree.
+Landed the same day, the first four rows: `src/Effect4/Program/Authoring/Loops.lean`
+(`whileEff` under the name `repeatWhile`), with each definition's scope law in
+`src/Effect4/Laws/Program/Authoring/Loops.lean` (laws apart from implementation, as
+`Sugar.lean`'s are) and `Test/Program/LoopSugarContract.lean` pinning the trees, the typing, the
+machine's answers and the printed image. `reduceT` stays in the probe: it is untyped, and what
+it waits on is §3. Names remain the owner's to change.
 
 ## 3. Lists: what the algebra says is missing
 

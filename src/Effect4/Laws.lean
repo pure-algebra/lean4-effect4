@@ -73,6 +73,7 @@ import Effect4.Laws.Program.Authoring.Lifts
 import Effect4.Laws.Program.Authoring.Rows
 import Effect4.Laws.Program.Authoring.Forms
 import Effect4.Laws.Program.Authoring.Sugar
+import Effect4.Laws.Program.Authoring.Loops
 
 /-!
 # Effect4 proof graph

@@ -2,7 +2,7 @@
 
 Working note, untracked. Scout D, 2026-09-17, at `6545d862` on `refactor/phase1-phase3`.
 Research only: no tracked file was edited, no gate was run, no build was started. The
-three probes live under the session scratchpad and are quoted below.
+four probes live under the session scratchpad and are quoted below.
 
 Evidence words are used strictly. **proved** = a Lean theorem in the tree. **compiled** = a
 `#guard`/`#eval` I ran this session. **reproduced** = a red/green check I ran this session, or
@@ -18,9 +18,10 @@ a recorded run in the tree. **tested** = an existing battery. **stamped** = a ga
    identity on rc.112**, so Lean's requirement row (a set of full keys) maps onto a host `R`
    that identifies a service by its *carrier type*. Everything else in the chain — the key
    data, the wire bytes, the machine's context, the row algebra — is already full-key.
-2. I reproduced the conflation both ways this session: in Lean (`requires = [k5_4]` after
-   providing `k4_4`) and under the vendored `tsc` 5.9.2 (`R = never` for the same program),
-   with a red control that fails on both flipped assertions.
+2. I reproduced it both ways this session: in Lean (`requires = [k5_4]` after providing
+   `k4_4`) and under the repo's own `tsc` 5.9.2 (`R = never` for the same program), each with
+   a red control. I also compiled the repair: with one class per key the same program's `R` is
+   exactly `k5_4`, and weakening the annotation to `never` is caught as `TS2375`.
 3. The change is **half-landed**: the *measurement* side landed at `38344fcc` (2026-09-13,
    bind each key by its printed shape, refuse a collapse as `noninjective`); the *repair*
    side — printing one nominal class per full key, and spelling `R` — is unstarted.
@@ -29,10 +30,12 @@ a recorded run in the tree. **tested** = an existing battery. **stamped** = a ga
    key (plan §3.3; DI-24's open half; drift-release R5). I recommend exactly that and no
    core-data change; the key stays two `Nat`s.
 5. The cost is smaller than the record implies (§1.5): the pinned `typescript` package already
-   carries `ClassDecl` and `Decl.classDecl`, written for exactly this Effect idiom, and
-   `Fold.serviceKeys` already computes the hoist list. The work is four printer/reader slices,
-   three theorem restatements, one widened emission type, and one owner ruling (the class
-   identifier's spelling). Three unregistered defects fell out along the way (§1.6, §5.9).
+   carries `ClassDecl` and `Decl.classDecl` written for exactly this Effect idiom,
+   `Fold.serviceKeys` already computes the hoist list, and the source-bindings checker already
+   admits `class K extends Context.Service<K, …>()("k") {}` with a battery pinning it. The work
+   is four printer/reader slices, three theorem restatements, one widened emission type, and one
+   owner ruling (the class identifier's spelling). Three unregistered defects fell out along the
+   way (§1.6, §5.9).
 
 ---
 
@@ -194,15 +197,15 @@ number`. *(read)* Column tally of that promoted baseline, computed this session:
 | Key printed with its full identity in the string | **landed** | `printKey`; `readKey_printKey` *(proved, `src/Effect4/Codegen/Read.lean:1074`)* |
 | **Bind a required key by the shape it prints** (DI-76 (a), first clause) | **landed in the corpus lane only** | `38344fcc` (2026-09-13), `harness/truth/Truth.lean:580` `requireJson` emits `shape`; `tools/target/corpus.ts:55` `bindings`; `tools/target/profile.ts:34` `requirements` |
 | **Refuse a same-carrier collapse rather than call it agreement** | **landed** | `tools/target/profile.ts:41`; `tools/target/profile.test.ts:36`; reachable since the shape fallback (`docs/research/2026-09-15-dogfood-3-receipt.md:200-213` recorded it unreachable before) |
-| **One nominal class per full key, printed** | **unstarted** | no declaration anywhere emits `TypeScript.Decl.classDecl` *(read: grep over `src`, `tools`, `harness` finds no use)* |
+| **One nominal class per full key, printed** | **unstarted on the printer, built on the admission side** | no printer emits `TypeScript.Decl.classDecl`, but `SourceBindings` already reads one — see §1.5.3 *(read)* |
 | **`R` spelled in the declared type** | **unstarted** | `declarationType` returns `none` for a requirement-bearing program *(compiled)* |
-| **Both module readers accept class declarations** | **unstarted** | `Program.readModule` refuses any `Decl` that is not `.const` (`src/Effect4/Codegen/Read.lean:672-690`); `ts/eff/read.ts` has no class clause *(read)* |
+| **Both module readers accept class declarations** | **unstarted** | `Program.readModule` refuses any `Decl` that is not `.const` (`src/Effect4/Codegen/Read.lean:672-690`); `layersPlain` (`src/Effect4/Codegen/Admit.lean:48-53`) refuses every non-`const` declaration in the envelope; `ts/eff/read.ts` has no class clause *(read)* |
 | **O16 stated as a theorem** | **unstarted** | `docs/research/2026-09-16-strict-proof-obligations.md:28` records "unstated" |
 
-### 1.5 Two things the change needs that already exist
+### 1.5 Three things the change needs that already exist
 
 *(read)* The record talks about this repair as if the printed-module machinery had to be
-built. Two pieces are already in the tree, which is most of why §6's estimate is small.
+built. Three pieces are already in the tree, which is most of why §6's estimate is small.
 
 1. **The target syntax already has the class form.** The pinned `typescript` package
    (`lakefile.toml:126-129`, rev `6afc9b84`) declares `ClassDecl` with `heritage : Option Expr`
@@ -219,6 +222,22 @@ built. Two pieces are already in the tree, which is most of why §6's estimate i
    `Eff` arms (`service`, `provideService`) and the `LayerTerm` arms (`succeed`, `effect`),
    deduplicated. That is exactly "one class per full key of the program, layers included",
    computed by the generated fold rather than a hand list. Its `#guard` at `:64` is the control.
+3. **The source-bindings checker already admits exactly this class.**
+   `SourceBindings.declarationUses`' `.classDecl` arm
+   (`src/Effect4/Codegen/SourceBindings.lean:259-264`) puts the class's own *type* in scope
+   inside its heritage expression and not its value, requires a fresh name, and requires
+   `members` to be empty — which is precisely `class K extends Context.Service<K, …>()("k") {}`
+   and nothing looser. `declarationBinding` (`:246-250`) gives it a `classBinding`.
+   `Test/Codegen/SourceBindingsContract.lean:119-128` pins it, comment and all: *"A class's own
+   type is in scope in heritage arguments, but its value is not."* — accepting
+   `class Service extends Context.Service<Service>()`, refusing `class Service extends Service`
+   and refusing a class with members. **This is the half of DI-24's reader that is already
+   written and tested.** What is *not* written is the envelope: `layersPlain`
+   (`src/Effect4/Codegen/Admit.lean:48-53`) refuses every declaration that is not a plain
+   exported `const`, so `admitModule` rejects a module with class declarations today, and
+   `Laws/Codegen/Admit.lean:81` proves that refusal. That lemma is the one that must be
+   restated, and it already has a `classDecl` case to restate. *(read; not compiled — I did not
+   run the `SourceBindingsContract` battery, it is `tested` in the tree's sense.)*
 
 ### 1.6 Two live defects, found while reading, registered nowhere I could find
 
@@ -299,8 +318,42 @@ Effect.Effect<A, E, R>   where R = C₁ | … | Cₙ, Cᵢ the class identifier 
 ```
 
 The row is already canonically ordered (name-major, `ServiceKey.Lt`), so the spelling is
-deterministic without a second order notion — the `PORT-MANIFEST.md` canonicality rule Key.lean cites is
-respected by construction *(inferred from `src/Effect4/Machine/Key.lean:93-104`, read)*.
+deterministic without a second order notion — the `PORT-MANIFEST.md` canonicality rule
+`Key.lean` cites is respected by construction *(inferred from
+`src/Effect4/Machine/Key.lean:93-104`, read)*.
+
+**Probe D checks the whole shape end to end**, with the class identifier minted as the key's
+own spelling and the three-parameter annotation written out
+(`scratchpad/scoutD/names.ts`, tsc 5.9.2, exit 0):
+
+```ts
+class k4_4 extends Context.Service<k4_4, number>()("k4_4") {}
+class k5_4 extends Context.Service<k5_4, number>()("k5_4") {}
+class k4_5 extends Context.Service<k4_5, boolean>()("k4_5") {}
+
+export const main: Effect.Effect<number, never, k5_4> =
+  Effect.provideService(
+    Effect.flatMap(Effect.service(k4_4), () => Effect.service(k5_4)), k4_4, 3)
+
+false satisfies Same<k4_4, k5_4>
+false satisfies Same<k4_4, k4_5>
+true  satisfies Same<Requirements<typeof main>, k5_4>
+```
+
+So the printed key's own text is a legal class name and a legal `Self` argument, same-carrier
+keys stay apart (`k4_4` vs `k5_4`), same-name keys stay apart (`k4_4` vs `k4_5`), and the
+declaration Lean would print is accepted by `tsc`. **Red control** (`names-red.ts`, the
+annotation weakened to `never`, which is what the host infers today):
+
+```
+names-red.ts(10,14): error TS2375: Type 'Effect<number, never, k5_4>' is not assignable to
+  type 'Effect<number, never, never>' … Type 'k5_4' is not assignable to type 'never'.
+names-red.ts(17,8): error TS1360: Type 'true' does not satisfy the expected type 'false'.
+```
+
+*(reproduced, with its red control)* That first diagnostic is the whole point of the change:
+under N1 the host **catches** the unprovided key that today's `mismatch-R` rows record as a
+disagreement between the two faces.
 
 DI-24's current text still says the `R` spelling is "the union of the requirement row's
 service carriers in `printKey` order" and that it "is **not** injective in the key". **That
@@ -509,7 +562,7 @@ marked *(inferred)* unless a premise is already in the tree.
 | P7 | `Program.readModule` and `readModule_printModule` (`src/Effect4/Laws/Codegen/Module.lean:162`), `printModule_shape` (`:240`), `printModule_readable` (`:294`), `readModule_printModule_readable` (`:318`) | `List ConstDecl`, last is main, earlier are layers | **restated over three declaration groups**: class declarations (one per key of `Fold.serviceKeys`, in row order), then layer consts, then main. The `getLast?`/`dropLast` split becomes a three-way partition. | **medium-high**: this is the real proof cost. The existing proofs destructure `decls.getLast?` directly. |
 | P8 | `ModuleEmission` (`src/Effect4/Codegen/Checked.lean:32-37`) and `ModuleEmission.module` (`:40`) | `declarations : List TypeScript.ConstDecl`; `decls := declarations.map .const` | field becomes `List TypeScript.Decl`; `module` stops mapping | **low**, but it is a structure change with consumers in `Laws/Codegen/Checked.lean` and `Api.lean:185-195` |
 | P9 | `declarationType`, `declarationType_ok`, `declarationTypeRepresentable`, `printDecl_fields` (`src/Effect4/Codegen/Print.lean:611-660`) | `none` when `requires ≠ ∅`; representability is trivially true there | total three-parameter annotation; representability becomes "every key of the row is declared" | **low-medium**: `declarationType_ok`'s proof is four lines and gets one more case |
-| P10 | `Codegen/Admit.lean`'s envelope check (`ModuleReading`, `src/Effect4/Codegen/Admit.lean:100`) — "the last declaration exported under that name and annotated exactly as `printDecl` annotates the checked type, and every earlier declaration a plain exported layer constant" (`src/Effect4/Api.lean:211-224`) | two declaration classes | three; and the annotation comparison now has an `R` to compare | **medium**: this is where DI-29's oracle finally gets something to check |
+| P10 | `Codegen/Admit.lean`'s envelope check: `layersPlain` (`:48-53`) refuses every non-`const` declaration, `ModuleReading` (`:100`) is "the last declaration exported under that name and annotated exactly as `printDecl` annotates the checked type, and every earlier declaration a plain exported layer constant" (`src/Effect4/Api.lean:211-224`); the refusal is proved in `src/Effect4/Laws/Codegen/Admit.lean:81` | two declaration classes | three; and the annotation comparison now has an `R` to compare. The `classDecl` case already exists in the proof as a refusal and is restated, not added | **medium**: this is where DI-29's oracle finally gets something to check |
 | P11 | **O16, new** (`docs/research/2026-09-16-strict-proof-obligations.md:28`): the declared `R` is the requirement row's keys, never the carrier union | unstated | `declarationType ty = .ok (some (.name … [A, E, R]))` with `R` determined by `ty.requires.elems` and injective in it | **low once P9 lands**: injectivity of `classIdent` reduces to injectivity of `keyText`, and `Var.name_inj`/`repr_inj` (`Read.lean:1099-1104`) are the pattern to copy |
 | P12 | `Authoring/Lifts.lean`'s `service_scoped`, `provideService_scoped`, `Layer.succeed_scoped`, `Layer.effect_scoped` (`src/Effect4/Laws/Program/Authoring/Lifts.lean:204-414`); `yieldKey_scoped` (`Authoring/Forms.lean:23`) | generated scope lemmas | **unchanged** — `ServiceDef` wraps the lifts, it does not replace them | none |
 | P13 | `Scoped.lean`'s `scopedAt_service`, `scopedAt_provideService`, `LayerTerm.scoped_succeed/_effect` (`src/Effect4/Program/Scoped.lean:150-195`) | generated | **unchanged** | none |
@@ -602,7 +655,7 @@ Each slice small, each gated, each committed before the next. Bytes that move ar
 | --- | --- | --- | --- |
 | **K0** (no dependency) | `ServiceDef` and its four combinators under `src/Effect4/Program/Authoring/`, plus `Agrees`; the two `Test` key literals and `Provision`'s four rewritten through it. Authoring-only: no constructor, no tag. | none | `make check` |
 | **K1** | The emission type widens: `ModuleEmission.declarations : List TypeScript.Decl`, `printEntry`/`printModule` return `List Decl`, `ModuleEmission.module` stops mapping. Reader gains a `.const`-only classifier so behaviour is byte-identical. No package change: `Decl` and `ClassDecl` are already in the pinned rev (§1.5). | none — every module still emits only consts | `make check`, `check-ocaml` (the LCNF face sees the type), `check-compat` |
-| **K2** | `classIdent : ServiceKey → String` and the class emitter; `printModule` prefixes one `Decl.classDecl` per key of `Fold.serviceKeys` in row order; `printKey` emits the bare identifier. `readModule` gains its class-declaration arm and the key environment; `readKey` becomes environment-relative. P6, P7 restated. | **every printed corpus image with a service key changes**; `harness/truth/generated/*.ts`, `generated/corpus-index.tsv`, the tsdiag table | `make check`, `check-truth`, `check-tsdiag` (promote), `check-ingest-smoke`, `check-ocaml` |
+| **K2** | `classIdent : ServiceKey → String` and the class emitter; `printModule` prefixes one `Decl.classDecl` per key of `Fold.serviceKeys` in row order; `printKey` emits the bare identifier. `readModule` gains its class-declaration arm and the key environment; `readKey` becomes environment-relative; `layersPlain` learns the class prefix. P6, P7, P10's refusal lemma restated. `checkSourceBindings` needs nothing (§1.5.3). | **every printed corpus image with a service key changes**; `harness/truth/generated/*.ts`, `generated/corpus-index.tsv`, the tsdiag table | `make check`, `check-truth`, `check-tsdiag` (promote), `check-ingest-smoke`, `check-ocaml` |
 | **K3** | `ts/eff/read.ts` learns the same two clauses (or R6 generates them, if R6 has landed). | `ts/eff/read.ts` | `check-ts-reader`, `check-corpus` |
 | **K4** | `declarationType` becomes total with `R`; `declarationTypeRepresentable` collapses; P9, P10, O16. `Admit`'s envelope compares three parameters. | every printed module's annotation line | `make check`, `check-target`, `check-corpus` (**the `mismatch-R` and `noninjective` rows are the acceptance test: g21, g50, g89, g290 must move to `agree`**), `check-tsdiag` |
 | **K5** | Cleanup §5 items 1-4, 6-9; DI-24 amended; O16 marked proved in the obligations note. | `docs/DESIGN-ISSUES.md`, `tools/target/corpus.ts`, `tools/target/profile.ts`, `tools/Tools/Styles.lean`, `src/Effect4/Machine/Key.lean`'s docstring | `check-citations`, `check-corpus`, `check-target` |
@@ -672,12 +725,15 @@ K5 an hour. *(inferred; I did not attempt any of it.)*
 2. **The class identifier's spelling.** With N1 and no name table the identifier is minted from
    the key. Two candidates: `k4_4` (identical to the runtime string — one fact, one spelling,
    and the reader's check is an equality) or `S_k4_4` (unmistakably a declaration, at the cost
-   of two spellings to keep in step). Recommend `k4_4`; it is already a legal TypeScript
-   identifier and `exportNameSafe` (`Print.lean:704-710`) already guards the collision with a
-   program's export name. *(inferred — I did not check `exportNameSafe`'s exact predicate.)*
+   of two spellings to keep in step). **Recommend `k4_4`**: probe D compiles it as both the
+   class name and the `Self` argument *(reproduced)*, and `printEntry`
+   (`src/Effect4/Codegen/Print.lean:704-710`) already refuses an unsafe export name, which is
+   where a collision between a program's name and a key's would be caught. *(The exact
+   predicate `exportNameSafe`, `Print.lean:157`, I did not read; whether it already excludes
+   the `k<n>_<m>` shape is the one thing to check before committing to this.)*
 3. **Whether the class declaration is `Self`-parameterised.** rc.112 allows
-   `Context.Service<Self, Shape>()("key")` where `Self` is the class itself. My probe used the
-   self-referential form and it type-checks. The alternative,
+   `Context.Service<Self, Shape>()("key")` where `Self` is the class itself. Probes B and D
+   both use the self-referential form and both compile *(reproduced)*. The alternative,
    `Context.Service<{ k: "k4_4" }, number>()("k4_4")`, avoids the recursive reference but is not
    the idiom. Recommend the idiom.
 4. **Order against R4/R5** (§6). Recommend R4 → R5 → K1..K4, so the reader's key clause is
@@ -690,7 +746,7 @@ K5 an hour. *(inferred; I did not attempt any of it.)*
 
 ---
 
-### The three probes
+### The four probes
 
 All live under
 `/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/aa7ebaa0-7350-4784-b70e-322956de92e8/scratchpad/scoutD/`
@@ -698,12 +754,15 @@ and none is in the repository. If this slice is taken up, probe A's guards and p
 `carrier_unique` belong in `Test/Program/` and the two `keys.ts` files in
 `Test/fixtures/target/` beside `controls.ts`, red control included.
 
-- `KeyProbe.lean` — 18 `#guard`s and 3 `#eval`s. Run:
+- `KeyProbe.lean` (probe A) — 18 `#guard`s and 3 `#eval`s. Run:
   `lake env lean -M 4096 <path>/KeyProbe.lean`. Green this session; output quoted in §1.3.
-- `ServiceDefProbe.lean` — the §3 authoring surface: 4 `#guard`s, the `carrier_unique`
+- `ServiceDefProbe.lean` (probe C) — the §3 authoring surface: 4 `#guard`s, the `carrier_unique`
   theorem, and 2 `#eval`s. Run the same way. Green this session; output quoted in §3.3.
-- `keys.ts` + `keys-red.ts` — 6 `satisfies` assertions and their red control. Run:
+- `keys.ts` + `keys-red.ts` (probe B) — 6 `satisfies` assertions and their red control. Run:
   `node ts/eff/node_modules/typescript/bin/tsc --noEmit --strict --exactOptionalPropertyTypes
   --target ES2022 --module ESNext --moduleResolution bundler --skipLibCheck <path>/keys.ts`.
   Green (exit 0) this session; the red control fails with `TS1360` at both flipped lines.
   TypeScript 5.9.2, the repo's own copy.
+- `names.ts` + `names-red.ts` (probe D) — the printed class form with the key's own identifier
+  and the three-parameter annotation, run the same way. Green this session; the red control
+  fails with `TS2375` on the weakened annotation and `TS1360` on the assertion.

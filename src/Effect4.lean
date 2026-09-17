@@ -98,6 +98,7 @@ import Effect4.Program.Authoring.Rows
 import Effect4.Program.Authoring.Forms
 import Effect4.Api.TestClock
 import Effect4.Program.Authoring.Sugar
+import Effect4.Program.Authoring.Loops
 import Effect4.Codegen.Print
 import Effect4.Codegen.Diagnostics
 import Effect4.Codegen.Read
