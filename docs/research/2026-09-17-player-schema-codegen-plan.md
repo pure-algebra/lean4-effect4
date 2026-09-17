@@ -96,6 +96,57 @@ a per-target optimisation checked against it by byte equality of `inspect`.
 
 The differential across targets is then one rule: same bytes in, same bytes out.
 
+## 4b. The holder: what keeps a player running (owner, same day)
+
+A player is pure, so something must hold it: keep its events, answer its parks, expose it.
+The owner's direction: an event construct, Eio or similar on OCaml, an event source holding
+the WASM player, built from Effect's own types (its event log for persistence), everything
+under a schema, a state machine, MCP on top. That is event sourcing with the player as the
+reducer, and the pieces exist on both sides.
+
+**One shape on every host: journal, player, reactor.**
+
+| part | what it does | OCaml | TypeScript or WASM host |
+| --- | --- | --- | --- |
+| journal | append-only rows per job: `(kind, index, canonical bytes)`; read from an index; subscribe | `cas/e4_wal` (rows are already opaque canonical bytes plus a kind byte) | rc.112 `EventJournal` (`unstable/eventlog`): `write { event, primaryKey, payload: Uint8Array, effect }`, `entries`, `changes`; layers for memory, IndexedDB and SQL |
+| player | `state' = step state decision`, pure | generated | generated TypeScript, or the WASM module |
+| reactor | turns the world into decisions: timers, I/O, external rows, an agent's reply | Eio fibers and streams (the Lean models are in `OCaml5/Lib/Eio`), inside one owner domain per machine as `e4_sched` requires | Effect fibers, `Schedule`, `PubSub`; the journal's `changes` is the subscription |
+
+**The one rule: journal first.** A decision is appended before it is applied. State is the fold
+of the player over the journal, recovery is replay, and the reactor can be anything because
+replay never calls it. `EventJournal.write` has this shape already: it takes the payload and
+the `effect` to run on the committed entry, so "commit, then step the player" is one call.
+
+**Events are schemas.** An rc.112 `Event` is `{ tag, primaryKey, payload: Schema, success:
+Schema, error: Schema }`. The decision alphabet maps onto it directly: one `Event` per
+decision constructor, `primaryKey` the job, `payload` the decision's schema (printed from its
+`ShapeDoc` by the schema printer, R7), `success` the observation's schema, `error` the
+refusal's. An `EventGroup` of them is a typed client for a player, and it is also exactly the
+MCP tool list (R12): one tool per event, arguments and results under the same schemas.
+
+**The state machine** is the session's, already in Lean: `HostSession.Phase` with refusal as a
+verdict that leaves the state unchanged. The holder adds no states of its own.
+
+**Two mismatches to design around, both known now.**
+
+1. `EventJournal`'s `EntryId` is a time-based identifier the host mints. LOG-REL forbids
+   anything host-chosen in a position. So the entry id is transport only; the canonical
+   position is the row's index within its job, carried in the payload or counted per
+   `primaryKey`, and two hosts must agree on bytes and indices, never on ids.
+2. `EventLog` above the journal brings remotes, conflict handling, compaction and encryption.
+   That is sync, which is out of scope now. Use `EventJournal` and `Event`/`EventGroup`; leave
+   `EventLog`'s remote half alone until the store API (§6) exists.
+
+**Not first, but worth recording:** the holder could itself be an Eff program whose external
+rows are the journal's operations. It would make the holder replayable and inspectable like
+any other program. It needs the package rows of R8 first.
+
+**Reading checked with the owner's words.** "They need an event construct" is read here as the
+host-side holder. If it also means a construct inside `Eff` (a program that emits and awaits
+named events), the existing pieces cover it without a new constructor: awaiting is an external
+row answered by the tape, emitting is a trace event; a named-event pair of rows would be an
+addition to the row table, not to the alphabet.
+
 ## 5. The codegen API
 
 Today `src/OCaml5/Lcnf/Translate.lean` does four jobs at once: reads LCNF and closes over
@@ -171,7 +222,8 @@ Questions the store API must answer before it is built:
    renderer); the player in TypeScript, byte-equal on the corpus.
 6. **WASM** by `wasm_of_ocaml` on the OCaml player first (31-bit profile); a direct Wasm GC
    printer only if a reason appears.
-7. **MCP driver** over the player (R12).
+7. **The holder** (§4b): journal, player, reactor, journal first; on OCaml over `e4_wal` with Eio, on the TypeScript host over rc.112 `EventJournal`, which also holds the WASM player.
+8. **MCP driver**: the event group of the decision alphabet as the tool list (R12).
 
 Steps 1 to 3 need no new API and remove hand code at each step. Step 4 is the API. Steps 5
 and 6 are what the API is for.
