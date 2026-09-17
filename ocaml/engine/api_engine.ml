@@ -376,6 +376,7 @@ and 'op eff =
   | Eff_provideService of service_key * term * 'op eff
   | Eff_catchIf of term * 'op eff * 'op eff
   | Eff_select of term * decision * 'op eff * 'op eff
+  | Eff_iterate of ty * term * term * term * term * 'op eff
 and 'op stmts = Stmts_nil | Stmts_cons of 'op stmt * 'op stmts
 and 'op stmt =
   | Stmt_bindYield of 'op eff
@@ -1528,140 +1529,146 @@ let sh_dispatcher_mk buckets armed =
               let _x_163 = Some _x_162 in
               _x_163) else (let _x_161 = None in
               _x_161)))
-        | _ -> (let _x_166 = None in
-          _x_166))
-    | Node_stmts s_167 -> (match (s_167 : _ stmts) with
-        | Stmts_cons (head_168, tail_169) -> (let _x_170 = 0 in
-          let _x_171 = x_2 = _x_170 in
-          if _x_171 then (let _x_177 = Node_stmt head_168 in
-            let _x_178 = Some _x_177 in
-            _x_178) else (let _x_172 = 1 in
-            let _x_173 = x_2 = _x_172 in
-            if _x_173 then (let _x_175 = Node_stmts tail_169 in
-              let _x_176 = Some _x_175 in
-              _x_176) else (let _x_174 = None in
-              _x_174)))
-        | _ -> (let _x_179 = None in
-          _x_179))
-    | Node_stmt s_180 -> (match (s_180 : _ stmt) with
-        | Stmt_bindYield effect_181 -> (let _x_182 = 0 in
-          let _x_183 = x_2 = _x_182 in
-          if _x_183 then _jp_3 effect_181 else (let _x_184 = None in
-            _x_184))
-        | Stmt_yieldDiscard effect_185 -> (let _x_186 = 0 in
-          let _x_187 = x_2 = _x_186 in
-          if _x_187 then _jp_3 effect_185 else (let _x_188 = None in
-            _x_188))
-        | Stmt_ifElse (_, then_b_190, else_b_191) -> (let _x_192 = 0 in
-          let _x_193 = x_2 = _x_192 in
-          if _x_193 then (let _x_199 = Node_stmts then_b_190 in
-            let _x_200 = Some _x_199 in
-            _x_200) else (let _x_194 = 1 in
-            let _x_195 = x_2 = _x_194 in
-            if _x_195 then (let _x_197 = Node_stmts else_b_191 in
-              let _x_198 = Some _x_197 in
-              _x_198) else (let _x_196 = None in
-              _x_196)))
-        | Stmt_whileTrue body_201 -> (let _x_202 = 0 in
-          let _x_203 = x_2 = _x_202 in
-          if _x_203 then _jp_6 body_201 else (let _x_204 = None in
-            _x_204))
-        | _ -> (let _x_205 = None in
-          _x_205))
-    | Node_action a_206 -> (match (a_206 : _ action_term) with
-        | ActionTerm_fork (program_207, _) -> (let _x_209 = 0 in
-          let _x_210 = x_2 = _x_209 in
-          if _x_210 then _jp_21 program_207 else (let _x_211 = None in
-            _x_211))
-        | ActionTerm_forkIn (program_212, _, _) -> (let _x_215 = 0 in
-          let _x_216 = x_2 = _x_215 in
-          if _x_216 then (let _x_218 = Node_eff program_212 in
-            let _x_219 = Some _x_218 in
-            _x_219) else (let _x_217 = None in
-            _x_217))
-        | ActionTerm_forkScoped (program_220, _) -> (let _x_222 = 0 in
-          let _x_223 = x_2 = _x_222 in
-          if _x_223 then _jp_21 program_220 else (let _x_224 = None in
-            _x_224))
-        | ActionTerm_raceAll entrants_225 -> (let _x_226 = 0 in
+        | Eff_iterate (_, _, _, _, _, body_171) -> (let _x_172 = 0 in
+          let _x_173 = x_2 = _x_172 in
+          if _x_173 then (let _x_175 = Node_eff body_171 in
+            let _x_176 = Some _x_175 in
+            _x_176) else (let _x_174 = None in
+            _x_174))
+        | _ -> (let _x_177 = None in
+          _x_177))
+    | Node_stmts s_178 -> (match (s_178 : _ stmts) with
+        | Stmts_cons (head_179, tail_180) -> (let _x_181 = 0 in
+          let _x_182 = x_2 = _x_181 in
+          if _x_182 then (let _x_188 = Node_stmt head_179 in
+            let _x_189 = Some _x_188 in
+            _x_189) else (let _x_183 = 1 in
+            let _x_184 = x_2 = _x_183 in
+            if _x_184 then (let _x_186 = Node_stmts tail_180 in
+              let _x_187 = Some _x_186 in
+              _x_187) else (let _x_185 = None in
+              _x_185)))
+        | _ -> (let _x_190 = None in
+          _x_190))
+    | Node_stmt s_191 -> (match (s_191 : _ stmt) with
+        | Stmt_bindYield effect_192 -> (let _x_193 = 0 in
+          let _x_194 = x_2 = _x_193 in
+          if _x_194 then _jp_3 effect_192 else (let _x_195 = None in
+            _x_195))
+        | Stmt_yieldDiscard effect_196 -> (let _x_197 = 0 in
+          let _x_198 = x_2 = _x_197 in
+          if _x_198 then _jp_3 effect_196 else (let _x_199 = None in
+            _x_199))
+        | Stmt_ifElse (_, then_b_201, else_b_202) -> (let _x_203 = 0 in
+          let _x_204 = x_2 = _x_203 in
+          if _x_204 then (let _x_210 = Node_stmts then_b_201 in
+            let _x_211 = Some _x_210 in
+            _x_211) else (let _x_205 = 1 in
+            let _x_206 = x_2 = _x_205 in
+            if _x_206 then (let _x_208 = Node_stmts else_b_202 in
+              let _x_209 = Some _x_208 in
+              _x_209) else (let _x_207 = None in
+              _x_207)))
+        | Stmt_whileTrue body_212 -> (let _x_213 = 0 in
+          let _x_214 = x_2 = _x_213 in
+          if _x_214 then _jp_6 body_212 else (let _x_215 = None in
+            _x_215))
+        | _ -> (let _x_216 = None in
+          _x_216))
+    | Node_action a_217 -> (match (a_217 : _ action_term) with
+        | ActionTerm_fork (program_218, _) -> (let _x_220 = 0 in
+          let _x_221 = x_2 = _x_220 in
+          if _x_221 then _jp_21 program_218 else (let _x_222 = None in
+            _x_222))
+        | ActionTerm_forkIn (program_223, _, _) -> (let _x_226 = 0 in
           let _x_227 = x_2 = _x_226 in
-          if _x_227 then (let _x_229 = Node_effs entrants_225 in
+          if _x_227 then (let _x_229 = Node_eff program_223 in
             let _x_230 = Some _x_229 in
             _x_230) else (let _x_228 = None in
             _x_228))
-        | _ -> (let _x_231 = None in
-          _x_231))
-    | Node_effs es_232 -> (match (es_232 : _ effs) with
-        | Effs_cons (head_233, tail_234) -> (let _x_235 = 0 in
-          let _x_236 = x_2 = _x_235 in
-          if _x_236 then (let _x_242 = Node_eff head_233 in
-            let _x_243 = Some _x_242 in
-            _x_243) else (let _x_237 = 1 in
-            let _x_238 = x_2 = _x_237 in
-            if _x_238 then (let _x_240 = Node_effs tail_234 in
-              let _x_241 = Some _x_240 in
-              _x_241) else (let _x_239 = None in
-              _x_239)))
-        | _ -> (let _x_244 = None in
-          _x_244))
-    | Node_layer l_245 -> (match (l_245 : _ layer_term) with
-        | LayerTerm_effect (_, body_247) -> (let _x_248 = 0 in
-          let _x_249 = x_2 = _x_248 in
-          if _x_249 then (let _x_251 = Node_eff body_247 in
-            let _x_252 = Some _x_251 in
-            _x_252) else (let _x_250 = None in
-            _x_250))
-        | LayerTerm_effectDiscard body_253 -> (let _x_254 = 0 in
-          let _x_255 = x_2 = _x_254 in
-          if _x_255 then _jp_3 body_253 else (let _x_256 = None in
-            _x_256))
-        | LayerTerm_provide (self_257, that_258) -> (let _x_259 = 0 in
+        | ActionTerm_forkScoped (program_231, _) -> (let _x_233 = 0 in
+          let _x_234 = x_2 = _x_233 in
+          if _x_234 then _jp_21 program_231 else (let _x_235 = None in
+            _x_235))
+        | ActionTerm_raceAll entrants_236 -> (let _x_237 = 0 in
+          let _x_238 = x_2 = _x_237 in
+          if _x_238 then (let _x_240 = Node_effs entrants_236 in
+            let _x_241 = Some _x_240 in
+            _x_241) else (let _x_239 = None in
+            _x_239))
+        | _ -> (let _x_242 = None in
+          _x_242))
+    | Node_effs es_243 -> (match (es_243 : _ effs) with
+        | Effs_cons (head_244, tail_245) -> (let _x_246 = 0 in
+          let _x_247 = x_2 = _x_246 in
+          if _x_247 then (let _x_253 = Node_eff head_244 in
+            let _x_254 = Some _x_253 in
+            _x_254) else (let _x_248 = 1 in
+            let _x_249 = x_2 = _x_248 in
+            if _x_249 then (let _x_251 = Node_effs tail_245 in
+              let _x_252 = Some _x_251 in
+              _x_252) else (let _x_250 = None in
+              _x_250)))
+        | _ -> (let _x_255 = None in
+          _x_255))
+    | Node_layer l_256 -> (match (l_256 : _ layer_term) with
+        | LayerTerm_effect (_, body_258) -> (let _x_259 = 0 in
           let _x_260 = x_2 = _x_259 in
-          if _x_260 then _jp_24 self_257 else (let _x_261 = 1 in
-            let _x_262 = x_2 = _x_261 in
-            if _x_262 then _jp_27 that_258 else (let _x_263 = None in
-              _x_263)))
-        | LayerTerm_provideMerge (self_264, that_265) -> (let _x_266 = 0 in
-          let _x_267 = x_2 = _x_266 in
-          if _x_267 then _jp_24 self_264 else (let _x_268 = 1 in
-            let _x_269 = x_2 = _x_268 in
-            if _x_269 then _jp_27 that_265 else (let _x_270 = None in
-              _x_270)))
-        | LayerTerm_merge (left_271, right_272) -> (let _x_273 = 0 in
-          let _x_274 = x_2 = _x_273 in
-          if _x_274 then _jp_24 left_271 else (let _x_275 = 1 in
-            let _x_276 = x_2 = _x_275 in
-            if _x_276 then _jp_27 right_272 else (let _x_277 = None in
-              _x_277)))
-        | LayerTerm_fresh inner_278 -> (let _x_279 = 0 in
-          let _x_280 = x_2 = _x_279 in
-          if _x_280 then _jp_30 inner_278 else (let _x_281 = None in
-            _x_281))
-        | LayerTerm_orDie inner_282 -> (let _x_283 = 0 in
-          let _x_284 = x_2 = _x_283 in
-          if _x_284 then _jp_30 inner_282 else (let _x_285 = None in
-            _x_285))
-        | LayerTerm_mergeAll layers_286 -> (let _x_287 = 0 in
-          let _x_288 = x_2 = _x_287 in
-          if _x_288 then (let _x_290 = Node_layers layers_286 in
-            let _x_291 = Some _x_290 in
-            _x_291) else (let _x_289 = None in
-            _x_289))
-        | _ -> (let _x_292 = None in
-          _x_292))
-    | Node_layers ls_293 -> (match (ls_293 : _ layer_terms) with
-        | LayerTerms_cons (head_294, tail_295) -> (let _x_296 = 0 in
-          let _x_297 = x_2 = _x_296 in
-          if _x_297 then (let _x_303 = Node_layer head_294 in
-            let _x_304 = Some _x_303 in
-            _x_304) else (let _x_298 = 1 in
-            let _x_299 = x_2 = _x_298 in
-            if _x_299 then (let _x_301 = Node_layers tail_295 in
-              let _x_302 = Some _x_301 in
-              _x_302) else (let _x_300 = None in
-              _x_300)))
-        | _ -> (let _x_305 = None in
-          _x_305))
+          if _x_260 then (let _x_262 = Node_eff body_258 in
+            let _x_263 = Some _x_262 in
+            _x_263) else (let _x_261 = None in
+            _x_261))
+        | LayerTerm_effectDiscard body_264 -> (let _x_265 = 0 in
+          let _x_266 = x_2 = _x_265 in
+          if _x_266 then _jp_3 body_264 else (let _x_267 = None in
+            _x_267))
+        | LayerTerm_provide (self_268, that_269) -> (let _x_270 = 0 in
+          let _x_271 = x_2 = _x_270 in
+          if _x_271 then _jp_24 self_268 else (let _x_272 = 1 in
+            let _x_273 = x_2 = _x_272 in
+            if _x_273 then _jp_27 that_269 else (let _x_274 = None in
+              _x_274)))
+        | LayerTerm_provideMerge (self_275, that_276) -> (let _x_277 = 0 in
+          let _x_278 = x_2 = _x_277 in
+          if _x_278 then _jp_24 self_275 else (let _x_279 = 1 in
+            let _x_280 = x_2 = _x_279 in
+            if _x_280 then _jp_27 that_276 else (let _x_281 = None in
+              _x_281)))
+        | LayerTerm_merge (left_282, right_283) -> (let _x_284 = 0 in
+          let _x_285 = x_2 = _x_284 in
+          if _x_285 then _jp_24 left_282 else (let _x_286 = 1 in
+            let _x_287 = x_2 = _x_286 in
+            if _x_287 then _jp_27 right_283 else (let _x_288 = None in
+              _x_288)))
+        | LayerTerm_fresh inner_289 -> (let _x_290 = 0 in
+          let _x_291 = x_2 = _x_290 in
+          if _x_291 then _jp_30 inner_289 else (let _x_292 = None in
+            _x_292))
+        | LayerTerm_orDie inner_293 -> (let _x_294 = 0 in
+          let _x_295 = x_2 = _x_294 in
+          if _x_295 then _jp_30 inner_293 else (let _x_296 = None in
+            _x_296))
+        | LayerTerm_mergeAll layers_297 -> (let _x_298 = 0 in
+          let _x_299 = x_2 = _x_298 in
+          if _x_299 then (let _x_301 = Node_layers layers_297 in
+            let _x_302 = Some _x_301 in
+            _x_302) else (let _x_300 = None in
+            _x_300))
+        | _ -> (let _x_303 = None in
+          _x_303))
+    | Node_layers ls_304 -> (match (ls_304 : _ layer_terms) with
+        | LayerTerms_cons (head_305, tail_306) -> (let _x_307 = 0 in
+          let _x_308 = x_2 = _x_307 in
+          if _x_308 then (let _x_314 = Node_layer head_305 in
+            let _x_315 = Some _x_314 in
+            _x_315) else (let _x_309 = 1 in
+            let _x_310 = x_2 = _x_309 in
+            if _x_310 then (let _x_312 = Node_layers tail_306 in
+              let _x_313 = Some _x_312 in
+              _x_313) else (let _x_311 = None in
+              _x_311)))
+        | _ -> (let _x_316 = None in
+          _x_316))
   
   (* LCNF mono: Effect4.Program.blockAt (root : Effect4.Program.Eff Effect4.Program.NativeOp) (p : Effect4.Program.Point) (block : List Nat) : Option (Effect4.Program.Stmts Effect4.Program.NativeOp) *)
   let program_block_at (root : native_op eff) (p : point) (block : int list) : native_op stmts option =
@@ -7097,12 +7104,51 @@ and reasons_of_list (x_1 : val_ list) : (err, defect, int, unit) reason list =
                   let _x_10 = test_6, _x_9 in
                   let _x_11 = Some _x_10 in
                   _x_11)
+                | Eff_iterate (_, _, test_14, step_15, _, body_17) -> (let _x_18 = step_15, body_17 in
+                  let _x_19 = test_14, _x_18 in
+                  let _x_20 = Some _x_19 in
+                  _x_20)
+                | _ -> (let _x_21 = None in
+                  _x_21))
+            | _ -> (let _x_22 = None in
+              _x_22))
+        | _ -> (let _x_23 = None in
+          _x_23))
+  
+  (* LCNF mono: Effect4.Program.loopResultAt (root : Effect4.Program.Eff Effect4.Program.NativeOp) (p : Effect4.Program.Point) : Option Effect4.Program.Term *)
+  let program_loop_result_at (root : native_op eff) (p : point) : term option =
+  match (p : point) with
+    | { path = path; _ } -> (let _x_1 = Node_eff root in
+      let _x_2 = sh_node_at program_node_child _x_1 path in
+      match _x_2 with
+        | Some val__3 -> (match (val__3 : _ node) with
+            | Node_eff e_4 -> (match (e_4 : _ eff) with
+                | Eff_iterate (_, _, _, _, result_9, _) -> (let _x_11 = Some result_9 in
+                  _x_11)
                 | _ -> (let _x_12 = None in
                   _x_12))
             | _ -> (let _x_13 = None in
               _x_13))
         | _ -> (let _x_14 = None in
           _x_14))
+  
+  (* LCNF mono: Effect4.Program.loopFinishAt (root : Effect4.Program.Eff Effect4.Program.NativeOp) (p : Effect4.Program.Point) (cursor : Effect4.Store.Val) : Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit *)
+  let program_loop_finish_at (root : native_op eff) (p : point) (cursor : val_) : (eff_name, eff_thunk, val_, err, defect, int, unit) prim =
+  let _x_1 = program_loop_result_at root p in
+  match _x_1 with
+    | None -> (let _x_2 = Val_unit in
+      let _x_3 = Prim_success _x_2 in
+      _x_3)
+    | Some val__4 -> (match (p : point) with
+        | { env = env; _ } -> (let _x_5 = [] in
+          let _x_6 = cursor :: _x_5 in
+          let _x_7 = E.snoc env cursor in
+          let _x_8 = program_eval_term _x_7 val__4 in
+          match _x_8 with
+            | None -> (let _x_9 = program_bad_shape in
+              _x_9)
+            | Some val__10 -> (let _x_11 = Prim_success val__10 in
+              _x_11)))
   
   (* LCNF mono: Effect4.Program.Point.childWith (p : Effect4.Program.Point) (i : Nat) (v : Effect4.Store.Val) : Effect4.Program.Point *)
   let program_point_child_with (p : point) (i : int) (v : val_) : point =
@@ -7149,14 +7195,13 @@ and reasons_of_list (x_1 : val_ list) : (err, defect, int, unit) reason list =
               let _x_13 = program_eval_term _x_12 fst_8 in
               match _x_13 with
                 | Some val__14 -> (match (val__14 : val_) with
-                    | Val_bool b_15 -> if b_15 then (let _x_19 = 0 in
-                        let _x_20 = program_point_child_with p _x_19 cursor in
-                        let _x_21 = program_resolve root _x_20 in
-                        let _x_22 = LoopNext_continue (cursor, _x_21) in
-                        _x_22) else (let _x_16 = Val_unit in
-                        let _x_17 = Prim_success _x_16 in
-                        let _x_18 = LoopNext_finish _x_17 in
-                        _x_18)
+                    | Val_bool b_15 -> if b_15 then (let _x_18 = 0 in
+                        let _x_19 = program_point_child_with p _x_18 cursor in
+                        let _x_20 = program_resolve root _x_19 in
+                        let _x_21 = LoopNext_continue (cursor, _x_20) in
+                        _x_21) else (let _x_16 = program_loop_finish_at root p cursor in
+                        let _x_17 = LoopNext_finish _x_16 in
+                        _x_17)
                     | _ -> _jp_1 ())
                 | _ -> _jp_1 ())))
   
@@ -10355,38 +10400,45 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
                           | Some val__56 -> (let _x_57 = EffName_loop p_6 in
                             let _x_58 = Prim_whileLoop (_x_57, val__56) in
                             _x_58))
-                      | Eff_provideLayer (_, _, _) -> (let _x_62 = FinalizerStrategy_sequential in
-                        let _x_63 = SyncOp_scopeMake _x_62 in
-                        let _x_64 = EffThunk_op _x_63 in
-                        let _x_65 = Prim_sync _x_64 in
-                        let _x_66 = EffName_provideLayerWith p_6 in
-                        let _x_67 = Prim_onSuccess (_x_65, _x_66) in
-                        _x_67)
-                      | _ -> (let _x_68 = program_compile_eff e_11 p_6 in
-                        _x_68))
-                  | _ -> (let _x_69 = program_bad_shape in
-                    _x_69))
-              | _ -> (let _x_70 = program_bad_shape in
-                _x_70))))
-    | EffThunk_memoLookup (q_71, memo_map_72, scope_73) -> (match (q_71 : point) with
-        | { path = path_1; _ } -> (let _x_74 = SyncOp_memoGet (P.to_list path_1, memo_map_72) in
-          let _x_75 = EffThunk_op _x_74 in
-          let _x_76 = Prim_sync _x_75 in
-          let _x_77 = EffName_memoize (q_71, memo_map_72, scope_73) in
-          let _x_78 = Prim_onSuccess (_x_76, _x_77) in
-          _x_78))
-    | EffThunk_store thunk_79 -> (match (thunk_79 : thunk) with
-        | Thunk_body program_80 -> (let _x_81 = prog_of program_80 in
-          let _x_82 = program_embed _x_81 in
-          _x_82)
-        | Thunk_foreign (capture_83, exit__84) -> (match (capture_83 : capture) with
-            | { ctx = ctx; _ } -> (let _x_85 = EffThunk_getCtx in
-              let _x_86 = Prim_withFiber _x_85 in
-              let _x_87 = [] in
-              let _x_88 = program_point_of_capture capture_83 _x_87 in
-              let _x_89 = EffName_releaseUnder (_x_88, ctx, exit__84) in
-              let _x_90 = Prim_onSuccess (_x_86, _x_89) in
-              _x_90))
+                      | Eff_iterate (_, initial_60, _, _, _, _) -> (let _x_65 = program_eval_term env initial_60 in
+                        match _x_65 with
+                          | None -> (let _x_66 = program_bad_shape in
+                            _x_66)
+                          | Some val__67 -> (let _x_68 = EffName_loop p_6 in
+                            let _x_69 = Prim_whileLoop (_x_68, val__67) in
+                            _x_69))
+                      | Eff_provideLayer (_, _, _) -> (let _x_73 = FinalizerStrategy_sequential in
+                        let _x_74 = SyncOp_scopeMake _x_73 in
+                        let _x_75 = EffThunk_op _x_74 in
+                        let _x_76 = Prim_sync _x_75 in
+                        let _x_77 = EffName_provideLayerWith p_6 in
+                        let _x_78 = Prim_onSuccess (_x_76, _x_77) in
+                        _x_78)
+                      | _ -> (let _x_79 = program_compile_eff e_11 p_6 in
+                        _x_79))
+                  | _ -> (let _x_80 = program_bad_shape in
+                    _x_80))
+              | _ -> (let _x_81 = program_bad_shape in
+                _x_81))))
+    | EffThunk_memoLookup (q_82, memo_map_83, scope_84) -> (match (q_82 : point) with
+        | { path = path_1; _ } -> (let _x_85 = SyncOp_memoGet (P.to_list path_1, memo_map_83) in
+          let _x_86 = EffThunk_op _x_85 in
+          let _x_87 = Prim_sync _x_86 in
+          let _x_88 = EffName_memoize (q_82, memo_map_83, scope_84) in
+          let _x_89 = Prim_onSuccess (_x_87, _x_88) in
+          _x_89))
+    | EffThunk_store thunk_90 -> (match (thunk_90 : thunk) with
+        | Thunk_body program_91 -> (let _x_92 = prog_of program_91 in
+          let _x_93 = program_embed _x_92 in
+          _x_93)
+        | Thunk_foreign (capture_94, exit__95) -> (match (capture_94 : capture) with
+            | { ctx = ctx; _ } -> (let _x_96 = EffThunk_getCtx in
+              let _x_97 = Prim_withFiber _x_96 in
+              let _x_98 = [] in
+              let _x_99 = program_point_of_capture capture_94 _x_98 in
+              let _x_100 = EffName_releaseUnder (_x_99, ctx, exit__95) in
+              let _x_101 = Prim_onSuccess (_x_97, _x_100) in
+              _x_101))
         | _ -> _jp_2 ())
     | _ -> _jp_2 ()
   
@@ -12045,8 +12097,8 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
   
   (* LCNF mono: Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_0.spec_1._redArg (interp : Effect4.Machine.RunInterp lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (m : Effect4.Machine.RunMachine lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (f : Effect4.Machine.RunFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (yielding : Bool) (action : Effect4.Machine.WithFiberAction lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Effect4.Machine.Iter lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) *)
   let evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_0_spec_1 (interp : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim) run_interp) (m : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber, (_, _, _, err, defect, int, unit) frame_event) run_machine) (f : (_, _, _, err, defect, int, unit, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber) run_fiber) (yielding : bool) (action : (_, _, _, err, defect, int, unit, _, (_, _, _, err, defect, int, unit) prim) with_fiber_action) : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber, (_, _, _, err, defect, int, unit) frame_event) iter =
-  let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 -> let _x_7 = _y_4 @ _y_6 in
-  let _x_8 = ({ machine = _y_2; fiber = _y_3; yielding = yielding; outcome = _y_5; nested = _x_7 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+  let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 -> let _x_7 = _y_3 @ _y_6 in
+  let _x_8 = ({ machine = _y_5; fiber = _y_4; yielding = yielding; outcome = _y_2; nested = _x_7 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
   _x_8 in
   match (action : (_, _, _, _, _, _, _, _, _) with_fiber_action) with
     | WithFiberAction_fork (program_9, options_10) -> (match (options_10 : fork_options) with
@@ -12062,10 +12114,10 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
                                   let _x_24 = evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_0_spec_1__red_arg__lam_0 fst_21 _x_23 in
                                   let _x_25 = Effect4_machine_outcome_continue_ in
                                   if daemon then (let _x_29 = [] in
-                                    _jp_1 fst_19 _x_24 snd_22 _x_25 _x_29) else (let _x_26 = Cmd_trackChild (id, snd_17) in
+                                    _jp_1 _x_25 snd_22 _x_24 fst_19 _x_29) else (let _x_26 = Cmd_trackChild (id, snd_17) in
                                     let _x_27 = [] in
                                     let _x_28 = _x_26 :: _x_27 in
-                                    _jp_1 fst_19 _x_24 snd_22 _x_25 _x_28))))))) in
+                                    _jp_1 _x_25 snd_22 _x_24 fst_19 _x_28))))))) in
           if daemon then _jp_11 m else (match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
               | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; armed = armed; state = state; trace = trace; stuck = stuck; _ } -> (let _x_30 = true in
                 let _x_31 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = _x_30; armed = armed; state = state; trace = trace; stuck = stuck } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
@@ -12675,11 +12727,11 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
   (* LCNF mono: Effect4.Program.exitScoped (root : Effect4.Program.Eff Effect4.Program.NativeOp) (m : Effect4.Machine.RunMachine Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx Effect4.Machine.Stores (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (f : Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (yielding : Bool) (exit : Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) : Effect4.Machine.Iter Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx Effect4.Machine.Stores (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) *)
   let program_exit_scoped (root : native_op eff) (m : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) run_machine) (f : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber) run_fiber) (yielding : bool) (exit_ : (val_, err, defect, int, unit) exit_) : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) iter =
   match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; _ } -> (let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 _y_7 _y_8 _y_9 _y_10 -> let _x_11 = ({ current = _y_10; stack = _y_2; interruptible = _y_4; interrupted_cause = _y_6; deferred_interrupt = _y_9 } : (_, _, _, _, _, _, _) frame_fiber) in
-      let _x_12 = ({ id = id; frame = _x_11; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = _y_7; prevent_yield = _y_3; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = _y_5 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; _ } -> (let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 _y_7 _y_8 _y_9 _y_10 -> let _x_11 = ({ current = _y_10; stack = _y_4; interruptible = _y_5; interrupted_cause = _y_9; deferred_interrupt = _y_6 } : (_, _, _, _, _, _, _) frame_fiber) in
+      let _x_12 = ({ id = id; frame = _x_11; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = _y_8; prevent_yield = _y_7; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = _y_2 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
       let _x_13 = Effect4_machine_outcome_continue_ in
       let _x_14 = [] in
-      let _x_15 = ({ machine = _y_8; fiber = _x_12; yielding = yielding; outcome = _x_13; nested = _x_14 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+      let _x_15 = ({ machine = _y_3; fiber = _x_12; yielding = yielding; outcome = _x_13; nested = _x_14 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
       _x_15 in
       let _x_16 = sh_machine_completed_exits m in
       let _x_17 = [] in
@@ -12705,13 +12757,13 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
                                         | fst_33, snd_34 -> (let m_2 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = fst_33; trace = trace; stuck = stuck } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
                                           match snd_34 with
                                             | None -> (let _x_35 = prim_of_exit exit_ in
-                                              _jp_1 stack prevent_yield interruptible previous_25 interrupted_cause max_ops_before_yield m_2 deferred_interrupt _x_35)
+                                              _jp_1 previous_25 m_2 stack interruptible deferred_interrupt prevent_yield max_ops_before_yield interrupted_cause _x_35)
                                             | Some val__36 -> (let _x_37 = RunEvent_finalizerProgram (id, finalizer_23, exit_) in
                                               let _x_38 = _x_37 :: _x_17 in
                                               let _x_39 = sh_machine_emit m_2 _x_38 in
                                               let _x_40 = program_embed val__36 in
                                               let _x_41 = finalizer_code interp exit_ _x_40 in
-                                              _jp_1 stack prevent_yield interruptible previous_25 interrupted_cause max_ops_before_yield _x_39 deferred_interrupt _x_41)))))))
+                                              _jp_1 previous_25 _x_39 stack interruptible deferred_interrupt prevent_yield max_ops_before_yield interrupted_cause _x_41)))))))
                     | _ -> (let _x_42 = evaluate_prim_at_program_exit_scoped_spec_0 interp m f yielding in
                       _x_42))
                 | _ -> (let _x_43 = evaluate_prim_at_program_exit_scoped_spec_0 interp m f yielding in

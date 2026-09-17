@@ -364,10 +364,13 @@ let () =
   print_endline "";
 
   (* -------------------------------------------------------------- 1. the byte goldens *)
-  print_endline "== 1. ocaml/eff/goldens: the 37 byte goldens (fuel 1000) ==";
+  print_endline "== 1. ocaml/eff/goldens: the byte goldens (fuel 1000) ==";
   let goldens, grep = Corpora.goldens () in
   show_report grep;
-  check "the byte corpus decodes: 51 programs" (List.length goldens = 51);
+  (* no pinned count: every byte golden found decodes, and there is at least one *)
+  check
+    (Printf.sprintf "the byte corpus decodes: all %d programs found" grep.Corpora.lr_found)
+    (goldens <> [] && List.length goldens = grep.Corpora.lr_found);
   let tg = run_corpus "goldens" goldens tapes_for_bytes_random in
   verdict "goldens" tg;
 

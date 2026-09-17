@@ -44,6 +44,7 @@ let children (f : family) (c : int) : (int * family) list =
   | Eff, 25 -> [ (2, Eff) ] (* provideService *)
   | Eff, 26 -> [ (1, Eff); (2, Eff) ] (* catchIf *)
   | Eff, 27 -> [ (2, Eff); (3, Eff) ] (* select *)
+  | Eff, 28 -> [ (5, Eff) ] (* iterate *)
   | Stmts, 1 -> [ (0, Stmt); (1, Stmts) ] (* cons *)
   | Stmt, 0 -> [ (0, Eff) ] (* bindYield *)
   | Stmt, 1 -> [ (0, Eff) ] (* yieldDiscard *)
@@ -131,6 +132,7 @@ let child (n : node) (i : int) : node option =
   | N_eff (Eff_types.Eff_catchIf (_, _, a2)), 1 -> Some (N_eff a2)
   | N_eff (Eff_types.Eff_select (_, _, a2, _)), 0 -> Some (N_eff a2)
   | N_eff (Eff_types.Eff_select (_, _, _, a3)), 1 -> Some (N_eff a3)
+  | N_eff (Eff_types.Eff_iterate (_, _, _, _, _, a5)), 0 -> Some (N_eff a5)
   | N_stmts (Eff_types.Stmts_cons (a0, _)), 0 -> Some (N_stmt a0)
   | N_stmts (Eff_types.Stmts_cons (_, a1)), 1 -> Some (N_stmts a1)
   | N_stmt (Eff_types.Stmt_bindYield a0), 0 -> Some (N_eff a0)
@@ -188,6 +190,7 @@ let witnesses : node list = [
   N_eff (Eff_types.Eff_provideService ({ Eff_types.service_key_name = { Eff_types.service_name_value = 1 }; service_key_service = { Eff_types.service_type_code_value = 1 } }, (Eff_types.Term_var 2), (Eff_types.Eff_succeed (Eff_types.Term_var 3))));
   N_eff (Eff_types.Eff_catchIf ((Eff_types.Term_var 1), (Eff_types.Eff_succeed (Eff_types.Term_var 2)), (Eff_types.Eff_succeed (Eff_types.Term_var 3))));
   N_eff (Eff_types.Eff_select ((Eff_types.Term_var 1), (Eff_types.Decision_bool), (Eff_types.Eff_succeed (Eff_types.Term_var 3)), (Eff_types.Eff_succeed (Eff_types.Term_var 4))));
+  N_eff (Eff_types.Eff_iterate ((Eff_types.Ty_never), (Eff_types.Term_var 2), (Eff_types.Term_var 3), (Eff_types.Term_var 4), (Eff_types.Term_var 5), (Eff_types.Eff_succeed (Eff_types.Term_var 6))));
   N_stmts (Eff_types.Stmts_nil);
   N_stmts (Eff_types.Stmts_cons ((Eff_types.Stmt_bindYield (Eff_types.Eff_succeed (Eff_types.Term_var 1))), (Eff_types.Stmts_cons ((Eff_types.Stmt_bindYield (Eff_types.Eff_succeed (Eff_types.Term_var 2))), (Eff_types.Stmts_nil)))));
   N_stmt (Eff_types.Stmt_bindYield (Eff_types.Eff_succeed (Eff_types.Term_var 1)));

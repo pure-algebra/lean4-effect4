@@ -100,6 +100,8 @@ def codesOf (c : HostConfig) : TypeReason → List Nat
   -- is not assignable (2345); a `t ? a : b` on a non-Boolean is accepted by TypeScript.
   | .notSelectable _ _ => [2345]
   | .stepNotCursor _ _ => []
+  -- `let aN: T = initial` with an initial outside `T`: not assignable (2322).
+  | .initialNotCursor _ _ => [2322]
   | .notFiber _ => [2345]
   | .scopeExpected _ => [2345]
   | .natExpected _ => [2345]

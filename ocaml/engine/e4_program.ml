@@ -117,6 +117,24 @@ let check_manifest path =
 (* ------------------------------------------------------------------ the conversion *)
 
 module Make (A : PROGRAM_TYPES) = struct
+  let rec of_ty : Eff_types.ty -> A.ty = function
+    | Eff_types.Ty_never -> A.Ty_never
+    | Eff_types.Ty_unit -> A.Ty_unit
+    | Eff_types.Ty_nat -> A.Ty_nat
+    | Eff_types.Ty_int -> A.Ty_int
+    | Eff_types.Ty_string -> A.Ty_string
+    | Eff_types.Ty_bool -> A.Ty_bool
+    | Eff_types.Ty_handle h -> A.Ty_handle h
+    | Eff_types.Ty_option a -> A.Ty_option (of_ty a)
+    | Eff_types.Ty_list a -> A.Ty_list (of_ty a)
+    | Eff_types.Ty_prod (a, b) -> A.Ty_prod (of_ty a, of_ty b)
+    | Eff_types.Ty_except (a, b) -> A.Ty_except (of_ty a, of_ty b)
+    | Eff_types.Ty_exitOf (a, b) -> A.Ty_exitOf (of_ty a, of_ty b)
+    | Eff_types.Ty_causeOf a -> A.Ty_causeOf (of_ty a)
+    | Eff_types.Ty_fiberOf (a, b) -> A.Ty_fiberOf (of_ty a, of_ty b)
+    | Eff_types.Ty_union (a, b) -> A.Ty_union (of_ty a, of_ty b)
+    | Eff_types.Ty_lit s -> A.Ty_lit s
+
   let of_lit : Eff_types.lit -> A.lit = function
     | Eff_types.Lit_unit -> A.Lit_unit
     | Eff_types.Lit_nat n -> A.Lit_nat n
@@ -222,6 +240,8 @@ module Make (A : PROGRAM_TYPES) = struct
       A.Eff_select (of_term t, of_decision d, of_eff a, of_eff b)
     | Eff_types.Eff_whileLoop (t1, t2, t3, e) ->
       A.Eff_whileLoop (of_term t1, of_term t2, of_term t3, of_eff e)
+    | Eff_types.Eff_iterate (c, t1, t2, t3, t4, e) ->
+      A.Eff_iterate (of_ty c, of_term t1, of_term t2, of_term t3, of_term t4, of_eff e)
     | Eff_types.Eff_yieldNow n -> A.Eff_yieldNow n
     | Eff_types.Eff_callback (op, t) -> A.Eff_callback (of_native_op op, of_term t)
     | Eff_types.Eff_awaitFiber (t, m) -> A.Eff_awaitFiber (of_term t, of_observer_mode m)
@@ -380,6 +400,7 @@ module Make (A : PROGRAM_TYPES) = struct
     | A.Eff_provideService _ -> 25
     | A.Eff_catchIf _ -> 26
     | A.Eff_select _ -> 27
+    | A.Eff_iterate _ -> 28
 
   let ctor_index_stmt : 'op A.stmt -> int = function
     | A.Stmt_bindYield _ -> 0 | A.Stmt_yieldDiscard _ -> 1 | A.Stmt_ret _ -> 2

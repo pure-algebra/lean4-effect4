@@ -788,7 +788,7 @@
             "provideLayer",
             "service",
             "provideService",
-            "catchIf", "select"
+            "catchIf", "select", "iterate"
           ]
         },
         {
@@ -820,7 +820,7 @@
             "provideLayer",
             "service",
             "provideService",
-            "catchIf", "select"
+            "catchIf", "select", "iterate"
           ]
         },
         {
@@ -856,6 +856,41 @@
           ]
         },
         {
+          "name": "Effect4.Program.loopResultAt",
+          "mode": "default",
+          "cover": [
+            "succeed",
+            "fail",
+            "failCause",
+            "yieldError",
+            "sync",
+            "suspend",
+            "perform",
+            "bind",
+            "gen",
+            "catchCause",
+            "matchCause",
+            "onExit",
+            "exit",
+            "uninterruptible",
+            "interruptible",
+            "branch",
+            "whileLoop",
+            "yieldNow",
+            "callback",
+            "awaitFiber",
+            "withFiber",
+            "scoped",
+            "acquireRelease",
+            "provideLayer",
+            "service",
+            "provideService",
+            "catchIf",
+            "select"
+          ],
+          "note": "Only `iterate` has a result term; every other form, `whileLoop` included, finishes a loop with unit."
+        },
+        {
           "name": "Effect4.Program.contEOf",
           "mode": "default",
           "cover": [
@@ -885,7 +920,7 @@
             "provideLayer",
             "service",
             "provideService",
-            "select"
+            "select", "iterate"
           ]
         },
         {
@@ -925,7 +960,7 @@
             "branch",
             "whileLoop",
             "provideLayer",
-            "select"
+            "select", "iterate"
           ]
         },
         {
@@ -957,7 +992,7 @@
             "provideLayer",
             "service",
             "provideService",
-            "catchIf", "select"
+            "catchIf", "select", "iterate"
           ]
         },
         {
@@ -989,7 +1024,7 @@
             "acquireRelease",
             "service",
             "provideService",
-            "catchIf", "select"
+            "catchIf", "select", "iterate"
           ]
         },
         {
@@ -1019,7 +1054,7 @@
             "provideLayer",
             "service",
             "provideService",
-            "catchIf", "select"
+            "catchIf", "select", "iterate"
           ]
         },
         {
@@ -1055,7 +1090,7 @@
             "provideLayer",
             "service",
             "provideService",
-            "catchIf", "select"
+            "catchIf", "select", "iterate"
           ]
         },
         {
@@ -1075,7 +1110,7 @@
             "provideLayer",
             "service",
             "provideService",
-            "catchIf"
+            "catchIf", "iterate"
           ],
           "note": "The existing classifier now lives in Program/Fragment and is reachable from the runtime API. These constructors remain outside the fragment; moving the owner does not widen admission."
         }

@@ -364,6 +364,18 @@ mutual
       let b ← effTy sig (env ++ [cursor]) body
       let s ← termTy sig (env ++ [cursor, b.answer]) step
       if t = .bool ∧ s = cursor then some ⟨.unit, b.error, b.requires⟩ else none
+    -- `iterate`: the cursor is typed at its annotation; `initial` and `step` are under it by
+    -- subsumption (both sides normalized, as the annotation is stored raw), so the body, the
+    -- test and the result see one cursor type across every round. The answer is `result`'s.
+    | .iterate cursor initial test step result body => do
+      let c0 ← termTy sig env initial
+      let t ← termTy sig (env ++ [cursor]) test
+      let b ← effTy sig (env ++ [cursor]) body
+      let c1 ← termTy sig (env ++ [cursor, b.answer]) step
+      let d ← termTy sig (env ++ [cursor]) result
+      if t = .bool ∧ Ty.sub c0.normalize cursor.normalize = true
+          ∧ Ty.sub c1.normalize cursor.normalize = true
+        then some ⟨d, b.error, b.requires⟩ else none
     | .yieldNow _ => some (EffTy.pure .unit)
     -- Same domain check as `perform` (DI-54). The kind check is not a domain check: an
     -- out-of-range external index has the placeholder's `kind = .program`, but a *supplied*
@@ -697,7 +709,8 @@ mutual
     | .onExit _ _ | .exit _ | .uninterruptible _ | .interruptible _ | .branch _ _ _
     | .whileLoop _ _ _ _ | .yieldNow _ | .callback _ _ | .awaitFiber _ _
     | .withFiber _ | .scoped _ | .acquireRelease _ _
-    | .provideLayer _ _ _ | .service _ | .provideService _ _ _ | .select _ _ _ _ => by
+    | .provideLayer _ _ _ | .service _ | .provideService _ _ _ | .select _ _ _ _
+    | .iterate _ _ _ _ _ _ => by
       simp only [Eff.weaken, effTy, termTy_weaken, causeTy_weaken, Term.weaken_eq_lit,
         catchIfError_weaken, List.append_assoc, List.cons_append, effTy_weaken, stmtsTy_weaken,
         actionTy_weaken]

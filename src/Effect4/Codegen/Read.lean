@@ -806,6 +806,9 @@ mutual
     -- `select` prints (`branch`'s image, `optionCase`, `caseTag`) and is read back by the
     -- generic reader from the template table (R5); this reader leaves it outside its domain
     | .select _ _ _ _ => false
+    -- `iterate` prints (`reduce`'s shape, with the cursor's annotation) and is read back by
+    -- the generic reader with the annotation grammar (R5); outside this reader's domain
+    | .iterate _ _ _ _ _ _ => false
     | .whileLoop initial test step body =>
       initial.scoped n && test.scoped (n + 1) && step.scoped (n + 2)
         && readable sig spell (n + 1) body
@@ -1390,6 +1393,10 @@ theorem print_not_cond {sig : Signature Op} {n : Nat} {e : Eff Op} {t a b : Expr
   case catchIf test body handler =>
     by_cases ht : test = .lit (.bool true) <;> simp [print, ht, bind_eq_ok] at hp
   case select s d a0 a1 => cases d <;> simp [print, bind_eq_ok] at hp
+  case iterate c i t s r b =>
+    simp only [print, bind_eq_ok] at hp
+    obtain ⟨_, _, hp⟩ := hp
+    split at hp <;> cases hp
   case awaitFiber f m => cases m <;> simp [print] at hp
   case withFiber act =>
     cases act
@@ -1875,6 +1882,7 @@ theorem read_print {sig : Signature Op} {spell : String → List String → Opti
     simp [headOf_lit .suspend "Effect.suspend" rfl, readTerm_printTerm test h1,
       read_print hl thenB h2 ha, read_print hl elseB h3 hb]
   | .select _ _ _ _, hr, _ => by simp [readable] at hr
+  | .iterate _ _ _ _ _ _, hr, _ => by simp [readable] at hr
   | .whileLoop initial test step body, hr, hp => by
     simp only [readable, Bool.and_eq_true] at hr
     obtain ⟨⟨⟨h1, h2⟩, h3⟩, h4⟩ := hr
@@ -3295,6 +3303,7 @@ mutual
     match program with
     | .yieldError _ => rfl
     | .select _ _ _ _ => by simp only [Eff.weaken, readable]
+    | .iterate _ _ _ _ _ _ => by simp only [Eff.weaken, readable]
     | .succeed _ | .fail _ | .failCause _ | .sync _ | .suspend _ | .perform _ _
     | .bind _ _ | .gen _ | .catchCause _ _ | .catchIf _ _ _ | .matchCause _ _ _ | .onExit _ _ | .exit _
     | .uninterruptible _ | .interruptible _ | .branch _ _ _ | .whileLoop _ _ _ _
@@ -3395,6 +3404,7 @@ mutual
       obtain ⟨b, hb⟩ := print_readable sig spell n elseB hs.2
       exact ⟨_, by simp only [print, ha, hb] <;> rfl⟩
     | .select _ _ _ _ => by simp [readable] at hr
+    | .iterate _ _ _ _ _ _ => by simp [readable] at hr
     | .whileLoop _ _ _ body => by
       obtain ⟨b, hb⟩ := print_readable sig spell (n + 1) body (Bool.and_eq_true_iff.mp hr).2
       exact ⟨_, by simp only [print, hb] <;> rfl⟩

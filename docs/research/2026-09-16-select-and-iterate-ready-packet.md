@@ -356,6 +356,17 @@ Brief §4 as written: `| iterate (cursorTy : Ty) (initial test step result : Ter
 
 The printed annotation needs no carrier change either: the pinned carrier has `letDefinite (name) (type)` and `assign`, so `let aN: T; aN = initial;` is two existing statements, and the readers recognize the pair. The plan's annotation grammar (§3.8) and F3's reader still apply to `T`.
 
+**Landed (2026-09-17).** `Eff.iterate (cursorTy) (initial test step result) (body)`, appended after `select` (ordinal 28, no stored bytes move). What is in the tree:
+
+- Typing: the arm as written above with `Ty.sub … = true` on both normalized sides; `HasTy.iterate`, `inv_iterate`, the `effTy_sound` and `effTy_complete` arms; the blame arm with one new refusal, `initialNotCursor` (diagnostic 2322), beside `stepNotCursor` and `predicateNotBool`.
+- Compile and reference: no new frame and no interface change beyond the two-field cut. `loopAt` answers `(test, step, body)` for both loop forms; `loopResultAt` answers an `iterate`'s result term; `loopFinishAt` (and the reference's `loopFinishRAt`) is what `loopNextAt`'s false branch finishes with: the result over the last cursor, the wrong shape when it does not evaluate, `unit` for a `whileLoop`. `suspendBodyAt` and `denoteR` enter the same `Prim.whileLoop` frame. `intro_iterate`, `loopFinishAt_means`, `loopFinishAt_keys`, `raceSites_loopFinishAt` are the four new lemmas; every other loop proof is unchanged.
+- Print: `reduce`'s shape, `Effect.suspend(() => { let aN: T = initial; return Effect.map(Effect.whileLoop({…}), () => result) })`, using the carrier's `letInit` with a type (no `letDefinite` pair was needed). `Effect.map` is a new reserved head, refused by both readers until R5; `readable` is `false` for `iterate`.
+- Generated: one row in `binders.json` gives `Node.binders`, `Node.child`, the fold, `scopedAt` and the authoring lift `iterate cursor answer cursorTy initial test step result body`. `Ty` moved before `Eff` in the derived canonical group because `Eff` now holds a type.
+- Faces: two goldens (`pIterate` answers 3, `pIterateAnswer` answers 7, both typed `nat`); `make check` and `make check-ocaml` green, 0 divergences over the three engines. The OCaml subterm table and the carrier rows needed no hand edit; `e4_program.ml` needed the arm and a `ty` translation.
+- Contract: `Test/Program/CompileContract.lean` (`## iterate`): the answers, a loop under a binder with a ref, an annotation wider than the initial cursor, the two refusals, and a result that does not evaluate being the wrong shape.
+
+Owed: the budgeted meaning below (§2.3), and the lanes not run (`check-host`: truth, corpus, target).
+
 ### 2.3 Nesting and the unfinished carrier
 
 The plan's preflight correction is right that `iter_uniform` says nothing about nesting; it is cursor transport (the unit loop's migration, an index cursor against an `uncons` cursor). Nesting is carried by the answer type, not by a loop law. The budgeted meaning of the loop-bearing fragment answers `Option ExitV`, the plan's `(Option Exit × Stores)` once run through the store handler: `none` is "the budget ended inside", with every store written so far retained.

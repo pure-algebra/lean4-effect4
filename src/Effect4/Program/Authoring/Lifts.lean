@@ -196,6 +196,16 @@ def selectTag {Op : Type} (payload : String) (rest : String) (scrutinee : TermSr
     let x3 ← arm1 (env.push [rest]) (p ++ [1])
     .ok (.select x0 (.tag tag) x2 x3)
 
+/-- `Effect4.Program.Eff.iterate`: `test` sees `cursor`; `step` sees `cursor`, `answer`; `result` sees `cursor`; `body` sees `cursor`. -/
+def iterate {Op : Type} (cursor : String) (answer : String) (cursorTy : Effect4.Program.Ty) (initial : TermSrc) (test : TermSrc) (step : TermSrc) (result : TermSrc) (body : Src Op) : Src Op :=
+  fun env p => do
+    let x1 ← initial env p
+    let x2 ← test (env.push [cursor]) p
+    let x3 ← step (env.push [cursor, answer]) p
+    let x4 ← result (env.push [cursor]) p
+    let x5 ← body (env.push [cursor]) (p ++ [0])
+    .ok (.iterate cursorTy x1 x2 x3 x4 x5)
+
 /-- `Effect4.Program.ActionTerm.fork`. -/
 def Action.fork {Op : Type} (program : Src Op) (options : Effect4.Supervision.ForkOptions) : ActionSrc Op :=
   fun env p => do
@@ -373,6 +383,7 @@ def Cause.both (left : CauseSrc) (right : CauseSrc) : CauseSrc :=
 #print axioms Effect4.Program.Authoring.selectBool
 #print axioms Effect4.Program.Authoring.selectOption
 #print axioms Effect4.Program.Authoring.selectTag
+#print axioms Effect4.Program.Authoring.iterate
 #print axioms Effect4.Program.Authoring.Action.fork
 #print axioms Effect4.Program.Authoring.Action.forkIn
 #print axioms Effect4.Program.Authoring.Action.forkScoped

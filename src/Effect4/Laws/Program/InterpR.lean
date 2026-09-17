@@ -266,6 +266,16 @@ where
     | some (.failure cause) => (folded, .halt cause)
     | none => (folded, .resume (denoteR root e q) (.gen { p with env := env } (pc ++ [1]) bind))
 
+/-- The reference of `loopFinishAt` (`Compile.lean`): an `iterate`'s result over the last
+cursor, the wrong shape when it does not evaluate; `unit` for a `whileLoop`. -/
+def loopFinishRAt (root : NativeEff) (p : Point) (cursor : Val) : RProgram :=
+  match loopResultAt root p with
+  | some result =>
+    match evalTerm (p.env ++ [cursor]) result with
+    | some answer => .pure (.success answer)
+    | none => .pure badShapeExit
+  | none => .pure (.success Val.unit)
+
 /-- The reference of `loopNextAt` (`Compile.lean`): the same test on the same cursor, the body
 as the denotation at `childWith 0 cursor`, the wrong shape as `badShapeExit`. -/
 def loopNextRAt (root : NativeEff) (p : Point) (cursor : Val) : LoopNext Val RProgram :=
@@ -273,7 +283,7 @@ def loopNextRAt (root : NativeEff) (p : Point) (cursor : Val) : LoopNext Val RPr
   | some (test, _, _) =>
     match evalTerm (p.env ++ [cursor]) test with
     | some (Val.bool true) => .continue cursor (denoteAt root (p.childWith 0 cursor))
-    | some (Val.bool false) => .finish (.pure (.success Val.unit))
+    | some (Val.bool false) => .finish (loopFinishRAt root p cursor)
     | _ => .finish (.pure badShapeExit)
   | none => .finish (.pure badShapeExit)
 

@@ -612,6 +612,9 @@ def compileEff : NativeEff → Point → NCode
       -- Effect.whileLoop({…}) })` (`Codegen/Print.lean:158-168`): the cursor is read and the
       -- `While` frame built when the suspension runs, by `suspendBodyAt`.
       | .whileLoop _ _ _ _ => Prim.suspend (EffThunk.body p)
+      -- `iterate` prints inside the same suspension (`let aN: T = initial` then the loop
+      -- mapped to `result`), so it is the same frame, read by `suspendBodyAt`.
+      | .iterate _ _ _ _ _ _ => Prim.suspend (EffThunk.body p)
       | .yieldNow priority => Prim.yieldNowWith priority
       -- The shared dispatcher, unchanged in what it compiles for every operation.
       | .callback register request => asyncRoute register request p
@@ -1259,7 +1262,7 @@ complement (every other head's body is `compileEff` at the point), which stops b
 moment the match gains an arm this list lacks. -/
 def Eff.suspendDecided {Op : Type} : Eff Op → Bool
   | .suspend _ | .branch _ _ _ | .select _ _ _ _ | .gen _ | .whileLoop _ _ _ _
-  | .provideLayer _ _ _ => true
+  | .iterate _ _ _ _ _ _ | .provideLayer _ _ _ => true
   | _ => false
 
 /-- What a `suspend` thunk returns: a body compiled at its point, a branch decided by its
@@ -1290,6 +1293,10 @@ def suspendBodyAt (root : NativeEff) : EffThunk → NCode
         match evalTerm p.env initial with
         | some cursor => Prim.whileLoop (EffName.loop p) cursor
         | none => badShape
+      | some (Node.eff (.iterate _ initial _ _ _ _)) =>
+        match evalTerm p.env initial with
+        | some cursor => Prim.whileLoop (EffName.loop p) cursor
+        | none => badShape
       -- `scopedWith` (`internal/effect.ts:3966-3967`): the scope made, the rest named
       | some (Node.eff (.provideLayer _ _ _)) =>
         Prim.onSuccess
@@ -1308,21 +1315,39 @@ def suspendBodyAt (root : NativeEff) : EffThunk → NCode
       (EffName.releaseUnder (Point.ofCapture capture) capture.ctx exit)
   | _ => Prim.failure (Cause.die Defect.notImplemented)
 
-/-- The loop at a point: its test, step and body terms. -/
+/-- The loop at a point, `whileLoop` or `iterate`: its test, step and body. -/
 def loopAt (root : NativeEff) (p : Point) : Option (Term × Term × NativeEff) :=
   match Node.at_ (Node.eff root) p.path with
   | some (Node.eff (.whileLoop _ test step body)) => some (test, step, body)
+  | some (Node.eff (.iterate _ _ test step _ body)) => some (test, step, body)
   | _ => none
 
+/-- The result term of the loop at a point: an `iterate`'s; a `whileLoop` has none. -/
+def loopResultAt (root : NativeEff) (p : Point) : Option Term :=
+  match Node.at_ (Node.eff root) p.path with
+  | some (Node.eff (.iterate _ _ _ _ result _)) => some result
+  | _ => none
+
+/-- What the loop at a point answers at the cursor that failed its test: an `iterate`'s
+`result` over that cursor, the wrong shape when it does not evaluate (the raw-program rule,
+with no silent fallback); `unit` for a `whileLoop` (`exitVoid`, rc.112). -/
+def loopFinishAt (root : NativeEff) (p : Point) (cursor : Val) : NCode :=
+  match loopResultAt root p with
+  | some result =>
+    match evalTerm (p.env ++ [cursor]) result with
+    | some answer => Prim.success answer
+    | none => badShape
+  | none => Prim.success Val.unit
+
 /-- The loop at a point from a cursor: the test chooses the body at `childWith 0 cursor` or
-the loop's end (`exitVoid`, rc.112); a test that is not a Boolean, or no loop at the point,
+the loop's end (`loopFinishAt`); a test that is not a Boolean, or no loop at the point,
 is the wrong shape. The one place the raw-program rule of a loop's test lives. -/
 def loopNextAt (root : NativeEff) (p : Point) (cursor : Val) : LoopNext Val NCode :=
   match loopAt root p with
   | some (test, _, _) =>
     match evalTerm (p.env ++ [cursor]) test with
     | some (Val.bool true) => .continue cursor (resolve root (p.childWith 0 cursor))
-    | some (Val.bool false) => .finish (Prim.success Val.unit)
+    | some (Val.bool false) => .finish (loopFinishAt root p cursor)
     | _ => .finish badShape
   | none => .finish badShape
 

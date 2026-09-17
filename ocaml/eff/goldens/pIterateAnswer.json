@@ -1,0 +1,1 @@
+["iterate",["nat"],["lit",["nat",0]],["app","isZero",["cons",["var",0],["nil"]]],["var",1],["var",0],["succeed",["lit",["nat",7]]]]

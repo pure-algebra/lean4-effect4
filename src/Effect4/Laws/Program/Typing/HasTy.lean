@@ -197,6 +197,19 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
       HasTy sig (env ++ [cursor]) body b →
       termTy sig (env ++ [cursor, b.answer]) step = some cursor →
       HasTy sig env (.whileLoop initial test step body) ⟨.unit, b.error, b.requires⟩
+  /-- `iterate`: the cursor has its annotation's type in the test, the body, the step and the
+  result; `initial` and `step` are under the annotation by subsumption, which is what carries
+  the cursor's membership across rounds (`hasTy_sub`). The answer is the result's type. -/
+  | iterate {env : TyEnv} {cursor : Ty} {initial test step result : Term} {body : Eff Op}
+      {c0 c1 d : Ty} {b : EffTy} :
+      termTy sig env initial = some c0 →
+      termTy sig (env ++ [cursor]) test = some .bool →
+      HasTy sig (env ++ [cursor]) body b →
+      termTy sig (env ++ [cursor, b.answer]) step = some c1 →
+      termTy sig (env ++ [cursor]) result = some d →
+      Ty.sub c0.normalize cursor.normalize = true →
+      Ty.sub c1.normalize cursor.normalize = true →
+      HasTy sig env (.iterate cursor initial test step result body) ⟨d, b.error, b.requires⟩
   /-- `Effect.yieldNowWith` (`:982-990`): pure `void`, whatever the priority. -/
   | yieldNow {env : TyEnv} (priority : Nat) :
       HasTy sig env (.yieldNow priority) (EffTy.pure .unit)

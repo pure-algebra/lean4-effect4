@@ -30,6 +30,7 @@
     { "ctor": "Effect4.Program.Eff.matchCause", "slots": ["value", "cause"], "args": [[], [0], [1]] },
     { "ctor": "Effect4.Program.Eff.onExit", "slots": ["exit"], "args": [[], [0]] },
     { "ctor": "Effect4.Program.Eff.whileLoop", "slots": ["cursor", "answer"], "args": [[], [0], [0, 1], [0]] },
+    { "ctor": "Effect4.Program.Eff.iterate", "slots": ["cursor", "answer"], "args": [[], [], [0], [0, 1], [0], [0]] },
     { "ctor": "Effect4.Program.Eff.acquireRelease", "slots": ["resource", "exit"], "args": [[], [0, 1]] },
     { "ctor": "Effect4.Program.LayerTerm.effect", "slots": [], "args": [[], []], "closed": [1] },
     { "ctor": "Effect4.Program.LayerTerm.effectDiscard", "slots": [], "args": [[]], "closed": [0] },

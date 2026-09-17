@@ -469,6 +469,9 @@ theorem suspendBodyAt_keys (root : NativeEff) (t : EffThunk) : nativeKeys (suspe
       · split
         · next cursor hcursor => sub_tac using (evalTerm_point_keys _ p cursor hcursor)
         · exact List.nil_subset _
+      · split
+        · next cursor hcursor => sub_tac using (evalTerm_point_keys _ p cursor hcursor)
+        · exact List.nil_subset _
       · sub_tac
       · exact compileEff_keys _ p
       · exact List.nil_subset _
@@ -579,6 +582,20 @@ theorem prepareExternalAnswer_minted (table : RowTable) (current : Option NCode)
           exact externalValue_minted row.answer s ids value result allocated hv hok
     · exact fallback
 
+/-- A loop's end names the point's handles and the cursor's: an `iterate`'s result evaluates
+inside that environment. -/
+theorem loopFinishAt_keys (root : NativeEff) (q : Point) (cursor : Val) :
+    nativeKeys (loopFinishAt root q cursor) ⊆ q.keys ++ cursor.keys := by
+  unfold loopFinishAt
+  split
+  · split
+    · next answer hanswer =>
+      have hk := evalTerm_keys _ (q.env ++ [cursor]) answer hanswer
+      simp only [List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.append_nil] at hk
+      sub_tac using hk
+    · exact List.nil_subset _
+  · exact List.nil_subset _
+
 /-- A loop's next move names the point's handles and the cursor's: the body is a resolved
 child point, the final code an exit or the wrong shape. -/
 theorem loopNextAt_keys (root : NativeEff) (q : Point) (cursor : Val) :
@@ -598,7 +615,7 @@ theorem loopNextAt_keys (root : NativeEff) (q : Point) (cursor : Val) :
         | true =>
           simp only [loopNextKeys]
           sub_tac using (resolve_keys root (q.childWith 0 cursor))
-        | false => exact List.nil_subset _
+        | false => exact loopFinishAt_keys root q cursor
       | _ => exact List.nil_subset _
 
 /-- Resuming a loop names the point's handles, the cursor's and the answer's: the stepped

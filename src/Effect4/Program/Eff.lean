@@ -365,6 +365,15 @@ mutual
     `Option.match(s, { onNone, onSome })` or the prelude's `caseTag(s, "A", hit, miss)` by
     the decision. -/
     | select (scrutinee : Term) (decision : Decision) (arm0 arm1 : Eff Op)
+    /-- The loop with a typed cursor and an answer, `whileLoop` generalized (the `select` and
+    `iterate` packet §2.2): `initial` over the environment; `test` and `result` over the
+    environment extended by the cursor, `body` a program over the same; `step` over the cursor
+    and the body's answer. `cursorTy` is the cursor's annotation: `initial` and `step` are
+    typed under it by subsumption, so a cursor whose members grow (an accumulator that starts
+    empty) has one stated type. The loop answers `result` at the cursor that failed the test.
+    Printed as `reduce`'s shape at the pin (`internal/effect.ts:4450-4470`): a suspension that
+    declares `let aN: T = initial` and maps the `Effect.whileLoop` to `result`. -/
+    | iterate (cursorTy : Ty) (initial test step result : Term) (body : Eff Op)
   /-- A statement of a generator body. -/
   inductive Stmt (Op : Type)
     /-- `const aN = yield* e`: binds the answer as the next variable. -/
@@ -542,17 +551,18 @@ def arms : List Arm :=
   , ⟨"service", "Effect.service", "Prim.onSuccess (Prim.withFiber getCtx) serviceLookup", "internal/effect.ts:2059"⟩
   , ⟨"provideService", "Effect.provideService", "updateContext region", "internal/effect.ts:2202-2232"⟩
   , ⟨"catchIf", "Effect.catchIf", "Prim.onFailure", "internal/effect.ts:2798-2810"⟩
-  , ⟨"select", "t ? a : b | Option.match | caseTag (by the decision)", "decided by the environment at compile", "select packet §1"⟩ ]
+  , ⟨"select", "t ? a : b | Option.match | caseTag (by the decision)", "decided by the environment at compile", "select packet §1"⟩
+  , ⟨"iterate", "Effect.suspend(() => { let aN: T = initial; return Effect.map(Effect.whileLoop(…), () => result) })", "Prim.whileLoop, finished by the result term", "internal/effect.ts:4450-4470"⟩ ]
 
 /-- Every constructor has one arm and every arm one constructor. -/
 def constructorNames : List String :=
   ["succeed", "fail", "failCause", "yieldError", "sync", "suspend", "perform", "bind", "gen",
    "catchCause", "matchCause", "onExit", "exit", "uninterruptible", "interruptible", "branch",
    "whileLoop", "yieldNow", "callback", "awaitFiber", "withFiber", "scoped", "acquireRelease",
-   "provideLayer", "service", "provideService", "catchIf", "select"]
+   "provideLayer", "service", "provideService", "catchIf", "select", "iterate"]
 
 #guard arms.map Arm.constructor = constructorNames
-#guard constructorNames.length = 28
+#guard constructorNames.length = 29
 
 /-! ## The separation-4 receipts: first-order, decidable throughout -/
 

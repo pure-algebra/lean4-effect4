@@ -620,6 +620,11 @@ theorem compileEff_whileLoop (initial test step : Term) (b : NativeEff) (hf : p.
     compileEff (.whileLoop initial test step b) p = Prim.suspend (EffThunk.body p) := by
   simp only [compileEff, hf]
 
+theorem compileEff_iterate (cursor : Ty) (initial test step result : Term) (b : NativeEff)
+    (hf : p.fuel = k + 1) :
+    compileEff (.iterate cursor initial test step result b) p = Prim.suspend (EffThunk.body p) := by
+  simp only [compileEff, hf]
+
 theorem compileEff_yieldNow (priority : Nat) (hf : p.fuel = k + 1) :
     compileEff (.yieldNow priority) p = Prim.yieldNowWith priority := by
   simp only [compileEff, hf]

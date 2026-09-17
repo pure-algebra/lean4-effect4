@@ -206,6 +206,8 @@ partial def effV : Eff NativeOp → V
   | .branch t a b => .ctor ``Eff.branch [termV t, effV a, effV b]
   | .select s d a0 a1 => .ctor ``Eff.select [termV s, decisionV d, effV a0, effV a1]
   | .whileLoop i t s b => .ctor ``Eff.whileLoop [termV i, termV t, termV s, effV b]
+  | .iterate c i t s r b =>
+    .ctor ``Eff.iterate [tyV c, termV i, termV t, termV s, termV r, effV b]
   | .yieldNow p => .ctor ``Eff.yieldNow [.nat p]
   | .callback op r => .ctor ``Eff.callback [opV op, termV r]
   | .awaitFiber f m => .ctor ``Eff.awaitFiber [termV f, modeV m]
@@ -304,6 +306,12 @@ def pOnExit : P := .onExit (.succeed (n 1)) (.yieldNow 1)
 def pExit : P := .exit (.fail (n 9))
 def pMasks : P := .uninterruptible (.interruptible (.succeed (n 1)))
 def pBranch : P := .branch (.lit (.bool true)) (.succeed (n 1)) (.fail (n 2))
+/-- Count to three and answer the cursor. -/
+def pIterate : P :=
+  .iterate .nat (n 0) (.app "lt" (ts [v 0, n 3])) (.app "succ" (ts [v 0])) (v 0) (.yieldNow 0)
+/-- One round: the step takes the body's answer, and the result is the stepped cursor. -/
+def pIterateAnswer : P :=
+  .iterate .nat (n 0) (.app "isZero" (ts [v 0])) (v 1) (v 0) (.succeed (n 7))
 def pSelectBool : P := .select (.lit (.bool false)) .bool (.succeed (n 1)) (.succeed (n 2))
 def pSelectOption : P :=
   .catchCause (.fail (n 7))
@@ -440,6 +448,7 @@ def corpus : List (String × P) :=
   , ("pYieldError", pYieldError), ("pSync", pSync), ("pSuspend", pSuspend), ("pMatch", pMatch)
   , ("pOnExit", pOnExit), ("pExit", pExit), ("pMasks", pMasks), ("pBranch", pBranch)
   , ("pSelectBool", pSelectBool), ("pSelectOption", pSelectOption), ("pSelectTag", pSelectTag)
+  , ("pIterate", pIterate), ("pIterateAnswer", pIterateAnswer)
   , ("pCallback", pCallback), ("pJoin", pJoin), ("pScoped", pScoped), ("pAcquire", pAcquire)
   , ("pPair", pPair), ("pStmts", pStmts), ("pActions", pActions), ("pOps", pOps)
   , ("pIll", pIll), ("pIllRet", pIllRet), ("pIllReq", pIllReq), ("pIllBreak", pIllBreak)

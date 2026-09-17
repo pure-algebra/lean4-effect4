@@ -1205,6 +1205,14 @@ def HooksNoRace (interp : PrimInterp EffName EffThunk Val Err Defect FiberId Ann
   (∀ name cause, raceSites (interp.cancelThenFail name cause) = []) ∧
   (∀ name value, stepRaceSites (interp.iterNext name value).2 = [])
 
+/-- A loop's end registers no race: an exit or the wrong shape. -/
+theorem raceSites_loopFinishAt (root : NativeEff) (q : Point) (cursor : Val) :
+    raceSites (loopFinishAt root q cursor) = [] := by
+  unfold loopFinishAt
+  split
+  · split <;> rfl
+  · rfl
+
 /-- A loop's next move registers no race: its body is a resolved point, its final code an
 exit or the wrong shape. -/
 theorem raceSites_loopNextAt (root : NativeEff) (q : Point) (cursor : Val) :
@@ -1213,7 +1221,7 @@ theorem raceSites_loopNextAt (root : NativeEff) (q : Point) (cursor : Val) :
   split
   · split
     · exact raceSites_resolve _ _
-    · rfl
+    · exact raceSites_loopFinishAt _ _ _
     · rfl
   · rfl
 

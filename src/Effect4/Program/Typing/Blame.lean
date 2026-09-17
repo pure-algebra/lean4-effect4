@@ -45,6 +45,8 @@ inductive TypeReason
   | notSelectable (decision : Decision) (scrutinee : Ty)
   /-- A loop's step does not have the cursor's type. -/
   | stepNotCursor (step cursor : Ty)
+  /-- An `iterate`'s initial cursor is not under the cursor's annotation. -/
+  | initialNotCursor (initial cursor : Ty)
   | notFiber (t : Ty)
   | scopeExpected (t : Ty)
   | natExpected (t : Ty)
@@ -78,6 +80,7 @@ def TypeReason.head : TypeReason → String
   | .predicateNotBool _ => "predicateNotBool"
   | .notSelectable _ _ => "notSelectable"
   | .stepNotCursor _ _ => "stepNotCursor"
+  | .initialNotCursor _ _ => "initialNotCursor"
   | .notFiber _ => "notFiber"
   | .scopeExpected _ => "scopeExpected"
   | .natExpected _ => "natExpected"
@@ -196,6 +199,28 @@ mutual
               if t = .bool ∧ s = cursor then none
               else if t = .bool then some ⟨p, .stepNotCursor s cursor⟩
               else some ⟨p, .predicateNotBool t⟩
+    | .iterate cursor initial test step result body =>
+      match termTy sig env initial with
+      | none => some ⟨p, .term initial⟩
+      | some c0 =>
+        match termTy sig (env ++ [cursor]) test with
+        | none => some ⟨p, .term test⟩
+        | some t =>
+          match effTy sig (env ++ [cursor]) body with
+          | none => explainEff sig (env ++ [cursor]) (p ++ [0]) body
+          | some b =>
+            match termTy sig (env ++ [cursor, b.answer]) step with
+            | none => some ⟨p, .term step⟩
+            | some c1 =>
+              match termTy sig (env ++ [cursor]) result with
+              | none => some ⟨p, .term result⟩
+              | some _ =>
+                if t = .bool ∧ Ty.sub c0.normalize cursor.normalize = true
+                    ∧ Ty.sub c1.normalize cursor.normalize = true then none
+                else if ¬ t = .bool then some ⟨p, .predicateNotBool t⟩
+                else if Ty.sub c0.normalize cursor.normalize = true then
+                  some ⟨p, .stepNotCursor c1 cursor⟩
+                else some ⟨p, .initialNotCursor c0 cursor⟩
     | .yieldNow _ => none
     | .callback register request =>
       match termTy sig env request with
@@ -527,6 +552,11 @@ mutual
   | .select s d a b =>
     intro env pth
     have ih_a := explainEff_none_iff sig a
+    have ih_b := explainEff_none_iff sig b
+    simp only [explainEff, effTy, termRefusal, explainStmts, stmtsTy, explainEffs, effsTy, explainAction, actionTy, explainLayer, layerTy, explainLayers, layersTy]
+    (repeat' split) <;> simp_all [EffTy.joinAnswer]
+  | .iterate c i t s r b =>
+    intro env pth
     have ih_b := explainEff_none_iff sig b
     simp only [explainEff, effTy, termRefusal, explainStmts, stmtsTy, explainEffs, effsTy, explainAction, actionTy, explainLayer, layerTy, explainLayers, layersTy]
     (repeat' split) <;> simp_all [EffTy.joinAnswer]

@@ -1257,6 +1257,8 @@ const headReaders: Record<Head, HeadReader> = {
   // until the generic reader from the template table reads them back (R5)
   "optionCase": () => arity("optionCase"),
   "caseTag": () => arity("caseTag"),
+  // `iterate`'s printed head (the loop mapped to its result): refused the same way until R5
+  "Effect.map": () => arity("Effect.map"),
   "Effect.withFiber": readRunIn,
   // Keys and layers are read only in their dedicated argument positions, as in Read.lean
   "Context.Service": notHere("Context.Service"),

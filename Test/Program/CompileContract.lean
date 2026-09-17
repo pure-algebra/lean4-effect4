@@ -602,6 +602,66 @@ def pLoopBare : NativeEff :=
 #guard exitOf (replayEff (.exit (.exit pSucceed)) [evaluateRoot]) 0
   = some (Exit.success (Val.exitOk (Val.exitOk (Val.nat 42))))
 
+/-! ## `iterate`
+
+`whileLoop` with a typed cursor and an answer: the same loop frame, finished by the result
+term over the cursor that failed the test (the `select` and `iterate` packet §2.2). -/
+
+/-- Count to three and answer the cursor. -/
+def pIterateCount : NativeEff :=
+  .iterate .nat (.lit (.nat 0)) (.app "lt" (.cons (.var 0) (.cons (.lit (.nat 3)) .nil)))
+    (.app "succ" (.cons (.var 0) .nil)) (.var 0) (.succeed (.lit .unit))
+
+/-- One round: the step takes the body's answer; the result is the stepped cursor. -/
+def pIterateAnswer : NativeEff :=
+  .iterate .nat (.lit (.nat 0)) (.app "isZero" (.cons (.var 0) .nil)) (.var 1) (.var 0)
+    (.succeed (.lit (.nat 7)))
+
+/-- The loop under a binder, with stores: the cursor is `var 1`, the ref `var 0`. -/
+def pIterateRef : NativeEff :=
+  .bind (.perform .refMake (.lit (.nat 0)))
+    (.iterate .nat (.lit (.nat 0))
+      (.app "lt" (.cons (.var 1) (.cons (.lit (.nat 3)) .nil)))
+      (.app "succ" (.cons (.var 1) .nil)) (.var 1)
+      (.perform (.refUpdate FnName.incr) (.var 0)))
+
+/-- The annotation is wider than the initial cursor: `nat` under `nat | string`. -/
+def pIterateWide : NativeEff :=
+  .iterate (.union .nat .string) (.lit (.nat 0)) (.lit (.bool false)) (.var 0) (.var 0)
+    (.succeed (.lit .unit))
+
+/-- Refused: the initial cursor is outside the annotation. -/
+def pIterateIllInitial : NativeEff :=
+  .iterate .string (.lit (.nat 0)) (.lit (.bool false)) (.var 0) (.var 0) (.succeed (.lit .unit))
+
+/-- Refused: the step (the body's answer, a string) is outside the annotation. -/
+def pIterateIllStep : NativeEff :=
+  .iterate .nat (.lit (.nat 0)) (.lit (.bool false)) (.var 1) (.var 0)
+    (.succeed (.lit (.str "x")))
+
+/-- A result that does not evaluate (an open variable) is the wrong shape, not `unit`. -/
+def pIterateBadResult : NativeEff :=
+  .iterate .nat (.lit (.nat 0)) (.lit (.bool false)) (.var 0) (.var 9) (.succeed (.lit .unit))
+
+#guard (typeOf nativeSignature pIterateCount).map (·.answer) = some .nat
+#guard (typeOf nativeSignature pIterateAnswer).map (·.answer) = some .nat
+#guard (typeOf nativeSignature pIterateRef).map (·.answer) = some .nat
+#guard (typeOf nativeSignature pIterateWide).map (·.answer) = some (.union .nat .string)
+#guard (typeOf nativeSignature pIterateIllInitial).isNone
+#guard (typeOf nativeSignature pIterateIllStep).isNone
+#guard (typeOf nativeSignature pIterateBadResult).isNone
+
+#guard compile pIterateCount fuel = Prim.suspend (EffThunk.body (rootPoint fuel))
+#guard suspendBodyAt pIterateCount (EffThunk.body (rootPoint fuel)) =
+  Prim.whileLoop (EffName.loop (rootPoint fuel)) (Val.nat 0)
+#guard exitOf (replayEff pIterateCount [evaluateRoot]) 0 = some (Exit.success (Val.nat 3))
+#guard exitOf (replayEff pIterateAnswer [evaluateRoot]) 0 = some (Exit.success (Val.nat 7))
+#guard exitOf (replayEff pIterateRef [evaluateRoot]) 0 = some (Exit.success (Val.nat 3))
+#guard refsOf (replayEff pIterateRef [evaluateRoot]) = [Val.nat 3]
+#guard exitOf (replayEff pIterateWide [evaluateRoot]) 0 = some (Exit.success (Val.nat 0))
+#guard exitOf (replayEff pIterateBadResult [evaluateRoot]) 0 =
+  exitOf (replayEff (.succeed (.var 9)) [evaluateRoot]) 0
+
 /-! ## Control by value: `branch` and `choose` -/
 
 def pBranchTrue : NativeEff :=

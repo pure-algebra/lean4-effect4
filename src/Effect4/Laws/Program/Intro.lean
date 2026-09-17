@@ -72,6 +72,7 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
   | branch t a b => exact intro_branch root n t a b p k hf hpos hwc h ih
   | select s d a0 a1 => exact intro_select root n s d a0 a1 p k hf hpos hwc hwcw h ih
   | whileLoop i t s b => exact intro_whileLoop root i t s b p k hf hpos h
+  | iterate c i t s r b => exact intro_iterate root c i t s r b p k hf hpos h
   | yieldNow priority => exact intro_yieldNow root priority p k hf hpos
   | callback op r => exact intro_callback root op r p k hf hpos
   | awaitFiber t mode => exact intro_awaitFiber root t mode p k hf hpos

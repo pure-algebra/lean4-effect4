@@ -174,6 +174,20 @@ theorem inv_whileLoop (sig : Signature Op) (env : TyEnv) (initial test step : Te
   refine Option.of_triple ?_
   simp only [effTy]; mvcgen; all_goals simp_all
 
+theorem inv_iterate (sig : Signature Op) (env : TyEnv) (cursor : Ty)
+    (initial test step result : Term) (body : Eff Op) :
+    ∀ t, effTy sig env (.iterate cursor initial test step result body) = some t →
+      ∃ c0 c1 d b, termTy sig env initial = some c0 ∧
+        termTy sig (env ++ [cursor]) test = some .bool ∧
+        effTy sig (env ++ [cursor]) body = some b ∧
+        termTy sig (env ++ [cursor, b.answer]) step = some c1 ∧
+        termTy sig (env ++ [cursor]) result = some d ∧
+        Ty.sub c0.normalize cursor.normalize = true ∧
+        Ty.sub c1.normalize cursor.normalize = true ∧
+        t = ⟨d, b.error, b.requires⟩ := by
+  refine Option.of_triple ?_
+  simp only [effTy]; mvcgen; all_goals simp_all
+
 theorem inv_yieldNow (sig : Signature Op) (env : TyEnv) (priority : Nat) :
     ∀ t, effTy sig env (.yieldNow priority) = some t → t = EffTy.pure .unit := by
   refine Option.of_triple ?_

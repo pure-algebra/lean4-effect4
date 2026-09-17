@@ -351,6 +351,7 @@ type eff =
   | Eff_provideService of service_key * term * eff
   | Eff_catchIf of term * eff * eff
   | Eff_select of term * decision * eff * eff
+  | Eff_iterate of ty * term * term * term * term * eff
 
 and stmt =
   | Stmt_bindYield of eff
@@ -431,6 +432,7 @@ let ctor_index_eff : eff -> int = function
   | Eff_provideService _ -> 25
   | Eff_catchIf _ -> 26
   | Eff_select _ -> 27
+  | Eff_iterate _ -> 28
 let ctor_name_eff : eff -> string = function
   | Eff_succeed _ -> "succeed"
   | Eff_fail _ -> "fail"
@@ -460,7 +462,8 @@ let ctor_name_eff : eff -> string = function
   | Eff_provideService _ -> "provideService"
   | Eff_catchIf _ -> "catchIf"
   | Eff_select _ -> "select"
-let ctor_names_eff : string list = ["succeed"; "fail"; "failCause"; "yieldError"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "branch"; "whileLoop"; "yieldNow"; "callback"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"]
+  | Eff_iterate _ -> "iterate"
+let ctor_names_eff : string list = ["succeed"; "fail"; "failCause"; "yieldError"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "branch"; "whileLoop"; "yieldNow"; "callback"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"]
 
 let ctor_index_stmt : stmt -> int = function
   | Stmt_bindYield _ -> 0

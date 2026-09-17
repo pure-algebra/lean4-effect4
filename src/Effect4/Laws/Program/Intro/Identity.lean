@@ -80,6 +80,7 @@ theorem prepareR_denoteR (root : NativeEff) (e : NativeEff) (p : Point)
       | branch t a b => rw [denoteR_branch root t a b p hpos]; rfl
       | select s d a0 a1 => rw [denoteR_select root s d a0 a1 p hpos]; rfl
       | whileLoop i t s b => rw [denoteR_whileLoop root i t s b p hpos]; rfl
+      | iterate c i t s r b => rw [denoteR_iterate root c i t s r b p hpos]; rfl
       | yieldNow priority => rw [denoteR_yieldNow root priority hpos]; rfl
       | callback op r =>
         rw [denoteR_callback root op r hpos]

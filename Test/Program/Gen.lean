@@ -413,7 +413,7 @@ def refusedActions : List String :=
 
 /-- Forms kept out of the round-trip corpus until R5 (`docs/research/2026-09-16-select-and-iterate-ready-packet.md` §1.8). -/
 def pendingEffs : List String :=
-  ["select"]
+  ["select", "iterate"]
 
 /-- Every case the printer accepts and the corpus currently draws. -/
 def expected : List (Head × String) :=

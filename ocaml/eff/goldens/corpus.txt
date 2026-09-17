@@ -19,6 +19,8 @@ pBranch	well-typed
 pSelectBool	well-typed
 pSelectOption	well-typed
 pSelectTag	well-typed
+pIterate	well-typed
+pIterateAnswer	well-typed
 pCallback	well-typed
 pJoin	well-typed
 pScoped	well-typed

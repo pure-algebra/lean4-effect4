@@ -93,6 +93,15 @@ theorem suspendBodyAt_whileLoop {root : NativeEff} {q : Point} {k : Nat} {i t s 
        | none => badShape) := by
   simp [suspendBodyAt, hf, h]; rfl
 
+theorem suspendBodyAt_iterate {root : NativeEff} {q : Point} {k : Nat} {c : Ty}
+    {i t s r : Term} {b : NativeEff} (hf : q.fuel = k + 1)
+    (h : Node.at_ (Node.eff root) q.path = some (Node.eff (.iterate c i t s r b))) :
+    suspendBodyAt root (EffThunk.body q) =
+      (match evalTerm q.env i with
+       | some cursor => Prim.whileLoop (EffName.loop q) cursor
+       | none => badShape) := by
+  simp [suspendBodyAt, hf, h]; rfl
+
 /-- `resolve` and `denoteAt` are related at every point of weight below the induction's bound. -/
 theorem resolve_intro_of (root : NativeEff) (n : Nat)
     (ih : ∀ (p : Point), p.weight < n → ∀ (e : NativeEff),

@@ -6,7 +6,7 @@
 --    Effect4.Supervision.MaskMode Effect4.Supervision.ObserverMode Effect4.Program.Decision \
 --    Effect4.Program.NativeOp Effect4.Supervision.ForkOptions Effect4.Program.Term \
 --    Effect4.Program.CauseTerm Effect4.ServiceName Effect4.ServiceTypeCode Effect4.ServiceKey \
---    Effect4.Program.Eff@Effect4.Program.NativeOp Effect4.Program.Ty Effect4.Program.RowKind \
+--    Effect4.Program.Ty Effect4.Program.Eff@Effect4.Program.NativeOp Effect4.Program.RowKind \
 --    Effect4.Program.RowShape Effect4.Program.Registration Effect4.Program.Row \
 --    Effect4.Program.EffTy
 -- Carriers read from: Effect4.Program.Eff, Effect4.Machine.Stores, Effect4.Machine.Scope, Effect4.Machine.Supervision, Effect4.Program.Decision, Effect4.Program.Native, Effect4.Machine.Key, Effect4.Program.Ty, Effect4.Program.Typing
@@ -1016,6 +1016,217 @@ instance instCanonical : Canonical (_root_.Effect4.ServiceKey) :=
 
 end ServiceKeyC
 
+namespace TyC
+
+/-! The block's shapes: every member by name, every field through its own type. -/
+
+def TyShape : Shape :=
+  .sum "Ty"
+     [("never", []),
+      ("unit", []),
+      ("nat", []),
+      ("int", []),
+      ("string", []),
+      ("bool", []),
+      ("handle", [("target", (shape _root_.String).root)]),
+      ("option", [("inner", .named "Ty")]),
+      ("list", [("inner", .named "Ty")]),
+      ("prod", [("left", .named "Ty"), ("right", .named "Ty")]),
+      ("except", [("error", .named "Ty"), ("value", .named "Ty")]),
+      ("exitOf", [("value", .named "Ty"), ("error", .named "Ty")]),
+      ("causeOf", [("error", .named "Ty")]),
+      ("fiberOf", [("value", .named "Ty"), ("error", .named "Ty")]),
+      ("union", [("left", .named "Ty"), ("right", .named "Ty")]),
+      ("lit", [("value", (shape _root_.String).root)])]
+
+/-- One table for the block, then the field types' tables. -/
+def defs : List (String × Shape) :=
+  ("Ty", TyShape) ::
+    ((shape _root_.String).defs)
+
+mutual
+def toValTy : _root_.Effect4.Program.Ty → Val
+  | .never => .ctor 0 []
+  | .unit => .ctor 1 []
+  | .nat => .ctor 2 []
+  | .int => .ctor 3 []
+  | .string => .ctor 4 []
+  | .bool => .ctor 5 []
+  | .handle a0 => .ctor 6 [Canonical.toVal a0]
+  | .option a0 => .ctor 7 [toValTy a0]
+  | .list a0 => .ctor 8 [toValTy a0]
+  | .prod a0 a1 => .ctor 9 [toValTy a0, toValTy a1]
+  | .except a0 a1 => .ctor 10 [toValTy a0, toValTy a1]
+  | .exitOf a0 a1 => .ctor 11 [toValTy a0, toValTy a1]
+  | .causeOf a0 => .ctor 12 [toValTy a0]
+  | .fiberOf a0 a1 => .ctor 13 [toValTy a0, toValTy a1]
+  | .union a0 a1 => .ctor 14 [toValTy a0, toValTy a1]
+  | .lit a0 => .ctor 15 [Canonical.toVal a0]
+end
+
+/-! The structural readers. Exactness is bought by the re-encode guard, so a reader
+only has to be a left inverse. -/
+
+mutual
+def rawTy : Val → Option (_root_.Effect4.Program.Ty)
+  | .ctor 0 [] => some .never
+  | .ctor 1 [] => some .unit
+  | .ctor 2 [] => some .nat
+  | .ctor 3 [] => some .int
+  | .ctor 4 [] => some .string
+  | .ctor 5 [] => some .bool
+  | .ctor 6 [v0] =>
+    match Canonical.ofVal (α := _root_.String) v0 with
+    | some a0 => some (.handle a0)
+    | _ => none
+  | .ctor 7 [v0] =>
+    match rawTy v0 with
+    | some a0 => some (.option a0)
+    | _ => none
+  | .ctor 8 [v0] =>
+    match rawTy v0 with
+    | some a0 => some (.list a0)
+    | _ => none
+  | .ctor 9 [v0, v1] =>
+    match rawTy v0, rawTy v1 with
+    | some a0, some a1 => some (.prod a0 a1)
+    | _, _ => none
+  | .ctor 10 [v0, v1] =>
+    match rawTy v0, rawTy v1 with
+    | some a0, some a1 => some (.except a0 a1)
+    | _, _ => none
+  | .ctor 11 [v0, v1] =>
+    match rawTy v0, rawTy v1 with
+    | some a0, some a1 => some (.exitOf a0 a1)
+    | _, _ => none
+  | .ctor 12 [v0] =>
+    match rawTy v0 with
+    | some a0 => some (.causeOf a0)
+    | _ => none
+  | .ctor 13 [v0, v1] =>
+    match rawTy v0, rawTy v1 with
+    | some a0, some a1 => some (.fiberOf a0 a1)
+    | _, _ => none
+  | .ctor 14 [v0, v1] =>
+    match rawTy v0, rawTy v1 with
+    | some a0, some a1 => some (.union a0 a1)
+    | _, _ => none
+  | .ctor 15 [v0] =>
+    match Canonical.ofVal (α := _root_.String) v0 with
+    | some a0 => some (.lit a0)
+    | _ => none
+  | _ => none
+end
+
+mutual
+theorem rawTy_toValTy (a : _root_.Effect4.Program.Ty) :
+    rawTy (toValTy a) = some a := by
+  cases a with
+  | «never» => rfl
+  | «unit» => rfl
+  | «nat» => rfl
+  | «int» => rfl
+  | «string» => rfl
+  | «bool» => rfl
+  | «handle» a0 =>
+    simp [toValTy, rawTy, Canonical.ofVal_toVal]
+  | «option» a0 =>
+    simp [toValTy, rawTy, rawTy_toValTy a0]
+  | «list» a0 =>
+    simp [toValTy, rawTy, rawTy_toValTy a0]
+  | «prod» a0 a1 =>
+    simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+  | «except» a0 a1 =>
+    simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+  | «exitOf» a0 a1 =>
+    simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+  | «causeOf» a0 =>
+    simp [toValTy, rawTy, rawTy_toValTy a0]
+  | «fiberOf» a0 a1 =>
+    simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+  | «union» a0 a1 =>
+    simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+  | «lit» a0 =>
+    simp [toValTy, rawTy, Canonical.ofVal_toVal]
+termination_by structural a
+end
+
+/-! The table memberships and the field lifts, one per member and one per field type. -/
+
+theorem mem_Ty : ("Ty", TyShape) ∈ defs := List.Mem.head _
+
+/-- Into the appended tail of the block's table. -/
+theorem mem_tail {p : String × Shape}
+    (h : p ∈ (shape _root_.String).defs) : p ∈ defs :=
+  List.Mem.tail _ (h)
+
+theorem lift_String (x : _root_.String) :
+    acceptsIn defs (shape _root_.String).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_tail (hp))
+    _ _ (Canonical.fits x)
+
+mutual
+theorem fitsTy (a : _root_.Effect4.Program.Ty) :
+    acceptsIn defs (.named "Ty") (toValTy a) = true := by
+  apply accepts_named_of_mem _ _ TyShape _ mem_Ty
+  cases a with
+  | «never» =>
+    exact acceptsAt_sum _ _ _ 0 "never" [] [] rfl (acceptsFields_nil _)
+  | «unit» =>
+    exact acceptsAt_sum _ _ _ 1 "unit" [] [] rfl (acceptsFields_nil _)
+  | «nat» =>
+    exact acceptsAt_sum _ _ _ 2 "nat" [] [] rfl (acceptsFields_nil _)
+  | «int» =>
+    exact acceptsAt_sum _ _ _ 3 "int" [] [] rfl (acceptsFields_nil _)
+  | «string» =>
+    exact acceptsAt_sum _ _ _ 4 "string" [] [] rfl (acceptsFields_nil _)
+  | «bool» =>
+    exact acceptsAt_sum _ _ _ 5 "bool" [] [] rfl (acceptsFields_nil _)
+  | «handle» a0 =>
+    exact acceptsAt_sum _ _ _ 6 "handle" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
+  | «option» a0 =>
+    exact acceptsAt_sum _ _ _ 7 "option" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (fitsTy a0) (acceptsFields_nil _))
+  | «list» a0 =>
+    exact acceptsAt_sum _ _ _ 8 "list" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (fitsTy a0) (acceptsFields_nil _))
+  | «prod» a0 a1 =>
+    exact acceptsAt_sum _ _ _ 9 "prod" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (fitsTy a0)
+        (acceptsFields_cons _ _ _ _ _ _ (fitsTy a1) (acceptsFields_nil _)))
+  | «except» a0 a1 =>
+    exact acceptsAt_sum _ _ _ 10 "except" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (fitsTy a0)
+        (acceptsFields_cons _ _ _ _ _ _ (fitsTy a1) (acceptsFields_nil _)))
+  | «exitOf» a0 a1 =>
+    exact acceptsAt_sum _ _ _ 11 "exitOf" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (fitsTy a0)
+        (acceptsFields_cons _ _ _ _ _ _ (fitsTy a1) (acceptsFields_nil _)))
+  | «causeOf» a0 =>
+    exact acceptsAt_sum _ _ _ 12 "causeOf" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (fitsTy a0) (acceptsFields_nil _))
+  | «fiberOf» a0 a1 =>
+    exact acceptsAt_sum _ _ _ 13 "fiberOf" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (fitsTy a0)
+        (acceptsFields_cons _ _ _ _ _ _ (fitsTy a1) (acceptsFields_nil _)))
+  | «union» a0 a1 =>
+    exact acceptsAt_sum _ _ _ 14 "union" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (fitsTy a0)
+        (acceptsFields_cons _ _ _ _ _ _ (fitsTy a1) (acceptsFields_nil _)))
+  | «lit» a0 =>
+    exact acceptsAt_sum _ _ _ 15 "lit" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
+termination_by structural a
+end
+
+instance instCanonicalTy : Canonical (_root_.Effect4.Program.Ty) :=
+  ⟨⟨.named "Ty", defs⟩, toValTy, guarded toValTy rawTy,
+    fun a => guarded_toVal _ _ a (rawTy_toValTy a), fun h => guarded_exact h,
+    fitsTy⟩
+
+end TyC
+
 namespace EffC
 
 /-! The block's shapes: every member by name, every field through its own type. -/
@@ -1061,7 +1272,12 @@ def EffShape : Shape :=
         ("handler", .named "Eff")]),
       ("select", [("scrutinee", (shape _root_.Effect4.Program.Term).root),
         ("decision", (shape _root_.Effect4.Program.Decision).root), ("arm0", .named "Eff"),
-        ("arm1", .named "Eff")])]
+        ("arm1", .named "Eff")]),
+      ("iterate", [("cursorTy", (shape _root_.Effect4.Program.Ty).root),
+        ("initial", (shape _root_.Effect4.Program.Term).root),
+        ("test", (shape _root_.Effect4.Program.Term).root),
+        ("step", (shape _root_.Effect4.Program.Term).root),
+        ("result", (shape _root_.Effect4.Program.Term).root), ("body", .named "Eff")])]
 
 def StmtShape : Shape :=
   .sum "Stmt"
@@ -1137,6 +1353,7 @@ def defs : List (String × Shape) :=
       (shape _root_.Effect4.Program.NativeOp).defs ++ (shape _root_.Nat).defs ++
       (shape _root_.Effect4.Supervision.ObserverMode).defs ++ (shape _root_.Bool).defs ++
       (shape _root_.Effect4.ServiceKey).defs ++ (shape _root_.Effect4.Program.Decision).defs ++
+      (shape _root_.Effect4.Program.Ty).defs ++
       (shape _root_.Effect4.Supervision.ForkOptions).defs ++
       (shape (@_root_.Option (_root_.Effect4.Program.Term))).defs ++
       (shape _root_.Effect4.Program.Lit).defs ++ (shape (@_root_.List (_root_.Nat))).defs)
@@ -1173,6 +1390,8 @@ def toValEff : @_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp) →
   | .catchIf a0 a1 a2 => .ctor 26 [Canonical.toVal a0, toValEff a1, toValEff a2]
   | .select a0 a1 a2 a3 => .ctor 27 [Canonical.toVal a0, Canonical.toVal a1, toValEff a2,
       toValEff a3]
+  | .iterate a0 a1 a2 a3 a4 a5 => .ctor 28 [Canonical.toVal a0, Canonical.toVal a1,
+      Canonical.toVal a2, Canonical.toVal a3, Canonical.toVal a4, toValEff a5]
 def toValStmt : @_root_.Effect4.Program.Stmt (_root_.Effect4.Program.NativeOp) → Val
   | .bindYield a0 => .ctor 0 [toValEff a0]
   | .yieldDiscard a0 => .ctor 1 [toValEff a0]
@@ -1343,6 +1562,14 @@ def rawEff : Val → Option (@_root_.Effect4.Program.Eff (_root_.Effect4.Program
         Canonical.ofVal (α := _root_.Effect4.Program.Decision) v1, rawEff v2, rawEff v3 with
     | some a0, some a1, some a2, some a3 => some (.select a0 a1 a2 a3)
     | _, _, _, _ => none
+  | .ctor 28 [v0, v1, v2, v3, v4, v5] =>
+    match Canonical.ofVal (α := _root_.Effect4.Program.Ty) v0,
+        Canonical.ofVal (α := _root_.Effect4.Program.Term) v1,
+        Canonical.ofVal (α := _root_.Effect4.Program.Term) v2,
+        Canonical.ofVal (α := _root_.Effect4.Program.Term) v3,
+        Canonical.ofVal (α := _root_.Effect4.Program.Term) v4, rawEff v5 with
+    | some a0, some a1, some a2, some a3, some a4, some a5 => some (.iterate a0 a1 a2 a3 a4 a5)
+    | _, _, _, _, _, _ => none
   | _ => none
 def rawStmt : Val → Option (@_root_.Effect4.Program.Stmt (_root_.Effect4.Program.NativeOp))
   | .ctor 0 [v0] =>
@@ -1558,6 +1785,8 @@ theorem rawEff_toValEff (a : @_root_.Effect4.Program.Eff (_root_.Effect4.Program
     simp [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a1, rawEff_toValEff a2]
   | «select» a0 a1 a2 a3 =>
     simp [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a2, rawEff_toValEff a3]
+  | «iterate» a0 a1 a2 a3 a4 a5 =>
+    simp [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a5]
 termination_by structural a
 theorem rawStmt_toValStmt (a : @_root_.Effect4.Program.Stmt (_root_.Effect4.Program.NativeOp)) :
     rawStmt (toValStmt a) = some a := by
@@ -1685,6 +1914,7 @@ theorem mem_tail {p : String × Shape}
       (shape _root_.Effect4.Program.NativeOp).defs ++ (shape _root_.Nat).defs ++
       (shape _root_.Effect4.Supervision.ObserverMode).defs ++ (shape _root_.Bool).defs ++
       (shape _root_.Effect4.ServiceKey).defs ++ (shape _root_.Effect4.Program.Decision).defs ++
+      (shape _root_.Effect4.Program.Ty).defs ++
       (shape _root_.Effect4.Supervision.ForkOptions).defs ++
       (shape (@_root_.Option (_root_.Effect4.Program.Term))).defs ++
       (shape _root_.Effect4.Program.Lit).defs ++
@@ -1694,41 +1924,46 @@ theorem mem_tail {p : String × Shape}
 theorem lift_Term (x : _root_.Effect4.Program.Term) :
     acceptsIn defs (shape _root_.Effect4.Program.Term).root (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset
-    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp)))))))))))))
+    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_CauseTerm (x : _root_.Effect4.Program.CauseTerm) :
     acceptsIn defs (shape _root_.Effect4.Program.CauseTerm).root (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset
-    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))))
+    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_NativeOp (x : _root_.Effect4.Program.NativeOp) :
     acceptsIn defs (shape _root_.Effect4.Program.NativeOp).root (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset
-    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))
+    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_Nat (x : _root_.Nat) :
     acceptsIn defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset
-    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))
+    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_ObserverMode (x : _root_.Effect4.Supervision.ObserverMode) :
     acceptsIn defs (shape _root_.Effect4.Supervision.ObserverMode).root
       (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset
-    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))
+    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))
     _ _ (Canonical.fits x)
 theorem lift_Bool (x : _root_.Bool) :
     acceptsIn defs (shape _root_.Bool).root (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset
-    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))
+    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))
     _ _ (Canonical.fits x)
 theorem lift_ServiceKey (x : _root_.Effect4.ServiceKey) :
     acceptsIn defs (shape _root_.Effect4.ServiceKey).root (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset
-    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))
+    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))
     _ _ (Canonical.fits x)
 theorem lift_Decision (x : _root_.Effect4.Program.Decision) :
     acceptsIn defs (shape _root_.Effect4.Program.Decision).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset
+    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))
+    _ _ (Canonical.fits x)
+theorem lift_Ty (x : _root_.Effect4.Program.Ty) :
+    acceptsIn defs (shape _root_.Effect4.Program.Ty).root (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset
     (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))
     _ _ (Canonical.fits x)
@@ -1865,6 +2100,14 @@ theorem fitsEff (a : @_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeO
         (acceptsFields_cons _ _ _ _ _ _ (lift_Decision a1)
           (acceptsFields_cons _ _ _ _ _ _ (fitsEff a2)
             (acceptsFields_cons _ _ _ _ _ _ (fitsEff a3) (acceptsFields_nil _)))))
+  | «iterate» a0 a1 a2 a3 a4 a5 =>
+    exact acceptsAt_sum _ _ _ 28 "iterate" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_Term a1)
+          (acceptsFields_cons _ _ _ _ _ _ (lift_Term a2)
+            (acceptsFields_cons _ _ _ _ _ _ (lift_Term a3)
+              (acceptsFields_cons _ _ _ _ _ _ (lift_Term a4)
+                (acceptsFields_cons _ _ _ _ _ _ (fitsEff a5) (acceptsFields_nil _)))))))
 termination_by structural a
 theorem fitsStmt (a : @_root_.Effect4.Program.Stmt (_root_.Effect4.Program.NativeOp)) :
     acceptsIn defs (.named "Stmt") (toValStmt a) = true := by
@@ -2067,217 +2310,6 @@ instance instCanonicalLayerTerms :
     fitsLayerTerms⟩
 
 end EffC
-
-namespace TyC
-
-/-! The block's shapes: every member by name, every field through its own type. -/
-
-def TyShape : Shape :=
-  .sum "Ty"
-     [("never", []),
-      ("unit", []),
-      ("nat", []),
-      ("int", []),
-      ("string", []),
-      ("bool", []),
-      ("handle", [("target", (shape _root_.String).root)]),
-      ("option", [("inner", .named "Ty")]),
-      ("list", [("inner", .named "Ty")]),
-      ("prod", [("left", .named "Ty"), ("right", .named "Ty")]),
-      ("except", [("error", .named "Ty"), ("value", .named "Ty")]),
-      ("exitOf", [("value", .named "Ty"), ("error", .named "Ty")]),
-      ("causeOf", [("error", .named "Ty")]),
-      ("fiberOf", [("value", .named "Ty"), ("error", .named "Ty")]),
-      ("union", [("left", .named "Ty"), ("right", .named "Ty")]),
-      ("lit", [("value", (shape _root_.String).root)])]
-
-/-- One table for the block, then the field types' tables. -/
-def defs : List (String × Shape) :=
-  ("Ty", TyShape) ::
-    ((shape _root_.String).defs)
-
-mutual
-def toValTy : _root_.Effect4.Program.Ty → Val
-  | .never => .ctor 0 []
-  | .unit => .ctor 1 []
-  | .nat => .ctor 2 []
-  | .int => .ctor 3 []
-  | .string => .ctor 4 []
-  | .bool => .ctor 5 []
-  | .handle a0 => .ctor 6 [Canonical.toVal a0]
-  | .option a0 => .ctor 7 [toValTy a0]
-  | .list a0 => .ctor 8 [toValTy a0]
-  | .prod a0 a1 => .ctor 9 [toValTy a0, toValTy a1]
-  | .except a0 a1 => .ctor 10 [toValTy a0, toValTy a1]
-  | .exitOf a0 a1 => .ctor 11 [toValTy a0, toValTy a1]
-  | .causeOf a0 => .ctor 12 [toValTy a0]
-  | .fiberOf a0 a1 => .ctor 13 [toValTy a0, toValTy a1]
-  | .union a0 a1 => .ctor 14 [toValTy a0, toValTy a1]
-  | .lit a0 => .ctor 15 [Canonical.toVal a0]
-end
-
-/-! The structural readers. Exactness is bought by the re-encode guard, so a reader
-only has to be a left inverse. -/
-
-mutual
-def rawTy : Val → Option (_root_.Effect4.Program.Ty)
-  | .ctor 0 [] => some .never
-  | .ctor 1 [] => some .unit
-  | .ctor 2 [] => some .nat
-  | .ctor 3 [] => some .int
-  | .ctor 4 [] => some .string
-  | .ctor 5 [] => some .bool
-  | .ctor 6 [v0] =>
-    match Canonical.ofVal (α := _root_.String) v0 with
-    | some a0 => some (.handle a0)
-    | _ => none
-  | .ctor 7 [v0] =>
-    match rawTy v0 with
-    | some a0 => some (.option a0)
-    | _ => none
-  | .ctor 8 [v0] =>
-    match rawTy v0 with
-    | some a0 => some (.list a0)
-    | _ => none
-  | .ctor 9 [v0, v1] =>
-    match rawTy v0, rawTy v1 with
-    | some a0, some a1 => some (.prod a0 a1)
-    | _, _ => none
-  | .ctor 10 [v0, v1] =>
-    match rawTy v0, rawTy v1 with
-    | some a0, some a1 => some (.except a0 a1)
-    | _, _ => none
-  | .ctor 11 [v0, v1] =>
-    match rawTy v0, rawTy v1 with
-    | some a0, some a1 => some (.exitOf a0 a1)
-    | _, _ => none
-  | .ctor 12 [v0] =>
-    match rawTy v0 with
-    | some a0 => some (.causeOf a0)
-    | _ => none
-  | .ctor 13 [v0, v1] =>
-    match rawTy v0, rawTy v1 with
-    | some a0, some a1 => some (.fiberOf a0 a1)
-    | _, _ => none
-  | .ctor 14 [v0, v1] =>
-    match rawTy v0, rawTy v1 with
-    | some a0, some a1 => some (.union a0 a1)
-    | _, _ => none
-  | .ctor 15 [v0] =>
-    match Canonical.ofVal (α := _root_.String) v0 with
-    | some a0 => some (.lit a0)
-    | _ => none
-  | _ => none
-end
-
-mutual
-theorem rawTy_toValTy (a : _root_.Effect4.Program.Ty) :
-    rawTy (toValTy a) = some a := by
-  cases a with
-  | «never» => rfl
-  | «unit» => rfl
-  | «nat» => rfl
-  | «int» => rfl
-  | «string» => rfl
-  | «bool» => rfl
-  | «handle» a0 =>
-    simp [toValTy, rawTy, Canonical.ofVal_toVal]
-  | «option» a0 =>
-    simp [toValTy, rawTy, rawTy_toValTy a0]
-  | «list» a0 =>
-    simp [toValTy, rawTy, rawTy_toValTy a0]
-  | «prod» a0 a1 =>
-    simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
-  | «except» a0 a1 =>
-    simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
-  | «exitOf» a0 a1 =>
-    simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
-  | «causeOf» a0 =>
-    simp [toValTy, rawTy, rawTy_toValTy a0]
-  | «fiberOf» a0 a1 =>
-    simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
-  | «union» a0 a1 =>
-    simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
-  | «lit» a0 =>
-    simp [toValTy, rawTy, Canonical.ofVal_toVal]
-termination_by structural a
-end
-
-/-! The table memberships and the field lifts, one per member and one per field type. -/
-
-theorem mem_Ty : ("Ty", TyShape) ∈ defs := List.Mem.head _
-
-/-- Into the appended tail of the block's table. -/
-theorem mem_tail {p : String × Shape}
-    (h : p ∈ (shape _root_.String).defs) : p ∈ defs :=
-  List.Mem.tail _ (h)
-
-theorem lift_String (x : _root_.String) :
-    acceptsIn defs (shape _root_.String).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_tail (hp))
-    _ _ (Canonical.fits x)
-
-mutual
-theorem fitsTy (a : _root_.Effect4.Program.Ty) :
-    acceptsIn defs (.named "Ty") (toValTy a) = true := by
-  apply accepts_named_of_mem _ _ TyShape _ mem_Ty
-  cases a with
-  | «never» =>
-    exact acceptsAt_sum _ _ _ 0 "never" [] [] rfl (acceptsFields_nil _)
-  | «unit» =>
-    exact acceptsAt_sum _ _ _ 1 "unit" [] [] rfl (acceptsFields_nil _)
-  | «nat» =>
-    exact acceptsAt_sum _ _ _ 2 "nat" [] [] rfl (acceptsFields_nil _)
-  | «int» =>
-    exact acceptsAt_sum _ _ _ 3 "int" [] [] rfl (acceptsFields_nil _)
-  | «string» =>
-    exact acceptsAt_sum _ _ _ 4 "string" [] [] rfl (acceptsFields_nil _)
-  | «bool» =>
-    exact acceptsAt_sum _ _ _ 5 "bool" [] [] rfl (acceptsFields_nil _)
-  | «handle» a0 =>
-    exact acceptsAt_sum _ _ _ 6 "handle" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
-  | «option» a0 =>
-    exact acceptsAt_sum _ _ _ 7 "option" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (fitsTy a0) (acceptsFields_nil _))
-  | «list» a0 =>
-    exact acceptsAt_sum _ _ _ 8 "list" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (fitsTy a0) (acceptsFields_nil _))
-  | «prod» a0 a1 =>
-    exact acceptsAt_sum _ _ _ 9 "prod" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (fitsTy a0)
-        (acceptsFields_cons _ _ _ _ _ _ (fitsTy a1) (acceptsFields_nil _)))
-  | «except» a0 a1 =>
-    exact acceptsAt_sum _ _ _ 10 "except" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (fitsTy a0)
-        (acceptsFields_cons _ _ _ _ _ _ (fitsTy a1) (acceptsFields_nil _)))
-  | «exitOf» a0 a1 =>
-    exact acceptsAt_sum _ _ _ 11 "exitOf" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (fitsTy a0)
-        (acceptsFields_cons _ _ _ _ _ _ (fitsTy a1) (acceptsFields_nil _)))
-  | «causeOf» a0 =>
-    exact acceptsAt_sum _ _ _ 12 "causeOf" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (fitsTy a0) (acceptsFields_nil _))
-  | «fiberOf» a0 a1 =>
-    exact acceptsAt_sum _ _ _ 13 "fiberOf" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (fitsTy a0)
-        (acceptsFields_cons _ _ _ _ _ _ (fitsTy a1) (acceptsFields_nil _)))
-  | «union» a0 a1 =>
-    exact acceptsAt_sum _ _ _ 14 "union" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (fitsTy a0)
-        (acceptsFields_cons _ _ _ _ _ _ (fitsTy a1) (acceptsFields_nil _)))
-  | «lit» a0 =>
-    exact acceptsAt_sum _ _ _ 15 "lit" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
-termination_by structural a
-end
-
-instance instCanonicalTy : Canonical (_root_.Effect4.Program.Ty) :=
-  ⟨⟨.named "Ty", defs⟩, toValTy, guarded toValTy rawTy,
-    fun a => guarded_toVal _ _ a (rawTy_toValTy a), fun h => guarded_exact h,
-    fitsTy⟩
-
-end TyC
 
 namespace RowKindC
 
@@ -2784,6 +2816,10 @@ end MetadataAcceptance
 #print axioms ProgramGen.ServiceKeyC.ofVal_exact
 #print axioms ProgramGen.ServiceKeyC.fits
 #print axioms ProgramGen.ServiceKeyC.instCanonical
+#print axioms ProgramGen.TyC.toValTy
+#print axioms ProgramGen.TyC.rawTy_toValTy
+#print axioms ProgramGen.TyC.fitsTy
+#print axioms ProgramGen.TyC.instCanonicalTy
 #print axioms ProgramGen.EffC.toValEff
 #print axioms ProgramGen.EffC.rawEff_toValEff
 #print axioms ProgramGen.EffC.fitsEff
@@ -2812,10 +2848,6 @@ end MetadataAcceptance
 #print axioms ProgramGen.EffC.rawLayerTerms_toValLayerTerms
 #print axioms ProgramGen.EffC.fitsLayerTerms
 #print axioms ProgramGen.EffC.instCanonicalLayerTerms
-#print axioms ProgramGen.TyC.toValTy
-#print axioms ProgramGen.TyC.rawTy_toValTy
-#print axioms ProgramGen.TyC.fitsTy
-#print axioms ProgramGen.TyC.instCanonicalTy
 #print axioms ProgramGen.RowKindC.toVal
 #print axioms ProgramGen.RowKindC.ofVal_toVal
 #print axioms ProgramGen.RowKindC.ofVal_exact

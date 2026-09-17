@@ -23,8 +23,8 @@ const refusal = (source: string): Refusal => {
 }
 
 describe("the profile", () => {
-  test("has the reader's 55 heads and one entry per NativeOp value", () => {
-    expect(heads.length).toBe(55)
+  test("has the reader's 56 heads and one entry per NativeOp value", () => {
+    expect(heads.length).toBe(56)
     expect(rows.length).toBe(55)
     expect(new Set(rows.map((e) => e.row.spelling)).size).toBe(22)
     expect(new Set(rows.map((e) => JSON.stringify(e.op))).size).toBe(55)
@@ -98,7 +98,7 @@ describe("rows: the shape the grammar could not decide", () => {
   })
   test("an unknown call in effect position is an unknown head, not a yielded atom application", () => {
     expect(refusal("add(1, 2)")).toEqual({ _tag: "unknownHead", name: "add" })
-    expect(refusal("Effect.map(1)")).toEqual({ _tag: "unknownHead", name: "Effect.map" })
+    expect(refusal("Effect.tap(1)")).toEqual({ _tag: "unknownHead", name: "Effect.tap" })
     expect(json("Effect.fail(add(1, 2))")).toBe('["fail",["app","add",["cons",["lit",["nat",1]],["cons",["lit",["nat",2]],["nil"]]]]]')
   })
 })
@@ -218,7 +218,9 @@ describe("heads out of position", () => {
     expect(refusal("Cause.fail(1)")).toEqual({ _tag: "unknownHead", name: "Cause.fail" })
   })
   test("an unknown Effect export is an unknown head in effect position", () => {
-    expect(refusal("Effect.map(Effect.succeed(1), (a0) => a0)")).toEqual({ _tag: "unknownHead", name: "Effect.map" })
+    expect(refusal("Effect.tap(Effect.succeed(1), (a0) => a0)")).toEqual({ _tag: "unknownHead", name: "Effect.tap" })
+    // `Effect.map` is `iterate`'s printed head since 2026-09-17: known, and refused here until R5
+    expect(refusal("Effect.map(Effect.succeed(1), (a0) => a0)")).toEqual({ _tag: "arity", head: "Effect.map" })
   })
 })
 

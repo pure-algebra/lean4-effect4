@@ -651,6 +651,10 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
   | .whileLoop initial _ _ _, p => suspendR p (match evalTerm p.env initial with
       | some cursor => .vis (.inr (.loop p cursor)) Effects.Program.pure
       | none => .pure badShapeExit)
+  -- the same entry: `iterate` is the same loop frame, finished by its result term.
+  | .iterate _ initial _ _ _ _, p => suspendR p (match evalTerm p.env initial with
+      | some cursor => .vis (.inr (.loop p cursor)) Effects.Program.pure
+      | none => .pure badShapeExit)
   -- `Prim.yieldNowWith`: the park answers the void value, which the continuation passes
   -- on (the frame resumes with `success void`; an answer is never discarded)
   | .yieldNow priority, _ => .vis (.inr (.yieldNow priority)) fun v => .pure (.success v)
@@ -902,6 +906,16 @@ theorem denoteR_gen (root : NativeEff) (body : Stmts NativeOp) (p : Point) (h : 
 theorem denoteR_whileLoop (root : NativeEff) (initial test step : Term) (body : NativeEff)
     (p : Point) (h : p.fuel ≠ 0) :
     denoteR root (.whileLoop initial test step body) p =
+      suspendR p (match evalTerm p.env initial with
+        | some cursor => .vis (.inr (.loop p cursor)) Effects.Program.pure
+        | none => .pure badShapeExit) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf
+
+theorem denoteR_iterate (root : NativeEff) (cursorTy : Ty) (initial test step result : Term)
+    (body : NativeEff) (p : Point) (h : p.fuel ≠ 0) :
+    denoteR root (.iterate cursorTy initial test step result body) p =
       suspendR p (match evalTerm p.env initial with
         | some cursor => .vis (.inr (.loop p cursor)) Effects.Program.pure
         | none => .pure badShapeExit) := by
@@ -1334,8 +1348,8 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
       cases evalTerm p.env value <;> rfl
     | sync _ | suspend _ | bind _ _ | gen _ | catchCause _ _ | catchIf _ _ _ | matchCause _ _ _
     | onExit _ _ | uninterruptible _ | interruptible _ | branch _ _ _ | select _ _ _ _
-    | whileLoop _ _ _ _ | yieldNow _ | «scoped» _ | acquireRelease _ _ | provideLayer _ _ _
-    | service _ =>
+    | whileLoop _ _ _ _ | iterate _ _ _ _ _ _ | yieldNow _ | «scoped» _ | acquireRelease _ _
+    | provideLayer _ _ _ | service _ =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte, headExit, frontier]
 termination_by structural e
 

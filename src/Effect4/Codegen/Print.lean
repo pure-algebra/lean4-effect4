@@ -65,6 +65,9 @@ inductive Head
   /-- The prelude's two `select` heads (the `select` packet §1.8): `optionCase(s, onNone,
   onSome)` and `caseTag(s, "tag", hit, miss)`, each suspending internally. -/
   | optionCase | caseTag
+  /-- `Effect.map`, the head that maps an `iterate`'s printed `Effect.whileLoop` to its result
+  (`reduce`'s shape, `internal/effect.ts:4450-4470`). -/
+  | map
 deriving DecidableEq, Repr
 
 /-- The spelling of each head, exactly as `print` emits it. -/
@@ -87,6 +90,7 @@ def Head.spelling : Head → String
   | .uninterruptible => "Effect.uninterruptible"
   | .interruptible => "Effect.interruptible"
   | .whileLoop => "Effect.whileLoop"
+  | .map => "Effect.map"
   | .yieldNowWith => "Effect.yieldNowWith"
   | .join => "Fiber.join"
   | .await => "Fiber.await"
@@ -136,7 +140,7 @@ def heads : List Head :=
   , .contextService, .provide, .service, .provideService
   , .layerSucceed, .layerEffect, .layerEffectDiscard, .layerProvide, .layerProvideMerge
   , .layerMerge, .layerFresh, .layerOrDie, .layerMergeAll, .catchError, .catchIf
-  , .optionCase, .caseTag ]
+  , .optionCase, .caseTag, .map ]
 
 /-- Every spelling the printer reserves: a row's spelling and a term's atom must avoid
 these. -/
@@ -408,6 +412,24 @@ mutual
                     , ("body", .arrow none b)
                     , ("step", .arrowBlock [Var.name (n + 1)]
                         [.assign (Var.name n) (printTerm step)]) ] ]) ] ])
+    -- `reduce`'s shape at the pin (`internal/effect.ts:4450-4470`): the cursor declared at
+    -- its annotation, the loop, and the loop mapped to the result over the last cursor.
+    | .iterate cursor initial test step result body => do
+      let b ← print sig (n + 1) body
+      let annotation ← match Effect4.Codegen.Types.ofTy cursor with
+        | some target => .ok target
+        | none => .error (.typeSpelling cursor.render)
+      .ok (.call (.ident "Effect.suspend")
+        [ .arrowBlock []
+            [ .letInit (Var.name n) (printTerm initial) (some annotation)
+            , .ret (.call (.ident "Effect.map")
+                [ .call (.ident "Effect.whileLoop")
+                    [ .object
+                        [ ("while", .arrow none (printTerm test))
+                        , ("body", .arrow none b)
+                        , ("step", .arrowBlock [Var.name (n + 1)]
+                            [.assign (Var.name n) (printTerm step)]) ] ]
+                , .arrow none (printTerm result) ]) ] ])
     | .yieldNow priority =>
       .ok (.call (.ident "Effect.yieldNowWith") [.int (Int.ofNat priority)])
     | .callback register request => printRow (sig.rowOf register) request

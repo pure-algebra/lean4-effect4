@@ -30,6 +30,9 @@ private def u : Eff Unit := .succeed (.lit .unit)
 #guard Eff.scopedAt 0 (.acquireRelease u (v 2)) = false
 #guard Eff.scopedAt 0 (.whileLoop (.lit .unit) (.var 0) (.var 1) (v 0)) = true
 #guard Eff.scopedAt 0 (.whileLoop (.var 0) (.lit .unit) (.lit .unit) u) = false
+#guard Eff.scopedAt 0 (.iterate .nat (.lit .unit) (.var 0) (.var 1) (.var 0) (v 0)) = true
+#guard Eff.scopedAt 0 (.iterate .nat (.var 0) (.lit .unit) (.lit .unit) (.lit .unit) u) = false
+#guard Eff.scopedAt 0 (.iterate .nat (.lit .unit) (.lit .unit) (.lit .unit) (.var 1) u) = false
 -- a layer's body is closed: level 5 outside, level 0 inside
 #guard Eff.scopedAt 5 (.provideLayer (.effectDiscard (v 0)) false (v 4)) = false
 #guard Eff.scopedAt 5 (.provideLayer (.effectDiscard u) false (v 4)) = true

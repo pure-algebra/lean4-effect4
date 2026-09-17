@@ -51,7 +51,14 @@ let ellipsis (n : int) (s : string) : string =
 (* ---- 1. goldens ---- *)
 
 let () =
-  check "corpus has 51 programs" (List.length corpus = 51);
+  (* no pinned count: every program corpus.txt names has its bytes, and no bytes are unnamed *)
+  let bins =
+    List.filter (fun f -> Filename.check_suffix f ".bin") (Array.to_list (Sys.readdir goldens))
+  in
+  check
+    (Printf.sprintf "corpus.txt names exactly the %d byte goldens" (List.length bins))
+    (corpus <> []
+    && List.sort compare (List.map (fun (n, _) -> n ^ ".bin") corpus) = List.sort compare bins);
   Printf.printf "  %-16s %6s %-8s %-10s %-6s %-5s %s\n" "program" "bytes" "decode" "re-encode" "JSON" "Lean" "typeOf";
   List.iter
     (fun (name, typed) ->

@@ -697,6 +697,19 @@ inductive LoopNextMeans (root : NativeEff) : LoopNext Val NCode → LoopNext Val
   | finish {code₁ : NCode} {code₂ : RProgram} (h : CodeMeans root code₁ code₂) :
       LoopNextMeans root (.finish code₁) (.finish code₂)
 
+/-- At one point, the compile's and the reference's loop end agree: the same result term over
+the same cursor, or the wrong shape on both sides. -/
+theorem loopFinishAt_means (root : NativeEff) (q : Point) (cursor : Val) :
+    CodeMeans root (loopFinishAt root q cursor) (loopFinishRAt root q cursor) := by
+  unfold loopFinishAt loopFinishRAt
+  cases loopResultAt root q with
+  | none => exact CodeMeans.success _
+  | some result =>
+    dsimp only
+    cases evalTerm (q.env ++ [cursor]) result with
+    | none => exact codeMeans_badShape root
+    | some answer => exact CodeMeans.success _
+
 /-- At one point, the compile's and the reference's test agree arm by arm. -/
 theorem loopNextAt_means (root : NativeEff) (q : Point) (cursor : Val) :
     LoopNextMeans root (loopNextAt root q cursor) (loopNextRAt root q cursor) := by
@@ -713,7 +726,7 @@ theorem loopNextAt_means (root : NativeEff) (q : Point) (cursor : Val) :
       | bool flag =>
         cases flag with
         | true => exact .continue cursor (resolve_intro root _)
-        | false => exact .finish (CodeMeans.success _)
+        | false => exact .finish (loopFinishAt_means root q cursor)
       | _ => exact .finish (codeMeans_badShape root)
 
 /-- At one point, the compile's and the reference's step-then-test agree. -/
