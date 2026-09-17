@@ -43,9 +43,9 @@ The coordinator's own note: `2026-09-17-loop-sugar-and-list-elimination.md`.
 | E-B4 | E | `Typing/Blame.lean:431-765`: 51 copies of one tactic line. | read | superseded by C-P7 (the checker written once makes the whole proof a lemma about `Except`) | C-P7 |
 | E-B5 | E | Sixteen hand-enumerated leaf lists for the loop fragment; every alphabet change edits all of them. | read; C compiled the generated recursor | queued as C-P4 | C-P4 |
 | E-B6 | E | `rowAnswer`'s dead row parameter, 36 sites. | read | queued with R5 (the file is replaced) | R4-R6 packet |
-| E-C1 | E | DI-61(c)'s reason for `readable` not being part of admission named `pAwait`, which is now readable. | compiled by the scout | **landed** `4a0af845` in the docstring (stated as a claim about what is certified); DI-61's row still to amend | DI-61 |
+| E-C1 | E | DI-61(c)'s reason for `readable` not being part of admission named `pAwait`, which is now readable. | compiled by the scout | **landed** `4a0af845` in the docstring and `ae8c8478` in DI-61's row | DI-61 |
 | E-C3 | E | Generated `Fold.lean` and `Scoped.lean` carry their laws under the core root, while the lifts are emitted as an implementation and a laws module. | read | queued: split at the next Fold regeneration if no core definition needs the theorems | scout E's note C-3 |
-| E-C5 | E | The explicit-tactic rule is written in no tracked file. | grep | queued: the weaker form into `AGENTS.md` (in `Laws/`: no `simp_all`, `first`, `try`, `aesop`) | scout E's note C-5 |
+| E-C5 | E | The explicit-tactic rule is written in no tracked file. | grep | **landed** `dc8e9b98`: the rule and the verification cadence are in `AGENTS.md` | `AGENTS.md`, Working |
 | E-D2 | E | `Eff.arms` and `Eff.constructorNames` are two hand lists guarded only against each other. | compiled by the scout | queued as C-P1 | C-P1 |
 | E-D3 | E | 240 line-ranged and 518 shorthand `.lean` citations are outside both citation gates. | measured by the scout | queued as C-P2 | C-P2 |
 | E-D6 | E | `Prim.yieldableError` stays (machine alphabet, a green census row) and no program reaches it any more; the census does not say so. | read | open: one sentence in the census row | none yet |
@@ -56,15 +56,34 @@ The coordinator's own note: `2026-09-17-loop-sugar-and-list-elimination.md`.
 | F-5 | F | `harness/truth/select-controls.ts` was compiled by no lane; three `.test.ts` files under `harness/truth/` are run by nothing; `check-compat` was in no aggregate. | read | **landed** `4a0af845` (the copy; `check-compat` in `check-host`); the three orphan tests: wire or delete | this ledger |
 | F-6 | F | The corpus baseline is still held though the `Eff` series closed. | read | queued: promote with the atom widening (one move of the corpus) | `docs/STATE.md` |
 | F-7 | F | DI-73 (is a fiber id a value) is the only recorded run disagreement with rc.112: six corpus programs. | read | open: needs a recommendation | DI-73 |
-| C-1 | C | Two schema dialects land in `Representation` (`Ty.schema`/`ofSchema` and `Store.render`/`ShapeDoc.document`) with no theorem between them; composed, they disagree on five formers (`unit` and `option` lost, `nat` reads back as `int`, `bytes` and `digest` silently widen to `string`). | compiled by the scout, with a red control | queued: C-P3 pins it today; the repair is part of C-P11 | scout C's note §2.2a |
+| C-1 | C | Two schema dialects land in `Representation` (`Ty.schema`/`ofSchema` and `Store.render`/`ShapeDoc.document`) with no theorem between them; composed, they disagree on five formers (`unit` and `option` lost, `nat` reads back as `int`, `bytes` and `digest` silently widen to `string`). | compiled by the scout, with a red control; re-run by the coordinator | pinned: **landed** `da5681e6` (`Test/Schema/DialectContract.lean`); the repair is part of C-P11 | scout C's note §2.2a |
 | C-P1 | C | The alphabet's inventory generated from the inductive (`constructorNames`, a flat head enum, `arms` total on it) and a census guard per fragment predicate. | read | half **landed** `edcd1fcc`: `Test/Program/FragmentCensusContract.lean` (a sample per constructor against `constructorNames`; what `Straight` and `Looped` admit; the twelve outside both). The generated head enum is queued. | scout C's note §8 |
 | C-P2 | C | Check line numbers in citations (1,516 unguarded sites), rc.112 form included. | measured by the scout | queued | scout C's note §8 |
-| C-P3 | C | Pin `Ty.ofSchema ∘ Store.render` on the thirteen formers. | compiled by the scout | queued (an hour) | scout C's note §8 |
+| C-P3 | C | Pin `Ty.ofSchema ∘ Store.render` on the thirteen formers. | compiled by the scout | **landed** `da5681e6` | scout C's note §8 |
 | C-P4 | C | A generated recursor per fragment predicate: 194 lines of constructor enumeration in nine files become none. | compiled probe, re-run green by the coordinator on the current tree (`[propext]`) | queued | scout C's note §4 |
 | C-P6 | C | The generator driver rebuilds between groups and takes its order from data, ending the by-hand regeneration ritual. | read | queued | scout C's note §6.3 |
 | C-P7 | C | The checker written once in the refusal monad; `effTy` and `explain` as its two projections; `explain_none_iff` becomes a lemma about `Except`. About 520 lines net. | read | queued (two days); supersedes E-B4 | scout C's note §8 |
-| C-P8 | C | The same fold is hand-written three times: `Schema/Representation.lean:1255-2111` (857 lines) and six traversals in `Store/Shape.lean` (242) are what `Effect4Gen/Fold.lean` emits; the blocker is that `readBlock` reads `List Representation` as a leaf. About 1,100 lines net. | read; the structural-recursion shape is unprobed | queued: probe first. The owner's priority (duplicated representations) | scout C's note §6.5 |
+| C-P8 | C | The same fold is hand-written three times: `Schema/Representation.lean:1255-2111` (857 lines) and six traversals in `Store/Shape.lean` (242) are what `Effect4Gen/Fold.lean` emits; the blocker is that `readBlock` reads `List Representation` as a leaf. About 1,100 lines net. | read. The scout's one unknown is answered by the tree: the hand-written fold (`Schema/Representation.lean:1298-1440`) is a mutual block with one `termination_by structural` helper per nested list position, so the shape the generator must emit is accepted | queued as the next de-duplication slice, with a packet: teach `readBlock` the nested child positions, emit the helpers, move the consumers, delete the 857 + 242 hand lines. The owner's stated priority (duplicated representations) | scout C's note §6.5 |
 | C-P9 | C | Generate the `Ty` arms from `TyAlgebra` (27 hand arms per new constructor today). | read | queued, immediately before C-P10 | scout C's note §2.3 |
 | C-P10 | C | `Ty.data name`: the nominal tree type, the missing `.reference` arm of `Ty.ofSchema`; one eliminator subsuming `Decision.option` and `Decision.tag`; no new `Decision` constructor until it is settled. | compiled probe by the scout | queued after the reader line; invariant by name, the `ShapeDoc` on the `Signature` | scout C's note §2.4 |
 | C-P11 | C | `src/Effect4/Schema/**`: 9,174 lines, of which 108 code declarations and 173 theorems have no reference anywhere; `Schema/Dimension.lean`'s only reference is its import line. | measured by the scout | step 0 **landed** `01103182` (`Schema/Dimension.lean` deleted); the rest queued: delete what has no consumer | scout C's note §6.4 |
 | C-P12 | C | The option and list kit holds as evaluated; all five are atoms (an atom moves no wire byte), nullary atoms already exist. | read | queued after the reader line; `uncons` alone is a day | loop-sugar note §3 |
+
+## What this wave landed (2026-09-17), in order
+
+`5185a6cd` DI-91 and DI-92; `23420ee2` this ledger, DI-93, the `Key.lean` citation; `33990200` the
+loop sugar; `4a0af845` scout E's list A and two harness repairs; `1a973c18` the ungated pins and
+the abandoned runs deleted; `b3ea5a5d` the Guard block stated once (511 lines net); `01103182`
+`Schema/Dimension.lean` deleted; `edcd1fcc` the fragment census; `1f4edcb9` a red control per
+refusal reason; `da5681e6` the dialect contract; `dc8e9b98` and `ae8c8478` STATE, `AGENTS.md`,
+DI-61.
+
+**Owed by the wave's gate sweep** (the owner stopped the full runs; every step above was checked
+by a narrow build): one `make check` and one `make check-host`. Unswept in particular: the root
+imports added to `src/Effect4.lean`, `src/Effect4/Laws.lean` and `Test/All.lean`; `check-truth`
+with `select-controls.ts` now compiled; `make check-tools` with the repaired fixture.
+
+**Next, in the owner's order of concern** (duplication and drift first): C-P8 (one generated fold
+for `Representation` and `Shape`), C-P7 (the checker written once), E-B2 (the reader's proofs
+under `Laws/`), C-P4 (the generated fragment recursor), C-P2 (line numbers in the citation gate),
+C-P11 (the schema tree's unconsumed declarations); then the reader line R4.1.
