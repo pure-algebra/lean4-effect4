@@ -196,3 +196,39 @@ C-P11 (the schema tree's unconsumed declarations); then the reader line R4.1.
     cutovers where narrow builds of the consumers and the four batteries would have shown the
     same. Narrow builds only until the wave closes.
 
+14. **The reader line after the cutover: R6, and five simplifications the owner asked for the same
+    evening** (each committed with its narrow builds, the corpus bytes compared before and
+    after, and the TypeScript differential at matched 416, mismatched 0).
+    - `f6f597ac` **R6**: `ts/eff/read.ts` is one matcher over `ts/eff/templates.gen.ts` (the table,
+      argument sorts, field names and program heads, written by `TsGen`); 45 per-head readers gone;
+      the corpus regains its 45 loop programs; `check-ts-reader`'s three steps green by hand.
+    - `b0912a59` a row states no depth: `Template.levelAt` reads the binders in scope at a hole
+      off the skeleton; "a layer is closed" is a fact of the family (`argDepth`). Guarded against
+      the binder table (`Node.binders`) child by child. Three entries of the old column had been
+      corrected by hand that day.
+    - `8c9c186f` a generator and its six statements are rows: the calculus gained seven formers
+      with their cases in all five law blocks; no hand recursion is left in printer or reader, in
+      either language.
+    - `613fa0c6` a classifier pattern either fixes its argument (`is v`) or chooses the row;
+      `ArgPat.holds_of_supplies` proved.
+    - `0b45e22e` `perform` is a row (`RowOut.rowCall`, last of the program rows): every
+      constructor of the row families is in the table; the printer's algebra has no hand
+      constructor field. Its signature rows are deliberately NOT compiled to skeletons (it is a
+      codec with a proved round trip; compiling would discard about 600 lines of proofs and bring
+      the same disjointness back as a premise).
+    - `26c046c3` located diagnostics: `readEffAt` / `Api.readAt` give the path to the node that
+      refused and, when a reserved head matched no row, what the nearest row's skeleton has where
+      the tree parts from it (`Template.explainT`, generic over rows). The refusal stays flat, so
+      no pin moved. Same five inputs pinned in Lean and TypeScript.
+    From the owner's two external audits, taken: closure by family, `Tpl.head?` as the key for
+    R5.2's disjointness (a fact, not a runtime index: 63 rows, the first node rejects, the corpus
+    reads in 0.1 s), the `.rowCall` row, path diagnostics, and the shape
+    `readable = scopedAt ∧ reconstructible` for R5.2's domain. Declined with reasons: a runtime
+    head index; generic spine folds (six lines; the carrier is a reader over `Except`, not a free
+    monoid); `cata_ctx` (already landed on 09-16; the structural `readable` it cites is deleted).
+    Noted, not reader work: quasi-quoting from the table, semantic cards over the folds.
+    **Open question for the owner, found on the way:** the printer emits `forkIn`/`forkScoped`
+    with `daemon = false` as the same text as the daemon fork, which rc.112 runs as a daemon; it
+    is outside `readable`, but it is printed without a refusal. A refusing row would be one line.
+    **Owed: R5.2**, over this final shape.
+
