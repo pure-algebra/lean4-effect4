@@ -141,3 +141,16 @@ C-P11 (the schema tree's unconsumed declarations); then the reader line R4.1.
     declaring file as none). Of 856 unused-simp-argument warnings in the build log, 613 are in
     `Program/Typing/Blame.lean`, the law C-P7 deletes, and 50 in `Laws/Codegen/HoistingReadable.lean`,
     which goes with the hand reader.
+
+11. **Dead names across the hand-written source, measured** (one linear `grep -F -w -o -f` pass per
+    file over `src`, `Test`, `tools` and the top-level docs; generated files left out). In the
+    schema tree: 38, deleted in one pass (219 lines), except that the three annotation-key
+    lawfulness theorems it caught were restored: `AnnotationKey.Lawful` is an obligation every key
+    owes (as `Store/Shape.lean`'s keys prove theirs), and their keys are in use or exported.
+    Everywhere else: **no dead code** (one definition, `Store.putOr`, and one private theorem in
+    the hand reader), and **532 public theorems that no file, test, contract packet or top-level
+    document names**, 313 of them under `Laws/` (most in `Laws/Machine/Witnesses.lean` 33,
+    `Laws/Machine/Handles.lean` 28, `Machine/Stores.lean` 28, `Laws/Program/Guard/Core.lean` 26).
+    By ruling 5 as written they would go; the coordinator has NOT deleted them, because a law is
+    often the product and not a step, and a script cannot tell a headline from an orphan. They
+    are the owner's call, module by module.
