@@ -48,6 +48,8 @@ inductive Arg where
   | str (s : String)
   | int (i : Int)
   | type (t : TypeRef)
+  /-- A whole statement list: a generator's body, a branch, a loop's body. -/
+  | stmts (ss : List Stmt)
 deriving BEq
 
 /-- A substitution: hole number to captured argument, in the order the holes occur. -/
@@ -88,22 +90,35 @@ mutual
     | cond (test yes no : Tpl)
     | method (target : Tpl) (name : String) (args : Tpls)
     | arrowBlock (binders : List Nat) (body : StmtTpls)
+    /-- `function* () { body }`. -/
+    | generator (body : StmtTpls)
   inductive Tpls where
     | nil
     | cons (head : Tpl) (tail : Tpls)
   inductive Fields where
     | nil
     | cons (key : String) (value : Tpl) (tail : Fields)
-  /-- A statement skeleton: the four statements of the loop image. -/
+  /-- A statement skeleton: the statements of the loop image and of a generator. -/
   inductive StmtTpl where
     /-- `let a<n+k> = value`, annotated by a captured type when `ann` names a hole. -/
     | letInit (k : Nat) (value : Tpl) (ann : Option Nat)
     | assign (k : Nat) (value : Tpl)
     | ret (value : Tpl)
     | exprStmt (value : Tpl)
+    /-- `const a<n+k> = yield* value`, unannotated. -/
+    | constYield (k : Nat) (value : Tpl)
+    /-- `yield* value`. -/
+    | yieldDiscard (value : Tpl)
+    | ifElse (test : Tpl) (thenB elseB : StmtTpls)
+    /-- `while (true) { body }`, unlabelled. -/
+    | whileTrue (body : StmtTpls)
+    /-- `break`, unlabelled. -/
+    | breakTo
   inductive StmtTpls where
     | nil
     | cons (head : StmtTpl) (tail : StmtTpls)
+    /-- A statement list that is one captured list. -/
+    | hole (i : Nat)
 end
 
 /-! ## Printing: `inst` -/
@@ -157,6 +172,7 @@ mutual
       let a' ← insts n σ args
       some (.method t' name a')
     | .arrowBlock bs body => do some (.arrowBlock (params n bs) (← instStmts n σ body))
+    | .generator body => do some (.generator (← instStmts n σ body))
   def insts (n : Nat) (σ : Subst) : Tpls → Option (List Expr)
     | .nil => some []
     | .cons h t => do
@@ -177,12 +193,24 @@ mutual
     | .assign k v => do some (.assign (varName (n + k)) (← inst n σ v))
     | .ret v => do some (.ret (← inst n σ v))
     | .exprStmt v => do some (.exprStmt (← inst n σ v))
+    | .constYield k v => do some (.constYield (varName (n + k)) (← inst n σ v) none)
+    | .yieldDiscard v => do some (.yieldDiscard (← inst n σ v))
+    | .ifElse t a b => do
+      let t' ← inst n σ t
+      let a' ← instStmts n σ a
+      let b' ← instStmts n σ b
+      some (.ifElse t' a' b')
+    | .whileTrue body => do some (.whileTrue none (← instStmts n σ body))
+    | .breakTo => some (.breakTo none)
   def instStmts (n : Nat) (σ : Subst) : StmtTpls → Option (List Stmt)
     | .nil => some []
     | .cons h t => do
       let h' ← instStmt n σ h
       let t' ← instStmts n σ t
       some (h' :: t')
+    | .hole i => match lookup σ i with
+      | some (.stmts ss) => some ss
+      | _ => none
 end
 
 /-! ## Reading: `matchT` -/
@@ -229,6 +257,7 @@ mutual
       else none
     | .arrowBlock bs body, .arrowBlock ps body' none =>
       if ps = params n bs then matchStmts n body body' else none
+    | .generator body, .generator body' => matchStmts n body body'
     | _, _ => none
   def matchTs (n : Nat) : Tpls → List Expr → Option Subst
     | .nil, [] => some []
@@ -256,8 +285,19 @@ mutual
     | .assign k v, .assign name e => if name = varName (n + k) then matchT n v e else none
     | .ret v, .ret e => matchT n v e
     | .exprStmt v, .exprStmt e => matchT n v e
+    | .constYield k v, .constYield name e none =>
+      if name = varName (n + k) then matchT n v e else none
+    | .yieldDiscard v, .yieldDiscard e => matchT n v e
+    | .ifElse t a b, .ifElse t' a' b' => do
+      let x ← matchT n t t'
+      let y ← matchStmts n a a'
+      let z ← matchStmts n b b'
+      some (x ++ (y ++ z))
+    | .whileTrue body, .whileTrue none body' => matchStmts n body body'
+    | .breakTo, .breakTo none => some []
     | _, _ => none
   def matchStmts (n : Nat) : StmtTpls → List Stmt → Option Subst
+    | .hole i, ss => some [(i, .stmts ss)]
     | .nil, [] => some []
     | .cons h t, s :: ss => do
       let a ← matchStmt n h s
@@ -285,6 +325,7 @@ mutual
     | .cond t a b => holes t ++ (holes a ++ holes b)
     | .method target _ args => holes target ++ holesTs args
     | .arrowBlock _ body => holesStmts body
+    | .generator body => holesStmts body
   def holesTs : Tpls → List Nat
     | .nil => []
     | .cons h t => holes h ++ holesTs t
@@ -293,10 +334,14 @@ mutual
     | .cons _ v t => holes v ++ holesFields t
   def holesStmt : StmtTpl → List Nat
     | .letInit _ v ann => holes v ++ holesAnn ann
-    | .assign _ v | .ret v | .exprStmt v => holes v
+    | .assign _ v | .ret v | .exprStmt v | .constYield _ v | .yieldDiscard v => holes v
+    | .ifElse t a b => holes t ++ (holesStmts a ++ holesStmts b)
+    | .whileTrue body => holesStmts body
+    | .breakTo => []
   def holesStmts : StmtTpls → List Nat
     | .nil => []
     | .cons h t => holesStmt h ++ holesStmts t
+    | .hole i => [i]
 end
 
 /-! ## The binders in scope at each hole
@@ -305,6 +350,12 @@ A skeleton shows its own binding structure: a lambda or a block arrow brings its
 scope for its body, and a `let` brings its slot into scope for the statements after it. Slots
 count from the node's own depth, so a hole at level `k` is printed, and read, at `n + k`. A
 table row therefore states no depth: it is read off the skeleton. -/
+
+/-- The binders a statement brings into scope for the statements after it: a `let` or a yielded
+`const` of slot `s` means `s + 1` binders are in scope. -/
+def StmtTpl.declares : StmtTpl → Nat
+  | .letInit s _ _ | .constYield s _ => s + 1
+  | _ => 0
 
 /-- The scope after binding the slots `bs`: slot `b` in scope means `b + 1` binders are. -/
 def scopeWith (k : Nat) (bs : List Nat) : Nat := bs.foldl (fun acc b => max acc (b + 1)) k
@@ -323,19 +374,24 @@ mutual
     | .cond t a b => levels k t ++ (levels k a ++ levels k b)
     | .method target _ args => levels k target ++ levelsTs k args
     | .arrowBlock bs body => levelsStmts (scopeWith k bs) body
+    | .generator body => levelsStmts k body
   def levelsTs (k : Nat) : Tpls → List (Nat × Nat)
     | .nil => []
     | .cons h t => levels k h ++ levelsTs k t
   def levelsFields (k : Nat) : Fields → List (Nat × Nat)
     | .nil => []
     | .cons _ v t => levels k v ++ levelsFields k t
-  /-- A statement list: a `let` of slot `s` is in scope for the statements after it. -/
+  def levelsStmt (k : Nat) : StmtTpl → List (Nat × Nat)
+    | .letInit _ v ann => levels k v ++ (holesAnn ann).map (·, k)
+    | .assign _ v | .ret v | .exprStmt v | .constYield _ v | .yieldDiscard v => levels k v
+    | .ifElse t a b => levels k t ++ (levelsStmts k a ++ levelsStmts k b)
+    | .whileTrue body => levelsStmts k body
+    | .breakTo => []
+  /-- A statement list: what a statement declares is in scope for the statements after it. -/
   def levelsStmts (k : Nat) : StmtTpls → List (Nat × Nat)
     | .nil => []
-    | .cons (.letInit s v ann) t =>
-      levels k v ++ (holesAnn ann).map (·, k) ++ levelsStmts (max k (s + 1)) t
-    | .cons (.assign _ v) t | .cons (.ret v) t | .cons (.exprStmt v) t =>
-      levels k v ++ levelsStmts k t
+    | .cons h t => levelsStmt k h ++ levelsStmts (max k h.declares) t
+    | .hole i => [(i, k)]
 end
 
 /-- The binders in scope at hole `i` of a skeleton; `0` for a hole it does not have. -/
@@ -343,6 +399,20 @@ def levelAt (t : Tpl) (i : Nat) : Nat :=
   match (levels 0 t).find? (·.1 == i) with
   | some (_, k) => k
   | none => 0
+
+/-- The same of a statement skeleton. -/
+def StmtTpl.levelAt (t : StmtTpl) (i : Nat) : Nat :=
+  match (levelsStmt 0 t).find? (·.1 == i) with
+  | some (_, k) => k
+  | none => 0
+
+/-- The name that heads a skeleton, when it has a rigid one: the head of a call, or a bare
+identifier. A match forces the tree's head to be this name, so rows with different heads cannot
+both match one tree; that is the key the table is read by, as a fact and not as an index. -/
+def Tpl.head? : Tpl → Option String
+  | .ident name => some name
+  | .call (.ident name) _ | .callSpread (.ident name) _ => some name
+  | _ => none
 
 /-- A skeleton whose holes are pairwise distinct: what `inst_of_match` asks of a table row. -/
 def Linear (t : Tpl) : Prop := (holes t).Nodup
@@ -360,11 +430,13 @@ hold no expression. (A predicate, not a size function: `sizeOf` has no compiled 
 def Arg.Within (bound : Nat) : Arg → Prop
   | .expr e => sizeOf e ≤ bound
   | .exprs es => sizeOf es ≤ bound
+  | .stmts ss => sizeOf ss ≤ bound
   | _ => True
 
 theorem Arg.Within.mono {a b : Nat} (hab : a ≤ b) : ∀ {x : Arg}, x.Within a → x.Within b
   | .expr _, h => Nat.le_trans h hab
   | .exprs _, h => Nat.le_trans h hab
+  | .stmts _, h => Nat.le_trans h hab
   | .str _, _ => trivial
   | .int _, _ => trivial
   | .type _, _ => trivial
@@ -511,6 +583,10 @@ mutual
       · have hsz := Expr.arrowBlock.sizeOf_spec ps body' none
         exact (matchStmts_within n body body' σ h).mono (by omega)
       · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+    | .generator body, .generator body', σ, h => by
+      simp only [matchT] at h
+      have hsz := Expr.generator.sizeOf_spec body'
+      exact (matchStmts_within n body body' σ h).mono (by omega)
   theorem matchs_within (n : Nat) : ∀ (ts : Tpls) (es : List Expr) (σ : Subst),
       matchTs n ts es = some σ → Within (sizeOf es) σ
     | .nil, [], σ, h => by
@@ -565,8 +641,37 @@ mutual
       simp only [matchStmt] at h
       have hsz := Stmt.exprStmt.sizeOf_spec e
       exact (match_within n v e σ h).mono (by omega)
+    | .constYield k v, .constYield name e none, σ, h => by
+      simp only [matchStmt] at h
+      split at h
+      · have hsz := Stmt.constYield.sizeOf_spec name e none
+        exact (match_within n v e σ h).mono (by omega)
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+    | .yieldDiscard v, .yieldDiscard e, σ, h => by
+      simp only [matchStmt] at h
+      have hsz := Stmt.yieldDiscard.sizeOf_spec e
+      exact (match_within n v e σ h).mono (by omega)
+    | .ifElse t a b, .ifElse t' a' b', σ, h => by
+      simp only [matchStmt, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+      obtain ⟨x, hx, y, hy, z, hz, rfl⟩ := h
+      have hsz := Stmt.ifElse.sizeOf_spec t' a' b'
+      exact Within.append ((match_within n t t' x hx).mono (by omega))
+        (Within.append ((matchStmts_within n a a' y hy).mono (by omega))
+          ((matchStmts_within n b b' z hz).mono (by omega)))
+    | .whileTrue body, .whileTrue none body', σ, h => by
+      simp only [matchStmt] at h
+      have hsz := Stmt.whileTrue.sizeOf_spec none body'
+      exact (matchStmts_within n body body' σ h).mono (by omega)
+    | .breakTo, .breakTo none, σ, h => by
+      simp only [matchStmt, Option.some.injEq] at h
+      subst h
+      exact Within.nil _
   theorem matchStmts_within (n : Nat) : ∀ (ts : StmtTpls) (ss : List Stmt) (σ : Subst),
       matchStmts n ts ss = some σ → Within (sizeOf ss) σ
+    | .hole i, ss, σ, h => by
+      simp only [matchStmts, Option.some.injEq] at h
+      subst h
+      exact Within.single (show sizeOf ss ≤ sizeOf ss from Nat.le_refl _)
     | .nil, [], σ, h => by
       simp only [matchStmts, Option.some.injEq] at h
       subst h
@@ -590,6 +695,7 @@ def Tpl.rigid : Tpl → Bool
 def Arg.Below (bound : Nat) : Arg → Prop
   | .expr e => sizeOf e < bound
   | .exprs es => sizeOf es < bound
+  | .stmts ss => sizeOf ss < bound
   | _ => True
 
 /-- Every capture of `σ` is strictly below `bound`. -/
@@ -598,6 +704,7 @@ def Below (bound : Nat) (σ : Subst) : Prop := ∀ p ∈ σ, p.2.Below bound
 theorem Arg.Within.below {a b : Nat} (hab : a < b) : ∀ {x : Arg}, x.Within a → x.Below b
   | .expr _, h => Nat.lt_of_le_of_lt h hab
   | .exprs _, h => Nat.lt_of_le_of_lt h hab
+  | .stmts _, h => Nat.lt_of_le_of_lt h hab
   | .str _, _ => trivial
   | .int _, _ => trivial
   | .type _, _ => trivial
@@ -731,5 +838,61 @@ theorem match_below (n : Nat) : ∀ (t : Tpl) (e : Expr) (σ : Subst),
     · have hsz := Expr.arrowBlock.sizeOf_spec ps body' none
       exact (matchStmts_within n body body' σ h).below (by omega)
     · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+  | .generator body, .generator body', σ, _, h => by
+    simp only [matchT] at h
+    have hsz := Expr.generator.sizeOf_spec body'
+    exact (matchStmts_within n body body' σ h).below (by omega)
+
+/-- A statement skeleton has no bare hole: what it captures is strictly inside the statement. -/
+theorem matchStmt_below (n : Nat) : ∀ (t : StmtTpl) (s : Stmt) (σ : Subst),
+    matchStmt n t s = some σ → Below (sizeOf s) σ
+  | .letInit k v ann, .letInit name e ty, σ, h => by
+    simp only [matchStmt] at h
+    split at h
+    · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+      obtain ⟨a, ha, b, hb, rfl⟩ := h
+      have hsz := Stmt.letInit.sizeOf_spec name e ty
+      exact Below.append ((match_within n v e a ha).below (by omega))
+        ((matchAnn_within (sizeOf e) ann ty b hb).below (by omega))
+    · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+  | .assign k v, .assign name e, σ, h => by
+    simp only [matchStmt] at h
+    split at h
+    · have hsz := Stmt.assign.sizeOf_spec name e
+      exact (match_within n v e σ h).below (by omega)
+    · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+  | .ret v, .ret e, σ, h => by
+    simp only [matchStmt] at h
+    have hsz := Stmt.ret.sizeOf_spec e
+    exact (match_within n v e σ h).below (by omega)
+  | .exprStmt v, .exprStmt e, σ, h => by
+    simp only [matchStmt] at h
+    have hsz := Stmt.exprStmt.sizeOf_spec e
+    exact (match_within n v e σ h).below (by omega)
+  | .constYield k v, .constYield name e none, σ, h => by
+    simp only [matchStmt] at h
+    split at h
+    · have hsz := Stmt.constYield.sizeOf_spec name e none
+      exact (match_within n v e σ h).below (by omega)
+    · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+  | .yieldDiscard v, .yieldDiscard e, σ, h => by
+    simp only [matchStmt] at h
+    have hsz := Stmt.yieldDiscard.sizeOf_spec e
+    exact (match_within n v e σ h).below (by omega)
+  | .ifElse t a b, .ifElse t' a' b', σ, h => by
+    simp only [matchStmt, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨x, hx, y, hy, z, hz, rfl⟩ := h
+    have hsz := Stmt.ifElse.sizeOf_spec t' a' b'
+    exact Below.append ((match_within n t t' x hx).below (by omega))
+      (Below.append ((matchStmts_within n a a' y hy).below (by omega))
+        ((matchStmts_within n b b' z hz).below (by omega)))
+  | .whileTrue body, .whileTrue none body', σ, h => by
+    simp only [matchStmt] at h
+    have hsz := Stmt.whileTrue.sizeOf_spec none body'
+    exact (matchStmts_within n body body' σ h).below (by omega)
+  | .breakTo, .breakTo none, σ, h => by
+    simp only [matchStmt, Option.some.injEq] at h
+    subst h
+    exact Below.nil _
 
 end Effect4.Codegen.Template

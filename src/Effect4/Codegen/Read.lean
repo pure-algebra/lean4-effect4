@@ -413,36 +413,46 @@ def rowDaemon (row : Templates.Row) : Bool :=
   | none => true
 
 /-- The arguments of a row from what its skeleton captured, in declaration order, each at the
-depth its hole is under (`Template.levelAt`). An argument the classifier determines is supplied; a child is handed to the recursion with the fact that it
-is one of the captures; a leaf goes through its own reader. -/
-def readArgs (sig : Signature Op) (n : Nat) (row : Templates.Row) (t : Template.Tpl) (σ : Subst)
+depth its hole is under (`RowOut.levelAt`, `Templates.argDepth`). An argument the classifier
+determines is supplied; a child is handed to the recursion with the fact that it is one of the
+captures (what the recursion's measure is stated over); a leaf goes through its own reader. -/
+def readArgs (sig : Signature Op) (n : Nat) (row : Templates.Row) (σ : Subst)
     (child : (fam : EffFam) → Nat → (y : Expr) → (i : Nat) → (i, Arg.expr y) ∈ σ →
       Except ReadRefusal (EffSelfCarrier Op fam))
     (children : (fam : EffFam) → Nat → (ys : List Expr) → (i : Nat) → (i, Arg.exprs ys) ∈ σ →
-      Except ReadRefusal (EffSelfCarrier Op fam)) :
+      Except ReadRefusal (EffSelfCarrier Op fam))
+    (block : Nat → (ss : List TypeScript.Stmt) → (i : Nat) → (i, Arg.stmts ss) ∈ σ →
+      Except ReadRefusal (EffSelfCarrier Op .stmts)) :
     List ArgSort → Nat → Except ReadRefusal (List (ArgF Op (EffSelfCarrier Op)))
   | [], _ => .ok []
   | s :: ss, i => do
-    let d := Templates.argDepth s n (Template.levelAt t i)
+    let d := Templates.argDepth row.fam s n (row.out.levelAt i)
     let a ← match (row.fixed.find? (·.1 == i)).bind (·.2.supplies) with
       | some a => .ok a
       | none => match s, captured σ i with
         | .child fam, some ⟨.expr y, h⟩ => (child fam d y i h).map (.child fam)
         | .child fam, some ⟨.exprs ys, h⟩ => (children fam d ys i h).map (.child fam)
+        | .child .stmts, some ⟨.stmts body, h⟩ => (block d body i h).map (.child .stmts)
         | s, some ⟨a, _⟩ => readLeaf sig d (rowDaemon row) s a
         | _, none => .error readDefect
-    let rest ← readArgs sig n row t σ child children ss (i + 1)
+    let rest ← readArgs sig n row σ child children block ss (i + 1)
     .ok (a :: rest)
 
-/-- The reserved names that head a program's printed clause: the heads of the table's program
-and action rows, and the generator. A reserved name that heads none of them has no reading in
+/-- The arguments read select this row: the printer would choose it for them, so what is read
+prints back to the tree read. -/
+def printedRow (fam : EffFam) (ctor : String) (args : List (ArgF Op (EffSelfCarrier Op)))
+    (k : Nat) : Bool :=
+  Templates.table.findIdx? (fun r => r.selects fam ctor args) == some k
+
+
+/-- The reserved names that head a program's printed clause: the heads (`Tpl.head?`) of the
+table's program and action rows. A reserved name that heads none of them has no reading in
 program position (`Cause.fail` outside a cause, `Layer.merge` outside a layer). -/
 def programHeads : List String :=
-  Templates.genHead :: Templates.table.filterMap fun row =>
+  Templates.table.filterMap fun row =>
     if row.fam = .eff ∨ row.fam = .action then
       match row.out with
-      | .tpl (.call (.ident s) _) => some s
-      | .tpl (.callSpread (.ident s) _) => some s
+      | .tpl t => t.head?
       | _ => none
     else none
 
@@ -485,13 +495,13 @@ mutual
   /-- `readT sig spell fam n x`: the first row of `fam` whose skeleton matches `x`, its
   arguments read; `none` when no row matches. A transparent row (a bare hole: `withFiber` over
   its action) hands the same expression to its child's family and matches when that does. For a
-  program, what no row matches is a generator or a row call. -/
+  program, what no row matches is a row call. -/
   def readT (sig : Signature Op) (spell : String → List String → Option Op) (fam : EffFam)
       (n : Nat) (x : Expr) : Option (Except ReadRefusal (EffSelfCarrier Op fam)) :=
     let byRow := Templates.table.zipIdx.findSome? fun (row, k) =>
       if row.fam = fam then
         match row.out with
-        | .refuse _ => none
+        | .refuse _ | .stmt _ => none
         | .tpl t =>
           match hσ : matchT n t x with
           | none => none
@@ -501,16 +511,18 @@ mutual
             | some sorts =>
               if hr : t.rigid = true then
                 some do
-                  let args ← readArgs sig n row t σ
+                  let args ← readArgs sig n row σ
                     (fun fam' d y i hy =>
                       have : sizeOf y < sizeOf x := match_below n t x σ hr hσ (i, .expr y) hy
                       (readT sig spell fam' d y).getD (.error (unread fam')))
                     (fun fam' d ys i hy =>
                       have : sizeOf ys < sizeOf x := match_below n t x σ hr hσ (i, .exprs ys) hy
                       readSpine sig spell fam' d ys)
+                    (fun d body i hy =>
+                      have : sizeOf body < sizeOf x := match_below n t x σ hr hσ (i, .stmts body) hy
+                      readStmts sig spell d body)
                     sorts 0
-                  -- exactness: the printer would choose this row for what was read
-                  if Templates.table.findIdx? (fun r => r.selects fam row.ctor args) = some k then
+                  if printedRow fam row.ctor args k then
                     match build fam row.ctor args with
                     | some e => .ok e
                     | none => .error readDefect
@@ -519,7 +531,7 @@ mutual
                 match sorts with
                 | [.child fam'] =>
                   if _hk : famRank fam' < famRank fam then
-                    (readT sig spell fam' (Templates.argDepth (.child fam') n 0) x).map fun r => do
+                    (readT sig spell fam' (Templates.argDepth fam (.child fam') n 0) x).map fun r => do
                       let c ← r
                       match build fam row.ctor [.child fam' c] with
                       | some e => .ok e
@@ -535,12 +547,7 @@ mutual
     | some r => some r
     | none =>
       match fam with
-      | .eff => some (
-          match x with
-          | .call (.ident s) [.generator body] =>
-            if s = Templates.genHead then (readStmts sig spell n body).map .gen
-            else readPerform sig spell n x
-          | _ => readPerform sig spell n x)
+      | .eff => some (readPerform sig spell n x)
       | _ => none
   termination_by (sizeOf x, famRank fam)
 
@@ -561,39 +568,52 @@ mutual
     | _, _ => .error readDefect
   termination_by (sizeOf xs, 0)
 
-  /-- A generator body, statement by statement, with the binder counts of the printer. -/
+  /-- The spine of statements: each statement through the first statement row whose skeleton
+  matches it, the rest under the binders that row's skeleton declares (`StmtTpl.declares`), as
+  the printer's spine threads them. -/
   def readStmts (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
       (stmts : List TypeScript.Stmt) : Except ReadRefusal (Stmts Op) :=
     match stmts with
     | [] => .ok .nil
-    | .constYield x value none :: rest =>
-      if x = Var.name n then do
-        let e ← (readT sig spell .eff n value).getD (.error (.shape "expression"))
-        let tail ← readStmts sig spell (n + 1) rest
-        .ok (.cons (.bindYield e) tail)
-      else .error (.binder (Var.name n))
-    | .yieldDiscard value :: rest => do
-      let e ← (readT sig spell .eff n value).getD (.error (.shape "expression"))
-      let tail ← readStmts sig spell n rest
-      .ok (.cons (.yieldDiscard e) tail)
-    | .ret value :: rest => do
-      let v ← readTerm n value
-      let tail ← readStmts sig spell n rest
-      .ok (.cons (.ret v) tail)
-    | .ifElse test thenB elseB :: rest => do
-      let t ← readTerm n test
-      let a ← readStmts sig spell n thenB
-      let b ← readStmts sig spell n elseB
-      let tail ← readStmts sig spell n rest
-      .ok (.cons (.ifElse t a b) tail)
-    | .whileTrue none body :: rest => do
-      let b ← readStmts sig spell n body
-      let tail ← readStmts sig spell n rest
-      .ok (.cons (.whileTrue b) tail)
-    | .breakTo none :: rest => do
-      let tail ← readStmts sig spell n rest
-      .ok (.cons .breakLoop tail)
-    | stmt :: _ => .error (stmtRefusal stmt)
+    | s :: rest =>
+      let byRow := Templates.table.zipIdx.findSome? fun (row, k) =>
+        if row.fam = .stmt then
+          match row.out with
+          | .stmt t =>
+            match hσ : Template.matchStmt n t s with
+            | none => none
+            | some σ =>
+              match argSorts .stmt row.ctor with
+              | none => none
+              | some sorts =>
+                some do
+                  let args ← readArgs sig n row σ
+                    (fun fam' d y i hy =>
+                      have : sizeOf y < sizeOf s :=
+                        Template.matchStmt_below n t s σ hσ (i, .expr y) hy
+                      (readT sig spell fam' d y).getD (.error (unread fam')))
+                    (fun fam' d ys i hy =>
+                      have : sizeOf ys < sizeOf s :=
+                        Template.matchStmt_below n t s σ hσ (i, .exprs ys) hy
+                      readSpine sig spell fam' d ys)
+                    (fun d body i hy =>
+                      have : sizeOf body < sizeOf s :=
+                        Template.matchStmt_below n t s σ hσ (i, .stmts body) hy
+                      readStmts sig spell d body)
+                    sorts 0
+                  if printedRow .stmt row.ctor args k then
+                    match build .stmt row.ctor args with
+                    | some st => .ok (st, t.declares)
+                    | none => .error readDefect
+                  else .error (.shape "not the printed row")
+          | _ => none
+        else none
+      match byRow with
+      | some r => do
+        let (st, declared) ← r
+        let tail ← readStmts sig spell (n + declared) rest
+        .ok (.cons st tail)
+      | none => .error (stmtRefusal s)
   termination_by (sizeOf stmts, 0)
 end
 

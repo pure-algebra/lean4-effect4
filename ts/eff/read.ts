@@ -18,7 +18,7 @@ import { parseSync } from "oxc-parser"
 import type { ActionTerm, CauseTerm, Eff, ForkOptions, LayerTerm, Lit, Row, ServiceKey, Stmt, Term, Ty } from "./eff.gen.ts"
 import { decodeEff } from "./eff.gen.ts"
 import { heads, rows, serviceTypeFor, type Entry, type Head } from "./profile.gen.ts"
-import { argNamesOf, argSortsOf, genHead, programHeads, templates, type ArgPat, type ArgSort, type Depth, type Fam, type StmtTpl, type TemplateRow, type Tpl } from "./templates.gen.ts"
+import { argNamesOf, argSortsOf, programHeads, templates, type ArgPat, type ArgSort, type Depth, type Fam, type StmtTpl, type StmtTpls, type TemplateRow, type Tpl } from "./templates.gen.ts"
 
 export type { Eff } from "./eff.gen.ts"
 
@@ -844,7 +844,8 @@ const readLiteral = (x: Expr): Read<Lit> => {
  * arguments read, so what is read prints back to the tree read (`Effect.catchIf` with a literal
  * `true` test is refused: the printer writes that program as `Effect.catch`). A transparent
  * row (a bare hole: `withFiber` over its action) hands the same tree to its child's family and
- * matches when that does. What no row matches is, for a program, a generator or a row call.
+ * matches when that does. A generator is a row, and so is each of its statements (`readStmts`).
+ * What no row matches is, for a program, a row call.
  */
 
 type Arg =
@@ -852,6 +853,7 @@ type Arg =
   | { readonly _tag: "exprs"; readonly es: ReadonlyArray<Expr> }
   | { readonly _tag: "str"; readonly s: string }
   | { readonly _tag: "int"; readonly v: number }
+  | { readonly _tag: "stmts"; readonly ss: ReadonlyArray<TsStmt> }
 
 type Subst = Map<number, Arg>
 
@@ -892,17 +894,27 @@ const matchT = (n: number, t: Tpl, e: Expr, captured: Subst): boolean => {
       return e._tag === "method" && e.name === t.name && matchT(n, t.target, e.base, captured) &&
         matchTs(n, t.args, e.args, captured)
     case "arrowBlock":
-      return e._tag === "arrowBlock" && sameParams(n, t.binders, e.params) &&
-        e.body.length === t.body.length && t.body.every((s, j) => matchStmt(n, s, e.body[j]!, captured))
+      return e._tag === "arrowBlock" && sameParams(n, t.binders, e.params) && matchStmts(n, t.body, e.body, captured)
+    case "generator": return e._tag === "generator" && matchStmts(n, t.body, e.body, captured)
   }
+}
+
+/** A statement list: one captured list, or its statements in order (`matchStmts`). */
+const matchStmts = (n: number, ts: StmtTpls, ss: ReadonlyArray<TsStmt>, captured: Subst): boolean => {
+  if (!Array.isArray(ts)) {
+    captured.set((ts as { readonly i: number }).i, { _tag: "stmts", ss })
+    return true
+  }
+  const items = ts as ReadonlyArray<StmtTpl>
+  return items.length === ss.length && items.every((t, j) => matchStmt(n, t, ss[j]!, captured))
 }
 
 const matchTs = (n: number, ts: ReadonlyArray<Tpl>, es: ReadonlyArray<Expr>, captured: Subst): boolean =>
   ts.length === es.length && ts.every((t, j) => matchT(n, t, es[j]!, captured))
 
-/** The four statements of the loop image. An annotated `let` never reaches this fragment (§ 2
- * refuses it), so a skeleton that captures an annotation matches nothing here: the annotated
- * loop prints and is not read, as in Lean (no reader of types exists). */
+/** The statements of the loop image and of a generator. An annotated `let` or `const` never
+ * reaches this fragment (§ 2 refuses it), so a skeleton that captures an annotation matches
+ * nothing here: the annotated loop prints and is not read, as in Lean (no reader of types). */
 const matchStmt = (n: number, t: StmtTpl, s: TsStmt, captured: Subst): boolean => {
   switch (t._tag) {
     case "letInit":
@@ -910,6 +922,13 @@ const matchStmt = (n: number, t: StmtTpl, s: TsStmt, captured: Subst): boolean =
     case "assign": return s._tag === "assign" && s.name === varName(n + t.k) && matchT(n, t.value, s.value, captured)
     case "ret": return s._tag === "ret" && matchT(n, t.value, s.value, captured)
     case "exprStmt": return s._tag === "exprStmt" && matchT(n, t.value, s.value, captured)
+    case "constYield": return s._tag === "constYield" && s.name === varName(n + t.k) && matchT(n, t.value, s.value, captured)
+    case "yieldDiscard": return s._tag === "yieldDiscard" && matchT(n, t.value, s.value, captured)
+    case "ifElse":
+      return s._tag === "ifElse" && matchT(n, t.test, s.condition, captured) &&
+        matchStmts(n, t.thenB, s.thenBranch, captured) && matchStmts(n, t.elseB, s.elseBranch, captured)
+    case "whileTrue": return s._tag === "whileTrue" && matchStmts(n, t.body, s.body, captured)
+    case "breakTo": return s._tag === "breakTo"
   }
 }
 
@@ -1021,6 +1040,7 @@ const readArg = (n: number, row: TemplateRow, captured: Subst, i: number, sort: 
   const fam = childFam(sort)
   if (fam !== undefined && a._tag === "expr") return readT(fam, d, a.e) ?? unread(fam)
   if (fam !== undefined && a._tag === "exprs") return readSpine(fam, d, a.es)
+  if (fam === "stmts" && a._tag === "stmts") return readStmts(d, a.ss)
   return readLeaf(d, rowDaemon(row), sort, a)
 }
 
@@ -1069,7 +1089,7 @@ const readPerform = (n: number, x: Expr): Read<Eff> => {
 const readT = (fam: Fam, n: number, x: Expr): Read<unknown> | undefined => {
   for (let k = 0; k < tableRows.length; k++) {
     const row = tableRows[k]!
-    if (row.fam !== fam || row.out._tag !== "tpl") continue
+    if (row.fam !== fam || row.out._tag !== "tpl") continue // a statement row is read by `readStmts`
     const sorts = argSortsOf(fam, row.ctor)
     const names = argNamesOf(fam, row.ctor)
     if (sorts === undefined || names === undefined) continue
@@ -1090,20 +1110,47 @@ const readT = (fam: Fam, n: number, x: Expr): Read<unknown> | undefined => {
     }
     const captured: Subst = new Map()
     if (!matchT(n, t, x, captured)) continue
-    const args: unknown[] = []
-    for (let i = 0; i < sorts.length; i++) {
-      const a = readArg(n, row, captured, i, sorts[i]!)
-      if (failed(a)) return again(a)
-      args.push(a.success)
-    }
-    // exactness: the printer would choose this row for what was read
-    if (chosenRow(fam, row.ctor, args) !== k) return refuse({ _tag: "shape", what: "not the printed row" })
-    return ok(build(row.ctor, names, args))
+    return readRow(k, row, n, sorts, names, captured)
   }
-  if (fam !== "eff") return undefined
-  if (x._tag === "call" && x.fn._tag === "ident" && x.fn.name === genHead && x.args.length === 1 && x.args[0]!._tag === "generator")
-    return Result.map(readStmts(n, x.args[0]!.body), (body): Eff => ({ _tag: "gen", body }))
-  return readPerform(n, x)
+  return fam === "eff" ? readPerform(n, x) : undefined
+}
+
+/** The arguments of a matched row, the exactness check, and the node (shared by both steps). */
+const readRow = (k: number, row: TemplateRow, n: number, sorts: ReadonlyArray<ArgSort>, names: ReadonlyArray<string>, captured: Subst): Read<unknown> => {
+  const args: unknown[] = []
+  for (let i = 0; i < sorts.length; i++) {
+    const a = readArg(n, row, captured, i, sorts[i]!)
+    if (failed(a)) return again(a)
+    args.push(a.success)
+  }
+  // exactness: the printer would choose this row for what was read
+  if (chosenRow(row.fam, row.ctor, args) !== k) return refuse({ _tag: "shape", what: "not the printed row" })
+  return ok(build(row.ctor, names, args))
+}
+
+/** The spine of statements: each statement through the first statement row whose skeleton
+ * matches it, the rest under the binders that row's skeleton declares (`readStmts`). */
+const readStmts = (n: number, stmts: ReadonlyArray<TsStmt>): Read<ReadonlyArray<Stmt>> => {
+  const out: Stmt[] = []
+  let depth = n
+  next: for (const s of stmts) {
+    for (let k = 0; k < tableRows.length; k++) {
+      const row = tableRows[k]!
+      if (row.fam !== "stmt" || row.out._tag !== "stmt") continue
+      const sorts = argSortsOf("stmt", row.ctor)
+      const names = argNamesOf("stmt", row.ctor)
+      if (sorts === undefined || names === undefined) continue
+      const captured: Subst = new Map()
+      if (!matchStmt(depth, row.out.stmt, s, captured)) continue
+      const node = readRow(k, row, depth, sorts, names, captured)
+      if (failed(node)) return again(node)
+      out.push(node.success as Stmt)
+      depth += row.out.declares
+      continue next
+    }
+    return refuse({ _tag: "unsupportedStmt" })
+  }
+  return ok(out)
 }
 
 /** A program from a tree, at environment length `n`. The node is checked against the schema by
@@ -1116,57 +1163,6 @@ export const readLayer = (x: Expr): Read<LayerTerm> =>
   (readT("layer", 0, x) ?? unread("layer")) as Read<LayerTerm>
 
 
-/** A generator body, statement by statement, with the binder counts of the printer. */
-const readStmts = (n: number, stmts: ReadonlyArray<TsStmt>): Read<ReadonlyArray<Stmt>> => {
-  const out: Stmt[] = []
-  let depth = n
-  for (const s of stmts) {
-    switch (s._tag) {
-      case "constYield": {
-        if (s.name !== varName(depth)) return binder(varName(depth))
-        const e = readEff(depth, s.value)
-        if (failed(e)) return again(e)
-        out.push({ _tag: "bindYield", effect: e.success })
-        depth += 1
-        break
-      }
-      case "yieldDiscard": {
-        const e = readEff(depth, s.value)
-        if (failed(e)) return again(e)
-        out.push({ _tag: "yieldDiscard", effect: e.success })
-        break
-      }
-      case "ret": {
-        const v = readTerm(depth, s.value)
-        if (failed(v)) return again(v)
-        out.push({ _tag: "ret", value: v.success })
-        break
-      }
-      case "ifElse": {
-        const t = readTerm(depth, s.condition)
-        if (failed(t)) return again(t)
-        const a = readStmts(depth, s.thenBranch)
-        if (failed(a)) return again(a)
-        const b = readStmts(depth, s.elseBranch)
-        if (failed(b)) return again(b)
-        out.push({ _tag: "ifElse", test: t.success, thenB: a.success, elseB: b.success })
-        break
-      }
-      case "whileTrue": {
-        const b = readStmts(depth, s.body)
-        if (failed(b)) return again(b)
-        out.push({ _tag: "whileTrue", body: b.success })
-        break
-      }
-      case "breakTo":
-        out.push({ _tag: "breakLoop" })
-        break
-      default:
-        return refuse({ _tag: "unsupportedStmt" })
-    }
-  }
-  return ok(out)
-}
 
 /** The race entrants, each at the same environment length. */
 const readEffs = (n: number, items: ReadonlyArray<Expr>): Read<ReadonlyArray<Eff>> => {

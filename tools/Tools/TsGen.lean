@@ -44,7 +44,7 @@ Writes eight files, all `GENERATED`, none ever edited:
   constructor's argument sorts and field names, and the reserved names that head a program
   clause: what `ts/eff/read.ts`'s one matcher runs over, as Lean's `readT` does. The reserved
   heads are cross-checked against the identifiers the table's skeletons write (data, not a
-  source scan), the generator head and `PrintLeaf.lean`'s literals.
+  source scan) and `PrintLeaf.lean`'s literals.
 * `packages.gen.ts` — the canonical package tables (`Effect4.Program.Packages.all`, the host
   rows slice): per package its rc.112 key string, service type code, handle target and its
   rows in table order, decoded at import through the `Row` schema; the row at position `i` is
@@ -797,7 +797,8 @@ mutual
     | .method target name args =>
       tagged "method" [("target", tplJs target), ("name", lit name), ("args", "[" ++ tplsJs args ++ "]")]
     | .arrowBlock binders body =>
-      tagged "arrowBlock" [("binders", arr (binders.map toString)), ("body", "[" ++ stmtTplsJs body ++ "]")]
+      tagged "arrowBlock" [("binders", arr (binders.map toString)), ("body", stmtTplsJs body)]
+    | .generator body => tagged "generator" [("body", stmtTplsJs body)]
   def tplsJs : Tpls → String
     | .nil => ""
     | .cons head .nil => tplJs head
@@ -813,10 +814,55 @@ mutual
     | .assign k value => tagged "assign" [("k", toString k), ("value", tplJs value)]
     | .ret value => tagged "ret" [("value", tplJs value)]
     | .exprStmt value => tagged "exprStmt" [("value", tplJs value)]
+    | .constYield k value => tagged "constYield" [("k", toString k), ("value", tplJs value)]
+    | .yieldDiscard value => tagged "yieldDiscard" [("value", tplJs value)]
+    | .ifElse test thenB elseB =>
+      tagged "ifElse" [("test", tplJs test), ("thenB", stmtTplsJs thenB), ("elseB", stmtTplsJs elseB)]
+    | .whileTrue body => tagged "whileTrue" [("body", stmtTplsJs body)]
+    | .breakTo => tagged "breakTo" []
+  /-- A statement list: one captured list, or its statements in order. -/
   def stmtTplsJs : StmtTpls → String
+    | .hole i => tagged "hole" [("i", toString i)]
+    | list => "[" ++ stmtItemsJs list ++ "]"
+  def stmtItemsJs : StmtTpls → String
     | .nil => ""
     | .cons head .nil => stmtTplJs head
-    | .cons head tail => stmtTplJs head ++ "," ++ stmtTplsJs tail
+    | .cons head tail => stmtTplJs head ++ "," ++ stmtItemsJs tail
+    -- a list that ends in a captured rest has no row today; `listsClosed` refuses it by name
+    | .hole i => tagged "rest" [("i", toString i)]
+end
+
+mutual
+  /-- Every statement list of a skeleton is one captured list or a closed list of statements:
+  the two shapes the TypeScript matcher reads. -/
+  def listsClosed : Tpl → Bool
+    | .call head args | .method head _ args => listsClosed head && listsClosedTs args
+    | .callSpread head _ => listsClosed head
+    | .arr items => listsClosedTs items
+    | .object fields => listsClosedFields fields
+    | .arrow body | .lambda _ body => listsClosed body
+    | .cond test yes no => listsClosed test && listsClosed yes && listsClosed no
+    | .arrowBlock _ body | .generator body => listClosed body
+    | _ => true
+  def listsClosedTs : Tpls → Bool
+    | .nil => true
+    | .cons head tail => listsClosed head && listsClosedTs tail
+  def listsClosedFields : Fields → Bool
+    | .nil => true
+    | .cons _ value tail => listsClosed value && listsClosedFields tail
+  def listsClosedStmt : StmtTpl → Bool
+    | .letInit _ value _ | .assign _ value | .ret value | .exprStmt value
+    | .constYield _ value | .yieldDiscard value => listsClosed value
+    | .ifElse test thenB elseB => listsClosed test && listClosed thenB && listClosed elseB
+    | .whileTrue body => listClosed body
+    | .breakTo => true
+  def listClosed : StmtTpls → Bool
+    | .hole _ => true
+    | list => itemsClosed list
+  def itemsClosed : StmtTpls → Bool
+    | .nil => true
+    | .cons head tail => listsClosedStmt head && itemsClosed tail
+    | .hole _ => false
 end
 
 /-- A classifier pattern. A term pattern is a literal in every row; any other term is refused
@@ -839,10 +885,10 @@ def argPatJs : ArgPat → Except String String
 
 /-- The depth an argument is read at, as `Templates.argDepth` decides it: closed for an argument
 of a layer family, otherwise under the binders its hole is under (`Template.levelAt`). -/
-def depthJs (sort : Effect4.Program.ArgSort) (level : Nat) : String :=
-  match sort with
-  | .child .layer | .child .layers => tagged "closed" []
-  | _ => tagged "rel" [("k", toString level)]
+def depthJs (fam : Effect4.Program.EffFam) (sort : Effect4.Program.ArgSort) (level : Nat) : String :=
+  match fam, sort with
+  | .layer, _ | .layers, _ | _, .child .layer | _, .child .layers => tagged "closed" []
+  | _, _ => tagged "rel" [("k", toString level)]
 
 def famJs : Effect4.Program.EffFam → String
   | .eff => "eff" | .stmt => "stmt" | .stmts => "stmts" | .effs => "effs"
@@ -859,20 +905,25 @@ def rowJs' (row : Effect4.Codegen.Templates.Row) : Except String String := do
   let fixed ← row.fixed.mapM fun (i, p) => do
     let p ← (argPatJs p).mapError fun why => s!"row {row.ctor}: {why}"
     pure ("[" ++ toString i ++ "," ++ p ++ "]")
+  let closed := match row.out with
+    | .tpl t => listsClosed t
+    | .stmt t => listsClosedStmt t
+    | .refuse _ => true
+  unless closed do
+    throw s!"row {row.ctor}: a statement list that ends in a captured rest"
   let out := match row.out with
     | .tpl t => tagged "tpl" [("tpl", tplJs t)]
+    | .stmt t => tagged "stmt" [("stmt", stmtTplJs t), ("declares", toString t.declares)]
     | .refuse name => tagged "refuse" [("name", lit name)]
   let sorts := (Effect4.Program.argSorts row.fam row.ctor).getD []
-  let depth := sorts.zipIdx.map fun (sort, i) => match row.out with
-    | .tpl t => depthJs sort (levelAt t i)
-    | .refuse _ => depthJs sort 0
+  let depth := sorts.zipIdx.map fun (sort, i) => depthJs row.fam sort (row.out.levelAt i)
   pure (obj [("fam", lit (famJs row.fam)), ("ctor", lit row.ctor), ("fixed", arr fixed),
     ("depth", arr depth), ("out", out)])
 
-/-- The three families read from one expression, with their Lean names in the closed world. -/
+/-- The four families read through rows, with their Lean names in the closed world. -/
 def readFamilies : List (Effect4.Program.EffFam × Name) :=
   [(.eff, `Effect4.Program.Eff), (.action, `Effect4.Program.ActionTerm),
-   (.layer, `Effect4.Program.LayerTerm)]
+   (.layer, `Effect4.Program.LayerTerm), (.stmt, `Effect4.Program.Stmt)]
 
 def templateTypes : String :=
   "export type Fam = \"eff\" | \"stmt\" | \"stmts\" | \"effs\" | \"action\" | \"layer\" | \"layers\"\n" ++
@@ -892,11 +943,17 @@ def templateTypes : String :=
   "  | { readonly _tag: \"lambda\"; readonly binders: ReadonlyArray<number>; readonly body: Tpl }\n" ++
   "  | { readonly _tag: \"cond\"; readonly test: Tpl; readonly yes: Tpl; readonly no: Tpl }\n" ++
   "  | { readonly _tag: \"method\"; readonly target: Tpl; readonly name: string; readonly args: ReadonlyArray<Tpl> }\n" ++
-  "  | { readonly _tag: \"arrowBlock\"; readonly binders: ReadonlyArray<number>; readonly body: ReadonlyArray<StmtTpl> }\n" ++
+  "  | { readonly _tag: \"arrowBlock\"; readonly binders: ReadonlyArray<number>; readonly body: StmtTpls }\n" ++
+  "  | { readonly _tag: \"generator\"; readonly body: StmtTpls }\n" ++
+  "/** A statement list: one captured list, or its statements in order. */\n" ++
+  "export type StmtTpls = ReadonlyArray<StmtTpl> | { readonly _tag: \"hole\"; readonly i: number }\n" ++
   "export type StmtTpl =\n" ++
   "  | { readonly _tag: \"letInit\"; readonly k: number; readonly value: Tpl; readonly ann: number | null }\n" ++
-  "  | { readonly _tag: \"assign\"; readonly k: number; readonly value: Tpl }\n" ++
-  "  | { readonly _tag: \"ret\" | \"exprStmt\"; readonly value: Tpl }\n" ++
+  "  | { readonly _tag: \"assign\" | \"constYield\"; readonly k: number; readonly value: Tpl }\n" ++
+  "  | { readonly _tag: \"ret\" | \"exprStmt\" | \"yieldDiscard\"; readonly value: Tpl }\n" ++
+  "  | { readonly _tag: \"ifElse\"; readonly test: Tpl; readonly thenB: StmtTpls; readonly elseB: StmtTpls }\n" ++
+  "  | { readonly _tag: \"whileTrue\"; readonly body: StmtTpls }\n" ++
+  "  | { readonly _tag: \"breakTo\" }\n" ++
   "export type ArgPat =\n" ++
   "  | { readonly _tag: \"term\"; readonly value: unknown }\n" ++
   "  | { readonly _tag: \"bool\" | \"daemon\"; readonly value: boolean }\n" ++
@@ -907,7 +964,10 @@ def templateTypes : String :=
   "  readonly fam: Fam\n  readonly ctor: string\n" ++
   "  readonly fixed: ReadonlyArray<readonly [number, ArgPat]>\n" ++
   "  readonly depth: ReadonlyArray<Depth>\n" ++
-  "  readonly out: { readonly _tag: \"tpl\"; readonly tpl: Tpl } | { readonly _tag: \"refuse\"; readonly name: string }\n}\n" ++
+  "  readonly out:\n" ++
+  "    | { readonly _tag: \"tpl\"; readonly tpl: Tpl }\n" ++
+  "    | { readonly _tag: \"stmt\"; readonly stmt: StmtTpl; readonly declares: number }\n" ++
+  "    | { readonly _tag: \"refuse\"; readonly name: string }\n}\n" ++
   "export const rowsOf = (fam: Fam): ReadonlyArray<TemplateRow> => (templates.rows as ReadonlyArray<TemplateRow>).filter((row) => row.fam === fam)\n" ++
   "export const argSortsOf = (fam: Fam, ctor: string): ReadonlyArray<ArgSort> | undefined =>\n" ++
   "  (templates.argSorts as Record<string, Record<string, ReadonlyArray<ArgSort>>>)[fam]?.[ctor]\n" ++
@@ -950,7 +1010,7 @@ mutual
     | .object fields => fieldsIdents fields
     | .arrow body | .lambda _ body => tplIdents body
     | .cond test yes no => tplIdents test ++ tplIdents yes ++ tplIdents no
-    | .arrowBlock _ body => stmtTplsIdents body
+    | .arrowBlock _ body | .generator body => stmtTplsIdents body
     | _ => []
   def tplsIdents : Tpls → List String
     | .nil => []
@@ -958,16 +1018,22 @@ mutual
   def fieldsIdents : Fields → List String
     | .nil => []
     | .cons _ value tail => tplIdents value ++ fieldsIdents tail
+  def stmtTplIdents : StmtTpl → List String
+    | .letInit _ value _ | .assign _ value | .ret value | .exprStmt value
+    | .constYield _ value | .yieldDiscard value => tplIdents value
+    | .ifElse test thenB elseB => tplIdents test ++ stmtTplsIdents thenB ++ stmtTplsIdents elseB
+    | .whileTrue body => stmtTplsIdents body
+    | .breakTo => []
   def stmtTplsIdents : StmtTpls → List String
-    | .nil => []
-    | .cons (.letInit _ value _) tail | .cons (.assign _ value) tail
-    | .cons (.ret value) tail | .cons (.exprStmt value) tail => tplIdents value ++ stmtTplsIdents tail
+    | .nil | .hole _ => []
+    | .cons head tail => stmtTplIdents head ++ stmtTplsIdents tail
 end
 
 /-- Every identifier the table's skeletons write. -/
 def tableIdents : List String :=
   (table.flatMap fun row => match row.out with
     | .tpl t => tplIdents t
+    | .stmt t => stmtTplIdents t
     | .refuse _ => []).eraseDups
 
 end Templates
@@ -1034,9 +1100,9 @@ def main (args : List String) : IO Unit := do
   let lakefile ← IO.FS.readFile "lakefile.toml"
   let tsRev := (revOf lakefile "typescript").getD "UNKNOWN"
   let address := " + ".intercalate (hostPin.libraries ++ ["lean4-typescript@" ++ tsRev])
-  -- the printer's vocabulary: the identifiers the table's skeletons write (data), the leaf
-  -- printers' own literals, and the generator head, which is a hand field of the fold
-  let printed := (tableIdents ++ [Effect4.Codegen.Templates.genHead]
+  -- the printer's vocabulary: the identifiers the table's skeletons write (data) and the leaf
+  -- printers' own literals
+  let printed := (tableIdents
     ++ identLiterals (← IO.FS.readFile "src/Effect4/Codegen/PrintLeaf.lean")).eraseDups
   -- readRunIn consumes Effect.void only as its fixed block return, not as an
   -- effect head, and printTupleArgs spells a saved tuple request's components with
@@ -1046,7 +1112,7 @@ def main (args : List String) : IO Unit := do
   let extraInPrint := missingFrom printed expectedIdents
   let extraInHeads := missingFrom expectedIdents printed
   unless extraInPrint.isEmpty && extraInHeads.isEmpty do
-    throw (IO.userError s!"TsGen: the reserved heads and the printer's identifiers (the table's skeletons, the generator head, PrintLeaf.lean) differ: printed only {extraInPrint}; in reserved only {extraInHeads}")
+    throw (IO.userError s!"TsGen: the reserved heads and the printer's identifiers (the table's skeletons, PrintLeaf.lean) differ: printed only {extraInPrint}; in reserved only {extraInHeads}")
   -- the package tables transcribe pinned vendor sources; the Makefile's `gen-ts` rule names
   -- them as prerequisites, so a change under vendor/ re-cuts every file this tool writes
   let stamp := Tools.GeneratedStamp.note "tools/Tools/TsGen.lean"

@@ -18,8 +18,9 @@ depth, instantiate the skeleton. `EffAlgebra.ofLayer` (generated from the constr
 declarations) makes it an algebra, and the generated fold `cata_eff` does the recursion.
 
 What is not a skeleton stays a hand field of the algebra, overriding the table's: the row call of
-`perform` (its inverse is the signature's `spell`), `gen` with its statements (a second table over
-`TypeScript.Stmt` when it is the largest thing left), and the two spines.
+`perform` (its inverse is the signature's `spell`) and the three spines (programs, layers, and
+statements, which thread the binders a statement declares). A generator and its six statements
+are rows like any other.
 
 `Codegen/Print.lean`'s `print` IS this fold (the hand printer, one clause per constructor, was
 deleted once the two agreed on every constructor, classifier and the seeded corpus), and
@@ -55,10 +56,18 @@ inductive ArgPat where
   | daemon (b : Bool)
 deriving DecidableEq
 
-/-- What a row prints: a skeleton, or the refusal of an action with no public export. -/
+/-- What a row prints: an expression skeleton, a statement skeleton (the rows of the statement
+family), or the refusal of an action with no public export. -/
 inductive RowOut where
   | tpl (t : Tpl)
+  | stmt (t : StmtTpl)
   | refuse (name : String)
+
+/-- The binders in scope at argument `i` of a row, read off its skeleton. -/
+def RowOut.levelAt : RowOut → Nat → Nat
+  | .tpl t, i => Template.levelAt t i
+  | .stmt t, i => t.levelAt i
+  | .refuse _, _ => 0
 
 structure Row where
   fam : EffFam
@@ -88,6 +97,9 @@ def call (head : String) (args : List Tpl) : Tpl := .call (.ident head) (tpls ar
 def lam (body : Tpl) : Tpl := .lambda [0] body
 
 def h (i : Nat) : Tpl := .hole i
+
+/-- The head of a generator. -/
+def genHead : String := "Effect.gen"
 
 /-- The loop image (`reduce`'s shape at the pin, `internal/effect.ts:4450-4470`): the cursor
 declared at `a<n>`, with its annotation when the row has one (DI-91), the loop, and the loop
@@ -154,6 +166,7 @@ def effRows : List Row :=
   , ⟨.eff, "service", [], .tpl (call "Effect.service" [h 0])⟩
   , ⟨.eff, "provideService", [],
       .tpl (call "Effect.provideService" [h 2, h 0, h 1])⟩
+  , ⟨.eff, "gen", [], .tpl (call genHead [.generator (.hole 0)])⟩
   , ⟨.eff, "withFiber", [], .tpl (h 0)⟩ ]
 
 def actionRows : List Row :=
@@ -194,7 +207,17 @@ def layerRows : List Row :=
   , ⟨.layer, "mergeAll", [], .tpl (.callSpread (.ident "Layer.mergeAll") 0)⟩
   , ⟨.layer, "ref", [], .tpl (h 0)⟩ ]
 
-def table : List Row := effRows ++ actionRows ++ layerRows
+/-- The statements of a generator. A yielded `const` declares its slot for the statements after
+it (`StmtTpl.declares`); the statement list threads that, as the scope rules do. -/
+def stmtRows : List Row :=
+  [ ⟨.stmt, "bindYield", [], .stmt (.constYield 0 (h 0))⟩
+  , ⟨.stmt, "yieldDiscard", [], .stmt (.yieldDiscard (h 0))⟩
+  , ⟨.stmt, "ret", [], .stmt (.ret (h 0))⟩
+  , ⟨.stmt, "ifElse", [], .stmt (.ifElse (h 0) (.hole 1) (.hole 2))⟩
+  , ⟨.stmt, "whileTrue", [], .stmt (.whileTrue (.hole 0))⟩
+  , ⟨.stmt, "breakLoop", [], .stmt .breakTo⟩ ]
+
+def table : List Row := effRows ++ actionRows ++ layerRows ++ stmtRows
 
 /-! ## The printer: one generic layer function -/
 
@@ -248,24 +271,31 @@ def Row.selects {R : EffFam → Type} (row : Row) (fam : EffFam) (ctor : String)
       | none => false
 
 /-- The environment length an argument is printed and read at, from the binders its hole is
-under. A layer is closed (its bodies are typed in the empty scope), so an argument of a layer
-family is at `0` whatever is around it; and since a layer is always at `0`, so is a program
-inside one. -/
-def argDepth (sort : ArgSort) (n level : Nat) : Nat :=
-  match sort with
-  | .child .layer | .child .layers => 0
-  | _ => n + level
+under. A layer is closed (its bodies are typed in the empty scope): every argument of a layer
+row, and every argument of a layer family, is at `0` whatever is around it. That is a fact of
+the family, so no caller has to arrange it. -/
+def argDepth (fam : EffFam) (sort : ArgSort) (n level : Nat) : Nat :=
+  match fam, sort with
+  | .layer, _ | .layers, _ => 0
+  | _, .child .layer | _, .child .layers => 0
+  | _, _ => n + level
+
+/-- The sort of an argument, without its value. -/
+def argSortOf {R : EffFam → Type} : ArgF Op R → ArgSort
+  | .child fam _ => .child fam
+  | .term _ => .term | .cause _ => .cause | .op _ => .op | .nat _ => .nat | .mode _ => .mode
+  | .bool _ => .bool | .key _ => .key | .decision _ => .decision | .optTy _ => .optTy
+  | .forkOptions _ => .forkOptions | .optTerm _ => .optTerm | .lit _ => .lit | .path _ => .path
 
 /-- One argument as what its hole captures, by sort; `none` for an argument that is only a
 classifier. A child is its folded printer applied at the row's depth; a leaf goes through its own
 printer (`Codegen/PrintLeaf.lean`). -/
-def printArg (sig : Signature Op) (n level : Nat) :
+def printArg (sig : Signature Op) (d : Nat) :
     ArgF Op Carrier → Except PrintRefusal (Option Arg)
-  | .child .eff r | .child .action r => do return some (.expr (← r (n + level)))
-  | .child .layer r => do return some (.expr (← r 0))
-  | .child .effs r => do return some (.exprs (← r (n + level)))
-  | .child .layers r => do return some (.exprs (← r 0))
-  | .child .stmts _ | .child .stmt _ => .ok none
+  | .child .eff r | .child .action r | .child .layer r => do return some (.expr (← r d))
+  | .child .effs r | .child .layers r => do return some (.exprs (← r d))
+  | .child .stmts r => do return some (.stmts (← r d))
+  | .child .stmt _ => .ok none
   | .term t => .ok (some (.expr (printTerm t)))
   | .optTerm (some t) => .ok (some (.expr (printTerm t)))
   | .optTerm none => .ok none
@@ -283,11 +313,11 @@ def printArg (sig : Signature Op) (n level : Nat) :
   | .optTy none => .ok none
   | .mode _ | .bool _ | .op _ => .ok none
 
-def printArgs (sig : Signature Op) (n : Nat) (t : Tpl) :
+def printArgs (sig : Signature Op) (fam : EffFam) (n : Nat) (out : RowOut) :
     List (ArgF Op Carrier) → Nat → Except PrintRefusal Subst
   | a :: as, i => do
-    let x ← printArg sig n (levelAt t i) a
-    let rest ← printArgs sig n t as (i + 1)
+    let x ← printArg sig (argDepth fam (argSortOf a) n (out.levelAt i)) a
+    let rest ← printArgs sig fam n out as (i + 1)
     match x with
     | some v => .ok ((i, v) :: rest)
     | none => .ok rest
@@ -298,16 +328,25 @@ defect of the table, not a refusal of the program. It is named so a guard can se
 (`Test/Codegen/TemplatesContract.lean` shows it does not occur). -/
 def tableDefect (ctor : String) : PrintRefusal := .internalAction ("table:" ++ ctor)
 
-/-- The whole printer of the three skeleton families, per layer. -/
+/-- The whole printer, per layer: the row chosen by constructor and classifier, its arguments
+printed by sort at the depth their holes are under, its skeleton instantiated. A statement
+comes with the binders it declares for the statements after it. -/
 def tableLayer (sig : Signature Op) :
     (fam : EffFam) → String → List (ArgF Op Carrier) → Carrier fam
   | .eff, ctor, args => fun n => rowPrint sig .eff ctor args n
   | .action, ctor, args => fun n => rowPrint sig .action ctor args n
   | .layer, ctor, args => fun n => rowPrint sig .layer ctor args n
+  | .stmt, ctor, args => fun n =>
+    match table.find? fun row => row.selects .stmt ctor args with
+    | some ⟨_, _, _, .stmt t⟩ => do
+      let σ ← printArgs sig .stmt n (.stmt t) args 0
+      match instStmt n σ t with
+      | some s => .ok (s, t.declares)
+      | none => .error (tableDefect ctor)
+    | _ => .error (tableDefect ctor)
   | .effs, ctor, _ => fun _ => .error (tableDefect ctor)
   | .layers, ctor, _ => fun _ => .error (tableDefect ctor)
   | .stmts, ctor, _ => fun _ => .error (tableDefect ctor)
-  | .stmt, ctor, _ => fun _ => .error (tableDefect ctor)
 where
   rowPrint (sig : Signature Op) (fam : EffFam) (ctor : String) (args : List (ArgF Op Carrier))
       (n : Nat) : Except PrintRefusal Expr :=
@@ -315,30 +354,18 @@ where
     | none => .error (tableDefect ctor)
     | some row => match row.out with
       | .refuse name => .error (.internalAction name)
+      | .stmt _ => .error (tableDefect ctor)
       | .tpl t => do
-        let σ ← printArgs sig n t args 0
+        let σ ← printArgs sig fam n (.tpl t) args 0
         match inst n σ t with
         | some e => .ok e
         | none => .error (tableDefect ctor)
 
-/-- The head of a generator, the one reserved name a hand field writes (the printer's and the
-reader's, and the generated TypeScript profile's cross-check, all read it from here). -/
-def genHead : String := "Effect.gen"
-
-/-- The algebra: the table's layer function, with the hand fields for what is not a skeleton. -/
+/-- The algebra: the table's layer function, with the hand fields for what is not a skeleton:
+the row call and the spines. -/
 def printAlg (sig : Signature Op) : EffAlgebra Op Carrier :=
   { EffAlgebra.ofLayer (tableLayer sig) with
     eff_perform := fun op request _ => printRow (sig.rowOf op) request
-    eff_gen := fun body n => do
-      let statements ← body n
-      .ok (.call (.ident genHead) [.generator statements])
-    stmt_bindYield := fun effect n => do return (.constYield (Var.name n) (← effect n), 1)
-    stmt_yieldDiscard := fun effect n => do return (.yieldDiscard (← effect n), 0)
-    stmt_ret := fun value _ => .ok (.ret (printTerm value), 0)
-    stmt_ifElse := fun test thenB elseB n => do
-      return (.ifElse (printTerm test) (← thenB n) (← elseB n), 0)
-    stmt_whileTrue := fun body n => do return (.whileTrue none (← body n), 0)
-    stmt_breakLoop := fun _ => .ok (.breakTo none, 0)
     stmts_nil := fun _ => .ok []
     stmts_cons := fun head tail n => do
       let (s, k) ← head n

@@ -181,6 +181,10 @@ mutual
       simp only [inst, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
       obtain ⟨b', hb, rfl⟩ := h
       simp only [matchT, holes, ↓reduceIte, matchStmts_inst n σ body b' hb]
+    | .generator body, e, h => by
+      simp only [inst, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+      obtain ⟨b', hb, rfl⟩ := h
+      simp only [matchT, holes, matchStmts_inst n σ body b' hb]
   theorem matchs_inst (n : Nat) (σ : Subst) : ∀ (ts : Tpls) (es : List Expr),
       insts n σ ts = some es → matchTs n ts es = along σ (holesTs ts)
     | .nil, es, h => by
@@ -221,8 +225,38 @@ mutual
       simp only [instStmt, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
       obtain ⟨v', hv, rfl⟩ := h
       simp only [matchStmt, holesStmt, match_inst n σ v v' hv]
+    | .constYield k v, s, h => by
+      simp only [instStmt, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+      obtain ⟨v', hv, rfl⟩ := h
+      simp only [matchStmt, holesStmt, ↓reduceIte, match_inst n σ v v' hv]
+    | .yieldDiscard v, s, h => by
+      simp only [instStmt, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+      obtain ⟨v', hv, rfl⟩ := h
+      simp only [matchStmt, holesStmt, match_inst n σ v v' hv]
+    | .ifElse t a b, s, h => by
+      simp only [instStmt, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+      obtain ⟨t', ht, a', ha, b', hb, rfl⟩ := h
+      simp only [matchStmt, holesStmt, along_append, match_inst n σ t t' ht,
+        matchStmts_inst n σ a a' ha, matchStmts_inst n σ b b' hb]
+      cases along σ (holes t) <;> cases along σ (holesStmts a) <;> cases along σ (holesStmts b) <;> rfl
+    | .whileTrue body, s, h => by
+      simp only [instStmt, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+      obtain ⟨b', hb, rfl⟩ := h
+      simp only [matchStmt, holesStmt, matchStmts_inst n σ body b' hb]
+    | .breakTo, s, h => by
+      simp only [instStmt, Option.some.injEq] at h
+      subst h
+      simp only [matchStmt, holesStmt, along_nil]
   theorem matchStmts_inst (n : Nat) (σ : Subst) : ∀ (ts : StmtTpls) (ss : List Stmt),
       instStmts n σ ts = some ss → matchStmts n ts ss = along σ (holesStmts ts)
+    | .hole i, ss, h => by
+      simp only [instStmts] at h
+      split at h
+      · rename_i ss' hl
+        simp only [Option.some.injEq] at h
+        subst h
+        simp only [matchStmts, holesStmts, along_single σ i _ hl]
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
     | .nil, ss, h => by
       simp only [instStmts, Option.some.injEq] at h
       subst h
@@ -337,6 +371,9 @@ mutual
         simp only [keys_append, holes, match_keys n target target' a ha,
           matchs_keys n args args' b hb]
       · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+    | .generator body, .generator body', σ, h => by
+      simp only [matchT] at h
+      simp only [holes, matchStmts_keys n body body' σ h]
     | .arrowBlock bs body, .arrowBlock ps body' none, σ, h => by
       simp only [matchT] at h
       split at h
@@ -385,8 +422,32 @@ mutual
     | .exprStmt v, .exprStmt e, σ, h => by
       simp only [matchStmt] at h
       simp only [holesStmt, match_keys n v e σ h]
+    | .constYield k v, .constYield name e none, σ, h => by
+      simp only [matchStmt] at h
+      split at h
+      · simp only [holesStmt, match_keys n v e σ h]
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+    | .yieldDiscard v, .yieldDiscard e, σ, h => by
+      simp only [matchStmt] at h
+      simp only [holesStmt, match_keys n v e σ h]
+    | .ifElse t a b, .ifElse t' a' b', σ, h => by
+      simp only [matchStmt, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+      obtain ⟨x, hx, y, hy, z, hz, rfl⟩ := h
+      simp only [keys_append, holesStmt, match_keys n t t' x hx, matchStmts_keys n a a' y hy,
+        matchStmts_keys n b b' z hz]
+    | .whileTrue body, .whileTrue none body', σ, h => by
+      simp only [matchStmt] at h
+      simp only [holesStmt, matchStmts_keys n body body' σ h]
+    | .breakTo, .breakTo none, σ, h => by
+      simp only [matchStmt, Option.some.injEq] at h
+      subst h
+      rfl
   theorem matchStmts_keys (n : Nat) : ∀ (ts : StmtTpls) (ss : List Stmt) (σ : Subst),
       matchStmts n ts ss = some σ → keys σ = holesStmts ts
+    | .hole i, ss, σ, h => by
+      simp only [matchStmts, Option.some.injEq] at h
+      subst h
+      rfl
     | .nil, [], σ, h => by
       simp only [matchStmts, Option.some.injEq] at h
       subst h
@@ -552,6 +613,11 @@ mutual
         simp only [List.append_assoc] at h1 h2 ⊢
         simp only [inst, h1, h2, Option.bind_eq_bind, Option.bind_some, hname]
       · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+    | .generator body, .generator body', σ, pre, post, h, nd, fr => by
+      simp only [matchT] at h
+      simp only [holes] at nd fr
+      simp only [inst, instStmts_match n body body' σ pre post h nd fr, Option.bind_eq_bind,
+        Option.bind_some]
     | .arrowBlock bs body, .arrowBlock ps body' none, σ, pre, post, h, nd, fr => by
       simp only [matchT] at h
       simp only [holes] at nd fr
@@ -627,9 +693,47 @@ mutual
       simp only [holesStmt] at nd fr
       simp only [instStmt, inst_match n v e σ pre post h nd fr, Option.bind_eq_bind,
         Option.bind_some]
+    | .constYield k v, .constYield name e none, σ, pre, post, h, nd, fr => by
+      simp only [matchStmt] at h
+      simp only [holesStmt] at nd fr
+      split at h
+      · rename_i hname
+        simp only [instStmt, inst_match n v e σ pre post h nd fr, Option.bind_eq_bind,
+          Option.bind_some, hname]
+      · exact absurd h (by simp only [reduceCtorEq, not_false_eq_true])
+    | .yieldDiscard v, .yieldDiscard e, σ, pre, post, h, nd, fr => by
+      simp only [matchStmt] at h
+      simp only [holesStmt] at nd fr
+      simp only [instStmt, inst_match n v e σ pre post h nd fr, Option.bind_eq_bind,
+        Option.bind_some]
+    | .ifElse t a b, .ifElse t' a' b', σ, pre, post, h, nd, fr => by
+      simp only [matchStmt, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+      obtain ⟨x, hx, y, hy, z, hz, rfl⟩ := h
+      simp only [holesStmt] at nd fr
+      have ndab := (List.nodup_append.mp nd).2.1
+      have h1 := inst_match n t t' x pre (y ++ z ++ post) hx (List.nodup_append.mp nd).1 fr.left
+      have frab : Fresh (pre ++ x) (holesStmts a ++ holesStmts b) :=
+        fr.past (match_keys n t t' x hx) nd
+      have h2 := instStmts_match n a a' y (pre ++ x) (z ++ post) hy
+        (List.nodup_append.mp ndab).1 frab.left
+      have h3 := instStmts_match n b b' z (pre ++ x ++ y) post hz
+        (List.nodup_append.mp ndab).2.1 (frab.past (matchStmts_keys n a a' y hy) ndab)
+      simp only [List.append_assoc] at h1 h2 h3 ⊢
+      simp only [instStmt, h1, h2, h3, Option.bind_eq_bind, Option.bind_some]
+    | .whileTrue body, .whileTrue none body', σ, pre, post, h, nd, fr => by
+      simp only [matchStmt] at h
+      simp only [holesStmt] at nd fr
+      simp only [instStmt, instStmts_match n body body' σ pre post h nd fr, Option.bind_eq_bind,
+        Option.bind_some]
+    | .breakTo, .breakTo none, σ, pre, post, _, _, _ => by
+      simp only [instStmt]
   theorem instStmts_match (n : Nat) : ∀ (ts : StmtTpls) (ss : List Stmt) (σ pre post : Subst),
       matchStmts n ts ss = some σ → (holesStmts ts).Nodup → Fresh pre (holesStmts ts) →
       instStmts n (pre ++ σ ++ post) ts = some ss
+    | .hole i, ss, σ, pre, post, h, _, fr => by
+      simp only [matchStmts, Option.some.injEq] at h
+      subst h
+      simp only [instStmts, lookup_mid pre post i _ (fr i (List.mem_cons_self ..))]
     | .nil, [], σ, pre, post, _, _, _ => by
       simp only [instStmts]
     | .cons hd tl, s :: ss, σ, pre, post, h, nd, fr => by
@@ -649,6 +753,14 @@ theorem inst_of_match (n : Nat) (t : Tpl) (e : Expr) (σ : Subst)
   have hfresh : Fresh [] (holes t) := fun _ _ hm => by
     simp only [keys, List.map_nil, List.not_mem_nil] at hm
   have := inst_match n t e σ [] [] h nd hfresh
+  simpa only [List.nil_append, List.append_nil] using this
+
+/-- The same of a statement skeleton, as a statement row uses it. -/
+theorem instStmt_of_match (n : Nat) (t : StmtTpl) (s : Stmt) (σ : Subst)
+    (h : matchStmt n t s = some σ) (nd : (holesStmt t).Nodup) : instStmt n σ t = some s := by
+  have hfresh : Fresh [] (holesStmt t) := fun _ _ hm => by
+    simp only [keys, List.map_nil, List.not_mem_nil] at hm
+  have := instStmt_match n t s σ [] [] h nd hfresh
   simpa only [List.nil_append, List.append_nil] using this
 
 end Effect4.Codegen.Template

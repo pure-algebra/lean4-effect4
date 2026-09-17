@@ -88,9 +88,11 @@ def isTableDefect : Except PrintRefusal TypeScript.Expr → Bool
 
 /-! ## The table's shape -/
 
--- every skeleton has distinct holes
+-- every skeleton has distinct holes (so `levelAt` reads one level per hole, and
+-- `inst_of_match` / `instStmt_of_match` apply to every row)
 #guard table.all fun row => match row.out with
   | .tpl tp => decide (Linear tp)
+  | .stmt tp => decide (holesStmt tp).Nodup
   | .refuse _ => true
 
 -- every row names a constructor of its family
@@ -131,21 +133,31 @@ def agreesWithBinders (e : Eff NativeOp) : Bool :=
     | some k => k == Node.binders (.eff e) j
     | none => true
 
-#guard (effSamples.filter fun e => match e with | .perform .. | .gen .. | .withFiber .. => false | _ => true).all
+#guard (effSamples.filter fun e => match e with | .perform .. => false | _ => true).all
   agreesWithBinders
+-- a yielded `const` declares one binder for the statements after it, as the binder table says of
+-- the statement list's `cons` (`Node.binders (.stmts (.cons (.bindYield _) _)) 1 = 1`)
+#guard stmtRows.all fun row => match row.out with
+  | .stmt tp => tp.declares == (if row.ctor == "bindYield" then 1 else 0)
+  | _ => false
+#guard Node.binders (Op := NativeOp) (.stmts (.cons (.bindYield u) .nil)) 1 = 1
 -- and it is not vacuous: the samples put children under one and under two binders
 #guard effSamples.any fun e => (topLevels e).contains (some 1)
 #guard effSamples.any fun e => (topLevels e).contains (some 2)
 
--- every constructor of the three skeleton families has a row, except the two hand fields
+-- every constructor of the four row families has a row, except the one hand field
 #guard ((ctorNames .eff).filter fun c => !(table.any fun row => row.fam == .eff && row.ctor == c))
-  == ["perform", "gen"]
+  == ["perform"]
+#guard (ctorNames .stmt).all fun c => table.any fun row => row.fam == .stmt && row.ctor == c
+-- a statement row prints a statement, and no other row does
+#guard table.all fun row => (row.fam == .stmt) == (match row.out with | .stmt _ => true | _ => false)
 #guard (ctorNames .action).all fun c => table.any fun row => row.fam == .action && row.ctor == c
 #guard (ctorNames .layer).all fun c => table.any fun row => row.fam == .layer && row.ctor == c
 
 -- a hole is an argument: no skeleton names a hole past its constructor's arity
 #guard table.all fun row => match row.out, argSorts row.fam row.ctor with
   | .tpl tp, some sorts => (holes tp).all (· < sorts.length)
+  | .stmt tp, some sorts => (holesStmt tp).all (· < sorts.length)
   | _, _ => true
 
 end Test.Codegen.TemplatesContract
