@@ -193,74 +193,93 @@ def ctorNames : EffFam → List String
   | .layer => ["succeed", "effect", "effectDiscard", "provide", "provideMerge", "merge", "fresh", "orDie", "ref", "mergeAll"]
   | .layers => ["nil", "cons"]
 
+/-- One constructor as the generic step sees it: its name, and how arguments of its sorts
+make a node. `build` looks a maker up by name, so inverting it is a list membership and one
+two-case match, never one match over every constructor's name. -/
+structure Maker (Op : Type) (fam : EffFam) where
+  name : String
+  make : List (ArgF Op (EffSelfCarrier Op)) → Option (EffSelfCarrier Op fam)
+
+/-- The constructors of a family, in declaration order. -/
+def makers {Op : Type} : (fam : EffFam) → List (Maker Op fam)
+  | .eff =>
+    [ ⟨"succeed", fun | [.term a0] => some (Effect4.Program.Eff.succeed a0) | _ => none⟩
+    , ⟨"fail", fun | [.term a0] => some (Effect4.Program.Eff.fail a0) | _ => none⟩
+    , ⟨"failCause", fun | [.cause a0] => some (Effect4.Program.Eff.failCause a0) | _ => none⟩
+    , ⟨"sync", fun | [.term a0] => some (Effect4.Program.Eff.sync a0) | _ => none⟩
+    , ⟨"suspend", fun | [.child .eff a0] => some (Effect4.Program.Eff.suspend a0) | _ => none⟩
+    , ⟨"perform", fun | [.op a0, .term a1] => some (Effect4.Program.Eff.perform a0 a1) | _ => none⟩
+    , ⟨"bind", fun | [.child .eff a0, .child .eff a1] => some (Effect4.Program.Eff.bind a0 a1) | _ => none⟩
+    , ⟨"gen", fun | [.child .stmts a0] => some (Effect4.Program.Eff.gen a0) | _ => none⟩
+    , ⟨"catchCause", fun | [.child .eff a0, .child .eff a1] => some (Effect4.Program.Eff.catchCause a0 a1) | _ => none⟩
+    , ⟨"matchCause", fun | [.child .eff a0, .child .eff a1, .child .eff a2] => some (Effect4.Program.Eff.matchCause a0 a1 a2) | _ => none⟩
+    , ⟨"onExit", fun | [.child .eff a0, .child .eff a1] => some (Effect4.Program.Eff.onExit a0 a1) | _ => none⟩
+    , ⟨"exit", fun | [.child .eff a0] => some (Effect4.Program.Eff.exit a0) | _ => none⟩
+    , ⟨"uninterruptible", fun | [.child .eff a0] => some (Effect4.Program.Eff.uninterruptible a0) | _ => none⟩
+    , ⟨"interruptible", fun | [.child .eff a0] => some (Effect4.Program.Eff.interruptible a0) | _ => none⟩
+    , ⟨"yieldNow", fun | [.nat a0] => some (Effect4.Program.Eff.yieldNow a0) | _ => none⟩
+    , ⟨"awaitFiber", fun | [.term a0, .mode a1] => some (Effect4.Program.Eff.awaitFiber a0 a1) | _ => none⟩
+    , ⟨"withFiber", fun | [.child .action a0] => some (Effect4.Program.Eff.withFiber a0) | _ => none⟩
+    , ⟨"scoped", fun | [.child .eff a0] => some (Effect4.Program.Eff.scoped a0) | _ => none⟩
+    , ⟨"acquireRelease", fun | [.child .eff a0, .child .eff a1] => some (Effect4.Program.Eff.acquireRelease a0 a1) | _ => none⟩
+    , ⟨"provideLayer", fun | [.child .layer a0, .bool a1, .child .eff a2] => some (Effect4.Program.Eff.provideLayer a0 a1 a2) | _ => none⟩
+    , ⟨"service", fun | [.key a0] => some (Effect4.Program.Eff.service a0) | _ => none⟩
+    , ⟨"provideService", fun | [.key a0, .term a1, .child .eff a2] => some (Effect4.Program.Eff.provideService a0 a1 a2) | _ => none⟩
+    , ⟨"catchIf", fun | [.term a0, .child .eff a1, .child .eff a2] => some (Effect4.Program.Eff.catchIf a0 a1 a2) | _ => none⟩
+    , ⟨"select", fun | [.term a0, .decision a1, .child .eff a2, .child .eff a3] => some (Effect4.Program.Eff.select a0 a1 a2 a3) | _ => none⟩
+    , ⟨"iterate", fun | [.optTy a0, .term a1, .term a2, .term a3, .term a4, .child .eff a5] => some (Effect4.Program.Eff.iterate a0 a1 a2 a3 a4 a5) | _ => none⟩ ]
+  | .stmt =>
+    [ ⟨"bindYield", fun | [.child .eff a0] => some (Effect4.Program.Stmt.bindYield a0) | _ => none⟩
+    , ⟨"yieldDiscard", fun | [.child .eff a0] => some (Effect4.Program.Stmt.yieldDiscard a0) | _ => none⟩
+    , ⟨"ret", fun | [.term a0] => some (Effect4.Program.Stmt.ret a0) | _ => none⟩
+    , ⟨"ifElse", fun | [.term a0, .child .stmts a1, .child .stmts a2] => some (Effect4.Program.Stmt.ifElse a0 a1 a2) | _ => none⟩
+    , ⟨"whileTrue", fun | [.child .stmts a0] => some (Effect4.Program.Stmt.whileTrue a0) | _ => none⟩
+    , ⟨"breakLoop", fun | [] => some (Effect4.Program.Stmt.breakLoop) | _ => none⟩ ]
+  | .stmts =>
+    [ ⟨"nil", fun | [] => some (Effect4.Program.Stmts.nil) | _ => none⟩
+    , ⟨"cons", fun | [.child .stmt a0, .child .stmts a1] => some (Effect4.Program.Stmts.cons a0 a1) | _ => none⟩ ]
+  | .effs =>
+    [ ⟨"nil", fun | [] => some (Effect4.Program.Effs.nil) | _ => none⟩
+    , ⟨"cons", fun | [.child .eff a0, .child .effs a1] => some (Effect4.Program.Effs.cons a0 a1) | _ => none⟩ ]
+  | .action =>
+    [ ⟨"fork", fun | [.child .eff a0, .forkOptions a1] => some (Effect4.Program.ActionTerm.fork a0 a1) | _ => none⟩
+    , ⟨"forkIn", fun | [.child .eff a0, .forkOptions a1, .term a2] => some (Effect4.Program.ActionTerm.forkIn a0 a1 a2) | _ => none⟩
+    , ⟨"forkScoped", fun | [.child .eff a0, .forkOptions a1] => some (Effect4.Program.ActionTerm.forkScoped a0 a1) | _ => none⟩
+    , ⟨"runIn", fun | [.term a0, .term a1] => some (Effect4.Program.ActionTerm.runIn a0 a1) | _ => none⟩
+    , ⟨"interrupt", fun | [.term a0] => some (Effect4.Program.ActionTerm.interrupt a0) | _ => none⟩
+    , ⟨"interruptScoped", fun | [.term a0] => some (Effect4.Program.ActionTerm.interruptScoped a0) | _ => none⟩
+    , ⟨"interruptAll", fun | [.term a0, .optTerm a1] => some (Effect4.Program.ActionTerm.interruptAll a0 a1) | _ => none⟩
+    , ⟨"awaitAll", fun | [.term a0] => some (Effect4.Program.ActionTerm.awaitAll a0) | _ => none⟩
+    , ⟨"awaitAllFailFast", fun | [.term a0] => some (Effect4.Program.ActionTerm.awaitAllFailFast a0) | _ => none⟩
+    , ⟨"snapshotChildren", fun | [] => some (Effect4.Program.ActionTerm.snapshotChildren) | _ => none⟩
+    , ⟨"awaitNewChildren", fun | [.term a0] => some (Effect4.Program.ActionTerm.awaitNewChildren a0) | _ => none⟩
+    , ⟨"raceAll", fun | [.child .effs a0] => some (Effect4.Program.ActionTerm.raceAll a0) | _ => none⟩
+    , ⟨"setContext", fun | [.term a0] => some (Effect4.Program.ActionTerm.setContext a0) | _ => none⟩
+    , ⟨"getContext", fun | [] => some (Effect4.Program.ActionTerm.getContext) | _ => none⟩
+    , ⟨"getId", fun | [] => some (Effect4.Program.ActionTerm.getId) | _ => none⟩
+    , ⟨"closeScope", fun | [.term a0, .term a1] => some (Effect4.Program.ActionTerm.closeScope a0 a1) | _ => none⟩ ]
+  | .layer =>
+    [ ⟨"succeed", fun | [.key a0, .lit a1] => some (Effect4.Program.LayerTerm.succeed a0 a1) | _ => none⟩
+    , ⟨"effect", fun | [.key a0, .child .eff a1] => some (Effect4.Program.LayerTerm.effect a0 a1) | _ => none⟩
+    , ⟨"effectDiscard", fun | [.child .eff a0] => some (Effect4.Program.LayerTerm.effectDiscard a0) | _ => none⟩
+    , ⟨"provide", fun | [.child .layer a0, .child .layer a1] => some (Effect4.Program.LayerTerm.provide a0 a1) | _ => none⟩
+    , ⟨"provideMerge", fun | [.child .layer a0, .child .layer a1] => some (Effect4.Program.LayerTerm.provideMerge a0 a1) | _ => none⟩
+    , ⟨"merge", fun | [.child .layer a0, .child .layer a1] => some (Effect4.Program.LayerTerm.merge a0 a1) | _ => none⟩
+    , ⟨"fresh", fun | [.child .layer a0] => some (Effect4.Program.LayerTerm.fresh a0) | _ => none⟩
+    , ⟨"orDie", fun | [.child .layer a0] => some (Effect4.Program.LayerTerm.orDie a0) | _ => none⟩
+    , ⟨"ref", fun | [.path a0] => some (Effect4.Program.LayerTerm.ref a0) | _ => none⟩
+    , ⟨"mergeAll", fun | [.child .layers a0] => some (Effect4.Program.LayerTerm.mergeAll a0) | _ => none⟩ ]
+  | .layers =>
+    [ ⟨"nil", fun | [] => some (Effect4.Program.LayerTerms.nil) | _ => none⟩
+    , ⟨"cons", fun | [.child .layer a0, .child .layers a1] => some (Effect4.Program.LayerTerms.cons a0 a1) | _ => none⟩ ]
+
 /-- The inverse of the view at the tree itself: a constructor from its name and its
 arguments; `none` when the name or the sorts are not the constructor's. -/
-def build {Op : Type} : (fam : EffFam) → String → List (ArgF Op (EffSelfCarrier Op)) →
-    Option (EffSelfCarrier Op fam)
-  | .eff, "succeed", [.term a0] => some (Effect4.Program.Eff.succeed a0)
-  | .eff, "fail", [.term a0] => some (Effect4.Program.Eff.fail a0)
-  | .eff, "failCause", [.cause a0] => some (Effect4.Program.Eff.failCause a0)
-  | .eff, "sync", [.term a0] => some (Effect4.Program.Eff.sync a0)
-  | .eff, "suspend", [.child .eff a0] => some (Effect4.Program.Eff.suspend a0)
-  | .eff, "perform", [.op a0, .term a1] => some (Effect4.Program.Eff.perform a0 a1)
-  | .eff, "bind", [.child .eff a0, .child .eff a1] => some (Effect4.Program.Eff.bind a0 a1)
-  | .eff, "gen", [.child .stmts a0] => some (Effect4.Program.Eff.gen a0)
-  | .eff, "catchCause", [.child .eff a0, .child .eff a1] => some (Effect4.Program.Eff.catchCause a0 a1)
-  | .eff, "matchCause", [.child .eff a0, .child .eff a1, .child .eff a2] => some (Effect4.Program.Eff.matchCause a0 a1 a2)
-  | .eff, "onExit", [.child .eff a0, .child .eff a1] => some (Effect4.Program.Eff.onExit a0 a1)
-  | .eff, "exit", [.child .eff a0] => some (Effect4.Program.Eff.exit a0)
-  | .eff, "uninterruptible", [.child .eff a0] => some (Effect4.Program.Eff.uninterruptible a0)
-  | .eff, "interruptible", [.child .eff a0] => some (Effect4.Program.Eff.interruptible a0)
-  | .eff, "yieldNow", [.nat a0] => some (Effect4.Program.Eff.yieldNow a0)
-  | .eff, "awaitFiber", [.term a0, .mode a1] => some (Effect4.Program.Eff.awaitFiber a0 a1)
-  | .eff, "withFiber", [.child .action a0] => some (Effect4.Program.Eff.withFiber a0)
-  | .eff, "scoped", [.child .eff a0] => some (Effect4.Program.Eff.scoped a0)
-  | .eff, "acquireRelease", [.child .eff a0, .child .eff a1] => some (Effect4.Program.Eff.acquireRelease a0 a1)
-  | .eff, "provideLayer", [.child .layer a0, .bool a1, .child .eff a2] => some (Effect4.Program.Eff.provideLayer a0 a1 a2)
-  | .eff, "service", [.key a0] => some (Effect4.Program.Eff.service a0)
-  | .eff, "provideService", [.key a0, .term a1, .child .eff a2] => some (Effect4.Program.Eff.provideService a0 a1 a2)
-  | .eff, "catchIf", [.term a0, .child .eff a1, .child .eff a2] => some (Effect4.Program.Eff.catchIf a0 a1 a2)
-  | .eff, "select", [.term a0, .decision a1, .child .eff a2, .child .eff a3] => some (Effect4.Program.Eff.select a0 a1 a2 a3)
-  | .eff, "iterate", [.optTy a0, .term a1, .term a2, .term a3, .term a4, .child .eff a5] => some (Effect4.Program.Eff.iterate a0 a1 a2 a3 a4 a5)
-  | .stmt, "bindYield", [.child .eff a0] => some (Effect4.Program.Stmt.bindYield a0)
-  | .stmt, "yieldDiscard", [.child .eff a0] => some (Effect4.Program.Stmt.yieldDiscard a0)
-  | .stmt, "ret", [.term a0] => some (Effect4.Program.Stmt.ret a0)
-  | .stmt, "ifElse", [.term a0, .child .stmts a1, .child .stmts a2] => some (Effect4.Program.Stmt.ifElse a0 a1 a2)
-  | .stmt, "whileTrue", [.child .stmts a0] => some (Effect4.Program.Stmt.whileTrue a0)
-  | .stmt, "breakLoop", [] => some (Effect4.Program.Stmt.breakLoop)
-  | .stmts, "nil", [] => some (Effect4.Program.Stmts.nil)
-  | .stmts, "cons", [.child .stmt a0, .child .stmts a1] => some (Effect4.Program.Stmts.cons a0 a1)
-  | .effs, "nil", [] => some (Effect4.Program.Effs.nil)
-  | .effs, "cons", [.child .eff a0, .child .effs a1] => some (Effect4.Program.Effs.cons a0 a1)
-  | .action, "fork", [.child .eff a0, .forkOptions a1] => some (Effect4.Program.ActionTerm.fork a0 a1)
-  | .action, "forkIn", [.child .eff a0, .forkOptions a1, .term a2] => some (Effect4.Program.ActionTerm.forkIn a0 a1 a2)
-  | .action, "forkScoped", [.child .eff a0, .forkOptions a1] => some (Effect4.Program.ActionTerm.forkScoped a0 a1)
-  | .action, "runIn", [.term a0, .term a1] => some (Effect4.Program.ActionTerm.runIn a0 a1)
-  | .action, "interrupt", [.term a0] => some (Effect4.Program.ActionTerm.interrupt a0)
-  | .action, "interruptScoped", [.term a0] => some (Effect4.Program.ActionTerm.interruptScoped a0)
-  | .action, "interruptAll", [.term a0, .optTerm a1] => some (Effect4.Program.ActionTerm.interruptAll a0 a1)
-  | .action, "awaitAll", [.term a0] => some (Effect4.Program.ActionTerm.awaitAll a0)
-  | .action, "awaitAllFailFast", [.term a0] => some (Effect4.Program.ActionTerm.awaitAllFailFast a0)
-  | .action, "snapshotChildren", [] => some (Effect4.Program.ActionTerm.snapshotChildren)
-  | .action, "awaitNewChildren", [.term a0] => some (Effect4.Program.ActionTerm.awaitNewChildren a0)
-  | .action, "raceAll", [.child .effs a0] => some (Effect4.Program.ActionTerm.raceAll a0)
-  | .action, "setContext", [.term a0] => some (Effect4.Program.ActionTerm.setContext a0)
-  | .action, "getContext", [] => some (Effect4.Program.ActionTerm.getContext)
-  | .action, "getId", [] => some (Effect4.Program.ActionTerm.getId)
-  | .action, "closeScope", [.term a0, .term a1] => some (Effect4.Program.ActionTerm.closeScope a0 a1)
-  | .layer, "succeed", [.key a0, .lit a1] => some (Effect4.Program.LayerTerm.succeed a0 a1)
-  | .layer, "effect", [.key a0, .child .eff a1] => some (Effect4.Program.LayerTerm.effect a0 a1)
-  | .layer, "effectDiscard", [.child .eff a0] => some (Effect4.Program.LayerTerm.effectDiscard a0)
-  | .layer, "provide", [.child .layer a0, .child .layer a1] => some (Effect4.Program.LayerTerm.provide a0 a1)
-  | .layer, "provideMerge", [.child .layer a0, .child .layer a1] => some (Effect4.Program.LayerTerm.provideMerge a0 a1)
-  | .layer, "merge", [.child .layer a0, .child .layer a1] => some (Effect4.Program.LayerTerm.merge a0 a1)
-  | .layer, "fresh", [.child .layer a0] => some (Effect4.Program.LayerTerm.fresh a0)
-  | .layer, "orDie", [.child .layer a0] => some (Effect4.Program.LayerTerm.orDie a0)
-  | .layer, "ref", [.path a0] => some (Effect4.Program.LayerTerm.ref a0)
-  | .layer, "mergeAll", [.child .layers a0] => some (Effect4.Program.LayerTerm.mergeAll a0)
-  | .layers, "nil", [] => some (Effect4.Program.LayerTerms.nil)
-  | .layers, "cons", [.child .layer a0, .child .layers a1] => some (Effect4.Program.LayerTerms.cons a0 a1)
-  | _, _, _ => none
+def build {Op : Type} (fam : EffFam) (ctor : String)
+    (args : List (ArgF Op (EffSelfCarrier Op))) : Option (EffSelfCarrier Op fam) :=
+  match (makers fam).find? fun m => decide (m.name = ctor) with
+  | some m => m.make args
+  | none => none
 
 /-- The view rebuilt: the layer function that builds folds every tree to itself. One
 equation per constructor, each by `rfl`. -/
@@ -390,6 +409,223 @@ theorem build_layers_nil {Op : Type} :
     build (Op := Op) .layers "nil" [] = some (Effect4.Program.LayerTerms.nil) := rfl
 theorem build_layers_cons {Op : Type} (a0 : EffSelfCarrier Op .layer) (a1 : EffSelfCarrier Op .layers) :
     build (Op := Op) .layers "cons" [.child .layer a0, .child .layers a1] = some (Effect4.Program.LayerTerms.cons a0 a1) := rfl
+
+/-- The fold at a family. -/
+def cataFam {Op : Type} {R : EffFam → Type u} (alg : EffAlgebra Op R) :
+    (fam : EffFam) → EffSelfCarrier Op fam → R fam
+  | .eff => cata_eff alg
+  | .stmt => cata_stmt alg
+  | .stmts => cata_stmts alg
+  | .effs => cata_effs alg
+  | .action => cata_action alg
+  | .layer => cata_layer alg
+  | .layers => cata_layers alg
+
+/-- An argument with its child folded; a leaf is itself. -/
+def ArgF.fold {Op : Type} {R : EffFam → Type u} (alg : EffAlgebra Op R) :
+    ArgF Op (EffSelfCarrier Op) → ArgF Op R
+  | .child fam v => .child fam (cataFam alg fam v)
+  | .term v => .term v
+  | .cause v => .cause v
+  | .op v => .op v
+  | .nat v => .nat v
+  | .mode v => .mode v
+  | .bool v => .bool v
+  | .key v => .key v
+  | .decision v => .decision v
+  | .optTy v => .optTy v
+  | .forkOptions v => .forkOptions v
+  | .optTerm v => .optTerm v
+  | .lit v => .lit v
+  | .path v => .path v
+
+/-- What a maker made folds, one layer down, to the layer function on the folded arguments. -/
+theorem makers_cata {Op : Type} {R : EffFam → Type u}
+    (layer : (fam : EffFam) → String → List (ArgF Op R) → R fam) :
+    (fam : EffFam) → (m : Maker Op fam) → m ∈ makers fam →
+    (args : List (ArgF Op (EffSelfCarrier Op))) → (e : EffSelfCarrier Op fam) →
+    m.make args = some e →
+    cataFam (EffAlgebra.ofLayer layer) fam e =
+      layer fam m.name (args.map (ArgF.fold (EffAlgebra.ofLayer layer)))
+  | .eff, m, hm, args, e, h => by
+    simp only [makers, List.mem_cons, List.mem_nil_iff, or_false] at hm
+    rcases hm with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+      (simp only at h; split at h <;> first | (cases h; rfl) | cases h)
+  | .stmt, m, hm, args, e, h => by
+    simp only [makers, List.mem_cons, List.mem_nil_iff, or_false] at hm
+    rcases hm with rfl | rfl | rfl | rfl | rfl | rfl <;>
+      (simp only at h; split at h <;> first | (cases h; rfl) | cases h)
+  | .stmts, m, hm, args, e, h => by
+    simp only [makers, List.mem_cons, List.mem_nil_iff, or_false] at hm
+    rcases hm with rfl | rfl <;>
+      (simp only at h; split at h <;> first | (cases h; rfl) | cases h)
+  | .effs, m, hm, args, e, h => by
+    simp only [makers, List.mem_cons, List.mem_nil_iff, or_false] at hm
+    rcases hm with rfl | rfl <;>
+      (simp only at h; split at h <;> first | (cases h; rfl) | cases h)
+  | .action, m, hm, args, e, h => by
+    simp only [makers, List.mem_cons, List.mem_nil_iff, or_false] at hm
+    rcases hm with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+      (simp only at h; split at h <;> first | (cases h; rfl) | cases h)
+  | .layer, m, hm, args, e, h => by
+    simp only [makers, List.mem_cons, List.mem_nil_iff, or_false] at hm
+    rcases hm with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+      (simp only at h; split at h <;> first | (cases h; rfl) | cases h)
+  | .layers, m, hm, args, e, h => by
+    simp only [makers, List.mem_cons, List.mem_nil_iff, or_false] at hm
+    rcases hm with rfl | rfl <;>
+      (simp only at h; split at h <;> first | (cases h; rfl) | cases h)
+
+/-- The fold of what `build` built, one layer down: the layer function at that constructor,
+on the arguments with their children folded. What a generic reader needs of the fold. -/
+theorem cata_build {Op : Type} {R : EffFam → Type u}
+    (layer : (fam : EffFam) → String → List (ArgF Op R) → R fam)
+    (fam : EffFam) (ctor : String) (args : List (ArgF Op (EffSelfCarrier Op)))
+    (e : EffSelfCarrier Op fam) (h : build fam ctor args = some e) :
+    cataFam (EffAlgebra.ofLayer layer) fam e =
+      layer fam ctor (args.map (ArgF.fold (EffAlgebra.ofLayer layer))) := by
+  unfold build at h
+  split at h
+  · rename_i m hfind
+    have hp : decide (m.name = ctor) = true :=
+      List.find?_some (p := fun m : Maker Op fam => decide (m.name = ctor)) hfind
+    rw [← of_decide_eq_true hp]
+    exact makers_cata layer fam m (List.mem_of_find?_eq_some hfind) args e h
+  · cases h
+
+/-- A `eff` node one layer down: its constructor's name and its arguments by sort. -/
+def view_eff {Op : Type} : Effect4.Program.Eff Op → String × List (ArgF Op (EffSelfCarrier Op))
+  | .succeed a0 => ("succeed", [.term a0])
+  | .fail a0 => ("fail", [.term a0])
+  | .failCause a0 => ("failCause", [.cause a0])
+  | .sync a0 => ("sync", [.term a0])
+  | .suspend a0 => ("suspend", [.child .eff a0])
+  | .perform a0 a1 => ("perform", [.op a0, .term a1])
+  | .bind a0 a1 => ("bind", [.child .eff a0, .child .eff a1])
+  | .gen a0 => ("gen", [.child .stmts a0])
+  | .catchCause a0 a1 => ("catchCause", [.child .eff a0, .child .eff a1])
+  | .matchCause a0 a1 a2 => ("matchCause", [.child .eff a0, .child .eff a1, .child .eff a2])
+  | .onExit a0 a1 => ("onExit", [.child .eff a0, .child .eff a1])
+  | .exit a0 => ("exit", [.child .eff a0])
+  | .uninterruptible a0 => ("uninterruptible", [.child .eff a0])
+  | .interruptible a0 => ("interruptible", [.child .eff a0])
+  | .yieldNow a0 => ("yieldNow", [.nat a0])
+  | .awaitFiber a0 a1 => ("awaitFiber", [.term a0, .mode a1])
+  | .withFiber a0 => ("withFiber", [.child .action a0])
+  | .scoped a0 => ("scoped", [.child .eff a0])
+  | .acquireRelease a0 a1 => ("acquireRelease", [.child .eff a0, .child .eff a1])
+  | .provideLayer a0 a1 a2 => ("provideLayer", [.child .layer a0, .bool a1, .child .eff a2])
+  | .service a0 => ("service", [.key a0])
+  | .provideService a0 a1 a2 => ("provideService", [.key a0, .term a1, .child .eff a2])
+  | .catchIf a0 a1 a2 => ("catchIf", [.term a0, .child .eff a1, .child .eff a2])
+  | .select a0 a1 a2 a3 => ("select", [.term a0, .decision a1, .child .eff a2, .child .eff a3])
+  | .iterate a0 a1 a2 a3 a4 a5 => ("iterate", [.optTy a0, .term a1, .term a2, .term a3, .term a4, .child .eff a5])
+
+theorem build_view_eff {Op : Type} (e : Effect4.Program.Eff Op) :
+    build .eff (view_eff e).1 (view_eff e).2 = some e := by
+  cases e <;> rfl
+
+/-- A `stmt` node one layer down: its constructor's name and its arguments by sort. -/
+def view_stmt {Op : Type} : Effect4.Program.Stmt Op → String × List (ArgF Op (EffSelfCarrier Op))
+  | .bindYield a0 => ("bindYield", [.child .eff a0])
+  | .yieldDiscard a0 => ("yieldDiscard", [.child .eff a0])
+  | .ret a0 => ("ret", [.term a0])
+  | .ifElse a0 a1 a2 => ("ifElse", [.term a0, .child .stmts a1, .child .stmts a2])
+  | .whileTrue a0 => ("whileTrue", [.child .stmts a0])
+  | .breakLoop => ("breakLoop", [])
+
+theorem build_view_stmt {Op : Type} (e : Effect4.Program.Stmt Op) :
+    build .stmt (view_stmt e).1 (view_stmt e).2 = some e := by
+  cases e <;> rfl
+
+/-- A `stmts` node one layer down: its constructor's name and its arguments by sort. -/
+def view_stmts {Op : Type} : Effect4.Program.Stmts Op → String × List (ArgF Op (EffSelfCarrier Op))
+  | .nil => ("nil", [])
+  | .cons a0 a1 => ("cons", [.child .stmt a0, .child .stmts a1])
+
+theorem build_view_stmts {Op : Type} (e : Effect4.Program.Stmts Op) :
+    build .stmts (view_stmts e).1 (view_stmts e).2 = some e := by
+  cases e <;> rfl
+
+/-- A `effs` node one layer down: its constructor's name and its arguments by sort. -/
+def view_effs {Op : Type} : Effect4.Program.Effs Op → String × List (ArgF Op (EffSelfCarrier Op))
+  | .nil => ("nil", [])
+  | .cons a0 a1 => ("cons", [.child .eff a0, .child .effs a1])
+
+theorem build_view_effs {Op : Type} (e : Effect4.Program.Effs Op) :
+    build .effs (view_effs e).1 (view_effs e).2 = some e := by
+  cases e <;> rfl
+
+/-- A `action` node one layer down: its constructor's name and its arguments by sort. -/
+def view_action {Op : Type} : Effect4.Program.ActionTerm Op → String × List (ArgF Op (EffSelfCarrier Op))
+  | .fork a0 a1 => ("fork", [.child .eff a0, .forkOptions a1])
+  | .forkIn a0 a1 a2 => ("forkIn", [.child .eff a0, .forkOptions a1, .term a2])
+  | .forkScoped a0 a1 => ("forkScoped", [.child .eff a0, .forkOptions a1])
+  | .runIn a0 a1 => ("runIn", [.term a0, .term a1])
+  | .interrupt a0 => ("interrupt", [.term a0])
+  | .interruptScoped a0 => ("interruptScoped", [.term a0])
+  | .interruptAll a0 a1 => ("interruptAll", [.term a0, .optTerm a1])
+  | .awaitAll a0 => ("awaitAll", [.term a0])
+  | .awaitAllFailFast a0 => ("awaitAllFailFast", [.term a0])
+  | .snapshotChildren => ("snapshotChildren", [])
+  | .awaitNewChildren a0 => ("awaitNewChildren", [.term a0])
+  | .raceAll a0 => ("raceAll", [.child .effs a0])
+  | .setContext a0 => ("setContext", [.term a0])
+  | .getContext => ("getContext", [])
+  | .getId => ("getId", [])
+  | .closeScope a0 a1 => ("closeScope", [.term a0, .term a1])
+
+theorem build_view_action {Op : Type} (e : Effect4.Program.ActionTerm Op) :
+    build .action (view_action e).1 (view_action e).2 = some e := by
+  cases e <;> rfl
+
+/-- A `layer` node one layer down: its constructor's name and its arguments by sort. -/
+def view_layer {Op : Type} : Effect4.Program.LayerTerm Op → String × List (ArgF Op (EffSelfCarrier Op))
+  | .succeed a0 a1 => ("succeed", [.key a0, .lit a1])
+  | .effect a0 a1 => ("effect", [.key a0, .child .eff a1])
+  | .effectDiscard a0 => ("effectDiscard", [.child .eff a0])
+  | .provide a0 a1 => ("provide", [.child .layer a0, .child .layer a1])
+  | .provideMerge a0 a1 => ("provideMerge", [.child .layer a0, .child .layer a1])
+  | .merge a0 a1 => ("merge", [.child .layer a0, .child .layer a1])
+  | .fresh a0 => ("fresh", [.child .layer a0])
+  | .orDie a0 => ("orDie", [.child .layer a0])
+  | .ref a0 => ("ref", [.path a0])
+  | .mergeAll a0 => ("mergeAll", [.child .layers a0])
+
+theorem build_view_layer {Op : Type} (e : Effect4.Program.LayerTerm Op) :
+    build .layer (view_layer e).1 (view_layer e).2 = some e := by
+  cases e <;> rfl
+
+/-- A `layers` node one layer down: its constructor's name and its arguments by sort. -/
+def view_layers {Op : Type} : Effect4.Program.LayerTerms Op → String × List (ArgF Op (EffSelfCarrier Op))
+  | .nil => ("nil", [])
+  | .cons a0 a1 => ("cons", [.child .layer a0, .child .layers a1])
+
+theorem build_view_layers {Op : Type} (e : Effect4.Program.LayerTerms Op) :
+    build .layers (view_layers e).1 (view_layers e).2 = some e := by
+  cases e <;> rfl
+
+/-- A node one layer down, at any family. -/
+def view {Op : Type} : (fam : EffFam) → EffSelfCarrier Op fam →
+    String × List (ArgF Op (EffSelfCarrier Op))
+  | .eff => view_eff
+  | .stmt => view_stmt
+  | .stmts => view_stmts
+  | .effs => view_effs
+  | .action => view_action
+  | .layer => view_layer
+  | .layers => view_layers
+
+/-- `build` rebuilds a node from its view. -/
+theorem build_view {Op : Type} : (fam : EffFam) → (e : EffSelfCarrier Op fam) →
+    build fam (view fam e).1 (view fam e).2 = some e
+  | .eff, e => build_view_eff e
+  | .stmt, e => build_view_stmt e
+  | .stmts, e => build_view_stmts e
+  | .effs, e => build_view_effs e
+  | .action, e => build_view_action e
+  | .layer, e => build_view_layer e
+  | .layers, e => build_view_layers e
 
 
 end Effect4.Program

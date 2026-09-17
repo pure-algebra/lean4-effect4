@@ -166,16 +166,29 @@ def emit (root : Name) : MetaM String := do
     s := s ++ s!"  | .{label} => [{names}]\n"
   s := s ++ "\n"
 
+  s := s ++ "/-- One constructor as the generic step sees it: its name, and how arguments of its sorts\n"
+  s := s ++ "make a node. `build` looks a maker up by name, so inverting it is a list membership and one\n"
+  s := s ++ "two-case match, never one match over every constructor's name. -/\n"
+  s := s ++ "structure Maker (Op : Type) (fam : EffFam) where\n"
+  s := s ++ "  name : String\n"
+  s := s ++ "  make : List (ArgF Op (EffSelfCarrier Op)) → Option (EffSelfCarrier Op fam)\n\n"
+  s := s ++ "/-- The constructors of a family, in declaration order. -/\n"
+  s := s ++ "def makers {Op : Type} : (fam : EffFam) → List (Maker Op fam)\n"
+  for (label, _) in fams do
+    let entries := (ctors.filter (·.fam == label)).map fun c =>
+      let pats := String.intercalate ", " (c.args.map packArg)
+      let binders := String.intercalate " " (c.args.map (·.name))
+      let rhs := if c.args.isEmpty then s!"{c.famName}.{c.short}" else s!"{c.famName}.{c.short} {binders}"
+      s!"⟨\"{c.short}\", fun | [{pats}] => some ({rhs}) | _ => none⟩"
+    s := s ++ s!"  | .{label} =>\n    [ " ++ String.intercalate "\n    , " entries ++ " ]\n"
+  s := s ++ "\n"
   s := s ++ "/-- The inverse of the view at the tree itself: a constructor from its name and its\n"
   s := s ++ "arguments; `none` when the name or the sorts are not the constructor's. -/\n"
-  s := s ++ "def build {Op : Type} : (fam : EffFam) → String → List (ArgF Op (EffSelfCarrier Op)) →\n"
-  s := s ++ "    Option (EffSelfCarrier Op fam)\n"
-  for c in ctors do
-    let pats := String.intercalate ", " (c.args.map packArg)
-    let binders := String.intercalate " " (c.args.map (·.name))
-    let rhs := if c.args.isEmpty then s!"{c.famName}.{c.short}" else s!"{c.famName}.{c.short} {binders}"
-    s := s ++ s!"  | .{c.fam}, \"{c.short}\", [{pats}] => some ({rhs})\n"
-  s := s ++ "  | _, _, _ => none\n\n"
+  s := s ++ "def build {Op : Type} (fam : EffFam) (ctor : String)\n"
+  s := s ++ "    (args : List (ArgF Op (EffSelfCarrier Op))) : Option (EffSelfCarrier Op fam) :=\n"
+  s := s ++ "  match (makers fam).find? fun m => decide (m.name = ctor) with\n"
+  s := s ++ "  | some m => m.make args\n"
+  s := s ++ "  | none => none\n\n"
 
   s := s ++ "/-- The view rebuilt: the layer function that builds folds every tree to itself. One\n"
   s := s ++ "equation per constructor, each by `rfl`. -/\n"
@@ -190,6 +203,80 @@ def emit (root : Name) : MetaM String := do
     let rhs := if c.args.isEmpty then s!"{c.famName}.{c.short}" else s!"{c.famName}.{c.short} {binders}"
     s := s ++ s!"theorem build_{c.field} \{Op : Type} {quant}:\n"
     s := s ++ s!"    build (Op := Op) .{c.fam} \"{c.short}\" [{packed}] = some ({rhs}) := rfl\n"
+  s := s ++ "\n"
+
+  -- the fold at a family, an argument with its child folded, and the coherence of the two
+  s := s ++ "/-- The fold at a family. -/\n"
+  s := s ++ "def cataFam {Op : Type} {R : EffFam → Type u} (alg : EffAlgebra Op R) :\n"
+  s := s ++ "    (fam : EffFam) → EffSelfCarrier Op fam → R fam\n"
+  for (label, _) in fams do
+    s := s ++ s!"  | .{label} => cata_{label} alg\n"
+  s := s ++ "\n"
+  s := s ++ "/-- An argument with its child folded; a leaf is itself. -/\n"
+  s := s ++ "def ArgF.fold {Op : Type} {R : EffFam → Type u} (alg : EffAlgebra Op R) :\n"
+  s := s ++ "    ArgF Op (EffSelfCarrier Op) → ArgF Op R\n"
+  s := s ++ "  | .child fam v => .child fam (cataFam alg fam v)\n"
+  for (sort, _) in leaves do
+    s := s ++ s!"  | .{sort} v => .{sort} v\n"
+  s := s ++ "\n"
+  s := s ++ "/-- What a maker made folds, one layer down, to the layer function on the folded arguments. -/\n"
+  s := s ++ "theorem makers_cata {Op : Type} {R : EffFam → Type u}\n"
+  s := s ++ "    (layer : (fam : EffFam) → String → List (ArgF Op R) → R fam) :\n"
+  s := s ++ "    (fam : EffFam) → (m : Maker Op fam) → m ∈ makers fam →\n"
+  s := s ++ "    (args : List (ArgF Op (EffSelfCarrier Op))) → (e : EffSelfCarrier Op fam) →\n"
+  s := s ++ "    m.make args = some e →\n"
+  s := s ++ "    cataFam (EffAlgebra.ofLayer layer) fam e =\n"
+  s := s ++ "      layer fam m.name (args.map (ArgF.fold (EffAlgebra.ofLayer layer)))\n"
+  for (label, _) in fams do
+    let count := (ctors.filter (·.fam == label)).length
+    let alts := String.intercalate " | " (List.replicate count "rfl")
+    s := s ++ s!"  | .{label}, m, hm, args, e, h => by\n"
+    s := s ++ "    simp only [makers, List.mem_cons, List.mem_nil_iff, or_false] at hm\n"
+    s := s ++ s!"    rcases hm with {alts} <;>\n"
+    s := s ++ "      (simp only at h; split at h <;> first | (cases h; rfl) | cases h)\n"
+  s := s ++ "\n"
+  s := s ++ "/-- The fold of what `build` built, one layer down: the layer function at that constructor,\n"
+  s := s ++ "on the arguments with their children folded. What a generic reader needs of the fold. -/\n"
+  s := s ++ "theorem cata_build {Op : Type} {R : EffFam → Type u}\n"
+  s := s ++ "    (layer : (fam : EffFam) → String → List (ArgF Op R) → R fam)\n"
+  s := s ++ "    (fam : EffFam) (ctor : String) (args : List (ArgF Op (EffSelfCarrier Op)))\n"
+  s := s ++ "    (e : EffSelfCarrier Op fam) (h : build fam ctor args = some e) :\n"
+  s := s ++ "    cataFam (EffAlgebra.ofLayer layer) fam e =\n"
+  s := s ++ "      layer fam ctor (args.map (ArgF.fold (EffAlgebra.ofLayer layer))) := by\n"
+  s := s ++ "  unfold build at h\n"
+  s := s ++ "  split at h\n"
+  s := s ++ "  · rename_i m hfind\n"
+  s := s ++ "    have hp : decide (m.name = ctor) = true :=\n"
+  s := s ++ "      List.find?_some (p := fun m : Maker Op fam => decide (m.name = ctor)) hfind\n"
+  s := s ++ "    rw [← of_decide_eq_true hp]\n"
+  s := s ++ "    exact makers_cata layer fam m (List.mem_of_find?_eq_some hfind) args e h\n"
+  s := s ++ "  · cases h\n\n"
+
+  -- the view of a node, and that `build` rebuilds it
+  for (label, fam) in fams do
+    let famTy := s!"{fam} Op"
+    s := s ++ s!"/-- A `{label}` node one layer down: its constructor's name and its arguments by sort. -/\n"
+    s := s ++ s!"def view_{label} \{Op : Type} : {famTy} → String × List (ArgF Op (EffSelfCarrier Op))\n"
+    for c in ctors.filter (·.fam == label) do
+      let binders := String.intercalate " " (c.args.map (·.name))
+      let lhs := if c.args.isEmpty then s!".{c.short}" else s!".{c.short} {binders}"
+      let packed := String.intercalate ", " (c.args.map packArg)
+      s := s ++ s!"  | {lhs} => (\"{c.short}\", [{packed}])\n"
+    s := s ++ "\n"
+    s := s ++ s!"theorem build_view_{label} \{Op : Type} (e : {famTy}) :\n"
+    s := s ++ s!"    build .{label} (view_{label} e).1 (view_{label} e).2 = some e := by\n"
+    s := s ++ "  cases e <;> rfl\n\n"
+  s := s ++ "/-- A node one layer down, at any family. -/\n"
+  s := s ++ "def view {Op : Type} : (fam : EffFam) → EffSelfCarrier Op fam →\n"
+  s := s ++ "    String × List (ArgF Op (EffSelfCarrier Op))\n"
+  for (label, _) in fams do
+    s := s ++ s!"  | .{label} => view_{label}\n"
+  s := s ++ "\n"
+  s := s ++ "/-- `build` rebuilds a node from its view. -/\n"
+  s := s ++ "theorem build_view {Op : Type} : (fam : EffFam) → (e : EffSelfCarrier Op fam) →\n"
+  s := s ++ "    build fam (view fam e).1 (view fam e).2 = some e\n"
+  for (label, _) in fams do
+    s := s ++ s!"  | .{label}, e => build_view_{label} e\n"
   s := s ++ "\n"
   return s
 

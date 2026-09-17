@@ -19,8 +19,10 @@ declarations) makes it an algebra, and the generated fold `cata_eff` does the re
 
 Every constructor of the four row families has a row. One row is not a skeleton: the row call
 of `perform` (`RowOut.rowCall`), a codec parametrised by the signature whose inverse is the
-signature's `spell`. The algebra's only hand fields are the three spines (programs, layers, and
-statements, which thread the binders a statement declares): list structure, not clauses.
+signature's `spell`. The three spines (programs, layers, and statements, which thread the
+binders a statement declares) are list structure, not clauses; the layer function handles them
+by their two constructors, so the printer's algebra is `EffAlgebra.ofLayer` of ONE function with
+no field overridden.
 
 `Codegen/Print.lean`'s `print` IS this fold (the hand printer, one clause per constructor, was
 deleted once the two agreed on every constructor, classifier and the seeded corpus), and
@@ -366,7 +368,8 @@ def tableDefect (ctor : String) : PrintRefusal := .internalAction ("table:" ++ c
 
 /-- The whole printer, per layer: the row chosen by constructor and classifier, its arguments
 printed by sort at the depth their holes are under, its skeleton instantiated. A statement
-comes with the binders it declares for the statements after it. -/
+comes with the binders it declares for the statements after it, which the statement spine
+threads. -/
 def tableLayer (sig : Signature Op) :
     (fam : EffFam) → String → List (ArgF Op Carrier) → Carrier fam
   | .eff, ctor, args => fun n => rowPrint sig .eff ctor args n
@@ -380,6 +383,18 @@ def tableLayer (sig : Signature Op) :
       | some s => .ok (s, t.declares)
       | none => .error (tableDefect ctor)
     | _ => .error (tableDefect ctor)
+  -- the three spines are list structure, not clauses: programs and layers item by item at one
+  -- depth, statements threading the binders each one declares
+  | .effs, "nil", [] => fun _ => .ok []
+  | .effs, "cons", [.child .eff head, .child .effs tail] => fun n => do
+    return (← head n) :: (← tail n)
+  | .layers, "nil", [] => fun _ => .ok []
+  | .layers, "cons", [.child .layer head, .child .layers tail] => fun n => do
+    return (← head n) :: (← tail n)
+  | .stmts, "nil", [] => fun _ => .ok []
+  | .stmts, "cons", [.child .stmt head, .child .stmts tail] => fun n => do
+    let (s, declared) ← head n
+    return s :: (← tail (n + declared))
   | .effs, ctor, _ => fun _ => .error (tableDefect ctor)
   | .layers, ctor, _ => fun _ => .error (tableDefect ctor)
   | .stmts, ctor, _ => fun _ => .error (tableDefect ctor)
@@ -400,19 +415,11 @@ where
         | some e => .ok e
         | none => .error (tableDefect ctor)
 
-/-- The algebra: the table's layer function for every constructor, and the three spines (which
-are list structure, not clauses). -/
+/-- The printer's algebra IS the table's layer function (`EffAlgebra.ofLayer`): there is no hand
+field, so the generated coherence of the fold with `build` (`cata_build`) speaks of the whole
+printer. -/
 def printAlg (sig : Signature Op) : EffAlgebra Op Carrier :=
-  { EffAlgebra.ofLayer (tableLayer sig) with
-    stmts_nil := fun _ => .ok []
-    stmts_cons := fun head tail n => do
-      let (s, k) ← head n
-      let rest ← tail (n + k)
-      .ok (s :: rest)
-    effs_nil := fun _ => .ok []
-    effs_cons := fun head tail n => do return (← head n) :: (← tail n)
-    layers_nil := fun _ => .ok []
-    layers_cons := fun head tail n => do return (← head n) :: (← tail n) }
+  EffAlgebra.ofLayer (tableLayer sig)
 
 /-- The table-driven printer of a program. -/
 def printT (sig : Signature Op) (n : Nat) (e : Eff Op) : Except PrintRefusal Expr :=
