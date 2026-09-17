@@ -312,6 +312,10 @@ def Row.selects {R : EffFam → Type} (row : Row) (fam : EffFam) (ctor : String)
     (args : List (ArgF Op R)) : Bool :=
   row.fam == fam && row.ctor == ctor && row.fixed.all fun p => patternAt args p.1 p.2
 
+/-- An argument supplied by the classifier at position `i`, if the row fixes it. -/
+def Row.supplied {R : EffFam → Type} (row : Row) (i : Nat) : Option (ArgF Op R) :=
+  (row.fixed.find? (·.1 == i)).bind (·.2.supplies)
+
 /-- The environment length an argument is printed and read at, from the binders its hole is
 under. A layer is closed (its bodies are typed in the empty scope): every argument of a layer
 row, and every argument of a layer family, is at `0` whatever is around it. That is a fact of

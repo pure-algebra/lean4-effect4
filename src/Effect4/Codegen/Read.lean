@@ -443,7 +443,7 @@ def rowDaemon (row : Templates.Row) : Bool :=
 /-- One capture as the argument of sort `s`: a child is handed to the recursion with the fact
 that it is one of the captures (what the recursion's measure is stated over); anything else goes
 through the leaf reader of its sort. -/
-def readCapture (sig : Signature Op) (row : Templates.Row) (σ : Subst)
+def readCapture (sig : Signature Op) (daemon : Bool) (σ : Subst)
     (child : (fam : EffFam) → Nat → (y : Expr) → (i : Nat) → (i, Arg.expr y) ∈ σ →
       Except ReadFailure (EffSelfCarrier Op fam))
     (children : (fam : EffFam) → Nat → (ys : List Expr) → (i : Nat) → (i, Arg.exprs ys) ∈ σ →
@@ -455,18 +455,18 @@ def readCapture (sig : Signature Op) (row : Templates.Row) (σ : Subst)
   | .expr y, h =>
     match s with
     | .child fam => (child fam d y i h).map (.child fam)
-    | s => (readLeaf sig d (rowDaemon row) s (.expr y)).mapError .here
+    | s => (readLeaf sig d daemon s (.expr y)).mapError .here
   | .exprs ys, h =>
     match s with
     | .child fam => (children fam d ys i h).map (.child fam)
-    | s => (readLeaf sig d (rowDaemon row) s (.exprs ys)).mapError .here
+    | s => (readLeaf sig d daemon s (.exprs ys)).mapError .here
   | .stmts body, h =>
     match s with
     | .child .stmts => (block d body i h).map (.child .stmts)
-    | s => (readLeaf sig d (rowDaemon row) s (.stmts body)).mapError .here
-  | .str v, _ => (readLeaf sig d (rowDaemon row) s (.str v)).mapError .here
-  | .int v, _ => (readLeaf sig d (rowDaemon row) s (.int v)).mapError .here
-  | .type t, _ => (readLeaf sig d (rowDaemon row) s (.type t)).mapError .here
+    | s => (readLeaf sig d daemon s (.stmts body)).mapError .here
+  | .str v, _ => (readLeaf sig d daemon s (.str v)).mapError .here
+  | .int v, _ => (readLeaf sig d daemon s (.int v)).mapError .here
+  | .type t, _ => (readLeaf sig d daemon s (.type t)).mapError .here
 
 /-- The argument at position `i`, of sort `s`, at the depth its hole is under
 (`RowOut.levelAt`, `Templates.argDepth`): supplied when the classifier fixes it, otherwise read
@@ -479,12 +479,12 @@ def readArg (sig : Signature Op) (n : Nat) (row : Templates.Row) (σ : Subst)
     (block : Nat → (ss : List TypeScript.Stmt) → (i : Nat) → (i, Arg.stmts ss) ∈ σ →
       Except ReadFailure (EffSelfCarrier Op .stmts))
     (s : ArgSort) (i : Nat) : Except ReadFailure (ArgF Op (EffSelfCarrier Op)) :=
-  match (row.fixed.find? (·.1 == i)).bind (·.2.supplies) with
+  match row.supplied i with
   | some a => .ok a
   | none =>
     match captured σ i with
     | some ⟨a, h⟩ =>
-      readCapture sig row σ child children block
+      readCapture sig (rowDaemon row) σ child children block
         (Templates.argDepth row.fam s n (row.out.levelAt i)) s i a h
     | none => .error (.here readDefect)
 
@@ -510,6 +510,16 @@ def printedRow (fam : EffFam) (ctor : String) (args : List (ArgF Op (EffSelfCarr
     (k : Nat) : Bool :=
   decide (Templates.table.findIdx? (fun r => r.selects fam ctor args) = some k)
 
+
+/-- What a row accepts of the arguments it read: the printer would choose this row for them
+(exactness), and they make a node of the row's constructor. Every row ends here. -/
+def buildRow (fam : EffFam) (ctor : String) (args : List (ArgF Op (EffSelfCarrier Op)))
+    (k : Nat) : Except ReadFailure (EffSelfCarrier Op fam) :=
+  if printedRow fam ctor args k then
+    match build fam ctor args with
+    | some e => .ok e
+    | none => .error (.here readDefect)
+  else .error (.here (.shape "not the printed row"))
 
 /-- The reserved names that head a program's printed clause: the heads (`Tpl.head?`) of the
 table's program and action rows. A reserved name that heads none of them has no reading in
@@ -614,26 +624,18 @@ def readRow (sig : Signature Op) (spell : String → List String → Option Op) 
                   children fam' d ys (match_below n t x σ hr hσ (i, .exprs ys) hy))
                 (fun d body i hy => block d body (match_below n t x σ hr hσ (i, .stmts body) hy))
                 sorts 0
-              if printedRow fam row.ctor args k then
-                match build fam row.ctor args with
-                | some e => .ok e
-                | none => .error (.here readDefect)
-              else .error (.here (.shape "not the printed row"))
+              buildRow fam row.ctor args k
           else
             match sorts with
             | [.child fam'] =>
               if hk : famRank fam' < famRank fam then
                 (same fam' hk (Templates.argDepth fam (.child fam') n 0)).map fun r => do
                   let c ← r.mapError (·.under row.ctor 0)
-                  if printedRow fam row.ctor [.child fam' c] k then
-                    match build fam row.ctor [.child fam' c] with
-                    | some e => .ok e
-                    | none => .error (.here readDefect)
-                  else .error (.here (.shape "not the printed row"))
+                  buildRow fam row.ctor [.child fam' c] k
               else none
             | [sort] =>
               match readLeaf (R := EffSelfCarrier Op) sig n true sort (.expr x) with
-              | .ok a => if printedRow fam row.ctor [a] k then (build fam row.ctor [a]).map .ok else none
+              | .ok a => (buildRow fam row.ctor [a] k).toOption.map .ok
               | .error _ => none
             | _ => none
   else none
@@ -666,11 +668,8 @@ def readStmtRow (sig : Signature Op) (n : Nat) (s : TypeScript.Stmt) (row : Temp
               (fun d body i hy =>
                 block d body (Template.matchStmt_below n t s σ hσ (i, .stmts body) hy))
               sorts 0
-            if printedRow .stmt row.ctor args k then
-              match build .stmt row.ctor args with
-              | some st => .ok (st, t.declares)
-              | none => .error (.here readDefect)
-            else .error (.here (.shape "not the printed row"))
+            let st ← buildRow .stmt row.ctor args k
+            .ok (st, t.declares)
     | _ => none
   else none
 
