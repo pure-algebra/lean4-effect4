@@ -98,4 +98,36 @@ def authorRefusalOf {table : RowTable} : Except Api.AuthorRefusal (Api.Typed tab
 #print axioms Effect4.Api.author
 #print axioms Effect4.Program.explain_none_iff
 
+/-! ## A red control for every reason (scout F, 2026-09-17)
+
+Ten of the twenty-four reasons had no test that produces them; three belong to `select` and
+`iterate`, and `initialNotCursor` to DI-91's stated annotation. One program each, the smallest
+that reaches the rule. -/
+
+private def unitP : Api.Program := .succeed (.lit .unit)
+
+#guard Api.explain (.select (.lit (.nat 1)) .option unitP unitP)
+  = some ⟨[], .notSelectable .option .nat⟩
+#guard Api.explain (.iterate none (.lit (.nat 0)) (.lit (.bool false)) (.lit (.bool true))
+    (.lit .unit) unitP) = some ⟨[], .stepNotCursor .bool .nat⟩
+#guard Api.explain (.iterate (some .string) (.lit (.nat 0)) (.lit (.bool false)) (.var 0)
+    (.lit .unit) unitP) = some ⟨[], .initialNotCursor .nat .string⟩
+#guard Api.explain (.bind (.withFiber .snapshotChildren)
+    (.withFiber (.interruptAll (.var 0) (some (.lit (.bool true))))))
+  = some ⟨[1, 0], .natExpected .bool⟩
+#guard Api.explain (.withFiber (.setContext (.lit (.nat 1)))) = some ⟨[0], .contextExpected .nat⟩
+#guard Api.explain (.withFiber (.awaitNewChildren (.lit (.nat 1))))
+  = some ⟨[0], .snapshotExpected .nat⟩
+#guard Api.explain (.service ⟨⟨99⟩, ⟨99⟩⟩) = some ⟨[], .serviceUnknown ⟨⟨99⟩, ⟨99⟩⟩⟩
+#guard Api.explain (.provideLayer (.succeed ⟨⟨4⟩, ⟨4⟩⟩ (.str "x")) false unitP)
+  = some ⟨[0], .literalOutsideAlphabet (.str "x")⟩
+#guard (Api.explain (.perform (.external 3) (.lit .unit))).map (·.reason.head)
+  = some "outsideDomain"
+-- A reference that reaches the walker is `layerReference`. Through `Api.explain` an ill-formed
+-- one is caught at the root first, and a well-formed one is expanded away, so the walker's own
+-- arm is reached only on the unexpanded tree.
+#guard Api.explain (.provideLayer (.ref [0]) false unitP) = some ⟨[], .referencesIllFormed⟩
+#guard explainEff (nativeSignature []) [] [] (.provideLayer (.ref [0]) false unitP)
+  = some ⟨[0], .layerReference [0]⟩
+
 end Test.Program.BlameContract
