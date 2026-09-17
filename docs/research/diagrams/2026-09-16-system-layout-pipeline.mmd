@@ -1,0 +1,43 @@
+flowchart LR
+  subgraph Docs["documents (P2, in the store)"]
+    B[("binders.json")]
+    R[("row table")]
+    S[("syntax table<br/>imported from tsgo")]
+    T[("template table")]
+    C[("code table, HostConfig")]
+    TS[("InspectOp signature, ToolSpec table")]
+    M[("McpSchema rc.112")]
+  end
+  subgraph Gen["generators (Effect4Gen, Tools, OCaml5.Tools)"]
+    G1["Fold, Rows, Forms, Authoring, Check"]
+    G2["TsGen, HostProtocol"]
+    G3["EffGen, LcnfGen"]
+    G4["syntax importer, template emitter, protocol emitters (new)"]
+  end
+  subgraph Out["artifacts"]
+    L["src/Effect4 generated modules<br/>Fold, NodeLenses, lifts, Tree views"]
+    J["eff.gen.ts, profile.gen.ts, protocol.gen.ts,<br/>tsSyntax.gen.ts, MCP inspection server, typed client, CLI"]
+    O["eff_types.ml, api_gen.ml, jsoo bundle,<br/>OCaml printer and reader"]
+  end
+  subgraph Gates["gates"]
+    K1["check-gen (drift vs index)"]
+    K2["check-tsdiag (R0), span lane (R2), Check A"]
+    K3["check-ocaml, Conform rungs"]
+    K4["#guard, decide, rfl per row"]
+  end
+  B --> G1
+  R --> G1
+  S --> G4
+  T --> G4
+  C --> G2
+  TS --> G4
+  M --> G4
+  G1 --> L
+  G2 --> J
+  G4 --> J
+  G3 --> O
+  G4 --> O
+  L --> K1
+  L --> K4
+  J --> K2
+  O --> K3

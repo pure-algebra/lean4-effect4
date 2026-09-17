@@ -1,0 +1,53 @@
+flowchart TB
+  classDef proved fill:#d9ead3,stroke:#38761d
+  classDef open fill:#fff2cc,stroke:#bf9000
+  classDef lane fill:#d9d2e9,stroke:#674ea7
+  init["initiality hom_eq_cata (Eff, Doc)"]:::proved
+  fusion["AlgMap, cata_fusion (Doc yes, Eff missing)"]:::open
+  typing["effTy_sound, effTy_complete, wellTyped_iff (O1)"]:::proved
+  blame["explain_none_iff, blame_none_iff (DI-86)"]:::proved
+  cert["TypedProgram, ModuleEmission (O3, O5, O7, O8)"]:::proved
+  docmon["Doc laws 1-4: monoid, nest, flatten, measure"]:::proved
+  bracket["law 5: layout_bracketed, spans laminar"]:::open
+  house["law 6: layout house state-free, render_house"]:::proved
+  layoutinfo["layout_info by fusion"]:::proved
+  locate["spans_disjoint_or_nested, locate_innermost"]:::open
+  table["law 9: table linear, disjoint (decide)"]:::open
+  untmpl["law 10: unTmpl (tmpl c args) per row (rfl)"]:::open
+  rp["law 11: read (print e) = ok e"]:::open
+  pr["law 12: print (read x) = ok x on InImage"]:::open
+  fus13["law 13: text . render_house = Render.expr"]:::open
+  fmt["law 14: renderer injective, Fmt functional"]:::open
+  checkB["Check B: spans commute with Node.child"]:::open
+  checkA["Check A: one path set per program"]:::lane
+  spanlane["span agreement with tsgo (R2)"]:::lane
+  codelane["code agreement (R0, landed)"]:::lane
+  natural["compile naturality (S9)"]:::open
+  meaning["run_eq_ref, run_eq_meaning (P3/P4)"]:::proved
+  O9["O9 typed-state invariant (whole machine)"]:::open
+  O10["O10, O11 elaborate preserves typing, behaviour"]:::open
+  O12["O12 loop laws (Elgot)"]:::open
+  init --> fusion
+  fusion --> layoutinfo
+  fusion --> fus13
+  fusion --> natural
+  docmon --> house
+  docmon --> bracket
+  bracket --> locate
+  bracket --> checkB
+  locate --> spanlane
+  table --> rp
+  untmpl --> rp
+  rp --> pr
+  pr --> fmt
+  house --> fus13
+  fus13 --> spanlane
+  typing --> blame
+  blame --> cert
+  blame --> codelane
+  checkB --> checkA
+  spanlane --> checkA
+  meaning --> natural
+  typing --> O10
+  meaning --> O9
+  O9 --> O12

@@ -1,0 +1,51 @@
+flowchart LR
+  subgraph P1["P1 operational"]
+    Eff["Eff Op<br/>initial algebra, paths List Nat"]
+    Typed["TypedProgram<br/>certificate"]
+    Ref["TypeRefusal<br/>path, reason"]
+    Plan["Eff CompileOp<br/>plan as data"]
+    Mach["Machine, store, tape<br/>run, replay, meaning"]
+  end
+  subgraph P4["P4 syntax"]
+    Tab[("syntax table<br/>tsgo, 192 kinds")]
+    Tm["templates Tm Slot<br/>free monad, holes"]
+    Tree["Tree"]
+  end
+  subgraph P5["P5 layout"]
+    Doc["Doc (Path x Role)"]
+    Str["Stream"]
+    Txt["String + Measure"]
+    Sp["spans : List (Span Path)"]
+  end
+  subgraph Host["host boundary"]
+    Cfg[("HostConfig, tsconfig, pins")]
+    Diag["tsgo diagnostics<br/>code, pos, end (UTF-16)"]
+    Codes[("codesOf table")]
+  end
+  subgraph Faces["faces"]
+    MCP["MCP inspection protocol<br/>resolve, at, render, window, evaluate"]
+    CLI["CLI, typed client"]
+    Html["Whatwg.Html, ANSI, SVG"]
+    ML["OCaml, jsoo"]
+  end
+  Eff -- "print = cata (templates)" --> Tree
+  Tree -- "read (generic inverse)" --> Eff
+  Tm --> Tree
+  Tab --> Tree
+  Tree -- "render (G-algebra)" --> Doc
+  Doc -- "layout policy (zygomorphism)" --> Str
+  Str -- "text" --> Txt
+  Str -- "spans" --> Sp
+  Str -- "color, html, svg" --> Html
+  Txt -- "check (R0 lane)" --> Diag
+  Cfg --> Diag
+  Eff -- "typeOf, explain" --> Ref
+  Eff -- "certificate" --> Typed
+  Ref -- "codesOf" --> Codes
+  Ref -- "locate by containment" --> Sp
+  Eff -- "compile (pure fold)" --> Plan
+  Plan --> Mach
+  Typed -- "InspectOp rows, ToolSpec" --> MCP
+  Str -- "window (scroll)" --> MCP
+  Typed --> CLI
+  Eff -- "LCNF" --> ML
