@@ -619,6 +619,13 @@ Worker (§5 Q7).
 Each question has a recommended answer. These are about needs, so that the algebra is asked
 for everything; the design choices above are not re-opened here.
 
+**Answered 2026-09-16, late night: all as recommended**, with one rule on top: keep it
+simple, do the most basic thing the algebraic constructions offer, add features as they are
+discovered. The construct the owner then asked to workshop ahead of everything, the
+generation medium (schemas and AST transforms as the meta language, the AST compiler that
+can run, the whole Effect module surface through it), is
+`2026-09-16-generation-medium-workshop.md`.
+
 **Q1, consumers of a printed program.** Which of these must every printed program serve:
 (a) `tsgo` diagnostics agreement, (b) execution by the Effect runtime, (c) a model reading it
 over MCP with spans it can cite, (d) a person in a terminal with colour, (e) a web page
