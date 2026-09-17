@@ -91,10 +91,11 @@ ascending row, which is the shape `ServiceKey.Conflict` will be read against at
 `Context/Environment`. That is the reason for the choice, not a theorem: no
 adjacency result is stated at `L0`.
 
-The order itself is load-bearing and not merely a convenience. `PORT-MANIFEST.md`,
-"Canonical row extraction", freezes canonicality as strictly ascending
-`List.Pairwise (· < ·)` and records that "Effect4 gains no second canonical
-order notion", so a canonical row over keys must cite exactly this relation.
+The order itself is load-bearing and not merely a convenience. Canonicality of a row is
+strictly ascending `List.Pairwise (· < ·)` (`Ascending`, `src/Effect4/Data/Row.lean`), and the
+port's manifest, removed with the prod cleanup (git:1529a1fe^:PORT-MANIFEST.md, "Canonical row
+extraction"), recorded that "Effect4 gains no second canonical order notion", so a canonical
+row over keys must cite exactly this relation.
 Three order laws alone would not fix it: a service-major or hash-derived order
 satisfies them and spells a different ascending row for the same key set.
 -/
