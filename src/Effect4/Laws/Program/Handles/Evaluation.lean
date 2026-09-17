@@ -87,12 +87,16 @@ theorem interpAt_keyBounded (root : NativeEff) (completed : List (FiberId × Exi
       simp only [embed_keys, EffName.keys]
       exact List.Subset.trans hs (List.subset_append_right _ _)
     | _ => simp only [interpAt] at h; cases h
-  loopBody n c := by
+  loopEnter n c := by
     cases n with
     | loop p =>
-      exact List.Subset.trans
-        (resolve_keys root ({ p with completed }.childWith 0 c)) (by sub_tac)
-    | _ => simp only [interpAt]; sub_tac
+      exact List.Subset.trans (loopNextAt_keys root { p with completed } c) (by sub_tac)
+    | _ => exact List.nil_subset _
+  loopResume n c v := by
+    cases n with
+    | loop p =>
+      exact List.Subset.trans (loopResumeAt_keys root { p with completed } c v) (by sub_tac)
+    | _ => exact List.nil_subset _
   finalizerProgram n e code h := by
     cases n with
     | fin p =>
@@ -107,8 +111,6 @@ theorem interpAt_keyBounded (root : NativeEff) (completed : List (FiberId × Exi
         (List.subset_append_right _ _)
   syncValue := (interpOf_keyBounded root table).syncValue
   reifyExit := (interpOf_keyBounded root table).reifyExit
-  loopStep := (interpOf_keyBounded root table).loopStep
-  loopDone := (interpOf_keyBounded root table).loopDone
   cancelThenFail := (interpOf_keyBounded root table).cancelThenFail
   parkOf := (interpOf_keyBounded root table).parkOf
   parkCode := (interpOf_keyBounded root table).parkCode

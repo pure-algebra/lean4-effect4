@@ -1314,6 +1314,28 @@ def loopAt (root : NativeEff) (p : Point) : Option (Term × Term × NativeEff) :
   | some (Node.eff (.whileLoop _ test step body)) => some (test, step, body)
   | _ => none
 
+/-- The loop at a point from a cursor: the test chooses the body at `childWith 0 cursor` or
+the loop's end (`exitVoid`, rc.112); a test that is not a Boolean, or no loop at the point,
+is the wrong shape. The one place the raw-program rule of a loop's test lives. -/
+def loopNextAt (root : NativeEff) (p : Point) (cursor : Val) : LoopNext Val NCode :=
+  match loopAt root p with
+  | some (test, _, _) =>
+    match evalTerm (p.env ++ [cursor]) test with
+    | some (Val.bool true) => .continue cursor (resolve root (p.childWith 0 cursor))
+    | some (Val.bool false) => .finish (Prim.success Val.unit)
+    | _ => .finish badShape
+  | none => .finish badShape
+
+/-- The loop at a point resumed with the previous cursor and the body's answer: the step,
+then `loopNextAt` at the stepped cursor; a step that does not evaluate is the wrong shape. -/
+def loopResumeAt (root : NativeEff) (p : Point) (cursor answer : Val) : LoopNext Val NCode :=
+  match loopAt root p with
+  | some (_, step, _) =>
+    match evalTerm (p.env ++ [cursor, answer]) step with
+    | some next => loopNextAt root p next
+    | none => .finish badShape
+  | none => .finish badShape
+
 /-- An external registration must name an external asynchronous row. Return the same
 canonical type-column view used by the native signature; the raw table is not rewritten. -/
 def externalRow (table : RowTable) (i : Nat) : Option Row := do
@@ -1382,25 +1404,14 @@ def interpOf (root : NativeEff) (table : RowTable := []) :
     -- the stores' generators (a scope's close walk, §20), their steps embedded
     | .store n => ((stores.iterNext n value).1, embedStep (stores.iterNext n value).2)
     | _ => ([], IterStep.done value)
-  loopTest := fun name cursor =>
+  loopEnter := fun name cursor =>
     match name with
-    | .loop p =>
-      match loopAt root p with
-      | some (test, _, _) => evalTerm (p.env ++ [cursor]) test = some (Val.bool true)
-      | none => false
-    | _ => false
-  loopBody := fun name cursor =>
+    | .loop p => loopNextAt root p cursor
+    | _ => .finish (Prim.success Val.unit)
+  loopResume := fun name cursor answer =>
     match name with
-    | .loop p => resolve root (p.childWith 0 cursor)
-    | _ => Prim.success cursor
-  loopStep := fun name cursor answer =>
-    match name with
-    | .loop p =>
-      match loopAt root p with
-      | some (_, step, _) => (evalTerm (p.env ++ [cursor, answer]) step).getD cursor
-      | none => cursor
-    | _ => cursor
-  loopDone := fun _ => Val.unit
+    | .loop p => loopResumeAt root p cursor answer
+    | _ => .finish (Prim.success Val.unit)
   notImplemented := Defect.notImplemented
   cancelThenFail := fun name cause => Prim.onSuccess (cancelProgramOf name) (EffName.reFail cause)
   parkOf := fun
@@ -1556,9 +1567,12 @@ def interpAt (root : NativeEff) (completed : List (FiberId × ExitV)) (table : R
           (if bind then p.env ++ [value] else p.env) []
       | .store n => ((stores.iterNext n value).1, embedStep (stores.iterNext n value).2)
       | _ => ([], .done value)
-    loopBody := fun name cursor => match name with
-      | .loop p => resolve root ({ p with completed }.childWith 0 cursor)
-      | _ => Prim.success cursor
+    loopEnter := fun name cursor => match name with
+      | .loop p => loopNextAt root { p with completed } cursor
+      | _ => .finish (Prim.success Val.unit)
+    loopResume := fun name cursor answer => match name with
+      | .loop p => loopResumeAt root { p with completed } cursor answer
+      | _ => .finish (Prim.success Val.unit)
     finalizerProgram := fun name exit => match name with
       | .fin p => some (resolve root ({ p with completed }.childWith 1 (reifyExitVal exit)))
       | _ => (interpOf root).finalizerProgram name exit }

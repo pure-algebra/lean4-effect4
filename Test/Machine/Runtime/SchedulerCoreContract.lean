@@ -66,10 +66,8 @@ def interp : I where
   syncValue := fun _ => 0
   suspendBody := fun _ => readNext
   iterNext := fun _ v => ([], .done v)
-  loopTest := fun _ _ => false
-  loopBody := fun _ v => .pure (.success v)
-  loopStep := fun _ _ v => v
-  loopDone := fun _ => 0
+  loopEnter := fun _ _ => .finish (.pure (.success 0))
+  loopResume := fun _ _ _ => .finish (.pure (.success 0))
   finalizerExit := fun _ _ => Exit.void
   reifyExit := fun _ => 0
   cancelThenFail := fun _ c => .pure (.failure c)
@@ -269,10 +267,8 @@ def winterp : WI where
   syncValue := fun _ => 0
   suspendBody := fun _ => readNext
   iterNext := fun _ v => ([], .done v)
-  loopTest := fun _ _ => false
-  loopBody := fun _ v => .pure (.success v)
-  loopStep := fun _ _ v => v
-  loopDone := fun _ => 0
+  loopEnter := fun _ _ => .finish (.pure (.success 0))
+  loopResume := fun _ _ _ => .finish (.pure (.success 0))
   finalizerExit := fun _ _ => Exit.void
   reifyExit := fun _ => 0
   cancelThenFail := fun _ c => .pure (.failure c)

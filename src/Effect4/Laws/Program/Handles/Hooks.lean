@@ -579,6 +579,47 @@ theorem prepareExternalAnswer_minted (table : RowTable) (current : Option NCode)
           exact externalValue_minted row.answer s ids value result allocated hv hok
     · exact fallback
 
+/-- A loop's next move names the point's handles and the cursor's: the body is a resolved
+child point, the final code an exit or the wrong shape. -/
+theorem loopNextAt_keys (root : NativeEff) (q : Point) (cursor : Val) :
+    loopNextKeys EffName.keys EffThunk.keys (loopNextAt root q cursor) ⊆ q.keys ++ cursor.keys := by
+  unfold loopNextAt
+  cases loopAt root q with
+  | none => exact List.nil_subset _
+  | some loop =>
+    obtain ⟨test, step, body⟩ := loop
+    dsimp only
+    cases evalTerm (q.env ++ [cursor]) test with
+    | none => exact List.nil_subset _
+    | some v =>
+      cases v with
+      | bool flag =>
+        cases flag with
+        | true =>
+          simp only [loopNextKeys]
+          sub_tac using (resolve_keys root (q.childWith 0 cursor))
+        | false => exact List.nil_subset _
+      | _ => exact List.nil_subset _
+
+/-- Resuming a loop names the point's handles, the cursor's and the answer's: the stepped
+cursor evaluates inside that environment. -/
+theorem loopResumeAt_keys (root : NativeEff) (q : Point) (cursor answer : Val) :
+    loopNextKeys EffName.keys EffThunk.keys (loopResumeAt root q cursor answer) ⊆
+      q.keys ++ cursor.keys ++ answer.keys := by
+  unfold loopResumeAt
+  cases loopAt root q with
+  | none => exact List.nil_subset _
+  | some loop =>
+    obtain ⟨test, step, body⟩ := loop
+    dsimp only
+    cases hnext : evalTerm (q.env ++ [cursor, answer]) step with
+    | none => exact List.nil_subset _
+    | some next =>
+      have hk := evalTerm_keys step (q.env ++ [cursor, answer]) next hnext
+      simp only [List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.append_nil] at hk
+      refine List.Subset.trans (loopNextAt_keys root q next) ?_
+      sub_tac using hk
+
 set_option maxHeartbeats 800000 in
 theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
     KeyBounded EffName.keys EffThunk.keys (interpOf root table) where
@@ -642,51 +683,14 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
     | mergeAllForkNext q i mm parent forked | mergeContexts | serviceLookup key | bindService key
     | orDie | external _ _ =>
       simp only [interpOf] at h; cases h
-  loopBody n c := by
+  loopEnter n c := by
     cases n with
-    | loop p => simp only [interpOf]; sub_tac using (resolve_keys root (p.childWith 0 c))
-    | cont p | caught p | caughtError p | onValue p | onCause p | fin p | restore e | merge e | gen p pc bind | registerAwait cell
-    | cancelAwait cell | withWaiter base waiter token | abort | reFail c' | scopeOpen p | scopeProvide p s
-    | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
-    | store name | forkScopedIn p | acquireCtx p | acquireIn p ctx | acquired p ctx sc | afterScopeAdd a finalizer
-    | releaseUnder p ctx e | releaseBody p e previous
-    | provideLayerWith p | provideLayerBody p | updateThen u body | bodyThen body previous
-    | buildWithScopeFromContext q scope' | withMemoMapThen q scope' | addCurrentMemoMap mm
-    | fromBuildThen q mm | memoize q mm scope' | awaitPromise cell' | buildIntoLayerScope q mm scope'
-    | thenBuildInto q mm layerScope | freshThen q scope' | provideThen q mm scope' mode
-    | combineWith mode that | mergeChildren q mm | mergeForkOne q i mm parent forked
-    | mergeForkNext q i mm parent forked | mergeAllChildren q mm | mergeAllForkOne q i mm parent forked
-    | mergeAllForkNext q i mm parent forked | mergeContexts | serviceLookup key | bindService key
-    | orDie | external _ _ =>
-      simp only [interpOf]; sub_tac
-  loopStep n c v := by
+    | loop p => exact List.Subset.trans (loopNextAt_keys root p c) (by sub_tac)
+    | _ => exact List.nil_subset _
+  loopResume n c v := by
     cases n with
-    | loop p =>
-      simp only [interpOf]
-      split
-      · rename_i test step body _
-        cases hval : evalTerm (p.env ++ [c, v]) step with
-        | none => sub_tac
-        | some val =>
-          have hk := evalTerm_keys step (p.env ++ [c, v]) val hval
-          simp only [List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.append_nil] at hk
-          sub_tac using hk
-      · sub_tac
-    | cont p | caught p | caughtError p | onValue p | onCause p | fin p | restore e | merge e | gen p pc bind | registerAwait cell
-    | cancelAwait cell | withWaiter base waiter token | abort | reFail c' | scopeOpen p | scopeProvide p s
-    | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
-    | store name | forkScopedIn p | acquireCtx p | acquireIn p ctx | acquired p ctx sc | afterScopeAdd a finalizer
-    | releaseUnder p ctx e | releaseBody p e previous
-    | provideLayerWith p | provideLayerBody p | updateThen u body | bodyThen body previous
-    | buildWithScopeFromContext q scope' | withMemoMapThen q scope' | addCurrentMemoMap mm
-    | fromBuildThen q mm | memoize q mm scope' | awaitPromise cell' | buildIntoLayerScope q mm scope'
-    | thenBuildInto q mm layerScope | freshThen q scope' | provideThen q mm scope' mode
-    | combineWith mode that | mergeChildren q mm | mergeForkOne q i mm parent forked
-    | mergeForkNext q i mm parent forked | mergeAllChildren q mm | mergeAllForkOne q i mm parent forked
-    | mergeAllForkNext q i mm parent forked | mergeContexts | serviceLookup key | bindService key
-    | orDie | external _ _ =>
-      simp only [interpOf]; sub_tac
-  loopDone n := by simp only [interpOf]; exact List.nil_subset _
+    | loop p => exact List.Subset.trans (loopResumeAt_keys root p c v) (by sub_tac)
+    | _ => exact List.nil_subset _
   cancelThenFail n c := by
     simp only [interpOf]
     sub_tac using (cancelProgramOf_keys n)

@@ -521,10 +521,8 @@ private def constInterp : Effect4.PrimInterp Nat Nat Nat Nat Nat Nat Nat where
   finalizerExit := fun _ _ => .success ()
   reifyExit := fun _ => 0
   iterNext := fun _ value => ([], .done value)
-  loopTest := fun _ _ => false
-  loopBody := fun name _ => .success name
-  loopStep := fun _ cursor _ => cursor
-  loopDone := fun _ => 0
+  loopEnter := fun _ _ => .finish (.success 0)
+  loopResume := fun _ _ _ => .finish (.success 0)
   notImplemented := 0
   cancelThenFail := fun _ cause => .failure cause
 

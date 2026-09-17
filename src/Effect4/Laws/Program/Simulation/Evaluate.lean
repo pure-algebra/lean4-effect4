@@ -297,16 +297,16 @@ theorem step_iterator_resume {g : EffName} {cursor : Val} {next : NCode} {cont :
     (fr.step i).1 = .running { fr with current := next, stack := Prim.iterator cont cursor :: fr.stack } := by
   simp only [FrameFiber.step, h, Prim.armA, hs, List.cons_append, List.nil_append]
 
-theorem step_whileLoop_true {l : EffName} {cursor : Val} (h : fr.current = Prim.whileLoop l cursor)
-    (ht : i.loopTest l cursor = true) :
+theorem step_whileLoop_true {l : EffName} {cursor next : Val} {body : NCode}
+    (h : fr.current = Prim.whileLoop l cursor) (ht : i.loopEnter l cursor = .continue next body) :
     (fr.step i).1 =
-      .running { fr with current := i.loopBody l cursor, stack := Prim.whileLoop l cursor :: fr.stack } := by
-  simp only [FrameFiber.step, h, ht, ↓reduceIte]
+      .running { fr with current := body, stack := Prim.whileLoop l next :: fr.stack } := by
+  simp only [FrameFiber.step, h, ht]
 
-theorem step_whileLoop_false {l : EffName} {cursor : Val} (h : fr.current = Prim.whileLoop l cursor)
-    (ht : i.loopTest l cursor = false) :
-    (fr.step i).1 = .running { fr with current := Prim.success (i.loopDone l) } := by
-  simp only [FrameFiber.step, h, ht, Bool.false_eq_true, ↓reduceIte]
+theorem step_whileLoop_false {l : EffName} {cursor : Val} {code : NCode}
+    (h : fr.current = Prim.whileLoop l cursor) (ht : i.loopEnter l cursor = .finish code) :
+    (fr.step i).1 = .running { fr with current := code } := by
+  simp only [FrameFiber.step, h, ht]
 
 end Step
 
@@ -688,18 +688,23 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluatePrim_step root _ m₁ f₁ y hc₁ rfl,
       stepFrame_eq', evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR]
-    rw [loopTest_eq, ← loopTest_congr root _ hp cursor]
-    by_cases ht : (interpAt root m₂.completedExits).loopTest (.loop p') cursor = true
-    · rw [if_pos ht, step_whileLoop_true _ _ hc₁ ht, finishFrame_running]
+    -- the two loop decisions agree (`loopEnter_means`): one case each
+    have hrel := loopEnter_means root m₂.completedExits hp cursor
+    generalize h₁ : (interpAt root m₂.completedExits).loopEnter (.loop p') cursor = n₁ at hrel
+    generalize h₂ : (interpRAt root m₂.completedExits).loopEnter (.loop p) cursor = n₂ at hrel ⊢
+    cases hrel with
+    | «continue» entered hbody =>
+      rw [step_whileLoop_true _ _ hc₁ h₁, finishFrame_running]
       refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
       exact (hf'.saveAnswer hk).withFrame ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred,
-        (loopBody_means' root _ hp cursor).prepare _,
-        StackMeans.slot (SlotMeans.whileLoop p p' cursor hp) (StackMeans.answer k hk hf'.stack),
+        hbody.prepare _,
+        StackMeans.slot (SlotMeans.whileLoop p p' entered hp) (StackMeans.answer k hk hf'.stack),
         hf'.maskInv⟩
-    · rw [if_neg ht, step_whileLoop_false _ _ hc₁ (bool_eq_false_of_not ht), finishFrame_running]
+    | finish hcode =>
+      rw [step_whileLoop_false _ _ hc₁ h₁, finishFrame_running]
       refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
       exact (hf'.saveAnswer hk).withFrame ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred,
-        CodeMeans.success _, StackMeans.answer k hk hf'.stack, hf'.maskInv⟩
+        hcode.prepare _, StackMeans.answer k hk hf'.stack, hf'.maskInv⟩
   | closeIterSeq order ex k hk =>
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluatePrim_step root _ m₁ f₁ y hc₁ rfl,
       stepFrame_eq', evaluateRawR_fiber _ _ _ _ hc₂]

@@ -225,6 +225,30 @@ theorem cases_receipt {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
 
 end Prim
 
+/-- What a loop does next: run the body under the loop's frame at a cursor, or finish with
+a code. The finishing code is how a loop refuses: a test that is not a Boolean, a step that
+does not evaluate and a result that does not evaluate all finish with the interpreter's
+wrong-shape code instead of stopping silently. -/
+inductive LoopNext (β : Type v) (κ : Type w) : Type (max v w)
+  /-- Continue: the body runs with the loop's frame pushed at this cursor. -/
+  | continue (cursor : β) (body : κ)
+  /-- Finish: the loop's frame is gone and this code runs in its place. -/
+  | finish (code : κ)
+
+namespace LoopNext
+
+/-- The code that runs next, either way. -/
+def code {β : Type v} {κ : Type w} : LoopNext β κ → κ
+  | .continue _ body => body
+  | .finish code => code
+
+/-- The same decision over another code alphabet. -/
+def map {β : Type v} {κ : Type w} {κ' : Type w} (f : κ → κ') : LoopNext β κ → LoopNext β κ'
+  | .continue cursor body => .continue cursor (f body)
+  | .finish code => .finish (f code)
+
+end LoopNext
+
 /-- What stopped a generator's inline fold: a final value, a cause, or an
 effect that has to leave the arm. -/
 inductive IterStep (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
@@ -260,15 +284,12 @@ structure PrimInterp (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
   reifyExit : Exit β ε δ ι α -> β
   /-- The maximal inline run of a generator and the outcome that ended it. -/
   iterNext : ν -> β -> List β × IterStep ν σ β ε δ ι α κ
-  /-- `whileLoop`'s predicate. -/
-  loopTest : ν -> β -> Bool
-  /-- `whileLoop`'s body. -/
-  loopBody : ν -> β -> κ
-  /-- `whileLoop`'s cursor step: from the current cursor and the body's answer,
-  as rc.112's `step(value)` reads the closure it mutates. -/
-  loopStep : ν -> β -> β -> β
-  /-- The terminal value of a finished loop, rc.112's `exitVoid`. -/
-  loopDone : ν -> β
+  /-- Entering a loop at its initial cursor: the test, then the body or the final code. -/
+  loopEnter : ν -> β -> LoopNext β κ
+  /-- Resuming a loop with the previous cursor and the body's answer: the step (rc.112's
+  `step(value)` reads the closure it mutates), the test, then the body or the final code.
+  A refusal is a finishing failure code. -/
+  loopResume : ν -> β -> β -> LoopNext β κ
   /-- The defect payload of `defaultEvaluate`. -/
   notImplemented : δ
   /-- The defunctionalised `flatMap(this[args](), () => failCause(cause))` of
@@ -874,10 +895,9 @@ def armA [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
     some (ofExit (Exit.restoreAfterFinalizer (provided.getD (Exit.success value))
       (interp.finalizerExit finalizer (provided.getD (Exit.success value)))), [])
   | whileLoop loop cursor, value, _ =>
-    let next := interp.loopStep loop cursor value
-    if interp.loopTest loop next then
-      some (interp.loopBody loop next, [whileLoop loop next])
-    else some (success (interp.loopDone loop), [])
+    match interp.loopResume loop cursor value with
+    | .continue next body => some (body, [whileLoop loop next])
+    | .finish code => some (code, [])
   | iterator generator cursor, value, _ =>
     match (interp.iterNext generator value).snd with
     | IterStep.done result => some (success result, [])
@@ -1003,8 +1023,7 @@ theorem armA_isSome [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [Decidabl
   | asyncFinalizer _ => rfl
   | whileLoop loop cursor =>
     show (armA interp (whileLoop loop cursor) value provided).isSome = true
-    cases hloop : interp.loopTest loop (interp.loopStep loop cursor value) <;>
-      simp [armA, hloop]
+    cases hloop : interp.loopResume loop cursor value <;> simp only [armA, hloop, Option.isSome_some]
 
 /-- The cause arm is defined exactly on the frames that declare it.
 census: rule.frames-are-primitives -/
@@ -1260,27 +1279,26 @@ theorem onSuccessAndFailure_arms_are_per_instance [DecidableEq ε] [DecidableEq 
       (onSuccessAndFailure body onValue onCause).armE interp cause provided =
         some (interp.contE onCause cause, []) := ⟨rfl, rfl⟩
 
-/-- The loop steps the stored cursor with the body's answer, re-tests, and only
-then pushes and runs the body.
+/-- The loop resumes with the stored cursor and the body's answer, and only on `continue`
+pushes itself and runs the body.
 census: op.While -/
 theorem armA_whileLoop_continue [DecidableEq ε] [DecidableEq δ] [DecidableEq ι]
-    [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α) (loop : ν) (cursor value : β)
-    (provided : Option (Exit β ε δ ι α))
-    (h : interp.loopTest loop (interp.loopStep loop cursor value) = true) :
+    [DecidableEq α] (interp : PrimInterp ν σ β ε δ ι α) (loop : ν) (cursor value next : β)
+    (body : Prim ν σ β ε δ ι α) (provided : Option (Exit β ε δ ι α))
+    (h : interp.loopResume loop cursor value = .continue next body) :
     (whileLoop loop cursor : Prim ν σ β ε δ ι α).armA interp value provided =
-      some (interp.loopBody loop (interp.loopStep loop cursor value),
-        [whileLoop loop (interp.loopStep loop cursor value)]) := by
-  simp [armA, h]
+      some (body, [whileLoop loop next]) := by
+  simp only [armA, h]
 
-/-- A loop whose re-test fails finishes with the supplied terminal value.
+/-- A loop that finishes runs the interpreter's final code in the frame's place.
 census: op.While -/
 theorem armA_whileLoop_stop [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
     (interp : PrimInterp ν σ β ε δ ι α) (loop : ν) (cursor value : β)
-    (provided : Option (Exit β ε δ ι α))
-    (h : interp.loopTest loop (interp.loopStep loop cursor value) = false) :
+    (code : Prim ν σ β ε δ ι α) (provided : Option (Exit β ε δ ι α))
+    (h : interp.loopResume loop cursor value = .finish code) :
     (whileLoop loop cursor : Prim ν σ β ε δ ι α).armA interp value provided =
-      some (success (interp.loopDone loop), []) := by
-  simp [armA, h]
+      some (code, []) := by
+  simp only [armA, h]
 
 /-- A generator that returned finishes with its value. census: op.Iterator -/
 theorem armA_iterator_done [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
@@ -2502,14 +2520,14 @@ def step [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
   | Prim.yieldNowWith _ => (FrameStep.running self, [])
   | Prim.async _ _ _ => (FrameStep.running self, [])
   | Prim.whileLoop loop cursor =>
-    if interp.loopTest loop cursor then
+    match interp.loopEnter loop cursor with
+    | .continue next body =>
       (FrameStep.running
         { self with
-          current := interp.loopBody loop cursor,
-          stack := Prim.whileLoop loop cursor :: self.stack },
-        [FrameEvent.pushed (Prim.whileLoop loop cursor)])
-    else
-      (FrameStep.running { self with current := Prim.success (interp.loopDone loop) }, [])
+          current := body,
+          stack := Prim.whileLoop loop next :: self.stack },
+        [FrameEvent.pushed (Prim.whileLoop loop next)])
+    | .finish code => (FrameStep.running { self with current := code }, [])
 
 /-- The bounded runner. `FrameStep.running` at exhausted fuel is a live
 frontier under `docs/DESIGN-BASIS.md` DB-04: never a failure, never a defect,
@@ -2853,31 +2871,32 @@ theorem step_parking_is_a_fixed_point [DecidableEq ε] [DecidableEq δ] [Decidab
             self.interruptible self.interruptedCause self.deferredInterrupt), []) :=
   ⟨rfl, rfl⟩
 
-/-- A loop whose test passes pushes itself and runs its body.
+/-- A loop that enters pushes itself at the entered cursor and runs its body.
 census: op.While -/
 theorem step_whileLoop_true [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
     (interp : PrimInterp ν σ β ε δ ι α) (self : FrameFiber ν σ β ε δ ι α) (loop : ν)
-    (cursor : β) (h : interp.loopTest loop cursor = true) :
+    (cursor next : β) (body : Prim ν σ β ε δ ι α)
+    (h : interp.loopEnter loop cursor = .continue next body) :
     (FrameFiber.mk (Prim.whileLoop loop cursor) self.stack self.interruptible
         self.interruptedCause self.deferredInterrupt).step interp =
       (FrameStep.running
-        (FrameFiber.mk (interp.loopBody loop cursor)
-          (Prim.whileLoop loop cursor :: self.stack) self.interruptible
+        (FrameFiber.mk body
+          (Prim.whileLoop loop next :: self.stack) self.interruptible
           self.interruptedCause self.deferredInterrupt),
-        [FrameEvent.pushed (Prim.whileLoop loop cursor)]) := by
-  simp [step, h]
+        [FrameEvent.pushed (Prim.whileLoop loop next)]) := by
+  simp only [step, h]
 
-/-- A loop whose test fails finishes with the supplied terminal value.
+/-- A loop that does not enter runs the interpreter's final code.
 census: op.While -/
 theorem step_whileLoop_false [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
     (interp : PrimInterp ν σ β ε δ ι α) (self : FrameFiber ν σ β ε δ ι α) (loop : ν)
-    (cursor : β) (h : interp.loopTest loop cursor = false) :
+    (cursor : β) (code : Prim ν σ β ε δ ι α) (h : interp.loopEnter loop cursor = .finish code) :
     (FrameFiber.mk (Prim.whileLoop loop cursor) self.stack self.interruptible
         self.interruptedCause self.deferredInterrupt).step interp =
       (FrameStep.running
-        (FrameFiber.mk (Prim.success (interp.loopDone loop)) self.stack self.interruptible
+        (FrameFiber.mk code self.stack self.interruptible
           self.interruptedCause self.deferredInterrupt), []) := by
-  simp [step, h]
+  simp only [step, h]
 
 /-- The `Iterator` frame's `evaluate` delegates to its own value arm, so the
 inline fold happens without a `getCont` checkpoint. census: op.Iterator -/

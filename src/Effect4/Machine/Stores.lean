@@ -2544,10 +2544,8 @@ def stores : RunInterp Name Thunk Val Err Defect FiberId Ann Ctx Stores where
     | Name.closeSeq remaining exit captured, value => ([], closeSeqStep remaining exit captured value)
     | Name.closeParDone, value => ([], closeDone (reasonsOfVal value))
     | _, value => ([], IterStep.done value)
-  loopTest := fun _ _ => false
-  loopBody := fun _ value => Prim.success value
-  loopStep := fun _ _ value => value
-  loopDone := fun _ => Val.unit
+  loopEnter := fun _ _ => .finish (Prim.success Val.unit)
+  loopResume := fun _ _ _ => .finish (Prim.success Val.unit)
   notImplemented := Defect.notImplemented
   cancelThenFail := fun name cause =>
     -- `flatMap(this[args](), () => failCause(cause))` (`internal/effect.ts:1157`), S1

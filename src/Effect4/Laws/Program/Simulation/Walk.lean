@@ -73,10 +73,11 @@ theorem armOf_iterator (interp : NInterp) (v : Val) (g : EffName) (cursor : Val)
 
 theorem armOf_whileLoop (interp : NInterp) (v : Val) (l : EffName) (cursor : Val) :
     armOf interp (.success v) (Prim.whileLoop l cursor) =
-      (if interp.loopTest l (interp.loopStep l cursor v) then
-        some (interp.loopBody l (interp.loopStep l cursor v),
-          [Prim.whileLoop l (interp.loopStep l cursor v)])
-      else some (Prim.success (interp.loopDone l), [])) := rfl
+      (match interp.loopResume l cursor v with
+       | .continue next body => some (body, [Prim.whileLoop l next])
+       | .finish code => some (code, [])) := by
+  show (Prim.whileLoop l cursor).armA interp v (some (.success v)) = _
+  cases h : interp.loopResume l cursor v <;> simp only [Prim.armA, h]
 
 theorem armOf_asyncFinalizer (interp : NInterp) (c : CauseV) (name : EffName) :
     armOf interp (.failure c) (Prim.asyncFinalizer name) =
@@ -198,11 +199,11 @@ theorem popR_loop_fail (c : CauseV) (name : EffName) (cursor : Val) :
 
 theorem popR_loop_succ (v : Val) (name : EffName) (cursor : Val) :
     popR i (.success v) (.loop name cursor :: T) frame =
-      (if i.loopTest name (i.loopStep name cursor v) then
-        ({ frame with
-            stack := .loop name (i.loopStep name cursor v) :: T
-            current := i.loopBody name (i.loopStep name cursor v) }, none)
-      else ({ frame with stack := T, current := .pure (.success (i.loopDone name)) }, none)) := rfl
+      (match i.loopResume name cursor v with
+       | .continue next body =>
+         ({ frame with stack := .loop name next :: T, current := body }, none)
+       | .finish code => ({ frame with stack := T, current := code }, none)) := by
+  cases h : i.loopResume name cursor v <;> simp only [popR, h]
 
 end popREqs
 
@@ -458,6 +459,9 @@ theorem toPrimInterp_contE (i : RunInterp EffName EffThunk Val Err Defect FiberI
 
 theorem toPrimInterp_iterNext (i : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores)
     (n : EffName) (v : Val) : i.toPrimInterp.iterNext n v = i.iterNext n v := rfl
+
+theorem toPrimInterp_loopResume (i : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores)
+    (n : EffName) (c v : Val) : i.toPrimInterp.loopResume n c v = i.loopResume n c v := rfl
 
 /-! ## The mask slot -/
 
@@ -762,29 +766,29 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
         simp only [demandOf, skipOf]
         have hp0 := popFrom_plain_answer .contA false (f := Prim.whileLoop (.loop p') cursor)
           (rest := S') rfl rfl rfl hstack
-        rw [popR_loop_succ, loopTest_eq, loopStep_eq, ← loopTest_congr root completed hp,
-          ← loopStep_congr root completed hp]
-        by_cases ht : (interpAt root completed).loopTest (.loop p')
-            ((interpAt root completed).loopStep (.loop p') cursor v) = true
-        · rw [if_pos ht]
+        rw [popR_loop_succ]
+        -- the two loop decisions agree (`loopResume_means`): one case each
+        have hrel := loopResume_means root completed hp cursor v
+        generalize h₁ : (interpAt root completed).loopResume (.loop p') cursor v = n₁ at hrel
+        generalize h₂ : (interpRAt root completed).loopResume (.loop p) cursor v = n₂ at hrel ⊢
+        cases hrel with
+        | «continue» stepped hbody =>
           refine WalkRel.arm _ hp0.1 (by nofun) ?_ ?_ (by rw [hp0.2]; exact hi)
             (by rw [hp0.2]; exact hc) (by rw [hp0.2]; exact hd) hm
           · intro next pushed harm
-            rw [armOf_whileLoop] at harm
-            simp only [ht] at harm
+            simp only [armOf_whileLoop, toPrimInterp_loopResume, h₁] at harm
             obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj harm)
-            exact ⟨(loopBody_means' root completed hp _).prepare completed,
+            exact ⟨hbody.prepare completed,
               by rw [hp0.2]; exact StackMeans.slot (SlotMeans.whileLoop p p' _ hp) rest⟩
-          · rw [armOf_whileLoop]; simp only [ht]; rfl
-        · rw [if_neg ht]
+          · simp only [armOf_whileLoop, toPrimInterp_loopResume, h₁]; rfl
+        | finish hcode =>
           refine WalkRel.arm _ hp0.1 (by nofun) ?_ ?_ (by rw [hp0.2]; exact hi)
             (by rw [hp0.2]; exact hc) (by rw [hp0.2]; exact hd) hm
           · intro next pushed harm
-            rw [armOf_whileLoop] at harm
-            simp only [ht] at harm
+            simp only [armOf_whileLoop, toPrimInterp_loopResume, h₁] at harm
             obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj harm)
-            exact ⟨CodeMeans.success _, by rw [hp0.2]; exact rest⟩
-          · rw [armOf_whileLoop]; simp only [ht]; rfl
+            exact ⟨hcode.prepare completed, by rw [hp0.2]; exact rest⟩
+          · simp only [armOf_whileLoop, toPrimInterp_loopResume, h₁]; rfl
       | failure c =>
         simp only [demandOf, skipOf]
         have hp0 := popFrom_plain_pass .contE true (f := Prim.whileLoop (.loop p') cursor)

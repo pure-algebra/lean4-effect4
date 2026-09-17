@@ -1200,9 +1200,31 @@ def HooksNoRace (interp : PrimInterp EffName EffThunk Val Err Defect FiberId Ann
   (∀ name value, raceSites (interp.contA name value) = []) ∧
   (∀ name cause, raceSites (interp.contE name cause) = []) ∧
   (∀ thunk, raceSites (interp.suspendBody thunk) = []) ∧
-  (∀ name value, raceSites (interp.loopBody name value) = []) ∧
+  (∀ name cursor, raceSites (interp.loopEnter name cursor).code = [] ∧
+    ∀ value, raceSites (interp.loopResume name cursor value).code = []) ∧
   (∀ name cause, raceSites (interp.cancelThenFail name cause) = []) ∧
   (∀ name value, stepRaceSites (interp.iterNext name value).2 = [])
+
+/-- A loop's next move registers no race: its body is a resolved point, its final code an
+exit or the wrong shape. -/
+theorem raceSites_loopNextAt (root : NativeEff) (q : Point) (cursor : Val) :
+    raceSites (loopNextAt root q cursor).code = [] := by
+  unfold loopNextAt
+  split
+  · split
+    · exact raceSites_resolve _ _
+    · rfl
+    · rfl
+  · rfl
+
+theorem raceSites_loopResumeAt (root : NativeEff) (q : Point) (cursor answer : Val) :
+    raceSites (loopResumeAt root q cursor answer).code = [] := by
+  unfold loopResumeAt
+  split
+  · split
+    · exact raceSites_loopNextAt _ _ _
+    · rfl
+  · rfl
 
 theorem hooksNoRace_interpOf (root : NativeEff) (table : RowTable) :
     HooksNoRace (interpOf root table).toPrimInterp := by
@@ -1210,8 +1232,14 @@ theorem hooksNoRace_interpOf (root : NativeEff) (table : RowTable) :
   · exact raceSites_contAOf root
   · exact raceSites_contEOf root
   · exact raceSites_suspendBodyAt root
-  · intro name value
-    cases name <;> first | rfl | exact raceSites_resolve _ _
+  · intro name cursor
+    refine ⟨?_, fun value => ?_⟩
+    · cases name with
+      | loop p => exact raceSites_loopNextAt root _ cursor
+      | _ => rfl
+    · cases name with
+      | loop p => exact raceSites_loopResumeAt root _ cursor value
+      | _ => rfl
   · intro name cause
     exact raceSites_cancelProgramOf name
   · intro name value
@@ -1229,8 +1257,14 @@ theorem hooksNoRace_interpAt (root : NativeEff) (completed : List (FiberId × Ex
     exact raceSites_contEOf root _ cause
   · intro thunk
     exact raceSites_suspendBodyAt root _
-  · intro name value
-    cases name <;> first | rfl | exact raceSites_resolve _ _
+  · intro name cursor
+    refine ⟨?_, fun value => ?_⟩
+    · cases name with
+      | loop p => exact raceSites_loopNextAt root _ cursor
+      | _ => rfl
+    · cases name with
+      | loop p => exact raceSites_loopResumeAt root _ cursor value
+      | _ => rfl
   · intro name cause
     exact raceSites_cancelProgramOf name
   · intro name value

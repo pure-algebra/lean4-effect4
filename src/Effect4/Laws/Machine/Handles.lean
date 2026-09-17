@@ -573,6 +573,12 @@ def primKeys (nk : ν → List Handle) (sk : σ → List Handle) :
   | Prim.async register _ cancel => nk register ++ (cancel.map nk).getD []
   | Prim.asyncFinalizer onInterrupt => nk onInterrupt
 
+/-- The handles of a loop's next move: the entered cursor and the code that runs. -/
+def loopNextKeys (nk : ν → List Handle) (sk : σ → List Handle) :
+    LoopNext Val (Prim ν σ Val Err Defect FiberId Ann) → List Handle
+  | .continue cursor body => cursor.keys ++ primKeys nk sk body
+  | .finish code => primKeys nk sk code
+
 /-- The handles of a program of the stores' alphabet. -/
 def programKeys : Program → List Handle := primKeys Name.keys Thunk.keys
 
@@ -867,9 +873,9 @@ structure KeyBounded (nk : ν → List Handle) (sk : σ → List Handle)
   iterNext_done : ∀ n v r, (interp.iterNext n v).2 = IterStep.done r → r.keys ⊆ ambient ++ (nk n ++ v.keys)
   iterNext_resume : ∀ n v next n', (interp.iterNext n v).2 = IterStep.resume next n' →
     primKeys nk sk next ++ nk n' ⊆ ambient ++ (nk n ++ v.keys)
-  loopBody : ∀ n c, primKeys nk sk (interp.loopBody n c) ⊆ ambient ++ (nk n ++ c.keys)
-  loopStep : ∀ n c v, (interp.loopStep n c v).keys ⊆ nk n ++ c.keys ++ v.keys
-  loopDone : ∀ n, (interp.loopDone n).keys ⊆ nk n
+  loopEnter : ∀ n c, loopNextKeys nk sk (interp.loopEnter n c) ⊆ ambient ++ (nk n ++ c.keys)
+  loopResume : ∀ n c v,
+    loopNextKeys nk sk (interp.loopResume n c v) ⊆ ambient ++ (nk n ++ c.keys ++ v.keys)
   cancelThenFail : ∀ n c, primKeys nk sk (interp.cancelThenFail n c) ⊆ nk n
   parkOf : ∀ code target mode, interp.parkOf code = some (Except.ok (ParkKind.join target mode)) →
     Handle.fiber target ∈ primKeys nk sk code
@@ -1398,20 +1404,24 @@ theorem armA_keys_with_ambient (hb : KeyBounded nk sk interp ambient) (frame : P
     sub_tac
   | whileLoop loop cursor =>
     simp only [Prim.armA] at h
+    have hnext := hb.loopResume loop cursor value
     split at h
-    · simp only [Option.some.injEq, Prod.mk.injEq] at h
+    · next stepped body hr =>
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
+      rw [hr] at hnext
+      simp only [loopNextKeys, List.append_subset] at hnext
       simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil, primKeys]
-      have hstep := hb.loopStep loop cursor value
       refine List.append_subset.mpr ⟨?_, List.append_subset.mpr ⟨?_, ?_⟩⟩
-      · refine List.Subset.trans (hb.loopBody loop _) ?_
-        sub_tac using hstep
+      · refine List.Subset.trans hnext.2 ?_; sub_tac
       · sub_tac
-      · refine List.Subset.trans hstep ?_; sub_tac
-    · simp only [Option.some.injEq, Prod.mk.injEq] at h
+      · refine List.Subset.trans hnext.1 ?_; sub_tac
+    · next code hr =>
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      simp only [List.flatMap_nil, List.append_nil, primKeys]
-      refine List.Subset.trans (hb.loopDone loop) ?_
+      rw [hr] at hnext
+      simp only [List.flatMap_nil, List.append_nil]
+      refine List.Subset.trans hnext ?_
       sub_tac
   | iterator generator cursor =>
     simp only [Prim.armA] at h
@@ -1668,14 +1678,22 @@ theorem step_keys_with_ambient (hb : KeyBounded nk sk interp ambient) (self : Fr
     sub_tac
   · next loop cursor heq =>
     rw [hfk, heq]
+    have hnext := hb.loopEnter loop cursor
     split
-    · simp only [stepKeys, frameKeys, primKeys, List.flatMap_cons]
-      refine List.append_subset.mpr ⟨?_, ?_⟩
-      · refine List.Subset.trans (hb.loopBody loop cursor) ?_; sub_tac
+    · next entered body he =>
+      rw [he] at hnext
+      simp only [loopNextKeys, List.append_subset] at hnext
+      simp only [stepKeys, frameKeys, primKeys, List.flatMap_cons]
+      refine List.append_subset.mpr ⟨?_, List.append_subset.mpr ⟨List.append_subset.mpr ⟨?_, ?_⟩, ?_⟩⟩
+      · refine List.Subset.trans hnext.2 ?_; sub_tac
       · sub_tac
-    · simp only [stepKeys, frameKeys, primKeys]
+      · refine List.Subset.trans hnext.1 ?_; sub_tac
+      · sub_tac
+    · next code he =>
+      rw [he] at hnext
+      simp only [stepKeys, frameKeys, primKeys]
       refine List.append_subset.mpr ⟨?_, ?_⟩
-      · refine List.Subset.trans (hb.loopDone loop) ?_; sub_tac
+      · refine List.Subset.trans hnext ?_; sub_tac
       · sub_tac
 
 /-! ## The machine's operations
@@ -6305,9 +6323,8 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
     | externalRegister _ | abortController | cancelPark
     | cancelRace _ | withWaiter _ _ _ | reFail _ | finalizerName _ | closeIfLast _ =>
       simp only [stores] at h; cases h
-  loopBody n c := by simp only [stores]; sub_tac
-  loopStep n c v := by simp only [stores]; sub_tac
-  loopDone n := by simp only [stores]; exact List.nil_subset _
+  loopEnter n c := by simp only [stores, loopNextKeys]; sub_tac
+  loopResume n c v := by simp only [stores, loopNextKeys]; sub_tac
   cancelThenFail n c := by simp only [stores]; sub_tac using (cancelProgram_keys n)
   parkOf code target mode h := by
     simp only [stores] at h

@@ -23,7 +23,7 @@ no serialization or decidable equality. No host correspondence is proved.
 The generator walk `walkR` is the term instance of the compile's `runStmts`: the
 same navigation (`blockAt`, `blockExit`, `loopExit`), the source classifier
 `inlineYield` for the inline folds, and the term as the yielded code. `interpR`'s
-`iterNext` and `loopBody` are that walk and the addressed loop body; the loop's
+`iterNext` and `loopEnter`/`loopResume` are that walk and the addressed loop; the loop's
 test, step and done hooks are the compile's own.
 -/
 
@@ -266,6 +266,26 @@ where
     | some (.failure cause) => (folded, .halt cause)
     | none => (folded, .resume (denoteR root e q) (.gen { p with env := env } (pc ++ [1]) bind))
 
+/-- The reference of `loopNextAt` (`Compile.lean`): the same test on the same cursor, the body
+as the denotation at `childWith 0 cursor`, the wrong shape as `badShapeExit`. -/
+def loopNextRAt (root : NativeEff) (p : Point) (cursor : Val) : LoopNext Val RProgram :=
+  match loopAt root p with
+  | some (test, _, _) =>
+    match evalTerm (p.env ++ [cursor]) test with
+    | some (Val.bool true) => .continue cursor (denoteAt root (p.childWith 0 cursor))
+    | some (Val.bool false) => .finish (.pure (.success Val.unit))
+    | _ => .finish (.pure badShapeExit)
+  | none => .finish (.pure badShapeExit)
+
+/-- The reference of `loopResumeAt`: the step, then `loopNextRAt` at the stepped cursor. -/
+def loopResumeRAt (root : NativeEff) (p : Point) (cursor answer : Val) : LoopNext Val RProgram :=
+  match loopAt root p with
+  | some (_, step, _) =>
+    match evalTerm (p.env ++ [cursor, answer]) step with
+    | some next => loopNextRAt root p next
+    | none => .finish (.pure badShapeExit)
+  | none => .finish (.pure badShapeExit)
+
 /-- The actual loop and generator hooks, with the same non-code fields as `interpOf`.
 Frame-only hooks have explicit refusal bodies and are not read by `evaluateR`. -/
 def interpR (root : NativeEff) : RInterp where
@@ -287,13 +307,14 @@ def interpR (root : NativeEff) : RInterp where
     | .store (.closeSeq remaining exit captured) => ([], closeSeqStepR remaining exit captured value)
     | .store .closeParDone => ([], closeDone (reasonsOfVal value))
     | _ => ([], .done value)
-  loopTest := (interpOf root).loopTest
-  loopBody := fun name cursor =>
+  loopEnter := fun name cursor =>
     match name with
-    | .loop p => denoteAt root (p.childWith 0 cursor)
-    | _ => .pure (.success cursor)
-  loopStep := (interpOf root).loopStep
-  loopDone := (interpOf root).loopDone
+    | .loop p => loopNextRAt root p cursor
+    | _ => .finish (.pure (.success Val.unit))
+  loopResume := fun name cursor answer =>
+    match name with
+    | .loop p => loopResumeRAt root p cursor answer
+    | _ => .finish (.pure (.success Val.unit))
   notImplemented := .notImplemented
   cancelThenFail := fun name cause =>
     (guardR .onSuccess (denoteCancel name)).bind (seqR fun _ => .pure (.failure cause))
@@ -373,9 +394,12 @@ def interpRAt (root : NativeEff) (completed : List (FiberId × ExitV)) : RInterp
       | .store (.closeSeq remaining exit captured) => ([], closeSeqStepR remaining exit captured value)
       | .store .closeParDone => ([], closeDone (reasonsOfVal value))
       | _ => ([], .done value)
-    loopBody := fun name cursor => match name with
-      | .loop p => denoteAt root ({ p with completed }.childWith 0 cursor)
-      | _ => .pure (.success cursor)
+    loopEnter := fun name cursor => match name with
+      | .loop p => loopNextRAt root { p with completed } cursor
+      | _ => .finish (.pure (.success Val.unit))
+    loopResume := fun name cursor answer => match name with
+      | .loop p => loopResumeRAt root { p with completed } cursor answer
+      | _ => .finish (.pure (.success Val.unit))
     finalizerProgram := fun name ex => match name with
       | .fin p => some (denoteAt root ({ p with completed }.childWith 1 (reifyExitVal ex)))
       | _ => (interpR root).finalizerProgram name ex }

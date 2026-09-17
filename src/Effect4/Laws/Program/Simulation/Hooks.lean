@@ -689,39 +689,56 @@ theorem iterNext_means (root : NativeEff) (completed : List (FiberId × ExitV)) 
     | _ => exact ⟨rfl, StepRel.done value⟩
   | _ => exact ⟨rfl, StepRel.done value⟩
 
-/-- The loop hooks: the frame's test and step are the term's, and the bodies are related. -/
-theorem loopBody_means (root : NativeEff) (completed : List (FiberId × ExitV)) (name : EffName)
-    (cursor : Val) :
-    CodeMeans root ((interpAt root completed).loopBody name cursor)
-      ((interpRAt root completed).loopBody name cursor) := by
-  cases name with
-  | loop p => exact resolve_intro root _
-  | _ => exact CodeMeans.success _
+/-- The frame's and the term's loop decisions agree: both continue at one cursor with related
+bodies, or both finish with related codes. The one relation the loop's two hooks need. -/
+inductive LoopNextMeans (root : NativeEff) : LoopNext Val NCode → LoopNext Val RProgram → Prop
+  | «continue» (cursor : Val) {body₁ : NCode} {body₂ : RProgram} (h : CodeMeans root body₁ body₂) :
+      LoopNextMeans root (.continue cursor body₁) (.continue cursor body₂)
+  | finish {code₁ : NCode} {code₂ : RProgram} (h : CodeMeans root code₁ code₂) :
+      LoopNextMeans root (.finish code₁) (.finish code₂)
+
+/-- At one point, the compile's and the reference's test agree arm by arm. -/
+theorem loopNextAt_means (root : NativeEff) (q : Point) (cursor : Val) :
+    LoopNextMeans root (loopNextAt root q cursor) (loopNextRAt root q cursor) := by
+  unfold loopNextAt loopNextRAt
+  cases loopAt root q with
+  | none => exact .finish (codeMeans_badShape root)
+  | some loop =>
+    obtain ⟨test, step, body⟩ := loop
+    dsimp only
+    cases evalTerm (q.env ++ [cursor]) test with
+    | none => exact .finish (codeMeans_badShape root)
+    | some v =>
+      cases v with
+      | bool flag =>
+        cases flag with
+        | true => exact .continue cursor (resolve_intro root _)
+        | false => exact .finish (CodeMeans.success _)
+      | _ => exact .finish (codeMeans_badShape root)
+
+/-- At one point, the compile's and the reference's step-then-test agree. -/
+theorem loopResumeAt_means (root : NativeEff) (q : Point) (cursor answer : Val) :
+    LoopNextMeans root (loopResumeAt root q cursor answer) (loopResumeRAt root q cursor answer) := by
+  unfold loopResumeAt loopResumeRAt
+  cases loopAt root q with
+  | none => exact .finish (codeMeans_badShape root)
+  | some loop =>
+    obtain ⟨test, step, body⟩ := loop
+    dsimp only
+    cases evalTerm (q.env ++ [cursor, answer]) step with
+    | none => exact .finish (codeMeans_badShape root)
+    | some next => exact loopNextAt_means root q next
 
 theorem loopAt_congr (root : NativeEff) {p p' : Point} (h : p'.path = p.path) :
     loopAt root p' = loopAt root p := by
   simp [loopAt, h]
 
-/-- The loop hooks read only the loop's address and environment, never the captured view. -/
-theorem loopTest_congr (root : NativeEff) (completed : List (FiberId × ExitV)) {p p' : Point}
+/-- Two points that differ at most in the captured view are one point at a given view. -/
+theorem point_congr {p p' : Point}
     (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
-    (cursor : Val) :
-    (interpAt root completed).loopTest (.loop p') cursor =
-      (interpAt root completed).loopTest (.loop p) cursor := by
-  show (interpOf root).loopTest (.loop p') cursor = (interpOf root).loopTest (.loop p) cursor
-  unfold interpOf
-  dsimp only
-  rw [loopAt_congr root hp.1, hp.2.1]
-
-theorem loopStep_congr (root : NativeEff) (completed : List (FiberId × ExitV)) {p p' : Point}
-    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
-    (cursor answer : Val) :
-    (interpAt root completed).loopStep (.loop p') cursor answer =
-      (interpAt root completed).loopStep (.loop p) cursor answer := by
-  show (interpOf root).loopStep (.loop p') cursor answer = (interpOf root).loopStep (.loop p) cursor answer
-  unfold interpOf
-  dsimp only
-  rw [loopAt_congr root hp.1, hp.2.1]
+    (completed : List (FiberId × ExitV)) :
+    ({ p' with completed } : Point) = ({ p with completed } : Point) := by
+  rw [hp.1, hp.2.1, hp.2.2.1, hp.2.2.2.1, hp.2.2.2.2]
 
 theorem childWith_congr {p p' : Point}
     (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
@@ -730,25 +747,27 @@ theorem childWith_congr {p p' : Point}
   simp only [Point.childWith]
   rw [hp.1, hp.2.1, hp.2.2.1, hp.2.2.2.1, hp.2.2.2.2]
 
-/-- The loop bodies of loops named up to the captured view are related. -/
-theorem loopBody_means' (root : NativeEff) (completed : List (FiberId × ExitV)) {p p' : Point}
+/-- The loop hooks of loops named up to the captured view are related, entering and
+resuming. -/
+theorem loopEnter_means (root : NativeEff) (completed : List (FiberId × ExitV)) {p p' : Point}
     (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
     (cursor : Val) :
-    CodeMeans root ((interpAt root completed).loopBody (.loop p') cursor)
-      ((interpRAt root completed).loopBody (.loop p) cursor) := by
-  show CodeMeans root (resolve root (({ p' with completed } : Point).childWith 0 cursor))
-    (denoteAt root (({ p with completed } : Point).childWith 0 cursor))
-  rw [childWith_congr hp completed 0 cursor]
-  exact resolve_intro root _
+    LoopNextMeans root ((interpAt root completed).loopEnter (.loop p') cursor)
+      ((interpRAt root completed).loopEnter (.loop p) cursor) := by
+  show LoopNextMeans root (loopNextAt root ({ p' with completed } : Point) cursor)
+    (loopNextRAt root ({ p with completed } : Point) cursor)
+  rw [point_congr hp completed]
+  exact loopNextAt_means root _ cursor
 
-theorem loopTest_eq (root : NativeEff) (completed : List (FiberId × ExitV)) :
-    (interpRAt root completed).loopTest = (interpAt root completed).loopTest := rfl
-
-theorem loopStep_eq (root : NativeEff) (completed : List (FiberId × ExitV)) :
-    (interpRAt root completed).loopStep = (interpAt root completed).loopStep := rfl
-
-theorem loopDone_eq (root : NativeEff) (completed : List (FiberId × ExitV)) :
-    (interpRAt root completed).loopDone = (interpAt root completed).loopDone := rfl
+theorem loopResume_means (root : NativeEff) (completed : List (FiberId × ExitV)) {p p' : Point}
+    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
+    (cursor answer : Val) :
+    LoopNextMeans root ((interpAt root completed).loopResume (.loop p') cursor answer)
+      ((interpRAt root completed).loopResume (.loop p) cursor answer) := by
+  show LoopNextMeans root (loopResumeAt root ({ p' with completed } : Point) cursor answer)
+    (loopResumeRAt root ({ p with completed } : Point) cursor answer)
+  rw [point_congr hp completed]
+  exact loopResumeAt_means root _ cursor answer
 
 /-! ## The fiber core: every operation preserves the saved-state relation -/
 

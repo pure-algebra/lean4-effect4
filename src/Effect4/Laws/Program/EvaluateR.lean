@@ -115,10 +115,9 @@ def popR (interp : RInterp) (ex : ExitV) : List ScopeFrame → RSaved → RSaved
       match ex with
       | .failure _ => popR interp ex rest frame
       | .success v =>
-        let next := interp.loopStep name cursor v
-        if interp.loopTest name next then
-          ({ frame with current := interp.loopBody name next, stack := .loop name next :: rest }, none)
-        else ({ frame with current := .pure (.success (interp.loopDone name)) }, none)
+        match interp.loopResume name cursor v with
+        | .continue next body => ({ frame with current := body, stack := .loop name next :: rest }, none)
+        | .finish code => ({ frame with current := code }, none)
 
 def outcomeOfWalk : Option ExitV → Outcome EffName EffThunk Val Err Defect FiberId Ann
   | none => .continue_
@@ -201,10 +200,10 @@ def evaluateFiberR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool
     | .resume code cont => ⟨m, answerR (pushR f (.iter cont)) code, yielding, .continue_, []⟩
   | .loop p cursor =>
     let f := saveAnswerR f next
-    if interp.loopTest (.loop p) cursor then
-      ⟨m, answerR (pushR f (.loop (.loop p) cursor)) (interp.loopBody (.loop p) cursor),
-        yielding, .continue_, []⟩
-    else ⟨m, answerR f (.pure (.success (interp.loopDone (.loop p)))), yielding, .continue_, []⟩
+    match interp.loopEnter (.loop p) cursor with
+    | .continue next body =>
+      ⟨m, answerR (pushR f (.loop (.loop p) next)) body, yielding, .continue_, []⟩
+    | .finish code => ⟨m, answerR f code, yielding, .continue_, []⟩
   | .yieldNow priority => FiberAction.yieldNow interp m (saveAnswerR f (seqR next)) yielding priority
   | .async register _request =>
     let f := saveAnswerR f next
