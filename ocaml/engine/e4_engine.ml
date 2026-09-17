@@ -185,12 +185,12 @@ module type INSTANCE = sig
       (nu, s, val_, err, defect, fiber_id, unit) frame_event )
     run_event
 
-  type decision = (nu, s, val_, err, defect, fiber_id, unit) run_decision
+  type api_decision = (nu, s, val_, err, defect, fiber_id, unit) run_decision
 
-  val api_evaluate : decision
+  val api_evaluate : api_decision
   val interp_of : program -> interp
   val load : program -> fuel:int -> machine
-  val step : program -> interp -> fuel:int -> machine -> decision -> machine * bool
+  val step : program -> interp -> fuel:int -> machine -> api_decision -> machine * bool
   val run_api : program -> fuel:int -> outcome * machine
   val fibers : machine -> (fiber_id * fiber) list
   val fiber_count : machine -> int
@@ -282,7 +282,7 @@ module Make (I : INSTANCE) = struct
   let carriers = I.carriers
 
   type program = I.program
-  type decision = I.decision
+  type decision = I.api_decision
 
   type t = {
     program : I.program;

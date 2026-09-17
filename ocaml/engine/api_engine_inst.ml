@@ -54,7 +54,9 @@ type machine =
 
 type fiber = (nu, s, val_, err, defect, fiber_id, unit, ctx, prim_, ffiber) run_fiber
 type event = (nu, s, val_, err, defect, fiber_id, unit, ctx, prim_, fevent) run_event
-type decision = (nu, s, val_, err, defect, fiber_id, unit) run_decision
+(* The tape's decision. `decision` itself is the program's `Decision` (`select`'s carrier),
+   generated with the rest of the program types. *)
+type api_decision = (nu, s, val_, err, defect, fiber_id, unit) run_decision
 type interp = (nu, s, val_, err, defect, fiber_id, unit, ctx, stores, prim_) run_interp
 type program = native_op eff
 
@@ -67,7 +69,7 @@ let load (p : program) ~(fuel : int) : machine =
 
 (* `Effect4.Machine.stepDecisionState` at `Api.replay`'s specialisation (api_engine.ml:11424);
    the bool is `Effect4.Machine.settled` (:11330), which api_replay reads at :11503. *)
-let step (p : program) (i : interp) ~(fuel : int) (m : machine) (d : decision)
+let step (p : program) (i : interp) ~(fuel : int) (m : machine) (d : api_decision)
   : machine * bool =
   step_decision_state_at_program_replay_checked_from_spec_1 p [] i fuel m d
 

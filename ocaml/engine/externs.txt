@@ -154,6 +154,7 @@ carg Effect4.Program.evalTerm 0 E.t
 carg Effect4.Program.evalTerms 0 E.t
 carg Effect4.Program.causeOf 0 E.t
 carg Effect4.Program.caughtErrorValue? 0 E.t
+carg Effect4.Program.blockEnv 4 E.t
 carg Effect4.Program.blockExit 3 E.t
 carg Effect4.Program.loopExit 4 E.t
 carg Effect4.Program.runStmts 4 E.t

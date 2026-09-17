@@ -194,6 +194,11 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Native_op_clockNow -> A.NativeOp_clockNow
     | Eff_types.Native_op_external d -> A.NativeOp_external d
 
+  let of_decision : Eff_types.decision -> A.decision = function
+    | Eff_types.Decision_bool -> A.Decision_bool
+    | Eff_types.Decision_option -> A.Decision_option
+    | Eff_types.Decision_tag t -> A.Decision_tag t
+
   let rec of_eff : Eff_types.eff -> A.native_op A.eff = function
     | Eff_types.Eff_succeed t -> A.Eff_succeed (of_term t)
     | Eff_types.Eff_fail t -> A.Eff_fail (of_term t)
@@ -213,6 +218,8 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Eff_uninterruptible e -> A.Eff_uninterruptible (of_eff e)
     | Eff_types.Eff_interruptible e -> A.Eff_interruptible (of_eff e)
     | Eff_types.Eff_branch (t, a, b) -> A.Eff_branch (of_term t, of_eff a, of_eff b)
+    | Eff_types.Eff_select (t, d, a, b) ->
+      A.Eff_select (of_term t, of_decision d, of_eff a, of_eff b)
     | Eff_types.Eff_whileLoop (t1, t2, t3, e) ->
       A.Eff_whileLoop (of_term t1, of_term t2, of_term t3, of_eff e)
     | Eff_types.Eff_yieldNow n -> A.Eff_yieldNow n
@@ -372,6 +379,7 @@ module Make (A : PROGRAM_TYPES) = struct
     | A.Eff_service _ -> 24
     | A.Eff_provideService _ -> 25
     | A.Eff_catchIf _ -> 26
+    | A.Eff_select _ -> 27
 
   let ctor_index_stmt : 'op A.stmt -> int = function
     | A.Stmt_bindYield _ -> 0 | A.Stmt_yieldDiscard _ -> 1 | A.Stmt_ret _ -> 2

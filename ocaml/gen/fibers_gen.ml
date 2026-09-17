@@ -201,10 +201,8 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) prim_interp = {
   finalizer_exit : 'nu -> ('b, 'e, 'd, 'i, 'a) exit_ -> (unit, 'e, 'd, 'i, 'a) exit_;
   reify_exit : ('b, 'e, 'd, 'i, 'a) exit_ -> 'b;
   iter_next : 'nu -> 'b -> 'b list * ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) iter_step;
-  loop_test : 'nu -> 'b -> bool;
-  loop_body : 'nu -> 'b -> 'k;
-  loop_step : 'nu -> 'b -> 'b -> 'b;
-  loop_done : 'nu -> 'b;
+  loop_enter : 'nu -> 'b -> ('b, 'k) loop_next;
+  loop_resume : 'nu -> 'b -> 'b -> ('b, 'k) loop_next;
   not_implemented : 'd;
   cancel_then_fail : 'nu -> ('e, 'd, 'i, 'a) cause -> 'k;
 }
@@ -298,6 +296,7 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_event =
   | FrameEvent_substituted of ('e, 'd, 'i, 'a) cause
   | FrameEvent_deferred of ('e, 'd, 'i, 'a) cause
   | FrameEvent_yielded of ('b, 'e, 'd, 'i, 'a) exit_
+and ('b, 'k) loop_next = LoopNext_continue of 'b * 'k | LoopNext_finish of 'k
 and observer_mode = ObserverMode_awaitValue | ObserverMode_joinEffect
 and ('e, 'd) squashed =
   | Squashed_error of 'e
@@ -2014,20 +2013,18 @@ let prim_arm_a (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -
           _jp_59 _x_67)
         | Some val__68 -> _jp_59 val__68)
     | Prim_whileLoop (loop_69, cursor_70) -> (match (interp : (_, _, _, _, _, _, _, _) prim_interp) with
-        | { loop_test = loop_test; loop_body = loop_body; loop_step = loop_step; loop_done = loop_done; _ } -> (let next = loop_step loop_69 cursor_70 x_6 in
-          let _x_71 = loop_test loop_69 next in
-          if _x_71 then (let _x_77 = loop_body loop_69 next in
-            let _x_78 = Prim_whileLoop (loop_69, next) in
-            let _x_79 = [] in
-            let _x_80 = _x_78 :: _x_79 in
-            let _x_81 = _x_77, _x_80 in
-            let _x_82 = Some _x_81 in
-            _x_82) else (let _x_72 = loop_done loop_69 in
-            let _x_73 = Prim_success _x_72 in
-            let _x_74 = [] in
-            let _x_75 = _x_73, _x_74 in
-            let _x_76 = Some _x_75 in
-            _x_76)))
+        | { loop_resume = loop_resume; _ } -> (let _x_71 = loop_resume loop_69 cursor_70 x_6 in
+          match (_x_71 : (_, _) loop_next) with
+            | LoopNext_continue (cursor_72, body_73) -> (let _x_74 = Prim_whileLoop (loop_69, cursor_72) in
+              let _x_75 = [] in
+              let _x_76 = _x_74 :: _x_75 in
+              let _x_77 = body_73, _x_76 in
+              let _x_78 = Some _x_77 in
+              _x_78)
+            | LoopNext_finish code_79 -> (let _x_80 = [] in
+              let _x_81 = code_79, _x_80 in
+              let _x_82 = Some _x_81 in
+              _x_82)))
     | _ -> (let _x_83 = None in
       _x_83)
 
@@ -2405,38 +2402,38 @@ let frame_fiber_step (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3
           let _x_103 = _x_99, _x_102 in
           _x_103)
         | Prim_whileLoop (loop_104, cursor_105) -> (match (interp : (_, _, _, _, _, _, _, _) prim_interp) with
-            | { loop_test = loop_test; loop_body = loop_body; loop_done = loop_done; _ } -> (let _x_106 = loop_test loop_104 cursor_105 in
-              if _x_106 then (let _x_113 = loop_body loop_104 cursor_105 in
-                let _x_114 = current :: stack in
-                let _x_115 = ({ current = _x_113; stack = _x_114; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
-                let _x_116 = FrameStep_running _x_115 in
-                let _x_117 = FrameEvent_pushed current in
-                let _x_118 = [] in
-                let _x_119 = _x_117 :: _x_118 in
-                let _x_120 = _x_116, _x_119 in
-                _x_120) else (let _x_107 = loop_done loop_104 in
-                let _x_108 = Prim_success _x_107 in
-                let _x_109 = ({ current = _x_108; stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
-                let _x_110 = FrameStep_running _x_109 in
-                let _x_111 = [] in
-                let _x_112 = _x_110, _x_111 in
-                _x_112)))
-        | Prim_yieldNowWith _ -> (let _x_122 = FrameStep_running self in
-          let _x_123 = [] in
-          let _x_124 = _x_122, _x_123 in
-          _x_124)
-        | Prim_async (_, _, _) -> (let _x_128 = FrameStep_running self in
-          let _x_129 = [] in
-          let _x_130 = _x_128, _x_129 in
-          _x_130)
+            | { loop_enter = loop_enter; _ } -> (let _x_106 = loop_enter loop_104 cursor_105 in
+              match (_x_106 : (_, _) loop_next) with
+                | LoopNext_continue (cursor_107, body_108) -> (let _x_109 = Prim_whileLoop (loop_104, cursor_107) in
+                  let _x_110 = _x_109 :: stack in
+                  let _x_111 = ({ current = body_108; stack = _x_110; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
+                  let _x_112 = FrameStep_running _x_111 in
+                  let _x_113 = FrameEvent_pushed _x_109 in
+                  let _x_114 = [] in
+                  let _x_115 = _x_113 :: _x_114 in
+                  let _x_116 = _x_112, _x_115 in
+                  _x_116)
+                | LoopNext_finish code_117 -> (let _x_118 = ({ current = code_117; stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
+                  let _x_119 = FrameStep_running _x_118 in
+                  let _x_120 = [] in
+                  let _x_121 = _x_119, _x_120 in
+                  _x_121)))
+        | Prim_yieldNowWith _ -> (let _x_123 = FrameStep_running self in
+          let _x_124 = [] in
+          let _x_125 = _x_123, _x_124 in
+          _x_125)
+        | Prim_async (_, _, _) -> (let _x_129 = FrameStep_running self in
+          let _x_130 = [] in
+          let _x_131 = _x_129, _x_130 in
+          _x_131)
         | _ -> (match (interp : (_, _, _, _, _, _, _, _) prim_interp) with
-            | { not_implemented = not_implemented; _ } -> (let _x_131 = cause_die not_implemented in
-              let _x_132 = Prim_failure _x_131 in
-              let _x_133 = ({ current = _x_132; stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
-              let _x_134 = FrameStep_running _x_133 in
-              let _x_135 = [] in
-              let _x_136 = _x_134, _x_135 in
-              _x_136)))
+            | { not_implemented = not_implemented; _ } -> (let _x_132 = cause_die not_implemented in
+              let _x_133 = Prim_failure _x_132 in
+              let _x_134 = ({ current = _x_133; stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
+              let _x_135 = FrameStep_running _x_134 in
+              let _x_136 = [] in
+              let _x_137 = _x_135, _x_136 in
+              _x_137)))
 
 
 
@@ -2750,8 +2747,8 @@ let evaluate_prim_with_fiber__red_arg__lam_6 (_f_1 : observer -> bool) (g : (_, 
 (* LCNF mono: Effect4.Machine.evaluatePrim.withFiber._redArg (inst.1 : lcAny -> lcAny -> Bool) (inst.2 : lcAny -> lcAny -> Bool) (inst.3 : lcAny -> lcAny -> Bool) (inst.4 : lcAny -> lcAny -> Bool) (interp : Effect4.Machine.RunInterp lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny (Effect4.Prim lcAny lcAny lcAny lcAny lcAny lcAny lcAny)) (m : Effect4.Machine.RunMachine lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny (Effect4.Prim lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (Effect4.FrameFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (Effect4.FrameEvent lcAny lcAny lcAny lcAny lcAny lcAny lcAny)) (f : Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny (Effect4.Prim lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (Effect4.FrameFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny)) (yielding : Bool) (action : Effect4.Machine.WithFiberAction lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny (Effect4.Prim lcAny lcAny lcAny lcAny lcAny lcAny lcAny)) : Effect4.Machine.Iter lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny (Effect4.Prim lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (Effect4.FrameFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (Effect4.FrameEvent lcAny lcAny lcAny lcAny lcAny lcAny lcAny) *)
 
 let evaluate_prim_with_fiber (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -> _ -> bool) (inst_4 : _ -> _ -> bool) (interp : (_, _, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim) run_interp) (m : (_, _, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim, (_, _, _, _, _, _, _) frame_fiber, (_, _, _, _, _, _, _) frame_event) run_machine) (f : (_, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim, (_, _, _, _, _, _, _) frame_fiber) run_fiber) (yielding : bool) (action : (_, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim) with_fiber_action) : (_, _, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim, (_, _, _, _, _, _, _) frame_fiber, (_, _, _, _, _, _, _) frame_event) iter =
-  let _jp_5 = fun _y_6 _y_7 _y_8 _y_9 _y_10 -> let _x_11 = _y_9 @ _y_10 in
-  let _x_12 = ({ machine = _y_8; fiber = _y_6; yielding = yielding; outcome = _y_7; nested = _x_11 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+  let _jp_5 = fun _y_6 _y_7 _y_8 _y_9 _y_10 -> let _x_11 = _y_6 @ _y_10 in
+  let _x_12 = ({ machine = _y_7; fiber = _y_8; yielding = yielding; outcome = _y_9; nested = _x_11 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
   _x_12 in
   let _x_13 = frame_core () () () () () () () in
   match (action : (_, _, _, _, _, _, _, _, _) with_fiber_action) with
@@ -2768,10 +2765,10 @@ let evaluate_prim_with_fiber (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool)
                                   let _x_29 = evaluate_prim_with_fiber__red_arg__lam_0 fst_26 _x_28 in
                                   let _x_30 = Outcome_continue_ in
                                   if daemon then (let _x_34 = [] in
-                                    _jp_5 _x_29 _x_30 fst_24 snd_27 _x_34) else (let _x_31 = Cmd_trackChild (id, snd_22) in
+                                    _jp_5 snd_27 fst_24 _x_29 _x_30 _x_34) else (let _x_31 = Cmd_trackChild (id, snd_22) in
                                     let _x_32 = [] in
                                     let _x_33 = _x_31 :: _x_32 in
-                                    _jp_5 _x_29 _x_30 fst_24 snd_27 _x_33))))))) in
+                                    _jp_5 snd_27 fst_24 _x_29 _x_30 _x_33))))))) in
           if daemon then _jp_16 m else (match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
               | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; armed = armed; state = state; trace = trace; stuck = stuck; _ } -> (let _x_35 = true in
                 let _x_36 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = _x_35; armed = armed; state = state; trace = trace; stuck = stuck } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in

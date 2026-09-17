@@ -595,6 +595,7 @@ def refusalText : PrintRefusal → String
   | .internalAction name => s!"internal action {name}"
   | .layerRef target => s!"layer reference to {target}"
   | .unsafeName spelling => s!"unsafe name {spelling}"
+  | .typeSpelling text => s!"type spelling {text}"
 
 def fiberJson (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) : J :=
   Lean.Json.mkObj

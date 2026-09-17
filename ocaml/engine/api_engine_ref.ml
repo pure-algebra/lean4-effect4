@@ -41,7 +41,7 @@ type machine =
 
 type fiber = (nu, s, val_, err, defect, fiber_id, unit, ctx, prim_, ffiber) run_fiber
 type event = (nu, s, val_, err, defect, fiber_id, unit, ctx, prim_, fevent) run_event
-type decision = (nu, s, val_, err, defect, fiber_id, unit) run_decision
+type api_decision = (nu, s, val_, err, defect, fiber_id, unit) run_decision
 type interp = (nu, s, val_, err, defect, fiber_id, unit, ctx, stores, prim_) run_interp
 type program = native_op eff
 
@@ -52,7 +52,7 @@ let interp_of (p : program) : interp = program_interp_of p []
 let load (p : program) ~(fuel : int) : machine =
   sh_api_load program_compile empty_ctx stores p fuel []
 
-let step (p : program) (i : interp) ~(fuel : int) (m : machine) (d : decision)
+let step (p : program) (i : interp) ~(fuel : int) (m : machine) (d : api_decision)
   : machine * bool =
   step_decision_state_at_program_replay_checked_from_spec_1 p [] i fuel m d
 

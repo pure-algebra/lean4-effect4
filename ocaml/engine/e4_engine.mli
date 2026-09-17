@@ -279,14 +279,14 @@ module type INSTANCE = sig
       (nu, s, val_, err, defect, fiber_id, unit) frame_event )
     run_event
 
-  type decision = (nu, s, val_, err, defect, fiber_id, unit) run_decision
+  type api_decision = (nu, s, val_, err, defect, fiber_id, unit) run_decision
 
-  val api_evaluate : decision
+  val api_evaluate : api_decision
   (** `Effect4.Api.evaluate`, the first row of `Api.run`'s tape. *)
 
   val interp_of : program -> interp
   val load : program -> fuel:int -> machine
-  val step : program -> interp -> fuel:int -> machine -> decision -> machine * bool
+  val step : program -> interp -> fuel:int -> machine -> api_decision -> machine * bool
   val run_api : program -> fuel:int -> outcome * machine
 
   (** The free rows. *)

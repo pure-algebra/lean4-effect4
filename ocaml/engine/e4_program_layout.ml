@@ -61,6 +61,7 @@ module type PROGRAM_TYPES = sig
   type service_name = int
   type service_type_code = int
   type service_key = { name : service_name; service : service_type_code }
+  type decision = Decision_bool | Decision_option | Decision_tag of string
   type 'op eff = | Eff_succeed of term
   | Eff_fail of term
   | Eff_failCause of cause_term
@@ -88,6 +89,7 @@ module type PROGRAM_TYPES = sig
   | Eff_service of service_key
   | Eff_provideService of service_key * term * 'op eff
   | Eff_catchIf of term * 'op eff * 'op eff
+  | Eff_select of term * decision * 'op eff * 'op eff
   and 'op stmt = | Stmt_bindYield of 'op eff
   | Stmt_yieldDiscard of 'op eff
   | Stmt_ret of term
@@ -156,6 +158,7 @@ let source_ctor_names = [
   ("finalizer_strategy", Eff_types.ctor_names_finalizer_strategy);
   ("fn_name", Eff_types.ctor_names_fn_name);
   ("native_op", Eff_types.ctor_names_native_op);
+  ("decision", Eff_types.ctor_names_decision);
   ("eff", Eff_types.ctor_names_eff);
   ("stmt", Eff_types.ctor_names_stmt);
   ("stmts", Eff_types.ctor_names_stmts);
@@ -179,7 +182,8 @@ let engine_ctor_names = [
   ("finalizer_strategy", ["sequential"; "parallel"]);
   ("fn_name", ["incr"; "double"; "zeroWhenPositive"; "noChange"; "takeAndBump"]);
   ("native_op", ["refMake"; "refGet"; "refSet"; "refGetAndSet"; "refSetAndGet"; "refUpdate"; "refGetAndUpdate"; "refUpdateAndGet"; "refUpdateSome"; "refGetAndUpdateSome"; "refUpdateSomeAndGet"; "refModify"; "refModifySome"; "deferredMake"; "deferredIsDone"; "deferredPoll"; "deferredSucceed"; "deferredFail"; "deferredAwait"; "scopeMake"; "sleep"; "clockNow"; "external"]);
-  ("eff", ["succeed"; "fail"; "failCause"; "yieldError"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "branch"; "whileLoop"; "yieldNow"; "callback"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"]);
+  ("decision", ["bool"; "option"; "tag"]);
+  ("eff", ["succeed"; "fail"; "failCause"; "yieldError"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "branch"; "whileLoop"; "yieldNow"; "callback"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"]);
   ("stmt", ["bindYield"; "yieldDiscard"; "ret"; "ifElse"; "whileTrue"; "breakLoop"]);
   ("stmts", ["nil"; "cons"]);
   ("effs", ["nil"; "cons"]);

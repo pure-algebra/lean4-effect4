@@ -60,6 +60,7 @@ let children (f : family) (c : int) : (int * family) list =
     | 22 -> [ (0, Eff); (1, Eff) ] (* acquireRelease a r *)
     | 25 -> [ (2, Eff) ] (* provideService k t e -- M5: 0 -> 2 *)
     | 26 -> [ (1, Eff); (2, Eff) ] (* catchIf t b h -- M5: 0,1 -> 1,2 *)
+    | 27 -> [ (2, Eff); (3, Eff) ] (* select s d a0 a1 -- M5: 0,1 -> 2,3 *)
     | _ -> [])
   | Stmt -> (
     match c with
@@ -133,6 +134,8 @@ module Tree = struct
     | N_eff (Eff_interruptible b), 0 -> Some (N_eff b)
     | N_eff (Eff_branch (_, a, _)), 0 -> Some (N_eff a)
     | N_eff (Eff_branch (_, _, b)), 1 -> Some (N_eff b)
+    | N_eff (Eff_select (_, _, a, _)), 0 -> Some (N_eff a)
+    | N_eff (Eff_select (_, _, _, b)), 1 -> Some (N_eff b)
     | N_eff (Eff_whileLoop (_, _, _, b)), 0 -> Some (N_eff b)
     | N_eff (Eff_withFiber a), 0 -> Some (N_action a)
     | N_eff (Eff_scoped b), 0 -> Some (N_eff b)

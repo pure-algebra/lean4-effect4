@@ -71,7 +71,7 @@ module Api_gen_inst = struct
 
   type fiber = (nu, s, val_, err, defect, fiber_id, unit, ctx, prim_, ffiber) run_fiber
   type event = (nu, s, val_, err, defect, fiber_id, unit, ctx, prim_, fevent) run_event
-  type decision = (nu, s, val_, err, defect, fiber_id, unit) run_decision
+  type api_decision = (nu, s, val_, err, defect, fiber_id, unit) run_decision
 
   type interp =
     (nu, s, val_, err, defect, fiber_id, unit, ctx, stores, prim_) run_interp
@@ -84,7 +84,7 @@ module Api_gen_inst = struct
 
   (* `Effect4.Machine.stepDecisionState` at `Api.replay`'s specialisation
      (api_gen.ml); the bool is `Effect4.Machine.settled`. *)
-  let step (p : program) (i : interp) ~(fuel : int) (m : machine) (d : decision)
+  let step (p : program) (i : interp) ~(fuel : int) (m : machine) (d : api_decision)
     : machine * bool =
     step_decision_state_at_program_replay_checked_from_spec_1 p [] i fuel m d
 
@@ -367,7 +367,7 @@ let () =
   print_endline "== 1. ocaml/eff/goldens: the 37 byte goldens (fuel 1000) ==";
   let goldens, grep = Corpora.goldens () in
   show_report grep;
-  check "the byte corpus decodes: 48 programs" (List.length goldens = 48);
+  check "the byte corpus decodes: 51 programs" (List.length goldens = 51);
   let tg = run_corpus "goldens" goldens tapes_for_bytes_random in
   verdict "goldens" tg;
 

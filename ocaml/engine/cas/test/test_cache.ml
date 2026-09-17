@@ -508,7 +508,8 @@ let eff_witnesses : Eff_types.eff list =
     Eff_provideLayer (Layer_term_succeed (skey0, Lit_unit), false, ea);
     Eff_service skey0;
     Eff_provideService (skey0, t_unit, ea);
-    Eff_catchIf (t_unit, ea, eb) ]
+    Eff_catchIf (t_unit, ea, eb);
+    Eff_select (t_unit, Decision_tag "A", ea, eb) ]
 
 let stmt_witnesses : Eff_types.stmt list =
   [ Stmt_bindYield ea; Stmt_yieldDiscard eb; Stmt_ret t_unit; Stmt_ifElse (t_unit, ssa, ssb);
@@ -659,7 +660,7 @@ let test_slice_goldens () =
          "S1 every subterm's own encoding equals the slice its entry names (%d programs, %d \
           subterms)"
          !progs !total)
-      (!bad = 0 && !progs = 48 && !refused = 0);
+      (!bad = 0 && !progs = 51 && !refused = 0);
     check "S3 the root entry is the whole program, at path ." !root_ok;
     check "S8 `entries` is a pre-order: a parent precedes every descendant" !order_ok
 
@@ -733,12 +734,12 @@ let test_every_constructor () =
                   end)
               value_children))
     embedded;
-  note "S2 %d constructors: 27 eff + 6 stmt + 2 stmts + 2 effs + 16 action" !n;
+  note "S2 %d constructors: 28 eff + 6 stmt + 2 stmts + 2 effs + 16 action" !n;
   check "S2 every constructor of every family: the entry, its slice, its children, its ValPath"
-    (!bad = 0 && !n = 53);
+    (!bad = 0 && !n = 54);
   (* the table's alphabet is the wire's alphabet, family for family *)
   check "S7 `children` covers exactly the constructors `Eff_types` declares"
-    (E4_subterm.arity E4_subterm.Eff = 27
+    (E4_subterm.arity E4_subterm.Eff = 28
     && E4_subterm.arity E4_subterm.Stmt = 6
     && E4_subterm.arity E4_subterm.Stmts = 2
     && E4_subterm.arity E4_subterm.Effs = 2
@@ -773,11 +774,12 @@ let test_path_spaces () =
         ("eff", 16, 0, 3); (* whileLoop *)
         ("eff", 25, 0, 2); (* provideService *)
         ("eff", 26, 0, 1); ("eff", 26, 1, 2); (* catchIf *)
+        ("eff", 27, 0, 2); ("eff", 27, 1, 3); (* select *)
         ("stmt", 3, 0, 1); ("stmt", 3, 1, 2) (* ifElse *) ]
   in
   List.iter (fun (f, c, k, v) -> note "S5 %s ctor %d: program child %d is argument %d" f c k v) got;
   check
-    "S5 the two path spaces differ at exactly branch, whileLoop, provideService, catchIf and \
+    "S5 the two path spaces differ at exactly branch, whileLoop, provideService, catchIf, select and \
      ifElse — and nowhere else"
     (got = want);
   let rt = ref true in
