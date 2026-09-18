@@ -287,6 +287,8 @@ connector at that point, every one at `[propext, Quot.sound]` (72 after §7.5).
   `ofSchema` (1).
 - **`instReprTy.repr`** (1): the implementation of `deriving Repr`, generated from the
   signature by Lean's handler; the census marks it as an instance implementation (§7.6).
+
+The count after §7.7: 87 hand traversals, 74 with connectors, 13 named above.
 - **`compileEff`** (5): exempt by ruling (row 30); `Sched`'s helpers (5) follow it.
 
 The step after the connectors is the callers: each `f`'s callers move to `cata alg`, the
@@ -370,6 +372,29 @@ definition nested under an instance as an instance implementation and counts tho
 Census after this: **80 of 93** hand traversals have a fold and a kernel-checked connector.
 The thirteen without: `compileEff`'s five (exempt, row 30) and `Sched`'s five, `valCode` and
 `ofSchema` (the grandchild-under-a-container shape, §7.4), and the derived instance.
+
+### 7.7 The callers of `explain` moved; the hand blame deleted (2026-09-18)
+
+The good place for the first deletion: `explain` and `blame` had two consumers, `Api` and the
+blame contract, and the fold's refusal was proved equal to the hand walk's arm for arm (§7.5).
+So `explain sig env e` is now `Checker.refusal (Checker.check sig env [] e)` by definition
+(`Program/Checker.lean`), `Api.checkLayer` matches the `Except` of `Checker.checkLayer` and
+carries `checkLayer_eq` as its certificate (no `absurd` on a completeness law), the contract's
+one direct use names `Program.explain`, and the six hand blame members (`explainEff`,
+`explainLayer`, `explainLayers`, `explainStmts`, `explainEffs`, `explainAction`, 270 lines)
+are deleted with the refusal half of the agreement and the six sort-level `*_none_iff`
+theorems that stated it. `Typing/Blame.lean` is the vocabulary of reasons (`TypeReason`,
+`TypeRefusal`, `selectRefusal`), 117 lines from 777 at the start of the day. The law of the
+projection keeps its name and statement (`explain_none_iff : explain sig env e = none ↔ (effTy
+sig env e).isSome`), two lines from `check_eq` and `refusal_none_iff`; `Api.explain_none_iff`
+and `Test/Program/BlameContract.lean` are untouched, every battery of `Test/All.lean` builds,
+and the axioms are `[propext, Quot.sound]` throughout.
+
+This is where the count in §2 goes down for the right reason: the hand traversals are
+**87** (`Eff` 34), of which **74** have a fold and a connector; the thirteen without are
+unchanged. `effTy`'s block stays: its consumers are the proof files (`Typing/Sound.lean`,
+`Typing/Check.lean`, `CheckedTyping.lean`, …), which unfold its equations, and moving them is
+the next callers slice, not a deletion.
 
 ## 8. Scout G — the tooling that exists (`docs/research/2026-09-17-lean-tooling-scout-G.md`)
 

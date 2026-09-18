@@ -29,12 +29,13 @@ reads back.
   safety by construction, the journal as a free monoid (`replay_unique`); the law of the
   projection (`explain = none ↔ effTy.isSome`) as the shape of one `Except`-valued fold
   (`Program/Typing/Agreement.lean`), its 370-line induction deleted.
-- Measured (`#traversal_census`, `docs/core/traversal-census.md`): 93 hand traversals of the
-  five free objects (`Eff` 40, `Ty` 17, `Term` 14, `Representation` 5, `Val` 17). The converter
-  `fold_of` (`Program/FoldOf.lean`, five shapes) has given 80 of them a fold and a kernel-checked
-  connector beside the hand definition, at `[propext, Quot.sound]`; typing with located refusal
-  is one `Except`-valued fold (`Program/Checker.lean`: a statement has a type; `effTy` its
-  success, `explain` its refusal, census §7.5) and the term typer is the fold `argTy` (§7.6);
+- Measured (`#traversal_census`, `docs/core/traversal-census.md`): 87 hand traversals of the
+  five free objects (`Eff` 34, `Ty` 17, `Term` 14, `Representation` 5, `Val` 17), down from
+  93 once the hand blame walk was deleted. The converter `fold_of` (`Program/FoldOf.lean`, five
+  shapes) has given 74 of them a fold and a kernel-checked connector beside the hand
+  definition, at `[propext, Quot.sound]`; typing with located refusal is one `Except`-valued
+  fold (`Program/Checker.lean`: a statement has a type; `effTy` its success, `explain` its
+  refusal by definition, census §7.5, §7.7) and the term typer is the fold `argTy` (§7.6);
   the thirteen without are the ruled exemptions, `valCode`/`ofSchema`, and a derived instance
   (§7.4). That distance is the current work.
 
@@ -56,9 +57,10 @@ reads back.
 
 1. **The converter's last shape** (`docs/core/traversal-census.md` §7.4): the grandchild under a
    container for `valCode`/`ofSchema` (two rows); then the callers move to
-   `cata alg` (the checker's first: the projection law has moved; `typeOf`, `explain` and
-   `blame` over `Checker.check.alg` next, after which `Typing.lean`'s block and `Blame.lean`'s
-   block are deleted) and the hand definitions go at a good place. `compileEff` stays exempt.
+   `cata alg` (the checker's first: `explain`/`blame` and the projection law have moved and the
+   hand blame is deleted; `effTy`'s consumers are the typing proof files, the next slice, after
+   which `Typing.lean`'s block goes) and the hand definitions go at a good place. `compileEff`
+   stays exempt.
 2. **The simple rows** of the do-now set (`ontology.md` §2): 6 with exactness modulo
    annotations, 8, 23 as a delete, 24, 37, 17.
 3. **The Schema layer** re-cut (`ontology.md` §3): the five files that carry the two real claims
