@@ -145,3 +145,45 @@ alphabet and its answers are §1's second bullet; the pairing is per fiber and p
    says contributes `never` to the error column; the clause must say so at the exit, not only at
    the term.
 5. The reference's four table gaps are inherited, stated, and not hidden.
+
+## 6. After the scout (2026-09-18, `docs/research/2026-09-18-typed-state-proof-graph-scout.md`)
+
+An Opus seat mapped the graph, ran ten probes and filed eleven corrections. The plan stands with
+these amendments; the scout note is the detail and carries the file:line for each.
+
+- **The table is read in `∀`-form.** Every clause that consults the fiber table is `∀ ty, Γ x =
+  some ty → …`, never `∃ ty, …`; the `∃`-form is antitone in `Γ` and a fork's extension of the
+  table breaks it (probe `P6_bind`, the repaired form stamped `[propext]` in `P7_variance`).
+  Coverage of the table is asserted once, in `TypedState`.
+- **A fiber handle carries no type in `Val.hasTy`** (`Program/Typed.lean:55`, coarse by DI-17),
+  and `validIn` on a handle is always true. So `TypedAt` cannot support the `await` clause. The
+  invariant gains a field `HandlesFit Γ tys env` (every handle in scope at a `fiberOf` type is
+  typed by the table no more loosely than its static type), in `∀`-form; `Val.hasTy` is not
+  touched. **This widens every S1 statement and is the owner's call** (scout F, question 1).
+- **S1 is not an induction on the term.** `denoteAction` is a path lookup, so S1 is the weight
+  induction of `code_intro_aux` with the `Node.at_` premise (`Intro.lean:27`); `sound`'s lemmas
+  are reused, its arms are not (four arms reproduced at 5 to 14 lines each in `P5_s1_arms`).
+- **S2 is 65 arms, not 40**: `evaluateFiberR` 40, `driveStep` 18, `popR` 7; the `book_*` ladder
+  is binary and carries `MachineOk` for one side only, so a generic unary ladder
+  (`Laws/Machine/Keeps.lean`, imports `Machine/Fibers` only) is needed; the invariant must also
+  cover the command residue, the dispatcher and the races, which carry `RProgram`.
+- **Placement** (scout §D.2): `Laws/Program/Typed/{Residual,Denotation,State,Step/*}.lean` close
+  at 121 to 122 modules with no `Simulation/*` or `Book` import; `RuntimeR` (26 modules, 10,690
+  lines) enters only at `Typed/Transfer.lean` (S3). Enabling move, first and on its own: the six
+  `evaluateR_*` equations (`RuntimeR.lean:81-119`, no consumers anywhere) into `EvaluateR.lean`
+  (probe `P9`). Two further cheap moves are listed in §D.3 with their consumer lists (none
+  outside `Laws/`).
+- **The shape of the residual predicate**: shape B (three clauses plus one 40-arm `AnswerOk`
+  definition) compiles and inverts cleanly; taken.
+- **Aesop**: `#auto_census` closes 65 of 68 in `CheckInversion`, 1 of 19 in `LoopSound`, 0 of 37
+  in `MeaningSound`; the search closes a `succeed` arm outright but never applies the `fiber`
+  constructor (dependent `op.answer` unification), so fiber arms start with a hand `cases` on
+  the operation; `Later` accessors register as `forward`, not `destruct`. The rule set proposal
+  is scout §C, to be applied with S0.
+- **Sizes corrected**: `Simulation/*` is 6,008 lines (4,747 for the six named); `run_eq_ref_exit`
+  is root-only but `BMeans.exitOf` is per fiber, so S3 stands; the honest estimate is about 150
+  lemmas and 5,300 to 8,600 lines, S2 alone 3,000 to 5,000 and its own wave, split by operation
+  family.
+
+Order after the scout: Move 1 (`EvaluateR.lean`), then `Keeps.lean`, then S0 in `Typed/Residual`
+with the `∀`-form and `HandlesFit` once ruled, then S1, then S2 by family, then S3.
