@@ -91,7 +91,7 @@ def positionOf (b : Built) (spelling : String) : Option Nat :=
 
 /-- The ordinary run of a built program: the certificate is the evidence, so nothing is
 re-derived (`Api.runAdmitted`). -/
-def run (b : Built) (budget : Budget := {}) : Run :=
+def run (b : Built) (budget : Budget := {}) : Inspection :=
   Api.runAdmitted b.admitted budget.fuel [] budget.compileFuel
 
 /-- `Effect.runSyncExit` on a built program. -/
