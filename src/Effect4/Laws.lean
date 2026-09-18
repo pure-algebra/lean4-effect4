@@ -14,6 +14,7 @@ import Effect4.Laws.Machine.Witnesses
 import Effect4.Laws.Program.Denote
 import Effect4.Laws.Program.Iter
 import Effect4.Laws.Program.DenoteB
+import Effect4.Laws.Program.Folds.Looped
 import Effect4.Laws.Program.LoopAgreement
 import Effect4.Laws.Program.MeaningSound
 import Effect4.Laws.Program.LoopSound
@@ -68,6 +69,7 @@ import Effect4.Laws.Codegen.Forms
 import Effect4.Laws.Codegen.Module
 import Effect4.Laws.Auto.Inversion
 import Effect4.Laws.Auto.Census
+import Effect4.Laws.Auto.Traversals
 import Effect4.Laws.Codegen.Template
 import Effect4.Laws.Codegen.Read
 import Effect4.Laws.Codegen.ReadPrint

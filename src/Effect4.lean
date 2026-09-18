@@ -140,6 +140,11 @@ import Effect4.Api.Runner
 import Effect4.Api.RunnerBytes
 -- The application surface (2026-09-17): a built program, its author, its run, its daemons.
 import Effect4.Api.Built
+import Effect4.Program.FoldOf
+import Effect4.Program.Folds.Straight
+import Effect4.Program.Folds.Projections
+import Effect4.Program.Folds.Ty
+import Effect4.Program.Folds.Provision
 import Effect4.Api.Author
 import Effect4.Api.Supervision
 import Effect4.Run

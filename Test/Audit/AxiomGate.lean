@@ -95,6 +95,9 @@ private def auditImplementationModules : List Name :=
   -- The traversal census (`#traversal_census`): a command elaborator that classifies every
   -- definition reading a free object (fold / generated / structural / …); meta code, no theorem.
   , `Effect4.Laws.Auto.Traversals
+  -- The converter (`fold_of`): a command elaborator that adds a hand traversal's algebra, its
+  -- homomorphism witness and `eq_cata` to the environment; meta code, no theorem of its own.
+  , `Effect4.Program.FoldOf
   ]
 
 /--
