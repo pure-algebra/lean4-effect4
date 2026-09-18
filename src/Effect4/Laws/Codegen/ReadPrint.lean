@@ -258,7 +258,8 @@ theorem insts_length (n : Nat) (τ : Subst) : ∀ (ts : Tpls) (es : List Expr),
 by node-like images, matches no earlier skeleton it is apart from. -/
 theorem match_apart (n : Nat) (τ : Subst) (sorts : List Effect4.Program.ArgSort) (t' t : Tpl)
     (x : Expr) (hapart : apartBy sorts t' t = true) (hinst : inst n τ t = some x)
-    (hnode : ∀ i y, childHole sorts i = true → lookup τ i = some (.expr y) → nodeLike y = true) :
+    (hnode : ∀ i y, childHole sorts i = true → i ∈ holes t → lookup τ i = some (.expr y) →
+      nodeLike y = true) :
     matchT n t' x = none := by
   unfold apartBy at hapart
   rw [Bool.or_eq_true] at hapart
@@ -280,8 +281,15 @@ theorem match_apart (n : Nat) (τ : Subst) (sorts : List Effect4.Program.ArgSort
           simp only [h', h, bne_self_eq_false] at hhead; cases hhead
   · unfold shapeApart at hshape
     split at hshape
-    · split at hshape <;> aesop (add norm simp [matchT_arrow_arrowBlock, matchT_arrowBlock_arrow,
-        matchT_cond_nodeLike, matchAnn], safe forward [matchTs_length, insts_length, hnode])
+    · split at hshape
+      · aesop (add norm simp matchT_arrow_arrowBlock)
+      · aesop (add norm simp matchT_arrowBlock_arrow)
+      · -- the conditional against a child hole: the hole's capture is a child image
+        have hn : ∀ y, lookup τ _ = some (.expr y) → nodeLike y = true :=
+          fun y hy => hnode _ y hshape (by simp) hy
+        aesop (add norm simp matchT_cond_nodeLike, safe forward hn)
+      · aesop (add norm simp matchAnn)
+      · aesop (add safe forward [matchTs_length, insts_length])
     all_goals aesop
 
 /-- A skeleton with a node-like top: what every rigid row of an expression family has. -/
@@ -1156,7 +1164,8 @@ include hap
 theorem earlier_none_rigid {t : Tpl} (hout : row.out = .tpl t) (hrigid : t.rigid = true)
     {sorts : List ArgSort} (hsorts : argSorts row.fam row.ctor = some sorts) {τ : Subst}
     (hinst : inst n τ t = some x)
-    (hnode : ∀ i y, childHole sorts i = true → lookup τ i = some (.expr y) → nodeLike y = true) :
+    (hnode : ∀ i y, childHole sorts i = true → i ∈ holes t → lookup τ i = some (.expr y) →
+      nodeLike y = true) :
     readRow sig spell fam n x rj j child children block same = none := by
   unfold rowsApart at hap
   rw [hout] at hap
@@ -1233,6 +1242,110 @@ theorem earlier_none_rowCall (hl : LawfulSpelling sig spell) (hrow : row.out = .
       | _ => cases hnr
 
 end Earlier
+
+
+/-! ## The reader reaches the printing row -/
+
+/-- Rows before `k` in the table are apart from row `k`, or of another family. -/
+theorem apart_of_lt {j : Nat} {rj : Templates.Row} (hj : table[j]? = some rj)
+    {row : Templates.Row} (hk : table[k]? = some row) (hlt : j < k) :
+    rj.fam ≠ row.fam ∨ rowsApart rj row = true := by
+  have h := table_apart
+  simp only [List.all_eq_true, List.mem_range] at h
+  have := h k (List.getElem?_eq_some_iff.mp hk).1 j hlt
+  simp only [hj, hk, Bool.or_eq_true, bne_iff_ne, ne_eq] at this
+  exact this
+
+/-- `readT` is the first row that fires: when every earlier row returns `none` and row `k`
+returns the node, `readT` returns the node. -/
+theorem readT_of_row {row : Templates.Row} (hk : table[k]? = some row)
+    {e : EffSelfCarrier Op fam}
+    (hbefore : ∀ j < k, ∀ rj, table[j]? = some rj →
+      readRow sig spell fam n x rj j
+        (fun fam' d y _ => (readT sig spell fam' d y).getD (.error (.here (unread fam'))))
+        (fun fam' d ys _ => readSpine sig spell fam' d ys)
+        (fun d body _ => readStmts sig spell d body)
+        (fun fam' _ d => readT sig spell fam' d x) = none)
+    (hat : readRow sig spell fam n x row k
+        (fun fam' d y _ => (readT sig spell fam' d y).getD (.error (.here (unread fam'))))
+        (fun fam' d ys _ => readSpine sig spell fam' d ys)
+        (fun d body _ => readStmts sig spell d body)
+        (fun fam' _ d => readT sig spell fam' d x) = some (.ok e)) :
+    readT sig spell fam n x = some (.ok e) := by
+  rw [readT]
+  refine findSome?_zipIdx (fun (p : Templates.Row × Nat) => readRow sig spell fam n x p.1 p.2
+      (fun fam' d y _ => (readT sig spell fam' d y).getD (.error (.here (unread fam'))))
+      (fun fam' d ys _ => readSpine sig spell fam' d ys)
+      (fun d body _ => readStmts sig spell d body)
+      (fun fam' _ d => readT sig spell fam' d x)) table 0 k row (.ok e)
+    (fun j hj rj hrj => ?_) hk ?_
+  · simpa only [Nat.zero_add] using hbefore j hj rj hrj
+  · simpa only [Nat.zero_add] using hat
+
+
+/-! ## The node step -/
+
+section Step
+
+variable (hl : LawfulSpelling sig spell) {fam : EffFam} {n : Nat} {x : Expr}
+  {ctor : String} {args : List (ArgF Op (EffSelfCarrier Op))} {e : EffSelfCarrier Op fam}
+  (hbuild : build fam ctor args = some e) (hsorts : argSorts fam ctor = some (args.map argSortOf))
+  {row : Templates.Row} {k : Nat} (hk : table[k]? = some row)
+  (hsel : row.selects fam ctor args = true)
+  (hidx : table.findIdx? (fun r => r.selects fam ctor args) = some k)
+  (hchild : ∀ fam' d (y : Expr), sizeOf y < sizeOf x → ∀ c, ReadableAt sig fam' c d →
+    PrintsTo sig d fam' c (.expr y) → readT sig spell fam' d y = some (.ok c) ∧ nodeLike y = true)
+  (hchildren : ∀ fam' d (ys : List Expr), sizeOf ys < sizeOf x → ∀ c, ReadableAt sig fam' c d →
+    PrintsTo sig d fam' c (.exprs ys) → readSpine sig spell fam' d ys = .ok c)
+  (hblock : ∀ d (ss : List TypeScript.Stmt), sizeOf ss < sizeOf x → ∀ c, ReadableAt sig .stmts c d →
+    PrintsTo sig d .stmts c (.stmts ss) → readStmts sig spell d ss = .ok c)
+  (hsame : ∀ fam', famRank fam' < famRank fam → ∀ d c, ReadableAt sig fam' c d →
+    PrintsTo sig d fam' c (.expr x) → readT sig spell fam' d x = some (.ok c) ∧ nodeLike x = true)
+
+/-- A capture `lookup` finds is a member. -/
+theorem mem_of_lookup {σ : Subst} {i : Nat} {a : Arg} (h : lookup σ i = some a) : (i, a) ∈ σ := by
+  unfold lookup at h
+  obtain ⟨p, hfind, hp⟩ := Option.map_eq_some_iff.mp h
+  have hi := List.find?_some hfind
+  obtain ⟨j, b⟩ := p
+  simp only [beq_iff_eq] at hi
+  simp only at hp
+  subst hi hp
+  exact List.mem_of_find?_eq_some hfind
+
+include hchild in
+/-- The child at a hole of the printing skeleton is node-like: its image is captured there, it
+is smaller than the tree, and it is readable, so the recursion says so. -/
+theorem child_at_hole {t : Tpl} (hout : row.out = .tpl t) (hrigid : t.rigid = true) {τ : Subst}
+    (hτ : printArgs sig fam n (.tpl t) (args.map (ArgF.fold (printAlg sig))) 0 = .ok τ)
+    (hinst : inst n τ t = some x)
+    (hr : argsReadable sig fam n (.tpl t) (rowDaemon row) (args.map (ArgF.fold (readableAlg sig))) 0
+      = true)
+    (i : Nat) (y : Expr) (hc : childHole (args.map argSortOf) i = true) (hin : i ∈ holes t)
+    (hlook : lookup τ i = some (.expr y)) : nodeLike y = true := by
+  obtain ⟨σ, hσ, hagree⟩ := match_of_inst n τ t x hinst
+  obtain ⟨hprint, _⟩ := printArgs_lookup (args.map (ArgF.fold (printAlg sig))) 0 τ hτ
+  have hlt : sizeOf y < sizeOf x :=
+    match_below n t x σ hrigid hσ (i, .expr y) (mem_of_lookup (by rw [hagree i hin, hlook]))
+  -- the argument at `i` is a child of an expression family
+  unfold childHole at hc
+  rw [List.getElem?_map] at hc
+  cases ha : args[i]? with
+  | none => rw [ha] at hc; exact absurd hc Bool.false_ne_true
+  | some a =>
+    rw [ha] at hc
+    have hp := hprint i (ArgF.fold (printAlg sig) a) (by simp only [List.getElem?_map, ha, Option.map_some])
+    have hra := argsReadable_at (args.map (ArgF.fold (readableAlg sig))) 0 i
+      (ArgF.fold (readableAlg sig) a) hr (by simp only [List.getElem?_map, ha, Option.map_some])
+    rw [argSortOf_fold] at hp hra
+    rw [Nat.zero_add, hlook] at hp
+    rw [Nat.zero_add] at hra
+    cases a with
+    | child fam' c =>
+      exact (hchild fam' _ y hlt c (readableAt_of_argReadable hra) (printsTo_of_printArg hp)).2
+    | _ => exact absurd hc Bool.false_ne_true
+
+end Step
 
 end Node
 
