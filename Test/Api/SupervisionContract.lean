@@ -57,9 +57,9 @@ the pinned daemon is alive when the run ends. -/
 def pinnedDaemon : Api.Program :=
   .scoped (.bind (.withFiber (.forkScoped (wait 2) ⟨true, false, .inherit⟩)) (wait 3))
 
-def childRun : Api.Run := Api.run childFork 400 [] table
-def looseRun : Api.Run := Api.run looseDaemon 400 [] table
-def pinnedRun : Api.Run := Api.run pinnedDaemon 400 [] table
+def childRun : Api.Inspection := Api.run childFork 400 [] table
+def looseRun : Api.Inspection := Api.run looseDaemon 400 [] table
+def pinnedRun : Api.Inspection := Api.run pinnedDaemon 400 [] table
 
 /-! ## Supervision before the run: one site each, of three different kinds -/
 
@@ -89,12 +89,12 @@ def pinnedRun : Api.Run := Api.run pinnedDaemon 400 [] table
 
 /-! ## `supervision_static` on a real run: the event's flag is the site's -/
 
-#guard Api.Run.forked childRun = [(⟨0⟩, ⟨1⟩, false)]
-#guard Api.Run.forked looseRun = [(⟨0⟩, ⟨1⟩, true)]
-#guard Api.Run.forked pinnedRun = [(⟨0⟩, ⟨1⟩, true)]
+#guard Api.Inspection.forked childRun = [(⟨0⟩, ⟨1⟩, false)]
+#guard Api.Inspection.forked looseRun = [(⟨0⟩, ⟨1⟩, true)]
+#guard Api.Inspection.forked pinnedRun = [(⟨0⟩, ⟨1⟩, true)]
 
 #guard [(childFork, childRun), (looseDaemon, looseRun), (pinnedDaemon, pinnedRun)].all
-  fun entry => (Api.Run.forked entry.2).map (fun e => e.2.2) ==
+  fun entry => (Api.Inspection.forked entry.2).map (fun e => e.2.2) ==
     (Api.supervision entry.1).map ForkSite.isDaemon
 
 /-! ## The fibers of each run -/
@@ -107,28 +107,28 @@ def tagOf : FiberStatus → Nat
   | .root => 3
   | .exited _ => 4
 
-def tags (r : Api.Run) : List (FiberId × Nat) :=
-  (Api.Run.fibers r).map fun entry => (entry.1, tagOf entry.2)
+def tags (r : Api.Inspection) : List (FiberId × Nat) :=
+  (Api.Inspection.fibers r).map fun entry => (entry.1, tagOf entry.2)
 
 -- The child fork: root and child both exit.
 #guard tags childRun = [(⟨0⟩, 4), (⟨1⟩, 4)]
 #guard childRun.exit = some (.success (.nat 1))
-#guard Api.Run.unpinnedDaemonsAlive childRun = []
-#guard Api.Run.daemonsQuiet childRun
+#guard Api.Inspection.unpinnedDaemonsAlive childRun = []
+#guard Api.Inspection.daemonsQuiet childRun
 
 -- The loose daemon: the root exited, the daemon is alive and nobody holds it.
 #guard tags looseRun = [(⟨0⟩, 4), (⟨1⟩, 2)]
 #guard looseRun.exit = some (.success (.nat 0))
-#guard Api.Run.unpinnedDaemonsAlive looseRun = [⟨1⟩]
-#guard Api.Run.daemonsQuiet looseRun = false
+#guard Api.Inspection.unpinnedDaemonsAlive looseRun = [⟨1⟩]
+#guard Api.Inspection.daemonsQuiet looseRun = false
 
 -- The pinned daemon: the root is the run's own fiber, still parked; the daemon is alive and
 -- held by the scope, so the run is quiet although something is running.
 #guard tags pinnedRun = [(⟨0⟩, 3), (⟨1⟩, 1)]
 #guard pinnedRun.exit = none
-#guard Api.Run.unpinnedDaemonsAlive pinnedRun = []
-#guard Api.Run.daemonsQuiet pinnedRun
-#guard (Api.Run.fibers pinnedRun).any fun entry =>
+#guard Api.Inspection.unpinnedDaemonsAlive pinnedRun = []
+#guard Api.Inspection.daemonsQuiet pinnedRun
+#guard (Api.Inspection.fibers pinnedRun).any fun entry =>
   match entry.2 with | .pinned _ _ => true | _ => false
 
 /-! ## The hypotheses the laws take, on these machines -/
@@ -148,7 +148,7 @@ def tags (r : Api.Run) : List (FiberId × Nat) :=
 -- `awaits_live` on these machines: every outstanding call names a fiber whose status is live.
 #guard [childRun, looseRun, pinnedRun].all fun r =>
   (Program.awaits r.machine).all fun a =>
-    (Api.Run.fibers r).any fun entry => entry.1 == a.1 && entry.2.live
+    (Api.Inspection.fibers r).any fun entry => entry.1 == a.1 && entry.2.live
 
 /-! ## The property at the observation -/
 

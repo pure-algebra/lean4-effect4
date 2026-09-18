@@ -56,7 +56,7 @@ abbrev CmdA := Cmd EffName EffThunk Val Err Defect FiberId Ann
 def machineOf (p : NativeEff) : Api.Machine := Api.load p fuel
 
 /-- A replay at machine fuel `f`, the compile fuel held at `fuel`. -/
-def runAt (p : NativeEff) (f : Nat) (tape : List Api.Decision) : Api.Run :=
+def runAt (p : NativeEff) (f : Nat) (tape : List Api.Decision) : Api.Inspection :=
   match replayEval (interpOf p) f tape (machineOf p) with
   | ReplayResult.finished m => ⟨Api.Outcome.finished, m, []⟩
   | ReplayResult.frontier why m => ⟨Api.Outcome.frontier, m, Api.frontierReasons why m⟩

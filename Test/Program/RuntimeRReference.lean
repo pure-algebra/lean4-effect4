@@ -34,24 +34,24 @@ def reply (answer : Completion Val Err Defect FiberId Ann) (token : Nat := 0) :
     Api.Decision := .answerAsync Api.root token answer
 
 def run (program : NativeEff) (tape : List Api.Decision) :
-    Api.Run := Api.replay program budget tape
+    Api.Inspection := Api.replay program budget tape
 
-def fiberExit (r : Api.Run) (id : Nat) : Option ExitV :=
+def fiberExit (r : Api.Inspection) (id : Nat) : Option ExitV :=
   (r.machine.fiber? ⟨id⟩).bind RunFiber.exit
 
-def parked (r : Api.Run) (id : Nat := 0) : Option Parked :=
+def parked (r : Api.Inspection) (id : Nat := 0) : Option Parked :=
   (r.machine.fiber? ⟨id⟩).map RunFiber.parked
 
-def interruptible (r : Api.Run) (id : Nat := 0) : Option Bool :=
+def interruptible (r : Api.Inspection) (id : Nat := 0) : Option Bool :=
   (r.machine.fiber? ⟨id⟩).map fun f => f.frame.interruptible
 
-def context (r : Api.Run) (id : Nat := 0) : Option Ctx :=
+def context (r : Api.Inspection) (id : Nat := 0) : Option Ctx :=
   (r.machine.fiber? ⟨id⟩).map RunFiber.context
 
-def waiterCount (r : Api.Run) (cell : Nat := 0) : Option Nat :=
+def waiterCount (r : Api.Inspection) (cell : Nat := 0) : Option Nat :=
   (r.stores.deferreds.cellAt ⟨cell⟩).map fun c => c.wake.waiters.length
 
-def scopeClosed (r : Api.Run) (scope : Nat := 0) : Option Bool :=
+def scopeClosed (r : Api.Inspection) (scope : Nat := 0) : Option Bool :=
   (r.stores.scopes.entryAt scope).map fun e => e.scope.isClosed
 
 def failure : CauseV := Cause.fail (Err.tag 7)

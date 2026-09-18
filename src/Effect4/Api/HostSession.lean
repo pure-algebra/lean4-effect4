@@ -250,7 +250,8 @@ def advance {program : Api.Program} {table : RowTable} (s : Session program tabl
       else ⟨if enough then .progressed else .frontier, retire { s with machine }⟩
 
 /-- Reading a frontier does not execute pending replies or discard the session ledger. -/
-def inspect {program : Api.Program} {table : RowTable} (s : Session program table) : Api.Run :=
+def inspect {program : Api.Program} {table : RowTable} (s : Session program table) :
+    Api.Inspection :=
   letI := evaluatorFor program table
   match replayEval (interpOf program table) 0 [] s.machine with
   | .finished m => ⟨.finished, m, []⟩

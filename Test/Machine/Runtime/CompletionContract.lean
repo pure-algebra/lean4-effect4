@@ -24,7 +24,7 @@ def waiting : NativeEff :=
 def reply (answer : Completion Val Err Defect FiberId Ann) (token : Nat := 0) : Api.Decision :=
   .answerAsync Api.root token answer
 
-def answerWith (answer : Completion Val Err Defect FiberId Ann) : Api.Run :=
+def answerWith (answer : Completion Val Err Defect FiberId Ann) : Api.Inspection :=
   Api.replay waiting 80 [Api.evaluate, reply answer]
 
 #guard (Api.typeOf waiting).isSome
@@ -53,12 +53,12 @@ def readReply (v : Val) : Api.Machine :=
 #guard stores.answerCode (.ofExit (.success (.nat 9))) = Prim.success (.nat 9)
 
 -- E4-HANDLE-CE-001: the answer format does not certify that its handles exist.
-def forgedFiber : Api.Run := answerWith (.ofExit (.success (.fiber ⟨7⟩)))
+def forgedFiber : Api.Inspection := answerWith (.ofExit (.success (.fiber ⟨7⟩)))
 #guard forgedFiber.outcome = Api.Outcome.finished
 #guard forgedFiber.exit = some (.success (.fiber ⟨7⟩))
 #guard (forgedFiber.machine.fiber? ⟨7⟩).isNone
 
-def forgedCell : Api.Run := answerWith (.ofExit (.success (.cell ⟨7⟩)))
+def forgedCell : Api.Inspection := answerWith (.ofExit (.success (.cell ⟨7⟩)))
 #guard forgedCell.exit = some (.success (.cell ⟨7⟩))
 #guard !(Val.cell ⟨7⟩).validIn forgedCell.stores
 

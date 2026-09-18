@@ -42,7 +42,7 @@ def tape (adjusts : List Nat) : List Decision :=
 dispatcher flushed. -/
 def run (program : Program) (fuel : Nat) (adjusts : List Nat)
     (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := [])
-    (compileFuel : Nat := fuel) : Run :=
+    (compileFuel : Nat := fuel) : Inspection :=
   replay program fuel (tape adjusts) answers table compileFuel
 
 /-- Every literal sleep of a program, in program order: the durations a sequential program
@@ -60,7 +60,7 @@ def synthesize (program : Program) : List Decision := tape (sleepDeadlines progr
 the clock at the sum of its literal sleeps. -/
 def runSequential (program : Program) (fuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := [])
-    (compileFuel : Nat := fuel) : Run :=
+    (compileFuel : Nat := fuel) : Inspection :=
   run program fuel (sleepDeadlines program) answers table compileFuel
 
 /-- Every sleep an immediate success: the identity fold with the invocation slot replaced. -/
@@ -86,7 +86,7 @@ def dilateTime (k : Nat) (program : Program) : Program := cata_eff (dilateAlgebr
 /-- The dilated program under its own synthesized tape: the caller scales nothing. -/
 def runDilated (k : Nat) (program : Program) (fuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := [])
-    (compileFuel : Nat := fuel) : Run :=
+    (compileFuel : Nat := fuel) : Inspection :=
   runSequential (dilateTime k program) fuel answers table compileFuel
 
 end Effect4.Api.TestClock

@@ -149,7 +149,7 @@ def pRef : NativeEff :=
 
 -- E4-HANDLE-CE-002: the cause's interruptor is provenance, not a handle. The tape interrupts
 -- the root from a fiber that does not exist; the exit carries it, and the machine is minted.
-def interruptedFromNowhere : Api.Run :=
+def interruptedFromNowhere : Api.Inspection :=
   Api.replay waiting 80 [Api.evaluate, RunDecision.interruptFrom (some ⟨7⟩) ReasonAnnotations.empty Api.root]
 
 #guard interruptedFromNowhere.exit = some (.failure

@@ -272,16 +272,18 @@ def exitedUnparked (m : Machine) : Bool :=
 /-! ## A run, read for supervision -/
 
 /-- Every fiber of a finished or parked run with what holds it. -/
-def Run.fibers (r : Run) : List (FiberId × FiberStatus) := fiberStatuses r.machine
+def Inspection.fibers (r : Inspection) : List (FiberId × FiberStatus) := fiberStatuses r.machine
 
 /-- The live fibers of a run that nobody holds. -/
-def Run.unpinnedDaemonsAlive (r : Run) : List FiberId := Api.unpinnedDaemonsAlive r.machine
+def Inspection.unpinnedDaemonsAlive (r : Inspection) : List FiberId :=
+  Api.unpinnedDaemonsAlive r.machine
 
 /-- Whether the run left no unpinned daemon alive. -/
-def Run.daemonsQuiet (r : Run) : Bool := Api.daemonsQuiet r.machine
+def Inspection.daemonsQuiet (r : Inspection) : Bool := Api.daemonsQuiet r.machine
 
 /-- Every fork the run made, with the flag the machine stamped. -/
-def Run.forked (r : Run) : List (FiberId × FiberId × Bool) := forkedEvents r.machine
+def Inspection.forked (r : Inspection) : List (FiberId × FiberId × Bool) :=
+  forkedEvents r.machine
 
 /-! ## Receipts -/
 

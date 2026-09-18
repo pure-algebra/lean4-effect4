@@ -63,7 +63,7 @@ def finished : Session program table := (applyPending pending1 100).session
 #guard finished.consumed = [0, 1]
 
 -- DI-58 / P2b: a bare evaluate cannot replace a guarded callback's token.
-def repeatedEvaluation : Api.Run :=
+def repeatedEvaluation : Api.Inspection :=
   Api.replay program 100 [Api.evaluate, Api.evaluate] [] table
 def evaluatedAgain : Session program table := (advance bound0 100 Api.evaluate).session
 def replyAfterEvaluate : Session program table := (submit evaluatedAgain reply0).session

@@ -155,7 +155,7 @@ def localAgrees (p : NativeEff) : Bool :=
 -- (the fiber parks on its own dispatcher and `flush` resumes it), and the run still finishes
 -- with the meaning. The theorem used to carry `steps e + 2 ≤ defaultBudget` to keep that
 -- path out of the proof; it no longer does.
-def yielded : Api.Run :=
+def yielded : Api.Inspection :=
   Api.replay pBindSync fuel
     [RunDecision.yieldVerdict Api.root true, Api.evaluate, Api.flush]
 
@@ -199,7 +199,7 @@ def fuelLong : Nat := 16384
 #guard Straight pLong = true
 #guard 2 * defaultBudget < steps pLong
 
-def long : Api.Run := Api.run pLong fuelLong
+def long : Api.Inspection := Api.run pLong fuelLong
 
 #guard long.outcome == Api.Outcome.finished
 #guard long.exit == some (meaning pLong [] Stores.empty).1

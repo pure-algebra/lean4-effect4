@@ -268,8 +268,10 @@ inductive Outcome
   | stuck (why : Stuck)
 deriving DecidableEq, Repr
 
-/-- A run: its outcome, final machine and live frontier reasons. -/
-structure Run where
+/-- What a replay is read as: its outcome, final machine and live frontier reasons. (`Run`,
+`src/Effect4/Run.lean`, is the value a caller holds while a built program runs; this is the
+reading `Run.inspect` takes of it.) -/
+structure Inspection where
   outcome : Outcome
   machine : Machine
   reasons : List FrontierReason
@@ -284,7 +286,7 @@ driver. -/
 def replay (program : Program) (fuel : Nat) (tape : List Decision)
     (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := [])
     (compileFuel : Nat := fuel) :
-    Run :=
+    Inspection :=
   letI := evaluatorFor program table
   match replayEval (interpOf program table) fuel tape (load program compileFuel answers) with
   | ReplayResult.finished m => ⟨Outcome.finished, m, []⟩
@@ -313,7 +315,7 @@ program that parks on a clock cannot finish through it — a timed `sleep` needs
 `replay … [evaluate, .advance 1, flush]`. -/
 def run (program : Program) (fuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := [])
-    (compileFuel : Nat := fuel) : Run :=
+    (compileFuel : Nat := fuel) : Inspection :=
   replay program fuel [evaluate, flush] answers table compileFuel
 
 /-- `Effect.runSyncExit`: the root evaluated on the caller's stack, its dispatcher flushed,
@@ -329,17 +331,18 @@ def runSync (program : Program) (fuel : Nat)
     (compile program compileFuel) emptyCtx
 
 /-- The root's exit; `none` while it is still live. -/
-def Run.exit (r : Run) : Option ExitV := (r.machine.fiber? root).bind RunFiber.exit
+def Inspection.exit (r : Inspection) : Option ExitV := (r.machine.fiber? root).bind RunFiber.exit
 
 /-- Every event the machine recorded, in order. -/
-def Run.trace (r : Run) : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx) :=
+def Inspection.trace (r : Inspection) :
+    List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx) :=
   r.machine.trace
 
 /-- The stores the run left behind. -/
-def Run.stores (r : Run) : Stores := r.machine.state
+def Inspection.stores (r : Inspection) : Stores := r.machine.state
 
 /-- How many fibers the run created, the root included. -/
-def Run.fiberCount (r : Run) : Nat := r.machine.fibers.length
+def Inspection.fiberCount (r : Inspection) : Nat := r.machine.fibers.length
 
 /-- The external row and evaluated request at a matching guard token. -/
 def requestOf (m : Machine) (fiber : FiberId) (token : Nat) : Option (NativeOp × Val) :=
@@ -352,7 +355,7 @@ machine at the refusal; it is separate from the program's exit. -/
 def replayChecked (program : Program) (fuel : Nat) (tape : List Decision)
 
     (answers : List (Completion Val Err Defect FiberId Ann) := [])
-    (table : RowTable := []) : Run ⊕ (Nat × Decision × Refusal × Machine) :=
+    (table : RowTable := []) : Inspection ⊕ (Nat × Decision × Refusal × Machine) :=
   match Program.replayCheckedFrom program fuel answers table 0 tape
       (load program fuel answers) with
   | .inr refusal => .inr refusal
@@ -416,7 +419,7 @@ def imageCertificate (program : Program) (table : RowTable := []) :
 def runAdmitted {program : Program} {table : RowTable}
     (admitted : AdmittedProgram program table) (fuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann) := [])
-    (compileFuel : Nat := fuel) : Run :=
+    (compileFuel : Nat := fuel) : Inspection :=
   let _ := admitted.ty
   run program fuel answers table compileFuel
 
@@ -427,7 +430,7 @@ def replayAdmitted {program : Program} {table : RowTable}
     (admitted : AdmittedProgram program table) (fuel : Nat) (tape : List Decision)
 
     (answers : List (Completion Val Err Defect FiberId Ann) := [])
-    (compileFuel : Nat := fuel) : Run :=
+    (compileFuel : Nat := fuel) : Inspection :=
   let _ := admitted.ty
   replay program fuel tape answers table compileFuel
 
@@ -466,11 +469,11 @@ variable {table : RowTable}
 def ty (t : Typed table) : EffTy := t.certificate.ty
 
 /-- `replay` on the certified program. -/
-def replay (t : Typed table) (tape : List Decision) (budget : Budget := {}) : Run :=
+def replay (t : Typed table) (tape : List Decision) (budget : Budget := {}) : Inspection :=
   Api.replay t.program budget.fuel tape [] table budget.compileFuel
 
 /-- `run` on the certified program: evaluate the root, flush. -/
-def run (t : Typed table) (budget : Budget := {}) : Run :=
+def run (t : Typed table) (budget : Budget := {}) : Inspection :=
   Api.run t.program budget.fuel [] table budget.compileFuel
 
 /-- `Effect.runSyncExit` on the certified program: the exit alone. -/

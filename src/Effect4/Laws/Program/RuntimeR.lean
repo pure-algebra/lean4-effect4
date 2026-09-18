@@ -249,7 +249,7 @@ theorem run_eq_ref_exit (e : NativeEff) (fuel : Nat) (tape : List Api.Decision)
  :
     (Api.replay e fuel tape).exit =
       ((replayR e fuel tape).machine.fiber? Api.root).bind RunFiber.exit := by
-  unfold Api.Run.exit
+  unfold Api.Inspection.exit
   rw [replay_machine]
   exact BMeans.exitOf (ReplayRel.machine (replay_rel e fuel fuel tape)) Api.root
 

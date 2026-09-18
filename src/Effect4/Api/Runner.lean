@@ -80,7 +80,7 @@ def replay (p : Runner) : List Command → Runner × List HostSession.Phase
     (p₂, phase :: phases)
 
 /-- The run as a frontier reading: outcome, machine and reasons. Reads only. -/
-def inspect (p : Runner) : Api.Run := HostSession.inspect p.session
+def inspect (p : Runner) : Api.Inspection := HostSession.inspect p.session
 
 /-- The protocol state a holder schedules by: idle, awaiting a host, parked or terminated. -/
 def observe (p : Runner) : HostProtocol.State := HostProtocol.observe p.session.machine

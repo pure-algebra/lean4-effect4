@@ -152,10 +152,10 @@ theorem once_count : (Api.run once 216 [] [] 16).outcome = .finished ∧
     (Api.run once 216 [] [] 16).exit = some (.success (.nat 1)) ∧
     (Api.run once 216 [] [] 16).stores.refs = [.nat 1] := by
   refine ⟨once_run.1, ?_, ?_⟩
-  · unfold Api.Run.exit
+  · unfold Api.Inspection.exit
     rw [once_run.2]
     exact once_exit
-  · unfold Api.Run.stores
+  · unfold Api.Inspection.stores
     rw [once_run.2]
     exact once_refs
 
@@ -163,10 +163,10 @@ theorem twice_count : (Api.run twice 300 [] [] 16).outcome = .finished ∧
     (Api.run twice 300 [] [] 16).exit = some (.success (.nat 1)) ∧
     (Api.run twice 300 [] [] 16).stores.refs = [.nat 1] := by
   refine ⟨twice_run.1, ?_, ?_⟩
-  · unfold Api.Run.exit
+  · unfold Api.Inspection.exit
     rw [twice_run.2]
     exact twice_exit
-  · unfold Api.Run.stores
+  · unfold Api.Inspection.stores
     rw [twice_run.2]
     exact twice_refs
 

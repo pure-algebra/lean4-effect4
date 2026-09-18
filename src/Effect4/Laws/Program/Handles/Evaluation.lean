@@ -330,7 +330,7 @@ theorem handles_minted (program : Api.Program) (fuel : Nat) (tape : List Api.Dec
 and oracle. The unconsumed oracle remains input data; admission checks it before use. -/
 theorem checked_replay_minted (program : Api.Program) (fuel : Nat) (tape : List Api.Decision)
  (answers : List (Completion Val Err Defect FiberId Ann))
-    (table : RowTable) (run : Api.Run)
+    (table : RowTable) (run : Api.Inspection)
     (h : Api.replayChecked program fuel tape answers table = .inl run) :
     Minted run.machine := by
   letI := evaluatorFor program table
