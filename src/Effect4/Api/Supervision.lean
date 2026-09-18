@@ -132,6 +132,26 @@ def ForkSite.parent (sites : List ForkSite) (s : ForkSite) : Option ForkSite :=
       | some b => if b.body.length < t.body.length then some t else some b
       | none => some t) none
 
+/-! ## The `forked` events of a trace
+
+What the machine stamps when it forks. Kept beside the static table so the law that the two
+agree has both halves in one place. -/
+
+/-- Every `RunEvent.forked` of a trace, as parent, child and the daemon flag the machine
+stamped. -/
+def forkedOf {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {κ η : Type (max u v)}
+    (trace : List (RunEvent ν σ β ε δ ι α χ κ η)) : List (FiberId × FiberId × Bool) :=
+  trace.filterMap fun
+    | .forked parent child daemon => some (parent, child, daemon)
+    | _ => none
+
+/-- The `forked` events of a run. -/
+def forkedEvents (m : Machine) : List (FiberId × FiberId × Bool) := forkedOf m.trace
+
+/-- The fibers this run forked, whatever the flag. A fiber that is not among them was not
+forked: it is the fiber the run started. -/
+def forkedIds (m : Machine) : List FiberId := (forkedEvents m).map (·.2.1)
+
 /-! ## The fibers of a run: supervision during it -/
 
 /-- One fiber of the machine at the application's alphabet. -/
@@ -139,9 +159,15 @@ abbrev Fiber := RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx
 
 /-- What the machine is holding a fiber by.
 
-The four are read in this order, which is the order of what governs the fiber: an exit ends
-the question; a tracked fiber answers to its parent's exit; an untracked one that carries a
-scope link answers to that scope's close; anything else answers to nobody. -/
+They are read in this order, which is the order of what governs the fiber: an exit ends the
+question; a tracked fiber answers to its parent's exit; an untracked one that carries a scope
+link answers to that scope's close; anything else answers to nobody — and of those, the fiber
+the run itself started is held by the driver, outside the machine.
+
+`root` is the one alternative the brief for this module did not ask for, and the machine
+forces it: a fresh root is untracked and unpinned exactly as a detached daemon is, so without
+it every run would report its own root as a loose daemon and `daemonsQuiet` would decide
+nothing. The `forked` events of the trace separate them, and only they can. -/
 inductive FiberStatus
   /-- `parent` tracks it (`RunFiber.children`, `Machine/Fibers.lean:244`), so the parent's
   exit interrupts it (`:1724`, `RunEvent.childrenInterrupted`). -/
@@ -149,8 +175,11 @@ inductive FiberStatus
   /-- A daemon linked to `scope` under the registration identity `key`, which the scope's
   close interrupts and whose drop observer the machine left on the fiber (`:988-990`). -/
   | pinned (scope : Nat) (key : Nat)
-  /-- Alive, untracked and unpinned: DI-75's fiber, whose rows appear on neither face. -/
+  /-- Alive, forked, untracked and unpinned: DI-75's fiber, whose rows appear on neither
+  face. -/
   | daemon
+  /-- The fiber the run started: no `forked` event names it as a child. -/
+  | root
   /-- It has exited. -/
   | exited (exit : ExitV)
 deriving DecidableEq
@@ -174,7 +203,9 @@ def pinOf (f : Fiber) : Option (Nat × Nat) :=
     | .dropScopeFinalizer scope key => some (scope, key)
     | _ => none
 
-/-- What the machine holds this fiber by. -/
+/-- What the machine holds this fiber by: four observations, all of them machine state — its
+own exit, the fiber whose `children` name it, the scope link on its own observer list, and
+whether a `forked` event of the trace names it. -/
 def statusOf (m : Machine) (f : Fiber) : FiberStatus :=
   match f.exit with
   | some exit => .exited exit
@@ -184,7 +215,7 @@ def statusOf (m : Machine) (f : Fiber) : FiberStatus :=
     | none =>
       match pinOf f with
       | some (scope, key) => .pinned scope key
-      | none => .daemon
+      | none => if (forkedIds m).contains f.id then .daemon else .root
 
 /-- Every fiber of the run with what holds it, in creation order (`spawn` appends and nothing
 removes a fiber, `Machine/Fibers.lean:922`). -/
@@ -210,22 +241,6 @@ step (`Machine/Fibers.lean:1696-1704`), so every machine a run reaches satisfies
 written by hand need not, which is why the laws that need it take it as a hypothesis. -/
 def exitedUnparked (m : Machine) : Bool :=
   m.fibers.all fun f => !f.exit.isSome || f.parked == Parked.notParked
-
-/-! ## The `forked` events of a trace
-
-What the machine stamps when it forks. Kept beside the static table so the law that they
-agree has both halves in one place. -/
-
-/-- Every `RunEvent.forked` of a trace, as parent, child and the daemon flag the machine
-stamped. -/
-def forkedOf {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {κ η : Type (max u v)}
-    (trace : List (RunEvent ν σ β ε δ ι α χ κ η)) : List (FiberId × FiberId × Bool) :=
-  trace.filterMap fun
-    | .forked parent child daemon => some (parent, child, daemon)
-    | _ => none
-
-/-- The `forked` events of a run. -/
-def forkedEvents (m : Machine) : List (FiberId × FiberId × Bool) := forkedOf m.trace
 
 /-! ## A run, read for supervision -/
 
@@ -305,6 +320,21 @@ private def siblingForks : Effect4.Program.Eff Nat :=
 
 -- Only a `.child` site is not a daemon.
 #guard (supervision siblingForks).map ForkSite.isDaemon = [false, true]
+
+/-! The machine side, on a loaded but unevaluated program: one fiber, the root, held by the
+driver and not by anything in the machine. Running programs is the battery's job
+(`Test/Api/SupervisionContract.lean`). -/
+
+private def loaded : Machine := load (.succeed (.lit (.nat 1))) 100
+
+#guard (loaded.fibers.map RunFiber.id) = [root]
+#guard forkedEvents loaded = []
+#guard fiberStatuses loaded = [(root, .root)]
+#guard unpinnedDaemonsAlive loaded = []
+#guard daemonsQuiet loaded
+#guard exitedUnparked loaded
+#guard parentOf loaded root = none
+#guard (loaded.fibers.map pinOf) = [none]
 
 end Receipts
 
