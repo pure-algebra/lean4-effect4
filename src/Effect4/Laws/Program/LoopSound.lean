@@ -291,6 +291,16 @@ theorem hasTy_of_sub_normalize {a b : Ty} {v : Val}
   rw [Effect4.Program.hasTy_normalize] at h2
   exact h2
 
+/-- The leaf case of `soundB`: on a leaf the budgeted meaning is the meaning, and the fragments
+agree arm for arm (`Looped` names every leaf `Straight` names), so `sound` applies. -/
+private theorem soundB_leaf (bad : ExitV) (k : Nat) (e : NativeEff) (tys : TyEnv)
+    (env : List Val) (s : Stores) (t : EffTy) (hleaf : composite e = false)
+    (hs : Straight e = true) (hty : effTy nativeSignature tys e = some t)
+    (hat : TypedAt tys env s) :
+    SoundB (denoteBWith bad k e env) (denoteB k e env) s t.answer t.error := by
+  rw [denoteBWith_leaf bad k _ env hleaf, denoteB_leaf k _ env hleaf, leafB, if_pos hs, if_pos hs]
+  exact SoundB.of_sound (sound bad _ tys env s t hs hty hat)
+
 /-- A typed program of the loop-bearing fragment is sound at every budget, from every state the
 invariant holds in. -/
 theorem soundB (bad : ExitV) (k : Nat) : ∀ (e : NativeEff) (tys : TyEnv) (env : List Val)
@@ -497,12 +507,13 @@ theorem soundB (bad : ExitV) (k : Nat) : ∀ (e : NativeEff) (tys : TyEnv) (env 
     intro fex hfex
     exact SoundB.pure ihf.stores.wf ihf.stores.heap _
       (restore_ok (hok.later ihf.stores.le) (ihf.exit fex hfex))
-  | .succeed v, tys, env, s, t, hl, hty, hat | .fail v, tys, env, s, t, hl, hty, hat
-  | .failCause v, tys, env, s, t, hl, hty, hat
-  | .sync v, tys, env, s, t, hl, hty, hat | .perform v _, tys, env, s, t, hl, hty, hat => by
-    have hs : Straight _ = true := hl
-    rw [denoteBWith_leaf bad k _ env rfl, denoteB_leaf k _ env rfl, leafB, if_pos hs, if_pos hs]
-    exact SoundB.of_sound (sound bad _ tys env s t hs hty hat)
+  | .succeed v, tys, env, s, t, hl, hty, hat => soundB_leaf bad k (.succeed v) tys env s t rfl hl hty hat
+  | .fail v, tys, env, s, t, hl, hty, hat => soundB_leaf bad k (.fail v) tys env s t rfl hl hty hat
+  | .failCause v, tys, env, s, t, hl, hty, hat =>
+    soundB_leaf bad k (.failCause v) tys env s t rfl hl hty hat
+  | .sync v, tys, env, s, t, hl, hty, hat => soundB_leaf bad k (.sync v) tys env s t rfl hl hty hat
+  | .perform op r, tys, env, s, t, hl, hty, hat =>
+    soundB_leaf bad k (.perform op r) tys env s t rfl hl hty hat
   | .gen _, _, _, _, _, hl, _, _ | .uninterruptible _, _, _, _, _, hl, _, _
   | .interruptible _, _, _, _, _, hl, _, _
   | .yieldNow _, _, _, _, _, hl, _, _

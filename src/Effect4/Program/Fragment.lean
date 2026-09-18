@@ -16,7 +16,9 @@ namespace Effect4.Program.Denote
 open Effect4 Effect4.Machine Effect4.Program
 
 /-- The straight-line fragment: one fiber, no park, no fork, no loop, no tape. A `perform`
-is in the fragment exactly when its row is a `sync` row. -/
+is in the fragment exactly when its row is a `sync` row. Every constructor is named (no
+wildcard arm), so a constructor added to `Eff` is a missing case here until it is classified
+(row 35, the fragment by exclusion). -/
 def Straight : NativeEff → Bool
   | .succeed _ => true
   | .fail _ => true
@@ -33,6 +35,18 @@ def Straight : NativeEff → Bool
   | .catchCause b h => Straight b && Straight h
   | .matchCause b v c => Straight b && Straight v && Straight c
   | .onExit b f => Straight b && Straight f
-  | _ => false
+  | .gen _ => false
+  | .uninterruptible _ => false
+  | .interruptible _ => false
+  | .yieldNow _ => false
+  | .awaitFiber _ _ => false
+  | .withFiber _ => false
+  | .scoped _ => false
+  | .acquireRelease _ _ => false
+  | .provideLayer _ _ _ => false
+  | .service _ => false
+  | .provideService _ _ _ => false
+  | .catchIf _ _ _ => false
+  | .iterate _ _ _ _ _ _ => false
 
 end Effect4.Program.Denote

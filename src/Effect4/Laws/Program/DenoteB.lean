@@ -119,8 +119,18 @@ def iterateStep (body : List Val → Effects.Program StoreSig (Option ExitV)) (e
   | _ => pure (.inl (some badShapeExit))
 
 /-- The loop-bearing fragment: `Straight`'s clauses, with `iterate` over a body of the
-fragment. -/
+fragment. Every constructor is named (no fallback arm), so a constructor added to `Eff` is a
+missing case here until it is classified (row 35, the fragment by exclusion); the leaves and
+the exclusions are `Straight`'s, arm for arm (`Looped.of_straight`). -/
 def Looped : NativeEff → Bool
+  | .succeed _ => true
+  | .fail _ => true
+  | .failCause _ => true
+  | .sync _ => true
+  | .perform op _ =>
+    match (NativeOp.row op).kind with
+    | .sync => true
+    | _ => false
   | .iterate _ _ _ _ _ body => Looped body
   | .suspend b => Looped b
   | .bind a b => Looped a && Looped b
@@ -129,7 +139,18 @@ def Looped : NativeEff → Bool
   | .catchCause b h => Looped b && Looped h
   | .matchCause b v c => Looped b && Looped v && Looped c
   | .onExit b f => Looped b && Looped f
-  | e => Straight e
+  | .gen _ => false
+  | .uninterruptible _ => false
+  | .interruptible _ => false
+  | .yieldNow _ => false
+  | .awaitFiber _ _ => false
+  | .withFiber _ => false
+  | .scoped _ => false
+  | .acquireRelease _ _ => false
+  | .provideLayer _ _ _ => false
+  | .service _ => false
+  | .provideService _ _ _ => false
+  | .catchIf _ _ _ => false
 
 /-! ## The fragment's subprograms -/
 
@@ -169,7 +190,7 @@ theorem Looped.suspendDecided_iff {e : NativeEff} (hl : Looped e = true) :
     e.suspendDecided = true ↔
       (∃ b, e = .suspend b) ∨ (∃ s d a b, e = .select s d a b) ∨
         (∃ c i t st r b, e = .iterate c i t st r b) := by
-  cases e <;> simp [Eff.suspendDecided, Looped, Straight] at hl ⊢
+  cases e <;> simp [Eff.suspendDecided, Looped] at hl ⊢
 
 /-- The forms the budgeted meaning descends into. Every other form is a leaf. -/
 def composite : NativeEff → Bool
@@ -253,15 +274,11 @@ theorem Looped.of_straight : ∀ (e : NativeEff), Straight e = true → Looped e
     rw [Looped, Looped.of_straight b (Straight.onExit h).1,
       Looped.of_straight f (Straight.onExit h).2]
     rfl
-  | .iterate _ _ _ _ _ _, h => absurd h Bool.false_ne_true
-  | .succeed _, h | .fail _, h | .failCause _, h | .sync _, h
-  | .perform _ _, h | .gen _, h | .uninterruptible _, h | .interruptible _, h
+  | .succeed _, h | .fail _, h | .failCause _, h | .sync _, h | .perform _ _, h => h
+  | .iterate _ _ _ _ _ _, h | .gen _, h | .uninterruptible _, h | .interruptible _, h
   | .yieldNow _, h | .awaitFiber _ _, h
   | .withFiber _, h | .scoped _, h | .acquireRelease _ _, h | .provideLayer _ _ _, h
-  | .service _, h | .provideService _ _ _, h | .catchIf _ _ _, h => by
-    rw [Looped]
-    · exact h
-    all_goals (intros; rename_i heq; cases heq)
+  | .service _, h | .provideService _ _ _, h | .catchIf _ _ _, h => absurd h Bool.false_ne_true
 
 /-- On the straight fragment the budgeted meaning is `denote`: every straight-fragment theorem
 is a corollary. -/
