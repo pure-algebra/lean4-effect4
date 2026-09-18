@@ -236,9 +236,20 @@ def RowDef.key (r : RowDef) : String × List String := (r.row.spelling, r.row.tr
 program. A declaration's position in this list is the `NativeOp.external` index that calls it. -/
 def RowDef.table (rows : List RowDef) : RowTable := rows.map (·.row)
 
+/-- The spelling each declaration was made under, with its position, counting from `base`. -/
+def RowDef.namesFrom (base : Nat) : List RowDef → RowNames
+  | [] => []
+  | r :: rest => (r.row.spelling, base) :: RowDef.namesFrom (base + 1) rest
+
 /-- The spelling each declaration was made under, with its position in `RowDef.table`. -/
-def RowDef.names (rows : List RowDef) : RowNames :=
-  rows.zipIdx.map fun (r, i) => (r.row.spelling, i)
+def RowDef.names (rows : List RowDef) : RowNames := RowDef.namesFrom 0 rows
+
+/-- The first spelling declared twice, if any. -/
+def RowDef.duplicate? : List RowDef → Option String
+  | [] => none
+  | r :: rest =>
+    if rest.any (fun s => s.row.spelling == r.row.spelling) then some r.row.spelling
+    else RowDef.duplicate? rest
 
 /-- A declared host row, called on a request. The position is the one the module's table put
 the declaration at; an undeclared spelling refuses at the call site. -/
@@ -366,12 +377,12 @@ private def pointAtPlaced {Op : Type} (placed : List (Nat × List Nat)) (tree : 
       | _ => .error ⟨site, .placement ""⟩
     | none => .error ⟨site, .placement ""⟩
 
-/-- Two rows declared under one spelling refuse: a table key is the spelling and the trailing
-names, and `Table.lawful` requires it to be unique. -/
-private def rowNamesOf (rows : List RowDef) : Except Refusal RowNames :=
-  rows.zipIdx.foldlM (init := []) fun acc (r, i) =>
-    if acc.any (·.1 == r.row.spelling) then .error ⟨[], .duplicateRow r.row.spelling⟩
-    else .ok (acc ++ [(r.row.spelling, i)])
+/-- The declared rows as a scope, or the first spelling declared twice: a table key is the
+spelling and the trailing names (`rowKey`), and `Table.lawful` requires it to be unique. -/
+def rowNamesOf (rows : List RowDef) : Except Refusal RowNames :=
+  match RowDef.duplicate? rows with
+  | some spelling => .error ⟨[], .duplicateRow spelling⟩
+  | none => .ok (RowDef.names rows)
 
 /-- The one first-order tree of an authored module: main elaborated in the empty scope, every
 declared layer placed at its first use in program order, every later use a reference to that
