@@ -1,10 +1,10 @@
-import Effect4.Laws.Program.Typed.Sources
+import Effect4.Laws.Program.EvaluateR
 import Aesop
 
 /-!
 # Typed/State — the typed-state skeleton (GENERATED)
 
-Emitted by `#emit_typed_state` (`Laws/Auto/TypedStateGen.lean`) from the position census of
+Emitted by `#emit_typed_state` (`Laws/Auto/TypedStateGen.lean`, run as `lake env lean scripts/lean/TypedStateEmit.lean`) from the position census of
 [Effect4.Program.Sched.RState, Effect4.Program.Sched.RCmd] and the source table `Typed/Sources.lean`. One `Ok` per owner, nested along the
 containment edges, parametric in the carrier predicates `Preds`. Regenerate; never edit.
 -/

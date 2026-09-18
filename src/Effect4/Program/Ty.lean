@@ -40,6 +40,18 @@ inductive Ty
   | fiberOf (value error : Ty)
   | union (left right : Ty)
   | lit (value : String)
+  /-- `Ref.Ref<A>` (decisions row 42): a cell handle, coarse in `hasTy` as every handle is;
+  what the cell holds is typed by the world's heap column. A dedicated constructor, as
+  `fiberOf` is, so `Ty` stays a plain inductive (a `List Ty` argument would make it nested and
+  cost the derived equality and every `induction` on it). -/
+  | refOf (value : Ty)
+  /-- `Deferred.Deferred<A, E>` (decisions row 42): a promise handle; what it completes with is
+  typed by the world's promise table. -/
+  | deferredOf (value error : Ty)
+  /-- A row template's parameter (`Ref.get<A>`), never a program's type: the checker
+  instantiates every variable of a row from the request or the operation's type arguments
+  (decisions row 42). -/
+  | var (index : Nat)
 deriving DecidableEq, Repr
 
 namespace Ty
@@ -76,6 +88,12 @@ def renderRaw : Ty → String
   | .fiberOf value error => "Fiber.Fiber<" ++ renderRaw value ++ ", " ++ renderRaw error ++ ">"
   | .union left right => renderRaw left ++ " | " ++ renderRaw right
   | .lit value => "\"" ++ value ++ "\""
+  | .refOf value => "Ref.Ref<" ++ renderRaw value ++ ">"
+  | .deferredOf value error => "Deferred.Deferred<" ++ renderRaw value ++ ", " ++ renderRaw error ++ ">"
+  -- a template parameter, in a row's declaration only: `A`, `E`, then `T2`, `T3`, …
+  | .var 0 => "A"
+  | .var 1 => "E"
+  | .var index => "T" ++ toString index
 
 /-- The members of a union, flattened at the top; `never` contributes none. -/
 def members : Ty → List Ty
@@ -95,6 +113,9 @@ def members : Ty → List Ty
   | .causeOf error => [.causeOf error]
   | .fiberOf value error => [.fiberOf value error]
   | .lit value => [.lit value]
+  | .refOf value => [.refOf value]
+  | .deferredOf value error => [.deferredOf value error]
+  | .var index => [.var index]
 
 /-- An injective structural key, for ordering union members: a constructor code, then the
 length-prefixed keys of the components; a handle's target by its UTF-8 bytes
@@ -117,6 +138,9 @@ def key : Ty → List Nat
   | .fiberOf value error => 13 :: (key value).length :: key value ++ key error
   | .union left right => 14 :: (key left).length :: key left ++ key right
   | .lit value => 15 :: value.toUTF8.data.toList.map UInt8.toNat
+  | .refOf value => 16 :: key value
+  | .deferredOf value error => 17 :: (key value).length :: key value ++ key error
+  | .var index => [18, index]
 
 /-- Lexicographic order on keys, as a Boolean. -/
 def ltKey : List Nat → List Nat → Bool
@@ -145,7 +169,17 @@ def isNever : Ty → Bool
   | .unit | .nat | .int | .string | .bool
   | .handle _ | .option _ | .list _ | .prod _ _
   | .except _ _ | .exitOf _ _ | .causeOf _ | .fiberOf _ _ | .union _ _
-  | .lit _ => false
+  | .lit _ | .refOf _ | .deferredOf _ _ | .var _ => false
+
+/-- No template parameter inside: a program's type. `schema` is exact on closed types only
+(`Schema/Bridge.lean`); the checker instantiates every row it admits, so every type it gives
+a program is closed. -/
+def closed : Ty → Bool
+  | .var _ => false
+  | .never | .unit | .nat | .int | .string | .bool | .handle _ | .lit _ => true
+  | .option t | .list t | .causeOf t | .refOf t => closed t
+  | .prod a b | .except a b | .exitOf a b | .fiberOf a b | .union a b | .deferredOf a b =>
+    closed a && closed b
 
 /-- The `Scope` service handle; its spelling is written once, here. -/
 def scopeTarget : String := "Scope.Scope"
@@ -213,6 +247,10 @@ theorem key_injective {a b : Ty} (h : key a = key b) : a = b := by
   · obtain ⟨hl, hr⟩ := List.append_inj h.2.2 h.2.1
     congr 1 <;> (apply_assumption; assumption)
   · exact congrArg Ty.lit (utf8_key_injective h.2)
+  · exact congrArg Ty.refOf (by apply_assumption; exact h.2)
+  · obtain ⟨hl, hr⟩ := List.append_inj h.2.2 h.2.1
+    congr 1 <;> (apply_assumption; assumption)
+  · exact congrArg Ty.var h.2.1
 
 theorem ltKey_iff_lex (a b : List Nat) :
     ltKey a b = true ↔ List.Lex (· < ·) a b := by
@@ -344,7 +382,7 @@ def isMember : Ty → Bool
   | .unit | .nat | .int | .string | .bool
   | .handle _ | .option _ | .list _ | .prod _ _
   | .except _ _ | .exitOf _ _ | .causeOf _ | .fiberOf _ _
-  | .lit _ => true
+  | .lit _ | .refOf _ | .deferredOf _ _ | .var _ => true
 
 theorem members_isMember {t x : Ty} (h : x ∈ members t) : isMember x = true := by
   induction t <;> simp only [members, List.mem_append, List.mem_singleton] at h
@@ -384,6 +422,8 @@ def sub (a b : Ty) : Bool :=
   | .exitOf a1 e1, .exitOf a2 e2 => sub a1 a2 && sub e1 e2
   | .causeOf e1, .causeOf e2 => sub e1 e2
   | .fiberOf a1 e1, .fiberOf a2 e2 => sub a1 a2 && sub e1 e2
+  | .refOf a1, .refOf a2 => sub a1 a2
+  | .deferredOf a1 e1, .deferredOf a2 e2 => sub a1 a2 && sub e1 e2
   | _, _ => false
 termination_by sizeOf a + sizeOf b
 
@@ -439,6 +479,9 @@ def normalize : Ty → Ty
   | .exitOf a b => .exitOf (normalize a) (normalize b)
   | .causeOf t => .causeOf (normalize t)
   | .fiberOf a b => .fiberOf (normalize a) (normalize b)
+  | .refOf a => .refOf (normalize a)
+  | .deferredOf a b => .deferredOf (normalize a) (normalize b)
+  | .var i => .var i
   | .union a b => ofMembers (normalizeRow
       ((normalize a).members ++ (normalize b).members)).elems
   | .never => .never
@@ -467,6 +510,9 @@ inductive Normal : Ty → Prop
   | exitOf {a b} : Normal a → Normal b → Normal (.exitOf a b)
   | causeOf {t} : Normal t → Normal (.causeOf t)
   | fiberOf {a b} : Normal a → Normal b → Normal (.fiberOf a b)
+  | refOf {a} : Normal a → Normal (.refOf a)
+  | deferredOf {a b} : Normal a → Normal b → Normal (.deferredOf a b)
+  | var (i : Nat) : Normal (.var i)
   | row (r : Effect4.Row Ty)
       (children : ∀ t ∈ r.elems, Normal t)
       (atoms : ∀ t ∈ r.elems, isMember t = true)
@@ -519,6 +565,9 @@ theorem normal_normalize (t : Ty) : Normal (normalize t) := by
   | exitOf a b iha ihb => exact .exitOf iha ihb
   | causeOf t ih => exact .causeOf ih
   | fiberOf a b iha ihb => exact .fiberOf iha ihb
+  | refOf a ih => exact .refOf ih
+  | deferredOf a b iha ihb => exact .deferredOf iha ihb
+  | var i => exact .var i
   | union a b iha ihb =>
     apply normal_row
     · intro t ht

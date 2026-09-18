@@ -22,6 +22,9 @@ let rec emit_ty (b : Buffer.t) (v : ty) : unit =
   | Ty_fiberOf (a0, a1) -> Eff_frame.emit_ctor b 13 (fun b -> emit_ty b a0; emit_ty b a1)
   | Ty_union (a0, a1) -> Eff_frame.emit_ctor b 14 (fun b -> emit_ty b a0; emit_ty b a1)
   | Ty_lit a0 -> Eff_frame.emit_ctor b 15 (fun b -> Eff_frame.emit_string b a0)
+  | Ty_refOf a0 -> Eff_frame.emit_ctor b 16 (fun b -> emit_ty b a0)
+  | Ty_deferredOf (a0, a1) -> Eff_frame.emit_ctor b 17 (fun b -> emit_ty b a0; emit_ty b a1)
+  | Ty_var a0 -> Eff_frame.emit_ctor b 18 (fun b -> Eff_frame.emit_nat b a0)
 
 let encode_ty (v : ty) : string = Eff_frame.to_string emit_ty v
 
@@ -107,6 +110,24 @@ let rec decode_ty (s : string) (pos : int) (limit : int) : (ty * int) option =
        | None -> None
        | Some (a0, p) ->
         if p = e then Some (Ty_lit a0, next) else None)
+    | 16 ->
+      (match decode_ty s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Ty_refOf a0, next) else None)
+    | 17 ->
+      (match decode_ty s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match decode_ty s p e with
+         | None -> None
+         | Some (a1, p) ->
+          if p = e then Some (Ty_deferredOf (a0, a1), next) else None))
+    | 18 ->
+      (match Eff_frame.decode_nat s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Ty_var a0, next) else None)
     | _ -> None)
 
 let decode_ty_exact (s : string) : ty option = Eff_frame.exact decode_ty s

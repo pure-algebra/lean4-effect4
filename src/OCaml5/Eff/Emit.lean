@@ -380,6 +380,9 @@ def tyO : Ty → String
   | .fiberOf v e => s!"({octor "ty" "fiberOf"} ({tyO v}, {tyO e}))"
   | .union l r => s!"({octor "ty" "union"} ({tyO l}, {tyO r}))"
   | .lit s => s!"({octor "ty" "lit"} {ostr s})"
+  | .refOf v => s!"({octor "ty" "refOf"} {tyO v})"
+  | .deferredOf v e => s!"({octor "ty" "deferredOf"} ({tyO v}, {tyO e}))"
+  | .var i => s!"({octor "ty" "var"} {i})"
 
 def kindO : RowKind → String
   | .sync => octor "row_kind" "sync"

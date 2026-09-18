@@ -183,6 +183,8 @@ theorem hasTy_normalize (t : Ty) (v : Val) (allocated : List String) :
     · exact ihe _
     · exact ihv _
   | fiberOf => rfl
+  -- a cell or promise handle is coarse in `hasTy`: the argument's normalisation is invisible
+  | refOf | deferredOf | var => rfl
   | option t ih =>
     simp only [Ty.normalize, Val.hasTy]
     split <;> try rfl
@@ -447,13 +449,15 @@ theorem normal_members {t : Ty} (hn : Ty.Normal t) :
 
 theorem normal_children (t : Ty) : Ty.Normal t →
     match t with
-    | .option a | .list a | .causeOf a => Ty.Normal a
-    | .prod a b | .except a b | .exitOf a b | .fiberOf a b => Ty.Normal a ∧ Ty.Normal b
+    | .option a | .list a | .causeOf a | .refOf a => Ty.Normal a
+    | .prod a b | .except a b | .exitOf a b | .fiberOf a b | .deferredOf a b =>
+      Ty.Normal a ∧ Ty.Normal b
     | _ => True := by
   intro hn
   induction hn with
-  | option h _ | list h _ | causeOf h _ => exact h
-  | prod ha hb _ _ _ _ | except ha hb _ _ | exitOf ha hb _ _ | fiberOf ha hb _ _ =>
+  | option h _ | list h _ | causeOf h _ | refOf h _ => exact h
+  | prod ha hb _ _ _ _ | except ha hb _ _ | exitOf ha hb _ _ | fiberOf ha hb _ _
+  | deferredOf ha hb _ _ =>
       exact ⟨ha, hb⟩
   | row r children atoms maximal ih =>
       cases hr : r.elems with

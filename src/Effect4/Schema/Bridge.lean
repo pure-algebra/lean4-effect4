@@ -51,6 +51,10 @@ def schema : Ty → Representation
   | .exitOf value error => .declaration ⟨"effect/schema/Exit", .null⟩ none [schema value, schema error, defectRep] []
   | .causeOf error => .declaration ⟨"effect/schema/Cause", .null⟩ none [schema error, defectRep] []
   | .fiberOf value error => .declaration ⟨"effect/schema/Fiber", .null⟩ none [schema value, schema error] []
+  | .refOf value => .declaration ⟨"effect/schema/Ref", .null⟩ none [schema value] []
+  | .deferredOf value error => .declaration ⟨"effect/schema/Deferred", .null⟩ none [schema value, schema error] []
+  -- a row template's parameter has no schema: an opaque node `ofSchema` does not read back
+  | .var _ => .declaration ⟨"effect/schema/TypeParameter", .null⟩ none [] []
   | .union left right => .union none [] [schema left, schema right] .anyOf
 
 /-- Extracts the identifier of a persisted check. -/
@@ -86,6 +90,9 @@ def ofSchema : Representation → Option Ty
     if id == "effect/schema/Option" then do
       let t ← ofSchema val
       some (.option t)
+    else if id == "effect/schema/Ref" then do
+      let t ← ofSchema val
+      some (.refOf t)
     else none
   | .declaration ⟨id, .null⟩ _ [a, b] [] =>
     if id == "effect/schema/Result" then do
@@ -96,6 +103,10 @@ def ofSchema : Representation → Option Ty
       let tv ← ofSchema a
       let te ← ofSchema b
       some (.fiberOf tv te)
+    else if id == "effect/schema/Deferred" then do
+      let tv ← ofSchema a
+      let te ← ofSchema b
+      some (.deferredOf tv te)
     else if id == "effect/schema/Cause" && isDefect b then do
       let te ← ofSchema a
       some (.causeOf te)
@@ -121,9 +132,10 @@ def ofSchema : Representation → Option Ty
     some (.union ta tb)
   | _ => none
 
-/-- Q5 Retraction Theorem: `ofSchema` is a left inverse to `schema` across all 16 `Ty` constructors
-(`schema` mints no checks but `number`'s, `null` payloads, plain elements, so every guard passes). -/
-theorem ofSchema_schema (t : Ty) : ofSchema (schema t) = some t := by
+/-- Q5 Retraction Theorem: `ofSchema` is a left inverse to `schema` on every closed type
+(`schema` mints no checks but `number`'s, `null` payloads, plain elements, so every guard passes;
+a row template's parameter is not a program type and has no schema to read back). -/
+theorem ofSchema_schema (t : Ty) (h : t.closed = true) : ofSchema (schema t) = some t := by
   induction t with
   | never => rfl
   | unit => rfl
@@ -134,41 +146,61 @@ theorem ofSchema_schema (t : Ty) : ofSchema (schema t) = some t := by
   | lit s => rfl
   | handle target => rfl
   | option inner ih =>
+    simp only [Ty.closed] at h
     dsimp [schema, ofSchema]
-    rw [ih]
+    rw [ih h]
     rfl
   | list inner ih =>
+    simp only [Ty.closed] at h
     dsimp [schema, ofSchema, Schema.array]
-    rw [ih]
+    rw [ih h]
     rfl
   | prod a b iha ihb =>
+    simp only [Ty.closed, Bool.and_eq_true] at h
     dsimp [schema, ofSchema, Schema.tuple, Schema.element]
-    rw [iha, ihb]
+    rw [iha h.1, ihb h.2]
     rfl
   | except e a ihe iha =>
+    simp only [Ty.closed, Bool.and_eq_true] at h
     dsimp [schema, ofSchema]
-    rw [iha, ihe]
+    rw [iha h.2, ihe h.1]
     rfl
   | exitOf a e iha ihe =>
+    simp only [Ty.closed, Bool.and_eq_true] at h
     dsimp [schema, ofSchema]
-    rw [iha, ihe]
+    rw [iha h.1, ihe h.2]
     rfl
   | causeOf e ihe =>
+    simp only [Ty.closed] at h
     dsimp [schema, ofSchema]
-    rw [ihe]
+    rw [ihe h]
     rfl
   | fiberOf a e iha ihe =>
+    simp only [Ty.closed, Bool.and_eq_true] at h
     dsimp [schema, ofSchema]
-    rw [iha, ihe]
+    rw [iha h.1, ihe h.2]
     rfl
-  | union a b iha ihb =>
+  | refOf a ih =>
+    simp only [Ty.closed] at h
     dsimp [schema, ofSchema]
-    rw [iha, ihb]
+    rw [ih h]
+    rfl
+  | deferredOf a e iha ihe =>
+    simp only [Ty.closed, Bool.and_eq_true] at h
+    dsimp [schema, ofSchema]
+    rw [iha h.1, ihe h.2]
+    rfl
+  | var i => simp [Ty.closed] at h
+  | union a b iha ihb =>
+    simp only [Ty.closed, Bool.and_eq_true] at h
+    dsimp [schema, ofSchema]
+    rw [iha h.1, ihb h.2]
     rfl
 
 /-- Retraction over canonical types `CTy`. -/
-theorem ofSchema_schema_cty (t : CTy) : ofSchema (schema t.toRaw) = some t.toRaw :=
-  ofSchema_schema t.toRaw
+theorem ofSchema_schema_cty (t : CTy) (h : t.toRaw.closed = true) :
+    ofSchema (schema t.toRaw) = some t.toRaw :=
+  ofSchema_schema t.toRaw h
 
 /-- As an effect: the exit schema root with answer, error, and requirement references (S-2). -/
 def effDocument (eff : EffTy) : Document :=
@@ -226,10 +258,12 @@ namespace Effect4.Program.CTy
 /-- Schema projection of a canonical type. -/
 def schema (t : CTy) : Effect4.Representation := Ty.schema t.toRaw
 
-/-- The public schema boundary retracts on canonical types; integer parsing is retained. -/
-theorem ofSchema_schema (t : CTy) : Ty.ofSchema (schema t) = some t.toRaw := by
+/-- The public schema boundary retracts on closed canonical types; integer parsing is retained.
+A row template's parameter is not a program type (`Ty.closed`). -/
+theorem ofSchema_schema (t : CTy) (h : t.toRaw.closed = true) :
+    Ty.ofSchema (schema t) = some t.toRaw := by
   change Effect4.Schema.Bridge.ofSchema (Effect4.Schema.Bridge.schema t.val.normalize) = _
   rw [t.property]
-  exact Effect4.Schema.Bridge.ofSchema_schema t.toRaw
+  exact Effect4.Schema.Bridge.ofSchema_schema t.toRaw h
 
 end Effect4.Program.CTy

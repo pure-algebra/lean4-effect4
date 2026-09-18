@@ -53,6 +53,18 @@ def Val.hasTy (v : Val) (ty : Ty) (allocated : List String := []) : Bool :=
       | _ => false
     | _ => target == Ty.contextTarget && (Val.context? v).isSome
   | .fiberOf _ _ => match v with | Value.fiber _ => true | _ => false
+  -- a cell or a promise handle, coarse as every handle is (DI-17, decisions row 44): what it
+  -- holds is typed by the world's tables
+  | .refOf _ =>
+    match v with
+    | .handle kind _ => HandleKind.ofByte? kind == some .cell
+    | _ => false
+  | .deferredOf _ _ =>
+    match v with
+    | .handle kind _ => HandleKind.ofByte? kind == some .promise
+    | _ => false
+  -- a row template's parameter: no value inhabits it
+  | .var _ => false
   | .exitOf a e =>
     match v with
     | Val.exitOk x => Val.hasTy x a allocated
@@ -152,8 +164,7 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         split at hv <;> try contradiction
         · exact hasTy_sub ae be _ allocated hab.1 hv
         · exact hasTy_sub av bv _ allocated hab.2 hv
-      | never | unit | nat | int | string | bool | handle _ | lit _ | option _ | list _
-      | prod _ _ | exitOf _ _ | causeOf _ | fiberOf _ _ =>
+      | _ =>
         revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
     | union a1 a2 =>
       rw [Ty.sub_union_left a1 a2 b heq] at hsub
@@ -173,8 +184,7 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         cases v with
         | str s' => rfl
         | _ => simp [Val.hasTy] at hv
-      | never | unit | nat | int | bool | handle _ | lit _ | option _ | list _
-      | prod _ _ | except _ _ | exitOf _ _ | causeOf _ | fiberOf _ _ =>
+      | _ =>
         revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
     | option a' =>
       cases b with
@@ -190,8 +200,7 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         · rfl
         · rename_i x
           exact hasTy_sub a' b' x allocated hsub hv
-      | never | unit | nat | int | string | bool | handle _ | lit _ | list _
-      | prod _ _ | except _ _ | exitOf _ _ | causeOf _ | fiberOf _ _ =>
+      | _ =>
         revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
     | list a' =>
       cases b with
@@ -208,8 +217,7 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
           exact list_all_mono _ (fun id => hasTy_sub a' b' (Val.fiber id) allocated hsub) hv
         · rename_i vs
           exact list_all_mono vs (fun x => hasTy_sub a' b' x allocated hsub) hv
-      | never | unit | nat | int | string | bool | handle _ | lit _ | option _
-      | prod _ _ | except _ _ | exitOf _ _ | causeOf _ | fiberOf _ _ =>
+      | _ =>
         revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
     | prod a1 a2 =>
       cases b with
@@ -226,8 +234,7 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         rename_i x y
         simp only [Bool.and_eq_true_iff] at hv ⊢
         exact ⟨hasTy_sub a1 b1 x allocated h1 hv.1, hasTy_sub a2 b2 y allocated h2 hv.2⟩
-      | never | unit | nat | int | string | bool | handle _ | lit _ | option _ | list _
-      | except _ _ | exitOf _ _ | causeOf _ | fiberOf _ _ =>
+      | _ =>
         revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
     | exitOf a1 e1 =>
       cases b with
@@ -245,8 +252,7 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         · split at hv <;> try contradiction
           exact causeAdmits_mono_sub (fun w hw => hasTy_sub e1 e2 w allocated he hw) _ hv
         · contradiction
-      | never | unit | nat | int | string | bool | handle _ | lit _ | option _ | list _
-      | prod _ _ | except _ _ | causeOf _ | fiberOf _ _ =>
+      | _ =>
         revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
     | causeOf e1 =>
       cases b with
@@ -260,8 +266,7 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         dsimp only [Val.hasTy] at hv ⊢
         split at hv <;> try contradiction
         exact causeAdmits_mono_sub (fun w hw => hasTy_sub e1 e2 w allocated hsub hw) _ hv
-      | never | unit | nat | int | string | bool | handle _ | lit _ | option _ | list _
-      | prod _ _ | except _ _ | exitOf _ _ | fiberOf _ _ =>
+      | _ =>
         revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
     | fiberOf a1 e1 =>
       cases b with
@@ -273,9 +278,33 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
       | fiberOf a2 e2 =>
         simp only [Val.hasTy] at hv ⊢
         exact hv
-      | never | unit | nat | int | string | bool | handle _ | lit _ | option _ | list _
-      | prod _ _ | except _ _ | exitOf _ _ | causeOf _ =>
+      | _ =>
         revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
+    | refOf a1 =>
+      cases b with
+      | union b1 b2 =>
+        rw [Ty.sub_union_right (.refOf a1) b1 b2 rfl] at hsub
+        obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
+        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub (.refOf a1) b1 v allocated h1 hv)
+        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub (.refOf a1) b2 v allocated h2 hv)
+      | refOf a2 =>
+        simp only [Val.hasTy] at hv ⊢
+        exact hv
+      | _ =>
+        revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
+    | deferredOf a1 e1 =>
+      cases b with
+      | union b1 b2 =>
+        rw [Ty.sub_union_right (.deferredOf a1 e1) b1 b2 rfl] at hsub
+        obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
+        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub (.deferredOf a1 e1) b1 v allocated h1 hv)
+        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub (.deferredOf a1 e1) b2 v allocated h2 hv)
+      | deferredOf a2 e2 =>
+        simp only [Val.hasTy] at hv ⊢
+        exact hv
+      | _ =>
+        revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
+    | var i => simp [Val.hasTy] at hv
     | unit =>
       cases b with
       | union b1 b2 =>
@@ -283,8 +312,7 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
         · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub .unit b1 v allocated h1 hv)
         · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub .unit b2 v allocated h2 hv)
-      | never | unit | nat | int | string | bool | handle _ | lit _ | option _ | list _
-      | prod _ _ | except _ _ | exitOf _ _ | causeOf _ | fiberOf _ _ =>
+      | _ =>
         revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
     | nat =>
       cases b with
@@ -293,8 +321,7 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
         · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub .nat b1 v allocated h1 hv)
         · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub .nat b2 v allocated h2 hv)
-      | never | unit | nat | int | string | bool | handle _ | lit _ | option _ | list _
-      | prod _ _ | except _ _ | exitOf _ _ | causeOf _ | fiberOf _ _ =>
+      | _ =>
         revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
     | string =>
       cases b with
@@ -303,8 +330,7 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
         · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub .string b1 v allocated h1 hv)
         · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub .string b2 v allocated h2 hv)
-      | never | unit | nat | int | string | bool | handle _ | lit _ | option _ | list _
-      | prod _ _ | except _ _ | exitOf _ _ | causeOf _ | fiberOf _ _ =>
+      | _ =>
         revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
     | bool =>
       cases b with
@@ -313,8 +339,7 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
         · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub .bool b1 v allocated h1 hv)
         · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub .bool b2 v allocated h2 hv)
-      | never | unit | nat | int | string | bool | handle _ | lit _ | option _ | list _
-      | prod _ _ | except _ _ | exitOf _ _ | causeOf _ | fiberOf _ _ =>
+      | _ =>
         revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
     | handle target =>
       cases b with
@@ -323,8 +348,7 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
         · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub (.handle target) b1 v allocated h1 hv)
         · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub (.handle target) b2 v allocated h2 hv)
-      | never | unit | nat | int | string | bool | handle _ | lit _ | option _ | list _
-      | prod _ _ | except _ _ | exitOf _ _ | causeOf _ | fiberOf _ _ =>
+      | _ =>
         revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
 termination_by sizeOf a + sizeOf b
 

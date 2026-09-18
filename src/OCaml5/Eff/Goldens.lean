@@ -103,6 +103,9 @@ def tyV : Ty → V
   | .fiberOf v e => .ctor ``Ty.fiberOf [tyV v, tyV e]
   | .union l r => .ctor ``Ty.union [tyV l, tyV r]
   | .lit s => .ctor ``Ty.lit [.str s]
+  | .refOf v => .ctor ``Ty.refOf [tyV v]
+  | .deferredOf v e => .ctor ``Ty.deferredOf [tyV v, tyV e]
+  | .var i => .ctor ``Ty.var [.nat i]
 
 def litV : Lit → V
   | .unit => .ctor ``Lit.unit []

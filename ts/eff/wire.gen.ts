@@ -112,6 +112,9 @@ const writeTy = (w: Writer, v: Ty): void => {
     case "fiberOf": return w.ctor(13, [() => writeTy(w, v.value), () => writeTy(w, v.error)])
     case "union": return w.ctor(14, [() => writeTy(w, v.left), () => writeTy(w, v.right)])
     case "lit": return w.ctor(15, [() => w.str(v.value)])
+    case "refOf": return w.ctor(16, [() => writeTy(w, v.value)])
+    case "deferredOf": return w.ctor(17, [() => writeTy(w, v.value), () => writeTy(w, v.error)])
+    case "var": return w.ctor(18, [() => w.nat(v.index)])
     default: throw new TypeError("wire Ty constructor")
   }
 }

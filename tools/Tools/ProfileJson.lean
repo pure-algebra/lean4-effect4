@@ -35,6 +35,9 @@ def tyJson : Ty → Json
   | .fiberOf value error => tagged "fiberOf" [("value", tyJson value), ("error", tyJson error)]
   | .union left right => tagged "union" [("left", tyJson left), ("right", tyJson right)]
   | .lit value => tagged "lit" [("value", .str value)]
+  | .refOf value => tagged "refOf" [("value", tyJson value)]
+  | .deferredOf value error => tagged "deferredOf" [("value", tyJson value), ("error", tyJson error)]
+  | .var index => tagged "var" [("index", .num index)]
 
 def shapeJson : RowShape → Json
   | .call => .str "call"

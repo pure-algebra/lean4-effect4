@@ -1,8 +1,8 @@
 Effect4.Program.Ty.never	3
 Effect4.Program.Ty.unit	3
-Effect4.Program.Ty.nat	11
+Effect4.Program.Ty.nat	13
 Effect4.Program.Ty.int	1
-Effect4.Program.Ty.string	11
+Effect4.Program.Ty.string	12
 Effect4.Program.Ty.bool	1
 Effect4.Program.Ty.handle	2
 Effect4.Program.Ty.option	4
@@ -14,6 +14,9 @@ Effect4.Program.Ty.causeOf	1
 Effect4.Program.Ty.fiberOf	1
 Effect4.Program.Ty.union	4
 Effect4.Program.Ty.lit	1
+Effect4.Program.Ty.refOf	1
+Effect4.Program.Ty.deferredOf	1
+Effect4.Program.Ty.var	1
 Effect4.Program.RowKind.sync	1
 Effect4.Program.RowKind.async	2
 Effect4.Program.RowKind.program	1

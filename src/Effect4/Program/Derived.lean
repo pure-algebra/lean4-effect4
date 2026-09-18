@@ -9,7 +9,7 @@
 --    Effect4.Program.Ty Effect4.Program.Eff@Effect4.Program.NativeOp Effect4.Program.RowKind \
 --    Effect4.Program.RowShape Effect4.Program.Registration Effect4.Program.Row \
 --    Effect4.Program.EffTy
--- Carriers read from: Effect4.Program.Eff, Effect4.Machine.Stores, Effect4.Machine.Scope, Effect4.Machine.Supervision, Effect4.Program.Decision, Effect4.Program.Native, Effect4.Machine.Key, Effect4.Program.Ty, Effect4.Program.Typing
+-- Carriers read from: Effect4.Program.Eff, Effect4.Machine.Stores, Effect4.Machine.Scope, Effect4.Machine.Supervision, Effect4.Program.Decision, Effect4.Program.Native, Effect4.Machine.Key, Effect4.Program.Ty, Effect4.Program.Typing.Rules
 -- Acceptance guards appended verbatim from: tools/Effect4Gen/guards/program.lean
 import Effect4.Program.Native
 import Effect4.Store.Canonical
@@ -1076,12 +1076,15 @@ def TyShape : Shape :=
       ("causeOf", 12, [("error", .named "Ty")]),
       ("fiberOf", 13, [("value", .named "Ty"), ("error", .named "Ty")]),
       ("union", 14, [("left", .named "Ty"), ("right", .named "Ty")]),
-      ("lit", 15, [("value", (shape _root_.String).root)])]
+      ("lit", 15, [("value", (shape _root_.String).root)]),
+      ("refOf", 16, [("value", .named "Ty")]),
+      ("deferredOf", 17, [("value", .named "Ty"), ("error", .named "Ty")]),
+      ("var", 18, [("index", (shape _root_.Nat).root)])]
 
 /-- One table for the block, then the field types' tables. -/
 def defs : List (String × Shape) :=
   ("Ty", TyShape) ::
-    ((shape _root_.String).defs)
+    ((shape _root_.String).defs ++ (shape _root_.Nat).defs)
 
 mutual
 def toValTy : _root_.Effect4.Program.Ty → Val
@@ -1101,6 +1104,9 @@ def toValTy : _root_.Effect4.Program.Ty → Val
   | .fiberOf a0 a1 => .ctor 13 [toValTy a0, toValTy a1]
   | .union a0 a1 => .ctor 14 [toValTy a0, toValTy a1]
   | .lit a0 => .ctor 15 [Canonical.toVal a0]
+  | .refOf a0 => .ctor 16 [toValTy a0]
+  | .deferredOf a0 a1 => .ctor 17 [toValTy a0, toValTy a1]
+  | .var a0 => .ctor 18 [Canonical.toVal a0]
 end
 
 /-! The structural readers. Exactness is bought by the re-encode guard, so a reader
@@ -1154,6 +1160,18 @@ def rawTy : Val → Option (_root_.Effect4.Program.Ty)
     match Canonical.ofVal (α := _root_.String) v0 with
     | some a0 => some (.lit a0)
     | _ => none
+  | .ctor 16 [v0] =>
+    match rawTy v0 with
+    | some a0 => some (.refOf a0)
+    | _ => none
+  | .ctor 17 [v0, v1] =>
+    match rawTy v0, rawTy v1 with
+    | some a0, some a1 => some (.deferredOf a0 a1)
+    | _, _ => none
+  | .ctor 18 [v0] =>
+    match Canonical.ofVal (α := _root_.Nat) v0 with
+    | some a0 => some (.var a0)
+    | _ => none
   | _ => none
 end
 
@@ -1187,6 +1205,12 @@ theorem rawTy_toValTy (a : _root_.Effect4.Program.Ty) :
     simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
   | «lit» a0 =>
     simp [toValTy, rawTy, Canonical.ofVal_toVal]
+  | «refOf» a0 =>
+    simp [toValTy, rawTy, rawTy_toValTy a0]
+  | «deferredOf» a0 a1 =>
+    simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+  | «var» a0 =>
+    simp [toValTy, rawTy, Canonical.ofVal_toVal]
 termination_by structural a
 end
 
@@ -1196,12 +1220,16 @@ theorem mem_Ty : ("Ty", TyShape) ∈ defs := List.Mem.head _
 
 /-- Into the appended tail of the block's table. -/
 theorem mem_tail {p : String × Shape}
-    (h : p ∈ (shape _root_.String).defs) : p ∈ defs :=
+    (h : p ∈ (shape _root_.String).defs ++ (shape _root_.Nat).defs) : p ∈ defs :=
   List.Mem.tail _ (h)
 
 theorem lift_String (x : _root_.String) :
     acceptsIn defs (shape _root_.String).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_tail (hp))
+  acceptsIn_mono_of_subset (fun _ hp => mem_tail (mem_append_of_left (hp)))
+    _ _ (Canonical.fits x)
+theorem lift_Nat (x : _root_.Nat) :
+    acceptsIn defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_tail (mem_append_of_right (hp)))
     _ _ (Canonical.fits x)
 
 mutual
@@ -1256,6 +1284,16 @@ theorem fitsTy (a : _root_.Effect4.Program.Ty) :
   | «lit» a0 =>
     exact acceptsAt_sum _ _ _ 15 "lit" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
+  | «refOf» a0 =>
+    exact acceptsAt_sum _ _ _ 16 "refOf" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (fitsTy a0) (acceptsFields_nil _))
+  | «deferredOf» a0 a1 =>
+    exact acceptsAt_sum _ _ _ 17 "deferredOf" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (fitsTy a0)
+        (acceptsFields_cons _ _ _ _ _ _ (fitsTy a1) (acceptsFields_nil _)))
+  | «var» a0 =>
+    exact acceptsAt_sum _ _ _ 18 "var" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0) (acceptsFields_nil _))
 termination_by structural a
 end
 

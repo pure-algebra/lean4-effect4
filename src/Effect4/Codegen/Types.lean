@@ -298,6 +298,15 @@ private def ofNormalized : Program.Ty → Option TypeRef
       let a ← ofNormalized value
       let e ← ofNormalized error
       pure (.name ["Fiber", "Fiber"] [a, e])
+  | .refOf value => do
+      let a ← ofNormalized value
+      pure (.name ["Ref", "Ref"] [a])
+  | .deferredOf value error => do
+      let a ← ofNormalized value
+      let e ← ofNormalized error
+      pure (.name ["Deferred", "Deferred"] [a, e])
+  -- a row template's parameter is not a program type: no reference
+  | .var _ => none
   | .union left right => do
       let a ← ofNormalized left
       let b ← ofNormalized right

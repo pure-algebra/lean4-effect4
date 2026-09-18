@@ -37,6 +37,9 @@ export const tyJson = (v: Ty): Json => {
     case "fiberOf": return ["fiberOf", tyJson(v.value), tyJson(v.error)]
     case "union": return ["union", tyJson(v.left), tyJson(v.right)]
     case "lit": return ["lit", v.value]
+    case "refOf": return ["refOf", tyJson(v.value)]
+    case "deferredOf": return ["deferredOf", tyJson(v.value), tyJson(v.error)]
+    case "var": return ["var", v.index]
   }
 }
 

@@ -84,15 +84,20 @@ structure Walk where
   edges : Array Edge := #[]
   seen : Array Name := #[]
 
-partial def walkType (carriers wrappers : List Name) (owner : Name) (field : String)
-    (ctor : Option (Name × Nat)) (shape : String) (wraps : List String) (ty : Expr) (w : Walk) :
-    MetaM Walk := do
+/-- The walk, bounded by a depth (`fuel`): a type nests a few dozen deep at most, and the trust
+gate refuses unbounded recursion. Running out is a loud refusal, never silence. -/
+def walkType (carriers wrappers : List Name) : Nat → Name → String → Option (Name × Nat) →
+    String → List String → Expr → Walk → MetaM Walk
+  | 0, owner, field, _, _, _, _, w => do
+    logWarning m!"REFUSED {owner}.{field}: the type walk ran out of depth"
+    return w
+  | fuel + 1, owner, field, ctor, shape, wraps, ty, w => do
   let ty ← whnf (← instantiateMVars ty)
   if ← isProp ty then return w
   match ty with
   | .forallE _ d b _ =>
     let dText ← ppExpr d
-    walkType carriers wrappers owner field ctor (shape ++ s!"({dText} → _) ") (wraps ++ ["fn"]) b w
+    walkType carriers wrappers fuel owner field ctor (shape ++ s!"({dText} → _) ") (wraps ++ ["fn"]) b w
   | _ =>
   let fn := ty.getAppFn
   let args := ty.getAppArgs
@@ -107,7 +112,7 @@ partial def walkType (carriers wrappers : List Name) (owner : Name) (field : Str
       for a in args do
         -- a product or a sum records the side, so the emitter can read the component
         let tok := if n == `Prod || n == `Sum || n == `Except then s!"{n.getString!}.{i + 1}" else n.getString!
-        w ← walkType carriers wrappers owner field ctor (shape ++ s!"{tok} ") (wraps ++ [tok]) a w
+        w ← walkType carriers wrappers fuel owner field ctor (shape ++ s!"{tok} ") (wraps ++ [tok]) a w
         i := i + 1
       return w
     match (← getEnv).find? n with
@@ -135,7 +140,7 @@ partial def walkType (carriers wrappers : List Name) (owner : Name) (field : Str
             let name := (← x.fvarId!.getDecl).userName
             let single := iv.ctors.length == 1
             let label := if single then argLabel name i else s!"{c.getString!}.{argLabel name i}"
-            w ← walkType carriers wrappers n label (if single then none else some (c, i)) "" [] xty w
+            w ← walkType carriers wrappers fuel n label (if single then none else some (c, i)) "" [] xty w
             i := i + 1
           return w
       return w
@@ -152,7 +157,7 @@ def walkOf (root : Name) (carriers := defaultCarriers) (wrappers := defaultWrapp
   let v := match ci.value? with
     | some v => v
     | none => mkConst root (ci.levelParams.map mkLevelParam)
-  walkType carriers wrappers root "" none "" [] v {}
+  walkType carriers wrappers 64 root "" none "" [] v {}
 
 /-- The positions reachable from a root. -/
 def positionsOf (root : Name) (carriers := defaultCarriers) (wrappers := defaultWrappers) :
@@ -218,9 +223,12 @@ structure Site where
   fields : Array String
 deriving Inhabited
 
-/-- Every constructor application of an owner type in `e`, with the fields it writes. -/
-partial def writeSites (env : Environment) (owners : List Name) (holder : Name) (e : Expr)
-    (acc : Array Site) : Array Site := Id.run do
+/-- Every constructor application of an owner type in `e`, with the fields it writes. Bounded
+by a depth, as the walk is. -/
+def writeSites (env : Environment) (owners : List Name) (holder : Name) :
+    Nat → Expr → Array Site → Array Site
+  | 0, _, acc => acc
+  | fuel + 1, e, acc => Id.run do
   let mut acc := acc
   match e with
   | .app .. =>
@@ -243,24 +251,28 @@ partial def writeSites (env : Environment) (owners : List Name) (holder : Name) 
               if (args[ci.numParams + i]?).isSome then
                 written := written.push s!"{c.getString!}.{(names[i]?).getD s!"arg{i}"}"
           acc := acc.push { holder, owner := ci.induct, fields := written }
-    for a in args do acc := writeSites env owners holder a acc
-    writeSites env owners holder fn acc
-  | .lam _ d b _ | .forallE _ d b _ => writeSites env owners holder b (writeSites env owners holder d acc)
+    for a in args do acc := writeSites env owners holder fuel a acc
+    writeSites env owners holder fuel fn acc
+  | .lam _ d b _ | .forallE _ d b _ =>
+    writeSites env owners holder fuel b (writeSites env owners holder fuel d acc)
   | .letE _ t v b _ =>
-    writeSites env owners holder b (writeSites env owners holder v (writeSites env owners holder t acc))
-  | .mdata _ b | .proj _ _ b => writeSites env owners holder b acc
+    writeSites env owners holder fuel b
+      (writeSites env owners holder fuel v (writeSites env owners holder fuel t acc))
+  | .mdata _ b | .proj _ _ b => writeSites env owners holder fuel b acc
   | _ => acc
 
 /-- Every owner field `e` reads: primitive projections and projection-function applications. -/
-partial def readSites (env : Environment) (owners : List Name) (e : Expr)
-    (acc : Array (Name × String)) : Array (Name × String) := Id.run do
+def readSites (env : Environment) (owners : List Name) :
+    Nat → Expr → Array (Name × String) → Array (Name × String)
+  | 0, _, acc => acc
+  | fuel + 1, e, acc => Id.run do
   let mut acc := acc
   match e with
   | .proj s i b =>
     if owners.contains s then
       let fields := getStructureFields env s
       acc := acc.push (s, (fields[i]?.map (·.toString)).getD s!"{i}")
-    readSites env owners b acc
+    readSites env owners fuel b acc
   | .app .. =>
     if let .const f _ := e.getAppFn then
       if let some info := env.getProjectionFnInfo? f then
@@ -268,21 +280,30 @@ partial def readSites (env : Environment) (owners : List Name) (e : Expr)
         if owners.contains s then
           let fields := getStructureFields env s
           acc := acc.push (s, (fields[info.i]?.map (·.toString)).getD s!"{info.i}")
-    for a in e.getAppArgs do acc := readSites env owners a acc
-    readSites env owners e.getAppFn acc
-  | .lam _ d b _ | .forallE _ d b _ => readSites env owners b (readSites env owners d acc)
-  | .letE _ t v b _ => readSites env owners b (readSites env owners v (readSites env owners t acc))
-  | .mdata _ b => readSites env owners b acc
+    for a in e.getAppArgs do acc := readSites env owners fuel a acc
+    readSites env owners fuel e.getAppFn acc
+  | .lam _ d b _ | .forallE _ d b _ =>
+    readSites env owners fuel b (readSites env owners fuel d acc)
+  | .letE _ t v b _ =>
+    readSites env owners fuel b (readSites env owners fuel v (readSites env owners fuel t acc))
+  | .mdata _ b => readSites env owners fuel b acc
   | _ => acc
 
-/-- The constants `root` reaches under `Effect4.`, `root` first. -/
-partial def closure (env : Environment) (root : Name) (seen : Array Name) : Array Name := Id.run do
-  if seen.contains root then return seen
-  let mut seen := seen.push root
-  if let some ci := env.find? root then
-    if let some v := ci.value? then
-      for c in v.getUsedConstants do
-        if c.getRoot == `Effect4 then seen := closure env c seen
+/-- The constants `root` reaches under `Effect4.`, `root` first; a worklist, bounded by the
+number of steps it may take. -/
+def closure (env : Environment) (root : Name) (seen : Array Name) : Array Name := Id.run do
+  let mut seen := seen
+  let mut work : Array Name := #[root]
+  for _ in [:200000] do
+    if work.isEmpty then break
+    let n := work.back!
+    work := work.pop
+    if seen.contains n then continue
+    seen := seen.push n
+    if let some ci := env.find? n then
+      if let some v := ci.value? then
+        for c in v.getUsedConstants do
+          if c.getRoot == `Effect4 && !seen.contains c then work := work.push c
   return seen
 
 /-- The owner types of a position list. -/
@@ -308,7 +329,7 @@ definition it reaches) on the owner types of the roots' positions, one row per s
     for n in names do
       if let some ci := env.find? n then
         if let some v := ci.value? then
-          for s in writeSites env owners n v #[] do
+          for s in writeSites env owners n 100000 v #[] do
             unless s.fields.isEmpty do
               count := count + 1
               report := report ++ m!"\n{f}\t{s.holder}\t{s.owner}\t{s.fields}"
@@ -330,7 +351,7 @@ syntax (name := readCensus) "#read_census " ident (&" closure")? " over " ident+
     for n in names do
       if let some ci := env.find? n then
         if let some v := ci.value? then
-          for (s, fld) in readSites env owners v #[] do
+          for (s, fld) in readSites env owners 100000 v #[] do
             unless rows.contains (n, s, fld) do rows := rows.push (n, s, fld)
     let mut report := m!"step\tholder\towner\tfield"
     for (n, s, fld) in rows do

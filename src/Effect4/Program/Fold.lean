@@ -45,6 +45,9 @@ structure TyAlgebra (R : TyFam → Type u) where
   ty_fiberOf : R .ty → R .ty → R .ty
   ty_union : R .ty → R .ty → R .ty
   ty_lit : (String) → R .ty
+  ty_refOf : R .ty → R .ty
+  ty_deferredOf : R .ty → R .ty → R .ty
+  ty_var : (Nat) → R .ty
 
 def cata_ty {R : TyFam → Type u} (alg : TyAlgebra R)
     (node : Effect4.Program.Ty) : R .ty :=
@@ -65,6 +68,9 @@ def cata_ty {R : TyFam → Type u} (alg : TyAlgebra R)
   | .fiberOf a0 a1 => alg.ty_fiberOf (cata_ty alg a0) (cata_ty alg a1)
   | .union a0 a1 => alg.ty_union (cata_ty alg a0) (cata_ty alg a1)
   | .lit a0 => alg.ty_lit a0
+  | .refOf a0 => alg.ty_refOf (cata_ty alg a0)
+  | .deferredOf a0 a1 => alg.ty_deferredOf (cata_ty alg a0) (cata_ty alg a1)
+  | .var a0 => alg.ty_var a0
 termination_by structural node
 
 structure TyHom {R : TyFam → Type u} (alg : TyAlgebra R) where
@@ -85,6 +91,9 @@ structure TyHom {R : TyFam → Type u} (alg : TyAlgebra R) where
   h_ty_fiberOf : ∀ a0 a1, f_ty (.fiberOf a0 a1) = alg.ty_fiberOf (f_ty a0) (f_ty a1)
   h_ty_union : ∀ a0 a1, f_ty (.union a0 a1) = alg.ty_union (f_ty a0) (f_ty a1)
   h_ty_lit : ∀ a0, f_ty (.lit a0) = alg.ty_lit a0
+  h_ty_refOf : ∀ a0, f_ty (.refOf a0) = alg.ty_refOf (f_ty a0)
+  h_ty_deferredOf : ∀ a0 a1, f_ty (.deferredOf a0 a1) = alg.ty_deferredOf (f_ty a0) (f_ty a1)
+  h_ty_var : ∀ a0, f_ty (.var a0) = alg.ty_var a0
 
 theorem hom_eq_cata_ty {R : TyFam → Type u}
     {alg : TyAlgebra R} (hom : TyHom alg) (node : Effect4.Program.Ty) :
@@ -122,6 +131,12 @@ theorem hom_eq_cata_ty {R : TyFam → Type u}
     simp only [cata_ty, hom.h_ty_union a0 a1, hom_eq_cata_ty hom a0, hom_eq_cata_ty hom a1]
   | .lit a0 =>
     simp only [cata_ty, hom.h_ty_lit a0]
+  | .refOf a0 =>
+    simp only [cata_ty, hom.h_ty_refOf a0, hom_eq_cata_ty hom a0]
+  | .deferredOf a0 a1 =>
+    simp only [cata_ty, hom.h_ty_deferredOf a0 a1, hom_eq_cata_ty hom a0, hom_eq_cata_ty hom a1]
+  | .var a0 =>
+    simp only [cata_ty, hom.h_ty_var a0]
 termination_by structural node
 
 abbrev TySelfCarrier : TyFam → Type
@@ -144,6 +159,9 @@ def TyAlgebra.id : TyAlgebra (TySelfCarrier) where
   ty_fiberOf a0 a1 := Effect4.Program.Ty.fiberOf a0 a1
   ty_union a0 a1 := Effect4.Program.Ty.union a0 a1
   ty_lit a0 := Effect4.Program.Ty.lit a0
+  ty_refOf a0 := Effect4.Program.Ty.refOf a0
+  ty_deferredOf a0 a1 := Effect4.Program.Ty.deferredOf a0 a1
+  ty_var a0 := Effect4.Program.Ty.var a0
 
 @[simp] theorem cata_id_ty (node : Effect4.Program.Ty) :
     cata_ty (TyAlgebra.id) node = node := by
@@ -196,6 +214,15 @@ def TyAlgebra.id : TyAlgebra (TySelfCarrier) where
   | .lit a0 =>
     simp only [cata_ty]
     rfl
+  | .refOf a0 =>
+    simp only [cata_ty, cata_id_ty a0]
+    rfl
+  | .deferredOf a0 a1 =>
+    simp only [cata_ty, cata_id_ty a0, cata_id_ty a1]
+    rfl
+  | .var a0 =>
+    simp only [cata_ty]
+    rfl
 termination_by structural node
 
 def foldMapAt_ty {M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (node : Effect4.Program.Ty)
@@ -233,6 +260,12 @@ def foldMapAt_ty {M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (no
     op (f_ty (.union a0 a1) p) (op (foldMapAt_ty unit op (p ++ [0]) a0 f_ty) ((foldMapAt_ty unit op (p ++ [1]) a1 f_ty)))
   | .lit a0 =>
     f_ty (.lit a0) p
+  | .refOf a0 =>
+    op (f_ty (.refOf a0) p) ((foldMapAt_ty unit op (p ++ [0]) a0 f_ty))
+  | .deferredOf a0 a1 =>
+    op (f_ty (.deferredOf a0 a1) p) (op (foldMapAt_ty unit op (p ++ [0]) a0 f_ty) ((foldMapAt_ty unit op (p ++ [1]) a1 f_ty)))
+  | .var a0 =>
+    f_ty (.var a0) p
 termination_by structural node
 
 def foldMap_ty {M : Type u} (unit : M) (op : M → M → M) (node : Effect4.Program.Ty)
@@ -270,6 +303,12 @@ def foldMap_ty {M : Type u} (unit : M) (op : M → M → M) (node : Effect4.Prog
     op (f_ty (.union a0 a1)) (op (foldMap_ty unit op a0 f_ty) ((foldMap_ty unit op a1 f_ty)))
   | .lit a0 =>
     f_ty (.lit a0)
+  | .refOf a0 =>
+    op (f_ty (.refOf a0)) ((foldMap_ty unit op a0 f_ty))
+  | .deferredOf a0 a1 =>
+    op (f_ty (.deferredOf a0 a1)) (op (foldMap_ty unit op a0 f_ty) ((foldMap_ty unit op a1 f_ty)))
+  | .var a0 =>
+    f_ty (.var a0)
 termination_by structural node
 
 structure TyMAlgebra (M : Type u → Type v) (R : TyFam → Type u) where
@@ -289,6 +328,9 @@ structure TyMAlgebra (M : Type u → Type v) (R : TyFam → Type u) where
   ty_fiberOf : R .ty → R .ty → M (R .ty)
   ty_union : R .ty → R .ty → M (R .ty)
   ty_lit : (String) → M (R .ty)
+  ty_refOf : R .ty → M (R .ty)
+  ty_deferredOf : R .ty → R .ty → M (R .ty)
+  ty_var : (Nat) → M (R .ty)
 
 def TyAlgebra.toM {M : Type u → Type v} [Monad M] {R : TyFam → Type u}
     (alg : TyAlgebra R) : TyMAlgebra M R where
@@ -308,6 +350,9 @@ def TyAlgebra.toM {M : Type u → Type v} [Monad M] {R : TyFam → Type u}
   ty_fiberOf a0 a1 := pure (alg.ty_fiberOf a0 a1)
   ty_union a0 a1 := pure (alg.ty_union a0 a1)
   ty_lit a0 := pure (alg.ty_lit a0)
+  ty_refOf a0 := pure (alg.ty_refOf a0)
+  ty_deferredOf a0 a1 := pure (alg.ty_deferredOf a0 a1)
+  ty_var a0 := pure (alg.ty_var a0)
 
 def TyMAlgebra.map {M : Type u → Type v} {N : Type u → Type w}
     {R : TyFam → Type u} (φ : ∀ {α}, M α → N α)
@@ -328,6 +373,9 @@ def TyMAlgebra.map {M : Type u → Type v} {N : Type u → Type w}
   ty_fiberOf a0 a1 := φ (alg.ty_fiberOf a0 a1)
   ty_union a0 a1 := φ (alg.ty_union a0 a1)
   ty_lit a0 := φ (alg.ty_lit a0)
+  ty_refOf a0 := φ (alg.ty_refOf a0)
+  ty_deferredOf a0 a1 := φ (alg.ty_deferredOf a0 a1)
+  ty_var a0 := φ (alg.ty_var a0)
 
 def TyMAlgebra.toSeq {M : Type u → Type v} [Monad M]
     {R : TyFam → Type u} (alg : TyMAlgebra M R) :
@@ -369,6 +417,14 @@ def TyMAlgebra.toSeq {M : Type u → Type v} [Monad M]
     let x1 ← a1
     alg.ty_union x0 x1
   ty_lit a0 := alg.ty_lit a0
+  ty_refOf a0 := do
+    let x0 ← a0
+    alg.ty_refOf x0
+  ty_deferredOf a0 a1 := do
+    let x0 ← a0
+    let x1 ← a1
+    alg.ty_deferredOf x0 x1
+  ty_var a0 := alg.ty_var a0
 
 def foldM_ty {M : Type u → Type v} [Monad M] {R : TyFam → Type u}
     (alg : TyMAlgebra M R) (node : Effect4.Program.Ty) : M (R .ty) :=
@@ -410,6 +466,14 @@ def foldM_ty {M : Type u → Type v} [Monad M] {R : TyFam → Type u}
       let x1 ← foldM_ty alg a1
       alg.ty_union x0 x1
   | .lit a0 => alg.ty_lit a0
+  | .refOf a0 => do
+      let x0 ← foldM_ty alg a0
+      alg.ty_refOf x0
+  | .deferredOf a0 a1 => do
+      let x0 ← foldM_ty alg a0
+      let x1 ← foldM_ty alg a1
+      alg.ty_deferredOf x0 x1
+  | .var a0 => alg.ty_var a0
 termination_by structural node
 
 theorem foldM_eq_cata_ty {M : Type u → Type v} [Monad M]
@@ -447,6 +511,12 @@ theorem foldM_eq_cata_ty {M : Type u → Type v} [Monad M]
   | .union a0 a1 =>
     simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq, foldM_eq_cata_ty alg a0, foldM_eq_cata_ty alg a1]
   | .lit a0 =>
+    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq]
+  | .refOf a0 =>
+    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq, foldM_eq_cata_ty alg a0]
+  | .deferredOf a0 a1 =>
+    simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq, foldM_eq_cata_ty alg a0, foldM_eq_cata_ty alg a1]
+  | .var a0 =>
     simp only [foldM_ty, cata_ty, TyMAlgebra.toSeq]
 termination_by structural node
 
@@ -492,6 +562,12 @@ theorem foldM_natural_ty {M : Type u → Type v} {N : Type u → Type w}
   | .union a0 a1 =>
     simp only [foldM_ty, TyMAlgebra.map, φ.map_bind, foldM_natural_ty φ alg a0, foldM_natural_ty φ alg a1]
   | .lit a0 =>
+    simp only [foldM_ty, TyMAlgebra.map]
+  | .refOf a0 =>
+    simp only [foldM_ty, TyMAlgebra.map, φ.map_bind, foldM_natural_ty φ alg a0]
+  | .deferredOf a0 a1 =>
+    simp only [foldM_ty, TyMAlgebra.map, φ.map_bind, foldM_natural_ty φ alg a0, foldM_natural_ty φ alg a1]
+  | .var a0 =>
     simp only [foldM_ty, TyMAlgebra.map]
 termination_by structural node
 

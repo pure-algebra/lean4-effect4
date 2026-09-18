@@ -136,19 +136,23 @@ private def emittable : Source → Bool
 
 /-- Do any positions with a clause lie under `owner`, transitively, through edges that are not
 themselves skipped by an edge row? -/
-private partial def hasPositions (rows : List Effect4.Program.Typed.Row) (ps : Array Positions.Position)
-    (edges : Array Edge) (owner : Name) (seen : List Name := []) : Bool :=
-  if seen.contains owner then false
-  else (ps.any fun p => p.owner == owner && (rows.find? (·.1 == p.key)).any (emittable ·.2)) ||
-    edges.any fun e => e.parent == owner &&
-      (match rows.find? (·.1 == s!"{e.parent}.{e.field}") with
-        | some (_, .custom _) => true
-        | some (_, .journal) | some (_, .refused _) => false
-        | _ => hasPositions rows ps edges e.child (owner :: seen))
+private def hasPositions (rows : List Effect4.Program.Typed.Row) (ps : Array Positions.Position)
+    (edges : Array Edge) : Nat → Name → List Name → Bool
+  | 0, _, _ => false
+  | fuel + 1, owner, seen =>
+    if seen.contains owner then false
+    else (ps.any fun p => p.owner == owner && (rows.find? (·.1 == p.key)).any (emittable ·.2)) ||
+      edges.any fun e => e.parent == owner &&
+        (match rows.find? (·.1 == s!"{e.parent}.{e.field}") with
+          | some (_, .custom _) => true
+          | some (_, .journal) | some (_, .refused _) => false
+          | _ => hasPositions rows ps edges fuel e.child (owner :: seen))
 
 /-- The column names of the positions under `owner`, transitively. -/
-private partial def columnsUnder (rows : List Effect4.Program.Typed.Row) (ps : Array Positions.Position)
-    (edges : Array Edge) (owner : Name) (seen : List Name := []) : List String := Id.run do
+private def columnsUnder (rows : List Effect4.Program.Typed.Row) (ps : Array Positions.Position)
+    (edges : Array Edge) : Nat → Name → List Name → List String
+  | 0, _, _ => []
+  | fuel + 1, owner, seen => Id.run do
   if seen.contains owner then return []
   let mut out : List String := []
   for p in ps do
@@ -157,7 +161,7 @@ private partial def columnsUnder (rows : List Effect4.Program.Typed.Row) (ps : A
         unless out.contains c do out := out ++ [c]
   for e in edges do
     if e.parent == owner then
-      for c in columnsUnder rows ps edges e.child (owner :: seen) do
+      for c in columnsUnder rows ps edges fuel e.child (owner :: seen) do
         unless out.contains c do out := out ++ [c]
   return out
 
@@ -184,26 +188,30 @@ private def ownerCtors (owner : Name) (args : Array Expr) (levels : List Level) 
   return out
 
 /-- The instantiation of `child` a field type reaches, under the wrappers and functions. -/
-private partial def headOfChild (ty : Expr) (child : Name) : MetaM (Option (Name × Array Expr × List Level)) := do
+private def headOfChild (child : Name) : Nat → Expr → MetaM (Option (Name × Array Expr × List Level))
+  | 0, _ => return none
+  | fuel + 1, ty => do
   let ty ← whnf ty
   match ty with
-  | .forallE _ _ b _ => headOfChild b child
+  | .forallE _ _ b _ => headOfChild child fuel b
   | _ =>
     match ty.getAppFn with
     | .const n ls =>
       if n == child then return some (n, ty.getAppArgs, ls)
       if defaultWrappers.contains n then
         for a in ty.getAppArgs do
-          if let some h ← headOfChild a child then return some h
+          if let some h ← headOfChild child fuel a then return some h
         return none
       return none
     | _ => return none
 
 /-- The type constant and arguments a field type reaches, after the wrappers and functions. -/
-private partial def headOf (ty : Expr) : MetaM (Option (Name × Array Expr × List Level)) := do
+private def headOf : Nat → Expr → MetaM (Option (Name × Array Expr × List Level))
+  | 0, _ => return none
+  | fuel + 1, ty => do
   let ty ← whnf ty
   match ty with
-  | .forallE _ _ b _ => headOf b
+  | .forallE _ _ b _ => headOf fuel b
   | _ =>
     match ty.getAppFn with
     | .const n ls =>
@@ -211,14 +219,16 @@ private partial def headOf (ty : Expr) : MetaM (Option (Name × Array Expr × Li
         -- the last carrier-bearing argument
         let mut out := none
         for a in ty.getAppArgs do
-          if let some h ← headOf a then out := some h
+          if let some h ← headOf fuel a then out := some h
         return out
       else return some (n, ty.getAppArgs, ls)
     | _ => return none
 
 /-- Emit the `Ok` of one owner, and of the owners it reaches, into `em`. -/
-private partial def emitOwner (rows : List Effect4.Program.Typed.Row) (ps : Array Positions.Position) (edges : Array Edge)
-    (owner : Name) (args : Array Expr) (levels : List Level) (em : Emit) : MetaM Emit := do
+private def emitOwner (rows : List Effect4.Program.Typed.Row) (ps : Array Positions.Position) (edges : Array Edge) :
+    Nat → Name → Array Expr → List Level → Emit → MetaM Emit
+  | 0, owner, _, _, _ => throwError "emit: the owner walk ran out of depth at {owner}"
+  | fuel + 1, owner, args, levels, em => do
   if em.emitted.contains owner then return em
   let mut em := { em with emitted := em.emitted.push owner }
   let ctors ← ownerCtors owner args levels
@@ -227,7 +237,7 @@ private partial def emitOwner (rows : List Effect4.Program.Typed.Row) (ps : Arra
   let mut lines : Array String := #[]
   let mut arms : Array String := #[]
   -- the store's columns, once, at the store
-  let columns := if owner == `Effect4.Machine.Stores then columnsUnder rows ps edges owner else []
+  let columns := if owner == `Effect4.Machine.Stores then columnsUnder rows ps edges 64 owner [] else []
   for (c, fields) in ctors do
     let mut clauses : Array String := #[]
     let mut binders : Array String := #[]
@@ -279,13 +289,13 @@ private partial def emitOwner (rows : List Effect4.Program.Typed.Row) (ps : Arra
             unless clauses.any (·.startsWith "True  -- REFUSED") do
               clauses := clauses.push s!"True  -- REFUSED {key}: {reason}"
           | _ =>
-            if hasPositions rows ps edges edge.child then
+            if hasPositions rows ps edges 64 edge.child [] then
               let passed := match edgeRow with
                 | some (_, .nested ex) => expectText ex "e"
                 | _ => "e"
-              let some (child, cargs, cls) ← headOfChild fty edge.child
+              let some (child, cargs, cls) ← headOfChild edge.child 64 fty
                 | throwError "emit: no head for {key} at {edge.child}"
-              em ← emitOwner rows ps edges child cargs cls em
+              em ← emitOwner rows ps edges fuel child cargs cls em
               let (b, h, t) := throughWraps edge.wraps term 0
               clauses := clauses.push s!"{b}{h}{okName child} P w {passed} {t}"
     if isStruct then
@@ -320,7 +330,7 @@ syntax (name := emitTypedState) "#emit_typed_state " ident+ " to " str : command
   let roots := stx[1].getArgs.map (·.getId)
   let path := stx[3].isStrLit?.getD ""
   liftTermElabM do
-    let rows ← Effect4.Laws.Auto.PositionGate.evalRows
+    let rows ← Effect4.Laws.Auto.TypedSources.readRows
     let mut ps : Array Positions.Position := #[]
     let mut edges : Array Edge := #[]
     let mut em : Emit := {}
@@ -333,8 +343,8 @@ syntax (name := emitTypedState) "#emit_typed_state " ident+ " to " str : command
       let v := match ci.value? with
         | some v => v
         | none => mkConst root (ci.levelParams.map mkLevelParam)
-      let some (owner, args, ls) ← headOf v | throwError "emit: no head for {root}"
-      em ← emitOwner rows ps edges owner args ls em
+      let some (owner, args, ls) ← headOf 64 v | throwError "emit: no head for {root}"
+      em ← emitOwner rows ps edges 64 owner args ls em
       tops := tops.push s!"abbrev {root.getString!}Ok (P : Preds W) (w : W) (x : {root}) : Prop := {okName owner} P w Expect.root x"
     -- the bundle
     let mut bundle : Array String := #["structure Preds (W : Type) where"]
@@ -348,13 +358,13 @@ syntax (name := emitTypedState) "#emit_typed_state " ident+ " to " str : command
         | "HeapNat" | "PromiseTable" => s!"{name} : W → {ty} → Prop"
         | _ => s!"{name} : W → Expect → {ty} → Prop"
       bundle := bundle.push (indent 2 field)
-    let header := s!"import Effect4.Laws.Program.Typed.Sources
+    let header := s!"import Effect4.Laws.Program.EvaluateR
 import Aesop
 
 /-!
 # Typed/State — the typed-state skeleton (GENERATED)
 
-Emitted by `#emit_typed_state` (`Laws/Auto/TypedStateGen.lean`) from the position census of
+Emitted by `#emit_typed_state` (`Laws/Auto/TypedStateGen.lean`, run as `lake env lean scripts/lean/TypedStateEmit.lean`) from the position census of
 {roots.toList} and the source table `Typed/Sources.lean`. One `Ok` per owner, nested along the
 containment edges, parametric in the carrier predicates `Preds`. Regenerate; never edit.
 -/
@@ -364,7 +374,7 @@ set_option autoImplicit false
 namespace Effect4.Program.Typed
 
 -- `W` is the typing tables and the store: layer 1 instantiates it.
-variable \{W : Type}
+" ++ "variable {W : Type}" ++ s!"
 
 /-- Where a position's expected type comes from, as data the predicates read. -/
 inductive Expect

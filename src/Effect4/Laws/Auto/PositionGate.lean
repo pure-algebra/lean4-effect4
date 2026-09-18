@@ -1,4 +1,5 @@
 import Effect4.Laws.Auto.Positions
+import Effect4.Laws.Auto.TypedSources
 import Effect4.Laws.Program.Typed.Sources
 
 /-!
@@ -31,20 +32,12 @@ def kindLabel : Source → String
   | .refused _ => "refused"
   | .nested _ => "nested"
 
-/-- The table, evaluated: the one place the gate runs the compiled value. -/
-unsafe def evalRowsUnsafe : TermElabM (List Effect4.Program.Typed.Row) := do
-  let ty ← Term.elabType (← `(List Effect4.Program.Typed.Row))
-  Term.evalTerm (List Effect4.Program.Typed.Row) ty (← `(Effect4.Program.Typed.sources))
-
-@[implemented_by evalRowsUnsafe] def evalRows : TermElabM (List Effect4.Program.Typed.Row) :=
-  pure []
-
 syntax (name := positionGate) "#position_gate " ident+ : command
 
 @[command_elab positionGate] def elabPositionGate : CommandElab := fun stx => do
   let roots := stx[1].getArgs.map (·.getId)
   liftTermElabM do
-    let rows ← evalRows
+    let rows ← Effect4.Laws.Auto.TypedSources.readRows
     let mut keys : Array String := #[]
     let mut edgeKeys : Array String := #[]
     for root in roots do

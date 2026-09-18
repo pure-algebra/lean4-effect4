@@ -35,9 +35,10 @@ def findInt (pos : Path) : Ty → Option Path
   | .prod a b | .union a b =>
       findInt (pos ++ ["left"]) a <|> findInt (pos ++ ["right"]) b
   | .except e a => findInt (pos ++ ["error"]) e <|> findInt (pos ++ ["value"]) a
-  | .exitOf a e | .fiberOf a e =>
+  | .exitOf a e | .fiberOf a e | .deferredOf a e =>
       findInt (pos ++ ["value"]) a <|> findInt (pos ++ ["error"]) e
-  | .never | .unit | .nat | .string | .bool | .handle _ | .lit _ => none
+  | .refOf a => findInt (pos ++ ["value"]) a
+  | .never | .unit | .nat | .string | .bool | .handle _ | .lit _ | .var _ => none
 
 /-- Scan every supplied row before normalization can discard any syntax. -/
 def findIntInTable (table : RowTable) : Option Path := go 0 table

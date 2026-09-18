@@ -11,7 +11,7 @@
 // ReadonlyArray<head>; a family whose constructors are all nullary is a union of string literals.
 // Nat is number, Option is `| null`, List is ReadonlyArray.
 // Families:
-//   Ty (Effect4.Program.Ty, tagged union): never unit nat int string bool handle(target: string) option(inner: Ty) list(inner: Ty) prod(left: Ty, right: Ty) except(error: Ty, value: Ty) exitOf(value: Ty, error: Ty) causeOf(error: Ty) fiberOf(value: Ty, error: Ty) union(left: Ty, right: Ty) lit(value: string)
+//   Ty (Effect4.Program.Ty, tagged union): never unit nat int string bool handle(target: string) option(inner: Ty) list(inner: Ty) prod(left: Ty, right: Ty) except(error: Ty, value: Ty) exitOf(value: Ty, error: Ty) causeOf(error: Ty) fiberOf(value: Ty, error: Ty) union(left: Ty, right: Ty) lit(value: string) refOf(value: Ty) deferredOf(value: Ty, error: Ty) var(index: number)
 //   Lit (Effect4.Program.Lit, tagged union): unit nat(value: number) bool(value: boolean) str(value: string)
 //   Term (Effect4.Program.Term, tagged union): var(index: number) lit(value: Lit) app(atom: string, args: ReadonlyArray<Term>)
 //   Terms (Effect4.Program.Terms, ReadonlyArray<Term>): nil cons(head: Term, tail: ReadonlyArray<Term>)
@@ -58,6 +58,9 @@ export type Ty =
   | { readonly _tag: "fiberOf"; readonly value: Ty; readonly error: Ty }
   | { readonly _tag: "union"; readonly left: Ty; readonly right: Ty }
   | { readonly _tag: "lit"; readonly value: string }
+  | { readonly _tag: "refOf"; readonly value: Ty }
+  | { readonly _tag: "deferredOf"; readonly value: Ty; readonly error: Ty }
+  | { readonly _tag: "var"; readonly index: number }
 
 export const Ty = Schema.TaggedUnion({
   never: {},
@@ -76,6 +79,9 @@ export const Ty = Schema.TaggedUnion({
   fiberOf: { value: Schema.suspend((): Schema.Codec<Ty> => Ty), error: Schema.suspend((): Schema.Codec<Ty> => Ty) },
   union: { left: Schema.suspend((): Schema.Codec<Ty> => Ty), right: Schema.suspend((): Schema.Codec<Ty> => Ty) },
   lit: { value: Schema.String },
+  refOf: { value: Schema.suspend((): Schema.Codec<Ty> => Ty) },
+  deferredOf: { value: Schema.suspend((): Schema.Codec<Ty> => Ty), error: Schema.suspend((): Schema.Codec<Ty> => Ty) },
+  var: { index: Schema.Int },
 })
 
 export type Lit =

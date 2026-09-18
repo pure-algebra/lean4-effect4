@@ -222,7 +222,9 @@ private theorem hasTy_rawSupported_allocation (ty : Ty) (v : Val) (allocated : L
   | union a b iha ihb =>
     obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hs
     simp only [Val.hasTy, iha ha, ihb hb]
-  | unit | int | bool | handle | option | list | except | exitOf | causeOf | fiberOf =>
+  -- every constructor outside the error profile; a wildcard, so a new constructor never
+  -- touches this proof
+  | _ =>
     simp only [rawSupportedErrTy] at hs
     contradiction
 
@@ -275,7 +277,9 @@ private theorem valOfErr_errOf_rawSupported (ty : Ty) (v : Val) (allocated : Lis
     obtain h | h := Bool.or_eq_true_iff.mp hv
     · exact iha ha h
     · exact ihb hb h
-  | unit | int | bool | handle | option | list | except | exitOf | causeOf | fiberOf =>
+  -- every constructor outside the error profile; a wildcard, so a new constructor never
+  -- touches this proof
+  | _ =>
     simp only [rawSupportedErrTy] at hs
     contradiction
 

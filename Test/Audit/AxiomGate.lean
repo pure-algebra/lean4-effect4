@@ -103,6 +103,7 @@ private def auditImplementationModules : List Name :=
   , `Effect4.Laws.Auto.Positions
   , `Effect4.Laws.Auto.PositionGate
   , `Effect4.Laws.Auto.TypedStateGen
+  , `Effect4.Laws.Auto.TypedSources
   ]
 
 /--
