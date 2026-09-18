@@ -27,11 +27,11 @@ g24	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"missingService"
 g25	yes	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Deferred<unknown, unknown>'.
 g26	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"missingService"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'string' is not assignable to parameter of type 'Deferred<unknown, unknown>'.
 g27	yes	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Deferred<unknown, unknown>'.
-g28	no	no	expr	errors	untyped	n/a	{"success":null}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
+g28	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
 g29	yes	no	expr	clean	untyped	n/a	{"failure":{"reasons":[{"fail":{"boom":null}}]}}	not run			untyped	
 g30	no	no	expr	clean	untyped	n/a	{"failure":{"reasons":[{"die":"missingService"}]}}	not run			untyped	
 g31	yes	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'number' is not assignable to parameter of type 'Deferred<unknown, unknown>'.
-g32	no	no	expr	errors	untyped	n/a	{"success":null}	not run			untyped	tsc: error TS2322: Type 'unknown' is not assignable to type 'boolean'.
+g32	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2322: Type 'unknown' is not assignable to type 'boolean'.
 g33	yes	yes	decl	clean	agree	agree	fail [{"fail":10}]	fail [{"fail":10}]	started 0,exited 0 fail	started 0,exited 0 fail	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
 g34	no	no	expr	clean	untyped	n/a	{"failure":{"reasons":[{"fail":{"boom":null}}]}}	not run			untyped	
 g35	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'boolean' is not assignable to parameter of type 'number'.
@@ -45,9 +45,9 @@ g42	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	no
 g43	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'number' is not assignable to parameter of type 'Fiber<unknown, unknown>'.
 g44	yes	yes	decl	clean	agree	agree	interrupt [{"interrupt":null}]	interrupt [{"interrupt":null}]	started 0,exited 0 interrupt	started 0,exited 0 interrupt	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
 g45	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2872: This kind of expression is always truthy.
-g46	no	no	expr	errors	untyped	n/a	{"success":null}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
-g47	no	no	expr	errors	untyped	n/a	{"success":null}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
-g48	no	no	expr	errors	untyped	n/a	{"success":null}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
+g46	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
+g47	no	no	expr	errors	untyped	n/a	{"success":4}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
+g48	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
 g49	yes	yes	decl	clean	agree	agree	fail [{"fail":12}]	fail [{"fail":12}]	started 0,exited 0 fail	started 0,exited 0 fail	mismatch-A	same failure reasons and payloads
 g50	no	yes	decl	clean	agree	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	started 0,exited 0 die	started 0,exited 0 die	mismatch-R	same failure reasons and payloads
 g51	no	no	expr	errors	untyped	n/a	{"success":null}	not run			untyped	tsc: error TS2769: No overload matches this call.
@@ -63,14 +63,14 @@ g60	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	no
 g61	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'number' is not assignable to parameter of type 'Ref<number>'.
 g62	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"},{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'boolean' is not assignable to parameter of type 'number'.
 g63	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"missingService"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'number' is not assignable to parameter of type 'Fiber<unknown, unknown>'.
-g64	no	no	expr	errors	untyped	n/a	{"success":null}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
+g64	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
 g65	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'number' is not assignable to parameter of type 'Scope'.
 g66	no	yes	decl	clean	agree	agree	success null	success null	started 0,parked 0,ran 0,resumed 0,started 0,exited 0 success	started 0,parked 0,ran 0,resumed 0,started 0,exited 0 success	agree	same value
 g67	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'boolean' is not assignable to parameter of type 'Fiber<unknown, unknown>'.
 g68	yes	yes	decl	clean	agree	agree	fail [{"fail":10}]	fail [{"fail":10}]	started 0,exited 0 fail	started 0,exited 0 fail	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
 g69	no	no	expr	clean	untyped	n/a	{"failure":{"reasons":[{"die":"missingService"}]}}	not run			untyped	
 g70	yes	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Ref<unknown>'.
-g71	no	no	expr	errors	untyped	n/a	{"success":null}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
+g71	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
 g72	yes	yes	decl	clean	agree	agree	fail [{"fail":1}]	fail [{"fail":1}]	started 0,exited 0 fail	started 0,exited 0 fail	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
 g73	yes	yes	decl	clean	agree	agree	success {"success":"hi"}	success {"success":"hi"}	started 0,exited 0 success	started 0,exited 0 success	agree	same value
 g74	no	yes	decl	clean	agree	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	started 0,exited 0 die	started 0,exited 0 die	agree	same failure reasons and payloads
@@ -90,7 +90,7 @@ g87	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	no
 g88	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'number' is not assignable to parameter of type 'readonly [unknown, unknown]'.
 g89	no	yes	decl	clean	agree	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	started 0,parked 0,ran 0,resumed 0,started 0,exited 0 die	started 0,parked 0,ran 0,resumed 0,started 0,exited 0 die	mismatch-R	same failure reasons and payloads
 g90	no	no	expr	errors	untyped	n/a	{"success":4}	not run			untyped	tsc: error TS2872: This kind of expression is always truthy.
-g91	no	no	expr	errors	untyped	n/a	{"success":{"fiber":2}}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
+g91	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"interrupt":null}]}}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
 g92	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'boolean' is not assignable to parameter of type 'number'.
 g93	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"missingService"}]}}	not run			untyped	tsc: error TS2872: This kind of expression is always truthy.
 g94	yes	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'boolean' is not assignable to parameter of type 'Ref<number>'.
@@ -124,7 +124,7 @@ g121	no	yes	decl	clean	agree	agree	success {"fiber":1}	success {"fiber":1}	start
 g122	yes	yes	decl	clean	agree	agree	fail [{"fail":15}]	fail [{"fail":15}]	started 0,exited 0 fail	started 0,exited 0 fail	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
 g123	no	yes	decl	errors	agree	agree	success {"fiber":1}	success {"fiber":1}	started 0,forked 0 1,started 1,exited 1 success,exited 0 success	started 0,forked 0 1,started 1,exited 1 success,exited 0 success	refused	same value; tsc: error TS2375: Type 'Effect<Fiber<Context<never>, never>, never, never>' is not assignable to type 'Effect<Fiber<Context<unknown>, never>, never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.; types refused: unresolved-unknown/A: expected A contains unknown
 g124	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'number' is not assignable to parameter of type 'Ref<number>'.
-g125	no	no	expr	errors	untyped	n/a	{"success":{"failure":{"reasons":[{"die":"missingService"}]}}}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
+g125	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
 g126	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"missingService"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'boolean' is not assignable to parameter of type 'number'.
 g127	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"missingService"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'number' is not assignable to parameter of type 'Ref<number>'.
 g128	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"fail":8}]}}	not run			untyped	tsc: error TS2769: No overload matches this call.
@@ -133,7 +133,7 @@ g130	no	yes	decl	clean	agree	agree	success {"fiber":1}	success {"fiber":1}	start
 g131	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"missingService"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'boolean' is not assignable to parameter of type 'readonly [unknown, unknown]'.
 g132	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"missingService"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'string' is not assignable to parameter of type 'Fiber<unknown, unknown>'.
 g133	yes	no	expr	clean	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	
-g134	no	no	expr	errors	untyped	n/a	{"success":null}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
+g134	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
 g135	yes	yes	decl	clean	agree	agree	fail [{"fail":18}]	fail [{"fail":18}]	started 0,exited 0 fail	started 0,exited 0 fail	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
 g136	no	yes	decl	clean	agree	agree	success {"success":null}	success {"success":null}	started 0,parked 0,ran 0,resumed 0,started 0,exited 0 success	started 0,parked 0,ran 0,resumed 0,started 0,exited 0 success	agree	same value
 g137	no	yes	decl	clean	agree	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	started 0,exited 0 die	started 0,exited 0 die	agree	same failure reasons and payloads
@@ -163,7 +163,7 @@ g160	no	yes	decl	clean	agree	agree	success {"fiber":1}	success {"fiber":1}	start
 g161	yes	yes	decl	clean	agree	agree	success 19	success 19	started 0,exited 0 success	started 0,exited 0 success	agree	same value
 g162	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2872: This kind of expression is always truthy.
 g163	yes	yes	decl	clean	agree	agree	success 19	success 19	started 0,exited 0 success	started 0,exited 0 success	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same value
-g164	no	no	expr	errors	untyped	n/a	{"success":null}	not run			untyped	tsc: error TS2322: Type 'undefined' is not assignable to type 'boolean'.
+g164	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2322: Type 'undefined' is not assignable to type 'boolean'.
 g165	no	no	expr	errors	untyped	n/a	{"success":19}	not run			untyped	tsc: error TS2304: Cannot find name 'L_0'.
 g166	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Deferred<unknown, unknown>'.
 g167	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"fail":6}]}}	not run			untyped	tsc: error TS2345: Argument of type 'readonly [8, 1]' is not assignable to parameter of type 'number'.
@@ -190,10 +190,10 @@ g187	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	n
 g188	no	no	expr	clean	untyped	n/a	{"success":{"fiber":1}}	not run			untyped	
 g189	yes	yes	decl	clean	agree	agree	fail [{"fail":0}]	fail [{"fail":0}]	started 0,exited 0 fail	started 0,exited 0 fail	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
 g190	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2873: This kind of expression is always falsy.
-g191	no	no	expr	errors	untyped	n/a	{"success":null}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
+g191	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
 g192	no	no	expr	errors	untyped	n/a	{"success":null}	not run			untyped	tsc: error TS2345: Argument of type 'boolean' is not assignable to parameter of type 'readonly [unknown, unknown]'.
 g193	no	yes	decl	clean	agree	agree	success {"fiber":1}	success {"fiber":1}	started 0,forked 0 1,started 1,exited 1 fail,exited 0 success	started 0,forked 0 1,started 1,exited 1 fail,exited 0 success	agree	same value
-g194	no	no	expr	errors	untyped	n/a	{"success":null}	not run			untyped	tsc: error TS2322: Type 'string' is not assignable to type 'boolean'.
+g194	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2322: Type 'string' is not assignable to type 'boolean'.
 g195	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"missingService"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'number' is not assignable to parameter of type 'Fiber<unknown, unknown>'.
 g196	yes	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Ref<unknown>'.
 g197	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'number' is not assignable to parameter of type 'Fiber<unknown, unknown>'.
@@ -239,7 +239,7 @@ g236	no	yes	decl	clean	agree	agree	success {"fiber":1}	success {"fiber":1}	start
 g237	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'string' is not assignable to parameter of type 'Iterable<Fiber<any, any>>'.
 g238	no	yes	decl	clean	agree	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	started 0,exited 0 die	started 0,exited 0 die	agree	same failure reasons and payloads
 g239	yes	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'undefined' is not assignable to parameter of type 'Ref<number>'.
-g240	no	no	expr	errors	untyped	n/a	{"success":null}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
+g240	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
 g241	yes	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'number' is not assignable to parameter of type 'boolean'.
 g242	yes	yes	decl	clean	agree	agree	success {"failure":{"reasons":[{"die":{"error":"hi"}}]}}	success {"failure":{"reasons":[{"die":{"error":"hi"}}]}}	started 0,exited 0 success	started 0,exited 0 success	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same value
 g243	no	yes	decl	clean	agree	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	started 0,exited 0 die	started 0,exited 0 die	agree	same failure reasons and payloads
@@ -278,7 +278,7 @@ g275	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"missingService
 g276	no	yes	decl	errors	agree	agree	success {"context":true}	success {"context":true}	started 0,exited 0 success	started 0,exited 0 success	refused	same value; tsc: error TS2375: Type 'Effect<Context<unknown>, never, unknown>' is not assignable to type 'Effect<Context<unknown>, never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.; types refused: unresolved-unknown/A: expected A contains unknown
 g277	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'boolean' is not assignable to parameter of type 'Scope'.
 g278	no	yes	decl	clean	agree	agree	success null	success null	started 0,parked 0,ran 0,resumed 0,started 0,exited 0 success	started 0,parked 0,ran 0,resumed 0,started 0,exited 0 success	agree	same value
-g279	no	no	expr	errors	untyped	n/a	{"success":null}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
+g279	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2322: Type 'number' is not assignable to type 'boolean'.
 g280	yes	no	expr	clean	untyped	n/a	{"failure":{"reasons":[{"fail":{"boom":null}}]}}	not run			untyped	
 g281	yes	no	expr	errors	untyped	n/a	{"success":{"failure":{"reasons":[{"die":"badName"}]}}}	not run			untyped	tsc: error TS2345: Argument of type 'boolean' is not assignable to parameter of type 'number'.
 g282	no	yes	decl	clean	agree	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	started 0,exited 0 die	started 0,exited 0 die	agree	same failure reasons and payloads
@@ -298,7 +298,7 @@ g295	yes	no	expr	clean	untyped	n/a	{"failure":{"reasons":[{"fail":{"boom":null}}
 g296	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Ref<unknown>'.
 g297	no	no	expr	errors	untyped	n/a	{"success":true}	not run			untyped	tsc: error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
 g298	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"missingService"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'boolean' is not assignable to parameter of type 'Ref<number>'.
-g299	no	no	expr	errors	untyped	n/a	{"success":null}	not run			untyped	tsc: error TS7034: Variable 'a0' implicitly has type 'any' in some locations where its type cannot be determined.
+g299	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS7034: Variable 'a0' implicitly has type 'any' in some locations where its type cannot be determined.
 g300	no	yes	decl	clean	agree	agree	fail [{"fail":17},{"fail":15}]	fail [{"fail":17},{"fail":15}]	started 0,exited 0 fail	started 0,exited 0 fail	agree	same failure reasons and payloads
 g301	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"missingService"}]}}	not run			untyped	tsc: error TS2872: This kind of expression is always truthy.
 g302	yes	no	expr	clean	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	
@@ -345,7 +345,7 @@ g342	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	n
 g343	yes	no	expr	clean	untyped	n/a	{"failure":{"reasons":[{"fail":{"boom":null}}]}}	not run			untyped	
 g344	no	yes	decl	clean	agree	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	started 0,exited 0 die	started 0,exited 0 die	agree	same failure reasons and payloads
 g345	yes	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'number' is not assignable to parameter of type 'Ref<number>'.
-g346	no	no	expr	errors	untyped	n/a	{"success":null}	not run			untyped	tsc: error TS2322: Type 'undefined' is not assignable to type 'boolean'.
+g346	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2322: Type 'undefined' is not assignable to type 'boolean'.
 g347	yes	yes	decl	clean	agree	agree	fail [{"fail":1}]	fail [{"fail":1}]	started 0,exited 0 fail	started 0,exited 0 fail	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
 g348	no	no	expr	clean	untyped	n/a	{"success":{"failure":{"reasons":[{"fail":{"boom":null}}]}}}	not run			untyped	
 g349	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"missingService"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'undefined' is not assignable to parameter of type 'Deferred<unknown, unknown>'.
@@ -384,7 +384,7 @@ g381	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	n
 g382	yes	yes	decl	clean	agree	agree	interrupt [{"interrupt":2}]	interrupt [{"interrupt":2}]	started 0,exited 0 interrupt	started 0,exited 0 interrupt	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
 g383	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS2345: Argument of type 'number' is not assignable to parameter of type 'Fiber<unknown, unknown>'.
 g384	no	yes	decl	clean	agree	agree	success null	success null	started 0,parked 0,ran 0,resumed 0,started 0,exited 0 success	started 0,parked 0,ran 0,resumed 0,started 0,exited 0 success	agree	same value
-g385	no	no	expr	errors	untyped	n/a	{"success":null}	not run			untyped	tsc: error TS7034: Variable 'a0' implicitly has type 'any' in some locations where its type cannot be determined.
+g385	no	no	expr	errors	untyped	n/a	{"failure":{"reasons":[{"die":"badName"}]}}	not run			untyped	tsc: error TS7034: Variable 'a0' implicitly has type 'any' in some locations where its type cannot be determined.
 g386	yes	yes	decl	clean	agree	agree	fail [{"fail":13}]	fail [{"fail":13}]	started 0,exited 0 fail	started 0,exited 0 fail	agree	runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads
 g387	no	no	expr	errors	untyped	n/a	{"success":{"failure":{"reasons":[{"die":"badName"}]}}}	not run			untyped	tsc: error TS2872: This kind of expression is always truthy.
 g388	no	yes	decl	clean	agree	agree	die [{"die":"missingService"}]	die [{"die":"missingService"}]	started 0,exited 0 die	started 0,exited 0 die	agree	same failure reasons and payloads

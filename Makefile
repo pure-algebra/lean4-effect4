@@ -238,8 +238,8 @@ CHECKS := roots citations cases native ts-reader truth target schema-codec ocaml
 .PHONY: check check-host check-full check-gen check-gen-full clean-check FORCE $(addprefix check-,$(CHECKS))
 FORCE:
 
-check: build check-roots check-gen check-cases check-native check-ts-reader ## after every change
-check-host: check check-citations check-truth check-corpus check-tsdiag check-target check-schema-codec check-ocaml check-ingest-smoke check-compat ## per slice: the outside oracles and the citation scans
+check: build check-roots check-gen check-cases check-native check-ts-reader check-corpus ## after every change (the corpus pin is stamped against the compiler, the machine and the generator, so it re-runs only when they move)
+check-host: check check-citations check-truth check-tsdiag check-target check-schema-codec check-ocaml check-ingest-smoke check-compat ## per slice: the outside oracles and the citation scans
 check-full: check-host check-tools check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins check-schema-host ## everything
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
