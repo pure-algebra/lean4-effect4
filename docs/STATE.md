@@ -49,7 +49,8 @@ reads back.
 | `docs/core/ontology.md` | the frame: six sorts with one free object each, five arrow kinds with their obligations, coherence as a per-sort census; the probe of the "do now" rows; the Schema layer as the place to start over |
 | `docs/core/coherence-principle.md` | scout F: the principle in full, the seven squares, the arrows lacking obligations |
 | `docs/core/traversal-census.md` | the census numbers, every hand traversal by root, the converter design |
-| `docs/core/decisions.md` | every open decision, one list (40 rows; 18 the owner's; reviewed row by row against HEAD on 2026-09-18, a status column) with the order |
+| `docs/core/decisions.md` | every open decision, one list (54 rows; reviewed row by row against HEAD on 2026-09-18, a status column; rows 42–54 the milestone's rulings with recommendations) with the order |
+| `docs/core/language-cut.md` | the language as cut, every alphabet against Effect: terms (first order, twenty atoms, positional binders), types, values and errors, the 25 constructors, the absent modules; which gaps are profile rulings, which are cuts nobody decided |
 | `docs/core/api-surface.md` | the consolidated API and its awkward constructs |
 | `docs/core/lcnf-route.md` | what the LCNF lowering handles and refuses; the LLVM-shaped architecture |
 | `docs/DESIGN-ISSUES.md` | the DI register (rulings are made only when written here) |
