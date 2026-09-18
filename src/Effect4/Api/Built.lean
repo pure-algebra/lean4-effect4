@@ -13,6 +13,7 @@ the certificate is the evidence `HostSession.start` re-derives today.
 set_option autoImplicit false
 
 namespace Effect4.Api
+open Effect4.Program (RowTable AdmittedProgram)
 
 open Effect4.Program (RowTable AdmittedProgram)
 

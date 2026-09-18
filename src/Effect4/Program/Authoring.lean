@@ -56,6 +56,13 @@ inductive Reason
   | duplicateLayer (name : String)
   /-- Placing a layer failed at this path (a reference site the tree no longer has). -/
   | placement (name : String)
+  /-- A call of a host row the module does not declare, by the spelling it was called under. -/
+  | unboundRow (spelling : String)
+  /-- A name only the surface may write: it begins with the reserved prefix. -/
+  | reservedName (name : String)
+  /-- Two row declarations under one spelling: a table key is the spelling and the trailing
+  names (`Program/Table.lean` `rowKey`), so two rows cannot share one. -/
+  | duplicateRow (spelling : String)
   deriving DecidableEq, Repr
 
 structure Refusal where
@@ -63,13 +70,41 @@ structure Refusal where
   reason : Reason
   deriving DecidableEq, Repr
 
+/-! ## Names the surface mints for itself
+
+A binder a convenience introduces has a name like any other, and a name an author writes with
+the same spelling is read by the same rule — the last binding wins. So a convenience that
+mints a fixed spelling can be handed that spelling as its own argument and bind the wrong
+variable (B-9). Two rules together close it: a minted name begins with `reservedPrefix`,
+which `var` refuses, so an author cannot write one; and it carries the level it is bound at,
+so two mints in one scope are two names. `minted` is the reader the surface uses for its own
+names, the one `var` would be without the check. -/
+
+/-- The two bytes a minted name begins with: `_` then `%`. A `%` is not part of a TypeScript
+identifier, so a minted name never reaches the printer as a binder an author could have
+written. -/
+def reservedPrefix : String := "_%"
+
+/-- Whether a name is one only the surface may write. Read off the UTF-8 bytes (`95` is `_`,
+`37` is `%`): the string API's character traversals reach `Classical.choice` on this
+toolchain, as `LayerTerm.readRefName` (`Program/Refs.lean`) records. -/
+def Name.reserved (name : String) : Bool :=
+  match name.toUTF8.data.toList with
+  | 95 :: 37 :: _ => true
+  | _ => false
+
 /-- Declared layer names, each to the index of its declaration in the module. -/
 abbrev LayerNames := List (String × Nat)
 
-/-- What a source program reads: the value names in scope and the declared layer names. -/
+/-- Declared host rows, each spelling to its position in the module's table. -/
+abbrev RowNames := List (String × Nat)
+
+/-- What a source program reads: the value names in scope, the declared layer names, and the
+declared host rows. -/
 structure Env where
   names : Names := []
   layers : LayerNames := []
+  rows : RowNames := []
 
 /-- A source term. -/
 abbrev TermSrc := Env → List Nat → Except Refusal Term
@@ -89,8 +124,16 @@ abbrev LayerSrc (Op : Type) := Env → List Nat → Except Refusal (LayerTerm Op
 /-- Extend the scope by the names a child binds. -/
 def Env.push (env : Env) (xs : List String) : Env := { env with names := env.names ++ xs }
 
-/-- The empty value scope, for a layer body (`layerTy` types it in the empty environment). -/
+/-- The empty value scope, for a layer body (`layerTy` types it in the empty environment).
+The declared layers and rows stay: a layer body calls the module's rows like any other. -/
 def Env.closed (env : Env) : Env := { env with names := [] }
+
+/-- A binder name the surface mints for itself in this scope: the reserved prefix, the stem
+that says which convenience minted it, and the level it will be bound at. Only one binder
+sits at a level, so two mints in one scope are two names, and no name an author wrote can be
+bound in a mint's place, because `var` refuses the reserved prefix. -/
+def Env.mint (env : Env) (stem : String) : String :=
+  reservedPrefix ++ stem ++ toString env.names.length
 
 def termsOfList : List Term → Terms
   | [] => .nil
@@ -129,11 +172,19 @@ def elabOption : Option TermSrc → Env → List Nat → Except Refusal (Option 
 
 /-! ## Terms: the one name-resolving operation, and the two that resolve nothing -/
 
-/-- A variable by name: the level of its nearest binder. -/
-def var (x : String) : TermSrc := fun env p =>
+/-- A variable the surface minted (`Env.mint`): the level of its nearest binder. The reserved
+prefix is exactly what this reader is for, so it does not refuse one. An author never calls
+it; `var` is this with the reserved check in front. -/
+def minted (x : String) : TermSrc := fun env p =>
   match env.names.resolve x with
   | some i => .ok (.var i)
   | none => .error ⟨p, .unbound x⟩
+
+/-- A variable by name: the level of its nearest binder. A name under the reserved prefix is
+refused — it is one the surface minted for itself, and reading it here is the capture B-9
+names. -/
+def var (x : String) : TermSrc := fun env p =>
+  if Name.reserved x then .error ⟨p, .reservedName x⟩ else minted x env p
 
 def lit (value : Lit) : TermSrc := fun _ _ => .ok (.lit value)
 
@@ -147,6 +198,86 @@ the tree's addressing (`Node.child`), so a refusal inside one names the term's n
 def app (atom : String) (args : List TermSrc) : TermSrc := fun env p => do
   let vs ← args.mapM (· env p)
   .ok (.app atom (termsOfList vs))
+
+/-! ## Host rows by name
+
+A host row is a position in the table supplied beside the program (`NativeOp.external i`,
+`Program/Native.lean`). An author who writes the position writes an integer whose meaning
+lives in a table passed separately, and nothing checks that the two were counted together.
+A `RowDef` is that row declared once under its spelling; `Module` assembles the table in
+declaration order, and `Row.call` resolves the spelling to the position the module gave it.
+The key is `rowKey` (`Program/Table.lean`), the spelling and the trailing names, the same
+pair `Table.lawful` requires to be unique; a host row declares no trailing name, so the
+spelling alone is its key. -/
+
+/-- A host row an author declares once, with the spelling it is called under. -/
+structure RowDef where
+  row : Row
+  deriving DecidableEq, Repr
+
+/-- A row the host answers: the spelling the printer prints and the reader reads, the request
+and answer types, the error column and the rc.112 line it transcribes. `kind := .async` and
+`registration := .external` are what `externalRow` (`Program/Compile.lean`) demands of a row
+the host answers, and `checkTable` (`Program/Native.lean`) is where a table that breaks them
+is refused. -/
+def Row.host (spelling : String) (request answer : Ty) (error : Ty := .never)
+    (cite : String := "") : RowDef :=
+  ⟨{ name := spelling, spelling := spelling, shape := .call, trailing := [], kind := .async,
+     request := request, answer := answer, error := error, requires := [], cite := cite,
+     typeArgs := [], registration := .external }⟩
+
+/-- The rows of a list of declarations, in declaration order: the table to supply beside the
+program. A declaration's position in this list is the `NativeOp.external` index that calls it. -/
+def RowDef.table (rows : List RowDef) : RowTable := rows.map (·.row)
+
+/-- The spelling each declaration was made under, with its position, counting from `base`. -/
+def RowDef.namesFrom (base : Nat) : List RowDef → RowNames
+  | [] => []
+  | r :: rest => (r.row.spelling, base) :: RowDef.namesFrom (base + 1) rest
+
+/-- The spelling each declaration was made under, with its position in `RowDef.table`. -/
+def RowDef.names (rows : List RowDef) : RowNames := RowDef.namesFrom 0 rows
+
+/-- The first spelling declared twice, if any. -/
+def RowDef.duplicate? : List RowDef → Option String
+  | [] => none
+  | r :: rest =>
+    if rest.any (fun s => s.row.spelling == r.row.spelling) then some r.row.spelling
+    else RowDef.duplicate? rest
+
+/-- A declared host row, called on a request. The position is the one the module's table put
+the declaration at; an undeclared spelling refuses at the call site. -/
+def Row.call (r : RowDef) (request : TermSrc) : Src NativeOp := fun env p =>
+  match env.rows.find? (fun entry => entry.1 == r.row.spelling) with
+  | some (_, i) => do
+    let x ← request env p
+    .ok (.perform (.external i) x)
+  | none => .error ⟨p, .unboundRow r.row.spelling⟩
+
+/-! ## Services and packages, as declarations
+
+A service is a key and the carrier the signature types it at; nothing in the tree bound the
+two at the authoring site before, so an author held `⟨⟨6⟩, ⟨7⟩⟩` and "`7` is a `Ref`" as two
+separate facts (B-1). A `ServiceDef` states them once, with the operations that may be
+performed on a value of that carrier — rows, whose receiver is the first component of the
+request (`RowShape.method`), which is what the printer already prints. A `Package` is a block
+of rows and services installed as one unit. The operations over these records live in
+`Program/Authoring/Services.lean`; the records are here because `Module` holds them. -/
+
+/-- A service an author declares once: the key, the carrier the signature must type it at,
+and the operations that may be performed on a value of that carrier. -/
+structure ServiceDef where
+  key : Effect4.ServiceKey
+  carrier : Ty
+  ops : List RowDef := []
+  deriving DecidableEq, Repr
+
+/-- A block of rows and services installed as one unit: what one host library offers. -/
+structure Package where
+  name : String
+  rows : List RowDef := []
+  services : List ServiceDef := []
+  deriving DecidableEq, Repr
 
 /-! ## Shared layers by name -/
 
@@ -171,13 +302,35 @@ def Layer.ref {Op : Type} (name : String) : LayerSrc Op := fun env p =>
 
 /-! ## Elaboration -/
 
-/-- A closed program: no value in scope, no declared layers. -/
+/-- A closed program: no value in scope, no declared layers, no declared rows. -/
 def elaborate {Op : Type} (src : Src Op) : Except Refusal (Eff Op) := src {} []
 
-/-- An authored module: shared layers declared once by name, and the main program. -/
+/-- A closed layer: the same, for a layer written on its own. -/
+def elaborateLayer {Op : Type} (l : LayerSrc Op) : Except Refusal (LayerTerm Op) := l {} []
+
+/-- An authored module: the host rows it declares, the services it declares, the shared
+layers declared once by name, and the main program. One value holds everything a program
+needs, so the table a program is checked against is the table it was written against. -/
 structure Module (Op : Type) where
+  rows : List RowDef := []
+  services : List ServiceDef := []
   layers : List (String × LayerSrc Op) := []
   main : Src Op
+
+/-- Every row a module supplies, in table order: its own declarations, then each service's
+operations in service order. -/
+def Module.rowDefs {Op : Type} (m : Module Op) : List RowDef :=
+  m.rows ++ m.services.flatMap (·.ops)
+
+/-- The table to supply beside the module's program. -/
+def Module.table {Op : Type} (m : Module Op) : RowTable := RowDef.table m.rowDefs
+
+/-- The spelling each of the module's rows was declared under, with its position. -/
+def Module.rowNames {Op : Type} (m : Module Op) : RowNames := RowDef.names m.rowDefs
+
+/-- The service carriers the module declares, as the signature's service table reads them. -/
+def Module.serviceTypes {Op : Type} (m : Module Op) : List (Effect4.ServiceKey × Ty) :=
+  m.services.map fun s => (s.key, s.carrier)
 
 private def layerNamesOf {Op : Type} (layers : List (String × LayerSrc Op)) :
     Except Refusal LayerNames :=
@@ -218,12 +371,21 @@ private def pointAtPlaced {Op : Type} (placed : List (Nat × List Nat)) (tree : 
       | _ => .error ⟨site, .placement ""⟩
     | none => .error ⟨site, .placement ""⟩
 
+/-- The declared rows as a scope, or the first spelling declared twice: a table key is the
+spelling and the trailing names (`rowKey`), and `Table.lawful` requires it to be unique. -/
+def rowNamesOf (rows : List RowDef) : Except Refusal RowNames :=
+  match RowDef.duplicate? rows with
+  | some spelling => .error ⟨[], .duplicateRow spelling⟩
+  | none => .ok (RowDef.names rows)
+
 /-- The one first-order tree of an authored module: main elaborated in the empty scope, every
 declared layer placed at its first use in program order, every later use a reference to that
-path. A declared layer nobody uses is dropped. -/
+path. A declared layer nobody uses is dropped; a declared row nobody calls keeps its position,
+because the table's positions are the declaration order. -/
 def elaborateModule {Op : Type} (m : Module Op) : Except Refusal (Eff Op) := do
   let names ← layerNamesOf m.layers
-  let env : Env := { layers := names }
+  let rows ← rowNamesOf m.rowDefs
+  let env : Env := { layers := names, rows := rows }
   let main ← m.main env []
   let terms ← m.layers.zipIdx.mapM fun ((_, l), k) => l env (placeholder k)
   let (tree, placed) ← placeRounds terms names (m.layers.length + 1) main []

@@ -88,12 +88,20 @@ theorem Names.resolve_lt {names : List String} {x : String} {i : Nat}
   have := Names.resolve_go_lt names x 0 none (by intro j hj; cases hj) i h
   simpa using this
 
+/-- A name the surface minted for itself resolves below the scope's depth, like any other. -/
+theorem minted_scoped (x : String) : (minted x).Scoped := by
+  refine ⟨fun env p t h => ?_⟩
+  unfold minted at h
+  split at h
+  · rename_i i hi; cases h; simpa [Term.scoped] using Names.resolve_lt hi
+  · cases h
+
 theorem var_scoped (x : String) : (var x).Scoped := by
   refine ⟨fun env p t h => ?_⟩
   unfold var at h
   split at h
-  · rename_i i hi; cases h; simpa [Term.scoped] using Names.resolve_lt hi
   · cases h
+  · exact (minted_scoped x).holds env p t h
 
 theorem lit_scoped (v : Lit) : (lit v).Scoped := by
   refine ⟨fun env p t h => ?_⟩; cases h; rfl
