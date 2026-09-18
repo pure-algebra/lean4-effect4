@@ -238,9 +238,12 @@ sibling called, since two siblings may read the same list. A list child the arm 
 | `Store/Folds/Val.lean` | `render`, `encode`, `tag`, `handles`, `beq` (its second list an accumulator), `refs`, `malformedRef`, `acceptsAt` (two siblings), `printIn` (two siblings), `Config.Val.ofStore` |
 | `Laws/Machine/Folds/Val.lean` | `Val.keys`, `Val.validIn` (the stores fixed) |
 
-**`Val` is 12 of 17**, with twelve sibling connectors beside them. The census at `9cfeaf40`:
-`Eff` 18 of 40, `Ty` 16 of 17, `Term` 12 of 14, `Representation` 0 of 5, `Val` 12 of 17 —
-**58 of 93 hand traversals have a fold and a kernel-checked connector**.
+**`Val` is 12 of 17**, with twelve sibling connectors beside them. Then (`13dde151`) a
+position other than `List M` — `Option M`, `List (ElementOf M)`, a record wrapper — types the
+field's local with the carrier in the member's place, as the generated algebra does, and
+`Representation.tag` / `Check.tag` convert. The census at `13dde151`: `Eff` 18 of 40, `Ty` 16
+of 17, `Term` 12 of 14, `Representation` 2 of 5, `Val` 12 of 17 — **60 of 93 hand traversals
+have a fold and a kernel-checked connector**.
 
 ### 7.3 What `fold_of` refuses today, and the shape each needs
 
@@ -249,13 +252,18 @@ sibling called, since two siblings may read the same list. A list child the arm 
   value is needed beside its results; under the paired carrier the results arrive as
   `xs.map (fun e => (e, f e))`, and the equation needs `List.map_map` and `List.map_id` —
   term-level, but a rewrite rather than a reduction. `Val`'s last four.
-- **The `map` idiom** (`Witnesses.valCode`: `args.map valCode` with no sibling): the mapped
-  list *is* the field's result list; one more recognised call shape.
+- **A case analysis on a container child** (`Witnesses.valCode`: `| .ctor 9 [head] => 9 ::
+  valCode head`, `Bridge.ofSchema` reading through `declaration`'s annotation): the arm splits
+  on the container's shape or reads through a wrapper before recursing — not a fold of the
+  family as written; the generated positional folds are the shape it would need. (The plain
+  `xs.map f` idiom is recognised.)
 - **Positions other than `List M`** (`Representation`: `List (ElementOf Representation)`,
   `Option`, the record wrappers `PropertySignatureOf`, `IndexSignatureOf`): the generated
   algebra's argument is the constructor's argument type with the member replaced by its
   carrier; the converter must type the field's local the same way and, where an arm reads
-  through the wrapper, use the generated positional folds. `Representation`'s 5.
+  through the wrapper, use the generated positional folds. `Representation`'s last 3
+  (`withChecks?` and `checkId` keep the child list — the container paramorphism; `ofSchema`
+  reads through a wrapper).
 - **Shape-inspecting arms** (`termsTy`: `| .cons (.var index) tail => termTy sig env (.var
   index)`): the arm splits on a child's constructor and recurses on the *rebuilt* child, so the
   equation holds by cases on the child, not by unfolding. `termTy`/`termsTy` (2).
