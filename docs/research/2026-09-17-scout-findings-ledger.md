@@ -265,3 +265,43 @@ C-P11 (the schema tree's unconsumed declarations); then the reader line R4.1.
   Three Opus seats dispatched in worktrees `../lean4-effect4-{run,author,daemons}` (branches
   `seat/*`, from `1a8587f2` which adds `Api.Built`), each with the aesop discipline in its brief;
   receipts owed at `docs/research/2026-09-17-seat-{run,author,daemons}-receipt.md`.
+
+## The mid-wave review of the three seats (2026-09-17, owner: "address these findings")
+
+An outside review of the three seat branches, checked against the worktrees before anything
+moved. Verified and done, queued to the merge, or refused with the reason:
+
+- **`Api.Built` was uninhabitable** (review 2A, verified: `#print` showed
+  `table : {RowTable : Type} → RowTable`, auto-bound). Fixed in main (`3cf0d1e8`) with the run
+  seat's exact text (`set_option autoImplicit false`, `open Effect4.Program (RowTable
+  AdmittedProgram)`); the author seat was asked to match it so its merge is clean.
+- **Two size folds** (2B, verified: `nodeSize*` in `Laws/Api/Supervision.lean` was the section of
+  `PrintReadable.lean` plus `nodeSize_pos`). One module now: `Laws/Program/Size.lean`
+  (`c2688499`: `sizeAlg`, `size_pos`, `size_child_lt`, imports only the generated view); the
+  daemons branch merged (`9aa13150`) and pointed at it (`cdb67adb`, 542 → 501 lines).
+- **`Api.Run` renamed `Api.Inspection`** (2C, `8df51c55`, 16 files): the reading a replay is
+  taken as (outcome, machine, reasons); `Run` is the seat's value. The run seat's
+  `_root_.Effect4.Run` spellings and `Run.inspect : Api.Run`, and the author seat's
+  `Built.run : Run`, are edited at their merges.
+- **Supervision in the observation** (2D): queued to the run seat's merge, in the daemons seat's
+  shape rather than the review's — one field `fibers : List (FiberId × FiberStatus)`, with
+  `daemons` and `daemonsQuiet` functions of it (a field that is a function of another field is a
+  drift point; receipt §5).
+- **aesop in the seats' laws** (3A): stale for the daemons seat (`status_persists` is already
+  `unfold statusOf; aesop`; census 8/44 closed, six `rfl` equations kept because aesop's proof of
+  two reaches `propext`). The run seat's `result_header` (four `repeat' split; all_goals rfl`
+  arms) is within the rules; the one-line shape was sent to the seat as optional.
+- **`nativeSignatureWith` into `Api.check`/`explain`** (4B): **not done — a decision.** Moving the
+  definition beside `nativeSignature` is free (it is `rfl` at `[]`); threading it through the
+  checker changes the certificate's signature, hence `Built`, `HostSession.start`, `Run.open`,
+  and the soundness statements (`MeaningSound`, `LoopSound` are stated at `nativeSignature
+  table`). The author seat's `build` compares declared carriers against `nativeSignature` and
+  refuses a disagreement (`BuildRefusal.serviceCarrier`), which is the honest version until the
+  owner rules on carriers beyond the six the type codes spell.
+- **`Row.requires := [s.key]` on service operations** (4C): **refused.** `Typing.lean:302` puts a
+  row's `requires` into the program's requirement; an operation is a method on a receiver already
+  in hand (`ServiceDef.receiver`), and the key is required by `service key`, not by the call. With
+  the change a layer's own build would require the key it provides.
+- **`letLayer`** (4D) and **`Ty.data`** (4E): after this line, as already planned.
+
+Merge order held: daemons (done) → run → author, then one gate sweep.
