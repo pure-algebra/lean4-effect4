@@ -48,6 +48,39 @@ theorem step_phases (s : Run) (c : Command) :
 
 theorem step_journal (s : Run) (c : Command) : (s.step c).journal = s.journal ++ [c] := rfl
 
+/-! Each row's transition, named so that a proof can rewrite with a fact about it. -/
+
+theorem step_session_bind (s : Run) (call : Call) (token : Nat) :
+    (s.step (.bind call token)).session =
+      (Api.HostSession.bindCall s.session call token).session := rfl
+
+theorem step_phases_bind (s : Run) (call : Call) (token : Nat) :
+    (s.step (.bind call token)).phases =
+      s.phases ++ [(Api.HostSession.bindCall s.session call token).phase] := rfl
+
+theorem step_session_submit (s : Run) (reply : Reply) :
+    (s.step (.submit reply)).session = (Api.HostSession.submit s.session reply).session := rfl
+
+theorem step_phases_submit (s : Run) (reply : Reply) :
+    (s.step (.submit reply)).phases =
+      s.phases ++ [(Api.HostSession.submit s.session reply).phase] := rfl
+
+theorem step_session_apply (s : Run) (key : Key) :
+    (s.step (.apply key)).session =
+      (Api.HostSession.applyReply s.session key s.budget.fuel).session := rfl
+
+theorem step_phases_apply (s : Run) (key : Key) :
+    (s.step (.apply key)).phases =
+      s.phases ++ [(Api.HostSession.applyReply s.session key s.budget.fuel).phase] := rfl
+
+theorem step_session_control (s : Run) (d : Api.Decision) :
+    (s.step (.control d)).session =
+      (Api.HostSession.advance s.session s.budget.fuel d).session := rfl
+
+theorem step_phases_control (s : Run) (d : Api.Decision) :
+    (s.step (.control d)).phases =
+      s.phases ++ [(Api.HostSession.advance s.session s.budget.fuel d).phase] := rfl
+
 theorem step_built (s : Run) (c : Command) : (s.step c).built = s.built := rfl
 
 theorem step_budget (s : Run) (c : Command) : (s.step c).budget = s.budget := rfl
@@ -459,5 +492,258 @@ theorem applyReply_accepted {program : Api.Program} {table : RowTable} (s : Sess
     split
     · exact Or.inl rfl
     · exact Or.inr rfl
+
+/-! ## The answer law -/
+
+/-- **The answer law.** Three rows, three verdicts. A call the machine is holding, at a key
+the session has no record of, answered with a completion the machine admits: the call is
+bound, the completion is received, and it is applied — or, when the row's fuel ran out, the
+run is left at a frontier with the completion received. No row of it is refused, and in
+particular no row of it is refused for an envelope.
+
+The hypotheses are exactly what the session checks: `Call.at` reports a call (so the machine
+is holding one at that key), the session has no binding and no slot for that key, and the
+completion is one `admit` accepts at that guard — the third part of `Envelope`. -/
+theorem answer_accepted (s : Run) (key : Key) (c : Answer) (call : Call)
+    (hat : Api.HostSession.Call.at s key = some call)
+    (hfresh : s.session.active.any (fun b => b.key == key) = false)
+    (hslot : s.session.pending.any (fun slot => slot.key == key) = false)
+    (hfits : admit s.built.table s.machine (.answerAsync key.fiber key.token c) = none) :
+    (s.answer key c).phases = s.phases ++ [.bound, .preflight, .applied] ∨
+      (s.answer key c).phases = s.phases ++ [.bound, .preflight, .frontier] := by
+  obtain ⟨op, request, hr, hshape⟩ := at_eq s key call hat
+  have hfib : call.fiber = key.fiber := by
+    simp only [hshape, Api.HostSession.Call.claim]
+  have hop : call.op = op := by
+    simp only [hshape, Api.HostSession.Call.claim]
+  have hreq : call.request = request := by
+    simp only [hshape, Api.HostSession.Call.claim]
+  have htab : call.table = s.built.table := by
+    simp only [hshape, Api.HostSession.Call.claim]
+  have hbkey : (⟨call, key.token⟩ : BoundCall).key = key := by
+    show (⟨call.fiber, key.token⟩ : Key) = key
+    rw [hfib]
+  have hobs : Api.HostProtocol.observe s.session.machine = .awaitingAsync :=
+    observe_awaitingAsync s.session.machine key.fiber key.token op request hr
+  -- the run after the bind row
+  have hb := bindCall_at_bound s key call hat hfresh
+  have ha1 : (s.step (.bind call key.token)).session.active =
+      s.session.active ++ [(⟨call, key.token⟩ : BoundCall)] := by
+    rw [step_session_bind, hb]
+  have hp1 : (s.step (.bind call key.token)).session.pending =
+      s.session.pending ++ [(⟨key, none⟩ : ReplySlot)] := by
+    rw [step_session_bind, hb]
+  have hm1 : (s.step (.bind call key.token)).session.machine = s.session.machine := by
+    rw [step_session_bind, hb]
+  have hh1 : (s.step (.bind call key.token)).session.header = s.session.header := by
+    rw [step_session_bind, hb]
+  have hph1 : (s.step (.bind call key.token)).phases = s.phases ++ [Phase.bound] := by
+    rw [step_phases_bind, hb]
+  -- the receipt is accepted
+  have hfind : (s.step (.bind call key.token)).session.active.find?
+      (fun b => b.key == (Rows.reply s call key c).key) = some ⟨call, key.token⟩ := by
+    rw [ha1]
+    exact find_append_fresh s.session.active ⟨call, key.token⟩ key hbkey hfresh
+  have hslot1 : Api.HostSession.readReply (s.step (.bind call key.token)).session.pending
+      (Rows.reply s call key c).key = none := by
+    rw [hp1]
+    exact readReply_append_fresh s.session.pending key hslot
+  have hany1 : (s.step (.bind call key.token)).session.pending.any
+      (fun slot => slot.key == (Rows.reply s call key c).key) = true := by
+    rw [hp1]
+    exact any_append_key s.session.pending key
+  have henv : Envelope s.built.table (s.step (.bind call key.token)).session.machine
+      ((⟨call, key.token⟩ : BoundCall).record (Rows.reply s call key c)) := by
+    rw [hm1]
+    refine ⟨htab, ?_, ?_⟩
+    · show requestOf s.session.machine call.fiber key.token = some (call.op, call.request)
+      rw [hfib, hop, hreq]
+      exact hr
+    · show admit s.built.table s.session.machine (.answerAsync call.fiber key.token c) = none
+      rw [hfib]
+      exact hfits
+  have hobs1 : Api.HostProtocol.observe (s.step (.bind call key.token)).session.machine =
+      .awaitingAsync := by
+    rw [hm1]
+    exact hobs
+  have hsub := submit_accepted (s.step (.bind call key.token)).session (Rows.reply s call key c)
+    ⟨call, key.token⟩ rfl (by rw [hh1]; rfl) hfind rfl hslot1 hany1 henv hobs1
+  have hpre := preflight_ok (s.step (.bind call key.token)).session (Rows.reply s call key c)
+    ⟨call, key.token⟩ rfl (by rw [hh1]; rfl) hfind rfl henv
+  -- the run after the receipt row
+  have ha2 : ((s.step (.bind call key.token)).step (.submit (Rows.reply s call key c))).session.active
+      = (s.step (.bind call key.token)).session.active := by
+    rw [step_session_submit, hsub]
+  have hp2 : ((s.step (.bind call key.token)).step (.submit (Rows.reply s call key c))).session.pending
+      = Api.HostSession.storeReply (s.step (.bind call key.token)).session.pending
+        (Rows.reply s call key c) := by
+    rw [step_session_submit, hsub]
+  have hm2 : ((s.step (.bind call key.token)).step (.submit (Rows.reply s call key c))).session.machine
+      = (s.step (.bind call key.token)).session.machine := by
+    rw [step_session_submit, hsub]
+  have hph2 : ((s.step (.bind call key.token)).step (.submit (Rows.reply s call key c))).phases
+      = s.phases ++ [Phase.bound] ++ [Phase.preflight] := by
+    rw [step_phases_submit, hsub, hph1]
+  -- the answer is applied, or the fuel ran out
+  have hfind2 : ((s.step (.bind call key.token)).step
+      (.submit (Rows.reply s call key c))).session.active.find? (fun b => b.key == key)
+      = some ⟨call, key.token⟩ := by
+    rw [ha2]
+    exact hfind
+  have hread2 : Api.HostSession.readReply ((s.step (.bind call key.token)).step
+      (.submit (Rows.reply s call key c))).session.pending key
+      = some (Rows.reply s call key c) := by
+    rw [hp2]
+    exact Api.HostSession.readReply_store_self (s.step (.bind call key.token)).session.pending
+      (Rows.reply s call key c) hany1
+  have hpre2 : Api.HostSession.preflight ((s.step (.bind call key.token)).step
+      (.submit (Rows.reply s call key c))).session (Rows.reply s call key c)
+      = .ok (.answerAsync call.fiber key.token c) := by
+    rw [step_session_submit, hsub]
+    exact hpre
+  have hobs2 : Api.HostProtocol.observe ((s.step (.bind call key.token)).step
+      (.submit (Rows.reply s call key c))).session.machine = .awaitingAsync := by
+    rw [hm2]
+    exact hobs1
+  have happly := applyReply_accepted ((s.step (.bind call key.token)).step
+    (.submit (Rows.reply s call key c))).session key s.budget.fuel ⟨call, key.token⟩
+    (Rows.reply s call key c) (.answerAsync call.fiber key.token c) hfind2 hread2 hpre2 hobs2
+  have hplay : s.answer key c = ((s.step (.bind call key.token)).step
+      (.submit (Rows.reply s call key c))).step (.apply key) := by
+    show s.play (Rows.answer s key c) = _
+    rw [answer_rows_three s key c call hat]
+    rfl
+  rw [hplay, step_phases_apply, step_budget, step_budget, hph2]
+  rcases happly with h | h
+  · left
+    rw [h]
+    simp only [List.append_assoc, List.cons_append, List.nil_append]
+  · right
+    rw [h]
+    simp only [List.append_assoc, List.cons_append, List.nil_append]
+
+/-! ## A host inside the envelope -/
+
+/-- Playing rows never changes what was built. -/
+theorem play_built (s : Run) (rows : List Command) : (s.play rows).built = s.built := by
+  induction rows generalizing s with
+  | nil => rfl
+  | cons c rest ih => rw [play_cons, ih, step_built]
+
+/-- A machine waiting on a call is holding it. -/
+theorem requestOf_of_mem_awaits (m : NativeMachine) (a : Await) (h : a ∈ awaits m) :
+    requestOf m a.1 a.2.1 = some (a.2.2.1, a.2.2.2) := by
+  obtain ⟨f, hf, hsome⟩ := List.mem_filterMap.mp h
+  split at hsome
+  · rename_i token hpark
+    cases hreq : requestOf m f.id token with
+    | none =>
+      rw [hreq] at hsome
+      cases hsome
+    | some pair =>
+      rw [hreq] at hsome
+      simp only [Option.map_some, Option.some.injEq] at hsome
+      rw [← hsome]
+      exact hreq
+  · cases hsome
+
+/-- The row a host call names is an external row of the run's table. -/
+theorem rowOf_external (s : Run) (op : NativeOp) (row : Program.Row) (h : s.rowOf op = some row) :
+    ∃ i, op = .external i ∧ externalRow s.built.table i = some row := by
+  unfold Run.rowOf at h
+  split at h
+  · rename_i i
+    exact ⟨i, rfl, h⟩
+  · cases h
+
+/-- What the drive knows about the call it picked: the machine is waiting on it, and the
+session has neither a binding nor a slot for it. -/
+theorem freshCall_facts (s : Run) (await : Await) (h : s.freshCall = some await) :
+    await ∈ s.outstanding ∧
+      (s.session.active.any fun b => b.key == (⟨await.1, await.2.1⟩ : Key)) = false ∧
+      (s.session.pending.any fun slot => slot.key == (⟨await.1, await.2.1⟩ : Key)) = false := by
+  unfold Run.freshCall at h
+  have hp := List.find?_some h
+  refine ⟨List.mem_of_find?_eq_some h, ?_, ?_⟩ <;> aesop
+
+/-- A host stays inside the envelope: every completion it gives for a call a machine is
+holding, on the row that call was made on, is one the machine admits. It is the third part of
+`Envelope` (`Program/Admit.lean`) asked of the host, and the two parts it does not mention —
+the table and the parked request — are the ones the run builds rather than the host. -/
+def Reactor.Envelops {σ : Type} (r : Reactor σ) (table : RowTable) : Prop :=
+  ∀ (m : Api.Machine) (fiber : FiberId) (token i : Nat) (row : Program.Row)
+    (request : Val) (st : σ) (c : Answer) (next : σ),
+    requestOf m fiber token = some (.external i, request) →
+    externalRow table i = some row →
+    r row request st = some (c, next) →
+    admit table m (.answerAsync fiber token c) = none
+
+/-- **O-7.** A host inside the envelope is never refused for one. Every phase a drive writes
+is a phase of an answer the session accepted (bound, received, applied or a fuel frontier) or
+of a flush, and a flush carries no envelope at all. -/
+theorem drive_envelope {σ : Type} (r : Reactor σ) (table : RowTable) (henv : r.Envelops table)
+    (rounds : Nat) (s : Run) (st : σ) (htable : s.built.table = table) :
+    ∃ added, (driveFrom r rounds s st).1.phases = s.phases ++ added ∧
+      Phase.refused .envelope ∉ added := by
+  induction rounds generalizing s st with
+  | zero => exact ⟨[], (List.append_nil _).symm, List.not_mem_nil⟩
+  | succ rounds ih =>
+    rw [driveFrom]
+    split
+    · rename_i await hfresh
+      split
+      · exact ⟨[], (List.append_nil _).symm, List.not_mem_nil⟩
+      · rename_i row hrow
+        split
+        · exact ⟨[], (List.append_nil _).symm, List.not_mem_nil⟩
+        · rename_i completion next hreact
+          obtain ⟨hmem, hactive, hpending⟩ := freshCall_facts s await hfresh
+          obtain ⟨i, hop, hext⟩ := rowOf_external s await.2.2.1 row hrow
+          have hreq : requestOf s.machine await.1 await.2.1 =
+              some (await.2.2.1, await.2.2.2) := requestOf_of_mem_awaits s.machine await hmem
+          have hreqi : requestOf s.machine (⟨await.1, await.2.1⟩ : Key).fiber
+              (⟨await.1, await.2.1⟩ : Key).token = some (.external i, await.2.2.2) := by
+            rw [← hop]
+            exact hreq
+          have hfits : admit s.built.table s.machine
+              (.answerAsync (⟨await.1, await.2.1⟩ : Key).fiber
+                (⟨await.1, await.2.1⟩ : Key).token completion) = none := by
+            rw [htable]
+            exact henv s.machine await.1 await.2.1 i row await.2.2.2 st completion next
+              hreqi (by rw [← htable]; exact hext) hreact
+          have hanswer := answer_accepted s ⟨await.1, await.2.1⟩ completion
+            (Api.HostSession.Call.claim s ⟨await.1, await.2.1⟩ (.external i) await.2.2.2)
+            (at_of_requestOf s ⟨await.1, await.2.1⟩ (.external i) await.2.2.2 hreqi)
+            hactive hpending hfits
+          have hplayed : s.play (Rows.answer s ⟨await.1, await.2.1⟩ completion) =
+              s.answer ⟨await.1, await.2.1⟩ completion := rfl
+          obtain ⟨rest, hrest, hnorest⟩ :=
+            ih (s.play (Rows.answer s ⟨await.1, await.2.1⟩ completion)) next
+              (by rw [play_built]; exact htable)
+          rcases hanswer with hph | hph <;>
+            exact ⟨[Phase.bound, Phase.preflight, _] ++ rest,
+              by rw [hrest, hplayed, hph, List.append_assoc], by
+                simp only [List.cons_append, List.nil_append, List.mem_cons]
+                aesop⟩
+    · split
+      · exact ⟨[], (List.append_nil _).symm, List.not_mem_nil⟩
+      · dsimp only
+        split
+        · exact ⟨[(Api.HostSession.advance s.session s.budget.fuel Api.flush).phase],
+            step_phases_control s Api.flush,
+            by simp only [List.mem_singleton]
+               exact fun h => advance_not_envelope s.session s.budget.fuel Api.flush h.symm⟩
+        · obtain ⟨rest, hrest, hnorest⟩ := ih (s.play Rows.flush) st
+            (by rw [play_built]; exact htable)
+          refine ⟨(Api.HostSession.advance s.session s.budget.fuel Api.flush).phase :: rest, ?_, ?_⟩
+          · rw [hrest]
+            show ((s.step (.control Api.flush)).phases) ++ rest = _
+            rw [step_phases_control, List.append_assoc]
+            rfl
+          · simp only [List.mem_cons]
+            intro hmem
+            rcases hmem with h | h
+            · exact advance_not_envelope s.session s.budget.fuel Api.flush h.symm
+            · exact hnorest h
 
 end Effect4.Run
