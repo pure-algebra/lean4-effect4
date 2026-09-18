@@ -217,12 +217,12 @@ refs, deferreds, the clock, scopes, memo maps), and the scheduler is the one sha
   This cut's `Deferred` is `Deferred<number, number>` (`:138-150`), and `deferredSucceed` /
   `deferredFail` / `deferredCompleteWith` take a `nat` request (`:218-`), exactly as refs are
   `Ref<number>` with `HeapNat` (`Progress.lean:71`, the `.nat` column, `E4-PROGRESS-CE-002`). So
-  the missing invariant is **`DeferredNat`**: every stored completion is `.success (Val.nat _)`
-  or a failure whose cause admits `.nat`, or `ofRefGet cell` (typed by `HeapNat`). It widens
-  `CompletionShaped` (`Simulation/Hooks.lean:27`) in the same shape, is preserved by the four
-  completing rows via their typed requests (the `answer_typed` pattern), and it is what makes
-  `denoteStored` typed at `⟨nat, nat⟩` = the row's answer. **This is a ruling to make**
-  (§7); it is the deferred twin of `HeapNat` and no larger.
+  the missing invariant is a typing column on the deferred store, widening
+  `CompletionShaped` (`Simulation/Hooks.lean:27`) in the same shape and preserved by the
+  completing rows via their typed requests (the `answer_typed` pattern). **Corrected in §9:**
+  the column is a per-cell table, not the constant `⟨nat, nat⟩`, because `memoBuild`
+  allocates a layer build's cell from the same store (`Stores.lean:2329`) and `memoComplete`
+  stores the build's exit in it (`:2342`). **This is a ruling to make** (§7).
 - **External rows** (`.external`, kind `.async`): on the reference `registerAsync` parks them
   forever (`InterpR.lean:351`, the `_` arm), so the invariant is trivially preserved and the
   statement covers them syntactically. Their delivered answers are the table-aware slice's
@@ -278,9 +278,11 @@ discovery in the middle of S2.
 
 1. **`HandlesFit`** (open since the scout): add the world-satisfaction field, leave
    `Val.hasTy` coarse. Unchanged recommendation; §2 gives it its principled reading.
-2. **`DeferredNat`**: widen the machine-level deferred invariant from "is a completion" to
-   "is a completion typed at the cut's `⟨nat, nat⟩`", the twin of `HeapNat`, preserved by the
-   completing rows' typed requests. Needed for the `async` clause; recommended.
+2. **The promise table `Π`** (was "`DeferredNat`", corrected in §9): a per-cell table
+   `DeferredKey → Option (Ty × Ty)`, extended at `deferredMake` with the row's `⟨nat, nat⟩` and
+   at `memoBuild layer` with the layer's type, with "every stored completion fits the cell's
+   entry" as the column. A constant column is wrong because memoised layer builds live in the
+   same deferred store. Needed for the `async` clause; recommended.
 3. **Layer 0's home**: `src/Effect4/Laws/Effects/Protocol.lean` now (imports the pinned
    `Effects` only); upstream or vendor later. Recommended; the pull-in is not on the path.
 
@@ -313,3 +315,47 @@ against the tree at `1246d121`:
 Two slips on the way, both binder hygiene under `autoImplicit false` (an unbound `w`, and a
 `bind`/`widen` continuation hypothesis not passed through the induction); neither touches the
 design.
+
+## 9. Correction after the owner's question (2026-09-18, later)
+
+"Why is only Deferred treated specially?" It is not; it was the one store whose contents are
+read back as an answer *and* have no typing column. The principle, stated properly: **every
+position in the store or the machine that holds a value, an exit, a cause, a program or a
+continuation, and is read back by some step, needs a typing source in the world.** Listed by
+the types themselves, not by my reading of the operations:
+
+| position | who reads it back | typing source | status |
+| --- | --- | --- | --- |
+| `Stores.refs` (`RefHeap`) | `refGet` and the update rows | `HeapNat` (`Progress.lean:71`) | exists, this cut's `nat` column |
+| `Stores.deferreds` cells' `completion` | `registerAsync` immediate, `dueResumes` (`InterpR.lean:348`, `:355`) | **none** (`STORES-FB-COMPLETION`) | needs the promise table `Π`; **two populations**: user cells at the row's `⟨nat, nat⟩` (`Native.lean:224`), memo cells at the layer's type (`memoBuild`, `Stores.lean:2329-2336`; `memoComplete`, `:2338-2345`) |
+| `Stores.memo` entries (`effect : Program`, `deferred`) | `memoGet` answers `pair (promise entry.deferred) (memoMap owner)` (`:2321-2325`); `memoizeR` awaits the cell (`DenoteR.lean:377-381`) | through `Π` at the entry's cell | covered once `Π` is per cell; the owner's intuition is right here: a memoised build *is* a deferred |
+| `Stores.scopes` entries' `closingExit?` | `scopeAdd` on a closed scope answers it (`Stores.lean:2291-2294`); `acquireInR` runs the release with it (`InterpR.lean:117-124`; `denoteFin .foreign`, `DenoteR.lean:261-269`) | **none for its type**; `Stores.WF` gives validity only | see the finding below |
+| `Stores.timers` sleeps | `clockStep` owes `Prim.success Val.unit` (`InterpR.lean:358`) | `unit` by inspection | nothing to add |
+| `Stores.externals` | the tape, table-aware slice | typed-tape hypothesis | out of the empty-table statement, same `AnswerOk` clause |
+| `RunFiber.frame.current`, `.stack` slots | the step, `popR` | `TypedProg`, `StackOk` (§4) | the milestone |
+| `RunFiber.pending.collected : List Exit` | `countdown` → `resumePrim … exits` (`Fibers.lean:1622-1640`) | `Γ` at the collected targets | family (c); new clause on `Pending` |
+| `RunFiber.context.services` (`Ctx.services : Env.Ctx`) | `getContext`, `service` lookups | the requirement row / `provideService`'s typed value | new clause on the context, read through `HandlesFit`'s sibling for services |
+| `RunFiber.exit`, `.finalizing` | `join`, `fireObserver`, `awaitAll` | `Γ f.id` | `TypedFiber`'s exited case |
+| `Race.programs`, `RaceAllState.accepted`, `.winner`, `.failures` | `launch`, `raceCallback`, `registrationDone` | the race's type (the entrants' common type) | new clause on `Race` (scout E.8 named `programs` only) |
+| `Cmd.resume … answer`, `Task.resume`, `Cmd.finish exit`, `Cmd.observe exit` | `driveStep` | the residue clause | scout E.8 |
+| `FinName.foreign capture` with `Capture.env : List Val` | the release at the capture's point | the capture's typing env | the release finding |
+
+**Finding: the release's exit parameter.** The checker types a release body with its exit
+parameter at `exitOf a.answer a.error`, the *acquire's* type (`inv_acquireRelease`,
+`CheckInversion.lean:191-197`). The reference hands the release the *scope's closing exit*
+(`scopeAdd` on a closed scope, then `denoteFin (.foreign …) ex` with `reifyExitVal ex` in the
+env), which is the exit of whatever closed the ambient scope, not of the acquire. `Val.hasTy` at
+`exitOf` inspects the payload (`Program/Typed.lean:56-61`), so the two do not fit in general.
+rc.112 types the parameter `Exit<unknown, unknown>` (`Effect.ts:12930`, `internal/effect.ts:3973`).
+`acquireRelease` is outside `Straight`, so no proof has ever exercised this. It is a checker
+defect against rc.112, not a proof-graph problem: the parameter must be the opaque exit, as
+rc.112 has it, and then the scope store needs no column. No DI names it yet; it needs one.
+
+**The method that ends this class of surprise.** The list above was still made by reading.
+The invariant has to be total over the data by construction, which means the positions are
+derived from the *types* reachable from `RState` and `Stores`, by an instrument in the meta
+estate beside `#traversal_census`: walk every structure and inductive reachable from the state,
+list every field whose type mentions `Val`, `Exit`, `Cause`, `Program`, `RProgram` or a function
+into one of them, and refuse a position with no typing source named. That census is the first
+artefact of the milestone, before S0, and its output is the field list of `TypedState`. It is
+the same move as the coherence census: measure by the algebra, not by a reader.
