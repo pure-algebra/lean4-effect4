@@ -2,6 +2,7 @@ import Effect4.Api.Supervision
 import Effect4.Laws.Machine.Clauses
 import Effect4.Laws.Api.Frontier
 import Effect4.Laws.Auto.Inversion
+import Effect4.Laws.Program.Size
 
 /-!
 # Laws.Api.Supervision — the static table and the running machine say the same thing
@@ -19,7 +20,7 @@ a fork emits a `scheduledTask` and no `forked`, which is why the equations read 
 The static half is whole-program and has no case per constructor: `forkSitesOf_child_flag` is
 the generic node step, and `supervision_child_flag` lifts it through the fold by the generic
 child step — a node's children are what the generated layer view lists, and a child is
-smaller than its node by one fold (`nodeSizeAlg`) and one lemma (`nodeSize_child_lt`).
+smaller than its node by one fold (`sizeAlg`) and one lemma (`size_child_lt`).
 
 **(b) What a status can change by.** `statusOf` is a function of four observations — the
 fiber's exit, the fiber that tracks it, the scope link on it, and whether a `forked` event
@@ -52,53 +53,11 @@ universe u v
 
 `supervision` recurses the generic way: a node's sites are its own plus its children's, where
 "its children" is what the generated layer view lists. To reason about that by the same
-generic step, a child must be smaller than its node — one fold counting nodes, and one lemma.
-The pair is `sizeAlg` / `size_child_lt` of `Laws/Codegen/PrintReadable.lean` on the
-coordinator's branch; when that module lands, the two copies should become one. -/
+generic step, a child must be smaller than its node: the node count `sizeAlg` and the lemmas
+`size_pos` / `size_child_lt` of `Laws/Program/Size.lean`, shared with the printer's
+completeness. -/
 
 variable {Op : Type}
-
-/-- One more than the children: the node count by the generic layer function. -/
-def nodeSizeLayer : (fam : EffFam) → String → List (ArgF Op (fun _ => Nat)) → Nat
-  | _, _, args => 1 + (args.map fun a => match a with | .child _ k => k | _ => 0).sum
-
-def nodeSizeAlg : EffAlgebra Op (fun _ => Nat) := EffAlgebra.ofLayer nodeSizeLayer
-
-theorem nodeSizeLayer_eq (fam : EffFam) (ctor : String) (args : List (ArgF Op (fun _ => Nat))) :
-    nodeSizeLayer fam ctor args =
-      1 + (args.map fun a => match a with | .child _ k => k | _ => 0).sum := rfl
-
-theorem le_sum_of_mem : ∀ (l : List Nat) (a : Nat), a ∈ l → a ≤ l.sum
-  | [], _, h => by aesop
-  | b :: rest, a, h => by
-    have ih := le_sum_of_mem rest a
-    simp only [List.mem_cons, List.sum_cons] at h ⊢
-    rcases h with rfl | h
-    · omega
-    · have := ih h; omega
-
-/-- Every node counts at least itself. -/
-theorem nodeSize_pos (fam : EffFam) (e : EffSelfCarrier Op fam) :
-    0 < cataFam nodeSizeAlg fam e := by
-  have hb := cata_build nodeSizeLayer fam (view fam e).1 (view fam e).2 e (build_view fam e)
-  rw [show (nodeSizeAlg : EffAlgebra Op (fun _ => Nat)) = EffAlgebra.ofLayer nodeSizeLayer from rfl,
-    hb, nodeSizeLayer_eq]
-  omega
-
-/-- A child the view lists is smaller than its node. -/
-theorem nodeSize_child_lt (fam : EffFam) (e : EffSelfCarrier Op fam) (fam' : EffFam)
-    (c : EffSelfCarrier Op fam') (member : ArgF.child fam' c ∈ (view fam e).2) :
-    cataFam nodeSizeAlg fam' c < cataFam nodeSizeAlg fam e := by
-  have hb := cata_build nodeSizeLayer fam (view fam e).1 (view fam e).2 e (build_view fam e)
-  rw [show (nodeSizeAlg : EffAlgebra Op (fun _ => Nat)) = EffAlgebra.ofLayer nodeSizeLayer from rfl,
-    hb, nodeSizeLayer_eq]
-  have hmem : cataFam (EffAlgebra.ofLayer nodeSizeLayer) fam' c ∈
-      ((view fam e).2.map (ArgF.fold (EffAlgebra.ofLayer nodeSizeLayer))).map
-        (fun a : ArgF Op (fun _ => Nat) => match a with | .child _ k => k | _ => 0) := by
-    rw [List.map_map]
-    exact List.mem_map.mpr ⟨.child fam' c, member, rfl⟩
-  have := le_sum_of_mem _ _ hmem
-  omega
 
 /-! ## (a) The static half: every site of a program is the table's -/
 
@@ -143,10 +102,10 @@ theorem mem_childReaders : ∀ (args : List (ArgF Op (EffSelfCarrier Op)))
 children's, and a child is smaller. -/
 theorem supervision_child_flag_bounded :
     ∀ (n : Nat) (fam : EffFam) (e : EffSelfCarrier Op fam),
-      cataFam nodeSizeAlg fam e ≤ n →
+      cataFam sizeAlg fam e ≤ n →
       ∀ (p : List Nat) (s : ForkSite), s ∈ cataFam superAlg fam e p →
         s.kind = ForkKind.child → s.options.daemon = false
-  | 0, fam, e, size, _, _, _, _ => absurd size (by have := nodeSize_pos fam e; omega)
+  | 0, fam, e, size, _, _, _, _ => absurd size (by have := size_pos fam e; omega)
   | n + 1, fam, e, size, p, s, member, kind => by
     have hb := cata_build superLayer fam (view fam e).1 (view fam e).2 e (build_view fam e)
     rw [show (superAlg : EffAlgebra Op SiteReader) = EffAlgebra.ofLayer superLayer from rfl, hb,
@@ -155,7 +114,7 @@ theorem supervision_child_flag_bounded :
     · exact forkSitesOf_child_flag fam _ _ p s node kind
     · obtain ⟨reader, hreader, q, hq⟩ := mem_atChildPaths _ _ _ _ child
       obtain ⟨fam', c, hc, rfl⟩ := mem_childReaders _ _ hreader
-      have hlt := nodeSize_child_lt fam e fam' c hc
+      have hlt := size_child_lt fam e fam' c hc
       exact supervision_child_flag_bounded n fam' c (by omega) q s hq kind
 
 /-- **The static table is coherent, whole-program.** Every site of a program that the table
@@ -164,7 +123,7 @@ machine will stamp there is the flag the site carries. One proof, through the ge
 step and the generic child step: no case per constructor. -/
 theorem supervision_child_flag (e : Effect4.Program.Eff Op) (s : ForkSite)
     (member : s ∈ supervision e) (kind : s.kind = ForkKind.child) : s.options.daemon = false :=
-  supervision_child_flag_bounded (cataFam nodeSizeAlg .eff e) .eff e (Nat.le_refl _) [] s member kind
+  supervision_child_flag_bounded (cataFam sizeAlg .eff e) .eff e (Nat.le_refl _) [] s member kind
 
 /-- The same fact read off `isDaemon`: a site of a program that does not fork a daemon was
 written with `daemon := false`. -/
