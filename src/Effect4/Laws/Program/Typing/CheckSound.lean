@@ -43,7 +43,7 @@ theorem check_sound (sig : Signature Op) (e : Eff Op) :
     exact .succeed hty
   | select s d a0 a1 =>
     intro env p t h
-    obtain ⟨ty, e0, e1, t0, t1, hs, harms, h0, h1, rfl⟩ := inv_select sig env p s d a0 a1 t h
+    obtain ⟨ty, arms, t0, t1, hs, harms, h0, h1, rfl⟩ := inv_select sig env p s d a0 a1 t h
     exact .select hs harms (check_sound sig a0 _ _ t0 h0) (check_sound sig a1 _ _ t1 h1)
       (EffTy.joinAnswer_eq _ _)
   | fail error =>
@@ -115,10 +115,10 @@ theorem check_sound (sig : Signature Op) (e : Eff Op) :
     intro env p t h
     cases mode with
     | joinEffect =>
-      obtain ⟨handle, value, error, hterm, hfib, rfl⟩ := inv_awaitFiber_join sig env p fiber t h
+      obtain ⟨handle, pair, hterm, hfib, rfl⟩ := inv_awaitFiber_join sig env p fiber t h
       exact .awaitFiber_join hterm hfib
     | awaitValue =>
-      obtain ⟨handle, value, error, hterm, hfib, rfl⟩ := inv_awaitFiber_await sig env p fiber t h
+      obtain ⟨handle, pair, hterm, hfib, rfl⟩ := inv_awaitFiber_await sig env p fiber t h
       exact .awaitFiber_await hterm hfib
   | withFiber action =>
     intro env p t h
@@ -226,33 +226,33 @@ theorem checkAction_sound (sig : Signature Op) (action : ActionTerm Op) :
     exact .forkScoped options (check_sound sig program env _ q hq)
   | runIn target scope =>
     intro env p t h
-    obtain ⟨handle, value, error, ht, hf, hs, rfl⟩ := inv_action_runIn sig env p target scope t h
+    obtain ⟨handle, pair, ht, hf, hs, rfl⟩ := inv_action_runIn sig env p target scope t h
     exact .runIn ht hf hs
   | interrupt target =>
     intro env p t h
-    obtain ⟨handle, value, error, ht, hf, rfl⟩ := inv_action_interrupt sig env p target t h
+    obtain ⟨handle, pair, ht, hf, rfl⟩ := inv_action_interrupt sig env p target t h
     exact .interrupt ht hf
   | interruptScoped target =>
     intro env p t h
-    obtain ⟨handle, value, error, ht, hf, rfl⟩ := inv_action_interruptScoped sig env p target t h
+    obtain ⟨handle, pair, ht, hf, rfl⟩ := inv_action_interruptScoped sig env p target t h
     exact .interruptScoped ht hf
   | interruptAll targets who =>
     intro env p t h
     cases who with
     | none =>
-      obtain ⟨inner, value, error, ht, hf, rfl⟩ := inv_action_interruptAll_self sig env p targets t h
+      obtain ⟨inner, pair, ht, hf, rfl⟩ := inv_action_interruptAll_self sig env p targets t h
       exact .interruptAll_self ht hf
     | some w =>
-      obtain ⟨inner, value, error, ht, hf, hw, rfl⟩ :=
+      obtain ⟨inner, pair, ht, hf, hw, rfl⟩ :=
         inv_action_interruptAll_by sig env p targets w t h
       exact .interruptAll_by ht hf hw
   | awaitAll targets =>
     intro env p t h
-    obtain ⟨inner, value, error, ht, hf, rfl⟩ := inv_action_awaitAll sig env p targets t h
+    obtain ⟨inner, pair, ht, hf, rfl⟩ := inv_action_awaitAll sig env p targets t h
     exact .awaitAll ht hf
   | awaitAllFailFast targets =>
     intro env p t h
-    obtain ⟨inner, value, error, ht, hf, rfl⟩ := inv_action_awaitAllFailFast sig env p targets t h
+    obtain ⟨inner, pair, ht, hf, rfl⟩ := inv_action_awaitAllFailFast sig env p targets t h
     exact .awaitAllFailFast ht hf
   | snapshotChildren =>
     intro env p t h
@@ -279,7 +279,7 @@ theorem checkAction_sound (sig : Signature Op) (action : ActionTerm Op) :
     exact .getId
   | closeScope scope exitTerm =>
     intro env p t h
-    obtain ⟨value, error, hs, he, rfl⟩ := inv_action_closeScope sig env p scope exitTerm t h
+    obtain ⟨pair, hs, he, rfl⟩ := inv_action_closeScope sig env p scope exitTerm t h
     exact .closeScope hs he
 termination_by structural action
 

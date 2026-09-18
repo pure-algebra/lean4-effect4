@@ -65,7 +65,7 @@ the whole input without a second decoder. `Test.Program.TypingCheckContract` exe
 | `Source.Description` | Generic bounded constructor reflection; used by ProgramStructure, layouts and OCaml parameter handling |
 | `Layout` | One layout plan for construction, projection and matching; exact applied-type keys and target usages; standard `Function.Injective` laws |
 | `Model.Container` | Higher-order builders over the caller's existing model carrier |
-| `Spec.Reflect`, `Cli.EmitSpecs` | Tool-side equation inspection and deterministic ordinary `@[spec]` output; the generated Laws file imports no Conform reflection |
+| `Spec.Reflect` | Tool-side equation inspection (the `specs` group it fed was cut on 2026-09-18: its `@[spec]` output had no consumer) |
 | `Lcnf.Index`, `Lcnf.Validity` | One persisted mono index per walk, structural checks, explicit opt-in on-demand compilation with phase diagnostics |
 | `Lcnf.Cases`, `Lcnf.Rules`, `Manifest` | Compiler walkers and indexed lookups, with deterministic output ordering |
 | `Lcnf.Semantics`, `Lcnf.SemanticsTarget` | Bounded source and target interpreters with separate fuel bounds |

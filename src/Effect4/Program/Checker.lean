@@ -42,6 +42,14 @@ inductive StmtTy where
   /-- `break`: nothing. -/
   | pass
 
+/-- The eliminator of a statement's type, named so that `Except.toOption` distributes through
+it (`Checker.toOption_fold`). -/
+def StmtTy.fold {α : Type} (step : GenTy → List Ty → α) (ret : Except TypeRefusal Ty → α)
+    (pass : α) : StmtTy → α
+  | .step g binds => step g binds
+  | .ret answer => ret answer
+  | .pass => pass
+
 namespace GenTy
 
 /-- `joinAnswer` without the refusal it never makes. -/
@@ -87,6 +95,16 @@ def expect {α : Type} (r : TypeRefusal) : Option α → Except TypeRefusal α
 /-- A term's type at a node, or its refusal there. -/
 def term? (sig : Signature Op) (env : TyEnv) (p : List Nat) (t : Term) : Except TypeRefusal Ty :=
   expect ⟨p, .term t⟩ (termTy sig env t)
+
+/-- The element type of a list type. -/
+def listOf? : Ty → Option Ty
+  | .list t => some t
+  | _ => none
+
+/-- The value and error types of an exit type. -/
+def exitOf? : Ty → Option (Ty × Ty)
+  | .exitOf v e => some (v, e)
+  | _ => none
 
 /-- The refusal of a check, when it refuses. -/
 def refusal {α : Type} : Except TypeRefusal α → Option TypeRefusal
@@ -138,9 +156,9 @@ mutual
       else throw ⟨p, .predicateNotBool predicate⟩
     | .select s d a0 a1 => do
       let t ← term? sig env p s
-      let (e0, e1) ← expect ⟨p, selectRefusal d t⟩ (d.arms t)
-      let t0 ← check sig (env ++ e0) (p ++ [0]) a0
-      let t1 ← check sig (env ++ e1) (p ++ [1]) a1
+      let arms ← expect ⟨p, selectRefusal d t⟩ (d.arms t)
+      let t0 ← check sig (env ++ arms.1) (p ++ [0]) a0
+      let t1 ← check sig (env ++ arms.2) (p ++ [1]) a1
       pure ⟨Ty.join t0.answer t1.answer, t0.error.join t1.error, t0.requires.union t1.requires⟩
     | .matchCause body onValue onCause => do
       let b ← check sig env (p ++ [0]) body
@@ -172,10 +190,10 @@ mutual
     | .yieldNow _ => pure (EffTy.pure .unit)
     | .awaitFiber fiber mode => do
       let t ← term? sig env p fiber
-      let (value, error) ← expect ⟨p, .notFiber t⟩ (fiberTy t)
+      let handle ← expect ⟨p, .notFiber t⟩ (fiberTy t)
       match mode with
-      | .joinEffect => pure ⟨value, error, Requirement.empty⟩
-      | .awaitValue => pure (EffTy.pure (.exitOf value error))
+      | .joinEffect => pure ⟨handle.1, handle.2, Requirement.empty⟩
+      | .awaitValue => pure (EffTy.pure (.exitOf handle.1 handle.2))
     | .withFiber action => checkAction sig env (p ++ [0]) action
     | .scoped body => do
       let t ← check sig env (p ++ [0]) body
@@ -274,15 +292,15 @@ mutual
       | some ret => throw ⟨ret, .returnNotLast⟩
       | none => do
         let s ← checkStmt sig env inLoop (p ++ [0]) head
-        match s with
-        | .step g binds => do
-          let r ← checkStmts sig (env ++ binds) inLoop none (p ++ [1]) rest
-          pure (g.mergeT r)
-        | .ret answer => do
-          let _ ← checkStmts sig env inLoop (some (p ++ [0])) (p ++ [1]) rest
-          let t ← answer
-          pure ⟨some t, .never, Requirement.empty⟩
-        | .pass => checkStmts sig env inLoop none (p ++ [1]) rest
+        s.fold
+          (fun g binds => do
+            let r ← checkStmts sig (env ++ binds) inLoop none (p ++ [1]) rest
+            pure (g.mergeT r))
+          (fun answer => do
+            let _ ← checkStmts sig env inLoop (some (p ++ [0])) (p ++ [1]) rest
+            let t ← answer
+            pure ⟨some t, .never, Requirement.empty⟩)
+          (checkStmts sig env inLoop none (p ++ [1]) rest)
 
   /-- Race entrants: every entrant's answer joins, the errors union. -/
   def checkEffs (sig : Signature Op) (env : TyEnv) (p : List Nat) : Effs Op → Except TypeRefusal EffTy
@@ -322,29 +340,23 @@ mutual
       pure (EffTy.pure .unit)
     | .interruptAll targets interruptor => do
       let ts ← term? sig env p targets
-      match ts with
-      | .list inner => do
-        let _ ← expect ⟨p, .notFiber inner⟩ (fiberTy inner)
-        match interruptor with
-        | none => pure (EffTy.pure .unit)
-        | some who => do
-          let w ← term? sig env p who
-          if w = .nat then pure (EffTy.pure .unit) else throw ⟨p, .natExpected w⟩
-      | _ => throw ⟨p, .listOfFibersExpected ts⟩
+      let inner ← expect ⟨p, .listOfFibersExpected ts⟩ (listOf? ts)
+      let _ ← expect ⟨p, .notFiber inner⟩ (fiberTy inner)
+      match interruptor with
+      | none => pure (EffTy.pure .unit)
+      | some who => do
+        let w ← term? sig env p who
+        if w = .nat then pure (EffTy.pure .unit) else throw ⟨p, .natExpected w⟩
     | .awaitAll targets => do
       let ts ← term? sig env p targets
-      match ts with
-      | .list inner => do
-        let (value, error) ← expect ⟨p, .notFiber inner⟩ (fiberTy inner)
-        pure (EffTy.pure (.list (.exitOf value error)))
-      | _ => throw ⟨p, .listOfFibersExpected ts⟩
+      let inner ← expect ⟨p, .listOfFibersExpected ts⟩ (listOf? ts)
+      let handle ← expect ⟨p, .notFiber inner⟩ (fiberTy inner)
+      pure (EffTy.pure (.list (.exitOf handle.1 handle.2)))
     | .awaitAllFailFast targets => do
       let ts ← term? sig env p targets
-      match ts with
-      | .list inner => do
-        let (value, error) ← expect ⟨p, .notFiber inner⟩ (fiberTy inner)
-        pure (EffTy.pure (.list (.exitOf value error)))
-      | _ => throw ⟨p, .listOfFibersExpected ts⟩
+      let inner ← expect ⟨p, .listOfFibersExpected ts⟩ (listOf? ts)
+      let handle ← expect ⟨p, .notFiber inner⟩ (fiberTy inner)
+      pure (EffTy.pure (.list (.exitOf handle.1 handle.2)))
     | .snapshotChildren =>
       pure (EffTy.pure (.list (.fiberOf (.handle "unknown") (.handle "unknown"))))
     | .awaitNewChildren snapshot => do
@@ -360,10 +372,37 @@ mutual
     | .closeScope scope exit => do
       let s ← term? sig env p scope
       let e ← term? sig env p exit
-      match e with
-      | .exitOf _ _ => if s = Ty.scope then pure (EffTy.pure .unit) else throw ⟨p, .scopeExpected s⟩
-      | _ => throw ⟨p, .exitExpected e⟩
+      let _ ← expect ⟨p, .exitExpected e⟩ (exitOf? e)
+      if s = Ty.scope then pure (EffTy.pure .unit) else throw ⟨p, .scopeExpected s⟩
 end
+
+/-! ### `Except.toOption` through the checker's connectives
+
+The success projection forgets the refusal, so it distributes through the monad, through
+`expect` (whatever the reason), through a Boolean or decidable condition, and through the
+statement eliminator. These are what a proof about the projection unfolds with. -/
+
+theorem toOption_bind {α β : Type} (x : Except TypeRefusal α) (f : α → Except TypeRefusal β) :
+    (x >>= f).toOption = x.toOption.bind fun a => (f a).toOption := by
+  cases x <;> rfl
+
+theorem toOption_pure {α : Type} (a : α) : (pure a : Except TypeRefusal α).toOption = some a := rfl
+
+theorem toOption_throw {α : Type} (r : TypeRefusal) :
+    (throw r : Except TypeRefusal α).toOption = none := rfl
+
+theorem toOption_expect {α : Type} (r : TypeRefusal) (o : Option α) : (expect r o).toOption = o := by
+  cases o <;> rfl
+
+theorem toOption_term? (sig : Signature Op) (env : TyEnv) (p : List Nat) (t : Term) :
+    (term? sig env p t).toOption = termTy sig env t := toOption_expect _ _
+
+theorem toOption_fold {α : Type} (step : GenTy → List Ty → Except TypeRefusal α)
+    (ret : Except TypeRefusal Ty → Except TypeRefusal α) (pass : Except TypeRefusal α)
+    (s : StmtTy) :
+    (s.fold step ret pass).toOption =
+      s.fold (fun g b => (step g b).toOption) (fun a => (ret a).toOption) pass.toOption := by
+  cases s <;> rfl
 
 end Checker
 

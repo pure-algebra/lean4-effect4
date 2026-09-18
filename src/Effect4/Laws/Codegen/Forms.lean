@@ -1,5 +1,6 @@
 import Effect4.Codegen.Forms
 import Effect4.Laws.Program.TypeAlgebra
+import Effect4.Laws.Program.Typing.Sound
 
 /-!
 # Shared-form typing transport
@@ -73,7 +74,7 @@ theorem Template.bind_typed (sig : Signature NativeOp) (env : TyEnv) (n : Nat)
     ((Template.bind first rest).expand n args).bind (effTy sig env) =
       some ⟨b.answer, a.error.join b.error, a.requires.union b.requires⟩ := by
   simp only [Template.expand, hp, hq, Option.bind_eq_bind, Option.bind_some,
-    Option.pure_def, effTy, ha, hb]
+    Option.pure_def, Conform.Effect4.Typing.effTy_bind, ha, hb]
 
 /-- An exit template gives its finalizer an exit value, not the body's answer.
 The finalizer's answer is discarded; its errors and requirements remain. -/
@@ -85,7 +86,7 @@ theorem Template.onExit_typed (sig : Signature NativeOp) (env : TyEnv) (n : Nat)
     ((Template.onExit body finalizer).expand n args).bind (effTy sig env) =
       some ⟨a.answer, a.error.join b.error, a.requires.union b.requires⟩ := by
   simp only [Template.expand, hp, hq, Option.bind_eq_bind, Option.bind_some,
-    Option.pure_def, effTy, ha, hb]
+    Option.pure_def, Conform.Effect4.Typing.effTy_onExit, ha, hb]
 
 /-- The table's effect-valued `andThen` inserts an unused answer slot into its
 second argument. Captures in either argument may refer to any position in `env`. -/
@@ -99,7 +100,7 @@ theorem andThenEffect_typed (sig : Signature NativeOp) (env : TyEnv)
   change effTy sig env (.bind first (insert env.length 1 second)) = _
   have hb' : effTy sig (env ++ [a.answer]) (insert env.length 1 second) = some b :=
     (effTy_insert_append sig env [a.answer] second).trans hb
-  simp only [effTy, ha, hb', Option.bind_eq_bind, Option.bind_some]
+  simp only [Conform.Effect4.Typing.effTy_bind, ha, hb', Option.bind_eq_bind, Option.bind_some]
 
 /-- A continuation-valued `andThen` is already authored under its answer binder;
 its argument must not receive the unused-slot insertion of the effect form. -/
@@ -112,7 +113,7 @@ theorem andThenContinuation_typed (sig : Signature NativeOp) (env : TyEnv)
         (effTy sig env) =
       some ⟨b.answer, a.error.join b.error, a.requires.union b.requires⟩ := by
   change effTy sig env (.bind first continuation) = _
-  simp only [effTy, ha, hb, Option.bind_eq_bind, Option.bind_some]
+  simp only [Conform.Effect4.Typing.effTy_bind, ha, hb, Option.bind_eq_bind, Option.bind_some]
 
 /-- The thunk row shares the effect row's core typing rule. This does not claim
 that an arbitrary host thunk is an admitted source expression. -/
@@ -137,7 +138,8 @@ private theorem bind_keep_typed (sig : Signature NativeOp) (env : TyEnv)
     change (env ++ [a.answer, b.answer])[env.length]? = some a.answer
     rw [List.getElem?_append_right (Nat.le_refl _)]
     simp only [Nat.sub_self, List.getElem?_cons_zero]
-  simp only [effTy, ha, hb, hv, Option.bind_eq_bind, Option.bind_some, Option.map_some, EffTy.pure]
+  simp only [Conform.Effect4.Typing.effTy_bind, Conform.Effect4.Typing.effTy_succeed, ha, hb, hv,
+    Option.bind_eq_bind, Option.bind_some, Option.map_some, EffTy.pure]
   rw [← Ty.join_assoc, Ty.join_never_right, Ty.normalize_join]
   simp only [Requirement.empty, Requirement.union, Row.union_empty_right]
 
@@ -178,7 +180,8 @@ theorem as_typed (sig : Signature NativeOp) (env : TyEnv)
         { effects := [body], terms := [.lit value] })).bind (effTy sig env) =
       some ⟨value.ty, a.error.normalize, a.requires⟩ := by
   change effTy sig env (.bind body (.succeed (.lit value))) = _
-  simp only [effTy, ha, termTy, Option.bind_eq_bind, Option.bind_some, Option.map_some, EffTy.pure,
+  simp only [Conform.Effect4.Typing.effTy_bind, Conform.Effect4.Typing.effTy_succeed, ha, termTy,
+    Option.bind_eq_bind, Option.bind_some, Option.map_some, EffTy.pure,
     Ty.join_never_right, Requirement.empty, Requirement.union, Row.union_empty_right]
 
 /-- The table's `asVoid` is the unit instance of the same core expansion. -/
@@ -202,6 +205,6 @@ theorem ensuring_typed (sig : Signature NativeOp) (env : TyEnv)
   have hb' : effTy sig (env ++ [.exitOf a.answer a.error])
       (insert env.length 1 finalizer) = some b :=
     (effTy_insert_append sig env [.exitOf a.answer a.error] finalizer).trans hb
-  simp only [effTy, ha, hb', Option.bind_eq_bind, Option.bind_some]
+  simp only [Conform.Effect4.Typing.effTy_onExit, ha, hb', Option.bind_eq_bind, Option.bind_some]
 
 end Effect4.Codegen.Forms

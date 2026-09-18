@@ -1,4 +1,4 @@
-import Effect4.Program.Typing
+import Effect4.Program.Typing.Rules
 
 /-!
 # Program.Typing.Terms — the type of a term in argument position, as a fold

@@ -27,8 +27,18 @@ theorem expect_eq_ok {α : Type} (r : TypeRefusal) (o : Option α) (a : α) :
   | none => simp only [expect, reduceCtorEq]
   | some b => simp only [expect, Except.ok.injEq, Option.some.injEq]
 
-attribute [aesop norm simp] expect_eq_ok term? check checkStmt checkStmts checkEffs checkAction
-  checkLayer checkLayers GenTy.mergeT GenTy.joinAnswerT EffTy.joinAnswer_eq GenTy.merge_eq
+/-- The element type of a list type, inverted. -/
+theorem listOf?_eq_some (t inner : Ty) : listOf? t = some inner ↔ t = .list inner := by
+  cases t <;> simp only [listOf?, reduceCtorEq, Option.some.injEq, Ty.list.injEq]
+
+/-- The value and error types of an exit type, inverted. -/
+theorem exitOf?_eq_some (t : Ty) (x : Ty × Ty) : exitOf? t = some x ↔ t = .exitOf x.1 x.2 := by
+  cases x
+  cases t <;> simp only [exitOf?, reduceCtorEq, Option.some.injEq, Ty.exitOf.injEq, Prod.mk.injEq]
+
+attribute [aesop norm simp] expect_eq_ok listOf?_eq_some exitOf?_eq_some term? check checkStmt
+  checkStmts checkEffs checkAction checkLayer checkLayers StmtTy.fold GenTy.mergeT
+  GenTy.joinAnswerT EffTy.joinAnswer_eq GenTy.merge_eq
 
 /-! ## `check` — one lemma per constructor (`awaitFiber` splits on the observer mode) -/
 
@@ -131,9 +141,9 @@ theorem inv_interruptible (sig : Signature Op) (env : TyEnv) (p : List Nat) (bod
 theorem inv_select (sig : Signature Op) (env : TyEnv) (p : List Nat) (s : Term) (d : Decision)
     (a0 a1 : Eff Op) :
     ∀ t, check sig env p (.select s d a0 a1) = .ok t →
-      ∃ ty e0 e1 t0 t1, termTy sig env s = some ty ∧ d.arms ty = some (e0, e1) ∧
-        check sig (env ++ e0) (p ++ [0]) a0 = .ok t0 ∧
-        check sig (env ++ e1) (p ++ [1]) a1 = .ok t1 ∧
+      ∃ ty arms t0 t1, termTy sig env s = some ty ∧ d.arms ty = some arms ∧
+        check sig (env ++ arms.1) (p ++ [0]) a0 = .ok t0 ∧
+        check sig (env ++ arms.2) (p ++ [1]) a1 = .ok t1 ∧
         t = ⟨Ty.join t0.answer t1.answer, t0.error.join t1.error,
           t0.requires.union t1.requires⟩ := by
   aesop
@@ -157,14 +167,14 @@ theorem inv_yieldNow (sig : Signature Op) (env : TyEnv) (p : List Nat) (priority
 
 theorem inv_awaitFiber_join (sig : Signature Op) (env : TyEnv) (p : List Nat) (fiber : Term) :
     ∀ t, check sig env p (.awaitFiber fiber .joinEffect) = .ok t →
-      ∃ handle value error, termTy sig env fiber = some handle ∧
-        fiberTy handle = some (value, error) ∧ t = ⟨value, error, Requirement.empty⟩ := by
+      ∃ (handle : Ty) (pair : Ty × Ty), termTy sig env fiber = some handle ∧
+        fiberTy handle = some pair ∧ t = ⟨pair.1, pair.2, Requirement.empty⟩ := by
   aesop
 
 theorem inv_awaitFiber_await (sig : Signature Op) (env : TyEnv) (p : List Nat) (fiber : Term) :
     ∀ t, check sig env p (.awaitFiber fiber .awaitValue) = .ok t →
-      ∃ handle value error, termTy sig env fiber = some handle ∧
-        fiberTy handle = some (value, error) ∧ t = EffTy.pure (.exitOf value error) := by
+      ∃ (handle : Ty) (pair : Ty × Ty), termTy sig env fiber = some handle ∧
+        fiberTy handle = some pair ∧ t = EffTy.pure (.exitOf pair.1 pair.2) := by
   aesop
 
 theorem inv_withFiber (sig : Signature Op) (env : TyEnv) (p : List Nat) (action : ActionTerm Op) :
@@ -306,52 +316,50 @@ theorem inv_action_forkScoped (sig : Signature Op) (env : TyEnv) (p : List Nat) 
 
 theorem inv_action_runIn (sig : Signature Op) (env : TyEnv) (p : List Nat) (target scope : Term) :
     ∀ t, checkAction sig env p (.runIn target scope) = .ok t →
-      ∃ handle value error, termTy sig env target = some handle ∧
-        fiberTy handle = some (value, error) ∧ termTy sig env scope = some Ty.scope ∧
+      ∃ (handle : Ty) (pair : Ty × Ty), termTy sig env target = some handle ∧
+        fiberTy handle = some pair ∧ termTy sig env scope = some Ty.scope ∧
         t = EffTy.pure .unit := by
   aesop
 
 theorem inv_action_interrupt (sig : Signature Op) (env : TyEnv) (p : List Nat) (target : Term) :
     ∀ t, checkAction sig env p (.interrupt target) = .ok t →
-      ∃ handle value error, termTy sig env target = some handle ∧
-        fiberTy handle = some (value, error) ∧ t = EffTy.pure .unit := by
+      ∃ (handle : Ty) (pair : Ty × Ty), termTy sig env target = some handle ∧
+        fiberTy handle = some pair ∧ t = EffTy.pure .unit := by
   aesop
 
 theorem inv_action_interruptScoped (sig : Signature Op) (env : TyEnv) (p : List Nat)
     (target : Term) :
     ∀ t, checkAction sig env p (.interruptScoped target) = .ok t →
-      ∃ handle value error, termTy sig env target = some handle ∧
-        fiberTy handle = some (value, error) ∧ t = EffTy.pure .unit := by
+      ∃ (handle : Ty) (pair : Ty × Ty), termTy sig env target = some handle ∧
+        fiberTy handle = some pair ∧ t = EffTy.pure .unit := by
   aesop
 
 theorem inv_action_interruptAll_self (sig : Signature Op) (env : TyEnv) (p : List Nat)
     (targets : Term) :
     ∀ t, checkAction sig env p (.interruptAll targets none) = .ok t →
-      ∃ inner value error, termTy sig env targets = some (.list inner) ∧
-        fiberTy inner = some (value, error) ∧ t = EffTy.pure .unit := by
+      ∃ (inner : Ty) (pair : Ty × Ty), termTy sig env targets = some (.list inner) ∧
+        fiberTy inner = some pair ∧ t = EffTy.pure .unit := by
   aesop
 
 theorem inv_action_interruptAll_by (sig : Signature Op) (env : TyEnv) (p : List Nat)
     (targets who : Term) :
     ∀ t, checkAction sig env p (.interruptAll targets (some who)) = .ok t →
-      ∃ inner value error, termTy sig env targets = some (.list inner) ∧
-        fiberTy inner = some (value, error) ∧ termTy sig env who = some .nat ∧
+      ∃ (inner : Ty) (pair : Ty × Ty), termTy sig env targets = some (.list inner) ∧
+        fiberTy inner = some pair ∧ termTy sig env who = some .nat ∧
         t = EffTy.pure .unit := by
   aesop
 
 theorem inv_action_awaitAll (sig : Signature Op) (env : TyEnv) (p : List Nat) (targets : Term) :
     ∀ t, checkAction sig env p (.awaitAll targets) = .ok t →
-      ∃ inner value error, termTy sig env targets = some (.list inner) ∧
-        fiberTy inner = some (value, error) ∧
-        t = EffTy.pure (.list (.exitOf value error)) := by
+      ∃ (inner : Ty) (pair : Ty × Ty), termTy sig env targets = some (.list inner) ∧
+        fiberTy inner = some pair ∧ t = EffTy.pure (.list (.exitOf pair.1 pair.2)) := by
   aesop
 
 theorem inv_action_awaitAllFailFast (sig : Signature Op) (env : TyEnv) (p : List Nat)
     (targets : Term) :
     ∀ t, checkAction sig env p (.awaitAllFailFast targets) = .ok t →
-      ∃ inner value error, termTy sig env targets = some (.list inner) ∧
-        fiberTy inner = some (value, error) ∧
-        t = EffTy.pure (.list (.exitOf value error)) := by
+      ∃ (inner : Ty) (pair : Ty × Ty), termTy sig env targets = some (.list inner) ∧
+        fiberTy inner = some pair ∧ t = EffTy.pure (.list (.exitOf pair.1 pair.2)) := by
   aesop
 
 theorem inv_action_snapshotChildren (sig : Signature Op) (env : TyEnv) (p : List Nat) :
@@ -389,8 +397,8 @@ theorem inv_action_getId (sig : Signature Op) (env : TyEnv) (p : List Nat) :
 theorem inv_action_closeScope (sig : Signature Op) (env : TyEnv) (p : List Nat)
     (scope exit : Term) :
     ∀ t, checkAction sig env p (.closeScope scope exit) = .ok t →
-      ∃ value error, termTy sig env scope = some Ty.scope ∧
-        termTy sig env exit = some (.exitOf value error) ∧ t = EffTy.pure .unit := by
+      ∃ pair : Ty × Ty, termTy sig env scope = some Ty.scope ∧
+        termTy sig env exit = some (.exitOf pair.1 pair.2) ∧ t = EffTy.pure .unit := by
   aesop
 
 /-! ## `checkLayer` — ten arms, one of which is a refusal -/

@@ -16,10 +16,8 @@ import Effect4.Codegen.Schema
 import Effect4.Codegen.Target
 import Effect4.Store.Cascade
 import Effect4.Schema.Bridge
-import Effect4.Schema.Endpoint
 import Effect4.Schema.Codec
 import Effect4.Schema.Image
-import Effect4.Schema.Transform
 
 /-!
 # Effect4.Api — the application face
@@ -547,9 +545,7 @@ def checkLayer (l : Effect4.Program.Authoring.LayerSrc NativeOp) (table : RowTab
   | .ok layer =>
     match h : Effect4.Program.Checker.checkLayer sig [] layer with
     | .error refusal => .error (.typing refusal)
-    | .ok ty =>
-      .ok ⟨layer, ty, (Effect4.Program.Checker.checkLayer_eq sig [] layer).symm.trans
-        (congrArg Except.toOption h)⟩
+    | .ok ty => .ok ⟨layer, ty, congrArg Except.toOption h⟩
 
 namespace TypedLayer
 
@@ -597,10 +593,8 @@ export Effect4.Codegen.Artefact (render)
 
 export Effect4.Store (CascadingStore)
 
-/-! ## Higher-Order Schema APIs and Functions -/
+/-! ## The program image -/
 
-export Effect4.Schema (Endpoint ApiSpec SchemaFn SchemaTransform
-  titleKey descriptionKey documentationKey httpMethodKey httpPathKey deprecatedKey)
-export Effect4.Schema (ProgramImage Transform PureMap)
+export Effect4.Schema (ProgramImage)
 
 end Effect4.Api

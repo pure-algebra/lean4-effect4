@@ -89,13 +89,9 @@ $(GEN)/derived: $(DERIVED_SOURCES) $(DERIVED_TRACES) | build
 	$(PY) scripts/generate.py --only derived
 	@mkdir -p $(GEN) && touch $@
 
-$(GEN)/specs: $(GEN)/derived tools/Conform/Cli/EmitSpecs.lean tools/Conform/Effect4/specs.json $(TRACE)/Program/Typing.trace
-	$(PY) scripts/generate.py --only specs
-	@mkdir -p $(GEN) && touch $@
-
 EFF_SOURCES := src/OCaml5/Tools/EffGen.lean $(wildcard src/OCaml5/Eff/*.lean) $(WIRE_TAGS) \
   scripts/generate-engine-structure.py scripts/lib/program_structure.py ocaml/engine/api_engine.ml
-$(GEN)/eff: $(GEN)/specs $(EFF_SOURCES) $(CORE)
+$(GEN)/eff: $(GEN)/derived $(EFF_SOURCES) $(CORE)
 	$(PY) scripts/generate.py --only eff
 	@mkdir -p $(GEN) && touch $@
 
@@ -155,7 +151,7 @@ $(GEN)/census: $(GEN)/schema-ts generated/effect-runtime-census.tsv
 	@mkdir -p $(GEN) && touch $@
 
 # The groups generate.py can regenerate into a temporary directory (no host runtime).
-HERMETIC_GROUPS := derived specs eff wire cas ts readme
+HERMETIC_GROUPS := derived eff wire cas ts readme
 GEN_GROUPS := $(HERMETIC_GROUPS) lcnf truth host-protocol schema-ts census
 
 .PHONY: gen gen-hermetic $(addprefix gen-,$(GEN_GROUPS)) clean-gen
@@ -167,7 +163,7 @@ clean-gen: ## forget the generation markers (the next `make gen` re-cuts everyth
 	rm -rf $(GEN)
 
 # Every committed path a generator writes. The drift check diffs exactly these.
-GENERATED_PATHS := $(DERIVED_OUT) src/Effect4/Laws/Program/Typing/Specs.lean \
+GENERATED_PATHS := $(DERIVED_OUT) \
   ocaml/eff ocaml/goldens/eff ocaml/engine/cas/goldens ocaml/engine/e4_program_layout.ml \
   ocaml/engine/e4_program_layout.json \
   ocaml/gen/api_gen.ml ocaml/gen/fibers_gen.ml ocaml/gen/machine_gen.ml ocaml/engine/api_engine.ml \
@@ -466,7 +462,7 @@ help: ## this list
 	@echo '                     ocaml, ingest, ingest-smoke, host-protocol, census, schema-ts, corpus,'
 	@echo '                     schema-pins, schema-host, compat, tools'
 	@echo '                     (each skipped while its inputs are unchanged; -B forces)'
-	@echo '  gen-<group>        one generated group: derived, specs, eff, wire, cas, ts, readme, lcnf,'
+	@echo '  gen-<group>        one generated group: derived, eff, wire, cas, ts, readme, lcnf,'
 	@echo '                     truth, host-protocol, schema-ts, census'
 
 clean: ## lake clean (drops the build, the generation and check markers)

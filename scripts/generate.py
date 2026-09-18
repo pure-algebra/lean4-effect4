@@ -39,7 +39,7 @@ def install(source, destination, checking):
 # import; `eff`, `wire` and `cas` cut the OCaml estate from them; `ts` cuts the TypeScript
 # estate; `readme` renders the ingest tables out of three files `ts` just wrote. `lcnf` is
 # the explicit Phase 1 route and is requested by name.
-ALL = ['derived', 'specs', 'eff', 'wire', 'cas', 'ts', 'readme']
+ALL = ['derived', 'eff', 'wire', 'cas', 'ts', 'readme']
 
 # The four LCNF outputs; each carries the exact command that regenerates it in its header.
 LCNF = ['ocaml/gen/fibers_gen.ml', 'ocaml/gen/machine_gen.ml',
@@ -71,13 +71,6 @@ def generate(families, output):
                 # Schema depends on the Json projection just checked/installed.
                 module = canonical.removeprefix('src/').removesuffix('.lean').replace('/', '.')
                 run(['lake', 'build', module])
-        if 'specs' in families:
-            run(['lake', 'build', 'Conform.Cli.EmitSpecs', 'Effect4.Program.Typing'])
-            canonical = 'src/Effect4/Laws/Program/Typing/Specs.lean'
-            temp = out / canonical
-            run(['lake', 'env', 'lean', '-M4096', '--run', 'tools/Conform/Cli/EmitSpecs.lean',
-                 'tools/Conform/Effect4/specs.json', str(temp)])
-            install(temp, ROOT / canonical, checking)
         routes = [('eff', 'EffGen', 'ocaml/eff'),
                   ('wire', 'EffWire', 'ocaml/goldens/eff'),
                   ('cas', 'CasGoldens', 'ocaml/engine/cas/goldens'),

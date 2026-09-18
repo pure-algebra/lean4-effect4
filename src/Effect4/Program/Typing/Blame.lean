@@ -1,4 +1,4 @@
-import Effect4.Program.Typing
+import Effect4.Program.Typing.Rules
 
 /-!
 # Program.Typing.Blame — the vocabulary of the located refusal (DI-86)

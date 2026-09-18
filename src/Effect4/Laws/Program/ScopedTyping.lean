@@ -1,4 +1,5 @@
 import Effect4.Program.Typing
+import Effect4.Laws.Program.Typing.Sound
 
 /-!
 # Scoped typing — exact service-requirement discharge (DI-63)
@@ -21,7 +22,8 @@ variable {Op : Type}
 /-- DI-63: the full typing equation, including refused bodies. -/
 theorem effTy_scoped (sig : Signature Op) (env : TyEnv) (body : Eff Op) :
     effTy sig env (.scoped body) =
-      (effTy sig env body).map (fun t => { t with requires := bodyRequires sig t }) := rfl
+      (effTy sig env body).map (fun t => { t with requires := bodyRequires sig t }) :=
+  Conform.Effect4.Typing.effTy_scoped sig env body
 
 /-- Scoping retains exactly A/E and removes only the signature's Scope requirement. -/
 theorem effTy_scoped_some (sig : Signature Op) (env : TyEnv) (body : Eff Op)

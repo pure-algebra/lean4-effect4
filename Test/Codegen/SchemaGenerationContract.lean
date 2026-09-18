@@ -141,74 +141,6 @@ open Effect4.Program Effect4.Schema.Bridge
 #check ofSchema_schema
 #check ofSchema_schema_cty
 
-/-! ## Higher-Order Schema APIs, Functions, and Combinators -/
-
-open Effect4.Schema Effect4.Store
-
-private def getUserEndpoint : Endpoint :=
-  (Endpoint.make "getUser")
-    |>.external
-    |>.withTitle "Get User"
-    |>.withDescription "Fetch a user record by string ID"
-    |>.withHttp "GET" "/users/:id"
-    |>.withInput .string
-    |>.withOutput (Ty.tagged "User" .string)
-    |>.withError .string
-
-#guard getUserEndpoint.name = "getUser"
-#guard getUserEndpoint.input = .string
-#guard getUserEndpoint.output = Ty.tagged "User" .string
-#guard getUserEndpoint.error = .string
-
-private def userRow : Effect4.Program.Row := getUserEndpoint.toRow
-#guard userRow.name = "getUser"
-#guard userRow.request = .string
-#guard userRow.answer = .prod (.lit "User") .string
-#guard userRow.error = .string
-
-private def userDoc : Document := getUserEndpoint.document
-#guard userDoc.references.length = 3
-#guard (userDoc.references.map (·.key)) = ["request", "answer", "error"]
-
-private def userApi : ApiSpec :=
-  (ApiSpec.make "UserApi")
-    |>.withTitle "User Management API"
-    |>.withVersion "1.2.0"
-    |>.addEndpoint getUserEndpoint
-
-#guard userApi.endpoints.length = 1
-#guard userApi.toRowTable.length = 1
-#guard userApi.document.references.length = 3
-
-private def doubleFn : SchemaFn :=
-  SchemaFn.pure "double" .nat .nat fun
-    | .nat n => .nat (n * 2)
-    | v => v
-
-#guard doubleFn.apply (.nat 21) = some (.nat 42)
-#guard doubleFn.apply (.str "not a nat") = none
-#guard doubleFn.apply .unit = none
-
-private def fallibleDivFn : SchemaFn :=
-  SchemaFn.fallible "safeHalf" .nat .nat .string fun
-    | .nat n => if n % 2 == 0 then some (.nat (n / 2)) else none
-    | _ => none
-
-#guard fallibleDivFn.apply (.nat 10) = some (.nat 5)
-#guard fallibleDivFn.apply (.nat 11) = none
-
-#guard (SchemaFn.compose? doubleFn doubleFn).isSome
-#guard ((SchemaFn.compose? doubleFn doubleFn).get!.apply (Val.nat 5)) = some (Val.nat 20)
-
-#guard Ty.tagged "Profile" .string = .prod (.lit "Profile") .string
-#guard Ty.record [("name", .string), ("active", .bool)] =
-  .prod (.prod (.lit "name") .string) (.prod (.lit "active") .bool)
-
-#print axioms SchemaFn.apply_sound
-#print axioms titleKey_lawful
-#print axioms httpMethodKey_lawful
-#print axioms deprecatedKey_lawful
-
 /-! ## Multi-Tier Cascading CAS -/
 
 open Effect4.Store
@@ -416,45 +348,9 @@ private def pLoopProg : Api.Program :=
 #guard (Api.run pLoopProg 300).exit = some (Exit.success Store.Val.unit)
 #guard (Api.run pLoopProg 300).stores.refs = [Store.Val.nat 1]
 
--- 7. Schema-Backed Endpoint Invocation (Endpoint -> RowTable -> Eff)
-private def pCallGetUser (id : String) : Api.Program :=
-  .perform (.external 0) (.lit (.str id))
-
-#guard Api.wellTyped (pCallGetUser "alice") userApi.toRowTable
-#guard Api.typeOf (pCallGetUser "alice") userApi.toRowTable =
-  some ⟨.prod (.lit "User") .string, .string, Effect4.Machine.Env.Requirement.empty⟩
-#guard Api.roundTrip (pCallGetUser "alice") userApi.toRowTable = .ok (pCallGetUser "alice")
-
--- Verify TypeScript reification: endpoint spelling reifies directly to host call
-#guard match Api.print (pCallGetUser "alice") userApi.toRowTable with
-  | .ok expr => TypeScript.Render.expr TypeScript.house0 0 expr == "getUser(\"alice\")"
-  | .error _ => false
-
--- Oracle completion answer
-private def aliceAnswer : Machine.Completion Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann :=
-  .ofExit (.success (Store.Val.list [Store.Val.str "User", Store.Val.str "Alice Smith"]))
-
-#guard (Api.run (pCallGetUser "alice") 1000 [aliceAnswer] userApi.toRowTable).exit =
-  some (.success (Store.Val.list [Store.Val.str "User", Store.Val.str "Alice Smith"]))
-
--- Refusal on wrong answer type
-private def wrongTypeAnswer : Machine.Completion Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann :=
-  .ofExit (.success (Store.Val.nat 42))
-
-#guard match Api.replayChecked (pCallGetUser "alice") 1000 [Api.evaluate, .answerAsync Api.root 0 wrongTypeAnswer] [] userApi.toRowTable with
-  | .inr (_, _, why, _) => why == .answerType Api.root 0 (.prod (.lit "User") .string)
-  | _ => false
-
--- Error propagation from external call
-private def userNotFoundAnswer : Machine.Completion Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann :=
-  .ofExit (.failure (Cause.fail (.text "User not found")))
-
-#guard (Api.run (pCallGetUser "alice") 1000 [userNotFoundAnswer] userApi.toRowTable).exit =
-  some (.failure (Cause.fail (.text "User not found")))
-
--- 8. CAS Wire Serialization & Exact Deserialization
-private def pCallBytes := Api.bytesOf (pCallGetUser "alice")
-#guard Api.ofBytes pCallBytes = some (pCallGetUser "alice")
+-- 8. CAS Wire Serialization & Exact Deserialization (the loop program as the serialized one)
+private def pCallBytes := Api.bytesOf pLoopProg
+#guard Api.ofBytes pCallBytes = some pLoopProg
 
 private def pGenBytes := Api.bytesOf pGen
 #guard Api.ofBytes pGenBytes = some pGen
@@ -480,7 +376,7 @@ private def csWithProg : CascadingStore :=
 
 -- Deserializing back from CAS payload
 #guard match (csWithProg.find progCasDigest).map (·.payload) with
-  | some (Store.Val.bytes b) => Api.ofBytes b = some (pCallGetUser "alice")
+  | some (Store.Val.bytes b) => Api.ofBytes b = some pLoopProg
   | _ => false
 
 -- Cascading upstream lookup via promote
@@ -492,29 +388,6 @@ private def csTiered : CascadingStore :=
 #guard csTiered.contains progCasDigest
 #guard csTiered.find progCasDigest = some progCasNode
 #guard csTiered.findWithSource progCasDigest = some (progCasNode, .upstream)
-
--- 10. SchemaTransform Composition over Eff
-private def tId : SchemaTransform NativeOp := SchemaTransform.id .nat
-private def tSucc : SchemaTransform NativeOp :=
-  { name := "succ", source := .nat, target := .nat,
-    program := .succeed (.app "succ" (.cons (.var 0) .nil)) }
-
-private def tComposedUser : SchemaTransform NativeOp :=
-  SchemaTransform.compose tSucc tId
-
-#guard tComposedUser.source = .nat
-#guard tComposedUser.target = .nat
-#guard tComposedUser.error = .never
-
--- Applied with an input: 41 + 1 = 42
-private def pAppliedTransform : Api.Program :=
-  .bind (.succeed (.lit (.nat 41))) tComposedUser.program
-
-#guard Api.wellTyped pAppliedTransform
-#guard Api.typeOf pAppliedTransform = some (.pure .nat)
-#guard (Api.run pAppliedTransform 100).outcome = Api.Outcome.finished
-#guard (Api.run pAppliedTransform 100).exit = some (Exit.success (Store.Val.nat 42))
-#guard (Api.runSync pAppliedTransform 100).2 = Exit.success (Store.Val.nat 42)
 
 end Test.Codegen.SchemaGenerationContract
 
