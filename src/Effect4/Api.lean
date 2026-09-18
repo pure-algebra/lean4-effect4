@@ -511,6 +511,73 @@ def authorModule (m : Effect4.Program.Authoring.Module NativeOp) (table : RowTab
   | .error refusal => .error (.scope refusal)
   | .ok program => (check program table).mapError .typing
 
+/-! ## The environment as data
+
+What a program needs of its surroundings, and what a layer gives one, are both computed by
+the type system (`EffTy.requires`, `LayerTy`) and were reachable from neither this face nor
+an author. They are projections of a certificate, so they cost one line each, and they are
+what lets an agent read a composition before running anything. -/
+
+/-- The full keys this program performs against, in the canonical key order. -/
+def requires {table : RowTable} (t : Typed table) : List ServiceKey := t.ty.requires.elems
+
+/-- Whether the program needs nothing of its surroundings: `Effect<A, E, never>`. -/
+def closed {table : RowTable} (t : Typed table) : Bool :=
+  t.ty.requires == Effect4.Machine.Env.Requirement.empty
+
+/-- A layer with its signature: what it provides, its error column, what it still needs
+(`LayerTy`, `Layer<ROut, E, RIn>`). A layer could be written before this and neither checked
+nor printed on its own: `Authoring.elaborate` took a program, and the first error in a layer
+a library shipped surfaced when some program provided it. -/
+structure TypedLayer (sig : Signature NativeOp) where
+  layer : LayerTerm NativeOp
+  ty : LayerTy
+  ok : Effect4.Program.layerTy sig layer = some ty
+
+/-- The agent's one call for a layer, as `author` is for a program: elaborated at the empty
+scope, then typed, with the checker's located refusal when it does not type. Total, by
+`explainLayer_none_iff`: no layer is refused without a reason at a path. -/
+def checkLayer (l : Effect4.Program.Authoring.LayerSrc NativeOp) (table : RowTable := [])
+    (sig : Signature NativeOp := nativeSignature table) :
+    Except AuthorRefusal (TypedLayer sig) :=
+  match Effect4.Program.Authoring.elaborateLayer l with
+  | .error refusal => .error (.scope refusal)
+  | .ok layer =>
+    match h : Effect4.Program.layerTy sig layer with
+    | some ty => .ok ⟨layer, ty, h⟩
+    | none =>
+      match h2 : Effect4.Program.explainLayer sig [] layer with
+      | some refusal => .error (.typing refusal)
+      | none =>
+        absurd ((Effect4.Program.explainLayer_none_iff sig layer []).mp h2) (by simp [h])
+
+namespace TypedLayer
+
+variable {sig : Signature NativeOp}
+
+/-- The keys the layer provides, in the canonical key order. -/
+def provides (l : TypedLayer sig) : List ServiceKey := l.ty.out.elems
+
+/-- The keys the layer still needs before it can be built. -/
+def requires (l : TypedLayer sig) : List ServiceKey := l.ty.requires.elems
+
+/-- Whether the layer needs nothing of its surroundings: a deployment that is complete
+(`LayerTy.Closed`). A merge of two siblings where one meant to feed the other is exactly the
+layer whose `requires` is not empty, which is why this is worth reading before a program
+exists. -/
+def closed (l : TypedLayer sig) : Bool :=
+  l.ty.requires == Effect4.Machine.Env.Requirement.empty
+
+/-- The printed layer (`Codegen.Templates.printLayerT`, the printer's own fold). -/
+def print (l : TypedLayer sig) : Except PrintRefusal TypeScript.Expr :=
+  Effect4.Codegen.Templates.printLayerT sig l.layer
+
+end TypedLayer
+
+/-- The printed layer, as `print` is for a program. -/
+def printLayer {sig : Signature NativeOp} (l : TypedLayer sig) :
+    Except PrintRefusal TypeScript.Expr := l.print
+
 /-! ## Schema, as syntax -/
 
 /-- A persisted Schema document as its `Schema.Struct({…})` Program. -/

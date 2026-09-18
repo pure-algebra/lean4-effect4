@@ -1,4 +1,5 @@
 import Effect4.Api.Built
+import Effect4.Program.Authoring.Services
 
 /-!
 # Api.Author — one call from what an author wrote to what a run needs
