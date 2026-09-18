@@ -393,3 +393,17 @@ against a table supplied out of band). **Renamed**: `with_` → `provide` (Effec
   no author-written flag at a pin: yes); the author seat's C1 (the minted-spelling fix in
   `Sugar.bindWith`, `Sugar.andThen`, `Loops.iterateWith`, generated `Forms.lean`: one
   regeneration, next slice).
+
+## The four scouts of the evening and the one list (2026-09-17)
+
+Scout C (the MCP surface, `2026-09-17-mcp-surface-scout-C.md`), scout D (Effect Schema interop
+dogfooded and the applications regroup, `2026-09-17-schema-interop-scout-D.md`), scout E (the
+Schema AST path and the LCNF-to-TypeScript lowering, `2026-09-17-schema-ast-lowering-scout-E.md`:
+coherent for the encoded-side, program-free fragment; 91 of 7,008 vendored exports are AST-typed
+entries; Design A with `Ty.app`) and scout F (the organizing principle,
+`2026-09-17-coherence-theory-scout-F.md`: one free object per kind presented as data, every other
+representation an algebra by the unique fold or an exact embedding; coherence as the uniqueness of
+the fold; 13 arrows lacking their obligation; the seven-square gate). The coordinator's own notes:
+`2026-09-17-api-consolidation-and-decisions.md` and `2026-09-17-lcnf-capabilities-survey.md` (with
+the owner's LLVM steer, §7). **Every open decision, deduplicated, is
+`2026-09-17-decisions-one-list.md`** — 37 rows, 21 the owner's, 16 scheduled; the order at its end.
