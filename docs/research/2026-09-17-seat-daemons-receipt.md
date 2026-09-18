@@ -109,10 +109,16 @@ Static half, **whole-program, one proof, no case per constructor**:
   (`:129`) say a site that is not the node's own comes from a child the view lists, and
   `nodeSize_child_lt` (`:89`) says that child is smaller. `supervision_isDaemon_flag` (`:171`)
   is the same fact read off `isDaemon`.
-* `nodeSizeLayer` / `nodeSizeAlg` / `nodeSize_child_lt` (`:62-101`) are a local copy of
-  `sizeAlg` / `size_child_lt` from the coordinator's `Laws/Codegen/PrintReadable.lean`, which
-  is not on this branch. **When that module lands the two copies should become one** — this is
-  the only duplication the seat introduces.
+* `nodeSizeLayer` / `nodeSizeAlg` / `nodeSizeLayer_eq` / `le_sum_of_mem` / `nodeSize_pos` /
+  `nodeSize_child_lt` (`:62-101`) are a local copy of the measure. **The coordinator has since
+  landed it once in main** as `src/Effect4/Laws/Program/Size.lean` (`c2688499`, namespace
+  `Effect4.Program`, importing only `Effect4.Program.LayerView`) under the names `sizeLayer`,
+  `sizeAlg`, `sizeLayer_eq`, `le_sum_of_mem`, `size_pos`, `size_child_lt`. This branch's base
+  predates that commit, so **the copy stays as it is and is not grown**: at the merge the
+  coordinator deletes lines `:62-101` and renames the uses. There are exactly four uses outside
+  the copied section — `:146`, `:149`, `:158`, `:167` (`nodeSizeAlg` twice, `nodeSize_pos`,
+  `nodeSize_child_lt`) — plus one mention in the module docstring at `:22`. This is the only
+  duplication the seat introduces.
 
 Machine half — every fork the machine can make, each appending exactly one `forked` event
 carrying the flag the site carries:
@@ -216,6 +222,17 @@ observation (`:154-161`). Eight `#print axioms` stamps at `[propext, Quot.sound]
 (`:164-180`); `status_persists` is `[propext]` alone.
 
 ## 5. What the observation should show — for the run and author seats
+
+> **Ruled by the coordinator after this section was written.** Two edits land at the merge, both
+> by the coordinator, neither by this seat: the old `Api.Run` (`src/Effect4/Api.lean:272`) is
+> renamed `Api.Inspection`, so this seat's `Run.fibers` / `Run.unpinnedDaemonsAlive` /
+> `Run.daemonsQuiet` / `Run.forked` (`src/Effect4/Api/Supervision.lean:275-284`) become
+> `Inspection.*`; and the run seat's `Run.Observation` gains **`daemons : List FiberId`**, fed
+> by `unpinnedDaemonsAlive`. So the answer below is right about `fibers` and overruled on the
+> second field. The one caveat the ruling inherits is the one §5 gives for leaving it out: a
+> field that is a function of another field can drift, and the guard against it is that
+> `daemons` is computed by `Api.unpinnedDaemonsAlive` at the point `Observation` is built and
+> never assigned from anywhere else. `daemonsQuiet` stays a function — `daemons.isEmpty`.
 
 ### The run seat: one field on `Observation`
 
@@ -358,10 +375,14 @@ No `sorry`, `native_decide`, `partial`, `unsafe`, `axiom`, `extern` or `implemen
 2. **No law that a `forked` event is the *only* way a fiber enters `m.fibers`.** `spawn` is
    the only caller of `RunFiber.make` inside the machine (`Api.load` makes the root), which is
    what makes `FiberStatus.root` exact; that is read off the source, not proved.
-3. **The `nodeSizeAlg` duplication** with the coordinator's `PrintReadable.lean` (§3a).
-4. **No law about `runIn`.** A `fiberRunIn` pin reads as `.pinned` and is correct data, but no
+3. **No law about `runIn`.** A `fiberRunIn` pin reads as `.pinned` and is correct data, but no
    theorem says so; `linkScope` is shared, so the theorem would be `spawn_status_*`'s shape
    over `Cmd.link`.
+
+Two items that were owed here are now **settled by the coordinator, at the merge, not by this
+seat**: the `nodeSizeAlg` duplication against `src/Effect4/Laws/Program/Size.lean` (§3a), and
+the `Api.Run` → `Api.Inspection` rename with `Observation.daemons` (§5). Neither is a change
+to this branch.
 
 ## 8. Decisions for the owner
 
@@ -374,3 +395,7 @@ No `sorry`, `native_decide`, `partial`, `unsafe`, `axiom`, `extern` or `implemen
 * **D4 — the authoring spellings** (§5): `fork` / `daemon in scope` / `detach`, with no
   author-written `daemon` flag at a pin. The author seat owns it; this is the recommendation
   the data supports.
+
+Not open: the shape of the observation. The coordinator ruled it while this seat was
+finishing — `Observation` gains `fibers` **and** `daemons : List FiberId` (§5) — and does both
+merge edits itself.
