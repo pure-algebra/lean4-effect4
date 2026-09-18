@@ -97,6 +97,26 @@ Answer these, in order, with the literature and against the tree.
    a multi-sorted algebraic theory with the six sorts, or a fibration of types over programs,
    or a compiler-pipeline reading where everything is a language and a translation with a
    simulation. Pick one and defend it against the alternatives.
+4b. **The schema/program overlap — the owner's sharpest instance of "holding water".** Effect's
+   Schema does not only model types and values: its transformations are first-class and
+   effectful (`SchemaTransformation`, `Schema.decodeTo`, effectful getters and `Class`
+   constructors, `SchemaAST.Link.transformation` at `vendor/effect-4.0.0-rc.112/src/
+   SchemaAST.ts:401`), so a schema is also a program language. Two ways to hold that: (i) use
+   Schema's own effectful semantics to govern program operation — schemas as the language in
+   which our transformations are written and run; (ii) keep Schema a *data* language whose
+   effectful slots are holes filled by our programs — which is what the tree does today:
+   `src/Effect4/Schema/Transform.lean` types a transformation as an `Eff` program with error and
+   requirement columns, `Schema/EffectfulField.lean` and `Schema/Endpoint.lean` follow, and
+   under the scout-E proposal the AST's `encoding` link *is* such a program. Say, from the
+   theory of (4), which of (i)/(ii) is coherent — where the sort of programs lives, whether a
+   two-sorted signature (types over programs, or programs over types) is the right shape, what
+   Effect's effectful schema surface then *is* on the TypeScript side (the printed image of a
+   Lean `Transform`, or a foreign opaque program), and how typing and schema representation in
+   Lean stay separate from program semantics without losing the effectful transformations.
+   The owner's words: "do we want to utilize that to enforce our own semantics in terms of
+   program operation? but then how do we separate that from just the typing and the schema
+   representation in Lean?"
+
 5. **Where the metaprogramming sits.** The sugar and forms (Lean macros generating `Src`),
    the generated lifts (from a table), the equation-lemma emitter, the type generation. In the
    principle of (4), is metaprogramming an arrow (a fold from a table), an object (a
