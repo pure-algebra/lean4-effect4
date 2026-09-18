@@ -504,10 +504,9 @@ theorem awaits_live (m : Machine) (unparked : exitedUnparked m = true) (a : Awai
     ∃ f ∈ m.fibers, f.id = a.1 ∧ (a.1, statusOf m f) ∈ fiberStatuses m ∧
       (statusOf m f).live = true := by
   obtain ⟨f, hf, hid, hparked⟩ := awaits_parked m a member
-  refine ⟨f, hf, hid, ?_, parked_status_live m unparked f hf a.2.1 hparked⟩
-  rw [← hid]
+  have live := parked_status_live m unparked f hf a.2.1 hparked
   unfold fiberStatuses
-  exact List.mem_map_of_mem hf
+  aesop
 
 /-! ## The property the check decides -/
 
