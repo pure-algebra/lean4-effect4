@@ -213,11 +213,12 @@ def Tpls.length : Tpls → Nat
   | .nil => 0
   | .cons _ t => Tpls.length t + 1
 
-/-- `apartBy sorts earlier later`: a reason no instance of `later` (its child holes filled by
-child images) matches `earlier`. -/
-def apartBy (sorts : List Effect4.Program.ArgSort) : Tpl → Tpl → Bool
-  | .call (.ident h') args', .call (.ident h) args =>
-    if h' ≠ h then true else
+/-- `shapeApart sorts earlier later`: a reason, by shape, no instance of `later` (its child
+holes filled by child images) matches `earlier`: formers that never cross, an arrow against a
+block, a conditional against a child hole, an unannotated first `let` against an annotated one,
+argument lists of different lengths, `pipe` receivers of different inner heads. -/
+def shapeApart (sorts : List Effect4.Program.ArgSort) : Tpl → Tpl → Bool
+  | .call _ args', .call _ args =>
     match args', args with
     | .cons (.arrow _) .nil, .cons (.arrowBlock _ _) .nil => true
     | .cons (.arrowBlock _ _) .nil, .cons (.arrow _) .nil => true
@@ -227,9 +228,17 @@ def apartBy (sorts : List Effect4.Program.ArgSort) : Tpl → Tpl → Bool
     | _, _ => args'.length != args.length
   | .method (.hole _) name' (.cons (.call (.ident a) _) .nil),
     .method (.hole _) name (.cons (.call (.ident b) _) .nil) => name' != name || a != b
-  | .ident h', .call (.ident _) _ => true
-  | .call (.ident _) _, .ident _ => true
+  | .ident _, .call _ _ | .call _ _, .ident _ => true
+  | .call _ _, .method _ _ _ | .method _ _ _, .call _ _ => true
+  | .ident _, .method _ _ _ | .method _ _ _, .ident _ => true
+  | .callSpread _ _, .method _ _ _ | .method _ _ _, .callSpread _ _ => true
   | _, _ => false
+
+/-- Apart by head (`head_of_match`: a match forces the head) or by shape. -/
+def apartBy (sorts : List Effect4.Program.ArgSort) (t' t : Tpl) : Bool :=
+  (match t'.head?, t.head? with
+    | some h', some h => h' != h
+    | _, _ => false) || shapeApart sorts t' t
 
 theorem matchTs_length (n : Nat) : ∀ (ts : Tpls) (es : List Expr) (σ : Subst),
     matchTs n ts es = some σ → Tpls.length ts = es.length
@@ -248,31 +257,32 @@ theorem insts_length (n : Nat) (τ : Subst) : ∀ (ts : Tpls) (es : List Expr),
 /-- The calculus lemma of apartness: an instance of the later skeleton, its child holes filled
 by node-like images, matches no earlier skeleton it is apart from. -/
 theorem match_apart (n : Nat) (τ : Subst) (sorts : List Effect4.Program.ArgSort) (t' t : Tpl)
-    (x : Expr)
-    (hapart : apartBy sorts t' t = true) (hinst : inst n τ t = some x)
+    (x : Expr) (hapart : apartBy sorts t' t = true) (hinst : inst n τ t = some x)
     (hnode : ∀ i y, childHole sorts i = true → lookup τ i = some (.expr y) → nodeLike y = true) :
     matchT n t' x = none := by
   unfold apartBy at hapart
-  split at hapart
-  · -- two calls with identifier heads
-    rename_i h' args' h args
-    split at hapart
-    · -- different heads
-      rename_i hne
-      cases hx : matchT n (.call (.ident h') args') x with
-      | none => rfl
-      | some σ =>
-        have h1 := head_of_match n _ x σ hx (name := h') rfl
-        have h2 := head_of_inst n τ _ x hinst (name := h) rfl
-        rw [h1] at h2
-        exact absurd (Option.some.inj h2) hne
-    · split at hapart <;> aesop (add norm simp [matchT_arrow_arrowBlock, matchT_arrowBlock_arrow,
+  rw [Bool.or_eq_true] at hapart
+  rcases hapart with hhead | hshape
+  · -- different heads
+    cases hx : matchT n t' x with
+    | none => rfl
+    | some σ =>
+      cases h' : t'.head? with
+      | none => simp only [h'] at hhead; cases hhead
+      | some a =>
+        cases h : t.head? with
+        | none => simp only [h', h] at hhead; cases hhead
+        | some b =>
+          have h1 := head_of_match n _ x σ hx h'
+          have h2 := head_of_inst n τ _ x hinst h
+          rw [h1, Option.some.injEq] at h2
+          subst h2
+          simp only [h', h, bne_self_eq_false] at hhead; cases hhead
+  · unfold shapeApart at hshape
+    split at hshape
+    · split at hshape <;> aesop (add norm simp [matchT_arrow_arrowBlock, matchT_arrowBlock_arrow,
         matchT_cond_nodeLike, matchAnn], safe forward [matchTs_length, insts_length, hnode])
-  · aesop
-  · aesop
-  · aesop
-  · cases hapart
-
+    all_goals aesop
 
 /-- A skeleton with a node-like top: what every rigid row of an expression family has. -/
 def Tpl.nodeTop : Tpl → Bool
@@ -780,5 +790,71 @@ theorem printRow_nodeLike {row : Row} {r : Term} {x : Expr} (h : printRow row r 
     nodeLike x = true := by
   unfold printRow at h
   aesop (add norm simp [printRowHead, printMethod, nodeLike])
+
+
+/-! ## The pairwise fact of the table: no row before the printing row matches its image -/
+
+/-- The heads of the action rows: what a `withFiber` image is headed by. -/
+def actionHeads : List String := table.filterMap fun r =>
+  if r.fam = .action then match r.out with | .tpl t => t.head? | _ => none else none
+
+/-- `rowsApart earlier later`: the reason `earlier` cannot match an image of `later`, by the
+shape of `later`'s output. A skeleton against a rigid skeleton: `apartBy`. A skeleton against a
+transparent row: the image is an action's (headed by an action head the skeleton does not have)
+or a name (which no rigid skeleton matches). A skeleton against the row call: its head is
+reserved, and the row call's image is headed by a spelling or nothing; the transparent row
+before the row call hands the image to the action family, whose rows are all such skeletons.
+Statement rows are apart by former. -/
+def rowsApart (rj rk : Templates.Row) : Bool :=
+  match rk.out with
+  | .tpl t =>
+    match rj.out with
+    | .refuse _ | .stmt _ => true
+    | .rowCall => false
+    | .tpl t' =>
+      if t.rigid then
+        t'.rigid && (match argSorts rk.fam rk.ctor with
+          | some sorts => apartBy sorts t' t
+          | none => false)
+      else
+        t'.rigid && (match argSorts rk.fam rk.ctor with
+          | some [.child .action] => (t'.head?).any fun h => !actionHeads.contains h
+          | some [.path] => t'.notName
+          | _ => false)
+  | .rowCall =>
+    match rj.out with
+    | .refuse _ | .stmt _ => true
+    | .rowCall => false
+    | .tpl t' =>
+      (t'.rigid && (t'.head?).any (reserved.contains ·)) ||
+        (!t'.rigid && argSorts rj.fam rj.ctor == some [.child .action])
+  | .stmt t => match rj.out with | .stmt t' => t'.former != t.former | _ => true
+  | .refuse _ => true
+
+theorem table_apart : (List.range table.length).all (fun k => (List.range k).all fun j =>
+    match table[j]?, table[k]? with
+    | some rj, some rk => rj.fam != rk.fam || rowsApart rj rk
+    | _, _ => true) = true := by decide
+
+/-- The shape of the rows of the expression families: a rigid skeleton has a node-like top and
+a head, a transparent one hands to the action family or reads a name; every action row is a
+rigid skeleton with a reserved head, or a refusal. -/
+def rowShape (row : Templates.Row) : Bool :=
+  match row.fam, row.out with
+  | .eff, .tpl t | .action, .tpl t | .layer, .tpl t =>
+    if t.rigid then t.nodeTop && (t.head?).isSome || t.nodeTop && row.fam == .layer
+    else argSorts row.fam row.ctor == some [.child .action] ||
+      argSorts row.fam row.ctor == some [.path]
+  | _, _ => true
+
+theorem table_shape : table.all rowShape = true := by decide
+
+def actionRowHeaded (row : Templates.Row) : Bool :=
+  row.fam != .action || match row.out with
+    | .tpl t => t.rigid && (t.head?).any (reserved.contains ·)
+    | .refuse _ => true
+    | _ => false
+
+theorem table_actionHeaded : table.all actionRowHeaded = true := by decide
 
 end Effect4.Program
