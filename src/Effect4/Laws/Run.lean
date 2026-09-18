@@ -100,6 +100,8 @@ theorem play_append (s : Run) (a b : List Command) : s.play (a ++ b) = (s.play a
 opened under, however many rows it has played. -/
 theorem result_header (p : Runner) (c : Command) :
     (Api.Runner.result p c).session.header = p.session.header := by
+  -- `aesop (add norm unfold [Api.Runner.result, …])` closes this, but its proof reaches
+  -- `Classical.choice`, which the axiom gate refuses; the four arms are one `rfl` each.
   cases c with
   | bind call token =>
     unfold Api.Runner.result Api.HostSession.bindCall
@@ -164,8 +166,8 @@ theorem journal_replays (s : Run) (h : Reached s) :
   induction h with
   | opened b id budget profile => rfl
   | step s c hs ih =>
-    rw [step_built, step_id, step_budget, step_profile, step_journal, play_append, ih,
-      play_single]
+    aesop (add norm simp [step_built, step_id, step_budget, step_profile, step_journal,
+      play_append, play_single, ih])
 
 /-! ## Driving is playing -/
 
@@ -176,24 +178,7 @@ theorem drive_eq_play {σ : Type} (r : Reactor σ) (rounds : Nat) (s : Run) (st 
     (driveFrom r rounds s st).1 = s.play (driveFrom r rounds s st).2.1 := by
   induction rounds generalizing s st with
   | zero => rfl
-  | succ rounds ih =>
-    rw [driveFrom]
-    split
-    · split
-      · rfl
-      · split
-        · rfl
-        · dsimp only
-          rw [play_append]
-          exact ih _ _
-    · split
-      · rfl
-      · dsimp only
-        split
-        · rfl
-        · dsimp only
-          rw [play_append]
-          exact ih _ _
+  | succ rounds ih => aesop (add norm simp [driveFrom, play_append, ih])
 
 /-! ## Opening cannot refuse -/
 
@@ -212,37 +197,9 @@ field of the certificate, so none of them can fail. This is the fact `HostSessio
 needs and the tree did not have. -/
 theorem admitProgram_certificate (program : Api.Program) (table : RowTable)
     (c : AdmittedProgram program table) : admitProgram program table = .ok c := by
-  unfold admitProgram
-  split
-  · rename_i pos h
-    rw [c.intFreeTable] at h
-    cases h
-  · split
-    · rename_i pos h
-      rw [c.intFreeProgram] at h
-      cases h
-    · split
-      · rename_i h
-        unfold checkTypedProgram at h
-        split at h
-        · rename_i hnone
-          rw [c.typed] at hnone
-          cases hnone
-        · cases h
-      · rename_i typing h
-        have hty : typing.ty = c.ty := Option.some.inj (typing.typed.symm.trans c.typed)
-        split
-        · rename_i pos hpos
-          rw [hty, c.intFreeType] at hpos
-          cases hpos
-        · split
-          · split
-            · rename_i why hrunnable
-              rw [c.runnable] at hrunnable
-              cases hrunnable
-            · exact congrArg Except.ok (admitted_unique program table _ c)
-          · rename_i hlawful
-            exact absurd c.lawful hlawful
+  aesop (add norm unfold [admitProgram, checkTypedProgram])
+    (add norm simp [c.intFreeTable, c.intFreeProgram, c.typed, c.intFreeType, c.lawful,
+      c.runnable]) (add safe apply admitted_unique)
 
 /-- **O-1.** Opening cannot refuse. With a `Built` in hand the checked `start` of
 `HostSession` returns exactly the session `Run.open` builds: its five identity refusals are
@@ -255,10 +212,8 @@ theorem open_total (b : Api.Built) (id : String) (budget : Api.Budget) (profile 
     Api.HostSession.start b.program b.table profile
         ⟨Api.HostSession.version, id, profile, b.table⟩ budget.compileFuel
       = .ok (Run.open b id budget profile).session := by
-  unfold Api.HostSession.start
-  rw [if_neg (fun h => h rfl), if_neg hid, if_neg (fun h => h rfl), if_neg (fun h => h rfl),
-    admitProgram_certificate b.program b.table b.admitted]
-  rfl
+  have hadmit := admitProgram_certificate b.program b.table b.admitted
+  aesop (add norm unfold [Api.HostSession.start]) (add norm simp [hid, hadmit])
 
 /-! ## Small facts the answer rows need -/
 
@@ -268,11 +223,8 @@ theorem readReply_append_fresh (slots : List ReplySlot) (key : Key)
     (h : slots.any (fun slot => slot.key == key) = false) :
     Api.HostSession.readReply (slots ++ [⟨key, none⟩]) key = none := by
   induction slots with
-  | nil => simp only [List.nil_append, Api.HostSession.readReply, if_pos]
-  | cons slot rest ih =>
-    simp only [List.any_cons, Bool.or_eq_false_iff, beq_eq_false_iff_ne] at h
-    simp only [List.cons_append, Api.HostSession.readReply, if_neg h.1]
-    exact ih h.2
+  | nil => aesop (add norm simp [Api.HostSession.readReply])
+  | cons slot rest ih => aesop (add norm simp [Api.HostSession.readReply])
 
 /-- A key with no binding is bound by the one appended at the end, and that is the binding
 the session finds. -/
@@ -280,11 +232,8 @@ theorem find_append_fresh (active : List BoundCall) (bound : BoundCall) (key : K
     (hkey : bound.key = key) (h : active.any (fun b => b.key == key) = false) :
     (active ++ [bound]).find? (fun b => b.key == key) = some bound := by
   induction active with
-  | nil => simp only [List.nil_append, List.find?_cons, hkey, beq_self_eq_true]
-  | cons first rest ih =>
-    simp only [List.any_cons, Bool.or_eq_false_iff] at h
-    simp only [List.cons_append, List.find?_cons, h.1]
-    exact ih h.2
+  | nil => aesop
+  | cons first rest ih => aesop
 
 /-- A machine holding a call is waiting on at least that one. -/
 theorem awaits_ne_nil (m : NativeMachine) (fiber : FiberId) (token : Nat)
@@ -298,10 +247,8 @@ theorem awaits_ne_nil (m : NativeMachine) (fiber : FiberId) (token : Nat)
     refine List.mem_filterMap.mpr ⟨f, List.mem_of_find?_eq_some hf, ?_⟩
     rw [hp, hid]
     aesop (add norm simp [h])
-  have hne : awaits m ≠ [] := List.ne_nil_of_mem hmem
-  cases hlist : awaits m with
-  | nil => exact absurd hlist hne
-  | cons a rest => rfl
+  have hne := List.ne_nil_of_mem hmem
+  aesop (add norm simp [hne])
 
 /-- A machine holding a call is waiting on a host, so the protocol state is `awaitingAsync`
 — the state every receipt and every answer is an edge from. -/
@@ -314,9 +261,7 @@ theorem observe_awaitingAsync (m : NativeMachine) (fiber : FiberId) (token : Nat
 /-- A receipt is an edge from `awaitingAsync` to itself. -/
 theorem allows_submit (key : Key) :
     Api.HostProtocol.allows .awaitingAsync (.submit key) .awaitingAsync = true := by
-  show Api.HostProtocol.hostProtocol.transitions.contains
-    ⟨.awaitingAsync, .submit, .awaitingAsync⟩ = true
-  decide
+  aesop
 
 /-- An answer is an edge from `awaitingAsync` to every state, so the machine it leaves is
 never a protocol refusal. -/
@@ -334,10 +279,7 @@ a control carries none. -/
 theorem advance_not_envelope {program : Api.Program} {table : RowTable}
     (s : Session program table) (fuel : Nat) (decision : NativeDecision) :
     (Api.HostSession.advance s fuel decision).phase ≠ .refused .envelope := by
-  unfold Api.HostSession.advance
-  dsimp only
-  repeat' split
-  all_goals intro h; cases h
+  aesop (add norm unfold [Api.HostSession.advance])
 
 /-! ## The claims are the machine's -/
 
@@ -369,9 +311,7 @@ theorem at_of_requestOf (s : Run) (key : Key) (op : NativeOp) (request : Val)
 /-- A machine holding no call at a key has no claim for it. -/
 theorem at_none (s : Run) (key : Key) (h : requestOf s.machine key.fiber key.token = none) :
     Api.HostSession.Call.at s key = none := by
-  unfold Api.HostSession.Call.at
-  rw [h]
-  rfl
+  aesop (add norm unfold [Api.HostSession.Call.at]) (add norm simp [h])
 
 /-- **O-5.** A call built from the machine is never stale: `Call.at` restates exactly what
 `bindCall` checks it against. -/
@@ -406,44 +346,37 @@ completion received against it. -/
 theorem receive_rows (s : Run) (key : Key) (c : Answer) (call : Call)
     (h : Api.HostSession.Call.at s key = some call) :
     Rows.receive s key c = [.bind call key.token, .submit (Rows.reply s call key c)] := by
-  unfold Rows.receive
-  rw [h]
+  aesop (add norm unfold [Rows.receive]) (add norm simp [h])
 
 /-- A key the machine holds no call at has nothing to receive. -/
 theorem receive_none (s : Run) (key : Key) (c : Answer)
     (h : Api.HostSession.Call.at s key = none) : Rows.receive s key c = [] := by
-  unfold Rows.receive
-  rw [h]
+  aesop (add norm unfold [Rows.receive]) (add norm simp [h])
 
 /-- **O-3.** Answering is receiving, then applying. -/
 theorem answer_rows (s : Run) (key : Key) (c : Answer) (call : Call)
     (h : Api.HostSession.Call.at s key = some call) :
     Rows.answer s key c = Rows.receive s key c ++ [.apply key] := by
-  unfold Rows.answer Rows.receive
-  rw [h]
-  rfl
+  aesop (add norm unfold [Rows.answer, Rows.receive]) (add norm simp [h])
 
 /-- A key the machine holds no call at has nothing to answer. -/
 theorem answer_none (s : Run) (key : Key) (c : Answer)
     (h : Api.HostSession.Call.at s key = none) : Rows.answer s key c = [] := by
-  unfold Rows.answer
-  rw [h]
+  aesop (add norm unfold [Rows.answer]) (add norm simp [h])
 
 /-- The three rows of an answer, written out. -/
 theorem answer_rows_three (s : Run) (key : Key) (c : Answer) (call : Call)
     (h : Api.HostSession.Call.at s key = some call) :
     Rows.answer s key c =
       [.bind call key.token, .submit (Rows.reply s call key c), .apply key] := by
-  unfold Rows.answer
-  rw [h]
+  aesop (add norm unfold [Rows.answer]) (add norm simp [h])
 
 /-! ## A receipt and an answer that are accepted -/
 
 /-- A slot is there for a key that was just bound. -/
 theorem any_append_key (slots : List ReplySlot) (key : Key) :
     (slots ++ [(⟨key, none⟩ : ReplySlot)]).any (fun slot => slot.key == key) = true := by
-  simp only [List.any_append, List.any_cons, List.any_nil, beq_self_eq_true, Bool.true_or,
-    Bool.or_true]
+  aesop
 
 /-- Preflight succeeds on a reply that names a binding the machine still holds and carries a
 completion the machine admits; the decision it returns is the answer that reply records. -/
@@ -458,11 +391,9 @@ theorem preflight_ok {program : Api.Program} {table : RowTable} (s : Session pro
       .ok (.answerAsync bound.call.fiber bound.token reply.completion) := by
   have hreq : requestOf s.machine bound.call.fiber bound.token =
       some (bound.call.op, bound.call.request) := henv.2.1
-  unfold Api.HostSession.preflight
-  rw [if_neg (fun h => h hver), if_neg (fun h => h hsess), hfind]
-  simp only [hid, ne_eq, not_true_eq_false, if_false, api_requestOf, hreq, reduceCtorEq]
-  rw [acceptReply_of_envelope table s.machine (bound.record reply) henv]
-  rfl
+  have haccept := acceptReply_of_envelope table s.machine (bound.record reply) henv
+  aesop (add norm unfold [Api.HostSession.preflight])
+    (add norm simp [hver, hsess, hfind, hid, api_requestOf, hreq, haccept])
 
 /-- A receipt on a bound key with a fresh slot, an admitted completion and a machine waiting
 on a host is accepted: it stores the completion and changes nothing else. -/
@@ -478,6 +409,7 @@ theorem submit_accepted {program : Api.Program} {table : RowTable} (s : Session 
     (hobs : Api.HostProtocol.observe s.machine = .awaitingAsync) :
     Api.HostSession.submit s reply =
       ⟨.preflight, { s with pending := Api.HostSession.storeReply s.pending reply }⟩ := by
+  -- aesop closes this too, and its proof reaches `Classical.choice`; the gate refuses that.
   unfold Api.HostSession.submit
   rw [hslot, preflight_ok s reply bound hver hsess hfind hid henv]
   simp only [Option.isSome_none, Bool.false_eq_true, if_false, hany, Bool.not_true, hobs,
@@ -497,6 +429,8 @@ theorem applyReply_accepted {program : Api.Program} {table : RowTable} (s : Sess
   cases fuel with
   | zero => exact Or.inr rfl
   | succ fuel =>
+    -- aesop reaches the last `if` and stops there: which side it takes is the difference
+    -- between the two disjuncts, so the split is the statement, not a missing fact.
     unfold Api.HostSession.applyReply
     simp only [hfind, hread, hpre, hobs, allows_answer key, Bool.not_true, Bool.false_eq_true,
       if_false]
@@ -639,33 +573,18 @@ theorem answer_accepted (s : Run) (key : Key) (c : Answer) (call : Call)
 theorem play_built (s : Run) (rows : List Command) : (s.play rows).built = s.built := by
   induction rows generalizing s with
   | nil => rfl
-  | cons c rest ih => rw [play_cons, ih, step_built]
+  | cons c rest ih => aesop (add norm simp [play_cons, ih, step_built])
 
 /-- A machine waiting on a call is holding it. -/
 theorem requestOf_of_mem_awaits (m : NativeMachine) (a : Await) (h : a ∈ awaits m) :
     requestOf m a.1 a.2.1 = some (a.2.2.1, a.2.2.2) := by
   obtain ⟨f, hf, hsome⟩ := List.mem_filterMap.mp h
-  split at hsome
-  · rename_i token hpark
-    cases hreq : requestOf m f.id token with
-    | none =>
-      rw [hreq] at hsome
-      cases hsome
-    | some pair =>
-      rw [hreq] at hsome
-      simp only [Option.map_some, Option.some.injEq] at hsome
-      rw [← hsome]
-      exact hreq
-  · cases hsome
+  aesop
 
 /-- The row a host call names is an external row of the run's table. -/
 theorem rowOf_external (s : Run) (op : NativeOp) (row : Program.Row) (h : s.rowOf op = some row) :
     ∃ i, op = .external i ∧ externalRow s.built.table i = some row := by
-  unfold Run.rowOf at h
-  split at h
-  · rename_i i
-    exact ⟨i, rfl, h⟩
-  · cases h
+  aesop (add norm unfold [Run.rowOf])
 
 /-- What the drive knows about the call it picked: the machine is waiting on it, and the
 session has neither a binding nor a slot for it. -/
@@ -673,9 +592,10 @@ theorem freshCall_facts (s : Run) (await : Await) (h : s.freshCall = some await)
     await ∈ s.outstanding ∧
       (s.session.active.any fun b => b.key == (⟨await.1, await.2.1⟩ : Key)) = false ∧
       (s.session.pending.any fun slot => slot.key == (⟨await.1, await.2.1⟩ : Key)) = false := by
-  unfold Run.freshCall at h
   have hp := List.find?_some h
-  refine ⟨List.mem_of_find?_eq_some h, ?_, ?_⟩ <;> aesop
+  have hm := List.mem_of_find?_eq_some h
+  unfold Run.freshCall at h hp
+  aesop
 
 /-- A host stays inside the envelope: every completion it gives for a call a machine is
 holding, on the row that call was made on, is one the machine admits. It is the third part of
@@ -776,9 +696,7 @@ theorem answer_once (s : Run) (key : Key) (bound : BoundCall) (c : Answer)
   have hguard := Api.HostSession.applied_guard_absent s.session s.budget.fuel bound
     (by rw [hkey]; exact hfind) (by rw [hkey]; exact hphase)
   rw [hkey] at hguard
-  refine answer_none _ _ _ (at_none _ _ ?_)
-  rw [← hfiber, ← htoken]
-  exact hguard
+  aesop (add norm simp [hfiber, htoken, hguard]) (add safe apply [answer_none, at_none])
 
 /-- And the recorded row is refused: the machine accepts no second completion for a call
 whose answer was applied (`applied_reply_refused`). -/
@@ -830,15 +748,12 @@ theorem replay_machine (program : Api.Program) (fuel : Nat) (tape : List Api.Dec
     (Api.replay program fuel tape [] table compileFuel).machine =
       machineOf (replayFrom program table fuel tape (Api.load program compileFuel)) := by
   rw [replay_eq]
-  cases replayFrom program table fuel tape (Api.load program compileFuel) <;> rfl
+  aesop (add norm unfold [runOf, machineOf])
 
 /-- An empty tape reaches the machine it started from. -/
 theorem machineOf_nil (program : Api.Program) (table : RowTable) (fuel : Nat)
     (m : Api.Machine) : machineOf (replayFrom program table fuel [] m) = m := by
-  unfold replayFrom
-  simp only [replayEval]
-  repeat' split
-  all_goals rfl
+  aesop (add norm unfold [replayFrom, machineOf]) (add norm simp [replayEval])
 
 /-- One decision of a tape, when the machine is live and the step had enough fuel. -/
 theorem replayFrom_cons (program : Api.Program) (table : RowTable) (fuel : Nat)
@@ -847,8 +762,7 @@ theorem replayFrom_cons (program : Api.Program) (table : RowTable) (fuel : Nat)
     replayFrom program table fuel (d :: tape) m =
       replayFrom program table fuel tape (steppedBy program fuel table m d) := by
   unfold enoughFor at henough
-  unfold replayFrom steppedBy
-  simp only [replayEval, hstuck, henough, if_true]
+  aesop (add norm unfold [replayFrom, steppedBy]) (add norm simp [replayEval, hstuck, henough])
 
 /-- What a control row can do: refuse and change nothing, or step the machine and retire the
 bindings the step removed. -/
@@ -859,22 +773,7 @@ theorem advance_step {program : Api.Program} {table : RowTable} (s : Session pro
         ⟨if enoughFor program table fuel s.machine d then .progressed else .frontier,
           Api.HostSession.retire { s with
             machine := steppedBy program fuel table s.machine d }⟩) := by
-  unfold Api.HostSession.advance
-  split
-  · exact Or.inl ⟨_, rfl⟩
-  · split
-    · exact Or.inl ⟨_, rfl⟩
-    · rename_i hlive
-      split
-      rename_i pair machine enough heq
-      split
-      · exact Or.inl ⟨_, rfl⟩
-      · refine Or.inr ⟨?_, ?_⟩
-        · cases hs : s.machine.stuck with
-          | none => rfl
-          | some why => rw [hs] at hlive; exact absurd rfl hlive
-        · unfold enoughFor steppedBy
-          rw [heq]
+  aesop (add norm unfold [Api.HostSession.advance, enoughFor, steppedBy])
 
 /-- A control row that progressed: the machine before it was not stuck, the step had enough
 fuel, and the machine it leaves is the one the raw stepper leaves. Retiring the bindings a
@@ -885,18 +784,8 @@ theorem advance_progressed {program : Api.Program} {table : RowTable}
     s.machine.stuck = none ∧ enoughFor program table fuel s.machine d = true ∧
       (Api.HostSession.advance s fuel d).session.machine =
         steppedBy program fuel table s.machine d := by
-  rcases advance_step s fuel d with ⟨why, hrefuse⟩ | ⟨hstuck, hstep⟩
-  · rw [hrefuse] at h
-    cases h
-  · refine ⟨hstuck, ?_, ?_⟩
-    · rw [hstep] at h
-      cases he : enoughFor program table fuel s.machine d with
-      | true => rfl
-      | false =>
-        rw [he] at h
-        simp only [Bool.false_eq_true, if_false, reduceCtorEq] at h
-    · rw [hstep]
-      rfl
+  have hcases := advance_step s fuel d
+  aesop
 
 /-- **O-10.** The ordinary run is the ordinary run: the journal `[evaluate, flush]` leaves
 the machine `Api.run` leaves. Both step by `stepDecisionState`, one decision at a time; the
