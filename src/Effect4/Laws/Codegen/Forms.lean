@@ -181,7 +181,7 @@ theorem as_typed (sig : Signature NativeOp) (env : TyEnv)
       some ⟨value.ty, a.error.normalize, a.requires⟩ := by
   change effTy sig env (.bind body (.succeed (.lit value))) = _
   simp only [Conform.Effect4.Typing.effTy_bind, Conform.Effect4.Typing.effTy_succeed, ha, termTy,
-    Option.bind_eq_bind, Option.bind_some, Option.map_some, EffTy.pure,
+    argTy, litArgTy_false, Option.bind_eq_bind, Option.bind_some, Option.map_some, EffTy.pure,
     Ty.join_never_right, Requirement.empty, Requirement.union, Row.union_empty_right]
 
 /-- The table's `asVoid` is the unit instance of the same core expansion. -/

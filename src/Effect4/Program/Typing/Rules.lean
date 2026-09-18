@@ -6,7 +6,8 @@ import Effect4.Machine.Context
 
 What a type assignment needs beside the program: the effect type `EffTy` (`A`, `E` as a
 canonical union, the requirement row `R`), the signature `Signature Op`, the environment
-`TyEnv` (one `Ty` per positional variable), the term typer (`termTy`/`termsTy`, `argTy`), the
+`TyEnv` (one `Ty` per positional variable), the term typer (the fold `argTy`/`argsTy`; `termTy` its
+projection outside a const-generic atom), the
 cause typer, the generator state `GenTy` and the layer signature `LayerTy` with their
 operations, the first-failure residual of `catchIf`, the scope discharge `bodyRequires`, and
 the weakening lemmas of terms and causes. The checker itself is `Program/Checker.lean` and its
@@ -67,11 +68,11 @@ structure Signature (Op : Type) where
 variable {Op : Type}
 
 /-- The literal rule (DI-15, amended 2026-09-11: "mirror TypeScript"). A string literal types
-as `string` in general position (`Lit.ty`, the rule `termTy` uses) and keeps its literal type
+as `string` in general position (`Lit.ty`, what `termTy` answers) and keeps its literal type
 `lit s` exactly as a direct argument of a const-generic atom (`Signature.constAtom`), which is
 TypeScript's `const` type-parameter rule: `pair("A", m)` is `readonly ["A", string]`,
 `succeed "x"` stays `string`. Every other literal is its `Lit.ty` in both positions. The rule
-is stated once, here; `termsTy` applies it to the direct arguments of an application and
+is stated once, here; `argsTy` applies it to the direct arguments of an application and
 nowhere else. -/
 def litArgTy (const : Bool) : Lit → Ty
   | .str s => if const then .lit s else .string
@@ -80,55 +81,47 @@ def litArgTy (const : Bool) : Lit → Ty
   | .bool _ => .bool
 
 mutual
-  /-- The type of a pure term. An application's arguments are typed under the atom's
-  const-generic flag (`Signature.constAtom`), so a string literal argument of `pair` is a
-  `lit` and a string literal argument of any other atom is a `string`. -/
-  def termTy (sig : Signature Op) (env : TyEnv) : Term → Option Ty
+  /-- The type of a term in argument position, as a fold: a variable from the environment, the
+  literal rule under the enclosing atom's const-generic flag, an application by its atom at its
+  arguments' types under the atom's own flag (`Signature.constAtom`) — so a string literal
+  argument of `pair` is a `lit` and a string literal argument of any other atom is a `string`.
+  The flag is the accumulator; `fold_of` reads the algebra (`Program/Folds/Term.lean`). -/
+  def argTy (sig : Signature Op) (env : TyEnv) (const : Bool) : Term → Option Ty
     | .var index => env[index]?
-    | .lit value => some value.ty
+    | .lit value => some (litArgTy const value)
     | .app atom args => do
-      let tys ← termsTy sig env (sig.constAtom atom) args
+      let tys ← argsTy sig env (sig.constAtom atom) args
       sig.atomOf atom tys
-  /-- The argument types of an application: a literal argument by the literal rule
-  (`litArgTy`, under the atom's const flag), every other argument by `termTy`. -/
-  def termsTy (sig : Signature Op) (env : TyEnv) (const : Bool) : Terms → Option (List Ty)
+  /-- The argument types of an application, argument by argument. -/
+  def argsTy (sig : Signature Op) (env : TyEnv) (const : Bool) : Terms → Option (List Ty)
     | .nil => some []
-    | .cons (.lit value) tail => do
-      let rest ← termsTy sig env const tail
-      some (litArgTy const value :: rest)
-    | .cons (.var index) tail => do
-      let t ← termTy sig env (.var index)
-      let rest ← termsTy sig env const tail
-      some (t :: rest)
-    | .cons (.app atom args) tail => do
-      let t ← termTy sig env (.app atom args)
-      let rest ← termsTy sig env const tail
+    | .cons head tail => do
+      let t ← argTy sig env const head
+      let rest ← argsTy sig env const tail
       some (t :: rest)
 end
 
-/-- The type of one argument of an application: the literal rule for a literal, `termTy` for
-a variable or a nested application. `termsTy` is this, argument by argument
-(`termsTy_cons`). -/
-def argTy (sig : Signature Op) (env : TyEnv) (const : Bool) : Term → Option Ty
-  | .lit value => some (litArgTy const value)
-  | .var index => termTy sig env (.var index)
-  | .app atom args => termTy sig env (.app atom args)
+/-- The type of a pure term: the fold outside any const-generic atom, where the literal rule
+is `Lit.ty` (`litArgTy_false`). -/
+def termTy (sig : Signature Op) (env : TyEnv) (t : Term) : Option Ty :=
+  argTy sig env false t
 
-/-- `termsTy` on a cons (`argTy` for the head), as nested `Option.bind`s. -/
-theorem termsTy_cons (sig : Signature Op) (env : TyEnv) (const : Bool) (head : Term)
+/-- `argsTy` on a cons, as nested `Option.bind`s. -/
+theorem argsTy_cons (sig : Signature Op) (env : TyEnv) (const : Bool) (head : Term)
     (tail : Terms) :
-    termsTy sig env const (.cons head tail) =
+    argsTy sig env const (.cons head tail) =
       (argTy sig env const head).bind fun t =>
-        (termsTy sig env const tail).bind fun rest => some (t :: rest) := by
-  cases head <;> rfl
+        (argsTy sig env const tail).bind fun rest => some (t :: rest) :=
+  rfl
 
 /-- The general rule for a literal in argument position, read back: outside a const-generic
 atom the literal rule is `Lit.ty`. -/
 theorem litArgTy_false (value : Lit) : litArgTy false value = value.ty := by
   cases value <;> rfl
 
-/-- `argTy` answers either by the literal rule or by `termTy`: the case split the term laws
-take instead of a case split on the term. -/
+/-- `argTy` answers either by the literal rule or by `termTy` (the flag reaches a literal
+argument and nothing else): the case split the term laws take instead of a case split on the
+term. -/
 theorem argTy_cases (sig : Signature Op) (env : TyEnv) (const : Bool) (head : Term) (t : Ty)
     (h : argTy sig env const head = some t) :
     (∃ value, head = .lit value ∧ t = litArgTy const value) ∨ termTy sig env head = some t := by
@@ -289,33 +282,34 @@ private theorem lookup_weaken {α : Type} (pre post : List α) (inserted : α) (
       · simpa [Var.weaken, h] using ih index
 
 mutual
-  /-- Inserting a slot preserves the whole term-typing result, including refusal. -/
-  theorem termTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty)
+  /-- Inserting a slot preserves the whole term-typing result, including refusal, under either
+  flag. -/
+  theorem argTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty) (const : Bool)
       (term : Term) :
-      termTy sig (pre ++ inserted :: post) (Term.weaken pre.length term) =
-        termTy sig (pre ++ post) term :=
+      argTy sig (pre ++ inserted :: post) const (Term.weaken pre.length term) =
+        argTy sig (pre ++ post) const term :=
     match term with
     | .var index => lookup_weaken pre post inserted index
     | .lit _ => rfl
     | .app atom args => by
-      simp only [Term.weaken, termTy, termsTy_weaken sig pre post inserted _ args]
+      simp only [Term.weaken, argTy, argsTy_weaken sig pre post inserted _ args]
 
-  theorem termsTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty)
+  theorem argsTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty)
       (const : Bool) (terms : Terms) :
-      termsTy sig (pre ++ inserted :: post) const (Terms.weaken pre.length terms) =
-        termsTy sig (pre ++ post) const terms :=
+      argsTy sig (pre ++ inserted :: post) const (Terms.weaken pre.length terms) =
+        argsTy sig (pre ++ post) const terms :=
     match terms with
     | .nil => rfl
-    | .cons (.lit _) tail => by
-      simp only [Terms.weaken, Term.weaken, termsTy, termsTy_weaken sig pre post inserted const tail]
-    | .cons (.var index) tail => by
-      simp only [Terms.weaken, Term.weaken, termsTy, termTy, lookup_weaken,
-        termsTy_weaken sig pre post inserted const tail]
-    | .cons (.app atom args) tail => by
-      simp only [Terms.weaken, Term.weaken, termsTy, termTy,
-        termsTy_weaken sig pre post inserted _ args,
-        termsTy_weaken sig pre post inserted const tail]
+    | .cons head tail => by
+      simp only [Terms.weaken, argsTy, argTy_weaken sig pre post inserted const head,
+        argsTy_weaken sig pre post inserted const tail]
 end
+
+/-- `termTy`'s weakening: the fold's at `false`. -/
+theorem termTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty) (term : Term) :
+    termTy sig (pre ++ inserted :: post) (Term.weaken pre.length term) =
+      termTy sig (pre ++ post) term :=
+  argTy_weaken sig pre post inserted false term
 
 theorem causeTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty)
     (cause : CauseTerm) :

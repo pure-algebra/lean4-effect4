@@ -8,13 +8,11 @@ import Effect4.Program.Typing
 /-!
 # The hand traversals of `Term` / `Terms` as folds
 
-Twelve of the fourteen the census lists (`docs/core/traversal-census.md` §3.3): the leaf
-printer (`printTerm`/`printTerms`), the reader's `Terms.names?` and `noRow`, `Terms.toList`,
-`scoped` and `weaken` (the level in the carrier), the evaluator `evalTerm`/`evalTerms` (the
-environment in the carrier) and `argTy`, each as a `TermAlgebra` with its connectors. Not here:
-`termTy`/`termsTy` — `termsTy` splits on the term child's constructor and calls `termTy` on the
-rebuilt child (`.cons (.var index) tail => termTy sig env (.var index)`), so its homomorphism
-equation holds by cases on the child, not by unfolding; the next shape for `fold_of`.
+Every one the census lists (`docs/core/traversal-census.md` §3.3): the leaf printer
+(`printTerm`/`printTerms`), the reader's `Terms.names?` and `noRow`, `Terms.toList`, `scoped`
+and `weaken` (the level in the carrier), the evaluator `evalTerm`/`evalTerms` (the environment
+in the carrier) and the term typer `argTy`/`argsTy` (the const flag in the carrier; `termTy` is
+its projection at `false`, `Typing/Rules.lean`), each as a `TermAlgebra` with its connectors.
 -/
 
 namespace Effect4.Program

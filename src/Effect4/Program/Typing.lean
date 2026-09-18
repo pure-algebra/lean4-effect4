@@ -115,7 +115,7 @@ mutual
       | some _ => simp only [Stmts.weaken, checkStmts, toOption_throw]
       | none =>
         cases head <;> simp only [Stmts.weaken, Stmt.weaken, checkStmts, checkStmt,
-          toOption_bind, toOption_pure, toOption_throw, toOption_expect, toOption_term?,
+          toOption_bind, toOption_pure, toOption_throw, toOption_term?,
           toOption_fold, StmtTy.fold.eq_1, StmtTy.fold.eq_2, StmtTy.fold.eq_3,
           apply_ite Except.toOption, Option.bind_some, Option.bind_assoc, termTy_weaken,
           List.append_assoc, List.cons_append, check_weaken, checkStmts_weaken]

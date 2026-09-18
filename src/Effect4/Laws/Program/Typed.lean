@@ -15,7 +15,7 @@ is retired, below).
 This module says which machine values (`src/Effect4/Machine/Stores.lean` `Val`) inhabit which
 types of the program language (`src/Effect4/Program/Eff.lean` `Ty`), and proves three things
 about the native route (`src/Effect4/Program/Native.lean`): a term that types
-(`src/Effect4/Program/Typing.lean` `termTy`) and evaluates (`evalTerm`) evaluates to a value of
+(`src/Effect4/Program/Typing/Rules.lean` `termTy`) and evaluates (`evalTerm`) evaluates to a value of
 its type; a term that types evaluates; and a request value of a `sync` row's request type
 decodes to a store operation (`NativeOp.syncOpOf`). Everything is
 first-order and in `Type 0`; the only `String` operation is `BEq String` on a handle target,
@@ -751,11 +751,11 @@ theorem nativeAtom_typed (atom : String) (tys : List Ty) (ty : Ty) (vs : List Va
 /-! ## Terms -/
 
 /-- `termTy` on an application is the atom's type at the arguments' types, typed under the
-atom's const-generic flag (`Typing.lean`, `termTy`), as an `Option.bind`. `termsTy_cons`
-(`Typing.lean`) is the cons equation, with `argTy` for the head. -/
+atom's const-generic flag (`Typing/Rules.lean`, `argTy`), as an `Option.bind`. `argsTy_cons`
+is the cons equation, with `argTy` for the head. -/
 theorem termTy_app (tys : TyEnv) (atom : String) (args : Terms) :
     termTy nativeSignature tys (.app atom args) =
-      (termsTy nativeSignature tys (nativeConstAtom atom) args).bind (nativeAtomTy atom) := rfl
+      (argsTy nativeSignature tys (nativeConstAtom atom) args).bind (nativeAtomTy atom) := rfl
 
 /-- `evalTerm` on an application is the atom at the arguments' values (`Native.lean:91-93`). -/
 theorem evalTerm_app (env : List Val) (atom : String) (args : Terms) :
@@ -777,7 +777,9 @@ theorem evalTerm_hasTy (t : Term) (env : List Val) (tys : TyEnv) (ty : Ty) (v : 
   cases t with
   | var i => exact hfit.get? hev hty
   | lit l =>
-    have hty' : some l.ty = some ty := hty
+    have hty' : some l.ty = some ty := by
+      simp only [termTy, argTy, litArgTy_false] at hty
+      exact hty
     cases hty'
     exact Lit.toVal_hasTy l v hev
   | app atom args =>
@@ -796,7 +798,7 @@ termination_by structural t
 const flag — a literal argument fits its literal-rule type (`Lit.toVal_hasTy_arg`). -/
 theorem evalTerms_hasTy (ts : Terms) (env : List Val) (tys : TyEnv) (const : Bool)
     (tl : List Ty) (vs : List Val) (hfit : Fits env tys)
-    (hty : termsTy nativeSignature tys const ts = some tl)
+    (hty : argsTy nativeSignature tys const ts = some tl)
     (hev : evalTerms env ts = some vs) : Fits vs tl := by
   cases ts with
   | nil =>
@@ -805,7 +807,7 @@ theorem evalTerms_hasTy (ts : Terms) (env : List Val) (tys : TyEnv) (const : Boo
     cases hty'; cases hev'
     exact Fits.nil
   | cons head tail =>
-    rw [termsTy_cons] at hty
+    rw [argsTy_cons] at hty
     obtain ⟨t1, ht1, hty'⟩ := Option.bind_eq_some_iff.mp hty
     obtain ⟨rest, hrest, hcons⟩ := Option.bind_eq_some_iff.mp hty'
     cases hcons
@@ -854,12 +856,12 @@ theorem evalTerm_isSome (t : Term) (env : List Val) (tys : TyEnv) (ty : Ty)
 termination_by structural t
 /-- The list form of `evalTerm_isSome` (ENSURES 7), under either const flag. -/
 theorem evalTerms_isSome (ts : Terms) (env : List Val) (tys : TyEnv) (const : Bool)
-    (tl : List Ty) (hfit : Fits env tys) (hty : termsTy nativeSignature tys const ts = some tl) :
+    (tl : List Ty) (hfit : Fits env tys) (hty : argsTy nativeSignature tys const ts = some tl) :
     (evalTerms env ts).isSome = true := by
   cases ts with
   | nil => rfl
   | cons head tail =>
-    rw [termsTy_cons] at hty
+    rw [argsTy_cons] at hty
     obtain ⟨t1, ht1, hty'⟩ := Option.bind_eq_some_iff.mp hty
     obtain ⟨rest, hrest, _⟩ := Option.bind_eq_some_iff.mp hty'
     have hhead : (evalTerm env head).isSome = true := by

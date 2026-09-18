@@ -68,7 +68,7 @@ def nativeAtomTy (name : String) (types : List Ty) : Option Ty :=
   (NativeAtom.ofName? name).bind (fun atom => atom.typeOf types)
 
 /-- Which atoms are const-generic, by name, from the same owner (`NativeAtom.constGeneric`):
-the literal rule's flag for `termsTy`. An unknown name is not. -/
+the literal rule's flag for `argsTy`. An unknown name is not. -/
 def nativeConstAtom (name : String) : Bool :=
   (NativeAtom.ofName? name).any NativeAtom.constGeneric
 
