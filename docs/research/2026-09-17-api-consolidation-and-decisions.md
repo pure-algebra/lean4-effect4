@@ -83,7 +83,7 @@ Ordered by how much they distort what an agent sees.
 9. **`gen`/`Stmt` has no authoring lift.** The statement family (`Stmt`, `Stmts`, 364 lines in
    24 files) is reachable from the reader only; an author re-expresses every loop with
    `iterate`/`select` (D §8.1). The owner ruled `gen` stays (2026-09-17). The consequence to
-   confirm is decision D-F: the reader's image and the author's image differ by one constructor
+   confirm is decision D-I: the reader's image and the author's image differ by one constructor
    family that no author can write.
 10. **The daemon words.** `daemonFork` / `daemonForkIn` with the `daemon p [in s]` syntax; no word
     for `forkScoped` (the ambient scope); the daemons seat's D4 asks for `fork` / `daemon p in s`
