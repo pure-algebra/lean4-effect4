@@ -168,6 +168,18 @@
       ]
     },
     {
+      "Note": "The fold of the value sort's free object: one algebra over Store.Val, its children under List (`list`, `ctor`) as positional folds. No guards yet: the fold's first customers are the seventeen hand traversals of Val the census lists, converted by fold_of.",
+      "Name": "ValFold",
+      "Tool": "tools/Effect4Gen/Fold.lean",
+      "Imports": "Effect4.Store.Val",
+      "Out": "src\\Effect4\\Store\\Fold.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Store.Val"
+      ]
+    },
+    {
       "Note": "The fold of the persisted schema carrier: Representation and Check together, their children under List, Option and the four one-parameter records included. A block with a composite position emits no monadic half and no foldMapAt: a foldM over a nested position needs a sequence per position type and has no consumer on this family.",
       "Name": "SchemaFold",
       "Tool": "tools/Effect4Gen/Fold.lean",
