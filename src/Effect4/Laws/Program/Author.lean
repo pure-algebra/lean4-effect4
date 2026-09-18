@@ -86,7 +86,7 @@ theorem Names.resolve_append_ne {target binder : String} (hb : binder ≠ target
 theorem var_push_ne {binder x : String} (hb : binder ≠ x) (env : Env) (p : List Nat) :
     var x (env.push [binder]) p = var x env p := by
   have hr := Names.resolve_append_ne hb env.names
-  unfold var Env.push
+  unfold var minted Env.push
   aesop (add norm simp [hr])
 
 /-- A name only the surface may write is refused where an author writes it, at that site. -/

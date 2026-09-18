@@ -172,22 +172,19 @@ def elabOption : Option TermSrc → Env → List Nat → Except Refusal (Option 
 
 /-! ## Terms: the one name-resolving operation, and the two that resolve nothing -/
 
-/-- A variable by name: the level of its nearest binder. A name under the reserved prefix is
-refused — it is one the surface minted for itself, and reading it through this operation is
-the capture B-9 names. The surface reads its own names with `minted`. -/
-def var (x : String) : TermSrc := fun env p =>
-  if Name.reserved x then .error ⟨p, .reservedName x⟩
-  else
-    match env.names.resolve x with
-    | some i => .ok (.var i)
-    | none => .error ⟨p, .unbound x⟩
-
-/-- A variable the surface minted (`Env.mint`): `var` without the reserved check, because the
-reserved prefix is exactly what this reader is for. An author never calls it. -/
+/-- A variable the surface minted (`Env.mint`): the level of its nearest binder. The reserved
+prefix is exactly what this reader is for, so it does not refuse one. An author never calls
+it; `var` is this with the reserved check in front. -/
 def minted (x : String) : TermSrc := fun env p =>
   match env.names.resolve x with
   | some i => .ok (.var i)
   | none => .error ⟨p, .unbound x⟩
+
+/-- A variable by name: the level of its nearest binder. A name under the reserved prefix is
+refused — it is one the surface minted for itself, and reading it here is the capture B-9
+names. -/
+def var (x : String) : TermSrc := fun env p =>
+  if Name.reserved x then .error ⟨p, .reservedName x⟩ else minted x env p
 
 def lit (value : Lit) : TermSrc := fun _ _ => .ok (.lit value)
 
@@ -228,9 +225,6 @@ def Row.host (spelling : String) (request answer : Ty) (error : Ty := .never)
   ⟨{ name := spelling, spelling := spelling, shape := .call, trailing := [], kind := .async,
      request := request, answer := answer, error := error, requires := [], cite := cite,
      typeArgs := [], registration := .external }⟩
-
-/-- The key this row is declared and called under (`rowKey`, `Program/Table.lean`). -/
-def RowDef.key (r : RowDef) : String × List String := (r.row.spelling, r.row.trailing)
 
 /-- The rows of a list of declarations, in declaration order: the table to supply beside the
 program. A declaration's position in this list is the `NativeOp.external` index that calls it. -/

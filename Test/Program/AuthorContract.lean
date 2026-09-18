@@ -206,6 +206,16 @@ def handler : Src NativeOp := eff do
 #guard (Effect4.Api.author (with_ siblingMistake handler)).toOption.map Effect4.Api.requires
   = some [DbEnv.key, RateEnv.key]
 
+-- The deployed program with no declarations of its own: one call, one built value.
+#guard (Effect4.Api.Author.program (with_ deployment handler)).toOption.map (fun b => b.closed)
+  = some true
+#guard (Effect4.Api.Author.program (with_ deployment handler)).toOption.map
+    (fun b => b.runSync) = some (Exit.success (Val.list [Val.nat 1, Val.nat 2]))
+
+-- The carriers a module declares, in the shape the signature's service table reads.
+#guard ({ services := [Db, Rate], main := succeed unit } : Module NativeOp).serviceTypes
+  = [(Db.key, Ty.nat), (Rate.key, Ty.nat)]
+
 theorem deployment_scoped : LayerSrc.Scoped deployment := by
   unfold deployment services bindings; authoring_scoped
 
