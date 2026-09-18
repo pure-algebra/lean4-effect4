@@ -1103,6 +1103,137 @@ theorem readRow_rowCall_print (hl : LawfulSpelling sig spell) {row : Templates.R
   unfold readRow
   simp only [↓reduceIte, read_printRow hl op hd r hreq hp, rowAnswer, Except.mapError]
 
+
+/-! ## No row before the printing row fires -/
+
+/-- A skeleton with a reserved head does not match the row call's image. -/
+theorem matchT_none_of_reserved (hl : LawfulSpelling sig spell) {op : Op} {r : Term}
+    (hp : printRow (sig.rowOf op) r = .ok x) {t : Tpl} {h : String} (hh : t.head? = some h)
+    (hres : h ∈ reserved) : matchT n t x = none := by
+  cases hm : matchT n t x with
+  | none => rfl
+  | some σ =>
+    have h1 := head_of_match n t x σ hm hh
+    rcases printRow_head hp with h2 | h2 <;> rw [h1] at h2
+    · cases h2
+    · exact absurd (Option.some.inj h2 ▸ hres) (hl.spelling_not_reserved op)
+
+/-- No action row reads the row call's image. -/
+theorem readT_action_none_of_printRow (hl : LawfulSpelling sig spell) {op : Op} {r : Term}
+    (hp : printRow (sig.rowOf op) r = .ok x) (d : Nat) : readT sig spell .action d x = none := by
+  rw [readT, List.findSome?_eq_none_iff]
+  intro p hmem
+  obtain ⟨row, k⟩ := p
+  have hrow : row ∈ table := List.mem_of_getElem? (List.mk_mem_zipIdx_iff_getElem?.mp hmem)
+  have hshape := table_fact table_actionHeaded hrow
+  simp only [actionRowHeaded, bne_iff_ne, ne_eq, Bool.or_eq_true] at hshape
+  rcases hshape with hfam | hshape
+  · exact readRow_none_of_fam hfam
+  · split at hshape
+    · rename_i t hout
+      simp only [Bool.and_eq_true, Option.any_eq_true] at hshape
+      obtain ⟨_, h, hh, hres⟩ := hshape
+      exact readRow_none_of_nomatch hout
+        (matchT_none_of_reserved hl hp hh (List.mem_of_elem_eq_true hres))
+    · rename_i name hout
+      exact readRow_none_of_refuse hout
+    · cases hshape
+
+/-- The heads of the images of the action family are action heads. -/
+theorem mem_actionHeads {row : Templates.Row} (hmem : row ∈ table) (hfam : row.fam = .action)
+    {t : Tpl} (hout : row.out = .tpl t) {h : String} (hh : t.head? = some h) :
+    h ∈ actionHeads := by
+  unfold actionHeads
+  rw [List.mem_filterMap]
+  exact ⟨row, hmem, by simp only [hfam, ↓reduceIte, hout, hh]⟩
+
+section Earlier
+
+variable {rj : Templates.Row} {j : Nat} {row : Templates.Row} (hap : rowsApart rj row = true)
+include hap
+
+/-- Before a rigid printing row. -/
+theorem earlier_none_rigid {t : Tpl} (hout : row.out = .tpl t) (hrigid : t.rigid = true)
+    {sorts : List ArgSort} (hsorts : argSorts row.fam row.ctor = some sorts) {τ : Subst}
+    (hinst : inst n τ t = some x)
+    (hnode : ∀ i y, childHole sorts i = true → lookup τ i = some (.expr y) → nodeLike y = true) :
+    readRow sig spell fam n x rj j child children block same = none := by
+  unfold rowsApart at hap
+  rw [hout] at hap
+  simp only [hrigid, ↓reduceIte, hsorts] at hap
+  split at hap
+  · rename_i name h; exact readRow_none_of_refuse h
+  · rename_i st h; exact readRow_none_of_stmt h
+  · cases hap
+  · rename_i t' h
+    simp only [Bool.and_eq_true] at hap
+    exact readRow_none_of_nomatch h (match_apart n τ sorts t' t x hap.2 hinst hnode)
+
+/-- Before the transparent row that hands to the action family: the image is an action's. -/
+theorem earlier_none_action {i : Nat} (hout : row.out = .tpl (.hole i))
+    (hsorts : argSorts row.fam row.ctor = some [.child .action]) {h : String}
+    (hx : exprHead? x = some h) (hact : h ∈ actionHeads) :
+    readRow sig spell fam n x rj j child children block same = none := by
+  unfold rowsApart at hap
+  rw [hout] at hap
+  simp only [Tpl.rigid, Bool.false_eq_true, ↓reduceIte, hsorts] at hap
+  split at hap
+  · rename_i name h; exact readRow_none_of_refuse h
+  · rename_i st h; exact readRow_none_of_stmt h
+  · cases hap
+  · rename_i t' h'
+    simp only [Bool.and_eq_true, Option.any_eq_true] at hap
+    obtain ⟨_, h'', hh, hnot⟩ := hap
+    refine readRow_none_of_nomatch h' ?_
+    cases hm : matchT n t' x with
+    | none => rfl
+    | some σ =>
+      have := head_of_match n t' x σ hm hh
+      rw [hx, Option.some.injEq] at this
+      subst this
+      simp only [List.contains_eq_mem, hact, decide_true, Bool.not_true, Bool.false_eq_true] at hnot
+
+/-- Before the transparent row that reads a name: the image is an identifier. -/
+theorem earlier_none_path {i : Nat} (hout : row.out = .tpl (.hole i))
+    (hsorts : argSorts row.fam row.ctor = some [.path]) {s : String} (hx : x = .ident s) :
+    readRow sig spell fam n x rj j child children block same = none := by
+  unfold rowsApart at hap
+  rw [hout] at hap
+  simp only [Tpl.rigid, Bool.false_eq_true, ↓reduceIte, hsorts] at hap
+  split at hap
+  · rename_i name h; exact readRow_none_of_refuse h
+  · rename_i st h; exact readRow_none_of_stmt h
+  · cases hap
+  · rename_i t' h'
+    simp only [Bool.and_eq_true] at hap
+    subst hx
+    exact readRow_none_of_nomatch h' (matchT_ident_none n t' s hap.2)
+
+/-- Before the row call: a skeleton's head is reserved and the image's is a spelling; the
+transparent row hands the image to the action family, which reads nothing of it. -/
+theorem earlier_none_rowCall (hl : LawfulSpelling sig spell) (hrow : row.out = .rowCall)
+    {op : Op} {r : Term} (hp : printRow (sig.rowOf op) r = .ok x)
+    (hsame : ∀ hk d, same .action hk d = none) :
+    readRow sig spell fam n x rj j child children block same = none := by
+  unfold rowsApart at hap
+  rw [hrow] at hap
+  simp only at hap
+  split at hap
+  · rename_i name h; exact readRow_none_of_refuse h
+  · rename_i st h; exact readRow_none_of_stmt h
+  · cases hap
+  · rename_i t' h'
+    simp only [Bool.or_eq_true, Bool.and_eq_true, Option.any_eq_true, Bool.not_eq_true',
+      beq_iff_eq] at hap
+    rcases hap with ⟨_, h, hh, hres⟩ | ⟨hnr, hsorts⟩
+    · exact readRow_none_of_nomatch h'
+        (matchT_none_of_reserved hl hp hh (List.mem_of_elem_eq_true hres))
+    · cases t' with
+      | hole i => exact readRow_none_of_same h' hsorts hsame
+      | _ => cases hnr
+
+end Earlier
+
 end Node
 
 end Effect4.Program
