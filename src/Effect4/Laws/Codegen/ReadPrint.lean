@@ -1044,6 +1044,65 @@ theorem readRow_rigid_print {row : Templates.Row} (hk : table[k]? = some row)
     obtain rfl := Option.some.inj hσ'
     simp only [hargs, ok_bind, hb]
 
+
+/-- The printing row, transparent to the action family (`withFiber`), reads its image back:
+the same tree read as an action, then the node rebuilt. -/
+theorem readRow_action_print {row : Templates.Row} (hk : table[k]? = some row)
+    {ctor : String} {c : EffSelfCarrier Op .action} {e : EffSelfCarrier Op fam}
+    (hbuild : build fam ctor ([.child .action c] : List (ArgF Op (EffSelfCarrier Op))) = some e)
+    (hsorts : argSorts fam ctor = some [.child .action])
+    (hsel : row.selects fam ctor ([.child .action c] : List (ArgF Op (EffSelfCarrier Op))) = true)
+    (hidx : table.findIdx? (fun r => r.selects fam ctor ([.child .action c] : List (ArgF Op (EffSelfCarrier Op)))) = some k)
+    {i : Nat} (hout : row.out = .tpl (.hole i)) (hrank : famRank .action < famRank fam)
+    (hprint : cata_action (printAlg sig) c (argDepth fam (.child .action) n 0) = .ok x)
+    (hr : ReadableAt sig .action c (argDepth fam (.child .action) n 0))
+    (hsame : ∀ fam' hlt d (c' : EffSelfCarrier Op fam'), ReadableAt sig fam' c' d →
+      PrintsTo sig d fam' c' (.expr x) → same fam' hlt d = some (.ok c')) :
+    readRow sig spell fam n x row k child children block same = some (.ok e) := by
+  obtain ⟨hfam, hctor⟩ := selects_fam_ctor hsel
+  have hb := buildRow_of_findIdx? hbuild hidx
+  have hs := hsame .action hrank _ c hr (by simpa only [PrintsTo] using hprint)
+  obtain ⟨rfam, rctor, rfixed, rout⟩ := row
+  simp only at hfam hctor hout
+  subst hfam hctor hout
+  unfold readRow
+  simp only [↓reduceIte, matchT, hsorts, Tpl.rigid, Bool.false_eq_true, ↓reduceDIte, hrank, hs,
+    Option.map_some, Except.mapError, ok_bind, hb]
+
+/-- The printing row that reads a name (`ref`) reads its image back. -/
+theorem readRow_path_print {row : Templates.Row} (hk : table[k]? = some row)
+    {ctor : String} {p : List Nat} {e : EffSelfCarrier Op fam}
+    (hbuild : build fam ctor ([.path p] : List (ArgF Op (EffSelfCarrier Op))) = some e)
+    (hsorts : argSorts fam ctor = some [.path])
+    (hsel : row.selects fam ctor ([.path p] : List (ArgF Op (EffSelfCarrier Op))) = true)
+    (hidx : table.findIdx? (fun r => r.selects fam ctor ([.path p] : List (ArgF Op (EffSelfCarrier Op)))) = some k)
+    {i : Nat} (hout : row.out = .tpl (.hole i))
+    (hx : x = .ident (LayerTerm.refName p))
+    (hr : LayerTerm.readRefName (LayerTerm.refName p) = some p) :
+    readRow sig spell fam n x row k child children block same = some (.ok e) := by
+  obtain ⟨hfam, hctor⟩ := selects_fam_ctor hsel
+  have hb := buildRow_of_findIdx? hbuild hidx
+  obtain ⟨rfam, rctor, rfixed, rout⟩ := row
+  simp only at hfam hctor hout
+  subst hfam hctor hout hx
+  unfold readRow
+  simp only [↓reduceIte, matchT, hsorts, Tpl.rigid, Bool.false_eq_true, ↓reduceDIte, readLeaf, hr,
+    ↓reduceIte, hb, Except.toOption, Option.map_some]
+
+/-- The row call reads its image back: the printed row of `perform` reads to `perform`. -/
+theorem readRow_rowCall_print (hl : LawfulSpelling sig spell) {row : Templates.Row}
+    (hrow : row.out = .rowCall) (hfam : row.fam = .eff) {op : Op} {r : Term}
+    (hd : sig.dom op = true) (hreq : requestReadable (sig.rowOf op) n r = true)
+    (hp : printRow (sig.rowOf op) r = .ok x) (hfam' : fam = .eff) :
+    readRow sig spell fam n x row k child children block same =
+      some (.ok (hfam' ▸ (Eff.perform op r : EffSelfCarrier Op .eff))) := by
+  subst hfam'
+  obtain ⟨rfam, rctor, rfixed, rout⟩ := row
+  simp only at hfam hrow
+  subst hfam hrow
+  unfold readRow
+  simp only [↓reduceIte, read_printRow hl op hd r hreq hp, rowAnswer, Except.mapError]
+
 end Node
 
 end Effect4.Program
