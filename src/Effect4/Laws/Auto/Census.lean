@@ -30,11 +30,13 @@ def axiomsOf (e : Expr) : CoreM (Array Name) := do
 
 /-- The source line a constant of the current module is declared at: its own, or that of the
 declaration it was generated from (`foo.eq_1`, `foo.match_1`, … carry no range of their own). -/
-partial def declaredAt (name : Name) : CoreM (Option Nat) := do
-  if let some r ← findDeclarationRanges? name then return some r.range.pos.line
-  match name with
-  | .str p _ => declaredAt p
-  | _ => return none
+def declaredAt : Name → CoreM (Option Nat)
+  | name@(.str p _) => do
+    if let some r ← findDeclarationRanges? name then return some r.range.pos.line
+    declaredAt p
+  | name => do
+    if let some r ← findDeclarationRanges? name then return some r.range.pos.line
+    return none
 
 /-- Does `proof`, found for a theorem declared at line `first` of module `modIdx`, use that
 theorem itself or anything of the module declared after it? In place, the proof would have
