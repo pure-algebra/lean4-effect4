@@ -189,21 +189,58 @@ reads `g e = (cata alg e).2`. Family members the block does not traverse carry `
 | `Program/Folds/Ty.lean` | `renderRaw`, `members` (para), `key`, `isNever`, `isMember`, `normalize`, `isTagTy`, `rawSupportedErrTy`, `NativeAtom.projectProduct`, `Bridge.schema`, `Codec.layout`, `Codec.isSupported` — 12 of `Ty`'s 17 | `[propext]` |
 | `Program/Folds/Provision.lean` | `docsLayer` / `docsLayers` | `[propext]` |
 
-Twenty-one hand traversals now have a fold and a kernel-checked connector, from six stub files
-that change nothing in the modules they read. What `fold_of` refuses today, honestly:
+Twenty-one hand traversals had a fold and a kernel-checked connector after the first
+iteration, from six stub files that change nothing in the modules they read.
 
-- **the accumulator shape** (an argument before the family value that a recursive call
-  changes, or any argument after it): `effTy`/`explain` (the environment), `Provision.build`
-  (its environment), `findInt` (the path), `Val.hasTy`, `Codec.encodeRaw`/`decodeRaw`,
-  `instReprTy.repr` (the second value). The carrier becomes a function type and the arm
-  becomes a lambda; the same equations then hold by `rfl`. Next iteration of the converter.
-- **`compileEff`**: exempt by ruling (row 30); `Sched`'s helpers follow it.
-- **the `denote` family**: the accumulator shape too (`denoteWith`), plus `denote` itself
-  returns into the meaning's carrier — the first customer after the accumulator shape lands.
+### 7.1 The accumulator shape (2026-09-18, `79349430` … `213bbb6f`)
 
-The step after the connectors exist is the callers: each `f`'s callers move to
-`cata alg`, the proofs that unfold `f` rewrite by `f.eq_cata`, and `f` is deleted. That is
-where the count in §2 goes down.
+The second iteration reads the *fixed prefix* — the leading binders every recursive call in
+the block passes through unchanged — and puts every other binder, before or after the family
+value, into the carrier as a function type: `findInt.alg` at `Path → Option Path`,
+`Val.hasTy.alg` at `Val → List String → Bool`, `effTy`'s shape would be `R .eff := TyEnv →
+Option EffTy` beside `R .layer := Option LayerTy`. A recursive call that stops short of the last
+binders (`vs.mapM (encodeRaw t)`) is the curried result. Two further idioms reduce through
+their case splits rather than the matcher: a match on more than the family value
+(`| .unit, .unit => …`) and an overlapping pattern (`| .cons head .nil, ctx => …`, which
+inspects the tail and so pairs the value in). The homomorphism equations are no longer
+`rfl` against the definition: each is the unfold equation `g … node … = M` closed by `funext`
+over the varying binders (and `congrArg (node, ·)` under a paramorphism), so the kernel only
+ever reduces a matcher on a constructor, never the recursion's `brecOn`. Connectors are at
+`[propext, Quot.sound]`.
+
+| stub file | converted in this iteration |
+| --- | --- |
+| `Program/Folds/Ty.lean` | `findInt`, `Val.hasTy`, `Codec.encodeRaw`, `Codec.decodeRaw` — **`Ty` is 16 of 17** (`instReprTy.repr` remains) |
+| `Program/Folds/Provision.lean` | `Provision.build` / `buildAll` |
+| `Laws/Program/Folds/Denote.lean` | `denote`, `denoteB`, `denoteWith`, `denoteBWith` (**row 30's `denote` onto the fold**), `Agreement.depth`, `steps`, `depthB`, `boundB` |
+| `Program/Folds/Term.lean` | `printTerm`/`printTerms`, `Terms.names?`, `noRow`, `Terms.toList`, `Term.scoped`/`Terms.scoped`, `Term.weaken`/`Terms.weaken`, `evalTerm`/`evalTerms`, `argTy` — **`Term` is 12 of 14** |
+
+The census now marks a hand traversal that has its fold beside it: **`Eff` 18 of 40, `Ty` 16
+of 17, `Term` 12 of 14**; `Representation` 0 of 5 and `Val` 0 of 17. `Val` had no fold at all;
+`src/Effect4/Store/Fold.lean` is generated now (`ValFold` in the manifest, `7bb403ed`).
+
+### 7.2 What `fold_of` refuses today, and the shape each needs
+
+- **Nested containers** (`Val.list (xs : List Val)`, `Representation.arrays … (List (ElementOf
+  Representation))`): the generated algebra takes the children's results *inside the container*
+  (`val_list : List (R .val) → R .val`, hom equation `f (.list xs) = alg.val_list (xs.map f)`),
+  so the converter must read `xs.map f` (and `mapM`, `all`, `foldl` over `f`) as the result
+  list, and a traversal with an accumulator needs `List.map_map` in the equation — a
+  propositional step, the first tactic in an otherwise term-built proof. `Val`'s 17 and
+  `Representation`'s 5 wait on this.
+- **Shape-inspecting arms** (`termsTy`: `| .cons (.var index) tail => termTy sig env (.var
+  index)`): the arm splits on a child's constructor and recurses on the *rebuilt* child, so the
+  equation holds by cases on the child, not by unfolding. `termTy`/`termsTy` (2).
+- **A child with no carrier** (`stmtsTy`: `| .cons (.bindYield effect) rest => effTy sig env
+  effect`): the arm splits on the statement child and recurses on a *grandchild*; statements
+  have no type of their own in the checker. Not a fold as written — giving `Stmt` its own rule
+  (`stmtTy`) is a change to the checker and its `HasTy` soundness proof. `effTy` (6),
+  `explain` (6) — the `gen`/`Stmt` family the owner ruled reader-only (row 22).
+- **`compileEff`** (5): exempt by ruling (row 30); `Sched`'s helpers (5) follow it.
+
+The step after the connectors is the callers: each `f`'s callers move to `cata alg`, the
+proofs that unfold `f` rewrite by `f.eq_cata`, and `f` is deleted. That is where the count in
+§2 goes down.
 
 ## 8. Scout G — the tooling that exists (`docs/research/2026-09-17-lean-tooling-scout-G.md`)
 
