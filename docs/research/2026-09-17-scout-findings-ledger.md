@@ -305,3 +305,91 @@ moved. Verified and done, queued to the merge, or refused with the reason:
 - **`letLayer`** (4D) and **`Ty.data`** (4E): after this line, as already planned.
 
 Merge order held: daemons (done) → run → author, then one gate sweep.
+
+## The seats integrated (2026-09-17, later): what was unified, what regressed, what to derive, sugar, cut
+
+Owner's direction while the seats landed: "unify and reduce duplication, no shortcuts; everything
+semantically coherent as part of the integration; any regression whatsoever, I want to know
+about it and a plan to rectify it"; then "look into derived — what can be derived, what do we
+not need to be hand-typing, what can be sugared, what can be cut; imports clean, separated from
+our laws; this is the real API that goes to users and agents; push the messiness into a deep
+source."
+
+**Merged** (`9aa13150` daemons, `af31f82d` author, the run merge, then the fixups `cdb67adb`,
+`6dbdb675`, `16e32ec6`, `d798feb2`, `01428b9a`): `Api.Built` / `Api.Author` / `Effect4.Run` /
+`Api.Supervision`, the three law modules, three batteries, three receipts. Narrow builds green
+at every step; the headline laws (`open_total`, `journal_replays`, `drive_eq_play`,
+`drive_envelope`, `runPure_eq_run`, `supervision_static`, `daemonsQuiet_iff`,
+`build_table_lawful`, `build_rows_resolve`) at `[propext, Quot.sound]`.
+
+**Regressions, each with its cause and the rectification** (nothing semantic; the sweep decides
+the rest):
+
+1. `Api.Built` uninhabitable at `1a8587f2` (`table : {RowTable : Type} → RowTable`). Cause: the
+   coordinator committed the module without building it. Both seats hit it and repaired it
+   differently (`open Effect4.Program` vs the narrow open) — the first drift the review saw.
+   Fixed `3cf0d1e8`; the seats' copies reconciled at the merges. Rule from now on: no commit
+   of a Lean module without a narrow build of that module (memory `aesop-proof-workflow`).
+2. `advance_step` (`Laws/Run.lean`) green on the seat, red on the merged tree. Cause: the
+   default aesop rule set changed under the seat (`52c67c1f`, the Bool/`ite` inversions)
+   after it branched, so the search's normal form changed. Fixed in `d798feb2` by stating the
+   two case splits the residual goal showed (`s.machine.stuck`, `enoughFor`). Rule: a change
+   to `Laws/Auto/Inversion.lean` while seats are in flight is announced to them, and their law
+   modules are rebuilt on the merged tree before the sweep (which is what happened here).
+3. The size fold copied into the daemons seat, the `Api.Run` name clash the run seat spelled
+   around, and `nativeSignatureWith` placed away from `nativeSignature`. Cause: the seats
+   branched from `1a8587f2`, before `PrintReadable` landed, and the coordinator had not renamed
+   the old `Run` before dispatch. All three unified today; the third is a decision (below).
+4. The data volume is at 423/460 GiB (1.7 GiB free at the sweep). The coordinator's worktree
+   copies were ~10 GB of that; the three merged seat worktrees are removed (branches kept),
+   the two scout worktrees stay (2.4 GB each). The six idle lanes' build caches
+   (`lean4-effect4-{audit,layout,lcnf,rules,types,player}`, ~7 GB) and the local snapshot
+   are the owner's to clear.
+
+**Unified**: one size fold (`Laws/Program/Size.lean`); `Api.Run` → `Api.Inspection`; the
+`Built` face reads through `Built.typed` (no second definition of `ty`, `requires`, `closed`,
+`runSync`, `print`, `bytes`); `requires`/`closed` are `Typed.*`; `Observation` carries
+`fibers` with `daemons`/`daemonsQuiet` as functions of it; `Api/Author.lean` sits where its
+namespace is; the package root imports the surface (`Built`, `Author`, `Supervision`, `Run`).
+
+**Cut**: `Layer.all` (alias of `mergeAll`), `Api.printLayer` (alias of `TypedLayer.print`),
+`Built.run` (the run of a built program is `Run.runPure`), `Api.authorModule` (a module typed
+against a table supplied out of band). **Renamed**: `with_` → `provide` (Effect's verb).
+
+**Imports**: no module of the surface (`Api.lean`, `Api/*.lean`, `Run.lean`,
+`Program/Authoring*`) imports `Effect4.Laws`, `Test` or `Aesop`. Clean.
+
+**To derive, not hand-type** (recommendations; the scouts C and D quantify the codec half):
+- Codecs and schemas for `Observation`, `FiberStatus`, `ForkSite`, `ForkKind`, `BuildRefusal`,
+  `Phase`: one generator group each, beside the seven field instances that already exist
+  (run receipt O-8). `Repr` for `Observation` and `FiberStatus` is blocked on `Repr NativeOp`
+  (probe: `NativeOp` has none; `HostProtocol.State`, `Outcome`, `FrontierReason` have theirs).
+- The 14 `*_eq` and 15 `*_scoped` lemmas of `Laws/Program/Author.lean` are the shape the
+  equation-lemma emitter and the `authoring_scoped` dispatcher already produce for generated
+  lifts; hand sugar gets hand lemmas today. Making the sugar reducible (or generating it from
+  a small table, as the lifts are) lets the dispatcher discharge `_scoped` and deletes the
+  `_eq` files' hand copies.
+- `raceEntrantOptions` (`Api/Supervision.lean`) transcribes the machine's literal
+  `⟨true, true, .interruptible⟩` (`Machine/Fibers.lean:941`), tied by `launchEntrant_forked`;
+  the literal appears at 8 more Laws sites. Name it once in `Machine/Supervision.lean` when the
+  machine is next edited (D3, the path on `RunEvent.forked`) — one rebuild, not two.
+
+**Decisions raised** (with the recommendation):
+- D-I1 `Api.author` (a source to a `Typed`, check only) beside `Author.program` (a source to a
+  `Built`): two entries. Recommend keeping both verbs — *check* answers where a source is
+  wrong (blame), *build* makes it runnable — but defining `author` as `check` on the
+  elaborated source only, never a second pipeline; today it is that.
+- D-I2 The three deep modules by name. `Run` is `Effect4.Run`; `Author` is `Effect4.Api.Author`;
+  `Face` is spread across `Api.lean` (`print`, `read`, `bytes`, `schemaOf`, `explain`,
+  `blame`). Recommend three root modules `Effect4.Author`, `Effect4.Run`, `Effect4.Face` as the
+  imports an agent writes, with `Api.*` the deep source underneath — a file-move wave after
+  the scouts report, not now.
+- D-I3 `nativeSignatureWith` (custom service carriers): keep it a declaration-site check
+  (`ServiceDef.Agrees`, `BuildRefusal.serviceCarrier`) or thread it through the checker and
+  the certificate (changes `Built`, `HostSession.start`, `Run.open`, the soundness
+  statements). Recommend: keep, until an application needs a seventh carrier.
+- D-I4 The daemons seat's D1 (`FiberStatus.root`: keep), D3 (path on `RunEvent.forked`:
+  yes, with the literal naming above), D4 (spellings `fork` / `daemon in scope` / `detach`,
+  no author-written flag at a pin: yes); the author seat's C1 (the minted-spelling fix in
+  `Sugar.bindWith`, `Sugar.andThen`, `Loops.iterateWith`, generated `Forms.lean`: one
+  regeneration, next slice).
