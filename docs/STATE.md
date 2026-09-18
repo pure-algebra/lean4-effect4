@@ -59,10 +59,9 @@ reads back.
 ## Next, in order
 
 1. **The callers phase, continued** (`docs/core/traversal-census.md` §7.8 for the checker's,
-   §7.9 for the term typer's, both landed; `decisions.md` row 40): `Straight`/`Looped` as
-   definitions of their folds next (row 35's by-exclusion form for free), then the value and
-   type sorts' hand definitions once their callers move; `valCode`/`ofSchema` (two rows) stay
-   named. `compileEff` stays exempt.
+   §7.9 for the term typer's, both landed; `Straight`/`Looped` name every constructor, §7.10,
+   row 35 done; `decisions.md` row 40): the value and type sorts' hand definitions next, once
+   their callers move; `valCode`/`ofSchema` (two rows) stay named. `compileEff` stays exempt.
 2. **The simple rows** of the do-now set (`ontology.md` §2): 6 with exactness modulo
    annotations, 8, 23 as a delete, 24, 37, 17.
 3. **The Schema layer** re-cut (`ontology.md` §3): the five files that carry the two real claims

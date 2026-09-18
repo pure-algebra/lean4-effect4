@@ -477,6 +477,29 @@ Both roots and `Test.All` build; `argTy_weaken`, `termTy_weaken`, `argTy.eq_cata
 (the driver prints `structural 13 (of which 13 with a fold beside them)`: the two fold members
 are rows too); the thirteen without unchanged. `termTy` classifies as delegating to `argTy`.
 
+### 7.10 The fragments by exclusion (2026-09-18, decisions row 35)
+
+Not a callers move: `Straight` (`Program/Fragment.lean`) and `Looped` (`Laws/Program/DenoteB.lean`)
+are one hand definition each with the fold beside them, and about twenty-five proof sites unfold
+them by name (`simp [Straight]`, `rw [Looped]`, `unfold Straight at h`). The fix for row 35 is at
+the definition. §7's earlier line "the algebra names every constructor, row 35 settled" was
+overstated: `fold_of` reads the algebra off the hand definition, so a constructor added to `Eff`
+fell into `Straight`'s wildcard arm and `Looped`'s fallback to `Straight`, and the generated field
+said `false` without anyone having classified it. Now both definitions name every constructor —
+twelve excluded arms written `false` in `Straight`, thirteen in `Looped` less `iterate`, the five
+leaves and the `perform` row-kind match repeated in `Looped` arm for arm — so a new constructor is
+a missing case at each definition until it is classified. `fold_of` converts both as before
+(`Straight.eq_cata`, `Looped.eq_cata`, `[propext]`).
+
+Consumers: `Looped.of_straight`'s leaf arms are the hypothesis itself (`Looped` and `Straight` are
+one term on a leaf by definition) and its excluded arms `absurd h Bool.false_ne_true`, where the
+fallback arm had needed `rw [Looped]` and the wildcard's side goals discharged by hand.
+`LoopSound.soundB`'s five leaf arms shared one body whose `have hs : Straight _ = true := hl`
+found its term through the fallback (the only way `Looped (.succeed v)` could unify with
+`Straight ?e`); they now go through one lemma, `soundB_leaf`, that takes the `Straight` witness
+explicitly, one call per leaf. Everything else compiled untouched. Both roots and `Test.All`
+build; the census is unchanged (the two rows were structural with folds before and after).
+
 ## 8. Scout G — the tooling that exists (`docs/research/2026-09-17-lean-tooling-scout-G.md`)
 
 Read against the converter: **no recursion-schemes or generic-programming library exists** for
