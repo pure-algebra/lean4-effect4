@@ -30,7 +30,7 @@ per-arm goals".
 
 | # | claim | where | verdict |
 | --- | --- | --- | --- |
-| 1 | "Every command but `resume` is code-free" means 17 transitions do not touch fiber code | `Laws/Machine/Book.lean:202` | **misread.** The line is about what a `Cmd` *carries* (`CmdMeans` relates payloads; only `resume` has a `κ`). `driveStep` (`Machine/Fibers.lean:1795`) installs code in `resume` (payload), `registrationDone` (`raceSettle` hook, `:1879`), `afterInterrupt` (`asVoidCode`/`awaitCode` hooks, `:1893`), `closeParAwait` (`parkCode` + `pushIterator`, `:1924`), `finish` (`exitInterruptChildren`: `onSuccess (interruptAllCode …)`, `:1733`), fires observers in `observe`/`enrollRace`/`finish` (`fireObserver`, `:1609`: `resumeAwait` emits `Cmd.resume … (exitValue exit mode)`; `countdown` resumes with the collected exits; `raceCallback` buffers or resumes with `raceSettle`), records an interrupt that can set `current` to a failure in `interruptTarget` and `link` (`interruptRecord`, `:763-777`), and creates a fiber from `Race.programs` in `launch` (`launchEntrant`, `:938`). `loop` and `deliver` run the fiber. Frame-untouched: `evaluate`, `trackChild`, `raceCancel`, `wake`, `drainDue` (state only, but it emits `resume` commands carrying code), `exitDone` (on an exited fiber), `enrollRace`'s no-exit branch. **Seven, not seventeen.** |
+| 1 | "Every command but `resume` is code-free" means 17 transitions do not touch fiber code | `Laws/Machine/Book.lean:202` | **misread.** The line is about what a `Cmd` *carries* (`CmdMeans` relates payloads; only `resume` has a `κ`). `driveStep` (`Machine/Fibers.lean:1795`) installs code in `resume` (payload), `registrationDone` (`raceSettle` hook, `:1859`), `afterInterrupt` (`asVoidCode`/`awaitCode` hooks, `:1886`), `closeParAwait` (`parkCode` + `pushIterator`, `:1918`), `finish` (`exitInterruptChildren`: `onSuccess (interruptAllCode …)`, `:1733`), fires observers in `observe`/`enrollRace`/`finish` (`fireObserver`, `:1609`: `resumeAwait` emits `Cmd.resume … (exitValue exit mode)`; `countdown` resumes with the collected exits; `raceCallback` buffers or resumes with `raceSettle`), records an interrupt that can set `current` to a failure in `interruptTarget` and `link` (`interruptRecord`, `:763-777`), and creates a fiber from `Race.programs` in `launch` (`launchEntrant`, `:938`). `loop` and `deliver` run the fiber. Frame-untouched: `evaluate`, `trackChild`, `raceCancel`, `wake`, `drainDue` (state only, but it emits `resume` commands carrying code), `exitDone` (on an exited fiber), `enrollRace`'s no-exit branch. **Seven, not seventeen.** |
 | 2 | `PreservesCode` may conclude `dispatcher = dispatcher ∧ races = races` | same | **false**: `enrollRace`/`registrationDone`/`launch` update races; `start` (`:927`) and `drainOwed` (`:1780`) post dispatcher tasks; the conclusion also ignores the stack, which holds continuations (`ScopeFrame.resume`/`.answer`, `InterpR.lean:44-45`). |
 | 3 | Sync cluster: 11 ops, one shared lemma, ~40 lines | `EvaluateR.lean:156-285` | **overstated.** Four inline (`suspend`, `foreignRelease`, `closeWalk`, `sync`), six through distinct `FiberAction` helpers (`getId`, `getContext`, `setContext`, `snapshotChildren`, `ambientScope`, `dropObservers`), `refuse` installs a failure, `frontier` does nothing. Each is trivial under §4's generic resume lemma, but they are not one code path. |
 | 4 | Scoping cluster: 6 ops, "push/pop a ScopeFrame", ~80 lines | same | **wrong in kind.** `unguard` and `finishFinalizer` are `deliverR` (`:127`), i.e. the `popR` walk (`:66-121`) with mask restoration, deferred interrupts, and the `iter`/`loop` slot re-entries. That walk is the single hardest piece of S2, not the easy cluster. |
@@ -103,10 +103,10 @@ type the receiver expects":
 | `fireObserver.countdown` / `countdownPark` immediate | `:1622`, `:831` | `resumePrim resumeWith exits` |
 | `fireObserver.raceCallback` → `registrationDone` | `:1655`, `:1859` | `raceSettle` (`denoteRaceSettle`, `InterpR.lean:199`) or a park |
 | `registerAsync` immediate, `dueResumes`, `clockStep` → `drainOwed` | `InterpR.lean:344-360`, `Fibers.lean:1780` | `denoteStored` of a stored completion; `Prim.success unit` for a sleep |
-| `afterInterrupt` | `:1893` | `asVoidCode (awaitCode kind)` |
-| `closeParAwait` | `:1924` | `parkCode (awaitAll fibers)` under an iterator slot |
+| `afterInterrupt` | `:1886` | `asVoidCode (awaitCode kind)` |
+| `closeParAwait` | `:1918` | `parkCode (awaitAll fibers)` under an iterator slot |
 | `exitInterruptChildren` | `:1733` | `onSuccess (interruptAllCode children) (restoreName exit)` |
-| `Cmd.resume` (the sink) | `:1816` | `answerWith t.frame answer`, then `evaluate` |
+| `Cmd.resume` (the sink) | `:1814-1824` | `answerWith t.frame answer`, then `evaluate` |
 
 Nine producers and one sink. This table, not "18 arms of `driveStep`", is S2's command half.
 
@@ -123,7 +123,7 @@ over `walkR`/`loopNextRAt`; the rest are closed small programs (`fiberValR`, `pu
 
 **3.5 The asynchronous completion.** A `perform` on an `.async` row denotes
 `.vis (.inr (.async (.registerAwait cell) v)) pure` (`denoteAsync`, `DenoteR.lean:223`); the
-answer arrives as code — `denoteStored` of the completion the cell holds (`InterpR.lean:347`,
+answer arrives as code — `denoteStored` of the completion the cell holds (`InterpR.lean:348`,
 `:355`; `denoteStored`, `:133`: `.pure (.success v)`, `.pure (.failure c)`, or `storeR (refGet
 cell)`). Nothing types that completion: `Stores.WF` excludes it by name
 (`STORES-FB-COMPLETION`), and the machine-level `DeferredOk` (`Simulation/Hooks.lean:33`) says
@@ -131,11 +131,11 @@ only that it *is* a completion (`CompletionShaped`, `:27`). So today the `async`
 `AnswerOk` has no source. The resolution is in §5 and is the deferred analogue of `HeapNat`.
 
 **3.6 Two shape facts the invariant must carry.** A `scopeExit` node arriving as a counted
-operation answers `badShapeExit` (`EvaluateR.lean:174-177`); it is meant to be consumed by
+operation answers `badShapeExit` (`EvaluateR.lean:177-180`); it is meant to be consumed by
 `prepareScopedExitR` in the glue pass (`:302`, `:322`). The no-`badShape` corollary therefore
 needs "a `scopeExit` head is never counted", i.e. `OpOk` at a counted head is `False` for it
 and `TypedFiber` is stated on the configuration *after* `prepareIterR`. And `evaluateRawR`'s
-store arm answers `.unit` when `syncOpStep` is `none` (`:293-296`, `evaluateR_store_missing`);
+store arm answers `.unit` when `syncOpStep` is `none` (`:294-297`, `evaluateR_store_missing`);
 the invariant needs `progress` (`Progress.lean:495`) to show that branch is unreachable for a
 typed operation in a well-formed store — the store clause of `OpOk` is exactly `progress`'s
 hypotheses.
@@ -206,14 +206,14 @@ countdown, the race registration) are named and the rest are mechanical.
 ## 5. Async versus sync, answered for the owner
 
 There is no capability wall. The alphabet the reference runs is the whole `FiberOp` list
-(forty operations, `Sched.lean:96-160`) and the whole store list (`SyncOp`, `Stores.lean:568-641`:
+(forty operations, `Sched.lean:96-160`) and the whole store list (`SyncOp`, `Stores.lean:566-641`:
 refs, deferreds, the clock, scopes, memo maps), and the scheduler is the one shared
 `RunMachine`. The typed-state statement covers all of it at the empty external table, as
 `run_eq_ref` does. What the milestone must add for the asynchronous rows, and what it inherits:
 
-- **`sleep`** (`Native.lean:234`: `.async`, answer `.unit`): the clock owes `Prim.success
-  Val.unit` (`InterpR.lean:357`) — typed at `unit` by inspection. Nothing to decide.
-- **`deferredAwait`** (`:225`: `.async`, request `deferredTy`, answer `.nat`, error `.nat`).
+- **`sleep`** (`Native.lean:233`: `.async`, answer `.unit`): the clock owes `Prim.success
+  Val.unit` (`InterpR.lean:358`) — typed at `unit` by inspection. Nothing to decide.
+- **`deferredAwait`** (`:224`: `.async`, request `deferredTy`, answer `.nat`, error `.nat`).
   This cut's `Deferred` is `Deferred<number, number>` (`:138-150`), and `deferredSucceed` /
   `deferredFail` / `deferredCompleteWith` take a `nat` request (`:218-`), exactly as refs are
   `Ref<number>` with `HeapNat` (`Progress.lean:71`, the `.nat` column, `E4-PROGRESS-CE-002`). So
