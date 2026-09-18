@@ -95,9 +95,10 @@ allows, delete at a good place") is applied to the rows argued from consumer cou
 2. **Row 39, one ruling** — the Schema wipe. It closes 4 and 9, takes `Image` out of row 10's
    count, and ends with `render` leaving `Shape.lean` (row 8's `ShapeDoc.document` fix lands in
    the move). Then row 10 (one `Val → Json`) over what remains.
-3. **Row 41, the milestone** — the concurrent alphabet's meaning statement: the fragment named,
-   the observation named, the simulation stated and proved. Research first (the runtime proof
-   graph note of 2026-09-05 lays out the layers).
+3. **Row 41, the milestone** — the typed-state invariant on the reference machine, in the order
+   of `docs/research/2026-09-18-typed-state-plan.md` §3: S0 the statement, S1 `denoteR_typed`, S2
+   one preservation lemma per fiber operation on the shared scheduler, S3 the transfer through
+   `BMeans` to the compiled machine's exits.
 4. **Group D** (rows 26, 27, 28, 31, 32, 29; row 30's `compileEff` ruling when row 27's root order
    reaches it): the TypeScript rules, the recipe, rule coverage, the rung-3 reader, the vendoring
    order, then the profile/legalization/IR refactor with the TypeScript printer as its first

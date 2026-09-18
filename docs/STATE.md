@@ -75,11 +75,11 @@ Scout G (third-party Lean tooling for this work) is out: `docs/research/2026-09-
 
 ## Owner decisions open
 
-Row 39 (the Schema wipe) is ruled (2026-09-18); rows 34 and 40 are ruled out (no gate, no
-further conversion). Open, in the order `decisions.md`'s last section gives: row 41 restated as
-the concurrent alphabet's meaning statement (the list of API-backing obligations awaits the
-owner's confirmation), then group D (26–29, 32, 30's `compileEff`), then group B (14, 15) and 2,
-7, 10, 11; then 1 with 3, and 19–22. Row 5 has the restatement `ontology.md` §2 gives.
+Row 39 (the Schema wipe) and row 41 (the typed-state invariant on the reference machine, the
+core milestone, no shortcuts; design `docs/research/2026-09-18-typed-state-plan.md`) are ruled
+(2026-09-18); rows 34 and 40 are ruled out. Open, in the order `decisions.md`'s last section
+gives: group D (26–29, 32, 30's `compileEff`), then group B (14, 15) and 2, 7, 10, 11; then 1
+with 3, and 19–22. Row 5 has the restatement `ontology.md` §2 gives.
 
 ## What row 39 does (for the owner, 2026-09-18)
 
