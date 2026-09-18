@@ -446,12 +446,6 @@ def ReadsTo (sig : Signature Op) (spell : String → List String → Option Op) 
 
 /-! ## The leaves read back -/
 
-/-- `<$>` on `Except`, inverted (the printer maps a capture over a leaf's printing). -/
-theorem fmap_eq_ok {ε α β : Type} {m : Except ε α} {f : α → β} {b : β} :
-    (f <$> m) = .ok b ↔ ∃ a, m = .ok a ∧ f a = b := by
-  cases m <;> simp [Functor.map, Except.map]
-
-attribute [local aesop norm simp] fmap_eq_ok
 attribute [local aesop safe forward] readTerm_printTerm readCause_printCause readKey_printKey
 
 /-- A readable leaf prints, and what it prints reads back at the same depth and sort. -/

@@ -1,4 +1,5 @@
 import Effect4.Machine.Fibers
+import Effect4.Laws.Auto.Inversion
 
 /-!
 # Deep.Clauses
@@ -54,7 +55,7 @@ theorem runloopTop_idle (f : RunFiber ν σ β ε δ ι α χ) (h : f.frame.defe
 theorem runloopTop_clears (f : RunFiber ν σ β ε δ ι α χ) :
     (runloopTop f).frame.deferredInterrupt = false := by
   unfold runloopTop
-  split <;> simp_all
+  aesop
 
 /-- The op counter counts every iteration (`:643`). census: rule.budget-per-runloop-entry -/
 theorem countOp_count (f : RunFiber ν σ β ε δ ι α χ) :

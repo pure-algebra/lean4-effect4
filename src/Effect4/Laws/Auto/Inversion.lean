@@ -72,10 +72,53 @@ theorem none_ne_some {a : α} : (none : Option α) = some a ↔ False := by
 theorem some_ne_none {a : α} : some a = (none : Option α) ↔ False := by
   simp only [reduceCtorEq]
 
+/-! Boolean connectives and a Boolean `if`, inverted: what a successful test says of its
+parts. -/
+
+theorem bool_and_eq_true (a b : Bool) : (a && b) = true ↔ a = true ∧ b = true := by
+  cases a <;> cases b <;> decide
+
+theorem bool_or_eq_true (a b : Bool) : (a || b) = true ↔ a = true ∨ b = true := by
+  cases a <;> cases b <;> decide
+
+theorem bool_not_eq_true (b : Bool) : (!b) = true ↔ b = false := by
+  cases b <;> decide
+
+theorem bool_not_eq_false (b : Bool) : (!b) = false ↔ b = true := by
+  cases b <;> decide
+
+theorem ite_eq_some {α : Type} (c : Bool) (x y : α) (a : α) :
+    (if c then x else y) = a ↔ (c = true ∧ x = a) ∨ (c = false ∧ y = a) := by
+  cases c <;> simp only [Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte, false_and, true_and,
+    false_or, or_false]
+
+theorem ite_eq_none {α : Type} (c : Bool) (x y : Option α) :
+    (if c then x else y) = none ↔ (c = true ∧ x = none) ∨ (c = false ∧ y = none) := by
+  cases c <;> simp only [Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte, false_and, true_and,
+    false_or, or_false]
+
+theorem ite_eq_ok {ε α : Type} (c : Bool) (x y : Except ε α) (a : α) :
+    (if c then x else y) = .ok a ↔ (c = true ∧ x = .ok a) ∨ (c = false ∧ y = .ok a) := by
+  cases c <;> simp only [Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte, false_and, true_and,
+    false_or, or_false]
+
+theorem ite_eq_error {ε α : Type} (c : Bool) (x y : Except ε α) (e : ε) :
+    (if c then x else y) = .error e ↔ (c = true ∧ x = .error e) ∨ (c = false ∧ y = .error e) := by
+  cases c <;> simp only [Bool.false_eq_true, Bool.true_eq_false, ↓reduceIte, false_and, true_and,
+    false_or, or_false]
+
+/-- `<$>` on `Except`, inverted. -/
+theorem fmap_eq_ok {m : Except ε α} {f : α → β} {b : β} :
+    (f <$> m) = .ok b ↔ ∃ a, m = .ok a ∧ f a = b := by
+  cases m <;> simp only [Functor.map, Except.map, reduceCtorEq, false_and, exists_false,
+    Except.ok.injEq, exists_eq_left']
+
 attribute [aesop norm simp]
   error_ne_ok ok_ne_error none_ne_some some_ne_none
   bind_eq_ok map_eq_ok mapError_eq_ok toOption_eq_some getD_error_eq_ok
   Option.map_eq_some_iff Option.bind_eq_some_iff
   Option.some.injEq Except.ok.injEq Prod.mk.injEq
+  bool_and_eq_true bool_or_eq_true bool_not_eq_true bool_not_eq_false
+  ite_eq_some ite_eq_none ite_eq_ok ite_eq_error fmap_eq_ok
 
 end Effect4.Laws.Auto
