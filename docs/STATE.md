@@ -62,8 +62,9 @@ reads back.
    §7.9 for the term typer's, both landed; `Straight`/`Looped` name every constructor, §7.10,
    row 35 done; `decisions.md` row 40): the value and type sorts' hand definitions next, once
    their callers move; `valCode`/`ofSchema` (two rows) stay named. `compileEff` stays exempt.
-2. **The simple rows** of the do-now set (`ontology.md` §2): 6 with exactness modulo
-   annotations, 8, 23 as a delete, 24, 37, 17.
+2. **Row 39** (ruled): `EffectfulField` first, then `Check`/`Accepts`/`Image`/`schemaOf`, the
+   `Annotations` trim, the `render` move. Then the simple rows still open: 8 (in the move), 23 as
+   a delete, 24, 17, 16.
 3. **The Schema layer** re-cut (`ontology.md` §3): the five files that carry the two real claims
    stay; the rest is converted where it is a fold or an embedding and deleted where it is
    neither; `Store.render` leaves `Shape.lean` first.
@@ -74,11 +75,28 @@ Scout G (third-party Lean tooling for this work) is out: `docs/research/2026-09-
 
 ## Owner decisions open
 
-The 18 owner rows of `docs/core/decisions.md` (reviewed 2026-09-18), in the order its last
-section gives: row 39 (the Schema wipe as one ruling; it closes rows 4 and 9), then rows 14 and 15
-(the digest, the MCP server), then 2, 7, 10, 11; then 26–29 and 32, with 30's `compileEff` ruling;
-then 1 with 3, and 19–22. Rows 5 and 6 have the restatements `ontology.md` §2 gives (exactness
-modulo a named normaliser).
+Row 39 (the Schema wipe) is ruled (2026-09-18). Open, in the order `decisions.md`'s last section
+gives: row 41 (the coherence milestone's criteria), then group D (26–29, 32, 30's `compileEff`),
+then group B (14, 15) and 2, 7, 10, 11; then 1 with 3, and 19–22. Row 5 has the restatement
+`ontology.md` §2 gives.
+
+## What row 39 does (for the owner, 2026-09-18)
+
+- *Trim `Annotations.lean` to the carrier*: of its 1,193 lines the estate uses `AnnotationKey` (a
+  typed key: a name and the codec of its payload, two laws), the two keys `identifierKey` and
+  `refKey`, and the lens `Representation.nodeAnnotations` — all from `Store/Shape.lean`'s
+  `renderDef`. The rest is the "annotation data plane": bag operations, lenses on every node
+  kind, and a 650-line `AnnotationTraversal` with four laws that nothing calls. The carrier types
+  themselves (`AnnotationEntry`, `Annotations`) already live in `Payload.lean`. Kept: about 150
+  lines. `Data/Optic.lean` stays (`Document.lean`'s two lawful traversals use it). Row 2(c) puts
+  record and sum names in annotations, through exactly the `AnnotationKey` that is kept.
+- *Move `render`*: `Store.render : Shape → Representation` is the schema arrow out of the store's
+  value descriptions (the Q5 table: `nat` to `number` with `isInt`, `bytes` to a hex-pattern
+  string, a `sum` to a union of tagged structs). Not a visual rendering. It lives in
+  `Store/Shape.lean`, so the Store module imports the whole Schema tree; the sort order runs the
+  other way. It moves to `Schema/OfShape.lean` beside `Bridge` (the arrow out of `Ty`); Store
+  becomes a leaf (`Val`, `Shape`, the byte codec, `ShapeDoc.print`); row 8's key dedupe lands in
+  the move.
 
 ## Process
 
