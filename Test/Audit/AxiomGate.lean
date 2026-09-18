@@ -98,6 +98,11 @@ private def auditImplementationModules : List Name :=
   -- The converter (`fold_of`): a command elaborator that adds a hand traversal's algebra, its
   -- homomorphism witness and `eq_cata` to the environment; meta code, no theorem of its own.
   , `Effect4.Program.FoldOf
+  -- The position census, its totality gate and the typed-state skeleton emitter: commands over
+  -- the environment and a file writer; meta code, no theorem in the modules.
+  , `Effect4.Laws.Auto.Positions
+  , `Effect4.Laws.Auto.PositionGate
+  , `Effect4.Laws.Auto.TypedStateGen
   ]
 
 /--
