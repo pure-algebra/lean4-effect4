@@ -89,6 +89,9 @@ private def auditImplementationModules : List Name :=
   , `Test.Audit.RuntimeCoverage
   -- The authoring scope tactic: a tactic elaborator, meta code, no theorem in the module.
   , `Effect4.Laws.Program.Authoring.Tactic
+  -- The proof census (`#auto_census`): a command elaborator that re-proves a module's
+  -- theorems in a rolled-back environment and reports; meta code, no theorem in the module.
+  , `Effect4.Laws.Auto.Census
   ]
 
 /--

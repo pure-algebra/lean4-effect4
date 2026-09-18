@@ -5,6 +5,28 @@
       "name": "Effect4.Program.Ty",
       "functions": [
         {
+          "name": "Effect4.Program.Authoring.ServiceDef.receiver",
+          "mode": "default",
+          "cover": [
+            "never",
+            "unit",
+            "nat",
+            "int",
+            "string",
+            "bool",
+            "handle",
+            "option",
+            "list",
+            "except",
+            "exitOf",
+            "causeOf",
+            "fiberOf",
+            "union",
+            "lit"
+          ],
+          "note": "A method's receiver is the first factor of its product request; a request that is not a product is the receiver itself."
+        },
+        {
           "name": "Effect4.Program.Decision.arms",
           "mode": "default",
           "cover": [
@@ -1079,6 +1101,35 @@
       "unlisted": "refuse",
       "name": "Effect4.Program.NativeOp",
       "functions": [
+        {
+          "name": "Effect4.Run.rowOf",
+          "mode": "default",
+          "cover": [
+            "refMake",
+            "refGet",
+            "refSet",
+            "refGetAndSet",
+            "refSetAndGet",
+            "refUpdate",
+            "refGetAndUpdate",
+            "refUpdateAndGet",
+            "refUpdateSome",
+            "refGetAndUpdateSome",
+            "refUpdateSomeAndGet",
+            "refModify",
+            "refModifySome",
+            "deferredMake",
+            "deferredIsDone",
+            "deferredPoll",
+            "deferredSucceed",
+            "deferredFail",
+            "deferredAwait",
+            "scopeMake",
+            "sleep",
+            "clockNow"
+          ],
+          "note": "Only an external operation names a host row of the run's table; every built-in operation names none."
+        },
         {
           "name": "Effect4.Program.asyncRoute",
           "mode": "default",
