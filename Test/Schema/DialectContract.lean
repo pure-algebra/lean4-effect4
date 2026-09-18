@@ -10,10 +10,12 @@ No theorem relates them. This battery pins what the composite `Bridge.ofSchema โ
 answers today on every shape former, so that an edit to either rendering is a red row and not a
 silent change (scout C, 2026-09-17, ยง2.2a; the findings ledger, C-1).
 
-Five rows DISAGREE with what the former means, and are pinned as they are, not blessed:
+Three rows DISAGREE with what the former means, and are pinned as they are, not blessed:
 `unit` and `option` are lost; `nat` reads back as `int`, the reserved type admission refuses as
-uninhabited; `bytes` and `digest` widen to `string`. `anyRef`, a named reference, a sum and a
-structure have no `Ty` at all, which is the gap a nominal `Ty.data` would close (ledger, C-P10).
+uninhabited. `bytes` and `digest` are refused since decisions row 6 landed (2026-09-18): their
+pattern check is one `Ty` cannot represent, and `ofSchema` no longer widens it to `string`.
+`anyRef`, a named reference, a sum and a structure have no `Ty` at all, which is the gap a
+nominal `Ty.data` would close (ledger, C-P10).
 -/
 
 set_option autoImplicit false
@@ -34,8 +36,10 @@ def shapeTy (s : Shape) : Option Ty := Bridge.ofSchema (Effect4.Store.render s)
 #guard shapeTy (.option .bool) = none
 #guard shapeTy .nat = some .int
 #guard shapeTy (.pair .nat .string) = some (.prod .int .string)
-#guard shapeTy .bytes = some .string
-#guard shapeTy .digest = some .string
+
+-- refused (row 6): a pattern check `Ty` cannot represent
+#guard shapeTy .bytes = none
+#guard shapeTy .digest = none
 
 -- no program type exists for these today
 #guard shapeTy .anyRef = none

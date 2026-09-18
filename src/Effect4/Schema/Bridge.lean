@@ -59,58 +59,70 @@ def checkId : Check → String
   | .filterGroup (some rep) _ _ => rep.id
   | .filterGroup none _ _ => ""
 
-/-- Reconstitutes a first-order `Ty` from an rc.112 `SchemaRepresentation`. -/
+/-- The defect slot of an `Exit` or `Cause` declaration is the `Defect` declaration `schema` mints
+(`defectRep`), nothing else. -/
+def isDefect : Representation → Bool
+  | .declaration ⟨"effect/schema/Defect", .null⟩ _ [] [] => true
+  | _ => false
+
+/-- Reconstitutes a first-order `Ty` from an rc.112 `SchemaRepresentation` (decisions row 6):
+exactly the nodes `schema` mints, modulo annotations. A node with checks `schema` does not mint
+(`number`'s two, nothing else), a declaration whose payload is not `null`, a declaration whose
+defect slot is not the `Defect` declaration, an optional or annotated tuple element, is refused
+— `Ty` cannot represent it, and answering would widen the read into something `schema` never
+writes. Annotations are not read: `ofSchema r = some t` says `r` is `schema t` up to them. -/
 def ofSchema : Representation → Option Ty
-  | .never _ _ => some .never
-  | .void _ _ => some .unit
+  | .never _ [] => some .never
+  | .void _ [] => some .unit
   | .number _ checks =>
     match checks.map checkId with
     | ["effect/schema/isInt", "effect/schema/isGreaterThanOrEqualTo"] => some .nat
     | ["effect/schema/isInt"] => some .int
     | _ => none
-  | .string _ _ => some .string
-  | .boolean _ _ => some .bool
-  | .literal _ _ (.string s) => some (.lit s)
-  | .declaration rep _ [val] _ =>
-    if rep.id == "effect/schema/Option" then do
+  | .string _ [] => some .string
+  | .boolean _ [] => some .bool
+  | .literal _ [] (.string s) => some (.lit s)
+  | .declaration ⟨id, .null⟩ _ [val] [] =>
+    if id == "effect/schema/Option" then do
       let t ← ofSchema val
       some (.option t)
     else none
-  | .declaration rep _ [a, b] _ =>
-    if rep.id == "effect/schema/Result" then do
+  | .declaration ⟨id, .null⟩ _ [a, b] [] =>
+    if id == "effect/schema/Result" then do
       let tv ← ofSchema a
       let te ← ofSchema b
       some (.except te tv)
-    else if rep.id == "effect/schema/Fiber" then do
+    else if id == "effect/schema/Fiber" then do
       let tv ← ofSchema a
       let te ← ofSchema b
       some (.fiberOf tv te)
-    else if rep.id == "effect/schema/Cause" then do
+    else if id == "effect/schema/Cause" && isDefect b then do
       let te ← ofSchema a
       some (.causeOf te)
     else none
-  | .declaration rep _ [val, err, _] _ =>
-    if rep.id == "effect/schema/Exit" then do
+  | .declaration ⟨id, .null⟩ _ [val, err, defect] [] =>
+    if id == "effect/schema/Exit" && isDefect defect then do
       let tv ← ofSchema val
       let te ← ofSchema err
       some (.exitOf tv te)
     else none
-  | .declaration rep _ [] _ =>
-    some (.handle rep.id)
-  | .arrays _ _ [] [item] => do
+  | .declaration ⟨id, .null⟩ _ [] [] =>
+    some (.handle id)
+  | .arrays _ [] [] [item] => do
     let t ← ofSchema item
     some (.list t)
-  | .arrays _ _ [⟨false, a, none⟩, ⟨false, b, none⟩] [] => do
+  | .arrays _ [] [⟨false, a, none⟩, ⟨false, b, none⟩] [] => do
     let ta ← ofSchema a
     let tb ← ofSchema b
     some (.prod ta tb)
-  | .union _ _ [a, b] .anyOf => do
+  | .union _ [] [a, b] .anyOf => do
     let ta ← ofSchema a
     let tb ← ofSchema b
     some (.union ta tb)
   | _ => none
 
-/-- Q5 Retraction Theorem: `ofSchema` is an exact left inverse to `schema` across all 16 `Ty` constructors. -/
+/-- Q5 Retraction Theorem: `ofSchema` is a left inverse to `schema` across all 16 `Ty` constructors
+(`schema` mints no checks but `number`'s, `null` payloads, plain elements, so every guard passes). -/
 theorem ofSchema_schema (t : Ty) : ofSchema (schema t) = some t := by
   induction t with
   | never => rfl

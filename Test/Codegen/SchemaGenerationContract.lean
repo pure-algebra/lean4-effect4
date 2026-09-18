@@ -141,6 +141,23 @@ open Effect4.Program Effect4.Schema.Bridge
 #check ofSchema_schema
 #check ofSchema_schema_cty
 
+-- Row 6: what `schema` never writes, `ofSchema` refuses — a check `Ty` cannot carry, a declaration
+-- payload that is not `null`, a defect slot that is not the `Defect` declaration, an optional
+-- tuple element. Annotations are not read.
+#guard Ty.ofSchema (.string none [Schema.Check.named "effect/schema/pattern"]) = none
+#guard Ty.ofSchema (.boolean none [Schema.Check.named "effect/schema/isTrue"]) = none
+#guard Ty.ofSchema (.declaration ⟨"effect/schema/Option", .str "payload"⟩ none [Schema.string] []) = none
+#guard Ty.ofSchema (.declaration ⟨"effect/schema/Option", .null⟩ none [Schema.string]
+  [Schema.Check.named "effect/schema/isSome"]) = none
+#guard Ty.ofSchema (.declaration ⟨"effect/schema/Exit", .null⟩ none
+  [Schema.string, Schema.string, Schema.string] []) = none
+#guard Ty.ofSchema (.arrays none [] [Schema.element Schema.string (isOptional := true),
+  Schema.element Schema.string] []) = none
+#guard Ty.ofSchema (.union none [Schema.Check.named "effect/schema/x"] [Schema.string, Schema.boolean] .anyOf)
+  = none
+#guard Ty.ofSchema (.declaration ⟨"effect/schema/Option", .null⟩ (some [⟨"title", .str "t"⟩])
+  [Schema.string] []) = some (.option .string)
+
 /-! ## Multi-Tier Cascading CAS -/
 
 open Effect4.Store
