@@ -138,6 +138,11 @@ import Effect4.Program.Stream
 import Effect4.Api.HostSession
 import Effect4.Api.Runner
 import Effect4.Api.RunnerBytes
+-- The application surface (2026-09-17): a built program, its author, its run, its daemons.
+import Effect4.Api.Built
+import Effect4.Api.Author
+import Effect4.Api.Supervision
+import Effect4.Run
 -- Foreign-source ingestion tables and constructed target spellings.
 import Effect4.Ingest.Taxonomy
 import Effect4.Codegen.Forms

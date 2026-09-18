@@ -731,7 +731,7 @@ def enoughFor (program : Api.Program) (table : RowTable) (fuel : Nat) (m : Api.M
   (stepDecisionState (interpOf program table) fuel m d).2
 
 /-- The run a replay result reports, as `Api.replay` reports it. -/
-def runOf : NativeReplay → Api.Run
+def runOf : NativeReplay → Api.Inspection
   | .finished machine => ⟨.finished, machine, []⟩
   | .frontier why machine => ⟨.frontier, machine, Api.frontierReasons why machine⟩
   | .stuck why machine => ⟨.stuck why, machine, []⟩
@@ -773,7 +773,10 @@ theorem advance_step {program : Api.Program} {table : RowTable} (s : Session pro
         ⟨if enoughFor program table fuel s.machine d then .progressed else .frontier,
           Api.HostSession.retire { s with
             machine := steppedBy program fuel table s.machine d }⟩) := by
-  aesop (add norm unfold [Api.HostSession.advance, enoughFor, steppedBy])
+  rcases hstuck : s.machine.stuck with _ | why
+  · cases henough : enoughFor program table fuel s.machine d <;>
+      aesop (add norm unfold [Api.HostSession.advance, enoughFor, steppedBy])
+  · aesop (add norm unfold [Api.HostSession.advance, enoughFor, steppedBy])
 
 /-- A control row that progressed: the machine before it was not stuck, the step had enough
 fuel, and the machine it leaves is the one the raw stepper leaves. Retiring the bindings a

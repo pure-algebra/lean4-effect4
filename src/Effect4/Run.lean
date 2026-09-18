@@ -1,6 +1,7 @@
 import Effect4.Api.Built
 import Effect4.Api.Runner
 import Effect4.Api.TestClock
+import Effect4.Api.Supervision
 
 /-!
 # Run — one value a caller holds while a built program runs
@@ -81,7 +82,7 @@ def machine (s : Run) : Api.Machine := s.session.machine
 def outstanding (s : Run) : List Await := Api.HostSession.outstanding s.session
 
 /-- The frontier reading of the machine: outcome, machine and live reasons. -/
-def inspect (s : Run) : Api.Run := Api.HostSession.inspect s.session
+def inspect (s : Run) : Api.Inspection := Api.HostSession.inspect s.session
 
 /-- The root's exit, or `none` while it is still live. -/
 def exit (s : Run) : Option ExitV := s.inspect.exit
@@ -134,11 +135,9 @@ built here from `requestOf` — the same function `bindCall` checks it against. 
 namespace Api.HostSession.Call
 
 /-- The claim a run makes for a call on a row: everything but the row and the request is the
-run's own — its name, its table and its next call id.
-
-`Run` is spelled in full because `Api.Run` — the frontier reading of `Api.inspect` — is the
-nearer name inside this namespace, and `Program.requestOf` because `Api.requestOf` is. -/
-def claim (s : _root_.Effect4.Run) (key : Key) (op : NativeOp) (request : Val) : Call :=
+run's own — its name, its table and its next call id. (`Program.requestOf` is spelled in full
+because `Api.requestOf` is the nearer name inside this namespace.) -/
+def claim (s : Run) (key : Key) (op : NativeOp) (request : Val) : Call :=
   { version := Api.HostSession.version
     session := s.id
     table := s.built.table
@@ -149,7 +148,7 @@ def claim (s : _root_.Effect4.Run) (key : Key) (op : NativeOp) (request : Val) :
 
 /-- The call the machine is holding at this key, as the claim a `bind` row carries. `none`
 when the machine holds no call at that key. -/
-def «at» (s : _root_.Effect4.Run) (key : Key) : Option Call :=
+def «at» (s : Run) (key : Key) : Option Call :=
   (Program.requestOf s.machine key.fiber key.token).map fun request =>
     claim s key request.1 request.2
 
@@ -235,6 +234,9 @@ structure Observation where
   applied : Nat
   /-- Why the run is still live. -/
   reasons : List Api.FrontierReason
+  /-- Every fiber with what holds it (`Api.Supervision`): a tracked child, a daemon at a pin,
+  a daemon nobody holds, the root, or an exit — in creation order. -/
+  fibers : List (FiberId × Api.FiberStatus)
 deriving DecidableEq
 
 /-- The run as content. -/
@@ -247,7 +249,15 @@ def observe (s : Run) : Observation :=
     pending := (Api.HostSession.pendingReplies s.session).map Reply.key
     retired := s.session.retired.map (·.bound.key)
     applied := s.session.applied
-    reasons := read.reasons }
+    reasons := read.reasons
+    fibers := Api.fiberStatuses s.machine }
+
+/-- The live fibers nobody holds: a function of `fibers`, never a second field. -/
+def Observation.daemons (o : Observation) : List FiberId :=
+  o.fibers.filterMap fun entry => if entry.2 = Api.FiberStatus.daemon then some entry.1 else none
+
+/-- No unpinned daemon is alive (`Api.daemonsQuiet` of the machine the observation read). -/
+def Observation.daemonsQuiet (o : Observation) : Bool := o.daemons.isEmpty
 
 /-! ## The host as a function
 
