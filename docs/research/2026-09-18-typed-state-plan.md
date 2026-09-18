@@ -187,3 +187,23 @@ these amendments; the scout note is the detail and carries the file:line for eac
 
 Order after the scout: Move 1 (`EvaluateR.lean`), then `Keeps.lean`, then S0 in `Typed/Residual`
 with the `∀`-form and `HandlesFit` once ruled, then S1, then S2 by family, then S3.
+
+## 7. The composed graph (2026-09-18, `docs/research/2026-09-18-typed-state-composed-graph.md`; pending the owner's read)
+
+An adversarial check of the "algebraically factored" proposal against the tree. Its
+administrative frame lemma is false as stated (seven scheduler commands are frame-untouched,
+not seventeen; `Book.lean:202` is about what a command carries), its cluster counts do not
+match the code paths, and its 55 % cut does not survive; its three structural moves do. The
+refinement that survives: a **generic protocol-typed predicate on the free monad** (layer 0,
+probed, no axioms: weakening is one `cases`, `bind`/`widen`/the coproduct lift one induction
+each) with the continuation clause quantified over later worlds, so `monoΓ` and the `∀`-form
+repair are by construction; a **protocol pre-half** `OpOk` beside `AnswerOk`; a **typed
+stack** so `popR` is one delivery lemma; the **nine delivery sites** as S2's command half;
+**hook typing** `InterpTyped` for `interpR`'s fourteen code-valued fields; and the
+**`DeferredNat` column**, the twin of `HeapNat`, which is what types an asynchronous
+completion (`STORES-FB-COMPLETION` excludes it today). The world carries the ref and promise
+tables from the start so polymorphic `Ref<A>`/`Deferred<A, E>` is a refinement, not a rewrite.
+Honest size: ~130 lemmas, 4,500–6,300 lines. Three rulings owed: `HandlesFit` (open),
+`DeferredNat`, layer 0's home (`Laws/Effects/Protocol.lean`, importing the pinned `Effects`
+only; no pull-in needed). Order if adopted: Move 1 → `Keeps` → layer 0 → layer 1 → `popR_typed`
+first → S1 → `InterpTyped` → S2 (frame, delivery, operations) → S3.
