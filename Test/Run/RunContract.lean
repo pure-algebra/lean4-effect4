@@ -1,4 +1,4 @@
-import Effect4.Run
+import Effect4.Laws.Run
 import Test.Api.RunnerContract
 
 /-!
@@ -132,5 +132,47 @@ def byKey : Run :=
     (.ofExit (.success (.nat 2)))
 #guard byKey.phases = [.progressed, .bound, .preflight, .applied, .bound, .preflight, .applied]
 #guard (byKey.play Rows.flush).exit = some (.success (Val.exitOk (.nat 3)))
+
+/-! ## The clock is the tape -/
+
+-- The rows of a clocked run are the test clock's tape, written as control rows.
+#guard Rows.tape (Api.TestClock.tape [5, 7]) =
+  Rows.start ++ Rows.clock 5 ++ Rows.clock 7 ++ Rows.flush
+#guard (Run.runClock twice [5]).journal = Rows.tape [Api.evaluate, .advance 5, Api.flush]
+#guard (Run.runClock twice []).journal = (Run.runPure twice).journal
+
+/-! ## One completion per call
+
+Once an answer has been applied the machine holds no call at that key, so a second answer
+has no rows at all. -/
+
+#guard Rows.answer driven ⟨Api.root, 0⟩ (.ofExit (.success (.nat 2))) = []
+#guard Api.HostSession.Call.at driven ⟨Api.root, 0⟩ = none
+#guard (driven.answer ⟨Api.root, 0⟩ (.ofExit (.success (.nat 2)))).journal = driven.journal
+
+/-! ## The ceilings -/
+
+/-- info: 'Effect4.Run.journal_replays' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Effect4.Run.journal_replays
+/-- info: 'Effect4.Run.drive_eq_play' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Effect4.Run.drive_eq_play
+/-- info: 'Effect4.Run.drive_envelope' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Effect4.Run.drive_envelope
+/-- info: 'Effect4.Run.answer_accepted' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Effect4.Run.answer_accepted
+/-- info: 'Effect4.Run.open_total' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Effect4.Run.open_total
+/-- info: 'Effect4.Run.bindCall_at' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Effect4.Run.bindCall_at
+/-- info: 'Effect4.Run.answer_once' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Effect4.Run.answer_once
+/-- info: 'Effect4.Run.runPure_eq_run' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Effect4.Run.runPure_eq_run
+/-- info: 'Effect4.Run.admitProgram_certificate' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Effect4.Run.admitProgram_certificate
+
+#check @Effect4.Run.receive_rows
+#check @Effect4.Run.answer_rows
+#check @Effect4.Run.acceptReply_after_applied
 
 end Test.Run.RunContract
