@@ -16,7 +16,7 @@ thing seen three times: **the boundary does not say what it means.** A record is
 tuple (`Await`, `Observation.fibers`, `rowNames`, every application's request), a handle's
 published schema is not the value that crosses, and the row table travels by value in every
 call. Everything else is either a mechanical fix with no decision content (§4, do now), a proof
-that ties two existing pieces together (§3), or one of nine decisions (§5) — of which the first,
+that ties two existing pieces together (§3), or one of ten decisions (§5) — of which the first,
 *how a record and a sum are named at the boundary*, is the language decision the rest hang on.
 
 ## 1. The surface as it stands
@@ -150,7 +150,7 @@ the boundary is computed twice.
 
 ## 5. The decisions
 
-Nine, deduplicated from the receipts' fourteen and the scouts' twenty. Ordered by what depends
+Ten, deduplicated from the receipts' fourteen and the scouts' twenty. Ordered by what depends
 on what; each with the recommendation and the reason.
 
 **D-A — how a record and a sum are named at the boundary.** (D's D-1; the language decision.)
@@ -202,6 +202,25 @@ check at the declaration site until an application needs a seventh carrier (thre
 `Built`, `HostSession.start`, `Run.open` and the soundness statements); and confirm that `gen`
 stays a printer spelling with no authoring lift, so authored programs never contain `Stmt` —
 or say that the statement family is to be retired from `Eff` after all.
+
+**D-J — how canonical TypeScript is generated** (owner, later on 2026-09-17: "the semantics
+of how we generate canonical TypeScript representations might need to be refined", and "refactor
+the lowering with LCNF so we can author canonical parts for Effect in TypeScript — the session
+APIs — and prove API correctness, robustness, version handling, data structures"). Three rules,
+each one a gate can hold: (1) every TypeScript artefact names the canonical object it is a fold
+of — `Eff` for programs (the template table, laws 11/12), `Document` for types and schemas (the
+rc.112 mirror, the retraction, the pins), the LCNF closure for code (the session transitions,
+the codecs, the atoms; the Conform rungs as the differential) — and a fold from anything else
+(the Lean environment, as `TsGen` reads today; a hand transcription, as `prelude.ts` is) fails
+`check-gen`; (2) the TypeScript side holds no second representation of a schema — static types
+come from the same `Document` the runtime schema does, so `eff.gen.ts`'s `TaggedUnion` and
+`Ty.schema`'s `anyOf` become one encoding; (3) code that has a law in Lean crosses only by
+lowering, never by mirror — `runner.gen.ts` and `prelude.ts` lowered from LCNF beside
+`ocaml/gen`, so `advance_step` is a sentence about the TypeScript host too. *Recommend:* adopt
+the three rules now (they decide D-E and D-F the same way); build the LCNF-to-TypeScript backend
+after D-C/D-F land the Lean driver, so it inherits a settled `ToolSpec` table. Diagrams and the
+kv walk-through are in the session of 2026-09-17 (three inline diagrams: where a schema lives
+today, the proposed pipeline, the kv module's crossings).
 
 Not decisions, recorded as such: the error column stays wide (D's D-4 — sound, not tight; D-H
 was rejected); `FiberStatus.root` stays (daemons D1); the six `rfl` proofs stay `rfl` (daemons
