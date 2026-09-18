@@ -594,20 +594,20 @@ A `daemon` flag on a scoped fork has no field in the options object; a `perform`
 of a `unit`-request row or a value row is dropped. Each is `readable = false`, and the reader
 answers the program the printer kept. -/
 
--- The retained negative: a *non-daemon* `forkIn`/`forkScoped` action has no rc.112 spelling,
--- so it is outside the readable image and the reader answers the daemon program the printed
--- text means. The refusal is kept, only its side is the source's (`E4-CHECK-CE-015`).
+-- The retained negative: a *non-daemon* `forkIn`/`forkScoped` action has no rc.112 spelling.
+-- The printer refuses it (owner ruling 2026-09-17: the daemon flag stays visible; it is never
+-- printed as the daemon it is not), so the round trip stops at the printer (`E4-CHECK-CE-015`).
 #guard readable sig spell 0 (.withFiber (.forkScoped (.succeed (.lit (.nat 1))) ⟨true, false, .inherit⟩))
   = false
 
 #guard roundTrip sig spell 0 (.withFiber (.forkScoped (.succeed (.lit (.nat 1))) ⟨true, false, .inherit⟩))
-  = .ok (.withFiber (.forkScoped (.succeed (.lit (.nat 1))) ⟨true, true, .inherit⟩))
+  = .error (.shape "printer")
 
 #guard readable sig spell 1 (.withFiber (.forkIn (.succeed (.lit (.nat 1))) ⟨true, false, .inherit⟩ (.var 0)))
   = false
 
 #guard roundTrip sig spell 1 (.withFiber (.forkIn (.succeed (.lit (.nat 1))) ⟨true, false, .inherit⟩ (.var 0)))
-  = .ok (.withFiber (.forkIn (.succeed (.lit (.nat 1))) ⟨true, true, .inherit⟩ (.var 0)))
+  = .error (.shape "printer")
 
 #guard readable sig spell 0 (.perform 1 (.lit (.nat 5))) = false
 

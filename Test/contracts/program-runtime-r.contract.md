@@ -290,8 +290,9 @@ Current source/target limits remain explicit:
   still fails strict TypeScript checking although `ts/eff` typechecks.
 - `E4-CHECK-CE-014`: two finite interrupt-all host cases use a pair where the IR
   typing rule demands a list. They are not well-typed admission evidence.
-- `E4-CHECK-CE-015`: admitted printed scope/fork forms are outside the current
-  reader's image. Exact round-trip statements retain their readable premise.
+- `E4-CHECK-CE-015`: a child (non-daemon) `forkIn`/`forkScoped` has no rc.112
+  spelling. Since 2026-09-17 the printer refuses it (`internalAction "forkIn:child"`)
+  instead of printing the daemon form; the daemon flag is never hidden.
 - `E4-CHECK-CE-016`: repeated execution of one scoped-fork point reuses its
   registration key. The tracked `ScopeRegistrationCollision` witness retains
   the current bad result: two iterations leave the first child live on both

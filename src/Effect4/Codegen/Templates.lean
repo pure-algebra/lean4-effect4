@@ -187,8 +187,13 @@ def effRows : List Row :=
 def actionRows : List Row :=
   [ ⟨.action, "fork", [(1, .daemon true)], .tpl (call "Effect.forkDetach" [h 0, h 1])⟩
   , ⟨.action, "fork", [(1, .daemon false)], .tpl (call "Effect.forkChild" [h 0, h 1])⟩
-  , ⟨.action, "forkIn", [], .tpl (call "Effect.forkIn" [h 0, h 2, h 1])⟩
-  , ⟨.action, "forkScoped", [], .tpl (call "Effect.forkScoped" [h 0, h 1])⟩
+  -- rc.112's `forkIn` and `forkScoped` fork a daemon at the pin (`internal/effect.ts:5366`,
+  -- `:5406`): a child (non-daemon) fork into a scope has no spelling, so it is refused rather
+  -- than printed as the daemon it is not (owner ruling 2026-09-17: the flag stays visible)
+  , ⟨.action, "forkIn", [(1, .daemon true)], .tpl (call "Effect.forkIn" [h 0, h 2, h 1])⟩
+  , ⟨.action, "forkIn", [(1, .daemon false)], .refuse "forkIn:child"⟩
+  , ⟨.action, "forkScoped", [(1, .daemon true)], .tpl (call "Effect.forkScoped" [h 0, h 1])⟩
+  , ⟨.action, "forkScoped", [(1, .daemon false)], .refuse "forkScoped:child"⟩
   , ⟨.action, "runIn", [],
       .tpl (call "Effect.withFiber"
         [ .arrowBlock []

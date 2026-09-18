@@ -287,15 +287,18 @@ def sig : Signature (Fin 3) :=
   = .ok ("Effect.forkDetach(Effect.succeed(1), { startImmediately: true, "
       ++ "uninterruptible: \"inherit\" })")
 
+-- a child (non-daemon) fork into a scope has no rc.112 spelling: refused, never printed as
+-- the daemon it is not
+#guard print sig 1 (.withFiber (.forkIn (.succeed (.lit (.nat 1))) ⟨true, false, .inherit⟩ (.var 0)))
+  matches .error (.internalAction "forkIn:child")
+
+#guard print sig 0 (.withFiber (.forkScoped (.succeed (.lit (.nat 1))) ⟨true, false, .interruptible⟩))
+  matches .error (.internalAction "forkScoped:child")
+
 #guard (print sig 1 (.withFiber (.forkIn (.succeed (.lit (.nat 1)))
-      ⟨true, false, .inherit⟩ (.var 0)))).map (expr house0 0)
+      ⟨true, true, .inherit⟩ (.var 0)))).map (expr house0 0)
   = .ok ("Effect.forkIn(Effect.succeed(1), a0, { startImmediately: true, "
       ++ "uninterruptible: \"inherit\" })")
-
-#guard (print sig 0 (.withFiber (.forkScoped (.succeed (.lit (.nat 1)))
-      ⟨true, false, .interruptible⟩))).map (expr house0 0)
-  = .ok ("Effect.forkScoped(Effect.succeed(1), { startImmediately: true, "
-      ++ "uninterruptible: false })")
 
 /-! ## `withFiber`: the handle actions -/
 

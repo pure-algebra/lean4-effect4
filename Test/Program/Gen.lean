@@ -264,8 +264,10 @@ def genEffStep (prev : Nat → M (Eff NativeOp)) (prevStmts : Nat → Nat → M 
     | 21 =>
       pure (.awaitFiber (← genTerm n 1) (if (← pick 2) == 0 then .awaitValue else .joinEffect))
     | 22 | 23 => pure (.withFiber (.fork (← prev n) (← genOpts)))
-    | 24 => pure (.withFiber (.forkScoped (← prev n) (← genOpts)))
-    | 25 => pure (.withFiber (.forkIn (← prev n) (← genOpts) (← genTerm n 1)))
+    -- a fork into a scope is a daemon at the pin (rc.112): the child form has no spelling and
+    -- the printer refuses it, so the corpus draws the daemon form only
+    | 24 => pure (.withFiber (.forkScoped (← prev n) { (← genOpts) with daemon := true }))
+    | 25 => pure (.withFiber (.forkIn (← prev n) { (← genOpts) with daemon := true } (← genTerm n 1)))
     | 26 =>
       match ← pick 6 with
       | 0 => pure (.withFiber (.runIn (← genTerm n 1) (← genTerm n 1)))
