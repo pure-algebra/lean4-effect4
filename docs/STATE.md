@@ -48,7 +48,7 @@ reads back.
 | `docs/core/ontology.md` | the frame: six sorts with one free object each, five arrow kinds with their obligations, coherence as a per-sort census; the probe of the "do now" rows; the Schema layer as the place to start over |
 | `docs/core/coherence-principle.md` | scout F: the principle in full, the seven squares, the arrows lacking obligations |
 | `docs/core/traversal-census.md` | the census numbers, every hand traversal by root, the converter design |
-| `docs/core/decisions.md` | every open decision, one list (37 rows; 21 the owner's) with the order |
+| `docs/core/decisions.md` | every open decision, one list (40 rows; 18 the owner's; reviewed row by row against HEAD on 2026-09-18, a status column) with the order |
 | `docs/core/api-surface.md` | the consolidated API and its awkward constructs |
 | `docs/core/lcnf-route.md` | what the LCNF lowering handles and refuses; the LLVM-shaped architecture |
 | `docs/DESIGN-ISSUES.md` | the DI register (rulings are made only when written here) |
@@ -74,10 +74,11 @@ Scout G (third-party Lean tooling for this work) is out: `docs/research/2026-09-
 
 ## Owner decisions open
 
-The 21 owner rows of `docs/core/decisions.md`, in the order its last section gives: rows 14 and
-15 (the digest, the MCP server), then 2, 4, 7, 9, 10, 11; then 26–29 and 32; then 1, 30,
-19–22. Rows 5 and 6 have the restatements `ontology.md` §2 gives (exactness modulo a named
-normaliser).
+The 18 owner rows of `docs/core/decisions.md` (reviewed 2026-09-18), in the order its last
+section gives: row 39 (the Schema wipe as one ruling; it closes rows 4 and 9), then rows 14 and 15
+(the digest, the MCP server), then 2, 7, 10, 11; then 26–29 and 32, with 30's `compileEff` ruling;
+then 1 with 3, and 19–22. Rows 5 and 6 have the restatements `ontology.md` §2 gives (exactness
+modulo a named normaliser).
 
 ## Process
 
