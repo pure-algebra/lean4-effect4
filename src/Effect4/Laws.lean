@@ -69,6 +69,7 @@ import Effect4.Laws.Auto.Census
 import Effect4.Laws.Codegen.Template
 import Effect4.Laws.Codegen.Read
 import Effect4.Laws.Codegen.ReadPrint
+import Effect4.Laws.Codegen.PrintReadable
 import Effect4.Laws.Codegen.ModuleReadable
 import Effect4.Laws.Store.CanonicalSpec
 import Effect4.Laws.Schema.Codec
