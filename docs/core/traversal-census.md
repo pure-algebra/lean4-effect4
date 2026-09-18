@@ -444,6 +444,39 @@ of the hand checker), **68 with a fold and a connector**, the thirteen without u
 (`compileEff`'s five, `Sched`'s five, `valCode`, `ofSchema`, the derived instance). The
 projections themselves classify as delegating to `check`, which is the fold's presentation.
 
+### 7.9 The callers of the term typer moved; the hand term block deleted (2026-09-18)
+
+The pattern of §7.8 at the term sort. `argTy`/`argsTy` — the fold of §7.6, until now
+`Checker.argTy` in `Typing/Terms.lean` beside the hand block — is the definition in
+`Typing/Rules.lean`, under the names the hand `argTy` and `termsTy` had; `termTy sig env t :=
+argTy sig env false t` is its projection outside a const-generic atom, where the literal rule is
+`Lit.ty` (`litArgTy_false`). Deleted: the hand `termTy`/`termsTy` mutual block, the hand `argTy`
+(a case split that delegated to `termTy`), `termsTy_cons` (now `argsTy_cons`, `rfl`),
+`Typing/Terms.lean`, `Folds/TermTy.lean`, and the agreement (`argTy_eq`, `argsTy_eq`,
+`termTy_eq`, `termTy.eq_cata`, `termsTy.eq_cata`) — no agreement is needed when the fold is the
+definition. Weakening moves onto the fold: `argTy_weaken`/`argsTy_weaken` by one arm per
+constructor, where the hand `termsTy_weaken` needed three cons arms, one per head constructor,
+because `termsTy` split on the head; `termTy_weaken` is the corollary at `false`, its statement
+unchanged, so `Typing.lean`'s `check_weaken` simp sets are untouched.
+
+Callers: `argTy_cases` keeps its statement and its proof — the flag reaches a literal argument
+and nothing else, so `argTy … const (.var i)` and `termTy … (.var i)` are one term by
+definition; `Typed.lean`'s `evalTerm_hasTy`/`evalTerms_hasTy`/`evalTerm_isSome`/
+`evalTerms_isSome` read `argsTy` and `argsTy_cons` where they read `termsTy`, and the one site
+that had `termTy … (.lit l) = some l.ty` by `rfl` unfolds through `argTy` and `litArgTy_false`
+(the literal rule at `false` is an equation, not a definitional identity); `Forms.as_typed` adds
+the same two names to its simp set. Everything else — `HasTy`'s rules, the fifty inversions,
+`Sound`, `Checker.term?`, the batteries' `#guard`s — names `termTy` opaquely and compiled
+untouched. `tools/conform-red` names a `termTy_reflect` that does not exist; it is not a lake
+target.
+
+Both roots and `Test.All` build; `argTy_weaken`, `termTy_weaken`, `argTy.eq_cata`,
+`argsTy.eq_cata`, `evalTerm_hasTy`, `Forms.as_typed` at `[propext, Quot.sound]`;
+`argTy_cases`/`argsTy_cons` at `[propext]`. Census: **78 hand traversals** (`Term` 11, down from
+14: the three of the hand term block), **65 with a fold and a connector**; `Term` is 11 of 11
+(the driver prints `structural 13 (of which 13 with a fold beside them)`: the two fold members
+are rows too); the thirteen without unchanged. `termTy` classifies as delegating to `argTy`.
+
 ## 8. Scout G — the tooling that exists (`docs/research/2026-09-17-lean-tooling-scout-G.md`)
 
 Read against the converter: **no recursion-schemes or generic-programming library exists** for
