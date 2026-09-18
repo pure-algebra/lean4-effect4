@@ -150,6 +150,8 @@ import Effect4.Program.Folds.Ty
 import Effect4.Program.Folds.Provision
 import Effect4.Program.Folds.Term
 import Effect4.Program.Folds.Representation
+import Effect4.Program.Checker
+import Effect4.Program.Folds.Checker
 import Effect4.Api.Author
 import Effect4.Api.Supervision
 import Effect4.Run
