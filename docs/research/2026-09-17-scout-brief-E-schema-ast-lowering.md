@@ -73,7 +73,7 @@ Your job is to say whether this is coherent, exactly where it is not, and what i
 - The plans this refines: `docs/research/2026-09-16-generation-medium-workshop.md` (five words
   per signature; entries each a type with a schema input and output; the signature persisted as
   a document; `Ty.app`), `2026-09-17-runner-schema-codegen-plan.md`, the consolidation note
-  `2026-09-17-api-consolidation-and-decisions.md` (D-A, D-B, D-E, D-J), scout D
+  `docs/core/api-surface.md` (D-A, D-B, D-E, D-J), scout D
   `2026-09-17-schema-interop-scout-D.md` (§4 the `ofSchema` table, §5–§7), scout C
   `2026-09-17-mcp-surface-scout-C.md` (§3–§4).
 

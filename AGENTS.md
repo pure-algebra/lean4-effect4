@@ -8,22 +8,21 @@ full, then open only the authority documents named for the current task.
 | Path | Owns |
 | --- | --- |
 | `README.md` | what the product is, the application face, how to build |
+| `docs/STATE.md` | the entry point: true at HEAD, the documents, what is next, what the owner must decide |
+| `docs/core/` | the current authorities: `ontology.md` (the frame and the vocabulary's definitions), `coherence-principle.md`, `traversal-census.md`, `decisions.md` (every open decision, one list), `api-surface.md`, `lcnf-route.md` |
 | `docs/ARCHITECTURE.md` | the source tree, module boundaries, dependency direction, the API seam |
 | `docs/GENERATED.md` | the generated groups: producers (`make gen-<group>`), inputs, consumers and checks |
 | `docs/DESIGN-BASIS.md` | the representation decisions (DB-01 … DB-15), their status and sources |
 | `docs/DESIGN-ISSUES.md` | the open design questions (DI-nn): status, what each would force to be redone, the milestone to decide by; a ruling is made only when written into a tracked file |
-| `docs/DESIGN-MAP.md` | the framework: the five layers of the reification, their representations and conversions with the grade of evidence each carries, the drift points, the literature per layer, the register rows per layer; cited by section |
+| `docs/DESIGN-MAP.md` | the earlier five-layer map, cited by section from code; superseded in substance by `docs/core/ontology.md` §5 |
 | `docs/RUNTIME-COVERAGE.md` | the rc.112 runtime mechanism census, its rows, and the one coverage report format |
-| `docs/SCHEMA-ANNOTATIONS.md` | the annotation data plane as the host defines it |
 | `Test/contracts/` | frozen contract packets and their executable falsifiers |
 | `Test/Counterexamples/REGISTER.md` | stable IDs of every declaration-changing counterexample |
 | `Test/fixtures/baseline/<commit>/` | retained pre-change baselines of the descriptions and alphabets, the independent authority a compatibility gate compares against (DI-47). No generator writes here; it changes only by a named promotion command, and a diff in it is a review event, not drift |
 | `src/Effect4/` | API and functional utilities through `Effect4`; the proof graph through `Effect4.Laws`, with declaration namespaces unchanged |
 | `Test/` | batteries, attacks and proof receipts; `Audit/AxiomGate.lean` is the gate |
 | `generated/` | deterministic projections only; never hand-edited |
-| `docs/research/` (not tracked) | working notes, plans, the proof-graph ledgers and surveys; synced between machines directly |
-| `COORDINATION.md` (not tracked) | live claims between concurrent sessions, and the parity steps for the other machine |
-| `docs/agents/` | where the engineering skills (wayfinder, to-spec, to-tickets, domain-modeling, implement) find this repo's tracker and domain docs; pointers only, it owns no fact |
+| `docs/research/` (gitignored; the notes that matter are force-added) | working notes, scout briefs and notes, receipts, evidence trees; history, not authority |
 
 If two files appear to own the same fact, stop and repair the ownership map.
 
@@ -56,6 +55,37 @@ number in a report behind a command; `ocaml/README.md` is its map.
 - Effect TypeScript is one target profile, not the identity or semantic owner.
 - Names are data: an alphabet instantiated at a function type fails the
   separation gates at the foot of the machine modules.
+
+## Vocabulary
+
+The words below have one meaning each (`docs/core/ontology.md` §5 defines them against the
+tree). A new representation is admitted by naming its sort's signature and the kind of each of
+its arrows; anything else is a leak.
+
+- **Free object**: the one representation of a sort, an inductive family with its signature as
+  data (`Eff` with `binders.json`/`LayerView`; `Ty`; `Term`; `Store.Val`; `Representation`;
+  `List Command`). One per sort.
+- **Algebra** and **fold**: a carrier with one field per constructor (`EffAlgebra`,
+  `TyAlgebra`, …, generated) and the unique map out of the free object (`cataFam`, `cata_eff`,
+  `cata_ty`, …). Every traversal is a fold or generated from the signature; a hand `match` is an
+  exemption the census (`#traversal_census`, `docs/core/traversal-census.md`) lists by name.
+  Two folds agree when their algebras do (`hom_eq_cata_eff`); no pairwise agreement proof.
+- **Exact embedding**: a write/read pair `write : A → F`, `read : F → Option A` with three
+  laws — total on its domain, retraction `read (write a) = some a`, exactness
+  `read v = some a → v ≡ write a` modulo a named normaliser (`Canonical`; `print`/`read`;
+  `Ty.schema`/`ofSchema`; the JSON codec). A read without exactness is a widening, not an
+  embedding.
+- **Simulation**: two behaviours related on one observation over a named fragment
+  (`run_eq_meaning` on `Straight`, `loopAgreement` on `Looped`, the Conform rungs, the truth
+  lane). The only statement about two behaviours; never "equivalent" without the observation.
+- **Located refusal**: a total-by-refusal map `Src → Except Refusal F` whose refusal names a
+  path and a reason, complete against the judgment (`explain = none ↔ wellTyped`).
+- **Monoid action**: the journal `List Command` acting on the run (`replay_unique`,
+  `journal_replays`); a run is data because its journal is.
+- **Schema and program**: Schema is a data language; every effectful slot in it is a hole
+  filled by an `Eff` program with a typing certificate; `Ty` and the schema carriers never
+  mention `Eff`; a foreign transformation is a name with a typed signature that any
+  meaning-needing operation refuses.
 
 ## Trust
 
@@ -111,23 +141,19 @@ number in a report behind a command; `ocaml/README.md` is its map.
   relations, nontrivial composition or recursive invariants, and external
   semantic equivalence; a passive finite alphabet closes with its local
   receipts.
-- More than one session may edit this branch. Read `COORDINATION.md` before
-  changing a shared surface and record a claim there; `git fetch` before a
-  commit and never `git add -A` without reading `git status` first.
+- One session per checkout; a parallel seat runs in its own worktree on disjoint files with a
+  brief the owner has seen, and never copies `docs/research` (2 GB). Never `git add -A`
+  without reading `git status` first; the owner's untracked `docs/*.md` stay untracked.
+- Build in parallel, slot in, delete at a good place: a new representation is a second file
+  beside the old one with its connector (the agreement theorem), the callers move, then the old
+  one goes. Never an edit in place that throws away work to be repeated.
 - A handoff records base and head commits, changed files, exact commands and
   results, axiom output, open obligations, and whether any evidence is bounded
   or host-only.
 
-## Agent skills
+## Registers
 
-### Issue tracker
-
-This repo's own registers and research notes: `docs/DESIGN-ISSUES.md` (open, owner-ruled),
-`docs/DESIGN-BASIS.md` (settled), `Test/contracts/`, `Test/Counterexamples/REGISTER.md`, and
-`docs/research/` for the history. No external tracker. A wayfinder map lives inside its
-effort's research note. See `docs/agents/issue-tracker.md`.
-
-### Domain docs
-
-Single-context; the glossary is `docs/DESIGN-MAP.md` and the decision record is the two
-registers. No `CONTEXT.md`, no `docs/adr/`. See `docs/agents/domain.md`.
+Open decisions: `docs/core/decisions.md` (one list) and `docs/DESIGN-ISSUES.md` (the DI
+register; a ruling is made only when written there). Settled representation decisions:
+`docs/DESIGN-BASIS.md`. Contracts and counterexamples: `Test/contracts/`,
+`Test/Counterexamples/REGISTER.md`. No external tracker, no `docs/adr/`.

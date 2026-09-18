@@ -5,7 +5,7 @@ that it's like we're trying to hold water — everything can turn into everythin
 organize that, where do we go to make that coherent? I want a deep theoretical seat to dig into
 the research — language semantics, compiler semantics — to find a coherent answer." A research
 scout at high effort. The coordinator commits; you write
-`docs/research/2026-09-17-coherence-theory-scout-F.md`.
+`docs/core/coherence-principle.md`.
 
 This is not an inventory. The inventories exist (below). The deliverable is the *principle*:
 the smallest theory under which every representation in the estate is an instance, every
@@ -51,7 +51,7 @@ estate drawn in that theory, with the arrows that are missing or wrong marked.
   `fold`, `Hom`, `Build`), `2026-09-10-fractal-cas-architecture.md` (the wayfinder map),
   `2026-09-16-algebraic-reading-assessment-and-order-ruling.md` (the initial-algebra reading),
   `docs/research/2026-09-16-core-goals-and-end-state.md` (the proof chain and its gaps),
-  `2026-09-17-api-consolidation-and-decisions.md` (D-A..D-J), `2026-09-17-schema-interop-
+  `docs/core/api-surface.md` (D-A..D-J), `2026-09-17-schema-interop-
   scout-D.md` §5 (seven places a schema lives), memory `top-of-abstraction-tree-rule` and
   `universal-algebra-refactor-2026-09-16`.
 - **The prior literature reviews in the tree:** `2026-09-05-effects-papers-review` (memory
@@ -155,5 +155,5 @@ Answer these, in order, with the literature and against the tree.
   proofs at `[propext, Quot.sound]`; no semantics duplicated outside the machine.
 - The note is the deliverable, ≤ 600 lines, sections numbered as the questions, a
   one-paragraph answer at the top. Write it to
-  `/Users/pooks/Dev/lean4-effect4/docs/research/2026-09-17-coherence-theory-scout-F.md`.
+  `/Users/pooks/Dev/lean4-effect4/docs/core/coherence-principle.md`.
   No artifacts, no commits, no edits outside that file and your worktree's probes.

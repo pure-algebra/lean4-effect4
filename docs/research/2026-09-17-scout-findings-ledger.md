@@ -401,9 +401,9 @@ dogfooded and the applications regroup, `2026-09-17-schema-interop-scout-D.md`),
 Schema AST path and the LCNF-to-TypeScript lowering, `2026-09-17-schema-ast-lowering-scout-E.md`:
 coherent for the encoded-side, program-free fragment; 91 of 7,008 vendored exports are AST-typed
 entries; Design A with `Ty.app`) and scout F (the organizing principle,
-`2026-09-17-coherence-theory-scout-F.md`: one free object per kind presented as data, every other
+`docs/core/coherence-principle.md`: one free object per kind presented as data, every other
 representation an algebra by the unique fold or an exact embedding; coherence as the uniqueness of
 the fold; 13 arrows lacking their obligation; the seven-square gate). The coordinator's own notes:
-`2026-09-17-api-consolidation-and-decisions.md` and `2026-09-17-lcnf-capabilities-survey.md` (with
+`docs/core/api-surface.md` and `docs/core/lcnf-route.md` (with
 the owner's LLVM steer, §7). **Every open decision, deduplicated, is
-`2026-09-17-decisions-one-list.md`** — 37 rows, 21 the owner's, 16 scheduled; the order at its end.
+`docs/core/decisions.md`** — 37 rows, 21 the owner's, 16 scheduled; the order at its end.
