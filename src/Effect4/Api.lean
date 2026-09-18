@@ -2,6 +2,7 @@ import Effect4.Program.Admit
 import Effect4.Program.Admission
 import Effect4.Program.Table
 import Effect4.Program.Typing.Blame
+import Effect4.Program.Typing.Agreement
 import Effect4.Program.Authoring
 import Effect4.Api.Derived
 import Effect4.Program.Packages

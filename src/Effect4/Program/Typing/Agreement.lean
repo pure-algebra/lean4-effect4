@@ -1,17 +1,17 @@
 import Effect4.Program.Checker
 import Effect4.Program.Folds.Checker
-import Aesop
 
 /-!
-# Laws.Program.Typing.Checker — the fold checker is the hand checker and the hand blame
+# Program.Typing.Agreement — the fold checker is the hand checker and the hand blame
 
 `Checker.check sig env p e : Except TypeRefusal EffTy` projects to both hand blocks: its
 success is `effTy sig env e` and its refusal is `explainEff sig env p e`, one theorem per sort
 of the program's family by structural recursion (`check_eq`, `checkLayer_eq`, …), each stating
 both projections at once. This is the connector of `Program/Checker.lean`: every property of
 `effTy` (`Typing/Sound.lean`, `Typing/Check.lean`) and of `explain` reaches the fold through
-it, `explain = none ↔ effTy.isSome` is the shape of `Except` (`explain_none_iff'`), and the
-callers move across it.
+it, the law of the projection (DI-86, `explain_none_iff` and its six sorts, once a second
+mutual induction of seven hundred lines in `Blame.lean`) is the shape of `Except`, and the
+callers move across it. It lives in the core root because `Api.check` is total by that law.
 
 The list sort is stated at its consumer: the layers' signatures under the nonempty merge are
 `layersTy`'s result, and their refusal is `explainLayers`'s on a `cons` (on `nil` the
@@ -23,7 +23,9 @@ the hand checker and the hand blame as the two projections of the fold of `check
 (`Program/Folds/Checker.lean`), which is what the census reads.
 -/
 
-namespace Effect4.Program.Checker
+namespace Effect4.Program
+
+namespace Checker
 
 variable {Op : Type}
 
@@ -629,13 +631,88 @@ theorem typeOf_eq (sig : Signature Op) (program : Eff Op) :
 theorem explain_eq (sig : Signature Op) (env : TyEnv) (e : Eff Op) :
     refusal (check sig env [] e) = explain sig env e := (check_eq sig env [] e).2
 
-/-- `explain = none ↔ effTy.isSome`, the law `Blame.lean` proves by a second mutual induction,
-is the shape of `Except`: a check is `ok` or it is `error`. -/
-theorem explain_none_iff' (sig : Signature Op) (env : TyEnv) (e : Eff Op) :
-    explain sig env e = none ↔ (effTy sig env e).isSome = true := by
-  rw [← explain_eq, ← (check_eq sig env [] e).1]
-  cases check sig env [] e <;>
-    simp only [refusal, Except.toOption, Option.isSome, reduceCtorEq, Bool.false_eq_true, iff_self]
+/-- A check is `ok` or it is `error`: its refusal is `none` exactly when its success is
+`some`. Every `*_none_iff` below is this, through the agreement. -/
+theorem refusal_none_iff {α : Type} (x : Except TypeRefusal α) :
+    refusal x = none ↔ x.toOption.isSome := by
+  cases x <;> simp only [refusal, Except.toOption, Option.isSome, reduceCtorEq,
+    Bool.false_eq_true, iff_self]
+
+end Checker
+
+/-! ## The law of the projection (DI-86)
+
+`explain` answers `none` exactly when `effTy` answers, at every sort and every environment:
+the located refusal is a projection of the one checker. Once proved by a mutual induction
+following every arm of both blocks (`Blame.lean`, before 2026-09-18), it is now the shape of
+`Except` read through the agreement. The statements are unchanged; `Api.check` is total by
+`explain_none_iff`. -/
+
+open Checker
+
+theorem explainEff_none_iff (sig : Signature Op) (e : Eff Op) :
+    ∀ env p, explainEff sig env p e = none ↔ (effTy sig env e).isSome := by
+  intro env p
+  rw [← (check_eq sig env p e).2, ← (check_eq sig env p e).1]
+  exact refusal_none_iff _
+
+theorem explainStmts_none_iff (sig : Signature Op) (ss : Stmts Op) :
+    ∀ env inLoop p, explainStmts sig env inLoop p ss = none ↔ (stmtsTy sig env inLoop ss).isSome := by
+  intro env inLoop p
+  rw [← (checkStmts_eq sig env inLoop p ss).2, ← (checkStmts_eq sig env inLoop p ss).1]
+  exact refusal_none_iff _
+
+theorem explainEffs_none_iff (sig : Signature Op) (es : Effs Op) :
+    ∀ env p, explainEffs sig env p es = none ↔ (effsTy sig env es).isSome := by
+  intro env p
+  rw [← (checkEffs_eq sig env p es).2, ← (checkEffs_eq sig env p es).1]
+  exact refusal_none_iff _
+
+theorem explainAction_none_iff (sig : Signature Op) (a : ActionTerm Op) :
+    ∀ env p, explainAction sig env p a = none ↔ (actionTy sig env a).isSome := by
+  intro env p
+  rw [← (checkAction_eq sig env p a).2, ← (checkAction_eq sig env p a).1]
+  exact refusal_none_iff _
+
+theorem explainLayer_none_iff (sig : Signature Op) (l : LayerTerm Op) :
+    ∀ p, explainLayer sig p l = none ↔ (layerTy sig l).isSome := by
+  intro p
+  rw [← (checkLayer_eq sig p l).2, ← (checkLayer_eq sig p l).1]
+  exact refusal_none_iff _
+
+/-- On `nil` both sides refuse (`mergeAllEmpty`, no signature); on a `cons` the list of
+signatures is a `cons`, whose nonempty merge is `some`. -/
+theorem explainLayers_none_iff (sig : Signature Op) (ls : LayerTerms Op) :
+    ∀ p, explainLayers sig p ls = none ↔ (layersTy sig ls).isSome := by
+  intro p
+  cases ls with
+  | nil =>
+    simp only [explainLayers, layersTy, Option.isSome_none, reduceCtorEq, Bool.false_eq_true,
+      iff_self]
+  | cons next tail =>
+    have ht := checkLayers_eq sig p (.cons next tail)
+    have ht2 : refusal (checkLayers sig p (.cons next tail)) =
+      explainLayers sig p (.cons next tail) := ht.2
+    have hne := checkLayers_cons_ne_nil sig p next tail
+    rw [← ht2, ← ht.1]
+    rcases hc : checkLayers sig p (.cons next tail) with r | (_ | ⟨t, ts⟩)
+    · simp only [refusal, Except.toOption, Option.bind_none, Option.isSome_none, reduceCtorEq,
+        Bool.false_eq_true, iff_self]
+    · exact absurd hc hne
+    · obtain ⟨m, hm⟩ := mergeNonempty_cons t ts
+      simp only [refusal, Except.toOption, Option.bind_some, hm, Option.isSome_some, iff_self]
+
+/-- The law of the projection: `explain` refuses exactly when the checker does. -/
+theorem explain_none_iff (sig : Signature Op) (env : TyEnv) (e : Eff Op) :
+    explain sig env e = none ↔ (effTy sig env e).isSome :=
+  explainEff_none_iff sig e env []
+
+/-- A refusal is where a program fails to type, and a typed program has no refusal. -/
+theorem blame_none_iff (sig : Signature Op) (env : TyEnv) (e : Eff Op) :
+    blame sig env e = none ↔ (effTy sig env e).isSome := by
+  simp [blame, ← explain_none_iff]
+
+namespace Checker
 
 /-! ## The hand checker and the hand blame as the fold -/
 
@@ -704,4 +781,6 @@ theorem _root_.Effect4.Program.explainAction.eq_cata (sig : Signature Op) (env :
     Program.explainAction sig env p a = refusal (cata_action (check.alg sig) a env p) :=
   (checkAction_eq sig env p a).2.symm.trans (congrArg refusal (checkAction.eq_cata sig env p a))
 
-end Effect4.Program.Checker
+end Checker
+
+end Effect4.Program
