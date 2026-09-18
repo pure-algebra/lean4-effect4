@@ -85,3 +85,13 @@ to Laws or goes. All three have no users or are on the wipe list.
 3. Docs: census note §7.8, `STATE.md`, `GENERATED.md`, `decisions.md` rows 3/26 as touched.
 
 `termTy`/`termsTy` (the term typer) follow the same pattern in a later slice.
+
+## 6. Landed (same day) — what differed
+
+Both steps landed (`d7ea2bd9`, then the flip). Two things the probe had not seen, recorded in
+`docs/core/traversal-census.md` §7.8: weakening is an equation of the success projection only,
+since a refusal names the term it refuses (so `check_weaken` is proved by pushing `toOption`
+through the connectives, which needed `check`'s matches on bound values to become `expect`
+helpers, pair binds to become projections, and a named `StmtTy.fold`); and the statement sort
+carries its syntax, so `checkStmts` weakens by cases on the head. `Laws/Program/Typing/Check.lean`
+stayed (a test consumes it). Everything in §4 else was cut.

@@ -128,8 +128,8 @@ be, so `Transform`'s category laws can only be stated at the meaning (§2 row 25
 | 22 | `Schema.encode`/`decode` (JSON, `Schema/Codec.lean:224`) | K2 | **✘ (c) absent**: nothing says `decode t j = some v → encode t v = some j` |
 | 23 | `Ty.schema`/`Ty.ofSchema` (`Bridge.lean:38`, `:63`) | K2 | **✘ (c) absent and false**: `.never ann checks` reads as `.never` for any annotations and checks; a declaration with a payload reads as `.handle` and reprints without it |
 | 24 | `ShapeDoc.document` (`Shape.lean:468`), `effDocument` (`Bridge.lean:162`), `Row.document`, `Api.schemaOf` | K2 | **✘ no reader at all**, hence no law; `Api.schemaOf` (`Api.lean:138`) has zero call sites — the `RunnerBytes.schemaOf` of the same name (`:89`) is a different function, used twice in `Test/` |
-| 25 | `Transform.id`/`andThen`/`dimap` (`Schema/Transform.lean:39-77`) | composition | **✘ no identity, no associativity**; only `andThen_typed` (the signature) |
-| 26 | `SchemaTransform.check` (`Transform.lean:92`) | K4 | **✘ no completeness**: a refusal is not tied to ill-typedness |
+| 25 | `Transform.id`/`andThen`/`dimap` (`Schema/Transform.lean:39-77`; deleted 2026-09-18) | composition | **✘ no identity, no associativity**; only `andThen_typed` (the signature) |
+| 26 | `SchemaTransform.check` (`Transform.lean:92`; deleted 2026-09-18) | K4 | **✘ no completeness**: a refusal is not tied to ill-typedness |
 | 27 | `replay`/`replayPlay`, `behaviour` | K5 | ✔ `replay_unique`, `replay_append`, `replay_skip_refused` |
 | 28 | `journal_replays`, `drive_eq_play` | K5 | ✔ |
 | 29 | `HostSession.advance` | K3 | ✔ `advance_step` trichotomy (`Laws/Run.lean:769`), `open_total` (`:210`) |

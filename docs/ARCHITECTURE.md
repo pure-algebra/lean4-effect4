@@ -48,11 +48,10 @@ for validation above the canonical expression reader.
 
 ## Source tree
 
-The schema authoring boundary sits above Program and Schema. `Schema/Image`
-connects concrete Lean carriers to admitted program values; `Schema/Transform`
-wraps existing `Eff`/`Term` syntax with typing evidence; `Schema/Endpoint` defines
-typed service interfaces bridging directly into `RowTable` for `Eff` program invocations.
-The separate proofs are in `Laws/Schema/{Image,Transform}`.
+The schema authoring boundary sits above Program and Schema. `Schema/Image` connects
+concrete Lean carriers to admitted program values; its proofs are `Laws/Schema/Image`.
+(`Schema/Transform` and `Schema/Endpoint`, the second authoring plane, were deleted on
+2026-09-18 under `docs/core/ontology.md` §3.)
 
 | Area | Responsibility |
 | --- | --- |

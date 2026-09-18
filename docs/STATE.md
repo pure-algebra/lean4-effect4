@@ -26,18 +26,20 @@ reads back.
   retired; `gen` stays). Wire tags are stable (`tools/Effect4Gen/wire-tags.json`).
 - Proved: `run_eq_meaning` on `Straight`, `loopAgreement` on `Looped`, meaning and loop type
   soundness, laws 11/12 and completeness of the printer/reader over the template table, scope
-  safety by construction, the journal as a free monoid (`replay_unique`); the law of the
-  projection (`explain = none ↔ effTy.isSome`) as the shape of one `Except`-valued fold
-  (`Program/Typing/Agreement.lean`), its 370-line induction deleted.
-- Measured (`#traversal_census`, `docs/core/traversal-census.md`): 87 hand traversals of the
-  five free objects (`Eff` 34, `Ty` 17, `Term` 14, `Representation` 5, `Val` 17), down from
-  93 once the hand blame walk was deleted. The converter `fold_of` (`Program/FoldOf.lean`, five
-  shapes) has given 74 of them a fold and a kernel-checked connector beside the hand
-  definition, at `[propext, Quot.sound]`; typing with located refusal is one `Except`-valued
-  fold (`Program/Checker.lean`: a statement has a type; `effTy` its success, `explain` its
-  refusal by definition, census §7.5, §7.7) and the term typer is the fold `argTy` (§7.6);
-  the thirteen without are the ruled exemptions, `valCode`/`ofSchema`, and a derived instance
-  (§7.4). That distance is the current work.
+  safety by construction, the journal as a free monoid (`replay_unique`); the checker sound and
+  complete against `HasTy` at every path, `explain = none ↔ effTy.isSome` and weakening as
+  corollaries of one `Except`-valued fold (`CheckSound.lean`, `Typing/Agreement.lean`), the
+  two hand inductions that proved them deleted.
+- Measured (`#traversal_census`, `docs/core/traversal-census.md`): 81 hand traversals of the
+  five free objects (`Eff` 28, `Ty` 17, `Term` 14, `Representation` 5, `Val` 17), down from
+  93 once the hand blame walk and the hand checker were deleted. The converter `fold_of`
+  (`Program/FoldOf.lean`, five shapes) has given 68 of them a fold and a kernel-checked
+  connector beside the hand definition, at `[propext, Quot.sound]`. The checker is one
+  `Except`-valued fold (`Program/Checker.lean`): `effTy` and its siblings are its success at
+  the root by definition (`Program/Typing.lean`), `explain` its refusal, and the typing proof
+  graph is stated for it at every path (`Laws/Program/Typing/CheckSound.lean`; census §7.5,
+  §7.7, §7.8); the term typer is the fold `argTy` (§7.6). The thirteen without are the ruled
+  exemptions, `valCode`/`ofSchema`, and a derived instance (§7.4).
 
 ## The documents (read these; the rest is history)
 
@@ -55,12 +57,11 @@ reads back.
 
 ## Next, in order
 
-1. **The converter's last shape** (`docs/core/traversal-census.md` §7.4): the grandchild under a
-   container for `valCode`/`ofSchema` (two rows); then the callers move to
-   `cata alg` (the checker's first: `explain`/`blame` and the projection law have moved and the
-   hand blame is deleted; `effTy`'s consumers are the typing proof files, the next slice, after
-   which `Typing.lean`'s block goes) and the hand definitions go at a good place. `compileEff`
-   stays exempt.
+1. **The callers phase, continued** (`docs/core/traversal-census.md` §7.8 for the checker's,
+   landed): the term typer next (`termTy`/`termsTy` as projections of `Checker.argTy`, the
+   same pattern, `termTy_weaken` its weakening), then the value and type sorts' hand
+   definitions once their callers move; `valCode`/`ofSchema` (two rows) stay named.
+   `compileEff` stays exempt.
 2. **The simple rows** of the do-now set (`ontology.md` §2): 6 with exactness modulo
    annotations, 8, 23 as a delete, 24, 37, 17.
 3. **The Schema layer** re-cut (`ontology.md` §3): the five files that carry the two real claims

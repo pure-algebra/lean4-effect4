@@ -288,7 +288,7 @@ connector at that point, every one at `[propext, Quot.sound]` (72 after §7.5).
 - **`instReprTy.repr`** (1): the implementation of `deriving Repr`, generated from the
   signature by Lean's handler; the census marks it as an instance implementation (§7.6).
 
-The count after §7.7: 87 hand traversals, 74 with connectors, 13 named above.
+The count after §7.8: 81 hand traversals, 68 with connectors, 13 named above.
 - **`compileEff`** (5): exempt by ruling (row 30); `Sched`'s helpers (5) follow it.
 
 The step after the connectors is the callers: each `f`'s callers move to `cata alg`, the
@@ -395,6 +395,54 @@ This is where the count in §2 goes down for the right reason: the hand traversa
 unchanged. `effTy`'s block stays: its consumers are the proof files (`Typing/Sound.lean`,
 `Typing/Check.lean`, `CheckedTyping.lean`, …), which unfold its equations, and moving them is
 the next callers slice, not a deletion.
+
+### 7.8 The callers of `effTy` moved; the hand checker deleted (2026-09-18)
+
+The plan is `docs/research/2026-09-18-efftys-callers-plan.md`; this is what landed, in the
+order that kept every commit green.
+
+- **The proof graph moved first, beside the old** (`d7ea2bd9`): `Laws/Program/Typing/
+  CheckInversion.lean` (one inversion per arm of `check`, every proof `aesop` over the
+  checker's equations, the `Except` laws and `expect_eq_ok`) and `CheckSound.lean` (soundness
+  and completeness of `check` against `HasTy` **at every path**, the same three lines per arm
+  as `Sound.lean`, and `check_toOption`: the success projection is path-independent, because
+  an `ok` at one path derives a judgment that completeness returns at any other). For that,
+  every `Option`-answering rule of `check` now goes through `expect r o` so one lemma inverts
+  them all.
+- **Then the flip.** `Program/Typing.lean` split into `Typing/Rules.lean` (the type algebra,
+  the term and cause typers, their weakening) and the facade `Typing.lean`, where `effTy`,
+  `layerTy`, `layersTy`, `stmtsTy`, `effsTy`, `actionTy` are *definitions*: the check's success
+  at the empty path. `typeOf`, `typeOfProgram`, `WellTyped` unchanged. The hand block (275
+  lines) is gone. `Sound.lean` (715 → 202) is the corollaries under the old names —
+  `effTy_sound`, `effTy_complete`, `effTy_eq_hasTy`, `wellTyped_iff`, `hasTy_unique`,
+  `hasTy_weaken` — one line each through `toOption_eq_some`, plus the projection's equations
+  at the arms other proofs unfold (`effTy_bind`, `effTy_onExit`, `effTy_succeed`,
+  `effTy_scoped`). `Inversion.lean` (450 → 129) keeps the thirteen `effTy` inversions
+  `MeaningSound`/`LoopSound` consume, as corollaries. `Agreement.lean` (721 → 167) lost
+  `check_eq`, the 600-line structural induction: it was path independence, which is now a
+  corollary. `Forms.lean` and `ScopedTyping.lean` rewrite their unfold sites with the
+  equations.
+- **Two things the plan had not seen.** A refusal names the term it refuses, so weakening
+  is not an equation of `check` but of its success projection: `check_weaken` (facade, every
+  path) is proved by pushing `Except.toOption` through the connectives (`toOption_bind`,
+  `toOption_expect` — the reason is forgotten — `apply_ite`, `toOption_fold`); for that,
+  `check`'s matches on bound values became `expect` helpers (`listOf?`, `exitOf?`), pair binds
+  became projections, and the statement eliminator is a named `StmtTy.fold`. And the
+  statement sort carries its syntax (`StmtTy.ret` holds the value's check), so `checkStmts`
+  weakens by cases on the head rather than through a `checkStmt` law that cannot exist.
+- **Cuts.** `Typing/Specs.lean` (1,635 generated lines, no consumer) and the `specs` group
+  (`EmitSpecs`, `specs.json`, Makefile, `generate.py`, `GENERATED.md`); `Provision.lean`'s
+  `build_total`/`buildAll_total` (no consumer, 175 lines); `effTy_provideService_twice` (no
+  consumer); `Schema/Endpoint.lean`, `Schema/Transform.lean`, `Laws/Schema/Transform.lean`
+  (the wipe list, `ontology.md` §3; imported only by `Api` re-exports and one test section,
+  both cut). `Laws/Program/Typing/Check.lean` stays: the typing-check contract consumes it.
+
+Every battery in `Test/All.lean` and both roots build; `effTy_sound`, `hasTy_weaken`,
+`effTy_weaken`, `typeOf_weaken`, `Api.explain_none_iff`, `Api.checkLayer` and the Forms laws
+are at `[propext, Quot.sound]`. Census: **81 hand traversals** (`Eff` 28, down from 34: the six
+of the hand checker), **68 with a fold and a connector**, the thirteen without unchanged
+(`compileEff`'s five, `Sched`'s five, `valCode`, `ofSchema`, the derived instance). The
+projections themselves classify as delegating to `check`, which is the fold's presentation.
 
 ## 8. Scout G — the tooling that exists (`docs/research/2026-09-17-lean-tooling-scout-G.md`)
 
