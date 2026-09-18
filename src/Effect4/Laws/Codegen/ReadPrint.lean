@@ -947,8 +947,8 @@ theorem readRow_none_of_same {row : Templates.Row} {i : Nat} (hout : row.out = .
 
 /-! ## The printing row reads its image back -/
 
-theorem selects_fam_ctor {row : Templates.Row} {ctor : String}
-    {args : List (ArgF Op (EffSelfCarrier Op))} (hsel : row.selects fam ctor args = true) :
+theorem selects_fam_ctor {R : EffFam → Type} {row : Templates.Row} {ctor : String}
+    {args : List (ArgF Op R)} (hsel : row.selects fam ctor args = true) :
     row.fam = fam ∧ row.ctor = ctor := by
   simp only [Templates.Row.selects, Bool.and_eq_true, beq_iff_eq] at hsel
   exact ⟨hsel.1.1, hsel.1.2⟩
@@ -1285,6 +1285,47 @@ theorem readT_of_row {row : Templates.Row} (hk : table[k]? = some row)
 
 /-! ## The node step -/
 
+/-- An action's image is headed by an action head: every action row is a rigid skeleton with a
+head (or a refusal, which prints nothing). -/
+theorem action_image_head {c : EffSelfCarrier Op .action} {d : Nat} {x : Expr}
+    (hx : cata_action (printAlg sig) c d = .ok x) : ∃ h, exprHead? x = some h ∧ h ∈ actionHeads := by
+  obtain ⟨ctor, args, hview⟩ : ∃ ctor args, view .action c = (ctor, args) := ⟨_, _, rfl⟩
+  have hbuild : build .action ctor args = some c := by have := build_view .action c; rwa [hview] at this
+  have hp : tableLayer.rowPrint sig .action ctor (args.map (ArgF.fold (printAlg sig))) d = .ok x := by
+    have := cata_build (tableLayer sig) .action ctor args c hbuild
+    simp only [cataFam] at this
+    rw [show printAlg sig = EffAlgebra.ofLayer (tableLayer sig) from rfl, this] at hx
+    exact hx
+  obtain ⟨row, hfind, hcase⟩ := rowPrint_inv hp
+  have hmem := List.mem_of_find?_eq_some hfind
+  have hfam : row.fam = .action := by
+    have := List.find?_some hfind
+    exact (selects_fam_ctor this).1
+  have hshape := table_fact table_actionHeaded hmem
+  simp only [actionRowHeaded, hfam, bne_self_eq_false, Bool.false_or] at hshape
+  rcases hcase with ⟨t, τ, hout, _, hinst⟩ | ⟨_, _, hout, _, _⟩
+  · rw [hout] at hshape
+    simp only [Bool.and_eq_true, Option.any_eq_true] at hshape
+    obtain ⟨_, h, hh, _⟩ := hshape
+    exact ⟨h, head_of_inst d τ t x hinst hh, mem_actionHeads hmem hfam hout hh⟩
+  · rw [hout] at hshape; cases hshape
+
+/-- The row call's arguments, through the fold. -/
+theorem fold_eq_op_term {R : EffFam → Type} (alg : EffAlgebra Op R)
+    {args : List (ArgF Op (EffSelfCarrier Op))} {op : Op} {r : Term}
+    (h : args.map (ArgF.fold alg) = [.op op, .term r]) : args = [.op op, .term r] :=
+  match args, h with
+  | [a, b], h => by
+    cases a <;> cases b <;> simp only [List.map_cons, List.map_nil, ArgF.fold, List.cons.injEq,
+      reduceCtorEq, and_true, and_false, false_and, ArgF.op.injEq, ArgF.term.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    rfl
+  | [], h => by simp only [List.map_nil, reduceCtorEq] at h
+  | [_], h => by simp only [List.map_cons, List.map_nil, List.cons.injEq, reduceCtorEq, and_false] at h
+  | _ :: _ :: _ :: _, h => by
+    simp only [List.map_cons, List.cons.injEq, reduceCtorEq, and_false] at h
+
+
 section Step
 
 variable (hl : LawfulSpelling sig spell) {fam : EffFam} {n : Nat} {x : Expr}
@@ -1344,6 +1385,192 @@ theorem child_at_hole {t : Tpl} (hout : row.out = .tpl t) (hrigid : t.rigid = tr
     | child fam' c =>
       exact (hchild fam' _ y hlt c (readableAt_of_argReadable hra) (printsTo_of_printArg hp)).2
     | _ => exact absurd hc Bool.false_ne_true
+
+
+/-- The single argument of a transparent row, from the sort column. -/
+theorem args_of_sorts_single {args : List (ArgF Op (EffSelfCarrier Op))} {s : ArgSort}
+    (h : args.map argSortOf = [s]) : ∃ a, args = [a] ∧ argSortOf a = s := by
+  cases args with
+  | nil => cases h
+  | cons a rest =>
+    cases rest with
+    | nil => exact ⟨a, rfl, by simpa only [List.map_cons, List.map_nil, List.cons.injEq, and_true] using h⟩
+    | cons b rest' => simp only [List.map_cons, List.cons.injEq, reduceCtorEq, and_false] at h
+
+/-- The hole of a transparent row is hole `0`: it is an argument, and there is one. -/
+theorem hole_zero {row : Templates.Row} (hmem : row ∈ table) {i : Nat}
+    (hout : row.out = .tpl (.hole i)) {s : ArgSort} (hsorts : argSorts row.fam row.ctor = some [s]) :
+    i = 0 := by
+  obtain ⟨_, _, hlt⟩ := table_row hmem
+  rw [hout] at hlt
+  have := hlt [s] hsorts i (by simp only [Templates.RowOut.holes, holes, List.mem_singleton])
+  simp only [List.length_singleton] at this
+  omega
+
+include hl hchild hchildren hblock hsame in
+/-- **The node step.** A readable node of an expression family whose image is `x` reads back
+from `x`, and `x` is node-like — given the recursion below the node and at the lower families. -/
+theorem readT_print (hfam : fam = .eff ∨ fam = .action ∨ fam = .layer)
+    {e : EffSelfCarrier Op fam} (hx : PrintsTo sig n fam e (.expr x))
+    (hr : ReadableAt sig fam e n) :
+    readT sig spell fam n x = some (.ok e) ∧ nodeLike x = true := by
+  obtain ⟨ctor, args, hview⟩ : ∃ ctor args, view fam e = (ctor, args) := ⟨_, _, rfl⟩
+  have hbuild : build fam ctor args = some e := by
+    have := build_view fam e; rwa [hview] at this
+  have hsorts : argSorts fam ctor = some (args.map argSortOf) := by
+    have := argSorts_view fam e; rwa [hview] at this
+  have hp : tableLayer.rowPrint sig fam ctor (args.map (ArgF.fold (printAlg sig))) n = .ok x := by
+    have := cata_build (tableLayer sig) fam ctor args e hbuild
+    rcases hfam with rfl | rfl | rfl <;> simp only [PrintsTo, cataFam] at hx this <;>
+      (rw [show printAlg sig = EffAlgebra.ofLayer (tableLayer sig) from rfl, this] at hx; exact hx)
+  obtain ⟨d, hd⟩ := hr
+  have hdom : domLayer.rowDom sig fam ctor (args.map (ArgF.fold (readableAlg sig))) n = some d := by
+    have := cata_build (domLayer sig) fam ctor args e hbuild
+    rw [show readableAlg sig = EffAlgebra.ofLayer (domLayer sig) from rfl, this] at hd
+    rcases hfam with rfl | rfl | rfl <;> exact hd
+  obtain ⟨row, hfind, hcase⟩ := rowPrint_inv hp
+  obtain ⟨row', hfind', hcase'⟩ := rowDom_inv hdom
+  rw [find?_selects_fold (readableAlg sig) (printAlg sig), hfind, Option.some.injEq] at hfind'
+  subst hfind'
+  obtain ⟨k, hk, hidx, _⟩ := find?_index _ table row hfind
+  have hpred : (fun r : Templates.Row => r.selects fam ctor (args.map (ArgF.fold (printAlg sig)))) =
+      fun r => r.selects fam ctor args := funext fun r => selects_fold _ r fam ctor args
+  rw [hpred] at hidx
+  have hsel : row.selects fam ctor args = true := by
+    have := List.find?_some hfind; rwa [selects_fold] at this
+  obtain ⟨hfamrow, hctor⟩ := selects_fam_ctor hsel
+  have hmem := List.mem_of_getElem? hk
+  have hshape := table_fact table_shape hmem
+  have hsorts' : argSorts row.fam row.ctor = some (args.map argSortOf) := by
+    rw [hfamrow, hctor]; exact hsorts
+  have hsorts'' : argSorts fam row.ctor = some (args.map argSortOf) := by
+    rw [hctor]; exact hsorts
+  -- the recursion, in the shape `readRow` asks for
+  have hchild' : ∀ fam' d (y : Expr) (hy : sizeOf y < sizeOf x) c, ReadableAt sig fam' c d →
+      PrintsTo sig d fam' c (.expr y) →
+      (readT sig spell fam' d y).getD (.error (.here (unread fam'))) = .ok c :=
+    fun fam' d y hy c hr hp => by rw [(hchild fam' d y hy c hr hp).1]; rfl
+  -- an earlier row of another family reads nothing
+  have hother : ∀ j < k, ∀ rj, table[j]? = some rj → rj.fam ≠ fam ∨ rowsApart rj row = true :=
+    fun j hj rj hrj => by rw [← hfamrow]; exact apart_of_lt hrj hk hj
+  rcases hcase with ⟨t, τ, hout, hτ, hinst⟩ | ⟨op, r, hout, hargs, hp'⟩
+  · -- a skeleton row
+    rcases hcase' with ⟨t', hout', hr'⟩ | ⟨_, _, hout', _⟩
+    swap; · rw [hout] at hout'; cases hout'
+    rw [hout, RowOut.tpl.injEq] at hout'
+    subst hout'
+    by_cases hrigid : t.rigid = true
+    · -- rigid: the arguments read back at the row, and nothing before it fires
+      have hnode := child_at_hole hchild hout hrigid hτ hinst hr'
+      refine ⟨readT_of_row hk (fun j hj rj hrj => ?_) ?_, ?_⟩
+      · rcases hother j hj rj hrj with hne | hap
+        · exact readRow_none_of_fam hne
+        · exact earlier_none_rigid hap hout hrigid hsorts' hinst hnode
+      · exact readRow_rigid_print hk hbuild hsorts hsel hidx hout hrigid hτ hinst hr' hchild'
+          (fun fam' d ys hy c hr hp => hchildren fam' d ys hy c hr hp)
+          (fun d ss hy c hr hp => hblock d ss hy c hr hp)
+      · have htop : t.nodeTop = true := by
+          rcases hfam with rfl | rfl | rfl <;>
+            simpa only [rowShape, hfamrow, hout, hrigid, ↓reduceIte] using hshape
+        exact inst_nodeLike n τ t x htop hinst
+    · -- transparent: a bare hole
+      cases t with
+      | hole i =>
+        have hkind : (fam = .eff ∧ args.map argSortOf = [.child .action]) ∨
+            (fam = .layer ∧ args.map argSortOf = [.path]) := by
+          unfold rowShape at hshape
+          rw [hfamrow, hout] at hshape
+          rcases hfam with rfl | rfl | rfl <;>
+            simp only [Tpl.rigid, Bool.false_eq_true, ↓reduceIte, hsorts'', Bool.or_eq_true,
+              Bool.and_eq_true, beq_iff_eq, beq_self_eq_true, Option.some.injEq, true_and,
+              reduceCtorEq, false_and, or_false, false_or] at hshape <;> aesop
+        rcases hfam with rfl | rfl | rfl
+        · -- the eff row that hands to the action family (`withFiber`)
+          have hact : args.map argSortOf = [.child .action] := by
+            rcases hkind with ⟨_, h⟩ | ⟨h, _⟩
+            · exact h
+            · cases h
+          obtain ⟨a, rfl, ha⟩ := args_of_sorts_single hact
+          have hi := hole_zero hmem hout (s := .child .action) (by rw [hsorts', hact])
+          subst hi
+          cases a with
+          | child fam' c =>
+            simp only [argSortOf, ArgSort.child.injEq] at ha
+            subst ha
+            -- the child's image is the tree, at the row's depth
+            obtain ⟨hprint, _⟩ := printArgs_lookup _ 0 τ hτ
+            have hp0 := hprint 0 (ArgF.fold (printAlg sig) (.child .action c)) rfl
+            simp only [inst] at hinst
+            rw [Nat.add_zero, argSortOf_fold, argSortOf] at hp0
+            have hlook : lookup τ 0 = some (.expr x) := by
+              revert hinst; cases lookup τ 0 <;> aesop
+            rw [hlook] at hp0
+            have hpa : cata_action (printAlg sig) c
+                (argDepth .eff (.child .action) n ((RowOut.tpl (.hole 0)).levelAt 0)) = .ok x :=
+              printsTo_of_printArg hp0
+            have hlevel : (RowOut.tpl (.hole 0)).levelAt 0 = 0 := rfl
+            rw [hlevel] at hpa
+            have hra : ReadableAt sig .action c (argDepth .eff (.child .action) n 0) := by
+              have := argsReadable_at _ 0 0 (ArgF.fold (readableAlg sig) (.child .action c)) hr' rfl
+              rw [Nat.add_zero, argSortOf_fold, argSortOf, hlevel] at this
+              exact readableAt_of_argReadable this
+            have hrank : famRank .action < famRank .eff := by decide
+            obtain ⟨h, hxh, hh⟩ := action_image_head hpa
+            refine ⟨readT_of_row hk (fun j hj rj hrj => ?_) ?_, ?_⟩
+            · rcases hother j hj rj hrj with hne | hap
+              · exact readRow_none_of_fam hne
+              · exact earlier_none_action hap hout (by rw [hsorts', hact]) hxh hh
+            · exact readRow_action_print hk hbuild (by rw [hsorts, hact]) hsel hidx hout hrank hpa hra
+                (fun fam' hlt d c' hr hp => (hsame fam' hlt d c' hr hp).1)
+            · exact (hsame .action hrank _ c hra (by simpa only [PrintsTo] using hpa)).2
+          | _ => cases ha
+        · -- no action row is transparent
+          rcases hkind with ⟨h, _⟩ | ⟨h, _⟩ <;> cases h
+        · -- the layer row that reads a name (`ref`)
+          have hpath : args.map argSortOf = [.path] := by
+            rcases hkind with ⟨h, _⟩ | ⟨_, h⟩
+            · cases h
+            · exact h
+          obtain ⟨a, rfl, ha⟩ := args_of_sorts_single hpath
+          have hi := hole_zero hmem hout (s := .path) (by rw [hsorts', hpath])
+          subst hi
+          cases a with
+          | path p =>
+            obtain ⟨hprint, _⟩ := printArgs_lookup _ 0 τ hτ
+            have hp0 := hprint 0 (ArgF.fold (printAlg sig) (.path p)) rfl
+            simp only [inst] at hinst
+            simp only [Nat.add_zero, ArgF.fold, printArg, Except.ok.injEq] at hp0
+            have hx : x = .ident (LayerTerm.refName p) := by
+              rw [← hp0] at hinst; simpa only [Option.some.injEq] using hinst.symm
+            have hrp : LayerTerm.readRefName (LayerTerm.refName p) = some p := by
+              have := argsReadable_at _ 0 0 (ArgF.fold (readableAlg sig) (.path p)) hr' rfl
+              simpa only [argReadable, ArgF.fold, leafReadable, decide_eq_true_eq] using this
+            refine ⟨readT_of_row hk (fun j hj rj hrj => ?_) ?_, ?_⟩
+            · rcases hother j hj rj hrj with hne | hap
+              · exact readRow_none_of_fam hne
+              · exact earlier_none_path hap hout (by rw [hsorts', hpath]) hx
+            · exact readRow_path_print hk hbuild (by rw [hsorts, hpath]) hsel hidx hout hx hrp
+            · subst hx; rfl
+          | _ => cases ha
+      | _ => exact absurd rfl hrigid
+  · -- the row call
+    rcases hcase' with ⟨_, hout', _⟩ | ⟨op', r', hout', hargs', hd', hreq⟩
+    · rw [hout] at hout'; cases hout'
+    have hfamily := table_fact table_family hmem
+    simp only [rowFamily, hout, beq_iff_eq] at hfamily
+    rw [hfamily] at hfamrow
+    subst hfamrow
+    have hargs := fold_eq_op_term (printAlg sig) hargs
+    have hargs' := fold_eq_op_term (readableAlg sig) hargs'
+    rw [hargs, List.cons.injEq, List.cons.injEq, ArgF.op.injEq, ArgF.term.injEq] at hargs'
+    obtain ⟨rfl, rfl, _⟩ := hargs'
+    have he : e = .perform op r := eff_of_view_op_term e op r (by rw [hview]; exact hargs)
+    subst he
+    refine ⟨readT_of_row hk (fun j hj rj hrj => ?_) ?_, printRow_nodeLike hp'⟩
+    · rcases hother j hj rj hrj with hne | hap
+      · exact readRow_none_of_fam hne
+      · exact earlier_none_rowCall hap hl hout hp' (fun hk d => readT_action_none_of_printRow hl hp' d)
+    · exact readRow_rowCall_print hl hout hfamily hd' hreq hp' rfl
 
 end Step
 
