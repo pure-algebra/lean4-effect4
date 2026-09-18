@@ -295,4 +295,169 @@ theorem advance_not_envelope {program : Api.Program} {table : RowTable}
   repeat' split
   all_goals intro h; cases h
 
+/-! ## The claims are the machine's -/
+
+/-- The facade's request projection is the program plane's: one is defined as the other. The
+session module reads the facade's name and the envelope reads the program plane's, so a proof
+that joins them needs this. -/
+theorem api_requestOf (m : Api.Machine) (fiber : FiberId) (token : Nat) :
+    Api.requestOf m fiber token = requestOf m fiber token := rfl
+
+attribute [local simp] api_requestOf Api.HostSession.Call.claim Run.machine Run.id
+
+/-- The shape of the call the machine is holding at a key: the run's own name, table and next
+call id, and the row and the request `requestOf` reports. Nothing in it is the caller's. -/
+theorem at_eq (s : Run) (key : Key) (call : Call)
+    (h : Api.HostSession.Call.at s key = some call) :
+    ∃ op request, requestOf s.machine key.fiber key.token = some (op, request) ∧
+      call = Api.HostSession.Call.claim s key op request := by
+  unfold Api.HostSession.Call.at at h
+  aesop
+
+/-- And the converse: a machine holding a call has a claim for it. -/
+theorem at_of_requestOf (s : Run) (key : Key) (op : NativeOp) (request : Val)
+    (h : requestOf s.machine key.fiber key.token = some (op, request)) :
+    Api.HostSession.Call.at s key = some (Api.HostSession.Call.claim s key op request) := by
+  unfold Api.HostSession.Call.at
+  rw [h]
+  rfl
+
+/-- A machine holding no call at a key has no claim for it. -/
+theorem at_none (s : Run) (key : Key) (h : requestOf s.machine key.fiber key.token = none) :
+    Api.HostSession.Call.at s key = none := by
+  unfold Api.HostSession.Call.at
+  rw [h]
+  rfl
+
+/-- **O-5.** A call built from the machine is never stale: `Call.at` restates exactly what
+`bindCall` checks it against. -/
+theorem bindCall_at (s : Run) (key : Key) (call : Call)
+    (h : Api.HostSession.Call.at s key = some call) :
+    (Api.HostSession.bindCall s.session call key.token).phase ≠ .refused .staleCall := by
+  obtain ⟨op, request, hr, rfl⟩ := at_eq s key call h
+  unfold Api.HostSession.bindCall
+  aesop (add norm simp [hr])
+
+/-- Binding a call the machine is holding, at a key the session has no binding for, is
+accepted: the binding and its empty slot go to the end of the ledger and the next call id
+advances. -/
+theorem bindCall_at_bound (s : Run) (key : Key) (call : Call)
+    (hcall : Api.HostSession.Call.at s key = some call)
+    (hfresh : s.session.active.any (fun b => b.key == key) = false) :
+    Api.HostSession.bindCall s.session call key.token =
+      ⟨.bound, { s.session with
+        active := s.session.active ++ [⟨call, key.token⟩]
+        pending := s.session.pending ++ [⟨key, none⟩]
+        nextCall := s.session.nextCall + 1 }⟩ := by
+  have hfresh' : s.session.active.any (fun b => b.key == (⟨key.fiber, key.token⟩ : Key)) = false :=
+    hfresh
+  obtain ⟨op, request, hr, rfl⟩ := at_eq s key call hcall
+  unfold Api.HostSession.bindCall
+  aesop (add norm simp [hr, hfresh', Run.id])
+
+/-! ## Rows -/
+
+/-- **O-2.** Receiving is the two rows it says it is: the call bound to its guard, then the
+completion received against it. -/
+theorem receive_rows (s : Run) (key : Key) (c : Answer) (call : Call)
+    (h : Api.HostSession.Call.at s key = some call) :
+    Rows.receive s key c = [.bind call key.token, .submit (Rows.reply s call key c)] := by
+  unfold Rows.receive
+  rw [h]
+
+/-- A key the machine holds no call at has nothing to receive. -/
+theorem receive_none (s : Run) (key : Key) (c : Answer)
+    (h : Api.HostSession.Call.at s key = none) : Rows.receive s key c = [] := by
+  unfold Rows.receive
+  rw [h]
+
+/-- **O-3.** Answering is receiving, then applying. -/
+theorem answer_rows (s : Run) (key : Key) (c : Answer) (call : Call)
+    (h : Api.HostSession.Call.at s key = some call) :
+    Rows.answer s key c = Rows.receive s key c ++ [.apply key] := by
+  unfold Rows.answer Rows.receive
+  rw [h]
+  rfl
+
+/-- A key the machine holds no call at has nothing to answer. -/
+theorem answer_none (s : Run) (key : Key) (c : Answer)
+    (h : Api.HostSession.Call.at s key = none) : Rows.answer s key c = [] := by
+  unfold Rows.answer
+  rw [h]
+
+/-- The three rows of an answer, written out. -/
+theorem answer_rows_three (s : Run) (key : Key) (c : Answer) (call : Call)
+    (h : Api.HostSession.Call.at s key = some call) :
+    Rows.answer s key c =
+      [.bind call key.token, .submit (Rows.reply s call key c), .apply key] := by
+  unfold Rows.answer
+  rw [h]
+
+/-! ## A receipt and an answer that are accepted -/
+
+/-- A slot is there for a key that was just bound. -/
+theorem any_append_key (slots : List ReplySlot) (key : Key) :
+    (slots ++ [(⟨key, none⟩ : ReplySlot)]).any (fun slot => slot.key == key) = true := by
+  simp only [List.any_append, List.any_cons, List.any_nil, beq_self_eq_true, Bool.true_or,
+    Bool.or_true]
+
+/-- Preflight succeeds on a reply that names a binding the machine still holds and carries a
+completion the machine admits; the decision it returns is the answer that reply records. -/
+theorem preflight_ok {program : Api.Program} {table : RowTable} (s : Session program table)
+    (reply : Reply) (bound : BoundCall)
+    (hver : reply.version = Api.HostSession.version)
+    (hsess : reply.session = s.header.session)
+    (hfind : s.active.find? (fun b => b.key == reply.key) = some bound)
+    (hid : reply.callId = bound.call.callId)
+    (henv : Envelope table s.machine (bound.record reply)) :
+    Api.HostSession.preflight s reply =
+      .ok (.answerAsync bound.call.fiber bound.token reply.completion) := by
+  have hreq : requestOf s.machine bound.call.fiber bound.token =
+      some (bound.call.op, bound.call.request) := henv.2.1
+  unfold Api.HostSession.preflight
+  rw [if_neg (fun h => h hver), if_neg (fun h => h hsess), hfind]
+  simp only [hid, ne_eq, not_true_eq_false, if_false, api_requestOf, hreq, reduceCtorEq]
+  rw [acceptReply_of_envelope table s.machine (bound.record reply) henv]
+  rfl
+
+/-- A receipt on a bound key with a fresh slot, an admitted completion and a machine waiting
+on a host is accepted: it stores the completion and changes nothing else. -/
+theorem submit_accepted {program : Api.Program} {table : RowTable} (s : Session program table)
+    (reply : Reply) (bound : BoundCall)
+    (hver : reply.version = Api.HostSession.version)
+    (hsess : reply.session = s.header.session)
+    (hfind : s.active.find? (fun b => b.key == reply.key) = some bound)
+    (hid : reply.callId = bound.call.callId)
+    (hslot : Api.HostSession.readReply s.pending reply.key = none)
+    (hany : s.pending.any (fun slot => slot.key == reply.key) = true)
+    (henv : Envelope table s.machine (bound.record reply))
+    (hobs : Api.HostProtocol.observe s.machine = .awaitingAsync) :
+    Api.HostSession.submit s reply =
+      ⟨.preflight, { s with pending := Api.HostSession.storeReply s.pending reply }⟩ := by
+  unfold Api.HostSession.submit
+  rw [hslot, preflight_ok s reply bound hver hsess hfind hid henv]
+  simp only [Option.isSome_none, Bool.false_eq_true, if_false, hany, Bool.not_true, hobs,
+    allows_submit reply.key, if_false]
+
+/-- Applying a received completion for a bound key, on a machine waiting on a host, is
+accepted: it is applied, or the fuel ran out and the run is at a frontier. It is never
+refused. -/
+theorem applyReply_accepted {program : Api.Program} {table : RowTable} (s : Session program table)
+    (key : Key) (fuel : Nat) (bound : BoundCall) (reply : Reply) (decision : NativeDecision)
+    (hfind : s.active.find? (fun b => b.key == key) = some bound)
+    (hread : Api.HostSession.readReply s.pending key = some reply)
+    (hpre : Api.HostSession.preflight s reply = .ok decision)
+    (hobs : Api.HostProtocol.observe s.machine = .awaitingAsync) :
+    (Api.HostSession.applyReply s key fuel).phase = .applied ∨
+      (Api.HostSession.applyReply s key fuel).phase = .frontier := by
+  cases fuel with
+  | zero => exact Or.inr rfl
+  | succ fuel =>
+    unfold Api.HostSession.applyReply
+    simp only [hfind, hread, hpre, hobs, allows_answer key, Bool.not_true, Bool.false_eq_true,
+      if_false]
+    split
+    · exact Or.inl rfl
+    · exact Or.inr rfl
+
 end Effect4.Run

@@ -133,21 +133,25 @@ built here from `requestOf` — the same function `bindCall` checks it against. 
 
 namespace Api.HostSession.Call
 
-/-- The call the machine is holding at this key, as the claim a `bind` row carries: this
-run's name and table, the next call id, and the row and request `requestOf` reports. `none`
-when the machine holds no call at that key.
+/-- The claim a run makes for a call on a row: everything but the row and the request is the
+run's own — its name, its table and its next call id.
 
 `Run` is spelled in full because `Api.Run` — the frontier reading of `Api.inspect` — is the
-nearer name inside this namespace. -/
+nearer name inside this namespace, and `Program.requestOf` because `Api.requestOf` is. -/
+def claim (s : _root_.Effect4.Run) (key : Key) (op : NativeOp) (request : Val) : Call :=
+  { version := Api.HostSession.version
+    session := s.id
+    table := s.built.table
+    callId := s.session.nextCall
+    fiber := key.fiber
+    op := op
+    request := request }
+
+/-- The call the machine is holding at this key, as the claim a `bind` row carries. `none`
+when the machine holds no call at that key. -/
 def «at» (s : _root_.Effect4.Run) (key : Key) : Option Call :=
-  (requestOf s.machine key.fiber key.token).map fun request =>
-    { version := Api.HostSession.version
-      session := s.id
-      table := s.built.table
-      callId := s.session.nextCall
-      fiber := key.fiber
-      op := request.1
-      request := request.2 }
+  (Program.requestOf s.machine key.fiber key.token).map fun request =>
+    claim s key request.1 request.2
 
 end Api.HostSession.Call
 
