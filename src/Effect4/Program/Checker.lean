@@ -7,7 +7,7 @@ The located-refusal arrow of the ontology (`docs/core/ontology.md` §5, K4) as o
 `check sig env p e : Except TypeRefusal EffTy` is the program's type, or the refusal at the path
 that earns it. `Program/Typing.lean`'s `effTy` is its success projection and
 `Typing/Blame.lean`'s `explainEff` its refusal, rule for rule — the agreement theorems in
-`Laws/Program/Typing/Checker.lean` say so (`check_toOption`, `check_refusal`), and
+`Typing/Agreement.lean` say so (`check_eq`, both projections per sort), and
 `explain = none ↔ effTy.isSome` is then the shape of `Except`. This is the second file beside
 both; `fold_of` reads its algebra (`Program/Folds/Checker.lean`). Nothing in the two hand
 blocks changed.

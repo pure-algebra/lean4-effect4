@@ -11,7 +11,7 @@ accumulator shape, the environment, the path and the mode flags as the carriers'
 Except TypeRefusal StmtTy`, `R .stmts = TyEnv → Bool → Option (List Nat) → List Nat → Except
 TypeRefusal GenTy`, `R .layerTerms = List Nat → Except TypeRefusal (List LayerTy)`). The hand
 checker `effTy` and the hand blame `explainEff` reach the algebra through the agreement
-(`Laws/Program/Typing/Checker.lean`) and this `eq_cata`.
+(`Typing/Agreement.lean`) and this `eq_cata`.
 -/
 
 namespace Effect4.Program
