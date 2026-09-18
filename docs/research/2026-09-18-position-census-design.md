@@ -200,6 +200,22 @@ table imports `InterpR` (the roots) and nothing of `Simulation/*`; the generated
 imports the hand predicates of layers 0–2 and the table. The scout's placement (§D.2 of the
 scout note) holds: no `Simulation`/`Book` import before `Typed/Transfer.lean`.
 
+## 3a. Landed (2026-09-18, the same night)
+
+`Laws/Auto/Positions.lean` (the four censuses), `Laws/Auto/PositionGate.lean` (the totality
+gate, green: 74 positions, 74 rows, two refusals named), `Laws/Auto/TypedStateGen.lean` (the
+emitter), `Typed/Sources.lean` (the table), `Typed/State.lean` (generated: 16 `Ok`
+predicates, an 11-field `Preds` bundle, the aesop registrations), `Laws/Effects/Protocol.lean`
+(layer 0), `Test/Audit/PositionCensus.lean` (in `Test.All`) and `Test/Audit/TypedStateEmit.lean`
+(the regeneration, outside the battery so no test build writes into `src`). Two changes from
+the design as written: a `custom` row on an *edge* takes the field's whole type (the stack, the
+pending list, the races, the context) while one on a *position* takes the position's own type;
+and `journal`/`refused` rows on an edge skip its subtree. `D1` was built before any predicate,
+as the owner ruled: the skeleton is parametric in the bundle, so it compiles today and layer 1
+instantiates it. Owed from this section: the `generated/*.tsv` files and the `make
+gen-typed-state` group (the emit is one explicit build today), `#read_census` on matches
+(projections only), and the obligation ledger `D2`.
+
 ## 4. How it lands the milestone, in order
 
 | step | artefact | gate |

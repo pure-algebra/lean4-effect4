@@ -80,9 +80,11 @@ core milestone, no shortcuts; design `docs/research/2026-09-18-typed-state-plan.
 ruled (2026-09-18); rows 34 and 40 are ruled out. Three rulings owed on row 41: `HandlesFit`
 (plan §6), the promise table `Π` and layer 0's home (plan §7, the composed graph
 `docs/research/2026-09-18-typed-state-composed-graph.md`), and a DI for the release's exit
-parameter (composed graph §9). Step 0 of the milestone is designed
-(`docs/research/2026-09-18-position-census-design.md`): the position census, the source table
-under a totality gate, the obligation ledger, the generated skeleton. Open, in the order `decisions.md`'s last section
+parameter (composed graph §9). Step 0 of the milestone is landed
+(`docs/research/2026-09-18-position-census-design.md` §3a): the position census, the source
+table under a totality gate (74/74, two refusals named), layer 0, and the generated skeleton
+`Laws/Program/Typed/State.lean` parametric in the carrier predicates; owed: the obligation
+ledger and the generated group wiring. Open, in the order `decisions.md`'s last section
 gives: group D (26–29, 32, 30's `compileEff`), then group B (14, 15) and 2, 7, 10, 11; then 1
 with 3, and 19–22. Row 5 has the restatement `ontology.md` §2 gives.
 
