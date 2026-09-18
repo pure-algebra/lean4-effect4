@@ -76,33 +76,38 @@ end Author
 
 namespace Built
 
+/-- The built program as a typed one: the admission certificate extends the typing
+certificate, so every reading `Typed` has is this one's, through this projection and not by
+a second definition. -/
+def typed (b : Built) : Typed b.table := ⟨b.program, b.admitted.toTypedProgram⟩
+
 /-- The certified type of the built program. -/
-def ty (b : Built) : EffTy := b.admitted.ty
+def ty (b : Built) : EffTy := b.typed.ty
 
 /-- The full keys the built program performs against, in the canonical key order. -/
-def requires (b : Built) : List Effect4.ServiceKey := b.ty.requires.elems
+def requires (b : Built) : List Effect4.ServiceKey := b.typed.requires
 
 /-- Whether the built program needs nothing from its surroundings. -/
-def closed (b : Built) : Bool := b.ty.requires == Effect4.Machine.Env.Requirement.empty
+def closed (b : Built) : Bool := b.typed.closed
 
 /-- The position a declared spelling was given in the table. -/
 def positionOf (b : Built) (spelling : String) : Option Nat :=
   (b.rowNames.find? (fun entry => entry.1 == spelling)).map Prod.snd
 
 /-- The ordinary run of a built program: the certificate is the evidence, so nothing is
-re-derived (`Api.runAdmitted`). -/
+re-derived (`Api.runAdmitted`). The run a caller holds is `Run.runPure` (`src/Effect4/Run.lean`);
+this is its reading. -/
 def run (b : Built) (budget : Budget := {}) : Inspection :=
   Api.runAdmitted b.admitted budget.fuel [] budget.compileFuel
 
 /-- `Effect.runSyncExit` on a built program. -/
-def runSync (b : Built) (budget : Budget := {}) : ExitV :=
-  (Api.runSync b.program budget.fuel [] b.table budget.compileFuel).2
+def runSync (b : Built) (budget : Budget := {}) : ExitV := b.typed.runSync budget
 
 /-- The printed syntax of the built program, against its own table. -/
-def print (b : Built) : Except PrintRefusal TypeScript.Expr := Api.print b.program b.table
+def print (b : Built) : Except PrintRefusal TypeScript.Expr := b.typed.print
 
 /-- The canonical bytes of the built program. -/
-def bytes (b : Built) : Store.Bytes := Api.bytesOf b.program
+def bytes (b : Built) : Store.Bytes := b.typed.bytes
 
 end Built
 

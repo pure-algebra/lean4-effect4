@@ -1,4 +1,4 @@
-import Effect4.Program.Author
+import Effect4.Api.Author
 import Effect4.Laws.Program.Author
 import Effect4.Program.Authoring.Forms
 import Effect4.Laws.Program.Authoring.Forms
@@ -167,12 +167,12 @@ def RateEnv : ServiceDef := { key := ⟨⟨21⟩, ⟨4⟩⟩, carrier := .nat }
 
 /-- The two services, each built from its own configuration binding. -/
 def services : LayerSrc NativeOp :=
-  Layer.all [ Db.layer (eff do let e ← DbEnv.use; succeed e)
+  Layer.mergeAll [ Db.layer (eff do let e ← DbEnv.use; succeed e)
             , Rate.layer (eff do let e ← RateEnv.use; succeed e) ]
 
 /-- The configuration bindings. -/
 def bindings : LayerSrc NativeOp :=
-  Layer.all [ DbEnv.constant (nat 1), RateEnv.constant (nat 2) ]
+  Layer.mergeAll [ DbEnv.constant (nat 1), RateEnv.constant (nat 2) ]
 
 /-- The deployment: the bindings feed the services, and both reach the surroundings. -/
 def deployment : LayerSrc NativeOp := Layer.provideMerge services bindings
@@ -198,12 +198,12 @@ def handler : Src NativeOp := eff do
   succeed (app "pair" [db, rl])
 
 -- A program's environment, as data.
-#guard (Effect4.Api.author handler).toOption.map Effect4.Api.requires = some [Db.key, Rate.key]
-#guard (Effect4.Api.author handler).toOption.map Effect4.Api.closed = some false
+#guard (Effect4.Api.author handler).toOption.map Effect4.Api.Typed.requires = some [Db.key, Rate.key]
+#guard (Effect4.Api.author handler).toOption.map Effect4.Api.Typed.closed = some false
 
 -- Deployed under the correct layer, the program is closed; under the mistake it is not.
-#guard (Effect4.Api.author (with_ deployment handler)).toOption.map Effect4.Api.closed = some true
-#guard (Effect4.Api.author (with_ siblingMistake handler)).toOption.map Effect4.Api.requires
+#guard (Effect4.Api.author (with_ deployment handler)).toOption.map Effect4.Api.Typed.closed = some true
+#guard (Effect4.Api.author (with_ siblingMistake handler)).toOption.map Effect4.Api.Typed.requires
   = some [DbEnv.key, RateEnv.key]
 
 -- The deployed program with no declarations of its own: one call, one built value.

@@ -521,12 +521,17 @@ the type system (`EffTy.requires`, `LayerTy`) and were reachable from neither th
 an author. They are projections of a certificate, so they cost one line each, and they are
 what lets an agent read a composition before running anything. -/
 
+namespace Typed
+
+variable {table : RowTable}
+
 /-- The full keys this program performs against, in the canonical key order. -/
-def requires {table : RowTable} (t : Typed table) : List ServiceKey := t.ty.requires.elems
+def requires (t : Typed table) : List ServiceKey := t.ty.requires.elems
 
 /-- Whether the program needs nothing of its surroundings: `Effect<A, E, never>`. -/
-def closed {table : RowTable} (t : Typed table) : Bool :=
-  t.ty.requires == Effect4.Machine.Env.Requirement.empty
+def closed (t : Typed table) : Bool := t.ty.requires == Effect4.Machine.Env.Requirement.empty
+
+end Typed
 
 /-- A layer with its signature: what it provides, its error column, what it still needs
 (`LayerTy`, `Layer<ROut, E, RIn>`). A layer could be written before this and neither checked

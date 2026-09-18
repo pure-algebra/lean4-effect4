@@ -1,5 +1,5 @@
 import Effect4.Laws.Program.Authoring.Sugar
-import Effect4.Program.Author
+import Effect4.Api.Author
 
 /-!
 # Laws.Program.Author — what a module's declarations guarantee
@@ -247,10 +247,6 @@ theorem ServiceDef.constant_scoped {Op : Type} (s : ServiceDef) {value : TermSrc
 theorem Layer.empty_scoped {Op : Type} : ((Layer.empty : LayerSrc Op)).Scoped :=
   Layer.effectDiscard_scoped (Authoring.succeed_scoped Authoring.unit_scoped)
 
-theorem Layer.all_scoped {Op : Type} {layers : List (LayerSrc Op)}
-    (h : ∀ l ∈ layers, l.Scoped) : ((Layer.all layers : LayerSrc Op)).Scoped :=
-  Layer.mergeAll_scoped h
-
 theorem with__scoped {Op : Type} {layer : LayerSrc Op} {body : Src Op}
     (h0 : layer.Scoped) (h1 : body.Scoped) : ((with_ layer body : Src Op)).Scoped :=
   provideLayer_scoped false h0 h1
@@ -258,7 +254,7 @@ theorem with__scoped {Op : Type} {layer : LayerSrc Op} {body : Src Op}
 theorem provideAll_scoped {Op : Type} {layers : List (LayerSrc Op)} {body : Src Op}
     (h0 : ∀ l ∈ layers, l.Scoped) (h1 : body.Scoped) :
     ((provideAll layers body : Src Op)).Scoped :=
-  provideLayer_scoped false (Layer.all_scoped h0) h1
+  provideLayer_scoped false (Layer.mergeAll_scoped h0) h1
 
 theorem provideFresh_scoped {Op : Type} {layer : LayerSrc Op} {body : Src Op}
     (h0 : layer.Scoped) (h1 : body.Scoped) : ((provideFresh layer body : Src Op)).Scoped :=
@@ -318,9 +314,6 @@ theorem Layer.value_eq {Op : Type} (key : Effect4.ServiceKey) (value : TermSrc) 
 
 theorem Layer.empty_eq {Op : Type} :
     (Layer.empty : LayerSrc Op) = Layer.effectDiscard (Authoring.succeed Authoring.unit) := rfl
-
-theorem Layer.all_eq {Op : Type} (layers : List (LayerSrc Op)) :
-    (Layer.all layers : LayerSrc Op) = Layer.mergeAll layers := rfl
 
 theorem ServiceDef.use_eq {Op : Type} (s : ServiceDef) :
     (s.use : Src Op) = Authoring.service s.key := rfl

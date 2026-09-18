@@ -17,8 +17,8 @@ prints has one owner.
   into a module, and `Row.call` resolves a row by its spelling, so an author never writes a
   table position.
 * The **layer** words are the rc.112 spellings we had no name for: `Layer.value` (a layer
-  over a value that is not a literal, `Layer.ts:1191`), `Layer.empty` (`:1155`), `Layer.all`
-  (`mergeAll`, `:1652`), `with_` and `provideAll` (`Effect.provide`), `provideFresh`
+  over a value that is not a literal, `Layer.ts:1191`), `Layer.empty` (`:1155`), `with_` and
+  `provideAll` (`Effect.provide`, the second over `Layer.mergeAll`, `:1652`), `provideFresh`
   (`{ local: true }`).
 * The **fiber** words are `fork`, `daemon`, `daemonIn` and `join`. The daemon flag is a word
   at the call site: a child that outlives its parent is spelled `daemon body`, never a
@@ -103,10 +103,6 @@ def Layer.value {Op : Type} (key : ServiceKey) (value : TermSrc) : LayerSrc Op :
 def Layer.empty {Op : Type} : LayerSrc Op :=
   Layer.effectDiscard (Authoring.succeed Authoring.unit)
 
-/-- `Layer.mergeAll(...)` (`Layer.ts:1652`): several layers as siblings, one build. A sibling
-provides nothing to a sibling (`merge_requires`, `Program/Provision.lean`). -/
-def Layer.all {Op : Type} (layers : List (LayerSrc Op)) : LayerSrc Op := Layer.mergeAll layers
-
 /-- `Layer.succeed(key, value)` for a service already in hand. -/
 def ServiceDef.constant {Op : Type} (s : ServiceDef) (value : TermSrc) : LayerSrc Op :=
   Layer.value s.key value
@@ -117,7 +113,7 @@ def with_ {Op : Type} (layer : LayerSrc Op) (body : Src Op) : Src Op :=
 
 /-- `Effect.provide(body, [l₁, …, lₙ])` — several layers at one site. -/
 def provideAll {Op : Type} (layers : List (LayerSrc Op)) (body : Src Op) : Src Op :=
-  provideLayer (Layer.all layers) false body
+  provideLayer (Layer.mergeAll layers) false body
 
 /-- `Effect.provide(body, layer, { local: true })` — a build of its own, not the shared one. -/
 def provideFresh {Op : Type} (layer : LayerSrc Op) (body : Src Op) : Src Op :=
