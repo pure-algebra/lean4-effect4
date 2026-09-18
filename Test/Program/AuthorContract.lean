@@ -68,7 +68,7 @@ def once : Module NativeOp :=
     main := eff do
       let r ← Ref.make 0
       TheRef.give r <| eff do
-        _ ← with_ (Layer.ref "Counter") (with_ (Layer.ref "Counter") Counter.use)
+        _ ← provide (Layer.ref "Counter") (provide (Layer.ref "Counter") Counter.use)
         Ref.get r }
 
 /-- The same, with a third use. -/
@@ -78,8 +78,8 @@ def twice : Module NativeOp :=
     main := eff do
       let r ← Ref.make 0
       TheRef.give r <| eff do
-        _ ← with_ (Layer.ref "Counter")
-          (with_ (Layer.ref "Counter") (with_ (Layer.ref "Counter") Counter.use))
+        _ ← provide (Layer.ref "Counter")
+          (provide (Layer.ref "Counter") (provide (Layer.ref "Counter") Counter.use))
         Ref.get r }
 
 -- The new surface elaborates to the trees the layer-sharing battery certifies, reference
@@ -202,14 +202,14 @@ def handler : Src NativeOp := eff do
 #guard (Effect4.Api.author handler).toOption.map Effect4.Api.Typed.closed = some false
 
 -- Deployed under the correct layer, the program is closed; under the mistake it is not.
-#guard (Effect4.Api.author (with_ deployment handler)).toOption.map Effect4.Api.Typed.closed = some true
-#guard (Effect4.Api.author (with_ siblingMistake handler)).toOption.map Effect4.Api.Typed.requires
+#guard (Effect4.Api.author (provide deployment handler)).toOption.map Effect4.Api.Typed.closed = some true
+#guard (Effect4.Api.author (provide siblingMistake handler)).toOption.map Effect4.Api.Typed.requires
   = some [DbEnv.key, RateEnv.key]
 
 -- The deployed program with no declarations of its own: one call, one built value.
-#guard (Effect4.Api.Author.program (with_ deployment handler)).toOption.map (fun b => b.closed)
+#guard (Effect4.Api.Author.program (provide deployment handler)).toOption.map (fun b => b.closed)
   = some true
-#guard (Effect4.Api.Author.program (with_ deployment handler)).toOption.map
+#guard (Effect4.Api.Author.program (provide deployment handler)).toOption.map
     (fun b => b.runSync) = some (Exit.success (Val.list [Val.nat 1, Val.nat 2]))
 
 -- The carriers a module declares, in the shape the signature's service table reads.

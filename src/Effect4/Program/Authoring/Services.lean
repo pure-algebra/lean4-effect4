@@ -17,7 +17,7 @@ prints has one owner.
   into a module, and `Row.call` resolves a row by its spelling, so an author never writes a
   table position.
 * The **layer** words are the rc.112 spellings we had no name for: `Layer.value` (a layer
-  over a value that is not a literal, `Layer.ts:1191`), `Layer.empty` (`:1155`), `with_` and
+  over a value that is not a literal, `Layer.ts:1191`), `Layer.empty` (`:1155`), `provide` and
   `provideAll` (`Effect.provide`, the second over `Layer.mergeAll`, `:1652`), `provideFresh`
   (`{ local: true }`).
 * The **fiber** words are `fork`, `daemon`, `daemonIn` and `join`. The daemon flag is a word
@@ -108,7 +108,7 @@ def ServiceDef.constant {Op : Type} (s : ServiceDef) (value : TermSrc) : LayerSr
   Layer.value s.key value
 
 /-- `Effect.provide(body, layer)` — the layer built for this body and nothing else. -/
-def with_ {Op : Type} (layer : LayerSrc Op) (body : Src Op) : Src Op :=
+def provide {Op : Type} (layer : LayerSrc Op) (body : Src Op) : Src Op :=
   provideLayer layer false body
 
 /-- `Effect.provide(body, [l₁, …, lₙ])` — several layers at one site. -/

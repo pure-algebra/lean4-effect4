@@ -507,13 +507,6 @@ def author (src : Effect4.Program.Authoring.Src NativeOp) (table : RowTable := [
   | .error refusal => .error (.scope refusal)
   | .ok program => (check program table).mapError .typing
 
-/-- `author` for a module with shared layers by name. -/
-def authorModule (m : Effect4.Program.Authoring.Module NativeOp) (table : RowTable := []) :
-    Except AuthorRefusal (Typed table) :=
-  match Effect4.Program.Authoring.elaborateModule m with
-  | .error refusal => .error (.scope refusal)
-  | .ok program => (check program table).mapError .typing
-
 /-! ## The environment as data
 
 What a program needs of its surroundings, and what a layer gives one, are both computed by
@@ -581,10 +574,6 @@ def print (l : TypedLayer sig) : Except PrintRefusal TypeScript.Expr :=
   Effect4.Codegen.Templates.printLayerT sig l.layer
 
 end TypedLayer
-
-/-- The printed layer, as `print` is for a program. -/
-def printLayer {sig : Signature NativeOp} (l : TypedLayer sig) :
-    Except PrintRefusal TypeScript.Expr := l.print
 
 /-! ## Schema, as syntax -/
 

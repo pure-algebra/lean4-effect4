@@ -247,8 +247,8 @@ theorem ServiceDef.constant_scoped {Op : Type} (s : ServiceDef) {value : TermSrc
 theorem Layer.empty_scoped {Op : Type} : ((Layer.empty : LayerSrc Op)).Scoped :=
   Layer.effectDiscard_scoped (Authoring.succeed_scoped Authoring.unit_scoped)
 
-theorem with__scoped {Op : Type} {layer : LayerSrc Op} {body : Src Op}
-    (h0 : layer.Scoped) (h1 : body.Scoped) : ((with_ layer body : Src Op)).Scoped :=
+theorem provide_scoped {Op : Type} {layer : LayerSrc Op} {body : Src Op}
+    (h0 : layer.Scoped) (h1 : body.Scoped) : ((provide layer body : Src Op)).Scoped :=
   provideLayer_scoped false h0 h1
 
 theorem provideAll_scoped {Op : Type} {layers : List (LayerSrc Op)} {body : Src Op}
@@ -300,8 +300,8 @@ theorem await_eq {Op : Type} (fiber : TermSrc) :
 theorem join_eq {Op : Type} (fiber : TermSrc) :
     (join fiber : Src Op) = awaitFiber fiber .joinEffect := rfl
 
-theorem with__eq {Op : Type} (layer : LayerSrc Op) (body : Src Op) :
-    with_ layer body = provideLayer layer false body := rfl
+theorem provide_eq {Op : Type} (layer : LayerSrc Op) (body : Src Op) :
+    provide layer body = provideLayer layer false body := rfl
 
 theorem provideAll_eq {Op : Type} (layers : List (LayerSrc Op)) (body : Src Op) :
     provideAll layers body = provideLayer (Layer.mergeAll layers) false body := rfl

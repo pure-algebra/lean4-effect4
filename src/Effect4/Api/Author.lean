@@ -94,13 +94,8 @@ def closed (b : Built) : Bool := b.typed.closed
 def positionOf (b : Built) (spelling : String) : Option Nat :=
   (b.rowNames.find? (fun entry => entry.1 == spelling)).map Prod.snd
 
-/-- The ordinary run of a built program: the certificate is the evidence, so nothing is
-re-derived (`Api.runAdmitted`). The run a caller holds is `Run.runPure` (`src/Effect4/Run.lean`);
-this is its reading. -/
-def run (b : Built) (budget : Budget := {}) : Inspection :=
-  Api.runAdmitted b.admitted budget.fuel [] budget.compileFuel
-
-/-- `Effect.runSyncExit` on a built program. -/
+/-- `Effect.runSyncExit` on a built program. (The ordinary run of a built program is a value a
+caller holds, `Run.runPure` in `src/Effect4/Run.lean`; it is not a projection of `Built`.) -/
 def runSync (b : Built) (budget : Budget := {}) : ExitV := b.typed.runSync budget
 
 /-- The printed syntax of the built program, against its own table. -/
