@@ -1,27 +1,30 @@
-import Effect4.Program.Typing
+import Effect4.Program.Typing.Blame
 
 /-!
-# Program.Checker — the typing rules as a fold of the program
+# Program.Checker — typing with located refusal, as one fold of the program
 
-The checker of `Program/Typing.lean` rule for rule, re-cut so that every member of the block
-is a fold of its sort (`docs/core/traversal-census.md` §7.4): the second file beside the hand
-checker, connected by `Laws/Program/Typing/Checker.lean` (`Checker.effTy sig env e = effTy sig
-env e`, one theorem per sort), from which `fold_of` derives the algebra
-(`Program/Folds/Checker.lean`). Two rules change shape, neither changes what is accepted:
+The located-refusal arrow of the ontology (`docs/core/ontology.md` §5, K4) as one function:
+`check sig env p e : Except TypeRefusal EffTy` is the program's type, or the refusal at the path
+that earns it. `Program/Typing.lean`'s `effTy` is its success projection and
+`Typing/Blame.lean`'s `explainEff` its refusal, rule for rule — the agreement theorems in
+`Laws/Program/Typing/Checker.lean` say so (`check_toOption`, `check_refusal`), and
+`explain = none ↔ effTy.isSome` is then the shape of `Except`. This is the second file beside
+both; `fold_of` reads its algebra (`Program/Folds/Checker.lean`). Nothing in the two hand
+blocks changed.
 
-- **A statement has a type** (`StmtTy`). `stmtsTy` split on the statement child and typed its
-  grandchild, so statements had no carrier. `stmtTy` types one statement — a *step* with the
-  state it contributes and the variables it binds, a *return* with its answer, or *nothing*
-  (`break`) — and `stmtsTy` sequences by the statement's type alone. "No statement after a
-  return" was a case split on the tail; it is now the mode flag `afterRet`, set by a return
-  for its tail, as `inLoop` is set by a loop for its body.
-- **The layers of a `mergeAll` are a list of signatures.** `layersTy` refused the empty list
-  and merged from the singleton, a case split on the tail. Its result is now the list of the
-  members' signatures and `mergeAll`'s own rule takes the nonempty merge
-  (`LayerTy.mergeNonempty`).
+Two shapes differ from the hand blocks so that every member is a fold of its sort
+(`docs/core/traversal-census.md` §7.5):
 
-Nothing here is the authority: the rules are `Typing.lean`'s and the agreement theorem is what
-admits this file. Callers move across it before the hand checker is deleted.
+- **A statement has a type** (`StmtTy`): a *step* with the state it contributes and the
+  variables it binds, a *return* with its answer's check (evaluated once the tail is known to
+  be empty, the order `explainStmts` blames in), or *nothing* (`break`). `checkStmts` sequences
+  by the statement's type alone; "no statement after a return" is the mode flag `afterRet`,
+  set by a return for its tail and carrying the return's path, as `inLoop` is set by a loop.
+- **The layers of a `mergeAll` are a list of signatures**; the nonempty merge and the
+  `mergeAllEmpty` refusal are `mergeAll`'s own rule (`LayerTy.mergeNonempty`).
+
+The answer join never refuses (`EffTy.joinAnswer_eq`), so the fold joins with `Ty.join` and
+merges generator states with `GenTy.mergeT`; the hand blocks' `Option` there is history.
 -/
 
 namespace Effect4.Program
@@ -34,10 +37,32 @@ inductive StmtTy where
   /-- A statement that contributes a state (its error and requirements, and for a branch or a
   loop its body's answer) and binds `binds` for the statements after it. -/
   | step (state : GenTy) (binds : List Ty)
-  /-- `return`: the body's answer; terminal. -/
-  | ret (answer : Ty)
+  /-- `return`: the body's answer, checked once the tail is known to be empty; terminal. -/
+  | ret (answer : Except TypeRefusal Ty)
   /-- `break`: nothing. -/
   | pass
+
+namespace GenTy
+
+/-- `joinAnswer` without the refusal it never makes. -/
+def joinAnswerT : Option Ty → Option Ty → Option Ty
+  | none, b => b
+  | a, none => a
+  | some a, some b => some (Ty.join a b)
+
+theorem joinAnswer_eq (a b : Option Ty) : joinAnswer a b = some (joinAnswerT a b) := by
+  cases a <;> cases b <;> rfl
+
+/-- `merge` without the refusal it never makes. -/
+def mergeT (a b : GenTy) : GenTy :=
+  ⟨joinAnswerT a.answer b.answer, a.error.join b.error, a.requires.union b.requires⟩
+
+theorem merge_eq (a b : GenTy) : merge a b = some (mergeT a b) := by
+  unfold merge mergeT
+  rw [joinAnswer_eq]
+  rfl
+
+end GenTy
 
 namespace LayerTy
 
@@ -54,293 +79,306 @@ namespace Checker
 
 variable {Op : Type}
 
+/-- A term's type at a node, or its refusal there (`termRefusal`). -/
+def term? (sig : Signature Op) (env : TyEnv) (p : List Nat) (t : Term) : Except TypeRefusal Ty :=
+  match termTy sig env t with
+  | none => .error ⟨p, .term t⟩
+  | some ty => .ok ty
+
+/-- The refusal of a check, when it refuses. -/
+def refusal {α : Type} : Except TypeRefusal α → Option TypeRefusal
+  | .error r => some r
+  | .ok _ => none
+
 mutual
-  /-- `typeOf` over the environment, structural in the program: `Effect4.Program.effTy`
-  rule for rule (`Typing.lean`), with `stmtsTy` under its mode flags. -/
-  def effTy (sig : Signature Op) (env : TyEnv) : Eff Op → Option EffTy
-    | .succeed value => (termTy sig env value).map EffTy.pure
+  /-- `effTy` and `explainEff` as one: the type, or the located refusal. -/
+  def check (sig : Signature Op) (env : TyEnv) (p : List Nat) : Eff Op → Except TypeRefusal EffTy
+    | .succeed value => do
+      let t ← term? sig env p value
+      pure (EffTy.pure t)
     | .fail error => do
-      let e ← termTy sig env error
-      if admittedErrTy e then some ⟨.never, e, Requirement.empty⟩ else none
-    | .failCause cause => (causeTy sig env cause).map fun e => ⟨.never, e, Requirement.empty⟩
-    | .sync thunk => (termTy sig env thunk).map EffTy.pure
-    | .suspend body => effTy sig env body
-    -- The operation must be in the signature's domain (`Signature.dom`, DI-54): an external
-    -- index outside the supplied table is refused here rather than typed through the
-    -- placeholder row, whose `request := .never` otherwise admits any request term typed
-    -- `never` (`Native.lean:189-191`). The OCaml checker already refuses it categorically.
-    -- The request is admitted at a subtype of the row's request (DI-15, subsumption at the
-    -- row request; TypeScript assignability at the call site); the answer is the row's.
+      let e ← term? sig env p error
+      if admittedErrTy e then pure ⟨.never, e, Requirement.empty⟩
+      else throw ⟨p, .errorNotAdmitted e⟩
+    | .failCause cause =>
+      match causeTy sig env cause with
+      | none => throw ⟨p, .cause cause⟩
+      | some e => pure ⟨.never, e, Requirement.empty⟩
+    | .sync thunk => do
+      let t ← term? sig env p thunk
+      pure (EffTy.pure t)
+    | .suspend body => check sig env (p ++ [0]) body
     | .perform op request => do
+      let r ← term? sig env p request
       let row := sig.rowOf op
-      let r ← termTy sig env request
-      if sig.dom op = true ∧ Ty.sub r.normalize row.request.normalize = true then
-        some ⟨row.answer, row.error, Requirement.ofList row.requires⟩
-      else none
+      if sig.dom op = false then throw ⟨p, .outsideDomain row.name⟩
+      else if Ty.sub r.normalize row.request.normalize then
+        pure ⟨row.answer, row.error, Requirement.ofList row.requires⟩
+      else throw ⟨p, .requestNotSubtype row.name r row.request⟩
     | .bind first rest => do
-      let f ← effTy sig env first
-      let r ← effTy sig (env ++ [f.answer]) rest
-      some ⟨r.answer, f.error.join r.error, f.requires.union r.requires⟩
+      let f ← check sig env (p ++ [0]) first
+      let r ← check sig (env ++ [f.answer]) (p ++ [1]) rest
+      pure ⟨r.answer, f.error.join r.error, f.requires.union r.requires⟩
     | .gen body => do
-      let g ← stmtsTy sig env false false body
-      some ⟨g.answer.getD .unit, g.error, g.requires⟩
+      let g ← checkStmts sig env false none (p ++ [0]) body
+      pure ⟨g.answer.getD .unit, g.error, g.requires⟩
     | .catchCause body handler => do
-      let b ← effTy sig env body
-      let h ← effTy sig (env ++ [.causeOf b.error]) handler
-      let answer ← EffTy.joinAnswer b.answer h.answer
-      some ⟨answer, h.error, b.requires.union h.requires⟩
-    -- `catchIfError` keeps every retained failure; only a proved all-caught column leaves E.
-    -- The handler is checked under the original first-failure value type.
+      let b ← check sig env (p ++ [0]) body
+      let h ← check sig (env ++ [.causeOf b.error]) (p ++ [1]) handler
+      pure ⟨Ty.join b.answer h.answer, h.error, b.requires.union h.requires⟩
     | .catchIf test body handler => do
-      let b ← effTy sig env body
-      let predicate ← termTy sig (env ++ [b.error]) test
+      let b ← check sig env (p ++ [0]) body
+      let predicate ← term? sig (env ++ [b.error]) p test
       if predicate = .bool then
-        let h ← effTy sig (env ++ [b.error]) handler
-        let answer ← EffTy.joinAnswer b.answer h.answer
-        some ⟨answer, catchIfError test env.length b.error h.error, b.requires.union h.requires⟩
-      else none
-    -- `select`: the arms are typed at the environments the decision gives from the
-    -- scrutinee's type; their answers join, both errors and requirements are kept.
+        let h ← check sig (env ++ [b.error]) (p ++ [1]) handler
+        pure ⟨Ty.join b.answer h.answer, catchIfError test env.length b.error h.error,
+          b.requires.union h.requires⟩
+      else throw ⟨p, .predicateNotBool predicate⟩
     | .select s d a0 a1 => do
-      let t ← termTy sig env s
-      let (e0, e1) ← d.arms t
-      let t0 ← effTy sig (env ++ e0) a0
-      let t1 ← effTy sig (env ++ e1) a1
-      let answer ← EffTy.joinAnswer t0.answer t1.answer
-      some ⟨answer, t0.error.join t1.error, t0.requires.union t1.requires⟩
+      let t ← term? sig env p s
+      match d.arms t with
+      | none => throw ⟨p, selectRefusal d t⟩
+      | some (e0, e1) => do
+        let t0 ← check sig (env ++ e0) (p ++ [0]) a0
+        let t1 ← check sig (env ++ e1) (p ++ [1]) a1
+        pure ⟨Ty.join t0.answer t1.answer, t0.error.join t1.error, t0.requires.union t1.requires⟩
     | .matchCause body onValue onCause => do
-      let b ← effTy sig env body
-      let v ← effTy sig (env ++ [b.answer]) onValue
-      let c ← effTy sig (env ++ [.causeOf b.error]) onCause
-      let answer ← EffTy.joinAnswer v.answer c.answer
-      some ⟨answer, v.error.join c.error, (b.requires.union v.requires).union c.requires⟩
+      let b ← check sig env (p ++ [0]) body
+      let v ← check sig (env ++ [b.answer]) (p ++ [1]) onValue
+      let c ← check sig (env ++ [.causeOf b.error]) (p ++ [2]) onCause
+      pure ⟨Ty.join v.answer c.answer, v.error.join c.error,
+        (b.requires.union v.requires).union c.requires⟩
     | .onExit body finalizer => do
-      let b ← effTy sig env body
-      let f ← effTy sig (env ++ [.exitOf b.answer b.error]) finalizer
-      some ⟨b.answer, b.error.join f.error, b.requires.union f.requires⟩
+      let b ← check sig env (p ++ [0]) body
+      let f ← check sig (env ++ [.exitOf b.answer b.error]) (p ++ [1]) finalizer
+      pure ⟨b.answer, b.error.join f.error, b.requires.union f.requires⟩
     | .exit body => do
-      let b ← effTy sig env body
-      some ⟨.exitOf b.answer b.error, .never, b.requires⟩
-    | .uninterruptible body => effTy sig env body
-    | .interruptible body => effTy sig env body
-    -- `iterate`: the cursor is typed at its annotation, or at `initial`'s type when there is
-    -- none (DI-91); `initial` and `step` are under it by subsumption (both sides normalized, as
-    -- the annotation is stored raw), so the body, the test and the result see one cursor type
-    -- across every round. The answer is `result`'s.
+      let b ← check sig env (p ++ [0]) body
+      pure ⟨.exitOf b.answer b.error, .never, b.requires⟩
+    | .uninterruptible body => check sig env (p ++ [0]) body
+    | .interruptible body => check sig env (p ++ [0]) body
     | .iterate cursorTy initial test step result body => do
-      let c0 ← termTy sig env initial
+      let c0 ← term? sig env p initial
       let cursor := cursorTy.getD c0
-      let t ← termTy sig (env ++ [cursor]) test
-      let b ← effTy sig (env ++ [cursor]) body
-      let c1 ← termTy sig (env ++ [cursor, b.answer]) step
-      let d ← termTy sig (env ++ [cursor]) result
+      let t ← term? sig (env ++ [cursor]) p test
+      let b ← check sig (env ++ [cursor]) (p ++ [0]) body
+      let c1 ← term? sig (env ++ [cursor, b.answer]) p step
+      let d ← term? sig (env ++ [cursor]) p result
       if t = .bool ∧ Ty.sub c0.normalize cursor.normalize = true
-          ∧ Ty.sub c1.normalize cursor.normalize = true
-        then some ⟨d, b.error, b.requires⟩ else none
-    | .yieldNow _ => some (EffTy.pure .unit)
-    -- Same domain check as `perform` (DI-54). The kind check is not a domain check: an
-    -- out-of-range external index has the placeholder's `kind = .program`, but a *supplied*
-    -- table can make an in-range row async while the index is still outside the domain of a
-    -- different signature.
+          ∧ Ty.sub c1.normalize cursor.normalize = true then pure ⟨d, b.error, b.requires⟩
+      else if ¬ t = .bool then throw ⟨p, .predicateNotBool t⟩
+      else if Ty.sub c0.normalize cursor.normalize = true then throw ⟨p, .stepNotCursor c1 cursor⟩
+      else throw ⟨p, .initialNotCursor c0 cursor⟩
+    | .yieldNow _ => pure (EffTy.pure .unit)
     | .awaitFiber fiber mode => do
-      let t ← termTy sig env fiber
-      let (value, error) ← fiberTy t
-      match mode with
-      | .joinEffect => some ⟨value, error, Requirement.empty⟩
-      | .awaitValue => some (EffTy.pure (.exitOf value error))
-    | .withFiber action => actionTy sig env action
-    -- DI-63: Effect.scoped excludes only Scope (vendor/effect-4.0.0-rc.112/src/Effect.ts:12815-12817).
-    | .scoped body => (effTy sig env body).map fun t =>
-        { t with requires := bodyRequires sig t }
+      let t ← term? sig env p fiber
+      match fiberTy t with
+      | none => throw ⟨p, .notFiber t⟩
+      | some (value, error) =>
+        match mode with
+        | .joinEffect => pure ⟨value, error, Requirement.empty⟩
+        | .awaitValue => pure (EffTy.pure (.exitOf value error))
+    | .withFiber action => checkAction sig env (p ++ [0]) action
+    | .scoped body => do
+      let t ← check sig env (p ++ [0]) body
+      pure { t with requires := bodyRequires sig t }
     | .acquireRelease acquire release => do
-      let a ← effTy sig env acquire
-      let r ← effTy sig (env ++ [a.answer, .exitOf a.answer a.error]) release
-      some ⟨a.answer, a.error, (a.requires.union r.requires).union (Requirement.single sig.scopeKey)⟩
-    -- `Effect.provide(self, layer)`: `Effect<A, E | E2, RIn | Exclude<R, ROut>>`
-    -- (`internal/layer.ts:8-14`) — the layer's requirements join, what it provides is
-    -- discharged from the body's
+      let a ← check sig env (p ++ [0]) acquire
+      let r ← check sig (env ++ [a.answer, .exitOf a.answer a.error]) (p ++ [1]) release
+      pure ⟨a.answer, a.error,
+        (a.requires.union r.requires).union (Requirement.single sig.scopeKey)⟩
     | .provideLayer layer _ body => do
-      let l ← layerTy sig layer
-      let b ← effTy sig env body
-      some ⟨b.answer, b.error.join l.error, Row.union l.requires (Row.diff b.requires l.out)⟩
-    -- `Effect.service(key)`: `Effect<S, never, I>` (`internal/effect.ts:2059`), the carrier
-    -- from the service table
-    | .service key => (sig.serviceTy key).map fun ty => ⟨ty, .never, Requirement.single key⟩
-    -- `Effect.provideService(self, key, value)`: `Effect<A, E, Exclude<R, I>>` (`:2202`), the
-    -- value admitted at a subtype of the key's carrier (DI-15, subsumption at service
-    -- provision)
-    | .provideService key value body => do
-      let ty ← sig.serviceTy key
-      let v ← termTy sig env value
-      let b ← effTy sig env body
-      if Ty.sub v.normalize ty.normalize = true then
-        some ⟨b.answer, b.error, Row.diff b.requires (Requirement.single key)⟩
-      else none
+      let l ← checkLayer sig (p ++ [0]) layer
+      let b ← check sig env (p ++ [1]) body
+      pure ⟨b.answer, b.error.join l.error, Row.union l.requires (Row.diff b.requires l.out)⟩
+    | .service key =>
+      match sig.serviceTy key with
+      | none => throw ⟨p, .serviceUnknown key⟩
+      | some ty => pure ⟨ty, .never, Requirement.single key⟩
+    | .provideService key value body =>
+      match sig.serviceTy key with
+      | none => throw ⟨p, .serviceUnknown key⟩
+      | some ty => do
+        let v ← term? sig env p value
+        let b ← check sig env (p ++ [0]) body
+        if Ty.sub v.normalize ty.normalize then
+          pure ⟨b.answer, b.error, Row.diff b.requires (Requirement.single key)⟩
+        else throw ⟨p, .valueNotSubtype key v ty⟩
 
-  /-- The signature of a layer term, structural; `none` refuses an ill-typed body or a literal
-  outside the value alphabet. The rules are the four `LayerTy` operations and the leaf rules:
-  `Layer.succeed` provides its key and requires nothing (`Layer.ts:1074`); `Layer.effect`
-  provides its key with the body's error and the body's scope-free requirements
-  (`:1427`, `:1438`); `Layer.effectDiscard` provides nothing (`:1512`); `fresh` keeps the
-  signature (`:3850`); `orDie` clears the error (`:3327`). A body is closed: it is typed at
-  the empty environment. -/
-  def layerTy (sig : Signature Op) : LayerTerm Op → Option LayerTy
+  /-- `layerTy` and `explainLayer` as one. -/
+  def checkLayer (sig : Signature Op) (p : List Nat) : LayerTerm Op → Except TypeRefusal LayerTy
     | .succeed key value =>
-      (litVal value).map fun _ => ⟨Requirement.single key, .never, Requirement.empty⟩
-    | .effect key body =>
-      (effTy sig [] body).map fun t => ⟨Requirement.single key, t.error, bodyRequires sig t⟩
-    | .effectDiscard body =>
-      (effTy sig [] body).map fun t => ⟨Requirement.empty, t.error, bodyRequires sig t⟩
+      match litVal value with
+      | none => throw ⟨p, .literalOutsideAlphabet value⟩
+      | some _ => pure ⟨Requirement.single key, .never, Requirement.empty⟩
+    | .effect key body => do
+      let t ← check sig [] (p ++ [0]) body
+      pure ⟨Requirement.single key, t.error, bodyRequires sig t⟩
+    | .effectDiscard body => do
+      let t ← check sig [] (p ++ [0]) body
+      pure ⟨Requirement.empty, t.error, bodyRequires sig t⟩
     | .provide self that => do
-      let s ← layerTy sig self
-      let t ← layerTy sig that
-      some (s.provide t)
+      let s ← checkLayer sig (p ++ [0]) self
+      let t ← checkLayer sig (p ++ [1]) that
+      pure (s.provide t)
     | .provideMerge self that => do
-      let s ← layerTy sig self
-      let t ← layerTy sig that
-      some (s.provideMerge t)
+      let s ← checkLayer sig (p ++ [0]) self
+      let t ← checkLayer sig (p ++ [1]) that
+      pure (s.provideMerge t)
     | .merge left right => do
-      let a ← layerTy sig left
-      let b ← layerTy sig right
-      some (a.merge b)
-    | .fresh inner => layerTy sig inner
-    | .orDie inner => (layerTy sig inner).map LayerTy.orDie
-    -- a reference is typed by the whole program (`typeOfProgram` expands it to its target);
-    -- structurally it is nothing
-    | .ref _ => none
-    -- the layers' signatures, then the nonempty merge (`Layer.ts:1652`, at least one): the
-    -- list sort's result is the list of its members' results, the combining is this rule's
-    | .mergeAll layers => (layersTy sig layers).bind LayerTy.mergeNonempty
+      let a ← checkLayer sig (p ++ [0]) left
+      let b ← checkLayer sig (p ++ [1]) right
+      pure (a.merge b)
+    | .fresh inner => checkLayer sig (p ++ [0]) inner
+    | .orDie inner => do
+      let l ← checkLayer sig (p ++ [0]) inner
+      pure l.orDie
+    | .ref target => throw ⟨p, .layerReference target⟩
+    -- the layers' signatures, then the nonempty merge (`Layer.ts:1652`, at least one)
+    | .mergeAll layers => do
+      let ls ← checkLayers sig (p ++ [0]) layers
+      match LayerTy.mergeNonempty ls with
+      | none => throw ⟨p ++ [0], .mergeAllEmpty⟩
+      | some l => pure l
 
-  /-- The signatures of a list of layer terms, in order; `none` when any is refused. -/
-  def layersTy (sig : Signature Op) : LayerTerms Op → Option (List LayerTy)
-    | .nil => some []
+  /-- The signatures of a list of layer terms, in order, or the first refusal. -/
+  def checkLayers (sig : Signature Op) (p : List Nat) :
+      LayerTerms Op → Except TypeRefusal (List LayerTy)
+    | .nil => pure []
     | .cons head tail => do
-      let h ← layerTy sig head
-      let t ← layersTy sig tail
-      some (h :: t)
+      let h ← checkLayer sig (p ++ [0]) head
+      let t ← checkLayers sig (p ++ [1]) tail
+      pure (h :: t)
 
-  /-- The type of one statement (`StmtTy`): `const aN = yield* e` and `yield* e` contribute
-  the effect's error and requirements and bind its answer or nothing; a branch or a loop
-  contributes its body's generator state (a loop's body under `inLoop`); `return` is the
-  answer, terminal; `break` is nothing, admitted under `inLoop`. -/
-  def stmtTy (sig : Signature Op) (env : TyEnv) (inLoop : Bool) : Stmt Op → Option StmtTy
+  /-- The type of one statement (`StmtTy`), or its refusal. -/
+  def checkStmt (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (p : List Nat) :
+      Stmt Op → Except TypeRefusal StmtTy
     | .bindYield effect => do
-      let t ← effTy sig env effect
-      some (.step ⟨none, t.error, t.requires⟩ [t.answer])
+      let t ← check sig env (p ++ [0]) effect
+      pure (.step ⟨none, t.error, t.requires⟩ [t.answer])
     | .yieldDiscard effect => do
-      let t ← effTy sig env effect
-      some (.step ⟨none, t.error, t.requires⟩ [])
-    | .ret value => (termTy sig env value).map StmtTy.ret
+      let t ← check sig env (p ++ [0]) effect
+      pure (.step ⟨none, t.error, t.requires⟩ [])
+    | .ret value => pure (.ret (term? sig env p value))
     | .ifElse test thenB elseB => do
-      let t ← termTy sig env test
+      let t ← term? sig env p test
       if t = .bool then
-        let a ← stmtsTy sig env inLoop false thenB
-        let b ← stmtsTy sig env inLoop false elseB
-        let ab ← a.merge b
-        some (.step ab [])
-      else none
+        let a ← checkStmts sig env inLoop none (p ++ [0]) thenB
+        let b ← checkStmts sig env inLoop none (p ++ [1]) elseB
+        pure (.step (a.mergeT b) [])
+      else throw ⟨p, .predicateNotBool t⟩
     | .whileTrue body => do
-      let b ← stmtsTy sig env true false body
-      some (.step b [])
-    | .breakLoop => if inLoop then some .pass else none
+      let b ← checkStmts sig env true none (p ++ [0]) body
+      pure (.step b [])
+    | .breakLoop => if inLoop then pure .pass else throw ⟨p, .breakOutsideLoop⟩
 
-  /-- A generator body, statement by statement; `inLoop` admits `break`, `afterRet` refuses
-  every statement (a `return` ends the body, and sets it for its tail). A step's state merges
-  with the tail's, typed under the step's bindings; a `return` is the answer once the tail is
-  empty; `break` contributes nothing. -/
-  def stmtsTy (sig : Signature Op) (env : TyEnv) (inLoop afterRet : Bool) :
-      Stmts Op → Option GenTy
-    | .nil => some ⟨none, .never, Requirement.empty⟩
+  /-- A generator body, statement by statement; `inLoop` admits `break`, `afterRet` (the path
+  of the return that ended the body) refuses every statement. -/
+  def checkStmts (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (afterRet : Option (List Nat))
+      (p : List Nat) : Stmts Op → Except TypeRefusal GenTy
+    | .nil => pure ⟨none, .never, Requirement.empty⟩
     | .cons head rest =>
-      if afterRet then none else do
-        let s ← stmtTy sig env inLoop head
+      match afterRet with
+      | some ret => throw ⟨ret, .returnNotLast⟩
+      | none => do
+        let s ← checkStmt sig env inLoop (p ++ [0]) head
         match s with
         | .step g binds => do
-          let r ← stmtsTy sig (env ++ binds) inLoop false rest
-          g.merge r
-        | .ret t => do
-          let _ ← stmtsTy sig env inLoop true rest
-          some ⟨some t, .never, Requirement.empty⟩
-        | .pass => stmtsTy sig env inLoop false rest
+          let r ← checkStmts sig (env ++ binds) inLoop none (p ++ [1]) rest
+          pure (g.mergeT r)
+        | .ret answer => do
+          let _ ← checkStmts sig env inLoop (some (p ++ [0])) (p ++ [1]) rest
+          let t ← answer
+          pure ⟨some t, .never, Requirement.empty⟩
+        | .pass => checkStmts sig env inLoop none (p ++ [1]) rest
 
   /-- Race entrants: every entrant's answer joins, the errors union. -/
-  def effsTy (sig : Signature Op) (env : TyEnv) : Effs Op → Option EffTy
-    | .nil => some ⟨.never, .never, Requirement.empty⟩
+  def checkEffs (sig : Signature Op) (env : TyEnv) (p : List Nat) : Effs Op → Except TypeRefusal EffTy
+    | .nil => pure ⟨.never, .never, Requirement.empty⟩
     | .cons head tail => do
-      let h ← effTy sig env head
-      let t ← effsTy sig env tail
-      let answer ← EffTy.joinAnswer h.answer t.answer
-      some ⟨answer, h.error.join t.error, h.requires.union t.requires⟩
+      let h ← check sig env (p ++ [0]) head
+      let t ← checkEffs sig env (p ++ [1]) tail
+      pure ⟨Ty.join h.answer t.answer, h.error.join t.error, h.requires.union t.requires⟩
 
-  /-- The fiber actions. -/
-  def actionTy (sig : Signature Op) (env : TyEnv) : ActionTerm Op → Option EffTy
+  /-- `actionTy` and `explainAction` as one. -/
+  def checkAction (sig : Signature Op) (env : TyEnv) (p : List Nat) :
+      ActionTerm Op → Except TypeRefusal EffTy
     | .fork program _ => do
-      let p ← effTy sig env program
-      some ⟨.fiberOf p.answer p.error, .never, p.requires⟩
+      let t ← check sig env (p ++ [0]) program
+      pure ⟨.fiberOf t.answer t.error, .never, t.requires⟩
     | .forkIn program _ scope => do
-      let p ← effTy sig env program
-      let s ← termTy sig env scope
-      if s = Ty.scope then some ⟨.fiberOf p.answer p.error, .never, p.requires⟩ else none
+      let t ← check sig env (p ++ [0]) program
+      let s ← term? sig env p scope
+      if s = Ty.scope then pure ⟨.fiberOf t.answer t.error, .never, t.requires⟩
+      else throw ⟨p, .scopeExpected s⟩
     | .forkScoped program _ => do
-      let p ← effTy sig env program
-      some ⟨.fiberOf p.answer p.error, .never, p.requires.union (Requirement.single sig.scopeKey)⟩
+      let t ← check sig env (p ++ [0]) program
+      pure ⟨.fiberOf t.answer t.error, .never,
+        t.requires.union (Requirement.single sig.scopeKey)⟩
     | .runIn target scope => do
-      let t ← termTy sig env target
-      let _ ← fiberTy t
-      let s ← termTy sig env scope
-      if s = Ty.scope then some (EffTy.pure .unit) else none
+      let t ← term? sig env p target
+      match fiberTy t with
+      | none => throw ⟨p, .notFiber t⟩
+      | some _ => do
+        let s ← term? sig env p scope
+        if s = Ty.scope then pure (EffTy.pure .unit) else throw ⟨p, .scopeExpected s⟩
     | .interrupt target => do
-      let t ← termTy sig env target
-      let _ ← fiberTy t
-      some (EffTy.pure .unit)
+      let t ← term? sig env p target
+      match fiberTy t with
+      | none => throw ⟨p, .notFiber t⟩
+      | some _ => pure (EffTy.pure .unit)
     | .interruptScoped target => do
-      let t ← termTy sig env target
-      let _ ← fiberTy t
-      some (EffTy.pure .unit)
+      let t ← term? sig env p target
+      match fiberTy t with
+      | none => throw ⟨p, .notFiber t⟩
+      | some _ => pure (EffTy.pure .unit)
     | .interruptAll targets interruptor => do
-      let ts ← termTy sig env targets
+      let ts ← term? sig env p targets
       match ts with
       | .list inner =>
-        let _ ← fiberTy inner
-        match interruptor with
-        | none => some (EffTy.pure .unit)
-        | some who => do
-          let w ← termTy sig env who
-          if w = .nat then some (EffTy.pure .unit) else none
-      | _ => none
+        match fiberTy inner with
+        | none => throw ⟨p, .notFiber inner⟩
+        | some _ =>
+          match interruptor with
+          | none => pure (EffTy.pure .unit)
+          | some who => do
+            let w ← term? sig env p who
+            if w = .nat then pure (EffTy.pure .unit) else throw ⟨p, .natExpected w⟩
+      | _ => throw ⟨p, .listOfFibersExpected ts⟩
     | .awaitAll targets => do
-      let ts ← termTy sig env targets
+      let ts ← term? sig env p targets
       match ts with
       | .list inner =>
-        let (value, error) ← fiberTy inner
-        some (EffTy.pure (.list (.exitOf value error)))
-      | _ => none
+        match fiberTy inner with
+        | none => throw ⟨p, .notFiber inner⟩
+        | some (value, error) => pure (EffTy.pure (.list (.exitOf value error)))
+      | _ => throw ⟨p, .listOfFibersExpected ts⟩
     | .awaitAllFailFast targets => do
-      let ts ← termTy sig env targets
+      let ts ← term? sig env p targets
       match ts with
       | .list inner =>
-        let (value, error) ← fiberTy inner
-        some (EffTy.pure (.list (.exitOf value error)))
-      | _ => none
+        match fiberTy inner with
+        | none => throw ⟨p, .notFiber inner⟩
+        | some (value, error) => pure (EffTy.pure (.list (.exitOf value error)))
+      | _ => throw ⟨p, .listOfFibersExpected ts⟩
     | .snapshotChildren =>
-      some (EffTy.pure (.list (.fiberOf (.handle "unknown") (.handle "unknown"))))
+      pure (EffTy.pure (.list (.fiberOf (.handle "unknown") (.handle "unknown"))))
     | .awaitNewChildren snapshot => do
-      let s ← termTy sig env snapshot
-      if s = .list (.fiberOf (.handle "unknown") (.handle "unknown")) then some (EffTy.pure .unit)
-      else none
-    | .raceAll entrants => effsTy sig env entrants
+      let s ← term? sig env p snapshot
+      if s = .list (.fiberOf (.handle "unknown") (.handle "unknown")) then pure (EffTy.pure .unit)
+      else throw ⟨p, .snapshotExpected s⟩
+    | .raceAll entrants => checkEffs sig env (p ++ [0]) entrants
     | .setContext context => do
-      let c ← termTy sig env context
-      if c = Ty.context then some (EffTy.pure .unit) else none
-    | .getContext => some (EffTy.pure Ty.context)
-    | .getId => some (EffTy.pure .nat)
+      let c ← term? sig env p context
+      if c = Ty.context then pure (EffTy.pure .unit) else throw ⟨p, .contextExpected c⟩
+    | .getContext => pure (EffTy.pure Ty.context)
+    | .getId => pure (EffTy.pure .nat)
     | .closeScope scope exit => do
-      let s ← termTy sig env scope
-      let e ← termTy sig env exit
+      let s ← term? sig env p scope
+      let e ← term? sig env p exit
       match e with
-      | .exitOf _ _ => if s = Ty.scope then some (EffTy.pure .unit) else none
-      | _ => none
+      | .exitOf _ _ => if s = Ty.scope then pure (EffTy.pure .unit) else throw ⟨p, .scopeExpected s⟩
+      | _ => throw ⟨p, .exitExpected e⟩
 end
 
 end Checker
