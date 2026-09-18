@@ -27,9 +27,11 @@ reads back.
 - Proved: `run_eq_meaning` on `Straight`, `loopAgreement` on `Looped`, meaning and loop type
   soundness, laws 11/12 and completeness of the printer/reader over the template table, scope
   safety by construction, the journal as a free monoid (`replay_unique`).
-- Measured (`#traversal_census`, `docs/core/traversal-census.md`): of the definitions reading
-  `Eff`, 22 go through a declared fold, 40 are hand traversals in nine roots; `Ty` 17, `Term` 14,
-  `Val` 17 with no fold declared. That distance is the current work.
+- Measured (`#traversal_census`, `docs/core/traversal-census.md`): 93 hand traversals of the
+  five free objects (`Eff` 40, `Ty` 17, `Term` 14, `Representation` 5, `Val` 17). The converter
+  `fold_of` (`Program/FoldOf.lean`, five shapes) has given 66 of them a fold and a kernel-checked
+  connector beside the hand definition, at `[propext, Quot.sound]`; the rest are named by shape
+  in the census note §7.4. That distance is the current work.
 
 ## The documents (read these; the rest is history)
 
@@ -47,12 +49,10 @@ reads back.
 
 ## Next, in order
 
-1. **The converter** (`docs/core/traversal-census.md` §4): a metaprogram that turns a structural
-   definition into its algebra, its `EffHom` (the equation lemmas) and `f = cata alg` by
-   uniqueness — built beside the hand definitions, callers moved, the hand definitions deleted
-   at a good place. First customers: `Straight` and the list projections (pure), `Ty`'s
-   seventeen (one inductive, sixteen constructors, the boundary rows waiting on it), then
-   `effTy` (accumulator), then `denote`; `compileEff` stays exempt.
+1. **The converter's last shapes** (`docs/core/traversal-census.md` §7.4): `stmtTy` in the
+   checker so `effTy`/`explain` (12 rows) become folds, the positional-fold shape for
+   `valCode`/`ofSchema`, cases on the child for `termTy`; then the callers move to `cata alg`
+   and the hand definitions are deleted at a good place. `compileEff` stays exempt.
 2. **The simple rows** of the do-now set (`ontology.md` §2): 6 with exactness modulo
    annotations, 8, 23 as a delete, 24, 37, 17.
 3. **The Schema layer** re-cut (`ontology.md` §3): the five files that carry the two real claims

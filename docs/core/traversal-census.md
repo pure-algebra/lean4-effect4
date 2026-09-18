@@ -242,36 +242,59 @@ sibling called, since two siblings may read the same list. A list child the arm 
 position other than `List M` — `Option M`, `List (ElementOf M)`, a record wrapper — types the
 field's local with the carrier in the member's place, as the generated algebra does, and
 `Representation.tag` / `Check.tag` convert. The census at `13dde151`: `Eff` 18 of 40, `Ty` 16
-of 17, `Term` 12 of 14, `Representation` 2 of 5, `Val` 12 of 17 — **60 of 93 hand traversals
+of 17, `Term` 12 of 14, `Representation` 2 of 5, `Val` 12 of 17 — **66 of 93 hand traversals
 have a fold and a kernel-checked connector**.
 
-### 7.3 What `fold_of` refuses today, and the shape each needs
+### 7.3 The container paramorphism (2026-09-18)
 
-- **A paramorphism over a container** (`WF`, `wf`, `payload`, `Machine.reasonsOfVal`): the arm
-  applies *another* block's traversal to the child list (`encodeList xs`), so the list child's
-  value is needed beside its results; under the paired carrier the results arrive as
-  `xs.map (fun e => (e, f e))`, and the equation needs `List.map_map` and `List.map_id` —
-  term-level, but a rewrite rather than a reduction. `Val`'s last four.
-- **A case analysis on a container child** (`Witnesses.valCode`: `| .ctor 9 [head] => 9 ::
-  valCode head`, `Bridge.ofSchema` reading through `declaration`'s annotation): the arm splits
-  on the container's shape or reads through a wrapper before recursing — not a fold of the
-  family as written; the generated positional folds are the shape it would need. (The plain
-  `xs.map f` idiom is recognised.)
-- **Positions other than `List M`** (`Representation`: `List (ElementOf Representation)`,
-  `Option`, the record wrappers `PropertySignatureOf`, `IndexSignatureOf`): the generated
-  algebra's argument is the constructor's argument type with the member replaced by its
-  carrier; the converter must type the field's local the same way and, where an arm reads
-  through the wrapper, use the generated positional folds. `Representation`'s last 3
-  (`withChecks?` and `checkId` keep the child list — the container paramorphism; `ofSchema`
-  reads through a wrapper).
+An arm that uses a child under a container or a wrapper as a value: `WF (.list xs) =
+(encodeList xs).length < 2^64 ∧ WFList xs`, `payload (.ctor i args) = … ++ encodeList args`,
+`withChecks?` rebuilding the node with its children, `checkId` reading `filterGroup`'s `Option`
+child, `reasonsOfVal`'s case analysis on `.ctor 1 [written]`. The value is paired in as for any
+paramorphism, and the generated algebra then hands the field the child's *paired results*
+(`List (Val × Prop)`, `List (PropertySignatureOf (Representation × Option Representation))`).
+The converter reads the value back through the position's functor map (`List.map Prod.fst`,
+`Option.map`, the generated `W.map`, composed down to the member) and the field is the arm at
+that reading. The equation `f_val (.list a) = alg.val_list (a.map f_val)` then needs
+`(a.map (fun e => (e, f e))).map Prod.fst = a`: the composition law, the pointwise identity
+under `funext` (`(e, f e).1` reduces), and the identity law, one container child at a time with
+the others held at their stage. `List` and `Option` carry both laws in core; the generator had
+emitted only `map_map` for its wrappers and now emits `map_id` beside it
+(`tools/Effect4Gen/Fold.lean`; `ElementOf`, `PropertySignatureOf`, `IndexSignatureOf`,
+`CheckRepresentationAnnotationOf` in `Schema/Fold.lean`). That is the functor's second law,
+and a paired fold is its first consumer.
+
+Two shapes the previous list kept apart fell to it: a case analysis on a container child whose
+grandchild is only *read* (`reasonsOfVal`), since the arm stays as written over the read-back
+value; and the positions other than `List M` under a paramorphism (`withChecks?`, `checkId`).
+The sibling connectors' pointwise step is now the uniqueness theorem itself
+(`hom.f_val x = cata alg x`) rather than `f.eq_cata` under `funext`, which is what makes the
+paired case uniform with the plain one.
+
+Converted: `Val.WF`/`WFList`, `Val.wf`/`wfList`, `Val.payload` (`Store/Folds/Val.lean`);
+`Machine.reasonsOfVal`/`reasonsOfList` (`Machine/Folds/Stores.lean`, new);
+`Schema.withChecks?`, `Bridge.checkId` (`Program/Folds/Representation.lean`). Census: `Val` 16
+of 17, `Representation` 4 of 5; **66 of 93** hand traversals have a fold and a kernel-checked
+connector, every one at `[propext, Quot.sound]`.
+
+### 7.4 What `fold_of` refuses today, and the shape each needs
+
+- **A child with no carrier** (`stmtsTy`: `| .cons (.bindYield effect) rest => effTy sig env
+  effect`): the arm splits on the statement child and recurses on a *grandchild*; statements
+  have no type of their own in the checker. Not a fold as written; giving `Stmt` its own rule
+  (`stmtTy`) is a change to the checker and its `HasTy` soundness proof. `effTy` (6),
+  `explain` (6): the largest block, and the one opened next.
+- **A case analysis on a container child that recurses on the grandchild**
+  (`Witnesses.valCode`: `| .ctor 9 [head] => 9 :: valCode head`; `Bridge.ofSchema` reading
+  through `declaration`'s annotation and recursing): the recursive call is not on an immediate
+  child, so the results the algebra hands over do not contain the grandchild's; the field would
+  have to split on the *results* list, the generated positional folds' shape. `valCode` (1),
+  `ofSchema` (1).
 - **Shape-inspecting arms** (`termsTy`: `| .cons (.var index) tail => termTy sig env (.var
   index)`): the arm splits on a child's constructor and recurses on the *rebuilt* child, so the
   equation holds by cases on the child, not by unfolding. `termTy`/`termsTy` (2).
-- **A child with no carrier** (`stmtsTy`: `| .cons (.bindYield effect) rest => effTy sig env
-  effect`): the arm splits on the statement child and recurses on a *grandchild*; statements
-  have no type of their own in the checker. Not a fold as written — giving `Stmt` its own rule
-  (`stmtTy`) is a change to the checker and its `HasTy` soundness proof. `effTy` (6),
-  `explain` (6) — the `gen`/`Stmt` family the owner ruled reader-only (row 22).
+- **`instReprTy.repr`** (1): a derived instance, generated by `deriving Repr`; a fold of `Ty`
+  in substance, and the census could mark derived instances as generated.
 - **`compileEff`** (5): exempt by ruling (row 30); `Sched`'s helpers (5) follow it.
 
 The step after the connectors is the callers: each `f`'s callers move to `cata alg`, the
