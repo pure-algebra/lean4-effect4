@@ -29,9 +29,10 @@ reads back.
   safety by construction, the journal as a free monoid (`replay_unique`).
 - Measured (`#traversal_census`, `docs/core/traversal-census.md`): 93 hand traversals of the
   five free objects (`Eff` 40, `Ty` 17, `Term` 14, `Representation` 5, `Val` 17). The converter
-  `fold_of` (`Program/FoldOf.lean`, five shapes) has given 66 of them a fold and a kernel-checked
-  connector beside the hand definition, at `[propext, Quot.sound]`; the rest are named by shape
-  in the census note §7.4. That distance is the current work.
+  `fold_of` (`Program/FoldOf.lean`, five shapes) has given 72 of them a fold and a kernel-checked
+  connector beside the hand definition, at `[propext, Quot.sound]`; the checker is on the fold
+  through `Program/Checker.lean` (a statement has a type, census §7.5); the rest are named by
+  shape in §7.4. That distance is the current work.
 
 ## The documents (read these; the rest is history)
 
@@ -49,10 +50,11 @@ reads back.
 
 ## Next, in order
 
-1. **The converter's last shapes** (`docs/core/traversal-census.md` §7.4): `stmtTy` in the
-   checker so `effTy`/`explain` (12 rows) become folds, the positional-fold shape for
+1. **The converter's last shapes** (`docs/core/traversal-census.md` §7.4): `explain` (6 rows,
+   decision row 38 — the `Except`-valued fold is recommended), the positional-fold shape for
    `valCode`/`ofSchema`, cases on the child for `termTy`; then the callers move to `cata alg`
-   and the hand definitions are deleted at a good place. `compileEff` stays exempt.
+   (the checker's first: `typeOf` and `Blame` over `Checker.effTy.alg`) and the hand
+   definitions are deleted at a good place. `compileEff` stays exempt.
 2. **The simple rows** of the do-now set (`ontology.md` §2): 6 with exactness modulo
    annotations, 8, 23 as a delete, 24, 37, 17.
 3. **The Schema layer** re-cut (`ontology.md` §3): the five files that carry the two real claims
@@ -65,8 +67,8 @@ Scout G (third-party Lean tooling for this work) is out: `docs/research/2026-09-
 
 ## Owner decisions open
 
-The 21 owner rows of `docs/core/decisions.md`, in the order its last section gives: rows 14 and
-15 first (the digest, the MCP server), then 2, 4, 7, 9, 10, 11; then 26–29 and 32; then 1, 30,
+The 22 owner rows of `docs/core/decisions.md`, in the order its last section gives: row 38 (the
+`explain` route) is the one the current slice waits on; then rows 14 and 15 (the digest, the MCP server), then 2, 4, 7, 9, 10, 11; then 26–29 and 32; then 1, 30,
 19–22. Rows 5 and 6 have the restatements `ontology.md` §2 gives (exactness modulo a named
 normaliser).
 

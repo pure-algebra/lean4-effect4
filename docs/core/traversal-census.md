@@ -274,16 +274,16 @@ paired case uniform with the plain one.
 Converted: `Val.WF`/`WFList`, `Val.wf`/`wfList`, `Val.payload` (`Store/Folds/Val.lean`);
 `Machine.reasonsOfVal`/`reasonsOfList` (`Machine/Folds/Stores.lean`, new);
 `Schema.withChecks?`, `Bridge.checkId` (`Program/Folds/Representation.lean`). Census: `Val` 16
-of 17, `Representation` 4 of 5; **66 of 93** hand traversals have a fold and a kernel-checked
-connector, every one at `[propext, Quot.sound]`.
+of 17, `Representation` 4 of 5; **66 of 93** hand traversals had a fold and a kernel-checked
+connector at that point, every one at `[propext, Quot.sound]` (72 after §7.5).
 
 ### 7.4 What `fold_of` refuses today, and the shape each needs
 
-- **A child with no carrier** (`stmtsTy`: `| .cons (.bindYield effect) rest => effTy sig env
-  effect`): the arm splits on the statement child and recurses on a *grandchild*; statements
-  have no type of their own in the checker. Not a fold as written; giving `Stmt` its own rule
-  (`stmtTy`) is a change to the checker and its `HasTy` soundness proof. `effTy` (6),
-  `explain` (6): the largest block, and the one opened next.
+- **`explain`** (6, `Typing/Blame.lean`): the two shapes §7.5 removed from `effTy` (the
+  statement child, the singleton `mergeAll`) and a third, its arms calling `effTy` on the
+  children (`| .bind first rest => match effTy sig env first with …`) — a paramorphism as
+  written. Decision row 38 chooses between `fold_of`'s paramorphism over a copy with
+  `explainStmt` and one `Except`-valued fold that is the located-refusal arrow itself (§7.5).
 - **A case analysis on a container child that recurses on the grandchild**
   (`Witnesses.valCode`: `| .ctor 9 [head] => 9 :: valCode head`; `Bridge.ofSchema` reading
   through `declaration`'s annotation and recursing): the recursive call is not on an immediate
@@ -300,6 +300,43 @@ connector, every one at `[propext, Quot.sound]`.
 The step after the connectors is the callers: each `f`'s callers move to `cata alg`, the
 proofs that unfold `f` rewrite by `f.eq_cata`, and `f` is deleted. That is where the count in
 §2 goes down.
+
+### 7.5 The statement sort: `effTy` as a fold (2026-09-18, `74f23029`)
+
+`stmtsTy` split on the statement child and typed its grandchild (`| .cons (.bindYield effect)
+rest => effTy sig env effect`), so statements had no carrier; and `layersTy` special-cased the
+singleton (`| .cons head .nil => layerTy sig head`), a split on the tail. Neither is a fold as
+written. `Program/Checker.lean` is the checker rule for rule with those two shapes changed and
+nothing accepted differently:
+
+- **a statement has a type** (`StmtTy`): a *step* with the state it contributes and the
+  variables it binds (`yield*`, `const = yield*`, a branch, a loop), a *return* with its answer,
+  or *nothing* (`break`); `stmtsTy` sequences by the statement's type alone, and "no statement
+  after a return" is the mode flag `afterRet` a return sets for its tail, as `inLoop` is set by
+  a loop for its body — the same device, and the reason `break` must be exactly nothing
+  (`Ty.join .never` normalizes, so an empty state merged in is not the identity);
+- **the layers of a `mergeAll` are a list of signatures**: the list sort's result is the list
+  of its members' results and the nonempty merge is `mergeAll`'s own rule
+  (`LayerTy.mergeNonempty`).
+
+The connector `Checker.effTy_eq` (`Laws/Program/Typing/Checker.lean`) is one theorem per sort
+by structural recursion over the family, `[propext, Quot.sound]`; `fold_of Checker.effTy`
+converts all seven members (`R .eff = TyEnv → Option EffTy`, `R .stmt = TyEnv → Bool → Option
+StmtTy`, `R .stmts = TyEnv → Bool → Bool → Option GenTy`, `R .layerTerms = Option (List
+LayerTy)`), and the hand checker's six rows carry `eq_cata` through the agreement
+(`effTy.eq_cata : effTy sig env e = cata_eff (Checker.effTy.alg sig) e env`). Every property of
+`effTy` (`Sound.lean`, `Check.lean`) reaches the fold checker through the same theorem; nothing
+in `Typing.lean` changed. Census: `Eff` 24 of the 40 hand rows, plus the seven fold-checker
+members, all folds (the driver prints 47 (31)); **72 of 93** hand traversals with connectors.
+
+`explain` (6 rows) has the same two shapes and a third: its arms call `effTy` on the children,
+so as written it is a paramorphism (the child's value goes to another traversal). Two routes,
+decision row 38: (a) the mechanical one — `fold_of`'s paramorphism on a `Checker.explain*`
+copy with `explainStmt`, carrier `Eff × (TyEnv → List Nat → Option TypeRefusal)`, an hour;
+(b) the algebraic one — one `Except TypeRefusal EffTy`-valued fold that *is* the
+located-refusal arrow (K4): `effTy` its `toOption`, `explain` its error, and
+`explain_none_iff` (700 lines, `Blame.lean`) the shape of `Except`. (b) is the deep module;
+both blocks and the completeness proof become two projections of one fold. Recommended: (b).
 
 ## 8. Scout G — the tooling that exists (`docs/research/2026-09-17-lean-tooling-scout-G.md`)
 
