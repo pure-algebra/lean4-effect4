@@ -79,6 +79,7 @@ import Test.Program.HostSpecContract
 import Test.Program.HostBoundaryContract
 import Test.Api.HostSessionContract
 import Test.Api.RunnerContract
+import Test.Api.SupervisionContract
 import Test.Api.KeyedHostContract
 import Test.Program.SchedContract
 import Test.Program.DenoteRContract
