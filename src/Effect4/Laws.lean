@@ -39,6 +39,7 @@ import Effect4.Laws.Api.Fuel
 import Effect4.Laws.Api.Guard
 import Effect4.Laws.Api.Supervision
 import Effect4.Laws.Api.Codegen
+import Effect4.Laws.Run
 import Effect4.Laws.Program.Handles
 import Effect4.Laws.Program.Means
 import Effect4.Laws.Program.Intro
