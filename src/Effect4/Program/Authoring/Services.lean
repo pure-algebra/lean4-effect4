@@ -172,6 +172,13 @@ namespace Package
 def ofRows (name : String) (rows : RowTable) : Package :=
   { name := name, rows := rows.map RowDef.mk }
 
+/-- The package's row under a spelling. A spelling the package does not offer answers a row
+under that spelling and nothing else, so `Row.call` of it refuses at the call site with the
+name the author wrote, rather than reaching a position that is not there. -/
+def op (p : Package) (spelling : String) : RowDef :=
+  (p.rows.find? (fun r => r.row.spelling == spelling)).getD
+    ⟨{ NativeOp.externalPlaceholder with spelling := spelling }⟩
+
 /-- The rows a list of packages offers, in package order. -/
 def rowsOf (ps : List Package) : List RowDef := ps.flatMap (·.rows)
 
