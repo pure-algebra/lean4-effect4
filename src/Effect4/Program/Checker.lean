@@ -5,12 +5,12 @@ import Effect4.Program.Typing.Blame
 
 The located-refusal arrow of the ontology (`docs/core/ontology.md` §5, K4) as one function:
 `check sig env p e : Except TypeRefusal EffTy` is the program's type, or the refusal at the path
-that earns it. `Program/Typing.lean`'s `effTy` is its success projection and
-`Typing/Blame.lean`'s `explainEff` its refusal, rule for rule — the agreement theorems in
-`Typing/Agreement.lean` say so (`check_eq`, both projections per sort), and
-`explain = none ↔ effTy.isSome` is then the shape of `Except`. This is the second file beside
-both; `fold_of` reads its algebra (`Program/Folds/Checker.lean`). Nothing in the two hand
-blocks changed.
+that earns it. `Program/Typing.lean`'s `effTy` is its success projection (`check_eq`,
+`Typing/Agreement.lean`, one theorem per sort), `explain` below is its refusal at the root by
+definition, and `explain = none ↔ effTy.isSome` is then the shape of `Except`. The hand blame
+walk of `Typing/Blame.lean` was the refusal's specification: the fold reproduced it rule for
+rule (the agreement's refusal half, before 2026-09-18), its callers moved, and it was deleted.
+`fold_of` reads the algebra (`Program/Folds/Checker.lean`).
 
 Two shapes differ from the hand blocks so that every member is a fold of its sort
 (`docs/core/traversal-census.md` §7.5):
@@ -382,5 +382,17 @@ mutual
 end
 
 end Checker
+
+variable {Op : Type}
+
+/-- The checker's refusal of a program at an environment, located from the root: the
+projection of the one check (DI-86), by definition; `none` exactly when `effTy` answers
+(`explain_none_iff`, `Typing/Agreement.lean`). -/
+def explain (sig : Signature Op) (env : TyEnv) (e : Eff Op) : Option TypeRefusal :=
+  Checker.refusal (Checker.check sig env [] e)
+
+/-- The path of the node the checker refuses: the deepest refused node whose children type. -/
+def blame (sig : Signature Op) (env : TyEnv) (e : Eff Op) : Option (List Nat) :=
+  (explain sig env e).map (·.path)
 
 end Effect4.Program

@@ -125,9 +125,9 @@ private def unitP : Api.Program := .succeed (.lit .unit)
   = some "outsideDomain"
 -- A reference that reaches the walker is `layerReference`. Through `Api.explain` an ill-formed
 -- one is caught at the root first, and a well-formed one is expanded away, so the walker's own
--- arm is reached only on the unexpanded tree.
+-- arm is reached only on the unexpanded tree (`Program.explain`, the check's refusal).
 #guard Api.explain (.provideLayer (.ref [0]) false unitP) = some ⟨[], .referencesIllFormed⟩
-#guard explainEff (nativeSignature []) [] [] (.provideLayer (.ref [0]) false unitP)
+#guard Effect4.Program.explain (nativeSignature []) [] (.provideLayer (.ref [0]) false unitP)
   = some ⟨[0], .layerReference [0]⟩
 
 end Test.Program.BlameContract

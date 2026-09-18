@@ -537,21 +537,19 @@ structure TypedLayer (sig : Signature NativeOp) where
   ok : Effect4.Program.layerTy sig layer = some ty
 
 /-- The agent's one call for a layer, as `author` is for a program: elaborated at the empty
-scope, then typed, with the checker's located refusal when it does not type. Total, by
-`explainLayer_none_iff`: no layer is refused without a reason at a path. -/
+scope, then checked, the type or the located refusal (`Checker.checkLayer`, an `Except`); the
+certificate is the agreement `checkLayer_eq`. -/
 def checkLayer (l : Effect4.Program.Authoring.LayerSrc NativeOp) (table : RowTable := [])
     (sig : Signature NativeOp := nativeSignature table) :
     Except AuthorRefusal (TypedLayer sig) :=
   match Effect4.Program.Authoring.elaborateLayer l with
   | .error refusal => .error (.scope refusal)
   | .ok layer =>
-    match h : Effect4.Program.layerTy sig layer with
-    | some ty => .ok ⟨layer, ty, h⟩
-    | none =>
-      match h2 : Effect4.Program.explainLayer sig [] layer with
-      | some refusal => .error (.typing refusal)
-      | none =>
-        absurd ((Effect4.Program.explainLayer_none_iff sig layer []).mp h2) (by simp [h])
+    match h : Effect4.Program.Checker.checkLayer sig [] layer with
+    | .error refusal => .error (.typing refusal)
+    | .ok ty =>
+      .ok ⟨layer, ty, (Effect4.Program.Checker.checkLayer_eq sig [] layer).symm.trans
+        (congrArg Except.toOption h)⟩
 
 namespace TypedLayer
 

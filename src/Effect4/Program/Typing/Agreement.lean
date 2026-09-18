@@ -4,25 +4,24 @@ import Effect4.Program.Typing.Terms
 import Effect4.Program.Folds.TermTy
 
 /-!
-# Program.Typing.Agreement — the fold checker is the hand checker and the hand blame
+# Program.Typing.Agreement — the fold checker is the hand checker
 
-`Checker.check sig env p e : Except TypeRefusal EffTy` projects to both hand blocks: its
-success is `effTy sig env e` and its refusal is `explainEff sig env p e`, one theorem per sort
-of the program's family by structural recursion (`check_eq`, `checkLayer_eq`, …), each stating
-both projections at once. This is the connector of `Program/Checker.lean`: every property of
-`effTy` (`Typing/Sound.lean`, `Typing/Check.lean`) and of `explain` reaches the fold through
-it, the law of the projection (DI-86, `explain_none_iff` and its six sorts, once a second
-mutual induction of seven hundred lines in `Blame.lean`) is the shape of `Except`, and the
-callers move across it. It lives in the core root because `Api.check` is total by that law.
+`Checker.check sig env p e : Except TypeRefusal EffTy` succeeds exactly as `effTy sig env e`
+does, one theorem per sort of the program's family by structural recursion (`check_eq`,
+`checkLayer_eq`, …). This is the connector of `Program/Checker.lean`: every property of `effTy`
+(`Typing/Sound.lean`, `Typing/Check.lean`) reaches the fold through it, and the callers move
+across it. The refusal needs no agreement any more: `explain` *is* the check's refusal
+(`Program/Checker.lean`, since the hand blame block was deleted on 2026-09-18), and the law of
+the projection (DI-86, `explain_none_iff`) is the shape of `Except`. The file lives in the core
+root because `Api.check` is total by that law.
 
 The list sort is stated at its consumer: the layers' signatures under the nonempty merge are
-`layersTy`'s result, and their refusal is `explainLayers`'s on a `cons` (on `nil` the
-`mergeAllEmpty` refusal is `mergeAll`'s). `checkStmts` agrees under `afterRet := none`; under
-`some ret` it is the empty tail a `return` demands (`checkStmts_afterRet`).
+`layersTy`'s result. `checkStmts` agrees under `afterRet := none`; under `some ret` it is the
+empty tail a `return` demands (`checkStmts_afterRet`).
 
-The last section carries the connectors across: `effTy.eq_cata` and `explainEff.eq_cata` state
-the hand checker and the hand blame as the two projections of the fold of `check.alg`
-(`Program/Folds/Checker.lean`), which is what the census reads.
+The last sections carry the connectors across: `effTy.eq_cata` states the hand checker as the
+success of the fold of `check.alg` (`Program/Folds/Checker.lean`), and `termTy.eq_cata` the
+term typer as the fold `argTy` (`Typing/Terms.lean`), which is what the census reads.
 -/
 
 namespace Effect4.Program
@@ -93,28 +92,26 @@ theorem mergeNonempty_cons (l : LayerTy) :
 
 mutual
 theorem check_eq (sig : Signature Op) (env : TyEnv) (p : List Nat) : (e : Eff Op) →
-    (check sig env p e).toOption = Program.effTy sig env e ∧
-      refusal (check sig env p e) = Program.explainEff sig env p e
+    (check sig env p e).toOption = Program.effTy sig env e
   | .succeed value => by
-    simp only [Checker.check, Program.effTy, Program.explainEff, term?, Program.termRefusal]
+    simp only [Checker.check, Program.effTy, term?]
     cases termTy sig env value <;> check_arm
   | .fail error => by
-    simp only [Checker.check, Program.effTy, Program.explainEff, term?]
+    simp only [Checker.check, Program.effTy, term?]
     cases termTy sig env error with
     | none => check_arm
     | some e => check_step; split <;> check_arm
   | .failCause cause => by
-    simp only [Checker.check, Program.effTy, Program.explainEff]
+    simp only [Checker.check, Program.effTy]
     cases causeTy sig env cause <;> check_arm
   | .sync thunk => by
-    simp only [Checker.check, Program.effTy, Program.explainEff, term?, Program.termRefusal]
+    simp only [Checker.check, Program.effTy, term?]
     cases termTy sig env thunk <;> check_arm
   | .suspend body => by
     have ih := check_eq sig env (p ++ [0]) body
-    simp only [Checker.check, Program.effTy, Program.explainEff, ← ih.1, ← ih.2]
-    check_arm
+    simp only [Checker.check, Program.effTy, ← ih]
   | .perform op request => by
-    simp only [Checker.check, Program.effTy, Program.explainEff, term?]
+    simp only [Checker.check, Program.effTy, term?]
     cases termTy sig env request with
     | none => check_arm
     | some r =>
@@ -123,8 +120,8 @@ theorem check_eq (sig : Signature Op) (env : TyEnv) (p : List Nat) : (e : Eff Op
   | .bind first rest => by
     have hf := check_eq sig env (p ++ [0]) first
     have hr := fun env => check_eq sig env (p ++ [1]) rest
-    simp only [Checker.check, Program.effTy, Program.explainEff, ← hf.1, ← hf.2,
-      ← fun env => (hr env).1, ← fun env => (hr env).2]
+    simp only [Checker.check, Program.effTy, ← hf,
+      ← hr]
     cases check sig env (p ++ [0]) first with
     | error r => check_arm
     | ok f =>
@@ -132,13 +129,13 @@ theorem check_eq (sig : Signature Op) (env : TyEnv) (p : List Nat) : (e : Eff Op
       cases check sig (env ++ [f.answer]) (p ++ [1]) rest <;> check_arm
   | .gen body => by
     have ih := checkStmts_eq sig env false (p ++ [0]) body
-    simp only [Checker.check, Program.effTy, Program.explainEff, ← ih.1, ← ih.2]
+    simp only [Checker.check, Program.effTy, ← ih]
     cases checkStmts sig env false none (p ++ [0]) body <;> check_arm
   | .catchCause body handler => by
     have hb := check_eq sig env (p ++ [0]) body
     have hh := fun env => check_eq sig env (p ++ [1]) handler
-    simp only [Checker.check, Program.effTy, Program.explainEff, ← hb.1, ← hb.2,
-      ← fun env => (hh env).1, ← fun env => (hh env).2]
+    simp only [Checker.check, Program.effTy, ← hb,
+      ← hh]
     cases check sig env (p ++ [0]) body with
     | error r => check_arm
     | ok b =>
@@ -147,8 +144,8 @@ theorem check_eq (sig : Signature Op) (env : TyEnv) (p : List Nat) : (e : Eff Op
   | .catchIf test body handler => by
     have hb := check_eq sig env (p ++ [0]) body
     have hh := fun env => check_eq sig env (p ++ [1]) handler
-    simp only [Checker.check, Program.effTy, Program.explainEff, term?, ← hb.1, ← hb.2,
-      ← fun env => (hh env).1, ← fun env => (hh env).2]
+    simp only [Checker.check, Program.effTy, term?, ← hb,
+      ← hh]
     cases check sig env (p ++ [0]) body with
     | error r => check_arm
     | ok b =>
@@ -163,9 +160,8 @@ theorem check_eq (sig : Signature Op) (env : TyEnv) (p : List Nat) : (e : Eff Op
   | .select s d a0 a1 => by
     have h0 := fun env => check_eq sig env (p ++ [0]) a0
     have h1 := fun env => check_eq sig env (p ++ [1]) a1
-    simp only [Checker.check, Program.effTy, Program.explainEff, term?,
-      ← fun env => (h0 env).1, ← fun env => (h0 env).2, ← fun env => (h1 env).1,
-      ← fun env => (h1 env).2]
+    simp only [Checker.check, Program.effTy, term?,
+      ← h0, ← h1]
     cases termTy sig env s with
     | none => check_arm
     | some t =>
@@ -184,9 +180,8 @@ theorem check_eq (sig : Signature Op) (env : TyEnv) (p : List Nat) : (e : Eff Op
     have hb := check_eq sig env (p ++ [0]) body
     have hv := fun env => check_eq sig env (p ++ [1]) onValue
     have hc := fun env => check_eq sig env (p ++ [2]) onCause
-    simp only [Checker.check, Program.effTy, Program.explainEff, ← hb.1, ← hb.2,
-      ← fun env => (hv env).1, ← fun env => (hv env).2, ← fun env => (hc env).1,
-      ← fun env => (hc env).2]
+    simp only [Checker.check, Program.effTy, ← hb,
+      ← hv, ← hc]
     cases check sig env (p ++ [0]) body with
     | error r => check_arm
     | ok b =>
@@ -199,8 +194,8 @@ theorem check_eq (sig : Signature Op) (env : TyEnv) (p : List Nat) : (e : Eff Op
   | .onExit body finalizer => by
     have hb := check_eq sig env (p ++ [0]) body
     have hf := fun env => check_eq sig env (p ++ [1]) finalizer
-    simp only [Checker.check, Program.effTy, Program.explainEff, ← hb.1, ← hb.2,
-      ← fun env => (hf env).1, ← fun env => (hf env).2]
+    simp only [Checker.check, Program.effTy, ← hb,
+      ← hf]
     cases check sig env (p ++ [0]) body with
     | error r => check_arm
     | ok b =>
@@ -208,20 +203,18 @@ theorem check_eq (sig : Signature Op) (env : TyEnv) (p : List Nat) : (e : Eff Op
       cases check sig (env ++ [.exitOf b.answer b.error]) (p ++ [1]) finalizer <;> check_arm
   | .exit body => by
     have ih := check_eq sig env (p ++ [0]) body
-    simp only [Checker.check, Program.effTy, Program.explainEff, ← ih.1, ← ih.2]
+    simp only [Checker.check, Program.effTy, ← ih]
     cases check sig env (p ++ [0]) body <;> check_arm
   | .uninterruptible body => by
     have ih := check_eq sig env (p ++ [0]) body
-    simp only [Checker.check, Program.effTy, Program.explainEff, ← ih.1, ← ih.2]
-    check_arm
+    simp only [Checker.check, Program.effTy, ← ih]
   | .interruptible body => by
     have ih := check_eq sig env (p ++ [0]) body
-    simp only [Checker.check, Program.effTy, Program.explainEff, ← ih.1, ← ih.2]
-    check_arm
+    simp only [Checker.check, Program.effTy, ← ih]
   | .iterate cursorTy initial test step result body => by
     have hb := fun env => check_eq sig env (p ++ [0]) body
-    simp only [Checker.check, Program.effTy, Program.explainEff, term?,
-      ← fun env => (hb env).1, ← fun env => (hb env).2]
+    simp only [Checker.check, Program.effTy, term?,
+      ← hb]
     cases termTy sig env initial with
     | none => check_arm
     | some c0 =>
@@ -248,10 +241,10 @@ theorem check_eq (sig : Signature Op) (env : TyEnv) (p : List Nat) : (e : Eff Op
                 · check_arm
                 · split <;> check_arm
   | .yieldNow _ => by
-    simp only [Checker.check, Program.effTy, Program.explainEff]
+    simp only [Checker.check, Program.effTy]
     check_arm
   | .awaitFiber fiber mode => by
-    simp only [Checker.check, Program.effTy, Program.explainEff, term?]
+    simp only [Checker.check, Program.effTy, term?]
     cases termTy sig env fiber with
     | none => check_arm
     | some t =>
@@ -263,17 +256,16 @@ theorem check_eq (sig : Signature Op) (env : TyEnv) (p : List Nat) : (e : Eff Op
         cases mode <;> check_arm
   | .withFiber action => by
     have ih := checkAction_eq sig env (p ++ [0]) action
-    simp only [Checker.check, Program.effTy, Program.explainEff, ← ih.1, ← ih.2]
-    check_arm
+    simp only [Checker.check, Program.effTy, ← ih]
   | .scoped body => by
     have ih := check_eq sig env (p ++ [0]) body
-    simp only [Checker.check, Program.effTy, Program.explainEff, ← ih.1, ← ih.2]
+    simp only [Checker.check, Program.effTy, ← ih]
     cases check sig env (p ++ [0]) body <;> check_arm
   | .acquireRelease acquire release => by
     have ha := check_eq sig env (p ++ [0]) acquire
     have hr := fun env => check_eq sig env (p ++ [1]) release
-    simp only [Checker.check, Program.effTy, Program.explainEff, ← ha.1, ← ha.2,
-      ← fun env => (hr env).1, ← fun env => (hr env).2]
+    simp only [Checker.check, Program.effTy, ← ha,
+      ← hr]
     cases check sig env (p ++ [0]) acquire with
     | error r => check_arm
     | ok a =>
@@ -282,18 +274,18 @@ theorem check_eq (sig : Signature Op) (env : TyEnv) (p : List Nat) : (e : Eff Op
   | .provideLayer layer _ body => by
     have hl := checkLayer_eq sig (p ++ [0]) layer
     have hb := check_eq sig env (p ++ [1]) body
-    simp only [Checker.check, Program.effTy, Program.explainEff, ← hl.1, ← hl.2, ← hb.1, ← hb.2]
+    simp only [Checker.check, Program.effTy, ← hl, ← hb]
     cases checkLayer sig (p ++ [0]) layer with
     | error r => check_arm
     | ok l =>
       check_step
       cases check sig env (p ++ [1]) body <;> check_arm
   | .service key => by
-    simp only [Checker.check, Program.effTy, Program.explainEff]
+    simp only [Checker.check, Program.effTy]
     cases sig.serviceTy key <;> check_arm
   | .provideService key value body => by
     have hb := check_eq sig env (p ++ [0]) body
-    simp only [Checker.check, Program.effTy, Program.explainEff, term?, ← hb.1, ← hb.2]
+    simp only [Checker.check, Program.effTy, term?, ← hb]
     cases sig.serviceTy key with
     | none => check_arm
     | some ty =>
@@ -309,24 +301,23 @@ theorem check_eq (sig : Signature Op) (env : TyEnv) (p : List Nat) : (e : Eff Op
           cases Ty.sub v.normalize ty.normalize <;> check_arm
 
 theorem checkLayer_eq (sig : Signature Op) (p : List Nat) : (l : LayerTerm Op) →
-    (checkLayer sig p l).toOption = Program.layerTy sig l ∧
-      refusal (checkLayer sig p l) = Program.explainLayer sig p l
+    (checkLayer sig p l).toOption = Program.layerTy sig l
   | .succeed _ value => by
-    simp only [Checker.checkLayer, Program.layerTy, Program.explainLayer]
+    simp only [Checker.checkLayer, Program.layerTy]
     cases litVal value <;> check_arm
   | .effect _ body => by
     have ih := check_eq sig [] (p ++ [0]) body
-    simp only [Checker.checkLayer, Program.layerTy, Program.explainLayer, ← ih.1, ← ih.2]
+    simp only [Checker.checkLayer, Program.layerTy, ← ih]
     cases check sig [] (p ++ [0]) body <;> check_arm
   | .effectDiscard body => by
     have ih := check_eq sig [] (p ++ [0]) body
-    simp only [Checker.checkLayer, Program.layerTy, Program.explainLayer, ← ih.1, ← ih.2]
+    simp only [Checker.checkLayer, Program.layerTy, ← ih]
     cases check sig [] (p ++ [0]) body <;> check_arm
   | .provide self that => by
     have hs := checkLayer_eq sig (p ++ [0]) self
     have ht := checkLayer_eq sig (p ++ [1]) that
-    simp only [Checker.checkLayer, Program.layerTy, Program.explainLayer, ← hs.1, ← hs.2,
-      ← ht.1, ← ht.2]
+    simp only [Checker.checkLayer, Program.layerTy, ← hs,
+      ← ht]
     cases checkLayer sig (p ++ [0]) self with
     | error r => check_arm
     | ok s =>
@@ -335,8 +326,8 @@ theorem checkLayer_eq (sig : Signature Op) (p : List Nat) : (l : LayerTerm Op) �
   | .provideMerge self that => by
     have hs := checkLayer_eq sig (p ++ [0]) self
     have ht := checkLayer_eq sig (p ++ [1]) that
-    simp only [Checker.checkLayer, Program.layerTy, Program.explainLayer, ← hs.1, ← hs.2,
-      ← ht.1, ← ht.2]
+    simp only [Checker.checkLayer, Program.layerTy, ← hs,
+      ← ht]
     cases checkLayer sig (p ++ [0]) self with
     | error r => check_arm
     | ok s =>
@@ -345,8 +336,8 @@ theorem checkLayer_eq (sig : Signature Op) (p : List Nat) : (l : LayerTerm Op) �
   | .merge left right => by
     have hl := checkLayer_eq sig (p ++ [0]) left
     have hr := checkLayer_eq sig (p ++ [1]) right
-    simp only [Checker.checkLayer, Program.layerTy, Program.explainLayer, ← hl.1, ← hl.2,
-      ← hr.1, ← hr.2]
+    simp only [Checker.checkLayer, Program.layerTy, ← hl,
+      ← hr]
     cases checkLayer sig (p ++ [0]) left with
     | error r => check_arm
     | ok a =>
@@ -354,27 +345,23 @@ theorem checkLayer_eq (sig : Signature Op) (p : List Nat) : (l : LayerTerm Op) �
       cases checkLayer sig (p ++ [1]) right <;> check_arm
   | .fresh inner => by
     have ih := checkLayer_eq sig (p ++ [0]) inner
-    simp only [Checker.checkLayer, Program.layerTy, Program.explainLayer, ← ih.1, ← ih.2]
-    check_arm
+    simp only [Checker.checkLayer, Program.layerTy, ← ih]
   | .orDie inner => by
     have ih := checkLayer_eq sig (p ++ [0]) inner
-    simp only [Checker.checkLayer, Program.layerTy, Program.explainLayer, ← ih.1, ← ih.2]
+    simp only [Checker.checkLayer, Program.layerTy, ← ih]
     cases checkLayer sig (p ++ [0]) inner <;> check_arm
   | .ref _ => by
-    simp only [Checker.checkLayer, Program.layerTy, Program.explainLayer]
+    simp only [Checker.checkLayer, Program.layerTy]
     check_arm
   | .mergeAll layers => by
     cases layers with
     | nil =>
-      simp only [Checker.checkLayer, Checker.checkLayers, Program.layerTy, Program.layersTy,
-        Program.explainLayer, Program.explainLayers]
+      simp only [Checker.checkLayer, Checker.checkLayers, Program.layerTy, Program.layersTy]
       check_arm
     | cons next tail =>
       have ih := checkLayers_eq sig (p ++ [0]) (.cons next tail)
-      have ih2 : refusal (checkLayers sig (p ++ [0]) (.cons next tail)) =
-        Program.explainLayers sig (p ++ [0]) (.cons next tail) := ih.2
       have hne := checkLayers_cons_ne_nil sig (p ++ [0]) next tail
-      simp only [Checker.checkLayer, Program.layerTy, Program.explainLayer, ← ih.1, ← ih2]
+      simp only [Checker.checkLayer, Program.layerTy, ← ih]
       rcases hc : checkLayers sig (p ++ [0]) (.cons next tail) with r | (_ | ⟨t, ts⟩)
       · check_arm
       · exact absurd hc hne
@@ -384,22 +371,18 @@ theorem checkLayer_eq (sig : Signature Op) (p : List Nat) : (l : LayerTerm Op) �
         check_arm
 
 theorem checkLayers_eq (sig : Signature Op) (p : List Nat) : (ls : LayerTerms Op) →
-    (checkLayers sig p ls).toOption.bind LayerTy.mergeNonempty = Program.layersTy sig ls ∧
-      refusal (checkLayers sig p ls) =
-        (match ls with | .nil => none | .cons _ _ => Program.explainLayers sig p ls)
-  | .nil => ⟨rfl, rfl⟩
+    (checkLayers sig p ls).toOption.bind LayerTy.mergeNonempty = Program.layersTy sig ls
+  | .nil => rfl
   | .cons head .nil => by
     have hh := checkLayer_eq sig (p ++ [0]) head
-    simp only [Checker.checkLayers, Program.layersTy, Program.explainLayers, ← hh.1, ← hh.2]
+    simp only [Checker.checkLayers, Program.layersTy, ← hh]
     cases checkLayer sig (p ++ [0]) head <;> check_arm
   | .cons head (.cons next tail) => by
     have hh := checkLayer_eq sig (p ++ [0]) head
     have ht := checkLayers_eq sig (p ++ [1]) (.cons next tail)
-    have ht2 : refusal (checkLayers sig (p ++ [1]) (.cons next tail)) =
-      Program.explainLayers sig (p ++ [1]) (.cons next tail) := ht.2
     have hne := checkLayers_cons_ne_nil sig (p ++ [1]) next tail
     rw [Checker.checkLayers.eq_2, Program.layersTy.eq_3 sig head (.cons next tail) nofun,
-      Program.explainLayers.eq_3 sig p head (.cons next tail) nofun, ← hh.1, ← hh.2, ← ht.1, ← ht2]
+      ← hh, ← ht]
     cases checkLayer sig (p ++ [0]) head with
     | error r => check_arm
     | ok h =>
@@ -414,15 +397,14 @@ theorem checkLayers_eq (sig : Signature Op) (p : List Nat) : (ls : LayerTerms Op
 
 theorem checkStmts_eq (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (p : List Nat) :
     (b : Stmts Op) →
-      (checkStmts sig env inLoop none p b).toOption = Program.stmtsTy sig env inLoop b ∧
-        refusal (checkStmts sig env inLoop none p b) = Program.explainStmts sig env inLoop p b
-  | .nil => ⟨rfl, rfl⟩
+      (checkStmts sig env inLoop none p b).toOption = Program.stmtsTy sig env inLoop b
+  | .nil => rfl
   | .cons (.bindYield effect) rest => by
     have he := check_eq sig env (p ++ [0, 0]) effect
     have hr := fun env => checkStmts_eq sig env inLoop (p ++ [1]) rest
-    simp only [Checker.checkStmts, Checker.checkStmt, Program.stmtsTy, Program.explainStmts,
-      List.append_assoc, List.cons_append, List.nil_append, ← he.1, ← he.2,
-      ← fun env => (hr env).1, ← fun env => (hr env).2]
+    simp only [Checker.checkStmts, Checker.checkStmt, Program.stmtsTy,
+      List.append_assoc, List.cons_append, List.nil_append, ← he,
+      ← hr]
     cases check sig env (p ++ [0, 0]) effect with
     | error r => check_arm
     | ok t =>
@@ -431,24 +413,23 @@ theorem checkStmts_eq (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (p : Li
   | .cons (.yieldDiscard effect) rest => by
     have he := check_eq sig env (p ++ [0, 0]) effect
     have hr := checkStmts_eq sig env inLoop (p ++ [1]) rest
-    simp only [Checker.checkStmts, Checker.checkStmt, Program.stmtsTy, Program.explainStmts,
-      List.append_assoc, List.cons_append, List.nil_append, ← he.1, ← he.2, ← hr.1, ← hr.2]
+    simp only [Checker.checkStmts, Checker.checkStmt, Program.stmtsTy,
+      List.append_assoc, List.cons_append, List.nil_append, ← he, ← hr]
     cases check sig env (p ++ [0, 0]) effect with
     | error r => check_arm
     | ok t =>
       check_step
       cases checkStmts sig env inLoop none (p ++ [1]) rest <;> check_arm
   | .cons (.ret value) rest => by
-    simp only [Checker.checkStmts, Checker.checkStmt, Program.stmtsTy, Program.explainStmts,
-      term?, Program.termRefusal, checkStmts_afterRet]
+    simp only [Checker.checkStmts, Checker.checkStmt, Program.stmtsTy,
+      term?, checkStmts_afterRet]
     cases rest <;> cases termTy sig env value <;> check_arm
   | .cons (.ifElse test thenB elseB) rest => by
     have ha := checkStmts_eq sig env inLoop (p ++ [0, 0]) thenB
     have hb := checkStmts_eq sig env inLoop (p ++ [0, 1]) elseB
     have hr := checkStmts_eq sig env inLoop (p ++ [1]) rest
-    simp only [Checker.checkStmts, Checker.checkStmt, Program.stmtsTy, Program.explainStmts,
-      term?, List.append_assoc, List.cons_append, List.nil_append, ← ha.1, ← ha.2, ← hb.1,
-      ← hb.2, ← hr.1, ← hr.2]
+    simp only [Checker.checkStmts, Checker.checkStmt, Program.stmtsTy,
+      term?, List.append_assoc, List.cons_append, List.nil_append, ← ha, ← hb, ← hr]
     cases termTy sig env test with
     | none => check_arm
     | some t =>
@@ -467,8 +448,8 @@ theorem checkStmts_eq (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (p : Li
   | .cons (.whileTrue body) rest => by
     have hb := checkStmts_eq sig env true (p ++ [0, 0]) body
     have hr := checkStmts_eq sig env inLoop (p ++ [1]) rest
-    simp only [Checker.checkStmts, Checker.checkStmt, Program.stmtsTy, Program.explainStmts,
-      List.append_assoc, List.cons_append, List.nil_append, ← hb.1, ← hb.2, ← hr.1, ← hr.2]
+    simp only [Checker.checkStmts, Checker.checkStmt, Program.stmtsTy,
+      List.append_assoc, List.cons_append, List.nil_append, ← hb, ← hr]
     cases checkStmts sig env true none (p ++ [0, 0]) body with
     | error r => check_arm
     | ok b =>
@@ -476,19 +457,17 @@ theorem checkStmts_eq (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (p : Li
       cases checkStmts sig env inLoop none (p ++ [1]) rest <;> check_arm
   | .cons .breakLoop rest => by
     have hr := checkStmts_eq sig env inLoop (p ++ [1]) rest
-    simp only [Checker.checkStmts, Checker.checkStmt, Program.stmtsTy, Program.explainStmts,
-      ← hr.1, ← hr.2]
+    simp only [Checker.checkStmts, Checker.checkStmt, Program.stmtsTy,
+      ← hr]
     cases inLoop <;> check_arm
 
 theorem checkEffs_eq (sig : Signature Op) (env : TyEnv) (p : List Nat) : (es : Effs Op) →
-    (checkEffs sig env p es).toOption = Program.effsTy sig env es ∧
-      refusal (checkEffs sig env p es) = Program.explainEffs sig env p es
-  | .nil => ⟨rfl, rfl⟩
+    (checkEffs sig env p es).toOption = Program.effsTy sig env es
+  | .nil => rfl
   | .cons head tail => by
     have hh := check_eq sig env (p ++ [0]) head
     have ht := checkEffs_eq sig env (p ++ [1]) tail
-    simp only [Checker.checkEffs, Program.effsTy, Program.explainEffs, ← hh.1, ← hh.2, ← ht.1,
-      ← ht.2]
+    simp only [Checker.checkEffs, Program.effsTy, ← hh, ← ht]
     cases check sig env (p ++ [0]) head with
     | error r => check_arm
     | ok h =>
@@ -496,15 +475,14 @@ theorem checkEffs_eq (sig : Signature Op) (env : TyEnv) (p : List Nat) : (es : E
       cases checkEffs sig env (p ++ [1]) tail <;> check_arm
 
 theorem checkAction_eq (sig : Signature Op) (env : TyEnv) (p : List Nat) : (a : ActionTerm Op) →
-    (checkAction sig env p a).toOption = Program.actionTy sig env a ∧
-      refusal (checkAction sig env p a) = Program.explainAction sig env p a
+    (checkAction sig env p a).toOption = Program.actionTy sig env a
   | .fork program _ => by
     have ih := check_eq sig env (p ++ [0]) program
-    simp only [Checker.checkAction, Program.actionTy, Program.explainAction, ← ih.1, ← ih.2]
+    simp only [Checker.checkAction, Program.actionTy, ← ih]
     cases check sig env (p ++ [0]) program <;> check_arm
   | .forkIn program _ scope => by
     have ih := check_eq sig env (p ++ [0]) program
-    simp only [Checker.checkAction, Program.actionTy, Program.explainAction, term?, ← ih.1, ← ih.2]
+    simp only [Checker.checkAction, Program.actionTy, term?, ← ih]
     cases check sig env (p ++ [0]) program with
     | error r => check_arm
     | ok t =>
@@ -514,10 +492,10 @@ theorem checkAction_eq (sig : Signature Op) (env : TyEnv) (p : List Nat) : (a : 
       | some s => check_step; split <;> check_arm
   | .forkScoped program _ => by
     have ih := check_eq sig env (p ++ [0]) program
-    simp only [Checker.checkAction, Program.actionTy, Program.explainAction, ← ih.1, ← ih.2]
+    simp only [Checker.checkAction, Program.actionTy, ← ih]
     cases check sig env (p ++ [0]) program <;> check_arm
   | .runIn target scope => by
-    simp only [Checker.checkAction, Program.actionTy, Program.explainAction, term?]
+    simp only [Checker.checkAction, Program.actionTy, term?]
     cases termTy sig env target with
     | none => check_arm
     | some t =>
@@ -530,17 +508,17 @@ theorem checkAction_eq (sig : Signature Op) (env : TyEnv) (p : List Nat) : (a : 
         | none => check_arm
         | some s => check_step; split <;> check_arm
   | .interrupt target => by
-    simp only [Checker.checkAction, Program.actionTy, Program.explainAction, term?]
+    simp only [Checker.checkAction, Program.actionTy, term?]
     cases termTy sig env target with
     | none => check_arm
     | some t => check_step; cases fiberTy t <;> check_arm
   | .interruptScoped target => by
-    simp only [Checker.checkAction, Program.actionTy, Program.explainAction, term?]
+    simp only [Checker.checkAction, Program.actionTy, term?]
     cases termTy sig env target with
     | none => check_arm
     | some t => check_step; cases fiberTy t <;> check_arm
   | .interruptAll targets interruptor => by
-    simp only [Checker.checkAction, Program.actionTy, Program.explainAction, term?]
+    simp only [Checker.checkAction, Program.actionTy, term?]
     cases termTy sig env targets with
     | none => check_arm
     | some ts =>
@@ -561,7 +539,7 @@ theorem checkAction_eq (sig : Signature Op) (env : TyEnv) (p : List Nat) : (a : 
             | some w => check_step; split <;> check_arm
       | _ => check_arm
   | .awaitAll targets => by
-    simp only [Checker.checkAction, Program.actionTy, Program.explainAction, term?]
+    simp only [Checker.checkAction, Program.actionTy, term?]
     cases termTy sig env targets with
     | none => check_arm
     | some ts =>
@@ -574,7 +552,7 @@ theorem checkAction_eq (sig : Signature Op) (env : TyEnv) (p : List Nat) : (a : 
         | some pair => obtain ⟨value, error⟩ := pair; check_arm
       | _ => check_arm
   | .awaitAllFailFast targets => by
-    simp only [Checker.checkAction, Program.actionTy, Program.explainAction, term?]
+    simp only [Checker.checkAction, Program.actionTy, term?]
     cases termTy sig env targets with
     | none => check_arm
     | some ts =>
@@ -587,30 +565,29 @@ theorem checkAction_eq (sig : Signature Op) (env : TyEnv) (p : List Nat) : (a : 
         | some pair => obtain ⟨value, error⟩ := pair; check_arm
       | _ => check_arm
   | .snapshotChildren => by
-    simp only [Checker.checkAction, Program.actionTy, Program.explainAction]
+    simp only [Checker.checkAction, Program.actionTy]
     check_arm
   | .awaitNewChildren snapshot => by
-    simp only [Checker.checkAction, Program.actionTy, Program.explainAction, term?]
+    simp only [Checker.checkAction, Program.actionTy, term?]
     cases termTy sig env snapshot with
     | none => check_arm
     | some s => check_step; split <;> check_arm
   | .raceAll entrants => by
     have ih := checkEffs_eq sig env (p ++ [0]) entrants
-    simp only [Checker.checkAction, Program.actionTy, Program.explainAction, ← ih.1, ← ih.2]
-    check_arm
+    simp only [Checker.checkAction, Program.actionTy, ← ih]
   | .setContext context => by
-    simp only [Checker.checkAction, Program.actionTy, Program.explainAction, term?]
+    simp only [Checker.checkAction, Program.actionTy, term?]
     cases termTy sig env context with
     | none => check_arm
     | some c => check_step; split <;> check_arm
   | .getContext => by
-    simp only [Checker.checkAction, Program.actionTy, Program.explainAction]
+    simp only [Checker.checkAction, Program.actionTy]
     check_arm
   | .getId => by
-    simp only [Checker.checkAction, Program.actionTy, Program.explainAction]
+    simp only [Checker.checkAction, Program.actionTy]
     check_arm
   | .closeScope scope exit => by
-    simp only [Checker.checkAction, Program.actionTy, Program.explainAction, term?]
+    simp only [Checker.checkAction, Program.actionTy, term?]
     cases termTy sig env scope with
     | none => check_arm
     | some s =>
@@ -627,11 +604,11 @@ end
 
 /-- `typeOf` is the success of the check at the root. -/
 theorem typeOf_eq (sig : Signature Op) (program : Eff Op) :
-    (check sig [] [] program).toOption = typeOf sig program := (check_eq sig [] [] program).1
+    (check sig [] [] program).toOption = typeOf sig program := check_eq sig [] [] program
 
-/-- `explain` is the refusal of the check at the root. -/
+/-- `explain` is the refusal of the check at the root, by definition. -/
 theorem explain_eq (sig : Signature Op) (env : TyEnv) (e : Eff Op) :
-    refusal (check sig env [] e) = explain sig env e := (check_eq sig env [] e).2
+    refusal (check sig env [] e) = explain sig env e := rfl
 
 /-- A check is `ok` or it is `error`: its refusal is `none` exactly when its success is
 `some`. Every `*_none_iff` below is this, through the agreement. -/
@@ -644,70 +621,17 @@ end Checker
 
 /-! ## The law of the projection (DI-86)
 
-`explain` answers `none` exactly when `effTy` answers, at every sort and every environment:
-the located refusal is a projection of the one checker. Once proved by a mutual induction
-following every arm of both blocks (`Blame.lean`, before 2026-09-18), it is now the shape of
-`Except` read through the agreement. The statements are unchanged; `Api.check` is total by
-`explain_none_iff`. -/
+`explain` answers `none` exactly when `effTy` answers: the located refusal is the check's, by
+definition, and a check is `ok` or it is `error`. Once a mutual induction following every arm
+of two hand blocks (`Blame.lean`, before 2026-09-18). `Api.check` is total by it. -/
 
 open Checker
 
-theorem explainEff_none_iff (sig : Signature Op) (e : Eff Op) :
-    ∀ env p, explainEff sig env p e = none ↔ (effTy sig env e).isSome := by
-  intro env p
-  rw [← (check_eq sig env p e).2, ← (check_eq sig env p e).1]
-  exact refusal_none_iff _
-
-theorem explainStmts_none_iff (sig : Signature Op) (ss : Stmts Op) :
-    ∀ env inLoop p, explainStmts sig env inLoop p ss = none ↔ (stmtsTy sig env inLoop ss).isSome := by
-  intro env inLoop p
-  rw [← (checkStmts_eq sig env inLoop p ss).2, ← (checkStmts_eq sig env inLoop p ss).1]
-  exact refusal_none_iff _
-
-theorem explainEffs_none_iff (sig : Signature Op) (es : Effs Op) :
-    ∀ env p, explainEffs sig env p es = none ↔ (effsTy sig env es).isSome := by
-  intro env p
-  rw [← (checkEffs_eq sig env p es).2, ← (checkEffs_eq sig env p es).1]
-  exact refusal_none_iff _
-
-theorem explainAction_none_iff (sig : Signature Op) (a : ActionTerm Op) :
-    ∀ env p, explainAction sig env p a = none ↔ (actionTy sig env a).isSome := by
-  intro env p
-  rw [← (checkAction_eq sig env p a).2, ← (checkAction_eq sig env p a).1]
-  exact refusal_none_iff _
-
-theorem explainLayer_none_iff (sig : Signature Op) (l : LayerTerm Op) :
-    ∀ p, explainLayer sig p l = none ↔ (layerTy sig l).isSome := by
-  intro p
-  rw [← (checkLayer_eq sig p l).2, ← (checkLayer_eq sig p l).1]
-  exact refusal_none_iff _
-
-/-- On `nil` both sides refuse (`mergeAllEmpty`, no signature); on a `cons` the list of
-signatures is a `cons`, whose nonempty merge is `some`. -/
-theorem explainLayers_none_iff (sig : Signature Op) (ls : LayerTerms Op) :
-    ∀ p, explainLayers sig p ls = none ↔ (layersTy sig ls).isSome := by
-  intro p
-  cases ls with
-  | nil =>
-    simp only [explainLayers, layersTy, Option.isSome_none, reduceCtorEq, Bool.false_eq_true,
-      iff_self]
-  | cons next tail =>
-    have ht := checkLayers_eq sig p (.cons next tail)
-    have ht2 : refusal (checkLayers sig p (.cons next tail)) =
-      explainLayers sig p (.cons next tail) := ht.2
-    have hne := checkLayers_cons_ne_nil sig p next tail
-    rw [← ht2, ← ht.1]
-    rcases hc : checkLayers sig p (.cons next tail) with r | (_ | ⟨t, ts⟩)
-    · simp only [refusal, Except.toOption, Option.bind_none, Option.isSome_none, reduceCtorEq,
-        Bool.false_eq_true, iff_self]
-    · exact absurd hc hne
-    · obtain ⟨m, hm⟩ := mergeNonempty_cons t ts
-      simp only [refusal, Except.toOption, Option.bind_some, hm, Option.isSome_some, iff_self]
-
 /-- The law of the projection: `explain` refuses exactly when the checker does. -/
 theorem explain_none_iff (sig : Signature Op) (env : TyEnv) (e : Eff Op) :
-    explain sig env e = none ↔ (effTy sig env e).isSome :=
-  explainEff_none_iff sig e env []
+    explain sig env e = none ↔ (effTy sig env e).isSome := by
+  rw [← check_eq sig env [] e]
+  exact refusal_none_iff _
 
 /-- A refusal is where a program fails to type, and a typed program has no refusal. -/
 theorem blame_none_iff (sig : Signature Op) (env : TyEnv) (e : Eff Op) :
@@ -716,72 +640,41 @@ theorem blame_none_iff (sig : Signature Op) (env : TyEnv) (e : Eff Op) :
 
 namespace Checker
 
-/-! ## The hand checker and the hand blame as the fold -/
+/-! ## The hand checker as the fold -/
 
 /-- `effTy` is the success of the fold of `check.alg`, at any path. -/
 theorem _root_.Effect4.Program.effTy.eq_cata (sig : Signature Op) (env : TyEnv) (p : List Nat)
     (e : Eff Op) : Program.effTy sig env e = (cata_eff (check.alg sig) e env p).toOption :=
-  (check_eq sig env p e).1.symm.trans (congrArg Except.toOption (check.eq_cata sig env p e))
-
-/-- `explainEff` is the refusal of the fold of `check.alg`. -/
-theorem _root_.Effect4.Program.explainEff.eq_cata (sig : Signature Op) (env : TyEnv) (p : List Nat)
-    (e : Eff Op) : Program.explainEff sig env p e = refusal (cata_eff (check.alg sig) e env p) :=
-  (check_eq sig env p e).2.symm.trans (congrArg refusal (check.eq_cata sig env p e))
+  (check_eq sig env p e).symm.trans (congrArg Except.toOption (check.eq_cata sig env p e))
 
 theorem _root_.Effect4.Program.layerTy.eq_cata (sig : Signature Op) (p : List Nat) (l : LayerTerm Op) :
     Program.layerTy sig l = (cata_layer (check.alg sig) l p).toOption :=
-  (checkLayer_eq sig p l).1.symm.trans (congrArg Except.toOption (checkLayer.eq_cata sig p l))
-
-theorem _root_.Effect4.Program.explainLayer.eq_cata (sig : Signature Op) (p : List Nat)
-    (l : LayerTerm Op) : Program.explainLayer sig p l = refusal (cata_layer (check.alg sig) l p) :=
-  (checkLayer_eq sig p l).2.symm.trans (congrArg refusal (checkLayer.eq_cata sig p l))
+  (checkLayer_eq sig p l).symm.trans (congrArg Except.toOption (checkLayer.eq_cata sig p l))
 
 /-- `layersTy` is the nonempty merge of the fold's list of signatures. -/
 theorem _root_.Effect4.Program.layersTy.eq_cata (sig : Signature Op) (p : List Nat)
     (ls : LayerTerms Op) :
     Program.layersTy sig ls = (cata_layers (check.alg sig) ls p).toOption.bind LayerTy.mergeNonempty :=
-  (checkLayers_eq sig p ls).1.symm.trans
+  (checkLayers_eq sig p ls).symm.trans
     (congrArg (fun x : Except TypeRefusal (List LayerTy) => x.toOption.bind LayerTy.mergeNonempty)
       (checkLayers.eq_cata sig p ls))
 
-/-- `explainLayers` on a `cons` is the refusal of the fold's list of signatures. -/
-theorem _root_.Effect4.Program.explainLayers.eq_cata (sig : Signature Op) (p : List Nat)
-    (head : LayerTerm Op) (tail : LayerTerms Op) :
-    Program.explainLayers sig p (.cons head tail) =
-      refusal (cata_layers (check.alg sig) (.cons head tail) p) :=
-  (checkLayers_eq sig p (.cons head tail)).2.symm.trans
-    (congrArg refusal (checkLayers.eq_cata sig p (.cons head tail)))
-
+/-- `stmtsTy` is the fold under `afterRet := none`. -/
 theorem _root_.Effect4.Program.stmtsTy.eq_cata (sig : Signature Op) (env : TyEnv) (inLoop : Bool)
     (p : List Nat) (b : Stmts Op) :
     Program.stmtsTy sig env inLoop b = (cata_stmts (check.alg sig) b env inLoop none p).toOption :=
-  (checkStmts_eq sig env inLoop p b).1.symm.trans
+  (checkStmts_eq sig env inLoop p b).symm.trans
     (congrArg Except.toOption (checkStmts.eq_cata sig env inLoop none p b))
-
-theorem _root_.Effect4.Program.explainStmts.eq_cata (sig : Signature Op) (env : TyEnv) (inLoop : Bool)
-    (p : List Nat) (b : Stmts Op) :
-    Program.explainStmts sig env inLoop p b = refusal (cata_stmts (check.alg sig) b env inLoop none p) :=
-  (checkStmts_eq sig env inLoop p b).2.symm.trans
-    (congrArg refusal (checkStmts.eq_cata sig env inLoop none p b))
 
 theorem _root_.Effect4.Program.effsTy.eq_cata (sig : Signature Op) (env : TyEnv) (p : List Nat)
     (es : Effs Op) : Program.effsTy sig env es = (cata_effs (check.alg sig) es env p).toOption :=
-  (checkEffs_eq sig env p es).1.symm.trans (congrArg Except.toOption (checkEffs.eq_cata sig env p es))
-
-theorem _root_.Effect4.Program.explainEffs.eq_cata (sig : Signature Op) (env : TyEnv) (p : List Nat)
-    (es : Effs Op) : Program.explainEffs sig env p es = refusal (cata_effs (check.alg sig) es env p) :=
-  (checkEffs_eq sig env p es).2.symm.trans (congrArg refusal (checkEffs.eq_cata sig env p es))
+  (checkEffs_eq sig env p es).symm.trans (congrArg Except.toOption (checkEffs.eq_cata sig env p es))
 
 theorem _root_.Effect4.Program.actionTy.eq_cata (sig : Signature Op) (env : TyEnv) (p : List Nat)
     (a : ActionTerm Op) :
     Program.actionTy sig env a = (cata_action (check.alg sig) a env p).toOption :=
-  (checkAction_eq sig env p a).1.symm.trans
+  (checkAction_eq sig env p a).symm.trans
     (congrArg Except.toOption (checkAction.eq_cata sig env p a))
-
-theorem _root_.Effect4.Program.explainAction.eq_cata (sig : Signature Op) (env : TyEnv) (p : List Nat)
-    (a : ActionTerm Op) :
-    Program.explainAction sig env p a = refusal (cata_action (check.alg sig) a env p) :=
-  (checkAction_eq sig env p a).2.symm.trans (congrArg refusal (checkAction.eq_cata sig env p a))
 
 end Checker
 
