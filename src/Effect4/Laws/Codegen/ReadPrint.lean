@@ -192,6 +192,132 @@ theorem matchT_cond_nodeLike (n : Nat) (t a b : Tpl) (y : Expr) (hy : nodeLike y
     matchT n (.cond t a b) y = none := by
   cases y <;> simp_all [nodeLike]
 
+
+/-! ## Two skeletons apart: no instance of the second matches the first
+
+The table is read first match wins, so the printing row's image must match no row before it.
+Rows with different heads are apart by `head_of_match`. The rows that share a head are apart by
+a former: an arrow against a block, a block whose first `let` is annotated against one whose
+is not, argument lists of different lengths, a conditional against a hole that a child image
+fills (a child image is a call, an identifier or a method call, never a conditional), and
+`pipe` receivers of different inner heads. `apartBy` names exactly those reasons; a table with
+a new overlap fails `table_apart` and asks for a reason here. -/
+
+/-- Whether hole `i` of the later skeleton is filled by a child image. -/
+def childHole (sorts : List Effect4.Program.ArgSort) (i : Nat) : Bool :=
+  match sorts[i]? with
+  | some (.child .eff) | some (.child .action) | some (.child .layer) => true
+  | _ => false
+
+def Tpls.length : Tpls → Nat
+  | .nil => 0
+  | .cons _ t => Tpls.length t + 1
+
+/-- `apartBy sorts earlier later`: a reason no instance of `later` (its child holes filled by
+child images) matches `earlier`. -/
+def apartBy (sorts : List Effect4.Program.ArgSort) : Tpl → Tpl → Bool
+  | .call (.ident h') args', .call (.ident h) args =>
+    if h' ≠ h then true else
+    match args', args with
+    | .cons (.arrow _) .nil, .cons (.arrowBlock _ _) .nil => true
+    | .cons (.arrowBlock _ _) .nil, .cons (.arrow _) .nil => true
+    | .cons (.arrow (.cond _ _ _)) .nil, .cons (.arrow (.hole i)) .nil => childHole sorts i
+    | .cons (.arrowBlock _ (.cons (.letInit _ _ none) _)) .nil,
+      .cons (.arrowBlock _ (.cons (.letInit _ _ (some _)) _)) .nil => true
+    | _, _ => args'.length != args.length
+  | .method (.hole _) name' (.cons (.call (.ident a) _) .nil),
+    .method (.hole _) name (.cons (.call (.ident b) _) .nil) => name' != name || a != b
+  | .ident h', .call (.ident _) _ => true
+  | .call (.ident _) _, .ident _ => true
+  | _, _ => false
+
+theorem matchTs_length (n : Nat) : ∀ (ts : Tpls) (es : List Expr) (σ : Subst),
+    matchTs n ts es = some σ → Tpls.length ts = es.length
+  | .nil, es, σ, h => by cases es <;> aesop (add norm simp Tpls.length)
+  | .cons t ts, es, σ, h => by
+    have ih := matchTs_length n ts
+    cases es <;> aesop (add norm simp Tpls.length)
+
+theorem insts_length (n : Nat) (τ : Subst) : ∀ (ts : Tpls) (es : List Expr),
+    insts n τ ts = some es → Tpls.length ts = es.length
+  | .nil, es, h => by aesop (add norm simp Tpls.length)
+  | .cons t ts, es, h => by
+    have ih := insts_length n τ ts
+    aesop (add norm simp Tpls.length)
+
+/-- The calculus lemma of apartness: an instance of the later skeleton, its child holes filled
+by node-like images, matches no earlier skeleton it is apart from. -/
+theorem match_apart (n : Nat) (τ : Subst) (sorts : List Effect4.Program.ArgSort) (t' t : Tpl)
+    (x : Expr)
+    (hapart : apartBy sorts t' t = true) (hinst : inst n τ t = some x)
+    (hnode : ∀ i y, childHole sorts i = true → lookup τ i = some (.expr y) → nodeLike y = true) :
+    matchT n t' x = none := by
+  unfold apartBy at hapart
+  split at hapart
+  · -- two calls with identifier heads
+    rename_i h' args' h args
+    split at hapart
+    · -- different heads
+      rename_i hne
+      cases hx : matchT n (.call (.ident h') args') x with
+      | none => rfl
+      | some σ =>
+        have h1 := head_of_match n _ x σ hx (name := h') rfl
+        have h2 := head_of_inst n τ _ x hinst (name := h) rfl
+        rw [h1] at h2
+        exact absurd (Option.some.inj h2) hne
+    · split at hapart <;> aesop (add norm simp [matchT_arrow_arrowBlock, matchT_arrowBlock_arrow,
+        matchT_cond_nodeLike, matchAnn], safe forward [matchTs_length, insts_length, hnode])
+  · aesop
+  · aesop
+  · aesop
+  · cases hapart
+
+
+/-- A skeleton with a node-like top: what every rigid row of an expression family has. -/
+def Tpl.nodeTop : Tpl → Bool
+  | .ident _ | .call _ _ | .callSpread _ _ | .method _ _ _ => true
+  | _ => false
+
+theorem inst_nodeLike (n : Nat) (τ : Subst) (t : Tpl) (x : Expr) (ht : t.nodeTop = true)
+    (h : inst n τ t = some x) : nodeLike x = true := by
+  cases t <;> aesop (add norm simp [Tpl.nodeTop, nodeLike])
+
+/-- A skeleton that no identifier matches. -/
+def Tpl.notName : Tpl → Bool
+  | .hole _ | .ident _ | .binderRef _ => false
+  | _ => true
+
+theorem matchT_ident_none (n : Nat) (t : Tpl) (s : String) (ht : t.notName = true) :
+    matchT n t (.ident s) = none := by
+  cases t <;> aesop (add norm simp Tpl.notName)
+
+/-- The former of a statement skeleton, for telling statement rows apart. -/
+def StmtTpl.former : StmtTpl → Nat
+  | .letInit _ _ _ => 0 | .assign _ _ => 1 | .ret _ => 2 | .exprStmt _ => 3
+  | .constYield _ _ => 4 | .yieldDiscard _ => 5 | .ifElse _ _ _ => 6 | .whileTrue _ => 7
+  | .breakTo => 8
+
+/-- The former of a statement, numbered as its skeleton's. -/
+def Stmt.former : Stmt → Nat
+  | .letInit _ _ _ => 0 | .assign _ _ => 1 | .ret _ => 2 | .exprStmt _ => 3
+  | .constYield _ _ _ => 4 | .yieldDiscard _ => 5 | .ifElse _ _ _ => 6 | .whileTrue _ _ => 7
+  | .breakTo _ => 8 | _ => 9
+
+theorem instStmt_former (n : Nat) (τ : Subst) (t : StmtTpl) (s : Stmt)
+    (h : instStmt n τ t = some s) : Stmt.former s = t.former := by
+  cases t <;> aesop (add norm simp [StmtTpl.former, Stmt.former])
+
+theorem matchStmt_former_eq (n : Nat) (t' : StmtTpl) (s : Stmt) (σ : Subst)
+    (h : matchStmt n t' s = some σ) : Stmt.former s = t'.former := by
+  cases t' <;> cases s <;> aesop (add norm simp [StmtTpl.former, Stmt.former])
+
+theorem matchStmt_former (n : Nat) (τ : Subst) (t' t : StmtTpl) (s : Stmt)
+    (hne : t'.former ≠ t.former) (h : instStmt n τ t = some s) : matchStmt n t' s = none := by
+  cases hm : matchStmt n t' s with
+  | none => rfl
+  | some σ => exact absurd ((matchStmt_former_eq n t' s σ hm).symm.trans (instStmt_former n τ t s h)) hne
+
 end Effect4.Codegen.Template
 
 namespace Effect4.Program
@@ -569,5 +695,90 @@ theorem argSorts_view : ∀ (fam : EffFam) (e : EffSelfCarrier Op fam),
   | .action, e => by cases e <;> rfl
   | .layer, e => by cases e <;> rfl
   | .layers, e => by cases e <;> rfl
+
+
+/-! ## Facts of the table, decided -/
+
+/-- Every argument of a skeleton row is a hole of the skeleton or fixed by the classifier: the
+reader has somewhere to take it from. -/
+def rowComplete (row : Templates.Row) : Bool :=
+  match row.out with
+  | .tpl _ | .stmt _ =>
+    match argSorts row.fam row.ctor with
+    | some sorts => (List.range sorts.length).all fun j =>
+        row.out.holes.contains j || (row.fixed.find? (·.1 == j)).any (·.2.fixes)
+    | none => true
+  | _ => true
+
+theorem table_complete : table.all rowComplete = true := by decide
+
+/-- At a row of the table, an argument the classifier does not supply is a hole. -/
+theorem hole_of_not_supplied {row : Templates.Row} (hmem : row ∈ table) {t : Tpl}
+    (hout : row.out = .tpl t) {sorts : List ArgSort} (hsorts : argSorts row.fam row.ctor = some sorts)
+    (j : Nat) (hj : j < sorts.length)
+    (hsup : (row.supplied (Op := Op) (R := EffSelfCarrier Op) j).isSome = false) :
+    j ∈ row.out.holes := by
+  have hc := table_fact table_complete hmem
+  simp only [rowComplete, hout, hsorts, List.all_eq_true, List.mem_range, Bool.or_eq_true,
+    List.contains_eq_mem, decide_eq_true_eq] at hc
+  unfold Templates.Row.supplied at hsup
+  have hc := hc j hj
+  cases hf : List.find? (fun x => x.1 == j) row.fixed with
+  | none => rw [hout]; simpa only [hf, Option.any, Bool.false_eq_true, or_false] using hc
+  | some p =>
+    obtain ⟨a, b⟩ := p
+    simp only [hf, Option.bind_some, Option.any] at hc hsup
+    rw [← ArgPat.supplies_isSome (Op := Op) (R := EffSelfCarrier Op), hsup] at hc
+    rw [hout]; simpa only [Option.isSome_none, Bool.false_eq_true, or_false] using hc
+
+
+/-! ## Lists: the index of what `find?` finds; `findSome?` over an indexed list -/
+
+theorem find?_index {α : Type} (p : α → Bool) : ∀ (l : List α) (a : α), l.find? p = some a →
+    ∃ k, l[k]? = some a ∧ l.findIdx? p = some k ∧ ∀ j < k, ∀ b, l[j]? = some b → p b = false
+  | [], a, h => by aesop
+  | x :: xs, a, h => by
+    have ih := find?_index p xs a
+    by_cases hx : p x = true
+    · exact ⟨0, by aesop, by simp [List.findIdx?_cons, hx], fun j hj => absurd hj (Nat.not_lt_zero j)⟩
+    · rw [List.find?_cons_of_neg hx] at h
+      obtain ⟨k, hk, hidx, hbefore⟩ := ih h
+      refine ⟨k + 1, by simpa using hk, by simp [List.findIdx?_cons, hx, hidx], fun j hj b hb => ?_⟩
+      cases j with
+      | zero => simp only [List.getElem?_cons_zero, Option.some.injEq] at hb; subst hb; simpa using hx
+      | succ j => exact hbefore j (by omega) b (by simpa using hb)
+
+theorem findSome?_zipIdx {α β : Type} (f : α × Nat → Option β) :
+    ∀ (l : List α) (start k : Nat) (a : α) (v : β),
+    (∀ j < k, ∀ b, l[j]? = some b → f (b, start + j) = none) →
+    l[k]? = some a → f (a, start + k) = some v → (l.zipIdx start).findSome? f = some v
+  | [], _, _, _, _, _, hk, _ => by aesop
+  | x :: xs, start, 0, a, v, hbefore, hk, hv => by
+    simp only [List.getElem?_cons_zero, Option.some.injEq] at hk
+    subst hk
+    simp only [List.zipIdx_cons, List.findSome?_cons, Nat.add_zero] at hv ⊢
+    rw [hv]
+  | x :: xs, start, k + 1, a, v, hbefore, hk, hv => by
+    have ih := findSome?_zipIdx f xs (start + 1) k a v
+      (fun j hj b hb => by
+        rw [show start + 1 + j = start + (j + 1) by omega]
+        exact hbefore (j + 1) (by omega) b (by simpa using hb))
+      (by simpa using hk) (by rw [show start + 1 + k = start + (k + 1) by omega]; exact hv)
+    have h0 := hbefore 0 (by omega) x rfl
+    rw [Nat.add_zero] at h0
+    simp only [List.zipIdx_cons, List.findSome?_cons, h0]
+    exact ih
+
+/-! ## What the row call prints: its head is the spelling or none, and it is node-like -/
+
+theorem printRow_head {row : Row} {r : Term} {x : Expr} (h : printRow row r = .ok x) :
+    exprHead? x = none ∨ exprHead? x = some row.spelling := by
+  unfold printRow at h
+  aesop (add norm simp [printRowHead, printMethod, exprHead?])
+
+theorem printRow_nodeLike {row : Row} {r : Term} {x : Expr} (h : printRow row r = .ok x) :
+    nodeLike x = true := by
+  unfold printRow at h
+  aesop (add norm simp [printRowHead, printMethod, nodeLike])
 
 end Effect4.Program
