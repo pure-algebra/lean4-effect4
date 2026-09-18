@@ -279,11 +279,6 @@ connector at that point, every one at `[propext, Quot.sound]` (72 after §7.5).
 
 ### 7.4 What `fold_of` refuses today, and the shape each needs
 
-- **`explain`** (6, `Typing/Blame.lean`): the two shapes §7.5 removed from `effTy` (the
-  statement child, the singleton `mergeAll`) and a third, its arms calling `effTy` on the
-  children (`| .bind first rest => match effTy sig env first with …`) — a paramorphism as
-  written. Decision row 38 chooses between `fold_of`'s paramorphism over a copy with
-  `explainStmt` and one `Except`-valued fold that is the located-refusal arrow itself (§7.5).
 - **A case analysis on a container child that recurses on the grandchild**
   (`Witnesses.valCode`: `| .ctor 9 [head] => 9 :: valCode head`; `Bridge.ofSchema` reading
   through `declaration`'s annotation and recursing): the recursive call is not on an immediate
@@ -301,42 +296,53 @@ The step after the connectors is the callers: each `f`'s callers move to `cata a
 proofs that unfold `f` rewrite by `f.eq_cata`, and `f` is deleted. That is where the count in
 §2 goes down.
 
-### 7.5 The statement sort: `effTy` as a fold (2026-09-18, `74f23029`)
+### 7.5 The statement sort, and typing with located refusal as one fold (2026-09-18)
 
 `stmtsTy` split on the statement child and typed its grandchild (`| .cons (.bindYield effect)
-rest => effTy sig env effect`), so statements had no carrier; and `layersTy` special-cased the
-singleton (`| .cons head .nil => layerTy sig head`), a split on the tail. Neither is a fold as
-written. `Program/Checker.lean` is the checker rule for rule with those two shapes changed and
-nothing accepted differently:
+rest => effTy sig env effect`), so statements had no carrier; `layersTy` special-cased the
+singleton (`| .cons head .nil => layerTy sig head`), a split on the tail; and `explain`'s arms
+called `effTy` on the children, a paramorphism as written. None of the three is a fold.
+`Program/Checker.lean` (first landed as an `Option`-valued copy of `effTy`, `74f23029`; re-cut
+under decision row 38, route (b)) is `check sig env p e : Except TypeRefusal EffTy` — the
+located-refusal arrow of the ontology (§5, K4) as one function: its success is `effTy sig env
+e` and its refusal is `explainEff sig env p e`, rule for rule, with the path `p` as an
+accumulator. Three shapes differ from the hand blocks and nothing is accepted or blamed
+differently:
 
 - **a statement has a type** (`StmtTy`): a *step* with the state it contributes and the
-  variables it binds (`yield*`, `const = yield*`, a branch, a loop), a *return* with its answer,
-  or *nothing* (`break`); `stmtsTy` sequences by the statement's type alone, and "no statement
-  after a return" is the mode flag `afterRet` a return sets for its tail, as `inLoop` is set by
-  a loop for its body — the same device, and the reason `break` must be exactly nothing
-  (`Ty.join .never` normalizes, so an empty state merged in is not the identity);
-- **the layers of a `mergeAll` are a list of signatures**: the list sort's result is the list
-  of its members' results and the nonempty merge is `mergeAll`'s own rule
-  (`LayerTy.mergeNonempty`).
+  variables it binds (`yield*`, `const = yield*`, a branch, a loop), a *return* with its
+  answer's check — carried unevaluated, since `explainStmts` blames "return not last" before
+  it types the value, and evaluated by `checkStmts` once the tail is known to be empty — or
+  *nothing* (`break`); "no statement after a return" is the mode flag `afterRet`, set by a
+  return for its tail and carrying the return's path (where `explain` locates the refusal), as
+  `inLoop` is set by a loop for its body;
+- **the layers of a `mergeAll` are a list of signatures**; the nonempty merge and the
+  `mergeAllEmpty` refusal are `mergeAll`'s own rule (`LayerTy.mergeNonempty`);
+- **the join and the merge are total**: `EffTy.joinAnswer a b = some (Ty.join a b)` by
+  definition and `GenTy.merge a b = some (GenTy.mergeT a b)`, so the fold joins with `Ty.join`
+  and has no dead branch.
 
-The connector `Checker.effTy_eq` (`Laws/Program/Typing/Checker.lean`) is one theorem per sort
-by structural recursion over the family, `[propext, Quot.sound]`; `fold_of Checker.effTy`
-converts all seven members (`R .eff = TyEnv → Option EffTy`, `R .stmt = TyEnv → Bool → Option
-StmtTy`, `R .stmts = TyEnv → Bool → Bool → Option GenTy`, `R .layerTerms = Option (List
-LayerTy)`), and the hand checker's six rows carry `eq_cata` through the agreement
-(`effTy.eq_cata : effTy sig env e = cata_eff (Checker.effTy.alg sig) e env`). Every property of
-`effTy` (`Sound.lean`, `Check.lean`) reaches the fold checker through the same theorem; nothing
-in `Typing.lean` changed. Census: `Eff` 24 of the 40 hand rows, plus the seven fold-checker
-members, all folds (the driver prints 47 (31)); **72 of 93** hand traversals with connectors.
+The connector `check_eq` (`Laws/Program/Typing/Checker.lean`) states both projections per sort
+by one structural recursion over the family, `[propext, Quot.sound]`; `explain = none ↔
+effTy.isSome` (`explain_none_iff'`) is then the shape of `Except`, where `Blame.lean` proves it
+by a second mutual induction of seven hundred lines. `fold_of check` converts all seven members
+(`R .eff = TyEnv → List Nat → Except TypeRefusal EffTy`, `R .stmts = TyEnv → Bool → Option
+(List Nat) → List Nat → Except TypeRefusal GenTy`, …), and the twelve hand rows — `effTy`'s
+six and `explain`'s six — carry `eq_cata` through the agreement (`effTy.eq_cata : effTy sig
+env e = (cata_eff (check.alg sig) e env p).toOption`, `explainEff.eq_cata : explainEff sig env
+p e = refusal (cata_eff (check.alg sig) e env p)`). Nothing in `Typing.lean` or `Blame.lean`
+changed; every property of either reaches the fold through the agreement.
 
-`explain` (6 rows) has the same two shapes and a third: its arms call `effTy` on the children,
-so as written it is a paramorphism (the child's value goes to another traversal). Two routes,
-decision row 38: (a) the mechanical one — `fold_of`'s paramorphism on a `Checker.explain*`
-copy with `explainStmt`, carrier `Eff × (TyEnv → List Nat → Option TypeRefusal)`, an hour;
-(b) the algebraic one — one `Except TypeRefusal EffTy`-valued fold that *is* the
-located-refusal arrow (K4): `effTy` its `toOption`, `explain` its error, and
-`explain_none_iff` (700 lines, `Blame.lean`) the shape of `Except`. (b) is the deep module;
-both blocks and the completeness proof become two projections of one fold. Recommended: (b).
+Proof notes. The arms close by `cases` on each child's result and one `simp only` set: the
+monad's laws stated by `rfl`, the `Option` laws of the hand blocks, the total join, path
+normalisation (`p ++ [0] ++ [0] = p ++ [0, 0]`), the conditions. `split` rewrites every `if`
+with the same condition on both sides at once, so no hypothesis needs carrying across. Aesop
+has no target-splitting rule and these goals split on terms, not hypotheses, so it is not
+used here.
+
+Census: `Eff` 30 of the 40 hand rows, plus the seven fold-checker members, all folds (the
+driver prints 47 (37)); **78 of 93** hand traversals with connectors. What remains of `Eff`
+is `compileEff`'s five (exempt by ruling) and `Sched`'s five.
 
 ## 8. Scout G — the tooling that exists (`docs/research/2026-09-17-lean-tooling-scout-G.md`)
 

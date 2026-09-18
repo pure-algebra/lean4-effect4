@@ -68,7 +68,7 @@ content, scheduled. Recommendations are the coordinator's, after reading all six
 | 35 | **Fragments by exclusion** (`Straight`, `Looped`, C5) and **exactness wherever a read exists** (C3: `ofSchema` first, the JSON codec second) | do — a new constructor silently leaves both fragments today | F-4, F-6 | do |
 | 36 | **The vocabulary in `AGENTS.md`**: free object, algebra, fold, exact embedding (three laws), simulation, located refusal, monoid action; the rule that a new representation is admitted by naming its signature and the kind of each of its arrows; row 13's schema/program rule | do — "the owner asked where to *go*; there is nowhere to go, and the vocabulary is what makes that usable" | F-12, F-7 | do |
 | 37 | **CI repaired** (broken since `78684a8`; the other reason the corpus pin went stale) | do | ledger | do |
-| 38 | **`explain` onto the fold**: (a) `fold_of`'s paramorphism over a `Checker.explain*` copy with `explainStmt`, or (b) one `Except TypeRefusal EffTy`-valued fold that is the located-refusal arrow, `effTy` its `toOption` and `explain` its error, `explain_none_iff` by the shape of `Except` | (b) — the deep module; both blocks and the 700-line completeness proof become two projections of one fold (`traversal-census.md` §7.5) | census §7.5 | owner |
+| 38 | **`explain` onto the fold**: (a) `fold_of`'s paramorphism over a `Checker.explain*` copy with `explainStmt`, or (b) one `Except TypeRefusal EffTy`-valued fold that is the located-refusal arrow, `effTy` its `toOption` and `explain` its error, `explain_none_iff` by the shape of `Except` | (b) — ruled and landed 2026-09-18: `Program/Checker.lean`, connector `check_eq`, `explain_none_iff'` (`traversal-census.md` §7.5) | census §7.5 | done |
 
 ## The order
 
@@ -82,7 +82,7 @@ content, scheduled. Recommendations are the coordinator's, after reading all six
    dogfoods, which are what those rulings are for.
 3. **Group D** (rows 26, 27, 28, 31, 32, 29, 30): the TypeScript rules, the recipe, rule coverage,
    the rung-3 reader, the vendoring order, then the profile/legalization/IR refactor with the
-   TypeScript printer as its first customer; `denote` onto the fold along the way (`effTy` is
-   on it, census §7.5; row 38 decides `explain`).
+   TypeScript printer as its first customer; `denote` onto the fold along the way (`effTy` and
+   `explain` are on it as one `Except`-valued fold, census §7.5).
 4. **Group C and the rest** (rows 1, 12, 19, 20, 21, 22): the AST as second carrier, the
    `Transform` laws, the file moves and daemon words, the machine edit, the two confirmations.
