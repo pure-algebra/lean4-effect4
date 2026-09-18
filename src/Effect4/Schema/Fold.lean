@@ -57,6 +57,12 @@ theorem _root_.Effect4.ElementOf.map_map {α : Type u} {β : Type v} {γ : Type 
   cases x
   simp only [Effect4.ElementOf.map]
 
+/-- The map of `Effect4.ElementOf` at the identity is the identity. -/
+theorem _root_.Effect4.ElementOf.map_id {α : Type u} (x : Effect4.ElementOf α) :
+    Effect4.ElementOf.map (fun a => a) x = x := by
+  cases x
+  simp only [Effect4.ElementOf.map]
+
 /-- The functor map of `Effect4.PropertySignatureOf`, which the structure itself does not carry. -/
 def _root_.Effect4.PropertySignatureOf.map {α : Type u} {β : Type v} (f : α → β)
     (x : Effect4.PropertySignatureOf α) : Effect4.PropertySignatureOf β :=
@@ -73,6 +79,12 @@ theorem _root_.Effect4.PropertySignatureOf.map_map {α : Type u} {β : Type v} {
   cases x
   simp only [Effect4.PropertySignatureOf.map]
 
+/-- The map of `Effect4.PropertySignatureOf` at the identity is the identity. -/
+theorem _root_.Effect4.PropertySignatureOf.map_id {α : Type u} (x : Effect4.PropertySignatureOf α) :
+    Effect4.PropertySignatureOf.map (fun a => a) x = x := by
+  cases x
+  simp only [Effect4.PropertySignatureOf.map]
+
 /-- The functor map of `Effect4.IndexSignatureOf`, which the structure itself does not carry. -/
 def _root_.Effect4.IndexSignatureOf.map {α : Type u} {β : Type v} (f : α → β)
     (x : Effect4.IndexSignatureOf α) : Effect4.IndexSignatureOf β :=
@@ -83,6 +95,12 @@ def _root_.Effect4.IndexSignatureOf.map {α : Type u} {β : Type v} (f : α → 
 theorem _root_.Effect4.IndexSignatureOf.map_map {α : Type u} {β : Type v} {γ : Type w}
     (g : β → γ) (f : α → β) (x : Effect4.IndexSignatureOf α) :
     Effect4.IndexSignatureOf.map g (Effect4.IndexSignatureOf.map f x) = Effect4.IndexSignatureOf.map (fun a => g (f a)) x := by
+  cases x
+  simp only [Effect4.IndexSignatureOf.map]
+
+/-- The map of `Effect4.IndexSignatureOf` at the identity is the identity. -/
+theorem _root_.Effect4.IndexSignatureOf.map_id {α : Type u} (x : Effect4.IndexSignatureOf α) :
+    Effect4.IndexSignatureOf.map (fun a => a) x = x := by
   cases x
   simp only [Effect4.IndexSignatureOf.map]
 
@@ -99,6 +117,12 @@ theorem _root_.Effect4.CheckRepresentationAnnotationOf.map_map {α : Type u} {β
     Effect4.CheckRepresentationAnnotationOf.map g (Effect4.CheckRepresentationAnnotationOf.map f x) = Effect4.CheckRepresentationAnnotationOf.map (fun a => g (f a)) x := by
   cases x
   simp only [Effect4.CheckRepresentationAnnotationOf.map, Option.map_map, List.map_map, Function.comp_def]
+
+/-- The map of `Effect4.CheckRepresentationAnnotationOf` at the identity is the identity. -/
+theorem _root_.Effect4.CheckRepresentationAnnotationOf.map_id {α : Type u} (x : Effect4.CheckRepresentationAnnotationOf α) :
+    Effect4.CheckRepresentationAnnotationOf.map (fun a => a) x = x := by
+  cases x
+  simp only [Effect4.CheckRepresentationAnnotationOf.map, Option.map_id_fun, List.map_id_fun', id_eq]
 
 mutual
 def cata_representation {R : RepresentationFam → Type u} (alg : RepresentationAlgebra R)
@@ -899,9 +923,13 @@ end
 /-! ## Receipts -/
 
 #print axioms Effect4.ElementOf.map_map
+#print axioms Effect4.ElementOf.map_id
 #print axioms Effect4.PropertySignatureOf.map_map
+#print axioms Effect4.PropertySignatureOf.map_id
 #print axioms Effect4.IndexSignatureOf.map_map
+#print axioms Effect4.IndexSignatureOf.map_id
 #print axioms Effect4.CheckRepresentationAnnotationOf.map_map
+#print axioms Effect4.CheckRepresentationAnnotationOf.map_id
 #print axioms cata_pos_list_representation_eq
 #print axioms cata_pos_list_check_eq
 #print axioms cata_pos_elementOf_representation_eq

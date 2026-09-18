@@ -686,6 +686,24 @@ partial def fuseLemmas : Pos → Option (List String)
       | _, _ => none) (some [s!"{s}.map_map"])
   | .prod _ _ => none
 
+/-- The rewrites that erase a map at the identity at a position, for a record's own identity
+law: each container's lemma in its function form — `List.map (fun a => a) = id` directly under
+the record, `List.map id = id` under another container whose own rewrite has already left
+`id`. `none` when the position holds a product, as for `fuseLemmas`. -/
+partial def idLemmas : Pos → Option (List String)
+  | .leaf _ => some []
+  | .direct _ => some []
+  | .list q => (idLemmas q).map fun ls =>
+    (if q matches .direct _ then "List.map_id_fun'" else "List.map_id_fun") :: ls
+  | .option q => (idLemmas q).map fun ls =>
+    (if q matches .direct _ then "Option.map_id_fun'" else "Option.map_id_fun") :: ls
+  | .record s _ _ flds =>
+    flds.foldl (fun acc f =>
+      match acc, idLemmas f.2 with
+      | some a, some b => some (a ++ b)
+      | _, _ => none) (some [s!"{s}.map_id"])
+  | .prod _ _ => none
+
 /-- The binder the emitted match gives a composite position's scrutinee. -/
 def scrutinee : Pos → String
   | .list _ => "xs"
@@ -794,6 +812,24 @@ positions: {p.key} and {q.key}"
           s := s ++ "  cases x\n"
           s := s ++ s!"  simp only [{lemmas}]\n\n"
           receiptsAux := receiptsAux ++ [s!"{st}.map_map"]
+        -- The functor's identity law, the other half of what a paired fold reads its values
+        -- back through (`fold_of`'s container paramorphism meets
+        -- `map Prod.fst (map (fun e => (e, f e)) x)` and needs it to be `x`).
+        let ident := (flds.foldl (fun acc f =>
+          match acc, idLemmas f.2 with
+          | some a, some b => some (a ++ b)
+          | _, _ => none) (some [])).map (·.eraseDups)
+        match ident with
+        | none => pure ()
+        | some ls =>
+          let lemmas := String.intercalate ", "
+            ([mapName] ++ ls ++ (if ls.isEmpty then [] else ["id_eq"]))
+          s := s ++ s!"/-- The map of `{st}` at the identity is the identity. -/\n"
+          s := s ++ s!"theorem _root_.{st}.map_id \{α : Type u} (x : {st} α) :\n"
+          s := s ++ s!"    {mapName} (fun a => a) x = x := by\n"
+          s := s ++ "  cases x\n"
+          s := s ++ s!"  simp only [{lemmas}]\n\n"
+          receiptsAux := receiptsAux ++ [s!"{st}.map_id"]
     | .prod a b =>
       let (nm, sig, body, eqn) :=
         if a.isLeaf then

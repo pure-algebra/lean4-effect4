@@ -142,6 +142,7 @@ import Effect4.Api.RunnerBytes
 import Effect4.Api.Built
 import Effect4.Store.Fold
 import Effect4.Store.Folds.Val
+import Effect4.Machine.Folds.Stores
 import Effect4.Program.FoldOf
 import Effect4.Program.Folds.Straight
 import Effect4.Program.Folds.Projections

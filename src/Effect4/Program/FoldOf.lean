@@ -15,7 +15,7 @@ declaration:
 - `g.eq_cata : ∀ e, g e = cata_<fam> f.alg e` for every member `g` of the block, by the
   generated uniqueness theorem (`hom_eq_cata_<fam>`).
 
-Three shapes, chosen by reading `f`:
+Five shapes, chosen by reading `f`:
 
 - **catamorphism** — the arms use only the children's results;
 - **paramorphism** — an arm uses a child's value as well; the carrier pairs the value in and
@@ -24,7 +24,16 @@ Three shapes, chosen by reading `f`:
   (`effTy sig env e`, `findInt pos t`, `hasTy v t allocated`, `build sem l ctx`); the carrier
   is the function type over them, the arm a lambda, and the connector
   `g fixed pre e post = cata alg e pre post`. The binders every recursive call passes through
-  unchanged are the fixed prefix and stay parameters of the algebra.
+  unchanged are the fixed prefix and stay parameters of the algebra;
+- **list sibling** — a block member over `List M` (`renderList` beside `render`) is a
+  `List.foldr` over the mapped results, its `nil` and `cons` read off its two arms, with
+  `s.eq_foldr` by induction on the list and `s.eq_cata` against the generated positional fold;
+- **container paramorphism** — an arm uses a child under a container or a wrapper as a value
+  (`encodeList xs`; a node rebuilt with its children; a case analysis on the child list). The
+  value is read back from the paired results through the position's functor map
+  (`List.map Prod.fst`, `Option.map`, the generated `W.map`), and the equation transports along
+  the two functor laws (`map_map`, `map_id`) — the reading of the mapped results is the
+  argument itself.
 
 Family members the block does not traverse get the carrier `Unit`. Nothing in `f`'s own module
 changes: this is the second file beside it, and `eq_cata` is the connector its callers move
@@ -288,6 +297,68 @@ def withShape {α : Type} (fixed : Array Expr) (fixedCount : Nat) (m : Member)
   let ty ← instantiateForall m.type fixed
   forallTelescope ty fun ys body => k ys (m.at_ - fixedCount) body
 
+/-- What reading a position needs of the block: the members at the family's parameters, the
+first projection out of the paired carrier, and the hom's function at each member. -/
+structure Positions where
+  members : Array Name
+  memberTy : Nat → Expr
+  /-- `Prod.fst : M × R → M` at member `j`. -/
+  fstFn : Nat → Expr
+  /-- The hom's function at member `j`, `fun e => (e, f e)` under `para`. -/
+  fv : Nat → Expr
+
+/-- The functor map through a position's type with `atMember j` at the member: `List.map`,
+`Option.map`, or the generated `W.map` of a one-parameter wrapper, composed down to the member.
+A partial application, `T[M ↦ A] → T[M ↦ B]` for `atMember j : A → B`. -/
+def mapThrough (P : Positions) (atMember : Nat → Expr) : Nat → Expr → MetaM Expr
+  | 0, t => throwError "fold_of: the position {t} is nested too deep"
+  | fuel + 1, t => do
+    let t ← whnfR t
+    if let some j := P.members.idxOf? (t.getAppFn.constName?.getD .anonymous) then
+      unless t == P.memberTy j do
+        throwError "fold_of: {t} is not the member at the family's parameters"
+      return atMember j
+    unless t.isApp do throwError "fold_of: no functor map through the position {t}"
+    let inner ← mapThrough P atMember fuel t.appArg!
+    if t.isAppOfArity ``List 1 then return ← mkAppM ``List.map #[inner]
+    if t.isAppOfArity ``Option 1 then return ← mkAppM ``Option.map #[inner]
+    let .const w _ := t.getAppFn | throwError "fold_of: no functor map through the position {t}"
+    unless (← getEnv).contains (w ++ `map) do
+      throwError "fold_of: {w} has no functor map {w ++ `map}; the generator emits one for a \
+        one-parameter record"
+    mkAppM (w ++ `map) #[inner]
+
+/-- `mapThrough t fst (mapThrough t fv x) = x`: the value at a position read back from its
+paired results. `Eq.refl` at the member (`(x, f x).1` reduces), and at each container the
+composition law, the pointwise identity under `funext`, and the identity law. -/
+def identThrough (P : Positions) : Nat → Expr → Expr → MetaM Expr
+  | 0, t, _ => throwError "fold_of: the position {t} is nested too deep"
+  | fuel + 1, t, x => do
+    let t ← whnfR t
+    if let some j := P.members.idxOf? (t.getAppFn.constName?.getD .anonymous) then
+      let lhs := mkApp (P.fstFn j) (mkApp (P.fv j) x)
+      return ← mkExpectedTypeHint (← mkEqRefl x) (← mkEq lhs x)
+    unless t.isApp do throwError "fold_of: no functor map through the position {t}"
+    let inner := t.appArg!
+    let h ← mapThrough P P.fstFn fuel inner
+    let g ← mapThrough P P.fv fuel inner
+    let pointwise ← withLocalDeclD `a inner fun a => do
+      mkLambdaFVars #[a] (← identThrough P fuel inner a)
+    let ext ← mkFunExt pointwise
+    let (mapMap, mapId, mapFn) ←
+      if t.isAppOfArity ``List 1 then
+        pure (← mkAppOptM ``List.map_map #[none, none, none, some h, some g, some x],
+          ← mkAppM ``List.map_id' #[x], ``List.map)
+      else if t.isAppOfArity ``Option 1 then
+        pure (← mkAppM ``Option.map_map #[h, g, x],
+          ← mkAppOptM ``Option.map_id' #[none, some x], ``Option.map)
+      else
+        let .const w _ := t.getAppFn | throwError "fold_of: no functor map through the position {t}"
+        pure (← mkAppM (w ++ `map_map) #[h, g, x], ← mkAppM (w ++ `map_id) #[x], w ++ `map)
+    let congr ← mkCongrArg (← withLocalDeclD `k (← mkArrow inner inner) fun k => do
+        mkLambdaFVars #[k] (← mkAppM mapFn #[k, x])) ext
+    mkEqTrans mapMap (← mkEqTrans congr mapId)
+
 /-- The work of `fold_of`, in `MetaM`. -/
 def convert (target : Name) : MetaM Unit := do
     let info ← getConstInfoDefn target
@@ -397,7 +468,6 @@ def convert (target : Name) : MetaM Unit := do
         | .const g _ => block.contains g | _ => false) |>.isSome
       -- pass 1: does any arm use a child's value (a paramorphism)?
       let mut needsPara := false
-      let mut hasListChild := false
       for m in members do
         for ctor in ← ctorsOf fam m do
           let ctorTy ← ctorTypeAt fam m ctor fam.params
@@ -414,14 +484,7 @@ def convert (target : Name) : MetaM Unit := do
                 immediate child at the fixed parameters:\n  {← ppExpr arm}"
             pure (childFam.any fun (k, _, _) => body.containsFVar args[k]!.fvarId!)
           if usesChild then needsPara := true
-          if !m.isList then
-            let ctorTy ← ctorTypeAt fam m ctor fam.params
-            if ← forallTelescope ctorTy fun args _ => do
-                pure ((← childrenOf args).any (·.2.2 != 0)) then hasListChild := true
       let para := needsPara
-      if para && hasListChild then
-        throwError "fold_of: {target}: an arm uses a child's value and a constructor has a list \
-          of children; the paramorphism over a container is not handled yet"
       let carriers ← results.mapIdxM fun j r => do
         if para then pure (mkAppN (mkConst ``Prod [Level.zero, level]) #[memberTy j, r]) else pure r
       let R ← carrierOf famType level carriers
@@ -475,13 +538,18 @@ def convert (target : Name) : MetaM Unit := do
             let acc := ys.eraseIdx! pre
             let node := nodeOf fam m ``List.cons fam.params #[x, restV]
             let (_, arm) ← armOf m (fixed ++ acc.extract 0 pre) node (acc.extract pre acc.size)
-            let body := abstractCalls #[(x, none, r), (restV, some m.fn, rrest)] arm
+            let body := abstractCalls #[(x, none, if para then sndOf j r else r), (restV, some m.fn, rrest)] arm
             if stillRecursive body then
               throwError "fold_of: {m.fn} at x :: rest: a recursive call that is not on the head \
                 or the tail:\n  {← ppExpr arm}"
-            if body.containsFVar x.fvarId! || body.containsFVar restV.fvarId! then
-              throwError "fold_of: {m.fn} at x :: rest: the head or the tail is used as a value; \
-                the paramorphism over a container is not handled yet:\n  {← ppExpr arm}"
+            if body.containsFVar restV.fvarId! then
+              throwError "fold_of: {m.fn} at x :: rest: the tail is used as a value; a fold of \
+                the list does not carry it:\n  {← ppExpr arm}"
+            -- under `para` the head's value is its result's first component
+            let body := if para then body.replaceFVar x (fstOf j r) else body
+            if body.containsFVar x.fvarId! then
+              throwError "fold_of: {m.fn} at x :: rest: the head is used as a value but no arm \
+                of the block made this a paramorphism:\n  {← ppExpr arm}"
             mkLambdaFVars #[r, rrest] (← mkLambdaFVars acc body)
         siblingFolds := siblingFolds.push (m.fn, carrier, nilArm, consArm)
       let foldOfSibling := fun (s : Name) (rs : Expr) => do
@@ -543,6 +611,12 @@ def convert (target : Name) : MetaM Unit := do
       -- to the field at the recursive results (a matcher on a constructor; never through the
       -- recursion's `brecOn`); a list child's sibling call is rewritten by `s.eq_foldr`; closed
       -- by `funext` over the varying binders and `congrArg (node, ·)` under `para`
+      -- the positions: a container child's value is read back from its paired results through
+      -- the position's functor map
+      let P : Positions :=
+        { members := fam.members, memberTy
+          fstFn := fun j => mkAppN (mkConst ``Prod.fst [Level.zero, level]) #[memberTy j, results[j]!]
+          fv := fun j => fns[j]! }
       let mut fields : Array Expr := #[]
       let mut homEqs : Array Expr := #[]
       for i in [:fam.members.size] do
@@ -557,20 +631,40 @@ def convert (target : Name) : MetaM Unit := do
               (Name.mkSimple s!"r{k}", fun (_ : Array Expr) =>
                 pure (if kind == 1 then mkApp (mkConst ``List [level]) (rTy j)
                   else if kind == 2 then carrierTyped argTys[k]! else rTy j))
-            withLocalDeclsD decls fun rs => do
+            -- the container children (a list of the member, or any other position mentioning
+            -- one) and, under `para`, a value local for each: the field reads it back from the
+            -- paired results, and the equation transports along that reading
+            let containers := childFam.filter fun (_, _, kind) => kind != 0
+            let valueDecls := if para then containers.map fun (k, _, _) =>
+                (Name.mkSimple s!"v{k}", fun (_ : Array Expr) => pure argTys[k]!)
+              else #[]
+            withLocalDeclsD decls fun rs => withLocalDeclsD valueDecls fun vs => do
               let fieldArgs := args.mapIdx fun k a =>
                 match childFam.findIdx? (·.1 == k) with
                 | some c => rs[c]!
                 | none => a
               let valueOf := fun (r : Expr) (j : Nat) => if para then fstOf j r else r
               let resultOf := fun (r : Expr) (j : Nat) => if para then sndOf j r else r
-              if para && childFam.any (·.2.2 == 2) then
-                throwError "fold_of: {ctor}: a paramorphism with a child through a wrapper or \
-                  container is not handled yet"
-              let rebuilt := mkAppN (mkAppN (mkConst ctor) fam.params) (args.mapIdx fun k a =>
-                match childFam.findIdx? (·.1 == k) with
-                | some c => valueOf rs[c]! childFam[c]!.2.1
-                | none => a)
+              -- a child's value: a direct child's is its result's first component, a container
+              -- child's is its value local
+              let childValue := fun (c : Nat) => do
+                let (k, j, kind) := childFam[c]!
+                if kind == 0 then pure (valueOf rs[c]! j)
+                else
+                  let some v := containers.findIdx? (·.1 == k)
+                    | throwError "fold_of: {ctor}: no value local for argument {k}"
+                  if para then pure vs[v]!
+                  else throwError "fold_of: {ctor}: a child under a container or a wrapper is \
+                    used as a value but no arm of the block made this a paramorphism"
+              -- the node rebuilt from its children's values, paired in under `para`
+              let rebuilt ← if para then do
+                  let mut out : Array Expr := #[]
+                  for h : k in [:args.size] do
+                    match childFam.findIdx? (·.1 == k) with
+                    | some c => out := out.push (← childValue c)
+                    | none => out := out.push args[k]
+                  pure (mkAppN (mkAppN (mkConst ctor) fam.params) out)
+                else pure node
               let (result, proof) ← match byMember i with
                 | some m => withShape m fun ys pre _ => do
                   let acc := ys.eraseIdx! pre
@@ -604,16 +698,16 @@ def convert (target : Name) : MetaM Unit := do
                         | none => none
                       | none => none
                     else none
-                  let body := abstractCalls calls arm
-                  let body := body.replace fun sub =>
-                    match childFam.findIdx? (fun (k, _, _) => sub == args[k]!) with
-                    | some c => if childFam[c]!.2.2 != 0 then none else some (valueOf rs[c]! childFam[c]!.2.1)
-                    | none => none
-                  for (k, _, kind) in childFam do
-                    if kind != 0 && body.containsFVar args[k]!.fvarId! then
-                      throwError "fold_of: {m.fn} at {ctor}: a child under a container or a \
-                        wrapper is used as a value; the paramorphism over a container is not \
-                        handled yet:\n  {← ppExpr arm}"
+                  -- what remains of a child in the arm is its value
+                  let mut body := abstractCalls calls arm
+                  for c in [:childFam.size] do
+                    let (k, _, kind) := childFam[c]!
+                    if body.containsFVar args[k]!.fvarId! then
+                      if kind != 0 && !para then
+                        throwError "fold_of: {m.fn} at {ctor}: a child under a container or a \
+                          wrapper is used as a value but no arm of the block made this a \
+                          paramorphism:\n  {← ppExpr arm}"
+                      body := body.replaceFVar args[k]! (← childValue c)
                   let mut h ← unfoldEqAt m levelParams before node after
                   -- rewrite each list child's sibling call by the sibling's lemma
                   let mut cur := arm
@@ -641,8 +735,36 @@ def convert (target : Name) : MetaM Unit := do
                     else pure h
                   pure (← mkLambdaFVars acc body, proof)
                 | none => pure (mkConst ``Unit.unit, ← mkEqRefl (if para then pair i node (mkConst ``Unit.unit) else mkConst ``Unit.unit))
-              let value := if para then pair i rebuilt result else result
-              let field ← mkLambdaFVars fieldArgs value
+              let template := if para then pair i rebuilt result else result
+              -- the field: every value local read back from the paired results
+              let readBack ← containers.mapM fun (k, _, _) => do
+                let some c := childFam.findIdx? (·.1 == k) | throwError "fold_of: {ctor}: argument {k}"
+                pure (mkApp (← mapThrough P P.fstFn 8 argTys[k]!) rs[c]!)
+              let field ← mkLambdaFVars fieldArgs (template.replaceFVars vs readBack)
+              -- the equation under `para` with container children: at the hom's arguments the
+              -- results are `mapThrough fv a_k`, and each value local moves from `a_k` to its
+              -- reading `mapThrough fst (mapThrough fv a_k)` by the functor laws, one child at
+              -- a time with the others held at their current stage
+              let proof ← if para && !containers.isEmpty then do
+                  let mapped ← containers.mapM fun (k, _, _) => do
+                    pure (mkApp (← mapThrough P P.fv 8 argTys[k]!) args[k]!)
+                  let atArgs ← childFam.mapM fun (k, j, kind) => do
+                    if kind == 0 then pure (mkApp fns[j]! args[k]!)
+                    else
+                      let some v := containers.findIdx? (·.1 == k) | throwError "fold_of: {ctor}: argument {k}"
+                      pure mapped[v]!
+                  let atHom := template.replaceFVars rs atArgs
+                  let mut current := containers.map fun (k, _, _) => args[k]!
+                  let mut proof := proof
+                  for v in [:containers.size] do
+                    let (k, _, _) := containers[v]!
+                    let ident ← identThrough P 8 argTys[k]! args[k]!
+                    let motive ← mkLambdaFVars #[vs[v]!]
+                      (atHom.replaceFVars (vs.eraseIdx! v) (current.eraseIdx! v))
+                    proof ← mkEqTrans proof (← mkCongrArg motive (← mkEqSymm ident))
+                    current := current.set! v (mkApp (← mapThrough P P.fstFn 8 argTys[k]!) mapped[v]!)
+                  pure proof
+                else pure proof
               let homEq ← mkLambdaFVars args proof
               pure (field, homEq)
           fields := fields.push field
@@ -702,7 +824,6 @@ def convert (target : Name) : MetaM Unit := do
       for m in members do
         unless m.isList do continue
         let j := m.member
-        let some f := byMember j | continue
         let some (_, lemmaName) := siblingLemmas.find? (·.1 == m.fn) | continue
         let some (_, carrier, nilArm, consArm) := siblingFolds.find? (·.1 == m.fn) | continue
         let stem := fam.fams[j]!.getString!
@@ -719,16 +840,12 @@ def convert (target : Name) : MetaM Unit := do
             mkAppN (mkConst ``List.foldr [Level.zero, level]) #[rTy j, carrier, consArm, nilArm, l]
           -- e₁ : (fun acc => s … xs …) = foldr (xs.map fv)
           let e₁ := mkAppN (mkConst lemmaName levelParams) (fixed ++ #[xs])
-          -- e₂ : xs.map fv = xs.map (cata alg), from f.eq_cata under funext and the map
-          let cataFn := mkAppN (mkConst fam.catas[j]! (← levelsFor fam.catas[j]!)) (fam.params ++ #[R, alg])
-          let pointwise ← withLocalDeclD `x (memberTy j) fun x => do
-            let hx ← withShape f fun ys' pre' _ => do
-              let acc' := ys'.eraseIdx! pre'
-              let mut h := mkAppN (mkConst (f.fn ++ `eq_cata) levelParams) (fixed ++ acc'.extract 0 pre' ++ #[x] ++ acc'.extract pre' acc'.size)
-              for a in acc'.reverse do
-                h ← mkFunExt (← mkLambdaFVars #[a] h)
-              pure h
-            mkLambdaFVars #[x] hx
+          -- e₂ : xs.map fv = xs.map (cata alg), pointwise by the uniqueness theorem
+          -- (`hom.f_<fam> x = cata alg x`, `hom.f_<fam>` being `fv`, the value paired in under
+          -- `para`) under funext and the map
+          let unique := mkConst fam.uniques[j]! (← levelsFor fam.uniques[j]!)
+          let pointwise ← withLocalDeclD `x (memberTy j) fun x =>
+            mkLambdaFVars #[x] (mkAppN unique (fam.params ++ #[R, alg, hom, x]))
           let e₂ ← mkCongrArg (← withLocalDeclD `g (← mkArrow (memberTy j) (rTy j)) fun g =>
               mkLambdaFVars #[g] (mkAppN (mkConst ``List.map [Level.zero, level]) #[memberTy j, rTy j, g, xs]))
             (← mkFunExt pointwise)
