@@ -322,7 +322,7 @@ differently:
   definition and `GenTy.merge a b = some (GenTy.mergeT a b)`, so the fold joins with `Ty.join`
   and has no dead branch.
 
-The connector `check_eq` (`Laws/Program/Typing/Checker.lean`) states both projections per sort
+The connector `check_eq` (`Program/Typing/Agreement.lean`) states both projections per sort
 by one structural recursion over the family, `[propext, Quot.sound]`; `explain = none ↔
 effTy.isSome` (`explain_none_iff'`) is then the shape of `Except`, where `Blame.lean` proves it
 by a second mutual induction of seven hundred lines. `fold_of check` converts all seven members
@@ -343,6 +343,15 @@ used here.
 Census: `Eff` 30 of the 40 hand rows, plus the seven fold-checker members, all folds (the
 driver prints 47 (37)); **78 of 93** hand traversals with connectors. What remains of `Eff`
 is `compileEff`'s five (exempt by ruling) and `Sched`'s five.
+
+The first caller moved the same day: the law of the projection (DI-86). `Blame.lean`'s second
+mutual block — the seven `*_none_iff` theorems by induction over both blocks, 370 lines under
+`maxHeartbeats 1600000` — is deleted; the same theorems with the same statements are derived
+in `Program/Typing/Agreement.lean` from `check_eq` and one lemma, `refusal_none_iff : refusal
+x = none ↔ x.toOption.isSome`, by cases on `x`. The agreement moved into the core root for
+that (it uses no proof search; `Api.check` is total by `explain_none_iff`, and the application
+root never reaches `Effect4.Laws`). `Api.explain_none_iff` and `Test/Program/BlameContract.lean`
+are untouched, at `[propext, Quot.sound]`. `Blame.lean` is 406 lines, from 777.
 
 ## 8. Scout G — the tooling that exists (`docs/research/2026-09-17-lean-tooling-scout-G.md`)
 
