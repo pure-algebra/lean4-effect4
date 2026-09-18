@@ -15,6 +15,7 @@ import Effect4.Laws.Program.Denote
 import Effect4.Laws.Program.Iter
 import Effect4.Laws.Program.DenoteB
 import Effect4.Laws.Program.Folds.Looped
+import Effect4.Laws.Program.Folds.Denote
 import Effect4.Laws.Program.LoopAgreement
 import Effect4.Laws.Program.MeaningSound
 import Effect4.Laws.Program.LoopSound

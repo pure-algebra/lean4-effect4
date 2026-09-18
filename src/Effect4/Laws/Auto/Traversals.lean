@@ -231,12 +231,15 @@ syntax (name := traversalCensus) "#traversal_census " ident (" under " ident)? :
         else if used.contains ``WellFounded.fix then .wf else .structural
       else if !hands.isEmpty then .delegates
       else .opaque
+    -- a hand traversal with its fold beside it: `fold_of` left `<name>.eq_cata`
+    let converted := env.contains (n ++ `eq_cata)
     let detail :=
       match kind with
       | .fold => ", ".intercalate algebras.toList ++
           (if hands.isEmpty then "" else s!"; hands to {hands.toList}")
       | .delegates => s!"→ {hands.toList}"
-      | _ => if hands.isEmpty then "" else s!"hands to {hands.toList}"
+      | _ => (if converted then s!"converted: {n ++ `alg} with {n ++ `eq_cata}" else "") ++
+          (if hands.isEmpty then "" else s!" hands to {hands.toList}")
     let line := (← liftCoreM (declaredAt n)).getD 0
     let inst ← liftCoreM (isInstance n)
     rows := rows.push ⟨n, m, line, d, kind, detail, inst⟩
@@ -245,10 +248,12 @@ syntax (name := traversalCensus) "#traversal_census " ident (" under " ident)? :
       (a.mod.toString < b.mod.toString ||
         (a.mod == b.mod && a.line < b.line)))
   let count (k : TraversalKind) := sorted.filter (·.kind == k) |>.size
+  let converted := sorted.filter (fun r => r.kind == .structural && env.contains (r.name ++ `eq_cata)) |>.size
   let mut report := m!"#traversal_census {root} (family {family.toList}) under {scope}: \
     {sorted.size} definitions take a family value — \
-    fold {count .fold}, generated {count .generated}, structural {count .structural}, \
-    wf {count .wf}, delegates {count .delegates}, opaque {count .opaque}; \
+    fold {count .fold}, generated {count .generated}, structural {count .structural} \
+    (of which {converted} with a fold beside them), wf {count .wf}, \
+    delegates {count .delegates}, opaque {count .opaque}; \
     declared folds: {folds.toList.map (·.1)}"
   for r in sorted do
     let inst := if r.isInstance then " [instance]" else ""
