@@ -128,6 +128,17 @@ theorem step_id (s : Run) (c : Command) : (s.step c).id = s.id :=
 theorem step_profile (s : Run) (c : Command) : (s.step c).profile = s.profile :=
   congrArg Header.profile (result_header s.runner c)
 
+/-! An opened run has played nothing. -/
+
+theorem open_phases (b : Api.Built) (id : String) (budget : Api.Budget) (profile : String) :
+    (Run.open b id budget profile).phases = [] := rfl
+
+theorem open_journal (b : Api.Built) (id : String) (budget : Api.Budget) (profile : String) :
+    (Run.open b id budget profile).journal = [] := rfl
+
+theorem open_machine (b : Api.Built) (id : String) (budget : Api.Budget) (profile : String) :
+    (Run.open b id budget profile).machine = Api.load b.program budget.compileFuel := rfl
+
 /-! ## A run is its own recording -/
 
 /-- A run that was opened and then played. Nothing else makes a `Run`: the fields are only
@@ -745,5 +756,197 @@ theorem drive_envelope {σ : Type} (r : Reactor σ) (table : RowTable) (henv : r
             rcases hmem with h | h
             · exact advance_not_envelope s.session s.budget.fuel Api.flush h.symm
             · exact hnorest h
+
+/-! ## One completion per call -/
+
+/-- **O-4.** One completion per call. Once an answer has been applied, the machine holds no
+call at that key, so there is nothing left to answer there: the rows of a second answer are
+empty and playing them changes nothing.
+
+The scout expects a refusal here. What happens instead is that there are no rows, because the
+rows are built from the machine — the stronger statement, and the one a driver sees. The
+refusal is still there for a row that was recorded earlier: `acceptReply_after_applied`. -/
+theorem answer_once (s : Run) (key : Key) (bound : BoundCall) (c : Answer)
+    (hfind : s.session.active.find? (fun b => b.key == key) = some bound)
+    (hkey : bound.key = key)
+    (hphase : (Api.HostSession.applyReply s.session key s.budget.fuel).phase = .applied) :
+    Rows.answer (s.step (.apply key)) key c = [] := by
+  have hfiber : bound.call.fiber = key.fiber := congrArg Api.HostProtocol.Key.fiber hkey
+  have htoken : bound.token = key.token := congrArg Api.HostProtocol.Key.token hkey
+  have hguard := Api.HostSession.applied_guard_absent s.session s.budget.fuel bound
+    (by rw [hkey]; exact hfind) (by rw [hkey]; exact hphase)
+  rw [hkey] at hguard
+  refine answer_none _ _ _ (at_none _ _ ?_)
+  rw [← hfiber, ← htoken]
+  exact hguard
+
+/-- And the recorded row is refused: the machine accepts no second completion for a call
+whose answer was applied (`applied_reply_refused`). -/
+theorem acceptReply_after_applied (s : Run) (key : Key) (bound : BoundCall) (reply : Reply)
+    (hfind : s.session.active.find? (fun b => b.key == key) = some bound)
+    (hkey : bound.key = key)
+    (hphase : (Api.HostSession.applyReply s.session key s.budget.fuel).phase = .applied) :
+    acceptReply s.built.table (s.step (.apply key)).machine (bound.record reply) = none := by
+  have h := Api.HostSession.applied_reply_refused s.session s.budget.fuel bound reply
+    (by rw [hkey]; exact hfind) (by rw [hkey]; exact hphase)
+  rw [hkey] at h
+  exact h
+
+/-! ## The ordinary run -/
+
+/-- The machine a replay reached, whichever way it ended. -/
+def machineOf : NativeReplay → Api.Machine
+  | .finished m => m
+  | .frontier _ m => m
+  | .stuck _ m => m
+
+/-- A decision tape replayed from a machine, at the program's own evaluator. -/
+def replayFrom (program : Api.Program) (table : RowTable) (fuel : Nat)
+    (tape : List Api.Decision) (m : Api.Machine) : NativeReplay :=
+  letI := evaluatorFor program table
+  replayEval (interpOf program table) fuel tape m
+
+/-- Whether one decision had enough command fuel, at the program's own evaluator. -/
+def enoughFor (program : Api.Program) (table : RowTable) (fuel : Nat) (m : Api.Machine)
+    (d : Api.Decision) : Bool :=
+  letI := evaluatorFor program table
+  (stepDecisionState (interpOf program table) fuel m d).2
+
+/-- The run a replay result reports, as `Api.replay` reports it. -/
+def runOf : NativeReplay → Api.Run
+  | .finished machine => ⟨.finished, machine, []⟩
+  | .frontier why machine => ⟨.frontier, machine, Api.frontierReasons why machine⟩
+  | .stuck why machine => ⟨.stuck why, machine, []⟩
+
+/-- The raw replay entry point, in the two pieces above. -/
+theorem replay_eq (program : Api.Program) (fuel : Nat) (tape : List Api.Decision)
+    (table : RowTable) (compileFuel : Nat) :
+    Api.replay program fuel tape [] table compileFuel =
+      runOf (replayFrom program table fuel tape (Api.load program compileFuel)) := rfl
+
+/-- However a replay ended, the run it reports carries the machine it reached. -/
+theorem replay_machine (program : Api.Program) (fuel : Nat) (tape : List Api.Decision)
+    (table : RowTable) (compileFuel : Nat) :
+    (Api.replay program fuel tape [] table compileFuel).machine =
+      machineOf (replayFrom program table fuel tape (Api.load program compileFuel)) := by
+  rw [replay_eq]
+  cases replayFrom program table fuel tape (Api.load program compileFuel) <;> rfl
+
+/-- An empty tape reaches the machine it started from. -/
+theorem machineOf_nil (program : Api.Program) (table : RowTable) (fuel : Nat)
+    (m : Api.Machine) : machineOf (replayFrom program table fuel [] m) = m := by
+  unfold replayFrom
+  simp only [replayEval]
+  repeat' split
+  all_goals rfl
+
+/-- One decision of a tape, when the machine is live and the step had enough fuel. -/
+theorem replayFrom_cons (program : Api.Program) (table : RowTable) (fuel : Nat)
+    (d : Api.Decision) (tape : List Api.Decision) (m : Api.Machine)
+    (hstuck : m.stuck = none) (henough : enoughFor program table fuel m d = true) :
+    replayFrom program table fuel (d :: tape) m =
+      replayFrom program table fuel tape (steppedBy program fuel table m d) := by
+  unfold enoughFor at henough
+  unfold replayFrom steppedBy
+  simp only [replayEval, hstuck, henough, if_true]
+
+/-- What a control row can do: refuse and change nothing, or step the machine and retire the
+bindings the step removed. -/
+theorem advance_step {program : Api.Program} {table : RowTable} (s : Session program table)
+    (fuel : Nat) (d : NativeDecision) :
+    (∃ why, Api.HostSession.advance s fuel d = ⟨.refused why, s⟩) ∨
+      (s.machine.stuck = none ∧ Api.HostSession.advance s fuel d =
+        ⟨if enoughFor program table fuel s.machine d then .progressed else .frontier,
+          Api.HostSession.retire { s with
+            machine := steppedBy program fuel table s.machine d }⟩) := by
+  unfold Api.HostSession.advance
+  split
+  · exact Or.inl ⟨_, rfl⟩
+  · split
+    · exact Or.inl ⟨_, rfl⟩
+    · rename_i hlive
+      split
+      rename_i pair machine enough heq
+      split
+      · exact Or.inl ⟨_, rfl⟩
+      · refine Or.inr ⟨?_, ?_⟩
+        · cases hs : s.machine.stuck with
+          | none => rfl
+          | some why => rw [hs] at hlive; exact absurd rfl hlive
+        · unfold enoughFor steppedBy
+          rw [heq]
+
+/-- A control row that progressed: the machine before it was not stuck, the step had enough
+fuel, and the machine it leaves is the one the raw stepper leaves. Retiring the bindings a
+step removed does not touch the machine. -/
+theorem advance_progressed {program : Api.Program} {table : RowTable}
+    (s : Session program table) (fuel : Nat) (d : NativeDecision)
+    (h : (Api.HostSession.advance s fuel d).phase = .progressed) :
+    s.machine.stuck = none ∧ enoughFor program table fuel s.machine d = true ∧
+      (Api.HostSession.advance s fuel d).session.machine =
+        steppedBy program fuel table s.machine d := by
+  rcases advance_step s fuel d with ⟨why, hrefuse⟩ | ⟨hstuck, hstep⟩
+  · rw [hrefuse] at h
+    cases h
+  · refine ⟨hstuck, ?_, ?_⟩
+    · rw [hstep] at h
+      cases he : enoughFor program table fuel s.machine d with
+      | true => rfl
+      | false =>
+        rw [he] at h
+        simp only [Bool.false_eq_true, if_false, reduceCtorEq] at h
+    · rw [hstep]
+      rfl
+
+/-- **O-10.** The ordinary run is the ordinary run: the journal `[evaluate, flush]` leaves
+the machine `Api.run` leaves. Both step by `stepDecisionState`, one decision at a time; the
+session adds the protocol edge and the retirement of removed bindings, and neither of those
+touches the machine.
+
+The hypothesis is that both rows progressed. A run that gets stuck, or whose step runs out of
+fuel, stops at a frontier in both routes, but not at the same place: the session keeps the
+machine it stepped to and stops, while `Api.replay` keeps stepping the rest of its tape. -/
+theorem runPure_eq_run (b : Api.Built) (id : String) (budget : Api.Budget)
+    (h : (Run.runPure b id budget).phases = [.progressed, .progressed]) :
+    (Run.runPure b id budget).machine =
+      (Api.run b.program budget.fuel [] b.table budget.compileFuel).machine := by
+  have hphases : ((Run.open b id budget).step (.control Api.evaluate)).phases ++
+      [(Api.HostSession.advance
+        ((Run.open b id budget).step (.control Api.evaluate)).session budget.fuel
+        Api.flush).phase] = [Phase.progressed, Phase.progressed] := h
+  rw [step_phases_control, open_phases] at hphases
+  simp only [List.nil_append, List.cons_append, List.cons.injEq] at hphases
+  obtain ⟨h1, h2⟩ := hphases
+  obtain ⟨hstuck1, henough1, hmachine1⟩ :=
+    advance_progressed (Run.open b id budget).session budget.fuel Api.evaluate h1
+  obtain ⟨hstuck2, henough2, hmachine2⟩ :=
+    advance_progressed ((Run.open b id budget).step (.control Api.evaluate)).session budget.fuel
+      Api.flush h2.1
+  have hstuck1' : (Api.load b.program budget.compileFuel).stuck = none := hstuck1
+  have henough1' : enoughFor b.program b.table budget.fuel
+      (Api.load b.program budget.compileFuel) Api.evaluate = true := henough1
+  have hm1 : ((Run.open b id budget).step (.control Api.evaluate)).session.machine =
+      steppedBy b.program budget.fuel b.table (Api.load b.program budget.compileFuel)
+        Api.evaluate := hmachine1
+  have hstuck2' : (steppedBy b.program budget.fuel b.table
+      (Api.load b.program budget.compileFuel) Api.evaluate).stuck = none := by
+    rw [← hm1]
+    exact hstuck2
+  have henough2' : enoughFor b.program b.table budget.fuel (steppedBy b.program budget.fuel
+      b.table (Api.load b.program budget.compileFuel) Api.evaluate) Api.flush = true := by
+    rw [← hm1]
+    exact henough2
+  have hlhs : (Run.runPure b id budget).machine = steppedBy b.program budget.fuel b.table
+      (steppedBy b.program budget.fuel b.table (Api.load b.program budget.compileFuel)
+        Api.evaluate) Api.flush := by
+    rw [← hm1]
+    exact hmachine2
+  rw [hlhs, Api.run, replay_machine,
+    replayFrom_cons b.program b.table budget.fuel Api.evaluate [Api.flush]
+      (Api.load b.program budget.compileFuel) hstuck1' henough1',
+    replayFrom_cons b.program b.table budget.fuel Api.flush []
+      (steppedBy b.program budget.fuel b.table (Api.load b.program budget.compileFuel)
+        Api.evaluate) hstuck2' henough2',
+    machineOf_nil]
 
 end Effect4.Run
