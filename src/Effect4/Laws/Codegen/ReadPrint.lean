@@ -1713,4 +1713,220 @@ end StmtRow
 
 end Node
 
+/-! ## The theorem: induction on the size of the image -/
+
+section Theorem
+
+variable {sig : Signature Op} {spell : String → List String → Option Op}
+
+/-- Everything readable whose image has size at most `m` reads back from its image; the
+images of the expression families are node-like. -/
+def PrintsBackUpTo (sig : Signature Op) (spell : String → List String → Option Op) (m : Nat) :
+    Prop :=
+  (∀ fam n (e : EffSelfCarrier Op fam) (x : Expr), sizeOf x ≤ m → ReadableAt sig fam e n →
+    PrintsTo sig n fam e (.expr x) → readT sig spell fam n x = some (.ok e) ∧ nodeLike x = true) ∧
+  (∀ fam n (e : EffSelfCarrier Op fam) (xs : List Expr), sizeOf xs ≤ m → ReadableAt sig fam e n →
+    PrintsTo sig n fam e (.exprs xs) → readSpine sig spell fam n xs = .ok e) ∧
+  (∀ n (e : Stmts Op) (ss : List TypeScript.Stmt), sizeOf ss ≤ m → ReadableAt sig .stmts e n →
+    PrintsTo sig n .stmts e (.stmts ss) → readStmts sig spell n ss = .ok e)
+
+/-- The node step, from the induction hypothesis. -/
+theorem readT_print_step (hl : LawfulSpelling sig spell) {m : Nat}
+    (ih : ∀ m', m' < m → PrintsBackUpTo sig spell m') {fam : EffFam} {n : Nat}
+    {e : EffSelfCarrier Op fam} {x : Expr} (hx : sizeOf x ≤ m)
+    (hsame : ∀ fam', famRank fam' < famRank fam → ∀ d c, ReadableAt sig fam' c d →
+      PrintsTo sig d fam' c (.expr x) → readT sig spell fam' d x = some (.ok c) ∧ nodeLike x = true)
+    (hr : ReadableAt sig fam e n) (hp : PrintsTo sig n fam e (.expr x)) :
+    readT sig spell fam n x = some (.ok e) ∧ nodeLike x = true := by
+  have hfam : fam = .eff ∨ fam = .action ∨ fam = .layer := by
+    cases fam <;> simp only [PrintsTo] at hp <;> simp
+  exact readT_print hl
+    (hchild := fun fam' d y hy c hr' hp' => (ih (sizeOf y) (by omega)).1 fam' d c y (Nat.le_refl _) hr' hp')
+    (hchildren := fun fam' d ys hy c hr' hp' => (ih (sizeOf ys) (by omega)).2.1 fam' d c ys (Nat.le_refl _) hr' hp')
+    (hblock := fun d ss hy c hr' hp' => (ih (sizeOf ss) (by omega)).2.2 d c ss (Nat.le_refl _) hr' hp')
+    (hsame := hsame) hfam hp hr
+
+
+/-- The domain's spines, item by item (the definition, at each cons). -/
+theorem dom_effs_cons (e : Eff Op) (es : Effs Op) (n : Nat) :
+    cata_effs (readableAlg sig) (.cons e es) n =
+      (cata_eff (readableAlg sig) e n).bind fun _ =>
+        (cata_effs (readableAlg sig) es n).bind fun _ => some 0 := rfl
+
+theorem dom_layers_cons (l : LayerTerm Op) (ls : LayerTerms Op) (n : Nat) :
+    cata_layers (readableAlg sig) (.cons l ls) n =
+      (cata_layer (readableAlg sig) l n).bind fun _ =>
+        (cata_layers (readableAlg sig) ls n).bind fun _ => some 0 := rfl
+
+theorem dom_stmts_cons (st : Program.Stmt Op) (ss : Stmts Op) (n : Nat) :
+    cata_stmts (readableAlg sig) (.cons st ss) n =
+      (cata_stmt (readableAlg sig) st n).bind fun d =>
+        (cata_stmts (readableAlg sig) ss (n + d)).bind fun _ => some 0 := rfl
+
+/-- The spines' step: item by item, from the induction hypothesis. -/
+theorem readSpine_print_step {m : Nat} (ih : ∀ m', m' < m → PrintsBackUpTo sig spell m') :
+    ∀ (fam : EffFam) (n : Nat) (e : EffSelfCarrier Op fam) (xs : List Expr),
+      sizeOf xs ≤ m → ReadableAt sig fam e n → PrintsTo sig n fam e (.exprs xs) →
+      readSpine sig spell fam n xs = .ok e
+  | .effs, n, e, xs, hx, hr, hp => by
+    cases e with
+    | nil =>
+      simp only [PrintsTo] at hp
+      cases hp
+      rw [readSpine]
+    | cons e es =>
+      simp only [PrintsTo, cata_effs_cons, bind_eq_ok] at hp
+      obtain ⟨y, hy, rest, hrest, hxs⟩ := hp
+      cases hxs
+      obtain ⟨d, hd⟩ := hr
+      simp only [cataFam, dom_effs_cons, Option.bind_eq_some_iff] at hd
+      obtain ⟨d1, hd1, d2, hd2, _⟩ := hd
+      have hsz : sizeOf (y :: rest) = 1 + sizeOf y + sizeOf rest := List.cons.sizeOf_spec y rest
+      have h1 := (ih (sizeOf y) (by omega)).1 .eff n e y (Nat.le_refl _) ⟨d1, hd1⟩ hy
+      have h2 := (ih (sizeOf rest) (by omega)).2.1 .effs n es rest (Nat.le_refl _) ⟨d2, hd2⟩ hrest
+      rw [readSpine]
+      simp only [h1.1, Option.getD_some, Except.mapError, h2, ok_bind]
+  | .layers, n, e, xs, hx, hr, hp => by
+    cases e with
+    | nil =>
+      simp only [PrintsTo] at hp
+      cases hp
+      rw [readSpine]
+    | cons l ls =>
+      simp only [PrintsTo, cata_layers_cons, bind_eq_ok] at hp
+      obtain ⟨y, hy, rest, hrest, hxs⟩ := hp
+      cases hxs
+      obtain ⟨d, hd⟩ := hr
+      simp only [cataFam, dom_layers_cons, Option.bind_eq_some_iff] at hd
+      obtain ⟨d1, hd1, d2, hd2, _⟩ := hd
+      have hsz : sizeOf (y :: rest) = 1 + sizeOf y + sizeOf rest := List.cons.sizeOf_spec y rest
+      have h1 := (ih (sizeOf y) (by omega)).1 .layer n l y (Nat.le_refl _) ⟨d1, hd1⟩ hy
+      have h2 := (ih (sizeOf rest) (by omega)).2.1 .layers n ls rest (Nat.le_refl _) ⟨d2, hd2⟩ hrest
+      rw [readSpine]
+      simp only [h1.1, Option.getD_some, Except.mapError, h2, ok_bind]
+  | .eff, _, _, _, _, _, hp => by simp only [PrintsTo] at hp
+  | .action, _, _, _, _, _, hp => by simp only [PrintsTo] at hp
+  | .layer, _, _, _, _, _, hp => by simp only [PrintsTo] at hp
+  | .stmt, _, _, _, _, _, hp => by simp only [PrintsTo] at hp
+  | .stmts, _, _, _, _, _, hp => by simp only [PrintsTo] at hp
+
+
+/-- A readable statement whose image is `(s, declared)` reads back from `s` through the first
+statement row that fires, declaring `declared`, given the recursion below it. -/
+theorem readStmt_print {m : Nat} (ih : ∀ m', m' < m → PrintsBackUpTo sig spell m') {n : Nat}
+    {st : Program.Stmt Op} {s : TypeScript.Stmt} {declared : Nat} (hs : sizeOf s ≤ m)
+    (hp : cata_stmt (printAlg sig) st n = .ok (s, declared)) {d : Nat}
+    (hr : cata_stmt (readableAlg sig) st n = some d) :
+    (table.zipIdx.findSome? fun (row, k) =>
+      readStmtRow sig n s row k
+        (fun fam' d y _ => (readT sig spell fam' d y).getD (.error (.here (unread fam'))))
+        (fun fam' d ys _ => readSpine sig spell fam' d ys)
+        (fun d body _ => readStmts sig spell d body)) = some (.ok (st, declared)) ∧ d = declared := by
+  obtain ⟨ctor, args, hview⟩ : ∃ ctor args, view .stmt st = (ctor, args) := ⟨_, _, rfl⟩
+  have hbuild : build .stmt ctor args = some st := by
+    have := build_view .stmt st; rwa [hview] at this
+  have hsorts : argSorts .stmt ctor = some (args.map argSortOf) := by
+    have := argSorts_view .stmt st; rwa [hview] at this
+  have hp' : tableLayer sig .stmt ctor (args.map (ArgF.fold (printAlg sig))) n = .ok (s, declared) := by
+    have := cata_build (tableLayer sig) .stmt ctor args st hbuild
+    simp only [cataFam] at this
+    rw [show printAlg sig = EffAlgebra.ofLayer (tableLayer sig) from rfl, this] at hp
+    exact hp
+  have hd' : domLayer sig .stmt ctor (args.map (ArgF.fold (readableAlg sig))) n = some d := by
+    have := cata_build (domLayer sig) .stmt ctor args st hbuild
+    simp only [cataFam] at this
+    rw [show readableAlg sig = EffAlgebra.ofLayer (domLayer sig) from rfl, this] at hr
+    exact hr
+  obtain ⟨row, t, τ, hfind, hout, hτ, hinst, rfl⟩ := stmtPrint_inv hp'
+  obtain ⟨row', t', hfind', hout', hr', rfl⟩ := stmtDom_inv hd'
+  rw [find?_selects_fold (readableAlg sig) (printAlg sig), hfind, Option.some.injEq] at hfind'
+  subst hfind'
+  rw [hout, RowOut.stmt.injEq] at hout'
+  subst hout'
+  obtain ⟨k, hk, hidx, _⟩ := find?_index _ table row hfind
+  have hpred : (fun r : Templates.Row => r.selects .stmt ctor (args.map (ArgF.fold (printAlg sig)))) =
+      fun r => r.selects .stmt ctor args := funext fun r => selects_fold _ r .stmt ctor args
+  rw [hpred] at hidx
+  have hsel : row.selects .stmt ctor args = true := by
+    have := List.find?_some hfind; rwa [selects_fold] at this
+  obtain ⟨hfam, _⟩ := selects_fam_ctor hsel
+  refine ⟨?_, rfl⟩
+  refine findSome?_zipIdx (fun (p : Templates.Row × Nat) => readStmtRow sig n s p.1 p.2
+      (fun fam' d y _ => (readT sig spell fam' d y).getD (.error (.here (unread fam'))))
+      (fun fam' d ys _ => readSpine sig spell fam' d ys)
+      (fun d body _ => readStmts sig spell d body)) table 0 k row (.ok (st, t.declares))
+    (fun j hj rj hrj => ?_) hk ?_
+  · simp only [Nat.zero_add]
+    rcases apart_of_lt hrj hk hj with hne | hap
+    · exact readStmtRow_none_of_fam (by rw [hfam] at hne; exact hne)
+    · exact earlier_stmt_none hap hout hinst
+  · simp only [Nat.zero_add]
+    exact readStmtRow_print hk hbuild hsorts hsel hidx hout hτ hinst hr'
+      (fun fam' d y hy c hr hp => by
+        rw [((ih (sizeOf y) (by omega)).1 fam' d c y (Nat.le_refl _) hr hp).1]; rfl)
+      (fun fam' d ys hy c hr hp => (ih (sizeOf ys) (by omega)).2.1 fam' d c ys (Nat.le_refl _) hr hp)
+      (fun d ss hy c hr hp => (ih (sizeOf ss) (by omega)).2.2 d c ss (Nat.le_refl _) hr hp)
+
+/-- The statement spine's step: each statement through its row, the rest under what it
+declares. -/
+theorem readStmts_print_step {m : Nat} (ih : ∀ m', m' < m → PrintsBackUpTo sig spell m') :
+    ∀ (n : Nat) (e : Stmts Op) (ss : List TypeScript.Stmt),
+      sizeOf ss ≤ m → ReadableAt sig .stmts e n → PrintsTo sig n .stmts e (.stmts ss) →
+      readStmts sig spell n ss = .ok e
+  | n, e, ss, hx, hr, hp => by
+    cases e with
+    | nil =>
+      simp only [PrintsTo] at hp
+      cases hp
+      rw [readStmts]
+    | cons st rest =>
+      simp only [PrintsTo, cata_stmts_cons, bind_eq_ok] at hp
+      obtain ⟨⟨s, declared⟩, hs, tail, htail, hss⟩ := hp
+      cases hss
+      simp only at hx
+      obtain ⟨d, hd⟩ := hr
+      simp only [cataFam, dom_stmts_cons, Option.bind_eq_some_iff] at hd
+      obtain ⟨d1, hd1, d2, hd2, _⟩ := hd
+      have hsz : sizeOf (s :: tail) = 1 + sizeOf s + sizeOf tail := List.cons.sizeOf_spec s tail
+      obtain ⟨hrow, rfl⟩ := readStmt_print ih (by omega) hs hd1
+      have h2 := (ih (sizeOf tail) (by omega)).2.2 (n + d1) rest tail (Nat.le_refl _) ⟨d2, hd2⟩ htail
+      rw [readStmts]
+      simp only [hrow, Except.mapError, ok_bind, h2]
+
+/-- Everything readable reads back from its image, at every size. -/
+theorem printsBackUpTo (hl : LawfulSpelling sig spell) (m : Nat) : PrintsBackUpTo sig spell m := by
+  induction m using Nat.strongRecOn with
+  | _ m ih =>
+    have hlow : ∀ fam, famRank fam = 0 → ∀ n (e : EffSelfCarrier Op fam) (x : Expr), sizeOf x ≤ m →
+        ReadableAt sig fam e n → PrintsTo sig n fam e (.expr x) →
+        readT sig spell fam n x = some (.ok e) ∧ nodeLike x = true :=
+      fun fam h0 n e x hx hr hp =>
+        readT_print_step hl ih hx (fun fam' hlt => absurd hlt (by omega)) hr hp
+    refine ⟨fun fam n e x hx hr hp => ?_, readSpine_print_step ih, readStmts_print_step ih⟩
+    exact readT_print_step hl ih hx
+      (fun fam' hlt d c hr' hp' => hlow fam' (by have := famRank_le_one fam; omega) d c x hx hr' hp')
+      hr hp
+
+/-- **Law 11.** What the printer prints of a readable program reads back to it. -/
+theorem read_print (hl : LawfulSpelling sig spell) {n : Nat} {e : Eff Op}
+    (hr : Readable sig n e = true) {x : Expr} (hp : print sig n e = .ok x) :
+    readEff sig spell n x = .ok e := by
+  have h := (printsBackUpTo hl (sizeOf x)).1 .eff n e x (Nat.le_refl _)
+    (by unfold ReadableAt; simpa only [Readable, cataFam, Option.isSome_iff_exists] using hr) hp
+  simp only [readEff, readEffAt, h.1, Option.getD_some, Except.mapError]
+
+/-- The same of a layer, which is closed: read and printed at depth `0`. -/
+theorem readLayer_print (hl : LawfulSpelling sig spell) {l : LayerTerm Op}
+    (hr : ReadableAt sig .layer l 0) {x : Expr} (hp : printLayer sig l = .ok x) :
+    readLayer sig spell x = .ok l := by
+  have h := (printsBackUpTo hl (sizeOf x)).1 .layer 0 l x (Nat.le_refl _) hr hp
+  simp only [readLayer, readLayerAt, h.1, Option.getD_some, Except.mapError]
+
+/-- A readable program reads back from whatever the printer prints of it. -/
+theorem ReadsBack.of_Readable (hl : LawfulSpelling sig spell) {n : Nat} {e : Eff Op}
+    (hr : Readable sig n e = true) : ReadsBack sig spell n e :=
+  fun x hp => read_print hl hr hp
+
+end Theorem
+
 end Effect4.Program
