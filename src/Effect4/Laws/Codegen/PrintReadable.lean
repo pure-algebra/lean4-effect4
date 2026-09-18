@@ -1,4 +1,5 @@
 import Effect4.Laws.Codegen.ReadPrint
+import Effect4.Laws.Program.Size
 
 /-!
 # Laws.Codegen.PrintReadable — a readable program prints
@@ -7,8 +8,8 @@ The completeness half of the round trip: `Readable sig n e = true → ∃ x, pri
 With law 11 (`read_print`) this gives `Readable e → roundTrip e = ok e`.
 
 The proof is the generic node step again, by induction on the size of the program measured by
-a fold (`sizeAlg`: one more than the children), so a child is smaller by one generic lemma
-(`size_child_lt`) and no constructor is named. At a node the domain says the printer's row is
+a fold (`sizeAlg`, `Laws/Program/Size.lean`: one more than the children), so a child is smaller
+by one generic lemma (`size_child_lt`) and no constructor is named. At a node the domain says the printer's row is
 a skeleton or the row call and every argument is readable; every readable argument prints
 (`printArg_ok`); the skeleton instantiates because every hole has a capture of its kind, which
 is a decided fact of the table (`table_holeKinds`) joined to the calculus lemma `inst_of_kinds`.
@@ -230,41 +231,6 @@ open Effect4.Codegen.Templates (RowOut ArgPat Fixed table tableLayer printAlg pr
   argDepth argSortOf Carrier Out)
 
 variable {Op : Type}
-
-/-! ## The size of a program, by a fold -/
-
-/-- One more than the children: the size of a node by the generic layer function. -/
-def sizeLayer : (fam : EffFam) → String → List (ArgF Op (fun _ => Nat)) → Nat
-  | _, _, args => 1 + (args.map fun a => match a with | .child _ k => k | _ => 0).sum
-
-def sizeAlg : EffAlgebra Op (fun _ => Nat) := EffAlgebra.ofLayer sizeLayer
-
-theorem sizeLayer_eq (fam : EffFam) (ctor : String) (args : List (ArgF Op (fun _ => Nat))) :
-    sizeLayer fam ctor args =
-      1 + (args.map fun a => match a with | .child _ k => k | _ => 0).sum := rfl
-
-theorem le_sum_of_mem : ∀ (l : List Nat) (a : Nat), a ∈ l → a ≤ l.sum
-  | [], _, h => by cases h
-  | b :: rest, a, h => by
-    have ih := le_sum_of_mem rest a
-    simp only [List.mem_cons, List.sum_cons] at h ⊢
-    rcases h with rfl | h
-    · omega
-    · have := ih h; omega
-
-/-- A child is smaller than its node. -/
-theorem size_child_lt (fam : EffFam) (e : EffSelfCarrier Op fam) (fam' : EffFam)
-    (c : EffSelfCarrier Op fam') (h : ArgF.child fam' c ∈ (view fam e).2) :
-    cataFam sizeAlg fam' c < cataFam sizeAlg fam e := by
-  have hb := cata_build sizeLayer fam (view fam e).1 (view fam e).2 e (build_view fam e)
-  rw [show sizeAlg = EffAlgebra.ofLayer sizeLayer from rfl, hb, sizeLayer_eq]
-  have hmem : cataFam (EffAlgebra.ofLayer sizeLayer) fam' c ∈
-      ((view fam e).2.map (ArgF.fold (EffAlgebra.ofLayer sizeLayer))).map
-        (fun a : ArgF Op (fun _ => Nat) => match a with | .child _ k => k | _ => 0) := by
-    rw [List.map_map]
-    exact List.mem_map.mpr ⟨.child fam' c, h, rfl⟩
-  have := le_sum_of_mem _ _ hmem
-  omega
 
 /-! ## What an argument prints to: its kind, and whether it prints at all -/
 
