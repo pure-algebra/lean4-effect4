@@ -355,13 +355,23 @@ def convert (target : Name) : MetaM Unit := do
         match members.find? (·.fn == g) with
         | some m => m.at_ - fixedCount
         | none => 0
-      -- the children of a constructor's arguments: (argument index, member index, is a list)
+      -- the children of a constructor's arguments: (argument index, member index, kind), the
+      -- kind 0 for the member itself, 1 for a list of it, 2 for any other position whose type
+      -- mentions a member (`Option M`, `List (ElementOf M)`): the generated algebra types that
+      -- argument with the carrier in the member's place, and so does the field's local
       let childrenOf := fun (args : Array Expr) => do
-        let mut out : Array (Nat × Nat × Bool) := #[]
+        let mut out : Array (Nat × Nat × Nat) := #[]
         for h : k in [:args.size] do
-          if let some (j, _, isList) ← familyArgsOf fam (← inferType args[k]) then
-            out := out.push (k, j, isList)
+          let t ← inferType args[k]
+          match ← familyArgsOf fam t with
+          | some (j, _, false) => out := out.push (k, j, 0)
+          | some (j, _, true) => out := out.push (k, j, 1)
+          | none =>
+            let mentions := fam.members.findIdx? fun mem => t.find? (fun sub =>
+              match sub with | .const c _ => c == mem | _ => false) |>.isSome
+            if let some j := mentions then out := out.push (k, j, 2)
         pure out
+      let isList := fun (kind : Nat) => kind == 1
       -- a call `g fixed pre child post…` becomes `r pre post…` for the replacement `r` paired
       -- with `child` — for every block member when the pair names no callee, for that
       -- sibling alone when it does (two siblings may read the same list, `acceptsList` and
@@ -407,7 +417,7 @@ def convert (target : Name) : MetaM Unit := do
           if !m.isList then
             let ctorTy ← ctorTypeAt fam m ctor fam.params
             if ← forallTelescope ctorTy fun args _ => do
-                pure ((← childrenOf args).any (·.2.2)) then hasListChild := true
+                pure ((← childrenOf args).any (·.2.2 != 0)) then hasListChild := true
       let para := needsPara
       if para && hasListChild then
         throwError "fold_of: {target}: an arm uses a child's value and a constructor has a list \
@@ -425,6 +435,11 @@ def convert (target : Name) : MetaM Unit := do
       let sndOf := fun (j : Nat) (r : Expr) =>
         mkAppN (mkConst ``Prod.snd [Level.zero, level]) #[memberTy j, results[j]!, r]
       let rTy := fun (j : Nat) => mkApp R (mkConst fam.fams[j]!)
+      -- a position's type with every member replaced by its carrier
+      let carrierTyped := fun (t : Expr) => t.replace fun sub =>
+        match fam.members.idxOf? (sub.getAppFn.constName?.getD .anonymous) with
+        | some j => if sub == memberTy j then some (rTy j) else none
+        | none => none
       -- the hom's function at a family member: the block member as a function of the value,
       -- then of its varying binders; `()` where the block has no member; paired under `para`
       let homFnOf := fun (i : Nat) => withLocalDeclD `e (memberTy i) fun e => do
@@ -537,9 +552,11 @@ def convert (target : Name) : MetaM Unit := do
           let (field, homEq) ← forallTelescope ctorTy fun args _ => do
             let node := mkAppN (mkAppN (mkConst ctor) fam.params) args
             let childFam ← childrenOf args
-            let decls := childFam.map fun (k, j, isList) =>
+            let argTys ← args.mapM inferType
+            let decls := childFam.map fun (k, j, kind) =>
               (Name.mkSimple s!"r{k}", fun (_ : Array Expr) =>
-                pure (if isList then mkApp (mkConst ``List [level]) (rTy j) else rTy j))
+                pure (if kind == 1 then mkApp (mkConst ``List [level]) (rTy j)
+                  else if kind == 2 then carrierTyped argTys[k]! else rTy j))
             withLocalDeclsD decls fun rs => do
               let fieldArgs := args.mapIdx fun k a =>
                 match childFam.findIdx? (·.1 == k) with
@@ -547,6 +564,9 @@ def convert (target : Name) : MetaM Unit := do
                 | none => a
               let valueOf := fun (r : Expr) (j : Nat) => if para then fstOf j r else r
               let resultOf := fun (r : Expr) (j : Nat) => if para then sndOf j r else r
+              if para && childFam.any (·.2.2 == 2) then
+                throwError "fold_of: {ctor}: a paramorphism with a child through a wrapper or \
+                  container is not handled yet"
               let rebuilt := mkAppN (mkAppN (mkConst ctor) fam.params) (args.mapIdx fun k a =>
                 match childFam.findIdx? (·.1 == k) with
                 | some c => valueOf rs[c]! childFam[c]!.2.1
@@ -561,8 +581,9 @@ def convert (target : Name) : MetaM Unit := do
                   -- sibling's fold over the results
                   let mut calls : Array (Expr × Option Name × Expr) := #[]
                   let mut listChildren : Array (Expr × Name) := #[]
-                  for ((k, j, isList), r) in childFam.zip rs do
-                    if isList then
+                  for ((k, j, kind), r) in childFam.zip rs do
+                    if kind == 2 then pure ()
+                    else if kind == 1 then
                       -- every sibling reading a list of this member folds the same results; a
                       -- list child the arm never mentions (`| .list _ => Tag.list`) needs none,
                       -- and the value check below catches any other use
@@ -571,15 +592,28 @@ def convert (target : Name) : MetaM Unit := do
                           calls := calls.push (args[k]!, some s.fn, ← foldOfSibling s.fn r)
                           listChildren := listChildren.push (args[k]!, s.fn)
                     else calls := calls.push (args[k]!, none, resultOf r j)
+                  -- the map idiom: `xs.map f` over a list child, `f` the member at the fixed
+                  -- parameters, is the result list itself (`f_val` is `f` up to eta)
+                  let arm := if para then arm else arm.replace fun sub =>
+                    if sub.isAppOfArity ``List.map 4 then
+                      let xs := sub.getArg! 3
+                      match childFam.findIdx? (fun (k, _, kind) => kind == 1 && xs == args[k]!) with
+                      | some c =>
+                        match byMember childFam[c]!.2.1 with
+                        | some f => if sub.getArg! 2 == memberFn f then some rs[c]! else none
+                        | none => none
+                      | none => none
+                    else none
                   let body := abstractCalls calls arm
                   let body := body.replace fun sub =>
                     match childFam.findIdx? (fun (k, _, _) => sub == args[k]!) with
-                    | some c => if childFam[c]!.2.2 then none else some (valueOf rs[c]! childFam[c]!.2.1)
+                    | some c => if childFam[c]!.2.2 != 0 then none else some (valueOf rs[c]! childFam[c]!.2.1)
                     | none => none
-                  for (k, _, isList) in childFam do
-                    if isList && body.containsFVar args[k]!.fvarId! then
-                      throwError "fold_of: {m.fn} at {ctor}: a list of children is used as a value; \
-                        the paramorphism over a container is not handled yet:\n  {← ppExpr arm}"
+                  for (k, _, kind) in childFam do
+                    if kind != 0 && body.containsFVar args[k]!.fvarId! then
+                      throwError "fold_of: {m.fn} at {ctor}: a child under a container or a \
+                        wrapper is used as a value; the paramorphism over a container is not \
+                        handled yet:\n  {← ppExpr arm}"
                   let mut h ← unfoldEqAt m levelParams before node after
                   -- rewrite each list child's sibling call by the sibling's lemma
                   let mut cur := arm

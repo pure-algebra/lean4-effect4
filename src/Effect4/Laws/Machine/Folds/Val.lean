@@ -8,9 +8,9 @@ import Effect4.Laws.Machine.StoresLaws
 
 `Val.keys` / `keysList` (`Laws/Machine/Handles.lean`) and `Val.validIn` / `validInList`
 (`Laws/Machine/StoresLaws.lean`, the stores fixed), each as a `ValAlgebra` with its
-connectors. Not here: `Witnesses.valCode`, which maps itself over the constructor's argument
-list directly (`args.map valCode`) rather than through a sibling — the `map` idiom is the
-next shape.
+connectors. Not here: `Witnesses.valCode`, whose `ctor` arm splits on the argument list's shape
+(`| .ctor 9 [head] => 9 :: valCode head`) — a case analysis on a container child, not a fold
+as written.
 -/
 
 namespace Effect4.Machine
