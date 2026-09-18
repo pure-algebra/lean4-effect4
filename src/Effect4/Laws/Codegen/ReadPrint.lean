@@ -749,6 +749,25 @@ theorem hole_of_not_supplied {row : Templates.Row} (hmem : row ∈ table) {t : T
     rw [← ArgPat.supplies_isSome (Op := Op) (R := EffSelfCarrier Op), hsup] at hc
     rw [hout]; simpa only [Option.isSome_none, Bool.false_eq_true, or_false] using hc
 
+/-- The same at a statement row. -/
+theorem hole_of_not_supplied_stmt {row : Templates.Row} (hmem : row ∈ table) {t : StmtTpl}
+    (hout : row.out = .stmt t) {sorts : List ArgSort} (hsorts : argSorts row.fam row.ctor = some sorts)
+    (j : Nat) (hj : j < sorts.length)
+    (hsup : (row.supplied (Op := Op) (R := EffSelfCarrier Op) j).isSome = false) :
+    j ∈ row.out.holes := by
+  have hc := table_fact table_complete hmem
+  simp only [rowComplete, hout, hsorts, List.all_eq_true, List.mem_range, Bool.or_eq_true,
+    List.contains_eq_mem, decide_eq_true_eq] at hc
+  unfold Templates.Row.supplied at hsup
+  have hc := hc j hj
+  cases hf : List.find? (fun x => x.1 == j) row.fixed with
+  | none => rw [hout]; simpa only [hf, Option.any, Bool.false_eq_true, or_false] using hc
+  | some p =>
+    obtain ⟨a, b⟩ := p
+    simp only [hf, Option.bind_some, Option.any] at hc hsup
+    rw [← ArgPat.supplies_isSome (Op := Op) (R := EffSelfCarrier Op), hsup] at hc
+    rw [hout]; simpa only [Option.isSome_none, Bool.false_eq_true, or_false] using hc
+
 
 /-! ## Lists: the index of what `find?` finds; `findSome?` over an indexed list -/
 
@@ -1573,6 +1592,124 @@ theorem readT_print (hfam : fam = .eff ∨ fam = .action ∨ fam = .layer)
     · exact readRow_rowCall_print hl hout hfamily hd' hreq hp' rfl
 
 end Step
+
+/-! ## The statement row -/
+
+section StmtRow
+
+variable {n : Nat} {s : TypeScript.Stmt} {k : Nat}
+
+/-- What the printer did at a statement. -/
+theorem stmtPrint_inv {ctor : String} {args : List (ArgF Op Carrier)} {declared : Nat}
+    (h : tableLayer sig .stmt ctor args n = .ok (s, declared)) :
+    ∃ row t τ, table.find? (fun r => r.selects .stmt ctor args) = some row ∧ row.out = .stmt t ∧
+      printArgs sig .stmt n (.stmt t) args 0 = .ok τ ∧ instStmt n τ t = some s ∧
+      declared = t.declares := by
+  unfold tableLayer at h
+  aesop
+
+/-- What the domain said at a statement. -/
+theorem stmtDom_inv {ctor : String} {args : List (ArgF Op Dom)} {d : Nat}
+    (h : domLayer sig .stmt ctor args n = some d) :
+    ∃ row t, table.find? (fun r => r.selects .stmt ctor args) = some row ∧ row.out = .stmt t ∧
+      argsReadable sig .stmt n (.stmt t) (rowDaemon row) args 0 = true ∧ d = t.declares := by
+  unfold domLayer at h
+  aesop
+
+variable {child : (fam' : EffFam) → Nat → (y : Expr) → sizeOf y < sizeOf s →
+    Except ReadFailure (EffSelfCarrier Op fam')}
+  {children : (fam' : EffFam) → Nat → (ys : List Expr) → sizeOf ys < sizeOf s →
+    Except ReadFailure (EffSelfCarrier Op fam')}
+  {block : Nat → (ss : List TypeScript.Stmt) → sizeOf ss < sizeOf s →
+    Except ReadFailure (EffSelfCarrier Op .stmts)}
+
+theorem readStmtRow_none_of_fam {row : Templates.Row} (h : row.fam ≠ .stmt) :
+    readStmtRow sig n s row k child children block = none := by
+  unfold readStmtRow; simp only [h, ↓reduceIte]
+
+theorem readStmtRow_none_of_out {row : Templates.Row} (h : ∀ t, row.out ≠ .stmt t) :
+    readStmtRow sig n s row k child children block = none := by
+  unfold readStmtRow; aesop
+
+theorem readStmtRow_none_of_nomatch {row : Templates.Row} {t : StmtTpl} (hout : row.out = .stmt t)
+    (hm : matchStmt n t s = none) :
+    readStmtRow sig n s row k child children block = none := by
+  unfold readStmtRow; aesop
+
+/-- A statement row before the printing one is apart by former. -/
+theorem earlier_stmt_none {rj : Templates.Row} {row : Templates.Row} (hap : rowsApart rj row = true)
+    {t : StmtTpl} (hout : row.out = .stmt t) {τ : Subst} (hinst : instStmt n τ t = some s) :
+    readStmtRow sig n s rj k child children block = none := by
+  unfold rowsApart at hap
+  rw [hout] at hap
+  simp only at hap
+  split at hap
+  · rename_i t' h'
+    simp only [bne_iff_ne, ne_eq] at hap
+    exact readStmtRow_none_of_nomatch h' (matchStmt_former n τ t' t s hap hinst)
+  · rename_i h'
+    exact readStmtRow_none_of_out fun t ht => h' t ht
+
+/-- The printing statement row reads its image back, with the binders it declares. -/
+theorem readStmtRow_print {row : Templates.Row} (hk : table[k]? = some row)
+    {ctor : String} {args : List (ArgF Op (EffSelfCarrier Op))} {st : Program.Stmt Op}
+    (hbuild : build .stmt ctor args = some st)
+    (hsorts : argSorts .stmt ctor = some (args.map argSortOf))
+    (hsel : row.selects .stmt ctor args = true)
+    (hidx : table.findIdx? (fun r => r.selects .stmt ctor args) = some k)
+    {t : StmtTpl} (hout : row.out = .stmt t) {τ : Subst}
+    (hτ : printArgs sig .stmt n (.stmt t) (args.map (ArgF.fold (printAlg sig))) 0 = .ok τ)
+    (hinst : instStmt n τ t = some s)
+    (hr : argsReadable sig .stmt n (.stmt t) (rowDaemon row) (args.map (ArgF.fold (readableAlg sig))) 0
+      = true)
+    (hchild : ∀ fam' d y (hy : sizeOf y < sizeOf s) c, ReadableAt sig fam' c d →
+      PrintsTo sig d fam' c (.expr y) → child fam' d y hy = .ok c)
+    (hchildren : ∀ fam' d ys (hy : sizeOf ys < sizeOf s) c, ReadableAt sig fam' c d →
+      PrintsTo sig d fam' c (.exprs ys) → children fam' d ys hy = .ok c)
+    (hblock : ∀ d ss (hy : sizeOf ss < sizeOf s) c, ReadableAt sig .stmts c d →
+      PrintsTo sig d .stmts c (.stmts ss) → block d ss hy = .ok c) :
+    readStmtRow sig n s row k child children block = some (.ok (st, t.declares)) := by
+  obtain ⟨hfam, hctor⟩ := selects_fam_ctor hsel
+  obtain ⟨σ, hσ, hagree⟩ := matchStmt_of_instStmt n τ t s hinst
+  have hmem := List.mem_of_getElem? hk
+  obtain ⟨hprint, _⟩ := printArgs_lookup (args.map (ArgF.fold (printAlg sig))) 0 τ hτ
+  have hsorts' : argSorts row.fam row.ctor = some (args.map argSortOf) := by
+    rw [hfam, hctor]; exact hsorts
+  have hargs := readArgs_print sig σ n row (τ := τ)
+    (child := fun fam' d y i hy => child fam' d y (matchStmt_below n t s σ hσ (i, .expr y) hy))
+    (children := fun fam' d ys i hy => children fam' d ys (matchStmt_below n t s σ hσ (i, .exprs ys) hy))
+    (block := fun d body i hy => block d body (matchStmt_below n t s σ hσ (i, .stmts body) hy))
+    (fun fam' d y i hy c hr hp => hchild fam' d y _ c hr hp)
+    (fun fam' d ys i hy c hr hp => hchildren fam' d ys _ c hr hp)
+    (fun d ss i hy c hr hp => hblock d ss _ c hr hp)
+    (fun j hj => holesStmt_of_instStmt n τ t s hinst j (by rwa [hout] at hj))
+    (fun j hj => hagree j (by rwa [hout] at hj)) args 0
+    (fun k v hk a ha => supplied_eq_of_selects row hsel (0 + k) v (by simpa using hk) a ha)
+    (fun m v hm hsup => hole_of_not_supplied_stmt hmem hout hsorts' (0 + m)
+      (by simp only [List.length_map, Nat.zero_add]; exact (List.getElem?_eq_some_iff.mp hm).1) hsup)
+    (fun k v hk => by
+      have := hprint k (ArgF.fold (printAlg sig) v) (by simp only [List.getElem?_map, hk, Option.map_some])
+      rw [argSortOf_fold] at this
+      simpa only [hfam, hout] using this)
+    (fun k v hk => by
+      have := argsReadable_at (args.map (ArgF.fold (readableAlg sig))) 0 k (ArgF.fold (readableAlg sig) v)
+        hr (by simp only [List.getElem?_map, hk, Option.map_some])
+      rw [argSortOf_fold] at this
+      simpa only [hfam, hout] using this)
+  have hb := buildRow_of_findIdx? hbuild hidx
+  obtain ⟨rfam, rctor, rfixed, rout⟩ := row
+  simp only at hfam hctor hout
+  subst hfam hctor hout
+  unfold readStmtRow
+  simp only [↓reduceIte, hsorts]
+  split
+  · rename_i hnone; rw [hσ] at hnone; cases hnone
+  · rename_i σ' hσ'
+    rw [hσ] at hσ'
+    obtain rfl := Option.some.inj hσ'
+    simp only [hargs, ok_bind, hb]
+
+end StmtRow
 
 end Node
 
