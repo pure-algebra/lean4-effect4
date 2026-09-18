@@ -232,3 +232,36 @@ C-P11 (the schema tree's unconsumed declarations); then the reader line R4.1.
     is outside `readable`, but it is printed without a refusal. A refusing row would be one line.
     **Owed: R5.2**, over this final shape.
 
+
+## Later still on 2026-09-17: R5.2 closed; aesop; the API seats
+
+- **aesop is the law graph's proof search** (`a4168094`, `5e6920cf`, `d563260e`): rules in the
+  default set (`Laws/Auto/Inversion.lean`), a census instrument (`Laws/Auto/Census.lean`), the
+  AGENTS.md rule rewritten. The rewriter that automated proof replacement was retired by the
+  owner ("you don't even know how to use aesop yet"); the workflow that replaced it is in memory
+  (`aesop-proof-workflow`): state, `aesop (add …)`, read residual goals, restate.
+- **Law 11 over the table** (`52a2b602`, `Laws/Codegen/ReadPrint.lean`, 1,932 lines): `read_print`,
+  `readLayer_print`, `ReadsBack.of_Readable` at `[propext, Quot.sound]`. `Readable` is a fold
+  (`readableAlg`); the proof is one node step by induction on the image's size; the table-specific
+  part is the decided `table_apart` (`rowsApart`: apart by head or by shape, `match_apart`), and
+  `decide` found two overlaps the reasons had not named. A new overlapping row fails `table_apart`
+  and asks for one `shapeApart` reason — the row contract.
+- **Completeness** (`1cdbe2de`, `Laws/Codegen/PrintReadable.lean`): `print_of_readable`,
+  `roundTrip_of_readable`, `readable_of_Readable`. Size by a fold (`sizeAlg`, `size_child_lt`
+  generic), `inst_of_kinds` + decided `table_holeKinds`.
+- **The four module corollaries are back** (`67a3e023`, `2fb7051a`, `Laws/Codegen/ModuleReadable.lean`)
+  over `moduleReadable` (per hoisted piece): `readModule_printModule_readable`,
+  `ModuleEmission.readModule`, `Api.printModule_roundTrip`, `printModule_readable`,
+  `emitModule_complete`. Trap met: `simp` on `(t == t) = true` for `List Nat` brings
+  `Classical.choice`; proved structurally.
+- **Owner ruling, landed** (`09be67a8`): a child (non-daemon) `forkIn`/`forkScoped` is refused by the
+  printer (`internalAction "forkIn:child"`), never printed as the daemon it is not; the corpus
+  generator draws daemon forks only; 42 more corpus programs read back (385 of 408). Owed at the
+  wave's gate sweep: `harness/truth/corpus.json` (host cut).
+- **The API direction** (owner, ratified with two scout notes committed `64619565`): three deep
+  modules `Author` / `Run` / `Face` (the term is **Run**, not Session), every convenience a function
+  into `List Command`; daemons visible as data (static supervision tree, fiber statuses in the
+  observation); layers as the place for composable semantics; the layer binder after this line.
+  Three Opus seats dispatched in worktrees `../lean4-effect4-{run,author,daemons}` (branches
+  `seat/*`, from `1a8587f2` which adds `Api.Built`), each with the aesop discipline in its brief;
+  receipts owed at `docs/research/2026-09-17-seat-{run,author,daemons}-receipt.md`.
