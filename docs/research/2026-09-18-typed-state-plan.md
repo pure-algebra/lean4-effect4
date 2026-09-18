@@ -207,3 +207,14 @@ Honest size: ~130 lemmas, 4,500–6,300 lines. Three rulings owed: `HandlesFit` 
 `DeferredNat`, layer 0's home (`Laws/Effects/Protocol.lean`, importing the pinned `Effects`
 only; no pull-in needed). Order if adopted: Move 1 → `Keeps` → layer 0 → layer 1 → `popR_typed`
 first → S1 → `InterpTyped` → S2 (frame, delivery, operations) → S3.
+
+**Step 0, the position census** (`docs/research/2026-09-18-position-census-design.md`, owner
+asked for it 2026-09-18 after the second surprise; probes Q2/Q3 built): the invariant's
+positions are derived from the types reachable from `RState`, `RCmd`, `RInterp`, `RIter`
+(26 + 3 + 51 + 31 measured), each sourced by one hand row under a totality gate; the S2
+obligations are derived from the constructor sites each step reaches through its call graph
+(`driveStep` reaches 374 definitions, 21 write; the lemma unit is the definition, not the
+arm); the generator emits the `Ok` structures, `TypedState`, `InterpTyped`, the aesop rules
+and the obligation ledger with its witness join. Order with it: step 0 (census, sources,
+ledger) → layer 0/1 → generated skeleton → `Keeps` + `popR_typed` → S1 + hooks → S2 by
+ledger row → S3.
