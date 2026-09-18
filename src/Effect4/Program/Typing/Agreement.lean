@@ -48,7 +48,7 @@ theorem refusal_error {α : Type} (r : TypeRefusal) :
 
 /-- The reductions every arm ends in: the monad's laws, the projections, the `Option` laws of
 the hand blocks, the total join and merge, path normalisation, and the conditions. -/
-local macro "check_step" : tactic => `(tactic| simp only [bind_ok, bind_error, pure_eq, throw_eq,
+local macro "check_step" : tactic => `(tactic| simp only [Checker.expect, Checker.term?, bind_ok, bind_error, pure_eq, throw_eq,
   toOption_ok, toOption_error, refusal_ok, refusal_error, Option.bind_eq_bind, Option.bind_some,
   Option.bind_none, Option.map_eq_map, Option.map_some, Option.map_none, Option.isSome_some,
   Option.isSome_none, GenTy.merge_eq, EffTy.joinAnswer_eq, List.append_assoc, List.cons_append,

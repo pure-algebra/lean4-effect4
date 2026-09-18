@@ -79,11 +79,14 @@ namespace Checker
 
 variable {Op : Type}
 
-/-- A term's type at a node, or its refusal there (`termRefusal`). -/
+/-- What an `Option`-answering rule answers, or the refusal at this node. -/
+def expect {α : Type} (r : TypeRefusal) : Option α → Except TypeRefusal α
+  | none => .error r
+  | some a => .ok a
+
+/-- A term's type at a node, or its refusal there. -/
 def term? (sig : Signature Op) (env : TyEnv) (p : List Nat) (t : Term) : Except TypeRefusal Ty :=
-  match termTy sig env t with
-  | none => .error ⟨p, .term t⟩
-  | some ty => .ok ty
+  expect ⟨p, .term t⟩ (termTy sig env t)
 
 /-- The refusal of a check, when it refuses. -/
 def refusal {α : Type} : Except TypeRefusal α → Option TypeRefusal
@@ -100,10 +103,9 @@ mutual
       let e ← term? sig env p error
       if admittedErrTy e then pure ⟨.never, e, Requirement.empty⟩
       else throw ⟨p, .errorNotAdmitted e⟩
-    | .failCause cause =>
-      match causeTy sig env cause with
-      | none => throw ⟨p, .cause cause⟩
-      | some e => pure ⟨.never, e, Requirement.empty⟩
+    | .failCause cause => do
+      let e ← expect ⟨p, .cause cause⟩ (causeTy sig env cause)
+      pure ⟨.never, e, Requirement.empty⟩
     | .sync thunk => do
       let t ← term? sig env p thunk
       pure (EffTy.pure t)
@@ -136,12 +138,10 @@ mutual
       else throw ⟨p, .predicateNotBool predicate⟩
     | .select s d a0 a1 => do
       let t ← term? sig env p s
-      match d.arms t with
-      | none => throw ⟨p, selectRefusal d t⟩
-      | some (e0, e1) => do
-        let t0 ← check sig (env ++ e0) (p ++ [0]) a0
-        let t1 ← check sig (env ++ e1) (p ++ [1]) a1
-        pure ⟨Ty.join t0.answer t1.answer, t0.error.join t1.error, t0.requires.union t1.requires⟩
+      let (e0, e1) ← expect ⟨p, selectRefusal d t⟩ (d.arms t)
+      let t0 ← check sig (env ++ e0) (p ++ [0]) a0
+      let t1 ← check sig (env ++ e1) (p ++ [1]) a1
+      pure ⟨Ty.join t0.answer t1.answer, t0.error.join t1.error, t0.requires.union t1.requires⟩
     | .matchCause body onValue onCause => do
       let b ← check sig env (p ++ [0]) body
       let v ← check sig (env ++ [b.answer]) (p ++ [1]) onValue
@@ -172,12 +172,10 @@ mutual
     | .yieldNow _ => pure (EffTy.pure .unit)
     | .awaitFiber fiber mode => do
       let t ← term? sig env p fiber
-      match fiberTy t with
-      | none => throw ⟨p, .notFiber t⟩
-      | some (value, error) =>
-        match mode with
-        | .joinEffect => pure ⟨value, error, Requirement.empty⟩
-        | .awaitValue => pure (EffTy.pure (.exitOf value error))
+      let (value, error) ← expect ⟨p, .notFiber t⟩ (fiberTy t)
+      match mode with
+      | .joinEffect => pure ⟨value, error, Requirement.empty⟩
+      | .awaitValue => pure (EffTy.pure (.exitOf value error))
     | .withFiber action => checkAction sig env (p ++ [0]) action
     | .scoped body => do
       let t ← check sig env (p ++ [0]) body
@@ -191,26 +189,22 @@ mutual
       let l ← checkLayer sig (p ++ [0]) layer
       let b ← check sig env (p ++ [1]) body
       pure ⟨b.answer, b.error.join l.error, Row.union l.requires (Row.diff b.requires l.out)⟩
-    | .service key =>
-      match sig.serviceTy key with
-      | none => throw ⟨p, .serviceUnknown key⟩
-      | some ty => pure ⟨ty, .never, Requirement.single key⟩
-    | .provideService key value body =>
-      match sig.serviceTy key with
-      | none => throw ⟨p, .serviceUnknown key⟩
-      | some ty => do
-        let v ← term? sig env p value
-        let b ← check sig env (p ++ [0]) body
-        if Ty.sub v.normalize ty.normalize then
-          pure ⟨b.answer, b.error, Row.diff b.requires (Requirement.single key)⟩
-        else throw ⟨p, .valueNotSubtype key v ty⟩
+    | .service key => do
+      let ty ← expect ⟨p, .serviceUnknown key⟩ (sig.serviceTy key)
+      pure ⟨ty, .never, Requirement.single key⟩
+    | .provideService key value body => do
+      let ty ← expect ⟨p, .serviceUnknown key⟩ (sig.serviceTy key)
+      let v ← term? sig env p value
+      let b ← check sig env (p ++ [0]) body
+      if Ty.sub v.normalize ty.normalize then
+        pure ⟨b.answer, b.error, Row.diff b.requires (Requirement.single key)⟩
+      else throw ⟨p, .valueNotSubtype key v ty⟩
 
   /-- `layerTy` and `explainLayer` as one. -/
   def checkLayer (sig : Signature Op) (p : List Nat) : LayerTerm Op → Except TypeRefusal LayerTy
-    | .succeed key value =>
-      match litVal value with
-      | none => throw ⟨p, .literalOutsideAlphabet value⟩
-      | some _ => pure ⟨Requirement.single key, .never, Requirement.empty⟩
+    | .succeed key value => do
+      let _ ← expect ⟨p, .literalOutsideAlphabet value⟩ (litVal value)
+      pure ⟨Requirement.single key, .never, Requirement.empty⟩
     | .effect key body => do
       let t ← check sig [] (p ++ [0]) body
       pure ⟨Requirement.single key, t.error, bodyRequires sig t⟩
@@ -237,9 +231,7 @@ mutual
     -- the layers' signatures, then the nonempty merge (`Layer.ts:1652`, at least one)
     | .mergeAll layers => do
       let ls ← checkLayers sig (p ++ [0]) layers
-      match LayerTy.mergeNonempty ls with
-      | none => throw ⟨p ++ [0], .mergeAllEmpty⟩
-      | some l => pure l
+      expect ⟨p ++ [0], .mergeAllEmpty⟩ (LayerTy.mergeNonempty ls)
 
   /-- The signatures of a list of layer terms, in order, or the first refusal. -/
   def checkLayers (sig : Signature Op) (p : List Nat) :
@@ -317,49 +309,41 @@ mutual
         t.requires.union (Requirement.single sig.scopeKey)⟩
     | .runIn target scope => do
       let t ← term? sig env p target
-      match fiberTy t with
-      | none => throw ⟨p, .notFiber t⟩
-      | some _ => do
-        let s ← term? sig env p scope
-        if s = Ty.scope then pure (EffTy.pure .unit) else throw ⟨p, .scopeExpected s⟩
+      let _ ← expect ⟨p, .notFiber t⟩ (fiberTy t)
+      let s ← term? sig env p scope
+      if s = Ty.scope then pure (EffTy.pure .unit) else throw ⟨p, .scopeExpected s⟩
     | .interrupt target => do
       let t ← term? sig env p target
-      match fiberTy t with
-      | none => throw ⟨p, .notFiber t⟩
-      | some _ => pure (EffTy.pure .unit)
+      let _ ← expect ⟨p, .notFiber t⟩ (fiberTy t)
+      pure (EffTy.pure .unit)
     | .interruptScoped target => do
       let t ← term? sig env p target
-      match fiberTy t with
-      | none => throw ⟨p, .notFiber t⟩
-      | some _ => pure (EffTy.pure .unit)
+      let _ ← expect ⟨p, .notFiber t⟩ (fiberTy t)
+      pure (EffTy.pure .unit)
     | .interruptAll targets interruptor => do
       let ts ← term? sig env p targets
       match ts with
-      | .list inner =>
-        match fiberTy inner with
-        | none => throw ⟨p, .notFiber inner⟩
-        | some _ =>
-          match interruptor with
-          | none => pure (EffTy.pure .unit)
-          | some who => do
-            let w ← term? sig env p who
-            if w = .nat then pure (EffTy.pure .unit) else throw ⟨p, .natExpected w⟩
+      | .list inner => do
+        let _ ← expect ⟨p, .notFiber inner⟩ (fiberTy inner)
+        match interruptor with
+        | none => pure (EffTy.pure .unit)
+        | some who => do
+          let w ← term? sig env p who
+          if w = .nat then pure (EffTy.pure .unit) else throw ⟨p, .natExpected w⟩
       | _ => throw ⟨p, .listOfFibersExpected ts⟩
     | .awaitAll targets => do
       let ts ← term? sig env p targets
       match ts with
-      | .list inner =>
-        match fiberTy inner with
-        | none => throw ⟨p, .notFiber inner⟩
-        | some (value, error) => pure (EffTy.pure (.list (.exitOf value error)))
+      | .list inner => do
+        let (value, error) ← expect ⟨p, .notFiber inner⟩ (fiberTy inner)
+        pure (EffTy.pure (.list (.exitOf value error)))
       | _ => throw ⟨p, .listOfFibersExpected ts⟩
     | .awaitAllFailFast targets => do
       let ts ← term? sig env p targets
       match ts with
-      | .list inner =>
-        match fiberTy inner with
-        | none => throw ⟨p, .notFiber inner⟩
-        | some (value, error) => pure (EffTy.pure (.list (.exitOf value error)))
+      | .list inner => do
+        let (value, error) ← expect ⟨p, .notFiber inner⟩ (fiberTy inner)
+        pure (EffTy.pure (.list (.exitOf value error)))
       | _ => throw ⟨p, .listOfFibersExpected ts⟩
     | .snapshotChildren =>
       pure (EffTy.pure (.list (.fiberOf (.handle "unknown") (.handle "unknown"))))

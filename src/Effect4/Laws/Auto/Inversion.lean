@@ -113,7 +113,17 @@ theorem fmap_eq_ok {m : Except ε α} {f : α → β} {b : β} :
   cases m <;> simp only [Functor.map, Except.map, reduceCtorEq, false_and, exists_false,
     Except.ok.injEq, exists_eq_left']
 
+/-- `pure` and `throw` on `Except`, inverted. -/
+theorem pure_eq_ok {a b : α} : (pure a : Except ε α) = .ok b ↔ a = b := by
+  show Except.ok a = .ok b ↔ a = b
+  simp only [Except.ok.injEq]
+
+theorem throw_eq_ok {e : ε} {a : α} : (throw e : Except ε α) = .ok a ↔ False := by
+  show Except.error e = .ok a ↔ False
+  simp only [reduceCtorEq]
+
 attribute [aesop norm simp]
+  pure_eq_ok throw_eq_ok
   error_ne_ok ok_ne_error none_ne_some some_ne_none
   bind_eq_ok map_eq_ok mapError_eq_ok toOption_eq_some getD_error_eq_ok
   Option.map_eq_some_iff Option.bind_eq_some_iff
