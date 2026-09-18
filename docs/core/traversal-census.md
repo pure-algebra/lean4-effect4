@@ -219,15 +219,43 @@ The census now marks a hand traversal that has its fold beside it: **`Eff` 18 of
 of 17, `Term` 12 of 14**; `Representation` 0 of 5 and `Val` 0 of 17. `Val` had no fold at all;
 `src/Effect4/Store/Fold.lean` is generated now (`ValFold` in the manifest, `7bb403ed`).
 
-### 7.2 What `fold_of` refuses today, and the shape each needs
+### 7.2 The list-sibling shape (2026-09-18, `9cfeaf40`)
 
-- **Nested containers** (`Val.list (xs : List Val)`, `Representation.arrays … (List (ElementOf
-  Representation))`): the generated algebra takes the children's results *inside the container*
-  (`val_list : List (R .val) → R .val`, hom equation `f (.list xs) = alg.val_list (xs.map f)`),
-  so the converter must read `xs.map f` (and `mapM`, `all`, `foldl` over `f`) as the result
-  list, and a traversal with an accumulator needs `List.map_map` in the equation — a
-  propositional step, the first tactic in an otherwise term-built proof. `Val`'s 17 and
-  `Representation`'s 5 wait on this.
+The estate writes every nested traversal of `Val` as a mutual pair — `render` beside
+`renderList`, `encode` beside `encodeList`, `acceptsAt` beside `acceptsList` *and*
+`acceptsFields` — exactly the generated `cata_val` / `cata_pos_list_val` pair. So a block member
+over `List M` is read as a `List.foldr` over the mapped results: its `nil` and `cons` are its two
+arms with `f … x …` the element's result and `s … rest …` the fold of the rest;
+`s.eq_foldr : (fun acc => s fixed acc xs) = List.foldr cons nil (xs.map f)` is proved by
+`List.rec` from the sibling's unfold equations; the family algebra's container field
+(`val_list : List (R .val) → R .val`) gets `foldr cons nil rs`; and the sibling's own connector
+`s.eq_cata` goes through the generated `cata_pos_list_val_eq`. Replacements are keyed by the
+sibling called, since two siblings may read the same list. A list child the arm never mentions
+(`| .list _ => Tag.list`) needs no sibling.
+
+| stub file | converted |
+| --- | --- |
+| `Store/Folds/Val.lean` | `render`, `encode`, `tag`, `handles`, `beq` (its second list an accumulator), `refs`, `malformedRef`, `acceptsAt` (two siblings), `printIn` (two siblings), `Config.Val.ofStore` |
+| `Laws/Machine/Folds/Val.lean` | `Val.keys`, `Val.validIn` (the stores fixed) |
+
+**`Val` is 12 of 17**, with twelve sibling connectors beside them. The census at `9cfeaf40`:
+`Eff` 18 of 40, `Ty` 16 of 17, `Term` 12 of 14, `Representation` 0 of 5, `Val` 12 of 17 —
+**58 of 93 hand traversals have a fold and a kernel-checked connector**.
+
+### 7.3 What `fold_of` refuses today, and the shape each needs
+
+- **A paramorphism over a container** (`WF`, `wf`, `payload`, `Machine.reasonsOfVal`): the arm
+  applies *another* block's traversal to the child list (`encodeList xs`), so the list child's
+  value is needed beside its results; under the paired carrier the results arrive as
+  `xs.map (fun e => (e, f e))`, and the equation needs `List.map_map` and `List.map_id` —
+  term-level, but a rewrite rather than a reduction. `Val`'s last four.
+- **The `map` idiom** (`Witnesses.valCode`: `args.map valCode` with no sibling): the mapped
+  list *is* the field's result list; one more recognised call shape.
+- **Positions other than `List M`** (`Representation`: `List (ElementOf Representation)`,
+  `Option`, the record wrappers `PropertySignatureOf`, `IndexSignatureOf`): the generated
+  algebra's argument is the constructor's argument type with the member replaced by its
+  carrier; the converter must type the field's local the same way and, where an arm reads
+  through the wrapper, use the generated positional folds. `Representation`'s 5.
 - **Shape-inspecting arms** (`termsTy`: `| .cons (.var index) tail => termTy sig env (.var
   index)`): the arm splits on a child's constructor and recurses on the *rebuilt* child, so the
   equation holds by cases on the child, not by unfolding. `termTy`/`termsTy` (2).
