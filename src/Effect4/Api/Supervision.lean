@@ -99,9 +99,11 @@ def raceEntrantOptions : Effect4.Supervision.ForkOptions :=
 
 This is the whole classification, in four rows. Nothing here matches a constructor: the node
 arrives through the generated layer view as a name and a list of `ArgF`, so a constructor
-added to the alphabet reaches this table as a name it does not carry and yields nothing. -/
-def forkSitesOf {Op : Type} :
-    EffFam → String → List (ArgF Op (EffSelfCarrier Op)) → List Nat → List ForkSite
+added to the alphabet reaches this table as a name it does not carry and yields nothing. It
+reads only leaf arguments, so it is the same table whatever the children have been folded
+to. -/
+def forkSitesOf {Op : Type} {R : EffFam → Type} :
+    EffFam → String → List (ArgF Op R) → List Nat → List ForkSite
   | .action, "fork", [_, .forkOptions o], p =>
     [⟨p, if o.daemon then ForkKind.daemon else ForkKind.child, o⟩]
   | .action, "forkIn", [_, .forkOptions o, .term scope], p => [⟨p, .pinned (some scope), o⟩]
@@ -109,16 +111,40 @@ def forkSitesOf {Op : Type} :
   | .effs, "cons", _, p => [⟨p, .raceEntrant, raceEntrantOptions⟩]
   | _, _, _, _ => []
 
-/-- The fork sites of one node of any family, through the generated layer view. -/
-def siteAt {Op : Type} (fam : EffFam) : EffSelfCarrier Op fam → List Nat → List ForkSite :=
-  fun node p => forkSitesOf fam (view fam node).1 (view fam node).2 p
+/-- The carrier of the supervision fold: a folded node answers its fork sites once it is told
+its own path. -/
+abbrev SiteReader : EffFam → Type := fun _ => List Nat → List ForkSite
 
-/-- Every fork site of a program, in program order: one walk over the path fold
-(`foldMapAt_eff`, `Program/Fold.lean`), yielding at the two sorts that fork. `effs` occurs
-only under `raceAll` (`Program/LayerView.lean`, `argSorts`), so its cells are exactly the race
-entrants. -/
+/-- The folded children of a node's arguments, in child order. That order is how `Node.child`
+indexes them (`Program/NodeLenses.lean`) and how the path walk numbers them, so it is what a
+path has to follow. -/
+def childReaders {Op : Type} (args : List (ArgF Op SiteReader)) : List (List Nat → List ForkSite) :=
+  args.filterMap fun
+    | .child _ r => some r
+    | _ => none
+
+/-- Every child's sites, each at its own path: child `i` of the node at `p` is at `p ++ [i]`. -/
+def atChildPaths (readers : List (List Nat → List ForkSite)) (p : List Nat) (i : Nat) :
+    List ForkSite :=
+  match readers with
+  | [] => []
+  | reader :: rest => reader (p ++ [i]) ++ atChildPaths rest p (i + 1)
+
+/-- The generic layer function of the supervision fold: this node's own sites, then every
+child's. One function for the whole alphabet — no case per constructor. -/
+def superLayer {Op : Type} (fam : EffFam) (ctor : String) (args : List (ArgF Op SiteReader))
+    (p : List Nat) : List ForkSite :=
+  forkSitesOf fam ctor args p ++ atChildPaths (childReaders args) p 0
+
+/-- The supervision algebra: the generic layer function made an algebra
+(`Program/LayerView.lean`, `EffAlgebra.ofLayer`). -/
+def superAlg {Op : Type} : EffAlgebra Op SiteReader := EffAlgebra.ofLayer superLayer
+
+/-- Every fork site of a program, in program order: the fold of `superAlg`, read at the root
+path. `effs` occurs only under `raceAll` (`Program/LayerView.lean`, `argSorts`), so its cells
+are exactly the race entrants. -/
 def supervision {Op : Type} (e : Effect4.Program.Eff Op) : List ForkSite :=
-  foldMapAt_eff [] (· ++ ·) [] e (f_effs := siteAt .effs) (f_action := siteAt .action)
+  cata_eff superAlg e []
 
 /-- `a` encloses `b`: it is `b` or a proper prefix of it. -/
 def enclosingPath (a b : List Nat) : Bool := decide (a = b) || Path.properPrefix a b
@@ -231,10 +257,11 @@ def unpinnedDaemonsAlive (m : Machine) : List FiberId :=
 def daemonsQuiet (m : Machine) : Bool := (unpinnedDaemonsAlive m).isEmpty
 
 /-- The property `daemonsQuiet` decides: every live fiber is a tracked child or a daemon at a
-pin. At a terminated observation nothing is live, so it holds for a different reason; the
-content of the check is at every other observation. -/
+pin. An exited fiber reads `.exited`, so the quantifier needs no liveness side condition. At
+a terminated observation nothing is live, so it holds for a different reason; the content of
+the check is at every other observation. -/
 def Supervised (m : Machine) : Prop :=
-  ∀ f ∈ m.fibers, f.exit = none → statusOf m f ≠ FiberStatus.daemon
+  ∀ f ∈ m.fibers, statusOf m f ≠ FiberStatus.daemon
 
 /-- No exited fiber is parked. `RunFiber.publish` writes the exit and clears the guard in one
 step (`Machine/Fibers.lean:1696-1704`), so every machine a run reaches satisfies it; a machine
