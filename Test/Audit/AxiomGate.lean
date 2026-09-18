@@ -92,6 +92,9 @@ private def auditImplementationModules : List Name :=
   -- The proof census (`#auto_census`): a command elaborator that re-proves a module's
   -- theorems in a rolled-back environment and reports; meta code, no theorem in the module.
   , `Effect4.Laws.Auto.Census
+  -- The traversal census (`#traversal_census`): a command elaborator that classifies every
+  -- definition reading a free object (fold / generated / structural / …); meta code, no theorem.
+  , `Effect4.Laws.Auto.Traversals
   ]
 
 /--
