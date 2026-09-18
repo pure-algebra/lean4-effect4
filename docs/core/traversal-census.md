@@ -169,3 +169,61 @@ lake build Test.Audit.TraversalCensus 2>&1 | grep -v '^trace'
 `#traversal_census T` scans every imported `Effect4.*` module; `#traversal_census T under
 Effect4.Program` narrows it. Rows are `class ⟨tab⟩ module:line ⟨tab⟩ name [instance] ⟨tab⟩
 (family member) ⟨tab⟩ detail`, sorted by class, module, line.
+
+## 7. The converter, landed (`fb7a5784`)
+
+`fold_of f` is `src/Effect4/Program/FoldOf.lean` (a command elaborator, in the axiom gate's meta
+list; no source is pretty-printed — the declarations are built as terms and the kernel checks
+them). For a structural `f` it adds `f.alg`, `f.hom` and `g.eq_cata` for every member `g` of
+`f`'s mutual block. The arms come from `f`'s unfold equation with the matcher reduced at each
+constructor; the hom fields are `rfl` (structural recursion reduces on a constructor); the
+connector is the generated uniqueness theorem. When an arm uses a child's value as well as its
+result, the carrier pairs the value in (a paramorphism as a catamorphism) and the connector
+reads `g e = (cata alg e).2`. Family members the block does not traverse carry `Unit`.
+
+| stub file | converted | connector axioms |
+| --- | --- | --- |
+| `Program/Folds/Straight.lean` | `Straight` (every constructor a named field — row 35 settled) | `[propext]` |
+| `Laws/Program/Folds/Looped.lean` | `Looped` | `[propext]` |
+| `Program/Folds/Projections.lean` | `Stmts.toList`, `Effs.toList`, `LayerTerms.toList` (paramorphisms), `LayerTerms.length` | `[propext]` |
+| `Program/Folds/Ty.lean` | `renderRaw`, `members` (para), `key`, `isNever`, `isMember`, `normalize`, `isTagTy`, `rawSupportedErrTy`, `NativeAtom.projectProduct`, `Bridge.schema`, `Codec.layout`, `Codec.isSupported` — 12 of `Ty`'s 17 | `[propext]` |
+| `Program/Folds/Provision.lean` | `docsLayer` / `docsLayers` | `[propext]` |
+
+Twenty-one hand traversals now have a fold and a kernel-checked connector, from six stub files
+that change nothing in the modules they read. What `fold_of` refuses today, honestly:
+
+- **the accumulator shape** (an argument before the family value that a recursive call
+  changes, or any argument after it): `effTy`/`explain` (the environment), `Provision.build`
+  (its environment), `findInt` (the path), `Val.hasTy`, `Codec.encodeRaw`/`decodeRaw`,
+  `instReprTy.repr` (the second value). The carrier becomes a function type and the arm
+  becomes a lambda; the same equations then hold by `rfl`. Next iteration of the converter.
+- **`compileEff`**: exempt by ruling (row 30); `Sched`'s helpers follow it.
+- **the `denote` family**: the accumulator shape too (`denoteWith`), plus `denote` itself
+  returns into the meaning's carrier — the first customer after the accumulator shape lands.
+
+The step after the connectors exist is the callers: each `f`'s callers move to
+`cata alg`, the proofs that unfold `f` rewrite by `f.eq_cata`, and `f` is deleted. That is
+where the count in §2 goes down.
+
+## 8. Scout G — the tooling that exists (`docs/research/2026-09-17-lean-tooling-scout-G.md`)
+
+Read against the converter: **no recursion-schemes or generic-programming library exists** for
+Lean 4 (Mathlib's `DeriveTraversable` refuses indices, mutual families and recursive fields;
+QpfTypes is a v4.25 proof of concept) — `fold_of` is not duplicating anything. What G found
+that changes the next steps, all at zero install:
+
+1. **Batteries' linter framework** (`@[env_linter]`, `@[nolint]`, `runLinter` with
+   `nolints.json`, parallel `lintCore`, `file:line:col` output) — already vendored: the census's
+   `structural`/`wf` classification becomes a linter and the exemption list becomes data,
+   instead of a gate written by hand.
+2. **`leanchecker`** ships in the toolchain since v4.28: an independent kernel replay of every
+   module's declarations — the right trust rung for `eq_cata` connectors that the elaborator
+   built without source (`make check-kernel`).
+3. **Core `fun_induction`** proves `f = cata alg` for the accumulator shape when `rfl` will
+   not (`fun_induction f <;> simp [cata, alg, *]`): the proof engine for the next iteration.
+4. **import-graph at v4.33.0** (`#min_imports`, `#find_home`, `unused_transitive_imports`) turns
+   the import-closure rules (core never reaches Laws; the LCNF cut) into checks.
+5. **The core deriving toolkit** (`registerDerivingHandler`, `mkHeader`, `mkInstanceCmds`) for
+   the generator's emitters.
+
+Dead or blocked at 4.33: lean-egg, LeanInk, QpfTypes, loogle, CanonicalLean, Paperproof, alloy.
