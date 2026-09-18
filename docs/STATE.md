@@ -17,8 +17,8 @@ reads back.
 - Branch `refactor/phase1-phase3`. `make check` green (build, roots, generated drift,
   catch-all arms, native, the TypeScript reader, the corpus pin); axioms `[propext, Quot.sound]`
   everywhere but the four meta modules the axiom gate names. `check-host` green after the
-  corpus re-cut. CI has not run since `78684a8` (a workflow-file error; `docs/core/ontology.md`
-  §2 row 37).
+  corpus re-cut. CI: the workflow-file error that stopped every run since `78684a8` is repaired
+  (`3a394912`, row 37), unverified until the owner pushes.
 - The surface: `Api.Author` (`Author.build : Module → Except BuildRefusal Built`), `Effect4.Run`
   (`Run.open` cannot refuse; every convenience is a `List Command`; `journal_replays`,
   `drive_eq_play`), `Api.Supervision` (daemons as data), `Api.Inspection`. The alphabet is
@@ -31,11 +31,12 @@ reads back.
   (`Program/Typing/Agreement.lean`), its 370-line induction deleted.
 - Measured (`#traversal_census`, `docs/core/traversal-census.md`): 93 hand traversals of the
   five free objects (`Eff` 40, `Ty` 17, `Term` 14, `Representation` 5, `Val` 17). The converter
-  `fold_of` (`Program/FoldOf.lean`, five shapes) has given 78 of them a fold and a kernel-checked
+  `fold_of` (`Program/FoldOf.lean`, five shapes) has given 80 of them a fold and a kernel-checked
   connector beside the hand definition, at `[propext, Quot.sound]`; typing with located refusal
   is one `Except`-valued fold (`Program/Checker.lean`: a statement has a type; `effTy` its
-  success, `explain` its refusal, census §7.5); the rest are named by shape in §7.4. That
-  distance is the current work.
+  success, `explain` its refusal, census §7.5) and the term typer is the fold `argTy` (§7.6);
+  the thirteen without are the ruled exemptions, `valCode`/`ofSchema`, and a derived instance
+  (§7.4). That distance is the current work.
 
 ## The documents (read these; the rest is history)
 
@@ -53,8 +54,8 @@ reads back.
 
 ## Next, in order
 
-1. **The converter's last shapes** (`docs/core/traversal-census.md` §7.4): the positional-fold
-   shape for `valCode`/`ofSchema`, cases on the child for `termTy`; then the callers move to
+1. **The converter's last shape** (`docs/core/traversal-census.md` §7.4): the grandchild under a
+   container for `valCode`/`ofSchema` (two rows); then the callers move to
    `cata alg` (the checker's first: the projection law has moved; `typeOf`, `explain` and
    `blame` over `Checker.check.alg` next, after which `Typing.lean`'s block and `Blame.lean`'s
    block are deleted) and the hand definitions go at a good place. `compileEff` stays exempt.
