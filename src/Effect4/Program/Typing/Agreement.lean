@@ -1,5 +1,7 @@
 import Effect4.Program.Checker
 import Effect4.Program.Folds.Checker
+import Effect4.Program.Typing.Terms
+import Effect4.Program.Folds.TermTy
 
 /-!
 # Program.Typing.Agreement — the fold checker is the hand checker and the hand blame
@@ -780,6 +782,46 @@ theorem _root_.Effect4.Program.explainAction.eq_cata (sig : Signature Op) (env :
     (a : ActionTerm Op) :
     Program.explainAction sig env p a = refusal (cata_action (check.alg sig) a env p) :=
   (checkAction_eq sig env p a).2.symm.trans (congrArg refusal (checkAction.eq_cata sig env p a))
+
+end Checker
+
+/-! ## The term typer -/
+
+namespace Checker
+
+mutual
+theorem argTy_eq (sig : Signature Op) (env : TyEnv) (const : Bool) :
+    (t : Term) → Checker.argTy sig env const t = Program.argTy sig env const t
+  | .var _ => rfl
+  | .lit _ => rfl
+  | .app atom args => by
+    simp only [Checker.argTy, Program.argTy, Program.termTy,
+      argsTy_eq sig env (sig.constAtom atom) args]
+
+theorem argsTy_eq (sig : Signature Op) (env : TyEnv) (const : Bool) :
+    (ts : Terms) → Checker.argsTy sig env const ts = Program.termsTy sig env const ts
+  | .nil => rfl
+  | .cons head tail => by
+    rw [Program.termsTy_cons, Checker.argsTy.eq_2, argTy_eq sig env const head,
+      argsTy_eq sig env const tail]
+    rfl
+end
+
+/-- `termTy` is the fold at `false`: outside a const-generic atom the literal rule is `Lit.ty`. -/
+theorem termTy_eq (sig : Signature Op) (env : TyEnv) :
+    (t : Term) → Checker.argTy sig env false t = Program.termTy sig env t
+  | .var _ => rfl
+  | .lit _ => by simp only [Checker.argTy, Program.termTy, litArgTy_false]
+  | .app atom args => by
+    simp only [Checker.argTy, Program.termTy, argsTy_eq sig env (sig.constAtom atom) args]
+
+theorem _root_.Effect4.Program.termTy.eq_cata (sig : Signature Op) (env : TyEnv) (t : Term) :
+    Program.termTy sig env t = cata_term (argTy.alg sig env) t false :=
+  (termTy_eq sig env t).symm.trans (argTy.eq_cata sig env false t)
+
+theorem _root_.Effect4.Program.termsTy.eq_cata (sig : Signature Op) (env : TyEnv) (const : Bool)
+    (ts : Terms) : Program.termsTy sig env const ts = cata_terms (argTy.alg sig env) ts const :=
+  (argsTy_eq sig env const ts).symm.trans (argsTy.eq_cata sig env const ts)
 
 end Checker
 

@@ -241,7 +241,10 @@ syntax (name := traversalCensus) "#traversal_census " ident (" under " ident)? :
       | _ => (if converted then s!"converted: {n ++ `alg} with {n ++ `eq_cata}" else "") ++
           (if hands.isEmpty then "" else s!" hands to {hands.toList}")
     let line := (← liftCoreM (declaredAt n)).getD 0
-    let inst ← liftCoreM (isInstance n)
+    -- an instance, or a definition nested under one (a derived instance's implementation,
+    -- `instReprTy.repr`): generated from the signature by a deriving handler, or a hand
+    -- instance — marked, and counted apart from the hand traversals
+    let inst ← liftCoreM (do pure ((← isInstance n) || (← isInstance n.getPrefix)))
     rows := rows.push ⟨n, m, line, d, kind, detail, inst⟩
   let sorted := rows.qsort fun a b =>
     a.kind.label < b.kind.label || (a.kind.label == b.kind.label &&
@@ -249,10 +252,12 @@ syntax (name := traversalCensus) "#traversal_census " ident (" under " ident)? :
         (a.mod == b.mod && a.line < b.line)))
   let count (k : TraversalKind) := sorted.filter (·.kind == k) |>.size
   let converted := sorted.filter (fun r => r.kind == .structural && env.contains (r.name ++ `eq_cata)) |>.size
+  let instImpl := sorted.filter (fun r => r.kind == .structural && r.isInstance) |>.size
   let mut report := m!"#traversal_census {root} (family {family.toList}) under {scope}: \
     {sorted.size} definitions take a family value — \
     fold {count .fold}, generated {count .generated}, structural {count .structural} \
-    (of which {converted} with a fold beside them), wf {count .wf}, \
+    (of which {converted} with a fold beside them, {instImpl} instance implementations), \
+    wf {count .wf}, \
     delegates {count .delegates}, opaque {count .opaque}; \
     declared folds: {folds.toList.map (·.1)}"
   for r in sorted do
