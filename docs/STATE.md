@@ -58,10 +58,10 @@ reads back.
 
 ## Next, in order
 
-1. **The callers phase, continued** (`docs/core/traversal-census.md` §7.8 for the checker's,
-   §7.9 for the term typer's, both landed; `Straight`/`Looped` name every constructor, §7.10,
-   row 35 done; `decisions.md` row 40): the value and type sorts' hand definitions next, once
-   their callers move; `valCode`/`ofSchema` (two rows) stay named. `compileEff` stays exempt.
+1. **The fold work stops here** (owner, 2026-09-18): the checker, the term typer and the
+   fragments landed (census §7.5–§7.10); the thirteen exemptions — the compiler's five, the
+   reference evaluator's five, `valCode`, `ofSchema`, the derived instance — stay as they are and
+   are tracked in census §7.4. No census gate, no fusion, no conversion for uniformity's sake.
 2. **Row 39** (ruled): `EffectfulField` first, then `Check`/`Accepts`/`Image`/`schemaOf`, the
    `Annotations` trim, the `render` move. Then the simple rows still open: 8 (in the move), 23 as
    a delete, 24, 17, 16.
@@ -75,10 +75,11 @@ Scout G (third-party Lean tooling for this work) is out: `docs/research/2026-09-
 
 ## Owner decisions open
 
-Row 39 (the Schema wipe) is ruled (2026-09-18). Open, in the order `decisions.md`'s last section
-gives: row 41 (the coherence milestone's criteria), then group D (26–29, 32, 30's `compileEff`),
-then group B (14, 15) and 2, 7, 10, 11; then 1 with 3, and 19–22. Row 5 has the restatement
-`ontology.md` §2 gives.
+Row 39 (the Schema wipe) is ruled (2026-09-18); rows 34 and 40 are ruled out (no gate, no
+further conversion). Open, in the order `decisions.md`'s last section gives: row 41 restated as
+the concurrent alphabet's meaning statement (the list of API-backing obligations awaits the
+owner's confirmation), then group D (26–29, 32, 30's `compileEff`), then group B (14, 15) and 2,
+7, 10, 11; then 1 with 3, and 19–22. Row 5 has the restatement `ontology.md` §2 gives.
 
 ## What row 39 does (for the owner, 2026-09-18)
 
