@@ -216,6 +216,15 @@ instantiates it. Owed from this section: the `generated/*.tsv` files and the `ma
 gen-typed-state` group (the emit is one explicit build today), `#read_census` on matches
 (projections only), and the obligation ledger `D2`.
 
+## 3b. Re-planned after the metaprogramming review (2026-09-18, later)
+
+`docs/research/2026-09-18-metaprogramming-review.md` R1–R8 supersedes §2D's file emission and
+§2D2's TSV ledger: the skeleton is elaborated in place by quotations (`elabCommand`), the
+obligations are `theorem_wanted` declarations matched to witnesses by `isDefEq`, the write
+census is attributed to matcher arms, and the frame lemmas are generated and proved by a
+dedicated `aesop` rule set. §3a's owed items (the TSV files, the `make gen` group, the read
+census on matches) are replaced by that plan.
+
 ## 4. How it lands the milestone, in order
 
 | step | artefact | gate |
