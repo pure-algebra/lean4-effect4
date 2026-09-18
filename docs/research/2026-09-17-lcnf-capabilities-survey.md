@@ -112,3 +112,30 @@ TypeScript image *means the same*.
   is statable because both evaluators are Lean functions.
 - The case-site policy already gates *every* default arm in the compiled code, which is why a
   seat's `| _ =>` was refused today: the LCNF route's gates are already in `make check`.
+
+## 7. Owner's steer, later on 2026-09-17: LLVM as the model for the high tier, LLVM as the low tier
+
+Owner: "this is where we can learn from https://llvm.org/docs/CodeGenerator.html — or utilize it
+ourselves." Read against that document:
+
+- **Learn (OCaml, TypeScript).** Targets described as *data* with a two-class mandatory core
+  (`TargetMachine` + `DataLayout`; the rest TableGen `.td`) → our `Profile` and `Lowering`
+  descriptions as Lean tables with decided laws, in the template table's style, replacing the
+  builtin table wired into the OCaml printer. *Legalization* (`LegalizeTypes`/`LegalizeOps`:
+  promote, expand, custom) is the name for what a profile does — `Nat` promoted to `bigint` or
+  expanded to a clamped `int63`, tail calls expanded to loops, `cases` to `switch`, strings
+  custom — and each rule is a semantics-preserving rewrite on the IR with its obligation, which
+  is what `tools/Conform/Lcnf/Rules.lean` already holds. `MCInst` as "the common currency" →
+  promote `Conform.Lcnf.SemanticsTarget.Expr` from the rung-3 reader's image to the emission
+  language; each backend a printer with a reader. LLVM's own note that a non-traditional target
+  (its C backend) implements only the two mandatory classes is the class OCaml and TypeScript
+  belong to: profile + printer, no instruction selection, scheduling or register allocation.
+- **Use (WebAssembly, native).** Do not write a low-tier backend: Lean's pipeline already goes
+  LCNF → reference-counted IR (Ullrich–de Moura 2019; Perceus, Reinking et al. 2021) → C →
+  clang, and clang is LLVM with `wasm32-wasi` as a target. The trust boundary is the one the
+  Lean binary already has; LLVM IR has a formal semantics (Vellvm, Zhao et al. 2012) and
+  translation validation (Alive2). Everything above the common currency is ours and verified;
+  below it, GC targets get our printers, memory-owning targets get LLVM.
+- **Shape:** `Lowering/Profile`, `Lowering/IR`, `Lowering/Legalize`, per-target printers with
+  readers; the WASM/native path leaves through Lean's RC IR into LLVM. Held until scout E's
+  Part 3 (the TypeScript printer is the profile's first customer).
