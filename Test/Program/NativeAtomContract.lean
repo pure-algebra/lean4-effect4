@@ -20,7 +20,12 @@ open Effect4.Program
 -- the tag test (DI-39, part 4 commit 3): a string or literal tag, any tested value; total on
 -- values — true exactly on a pair whose first component is the tag
 #guard NativeAtom.arity .tagIs = some 2
-#guard NativeAtom.mono .tagIs = none
+-- The tag test *is* monomorphic now that the language has a top (decisions row 46): its second
+-- parameter is `unknown`, which every type is below, so the arm that used to ignore its second
+-- argument is the signature the prelude's own `(tag: string, e: unknown)` spells. `typeOf`
+-- answers exactly what it answered before; what changed is that the metadata says so, and
+-- `typeOf_mono` now covers this row (tooling plan 2.5).
+#guard NativeAtom.mono .tagIs = some ([.string, .unknown], .bool)
 #guard !NativeAtom.constGeneric .tagIs
 #guard nativeAtomTy "tagIs" [.string, .nat] = some .bool
 #guard nativeAtomTy "tagIs" [.lit "A", .union (.prod (.lit "A") .string) .string] = some .bool

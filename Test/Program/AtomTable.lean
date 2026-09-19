@@ -3,22 +3,24 @@ import Effect4.Program.NativeAtom
 /-!
 # The atom table's structural well-formedness, and the control that it has teeth
 
-The tooling plan 2.1. `NativeAtom.atom_table_wf` (`src/Effect4/Program/NativeAtom.lean`) decides
-four structural obligations over the whole inventory at once, in the kernel. A decided fact is
-only worth what its predicate refuses, so this battery carries a fixture alphabet whose columns
-are wrong in four separate ways and shows each one refused on its own.
+The tooling plan 2.1 and 2.5. `NativeAtom.atom_table_wf` (`src/Effect4/Program/NativeAtom.lean`)
+decides four structural obligations over the whole inventory at once, in the kernel. A decided
+fact is only worth what its predicate refuses, so this battery builds table rows by hand that
+are wrong in five separate ways and shows each one refused on its own.
 
-The predicate's clauses are repeated here over the fixture's own columns rather than applied to
-it: `atomWellFormed` reads `NativeAtom`'s projections, and a fixture cannot be a `NativeAtom`
-without being an atom. What the control therefore establishes is that these four clauses, as
-written, refuse each defect — not that the two texts are the same text. The inventory `all`
-itself is guarded differently and better, by `all_complete`: it is generated from the
-constructor list, so a missing atom is not expressible.
+The predicate is not copied here. `NativeAtom.specWellFormed` takes an inventory of names, an
+`AtomRow` and a `Spec`, and `atomWellFormed` is that predicate at the real table's columns — so
+the fixture rows below are judged by exactly the code the core ships, not by a second text that
+could drift from it.
+
+The inventory `all` itself is guarded differently and better, by `all_complete`: it is
+generated from the constructor list, so a missing atom is not expressible.
 -/
 
 namespace Test.Program.AtomTable
 
 open Effect4.Program
+open Effect4.Program.NativeAtom (AtomRow Spec specWellFormed)
 
 /-! ## The fact -/
 
@@ -27,102 +29,78 @@ open Effect4.Program
 /-- The decided fact, named here so the battery fails with it. -/
 example : NativeAtom.all.all NativeAtom.atomWellFormed = true := NativeAtom.atom_table_wf
 
-/-! ## The red control
+/-! ## Rows built by hand, judged by the shipped predicate
 
-Six fixture rows. `good1` and `good2` satisfy every clause; `badArity` declares arity 1 against
-a two-parameter monomorphic signature; `badAnswer`'s `typeOf` answers a type its own `mono`
-column does not; `badConst` is const-generic *and* monomorphic (DI-55 says a const-generic
-atom's parameters are polymorphic); `dupName` repeats `good1`'s name. -/
+`prelude` and `cite` play no part in well-formedness, so they are empty here; every other
+column is the one the clause reads. -/
 
-inductive Fixture
-  | good1 | good2 | badArity | badAnswer | badConst | dupName
-  deriving DecidableEq
+/-- A row and a spec under one name, the pair `specWellFormed` judges. -/
+private def mk (name : String) (arity : Option Nat) (constGeneric : Bool)
+    (scheme : NativeAtom.Scheme) : AtomRow × Spec :=
+  ({ name, arity, constGeneric, prelude := "" }, { scheme, cite := "" })
 
-namespace Fixture
+/-- A fixed signature, arity agreeing. -/
+private def good1 : AtomRow × Spec := mk "good1" (some 1) false (.mono [.nat] .nat)
+/-- Two alternatives of one arity. -/
+private def good2 : AtomRow × Spec :=
+  mk "good2" (some 2) false (.alts [([.nat, .nat], .bool), ([.string, .string], .bool)])
+/-- A variadic row declares no arity. -/
+private def goodVariadic : AtomRow × Spec :=
+  mk "goodVariadic" none false (.variadic .string (.list .string))
+/-- A template whose answer names only parameters the arguments bind. -/
+private def goodPoly : AtomRow × Spec :=
+  mk "goodPoly" (some 2) true (.poly [.var 0, .var 1] (.prod (.var 0) (.var 1)))
+/-- A named rule declares its own arity. -/
+private def goodCustom : AtomRow × Spec :=
+  mk "goodCustom" (some 1) false (.custom (.project false))
 
-def all : List Fixture := [.good1, .good2, .badArity, .badAnswer, .badConst, .dupName]
+/-- Defect: arity 1 against a two-parameter signature. -/
+private def badArity : AtomRow × Spec := mk "badArity" (some 1) false (.mono [.nat, .nat] .nat)
+/-- Defect: a template whose answer names a parameter nothing binds, so instantiating its own
+parameters does not give its own answer back (it gives `never`). -/
+private def badAnswer : AtomRow × Spec := mk "badAnswer" (some 1) false (.poly [.var 0] (.var 1))
+/-- Defect: const-generic (DI-55) *and* monomorphic. -/
+private def badConst : AtomRow × Spec := mk "badConst" (some 1) true (.mono [.nat] .nat)
+/-- Defect: two alternatives of different arity under one declared arity. -/
+private def badAlts : AtomRow × Spec :=
+  mk "badAlts" (some 2) false (.alts [([.nat, .nat], .bool), ([.nat], .bool)])
+/-- Defect: the name of `good1`. -/
+private def dupName : AtomRow × Spec := mk "good1" (some 1) false (.mono [.nat] .nat)
 
-def name : Fixture → String
-  | .good1 => "good1"
-  | .good2 => "good2"
-  | .badArity => "badArity"
-  | .badAnswer => "badAnswer"
-  | .badConst => "badConst"
-  -- the defect: two rows of one inventory carry one name
-  | .dupName => "good1"
+private def table : List (AtomRow × Spec) :=
+  [good1, good2, goodVariadic, goodPoly, goodCustom, badArity, badAnswer, badConst, badAlts,
+   dupName]
 
-def arity : Fixture → Option Nat
-  | .good1 => some 1
-  | .good2 => some 2
-  -- the defect: the monomorphic signature below declares two parameters
-  | .badArity => some 1
-  | .badAnswer => some 1
-  | .badConst => some 1
-  | .dupName => some 1
+private def names : List String := table.map (·.1.name)
 
-def mono : Fixture → Option (List Ty × Ty)
-  | .good1 => some ([.nat], .nat)
-  | .good2 => some ([.nat, .nat], .nat)
-  | .badArity => some ([.nat, .nat], .nat)
-  -- the defect: `typeOf` answers `.nat` at `[.nat]`, not `.bool`
-  | .badAnswer => some ([.nat], .bool)
-  -- the defect: const-generic below, with a monomorphic signature here
-  | .badConst => some ([.nat], .nat)
-  | .dupName => some ([.nat], .nat)
+/-- One row judged in an inventory holding only itself: every clause but uniqueness. -/
+private def alone (r : AtomRow × Spec) : Bool := specWellFormed [r.1.name] r.1 r.2
 
-def typeOf : Fixture → List Ty → Option Ty
-  | f, tys =>
-    match f.mono with
-    | some (args, answer) =>
-      if tys.length = args.length ∧ (tys.zip args).all (fun (a, e) => a.sub e) then
-        -- every row but `badAnswer` answers what it declares
-        some (match f with
-              | .badAnswer => .nat
-              | .good1 | .good2 | .badArity | .badConst | .dupName => answer)
-      else none
-    | none => none
+/-! The whole fixture table is refused, so `decide` could not close `table.all wellFormed =
+true` for it — which is the shape `atom_table_wf` asserts for the real inventory. -/
+#guard !table.all (fun r => specWellFormed names r.1 r.2)
 
-def constGeneric : Fixture → Bool
-  | .badConst => true
-  | .good1 | .good2 | .badArity | .badAnswer | .dupName => false
+/-! The five good rows pass on their own. Without this the control could be passing for a
+reason that has nothing to do with the five defects — and between them they exercise every
+constructor of `Scheme`. -/
+#guard alone good1
+#guard alone good2
+#guard alone goodVariadic
+#guard alone goodPoly
+#guard alone goodCustom
 
-/-- The four clauses of `NativeAtom.atomWellFormed`, over the fixture's columns, with the
-inventory of names supplied so a single row can be judged against an inventory of its own. -/
-def wellFormedIn (inventory : List String) (a : Fixture) : Bool :=
-  (inventory.count a.name == 1)
-    && (match a.mono, a.arity with
-        | some (args, _), some n => args.length == n
-        | some _, none => false
-        | none, _ => true)
-    && (match a.mono with
-        | some (args, answer) => a.typeOf args == some answer
-        | none => true)
-    && (!a.constGeneric || a.mono.isNone)
+/-! Each defect is refused on its own. `dupName` is the one whose refusal is the uniqueness
+clause, so it is judged in the full inventory and passes alone. -/
+#guard !alone badArity
+#guard !alone badAnswer
+#guard !alone badConst
+#guard !alone badAlts
+#guard !specWellFormed names dupName.1 dupName.2
+#guard alone dupName
 
-def names : List String := all.map name
-
-/-- One row judged against an inventory holding only itself: every clause but uniqueness. -/
-def alone (a : Fixture) : Bool := wellFormedIn [a.name] a
-
-end Fixture
-
-/-! The whole fixture table is refused, so `decide` could not close `all.all wellFormed = true`
-for it — which is the shape `atom_table_wf` asserts for the real inventory. -/
-#guard !Fixture.all.all (Fixture.wellFormedIn Fixture.names)
-
-/-! The two good rows pass on their own. Without this the control could be passing for a
-reason that has nothing to do with the four defects. -/
-#guard Fixture.alone .good1
-#guard Fixture.alone .good2
-
-/-! Each defect is detected independently, judged in an inventory where it is the only row (so
-`dupName` is the one row whose refusal is the uniqueness clause, and it needs the full
-inventory). -/
-#guard !Fixture.alone .badArity
-#guard !Fixture.alone .badAnswer
-#guard !Fixture.alone .badConst
-#guard !Fixture.wellFormedIn Fixture.names .dupName
-#guard Fixture.alone .dupName
+/-! And the real table's own rows pass the same predicate, row by row, so `atom_table_wf` is
+not carrying a vacuous inventory. -/
+#guard NativeAtom.all.all fun a => specWellFormed NativeAtom.names (NativeAtom.row a) (NativeAtom.spec a)
 
 #print axioms NativeAtom.atom_table_wf
 
