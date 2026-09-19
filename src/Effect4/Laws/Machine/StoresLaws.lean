@@ -1,4 +1,4 @@
-import Effect4.Machine.Stores
+import Effect4.Laws.Machine.RefKernel
 
 /-!
 # Machine.StoresLaws — growth, validity and well-formedness of the stores (slice 1, lane 2)
@@ -360,187 +360,80 @@ theorem mem_of_refPeek_eq_some {heap : RefHeap} {cell : RefKey} {a : Val}
     (h : refPeek heap cell = some a) : a ∈ heap :=
   List.mem_of_getElem? h
 
-/-- The heap never shrinks under one `refStep` (plan §3.2, ENSURES 11): `refMake` appends
-(`Stores.lean:485`), every other arm is `refPoke` (`:454`, `List.set`) or the heap itself. -/
+/-- The heap never shrinks under one `refStep` (plan §3.2, ENSURES 11): `refMake` appends, and
+every other heap row is a kernel row, which writes back one cell or nothing
+(`refStepOf_length`, `Laws/Machine/RefKernel.lean`). -/
 theorem refStep_length (o : SyncOp) (heap : RefHeap) (v : Val) (heap' : RefHeap)
     (h : refStep o heap = some (v, heap')) : heap.length ≤ heap'.length := by
-  cases o with
-  | refMake initial =>
-    simp only [refStep, Option.some.injEq, Prod.mk.injEq] at h
+  rcases refStep_cases h with ⟨initial, rfl⟩ | ⟨_, _, _, hstep⟩
+  · simp only [refStep, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨_, rfl⟩ := h
-    simp
-  | refGet cell =>
-    simp only [refStep] at h
-    obtain ⟨a, _, hf⟩ := Option.map_eq_some_iff.mp h
-    cases hf
-    exact Nat.le_refl _
-  | refSet cell value | refGetAndSet cell value | refSetAndGet cell value
-  | refUpdate cell f | refGetAndUpdate cell f | refUpdateAndGet cell f
-  | refModify cell f | refModifySome cell f =>
-    simp only [refStep] at h
-    obtain ⟨a, _, hf⟩ := Option.map_eq_some_iff.mp h
-    cases hf
-    simp [refPoke]
-  | refUpdateSome cell pf | refGetAndUpdateSome cell pf =>
-    simp only [refStep] at h
-    obtain ⟨a, _, hf⟩ := Option.map_eq_some_iff.mp h
-    cases hf
-    split <;> simp [refPoke]
-  | refUpdateSomeAndGet cell pf =>
-    simp only [refStep] at h
-    obtain ⟨a, _, hf⟩ := Option.bind_eq_some_iff.mp h
-    split at hf
-    · obtain ⟨fresh, _, hff⟩ := Option.map_eq_some_iff.mp hf
-      cases hff
-      simp [refPoke]
-    · cases hf
-      exact Nat.le_refl _
-  | _ => simp [refStep] at h
+    simp only [List.length_append, List.length_singleton]
+    exact Nat.le_succ _
+  · exact Nat.le_of_eq (refStepOf_length hstep).symm
 
-/-- Writing a valid value at a cell keeps every heap value valid in the store with the
-written heap: `List.set` keeps the length, and a member of the written heap is a member of
-the old one or the written value. -/
-theorem refPoke_valid (s : Stores) (cell : RefKey) (y : Val) (hwf : s.WF)
-    (hy : y.validIn s = true) :
-    ∀ x ∈ refPoke s.refs cell y, x.validIn { s with refs := refPoke s.refs cell y } = true := by
-  have hwf := hwf.1
-  intro x hx
-  have hle : s.le { s with refs := refPoke s.refs cell y } :=
-    ⟨by simp [refPoke], Nat.le_refl _, fun _ h => h, Nat.le_refl _, (fun _ h => h), Nat.le_refl _⟩
-  apply Val.validIn_mono hle
-  rcases List.mem_or_eq_of_mem_set hx with hmem | rfl
-  · exact hwf x hmem
-  · exact hy
+/-- Each kernel keeps validity in the store it reads: it answers and writes the value it read,
+the function's images of it (`FnName.*_validIn`), `unit`, the cell's own handle, or the
+operation's written value, and `SyncOp.validIn` covers the last two. One case a heap row. -/
+theorem SyncOp.refKernel_validIn {o : SyncOp} {cell : RefKey} {k : RefKernel} {s : Stores}
+    (hk : o.refKernel = some (cell, k)) (hv : o.validIn s = true) :
+    RefKernel.Keeps (·.validIn s = true) (·.validIn s = true) k := by
+  cases o <;> cases hk <;> intro c r hc hr <;> cases hr
+  case refGet => exact ⟨hc, nofun⟩
+  case refSet =>
+    simp only [SyncOp.validIn, Bool.and_eq_true] at hv
+    exact ⟨hv.1, fun _ h => by cases h; exact hv.2⟩
+  case refGetAndSet =>
+    simp only [SyncOp.validIn, Bool.and_eq_true] at hv
+    exact ⟨hc, fun _ h => by cases h; exact hv.2⟩
+  case refSetAndGet =>
+    simp only [SyncOp.validIn, Bool.and_eq_true] at hv
+    exact ⟨hv.2, fun _ h => by cases h; exact hv.2⟩
+  case refUpdate f =>
+    exact ⟨rfl, fun _ h => by cases h; exact (FnName.total_validIn s f c).trans hc⟩
+  case refGetAndUpdate f =>
+    exact ⟨hc, fun _ h => by cases h; exact (FnName.total_validIn s f c).trans hc⟩
+  case refUpdateAndGet f =>
+    have ht := (FnName.total_validIn s f c).trans hc
+    exact ⟨ht, fun _ h => by cases h; exact ht⟩
+  case refUpdateSome f =>
+    exact ⟨rfl, fun a' h => (FnName.partialUpdate_validIn s f c a' h).trans hc⟩
+  case refGetAndUpdateSome f =>
+    exact ⟨hc, fun a' h => (FnName.partialUpdate_validIn s f c a' h).trans hc⟩
+  case refUpdateSomeAndGet f =>
+    have hw : ∀ a', f.partialUpdate c = some a' → a'.validIn s = true :=
+      fun a' h => (FnName.partialUpdate_validIn s f c a' h).trans hc
+    exact ⟨RefKernel.getD_keeps hw hc, hw⟩
+  case refModify f =>
+    have hm := FnName.modify_validIn s f c
+    exact ⟨hm.1.trans hc, fun _ h => by cases h; exact hm.2.trans hc⟩
+  case refModifySome f =>
+    have hm := FnName.modifySome_validIn s f c
+    exact ⟨hm.1.trans hc, fun _ h => by cases h; exact hm.2.trans hc⟩
 
 /-- The heap after a valid `refStep` on a well-formed heap is well-formed in the store that
-carries it, and the answer is valid there: one arm per row of `refStep`
-(`Stores.lean:484-525`). Heap writes store the argument value, `f.total a`, `f.modify`'s
-second component, a `partialUpdate` answer, or a value already in the heap; answers are the
-fresh cell, a heap value, the argument value, `unit`, or one of those images. -/
+carries it, and the answer is valid there. `refMake` stores its argument, which validity covers,
+and answers the fresh cell; every other row is its kernel, which keeps validity
+(`SyncOp.refKernel_validIn`), so every cell it leaves and its answer are valid in the store it
+read (`refStepOf_keeps`), and the heap only grew. -/
 theorem refStep_valid (o : SyncOp) (s : Stores) (v : Val) (heap' : RefHeap) (hwf : s.WF)
     (hv : o.validIn s = true) (h : refStep o s.refs = some (v, heap')) :
     (∀ x ∈ heap', x.validIn { s with refs := heap' } = true) ∧
       v.validIn { s with refs := heap' } = true := by
   have hle : s.le { s with refs := heap' } :=
     ⟨refStep_length o s.refs v heap' h, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, (fun _ hm => hm), Nat.le_refl _⟩
-  have hwf' := hwf
-  have hwf := hwf.1
-  cases o with
-  | refMake initial =>
-    simp only [refStep, Option.some.injEq, Prod.mk.injEq] at h
+  rcases refStep_cases h with ⟨initial, rfl⟩ | ⟨cell, k, hk, hstep⟩
+  · simp only [refStep, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     refine ⟨fun x hx => Val.validIn_mono hle x ?_, ?_⟩
     · rcases List.mem_append.mp hx with hmem | hone
-      · exact hwf x hmem
-      · rw [List.mem_singleton.mp hone]; exact hv
-    · simp [Val.validIn_cell]
-  | refGet cell =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    exact ⟨fun x hx => Val.validIn_mono hle x (hwf x hx),
-      Val.validIn_mono hle a (hwf a (mem_of_refPeek_eq_some hpeek))⟩
-  | refSet cell value =>
-    simp only [SyncOp.validIn, Bool.and_eq_true, decide_eq_true_eq] at hv
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    refine ⟨refPoke_valid s cell value hwf' hv.2, Val.validIn_mono hle _ ?_⟩
-    simp only [Val.validIn_cell, decide_eq_true_eq]
-    exact hv.1
-  | refGetAndSet cell value =>
-    simp only [SyncOp.validIn, Bool.and_eq_true, decide_eq_true_eq] at hv
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    exact ⟨refPoke_valid s cell value hwf' hv.2,
-      Val.validIn_mono hle a (hwf a (mem_of_refPeek_eq_some hpeek))⟩
-  | refSetAndGet cell value =>
-    simp only [SyncOp.validIn, Bool.and_eq_true, decide_eq_true_eq] at hv
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    exact ⟨refPoke_valid s cell value hwf' hv.2, Val.validIn_mono hle value hv.2⟩
-  | refUpdate cell f =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    have ha : a.validIn s = true := hwf a (mem_of_refPeek_eq_some hpeek)
-    exact ⟨refPoke_valid s cell _ hwf' ((FnName.total_validIn s f a).trans ha), rfl⟩
-  | refGetAndUpdate cell f =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    have ha : a.validIn s = true := hwf a (mem_of_refPeek_eq_some hpeek)
-    exact ⟨refPoke_valid s cell _ hwf' ((FnName.total_validIn s f a).trans ha),
-      Val.validIn_mono hle a ha⟩
-  | refUpdateAndGet cell f =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    have ha : a.validIn s = true := hwf a (mem_of_refPeek_eq_some hpeek)
-    have hfa : (f.total a).validIn s = true := (FnName.total_validIn s f a).trans ha
-    exact ⟨refPoke_valid s cell _ hwf' hfa, Val.validIn_mono hle _ hfa⟩
-  | refUpdateSome cell pf =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    have ha : a.validIn s = true := hwf a (mem_of_refPeek_eq_some hpeek)
-    refine ⟨?_, rfl⟩
-    split
-    · rename_i a' hpf
-      exact refPoke_valid s cell a' hwf' ((FnName.partialUpdate_validIn s pf a a' hpf).trans ha)
-    · exact fun x hx => hwf x hx
-  | refGetAndUpdateSome cell pf =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    have ha : a.validIn s = true := hwf a (mem_of_refPeek_eq_some hpeek)
-    refine ⟨?_, Val.validIn_mono hle a ha⟩
-    split
-    · rename_i a' hpf
-      exact refPoke_valid s cell a' hwf' ((FnName.partialUpdate_validIn s pf a a' hpf).trans ha)
-    · exact fun x hx => hwf x hx
-  | refUpdateSomeAndGet cell pf =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.bind_eq_some_iff.mp h
-    have ha : a.validIn s = true := hwf a (mem_of_refPeek_eq_some hpeek)
-    split at hf
-    · rename_i a' hpf
-      rw [refPeek_poke_self s.refs cell a' a hpeek] at hf
-      simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq] at hf
-      obtain ⟨rfl, rfl⟩ := hf
-      have ha' : a'.validIn s = true := (FnName.partialUpdate_validIn s pf a a' hpf).trans ha
-      exact ⟨refPoke_valid s cell a' hwf' ha', Val.validIn_mono hle a' ha'⟩
-    · simp only [Option.some.injEq, Prod.mk.injEq] at hf
-      obtain ⟨rfl, rfl⟩ := hf
-      exact ⟨fun x hx => Val.validIn_mono hle x (hwf x hx), Val.validIn_mono hle a ha⟩
-  | refModify cell f =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    have ha : a.validIn s = true := hwf a (mem_of_refPeek_eq_some hpeek)
-    exact ⟨refPoke_valid s cell _ hwf' ((FnName.modify_validIn s f a).2.trans ha),
-      Val.validIn_mono hle _ ((FnName.modify_validIn s f a).1.trans ha)⟩
-  | refModifySome cell pf =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    have ha : a.validIn s = true := hwf a (mem_of_refPeek_eq_some hpeek)
-    exact ⟨refPoke_valid s cell _ hwf' ((FnName.modifySome_validIn s pf a).2.trans ha),
-      Val.validIn_mono hle _ ((FnName.modifySome_validIn s pf a).1.trans ha)⟩
-  | _ => simp [refStep] at h
+      · exact hwf.1 x hmem
+      · rw [List.mem_singleton.mp hone]
+        exact hv
+    · simp only [Val.validIn_cell, List.length_append, List.length_singleton, decide_eq_true_eq]
+      exact Nat.lt_succ_self _
+  · obtain ⟨hans, hcells⟩ := refStepOf_keeps hwf.1 (SyncOp.refKernel_validIn hk hv) hstep
+    exact ⟨fun x hx => Val.validIn_mono hle x (hcells x hx), Val.validIn_mono hle v hans⟩
 
 /-! ## The Deferred and Scope stores -/
 
