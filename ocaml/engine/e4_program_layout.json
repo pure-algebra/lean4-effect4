@@ -31,12 +31,6 @@
   ],
   "unavailable": [
     {
-      "family": "Effect4.Program.Ty",
-      "reason": "source-append-unavailable-in-frozen-engine",
-      "engine": 16,
-      "source": 20
-    },
-    {
       "family": "Effect4.Program.EffTy",
       "reason": "absent-frozen-engine-family"
     }

@@ -18,9 +18,19 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 
 
+# Every producer runs under one wall-clock budget, so a hung generator fails a lane instead
+# of hanging it. The budget is not a performance statement and it is not a target: it has to
+# cover the `lake build` each family runs first -- a cold build of the core is minutes -- and
+# the slowest cut on a machine that is busy. Measured on a quiet machine with the core
+# already built, `--only lcnf`'s four cuts are 37s end to end (the engine face 18s of it);
+# the same group was measured at 14m38s under four concurrent Lean compilers, past the old
+# 600s, which is why `--only lcnf` could not complete at all. One number for every command.
+TIMEOUT = os.environ.get('EFFECT4_GEN_TIMEOUT', '5400')
+
+
 def run(args, capture=False):
     print('+ ' + shlex.join(args), flush=True)
-    return subprocess.run(['timeout', '600', *args], check=True,
+    return subprocess.run(['timeout', TIMEOUT, *args], check=True,
                           stdout=subprocess.PIPE if capture else None, text=True).stdout
 
 

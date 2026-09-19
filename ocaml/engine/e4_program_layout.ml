@@ -16,6 +16,10 @@ module type PROGRAM_TYPES = sig
   | Ty_fiberOf of ty * ty
   | Ty_union of ty * ty
   | Ty_lit of string
+  | Ty_refOf of ty
+  | Ty_deferredOf of ty * ty
+  | Ty_var of int
+  | Ty_unknown
   type lit = | Lit_unit
   | Lit_nat of int
   | Lit_bool of bool
@@ -169,7 +173,7 @@ let source_ctor_names = [
 ]
 
 let engine_ctor_names = [
-  ("ty", ["never"; "unit"; "nat"; "int"; "string"; "bool"; "handle"; "option"; "list"; "prod"; "except"; "exitOf"; "causeOf"; "fiberOf"; "union"; "lit"]);
+  ("ty", ["never"; "unit"; "nat"; "int"; "string"; "bool"; "handle"; "option"; "list"; "prod"; "except"; "exitOf"; "causeOf"; "fiberOf"; "union"; "lit"; "refOf"; "deferredOf"; "var"; "unknown"]);
   ("lit", ["unit"; "nat"; "bool"; "str"]);
   ("term", ["var"; "lit"; "app"]);
   ("terms", ["nil"; "cons"]);

@@ -60,8 +60,10 @@ let show_outcome = function
   | A.Outcome_frontier -> "frontier"
   | A.Outcome_stuck _ -> "stuck"
 
-(* the root fiber's exit, the way `Api.Run.exit` reads it: fiber 0 of the machine *)
-let root_exit (r : A.run) =
+(* the root fiber's exit, the way `Api.Inspection.exit` reads it: fiber 0 of the machine.
+   `Effect4.Api.Run` was renamed `Effect4.Api.Inspection` in the tree; the record is the same
+   three fields and `api_run` still answers it. *)
+let root_exit (r : A.inspection) =
   match List.find_opt (fun (f : (_, _, _, _, _, _, _, _, _, _) A.run_fiber) -> f.A.id = 0)
           r.A.machine.A.fibers with
   | None -> None
