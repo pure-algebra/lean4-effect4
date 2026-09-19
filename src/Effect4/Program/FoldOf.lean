@@ -177,9 +177,34 @@ def recAppOf (e : Expr) : MetaM Expr := do
     | _ => return e
   return e
 
+/-- Does a stuck matcher application split on a CONSTRUCTOR at one of its discriminants?
+
+This is the whole test for whether unfolding it can make progress. A match on more than the
+family value (`| .unit, .unit => …`, the two-discriminant arms of `Codec.encodeRaw`) has the
+node as one discriminant and something opaque as another: `reduceMatcher?` is stuck on the
+opaque one, and unfolding lets the node's own split reduce. A match whose discriminants are
+ALL opaque is a different animal — it is `match v with`, the accumulator's value, written by
+the source. Unfolding that one gains nothing and costs the arm its matcher, which is what
+`split` needs to see a case analysis. So it stays. -/
+def matchOnCtorDiscr (n : Name) (e : Expr) : MetaM Bool := do
+  let some info ← getMatcherInfo? n | return false
+  let args := e.getAppArgs
+  let first := info.getFirstDiscrPos
+  if args.size < first + info.numDiscrs then return false
+  let env ← getEnv
+  for i in [first : first + info.numDiscrs] do
+    if let .const c _ := args[i]!.getAppFn then
+      if env.find? c matches some (.ctorInfo _) then return true
+  return false
+
 /-- Reduce every case split — a matcher, a `casesOn`, or one of the match compiler's own
 helpers — whose major premise is a constructor, at any depth, one step at a time; a split on a
-variable stays as written (readable, compilable), and what is inside it is reduced. -/
+variable stays as written (readable, compilable), and what is inside it is reduced.
+
+A split on a variable stays *as the source wrote it*: the matcher, not the `casesOn` or the
+`_sparseCasesOn` underneath it. That is the difference between an algebra whose arms a proof
+can `split` and one whose arms it can only `cases` a value through — the arm of an emitted
+algebra is read back by exactly the tactics that read the hand definition's arm. -/
 def reduceCases (e : Expr) : MetaM Expr :=
   Meta.transform e (pre := fun e₀ => do
     unless e₀.isApp do return .continue
@@ -191,7 +216,9 @@ def reduceCases (e : Expr) : MetaM Expr :=
       match ← reduceMatcher? e₀ with
       | .reduced e' => return .visit e'
       -- a match on more than the family value: unfold it, so the splits underneath can reduce
-      | .stuck _ => return .visit ((← delta? e₀).getD e₀).headBeta
+      | .stuck _ =>
+        if ← matchOnCtorDiscr n e₀ then return .visit ((← delta? e₀).getD e₀).headBeta
+        else return .continue
       | _ => return .continue
     if isAuxRecursor env n || n.components.any (fun c => "_sparseCasesOn".isPrefixOf c.toString) then
       let r ← recAppOf e₀
