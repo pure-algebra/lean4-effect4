@@ -64,7 +64,7 @@ reads back.
    review `docs/research/2026-09-19-wave1-review-and-next-slice.md` (C1–C9). Wave 2: seat D
    `f6db74cf` (one compiler: tsgo drives every typing lane; the assignability differential, 600 pairs
    594 agree 6 cut 0 defect; rows and atoms against their exports; C6 answered by the target),
-   seats E and V `dd015cbd` (the engine at twenty constructors through a one-pass chain and a mirror
+   seats E and V `5a44d83b` (the engine at twenty constructors through a one-pass chain and a mirror
    that refuses a lag; `fold_of` keeps the source's matcher, so `Val.hasTy_admitsSub` closes and
    `hasTy_sub` is the fold's corollary in the Laws with the core free of theorems about the order;
    `argsBelow_trans/antisymm`, the six `sub_*_of_ne` deleted), with the two seats' last slices inside the same
