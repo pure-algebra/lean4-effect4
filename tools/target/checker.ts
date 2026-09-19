@@ -205,7 +205,7 @@ function report(repo: string, profile: string, queries: readonly Query[]): Repor
         }
       }
       const signatures: Observation["signatures"] = []
-      if (q.kind === "function") {
+      if (q.kind === "function" || q.kind === "callable") {
         const subject = aliases.get("__Subject")
         const type = subject && checker.getTypeAtLocation(subject)
         const found = type ? checker.getSignaturesOfType(type, SignatureKind.Call) : []

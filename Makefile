@@ -185,7 +185,7 @@ GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) \
   harness/truth/corpus.json harness/truth/generated harness/truth/result.json harness/truth/result.md \
   harness/truth/tapes harness/truth/session/protocol.gen.ts harness/truth/session/tape.schema.json \
   $(SCHEMA_TS_DIR)/Person.generated.ts $(SCHEMA_TS_DIR)/AllRepresentations.generated.ts $(SCHEMA_TS_DIR)/TwoRoots.generated.ts \
-  generated/effect-runtime-census.tsv generated/corpus-index.tsv generated/row-types.tsv generated/assignability.tsv
+  generated/effect-runtime-census.tsv generated/corpus-index.tsv generated/row-types.tsv generated/assignability.tsv generated/row-citations.tsv
 
 # ---------------------------------------------------------------------------- corpus
 #
@@ -367,12 +367,17 @@ $(CHK)/target: $(CORE) $(LAWS) $(TRUTH_GENERATED) harness/truth/prelude.ts Test/
 	$(BUN) tools/target/cli.ts --repo .
 	@mkdir -p .lake/target && $(LAKE) env lean -M4096 --run tools/Tools/TyVectors.lean .lake/target/ty-vectors.tsv
 	$(BUN) tools/target/assignability.ts --repo . --vectors .lake/target/ty-vectors.tsv
+	$(BUN) tools/target/rows.ts --repo .
 	@mkdir -p $(CHK) && touch $@
 
 .PHONY: gen-assignability
 gen-assignability: | build ## promote a fresh assignability differential to generated/assignability.tsv
 	@mkdir -p .lake/target && $(LAKE) env lean -M4096 --run tools/Tools/TyVectors.lean .lake/target/ty-vectors.tsv
 	$(BUN) tools/target/assignability.ts --repo . --vectors .lake/target/ty-vectors.tsv --promote
+
+.PHONY: gen-row-citations
+gen-row-citations: | build ## promote a fresh rows/atoms report to generated/row-citations.tsv
+	$(BUN) tools/target/rows.ts --repo . --promote
 
 # The schema codec: Lean's `Ty.encode` results for the contract's cases, compared with
 # rc.112's `Schema.toCodecJson` on the host; nothing committed.

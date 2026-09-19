@@ -21,8 +21,10 @@ export interface Query {
   /** Import declarations and explicit bindings; no value assertions are generated. */
   imports: string[]
   subject: string
-  /** Only programs use an error bound; effect-valued and callable primitives stay exact. */
-  kind: "program" | "effect" | "function"
+  /** Only programs use an error bound; effect-valued and callable primitives stay exact.
+   * `callable` is a function that answers a value rather than an `Effect`: its `A` is the
+   * return type itself and it has no error or requirement column (the atoms of the prelude). */
+  kind: "program" | "effect" | "function" | "callable"
   receiver?: string
   expected: Partial<Record<Axis, string>>
   /** Handle target bindings, `<qualified name>` → `<target>`: declared in the query source as
@@ -131,21 +133,28 @@ export function bindingSource(bindings: Record<string, string> | undefined): str
 /** The module the compiler is asked about: the subject's three Effect columns, the request and
  * receiver of a callable, and one assignment statement per axis and direction. */
 export function querySource(q: Query): string {
-  const lines = [
-    'import type * as Effect from "effect/Effect"', ...q.imports, ...bindingSource(q.bindings),
-    `type __Subject = ${q.subject}`,
-    `type __Effect = ${q.kind === "function" ? "ReturnType<__Subject>" : "__Subject"}`,
-    "type __EffectShape = [__Effect] extends [never] ? false : __Effect extends Effect.Effect<infer _A, infer _E, infer _R> ? true : false",
-    "declare const __effectShape: __EffectShape",
-    "export const __requiresEffect: true = __effectShape",
-    "type __Actual_A = Effect.Success<__Effect>",
-    "type __Actual_E = Effect.Error<__Effect>",
-    "type __Actual_R = Effect.Services<__Effect>",
-  ]
-  if (q.kind === "function") lines.push("type __Actual_request = Parameters<__Subject>")
+  const lines = ['import type * as Effect from "effect/Effect"', ...q.imports, ...bindingSource(q.bindings),
+    `type __Subject = ${q.subject}`]
+  if (q.kind === "callable") {
+    // No Effect extraction: the answer column is the return type itself.
+    lines.push("type __Actual_A = ReturnType<__Subject>")
+  } else {
+    lines.push(
+      `type __Effect = ${q.kind === "function" ? "ReturnType<__Subject>" : "__Subject"}`,
+      "type __EffectShape = [__Effect] extends [never] ? false : __Effect extends Effect.Effect<infer _A, infer _E, infer _R> ? true : false",
+      "declare const __effectShape: __EffectShape",
+      "export const __requiresEffect: true = __effectShape",
+      "type __Actual_A = Effect.Success<__Effect>",
+      "type __Actual_E = Effect.Error<__Effect>",
+      "type __Actual_R = Effect.Services<__Effect>")
+  }
+  if (q.kind === "function" || q.kind === "callable") lines.push("type __Actual_request = Parameters<__Subject>")
   if (q.receiver !== undefined) lines.push(`type __Actual_receiver = ${q.receiver}`)
+  const callable = q.kind === "function" || q.kind === "callable"
   for (const axis of axes) {
-    if ((axis === "request" && q.kind !== "function") || (axis === "receiver" && q.receiver === undefined)) continue
+    if ((axis === "request" && !callable) || (axis === "receiver" && q.receiver === undefined)) continue
+    // A callable answers a value: it has no error and no requirement column to compare.
+    if (q.kind === "callable" && (axis === "E" || axis === "R")) continue
     lines.push(`declare const __${axis}_actual: __Actual_${axis}`)
     const expected = q.expected[axis]
     if (expected === undefined) continue

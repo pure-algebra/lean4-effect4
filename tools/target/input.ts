@@ -15,7 +15,7 @@ export function decodeQueries(value: unknown): Query[] {
   return value.map(raw => {
     const o = object(raw)
     if (Object.keys(o).some(k => !["id", "source", "imports", "subject", "kind", "receiver", "expected", "bindings", "allowUnknown"].includes(k))) throw new Error("query: unrecognized field")
-    if (o.kind !== "program" && o.kind !== "effect" && o.kind !== "function") throw new Error("query: unsupported kind")
+    if (o.kind !== "program" && o.kind !== "effect" && o.kind !== "function" && o.kind !== "callable") throw new Error("query: unsupported kind")
     if (!Array.isArray(o.imports)) throw new Error("query: imports must be an array")
     const q: Query = { id: string(o.id), source: string(o.source), imports: o.imports.map(string), subject: string(o.subject), kind: o.kind, expected: {} }
     for (const [k, v] of Object.entries(object(o.expected))) {
