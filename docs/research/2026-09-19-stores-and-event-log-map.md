@@ -402,9 +402,15 @@ state:
 4. **The other waiting primitives.** Semaphore, Queue, PubSub and Latch are not in the
    alphabet. `WakeList` was designed for exactly these (its header names each one's policy),
    so each is a new store, its rows, and a wake policy: new data, not new infrastructure.
-5. **STM** is the exception. It needs a per-transaction read and write journal with version
-   checks, which no current store has. It is the one item on this list that would add a new
-   kind of state.
+5. **STM** looked like the exception when this was written, on the assumption that it needs a
+   per-transaction journal with version checks. The STM scout
+   (`docs/research/2026-09-19-stm-scout.md`) shows otherwise: rc.112's journal and versions
+   exist only because its run loop can let another fiber commit inside a transaction body, and
+   this machine can close that window with the `PreventSchedulerYield` it already models plus a
+   fold admitting only bodies that cannot park, fork or resume another fiber. What STM then
+   needs is a store family on the wake protocol (a value and a waiter list per cell) and one
+   short-lived record for the open transaction, which is what Queue or Semaphore needs. What is
+   new about STM is control, not state: a body whose writes are thrown away and run again.
 6. **Tracing spans and metric timestamps** read the clock too, but they are observations,
    not state. They belong to the diagnostic sink of R3.
 
