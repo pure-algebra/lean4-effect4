@@ -283,15 +283,14 @@ $(CHK)/native: $(CORE) $(CONFORM_SOURCES)
 	$(PY) scripts/check-conform.py native
 	@mkdir -p $(CHK) && touch $@
 
-# The two citation scans read every text file of the nine trees both scripts name, with
-# `vendor`, `node_modules`, `_copy`, `research`, `_build` and `.lake` pruned as the scripts
-# prune them; the marker names those files, so the scans run when one of them changes and
-# not otherwise. Every cited path exists; no line-numbered citation into a mutable document.
+# One scan of every text file of the nine trees, with `vendor`, `node_modules`, `_copy`,
+# `research`, `_build` and `.lake` pruned as the scanner prunes them, answering both citation
+# questions: every cited path exists, and no line-numbered citation names a mutable authored
+# document. It was two programs reading the same files until 2026-09-18.
 CITATION_TREES := src Test tools ocaml ts docs scripts harness generated
 CITATION_SOURCES := $(shell find $(CITATION_TREES) \( -type d \( -name vendor -o -name node_modules -o -name _copy -o -name research -o -name _build -o -name .lake \) -prune \) -o -type f -print)
-$(CHK)/citations: scripts/check-source-citations.py scripts/check-internal-citations.sh scripts/source-citations-allowed.txt $(CITATION_SOURCES)
+$(CHK)/citations: scripts/check-source-citations.py scripts/source-citations-allowed.txt $(CITATION_SOURCES)
 	$(PY) scripts/check-source-citations.py
-	bash scripts/check-internal-citations.sh
 	@mkdir -p $(CHK) && touch $@
 
 # The TypeScript reader against Lean's reader: every `.ts` of the corpus and of the truth

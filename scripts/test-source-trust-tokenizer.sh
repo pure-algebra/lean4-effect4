@@ -41,7 +41,7 @@ run_elab do
     let path := System.FilePath.mk fixtureDirectory / fixture
     let result : Except String (Option String) ← liftM <| do
       try
-        return .ok (← forbiddenTrustToken? environment path)
+        return .ok (← scanSource environment path).1
       catch error =>
         return .error error.toString
     let accepted := match expected, result with

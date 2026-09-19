@@ -175,6 +175,10 @@ done
 # a missing file as a defect rather than an empty set. The scratch tree is the
 # real one, red modules included, so it gets the real set.
 cp "$known_red" "$probe/Test/fixtures/trust-gate/known-red.txt"
+# The proof-shape pin is read from the audited root for the same reason, and is
+# equally not optional; the scratch tree gets the real ceilings.
+mkdir -p "$probe/generated"
+cp "$repo_root/generated/proof-shape.tsv" "$probe/generated/proof-shape.tsv"
 cp "$audit_source" "$tmp_root/AxiomGate.lean"
 cp "$probe/Test/All.lean" "$tmp_root/All.lean"
 real_lean_path="$(cd "$repo_root" && lake env printenv LEAN_PATH)"
@@ -307,6 +311,22 @@ expect_token_rejection sorry.lean.txt sorry "sorry in a named theorem"
 expect_token_rejection example-sorry.lean.txt sorry "sorry inside an example"
 expect_token_rejection native-decide.lean.txt native_decide "native_decide"
 expect_token_rejection axiom.lean.txt axiom "axiom declaration"
+
+# --- 2b. the proof-shape ratchet ---------------------------------------------
+#
+# The counted tactics are not refused; their number per library source is a
+# ceiling. Plant one `first | …` in a source whose ceiling for `first` is zero
+# and the gate must say so. Nothing compiles it, exactly as above.
+restore_probe
+shape_target="src/Effect4/Store/Shape.lean"
+cp "$probe/$shape_target" "$tmp_root/shape-target.lean"
+printf '\n' >>"$probe/$shape_target"
+cat "$fixtures/proof-shape.lean.txt" >>"$probe/$shape_target"
+expect_rejection_matching \
+  "$shape_target now holds 1 \`first\` where generated/proof-shape.tsv pins 0" \
+  "a planted \`first\` above its pinned ceiling"
+cp "$tmp_root/shape-target.lean" "$probe/$shape_target"
+restore_probe
 
 # --- 3. planted declarations -------------------------------------------------
 #
