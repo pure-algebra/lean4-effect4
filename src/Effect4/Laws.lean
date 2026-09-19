@@ -72,6 +72,7 @@ import Effect4.Laws.Program.Typing.CheckInversion
 import Effect4.Laws.Program.Typing.CheckSound
 import Effect4.Laws.Codegen.Forms
 import Effect4.Laws.Codegen.Module
+import Effect4.Laws.Auto.RuleSets
 import Effect4.Laws.Auto.Inversion
 import Effect4.Laws.Auto.Census
 import Effect4.Laws.Auto.Traversals
