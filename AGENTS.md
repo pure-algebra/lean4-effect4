@@ -109,47 +109,57 @@ its arrows; anything else is a leak.
 
 ## Working
 
-- Design first, land once: a change to the machine or the syntax starts as a
-  grilled plan in `docs/research/`, then lands as one commit with the gate
-  green. Mechanical pieces on disjoint files may be delegated; the coordinator
-  reviews, adds the root imports, runs the build and commits. An agent never
-  commits, never `git add`s, and never edits `src/Effect4.lean`,
-  `Test/All.lean`, `Test/Audit/AxiomGate.lean` or `lakefile.toml`.
+- Design first, land in slices: a change to the machine or the syntax starts as a plan or a
+  research note in `docs/research/`, then lands as commits by explicit paths, each after a
+  narrow build of the modules it touches (`lake build <Module>` and its direct dependents;
+  `lake env lean <file>` for a test). No closure or battery run is owed for an integration; the
+  whole battery (`lake build Test`, the trust gate) and `make check`/`make check-host` run when
+  the owner asks for a sweep. A docstring or comment edit needs no build of a dependent module.
+- An agent commits the same way, on its own branch in its own worktree, from the base the
+  coordinator names, on the files its brief names. `git add` names files (never `git add -A`
+  without reading `git status`); the owner's untracked `docs/*.md` and `README.md` stay as they
+  are. The root imports (`src/Effect4.lean`, `src/Effect4/Laws.lean`, `Test/All.lean`) and
+  `Test/Audit/AxiomGate.lean` are edited at the anchor the brief names, so parallel branches
+  merge clean; `lakefile.toml` and `docs/core/decisions.md` are the coordinator's — an agent
+  proposes a decisions row in its receipt (`docs/research/<date>-seat-<X>-receipt.md`), never
+  edits the register. A worktree never copies `docs/research` (2 GB).
 - One `lake` at a time in a working tree.
 - In `src/Effect4/Laws/**` proof search is `aesop`
   (`https://github.com/leanprover-community/aesop`, a dependency of the law graph only; the core
-  root never imports it). Use it as its README says: register lemmas as rules in its default
-  rule set (`@[aesop norm simp]`, `safe`/`unsafe` with the builder that fits the fact:
-  `constructors`/`cases` for an inductive predicate, `forward`/`destruct` for an implication,
-  `unfold` for a definition), introduce induction hypotheses by hand and hand them to the call
-  (`aesop (add safe forward [ih1, ih2])`), and keep a rule that creates metavariables (a
-  transitivity) in the call that needs it, never in a rule set. Shared rules live in
-  `src/Effect4/Laws/Auto/`; `#auto_census Some.Module using aesop` (`Laws/Auto/Census.lean`)
-  reports which theorems of a module the search already closes from their statements. Prefer a
-  short searched proof to a long unpacked one: the search runs once per build and is cached.
-  The axiom gate holds a searched proof to `[propext, Quot.sound]` like any other. Still not
-  used there: `simp_all`, `first | …` and `try` written by hand (a hand-written fallback that
-  fails silently into an unsolved goal hides a missing lemma); a hand-written `simp` names its
-  lemmas as `simp only [...]` in new or touched proofs. Outside `Laws/` these rules are advisory.
-- Verification is narrow per step and swept per wave: build the modules a change touches
-  (`lake build <module>`, or `lake env lean <file>` for a test), and run `make check` and
-  `make check-host` once when a wave closes. A docstring or comment edit cannot break a
-  dependent module and needs no build of it.
+  root never imports it). Register a lemma in the named bank that fits
+  (`src/Effect4/Laws/Auto/RuleSets.lean`; `@[aesop norm simp (rule_sets := [X])]` for a
+  definition, `safe`/`unsafe` with the builder that fits the fact: `constructors`/`cases` for an
+  inductive predicate, `forward`/`destruct` for an implication), introduce induction hypotheses
+  by hand and hand them to the call (`aesop (add safe forward [ih1, ih2])`), and keep a rule that
+  creates metavariables (a transitivity) in the call that needs it, never in a bank. A bank lands
+  with a theorem that closes only with `(rule_sets := [X])` and a `Test` fixture with the clause
+  omitted under `#guard_msgs (error)` (decisions row 65). `#auto_census Some.Module using aesop`
+  (`Laws/Auto/Census.lean`) reports which theorems of a module the search already closes from
+  their statements; run it before rewriting proofs against a bank. Prefer a short searched
+  proof to a long unpacked one, and take a proof's case list from the definition it is about
+  (`fun_induction`/`fun_cases`) rather than from `cases a <;> cases b`. The axiom gate holds a
+  searched proof to `[propext, Quot.sound]` like any other; `simp` at `(x == x) = true` for
+  `String`/`Nat` and aesop on a catch-all's negative hypotheses both reach `Classical.choice`.
+  Not written by hand in a new or touched proof, anywhere under `src/`: `simp_all`, `first | …`
+  and `try` (a fallback that fails silently into an unsolved goal hides a missing lemma);
+  `generated/proof-shape.tsv` pins their count per module as a ceiling that only falls. A
+  hand-written `simp` names its lemmas as `simp only [...]`.
+- The gates that run with a commit are the ones the change reaches: `make check-cases` after a
+  new match on a policy family, `python3 scripts/generate.py --only <family>` after a generator
+  or its input (the output must be byte-identical or committed), `dune build` (only via
+  `opam exec --switch=effect4`) after the OCaml estate.
 - On Windows the shell is PowerShell; the bash gate scripts run through WSL.
 - A proof graph is mandatory only for admission or refusal, judgments or
   denotations, interpreters or handlers, reification or generated-code
   relations, nontrivial composition or recursive invariants, and external
   semantic equivalence; a passive finite alphabet closes with its local
   receipts.
-- One session per checkout; a parallel seat runs in its own worktree on disjoint files with a
-  brief the owner has seen, and never copies `docs/research` (2 GB). Never `git add -A`
-  without reading `git status` first; the owner's untracked `docs/*.md` stay untracked.
 - Build in parallel, slot in, delete at a good place: a new representation is a second file
   beside the old one with its connector (the agreement theorem), the callers move, then the old
   one goes. Never an edit in place that throws away work to be repeated.
-- A handoff records base and head commits, changed files, exact commands and
+- A handoff or receipt records base and head commits, changed files, exact commands and
   results, axiom output, open obligations, and whether any evidence is bounded
-  or host-only.
+  or host-only — and, first, the one thing the coordinator must know before merging.
 
 ## Registers
 
