@@ -1,6 +1,4 @@
 /** Selection contains identities/bindings only. Expected columns come from generated Lean data. */
-import * as Schema from "../../ts/eff/node_modules/effect/dist/Schema.js"
-import { Row, type Ty } from "../../ts/eff/eff.gen.ts"
 import { packages } from "../../ts/eff/packages.gen.ts"
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
@@ -52,46 +50,22 @@ export function requirements(raw: unknown, scope: Key | undefined): string {
   return [...carriers.keys()].map(t => `(${t})`).join(" | ") || "never"
 }
 
-/** Projection of the generated Ty schema to the target's type syntax, never per-case expected types. */
-export function renderTy(ty: Ty, handles: ReadonlyMap<string, string>): string {
-  const r = (t: Ty) => renderTy(t, handles)
-  switch (ty._tag) {
-    case "never": return "never"
-    case "unit": return "void"
-    case "nat": case "int": return "number"
-    case "string": return "string"
-    case "lit": return JSON.stringify(ty.value)
-    case "bool": return "boolean"
-    case "handle": {
-      const bound = handles.get(ty.target)
-      if (!bound) throw new Error(`unbound handle target ${ty.target}`)
-      return bound
-    }
-    case "option": return `Option.Option<${r(ty.inner)}>`
-    case "list": return `ReadonlyArray<${r(ty.inner)}>`
-    case "prod": return `readonly [${r(ty.left)}, ${r(ty.right)}]`
-    case "except": return `Result.Result<${r(ty.value)}, ${r(ty.error)}>`
-    case "exitOf": return `Exit.Exit<${r(ty.value)}, ${r(ty.error)}>`
-    case "causeOf": return `Cause.Cause<${r(ty.error)}>`
-    case "fiberOf": return `Fiber.Fiber<${r(ty.value)}, ${r(ty.error)}>`
-    case "union": return `(${r(ty.left)}) | (${r(ty.right)})`
+/** A row's target signature as Lean rendered it (`generated/row-types.tsv`, written by
+ * `tools/Tools/RowTypes.lean` with `Ty.renderRaw` and the row's own `RowShape`). There is no
+ * second printer here: handle spellings stay as the row declares them and the query's
+ * declarations bind them. */
+export interface RowSignature { shape: string; receiver: string; request: string; answer: string; error: string }
+export function rowSignatures(repo: string): Map<string, RowSignature> {
+  const table = new Map<string, RowSignature>()
+  const text = readFileSync(resolve(repo, "generated/row-types.tsv"), "utf8")
+  for (const line of text.split("\n")) {
+    if (!line || line.startsWith("#")) continue
+    const [name, row, shape, receiver, request, answer, error] = line.split("\t")
+    if (error === undefined) throw new Error(`generated/row-types.tsv: malformed line ${JSON.stringify(line)}`)
+    table.set(`${name}/${row}`, { shape: shape!, receiver: receiver!, request: request!, answer: answer!, error })
   }
-}
-export function rowArguments(row: Row, handles: ReadonlyMap<string, string>): { request: string; receiver?: string } {
-  if (row.trailing.length || row.typeArgs.length) throw new Error("unsupported trailing arguments or explicit type arguments")
-  const r = (t: Ty) => renderTy(t, handles)
-  const spread = (t: Ty) => t._tag === "unit" ? "[]" : t._tag === "prod" ? `[${r(t.left)}, ${r(t.right)}]` : `[${r(t)}]`
-  switch (row.shape) {
-    case "call": return { request: row.request._tag === "unit" ? "[]" : `[${r(row.request)}]` }
-    case "tupleCall":
-      if (row.request._tag !== "prod") throw new Error("tupleCall request must be a binary product")
-      return { request: spread(row.request) }
-    case "method": {
-      if (row.request._tag !== "prod") throw new Error("method request must contain receiver and arguments")
-      return { request: spread(row.request.right), receiver: r(row.request.left) }
-    }
-    case "value": throw new Error("value row is not a callable adapter row")
-  }
+  if (!table.size) throw new Error("generated/row-types.tsv: no rows")
+  return table
 }
 
 /** A method's actual receiver is derived from its selected member type, not a second claim: the
@@ -139,6 +113,7 @@ export function queriesFromInputs(repo: string, selectionInput: unknown, corpusI
   const selectedIds = selectedRows.map(r => `${string(r.table, "table")}/${string(r.name, "name")}`)
   const unselected = actualRows.filter(id => !selectedIds.includes(id))
   const rowInventoryIssues: Issue[] = unselected.length || new Set(actualRows).size !== actualRows.length ? [{ code: "row-inventory", message: `unselected=${unselected.join(",")}; duplicate=${new Set(actualRows).size !== actualRows.length}` }] : []
+  const signatures = rowSignatures(repo)
   const rowReceivers = subjectReceivers(repo, selectedRows.map(r => string(r.subject, "row subject")))
   selectedRows.forEach((selected, index) => {
     const table = string(selected.table, "table"), name = string(selected.name, "row name")
@@ -150,13 +125,16 @@ export function queriesFromInputs(repo: string, selectionInput: unknown, corpusI
     try {
       const raw = tables.get(table)?.find(r => object(r, "row").name === name)
       if (!raw) throw new Error(`missing selected row ${table}/${name}`)
-      const row = Schema.decodeUnknownSync(Row)(raw)
-      q.provenance = { metadata: table === "Host" ? "harness/truth/corpus.json#hostRows" : "ts/eff/packages.gen.ts", table, row: name, descriptor: row, scopeKey: scope ?? null, handles: Object.fromEntries(handles) }
-      const args = rowArguments(row, handles)
-      q.expected = { A: renderTy(row.answer, handles), E: renderTy(row.error, handles),
-        R: requirements(row.requires.map(k => ({ name: k.name.value, service: k.service.value })), scope), ...args }
-      if (args.receiver !== undefined && q.receiver === undefined) throw new Error("missing actual receiver binding")
-      if (args.receiver === undefined && q.receiver !== undefined) throw new Error("unexpected receiver binding for non-method row")
+      const descriptor = object(raw, "row")
+      const signature = signatures.get(`${table}/${name}`)
+      if (!signature) throw new Error(`generated/row-types.tsv has no signature for ${table}/${name}`)
+      if (!signature.request) throw new Error(`${table}/${name} is not a callable adapter row (shape ${signature.shape}, or trailing/explicit type arguments)`)
+      q.provenance = { metadata: table === "Host" ? "harness/truth/corpus.json#hostRows" : "ts/eff/packages.gen.ts", table, row: name, descriptor, rendered: signature, scopeKey: scope ?? null, handles: Object.fromEntries(handles) }
+      q.expected = { A: signature.answer, E: signature.error,
+        R: requirements(array(descriptor.requires, `${name}.requires`).map(k => { const o = object(k, "service key"); return { name: object(o.name, "key name").value, service: object(o.service, "key service").value } }), scope),
+        request: signature.request, ...(signature.receiver ? { receiver: signature.receiver } : {}) }
+      if (signature.receiver && q.receiver === undefined) throw new Error("missing actual receiver binding")
+      if (!signature.receiver && q.receiver !== undefined) throw new Error("unexpected receiver binding for non-method row")
     } catch (e) { q.inputIssues!.push({ code: "row-type-metadata", message: String(e) }) }
     queries.push(q)
   })

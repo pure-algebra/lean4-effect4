@@ -15,7 +15,9 @@ Expected program A/E strings and full requirement keys come from `harness/truth/
 The hand selection reads annotated generated exports. The corpus lane reads separate
 unannotated modules so its actual columns come from initializer inference; the hand
 selection alone is not that independent inference check.
-Expected adapter types come from the generated `Row` schema and package/Host row data.
+Expected adapter types come from `generated/row-types.tsv`, which `tools/Tools/RowTypes.lean`
+writes with `Ty.renderRaw` and each row's own `RowShape`: the tool has no type printer of its
+own, and `make check-target` refuses a stale table rather than reading it.
 The full `scopeKey` maps to `Scope.Scope`; a matching service code alone is insufficient.
 Other requirement keys need explicit bindings before this profile can admit them.
 
@@ -57,8 +59,8 @@ A Boolean tag predicate does not establish a narrower host error type. If the co
 an all-caught residual but the printer still emits ordinary `catchIf`, that target mismatch
 remains visible; the comparison does not excuse it.
 A method's actual receiver is derived from the selected indexed member type. Arguments are
-projected by call shape, including the printer's one-level binary-product split. Return
-answer, error, and requirements are separate columns. Missing fields or unbound symbols do
+projected by call shape, including the printer's one-level binary-product split — in Lean,
+beside the shape it reads. Return answer, error, and requirements are separate columns. Missing fields or unbound symbols do
 not become `unknown`; a non-Effect value cannot pass through `never` extraction results.
 
 Any in compared roots, generic payloads, or local record data is refused. Unknown requires

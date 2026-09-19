@@ -1,26 +1,25 @@
 import { expect, test } from "bun:test"
 import { resolve } from "node:path"
 import { readFileSync } from "node:fs"
-import { key, queriesFromInputs, renderTy, requirements, rowArguments, receiverOfSubject } from "./profile.ts"
+import { key, queriesFromInputs, requirements, rowSignatures, receiverOfSubject } from "./profile.ts"
 import { bindingSource } from "./oracle.ts"
-import type { Row } from "../../ts/eff/eff.gen.ts"
 
 const repo = resolve(import.meta.dir, "../..")
 const bindings = new Map([["Host.Resource", "Adapter.HostResource"]])
-const row: Row = { name: "control", spelling: "Control.call", shape: "call", trailing: [], typeArgs: [], kind: "async", registration: "external", cite: "independent control",
-  request: { _tag: "prod", left: { _tag: "string" }, right: { _tag: "prod", left: { _tag: "nat" }, right: { _tag: "bool" } } },
-  answer: { _tag: "unit" }, error: { _tag: "never" }, requires: [] }
 
-test("request projection follows call shape and splits only one tuple level", () => {
-  expect(rowArguments(row, bindings)).toEqual({ request: "[readonly [string, readonly [number, boolean]]]" })
-  expect(rowArguments({ ...row, shape: "tupleCall" }, bindings)).toEqual({ request: "[string, readonly [number, boolean]]" })
-  expect(rowArguments({ ...row, shape: "method" }, bindings)).toEqual({ receiver: "string", request: "[number, boolean]" })
-  expect(rowArguments({ ...row, request: { _tag: "unit" } }, bindings)).toEqual({ request: "[]" })
-  expect(() => rowArguments({ ...row, shape: "value" }, bindings)).toThrow("not a callable")
-  expect(() => rowArguments({ ...row, shape: "method", request: { _tag: "string" } }, bindings)).toThrow("receiver")
-  expect(() => rowArguments({ ...row, trailing: ["undefined"] }, bindings)).toThrow("unsupported")
-  expect(() => rowArguments({ ...row, shape: "tupleCall", request: { _tag: "unit" } }, bindings)).toThrow("binary product")
-  expect(() => rowArguments({ ...row, typeArgs: ["number"] }, bindings)).toThrow("unsupported")
+test("the row signatures are Lean's, one line per selectable row, and cover the selection", () => {
+  const signatures = rowSignatures(repo)
+  const selection = JSON.parse(readFileSync(resolve(repo, "Test/fixtures/target/selection.json"), "utf8"))
+  for (const row of selection.rows as Array<{ table: string; name: string }>) {
+    expect(signatures.has(`${row.table}/${row.name}`)).toBe(true)
+  }
+  // the projection of a request by the row's own shape, as Lean printed it: one tuple level
+  expect(signatures.get("SqliteBun/sqliteOpen")).toEqual({ shape: "call", receiver: "", request: "[string]", answer: "SqlClient.SqlClient", error: "never" })
+  expect(signatures.get("KeyValueStoreMemory/kvMake")?.request).toBe("[]")
+  expect(signatures.get("KeyValueStoreMemory/kvGet")).toEqual({ shape: "method", receiver: "KeyValueStore.KeyValueStore", request: "[string]", answer: "Option.Option<string>", error: "readonly [string, string]" })
+  expect(signatures.get("SqliteBun/sqlUnsafe")?.request).toBe("[string, ReadonlyArray<string>]")
+  // a handle keeps the spelling the row declares; the query's declarations bind it
+  expect(signatures.get("Host/close")?.request).toBe("[Host.Resource]")
 })
 
 test("the receiver of a selected member is the object type the compiler parsed", () => {
@@ -71,9 +70,8 @@ test("handle targets are bound by declaration, and structured types preserve nes
   expect(() => bindingSource({ "Host-Resource": "Adapter.HostResource" })).toThrow("binding name")
   expect(() => bindingSource({ "A.B": "X", "C.D": "X" })).toThrow("noninjective")
   expect(() => bindingSource({ A: "X", "A.B": "Y" })).toThrow("both a name and a namespace")
-  expect(renderTy({ _tag: "option", inner: { _tag: "list", inner: { _tag: "handle", target: "Host.Resource" } } }, bindings)).toBe("Option.Option<ReadonlyArray<Adapter.HostResource>>")
-  expect(renderTy({ _tag: "lit", value: 'A"B' }, bindings)).toBe('"A\\"B"')
-  expect(() => renderTy({ _tag: "handle", target: "Missing.Handle" }, bindings)).toThrow("unbound")
+  // the binding reaches a nested payload because the compiler resolves the name, not a rewrite
+  expect(bindingSource(Object.fromEntries(bindings))[0]).toContain("Adapter.HostResource")
 })
 
 test("selected IDs cannot vanish with absent metadata and unexpected inventory is refused", () => {
