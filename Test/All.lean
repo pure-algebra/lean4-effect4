@@ -102,6 +102,7 @@ import Test.Audit.AxiomGate
 import Test.Audit.TraversalCensus
 import Test.Audit.PositionCensus
 import Test.Program.TypeAlgebraContract
+import Test.Program.TyViewContract
 import Test.Program.ValueModelContract
 import Test.Program.TypingCheckContract
 import Test.Program.LinkedRowsContract
