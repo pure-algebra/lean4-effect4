@@ -8,6 +8,18 @@ mutation run that I executed and read. *Reproduced* = a number I re-measured fro
 *Stamped* = a generator emitted it and the drift check holds it. *Assumed* = nothing here is
 assumed unless it says so.
 
+## 0a. The one thing to know before merging
+
+**1.5 landed in a different shape from the brief, and the shape is the safer one.** The brief
+asks for `hasTy_sub` to become a one-line application of `cata_admits_sub` through
+`Val.hasTy.eq_cata`. That derivation needs `Val.hasTy_admitsSub`, five of whose fourteen fields
+do not close (§7.1b, with the residual goal quoted). So `hasTy_sub` was instead reproved **in
+place**, by `fun_induction Ty.sub`, with its statement and argument order byte-identical — the
+twenty-five call sites in five files do not move, and `Program/Typed.lean` does not acquire an
+import of the Laws, which it could not have anyway (the fold lives above it). The measured goal
+the plan sets for 1.5 is met: 257 lines → 79, sixteen `first` blocks → 0 (§5). The generic law
+`cata_admits_sub` is proved and committed beside it. Nothing red was committed.
+
 ## 0. The worktree was branched from the wrong commit
 
 Read first because it affects the merge. The worktree arrived at `9187b9b6` (the tip of
@@ -32,6 +44,11 @@ read of the main checkout, not a write to it.
 | `f08b3199` | the `Effect4.Laws` import of `TyView` (the library-root gate; the coordinator's pre-review caught it) |
 | `5009f467` | **1.5** `hasTy_sub` rewritten by `fun_induction Ty.sub`: 257 lines → 79, sixteen `first` blocks → 0 |
 | `096da231` | **1.5** `src/Effect4/Laws/Program/Admits.lean`: `cata_admits_sub`, proved once, and its `Effect4.Laws` import |
+| `19ab3994` | receipt completed |
+| `d63c3ca9` | `Admits.lean`'s closing section corrected: fourteen fields, nine proved, five refused, residual goal quoted |
+
+Every commit was made only after a narrow `lake build` of the modules it touches. Nothing red was
+committed at any point, and the working tree is clean.
 
 (See §7 for what is not done and why.)
 
@@ -316,23 +333,54 @@ replaced by `sub_eq_args` + `argsBelow_trans` without any proof naming a constru
 `Variance.holds_trans`/`holds_antisymm` that the four alternatives were hand-instances of are
 proved once. That is the whole of the note's §1.3 except the two lemmas above.
 
-### 7.1b `Val.hasTy_admitsSub` is not discharged
+### 7.1b `Val.hasTy_admitsSub` is not discharged — nine of fourteen fields
+
+This is the one item where the brief's shape and what landed differ, so it is written out field
+by field.
 
 `Laws/Program/Admits.lean` proves the generic law `cata_admits_sub` — monotonicity along `sub` is
 a condition on the **algebra**, one field per constructor, not a property of one fold — at
-`[propext, Quot.sound]`, by `fun_induction Ty.sub` with no constructor named. The instance
-`AdmitsSub Val.hasTy.alg` is not there, and the module's closing section says why at length:
-five of its fifteen fields are `rfl` and two close by `cases v`, but the other seven inspect the
-value through the compiler's sparse case analyses that `fold_of` emits
-(`Val.hasTy._sparseCasesOn_37` and kin) rather than through `Val`'s own matcher, so `split`
-refuses them — "Could not split an `if` or `match` expression" — and each needs a `cases v` walk
-with the two-cell and snapshot sub-cases spelled out. Mechanical, about eighty lines, no design
-question. **Tested** to that point: the seven fields fail exactly there and nowhere else.
+`[propext, Quot.sound]`, by `fun_induction Ty.sub`, with no constructor of `Ty` named in the
+script. That is the half of 1.5 that is worth having: it is the statement L2 needs.
 
-The consequence for the plan's claim is small but should be stated: "then `hasTy_sub` becomes an
-application via `Val.hasTy.eq_cata`" is **not** what landed. `hasTy_sub` stays where it is and is
-proved directly (§5), which is better for the call sites and worse for the genericity claim; the
-genericity is available as soon as the instance is discharged.
+The instance `AdmitsSub Val.hasTy.alg` is **not** there. `AdmitsSub` has **fourteen** fields (an
+earlier draft of this receipt and of the module said fifteen; corrected in `d63c3ca9`). All
+fourteen were written; nine were accepted and five refused.
+
+| field | state |
+| --- | --- |
+| `never`, `union`, `top`, `var` | **proved**, `rfl` — the generated arms are literally `fun v al => false`, `fun v al => p.2 v al \|\| q.2 v al`, `fun v al => true`, `fun v al => false` |
+| `refOf`, `deferredOf` | **proved**, `rfl` — the arms ignore their argument, which is decisions row 44 (a handle is coarse by kind) stated as a law |
+| `fiberOf` | **proved**, the identity, same reason |
+| `lit_string`, `option` | **proved** by `cases v`, three lines each |
+| `list`, `prod`, `except`, `exitOf`, `causeOf` | **open** — all five refused at the same tactic, for the same reason |
+
+The residual goal, verbatim from the build, at `list` (the other four are the same shape):
+
+```
+Tactic `split` failed: Could not split an `if` or `match` expression in the type
+  (hasTy._sparseCasesOn_37 v
+      (fun index args => if h : index = 3 then … else false)
+      (fun xs => xs.all fun x => p.snd x al) fun h => false) = true
+of `hv`
+```
+
+`fold_of` emits the value-inspecting arms through the compiler's sparse case analyses rather than
+through `Val`'s own matcher, so `split at hv` cannot see the match. **Tested**: unfolding
+`Val.hasTy.alg` first does not help — it exposes the `_sparseCasesOn` rather than removing it.
+Each of the five needs a `cases v` walk over `Val`'s frames with the two-cell and snapshot
+sub-cases spelled out, in place of the four-line `split at hv` the hand-written `Val.hasTy`
+admits. Mechanical, roughly eighty lines, no design question open.
+
+**The consequence for the brief's wording, stated plainly.** "`hasTy_sub` derived in one line
+from `cata_admits_sub`" is *not* what landed, and could not be: the derivation needs the
+instance. What landed instead reaches the same measured goal by a different route —
+`hasTy_sub` stays in `src/Effect4/Program/Typed.lean` with its statement and argument order
+byte-identical (so none of the twenty-five call sites in five files moved) and is proved
+directly by `fun_induction Ty.sub` at seventy-nine lines with the sixteen `first` blocks gone
+(§5). That is better for the call sites and for the import order, and worse for the genericity
+claim, which becomes available the moment the five fields are discharged. Nothing red was
+committed, and the working tree is clean.
 
 ### 7.2 `hasTy_normalize` and `hasTy_mono` are not rewritten
 
