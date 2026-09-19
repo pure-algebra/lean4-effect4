@@ -197,6 +197,7 @@ GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) \
   ocaml/eff ocaml/goldens/eff ocaml/engine/cas/goldens ocaml/engine/e4_program_layout.ml \
   ocaml/engine/e4_program_layout.json \
   ocaml/gen/api_gen.ml ocaml/gen/fibers_gen.ml ocaml/gen/machine_gen.ml ocaml/engine/api_engine.ml \
+  ocaml/gen/closure-api_gen.tsv ocaml/gen/closure-fibers_gen.tsv ocaml/gen/closure-machine_gen.tsv ocaml/gen/closure-api_engine.tsv \
   ts/eff/eff.gen.ts ts/eff/json.gen.ts ts/eff/profile.gen.ts ts/eff/taxonomy.gen.ts ts/eff/forms.gen.ts \
   ts/eff/wire.gen.ts ts/eff/packages.gen.ts ts/eff/templates.gen.ts ts/eff/ingest/README.md \
   harness/truth/prelude-atoms.gen.ts \

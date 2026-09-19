@@ -1,0 +1,117 @@
+{
+  "format": "effect4-lcnf-roots-v1",
+  "claim": "Hand-written, not generated. The four LCNF artefacts and the exact arguments that cut them: `scripts/generate.py --only lcnf` builds each command from this file, and `src/OCaml5/Tools/LcnfGen.lean` renders the artefact's `Regenerate with:` header from the argv it was handed -- so the header IS this file, rather than the file being read back out of the artefact it produced. Changing an artefact's roots, cap or seam is an edit here followed by `make gen-lcnf`. The argv order is fixed: --out, one --import per module, --cap, --types (comma-joined, when any), --externs, --prelude, then the roots in the order listed.",
+  "artefacts": [
+    {
+      "out": "ocaml/gen/fibers_gen.ml",
+      "import": [],
+      "cap": 400,
+      "types": [
+        "Effect4.Machine.Task"
+      ],
+      "roots": [
+        "Effect4.Machine.Dispatcher.empty",
+        "Effect4.Machine.Dispatcher.insert",
+        "Effect4.Machine.Dispatcher.enqueue",
+        "Effect4.Machine.Dispatcher.drain",
+        "Effect4.Machine.RunFiber.interruptPending",
+        "Effect4.Machine.RunFiber.make",
+        "Effect4.Machine.RunFiber.park",
+        "Effect4.Machine.RunMachine.fiber?",
+        "Effect4.Machine.RunMachine.update",
+        "Effect4.Machine.RunMachine.emit",
+        "Effect4.Machine.RunMachine.modify",
+        "Effect4.Machine.RunMachine.halt",
+        "Effect4.Machine.RunMachine.race?",
+        "Effect4.Machine.RunMachine.updateRace",
+        "Effect4.Machine.RunMachine.finished",
+        "Effect4.Machine.RunMachine.empty",
+        "Effect4.Machine.RunMachine.arm",
+        "Effect4.Machine.RunMachine.disarm",
+        "Effect4.Machine.interruptRecord",
+        "Effect4.Machine.interruptEach",
+        "Effect4.Machine.countdownWalk",
+        "Effect4.Machine.countdownPark",
+        "Effect4.Machine.spawn",
+        "Effect4.Machine.start",
+        "Effect4.Machine.launchEntrant",
+        "Effect4.Machine.linkScope",
+        "Effect4.Machine.runloopTop",
+        "Effect4.Machine.countOp",
+        "Effect4.Machine.yieldVerdict",
+        "Effect4.Machine.injectYield",
+        "Effect4.Machine.evaluatePrim",
+        "Effect4.Machine.iteration",
+        "Effect4.Machine.fireObserver",
+        "Effect4.Machine.exitFiber",
+        "Effect4.Machine.settle",
+        "Effect4.Machine.drive",
+        "Effect4.Machine.stepDecision",
+        "Effect4.Machine.replayEval",
+        "Effect4.Machine.runFork",
+        "Effect4.Machine.runCallback",
+        "Effect4.Machine.runSyncExit",
+        "Effect4.Machine.promiseOutcome"
+      ]
+    },
+    {
+      "out": "ocaml/gen/machine_gen.ml",
+      "import": [],
+      "cap": 60,
+      "types": [
+        "Effect4.Machine.Task"
+      ],
+      "roots": [
+        "Effect4.Machine.Dispatcher.insert",
+        "Effect4.Machine.Dispatcher.enqueue",
+        "Effect4.Machine.Dispatcher.drain",
+        "Effect4.Machine.RunMachine.update",
+        "Effect4.Machine.RunMachine.fiber?",
+        "Effect4.Machine.RunMachine.emit",
+        "Effect4.Machine.RunMachine.finished",
+        "Effect4.Machine.countdownWalk",
+        "Effect4.Machine.interruptRecord"
+      ]
+    },
+    {
+      "out": "ocaml/gen/api_gen.ml",
+      "import": [
+        "Effect4.Api"
+      ],
+      "cap": 2000,
+      "types": [],
+      "roots": [
+        "Effect4.Api.run",
+        "Effect4.Api.replay"
+      ]
+    },
+    {
+      "out": "ocaml/engine/api_engine.ml",
+      "import": [
+        "Effect4.Api"
+      ],
+      "cap": 2000,
+      "types": [],
+      "roots": [
+        "Effect4.Api.run",
+        "Effect4.Api.replay",
+        "Effect4.Machine.stepDecisionState",
+        "Effect4.Machine.driveState",
+        "Effect4.Machine.settled",
+        "Effect4.Machine.FnName.total",
+        "Effect4.Machine.FnName.partialUpdate",
+        "Effect4.Machine.FnName.modify",
+        "Effect4.Machine.FnName.modifySome",
+        "Effect4.Scope.make",
+        "Effect4.Scope.fork",
+        "Effect4.Machine.RunFiber.make",
+        "Effect4.Machine.emptyCtx",
+        "Effect4.Program.compile",
+        "Effect4.Machine.stores",
+        "Effect4.Program.Node.child"
+      ],
+      "externs": "ocaml/engine/externs.txt",
+      "prelude": "ocaml/engine/tools/api_engine_prelude.ml"
+    }
+  ]
+}
