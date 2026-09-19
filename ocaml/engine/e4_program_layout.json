@@ -1,6 +1,6 @@
 {
   "format": "effect4-engine-structure-v1",
-  "claim": "selected source shape checked against frozen engine declarations; no execution cutover",
+  "claim": "selected source shape checked against the engine declarations; a family declared at fewer members than the source refuses unless ocaml/engine/layout-allowance.json names it; `unavailable` lists the families the engine does not declare at all, plus any allowed lag",
   "families": [
     "Effect4.Program.Ty",
     "Effect4.Program.Lit",

@@ -111,13 +111,38 @@ def engine_constructors(body):
         result.append((match[1].split('_',1)[-1], [type_shape(field) for field in fields]))
     return result
 
-def selected_view(descriptor, engine):
+def lag(boundaries, allowed, seen, path, reason, engine_count, source_count):
+    """A family the engine declares at FEWER members than the source is a divergence, not a
+    boundary. The mirror emits the engine's declaration into `PROGRAM_TYPES` as though it were
+    the source's projection, so every reader of the mirror is handed a type language the source
+    no longer has, and the only record of it is a JSON field nothing gates. That is how the
+    engine ran four `Ty` constructors behind the source for the whole of L5. It refuses, unless
+    the family is named in the committed allowance file — which is where a lag has to be argued
+    and where what removes it is written down.
+
+    A family the engine does not declare AT ALL is a different thing and stays recorded: the
+    mirror is the intersection, and it claims nothing about what lies outside it."""
+    if path not in allowed:
+        raise ValueError(
+            f'{path}: the engine declares {engine_count} of the source\'s {source_count} '
+            f'members. Regenerate the engine face (make gen-lcnf); if the engine must lag, '
+            f'name the family in the layout allowance with the reason and what removes it')
+    seen.add(path)
+    boundaries.append({'family':path,'reason':reason,'allowed':True,
+                       'engine':engine_count,'source':source_count})
+
+def selected_view(descriptor, engine, allowance=()):
     if descriptor.get('format') != 'effect4-program-structure-v1' or descriptor.get('phase') != 'ground-source-declaration':
         raise ValueError('unsupported structural description format/phase')
     source = [f for block in descriptor['blocks'] for f in block]
     families = {f['name']:f for f in source}
     if len(families) != len(source) or len({f['label'] for f in source}) != len(source):
         raise ValueError('duplicate selected source family')
+    allowed = set(allowance)
+    if len(allowed) != len(list(allowance)): raise ValueError('duplicate allowance family')
+    unknown = allowed - set(families)
+    if unknown: raise ValueError('allowance names a family the source does not declare: ' + ', '.join(sorted(unknown)))
+    hit = set()
     actual = declarations(engine)
     common = []
     boundaries = []
@@ -141,13 +166,13 @@ def selected_view(descriptor, engine):
                     if not sep: raise ValueError(path + ': malformed engine field')
                     target_fields.append((key.strip(), type_shape(value)))
                 expected = [(snake(f['name']), expected_shape(f['shape'], families, family['parameters'])) for f in fields]
-                # Record-only append shortages remain unavailable to this frozen engine;
-                # a changed/reordered existing field must stop the producer.
+                # A changed or reordered existing field stops the producer; a short record is
+                # the same divergence as a short constructor list and goes through `lag`.
                 if len(target_fields) > len(expected) or target_fields != expected[:len(target_fields)]:
                     raise ValueError(path + ': engine structure field order/payload differs')
                 if target_fields != expected:
-                    boundaries.append({'family':path,'reason':'source-structure-append-unavailable-in-frozen-engine',
-                                       'engine':len(target_fields),'source':len(expected)})
+                    lag(boundaries, allowed, hit, path, 'source-structure-append-unavailable-in-frozen-engine',
+                        len(target_fields), len(expected))
             elif len(fields) == 1 and fields[0]['name'] == 'value' and type_shape(body) == expected_shape(fields[0]['shape'], families, family['parameters']):
                 pass  # Explicit single-field wrapper erasure at the engine projection.
             else: raise ValueError(path + ': unsupported engine structure projection')
@@ -160,8 +185,12 @@ def selected_view(descriptor, engine):
             if ctor_name != src['name'].rsplit('.',1)[-1] or fields != expected:
                 raise ValueError(f'{path}.constructor[{i}]: engine ordinal/payload differs')
         if len(target) != len(constructors):
-            boundaries.append({'family':path,'reason':'source-append-unavailable-in-frozen-engine',
-                               'engine':len(target),'source':len(constructors)})
+            lag(boundaries, allowed, hit, path, 'source-append-unavailable-in-frozen-engine',
+                len(target), len(constructors))
         common.append((family, declaration, [name for name,_ in target]))
     if not common: raise ValueError('empty engine intersection')
+    # A ledger nothing hit is a stale ledger: an allowance for a family that no longer lags
+    # is a standing permission for a divergence that does not exist, so it must go.
+    stale = allowed - hit
+    if stale: raise ValueError('allowance names a family whose engine declaration no longer lags: ' + ', '.join(sorted(stale)))
     return common, boundaries

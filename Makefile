@@ -120,7 +120,8 @@ $(GEN)/lcnf: $(GEN)/derived $(LCNF_SOURCES) $(CORE)
 	@mkdir -p $(GEN) && touch $@
 
 EFF_SOURCES := src/OCaml5/Tools/EffGen.lean $(wildcard src/OCaml5/Eff/*.lean) $(WIRE_TAGS) \
-  scripts/generate-engine-structure.py scripts/lib/program_structure.py ocaml/engine/api_engine.ml
+  scripts/generate-engine-structure.py scripts/lib/program_structure.py \
+  ocaml/engine/layout-allowance.json ocaml/engine/api_engine.ml
 $(GEN)/eff: $(GEN)/derived $(EFF_SOURCES) $(CORE)
 	$(PY) scripts/generate.py --only eff
 	@mkdir -p $(GEN) && touch $@

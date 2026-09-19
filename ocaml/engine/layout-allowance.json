@@ -1,0 +1,5 @@
+{
+  "format": "effect4-engine-layout-allowance-v1",
+  "claim": "hand-written, not generated. The families whose engine declaration is allowed to lag the source, each with the reason and what removes it. Empty is the normal state: a lag means ocaml/engine/api_engine.ml has not been re-cut (make gen-lcnf), and scripts/lib/program_structure.py refuses one that is not named here. An entry that no longer lags is refused too, so this file cannot go stale in either direction.",
+  "allowed": []
+}
