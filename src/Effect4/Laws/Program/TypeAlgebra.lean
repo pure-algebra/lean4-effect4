@@ -1,4 +1,5 @@
 import Effect4.Program.Typed
+import Effect4.Laws.Program.Admits
 
 namespace Effect4.Program.Ty
 

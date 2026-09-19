@@ -1,4 +1,5 @@
 import Effect4.Schema.Codec
+import Effect4.Laws.Program.Admits
 
 /-! S-3 checked JSON boundary laws, under the owner's 2026-09-11 admission amendment.
 The type parameters range over canonical types. Exact recovery is conditional on
