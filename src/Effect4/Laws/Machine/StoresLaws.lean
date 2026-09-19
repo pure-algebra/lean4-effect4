@@ -355,11 +355,6 @@ theorem lt_of_refPeek_eq_some {heap : RefHeap} {cell : RefKey} {a : Val}
     (h : refPeek heap cell = some a) : cell.index < heap.length :=
   (List.getElem?_eq_some_iff.mp h).1
 
-/-- What a key reads is in the heap. -/
-theorem mem_of_refPeek_eq_some {heap : RefHeap} {cell : RefKey} {a : Val}
-    (h : refPeek heap cell = some a) : a ∈ heap :=
-  List.mem_of_getElem? h
-
 /-- The heap never shrinks under one `refStep` (plan §3.2, ENSURES 11): `refMake` appends, and
 every other heap row is a kernel row, which writes back one cell or nothing
 (`refStepOf_length`, `Laws/Machine/RefKernel.lean`). -/

@@ -5715,19 +5715,52 @@ theorem FnName.modifySome_keys (f : FnName) (a : Val) :
   cases f <;> cases a <;> simp only [FnName.modifySome, FnName.modify, FnName.total, Option.getD] <;>
     exact ⟨List.Subset.refl _, List.Subset.refl _⟩
 
-theorem refPoke_keys (heap : RefHeap) (cell : RefKey) (y : Val) :
-    (refPoke heap cell y).flatMap Val.keys ⊆ heap.flatMap Val.keys ++ y.keys := by
-  intro x hx
-  obtain ⟨a, ha, hxa⟩ := List.mem_flatMap.mp hx
-  rcases List.mem_or_eq_of_mem_set ha with h | rfl
-  · exact List.mem_append_left _ (List.mem_flatMap.mpr ⟨a, h, hxa⟩)
-  · exact List.mem_append_right _ hxa
-
 theorem mem_heap_keys {heap : RefHeap} {a : Val} (h : a ∈ heap) : a.keys ⊆ heap.flatMap Val.keys :=
   fun _ hx => List.mem_flatMap.mpr ⟨a, h, hx⟩
 
+/-- Each kernel keeps its values' handles inside any list that holds the operation's keys: it
+answers and writes the value it read, the function's images of it (`FnName.*_keys`), `unit`,
+the cell's handle, or the written argument, and the operation's keys hold the last two. One case
+a heap row. -/
+theorem SyncOp.refKernel_keys {o : SyncOp} {cell : RefKey} {k : RefKernel} {K : List Handle}
+    (hk : o.refKernel = some (cell, k)) (hK : o.keys ⊆ K) :
+    RefKernel.Keeps (·.keys ⊆ K) (·.keys ⊆ K) k := by
+  cases o <;> cases hk <;> intro c r hc hr <;> cases hr
+  case refGet => exact ⟨hc, nofun⟩
+  case refSet =>
+    exact ⟨fun _ hx => hK (List.mem_cons.mpr (.inl (List.mem_singleton.mp hx))),
+      fun _ h => by cases h; exact fun _ hx => hK (List.mem_cons_of_mem _ hx)⟩
+  case refGetAndSet =>
+    exact ⟨hc, fun _ h => by cases h; exact fun _ hx => hK (List.mem_cons_of_mem _ hx)⟩
+  case refSetAndGet =>
+    have hw : _ ⊆ K := fun _ hx => hK (List.mem_cons_of_mem _ hx)
+    exact ⟨hw, fun _ h => by cases h; exact hw⟩
+  case refUpdate f =>
+    exact ⟨List.nil_subset K, fun _ h => by cases h; exact (FnName.total_keys f c).trans hc⟩
+  case refGetAndUpdate f =>
+    exact ⟨hc, fun _ h => by cases h; exact (FnName.total_keys f c).trans hc⟩
+  case refUpdateAndGet f =>
+    have ht := (FnName.total_keys f c).trans hc
+    exact ⟨ht, fun _ h => by cases h; exact ht⟩
+  case refUpdateSome f =>
+    exact ⟨List.nil_subset K, fun a' h => (FnName.partialUpdate_keys f c a' h).trans hc⟩
+  case refGetAndUpdateSome f =>
+    exact ⟨hc, fun a' h => (FnName.partialUpdate_keys f c a' h).trans hc⟩
+  case refUpdateSomeAndGet f =>
+    have hw : ∀ a', f.partialUpdate c = some a' → a'.keys ⊆ K :=
+      fun a' h => (FnName.partialUpdate_keys f c a' h).trans hc
+    exact ⟨RefKernel.getD_keeps hw hc, hw⟩
+  case refModify f =>
+    have hm := FnName.modify_keys f c
+    exact ⟨hm.1.trans hc, fun _ h => by cases h; exact hm.2.trans hc⟩
+  case refModifySome f =>
+    have hm := FnName.modifySome_keys f c
+    exact ⟨hm.1.trans hc, fun _ h => by cases h; exact hm.2.trans hc⟩
+
 /-- One heap step answers and writes only values built from the operation's argument and the
-values already in the heap; the fresh cell of `refMake` exists in the heap it leaves. -/
+values already in the heap; the fresh cell of `refMake` exists in the heap it leaves. Every row
+but `refMake` is its kernel (`SyncOp.refKernel_keys`, carried through the write by
+`refStepOf_keeps`). -/
 theorem refStep_keys (o : SyncOp) (s : Stores) (v : Val) (heap' : RefHeap) (ids : List FiberId)
     (h : refStep o s.refs = some (v, heap')) (hok : Ok ⟨ids, s⟩ (o.keys ++ s.keys)) :
     Ok ⟨ids, { s with refs := heap' }⟩ (v.keys ++ heap'.flatMap Val.keys) := by
@@ -5735,128 +5768,24 @@ theorem refStep_keys (o : SyncOp) (s : Stores) (v : Val) (heap' : RefHeap) (ids 
     ⟨refStep_length o s.refs v heap' h, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, (fun _ hm => hm), Nat.le_refl _⟩
   have hmono : World.le ⟨ids, s⟩ ⟨ids, { s with refs := heap' }⟩ := ⟨fun _ hh => hh, hle⟩
   have hok' := Ok_mono hmono hok
-  cases o with
-  | refMake initial =>
-    simp only [refStep, Option.some.injEq, Prod.mk.injEq] at h
+  rcases refStep_cases h with ⟨initial, rfl⟩ | ⟨cell, k, hk, hstep⟩
+  · simp only [refStep, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    refine Ok_append.mpr ⟨?_, ?_⟩
-    · refine Ok_cons.mpr ⟨?_, Ok_nil _⟩
-      simp [Handle.existsIn]
-    · refine Ok_of_subset ?_ hok'
-      sub_tac
-  | refGet cell =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    refine Ok_of_subset ?_ hok'
-    sub_tac using (mem_heap_keys (mem_of_refPeek_eq_some hpeek))
-  | refSet cell value =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    refine Ok_of_subset ?_ hok'
-    sub_tac using (refPoke_keys s.refs cell value)
-  | refGetAndSet cell value =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    refine Ok_of_subset ?_ hok'
-    sub_tac using (refPoke_keys s.refs cell value), (mem_heap_keys (mem_of_refPeek_eq_some hpeek))
-  | refSetAndGet cell value =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    refine Ok_of_subset ?_ hok'
-    sub_tac using (refPoke_keys s.refs cell value)
-  | refUpdate cell f =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    refine Ok_of_subset ?_ hok'
-    sub_tac using (refPoke_keys s.refs cell (f.total a)),
-      (List.Subset.trans (FnName.total_keys f a) (mem_heap_keys (mem_of_refPeek_eq_some hpeek)))
-  | refGetAndUpdate cell f =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    refine Ok_of_subset ?_ hok'
-    sub_tac using (refPoke_keys s.refs cell (f.total a)),
-      (List.Subset.trans (FnName.total_keys f a) (mem_heap_keys (mem_of_refPeek_eq_some hpeek))),
-      (mem_heap_keys (mem_of_refPeek_eq_some hpeek))
-  | refUpdateAndGet cell f =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    refine Ok_of_subset ?_ hok'
-    sub_tac using (refPoke_keys s.refs cell (f.total a)),
-      (List.Subset.trans (FnName.total_keys f a) (mem_heap_keys (mem_of_refPeek_eq_some hpeek)))
-  | refUpdateSome cell pf =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    refine Ok_of_subset ?_ hok'
-    split
-    · next a' ha' =>
-      sub_tac using (refPoke_keys s.refs cell a'),
-        (List.Subset.trans (FnName.partialUpdate_keys pf a a' ha') (mem_heap_keys (mem_of_refPeek_eq_some hpeek)))
+    refine Ok_append.mpr ⟨Ok_cons.mpr ⟨?_, Ok_nil _⟩, Ok_of_subset ?_ hok'⟩
+    · simp only [Handle.existsIn, List.length_append, List.length_singleton, decide_eq_true_eq]
+      exact Nat.lt_succ_self _
     · sub_tac
-  | refGetAndUpdateSome cell pf =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    refine Ok_of_subset ?_ hok'
-    split
-    · next a' ha' =>
-      sub_tac using (refPoke_keys s.refs cell a'),
-        (List.Subset.trans (FnName.partialUpdate_keys pf a a' ha') (mem_heap_keys (mem_of_refPeek_eq_some hpeek))),
-        (mem_heap_keys (mem_of_refPeek_eq_some hpeek))
-    · sub_tac using (mem_heap_keys (mem_of_refPeek_eq_some hpeek))
-  | refUpdateSomeAndGet cell pf =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.bind_eq_some_iff.mp h
-    split at hf
-    · next a' ha' =>
-      obtain ⟨fresh, hfresh, hff⟩ := Option.map_eq_some_iff.mp hf
-      simp only [Prod.mk.injEq] at hff
-      obtain ⟨rfl, rfl⟩ := hff
-      have hfm : fresh ∈ refPoke s.refs cell a' := mem_of_refPeek_eq_some hfresh
-      have hfk : fresh.keys ⊆ s.refs.flatMap Val.keys ++ a'.keys :=
-        List.Subset.trans (mem_heap_keys hfm) (refPoke_keys s.refs cell a')
-      refine Ok_of_subset ?_ hok'
-      sub_tac using hfk, (refPoke_keys s.refs cell a'),
-        (List.Subset.trans (FnName.partialUpdate_keys pf a a' ha') (mem_heap_keys (mem_of_refPeek_eq_some hpeek)))
-    · simp only [Option.some.injEq, Prod.mk.injEq] at hf
-      obtain ⟨rfl, rfl⟩ := hf
-      refine Ok_of_subset ?_ hok'
-      sub_tac using (mem_heap_keys (mem_of_refPeek_eq_some hpeek))
-  | refModify cell f =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    refine Ok_of_subset ?_ hok'
-    sub_tac using (refPoke_keys s.refs cell (f.modify a).2),
-      (List.Subset.trans (FnName.modify_keys f a).1 (mem_heap_keys (mem_of_refPeek_eq_some hpeek))),
-      (List.Subset.trans (FnName.modify_keys f a).2 (mem_heap_keys (mem_of_refPeek_eq_some hpeek)))
-  | refModifySome cell pf =>
-    simp only [refStep] at h
-    obtain ⟨a, hpeek, hf⟩ := Option.map_eq_some_iff.mp h
-    simp only [Prod.mk.injEq] at hf
-    obtain ⟨rfl, rfl⟩ := hf
-    refine Ok_of_subset ?_ hok'
-    sub_tac using (refPoke_keys s.refs cell ((pf.modifySome a).2.getD a)),
-      (List.Subset.trans (FnName.modifySome_keys pf a).1 (mem_heap_keys (mem_of_refPeek_eq_some hpeek))),
-      (List.Subset.trans (FnName.modifySome_keys pf a).2 (mem_heap_keys (mem_of_refPeek_eq_some hpeek)))
-  | _ => simp [refStep] at h
+  · have hheap : ∀ c ∈ s.refs, c.keys ⊆ o.keys ++ s.keys := fun c hc _ hx =>
+      List.mem_append_right _ (by
+        simp only [Stores.keys, List.mem_append]
+        exact .inl (.inl (.inl (mem_heap_keys hc hx))))
+    obtain ⟨hans, hcells⟩ :=
+      refStepOf_keeps hheap (SyncOp.refKernel_keys hk (List.subset_append_left _ _)) hstep
+    refine Ok_of_subset (fun _ hx => ?_) hok'
+    rcases List.mem_append.mp hx with hv | hh
+    · exact hans hv
+    · obtain ⟨c, hc, hxc⟩ := List.mem_flatMap.mp hh
+      exact hcells c hc hxc
 
 
 /-! ### The joined families' handles: the forked scope and the memo world -/
