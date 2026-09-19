@@ -14,12 +14,16 @@ test("the row signatures are Lean's, one line per selectable row, and cover the 
     expect(signatures.has(`${row.table}/${row.name}`)).toBe(true)
   }
   // the projection of a request by the row's own shape, as Lean printed it: one tuple level
-  expect(signatures.get("SqliteBun/sqliteOpen")).toEqual({ shape: "call", receiver: "", request: "[string]", answer: "SqlClient.SqlClient", error: "never" })
+  expect(signatures.get("SqliteBun/sqliteOpen")).toEqual({ shape: "call", receiver: "", request: "[string]", answer: "SqlClient.SqlClient", error: "never", typeArgs: "" })
   expect(signatures.get("KeyValueStoreMemory/kvMake")?.request).toBe("[]")
-  expect(signatures.get("KeyValueStoreMemory/kvGet")).toEqual({ shape: "method", receiver: "KeyValueStore.KeyValueStore", request: "[string]", answer: "Option.Option<string>", error: "readonly [string, string]" })
+  expect(signatures.get("KeyValueStoreMemory/kvGet")).toEqual({ shape: "method", receiver: "KeyValueStore.KeyValueStore", request: "[string]", answer: "Option.Option<string>", error: "readonly [string, string]", typeArgs: "" })
   expect(signatures.get("SqliteBun/sqlUnsafe")?.request).toBe("[string, ReadonlyArray<string>]")
   // a handle keeps the spelling the row declares; the query's declarations bind it
   expect(signatures.get("Host/close")?.request).toBe("[Host.Resource]")
+  // a template atom is queried at an explicit instantiation, and Lean rendered its columns there
+  expect(signatures.get("Atom/getOrElse")).toEqual({ shape: "poly", receiver: "", request: '[Option.Option<"p0">, "p0"]', answer: '"p0"', error: "", typeArgs: '<"p0">' })
+  expect(signatures.get("Atom/pair")?.typeArgs).toBe('<"p0", "p1">')
+  expect(signatures.get("Atom/succ")?.typeArgs).toBe("")
 })
 
 test("the receiver of a selected member is the object type the compiler parsed", () => {

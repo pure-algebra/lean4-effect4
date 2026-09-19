@@ -13,7 +13,11 @@
  * So: one query per row (`Parameters<typeof Ref.set>` and the three `Effect` columns of its
  * `ReturnType`) and one per atom (`Parameters<typeof Atoms.isSome>` and its `ReturnType`, which
  * is a value, not an `Effect`), with the expectation `Ty.renderRaw` prints for the row's request,
- * answer and error, under the row's own shape (`generated/row-types.tsv`).
+ * answer and error, under the row's own shape (`generated/row-types.tsv`). A template atom is
+ * queried at the explicit instantiation Lean rendered its columns at (`typeof Atoms.ite<"p0">`
+ * against `[boolean, "p0", "p0"]`): the checker cannot judge a generic signature, an
+ * instantiated one is an ordinary signature, and since a probe is a type no other type of the
+ * template can be, agreement at the probes is the template's own.
  *
  * Every line of `generated/row-citations.tsv` is a report, never a gate on agreement: an rc.112
  * export is generic where a row is monomorphic, so most rows are *reported* with what the target
@@ -45,7 +49,7 @@ export function queries(repo: string, signatures: Map<string, RowSignature>): Qu
     const [table, name] = id.split("/") as [string, string]
     if (table !== "Native" && table !== "Atom") continue
     const atom = table === "Atom"
-    const subject = atom ? `typeof Atoms.${name}` : `typeof ${nativeSpelling(name)}`
+    const subject = atom ? `typeof Atoms.${name}${signature.typeArgs}` : `typeof ${nativeSpelling(name)}`
     // A `value` row is not called: `Effect.currentTimeMillis` is an `Effect`, not a function.
     const value = signature.shape === "value"
     const q: Query = {

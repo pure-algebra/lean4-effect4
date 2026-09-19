@@ -53,16 +53,18 @@ export function requirements(raw: unknown, scope: Key | undefined): string {
 /** A row's target signature as Lean rendered it (`generated/row-types.tsv`, written by
  * `tools/Tools/RowTypes.lean` with `Ty.renderRaw` and the row's own `RowShape`). There is no
  * second printer here: handle spellings stay as the row declares them and the query's
- * declarations bind them. */
-export interface RowSignature { shape: string; receiver: string; request: string; answer: string; error: string }
+ * declarations bind them. `typeArgs` is the explicit instantiation a generic subject is queried
+ * at (`<"p0">` for a `poly` atom, whose request and answer Lean rendered at the same probes),
+ * empty for every other row. */
+export interface RowSignature { shape: string; receiver: string; request: string; answer: string; error: string; typeArgs: string }
 export function rowSignatures(repo: string): Map<string, RowSignature> {
   const table = new Map<string, RowSignature>()
   const text = readFileSync(resolve(repo, "generated/row-types.tsv"), "utf8")
   for (const line of text.split("\n")) {
     if (!line || line.startsWith("#")) continue
-    const [name, row, shape, receiver, request, answer, error] = line.split("\t")
-    if (error === undefined) throw new Error(`generated/row-types.tsv: malformed line ${JSON.stringify(line)}`)
-    table.set(`${name}/${row}`, { shape: shape!, receiver: receiver!, request: request!, answer: answer!, error })
+    const [name, row, shape, receiver, request, answer, error, typeArgs] = line.split("\t")
+    if (typeArgs === undefined) throw new Error(`generated/row-types.tsv: malformed line ${JSON.stringify(line)}`)
+    table.set(`${name}/${row}`, { shape: shape!, receiver: receiver!, request: request!, answer: answer!, error: error!, typeArgs })
   }
   if (!table.size) throw new Error("generated/row-types.tsv: no rows")
   return table

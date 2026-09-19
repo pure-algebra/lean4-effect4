@@ -1,5 +1,6 @@
 import Effect4.Program.Packages
 import Effect4.Program.NativeAtom
+import Effect4.Laws.Program.Template
 import Test.Api.AcquireHandleContract
 import Tools.ProfileJson
 import Lean.Data.Json
@@ -18,11 +19,13 @@ stated once, here, beside the shape it reads.
 
 One line per row, tab separated:
 
-    table  name  shape  receiver  request  answer  error
+    table  name  shape  receiver  request  answer  error  typeArgs
 
 `request` is the argument tuple the call takes (`[string, number]`), `receiver` the method's
 receiver or empty. A row with trailing arguments or explicit type arguments is not a callable
 adapter row for this lane and is written with an empty `request`, which the reader refuses.
+`typeArgs` is the explicit instantiation the lane queries a template atom at (`<"p0">`), its
+request and answer rendered at the same probes; it is empty on every other line.
 
 The tables are the ones the lane can select: the canonical packages
 (`Effect4.Program.Packages.all`) and the truth harness's host fixture. That fixture is
@@ -74,7 +77,7 @@ def line (table : String) (row : Row) : String :=
     | none => ("", "")
   String.intercalate "\t"
     [table, row.name, shapeName row.shape, receiver, args,
-      Ty.renderRaw row.answer, Ty.renderRaw row.error]
+      Ty.renderRaw row.answer, Ty.renderRaw row.error, ""]
 
 /-- The built-in operations, one per row name: the read-modify-write rows differ only in the
 pure function they print after the request, which is a trailing argument, so one representative
@@ -89,16 +92,37 @@ def nativeOps : List NativeOp :=
   , .deferredMake, .deferredIsDone, .deferredPoll, .deferredSucceed, .deferredFail, .deferredAwait
   , .scopeMake .sequential, .sleep, .clockNow ]
 
-/-- An atom's declared signature in the target's request syntax, when its scheme declares one.
-`alts`, `poly` and the custom rules declare none: what the prelude spells for them is what the
-lane reports, and comparing it against a template with free parameters would be a claim about
-an instantiation nobody made. -/
-def atomSignature (s : NativeAtom.Scheme) : Option (String × String) :=
+/-- The probe a template atom's query instantiates parameter `i` at: a string literal type no
+other type of a template can be, so an agreement at the probes is the template's own. -/
+def probe (i : Nat) : Ty := .lit s!"p{i}"
+
+/-- The explicit instantiation a template is queried at: its parameters `0 … n-1` at their
+probes. They are the target's type parameters in declaration order, which is the order the
+prelude spells every template in. -/
+def probes (params : List Ty) : Ty.Subst :=
+  match (params.flatMap Ty.varsOf).max? with
+  | some n => (List.range (n + 1)).map fun i => (i, probe i)
+  | none => []
+
+/-- An argument list in the target's request syntax. -/
+def renderArgs (params : List Ty) : String :=
+  "[" ++ String.intercalate ", " (params.map Ty.renderRaw) ++ "]"
+
+/-- An atom's declared signature in the target's request syntax, with the type arguments the
+query applies. A template is rendered at its probes and queried at them, so the target checks
+an ordinary signature against the template's instance; `alts` and the custom rules declare
+none, and what the prelude spells for them is what the lane reports. -/
+def atomSignature (s : NativeAtom.Scheme) : Option (String × String × String) :=
   match s with
-  | .mono params answer =>
-    some ("[" ++ String.intercalate ", " (params.map Ty.renderRaw) ++ "]", Ty.renderRaw answer)
-  | .variadic param answer => some (Ty.renderRaw param ++ "[]", Ty.renderRaw answer)
-  | .poly .. | .alts _ | .custom _ => none
+  | .mono params answer => some (renderArgs params, Ty.renderRaw answer, "")
+  | .variadic param answer => some (Ty.renderRaw param ++ "[]", Ty.renderRaw answer, "")
+  | .poly params answer _ =>
+    let σ := probes params
+    let typeArgs := if σ.isEmpty then "" else
+      "<" ++ String.intercalate ", " (σ.map fun b => Ty.renderRaw b.2) ++ ">"
+    some (renderArgs (params.map (Ty.instantiate σ)), Ty.renderRaw (Ty.instantiate σ answer),
+      typeArgs)
+  | .alts _ | .custom _ => none
 
 def schemeKind : NativeAtom.Scheme → String
   | .mono _ _ => "mono"
@@ -112,8 +136,9 @@ column carries the scheme's kind, which is what a reader of this table needs to 
 reading its request. -/
 def atomLine (atom : NativeAtom) : String :=
   let spec := NativeAtom.spec atom
-  let (request, answer) := (atomSignature spec.scheme).getD ("", "")
-  String.intercalate "\t" ["Atom", NativeAtom.name atom, schemeKind spec.scheme, "", request, answer, ""]
+  let (request, answer, typeArgs) := (atomSignature spec.scheme).getD ("", "", "")
+  String.intercalate "\t"
+    ["Atom", NativeAtom.name atom, schemeKind spec.scheme, "", request, answer, "", typeArgs]
 
 /-- The host fixture, checked against what the truth harness published. -/
 def hostRowsAgree (corpus : Lean.Json) (rows : List Row) : Except String Unit := do
@@ -130,7 +155,7 @@ def hostRowsAgree (corpus : Lean.Json) (rows : List Row) : Except String Unit :=
 
 def render (corpus : Lean.Json) : Except String String := do
   hostRowsAgree corpus Test.Api.AcquireHandleContract.table
-  let header := "# GENERATED by tools/Tools/RowTypes.lean (Ty.renderRaw over the row tables and the atom table); do not edit\n# table\tname\tshape\treceiver\trequest\tanswer\terror\n"
+  let header := "# GENERATED by tools/Tools/RowTypes.lean (Ty.renderRaw over the row tables and the atom table); do not edit\n# table\tname\tshape\treceiver\trequest\tanswer\terror\ttypeArgs\n"
   let packages := Packages.all.flatMap fun p => p.rows.map (line p.name)
   let host := Test.Api.AcquireHandleContract.table.map (line "Host")
   let native := nativeOps.map fun op => line "Native" (NativeOp.row op)

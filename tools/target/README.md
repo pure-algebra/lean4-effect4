@@ -70,7 +70,10 @@ in compiler assignment checks. This prevents the SQL client's internal `any` or 
 internal `unknown` from being misreported as an unresolved handle result. It does not certify
 host implementation bodies. Single, non-generic call signatures are supported. All overloads
 are listed; overloaded/generic members and rows with trailing/explicit type arguments are
-refused pending an explicit instantiation model. These assignment checks are finite TypeScript
+refused, except a template atom, which is queried at the explicit instantiation
+`generated/row-types.tsv` names (`typeof Atoms.ite<"p0">`, each parameter at a string literal
+probe) against its template rendered at the same probes; `rows.test.ts` holds the red control.
+These assignment checks are finite TypeScript
 judgments, not Lean semantic theorems, runtime cause agreement, or proof of distinct Lean
 service-key identity.
 
