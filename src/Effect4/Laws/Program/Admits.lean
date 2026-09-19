@@ -187,4 +187,203 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
   rw [Val.hasTy.eq_cata v b allocated]
   exact cata_admits_sub Val.hasTy_admitsSub hsub v allocated hv
 
+/-! ## Monotonicity in the allocation table -/
+
+/-- An admission algebra whose twenty arms satisfy `AdmitsExtend` has a fold that preserves
+extension of the allocation table. -/
+theorem cata_admits_extend {alg : TyAlgebra AdmCarrier} (h : AdmitsExtend alg) (ty : Ty) :
+    Adm.Extends (cata_ty alg ty).2 := by
+  fun_induction cata_ty alg ty
+  case case1 => exact h.never
+  case case2 => exact h.unit
+  case case3 => exact h.nat
+  case case4 => exact h.int
+  case case5 => exact h.string
+  case case6 => exact h.bool
+  case case7 target => exact h.handle target
+  case case8 _ ih => exact h.option _ ih
+  case case9 _ ih => exact h.list _ ih
+  case case10 _ _ ih1 ih2 => exact h.prod _ _ ih1 ih2
+  case case11 _ _ ih1 ih2 => exact h.except _ _ ih1 ih2
+  case case12 _ _ ih1 ih2 => exact h.exitOf _ _ ih1 ih2
+  case case13 _ ih => exact h.causeOf _ ih
+  case case14 _ _ ih1 ih2 => exact h.fiberOf _ _ ih1 ih2
+  case case15 _ _ ih1 ih2 => exact h.union _ _ ih1 ih2
+  case case16 value => exact h.lit value
+  case case17 _ ih => exact h.refOf _ ih
+  case case18 _ _ ih1 ih2 => exact h.deferredOf _ _ ih1 ih2
+  case case19 index => exact h.var index
+  case case20 => exact h.unknown
+
+/-- The extension condition discharged for `Val.hasTy.alg`. -/
+theorem Val.hasTy_admitsExtend : AdmitsExtend Val.hasTy.alg where
+  never := fun _ _ _ _ hv => by
+    dsimp only [Val.hasTy.alg] at hv
+    exact Bool.noConfusion hv
+  unit := by
+    intro v a b ext hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv <;> [rfl; exact Bool.noConfusion hv]
+  nat := by
+    intro v a b ext hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv <;> [rfl; exact Bool.noConfusion hv]
+  int := fun _ _ _ _ hv => by
+    dsimp only [Val.hasTy.alg] at hv
+    exact Bool.noConfusion hv
+  string := by
+    intro v a b ext hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv <;> [rfl; exact Bool.noConfusion hv]
+  bool := by
+    intro v a b ext hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv <;> [rfl; exact Bool.noConfusion hv]
+  handle := by
+    intro target v a b ext hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv
+    · split at hv
+      · exact hv
+      · exact hv
+      · exact hv
+      · obtain ⟨ht, hi⟩ := Bool.and_eq_true_iff.mp hv
+        simp only [ht]
+        exact beq_iff_eq.mpr (ext _ target (beq_iff_eq.mp hi))
+      · exact Bool.noConfusion hv
+    · exact hv
+  option := by
+    intro p0 h0 v a b ext hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv
+    · rfl
+    · rename_i w
+      exact h0 w a b ext hv
+    · exact Bool.noConfusion hv
+  list := by
+    intro p0 h0 v a b ext hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv
+    · split at hv
+      · exact list_all_mono _ (fun id => h0 (Val.fiber id) a b ext) hv
+      · exact Bool.noConfusion hv
+    · rename_i vs
+      exact list_all_mono vs (fun w => h0 w a b ext) hv
+    · exact Bool.noConfusion hv
+  prod := by
+    intro p0 p1 h0 h1 v a b ext hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv
+    · rename_i x y
+      simp only [Bool.and_eq_true_iff] at hv ⊢
+      exact ⟨h0 x a b ext hv.1, h1 y a b ext hv.2⟩
+    · exact Bool.noConfusion hv
+  except := by
+    intro p0 p1 h0 h1 v a b ext hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv
+    · exact h0 _ a b ext hv
+    · exact h1 _ a b ext hv
+    · exact Bool.noConfusion hv
+  exitOf := by
+    intro p0 p1 h0 h1 v a b ext hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv
+    · exact h0 _ a b ext hv
+    · split at hv
+      · exact causeAdmits_mono_sub (fun w hw => h1 w a b ext hw) _ hv
+      · exact Bool.noConfusion hv
+    · exact Bool.noConfusion hv
+  causeOf := by
+    intro p0 h0 v a b ext hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv
+    · exact causeAdmits_mono_sub (fun w hw => h0 w a b ext hw) _ hv
+    · exact Bool.noConfusion hv
+  fiberOf := by
+    intro p0 p1 h0 h1 v a b ext hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv <;> [rfl; exact Bool.noConfusion hv]
+  union := by
+    intro p0 p1 h0 h1 v a b ext hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    obtain h | h := Bool.or_eq_true_iff.mp hv
+    · exact Bool.or_eq_true_iff.mpr (Or.inl (h0 v a b ext h))
+    · exact Bool.or_eq_true_iff.mpr (Or.inr (h1 v a b ext h))
+  lit := by
+    intro s v a b ext hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv <;> [exact hv; exact Bool.noConfusion hv]
+  refOf := by
+    intro p0 h0 v a b ext hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv <;> [exact hv; exact Bool.noConfusion hv]
+  deferredOf := by
+    intro p0 p1 h0 h1 v a b ext hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv <;> [exact hv; exact Bool.noConfusion hv]
+  var := fun _ _ _ _ _ hv => by
+    dsimp only [Val.hasTy.alg] at hv
+    exact Bool.noConfusion hv
+  unknown := fun _ _ _ _ _ => rfl
+
+/-- Membership is monotone in the allocation table at every type. -/
+theorem hasTy_mono (ty : Ty) (v : Val) (a b : List String)
+    (ext : Extends a b) (typed : Val.hasTy v ty a = true) : Val.hasTy v ty b = true := by
+  rw [Val.hasTy.eq_cata v ty a] at typed
+  rw [Val.hasTy.eq_cata v ty b]
+  exact cata_admits_extend Val.hasTy_admitsExtend ty v a b ext typed
+
+/-- In cause admission, discarding the type argument makes the choice of type irrelevant. -/
+theorem causeAdmits_discard_ty (m : Val → Bool) (t1 t2 : Ty) (c : CauseV) :
+    causeAdmits (fun w _ => m w) t1 c = causeAdmits (fun w _ => m w) t2 c := by
+  apply List.all_congr rfl
+  intro r
+  cases r with
+  | fail e _ => dsimp only [reasonAdmits]
+  | die _ _ => rfl
+  | interrupt _ _ => rfl
+
+/-- What an admission algebra satisfies when its arms respect equality of admitted values.
+The congruence arms preserve pointwise agreement of their subterm admissions; the coarse
+handles ignore normalisation of their arguments. -/
+structure AdmitsNormalize (alg : TyAlgebra AdmCarrier) : Prop where
+  option : ∀ p0 q0, (p0).2 = (q0).2 → (alg.ty_option p0).2 = (alg.ty_option q0).2
+  list : ∀ p0 q0, (p0).2 = (q0).2 → (alg.ty_list p0).2 = (alg.ty_list q0).2
+  except : ∀ p0 p1 q0 q1, (p0).2 = (q0).2 → (p1).2 = (q1).2 → (alg.ty_except p0 p1).2 = (alg.ty_except q0 q1).2
+  exitOf : ∀ p0 p1 q0 q1, (p0).2 = (q0).2 → (p1).2 = (q1).2 → (alg.ty_exitOf p0 p1).2 = (alg.ty_exitOf q0 q1).2
+  causeOf : ∀ p0 q0, (p0).2 = (q0).2 → (alg.ty_causeOf p0).2 = (alg.ty_causeOf q0).2
+  fiberOf : ∀ p0 p1 q0 q1, (alg.ty_fiberOf p0 p1).2 = (alg.ty_fiberOf q0 q1).2
+  refOf : ∀ p0 q0, (alg.ty_refOf p0).2 = (alg.ty_refOf q0).2
+  deferredOf : ∀ p0 p1 q0 q1, (alg.ty_deferredOf p0 p1).2 = (alg.ty_deferredOf q0 q1).2
+
+/-- The congruence condition for normalisation discharged for `Val.hasTy.alg`. -/
+theorem Val.hasTy_admitsNormalize : AdmitsNormalize Val.hasTy.alg where
+  option := fun _ _ h => by dsimp only [Val.hasTy.alg]; rw [h]
+  list := fun _ _ h => by dsimp only [Val.hasTy.alg]; rw [h]
+  except := fun _ _ _ _ h0 h1 => by dsimp only [Val.hasTy.alg]; rw [h0, h1]
+  exitOf := by
+    intro p0 p1 q0 q1 h0 h1
+    dsimp only [Val.hasTy.alg]
+    rw [h0, h1]
+    funext v allocated
+    split
+    · rfl
+    · split
+      · exact causeAdmits_discard_ty (fun w => q1.snd w allocated) p1.fst q1.fst _
+      · rfl
+    · rfl
+  causeOf := by
+    intro p0 q0 h
+    dsimp only [Val.hasTy.alg]
+    rw [h]
+    funext v allocated
+    split
+    · exact causeAdmits_discard_ty (fun w => q0.snd w allocated) p0.fst q0.fst _
+    · rfl
+  fiberOf := fun _ _ _ _ => rfl
+  refOf := fun _ _ => rfl
+  deferredOf := fun _ _ _ _ => rfl
+
 end Effect4.Program
+

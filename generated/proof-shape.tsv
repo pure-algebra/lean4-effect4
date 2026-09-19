@@ -73,7 +73,7 @@ src/Effect4/Laws/Program/Simulation/Evaluate.lean	6	0	2
 src/Effect4/Laws/Program/Simulation/Hooks.lean	4	0	8
 src/Effect4/Laws/Program/Simulation/Pending.lean	1	0	2
 src/Effect4/Laws/Program/TypeAlgebra.lean	4	1	35
-src/Effect4/Laws/Program/Typed.lean	0	0	10
+src/Effect4/Laws/Program/Typed.lean	0	0	0
 src/Effect4/Laws/Program/Typing/Check.lean	0	2	0
 src/Effect4/Laws/Store/CanonicalSpec.lean	0	1	0
 src/Effect4/Machine/Alphabets.lean	1	0	3

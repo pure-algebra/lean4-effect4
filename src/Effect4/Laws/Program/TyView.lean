@@ -592,6 +592,45 @@ structure AdmitsSub (alg : TyAlgebra AdmCarrier) : Prop where
   /-- argument 0 inv, argument 1 inv (vendor/effect-4.0.0-rc.112/src/Deferred.ts:58) -/
   deferredOf : ∀ p0 p1 q0 q1, (alg.ty_deferredOf p0 p1).2 = (alg.ty_deferredOf q0 q1).2
 
+/-- The allocation table `after` agrees with `before` at every index `before` has. -/
+def Extends (before after : List String) : Prop :=
+  ∀ (i : Nat) (target : String), before[i]? = some target → after[i]? = some target
+
+/-- A registration appends, and an append extends. -/
+theorem extends_append (before added : List String) : Extends before (before ++ added) := by
+  intro i target h
+  rw [List.getElem?_append_left (List.getElem?_eq_some_iff.mp h).1]
+  exact h
+
+/-- Pointwise monotonicity in the allocation table: if `Extends a b`, what is admitted
+at `a` is admitted at `b`. -/
+def Adm.Extends (p : Adm) : Prop :=
+  ∀ v a b, Effect4.Program.Extends a b → p v a = true → p v b = true
+
+/-- **One field per constructor**: what an admission algebra must satisfy for its fold to
+preserve extension of the allocation table. -/
+structure AdmitsExtend (alg : TyAlgebra AdmCarrier) : Prop where
+  never : Adm.Extends (alg.ty_never).2
+  unit : Adm.Extends (alg.ty_unit).2
+  nat : Adm.Extends (alg.ty_nat).2
+  int : Adm.Extends (alg.ty_int).2
+  string : Adm.Extends (alg.ty_string).2
+  bool : Adm.Extends (alg.ty_bool).2
+  handle : ∀ (target : String), Adm.Extends (alg.ty_handle target).2
+  option : ∀ p0, Adm.Extends (p0).2 → Adm.Extends (alg.ty_option p0).2
+  list : ∀ p0, Adm.Extends (p0).2 → Adm.Extends (alg.ty_list p0).2
+  prod : ∀ p0 p1, Adm.Extends (p0).2 → Adm.Extends (p1).2 → Adm.Extends (alg.ty_prod p0 p1).2
+  except : ∀ p0 p1, Adm.Extends (p0).2 → Adm.Extends (p1).2 → Adm.Extends (alg.ty_except p0 p1).2
+  exitOf : ∀ p0 p1, Adm.Extends (p0).2 → Adm.Extends (p1).2 → Adm.Extends (alg.ty_exitOf p0 p1).2
+  causeOf : ∀ p0, Adm.Extends (p0).2 → Adm.Extends (alg.ty_causeOf p0).2
+  fiberOf : ∀ p0 p1, Adm.Extends (p0).2 → Adm.Extends (p1).2 → Adm.Extends (alg.ty_fiberOf p0 p1).2
+  union : ∀ p0 p1, Adm.Extends (p0).2 → Adm.Extends (p1).2 → Adm.Extends (alg.ty_union p0 p1).2
+  lit : ∀ (value : String), Adm.Extends (alg.ty_lit value).2
+  refOf : ∀ p0, Adm.Extends (p0).2 → Adm.Extends (alg.ty_refOf p0).2
+  deferredOf : ∀ p0 p1, Adm.Extends (p0).2 → Adm.Extends (p1).2 → Adm.Extends (alg.ty_deferredOf p0 p1).2
+  var : ∀ (index : Nat), Adm.Extends (alg.ty_var index).2
+  unknown : Adm.Extends (alg.ty_unknown).2
+
 end Effect4.Program
 
 /-! ## Acceptance guards for the generated relational view of `Ty`

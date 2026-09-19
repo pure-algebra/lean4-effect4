@@ -174,17 +174,8 @@ is exactly what the `.handle` arm needs and nothing more. It is *not* a semantic
 a target spelling says which kind of resource a handle names, never whether that resource is
 still open or which run minted it (`Test/Program/TypedContract.lean` pins both facts).
 Source of the proofs: the foundation probe `Allocation.lean` (2026-09-09), reproved here
-against the production definition unchanged. -/
-
-/-- The allocation table `after` agrees with `before` at every index `before` has. -/
-def Extends (before after : List String) : Prop :=
-  ∀ (i : Nat) (target : String), before[i]? = some target → after[i]? = some target
-
-/-- A registration appends, and an append extends. -/
-theorem extends_append (before added : List String) : Extends before (before ++ added) := by
-  intro i target h
-  rw [List.getElem?_append_left (List.getElem?_eq_some_iff.mp h).1]
-  exact h
+against the production definition unchanged. `Extends` and `extends_append` live in
+`Effect4.Laws.Program.TyView` with the algebra conditions. -/
 
 /-! ## The error folds
 
@@ -272,63 +263,9 @@ theorem hasTy_causeOf_eq_hasTyCause (v : Val) (e : Ty) :
     Val.hasTy v (.causeOf e) = hasTyCause v e := by
   aesop
 
-/-- Membership is monotone in the allocation table at every type. The type induction
-uses the shared pointwise cause-fold law for causes and failed exits; only external handle
-membership reads the table. All previous environment statements retain their premises. -/
-theorem hasTy_mono (ty : Ty) (v : Val) (a b : List String)
-    (ext : Extends a b) (typed : Val.hasTy v ty a = true) : Val.hasTy v ty b = true := by
-  induction ty generalizing v with
-  | never | int | var => simp [Val.hasTy] at typed
-  | except error value ihe ihv =>
-    simp only [Val.hasTy] at typed ⊢
-    split at typed <;> try exact typed
-    · exact ihe _ typed
-    · exact ihv _ typed
-  | unit | nat | bool | string | fiberOf | refOf | deferredOf | lit | unknown => exact typed
-  | handle target =>
-    cases v <;> simp only [Val.hasTy] at typed ⊢
-    all_goals try exact typed
-    split at typed <;> try exact typed
-    next h =>
-      obtain ⟨ht, hi⟩ := Bool.and_eq_true_iff.mp typed
-      apply Bool.and_eq_true_iff.mpr
-      exact ⟨ht, beq_iff_eq.mpr (ext _ _ (beq_iff_eq.mp hi))⟩
-  | option inner ih =>
-    cases v <;> simp only [Val.hasTy] at typed ⊢
-    all_goals try exact typed
-    exact ih _ typed
-  | prod x y ihx ihy =>
-    simp only [Val.hasTy] at typed ⊢
-    split at typed <;> try exact typed
-    next u v =>
-      exact Bool.and_eq_true_iff.mpr ⟨ihx u (Bool.and_eq_true_iff.mp typed).1,
-        ihy v (Bool.and_eq_true_iff.mp typed).2⟩
-  | union x y ihx ihy =>
-    simp only [Val.hasTy, Bool.or_eq_true] at typed ⊢
-    exact typed.elim (fun h => Or.inl (ihx _ h)) (fun h => Or.inr (ihy _ h))
-  | exitOf x y ihx ihy =>
-    simp only [Val.hasTy] at typed ⊢
-    split at typed <;> try exact typed
-    · exact ihx _ typed
-    · split at typed <;> try exact typed
-      exact causeAdmits_mono y (fun w => ihy w) _ typed
-  | causeOf e ih =>
-    simp only [Val.hasTy] at typed ⊢
-    split at typed <;> try exact typed
-    exact causeAdmits_mono e (fun w => ih w) _ typed
-  | list x ih =>
-    simp only [Val.hasTy] at typed ⊢
-    split at typed <;> try exact typed
-    · split at typed <;> try exact typed
-      apply List.all_eq_true.mpr
-      intro id hid
-      exact ih (Val.fiber id) (List.all_eq_true.mp typed id hid)
-    · apply List.all_eq_true.mpr
-      intro value hv
-      exact ih value (List.all_eq_true.mp typed value hv)
-
 /-- The registration case of `hasTy_mono`: a value typed before an allocation is typed
-after it. -/
+after it. `hasTy_mono` itself lives in `Effect4.Laws.Program.Admits` as the corollary of
+`cata_admits_extend`. -/
 theorem hasTy_append (ty : Ty) (v : Val) (a added : List String)
     (h : Val.hasTy v ty a = true) : Val.hasTy v ty (a ++ added) = true :=
   hasTy_mono ty v a (a ++ added) (extends_append a added) h

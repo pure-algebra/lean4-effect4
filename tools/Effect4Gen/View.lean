@@ -763,6 +763,56 @@ def emitAdmits (rs : List Row) : List String := Id.run do
       s := s ++ [s!"  {c.name} : ∀ {binders}, {pre}Adm.le {lhs} {rhs}"]
   return s ++ [""]
 
+/-- `AdmitsExtend`: one field per constructor, the condition under which an admission algebra's
+fold preserves extension of the allocation table. -/
+def emitAdmitsExtend (rs : List Row) : List String := Id.run do
+  let mut s : List String :=
+    [ "/-- The allocation table `after` agrees with `before` at every index `before` has. -/",
+      "def Extends (before after : List String) : Prop :=",
+      "  ∀ (i : Nat) (target : String), before[i]? = some target → after[i]? = some target",
+      "",
+      "/-- A registration appends, and an append extends. -/",
+      "theorem extends_append (before added : List String) : Extends before (before ++ added) := by",
+      "  intro i target h",
+      "  rw [List.getElem?_append_left (List.getElem?_eq_some_iff.mp h).1]",
+      "  exact h",
+      "",
+      "/-- Pointwise monotonicity in the allocation table: if `Extends a b`, what is admitted",
+      "at `a` is admitted at `b`. -/",
+      "def Adm.Extends (p : Adm) : Prop :=",
+      "  ∀ v a b, Effect4.Program.Extends a b → p v a = true → p v b = true",
+      "",
+      "/-- **One field per constructor**: what an admission algebra must satisfy for its fold to",
+      "preserve extension of the allocation table. -/",
+      "structure AdmitsExtend (alg : TyAlgebra AdmCarrier) : Prop where" ]
+  for r in rs do
+    let c := r.ctor
+    let n := c.children.length
+    let ps := c.payloads
+    if n == 0 && ps.isEmpty then
+      s := s ++ [s!"  {c.name} : Adm.Extends (alg.ty_{c.name}).2"]
+    else if n == 0 then
+      let binders := String.intercalate " " (ps.map fun (name, ty) => s!"({name} : {ty})")
+      let args := String.intercalate " " (ps.map Prod.fst)
+      s := s ++ [s!"  {c.name} : ∀ {binders}, Adm.Extends (alg.ty_{c.name} {args}).2"]
+    else if ps.isEmpty then
+      let pVars := (List.range n).map fun i => s!"p{i}"
+      let binders := String.intercalate " " pVars
+      let hyps := (List.range n).map fun i => s!"Adm.Extends (p{i}).2"
+      let pre := String.intercalate " → " hyps ++ " → "
+      let args := String.intercalate " " pVars
+      s := s ++ [s!"  {c.name} : ∀ {binders}, {pre}Adm.Extends (alg.ty_{c.name} {args}).2"]
+    else
+      let pVars := (List.range n).map fun i => s!"p{i}"
+      let payloadBinders := String.intercalate " " (ps.map fun (name, ty) => s!"({name} : {ty})")
+      let binders := payloadBinders ++ " " ++ String.intercalate " " pVars
+      let hyps := (List.range n).map fun i => s!"Adm.Extends (p{i}).2"
+      let pre := String.intercalate " → " hyps ++ " → "
+      let payloadArgs := String.intercalate " " (ps.map Prod.fst)
+      let args := payloadArgs ++ " " ++ String.intercalate " " pVars
+      s := s ++ [s!"  {c.name} : ∀ {binders}, {pre}Adm.Extends (alg.ty_{c.name} {args}).2"]
+  return s ++ [""]
+
 structure Args where
   group : String := ""
   imports : List String := []
@@ -810,7 +860,7 @@ def run (args : Args) (heads : List Head) : MetaM (Array String) := do
       | .ok rs => pure rs
     lines := lines.push (join (["namespace Ty", ""] ++ emitVariance ++ emitArgs rs ++
       emitSameHead rs ++ emitRules ++ emitProbes rs ++ emitLaws rs ++ emitArmLemmas rs ++ emitDispatch rs ++ emitSizeOf rs ++ emitOrderLaws ++
-      ["end Ty", ""] ++ emitAdmits rs))
+      ["end Ty", ""] ++ emitAdmits rs ++ emitAdmitsExtend rs))
   lines := lines ++ #["end Effect4.Program", ""]
   if let some p := args.append then
     let txt ← IO.FS.readFile p
