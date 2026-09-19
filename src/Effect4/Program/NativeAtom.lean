@@ -257,6 +257,38 @@ def spec : NativeAtom → Spec
   | .mul =>
       { scheme := .mono [.nat, .nat] .nat,
         cite := "`\"mul\", [nat a, nat b] => nat (a * b)`" }
+  | .listNil =>
+      { scheme := .mono [] (.list .never),
+        cite := "`\"nil\", [] => list []`" }
+  | .listCons =>
+      { scheme := .poly [.var 0, .list (.var 0)] (.list (.var 0)) true,
+        cite := "`\"cons\", [x, list vs] => list (x :: vs)` — a fiber snapshot is the list of its \
+                 handles\n(`Val.asList?`)." }
+  | .listGet =>
+      { scheme := .poly [.list (.var 0), .nat] (.option (.var 0)),
+        cite := "`\"get\", [list vs, nat i] => option vs[i]?` — rc.112 `Array.get` at a natural \
+                 index\n(vendor/effect-4.0.0-rc.112/src/Array.ts:1698)." }
+  | .listLength =>
+      { scheme := .mono [.list .unknown] .nat,
+        cite := "`\"length\", [list vs] => nat vs.length`" }
+  | .listAppend =>
+      { scheme := .poly [.list (.var 0), .list (.var 0)] (.list (.var 0)) true,
+        cite := "`\"append\", [list xs, list ys] => list (xs ++ ys)`" }
+  | .natSub =>
+      { scheme := .mono [.nat, .nat] .nat,
+        cite := "`\"sub\", [nat a, nat b] => nat (a - b)` — Lean `Nat` subtraction truncates at \
+                 zero." }
+  | .natDiv =>
+      { scheme := .mono [.nat, .nat] .nat,
+        cite := "`\"div\", [nat a, nat b] => nat (a / b)` — Lean `Nat` division answers zero at a \
+                 zero divisor." }
+  | .natMod =>
+      { scheme := .mono [.nat, .nat] .nat,
+        cite := "`\"mod\", [nat a, nat b] => nat (a % b)` — Lean `Nat` remainder answers the \
+                 dividend at a zero divisor." }
+  | .strConcat =>
+      { scheme := .mono [.string, .string] .string,
+        cite := "`\"concat\", [str a, str b] => str (a ++ b)`" }
 
 /-- The typing of an application by its argument types (DI-40; DI-15, the 2026-09-12 clause):
 the atom's scheme, applied. -/

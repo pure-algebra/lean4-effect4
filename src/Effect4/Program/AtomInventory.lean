@@ -16,7 +16,8 @@ the generated profile, the OCaml alphabet and the wire publish). -/
 def all : List NativeAtom :=
   [.succ, .pred, .isZero, .boolNot, .add, .lt, .eq, .pair, .fst, .snd, .strings, .causeIsFail,
    .causeError, .causeIsDie, .causeIsInterrupt, .boolOr, .boolAnd, .tagIs, .isSome, .getOrElse,
-   .ite, .optSome, .optNone, .mul]
+   .ite, .optSome, .optNone, .mul, .listNil, .listCons, .listGet, .listLength, .listAppend,
+   .natSub, .natDiv, .natMod, .strConcat]
 
 /-- Every atom's name, in the inventory's order. -/
 def names : List String := all.map name

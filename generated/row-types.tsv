@@ -57,3 +57,12 @@ Atom	ite	poly		[boolean, "p0", "p0"]	"p0"		<"p0">
 Atom	some	poly		["p0"]	Option.Option<"p0">		<"p0">
 Atom	none	mono		[]	Option.Option<never>		
 Atom	mul	mono		[number, number]	number		
+Atom	nil	mono		[]	ReadonlyArray<never>		
+Atom	cons	poly		["p0", ReadonlyArray<"p0">]	ReadonlyArray<"p0">		<"p0">
+Atom	get	poly		[ReadonlyArray<"p0">, number]	Option.Option<"p0">		<"p0">
+Atom	length	mono		[ReadonlyArray<unknown>]	number		
+Atom	append	poly		[ReadonlyArray<"p0">, ReadonlyArray<"p0">]	ReadonlyArray<"p0">		<"p0">
+Atom	sub	mono		[number, number]	number		
+Atom	div	mono		[number, number]	number		
+Atom	mod	mono		[number, number]	number		
+Atom	concat	mono		[string, string]	string		

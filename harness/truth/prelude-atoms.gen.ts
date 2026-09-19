@@ -151,3 +151,52 @@ export const none = (): Option.Option<never> => Option.none()
  */
 export const mul = (a: number, b: number): number => a * b
 
+/**
+ * `"nil", [] => list []`
+ */
+export const nil = (): ReadonlyArray<never> => []
+
+/**
+ * `"cons", [x, list vs] => list (x :: vs)` — a fiber snapshot is the list of its handles
+ * (`Val.asList?`).
+ */
+export const cons = <A>(x: A, xs: ReadonlyArray<A>): ReadonlyArray<A> => [x, ...xs]
+
+/**
+ * `"get", [list vs, nat i] => option vs[i]?` — rc.112 `Array.get` at a natural index
+ * (vendor/effect-4.0.0-rc.112/src/Array.ts:1698).
+ */
+export const get = <A>(xs: ReadonlyArray<A>, i: number): Option.Option<A> =>
+  (i < xs.length ? Option.some(xs[i] as A) : Option.none())
+
+/**
+ * `"length", [list vs] => nat vs.length`
+ */
+export const length = (xs: ReadonlyArray<unknown>): number => xs.length
+
+/**
+ * `"append", [list xs, list ys] => list (xs ++ ys)`
+ */
+export const append = <A>(xs: ReadonlyArray<A>, ys: ReadonlyArray<A>): ReadonlyArray<A> =>
+  [...xs, ...ys]
+
+/**
+ * `"sub", [nat a, nat b] => nat (a - b)` — Lean `Nat` subtraction truncates at zero.
+ */
+export const sub = (a: number, b: number): number => (a <= b ? 0 : a - b)
+
+/**
+ * `"div", [nat a, nat b] => nat (a / b)` — Lean `Nat` division answers zero at a zero divisor.
+ */
+export const div = (a: number, b: number): number => (b === 0 ? 0 : Math.floor(a / b))
+
+/**
+ * `"mod", [nat a, nat b] => nat (a % b)` — Lean `Nat` remainder answers the dividend at a zero divisor.
+ */
+export const mod = (a: number, b: number): number => (b === 0 ? a : a % b)
+
+/**
+ * `"concat", [str a, str b] => str (a ++ b)`
+ */
+export const concat = (a: string, b: string): string => a + b
+

@@ -159,6 +159,9 @@ inductive NativeAtom
   | isSome | getOrElse
   /-- L4-blocking atoms (DI-40, DI-78): conditional, option constructors, multiplication. -/
   | ite | optSome | optNone | mul
+  /-- The L3 atoms (plan §2.6): the list operations, which read a fiber snapshot as the list of
+  its handles (`Val.asList?`), the rest of natural arithmetic, and string concatenation. -/
+  | listNil | listCons | listGet | listLength | listAppend | natSub | natDiv | natMod | strConcat
   deriving DecidableEq, BEq
 
 namespace NativeAtom
@@ -260,6 +263,35 @@ def row : NativeAtom → AtomRow
   | .mul =>
       { name := "mul", arity := some 2, constGeneric := false,
         prelude := "(a: number, b: number): number => a * b" }
+  | .listNil =>
+      { name := "nil", arity := some 0, constGeneric := false,
+        prelude := "(): ReadonlyArray<never> => []" }
+  | .listCons =>
+      { name := "cons", arity := some 2, constGeneric := false,
+        prelude := "<A>(x: A, xs: ReadonlyArray<A>): ReadonlyArray<A> => [x, ...xs]" }
+  | .listGet =>
+      { name := "get", arity := some 2, constGeneric := false,
+        prelude := "<A>(xs: ReadonlyArray<A>, i: number): Option.Option<A> =>\n  \
+                    (i < xs.length ? Option.some(xs[i] as A) : Option.none())" }
+  | .listLength =>
+      { name := "length", arity := some 1, constGeneric := false,
+        prelude := "(xs: ReadonlyArray<unknown>): number => xs.length" }
+  | .listAppend =>
+      { name := "append", arity := some 2, constGeneric := false,
+        prelude := "<A>(xs: ReadonlyArray<A>, ys: ReadonlyArray<A>): ReadonlyArray<A> =>\n  \
+                    [...xs, ...ys]" }
+  | .natSub =>
+      { name := "sub", arity := some 2, constGeneric := false,
+        prelude := "(a: number, b: number): number => (a <= b ? 0 : a - b)" }
+  | .natDiv =>
+      { name := "div", arity := some 2, constGeneric := false,
+        prelude := "(a: number, b: number): number => (b === 0 ? 0 : Math.floor(a / b))" }
+  | .natMod =>
+      { name := "mod", arity := some 2, constGeneric := false,
+        prelude := "(a: number, b: number): number => (b === 0 ? a : a % b)" }
+  | .strConcat =>
+      { name := "concat", arity := some 2, constGeneric := false,
+        prelude := "(a: string, b: string): string => a + b" }
 
 def name (atom : NativeAtom) : String := (row atom).name
 
@@ -294,6 +326,15 @@ def ofName? : String → Option NativeAtom
   | "some" => some .optSome
   | "none" => some .optNone
   | "mul" => some .mul
+  | "nil" => some .listNil
+  | "cons" => some .listCons
+  | "get" => some .listGet
+  | "length" => some .listLength
+  | "append" => some .listAppend
+  | "sub" => some .natSub
+  | "div" => some .natDiv
+  | "mod" => some .natMod
+  | "concat" => some .strConcat
   | _ => none
 
 theorem ofName?_name (atom : NativeAtom) : ofName? atom.name = some atom := by
@@ -349,11 +390,26 @@ def eval : NativeAtom → List Val → Option Val
   | .optSome, [a] => some (Store.Val.some a)
   | .optNone, [] => some Store.Val.none
   | .mul, [Val.nat a, Val.nat b] => some (Val.nat (a * b))
+  | .listNil, [] => some (Val.list [])
+  | .listCons, [x, xs] => (Val.asList? xs).map fun vs => Val.list (x :: vs)
+  | .listGet, [xs, Val.nat i] =>
+    (Val.asList? xs).map fun vs => (match vs[i]? with
+      | some v => Store.Val.some v
+      | none => Store.Val.none)
+  | .listLength, [xs] => (Val.asList? xs).map fun vs => Val.nat vs.length
+  | .listAppend, [xs, ys] =>
+    (Val.asList? xs).bind fun front => (Val.asList? ys).map fun back => Val.list (front ++ back)
+  | .natSub, [Val.nat a, Val.nat b] => some (Val.nat (a - b))
+  | .natDiv, [Val.nat a, Val.nat b] => some (Val.nat (a / b))
+  | .natMod, [Val.nat a, Val.nat b] => some (Val.nat (a % b))
+  | .strConcat, [Val.str a, Val.str b] => some (Val.str (a ++ b))
   | .succ, _ | .pred, _ | .isZero, _ | .boolNot, _ | .add, _ | .lt, _ | .eq, _
   | .pair, _ | .fst, _ | .snd, _
   | .causeIsFail, _ | .causeError, _ | .causeIsDie, _ | .causeIsInterrupt, _
   | .boolOr, _ | .boolAnd, _ | .tagIs, _ | .isSome, _ | .getOrElse, _
-  | .ite, _ | .optSome, _ | .optNone, _ | .mul, _ => none
+  | .ite, _ | .optSome, _ | .optNone, _ | .mul, _
+  | .listNil, _ | .listCons, _ | .listGet, _ | .listLength, _ | .listAppend, _
+  | .natSub, _ | .natDiv, _ | .natMod, _ | .strConcat, _ => none
 
 end NativeAtom
 

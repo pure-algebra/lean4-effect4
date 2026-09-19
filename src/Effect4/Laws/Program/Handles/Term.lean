@@ -43,14 +43,26 @@ theorem queryError_keys (input output : Val) (h : queryError input = some output
     obtain ⟨error, _, hvalue⟩ := Option.bind_eq_some_iff.mp hfound
     exact valOfErr_keys error value hvalue
 
+/-- A list read back names only handles its value names: the value is that list, or the
+snapshot that carries it (`Val.asList?_exact`). -/
+theorem asList?_keys {v : Val} {vs : List Val} (h : Val.asList? v = some vs) :
+    vs.flatMap Val.keys ⊆ v.keys := by
+  rcases Val.asList?_exact h with rfl | rfl
+  · rw [Val.keys_list]
+    exact List.Subset.refl _
+  · show vs.flatMap Val.keys ⊆ Val.keys (.list vs) ++ []
+    rw [List.append_nil, Val.keys_list]
+    exact List.Subset.refl _
+
 theorem nativeAtom_keys (atom : String) (vs : List Val) (v : Val) (h : nativeAtom atom vs = some v) :
     v.keys ⊆ vs.flatMap Val.keys := by
   unfold nativeAtom at h
   obtain ⟨named, _, h⟩ := Option.bind_eq_some_iff.mp h
   unfold NativeAtom.eval at h
   -- one goal per row of `NativeAtom.eval`, in the table's order: `strings` is row 12, the
-  -- four cause queries rows 13–16, `ite` row 24 and `some` row 25; every other answering row is
-  -- a scalar or a rearrangement of its arguments, and every refusing row is `none`
+  -- four cause queries rows 13–16, `ite` row 24, `some` row 25 and the list atoms rows 29–32;
+  -- every other answering row is a scalar or a rearrangement of its arguments, and every
+  -- refusing row is `none`
   split at h
   case h_12 =>
     unfold stringsAtom at h
@@ -73,6 +85,31 @@ theorem nativeAtom_keys (atom : String) (vs : List Val) (v : Val) (h : nativeAto
   case h_25 =>
     cases h
     exact fun x hx => List.mem_flatMap.mpr ⟨_, List.mem_cons_self .., hx⟩
+  -- the list atoms answer members of their list arguments, or a count
+  case h_29 =>
+    obtain ⟨elems, hl, rfl⟩ := Option.map_eq_some_iff.mp h
+    intro k hk
+    simp only [Val.keys_list, List.flatMap_cons, List.flatMap_nil, List.append_nil,
+      List.mem_append] at hk ⊢
+    exact hk.imp id (fun hk => asList?_keys hl hk)
+  case h_30 =>
+    obtain ⟨elems, hl, rfl⟩ := Option.map_eq_some_iff.mp h
+    split
+    · next e he =>
+      intro k hk
+      simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil, List.mem_append]
+      exact .inl (asList?_keys hl (List.mem_flatMap.mpr ⟨e, List.mem_of_getElem? he, hk⟩))
+    · exact List.nil_subset _
+  case h_31 =>
+    obtain ⟨_, _, rfl⟩ := Option.map_eq_some_iff.mp h
+    exact List.nil_subset _
+  case h_32 =>
+    obtain ⟨front, hf, h⟩ := Option.bind_eq_some_iff.mp h
+    obtain ⟨back, hb, rfl⟩ := Option.map_eq_some_iff.mp h
+    intro k hk
+    simp only [Val.keys_list, List.flatMap_append, List.flatMap_cons, List.flatMap_nil,
+      List.append_nil, List.mem_append] at hk ⊢
+    exact hk.imp (fun hk => asList?_keys hf hk) (fun hk => asList?_keys hb hk)
   all_goals cases h
   all_goals sub_tac norm [Val.tuple]
 

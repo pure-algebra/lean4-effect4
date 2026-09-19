@@ -48,3 +48,12 @@ Atom/ite	typeof Atoms.ite<"p0">	poly	agree	[boolean, "p0", "p0"]	[c: boolean, t:
 Atom/some	typeof Atoms.some<"p0">	poly	agree	["p0"]	[value: "p0"]	Option.Option<"p0">	Option.None<"p0"> | Option.Some<"p0">	request=exact A=exact E=- R=-	declared (value: "p0") => Option.Option<"p0">
 Atom/none	typeof Atoms.none	mono	agree	[]	[]	Option.Option<never>	Option.None<never> | Option.Some<never>	request=exact A=exact E=- R=-	declared () => Option.Option<never>
 Atom/mul	typeof Atoms.mul	mono	agree	[number, number]	[a: number, b: number]	number	number	request=exact A=exact E=- R=-	declared (a: number, b: number) => number
+Atom/nil	typeof Atoms.nil	mono	agree	[]	[]	ReadonlyArray<never>	readonly never[]	request=exact A=exact E=- R=-	declared () => ReadonlyArray<never>
+Atom/cons	typeof Atoms.cons<"p0">	poly	agree	["p0", ReadonlyArray<"p0">]	[x: "p0", xs: readonly "p0"[]]	ReadonlyArray<"p0">	readonly "p0"[]	request=exact A=exact E=- R=-	declared (x: "p0", xs: readonly "p0"[]) => readonly "p0"[]
+Atom/get	typeof Atoms.get<"p0">	poly	agree	[ReadonlyArray<"p0">, number]	[xs: readonly "p0"[], i: number]	Option.Option<"p0">	Option.None<"p0"> | Option.Some<"p0">	request=exact A=exact E=- R=-	declared (xs: readonly "p0"[], i: number) => Option.Option<"p0">
+Atom/length	typeof Atoms.length	mono	agree	[ReadonlyArray<unknown>]	[xs: readonly unknown[]]	number	number	request=exact A=exact E=- R=-	declared (xs: ReadonlyArray<unknown>) => number
+Atom/append	typeof Atoms.append<"p0">	poly	agree	[ReadonlyArray<"p0">, ReadonlyArray<"p0">]	[xs: readonly "p0"[], ys: readonly "p0"[]]	ReadonlyArray<"p0">	readonly "p0"[]	request=exact A=exact E=- R=-	declared (xs: readonly "p0"[], ys: readonly "p0"[]) => readonly "p0"[]
+Atom/sub	typeof Atoms.sub	mono	agree	[number, number]	[a: number, b: number]	number	number	request=exact A=exact E=- R=-	declared (a: number, b: number) => number
+Atom/div	typeof Atoms.div	mono	agree	[number, number]	[a: number, b: number]	number	number	request=exact A=exact E=- R=-	declared (a: number, b: number) => number
+Atom/mod	typeof Atoms.mod	mono	agree	[number, number]	[a: number, b: number]	number	number	request=exact A=exact E=- R=-	declared (a: number, b: number) => number
+Atom/concat	typeof Atoms.concat	mono	agree	[string, string]	[a: string, b: string]	string	string	request=exact A=exact E=- R=-	declared (a: string, b: string) => string

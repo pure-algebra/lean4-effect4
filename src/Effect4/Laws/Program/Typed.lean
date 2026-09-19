@@ -699,7 +699,7 @@ costs one line naming its kernel rather than a block re-deriving the inversion. 
 
 /-- The monomorphic evaluation shapes present in the alphabet. -/
 inductive Shape
-  | nat1 | natTest | bool1 | nat2 | natRel | bool2 | strTest
+  | nat1 | natTest | bool1 | nat2 | natRel | bool2 | strTest | str2
 deriving DecidableEq, Repr
 
 def Shape.params : Shape → TyEnv
@@ -708,10 +708,12 @@ def Shape.params : Shape → TyEnv
   | .nat2 | .natRel => [.nat, .nat]
   | .bool2 => [.bool, .bool]
   | .strTest => [.string, .unknown]
+  | .str2 => [.string, .string]
 
 def Shape.answer : Shape → Ty
   | .nat1 | .nat2 => .nat
   | .natTest | .bool1 | .natRel | .bool2 | .strTest => .bool
+  | .str2 => .string
 
 /-- What an atom of this shape must do: answer in the answer's frame on the frames its
 parameters admit. This is the whole per-atom content of a monomorphic atom. -/
@@ -724,6 +726,7 @@ def Shape.holds (s : Shape) (a : NativeAtom) : Prop :=
   | .natRel => ∀ m k : Nat, ∃ b : Bool, eval a [Val.nat m, Val.nat k] = some (Val.bool b)
   | .bool2 => ∀ x y : Bool, ∃ b : Bool, eval a [Val.bool x, Val.bool y] = some (Val.bool b)
   | .strTest => ∀ (t : String) (v : Val), ∃ b : Bool, eval a [Val.str t, v] = some (Val.bool b)
+  | .str2 => ∀ s t : String, ∃ u : String, eval a [Val.str s, Val.str t] = some (Val.str u)
 
 /-- The inversion of a shape's parameter fit, once per shape. `strTest`'s second parameter is
 the top (decisions row 46), which every value inhabits, so its second argument is unconstrained
@@ -760,10 +763,16 @@ theorem sound_of_shape {a : NativeAtom} (s : Shape)
     obtain ⟨t, rfl⟩ := Val.hasTy_string_inv hx
     obtain ⟨_, he⟩ := hev t y
     exact ⟨_, he, rfl⟩
+  | str2 =>
+    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+    obtain ⟨s, rfl⟩ := Val.hasTy_string_inv hx
+    obtain ⟨t, rfl⟩ := Val.hasTy_string_inv hy
+    obtain ⟨_, he⟩ := hev s t
+    exact ⟨_, he, rfl⟩
 
 /-- Every atom is sound: one line where a shape carries the argument, a short block where the
-atom's evaluation reads its argument's own frame (a projection, a cause query, an option), and
-no atom re-derives its scheme's guard. -/
+atom's evaluation reads its argument's own frame (a projection, a cause query, an option, a
+list), and no atom re-derives its scheme's guard. -/
 theorem sound (a : NativeAtom) : Sound a := by
   cases a with
   | succ => exact sound_of_shape .nat1 rfl (fun _ => ⟨_, rfl⟩)
@@ -889,6 +898,39 @@ theorem sound (a : NativeAtom) : Sound a := by
     exact ⟨Store.Val.some v, rfl, hv⟩
   | optNone => exact sound_of_mono rfl fun vs hfit => by cases hfit.nil_inv; exact ⟨_, rfl, rfl⟩
   | mul => exact sound_of_shape .nat2 rfl (fun _ _ => ⟨_, rfl⟩)
+  | listNil => exact sound_of_mono rfl fun vs hfit => by cases hfit.nil_inv; exact ⟨_, rfl, rfl⟩
+  | listCons =>
+    refine sound_of_poly rfl fun σ vs hfit => ?_
+    obtain ⟨x, xs, rfl, hx, hxs⟩ := hfit.pair_inv
+    obtain ⟨elems, hl, helems⟩ := Val.hasTy_list_inv hxs
+    exact ⟨.list (x :: elems), by simp only [eval, hl, Option.map_some],
+      Bool.and_eq_true_iff.mpr ⟨hx, List.all_eq_true.mpr helems⟩⟩
+  | listGet =>
+    refine sound_of_poly rfl fun σ vs hfit => ?_
+    obtain ⟨xs, i, rfl, hxs, hi⟩ := hfit.pair_inv
+    obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hi
+    obtain ⟨elems, hl, helems⟩ := Val.hasTy_list_inv hxs
+    cases hn : elems[n]? with
+    | none => exact ⟨Store.Val.none, by simp only [eval, hl, hn, Option.map_some], rfl⟩
+    | some e =>
+      exact ⟨Store.Val.some e, by simp only [eval, hl, hn, Option.map_some],
+        helems e (List.mem_of_getElem? hn)⟩
+  | listLength =>
+    refine sound_of_mono rfl fun vs hfit => ?_
+    obtain ⟨xs, rfl, hxs⟩ := hfit.singleton_inv
+    obtain ⟨elems, hl, _⟩ := Val.hasTy_list_inv hxs
+    exact ⟨Val.nat elems.length, by simp only [eval, hl, Option.map_some], rfl⟩
+  | listAppend =>
+    refine sound_of_poly rfl fun σ vs hfit => ?_
+    obtain ⟨xs, ys, rfl, hxs, hys⟩ := hfit.pair_inv
+    obtain ⟨front, hf, hfront⟩ := Val.hasTy_list_inv hxs
+    obtain ⟨back, hb, hback⟩ := Val.hasTy_list_inv hys
+    exact ⟨.list (front ++ back), by simp only [eval, hf, hb, Option.bind_some, Option.map_some],
+      List.all_eq_true.mpr fun y hy => (List.mem_append.mp hy).elim (hfront y) (hback y)⟩
+  | natSub => exact sound_of_shape .nat2 rfl (fun _ _ => ⟨_, rfl⟩)
+  | natDiv => exact sound_of_shape .nat2 rfl (fun _ _ => ⟨_, rfl⟩)
+  | natMod => exact sound_of_shape .nat2 rfl (fun _ _ => ⟨_, rfl⟩)
+  | strConcat => exact sound_of_shape .str2 rfl (fun _ _ => ⟨_, rfl⟩)
 
 end NativeAtom
 

@@ -234,7 +234,8 @@ def scope? : Val → Option Nat
 def snapshot? : Val → Option (List FiberId)
   | Value.fiberSnapshot handles => (Image.list Value.fiberHandle).ofVal handles
   | _ => none
-/-- A list read back from a value: either the carrier's `.list`, or a fiber snapshot through `snapshot?`. -/
+/-- A list read back from a value: the carrier's `.list`, or the handles of a fiber snapshot
+through `snapshot?`. -/
 def asList? : Val → Option (List Val)
   | .list values => some values
   | v => (snapshot? v).map fun ids => ids.map fiber
@@ -337,6 +338,16 @@ theorem snapshot?_exact {v : Val} {ids : List FiberId} (h : snapshot? v = some i
     show Store.Val.ctor 3 [handles] = Store.Val.ctor 3 [(Image.list Value.fiberHandle).toVal ids]
     rw [(Image.list Value.fiberHandle).ofVal_exact h]
   · exact nomatch h
+
+/-- A list read back is the value's own list, or the list of handles a snapshot carries. -/
+theorem asList?_exact {v : Val} {vs : List Val} (h : asList? v = some vs) :
+    v = .list vs ∨ v = Value.fiberSnapshot (.list vs) := by
+  unfold asList? at h
+  split at h
+  · cases h
+    exact .inl rfl
+  · obtain ⟨ids, hsnap, rfl⟩ := Option.map_eq_some_iff.mp h
+    exact .inr ((snapshot?_exact hsnap).trans (fibers_eq ids))
 
 theorem cause?_exitErr (c : CauseV) : cause? (exitErr c) = some c :=
   causeImage.ofVal_toVal c

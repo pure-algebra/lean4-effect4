@@ -396,8 +396,8 @@ Effect4.Machine.Value.cause._redArg._lam_1	value_cause__red_arg__lam_1	false	0	0
 Effect4.Machine.Value.reason._redArg	value_reason	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	11	10	0	0	0	1	0	18087945671237178160
 List.findSome?._at_.Effect4.Program.firstFailure?.spec_0	list_find_some_opt_at_program_first_failure_opt_spec_0	true	3	0	0	0	2	3	0	0	0	0	3	0	0	0	0	0	0	0	0	1	2	0	4	0	1	0	16548508499723176854
 Effect4.Program.valOfErr	program_val_of_err	false	12	0	0	0	1	4	0	0	0	0	12	0	0	0	0	0	0	0	0	7	12	0	4	0	1	0	16368007085661881792
-Effect4.Program.NativeAtom.ofName?	program_native_atom_of_name_opt	false	97	0	0	0	24	25	0	24	0	0	73	0	0	24	0	0	0	0	0	25	72	0	48	0	1	0	18129267956158124148
-Effect4.Program.NativeAtom.eval	program_native_atom_eval	false	151	0	3	6	92	115	0	3	0	0	148	0	3	0	0	0	0	0	0	110	71	0	122	87	1	0	12305407237257757861
+Effect4.Program.NativeAtom.ofName?	program_native_atom_of_name_opt	false	133	0	0	0	33	34	0	33	0	0	100	0	0	33	0	0	0	0	0	34	99	0	66	0	1	0	4209474395435231270
+Effect4.Program.NativeAtom.eval	program_native_atom_eval	false	222	0	3	6	131	163	0	3	0	0	219	0	3	0	0	0	0	0	0	159	110	0	176	120	1	0	1476097569742028646
 Effect4.Program.NativeOp.sleepMillisOf	program_native_op_sleep_millis_of	false	2	0	0	0	1	2	0	0	0	0	2	0	0	0	0	0	0	0	0	2	1	0	1	1	1	0	11326569151157239370
 Effect4.Program.NativeOp.awaitCellOf	program_native_op_await_cell_of	false	5	0	0	0	2	3	0	1	0	0	4	0	0	0	1	0	0	0	0	3	3	0	3	1	1	0	3357839316270022950
 Effect4.Program.NativeOp.refTy	program_native_op_ref_ty	false	2	0	0	0	0	1	0	1	0	0	1	0	0	1	0	0	0	0	0	0	1	0	0	0	1	0	1543270044433282405
@@ -486,6 +486,7 @@ Effect4.Program.stringsAtom	program_strings_atom	false	4	0	0	0	1	2	0	0	0	0	4	0	0
 Effect4.Program.queryTag	program_query_tag	false	5	0	0	0	1	2	0	0	0	0	5	0	0	0	0	0	0	0	0	2	5	0	2	0	1	0	16260458119732398648
 Effect4.Program.queryError	program_query_error	false	8	0	1	2	3	3	0	0	0	0	8	0	0	0	0	0	0	0	0	3	6	0	6	0	1	0	968683317540736846
 Effect4.Program.NativeAtom.tagHit	program_native_atom_tag_hit	false	6	0	0	0	5	6	0	0	0	0	6	0	0	0	0	0	0	0	0	0	2	0	5	5	1	0	15479924598481329893
+Effect4.Machine.Val.asList?	val__as_list_opt	false	6	0	0	0	2	3	0	0	0	0	6	0	0	0	0	0	0	0	0	4	5	0	3	1	1	0	267384237107163278
 Effect4.Machine.instDecidableEqHandleKind	inst_decidable_eq_handle_kind	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	0	4	0	0	0	1	0	1313571599419326889
 Effect4.Machine.taskCmds._redArg	task_cmds	false	15	0	0	0	1	3	0	0	0	0	15	0	0	0	0	0	0	0	0	57	18	0	3	0	1	0	10487617852642846894
 Effect4.Machine.runloopTop._at_.Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_8.spec_11._redArg	runloop_top_at_iteration_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_8_spec_11	false	5	0	0	0	3	2	0	0	0	0	5	0	0	0	0	0	0	0	0	24	22	0	4	0	1	0	664468259675564355
@@ -543,6 +544,7 @@ Effect4.Store.Image.option._redArg	store_image_option	false	3	0	0	0	0	1	0	0	0	0	
 List.all._at_.Effect4.Program.stringsAtom.spec_0	list_all_at_program_strings_atom_spec_0	true	3	0	0	0	2	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	1	0	3	1	1	0	13517934322442177125
 Effect4.Program.queryReasons?	program_query_reasons_opt	false	9	0	1	4	5	3	0	1	0	0	8	0	1	0	0	0	0	0	0	4	13	0	7	3	1	0	15128540791951619176
 List.any._at_.Effect4.Program.queryTag.spec_0	list_any_at_program_query_tag_spec_0	true	4	0	0	0	2	3	0	0	0	0	4	0	0	0	0	0	0	0	0	0	5	0	4	0	1	0	11071611085291567909
+List.mapTR.loop._at_.Effect4.Machine.Val.asList?.spec_0	list_map_tr_loop_at_val__as_list_opt_spec_0	true	5	0	0	0	1	2	0	1	0	0	4	0	0	0	1	0	0	0	0	1	7	0	2	0	1	0	9370517203020323234
 Effect4.Machine.HandleKind.ctorIdx	handle_kind_ctor_idx	false	6	0	0	0	1	6	0	6	0	0	0	0	6	0	0	0	0	0	0	0	0	0	6	0	1	0	3691366030123538746
 Effect4.FrameFiber.pendingCause._redArg	frame_fiber_pending_cause	false	1	0	0	0	2	2	0	0	0	0	1	0	0	0	0	0	0	0	0	1	0	0	3	0	1	0	7854426940220053168
 Effect4.Machine.yieldVerdict._redArg	yield_verdict	false	1	0	0	0	2	2	0	0	0	0	1	0	0	0	0	0	0	0	0	0	2	0	3	0	1	0	15353765940593789315

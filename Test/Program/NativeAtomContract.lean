@@ -16,7 +16,8 @@ open Effect4.Program
 #guard NativeAtom.names =
   ["succ", "pred", "isZero", "not", "add", "lt", "eq", "pair", "fst", "snd", "strings",
    "causeIsFail", "causeError", "causeIsDie", "causeIsInterrupt", "or", "and", "tagIs",
-   "isSome", "getOrElse", "ite", "some", "none", "mul"]
+   "isSome", "getOrElse", "ite", "some", "none", "mul",
+   "nil", "cons", "get", "length", "append", "sub", "div", "mod", "concat"]
 -- the tag test (DI-39, part 4 commit 3): a string or literal tag, any tested value; total on
 -- values — true exactly on a pair whose first component is the tag
 #guard NativeAtom.arity .tagIs = some 2
@@ -49,6 +50,9 @@ open Effect4.Program
 #guard nativeAtomTy "unknown" [.nat] = none
 #guard nativeAtomTy "succ" [] = none
 #guard nativeAtomTy "pair" [.nat, .bool] = some (.prod .nat .bool)
+-- the literal rule through the template calculus (DI-55): two distinct parameters bind
+-- positionally, so a literal argument keeps its type
+#guard NativeAtom.typeOf .pair [.lit "A", .string] = some (.prod (.lit "A") .string)
 #guard nativeAtomTy "strings" [] = some (.list .string)
 -- subsumption at a fixed-signature atom (part 4, DI-15): a subtype of the parameter is
 -- accepted, a literal is a string, `never` is anything; the const-generic flag names `pair`
@@ -121,6 +125,43 @@ open Effect4.Program
 #guard (Effect4.Machine.Val.asList? (Effect4.Machine.Val.fibers [⟨0⟩])).map List.length = some 1
 #guard Ty.sub (.prod .nat .nat) (.list .nat) = false
 #guard nativeAtomTy "length" [.prod .nat .nat] = none
+#guard nativeAtom "length" [Effect4.Machine.Val.fibers [⟨0⟩]] = some (.nat 1)
+
+-- The L3 atoms (plan §2.6). `length` is `mono` at `list unknown` (decisions row 69's rule: a
+-- parameter no answer mentions is the top). `cons` and `append` infer the common supertype of
+-- their element types as tsgo does: `cons(n, nil())` and `append(nil(), ns)` type at `number`,
+-- and `cons(n, ss)` and `append(ns, ss)` are refused (TS2345). `get` answers `some unit` on a
+-- list of units, which the prelude must not read as a missing element.
+#guard NativeAtom.mono .listLength = some ([.list .unknown], .nat)
+#guard !NativeAtom.constGeneric .listCons
+#guard nativeAtomTy "nil" [] = some (.list .never)
+#guard nativeAtomTy "cons" [.nat, .list .nat] = some (.list .nat)
+#guard nativeAtomTy "cons" [.nat, .list .never] = some (.list .nat)
+#guard nativeAtomTy "cons" [.never, .list .nat] = some (.list .nat)
+#guard nativeAtomTy "cons" [.nat, .list .string] = none
+#guard nativeAtomTy "append" [.list .never, .list .nat] = some (.list .nat)
+#guard nativeAtomTy "append" [.list .nat, .list .string] = none
+#guard nativeAtomTy "get" [.list .string, .nat] = some (.option .string)
+#guard nativeAtomTy "get" [.prod .nat .nat, .nat] = none
+#guard nativeAtomTy "length" [.list .nat] = some .nat
+#guard nativeAtomTy "concat" [.lit "a", .string] = some .string
+#guard nativeAtomTy "div" [.nat, .never] = some .nat
+#guard nativeAtom "nil" [] = some (.list [])
+#guard nativeAtom "cons" [.nat 1, .list [.nat 2]] = some (.list [.nat 1, .nat 2])
+#guard nativeAtom "cons" [.nat 1, Effect4.Machine.Val.fibers [⟨0⟩]] =
+  some (.list [.nat 1, Effect4.Machine.Val.fiber ⟨0⟩])
+#guard nativeAtom "get" [.list [.nat 10, .nat 20], .nat 1] = some (.some (.nat 20))
+#guard nativeAtom "get" [.list [.nat 10, .nat 20], .nat 5] = some .none
+#guard nativeAtom "get" [.list [.unit], .nat 0] = some (.some .unit)
+#guard nativeAtom "append" [.list [.nat 1], .list [.nat 2]] = some (.list [.nat 1, .nat 2])
+#guard nativeAtom "length" [.nat 3] = none
+#guard nativeAtom "sub" [.nat 5, .nat 2] = some (.nat 3)
+#guard nativeAtom "sub" [.nat 2, .nat 5] = some (.nat 0)
+#guard nativeAtom "div" [.nat 10, .nat 3] = some (.nat 3)
+#guard nativeAtom "div" [.nat 10, .nat 0] = some (.nat 0)
+#guard nativeAtom "mod" [.nat 10, .nat 3] = some (.nat 1)
+#guard nativeAtom "mod" [.nat 10, .nat 0] = some (.nat 10)
+#guard nativeAtom "concat" [.str "a", .str "b"] = some (.str "ab")
 
 
 /-- Every successful native typing names an inventoried atom, for arbitrary input types. -/

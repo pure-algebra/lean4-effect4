@@ -159,6 +159,14 @@ theorem validIn_list_of_mem {s : Stores} {vs : List Val} (h : ∀ x ∈ vs, x.va
   rw [Val.validIn_list]
   exact List.all_eq_true.mpr h
 
+/-- A list read back holds only valid values when its value is valid: the value is that list,
+or the snapshot that carries it (`Val.asList?_exact`). -/
+theorem asList?_validIn {s : Stores} {v : Val} {vs : List Val} (h : Val.asList? v = some vs)
+    (hv : v.validIn s = true) : ∀ x ∈ vs, x.validIn s = true := by
+  rcases Val.asList?_exact h with rfl | rfl
+  · exact validIn_list_mem hv
+  · exact validIn_list_mem (Bool.and_eq_true_iff.mp hv).1
+
 theorem NativeAtom.eval_validIn (s : Stores) (atom : NativeAtom) (vs : List Val) (v : Val)
     (hvs : ∀ x ∈ vs, x.validIn s = true) (h : atom.eval vs = some v) : v.validIn s = true := by
   unfold NativeAtom.eval at h
@@ -208,6 +216,27 @@ theorem NativeAtom.eval_validIn (s : Stores) (atom : NativeAtom) (vs : List Val)
   case h_25 a =>
     cases h
     exact hvs a (List.mem_cons_self ..)
+  -- the list atoms answer members of their list arguments, or a count
+  case h_29 x xs =>
+    obtain ⟨elems, hl, rfl⟩ := Option.map_eq_some_iff.mp h
+    have hxs := asList?_validIn hl (hvs xs (List.mem_cons_of_mem _ (List.mem_cons_self ..)))
+    exact validIn_list_of_mem fun y hy => (List.mem_cons.mp hy).elim
+      (fun hyx => hyx ▸ hvs x (List.mem_cons_self ..)) (hxs y)
+  case h_30 xs i =>
+    obtain ⟨elems, hl, rfl⟩ := Option.map_eq_some_iff.mp h
+    split
+    · next e he =>
+      exact asList?_validIn hl (hvs xs (List.mem_cons_self ..)) e (List.mem_of_getElem? he)
+    · rfl
+  case h_31 xs =>
+    obtain ⟨_, _, rfl⟩ := Option.map_eq_some_iff.mp h
+    rfl
+  case h_32 xs ys =>
+    obtain ⟨front, hf, h⟩ := Option.bind_eq_some_iff.mp h
+    obtain ⟨back, hb, rfl⟩ := Option.map_eq_some_iff.mp h
+    exact validIn_list_of_mem fun y hy => (List.mem_append.mp hy).elim
+      (asList?_validIn hf (hvs xs (List.mem_cons_self ..)) y)
+      (asList?_validIn hb (hvs ys (List.mem_cons_of_mem _ (List.mem_cons_self ..))) y)
   all_goals cases h
   all_goals rfl
 
