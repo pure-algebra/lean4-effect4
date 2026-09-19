@@ -29,7 +29,10 @@ an extended environment. That device exists; it is simply not offered to the row
 ## 2. Types
 
 `Ty := never unit nat int string bool handle(string) option list prod except exitOf causeOf
-fiberOf union lit` plus `scope` (`Ty.lean:24-42`).
+fiberOf union lit refOf deferredOf var` plus `scope` (`Ty.lean:23-55`; `refOf`, `deferredOf` and the
+template parameter `var` since rows 42/43 step 1). Variance follows rc.112's declarations
+(decisions row 55): `fiberOf` covariant (`Fiber<out A, out E>`), `refOf` and `deferredOf`
+invariant (`Ref<in out A>`, `Deferred<in out A, in out E>`).
 
 | gap | kind | cost | fix |
 | --- | --- | --- | --- |

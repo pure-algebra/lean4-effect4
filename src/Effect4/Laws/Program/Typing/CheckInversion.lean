@@ -70,9 +70,7 @@ theorem inv_suspend (sig : Signature Op) (env : TyEnv) (p : List Nat) (body : Ef
 theorem inv_perform (sig : Signature Op) (env : TyEnv) (p : List Nat) (op : Op) (request : Term) :
     ∀ t, check sig env p (.perform op request) = .ok t →
       ∃ requestTy, sig.dom op = true ∧ termTy sig env request = some requestTy ∧
-        Ty.sub requestTy.normalize (sig.rowOf op).request.normalize = true ∧
-        t = ⟨(sig.rowOf op).answer, (sig.rowOf op).error,
-              Requirement.ofList (sig.rowOf op).requires⟩ := by
+        rowTy (sig.rowOf op) requestTy = some t := by
   aesop
 
 theorem inv_bind (sig : Signature Op) (env : TyEnv) (p : List Nat) (first rest : Eff Op) :

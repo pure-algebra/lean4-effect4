@@ -3,6 +3,7 @@ import Effect4.Laws.Program.Progress
 import Effect4.Laws.Program.Admit
 import Effect4.Laws.Program.Decision
 import Effect4.Laws.Program.Typing.Inversion
+import Effect4.Laws.Program.Template
 import Effect4.Laws.Program.Agreement.Machine
 
 /-!
@@ -646,7 +647,9 @@ theorem sound (bad : ExitV) : ∀ (e : NativeEff) (tys : TyEnv) (env : List Val)
   | .catchIf _ _ _, _, _, _, _, hs, _, _ => absurd hs Bool.false_ne_true
   | .perform op r, tys, env, s, t, hs, hty, hat => by
     have hkind := Straight.perform_sync hs
-    obtain ⟨requestTy, _, hr, hsub, rfl⟩ := inv_perform nativeSignature tys op r t hty
+    obtain ⟨requestTy, _, hr, hrow⟩ := inv_perform nativeSignature tys op r t hty
+    obtain ⟨hcreq, hcans, hcerr⟩ := nativeSignature_row_closed op
+    obtain ⟨hsub, rfl⟩ := rowTy_closed_some hcreq hcans hcerr hrow
     obtain ⟨x, hx⟩ :=
       Option.isSome_iff_exists.mp (evalTerm_isSome r env tys requestTy hat.fits hr)
     have hxty := evalTerm_hasTy r env tys requestTy x hat.fits hr hx
@@ -671,7 +674,8 @@ theorem sound (bad : ExitV) : ∀ (e : NativeEff) (tys : TyEnv) (env : List Val)
       congr 1
       rw [denoteWith, denote]
       simp only [hkind, hx, Option.bind_some, ho]
-    have hans : Val.hasTy a (nativeSignature.rowOf op).answer = true := by
+    have hans : Val.hasTy a (nativeSignature.rowOf op).answer.normalize = true := by
+      rw [Effect4.Program.hasTy_normalize]
       show Val.hasTy a ((nativeRowOf [] op).normalizeTypes).answer = true
       rw [nativeRowOf_nil]
       show Val.hasTy a (NativeOp.row op).answer.normalize = true

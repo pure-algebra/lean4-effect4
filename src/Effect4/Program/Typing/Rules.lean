@@ -106,6 +106,16 @@ is `Lit.ty` (`litArgTy_false`). -/
 def termTy (sig : Signature Op) (env : TyEnv) (t : Term) : Option Ty :=
   argTy sig env false t
 
+/-- The type of a row performed on a request of type `r` (decisions row 42): the request,
+canonical, is matched against the row's request template (`Ty.matchTemplate`), and the answer
+and error columns are instantiated at the bindings and made canonical. A row with no template
+parameter reduces to subsumption at the request and its own columns (`rowTy_closed`,
+`Laws/Program/Template.lean`). `none` is the refusal `requestNotSubtype`. -/
+def rowTy (row : Row) (r : Ty) : Option EffTy :=
+  (Ty.matchTemplate [] row.request.normalize r.normalize).map fun σ =>
+    ⟨(row.answer.instantiate σ).normalize, (row.error.instantiate σ).normalize,
+      Requirement.ofList row.requires⟩
+
 /-- `argsTy` on a cons, as nested `Option.bind`s. -/
 theorem argsTy_cons (sig : Signature Op) (env : TyEnv) (const : Bool) (head : Term)
     (tail : Terms) :

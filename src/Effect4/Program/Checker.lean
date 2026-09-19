@@ -132,9 +132,9 @@ mutual
       let r ← term? sig env p request
       let row := sig.rowOf op
       if sig.dom op = false then throw ⟨p, .outsideDomain row.name⟩
-      else if Ty.sub r.normalize row.request.normalize then
-        pure ⟨row.answer, row.error, Requirement.ofList row.requires⟩
-      else throw ⟨p, .requestNotSubtype row.name r row.request⟩
+      else match rowTy row r with
+        | some t => pure t
+        | none => throw ⟨p, .requestNotSubtype row.name r row.request⟩
     | .bind first rest => do
       let f ← check sig env (p ++ [0]) first
       let r ← check sig (env ++ [f.answer]) (p ++ [1]) rest

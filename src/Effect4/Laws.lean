@@ -31,6 +31,7 @@ import Effect4.Laws.Program.EvaluateR
 import Effect4.Laws.Program.Typed
 import Effect4.Laws.Program.ScopedTyping
 import Effect4.Laws.Program.TypeAlgebra
+import Effect4.Laws.Program.Template
 import Effect4.Laws.Program.Residual
 import Effect4.Laws.Program.Decision
 import Effect4.Laws.Program.HostBoundary

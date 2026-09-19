@@ -63,8 +63,8 @@ theorem check_sound (sig : Signature Op) (e : Eff Op) :
     exact .suspend (check_sound sig body env _ t (inv_suspend sig env p body t h))
   | perform op request =>
     intro env p t h
-    obtain ⟨requestTy, hdom, hreq, heq, rfl⟩ := inv_perform sig env p op request t h
-    exact .perform hdom hreq heq
+    obtain ⟨requestTy, hdom, hreq, hrow⟩ := inv_perform sig env p op request t h
+    exact .perform hdom hreq hrow
   | bind first rest =>
     intro env p t h
     obtain ⟨f, r, hf, hr, rfl⟩ := inv_bind sig env p first rest t h

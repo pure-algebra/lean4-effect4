@@ -31,6 +31,11 @@ private theorem sub_trans_core (a b c : Ty) (hab : sub a b = true) (hbc : sub b 
             first
             | exact sub_trans_core _ _ _ hab hbc
             | exact ⟨sub_trans_core _ _ _ hab.1 hbc.1, sub_trans_core _ _ _ hab.2 hbc.2⟩
+            -- the invariant handles (decisions row 55): both directions, each transitive
+            | exact ⟨sub_trans_core _ _ _ hab.1 hbc.1, sub_trans_core _ _ _ hbc.2 hab.2⟩
+            | exact ⟨⟨⟨sub_trans_core _ _ _ hab.1.1.1 hbc.1.1.1,
+                sub_trans_core _ _ _ hbc.1.1.2 hab.1.1.2⟩,
+                sub_trans_core _ _ _ hab.1.2 hbc.1.2⟩, sub_trans_core _ _ _ hbc.2 hab.2⟩
       · cases c <;> simp only [isMember] at hc <;> try contradiction
         case never =>
           cases b <;> simp only [isMember] at hb <;> try contradiction
@@ -512,6 +517,13 @@ theorem sub_antisymm_normal
         cases h1
         cases h2
         rfl
+      -- the invariant handles (decisions row 55): one direction of each pair suffices
+      | exact congrArg _ (sub_antisymm_normal htrans _ _ hca hcb hab.1 hba.1)
+      | have h1 := sub_antisymm_normal htrans _ _ hca.1 hcb.1 hab.1.1.1 hba.1.1.1
+        have h2 := sub_antisymm_normal htrans _ _ hca.2 hcb.2 hab.1.2 hba.1.2
+        cases h1
+        cases h2
+        rfl
   · have haForm := normal_members ha
     have hbForm := normal_members hb
     have habMembers := (sub_iff_members htrans a b).mp hab
@@ -757,6 +769,10 @@ theorem sub_normalize_of_sub
           first
           | exact sub_normalize_of_sub htrans _ _ hab
           | exact ⟨sub_normalize_of_sub htrans _ _ hab.1, sub_normalize_of_sub htrans _ _ hab.2⟩
+          -- the promise handle, invariant in both arguments (decisions row 55)
+          | exact ⟨⟨⟨sub_normalize_of_sub htrans _ _ hab.1.1.1,
+              sub_normalize_of_sub htrans _ _ hab.1.1.2⟩,
+              sub_normalize_of_sub htrans _ _ hab.1.2⟩, sub_normalize_of_sub htrans _ _ hab.2⟩
     · cases b <;> simp only [Ty.isMember] at hb <;> try contradiction
       case never =>
         cases a <;> simp only [Ty.isMember] at ha <;> try contradiction

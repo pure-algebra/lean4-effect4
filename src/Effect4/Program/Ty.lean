@@ -405,9 +405,12 @@ theorem members_ofMembers (xs : List Ty)
       rw [ih (fun z hz => h z (List.mem_cons_of_mem x hz))]
       rfl
 
-/-- The subtype relation on `Ty` (DI-15). Covariant in structural constructors;
-unions distribute on the left and are choices on the right; string literals are
-subtypes of `string`. Reflexive. -/
+/-- The subtype relation on `Ty` (DI-15). Covariant in structural constructors and at the
+fiber handle (`Fiber<out A, out E>`); invariant at the cell and promise handles
+(`Ref<in out A>`, `Deferred<in out A, in out E>`, rc.112 `Ref.ts:59`, `Deferred.ts:58`), since
+a cell is written through its handle and a widened handle would admit a write the other
+alias reads at the narrower type (decisions row 55); unions distribute on the left and are
+choices on the right; string literals are subtypes of `string`. Reflexive. -/
 def sub (a b : Ty) : Bool :=
   if a = b then true
   else match a, b with
@@ -422,10 +425,70 @@ def sub (a b : Ty) : Bool :=
   | .exitOf a1 e1, .exitOf a2 e2 => sub a1 a2 && sub e1 e2
   | .causeOf e1, .causeOf e2 => sub e1 e2
   | .fiberOf a1 e1, .fiberOf a2 e2 => sub a1 a2 && sub e1 e2
-  | .refOf a1, .refOf a2 => sub a1 a2
-  | .deferredOf a1 e1, .deferredOf a2 e2 => sub a1 a2 && sub e1 e2
+  | .refOf a1, .refOf a2 => sub a1 a2 && sub a2 a1
+  | .deferredOf a1 e1, .deferredOf a2 e2 => sub a1 a2 && sub a2 a1 && sub e1 e2 && sub e2 e1
   | _, _ => false
 termination_by sizeOf a + sizeOf b
+
+/-! ## Row templates (decisions row 42)
+
+A row's type columns may name template parameters (`var i`); the checker binds them from the
+request and instantiates the answer and error columns (`rowTy`, `Typing/Rules.lean`). The
+calculus is three functions: substitution, inference, and the match, whose law is its own
+guard — a match answers bindings under which the request is a subtype of the instantiated
+template (`matchTemplate_sound`, `Laws/Program/Template.lean`). -/
+
+/-- Bindings for a template's parameters, by index. -/
+abbrev Subst := List (Nat × Ty)
+
+/-- Each parameter replaced by its binding. A parameter no binding names is `never`: what
+TypeScript infers for a parameter the arguments leave unconstrained, which happens only on a
+branch a `never` request marks as dead. -/
+def instantiate (σ : Subst) : Ty → Ty
+  | .var i => (σ.lookup i).getD .never
+  | .option t => .option (instantiate σ t)
+  | .list t => .list (instantiate σ t)
+  | .prod a b => .prod (instantiate σ a) (instantiate σ b)
+  | .except a b => .except (instantiate σ a) (instantiate σ b)
+  | .exitOf a b => .exitOf (instantiate σ a) (instantiate σ b)
+  | .causeOf t => .causeOf (instantiate σ t)
+  | .fiberOf a b => .fiberOf (instantiate σ a) (instantiate σ b)
+  | .refOf t => .refOf (instantiate σ t)
+  | .deferredOf a b => .deferredOf (instantiate σ a) (instantiate σ b)
+  | .union a b => .union (instantiate σ a) (instantiate σ b)
+  | .never => .never
+  | .unit => .unit
+  | .nat => .nat
+  | .int => .int
+  | .string => .string
+  | .bool => .bool
+  | .handle s => .handle s
+  | .lit s => .lit s
+
+/-- The bindings a request fixes for a template, read structurally from the seed: a
+parameter binds at its first occurrence, to the request's type at that position (a row spells
+the handle before the value it writes, so the invariant position binds); shapes that do not
+correspond bind nothing and are left to the check. -/
+def infer (σ : Subst) : Ty → Ty → Subst
+  | .var i, r => if (σ.lookup i).isSome then σ else σ ++ [(i, r)]
+  | .option t, .option r => infer σ t r
+  | .list t, .list r => infer σ t r
+  | .causeOf t, .causeOf r => infer σ t r
+  | .refOf t, .refOf r => infer σ t r
+  | .prod a b, .prod c d => infer (infer σ a c) b d
+  | .except a b, .except c d => infer (infer σ a c) b d
+  | .exitOf a b, .exitOf c d => infer (infer σ a c) b d
+  | .fiberOf a b, .fiberOf c d => infer (infer σ a c) b d
+  | .deferredOf a b, .deferredOf c d => infer (infer σ a c) b d
+  | .union a b, .union c d => infer (infer σ a c) b d
+  | _, _ => σ
+
+/-- The match of a request against a template from a seed: the bindings inference reads,
+kept exactly when the request is a subtype of the template instantiated at them. The guard is
+the law, so inference can only lose completeness, never soundness. -/
+def matchTemplate (σ : Subst) (template request : Ty) : Option Subst :=
+  let σ' := infer σ template request
+  if sub request (instantiate σ' template) then some σ' else none
 
 /-- Product distribution expands union factors. An explicit `never` factor stays
 explicit: this operation does not add a product-annihilation rule to subtyping. -/

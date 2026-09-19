@@ -88,16 +88,15 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
   (`git:62c04d9:src/Effect4/StdLib/Links.lean`). Two premises, both explicit: the operation is
   in the signature's domain (DI-54 — an index outside the supplied table is refused here, not
   typed through the placeholder row whose `request := .never` admits any `never` term), and the
-  request term's type is a subtype of the row's request type (DI-15, subsumption at the row
-  request: TypeScript assignability at the call site; both sides canonical). The answer and
-  error columns are the row's own. -/
-  | perform {env : TyEnv} {op : Op} {request : Term} {requestTy : Ty} :
+  request term's type matches the row's request template (`rowTy`, decisions row 42: the
+  bindings the request fixes, under which it is a subtype of the instantiated request — DI-15,
+  subsumption at the row request: TypeScript assignability at the call site; both sides
+  canonical). The answer and error columns are the row's own, instantiated at the bindings. -/
+  | perform {env : TyEnv} {op : Op} {request : Term} {requestTy : Ty} {t : EffTy} :
       sig.dom op = true →
       termTy sig env request = some requestTy →
-      Ty.sub requestTy.normalize (sig.rowOf op).request.normalize = true →
-      HasTy sig env (.perform op request)
-        ⟨(sig.rowOf op).answer, (sig.rowOf op).error,
-          Requirement.ofList (sig.rowOf op).requires⟩
+      rowTy (sig.rowOf op) requestTy = some t →
+      HasTy sig env (.perform op request) t
   /-- `Effect.flatMap` (`:1590`): the continuation is typed under the environment extended by
   the first program's answer; the errors join and the rows union. -/
   | bind {env : TyEnv} {first rest : Eff Op} {f r : EffTy} :
