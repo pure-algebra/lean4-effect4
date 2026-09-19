@@ -262,6 +262,16 @@
       "Types": []
     },
     {
+      "Note": "The atom inventory from the NativeAtom constructor list: `all` and its two projections, with all_complete and covers_iff appended as the acceptance guards. The hand-written list is retired; a constructor cannot be left out of a list read off the environment.",
+      "Name": "AtomInventory",
+      "Tool": "tools/Effect4Gen/Atoms.lean",
+      "Imports": "Effect4.Machine.Term",
+      "Out": "src\\Effect4\\Program\\AtomInventory.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\atominventory.lean",
+      "Kinds": [],
+      "Types": []
+    },
+    {
       "Note": "The derived forms as authoring combinators, from Codegen.Forms.all: each template read on the scope reader, with a drift guard per form against the printer's Template.expand.",
       "Name": "Forms",
       "Tool": "tools/Effect4Gen/Forms.lean",

@@ -76,14 +76,16 @@ DERIVED_SOURCES := $(wildcard tools/Effect4Gen/*.lean tools/Effect4Gen/guards/*.
 DERIVED_TRACES := $(addprefix $(TRACE)/,Store/Canonical.trace Program/Native.trace Store/RowCanonical.trace \
   Store/Pin.trace Store/Node.trace Api/Frontier.trace Program/Eff.trace Program/Ty.trace Program/Refs.trace \
   Program/Authoring.trace Laws/Program/Authoring.trace Program/Node.trace \
-  Api/Runner.trace Store/AnnotationsCanonical.trace Schema/Representation.trace)
+  Api/Runner.trace Store/AnnotationsCanonical.trace Schema/Representation.trace \
+  Machine/Term.trace)
 DERIVED_OUT := src/Effect4/Store/Derived/Json.lean src/Effect4/Store/Derived/Schema.lean \
   src/Effect4/Program/Derived.lean src/Effect4/Store/PinDerived.lean src/Effect4/Api/Derived.lean \
   src/Effect4/Store/Derived/Value.lean src/Effect4/Api/RunnerDerived.lean \
   src/Effect4/Program/Fold.lean src/Effect4/Schema/Fold.lean src/Effect4/Program/LayerView.lean src/Effect4/Program/NodeLenses.lean src/Effect4/Program/Binders.lean src/Effect4/Program/Scoped.lean \
   src/Effect4/Program/Authoring/Lifts.lean src/Effect4/Laws/Program/Authoring/Lifts.lean \
   src/Effect4/Program/Authoring/Rows.lean src/Effect4/Laws/Program/Authoring/Rows.lean \
-  src/Effect4/Program/Authoring/Forms.lean src/Effect4/Laws/Program/Authoring/Forms.lean
+  src/Effect4/Program/Authoring/Forms.lean src/Effect4/Laws/Program/Authoring/Forms.lean \
+  src/Effect4/Program/AtomInventory.lean
 
 $(GEN)/derived: $(DERIVED_SOURCES) $(DERIVED_TRACES) | build
 	$(PY) scripts/generate.py --only derived

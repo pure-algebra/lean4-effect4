@@ -1,14 +1,17 @@
 import Effect4.Program.Ty
-import Effect4.Machine.Term
+import Effect4.Program.AtomInventory
 
 /-!
 # Native atom typing (DI-40)
 
 The typing half of the native atom inventory: `constGeneric`, `mono`, `projectProduct`, `typeOf`
-and its monomorphic reading. The inventory itself (`NativeAtom`, its names, arity and `eval`)
-is `Machine/Term.lean`, below the stores, since L1 of the language push. The universal
-`all_complete` statement there forces an appended constructor into the inventory, and every
-dispatch here covers the enum explicitly, so a new constructor cannot inherit a fallback.
+and its monomorphic reading, and the table's own well-formedness (`atomWellFormed`,
+`atom_table_wf`). The alphabet itself (`NativeAtom`, its name, arity, lookup and `eval`) is
+`Machine/Term.lean`, below the stores, since L1 of the language push; the inventory `all` and
+its projections are generated from that inductive's constructor list into
+`Program/AtomInventory.lean`. The universal `all_complete` statement there forces an appended
+constructor into the inventory, and every dispatch here covers the enum explicitly, so a new
+constructor cannot inherit a fallback.
 -/
 
 namespace Effect4.Program
@@ -109,6 +112,38 @@ theorem typeOf_mono (atom : NativeAtom) (args answer : _) (h : atom.mono = some 
     | [_] => simp [typeOf]
     | [_, _] => simp [typeOf]
     | _ :: _ :: _ :: _ => rfl
+
+/-! ## The table's own well-formedness (the tooling plan 2.1)
+
+Four structural obligations, decided once over the whole inventory rather than argued per
+atom. They are the invariants a reader of the table may assume and an appended atom must
+satisfy; what they are *not* is the semantic obligation (`typeOf` answers a type the atom's
+`eval` inhabits), which quantifies over all `Ty` and all `Val` and is therefore not decidable
+at all — that one is `NativeAtom.Sound` in `Laws/Program/Typed.lean`. -/
+
+/-- Every structural obligation on one atom, as a Boolean over the table's own columns:
+
+* the atom's name occurs exactly once in the inventory, so `ofName?` cannot be ambiguous;
+* the arity agrees with the monomorphic signature's parameter count;
+* `typeOf` at the declared signature answers the declared answer, so `mono` is metadata about
+  `typeOf` rather than a second, drifting, typing rule;
+* a const-generic atom has no monomorphic signature (DI-55: the literal rule only has content
+  where a parameter is polymorphic). -/
+def atomWellFormed (a : NativeAtom) : Bool :=
+  (names.count a.name == 1)
+    && (match a.mono, a.arity with
+        | some (args, _), some n => args.length == n
+        | some _, none => false
+        | none, _ => true)
+    && (match a.mono with
+        | some (args, answer) => a.typeOf args == some answer
+        | none => true)
+    && (!a.constGeneric || a.mono.isNone)
+
+/-- The whole table is well-formed. Decided in the kernel: `atomWellFormed` compares `String`s,
+whose `DecidableEq` goes through `List Char`, and the elaborator's whnf expands a string
+literal per character (`Lean/Meta/WHNF.lean`), so the reduction belongs where it is cheapest. -/
+theorem atom_table_wf : NativeAtom.all.all atomWellFormed = true := by decide +kernel
 
 end NativeAtom
 end Effect4.Program

@@ -4,8 +4,8 @@ import Effect4.Machine.Alphabets
 # Machine.Term — the first-order term language and its evaluation, below the stores
 
 The literals (`Lit`), the positional variables (`Var`), the terms (`Term`, `Terms`: a variable,
-a literal, or an atom applied to terms), their scope check, the closed atom inventory
-(`NativeAtom`: names, arity, `eval`) and the evaluator (`evalTerm`), together with the error
+a literal, or an atom applied to terms), their scope check, the closed atom alphabet
+(`NativeAtom`: its name, arity, lookup and `eval`) and the evaluator (`evalTerm`), together with the error
 image (`errOf`, `valOfErr`) and the cause queries the query atoms read. Everything here is
 first-order data over the shared carrier `Val` and needs no type: the atoms' *typing*
 (`NativeAtom.typeOf`) is `Program/NativeAtom.lean`, the literals' types (`Lit.ty`) are
@@ -161,13 +161,10 @@ inductive NativeAtom
 
 namespace NativeAtom
 
-/-- Declaration order is the existing generated profile order. -/
-def all : List NativeAtom :=
-  [.succ, .pred, .isZero, .boolNot, .add, .lt, .eq, .pair, .fst, .snd, .strings,
-   .causeIsFail, .causeError, .causeIsDie, .causeIsInterrupt, .boolOr, .boolAnd, .tagIs, .isSome, .getOrElse]
-
-theorem all_complete (atom : NativeAtom) : atom ∈ all := by
-  cases atom <;> simp [all]
+/-! The inventory `all`, its two projections and the acceptance guards over it are generated
+from this inductive's constructor list into `src/Effect4/Program/AtomInventory.lean`
+(`tools/Effect4Gen/Atoms.lean`, group `AtomInventory`). Nothing below the stores reads the
+list: the name lookup is a match on the string, so this module needs only the alphabet. -/
 
 def name : NativeAtom → String
   | .succ => "succ" | .pred => "pred" | .isZero => "isZero" | .boolNot => "not"
@@ -179,37 +176,47 @@ def name : NativeAtom → String
   | .tagIs => "tagIs"
   | .isSome => "isSome" | .getOrElse => "getOrElse"
 
-def names : List String := all.map name
-
-/-- Exact lookup over the complete inventory; unknown names remain refused. -/
-def ofName? (value : String) : Option NativeAtom := all.find? (fun atom => atom.name == value)
+/-- Exact lookup over the complete inventory; unknown names remain refused. A match on the
+string, not a scan of `all`: `evalTerm` resolves an atom at every term application, so the
+lookup is on the machine's path, and OCaml compiles a string match to a decision tree where it
+compiled the scan to twenty name computations and compares (`ocaml/gen/api_gen.ml:1477-1493`).
+The second spelling of the name table this introduces is pinned both ways, by `ofName?_name`
+(every atom's name resolves back to it) and `ofName?_sound` (a resolved name is the atom's). -/
+def ofName? : String → Option NativeAtom
+  | "succ" => some .succ
+  | "pred" => some .pred
+  | "isZero" => some .isZero
+  | "not" => some .boolNot
+  | "add" => some .add
+  | "lt" => some .lt
+  | "eq" => some .eq
+  | "pair" => some .pair
+  | "fst" => some .fst
+  | "snd" => some .snd
+  | "strings" => some .strings
+  | "causeIsFail" => some .causeIsFail
+  | "causeError" => some .causeError
+  | "causeIsDie" => some .causeIsDie
+  | "causeIsInterrupt" => some .causeIsInterrupt
+  | "or" => some .boolOr
+  | "and" => some .boolAnd
+  | "tagIs" => some .tagIs
+  | "isSome" => some .isSome
+  | "getOrElse" => some .getOrElse
+  | _ => none
 
 theorem ofName?_name (atom : NativeAtom) : ofName? atom.name = some atom := by
   cases atom <;> rfl
 
 theorem ofName?_sound {value : String} {atom : NativeAtom}
     (h : ofName? value = some atom) : atom.name = value := by
-  have found : (atom.name == value) = true :=
-    List.find?_some (p := fun candidate : NativeAtom => candidate.name == value) h
-  exact eq_of_beq found
+  unfold ofName? at h
+  split at h <;> cases h <;> rfl
 
 theorem name_injective {a b : NativeAtom} (h : a.name = b.name) : a = b := by
   have ha := ofName?_name a
   rw [h, ofName?_name] at ha
   exact Option.some.inj ha.symm
-
-/-- A consumer inventory must cover every constructor, not just its own supplied rows. -/
-def covers (consumerNames : List String) : Bool := names.all consumerNames.contains
-
-theorem covers_iff (consumerNames : List String) :
-    covers consumerNames = true ↔ ∀ atom : NativeAtom, atom.name ∈ consumerNames := by
-  simp only [covers, names, List.all_eq_true, List.mem_map, List.contains_iff_mem]
-  constructor
-  · intro h atom
-    exact h atom.name ⟨atom, all_complete atom, rfl⟩
-  · intro h value hv
-    obtain ⟨atom, _, rfl⟩ := hv
-    exact h atom
 
 def arity : NativeAtom → Option Nat
   | .succ | .pred | .isZero | .boolNot | .fst | .snd
