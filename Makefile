@@ -185,7 +185,7 @@ GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) \
   harness/truth/corpus.json harness/truth/generated harness/truth/result.json harness/truth/result.md \
   harness/truth/tapes harness/truth/session/protocol.gen.ts harness/truth/session/tape.schema.json \
   $(SCHEMA_TS_DIR)/Person.generated.ts $(SCHEMA_TS_DIR)/AllRepresentations.generated.ts $(SCHEMA_TS_DIR)/TwoRoots.generated.ts \
-  generated/effect-runtime-census.tsv generated/corpus-index.tsv
+  generated/effect-runtime-census.tsv generated/corpus-index.tsv generated/row-types.tsv generated/assignability.tsv generated/row-citations.tsv
 
 # ---------------------------------------------------------------------------- corpus
 #
@@ -346,22 +346,45 @@ $(CHK)/corpus: $(CORE) $(LAWS) .lake/build/lib/lean/Test/Program/Gen.trace $(TRU
 gen-corpus-results: | build harness/truth/node_modules ## promote a fresh corpus run to harness/truth/corpus-results.tsv
 	$(PY) scripts/check-corpus.py --promote
 
-# T0: the printed programs' answer, error and requirement types against the pinned
-# TypeScript compiler (tools/target). The oracle reads the truth modules and their
-# prelude, the generated TypeScript tables, the package's compiler config and install,
-# and the toolchain file; each is a prerequisite so a change to any of them re-runs it.
-$(CHK)/target: $(TRUTH_GENERATED) harness/truth/prelude.ts Test/fixtures/target/selection.json $(wildcard tools/target/*.ts tools/target/*.json) \
-  ts/eff/profile.gen.ts ts/eff/eff.gen.ts ts/eff/packages.gen.ts ts/eff/tsconfig.json ts/eff/node_modules lean-toolchain
+# T0: the printed programs' answer, error and requirement types against the one compiler
+# (tsgo, decisions row 57; tools/target). The oracle reads the truth modules and their
+# prelude, the generated TypeScript tables, the package's compiler config, manifest and
+# install, and the toolchain file; each is a prerequisite so a change to any of them re-runs
+# it. The oracle's own compiler side runs under node (tools/target/checker.ts).
+#
+# Three steps before the report. The row lane's expected columns are Lean's own rendering
+# (generated/row-types.tsv, tools/Tools/RowTypes.lean): the lane refuses a stale one rather
+# than reading it, since a stale signature is a wrong expectation, not a missing one. Then
+# the tool type-checks itself under the same compiler it drives — nothing did before, and
+# `renderTy`, the hand copy of the printer it replaced, had fallen four constructors behind.
+$(CHK)/target: $(CORE) $(LAWS) $(TRUTH_GENERATED) harness/truth/prelude.ts Test/fixtures/target/selection.json \
+  $(wildcard tools/target/*.ts tools/target/*.json) tools/Tools/RowTypes.lean generated/row-types.tsv \
+  tools/Tools/TyVectors.lean generated/assignability.tsv \
+  ts/eff/profile.gen.ts ts/eff/eff.gen.ts ts/eff/packages.gen.ts ts/eff/tsconfig.json ts/eff/package.json ts/eff/node_modules lean-toolchain
+	$(LAKE) env lean -M4096 --run tools/Tools/RowTypes.lean generated/row-types.tsv --check
+	$(NODE) ts/eff/node_modules/@typescript/native-preview/bin/tsgo --noEmit -p tools/target/tsconfig.json
 	$(BUN) test tools/target
 	$(BUN) tools/target/cli.ts --repo .
+	@mkdir -p .lake/target && $(LAKE) env lean -M4096 --run tools/Tools/TyVectors.lean .lake/target/ty-vectors.tsv
+	$(BUN) tools/target/assignability.ts --repo . --vectors .lake/target/ty-vectors.tsv
+	$(BUN) tools/target/rows.ts --repo .
 	@mkdir -p $(CHK) && touch $@
+
+.PHONY: gen-assignability
+gen-assignability: | build ## promote a fresh assignability differential to generated/assignability.tsv
+	@mkdir -p .lake/target && $(LAKE) env lean -M4096 --run tools/Tools/TyVectors.lean .lake/target/ty-vectors.tsv
+	$(BUN) tools/target/assignability.ts --repo . --vectors .lake/target/ty-vectors.tsv --promote
+
+.PHONY: gen-row-citations
+gen-row-citations: | build ## promote a fresh rows/atoms report to generated/row-citations.tsv
+	$(BUN) tools/target/rows.ts --repo . --promote
 
 # The schema codec: Lean's `Ty.encode` results for the contract's cases, compared with
 # rc.112's `Schema.toCodecJson` on the host; nothing committed.
 $(CHK)/schema-codec: $(CORE) $(wildcard harness/truth/schema-codec/*) | build harness/truth/node_modules
 	@tmp="$$(mktemp -d "$${TMPDIR:-/tmp}/effect4-schema-codec.XXXXXX")"; \
 	  $(LAKE) env lean -M4096 --run harness/truth/schema-codec/Emit.lean "$$tmp/values.ts" && \
-	  node harness/truth/node_modules/typescript/bin/tsc --project harness/truth/schema-codec/tsconfig.json && \
+	  $(NODE) harness/truth/node_modules/@typescript/native-preview/bin/tsgo --project harness/truth/schema-codec/tsconfig.json && \
 	  $(BUN) harness/truth/schema-codec/check.ts "$$tmp/values.ts"; \
 	  status=$$?; rm -rf "$$tmp"; exit $$status
 	@mkdir -p $(CHK) && touch $@

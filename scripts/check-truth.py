@@ -8,8 +8,9 @@ and every committed artefact must equal the fresh one. A tape that moved fails t
 way corpus.json does: the answers Lean replayed are byte for byte the answers rc.112 just gave.
 
 Between the two, one more refusal (DI-49): the freshly printed modules, their adapter, and the recorder/session sources
-must type-check under the pinned compiler, `tsc --noEmit -p harness/truth/tsconfig.json`
-copied beside them in the work directory. Running is not being well typed — `pKv.ts` ran for
+must type-check under the one compiler (tsgo, decisions row 57),
+`tsgo --noEmit -p harness/truth/tsconfig.json` copied beside them in the work directory.
+Running is not being well typed — `pKv.ts` ran for
 months while its declared error type disagreed with what the shim could raise (TS2375) — so
 the check is on the modules rc.112 just ran, before any byte is compared. Evidence word:
 tested; a finite checker run, not byte reproduction (DI-32).
@@ -64,7 +65,7 @@ def main():
         config['files'] = [host_path(truth/'run-truth.ts')] + [
             host_path(path) for path in sorted((truth/'session').glob('*.ts'))]
         (Path(work)/'tsconfig.json').write_text(json.dumps(config, indent=2) + '\n')
-        typed = subprocess.run([bun, host_path(modules/'typescript/bin/tsc'), '--pretty', 'false',
+        typed = subprocess.run(truth_host.compiler(modules) + ['--pretty', 'false',
                                 '--noEmit', '-p', host_path(Path(work)/'tsconfig.json')],
                                cwd=work, text=True, capture_output=True, timeout=300)
         if typed.returncode != 0:

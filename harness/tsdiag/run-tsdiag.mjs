@@ -31,13 +31,15 @@ const [corpusDir, workDir, ...flags] = process.argv.slice(2)
 if (!corpusDir || !workDir) throw new Error("run-tsdiag.mjs <corpus dir> <work dir> [--promote]")
 const promote = flags.includes("--promote")
 const repo = process.cwd()
-const home = process.env.TSGO_HOME ?? "/opt/homebrew/lib/node_modules/@typescript/native-preview"
+// One compiler, one install (decisions row 57): the pinned `@typescript/native-preview` of
+// ts/eff/package.json, the same one the target oracle and both typechecks run.
+const home = process.env.TSGO_HOME ?? path.join(repo, "ts/eff/node_modules/@typescript/native-preview")
 const committed = path.join(repo, "generated", "tsdiag-agreement.tsv")
 
 // ---- pins ---------------------------------------------------------------------------
 const hostConfig = JSON.parse(fs.readFileSync(path.join(corpusDir, "host-config.json"), "utf8"))
 if (!fs.existsSync(path.join(home, "package.json")))
-  throw new Error(`tsdiag: @typescript/native-preview not found at ${home} (install it globally or set TSGO_HOME)`)
+  throw new Error(`tsdiag: @typescript/native-preview not found at ${home} (bun install in ts/eff, or set TSGO_HOME)`)
 const version = JSON.parse(fs.readFileSync(path.join(home, "package.json"), "utf8")).version
 if (version !== hostConfig.version)
   throw new Error(`tsdiag: pin drift: @typescript/native-preview ${version}, HostConfig.pinned says ${hostConfig.version}`)

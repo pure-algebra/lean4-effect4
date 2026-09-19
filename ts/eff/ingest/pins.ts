@@ -8,14 +8,19 @@ import { stamp as formsStamp } from "../forms.gen.ts"
 import { stamp as taxonomyStamp } from "../taxonomy.gen.ts"
 const Package = Schema.Struct({ version: Schema.String })
 const decodePackage = Schema.decodeUnknownSync(Package)
-export const pins = { typescript: "5.9.2", oxc: "0.147.0", effect: "4.0.0-rc.112", bun: "1.4.2", node: "22.23.2", bunTypes: "1.4.1", profileStamp, formsStamp, taxonomyStamp } as const
-for (const [name, expected] of [["typescript", pins.typescript], ["oxc-parser", pins.oxc], ["effect", pins.effect], ["@types/bun", pins.bunTypes]]) {
+// `tsgo` (`@typescript/native-preview`) is the one compiler: every typing lane asks it and no
+// other (decisions row 57). `typescript` is pinned beside it as a *parser* only — the ck
+// recognizer leg, the two-parser construction check and the two syntax readers call
+// `createSourceFile` and the `is*` guards, never `createProgram` or a checker.
+export const pins = { tsgo: "7.0.0-dev.20260629.1", typescript: "5.9.2", oxc: "0.147.0", effect: "4.0.0-rc.112", bun: "1.4.2", node: "22.23.2", bunTypes: "1.4.1", profileStamp, formsStamp, taxonomyStamp } as const
+const installs = [["@typescript/native-preview", pins.tsgo], ["typescript", pins.typescript], ["oxc-parser", pins.oxc], ["effect", pins.effect], ["@types/bun", pins.bunTypes]] as const
+for (const [name, expected] of installs) {
   const actual = decodePackage(JSON.parse(readFileSync(new URL(`../node_modules/${name}/package.json`, import.meta.url), "utf8"))).version
   if (actual !== expected) throw new Error(`pin drift: ${name} expected ${expected}, found ${actual}`)
 }
 const Manifest = Schema.Struct({ dependencies: Schema.Record(Schema.String, Schema.String), devDependencies: Schema.Record(Schema.String, Schema.String) })
 const manifest = Schema.decodeUnknownSync(Manifest)(JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")))
-for (const [name, expected] of [["typescript", pins.typescript], ["oxc-parser", pins.oxc], ["effect", pins.effect], ["@types/bun", pins.bunTypes]]) {
+for (const [name, expected] of installs) {
   if ((manifest.dependencies[name!] ?? manifest.devDependencies[name!]) !== expected) throw new Error(`manifest pin drift: ${name}`)
 }
 const root = fileURLToPath(new URL("./", import.meta.url))

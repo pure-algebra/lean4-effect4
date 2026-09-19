@@ -10,6 +10,14 @@
  * DELIBERATELY shares nothing with `decls-oxc.mjs` but the vocabulary. Two
  * enumerators that shared code would agree by construction and the twin
  * would testify to nothing.
+ *
+ * One compiler (decisions row 57) does not move this file: it is not a typing lane and it
+ * never re-parses. It reads the tree the ck recognizer (`../ck.ts`) already produced, so it
+ * is pinned to that engine's parser and moves only when the engine does. `tsgo` publishes no
+ * standalone parser — a source file exists only inside a project — so porting the leg alone
+ * would mean a second parse of every file by a different engine, which is the one thing the
+ * twin must not do. Its `hasVariance` (D1) is now a cross-check of the variance table that
+ * `tools/Tools/Variances.lean` reads off rc.112's declarations.
  */
 import ts from "typescript";
 import { ANONYMOUS_DEFAULT, DESTRUCTURED, type Decl } from "./census-contract.ts";

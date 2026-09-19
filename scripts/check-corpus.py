@@ -14,10 +14,12 @@
 3. The runner runs each selected program on the pinned `effect@4.0.0-rc.112`, one process
    per program with a kill timeout, and compares rc.112's exit, schedule and synchronous
    exit with the machine's.
-4. `tsc` type-checks every emitted shipped module under the harness's compiler options.
+4. the one compiler (tsgo, decisions row 57) type-checks every emitted shipped module under
+   the harness's compiler options; its column keeps the name `tsc`, which the register of
+   known differences reads as a dimension.
 5. `tools/target/corpus.ts` compares Lean's answer, error and requirement types with the
-   types `tsc` infers for the unannotated module, both assignment directions, on every
-   well-typed program.
+   types that compiler infers for the unannotated module, both assignment directions, on
+   every well-typed program.
 
 The result is `harness/truth/corpus-results.tsv`, one row per program: `straight`,
 `wellTyped`, `module` (`decl` the shipped block, `expr` an ill-typed program's bare
@@ -279,6 +281,11 @@ def main():
         shutil.rmtree(WORK)
     WORK.mkdir(parents=True)
     shutil.copyfile(truth / 'prelude.ts', WORK / 'prelude.ts')
+    # The prelude re-exports the generated atom block beside it (make gen-derived), as the truth
+    # check copies it. Without this copy every emitted module loses every atom: the one compiler
+    # says so (TS2305 per program), the retired one reported only an unattributed module error
+    # against the prelude, which this lane's per-program regex never saw.
+    shutil.copyfile(truth / 'prelude-atoms.gen.ts', WORK / 'prelude-atoms.gen.ts')
     # The prelude imports the session boundary by a relative path, as the truth check copies it.
     shutil.copytree(truth / 'session', WORK / 'session', ignore=shutil.ignore_patterns('.work'))
 
@@ -324,7 +331,7 @@ def main():
     config['include'] = ['generated']
     config.pop('files', None)
     (WORK / 'tsconfig.json').write_text(json.dumps(config, indent=2) + '\n')
-    typed = subprocess.run([bun, host_path(modules / 'typescript/bin/tsc'), '--pretty', 'false', '--noEmit',
+    typed = subprocess.run(truth_host.compiler(modules) + ['--pretty', 'false', '--noEmit',
                             '-p', host_path(WORK / 'tsconfig.json')],
                            cwd=WORK, text=True, capture_output=True, timeout=3600)
     tsc_errors = {}

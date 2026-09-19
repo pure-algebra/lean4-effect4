@@ -15,17 +15,30 @@ Expected program A/E strings and full requirement keys come from `harness/truth/
 The hand selection reads annotated generated exports. The corpus lane reads separate
 unannotated modules so its actual columns come from initializer inference; the hand
 selection alone is not that independent inference check.
-Expected adapter types come from the generated `Row` schema and package/Host row data.
+Expected adapter types come from `generated/row-types.tsv`, which `tools/Tools/RowTypes.lean`
+writes with `Ty.renderRaw` and each row's own `RowShape`: the tool has no type printer of its
+own, and `make check-target` refuses a stale table rather than reading it.
 The full `scopeKey` maps to `Scope.Scope`; a matching service code alone is insufficient.
 Other requirement keys need explicit bindings before this profile can admit them.
 
-`oracle.ts` is the diagnostic library. `profile.ts` projects existing generated metadata
-into its queries. `input.ts` decodes optional local query selections. `cli.ts` is the thin
-driver. The tool uses the repository's pinned TypeScript
-compiler and compiler options (with its pinned Bun type root made explicit); imported values
-are never executed. Expected types and actual compiler types meet only in two ordinary
+`oracle.ts` is the diagnostic library's face: the types, the query sources, and a `query` that
+runs `checker.ts`. `checker.ts` is the only thing in the repository that drives a type checker;
+it runs under node because the compiler's synchronous client reads a node-internal pipe handle,
+the same reason `harness/tsdiag/run-tsdiag.mjs` is node. `profile.ts` projects existing
+generated metadata into its queries. `input.ts` decodes optional local query selections.
+`cli.ts` is the thin driver. The compiler is the one compiler of decisions row 57, tsgo
+(`@typescript/native-preview`, pinned in `ts/eff/package.json`; the oracle refuses an install
+that is not the manifest's), with the package's own compiler options (and its pinned Bun type
+root made explicit); imported values are never executed. The query modules are never written to
+disk: the compiler reads them through its virtual filesystem callbacks, beside
+`ts/eff/tsconfig.json`. Expected types and actual compiler types meet only in two ordinary
 assignment statements per column. There are no assertions converting actual values to the
 expected type and no private compiler assignability APIs. Type strings are display data.
+
+A handle target binding (`Host.Resource` → `Adapter.HostResource`) is a *declaration* in the
+query source — a namespace with a type member — so the expected column is the string Lean
+rendered and the compiler does the binding by name resolution. Two names on one target are one
+host type and are refused at the binding (DI-24, DI-76).
 
 Queries explicitly distinguish `program`, effect-valued primitive (`effect`), and callable
 primitive (`function`) claims. Only a program's error column accepts an actual type contained
@@ -46,8 +59,8 @@ A Boolean tag predicate does not establish a narrower host error type. If the co
 an all-caught residual but the printer still emits ordinary `catchIf`, that target mismatch
 remains visible; the comparison does not excuse it.
 A method's actual receiver is derived from the selected indexed member type. Arguments are
-projected by call shape, including the printer's one-level binary-product split. Return
-answer, error, and requirements are separate columns. Missing fields or unbound symbols do
+projected by call shape, including the printer's one-level binary-product split — in Lean,
+beside the shape it reads. Return answer, error, and requirements are separate columns. Missing fields or unbound symbols do
 not become `unknown`; a non-Effect value cannot pass through `never` extraction results.
 
 Any in compared roots, generic payloads, or local record data is refused. Unknown requires
@@ -61,10 +74,21 @@ refused pending an explicit instantiation model. These assignment checks are fin
 judgments, not Lean semantic theorems, runtime cause agreement, or proof of distinct Lean
 service-key identity.
 
+`assignability.ts` is the second query kind (plan 1.10): a bare pair of rendered types, both
+readings of both directions (the checker's own `isTypeAssignableTo` and one ordinary assignment
+statement), against `Ty.sub` on the pairs `tools/Tools/TyVectors.lean` writes. Every row is
+`agree`, a named `cut`, `incomplete` (the order refuses what the target accepts) or `defect`
+(the order accepts what the target refuses, which fails the lane). The committed table is
+`generated/assignability.tsv`; `make gen-assignability` promotes a fresh run. Its own control
+travels with the questions: each pair also carries `Ty.sub` under one swapped arm (`refOf` read
+covariantly), and the lane fails if no pair catches it.
+
 Run `bun test tools/target` for independent positive and negative controls. These tests pass
 by detecting the specified failures; they do not turn a production mismatch into conformance.
-Run `bun ts/eff/node_modules/typescript/bin/tsc --noEmit -p tools/target/tsconfig.json` for the
-tool's own type check. A reproducible command control is:
+One of them is the ruling itself: no file of this tree constructs a second checker
+(`createProgram`, `getTypeChecker`, `transpileModule`), so "assignable" has one meaning.
+Run `node ts/eff/node_modules/@typescript/native-preview/bin/tsgo --noEmit -p tools/target/tsconfig.json`
+for the tool's own type check. A reproducible command control is:
 
 ```sh
 bun tools/target/cli.ts --repo . --queries Test/fixtures/target/positive.json --out .lake/target/positive.json
