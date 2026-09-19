@@ -346,12 +346,13 @@ $(CHK)/corpus: $(CORE) $(LAWS) .lake/build/lib/lean/Test/Program/Gen.trace $(TRU
 gen-corpus-results: | build harness/truth/node_modules ## promote a fresh corpus run to harness/truth/corpus-results.tsv
 	$(PY) scripts/check-corpus.py --promote
 
-# T0: the printed programs' answer, error and requirement types against the pinned
-# TypeScript compiler (tools/target). The oracle reads the truth modules and their
-# prelude, the generated TypeScript tables, the package's compiler config and install,
-# and the toolchain file; each is a prerequisite so a change to any of them re-runs it.
+# T0: the printed programs' answer, error and requirement types against the one compiler
+# (tsgo, decisions row 57; tools/target). The oracle reads the truth modules and their
+# prelude, the generated TypeScript tables, the package's compiler config, manifest and
+# install, and the toolchain file; each is a prerequisite so a change to any of them re-runs
+# it. The oracle's own compiler side runs under node (tools/target/checker.ts).
 $(CHK)/target: $(TRUTH_GENERATED) harness/truth/prelude.ts Test/fixtures/target/selection.json $(wildcard tools/target/*.ts tools/target/*.json) \
-  ts/eff/profile.gen.ts ts/eff/eff.gen.ts ts/eff/packages.gen.ts ts/eff/tsconfig.json ts/eff/node_modules lean-toolchain
+  ts/eff/profile.gen.ts ts/eff/eff.gen.ts ts/eff/packages.gen.ts ts/eff/tsconfig.json ts/eff/package.json ts/eff/node_modules lean-toolchain
 	$(BUN) test tools/target
 	$(BUN) tools/target/cli.ts --repo .
 	@mkdir -p $(CHK) && touch $@
@@ -361,7 +362,7 @@ $(CHK)/target: $(TRUTH_GENERATED) harness/truth/prelude.ts Test/fixtures/target/
 $(CHK)/schema-codec: $(CORE) $(wildcard harness/truth/schema-codec/*) | build harness/truth/node_modules
 	@tmp="$$(mktemp -d "$${TMPDIR:-/tmp}/effect4-schema-codec.XXXXXX")"; \
 	  $(LAKE) env lean -M4096 --run harness/truth/schema-codec/Emit.lean "$$tmp/values.ts" && \
-	  node harness/truth/node_modules/typescript/bin/tsc --project harness/truth/schema-codec/tsconfig.json && \
+	  $(NODE) harness/truth/node_modules/@typescript/native-preview/bin/tsgo --project harness/truth/schema-codec/tsconfig.json && \
 	  $(BUN) harness/truth/schema-codec/check.ts "$$tmp/values.ts"; \
 	  status=$$?; rm -rf "$$tmp"; exit $$status
 	@mkdir -p $(CHK) && touch $@

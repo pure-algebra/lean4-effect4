@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import { spawnSync } from "node:child_process"
 import { resolve } from "node:path"
 import { query, type Query } from "./oracle.ts"
 
@@ -140,6 +141,19 @@ test("non-Effect and never subjects cannot agree through never-valued extraction
     expect(observation.status).toBe("refused")
     expect(observation.issues.some(i => i.code === "query-diagnostic")).toBe(true)
   }
+}, 30_000)
+
+test("one compiler: no second checker is constructed anywhere in the tree (row 57)", () => {
+  // The ruling is about what answers a typing question, not about what parses. `typescript` is
+  // pinned as a parser for the recognizer twin; the moment anything asks it for a program or a
+  // checker there are two meanings of "assignable" again, and this control goes red.
+  const constructors = ["createProgram", "getTypeChecker", "transpileModule",
+    "createIncrementalProgram", "createWatchProgram", "createSemanticDiagnosticsBuilderProgram"]
+  const found = spawnSync("git", ["grep", "-nE", `(${constructors.join("|")})[[:space:]]*\\(`,
+    "--", "*.ts", "*.mts", "*.mjs", ":!vendor", ":!*/node_modules/*"], { cwd: repo, encoding: "utf8" })
+  const hits = found.stdout.split("\n").filter(line => line.trim().length)
+  expect(found.status === 0 || found.status === 1).toBe(true)
+  expect(hits).toEqual([])
 }, 30_000)
 
 test("E4-CATCH-CE-001: an explicit absent fallback selects the data-first overload", () => {

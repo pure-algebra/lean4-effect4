@@ -6,7 +6,7 @@
   "scripts": {
     "check": "bun run check.ts",
     "test": "bun test",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsgo --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@effect/sql-sqlite-bun": "4.0.0-rc.112",
@@ -15,6 +15,7 @@
   },
   "devDependencies": {
     "@types/bun": "1.4.1",
+    "@typescript/native-preview": "7.0.0-dev.20260629.1",
     "typescript": "5.9.2"
   }
 }

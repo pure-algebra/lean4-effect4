@@ -24,7 +24,7 @@
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
-import { bindRendered, key, requirements } from "./profile.ts"
+import { key, requirements } from "./profile.ts"
 import { query, type Query } from "./oracle.ts"
 
 const args = process.argv.slice(2)
@@ -55,14 +55,14 @@ for (const entry of manifest.programs as Array<Record<string, any>>) {
   const q: Query = {
     id: `program/${entry.name}`, source,
     imports: [...imports, `import type * as Program from ${JSON.stringify(source)}`],
-    subject: "typeof Program.main", kind: "program", expected: {}, inputIssues: [],
+    subject: "typeof Program.main", kind: "program", expected: {}, bindings: Object.fromEntries(handles), inputIssues: [],
     provenance: { metadata: "corpus manifest", program: entry.name, type: entry.type, module: "inferred (unannotated)" }
   }
   if (entry.declInferred === null) q.inputIssues!.push({ code: "no-inferred-module", message: "the manifest has no unannotated block for a well-typed program" })
   try {
-    q.expected.A = bindRendered(entry.type.answer, handles)
-    q.expected.E = bindRendered(entry.type.error, handles)
-    q.expected.R = requirements(entry.type.requires, scope, handles)
+    q.expected.A = entry.type.answer
+    q.expected.E = entry.type.error
+    q.expected.R = requirements(entry.type.requires, scope)
   } catch (error) {
     q.inputIssues!.push({ code: "program-type-metadata", message: String(error) })
   }

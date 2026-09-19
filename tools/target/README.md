@@ -19,13 +19,24 @@ Expected adapter types come from the generated `Row` schema and package/Host row
 The full `scopeKey` maps to `Scope.Scope`; a matching service code alone is insufficient.
 Other requirement keys need explicit bindings before this profile can admit them.
 
-`oracle.ts` is the diagnostic library. `profile.ts` projects existing generated metadata
-into its queries. `input.ts` decodes optional local query selections. `cli.ts` is the thin
-driver. The tool uses the repository's pinned TypeScript
-compiler and compiler options (with its pinned Bun type root made explicit); imported values
-are never executed. Expected types and actual compiler types meet only in two ordinary
+`oracle.ts` is the diagnostic library's face: the types, the query sources, and a `query` that
+runs `checker.ts`. `checker.ts` is the only thing in the repository that drives a type checker;
+it runs under node because the compiler's synchronous client reads a node-internal pipe handle,
+the same reason `harness/tsdiag/run-tsdiag.mjs` is node. `profile.ts` projects existing
+generated metadata into its queries. `input.ts` decodes optional local query selections.
+`cli.ts` is the thin driver. The compiler is the one compiler of decisions row 57, tsgo
+(`@typescript/native-preview`, pinned in `ts/eff/package.json`; the oracle refuses an install
+that is not the manifest's), with the package's own compiler options (and its pinned Bun type
+root made explicit); imported values are never executed. The query modules are never written to
+disk: the compiler reads them through its virtual filesystem callbacks, beside
+`ts/eff/tsconfig.json`. Expected types and actual compiler types meet only in two ordinary
 assignment statements per column. There are no assertions converting actual values to the
 expected type and no private compiler assignability APIs. Type strings are display data.
+
+A handle target binding (`Host.Resource` → `Adapter.HostResource`) is a *declaration* in the
+query source — a namespace with a type member — so the expected column is the string Lean
+rendered and the compiler does the binding by name resolution. Two names on one target are one
+host type and are refused at the binding (DI-24, DI-76).
 
 Queries explicitly distinguish `program`, effect-valued primitive (`effect`), and callable
 primitive (`function`) claims. Only a program's error column accepts an actual type contained
@@ -63,8 +74,10 @@ service-key identity.
 
 Run `bun test tools/target` for independent positive and negative controls. These tests pass
 by detecting the specified failures; they do not turn a production mismatch into conformance.
-Run `bun ts/eff/node_modules/typescript/bin/tsc --noEmit -p tools/target/tsconfig.json` for the
-tool's own type check. A reproducible command control is:
+One of them is the ruling itself: no file of this tree constructs a second checker
+(`createProgram`, `getTypeChecker`, `transpileModule`), so "assignable" has one meaning.
+Run `node ts/eff/node_modules/@typescript/native-preview/bin/tsgo --noEmit -p tools/target/tsconfig.json`
+for the tool's own type check. A reproducible command control is:
 
 ```sh
 bun tools/target/cli.ts --repo . --queries Test/fixtures/target/positive.json --out .lake/target/positive.json

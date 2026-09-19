@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test"
 import { resolve } from "node:path"
 import { readFileSync } from "node:fs"
-import { bindRendered, key, queriesFromInputs, renderTy, requirements, rowArguments, receiverOfSubject } from "./profile.ts"
+import { key, queriesFromInputs, renderTy, requirements, rowArguments, receiverOfSubject } from "./profile.ts"
+import { bindingSource } from "./oracle.ts"
 import type { Row } from "../../ts/eff/eff.gen.ts"
 
 const repo = resolve(import.meta.dir, "../..")
@@ -19,11 +20,14 @@ test("request projection follows call shape and splits only one tuple level", ()
   expect(() => rowArguments({ ...row, shape: "method", request: { _tag: "string" } }, bindings)).toThrow("receiver")
   expect(() => rowArguments({ ...row, trailing: ["undefined"] }, bindings)).toThrow("unsupported")
   expect(() => rowArguments({ ...row, shape: "tupleCall", request: { _tag: "unit" } }, bindings)).toThrow("binary product")
-  expect(receiverOfSubject('Adapter.SqlHandle["unsafe"]')).toBe("Adapter.SqlHandle")
-  expect(receiverOfSubject('Adapter.KvHandle["get"]')).toBe("Adapter.KvHandle")
-  expect(receiverOfSubject("typeof Adapter.Host.acquire")).toBeUndefined()
   expect(() => rowArguments({ ...row, typeArgs: ["number"] }, bindings)).toThrow("unsupported")
 })
+
+test("the receiver of a selected member is the object type the compiler parsed", () => {
+  expect(receiverOfSubject(repo, 'Adapter.SqlHandle["unsafe"]')).toBe("Adapter.SqlHandle")
+  expect(receiverOfSubject(repo, 'Adapter.KvHandle["get"]')).toBe("Adapter.KvHandle")
+  expect(receiverOfSubject(repo, "typeof Adapter.Host.acquire")).toBeUndefined()
+}, 60_000)
 
 test("full requirement keys have explicit, bounded and injective target bindings", () => {
   const scope = { name: 7, service: 2 }
@@ -40,12 +44,12 @@ test("a required key is bound by the shape its manifest entry carries, in both l
   const scope = { name: 0, service: 0 }
   // by its shape, as the printed `Context.Service<shape>("k<name>_<service>")` requires it
   expect(requirements([{ name: 8, service: 4, shape: "number" }], scope)).toBe("(number)")
-  // a handle-shaped key goes through the same handle binding as the answer and error axes
-  expect(requirements([{ name: 12, service: 8, shape: "SqlClient.SqlClient" }], scope, new Map([["SqlClient.SqlClient", "Adapter.SqlHandle"]]))).toBe("(Adapter.SqlHandle)")
+  // a handle-shaped key is carried verbatim and bound by the query's declarations
+  expect(requirements([{ name: 12, service: 8, shape: "SqlClient.SqlClient" }], scope)).toBe("(SqlClient.SqlClient)")
   // no shape, no binding: `null` is what the manifest writes for a key the signature does not type
   expect(() => requirements([{ name: 8, service: 4, shape: null }], scope)).toThrow("unbound")
-  // red control for the defect: a handle keyed by "<name>:<service>" binds nothing
-  expect(() => requirements([{ name: 8, service: 4 }], scope, new Map([["8:4", "Adapter.SqlHandle"]]))).toThrow("unbound")
+  // red control for the defect: a key with no shape binds nothing, whatever the handle table says
+  expect(() => requirements([{ name: 8, service: 4 }], scope)).toThrow("unbound")
   // the hand-selection lane binds a program's key the same way the corpus lane does
   const selection = { programs: ["p1"], handles: {}, rows: [] }
   const corpus = { scopeKey: scope, programs: [{ name: "p1", type: { answer: "number", error: "never", requires: [{ name: 8, service: 4, shape: "number" }] } }] }
@@ -54,13 +58,19 @@ test("a required key is bound by the shape its manifest entry carries, in both l
   expect(q?.inputIssues).toEqual([])
 })
 
-test("rendered canonical type bindings use syntax nodes and structured types preserve nesting", () => {
-  const bound = bindRendered('readonly [Host.Resource, "Host.Resource"]', bindings)
-  expect(bound).toContain("Adapter.HostResource")
-  expect(bound).toContain('"Host.Resource"')
-  expect(bound).not.toContain('"Adapter.HostResource"')
-  expect(() => bindRendered("number |", bindings)).toThrow("syntax")
-  expect(() => bindRendered("number; type Extra = string", bindings)).toThrow("expression")
+test("handle targets are bound by declaration, and structured types preserve nesting", () => {
+  // The rendered text is pasted verbatim; the binding is a declaration the compiler resolves,
+  // so a literal that spells a handle name is untouched (it is not a type reference).
+  expect(bindingSource({ "Host.Resource": "Adapter.HostResource" }))
+    .toEqual(["declare namespace Host { export type Resource = Adapter.HostResource }"])
+  expect(bindingSource({ Resource: "Adapter.HostResource" })).toEqual(["type Resource = Adapter.HostResource"])
+  expect(bindingSource({ "A.B.C": "X.Y", "A.D": "Z" }))
+    .toEqual(["declare namespace A { export namespace B { export type C = X.Y } export type D = Z }"])
+  expect(bindingSource(undefined)).toEqual([])
+  expect(() => bindingSource({ "Host.Resource": "not a type" })).toThrow("qualified target")
+  expect(() => bindingSource({ "Host-Resource": "Adapter.HostResource" })).toThrow("binding name")
+  expect(() => bindingSource({ "A.B": "X", "C.D": "X" })).toThrow("noninjective")
+  expect(() => bindingSource({ A: "X", "A.B": "Y" })).toThrow("both a name and a namespace")
   expect(renderTy({ _tag: "option", inner: { _tag: "list", inner: { _tag: "handle", target: "Host.Resource" } } }, bindings)).toBe("Option.Option<ReadonlyArray<Adapter.HostResource>>")
   expect(renderTy({ _tag: "lit", value: 'A"B' }, bindings)).toBe('"A\\"B"')
   expect(() => renderTy({ _tag: "handle", target: "Missing.Handle" }, bindings)).toThrow("unbound")

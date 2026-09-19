@@ -6,6 +6,9 @@ install must carry `effect@4.0.0-rc.112` and its sqlite driver, `bun` must exist
 existing `harness/truth/node_modules` link must select the same install, because bun
 resolves a generated module's `effect` import from the harness, not from the current
 directory.
+
+The compiler is the one compiler of decisions row 57, `@typescript/native-preview` (tsgo),
+from the same install; it is run under node, whose pipe handle its client reads.
 """
 import json
 import os
@@ -35,6 +38,12 @@ def select(root: Path, truth: Path):
             return subprocess.check_output(['wslpath', '-w', str(path)], text=True).strip()
         return str(path)
 
+    # The compiler is resolved from the same install, so one `bun install` serves every lane.
+    if not (modules / '@typescript/native-preview/bin/tsgo').is_file():
+        sys.exit('FAIL truth: EFFECT4_EFFECT_NODE_MODULES must contain @typescript/native-preview (bun install in ts/eff)')
+    if not shutil.which('node'):
+        sys.exit("FAIL truth: node is required (the compiler's synchronous client reads its pipe handle)")
+
     # Bun resolves imports relative to the runner. An existing link must select the same pin.
     link = truth / 'node_modules'
     if link.exists():
@@ -47,3 +56,8 @@ def select(root: Path, truth: Path):
     else:
         link.symlink_to(modules, target_is_directory=True)
     return bun, modules, host_path
+
+
+def compiler(modules: Path):
+    """The command that runs the one compiler's CLI over a project."""
+    return [shutil.which('node') or 'node', str(modules / '@typescript/native-preview/bin/tsgo')]

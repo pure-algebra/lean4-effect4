@@ -14,7 +14,7 @@ export function decodeQueries(value: unknown): Query[] {
   if (!Array.isArray(value) || !value.length) throw new Error("query: expected nonempty selection")
   return value.map(raw => {
     const o = object(raw)
-    if (Object.keys(o).some(k => !["id", "source", "imports", "subject", "kind", "receiver", "expected", "allowUnknown"].includes(k))) throw new Error("query: unrecognized field")
+    if (Object.keys(o).some(k => !["id", "source", "imports", "subject", "kind", "receiver", "expected", "bindings", "allowUnknown"].includes(k))) throw new Error("query: unrecognized field")
     if (o.kind !== "program" && o.kind !== "effect" && o.kind !== "function") throw new Error("query: unsupported kind")
     if (!Array.isArray(o.imports)) throw new Error("query: imports must be an array")
     const q: Query = { id: string(o.id), source: string(o.source), imports: o.imports.map(string), subject: string(o.subject), kind: o.kind, expected: {} }
@@ -23,6 +23,9 @@ export function decodeQueries(value: unknown): Query[] {
       q.expected[k] = string(v)
     }
     if (o.receiver !== undefined) q.receiver = string(o.receiver)
+    if (o.bindings !== undefined) {
+      q.bindings = Object.fromEntries(Object.entries(object(o.bindings)).map(([k, v]) => [k, string(v)]))
+    }
     if (o.allowUnknown !== undefined) {
       if (!Array.isArray(o.allowUnknown) || !o.allowUnknown.every(isAxis)) throw new Error("query: unknown allowUnknown axis")
       q.allowUnknown = o.allowUnknown
