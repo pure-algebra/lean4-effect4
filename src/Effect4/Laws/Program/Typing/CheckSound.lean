@@ -361,145 +361,145 @@ mutual
 theorem check_complete (sig : Signature Op) (e : Eff Op) :
     ∀ (env : TyEnv) (t : EffTy), HasTy sig env e t → ∀ p, check sig env p e = .ok t := by
   cases e with
-  | succeed value => intro env t hd p; cases hd; aesop
+  | succeed value => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
   | select s d a0 a1 =>
     intro env t hd p; cases hd
     have ih0 := check_complete sig a0 _ _ ‹HasTy sig _ a0 _› (p ++ [0])
     have ih1 := check_complete sig a1 _ _ ‹HasTy sig _ a1 _› (p ++ [1])
-    aesop
-  | fail error => intro env t hd p; cases hd; aesop
-  | failCause cause => intro env t hd p; cases hd; aesop
-  | sync thunk => intro env t hd p; cases hd; aesop
+    aesop (rule_sets := [Effect4.Checker])
+  | fail error => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
+  | failCause cause => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
+  | sync thunk => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
   | suspend body =>
     intro env t hd p; cases hd
     have ih := check_complete sig body _ _ ‹HasTy sig _ body _› (p ++ [0])
-    aesop
-  | perform op request => intro env t hd p; cases hd; aesop
+    aesop (rule_sets := [Effect4.Checker])
+  | perform op request => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
   | bind first rest =>
     intro env t hd p; cases hd
     have ihf := check_complete sig first _ _ ‹HasTy sig _ first _› (p ++ [0])
     have ihr := check_complete sig rest _ _ ‹HasTy sig _ rest _› (p ++ [1])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | gen body =>
     intro env t hd p; cases hd
     have ih := checkStmts_complete sig body _ _ _ ‹StmtsHasTy sig _ _ body _› (p ++ [0])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | catchCause body handler =>
     intro env t hd p; cases hd
     have ihb := check_complete sig body _ _ ‹HasTy sig _ body _› (p ++ [0])
     have ihh := check_complete sig handler _ _ ‹HasTy sig _ handler _› (p ++ [1])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | catchIf test body handler =>
     intro env t hd p; cases hd
     have ihb := check_complete sig body _ _ ‹HasTy sig _ body _› (p ++ [0])
     have ihh := check_complete sig handler _ _ ‹HasTy sig _ handler _› (p ++ [1])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | matchCause body onValue onCause =>
     intro env t hd p; cases hd
     have ihb := check_complete sig body _ _ ‹HasTy sig _ body _› (p ++ [0])
     have ihv := check_complete sig onValue _ _ ‹HasTy sig _ onValue _› (p ++ [1])
     have ihc := check_complete sig onCause _ _ ‹HasTy sig _ onCause _› (p ++ [2])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | onExit body finalizer =>
     intro env t hd p; cases hd
     have ihb := check_complete sig body _ _ ‹HasTy sig _ body _› (p ++ [0])
     have ihf := check_complete sig finalizer _ _ ‹HasTy sig _ finalizer _› (p ++ [1])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | exit body =>
     intro env t hd p; cases hd
     have ih := check_complete sig body _ _ ‹HasTy sig _ body _› (p ++ [0])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | uninterruptible body =>
     intro env t hd p; cases hd
     have ih := check_complete sig body _ _ ‹HasTy sig _ body _› (p ++ [0])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | interruptible body =>
     intro env t hd p; cases hd
     have ih := check_complete sig body _ _ ‹HasTy sig _ body _› (p ++ [0])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | iterate cursor initial test step result body =>
     intro env t hd p; cases hd
     have ih := check_complete sig body _ _ ‹HasTy sig _ body _› (p ++ [0])
-    aesop
-  | yieldNow priority => intro env t hd p; cases hd; aesop
+    aesop (rule_sets := [Effect4.Checker])
+  | yieldNow priority => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
   | awaitFiber fiber mode =>
     intro env t hd p
     cases mode with
-    | joinEffect => cases hd; aesop
-    | awaitValue => cases hd; aesop
+    | joinEffect => cases hd; aesop (rule_sets := [Effect4.Checker])
+    | awaitValue => cases hd; aesop (rule_sets := [Effect4.Checker])
   | withFiber action =>
     intro env t hd p; cases hd
     have ih := checkAction_complete sig action _ _ ‹ActionHasTy sig _ action _› (p ++ [0])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | «scoped» body =>
     intro env t hd p; cases hd
     have ih := check_complete sig body _ _ ‹HasTy sig _ body _› (p ++ [0])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | acquireRelease acquire release =>
     intro env t hd p; cases hd
     have iha := check_complete sig acquire _ _ ‹HasTy sig _ acquire _› (p ++ [0])
     have ihr := check_complete sig release _ _ ‹HasTy sig _ release _› (p ++ [1])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | provideLayer layer isLocal body =>
     intro env t hd p; cases hd
     have ihl := checkLayer_complete sig layer _ ‹LayerHasTy sig layer _› (p ++ [0])
     have ihb := check_complete sig body _ _ ‹HasTy sig _ body _› (p ++ [1])
-    aesop
-  | service key => intro env t hd p; cases hd; aesop
+    aesop (rule_sets := [Effect4.Checker])
+  | service key => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
   | provideService key value body =>
     intro env t hd p; cases hd
     have ih := check_complete sig body _ _ ‹HasTy sig _ body _› (p ++ [0])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
 termination_by structural e
 
 theorem checkStmts_complete (sig : Signature Op) (body : Stmts Op) :
     ∀ (env : TyEnv) (inLoop : Bool) (g : GenTy), StmtsHasTy sig env inLoop body g →
       ∀ p, checkStmts sig env inLoop none p body = .ok g := by
   cases body with
-  | nil => intro env inLoop g hd p; cases hd; aesop
+  | nil => intro env inLoop g hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
   | cons head tail =>
     cases head with
     | bindYield effect =>
       intro env inLoop g hd p; cases hd
       have iht := check_complete sig effect _ _ ‹HasTy sig _ effect _› (p ++ [0, 0])
       have ihr := checkStmts_complete sig tail _ _ _ ‹StmtsHasTy sig _ _ tail _› (p ++ [1])
-      aesop
+      aesop (rule_sets := [Effect4.Checker])
     | yieldDiscard effect =>
       intro env inLoop g hd p; cases hd
       have iht := check_complete sig effect _ _ ‹HasTy sig _ effect _› (p ++ [0, 0])
       have ihr := checkStmts_complete sig tail _ _ _ ‹StmtsHasTy sig _ _ tail _› (p ++ [1])
-      aesop
+      aesop (rule_sets := [Effect4.Checker])
     | ret value =>
       cases tail with
-      | nil => intro env inLoop g hd p; cases hd; aesop
+      | nil => intro env inLoop g hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
       | cons next rest => intro env inLoop g hd p; cases hd
     | ifElse test thenB elseB =>
       intro env inLoop g hd p; cases hd
       have iha := checkStmts_complete sig thenB _ _ _ ‹StmtsHasTy sig _ _ thenB _› (p ++ [0, 0])
       have ihb := checkStmts_complete sig elseB _ _ _ ‹StmtsHasTy sig _ _ elseB _› (p ++ [0, 1])
       have ihr := checkStmts_complete sig tail _ _ _ ‹StmtsHasTy sig _ _ tail _› (p ++ [1])
-      aesop
+      aesop (rule_sets := [Effect4.Checker])
     | whileTrue loopBody =>
       intro env inLoop g hd p; cases hd
       have ihb := checkStmts_complete sig loopBody _ _ _ ‹StmtsHasTy sig _ _ loopBody _› (p ++ [0, 0])
       have ihr := checkStmts_complete sig tail _ _ _ ‹StmtsHasTy sig _ _ tail _› (p ++ [1])
-      aesop
+      aesop (rule_sets := [Effect4.Checker])
     | breakLoop =>
       intro env inLoop g hd p; cases hd
       have ih := checkStmts_complete sig tail _ _ _ ‹StmtsHasTy sig _ _ tail _› (p ++ [1])
-      aesop
+      aesop (rule_sets := [Effect4.Checker])
 termination_by structural body
 
 theorem checkEffs_complete (sig : Signature Op) (entrants : Effs Op) :
     ∀ (env : TyEnv) (t : EffTy), EffsHasTy sig env entrants t →
       ∀ p, checkEffs sig env p entrants = .ok t := by
   cases entrants with
-  | nil => intro env t hd p; cases hd; aesop
+  | nil => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
   | cons head tail =>
     intro env t hd p; cases hd
     have ihh := check_complete sig head _ _ ‹HasTy sig _ head _› (p ++ [0])
     have ihr := checkEffs_complete sig tail _ _ ‹EffsHasTy sig _ tail _› (p ++ [1])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
 termination_by structural entrants
 
 theorem checkAction_complete (sig : Signature Op) (action : ActionTerm Op) :
@@ -509,78 +509,78 @@ theorem checkAction_complete (sig : Signature Op) (action : ActionTerm Op) :
   | fork program options =>
     intro env t hd p; cases hd
     have ih := check_complete sig program _ _ ‹HasTy sig _ program _› (p ++ [0])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | forkIn program options scope =>
     intro env t hd p; cases hd
     have ih := check_complete sig program _ _ ‹HasTy sig _ program _› (p ++ [0])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | forkScoped program options =>
     intro env t hd p; cases hd
     have ih := check_complete sig program _ _ ‹HasTy sig _ program _› (p ++ [0])
-    aesop
-  | runIn target scope => intro env t hd p; cases hd; aesop
-  | interrupt target => intro env t hd p; cases hd; aesop
-  | interruptScoped target => intro env t hd p; cases hd; aesop
+    aesop (rule_sets := [Effect4.Checker])
+  | runIn target scope => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
+  | interrupt target => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
+  | interruptScoped target => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
   | interruptAll targets who =>
     intro env t hd p
     cases who with
-    | none => cases hd; aesop
-    | some w => cases hd; aesop
-  | awaitAll targets => intro env t hd p; cases hd; aesop
-  | awaitAllFailFast targets => intro env t hd p; cases hd; aesop
-  | snapshotChildren => intro env t hd p; cases hd; aesop
-  | awaitNewChildren snapshot => intro env t hd p; cases hd; aesop
+    | none => cases hd; aesop (rule_sets := [Effect4.Checker])
+    | some w => cases hd; aesop (rule_sets := [Effect4.Checker])
+  | awaitAll targets => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
+  | awaitAllFailFast targets => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
+  | snapshotChildren => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
+  | awaitNewChildren snapshot => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
   | raceAll entrants =>
     intro env t hd p; cases hd
     have ih := checkEffs_complete sig entrants _ _ ‹EffsHasTy sig _ entrants _› (p ++ [0])
-    aesop
-  | setContext context => intro env t hd p; cases hd; aesop
-  | getContext => intro env t hd p; cases hd; aesop
-  | getId => intro env t hd p; cases hd; aesop
-  | closeScope scope exitTerm => intro env t hd p; cases hd; aesop
+    aesop (rule_sets := [Effect4.Checker])
+  | setContext context => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
+  | getContext => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
+  | getId => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
+  | closeScope scope exitTerm => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
 termination_by structural action
 
 theorem checkLayer_complete (sig : Signature Op) (layer : LayerTerm Op) :
     ∀ (s : LayerTy), LayerHasTy sig layer s → ∀ p, checkLayer sig p layer = .ok s := by
   cases layer with
-  | succeed key value => intro s hd p; cases hd; aesop
+  | succeed key value => intro s hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
   | effect key body =>
     intro s hd p; cases hd
     have ih := check_complete sig body _ _ ‹HasTy sig _ body _› (p ++ [0])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | effectDiscard body =>
     intro s hd p; cases hd
     have ih := check_complete sig body _ _ ‹HasTy sig _ body _› (p ++ [0])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | provide self that =>
     intro s hd p; cases hd
     have iha := checkLayer_complete sig self _ ‹LayerHasTy sig self _› (p ++ [0])
     have ihb := checkLayer_complete sig that _ ‹LayerHasTy sig that _› (p ++ [1])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | provideMerge self that =>
     intro s hd p; cases hd
     have iha := checkLayer_complete sig self _ ‹LayerHasTy sig self _› (p ++ [0])
     have ihb := checkLayer_complete sig that _ ‹LayerHasTy sig that _› (p ++ [1])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | merge left right =>
     intro s hd p; cases hd
     have iha := checkLayer_complete sig left _ ‹LayerHasTy sig left _› (p ++ [0])
     have ihb := checkLayer_complete sig right _ ‹LayerHasTy sig right _› (p ++ [1])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | fresh inner =>
     intro s hd p; cases hd
     have ih := checkLayer_complete sig inner _ ‹LayerHasTy sig inner _› (p ++ [0])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | orDie inner =>
     intro s hd p; cases hd
     have ih := checkLayer_complete sig inner _ ‹LayerHasTy sig inner _› (p ++ [0])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
   | ref target => intro s hd p; cases hd
   | mergeAll layers =>
     intro s hd p; cases hd
     obtain ⟨ls, hls, hm⟩ :=
       checkLayers_complete sig layers _ ‹LayersHasTy sig layers _› (p ++ [0])
-    aesop
+    aesop (rule_sets := [Effect4.Checker])
 termination_by structural layer
 
 /-- The spine's judgment is a list of signatures under its nonempty merge, at every path. -/
@@ -594,7 +594,7 @@ theorem checkLayers_complete (sig : Signature Op) (layers : LayerTerms Op) :
     | nil =>
       intro m hd p; cases hd
       have ih := checkLayer_complete sig head _ ‹LayerHasTy sig head _› (p ++ [0])
-      exact ⟨[m], by aesop, rfl⟩
+      exact ⟨[m], by aesop (rule_sets := [Effect4.Checker]), rfl⟩
     | cons next rest =>
       intro m hd p; cases hd with
       | cons hhead htail =>
@@ -602,7 +602,7 @@ theorem checkLayers_complete (sig : Signature Op) (layers : LayerTerms Op) :
         have ihh := checkLayer_complete sig head _ hhead (p ++ [0])
         obtain ⟨ls, hls, hm⟩ := checkLayers_complete sig (.cons next rest) _ htail (p ++ [1])
         obtain ⟨l, ls', -, -, rfl⟩ := inv_layers_cons sig (p ++ [1]) next rest ls hls
-        refine ⟨h :: l :: ls', by aesop, ?_⟩
+        refine ⟨h :: l :: ls', by aesop (rule_sets := [Effect4.Checker]), ?_⟩
         simp only [LayerTy.mergeNonempty, hm, Option.map_some]
 termination_by structural layers
 
