@@ -281,6 +281,11 @@ def main():
         shutil.rmtree(WORK)
     WORK.mkdir(parents=True)
     shutil.copyfile(truth / 'prelude.ts', WORK / 'prelude.ts')
+    # The prelude re-exports the generated atom block beside it (make gen-derived), as the truth
+    # check copies it. Without this copy every emitted module loses every atom: the one compiler
+    # says so (TS2305 per program), the retired one reported only an unattributed module error
+    # against the prelude, which this lane's per-program regex never saw.
+    shutil.copyfile(truth / 'prelude-atoms.gen.ts', WORK / 'prelude-atoms.gen.ts')
     # The prelude imports the session boundary by a relative path, as the truth check copies it.
     shutil.copytree(truth / 'session', WORK / 'session', ignore=shutil.ignore_patterns('.work'))
 
