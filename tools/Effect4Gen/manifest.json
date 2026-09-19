@@ -284,6 +284,16 @@
       "Types": []
     },
     {
+      "Note": "The TypeScript prelude's atom block: one export per atom, the body from AtomRow.prelude and the doc from Spec.cite. The last hand-transcribed face of the alphabet; prelude.ts re-exports it and keeps the hand-written self-test table.",
+      "Name": "PreludeAtoms",
+      "Tool": "tools/Effect4Gen/PreludeAtoms.lean",
+      "Imports": "Effect4.Program.NativeAtom",
+      "Out": "harness\\truth\\prelude-atoms.gen.ts",
+      "Guards": "",
+      "Kinds": [],
+      "Types": []
+    },
+    {
       "Note": "The derived forms as authoring combinators, from Codegen.Forms.all: each template read on the scope reader, with a drift guard per form against the printer's Template.expand.",
       "Name": "Forms",
       "Tool": "tools/Effect4Gen/Forms.lean",

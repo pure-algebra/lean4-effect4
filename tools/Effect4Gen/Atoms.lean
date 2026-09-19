@@ -20,6 +20,10 @@ Declaration order is the inductive's own (`InductiveVal.ctors`), which is the or
 generated profile, the OCaml alphabet and the wire already publish, so regenerating moves no
 byte on any face.
 
+The prelude's atom block is the sibling group `PreludeAtoms` (`tools/Effect4Gen/PreludeAtoms.lean`),
+in a file of its own because it reads the *typing* half, which imports this group's own output:
+one emitter importing both would be a module importing the file it writes.
+
 This is a tool (`IO`, `Lean.Meta`); it is not part of any audited library, and its own axioms
 are not the emitted code's. The emitted file prints its own receipts.
 -/
