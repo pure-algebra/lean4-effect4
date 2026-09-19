@@ -88,6 +88,12 @@ reads back.
    `op.kind`; `Ty.scope` and `NativeOp.row` exit the LCNF engine closure manifest (`NativeOp.kind`
    at 13 instructions replaces `NativeOp.row` at 279); `roots.json` and `cases-policy.json`
    updated; Row 77.
+   Scanner hardening for 3.3/3.4: type instances are visited separately; exhausted scans and
+   unsupported recursive carriers fail; reads include opaque whole values and matchers;
+   a copied field is unchanged only relative to an explicit source. The census now has 87
+   positions and 95 source rows: 13 captured-name positions were previously skipped. The
+   new rows use the existing stack, pending, journal and hook sources. Focused controls:
+   `Test/Audit/PositionAnalysis.lean`; receipt `docs/research/2026-09-19-typed-state-tooling-receipt.md`.
    Still open from the plan: 1.11a span pinning, 4.4, 4.8/4.9 and Q4–Q6 with seat I's survey;
    from Tier 3: 3.2, 3.3, 3.4, 3.7. L2–L7 resume after Tier 3.
 1. **The fold work stops here** (owner, 2026-09-18): the checker, the term typer and the
@@ -114,7 +120,7 @@ ruled (2026-09-18); rows 34 and 40 are ruled out. Three rulings owed on row 41: 
 `docs/research/2026-09-18-typed-state-composed-graph.md`), and a DI for the release's exit
 parameter (composed graph §9). Step 0 of the milestone is landed
 (`docs/research/2026-09-18-position-census-design.md` §3a): the position census, the source
-table under a totality gate (74/74, two refusals named), layer 0, and the generated skeleton
+table under a totality gate (87/87, two refusals named), layer 0, and the generated skeleton
 `Laws/Program/Typed/State.lean` parametric in the carrier predicates; owed: the obligation
 ledger and the generated group wiring. Open, in the order `decisions.md`'s last section
 gives: group D (26–29, 32, 30's `compileEff`), then group B (14, 15) and 2, 7, 10, 11; then 1

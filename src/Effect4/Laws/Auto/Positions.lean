@@ -14,14 +14,14 @@ Three censuses over the environment, beside `#traversal_census` and `#auto_censu
   unfoldable, with a carrier in its arguments, is a **refusal**, as is a recursive inductive over
   a carrier: the walk never goes quiet on a container it does not know.
 - `#write_census f` lists every constructor application of an owner type in `f`'s body and,
-  per site, the fields whose argument is not a projection of a source value: the fields `f`
-  writes. `#write_census f closure` follows every constant `f` uses under `Effect4.` (helpers,
+  per site, the potentially written fields. A field is omitted only when a caller identifies
+  its exact source record. `#write_census f closure` follows every constant `f` uses under `Effect4.` (helpers,
   matchers, the auxiliaries structural recursion compiles a body into) and attributes each
   site to the definition that holds it.
 - `#read_census f` lists the owner fields `f`'s body projects, with the same closure.
 
-Both are `tsv` on `logInfo`, one row per line, so a driver's output is the ledger. Nothing is
-changed.
+Commands print diagnostic rows. The structured Lean results are the analysis interface;
+rendered output is not a proof ledger or an authoritative input.
 -/
 
 open Lean Meta Elab Command
@@ -31,7 +31,8 @@ namespace Effect4.Laws.Auto.Positions
 /-- Where the type walk stops and reports. -/
 def defaultCarriers : List Name :=
   [`Effect4.Store.Val, `Effect4.Machine.Val, `Effect4.Exit, `Effect4.Cause, `Effect4.Reason,
-   `Effects.Program, `Effect4.Machine.Program, `Effect4.Prim]
+   `Effects.Program, `Effect4.Machine.Program, `Effect4.Prim,
+   `Effect4.Program.EffName]
 
 /-- Containers the walk sees through, recording them in the shape. -/
 def defaultWrappers : List Name := [`List, `Option, `Prod, `Array, `Except, `Sum]
@@ -78,26 +79,27 @@ def mentionsCarrier (carriers : List Name) (e : Expr) : Bool :=
 def argLabel (name : Name) (i : Nat) : String :=
   if name.hasMacroScopes then s!"arg{i}" else name.toString
 
-/-- The walk's accumulator: positions, containment edges, the type constants entered. -/
+/-- The walk's accumulator: positions, containment edges, the instantiated types entered. -/
 structure Walk where
   positions : Array Position := #[]
   edges : Array Edge := #[]
-  seen : Array Name := #[]
+  seen : Array Expr := #[]
 
 /-- The walk, bounded by a depth (`fuel`): a type nests a few dozen deep at most, and the trust
 gate refuses unbounded recursion. Running out is a loud refusal, never silence. -/
 def walkType (carriers wrappers : List Name) : Nat → Name → String → Option (Name × Nat) →
     String → List String → Expr → Walk → MetaM Walk
-  | 0, owner, field, _, _, _, _, w => do
-    logWarning m!"REFUSED {owner}.{field}: the type walk ran out of depth"
-    return w
+  | 0, owner, field, _, _, _, _, _ =>
+    throwError "REFUSED {owner}.{field}: the type walk ran out of depth"
   | fuel + 1, owner, field, ctor, shape, wraps, ty, w => do
   let ty ← whnf (← instantiateMVars ty)
   if ← isProp ty then return w
   match ty with
-  | .forallE _ d b _ =>
+  | .forallE n d b bi =>
     let dText ← ppExpr d
-    walkType carriers wrappers fuel owner field ctor (shape ++ s!"({dText} → _) ") (wraps ++ ["fn"]) b w
+    withLocalDecl n bi d fun x =>
+      walkType carriers wrappers fuel owner field ctor (shape ++ s!"({dText} → _) ")
+        (wraps ++ ["fn"]) (b.instantiate1 x) w
   | _ =>
   let fn := ty.getAppFn
   let args := ty.getAppArgs
@@ -118,20 +120,17 @@ def walkType (carriers wrappers : List Name) : Nat → Name → String → Optio
     match (← getEnv).find? n with
     | some (.inductInfo iv) =>
       if iv.isRec then
-        if args.any (mentionsCarrier carriers) then
-          logWarning m!"REFUSED {owner}.{field}: recursive type {n} over a carrier"
-        return w
+        throwError "REFUSED {owner}.{field}: recursive type {n} needs an explicit carrier or wrapper"
       -- the edge is recorded from every parent; the child is entered once
       let edge : Edge := { parent := owner, field, wraps, child := n }
       let w := if w.edges.contains edge then w else { w with edges := w.edges.push edge }
-      if w.seen.contains n then return w
-      let mut w := { w with seen := w.seen.push n }
+      if w.seen.contains ty then return w
+      let mut w := { w with seen := w.seen.push ty }
       for c in iv.ctors do
         let ci ← getConstInfoCtor c
         let cty := ci.type.instantiateLevelParams ci.levelParams fn.constLevels!
-        let some cty := instArgs cty args.toList | do
-          logWarning m!"REFUSED {owner}.{field}: {args.size} arguments do not fit {c}"
-          return w
+        let some cty := instArgs cty args.toList |
+          throwError "REFUSED {owner}.{field}: {args.size} arguments do not fit {c}"
         w ← forallTelescope cty fun xs _ => do
           let mut w := w
           let mut i := 0
@@ -146,7 +145,7 @@ def walkType (carriers wrappers : List Name) : Nat → Name → String → Optio
       return w
     | _ =>
       if args.any (mentionsCarrier carriers) then
-        logWarning m!"REFUSED {owner}.{field}: unknown type constructor {n} over a carrier"
+        throwError "REFUSED {owner}.{field}: unknown type constructor {n} over a carrier"
       return w
   | _ => return w
 
@@ -190,19 +189,21 @@ under which wrappers. The skeleton emitter nests the `Ok` structures along them.
 
 /-! ## Writes and reads -/
 
-/-- Is `e` field `i` of structure `s` projected from some value? Both spellings: the primitive
-projection, and the projection function applied to the structure's parameters and the value. -/
-def isProjOf (env : Environment) (s : Name) (i : Nat) : Expr → Bool
-  | .proj s' i' _ => s' == s && i' == i
-  | .mdata _ b => isProjOf env s i b
-  | e =>
-    match e.getAppFn with
-    | .const f _ =>
-      match env.getProjectionFnInfo? f with
-      | some info =>
-        info.ctorName.getPrefix == s && info.i == i && e.getAppNumArgs == info.numParams + 1
-      | none => false
-    | _ => false
+/-- The value from which `e` projects a field. Equality of field numbers alone
+never establishes that an update preserved a field: the source record matters. -/
+def projectionSource? (env : Environment) (s : Name) (i : Nat) : Expr → Option Expr
+  | .proj s' i' base => if s' == s && i' == i then some base else none
+  | .mdata _ b => projectionSource? env s i b
+  | e => do
+    let .const f _ := e.getAppFn | none
+    let info ← env.getProjectionFnInfo? f
+    if info.ctorName.getPrefix == s && info.i == i && e.getAppNumArgs == info.numParams + 1
+      then e.getAppArgs[info.numParams]?
+      else none
+
+/-- A frame is relative to this particular source value, never to any record of its type. -/
+def isProjOf (env : Environment) (s : Name) (i : Nat) (source e : Expr) : Bool :=
+  projectionSource? env s i e == some source
 
 /-- The binder names of a constructor's fields, after its parameters. -/
 def ctorArgNames (ty : Expr) (numParams : Nat) : Array String := Id.run do
@@ -223,79 +224,108 @@ structure Site where
   fields : Array String
 deriving Inhabited
 
-/-- Every constructor application of an owner type in `e`, with the fields it writes. Bounded
-by a depth, as the walk is. -/
-def writeSites (env : Environment) (owners : List Name) (holder : Name) :
-    Nat → Expr → Array Site → Array Site
-  | 0, _, acc => acc
-  | fuel + 1, e, acc => Id.run do
-  let mut acc := acc
-  match e with
-  | .app .. =>
-    let fn := e.getAppFn
-    let args := e.getAppArgs
-    if let .const c _ := fn then
-      if let some (.ctorInfo ci) := env.find? c then
-        if owners.contains ci.induct then
-          let mut written : Array String := #[]
-          if isStructure env ci.induct then
-            let fields := getStructureFields env ci.induct
-            for i in [:fields.size] do
-              if let some a := args[ci.numParams + i]? then
-                unless isProjOf env ci.induct i a do
-                  written := written.push fields[i]!.toString
-          else
-            -- a constructor of a sum: every argument is written; label by binder name
-            let names := ctorArgNames ci.type ci.numParams
-            for i in [:ci.numFields] do
-              if (args[ci.numParams + i]?).isSome then
-                written := written.push s!"{c.getString!}.{(names[i]?).getD s!"arg{i}"}"
-          acc := acc.push { holder, owner := ci.induct, fields := written }
-    for a in args do acc := writeSites env owners holder fuel a acc
-    writeSites env owners holder fuel fn acc
-  | .lam _ d b _ | .forallE _ d b _ =>
-    writeSites env owners holder fuel b (writeSites env owners holder fuel d acc)
-  | .letE _ t v b _ =>
-    writeSites env owners holder fuel b
-      (writeSites env owners holder fuel v (writeSites env owners holder fuel t acc))
-  | .mdata _ b | .proj _ _ b => writeSites env owners holder fuel b acc
-  | _ => acc
+/-- Every reconstructed field is a potential write unless it is copied from the
+explicit source record. Callers without that source receive a conservative inventory. -/
+def writeSites (env : Environment) (owners : List Name) (holder : Name)
+    (fuel : Nat) (e : Expr) (acc : Array Site) (source? : Option Expr := none) :
+    MetaM (Array Site) := go fuel e acc
+where
+  go : Nat → Expr → Array Site → MetaM (Array Site)
+    | 0, _, _ => throwError "position analysis: write scan ran out of depth"
+    | fuel + 1, e, acc => do
+      let mut acc := acc
+      match e with
+      | .app .. =>
+        let fn := e.getAppFn
+        let args := e.getAppArgs
+        if let .const c _ := fn then
+          if let some (.ctorInfo ci) := env.find? c then
+            if owners.contains ci.induct then
+              let mut written : Array String := #[]
+              if isStructure env ci.induct then
+                let fields := getStructureFields env ci.induct
+                for i in [:fields.size] do
+                  let unchanged := (args[ci.numParams + i]?).any fun a =>
+                    source?.any (fun source => isProjOf env ci.induct i source a)
+                  unless unchanged do
+                    written := written.push fields[i]!.toString
+              else
+                let names := ctorArgNames ci.type ci.numParams
+                for i in [:ci.numFields] do
+                  written := written.push s!"{c.getString!}.{(names[i]?).getD s!"arg{i}"}"
+              acc := acc.push { holder, owner := ci.induct, fields := written }
+        for a in args do acc ← go fuel a acc
+        go fuel fn acc
+      | .lam n d b bi | .forallE n d b bi =>
+        withLocalDecl n bi d fun x => go fuel (b.instantiate1 x) acc
+      | .letE n t v b _ =>
+        acc ← go fuel v acc
+        withLetDecl n t v fun x => go fuel (b.instantiate1 x) acc
+      | .mdata _ b | .proj _ _ b => go fuel b acc
+      | _ => return acc
 
-/-- Every owner field `e` reads: primitive projections and projection-function applications. -/
-def readSites (env : Environment) (owners : List Name) :
-    Nat → Expr → Array (Name × String) → Array (Name × String)
-  | 0, _, acc => acc
-  | fuel + 1, e, acc => Id.run do
+/-- All fields of a value used opaquely. Pattern matchers and predicate parameters
+consume whole values; a projection-only census must not treat those uses as independent. -/
+private def wholeReads (owners : List Name) (e : Expr) (acc : Array (Name × String)) :
+    MetaM (Array (Name × String)) := do
+  let ty ← whnf (← inferType e)
+  let .const owner _ := ty.getAppFn | return acc
+  unless owners.contains owner do return acc
+  let env ← getEnv
+  if isStructure env owner then
+    return acc ++ (getStructureFields env owner).map (fun f => (owner, f.toString))
+  let .inductInfo info ← getConstInfo owner | return acc
   let mut acc := acc
-  match e with
-  | .proj s i b =>
-    if owners.contains s then
-      let fields := getStructureFields env s
-      acc := acc.push (s, (fields[i]?.map (·.toString)).getD s!"{i}")
-    readSites env owners fuel b acc
-  | .app .. =>
-    if let .const f _ := e.getAppFn then
-      if let some info := env.getProjectionFnInfo? f then
-        let s := info.ctorName.getPrefix
+  for c in info.ctors do
+    let ci ← getConstInfoCtor c
+    for f in ctorArgNames ci.type ci.numParams do
+      acc := acc.push (owner, s!"{c.getString!}.{f}")
+  return acc
+
+/-- Conservative field dependencies, opening binders and tracking whole-value uses.
+A projected record is visited without treating the projection as reading every field. -/
+def readSites (env : Environment) (owners : List Name) (fuel : Nat) (e : Expr)
+    (acc : Array (Name × String)) : MetaM (Array (Name × String)) := do
+  return (← go fuel e acc true).foldl
+    (fun out entry => if out.contains entry then out else out.push entry) #[]
+where
+  go : Nat → Expr → Array (Name × String) → Bool → MetaM (Array (Name × String))
+    | 0, _, _, _ => throwError "position analysis: read scan ran out of depth"
+    | fuel + 1, e, acc, whole => do
+      let mut acc ← if whole then wholeReads owners e acc else pure acc
+      match e with
+      | .proj s i b =>
         if owners.contains s then
           let fields := getStructureFields env s
-          acc := acc.push (s, (fields[info.i]?.map (·.toString)).getD s!"{info.i}")
-    for a in e.getAppArgs do acc := readSites env owners fuel a acc
-    readSites env owners fuel e.getAppFn acc
-  | .lam _ d b _ | .forallE _ d b _ =>
-    readSites env owners fuel b (readSites env owners fuel d acc)
-  | .letE _ t v b _ =>
-    readSites env owners fuel b (readSites env owners fuel v (readSites env owners fuel t acc))
-  | .mdata _ b => readSites env owners fuel b acc
-  | _ => acc
+          acc := acc.push (s, (fields[i]?.map (·.toString)).getD s!"{i}")
+        go fuel b acc false
+      | .app .. =>
+        if let .const f _ := e.getAppFn then
+          if let some info := env.getProjectionFnInfo? f then
+            if e.getAppNumArgs == info.numParams + 1 then
+              let s := info.ctorName.getPrefix
+              if owners.contains s then
+                let fields := getStructureFields env s
+                acc := acc.push (s, (fields[info.i]?.map (·.toString)).getD s!"{info.i}")
+              return ← go fuel e.getAppArgs[info.numParams]! acc false
+        for a in e.getAppArgs do acc ← go fuel a acc true
+        go fuel e.getAppFn acc false
+      | .lam n d b bi | .forallE n d b bi =>
+        acc ← go fuel d acc true
+        withLocalDecl n bi d fun x => go fuel (b.instantiate1 x) acc true
+      | .letE n t v b _ =>
+        acc ← go fuel v acc true
+        withLetDecl n t v fun x => go fuel (b.instantiate1 x) acc whole
+      | .mdata _ b => go fuel b acc whole
+      | _ => return acc
 
-/-- The constants `root` reaches under `Effect4.`, `root` first; a worklist, bounded by the
-number of steps it may take. -/
-def closure (env : Environment) (root : Name) (seen : Array Name) : Array Name := Id.run do
+/-- A caller-selected declaration boundary, with a loud work-budget failure. -/
+def closure (env : Environment) (root : Name) (seen : Array Name)
+    (namespaceRoot : Name := `Effect4) (budget : Nat := 200000) : MetaM (Array Name) := do
   let mut seen := seen
   let mut work : Array Name := #[root]
-  for _ in [:200000] do
-    if work.isEmpty then break
+  for _ in [:budget] do
+    if work.isEmpty then return seen
     let n := work.back!
     work := work.pop
     if seen.contains n then continue
@@ -303,7 +333,8 @@ def closure (env : Environment) (root : Name) (seen : Array Name) : Array Name :
     if let some ci := env.find? n then
       if let some v := ci.value? then
         for c in v.getUsedConstants do
-          if c.getRoot == `Effect4 && !seen.contains c then work := work.push c
+          if namespaceRoot.isPrefixOf c && !seen.contains c then work := work.push c
+  unless work.isEmpty do throwError "position analysis: closure scan ran out of work at {root}"
   return seen
 
 /-- The owner types of a position list. -/
@@ -323,13 +354,13 @@ definition it reaches) on the owner types of the roots' positions, one row per s
     let mut ps : Array Position := #[]
     for r in roots do ps := ps ++ (← positionsOf r)
     let owners := ownersOf ps
-    let names := if withClosure then closure env f #[] else #[f]
+    let names ← if withClosure then closure env f #[] else pure #[f]
     let mut report := m!"step\tholder\towner\tfields"
     let mut count : Nat := 0
     for n in names do
       if let some ci := env.find? n then
         if let some v := ci.value? then
-          for s in writeSites env owners n 100000 v #[] do
+          for s in ← writeSites env owners n 100000 v #[] do
             unless s.fields.isEmpty do
               count := count + 1
               report := report ++ m!"\n{f}\t{s.holder}\t{s.owner}\t{s.fields}"
@@ -346,12 +377,12 @@ syntax (name := readCensus) "#read_census " ident (&" closure")? " over " ident+
     let mut ps : Array Position := #[]
     for r in roots do ps := ps ++ (← positionsOf r)
     let owners := ownersOf ps
-    let names := if withClosure then closure env f #[] else #[f]
+    let names ← if withClosure then closure env f #[] else pure #[f]
     let mut rows : Array (Name × Name × String) := #[]
     for n in names do
       if let some ci := env.find? n then
         if let some v := ci.value? then
-          for (s, fld) in readSites env owners 100000 v #[] do
+          for (s, fld) in ← readSites env owners 100000 v #[] do
             unless rows.contains (n, s, fld) do rows := rows.push (n, s, fld)
     let mut report := m!"step\tholder\towner\tfield"
     for (n, s, fld) in rows do

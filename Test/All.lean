@@ -105,6 +105,7 @@ import Test.Audit.AxiomGate
 import Test.Audit.ExhaustiveFixture
 import Test.Audit.TraversalCensus
 import Test.Audit.PositionCensus
+import Test.Audit.PositionAnalysis
 import Test.Program.TypeAlgebraContract
 import Test.Program.TyViewContract
 import Test.Program.ValueModelContract

@@ -36,6 +36,12 @@ def stateSources : List Row := [
   ("Effect4.Program.Sched.ScopeFrame.answer.next", .custom "StackOk"),
   ("Effect4.Program.Sched.ScopeFrame.loop.cursor", .custom "StackOk"),
   ("Effect4.Program.Sched.RSaved.interruptedCause", .custom "InterruptOnly"),
+  -- Captured continuation names are a recursive carrier, covered by the enclosing
+  -- stack/pending predicate. They were absent from the original census.
+  ("Effect4.Program.Sched.ScopeFrame.asyncFinalizer.name", .custom "StackOk"),
+  ("Effect4.Program.Sched.ScopeFrame.iter.generator", .custom "StackOk"),
+  ("Effect4.Program.Sched.ScopeFrame.loop.loop", .custom "StackOk"),
+  ("Effect4.Machine.Resume.continueWith.name", .custom "PendingOk"),
   -- the fiber record
   ("Effect4.Machine.Pending.collected", .custom "PendingOk"),
   ("Effect4.Machine.RunFiber.finalizing", .exit (.fiber "x.id")),
@@ -58,6 +64,7 @@ def stateSources : List Row := [
   ("Effect4.ScopeState.closed.exit",
     .refused "the release's exit parameter is typed at the acquire's exit; rc.112 says Exit<unknown, unknown> (composed graph §9, DI owed)"),
   -- the journal
+  ("Effect4.Machine.RunEvent.finalizerProgram.finalizer", .journal),
   ("Effect4.Machine.RunEvent.resumedWith.answer", .journal),
   ("Effect4.Machine.RunEvent.finalizerProgram.exit", .journal),
   ("Effect4.Machine.RunEvent.raceSettled.exit", .journal),
@@ -84,6 +91,7 @@ def hookSources : List Row := [
   ("Effect4.PrimInterp.iterNext", .hook (some "Effect4.Program.Sched.popR")),
   ("Effect4.IterStep.done.value", .hook (some "Effect4.Program.Sched.popR")),
   ("Effect4.IterStep.halt.cause", .hook (some "Effect4.Program.Sched.popR")),
+  ("Effect4.IterStep.resume.continueAs", .hook (some "Effect4.Program.Sched.popR")),
   ("Effect4.IterStep.resume.next", .hook (some "Effect4.Program.Sched.popR")),
   ("Effect4.LoopNext.continue.cursor", .hook (some "Effect4.Program.Sched.popR")),
   ("Effect4.LoopNext.continue.body", .hook (some "Effect4.Program.Sched.popR")),
@@ -104,6 +112,13 @@ def hookSources : List Row := [
   ("Effect4.Machine.WithFiberAction.refuse.cause", .hook none),
   ("Effect4.Machine.RunInterp.syncState", .hook none),
   ("Effect4.Machine.RunInterp.registerAsync", .hook (some "Effect4.Program.Sched.evaluateFiberR")),
+  ("Effect4.Machine.RunInterp.cancelName", .hook (some "Effect4.Machine.exitFiber")),
+  ("Effect4.Machine.RunInterp.abortName", .hook (some "Effect4.Machine.driveStep")),
+  ("Effect4.Machine.RunInterp.parkCancelName", .hook (some "Effect4.Machine.driveStep")),
+  ("Effect4.Machine.RunInterp.raceCancelName", .hook (some "Effect4.Machine.driveStep")),
+  ("Effect4.Machine.RunInterp.restoreName", .hook (some "Effect4.Machine.fireObserver")),
+  ("Effect4.Machine.RunInterp.mergeName", .hook (some "Effect4.Machine.fireObserver")),
+  ("Effect4.Machine.RunInterp.closeDoneName", .hook (some "Effect4.Machine.driveStep")),
   ("Effect4.Machine.RunInterp.answerCode", .hook (some "Effect4.Machine.replayEval")),
   ("Effect4.Machine.RunInterp.raceSettle", .hook (some "Effect4.Machine.driveStep")),
   ("Effect4.Machine.RunInterp.finalizerProgram", .hook (some "Effect4.Machine.fireObserver")),
