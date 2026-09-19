@@ -59,16 +59,22 @@ reads back.
 
 ## Next, in order
 
-0. **The tooling-first wave** (owner, 2026-09-18 evening: pause the language push at L5, build the
-   instruments that make a constructor cheap, remove gates aggressively, one TypeScript compiler
-   — rows 56–58). The plan with its tiers, red controls and verified assumptions is the
-   coordinator's plan file (its receipt notes land under `docs/research/2026-09-18-seat-*-receipt.md`);
-   the synthesis behind it is `docs/research/2026-09-18-synthesis-tooling-first.md`. Landed: L5
-   (`0a2cb898`, with DI-95 closed and the case-site policy re-seeded), the seven aesop banks
-   (`4b4e6aa3`). Three Opus seats in worktrees: the relational view of `Ty` with variance read from
-   rc.112 and the fold condition for `hasTy`; the exhaustiveness inventory, the proof-shape ratchet
-   and the gate removals; the atom table. Next wave: the aesop bank moves, the tsgo migration, the
-   store-row schema. L2–L7 resume after Tier 3.
+0. **The tooling-first wave, wave 1 landed** (2026-09-19; the owner's steer at the end: "just finish
+   it yourself"). Four merges on this branch: `f8517fa7` (the first cut of seats A, I, T2),
+   `dfd94366` (A's prelude group), `9e20cf9b` (I's receipt), `ee88efe2` (T2's fold condition).
+   Landed: the atom table in two halves with the inventory and the TypeScript prelude block
+   generated (rows 64–66); the exhaustiveness inventory, the proof-shape ceiling
+   (`generated/proof-shape.tsv`, 94 sources at 730), one citation scanner (rows 61–63); the top
+   stated, variance read off rc.112 (`tools/Tools/Variances.lean`), the relational view under Laws,
+   `hasTy_sub` by `fun_induction Ty.sub` (257 → 79 lines, sixteen `first` blocks → 0),
+   `cata_admits_sub` (rows 59–60). Receipts: `docs/research/2026-09-18-seat-{A,I,T2}-receipt.md`.
+   Open from the wave: `Val.hasTy_admitsSub` (five fields refused through `fold_of`'s sparse case
+   analyses), the three `TypeAlgebra` proofs on `sub_eq_args` and the six `sub_*_of_ne` deletions;
+   seat I's 0.10 cite fixes and 0.4 document edits (applied in its worktree, uncommitted, saved as a
+   patch by the coordinator; they regenerate three OCaml faces); the engine's layout mirror at 16 of
+   20 `Ty` constructors blocks `--only lcnf` (plan 4.2). Next wave, three seats at most: T1 (0.5,
+   0.8, 0.9, the 1.2 bank moves, 1.3), D (one compiler = tsgo: the oracle, the truth typecheck,
+   `ts/eff`; 1.10a, 1.10, the first half of 1.11), then 3.1–3.6. L2–L7 resume after Tier 3.
 1. **The fold work stops here** (owner, 2026-09-18): the checker, the term typer and the
    fragments landed (census §7.5–§7.10); the thirteen exemptions — the compiler's five, the
    reference evaluator's five, `valCode`, `ofSchema`, the derived instance — stay as they are and
