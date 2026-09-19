@@ -59,30 +59,22 @@ reads back.
 
 ## Next, in order
 
-0. **The tooling-first wave, wave 1 landed** (2026-09-19; the owner's steer at the end: "just finish
-   it yourself"). Four merges on this branch: `f8517fa7` (the first cut of seats A, I, T2),
-   `dfd94366` (A's prelude group), `9e20cf9b` (I's receipt), `ee88efe2` (T2's fold condition).
-   Landed: the atom table in two halves with the inventory and the TypeScript prelude block
-   generated (rows 64–66); the exhaustiveness inventory, the proof-shape ceiling
-   (`generated/proof-shape.tsv`, 94 sources at 730), one citation scanner (rows 61–63); the top
-   stated, variance read off rc.112 (`tools/Tools/Variances.lean`), the relational view under Laws,
-   `hasTy_sub` by `fun_induction Ty.sub` (257 → 79 lines, sixteen `first` blocks → 0),
-   `cata_admits_sub` (rows 59–60). Receipts: `docs/research/2026-09-18-seat-{A,I,T2}-receipt.md`.
-   Open from the wave: `Val.hasTy_admitsSub` (five fields refused through `fold_of`'s sparse case
-   analyses), the three `TypeAlgebra` proofs on `sub_eq_args` and the six `sub_*_of_ne` deletions;
-   seat I's 0.10 cite fixes and 0.4 document edits (applied in its worktree, uncommitted, saved as a
-   patch by the coordinator; they regenerate three OCaml faces); the engine's layout mirror at 16 of
-   20 `Ty` constructors blocks `--only lcnf` (plan 4.2). The coherence review and the next slice:
-   `docs/research/2026-09-19-wave1-review-and-next-slice.md` — findings C1–C9 (the engine runs an
-   older algebra than the tree; the order's consumers still enumerate constructors; the generic
-   membership law has no instance because `fold_of` emits sparse case analyses; two `hasTy` laws
-   want their own conditions; the template calculus has two homes; two atom rules are heads where
-   they could be subsumption), and three seats: E (the engine catches up: 4.2, 0.7, 0.10, 4.1, 4.3,
-   3.6), V (one proof each for the order and membership: FoldOf's arm emission, the fourteen
-   fields, `hasTy_sub` as a corollary, `argsBelow_trans/antisymm`, the six `sub_*_of_ne` deleted,
-   `AdmitsExtend`, templates, hygiene 0.5/0.8/0.9/0.4), D (tsgo as the one compiler, the
-   assignability differential, rows and atoms against the target). Wave 3: the L3 atoms, the bank
-   moves, Tier 3. L2–L7 resume after Tier 3.
+0. **The tooling-first waves, 1 and 2 landed** (2026-09-19). Wave 1: `f8517fa7`, `dfd94366`,
+   `9e20cf9b`, `ee88efe2`, rows 59–66 (`1f1cc8e3`), the policy re-seed (`ba5286d3`); the coherence
+   review `docs/research/2026-09-19-wave1-review-and-next-slice.md` (C1–C9). Wave 2: seat D
+   `f6db74cf` (one compiler: tsgo drives every typing lane; the assignability differential, 600 pairs
+   594 agree 6 cut 0 defect; rows and atoms against their exports; C6 answered by the target),
+   seats E and V `dd015cbd` (the engine at twenty constructors through a one-pass chain and a mirror
+   that refuses a lag; `fold_of` keeps the source's matcher, so `Val.hasTy_admitsSub` closes and
+   `hasTy_sub` is the fold's corollary in the Laws with the core free of theorems about the order;
+   `argsBelow_trans/antisymm`, the six `sub_*_of_ne` deleted), with the two seats' last slices inside the same
+   commit (template laws, `matchTemplateArgs` home, hygiene 0.5/0.8/0.9; closure manifests, fatal
+   frontier and module check, `roots.json`). Rows 67–72.
+   Receipts: `docs/research/2026-09-19-seat-D-receipt.md`; E and V have none (stopped by the owner
+   for speed; their commit messages are the record). Still open from the plan: `sub_normalize_of_sub`'s
+   congruence square, `AdmitsExtend` for `hasTy_mono` and the condition for `hasTy_normalize` (C4),
+   1.11a span pinning, 4.4, 4.8/4.9 and Q4–Q6 with seat I's survey, the bank moves (1.2), Tier 3,
+   and the L3 atoms with row 69's two `Spec` lines. L2–L7 resume after Tier 3.
 1. **The fold work stops here** (owner, 2026-09-18): the checker, the term typer and the
    fragments landed (census §7.5–§7.10); the thirteen exemptions — the compiler's five, the
    reference evaluator's five, `valCode`, `ofSchema`, the derived instance — stay as they are and
