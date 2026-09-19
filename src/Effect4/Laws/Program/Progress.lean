@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.Typed
 import Effect4.Laws.Machine.StoresLaws
+import Effect4.Laws.Machine.RefKernel
 
 /-!
 # Program.Progress — a typed, valid request steps to a typed, valid answer (the first join)
@@ -142,265 +143,115 @@ theorem Val.hasTy_scopeHandle_scope (n : Nat) : Val.hasTy (Val.scopeHandle n) Ty
   simp only [Val.hasTy, Ty.scope]
   rfl
 
-/-! ## The heap -/
+/-! ## The heap rows, typed once -/
 
-/-- Writing a number at a cell keeps every cell a number: `List.set` keeps the length, and a
-member of the written heap is a member of the old one or the written value (the shape of
-lane 2's `refPoke_valid`, `StoresLaws.lean:264`). -/
-theorem refPoke_heapNat (s : Stores) (cell : RefKey) (y : Val) (hheap : Stores.HeapNat s)
-    (hy : Val.hasTy y .nat = true) : Stores.HeapNat { s with refs := refPoke s.refs cell y } := by
-  intro x hx
-  rcases List.mem_or_eq_of_mem_set hx with hmem | rfl
-  · exact hheap x hmem
-  · exact hy
+/-- The written component of a typed pair request has the pair's second type. -/
+theorem Val.hasTy_tuple_snd {x y : Val} {a b : Ty}
+    (h : Val.hasTy (Val.tuple [x, y]) (.prod a b) = true) : Val.hasTy y b = true := by
+  obtain ⟨_, _, he, _, hy⟩ := Val.hasTy_prod_inv h
+  cases he
+  exact hy
 
-/-- A heap arm of `syncOpStep` (`Stores.lean:2034`) is `refStep` on the heap, the answer
-passed through and the written heap put back in the store. -/
-theorem refStep_of_syncOpStep {o : SyncOp} {s s' : Stores} {a : Val}
-    (h : (refStep o s.refs).map (fun step => ({ s with refs := step.2 }, step.1)) = some (s', a)) :
-    ∃ heap', refStep o s.refs = some (a, heap') ∧ s' = { s with refs := heap' } := by
-  obtain ⟨⟨b, heap'⟩, hr, hf⟩ := Option.map_eq_some_iff.mp h
-  simp only [Prod.mk.injEq] at hf
-  obtain ⟨rfl, rfl⟩ := hf
-  exact ⟨heap', hr, rfl⟩
+/-- A typed request of a heap row decodes to an operation whose kernel (`SyncOp.refKernel`,
+`Laws/Machine/RefKernel.lean`) reads numbers, writes numbers, and answers the row's answer type.
+One case a row, and the cases are `syncOpOf`'s own: `split` on its match hands each arm its
+request decoded, `h_2` (`refGet`) to `h_13` (`refModifySome`). Reads answer the cell's number;
+the writes of `refSet`, `refGetAndSet` and `refSetAndGet` are the request's number; the
+read-modify-write rows answer and write through `FnName.*_hasTy_nat`. -/
+theorem NativeOp.kernel_typed {op : NativeOp} {v : Val} {o : SyncOp} {cell : RefKey}
+    {k : RefKernel} (hv : Val.hasTy v (NativeOp.row op).request = true)
+    (ho : NativeOp.syncOpOf op v = some o) (hk : o.refKernel = some (cell, k)) :
+    RefKernel.Keeps (Val.hasTy · .nat = true) (Val.hasTy · (NativeOp.row op).answer = true) k := by
+  unfold NativeOp.syncOpOf at ho
+  split at ho <;> cases ho <;> cases hk <;> intro c r hc hr <;> cases hr
+  case h_2 =>  -- refGet
+    exact ⟨hc, nofun⟩
+  case h_3 =>  -- refSet
+    exact ⟨Val.hasTy_cell_refTy _, fun _ h => by cases h; exact Val.hasTy_tuple_snd hv⟩
+  case h_4 =>  -- refGetAndSet
+    exact ⟨hc, fun _ h => by cases h; exact Val.hasTy_tuple_snd hv⟩
+  case h_5 =>  -- refSetAndGet
+    exact ⟨Val.hasTy_tuple_snd hv, fun _ h => by cases h; exact Val.hasTy_tuple_snd hv⟩
+  case h_6 f _ =>  -- refUpdate
+    exact ⟨rfl, fun _ h => by cases h; exact FnName.total_hasTy_nat f c hc⟩
+  case h_7 f _ =>  -- refGetAndUpdate
+    exact ⟨hc, fun _ h => by cases h; exact FnName.total_hasTy_nat f c hc⟩
+  case h_8 f _ =>  -- refUpdateAndGet
+    have ht := FnName.total_hasTy_nat f c hc
+    exact ⟨ht, fun _ h => by cases h; exact ht⟩
+  case h_9 f _ =>  -- refUpdateSome
+    exact ⟨rfl, fun a' h => FnName.partialUpdate_hasTy_nat f c a' h hc⟩
+  case h_10 f _ =>  -- refGetAndUpdateSome
+    exact ⟨hc, fun a' h => FnName.partialUpdate_hasTy_nat f c a' h hc⟩
+  case h_11 f _ =>  -- refUpdateSomeAndGet: what it wrote, or what it read
+    have hw := fun a' h => FnName.partialUpdate_hasTy_nat f c a' h hc
+    exact ⟨RefKernel.getD_keeps hw hc, hw⟩
+  case h_12 f _ =>  -- refModify
+    have hm := FnName.modify_hasTy_nat f c hc
+    exact ⟨hm.1, fun _ h => by cases h; exact hm.2⟩
+  case h_13 f _ =>  -- refModifySome
+    have hm := FnName.modifySome_hasTy_nat f c hc
+    exact ⟨hm.1, fun _ h => by cases h; exact hm.2⟩
 
 /-! ## The join -/
 
 /-- A typed request's step answers a value of the row's answer type and leaves every cell a
-number: one case per row of `NativeOp.row` (`Native.lean:145-203`). The request's shape comes
-from lane 1's inversions, the operation from `NativeOp.syncOpOf` (`:208-232`), the step from
-`refStep` (`Stores.lean:484-525`) on the heap rows and lane 2's arm equations on the rest.
-Heap reads answer a cell's content, a number by `HeapNat`; the read-modify-write rows answer
-and write through `FnName.*_hasTy_nat`; the writes of `refMake`, `refSet`, `refGetAndSet`
-and `refSetAndGet` are the request's `.nat` component. -/
+number. The heap rows but `refMake` are one case: the step is the operation's kernel
+(`syncOpStep_eq_refStepOf`), typed by its line of `NativeOp.kernel_typed`, and
+`refStepOf_keeps` carries every cell's number through the write. The other rows take
+`syncOpOf`'s own cases: `refMake` answers the fresh cell and appends the request's number, and
+the Deferred, scope and clock rows leave the heap alone and answer through their arm equations
+(`StoresLaws.lean`). -/
 theorem step_typed (op : NativeOp) (v : Val) (o : SyncOp) (s s' : Stores) (a : Val)
     (hheap : Stores.HeapNat s)
     (hv : Val.hasTy v (NativeOp.row op).request = true)
     (ho : NativeOp.syncOpOf op v = some o)
     (hstep : syncOpStep o s = some (s', a)) :
     Val.hasTy a (NativeOp.row op).answer = true ∧ Stores.HeapNat s' := by
-  cases op with
-  | refMake =>
-    obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hv
-    cases ho
-    simp only [syncOpStep, refStep, Option.map_some, Option.some.injEq, Prod.mk.injEq] at hstep
-    obtain ⟨rfl, rfl⟩ := hstep
-    refine ⟨Val.hasTy_cell_refTy _, ?_⟩
-    intro x hx
-    rcases List.mem_append.mp hx with hmem | hone
-    · exact hheap x hmem
-    · rw [List.mem_singleton.mp hone]; simp [Val.hasTy]
-  | refGet =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hv
-    cases ho
-    simp only [syncOpStep] at hstep
-    obtain ⟨heap', hr, rfl⟩ := refStep_of_syncOpStep hstep
-    simp only [refStep] at hr
-    obtain ⟨c, hpeek, hc⟩ := Option.map_eq_some_iff.mp hr
-    simp only [Prod.mk.injEq] at hc
-    obtain ⟨rfl, rfl⟩ := hc
-    exact ⟨hheap c (mem_of_refPeek_eq_some hpeek), hheap⟩
-  | refSet =>
-    obtain ⟨x, y, rfl, hx, hy⟩ := Val.hasTy_prod_inv hv
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hx
-    cases ho
-    simp only [syncOpStep] at hstep
-    obtain ⟨heap', hr, rfl⟩ := refStep_of_syncOpStep hstep
-    simp only [refStep] at hr
-    obtain ⟨c, hpeek, hc⟩ := Option.map_eq_some_iff.mp hr
-    simp only [Prod.mk.injEq] at hc
-    obtain ⟨rfl, rfl⟩ := hc
-    exact ⟨Val.hasTy_cell_refTy k, refPoke_heapNat s k y hheap hy⟩
-  | refGetAndSet =>
-    obtain ⟨x, y, rfl, hx, hy⟩ := Val.hasTy_prod_inv hv
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hx
-    cases ho
-    simp only [syncOpStep] at hstep
-    obtain ⟨heap', hr, rfl⟩ := refStep_of_syncOpStep hstep
-    simp only [refStep] at hr
-    obtain ⟨c, hpeek, hc⟩ := Option.map_eq_some_iff.mp hr
-    simp only [Prod.mk.injEq] at hc
-    obtain ⟨rfl, rfl⟩ := hc
-    exact ⟨hheap c (mem_of_refPeek_eq_some hpeek), refPoke_heapNat s k y hheap hy⟩
-  | refSetAndGet =>
-    obtain ⟨x, y, rfl, hx, hy⟩ := Val.hasTy_prod_inv hv
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hx
-    cases ho
-    simp only [syncOpStep] at hstep
-    obtain ⟨heap', hr, rfl⟩ := refStep_of_syncOpStep hstep
-    simp only [refStep] at hr
-    obtain ⟨c, hpeek, hc⟩ := Option.map_eq_some_iff.mp hr
-    simp only [Prod.mk.injEq] at hc
-    obtain ⟨rfl, rfl⟩ := hc
-    exact ⟨hy, refPoke_heapNat s k y hheap hy⟩
-  | refUpdate f =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hv
-    cases ho
-    simp only [syncOpStep] at hstep
-    obtain ⟨heap', hr, rfl⟩ := refStep_of_syncOpStep hstep
-    simp only [refStep] at hr
-    obtain ⟨c, hpeek, hc⟩ := Option.map_eq_some_iff.mp hr
-    simp only [Prod.mk.injEq] at hc
-    obtain ⟨rfl, rfl⟩ := hc
-    have hcn : Val.hasTy c .nat = true := hheap c (mem_of_refPeek_eq_some hpeek)
-    exact ⟨by simp [NativeOp.row, Val.hasTy],
-      refPoke_heapNat s k _ hheap (FnName.total_hasTy_nat f c hcn)⟩
-  | refGetAndUpdate f =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hv
-    cases ho
-    simp only [syncOpStep] at hstep
-    obtain ⟨heap', hr, rfl⟩ := refStep_of_syncOpStep hstep
-    simp only [refStep] at hr
-    obtain ⟨c, hpeek, hc⟩ := Option.map_eq_some_iff.mp hr
-    simp only [Prod.mk.injEq] at hc
-    obtain ⟨rfl, rfl⟩ := hc
-    have hcn : Val.hasTy c .nat = true := hheap c (mem_of_refPeek_eq_some hpeek)
-    exact ⟨hcn, refPoke_heapNat s k _ hheap (FnName.total_hasTy_nat f c hcn)⟩
-  | refUpdateAndGet f =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hv
-    cases ho
-    simp only [syncOpStep] at hstep
-    obtain ⟨heap', hr, rfl⟩ := refStep_of_syncOpStep hstep
-    simp only [refStep] at hr
-    obtain ⟨c, hpeek, hc⟩ := Option.map_eq_some_iff.mp hr
-    simp only [Prod.mk.injEq] at hc
-    obtain ⟨rfl, rfl⟩ := hc
-    have hfn : Val.hasTy (f.total c) .nat = true :=
-      FnName.total_hasTy_nat f c (hheap c (mem_of_refPeek_eq_some hpeek))
-    exact ⟨hfn, refPoke_heapNat s k _ hheap hfn⟩
-  | refUpdateSome pf =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hv
-    cases ho
-    simp only [syncOpStep] at hstep
-    obtain ⟨heap', hr, rfl⟩ := refStep_of_syncOpStep hstep
-    simp only [refStep] at hr
-    obtain ⟨c, hpeek, hc⟩ := Option.map_eq_some_iff.mp hr
-    simp only [Prod.mk.injEq] at hc
-    obtain ⟨rfl, rfl⟩ := hc
-    have hcn : Val.hasTy c .nat = true := hheap c (mem_of_refPeek_eq_some hpeek)
-    refine ⟨by simp [NativeOp.row, Val.hasTy], ?_⟩
-    split
-    · rename_i a' hpf
-      exact refPoke_heapNat s k a' hheap (FnName.partialUpdate_hasTy_nat pf c a' hpf hcn)
-    · exact hheap
-  | refGetAndUpdateSome pf =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hv
-    cases ho
-    simp only [syncOpStep] at hstep
-    obtain ⟨heap', hr, rfl⟩ := refStep_of_syncOpStep hstep
-    simp only [refStep] at hr
-    obtain ⟨c, hpeek, hc⟩ := Option.map_eq_some_iff.mp hr
-    simp only [Prod.mk.injEq] at hc
-    obtain ⟨rfl, rfl⟩ := hc
-    have hcn : Val.hasTy c .nat = true := hheap c (mem_of_refPeek_eq_some hpeek)
-    refine ⟨hcn, ?_⟩
-    split
-    · rename_i a' hpf
-      exact refPoke_heapNat s k a' hheap (FnName.partialUpdate_hasTy_nat pf c a' hpf hcn)
-    · exact hheap
-  | refUpdateSomeAndGet pf =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hv
-    cases ho
-    simp only [syncOpStep] at hstep
-    obtain ⟨heap', hr, rfl⟩ := refStep_of_syncOpStep hstep
-    simp only [refStep] at hr
-    obtain ⟨c, hpeek, hf⟩ := Option.bind_eq_some_iff.mp hr
-    have hcn : Val.hasTy c .nat = true := hheap c (mem_of_refPeek_eq_some hpeek)
-    split at hf
-    · rename_i a' hpf
-      rw [refPeek_poke_self s.refs k a' c hpeek] at hf
-      simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq] at hf
-      obtain ⟨rfl, rfl⟩ := hf
-      have ha' : Val.hasTy a' .nat = true := FnName.partialUpdate_hasTy_nat pf c a' hpf hcn
-      exact ⟨ha', refPoke_heapNat s k a' hheap ha'⟩
-    · simp only [Option.some.injEq, Prod.mk.injEq] at hf
-      obtain ⟨rfl, rfl⟩ := hf
-      exact ⟨hcn, hheap⟩
-  | refModify f =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hv
-    cases ho
-    simp only [syncOpStep] at hstep
-    obtain ⟨heap', hr, rfl⟩ := refStep_of_syncOpStep hstep
-    simp only [refStep] at hr
-    obtain ⟨c, hpeek, hc⟩ := Option.map_eq_some_iff.mp hr
-    simp only [Prod.mk.injEq] at hc
-    obtain ⟨rfl, rfl⟩ := hc
-    have hm := FnName.modify_hasTy_nat f c (hheap c (mem_of_refPeek_eq_some hpeek))
-    exact ⟨hm.1, refPoke_heapNat s k _ hheap hm.2⟩
-  | refModifySome pf =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hv
-    cases ho
-    simp only [syncOpStep] at hstep
-    obtain ⟨heap', hr, rfl⟩ := refStep_of_syncOpStep hstep
-    simp only [refStep] at hr
-    obtain ⟨c, hpeek, hc⟩ := Option.map_eq_some_iff.mp hr
-    simp only [Prod.mk.injEq] at hc
-    obtain ⟨rfl, rfl⟩ := hc
-    have hm := FnName.modifySome_hasTy_nat pf c (hheap c (mem_of_refPeek_eq_some hpeek))
-    exact ⟨hm.1, refPoke_heapNat s k _ hheap hm.2⟩
-  | deferredMake =>
-    obtain rfl := Val.hasTy_unit_inv hv
-    cases ho
-    simp only [syncOpStep_deferredMake, Option.some.injEq, Prod.mk.injEq] at hstep
-    obtain ⟨rfl, rfl⟩ := hstep
-    exact ⟨Val.hasTy_promise_deferredTy _, hheap⟩
-  | deferredIsDone =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_deferredTy_inv hv
-    cases ho
-    simp only [syncOpStep_deferredIsDone] at hstep
-    obtain ⟨flag, _, hf⟩ := Option.map_eq_some_iff.mp hstep
+  cases hk : o.refKernel with
+  | some p =>
+    obtain ⟨cell, k⟩ := p
+    rw [syncOpStep_eq_refStepOf hk] at hstep
+    obtain ⟨⟨b, heap'⟩, hr, hf⟩ := Option.map_eq_some_iff.mp hstep
     cases hf
-    exact ⟨by simp [NativeOp.row, Val.hasTy], hheap⟩
-  | deferredPoll =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_deferredTy_inv hv
-    cases ho
-    simp only [syncOpStep_deferredPoll] at hstep
-    obtain ⟨slot, _, hf⟩ := Option.map_eq_some_iff.mp hstep
-    cases hf
-    exact ⟨by simp [NativeOp.row, Val.hasTy], hheap⟩
-  | deferredSucceed =>
-    obtain ⟨x, y, rfl, hx, hy⟩ := Val.hasTy_prod_inv hv
-    obtain ⟨k, rfl⟩ := Val.hasTy_deferredTy_inv hx
-    obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hy
-    cases ho
-    simp only [syncOpStep_deferredCompleteWith, Option.some.injEq, Prod.mk.injEq] at hstep
-    obtain ⟨rfl, rfl⟩ := hstep
-    exact ⟨by simp [NativeOp.row, Val.hasTy], hheap⟩
-  | deferredFail =>
-    obtain ⟨x, y, rfl, hx, hy⟩ := Val.hasTy_prod_inv hv
-    obtain ⟨k, rfl⟩ := Val.hasTy_deferredTy_inv hx
-    obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hy
-    cases ho
-    simp only [syncOpStep_deferredCompleteWith, Option.some.injEq, Prod.mk.injEq] at hstep
-    obtain ⟨rfl, rfl⟩ := hstep
-    exact ⟨by simp [NativeOp.row, Val.hasTy], hheap⟩
-  | external _ => cases ho
-  | deferredAwait =>
-    rw [syncOpOf_async_none NativeOp.deferredAwait v rfl] at ho
-    cases ho
-  | scopeMake strategy =>
-    cases strategy with
-    | sequential =>
-      obtain rfl := Val.hasTy_unit_inv hv
-      cases ho
+    exact refStepOf_keeps hheap (NativeOp.kernel_typed hv ho hk) hr
+  | none =>
+    unfold NativeOp.syncOpOf at ho
+    split at ho <;> cases ho <;> cases hk
+    case h_1 =>  -- refMake: the fresh cell, and the heap grown by the request's number
+      simp only [syncOpStep, refStep, Option.map_some, Option.some.injEq, Prod.mk.injEq] at hstep
+      obtain ⟨rfl, rfl⟩ := hstep
+      refine ⟨Val.hasTy_cell_refTy _, fun x hx => ?_⟩
+      rcases List.mem_append.mp hx with hmem | hone
+      · exact hheap x hmem
+      · rw [List.mem_singleton.mp hone]
+        rfl
+    case h_14 =>  -- deferredMake
+      simp only [syncOpStep_deferredMake, Option.some.injEq, Prod.mk.injEq] at hstep
+      obtain ⟨rfl, rfl⟩ := hstep
+      exact ⟨Val.hasTy_promise_deferredTy _, hheap⟩
+    case h_15 =>  -- deferredIsDone
+      simp only [syncOpStep_deferredIsDone] at hstep
+      obtain ⟨_, _, hf⟩ := Option.map_eq_some_iff.mp hstep
+      cases hf
+      exact ⟨rfl, hheap⟩
+    case h_16 =>  -- deferredPoll
+      simp only [syncOpStep_deferredPoll] at hstep
+      obtain ⟨_, _, hf⟩ := Option.map_eq_some_iff.mp hstep
+      cases hf
+      exact ⟨rfl, hheap⟩
+    case h_17 | h_18 =>  -- deferredSucceed, deferredFail
+      simp only [syncOpStep_deferredCompleteWith, Option.some.injEq, Prod.mk.injEq] at hstep
+      obtain ⟨rfl, rfl⟩ := hstep
+      exact ⟨rfl, hheap⟩
+    case h_19 strategy =>  -- scopeMake, whose row is spelled per strategy
       simp only [syncOpStep_scopeMake, Option.some.injEq, Prod.mk.injEq] at hstep
       obtain ⟨rfl, rfl⟩ := hstep
-      exact ⟨Val.hasTy_scopeHandle_scope s.nextName, hheap⟩
-    | parallel =>
-      obtain rfl := Val.hasTy_unit_inv hv
-      cases ho
-      simp only [syncOpStep_scopeMake, Option.some.injEq, Prod.mk.injEq] at hstep
+      cases strategy <;> exact ⟨Val.hasTy_scopeHandle_scope s.nextName, hheap⟩
+    case h_20 =>  -- clockNow
+      simp only [syncOpStep_clockNow, Option.some.injEq, Prod.mk.injEq] at hstep
       obtain ⟨rfl, rfl⟩ := hstep
-      exact ⟨Val.hasTy_scopeHandle_scope s.nextName, hheap⟩
-  | sleep =>
-    rw [syncOpOf_async_none NativeOp.sleep v rfl] at ho
-    cases ho
-  | clockNow =>
-    obtain rfl := Val.hasTy_unit_inv hv
-    cases ho
-    simp only [syncOpStep_clockNow, Option.some.injEq, Prod.mk.injEq] at hstep
-    obtain ⟨rfl, rfl⟩ := hstep
-    exact ⟨by simp [NativeOp.row, Val.hasTy], hheap⟩
+      exact ⟨rfl, hheap⟩
 
 /-- `PROGRESS/answer` (plan §6): the value a store step answers to a typed request has the
 row's answer type. Stated on the step itself, so neither `Stores.WF` nor `SyncOp.validIn`
