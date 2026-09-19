@@ -60,7 +60,7 @@ first: everything else the wave produced is invisible to the engine until it lan
 duplicate six of the nine generated arm lemmas (and are missing `refOf`, `deferredOf`, `except`).
 What is missing is two generic lemmas, `argsBelow_trans` and `argsBelow_antisymm`, with the triple
 measure threaded through `sizeOf_args`, and the literal rule lifted out of the three proofs
-(`sub_eq_args` holds only under `litRule = false`; the literal case is `eq_of_sameSead` at empty
+(`sub_eq_args` holds only under `litRule = false`; the literal case is `eq_of_sameHead` at empty
 argument lists). Then the six are deleted and `sub_prod_mono` reads `sub_args_prod`. One
 vocabulary for the order.
 
