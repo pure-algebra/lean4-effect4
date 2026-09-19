@@ -22,8 +22,9 @@ import {
   isIdentifier, isIndexedAccessTypeNode, isParameterDeclaration, isTypeAliasDeclaration, isVariableDeclaration, SyntaxKind,
 } from "../../ts/eff/node_modules/@typescript/native-preview/dist/ast/index.js"
 import {
-  bindingName, querySource,
-  type Axis, type Column, type Diagnostic, type Issue, type Observation, type Query, type Report,
+  bindingName, pairBindingName, pairSource, querySource,
+  type Axis, type Column, type Diagnostic, type Direction, type Issue, type Observation,
+  type Pair, type PairObservation, type PairReport, type Query, type Report,
 } from "./oracle.ts"
 
 const COMPILER = "@typescript/native-preview"
@@ -262,6 +263,70 @@ function report(repo: string, profile: string, queries: readonly Query[]): Repor
   } finally { api.close() }
 }
 
+/** The assignability differential (plan 1.10): one module per pair, both readings of both
+ * directions. The axis guard does not run here — a bare pair is not an Effect column, and
+ * `unknown` is a type of the algebra (decisions row 46), not contamination. */
+function assignability(repo: string, questions: readonly Pair[]): PairReport {
+  const directory = join(repo, "ts/eff/__assignability__")
+  const sources = new Map<string, string>(), fileOf = new Map<string, string>()
+  questions.forEach((p, index) => {
+    const file = join(directory, `p${index}.ts`)
+    sources.set(file, pairSource(p)); fileOf.set(p.id, file)
+  })
+  const version = compilerVersion(repo)
+  const { api, project, files } = open(repo, directory, sources,
+    { noEmit: true, typeRoots: [join(repo, "ts/eff/node_modules/@types")] })
+  try {
+    const { program, checker } = project
+    const textOfFile = (file: string) => files.get(file) ?? (existsSync(file) ? readFileSync(file, "utf8") : "")
+    const outside = [...program.getConfigFileParsingDiagnostics(), ...program.getProgramDiagnostics(),
+      ...program.getGlobalDiagnostics()].filter(d => !d.fileName || !sources.has(d.fileName))
+    if (outside.length) throw new Error(`target oracle: the assignability project does not compile: ${outside.map(d => d.text).join("; ")}`)
+    const observations = questions.map((p): PairObservation => {
+      const file = fileOf.get(p.id)!
+      const sf = program.getSourceFile(file)
+      const issues: Issue[] = []
+      const ds = [...program.getSyntacticDiagnostics(file), ...program.getSemanticDiagnostics(file)]
+      const { variables, aliases } = sf ? names(sf) : { variables: new Map<string, Node>(), aliases: new Map<string, Node>() }
+      const onAssignment = (d: CompilerDiagnostic, direction: "leftToRight" | "rightToLeft") => {
+        const id = variables.get(pairBindingName(direction))
+        return id !== undefined && d.pos >= id.parent.getStart() && d.pos < id.parent.end
+      }
+      const other = ds.filter(d => !assignmentDiagnostics.has(d.code) ||
+        !(["leftToRight", "rightToLeft"] as const).some(direction => onAssignment(d, direction)))
+      if (!sf) issues.push({ code: "missing-pair-source", message: p.id })
+      if (other.length) issues.push({ code: "pair-diagnostic", message: `${[...new Set(other.map(d => `TS${d.code}`))].join(", ")}: ${other[0]!.text}` })
+      const leftNode = aliases.get("__Left"), rightNode = aliases.get("__Right")
+      const left = leftNode && checker.getTypeAtLocation(leftNode)
+      const right = rightNode && checker.getTypeAtLocation(rightNode)
+      const clean = !issues.length && left !== undefined && right !== undefined
+      const direction = (from: Type | undefined, to: Type | undefined, which: "leftToRight" | "rightToLeft"): Direction => ({
+        assignable: clean && from && to ? checker.isTypeAssignableTo(from, to) : null,
+        statement: clean ? !ds.some(d => onAssignment(d, which)) : null,
+      })
+      return { id: p.id, left: p.left, right: p.right,
+        leftText: left ? checker.typeToString(left, leftNode, formatFlags) : null,
+        rightText: right ? checker.typeToString(right, rightNode, formatFlags) : null,
+        leftToRight: direction(left, right, "leftToRight"),
+        rightToLeft: direction(right, left, "rightToLeft"),
+        issues, diagnostics: ds.map(d => ({ code: d.code, file: d.fileName ? localPath(repo, d.fileName) : "<compiler>",
+          line: d.fileName ? lineAndColumn(textOfFile(d.fileName), d.pos).line : 0,
+          column: d.fileName ? lineAndColumn(textOfFile(d.fileName), d.pos).column : 0,
+          message: stableText(repo, d.text) })) }
+    })
+    return { format: "effect4-assignability-report-v1",
+      versions: { compiler: COMPILER, typescript: version,
+        effect: (JSON.parse(readFileSync(join(repo, "ts/eff/node_modules/effect/package.json"), "utf8")) as { version: string }).version,
+        lean: readFileSync(join(repo, "lean-toolchain"), "utf8").trim() },
+      compilerOptions: JSON.parse(stableText(repo, JSON.stringify(project.compilerOptions))),
+      observations,
+      limitations: [`Compiler: ${COMPILER} ${version} (tsgo, decisions row 57), under ts/eff/tsconfig.json.`,
+        "Two readings per direction: the checker's own relation (isTypeAssignableTo) and one ordinary assignment statement. They are reported side by side; a row where they differ is a finding, not a verdict.",
+        "A finite set of pairs over a small alphabet per head. No claim about types outside it, and no claim that the target's order and `Ty.sub` agree beyond these rows.",
+        "The any/unknown guard of the program lane does not run: `unknown` is the top of this algebra (decisions row 46) and is a compared type here."] }
+  } finally { api.close() }
+}
+
 /** The object type of each subject that is an indexed access `X["m"]`, as the compiler parsed
  * it. Parsing only: no lib, no resolution, no checker. */
 function receivers(repo: string, subjects: readonly string[]): (string | null)[] {
@@ -291,5 +356,7 @@ const repo = resolve(String(request.repo ?? ""))
 if (!isAbsolute(repo) || !existsSync(join(repo, "ts/eff/tsconfig.json"))) throw new Error(`target oracle: ${repo} is not a checkout of this repository`)
 const answer = request.kind === "subjects"
   ? { receivers: receivers(repo, request.subjects as string[]) }
-  : report(repo, String(request.profile), request.queries as Query[])
+  : request.kind === "pairs"
+    ? assignability(repo, request.pairs as Pair[])
+    : report(repo, String(request.profile), request.queries as Query[])
 writeFileSync(responsePath, JSON.stringify(answer))

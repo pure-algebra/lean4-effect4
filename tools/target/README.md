@@ -74,6 +74,15 @@ refused pending an explicit instantiation model. These assignment checks are fin
 judgments, not Lean semantic theorems, runtime cause agreement, or proof of distinct Lean
 service-key identity.
 
+`assignability.ts` is the second query kind (plan 1.10): a bare pair of rendered types, both
+readings of both directions (the checker's own `isTypeAssignableTo` and one ordinary assignment
+statement), against `Ty.sub` on the pairs `tools/Tools/TyVectors.lean` writes. Every row is
+`agree`, a named `cut`, `incomplete` (the order refuses what the target accepts) or `defect`
+(the order accepts what the target refuses, which fails the lane). The committed table is
+`generated/assignability.tsv`; `make gen-assignability` promotes a fresh run. Its own control
+travels with the questions: each pair also carries `Ty.sub` under one swapped arm (`refOf` read
+covariantly), and the lane fails if no pair catches it.
+
 Run `bun test tools/target` for independent positive and negative controls. These tests pass
 by detecting the specified failures; they do not turn a production mismatch into conformance.
 One of them is the ruling itself: no file of this tree constructs a second checker

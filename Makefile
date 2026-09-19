@@ -185,7 +185,7 @@ GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) \
   harness/truth/corpus.json harness/truth/generated harness/truth/result.json harness/truth/result.md \
   harness/truth/tapes harness/truth/session/protocol.gen.ts harness/truth/session/tape.schema.json \
   $(SCHEMA_TS_DIR)/Person.generated.ts $(SCHEMA_TS_DIR)/AllRepresentations.generated.ts $(SCHEMA_TS_DIR)/TwoRoots.generated.ts \
-  generated/effect-runtime-census.tsv generated/corpus-index.tsv generated/row-types.tsv
+  generated/effect-runtime-census.tsv generated/corpus-index.tsv generated/row-types.tsv generated/assignability.tsv
 
 # ---------------------------------------------------------------------------- corpus
 #
@@ -359,12 +359,20 @@ gen-corpus-results: | build harness/truth/node_modules ## promote a fresh corpus
 # `renderTy`, the hand copy of the printer it replaced, had fallen four constructors behind.
 $(CHK)/target: $(CORE) $(LAWS) $(TRUTH_GENERATED) harness/truth/prelude.ts Test/fixtures/target/selection.json \
   $(wildcard tools/target/*.ts tools/target/*.json) tools/Tools/RowTypes.lean generated/row-types.tsv \
+  tools/Tools/TyVectors.lean generated/assignability.tsv \
   ts/eff/profile.gen.ts ts/eff/eff.gen.ts ts/eff/packages.gen.ts ts/eff/tsconfig.json ts/eff/package.json ts/eff/node_modules lean-toolchain
 	$(LAKE) env lean -M4096 --run tools/Tools/RowTypes.lean generated/row-types.tsv --check
 	$(NODE) ts/eff/node_modules/@typescript/native-preview/bin/tsgo --noEmit -p tools/target/tsconfig.json
 	$(BUN) test tools/target
 	$(BUN) tools/target/cli.ts --repo .
+	@mkdir -p .lake/target && $(LAKE) env lean -M4096 --run tools/Tools/TyVectors.lean .lake/target/ty-vectors.tsv
+	$(BUN) tools/target/assignability.ts --repo . --vectors .lake/target/ty-vectors.tsv
 	@mkdir -p $(CHK) && touch $@
+
+.PHONY: gen-assignability
+gen-assignability: | build ## promote a fresh assignability differential to generated/assignability.tsv
+	@mkdir -p .lake/target && $(LAKE) env lean -M4096 --run tools/Tools/TyVectors.lean .lake/target/ty-vectors.tsv
+	$(BUN) tools/target/assignability.ts --repo . --vectors .lake/target/ty-vectors.tsv --promote
 
 # The schema codec: Lean's `Ty.encode` results for the contract's cases, compared with
 # rc.112's `Schema.toCodecJson` on the host; nothing committed.

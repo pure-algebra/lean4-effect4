@@ -60,8 +60,38 @@ export interface Report {
   conforms: boolean
 }
 
+/** One assignability question about a bare pair of rendered types (plan 1.10). Neither side is
+ * an `Effect` and neither is an axis, so the pair has no axis policy: `unknown` is the top of
+ * the algebra (decisions row 46) and is compared here, never refused as contamination. */
+export interface Pair {
+  id: string
+  /** The two rendered types, as `Ty.renderRaw` printed them. */
+  left: string
+  right: string
+}
+/** Both readings of one direction: the checker's own relation, and the assignment statement a
+ * user's program hits. They are reported side by side and never conflated. */
+export interface Direction { assignable: boolean | null; statement: boolean | null }
+export interface PairObservation {
+  id: string; left: string; right: string
+  leftText: string | null; rightText: string | null
+  leftToRight: Direction; rightToLeft: Direction
+  issues: Issue[]; diagnostics: Diagnostic[]
+}
+export interface PairReport {
+  format: "effect4-assignability-report-v1"
+  versions: Report["versions"]
+  compilerOptions: unknown
+  observations: PairObservation[]
+  limitations: string[]
+}
+
 const axes: Axis[] = ["A", "E", "R", "request", "receiver"]
 export const bindingName = (axis: Axis, direction: string) => `__${axis}_${direction}`
+export const pairBindingName = (direction: "leftToRight" | "rightToLeft") => `__pair_${direction}`
+/** Every module of the effect namespace a rendered type can name (`Ty.renderRaw`), plus the
+ * handle spellings it prints verbatim. */
+export const pairImports = ['import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from "effect"']
 
 /** The handle bindings as declarations the compiler resolves. A binding `A.B` → `T` is a
  * namespace `A` with a type member `B`; a binding `A` → `T` is a type alias. The rendered text
@@ -127,6 +157,19 @@ export function querySource(q: Query): string {
   return lines.join("\n") + "\n"
 }
 
+/** The module a bare type pair is asked about. The two named aliases are where the checker's
+ * own relation is read; the two assignments are what a user's program hits. */
+export function pairSource(p: Pair): string {
+  return [...pairImports,
+    `type __Left = ${p.left}`,
+    `type __Right = ${p.right}`,
+    "declare const __left: __Left",
+    "declare const __right: __Right",
+    `export const ${pairBindingName("leftToRight")}: __Right = __left`,
+    `export const ${pairBindingName("rightToLeft")}: __Left = __right`,
+  ].join("\n") + "\n"
+}
+
 /** The node that runs the compiler. `node` is a pinned tool of this repository (`make doctor`). */
 const nodeExecutable = () => process.env.EFFECT4_NODE ?? "node"
 const checkerPath = () => fileURLToPath(new URL("./checker.ts", import.meta.url))
@@ -147,6 +190,13 @@ export function query(repoRoot: string, queries: readonly Query[], profile = "ef
   if (new Set(queries.map(q => q.id)).size !== queries.length) throw new Error("duplicate target query ID")
   if (!queries.length) throw new Error("empty required target selection")
   return run({ kind: "query", repo: repoRoot, profile, queries }) as Report
+}
+
+/** The assignability differential's questions (plan 1.10), in one compiler run. */
+export function assignability(repoRoot: string, questions: readonly Pair[]): PairReport {
+  if (new Set(questions.map(p => p.id)).size !== questions.length) throw new Error("duplicate assignability pair ID")
+  if (!questions.length) throw new Error("empty required assignability selection")
+  return run({ kind: "pairs", repo: repoRoot, pairs: questions }) as PairReport
 }
 
 /** The object type of every subject that is an indexed access, as the compiler parsed it:
