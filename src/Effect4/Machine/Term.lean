@@ -166,15 +166,88 @@ from this inductive's constructor list into `src/Effect4/Program/AtomInventory.l
 (`tools/Effect4Gen/Atoms.lean`, group `AtomInventory`). Nothing below the stores reads the
 list: the name lookup is a match on the string, so this module needs only the alphabet. -/
 
-def name : NativeAtom → String
-  | .succ => "succ" | .pred => "pred" | .isZero => "isZero" | .boolNot => "not"
-  | .add => "add" | .lt => "lt" | .eq => "eq" | .pair => "pair"
-  | .fst => "fst" | .snd => "snd" | .strings => "strings"
-  | .causeIsFail => "causeIsFail" | .causeError => "causeError"
-  | .causeIsDie => "causeIsDie" | .causeIsInterrupt => "causeIsInterrupt"
-  | .boolOr => "or" | .boolAnd => "and"
-  | .tagIs => "tagIs"
-  | .isSome => "isSome" | .getOrElse => "getOrElse"
+/-- One atom's data: everything about an atom that is neither a type nor its evaluation, in
+one row instead of four matches.
+
+Three things the record deliberately does not hold. **No function field** — an
+`eval : List Val → Option Val` column would take `eval` off the enum, and with it the
+compiler's exhaustiveness error (the one mechanism that has caught every omission in this
+alphabet) and the OCaml engine's jump table, since LCNF's mono phase cannot see through a
+closure read out of a table row (`ocaml/gen/api_gen.ml`, the lowering of `eval`). **No `Ty`**
+— the type language stays above the stores, so the machine's import closure, and the LCNF cut
+taken from it, does not carry the checker; the typing half is `Program/NativeAtom.lean`. **No
+citation** — that belongs with the typing rule it transcribes (`NativeAtom.Spec.cite`). -/
+structure AtomRow where
+  /-- The atom's name: its spelling on the wire, in the generated profile, in the OCaml
+  alphabet and in the TypeScript prelude. -/
+  name : String
+  /-- `some n` for a fixed arity, `none` for a variadic atom. -/
+  arity : Option Nat
+  /-- The literal rule's flag (DI-55, the prelude's `pair<const A, const B>`): a string literal
+  argument keeps its literal type under `litArgTy` (DI-15). Only `pair` is; every other atom
+  widens a literal to `string`, as TypeScript does at a non-`const` parameter. -/
+  constGeneric : Bool
+  /-- The atom's body in the TypeScript prelude: the text after `export const <name> = `.
+  `harness/truth/prelude-atoms.gen.ts` is this column, one line per atom. -/
+  prelude : String
+deriving DecidableEq, Repr
+
+/-- The table. One exhaustive match, so an appended constructor is a compile error here and
+nowhere else; `name`, `arity` and `constGeneric` are projections of it. -/
+def row : NativeAtom → AtomRow
+  | .succ => { name := "succ", arity := some 1, constGeneric := false,
+               prelude := "(n: number): number => n + 1" }
+  | .pred => { name := "pred", arity := some 1, constGeneric := false,
+               prelude := "(n: number): number => (n === 0 ? 0 : n - 1)" }
+  | .isZero => { name := "isZero", arity := some 1, constGeneric := false,
+                 prelude := "(n: number): boolean => n === 0" }
+  | .boolNot => { name := "not", arity := some 1, constGeneric := false,
+                  prelude := "(b: boolean): boolean => !b" }
+  | .add => { name := "add", arity := some 2, constGeneric := false,
+              prelude := "(a: number, b: number): number => a + b" }
+  | .lt => { name := "lt", arity := some 2, constGeneric := false,
+             prelude := "(a: number, b: number): boolean => a < b" }
+  | .eq => { name := "eq", arity := some 2, constGeneric := false,
+             prelude := "(a: number | string, b: number | string): boolean => a === b" }
+  | .pair => { name := "pair", arity := some 2, constGeneric := true,
+               prelude := "<const A, const B>(a: A, b: B): readonly [A, B] => [a, b]" }
+  | .fst => { name := "fst", arity := some 1, constGeneric := false,
+              prelude := "<P extends readonly [unknown, unknown]>(p: P): P[0] => p[0]" }
+  | .snd => { name := "snd", arity := some 1, constGeneric := false,
+              prelude := "<P extends readonly [unknown, unknown]>(p: P): P[1] => p[1]" }
+  | .strings => { name := "strings", arity := none, constGeneric := false,
+                  prelude := "(...texts: string[]): ReadonlyArray<string> => texts" }
+  | .causeIsFail =>
+      { name := "causeIsFail", arity := some 1, constGeneric := false,
+        prelude := "<A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): boolean =>\n  \
+                    Cause.hasFails(queryCause(input))" }
+  | .causeError =>
+      { name := "causeError", arity := some 1, constGeneric := false,
+        prelude := "<A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): Option.Option<E> =>\n  \
+                    Cause.findErrorOption(queryCause(input))" }
+  | .causeIsDie =>
+      { name := "causeIsDie", arity := some 1, constGeneric := false,
+        prelude := "<A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): boolean =>\n  \
+                    Cause.hasDies(queryCause(input))" }
+  | .causeIsInterrupt =>
+      { name := "causeIsInterrupt", arity := some 1, constGeneric := false,
+        prelude := "<A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): boolean =>\n  \
+                    Cause.hasInterrupts(queryCause(input))" }
+  | .boolOr => { name := "or", arity := some 2, constGeneric := false,
+                 prelude := "(a: boolean, b: boolean): boolean => a || b" }
+  | .boolAnd => { name := "and", arity := some 2, constGeneric := false,
+                  prelude := "(a: boolean, b: boolean): boolean => a && b" }
+  | .tagIs => { name := "tagIs", arity := some 2, constGeneric := false,
+                prelude := "(tag: string, e: unknown): boolean =>\n  \
+                            Array.isArray(e) && e.length === 2 && e[0] === tag" }
+  | .isSome => { name := "isSome", arity := some 1, constGeneric := false,
+                 prelude := "<A>(value: Option.Option<A>): boolean => Option.isSome(value)" }
+  | .getOrElse =>
+      { name := "getOrElse", arity := some 2, constGeneric := false,
+        prelude := "<A>(value: Option.Option<A>, fallback: NoInfer<A>): A =>\n  \
+                    Option.getOrElse(value, () => fallback)" }
+
+def name (atom : NativeAtom) : String := (row atom).name
 
 /-- Exact lookup over the complete inventory; unknown names remain refused. A match on the
 string, not a scan of `all`: `evalTerm` resolves an atom at every term application, so the
@@ -218,11 +291,11 @@ theorem name_injective {a b : NativeAtom} (h : a.name = b.name) : a = b := by
   rw [h, ofName?_name] at ha
   exact Option.some.inj ha.symm
 
-def arity : NativeAtom → Option Nat
-  | .succ | .pred | .isZero | .boolNot | .fst | .snd
-  | .causeIsFail | .causeError | .causeIsDie | .causeIsInterrupt | .isSome => some 1
-  | .add | .lt | .eq | .pair | .boolOr | .boolAnd | .tagIs | .getOrElse => some 2
-  | .strings => none
+def arity (atom : NativeAtom) : Option Nat := (row atom).arity
+
+/-- Whether the atom's parameters are const-generic (DI-55). A projection of the table; it is
+lifted by name in `nativeConstAtom` (`Program/Native.lean`) and read by the literal rule. -/
+def constGeneric (atom : NativeAtom) : Bool := (row atom).constGeneric
 
 /-- The tag test on a value (DI-39): true exactly on a pair whose first component is the
 tag; false on every other value. Total, so `tagIs` never answers `none` on a string tag. -/

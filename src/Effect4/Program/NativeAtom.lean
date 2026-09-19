@@ -25,16 +25,6 @@ def causeInputError? : Ty → Option Ty
 
 namespace NativeAtom
 
-/-- Whether the atom's parameters are const-generic (DI-55, the prelude's
-`pair<const A, const B>`): a string literal argument keeps its literal type under the literal
-rule (`litArgTy`, DI-15). Only `pair` is; every other atom widens a literal to `string`, as
-TypeScript does at a non-`const` parameter. -/
-def constGeneric : NativeAtom → Bool
-  | .pair => true
-  | .succ | .pred | .isZero | .boolNot | .add | .lt | .eq | .fst | .snd | .strings
-  | .causeIsFail | .causeError | .causeIsDie | .causeIsInterrupt | .boolOr | .boolAnd
-  | .tagIs | .isSome | .getOrElse => false
-
 /-- Monomorphic metadata for generated interfaces. Polymorphic schemes are `none`;
 `typeOf` remains their single executable typing owner. -/
 def mono : NativeAtom → Option (List Ty × Ty)
