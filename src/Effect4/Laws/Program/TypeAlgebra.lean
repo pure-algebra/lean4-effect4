@@ -195,73 +195,115 @@ theorem hasTy_productMembers (v : Val) (a b : Ty) (allocated : List String) :
       exact ⟨ta, hta, tb, htb, hx, hy⟩
   · simp
 
-theorem causeAdmits_congr_at {f g : Val → Ty → Bool} (a b : Ty)
-    (h : ∀ v, f v a = g v b) (c : CauseV) :
-    causeAdmits f a c = causeAdmits g b c := by
-  apply List.all_congr rfl
-  intro r
-  cases r with
-  | fail e annotations =>
-    cases e <;> try rfl
-    all_goals exact h _
-  | die d annotations => rfl
-  | interrupt id annotations => rfl
+/-! ### The three normalisation facts -/
 
-/-- Every valid snapshot follows the same element rule as an ordinary list. -/
-theorem hasTy_fibers (ids : List FiberId) (inner : Ty) (allocated : List String) :
-    Val.hasTy (Val.fibers ids) (.list inner) allocated =
-      ids.all (fun id => Val.hasTy (Val.fiber id) inner allocated) := by
-  change (match Val.snapshot? (Val.fibers ids) with
-    | some ids => ids.all (fun id => Val.hasTy (Val.fiber id) inner allocated)
-    | none => false) = _
-  rw [Val.snapshot?_fibers]
+/-- Normalization of `never` preserves value typing. -/
+theorem hasTy_normalize_never (v : Val) (allocated : List String) :
+    Val.hasTy v Ty.never.normalize allocated = Val.hasTy v .never allocated := rfl
 
-theorem hasTy_fibers_nil (inner : Ty) (allocated : List String) :
-    Val.hasTy (Val.fibers []) (.list inner) allocated = true := by
-  rw [hasTy_fibers]
+/-- Normalization of `union` preserves value typing, given preservation on the members. -/
+theorem hasTy_normalize_union (a b : Ty) (v : Val) (allocated : List String)
+    (iha : ∀ v, Val.hasTy v a.normalize allocated = Val.hasTy v a allocated)
+    (ihb : ∀ v, Val.hasTy v b.normalize allocated = Val.hasTy v b allocated) :
+    Val.hasTy v (Ty.union a b).normalize allocated = Val.hasTy v (.union a b) allocated := by
+  rw [Ty.normalize, hasTy_ofMembers, hasTy_normalizeRow, List.any_append,
+    hasTy_members, hasTy_members, iha, ihb]
   rfl
 
+/-- Normalization of `prod` preserves value typing through product distribution. -/
+theorem hasTy_normalize_prod (a b : Ty) (v : Val) (allocated : List String)
+    (iha : ∀ v, Val.hasTy v a.normalize allocated = Val.hasTy v a allocated)
+    (ihb : ∀ v, Val.hasTy v b.normalize allocated = Val.hasTy v b allocated) :
+    Val.hasTy v (Ty.prod a b).normalize allocated = Val.hasTy v (.prod a b) allocated := by
+  rw [Ty.normalize, hasTy_ofMembers, hasTy_normalizeRow, hasTy_productMembers]
+  simp only [Val.hasTy]
+  split
+  · rename_i x y
+    rw [iha, ihb]
+  · rfl
+
+/-! ### The congruence arms for normalisation -/
+
+/-- Normalization of `option` preserves value typing. -/
+theorem hasTy_normalize_option (t : Ty) (v : Val) (allocated : List String)
+    (ih : ∀ v, Val.hasTy v t.normalize allocated = Val.hasTy v t allocated) :
+    Val.hasTy v (Ty.option t).normalize allocated = Val.hasTy v (Ty.option t) allocated := by
+  dsimp only [Ty.normalize]
+  simp only [Val.hasTy]
+  split
+  · rfl
+  · exact ih _
+  · rfl
+
+/-- Normalization of `list` preserves value typing. -/
+theorem hasTy_normalize_list (t : Ty) (v : Val) (allocated : List String)
+    (ih : ∀ v, Val.hasTy v t.normalize allocated = Val.hasTy v t allocated) :
+    Val.hasTy v (Ty.list t).normalize allocated = Val.hasTy v (Ty.list t) allocated := by
+  dsimp only [Ty.normalize]
+  simp only [Val.hasTy]
+  split
+  · split
+    · exact List.all_congr rfl (fun id => ih (Val.fiber id))
+    · rfl
+  · exact List.all_congr rfl ih
+  · rfl
+
+/-- Normalization of `except` preserves value typing. -/
+theorem hasTy_normalize_except (e a : Ty) (v : Val) (allocated : List String)
+    (ihe : ∀ v, Val.hasTy v e.normalize allocated = Val.hasTy v e allocated)
+    (iha : ∀ v, Val.hasTy v a.normalize allocated = Val.hasTy v a allocated) :
+    Val.hasTy v (Ty.except e a).normalize allocated = Val.hasTy v (Ty.except e a) allocated := by
+  dsimp only [Ty.normalize]
+  simp only [Val.hasTy]
+  split
+  · exact ihe _
+  · exact iha _
+  · rfl
+
+theorem causeAdmits_congr_pred {f g : Val → Bool} (hf : ∀ v, f v = g v) (a b : Ty) (c : CauseV) :
+    causeAdmits (fun w _ => f w) a c = causeAdmits (fun w _ => g w) b c := by
+  have : f = g := funext hf
+  subst this
+  exact causeAdmits_discard_ty f a b c
+
+/-- Normalization of `exitOf` preserves value typing. -/
+theorem hasTy_normalize_exitOf (a e : Ty) (v : Val) (allocated : List String)
+    (iha : ∀ v, Val.hasTy v a.normalize allocated = Val.hasTy v a allocated)
+    (ihe : ∀ v, Val.hasTy v e.normalize allocated = Val.hasTy v e allocated) :
+    Val.hasTy v (Ty.exitOf a e).normalize allocated = Val.hasTy v (Ty.exitOf a e) allocated := by
+  dsimp only [Ty.normalize]
+  simp only [Val.hasTy]
+  split
+  · exact iha _
+  · split
+    · exact causeAdmits_congr_pred ihe e.normalize e _
+    · rfl
+  · rfl
+
+/-- Normalization of `causeOf` preserves value typing. -/
+theorem hasTy_normalize_causeOf (e : Ty) (v : Val) (allocated : List String)
+    (ih : ∀ v, Val.hasTy v e.normalize allocated = Val.hasTy v e allocated) :
+    Val.hasTy v (Ty.causeOf e).normalize allocated = Val.hasTy v (Ty.causeOf e) allocated := by
+  dsimp only [Ty.normalize]
+  simp only [Val.hasTy]
+  split
+  · exact causeAdmits_congr_pred ih e.normalize e _
+  · rfl
+
+/-- Normalization preserves value typing at every type. Proved by structural induction,
+dispatching each case to its named congruence or normalisation fact with no catch-all. -/
 theorem hasTy_normalize (t : Ty) (v : Val) (allocated : List String) :
     Val.hasTy v t.normalize allocated = Val.hasTy v t allocated := by
   induction t generalizing v with
-  | never | unknown | unit | nat | int | string | bool | handle | lit => rfl
-  | except error value ihe ihv =>
-    simp only [Ty.normalize, Val.hasTy]
-    split <;> try rfl
-    · exact ihe _
-    · exact ihv _
-  | fiberOf => rfl
-  -- a cell or promise handle is coarse in `hasTy`: the argument's normalisation is invisible
-  | refOf | deferredOf | var => rfl
-  | option t ih =>
-    simp only [Ty.normalize, Val.hasTy]
-    split <;> try rfl
-    exact ih _
-  | prod a b iha ihb =>
-    rw [Ty.normalize, hasTy_ofMembers, hasTy_normalizeRow, hasTy_productMembers]
-    simp only [Val.hasTy]
-    split <;> try rfl
-    rw [iha, ihb]
-  | list t ih =>
-    simp only [Ty.normalize, Val.hasTy]
-    split <;> try rfl
-    · split <;> try rfl
-      exact List.all_congr rfl (fun id => ih (Val.fiber id))
-    · exact List.all_congr rfl ih
-  | causeOf e ih =>
-    simp only [Ty.normalize, Val.hasTy]
-    split <;> try rfl
-    exact causeAdmits_congr_at _ _ ih _
-  | exitOf a e iha ihe =>
-    simp only [Ty.normalize, Val.hasTy]
-    split <;> try rfl
-    · exact iha _
-    · split <;> try rfl
-      exact causeAdmits_congr_at _ _ ihe _
-  | union a b iha ihb =>
-    rw [Ty.normalize, hasTy_ofMembers, hasTy_normalizeRow, List.any_append,
-      hasTy_members, hasTy_members, iha, ihb]
-    rfl
+  | never => exact hasTy_normalize_never v allocated
+  | unknown | unit | nat | int | string | bool | handle | lit | fiberOf | refOf | deferredOf | var => rfl
+  | except error value ihe ihv => exact hasTy_normalize_except error value v allocated ihe ihv
+  | option inner ih => exact hasTy_normalize_option inner v allocated ih
+  | prod a b iha ihb => exact hasTy_normalize_prod a b v allocated iha ihb
+  | list inner ih => exact hasTy_normalize_list inner v allocated ih
+  | causeOf e ih => exact hasTy_normalize_causeOf e v allocated ih
+  | exitOf a e iha ihe => exact hasTy_normalize_exitOf a e v allocated iha ihe
+  | union a b iha ihb => exact hasTy_normalize_union a b v allocated iha ihb
 
 theorem hasTy_of_normalize_eq {a b : Ty} (h : a.normalize = b.normalize)
     (v : Val) (allocated : List String) :
