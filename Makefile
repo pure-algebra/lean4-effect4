@@ -141,7 +141,11 @@ $(GEN)/ts: $(GEN)/cas $(TS_SOURCES) $(CORE)
 	$(PY) scripts/generate.py --only ts
 	@mkdir -p $(GEN) && touch $@
 
-$(GEN)/readme: $(GEN)/ts ts/eff/ingest/render-readme.ts ts/eff/profile.gen.ts ts/eff/forms.gen.ts ts/eff/taxonomy.gen.ts
+# The only host producer of the hermetic chain. Without the pinned install it does not fail
+# with "install the dependencies": it resolves `effect` to whatever is above the worktree and
+# dies inside a generated schema (`Schema.TaggedUnion is not a function`), which is what a
+# fresh worktree saw here. Order-only, like every other consumer of the install.
+$(GEN)/readme: $(GEN)/ts ts/eff/ingest/render-readme.ts ts/eff/profile.gen.ts ts/eff/forms.gen.ts ts/eff/taxonomy.gen.ts | ts/eff/node_modules
 	$(PY) scripts/generate.py --only readme
 	@mkdir -p $(GEN) && touch $@
 

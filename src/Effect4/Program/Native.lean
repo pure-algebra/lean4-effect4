@@ -119,7 +119,25 @@ def externalPlaceholder : Row :=
   { name := "external", spelling := "", shape := .value, kind := .program,
     request := .never, answer := .never, cite := "", registration := .external }
 
-/-- The row of each operation. -/
+/-- The row of each operation.
+
+Three rows model an *unsafe* or *private* form of the operation they are named after, and the
+`cite` names the public export rather than the implementation, because a citation is a claim
+about the declaration the row transcribes (DI-96, DI-99, DI-100):
+
+* `deferredIsDone` cites `Deferred.isDone`, whose body is `sync (() => isDoneUnsafe(self))`;
+  the machine answers the synchronous `isDoneUnsafe` value, which is what `isDone` wraps.
+* `scopeMake` cites `Scope.make`, which is `internal/effect.ts`'s `scopeMake`; the machine
+  models the unsafe form `scopeMakeUnsafe`, which is what `scopeMake` wraps.
+* `deferredAwait` cites the export `_await as await`; the implementation is the private
+  `_await` above it, whose `callback` shape is the one the machine models.
+
+Two more rows disagree with rc.112 in their answer column and are signed exceptions, not
+citation errors: `deferredPoll` answers `bool` where `poll` answers
+`Effect<Option<Effect<A, E>>>` (DI-97 — the language has no carrier for an `Effect` as a
+value, so the machine answers its `isSome`), and `refSet` answers the cell where `Ref.set`
+answers `void` (DI-98 — the machine answers the cell, `Stores.refStep`, and restating it is a
+machine change scheduled with L4). -/
 def row : NativeOp → Row
   | refMake => ⟨"refMake", "Ref.make", .call, [], .sync, .nat, refTy, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:173", [], .deferred⟩
   | refGet => ⟨"refGet", "Ref.get", .call, [], .sync, refTy, .nat, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:200", [], .deferred⟩
@@ -160,7 +178,7 @@ def row : NativeOp → Row
       "vendor/effect-4.0.0-rc.112/src/Deferred.ts:171", deferredTypeArgs, .deferred⟩
   | deferredIsDone =>
     ⟨"deferredIsDone", "Deferred.isDone", .call, [], .sync, deferredTy, .bool, .never, [],
-      "vendor/effect-4.0.0-rc.112/src/Deferred.ts:1382", [], .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/Deferred.ts:1366", [], .deferred⟩
   | deferredPoll =>
     ⟨"deferredPoll", "Deferred.poll", .call, [], .sync, deferredTy, .bool, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Deferred.ts:1414-1416", [], .deferred⟩
@@ -172,13 +190,13 @@ def row : NativeOp → Row
       "vendor/effect-4.0.0-rc.112/src/Deferred.ts:669", [], .deferred⟩
   | deferredAwait =>
     ⟨"deferredAwait", "Deferred.await", .call, [], .async, deferredTy, .nat, .nat, [],
-      "vendor/effect-4.0.0-rc.112/src/Deferred.ts:173-186", [], .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/Deferred.ts:223", [], .deferred⟩
   | scopeMake .sequential =>
     ⟨"scopeMake", "Scope.make", .call, [], .sync, .unit, Ty.scope, .never, [],
-      "vendor/effect-4.0.0-rc.112/src/internal/effect.ts:3914-3922", [], .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/Scope.ts:240", [], .deferred⟩
   | scopeMake .parallel =>
     ⟨"scopeMake", "Scope.make", .call, ["\"parallel\""], .sync, .unit, Ty.scope, .never, [],
-      "vendor/effect-4.0.0-rc.112/src/internal/effect.ts:3914-3922", [], .deferred⟩
+      "vendor/effect-4.0.0-rc.112/src/Scope.ts:240", [], .deferred⟩
   | sleep =>
     ⟨"sleep", "Effect.sleep", .call, [], .async, .nat, .unit, .never, [],
       "vendor/effect-4.0.0-rc.112/src/internal/effect.ts:6114-6116", [], .deferred⟩

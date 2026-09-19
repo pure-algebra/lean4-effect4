@@ -3572,7 +3572,7 @@ let program_native_op_row (x_1 : native_op) : row =
       let _x_189 = program_native_op_deferred_ty in
       let _x_190 = Ty_bool in
       let _x_191 = Ty_never in
-      let _x_192 = "vendor/effect-4.0.0-rc.112/src/Deferred.ts:1382" in
+      let _x_192 = "vendor/effect-4.0.0-rc.112/src/Deferred.ts:1366" in
       let _x_193 = Registration_deferred in
       let _x_194 = ({ name = _x_184; spelling = _x_185; shape = _x_186; trailing = _x_187; kind = _x_188; request = _x_189; answer = _x_190; error = _x_191; requires = _x_187; cite = _x_192; type_args = _x_187; registration = _x_193 } : row) in
       _x_194)
@@ -3623,7 +3623,7 @@ let program_native_op_row (x_1 : native_op) : row =
       let _x_236 = RowKind_async in
       let _x_237 = program_native_op_deferred_ty in
       let _x_238 = Ty_nat in
-      let _x_239 = "vendor/effect-4.0.0-rc.112/src/Deferred.ts:173-186" in
+      let _x_239 = "vendor/effect-4.0.0-rc.112/src/Deferred.ts:223" in
       let _x_240 = Registration_deferred in
       let _x_241 = ({ name = _x_232; spelling = _x_233; shape = _x_234; trailing = _x_235; kind = _x_236; request = _x_237; answer = _x_238; error = _x_238; requires = _x_235; cite = _x_239; type_args = _x_235; registration = _x_240 } : row) in
       _x_241)
@@ -3636,7 +3636,7 @@ let program_native_op_row (x_1 : native_op) : row =
           let _x_248 = Ty_unit in
           let _x_249 = program_ty_scope in
           let _x_250 = Ty_never in
-          let _x_251 = "vendor/effect-4.0.0-rc.112/src/internal/effect.ts:3914-3922" in
+          let _x_251 = "vendor/effect-4.0.0-rc.112/src/Scope.ts:240" in
           let _x_252 = Registration_deferred in
           let _x_253 = ({ name = _x_243; spelling = _x_244; shape = _x_245; trailing = _x_246; kind = _x_247; request = _x_248; answer = _x_249; error = _x_250; requires = _x_246; cite = _x_251; type_args = _x_246; registration = _x_252 } : row) in
           _x_253)
@@ -3650,7 +3650,7 @@ let program_native_op_row (x_1 : native_op) : row =
           let _x_261 = Ty_unit in
           let _x_262 = program_ty_scope in
           let _x_263 = Ty_never in
-          let _x_264 = "vendor/effect-4.0.0-rc.112/src/internal/effect.ts:3914-3922" in
+          let _x_264 = "vendor/effect-4.0.0-rc.112/src/Scope.ts:240" in
           let _x_265 = Registration_deferred in
           let _x_266 = ({ name = _x_254; spelling = _x_255; shape = _x_256; trailing = _x_259; kind = _x_260; request = _x_261; answer = _x_262; error = _x_263; requires = _x_258; cite = _x_264; type_args = _x_258; registration = _x_265 } : row) in
           _x_266))

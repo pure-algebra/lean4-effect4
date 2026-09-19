@@ -252,7 +252,7 @@ profile enforced on the hand kernel.
 
 | gap | reason / consequence |
 | --- | --- |
-| `Nat` → `int` | OCaml `int` is 63-bit; `Nat.sub` is emitted as `max 0 (a - b)`, `Nat.pow` and literals ≥ 2^62 saturate at `max_int` (the rule above), but `Nat.div/mod` by zero (`0` in Lean, `Division_by_zero` in OCaml) is still not guarded. Not hit by `Fibers.lean` (counters, tokens, priorities) |
+| `Nat` → `int` | OCaml `int` is 63-bit; `Nat.sub` is emitted as `max 0 (a - b)`, and `Nat.pow` and literals ≥ 2^62 saturate at `max_int` (the rule above). Division by zero **is** guarded: `Translate.builtin?` emits `if b = 0 then 0 else a / b` for `Nat.div` and `if b = 0 then a else a mod b` for `Nat.mod`, which is what Lean answers, so no emitted expression can raise `Division_by_zero`. Not hit by `Fibers.lean` (counters, tokens, priorities) either way |
 | `Array` as `list` | `Array.mkEmpty/push/toList/appendList/size` are a list shim; `push` is O(n). Only the stdlib's `flatMapTR` accumulator uses it here |
 | `LetValue.proj` on a non-structure | a hole; never produced by 4.33.1's mono phase (`structProjCases`) |
 | `extern` / `implemented_by` / `noncomputable` callees | listed as `missing`; a `partial def` compiles to `f._unsafe_rec` and is reached through the wrapper. None in `Fibers.lean` (the only "missing" root, `Step`, is a `Prop`) |

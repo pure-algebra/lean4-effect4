@@ -129,7 +129,10 @@ val poll : 'a t -> cell_id -> 'a option option
 (** `poll` (Deferred.ts:1414-1416). A FREE ROW: no fuel, no tape, no state change. *)
 
 val is_done : 'a t -> cell_id -> bool option
-(** `isDoneUnsafe` (Deferred.ts:1382). A FREE ROW. *)
+(** `Deferred.isDone` (Deferred.ts:1366). A FREE ROW.
+
+    The value this answers is the one `isDoneUnsafe` (Deferred.ts:1382) computes, which is
+    what `isDone` wraps in `sync`; the row's citation names the public export (DI-96). *)
 
 val phase_of : 'a t -> cell_id -> phase option
 

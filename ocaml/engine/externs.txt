@@ -155,8 +155,10 @@ fn Effect4.Program.Point.redirect 2 sh_point_redirect program_node_child
 # still be written here by hand; it is then an override and the stale-ledger check covers it.
 
 # ---- Q6: Lean's division on a zero divisor ------------------------------------------------
-# `Translate.builtin?` emits raw `/` and `mod`, which RAISE where Lean answers 0 and n
-# (ocaml/gen/NOTES.md:263).  Optional: no declaration in this root set divides, and a
-# mandatory row would be a stale ledger.
+# Answered in the translator, not here.  `Translate.builtin?` guards both rows
+# (src/OCaml5/Lcnf/Translate.lean): `Nat.div` emits `if b = 0 then 0 else a / b` and `Nat.mod`
+# emits `if b = 0 then a else a mod b`, which is what Lean answers, so nothing emitted can
+# raise `Division_by_zero`.  The two rows below stay `fn?`, optional: no declaration in this
+# root set divides, so a mandatory row would be a stale ledger.
 fn? Nat.div 2 E4_nat.div
 fn? Nat.mod 2 E4_nat.rem
