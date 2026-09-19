@@ -140,262 +140,92 @@ theorem causeAdmits_mono_sub {m1 m2 : Val → Ty → Bool} {e1 e2 : Ty}
   exact list_all_mono c.reasons (fun r => reasonAdmits_mono_sub hm r) h
 
 /-- The subtype relation on `Ty` respects value typing (`hasTy`). If `Ty.sub a b = true`
-and value `v` has type `a`, then `v` also has type `b`. -/
+and value `v` has type `a`, then `v` also has type `b`.
+
+The proof is `fun_induction Ty.sub`, so its case list is `sub`'s own arm list: sixteen cases,
+one per rule, with the catch-all a single case whose `hsub` is `false = true`. That is why
+there is one `union` block rather than one per constructor of the left type, one line for the
+top rather than an alternative in every mismatch arm, and no `first`: the shape of the
+induction, not the discipline of the writer, is what keeps a new constructor from touching it
+(tooling plan 1.5). Statement and argument order are unchanged — twenty-five call sites in
+five files read it. -/
 theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
     (hsub : Ty.sub a b = true) (hv : Val.hasTy v a allocated = true) :
     Val.hasTy v b allocated = true := by
-  -- the top: every value inhabits `unknown` (decisions row 46)
-  by_cases hbu : b = .unknown
-  · subst hbu; simp [Val.hasTy]
-  if heq : a = b then
-    subst heq
-    exact hv
-  else
-    cases a with
-    | never => simp [Val.hasTy] at hv
-    | int => simp [Val.hasTy] at hv
-    | unknown =>
-      cases b with
-      | union b1 b2 =>
-        rw [Ty.sub_union_right .unknown b1 b2 rfl] at hsub
-        obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub .unknown b1 v allocated h1 hv)
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub .unknown b2 v allocated h2 hv)
-      | unknown => exact absurd rfl hbu
-      | _ =>
-        first
-        | exact absurd rfl hbu
-        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
-    | except ae av =>
-      cases b with
-      | union b1 b2 =>
-        rw [Ty.sub_union_right (.except ae av) b1 b2 rfl] at hsub
-        obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub (.except ae av) b1 v allocated h1 hv)
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub (.except ae av) b2 v allocated h2 hv)
-      | except be bv =>
-        have hab : Ty.sub ae be = true ∧ Ty.sub av bv = true := by
-          simpa [Ty.sub, heq] using hsub
-        dsimp only [Val.hasTy] at hv ⊢
-        split at hv <;> try contradiction
-        · exact hasTy_sub ae be _ allocated hab.1 hv
-        · exact hasTy_sub av bv _ allocated hab.2 hv
-      | _ =>
-        first
-        | exact absurd rfl hbu
-        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
-    | union a1 a2 =>
-      rw [Ty.sub_union_left a1 a2 b heq] at hsub
-      obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hsub
-      simp only [Val.hasTy, Bool.or_eq_true] at hv
-      cases hv with
-      | inl h => exact hasTy_sub a1 b v allocated h1 h
-      | inr h => exact hasTy_sub a2 b v allocated h2 h
-    | lit s =>
-      cases b with
-      | union b1 b2 =>
-        rw [Ty.sub_union_right (.lit s) b1 b2 rfl] at hsub
-        obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub (.lit s) b1 v allocated h1 hv)
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub (.lit s) b2 v allocated h2 hv)
-      | string =>
-        cases v with
-        | str s' => rfl
-        | _ => simp [Val.hasTy] at hv
-      | _ =>
-        first
-        | exact absurd rfl hbu
-        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
-    | option a' =>
-      cases b with
-      | union b1 b2 =>
-        rw [Ty.sub_union_right (.option a') b1 b2 rfl] at hsub
-        obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub (.option a') b1 v allocated h1 hv)
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub (.option a') b2 v allocated h2 hv)
-      | option b' =>
-        rw [Ty.sub_option_of_ne a' b' heq] at hsub
-        dsimp only [Val.hasTy] at hv ⊢
-        split at hv <;> try contradiction
-        · rfl
-        · rename_i x
-          exact hasTy_sub a' b' x allocated hsub hv
-      | _ =>
-        first
-        | exact absurd rfl hbu
-        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
-    | list a' =>
-      cases b with
-      | union b1 b2 =>
-        rw [Ty.sub_union_right (.list a') b1 b2 rfl] at hsub
-        obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub (.list a') b1 v allocated h1 hv)
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub (.list a') b2 v allocated h2 hv)
-      | list b' =>
-        rw [Ty.sub_list_of_ne a' b' heq] at hsub
-        dsimp only [Val.hasTy] at hv ⊢
-        split at hv <;> try contradiction
-        · split at hv <;> try contradiction
-          exact list_all_mono _ (fun id => hasTy_sub a' b' (Val.fiber id) allocated hsub) hv
-        · rename_i vs
-          exact list_all_mono vs (fun x => hasTy_sub a' b' x allocated hsub) hv
-      | _ =>
-        first
-        | exact absurd rfl hbu
-        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
-    | prod a1 a2 =>
-      cases b with
-      | union b1 b2 =>
-        rw [Ty.sub_union_right (.prod a1 a2) b1 b2 rfl] at hsub
-        obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub (.prod a1 a2) b1 v allocated h1 hv)
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub (.prod a1 a2) b2 v allocated h2 hv)
-      | prod b1 b2 =>
-        rw [Ty.sub_prod_of_ne a1 a2 b1 b2 heq] at hsub
-        obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hsub
-        dsimp only [Val.hasTy] at hv ⊢
-        split at hv <;> try contradiction
-        rename_i x y
-        simp only [Bool.and_eq_true_iff] at hv ⊢
-        exact ⟨hasTy_sub a1 b1 x allocated h1 hv.1, hasTy_sub a2 b2 y allocated h2 hv.2⟩
-      | _ =>
-        first
-        | exact absurd rfl hbu
-        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
-    | exitOf a1 e1 =>
-      cases b with
-      | union b1 b2 =>
-        rw [Ty.sub_union_right (.exitOf a1 e1) b1 b2 rfl] at hsub
-        obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub (.exitOf a1 e1) b1 v allocated h1 hv)
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub (.exitOf a1 e1) b2 v allocated h2 hv)
-      | exitOf a2 e2 =>
-        rw [Ty.sub_exitOf_of_ne a1 e1 a2 e2 heq] at hsub
-        obtain ⟨ha, he⟩ := Bool.and_eq_true_iff.mp hsub
-        dsimp only [Val.hasTy] at hv ⊢
-        split at hv
-        · exact hasTy_sub a1 a2 _ allocated ha hv
-        · split at hv <;> try contradiction
-          exact causeAdmits_mono_sub (fun w hw => hasTy_sub e1 e2 w allocated he hw) _ hv
-        · contradiction
-      | _ =>
-        first
-        | exact absurd rfl hbu
-        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
-    | causeOf e1 =>
-      cases b with
-      | union b1 b2 =>
-        rw [Ty.sub_union_right (.causeOf e1) b1 b2 rfl] at hsub
-        obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub (.causeOf e1) b1 v allocated h1 hv)
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub (.causeOf e1) b2 v allocated h2 hv)
-      | causeOf e2 =>
-        rw [Ty.sub_causeOf_of_ne e1 e2 heq] at hsub
-        dsimp only [Val.hasTy] at hv ⊢
-        split at hv <;> try contradiction
-        exact causeAdmits_mono_sub (fun w hw => hasTy_sub e1 e2 w allocated hsub hw) _ hv
-      | _ =>
-        first
-        | exact absurd rfl hbu
-        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
-    | fiberOf a1 e1 =>
-      cases b with
-      | union b1 b2 =>
-        rw [Ty.sub_union_right (.fiberOf a1 e1) b1 b2 rfl] at hsub
-        obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub (.fiberOf a1 e1) b1 v allocated h1 hv)
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub (.fiberOf a1 e1) b2 v allocated h2 hv)
-      | fiberOf a2 e2 =>
-        simp only [Val.hasTy] at hv ⊢
-        exact hv
-      | _ =>
-        first
-        | exact absurd rfl hbu
-        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
-    | refOf a1 =>
-      cases b with
-      | union b1 b2 =>
-        rw [Ty.sub_union_right (.refOf a1) b1 b2 rfl] at hsub
-        obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub (.refOf a1) b1 v allocated h1 hv)
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub (.refOf a1) b2 v allocated h2 hv)
-      | refOf a2 =>
-        simp only [Val.hasTy] at hv ⊢
-        exact hv
-      | _ =>
-        first
-        | exact absurd rfl hbu
-        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
-    | deferredOf a1 e1 =>
-      cases b with
-      | union b1 b2 =>
-        rw [Ty.sub_union_right (.deferredOf a1 e1) b1 b2 rfl] at hsub
-        obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub (.deferredOf a1 e1) b1 v allocated h1 hv)
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub (.deferredOf a1 e1) b2 v allocated h2 hv)
-      | deferredOf a2 e2 =>
-        simp only [Val.hasTy] at hv ⊢
-        exact hv
-      | _ =>
-        first
-        | exact absurd rfl hbu
-        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
-    | var i => simp [Val.hasTy] at hv
-    | unit =>
-      cases b with
-      | union b1 b2 =>
-        rw [Ty.sub_union_right .unit b1 b2 rfl] at hsub
-        obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub .unit b1 v allocated h1 hv)
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub .unit b2 v allocated h2 hv)
-      | _ =>
-        first
-        | exact absurd rfl hbu
-        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
-    | nat =>
-      cases b with
-      | union b1 b2 =>
-        rw [Ty.sub_union_right .nat b1 b2 rfl] at hsub
-        obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub .nat b1 v allocated h1 hv)
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub .nat b2 v allocated h2 hv)
-      | _ =>
-        first
-        | exact absurd rfl hbu
-        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
-    | string =>
-      cases b with
-      | union b1 b2 =>
-        rw [Ty.sub_union_right .string b1 b2 rfl] at hsub
-        obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub .string b1 v allocated h1 hv)
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub .string b2 v allocated h2 hv)
-      | _ =>
-        first
-        | exact absurd rfl hbu
-        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
-    | bool =>
-      cases b with
-      | union b1 b2 =>
-        rw [Ty.sub_union_right .bool b1 b2 rfl] at hsub
-        obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub .bool b1 v allocated h1 hv)
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub .bool b2 v allocated h2 hv)
-      | _ =>
-        first
-        | exact absurd rfl hbu
-        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
-    | handle target =>
-      cases b with
-      | union b1 b2 =>
-        rw [Ty.sub_union_right (.handle target) b1 b2 rfl] at hsub
-        obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub (.handle target) b1 v allocated h1 hv)
-        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub (.handle target) b2 v allocated h2 hv)
-      | _ =>
-        first
-        | exact absurd rfl hbu
-        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
-termination_by sizeOf a + sizeOf b
+  fun_induction Ty.sub a b generalizing v
+  -- the reflexive guard
+  case case1 => exact hv
+  -- `never` is below everything and admits nothing
+  case case2 => exact Bool.noConfusion hv
+  -- a union on the left is a conjunction: the value is in one member, and both are below `b`
+  case case3 a1 a2 b _ iha ihb =>
+    obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hsub
+    simp only [Val.hasTy, Bool.or_eq_true] at hv
+    exact hv.elim (fun h => iha v h1 h) (fun h => ihb v h2 h)
+  -- a union on the right is a choice: whichever member `a` is below, the value lands in it
+  case case4 a b1 b2 _ _ _ iha ihb =>
+    simp only [Val.hasTy, Bool.or_eq_true]
+    exact (Bool.or_eq_true_iff.mp hsub).elim
+      (fun h => Or.inl (iha v h hv)) (fun h => Or.inr (ihb v h hv))
+  -- the top (decisions row 46): every value inhabits `unknown`. One line, not sixteen
+  case case5 => rfl
+  -- the literal rule: a string frame is a string frame
+  case case6 =>
+    cases v
+    case str => rfl
+    all_goals exact Bool.noConfusion hv
+  case case7 x y _ ih =>
+    dsimp only [Val.hasTy] at hv ⊢
+    split at hv
+    · rfl
+    · rename_i w
+      exact ih w hsub hv
+    · exact Bool.noConfusion hv
+  case case8 x y _ ih =>
+    dsimp only [Val.hasTy] at hv ⊢
+    split at hv
+    · split at hv
+      · exact list_all_mono _ (fun id => ih (Val.fiber id) hsub) hv
+      · exact Bool.noConfusion hv
+    · rename_i vs
+      exact list_all_mono vs (fun w => ih w hsub) hv
+    · exact Bool.noConfusion hv
+  case case9 a1 a2 b1 b2 _ iha ihb =>
+    obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hsub
+    dsimp only [Val.hasTy] at hv ⊢
+    split at hv
+    · rename_i x y
+      simp only [Bool.and_eq_true_iff] at hv ⊢
+      exact ⟨iha x h1 hv.1, ihb y h2 hv.2⟩
+    · exact Bool.noConfusion hv
+  case case10 e1 a1 e2 a2 _ ihe iha =>
+    obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hsub
+    dsimp only [Val.hasTy] at hv ⊢
+    split at hv
+    · exact ihe _ h1 hv
+    · exact iha _ h2 hv
+    · exact Bool.noConfusion hv
+  case case11 a1 e1 a2 e2 _ iha ihe =>
+    obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hsub
+    dsimp only [Val.hasTy] at hv ⊢
+    split at hv
+    · exact iha _ h1 hv
+    · split at hv
+      · exact causeAdmits_mono_sub (fun w hw => ihe w h2 hw) _ hv
+      · exact Bool.noConfusion hv
+    · exact Bool.noConfusion hv
+  case case12 e1 e2 _ ih =>
+    dsimp only [Val.hasTy] at hv ⊢
+    split at hv
+    · exact causeAdmits_mono_sub (fun w hw => ih w hsub hw) _ hv
+    · exact Bool.noConfusion hv
+  -- the fiber handle is coarse in `hasTy` (DI-17, decisions row 44): the arms agree
+  case case13 => simp only [Val.hasTy] at hv ⊢; exact hv
+  -- the cell and promise handles likewise, which is why their `sub` arms are invariant
+  case case14 => simp only [Val.hasTy] at hv ⊢; exact hv
+  case case15 => simp only [Val.hasTy] at hv ⊢; exact hv
+  -- every other pair: `sub` answers `false`, so there is nothing to carry
+  case case16 => exact Bool.noConfusion hsub
+
 
 end Effect4.Program

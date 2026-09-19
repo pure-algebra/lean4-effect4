@@ -8,6 +8,18 @@ mutation run that I executed and read. *Reproduced* = a number I re-measured fro
 *Stamped* = a generator emitted it and the drift check holds it. *Assumed* = nothing here is
 assumed unless it says so.
 
+## 0a. The one thing to know before merging
+
+**1.5 landed in a different shape from the brief, and the shape is the safer one.** The brief
+asks for `hasTy_sub` to become a one-line application of `cata_admits_sub` through
+`Val.hasTy.eq_cata`. That derivation needs `Val.hasTy_admitsSub`, five of whose fourteen fields
+do not close (§7.1b, with the residual goal quoted). So `hasTy_sub` was instead reproved **in
+place**, by `fun_induction Ty.sub`, with its statement and argument order byte-identical — the
+twenty-five call sites in five files do not move, and `Program/Typed.lean` does not acquire an
+import of the Laws, which it could not have anyway (the fold lives above it). The measured goal
+the plan sets for 1.5 is met: 257 lines → 79, sixteen `first` blocks → 0 (§5). The generic law
+`cata_admits_sub` is proved and committed beside it. Nothing red was committed.
+
 ## 0. The worktree was branched from the wrong commit
 
 Read first because it affects the merge. The worktree arrived at `9187b9b6` (the tip of
@@ -28,8 +40,17 @@ read of the main checkout, not a write to it.
 | `b7790888` | **0.6** `Ty.join_unknown`, `Ty.join_unknown_left`, `CTy.le_unknown`, `CTy.join_unknown`; the carrier rule in `Ty.lean`'s header; eleven guards in `Test/Program/TypeAlgebraContract.lean` |
 | `1b46e5b8` | **1.4a** `tools/Tools/Variances.lean`, the hermetic family `variances` before `derived`, `tools/Effect4Gen/variances.json` |
 | `f2a6aa71` | **1.4** `tools/Effect4Gen/View.lean`, manifest group `TyView`, the generated `src/Effect4/Laws/Program/TyView.lean`, `tools/Effect4Gen/guards/tyview.lean`, `Test/Program/TyViewContract.lean` |
+| `d2147b86` | this receipt, first three commits |
+| `f08b3199` | the `Effect4.Laws` import of `TyView` (the library-root gate; the coordinator's pre-review caught it) |
+| `5009f467` | **1.5** `hasTy_sub` rewritten by `fun_induction Ty.sub`: 257 lines → 79, sixteen `first` blocks → 0 |
+| `096da231` | **1.5** `src/Effect4/Laws/Program/Admits.lean`: `cata_admits_sub`, proved once, and its `Effect4.Laws` import |
+| `19ab3994` | receipt completed |
+| `d63c3ca9` | `Admits.lean`'s closing section corrected: fourteen fields, nine proved, five refused, residual goal quoted |
 
-(The table is completed as the remaining commits land; see §7 for what is not done.)
+Every commit was made only after a narrow `lake build` of the modules it touches. Nothing red was
+committed at any point, and the working tree is clean.
+
+(See §7 for what is not done and why.)
 
 ## 2. The two decisions I took, and why
 
@@ -232,7 +253,36 @@ five real crossing probes so they cannot be weakened silently.
 
 ## 5. Measured before/after
 
-(Completed as the proof rewrites land; see §7.)
+`hasTy_sub` (`src/Effect4/Program/Typed.lean`), the one the plan measures the wave by. Counted
+with a script over the theorem's own line span, before at `4b4e6aa3` and after the rewrite:
+
+| | before | after |
+| --- | --- | --- |
+| lines in the theorem | **257** | **79** |
+| bare `first` blocks | **16** | **0** |
+| `| union b1 b2 =>` arms | **16** | **0** |
+| `sub_union_right` rewrites | **16** | **0** |
+| `| _ =>` catch-alls | **16** | **0** |
+| whole file: lines | 401 | 231 |
+| whole file: `first` tokens | 16 | 0 (one word in a docstring, which the ratchet's `.atom` pass does not count) |
+| whole file: `try` tokens | 7 | 0 |
+| axioms | `[propext, Quot.sound]` | `[propext, Quot.sound]` |
+
+The statement and argument order are byte-identical, so none of the twenty-five call sites in
+five files moved; `Effect4.Laws.Program.TypeAlgebra` and the rest of the Laws closure build
+unchanged.
+
+**What did it.** Not discipline — shape. The old proof was `cases a` and then `cases b` inside
+every arm, so the top rule (`sub t unknown = true`, decisions row 46) had to be re-excluded in
+each of the sixteen mismatch arms, and the union rule re-derived in each of the sixteen left
+constructors. `fun_induction Ty.sub a b generalizing v` takes the case list from `sub`'s own
+definition: the union rules are **one case each**, the top is **one line** (`rfl`), and the
+whole complement is **one catch-all case** whose `hsub` is `false = true`. The plan's sentence —
+"the shape of a proof decides the cost of a constructor before anyone writes the constructor" —
+is what the table measures.
+
+The other three proofs named in the brief (`sub_trans_core`, `sub_antisymm_normal`,
+`sub_normalize_of_sub`) are **not** rewritten; see §7.
 
 ## 6. Facts worth carrying forward
 
@@ -252,6 +302,149 @@ five real crossing probes so they cannot be weakened silently.
   through the derived `DecidableEq` pulls in nothing.
 * `/-- doc -/ set_option … in theorem` does not parse; the `set_option … in` must come first.
 
-## 7. What is not done
+## 7. What is not done, and why
 
-(Completed at the end of the run.)
+### 7.1 The three `TypeAlgebra` proofs are not rewritten against the view
+
+`sub_trans_core` (`:10-73`), `sub_antisymm_normal` (`:499-570`) and `sub_normalize_of_sub`
+(`:749-803`) are unchanged. The vocabulary they need now exists and is proved — `sub_eq_args`,
+`sub_eq_argsBelow_of_sameHead`, `sub_eq_false_of_not_sameHead`, `sameHead_refl/symm/trans`,
+`args_congr`, `sizeOf_args`, `eq_of_sameHead`, `argsBelow_refl`, `Variance.holds_trans`,
+`Variance.holds_antisymm` — but two pieces of real work sit between it and the rewrite, and I
+would rather hand them over named than land a half-done proof:
+
+1. **`argsBelow_trans` and `argsBelow_antisymm` with the size bound threaded.** The note calls
+   this out as its own second risk. `argsBelow r a b` is a `List.all` over `(a.args.zip b.args)`;
+   composing two of them needs `args_congr` (same length, same variances) and
+   `Variance.holds_trans` pointwise, and the recursion's measure is a *triple*
+   (`sizeOf a + sizeOf b + sizeOf c`) while `sizeOf_args` is unary. Both generic lemmas are
+   stated by the note and neither is written.
+2. **The exceptional rules have to be lifted out first.** `sub_eq_args` holds only under
+   `isMember a`, `isMember b`, `litRule a b = false` and `topRule a b = false`; today's
+   `sub_trans_core` dispatches on `isMember` but not on `litRule`, so the literal case
+   (`lit s ≤ string ≤ c`) needs its own hand step. The clean one is available —
+   `sub_eq_args string c` forces `sameHead string c = true`, and `eq_of_sameHead` with both
+   argument lists empty gives `c = string`, contradicting the case's `b ≠ c` — but it is three
+   or four lemmas of plumbing, not a substitution.
+
+What the wave already bought without them: the arm enumeration that step 2 of the language push
+added to all three (`first` with four alternatives, one per *shape* of constructor) can now be
+replaced by `sub_eq_args` + `argsBelow_trans` without any proof naming a constructor, and the
+`Variance.holds_trans`/`holds_antisymm` that the four alternatives were hand-instances of are
+proved once. That is the whole of the note's §1.3 except the two lemmas above.
+
+### 7.1b `Val.hasTy_admitsSub` is not discharged — nine of fourteen fields
+
+This is the one item where the brief's shape and what landed differ, so it is written out field
+by field.
+
+`Laws/Program/Admits.lean` proves the generic law `cata_admits_sub` — monotonicity along `sub` is
+a condition on the **algebra**, one field per constructor, not a property of one fold — at
+`[propext, Quot.sound]`, by `fun_induction Ty.sub`, with no constructor of `Ty` named in the
+script. That is the half of 1.5 that is worth having: it is the statement L2 needs.
+
+The instance `AdmitsSub Val.hasTy.alg` is **not** there. `AdmitsSub` has **fourteen** fields (an
+earlier draft of this receipt and of the module said fifteen; corrected in `d63c3ca9`). All
+fourteen were written; nine were accepted and five refused.
+
+| field | state |
+| --- | --- |
+| `never`, `union`, `top`, `var` | **proved**, `rfl` — the generated arms are literally `fun v al => false`, `fun v al => p.2 v al \|\| q.2 v al`, `fun v al => true`, `fun v al => false` |
+| `refOf`, `deferredOf` | **proved**, `rfl` — the arms ignore their argument, which is decisions row 44 (a handle is coarse by kind) stated as a law |
+| `fiberOf` | **proved**, the identity, same reason |
+| `lit_string`, `option` | **proved** by `cases v`, three lines each |
+| `list`, `prod`, `except`, `exitOf`, `causeOf` | **open** — all five refused at the same tactic, for the same reason |
+
+The residual goal, verbatim from the build, at `list` (the other four are the same shape):
+
+```
+Tactic `split` failed: Could not split an `if` or `match` expression in the type
+  (hasTy._sparseCasesOn_37 v
+      (fun index args => if h : index = 3 then … else false)
+      (fun xs => xs.all fun x => p.snd x al) fun h => false) = true
+of `hv`
+```
+
+`fold_of` emits the value-inspecting arms through the compiler's sparse case analyses rather than
+through `Val`'s own matcher, so `split at hv` cannot see the match. **Tested**: unfolding
+`Val.hasTy.alg` first does not help — it exposes the `_sparseCasesOn` rather than removing it.
+Each of the five needs a `cases v` walk over `Val`'s frames with the two-cell and snapshot
+sub-cases spelled out, in place of the four-line `split at hv` the hand-written `Val.hasTy`
+admits. Mechanical, roughly eighty lines, no design question open.
+
+**The consequence for the brief's wording, stated plainly.** "`hasTy_sub` derived in one line
+from `cata_admits_sub`" is *not* what landed, and could not be: the derivation needs the
+instance. What landed instead reaches the same measured goal by a different route —
+`hasTy_sub` stays in `src/Effect4/Program/Typed.lean` with its statement and argument order
+byte-identical (so none of the twenty-five call sites in five files moved) and is proved
+directly by `fun_induction Ty.sub` at seventy-nine lines with the sixteen `first` blocks gone
+(§5). That is better for the call sites and for the import order, and worse for the genericity
+claim, which becomes available the moment the five fields are discharged. Nothing red was
+committed, and the working tree is clean.
+
+### 7.2 `hasTy_normalize` and `hasTy_mono` are not rewritten
+
+Both are named in the brief as "likewise". Neither is a `sub` law, so neither is an instance of
+`cata_admits_sub`, and saying otherwise would be wrong:
+
+* `hasTy_mono` (`Laws/Program/Typed.lean:278-328`) is monotone in the **allocation table**, not
+  in the type: `Extends a b → hasTy v ty a → hasTy v ty b`, uniformly in `ty`. Its fold
+  condition is a *different* generated structure — call it `AdmitsExtend`, one field per
+  constructor saying the arm preserves table-monotonicity — with its own `cata_admits_extend`.
+  That structure is eight lines of generator and about the same proof as `cata_admits_sub`; I
+  did not write it because nothing needs it yet, and the plan does not schedule it.
+* `hasTy_normalize` (`TypeAlgebra.lean:183-223`) is an **equality** between the fold at `t` and
+  at `t.normalize`, and `normalize` distributes products over unions and takes an antichain, so
+  the condition is not congruence-per-arm: it needs the union/never/product-distribution facts
+  as well. The honest instrument is a `Congr`-shaped condition plus the three normalisation
+  facts, which is a second research step.
+
+Both are recorded here rather than attempted so the next seat does not rediscover that
+"likewise" is not true of them.
+
+### 7.3 The six `sub_*_of_ne` lemmas are not retired
+
+`Ty.lean:779-808` still carries `sub_option_of_ne`, `sub_list_of_ne`, `sub_prod_of_ne`,
+`sub_exitOf_of_ne`, `sub_causeOf_of_ne`, `sub_fiberOf_of_ne`. Retiring them is 7.1's last step,
+not an independent one: they are used by the three proofs above and by `sub_prod_mono`, and
+their replacements (`sub_args_option` and kin, nine of them, generated, and without the
+inequality hypothesis) are in `TyView.lean` but sit **above** `Ty.lean` in the import order, so
+the callers inside `Ty.lean` itself cannot use them. The deletion is: rewrite the three proofs
+(7.1), move `sub_prod_mono` to read `sub_args_prod`, then delete the six. I left them.
+
+### 7.4 What I did not run
+
+`make check` (the brief forbids it), `make gen-hermetic` and `make check-gen` end to end: the
+`derived` family regenerates twenty-one groups and the `eff`/`ts`/`readme` families need the
+OCaml switch and `bun`, which is more than a seat in a worktree should spend. What I did run:
+`python3 scripts/generate.py --only variances` (twice, byte-identical the second time), the
+`TyView` group by hand through `View.lean` at its manifest arguments, and narrow `lake build`s
+of every module I touched plus `Effect4.Laws` and `Test`. The Makefile and manifest edits are
+placed where the coordinator asked so the three seats' branches merge without a conflict.
+
+## 8. Everything the view gives the next seat, in one place
+
+Generated into `src/Effect4/Laws/Program/TyView.lean`, all at `[propext, Quot.sound]` or better:
+
+| name | what it says |
+| --- | --- |
+| `Ty.Variance`, `Ty.Variance.holds` | how a relation reads a recursive argument |
+| `Ty.args : Ty → List (Variance × Ty)` | the children with their variance, each row citing rc.112 |
+| `Ty.sameHead`, `Ty.litRule`, `Ty.topRule`, `Ty.argsBelow` | the head test and the rules beside the congruences |
+| `Ty.sub_eq_args` | **the** law: at two members, neither the literal rule nor the top, `sub` is the variance-wise comparison |
+| `Ty.sub_eq_argsBelow_of_sameHead`, `Ty.sub_eq_false_of_not_sameHead` | its two directions, usable on their own |
+| `Ty.sub_args_option` … `Ty.sub_args_deferredOf` | nine arm lemmas, no inequality hypothesis (the `sub_*_of_ne` that `Ty.lean` is missing for `refOf`/`deferredOf`/`except`) |
+| `Ty.sameHead_refl/symm/trans`, `Ty.args_congr`, `Ty.eq_of_sameHead` | the head is an equivalence and a node is its head plus its children |
+| `Ty.sizeOf_args`, `Ty.argsBelow_refl` | the measure and reflexivity |
+| `Ty.Variance.holds_trans`, `Ty.Variance.holds_antisymm` | composition and two-sidedness at each variance, once |
+| `Effect4.Program.Adm`, `Adm.le`, `AdmCarrier`, `AdmitsSub` | the admission carrier and the fold condition, fifteen fields |
+| `Effect4.Program.cata_admits_sub` (hand, `Laws/Program/Admits.lean`) | any algebra satisfying `AdmitsSub` has a fold that respects `sub` |
+
+What a new parametrised `Ty` constructor now costs, measured against what this branch did rather
+than estimated: one row in `variances.json` — which is **not** written by hand, it is read off
+rc.112 by `tools/Tools/Variances.lean`, so the true cost is that rc.112 must declare it — and
+then `python3 scripts/generate.py --only variances derived`, which regenerates `args`,
+`sameHead`, the probes, the arm lemma, the dispatcher case and the `AdmitsSub` field. The
+generator refuses if the constructor has no row, so the cost cannot be skipped by accident. The
+proofs of the order are the part that still needs hands, and §7.1 says exactly which two lemmas
+stand between here and that.
