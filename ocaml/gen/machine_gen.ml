@@ -121,9 +121,11 @@ and 'a reason_annotations = (string * 'a) list
 
 
 
-let lcnf_utf8_bytes s = List.init (String.length s) (fun i -> Char.code (String.get s i))
+let lcnf_utf8_bytes s =
+  List.init (String.length s) (fun i -> Char.code (String.get s i))
 
-let lcnf_utf8_length s = String.fold_left (fun n c -> if Char.code c land 192 = 128 then n else n + 1) 0 s
+let lcnf_utf8_length s =
+  String.fold_left (fun n c -> if Char.code c land 192 = 128 then n else n + 1) 0 s
 
 
 

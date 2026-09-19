@@ -637,14 +637,6 @@ theorem sound (bad : ExitV) : ∀ (e : NativeEff) (tys : TyEnv) (env : List Val)
       (env ++ [reifyExitVal (runP (denote b env) s).1]) _ tf hsf htf hat'
     refine SoundP.bind ihf _ _ ?_
     exact SoundP.pure ihf.wf ihf.heap _ (restore_ok (ih.exit.later ihf.le) ihf.exit)
-  | .gen _, _, _, _, _, hs, _, _ | .uninterruptible _, _, _, _, _, hs, _, _
-  | .interruptible _, _, _, _, _, hs, _, _
-  | .iterate _ _ _ _ _ _, _, _, _, _, hs, _, _ | .yieldNow _, _, _, _, _, hs, _, _
-  | .awaitFiber _ _, _, _, _, _, hs, _, _
-  | .withFiber _, _, _, _, _, hs, _, _ | .scoped _, _, _, _, _, hs, _, _
-  | .acquireRelease _ _, _, _, _, _, hs, _, _ | .provideLayer _ _ _, _, _, _, _, hs, _, _
-  | .service _, _, _, _, _, hs, _, _ | .provideService _ _ _, _, _, _, _, hs, _, _
-  | .catchIf _ _ _, _, _, _, _, hs, _, _ => absurd hs Bool.false_ne_true
   | .perform op r, tys, env, s, t, hs, hty, hat => by
     have hkind := Straight.perform_sync hs
     obtain ⟨requestTy, _, hr, hrow⟩ := inv_perform nativeSignature tys op r t hty
@@ -686,6 +678,17 @@ theorem sound (bad : ExitV) : ∀ (e : NativeEff) (tys : TyEnv) (env : List Val)
     · rw [hrun]; exact syncOpStep_le o s s' a hstep
     · rw [hrun]; exact hwf'
     · rw [hrun]; exact hheap'
+  -- the non-straight constructors, last: `Straight` answers `false` at each, so the arm is
+  -- unreachable. A wildcard would not do — the contradiction is `Straight` REDUCING on the
+  -- constructor, and at an opaque `e` there is nothing to reduce
+  | .gen _, _, _, _, _, hs, _, _ | .uninterruptible _, _, _, _, _, hs, _, _
+  | .interruptible _, _, _, _, _, hs, _, _
+  | .iterate _ _ _ _ _ _, _, _, _, _, hs, _, _ | .yieldNow _, _, _, _, _, hs, _, _
+  | .awaitFiber _ _, _, _, _, _, hs, _, _
+  | .withFiber _, _, _, _, _, hs, _, _ | .scoped _, _, _, _, _, hs, _, _
+  | .acquireRelease _ _, _, _, _, _, hs, _, _ | .provideLayer _ _ _, _, _, _, _, hs, _, _
+  | .service _, _, _, _, _, hs, _, _ | .provideService _ _ _, _, _, _, _, hs, _, _
+  | .catchIf _ _ _, _, _, _, _, hs, _, _ => absurd hs Bool.false_ne_true
 
 /-! ## The corollaries -/
 

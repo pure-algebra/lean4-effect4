@@ -158,6 +158,15 @@ jobs:
       - name: Install the OCaml build tools (the estate uses the standard library only)
         run: opam install --yes dune ocamlfind
       - run: make doctor OCAML="opam exec --"
+      # The engine's four faces are cut from the tree's own LCNF, and nothing held them: the
+      # committed api_engine.ml was four `Ty` constructors behind the source for the whole of
+      # L5 and only the nightly would have said so. Re-cutting them here and refusing a
+      # difference is what makes "the engine runs the same algebra" a gate. The OCaml lane
+      # below then compiles the faces this step just wrote.
+      - name: The four LCNF faces re-cut from the tree and held against the committed ones
+        run: |
+          make gen-lcnf
+          git diff --exit-code --stat -- ocaml/gen/fibers_gen.ml ocaml/gen/machine_gen.ml ocaml/gen/api_gen.ml ocaml/engine/api_engine.ml
       - name: The OCaml lane (the eff goldens and wire tests, the engine tests, the three-engine differential over the printed corpus, the seam check)
         run: make build check-ocaml OCAML="opam exec --"
       - name: The compiler conformance profile (Lean-emitted OCaml for normalization, compiled and run, plus one emitted-code mutation)

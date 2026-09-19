@@ -15,7 +15,7 @@ properties that are properties of the *syntax*, and leaves typing to `ocamlc`. W
 | `unbound-value` | an unqualified value name with no binder and no declaration |
 | `unbound-ctor` | an unqualified constructor with no declaration |
 | `ctor-arity` | a constructor applied to the wrong number of arguments, in an expression or a pattern |
-| `undetermined-param` | a type parameter no member of the declaration determines, and no variance annotation makes legal |
+| `unbound-tyvar` | a type variable a member mentions and the declaration's parameters do not bind |
 | `effc-abstract` | a handler whose answer type mentions `a`, the locally abstract type the `effc` binder introduces |
 | `effc-unknown` | an `effc` clause on a constructor that is not a declared effect |
 | `reperform-position` | a `reperform` outside tail position, which `ocamlc` refuses |
@@ -123,9 +123,12 @@ def preludeValues : List String :=
    "char_of_int", "int_of_char", "fst", "snd"]
 
 /-- The constructors every OCaml program has: the built-in data constructors and the exceptions
-the runtime raises. -/
+the runtime raises. `Ok`/`Error` are `Stdlib.result`'s and belong here beside `Some`/`None` —
+they are as unqualified and as always-in-scope; leaving them out made every translated
+`Except`/`Result` body an `unbound-ctor` (tooling plan 4.3). -/
 def preludeCtors : List (String × Nat) :=
   [("()", 0), ("true", 0), ("false", 0), ("[]", 0), ("::", 2), ("None", 0), ("Some", 1),
+   ("Ok", 1), ("Error", 1),
    ("Not_found", 0), ("Exit", 0), ("Failure", 1), ("Invalid_argument", 1), ("Sys_error", 1),
    ("Out_of_memory", 0), ("Stack_overflow", 0), ("Division_by_zero", 0), ("End_of_file", 0),
    ("Assert_failure", 1), ("Match_failure", 1), ("Undefined_recursive_module", 1)]
@@ -513,11 +516,18 @@ private def tysOfBody : TyBody → List Ty
   | .abstract => []
   | .extensible => []
 
-/-- A parameter no member determines is rejected by OCaml unless a variance annotation makes it
-legal (§11.6). Three declarations are exempt: an abstract one and an extensible one determine
-nothing and are always legal, and a **GADT** — a variant any of whose constructors carries its
-own `result` type — determines its parameters by the constructors' return indices, which is the
-whole point of the form (§9.9). -/
+/-- A declaration's parameters are what bind its variables: a variable a member mentions and the
+parameter list does not is `The type variable 'b is unbound in this type declaration`, and the
+declaration does not compile. Two declarations are exempt: an abstract and an extensible one have
+no members, and a **GADT** — a variant any of whose constructors carries its own `result` type —
+may bind an existential in a constructor's argument that the result does not mention (§9.9).
+
+The converse is **not** an error, and until 2026-09-19 this rule reported it: an *unused*
+parameter, which OCaml accepts in a variant, a record and an abbreviation alike, measured against
+`ocamlopt 5` on the three fixtures. It was 100 of the 110 diagnostics the three unseamed LCNF
+artefacts raised — on files `ocamlc` compiles, which is why the count could never become a gate
+(tooling plan 4.3). The phantom-parameter note on `TyParam` is about *rendering* a variance, not
+about legality. -/
 private def checkTypeDecl (d : TypeDecl) : List Diag :=
   let site := d.name
   let exempt := match d.body with
@@ -526,14 +536,12 @@ private def checkTypeDecl (d : TypeDecl) : List Diag :=
     | .variant cs => cs.any (fun c => c.result.isSome)
     | _ => false
   let tys := tysOfBody d.body
-  let annotated := d.tparams.filter (fun p =>
-    p.injective || (match p.variance with | .invariant => false | _ => true))
   let names :=
     if d.tparams.isEmpty then d.params else d.tparams.map (·.name)
-  let undetermined :=
+  let unbound :=
     if exempt then []
-    else names.filter fun n =>
-      !(tys.any (Ty.mentionsVar n)) && !(annotated.any (fun p => p.name == n))
+    else (tys.flatMap Ty.vars).foldl
+      (fun acc v => if names.contains v || acc.contains v then acc else acc ++ [v]) []
   badName site "type name" isLowerIdent d.name
     ++ d.derivers.flatMap (badName site "deriver" isLowerIdent)
     ++ dup "duplicate-ctor" site
@@ -544,9 +552,24 @@ private def checkTypeDecl (d : TypeDecl) : List Diag :=
         | .variant cs => cs.flatMap fun c => badName site "constructor" isUpperIdent c.name
         | .record fs => fs.flatMap fun f => badName site "field" isLowerIdent f.name
         | _ => [])
-    ++ undetermined.map fun n =>
-        { code := "undetermined-param", site := site,
-          detail := "`'" ++ n ++ "` is determined by no member and carries no variance" }
+    ++ unbound.map fun n =>
+        { code := "unbound-tyvar", site := site,
+          detail := "`'" ++ n ++ "` is mentioned by a member and bound by no parameter" }
+
+/-! The rule both ways, at the shapes `ocamlopt` was actually run on. `type ('a, 'b) t = A of 'a
+| B` compiles, and so do the record and the abbreviation with the same unused `'b`; `type 'a t =
+A of 'b` does not — *"The type variable 'b is unbound in this type declaration"*. The first guard
+is the one the old rule failed. -/
+private def declOf (params : List String) (body : TyBody) : TypeDecl :=
+  { name := "t", params := params, body := body }
+private def variantOf (args : List Ty) (result : Option Ty := none) : TyBody :=
+  .variant [{ name := "A", args := args, result := result }, { name := "B" }]
+
+#guard (checkTypeDecl (declOf ["a", "b"] (variantOf [.var "a"]))).isEmpty
+#guard (checkTypeDecl (declOf ["a", "b"] (.alias (Ty.list (.var "a"))))).isEmpty
+#guard (checkTypeDecl (declOf ["a"] (variantOf [.var "b"]))).map (·.code) == ["unbound-tyvar"]
+-- A GADT binds an existential in an argument its result does not mention, so it is exempt.
+#guard (checkTypeDecl (declOf ["a"] (variantOf [.var "b"] (some (.con "t" [.var "a"]))))).isEmpty
 
 mutual
 
@@ -598,9 +621,15 @@ end
 passes every check this file can decide; it does **not** mean `ocamlc` accepts it. -/
 def checkModule (m : Module) : List Diag :=
   let env0 := Env.ofModule m
+  -- `include` and `open` bring in names from another compilation unit; a top-level `rawD` is
+  -- verbatim text this module deliberately does not parse (see "Two deliberate silences"), and
+  -- what it binds is exactly as invisible. Reporting those names as unbound is not a weaker
+  -- check, it is a false one — it was 222 of the engine face's 244 diagnostics. A module with
+  -- no `rawD` keeps its value scope closed and `unbound-value` keeps deciding.
   let env := if m.items.any (fun d => match d with
                                       | .includeD _ => true
                                       | .openM _ => true
+                                      | .rawD _ => true
                                       | _ => false) then env0.opened else env0
   dup "duplicate-type" "module" env.types.reverse
     ++ checkDecls env m.items

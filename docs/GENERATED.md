@@ -29,11 +29,16 @@ The three tiers are:
   against a fresh run;
 - **vendored input**: copied from an identified source, with provenance recorded.
 
-`make gen` runs every stale group in the producers' dependency order: **derived,
-eff, wire, cas, ts, readme, lcnf, truth, host-protocol, schema-ts, census**. Each group's
+`make gen` runs every stale group in the producers' dependency order: **variances, derived,
+lcnf, eff, wire, cas, ts, readme, truth, host-protocol, schema-ts, census**. Each group's
 marker depends on the previous one, so a regenerated upstream group re-cuts everything
-downstream of it. `make gen-<group>` regenerates one group; `make clean-gen` forgets the
-markers. The recipes hold the Lean lane one at a time.
+downstream of it. lcnf is the exception, and it is deliberate: it sits in the order between
+derived and eff, because eff cuts the engine's layout mirror from the api_engine.ml lcnf
+writes, but its marker is not a link of the chain, so `check-gen` — which runs inside `make
+check`, on every core change — does not reach a group whose engine cut is minutes. lcnf used
+to run last, after readme, which made `make gen` a non-fixpoint: a changed row needed a second
+pass before the mirror agreed with the face (tooling plan 4.2). `make gen-<group>` regenerates
+one group; `make clean-gen` forgets the markers. The recipes hold the Lean lane one at a time.
 
 ## The groups
 
@@ -45,7 +50,7 @@ markers. The recipes hold the Lean lane one at a time.
 | cas | `src/OCaml5/Tools/CasGoldens.lean` | the store word, genesis and machine stores | `ocaml/engine/cas/goldens/` (119 files) | `make check-gen`; `make check-ocaml` (`engine-tests`) | reproduced; tested |
 | ts | `tools/Tools/TsGen.lean` (`scripts/generate.py --only ts`) | the closed world `OCaml5.Eff.World` reads, `Effect4.Codegen.Templates` (the table of printed clauses) and `Effect4.Codegen.PrintLeaf`, three pinned vendor sources for the package tables | `ts/eff/{eff,json,wire,profile,taxonomy,forms,packages,templates}.gen.ts` | `make check-gen`; `make check-ts-reader` | reproduced; tested |
 | readme | `bun ts/eff/ingest/render-readme.ts` (a host producer; writes in place) | `profile.gen.ts`, `forms.gen.ts`, `taxonomy.gen.ts` | `ts/eff/ingest/README.md` | `make check-gen`; the renderer's own `--check` inside `make check-ingest-smoke` | reproduced |
-| lcnf | `src/OCaml5/Tools/LcnfGen.lean`; each output's header carries its exact command | `Effect4.Machine.Fibers`, `Effect4.Api`, `ocaml/engine/externs.txt`, `ocaml/engine/tools/api_engine_prelude.ml` | `ocaml/gen/{fibers_gen,machine_gen,api_gen}.ml`, `ocaml/engine/api_engine.ml` | `make check-gen`; `make check-ocaml` (`api_check`, the engine seam in `gen-check.sh`) | reproduced; tested |
+| lcnf | `src/OCaml5/Tools/LcnfGen.lean`; each output's header carries its exact command | `Effect4.Machine.Fibers`, `Effect4.Api`, `ocaml/engine/externs.txt`, `ocaml/engine/tools/api_engine_prelude.ml` | `ocaml/gen/{fibers_gen,machine_gen,api_gen}.ml`, `ocaml/engine/api_engine.ml` | `make check-gen` holds these four against a hand edit only — the lcnf group is not in `HERMETIC_GROUPS`, so `check-gen` diffs them without re-cutting them and a *stale* output is invisible to it. What re-cuts them is the `check-ocaml` CI job, which runs `make gen-lcnf` and refuses a difference from the committed files, and the nightly `check-gen-full`. `make check-ocaml` (`api_check`, the engine seam in `gen-check.sh`) compiles and runs what is committed | reproduced; tested |
 | truth | `harness/truth/Truth.lean` writes the corpus from the committed tapes; `harness/truth/run-truth.ts` runs rc.112, prints the modules, re-records the tapes, writes the result | the Eff corpus, `prelude.ts`, the tapes, the pinned `effect` and `@effect/sql-sqlite-bun` | `harness/truth/corpus.json`, `generated/*.ts`, `result.{json,md}`, `tapes/*.jsonl` | `make check-truth` (a fresh run must equal the committed artefacts; the printed modules type-check first, DI-49) | reproduced (corpus, tapes); tested (the host run) |
 | host-protocol | `tools/Tools/HostProtocol.lean` (the `gen-host-protocol` recipe) | `Effect4.Api.HostProtocol` | `harness/truth/session/protocol.gen.ts`, `tape.schema.json` | `make check-host-protocol` | reproduced; tested |
 | schema-ts | `harness/schema-generation/Emit{Fixture,CoverageFixture,MultiFixture}.lean`, stdout redirected | `Effect4.Codegen.Schema`, the fixture declarations | the three `.generated.ts` beside them | `make check-schema-ts` | reproduced; tested |

@@ -1,4 +1,5 @@
 import Effect4.Program.Typed
+import Effect4.Laws.Program.Admits
 
 namespace Effect4.Program.Ty
 
@@ -6,7 +7,36 @@ private theorem sub_never_core (t : Ty) : sub .never t = true := by
   unfold sub
   split <;> rfl
 
-/-- Absorption and the canonical order use the same structural transitivity proof. -/
+/-- The other side of the empty union: nothing but `never` is below it. The view does not
+reach here — `sub_eq_args` speaks between two members and `never` is not one — so this is the
+one arm of the order that is still read off the definition, and it is read once. -/
+theorem sub_never_right {a : Ty} (ha : isMember a = true) : sub a .never = false := by
+  conv => lhs; unfold sub
+  cases a
+  case never => exact Bool.noConfusion ha
+  case union _ _ => exact Bool.noConfusion ha
+  all_goals rfl
+
+/-- The two shapes the order treats as rows rather than as heads: `isMember` is `false` at
+exactly `never` (the empty union) and at a `union`. One enumeration, so no proof of the order
+needs its own. -/
+theorem isMember_eq_false {t : Ty} (h : isMember t = false) :
+    t = .never ∨ ∃ a b, t = .union a b := by
+  cases t
+  case never => exact Or.inl rfl
+  case union a b => exact Or.inr ⟨a, b, rfl⟩
+  all_goals exact Bool.noConfusion h
+
+
+/-- Absorption and the canonical order use the same structural transitivity proof.
+
+The case list is the **order's**, not the alphabet's. Four equalities and the top are
+dispatched first; then the two rows (`never` and `union`, the two shapes `isMember` answers
+`false` at) on each side; then the literal rule, which is the one rule between members that is
+not a congruence; and what is left is a single step over `sub_eq_args` — `sameHead_trans` for
+the head and `argsBelow_trans` for the children, the latter taking this very recursion as its
+transitivity at every smaller triple. There is no congruence case, so no constructor is named
+in one. -/
 private theorem sub_trans_core (a b c : Ty) (hab : sub a b = true) (hbc : sub b c = true) :
     sub a c = true := by
   by_cases hac : a = c
@@ -20,53 +50,64 @@ private theorem sub_trans_core (a b c : Ty) (hab : sub a b = true) (hbc : sub b 
   by_cases ha : isMember a = true
   · by_cases hb : isMember b = true
     · by_cases hc : isMember c = true
-      · cases a <;> cases b <;> simp only [isMember] at ha hb <;> try contradiction
-        all_goals
-          unfold sub at hab
-          simp only [habEq, ↓reduceIte, Bool.and_eq_true, Bool.false_eq_true] at hab
-        all_goals
-          cases c <;> simp only [isMember] at hc <;> try contradiction
-          all_goals
-            unfold sub at hbc ⊢
-            simp only [hbcEq, hac, ↓reduceIte, Bool.and_eq_true, Bool.false_eq_true] at hbc ⊢
-          all_goals
-            first
-            | exact sub_trans_core _ _ _ hab hbc
-            | exact ⟨sub_trans_core _ _ _ hab.1 hbc.1, sub_trans_core _ _ _ hab.2 hbc.2⟩
-            -- the invariant handles (decisions row 55): both directions, each transitive
-            | exact ⟨sub_trans_core _ _ _ hab.1 hbc.1, sub_trans_core _ _ _ hbc.2 hab.2⟩
-            | exact ⟨⟨⟨sub_trans_core _ _ _ hab.1.1.1 hbc.1.1.1,
-                sub_trans_core _ _ _ hbc.1.1.2 hab.1.1.2⟩,
-                sub_trans_core _ _ _ hab.1.2 hbc.1.2⟩, sub_trans_core _ _ _ hbc.2 hab.2⟩
-      · cases c <;> simp only [isMember] at hc <;> try contradiction
-        case never =>
-          cases b <;> simp only [isMember] at hb <;> try contradiction
-          all_goals
-            unfold sub at hbc
-            simp only [hbcEq, ↓reduceIte, Bool.false_eq_true] at hbc
-        case union c1 c2 =>
-          rw [sub_union_right _ _ _ hb] at hbc
+      · -- three members, no two equal, and `c` is not the top: the only rules left are the
+        -- literal one and the congruences
+        cases hlac : litRule a c with
+        | true =>
+          obtain ⟨s, rfl, rfl⟩ := litRule_eq_true hlac
+          exact sub_lit_string s
+        | false =>
+          cases hlab : litRule a b with
+          | true =>
+            -- `a = lit s`, `b = string`: `sub string c` is then a congruence at an atom,
+            -- which forces `c = string = b`
+            obtain ⟨s, rfl, rfl⟩ := litRule_eq_true hlab
+            rw [sub_eq_args _ _ hb hc
+              (litRule_eq_false_of_head (by rintro ⟨t, ht, -⟩; exact Ty.noConfusion ht))
+              (topRule_eq_false hcu), Bool.and_eq_true_iff] at hbc
+            exact absurd (eq_of_sameHead_nil hbc.1 rfl) hbcEq
+          | false =>
+            cases hlbc : litRule b c with
+            | true =>
+              -- `b = lit s`, `c = string`: `sub a (lit s)` forces `a = lit s = b`
+              obtain ⟨s, rfl, rfl⟩ := litRule_eq_true hlbc
+              rw [sub_eq_args _ _ ha hb hlab (topRule_eq_false (fun h => Ty.noConfusion h)),
+                Bool.and_eq_true_iff] at hab
+              exact absurd (eq_of_sameHead_nil (sameHead_symm hab.1) rfl).symm habEq
+            | false =>
+              rw [sub_eq_args _ _ hb hc hlbc (topRule_eq_false hcu), Bool.and_eq_true_iff] at hbc
+              have hbu : b ≠ .unknown := by
+                rintro rfl
+                exact hcu (eq_of_sameHead_nil hbc.1 rfl).symm
+              rw [sub_eq_args _ _ ha hb hlab (topRule_eq_false hbu), Bool.and_eq_true_iff] at hab
+              rw [sub_eq_args _ _ ha hc hlac (topRule_eq_false hcu), Bool.and_eq_true_iff]
+              refine ⟨sameHead_trans hab.1 hbc.1,
+                argsBelow_trans hab.1 hbc.1 (fun x y z _ hxy hyz => ?_) hab.2 hbc.2⟩
+              exact sub_trans_core x y z hxy hyz
+      · -- `c` is a row: nothing but `never` is below the empty union, and a union on the
+        -- right is a choice
+        rcases isMember_eq_false (Bool.eq_false_iff.mpr hc) with rfl | ⟨c1, c2, rfl⟩
+        · rw [sub_never_right hb] at hbc
+          exact Bool.noConfusion hbc
+        · rw [sub_union_right _ _ _ hb] at hbc
           rw [sub_union_right _ _ _ ha]
           rcases Bool.or_eq_true_iff.mp hbc with h | h
           · exact Bool.or_eq_true_iff.mpr (Or.inl (sub_trans_core a b c1 hab h))
           · exact Bool.or_eq_true_iff.mpr (Or.inr (sub_trans_core a b c2 hab h))
-    · cases b <;> simp only [isMember] at hb <;> try contradiction
-      case never =>
-        cases a <;> simp only [isMember] at ha <;> try contradiction
-        all_goals
-          unfold sub at hab
-          simp only [habEq, ↓reduceIte, Bool.false_eq_true] at hab
-      case union b1 b2 =>
-        rw [sub_union_right _ _ _ ha] at hab
+    · -- `b` is a row: the same two shapes in the middle
+      rcases isMember_eq_false (Bool.eq_false_iff.mpr hb) with rfl | ⟨b1, b2, rfl⟩
+      · rw [sub_never_right ha] at hab
+        exact Bool.noConfusion hab
+      · rw [sub_union_right _ _ _ ha] at hab
         rw [sub_union_left _ _ _ hbcEq] at hbc
         rcases Bool.and_eq_true_iff.mp hbc with ⟨h1, h2⟩
         rcases Bool.or_eq_true_iff.mp hab with h | h
         · exact sub_trans_core a b1 c h h1
         · exact sub_trans_core a b2 c h h2
-  · cases a <;> simp only [isMember] at ha <;> try contradiction
-    case never => exact sub_never_core c
-    case union a1 a2 =>
-      rw [sub_union_left _ _ _ habEq] at hab
+  · -- `a` is a row: the empty union is below everything, and a union on the left distributes
+    rcases isMember_eq_false (Bool.eq_false_iff.mpr ha) with rfl | ⟨a1, a2, rfl⟩
+    · exact sub_never_core c
+    · rw [sub_union_left _ _ _ habEq] at hab
       rw [sub_union_left _ _ _ hac]
       rcases Bool.and_eq_true_iff.mp hab with ⟨h1, h2⟩
       exact Bool.and_eq_true_iff.mpr ⟨sub_trans_core a1 b c h1 hbc, sub_trans_core a2 b c h2 hbc⟩
@@ -496,6 +537,28 @@ theorem sizeOf_member_lt {t x : Ty} (hx : x ∈ t.members) (ha : Ty.isMember t �
     · have := sizeOf_member_le hx; omega
     · have := sizeOf_member_le hx; omega
 
+/-- The children of a normal member are normal, read off `args` rather than shape by shape:
+what `argsBelow_antisymm`'s element step needs, in the vocabulary the step is stated in. The
+row case is the only one with work in it — a normal row is a member exactly when it is a
+one-element row, and then it IS its member. -/
+theorem normal_args {t : Ty} (hn : Ty.Normal t) (hm : Ty.isMember t = true) :
+    ∀ x ∈ t.args.map Prod.snd, Ty.Normal x := by
+  induction hn with
+  | row r children atoms maximal ih =>
+    cases hr : r.elems with
+    | nil =>
+      rw [hr] at hm
+      exact Bool.noConfusion hm
+    | cons x xs =>
+      cases hxs : xs with
+      | nil =>
+        rw [hr, hxs] at hm
+        exact ih x (by rw [hr, hxs]; exact List.mem_cons_self) hm
+      | cons y ys =>
+        rw [hr, hxs] at hm
+        exact Bool.noConfusion hm
+  | _ => aesop (add norm simp [Ty.args])
+
 theorem sub_antisymm_normal
     (htrans : ∀ a b c, Ty.sub a b = true → Ty.sub b c = true → Ty.sub a c = true)
     (a b : Ty) : Ty.Normal a → Ty.Normal b →
@@ -504,28 +567,42 @@ theorem sub_antisymm_normal
   by_cases heq : a = b
   · exact heq
   by_cases hatoms : Ty.isMember a = true ∧ Ty.isMember b = true
-  · rcases hatoms with ⟨haAtom, hbAtom⟩
-    have hca := normal_children a ha
-    have hcb := normal_children b hb
-    cases a <;> cases b <;> simp only [Ty.isMember] at haAtom hbAtom <;> try contradiction
-    all_goals
-      unfold Ty.sub at hab hba
-      simp only [heq, Ne.symm heq, ↓reduceIte, Bool.and_eq_true, Bool.false_eq_true] at hab hba
-    all_goals
-      first
-      | exact congrArg _ (sub_antisymm_normal htrans _ _ hca hcb hab hba)
-      | have h1 := sub_antisymm_normal htrans _ _ hca.1 hcb.1 hab.1 hba.1
-        have h2 := sub_antisymm_normal htrans _ _ hca.2 hcb.2 hab.2 hba.2
-        cases h1
-        cases h2
-        rfl
-      -- the invariant handles (decisions row 55): one direction of each pair suffices
-      | exact congrArg _ (sub_antisymm_normal htrans _ _ hca hcb hab.1 hba.1)
-      | have h1 := sub_antisymm_normal htrans _ _ hca.1 hcb.1 hab.1.1.1 hba.1.1.1
-        have h2 := sub_antisymm_normal htrans _ _ hca.2 hcb.2 hab.1.2 hba.1.2
-        cases h1
-        cases h2
-        rfl
+  · -- two members, not equal: the literal rule, the top, then one step over `sub_eq_args`
+    rcases hatoms with ⟨haAtom, hbAtom⟩
+    cases hlab : Ty.litRule a b with
+    | true =>
+      obtain ⟨s, rfl, rfl⟩ := Ty.litRule_eq_true hlab
+      rw [Ty.sub_eq_args _ _ hbAtom haAtom
+        (Ty.litRule_eq_false_of_head (by rintro ⟨u, hu, -⟩; exact Ty.noConfusion hu))
+        (Ty.topRule_eq_false (fun h => Ty.noConfusion h)), Bool.and_eq_true_iff] at hba
+      exact Bool.noConfusion hba.1
+    | false =>
+      cases hlba : Ty.litRule b a with
+      | true =>
+        obtain ⟨s, rfl, rfl⟩ := Ty.litRule_eq_true hlba
+        rw [Ty.sub_eq_args _ _ haAtom hbAtom hlab
+          (Ty.topRule_eq_false (fun h => Ty.noConfusion h)), Bool.and_eq_true_iff] at hab
+        exact Bool.noConfusion hab.1
+      | false =>
+        have hau : a ≠ .unknown := by
+          rintro rfl
+          rw [Ty.sub_eq_args _ _ haAtom hbAtom hlab
+            (Ty.topRule_eq_false (fun h => heq h.symm)), Bool.and_eq_true_iff] at hab
+          exact heq (Ty.eq_of_sameHead_nil hab.1 rfl)
+        have hbu : b ≠ .unknown := by
+          rintro rfl
+          rw [Ty.sub_eq_args _ _ hbAtom haAtom hlba
+            (Ty.topRule_eq_false heq), Bool.and_eq_true_iff] at hba
+          exact heq (Ty.eq_of_sameHead_nil hba.1 rfl).symm
+        rw [Ty.sub_eq_args _ _ haAtom hbAtom hlab (Ty.topRule_eq_false hbu),
+          Bool.and_eq_true_iff] at hab
+        rw [Ty.sub_eq_args _ _ hbAtom haAtom hlba (Ty.topRule_eq_false hau),
+          Bool.and_eq_true_iff] at hba
+        refine Ty.argsBelow_antisymm hab.1 (fun x hx y hy hxy hyx => ?_) hab.2 hba.2
+        have hxs : sizeOf x < sizeOf a := Ty.sizeOf_args_mem hx
+        have hys : sizeOf y < sizeOf b := Ty.sizeOf_args_mem hy
+        exact sub_antisymm_normal htrans x y (normal_args ha haAtom x hx)
+          (normal_args hb hbAtom y hy) hxy hyx
   · have haForm := normal_members ha
     have hbForm := normal_members hb
     have habMembers := (sub_iff_members htrans a b).mp hab
@@ -707,12 +784,13 @@ theorem factors_coverage
     obtain ⟨y, hy, hxy⟩ := (sub_iff_members htrans a b).mp hab x hxm
     exact ⟨y, members_subset_factors hy, hxy⟩
 
+/-- The congruence at `prod`, read off the generated arm lemma rather than off `sub`'s
+definition: `sub_args_prod` carries the reflexive case, so no caller supplies an inequality. -/
 theorem sub_prod_mono (a b c d : Ty) (hac : Ty.sub a c = true) (hbd : Ty.sub b d = true) :
     Ty.sub (.prod a b) (.prod c d) = true := by
-  by_cases heq : Ty.prod a b = .prod c d
-  · rw [heq]; exact Ty.sub_refl _
-  · rw [Ty.sub_prod_of_ne _ _ _ _ heq, Bool.and_eq_true]
-    exact ⟨hac, hbd⟩
+  rw [Ty.sub_args_prod]
+  simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
+    List.all_nil, Bool.and_true, hac, hbd]
 
 theorem productMembers_isMember {a b p : Ty} (hp : p ∈ Ty.productMembers a b) :
     Ty.isMember p = true := by
@@ -777,23 +855,19 @@ theorem sub_normalize_of_sub
           | exact ⟨⟨⟨sub_normalize_of_sub htrans _ _ hab.1.1.1,
               sub_normalize_of_sub htrans _ _ hab.1.1.2⟩,
               sub_normalize_of_sub htrans _ _ hab.1.2⟩, sub_normalize_of_sub htrans _ _ hab.2⟩
-    · cases b <;> simp only [Ty.isMember] at hb <;> try contradiction
-      case never =>
-        cases a <;> simp only [Ty.isMember] at ha <;> try contradiction
-        all_goals
-          unfold Ty.sub at hab
-          simp only [heq, ↓reduceIte, Bool.false_eq_true] at hab
-      case union b1 b2 =>
-        rw [Ty.sub_union_right _ _ _ ha, Bool.or_eq_true_iff] at hab
+    · -- `b` is a row: nothing but `never` is below the empty union
+      rcases Ty.isMember_eq_false (Bool.eq_false_iff.mpr hb) with rfl | ⟨b1, b2, rfl⟩
+      · rw [Ty.sub_never_right ha] at hab
+        exact Bool.noConfusion hab
+      · rw [Ty.sub_union_right _ _ _ ha, Bool.or_eq_true_iff] at hab
         rcases hab with h | h
         · exact htrans _ _ _ (sub_normalize_of_sub htrans a b1 h)
             (sub_normalize_union_left htrans b1 b2)
         · exact htrans _ _ _ (sub_normalize_of_sub htrans a b2 h)
             (sub_normalize_union_right htrans b1 b2)
-  · cases a <;> simp only [Ty.isMember] at ha <;> try contradiction
-    case never => exact sub_never b.normalize
-    case union a1 a2 =>
-      rw [Ty.sub_union_left _ _ _ heq, Bool.and_eq_true] at hab
+  · rcases Ty.isMember_eq_false (Bool.eq_false_iff.mpr ha) with rfl | ⟨a1, a2, rfl⟩
+    · exact sub_never b.normalize
+    · rw [Ty.sub_union_left _ _ _ heq, Bool.and_eq_true] at hab
       exact sub_normalize_union_le htrans a1 a2 b.normalize
         (sub_normalize_of_sub htrans a1 b hab.1) (sub_normalize_of_sub htrans a2 b hab.2)
 termination_by sizeOf a + sizeOf b

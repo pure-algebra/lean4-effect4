@@ -6,8 +6,12 @@ import Effect4.Laws.Program.Typed.Vocabulary
 
 The typed-state source table is a plain list, `Effect4.Program.Typed.sources : List Row`
 (`Typed/Sources.lean`). The totality gate and the skeleton emitter need it as data at meta
-level, and the trust gate refuses every way of *running* it (`unsafe`, `implemented_by`,
-`initialize` for an environment extension). So the table is **read, not run**: the constant is
+level, and the trust gate refuses the ways of *running* it that leave a trust token: `unsafe`
+and `implemented_by` are refused by name, and `initialize x : T ← act` — the binder form an
+environment extension is declared with — elaborates to a bodyless `opaque`, which the gate
+refuses as a declaration. A *binder-free* `initialize` is a plain `def` and is admitted, which
+is why `declare_aesop_rule_sets` compiles (`Test/Audit/AxiomGate.lean:101-105`). So the table
+is **read, not run**: the constant is
 reduced to its constructor form and decoded, a string literal at a time
 (`docs/research/2026-09-18-metaprogramming-review.md` §1, the `whnf` and expression-matching
 API). A row the decoder does not recognise is a loud error, never a skipped row.

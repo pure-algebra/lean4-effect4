@@ -63,9 +63,14 @@ build-tools: build ## the generator and checker roots (Tools, OCaml5, Conform, E
 # ---------------------------------------------------------------------------- gen
 #
 # The order below is the producers' dependency order: derived writes Lean modules the
-# rest import; eff cuts the OCaml files and the engine structure that reads them; ts cuts
-# the TypeScript tables the ingest README renders. Each marker depends on the previous
-# one, so a regenerated upstream group re-cuts everything downstream of it.
+# rest import; lcnf cuts the engine face `ocaml/engine/api_engine.ml`; eff cuts the OCaml
+# files and the engine structure mirror, which READS that face; ts cuts the TypeScript
+# tables the ingest README renders. Each marker depends on the previous one, so a
+# regenerated upstream group re-cuts everything downstream of it.
+#
+# lcnf sits between derived and eff -- it used to sit after readme, which made `make gen` a
+# non-fixpoint: eff read the api_engine.ml of the previous run, so a changed row needed two
+# passes and the nightly was the only thing that closed it (tooling plan 4.2, finding C1).
 
 # The one assignment of wire tags. Every producer of canonical bytes reads it: the Lean
 # codecs (derived), the OCaml codec and the golden bytes (eff), the wire manifest (wire) and
@@ -101,8 +106,22 @@ $(GEN)/derived: $(GEN)/variances $(DERIVED_SOURCES) $(DERIVED_TRACES) | build
 	$(PY) scripts/generate.py --only derived
 	@mkdir -p $(GEN) && touch $@
 
+# The four LCNF outputs (each header carries its own regenerating command). The group is
+# NOT a link of the hermetic chain: it regenerates in place only (generate.py refuses
+# `--output-dir` for it) and its slowest producer is the engine cut, measured at 14m38s, so
+# `check-gen` -- which runs inside `make check`, on every core change -- must not reach it.
+# What the chain needs is the order, and `ocaml/engine/api_engine.ml` in EFF_SOURCES below:
+# together they make the second pass unnecessary. `make gen-lcnf` is run by name, by `gen`
+# and by the check-ocaml CI job.
+LCNF_SOURCES := src/OCaml5/Tools/LcnfGen.lean $(wildcard src/OCaml5/Lcnf/*.lean) \
+  ocaml/engine/externs.txt ocaml/engine/tools/api_engine_prelude.ml
+$(GEN)/lcnf: $(GEN)/derived $(LCNF_SOURCES) $(CORE)
+	$(PY) scripts/generate.py --only lcnf
+	@mkdir -p $(GEN) && touch $@
+
 EFF_SOURCES := src/OCaml5/Tools/EffGen.lean $(wildcard src/OCaml5/Eff/*.lean) $(WIRE_TAGS) \
-  scripts/generate-engine-structure.py scripts/lib/program_structure.py ocaml/engine/api_engine.ml
+  scripts/generate-engine-structure.py scripts/lib/program_structure.py \
+  ocaml/engine/layout-allowance.json ocaml/engine/api_engine.ml
 $(GEN)/eff: $(GEN)/derived $(EFF_SOURCES) $(CORE)
 	$(PY) scripts/generate.py --only eff
 	@mkdir -p $(GEN) && touch $@
@@ -122,15 +141,12 @@ $(GEN)/ts: $(GEN)/cas $(TS_SOURCES) $(CORE)
 	$(PY) scripts/generate.py --only ts
 	@mkdir -p $(GEN) && touch $@
 
-$(GEN)/readme: $(GEN)/ts ts/eff/ingest/render-readme.ts ts/eff/profile.gen.ts ts/eff/forms.gen.ts ts/eff/taxonomy.gen.ts
+# The only host producer of the hermetic chain. Without the pinned install it does not fail
+# with "install the dependencies": it resolves `effect` to whatever is above the worktree and
+# dies inside a generated schema (`Schema.TaggedUnion is not a function`), which is what a
+# fresh worktree saw here. Order-only, like every other consumer of the install.
+$(GEN)/readme: $(GEN)/ts ts/eff/ingest/render-readme.ts ts/eff/profile.gen.ts ts/eff/forms.gen.ts ts/eff/taxonomy.gen.ts | ts/eff/node_modules
 	$(PY) scripts/generate.py --only readme
-	@mkdir -p $(GEN) && touch $@
-
-# The four LCNF outputs (each header carries its own regenerating command).
-LCNF_SOURCES := src/OCaml5/Tools/LcnfGen.lean $(wildcard src/OCaml5/Lcnf/*.lean) \
-  ocaml/engine/externs.txt ocaml/engine/tools/api_engine_prelude.ml
-$(GEN)/lcnf: $(GEN)/readme $(LCNF_SOURCES) $(CORE)
-	$(PY) scripts/generate.py --only lcnf
 	@mkdir -p $(GEN) && touch $@
 
 # The truth harness: Lean writes the corpus from the committed tapes, then the real
@@ -138,7 +154,7 @@ $(GEN)/lcnf: $(GEN)/readme $(LCNF_SOURCES) $(CORE)
 # deterministic given the pinned host; the comparison against a fresh run is check-truth.
 TRUTH_SOURCES := harness/truth/Truth.lean harness/truth/prelude.ts harness/truth/prelude-atoms.gen.ts harness/truth/run-truth.ts \
   $(wildcard harness/truth/tapes/*.jsonl) ts/eff/package.json ts/eff/bun.lock
-$(GEN)/truth: $(GEN)/lcnf $(TRUTH_SOURCES) $(CORE) $(LAWS)
+$(GEN)/truth: $(GEN)/readme $(TRUTH_SOURCES) $(CORE) $(LAWS)
 	$(LAKE) env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes
 	$(BUN) run harness/truth/run-truth.ts --manifest harness/truth/corpus.json --out harness/truth --timeout 300 --tape-out harness/truth/tapes
 	@mkdir -p $(GEN) && touch $@
@@ -164,7 +180,9 @@ $(GEN)/census: $(GEN)/schema-ts generated/effect-runtime-census.tsv
 
 # The groups generate.py can regenerate into a temporary directory (no host runtime).
 HERMETIC_GROUPS := variances derived eff wire cas ts readme
-GEN_GROUPS := $(HERMETIC_GROUPS) lcnf truth host-protocol schema-ts census
+# `gen`'s order, which is the producers' order above; lcnf is named here, between derived
+# and eff, and nowhere in HERMETIC_GROUPS.
+GEN_GROUPS := variances derived lcnf eff wire cas ts readme truth host-protocol schema-ts census
 
 .PHONY: gen gen-hermetic $(addprefix gen-,$(GEN_GROUPS)) clean-gen
 gen: $(addprefix $(GEN)/,$(GEN_GROUPS)) ## regenerate every stale generated group, in order

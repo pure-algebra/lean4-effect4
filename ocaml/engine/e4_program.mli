@@ -55,8 +55,10 @@ val source_ctor_names : (string * string list) list
     constructor names -- i.e. `Eff_types.ctor_names_<t>` gathered into one table. *)
 
 val engine_ctor_names : (string * string list) list
-(** The selected common families read from the actual generated engine declarations.
-    Missing source additions are recorded in e4_program_layout.json. *)
+(** The selected common families read from the actual generated engine declarations. A family
+    the engine declares at FEWER members than the source refuses at generation time, unless
+    `ocaml/engine/layout-allowance.json` names it; `e4_program_layout.json` records the
+    families the engine does not declare at all, and any lag the allowance permitted. *)
 
 val pin : unit -> (unit, string) result
 (** P3: for every family, the source's names are a prefix of the engine's.  `Error msg` names

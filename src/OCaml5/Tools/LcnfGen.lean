@@ -1,5 +1,6 @@
 import Tools.GeneratedStamp
 import Lean
+import Conform.Lcnf.Validity
 import OCaml5.Ml.Syntax
 import OCaml5.Ml.Render
 import OCaml5.Ml.Check
@@ -84,6 +85,26 @@ partial def parseArgs : List String → GenArgs → GenArgs
   | r :: rest, a => parseArgs rest { a with roots := a.roots.push r.toName }
   | [], a => a
 
+/-- One row of the closure manifest: the Lean constant, the OCaml name it became, whether the
+emitted binding is recursive, the twenty-six mono-LCNF construct counts of its body
+(`Conform.Lcnf.constructs`, in that order) and `DeclHash`'s hash of the whole `Decl` — the
+identity of the *code*, stable across runs of one build.
+
+The mono declaration is read the way `translateClosure` reads it, out of `monoExt`'s module
+entries (`Conform.Lcnf.persistedMonoIndex`), never through `getMonoDecl?`: the module system's
+export filter makes the two disagree, which is the finding `Conform/Lcnf/Validity.lean` records
+at its "the answer is read out of `monoExt`'s local state" section. A declaration the closure
+translated and the index cannot find is fatal, not a blank row. -/
+private def manifestRow (env : Environment) (mono : Conform.Lcnf.MonoIndex)
+    (t : Translated) : MetaM String := do
+  let some d := mono.findIn? env t.leanName
+    | throwError s!"closure manifest: no mono declaration for {t.leanName}"
+  let census := Conform.Lcnf.Census.ofDecl {} d
+  return "\t".intercalate
+    ([toString t.leanName, t.ocamlName, toString t.recursive]
+      ++ Conform.Lcnf.constructs.map (fun k => toString (census.get k))
+      ++ [toString (hash d)])
+
 def main (argv : List String) : IO Unit := do
   initSearchPath (← findSysroot)
   let args := parseArgs argv {}
@@ -148,11 +169,24 @@ def main (argv : List String) : IO Unit := do
          .moduleD "Make" carrierParams none body]
     let modName := (System.FilePath.mk args.out).fileStem.getD "machine_gen"
     let m : Ml.Module := { name := modName, header := some header, items := items }
-    IO.println s!"translated ({closure.decls.size}):"
-    for t in closure.decls do
-      IO.println s!"  {t.leanName} -> {t.ocamlName}{if t.recursive then " [rec]" else ""}"
+    -- The closure as DATA (tooling plan 4.1). What stood here was a line per translated
+    -- declaration on a terminal nobody reads; the manifest is beside the artefact and inside
+    -- GENERATED_PATHS, so a declaration entering or leaving the engine's closure, or a body
+    -- whose shape changed, is a diff at review time. One file per artefact, all four in
+    -- `ocaml/gen/`, named after the artefact's own stem. It is BUILT here and WRITTEN with the
+    -- artefact, below every fatal check: a manifest beside an artefact the run never wrote
+    -- would be the drift it exists to catch.
+    let env ← getEnv
+    let monoIndex := Conform.Lcnf.persistedMonoIndex env
+    let stem := (System.FilePath.mk args.out).fileStem.getD "closure"
+    let manifestPath := s!"ocaml/gen/closure-{stem}.tsv"
+    let manifestHeader := "\t".intercalate
+      (["lean", "ocaml", "recursive"] ++ Conform.Lcnf.constructs ++ ["declHash"])
+    let manifestRows ← closure.decls.mapM (manifestRow env monoIndex)
+    let manifestText := String.intercalate "\n" (manifestHeader :: manifestRows.toList) ++ "\n"
+    IO.println s!"closure: {closure.decls.size} of --cap {args.cap} \
+      ({args.cap - closure.decls.size} of headroom); manifest {manifestPath}"
     IO.println s!"missing (no mono decl): {closure.missing}"
-    IO.println s!"frontier (beyond --cap {args.cap}): {closure.frontier}"
     IO.println s!"wrapper referenced directly: {closure.wrapperRefs}"
     IO.println s!"todos ({closure.todos.size}):"
     for t in closure.todos do IO.println s!"  {t}"
@@ -163,17 +197,29 @@ def main (argv : List String) : IO Unit := do
     IO.println s!"field types not spelled: {gen.unknown}"
     IO.println s!"type-name collisions renamed to their full path: {renamed}"
     IO.println s!"type-name collisions left unresolved: {gen.collisions}"
+    -- A non-empty frontier means the artefact calls a declaration the cap stopped at: the
+    -- emitted file names a function it does not define, and only `ocamlc` would say so. The
+    -- headroom is printed above, so raising the artefact's `cap` in `ocaml/gen/roots.json` is
+    -- the repair. All four close today, so this costs nothing until something stops closing.
+    unless closure.frontier.isEmpty do
+      throwError s!"closure did not close at --cap {args.cap} (fatal): {closure.frontier}"
     unless closure.missing.isEmpty do
       throwError s!"missing mono declarations (fatal): {closure.missing}"
     unless closure.todos.isEmpty do
       throwError s!"todos remaining in closure (fatal): {closure.todos}"
     unless gen.collisions.isEmpty do
       throwError s!"unresolved type-name collisions (fatal): {gen.collisions}"
+    -- The module's own well-formedness, FATAL (tooling plan 4.3), for all four artefacts and
+    -- not only the three without a prelude. It was an informational count nobody read, and the
+    -- count was 27/59/24/244 — every one of them a defect of the checker, not of the generated
+    -- file: it reported unused type parameters, which OCaml accepts, missed the unbound ones it
+    -- rejects, did not know `Ok`/`Error`, and called the names a top-level `rawD` binds unbound.
+    -- With those four repaired the count is zero everywhere and the check can refuse.
     let diags := Ml.checkModule m
-    if diags.isEmpty then
-      IO.println "Ml.checkModule: PASS (0 diagnostics)"
-    else
-      IO.println s!"Ml.checkModule: {diags.length} diagnostic(s) (informational; prelude symbols in rawD opaque)"
+    unless diags.isEmpty do
+      throwError s!"Ml.checkModule (fatal): {diags.length} diagnostic(s)\n  " ++
+        "\n  ".intercalate (diags.map Ml.Diag.toLine)
+    IO.println "Ml.checkModule: PASS (0 diagnostics)"
     -- G10: the extern ledger. Every row is reported; a row nothing hit is fatal, because a
     -- stale row is a claim about the generated file that the generated file does not make.
     if args.externs.isSome then
@@ -214,5 +260,6 @@ def main (argv : List String) : IO Unit := do
       unless stale.isEmpty do
         throwError "extern rows no declaration hit (a stale ledger): {stale}"
     IO.FS.writeFile args.out (Ml.render m)
-    IO.println s!"wrote {args.out}"
+    IO.FS.writeFile manifestPath manifestText
+    IO.println s!"wrote {args.out} and {manifestPath}"
   let _ ← (act.run' {}).toIO ctx { env := env }

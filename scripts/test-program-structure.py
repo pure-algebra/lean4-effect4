@@ -16,8 +16,8 @@ assert len(common) == 1 and not gaps
 assert common[0][2] == ['a','b']
 print('PASS selected exact source/engine shape')
 
-def refuses(name, d=descriptor, e=engine):
- try: selected_view(d,e)
+def refuses(name, d=descriptor, e=engine, a=()):
+ try: selected_view(d,e,a)
  except ValueError: print('PASS refuses '+name)
  else: raise AssertionError(name+' accepted')
 
@@ -37,10 +37,18 @@ bad = copy.deepcopy(descriptor); bad['blocks'][0].append(copy.deepcopy(family))
 refuses('duplicate source family',bad)
 bad = copy.deepcopy(descriptor); bad['phase']='mono-lcnf'
 refuses('wrong description phase',bad)
-# Append shortages stay visible, never a generated missing arm or an execution pass.
-common, gaps = selected_view(descriptor,'type foo = Foo_a\n')
+# The engine lagging the source refuses (tooling plan 4.2). This is the red control for the
+# defect that let the engine run four `Ty` constructors behind for the whole of L5: the shortage
+# used to be RECORDED in e4_program_layout.json, where nothing gated it.
+refuses('an engine declaring fewer constructors than the source', e='type foo = Foo_a\n')
+# Named in the allowance, the same shortage is recorded — and the record says it was allowed.
+common, gaps = selected_view(descriptor,'type foo = Foo_a\n',['Fixture.Foo'])
 assert common[0][2] == ['a'] and gaps[0]['reason'] == 'source-append-unavailable-in-frozen-engine'
-print('PASS source append remains an explicit unavailable engine boundary')
+assert gaps[0]['allowed'] is True and (gaps[0]['engine'], gaps[0]['source']) == (1, 2)
+print('PASS an allowed engine lag is recorded, with the counts and the permission')
+# And the allowance cannot go stale in either direction.
+refuses('an allowance for a family that does not lag', a=['Fixture.Foo'])
+refuses('an allowance for a family the source does not declare', a=['Fixture.Bar'])
 # Real input can be read independently, but this alone is not a selected shape verdict.
 actual = declarations((Path(__file__).resolve().parents[1]/'ocaml/engine/api_engine.ml').read_text())
 assert actual and 'eff' in actual

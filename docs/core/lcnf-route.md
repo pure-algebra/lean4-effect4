@@ -57,9 +57,15 @@ else in the machine's closure translates.
 
 So "verified semantics" today means: a differential on 20,387 vectors between LCNF, the
 emitted target, and native Lean — evidence, not a theorem that the lowering preserves the LCNF
-semantics. Scout F's question 6 is whether to prove it (CompCert-shaped simulation over
-`Semantics` and `SemanticsTarget`, both of which exist as Lean functions) or keep the
-differential; the two evaluators being Lean definitions is what makes the theorem statable.
+semantics. **And that evidence was produced once, not on every change.** The three modules
+above are libraries; their `--run` drivers are named by no `make` target, no script and no CI
+job, so nothing re-runs the 20,387 cases. What does run on every change is the case-site policy
+(`make check-cases`), the validity walk and the rewrite rules. Wiring the vector lane into
+`check-host` is the plan's item 4.5; until it lands, read this paragraph as a record of a run,
+with its date, and not as a standing check. Scout F's question 6 is whether to prove it
+(CompCert-shaped simulation over `Semantics` and `SemanticsTarget`, both of which exist as Lean
+functions) or keep the differential; the two evaluators being Lean definitions is what makes
+the theorem statable.
 
 ## 4. What a TypeScript target needs that ML did not
 
@@ -108,8 +114,9 @@ TypeScript image *means the same*.
 - The route is real and total on the machine's closure (six named refusals, none hit by
   `Fibers.lean`); a TypeScript target is an emitter and an externs table on top of shared
   infrastructure, not a second translator.
-- The evidence is a 20,387-vector differential between two Lean-defined evaluators; a theorem
-  is statable because both evaluators are Lean functions.
+- The evidence is a 20,387-vector differential between two Lean-defined evaluators, produced
+  once and not re-run by any lane today (see §3); a theorem is statable because both evaluators
+  are Lean functions.
 - The case-site policy already gates *every* default arm in the compiled code, which is why a
   seat's `| _ =>` was refused today: the LCNF route's gates are already in `make check`.
 

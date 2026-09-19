@@ -171,6 +171,29 @@ def mentionsRows (name : String) : List (String × List Ty) → Bool
   | (_, ts) :: rest => mentionsVars name ts || mentionsRows name rest
 end
 
+/-! `vars t`: every type variable occurring free in `t`, in occurrence order and with repeats.
+`(u as 'a)` BINDS `'a` over `u` (§11.2), so it is removed from the sub-answer; every other form
+only mentions. The checker's unbound-variable rule reads it. -/
+mutual
+def vars : Ty → List String
+  | .var n => [n]
+  | .con _ args => varsOfList args
+  | .arrow a b => vars a ++ vars b
+  | .tuple ps => varsOfList ps
+  | .larrow _ a b => vars a ++ vars b
+  | .polyVariant _ rows => varsOfRows rows
+  | .anon => []
+  | .asVar t n => (vars t).filter (· != n)
+
+def varsOfList : List Ty → List String
+  | [] => []
+  | t :: rest => vars t ++ varsOfList rest
+
+def varsOfRows : List (String × List Ty) → List String
+  | [] => []
+  | (_, ts) :: rest => varsOfList ts ++ varsOfRows rest
+end
+
 /-! `mentionsCon name t`: whether a type *constructor* of this name occurs anywhere in `t`. The
 `effc` rule needs it: a locally abstract `type a` is spelled `.con "a" []`, not `.var "a"`. -/
 mutual

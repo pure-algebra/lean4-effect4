@@ -63,16 +63,19 @@ theorem Ty.payload_hasTy (tag : String) (c : Ty) (v p : Val) (P : Ty) (allocated
   have hcm := hc m hm
   -- that member is a pair tagged `tag`, and its payload type admits `p`
   obtain ⟨q, hmq, hq⟩ : ∃ q, m = .prod (.lit tag) q ∧ Val.hasTy p q allocated = true := by
-    rcases m with _ | _ | _ | _ | _ | _ | tgt | inner | inner | ⟨a, b⟩ | ⟨e, w⟩ | ⟨w, e⟩ | e
-      | ⟨w, e⟩ | ⟨l, r⟩ | s
-    all_goals try (exact absurd hcm Bool.false_ne_true)
-    all_goals try (simp only [Val.hasTy, Bool.false_eq_true] at hvm; done)
-    rcases a with _ | _ | _ | _ | _ | _ | tgt | inner | inner | ⟨a1, a2⟩ | ⟨e, w⟩ | ⟨w, e⟩ | e
-      | ⟨w, e⟩ | ⟨l, r⟩ | t
-    all_goals try (exact absurd hcm Bool.false_ne_true)
-    simp only [Val.hasTy, Bool.and_eq_true, beq_iff_eq] at hvm
-    obtain ⟨rfl, hq⟩ := hvm
-    exact ⟨b, rfl, hq⟩
+    -- the column's own arms, by name: a tagged pair, then the scalars it also admits, and a
+    -- wildcard for everything `taggedColumn` refuses
+    cases m with
+    | prod a b =>
+      cases a with
+      | lit t =>
+        simp only [Val.hasTy, Bool.and_eq_true, beq_iff_eq] at hvm
+        obtain ⟨rfl, hq⟩ := hvm
+        exact ⟨b, rfl, hq⟩
+      | _ => exact absurd hcm Bool.false_ne_true
+    | unit | nat | int | string | bool | lit _ =>
+      simp only [Val.hasTy, Bool.false_eq_true] at hvm
+    | _ => exact absurd hcm Bool.false_ne_true
   -- so `q` is one of the payloads
   have hq_mem : q ∈ c.members.filterMap (Ty.payloadOf tag) := by
     rw [List.mem_filterMap]

@@ -516,6 +516,33 @@ def matchTemplate (σ : Subst) (template request : Ty) : Option Subst :=
   let σ' := infer σ template request
   if sub request (instantiate σ' template) then some σ' else none
 
+/-- Match an argument list against a parameter template list, threading the bindings each
+match reads. The list-level fold of `matchTemplate`, whose guard is its own law
+(`matchTemplate_sound`, `Laws/Program/Template.lean`); a longer or shorter argument list is
+refused, never padded. -/
+def matchTemplateArgs (σ : Subst) : List Ty → List Ty → Option Subst
+  | [], [] => some σ
+  | p :: ps, r :: rs => (matchTemplate σ p r).bind fun σ' => matchTemplateArgs σ' ps rs
+  | [], _ :: _ => none
+  | _ :: _, [] => none
+
+/-- A match fixes the argument count. The two lists walk together, and only the empty pair
+answers, so an argument list of another length is refused before any guard is read. -/
+theorem matchTemplateArgs_length {σ σ' : Subst} {ps rs : List Ty}
+    (h : matchTemplateArgs σ ps rs = some σ') : rs.length = ps.length := by
+  induction ps generalizing rs σ with
+  | nil =>
+    cases rs with
+    | nil => rfl
+    | cons _ _ => exact nomatch h
+  | cons p ps ih =>
+    cases rs with
+    | nil => exact nomatch h
+    | cons r rs =>
+      simp only [matchTemplateArgs, Option.bind_eq_some_iff] at h
+      obtain ⟨σ'', _, hrest⟩ := h
+      simp only [List.length_cons, ih hrest]
+
 /-- Product distribution expands union factors. An explicit `never` factor stays
 explicit: this operation does not add a product-annihilation rule to subtyping. -/
 def factors (t : Ty) : List Ty :=
@@ -787,36 +814,6 @@ theorem sub_union_left (a1 a2 b : Ty) (hne : union a1 a2 ≠ b) :
 theorem sub_lit_string (s : String) :
     sub (lit s) string = true := by
   have hne : lit s ≠ string := by intro h; contradiction
-  conv => lhs; unfold sub
-  simp only [hne, ↓reduceIte]
-
-theorem sub_option_of_ne (a b : Ty) (hne : option a ≠ option b) :
-    sub (option a) (option b) = sub a b := by
-  conv => lhs; unfold sub
-  simp only [hne, ↓reduceIte]
-
-theorem sub_list_of_ne (a b : Ty) (hne : list a ≠ list b) :
-    sub (list a) (list b) = sub a b := by
-  conv => lhs; unfold sub
-  simp only [hne, ↓reduceIte]
-
-theorem sub_prod_of_ne (a1 a2 b1 b2 : Ty) (hne : prod a1 a2 ≠ prod b1 b2) :
-    sub (prod a1 a2) (prod b1 b2) = (sub a1 b1 && sub a2 b2) := by
-  conv => lhs; unfold sub
-  simp only [hne, ↓reduceIte]
-
-theorem sub_exitOf_of_ne (a1 e1 a2 e2 : Ty) (hne : exitOf a1 e1 ≠ exitOf a2 e2) :
-    sub (exitOf a1 e1) (exitOf a2 e2) = (sub a1 a2 && sub e1 e2) := by
-  conv => lhs; unfold sub
-  simp only [hne, ↓reduceIte]
-
-theorem sub_causeOf_of_ne (e1 e2 : Ty) (hne : causeOf e1 ≠ causeOf e2) :
-    sub (causeOf e1) (causeOf e2) = sub e1 e2 := by
-  conv => lhs; unfold sub
-  simp only [hne, ↓reduceIte]
-
-theorem sub_fiberOf_of_ne (a1 e1 a2 e2 : Ty) (hne : fiberOf a1 e1 ≠ fiberOf a2 e2) :
-    sub (fiberOf a1 e1) (fiberOf a2 e2) = (sub a1 a2 && sub e1 e2) := by
   conv => lhs; unfold sub
   simp only [hne, ↓reduceIte]
 

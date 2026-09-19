@@ -154,7 +154,7 @@ theorem refPoke_heapNat (s : Stores) (cell : RefKey) (y : Val) (hheap : Stores.H
   · exact hheap x hmem
   · exact hy
 
-/-- A heap arm of `syncOpStep` (`Stores.lean:1237`) is `refStep` on the heap, the answer
+/-- A heap arm of `syncOpStep` (`Stores.lean:2034`) is `refStep` on the heap, the answer
 passed through and the written heap put back in the store. -/
 theorem refStep_of_syncOpStep {o : SyncOp} {s s' : Stores} {a : Val}
     (h : (refStep o s.refs).map (fun step => ({ s with refs := step.2 }, step.1)) = some (s', a)) :
@@ -438,11 +438,6 @@ theorem syncOpOf_validIn (op : NativeOp) (v : Val) (o : SyncOp) (s : Stores)
     obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hv
     cases ho
     rfl
-  | refGet | refUpdate _ | refGetAndUpdate _ | refUpdateAndGet _ | refUpdateSome _
-  | refGetAndUpdateSome _ | refUpdateSomeAndGet _ | refModify _ | refModifySome _ =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hv
-    cases ho
-    exact hval
   | refSet | refGetAndSet | refSetAndGet =>
     obtain ⟨x, y, rfl, hx, _⟩ := Val.hasTy_prod_inv hv
     obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hx
@@ -486,6 +481,11 @@ theorem syncOpOf_validIn (op : NativeOp) (v : Val) (o : SyncOp) (s : Stores)
     obtain rfl := Val.hasTy_unit_inv hv
     cases ho
     rfl
+  -- every remaining row is a bare cell request: the handle IS the operation's key
+  | _ =>
+    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hv
+    cases ho
+    exact hval
 
 /-- The two lanes read together: a typed, valid request of a `sync` row on a well-formed
 store whose cells hold numbers decodes (`syncOpOf_isSome`), steps

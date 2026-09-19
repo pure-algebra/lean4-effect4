@@ -1089,9 +1089,15 @@ def translateClosureInferring (roots : Array Name) (cap : Nat := 60) (tn : TypeN
 /-- Pure OCaml primitive implementations. Strings admitted by this profile are valid UTF-8;
 `ByteArray` and `Array UInt8` both use a byte list. These definitions are emitted by the
 production backend and are part of the manifest, never patched into a generated file. -/
+-- Declarations, not `rawD`: a top-level `rawD` is text `Ml.Check` cannot see into, so a module
+-- holding one has to be checked with its value scope open and `unbound-value` stops deciding
+-- anything there (tooling plan 4.3). The binder and its parameter are structure the checker
+-- reads; only the body stays verbatim, which is all these two need.
 def primitivePrelude : List Ml.Decl := [
-  .rawD "let lcnf_utf8_bytes s = List.init (String.length s) (fun i -> Char.code (String.get s i))",
-  .rawD "let lcnf_utf8_length s = String.fold_left (fun n c -> if Char.code c land 192 = 128 then n else n + 1) 0 s",
+  .letD false [{ name := "lcnf_utf8_bytes", params := [("s", none)],
+                 body := .raw "List.init (String.length s) (fun i -> Char.code (String.get s i))" }],
+  .letD false [{ name := "lcnf_utf8_length", params := [("s", none)],
+                 body := .raw "String.fold_left (fun n c -> if Char.code c land 192 = 128 then n else n + 1) 0 s" }],
   .blank]
 
 /-- Dependencies first on the translated-name graph. Wrapper/twin aliases and the

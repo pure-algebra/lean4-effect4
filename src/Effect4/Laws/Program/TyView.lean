@@ -385,6 +385,158 @@ theorem sizeOf_args {t : Ty} {v : Variance} {x : Ty} (h : (v, x) ∈ t.args) :
   case var index => simp only [args, List.not_mem_nil] at h
   case unknown => simp only [args, List.not_mem_nil] at h
 
+/-! ### The order's two generic steps -/
+
+/-- Composition at each variance under a measure: the composed pair is read at the same
+triple, whichever way round the variance turns it, so one bound serves every arm. -/
+theorem Variance.holds_trans_of {r : Ty → Ty → Bool} (v : Variance) {x y z : Ty} {m : Nat}
+    (hm : sizeOf x + sizeOf y + sizeOf z < m)
+    (htrans : ∀ p q s, sizeOf p + sizeOf q + sizeOf s < m →
+      r p q = true → r q s = true → r p s = true)
+    (h : v.holds r x y = true) (h' : v.holds r y z = true) : v.holds r x z = true := by
+  cases v
+  case co => exact htrans x y z hm h h'
+  case contra => exact htrans z y x (by omega) h' h
+  case inv =>
+    simp only [Variance.holds, Bool.and_eq_true_iff] at h h' ⊢
+    exact ⟨htrans x y z hm h.1 h'.1, htrans z y x (by omega) h'.2 h.2⟩
+
+/-- The list step of `argsBelow_trans`: corresponding positions compose, position by
+position, with the variance carried by the first list (the second and third agree with it). -/
+private theorem zipAll_trans {r : Ty → Ty → Bool} :
+    ∀ (xs ys zs : List (Variance × Ty)),
+      xs.map Prod.fst = ys.map Prod.fst → ys.map Prod.fst = zs.map Prod.fst →
+      (∀ x ∈ xs, ∀ y ∈ ys, ∀ z ∈ zs, ∀ v : Variance,
+        v.holds r x.2 y.2 = true → v.holds r y.2 z.2 = true → v.holds r x.2 z.2 = true) →
+      (xs.zip ys).all (fun p => p.1.1.holds r p.1.2 p.2.2) = true →
+      (ys.zip zs).all (fun p => p.1.1.holds r p.1.2 p.2.2) = true →
+      (xs.zip zs).all (fun p => p.1.1.holds r p.1.2 p.2.2) = true
+  | [], _, _, _, _, _, _, _ => rfl
+  | _ :: _, [], _, h1, _, _, _, _ => by
+    simp only [List.map_cons, List.map_nil] at h1
+    exact absurd h1 (List.cons_ne_nil _ _)
+  | _ :: _, _ :: _, [], _, h2, _, _, _ => by
+    simp only [List.map_cons, List.map_nil] at h2
+    exact absurd h2 (List.cons_ne_nil _ _)
+  | x :: xs, y :: ys, z :: zs, h1, h2, hstep, hxy, hyz => by
+    simp only [List.map_cons, List.cons.injEq] at h1 h2
+    simp only [List.zip_cons_cons, List.all_cons, Bool.and_eq_true_iff] at hxy hyz ⊢
+    refine ⟨?_, ?_⟩
+    · refine hstep x List.mem_cons_self y List.mem_cons_self z List.mem_cons_self x.1 hxy.1 ?_
+      rw [h1.1]
+      exact hyz.1
+    · exact zipAll_trans xs ys zs h1.2 h2.2
+        (fun a ha b hb c hc => hstep a (List.mem_cons_of_mem _ ha) b (List.mem_cons_of_mem _ hb)
+          c (List.mem_cons_of_mem _ hc))
+        hxy.2 hyz.2
+
+/-- **The order's transitive step, once.** At a common head the variance-wise comparison
+composes, given transitivity at every strictly smaller triple — which is exactly the
+induction hypothesis a proof by the triple measure has. No constructor is named. -/
+theorem argsBelow_trans {r : Ty → Ty → Bool} {a b c : Ty}
+    (hab : sameHead a b = true) (hbc : sameHead b c = true)
+    (htrans : ∀ x y z, sizeOf x + sizeOf y + sizeOf z < sizeOf a + sizeOf b + sizeOf c →
+      r x y = true → r y z = true → r x z = true)
+    (h1 : argsBelow r a b = true) (h2 : argsBelow r b c = true) :
+    argsBelow r a c = true := by
+  refine zipAll_trans a.args b.args c.args (args_congr hab).2 (args_congr hbc).2 ?_ h1 h2
+  intro x hx y hy z hz v
+  refine Variance.holds_trans_of v ?_ htrans
+  have hxa : sizeOf x.2 < sizeOf a := sizeOf_args hx
+  have hyb : sizeOf y.2 < sizeOf b := sizeOf_args hy
+  have hzc : sizeOf z.2 < sizeOf c := sizeOf_args hz
+  omega
+
+/-- The list step of `argsBelow_antisymm`. -/
+private theorem zipAll_antisymm {r : Ty → Ty → Bool} :
+    ∀ (xs ys : List (Variance × Ty)),
+      xs.map Prod.fst = ys.map Prod.fst →
+      (∀ x ∈ xs, ∀ y ∈ ys, r x.2 y.2 = true → r y.2 x.2 = true → x.2 = y.2) →
+      (xs.zip ys).all (fun p => p.1.1.holds r p.1.2 p.2.2) = true →
+      (ys.zip xs).all (fun p => p.1.1.holds r p.1.2 p.2.2) = true →
+      xs.map Prod.snd = ys.map Prod.snd
+  | [], [], _, _, _, _ => rfl
+  | _ :: _, [], h, _, _, _ => by
+    simp only [List.map_cons, List.map_nil] at h
+    exact absurd h (List.cons_ne_nil _ _)
+  | [], _ :: _, h, _, _, _ => by
+    simp only [List.map_cons, List.map_nil] at h
+    exact absurd h.symm (List.cons_ne_nil _ _)
+  | x :: xs, y :: ys, h, hstep, hxy, hyx => by
+    simp only [List.map_cons, List.cons.injEq] at h
+    simp only [List.zip_cons_cons, List.all_cons, Bool.and_eq_true_iff] at hxy hyx
+    simp only [List.map_cons, List.cons.injEq]
+    refine ⟨?_, zipAll_antisymm xs ys h.2
+      (fun a ha b hb => hstep a (List.mem_cons_of_mem _ ha) b (List.mem_cons_of_mem _ hb))
+      hxy.2 hyx.2⟩
+    have hback : x.1.holds r y.2 x.2 = true := by rw [h.1]; exact hyx.1
+    obtain ⟨hf, hb⟩ := Variance.holds_antisymm x.1 hxy.1 hback
+    exact hstep x List.mem_cons_self y List.mem_cons_self hf hb
+
+/-- A child of the node, read through `args.map Prod.snd`: the shape every consumer of
+the two steps below has, and the one `sizeOf_args` is applied at. -/
+theorem sizeOf_args_mem {t x : Ty} (h : x ∈ t.args.map Prod.snd) : sizeOf x < sizeOf t := by
+  obtain ⟨p, hp, rfl⟩ := List.mem_map.mp h
+  exact sizeOf_args hp
+
+/-- **The order's antisymmetric step, once.** At a common head, two-sided comparison makes
+the children agree; `eq_of_sameHead` then makes the nodes agree.
+
+Its element step is stated over MEMBERSHIP where `argsBelow_trans`'s is stated over the
+measure, and the difference is not a slip. Transitivity composes, and at a contravariant
+or invariant position it composes the triple the other way round, so no membership
+hypothesis it could be given covers both directions while a symmetric measure does.
+Antisymmetry does not compose: its element step is a predicate at one pair, and a caller
+that carries a side condition on the children (normality, closedness) needs the
+membership to discharge it. Each is the weakest hypothesis that does its own job, and
+membership gives the measure back through `sizeOf_args_mem`. -/
+theorem argsBelow_antisymm {r : Ty → Ty → Bool} {a b : Ty} (hab : sameHead a b = true)
+    (heq : ∀ x ∈ a.args.map Prod.snd, ∀ y ∈ b.args.map Prod.snd,
+      r x y = true → r y x = true → x = y)
+    (h1 : argsBelow r a b = true) (h2 : argsBelow r b a = true) : a = b := by
+  refine eq_of_sameHead hab (zipAll_antisymm a.args b.args (args_congr hab).2 ?_ h1 h2)
+  intro x hx y hy hxy hyx
+  exact heq x.2 (List.mem_map_of_mem hx) y.2 (List.mem_map_of_mem hy) hxy hyx
+
+/-! ### The two rules beside the congruences, as inversions -/
+
+/-- The top is the only right-hand side the top rule fires at. -/
+theorem topRule_eq_false {a b : Ty} (h : b ≠ .unknown) : topRule a b = false := by
+  cases b
+  case unknown => exact absurd rfl h
+  all_goals rfl
+
+/-- The literal rule fires only into `string`. -/
+theorem litRule_eq_false {a b : Ty} (h : b ≠ .string) : litRule a b = false := by
+  cases b
+  case string => exact absurd rfl h
+  all_goals cases a <;> rfl
+
+/-- At a head with no children, `sameHead` IS equality: a node is its head and its children,
+and there are none. -/
+theorem eq_of_sameHead_nil {a b : Ty} (h : sameHead a b = true) (hx : a.args = []) : a = b := by
+  have hlen := (args_congr h).1
+  rw [hx, List.length_nil] at hlen
+  have hb : b.args = [] := List.eq_nil_of_length_eq_zero hlen.symm
+  exact eq_of_sameHead h (by rw [hx, hb])
+
+/-- The literal rule fires at exactly one pair of shapes. -/
+theorem litRule_eq_true {a b : Ty} (h : litRule a b = true) :
+    ∃ s, a = .lit s ∧ b = .string := by
+  cases a
+  case lit s =>
+    cases b
+    case string => exact ⟨s, rfl, rfl⟩
+    all_goals exact Bool.noConfusion h
+  all_goals exact Bool.noConfusion h
+
+/-- …so it does not fire whenever either side is known not to be that shape. -/
+theorem litRule_eq_false_of_head {a b : Ty} (h : ¬ ∃ s, a = .lit s ∧ b = .string) :
+    litRule a b = false := by
+  cases hl : litRule a b
+  · rfl
+  · exact absurd (litRule_eq_true hl) h
+
 end Ty
 
 /-- A value-admission carrier: a predicate on a value and an allocation table.

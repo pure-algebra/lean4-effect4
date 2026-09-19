@@ -73,7 +73,7 @@ namespace Deferred
 def make : Src NativeOp :=
   perform .deferredMake unit
 
-/-- `Deferred.isDone` (`vendor/effect-4.0.0-rc.112/src/Deferred.ts:1382`). -/
+/-- `Deferred.isDone` (`vendor/effect-4.0.0-rc.112/src/Deferred.ts:1366`). -/
 def isDone (request : TermSrc) : Src NativeOp :=
   perform .deferredIsDone request
 
@@ -89,7 +89,7 @@ def succeed (x0 x1 : TermSrc) : Src NativeOp :=
 def fail (x0 x1 : TermSrc) : Src NativeOp :=
   perform .deferredFail (app "pair" [x0, x1])
 
-/-- `Deferred.await` (`vendor/effect-4.0.0-rc.112/src/Deferred.ts:173-186`). -/
+/-- `Deferred.await` (`vendor/effect-4.0.0-rc.112/src/Deferred.ts:223`). -/
 def await (request : TermSrc) : Src NativeOp :=
   perform .deferredAwait request
 
@@ -97,7 +97,7 @@ end Deferred
 
 namespace Scope
 
-/-- `Scope.make` (`vendor/effect-4.0.0-rc.112/src/internal/effect.ts:3914-3922`). -/
+/-- `Scope.make` (`vendor/effect-4.0.0-rc.112/src/Scope.ts:240`). -/
 def make (strategy : Effect4.FinalizerStrategy) : Src NativeOp :=
   perform (.scopeMake strategy) unit
 

@@ -18,9 +18,19 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 
 
+# Every producer runs under one wall-clock budget, so a hung generator fails a lane instead
+# of hanging it. The budget is not a performance statement and it is not a target: it has to
+# cover the `lake build` each family runs first -- a cold build of the core is minutes -- and
+# the slowest cut on a machine that is busy. Measured on a quiet machine with the core
+# already built, `--only lcnf`'s four cuts are 37s end to end (the engine face 18s of it);
+# the same group was measured at 14m38s under four concurrent Lean compilers, past the old
+# 600s, which is why `--only lcnf` could not complete at all. One number for every command.
+TIMEOUT = os.environ.get('EFFECT4_GEN_TIMEOUT', '5400')
+
+
 def run(args, capture=False):
     print('+ ' + shlex.join(args), flush=True)
-    return subprocess.run(['timeout', '600', *args], check=True,
+    return subprocess.run(['timeout', TIMEOUT, *args], check=True,
                           stdout=subprocess.PIPE if capture else None, text=True).stdout
 
 
@@ -45,9 +55,26 @@ ALL = ['variances', 'derived', 'eff', 'wire', 'cas', 'ts', 'readme']
 # The variance table, its producer and its landing path (tooling plan 1.4a).
 VARIANCES = 'tools/Effect4Gen/variances.json'
 
-# The four LCNF outputs; each carries the exact command that regenerates it in its header.
-LCNF = ['ocaml/gen/fibers_gen.ml', 'ocaml/gen/machine_gen.ml',
-        'ocaml/gen/api_gen.ml', 'ocaml/engine/api_engine.ml']
+# The LCNF artefacts and their arguments. Until 2026-09-19 this list held the four paths and
+# the command came out of each file's own `Regenerate with:` header -- a generated file was its
+# own recipe, so a stale header regenerated a stale file and nothing could say so. The recipe
+# lives in `ocaml/gen/roots.json` now and the header is rendered FROM it (tooling plan 3.6).
+LCNF_ROOTS = 'ocaml/gen/roots.json'
+
+
+def lcnf_command(entry):
+    """One artefact's argv, in the fixed order `roots.json` documents. It is the text that
+    lands in the artefact's header, so the order is part of the format."""
+    argv = ['lean', '-M4096', '--run', 'src/OCaml5/Tools/LcnfGen.lean', '--out', entry['out']]
+    for module in entry.get('import', []):
+        argv += ['--import', module]
+    argv += ['--cap', str(entry['cap'])]
+    if entry.get('types'):
+        argv += ['--types', ','.join(entry['types'])]
+    for flag in ('externs', 'prelude'):
+        if entry.get(flag):
+            argv += ['--' + flag, entry[flag]]
+    return argv + entry['roots']
 
 
 def generate(families, output):
@@ -122,11 +149,11 @@ def generate(families, output):
             if checking:
                 raise ValueError('LCNF regenerates in place only; the drift check is `git diff`')
             run(['lake', 'build', 'Effect4', 'OCaml5.Tools.LcnfGen'])
-            for target in LCNF:
-                text = (ROOT / target).read_text()
-                command = text.split('Regenerate with:\n', 1)[1].split('*)', 1)[0].strip()
-                # These are exactly the commands published in the headers.
-                run(['lake', 'env', *shlex.split(command)])
+            roots = json.loads((ROOT / LCNF_ROOTS).read_text())
+            if roots.get('format') != 'effect4-lcnf-roots-v1':
+                raise ValueError('unsupported LCNF roots format')
+            for entry in roots['artefacts']:
+                run(['lake', 'env', *lcnf_command(entry)])
 
 
 def main():

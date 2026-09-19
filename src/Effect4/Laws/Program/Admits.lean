@@ -6,18 +6,17 @@ import Effect4.Laws.Program.TyView
 `Val.hasTy` is a fold (`fold_of` at `src/Effect4/Program/Folds/Ty.lean`), so "membership respects
 `sub`" is not a fact about `Val.hasTy` at all: it is a fact about *any* admission algebra whose
 arms satisfy the generated condition `AdmitsSub` (`Laws/Program/TyView.lean`, one field per
-constructor). This module proves that once: `cata_admits_sub`. Discharging the condition for
-`Val.hasTy` itself is the mechanical half and is not here; the closing section says exactly what
-is left and why.
+constructor). Three declarations, in the order they depend on each other:
 
-What that buys, and what it costs. `hasTy_sub` itself stays where it is
-(`src/Effect4/Program/Typed.lean`): it is below the fold in the import order, twenty-five call
-sites in five files read it, and its own proof is now `fun_induction Ty.sub` at seventy-nine
-lines. What is new here is the **generic** statement, which is what L2 needs: `Val.hasTyWith`
-under an oracle, `Val.hasTyIn` at a world, and any later admission fold get their monotonicity by
-discharging fourteen fields rather than by re-proving a two-hundred-line case analysis.
-The claim that the existing law is an instance is therefore still a claim; what is proved here
-is the generic law it would be an instance of.
+* `cata_admits_sub` — the law, proved once, by `fun_induction Ty.sub`, naming no constructor;
+* `Val.hasTy_admitsSub` — the fourteen fields discharged for the admission fold of this tree;
+* `hasTy_sub` — the law every caller uses, now the two applied to one another.
+
+`hasTy_sub` lives here rather than in the core beside `Val.hasTy` because the fold lives above
+the core (`Program/Folds/Ty.lean` imports `Program/Typed.lean`), and because the core keeps
+definitions while the Laws keep laws: `Program/Typed.lean` carries no theorem about `sub` any
+more. Every call site is under `Laws`, and all but two of them reach this module through
+`Effect4.Laws.Program.TypeAlgebra`.
 
 The carrier is the paramorphic one `fold_of` builds — `Ty × (Val → List String → Bool)`, the node
 rebuilt beside its result — so every field reads the arm's `.2`. `Val.hasTy.eq_cata` is
@@ -97,40 +96,95 @@ theorem cata_admits_sub {alg : TyAlgebra AdmCarrier} (h : AdmitsSub alg) {a b : 
   -- every other pair: `sub` answers `false`
   case case16 => exact Bool.noConfusion hsub
 
-/-! ## What is owed: the condition discharged for `Val.hasTy`
+/-! ## The condition discharged for the admission fold of this tree
 
-`Val.hasTy_admitsSub : AdmitsSub Val.hasTy.alg` is **not** here. `AdmitsSub` has fourteen fields;
-nine of them were written and accepted, five were written and refused, and the refusal is a
-property of `fold_of`'s output rather than of the design.
+Fourteen fields, one per constructor. Six are `rfl` because the arm is a constant or reads only
+its own results (`never`, `union`, `top`, `var`) or ignores its argument outright — the two
+invariant handles, which is decisions row 44 (a handle is coarse by kind; the world's tables
+type what it holds) stated as a law rather than left as a comment. `fiberOf` is the identity
+for the same reason. The seven that inspect the value are the hand definition's own arms: the
+same `dsimp only [...]` then `split at hv` that proves `Val.hasTy`'s laws, because the emitted
+arm carries the matcher `Val.hasTy` wrote (`FoldOf.lean`'s `matchOnCtorDiscr`).
 
-**Nine proved.** `never`, `union`, `top`, `var`, `refOf` and `deferredOf` are `rfl`: the generated
-arms are literally `fun v al => false`, `fun v al => p.2 v al || q.2 v al`, `fun v al => true`,
-and — for the two handles — functions that ignore their argument, which is decisions row 44 (a
-handle is coarse by kind) stated as a law. `fiberOf` is the identity for the same reason.
-`lit_string` and `option` close by `cases v` in three lines each.
+The whole instance depends on `[propext]` alone. -/
 
-**Five refused**: `list`, `prod`, `except`, `exitOf`, `causeOf`. All five inspect the VALUE, and
-`fold_of` emits those arms through the compiler's sparse case analyses rather than through
-`Val`'s own matcher, so `split at hv` cannot see the match. The residual goal is the same shape
-in each; at `list` it reads
+theorem Val.hasTy_admitsSub : AdmitsSub Val.hasTy.alg where
+  never := fun _ _ => rfl
+  union := fun _ _ _ _ => rfl
+  top := fun _ _ => rfl
+  var := fun _ _ _ => rfl
+  lit_string := by
+    intro s v al hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv
+    · rfl
+    · exact Bool.noConfusion hv
+  option := by
+    intro p0 q0 h v al hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv
+    · rfl
+    · rename_i w
+      exact h w al hv
+    · exact Bool.noConfusion hv
+  list := by
+    intro p0 q0 h v al hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv
+    · split at hv
+      · exact list_all_mono _ (fun id => h (Val.fiber id) al) hv
+      · exact Bool.noConfusion hv
+    · rename_i vs
+      exact list_all_mono vs (fun w => h w al) hv
+    · exact Bool.noConfusion hv
+  prod := by
+    intro p0 p1 q0 q1 h0 h1 v al hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv
+    · rename_i x y
+      simp only [Bool.and_eq_true_iff] at hv ⊢
+      exact ⟨h0 x al hv.1, h1 y al hv.2⟩
+    · exact Bool.noConfusion hv
+  except := by
+    intro p0 p1 q0 q1 h0 h1 v al hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv
+    · exact h0 _ al hv
+    · exact h1 _ al hv
+    · exact Bool.noConfusion hv
+  exitOf := by
+    intro p0 p1 q0 q1 h0 h1 v al hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv
+    · exact h0 _ al hv
+    · split at hv
+      · exact causeAdmits_mono_sub (fun w hw => h1 w al hw) _ hv
+      · exact Bool.noConfusion hv
+    · exact Bool.noConfusion hv
+  causeOf := by
+    intro p0 q0 h v al hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    split at hv
+    · exact causeAdmits_mono_sub (fun w hw => h w al hw) _ hv
+    · exact Bool.noConfusion hv
+  fiberOf := fun _ _ _ _ _ _ => Adm.le_refl _
+  refOf := fun _ _ => rfl
+  deferredOf := fun _ _ _ _ => rfl
 
-    Tactic `split` failed: Could not split an `if` or `match` expression in the type
-      (hasTy._sparseCasesOn_37 v
-          (fun index args => if h : index = 3 then … else false)
-          (fun xs => xs.all fun x => p.snd x al) fun h => false) = true
-    of `hv`
+/-- The subtype relation on `Ty` respects value typing (`hasTy`). If `Ty.sub a b = true`
+and value `v` has type `a`, then `v` also has type `b`.
 
-Unfolding `Val.hasTy.alg` first does not help: it exposes the `_sparseCasesOn` rather than
-removing it. Each of the five needs a `cases v` walk over `Val`'s frames with the two-cell and
-snapshot sub-cases spelled out, in place of the four-line `split at hv` the hand-written
-`Val.hasTy` admits. That is mechanical, roughly eighty lines, and no design question is open in
-it; it is simply not attempted here.
-
-Until it lands, `hasTy_sub` (`src/Effect4/Program/Typed.lean`) is the law every caller uses, and
-it is proved directly by `fun_induction Ty.sub` at seventy-nine lines. What `cata_admits_sub`
-adds today is the statement L2 needs — that monotonicity along `sub` is a condition on the
-ALGEBRA and not a property of one fold — proved once, so `Val.hasTyWith` under an oracle and any
-later admission fold discharge fourteen fields instead of re-proving a case analysis.
--/
+There is no case analysis here at all: the two lines above it are the whole proof. The law is
+`cata_admits_sub` — monotonicity along `sub` is a condition on the ALGEBRA — applied to
+`Val.hasTy_admitsSub` through `Val.hasTy.eq_cata`, which is what makes a new constructor of
+`Ty` cost one field in the instance rather than an arm in every proof that carries membership.
+Statement and argument order are unchanged from the direct proof this replaces, so no call
+site moved. -/
+theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
+    (hsub : Ty.sub a b = true) (hv : Val.hasTy v a allocated = true) :
+    Val.hasTy v b allocated = true := by
+  rw [Val.hasTy.eq_cata v a allocated] at hv
+  rw [Val.hasTy.eq_cata v b allocated]
+  exact cata_admits_sub Val.hasTy_admitsSub hsub v allocated hv
 
 end Effect4.Program

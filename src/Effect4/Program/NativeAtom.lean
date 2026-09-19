@@ -16,7 +16,7 @@ machine's import closure, and the LCNF cut taken from it, does not carry the che
 
 The scheme language is the row-template calculus of decisions row 42, not a second one:
 `Ty.var`, `Ty.instantiate`, `Ty.infer` and `Ty.matchTemplate` are the rows' (`Program/Ty.lean`),
-and `Ty.matchTemplateArgs` below is the list-level fold of `matchTemplate` the atoms need. One
+and `Ty.matchTemplateArgs` (`Ty.lean`, beside `matchTemplate`) is its list-level fold. One
 calculus, two consumers.
 
 Two things a scheme deliberately does not do. It does not **normalise** the instantiated
@@ -37,37 +37,6 @@ open Effect4 Effect4.Machine
 def causeInputError? : Ty → Option Ty
   | .causeOf error | .exitOf _ error => some error
   | _ => none
-
-namespace Ty
-
-/-- Match an argument list against a parameter template list, threading the bindings each
-match reads. The list-level fold of `matchTemplate`, whose guard is its own law
-(`matchTemplate_sound`, `Laws/Program/Template.lean`); a longer or shorter argument list is
-refused, never padded. -/
-def matchTemplateArgs (σ : Subst) : List Ty → List Ty → Option Subst
-  | [], [] => some σ
-  | p :: ps, r :: rs => (matchTemplate σ p r).bind fun σ' => matchTemplateArgs σ' ps rs
-  | [], _ :: _ => none
-  | _ :: _, [] => none
-
-/-- A match fixes the argument count. The two lists walk together, and only the empty pair
-answers, so an argument list of another length is refused before any guard is read. -/
-theorem matchTemplateArgs_length {σ σ' : Subst} {ps rs : List Ty}
-    (h : matchTemplateArgs σ ps rs = some σ') : rs.length = ps.length := by
-  induction ps generalizing rs σ with
-  | nil =>
-    cases rs with
-    | nil => rfl
-    | cons _ _ => exact nomatch h
-  | cons p ps ih =>
-    cases rs with
-    | nil => exact nomatch h
-    | cons r rs =>
-      simp only [matchTemplateArgs, Option.bind_eq_some_iff] at h
-      obtain ⟨σ'', _, hrest⟩ := h
-      simp only [List.length_cons, ih hrest]
-
-end Ty
 
 namespace NativeAtom
 
