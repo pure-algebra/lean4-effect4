@@ -95,6 +95,7 @@ import Test.Api.TestClockContract
 import Test.Program.ScopedTypingContract
 import Test.Program.NativeAtomContract
 import Test.Program.AtomTable
+import Test.Program.AtomRulesRed
 import Test.Program.ErrorQueriesContract
 import Test.Program.CatchIfContract
 import Test.Machine.Fuzz
