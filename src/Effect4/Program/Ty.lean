@@ -790,36 +790,6 @@ theorem sub_lit_string (s : String) :
   conv => lhs; unfold sub
   simp only [hne, ↓reduceIte]
 
-theorem sub_option_of_ne (a b : Ty) (hne : option a ≠ option b) :
-    sub (option a) (option b) = sub a b := by
-  conv => lhs; unfold sub
-  simp only [hne, ↓reduceIte]
-
-theorem sub_list_of_ne (a b : Ty) (hne : list a ≠ list b) :
-    sub (list a) (list b) = sub a b := by
-  conv => lhs; unfold sub
-  simp only [hne, ↓reduceIte]
-
-theorem sub_prod_of_ne (a1 a2 b1 b2 : Ty) (hne : prod a1 a2 ≠ prod b1 b2) :
-    sub (prod a1 a2) (prod b1 b2) = (sub a1 b1 && sub a2 b2) := by
-  conv => lhs; unfold sub
-  simp only [hne, ↓reduceIte]
-
-theorem sub_exitOf_of_ne (a1 e1 a2 e2 : Ty) (hne : exitOf a1 e1 ≠ exitOf a2 e2) :
-    sub (exitOf a1 e1) (exitOf a2 e2) = (sub a1 a2 && sub e1 e2) := by
-  conv => lhs; unfold sub
-  simp only [hne, ↓reduceIte]
-
-theorem sub_causeOf_of_ne (e1 e2 : Ty) (hne : causeOf e1 ≠ causeOf e2) :
-    sub (causeOf e1) (causeOf e2) = sub e1 e2 := by
-  conv => lhs; unfold sub
-  simp only [hne, ↓reduceIte]
-
-theorem sub_fiberOf_of_ne (a1 e1 a2 e2 : Ty) (hne : fiberOf a1 e1 ≠ fiberOf a2 e2) :
-    sub (fiberOf a1 e1) (fiberOf a2 e2) = (sub a1 a2 && sub e1 e2) := by
-  conv => lhs; unfold sub
-  simp only [hne, ↓reduceIte]
-
 end Ty
 end Effect4.Program
 
