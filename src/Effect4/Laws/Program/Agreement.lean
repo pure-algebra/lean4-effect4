@@ -502,7 +502,7 @@ theorem compileEff_perform (op : NativeOp) (r : Term) (hf : p.fuel = k + 1) :
     compileEff (.perform op r) p =
       (match op with
        | .external _ => asyncRoute op r p
-       | _ => match (NativeOp.row op).kind with
+       | _ => match op.kind with
          | .sync =>
            match evalTerm p.env r with
            | some val =>

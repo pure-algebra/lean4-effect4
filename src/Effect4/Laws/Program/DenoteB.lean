@@ -128,7 +128,7 @@ def Looped : NativeEff → Bool
   | .failCause _ => true
   | .sync _ => true
   | .perform op _ =>
-    match (NativeOp.row op).kind with
+    match op.kind with
     | .sync => true
     | _ => false
   | .iterate _ _ _ _ _ body => Looped body

@@ -54,7 +54,7 @@ theorem asyncRoute_keys (register : NativeOp) (r : Term) (p : Point) :
     | some n => cases n <;> exact List.nil_subset _
   | deferredAwait =>
     -- the one asynchronous built-in: the awaited cell is a handle the request evaluated to
-    simp only [NativeOp.row]
+    simp only [NativeOp.kind]
     cases hcell : (evalTerm p.env r).bind NativeOp.awaitCellOf with
     | none => exact List.nil_subset _
     | some cell =>

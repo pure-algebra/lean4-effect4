@@ -159,9 +159,13 @@ theorem Straight.onExit {b f : NativeEff} (h : Straight (.onExit b f) = true) :
 
 theorem Straight.perform_sync {op : NativeOp} {r : Term} (h : Straight (.perform op r) = true) :
     (NativeOp.row op).kind = .sync := by
-  unfold Straight at h
-  revert h
-  cases (NativeOp.row op).kind <;> simp
+  rw [NativeOp.row_kind]
+  cases op with
+  | external _ => contradiction
+  | sleep => contradiction
+  | deferredAwait => contradiction
+  | scopeMake strategy => cases strategy <;> rfl
+  | _ => rfl
 
 /-- Where the straight fragment meets the heads whose suspension body the compile decides
 itself (`Eff.suspendDecided`, `Program/Compile.lean`): at a source suspension and at a

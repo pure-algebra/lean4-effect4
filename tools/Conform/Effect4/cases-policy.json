@@ -1648,6 +1648,23 @@
           ]
         },
         {
+          "name": "Effect4.Program.NativeOp.kind",
+          "mode": "default",
+          "cover": [
+            "refMake",
+            "refGet",
+            "refSet",
+            "refGetAndSet",
+            "refSetAndGet",
+            "deferredMake",
+            "deferredIsDone",
+            "deferredPoll",
+            "deferredSucceed",
+            "deferredFail",
+            "clockNow"
+          ]
+        },
+        {
           "name": "Effect4.Run.rowOf",
           "mode": "default",
           "cover": [

@@ -536,7 +536,7 @@ def asyncRoute (op : NativeOp) (request : Term) (p : Point) : NCode :=
         (some (EffName.store Name.cancelSleep))
     | none => badShape
   | _ =>
-    match (NativeOp.row op).kind with
+    match op.kind with
     | .async =>
       match (evalTerm p.env request).bind NativeOp.awaitCellOf with
       | some cell =>
@@ -574,7 +574,7 @@ def compileEff : NativeEff → Point → NCode
       | .perform op request =>
         match op with
         | .external _ => asyncRoute op request p
-        | _ => match (NativeOp.row op).kind with
+        | _ => match op.kind with
           | .sync =>
             match evalTerm p.env request with
             | some val =>

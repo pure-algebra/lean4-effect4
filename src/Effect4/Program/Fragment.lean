@@ -26,7 +26,7 @@ def Straight : NativeEff → Bool
   | .sync _ => true
   | .suspend b => Straight b
   | .perform op _ =>
-    match (NativeOp.row op).kind with
+    match op.kind with
     | .sync => true
     | _ => false
   | .bind a b => Straight a && Straight b

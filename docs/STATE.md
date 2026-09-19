@@ -70,11 +70,26 @@ reads back.
    `argsBelow_trans/antisymm`, the six `sub_*_of_ne` deleted), with the two seats' last slices inside the same
    commit (template laws, `matchTemplateArgs` home, hygiene 0.5/0.8/0.9; closure manifests, fatal
    frontier and module check, `roots.json`). Rows 67–72.
+   The atoms slice landed (`49543b83`, `694f02d3`, `0b6b99a1`): all 33 atoms as rows; row 69
+   option atoms as subsumption rows (`isSome` mono, `getOrElse` poly); the four L4-blocking atoms
+   (`ite`, `some`, `none`, `mul`) and nine L3 atoms (`nil`, `cons`, `get`, `length`, `append`,
+   `sub`, `div`, `mod`, `concat`); repeated parameters infer at TypeScript's common supertype;
+   generic soundness is proved once through `Fits.instantiate`; template atoms checked at explicit
+   instantiation in the rows lane (26 agree, all callable atoms judged); prelude unit list bug
+   repaired. Receipt: `docs/research/2026-09-19-atoms-slice-receipt.md`. Rows 73–75.
    Receipts: `docs/research/2026-09-19-seat-D-receipt.md`; E and V have none (stopped by the owner
-   for speed; their commit messages are the record). Still open from the plan: `sub_normalize_of_sub`'s
-   congruence square, `AdmitsExtend` for `hasTy_mono` and the condition for `hasTy_normalize` (C4),
-   1.11a span pinning, 4.4, 4.8/4.9 and Q4–Q6 with seat I's survey, the bank moves (1.2), Tier 3,
-   and the L3 atoms with row 69's two `Spec` lines. L2–L7 resume after Tier 3.
+   for speed; their commit messages are the record).
+   Tier 3 item 3.1 landed (`8f56ff1b`..`eea33606`): the store step kernel `refStepOf` and
+   `SyncOp.refKernel` in `Laws/Machine/RefKernel.lean` (`refStep_eq_refStepOf`), with `step_typed`
+   (from 229 to 51 lines), `refStep_length`, `refStep_valid`, and `refStep_keys` walking the
+   twelve heap rows in one case through `refStepOf_keeps` and per-row kernel tables (−146 net
+   lines); Row 76.
+   Tier 3 item 3.5 landed: split `NativeOp.kind` off `row`; `compileEff` and `Straight` use
+   `op.kind`; `Ty.scope` and `NativeOp.row` exit the LCNF engine closure manifest (`NativeOp.kind`
+   at 13 instructions replaces `NativeOp.row` at 279); `roots.json` and `cases-policy.json`
+   updated; Row 77.
+   Still open from the plan: 1.11a span pinning, 4.4, 4.8/4.9 and Q4–Q6 with seat I's survey;
+   from Tier 3: 3.2, 3.3, 3.4, 3.7. L2–L7 resume after Tier 3.
 1. **The fold work stops here** (owner, 2026-09-18): the checker, the term typer and the
    fragments landed (census §7.5–§7.10); the thirteen exemptions — the compiler's five, the
    reference evaluator's five, `valCode`, `ofSchema`, the derived instance — stay as they are and

@@ -119,6 +119,19 @@ def externalPlaceholder : Row :=
   { name := "external", spelling := "", shape := .value, kind := .program,
     request := .never, answer := .never, cite := "", registration := .external }
 
+/-- The scheduling kind of each operation: `.async` for `deferredAwait` and `sleep`, `.program`
+for external placeholders, and `.sync` for every heap and deferred operation. Split off `row`
+so the compiler and engine closure do not drag `Row` or `Ty` into native engine headers (plan 3.5). -/
+@[simp] def kind : NativeOp → RowKind
+  | deferredAwait | sleep => .async
+  | external _ => .program
+  | refMake | refGet | refSet | refGetAndSet | refSetAndGet
+  | refUpdate _ | refGetAndUpdate _ | refUpdateAndGet _
+  | refUpdateSome _ | refGetAndUpdateSome _ | refUpdateSomeAndGet _
+  | refModify _ | refModifySome _
+  | deferredMake | deferredIsDone | deferredPoll | deferredSucceed | deferredFail
+  | scopeMake _ | clockNow => .sync
+
 /-- The row of each operation.
 
 Three rows model an *unsafe* or *private* form of the operation they are named after, and the
@@ -138,73 +151,79 @@ citation errors: `deferredPoll` answers `bool` where `poll` answers
 value, so the machine answers its `isSome`), and `refSet` answers the cell where `Ref.set`
 answers `void` (DI-98 — the machine answers the cell, `Stores.refStep`, and restating it is a
 machine change scheduled with L4). -/
-def row : NativeOp → Row
-  | refMake => ⟨"refMake", "Ref.make", .call, [], .sync, .nat, refTy, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:173", [], .deferred⟩
-  | refGet => ⟨"refGet", "Ref.get", .call, [], .sync, refTy, .nat, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:200", [], .deferred⟩
+def row (op : NativeOp) : Row :=
+  match op with
+  | refMake => ⟨"refMake", "Ref.make", .call, [], kind op, .nat, refTy, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:173", [], .deferred⟩
+  | refGet => ⟨"refGet", "Ref.get", .call, [], kind op, refTy, .nat, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:200", [], .deferred⟩
   | refSet =>
-    ⟨"refSet", "Ref.set", .tupleCall, [], .sync, .prod refTy .nat, refTy, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:306-307", [], .deferred⟩
+    ⟨"refSet", "Ref.set", .tupleCall, [], kind op, .prod refTy .nat, refTy, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:306-307", [], .deferred⟩
   | refGetAndSet =>
-    ⟨"refGetAndSet", "Ref.getAndSet", .tupleCall, [], .sync, .prod refTy .nat, .nat, .never, [],
+    ⟨"refGetAndSet", "Ref.getAndSet", .tupleCall, [], kind op, .prod refTy .nat, .nat, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Ref.ts:399-404", [], .deferred⟩
   | refSetAndGet =>
-    ⟨"refSetAndGet", "Ref.setAndGet", .tupleCall, [], .sync, .prod refTy .nat, .nat, .never, [],
+    ⟨"refSetAndGet", "Ref.setAndGet", .tupleCall, [], kind op, .prod refTy .nat, .nat, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Ref.ts:747", [], .deferred⟩
   | refUpdate f =>
-    ⟨"refUpdate", "Ref.update", .call, [fnSpelling f], .sync, refTy, .unit, .never, [],
+    ⟨"refUpdate", "Ref.update", .call, [fnSpelling f], kind op, refTy, .unit, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Ref.ts:1273-1276", [], .deferred⟩
   | refGetAndUpdate f =>
-    ⟨"refGetAndUpdate", "Ref.getAndUpdate", .call, [fnSpelling f], .sync, refTy, .nat, .never, [],
+    ⟨"refGetAndUpdate", "Ref.getAndUpdate", .call, [fnSpelling f], kind op, refTy, .nat, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Ref.ts:496-501", [], .deferred⟩
   | refUpdateAndGet f =>
-    ⟨"refUpdateAndGet", "Ref.updateAndGet", .call, [fnSpelling f], .sync, refTy, .nat, .never, [],
+    ⟨"refUpdateAndGet", "Ref.updateAndGet", .call, [fnSpelling f], kind op, refTy, .nat, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Ref.ts:1368", [], .deferred⟩
   | refUpdateSome f =>
-    ⟨"refUpdateSome", "Ref.updateSome", .call, [fnSpelling f], .sync, refTy, .unit, .never, [],
+    ⟨"refUpdateSome", "Ref.updateSome", .call, [fnSpelling f], kind op, refTy, .unit, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Ref.ts:1502-1508", [], .deferred⟩
   | refGetAndUpdateSome f =>
-    ⟨"refGetAndUpdateSome", "Ref.getAndUpdateSome", .call, [fnSpelling f], .sync, refTy, .nat,
+    ⟨"refGetAndUpdateSome", "Ref.getAndUpdateSome", .call, [fnSpelling f], kind op, refTy, .nat,
       .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:635-643", [], .deferred⟩
   | refUpdateSomeAndGet f =>
-    ⟨"refUpdateSomeAndGet", "Ref.updateSomeAndGet", .call, [fnSpelling f], .sync, refTy, .nat,
+    ⟨"refUpdateSomeAndGet", "Ref.updateSomeAndGet", .call, [fnSpelling f], kind op, refTy, .nat,
       .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:1639-1646", [], .deferred⟩
   | refModify f =>
-    ⟨"refModify", "Ref.modify", .call, [fnSpelling f], .sync, refTy, .nat, .never, [],
+    ⟨"refModify", "Ref.modify", .call, [fnSpelling f], kind op, refTy, .nat, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Ref.ts:896-901", [], .deferred⟩
   | refModifySome f =>
-    ⟨"refModifySome", "Ref.modifySome", .call, [fnSpelling f], .sync, refTy, .nat, .never, [],
+    ⟨"refModifySome", "Ref.modifySome", .call, [fnSpelling f], kind op, refTy, .nat, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Ref.ts:1159-1163", [], .deferred⟩
   | deferredMake =>
-    ⟨"deferredMake", "Deferred.make", .call, [], .sync, .unit, deferredTy, .never, [],
+    ⟨"deferredMake", "Deferred.make", .call, [], kind op, .unit, deferredTy, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Deferred.ts:171", deferredTypeArgs, .deferred⟩
   | deferredIsDone =>
-    ⟨"deferredIsDone", "Deferred.isDone", .call, [], .sync, deferredTy, .bool, .never, [],
+    ⟨"deferredIsDone", "Deferred.isDone", .call, [], kind op, deferredTy, .bool, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Deferred.ts:1366", [], .deferred⟩
   | deferredPoll =>
-    ⟨"deferredPoll", "Deferred.poll", .call, [], .sync, deferredTy, .bool, .never, [],
+    ⟨"deferredPoll", "Deferred.poll", .call, [], kind op, deferredTy, .bool, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Deferred.ts:1414-1416", [], .deferred⟩
   | deferredSucceed =>
-    ⟨"deferredSucceed", "Deferred.succeed", .tupleCall, [], .sync, .prod deferredTy .nat, .bool, .never,
+    ⟨"deferredSucceed", "Deferred.succeed", .tupleCall, [], kind op, .prod deferredTy .nat, .bool, .never,
       [], "vendor/effect-4.0.0-rc.112/src/Deferred.ts:1514", [], .deferred⟩
   | deferredFail =>
-    ⟨"deferredFail", "Deferred.fail", .tupleCall, [], .sync, .prod deferredTy .nat, .bool, .never, [],
+    ⟨"deferredFail", "Deferred.fail", .tupleCall, [], kind op, .prod deferredTy .nat, .bool, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Deferred.ts:669", [], .deferred⟩
   | deferredAwait =>
-    ⟨"deferredAwait", "Deferred.await", .call, [], .async, deferredTy, .nat, .nat, [],
+    ⟨"deferredAwait", "Deferred.await", .call, [], kind op, deferredTy, .nat, .nat, [],
       "vendor/effect-4.0.0-rc.112/src/Deferred.ts:223", [], .deferred⟩
   | scopeMake .sequential =>
-    ⟨"scopeMake", "Scope.make", .call, [], .sync, .unit, Ty.scope, .never, [],
+    ⟨"scopeMake", "Scope.make", .call, [], kind op, .unit, Ty.scope, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Scope.ts:240", [], .deferred⟩
   | scopeMake .parallel =>
-    ⟨"scopeMake", "Scope.make", .call, ["\"parallel\""], .sync, .unit, Ty.scope, .never, [],
+    ⟨"scopeMake", "Scope.make", .call, ["\"parallel\""], kind op, .unit, Ty.scope, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Scope.ts:240", [], .deferred⟩
   | sleep =>
-    ⟨"sleep", "Effect.sleep", .call, [], .async, .nat, .unit, .never, [],
+    ⟨"sleep", "Effect.sleep", .call, [], kind op, .nat, .unit, .never, [],
       "vendor/effect-4.0.0-rc.112/src/internal/effect.ts:6114-6116", [], .deferred⟩
   | clockNow =>
-    ⟨"clockNow", "Effect.currentTimeMillis", .value, [], .sync, .unit, .nat, .never, [],
+    ⟨"clockNow", "Effect.currentTimeMillis", .value, [], kind op, .unit, .nat, .never, [],
       "vendor/effect-4.0.0-rc.112/src/internal/effect.ts:6118", [], .deferred⟩
 
   | external _ => externalPlaceholder
+
+@[simp] theorem row_kind (op : NativeOp) : (row op).kind = kind op := by
+  cases op
+  case scopeMake s => cases s <;> rfl
+  all_goals rfl
 
 /-- The store operation a row runs on a request value; `none` is a request of the wrong
 shape, which the compile turns into the `badName` defect (`Deep.Stores` does the same for a
