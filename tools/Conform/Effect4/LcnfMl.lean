@@ -178,6 +178,10 @@ def tyT : Ty → Target.TValue
   | .fiberOf v e => .ctorV (tyCtor "fiberOf") #[tyT v, tyT e]
   | .union l r => .ctorV (tyCtor "union") #[tyT l, tyT r]
   | .lit s => .ctorV (tyCtor "lit") #[.str s]
+  | .refOf v => .ctorV (tyCtor "refOf") #[tyT v]
+  | .deferredOf v e => .ctorV (tyCtor "deferredOf") #[tyT v, tyT e]
+  | .var i => .ctorV (tyCtor "var") #[.int i]
+  | .unknown => .ctorV (tyCtor "unknown") #[]
 
 def tyListT (ts : List Ty) : Target.TValue := Target.TValue.ofList (ts.map tyT)
 def natListT (ns : List Nat) : Target.TValue :=
@@ -280,6 +284,10 @@ def tyOcaml : Ty → String
   | .fiberOf v e => tyCtor "fiberOf" ++ " (" ++ tyOcaml v ++ ", " ++ tyOcaml e ++ ")"
   | .union l r => tyCtor "union" ++ " (" ++ tyOcaml l ++ ", " ++ tyOcaml r ++ ")"
   | .lit s => tyCtor "lit" ++ " (\"" ++ s ++ "\")"
+  | .refOf v => tyCtor "refOf" ++ " (" ++ tyOcaml v ++ ")"
+  | .deferredOf v e => tyCtor "deferredOf" ++ " (" ++ tyOcaml v ++ ", " ++ tyOcaml e ++ ")"
+  | .var i => tyCtor "var" ++ " (" ++ toString i ++ ")"
+  | .unknown => tyCtor "unknown"
 
 /-- The six observations the three sides compare, per vector: `render`, `key`, `isNever`,
 `render (join t t)`, `render (ofMembers (members t))`, `length (members t)`. All six print

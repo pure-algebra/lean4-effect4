@@ -94,6 +94,8 @@ def codesOf (c : HostConfig) : TypeReason → List Nat
   | .stepNotCursor _ _ => []
   -- `let aN: T = initial` with an initial outside `T`: not assignable (2322).
   | .initialNotCursor _ _ => [2322]
+  -- a release outside `Effect<unknown, never, R2>` is not assignable (2345); no observation yet
+  | .releaseFails _ => []
   | .notFiber _ => [2345]
   | .scopeExpected _ => [2345]
   | .natExpected _ => [2345]

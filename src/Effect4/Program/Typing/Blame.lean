@@ -42,6 +42,9 @@ inductive TypeReason
   | stepNotCursor (step cursor : Ty)
   /-- An `iterate`'s initial cursor is not under the cursor's annotation. -/
   | initialNotCursor (initial cursor : Ty)
+  /-- A release whose error column is not `never` (rc.112 `Effect<unknown, never, R2>`,
+  `Effect.ts:12930`; decisions row 47, DI-94): a release cannot fail, a failing one is a defect. -/
+  | releaseFails (error : Ty)
   | notFiber (t : Ty)
   | scopeExpected (t : Ty)
   | natExpected (t : Ty)
@@ -75,6 +78,7 @@ def TypeReason.head : TypeReason → String
   | .notSelectable _ _ => "notSelectable"
   | .stepNotCursor _ _ => "stepNotCursor"
   | .initialNotCursor _ _ => "initialNotCursor"
+  | .releaseFails _ => "releaseFails"
   | .notFiber _ => "notFiber"
   | .scopeExpected _ => "scopeExpected"
   | .natExpected _ => "natExpected"

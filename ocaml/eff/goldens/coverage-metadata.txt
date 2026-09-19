@@ -17,6 +17,7 @@ Effect4.Program.Ty.lit	1
 Effect4.Program.Ty.refOf	1
 Effect4.Program.Ty.deferredOf	1
 Effect4.Program.Ty.var	1
+Effect4.Program.Ty.unknown	1
 Effect4.Program.RowKind.sync	1
 Effect4.Program.RowKind.async	2
 Effect4.Program.RowKind.program	1

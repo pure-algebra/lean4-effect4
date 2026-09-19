@@ -20,6 +20,7 @@ def tagged (name : String) (fields : List (String × Json)) : Json :=
 
 def tyJson : Ty → Json
   | .never => tagged "never" []
+  | .unknown => tagged "unknown" []
   | .unit => tagged "unit" []
   | .nat => tagged "nat" []
   | .int => tagged "int" []

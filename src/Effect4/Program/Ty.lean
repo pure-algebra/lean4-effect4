@@ -52,6 +52,12 @@ inductive Ty
   instantiates every variable of a row from the request or the operation's type arguments
   (decisions row 42). -/
   | var (index : Nat)
+  /-- TypeScript's `unknown` (decisions row 46): the top of `sub`, inhabited by every value
+  (`Val.hasTy v unknown = true`); what rc.112 gives a release's exit parameter
+  (`Exit<unknown, unknown>`, `Effect.ts:12930`) and the children snapshot's fiber columns.
+  Appended last: the engine's structure mirror pins declaration order, so a constructor is
+  appended, never inserted (`scripts/lib/program_structure.py`). -/
+  | unknown
 deriving DecidableEq, Repr
 
 namespace Ty
@@ -74,6 +80,7 @@ abbrev readonlyArray (inner : Ty) : Ty := .list inner
 `Result.Result<A, E>`; a `handle` is an opaque host type whose spelling is carried verbatim. -/
 def renderRaw : Ty → String
   | .never => "never"
+  | .unknown => "unknown"
   | .unit => "void"
   | .nat | .int => "number"
   | .string => "string"
@@ -98,6 +105,7 @@ def renderRaw : Ty → String
 /-- The members of a union, flattened at the top; `never` contributes none. -/
 def members : Ty → List Ty
   | .never => []
+  | .unknown => [.unknown]
   | .union left right => members left ++ members right
   | .unit => [.unit]
   | .nat => [.nat]
@@ -123,6 +131,7 @@ length-prefixed keys of the components; a handle's target by its UTF-8 bytes
 `Classical.choice` on this toolchain, so no member is ordered by its rendering). -/
 def key : Ty → List Nat
   | .never => [0]
+  | .unknown => [19]
   | .unit => [1]
   | .nat => [2]
   | .int => [3]
@@ -166,7 +175,7 @@ def ofMembers : List Ty → Ty
 
 def isNever : Ty → Bool
   | .never => true
-  | .unit | .nat | .int | .string | .bool
+  | .unknown | .unit | .nat | .int | .string | .bool
   | .handle _ | .option _ | .list _ | .prod _ _
   | .except _ _ | .exitOf _ _ | .causeOf _ | .fiberOf _ _ | .union _ _
   | .lit _ | .refOf _ | .deferredOf _ _ | .var _ => false
@@ -176,7 +185,7 @@ def isNever : Ty → Bool
 a program is closed. -/
 def closed : Ty → Bool
   | .var _ => false
-  | .never | .unit | .nat | .int | .string | .bool | .handle _ | .lit _ => true
+  | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _ => true
   | .option t | .list t | .causeOf t | .refOf t => closed t
   | .prod a b | .except a b | .exitOf a b | .fiberOf a b | .union a b | .deferredOf a b =>
     closed a && closed b
@@ -382,7 +391,7 @@ def isMember : Ty → Bool
   | .unit | .nat | .int | .string | .bool
   | .handle _ | .option _ | .list _ | .prod _ _
   | .except _ _ | .exitOf _ _ | .causeOf _ | .fiberOf _ _
-  | .lit _ | .refOf _ | .deferredOf _ _ | .var _ => true
+  | .lit _ | .refOf _ | .deferredOf _ _ | .var _ | .unknown => true
 
 theorem members_isMember {t x : Ty} (h : x ∈ members t) : isMember x = true := by
   induction t <;> simp only [members, List.mem_append, List.mem_singleton] at h
@@ -417,6 +426,8 @@ def sub (a b : Ty) : Bool :=
   | .never, _ => true
   | .union a1 a2, b => sub a1 b && sub a2 b
   | a, .union b1 b2 => sub a b1 || sub a b2
+  -- the top (decisions row 46): every type is below `unknown`
+  | _, .unknown => true
   | .lit _, .string => true
   | .option a, .option b => sub a b
   | .list a, .list b => sub a b
@@ -457,6 +468,7 @@ def instantiate (σ : Subst) : Ty → Ty
   | .deferredOf a b => .deferredOf (instantiate σ a) (instantiate σ b)
   | .union a b => .union (instantiate σ a) (instantiate σ b)
   | .never => .never
+  | .unknown => .unknown
   | .unit => .unit
   | .nat => .nat
   | .int => .int
@@ -548,6 +560,7 @@ def normalize : Ty → Ty
   | .union a b => ofMembers (normalizeRow
       ((normalize a).members ++ (normalize b).members)).elems
   | .never => .never
+  | .unknown => .unknown
   | .unit => .unit
   | .nat => .nat
   | .int => .int
@@ -559,6 +572,7 @@ def normalize : Ty → Ty
 /-- Proof-only construction invariant. Its row case has canonical atomic members. -/
 inductive Normal : Ty → Prop
   | never : Normal .never
+  | unknown : Normal .unknown
   | unit : Normal .unit
   | nat : Normal .nat
   | int : Normal .int
@@ -605,6 +619,7 @@ theorem normal_row (xs : List Ty) (hn : ∀ t ∈ xs, Normal t)
 theorem normal_normalize (t : Ty) : Normal (normalize t) := by
   induction t with
   | never => exact .never
+  | unknown => exact .unknown
   | unit => exact .unit
   | nat => exact .nat
   | int => exact .int
@@ -689,6 +704,12 @@ def chunk (inner : Ty) : Ty := .handle (chunkTarget inner)
 
 /-- Canonical union includes deep normalization of both inputs. -/
 def join (a b : Ty) : Ty := normalize (.union a b)
+
+/-- The top (decisions row 46): every type is below `unknown`, a union memberwise. -/
+theorem sub_unknown (t : Ty) : sub t unknown = true := by
+  induction t with
+  | union a b iha ihb => unfold sub; simp [iha, ihb]
+  | _ => unfold sub; simp
 
 /-- A member the tag test `tagIs tag` can be true on: a pair whose first component is the
 literal `tag` (DI-39). A bare `lit tag` is not one — the atom is false on a bare string. -/
@@ -816,6 +837,7 @@ instance : Max CTy := ⟨join⟩
 
 /-- The empty canonical union. -/
 def never : CTy := ofRaw .never
+def unknown : CTy := ofRaw .unknown
 
 @[simp] theorem ofRaw_toRaw (t : CTy) : ofRaw t.toRaw = t := by
   apply Subtype.ext

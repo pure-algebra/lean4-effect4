@@ -38,7 +38,7 @@ def findInt (pos : Path) : Ty → Option Path
   | .exitOf a e | .fiberOf a e | .deferredOf a e =>
       findInt (pos ++ ["value"]) a <|> findInt (pos ++ ["error"]) e
   | .refOf a => findInt (pos ++ ["value"]) a
-  | .never | .unit | .nat | .string | .bool | .handle _ | .lit _ | .var _ => none
+  | .never | .unknown | .unit | .nat | .string | .bool | .handle _ | .lit _ | .var _ => none
 
 /-- Scan every supplied row before normalization can discard any syntax. -/
 def findIntInTable (table : RowTable) : Option Path := go 0 table

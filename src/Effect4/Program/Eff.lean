@@ -59,7 +59,7 @@ def rawSupportedErrTy : Ty → Bool
   | .union l r => rawSupportedErrTy l && rawSupportedErrTy r
   | .unit | .int | .bool | .handle _ | .option _ | .list _
   | .except _ _ | .exitOf _ _ | .causeOf _ | .fiberOf _ _
-  | .refOf _ | .deferredOf _ _ | .var _ => false
+  | .refOf _ | .deferredOf _ _ | .var _ | .unknown => false
 
 /-- Error support reads the raw profile of the canonical type. -/
 def supportedErrTy (t : Ty) : Bool := rawSupportedErrTy t.normalize

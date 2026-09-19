@@ -41,12 +41,18 @@ instance (s t : Ty) : Decidable (Compatible s t) := inferInstanceAs (Decidable (
 
 /-- Types with no opaque or unsupported component. `never` is supported as an empty
 column (for example an Exit's error); it still encodes and decodes no standalone value.
-This type check does not establish value-level JSON representability. -/
+This type check does not establish value-level JSON representability.
+
+A classifier lists its positive arms and closes with an explicit `false` (DI-95): the wire
+interpreter (`encodeRaw`/`decodeRaw`) knows exactly the leaves and containers named here, so an
+appended constructor is unsupported until it is given an arm in all three. Handles (`handle`,
+`fiberOf`, `refOf`, `deferredOf`), `int`, a template parameter (`var`) and the top (`unknown`)
+are the negative class today. -/
 def isSupported : Ty → Bool
-  | .handle _ | .fiberOf _ _ | .int => false
+  | .never | .unit | .nat | .string | .bool | .lit _ => true
   | .option t | .list t | .causeOf t => isSupported t
   | .prod a b | .except a b | .exitOf a b | .union a b => isSupported a && isSupported b
-  | _ => true
+  | _ => false
 
 /-- Decode only exact, nonnegative, integral binary64 data in the image of `ofNat`.
 The reconstruction check rejects fractional values, negative zero and non-finite data. -/

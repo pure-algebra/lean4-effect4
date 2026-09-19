@@ -40,6 +40,7 @@ export const tyJson = (v: Ty): Json => {
     case "refOf": return ["refOf", tyJson(v.value)]
     case "deferredOf": return ["deferredOf", tyJson(v.value), tyJson(v.error)]
     case "var": return ["var", v.index]
+    case "unknown": return ["unknown"]
   }
 }
 

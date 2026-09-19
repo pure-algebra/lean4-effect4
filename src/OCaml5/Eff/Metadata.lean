@@ -50,7 +50,7 @@ def fixture {α : Type} [Canonical α] (name : String) (family : Name)
   ⟨name, family, tree value, Canonical.encode value, node value⟩
 
 def types : List (String × Ty) := [
-  ("never", .never), ("unit", .unit), ("nat", .nat), ("int", .int),
+  ("never", .never), ("unknown", .unknown), ("unit", .unit), ("nat", .nat), ("int", .int),
   ("string", .string), ("bool", .bool), ("handle", .handle "Host.Resource"),
   ("option", .option (.list .nat)), ("list", .list (.option .string)),
   ("prod", .prod .string .nat), ("except", .except .string (.list .nat)),

@@ -129,8 +129,8 @@ theorem check_sound (sig : Signature Op) (e : Eff Op) :
     exact HasTy.scoped (check_sound sig body env _ b hb)
   | acquireRelease acquire release =>
     intro env p t h
-    obtain ⟨a, r, ha, hr, rfl⟩ := inv_acquireRelease sig env p acquire release t h
-    exact .acquireRelease (check_sound sig acquire env _ a ha) (check_sound sig release _ _ r hr)
+    obtain ⟨a, r, ha, hr, hrel, rfl⟩ := inv_acquireRelease sig env p acquire release t h
+    exact .acquireRelease (check_sound sig acquire env _ a ha) (check_sound sig release _ _ r hr) hrel
   | provideLayer layer isLocal body =>
     intro env p t h
     obtain ⟨l, b, hl, hb, rfl⟩ := inv_provideLayer sig env p layer isLocal body t h
@@ -260,8 +260,8 @@ theorem checkAction_sound (sig : Signature Op) (action : ActionTerm Op) :
     exact .snapshotChildren
   | awaitNewChildren snapshot =>
     intro env p t h
-    obtain ⟨hs, rfl⟩ := inv_action_awaitNewChildren sig env p snapshot t h
-    exact .awaitNewChildren hs
+    obtain ⟨s, hs, hsub, rfl⟩ := inv_action_awaitNewChildren sig env p snapshot t h
+    exact .awaitNewChildren hs hsub
   | raceAll entrants =>
     intro env p t h
     exact .raceAll (checkEffs_sound sig entrants env _ t (inv_action_raceAll sig env p entrants t h))

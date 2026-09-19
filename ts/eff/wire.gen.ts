@@ -115,6 +115,7 @@ const writeTy = (w: Writer, v: Ty): void => {
     case "refOf": return w.ctor(16, [() => writeTy(w, v.value)])
     case "deferredOf": return w.ctor(17, [() => writeTy(w, v.value), () => writeTy(w, v.error)])
     case "var": return w.ctor(18, [() => w.nat(v.index)])
+    case "unknown": return w.ctor(19, [])
     default: throw new TypeError("wire Ty constructor")
   }
 }

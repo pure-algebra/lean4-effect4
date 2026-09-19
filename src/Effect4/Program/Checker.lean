@@ -200,9 +200,14 @@ mutual
       pure { t with requires := bodyRequires sig t }
     | .acquireRelease acquire release => do
       let a ← check sig env (p ++ [0]) acquire
-      let r ← check sig (env ++ [a.answer, .exitOf a.answer a.error]) (p ++ [1]) release
-      pure ⟨a.answer, a.error,
-        (a.requires.union r.requires).union (Requirement.single sig.scopeKey)⟩
+      -- rc.112 `Effect.ts:12930`: `release : (a, exit : Exit<unknown, unknown>) => Effect<unknown, never, R2>`
+      -- (decisions row 47, DI-94): the exit parameter is the scope's closing exit, not the acquire's,
+      -- and a release cannot fail — a failing one is a defect
+      let r ← check sig (env ++ [a.answer, .exitOf .unknown .unknown]) (p ++ [1]) release
+      if r.error.normalize = .never then
+        pure ⟨a.answer, a.error,
+          (a.requires.union r.requires).union (Requirement.single sig.scopeKey)⟩
+      else throw ⟨p, .releaseFails r.error⟩
     | .provideLayer layer _ body => do
       let l ← checkLayer sig (p ++ [0]) layer
       let b ← check sig env (p ++ [1]) body
@@ -358,10 +363,10 @@ mutual
       let handle ← expect ⟨p, .notFiber inner⟩ (fiberTy inner)
       pure (EffTy.pure (.list (.exitOf handle.1 handle.2)))
     | .snapshotChildren =>
-      pure (EffTy.pure (.list (.fiberOf (.handle "unknown") (.handle "unknown"))))
+      pure (EffTy.pure (.list (.fiberOf .unknown .unknown)))
     | .awaitNewChildren snapshot => do
       let s ← term? sig env p snapshot
-      if s = .list (.fiberOf (.handle "unknown") (.handle "unknown")) then pure (EffTy.pure .unit)
+      if Ty.sub s.normalize (.list (.fiberOf .unknown .unknown)) then pure (EffTy.pure .unit)
       else throw ⟨p, .snapshotExpected s⟩
     | .raceAll entrants => checkEffs sig env (p ++ [0]) entrants
     | .setContext context => do

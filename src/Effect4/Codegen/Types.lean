@@ -267,6 +267,7 @@ def parseLegacy (text : String) : Option TypeRef := do
 
 private def ofNormalized : Program.Ty → Option TypeRef
   | .never => some (.name ["never"] [])
+  | .unknown => some (.name ["unknown"] [])
   | .unit => some (.name ["void"] [])
   | .nat | .int => some (.name ["number"] [])
   | .string => some (.name ["string"] [])

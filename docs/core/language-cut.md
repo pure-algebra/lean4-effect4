@@ -29,15 +29,15 @@ an extended environment. That device exists; it is simply not offered to the row
 ## 2. Types
 
 `Ty := never unit nat int string bool handle(string) option list prod except exitOf causeOf
-fiberOf union lit refOf deferredOf var` plus `scope` (`Ty.lean:23-55`; `refOf`, `deferredOf` and the
-template parameter `var` since rows 42/43 step 1). Variance follows rc.112's declarations
+fiberOf union lit refOf deferredOf var unknown` plus `scope` (`Ty.lean`; `refOf`, `deferredOf` and the
+template parameter `var` since rows 42/43 step 1; `unknown`, the top, since L5). Variance follows rc.112's declarations
 (decisions row 55): `fiberOf` covariant (`Fiber<out A, out E>`), `refOf` and `deferredOf`
 invariant (`Ref<in out A>`, `Deferred<in out A, in out E>`).
 
 | gap | kind | cost | fix |
 | --- | --- | --- | --- |
 | `Ref` and `Deferred` are `handle "Ref.Ref<number>"` / `handle "Deferred.Deferred<number, number>"` (`Native.lean:138-150`); rows fix `refGet : nat`, `deferredAwait : nat / nat` | cut | every `Ref<A>`, `Deferred<A, E>` with `A ≠ number` is refused by the checker; the machine runs them (`RefHeap := List Val`) | decisions row 42: `Ty.refOf a`, `Ty.deferredOf a e`, rows with type variables instantiated from the request; before S1 |
-| no top (`unknown`); the checker spells `.handle "unknown"` (`Checker.lean:361`) | cut | `Exit<unknown, unknown>`, `Fiber<unknown>` cannot be typed honestly | row 46 |
+| ~~no top (`unknown`)~~ landed 2026-09-18 (L5): `Ty.unknown`, the top of `sub`, inhabited by every value; `Exit<unknown, unknown>` types the release's parameter (row 47) and `Fiber<unknown, unknown>` the children snapshot | — | — | rows 46, 47 |
 | no records or variants: only `prod` and untagged `union` (DI-15 gave `tagIs` and subsumption) | deferred (row 2) | Effect programs are records everywhere; a struct is a nested pair with positional access | row 2(b) `Ty.record`/`Ty.variant` before the first foreign consumer; the authoring layer already models tagged tuples |
 | `int` has no inhabitant (`TYPED-FB-INT`); no float, no bigint | cut | negative numbers and decimals are unsayable; `Float64` exists only in the JSON carrier | add `Val.int`/`Val.float` with their atoms, or refuse them by name in the printed profile |
 | no type variables anywhere; no `Ty.app` (row 3) | profile (DI-20, DI-28) | generic combinators are written per instantiation by a builder | the basis: Lean/OCaml/TS builders are polymorphic, the stored program is closed. Keep, and say it on the surface |

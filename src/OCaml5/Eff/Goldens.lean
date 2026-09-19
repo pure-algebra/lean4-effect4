@@ -88,6 +88,7 @@ partial def V.names : V → List Name
 
 def tyV : Ty → V
   | .never => .ctor ``Ty.never []
+  | .unknown => .ctor ``Ty.unknown []
   | .unit => .ctor ``Ty.unit []
   | .nat => .ctor ``Ty.nat []
   | .int => .ctor ``Ty.int []

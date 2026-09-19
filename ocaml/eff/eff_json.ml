@@ -25,6 +25,7 @@ let rec json_ty (v : ty) : Eff_json_text.t =
   | Ty_refOf a0 -> Eff_json_text.Array [Eff_json_text.String "refOf"; json_ty a0]
   | Ty_deferredOf (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "deferredOf"; json_ty a0; json_ty a1]
   | Ty_var a0 -> Eff_json_text.Array [Eff_json_text.String "var"; Eff_json_text.Int a0]
+  | Ty_unknown -> Eff_json_text.Array [Eff_json_text.String "unknown"]
 
 let print_ty (v : ty) : string = Eff_json_text.render (json_ty v)
 

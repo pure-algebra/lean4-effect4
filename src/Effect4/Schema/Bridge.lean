@@ -37,6 +37,7 @@ def defectRep : Representation :=
 /-- Lowers any first-order `Ty` into its canonical rc.112 `SchemaRepresentation`. -/
 def schema : Ty → Representation
   | .never => Schema.never
+  | .unknown => .unknown none []
   | .unit => Schema.void
   | .nat => .number none [isIntCheck, nonNegativeCheck]
   | .int => .number none [isIntCheck]
@@ -77,6 +78,7 @@ defect slot is not the `Defect` declaration, an optional or annotated tuple elem
 writes. Annotations are not read: `ofSchema r = some t` says `r` is `schema t` up to them. -/
 def ofSchema : Representation → Option Ty
   | .never _ [] => some .never
+  | .unknown _ [] => some .unknown
   | .void _ [] => some .unit
   | .number _ checks =>
     match checks.map checkId with
@@ -138,6 +140,7 @@ a row template's parameter is not a program type and has no schema to read back)
 theorem ofSchema_schema (t : Ty) (h : t.closed = true) : ofSchema (schema t) = some t := by
   induction t with
   | never => rfl
+  | unknown => rfl
   | unit => rfl
   | nat => rfl
   | int => rfl

@@ -1,4 +1,4 @@
-Ty: never unit nat int string bool handle option list prod except exitOf causeOf fiberOf union lit refOf deferredOf var
+Ty: never unit nat int string bool handle option list prod except exitOf causeOf fiberOf union lit refOf deferredOf var unknown
 Lit: unit nat bool str
 Term: var lit app
 Terms: nil cons

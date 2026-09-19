@@ -284,7 +284,7 @@ theorem hasTy_mono (ty : Ty) (v : Val) (a b : List String)
     split at typed <;> try exact typed
     · exact ihe _ typed
     · exact ihv _ typed
-  | unit | nat | bool | string | fiberOf | refOf | deferredOf | lit => exact typed
+  | unit | nat | bool | string | fiberOf | refOf | deferredOf | lit | unknown => exact typed
   | handle target =>
     cases v <;> simp only [Val.hasTy] at typed ⊢
     all_goals try exact typed

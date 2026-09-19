@@ -1079,7 +1079,8 @@ def TyShape : Shape :=
       ("lit", 15, [("value", (shape _root_.String).root)]),
       ("refOf", 16, [("value", .named "Ty")]),
       ("deferredOf", 17, [("value", .named "Ty"), ("error", .named "Ty")]),
-      ("var", 18, [("index", (shape _root_.Nat).root)])]
+      ("var", 18, [("index", (shape _root_.Nat).root)]),
+      ("unknown", 19, [])]
 
 /-- One table for the block, then the field types' tables. -/
 def defs : List (String × Shape) :=
@@ -1107,6 +1108,7 @@ def toValTy : _root_.Effect4.Program.Ty → Val
   | .refOf a0 => .ctor 16 [toValTy a0]
   | .deferredOf a0 a1 => .ctor 17 [toValTy a0, toValTy a1]
   | .var a0 => .ctor 18 [Canonical.toVal a0]
+  | .unknown => .ctor 19 []
 end
 
 /-! The structural readers. Exactness is bought by the re-encode guard, so a reader
@@ -1172,6 +1174,7 @@ def rawTy : Val → Option (_root_.Effect4.Program.Ty)
     match Canonical.ofVal (α := _root_.Nat) v0 with
     | some a0 => some (.var a0)
     | _ => none
+  | .ctor 19 [] => some .unknown
   | _ => none
 end
 
@@ -1211,6 +1214,7 @@ theorem rawTy_toValTy (a : _root_.Effect4.Program.Ty) :
     simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
   | «var» a0 =>
     simp [toValTy, rawTy, Canonical.ofVal_toVal]
+  | «unknown» => rfl
 termination_by structural a
 end
 
@@ -1294,6 +1298,8 @@ theorem fitsTy (a : _root_.Effect4.Program.Ty) :
   | «var» a0 =>
     exact acceptsAt_sum _ _ _ 18 "var" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0) (acceptsFields_nil _))
+  | «unknown» =>
+    exact acceptsAt_sum _ _ _ 19 "unknown" [] [] rfl (acceptsFields_nil _)
 termination_by structural a
 end
 

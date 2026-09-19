@@ -92,6 +92,7 @@ def Val.hasTy (v : Val) (ty : Ty) (allocated : List String := []) : Bool :=
   | .union l r => Val.hasTy v l allocated || Val.hasTy v r allocated
   | .lit value => match v with | .str s => s == value | _ => false
   | .never => false
+  | .unknown => true
   | .int => false
   | .except error value =>
     match v with
@@ -143,6 +144,9 @@ and value `v` has type `a`, then `v` also has type `b`. -/
 theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
     (hsub : Ty.sub a b = true) (hv : Val.hasTy v a allocated = true) :
     Val.hasTy v b allocated = true := by
+  -- the top: every value inhabits `unknown` (decisions row 46)
+  by_cases hbu : b = .unknown
+  · subst hbu; simp [Val.hasTy]
   if heq : a = b then
     subst heq
     exact hv
@@ -150,6 +154,18 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
     cases a with
     | never => simp [Val.hasTy] at hv
     | int => simp [Val.hasTy] at hv
+    | unknown =>
+      cases b with
+      | union b1 b2 =>
+        rw [Ty.sub_union_right .unknown b1 b2 rfl] at hsub
+        obtain h1 | h2 := Bool.or_eq_true_iff.mp hsub
+        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub .unknown b1 v allocated h1 hv)
+        · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub .unknown b2 v allocated h2 hv)
+      | unknown => exact absurd rfl hbu
+      | _ =>
+        first
+        | exact absurd rfl hbu
+        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
     | except ae av =>
       cases b with
       | union b1 b2 =>
@@ -165,7 +181,9 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         · exact hasTy_sub ae be _ allocated hab.1 hv
         · exact hasTy_sub av bv _ allocated hab.2 hv
       | _ =>
-        revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
+        first
+        | exact absurd rfl hbu
+        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
     | union a1 a2 =>
       rw [Ty.sub_union_left a1 a2 b heq] at hsub
       obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hsub
@@ -185,7 +203,9 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         | str s' => rfl
         | _ => simp [Val.hasTy] at hv
       | _ =>
-        revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
+        first
+        | exact absurd rfl hbu
+        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
     | option a' =>
       cases b with
       | union b1 b2 =>
@@ -201,7 +221,9 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         · rename_i x
           exact hasTy_sub a' b' x allocated hsub hv
       | _ =>
-        revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
+        first
+        | exact absurd rfl hbu
+        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
     | list a' =>
       cases b with
       | union b1 b2 =>
@@ -218,7 +240,9 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         · rename_i vs
           exact list_all_mono vs (fun x => hasTy_sub a' b' x allocated hsub) hv
       | _ =>
-        revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
+        first
+        | exact absurd rfl hbu
+        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
     | prod a1 a2 =>
       cases b with
       | union b1 b2 =>
@@ -235,7 +259,9 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         simp only [Bool.and_eq_true_iff] at hv ⊢
         exact ⟨hasTy_sub a1 b1 x allocated h1 hv.1, hasTy_sub a2 b2 y allocated h2 hv.2⟩
       | _ =>
-        revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
+        first
+        | exact absurd rfl hbu
+        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
     | exitOf a1 e1 =>
       cases b with
       | union b1 b2 =>
@@ -253,7 +279,9 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
           exact causeAdmits_mono_sub (fun w hw => hasTy_sub e1 e2 w allocated he hw) _ hv
         · contradiction
       | _ =>
-        revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
+        first
+        | exact absurd rfl hbu
+        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
     | causeOf e1 =>
       cases b with
       | union b1 b2 =>
@@ -267,7 +295,9 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         split at hv <;> try contradiction
         exact causeAdmits_mono_sub (fun w hw => hasTy_sub e1 e2 w allocated hsub hw) _ hv
       | _ =>
-        revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
+        first
+        | exact absurd rfl hbu
+        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
     | fiberOf a1 e1 =>
       cases b with
       | union b1 b2 =>
@@ -279,7 +309,9 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         simp only [Val.hasTy] at hv ⊢
         exact hv
       | _ =>
-        revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
+        first
+        | exact absurd rfl hbu
+        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
     | refOf a1 =>
       cases b with
       | union b1 b2 =>
@@ -291,7 +323,9 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         simp only [Val.hasTy] at hv ⊢
         exact hv
       | _ =>
-        revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
+        first
+        | exact absurd rfl hbu
+        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
     | deferredOf a1 e1 =>
       cases b with
       | union b1 b2 =>
@@ -303,7 +337,9 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         simp only [Val.hasTy] at hv ⊢
         exact hv
       | _ =>
-        revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
+        first
+        | exact absurd rfl hbu
+        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
     | var i => simp [Val.hasTy] at hv
     | unit =>
       cases b with
@@ -313,7 +349,9 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub .unit b1 v allocated h1 hv)
         · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub .unit b2 v allocated h2 hv)
       | _ =>
-        revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
+        first
+        | exact absurd rfl hbu
+        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
     | nat =>
       cases b with
       | union b1 b2 =>
@@ -322,7 +360,9 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub .nat b1 v allocated h1 hv)
         · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub .nat b2 v allocated h2 hv)
       | _ =>
-        revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
+        first
+        | exact absurd rfl hbu
+        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
     | string =>
       cases b with
       | union b1 b2 =>
@@ -331,7 +371,9 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub .string b1 v allocated h1 hv)
         · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub .string b2 v allocated h2 hv)
       | _ =>
-        revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
+        first
+        | exact absurd rfl hbu
+        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
     | bool =>
       cases b with
       | union b1 b2 =>
@@ -340,7 +382,9 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub .bool b1 v allocated h1 hv)
         · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub .bool b2 v allocated h2 hv)
       | _ =>
-        revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
+        first
+        | exact absurd rfl hbu
+        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
     | handle target =>
       cases b with
       | union b1 b2 =>
@@ -349,7 +393,9 @@ theorem hasTy_sub (a b : Ty) (v : Val) (allocated : List String := [])
         · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inl (hasTy_sub (.handle target) b1 v allocated h1 hv)
         · simp only [Val.hasTy, Bool.or_eq_true]; exact Or.inr (hasTy_sub (.handle target) b2 v allocated h2 hv)
       | _ =>
-        revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction
+        first
+        | exact absurd rfl hbu
+        | (revert hsub; unfold Ty.sub; simp only [heq, ↓reduceIte]; intro h; contradiction)
 termination_by sizeOf a + sizeOf b
 
 end Effect4.Program

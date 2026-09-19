@@ -31,7 +31,7 @@
   ],
   "families": {
     "Effect4.Program.Ty": {
-      "active": {"never": 0, "unit": 1, "nat": 2, "int": 3, "string": 4, "bool": 5, "handle": 6, "option": 7, "list": 8, "prod": 9, "except": 10, "exitOf": 11, "causeOf": 12, "fiberOf": 13, "union": 14, "lit": 15, "refOf": 16, "deferredOf": 17, "var": 18},
+      "active": {"never": 0, "unit": 1, "nat": 2, "int": 3, "string": 4, "bool": 5, "handle": 6, "option": 7, "list": 8, "prod": 9, "except": 10, "exitOf": 11, "causeOf": 12, "fiberOf": 13, "union": 14, "lit": 15, "refOf": 16, "deferredOf": 17, "var": 18, "unknown": 19},
       "retired": {}
     },
     "Effect4.Program.Lit": {

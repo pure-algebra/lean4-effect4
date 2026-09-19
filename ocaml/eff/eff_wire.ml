@@ -25,6 +25,7 @@ let rec emit_ty (b : Buffer.t) (v : ty) : unit =
   | Ty_refOf a0 -> Eff_frame.emit_ctor b 16 (fun b -> emit_ty b a0)
   | Ty_deferredOf (a0, a1) -> Eff_frame.emit_ctor b 17 (fun b -> emit_ty b a0; emit_ty b a1)
   | Ty_var a0 -> Eff_frame.emit_ctor b 18 (fun b -> Eff_frame.emit_nat b a0)
+  | Ty_unknown -> Eff_frame.emit_ctor b 19 (fun _ -> ())
 
 let encode_ty (v : ty) : string = Eff_frame.to_string emit_ty v
 
@@ -128,6 +129,8 @@ let rec decode_ty (s : string) (pos : int) (limit : int) : (ty * int) option =
        | None -> None
        | Some (a0, p) ->
         if p = e then Some (Ty_var a0, next) else None)
+    | 19 ->
+      if p = e then Some (Ty_unknown, next) else None
     | _ -> None)
 
 let decode_ty_exact (s : string) : ty option = Eff_frame.exact decode_ty s

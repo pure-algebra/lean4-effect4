@@ -107,6 +107,15 @@ theorem left_biased_roundTrip_impossible (encode : Ty → Val → Option Json)
   some (.list [.nat 3, .bool true])
 #guard Schema.Codec.isValue (.prod (.union .nat .string) .bool) (.list [.nat 3, .bool true])
 
+-- DI-95: the support classifier lists its positive arms and closes with `false`, so the handle
+-- sorts, a template parameter and the top are unsupported, exactly as the wire interpreter is.
+#guard Schema.Codec.isSupported .unknown = false
+#guard Schema.Codec.isSupported (.refOf .nat) = false
+#guard Schema.Codec.isSupported (.deferredOf .nat .never) = false
+#guard Schema.Codec.isSupported (.var 0) = false
+#guard Schema.Codec.isSupported (.lit "A") = true
+#guard Schema.Codec.isSupported (.union .never (.option .nat)) = true
+
 #print axioms natural_collision
 #print axioms natural_roundTrip_impossible
 #print axioms subtype_encoding_impossible

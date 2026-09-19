@@ -22,6 +22,7 @@ type ty =
   | Ty_refOf of ty
   | Ty_deferredOf of ty * ty
   | Ty_var of int
+  | Ty_unknown
 
 let ctor_index_ty : ty -> int = function
   | Ty_never -> 0
@@ -43,6 +44,7 @@ let ctor_index_ty : ty -> int = function
   | Ty_refOf _ -> 16
   | Ty_deferredOf _ -> 17
   | Ty_var _ -> 18
+  | Ty_unknown -> 19
 let wire_tag_ty : ty -> int = function
   | Ty_never -> 0
   | Ty_unit -> 1
@@ -63,6 +65,7 @@ let wire_tag_ty : ty -> int = function
   | Ty_refOf _ -> 16
   | Ty_deferredOf _ -> 17
   | Ty_var _ -> 18
+  | Ty_unknown -> 19
 let ctor_name_ty : ty -> string = function
   | Ty_never -> "never"
   | Ty_unit -> "unit"
@@ -83,7 +86,8 @@ let ctor_name_ty : ty -> string = function
   | Ty_refOf _ -> "refOf"
   | Ty_deferredOf _ -> "deferredOf"
   | Ty_var _ -> "var"
-let ctor_names_ty : string list = ["never"; "unit"; "nat"; "int"; "string"; "bool"; "handle"; "option"; "list"; "prod"; "except"; "exitOf"; "causeOf"; "fiberOf"; "union"; "lit"; "refOf"; "deferredOf"; "var"]
+  | Ty_unknown -> "unknown"
+let ctor_names_ty : string list = ["never"; "unit"; "nat"; "int"; "string"; "bool"; "handle"; "option"; "list"; "prod"; "except"; "exitOf"; "causeOf"; "fiberOf"; "union"; "lit"; "refOf"; "deferredOf"; "var"; "unknown"]
 
 
 type lit =

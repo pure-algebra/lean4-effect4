@@ -11,6 +11,8 @@ private theorem sub_trans_core (a b c : Ty) (hab : sub a b = true) (hbc : sub b 
     sub a c = true := by
   by_cases hac : a = c
   · subst c; exact sub_refl a
+  by_cases hcu : c = .unknown
+  · subst hcu; exact sub_unknown a
   by_cases habEq : a = b
   · subst b; exact hbc
   by_cases hbcEq : b = c
@@ -181,7 +183,7 @@ theorem hasTy_fibers_nil (inner : Ty) (allocated : List String) :
 theorem hasTy_normalize (t : Ty) (v : Val) (allocated : List String) :
     Val.hasTy v t.normalize allocated = Val.hasTy v t allocated := by
   induction t generalizing v with
-  | never | unit | nat | int | string | bool | handle | lit => rfl
+  | never | unknown | unit | nat | int | string | bool | handle | lit => rfl
   | except error value ihe ihv =>
     simp only [Ty.normalize, Val.hasTy]
     split <;> try rfl
@@ -750,6 +752,8 @@ theorem sub_normalize_of_sub
   intro hab
   by_cases heq : a = b
   · subst b; exact Ty.sub_refl _
+  by_cases hbu : b = .unknown
+  · subst hbu; exact Ty.sub_unknown _
   by_cases hnorm : a.normalize = b.normalize
   · rw [hnorm]; exact Ty.sub_refl _
   by_cases ha : Ty.isMember a = true

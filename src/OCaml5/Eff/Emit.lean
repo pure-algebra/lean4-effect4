@@ -365,6 +365,7 @@ def manifest (bs : List (List Family)) : String :=
 
 def tyO : Ty → String
   | .never => octor "ty" "never"
+  | .unknown => octor "ty" "unknown"
   | .unit => octor "ty" "unit"
   | .nat => octor "ty" "nat"
   | .int => octor "ty" "int"

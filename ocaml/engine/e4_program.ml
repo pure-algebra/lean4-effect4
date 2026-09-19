@@ -134,6 +134,9 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Ty_fiberOf (a, b) -> A.Ty_fiberOf (of_ty a, of_ty b)
     | Eff_types.Ty_union (a, b) -> A.Ty_union (of_ty a, of_ty b)
     | Eff_types.Ty_lit s -> A.Ty_lit s
+    (* the frozen engine's alphabet ends at `lit`; a program carrying a later constructor
+       (`refOf`, `deferredOf`, `var`, `unknown`) is refused by name, never a `Match_failure` *)
+    | _ -> failwith "e4_program: Ty constructor beyond the frozen engine's alphabet"
 
   let of_lit : Eff_types.lit -> A.lit = function
     | Eff_types.Lit_unit -> A.Lit_unit

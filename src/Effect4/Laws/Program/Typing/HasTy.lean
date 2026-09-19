@@ -208,13 +208,15 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
   | scoped {env : TyEnv} {body : Eff Op} {t : EffTy} :
       HasTy sig env body t →
       HasTy sig env (.scoped body) { t with requires := bodyRequires sig t }
-  /-- `Effect.acquireRelease` (`:3978`): the answer and the error are the **acquire's**; the
-  release's error column `r.error` does not appear in the conclusion at all — a finalizer's
-  failure is a defect, not an `E` (DI-63, types seat §3.5). `r` occurs only in the requirement
-  row, and the conclusion adds this signature's `Scope` key. -/
+  /-- `Effect.acquireRelease` (`:3978`; `Effect.ts:12930`): the answer and the error are the
+  **acquire's**; the release is typed at the acquired value and the scope's closing exit
+  `Exit<unknown, unknown>` (decisions rows 46, 47), and its error column must be `never` — a
+  release cannot fail; a failing one is a defect (DI-63, DI-94). `r` otherwise occurs only in
+  the requirement row, and the conclusion adds this signature's `Scope` key. -/
   | acquireRelease {env : TyEnv} {acquire release : Eff Op} {a r : EffTy} :
       HasTy sig env acquire a →
-      HasTy sig (env ++ [a.answer, .exitOf a.answer a.error]) release r →
+      HasTy sig (env ++ [a.answer, .exitOf .unknown .unknown]) release r →
+      r.error.normalize = .never →
       HasTy sig env (.acquireRelease acquire release)
         ⟨a.answer, a.error, (a.requires.union r.requires).union (Requirement.single sig.scopeKey)⟩
   /-- `Effect.provide` (`internal/layer.ts:8-22`): the layer is typed closed — no environment —
@@ -375,13 +377,15 @@ inductive ActionHasTy (sig : Signature Op) : TyEnv → ActionTerm Op → EffTy �
       fiberTy inner = some (value, error) →
       ActionHasTy sig env (.awaitAllFailFast targets) (EffTy.pure (.list (.exitOf value error)))
   /-- `awaitAllChildren`'s snapshot (`:5318`): a list of fiber handles whose columns this
-  typing does not know, spelled with the opaque handle `"unknown"`. -/
+  typing does not know, `Fiber<unknown, unknown>` (decisions row 46). -/
   | snapshotChildren {env : TyEnv} :
       ActionHasTy sig env .snapshotChildren
-        (EffTy.pure (.list (.fiberOf (.handle "unknown") (.handle "unknown"))))
-  /-- `awaitAllChildren`'s exit half: the snapshot term must be exactly that list. -/
-  | awaitNewChildren {env : TyEnv} {snapshot : Term} :
-      termTy sig env snapshot = some (.list (.fiberOf (.handle "unknown") (.handle "unknown"))) →
+        (EffTy.pure (.list (.fiberOf .unknown .unknown)))
+  /-- `awaitAllChildren`'s exit half: the snapshot term is a list of fibers, at any columns
+  (DI-15, subsumption at `Fiber<unknown, unknown>`). -/
+  | awaitNewChildren {env : TyEnv} {snapshot : Term} {snapshotTy : Ty} :
+      termTy sig env snapshot = some snapshotTy →
+      Ty.sub snapshotTy.normalize (.list (.fiberOf .unknown .unknown)) = true →
       ActionHasTy sig env (.awaitNewChildren snapshot) (EffTy.pure .unit)
   /-- `raceAll`: the entrants' joined type, unchanged. -/
   | raceAll {env : TyEnv} {entrants : Effs Op} {t : EffTy} :

@@ -190,7 +190,8 @@ theorem inv_acquireRelease (sig : Signature Op) (env : TyEnv) (p : List Nat)
     (acquire release : Eff Op) :
     ∀ t, check sig env p (.acquireRelease acquire release) = .ok t →
       ∃ a r, check sig env (p ++ [0]) acquire = .ok a ∧
-        check sig (env ++ [a.answer, .exitOf a.answer a.error]) (p ++ [1]) release = .ok r ∧
+        check sig (env ++ [a.answer, .exitOf .unknown .unknown]) (p ++ [1]) release = .ok r ∧
+        r.error.normalize = .never ∧
         t = ⟨a.answer, a.error,
               (a.requires.union r.requires).union (Requirement.single sig.scopeKey)⟩ := by
   aesop
@@ -362,14 +363,14 @@ theorem inv_action_awaitAllFailFast (sig : Signature Op) (env : TyEnv) (p : List
 
 theorem inv_action_snapshotChildren (sig : Signature Op) (env : TyEnv) (p : List Nat) :
     ∀ t, checkAction sig env p (.snapshotChildren : ActionTerm Op) = .ok t →
-      t = EffTy.pure (.list (.fiberOf (.handle "unknown") (.handle "unknown"))) := by
+      t = EffTy.pure (.list (.fiberOf .unknown .unknown)) := by
   aesop
 
 theorem inv_action_awaitNewChildren (sig : Signature Op) (env : TyEnv) (p : List Nat)
     (snapshot : Term) :
     ∀ t, checkAction sig env p (.awaitNewChildren snapshot) = .ok t →
-      termTy sig env snapshot =
-          some (.list (.fiberOf (.handle "unknown") (.handle "unknown"))) ∧
+      ∃ s, termTy sig env snapshot = some s ∧
+        Ty.sub s.normalize (.list (.fiberOf .unknown .unknown)) = true ∧
         t = EffTy.pure .unit := by
   aesop
 

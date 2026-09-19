@@ -54,6 +54,10 @@ def tyValue : Ty → Value
   | .fiberOf v e => .ctor ``Ty.fiberOf #[tyValue v, tyValue e]
   | .union l r => .ctor ``Ty.union #[tyValue l, tyValue r]
   | .lit s => .ctor ``Ty.lit #[.str s]
+  | .refOf v => .ctor ``Ty.refOf #[tyValue v]
+  | .deferredOf v e => .ctor ``Ty.deferredOf #[tyValue v, tyValue e]
+  | .var i => .ctor ``Ty.var #[.nat i]
+  | .unknown => .ctor ``Ty.unknown #[]
 
 /-- The inverse, so the marshalling can be round-tripped rather than trusted. -/
 partial def valueTy? (v : Value) : Option Ty := do
@@ -75,6 +79,10 @@ partial def valueTy? (v : Value) : Option Ty := do
     else if n == ``Ty.fiberOf then do return .fiberOf (← valueTy? (← fs[0]?)) (← valueTy? (← fs[1]?))
     else if n == ``Ty.union then do return .union (← valueTy? (← fs[0]?)) (← valueTy? (← fs[1]?))
     else if n == ``Ty.lit then do return .lit (← (← fs[0]?).toStr?)
+    else if n == ``Ty.refOf then do return .refOf (← valueTy? (← fs[0]?))
+    else if n == ``Ty.deferredOf then do return .deferredOf (← valueTy? (← fs[0]?)) (← valueTy? (← fs[1]?))
+    else if n == ``Ty.var then do return .var (← (← fs[0]?).toNat?)
+    else if n == ``Ty.unknown then some .unknown
     else none
   | _ => none
 
