@@ -15,7 +15,7 @@ What that buys, and what it costs. `hasTy_sub` itself stays where it is
 sites in five files read it, and its own proof is now `fun_induction Ty.sub` at seventy-nine
 lines. What is new here is the **generic** statement, which is what L2 needs: `Val.hasTyWith`
 under an oracle, `Val.hasTyIn` at a world, and any later admission fold get their monotonicity by
-discharging fifteen fields rather than by re-proving a two-hundred-line case analysis.
+discharging fourteen fields rather than by re-proving a two-hundred-line case analysis.
 The claim that the existing law is an instance is therefore still a claim; what is proved here
 is the generic law it would be an instance of.
 
@@ -99,29 +99,38 @@ theorem cata_admits_sub {alg : TyAlgebra AdmCarrier} (h : AdmitsSub alg) {a b : 
 
 /-! ## What is owed: the condition discharged for `Val.hasTy`
 
-`Val.hasTy_admitsSub : AdmitsSub Val.hasTy.alg` is **not** here, and the reason is worth writing
-down because it is a property of `fold_of`'s output, not of the design.
+`Val.hasTy_admitsSub : AdmitsSub Val.hasTy.alg` is **not** here. `AdmitsSub` has fourteen fields;
+nine of them were written and accepted, five were written and refused, and the refusal is a
+property of `fold_of`'s output rather than of the design.
 
-Five of the fifteen fields are immediate — `never`, `union`, `top`, `var` and the two invariant
-handles are `rfl`, because the generated arms are literally `fun v al => false`,
-`fun v al => p.2 v al || q.2 v al`, `fun v al => true` and (for `refOf`/`deferredOf`) functions
-that ignore their argument, which is decisions row 44 stated as a law. `lit_string` and `option`
-close by `cases v` in three lines each.
+**Nine proved.** `never`, `union`, `top`, `var`, `refOf` and `deferredOf` are `rfl`: the generated
+arms are literally `fun v al => false`, `fun v al => p.2 v al || q.2 v al`, `fun v al => true`,
+and — for the two handles — functions that ignore their argument, which is decisions row 44 (a
+handle is coarse by kind) stated as a law. `fiberOf` is the identity for the same reason.
+`lit_string` and `option` close by `cases v` in three lines each.
 
-The remaining seven (`list`, `prod`, `except`, `exitOf`, `causeOf`, `fiberOf` and the `handle`
-side of the leaves) inspect the VALUE, and `fold_of` emits those arms through the compiler's
-sparse case analyses (`Val.hasTy._sparseCasesOn_37` and kin, one per reachable frame group)
-rather than through `Val`'s own matcher. `split` refuses them — "Could not split an `if` or
-`match` expression" — so each needs a `cases v` walk over `Val`'s frames with the two-cell and
-snapshot sub-cases spelled out, rather than the four-line `split at hv` the hand `Val.hasTy`
-admits. That is mechanical and perhaps eighty lines; it is not a design question and it is not
-attempted here.
+**Five refused**: `list`, `prod`, `except`, `exitOf`, `causeOf`. All five inspect the VALUE, and
+`fold_of` emits those arms through the compiler's sparse case analyses rather than through
+`Val`'s own matcher, so `split at hv` cannot see the match. The residual goal is the same shape
+in each; at `list` it reads
+
+    Tactic `split` failed: Could not split an `if` or `match` expression in the type
+      (hasTy._sparseCasesOn_37 v
+          (fun index args => if h : index = 3 then … else false)
+          (fun xs => xs.all fun x => p.snd x al) fun h => false) = true
+    of `hv`
+
+Unfolding `Val.hasTy.alg` first does not help: it exposes the `_sparseCasesOn` rather than
+removing it. Each of the five needs a `cases v` walk over `Val`'s frames with the two-cell and
+snapshot sub-cases spelled out, in place of the four-line `split at hv` the hand-written
+`Val.hasTy` admits. That is mechanical, roughly eighty lines, and no design question is open in
+it; it is simply not attempted here.
 
 Until it lands, `hasTy_sub` (`src/Effect4/Program/Typed.lean`) is the law every caller uses, and
 it is proved directly by `fun_induction Ty.sub` at seventy-nine lines. What `cata_admits_sub`
 adds today is the statement L2 needs — that monotonicity along `sub` is a condition on the
 ALGEBRA and not a property of one fold — proved once, so `Val.hasTyWith` under an oracle and any
-later admission fold discharge fifteen fields instead of re-proving a case analysis.
+later admission fold discharge fourteen fields instead of re-proving a case analysis.
 -/
 
 end Effect4.Program
