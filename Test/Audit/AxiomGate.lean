@@ -95,6 +95,15 @@ private def auditImplementationModules : List Name :=
   -- The traversal census (`#traversal_census`): a command elaborator that classifies every
   -- definition reading a free object (fold / generated / structural / …); meta code, no theorem.
   , `Effect4.Laws.Auto.Traversals
+  -- The exhaustiveness inventory (`#exhaustive_gate`): a command elaborator that reads every
+  -- match on a free object out of the matcher's own type and says which have no catch-all;
+  -- meta code, no theorem in the module.
+  , `Effect4.Laws.Auto.Exhaustive
+  -- The named aesop banks (tooling plan 1.1): `declare_aesop_rule_sets` expands to a
+  -- binder-free `initialize`, and the initializer that registers the rule set with aesop's
+  -- environment extension crosses to `Classical.choice`. The module declares no theorem and
+  -- states this entry's condition in its own header.
+  , `Effect4.Laws.Auto.RuleSets
   -- The converter (`fold_of`): a command elaborator that adds a hand traversal's algebra, its
   -- homomorphism witness and `eq_cata` to the environment; meta code, no theorem of its own.
   , `Effect4.Program.FoldOf
@@ -257,6 +266,52 @@ above refuses, and reaches `sorryAx`, which `forbiddenAxioms` refuses.
 private def forbiddenTrustKeywords : List String :=
   [ "admit" ]
 
+/--
+The counted tactics: the proof-shape ratchet (tooling plan 1.7, decision D-D).
+
+`first`, `simp_all` and `try` are not refused — the estate has hundreds of them and a refusal
+would be a lie — but their number per source is pinned in `generated/proof-shape.tsv` and may
+only fall. That makes "the proofs got shorter" a checked fact rather than a claim, and it is
+the receipt the algebra work is measured by: `AdmitsSub` deleting sixteen `first` blocks from
+`Program/Typed.lean` shows up here as a number, in a build that had to happen anyway.
+
+Why the tokenizer and not a grep: the tokenizer skips comments, doc comments and string
+literals, so prose about `try` is not a `try`, and a qualified `Foo.first` is one identifier
+token whose raw text is `Foo.first`, not a `first`.
+
+**Which token shape each word takes is measured, not assumed.** At this toolchain pin `try` is
+a reserved keyword and arrives as an atom, while `first` and `simp_all` are identifier-shaped
+tokens the tactic parsers match by name and arrive as idents — so the counter reads both
+shapes, by raw text, exactly as `forbiddenToken?` reads an identifier. A qualified `Foo.first`
+is one ident whose raw text is `Foo.first` and is not counted.
+
+`first` needs one more condition, and measuring said so: `first` is also an ordinary binder
+name in this tree (`intro raw first second` in the optic and annotation laws, and
+`Census.attempt`'s own parameter), which put 775 of it in the first reading against 16 real
+tactics in `Program/Typed.lean`. The tactic's syntax is `"first" ("| " tacticSeq)+`, so a
+`first` tactic is always followed by `|` and a binder never is. The counter therefore counts
+`first` only when the next token is `|`. `simp_all` and `try` need no such condition: neither
+is a name anywhere in the tree, and their counts agree exactly with a grep (120 and 274).
+
+What it does not see: a tactic reached through a macro, and anything inside a proof term. This
+counts source tokens and claims nothing more.
+-/
+private def countedTactics : List String :=
+  [ "first", "simp_all", "try" ]
+
+/-- The counts of `countedTactics` in one source, in that order. -/
+structure ProofShape where
+  counts : Array Nat := (countedTactics.map fun _ => 0).toArray
+deriving Inhabited, BEq
+
+def ProofShape.total (shape : ProofShape) : Nat := shape.counts.foldl (· + ·) 0
+
+def ProofShape.bump (shape : ProofShape) (index : Nat) : ProofShape :=
+  { counts := shape.counts.modify index (· + 1) }
+
+def ProofShape.render (path : String) (shape : ProofShape) : String :=
+  shape.counts.foldl (init := path) fun line n => line ++ "\t" ++ toString n
+
 /-- The synthesised values Lean gives a bodyless `opaque`. -/
 private def synthesizedOpaqueBodies : List Name :=
   [``Inhabited.default, ``Classical.ofNonempty]
@@ -409,9 +464,12 @@ private def forbiddenToken? (token : Syntax) : Option String :=
       if forbiddenTrustTokens.contains raw then some raw else none
   | _ => none
 
-private def forbiddenTrustToken?
+/-- One tokenization of one source, answering both questions the gate asks of its text: the
+first authored trust token, if any, and the counts of the ratcheted tactics. One pass, because
+walking every audited source is what this half of the gate already spends its time on. -/
+private def scanSource
     (environment : Environment)
-    (source : System.FilePath) : IO (Option String) := do
+    (source : System.FilePath) : IO (Option String × ProofShape) := do
   let input ← IO.FS.readFile source
   let inputContext := Parser.mkInputContext input source.toString
   let parserContext : Parser.ParserModuleContext :=
@@ -419,6 +477,9 @@ private def forbiddenTrustToken?
   let tokenTable := Parser.Module.updateTokens (Parser.getTokenTable environment)
   let mut state := Parser.mkParserState input
   let mut projectionEnd : Option String.Pos.Raw := none
+  let mut forbidden : Option String := none
+  let mut shape : ProofShape := {}
+  let mut awaitingBar := false
   while !inputContext.atEnd state.pos do
     let skipped := Parser.whitespace.run inputContext parserContext tokenTable state
     if let some error := skipped.errorMsg then
@@ -426,7 +487,7 @@ private def forbiddenTrustToken?
         s!"Effect4 source trust gate: tokenization failed in {source}: {error}"
     state := skipped
     if inputContext.atEnd state.pos then
-      return none
+      return (forbidden, shape)
     -- Documentation comments are syntax nodes rather than whitespace. Consume
     -- them with Lean's own parsers so their prose never becomes audit tokens.
     let docComment := Parser.Command.docComment.fn.run
@@ -456,20 +517,46 @@ private def forbiddenTrustToken?
       throw <| IO.userError
         s!"Effect4 source trust gate: tokenization failed in {source}:{position.line}:{position.column + 1}: {error}"
     let token := next.stxStack.back
-    if let some found := forbiddenToken? token then
-      return some found
+    if forbidden.isNone then
+      forbidden := forbiddenToken? token
+    -- `first` is confirmed by the token after it; the others are counted where they stand.
+    if awaitingBar then
+      if token.isToken "|" then shape := shape.bump 0
+      awaitingBar := false
+    let word? : Option String :=
+      match token with
+      | .atom _ value => some value.trimAscii.toString
+      | .ident _ rawValue _ _ => some rawValue.toString
+      | _ => none
+    if let some word := word? then
+      if word == "first" then
+        awaitingBar := true
+      else if let some index := countedTactics.idxOf? word then
+        shape := shape.bump index
     projectionEnd :=
       if token.isToken "." || token.isToken "|>." then token.getTailPos? else none
     state := next.popSyntax
-  return none
+  return (forbidden, shape)
 
+/-- Every audited source scanned once. The trust refusal is thrown here; the shapes of the
+library sources under `src/` come back for the ratchet, keyed by their repository-relative
+path. -/
 private def auditSourceTrustModifiers
     (environment : Environment)
-    (sources : Array System.FilePath) : IO Unit := do
+    (projectRoot : System.FilePath)
+    (sources : Array System.FilePath) : IO (Array (String × ProofShape)) := do
+  let libraryDirectory := (projectRoot / "src").toString ++
+    System.FilePath.pathSeparator.toString
+  let mut shapes : Array (String × ProofShape) := #[]
   for source in sources do
-    if let some token ← forbiddenTrustToken? environment source then
+    let (token?, shape) ← scanSource environment source
+    if let some token := token? then
       throw <| IO.userError
         s!"Effect4 source trust gate: {source} contains an authored `{token}` trust token"
+    let text := source.normalize.toString
+    if text.startsWith libraryDirectory then
+      shapes := shapes.push ((text.drop (projectRoot.toString.length + 1)).toString, shape)
+  return shapes.qsort fun a b => a.1 < b.1
 
 private def findProjectRoot (directory : System.FilePath) : IO System.FilePath := do
   let mut current := directory
@@ -512,6 +599,68 @@ private def declaredRedModules (projectRoot : System.FilePath) : IO (List Name) 
   return contents.splitOn "\n" |>.filterMap fun line =>
     let line := line.trimAscii.toString
     if line.isEmpty || line.startsWith "#" then none else some line.toName
+
+/--
+The pinned proof shape, one row per library source that holds at least one counted tactic.
+
+`generated/proof-shape.tsv`, and like `known-red.txt` it is not optional: a missing file is a
+gate that checks nothing. `#effect4_print_proof_shape` prints the file the tree would pin now,
+so re-pinning is a copy-paste rather than arithmetic.
+
+The pin is a **ceiling** (decision D-D, tooling plan 1.7). A count above its row fails; a count
+below it passes and the summary says by how much, because blocking a seat for improving a proof
+is friction with no gate behind it. Two staleness teeth keep the ceiling honest in the other
+direction: a source with a counted tactic and no row fails, so a new module cannot arrive under
+the radar, and a row whose source no longer exists fails, so a row cannot outlive its file.
+-/
+private def readProofShapePins
+    (projectRoot : System.FilePath) : IO (Array (String × ProofShape)) := do
+  let path := projectRoot / "generated" / "proof-shape.tsv"
+  unless ← path.pathExists do
+    throw <| IO.userError
+      s!"Effect4 proof-shape ratchet: {path} is missing; the pin is part of the gate, not an \
+         optional file. `#effect4_print_proof_shape` prints the file to commit"
+  let contents ← IO.FS.readFile path
+  let mut rows : Array (String × ProofShape) := #[]
+  for line in contents.splitOn "\n" do
+    let line := line.trimAscii.toString
+    if line.isEmpty || line.startsWith "#" then continue
+    let fields := line.splitOn "\t"
+    let counts := fields.tail.filterMap String.toNat?
+    unless counts.length == countedTactics.length do
+      throw <| IO.userError
+        s!"Effect4 proof-shape ratchet: {path} has a row with {counts.length} counts where \
+           {countedTactics.length} are expected: {line}"
+    rows := rows.push (fields.headD "", { counts := counts.toArray })
+  return rows
+
+/-- The ratchet: every measured shape against its pin, in both directions. -/
+private def auditProofShape
+    (projectRoot : System.FilePath)
+    (shapes : Array (String × ProofShape)) : IO String := do
+  let pins ← readProofShapePins projectRoot
+  let measured : Std.HashMap String ProofShape := shapes.foldl (init := {}) fun m (k, v) =>
+    m.insert k v
+  let mut slack := 0
+  for (path, pinned) in pins do
+    match measured[path]? with
+    | none =>
+      throw <| IO.userError
+        s!"Effect4 proof-shape ratchet: generated/proof-shape.tsv pins {path}, which is not an audited source under src/; the row has outlived its file, so remove it"
+    | some shape =>
+      for tactic in countedTactics.toArray, now in shape.counts, ceiling in pinned.counts do
+        if now > ceiling then
+          throw <| IO.userError
+            s!"Effect4 proof-shape ratchet: {path} now holds {now} `{tactic}` where generated/proof-shape.tsv pins {ceiling}. The pin is a ceiling: a proof may get shorter, never longer. Write the proof without it, or re-pin deliberately with `#effect4_print_proof_shape`"
+        slack := slack + (ceiling - now)
+  let pinnedPaths : Std.HashSet String := pins.foldl (init := {}) fun m (k, _) => m.insert k
+  for (path, shape) in shapes do
+    if shape.total > 0 && !pinnedPaths.contains path then
+      throw <| IO.userError
+        s!"Effect4 proof-shape ratchet: {path} holds {shape.total} counted tactic(s) and has no row in generated/proof-shape.tsv; a new source does not arrive under the ceiling. `#effect4_print_proof_shape` prints the file to commit"
+  let counted := shapes.foldl (init := 0) fun n (_, shape) => n + shape.total
+  let tail := if slack == 0 then "" else " — `#effect4_print_proof_shape` tightens it"
+  return s!"Effect4 proof-shape ratchet: {counted} counted tactic(s) ({String.intercalate ", " countedTactics}) over {pins.size} pinned source(s); {slack} below the ceiling" ++ tail
 
 private def auditedSources (projectRoot : System.FilePath) : IO (Array System.FilePath) := do
   let effect4 ← (projectRoot / "src" / "Effect4").walkDir
@@ -606,7 +755,8 @@ elab "#effect4_axiom_gate" : command => do
     (`Effect4).isPrefixOf name && !apiModules.contains name).size
   logInfo m!"Effect4 library-root gate: {apiCount} API/utility modules, {lawsCount} Laws-only modules; every library source is reachable; Effect4 never reaches Laws"
 
-  liftIO <| auditSourceTrustModifiers environment sources
+  let shapes ← liftIO <| auditSourceTrustModifiers environment projectRoot sources
+  logInfo (← liftIO <| auditProofShape projectRoot shapes)
 
   let mut declarations : Array Name := #[]
   for (name, info) in environment.constants.toList do
@@ -692,6 +842,33 @@ command prints is exactly the list the exact-declaration boundary still needs.
 Run it from a module that imports the whole tree, i.e. beside
 `#effect4_axiom_gate` in `Test.lean`.
 -/
+
+/-!
+## Re-pinning the proof shape
+
+`#effect4_print_proof_shape` prints `generated/proof-shape.tsv` as the tree would pin it now.
+Copy the output into the file when a proof got shorter, or when a new source arrives with a
+counted tactic. Run it from a module that imports the whole tree, i.e. beside
+`#effect4_axiom_gate` in `Test.lean`.
+-/
+
+open Lean Elab Command in
+elab "#effect4_print_proof_shape" : command => do
+  let named := System.FilePath.mk (← getFileName)
+  let workingDirectory ← IO.currentDir
+  let sourceFile := if named.isAbsolute then named else workingDirectory / named
+  let some sourceDirectory := sourceFile.parent
+    | throwError "Effect4 proof-shape ratchet: source file has no parent directory"
+  let projectRoot ← liftIO <| findProjectRoot sourceDirectory
+  let sources ← liftIO <| auditedSources projectRoot
+  let shapes ← liftIO <| auditSourceTrustModifiers (← getEnv) projectRoot sources
+  let header :=
+    "# GENERATED by `#effect4_print_proof_shape` (Test/Audit/AxiomGate.lean); commit it\n\
+     # format=proof-shape-v1; the ceiling per library source, never a target\n\
+     # path\t" ++ String.intercalate "\t" countedTactics
+  let rows := shapes.filterMap fun (path, shape) =>
+    if shape.total == 0 then none else some (ProofShape.render path shape)
+  logInfo (header ++ "\n" ++ String.intercalate "\n" rows.toList)
 
 open Lean Elab Command in
 elab "#effect4_print_choice_reachers" : command => do

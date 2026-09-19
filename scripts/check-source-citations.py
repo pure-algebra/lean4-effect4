@@ -1,11 +1,39 @@
 #!/usr/bin/env python3
-"""Check existence of explicit repository-relative citation paths (not line ranges).
+"""The citation gate: one walk of the source trees, two questions about every line.
 
-Properties: deterministic inventory and baseline; new missing targets refuse; removing
-a target invalidates a stamp even if it is outside the scanned source trees. Synthetic
-fixtures resolve against their own tree. Revision-qualified `git:<rev>:<path>` citations
-resolve against their immutable git tree. Untracked research notes must be
-marked as such in authority documents; they are not live source dependencies.
+1. EXISTENCE. Every explicit repository-relative citation path (not line ranges) resolves.
+   Deterministic inventory and baseline; new missing targets refuse; removing a target
+   invalidates a stamp even if it is outside the scanned source trees. Synthetic fixtures
+   resolve against their own tree. Revision-qualified `git:<rev>:<path>` citations resolve
+   against their immutable git tree. Untracked research notes must be marked as such in
+   authority documents; they are not live source dependencies.
+
+2. NO LINE CITATION INTO A MUTABLE AUTHORED DOCUMENT. A line citation into a pinned host
+   source is stable: those files are third-party bytes identified by digest, never edited
+   here. A line citation into one of this repository's own rulings is not: those documents
+   are edited continuously, so a name plus a line number silently retargets whenever a
+   section above it grows, and the citing sentence keeps asserting a claim the target no
+   longer makes. That has happened here — a proof-graph reallocation moved five obligation
+   rows and citations elsewhere were left pointing at unrelated prose with no file edited.
+   Cite a section heading, an obligation id, a proof-graph node or a short quoted phrase.
+
+   What a pass means: in the scanned trees, no citation names one of the protected documents
+   together with a line number. What it does not mean: nothing about whether a replacement
+   anchor exists, whether the target still says what the citing sentence claims, or whether
+   any other citation is correct. It is a lexical scan, not a resolver. Three limits named
+   rather than glossed: a bare continuation citation such as `:123` carries no document name
+   and is invisible; the targets are matched exactly after stripping one leading `./`, so a
+   different file with the same basename is a different target; and `vendor/`,
+   `node_modules/`, `_copy/` and `research/` are pruned wherever they appear, because none of
+   those trees is authored here.
+
+Until 2026-09-18 these were two programs (`check-internal-citations.sh` did the second) and
+`make check-citations` ran both, so every text file of the nine trees was read twice. They are
+one pass now; the shell gate is retired and its seventeen-case reaction test drives this
+script through `--internal-only`.
+
+`--root` reports on a supplied tree. `--internal-only` runs question 2 alone, which is what a
+synthetic tree can be asked: the existence baseline is about this repository.
 """
 from __future__ import annotations
 
@@ -32,6 +60,19 @@ HISTORICAL = ("ocaml/avatar/out/", "ocaml/wasm/out/", "ocaml/probes/fuzz/corpus/
               "ocaml/server/generated/", "Test/fixtures/traces/fiber-m3/")
 HISTORICAL_FILES = {"ocaml/avatar/tools/witnesses-after.txt", "ocaml/avatar/tools/failfast-demo-native.txt"}
 HISTORICAL_REVS = ("c407ab7", "d00cade")
+# The mutable authored rulings, in both spellings a citation can use. Assembled rather than
+# spelled where the target no longer exists, so this file carries no citation of its own to a
+# path the existence half would then have to find.
+RETIRED_ROUTER = "AGENT-" + "ROUTING.md"
+PROTECTED = {
+    "docs/research/SCHEMA-CUTOVER.md", "SCHEMA-CUTOVER.md",
+    "PLAN.md", "AGENTS.md",
+    "docs/ARCHITECTURE.md", "ARCHITECTURE.md",
+    "docs/DESIGN-ISSUES.md", "DESIGN-ISSUES.md",
+    "docs/DESIGN-MAP.md", "DESIGN-MAP.md",
+    "docs/" + RETIRED_ROUTER, RETIRED_ROUTER,
+}
+LINE_TOKEN = re.compile(r"[A-Za-z0-9._/-]+\.[A-Za-z0-9]+:[0-9]+(?:-[0-9]+)?")
 
 
 def inventory(root: Path) -> list[Path]:
@@ -57,12 +98,15 @@ def inventory(root: Path) -> list[Path]:
     return sorted(paths)
 
 
-def inspect(root: Path):
+def inspect(root: Path, internal_only: bool = False):
     digest = hashlib.sha256()
     missing: dict[str, list[str]] = {}
     tokens = 0
     notes = []
     histories = {}
+    line_tokens = 0
+    violations: list[str] = []
+    files = 0
     @cache
     def children(directory):
         return {entry.name for entry in directory.iterdir()}
@@ -89,9 +133,22 @@ def inspect(root: Path):
         rel = file.relative_to(root).as_posix()
         data = file.read_bytes()
         digest.update(rel.encode() + b"\0" + data + b"\0")
-        if b"\0" in data or rel in (BASELINE, ALLOW) or rel.startswith("Test/fixtures/internal-citations/tree/"):
+        if b"\0" in data or not data:
             continue
         text = data.decode("utf-8", errors="replace")
+        files += 1
+        # Question 2 reads every text file, the detector fixtures included: a violation in a
+        # fixture is a violation, and the fixture trees are where the reaction test plants one.
+        for n, line in enumerate(text.splitlines(), 1):
+            for match in LINE_TOKEN.finditer(line):
+                token = match.group()
+                line_tokens += 1
+                document = token.split(":", 1)[0].removeprefix("./")
+                if document in PROTECTED:
+                    violations.append(f"{rel} line {n} cites `{token}`; cite a section heading, "
+                                      "obligation ID, proof-graph node, or quoted phrase instead")
+        if internal_only or rel in (BASELINE, ALLOW) or rel.startswith("Test/fixtures/internal-citations/tree/"):
+            continue
         # A detector fixture is an independent repository, not a citation into this one.
         fixture = re.search(r"Test/fixtures/[^/]+/tree/", rel)
         resolution_root = root / fixture.group() if fixture else root
@@ -124,7 +181,7 @@ def inspect(root: Path):
                 digest.update(path.encode() + bytes([exists]))
                 if not exists:
                     missing.setdefault(path, []).append(f"{rel}:{n}")
-    return digest, missing, tokens, notes
+    return digest, missing, tokens, notes, line_tokens, violations, files
 
 
 def main() -> int:
@@ -133,9 +190,51 @@ def main() -> int:
     parser.add_argument("--update-baseline", action="store_true")
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--list-missing", action="store_true")
+    parser.add_argument("--internal-only", action="store_true",
+                        help="run the protected-document scan alone (for a synthetic tree)")
+    parser.add_argument("extra", nargs="*", help=argparse.SUPPRESS)
     args = parser.parse_args()
+    if args.extra:
+        print(f"FAIL unexpected argument: {args.extra[0]}", file=sys.stderr)
+        return 1
     root = args.root.resolve()
-    digest, missing, tokens, notes = inspect(root)
+    if not root.is_dir():
+        print(f"FAIL root is not a directory: {root}", file=sys.stderr)
+        return 1
+    here = Path(__file__).resolve().parent.parent
+    present = [tree for tree in sorted(TREES) if (root / tree).is_dir()]
+    if not present:
+        print(f"FAIL none of the scanned trees ({' '.join(sorted(TREES))}) exist under {root}",
+              file=sys.stderr)
+        return 1
+    digest, missing, tokens, notes, line_tokens, violations, files = inspect(root, args.internal_only)
+    # The extraction-pattern tooth: a scan that finds no `path:line` token at all has stopped
+    # matching. It is asked of this repository and of any tree the detector suite hands to
+    # `--internal-only`; a foreign tree scanned in full mode may legitimately hold none, and the
+    # result there already says it closes nothing here.
+    if (args.internal_only or root == here) and not line_tokens:
+        print("FAIL extracted no citation tokens at all; the extraction pattern no longer matches",
+              file=sys.stderr)
+        return 1
+    if violations:
+        print(f"FAIL {len(violations)} line-numbered citation(s) into a mutable authored document",
+              file=sys.stderr)
+        for violation in violations:
+            print("FAIL " + violation, file=sys.stderr)
+        return 1
+    internal_pass = (
+        f"PASS no line-numbered citation into the {len({p.rsplit(chr(47), 1)[-1] for p in PROTECTED})} protected authored documents\n"
+        f"PASS {line_tokens} citation tokens examined in {files} files "
+        f"across {len(present)} scanned tree(s)")
+    if args.internal_only:
+        print(internal_pass)
+        if root != here:
+            print("INFO scanned root is not this repository: " + str(root))
+            print("INFO the result is about the supplied tree only and closes nothing here")
+        else:
+            print("NOTE lexical scan only; host-source, vendor/, and .lean line citations "
+                  "are accepted unchecked")
+        return 0
     allowed_file = root / ALLOW
     allowed_bytes = allowed_file.read_bytes() if allowed_file.exists() else b""
     digest.update(allowed_bytes)
@@ -165,6 +264,13 @@ def main() -> int:
         return 1
     summary = f"{tokens} citation tokens examined; {len(missing)} baselined missing targets"
     print(f"PASS source-citations: {summary}")
+    print(internal_pass)
+    if root != here:
+        print("INFO scanned root is not this repository: " + str(root))
+        print("INFO the result is about the supplied tree only and closes nothing here")
+    else:
+        print("NOTE lexical scan only; host-source, vendor/, and .lean line citations "
+              "are accepted unchecked")
     return 0
 
 

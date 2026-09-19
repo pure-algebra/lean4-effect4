@@ -393,9 +393,10 @@ theorem Fits.all_string {vs : List Val} {tys : TyEnv} (h : Fits vs tys)
     | tail _ hw => exact ih hrest w hw
 
 /-- Under subsumption (DI-15, the 2026-09-12 clause): values fitting types that are each a
-subtype of `string` are strings, by `hasTy_sub`. -/
-theorem Fits.all_sub_string {vs : List Val} {tys : TyEnv} (h : Fits vs tys)
-    (hall : tys.all (·.sub Ty.string) = true) : ∀ v ∈ vs, Val.hasTy v .string = true := by
+subtype of one type are values of that type, by `hasTy_sub`. The variadic scheme's premise
+(`NativeAtom.sound_of_variadic`); `strings` is its one consumer today. -/
+theorem Fits.all_sub {vs : List Val} {tys : TyEnv} (h : Fits vs tys) {t : Ty}
+    (hall : tys.all (·.sub t) = true) : ∀ v ∈ vs, Val.hasTy v t = true := by
   induction h with
   | nil => intro v hv; cases hv
   | cons hv _ ih =>
@@ -405,6 +406,31 @@ theorem Fits.all_sub_string {vs : List Val} {tys : TyEnv} (h : Fits vs tys)
     cases hw with
     | head => exact hasTy_sub _ _ _ [] hsub hv
     | tail _ hw => exact ih hrest w hw
+
+/-- `Fits.all_sub` at `.string`: the statement the `Effect4.Atoms` bank registers. -/
+theorem Fits.all_sub_string {vs : List Val} {tys : TyEnv} (h : Fits vs tys)
+    (hall : tys.all (·.sub Ty.string) = true) : ∀ v ∈ vs, Val.hasTy v .string = true :=
+  h.all_sub hall
+
+/-- Pointwise subsumption: an environment fitting `tys` fits any `params` each of whose
+entries the corresponding `tys` entry is below. The fixed-signature scheme's premise
+(`NativeAtom.sound_of_mono`), and the one place `hasTy_sub` is applied for every atom at
+once — the twenty hand blocks applied it per atom, per argument. -/
+theorem Fits.sub {vs : List Val} {tys params : TyEnv} (h : Fits vs tys)
+    (hlen : tys.length = params.length)
+    (hall : (tys.zip params).all (fun (a, e) => a.sub e) = true) : Fits vs params := by
+  induction h generalizing params with
+  | nil =>
+    cases params with
+    | nil => exact .nil
+    | cons _ _ => exact absurd hlen (by simp only [List.length_cons, List.length_nil]; exact nofun)
+  | cons hv _ ih =>
+    cases params with
+    | nil => exact absurd hlen (by simp only [List.length_cons, List.length_nil]; exact nofun)
+    | cons p ps =>
+      simp only [List.zip_cons_cons, List.all_cons, Bool.and_eq_true] at hall
+      simp only [List.length_cons, Nat.add_right_cancel_iff] at hlen
+      exact .cons (hasTy_sub _ _ _ [] hall.1 hv) (ih hlen hall.2)
 
 /-- A fit against two types is two values of those types. -/
 theorem Fits.pair_inv {vs : List Val} {a b : Ty} (h : Fits vs [a, b]) :
@@ -580,173 +606,345 @@ theorem NativeAtom.getOrElse_typed (input fallback : Val) (payload defaultTy : T
     rwa [hasTy_normalize]
   · exact ⟨value, rfl, hvalue⟩
 
+/-! ### Atom soundness, once per scheme
+
+`nativeAtom_typed` was one theorem of twenty hand blocks, each re-deriving the same three
+facts: that `typeOf`'s guard held, that subsumption at each parameter put the value in the
+parameter's own frame, and that the atom's `eval` answered in the answer's frame. The first
+two are properties of the *scheme* (`NativeAtom.Scheme`), not of the atom, so they are proved
+once per scheme here; what is left per atom is the third, which is the atom's own content and
+nothing else. -/
+
+/-- The per-atom obligation: at any argument types the atom accepts, an environment fitting
+those types evaluates, and the answer inhabits the answer type.
+
+Not decidable at any strength — it quantifies over all `Ty` and all `Val`, both infinite —
+which is why the table's *structural* obligations are a separate, decided fact
+(`NativeAtom.atom_table_wf`). -/
+def NativeAtom.Sound (a : NativeAtom) : Prop :=
+  ∀ (tys : List Ty) (ty : Ty) (vs : List Val),
+    a.typeOf tys = some ty → Fits vs tys →
+      ∃ v, NativeAtom.eval a vs = some v ∧ Val.hasTy v ty = true
+
+namespace NativeAtom
+
+/-- A fixed signature. Subsumption at every parameter is discharged here, once, so the atom
+answers only on values of the parameters' own types. -/
+theorem sound_of_mono {a : NativeAtom} {params : TyEnv} {answer : Ty}
+    (hs : (spec a).scheme = .mono params answer)
+    (hev : ∀ vs, Fits vs params → ∃ v, eval a vs = some v ∧ Val.hasTy v answer = true) :
+    Sound a := by
+  intro tys ty vs hty hfit
+  simp only [typeOf, hs, Scheme.apply, monoApply] at hty
+  split at hty
+  · next hguard =>
+    cases hty
+    exact hev vs (hfit.sub hguard.1 hguard.2)
+  · exact nomatch hty
+
+/-- Any number of arguments at one parameter type. -/
+theorem sound_of_variadic {a : NativeAtom} {param answer : Ty}
+    (hs : (spec a).scheme = .variadic param answer)
+    (hev : ∀ vs, (∀ v ∈ vs, Val.hasTy v param = true) →
+             ∃ v, eval a vs = some v ∧ Val.hasTy v answer = true) : Sound a := by
+  intro tys ty vs hty hfit
+  simp only [typeOf, hs, Scheme.apply] at hty
+  split at hty
+  · next hall =>
+    cases hty
+    exact hev vs (hfit.all_sub hall)
+  · exact nomatch hty
+
+/-- A named rule keeps its own content; the scheme only routes to it. -/
+theorem sound_of_custom {a : NativeAtom} {tag : CustomScheme}
+    (hs : (spec a).scheme = .custom tag)
+    (hev : ∀ tys ty vs, tag.apply tys = some ty → Fits vs tys →
+             ∃ v, eval a vs = some v ∧ Val.hasTy v ty = true) : Sound a := by
+  intro tys ty vs hty hfit
+  simp only [typeOf, hs, Scheme.apply] at hty
+  exact hev tys ty vs hty hfit
+
+/-- A template. The premise is stated at the substitution the match produced, not at an
+arbitrary one: going from "the arguments fit `tys`" to "the arguments fit the parameters
+instantiated at the *final* σ" needs `instantiate` to be monotone along the threading, and it
+is not — an unbound parameter instantiates to `never`, which only widens in covariant
+positions, and `refOf`/`deferredOf` are invariant (decisions row 55). That is the anchored
+completeness the plan schedules with L4; until it lands, a `poly` atom reads its own σ. -/
+theorem sound_of_poly {a : NativeAtom} {params : TyEnv} {answer : Ty}
+    (hs : (spec a).scheme = .poly params answer)
+    (hev : ∀ (tys : List Ty) (σ : Ty.Subst) (vs : List Val),
+             Ty.matchTemplateArgs [] params tys = some σ → Fits vs tys →
+               ∃ v, eval a vs = some v ∧ Val.hasTy v (Ty.instantiate σ answer) = true) :
+    Sound a := by
+  intro tys ty vs hty hfit
+  simp only [typeOf, hs, Scheme.apply] at hty
+  obtain ⟨σ, hmatch, hanswer⟩ := Option.map_eq_some_iff.mp hty
+  cases hanswer
+  exact hev tys σ vs hmatch hfit
+
+/-- The alternative a `findSome?` over fixed signatures hit. -/
+theorem findSome?_monoApply {alts : List (TyEnv × Ty)} {tys : List Ty} {ty : Ty}
+    (h : alts.findSome? (fun c => monoApply c.1 c.2 tys) = some ty) :
+    ∃ params answer, (params, answer) ∈ alts ∧ monoApply params answer tys = some ty := by
+  induction alts with
+  | nil => exact nomatch h
+  | cons c cs ih =>
+    obtain ⟨params, answer⟩ := c
+    simp only [List.findSome?_cons] at h
+    split at h
+    · next hc =>
+      cases h
+      exact ⟨params, answer, List.mem_cons_self, hc⟩
+    · next hc =>
+      obtain ⟨p, ans, hmem, heq⟩ := ih h
+      exact ⟨p, ans, List.mem_cons_of_mem _ hmem, heq⟩
+
+/-- Alternative fixed signatures, first hit wins. -/
+theorem sound_of_alts {a : NativeAtom} {alts : List (TyEnv × Ty)}
+    (hs : (spec a).scheme = .alts alts)
+    (hev : ∀ params answer, (params, answer) ∈ alts → ∀ vs, Fits vs params →
+             ∃ v, eval a vs = some v ∧ Val.hasTy v answer = true) : Sound a := by
+  intro tys ty vs hty hfit
+  simp only [typeOf, hs, Scheme.apply] at hty
+  obtain ⟨params, answer, hmem, heq⟩ := findSome?_monoApply hty
+  simp only [monoApply] at heq
+  split at heq
+  · next hguard =>
+    cases heq
+    exact hev _ _ hmem vs (hfit.sub hguard.1 hguard.2)
+  · exact nomatch heq
+
+/-! The evaluation shapes the monomorphic atoms have. A shape names the parameter frames and
+the answer frame; `sound_of_shape` inverts the fit once per shape, so an atom of that shape
+costs one line naming its kernel rather than a block re-deriving the inversion. -/
+
+/-- The monomorphic evaluation shapes present in the alphabet. -/
+inductive Shape
+  | nat1 | natTest | bool1 | nat2 | natRel | bool2 | strTest
+deriving DecidableEq, Repr
+
+def Shape.params : Shape → TyEnv
+  | .nat1 | .natTest => [.nat]
+  | .bool1 => [.bool]
+  | .nat2 | .natRel => [.nat, .nat]
+  | .bool2 => [.bool, .bool]
+  | .strTest => [.string, .unknown]
+
+def Shape.answer : Shape → Ty
+  | .nat1 | .nat2 => .nat
+  | .natTest | .bool1 | .natRel | .bool2 | .strTest => .bool
+
+/-- What an atom of this shape must do: answer in the answer's frame on the frames its
+parameters admit. This is the whole per-atom content of a monomorphic atom. -/
+def Shape.holds (s : Shape) (a : NativeAtom) : Prop :=
+  match s with
+  | .nat1 => ∀ m : Nat, ∃ n : Nat, eval a [Val.nat m] = some (Val.nat n)
+  | .natTest => ∀ m : Nat, ∃ b : Bool, eval a [Val.nat m] = some (Val.bool b)
+  | .bool1 => ∀ x : Bool, ∃ b : Bool, eval a [Val.bool x] = some (Val.bool b)
+  | .nat2 => ∀ m k : Nat, ∃ n : Nat, eval a [Val.nat m, Val.nat k] = some (Val.nat n)
+  | .natRel => ∀ m k : Nat, ∃ b : Bool, eval a [Val.nat m, Val.nat k] = some (Val.bool b)
+  | .bool2 => ∀ x y : Bool, ∃ b : Bool, eval a [Val.bool x, Val.bool y] = some (Val.bool b)
+  | .strTest => ∀ (t : String) (v : Val), ∃ b : Bool, eval a [Val.str t, v] = some (Val.bool b)
+
+/-- The inversion of a shape's parameter fit, once per shape. `strTest`'s second parameter is
+the top (decisions row 46), which every value inhabits, so its second argument is unconstrained
+— which is exactly what the tag test wants. -/
+theorem sound_of_shape {a : NativeAtom} (s : Shape)
+    (hs : (spec a).scheme = .mono s.params s.answer) (hev : s.holds a) : Sound a := by
+  refine sound_of_mono hs ?_
+  intro vs hfit
+  cases s with
+  | nat1 | natTest =>
+    obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
+    obtain ⟨m, rfl⟩ := Val.hasTy_nat_inv hv
+    obtain ⟨_, he⟩ := hev m
+    exact ⟨_, he, rfl⟩
+  | bool1 =>
+    obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
+    obtain ⟨x, rfl⟩ := Val.hasTy_bool_inv hv
+    obtain ⟨_, he⟩ := hev x
+    exact ⟨_, he, rfl⟩
+  | nat2 | natRel =>
+    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+    obtain ⟨m, rfl⟩ := Val.hasTy_nat_inv hx
+    obtain ⟨k, rfl⟩ := Val.hasTy_nat_inv hy
+    obtain ⟨_, he⟩ := hev m k
+    exact ⟨_, he, rfl⟩
+  | bool2 =>
+    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+    obtain ⟨p, rfl⟩ := Val.hasTy_bool_inv hx
+    obtain ⟨q, rfl⟩ := Val.hasTy_bool_inv hy
+    obtain ⟨_, he⟩ := hev p q
+    exact ⟨_, he, rfl⟩
+  | strTest =>
+    obtain ⟨x, y, rfl, hx, _⟩ := hfit.pair_inv
+    obtain ⟨t, rfl⟩ := Val.hasTy_string_inv hx
+    obtain ⟨_, he⟩ := hev t y
+    exact ⟨_, he, rfl⟩
+
+/-- Two distinct top-level parameters bind positionally, and the guard is reflexivity: this is
+`pair`'s whole template, computed. -/
+theorem matchTemplateArgs_two_vars (x y : Ty) :
+    Ty.matchTemplateArgs [] [.var 0, .var 1] [x, y] = some [(0, x), (1, y)] := by
+  have h0 : Ty.matchTemplate [] (.var 0) x = some [(0, x)] := by
+    have hunfold : Ty.matchTemplate [] (.var 0) x
+        = if Ty.sub x x = true then some [(0, x)] else none := rfl
+    rw [hunfold, Ty.sub_refl]
+    rfl
+  have h1 : Ty.matchTemplate [(0, x)] (.var 1) y = some [(0, x), (1, y)] := by
+    have hunfold : Ty.matchTemplate [(0, x)] (.var 1) y
+        = if Ty.sub y y = true then some [(0, x), (1, y)] else none := rfl
+    rw [hunfold, Ty.sub_refl]
+    rfl
+  simp only [Ty.matchTemplateArgs, h0, Option.bind_some, h1]
+
+/-- Every atom is sound: one line per scheme where the scheme carries the argument, a block
+only where the rule is the atom's own (`fst`, `snd`, the four cause queries, `isSome`,
+`getOrElse`). -/
+theorem sound (a : NativeAtom) : Sound a := by
+  cases a with
+  | succ => exact sound_of_shape .nat1 rfl (fun _ => ⟨_, rfl⟩)
+  | pred => exact sound_of_shape .nat1 rfl (fun _ => ⟨_, rfl⟩)
+  | isZero => exact sound_of_shape .natTest rfl (fun _ => ⟨_, rfl⟩)
+  | boolNot => exact sound_of_shape .bool1 rfl (fun _ => ⟨_, rfl⟩)
+  | add => exact sound_of_shape .nat2 rfl (fun _ _ => ⟨_, rfl⟩)
+  | lt => exact sound_of_shape .natRel rfl (fun _ _ => ⟨_, rfl⟩)
+  | boolOr => exact sound_of_shape .bool2 rfl (fun _ _ => ⟨_, rfl⟩)
+  | boolAnd => exact sound_of_shape .bool2 rfl (fun _ _ => ⟨_, rfl⟩)
+  | tagIs => exact sound_of_shape .strTest rfl (fun _ _ => ⟨_, rfl⟩)
+  | strings =>
+    refine sound_of_variadic rfl ?_
+    intro vs hall
+    have hstr : ∀ v ∈ vs, ∃ s, v = Val.str s := fun v hv => Val.hasTy_string_inv (hall v hv)
+    refine ⟨Val.list vs, ?_, ?_⟩
+    · rw [NativeAtom.eval, stringsAtom, if_pos]
+      rw [List.all_eq_true]
+      intro v hv
+      obtain ⟨s, rfl⟩ := hstr v hv
+      rfl
+    · simp only [Val.hasTy, List.all_eq_true]
+      intro v hv
+      obtain ⟨s, rfl⟩ := hstr v hv
+      rfl
+  | eq =>
+    refine sound_of_alts rfl ?_
+    intro params answer hmem vs hfit
+    simp only [List.mem_cons, List.not_mem_nil, or_false, Prod.mk.injEq] at hmem
+    obtain ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ := hmem
+    · obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+      obtain ⟨m, rfl⟩ := Val.hasTy_nat_inv hx
+      obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hy
+      exact ⟨_, rfl, rfl⟩
+    · obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+      obtain ⟨s, rfl⟩ := Val.hasTy_string_inv hx
+      obtain ⟨t, rfl⟩ := Val.hasTy_string_inv hy
+      exact ⟨_, rfl, rfl⟩
+  | pair =>
+    refine sound_of_poly rfl ?_
+    intro tys σ vs hmatch hfit
+    have hlen := Ty.matchTemplateArgs_length hmatch
+    match tys with
+    | [] => exact absurd hlen (by simp only [List.length_cons, List.length_nil]; exact nofun)
+    | [_] => exact absurd hlen (by simp only [List.length_cons, List.length_nil]; exact nofun)
+    | _ :: _ :: _ :: _ => exact absurd hlen (by simp only [List.length_cons, List.length_nil]; exact nofun)
+    | [x, y] =>
+      rw [matchTemplateArgs_two_vars] at hmatch
+      cases hmatch
+      obtain ⟨u, w, rfl, hu, hw⟩ := hfit.pair_inv
+      refine ⟨Val.list [u, w], rfl, ?_⟩
+      have hinst : Ty.instantiate [(0, x), (1, y)] (.prod (.var 0) (.var 1)) = .prod x y := rfl
+      rw [hinst]
+      simp only [Val.hasTy, hu, hw, Bool.and_self]
+  | fst =>
+    refine sound_of_custom rfl ?_
+    intro tys ty vs hty hfit
+    simp only [CustomScheme.apply, projectRule] at hty
+    split at hty
+    · obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
+      exact projectProduct_typed false _ _ v [] hty hv
+    all_goals exact nomatch hty
+  | snd =>
+    refine sound_of_custom rfl ?_
+    intro tys ty vs hty hfit
+    simp only [CustomScheme.apply, projectRule] at hty
+    split at hty
+    · obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
+      exact projectProduct_typed true _ _ v [] hty hv
+    all_goals exact nomatch hty
+  | causeIsFail =>
+    refine sound_of_custom rfl ?_
+    intro tys ty vs hty hfit
+    simp only [CustomScheme.apply, causeTestRule] at hty
+    split at hty
+    · obtain ⟨error, hdomain, hanswer⟩ := Option.map_eq_some_iff.mp hty
+      cases hanswer
+      obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
+      exact queryTag_typed .fail value _ error [] hdomain hv
+    all_goals exact nomatch hty
+  | causeIsDie =>
+    refine sound_of_custom rfl ?_
+    intro tys ty vs hty hfit
+    simp only [CustomScheme.apply, causeTestRule] at hty
+    split at hty
+    · obtain ⟨error, hdomain, hanswer⟩ := Option.map_eq_some_iff.mp hty
+      cases hanswer
+      obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
+      exact queryTag_typed .die value _ error [] hdomain hv
+    all_goals exact nomatch hty
+  | causeIsInterrupt =>
+    refine sound_of_custom rfl ?_
+    intro tys ty vs hty hfit
+    simp only [CustomScheme.apply, causeTestRule] at hty
+    split at hty
+    · obtain ⟨error, hdomain, hanswer⟩ := Option.map_eq_some_iff.mp hty
+      cases hanswer
+      obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
+      exact queryTag_typed .interrupt value _ error [] hdomain hv
+    all_goals exact nomatch hty
+  | causeError =>
+    refine sound_of_custom rfl ?_
+    intro tys ty vs hty hfit
+    simp only [CustomScheme.apply, causeErrorRule] at hty
+    split at hty
+    · obtain ⟨error, hdomain, hanswer⟩ := Option.map_eq_some_iff.mp hty
+      cases hanswer
+      obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
+      exact queryError_typed value _ error [] hdomain hv
+    all_goals exact nomatch hty
+  | isSome =>
+    refine sound_of_custom rfl ?_
+    intro tys ty vs hty hfit
+    simp only [CustomScheme.apply, optionPresenceRule] at hty
+    split at hty
+    · cases hty
+      obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
+      exact NativeAtom.isSome_typed value _ [] hv
+    all_goals exact nomatch hty
+  | getOrElse =>
+    refine sound_of_custom rfl ?_
+    intro tys ty vs hty hfit
+    simp only [CustomScheme.apply, optionDefaultRule] at hty
+    split at hty
+    · split at hty
+      · next hsub =>
+        cases hty
+        obtain ⟨value, fallback, rfl, hv, hd⟩ := hfit.pair_inv
+        exact NativeAtom.getOrElse_typed value fallback _ _ [] hv hd hsub
+      · exact nomatch hty
+    all_goals exact nomatch hty
+
+end NativeAtom
+
 /-- A typed atom application answers a value of the answer type (`nativeAtomTy`,
-`Native.lean:73-84`, against `nativeAtom`, `:59-70`; plan §2.2, ENSURES 5). `pair` answers
-`Val.tuple [a, b]`, the `.prod` shape of `hasTy`; `fst` and `snd` read that shape back. -/
+`Native.lean`, against `nativeAtom`; plan §2.2, ENSURES 5). The name resolves to an atom, and
+the atom is sound: twenty hand blocks became a dispatch over the schemes. -/
 theorem nativeAtom_typed (atom : String) (tys : List Ty) (ty : Ty) (vs : List Val)
     (hty : nativeAtomTy atom tys = some ty) (hfit : Fits vs tys) :
     ∃ v, nativeAtom atom vs = some v ∧ Val.hasTy v ty = true := by
   unfold nativeAtomTy at hty
   obtain ⟨named, hname, hty⟩ := Option.bind_eq_some_iff.mp hty
   simp only [nativeAtom, hname, Option.bind_some]
-  unfold NativeAtom.typeOf at hty
-  split at hty
-  · -- succ: the argument fits a subtype of `nat`, so it is a `nat` (`hasTy_sub`)
-    split at hty
-    · next hsub =>
-      cases hty
-      obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
-      obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv (hasTy_sub _ _ v [] hsub hv)
-      exact ⟨_, rfl, by simp [Val.hasTy]⟩
-    · cases hty
-  · -- pred
-    split at hty
-    · next hsub =>
-      cases hty
-      obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
-      obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv (hasTy_sub _ _ v [] hsub hv)
-      exact ⟨_, rfl, by simp [Val.hasTy]⟩
-    · cases hty
-  · -- isZero
-    split at hty
-    · next hsub =>
-      cases hty
-      obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
-      obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv (hasTy_sub _ _ v [] hsub hv)
-      exact ⟨_, rfl, by simp [Val.hasTy]⟩
-    · cases hty
-  · -- not
-    split at hty
-    · next hsub =>
-      cases hty
-      obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
-      obtain ⟨b, rfl⟩ := Val.hasTy_bool_inv (hasTy_sub _ _ v [] hsub hv)
-      exact ⟨_, rfl, by simp [Val.hasTy]⟩
-    · cases hty
-  · -- add
-    split at hty
-    · next hsub =>
-      cases hty
-      obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hsub
-      obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
-      obtain ⟨m, rfl⟩ := Val.hasTy_nat_inv (hasTy_sub _ _ x [] ha hx)
-      obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv (hasTy_sub _ _ y [] hb hy)
-      exact ⟨_, rfl, by simp [Val.hasTy]⟩
-    · cases hty
-  · -- lt
-    split at hty
-    · next hsub =>
-      cases hty
-      obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hsub
-      obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
-      obtain ⟨m, rfl⟩ := Val.hasTy_nat_inv (hasTy_sub _ _ x [] ha hx)
-      obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv (hasTy_sub _ _ y [] hb hy)
-      exact ⟨_, rfl, by simp [Val.hasTy]⟩
-    · cases hty
-  · -- eq: two naturals or two strings, each at a subtype
-    split at hty
-    · next hsub =>
-      cases hty
-      obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
-      rcases Bool.or_eq_true_iff.mp hsub with hnat | hstr
-      · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hnat
-        obtain ⟨m, rfl⟩ := Val.hasTy_nat_inv (hasTy_sub _ _ x [] ha hx)
-        obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv (hasTy_sub _ _ y [] hb hy)
-        exact ⟨_, rfl, by simp [Val.hasTy]⟩
-      · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hstr
-        obtain ⟨a, rfl⟩ := Val.hasTy_string_inv (hasTy_sub _ _ x [] ha hx)
-        obtain ⟨b, rfl⟩ := Val.hasTy_string_inv (hasTy_sub _ _ y [] hb hy)
-        exact ⟨_, rfl, by simp [Val.hasTy]⟩
-    · cases hty
-  · -- pair
-    cases hty
-    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
-    exact ⟨_, rfl, by simp [Val.hasTy, hx, hy]⟩
-  · -- fst
-    obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
-    exact NativeAtom.projectProduct_typed false _ _ v [] hty hv
-  · -- snd
-    obtain ⟨v, rfl, hv⟩ := hfit.singleton_inv
-    exact NativeAtom.projectProduct_typed true _ _ v [] hty hv
-  · -- strings: every argument fits a subtype of `.string`, so every value is a `str` and the
-    -- list types
-    split at hty
-    · next hall =>
-      cases hty
-      have hstr : ∀ v ∈ vs, ∃ s, v = Val.str s := fun v hv =>
-        Val.hasTy_string_inv (Fits.all_sub_string hfit hall v hv)
-      refine ⟨Val.list vs, ?_, ?_⟩
-      · rw [NativeAtom.eval, stringsAtom, if_pos]
-        rw [List.all_eq_true]
-        intro v hv
-        obtain ⟨s, rfl⟩ := hstr v hv
-        rfl
-      · simp only [Val.hasTy, List.all_eq_true]
-        intro v hv
-        obtain ⟨s, rfl⟩ := hstr v hv
-        rfl
-    · cases hty
-  · -- cause failure query
-    obtain ⟨error, hdomain, hanswer⟩ := Option.map_eq_some_iff.mp hty
-    cases hanswer
-    obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
-    exact queryTag_typed .fail value _ error [] hdomain hv
-  · -- cause defect query
-    obtain ⟨error, hdomain, hanswer⟩ := Option.map_eq_some_iff.mp hty
-    cases hanswer
-    obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
-    exact queryTag_typed .die value _ error [] hdomain hv
-  · -- cause interruption query
-    obtain ⟨error, hdomain, hanswer⟩ := Option.map_eq_some_iff.mp hty
-    cases hanswer
-    obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
-    exact queryTag_typed .interrupt value _ error [] hdomain hv
-  · -- first failure payload query
-    obtain ⟨error, hdomain, hanswer⟩ := Option.map_eq_some_iff.mp hty
-    cases hanswer
-    obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
-    exact queryError_typed value _ error [] hdomain hv
-  · -- Boolean or
-    split at hty
-    · next hsub =>
-      cases hty
-      obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hsub
-      obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
-      obtain ⟨a, rfl⟩ := Val.hasTy_bool_inv (hasTy_sub _ _ x [] ha hx)
-      obtain ⟨b, rfl⟩ := Val.hasTy_bool_inv (hasTy_sub _ _ y [] hb hy)
-      exact ⟨_, rfl, by simp [Val.hasTy]⟩
-    · cases hty
-  · -- Boolean and
-    split at hty
-    · next hsub =>
-      cases hty
-      obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hsub
-      obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
-      obtain ⟨a, rfl⟩ := Val.hasTy_bool_inv (hasTy_sub _ _ x [] ha hx)
-      obtain ⟨b, rfl⟩ := Val.hasTy_bool_inv (hasTy_sub _ _ y [] hb hy)
-      exact ⟨_, rfl, by simp [Val.hasTy]⟩
-    · cases hty
-  · -- the tag test (DI-39): a string-typed tag, any tested value; the atom is total on values
-    split at hty
-    · next hsub =>
-      cases hty
-      obtain ⟨x, y, rfl, hx, _⟩ := hfit.pair_inv
-      obtain ⟨tag, rfl⟩ := Val.hasTy_string_inv (hasTy_sub _ _ x [] hsub hx)
-      exact ⟨_, rfl, by simp [Val.hasTy]⟩
-    · cases hty
-  · -- option presence
-    cases hty
-    obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
-    exact NativeAtom.isSome_typed value _ [] hv
-  · -- option payload or a default of a canonical subtype
-    split at hty
-    · next hsub =>
-      cases hty
-      obtain ⟨value, fallback, rfl, hv, hd⟩ := hfit.pair_inv
-      exact NativeAtom.getOrElse_typed value fallback _ _ [] hv hd hsub
-    · cases hty
-  -- Each constructor has its own exhaustive argument-shape refusal.
-  all_goals cases hty
+  exact NativeAtom.sound named tys ty vs hty hfit
 
 /-! ## Terms -/
 

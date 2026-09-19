@@ -168,6 +168,18 @@
       ]
     },
     {
+      "Note": "The relational view of `Ty` (tooling plan 1.4): the children of a node with the variance the order reads them at, the head test, and the one law `sub_eq_args` -- `sub` between members is the variance-wise comparison of corresponding arguments -- so the proofs of the order name no constructor. Variance is NOT declared here: tools/Tools/Variances.lean reads it off rc.112 into tools/Effect4Gen/variances.json. The output is under Laws because the one proof is `fun_cases` plus `aesop`, and nothing under the core root imports aesop.",
+      "Name": "TyView",
+      "Tool": "tools/Effect4Gen/View.lean",
+      "Imports": "Effect4.Program.Folds.Ty,Effect4.Laws.Auto.RuleSets",
+      "Out": "src\\Effect4\\Laws\\Program\\TyView.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\tyview.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Ty"
+      ]
+    },
+    {
       "Note": "The fold of the value sort's free object: one algebra over Store.Val, its children under List (`list`, `ctor`) as positional folds. No guards yet: the fold's first customers are the seventeen hand traversals of Val the census lists, converted by fold_of.",
       "Name": "ValFold",
       "Tool": "tools/Effect4Gen/Fold.lean",
@@ -258,6 +270,16 @@
       "Imports": "Effect4.Program.Authoring.Lifts",
       "Out": "src\\Effect4\\Program\\Authoring\\Rows.lean",
       "Guards": "tools\\Effect4Gen\\guards\\rows.lean",
+      "Kinds": [],
+      "Types": []
+    },
+    {
+      "Note": "The atom inventory from the NativeAtom constructor list: `all` and its two projections, with all_complete and covers_iff appended as the acceptance guards. The hand-written list is retired; a constructor cannot be left out of a list read off the environment.",
+      "Name": "AtomInventory",
+      "Tool": "tools/Effect4Gen/Atoms.lean",
+      "Imports": "Effect4.Machine.Term",
+      "Out": "src\\Effect4\\Program\\AtomInventory.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\atominventory.lean",
       "Kinds": [],
       "Types": []
     },

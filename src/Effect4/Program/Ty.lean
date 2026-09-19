@@ -7,6 +7,20 @@ Raw `Ty` remains first-order program data. Its key order supports `Effect4.Row` 
 `CTy` exposes the subtype order on canonical representatives. `Normal` is an erased
 proof invariant, not another stored type representation. `CTy.ofRaw` is total because deep
 normalization is proved idempotent here; value-membership laws belong to the Laws graph.
+
+## The carrier rule for a new constructor
+
+A `Ty` constructor is first-order, non-dependent and proof-free, and every field is a `Shape`:
+a `Nat`, a `Bool`, a `String`, a `Unit`, an `Option`/`List`/`Prod` of one, a canonical row, or a
+nominal carrier the description already knows, at its own parameters
+(`Conform.Source.readShape`, `tools/Conform/Source/Description.lean:35-54`, which refuses a
+function-typed, dependent or free-variable field by name). A field outside that grammar has no
+image in the engine's structure mirror, so the OCaml estate cannot be cut from the declaration
+and the constructor cannot land. Two consequences the tree already pays: a `List Ty` argument
+would make `Ty` nested and cost the derived equality and every `induction` on it — which is why
+`refOf`/`deferredOf`/`fiberOf` are dedicated constructors; and a constructor is **appended**,
+never inserted, because the mirror pins declaration order
+(`scripts/lib/program_structure.py`).
 -/
 
 namespace Effect4.Program

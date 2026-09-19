@@ -35,11 +35,15 @@ def install(source, destination, checking):
         destination.write_bytes(data)
 
 
-# The producers' dependency order (DI-33): `derived` writes the Lean projections the rest
-# import; `eff`, `wire` and `cas` cut the OCaml estate from them; `ts` cuts the TypeScript
-# estate; `readme` renders the ingest tables out of three files `ts` just wrote. `lcnf` is
-# the explicit Phase 1 route and is requested by name.
-ALL = ['derived', 'eff', 'wire', 'cas', 'ts', 'readme']
+# The producers' dependency order (DI-33): `variances` reads declaration-site variance off the
+# vendored rc.112 sources and is an INPUT of `derived`, so it is first; `derived` writes the
+# Lean projections the rest import; `eff`, `wire` and `cas` cut the OCaml estate from them;
+# `ts` cuts the TypeScript estate; `readme` renders the ingest tables out of three files `ts`
+# just wrote. `lcnf` is the explicit Phase 1 route and is requested by name.
+ALL = ['variances', 'derived', 'eff', 'wire', 'cas', 'ts', 'readme']
+
+# The variance table, its producer and its landing path (tooling plan 1.4a).
+VARIANCES = 'tools/Effect4Gen/variances.json'
 
 # The four LCNF outputs; each carries the exact command that regenerates it in its header.
 LCNF = ['ocaml/gen/fibers_gen.ml', 'ocaml/gen/machine_gen.ml',
@@ -51,6 +55,13 @@ def generate(families, output):
     with tempfile.TemporaryDirectory(prefix='effect4-generate-') as scratch:
         out = Path(output).resolve() if checking else Path(scratch)
         out.mkdir(parents=True, exist_ok=True)
+        if 'variances' in families:
+            run(['lake', 'build', 'Tools.Variances'])
+            temp = out / VARIANCES
+            temp.parent.mkdir(parents=True, exist_ok=True)
+            run(['lake', 'env', 'lean', '-M4096', '--run',
+                 'tools/Tools/Variances.lean', str(temp)])
+            install(temp, ROOT / VARIANCES, checking)
         if 'derived' in families:
             rows = json.loads(run(['lake', 'env', 'lean', '-M4096', '--run',
                                    'tools/Effect4Gen/Driver.lean', '--commands'], True))

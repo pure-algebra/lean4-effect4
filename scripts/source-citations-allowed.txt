@@ -47,3 +47,17 @@ scripts/lib/generate.py	moved to scripts/generate.py 2026-09-13
 # packet's history and an attack index; the stream harness census script.
 scripts/check-schema-fields.sh	removed 2026-09-13
 scripts/generate-effect-stream-census.py	removed 2026-09-13
+# Named 2026-09-18 so `check-citations` is green and can join CI (tooling plan 4.8). Each is a
+# citation this repository keeps on purpose into something that is not a file of this checkout.
+# Planned modules named by a ruling before they were written; the rulings are history and the
+# documents that carry them are not this seat's to edit.
+Test/Audit/TypedStateEmit.lean	planned name in decisions row 49; the emitter is Laws/Auto/TypedStateGen.lean
+src/Tools/McpRun.lean	planned MCP driver named by docs/core/api-surface.md; not written
+src/Effect4/Tooling/ToolSpec.lean	planned tool table named by docs/core/api-surface.md; not written
+docs/ALGEBRAIC-LAYOUT-SPECIFICATION.md	layout specification held outside the tracked tree
+# An installed dependency's manifest: present after `bun install --cwd ts/eff`, which every
+# lane that runs the file has as a prerequisite, and absent from a bare checkout.
+ts/eff/node_modules/effect/package.json	installed by bun, not committed
+# The logical-timer spike lives in its own workspace; the engine's timer sources cite it as the
+# model they were built from.
+workshop/Timer/Timer.lean	separate workshop tree (memory: timer spike)

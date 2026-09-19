@@ -49,10 +49,10 @@ else in the machine's closure translates.
 - `Lcnf/Validity.lean` (728), `Lcnf/Rules.lean` (757), `Lcnf/Cases.lean` (721): the validity
   check, the rewrite rules, and the case-site policy — the gate that refused `Run.rowOf` and
   `ServiceDef.receiver` today (`cases-policy.json`).
-- `Effect4/LcnfSemantics.lean` (rung 2): the LCNF evaluator against the compiled Lean functions
-  on 20,387 vectors. `Effect4/LcnfMl.lean` (rung 3): the emitted OCaml read into the target
+- `tools/Conform/Effect4/LcnfSemantics.lean` (rung 2): the LCNF evaluator against the compiled Lean functions
+  on 20,387 vectors. `tools/Conform/Effect4/LcnfMl.lean` (rung 3): the emitted OCaml read into the target
   evaluator and run on the same vectors — "the evaluator handles what the translator emits" is
-  a checked claim because the reader refuses by constructor name. `Effect4/TargetLeanNative.lean`
+  a checked claim because the reader refuses by constructor name. `tools/Conform/Effect4/TargetLeanNative.lean`
   closes the loop against native Lean.
 
 So "verified semantics" today means: a differential on 20,387 vectors between LCNF, the

@@ -1,0 +1,11 @@
+-- The proof-shape ratchet's red control.
+--
+-- `scripts/test-trust-gate.sh` appends this to a LIBRARY source of its scratch tree whose
+-- pinned `first` ceiling in `generated/proof-shape.tsv` is zero. Nothing compiles it: the gate
+-- tokenizes the file, counts one `first` followed by `|`, finds it above the ceiling, and
+-- refuses. Remove the `|` and the same word is a binder name and is not counted, which is the
+-- other half of the rule.
+example : True := by
+  first
+    | trivial
+    | exact True.intro

@@ -825,6 +825,25 @@ theorem join_least (a b c : CTy) (hac : sub a.toRaw c.toRaw = true)
 theorem sub_normalize_of_sub (a b : Ty) (hab : sub a b = true) :
     sub a.normalize b.normalize = true := OrderProof.sub_normalize_of_sub sub_trans a b hab
 
+/-! ### The top absorbs (tooling plan 0.6, decisions row 46)
+
+`never` is the empty union and `join .never t = normalize t` (`join_never`, above); `unknown`
+is the other end, and this is the law that says so. The join is `normalize (.union a b)`, so
+the statement is an antisymmetry between two normal types: `unknown` is above the join by
+`sub_unknown`, and below it because the join covers its right operand
+(`sub_normalize_union_right`) and `normalize .unknown = .unknown`. No constructor is named. -/
+
+/-- The top absorbs: joining anything onto `unknown` is `unknown`. -/
+theorem join_unknown (t : Ty) : join t unknown = unknown :=
+  OrderProof.sub_antisymm_normal sub_trans (join t unknown) unknown
+    (normal_normalize (.union t unknown)) Normal.unknown
+    (sub_unknown (join t unknown))
+    (OrderProof.sub_normalize_union_right sub_trans t unknown)
+
+/-- The mirror of `join_never_right`. -/
+theorem join_unknown_left (t : Ty) : join unknown t = unknown := by
+  rw [join_comm]; exact join_unknown t
+
 /-! ### Membership in the least upper bound (S4c, part 4 commit 2, 2026-09-12)
 
 Answer joining is `Ty.join` (`EffTy.joinAnswer`), so the value a branch, a catch or a race
@@ -865,6 +884,14 @@ instance instLawfulOrderSup : Std.LawfulOrderSup CTy where
 
 /-- The empty canonical union is below every canonical type. -/
 theorem never_le (t : CTy) : never ≤ t := Ty.OrderProof.sub_never t.toRaw
+
+/-- The top (decisions row 46): every canonical type is below `unknown`. `Std` has no
+top/bottom class in this toolchain, so this stays a plain theorem beside `never_le`. -/
+theorem le_unknown (t : CTy) : t ≤ unknown := Ty.sub_unknown t.toRaw
+
+/-- The top absorbs on the witnessed API. -/
+theorem join_unknown (t : CTy) : join t unknown = unknown :=
+  Subtype.ext (Ty.join_unknown t.toRaw)
 
 end Effect4.Program.CTy
 

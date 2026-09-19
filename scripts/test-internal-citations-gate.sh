@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
-# Exercises whether `scripts/check-internal-citations.sh` reacts.
+# Exercises whether the internal-citation half of `scripts/check-source-citations.py` reacts.
+#
+# The two citation scanners were merged into that one pass on 2026-09-18 (tooling plan 1.7's
+# paired retirement), so the detector this drives is `--internal-only`: the protected-document
+# scan alone, which is the only question a synthetic tree can be asked — the existence baseline
+# is about this repository.
 #
 # This exercises the DETECTOR, not the repository. Every case runs against a
 # synthetic tree built under $TMPDIR from `Test/fixtures/internal-citations/`,
@@ -15,7 +20,7 @@
 set -euo pipefail
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
-gate="$repo_root/scripts/check-internal-citations.sh"
+gate="$repo_root/scripts/check-source-citations.py"
 fixture="$repo_root/Test/fixtures/internal-citations/tree"
 tmp_parent="${TMPDIR:-/tmp}"
 tmp_parent="${tmp_parent%/}"
@@ -41,7 +46,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-[[ -x "$gate" ]] || { printf 'FAIL gate is not executable: %s\n' "$gate" >&2; exit 1; }
+[[ -r "$gate" ]] || { printf 'FAIL gate is not readable: %s\n' "$gate" >&2; exit 1; }
 [[ -d "$fixture" ]] || { printf 'FAIL fixture tree is missing: %s\n' "$fixture" >&2; exit 1; }
 find "$fixture" -type f -print0 | LC_ALL=C sort -z | xargs -0 cksum >"$fixture_before"
 
@@ -77,7 +82,7 @@ full_tree() {
 expect_reject() {
   local name="$1" dir="$2" signal="$3"
   local log="$tmp_root/reject-$rejected.log"
-  if "$gate" --root "$dir" >"$log" 2>&1; then
+  if python3 "$gate" --internal-only --root "$dir" >"$log" 2>&1; then
     printf 'FAIL gate accepted a tree it must reject: %s\n' "$name" >&2
     cat "$log" >&2
     exit 1
@@ -94,7 +99,7 @@ expect_reject() {
 expect_accept() {
   local name="$1" dir="$2"
   local log="$tmp_root/accept-$accepted.log"
-  if ! "$gate" --root "$dir" >"$log" 2>&1; then
+  if ! python3 "$gate" --internal-only --root "$dir" >"$log" 2>&1; then
     printf 'FAIL gate rejected a legitimate tree: %s\n' "$name" >&2
     cat "$log" >&2
     exit 1
@@ -211,7 +216,7 @@ expect_reject "root with no scanned tree" "$dir" 'none of the scanned trees'
 
 # R10. a stray positional argument must be refused, not silently ignored
 log="$tmp_root/stray.log"
-if "$gate" "$fixture" >"$log" 2>&1; then
+if python3 "$gate" --internal-only "$fixture" >"$log" 2>&1; then
   printf 'FAIL gate accepted a stray positional argument\n' >&2
   exit 1
 fi

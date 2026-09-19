@@ -168,6 +168,27 @@ private def hiddenPair : Ty := .prod (.union .string .never) .string
 #check CTy.join_self
 #check CTy.join_never
 
+/-! The top (tooling plan 0.6, decisions row 46). `never` is the empty union and absorbs on
+the left of `join`; `unknown` is the other end and absorbs on both sides. The universal laws
+are `Ty.join_unknown` and `CTy.le_unknown`; these finite controls pin them at a scalar, at a
+union, at a handle and at the top itself, so a `sub` arm that stopped answering `true` at the
+top would be caught here and not only in a proof. -/
+#check Ty.join_unknown
+#check Ty.join_unknown_left
+#check CTy.le_unknown
+#check CTy.join_unknown
+#guard Ty.join .nat .unknown = .unknown
+#guard Ty.join .unknown .nat = .unknown
+#guard Ty.join raw .unknown = .unknown
+#guard Ty.join (.handle "H") .unknown = .unknown
+#guard Ty.join .never .unknown = .unknown
+#guard Ty.join .unknown .unknown = .unknown
+#guard CTy.ofRaw raw ≤ CTy.unknown
+#guard CTy.toRaw (CTy.join (CTy.ofRaw raw) CTy.unknown) = .unknown
+-- the top is strictly above a proper member: `unknown` is not below `nat`
+#guard ¬ CTy.unknown ≤ CTy.ofRaw .nat
+#guard CTy.ofRaw .nat < CTy.unknown
+
 end Test.Program.TypeAlgebraContract
 
 /-! Public order, identity key and printed boundaries use the canonical type. -/
