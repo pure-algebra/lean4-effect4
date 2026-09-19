@@ -76,6 +76,7 @@ import Effect4.Laws.Auto.RuleSets
 import Effect4.Laws.Auto.Inversion
 import Effect4.Laws.Auto.Census
 import Effect4.Laws.Auto.Traversals
+import Effect4.Laws.Auto.Exhaustive
 import Effect4.Laws.Auto.Positions
 import Effect4.Laws.Auto.PositionGate
 import Effect4.Laws.Auto.TypedStateGen

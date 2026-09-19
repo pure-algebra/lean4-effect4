@@ -95,6 +95,15 @@ private def auditImplementationModules : List Name :=
   -- The traversal census (`#traversal_census`): a command elaborator that classifies every
   -- definition reading a free object (fold / generated / structural / …); meta code, no theorem.
   , `Effect4.Laws.Auto.Traversals
+  -- The exhaustiveness inventory (`#exhaustive_gate`): a command elaborator that reads every
+  -- match on a free object out of the matcher's own type and says which have no catch-all;
+  -- meta code, no theorem in the module.
+  , `Effect4.Laws.Auto.Exhaustive
+  -- The named aesop banks (tooling plan 1.1): `declare_aesop_rule_sets` expands to a
+  -- binder-free `initialize`, and the initializer that registers the rule set with aesop's
+  -- environment extension crosses to `Classical.choice`. The module declares no theorem and
+  -- states this entry's condition in its own header.
+  , `Effect4.Laws.Auto.RuleSets
   -- The converter (`fold_of`): a command elaborator that adds a hand traversal's algebra, its
   -- homomorphism witness and `eq_cata` to the environment; meta code, no theorem of its own.
   , `Effect4.Program.FoldOf

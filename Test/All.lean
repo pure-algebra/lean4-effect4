@@ -99,6 +99,7 @@ import Test.Program.CatchIfContract
 import Test.Machine.Fuzz
 import Test.Audit.RuntimeCoverage
 import Test.Audit.AxiomGate
+import Test.Audit.ExhaustiveFixture
 import Test.Audit.TraversalCensus
 import Test.Audit.PositionCensus
 import Test.Program.TypeAlgebraContract
