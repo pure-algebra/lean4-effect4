@@ -72,9 +72,17 @@ reads back.
    analyses), the three `TypeAlgebra` proofs on `sub_eq_args` and the six `sub_*_of_ne` deletions;
    seat I's 0.10 cite fixes and 0.4 document edits (applied in its worktree, uncommitted, saved as a
    patch by the coordinator; they regenerate three OCaml faces); the engine's layout mirror at 16 of
-   20 `Ty` constructors blocks `--only lcnf` (plan 4.2). Next wave, three seats at most: T1 (0.5,
-   0.8, 0.9, the 1.2 bank moves, 1.3), D (one compiler = tsgo: the oracle, the truth typecheck,
-   `ts/eff`; 1.10a, 1.10, the first half of 1.11), then 3.1–3.6. L2–L7 resume after Tier 3.
+   20 `Ty` constructors blocks `--only lcnf` (plan 4.2). The coherence review and the next slice:
+   `docs/research/2026-09-19-wave1-review-and-next-slice.md` — findings C1–C9 (the engine runs an
+   older algebra than the tree; the order's consumers still enumerate constructors; the generic
+   membership law has no instance because `fold_of` emits sparse case analyses; two `hasTy` laws
+   want their own conditions; the template calculus has two homes; two atom rules are heads where
+   they could be subsumption), and three seats: E (the engine catches up: 4.2, 0.7, 0.10, 4.1, 4.3,
+   3.6), V (one proof each for the order and membership: FoldOf's arm emission, the fourteen
+   fields, `hasTy_sub` as a corollary, `argsBelow_trans/antisymm`, the six `sub_*_of_ne` deleted,
+   `AdmitsExtend`, templates, hygiene 0.5/0.8/0.9/0.4), D (tsgo as the one compiler, the
+   assignability differential, rows and atoms against the target). Wave 3: the L3 atoms, the bank
+   moves, Tier 3. L2–L7 resume after Tier 3.
 1. **The fold work stops here** (owner, 2026-09-18): the checker, the term typer and the
    fragments landed (census §7.5–§7.10); the thirteen exemptions — the compiler's five, the
    reference evaluator's five, `valCode`, `ofSchema`, the derived instance — stay as they are and
