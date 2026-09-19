@@ -1,12 +1,14 @@
 import Effect4.Machine.Context
+import Effect4.Machine.Alphabets
 
 /-!
 # Machine.ContextValue — the Layer machine's value alphabet on the shared carrier
 
-Owner: the `Image` of `Env.Val` — the identity, since U1b made `Env.Val` the shared carrier
-`Effect4.Store.Val` (`Machine/Context.lean`) — the exit carrier built on it, and the receipts
-of the alphabet at the table of `Machine/Value.lean`
+Owner: the receipts of the Layer machine's value alphabet at the table of `Machine/Value.lean`
 (`docs/research/2026-09-07-u0-value-foundation.md`, `2026-09-07-u1-cutover-dispatch.md` U1b).
+`Env.Val` is the shared carrier `Effect4.Store.Val` (`Machine/ContextMap.lean`); its image, the
+exit carrier and `causeImage` are declared once in `Machine/Alphabets.lean` (`Val.image`,
+`ExitV`, `exitImage`) since L1 of the language push retired the S5 spike's second copy.
 
 ## The table
 
@@ -31,16 +33,10 @@ namespace Effect4.Machine.Env
 
 open Effect4.Store (Image)
 
-/-- The Layer machine's value alphabet as an image of the shared carrier: the identity. -/
-def Val.image : Image Val := ⟨id, some, fun _ => rfl, fun h => Option.some.inj h⟩
-
 /-- A written context spine reads back as its entries: `Context.lean`'s `spine_encodeEntries`
 at a context, the statement `decode_encode` rests on. -/
 theorem Val.ofSpine_entries (c : Ctx) : spine (encode c) = some c.entries :=
   spine_encodeEntries c.entries
-
-/-- The exit carrier at this instantiation. -/
-def exitImage : Image ExitV := Value.exit Val.image causeImage
 
 /-! ## Receipts -/
 
@@ -60,8 +56,8 @@ private def key12 : Store.Val := .ctor 0 [.ctor 0 [.nat 1], .ctor 0 [.nat 2]]
 #guard Val.memoMap 3 = Value.memoMap 3
 #guard Val.promise 1 = Value.promise 1
 #guard (Val.pair (Val.promise 1) (Val.memoMap 2)).handles = [(3, 1), (5, 2)]
-#guard (Val.exitErr (Cause.die (Defect.serviceNotFound ⟨⟨1⟩, ⟨2⟩⟩))).handles = []
-#guard exitImage.ofVal (Val.exitErr (Cause.fail (Err.tag 3))) =
+#guard (Effect4.Machine.Val.exitErr (Cause.die Defect.missingService)).handles = []
+#guard Effect4.Machine.exitImage.ofVal (Effect4.Machine.Val.exitErr (Cause.fail (Err.tag 3))) =
   some (Exit.failure (Cause.fail (Err.tag 3)))
 
 end Effect4.Machine.Env

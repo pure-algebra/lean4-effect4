@@ -1,11 +1,11 @@
-import Effect4.Program.Eff
-import Effect4.Machine.Stores
+import Effect4.Program.Ty
+import Effect4.Machine.Term
 
 /-!
 # Program.ErrorImage — the closed error image and parameterized cause folds
 
 Rows DI-62 (lossless admitted failures), DI-26 (external failure admission), and DI-17
-(cause/exit membership). `errOf` and `valOfErr` connect the closed error alphabet to native
+(cause/exit membership). `errOf` and `valOfErr` (`Machine/Term.lean`) connect the closed error alphabet to native
 values. `boom` has no typed payload and its inverse is `none`; only unchecked execution of
 unsupported values reaches that collapse. The typing introductions consult `supportedErrTy`
 in `Program/Eff.lean` before accepting an error term.
@@ -21,22 +21,6 @@ set_option autoImplicit false
 namespace Effect4.Program
 
 open Effect4 Effect4.Machine
-
-/-- The represented error image: natural, text, and the two-string package payload.
-Every other raw value collapses to `boom`; the supported-error typing guards exclude those
-values at each admitted failure introduction (DI-62). -/
-def errOf : Val → Err
-  | .nat n => .tag n
-  | .str s => .text s
-  | .list [.str t, .str m] => .tagged t m
-  | _ => .boom
-
-/-- The partial inverse of `errOf`. `boom` has no typed payload; no arm invents one. -/
-def valOfErr : Err → Option Val
-  | .boom => none
-  | .tag n => some (.nat n)
-  | .tagged tag message => some (.list [.str tag, .str message])
-  | .text s => some (.str s)
 
 /-- Does one reason of a cause stay inside the declared error type, at the supplied notion of
 membership? A typed failure must have an image (`valOfErr`) that is a member of the type; a

@@ -1,99 +1,26 @@
-import Effect4.Program.Typing
-import Effect4.Program.ErrorQueries
-import Effect4.Machine.Stores
+import Effect4.Program.Ty
+import Effect4.Machine.Term
 
 /-!
-# Native atom inventory (DI-40)
+# Native atom typing (DI-40)
 
-One finite owner for native atom names, arities, typing and evaluation. Stored Term.app
-continues to carry a String; this enum is an implementation inventory, not stored syntax.
-The universal all_complete statement forces an appended constructor into the inventory.
-Every dispatch covers the enum explicitly, so a new constructor cannot inherit a fallback.
-Generators project names/signatures from this owner; their scheme code remains checked
-target implementation. No host predicate or generated-code equivalence is asserted here.
+The typing half of the native atom inventory: `constGeneric`, `mono`, `projectProduct`, `typeOf`
+and its monomorphic reading. The inventory itself (`NativeAtom`, its names, arity and `eval`)
+is `Machine/Term.lean`, below the stores, since L1 of the language push. The universal
+`all_complete` statement there forces an appended constructor into the inventory, and every
+dispatch here covers the enum explicitly, so a new constructor cannot inherit a fallback.
 -/
 
 namespace Effect4.Program
 
 open Effect4 Effect4.Machine
 
-/-- `strings` builds the native list-of-strings image, including the empty list. -/
-def stringsAtom (vs : List Val) : Option Val :=
-  if vs.all (fun | Val.str _ => true | _ => false) then some (Val.list vs) else none
-
-inductive NativeAtom
-  | succ | pred | isZero | boolNot | add | lt | eq | pair | fst | snd | strings
-  | causeIsFail | causeError | causeIsDie | causeIsInterrupt | boolOr | boolAnd
-  /-- The tag test (DI-39, part 4 commit 3, 2026-09-12): `tagIs(tag, e)` is true exactly on a
-  pair whose first component is the string `tag` (`.list [.str tag, _]`, the pair
-  representation of `Typed.lean`), and false on every other value — a bare string, a natural,
-  a pair whose first component is not the tag — so it never refuses a well-typed program
-  (an error typed `union (prod (lit "A") string) string` can be a bare string). It is what a
-  `catchIf` test names for the tag residual (`Typing.lean` `catchIfError`, `Ty.diffTag`), and
-  it prints as `tagIs("A", aN)` through the atom printer with `tagIs` in the prelude. Atoms
-  are spelled by name on the wire, so appending it moves no ordinal and no byte. -/
-  | tagIs
-  /-- Pure option elimination; applications remain named terms on the wire (DI-78). -/
-  | isSome | getOrElse
-  deriving DecidableEq, BEq
+/-- The two input families advertised by the cause query atoms. -/
+def causeInputError? : Ty → Option Ty
+  | .causeOf error | .exitOf _ error => some error
+  | _ => none
 
 namespace NativeAtom
-
-/-- Declaration order is the existing generated profile order. -/
-def all : List NativeAtom :=
-  [.succ, .pred, .isZero, .boolNot, .add, .lt, .eq, .pair, .fst, .snd, .strings,
-   .causeIsFail, .causeError, .causeIsDie, .causeIsInterrupt, .boolOr, .boolAnd, .tagIs, .isSome, .getOrElse]
-
-theorem all_complete (atom : NativeAtom) : atom ∈ all := by
-  cases atom <;> simp [all]
-
-def name : NativeAtom → String
-  | .succ => "succ" | .pred => "pred" | .isZero => "isZero" | .boolNot => "not"
-  | .add => "add" | .lt => "lt" | .eq => "eq" | .pair => "pair"
-  | .fst => "fst" | .snd => "snd" | .strings => "strings"
-  | .causeIsFail => "causeIsFail" | .causeError => "causeError"
-  | .causeIsDie => "causeIsDie" | .causeIsInterrupt => "causeIsInterrupt"
-  | .boolOr => "or" | .boolAnd => "and"
-  | .tagIs => "tagIs"
-  | .isSome => "isSome" | .getOrElse => "getOrElse"
-
-def names : List String := all.map name
-
-/-- Exact lookup over the complete inventory; unknown names remain refused. -/
-def ofName? (value : String) : Option NativeAtom := all.find? (fun atom => atom.name == value)
-
-theorem ofName?_name (atom : NativeAtom) : ofName? atom.name = some atom := by
-  cases atom <;> rfl
-
-theorem ofName?_sound {value : String} {atom : NativeAtom}
-    (h : ofName? value = some atom) : atom.name = value := by
-  have found : (atom.name == value) = true :=
-    List.find?_some (p := fun candidate : NativeAtom => candidate.name == value) h
-  exact eq_of_beq found
-
-theorem name_injective {a b : NativeAtom} (h : a.name = b.name) : a = b := by
-  have ha := ofName?_name a
-  rw [h, ofName?_name] at ha
-  exact Option.some.inj ha.symm
-
-/-- A consumer inventory must cover every constructor, not just its own supplied rows. -/
-def covers (consumerNames : List String) : Bool := names.all consumerNames.contains
-
-theorem covers_iff (consumerNames : List String) :
-    covers consumerNames = true ↔ ∀ atom : NativeAtom, atom.name ∈ consumerNames := by
-  simp only [covers, names, List.all_eq_true, List.mem_map, List.contains_iff_mem]
-  constructor
-  · intro h atom
-    exact h atom.name ⟨atom, all_complete atom, rfl⟩
-  · intro h value hv
-    obtain ⟨atom, _, rfl⟩ := hv
-    exact h atom
-
-def arity : NativeAtom → Option Nat
-  | .succ | .pred | .isZero | .boolNot | .fst | .snd
-  | .causeIsFail | .causeError | .causeIsDie | .causeIsInterrupt | .isSome => some 1
-  | .add | .lt | .eq | .pair | .boolOr | .boolAnd | .tagIs | .getOrElse => some 2
-  | .strings => none
 
 /-- Whether the atom's parameters are const-generic (DI-55, the prelude's
 `pair<const A, const B>`): a string literal argument keeps its literal type under the literal
@@ -117,41 +44,6 @@ def mono : NativeAtom → Option (List Ty × Ty)
   | .eq | .pair | .fst | .snd | .strings
   | .causeIsFail | .causeError | .causeIsDie | .causeIsInterrupt | .tagIs
   | .isSome | .getOrElse => none
-
-/-- The tag test on a value (DI-39): true exactly on a pair whose first component is the
-tag; false on every other value. Total, so `tagIs` never answers `none` on a string tag. -/
-def tagHit (tag : String) : Val → Bool
-  | .list [.str t, _] => t == tag
-  | _ => false
-
-def eval : NativeAtom → List Val → Option Val
-  | .succ, [Val.nat n] => some (Val.nat (n + 1))
-  | .pred, [Val.nat n] => some (Val.nat (n - 1))
-  | .isZero, [Val.nat n] => some (Val.bool (n = 0))
-  | .boolNot, [Val.bool b] => some (Val.bool (!b))
-  | .add, [Val.nat a, Val.nat b] => some (Val.nat (a + b))
-  | .lt, [Val.nat a, Val.nat b] => some (Val.bool (decide (a < b)))
-  | .eq, [Val.nat a, Val.nat b] => some (Val.bool (a = b))
-  | .eq, [Val.str a, Val.str b] => some (Val.bool (a == b))
-  | .pair, [a, b] => some (Val.list [a, b])
-  | .fst, [.list (a :: _)] => some a
-  | .snd, [.list (_ :: b :: _)] => some b
-  | .strings, vs => stringsAtom vs
-  | .causeIsFail, [value] => queryTag .fail value
-  | .causeError, [value] => queryError value
-  | .causeIsDie, [value] => queryTag .die value
-  | .causeIsInterrupt, [value] => queryTag .interrupt value
-  | .boolOr, [Val.bool a, Val.bool b] => some (Val.bool (a || b))
-  | .boolAnd, [Val.bool a, Val.bool b] => some (Val.bool (a && b))
-  | .tagIs, [Val.str tag, v] => some (Val.bool (tagHit tag v))
-  | .isSome, [Store.Val.none] => some (Val.bool false)
-  | .isSome, [Store.Val.some _] => some (Val.bool true)
-  | .getOrElse, [Store.Val.none, fallback] => some fallback
-  | .getOrElse, [Store.Val.some value, _] => some value
-  | .succ, _ | .pred, _ | .isZero, _ | .boolNot, _ | .add, _ | .lt, _ | .eq, _
-  | .pair, _ | .fst, _ | .snd, _
-  | .causeIsFail, _ | .causeError, _ | .causeIsDie, _ | .causeIsInterrupt, _
-  | .boolOr, _ | .boolAnd, _ | .tagIs, _ | .isSome, _ | .getOrElse, _ => none
 
 /-- The selected column of a product or a union of products. `second = false` selects
 the first column. Bottom contributes no value; every other non-product alternative

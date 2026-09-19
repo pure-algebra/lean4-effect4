@@ -385,7 +385,7 @@ def shapeCode : Val → Nat
 #print axioms Effect4.Machine.Val.validIn_eq_handles
 #print axioms Effect4.Machine.Val.handles_eq_keys_code
 #print axioms Effect4.Machine.exitImage
-#print axioms Effect4.Machine.Env.Val.image
+#print axioms Effect4.Machine.Val.image
 #print axioms Effect4.Machine.Env.Val.ofSpine_entries
 
 end Foundation

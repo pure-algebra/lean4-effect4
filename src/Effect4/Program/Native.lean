@@ -1,5 +1,6 @@
 import Effect4.Program.NativeAtom
 import Effect4.Program.ErrorImage
+import Effect4.Program.Typing
 import Effect4.Machine.Stores
 
 /-!
@@ -12,8 +13,8 @@ module owns:
 
 * `NativeOp`, the positions of that table, each with its `Row` (spelling, shape, kind, the
   request and answer types, the rc.112 line);
-* the value side: terms evaluate to the stores' `Val`, tuples as the carrier's `list` (the
-  one list-shaped `Val`, the frame an exit list is too), the pure atoms as a closed table;
+* the atoms' types (`nativeAtomTy`); the terms, their values and their evaluation are
+  `Machine/Term.lean`, below the stores, since L1 of the language push;
 * `SyncOp.ofRow`, the decoding of a row and a request value into the store operation the
   machine runs.
 
@@ -27,42 +28,7 @@ namespace Effect4.Program
 
 open Effect4 Effect4.Machine
 
-/-! ## Values -/
-
-/-- A tuple of values: the carrier's `list` frame, the one list-shaped value
-(`src/Effect4/Machine/Stores.lean`; an awaited exit list, `exitsVal`, is the same frame). -/
-abbrev Val.tuple (values : List Val) : Val := .list values
-
-def Val.tuple? : Val → Option (List Val)
-  | .list values => some values
-  | _ => none
-
-theorem Val.tuple?_tuple (vs : List Val) : Val.tuple? (Val.tuple vs) = some vs := rfl
-
-theorem Val.tuple?_exact {v : Val} {vs : List Val} (h : Val.tuple? v = some vs) : v = Val.tuple vs := by
-  unfold Val.tuple? at h
-  split at h
-  · injection h with h
-    rw [h]
-  · exact nomatch h
-
-/-- A literal as a machine value: `unit`, `nat` and `bool` against the carrier's frames, and
-`str` against its `string` frame. Strings are machine values on the native route since the
-host rows slice (2026-09-08, DB-15): a canonical row's request and answer carry them, so a
-`str` literal evaluates like every other literal (`Lit.toVal_isSome`,
-`src/Effect4/Laws/Program/Typed.lean`). -/
-def Lit.toVal : Lit → Option Val
-  | .unit => some Val.unit
-  | .nat n => some (Val.nat n)
-  | .bool b => some (Val.bool b)
-  | .str s => some (Val.str s)
-
-/-- String-named compatibility surface over the complete native atom inventory. -/
-def nativeAtom (name : String) (values : List Val) : Option Val :=
-  (NativeAtom.ofName? name).bind (fun atom => atom.eval values)
-
-theorem nativeAtom_strings (vs : List Val) : nativeAtom "strings" vs = stringsAtom vs := rfl
-
+/-! ## The atoms' types (their values and evaluation are `Machine/Term.lean`) -/
 /-- The atoms' types, by their argument types, from the same exhaustive owner. -/
 def nativeAtomTy (name : String) (types : List Ty) : Option Ty :=
   (NativeAtom.ofName? name).bind (fun atom => atom.typeOf types)
@@ -77,23 +43,6 @@ theorem nativeConstAtom_pair : nativeConstAtom "pair" = true := by decide
 theorem nativeAtomTy_strings (tys : List Ty) :
     nativeAtomTy "strings" tys =
       if tys.all (·.sub .string) then some (.list .string) else none := rfl
-
-mutual
-  /-- A term's value in a positional environment. -/
-  def evalTerm (env : List Val) : Term → Option Val
-    | .var index => env[index]?
-    | .lit value => value.toVal
-    | .app atom args => do
-      let values ← evalTerms env args
-      nativeAtom atom values
-  def evalTerms (env : List Val) : Terms → Option (List Val)
-    | .nil => some []
-    | .cons head tail => do
-      let v ← evalTerm env head
-      let rest ← evalTerms env tail
-      some (v :: rest)
-end
-
 /-! ## The rows -/
 
 /-- The native operations this cut performs: the `Ref`, `Deferred` and `Scope.make` rows of

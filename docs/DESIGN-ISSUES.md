@@ -229,9 +229,11 @@ sorted antichain. These are explicit statement amendments, not unchanged laws.
   requirement has no two-parameter spelling. The four sqlite truth programs are not such programs:
   their rc.112 requirement is empty, and the row is non-empty in Lean only because `effTy`'s
   `.scoped` arm passes it through (DI-63).
-- `src/Effect4/Machine/Context.lean:282,291` declares a second `Err` and a second `Defect` in
-  namespace `Effect4.Machine.Env` (the header at `:52` calls them old spellings kept as patterns) —
+- `src/Effect4/Machine/Context.lean:282,291` declared a second `Err` and a second `Defect` in
+  namespace `Effect4.Machine.Env` (the header at `:52` called them old spellings kept as patterns) —
   two alphabets with one name each, which S2's appends must not be written against by mistake.
+  Corrected 2026-09-18 (L1 of the language push): the copy had no consumer and is deleted; the
+  alphabet is declared once, in `src/Effect4/Machine/Alphabets.lean`, below the stores.
 - `src/Effect4/Program/Packages/KeyValueStoreMemory.lean:24-25` describes `KeyValueStoreError` as
   carrying `message`, `method` and `key`; it also carries `cause?`, and the row's
   `kvError = prod string string` puts a constant in slot one, so the pair discriminates nothing

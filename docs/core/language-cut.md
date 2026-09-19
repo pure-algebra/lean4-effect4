@@ -48,12 +48,14 @@ invariant (`Ref<in out A>`, `Deferred<in out A, in out E>`).
 `Val := unit bool nat str bytes list pair none some ctor(index, args) ref(kind, digest)
 handle(kind, key)`. Handles carry a kind byte and no type (DI-17, row 44).
 
-`Err := boom | tag (code : Nat)` (`Machine/Context.lean:282-285`); `Err.value (v : Val)` is
-**refused** by the basis (`DESIGN-BASIS.md:640`).
+`Err := boom | tag (code : Nat) | tagged (tag message : String) | text (message : String)`
+(`Machine/Alphabets.lean`, since L1 of the push; this section first read the S5 spike's stale copy in
+`Machine/Context.lean`, which said `boom | tag` and had no consumer — deleted at L1). `Err.value (v : Val)`
+is **refused** by the basis (`DESIGN-BASIS.md:640`).
 
 | gap | kind | cost | fix |
 | --- | --- | --- | --- |
-| an error is a numbered tag; no payload | profile (DESIGN-BASIS) | `Effect.fail(new NotFound({ id }))` becomes `fail (tag 7)`; a handler cannot read `id` | a ruling: admit `Err.value` with the error column's type, or keep tags and say so on the surface. The typing proofs (`causeAdmits`, DI-62) are stated over the error column and survive either |
+| an error is a numbered tag, a text, or a tag with a message; no structured payload | profile (DESIGN-BASIS) | `Effect.fail(new NotFound({ id }))` becomes `fail (tag 7)`; a handler cannot read `id` | a ruling: admit `Err.value` with the error column's type, or keep tags and say so on the surface. The typing proofs (`causeAdmits`, DI-62) are stated over the error column and survive either |
 | defects are an alphabet (`Defect`) | cut | `Effect.die(anything)` is one of a few names | grows with rows |
 
 ## 4. Programs: 25 constructors, 16 actions, 10 layer forms

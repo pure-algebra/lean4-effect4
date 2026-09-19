@@ -1,4 +1,4 @@
-import Effect4.Program.ErrorQueries
+import Effect4.Machine.Term
 import Effect4.Program.Typed
 
 /-!

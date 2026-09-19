@@ -12,7 +12,7 @@
 --    Effect4.Api.HostSession.Call Effect4.Api.HostSession.Reply Effect4.Api.HostSession.Refusal \
 --    Effect4.Api.HostSession.Phase Effect4.Api.Runner.Command Effect4.Api.HostProtocol.State \
 --    Effect4.Machine.Stuck Effect4.Api.Outcome
--- Carriers read from: Effect4.Machine.Completion, Effect4.Machine.Stores, Effect4.Machine.Cause, Effect4.Machine.Exit, Effect4.Machine.Fibers, Effect4.Program.Native, Effect4.Program.Admission, Effect4.Api.HostSession, Effect4.Api.Runner, Effect4.Api.HostProtocol, Effect4.Api
+-- Carriers read from: Effect4.Machine.Completion, Effect4.Machine.Alphabets, Effect4.Machine.Cause, Effect4.Machine.Exit, Effect4.Machine.Fibers, Effect4.Program.Native, Effect4.Program.Admission, Effect4.Api.HostSession, Effect4.Api.Runner, Effect4.Api.HostProtocol, Effect4.Api
 -- Acceptance guards appended verbatim from: tools/Effect4Gen/guards/runner.lean
 import Effect4.Api.Runner
 import Effect4.Store.Derived.Value

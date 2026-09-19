@@ -74,6 +74,8 @@ import Effect4.Codegen.EffectfulField
 -- archived to branch `archive/flow-route` the same day
 -- (`docs/research/2026-09-04-prod-cleanup-inventory.md`).
 import Effect4.Machine.Fibers
+import Effect4.Machine.Alphabets
+import Effect4.Machine.Term
 import Effect4.Machine.Stores
 import Effect4.Machine.Context
 -- Structural acceptance of persisted Schema documents.

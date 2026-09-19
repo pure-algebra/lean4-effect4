@@ -2,6 +2,7 @@ import Effect4.Machine.Key
 import Effect4.Machine.Supervision
 import Effect4.Program.Ty
 import Effect4.Program.Decision
+import Effect4.Machine.Term
 
 /-!
 # Syntax.Eff — the Effect TS program AST (lane A1 of the AST relation)
@@ -230,42 +231,13 @@ def normalizeTypes (row : Row) : Row :=
 
 end Row
 
-/-! ## Values -/
-
-/-- The literals a program may write. -/
-inductive Lit
-  | unit
-  | nat (value : Nat)
-  | bool (value : Bool)
-  | str (value : String)
-deriving DecidableEq, Repr
+/-! ## Values (the literals and terms themselves are `Machine/Term.lean`) -/
 
 def Lit.ty : Lit → Ty
   | .unit => .unit
   | .nat _ => .nat
   | .bool _ => .bool
   | .str _ => .string
-
-/-- A variable is a position in the current environment (D1). -/
-abbrev Var := Nat
-
-mutual
-  /-- A pure value: a variable, a literal, or an atom applied to values. Atoms are the
-  pure functions a family declares (`AtomRow`), named, never stored. -/
-  inductive Term
-    | var (index : Var)
-    | lit (value : Lit)
-    | app (atom : String) (args : Terms)
-  inductive Terms
-    | nil
-    | cons (head : Term) (tail : Terms)
-end
-
-deriving instance DecidableEq for Term, Terms
-
-def Terms.toList : Terms → List Term
-  | .nil => []
-  | .cons head tail => head :: Terms.toList tail
 
 /-- The first-order spelling of a `Cause`: `Cause.fail`, `Cause.die`, `Cause.interrupt`,
 and the merge of two (`Cause.combine`, a list append in the model). -/
@@ -278,17 +250,6 @@ inductive CauseTerm
 deriving DecidableEq
 
 /-! ## Scope: every variable of a term below a level -/
-
-mutual
-  /-- Every variable of the term is in scope at `n`. -/
-  def Term.scoped (n : Nat) : Term → Bool
-    | .var index => decide (index < n)
-    | .lit _ => true
-    | .app _ args => Terms.scoped n args
-  def Terms.scoped (n : Nat) : Terms → Bool
-    | .nil => true
-    | .cons head tail => Term.scoped n head && Terms.scoped n tail
-end
 
 def CauseTerm.scoped (n : Nat) : CauseTerm → Bool
   | .fail error => error.scoped n
