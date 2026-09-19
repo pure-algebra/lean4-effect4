@@ -68,9 +68,13 @@ def generate(families, output):
                 args += ['--header-out', canonical]
                 run(['lake', *args])
                 install(temp, ROOT / canonical, checking)
-                # Schema depends on the Json projection just checked/installed.
-                module = canonical.removeprefix('src/').removesuffix('.lean').replace('/', '.')
-                run(['lake', 'build', module])
+                # Schema depends on the Json projection just checked/installed. A group whose
+                # output is not a Lean module of the library -- the TypeScript prelude's atom
+                # block -- has no module to build, and naming one would be a target that does
+                # not exist.
+                if canonical.startswith('src/') and canonical.endswith('.lean'):
+                    module = canonical.removeprefix('src/').removesuffix('.lean').replace('/', '.')
+                    run(['lake', 'build', module])
         routes = [('eff', 'EffGen', 'ocaml/eff'),
                   ('wire', 'EffWire', 'ocaml/goldens/eff'),
                   ('cas', 'CasGoldens', 'ocaml/engine/cas/goldens'),

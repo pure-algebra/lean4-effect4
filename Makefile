@@ -77,7 +77,7 @@ DERIVED_TRACES := $(addprefix $(TRACE)/,Store/Canonical.trace Program/Native.tra
   Store/Pin.trace Store/Node.trace Api/Frontier.trace Program/Eff.trace Program/Ty.trace Program/Refs.trace \
   Program/Authoring.trace Laws/Program/Authoring.trace Program/Node.trace \
   Api/Runner.trace Store/AnnotationsCanonical.trace Schema/Representation.trace \
-  Machine/Term.trace)
+  Machine/Term.trace Program/NativeAtom.trace)
 DERIVED_OUT := src/Effect4/Store/Derived/Json.lean src/Effect4/Store/Derived/Schema.lean \
   src/Effect4/Program/Derived.lean src/Effect4/Store/PinDerived.lean src/Effect4/Api/Derived.lean \
   src/Effect4/Store/Derived/Value.lean src/Effect4/Api/RunnerDerived.lean \
@@ -126,7 +126,7 @@ $(GEN)/lcnf: $(GEN)/readme $(LCNF_SOURCES) $(CORE)
 # The truth harness: Lean writes the corpus from the committed tapes, then the real
 # runtime prints the modules, re-records the tapes and writes the result. Both are
 # deterministic given the pinned host; the comparison against a fresh run is check-truth.
-TRUTH_SOURCES := harness/truth/Truth.lean harness/truth/prelude.ts harness/truth/run-truth.ts \
+TRUTH_SOURCES := harness/truth/Truth.lean harness/truth/prelude.ts harness/truth/prelude-atoms.gen.ts harness/truth/run-truth.ts \
   $(wildcard harness/truth/tapes/*.jsonl) ts/eff/package.json ts/eff/bun.lock
 $(GEN)/truth: $(GEN)/lcnf $(TRUTH_SOURCES) $(CORE) $(LAWS)
 	$(LAKE) env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes
@@ -171,6 +171,7 @@ GENERATED_PATHS := $(DERIVED_OUT) \
   ocaml/gen/api_gen.ml ocaml/gen/fibers_gen.ml ocaml/gen/machine_gen.ml ocaml/engine/api_engine.ml \
   ts/eff/eff.gen.ts ts/eff/json.gen.ts ts/eff/profile.gen.ts ts/eff/taxonomy.gen.ts ts/eff/forms.gen.ts \
   ts/eff/wire.gen.ts ts/eff/packages.gen.ts ts/eff/templates.gen.ts ts/eff/ingest/README.md \
+  harness/truth/prelude-atoms.gen.ts \
   harness/truth/corpus.json harness/truth/generated harness/truth/result.json harness/truth/result.md \
   harness/truth/tapes harness/truth/session/protocol.gen.ts harness/truth/session/tape.schema.json \
   $(SCHEMA_TS_DIR)/Person.generated.ts $(SCHEMA_TS_DIR)/AllRepresentations.generated.ts $(SCHEMA_TS_DIR)/TwoRoots.generated.ts \

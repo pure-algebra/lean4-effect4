@@ -2,12 +2,14 @@
  * prelude.ts — the pure atoms and Ref function names of the native route, on rc.112.
  *
  * What it is: one export per name the printed programs can mention outside the `effect`
- * package: the pure atoms of `src/Effect4/Program/Native.lean` (`nativeAtom`) and the
- * `FnName`s of `src/Effect4/Machine/Stores.lean` (`FnName.total`, `FnName.partialUpdate`).
+ * package. The pure atoms are no longer written here: they are generated from the atom table
+ * into `prelude-atoms.gen.ts` (`tools/Effect4Gen/PreludeAtoms.lean`, group `PreludeAtoms`) and
+ * re-exported below, each carrying the `cite` column of its `NativeAtom.spec` row as its doc.
+ * What stays hand-written here is everything that is not an atom: `select`'s printed heads,
+ * the `FnName`s of `src/Effect4/Machine/Stores.lean` (`FnName.total`, `FnName.partialUpdate`),
+ * the self-test table, the error projection and the canonical package tables.
  * Part of the truth claim (`Test/contracts/faces.contract.md` §4): the doc comment on each
- * export below is the table mapping it to its Lean definition — there is no separate notes
- * file. Hand-written transcription (no generator exists for it yet); when either Lean table
- * changes, this file changes with it, and the self-test refuses an atom it does not export.
+ * export is the table mapping it to its Lean definition — there is no separate notes file.
  *
  * Depends on `effect` (`Option`) only.
  *
@@ -19,7 +21,8 @@
  *    `docs/research/2026-09-09-seat-host-face-probes.ts`);
  *  - each atom agrees with `nativeAtom` on the values `typeOf` admits — naturals, booleans,
  *    pairs (tested: `run-truth.ts` `selfTest` evaluates the table below against fixed cases
- *    before any program runs);
+ *    before any program runs; the table is the one thing about the atoms still written by
+ *    hand, and `run-truth.ts` refuses an atom of the profile that has no case in it);
  *  - `pred` is Lean's truncated subtraction, `pred(0) = 0` (by construction);
  *  - one identifier, one shape: `incr`, `double`, `takeAndBump` are the `FnName.total`
  *    shape `(a) => a` that `Ref.update`/`getAndUpdate`/`updateAndGet` take;
@@ -34,46 +37,14 @@ import { KeyValueStore } from "effect/unstable/persistence"
 import * as Reactivity from "effect/unstable/reactivity/Reactivity"
 import { SqliteClient } from "@effect/sql-sqlite-bun"
 
-// ---- nativeAtom (Native.lean:59-70) -------------------------------------------------
+// ---- the atoms (generated) --------------------------------------------------------
+//
+// One export per atom of `Effect4.Program.NativeAtom`, generated from `NativeAtom.row` (the
+// body) and `NativeAtom.spec` (the doc). Re-exported here so that every printed module, the
+// runner's import header and `select-controls.ts` keep importing them from `./prelude.ts`.
 
-/** `"succ", [nat n] => nat (n + 1)` */
-export const succ = (n: number): number => n + 1
-/** `"pred", [nat n] => nat (n - 1)` — Lean `Nat` subtraction truncates at zero. */
-export const pred = (n: number): number => (n === 0 ? 0 : n - 1)
-/** `"isZero", [nat n] => bool (n = 0)` */
-export const isZero = (n: number): boolean => n === 0
-/** `"not", [bool b] => bool (!b)` */
-export const not = (b: boolean): boolean => !b
-/** `"add", [nat a, nat b] => nat (a + b)` */
-export const add = (a: number, b: number): number => a + b
-/** `"lt", [nat a, nat b] => bool (a < b)` */
-export const lt = (a: number, b: number): boolean => a < b
-/** NativeAtom.eq on admitted natural or string pairs (DI-09). */
-export const eq = (a: number | string, b: number | string): boolean => a === b
-/** `"pair", [a, b] => Val.tuple [a, b]` — a two-element tuple, the wire's JSON array. The
- * type parameters are `const` (DI-55, DI-15's literal rule, part 4 2026-09-12): a string
- * literal argument keeps its literal type, so `pair("A", m)` is `readonly ["A", string]` and
- * `pair("A", "m")` is `readonly ["A", "m"]`, exactly what `NativeAtom.typeOf .pair` answers
- * under `litArgTy`; a `string` variable stays `string`. The runtime body is unchanged. */
-export const pair = <const A, const B>(a: A, b: B): readonly [A, B] => [a, b]
-/** `"fst", [exitCons a _] => a` */
-export const fst = <P extends readonly [unknown, unknown]>(p: P): P[0] => p[0]
-/** `"snd", [exitCons _ (exitCons b _)] => b` */
-export const snd = <P extends readonly [unknown, unknown]>(p: P): P[1] => p[1]
-/** NativeAtom.isSome: presence only, with no TypeScript branch refinement. */
-export const isSome = <A>(value: Option.Option<A>): boolean => Option.isSome(value)
-/** NativeAtom.getOrElse: the payload type fixes the default and result. Both call
- * arguments are evaluated eagerly; this thunk captures only the already evaluated default.
- * Pinned implementations: vendor/effect-4.0.0-rc.112/src/Option.ts (isSome, getOrElse). */
-export const getOrElse = <A>(value: Option.Option<A>, fallback: NoInfer<A>): A =>
-  Option.getOrElse(value, () => fallback)
-
-/** NativeAtom.tagIs: true exactly on a pair whose first component is the tag
- * (`.list [.str tag, _]`, `NativeAtom.tagHit`). This ordinary Boolean test carries no
- * refinement promise. In particular, catchIf's first-failure test does not establish
- * that every failure in a re-raised cause excludes this tag (DI-17, DI-39). */
-export const tagIs = (tag: string, e: unknown): boolean =>
-  Array.isArray(e) && e.length === 2 && e[0] === tag
+export * from "./prelude-atoms.gen.ts"
+import * as Atoms from "./prelude-atoms.gen.ts"
 
 // ---- `select`'s printed heads (`Codegen/Print.lean`, `Head.optionCase`/`Head.caseTag`) ----
 
@@ -127,65 +98,44 @@ export const noChange = (_a: number): Option.Option<number> => Option.none()
  * that the case exercises: `run-truth.ts` checks the atom names against the profile's own
  * atom set (`ts/eff/profile.gen.ts`, cut from `nativeAtom` — DI-40), so an atom appended in
  * Lean cannot stay untested here. `strings` was untested until that check existed. */
-/** NativeAtom.boolOr/boolAnd; all inputs are pure evaluated Boolean values. */
-export const or = (a: boolean, b: boolean): boolean => a || b
-export const and = (a: boolean, b: boolean): boolean => a && b
-
-/** The two query inputs advertised by NativeAtom; successful exits have no reasons. */
-const queryCause = <A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): Cause.Cause<E> =>
-  Exit.isExit(input) ? Exit.isFailure(input) ? input.cause : Cause.empty : input
-/** NativeAtom.causeIsFail; rc.112 internal/effect.ts:148 (any Fail, not Fail only). */
-export const causeIsFail = <A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): boolean =>
-  Cause.hasFails(queryCause(input))
-/** NativeAtom.causeIsDie; rc.112 internal/effect.ts:171. */
-export const causeIsDie = <A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): boolean =>
-  Cause.hasDies(queryCause(input))
-/** NativeAtom.causeIsInterrupt; rc.112 internal/effect.ts:186. */
-export const causeIsInterrupt = <A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): boolean =>
-  Cause.hasInterrupts(queryCause(input))
-/** NativeAtom.causeError; rc.112 internal/effect.ts:157-168 selects the first Fail.
- * Lean's unrepresentable boom is an explicit model boundary, not a host string value. */
-export const causeError = <A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): Option.Option<E> =>
-  Cause.findErrorOption(queryCause(input))
-
 export const selfTestCases: ReadonlyArray<{
   readonly atom: string; readonly name: string; readonly apply: () => unknown; readonly expected: unknown
 }> = [
-  { atom: "succ", name: "succ 41", apply: () => succ(41), expected: 42 },
-  { atom: "pred", name: "pred 0", apply: () => pred(0), expected: 0 },
-  { atom: "pred", name: "pred 5", apply: () => pred(5), expected: 4 },
-  { atom: "isZero", name: "isZero 0", apply: () => isZero(0), expected: true },
-  { atom: "isZero", name: "isZero 3", apply: () => isZero(3), expected: false },
-  { atom: "not", name: "not true", apply: () => not(true), expected: false },
-  { atom: "add", name: "add 2 3", apply: () => add(2, 3), expected: 5 },
-  { atom: "lt", name: "lt 2 3", apply: () => lt(2, 3), expected: true },
-  { atom: "lt", name: "lt 3 3", apply: () => lt(3, 3), expected: false },
-  { atom: "eq", name: "eq 3 3", apply: () => eq(3, 3), expected: true },
-  { atom: "pair", name: "pair 1 2 is a two-element array", apply: () => JSON.stringify(pair(1, 2)), expected: "[1,2]" },
-  { atom: "fst", name: "fst (pair 1 2)", apply: () => fst(pair(1, 2)), expected: 1 },
-  { atom: "snd", name: "snd (pair 1 2)", apply: () => snd(pair(1, 2)), expected: 2 },
-  { atom: "strings", name: "strings () is empty", apply: () => JSON.stringify(strings()), expected: "[]" },
+  { atom: "succ", name: "succ 41", apply: () => Atoms.succ(41), expected: 42 },
+  { atom: "pred", name: "pred 0", apply: () => Atoms.pred(0), expected: 0 },
+  { atom: "pred", name: "pred 5", apply: () => Atoms.pred(5), expected: 4 },
+  { atom: "isZero", name: "isZero 0", apply: () => Atoms.isZero(0), expected: true },
+  { atom: "isZero", name: "isZero 3", apply: () => Atoms.isZero(3), expected: false },
+  { atom: "not", name: "not true", apply: () => Atoms.not(true), expected: false },
+  { atom: "add", name: "add 2 3", apply: () => Atoms.add(2, 3), expected: 5 },
+  { atom: "lt", name: "lt 2 3", apply: () => Atoms.lt(2, 3), expected: true },
+  { atom: "lt", name: "lt 3 3", apply: () => Atoms.lt(3, 3), expected: false },
+  { atom: "eq", name: "eq 3 3", apply: () => Atoms.eq(3, 3), expected: true },
+  { atom: "pair", name: "pair 1 2 is a two-element array", apply: () => JSON.stringify(Atoms.pair(1, 2)), expected: "[1,2]" },
+  { atom: "fst", name: "fst (pair 1 2)", apply: () => Atoms.fst(Atoms.pair(1, 2)), expected: 1 },
+  { atom: "snd", name: "snd (pair 1 2)", apply: () => Atoms.snd(Atoms.pair(1, 2)), expected: 2 },
+  { atom: "strings", name: "strings () is empty", apply: () => JSON.stringify(Atoms.strings()), expected: "[]" },
   { atom: "strings", name: "strings (\"7\", \"\\\"x\\\"\") keeps its JSON texts",
-    apply: () => JSON.stringify(strings("7", "\"x\"")), expected: "[\"7\",\"\\\"x\\\"\"]" },
-  { atom: "eq", name: "string equality hit", apply: () => eq("A", "A"), expected: true },
-  { atom: "eq", name: "string equality miss", apply: () => eq("A", "B"), expected: false },
-  { atom: "or", name: "or false true", apply: () => or(false, true), expected: true },
-  { atom: "and", name: "and true false", apply: () => and(true, false), expected: false },
-  { atom: "causeIsFail", name: "mixed cause contains Fail", apply: () => causeIsFail(Cause.combine(Cause.fail(7), Cause.interrupt(1))), expected: true },
-  { atom: "causeIsFail", name: "successful exit has no Fail", apply: () => causeIsFail(Exit.succeed(7)), expected: false },
-  { atom: "causeIsDie", name: "failed exit contains Die", apply: () => causeIsDie(Exit.failCause(Cause.die("defect"))), expected: true },
-  { atom: "causeIsInterrupt", name: "mixed cause contains Interrupt", apply: () => causeIsInterrupt(Cause.combine(Cause.fail(7), Cause.interrupt(1))), expected: true },
-  { atom: "causeError", name: "first Fail is retained", apply: () => Option.getOrUndefined(causeError(Cause.combine(Cause.fail(7), Cause.fail(9)))), expected: 7 },
-  { atom: "causeError", name: "successful exit has no error", apply: () => Option.isNone(causeError(Exit.succeed(7))), expected: true },
-  { atom: "tagIs", name: "tagIs hits the tagged pair", apply: () => tagIs("A", pair("A", "m")), expected: true },
-  { atom: "tagIs", name: "tagIs misses another tag", apply: () => tagIs("A", pair("B", "m")), expected: false },
-  { atom: "tagIs", name: "tagIs is false on a bare string", apply: () => tagIs("A", "A"), expected: false },
-  { atom: "tagIs", name: "tagIs is false on a number", apply: () => tagIs("A", 7), expected: false },
-  { atom: "isSome", name: "none has no payload", apply: () => isSome(Option.none<number>()), expected: false },
-  { atom: "isSome", name: "some unit is present", apply: () => isSome(Option.some(undefined)), expected: true },
-  { atom: "getOrElse", name: "none selects the default", apply: () => getOrElse(Option.none<number>(), 9), expected: 9 },
-  { atom: "getOrElse", name: "some selects its payload", apply: () => getOrElse(Option.some(7), 9), expected: 7 },
-  { atom: "getOrElse", name: "nested none remains a payload", apply: () => Option.isNone(getOrElse(Option.some(Option.none<number>()), Option.some(9))), expected: true },
+    apply: () => JSON.stringify(Atoms.strings("7", "\"x\"")), expected: "[\"7\",\"\\\"x\\\"\"]" },
+  { atom: "eq", name: "string equality hit", apply: () => Atoms.eq("A", "A"), expected: true },
+  { atom: "eq", name: "string equality miss", apply: () => Atoms.eq("A", "B"), expected: false },
+  { atom: "or", name: "or false true", apply: () => Atoms.or(false, true), expected: true },
+  { atom: "and", name: "and true false", apply: () => Atoms.and(true, false), expected: false },
+  { atom: "causeIsFail", name: "mixed cause contains Fail", apply: () => Atoms.causeIsFail(Cause.combine(Cause.fail(7), Cause.interrupt(1))), expected: true },
+  { atom: "causeIsFail", name: "successful exit has no Fail", apply: () => Atoms.causeIsFail(Exit.succeed(7)), expected: false },
+  { atom: "causeIsDie", name: "failed exit contains Die", apply: () => Atoms.causeIsDie(Exit.failCause(Cause.die("defect"))), expected: true },
+  { atom: "causeIsInterrupt", name: "mixed cause contains Interrupt", apply: () => Atoms.causeIsInterrupt(Cause.combine(Cause.fail(7), Cause.interrupt(1))), expected: true },
+  { atom: "causeError", name: "first Fail is retained", apply: () => Option.getOrUndefined(Atoms.causeError(Cause.combine(Cause.fail(7), Cause.fail(9)))), expected: 7 },
+  { atom: "causeError", name: "successful exit has no error", apply: () => Option.isNone(Atoms.causeError(Exit.succeed(7))), expected: true },
+  { atom: "tagIs", name: "tagIs hits the tagged pair", apply: () => Atoms.tagIs("A", Atoms.pair("A", "m")), expected: true },
+  { atom: "tagIs", name: "tagIs misses another tag", apply: () => Atoms.tagIs("A", Atoms.pair("B", "m")), expected: false },
+  { atom: "tagIs", name: "tagIs is false on a bare string", apply: () => Atoms.tagIs("A", "A"), expected: false },
+  { atom: "tagIs", name: "tagIs is false on a number", apply: () => Atoms.tagIs("A", 7), expected: false },
+  { atom: "isSome", name: "none has no payload", apply: () => Atoms.isSome(Option.none<number>()), expected: false },
+  { atom: "isSome", name: "some unit is present", apply: () => Atoms.isSome(Option.some(undefined)), expected: true },
+  { atom: "getOrElse", name: "none selects the default", apply: () => Atoms.getOrElse(Option.none<number>(), 9), expected: 9 },
+  { atom: "getOrElse", name: "some selects its payload", apply: () => Atoms.getOrElse(Option.some(7), 9), expected: 7 },
+  { atom: "getOrElse", name: "nested none remains a payload", apply: () => Option.isNone(Atoms.getOrElse(Option.some(Option.none<number>()), Option.some(9))), expected: true },
   { atom: "incr", name: "incr 1", apply: () => incr(1), expected: 2 },
   { atom: "double", name: "double 4", apply: () => double(4), expected: 8 },
   { atom: "takeAndBump", name: "takeAndBump 4", apply: () => takeAndBump(4), expected: 5 },
@@ -221,8 +171,8 @@ export namespace Host { export type Resource = HostResource }
 // before the package binds them, crosses the answers as the rows' types spell them, and
 // posts every call to the tape.
 
-/** `"strings", vs => list vs` — the parameter list of a host row, JSON texts (DB-15). */
-export const strings = (...texts: string[]): ReadonlyArray<string> => texts
+// `strings` is an atom and is generated with the rest; it is also the parameter list of a
+// host row, JSON texts (DB-15).
 
 // ---- the error projection (DI-59, ruling G1) -------------------------------------------
 //
