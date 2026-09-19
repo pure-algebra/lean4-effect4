@@ -1,4 +1,5 @@
 import Effect4.Laws.Machine.StoresLaws
+import Effect4.Laws.Machine.RefKernel
 import Effect4.Laws.Machine.StoresValue
 import Effect4.Laws.Machine.ContextValue
 
@@ -129,6 +130,30 @@ section Heap
 #guard ¬ Stores.WF (after (SyncOp.refMake (Val.cell ⟨3⟩)) Stores.empty)
 
 end Heap
+
+/-! ## The heap rows as one kernel (`src/Effect4/Laws/Machine/RefKernel.lean`) -/
+
+section Kernel
+
+/-- An operation's step run through its kernel line, or `none` when it has no kernel. -/
+def viaKernel (o : SyncOp) (heap : RefHeap) : Option (Option (Val × RefHeap)) :=
+  o.refKernel.map fun (cell, k) => refStepOf cell k heap
+
+-- the one row that reads again after its write agrees with the machine on both branches
+#guard viaKernel (SyncOp.refUpdateSomeAndGet ⟨0⟩ .zeroWhenPositive) [Val.nat 3] =
+  some (refStep (SyncOp.refUpdateSomeAndGet ⟨0⟩ .zeroWhenPositive) [Val.nat 3])
+#guard viaKernel (SyncOp.refUpdateSomeAndGet ⟨0⟩ .zeroWhenPositive) [Val.nat 0] =
+  some (refStep (SyncOp.refUpdateSomeAndGet ⟨0⟩ .zeroWhenPositive) [Val.nat 0])
+-- a dangling cell is the kernel row's frontier, as it is the machine's; `refMake` has no kernel
+#guard viaKernel (SyncOp.refGet ⟨1⟩) [Val.nat 3] = some none
+#guard viaKernel (SyncOp.refMake (Val.nat 1)) [] = none
+-- the red control: a kernel line that disagrees with its `refStep` arm (`getAndSet` answering
+-- the value it wrote rather than the one it read) differs at the first heap with a live cell,
+-- so `refStep_eq_refStepOf` cannot hold of it
+#guard refStepOf ⟨0⟩ (fun _ => some (Val.nat 7, some (Val.nat 7))) [Val.nat 5] ≠
+  refStep (SyncOp.refGetAndSet ⟨0⟩ (Val.nat 7)) [Val.nat 5]
+
+end Kernel
 
 /-! ## Make-then-read on the Deferred store (`Stores.lean:700-751`, `:1210-1226`) -/
 
