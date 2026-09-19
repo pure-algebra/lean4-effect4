@@ -71,8 +71,18 @@ build-tools: build ## the generator and checker roots (Tools, OCaml5, Conform, E
 # codecs (derived), the OCaml codec and the golden bytes (eff), the wire manifest (wire) and
 # the TypeScript writer (ts).
 WIRE_TAGS := tools/Effect4Gen/wire-tags.json
+
+# Declaration-site variance, read off the vendored rc.112 sources by a Lean `--run` driver
+# (tooling plan 1.4a). It is an INPUT of `derived` -- the TyView group reads it -- so it is the
+# first link of the chain, and `check-gen` holds it like any other generated file.
+VARIANCES := tools/Effect4Gen/variances.json
+VARIANCE_SOURCES := tools/Tools/Variances.lean $(VENDOR_SOURCES)
+$(GEN)/variances: $(VARIANCE_SOURCES) | build
+	$(PY) scripts/generate.py --only variances
+	@mkdir -p $(GEN) && touch $@
+
 DERIVED_SOURCES := $(wildcard tools/Effect4Gen/*.lean tools/Effect4Gen/guards/*.lean) tools/Effect4Gen/manifest.json tools/Effect4Gen/binders.json \
-  $(WIRE_TAGS) tools/Tools/WireTags.lean
+  $(VARIANCES) $(WIRE_TAGS) tools/Tools/WireTags.lean
 DERIVED_TRACES := $(addprefix $(TRACE)/,Store/Canonical.trace Program/Native.trace Store/RowCanonical.trace \
   Store/Pin.trace Store/Node.trace Api/Frontier.trace Program/Eff.trace Program/Ty.trace Program/Refs.trace \
   Program/Authoring.trace Laws/Program/Authoring.trace Program/Node.trace \
@@ -80,12 +90,12 @@ DERIVED_TRACES := $(addprefix $(TRACE)/,Store/Canonical.trace Program/Native.tra
 DERIVED_OUT := src/Effect4/Store/Derived/Json.lean src/Effect4/Store/Derived/Schema.lean \
   src/Effect4/Program/Derived.lean src/Effect4/Store/PinDerived.lean src/Effect4/Api/Derived.lean \
   src/Effect4/Store/Derived/Value.lean src/Effect4/Api/RunnerDerived.lean \
-  src/Effect4/Program/Fold.lean src/Effect4/Schema/Fold.lean src/Effect4/Program/LayerView.lean src/Effect4/Program/NodeLenses.lean src/Effect4/Program/Binders.lean src/Effect4/Program/Scoped.lean \
+  src/Effect4/Program/Fold.lean src/Effect4/Store/Fold.lean src/Effect4/Schema/Fold.lean src/Effect4/Program/LayerView.lean src/Effect4/Program/NodeLenses.lean src/Effect4/Program/Binders.lean src/Effect4/Program/Scoped.lean \
   src/Effect4/Program/Authoring/Lifts.lean src/Effect4/Laws/Program/Authoring/Lifts.lean \
   src/Effect4/Program/Authoring/Rows.lean src/Effect4/Laws/Program/Authoring/Rows.lean \
   src/Effect4/Program/Authoring/Forms.lean src/Effect4/Laws/Program/Authoring/Forms.lean
 
-$(GEN)/derived: $(DERIVED_SOURCES) $(DERIVED_TRACES) | build
+$(GEN)/derived: $(GEN)/variances $(DERIVED_SOURCES) $(DERIVED_TRACES) | build
 	$(PY) scripts/generate.py --only derived
 	@mkdir -p $(GEN) && touch $@
 
@@ -151,7 +161,7 @@ $(GEN)/census: $(GEN)/schema-ts generated/effect-runtime-census.tsv
 	@mkdir -p $(GEN) && touch $@
 
 # The groups generate.py can regenerate into a temporary directory (no host runtime).
-HERMETIC_GROUPS := derived eff wire cas ts readme
+HERMETIC_GROUPS := variances derived eff wire cas ts readme
 GEN_GROUPS := $(HERMETIC_GROUPS) lcnf truth host-protocol schema-ts census
 
 .PHONY: gen gen-hermetic $(addprefix gen-,$(GEN_GROUPS)) clean-gen
@@ -163,7 +173,7 @@ clean-gen: ## forget the generation markers (the next `make gen` re-cuts everyth
 	rm -rf $(GEN)
 
 # Every committed path a generator writes. The drift check diffs exactly these.
-GENERATED_PATHS := $(DERIVED_OUT) \
+GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) \
   ocaml/eff ocaml/goldens/eff ocaml/engine/cas/goldens ocaml/engine/e4_program_layout.ml \
   ocaml/engine/e4_program_layout.json \
   ocaml/gen/api_gen.ml ocaml/gen/fibers_gen.ml ocaml/gen/machine_gen.ml ocaml/engine/api_engine.ml \
