@@ -19,11 +19,11 @@ The scheme language is the row-template calculus of decisions row 42, not a seco
 and `Ty.matchTemplateArgs` (`Ty.lean`, beside `matchTemplate`) is its list-level fold. One
 calculus, two consumers.
 
-Two things a scheme deliberately does not do. It does not **normalise** the instantiated
-answer: normalising would change the typing judgment, since `normalize` distributes a product
-over a union, and that is rows 42/43 calculus scheduled with L4, not a refactor of what the
-table says today. And it does not **join** at a repeated parameter (`Ty.inferJoin`): no atom
-here repeats one, and the atoms that will are L3's.
+A scheme deliberately does not **normalise** the instantiated answer: normalising would
+change the typing judgment, since `normalize` distributes a product over a union, and that is
+rows 42/43 calculus scheduled with L4, not a refactor of what the table says today. What it
+does choose is how a parameter repeated across the arguments binds (`Scheme.poly`'s `join`):
+the prelude's own declaration decides, `NoInfer` or not.
 
 `all_complete` forces an appended constructor into the inventory, `Scheme.apply` is total, and
 every dispatch here covers the enum explicitly, so a new constructor cannot inherit a fallback.
@@ -64,11 +64,6 @@ inductive CustomScheme
   | causeTest
   /-- `causeError`: the same input, an option of its error column out. -/
   | causeError
-  /-- `isSome`: the argument's own head must be the option — not a subtype of one, which is
-  why this is a rule and not `mono [.option .unknown] .bool`. -/
-  | optionPresence
-  /-- `getOrElse`: the payload type, with the default checked by *canonical* subsumption. -/
-  | optionDefault
 deriving DecidableEq, Repr
 
 /-- The arity each custom rule accepts, so the table's `arity` column is checked against the
@@ -77,14 +72,12 @@ def CustomScheme.declaredArity : CustomScheme → Option Nat
   | .project _ => some 1
   | .causeTest => some 1
   | .causeError => some 1
-  | .optionPresence => some 1
-  | .optionDefault => some 2
 
 /-! Each rule is its own definition over the argument list, so "one rule, one definition" is
-literally true and a proof about one rule splits that rule's arms and no others. The two
-option rules match a *head*, so their negative class is a wildcard — the positive arms are
-explicit and the default absorbs everything else, which is the shape DI-95 settled for a
-classifier. -/
+literally true and a proof about one rule splits that rule's arms and no others. The input
+classifiers they read (`projectProduct`, `causeInputError?`) match a *head*, so their negative
+class is a wildcard — the positive arms are explicit and the default absorbs everything else,
+which is the shape DI-95 settled for a classifier. -/
 
 /-- `fst`/`snd`. -/
 def projectRule (second : Bool) : List Ty → Option Ty
@@ -101,23 +94,11 @@ def causeErrorRule : List Ty → Option Ty
   | [input] => (causeInputError? input).map Ty.option
   | [] | _ :: _ :: _ => none
 
-/-- `isSome`: the argument's own head must be the option. -/
-def optionPresenceRule : List Ty → Option Ty
-  | [.option _] => some .bool
-  | _ => none
-
-/-- `getOrElse`: the payload type, the default checked by canonical subsumption. -/
-def optionDefaultRule : List Ty → Option Ty
-  | [.option a, b] => if b.normalize.sub a.normalize then some a else none
-  | _ => none
-
 /-- The custom rules, verbatim from the arms they replace. -/
 def CustomScheme.apply : CustomScheme → List Ty → Option Ty
   | .project second => projectRule second
   | .causeTest => causeTestRule
   | .causeError => causeErrorRule
-  | .optionPresence => optionPresenceRule
-  | .optionDefault => optionDefaultRule
 
 /-- A fixed signature applied: each argument at a subtype of its parameter (`Ty.sub` is
 TypeScript assignability at a call site, so `succ` takes a `nat` and therefore a `never`). -/
@@ -132,8 +113,10 @@ inductive Scheme
   /-- Any number of arguments at one parameter type. -/
   | variadic (param answer : Ty)
   /-- A template over `Ty.var`: the parameters bind by `Ty.matchTemplateArgs` and the answer is
-  instantiated at the bindings. -/
-  | poly (params : List Ty) (answer : Ty)
+  instantiated at the bindings. `join` is the prelude's inference at a repeated parameter:
+  `true` where it declares a plain `<A>` (the candidates' common supertype, `Ty.infer`),
+  `false` where a later occurrence is `NoInfer<A>` (the first binding stays). -/
+  | poly (params : List Ty) (answer : Ty) (join : Bool := false)
   /-- Alternative fixed signatures, first hit wins. -/
   | alts (cases : List (List Ty × Ty))
   /-- A named rule. -/
@@ -144,21 +127,21 @@ deriving DecidableEq, Repr
 def Scheme.apply : Scheme → List Ty → Option Ty
   | .mono params answer, tys => monoApply params answer tys
   | .variadic param answer, tys => if tys.all (·.sub param) then some answer else none
-  | .poly params answer, tys =>
-    (Ty.matchTemplateArgs [] params tys).map fun σ => Ty.instantiate σ answer
+  | .poly params answer join, tys =>
+    (Ty.matchTemplateArgs [] params tys join).map fun σ => Ty.instantiate σ answer
   | .alts cases, tys => cases.findSome? fun c => monoApply c.1 c.2 tys
   | .custom tag, tys => tag.apply tys
 
 /-- The monomorphic signature a scheme declares, when it declares one. -/
 def Scheme.monoSig : Scheme → Option (List Ty × Ty)
   | .mono params answer => some (params, answer)
-  | .variadic _ _ | .poly _ _ | .alts _ | .custom _ => none
+  | .variadic _ _ | .poly .. | .alts _ | .custom _ => none
 
 /-- The arity the scheme declares agrees with the table's own `arity` column. -/
 def Scheme.arityAgrees (s : Scheme) (arity : Option Nat) : Bool :=
   match s with
   | .mono params _ => arity == some params.length
-  | .poly params _ => arity == some params.length
+  | .poly params _ .. => arity == some params.length
   | .variadic _ _ => arity == none
   | .alts cases => cases.all fun c => arity == some c.1.length
   | .custom tag => arity == tag.declaredArity
@@ -170,7 +153,7 @@ answered by its own laws. -/
 def Scheme.answersDeclared (s : Scheme) : Bool :=
   match s with
   | .mono params answer => s.apply params == some answer
-  | .poly params answer => s.apply params == some answer
+  | .poly params answer .. => s.apply params == some answer
   | .variadic param answer => s.apply [param, param] == some answer
   | .alts cases => cases.all fun c => s.apply c.1 == some c.2
   | .custom _ => true
@@ -252,15 +235,28 @@ def spec : NativeAtom → Spec
                  does not establish\nthat every failure in a re-raised cause excludes this tag \
                  (DI-17, DI-39)." }
   | .isSome =>
-      { scheme := .custom .optionPresence,
+      { scheme := .mono [.option .unknown] .bool,
         cite := "NativeAtom.isSome: presence only, with no TypeScript branch refinement.\n\
                  Pinned implementation: vendor/effect-4.0.0-rc.112/src/Option.ts (isSome)." }
   | .getOrElse =>
-      { scheme := .custom .optionDefault,
+      { scheme := .poly [.option (.var 0), .var 0] (.var 0),
         cite := "NativeAtom.getOrElse: the payload type fixes the default and result. Both \
                  call\narguments are evaluated eagerly; this thunk captures only the already \
                  evaluated default.\nPinned implementation: \
                  vendor/effect-4.0.0-rc.112/src/Option.ts (getOrElse)." }
+  | .ite =>
+      { scheme := .poly [.bool, .var 0, .var 0] (.var 0) true,
+        cite := "`\"ite\", [bool c, a, b] => if c then a else b` — a selection between two \
+                 evaluated\narguments, not a lazy conditional." }
+  | .optSome =>
+      { scheme := .poly [.var 0] (.option (.var 0)),
+        cite := "`\"some\", [a] => some a` — Option.some (vendor/effect-4.0.0-rc.112/src/Option.ts)." }
+  | .optNone =>
+      { scheme := .mono [] (.option .never),
+        cite := "`\"none\", [] => none` — Option.none (vendor/effect-4.0.0-rc.112/src/Option.ts)." }
+  | .mul =>
+      { scheme := .mono [.nat, .nat] .nat,
+        cite := "`\"mul\", [nat a, nat b] => nat (a * b)`" }
 
 /-- The typing of an application by its argument types (DI-40; DI-15, the 2026-09-12 clause):
 the atom's scheme, applied. -/

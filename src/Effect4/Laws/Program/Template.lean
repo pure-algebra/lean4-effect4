@@ -7,7 +7,10 @@ import Aesop
 # Laws.Program.Template — the row-template calculus (decisions row 42)
 
 `Ty.instantiate`, `Ty.infer` and `Ty.matchTemplate` (`Program/Ty.lean`) with their laws. A
-match is sound by its own guard (`matchTemplate_sound`). On a closed template the calculus is
+match is sound by its own guard (`matchTemplate_sound`), whichever rule `join` picks, and a
+list match puts every argument at its parameter's instance under the bindings of the LAST
+step, because inference only widens (`matchTemplateArgs_widens`) and instantiation carries a
+widening to every template (`cata_admits_instantiate`). On a closed template the calculus is
 the identity and subsumption (`instantiate_closed`, `infer_closed`, `matchTemplate_closed`),
 so a row with no parameter types exactly as it did before the templates (`rowTy_closed`,
 `rowTy_closed_some`). `closed` survives `normalize` (`closed_normalize`), which carries a
@@ -47,19 +50,149 @@ theorem closed_normalize (t : Ty) (h : closed t = true) : closed (normalize t) =
 theorem instantiate_closed (σ : Subst) (t : Ty) (h : closed t = true) : instantiate σ t = t := by
   induction t <;> aesop (add norm simp [closed, instantiate])
 
-theorem infer_closed (σ : Subst) (t r : Ty) (h : closed t = true) : infer σ t r = σ := by
+theorem infer_closed {join : Bool} (σ : Subst) (t r : Ty) (h : closed t = true) :
+    infer σ t r join = σ := by
   induction t generalizing σ r <;> cases r <;> aesop (add norm simp [closed, infer])
 
 /-- A match is sound: the request is a subtype of the template at the bindings. -/
-theorem matchTemplate_sound (σ : Subst) (t r : Ty) (σ' : Subst)
-    (h : matchTemplate σ t r = some σ') : sub r (instantiate σ' t) = true := by
+theorem matchTemplate_sound {join : Bool} (σ : Subst) (t r : Ty) (σ' : Subst)
+    (h : matchTemplate σ t r join = some σ') : sub r (instantiate σ' t) = true := by
   unfold matchTemplate at h
   aesop
 
 /-- On a closed template the match is subsumption and the seed. -/
-theorem matchTemplate_closed (σ : Subst) (t r : Ty) (h : closed t = true) :
-    matchTemplate σ t r = if sub r t then some σ else none := by
+theorem matchTemplate_closed {join : Bool} (σ : Subst) (t r : Ty) (h : closed t = true) :
+    matchTemplate σ t r join = if sub r t then some σ else none := by
   simp only [matchTemplate, infer_closed σ t r h, instantiate_closed σ t h]
+
+/-! ### What a list match binds, at the end of the list
+
+`matchTemplateArgs` reads each argument's guard at the bindings of that argument's own step,
+and an atom's answer is instantiated at the bindings of the last step. Between the two sits
+one fact: inference only widens. A parameter it binds was `never` before, which admits
+nothing, and a parameter it rebinds moves up the order (`infer`'s `join`). Instantiation
+carries a widening to every template, as a condition on the admission algebra — the order's
+own congruence (`AdmitsSub`), not an argument about `hasTy` — and handles are coarse by kind
+(decisions row 44), so an invariant position costs nothing here. -/
+
+/-- `σ'` admits at every parameter at least what `σ` admits there. -/
+def Widens (σ σ' : Subst) : Prop :=
+  ∀ i v al, Val.hasTy v (instantiate σ (.var i)) al = true →
+    Val.hasTy v (instantiate σ' (.var i)) al = true
+
+theorem Widens.refl (σ : Subst) : Widens σ σ := fun _ _ _ h => h
+
+theorem Widens.trans {σ₁ σ₂ σ₃ : Subst} (h₁ : Widens σ₁ σ₂) (h₂ : Widens σ₂ σ₃) :
+    Widens σ₁ σ₃ := fun i v al h => h₂ i v al (h₁ i v al h)
+
+/-- A widening read off the bindings: every binding of `σ` has one in `σ'` above it. An
+unbound parameter instantiates to `never`, so it needs nothing. -/
+theorem Widens.of_lookup {σ σ' : Subst}
+    (h : ∀ j u, σ.lookup j = some u → ∃ u', σ'.lookup j = some u' ∧ sub u u' = true) :
+    Widens σ σ' := by
+  intro j v al hv
+  simp only [instantiate] at hv ⊢
+  cases hj : σ.lookup j with
+  | none => simp only [hj, Option.getD_none, Val.hasTy, Bool.false_eq_true] at hv
+  | some u =>
+    obtain ⟨u', hj', hsub⟩ := h j u hj
+    simp only [hj, Option.getD_some] at hv
+    simp only [hj', Option.getD_some]
+    exact hasTy_sub u u' v al hsub hv
+
+/-- Instantiation is monotone in the bindings, for any admission algebra with the order's
+condition: bindings that admit more make every template admit more. -/
+theorem cata_admits_instantiate {alg : TyAlgebra AdmCarrier} (h : AdmitsSub alg) {σ σ' : Subst}
+    (hσ : ∀ i, Adm.le (cata_ty alg (instantiate σ (.var i))).2
+      (cata_ty alg (instantiate σ' (.var i))).2)
+    (t : Ty) : Adm.le (cata_ty alg (instantiate σ t)).2 (cata_ty alg (instantiate σ' t)).2 := by
+  induction t with
+  | var i => exact hσ i
+  | option t ih => simp only [instantiate, cata_ty]; exact h.option _ _ ih
+  | list t ih => simp only [instantiate, cata_ty]; exact h.list _ _ ih
+  | causeOf t ih => simp only [instantiate, cata_ty]; exact h.causeOf _ _ ih
+  | prod a b iha ihb => simp only [instantiate, cata_ty]; exact h.prod _ _ _ _ iha ihb
+  | except a b iha ihb => simp only [instantiate, cata_ty]; exact h.except _ _ _ _ iha ihb
+  | exitOf a b iha ihb => simp only [instantiate, cata_ty]; exact h.exitOf _ _ _ _ iha ihb
+  | fiberOf a b iha ihb => simp only [instantiate, cata_ty]; exact h.fiberOf _ _ _ _ iha ihb
+  -- the invariant handles ignore their argument, so the inclusion is an equality
+  | refOf t _ => simp only [instantiate, cata_ty]; exact (h.refOf _ _) ▸ Adm.le_refl _
+  | deferredOf a b _ _ =>
+    simp only [instantiate, cata_ty]; exact (h.deferredOf _ _ _ _) ▸ Adm.le_refl _
+  | union a b iha ihb =>
+    intro v al hp
+    simp only [instantiate, cata_ty, h.union] at hp ⊢
+    exact (Bool.or_eq_true_iff.mp hp).elim
+      (fun hx => Bool.or_eq_true_iff.mpr (Or.inl (iha v al hx)))
+      (fun hx => Bool.or_eq_true_iff.mpr (Or.inr (ihb v al hx)))
+  -- every other head is closed: both instances are the node itself
+  | _ => simp only [instantiate]; exact Adm.le_refl _
+
+/-- `cata_admits_instantiate` for the admission fold of this tree. -/
+theorem hasTy_instantiate_widens {σ σ' : Subst} (hw : Widens σ σ') (t : Ty)
+    (v : Effect4.Machine.Val) (al : List String) (hv : Val.hasTy v (instantiate σ t) al = true) :
+    Val.hasTy v (instantiate σ' t) al = true := by
+  rw [Val.hasTy.eq_cata v (instantiate σ t) al] at hv
+  rw [Val.hasTy.eq_cata v (instantiate σ' t) al]
+  refine cata_admits_instantiate Val.hasTy_admitsSub (fun i w bl hw' => ?_) t v al hv
+  rw [← Val.hasTy.eq_cata w (instantiate σ (.var i)) bl] at hw'
+  rw [← Val.hasTy.eq_cata w (instantiate σ' (.var i)) bl]
+  exact hw i w bl hw'
+
+/-- Inference only widens: a new binding was `never`, a joined one moves up the order. -/
+theorem infer_widens (σ : Subst) (t r : Ty) (join : Bool) : Widens σ (infer σ t r join) := by
+  fun_induction infer σ t r join
+  case case1 σ i r hnone =>
+    refine Widens.of_lookup fun j u hj => ⟨u, ?_, sub_refl u⟩
+    rw [List.lookup_append, hj, Option.some_or]
+  case case2 σ i r bound hbound hjoin =>
+    refine Widens.of_lookup fun j u hj => ?_
+    rw [List.lookup_cons]
+    cases hji : j == i with
+    | true =>
+      have : j = i := beq_iff_eq.mp hji
+      subst this
+      rw [hbound] at hj
+      cases hj
+      exact ⟨r, rfl, (Bool.and_eq_true_iff.mp hjoin).2⟩
+    | false => exact ⟨u, hj, sub_refl u⟩
+  case case3 => exact Widens.refl _
+  case case4 ih => exact ih
+  case case5 ih => exact ih
+  case case6 ih => exact ih
+  case case7 ih => exact ih
+  case case8 ih₁ ih₂ => exact ih₁.trans ih₂
+  case case9 ih₁ ih₂ => exact ih₁.trans ih₂
+  case case10 ih₁ ih₂ => exact ih₁.trans ih₂
+  case case11 ih₁ ih₂ => exact ih₁.trans ih₂
+  case case12 ih₁ ih₂ => exact ih₁.trans ih₂
+  case case13 ih₁ ih₂ => exact ih₁.trans ih₂
+  case case14 => exact Widens.refl _
+
+/-- A match widens its seed. -/
+theorem matchTemplate_widens {join : Bool} {σ σ' : Subst} {t r : Ty}
+    (h : matchTemplate σ t r join = some σ') : Widens σ σ' := by
+  dsimp only [matchTemplate] at h
+  split at h
+  · cases h
+    exact infer_widens σ t r join
+  · exact nomatch h
+
+/-- A list match widens its seed, step by step. -/
+theorem matchTemplateArgs_widens {join : Bool} {σ σ' : Subst} {ps rs : List Ty}
+    (h : matchTemplateArgs σ ps rs join = some σ') : Widens σ σ' := by
+  induction ps generalizing rs σ with
+  | nil =>
+    cases rs with
+    | nil => cases h; exact Widens.refl _
+    | cons _ _ => exact nomatch h
+  | cons p ps ih =>
+    cases rs with
+    | nil => exact nomatch h
+    | cons r rs =>
+      simp only [matchTemplateArgs, Option.bind_eq_some_iff] at h
+      obtain ⟨σ₁, h₁, hrest⟩ := h
+      exact (matchTemplate_widens h₁).trans (ih hrest)
 
 end Ty
 

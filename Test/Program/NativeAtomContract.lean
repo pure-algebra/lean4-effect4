@@ -16,7 +16,7 @@ open Effect4.Program
 #guard NativeAtom.names =
   ["succ", "pred", "isZero", "not", "add", "lt", "eq", "pair", "fst", "snd", "strings",
    "causeIsFail", "causeError", "causeIsDie", "causeIsInterrupt", "or", "and", "tagIs",
-   "isSome", "getOrElse"]
+   "isSome", "getOrElse", "ite", "some", "none", "mul"]
 -- the tag test (DI-39, part 4 commit 3): a string or literal tag, any tested value; total on
 -- values — true exactly on a pair whose first component is the tag
 #guard NativeAtom.arity .tagIs = some 2
@@ -66,7 +66,7 @@ open Effect4.Program
 -- payload type; it cannot widen that type, even when the option is empty.
 #guard NativeAtom.arity .isSome = some 1
 #guard NativeAtom.arity .getOrElse = some 2
-#guard NativeAtom.mono .isSome = none
+#guard NativeAtom.mono .isSome = some ([.option .unknown], .bool)
 #guard NativeAtom.mono .getOrElse = none
 #guard !NativeAtom.constGeneric .isSome
 #guard !NativeAtom.constGeneric .getOrElse
@@ -94,6 +94,34 @@ open Effect4.Program
 #guard nativeAtom "getOrElse" [.none, .nat 9, .nat 10] = none
 #guard !NativeAtom.covers (NativeAtom.names.filter (· != "isSome"))
 #guard !NativeAtom.covers (NativeAtom.names.filter (· != "getOrElse"))
+
+-- The L4-blocking atoms (DI-40, DI-78). `ite` selects between two evaluated arguments, and at
+-- its repeated parameter it infers the candidates' common supertype, never a union: tsgo 7
+-- refuses `ite(b, n, s)` at `n: number`, `s: string` (TS2345) and types `ite(b, nv, n)` at
+-- `nv: never` as `number`. `getOrElse`'s fallback is `NoInfer`, so its first binding stays:
+-- tsgo refuses `getOrElse(o, n)` at `o: Option<never>` (TS2345), and so does the guard above.
+#guard nativeAtomTy "ite" [.bool, .nat, .nat] = some .nat
+#guard nativeAtomTy "ite" [.bool, .never, .nat] = some .nat
+#guard nativeAtomTy "ite" [.bool, .nat, .never] = some .nat
+#guard nativeAtomTy "ite" [.bool, .option .never, .option .nat] = some (.option .nat)
+#guard nativeAtomTy "ite" [.bool, .nat, .string] = none
+#guard nativeAtomTy "ite" [.nat, .nat, .nat] = none
+#guard nativeAtomTy "some" [.nat] = some (.option .nat)
+#guard nativeAtomTy "none" [] = some (.option .never)
+#guard nativeAtomTy "mul" [.nat, .nat] = some .nat
+#guard nativeAtom "ite" [.bool true, .nat 1, .nat 2] = some (.nat 1)
+#guard nativeAtom "ite" [.bool false, .nat 1, .nat 2] = some (.nat 2)
+#guard nativeAtom "some" [.nat 4] = some (.some (.nat 4))
+#guard nativeAtom "none" [] = some .none
+#guard nativeAtom "mul" [.nat 6, .nat 7] = some (.nat 42)
+#guard !NativeAtom.constGeneric .ite
+#guard !NativeAtom.constGeneric .optSome
+
+-- Red controls: fiber snapshots unwrap to lists of handles; products are not lists
+#guard (Effect4.Machine.Val.asList? (Effect4.Machine.Val.fibers [⟨0⟩])).map List.length = some 1
+#guard Ty.sub (.prod .nat .nat) (.list .nat) = false
+#guard nativeAtomTy "length" [.prod .nat .nat] = none
+
 
 /-- Every successful native typing names an inventoried atom, for arbitrary input types. -/
 theorem typed_name_known (name : String) (args : List Ty) (answer : Ty)

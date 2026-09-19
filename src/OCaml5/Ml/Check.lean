@@ -120,7 +120,7 @@ def preludeValues : List String :=
    "print_string", "print_endline", "print_newline", "print_int", "prerr_endline",
    "string_of_int", "int_of_string", "string_of_float", "float_of_int", "string_of_bool",
    "compare", "min", "max", "abs", "succ", "pred", "exit", "at_exit", "read_line",
-   "char_of_int", "int_of_char", "fst", "snd"]
+   "char_of_int", "int_of_char", "fst", "snd", "max_int"]
 
 /-- The constructors every OCaml program has: the built-in data constructors and the exceptions
 the runtime raises. `Ok`/`Error` are `Stdlib.result`'s and belong here beside `Some`/`None` —

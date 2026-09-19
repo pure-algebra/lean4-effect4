@@ -199,6 +199,15 @@ theorem NativeAtom.eval_validIn (s : Stores) (atom : NativeAtom) (vs : List Val)
     cases h
     have := hvs _ (List.mem_cons_self ..)
     exact this
+  -- the selection answers one of its branches, whole
+  case h_24 c a b =>
+    cases h
+    cases c
+    · exact hvs _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_self ..)))
+    · exact hvs _ (List.mem_cons_of_mem _ (List.mem_cons_self ..))
+  case h_25 a =>
+    cases h
+    exact hvs a (List.mem_cons_self ..)
   all_goals cases h
   all_goals rfl
 

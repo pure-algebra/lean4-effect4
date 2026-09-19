@@ -120,7 +120,7 @@ export const tagIs = (tag: string, e: unknown): boolean =>
  * NativeAtom.isSome: presence only, with no TypeScript branch refinement.
  * Pinned implementation: vendor/effect-4.0.0-rc.112/src/Option.ts (isSome).
  */
-export const isSome = <A>(value: Option.Option<A>): boolean => Option.isSome(value)
+export const isSome = (value: Option.Option<unknown>): boolean => Option.isSome(value)
 
 /**
  * NativeAtom.getOrElse: the payload type fixes the default and result. Both call
@@ -129,4 +129,25 @@ export const isSome = <A>(value: Option.Option<A>): boolean => Option.isSome(val
  */
 export const getOrElse = <A>(value: Option.Option<A>, fallback: NoInfer<A>): A =>
   Option.getOrElse(value, () => fallback)
+
+/**
+ * `"ite", [bool c, a, b] => if c then a else b` — a selection between two evaluated
+ * arguments, not a lazy conditional.
+ */
+export const ite = <A>(c: boolean, t: A, f: A): A => (c ? t : f)
+
+/**
+ * `"some", [a] => some a` — Option.some (vendor/effect-4.0.0-rc.112/src/Option.ts).
+ */
+export const some = <A>(value: A): Option.Option<A> => Option.some(value)
+
+/**
+ * `"none", [] => none` — Option.none (vendor/effect-4.0.0-rc.112/src/Option.ts).
+ */
+export const none = (): Option.Option<never> => Option.none()
+
+/**
+ * `"mul", [nat a, nat b] => nat (a * b)`
+ */
+export const mul = (a: number, b: number): number => a * b
 

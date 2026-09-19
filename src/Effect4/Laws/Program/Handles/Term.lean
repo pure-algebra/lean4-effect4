@@ -48,9 +48,9 @@ theorem nativeAtom_keys (atom : String) (vs : List Val) (v : Val) (h : nativeAto
   unfold nativeAtom at h
   obtain ⟨named, _, h⟩ := Option.bind_eq_some_iff.mp h
   unfold NativeAtom.eval at h
-  -- one goal per row of `NativeAtom.eval`, in the table's order: `strings` is row 12 and the
-  -- four cause queries rows 13–16; every other answering row is a scalar or a rearrangement
-  -- of its arguments, and every refusing row is `none`
+  -- one goal per row of `NativeAtom.eval`, in the table's order: `strings` is row 12, the
+  -- four cause queries rows 13–16, `ite` row 24 and `some` row 25; every other answering row is
+  -- a scalar or a rearrangement of its arguments, and every refusing row is `none`
   split at h
   case h_12 =>
     unfold stringsAtom at h
@@ -63,6 +63,16 @@ theorem nativeAtom_keys (atom : String) (vs : List Val) (v : Val) (h : nativeAto
   case h_14 => rw [queryError_keys _ _ h]; exact List.nil_subset _
   case h_15 => rw [queryTag_keys _ _ _ h]; exact List.nil_subset _
   case h_16 => rw [queryTag_keys _ _ _ h]; exact List.nil_subset _
+  -- the selection answers one of its branches, whole
+  case h_24 =>
+    cases h
+    split
+    · exact fun x hx => List.mem_flatMap.mpr ⟨_, List.mem_cons_of_mem _ (List.mem_cons_self ..), hx⟩
+    · exact fun x hx => List.mem_flatMap.mpr
+        ⟨_, List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_self ..)), hx⟩
+  case h_25 =>
+    cases h
+    exact fun x hx => List.mem_flatMap.mpr ⟨_, List.mem_cons_self .., hx⟩
   all_goals cases h
   all_goals sub_tac norm [Val.tuple]
 

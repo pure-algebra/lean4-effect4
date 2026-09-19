@@ -158,7 +158,13 @@ def builtin? (n : Name) : Option Builtin :=
   | `Nat.decLt | `Nat.blt => some (bin "<")
   | `Nat.decLe | `Nat.ble => some (bin "<=")
   | `Nat.add => some (bin "+")
-  | `Nat.mul => some (bin "*")
+  | `Nat.mul => some (2, fun
+      | [a, b] => .letIn "_mula" a
+        (.letIn "_mulb" b
+          (.ifThen (.binop "=" (.var "_mula") (.int 0)) (.int 0)
+            (.ifThen (.binop ">" (.var "_mulb") (.binop "/" (.var "max_int") (.var "_mula")))
+              (.var "max_int") (.binop "*" (.var "_mula") (.var "_mulb")))))
+      | _ => .unit)
   | `Nat.div => some (2, fun | [a, b] => .ifThen (.binop "=" b (.int 0)) (.int 0) (.binop "/" a b) | _ => .unit)
   | `Nat.mod => some (2, fun | [a, b] => .ifThen (.binop "=" b (.int 0)) a (.binop "mod" a b) | _ => .unit)
   | `Nat.sub => some (2, fun

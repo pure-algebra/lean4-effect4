@@ -461,7 +461,9 @@ A row's type columns may name template parameters (`var i`); the checker binds t
 request and instantiates the answer and error columns (`rowTy`, `Typing/Rules.lean`). The
 calculus is three functions: substitution, inference, and the match, whose law is its own
 guard — a match answers bindings under which the request is a subtype of the instantiated
-template (`matchTemplate_sound`, `Laws/Program/Template.lean`). -/
+template (`matchTemplate_sound`, `Laws/Program/Template.lean`). The atom table's `poly`
+schemes read the same three (`Program/NativeAtom.lean`), with the one choice the rows never
+make: `join`, how a parameter repeated across an application's arguments binds. -/
 
 /-- Bindings for a template's parameters, by index. -/
 abbrev Subst := List (Nat × Ty)
@@ -492,44 +494,59 @@ def instantiate (σ : Subst) : Ty → Ty
   | .lit s => .lit s
 
 /-- The bindings a request fixes for a template, read structurally from the seed: a
-parameter binds at its first occurrence, to the request's type at that position (a row spells
-the handle before the value it writes, so the invariant position binds); shapes that do not
-correspond bind nothing and are left to the check. -/
-def infer (σ : Subst) : Ty → Ty → Subst
-  | .var i, r => if (σ.lookup i).isSome then σ else σ ++ [(i, r)]
-  | .option t, .option r => infer σ t r
-  | .list t, .list r => infer σ t r
-  | .causeOf t, .causeOf r => infer σ t r
-  | .refOf t, .refOf r => infer σ t r
-  | .prod a b, .prod c d => infer (infer σ a c) b d
-  | .except a b, .except c d => infer (infer σ a c) b d
-  | .exitOf a b, .exitOf c d => infer (infer σ a c) b d
-  | .fiberOf a b, .fiberOf c d => infer (infer σ a c) b d
-  | .deferredOf a b, .deferredOf c d => infer (infer σ a c) b d
-  | .union a b, .union c d => infer (infer σ a c) b d
+parameter binds at its first occurrence, to the request's type at that position; shapes that
+do not correspond bind nothing and are left to the check.
+
+At a parameter already bound, `join` chooses between TypeScript's two rules. Without it the
+first binding stays: the rows' rule (a row spells the handle before the value it writes, so
+the invariant position binds) and TypeScript's at a `NoInfer` occurrence (`getOrElse`'s
+fallback). With it the binding moves to the new candidate when the bound is below it, consed
+in front where `lookup` reads it first: TypeScript's own inference at an unannotated
+parameter, the common supertype of the candidates (`getCommonSupertype`). Two incomparable
+candidates are never joined into a union — tsgo refuses `ite(b, n, s)` at `n: number`,
+`s: string` with TS2345 — so the binding stays, and the guard refuses the application too. -/
+def infer (σ : Subst) (template request : Ty) (join : Bool := false) : Subst :=
+  match template, request with
+  | .var i, r =>
+    match σ.lookup i with
+    | none => σ ++ [(i, r)]
+    | some bound => if join && sub bound r then (i, r) :: σ else σ
+  | .option t, .option r => infer σ t r join
+  | .list t, .list r => infer σ t r join
+  | .causeOf t, .causeOf r => infer σ t r join
+  | .refOf t, .refOf r => infer σ t r join
+  | .prod a b, .prod c d => infer (infer σ a c join) b d join
+  | .except a b, .except c d => infer (infer σ a c join) b d join
+  | .exitOf a b, .exitOf c d => infer (infer σ a c join) b d join
+  | .fiberOf a b, .fiberOf c d => infer (infer σ a c join) b d join
+  | .deferredOf a b, .deferredOf c d => infer (infer σ a c join) b d join
+  | .union a b, .union c d => infer (infer σ a c join) b d join
   | _, _ => σ
 
 /-- The match of a request against a template from a seed: the bindings inference reads,
 kept exactly when the request is a subtype of the template instantiated at them. The guard is
-the law, so inference can only lose completeness, never soundness. -/
-def matchTemplate (σ : Subst) (template request : Ty) : Option Subst :=
-  let σ' := infer σ template request
+the law, so inference can only lose completeness, never soundness — whichever rule `join`
+picks. -/
+def matchTemplate (σ : Subst) (template request : Ty) (join : Bool := false) : Option Subst :=
+  let σ' := infer σ template request join
   if sub request (instantiate σ' template) then some σ' else none
 
 /-- Match an argument list against a parameter template list, threading the bindings each
 match reads. The list-level fold of `matchTemplate`, whose guard is its own law
 (`matchTemplate_sound`, `Laws/Program/Template.lean`); a longer or shorter argument list is
 refused, never padded. -/
-def matchTemplateArgs (σ : Subst) : List Ty → List Ty → Option Subst
+def matchTemplateArgs (σ : Subst) (params requests : List Ty) (join : Bool := false) :
+    Option Subst :=
+  match params, requests with
   | [], [] => some σ
-  | p :: ps, r :: rs => (matchTemplate σ p r).bind fun σ' => matchTemplateArgs σ' ps rs
+  | p :: ps, r :: rs => (matchTemplate σ p r join).bind fun σ' => matchTemplateArgs σ' ps rs join
   | [], _ :: _ => none
   | _ :: _, [] => none
 
 /-- A match fixes the argument count. The two lists walk together, and only the empty pair
 answers, so an argument list of another length is refused before any guard is read. -/
-theorem matchTemplateArgs_length {σ σ' : Subst} {ps rs : List Ty}
-    (h : matchTemplateArgs σ ps rs = some σ') : rs.length = ps.length := by
+theorem matchTemplateArgs_length {σ σ' : Subst} {ps rs : List Ty} {join : Bool}
+    (h : matchTemplateArgs σ ps rs join = some σ') : rs.length = ps.length := by
   induction ps generalizing rs σ with
   | nil =>
     cases rs with

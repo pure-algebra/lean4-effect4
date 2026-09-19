@@ -396,8 +396,8 @@ Effect4.Machine.Value.cause._redArg._lam_1	value_cause__red_arg__lam_1	false	0	0
 Effect4.Machine.Value.reason._redArg	value_reason	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	11	10	0	0	0	1	0	18087945671237178160
 List.findSome?._at_.Effect4.Program.firstFailure?.spec_0	list_find_some_opt_at_program_first_failure_opt_spec_0	true	3	0	0	0	2	3	0	0	0	0	3	0	0	0	0	0	0	0	0	1	2	0	4	0	1	0	16548508499723176854
 Effect4.Program.valOfErr	program_val_of_err	false	12	0	0	0	1	4	0	0	0	0	12	0	0	0	0	0	0	0	0	7	12	0	4	0	1	0	16368007085661881792
-Effect4.Program.NativeAtom.ofName?	program_native_atom_of_name_opt	false	81	0	0	0	20	21	0	20	0	0	61	0	0	20	0	0	0	0	0	21	60	0	40	0	1	0	12505365102046921115
-Effect4.Program.NativeAtom.eval	program_native_atom_eval	false	129	0	3	6	78	97	0	3	0	0	126	0	3	0	0	0	0	0	0	92	62	0	103	74	1	0	9888520531452046172
+Effect4.Program.NativeAtom.ofName?	program_native_atom_of_name_opt	false	97	0	0	0	24	25	0	24	0	0	73	0	0	24	0	0	0	0	0	25	72	0	48	0	1	0	18129267956158124148
+Effect4.Program.NativeAtom.eval	program_native_atom_eval	false	151	0	3	6	92	115	0	3	0	0	148	0	3	0	0	0	0	0	0	110	71	0	122	87	1	0	12305407237257757861
 Effect4.Program.NativeOp.sleepMillisOf	program_native_op_sleep_millis_of	false	2	0	0	0	1	2	0	0	0	0	2	0	0	0	0	0	0	0	0	2	1	0	1	1	1	0	11326569151157239370
 Effect4.Program.NativeOp.awaitCellOf	program_native_op_await_cell_of	false	5	0	0	0	2	3	0	1	0	0	4	0	0	0	1	0	0	0	0	3	3	0	3	1	1	0	3357839316270022950
 Effect4.Program.NativeOp.refTy	program_native_op_ref_ty	false	2	0	0	0	0	1	0	1	0	0	1	0	0	1	0	0	0	0	0	0	1	0	0	0	1	0	1543270044433282405

@@ -234,6 +234,11 @@ def scope? : Val → Option Nat
 def snapshot? : Val → Option (List FiberId)
   | Value.fiberSnapshot handles => (Image.list Value.fiberHandle).ofVal handles
   | _ => none
+/-- A list read back from a value: either the carrier's `.list`, or a fiber snapshot through `snapshot?`. -/
+def asList? : Val → Option (List Val)
+  | .list values => some values
+  | v => (snapshot? v).map fun ids => ids.map fiber
+
 /-- A reified failed `Exit`: the cause written by `causeImage` under `Value.exitErr`. -/
 abbrev exitErr (cause : CauseV) : Val := Value.exitErr (causeImage.toVal cause)
 /-- The cause of a reified failed exit read back; `none` on any other shape. -/

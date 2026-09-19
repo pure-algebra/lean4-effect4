@@ -157,6 +157,8 @@ inductive NativeAtom
   | tagIs
   /-- Pure option elimination; applications remain named terms on the wire (DI-78). -/
   | isSome | getOrElse
+  /-- L4-blocking atoms (DI-40, DI-78): conditional, option constructors, multiplication. -/
+  | ite | optSome | optNone | mul
   deriving DecidableEq, BEq
 
 namespace NativeAtom
@@ -241,11 +243,23 @@ def row : NativeAtom → AtomRow
                 prelude := "(tag: string, e: unknown): boolean =>\n  \
                             Array.isArray(e) && e.length === 2 && e[0] === tag" }
   | .isSome => { name := "isSome", arity := some 1, constGeneric := false,
-                 prelude := "<A>(value: Option.Option<A>): boolean => Option.isSome(value)" }
+                 prelude := "(value: Option.Option<unknown>): boolean => Option.isSome(value)" }
   | .getOrElse =>
       { name := "getOrElse", arity := some 2, constGeneric := false,
         prelude := "<A>(value: Option.Option<A>, fallback: NoInfer<A>): A =>\n  \
                     Option.getOrElse(value, () => fallback)" }
+  | .ite =>
+      { name := "ite", arity := some 3, constGeneric := false,
+        prelude := "<A>(c: boolean, t: A, f: A): A => (c ? t : f)" }
+  | .optSome =>
+      { name := "some", arity := some 1, constGeneric := false,
+        prelude := "<A>(value: A): Option.Option<A> => Option.some(value)" }
+  | .optNone =>
+      { name := "none", arity := some 0, constGeneric := false,
+        prelude := "(): Option.Option<never> => Option.none()" }
+  | .mul =>
+      { name := "mul", arity := some 2, constGeneric := false,
+        prelude := "(a: number, b: number): number => a * b" }
 
 def name (atom : NativeAtom) : String := (row atom).name
 
@@ -276,6 +290,10 @@ def ofName? : String → Option NativeAtom
   | "tagIs" => some .tagIs
   | "isSome" => some .isSome
   | "getOrElse" => some .getOrElse
+  | "ite" => some .ite
+  | "some" => some .optSome
+  | "none" => some .optNone
+  | "mul" => some .mul
   | _ => none
 
 theorem ofName?_name (atom : NativeAtom) : ofName? atom.name = some atom := by
@@ -327,10 +345,15 @@ def eval : NativeAtom → List Val → Option Val
   | .isSome, [Store.Val.some _] => some (Val.bool true)
   | .getOrElse, [Store.Val.none, fallback] => some fallback
   | .getOrElse, [Store.Val.some value, _] => some value
+  | .ite, [Val.bool c, a, b] => some (if c then a else b)
+  | .optSome, [a] => some (Store.Val.some a)
+  | .optNone, [] => some Store.Val.none
+  | .mul, [Val.nat a, Val.nat b] => some (Val.nat (a * b))
   | .succ, _ | .pred, _ | .isZero, _ | .boolNot, _ | .add, _ | .lt, _ | .eq, _
   | .pair, _ | .fst, _ | .snd, _
   | .causeIsFail, _ | .causeError, _ | .causeIsDie, _ | .causeIsInterrupt, _
-  | .boolOr, _ | .boolAnd, _ | .tagIs, _ | .isSome, _ | .getOrElse, _ => none
+  | .boolOr, _ | .boolAnd, _ | .tagIs, _ | .isSome, _ | .getOrElse, _
+  | .ite, _ | .optSome, _ | .optNone, _ | .mul, _ => none
 
 end NativeAtom
 

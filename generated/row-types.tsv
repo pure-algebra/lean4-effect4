@@ -51,5 +51,9 @@ Atom	causeIsInterrupt	custom
 Atom	or	mono		[boolean, boolean]	boolean	
 Atom	and	mono		[boolean, boolean]	boolean	
 Atom	tagIs	mono		[string, unknown]	boolean	
-Atom	isSome	custom				
-Atom	getOrElse	custom				
+Atom	isSome	mono		[Option.Option<unknown>]	boolean	
+Atom	getOrElse	poly				
+Atom	ite	poly				
+Atom	some	poly				
+Atom	none	mono		[]	Option.Option<never>	
+Atom	mul	mono		[number, number]	number	

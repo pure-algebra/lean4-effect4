@@ -257,32 +257,6 @@
           "name": "Effect4.Program.instDecidableEqTy.decEq"
         },
         {
-          "name": "Effect4.Program.NativeAtom.optionPresenceRule",
-          "mode": "default",
-          "cover": [
-            "never",
-            "unit",
-            "nat",
-            "int",
-            "string",
-            "bool",
-            "handle",
-            "list",
-            "prod",
-            "except",
-            "exitOf",
-            "causeOf",
-            "fiberOf",
-            "union",
-            "lit",
-            "refOf",
-            "deferredOf",
-            "var",
-            "unknown"
-          ],
-          "note": "Row 56: a classifier on the option HEAD (`isSome`'s rule, plan 2.5) — the positive arm is `.option`, and the default is the negative class: every other head refuses. An appended constructor lands here, refused."
-        },
-        {
           "name": "Effect4.Program.Ty.closed",
           "mode": "default",
           "cover": [
@@ -341,32 +315,6 @@
             "var",
             "unknown"
           ]
-        },
-        {
-          "name": "Effect4.Program.NativeAtom.optionDefaultRule",
-          "mode": "default",
-          "cover": [
-            "never",
-            "unit",
-            "nat",
-            "int",
-            "string",
-            "bool",
-            "handle",
-            "list",
-            "prod",
-            "except",
-            "exitOf",
-            "causeOf",
-            "fiberOf",
-            "union",
-            "lit",
-            "refOf",
-            "deferredOf",
-            "var",
-            "unknown"
-          ],
-          "note": "Row 56: a classifier on the option HEAD (`getOrElse`'s rule, plan 2.5) — the positive arm is `.option`, and the default is the negative class: every other head refuses. An appended constructor lands here, refused."
         },
         {
           "name": "Effect4.Schema.Codec.encodeRaw",

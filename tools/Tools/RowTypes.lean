@@ -98,12 +98,12 @@ def atomSignature (s : NativeAtom.Scheme) : Option (String × String) :=
   | .mono params answer =>
     some ("[" ++ String.intercalate ", " (params.map Ty.renderRaw) ++ "]", Ty.renderRaw answer)
   | .variadic param answer => some (Ty.renderRaw param ++ "[]", Ty.renderRaw answer)
-  | .poly _ _ | .alts _ | .custom _ => none
+  | .poly .. | .alts _ | .custom _ => none
 
 def schemeKind : NativeAtom.Scheme → String
   | .mono _ _ => "mono"
   | .variadic _ _ => "variadic"
-  | .poly _ _ => "poly"
+  | .poly .. => "poly"
   | .alts _ => "alts"
   | .custom _ => "custom"
 

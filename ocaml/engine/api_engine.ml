@@ -889,6 +889,10 @@ and native_atom =
   | NativeAtom_tagIs
   | NativeAtom_isSome
   | NativeAtom_getOrElse
+  | NativeAtom_ite
+  | NativeAtom_optSome
+  | NativeAtom_optNone
+  | NativeAtom_mul
 and reason_tag = ReasonTag_fail | ReasonTag_die | ReasonTag_interrupt
 and memo_map = { id : memo_map_id; parent : memo_map_id option; entries : memo_entry L.t }
 and 'u reference = { key : service_key; default : 'u }
@@ -1821,86 +1825,102 @@ let sh_dispatcher_mk buckets armed =
   let program_native_atom_of_name_opt (x_1 : string) : native_atom option =
   let _x_2 = "succ" in
   let _x_3 = x_1 = _x_2 in
-  if _x_3 then (let _x_81 = NativeAtom_succ in
-    let _x_82 = Some _x_81 in
-    _x_82) else (let _x_4 = "pred" in
+  if _x_3 then (let _x_97 = NativeAtom_succ in
+    let _x_98 = Some _x_97 in
+    _x_98) else (let _x_4 = "pred" in
     let _x_5 = x_1 = _x_4 in
-    if _x_5 then (let _x_79 = NativeAtom_pred in
-      let _x_80 = Some _x_79 in
-      _x_80) else (let _x_6 = "isZero" in
+    if _x_5 then (let _x_95 = NativeAtom_pred in
+      let _x_96 = Some _x_95 in
+      _x_96) else (let _x_6 = "isZero" in
       let _x_7 = x_1 = _x_6 in
-      if _x_7 then (let _x_77 = NativeAtom_isZero in
-        let _x_78 = Some _x_77 in
-        _x_78) else (let _x_8 = "not" in
+      if _x_7 then (let _x_93 = NativeAtom_isZero in
+        let _x_94 = Some _x_93 in
+        _x_94) else (let _x_8 = "not" in
         let _x_9 = x_1 = _x_8 in
-        if _x_9 then (let _x_75 = NativeAtom_boolNot in
-          let _x_76 = Some _x_75 in
-          _x_76) else (let _x_10 = "add" in
+        if _x_9 then (let _x_91 = NativeAtom_boolNot in
+          let _x_92 = Some _x_91 in
+          _x_92) else (let _x_10 = "add" in
           let _x_11 = x_1 = _x_10 in
-          if _x_11 then (let _x_73 = NativeAtom_add in
-            let _x_74 = Some _x_73 in
-            _x_74) else (let _x_12 = "lt" in
+          if _x_11 then (let _x_89 = NativeAtom_add in
+            let _x_90 = Some _x_89 in
+            _x_90) else (let _x_12 = "lt" in
             let _x_13 = x_1 = _x_12 in
-            if _x_13 then (let _x_71 = NativeAtom_lt in
-              let _x_72 = Some _x_71 in
-              _x_72) else (let _x_14 = "eq" in
+            if _x_13 then (let _x_87 = NativeAtom_lt in
+              let _x_88 = Some _x_87 in
+              _x_88) else (let _x_14 = "eq" in
               let _x_15 = x_1 = _x_14 in
-              if _x_15 then (let _x_69 = NativeAtom_eq in
-                let _x_70 = Some _x_69 in
-                _x_70) else (let _x_16 = "pair" in
+              if _x_15 then (let _x_85 = NativeAtom_eq in
+                let _x_86 = Some _x_85 in
+                _x_86) else (let _x_16 = "pair" in
                 let _x_17 = x_1 = _x_16 in
-                if _x_17 then (let _x_67 = NativeAtom_pair in
-                  let _x_68 = Some _x_67 in
-                  _x_68) else (let _x_18 = "fst" in
+                if _x_17 then (let _x_83 = NativeAtom_pair in
+                  let _x_84 = Some _x_83 in
+                  _x_84) else (let _x_18 = "fst" in
                   let _x_19 = x_1 = _x_18 in
-                  if _x_19 then (let _x_65 = NativeAtom_fst in
-                    let _x_66 = Some _x_65 in
-                    _x_66) else (let _x_20 = "snd" in
+                  if _x_19 then (let _x_81 = NativeAtom_fst in
+                    let _x_82 = Some _x_81 in
+                    _x_82) else (let _x_20 = "snd" in
                     let _x_21 = x_1 = _x_20 in
-                    if _x_21 then (let _x_63 = NativeAtom_snd in
-                      let _x_64 = Some _x_63 in
-                      _x_64) else (let _x_22 = "strings" in
+                    if _x_21 then (let _x_79 = NativeAtom_snd in
+                      let _x_80 = Some _x_79 in
+                      _x_80) else (let _x_22 = "strings" in
                       let _x_23 = x_1 = _x_22 in
-                      if _x_23 then (let _x_61 = NativeAtom_strings in
-                        let _x_62 = Some _x_61 in
-                        _x_62) else (let _x_24 = "causeIsFail" in
+                      if _x_23 then (let _x_77 = NativeAtom_strings in
+                        let _x_78 = Some _x_77 in
+                        _x_78) else (let _x_24 = "causeIsFail" in
                         let _x_25 = x_1 = _x_24 in
-                        if _x_25 then (let _x_59 = NativeAtom_causeIsFail in
-                          let _x_60 = Some _x_59 in
-                          _x_60) else (let _x_26 = "causeError" in
+                        if _x_25 then (let _x_75 = NativeAtom_causeIsFail in
+                          let _x_76 = Some _x_75 in
+                          _x_76) else (let _x_26 = "causeError" in
                           let _x_27 = x_1 = _x_26 in
-                          if _x_27 then (let _x_57 = NativeAtom_causeError in
-                            let _x_58 = Some _x_57 in
-                            _x_58) else (let _x_28 = "causeIsDie" in
+                          if _x_27 then (let _x_73 = NativeAtom_causeError in
+                            let _x_74 = Some _x_73 in
+                            _x_74) else (let _x_28 = "causeIsDie" in
                             let _x_29 = x_1 = _x_28 in
-                            if _x_29 then (let _x_55 = NativeAtom_causeIsDie in
-                              let _x_56 = Some _x_55 in
-                              _x_56) else (let _x_30 = "causeIsInterrupt" in
+                            if _x_29 then (let _x_71 = NativeAtom_causeIsDie in
+                              let _x_72 = Some _x_71 in
+                              _x_72) else (let _x_30 = "causeIsInterrupt" in
                               let _x_31 = x_1 = _x_30 in
-                              if _x_31 then (let _x_53 = NativeAtom_causeIsInterrupt in
-                                let _x_54 = Some _x_53 in
-                                _x_54) else (let _x_32 = "or" in
+                              if _x_31 then (let _x_69 = NativeAtom_causeIsInterrupt in
+                                let _x_70 = Some _x_69 in
+                                _x_70) else (let _x_32 = "or" in
                                 let _x_33 = x_1 = _x_32 in
-                                if _x_33 then (let _x_51 = NativeAtom_boolOr in
-                                  let _x_52 = Some _x_51 in
-                                  _x_52) else (let _x_34 = "and" in
+                                if _x_33 then (let _x_67 = NativeAtom_boolOr in
+                                  let _x_68 = Some _x_67 in
+                                  _x_68) else (let _x_34 = "and" in
                                   let _x_35 = x_1 = _x_34 in
-                                  if _x_35 then (let _x_49 = NativeAtom_boolAnd in
-                                    let _x_50 = Some _x_49 in
-                                    _x_50) else (let _x_36 = "tagIs" in
+                                  if _x_35 then (let _x_65 = NativeAtom_boolAnd in
+                                    let _x_66 = Some _x_65 in
+                                    _x_66) else (let _x_36 = "tagIs" in
                                     let _x_37 = x_1 = _x_36 in
-                                    if _x_37 then (let _x_47 = NativeAtom_tagIs in
-                                      let _x_48 = Some _x_47 in
-                                      _x_48) else (let _x_38 = "isSome" in
+                                    if _x_37 then (let _x_63 = NativeAtom_tagIs in
+                                      let _x_64 = Some _x_63 in
+                                      _x_64) else (let _x_38 = "isSome" in
                                       let _x_39 = x_1 = _x_38 in
-                                      if _x_39 then (let _x_45 = NativeAtom_isSome in
-                                        let _x_46 = Some _x_45 in
-                                        _x_46) else (let _x_40 = "getOrElse" in
+                                      if _x_39 then (let _x_61 = NativeAtom_isSome in
+                                        let _x_62 = Some _x_61 in
+                                        _x_62) else (let _x_40 = "getOrElse" in
                                         let _x_41 = x_1 = _x_40 in
-                                        if _x_41 then (let _x_43 = NativeAtom_getOrElse in
-                                          let _x_44 = Some _x_43 in
-                                          _x_44) else (let _x_42 = None in
-                                          _x_42))))))))))))))))))))
+                                        if _x_41 then (let _x_59 = NativeAtom_getOrElse in
+                                          let _x_60 = Some _x_59 in
+                                          _x_60) else (let _x_42 = "ite" in
+                                          let _x_43 = x_1 = _x_42 in
+                                          if _x_43 then (let _x_57 = NativeAtom_ite in
+                                            let _x_58 = Some _x_57 in
+                                            _x_58) else (let _x_44 = "some" in
+                                            let _x_45 = x_1 = _x_44 in
+                                            if _x_45 then (let _x_55 = NativeAtom_optSome in
+                                              let _x_56 = Some _x_55 in
+                                              _x_56) else (let _x_46 = "none" in
+                                              let _x_47 = x_1 = _x_46 in
+                                              if _x_47 then (let _x_53 = NativeAtom_optNone in
+                                                let _x_54 = Some _x_53 in
+                                                _x_54) else (let _x_48 = "mul" in
+                                                let _x_49 = x_1 = _x_48 in
+                                                if _x_49 then (let _x_51 = NativeAtom_mul in
+                                                  let _x_52 = Some _x_51 in
+                                                  _x_52) else (let _x_50 = None in
+                                                  _x_50))))))))))))))))))))))))
   
   (* LCNF mono: List.all._at_.Effect4.Program.stringsAtom.spec_0 (x.1 : List Effect4.Store.Val) : Bool *)
   let rec list_all_at_program_strings_atom_spec_0 (x_1 : val_ list) : bool =
@@ -3096,6 +3116,60 @@ let sh_dispatcher_mk buckets armed =
               _x_221))
         | _ -> (let _x_222 = None in
           _x_222))
+    | NativeAtom_ite -> (match x_2 with
+        | head_223 :: tail_224 -> (match (head_223 : val_) with
+            | Val_bool b_225 -> (match tail_224 with
+                | head_226 :: tail_227 -> (match tail_227 with
+                    | head_228 :: tail_229 -> (match tail_229 with
+                        | [] -> if b_225 then (let _x_231 = Some head_226 in
+                            _x_231) else (let _x_230 = Some head_228 in
+                            _x_230)
+                        | _ -> (let _x_232 = None in
+                          _x_232))
+                    | _ -> (let _x_233 = None in
+                      _x_233))
+                | _ -> (let _x_234 = None in
+                  _x_234))
+            | _ -> (let _x_235 = None in
+              _x_235))
+        | _ -> (let _x_236 = None in
+          _x_236))
+    | NativeAtom_optSome -> (match x_2 with
+        | head_237 :: tail_238 -> (match tail_238 with
+            | [] -> (let _x_239 = Val_some head_237 in
+              let _x_240 = Some _x_239 in
+              _x_240)
+            | _ -> (let _x_241 = None in
+              _x_241))
+        | _ -> (let _x_242 = None in
+          _x_242))
+    | NativeAtom_optNone -> (match x_2 with
+        | [] -> (let _x_243 = Val_none in
+          let _x_244 = Some _x_243 in
+          _x_244)
+        | _ -> (let _x_245 = None in
+          _x_245))
+    | NativeAtom_mul -> (match x_2 with
+        | head_246 :: tail_247 -> (match (head_246 : val_) with
+            | Val_nat n_248 -> (match tail_247 with
+                | head_249 :: tail_250 -> (match (head_249 : val_) with
+                    | Val_nat n_251 -> (match tail_250 with
+                        | [] -> (let _x_252 = let _mula = n_248 in
+                          let _mulb = n_251 in
+                          if _mula = 0 then 0 else if _mulb > max_int / _mula then max_int else _mula * _mulb in
+                          let _x_253 = Val_nat _x_252 in
+                          let _x_254 = Some _x_253 in
+                          _x_254)
+                        | _ -> (let _x_255 = None in
+                          _x_255))
+                    | _ -> (let _x_256 = None in
+                      _x_256))
+                | _ -> (let _x_257 = None in
+                  _x_257))
+            | _ -> (let _x_258 = None in
+              _x_258))
+        | _ -> (let _x_259 = None in
+          _x_259))
   
   (* LCNF mono: Effect4.Program.nativeAtom (name : String) (values : List Effect4.Store.Val) : Option Effect4.Store.Val *)
   let program_native_atom (name : string) (values : val_ list) : val_ option =
@@ -5480,7 +5554,9 @@ and reasons_of_list (x_1 : val_ list) : (err, defect, int, unit) reason list =
         | _ -> x_2)
     | FnName_double -> (match (x_2 : val_) with
         | Val_nat n_8 -> (let _x_9 = 2 in
-          let _x_10 = n_8 * _x_9 in
+          let _x_10 = let _mula = n_8 in
+          let _mulb = _x_9 in
+          if _mula = 0 then 0 else if _mulb > max_int / _mula then max_int else _mula * _mulb in
           let _x_11 = Val_nat _x_10 in
           _x_11)
         | _ -> x_2)
