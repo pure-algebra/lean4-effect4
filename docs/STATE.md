@@ -59,6 +59,16 @@ reads back.
 
 ## Next, in order
 
+0. **The tooling-first wave** (owner, 2026-09-18 evening: pause the language push at L5, build the
+   instruments that make a constructor cheap, remove gates aggressively, one TypeScript compiler
+   — rows 56–58). The plan with its tiers, red controls and verified assumptions is the
+   coordinator's plan file (its receipt notes land under `docs/research/2026-09-18-seat-*-receipt.md`);
+   the synthesis behind it is `docs/research/2026-09-18-synthesis-tooling-first.md`. Landed: L5
+   (`0a2cb898`, with DI-95 closed and the case-site policy re-seeded), the seven aesop banks
+   (`4b4e6aa3`). Three Opus seats in worktrees: the relational view of `Ty` with variance read from
+   rc.112 and the fold condition for `hasTy`; the exhaustiveness inventory, the proof-shape ratchet
+   and the gate removals; the atom table. Next wave: the aesop bank moves, the tsgo migration, the
+   store-row schema. L2–L7 resume after Tier 3.
 1. **The fold work stops here** (owner, 2026-09-18): the checker, the term typer and the
    fragments landed (census §7.5–§7.10); the thirteen exemptions — the compiler's five, the
    reference evaluator's five, `valCode`, `ofSchema`, the derived instance — stay as they are and

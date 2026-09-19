@@ -59,7 +59,7 @@ is said in §4.
 | --- | --- | --- |
 | three `Ty` constructors (step 1) | `git show --stat 7db30c8a` | 43 files, +700/−238 (src 22 files, +571/−197) |
 | one `Ty` constructor (L5, tonight) | `git diff --stat HEAD` | 38 files, +213/−57 (src 19, +169/−47); `Typed.lean` +61/−15 with sixteen `first` blocks in `hasTy_sub`; `TypeAlgebra.lean` +5/−1 |
-| readers of `Ty` that needed a hand arm | tonight's edit list | `Ty.lean` (nine), `Emit.tyO`, `Metadata`, wire tags, `Codegen/Types`, `Blame`, `Bridge`, `ProfileJson`, `Goldens`, Conform `LcnfMl`/`LcnfSemantics`, `e4_program.ml of_ty`, `Decision.lean`'s positional `rcases` |
+| readers of `Ty` that needed a hand arm | tonight's edit list | `Ty.lean` (nine), `Emit.tyO`, `Metadata`, wire tags, `Codegen/Types`, `Blame`, `Bridge`, `ProfileJson`, `Goldens`, Conform `LcnfMl`/`LcnfSemantics`, `e4_program.ml of_ty`, `Laws/Program/Decision.lean`'s positional `rcases` (16 patterns for 20 constructors) |
 | case sites on `Ty` in compiled code | `.lake/conform/cases.json` | 175 subjects, 58 on `Ty` needing a decision |
 | aesop in the Laws | grep, tactic positions | ~397 calls; **0** named rule sets; 39 attribute registrations, all into `default`, including the checker's recursive definitions as `norm simp` (`CheckInversion.lean:39-41`) |
 | proof shapes in the Laws | grep | `first` 306 occurrences, `try` 251, `simp_all` 96 |
@@ -97,7 +97,7 @@ break), and the case-site policy as the ratchet that already exists. Add the rul
 `docs/core/decisions.md` beside the wildcard rule for proofs, which it completes.
 
 **P3 — the same lemma at every row.** `step_typed` (ten identical arms), `nativeAtom_typed`
-(twenty blocks), the seven `sub_*_of_ne` scripts, the `syncOpStep_*` arm equations. Retired by
+(twenty blocks), the six `sub_*_of_ne` scripts, the `syncOpStep_*` arm equations. Retired by
 saying the shape once: `refStepOf` + a kernel table + one theorem; `Scheme` + `sound_of_mono`/
 `sound_of_shape`/`sound_of_poly`; the decided table fact (`table_fact`, which `Read.lean` already
 uses); frame lemmas as generated proof terms. A dispatcher tactic (`row_step`) only for the arms
@@ -201,8 +201,8 @@ E>` (`Fiber.ts:70`), `Ref<in out A>` (`Ref.ts:59`), `Deferred<in out A, in out E
 (`Effect.ts:117`), `Layer<in ROut, out E, out RIn>` (`Layer.ts:54`), `Queue<in out A, in out E>`
 (`Queue.ts:303`), `PubSub<in out A>` (`PubSub.ts:64`), `Stream<out A, out E, out R>`
 (`Stream.ts:122`), `Context<in Services>` (`Context.ts:617`). That is the variance table, already
-written, by the library whose semantics we lower into — measured tonight: 153 of the 373 generic
-`export interface`s in rc.112 declare `in`/`out` on at least one parameter, and 26 carry a
+written, by the library whose semantics we lower into — measured tonight: 153 of the 325 top-level generic
+`export interface`s in rc.112 (`src/*.ts`) declare `in`/`out` on at least one parameter, and 26 carry a
 `Variance` marker namespace. So `tools/Effect4Gen/variances.json`
 (D-C) should not be hand-declared: a small reader over `vendor/effect-4.0.0-rc.112/src/*.ts`
 emits it with the `file:line` as the citation, and the proof-engineering seat's fourth risk
@@ -362,8 +362,8 @@ one number that may not rise is the wall time of `make check` and of `lake build
 | added | retired or shrunk, in the same slice |
 | --- | --- |
 | named aesop banks (1.1, 1.2) | the checker's definitions leave `default`: ~397 calls stop unfolding `check`; measured by `aesop.stats.file`, and the Laws build time is the receipt |
-| `TyView` + `sub_eq_args` (1.4) | the eleven `sub_*_of_ne` lemmas, the `first` alternatives in three proofs, and the arm enumerations; the proof-shape counts fall |
-| `AdmitsSub` (1.5) | ~150 of `hasTy_sub`'s 214 lines, tonight's sixteen `first` blocks, and the re-proofs L2 would otherwise add (three laws of 200/40/50 lines) |
+| `TyView` + `sub_eq_args` (1.4) | the six `sub_*_of_ne` lemmas, the `first` alternatives in three proofs, and the arm enumerations; the proof-shape counts fall |
+| `AdmitsSub` (1.5) | ~190 of `hasTy_sub`'s 256 lines, tonight's sixteen `first` blocks, and the re-proofs L2 would otherwise add (three laws of 200/40/50 lines) |
 | `#exhaustive_gate` (1.6) | runs inside the existing traversal-census battery (`Test/Audit/TraversalCensus.lean`), not as a new `make` target; it replaces reading the compiler's errors one at a time |
 | the proof-shape ratchet (1.7) | computed by the tokenizer the trust gate already runs; no new build work |
 | `make check-aesop` (1.9) | numbers from a build that had to happen (the incremental rule); it exists to let `#auto_census` **delete** proofs the bank closes — measure, then delete |
