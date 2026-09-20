@@ -19,8 +19,8 @@ the landing.
 Doc comments cannot precede `#guard`, so the receipts carry line comments.
 -/
 
-import Effect4.Store.Word
-import Effect4.Program.Wire
+import Effect4.Store.Domain.Word
+import Effect4.Store.Domain.ProgramWire
 import Test.Store.NodeContract
 
 namespace Test.Store.ProbeContract

@@ -1,5 +1,5 @@
 import Effect4.Laws.Auto.Positions
-import Effect4.Store.Val
+import Effect4.Store.Carrier.Val
 
 open Lean Meta Elab Command Effect4.Laws.Auto.Positions
 

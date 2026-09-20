@@ -1,6 +1,6 @@
 import Effect4.Api.Author
 import Effect4.Laws.Program.Author
-import Effect4.Program.Authoring.Forms
+import Effect4.Codegen.Authoring.Forms
 import Effect4.Laws.Program.Authoring.Forms
 import Test.Program.LayerSharingContract
 

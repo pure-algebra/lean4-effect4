@@ -21,7 +21,7 @@ file does not list carries its declaration positions); a field goes through its 
 other through `.named`.
 
     lake env lean -M 4096 --run tools\Effect4Gen\Main.lean --group Json \
-      --imports Effect4.Store.Canonical --out src\Effect4\Store\Derived\Json.lean \
+      --imports Effect4.Store.Canonical --out src\Effect4\Store\Domain\Derived\Json.lean \
       --append tools\Effect4Gen\guards\json.lean Effect4.Float64 Effect4.Json
 
 `--imports` names the modules the emitted file imports; the tool imports exactly those before

@@ -1,6 +1,6 @@
 import Effect4.Codegen.Bindings
 import Effect4.Codegen.Names
-import Effect4.Store.Utf8
+import Effect4.Store.Carrier.Utf8
 
 /-!
 # Binding requirements of the original target syntax

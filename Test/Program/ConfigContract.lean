@@ -1,6 +1,6 @@
 import Effect4.Program.Config
 import Effect4.Program.ConfigValue
-import Effect4.Store.Canonical
+import Effect4.Store.Domain.Canonical
 
 /-!
 # Config contract — the provider algebra and the reader, frozen

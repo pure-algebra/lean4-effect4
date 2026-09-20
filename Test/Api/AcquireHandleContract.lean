@@ -1,3 +1,4 @@
+import TestSupport.AcquireHandle
 import Effect4.Api
 import Effect4.Laws.Program.Admit
 
@@ -7,14 +8,6 @@ open Effect4 Effect4.Program Effect4.Machine
 set_option maxRecDepth 8192
 set_option maxHeartbeats 4000000
 
-def resource := "Host.Resource"
-def table : RowTable :=
-  [ { name := "acquire", spelling := "Host.acquire", kind := .async,
-      registration := .external, request := .unit, answer := .handle resource, error := .never, cite := "" }
-  , { name := "close", spelling := "Host.close", kind := .async,
-      registration := .external, request := .handle resource, answer := .unit, error := .never, cite := "" }
-  , { name := "read", spelling := "Host.read", kind := .async,
-      registration := .external, request := .handle resource, answer := .nat, error := .never, cite := "" } ]
 
 def acquire : NativeEff := .perform (.external 0) (.lit .unit)
 def answer (v : Val) : Completion Val Err Defect FiberId Ann := .ofExit (.success v)

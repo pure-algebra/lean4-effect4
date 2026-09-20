@@ -1,5 +1,5 @@
 import OCaml5.Eff.Goldens
-import Effect4.Program.Derived
+import Effect4.Store.Domain.Derived.Program
 import Tools.ProfileJson
 
 /-!

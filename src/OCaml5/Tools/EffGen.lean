@@ -14,7 +14,7 @@ Writes into `<outdir>`:
 * `eff_types.ml`    — one OCaml variant or record per Lean inductive or structure of the
                       closed world below, constructors in the environment's declaration order,
                       with `ctor_index_<t>`, `ctor_name_<t>`, `ctor_names_<t>` per type;
-* `eff_wire.ml`     — the canonical byte encoding (`src/Effect4/Store/Canonical.lean` framing,
+* `eff_wire.ml`     — the canonical byte encoding (`src/Effect4/Store/Domain/Canonical.lean` framing,
                       constructor tag 10 with the index as a `Nat` frame) and its exact,
                       length-directed decoder, per type, over the hand-written `Eff_frame`;
 * `eff_json.ml`     — the JSON printer (a printer only) per type, over `Eff_json_text`;

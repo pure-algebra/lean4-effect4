@@ -108,11 +108,11 @@ private def auditImplementationModules : List Name :=
   -- The position census, its totality gate and the typed-state skeleton emitter: commands over
   -- the environment and declaration constructors; meta code, no theorem in the modules.
   , `Effect4.Laws.Auto.Positions
-  , `Effect4.Laws.Auto.PositionGate
-  , `Effect4.Laws.Auto.TypedStateDecl
+  , `Effect4.Laws.Program.Typed.PositionGate
+  , `Effect4.Laws.Program.Typed.TypedStateDecl
   , `Effect4.Laws.Auto.Frames
   , `Effect4.Laws.Auto.Obligations
-  , `Effect4.Laws.Auto.TypedSources
+  , `Effect4.Laws.Program.Typed.TypedSources
   ]
 
 /--

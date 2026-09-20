@@ -83,13 +83,13 @@ import Effect4.Laws.Auto.Census
 import Effect4.Laws.Auto.Traversals
 import Effect4.Laws.Auto.Exhaustive
 import Effect4.Laws.Auto.Positions
-import Effect4.Laws.Auto.PositionGate
-import Effect4.Laws.Auto.TypedStateDecl
+import Effect4.Laws.Program.Typed.PositionGate
+import Effect4.Laws.Program.Typed.TypedStateDecl
 import Effect4.Laws.Auto.Frames
 import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Effects.Protocol
 import Effect4.Laws.Program.Typed.Vocabulary
-import Effect4.Laws.Auto.TypedSources
+import Effect4.Laws.Program.Typed.TypedSources
 import Effect4.Laws.Program.Typed.Sources
 import Effect4.Laws.Program.Typed.State
 import Effect4.Laws.Program.Typed.Frames
@@ -97,7 +97,7 @@ import Effect4.Laws.Codegen.Template
 import Effect4.Laws.Codegen.Read
 import Effect4.Laws.Codegen.ReadPrint
 import Effect4.Laws.Codegen.PrintReadable
-import Effect4.Laws.Codegen.ModuleReadable
+import Effect4.Laws.Api.ModuleReadable
 import Effect4.Laws.Store.CanonicalSpec
 import Effect4.Laws.Schema.Codec
 import Effect4.Laws.Schema.Image
@@ -108,6 +108,17 @@ import Effect4.Laws.Program.Authoring.Forms
 import Effect4.Laws.Program.Authoring.Sugar
 import Effect4.Laws.Program.Authoring.Loops
 import Effect4.Laws.Program.Author
+
+import Effect4.Laws.Program.Folds.Checker
+import Effect4.Laws.Program.Folds.Projections
+import Effect4.Laws.Program.Folds.Provision
+import Effect4.Laws.Program.Folds.Representation
+import Effect4.Laws.Program.Folds.Straight
+import Effect4.Laws.Program.Folds.Term
+import Effect4.Laws.Program.Folds.Ty
+import Effect4.Laws.Machine.Folds.Stores
+import Effect4.Laws.Store.Folds.Val
+import Effect4.Laws.Program.Typing.FoldAgreement
 
 /-!
 # Effect4 proof graph

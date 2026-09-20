@@ -1,5 +1,5 @@
 import OCaml5.Eff.Emit
-import Effect4.Store.Canonical
+import Effect4.Store.Domain.Canonical
 
 /-!
 # OCaml5.Eff.Goldens
@@ -47,7 +47,7 @@ instance : Inhabited V := ⟨.unit⟩
 is the wire's, restated here so the tool builds at HEAD. -/
 def ctorTag : UInt8 := 10
 
-/-- The byte rule of `src/Effect4/Store/Canonical.lean` (`framed`, `natBytes`, `Tag.*` are the
+/-- The byte rule of `src/Effect4/Store/Domain/Canonical.lean` (`framed`, `natBytes`, `Tag.*` are the
 library's own), with `ctorTag` for a constructor application. -/
 partial def V.bytes (idx : Name → Nat) : V → Effect4.Store.Bytes
   | .unit => Effect4.Store.framed Effect4.Store.Tag.unit []

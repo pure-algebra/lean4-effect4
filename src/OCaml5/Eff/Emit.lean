@@ -17,7 +17,7 @@ const-generic metadata and operation rows as data). Program typing remains in Le
 * **Every generated file says so** in its first line, with the regeneration command — *by
   construction* (`header`).
 * **The wire is the Lean rule.** Constructor tag 10, the index as a `Nat` frame, the framing of
-  `src/Effect4/Store/Canonical.lean` — *tested* (`ocaml/eff` goldens, `dune test`).
+  `src/Effect4/Store/Domain/Canonical.lean` — *tested* (`ocaml/eff` goldens, `dune test`).
 -/
 
 open Lean Meta
@@ -184,7 +184,7 @@ def emitDecoder (first : Bool) (f : Family) : String :=
   "\n".intercalate arms ++ "\n    | _ -> None)\n"
 
 def emitWire (bs : List (List Family)) : String :=
-  header "Eff_wire: the canonical bytes of every carrier of Eff_types, and the exact decoder. Rule (src/Effect4/Store/Canonical.lean): framed tag payload = tag :: be64 (length payload) ++ payload; Unit 9 [], Bool 1 [0|1], Nat 2 base-256 big-endian no leading zero, String 3 utf8, List 4 concat, none 6 [] / some 7 x, pair 5 a++b, a constructor of an inductive 10 (encode t ++ args) where t is the constructor's wire tag from tools/Effect4Gen/wire-tags.json (Eff_types.wire_tag_<t>; not its declaration position, and a retired tag decodes as a refusal), a structure as constructor 0 with its fields in order. Decoding is length-directed and exact: a wrong tag, a bad index, a non-canonical Nat, invalid UTF-8, a short or long payload, or (for the _exact forms) trailing bytes are refusals (by construction: every arm checks p = e; tested: goldens, property test). encode_<t> raises Invalid_argument on a negative int or a string that is not valid UTF-8 (values outside the Lean image)." ++
+  header "Eff_wire: the canonical bytes of every carrier of Eff_types, and the exact decoder. Rule (src/Effect4/Store/Domain/Canonical.lean): framed tag payload = tag :: be64 (length payload) ++ payload; Unit 9 [], Bool 1 [0|1], Nat 2 base-256 big-endian no leading zero, String 3 utf8, List 4 concat, none 6 [] / some 7 x, pair 5 a++b, a constructor of an inductive 10 (encode t ++ args) where t is the constructor's wire tag from tools/Effect4Gen/wire-tags.json (Eff_types.wire_tag_<t>; not its declaration position, and a retired tag decodes as a refusal), a structure as constructor 0 with its fields in order. Decoding is length-directed and exact: a wrong tag, a bad index, a non-canonical Nat, invalid UTF-8, a short or long payload, or (for the _exact forms) trailing bytes are refusals (by construction: every arm checks p = e; tested: goldens, property test). encode_<t> raises Invalid_argument on a negative int or a string that is not valid UTF-8 (values outside the Lean image)." ++
   "open Eff_types\n\n" ++
   "\n".intercalate (bs.map fun b =>
     String.join ((enumL b).map fun (i, f) => emitEmitter (i == 0) f) ++ "\n" ++

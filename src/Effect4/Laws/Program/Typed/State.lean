@@ -1,6 +1,6 @@
 import Effect4.Laws.Program.EvaluateR
-import Effect4.Laws.Auto.TypedStateDecl
-import Effect4.Laws.Auto.PositionGate
+import Effect4.Laws.Program.Typed.TypedStateDecl
+import Effect4.Laws.Program.Typed.PositionGate
 
 /-!
 The reference machine's typed-state skeleton. Lean derives the declarations during

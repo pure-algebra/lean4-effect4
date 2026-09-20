@@ -1,5 +1,5 @@
 import Effect4.Program.FoldOf
-import Effect4.Store.Fold
+import Effect4.Store.Carrier.Fold
 import Effect4.Laws.Machine.Handles
 import Effect4.Laws.Machine.StoresLaws
 

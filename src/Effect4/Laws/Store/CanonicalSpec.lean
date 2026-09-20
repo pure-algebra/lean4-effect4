@@ -1,4 +1,4 @@
-import Effect4.Store.Canonical
+import Effect4.Store.Domain.Canonical
 import Std.Tactic.Do
 
 /-! Specifications for the existing Option-valued list decoder. Runtime decoding stays in

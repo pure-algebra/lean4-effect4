@@ -1,5 +1,5 @@
 import Effect4.Program.Typed
-import Effect4.Arch.JsonNumber
+import Effect4.Data.JsonNumber
 import Effect4.Schema.Codec
 
 /-! E4-SCHEMA-CE-056 through 059: retained S-3 contract falsifiers.

@@ -362,3 +362,51 @@ Seven verbose generation/build logs are retained as deterministic gzip archives 
 their small text indexes; large-log-archives.json records raw sizes and SHA-256 hashes.
 This preserves exact diagnostics without repeating about seven megabytes of build replay
 in the textual commit. Census and obligation sources remain plain text.
+
+## Phase A landing and placement
+
+Phase A committed as `8b64039f` on `refactor/phase1-phase3`; nothing was pushed.
+The placement plan was refreshed against that commit and applied afterward. It moves
+47 files (40 handwritten and seven generated), splits the six checker/fold connector laws
+from the runtime projection theorem, and extracts two shared test fixtures. Declaration
+names and existing proof bodies are compared by the placement script; runtime code is
+unchanged. The 11 affected derived groups are regenerated through their canonical producer.
+
+The aggregate projection check exhausted its unchanged 200000-heartbeat cap after the
+11 selected outputs had individually been generated and built. The same Canonical checker passed separately on its seven applicable outputs, retaining
+the cap and all comparisons. It refused TyView because that output is not a Canonical
+ShapeDoc; that invocation was a tool-applicability mistake, not projection evidence.
+TyView, ValFold, Forms and FormsLaws use their own producers, exact declaration/proof
+fingerprints, narrow builds and embedded guards, all of which passed. Old generated
+paths are removed after these applicable checks pass. This changes the orchestration granularity,
+not the checked projection or its budget. The failed aggregate log is retained.
+
+The placement narrow checks now pass at all 68 planned entries. A repair moved the new
+Laws imports into the leading import block; no proof body changed. The complete build
+required by architecture generation subsequently ran Test.All's actual root/axiom audit:
+138 runtime modules, 192 Laws-only modules, 459 audited modules and 65386 declarations.
+Semantic/test dependencies remain [propext, Quot.sound]; the unchanged exact implementation
+boundary contains 14 modules and 29 declarations allowed Classical.choice. The architecture
+producer reports 553 Lean modules and zero imports against the declared direction, down
+from the retained report's 26. Placement comparison and per-module evidence live in
+`2026-09-20-m1-evidence/placement/`; the full check is still pending at this point.
+
+Canonical placement validation found two additional mechanical issues. Direct execution of
+the authoring generator now treats warnings as errors and exposed two unused parameters;
+commit `f7d22703` renames those parameters separately from placement. The wire driver kept
+a dynamic import of the old module path; its import now names Domain.ProgramWire. The
+completed repair ran derived, EFF, wire, CAS, TypeScript and generated ingest documentation,
+then the corpus producer. The changed target files differ only in provenance paths. The
+corpus command now explicitly treats warnings as errors; a fresh temporary run produced
+the identical index (408 kept, 385 readable, zero refused). No runtime LCNF producer ran
+during placement. Cumulative completed runtime counts are LCNF 3, EFF 4, wire 4 and CAS 4;
+one failed full-derived attempt and one failed wire attempt are retained separately.
+Exact compressed logs and counts are in `2026-09-20-m1-evidence/placement/full-check/`.
+
+`LEAN_NUM_THREADS=1 make check` passed at the placement boundary: the full build, fresh
+Test.All root/axiom audit, and generated-file drift gate are green. The check invoked no
+additional group producer. The same 459-module / 65386-declaration trust counts were
+measured by the fresh audit, not inferred from replay output. A read-only audit of all
+47 moved module names found no remaining executable stale module reference. Declaration
+names and proof bodies are retained. Root README.md is unchanged; nothing was pushed.
+Phase B's corrected-cap census and statement ledgers have not run yet.

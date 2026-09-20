@@ -93,18 +93,18 @@ $(GEN)/variances: $(VARIANCE_SOURCES) | build
 
 DERIVED_SOURCES := $(wildcard tools/Effect4Gen/*.lean tools/Effect4Gen/guards/*.lean) tools/Effect4Gen/manifest.json tools/Effect4Gen/binders.json \
   $(VARIANCES) $(WIRE_TAGS) tools/Tools/WireTags.lean
-DERIVED_TRACES := $(addprefix $(TRACE)/,Store/Canonical.trace Program/Native.trace Store/RowCanonical.trace \
-  Store/Pin.trace Store/Node.trace Api/Frontier.trace Program/Eff.trace Program/Ty.trace Program/Folds/Ty.trace Laws/Auto/RuleSets.trace Program/Refs.trace \
+DERIVED_TRACES := $(addprefix $(TRACE)/,Store/Domain/Canonical.trace Program/Native.trace Store/Domain/RowCanonical.trace \
+  Store/Domain/Pin.trace Store/Domain/Node.trace Api/Frontier.trace Program/Eff.trace Program/Ty.trace Laws/Program/Folds/Ty.trace Laws/Auto/RuleSets.trace Program/Refs.trace \
   Program/Authoring.trace Laws/Program/Authoring.trace Program/Node.trace \
-  Api/Runner.trace Store/AnnotationsCanonical.trace Schema/Representation.trace \
+  Api/Runner.trace Store/Domain/AnnotationsCanonical.trace Schema/Representation.trace \
   Machine/Term.trace Program/NativeAtom.trace)
-DERIVED_OUT := src/Effect4/Store/Derived/Json.lean src/Effect4/Store/Derived/Schema.lean \
-  src/Effect4/Program/Derived.lean src/Effect4/Store/PinDerived.lean src/Effect4/Api/Derived.lean \
-  src/Effect4/Store/Derived/Value.lean src/Effect4/Api/RunnerDerived.lean \
-  src/Effect4/Program/Fold.lean src/Effect4/Laws/Program/TyView.lean src/Effect4/Store/Fold.lean src/Effect4/Schema/Fold.lean src/Effect4/Program/LayerView.lean src/Effect4/Program/NodeLenses.lean src/Effect4/Program/Binders.lean src/Effect4/Program/Scoped.lean \
+DERIVED_OUT := src/Effect4/Store/Domain/Derived/Json.lean src/Effect4/Store/Domain/Derived/Schema.lean \
+  src/Effect4/Store/Domain/Derived/Program.lean src/Effect4/Store/Domain/PinDerived.lean src/Effect4/Api/Derived.lean \
+  src/Effect4/Store/Domain/Derived/Value.lean src/Effect4/Api/RunnerDerived.lean \
+  src/Effect4/Program/Fold.lean src/Effect4/Laws/Program/TyView.lean src/Effect4/Store/Carrier/Fold.lean src/Effect4/Schema/Fold.lean src/Effect4/Program/LayerView.lean src/Effect4/Program/NodeLenses.lean src/Effect4/Program/Binders.lean src/Effect4/Program/Scoped.lean \
   src/Effect4/Program/Authoring/Lifts.lean src/Effect4/Laws/Program/Authoring/Lifts.lean \
   src/Effect4/Program/Authoring/Rows.lean src/Effect4/Laws/Program/Authoring/Rows.lean \
-  src/Effect4/Program/Authoring/Forms.lean src/Effect4/Laws/Program/Authoring/Forms.lean \
+  src/Effect4/Codegen/Authoring/Forms.lean src/Effect4/Laws/Program/Authoring/Forms.lean \
   src/Effect4/Program/AtomInventory.lean
 
 $(GEN)/derived: $(GEN)/variances $(DERIVED_SOURCES) $(DERIVED_TRACES) | build
@@ -139,7 +139,7 @@ $(GEN)/cas: $(GEN)/wire src/OCaml5/Tools/CasGoldens.lean $(CORE)
 	$(PY) scripts/generate.py --only cas
 	@mkdir -p $(GEN) && touch $@
 
-TS_SOURCES := $(wildcard tools/Tools/*.lean) $(WIRE_TAGS) src/Effect4/Codegen/Print.lean lakefile.toml \
+TS_SOURCES := $(wildcard tools/Tools/*.lean tools/Drivers/*.lean tools/TestSupport/*.lean) $(WIRE_TAGS) src/Effect4/Codegen/Print.lean lakefile.toml \
   vendor/effect-4.0.0-rc.112/src/unstable/sql/SqlClient.ts vendor/effect-4.0.0-rc.112/src/unstable/sql/Statement.ts \
   vendor/effect-4.0.0-rc.112/src/unstable/persistence/KeyValueStore.ts
 $(GEN)/ts: $(GEN)/cas $(TS_SOURCES) $(CORE)
@@ -214,10 +214,10 @@ GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) \
 # ---------------------------------------------------------------------------- corpus
 #
 # The printed corpus: 400 programs of Lean's seeded generator (Test/Program/Gen.lean) and
-# the wire corpus, printed by tools/Tools/Corpus.lean as TypeScript beside the JSON and
+# the wire corpus, printed by tools/Drivers/Corpus.lean as TypeScript beside the JSON and
 # the canonical bytes of the program Lean's own reader kept, with Lean's typing verdict
 # per program in index.tsv. A build artifact, not committed. It is re-cut when Lake's
-# trace of Tools.Corpus changes, which Lake rewrites when the generator, the printer, the
+# trace of Drivers.Corpus changes, which Lake rewrites when the generator, the printer, the
 # wire or the tool itself changes; the `lake build` that refreshes the trace is a no-op
 # otherwise. The OCaml engine differential reads the directory through E4_LEAN_CORPUS.
 # The index (one row per program: name, wellTyped, readable, chars) is also installed as
@@ -225,17 +225,17 @@ GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) \
 # verdict a change moved (DI-60); check-gen holds it.
 
 CORPUS := .lake/corpus
-CORPUS_TRACE := .lake/build/lib/lean/Tools/Corpus.trace
+CORPUS_TRACE := .lake/build/lib/lean/Drivers/Corpus.trace
 export E4_LEAN_CORPUS := $(abspath $(CORPUS))
 export EFFECT4_CORPUS := $(abspath $(CORPUS))
 
-$(CORPUS_TRACE): $(LEAN_SOURCES) $(wildcard tools/Tools/*.lean) | build
-	$(LAKE) build Tools.Corpus
+$(CORPUS_TRACE): $(LEAN_SOURCES) $(wildcard tools/Tools/*.lean tools/Drivers/*.lean tools/TestSupport/*.lean) | build
+	$(LAKE) build Drivers.Corpus
 
 $(CORPUS)/index.tsv: $(CORPUS_TRACE)
 	rm -rf $(CORPUS) && mkdir -p $(CORPUS)
-	$(LAKE) env lean -M4096 --run tools/Tools/Corpus.lean $(CORPUS) 400 4
-	{ printf '# GENERATED by make corpus (tools/Tools/Corpus.lean over Test/Program/Gen.lean and the wire corpus); do not edit\n# name\twellTyped\treadable\tchars\treason\tpath\tcodes\n'; cat $(CORPUS)/index.tsv; } > generated/corpus-index.tsv
+	$(LAKE) env lean -DwarningAsError=true -M4096 --run tools/Drivers/Corpus.lean $(CORPUS) 400 4
+	{ printf '# GENERATED by make corpus (tools/Drivers/Corpus.lean over Test/Program/Gen.lean and the wire corpus); do not edit\n# name\twellTyped\treadable\tchars\treason\tpath\tcodes\n'; cat $(CORPUS)/index.tsv; } > generated/corpus-index.tsv
 
 .PHONY: corpus
 corpus: $(CORPUS)/index.tsv ## the printed corpus under .lake/corpus (Lean's 400 programs and the wire corpus)
@@ -448,7 +448,7 @@ $(CHK)/ingest-smoke: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES)
 	$(BUN) ts/eff/ingest/check-corpus.ts printed $(abspath $(CORPUS))
 	@mkdir -p $(CHK) && touch $@
 
-$(CHK)/ingest: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) tools/Tools/ForeignCorpus.lean tools/Tools/Styles.lean $(OCAML_SOURCES) scripts/check-ingest.sh
+$(CHK)/ingest: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) tools/Drivers/ForeignCorpus.lean tools/Drivers/Styles.lean $(OCAML_SOURCES) scripts/check-ingest.sh
 	bash scripts/check-ingest.sh
 	@mkdir -p $(CHK) && touch $@
 
@@ -506,4 +506,11 @@ clean: ## lake clean (drops the build, the generation and check markers)
 .PHONY: gen-typed-state check-typed-state
 gen-typed-state: check-typed-state
 check-typed-state:
-	lake build Effect4.Laws.Program.Typed.Frames Test.Audit.PositionCensus Test.Audit.PositionAnalysis Test.Audit.TypedStateDecl Test.Audit.FrameRules Test.Audit.ProofGraph Test.Audit.Obligations Test.Program.TypedStateRulesRed
+	lake build Effect4.Laws.Program.Typed.Frames
+	lake build Test.Audit.PositionCensus
+	lake build Test.Audit.PositionAnalysis
+	lake build Test.Audit.TypedStateDecl
+	lake build Test.Audit.FrameRules
+	lake build Test.Audit.ProofGraph
+	lake build Test.Audit.Obligations
+	lake build Test.Program.TypedStateRulesRed

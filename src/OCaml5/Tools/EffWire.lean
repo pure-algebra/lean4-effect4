@@ -1,5 +1,5 @@
 import Tools.GeneratedStamp
-import Effect4.Program.Wire
+import Effect4.Store.Domain.ProgramWire
 import Tools.ProgramStructure
 import OCaml5.Eff.Goldens
 
@@ -86,7 +86,7 @@ def wireTags (env : Lean.Environment) : IO String := do
 
 def main (args : List String) : IO Unit := do
   Lean.initSearchPath (← Lean.findSysroot)
-  let env ← Lean.importModules #[{ module := `Effect4.Program.Wire }] {} 0
+  let env ← Lean.importModules #[{ module := `Effect4.Store.Domain.ProgramWire }] {} 0
   let manifest ← manifest env
   let wireTags ← wireTags env
   match args with

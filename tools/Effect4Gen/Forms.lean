@@ -8,7 +8,7 @@ import Effect4.Codegen.Forms
 Reads `Codegen.Forms.all`, the admitted derived forms of the printer (each a `Template`
 over argument slots, printed back by recognition), and emits:
 
-* group `Forms` → `src/Effect4/Program/Authoring/Forms.lean`: one `Src NativeOp`
+* group `Forms` → `src/Effect4/Codegen/Authoring/Forms.lean`: one `Src NativeOp`
   combinator per form, the template read on the scope-reader carrier. A template binder an
   argument can see becomes a name parameter (`tapContinuation answer body continuation`);
   a binder no argument sees is internal. The template's own `here k` references and the
@@ -21,7 +21,7 @@ over argument slots, printed back by recognition), and emits:
   every combinator, `unfold` then `authoring_scoped`.
 
     lake env lean -M 4096 --run tools/Effect4Gen/Forms.lean --group Forms
-      --imports Effect4.Program.Authoring.Lifts --out src/Effect4/Program/Authoring/Forms.lean
+      --imports Effect4.Program.Authoring.Lifts --out src/Effect4/Codegen/Authoring/Forms.lean
 -/
 
 open Lean Meta

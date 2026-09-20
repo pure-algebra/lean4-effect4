@@ -1,5 +1,5 @@
 import Effect4.Program.Ty
-import Effect4.Store.Val
+import Effect4.Store.Carrier.Val
 
 /-!
 # Program.Decision — how a value-decided fork selects its arm

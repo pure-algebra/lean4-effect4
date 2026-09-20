@@ -377,7 +377,7 @@ def prints (e : Eff NativeOp) : Bool :=
 
 The corpus must draw every constructor the printer accepts and none it refuses. That is
 stated against the language's own description of itself, not once per constructor: the
-derived projection (`src/Effect4/Program/Derived.lean`, the `EffC` block) gives every node its
+derived projection (`src/Effect4/Store/Domain/Derived/Program.lean`, the `EffC` block) gives every node its
 constructor ordinal (`toValEff e` is `.ctor i _`) and every family its shape (`EffShape`,
 `StmtShape`, `ActionTermShape`, `LayerTermShape`: one case per constructor in declaration
 order), and the generated fold (`src/Effect4/Program/Fold.lean`, `foldMap_eff`) visits every

@@ -3,7 +3,7 @@
 import Effect4.Data.Row
 import Effect4.Data.Ascii
 import Effect4.Data.Json
-import Effect4.Arch.JsonNumber
+import Effect4.Data.JsonNumber
 import Effect4.Data.Optic
 import Effect4.Data.JsonOptic
 -- The content-addressed store as one trait (docs/research/2026-09-04-cas-trait-plan.md,
@@ -16,28 +16,28 @@ import Effect4.Data.JsonOptic
 -- read, the outbox, verify); traits as annotation nodes; the generated instances of `Json`
 -- and of the Schema carriers; the genesis (`Content Document`, so the meta-schema is the
 -- zero-spec node); the pin and its generated instance at kind `source`.
-import Effect4.Store.Digits
-import Effect4.Store.Utf8
-import Effect4.Store.Val
+import Effect4.Store.Carrier.Digits
+import Effect4.Store.Carrier.Utf8
+import Effect4.Store.Carrier.Val
 -- The shape-free exact-image trait (U0, 2026-09-07): the views of the shared carrier the
 -- Machine layer uses without naming a `Shape`; `Canonical.image` is the bridge.
-import Effect4.Store.Image
-import Effect4.Store.Image.Containers
-import Effect4.Store.Digest
-import Effect4.Store.Kind
-import Effect4.Store.Shape
-import Effect4.Store.Canonical
-import Effect4.Store.Clock
-import Effect4.Store.RowCanonical
-import Effect4.Store.Node
-import Effect4.Store.Store
-import Effect4.Store.Word
-import Effect4.Store.Traits
-import Effect4.Store.Derived.Json
-import Effect4.Store.Derived.Schema
-import Effect4.Store.Genesis
-import Effect4.Store.Pin
-import Effect4.Store.PinDerived
+import Effect4.Store.Carrier.Image
+import Effect4.Store.Carrier.Image.Containers
+import Effect4.Store.Carrier.Digest
+import Effect4.Store.Carrier.Kind
+import Effect4.Store.Domain.Shape
+import Effect4.Store.Domain.Canonical
+import Effect4.Store.Domain.Clock
+import Effect4.Store.Domain.RowCanonical
+import Effect4.Store.Domain.Node
+import Effect4.Store.Domain.Store
+import Effect4.Store.Domain.Word
+import Effect4.Store.Domain.Traits
+import Effect4.Store.Domain.Derived.Json
+import Effect4.Store.Domain.Derived.Schema
+import Effect4.Store.Domain.Genesis
+import Effect4.Store.Domain.Pin
+import Effect4.Store.Domain.PinDerived
 -- The error channel everywhere.
 import Effect4.Machine.Cause
 import Effect4.Machine.Exit
@@ -80,7 +80,7 @@ import Effect4.Machine.Term
 import Effect4.Machine.Stores
 import Effect4.Machine.Context
 -- Structural acceptance of persisted Schema documents.
-import Effect4.Arch.Accepts
+import Effect4.Schema.Accepts
 -- The codegen target and artefact definitions with the one crossing to bytes.
 import Effect4.Codegen.Target
 import Effect4.Codegen.Template
@@ -99,7 +99,7 @@ import Effect4.Program.Scoped
 import Effect4.Program.Authoring
 import Effect4.Program.Authoring.Lifts
 import Effect4.Program.Authoring.Rows
-import Effect4.Program.Authoring.Forms
+import Effect4.Codegen.Authoring.Forms
 import Effect4.Api.TestClock
 import Effect4.Program.Authoring.Sugar
 import Effect4.Program.Authoring.Loops
@@ -132,8 +132,8 @@ import Effect4.Program.ConfigValue
 -- theorems, the corpus held to the goldens — so a program crosses the store,
 -- the OCaml host and the daemon and comes back as exactly itself. `ocaml/eff`
 -- implements the same rule in OCaml.
-import Effect4.Program.Derived
-import Effect4.Program.Wire
+import Effect4.Store.Domain.Derived.Program
+import Effect4.Store.Domain.ProgramWire
 -- The application face: one module, the whole pipeline (type, print, compile,
 -- run; the Schema syntax), answering syntax and never text. Import this.
 import Effect4.Api
@@ -143,18 +143,9 @@ import Effect4.Api.Runner
 import Effect4.Api.RunnerBytes
 -- The application surface (2026-09-17): a built program, its author, its run, its daemons.
 import Effect4.Api.Built
-import Effect4.Store.Fold
-import Effect4.Store.Folds.Val
-import Effect4.Machine.Folds.Stores
+import Effect4.Store.Carrier.Fold
 import Effect4.Program.FoldOf
-import Effect4.Program.Folds.Straight
-import Effect4.Program.Folds.Projections
-import Effect4.Program.Folds.Ty
-import Effect4.Program.Folds.Provision
-import Effect4.Program.Folds.Term
-import Effect4.Program.Folds.Representation
 import Effect4.Program.Checker
-import Effect4.Program.Folds.Checker
 import Effect4.Program.Typing.Agreement
 import Effect4.Api.Author
 import Effect4.Api.Supervision

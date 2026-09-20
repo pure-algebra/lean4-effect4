@@ -1,4 +1,4 @@
-import Effect4.Store.Image
+import Effect4.Store.Carrier.Image
 import Effect4.Machine.Exit
 import Effect4.Machine.Fiber
 
@@ -29,7 +29,7 @@ and no node carries one (`Store/Val.lean`). Distinct kinds stay distinct: the ty
 and the truth wire (`harness/truth/Truth.lean`) all read the kind.
 
 A *record* — an exit, a cause, a reason, a context — is ordinary first-order data and is
-written at the generated rule (`src/Effect4/Program/Derived.lean`): a structure is
+written at the generated rule (`src/Effect4/Store/Domain/Derived/Program.lean`): a structure is
 `ctor 0 [fields…]`, a case of a sum is `ctor i [args…]` with `i` the declaration index. rc.112
 distinguishes an `Exit` by its `_tag` (`Exit.ts:119`, `:155`), a structural mark on an
 otherwise ordinary object; the constructor index is that mark. The indices the runtime reads

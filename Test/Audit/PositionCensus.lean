@@ -1,6 +1,6 @@
 import Effect4.Laws.Auto.Positions
 import Effect4.Laws.Program.EvaluateR
-import Effect4.Laws.Auto.PositionGate
+import Effect4.Laws.Program.Typed.PositionGate
 
 /-!
 # The position census of the reference machine

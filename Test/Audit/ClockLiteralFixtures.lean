@@ -1,5 +1,5 @@
 import Effect4.Data.ClockMillis
-import Effect4.Store.Val
+import Effect4.Store.Carrier.Val
 
 /-! Three admitted clock construction routes beyond OCaml's native integer range.
 The companion audit inspects their actual persisted mono-LCNF translations. -/

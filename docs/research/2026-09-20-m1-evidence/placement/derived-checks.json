@@ -1,0 +1,68 @@
+[
+  {
+    "group": "Json",
+    "declarations_proofs_unchanged": true,
+    "narrow_build": "pass",
+    "canonical_projection": "pass"
+  },
+  {
+    "group": "Schema",
+    "declarations_proofs_unchanged": true,
+    "narrow_build": "pass",
+    "canonical_projection": "pass"
+  },
+  {
+    "group": "Program",
+    "declarations_proofs_unchanged": true,
+    "narrow_build": "pass",
+    "canonical_projection": "pass"
+  },
+  {
+    "group": "Pin",
+    "declarations_proofs_unchanged": true,
+    "narrow_build": "pass",
+    "canonical_projection": "pass"
+  },
+  {
+    "group": "Api",
+    "declarations_proofs_unchanged": true,
+    "narrow_build": "pass",
+    "canonical_projection": "pass"
+  },
+  {
+    "group": "Value",
+    "declarations_proofs_unchanged": true,
+    "narrow_build": "pass",
+    "canonical_projection": "pass"
+  },
+  {
+    "group": "Runner",
+    "declarations_proofs_unchanged": true,
+    "narrow_build": "pass",
+    "canonical_projection": "pass"
+  },
+  {
+    "group": "TyView",
+    "declarations_proofs_unchanged": true,
+    "narrow_build": "pass",
+    "canonical_projection": "not applicable; View/Fold/Forms producer"
+  },
+  {
+    "group": "ValFold",
+    "declarations_proofs_unchanged": true,
+    "narrow_build": "pass",
+    "canonical_projection": "not applicable; View/Fold/Forms producer"
+  },
+  {
+    "group": "Forms",
+    "declarations_proofs_unchanged": true,
+    "narrow_build": "pass",
+    "canonical_projection": "not applicable; View/Fold/Forms producer"
+  },
+  {
+    "group": "FormsLaws",
+    "declarations_proofs_unchanged": true,
+    "narrow_build": "pass",
+    "canonical_projection": "not applicable; View/Fold/Forms producer"
+  }
+]

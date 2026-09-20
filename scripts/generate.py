@@ -128,8 +128,8 @@ def generate(families, output):
             # `Tools.TsGen` (a Tools module) writes the TypeScript estate; the three OCaml
             # tools live under src/OCaml5/Tools. Every family reads the closed world off the
             # environment, so nothing here is typed by hand.
-            source = 'tools/Tools/TsGen.lean' if family == 'ts' else 'src/OCaml5/Tools/' + tool + '.lean'
-            run(['lake', 'build', ('Tools.' if family == 'ts' else 'OCaml5.Tools.') + tool])
+            source = 'tools/Drivers/TsGen.lean' if family == 'ts' else 'src/OCaml5/Tools/' + tool + '.lean'
+            run(['lake', 'build', ('Drivers.' if family == 'ts' else 'OCaml5.Tools.') + tool])
             run(['lake', 'env', 'lean', '-M4096', '--run', source, str(temp)])
             if not checking:
                 for source in sorted(temp.rglob('*')):

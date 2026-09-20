@@ -1,0 +1,788 @@
+[
+  {
+    "index": 0,
+    "module": "OCaml5.Eff.Emit",
+    "returncode": 0,
+    "log": "placement-build-logs/000-OCaml5.Eff.Emit.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "OCaml5.Eff.Emit"
+    ]
+  },
+  {
+    "index": 1,
+    "module": "OCaml5.Eff.Goldens",
+    "returncode": 0,
+    "log": "placement-build-logs/001-OCaml5.Eff.Goldens.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "OCaml5.Eff.Goldens"
+    ]
+  },
+  {
+    "index": 2,
+    "module": "Drivers.Styles",
+    "returncode": 0,
+    "log": "placement-build-logs/002-Drivers.Styles.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Drivers.Styles"
+    ]
+  },
+  {
+    "index": 3,
+    "module": "Test.Program.Gen",
+    "returncode": 0,
+    "log": "placement-build-logs/003-Test.Program.Gen.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Test.Program.Gen"
+    ]
+  },
+  {
+    "index": 4,
+    "module": "Drivers.ForeignCorpus",
+    "returncode": 0,
+    "log": "placement-build-logs/004-Drivers.ForeignCorpus.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Drivers.ForeignCorpus"
+    ]
+  },
+  {
+    "index": 5,
+    "module": "Drivers.Corpus",
+    "returncode": 0,
+    "log": "placement-build-logs/005-Drivers.Corpus.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Drivers.Corpus"
+    ]
+  },
+  {
+    "index": 6,
+    "module": "Drivers.ProgramStructureCheck",
+    "returncode": 0,
+    "log": "placement-build-logs/006-Drivers.ProgramStructureCheck.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Drivers.ProgramStructureCheck"
+    ]
+  },
+  {
+    "index": 7,
+    "module": "Drivers.TsGen",
+    "returncode": 0,
+    "log": "placement-build-logs/007-Drivers.TsGen.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Drivers.TsGen"
+    ]
+  },
+  {
+    "index": 8,
+    "module": "Effect4.Laws.Api.ModuleReadable",
+    "returncode": 0,
+    "log": "placement-build-logs/008-Effect4.Laws.Api.ModuleReadable.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4.Laws.Api.ModuleReadable"
+    ]
+  },
+  {
+    "index": 9,
+    "module": "Effect4.Laws.Machine.Clock",
+    "returncode": 0,
+    "log": "placement-build-logs/009-Effect4.Laws.Machine.Clock.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4.Laws.Machine.Clock"
+    ]
+  },
+  {
+    "index": 10,
+    "module": "Effect4.Laws.Machine.Folds.Stores",
+    "returncode": 0,
+    "log": "placement-build-logs/010-Effect4.Laws.Machine.Folds.Stores.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4.Laws.Machine.Folds.Stores"
+    ]
+  },
+  {
+    "index": 11,
+    "module": "Effect4.Laws.Machine.Folds.Val",
+    "returncode": 0,
+    "log": "placement-build-logs/011-Effect4.Laws.Machine.Folds.Val.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4.Laws.Machine.Folds.Val"
+    ]
+  },
+  {
+    "index": 12,
+    "module": "Effect4.Laws.Program.Admits",
+    "returncode": 0,
+    "source": "fresh dependency build",
+    "log": "placement-build-logs/012-Effect4.Laws.Program.Admits.log",
+    "diagnostic": "\u2714 [234/234] Built Effect4.Laws.Program.Admits (1.7s)"
+  },
+  {
+    "index": 13,
+    "module": "Effect4.Laws.Program.Folds.Checker",
+    "returncode": 0,
+    "source": "fresh dependency build",
+    "log": "placement-build-logs/013-Effect4.Laws.Program.Folds.Checker.log",
+    "diagnostic": "\u2139 [38/38] Built Effect4.Laws.Program.Folds.Checker (2.2s)"
+  },
+  {
+    "index": 14,
+    "module": "Effect4.Laws.Program.Folds.Straight",
+    "returncode": 0,
+    "source": "fresh dependency build",
+    "log": "placement-build-logs/014-Effect4.Laws.Program.Folds.Straight.log",
+    "diagnostic": "\u2139 [47/47] Built Effect4.Laws.Program.Folds.Straight (1.4s)"
+  },
+  {
+    "index": 15,
+    "module": "Effect4.Laws.Program.Folds.Looped",
+    "returncode": 0,
+    "source": "fresh dependency build",
+    "log": "placement-build-logs/015-Effect4.Laws.Program.Folds.Looped.log",
+    "diagnostic": "\u2139 [56/56] Built Effect4.Laws.Program.Folds.Looped (1.1s)"
+  },
+  {
+    "index": 16,
+    "module": "Effect4.Laws.Program.Folds.Projections",
+    "returncode": 0,
+    "source": "fresh dependency build",
+    "log": "placement-build-logs/016-Effect4.Laws.Program.Folds.Projections.log",
+    "diagnostic": "\u2139 [23/23] Built Effect4.Laws.Program.Folds.Projections (1.2s)"
+  },
+  {
+    "index": 17,
+    "module": "Effect4.Laws.Program.Folds.Provision",
+    "returncode": 0,
+    "source": "fresh dependency build",
+    "log": "placement-build-logs/017-Effect4.Laws.Program.Folds.Provision.log",
+    "diagnostic": "\u2139 [49/49] Built Effect4.Laws.Program.Folds.Provision (1.4s)"
+  },
+  {
+    "index": 18,
+    "module": "Effect4.Laws.Program.Folds.Representation",
+    "returncode": 0,
+    "source": "fresh dependency build",
+    "log": "placement-build-logs/018-Effect4.Laws.Program.Folds.Representation.log",
+    "diagnostic": "\u2139 [49/49] Built Effect4.Laws.Program.Folds.Representation (1.1s)"
+  },
+  {
+    "index": 19,
+    "module": "Effect4.Laws.Program.Folds.Term",
+    "returncode": 0,
+    "log": "placement-build-logs/019-Effect4.Laws.Program.Folds.Term.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4.Laws.Program.Folds.Term"
+    ]
+  },
+  {
+    "index": 20,
+    "module": "Effect4.Laws.Program.Typed.TypedSources",
+    "returncode": 0,
+    "log": "placement-build-logs/020-Effect4.Laws.Program.Typed.TypedSources.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4.Laws.Program.Typed.TypedSources"
+    ]
+  },
+  {
+    "index": 21,
+    "module": "Effect4.Laws.Program.Typed.PositionGate",
+    "returncode": 0,
+    "log": "placement-build-logs/021-Effect4.Laws.Program.Typed.PositionGate.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4.Laws.Program.Typed.PositionGate"
+    ]
+  },
+  {
+    "index": 22,
+    "module": "Effect4.Laws.Program.Typed.TypedStateDecl",
+    "returncode": 0,
+    "log": "placement-build-logs/022-Effect4.Laws.Program.Typed.TypedStateDecl.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4.Laws.Program.Typed.TypedStateDecl"
+    ]
+  },
+  {
+    "index": 23,
+    "module": "Effect4.Laws.Program.Typed.State",
+    "returncode": 0,
+    "log": "placement-build-logs/023-Effect4.Laws.Program.Typed.State.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4.Laws.Program.Typed.State"
+    ]
+  },
+  {
+    "index": 24,
+    "module": "Effect4.Laws.Program.Typing.FoldAgreement",
+    "returncode": 0,
+    "log": "placement-build-logs/024-Effect4.Laws.Program.Typing.FoldAgreement.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4.Laws.Program.Typing.FoldAgreement"
+    ]
+  },
+  {
+    "index": 25,
+    "module": "Effect4.Laws.Program.ValueModel",
+    "returncode": 0,
+    "log": "placement-build-logs/025-Effect4.Laws.Program.ValueModel.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4.Laws.Program.ValueModel"
+    ]
+  },
+  {
+    "index": 26,
+    "module": "Effect4.Laws.Store.CanonicalSpec",
+    "returncode": 0,
+    "log": "placement-build-logs/026-Effect4.Laws.Store.CanonicalSpec.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4.Laws.Store.CanonicalSpec"
+    ]
+  },
+  {
+    "index": 27,
+    "module": "Effect4.Program.ConfigValue",
+    "returncode": 0,
+    "log": "placement-build-logs/027-Effect4.Program.ConfigValue.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4.Program.ConfigValue"
+    ]
+  },
+  {
+    "index": 28,
+    "module": "Effect4.Laws.Store.Folds.Val",
+    "returncode": 0,
+    "log": "placement-build-logs/028-Effect4.Laws.Store.Folds.Val.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4.Laws.Store.Folds.Val"
+    ]
+  },
+  {
+    "index": 29,
+    "module": "Effect4.Program.Profile",
+    "returncode": 0,
+    "log": "placement-build-logs/029-Effect4.Program.Profile.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4.Program.Profile"
+    ]
+  },
+  {
+    "index": 30,
+    "module": "Effect4.Schema.Accepts",
+    "returncode": 0,
+    "log": "placement-build-logs/030-Effect4.Schema.Accepts.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4.Schema.Accepts"
+    ]
+  },
+  {
+    "index": 31,
+    "module": "Effect4.Store.Domain.Word",
+    "returncode": 0,
+    "log": "placement-build-logs/031-Effect4.Store.Domain.Word.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4.Store.Domain.Word"
+    ]
+  },
+  {
+    "index": 32,
+    "module": "Effect4.Store.Domain.Traits",
+    "returncode": 0,
+    "log": "placement-build-logs/032-Effect4.Store.Domain.Traits.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4.Store.Domain.Traits"
+    ]
+  },
+  {
+    "index": 33,
+    "module": "Effect4.Store.Domain.Genesis",
+    "returncode": 0,
+    "log": "placement-build-logs/033-Effect4.Store.Domain.Genesis.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4.Store.Domain.Genesis"
+    ]
+  },
+  {
+    "index": 34,
+    "module": "Effect4Gen.Check",
+    "returncode": 0,
+    "log": "placement-build-logs/034-Effect4Gen.Check.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4Gen.Check"
+    ]
+  },
+  {
+    "index": 35,
+    "module": "Effect4Gen.Forms",
+    "returncode": 0,
+    "source": "fresh Forms and FormsLaws producer elaboration",
+    "log": "placement-derived-logs/Forms-generate.log",
+    "diagnostic": "Fresh successful --run tools/Effect4Gen/Forms.lean; output fingerprint/build checked; not a lake library target."
+  },
+  {
+    "index": 36,
+    "module": "Effect4Gen.Main",
+    "returncode": 0,
+    "log": "placement-build-logs/036-Effect4Gen.Main.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4Gen.Main"
+    ]
+  },
+  {
+    "index": 37,
+    "module": "OCaml5.Eff.Metadata",
+    "returncode": 0,
+    "log": "placement-build-logs/037-OCaml5.Eff.Metadata.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "OCaml5.Eff.Metadata"
+    ]
+  },
+  {
+    "index": 38,
+    "module": "TestSupport.CasEntry",
+    "returncode": 0,
+    "log": "placement-build-logs/038-TestSupport.CasEntry.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "TestSupport.CasEntry"
+    ]
+  },
+  {
+    "index": 39,
+    "module": "OCaml5.Tools.CasGoldens",
+    "returncode": 0,
+    "log": "placement-build-logs/039-OCaml5.Tools.CasGoldens.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "OCaml5.Tools.CasGoldens"
+    ]
+  },
+  {
+    "index": 40,
+    "module": "OCaml5.Tools.EffGen",
+    "returncode": 0,
+    "log": "placement-build-logs/040-OCaml5.Tools.EffGen.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "OCaml5.Tools.EffGen"
+    ]
+  },
+  {
+    "index": 41,
+    "module": "OCaml5.Tools.EffWire",
+    "returncode": 0,
+    "log": "placement-build-logs/041-OCaml5.Tools.EffWire.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "OCaml5.Tools.EffWire"
+    ]
+  },
+  {
+    "index": 42,
+    "module": "TestSupport.AcquireHandle",
+    "returncode": 0,
+    "log": "placement-build-logs/042-TestSupport.AcquireHandle.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "TestSupport.AcquireHandle"
+    ]
+  },
+  {
+    "index": 43,
+    "module": "Test.Api.AcquireHandleContract",
+    "returncode": 0,
+    "log": "placement-build-logs/043-Test.Api.AcquireHandleContract.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Test.Api.AcquireHandleContract"
+    ]
+  },
+  {
+    "index": 44,
+    "module": "Test.Audit.ClockLiteralFixtures",
+    "returncode": 0,
+    "log": "placement-build-logs/044-Test.Audit.ClockLiteralFixtures.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Test.Audit.ClockLiteralFixtures"
+    ]
+  },
+  {
+    "index": 45,
+    "module": "Test.Audit.PositionAnalysis",
+    "returncode": 0,
+    "log": "placement-build-logs/045-Test.Audit.PositionAnalysis.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Test.Audit.PositionAnalysis"
+    ]
+  },
+  {
+    "index": 46,
+    "module": "Test.Audit.PositionCensus",
+    "returncode": 0,
+    "log": "placement-build-logs/046-Test.Audit.PositionCensus.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Test.Audit.PositionCensus"
+    ]
+  },
+  {
+    "index": 47,
+    "module": "Test.Audit.TypedStateDecl",
+    "returncode": 0,
+    "log": "placement-build-logs/047-Test.Audit.TypedStateDecl.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Test.Audit.TypedStateDecl"
+    ]
+  },
+  {
+    "index": 48,
+    "module": "Test.Counterexamples.Schema.Codec",
+    "returncode": 0,
+    "log": "placement-build-logs/048-Test.Counterexamples.Schema.Codec.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Test.Counterexamples.Schema.Codec"
+    ]
+  },
+  {
+    "index": 49,
+    "module": "Test.Program.AuthorContract",
+    "returncode": 0,
+    "log": "placement-build-logs/049-Test.Program.AuthorContract.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Test.Program.AuthorContract"
+    ]
+  },
+  {
+    "index": 50,
+    "module": "Test.Program.AuthoringContract",
+    "returncode": 0,
+    "log": "placement-build-logs/050-Test.Program.AuthoringContract.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Test.Program.AuthoringContract"
+    ]
+  },
+  {
+    "index": 51,
+    "module": "Test.Program.ConfigContract",
+    "returncode": 0,
+    "log": "placement-build-logs/051-Test.Program.ConfigContract.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Test.Program.ConfigContract"
+    ]
+  },
+  {
+    "index": 52,
+    "module": "Test.Program.LinkedRowsContract",
+    "returncode": 0,
+    "log": "placement-build-logs/052-Test.Program.LinkedRowsContract.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Test.Program.LinkedRowsContract"
+    ]
+  },
+  {
+    "index": 53,
+    "module": "Test.Schema.DialectContract",
+    "returncode": 0,
+    "log": "placement-build-logs/053-Test.Schema.DialectContract.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Test.Schema.DialectContract"
+    ]
+  },
+  {
+    "index": 54,
+    "module": "Test.Store.DerivedCheck",
+    "returncode": 0,
+    "log": "placement-build-logs/054-Test.Store.DerivedCheck.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Test.Store.DerivedCheck"
+    ]
+  },
+  {
+    "index": 55,
+    "module": "Test.Store.Templates",
+    "returncode": 0,
+    "log": "placement-build-logs/055-Test.Store.Templates.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Test.Store.Templates"
+    ]
+  },
+  {
+    "index": 56,
+    "module": "Test.Store.NodeContract",
+    "returncode": 0,
+    "log": "placement-build-logs/056-Test.Store.NodeContract.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Test.Store.NodeContract"
+    ]
+  },
+  {
+    "index": 57,
+    "module": "Test.Store.ProbeContract",
+    "returncode": 0,
+    "log": "placement-build-logs/057-Test.Store.ProbeContract.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Test.Store.ProbeContract"
+    ]
+  },
+  {
+    "index": 58,
+    "module": "Test.Store.StoreContract",
+    "returncode": 0,
+    "log": "placement-build-logs/058-Test.Store.StoreContract.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Test.Store.StoreContract"
+    ]
+  },
+  {
+    "index": 59,
+    "module": "Test.Store.TraitContract",
+    "returncode": 0,
+    "log": "placement-build-logs/059-Test.Store.TraitContract.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Test.Store.TraitContract"
+    ]
+  },
+  {
+    "index": 60,
+    "module": "Test.Store.WordContract",
+    "returncode": 0,
+    "log": "placement-build-logs/060-Test.Store.WordContract.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Test.Store.WordContract"
+    ]
+  },
+  {
+    "index": 61,
+    "module": "Tools.ArchitectureRoles",
+    "returncode": 0,
+    "log": "placement-build-logs/061-Tools.ArchitectureRoles.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Tools.ArchitectureRoles"
+    ]
+  },
+  {
+    "index": 62,
+    "module": "Tools.RowTypes",
+    "returncode": 0,
+    "log": "placement-build-logs/062-Tools.RowTypes.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Tools.RowTypes"
+    ]
+  },
+  {
+    "index": 63,
+    "module": "Tools.Variances",
+    "returncode": 0,
+    "log": "placement-build-logs/063-Tools.Variances.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Tools.Variances"
+    ]
+  },
+  {
+    "index": 64,
+    "module": "harness.truth.Truth",
+    "returncode": 0,
+    "log": "placement-build-logs/064-harness.truth.Truth.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "env",
+      "lean",
+      "-DwarningAsError=true",
+      "harness/truth/Truth.lean"
+    ]
+  },
+  {
+    "index": 65,
+    "module": "Effect4",
+    "returncode": 0,
+    "log": "placement-build-logs/065-Effect4.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4"
+    ]
+  },
+  {
+    "index": 66,
+    "module": "Effect4.Laws",
+    "returncode": 0,
+    "log": "placement-build-logs/066-Effect4.Laws.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Effect4.Laws"
+    ]
+  },
+  {
+    "index": 67,
+    "module": "Test.Audit.AxiomGate",
+    "returncode": 0,
+    "log": "placement-build-logs/067-Test.Audit.AxiomGate.log",
+    "source": "direct invocation",
+    "argv": [
+      "lake",
+      "build",
+      "Test.Audit.AxiomGate"
+    ]
+  }
+]

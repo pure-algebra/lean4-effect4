@@ -1,5 +1,5 @@
 import Lean
-import Effect4.Store.Digest
+import Effect4.Store.Carrier.Digest
 
 /-!
 # Tools.Variances — declaration-site variance, read off rc.112

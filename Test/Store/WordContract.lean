@@ -21,7 +21,7 @@ through the store the word already built, and the stale-root refusal read out of
 Doc comments cannot precede `#guard`, so the receipts carry line comments.
 -/
 
-import Effect4.Store.Word
+import Effect4.Store.Domain.Word
 
 namespace Test.Store.WordContract
 

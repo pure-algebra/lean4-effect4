@@ -1,5 +1,5 @@
 import Effect4.Laws.Program.TypeAlgebra
-import Effect4.Store.Image.Containers
+import Effect4.Store.Carrier.Image.Containers
 
 /-!
 Compositional models of program values. The existing Image owns encoding and exact decoding;

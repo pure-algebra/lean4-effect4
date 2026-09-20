@@ -6,7 +6,7 @@ import Effect4.Program.Packages.KeyValueStoreMemory
 
 Each package is a service the pinned host provides (its rc.112 key string and service type
 code, the handle spelling its rows share) and the `RowTable` of the rows a program may
-perform against it. `all` is what `tools/Tools/TsGen.lean` projects to `ts/eff/packages.gen.ts`
+perform against it. `all` is what `tools/Drivers/TsGen.lean` projects to `ts/eff/packages.gen.ts`
 for the TypeScript readers, in this order; a table's identity is its rows in their order, since
 an external index is a position in the link table supplied beside the program (`Read.lean`
 `nativeSpell`; DI-22, and `table` below).

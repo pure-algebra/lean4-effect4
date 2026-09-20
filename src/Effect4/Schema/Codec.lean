@@ -1,5 +1,5 @@
 import Effect4.Program.Typed
-import Effect4.Arch.JsonNumber
+import Effect4.Data.JsonNumber
 
 /-!
 # Type-directed JSON boundary

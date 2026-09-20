@@ -1,5 +1,5 @@
 import Effect4.Program.FoldOf
-import Effect4.Program.Folds.Straight
+import Effect4.Laws.Program.Folds.Straight
 import Effect4.Laws.Program.DenoteB
 
 /-!

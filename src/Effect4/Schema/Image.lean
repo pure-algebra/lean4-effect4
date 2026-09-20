@@ -1,4 +1,4 @@
-import Effect4.Store.Image.Containers
+import Effect4.Store.Carrier.Image.Containers
 import Effect4.Program.Typed
 import Effect4.Schema.Codec
 

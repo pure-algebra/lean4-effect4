@@ -16,9 +16,9 @@ file froze before the landing, at lines 39–47 of its previous revision: the tr
 Doc comments cannot precede `#guard`, so the receipts carry line comments.
 -/
 
-import Effect4.Store.Canonical
-import Effect4.Store.Node
-import Effect4.Program.Wire
+import Effect4.Store.Domain.Canonical
+import Effect4.Store.Domain.Node
+import Effect4.Store.Domain.ProgramWire
 import Test.Store.Templates
 
 namespace Test.Store.StoreContract

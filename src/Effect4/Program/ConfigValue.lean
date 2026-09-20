@@ -1,4 +1,4 @@
-import Effect4.Store.Image
+import Effect4.Store.Carrier.Image
 import Effect4.Program.Config
 
 /-!

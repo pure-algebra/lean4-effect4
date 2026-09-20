@@ -20,7 +20,7 @@ schedule, written as one JSON manifest (`harness/truth/corpus.json`) that the rc
 
 Without an argument the manifest goes to stdout. The second form writes the same manifest
 shape for the generated corpus (`Test/Program/Gen.lean`, `count` programs at `depth`, named
-`g<i>` as `tools/Tools/Corpus.lean` names them), with no tapes and the empty table; it is the
+`g<i>` as `tools/Drivers/Corpus.lean` names them), with no tapes and the empty table; it is the
 input of `scripts/check-corpus.py` (`make check-corpus`), the run and type comparisons
 against rc.112 over the whole corpus. Depends on `Effect4.Api` (typing, printing,
 running), `TypeScript.Render` (the pinned renderer: bytes of the printed program), and

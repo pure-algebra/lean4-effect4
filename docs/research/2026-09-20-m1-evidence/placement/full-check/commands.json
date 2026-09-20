@@ -1,0 +1,60 @@
+{
+  "logs": [
+    {
+      "log": "m1-placement-architecture-generation.log.gz",
+      "exit": 2,
+      "raw_bytes": 1552265,
+      "raw_sha256": "2f8e10429211fe1b13b87a0490616829171a077c1e10fcc49e2270182fc4444b",
+      "archive_sha256": "42f559e3f7efeb7da09dd50130c37d17aa70fce4f6733d9edc001a748a8bc7f3"
+    },
+    {
+      "log": "m1-placement-generation-repair.log.gz",
+      "exit": 2,
+      "raw_bytes": 1749228,
+      "raw_sha256": "fc6b02fba9823956aa5c83804570bac8ea9855c9d01a575170cb846b0fac1f1b",
+      "archive_sha256": "5b346f215496249218db1df91fd9bab9c9cc8411912b25a12e13872c6c5172dc"
+    },
+    {
+      "log": "m1-placement-generation-wire-repair.log.gz",
+      "exit": 0,
+      "raw_bytes": 1032505,
+      "raw_sha256": "3cf599ed9c5cba2da63985c21fc166740e61bbfef8ee80fdd9e63178114af008",
+      "archive_sha256": "15b44d4ace9ff705b949d9ac80e3dea53705d958c7a81c3636dfac6c82227951"
+    },
+    {
+      "log": "m1-placement-corpus-warning-check.log.gz",
+      "exit": 0,
+      "raw_bytes": 118,
+      "raw_sha256": "d79e7fef27a7a80bb12de0abe61eb2f5a75c77b79639f6bf7de389f7bb108fe7",
+      "archive_sha256": "d0fc9e7e9be6d87a1bdd070b8136a7af4953060c19d5306d9668ea562c6f5b42"
+    },
+    {
+      "log": "m1-placement-make-check.log.gz",
+      "exit": 0,
+      "raw_bytes": 968954,
+      "raw_sha256": "9bfadf97acb1ac5c8769d6cc61490f6e7ee0b0dd3cf1670e1fedd3e822f91734",
+      "archive_sha256": "4152e850a5ccf6ebf98cc259675b84ccbede9f7d754ba3c6df776b0e4efab551"
+    }
+  ],
+  "architecture_after": 0,
+  "architecture_before_retained_report": 26,
+  "runtime_completed_totals": {
+    "lcnf": 3,
+    "eff": 4,
+    "wire": 4,
+    "cas": 4
+  },
+  "placement_generation": {
+    "selected_derived_groups": 11,
+    "full_derived_completed": 1,
+    "full_derived_failed": 1,
+    "variances_completed": 1,
+    "eff_completed": 1,
+    "wire_completed": 1,
+    "wire_failed": 1,
+    "cas_completed": 1,
+    "ts_completed": 1,
+    "readme_completed": 1
+  },
+  "full_check": "PASS: LEAN_NUM_THREADS=1 make check; fresh root/axiom audit and generated drift"
+}

@@ -20,7 +20,7 @@ before_lock="$(sha256 ts/eff/bun.lock)"
 (cd ts/eff && bun install --frozen-lockfile)
 [[ "$(sha256 ts/eff/bun.lock)" = "$before_lock" ]] || { echo 'FAIL ingest: lockfile drift' >&2; exit 1; }
 bun ts/eff/ingest/cli.ts --help >/dev/null
-lean_run tools/Tools/Corpus.lean --foreign "$work/foreign" 400 4
+lean_run tools/Drivers/Corpus.lean --foreign "$work/foreign" 400 4
 bun ts/eff/ingest/check-coverage.ts "$work/foreign"
 bun ts/eff/ingest/cli.ts gate --printed "$printed" --foreign "$work/foreign"
 # DI-37: the printed image against the foreign contract over the same printed corpus, up to the

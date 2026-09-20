@@ -22,12 +22,16 @@ text in keyed host protocol version 3; the stock rc.112 adapter refuses values o
 number range.
 
 The full Lean build and axiom/root audit, focused host checks and fresh OCaml checks passed.
-Placement, the proof-statement skeleton, proof-bank fills, and the requested full `make check`
-remain in that order. Three completed runtime regeneration rounds were needed, with two
-additional partial LCNF attempts; the requested one-round target was missed. Details,
-counts, retained failures and open proof evidence are in
-`docs/research/2026-09-20-skeleton-first-receipt.md`. This is an implementation checkpoint,
-not a claim that the world, arena or M1 connector obligations are discharged.
+Placement is also complete: 47 files moved, connector proofs live in Laws, shared fixtures
+live under tooling, and the architecture report has zero imports against the declared
+direction (the retained baseline had 26). `make check` passed after placement, including a
+fresh root/axiom audit and generated drift. The proof-statement skeleton and proof fills
+are next; world, arena and M1 connector obligations are not yet discharged.
+
+The one-regeneration target was missed: Phase A required three completed runtime rounds,
+plus two partial LCNF attempts. Placement added one EFF/wire/CAS validation round; cumulative
+completed counts are LCNF 3, EFF 4, wire 4 and CAS 4. Failed attempts, exact commands and
+open proof evidence are retained in `docs/research/2026-09-20-skeleton-first-receipt.md`.
 
 ## Earlier full-check landing (2026-09-17)
 

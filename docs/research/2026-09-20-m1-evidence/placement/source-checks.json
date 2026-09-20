@@ -1,0 +1,905 @@
+{
+  "base": "8b64039f918b702b17281f7c438ef3fc6d7eea64",
+  "checked_at_utc": "2026-09-20T11:01:16.932610+00:00",
+  "comparison": "Imports, comments, whitespace and approved physical provenance paths removed; declaration/proof/name tokens compared. No semantic equivalence claim.",
+  "moves": [
+    {
+      "old": "src/Effect4/Program/Folds/Checker.lean",
+      "new": "src/Effect4/Laws/Program/Folds/Checker.lean",
+      "generated": false,
+      "old_sha256": "4f1f051bc48dda79ad567b4656856c8637d00b63b5718348cd6488ea196a37ee",
+      "new_sha256": "4f1f051bc48dda79ad567b4656856c8637d00b63b5718348cd6488ea196a37ee",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Folds/Projections.lean",
+      "new": "src/Effect4/Laws/Program/Folds/Projections.lean",
+      "generated": false,
+      "old_sha256": "4073a35d5df43dd42db227d7b8c84fb67b77307f5da7c0507034d5c17b3a6c8a",
+      "new_sha256": "4073a35d5df43dd42db227d7b8c84fb67b77307f5da7c0507034d5c17b3a6c8a",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Folds/Provision.lean",
+      "new": "src/Effect4/Laws/Program/Folds/Provision.lean",
+      "generated": false,
+      "old_sha256": "2896c75c2405f10d0c7b2ac395b0a4c65a867a6ab089b9881df5b8de340ca191",
+      "new_sha256": "2896c75c2405f10d0c7b2ac395b0a4c65a867a6ab089b9881df5b8de340ca191",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Folds/Representation.lean",
+      "new": "src/Effect4/Laws/Program/Folds/Representation.lean",
+      "generated": false,
+      "old_sha256": "968c139cea8bdf36d0c4c3e9f9b967b00bb484f7ac540d37f6294fcb0b15b0e2",
+      "new_sha256": "968c139cea8bdf36d0c4c3e9f9b967b00bb484f7ac540d37f6294fcb0b15b0e2",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Folds/Straight.lean",
+      "new": "src/Effect4/Laws/Program/Folds/Straight.lean",
+      "generated": false,
+      "old_sha256": "4915c0bc70668e909605ffe0e9cd43abf715f163f472ce2f087147c999a56e0d",
+      "new_sha256": "4915c0bc70668e909605ffe0e9cd43abf715f163f472ce2f087147c999a56e0d",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Folds/Term.lean",
+      "new": "src/Effect4/Laws/Program/Folds/Term.lean",
+      "generated": false,
+      "old_sha256": "51795e90f9638f17abdb34f0ef1417fc1352e2aaf0c31d7d3df5537552d2d1b2",
+      "new_sha256": "51795e90f9638f17abdb34f0ef1417fc1352e2aaf0c31d7d3df5537552d2d1b2",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Folds/Ty.lean",
+      "new": "src/Effect4/Laws/Program/Folds/Ty.lean",
+      "generated": false,
+      "old_sha256": "34e2c220d78db4cdd1ef7bdcf887235e4839a658602fb494a4a42cdd717b6743",
+      "new_sha256": "34e2c220d78db4cdd1ef7bdcf887235e4839a658602fb494a4a42cdd717b6743",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Machine/Folds/Stores.lean",
+      "new": "src/Effect4/Laws/Machine/Folds/Stores.lean",
+      "generated": false,
+      "old_sha256": "348b36d2ef1f0d0e1a1b47b71162436a669a429b3e08283e43f5b5fba406e04c",
+      "new_sha256": "f92b54729b3f96e660bfea62606ba19947b11b8c3b58c503d075e06d7ffa8d09",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Folds/Val.lean",
+      "new": "src/Effect4/Laws/Store/Folds/Val.lean",
+      "generated": false,
+      "old_sha256": "8fb8d7fbdf7c8ee02ff3b22bb569a30bbc1806361498e142de660f3e4d3075f9",
+      "new_sha256": "769c3cdc1e56d74dd5f3c187a3a6b3b178b29197a81d7d34b2be15a4f7f27aaa",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "tools/Tools/TsGen.lean",
+      "new": "tools/Drivers/TsGen.lean",
+      "generated": false,
+      "old_sha256": "a372c10759d8c33f2000c0e1be6239a7780c2997eb4cd154713fcc7c77b33e9c",
+      "new_sha256": "15405b6d4fe3bb78235ac16059fbeb3d30b0fd5d1106277fc1e83dd12bbf8e3e",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "tools/Tools/Corpus.lean",
+      "new": "tools/Drivers/Corpus.lean",
+      "generated": false,
+      "old_sha256": "4d38d7b23663a5a0c00c733d970891e1eceb9a5329459f571d7e69145df7da9d",
+      "new_sha256": "b1a35d06f0129146ea906a43209b29587c76bbb7b554dce9519b14cb7e391618",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "tools/Tools/ForeignCorpus.lean",
+      "new": "tools/Drivers/ForeignCorpus.lean",
+      "generated": false,
+      "old_sha256": "1d1a9e2b8b06bc3528d7a920c464c7acf02957f8898ce40c7ca0cbcd8e3146e6",
+      "new_sha256": "ea75571827e7011fbb3851ae7c2965d68246903a8c6f99801def9fcad30e84f5",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "tools/Tools/Styles.lean",
+      "new": "tools/Drivers/Styles.lean",
+      "generated": false,
+      "old_sha256": "941805478d83719a9925b3e9dd991d8c81701b6d7090fcdbc9e80ea005022dd7",
+      "new_sha256": "9f1aa07251c621edb387e335eb4eab3fb79b0b671d469e5e23336f4e43bee299",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "tools/Tools/ProgramStructureCheck.lean",
+      "new": "tools/Drivers/ProgramStructureCheck.lean",
+      "generated": false,
+      "old_sha256": "317ae7e5c265eeafbfeb06f250fe9a8c60c1d7ce4717015b403a85613539f605",
+      "new_sha256": "317ae7e5c265eeafbfeb06f250fe9a8c60c1d7ce4717015b403a85613539f605",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Laws/Auto/PositionGate.lean",
+      "new": "src/Effect4/Laws/Program/Typed/PositionGate.lean",
+      "generated": false,
+      "old_sha256": "76a0b0cd21a3ac7a3192de1202a1ad95eec03414e94c08b453cb560734cb9ce8",
+      "new_sha256": "842b36a0c141e2f4bc1bd9403021b1bf90a79c7b843dddf15aef83b3f0042e02",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Laws/Auto/TypedSources.lean",
+      "new": "src/Effect4/Laws/Program/Typed/TypedSources.lean",
+      "generated": false,
+      "old_sha256": "084b5cd84757a6269e7f179de39f170193bfa3211c3bf1f243ce59a98d71a335",
+      "new_sha256": "084b5cd84757a6269e7f179de39f170193bfa3211c3bf1f243ce59a98d71a335",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Laws/Auto/TypedStateDecl.lean",
+      "new": "src/Effect4/Laws/Program/Typed/TypedStateDecl.lean",
+      "generated": false,
+      "old_sha256": "0694c8fd1a2237e6d6368e0ac9713ad3a2c5a01a97af0d9da9cc26cea1017141",
+      "new_sha256": "b9221b8e723224eefb252b6c1835b8cae5934f95da4f4884f4680305f5f0ed07",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Val.lean",
+      "new": "src/Effect4/Store/Carrier/Val.lean",
+      "generated": false,
+      "old_sha256": "c52577251cde226b6b47df6b457764d95cec18cd6ff7422d8dbcde54bb46591c",
+      "new_sha256": "7d9f711fd8ec083a782009ee04ccec36e7f6a1d793946e3e1b49e163771f0e24",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Utf8.lean",
+      "new": "src/Effect4/Store/Carrier/Utf8.lean",
+      "generated": false,
+      "old_sha256": "fe52b095f38f6f06d4aac6e5fc4763db55055ea5a223b1f08f15bf7846f794cd",
+      "new_sha256": "acb9896cfb4e3a3604e90c1f04245b5bcbe3fc39d6c2c847b1a5bb38f4b4da4f",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Digits.lean",
+      "new": "src/Effect4/Store/Carrier/Digits.lean",
+      "generated": false,
+      "old_sha256": "25864951a2e4ae13143b28e13c4e3ea4fcdb6d4d7f9a0fb8934c2ebcddc7ab47",
+      "new_sha256": "148b57880824da05f322013e6ce44b13d2a2b1ff051dcb6a6006ec2a11d4ab4e",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Image.lean",
+      "new": "src/Effect4/Store/Carrier/Image.lean",
+      "generated": false,
+      "old_sha256": "78ef9438a1cb674926ee2d45a7b74ff46c2edb3c0e1fb72b0f8895236299e99e",
+      "new_sha256": "db57ceffaaab2a99f30b643e0f6fde44a7dee65aa0593c3db9aeb0972e0e416d",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Digest.lean",
+      "new": "src/Effect4/Store/Carrier/Digest.lean",
+      "generated": false,
+      "old_sha256": "e7253d8b1e76910de120bf081f2b5cffdc1c0c978d8fa634faa6c9dcb50dfe73",
+      "new_sha256": "3cc3373de9b78b86a19ee5091a75a2bb668a62f9875f7a78afd193027251ff5a",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Kind.lean",
+      "new": "src/Effect4/Store/Carrier/Kind.lean",
+      "generated": false,
+      "old_sha256": "efe84efb7270b1313545a1069aeee7672315f7711562889f4c4f33496878aa9d",
+      "new_sha256": "efe84efb7270b1313545a1069aeee7672315f7711562889f4c4f33496878aa9d",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Fold.lean",
+      "new": "src/Effect4/Store/Carrier/Fold.lean",
+      "generated": true,
+      "old_sha256": "c795191c7072f40b968aec50972a7ed5f9a8515eeb70aca5731d6a005f3c7116",
+      "new_sha256": "fbfca23d0356e144011aa38be891e4a565c0d2e7ef26784db9e2e30afe4a7197",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Image/Containers.lean",
+      "new": "src/Effect4/Store/Carrier/Image/Containers.lean",
+      "generated": false,
+      "old_sha256": "3b6bad3d0dbe4227674df082759c463f59cd0a64b5fd0bb94608e402050bc841",
+      "new_sha256": "26c6d7f70c368cc75a190b1453b0c7f7584e11405a1af1e361cbd95ab928607c",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Node.lean",
+      "new": "src/Effect4/Store/Domain/Node.lean",
+      "generated": false,
+      "old_sha256": "a3269ded194e93deae43316caad8c82eeff3f15f2fdc671de7f97c1825fb126b",
+      "new_sha256": "d37a23ad0067f193d06ae0d3aa18ce856b0ee273370aefe324fb22ec55ff1bd0",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Canonical.lean",
+      "new": "src/Effect4/Store/Domain/Canonical.lean",
+      "generated": false,
+      "old_sha256": "3a6cda6c4244be18d4f48d3852517143370d06f51c0d22a5e93b76d5851fe8a4",
+      "new_sha256": "5ff138afcc28cfaf4793cbfdd0fab12c3c2add8c81d35ed5bb29e35f8f4e6aa3",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Word.lean",
+      "new": "src/Effect4/Store/Domain/Word.lean",
+      "generated": false,
+      "old_sha256": "e9faef2780fbab83e556457ebdc4bcd33ef26c81fbc31d5bcf197d99aabde22f",
+      "new_sha256": "0f935c001fb954325a84e080eb4254a989e27d74408d2b3b971651339d27ac70",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Store.lean",
+      "new": "src/Effect4/Store/Domain/Store.lean",
+      "generated": false,
+      "old_sha256": "e1976bde8528e62755e3ed944dbcccc123e3d35a5f4b07b1fc988599d3e24be0",
+      "new_sha256": "d981810473b4d6984ef5f4910446d3bdee22cadfff9de537db973097b9d23440",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Traits.lean",
+      "new": "src/Effect4/Store/Domain/Traits.lean",
+      "generated": false,
+      "old_sha256": "65bc465aab735ec54a0003f49645915881e0a9af2aca214bc653095f96279417",
+      "new_sha256": "839d2279d72398c3bf4fe539ed1a2c316a7c7cdc79e4a3ac018405994fd6bfa6",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Genesis.lean",
+      "new": "src/Effect4/Store/Domain/Genesis.lean",
+      "generated": false,
+      "old_sha256": "268525408ade50d7b6868320c1a73bd3fe8fcc66617cd22041452c84e524ab17",
+      "new_sha256": "b52d15f5fb21cf59a2cbf60fbb6fc447261538620c29e20e97dd6c94a5beda61",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Shape.lean",
+      "new": "src/Effect4/Store/Domain/Shape.lean",
+      "generated": false,
+      "old_sha256": "cfa434a2e637f3ab9d04a86d02fe05407659e4f5a7ea4811f12e956fd3e95b17",
+      "new_sha256": "a7dc0f51532ae5ada3f8b8f4c9d8f125f3b3e9c0e114780e2eb8b35c350f45dc",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/AnnotationsCanonical.lean",
+      "new": "src/Effect4/Store/Domain/AnnotationsCanonical.lean",
+      "generated": false,
+      "old_sha256": "38e02c43fd6afeedd2bc3370f12ed93c1e49bbe11419cae0f6c6778239372571",
+      "new_sha256": "dab64674464041e6b20122bdc883fbced6aa3e47618982c9ba55de472394a1f0",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/RowCanonical.lean",
+      "new": "src/Effect4/Store/Domain/RowCanonical.lean",
+      "generated": false,
+      "old_sha256": "d1bb399d346942495bf349835d0af79a0f8f1f3ca34b3667e27b5a4f1d0c83b4",
+      "new_sha256": "12e99704c15ee195c6aa8ac9e1dfe37406f855cccafa7db0e520a064c0c4bff7",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Pin.lean",
+      "new": "src/Effect4/Store/Domain/Pin.lean",
+      "generated": false,
+      "old_sha256": "95040f8867d10d89f2649bb896a08628c04d0ee6b726bf69eec5934497bb94cb",
+      "new_sha256": "5d9367aa8261e339895fc45ff30728ae327027fef7abd3e0c5b9b1481f39ffb8",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/PinDerived.lean",
+      "new": "src/Effect4/Store/Domain/PinDerived.lean",
+      "generated": true,
+      "old_sha256": "c00ebe1ea71783a0e13791259b31ad2a6618a566977618d74b2d374c7b749123",
+      "new_sha256": "3d30b1f5e474f0cf23791252743e11e460670fc32dceee159e39d2f5618a3719",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Cascade.lean",
+      "new": "src/Effect4/Store/Domain/Cascade.lean",
+      "generated": false,
+      "old_sha256": "6b2e9a6395be5bebda91cbdfcb22784cf6918d788dafef6e056b767404b6ad47",
+      "new_sha256": "3107adfac35ef2226c1ad6c59e75a937775237e4b0aa2c86ccf7c30710e411c2",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Derived/Json.lean",
+      "new": "src/Effect4/Store/Domain/Derived/Json.lean",
+      "generated": true,
+      "old_sha256": "50970cc3a2c9e7d6f68cf6caad5124628e48d2a4dae35b10f91ba71ffc47e5e1",
+      "new_sha256": "54f25d6e1b7511f3897f9bc5778317a8723f275bcd2c65399476ded3ebd37c26",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Derived/Schema.lean",
+      "new": "src/Effect4/Store/Domain/Derived/Schema.lean",
+      "generated": true,
+      "old_sha256": "7d649d2f6a09a1d58b20e6e0738733e09298e06e2502145eed3a639b52ed3baa",
+      "new_sha256": "ea10972375589d8c6f91016c2072516b31afb2485f9bdfa8395cff6883cb0930",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Derived/Value.lean",
+      "new": "src/Effect4/Store/Domain/Derived/Value.lean",
+      "generated": true,
+      "old_sha256": "5edb1a0d77eec1d1681ded59a01abbf2420a87eba3e585412940953420c916a9",
+      "new_sha256": "eb2bcacc34e1f6d4d44797331c672ba86b99b2aceacdd3d0302769d1582dab3b",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Arch/JsonNumber.lean",
+      "new": "src/Effect4/Data/JsonNumber.lean",
+      "generated": false,
+      "old_sha256": "f5f8c5098a3386eb68fd1f0b47dc7d2e6605c5bd01b47f33c892ee5531d34b76",
+      "new_sha256": "f5f8c5098a3386eb68fd1f0b47dc7d2e6605c5bd01b47f33c892ee5531d34b76",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Arch/Accepts.lean",
+      "new": "src/Effect4/Schema/Accepts.lean",
+      "generated": false,
+      "old_sha256": "2ed9ef52b6435a90953c1a374b3f77c73baac70e00f21d6a698211b9474d5ed2",
+      "new_sha256": "2ed9ef52b6435a90953c1a374b3f77c73baac70e00f21d6a698211b9474d5ed2",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Laws/Codegen/ModuleReadable.lean",
+      "new": "src/Effect4/Laws/Api/ModuleReadable.lean",
+      "generated": false,
+      "old_sha256": "ea070274537ce0b95c8c7c32822949083a30e129d029d76732044491f0feecbe",
+      "new_sha256": "ea070274537ce0b95c8c7c32822949083a30e129d029d76732044491f0feecbe",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Clock.lean",
+      "new": "src/Effect4/Store/Domain/Clock.lean",
+      "generated": false,
+      "old_sha256": "0ffe151b5ae9a30c72a4819b8f55a9e45264336dac80e8769385a5f791b56b91",
+      "new_sha256": "171966a79cc540898b5f5b6655103133bb6e0d8de3a806c0a1a83d4c97d85c39",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Derived.lean",
+      "new": "src/Effect4/Store/Domain/Derived/Program.lean",
+      "generated": true,
+      "old_sha256": "e936596a8da1e0bc75edd70438a8f8ecd10e12447782229390318823299fe280",
+      "new_sha256": "04e1dee961944155fbc40ed7c6d6a9a189815179d98ca9336c7cdaae9501b40c",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Wire.lean",
+      "new": "src/Effect4/Store/Domain/ProgramWire.lean",
+      "generated": false,
+      "old_sha256": "cb2881db22c2b9e5ef6e95e2f54eecffa4ec41d782e38c24d35116434812fd6a",
+      "new_sha256": "f91ccf2d370e3068e7f8822ae3f0a407acabdfb506a104362bff1bded8d73206",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Authoring/Forms.lean",
+      "new": "src/Effect4/Codegen/Authoring/Forms.lean",
+      "generated": true,
+      "old_sha256": "1db634735c06200bde6db186ab4e8a8bef51e2eb6696dbca691b874dcb07f9ca",
+      "new_sha256": "bfdec551b64004792ebbfd01f35fcfe096fc951ef2c8209b18a1e747eac55911",
+      "declaration_and_proof_tokens_unchanged": true
+    }
+  ],
+  "import_only_files": [
+    {
+      "old": "Test/Audit/ClockLiteralFixtures.lean",
+      "new": "Test/Audit/ClockLiteralFixtures.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "Test/Audit/PositionAnalysis.lean",
+      "new": "Test/Audit/PositionAnalysis.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "Test/Audit/PositionCensus.lean",
+      "new": "Test/Audit/PositionCensus.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "Test/Audit/TypedStateDecl.lean",
+      "new": "Test/Audit/TypedStateDecl.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "Test/Counterexamples/Schema/Codec.lean",
+      "new": "Test/Counterexamples/Schema/Codec.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "Test/Program/AuthorContract.lean",
+      "new": "Test/Program/AuthorContract.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "Test/Program/AuthoringContract.lean",
+      "new": "Test/Program/AuthoringContract.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "Test/Program/ConfigContract.lean",
+      "new": "Test/Program/ConfigContract.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "Test/Program/Gen.lean",
+      "new": "Test/Program/Gen.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "Test/Program/LinkedRowsContract.lean",
+      "new": "Test/Program/LinkedRowsContract.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "Test/Schema/DialectContract.lean",
+      "new": "Test/Schema/DialectContract.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "Test/Store/DerivedCheck.lean",
+      "new": "Test/Store/DerivedCheck.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "Test/Store/ProbeContract.lean",
+      "new": "Test/Store/ProbeContract.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "Test/Store/StoreContract.lean",
+      "new": "Test/Store/StoreContract.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "Test/Store/TraitContract.lean",
+      "new": "Test/Store/TraitContract.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "Test/Store/WordContract.lean",
+      "new": "Test/Store/WordContract.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "harness/truth/Truth.lean",
+      "new": "harness/truth/Truth.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Api/Derived.lean",
+      "new": "src/Effect4/Api/Derived.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Api/RunnerDerived.lean",
+      "new": "src/Effect4/Api/RunnerDerived.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Api.lean",
+      "new": "src/Effect4/Api.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Arch/Accepts.lean",
+      "new": "src/Effect4/Schema/Accepts.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Arch/JsonNumber.lean",
+      "new": "src/Effect4/Data/JsonNumber.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Codegen/SourceBindings.lean",
+      "new": "src/Effect4/Codegen/SourceBindings.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Codegen/Types.lean",
+      "new": "src/Effect4/Codegen/Types.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Data/Ascii.lean",
+      "new": "src/Effect4/Data/Ascii.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Laws/Auto/PositionGate.lean",
+      "new": "src/Effect4/Laws/Program/Typed/PositionGate.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Laws/Auto/TypedSources.lean",
+      "new": "src/Effect4/Laws/Program/Typed/TypedSources.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Laws/Auto/TypedStateDecl.lean",
+      "new": "src/Effect4/Laws/Program/Typed/TypedStateDecl.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Laws/Codegen/ModuleReadable.lean",
+      "new": "src/Effect4/Laws/Api/ModuleReadable.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Laws/Machine/Clock.lean",
+      "new": "src/Effect4/Laws/Machine/Clock.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Laws/Machine/Folds/Val.lean",
+      "new": "src/Effect4/Laws/Machine/Folds/Val.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Laws/Program/Admits.lean",
+      "new": "src/Effect4/Laws/Program/Admits.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Laws/Program/Authoring/Forms.lean",
+      "new": "src/Effect4/Laws/Program/Authoring/Forms.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Laws/Program/Folds/Looped.lean",
+      "new": "src/Effect4/Laws/Program/Folds/Looped.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Laws/Program/TyView.lean",
+      "new": "src/Effect4/Laws/Program/TyView.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Laws/Program/Typed/State.lean",
+      "new": "src/Effect4/Laws/Program/Typed/State.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Laws/Program/ValueModel.lean",
+      "new": "src/Effect4/Laws/Program/ValueModel.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Laws/Store/CanonicalSpec.lean",
+      "new": "src/Effect4/Laws/Store/CanonicalSpec.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Laws.lean",
+      "new": "src/Effect4/Laws.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Machine/Folds/Stores.lean",
+      "new": "src/Effect4/Laws/Machine/Folds/Stores.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Machine/Value.lean",
+      "new": "src/Effect4/Machine/Value.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Authoring/Forms.lean",
+      "new": "src/Effect4/Codegen/Authoring/Forms.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/ConfigValue.lean",
+      "new": "src/Effect4/Program/ConfigValue.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Decision.lean",
+      "new": "src/Effect4/Program/Decision.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Derived.lean",
+      "new": "src/Effect4/Store/Domain/Derived/Program.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Folds/Checker.lean",
+      "new": "src/Effect4/Laws/Program/Folds/Checker.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Folds/Projections.lean",
+      "new": "src/Effect4/Laws/Program/Folds/Projections.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Folds/Provision.lean",
+      "new": "src/Effect4/Laws/Program/Folds/Provision.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Folds/Representation.lean",
+      "new": "src/Effect4/Laws/Program/Folds/Representation.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Folds/Straight.lean",
+      "new": "src/Effect4/Laws/Program/Folds/Straight.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Folds/Term.lean",
+      "new": "src/Effect4/Laws/Program/Folds/Term.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Folds/Ty.lean",
+      "new": "src/Effect4/Laws/Program/Folds/Ty.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Packages.lean",
+      "new": "src/Effect4/Program/Packages.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Profile.lean",
+      "new": "src/Effect4/Program/Profile.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Program/Wire.lean",
+      "new": "src/Effect4/Store/Domain/ProgramWire.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Schema/Codec.lean",
+      "new": "src/Effect4/Schema/Codec.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Schema/Image.lean",
+      "new": "src/Effect4/Schema/Image.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/AnnotationsCanonical.lean",
+      "new": "src/Effect4/Store/Domain/AnnotationsCanonical.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Canonical.lean",
+      "new": "src/Effect4/Store/Domain/Canonical.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Cascade.lean",
+      "new": "src/Effect4/Store/Domain/Cascade.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Clock.lean",
+      "new": "src/Effect4/Store/Domain/Clock.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Derived/Json.lean",
+      "new": "src/Effect4/Store/Domain/Derived/Json.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Derived/Schema.lean",
+      "new": "src/Effect4/Store/Domain/Derived/Schema.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Derived/Value.lean",
+      "new": "src/Effect4/Store/Domain/Derived/Value.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Digest.lean",
+      "new": "src/Effect4/Store/Carrier/Digest.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Digits.lean",
+      "new": "src/Effect4/Store/Carrier/Digits.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Fold.lean",
+      "new": "src/Effect4/Store/Carrier/Fold.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Folds/Val.lean",
+      "new": "src/Effect4/Laws/Store/Folds/Val.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Genesis.lean",
+      "new": "src/Effect4/Store/Domain/Genesis.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Image/Containers.lean",
+      "new": "src/Effect4/Store/Carrier/Image/Containers.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Image.lean",
+      "new": "src/Effect4/Store/Carrier/Image.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Kind.lean",
+      "new": "src/Effect4/Store/Carrier/Kind.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Node.lean",
+      "new": "src/Effect4/Store/Domain/Node.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Pin.lean",
+      "new": "src/Effect4/Store/Domain/Pin.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/PinDerived.lean",
+      "new": "src/Effect4/Store/Domain/PinDerived.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/RowCanonical.lean",
+      "new": "src/Effect4/Store/Domain/RowCanonical.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Shape.lean",
+      "new": "src/Effect4/Store/Domain/Shape.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Store.lean",
+      "new": "src/Effect4/Store/Domain/Store.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Traits.lean",
+      "new": "src/Effect4/Store/Domain/Traits.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Utf8.lean",
+      "new": "src/Effect4/Store/Carrier/Utf8.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Val.lean",
+      "new": "src/Effect4/Store/Carrier/Val.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4/Store/Word.lean",
+      "new": "src/Effect4/Store/Domain/Word.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/Effect4.lean",
+      "new": "src/Effect4.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/OCaml5/Eff/Emit.lean",
+      "new": "src/OCaml5/Eff/Emit.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/OCaml5/Eff/Goldens.lean",
+      "new": "src/OCaml5/Eff/Goldens.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/OCaml5/Eff/Metadata.lean",
+      "new": "src/OCaml5/Eff/Metadata.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/OCaml5/Tools/CasGoldens.lean",
+      "new": "src/OCaml5/Tools/CasGoldens.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/OCaml5/Tools/EffGen.lean",
+      "new": "src/OCaml5/Tools/EffGen.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "src/OCaml5/Tools/EffWire.lean",
+      "new": "src/OCaml5/Tools/EffWire.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "tools/Effect4Gen/Check.lean",
+      "new": "tools/Effect4Gen/Check.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "tools/Effect4Gen/Forms.lean",
+      "new": "tools/Effect4Gen/Forms.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "tools/Effect4Gen/Main.lean",
+      "new": "tools/Effect4Gen/Main.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "tools/Tools/Corpus.lean",
+      "new": "tools/Drivers/Corpus.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "tools/Tools/ForeignCorpus.lean",
+      "new": "tools/Drivers/ForeignCorpus.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "tools/Tools/ProgramStructureCheck.lean",
+      "new": "tools/Drivers/ProgramStructureCheck.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "tools/Tools/RowTypes.lean",
+      "new": "tools/Tools/RowTypes.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "tools/Tools/Styles.lean",
+      "new": "tools/Drivers/Styles.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "tools/Tools/TsGen.lean",
+      "new": "tools/Drivers/TsGen.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    },
+    {
+      "old": "tools/Tools/Variances.lean",
+      "new": "tools/Tools/Variances.lean",
+      "declaration_and_proof_tokens_unchanged": true
+    }
+  ],
+  "six_fold_laws": [
+    "Effect4.Program.effTy.eq_cata",
+    "Effect4.Program.layerTy.eq_cata",
+    "Effect4.Program.layersTy.eq_cata",
+    "Effect4.Program.stmtsTy.eq_cata",
+    "Effect4.Program.effsTy.eq_cata",
+    "Effect4.Program.actionTy.eq_cata"
+  ],
+  "fold_law_suffix_exact": true,
+  "remaining_typing_declarations_unchanged": true,
+  "neutral_fixture_blocks_exact": true,
+  "three_fixture_battery_commands_unchanged": true,
+  "architecture_allowed_relation_unchanged": true,
+  "axiom_gate_only_three_exact_meta_module_renames": true,
+  "manifest_non_import_output_fields_unchanged": true,
+  "protected_paths_unchanged": [
+    "README.md",
+    "ocaml/gen",
+    "ocaml/engine/api_engine.ml",
+    "generated",
+    "Test/contracts",
+    "Test/fixtures/baseline"
+  ],
+  "diff_check_exit": 0,
+  "retired_imports": []
+}

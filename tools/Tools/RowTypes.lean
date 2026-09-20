@@ -1,7 +1,7 @@
 import Effect4.Program.Packages
 import Effect4.Program.NativeAtom
 import Effect4.Laws.Program.Template
-import Test.Api.AcquireHandleContract
+import TestSupport.AcquireHandle
 import Tools.ProfileJson
 import Lean.Data.Json
 

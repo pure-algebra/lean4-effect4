@@ -56,7 +56,7 @@ moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 [[lean_lib]]
 name = "Tools"
 srcDir = "tools"
-globs = ["Tools.+"]
+globs = ["Tools.+", "Drivers.+", "TestSupport.+"]
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 # Shared metaprogramming evidence. No Effect4, Aesop or target-profile dependency.
@@ -137,7 +137,7 @@ name = "typescript"
 git = "https://github.com/pure-algebra/lean4-typescript"
 rev = "6afc9b841603796c16b266c0b8b92ded37a9445c"
 
-# Proved SHA-256 for content addresses (src/Effect4/Store/Digest.lean): exact commit of
+# Proved SHA-256 for content addresses (src/Effect4/Store/Carrier/Digest.lean): exact commit of
 # pure-algebra/lean4-hash main. Its SHA-256 family is audited at zero declarations
 # reaching Classical.choice, so a digest stays inside this tree's axiom ceiling.
 [[require]]

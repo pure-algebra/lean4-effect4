@@ -1,3 +1,4 @@
+import TestSupport.CasEntry
 /-
 Contract: the node layer — kinds, typed references, node bytes, and the genesis
 (`Effect4/Store/{Kind,Node,Genesis}.lean`).
@@ -24,7 +25,7 @@ second and the §6a addresses are guarded, not printed.
 Doc comments cannot precede `#guard`, so the receipts carry line comments.
 -/
 
-import Effect4.Store.Genesis
+import Effect4.Store.Domain.Genesis
 import Test.Store.Templates
 
 namespace Test.Store.NodeContract
@@ -55,8 +56,6 @@ open Effect4.Store
 
 /-! ## The census entry as content -/
 
-/-- `Templates.Entry` files as `export`, the kind the plan's §3 gives the census entry. -/
-instance instContentEntry : Content Effect4.Store.Templates.Entry := ⟨.«export»⟩
 
 #guard Content.kind Effect4.Store.Templates.Entry = .«export»
 #guard (Content.kind Effect4.Store.Templates.Entry).byte = 2

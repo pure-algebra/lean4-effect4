@@ -1,5 +1,5 @@
 import Effect4.Program.Ty
-import Effect4.Store.Utf8
+import Effect4.Store.Carrier.Utf8
 import TypeScript.TypeRef
 import TypeScript.Identifier
 

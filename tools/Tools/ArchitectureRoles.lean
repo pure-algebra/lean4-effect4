@@ -61,12 +61,11 @@ deriving Repr, Inhabited
 def areas : List Area := [
   -- the runtime root, bottom up
   ⟨"src/Effect4/Data", .runtime, 0, "Data", "requirement rows, JSON, lawful optics, ASCII", false, true⟩,
-  ⟨"src/Effect4/Arch", .runtime, 0, "Arch", "JSON-number facts and structural acceptance of Schema documents", false, true⟩,
-  ⟨"src/Effect4/Store", .runtime, 1, "Store", "the content-addressed store: `Val` and its one byte codec, `Canonical`, the digest, node, word and traits; measured beneath Machine, which reads `Store.Image`", false, true⟩,
-  ⟨"src/Effect4/Store/Derived", .runtime, 1, "Store/Derived", "generated `Canonical` instances (the derived group)", true, true⟩,
+  ⟨"src/Effect4/Store/Carrier", .runtime, 1, "Store/Carrier", "value trees, their byte codec, images, digests and folds below Machine", false, true⟩,
+  ⟨"src/Effect4/Store/Domain", .runtime, 4, "Store/Domain", "canonical documents, nodes, persistence, and program wire projections above Schema", false, true⟩,
+  ⟨"src/Effect4/Store/Domain/Derived", .runtime, 4, "Store/Domain/Derived", "generated `Canonical` instances (the derived group)", true, true⟩,
   ⟨"src/Effect4/Machine", .runtime, 2, "Machine", "`Cause` and `Exit`, the frame alphabet, the scope machine, the fiber machine (`RunMachine`, `replayEval`), the stores, the wake protocol, the logical clock", false, true⟩,
   ⟨"src/Effect4/Program", .runtime, 3, "Program", "`Eff`, `Ty`, the checker, the native rows and atoms, `compile`, provision and config", false, true⟩,
-  ⟨"src/Effect4/Program/Folds", .runtime, 3, "Program/Folds", "the `fold_of` connectors beside the runtime's hand traversals", true, true⟩,
   ⟨"src/Effect4/Program/Authoring", .runtime, 3, "Program/Authoring", "the authoring surface: modules, lifts, rows, forms", true, true⟩,
   ⟨"src/Effect4/Program/Typing", .runtime, 3, "Program/Typing", "the typing rules the checker and the declarative judgement share", true, true⟩,
   ⟨"src/Effect4/Program/Packages", .runtime, 3, "Program/Packages", "the two package tables", true, true⟩,
@@ -80,7 +79,9 @@ def areas : List Area := [
   ⟨"src/Effect4/Laws/Effects", .laws, 0, "Laws/Effects", "layer 0 of the typed-state invariant: the protocol-typed predicate on the free monad; imports the pinned `Effects` only", false, true⟩,
   ⟨"src/Effect4/Laws/Auto", .laws, 1, "Laws/Auto", "the instruments: the censuses, the position gate, `#typed_state`, `#frame_rules`, the obligation ledger, the aesop banks", false, true⟩,
   ⟨"src/Effect4/Laws/Store", .laws, 1, "Laws/Store", "the store's laws", false, true⟩,
+  ⟨"src/Effect4/Laws/Store/Folds", .laws, 1, "Laws/Store/Folds", "fold connectors for store values", true, true⟩,
   ⟨"src/Effect4/Laws/Machine", .laws, 2, "Laws/Machine", "store and frame invariants, the store kernel, `Book` and `BMeans`, observations, approximation and scheduling laws", false, true⟩,
+  ⟨"src/Effect4/Laws/Machine/Folds", .laws, 2, "Laws/Machine/Folds", "fold connectors for machine stores", true, true⟩,
   ⟨"src/Effect4/Laws/Program", .laws, 3, "Laws/Program", "typing soundness, meaning, the reference scheduler and evaluator, replay agreement, simulation, guards, authoring, the typed state", false, true⟩,
   ⟨"src/Effect4/Laws/Program/Typing", .laws, 3, "Laws/Program/Typing", "the checker sound and complete against `HasTy`; inversion", true, true⟩,
   ⟨"src/Effect4/Laws/Program/Guard", .laws, 3, "Laws/Program/Guard", "the guard family's laws", true, true⟩,
@@ -107,7 +108,9 @@ def areas : List Area := [
   ⟨"tools/Conform/Source", .tools, 1, "Conform/Source", "the generic source description", true, true⟩,
   ⟨"tools/Conform/Manifest", .tools, 1, "Conform/Manifest", "manifest readers and the mirror", true, true⟩,
   ⟨"tools/Conform/Cli", .tools, 5, "Conform/Cli", "the `--run` drivers over the generic core and the Effect4 adapters", false, true⟩,
-  ⟨"tools/Tools", .tools, 2, "Tools", "the Effect4-side `--run` drivers and the shared descriptions: `ProgramStructure`, `WireTags`, the stamp, the styles", false, true⟩,
+  ⟨"tools/Tools", .tools, 2, "Tools", "shared descriptions, stamps, inventory and neutral tool utilities", false, true⟩,
+  ⟨"tools/Drivers", .tools, 4, "Drivers", "Effect4 drivers that consume the OCaml5 projection", false, true⟩,
+  ⟨"tools/TestSupport", .tools, 2, "TestSupport", "shared immutable fixtures consumed by tooling and batteries; no runtime imports", false, true⟩,
   ⟨"src/OCaml5", .tools, 3, "OCaml5", "the Lean half of the OCaml estate: the `Eff` closed world and emitters, the LCNF → OCaml backend, the OCaml language model, the drivers", false, true⟩,
   ⟨"src/OCaml5/Eff", .tools, 3, "OCaml5/Eff", "the closed world, the emitters, the goldens", true, true⟩,
   ⟨"src/OCaml5/Lcnf", .tools, 3, "OCaml5/Lcnf", "the LCNF → OCaml translator, its types, externs and naming", true, true⟩,
@@ -170,7 +173,7 @@ structure Accepted where
 deriving Repr, Inhabited
 
 def accepted : List Accepted := [
-  ⟨"tools/Tools", "Test.Program.Gen", "the corpus generator is the input of `Tools.Corpus` (ARCHITECTURE.md, the Tools row)"⟩
+  ⟨"tools/Drivers", "Test.Program.Gen", "the corpus generator is the input of `Tools.Corpus` (ARCHITECTURE.md, the Tools row)"⟩
 ]
 
 /-- May a module in `a` import a module in `b`? Inside a Lean column, only the same height
@@ -197,7 +200,7 @@ def allowed (a b : Area) : Bool :=
 environment with another such module, so the drivers stay out and are measured from disk. -/
 def roots : List String := [
   "Test", "OCaml5", "ProofGraph.Ledger", "ProofGraph.Search",
-  "Tools.ProgramStructure", "Tools.WireTags", "Tools.Styles", "Tools.ForeignCorpus",
+  "Tools.ProgramStructure", "Tools.WireTags", "Drivers.Styles", "Drivers.ForeignCorpus",
   "Tools.ProfileJson", "Tools.GeneratedStamp",
   "Conform.Core.Evidence", "Conform.Core.Obligation", "Conform.Core.Policy", "Conform.Core.Proof",
   "Conform.Core.Report", "Conform.Layout.Build", "Conform.Layout.Check", "Conform.Layout.Laws",
@@ -221,7 +224,7 @@ deriving Repr, Inhabited
 def milestone : List Slice := [
   ⟨"layer 0", "the protocol-typed predicate on the free monad", ["Effect4.Laws.Effects.Protocol"]⟩,
   ⟨"T1", "the checked evidence seam", ["ProofGraph.Proof", "ProofGraph.Search", "ProofGraph.Ledger"]⟩,
-  ⟨"T2", "the census, the source table, the skeleton in place", ["Effect4.Laws.Auto.Positions", "Effect4.Laws.Auto.PositionGate", "Effect4.Laws.Program.Typed.Vocabulary", "Effect4.Laws.Program.Typed.Sources", "Effect4.Laws.Auto.TypedStateDecl", "Effect4.Laws.Program.Typed.State"]⟩,
+  ⟨"T2", "the census, the source table, the skeleton in place", ["Effect4.Laws.Auto.Positions", "Effect4.Laws.Program.Typed.PositionGate", "Effect4.Laws.Program.Typed.Vocabulary", "Effect4.Laws.Program.Typed.Sources", "Effect4.Laws.Program.Typed.TypedStateDecl", "Effect4.Laws.Program.Typed.State"]⟩,
   ⟨"T3 · T4", "frames and the ledger", ["Effect4.Laws.Auto.Frames", "Effect4.Laws.Program.Typed.Frames", "Effect4.Laws.Auto.Obligations"]⟩,
   ⟨"M2", "layer 1: the world, its order, the columns on data", ["Effect4.Laws.Program.Typed.World"]⟩,
   ⟨"M3", "the residual protocol under an answer gate", ["Effect4.Laws.Program.Typed.Residual", "Effect4.Laws.Auto.AnswerGate"]⟩,

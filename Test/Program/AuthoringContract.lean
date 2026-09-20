@@ -1,7 +1,7 @@
 import Effect4.Api
 import Effect4.Program.Authoring.Sugar
 import Effect4.Laws.Program.Authoring.Sugar
-import Effect4.Program.Authoring.Forms
+import Effect4.Codegen.Authoring.Forms
 import Effect4.Laws.Program.Authoring.Forms
 import Test.Program.LayerSharingContract
 

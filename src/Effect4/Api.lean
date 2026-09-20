@@ -6,7 +6,7 @@ import Effect4.Program.Typing.Agreement
 import Effect4.Program.Authoring
 import Effect4.Api.Derived
 import Effect4.Program.Packages
-import Effect4.Program.Wire
+import Effect4.Store.Domain.ProgramWire
 import Effect4.Codegen.Print
 import Effect4.Codegen.Checked
 import Effect4.Codegen.SourceBindings
@@ -14,7 +14,7 @@ import Effect4.Codegen.Read
 import Effect4.Codegen.Admit
 import Effect4.Codegen.Schema
 import Effect4.Codegen.Target
-import Effect4.Store.Cascade
+import Effect4.Store.Domain.Cascade
 import Effect4.Schema.Bridge
 import Effect4.Schema.Codec
 import Effect4.Schema.Image

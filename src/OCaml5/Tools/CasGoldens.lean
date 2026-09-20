@@ -1,8 +1,8 @@
 import Tools.GeneratedStamp
-import Effect4.Store.Word
-import Effect4.Store.Genesis
+import Effect4.Store.Domain.Word
+import Effect4.Store.Domain.Genesis
 import Effect4.Machine.Stores
-import Test.Store.NodeContract
+import TestSupport.CasEntry
 
 /-!
 # CasGoldens — the byte goldens of the Lean CAS

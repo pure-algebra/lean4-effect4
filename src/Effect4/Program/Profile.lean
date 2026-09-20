@@ -35,7 +35,7 @@ not vacuous. It owns no adapter, no tape, no third package.
   Keeping the data first-order is what makes a profile storable, comparable and generatable,
   the same discipline the exclusion list applies to canonical programs.
 * **A wire ordinal.** No constructor here is numbered and nothing here derives `Canonical`. A
-  profile does not cross the program wire (`src/Effect4/Program/Wire.lean` encodes `Eff`, its
+  profile does not cross the program wire (`src/Effect4/Store/Domain/ProgramWire.lean` encodes `Eff`, its
   terms and its rows — not a profile), so it claims no ordinal and no golden byte. Publishing
   a profile would be a new decision with its own byte discipline, taken there.
 * **A stateless value correspondence for handles.** `Rep` below is `Ty → Val → HostVal → Prop`

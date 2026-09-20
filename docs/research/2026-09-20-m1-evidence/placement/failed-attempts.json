@@ -1,0 +1,27 @@
+[
+  {
+    "log": "placement-derived-logs/projection-check.log",
+    "result": "unchanged 200000-heartbeat timeout",
+    "resolution": "Checked each of seven applicable Main/default outputs separately at unchanged cap; no producer rerun."
+  },
+  {
+    "log": "placement-derived-logs/TyView-projection-check.log",
+    "result": "no shape declaration found",
+    "resolution": "Canonical checker is inapplicable to View/Fold/Forms output. Those four groups retain producer fingerprint comparison, narrow build, embedded checks."
+  },
+  {
+    "log": "placement-build-logs/035-Effect4Gen.Forms.log",
+    "result": "unknown lake target",
+    "resolution": "Forms is not a library root. Its exact source had already elaborated in both fresh canonical producer invocations."
+  },
+  {
+    "log": "placement-build-logs/064-harness.truth.Truth-wrong-lake-target.log",
+    "result": "unknown lake target",
+    "resolution": "Direct lake env lean -DwarningAsError=true harness/truth/Truth.lean passed."
+  },
+  {
+    "log": "placement-build-logs/066-Effect4.Laws-import-placement-failed.log",
+    "result": "import after module doc command",
+    "resolution": "Moved added imports into leading block; unchanged declaration tokens; root rebuilt and passed."
+  }
+]

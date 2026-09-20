@@ -20,8 +20,8 @@
   "groups": [
     {
       "Name": "Json",
-      "Imports": "Effect4.Store.Canonical",
-      "Out": "src\\Effect4\\Store\\Derived\\Json.lean",
+      "Imports": "Effect4.Store.Domain.Canonical",
+      "Out": "src\\Effect4\\Store\\Domain\\Derived\\Json.lean",
       "Guards": "tools\\Effect4Gen\\guards\\json.lean",
       "Kinds": [],
       "Types": [
@@ -32,8 +32,8 @@
     {
       "Note": "The Schema carriers hold `Json` and `Float64` fields, whose instances are the Json group's.",
       "Name": "Schema",
-      "Imports": "Effect4.Store.Derived.Json",
-      "Out": "src\\Effect4\\Store\\Derived\\Schema.lean",
+      "Imports": "Effect4.Store.Domain.Derived.Json",
+      "Out": "src\\Effect4\\Store\\Domain\\Derived\\Schema.lean",
       "Guards": "tools\\Effect4Gen\\guards\\schema.lean",
       "Kinds": [],
       "Types": [
@@ -54,8 +54,8 @@
     },
     {
       "Name": "Program",
-      "Imports": "Effect4.Program.Native,Effect4.Store.Canonical,Effect4.Store.RowCanonical",
-      "Out": "src\\Effect4\\Program\\Derived.lean",
+      "Imports": "Effect4.Program.Native,Effect4.Store.Domain.Canonical,Effect4.Store.Domain.RowCanonical",
+      "Out": "src\\Effect4\\Store\\Domain\\Derived\\Program.lean",
       "Guards": "tools\\Effect4Gen\\guards\\program.lean",
       "Kinds": [],
       "Types": [
@@ -84,8 +84,8 @@
     {
       "Note": "`Tree` is the store's own carrier (a name space as content, Store/Node.lean); its instance is emitted here beside `Pin`'s so no area above the store supplies a store type's instance (coordinator, 2026-09-05, after lane C's note).",
       "Name": "Pin",
-      "Imports": "Effect4.Store.Pin,Effect4.Store.Node",
-      "Out": "src\\Effect4\\Store\\PinDerived.lean",
+      "Imports": "Effect4.Store.Domain.Pin,Effect4.Store.Domain.Node",
+      "Out": "src\\Effect4\\Store\\Domain\\PinDerived.lean",
       "Guards": "tools\\Effect4Gen\\guards\\pin.lean",
       "Kinds": [
         "Effect4.Store.Pin=source",
@@ -99,7 +99,7 @@
     },
     {
       "Name": "Api",
-      "Imports": "Effect4.Api.Frontier,Effect4.Store.Canonical,Effect4.Store.Clock",
+      "Imports": "Effect4.Api.Frontier,Effect4.Store.Domain.Canonical,Effect4.Store.Domain.Clock",
       "Out": "src\\Effect4\\Api\\Derived.lean",
       "Guards": "tools\\Effect4Gen\\guards\\api.lean",
       "Kinds": [],
@@ -113,8 +113,8 @@
     {
       "Note": "A value tree, a shape and a shape document written as content: what lets a schema and a plain value cross a boundary as canonical bytes.",
       "Name": "Value",
-      "Imports": "Effect4.Store.Canonical",
-      "Out": "src\\Effect4\\Store\\Derived\\Value.lean",
+      "Imports": "Effect4.Store.Domain.Canonical",
+      "Out": "src\\Effect4\\Store\\Domain\\Derived\\Value.lean",
       "Guards": "tools\\Effect4Gen\\guards\\value.lean",
       "Kinds": [],
       "Types": [
@@ -127,7 +127,7 @@
     {
       "Note": "The runner's byte boundary: a journal row, its verdict and what a holder observes. `ReasonAnnotations` has a proof field, so its instance is the hand one in Store/AnnotationsCanonical.lean; every applied carrier is listed before the type that holds it.",
       "Name": "Runner",
-      "Imports": "Effect4.Api.Runner,Effect4.Store.Derived.Value,Effect4.Store.AnnotationsCanonical,Effect4.Store.Clock,Effect4.Program.Derived,Effect4.Api.Derived",
+      "Imports": "Effect4.Api.Runner,Effect4.Store.Domain.Derived.Value,Effect4.Store.Domain.AnnotationsCanonical,Effect4.Store.Domain.Clock,Effect4.Store.Domain.Derived.Program,Effect4.Api.Derived",
       "Out": "src\\Effect4\\Api\\RunnerDerived.lean",
       "Guards": "tools\\Effect4Gen\\guards\\runner.lean",
       "Kinds": [],
@@ -171,7 +171,7 @@
       "Note": "The relational view of `Ty` (tooling plan 1.4): the children of a node with the variance the order reads them at, the head test, and the one law `sub_eq_args` -- `sub` between members is the variance-wise comparison of corresponding arguments -- so the proofs of the order name no constructor. Variance is NOT declared here: tools/Tools/Variances.lean reads it off rc.112 into tools/Effect4Gen/variances.json. The output is under Laws because the one proof is `fun_cases` plus `aesop`, and nothing under the core root imports aesop.",
       "Name": "TyView",
       "Tool": "tools/Effect4Gen/View.lean",
-      "Imports": "Effect4.Program.Folds.Ty,Effect4.Laws.Auto.RuleSets",
+      "Imports": "Effect4.Laws.Program.Folds.Ty,Effect4.Laws.Auto.RuleSets",
       "Out": "src\\Effect4\\Laws\\Program\\TyView.lean",
       "Guards": "tools\\Effect4Gen\\guards\\tyview.lean",
       "Kinds": [],
@@ -183,8 +183,8 @@
       "Note": "The fold of the value sort's free object: one algebra over Store.Val, its children under List (`list`, `ctor`) as positional folds. No guards yet: the fold's first customers are the seventeen hand traversals of Val the census lists, converted by fold_of.",
       "Name": "ValFold",
       "Tool": "tools/Effect4Gen/Fold.lean",
-      "Imports": "Effect4.Store.Val",
-      "Out": "src\\Effect4\\Store\\Fold.lean",
+      "Imports": "Effect4.Store.Carrier.Val",
+      "Out": "src\\Effect4\\Store\\Carrier\\Fold.lean",
       "Guards": "",
       "Kinds": [],
       "Types": [
@@ -298,7 +298,7 @@
       "Name": "Forms",
       "Tool": "tools/Effect4Gen/Forms.lean",
       "Imports": "Effect4.Program.Authoring.Lifts,Effect4.Codegen.Forms",
-      "Out": "src\\Effect4\\Program\\Authoring\\Forms.lean",
+      "Out": "src\\Effect4\\Codegen\\Authoring\\Forms.lean",
       "Guards": "",
       "Kinds": [],
       "Types": []
@@ -329,7 +329,7 @@
       "Note": "The scope lemma of every form combinator.",
       "Name": "FormsLaws",
       "Tool": "tools/Effect4Gen/Forms.lean",
-      "Imports": "Effect4.Laws.Program.Authoring.Lifts,Effect4.Program.Authoring.Forms,Effect4.Codegen.Forms",
+      "Imports": "Effect4.Laws.Program.Authoring.Lifts,Effect4.Codegen.Authoring.Forms,Effect4.Codegen.Forms",
       "Out": "src\\Effect4\\Laws\\Program\\Authoring\\Forms.lean",
       "Guards": "",
       "Kinds": [],

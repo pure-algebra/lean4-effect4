@@ -1,5 +1,5 @@
-import Effect4.Laws.Auto.TypedStateDecl
-import Effect4.Store.Val
+import Effect4.Laws.Program.Typed.TypedStateDecl
+import Effect4.Store.Carrier.Val
 open Effect4.Program.Typed
 
 namespace Test.TypedStateDecl.Positive

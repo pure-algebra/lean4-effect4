@@ -1,0 +1,69 @@
+index	module	result	source	log
+0	OCaml5.Eff.Emit	pass	direct invocation	placement-build-logs/000-OCaml5.Eff.Emit.log
+1	OCaml5.Eff.Goldens	pass	direct invocation	placement-build-logs/001-OCaml5.Eff.Goldens.log
+2	Drivers.Styles	pass	direct invocation	placement-build-logs/002-Drivers.Styles.log
+3	Test.Program.Gen	pass	direct invocation	placement-build-logs/003-Test.Program.Gen.log
+4	Drivers.ForeignCorpus	pass	direct invocation	placement-build-logs/004-Drivers.ForeignCorpus.log
+5	Drivers.Corpus	pass	direct invocation	placement-build-logs/005-Drivers.Corpus.log
+6	Drivers.ProgramStructureCheck	pass	direct invocation	placement-build-logs/006-Drivers.ProgramStructureCheck.log
+7	Drivers.TsGen	pass	direct invocation	placement-build-logs/007-Drivers.TsGen.log
+8	Effect4.Laws.Api.ModuleReadable	pass	direct invocation	placement-build-logs/008-Effect4.Laws.Api.ModuleReadable.log
+9	Effect4.Laws.Machine.Clock	pass	direct invocation	placement-build-logs/009-Effect4.Laws.Machine.Clock.log
+10	Effect4.Laws.Machine.Folds.Stores	pass	direct invocation	placement-build-logs/010-Effect4.Laws.Machine.Folds.Stores.log
+11	Effect4.Laws.Machine.Folds.Val	pass	direct invocation	placement-build-logs/011-Effect4.Laws.Machine.Folds.Val.log
+12	Effect4.Laws.Program.Admits	pass	fresh dependency build	placement-build-logs/012-Effect4.Laws.Program.Admits.log
+13	Effect4.Laws.Program.Folds.Checker	pass	fresh dependency build	placement-build-logs/013-Effect4.Laws.Program.Folds.Checker.log
+14	Effect4.Laws.Program.Folds.Straight	pass	fresh dependency build	placement-build-logs/014-Effect4.Laws.Program.Folds.Straight.log
+15	Effect4.Laws.Program.Folds.Looped	pass	fresh dependency build	placement-build-logs/015-Effect4.Laws.Program.Folds.Looped.log
+16	Effect4.Laws.Program.Folds.Projections	pass	fresh dependency build	placement-build-logs/016-Effect4.Laws.Program.Folds.Projections.log
+17	Effect4.Laws.Program.Folds.Provision	pass	fresh dependency build	placement-build-logs/017-Effect4.Laws.Program.Folds.Provision.log
+18	Effect4.Laws.Program.Folds.Representation	pass	fresh dependency build	placement-build-logs/018-Effect4.Laws.Program.Folds.Representation.log
+19	Effect4.Laws.Program.Folds.Term	pass	direct invocation	placement-build-logs/019-Effect4.Laws.Program.Folds.Term.log
+20	Effect4.Laws.Program.Typed.TypedSources	pass	direct invocation	placement-build-logs/020-Effect4.Laws.Program.Typed.TypedSources.log
+21	Effect4.Laws.Program.Typed.PositionGate	pass	direct invocation	placement-build-logs/021-Effect4.Laws.Program.Typed.PositionGate.log
+22	Effect4.Laws.Program.Typed.TypedStateDecl	pass	direct invocation	placement-build-logs/022-Effect4.Laws.Program.Typed.TypedStateDecl.log
+23	Effect4.Laws.Program.Typed.State	pass	direct invocation	placement-build-logs/023-Effect4.Laws.Program.Typed.State.log
+24	Effect4.Laws.Program.Typing.FoldAgreement	pass	direct invocation	placement-build-logs/024-Effect4.Laws.Program.Typing.FoldAgreement.log
+25	Effect4.Laws.Program.ValueModel	pass	direct invocation	placement-build-logs/025-Effect4.Laws.Program.ValueModel.log
+26	Effect4.Laws.Store.CanonicalSpec	pass	direct invocation	placement-build-logs/026-Effect4.Laws.Store.CanonicalSpec.log
+27	Effect4.Program.ConfigValue	pass	direct invocation	placement-build-logs/027-Effect4.Program.ConfigValue.log
+28	Effect4.Laws.Store.Folds.Val	pass	direct invocation	placement-build-logs/028-Effect4.Laws.Store.Folds.Val.log
+29	Effect4.Program.Profile	pass	direct invocation	placement-build-logs/029-Effect4.Program.Profile.log
+30	Effect4.Schema.Accepts	pass	direct invocation	placement-build-logs/030-Effect4.Schema.Accepts.log
+31	Effect4.Store.Domain.Word	pass	direct invocation	placement-build-logs/031-Effect4.Store.Domain.Word.log
+32	Effect4.Store.Domain.Traits	pass	direct invocation	placement-build-logs/032-Effect4.Store.Domain.Traits.log
+33	Effect4.Store.Domain.Genesis	pass	direct invocation	placement-build-logs/033-Effect4.Store.Domain.Genesis.log
+34	Effect4Gen.Check	pass	direct invocation	placement-build-logs/034-Effect4Gen.Check.log
+35	Effect4Gen.Forms	pass	fresh Forms and FormsLaws producer elaboration	placement-derived-logs/Forms-generate.log
+36	Effect4Gen.Main	pass	direct invocation	placement-build-logs/036-Effect4Gen.Main.log
+37	OCaml5.Eff.Metadata	pass	direct invocation	placement-build-logs/037-OCaml5.Eff.Metadata.log
+38	TestSupport.CasEntry	pass	direct invocation	placement-build-logs/038-TestSupport.CasEntry.log
+39	OCaml5.Tools.CasGoldens	pass	direct invocation	placement-build-logs/039-OCaml5.Tools.CasGoldens.log
+40	OCaml5.Tools.EffGen	pass	direct invocation	placement-build-logs/040-OCaml5.Tools.EffGen.log
+41	OCaml5.Tools.EffWire	pass	direct invocation	placement-build-logs/041-OCaml5.Tools.EffWire.log
+42	TestSupport.AcquireHandle	pass	direct invocation	placement-build-logs/042-TestSupport.AcquireHandle.log
+43	Test.Api.AcquireHandleContract	pass	direct invocation	placement-build-logs/043-Test.Api.AcquireHandleContract.log
+44	Test.Audit.ClockLiteralFixtures	pass	direct invocation	placement-build-logs/044-Test.Audit.ClockLiteralFixtures.log
+45	Test.Audit.PositionAnalysis	pass	direct invocation	placement-build-logs/045-Test.Audit.PositionAnalysis.log
+46	Test.Audit.PositionCensus	pass	direct invocation	placement-build-logs/046-Test.Audit.PositionCensus.log
+47	Test.Audit.TypedStateDecl	pass	direct invocation	placement-build-logs/047-Test.Audit.TypedStateDecl.log
+48	Test.Counterexamples.Schema.Codec	pass	direct invocation	placement-build-logs/048-Test.Counterexamples.Schema.Codec.log
+49	Test.Program.AuthorContract	pass	direct invocation	placement-build-logs/049-Test.Program.AuthorContract.log
+50	Test.Program.AuthoringContract	pass	direct invocation	placement-build-logs/050-Test.Program.AuthoringContract.log
+51	Test.Program.ConfigContract	pass	direct invocation	placement-build-logs/051-Test.Program.ConfigContract.log
+52	Test.Program.LinkedRowsContract	pass	direct invocation	placement-build-logs/052-Test.Program.LinkedRowsContract.log
+53	Test.Schema.DialectContract	pass	direct invocation	placement-build-logs/053-Test.Schema.DialectContract.log
+54	Test.Store.DerivedCheck	pass	direct invocation	placement-build-logs/054-Test.Store.DerivedCheck.log
+55	Test.Store.Templates	pass	direct invocation	placement-build-logs/055-Test.Store.Templates.log
+56	Test.Store.NodeContract	pass	direct invocation	placement-build-logs/056-Test.Store.NodeContract.log
+57	Test.Store.ProbeContract	pass	direct invocation	placement-build-logs/057-Test.Store.ProbeContract.log
+58	Test.Store.StoreContract	pass	direct invocation	placement-build-logs/058-Test.Store.StoreContract.log
+59	Test.Store.TraitContract	pass	direct invocation	placement-build-logs/059-Test.Store.TraitContract.log
+60	Test.Store.WordContract	pass	direct invocation	placement-build-logs/060-Test.Store.WordContract.log
+61	Tools.ArchitectureRoles	pass	direct invocation	placement-build-logs/061-Tools.ArchitectureRoles.log
+62	Tools.RowTypes	pass	direct invocation	placement-build-logs/062-Tools.RowTypes.log
+63	Tools.Variances	pass	direct invocation	placement-build-logs/063-Tools.Variances.log
+64	harness.truth.Truth	pass	direct invocation	placement-build-logs/064-harness.truth.Truth.log
+65	Effect4	pass	direct invocation	placement-build-logs/065-Effect4.log
+66	Effect4.Laws	pass	direct invocation	placement-build-logs/066-Effect4.Laws.log
+67	Test.Audit.AxiomGate	pass	direct invocation	placement-build-logs/067-Test.Audit.AxiomGate.log

@@ -183,11 +183,11 @@ reads `g e = (cata alg e).2`. Family members the block does not traverse carry `
 
 | stub file | converted | connector axioms |
 | --- | --- | --- |
-| `Program/Folds/Straight.lean` | `Straight` (every constructor a named field — row 35 settled) | `[propext]` |
+| `Laws/Program/Folds/Straight.lean` | `Straight` (every constructor a named field — row 35 settled) | `[propext]` |
 | `Laws/Program/Folds/Looped.lean` | `Looped` | `[propext]` |
-| `Program/Folds/Projections.lean` | `Stmts.toList`, `Effs.toList`, `LayerTerms.toList` (paramorphisms), `LayerTerms.length` | `[propext]` |
-| `Program/Folds/Ty.lean` | `renderRaw`, `members` (para), `key`, `isNever`, `isMember`, `normalize`, `isTagTy`, `rawSupportedErrTy`, `NativeAtom.projectProduct`, `Bridge.schema`, `Codec.layout`, `Codec.isSupported` — 12 of `Ty`'s 17 | `[propext]` |
-| `Program/Folds/Provision.lean` | `docsLayer` / `docsLayers` | `[propext]` |
+| `Laws/Program/Folds/Projections.lean` | `Stmts.toList`, `Effs.toList`, `LayerTerms.toList` (paramorphisms), `LayerTerms.length` | `[propext]` |
+| `Laws/Program/Folds/Ty.lean` | `renderRaw`, `members` (para), `key`, `isNever`, `isMember`, `normalize`, `isTagTy`, `rawSupportedErrTy`, `NativeAtom.projectProduct`, `Bridge.schema`, `Codec.layout`, `Codec.isSupported` — 12 of `Ty`'s 17 | `[propext]` |
+| `Laws/Program/Folds/Provision.lean` | `docsLayer` / `docsLayers` | `[propext]` |
 
 Twenty-one hand traversals had a fold and a kernel-checked connector after the first
 iteration, from six stub files that change nothing in the modules they read.
@@ -210,14 +210,14 @@ ever reduces a matcher on a constructor, never the recursion's `brecOn`. Connect
 
 | stub file | converted in this iteration |
 | --- | --- |
-| `Program/Folds/Ty.lean` | `findInt`, `Val.hasTy`, `Codec.encodeRaw`, `Codec.decodeRaw` — **`Ty` is 16 of 17** (`instReprTy.repr` remains) |
-| `Program/Folds/Provision.lean` | `Provision.build` / `buildAll` |
+| `Laws/Program/Folds/Ty.lean` | `findInt`, `Val.hasTy`, `Codec.encodeRaw`, `Codec.decodeRaw` — **`Ty` is 16 of 17** (`instReprTy.repr` remains) |
+| `Laws/Program/Folds/Provision.lean` | `Provision.build` / `buildAll` |
 | `Laws/Program/Folds/Denote.lean` | `denote`, `denoteB`, `denoteWith`, `denoteBWith` (**row 30's `denote` onto the fold**), `Agreement.depth`, `steps`, `depthB`, `boundB` |
-| `Program/Folds/Term.lean` | `printTerm`/`printTerms`, `Terms.names?`, `noRow`, `Terms.toList`, `Term.scoped`/`Terms.scoped`, `Term.weaken`/`Terms.weaken`, `evalTerm`/`evalTerms`, `argTy` — **`Term` is 12 of 14** |
+| `Laws/Program/Folds/Term.lean` | `printTerm`/`printTerms`, `Terms.names?`, `noRow`, `Terms.toList`, `Term.scoped`/`Terms.scoped`, `Term.weaken`/`Terms.weaken`, `evalTerm`/`evalTerms`, `argTy` — **`Term` is 12 of 14** |
 
 The census now marks a hand traversal that has its fold beside it: **`Eff` 18 of 40, `Ty` 16
 of 17, `Term` 12 of 14**; `Representation` 0 of 5 and `Val` 0 of 17. `Val` had no fold at all;
-`src/Effect4/Store/Fold.lean` is generated now (`ValFold` in the manifest, `7bb403ed`).
+`src/Effect4/Store/Carrier/Fold.lean` is generated now (`ValFold` in the manifest, `7bb403ed`).
 
 ### 7.2 The list-sibling shape (2026-09-18, `9cfeaf40`)
 
@@ -235,7 +235,7 @@ sibling called, since two siblings may read the same list. A list child the arm 
 
 | stub file | converted |
 | --- | --- |
-| `Store/Folds/Val.lean` | `render`, `encode`, `tag`, `handles`, `beq` (its second list an accumulator), `refs`, `malformedRef`, `acceptsAt` (two siblings), `printIn` (two siblings), `Config.Val.ofStore` |
+| `Laws/Store/Folds/Val.lean` | `render`, `encode`, `tag`, `handles`, `beq` (its second list an accumulator), `refs`, `malformedRef`, `acceptsAt` (two siblings), `printIn` (two siblings), `Config.Val.ofStore` |
 | `Laws/Machine/Folds/Val.lean` | `Val.keys`, `Val.validIn` (the stores fixed) |
 
 **`Val` is 12 of 17**, with twelve sibling connectors beside them. Then (`13dde151`) a
@@ -271,9 +271,9 @@ The sibling connectors' pointwise step is now the uniqueness theorem itself
 (`hom.f_val x = cata alg x`) rather than `f.eq_cata` under `funext`, which is what makes the
 paired case uniform with the plain one.
 
-Converted: `Val.WF`/`WFList`, `Val.wf`/`wfList`, `Val.payload` (`Store/Folds/Val.lean`);
-`Machine.reasonsOfVal`/`reasonsOfList` (`Machine/Folds/Stores.lean`, new);
-`Schema.withChecks?`, `Bridge.checkId` (`Program/Folds/Representation.lean`). Census: `Val` 16
+Converted: `Val.WF`/`WFList`, `Val.wf`/`wfList`, `Val.payload` (`Laws/Store/Folds/Val.lean`);
+`Machine.reasonsOfVal`/`reasonsOfList` (`Laws/Machine/Folds/Stores.lean`, new);
+`Schema.withChecks?`, `Bridge.checkId` (`Laws/Program/Folds/Representation.lean`). Census: `Val` 16
 of 17, `Representation` 4 of 5; **66 of 93** hand traversals had a fold and a kernel-checked
 connector at that point, every one at `[propext, Quot.sound]` (72 after §7.5).
 

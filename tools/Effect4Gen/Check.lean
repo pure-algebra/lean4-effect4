@@ -15,7 +15,7 @@ position. It refuses on any difference, which is what makes a hand edit inside a
 file, a changed tag, a renamed field or a dropped case a build failure rather than a silent
 change of every address in the store.
 
-    lake env lean -M 4096 --run tools\Effect4Gen\Check.lean src\Effect4\Program\Derived.lean
+    lake env lean -M 4096 --run tools\Effect4Gen\Check.lean src\Effect4\Store\Domain\Derived\Program.lean
 
 The environment is the one the generated files elaborate in: the tool reads the `import` lines
 of every file it is given and imports exactly those modules before it looks anything up.

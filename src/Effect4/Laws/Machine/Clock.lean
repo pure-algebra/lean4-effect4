@@ -1,5 +1,5 @@
 import Effect4.Machine.Timer
-import Effect4.Store.Clock
+import Effect4.Store.Domain.Clock
 import Effect4.Laws.Auto.Obligations
 
 /-!

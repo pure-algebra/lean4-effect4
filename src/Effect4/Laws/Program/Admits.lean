@@ -3,7 +3,7 @@ import Effect4.Laws.Program.TyView
 /-!
 # The fold condition for the subtype order (tooling plan 1.5)
 
-`Val.hasTy` is a fold (`fold_of` at `src/Effect4/Program/Folds/Ty.lean`), so "membership respects
+`Val.hasTy` is a fold (`fold_of` at `src/Effect4/Laws/Program/Folds/Ty.lean`), so "membership respects
 `sub`" is not a fact about `Val.hasTy` at all: it is a fact about *any* admission algebra whose
 arms satisfy the generated condition `AdmitsSub` (`Laws/Program/TyView.lean`, one field per
 constructor). Three declarations, in the order they depend on each other:
