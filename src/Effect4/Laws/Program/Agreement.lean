@@ -670,7 +670,7 @@ theorem contAOf_forkScopedIn (scope : Nat) :
 shape. -/
 theorem contAOf_forkScopedIn_other (v : Val) (hne : ∀ s, v ≠ Val.scopeHandle s) :
     Program.contAOf root (.forkScopedIn p) v = badShape := by
-  simp only [Program.contAOf, hne]
+  simp only [Program.contAOf]
 
 /-- The `forkIn` half reads the child, the options and the point's fuel off the `forkScoped`
 node, on the handle the read answered (§20). census: fork.scoped -/
@@ -692,7 +692,7 @@ theorem contAOf_acquireIn_scope (ctx : Ctx) (s : Nat) :
 
 theorem contAOf_acquireIn_other (ctx : Ctx) (v : Val) (hne : ∀ s, v ≠ Val.scopeHandle s) :
     Program.contAOf root (.acquireIn p ctx) v = badShape := by
-  simp only [Program.contAOf, hne]
+  simp only [Program.contAOf]
 
 theorem contAOf_acquired (ctx : Ctx) (s : Nat) (a : Val) :
     Program.contAOf root (.acquired p ctx s) a =
@@ -737,7 +737,7 @@ theorem contAOf_provideLayerWith_scope (p : Point) (scope : Nat) :
 
 theorem contAOf_provideLayerWith_other (p : Point) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
     Program.contAOf root (.provideLayerWith p) v = badShape := by
-  simp only [Program.contAOf, hne]
+  simp only [Program.contAOf]
 
 theorem contAOf_provideLayerBody (p : Point) (v : Val) :
     Program.contAOf root (.provideLayerBody p) v = provideLayerBodyK root p v := rfl
@@ -761,7 +761,7 @@ theorem contAOf_withMemoMapThen_memoMap (q : Point) (scope : Nat) (id : MemoMapI
 theorem contAOf_withMemoMapThen_other (q : Point) (scope : Nat) (v : Val) (hne : ∀ x, v ≠ Val.memoMap x) :
     Program.contAOf root (.withMemoMapThen q scope) v = badShape := by
   have hne' : ∀ x, v ≠ Val.handle 5 x := fun x => hne ⟨x⟩
-  simp only [Program.contAOf, hne']
+  simp only [Program.contAOf]
 
 theorem contAOf_addCurrentMemoMap (m : MemoMapId) (v : Val) :
     Program.contAOf root (.addCurrentMemoMap m) v = addCurrentMemoMapK m v := rfl
@@ -773,7 +773,7 @@ theorem contAOf_fromBuildThen_scope (q : Point) (m : MemoMapId) (child : Nat) :
 
 theorem contAOf_fromBuildThen_other (q : Point) (m : MemoMapId) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
     Program.contAOf root (.fromBuildThen q m) v = badShape := by
-  simp only [Program.contAOf, hne]
+  simp only [Program.contAOf]
 
 theorem contAOf_memoize_hit (q : Point) (m : MemoMapId) (scope : Nat) (cell : DeferredKey)
     (owner : MemoMapId) :
@@ -790,7 +790,7 @@ theorem contAOf_memoize_other (q : Point) (m : MemoMapId) (scope : Nat) (v : Val
     (hhit : ∀ c o, v ≠ .pair (Val.promise c) (Val.memoMap o)) (hunit : v ≠ Val.unit) :
     Program.contAOf root (.memoize q m scope) v = badShape := by
   have hhit' : ∀ c o, v ≠ .pair (Val.handle 3 c) (Val.handle 5 o) := fun c o => hhit ⟨c⟩ ⟨o⟩
-  simp only [Program.contAOf, hhit', hunit]
+  simp only [Program.contAOf]
 
 theorem contAOf_awaitPromise (cell : DeferredKey) (v : Val) :
     Program.contAOf root (.awaitPromise cell) v =
@@ -803,7 +803,7 @@ theorem contAOf_buildIntoLayerScope_scope (q : Point) (m : MemoMapId) (scope lay
 
 theorem contAOf_buildIntoLayerScope_other (q : Point) (m : MemoMapId) (scope : Nat) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
     Program.contAOf root (.buildIntoLayerScope q m scope) v = badShape := by
-  simp only [Program.contAOf, hne]
+  simp only [Program.contAOf]
 
 theorem contAOf_thenBuildInto (q : Point) (m : MemoMapId) (layerScope : Nat) (v : Val) :
     Program.contAOf root (.thenBuildInto q m layerScope) v =
@@ -817,7 +817,7 @@ theorem contAOf_freshThen_memoMap (q : Point) (scope : Nat) (id : MemoMapId) :
 theorem contAOf_freshThen_other (q : Point) (scope : Nat) (v : Val) (hne : ∀ x, v ≠ Val.memoMap x) :
     Program.contAOf root (.freshThen q scope) v = badShape := by
   have hne' : ∀ x, v ≠ Val.handle 5 x := fun x => hne ⟨x⟩
-  simp only [Program.contAOf, hne']
+  simp only [Program.contAOf]
 
 theorem contAOf_provideThen (q : Point) (m : MemoMapId) (scope : Nat) (mode : CombineMode)
     (v : Val) :
@@ -834,7 +834,7 @@ theorem contAOf_mergeChildren_scope (q : Point) (m : MemoMapId) (parent : Nat) :
 
 theorem contAOf_mergeChildren_other (q : Point) (m : MemoMapId) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
     Program.contAOf root (.mergeChildren q m) v = badShape := by
-  simp only [Program.contAOf, hne]
+  simp only [Program.contAOf]
 
 theorem contAOf_mergeForkOne_scope (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
     (forked : List FiberId) (child : Nat) :
@@ -845,7 +845,7 @@ theorem contAOf_mergeForkOne_scope (q : Point) (i : Nat) (m : MemoMapId) (parent
 theorem contAOf_mergeForkOne_other (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
     (forked : List FiberId) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
     Program.contAOf root (.mergeForkOne q i m parent forked) v = badShape := by
-  simp only [Program.contAOf, hne]
+  simp only [Program.contAOf]
 
 theorem contAOf_mergeForkNext_fiber (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
     (forked : List FiberId) (id : FiberId) :
@@ -863,7 +863,7 @@ theorem contAOf_mergeForkNext_other (q : Point) (i : Nat) (m : MemoMapId) (paren
     (forked : List FiberId) (v : Val) (hne : ∀ x, v ≠ Val.fiber x) :
     Program.contAOf root (.mergeForkNext q i m parent forked) v = badShape := by
   have hne' : ∀ x, v ≠ Val.handle 1 x := fun x => hne ⟨x⟩
-  simp only [Program.contAOf, hne']
+  simp only [Program.contAOf]
 
 /-! The n-ary merge's three names (the host rows slice): the same protocol over the
 `layers` spine, the sibling count read off the node at `q` (`mergeAllCount`). -/
@@ -880,7 +880,7 @@ theorem contAOf_mergeAllChildren_scope (q : Point) (m : MemoMapId) (parent : Nat
 theorem contAOf_mergeAllChildren_other (q : Point) (m : MemoMapId) (v : Val)
     (hne : ∀ x, v ≠ Val.scopeHandle x) :
     Program.contAOf root (.mergeAllChildren q m) v = badShape := by
-  simp only [Program.contAOf, hne]
+  simp only [Program.contAOf]
 
 theorem contAOf_mergeAllForkOne_scope (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
     (forked : List FiberId) (child : Nat) :
@@ -891,7 +891,7 @@ theorem contAOf_mergeAllForkOne_scope (q : Point) (i : Nat) (m : MemoMapId) (par
 theorem contAOf_mergeAllForkOne_other (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
     (forked : List FiberId) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
     Program.contAOf root (.mergeAllForkOne q i m parent forked) v = badShape := by
-  simp only [Program.contAOf, hne]
+  simp only [Program.contAOf]
 
 theorem contAOf_mergeAllForkNext_fiber (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
     (forked : List FiberId) (id : FiberId) :
@@ -909,7 +909,7 @@ theorem contAOf_mergeAllForkNext_other (q : Point) (i : Nat) (m : MemoMapId) (pa
     (forked : List FiberId) (v : Val) (hne : ∀ x, v ≠ Val.fiber x) :
     Program.contAOf root (.mergeAllForkNext q i m parent forked) v = badShape := by
   have hne' : ∀ x, v ≠ Val.handle 1 x := fun x => hne ⟨x⟩
-  simp only [Program.contAOf, hne']
+  simp only [Program.contAOf]
 
 theorem contAOf_mergeContexts (v : Val) :
     Program.contAOf root .mergeContexts v = mergeContextsK v := rfl

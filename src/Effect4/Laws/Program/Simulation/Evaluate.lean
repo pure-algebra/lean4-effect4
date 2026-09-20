@@ -147,13 +147,13 @@ theorem evaluatePrim_step (root : NativeEff) (c : List (FiberId × ExitV)) (m : 
   unfold evaluatePrim
   rw [hcur]
   cases cur
-  all_goals first | rfl | (simp [StepHead] at h) | skip
+  all_goals first | rfl | (simp [StepHead] at h)
   rename_i thunk
   cases thunk
-  all_goals first | rfl | (simp [StepHead] at h) | skip
+  all_goals first | rfl | (simp at h) | skip
   rename_i t
   cases t
-  all_goals first | rfl | (simp [StepHead] at h)
+  all_goals first | rfl | (simp at h)
 
 theorem evaluatePrim_yieldNow (root : NativeEff) (c : List (FiberId × ExitV)) (m : FMachine) (f : FRun)
     (y : Bool) {priority : Nat} (hcur : f.frame.current = Prim.yieldNowWith priority) :
@@ -189,7 +189,7 @@ theorem evaluatePrim_join (root : NativeEff) (c : List (FiberId × ExitV)) (m : 
   · simp only [evaluatePrim, hcur, hp, FiberAction.join, hm]
   · rcases hx : t.exit with _ | exit <;>
       simp only [evaluatePrim, hcur, hp, FiberAction.join, hm, hx, FiberCore.answerWith,
-        FiberCore.pushAsyncFinalizer, frameCore]
+        FiberCore.pushAsyncFinalizer]
 
 theorem parkOf_park (root : NativeEff) (c : List (FiberId × ExitV)) (kind : ParkKind) :
     (interpAt root c).parkOf (Prim.suspend (EffThunk.park kind)) = some (Except.ok kind) := rfl
@@ -433,14 +433,14 @@ theorem frame_closeScope (scope : Nat) (exit : ExitV) :
       FiberAction.closeScope (interpAt root c) m f y scope exit := by
   rcases hc : (interpAt root c).closeScope scope exit f.frame.interruptible f.id m.state with
     _ | ⟨state, program⟩ <;>
-    simp only [evaluatePrim.withFiber, FiberAction.closeScope, FiberCore.interruptible, frameCore, hc]
+    simp only [evaluatePrim.withFiber, FiberAction.closeScope, FiberCore.interruptible, hc]
 
 theorem frame_cancelRace (raceId : Nat) :
     evaluatePrim.withFiber (interpAt root c) m f y (.cancelRace raceId) =
       FiberAction.cancelRace (interpAt root c) m f y raceId := by
   rcases hr : m.race? raceId with _ | race
   · simp only [evaluatePrim.withFiber, FiberAction.cancelRace, FiberAction.coreAnswer,
-      FiberCore.answerWith, FiberCore.success, frameCore, hr]
+      FiberCore.answerWith, FiberCore.success, hr]
   · simp only [evaluatePrim.withFiber, FiberAction.cancelRace, hr]
 
 end FrameArms

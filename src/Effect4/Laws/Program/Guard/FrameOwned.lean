@@ -655,25 +655,24 @@ theorem withFiber_owned (p : NativeEff) (completed : List (FiberId × ExitV)) (t
           · simp only [RunMachine.emit, modify_races, linkScope_races, forkFinalizers_races]
             try rfl
           · rfl
-          · simp only [frameSites, raceSites, Option.getD_none, Option.getD_some, ha, countdownPark.resumePrim,
-              List.flatMap_cons, List.nil_append, List.append_nil] <;> sub_tac)
+          · simp only [frameSites, raceSites, Option.getD_none, Option.getD_some, countdownPark.resumePrim,
+              List.flatMap_cons, List.nil_append]; sub_tac)
     | split
-  all_goals try simp_all only [WithFiberAction.setInterruptible.injEq, Bool.false_eq_true,
-    Bool.true_eq_false, reduceCtorEq]
+  all_goals try simp_all only [WithFiberAction.setInterruptible.injEq,
+    reduceCtorEq]
   all_goals repeat' first
     | (solve
         | apply frameCodeOwned_same_races hf
-          · simp only [RunMachine.emit, modify_races, linkScope_races, forkFinalizers_races]
+          · simp only
             try rfl
           · rfl
-          · simp only [frameSites, raceSites, Option.getD_none, Option.getD_some, ha, countdownPark.resumePrim,
-              List.flatMap_cons, List.nil_append, List.append_nil] <;> sub_tac)
+          · simp only [frameSites, raceSites, Option.getD_none, ha,
+              List.flatMap_cons, List.nil_append] <;> sub_tac)
     | (solve
         | apply frameCodeOwned_same_races hf <;> try rfl
           apply replace_current_sites
           apply closeScope_hook_sites
           assumption)
-    | split
 
 theorem withFiber_hook_sites (p : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
     (thunk : EffThunk) (action : NAction)
@@ -739,11 +738,11 @@ theorem evaluatePrim_owned (p : NativeEff) (completed : List (FiberId × ExitV))
     | exact hf
     | (solve
         | apply frameCodeOwned_same_races hf
-          · simp only [RunMachine.emit, modify_races]
+          · simp only [RunMachine.emit]
             try rfl
           · rfl
-          · simp only [frameSites, raceSites, countdownPark.resumePrim,
-              List.flatMap_cons, List.nil_append, List.append_nil] <;> sub_tac)
+          · simp only [frameSites, raceSites,
+              List.flatMap_cons, List.nil_append]; sub_tac)
     | (solve
         | apply frameCodeOwned_same_races hf <;> try rfl
           apply replace_current_sites
@@ -754,7 +753,6 @@ theorem evaluatePrim_owned (p : NativeEff) (completed : List (FiberId × ExitV))
           apply replace_current_sites
           exact exitValue_sites _ _ _ _ _)
     | split
-  all_goals try simp_all only [reduceCtorEq]
 
 theorem exitScoped_owned (p : NativeEff) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (exit : ExitV) (bounds : RaceIdsBelow m)

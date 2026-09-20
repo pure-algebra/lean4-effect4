@@ -143,7 +143,7 @@ theorem withFiber_pending (interp : NInterp) (m : NativeMachine)
     | exact pendingShape_of_unparked _ park hp
     | exact pendingShape_park _ _ hp
     | split
-  all_goals simp_all [PendingShape, RunFiber.park]
+  all_goals simp_all
 
 theorem evaluatePrim_pending (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (park : f.parked = .notParked) (hp : f.pending = []) :
@@ -156,9 +156,8 @@ theorem evaluatePrim_pending (interp : NInterp) (m : NativeMachine)
     | exact pendingShape_of_unparked _ park hp
     | exact pendingShape_park _ _ hp
     | split
-  all_goals simp only [countdownPark]
+  all_goals simp only
   all_goals repeat' first | exact pendingShape_of_unparked _ park hp | exact pendingShape_park _ _ hp | split
-  all_goals simp_all [PendingShape, RunFiber.park]
 
 theorem exitScoped_pending (p : NativeEff) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) (park : f.parked = .notParked) (hp : f.pending = []) :
@@ -280,7 +279,6 @@ theorem withFiber_ready (interp : NInterp) (m : NativeMachine)
     | exact park
     | exact True.intro
     | split
-  all_goals simp_all [ReadyOutcome]
 
 theorem evaluatePrim_ready (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (park : f.parked = .notParked) :
@@ -295,7 +293,6 @@ theorem evaluatePrim_ready (interp : NInterp) (m : NativeMachine)
     | exact park
     | exact True.intro
     | split
-  all_goals simp_all [ReadyOutcome]
 
 theorem exitScoped_ready (p : NativeEff) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) (park : f.parked = .notParked) :
@@ -395,7 +392,6 @@ theorem withFiber_freshPark (interp : NInterp) (m : NativeMachine)
     | exact freshPark_unparked _ _ park
     | exact freshPark_minted rfl (Nat.lt_succ_self _)
     | split
-  all_goals simp_all
 
 theorem evaluatePrim_freshPark (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (park : f.parked = .notParked) :
@@ -409,7 +405,6 @@ theorem evaluatePrim_freshPark (interp : NInterp) (m : NativeMachine)
     | exact freshPark_unparked _ _ park
     | exact freshPark_minted rfl (Nat.lt_succ_self _)
     | split
-  all_goals simp_all
 
 theorem exitScoped_freshPark (p : NativeEff) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) (park : f.parked = .notParked) :

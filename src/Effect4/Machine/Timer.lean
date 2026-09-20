@@ -130,8 +130,7 @@ theorem cancel_pending (self : TimerStore) (fiber : FiberId) (token : Nat) :
     (self.cancel fiber token).wake.pending fiber token = false := by
   unfold cancel WakeList.cancel
   split
-  · simp only [WakeList.pending, List.any_eq_true, List.mem_filter, Bool.not_eq_eq_eq_not,
-      Bool.not_true, Bool.and_eq_false_imp, decide_eq_true_eq, decide_eq_false_iff_not]
+  · simp only [WakeList.pending]
     simp
     intro x _ h hf ht
     exact h.elim (fun h => h hf) (fun h => h ht)

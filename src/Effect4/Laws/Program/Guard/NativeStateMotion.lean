@@ -59,7 +59,6 @@ theorem withFiber_nextId (interp : NInterp) (m : NativeMachine) (f : NFiber)
     | solve | apply Nat.le_of_eq; exact (linkScope_nextId _ _ _ _ _ _ _).symm
     | dsimp only
     | split
-  all_goals try simp_all
 
 theorem evaluatePrim_nextId (interp : NInterp) (m : NativeMachine) (f : NFiber) (yielding : Bool) :
     m.nextId ≤ (evaluatePrim interp m f yielding).machine.nextId := by

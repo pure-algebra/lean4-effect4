@@ -674,8 +674,6 @@ theorem taskCmds_rel {t₁ : Task ν σ β ε δ ι α κ₁} {t₂ : Task ν σ
   cases t₁ <;> cases t₂ <;> first
     | exact absurd h not_false
     | (refine ListRel.cons ?_ (ListRel.cons True.intro ListRel.nil); exact h)
-    | (refine ListRel.cons ?_ (ListRel.cons True.intro ListRel.nil)
-       exact ⟨h.1, h.2.1, h.2.2⟩)
 
 theorem flatten_tasks_rel {l₁ : List (Bucket ν σ β ε δ ι α κ₁)}
     {l₂ : List (Bucket ν σ β ε δ ι α κ₂)} (h : ListRel (BucketMeans C) l₁ l₂) :

@@ -73,7 +73,7 @@ theorem emitModule_illTyped_iff :
   cases checked : checkTypedProgram (nativeSignature table) program with
   | none =>
     have typed := checkTypedProgram_refusal_iff.mp checked
-    simp [emitModule, checked, typed, Except.toOption]
+    simp [emitModule, checked, typed]
   | some typing =>
     simp only [emitModule, checked, emitTypedModule]
     split <;> simp [typing.typed]

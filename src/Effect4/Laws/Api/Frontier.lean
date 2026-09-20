@@ -45,7 +45,7 @@ theorem observe_awaitingAsync_iff (why : Exhaustion) (m : NativeMachine) :
     else if hasRunnable m then .idle else .parked) = _ ↔ _
   cases h : (Program.awaits m).isEmpty <;>
     cases he : m.fibers.all (fun f => f.exit.isSome) <;>
-    cases hr : hasRunnable m <;> simp [h, he, hr]
+    cases hr : hasRunnable m <;> simp
 
 theorem observe_terminated_iff (why : Exhaustion) (m : NativeMachine) :
     HostProtocol.observe m = .terminated ↔
@@ -57,7 +57,7 @@ theorem observe_terminated_iff (why : Exhaustion) (m : NativeMachine) :
     else if hasRunnable m then .idle else .parked) = _ ↔ _
   cases ha : (Program.awaits m).isEmpty <;>
     cases he : m.fibers.all (fun f => f.exit.isSome) <;>
-    cases hr : hasRunnable m <;> simp [ha, he, hr]
+    cases hr : hasRunnable m <;> simp
 
 theorem observe_idle_iff (why : Exhaustion) (m : NativeMachine) :
     HostProtocol.observe m = .idle ↔
@@ -68,7 +68,7 @@ theorem observe_idle_iff (why : Exhaustion) (m : NativeMachine) :
     else if hasRunnable m then .idle else .parked) = _ ↔ _
   cases ha : (Program.awaits m).isEmpty <;>
     cases he : m.fibers.all (fun f => f.exit.isSome) <;>
-    simp [ha, he]
+    simp
   exact all_exited_not_runnable m he
 
 theorem observe_idle_tape_iff (m : NativeMachine)

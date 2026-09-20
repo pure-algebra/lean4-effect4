@@ -1370,7 +1370,7 @@ theorem mem_of_lookup {σ : Subst} {i : Nat} {a : Arg} (h : lookup σ i = some a
 include hchild in
 /-- The child at a hole of the printing skeleton is node-like: its image is captured there, it
 is smaller than the tree, and it is readable, so the recursion says so. -/
-theorem child_at_hole {t : Tpl} (hout : row.out = .tpl t) (hrigid : t.rigid = true) {τ : Subst}
+theorem child_at_hole {t : Tpl} (_hout : row.out = .tpl t) (hrigid : t.rigid = true) {τ : Subst}
     (hτ : printArgs sig fam n (.tpl t) (args.map (ArgF.fold (printAlg sig))) 0 = .ok τ)
     (hinst : inst n τ t = some x)
     (hr : argsReadable sig fam n (.tpl t) (rowDaemon row) (args.map (ArgF.fold (readableAlg sig))) 0
@@ -1919,7 +1919,7 @@ theorem readLayer_print (hl : LawfulSpelling sig spell) {l : LayerTerm Op}
 /-- A readable program reads back from whatever the printer prints of it. -/
 theorem ReadsBack.of_Readable (hl : LawfulSpelling sig spell) {n : Nat} {e : Eff Op}
     (hr : Readable sig n e = true) : ReadsBack sig spell n e :=
-  fun x hp => read_print hl hr hp
+  fun _ hp => read_print hl hr hp
 
 end Theorem
 

@@ -209,7 +209,7 @@ theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), Looped e = true 
   | .provideLayer _ _ _, _, hpl
   | .service _, _, hpl
   | .provideService _ _ _, _, hpl
-  | .catchIf _ _ _, _, hpl => by simp [Looped, Straight] at hpl
+  | .catchIf _ _ _, _, hpl => by simp [Looped] at hpl
 
 /-! ### Every subterm of a straight-line program is straight-line -/
 
@@ -222,9 +222,9 @@ theorem child_plain {r : NativeEff} (hr : Looped r = true) {i : Nat} {m : Node N
     (h : (Node.eff r).child i = some m) : NodePlain m := by
   -- a constructor that is not plain is refuted by `hr` before its children are looked at
   cases r <;> first
-    | (simp [Looped, Straight] at hr; done)
+    | (simp [Looped] at hr; done)
     | (rcases i with _ | _ | _ | i <;> simp [Node.child] at h <;> subst h <;>
-        simp_all [NodePlain, Looped, Straight])
+        simp_all [NodePlain, Looped])
 
 theorem plain_at : ∀ (path : List Nat) (n : Node NativeOp) (e : NativeEff), NodePlain n →
     Node.at_ n path = some (Node.eff e) → Looped e = true

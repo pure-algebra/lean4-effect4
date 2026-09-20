@@ -145,13 +145,13 @@ theorem actionAt_fork {program : NCode} {options : Supervision.ForkOptions}
     (hact : actionAt root p = some (.fork program options)) :
     program = resolve root ((p.child 0).child 0) := by
   cases a <;> simp only [actionAt, h, Option.some.injEq] at hact <;> (repeat' split at hact) <;>
-    cases hact <;> rfl
+    cases hact; rfl
 
 theorem actionAt_forkIn {program : NCode} {options : Supervision.ForkOptions} {scope : Nat}
     (hact : actionAt root p = some (.forkIn program options scope)) :
     program = resolve root ((p.child 0).child 0) := by
   cases a <;> simp only [actionAt, h, Option.some.injEq] at hact <;> (repeat' split at hact) <;>
-    cases hact <;> rfl
+    cases hact; rfl
 
 theorem actionAt_not_forkScoped {program : NCode} {options : Supervision.ForkOptions}
     (hact : actionAt root p = some (.forkScoped program options)) : False := by
@@ -162,7 +162,7 @@ theorem actionAt_raceAll {entrants : List NCode}
     (hact : actionAt root p = some (.raceAll entrants)) :
     ∃ es, a = .raceAll es ∧ entrants = actionAt.entrants es ((p.child 0).child 0) := by
   cases a <;> simp only [actionAt, h, Option.some.injEq] at hact <;> (repeat' split at hact) <;>
-    cases hact <;> exact ⟨_, rfl, rfl⟩
+    cases hact; exact ⟨_, rfl, rfl⟩
 
 theorem actionAt_not_setInterruptible {body : NCode} {flag : Bool}
     (hact : actionAt root p = some (.setInterruptible body flag)) : False := by
@@ -172,7 +172,7 @@ theorem actionAt_not_setInterruptible {body : NCode} {flag : Bool}
 theorem actionAt_ambientScope (hact : actionAt root p = some .ambientScope) :
     ∃ child options, a = .forkScoped child options := by
   cases a <;> simp only [actionAt, h, Option.some.injEq] at hact <;> (repeat' split at hact) <;>
-    cases hact <;> exact ⟨_, _, rfl⟩
+    cases hact; exact ⟨_, _, rfl⟩
 
 theorem actionAt_not_closePar {fins : List NCode}
     (hact : actionAt root p = some (.closePar fins)) : False := by

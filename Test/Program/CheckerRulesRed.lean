@@ -18,6 +18,9 @@ namespace Test.Program.CheckerRulesRed
 
 open Effect4.Program Effect4.Program.Checker
 
+-- aesop's exhaustion report is a warning this control drops; the build's `warningAsError`
+-- would turn it into an unexpected error, so the option is off for this one command.
+set_option warningAsError false in
 /--
 error: unsolved goals
 Op : Type

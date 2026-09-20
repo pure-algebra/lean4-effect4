@@ -7,18 +7,21 @@ defaultTargets = ["Effect4", "Effect4Laws", "Test"]
 # Every Lean process of this package is capped at 6 GB (`lean --memory`): a runaway
 # elaboration aborts with "memory limit exceeded" instead of taking the machine down
 # (docs/research/2026-09-04-s3-volume-plan.md, memory rule).
+# Every warning is an error (`-DwarningAsError=true`, owner ruling 2026-09-19): a `sorry` or a
+# `native_decide` inside an `example` fails the build where it is written, which is what the
+# retired source scan of the trust gate used to catch, and a linter finding is fixed, not read.
 [[lean_lib]]
 name = "Effect4"
 srcDir = "src"
 roots = ["Effect4"]
-moreLeanArgs = ["-M6144"]
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 # The proof graph has its own root; namespaces inside its modules stay unchanged.
 [[lean_lib]]
 name = "Effect4Laws"
 srcDir = "src"
 roots = ["Effect4.Laws"]
-moreLeanArgs = ["-M6144"]
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 # The OCaml estate's Lean half (ocaml/README.md): the part of the OCaml language model the
 # backend prints through (`OCaml5.Ml`), the LCNF→OCaml backend (`OCaml5.Lcnf`), the `Eff` IR
@@ -31,7 +34,7 @@ name = "OCaml5"
 srcDir = "src"
 roots = ["OCaml5"]
 globs = ["OCaml5", "OCaml5.Tools.+"]
-moreLeanArgs = ["-M6144"]
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 # The generator of `Canonical` instances and its projection guard
 # (docs/research/2026-09-04-cas-trait-plan.md §4): `--run` tools over `Lean.Meta`, not part
@@ -40,7 +43,7 @@ moreLeanArgs = ["-M6144"]
 name = "Effect4Gen"
 srcDir = "tools"
 roots = ["Effect4Gen.Main", "Effect4Gen.Check"]
-moreLeanArgs = ["-M6144"]
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 # The Effect4-side `--run` drivers (`tools/Tools/`): thin `main`s over library modules that
 # cross to bytes — `Tools.TsGen`, the TypeScript estate's generated files (schemas, JSON
@@ -54,7 +57,7 @@ moreLeanArgs = ["-M6144"]
 name = "Tools"
 srcDir = "tools"
 globs = ["Tools.+"]
-moreLeanArgs = ["-M6144"]
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 # Shared metaprogramming evidence. No Effect4, Aesop or target-profile dependency.
 # Laws and Conform both depend on this seam; neither depends on the other.
@@ -62,7 +65,7 @@ moreLeanArgs = ["-M6144"]
 name = "ProofGraph"
 srcDir = "tools"
 globs = ["ProofGraph.+"]
-moreLeanArgs = ["-M6144"]
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 # Verification tooling (docs/research/type-tooling/, 2026-09-09): the generic core of
 # conformance checks between representations — one report format, separate evidence methods,
@@ -79,7 +82,7 @@ moreLeanArgs = ["-M6144"]
 name = "Conform"
 srcDir = "tools"
 globs = ["Conform.+"]
-moreLeanArgs = ["-M6144"]
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 # The green battery: the audit root and its import closure.
 [[lean_lib]]
@@ -88,7 +91,7 @@ name = "Test"
 # buildable on a fresh checkout without globbing the intentionally red batteries.
 roots = ["Test"]
 globs = ["Test"]
-moreLeanArgs = ["-M6144"]
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 # The five independently green area batteries; a narrow sweep is
 # `lake build TestSchema` rather than a whole-tree build. The globs are `.+`,
@@ -98,27 +101,27 @@ moreLeanArgs = ["-M6144"]
 [[lean_lib]]
 name = "TestSchema"
 globs = ["Test.Schema.+"]
-moreLeanArgs = ["-M6144"]
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 [[lean_lib]]
 name = "TestProgram"
 globs = ["Test.Program.+"]
-moreLeanArgs = ["-M6144"]
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 [[lean_lib]]
 name = "TestMachine"
 globs = ["Test.Machine.+"]
-moreLeanArgs = ["-M6144"]
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 [[lean_lib]]
 name = "TestCodegen"
 globs = ["Test.Codegen.+"]
-moreLeanArgs = ["-M6144"]
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 [[lean_lib]]
 name = "TestStore"
 globs = ["Test.Store.+"]
-moreLeanArgs = ["-M6144"]
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 # The generic effect algebra, morphisms, transport, families, and the shared trace
 # alphabet. Exact commit of tag v0.8.0 of pure-algebra/lean4-effects.

@@ -196,8 +196,8 @@ theorem updateThenK_keys (root : NativeEff) (u : Env.ContextUpdate) (body : Regi
     · -- `setContext(next)`'s handles are the update's and the previous map's; the restoring
       -- name carries the region's and the previous map's
       intro x hx
-      simp only [nativeKeys, primKeys, EffThunk.keys, EffName.keys, Ctx.keys_withServices,
-        Val.keys_context, Ctx.keys_eq_handleKeys, List.mem_append, List.nil_append] at hx ⊢
+      simp only [nativeKeys, primKeys, EffThunk.keys, EffName.keys,
+        Val.keys_context, Ctx.keys_eq_handleKeys, List.mem_append] at hx ⊢
       rcases hx with h | h | h
       · rcases List.mem_append.mp (Env.ContextUpdate.apply_keys u prev.services h) with h | h
         · exact Or.inl (Or.inl h)

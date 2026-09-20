@@ -95,7 +95,7 @@ theorem deferredOk_register {d : DeferredStore} (hd : DeferredOk d) (cell : Defe
     | none =>
       dsimp only
       refine ⟨deferredOk_setCell hd cell (fun p hp => ?_), fun p hp => by cases hp⟩
-      simp only [hcomp] at hp
+      simp only at hp
       cases hp
 
 theorem deferredOk_cancel {d : DeferredStore} (hd : DeferredOk d) (cell : DeferredKey)

@@ -137,7 +137,7 @@ theorem filter_compileReasons (m : NativeMachine) : (compileReasons m).filter no
   | nil => rfl
   | cons f fs ih =>
     cases h : isCompileFrontier f.frame.current <;>
-      simp [List.filterMap_cons, h, nonCompile, ih]
+      simp [h, nonCompile, ih]
 
 theorem filter_compileReasonsR (r : RState) : (compileReasonsR r).filter nonCompile = [] := by
   unfold compileReasonsR
@@ -146,7 +146,7 @@ theorem filter_compileReasonsR (r : RState) : (compileReasonsR r).filter nonComp
   | nil => rfl
   | cons f fs ih =>
     cases h : isCompileFrontierR f.frame.current <;>
-      simp [List.filterMap_cons, h, nonCompile, ih]
+      simp [h, nonCompile, ih]
 
 /-- Ordered list equality; compile reasons alone are explicitly outside this claim. -/
 theorem book_reasons_nonCompile {e : NativeEff} {m : NativeMachine} {r : RState}

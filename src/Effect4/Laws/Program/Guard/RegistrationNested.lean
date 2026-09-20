@@ -57,7 +57,6 @@ theorem withFiber_registration (interp : NInterp) (m : NativeMachine)
     | apply registrationQueue_append
     | constructor
     | split
-  all_goals simp_all
 
 theorem evaluatePrim_registration (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) :
@@ -71,7 +70,6 @@ theorem evaluatePrim_registration (interp : NInterp) (m : NativeMachine)
     | exact True.intro
     | constructor
     | split
-  all_goals simp_all
 
 theorem exitScoped_registration (p : NativeEff) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) :

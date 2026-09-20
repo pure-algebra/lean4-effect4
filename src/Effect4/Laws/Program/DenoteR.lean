@@ -754,12 +754,12 @@ def denoteLayerZero (root : NativeEff) : LayerTerm NativeOp → Point → MemoMa
        else denoteLayerZero root inner (q.child 0) m scope)).bind fun
       | .success v => .pure (.success v)
       | .failure c => .pure (.failure (orDieCause c))
-  | .effect key body, q, m, scope =>
+  | .effect key _body, q, m, scope =>
     fromBuildR scope fun child => memoizeR q m child fun layerScope =>
       updateContextR (.provideService Env.scopeKey (Val.scopeHandle layerScope))
         ((guardR .onSuccess (pending .compileFuel (q.child 0))).bind (seqR fun v =>
           bindServiceR (some key) v))
-  | .effectDiscard body, q, m, scope =>
+  | .effectDiscard _body, q, m, scope =>
     fromBuildR scope fun child => memoizeR q m child fun layerScope =>
       updateContextR (.provideService Env.scopeKey (Val.scopeHandle layerScope))
         ((guardR .onSuccess (pending .compileFuel (q.child 0))).bind (seqR fun v =>
@@ -951,7 +951,7 @@ theorem denoteR_perform_sync (op : NativeOp) (r : Term) (h : p.fuel ≠ 0)
   cases op with
   | scopeMake strategy => cases strategy <;> rfl
   | external _ => cases hk
-  | _ => simp_all [NativeOp.row] <;> rfl
+  | _ => simp_all [NativeOp.row]
 
 theorem denoteR_catchCause (b hd : NativeEff) (h : p.fuel ≠ 0) :
     denoteR root (.catchCause b hd) p =
@@ -1286,7 +1286,7 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
     | onExit _ _ | uninterruptible _ | interruptible _ | select _ _ _ _
     | iterate _ _ _ _ _ _ | yieldNow _ | «scoped» _ | acquireRelease _ _
     | provideLayer _ _ _ | service _ =>
-      simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte, headExit, frontier]
+      simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte, headExit]
 termination_by structural e
 
 /-- The synchronous classifier is unchanged by the shared async route. -/
@@ -1299,7 +1299,7 @@ theorem inlineYield_perform_sync (op : NativeOp) (r : Term) (q : Point)
   cases op with
   | scopeMake strategy => cases strategy <;> rfl
   | external _ => cases hk
-  | _ => simp_all [NativeOp.row, inlineYield] <;> rfl
+  | _ => simp_all [NativeOp.row, inlineYield]
 
 /-- A straight source form that `inlineYield` classifies as an immediate exit denotes to
 exactly that exit: the fold of `denoteR`'s `exit` arm is the body's straight meaning. -/
@@ -1531,7 +1531,7 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
       have hfin := denoteR_straight root fin
         ({ p with completed := [] }.childWith 1 (reifyExitVal ex)) hparts.2
         (by simp only [Agreement.depth] at hp; simp only [Point.childWith]; omega)
-      simp only [denoteR, Point.childWith_fuel, Point.completed_fuel, hf, Nat.add_sub_cancel] at hfin
+      simp only [denoteR, Point.childWith_fuel, hf, Nat.add_sub_cancel] at hfin
       rw [eraseControl_constructR, hfin, Effects.Program.inl_bind]
       rfl
   | .gen _, _, hs, _ | .uninterruptible _, _, hs, _ | .interruptible _, _, hs, _

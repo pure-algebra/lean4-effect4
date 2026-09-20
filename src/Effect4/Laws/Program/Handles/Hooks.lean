@@ -193,7 +193,7 @@ theorem contAOf_native_keys (root : NativeEff) (n : EffName) (v : Val) :
       sub_tac
     | none =>
       have hne := Val.scope?_none hs
-      simp only [Program.contAOf, hne]
+      simp only [Program.contAOf]
       exact List.nil_subset _
   case scopeProvide p s =>
     simp only [Program.contAOf]
@@ -326,7 +326,7 @@ theorem caughtErrorValue?_first {env : List Val} {test : Term} {cause : CauseV} 
 theorem caughtErrorValue?_keys {env : List Val} {test : Term} {cause : CauseV} {value : Val}
     (h : caughtErrorValue? env test cause = some value) : value.keys = [] := by
   have hf := caughtErrorValue?_first h
-  simp only [firstErrorValue?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hf
+  simp only [firstErrorValue?, Option.bind_eq_some_iff] at hf
   obtain ⟨error, _, he⟩ := hf
   exact valOfErr_keys error value he
 
@@ -821,10 +821,10 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
         · exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
         · cases hq : s.externals.answers with
           | nil =>
-            simp only [hq]
+            simp only
             exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
           | cons answer rest =>
-            simp only [hq]
+            simp only
             split
             · rename_i ha
               have hinput : Ok ⟨ids, s⟩ (answer.keys ++ s.keys) := by

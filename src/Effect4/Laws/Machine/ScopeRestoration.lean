@@ -73,10 +73,10 @@ theorem resumeClosedScope_failure_pending (interp : PrimInterp ν τ β ε δ ι
   -- rest: the restoring frame pushes nothing, so the drain is empty and the traversal
   -- continues on `rest` exactly as before.
   simp [resumeClosedScope, completed, Prim.ofExit, FrameFiber.step, FrameFiber.resumeCause,
-    FrameFiber.getCont, FrameFiber.popFrom, FrameFiber.continueFrom, FrameFiber.joinPushed,
+    FrameFiber.getCont, FrameFiber.popFrom, FrameFiber.joinPushed,
     FrameFiber.passPushed, FrameFiber.passOn, Prim.ensure, Prim.answerOf, Prim.passEvents,
     Prim.hasArm, Prim.arms, FrameFiber.interrupted, List.append_assoc]
-  split <;> (try simp_all [List.append_assoc]) <;> (split <;> simp_all [List.append_assoc])
+  split <;> (try simp_all) <;> (split <;> simp_all)
 
 /-- The actual stateful close and adapter agree with existing closeExitsM, exact restoration and the real frame step. census: scope.close-sequential -/
 theorem resumeClosedScope_complete
@@ -113,10 +113,10 @@ theorem resumeClosedScope_success_no_pending
        [.popped (.setInterruptible true), .ranContAll (.setInterruptible true)]
         ++ continued.2)) := by
   simp [resumeClosedScope, completed, Prim.ofExit, FrameFiber.step, FrameFiber.resumeValue,
-    FrameFiber.getCont, FrameFiber.popFrom, FrameFiber.continueFrom, FrameFiber.joinPushed,
+    FrameFiber.getCont, FrameFiber.popFrom, FrameFiber.joinPushed,
     FrameFiber.passPushed, FrameFiber.passOn, Prim.ensure, Prim.answerOf, Prim.passEvents,
-    Prim.hasArm, Prim.arms, FrameFiber.interrupted, List.append_assoc]
-  split <;> (try simp_all [List.append_assoc]) <;> (split <;> simp_all [List.append_assoc])
+    Prim.hasArm, Prim.arms, List.append_assoc]
+  split <;> (try simp_all) <;> (split <;> simp_all)
 
 /-- Nested uninterruptible adds no restoring frame when an outer mask remains active. census: scope.acquire-release -/
 theorem resumeClosedScope_already_masked

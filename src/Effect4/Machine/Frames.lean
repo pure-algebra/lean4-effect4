@@ -1956,7 +1956,7 @@ fused loop would instead have carried that frame past the frames below and
 answered with whichever of them declared `contA`, one pop too late and with the
 fiber still masked. census: op.AsyncFinalizer -/
 theorem popFrom_asyncFinalizer_pops_its_push (onInterrupt : ν) (cause : Cause ε δ ι α)
-    (fiber : FrameFiber ν σ β ε δ ι α) (hstack : fiber.stack = [])
+    (fiber : FrameFiber ν σ β ε δ ι α) (_hstack : fiber.stack = [])
     (hflag : fiber.interruptible = true) (hcause : fiber.interruptedCause = some cause) :
     (popFrom Arm.contA false [Prim.asyncFinalizer onInterrupt] fiber).answer =
         ContAnswer.replacement (Prim.failure cause) ∧

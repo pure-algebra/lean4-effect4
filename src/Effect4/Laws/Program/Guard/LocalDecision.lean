@@ -106,7 +106,7 @@ theorem interruptFrom_eq (p : NativeEff) (table : RowTable) (fuel : Nat) (m : Na
           [.evaluate target, .drainDue]).1
       else interruptBeforeLoop p table m target f who extra := by
   letI := evaluatorFor p table
-  simp only [steppedBy, stepDecision, stepDecisionState, lookup, interruptBeforeLoop,
+  simp only [steppedBy, stepDecisionState, lookup, interruptBeforeLoop,
     stepDecisionState.loop, FiberCore.deferredInterrupt]
   split <;> rfl
 

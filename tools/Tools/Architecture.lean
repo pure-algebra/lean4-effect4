@@ -62,8 +62,8 @@ def countLines (s : String) : Nat :=
   s.foldl (fun n c => if c == '\n' then n + 1 else n) 0
 
 /-- Prefix and suffix removal as `String`s: the toolchain's `drop` answers a slice. -/
-def dropStr (s : String) (n : Nat) : String := (s.toSubstring.drop n).toString
-def dropRightStr (s : String) (n : Nat) : String := (s.toSubstring.dropRight n).toString
+def dropStr (s : String) (n : Nat) : String := (s.toRawSubstring.drop n).toString
+def dropRightStr (s : String) (n : Nat) : String := (s.toRawSubstring.dropRight n).toString
 
 /-- Directories the walk never enters: hidden ones, installs, build trees. -/
 def skipDir (p : FilePath) : Bool :=
@@ -217,7 +217,7 @@ structure Group where
 deriving Inhabited
 
 def cells (line : String) : List String :=
-  let parts := (line.splitOn "|").map String.trim
+  let parts := (line.splitOn "|").map (·.trimAscii.toString)
   let parts := if parts.head? == some "" then parts.drop 1 else parts
   if parts.getLast? == some "" then parts.dropLast else parts
 
@@ -225,7 +225,7 @@ def cells (line : String) : List String :=
 def readGroups : IO (List Group) := do
   let text ← IO.FS.readFile "docs/GENERATED.md"
   let lines := text.splitOn "\n"
-  let after := lines.dropWhile (fun l => l.trim != "## The groups")
+  let after := lines.dropWhile (fun l => l.trimAscii.toString != "## The groups")
   let table := (after.drop 1).dropWhile (fun l => !l.startsWith "|") |>.takeWhile (·.startsWith "|")
   let rows := table.drop 2
   return rows.filterMap fun l =>
@@ -243,7 +243,7 @@ deriving Inhabited
 
 def tomlValue (line : String) : String :=
   match line.splitOn "=" with
-  | _ :: rest => ((String.intercalate "=" rest).trim.splitOn "\"").getD 1 ""
+  | _ :: rest => ((String.intercalate "=" rest).trimAscii.toString.splitOn "\"").getD 1 ""
   | _ => ""
 
 def readPins : IO (List Pin) := do
@@ -251,7 +251,7 @@ def readPins : IO (List Pin) := do
   let mut pins : Array Pin := #[]
   let mut cur : Option Pin := none
   for raw in text.splitOn "\n" do
-    let line := raw.trim
+    let line := raw.trimAscii.toString
     if line == "[[require]]" then
       if let some p := cur then pins := pins.push p
       cur := some ⟨"", "", ""⟩

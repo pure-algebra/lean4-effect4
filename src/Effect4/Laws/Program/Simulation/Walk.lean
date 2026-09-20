@@ -477,7 +477,7 @@ theorem walk_mask (root : NativeEff) (completed : List (FiberId × ExitV)) (ex :
         (popR (interpRAt root completed) ex T' frame).1 (popR (interpRAt root completed) ex T' frame).2)
     (flag : Bool) (s : ScopeFrame) (hs : s = .restoreMask flag ∨ s = .finalizerMask flag)
     (fiber : FFiber) (frame : RSaved) (hstack : fiber.stack = [])
-    (hi : fiber.interruptible = frame.interruptible)
+    (_hi : fiber.interruptible = frame.interruptible)
     (hc : fiber.interruptedCause = frame.interruptedCause)
     (hd : fiber.deferredInterrupt = frame.deferredInterrupt) (hm : MaskInv flag T')
     (hcur : frame.current = cur) :
@@ -776,19 +776,19 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
           refine WalkRel.arm _ hp0.1 (by nofun) ?_ ?_ (by rw [hp0.2]; exact hi)
             (by rw [hp0.2]; exact hc) (by rw [hp0.2]; exact hd) hm
           · intro next pushed harm
-            simp only [armOf_whileLoop, toPrimInterp_loopResume, h₁] at harm
+            simp only [armOf_whileLoop, h₁] at harm
             obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj harm)
             exact ⟨hbody.prepare completed,
               by rw [hp0.2]; exact StackMeans.slot (SlotMeans.whileLoop p p' _ hp) rest⟩
-          · simp only [armOf_whileLoop, toPrimInterp_loopResume, h₁]; rfl
+          · simp only [armOf_whileLoop, h₁]; rfl
         | finish hcode =>
           refine WalkRel.arm _ hp0.1 (by nofun) ?_ ?_ (by rw [hp0.2]; exact hi)
             (by rw [hp0.2]; exact hc) (by rw [hp0.2]; exact hd) hm
           · intro next pushed harm
-            simp only [armOf_whileLoop, toPrimInterp_loopResume, h₁] at harm
+            simp only [armOf_whileLoop, h₁] at harm
             obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj harm)
             exact ⟨hcode.prepare completed, by rw [hp0.2]; exact rest⟩
-          · simp only [armOf_whileLoop, toPrimInterp_loopResume, h₁]; rfl
+          · simp only [armOf_whileLoop, h₁]; rfl
       | failure c =>
         simp only [demandOf, skipOf]
         have hp0 := popFrom_plain_pass .contE true (f := Prim.whileLoop (.loop p') cursor)

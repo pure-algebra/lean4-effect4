@@ -172,7 +172,7 @@ theorem frame_closeScope (scope : Nat) (exit : ExitV) :
     evaluatePrim.withFiber interp m f y (.closeScope scope exit) =
       FiberAction.closeScope interp m f y scope exit := by
   rcases hc : interp.closeScope scope exit f.frame.interruptible f.id m.state with _ | ⟨state, program⟩ <;>
-    simp only [evaluatePrim.withFiber, FiberAction.closeScope, FiberCore.interruptible, frameCore, hc]
+    simp only [evaluatePrim.withFiber, FiberAction.closeScope, FiberCore.interruptible, hc]
 
 -- D6b: the public interrupt answers the `fiberInterruptAs` program; that program's arm records
 -- and delegates; the scoped finalizer answers void on itself, else the public program.
@@ -191,8 +191,8 @@ theorem frame_interruptScoped (target : FiberId) :
       FiberAction.interruptScoped interp m f y target := by
   by_cases h : target = f.id
   · simp only [evaluatePrim.withFiber, FiberAction.interruptScoped, FiberAction.coreAnswer,
-      FiberCore.answerWith, FiberCore.success, frameCore, h, ↓reduceIte]
-  · simp only [evaluatePrim.withFiber, FiberAction.interruptScoped, FiberCore.answerWith, frameCore, h,
+      FiberCore.answerWith, FiberCore.success, h, ↓reduceIte]
+  · simp only [evaluatePrim.withFiber, FiberAction.interruptScoped, FiberCore.answerWith, h,
       ↓reduceIte]
 
 -- §20: the `Scope` service read answers the handle or dies; the parallel close's step
@@ -201,7 +201,7 @@ theorem frame_ambientScope :
     evaluatePrim.withFiber interp m f y .ambientScope = FiberAction.ambientScope interp m f y := by
   rcases h : interp.ambientScope f.context with _ | scope <;>
     simp only [evaluatePrim.withFiber, FiberAction.ambientScope, FiberAction.coreAnswer,
-      FiberCore.answerWith, FiberCore.success, FiberCore.failure, frameCore, h]
+      FiberCore.answerWith, FiberCore.success, FiberCore.failure, h]
 
 theorem frame_closePar (finalizers : List NCode) :
     evaluatePrim.withFiber interp m f y (.closePar finalizers) =
@@ -228,7 +228,7 @@ theorem frame_cancelRace (raceId : Nat) :
       FiberAction.cancelRace interp m f y raceId := by
   rcases hr : m.race? raceId with _ | race
   · simp only [evaluatePrim.withFiber, FiberAction.cancelRace, FiberAction.coreAnswer,
-      FiberCore.answerWith, FiberCore.success, frameCore, hr]
+      FiberCore.answerWith, FiberCore.success, hr]
   · simp only [evaluatePrim.withFiber, FiberAction.cancelRace, hr]
 
 theorem frame_raceAll (entrants : List NCode) :
@@ -250,7 +250,7 @@ theorem frame_join (root : NativeEff) (target : FiberId) (mode : Supervision.Obs
   · simp only [evaluatePrim, FiberAction.join, interpOf, hm]
   · rcases hx : t.exit with _ | exit <;>
       simp only [evaluatePrim, FiberAction.join, interpOf, hm, hx, FiberCore.answerWith,
-        FiberCore.pushAsyncFinalizer, frameCore]
+        FiberCore.pushAsyncFinalizer]
 
 -- The term arms are the same helpers: a value answer installs the continuation directly
 -- (P2), an answer that arrives as code goes through the saved answer slot.

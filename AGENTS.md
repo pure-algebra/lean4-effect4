@@ -141,7 +141,9 @@ its arrows; anything else is a leak.
   searched proof to `[propext, Quot.sound]` like any other; `simp` at `(x == x) = true` for
   `String`/`Nat` and aesop on a catch-all's negative hypotheses both reach `Classical.choice`.
   Not written by hand in a new or touched proof, anywhere under `src/`: `simp_all`, `first | …`
-  and `try` (a fallback that fails silently into an unsolved goal hides a missing lemma). A
+  and `try` (a fallback that fails silently into an unsolved goal hides a missing lemma). Every
+  warning is an error (`-DwarningAsError=true` in the lakefile, 2026-09-19): an unused `simp`
+  argument, a dead tactic or a `sorry` in an `example` fails the build where it is written. A
   hand-written `simp` names its lemmas as `simp only [...]`.
 - The gates that run with a commit are the ones the change reaches: `make check-cases` after a
   new match on a policy family, `python3 scripts/generate.py --only <family>` after a generator

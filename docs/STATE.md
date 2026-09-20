@@ -90,7 +90,8 @@ coverage follows fields and column occurrences (two new controls), `E4-STORES-CE
 reference-validity boundary, row 84 owes the transaction connector, the map says presence not
 completion. The owner then retired the proof-shape ceiling and the source scan (the gate reads the
 compiled environment), collapsed the tiers to `check` and `check-full`, and cut the citation,
-compatibility, known-red and script-test lanes.
+compatibility, known-red and script-test lanes. The tree's 254 warnings were cleared and every
+library builds with `-DwarningAsError=true`.
 The immediate priority is shared representations and composition laws. Known future modules
 can reserve contracts with explicit missing implementations using the existing wanted machinery.
 Supporting reviews and the paused tooling handoff are tracked in

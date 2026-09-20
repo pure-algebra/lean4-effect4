@@ -126,7 +126,7 @@ theorem launch_queue {interp : RunInterp ν σ β ε δ ι α χ St} {race : Nat
     QueueKeeps m (launchEntrant interp race m f p).1 := by
   unfold launchEntrant
   dsimp only
-  queue_chain with queue_hops interp
+  queue_leaf
 
 theorem inject_queue {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ}
     {yielding : Bool} {it : Iter ν σ β ε δ ι α χ St} (h : injectYield m f yielding = some it) :
@@ -159,8 +159,7 @@ theorem exit_queue {interp : RunInterp ν σ β ε δ ι α χ St} {m : RunMachi
     QueueKeeps m (exitFiber interp m f exit).1 := by
   unfold exitFiber exitFiber.exitInterruptChildren exitFiber.exitStore
   dsimp only
-  (repeat' split) <;> queue_chain with
-    (first | queue_hops interp | exact observers_queue (interp := interp))
+  (repeat' split) <;> queue_leaf
 
 theorem finishFrame_queue {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ}
     {yielding : Bool} {next : FrameStep ν σ β ε δ ι α} {events : List (FrameEvent ν σ β ε δ ι α)}

@@ -70,7 +70,6 @@ theorem withFiber_external (interp : NInterp) (m : NativeMachine)
     | exact .unparked _ _ park
     | exact .noExternal _ _ rfl
     | split
-  all_goals simp_all
 
 theorem parkOf_noExternal (p : NativeEff) (table : RowTable) (completed)
     (code : NCode) (kind : Except CauseV ParkKind)
@@ -112,7 +111,7 @@ theorem evaluatePrim_external (p : NativeEff) (table : RowTable) (completed)
   all_goals repeat' first
     | exact .unparked _ _ park
     | exact .noExternal _ _ rfl
-    | solve | apply ExternalParkKeys.noExternal; simp only [hc, externalRequest]
+    | solve | apply ExternalParkKeys.noExternal; simp only [externalRequest]
     | exact stepFrame_external _ _ _ _ park
     | exact finalizerOr_external _ _ _ _ _ park
     | exact withFiber_external _ _ _ _ _ park (by simp only [externalRequest, *])

@@ -13,6 +13,7 @@ open Std.Do
   | none => simp [Triple.iff, wp, Option.instWP._aux_1, OptionT.run, Id.run]
   | some a => simpa [Triple.iff, wp, Option.instWP._aux_1, OptionT.run, Id.run] using (ofVal_exact h)
 
+set_option mvcgen.warning false in
 /-- Compose the actual list traversal through standard List equations and Std.Do's
 Option/bind specifications. A successful decode reconstructs the whole input, in order. -/
 @[spec] theorem mapM_ofVal_spec {α : Type} [Canonical α] (vs : List Val) :

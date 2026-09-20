@@ -3002,7 +3002,7 @@ theorem finalizerOr_minted_with_ambient (hb : KeyBounded nk sk interp ambient)
 
 /-- `fiberInterruptAs` records and delegates (D6b): the target's run and the return that names
 the host and the target are the commands. -/
-theorem interruptAs_minted (hb : KeyBounded nk sk interp ambient)
+theorem interruptAs_minted (_hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool) (target who : FiberId)
     (hm : MintedIn m (Handle.fiber f.id :: Handle.fiber target :: m.keys nk sk ++ f.keys nk sk)) :
@@ -3103,7 +3103,7 @@ theorem withFiber_fork_minted (hb : KeyBounded nk sk interp ambient)
   · sub_tac
   · -- the start's commands, then the tracking command unless daemon (D6b)
     simp only [cmdsKeys, List.flatMap_append]
-    split <;> simp only [cmdsKeys, List.flatMap_cons, List.flatMap_nil, Cmd.keys, List.append_nil] <;> sub_tac
+    split <;> simp only [List.flatMap_cons, List.flatMap_nil, Cmd.keys, List.append_nil] <;> sub_tac
 
 theorem withFiber_forkIn_minted (hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
@@ -3235,7 +3235,7 @@ theorem countdown_arm_minted (hb : KeyBounded nk sk interp ambient)
   refine Ok_of_subset ?_ (Ok_append.mpr ⟨hok, Ok_mono hle2 hI⟩)
   (repeat' split) <;> sub_tac
 
-theorem withFiber_interruptAll_minted (hb : KeyBounded nk sk interp ambient)
+theorem withFiber_interruptAll_minted (_hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool) (targets : List FiberId)
     (interruptor : Option FiberId)
@@ -3552,7 +3552,7 @@ theorem withFiber_cancelRace_minted (hb : KeyBounded nk sk interp ambient)
     -- the walk command names the host and the entrants live now (D6b)
     refine Ok_of_subset ?_ (Ok_append.mpr ⟨hm, hlive⟩)
     simp only [iterKeys, Outcome.keys, cmdsKeys, List.flatMap_cons, List.flatMap_nil, Cmd.keys,
-      List.append_nil, List.map_append, List.map_nil]
+      List.append_nil]
     sub_tac
 
 theorem withFiber_minted (hb : KeyBounded nk sk interp ambient)
@@ -4330,7 +4330,7 @@ theorem driveStep_finish_minted (hb : KeyBounded nk sk interp)
 
 /-- One `interruptUnsafe` as a command (D6b): the target is re-read and recorded; the
 evaluation it may owe carries no handle. -/
-theorem driveStep_interruptTarget_minted (hb : KeyBounded nk sk interp)
+theorem driveStep_interruptTarget_minted (_hb : KeyBounded nk sk interp)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores) (target : FiberId) (who : Option FiberId)
     (extra : ReasonAnnotations Ann) (rest : List (Cmd ν σ Val Err Defect FiberId Ann))
     (hm : MintedIn m (m.keys nk sk ++ cmdsKeys nk sk (Cmd.interruptTarget target who extra :: rest))) :
@@ -4359,6 +4359,7 @@ theorem driveStep_interruptTarget_minted (hb : KeyBounded nk sk interp)
         List.nil_append, List.append_nil] <;>
       sub_tac
 
+omit evaluator in
 /-- `asVoid` adds only the void exit's (empty) keys (D6b). -/
 theorem asVoidCode_keys_subset (hb : KeyBounded nk sk interp ambient)
     (code : Prim ν σ Val Err Defect FiberId Ann) :
@@ -4369,6 +4370,7 @@ theorem asVoidCode_keys_subset (hb : KeyBounded nk sk interp ambient)
   simp only [exitKeys, hb.voidValue]
   exact List.nil_subset _
 
+omit evaluator in
 /-- The await an interrupt returns names the park's targets, or an exit the machine holds
 (D6b). -/
 theorem awaitCode_keys_subset (hb : KeyBounded nk sk interp ambient)
@@ -4471,7 +4473,7 @@ theorem driveStep_closeParAwait_minted (hb : KeyBounded nk sk interp)
 
 /-- The race cleanup's Set walk (D6b) changes no machine; every command it issues names the
 host and members of the walk. -/
-theorem driveStep_raceCancel_minted (hb : KeyBounded nk sk interp)
+theorem driveStep_raceCancel_minted (_hb : KeyBounded nk sk interp)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores) (raceId : Nat) (host : FiberId)
     (yielding : Bool) (remaining visited : List FiberId) (rest : List (Cmd ν σ Val Err Defect FiberId Ann))
     (hm : MintedIn m (m.keys nk sk ++
@@ -4481,11 +4483,11 @@ theorem driveStep_raceCancel_minted (hb : KeyBounded nk sk interp)
   simp only [driveStep]
   (repeat' split) <;> refine ⟨World.le_refl _, ?_⟩ <;> refine Ok_of_subset ?_ hm <;>
     simp only [cmdsKeys, List.flatMap_cons, Cmd.keys, ParkKind.keys, List.map_append, List.map_cons,
-      List.map_nil, List.append_nil] <;>
+      List.map_nil] <;>
     sub_tac
 
 /-- Tracking a child (D6b): the parent gains the child, the child the untrack observer. -/
-theorem driveStep_trackChild_minted (hb : KeyBounded nk sk interp)
+theorem driveStep_trackChild_minted (_hb : KeyBounded nk sk interp)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores) (parent child : FiberId)
     (rest : List (Cmd ν σ Val Err Defect FiberId Ann))
     (hm : MintedIn m (m.keys nk sk ++ cmdsKeys nk sk (Cmd.trackChild parent child :: rest))) :
@@ -4571,7 +4573,7 @@ theorem driveStep_exitDone_minted (hb : KeyBounded nk sk interp)
     rw [world_update]
     refine Ok_of_subset ?_ (Ok_append.mpr ⟨hm, Ok_of_subset hclr hfk⟩)
     refine List.append_subset.mpr ⟨List.Subset.trans (keys_update_subset nk sk _) (by sub_tac), ?_⟩
-    simp only [cmdsKeys, List.flatMap_cons, Cmd.keys, List.nil_append]
+    simp only [cmdsKeys, List.flatMap_cons, Cmd.keys]
     sub_tac
 
 theorem driveStep_drainDue_minted (hb : KeyBounded nk sk interp)

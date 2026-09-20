@@ -22,7 +22,7 @@ proved here so the build needs nothing of `Simulation/Hooks.lean`. -/
 /-- The stores' `closeIfLast` on anything but a scope handle: done (`Layer.ts:408`). -/
 theorem contAOf_closeIfLast_other (ex : ExitV) (v : Val) (hne : ∀ s, v ≠ Val.scopeHandle s) :
     Effect4.Machine.contAOf (Name.closeIfLast ex) v = Prim.success Val.unit := by
-  simp only [Effect4.Machine.contAOf, hne]
+  simp only [Effect4.Machine.contAOf]
 
 /-- `fromBuild`'s `onExit` (`Layer.ts:343`): close the layer scope on failure only. -/
 theorem closeChildOnFailure_means (root : NativeEff) (child : Nat) (ex : ExitV) :
@@ -101,7 +101,7 @@ theorem updateContext_intro (root : NativeEff) (u : Env.ContextUpdate) (body : R
   | some prev =>
     dsimp only
     by_cases hid : updateKeepsIdentity u prev.services = true
-    · simp only [hid, eq_self_iff_true, ↓reduceIte]
+    · simp only [hid, ↓reduceIte]
       exact hb.prepare completed
     · simp only [hid, Bool.false_eq_true, ↓reduceIte]
       rw [prepareR_guardR_bind, guardR_bind]

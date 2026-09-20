@@ -366,7 +366,7 @@ theorem launchEntrant_grows {interp : RunInterp ν σ β ε δ ι α χ St} {rac
     {program : Prim ν σ β ε δ ι α} : Grows m (launchEntrant interp raceId m host program) := by
   unfold Grows launchEntrant
   try dsimp only
-  trace_chain with hops_leaf
+  trace_leaf
 
 /-- `injectYield` extends the diagnostic trace and changes no store observation. -/
 theorem injectYield_extends {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ}
@@ -407,7 +407,7 @@ theorem exitFiber_grows {interp : RunInterp ν σ β ε δ ι α χ St} {m : Run
     Grows m (exitFiber interp m f exit) := by
   unfold Grows exitFiber exitFiber.exitInterruptChildren exitFiber.exitStore
   try dsimp only
-  (repeat' split) <;> trace_chain with hops_observers
+  (repeat' split) <;> trace_leaf
 
 /-! ### `evaluatePrim` and its arms -/
 
@@ -988,7 +988,7 @@ theorem advanceState_stable (interp : RunInterp ν σ β ε δ ι α χ St κ) (
           · rename_i hf
             exact absurd h hf
         · simp at h
-    · simp only [hs, if_true]
+    · simp only [if_true]
 
 theorem flushRootState_stable (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) (root : FiberId)
     (rounds : Nat) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
@@ -1260,7 +1260,7 @@ theorem advance_trace_mono (interp : RunInterp ν σ β ε δ ι α χ St) (fuel
     rw [Nat.succ_add]
     unfold advanceState
     cases hs : m.stuck.isSome
-    · simp only [hs, Bool.false_eq_true, if_false]
+    · simp only [Bool.false_eq_true, if_false]
       rcases hc : interp.clockStep millis m.state with ⟨o, st⟩
       cases o with
       | none => exact Extends.refl _
@@ -1270,7 +1270,7 @@ theorem advance_trace_mono (interp : RunInterp ν σ β ε δ ι α χ St) (fuel
         have hd := drive_trace_mono interp (Nat.le_add_right fuel k) R.1 (R.2 ++ [Cmd.drainDue])
         rw [drive_eq_driveState interp fuel, drive_eq_driveState interp (fuel + k)] at hd
         cases hsd : settled (driveState interp fuel R.1 (R.2 ++ [Cmd.drainDue]))
-        · simp only [hsd, Bool.false_eq_true, if_false]
+        · simp only [Bool.false_eq_true, if_false]
           refine Extends.trans hd ?_
           split
           · split
@@ -1280,7 +1280,7 @@ theorem advance_trace_mono (interp : RunInterp ν σ β ε δ ι α χ St) (fuel
         · rw [driveState_settled_add interp fuel _ _ hsd k]
           simp only [hsd, if_true]
           cases hf : (flushAllState interp fuel fuel (driveState interp fuel R.1 (R.2 ++ [Cmd.drainDue])).1).2
-          · simp only [hf, Bool.false_eq_true, if_false]
+          · simp only [Bool.false_eq_true, if_false]
             have hfl : Extends (flushAllState interp fuel fuel
                   (driveState interp fuel R.1 (R.2 ++ [Cmd.drainDue])).1).1
                 (flushAllState interp (fuel + k) (fuel + k)
@@ -1293,7 +1293,7 @@ theorem advance_trace_mono (interp : RunInterp ν σ β ε δ ι α χ St) (fuel
           · rw [flushAllState_stable interp fuel fuel _ hf k k]
             simp only [hf, if_true]
             exact advance_trace_mono interp fuel millis rounds _ k j
-    · simp only [hs, if_true]; exact Extends.refl _
+    · simp only [if_true]; exact Extends.refl _
 
 /-- More fuel on a single-loop decision extends the trace. -/
 theorem stepDecision_trace_mono (interp : RunInterp ν σ β ε δ ι α χ St) {n n' : Nat} (h : n ≤ n')
@@ -1394,7 +1394,7 @@ theorem stepDecision_stuck_stable (interp : RunInterp ν σ β ε δ ι α χ St
       cases k with
       | zero => rfl
       | succ k =>
-        simp only [Nat.zero_add, stepDecision, stepDecisionState, stepDecisionState.loop,
+        simp only [stepDecision, stepDecisionState, stepDecisionState.loop,
           prepareAsyncAnswer, hs, if_true]
         simpa only [drive_eq_driveState] using
           drive_stuck interp (Nat.add 0 k + 1) m

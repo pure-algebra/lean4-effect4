@@ -63,7 +63,7 @@ theorem Preserved.drive (p : NativeEff) (table : RowTable) (driver : DriverContr
 
 theorem taskCmds_guardQueue (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (task : NTask) (reserved : ReservedKeys m (taskKeys task))
-    (sites : taskRaceSites task = []) : GuardQueue p table m (taskCmds task) := by
+    (_sites : taskRaceSites task = []) : GuardQueue p table m (taskCmds task) := by
   cases task <;> constructor
   all_goals first
     | exact fun command member => by
@@ -72,11 +72,6 @@ theorem taskCmds_guardQueue (p : NativeEff) (table : RowTable) (m : NativeMachin
     | exact List.nodup_nil
     | simpa only [taskCmds, List.flatMap_cons, List.flatMap_nil, commandKeys,
         List.nil_append, List.append_nil, taskKeys] using reserved
-    | exact fun command member => by
-        simp only [taskCmds, List.mem_cons, List.not_mem_nil, or_false] at member
-        rcases member with rfl | rfl
-        · exact sites
-        · rfl
 
 theorem taskCmds_registration (task : NTask) : RegistrationQueue (taskCmds task) := by
   cases task <;> exact ⟨True.intro, True.intro, True.intro⟩
