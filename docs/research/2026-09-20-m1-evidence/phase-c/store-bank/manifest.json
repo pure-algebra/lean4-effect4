@@ -1,0 +1,445 @@
+{
+  "phase_b_base": "3f89307488835002c1cb9d8b3bcb9c1dcc1554a1",
+  "scope": "Final CompletionData store-bank slice and its existing unchanged red control. Full scratch identity probes are retained as provenance, but no live Refinement source/build or completion claim is included.",
+  "commands": [
+    {
+      "id": "initial-bank-build",
+      "command": "LEAN_NUM_THREADS=1 lake build Test.Machine.Runtime.CompletionDataContract > /tmp/m1-phase-c-store-bank.log 2>&1",
+      "log": "logs/initial-build.log",
+      "outer_exit_code": 0,
+      "provenance": "Exact command and completed exit confirmed by coordinator."
+    },
+    {
+      "id": "owed-proof-probe",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -DwarningAsError=true /tmp/m1-phase-c/probes/OwedMap.lean > /tmp/m1-phase-c/probes/OwedMap.log 2>&1",
+      "log": "probes/OwedMap.log",
+      "outer_exit_code": 0,
+      "provenance": "Exact command and completed exit confirmed by coordinator."
+    },
+    {
+      "id": "owed-bank-build",
+      "command": "LEAN_NUM_THREADS=1 lake build Test.Machine.Runtime.CompletionDataContract > /tmp/m1-phase-c-store-bank-owed.log 2>&1",
+      "log": "logs/owed-build.log",
+      "outer_exit_code": 0,
+      "provenance": "Exact command and completed exit confirmed by coordinator."
+    },
+    {
+      "id": "initial-bank-census",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -DwarningAsError=true /tmp/m1-phase-c/census/CompletionData.lean > /tmp/m1-phase-c/census/CompletionData.log 2>&1",
+      "log": "census/initial-bank.log",
+      "outer_exit_code": 0,
+      "provenance": "Exact command and completed exit confirmed by coordinator."
+    },
+    {
+      "id": "owed-bank-census",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -DwarningAsError=true /tmp/m1-phase-c/census/CompletionData.lean > /tmp/m1-phase-c/census/CompletionData-owed.log 2>&1",
+      "log": "census/owed-bank.log",
+      "outer_exit_code": 0,
+      "provenance": "Exact command and completed exit confirmed by coordinator."
+    },
+    {
+      "id": "identity-name-shadowing-probe",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -DwarningAsError=true /tmp/m1-phase-c/probes/DeferredIdentity.lean > /tmp/m1-phase-c/probes/DeferredIdentity.log 2>&1",
+      "outer_exit_code": 1,
+      "log": "probes/DeferredIdentity-name-shadowing.log",
+      "source_snapshot": "probes/DeferredIdentity-name-shadowing.lean",
+      "outcome": "Naming failure: id resolved to the existing obligation in M1.OwedMapWanted; not a false law.",
+      "provenance": "Exact command and completed exit confirmed by coordinator."
+    },
+    {
+      "id": "identity-fixed-probe",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -DwarningAsError=true /tmp/m1-phase-c/probes/DeferredIdentity.lean > /tmp/m1-phase-c/probes/DeferredIdentity-fixed.log 2>&1",
+      "outer_exit_code": 0,
+      "log": "probes/DeferredIdentity-fixed.log",
+      "source_snapshot": "probes/DeferredIdentity.lean",
+      "outcome": "Passed after qualifying _root_.id in the obligation. Complete scratch context retained; this is not a live Refinement build.",
+      "provenance": "Exact command and completed exit confirmed by coordinator."
+    },
+    {
+      "id": "final-bank-build",
+      "command": "LEAN_NUM_THREADS=1 lake build Test.Machine.Runtime.CompletionDataContract > /tmp/m1-phase-c-store-bank-final.log 2>&1",
+      "outer_exit_code": 0,
+      "log": "logs/final-build.log",
+      "provenance": "Exact command and completed exit confirmed by coordinator."
+    },
+    {
+      "id": "final-bank-census",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -DwarningAsError=true /tmp/m1-phase-c/census/CompletionData.lean > /tmp/m1-phase-c/census/CompletionData-final.log 2>&1",
+      "outer_exit_code": 0,
+      "log": "census/final-bank.log",
+      "provenance": "Exact command and completed exit confirmed by coordinator."
+    }
+  ],
+  "census": {
+    "module": "Effect4.Laws.Machine.CompletionData",
+    "heartbeat_cap": 20000,
+    "cap_source": "#auto_census default unchanged; explicit baseline used same20000.",
+    "before": {
+      "tactic": "aesop",
+      "raw": 0,
+      "allowed": 0,
+      "total": 2,
+      "source_sha256": "3908254801abd6ba091918c81fe4aa3fa6fb3f423ca6f839ab5f4b8e827f4a3c",
+      "module_log_sha256": "e1f60624ebbfc39c9ec0ce1f0ceda9220ac5dc2a6e2f239b273d45f2183b30b4"
+    },
+    "initial_bank": {
+      "tactic": "aesop (rule_sets := [Effect4.Stores])",
+      "raw": 1,
+      "allowed": 1,
+      "total": 2
+    },
+    "final_bank": {
+      "tactic": "aesop (rule_sets := [Effect4.Stores])",
+      "raw": 4,
+      "allowed": 4,
+      "total": 6,
+      "closed_rows": [
+        {
+          "name": "Effect4.Machine.poll_reads_cell",
+          "first_line": 105,
+          "last_line": 108,
+          "source_lines": 4,
+          "axioms": [
+            "propext"
+          ],
+          "trust_admissible": true,
+          "disallowed_axioms": []
+        },
+        {
+          "name": "Effect4.Machine.Owed.mapCode_code",
+          "first_line": 42,
+          "last_line": 44,
+          "source_lines": 3,
+          "axioms": [
+            "propext"
+          ],
+          "trust_admissible": true,
+          "disallowed_axioms": []
+        },
+        {
+          "name": "Effect4.Machine.Owed.mapCode_comp",
+          "first_line": 49,
+          "last_line": 51,
+          "source_lines": 3,
+          "axioms": [
+            "propext"
+          ],
+          "trust_admissible": true,
+          "disallowed_axioms": []
+        },
+        {
+          "name": "Effect4.Machine.Owed.mapCode_id",
+          "first_line": 46,
+          "last_line": 47,
+          "source_lines": 2,
+          "axioms": [
+            "propext"
+          ],
+          "trust_admissible": true,
+          "disallowed_axioms": []
+        }
+      ],
+      "source_sha256": "c67cdab0e3f3405ec9559b414eca4baff202ea79cff94b929ab4d33b3834c8f6",
+      "log": "census/final-bank.log"
+    },
+    "same_original_population": {
+      "before": {
+        "closed": 0,
+        "total": 2
+      },
+      "after": {
+        "closed": 1,
+        "total": 2
+      },
+      "newly_closed_original_theorem": "Effect4.Machine.poll_reads_cell"
+    },
+    "added_theorems": [
+      "Effect4.Machine.Owed.mapCode_code",
+      "Effect4.Machine.Owed.mapCode_id",
+      "Effect4.Machine.Owed.mapCode_comp",
+      "Effect4.Machine.Owed.mapCode_id_fun"
+    ],
+    "all_searched_proof_axioms": [
+      "propext"
+    ],
+    "three_helper_bank": {
+      "tactic": "aesop (rule_sets := [Effect4.Stores])",
+      "raw": 4,
+      "allowed": 4,
+      "total": 5,
+      "closed_rows": [
+        {
+          "name": "Effect4.Machine.poll_reads_cell",
+          "first_line": 99,
+          "last_line": 102,
+          "source_lines": 4,
+          "axioms": [
+            "propext"
+          ],
+          "trust_admissible": true,
+          "disallowed_axioms": []
+        },
+        {
+          "name": "Effect4.Machine.Owed.mapCode_code",
+          "first_line": 39,
+          "last_line": 41,
+          "source_lines": 3,
+          "axioms": [
+            "propext"
+          ],
+          "trust_admissible": true,
+          "disallowed_axioms": []
+        },
+        {
+          "name": "Effect4.Machine.Owed.mapCode_comp",
+          "first_line": 46,
+          "last_line": 48,
+          "source_lines": 3,
+          "axioms": [
+            "propext"
+          ],
+          "trust_admissible": true,
+          "disallowed_axioms": []
+        },
+        {
+          "name": "Effect4.Machine.Owed.mapCode_id",
+          "first_line": 43,
+          "last_line": 44,
+          "source_lines": 2,
+          "axioms": [
+            "propext"
+          ],
+          "trust_admissible": true,
+          "disallowed_axioms": []
+        }
+      ],
+      "source_sha256": "da98a1354864f46e23c0ce0fe56465bc2f2eec888fc9dd74ae1e270951bea226"
+    },
+    "not_closed_by_final_census": [
+      "Effect4.Machine.store_lookup_lt",
+      "Effect4.Machine.Owed.mapCode_id_fun"
+    ]
+  },
+  "registration_delta": {
+    "kind": "Static explicit source registration delta for this module, not environment enumeration.",
+    "bank": "Effect4.Stores",
+    "rule_form": "aesop norm simp",
+    "added": [
+      "Effect4.Machine.DeferredStore.cancel",
+      "Effect4.Machine.DeferredStore.wakeBatch",
+      "Effect4.Machine.Owed.mapCode",
+      "Effect4.Machine.Owed.mapCode_code",
+      "Effect4.Machine.Owed.mapCode_id",
+      "Effect4.Machine.Owed.mapCode_comp",
+      "Effect4.Machine.Owed.mapCode_id_fun"
+    ],
+    "removed": []
+  },
+  "wanted_evidence": {
+    "before_proof_attempt": "OwedMap.lean retains code/id/comp obligations and wanted markers; DeferredIdentity.lean retains the id_fun obligation and wanted marker before its searched theorem. The failed naming version and log are also retained.",
+    "final_ledgers": [
+      {
+        "namespace": "Effect4.Machine.M1.Core",
+        "open": 0,
+        "proved": 5,
+        "total": 5,
+        "ceiling": 0
+      },
+      {
+        "namespace": "Effect4.Machine.M1.CompletionSupport",
+        "open": 0,
+        "proved": 2,
+        "total": 2,
+        "ceiling": 0,
+        "prior_phase_b_ceiling": 2
+      },
+      {
+        "namespace": "Effect4.Machine.M1.OwedMapWanted",
+        "open": 0,
+        "proved": 4,
+        "total": 4,
+        "ceiling": 0
+      }
+    ]
+  },
+  "existing_red_control": {
+    "path": "Test/Machine/Runtime/CompletionDataContract.lean",
+    "positive": "Effect4.Machine.poll_reads_cell",
+    "negative": "Anonymous example at16 under #guard_msgs; same statement attempted with plain aesop.",
+    "status": "Both narrow builds passed; printed positive proof dependencies [propext]."
+  },
+  "files": [
+    {
+      "member": "before/src/Effect4/Laws/Machine/CompletionData.lean",
+      "source": "git 3f89307488835002c1cb9d8b3bcb9c1dcc1554a1:src/Effect4/Laws/Machine/CompletionData.lean",
+      "bytes": 3738,
+      "sha256": "4123fc19ec919904b5c0e5fca5453f6632393cc4a2a413dea5168be2eeb7376b"
+    },
+    {
+      "member": "census/CompletionData.lean",
+      "source": "/tmp/m1-phase-c/census/CompletionData.lean",
+      "bytes": 136,
+      "sha256": "57c0c47a42be857e992f64ac5d35431d77cfcc7912ce6861e3230a146cf167cb"
+    },
+    {
+      "member": "census/before-module.log",
+      "source": "/private/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Machine.CompletionData.log",
+      "bytes": 112,
+      "sha256": "e1f60624ebbfc39c9ec0ce1f0ceda9220ac5dc2a6e2f239b273d45f2183b30b4"
+    },
+    {
+      "member": "census/before-row.json",
+      "source": "Exact selected row from committed portable before-fill results.",
+      "bytes": 1501,
+      "sha256": "8dda2ec720d85bf4d9fd3931078f24637dcb2c0bac896e904e165e157a3f7c30"
+    },
+    {
+      "member": "census/final-bank.log",
+      "source": "/tmp/m1-phase-c/census/CompletionData-final.log",
+      "bytes": 327,
+      "sha256": "360db1d478106dbb5261bdcc50ba972ede905e85ef12f130f282737f98da5241"
+    },
+    {
+      "member": "census/initial-bank.log",
+      "source": "/tmp/m1-phase-c/census/CompletionData.log",
+      "bytes": 164,
+      "sha256": "d285ebe584e9a6a39a06994d237376a9123243f47a0007a0126881440be4df89"
+    },
+    {
+      "member": "census/owed-bank.log",
+      "source": "/tmp/m1-phase-c/census/CompletionData-owed.log",
+      "bytes": 326,
+      "sha256": "3c626a6bce41f2e02944ea6c14bfb3587648288dc38a5e64e28e41b154203f98"
+    },
+    {
+      "member": "changes.patch",
+      "source": "Final CompletionData delta only against committed Phase B.",
+      "bytes": 2536,
+      "sha256": "5b9a851bf4f72955551a50d2f390e6d1299a1b71cb3df4814027e335d382f6ff"
+    },
+    {
+      "member": "chronology/three-helper-changes.patch",
+      "source": "Prior packaged stage changes.patch",
+      "bytes": 2280,
+      "sha256": "e354fcac2d7795e3ad68463cc8ae51b4c5c6475eb0ad475302d06d88cbd18f02"
+    },
+    {
+      "member": "chronology/three-helper-manifest.json",
+      "source": "Exact prior package record",
+      "bytes": 9523,
+      "sha256": "acdd7171e63087896ad8ec0bd9ddf9fe176516de52c9ffcc7998fefef1c7a63c"
+    },
+    {
+      "member": "chronology/three-helper-receipt.md",
+      "source": "Exact prior package record",
+      "bytes": 1752,
+      "sha256": "173e99cf335ea81e9f7a3772a8fc4d51b4ea6b33e865795ab3c184a13e0f543c"
+    },
+    {
+      "member": "chronology/three-helper-source.lean",
+      "source": "Prior packaged stage final/src/Effect4/Laws/Machine/CompletionData.lean",
+      "bytes": 4930,
+      "sha256": "da98a1354864f46e23c0ce0fe56465bc2f2eec888fc9dd74ae1e270951bea226"
+    },
+    {
+      "member": "controls/Test/Machine/Runtime/CompletionDataContract.lean",
+      "source": "/Users/pooks/Dev/lean4-effect4/Test/Machine/Runtime/CompletionDataContract.lean",
+      "bytes": 598,
+      "sha256": "a12fb560cfa17e11bd888cdc6dd4578d78c272808070e0cbb0824c2610107bbb"
+    },
+    {
+      "member": "final/src/Effect4/Laws/Machine/CompletionData.lean",
+      "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Machine/CompletionData.lean",
+      "bytes": 5180,
+      "sha256": "c67cdab0e3f3405ec9559b414eca4baff202ea79cff94b929ab4d33b3834c8f6"
+    },
+    {
+      "member": "logs/final-build.log",
+      "source": "/tmp/m1-phase-c-store-bank-final.log",
+      "bytes": 679,
+      "sha256": "3b99d48019e94b5ec6006facc8070f8ab25b8ed1307b503a4af5559b1b95152e"
+    },
+    {
+      "member": "logs/initial-build.log",
+      "source": "/tmp/m1-phase-c-store-bank.log",
+      "bytes": 550,
+      "sha256": "5b681a4ab52d412c9805ee62042d178cad976781f479e541ed140154bf8fff19"
+    },
+    {
+      "member": "logs/owed-build.log",
+      "source": "/tmp/m1-phase-c-store-bank-owed.log",
+      "bytes": 679,
+      "sha256": "1371786ad794d8276cb01bc00e89e05329ec098ba795bdfeb42d31ec83583bc5"
+    },
+    {
+      "member": "probes/DeferredIdentity-fixed.log",
+      "source": "/tmp/m1-phase-c/probes/DeferredIdentity-fixed.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "member": "probes/DeferredIdentity-name-shadowing.lean",
+      "source": "/tmp/m1-phase-c/probes/DeferredIdentity-name-shadowing.lean",
+      "bytes": 3792,
+      "sha256": "1c53a51039bc6d6a67ab0d1f1906cba7628acb3c3763e43be077c943783d7451"
+    },
+    {
+      "member": "probes/DeferredIdentity-name-shadowing.log",
+      "source": "/tmp/m1-phase-c/probes/DeferredIdentity.log",
+      "bytes": 546,
+      "sha256": "13719e3744187ae70572f662b26c215899f384dc76e4005ecc01344c7813c292"
+    },
+    {
+      "member": "probes/DeferredIdentity.lean",
+      "source": "/tmp/m1-phase-c/probes/DeferredIdentity.lean",
+      "bytes": 3806,
+      "sha256": "db2902970125424decc3afa6bc12a705d70b5a6091d3b1ac9bd0447668635c45"
+    },
+    {
+      "member": "probes/OwedMap.lean",
+      "source": "/tmp/m1-phase-c/probes/OwedMap.lean",
+      "bytes": 1008,
+      "sha256": "84d8662275178d11316ea9da1fd453ad13028ad00adc38085f109b2a161baef9"
+    },
+    {
+      "member": "probes/OwedMap.log",
+      "source": "/tmp/m1-phase-c/probes/OwedMap.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "archive": {
+    "path": "raw.tar.gz",
+    "members": 23,
+    "bytes": 7245,
+    "sha256": "19d82f76e5edeb47a89cad15e91b23338b56b5a61bc38ad34ad723480a108380",
+    "readback": "All current and historical archive members compared byte-for-byte."
+  },
+  "historical_task_status_reported_by_coordinator": {
+    "total_obligations": 314,
+    "active_remaining": 172,
+    "scope": "Ongoing whole task, not recomputed from this bounded bank package; not completion."
+  },
+  "task_status": "Whole-task status is outside this slice; earlier reported counts are retained only as historical.",
+  "chronology": [
+    {
+      "stage": "before Phase C",
+      "census": "0/2 plain aesop"
+    },
+    {
+      "stage": "initial store bank",
+      "census": "1/2 with Effect4.Stores"
+    },
+    {
+      "stage": "three Owed helpers",
+      "census": "4/5 with Effect4.Stores",
+      "retained_manifest": "chronology/three-helper-manifest.json",
+      "retained_receipt": "chronology/three-helper-receipt.md"
+    },
+    {
+      "stage": "final four-helper bank slice",
+      "census": "4/6 with Effect4.Stores",
+      "note": "Original two-theorem population remains1/2; additional denominator is four new helper theorems."
+    }
+  ]
+}

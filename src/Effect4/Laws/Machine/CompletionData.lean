@@ -7,7 +7,8 @@ namespace Effect4.Machine
 
 attribute [aesop norm simp (rule_sets := [Effect4.Stores])]
   DeferredStore.make DeferredStore.cellAt DeferredStore.setCell DeferredStore.isDone
-  DeferredStore.poll DeferredStore.register DeferredStore.complete DeferredStore.drainDue
+  DeferredStore.poll DeferredStore.register DeferredStore.cancel DeferredStore.complete
+  DeferredStore.drainDue DeferredStore.wakeBatch Owed.mapCode
   Owed.mapCode_waiter Owed.mapCode_token Owed.mapCode_mode
 
 def M1.CompletionSupport.store_lookup_lt {α : Type} {xs : List α} {i : Nat} {a : α}
@@ -21,6 +22,42 @@ theorem store_lookup_lt {α : Type} {xs : List α} {i : Nat} {a : α}
   exact bound
 
 attribute [aesop safe forward (rule_sets := [Effect4.Stores])] store_lookup_lt
+
+section OwedMap
+universe u v w
+variable {κ : Type u} {κ' : Type v} {κ'' : Type w}
+
+def M1.OwedMapWanted.code (f : κ → κ') (d : Owed κ) : ProofGraph.Obligation
+    ((d.mapCode f).code = f d.code) := ⟨⟩
+
+def M1.OwedMapWanted.id (d : Owed κ) : ProofGraph.Obligation
+    (d.mapCode id = d) := ⟨⟩
+
+def M1.OwedMapWanted.comp (f : κ → κ') (g : κ' → κ'') (d : Owed κ) : ProofGraph.Obligation
+    ((d.mapCode f).mapCode g = d.mapCode (g ∘ f)) := ⟨⟩
+
+def M1.OwedMapWanted.id_fun : ProofGraph.Obligation
+    (Owed.mapCode (_root_.id : κ → κ) = _root_.id) := ⟨⟩
+
+theorem Owed.mapCode_code (f : κ → κ') (d : Owed κ) :
+    (d.mapCode f).code = f d.code := by
+  aesop (rule_sets := [Effect4.Stores])
+
+theorem Owed.mapCode_id (d : Owed κ) : d.mapCode id = d := by
+  aesop (rule_sets := [Effect4.Stores])
+
+theorem Owed.mapCode_comp (f : κ → κ') (g : κ' → κ'') (d : Owed κ) :
+    (d.mapCode f).mapCode g = d.mapCode (g ∘ f) := by
+  aesop (rule_sets := [Effect4.Stores])
+
+theorem Owed.mapCode_id_fun : Owed.mapCode (id : κ → κ) = id := by
+  aesop (rule_sets := [Effect4.Stores])
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])]
+  Owed.mapCode_code Owed.mapCode_id Owed.mapCode_comp Owed.mapCode_id_fun
+
+#typed_state_obligations Effect4.Machine.M1.OwedMapWanted ceiling 0 using aesop (rule_sets := [Effect4.Stores])
+end OwedMap
 
 end Effect4.Machine
 
@@ -71,4 +108,4 @@ theorem poll_reads_cell (s : DeferredStore) (k : DeferredKey) (c : DeferredCell)
   aesop (rule_sets := [Effect4.Stores])
 end Effect4.Machine
 
-#typed_state_obligations Effect4.Machine.M1.CompletionSupport ceiling 2 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Machine.M1.CompletionSupport ceiling 0 using aesop (rule_sets := [Effect4.Stores])

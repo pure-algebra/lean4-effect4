@@ -527,3 +527,13 @@ The staged whitespace check is clean for source and prose. Two retained evidence
 are excluded from that formatting-only check: build-results.tsv preserves an empty final
 column, and reviewed-live-diff.patch preserves blank diff-context lines. Their original
 bytes and checksum manifests remain unchanged; no repository build or trust gate is relaxed.
+
+
+Phase C started from 3f893074. The first store-bank slice passes its narrow build and
+existing positive/negative controls. CompletionSupport drops from ceiling 2 to 0;
+the five Core seats remain at 0, and four new Owed map support seats are at 0.
+The final module census closes 4/6 with Effect4.Stores. On the original two-theorem
+population this is 1/2, up from the corrected plain-search baseline 0/2. New helpers
+are reported separately from that increase. Exact commands, failed and successful
+probes, axiom results, source snapshots and hashes are retained in phase-c/store-bank.
+No generation ran in this slice. The remaining Phase C fills and final sweep are pending.
