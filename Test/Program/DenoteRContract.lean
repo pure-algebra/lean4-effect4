@@ -140,7 +140,7 @@ def failedPoint : Point :=
 
 theorem prepare_construction (completed : List (FiberId × ExitV))
     (k : List (FiberId × ExitV) → RProgram) :
-    prepareR completed (constructR k) = prepareR completed (k completed) := rfl
+    prepareR completed (constructR k) = prepareR completed (k completed) := by aesop
 
 /-- Preparing a guard constructs its eager body while retaining the callback. -/
 theorem prepare_guard (completed : List (FiberId × ExitV)) (kind : GuardKind)
@@ -152,7 +152,7 @@ theorem prepare_guard (completed : List (FiberId × ExitV)) (kind : GuardKind)
 
 theorem prepare_suspend_retains (completed : List (FiberId × ExitV)) (p : Point)
     (k : Val → RProgram) :
-    prepareR completed (.vis (.inr (.suspend p)) k) = .vis (.inr (.suspend p)) k := rfl
+    prepareR completed (.vis (.inr (.suspend p)) k) = .vis (.inr (.suspend p)) k := by aesop
 
 #guard operation? (observe 5 (unfolded (awaitTerm .joinEffect) 8 [.fiber ⟨2⟩]) Stores.empty) =
   some (.await ⟨2⟩ .joinEffect)

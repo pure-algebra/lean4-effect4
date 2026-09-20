@@ -1,0 +1,292 @@
+{
+  "module": "Test.Program.DenoteRContract",
+  "evidence_kind": "completed finite rewrite/build/census slice",
+  "phase_b_commit": "3f89307488835002c1cb9d8b3bcb9c1dcc1554a1",
+  "recorded_finished_utc": "2026-09-20T13:57:55.673912+00:00",
+  "rewritten_bodies": 2,
+  "source_path": "Test/Program/DenoteRContract.lean",
+  "source_before_sha256": "12c609f3fbc005530949c7eb5d4b98884bf4b672fbe1c5346f4120578f525c44",
+  "source_after_sha256": "9148afdb120f56680ba536e21f93df44c99a36338cfdfda5e245241c01aa77e3",
+  "certified_headers_equal": true,
+  "only_certified_body_spans_changed": true,
+  "before": {
+    "tactic": "aesop",
+    "cap": 20000,
+    "instrument_closed_count": 2,
+    "trust_admissible_closed_count": 2,
+    "instrument_total_count": 4
+  },
+  "after": {
+    "tactic": "aesop",
+    "cap": 20000,
+    "instrument_closed_count": 2,
+    "trust_admissible_closed_count": 2,
+    "instrument_total_count": 4
+  },
+  "comparison_limit": "After search may use a different rule-bank context; counts do not attribute any change solely to shorter proof bodies.",
+  "processes": [
+    {
+      "label": "patch-check",
+      "command": [
+        "git",
+        "apply",
+        "--check",
+        "/private/tmp/m1-tools/phase-c-searched-rewrites/patches/Test.Program.DenoteRContract.patch"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Program.DenoteRContract/patch-check.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "apply",
+      "command": [
+        "git",
+        "apply",
+        "/private/tmp/m1-tools/phase-c-searched-rewrites/patches/Test.Program.DenoteRContract.patch"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Program.DenoteRContract/apply.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        "Test/Program/DenoteRContract.lean"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Program.DenoteRContract/diff-check.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "build",
+      "command": [
+        "lake",
+        "build",
+        "Test.Program.DenoteRContract"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Program.DenoteRContract/build.log",
+      "log_sha256": "a4688811201d94fda399f4aa492f76662e4ef0258c1174984d90194cdfe09425"
+    },
+    {
+      "label": "census",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Program.DenoteRContract/Census.lean"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Program.DenoteRContract/census.log",
+      "log_sha256": "dc188b05375bfd78f72f9224c8b524165e60abd0a3744cd3d4a7f44f9f8513ac"
+    }
+  ],
+  "fresh_build_line": "✔ [233/233] Built Test.Program.DenoteRContract (1.4s)",
+  "local_gate_lines": [],
+  "headers": [
+    {
+      "name": "Test.Program.DenoteRContract.prepare_construction",
+      "header_sha256": "e7a3487f91d23ae69cb1ed2e02742049fb27a2bdc972d8500f44327e932bdad9",
+      "exact_before_after_header_match": true
+    },
+    {
+      "name": "Test.Program.DenoteRContract.prepare_suspend_retains",
+      "header_sha256": "9788deedddce7da67752738b479b88cc7693e114ed9ab4735e53e6942f299bd6",
+      "exact_before_after_header_match": true
+    }
+  ],
+  "baseline_provenance": {
+    "census_results": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/results.json",
+    "census_results_sha256": "de504894001ca31ecd5fd195b09b513f415bb9bcb9987bb7c01c97249a93319e",
+    "census_run": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/run.json",
+    "census_run_sha256": "3420c3a7f77913db13b8c91a9f381f0a50b01f309f06cb390544e7bbd6d142b4",
+    "census_inputs_sha256": "a7f8f045a9e4f9bbee0cb5d93964bb1660b0379fea4c00dd415784da13744a34",
+    "prior_candidate_manifest": "/tmp/m1-tools/phase-c-rewrite-scope/rewrite-ready.json",
+    "prior_candidate_manifest_sha256": "adea2d7901d98a02a3dcdf006c3c7c1f365ee3c2334cbba07aba4f2a81a7eb18",
+    "prior_fragments_retained_unchanged": true,
+    "phase_b_scope_sha256": "aaa3de31fdaf2c26f62f7ebc179b7c6c00a7a91fa93223a880b43550583ef080",
+    "module_classification_sha256": "a71e5c5c72bf6b762f964c8a0691e5bc3202169585cdceed846d5d0a768d9a7a"
+  },
+  "history": [],
+  "runner_source_limit": "Runner source is packaged as currently retained; result pins its input manifest and census reader, not the runner script itself.",
+  "no_claims": [
+    "No compiler or git command run by packager",
+    "No full-tree gate or task completion inferred",
+    "No live source/current HEAD revalidation",
+    "No other module inspected"
+  ],
+  "members": [
+    {
+      "path": "baseline/Census.lean",
+      "bytes": 160,
+      "sha256": "7505c788469de284e518588a2fc54c2fb9fa778d46890720e1fed8d99432f02c",
+      "source": "/private/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/117-Test.Program.DenoteRContract.lean"
+    },
+    {
+      "path": "baseline/job.json",
+      "bytes": 1038,
+      "sha256": "b57a7b9612ecead5c25cad903384d2a508a4802a10eacde64ef1216c82076c18",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "baseline/module-result.json",
+      "bytes": 1935,
+      "sha256": "b4483479209ba8aa4444f38207c9af1909f8613c1d12f2207f385e9b53e28060",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "baseline/module.log",
+      "bytes": 252,
+      "sha256": "dc188b05375bfd78f72f9224c8b524165e60abd0a3744cd3d4a7f44f9f8513ac",
+      "source": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Program.DenoteRContract.log"
+    },
+    {
+      "path": "baseline/process.log",
+      "bytes": 252,
+      "sha256": "dc188b05375bfd78f72f9224c8b524165e60abd0a3744cd3d4a7f44f9f8513ac",
+      "source": "/private/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/117-Test.Program.DenoteRContract.log"
+    },
+    {
+      "path": "history/records.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "provenance/package-searched-rewrite.py",
+      "bytes": 17992,
+      "sha256": "b68f6bc3407570433dc4da882db15f41440883ac2dfcd9bf69951af470ee7fc8",
+      "source": "/private/tmp/m1-tools/package-searched-rewrite.py"
+    },
+    {
+      "path": "provenance/run-one.py",
+      "bytes": 9697,
+      "sha256": "c215f030938b56b2e0c4e7fa2557a8799207f834f8ed5f83ca41f9dc91320e14",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/run-one.py"
+    },
+    {
+      "path": "rewrite/certified-candidates.json",
+      "bytes": 4397,
+      "sha256": "390f4906935d0b96e0ba18979b8963fbbefe1385eb76042a24bef7cadf34e067",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "rewrite/certified-comparison.json",
+      "bytes": 3364,
+      "sha256": "f6a2c4e31ea56077aaf875be732c4857ea5a72ed761bd5a61522c79ef9ae5235",
+      "source": "/tmp/m1-tools/phase-c-rewrite-scope/portable-certified/comparison.json"
+    },
+    {
+      "path": "rewrite/change.patch",
+      "bytes": 1008,
+      "sha256": "d268693cf3c51bb1d0ac5ab405a98a9fe7f7d952c0302d84ddfa32290f30d8b8",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/patches/Test.Program.DenoteRContract.patch"
+    },
+    {
+      "path": "rewrite/header-comparisons.json",
+      "bytes": 420,
+      "sha256": "4a1627150163bbe7944d4e54b5f614b9e403151db56c30a558793e2569a2f4fb",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "rewrite/master-manifest.json",
+      "bytes": 8341,
+      "sha256": "d7a25d4fa05e6ac890e5aa15950e32f12332ff9d28c35c42045bd56ee9acc2b6",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/manifest.json"
+    },
+    {
+      "path": "rewrite/module.json",
+      "bytes": 2997,
+      "sha256": "9772803a3a515ce02e6b80f75b89dfd2b5dbea57a6721d5861e79ffbc66ef559",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/modules/Test.Program.DenoteRContract.json"
+    },
+    {
+      "path": "run/Census.lean",
+      "bytes": 173,
+      "sha256": "f812c715d02be55930c78f71d150d3434a19b035d572719e4364126acf1df3e6",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Program.DenoteRContract/Census.lean"
+    },
+    {
+      "path": "run/apply.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Program.DenoteRContract/apply.log"
+    },
+    {
+      "path": "run/build.log",
+      "bytes": 8026,
+      "sha256": "a4688811201d94fda399f4aa492f76662e4ef0258c1174984d90194cdfe09425",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Program.DenoteRContract/build.log"
+    },
+    {
+      "path": "run/census.json",
+      "bytes": 1245,
+      "sha256": "98449ba7013bb5ab8e4137b891642c871a12f344a78c64f5e21dc06b3c2ba242",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Program.DenoteRContract/census.json"
+    },
+    {
+      "path": "run/census.log",
+      "bytes": 252,
+      "sha256": "dc188b05375bfd78f72f9224c8b524165e60abd0a3744cd3d4a7f44f9f8513ac",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Program.DenoteRContract/census.log"
+    },
+    {
+      "path": "run/diff-check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Program.DenoteRContract/diff-check.log"
+    },
+    {
+      "path": "run/patch-check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Program.DenoteRContract/patch-check.log"
+    },
+    {
+      "path": "run/result.json",
+      "bytes": 3981,
+      "sha256": "ef7b9b1475536e0538392a80939bf1d5637ce5a3e7f6228f99e347a32c68f6cb",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Program.DenoteRContract/result.json"
+    },
+    {
+      "path": "sources/after/Test/Program/DenoteRContract.lean",
+      "bytes": 16492,
+      "sha256": "9148afdb120f56680ba536e21f93df44c99a36338cfdfda5e245241c01aa77e3",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/after/Test/Program/DenoteRContract.lean"
+    },
+    {
+      "path": "sources/before/Test/Program/DenoteRContract.lean",
+      "bytes": 16482,
+      "sha256": "12c609f3fbc005530949c7eb5d4b98884bf4b672fbe1c5346f4120578f525c44",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/before/Test/Program/DenoteRContract.lean"
+    }
+  ],
+  "archive": {
+    "path": "raw.tar.gz",
+    "sha256": "ae54a89e61984e90bb154f39a8fbabfdcffb51b33638552f5545e0f666f3c4d6",
+    "members": 24,
+    "bytes": 21038,
+    "lossless_readback_verified": true
+  }
+}
