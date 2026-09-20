@@ -285,9 +285,26 @@ Where things live, so no `Typed/*` module imports `Simulation` or `Book` before 
   the root imports cannot be split without a broken intermediate; docs), so T0 is closed and
   the worktree can be retired after the merge.
 - The plan gained §14 with the slice table above; `docs/STATE.md` points at this note;
-  decisions rows 84–85 record F9 and F10 as proposals.
-- No Lean build was run in the main checkout; the tooling tree's own build evidence is §1.
-  T1–T5 merge is the next act, with a narrow build of the touched modules on the merged tree.
+  decisions rows 84–85 record F9 and F10 as proposals (`74f2ddf0`).
+- T1–T5 merged into `refactor/phase1-phase3` as `de27095d` (one hand-resolved paragraph in
+  `docs/STATE.md`: main's rows 44–45 approval kept, the branch's 87-position and retired-writer
+  facts taken). The narrow build on the merged tree, in the main checkout:
+
+      lake build ProofGraph Conform.Core.Proof Effect4.Laws.Auto.Census \
+        Effect4.Laws.Auto.TypedStateDecl Effect4.Laws.Auto.Frames Effect4.Laws.Auto.Obligations \
+        Effect4.Laws.Program.Typed.State Effect4.Laws.Program.Typed.Frames Effect4.Laws \
+        Test.Audit.ProofGraph Test.Audit.Obligations Test.Audit.FrameRules Test.Audit.TypedStateDecl \
+        Test.Program.TypedStateRulesRed Test.Audit.PositionAnalysis Test.Audit.PositionCensus \
+        Test.Audit.AxiomGate
+
+  532 jobs, exit 0. Receipt lines: `Typed/State.lean:25` "87 positions from 4 roots, 95 source
+  rows"; `:28` "typed state: 16 predicates, 11 carrier predicates, 2 refusals";
+  `Typed/Frames.lean:8` "frame rules: 60 checked theorems, 159 reused clauses, 40 explicit
+  premises"; `saved_from_clauses` at `[propext]`; the axiom gate rebuilt with the three new
+  exemptions and the retired one removed. No whole-tree or host sweep was run.
+- The tooling worktree keeps an editor session open (`lake serve`); retire it with
+  `git worktree remove` once that is closed. The design worktree's branch is fully merged and
+  can go now.
 
 ## 7. Owner decisions surfaced
 

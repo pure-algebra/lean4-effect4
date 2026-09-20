@@ -49,7 +49,7 @@ reads back.
 | `docs/core/ontology.md` | the frame: six sorts with one free object each, five arrow kinds with their obligations, coherence as a per-sort census; the probe of the "do now" rows; the Schema layer as the place to start over |
 | `docs/core/coherence-principle.md` | scout F: the principle in full, the seven squares, the arrows lacking obligations |
 | `docs/core/traversal-census.md` | the census numbers, every hand traversal by root, the converter design |
-| `docs/core/decisions.md` | every open decision, one list (status by row; rows 44–45 record the approved world and rows 78–83 the state/refinement proposals) with the order |
+| `docs/core/decisions.md` | every open decision, one list (status by row; rows 44–45 record the approved world and rows 78–85 the state/refinement proposals) with the order |
 | `docs/core/language-cut.md` | the language as cut, every alphabet against Effect: terms (first order, twenty atoms, positional binders), types, values and errors, the 25 constructors, the absent modules; which gaps are profile rulings, which are cuts nobody decided |
 | `docs/core/api-surface.md` | the consolidated API and its awkward constructs |
 | `docs/core/lcnf-route.md` | what the LCNF lowering handles and refuses; the LLVM-shaped architecture |
@@ -63,9 +63,9 @@ reads back.
 **Design review before implementation resumes (2026-09-19).** The completed STM and stateful-API
 research is reconciled in `docs/core/machine-state.md`, with the detailed contracts, retained
 finite controls and proposed D0–D7 sequence in `docs/research/2026-09-19-state-refinement-plan.md`.
-Rows 44–45 record the approved typed world; rows 78–83 remain proposals. The tooling branch
-`codex/typed-state-tooling` was checkpointed as three commits on 2026-09-19 (it had built green
-at its last edit) and is not yet merged. Set the storage/observation contract before pinning
+Rows 44–45 record the approved typed world; rows 78–85 remain proposals. The tooling branch
+`codex/typed-state-tooling` was checkpointed as three commits and merged on 2026-09-19
+(`de27095d`; it had built green at its last edit in its worktree). Set the storage/observation contract before pinning
 the concrete obligation count; fast backends and new API families do not all block the milestone.
 **The deep-dive review** `docs/research/2026-09-19-plan-deep-dive-review.md` (2026-09-19) re-cut
 D0–D7 into slices with files, statements, deletions and red controls (plan §14): the tooling

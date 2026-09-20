@@ -40,6 +40,11 @@ Aesop integration, fixtures and build wiring. It is not included in the document
 Before resuming, inspect that checkout's diff and reconcile it with the synthesis. Before
 retiring it, preserve its tracked and untracked changes; a branch name alone does not save them.
 
+Update 2026-09-19: that work was checkpointed as three commits (7ab022a6, 6055a2cc, d679cdc2)
+and merged into the primary branch at de27095d after the deep-dive review
+(`docs/research/2026-09-19-plan-deep-dive-review.md`). The tooling checkout may be retired once
+its editor session is closed; both worktrees' branches are kept.
+
 ## Continuation
 
 Rows 44–45 record the approved typed world. Rows 78–83 remain semantic proposals. Next, settle
