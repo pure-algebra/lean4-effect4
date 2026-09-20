@@ -315,3 +315,49 @@ Where things live, so no `Typed/*` module imports `Simulation` or `Book` before 
 - Merge T1–T5 now (recommended; nothing runtime moves, the tree is green, the plan's §9 already
   says to retain every piece).
 - F7's pruning of `Expect` and the two derived predicates needs no ruling; it lands with M2.
+
+## 8. What the map measured (2026-09-19, after the merge)
+
+`docs/core/architecture-map.html` is now generated from the tree by `tools/Tools/Architecture.lean`
+(`make gen-architecture`, 17 s): every import header through the compiler's parser, declaration
+counts from the loaded roots, the estates by file walk, the groups from GENERATED.md and the
+pins from the lakefile, against the role register `tools/Tools/ArchitectureRoles.lean`, which
+is total both ways. At this measurement: 541 modules, 195,403 lines, 8,570 theorems in the
+tree, 26 imports against the declared direction (2 accepted by a document), 10 area pairs that
+import each other. The organization questions it puts to the plan review:
+
+1. **The fold connectors live in the runtime root and import upward.** `Program/Folds/{Term,
+   Ty, Representation}`, `Machine/Folds/Stores` and `Store/Folds/Val` reach Schema, Codegen
+   and Program: eleven of the twenty-six. They are `fold_of` connectors, proof material beside
+   a hand definition; they belong under Laws beside `Laws/Program/Folds`, or in one `Folds`
+   area declared above Codegen. Moving them clears three of the ten cycles at once (Machine ↔
+   Program, Program ↔ Schema, Program ↔ Codegen in part).
+2. **`tools/Tools` and `src/OCaml5` import each other.** The descriptions (`ProgramStructure`,
+   `WireTags`, `ProfileJson`, `GeneratedStamp`) are read by `OCaml5.Eff.World`; the drivers
+   (`TsGen`, `Corpus`, `ForeignCorpus`, `Styles`, `ProgramStructureCheck`) read `OCaml5.Eff`.
+   One library holds both. Split it: the descriptions below OCaml5, the drivers above.
+3. **`Laws/Auto` and `Laws/Program` import each other.** The position gate and the table
+   reader (`PositionGate`, `TypedSources`) read `Typed/Vocabulary` and `Typed/Sources`, which
+   sit in the area the gate serves. M3's answer gate would repeat the shape. Put the typed-state
+   tables and their readers in one place before M3: either the vocabulary and tables move to
+   `Laws/Auto/Typed*` as data, or the gates move under `Typed/`.
+4. **Store is two things.** `Machine/Value` reads `Store.Image`, so the register puts Store
+   beneath Machine; but `Store/AnnotationsCanonical` reads `Machine.Value`, `Store/Shape` reads
+   `Schema.Authoring` (row 39's `render` move, already ruled) and `Store/Folds/Val` reads
+   Program. The value carrier (`Val`, the codec, `Image`) is beneath Machine; the store proper
+   (nodes, words, shapes) is above Program. The prose in ARCHITECTURE lists Store beside Schema,
+   which matches neither half.
+5. **Arch is two things.** `Arch/JsonNumber` is a leaf; `Arch/Accepts` reads
+   `Schema.Document`. Two files, two heights.
+6. **One file each:** `Laws/Codegen/ModuleReadable` reads `Laws/Api/Codegen` (the
+   Api ↔ Codegen cycle in the proof graph); `OCaml5/Tools/CasGoldens` reads
+   `Test.Store.NodeContract`; `Tools/RowTypes` reads `Test.Api.AcquireHandleContract` and
+   `Laws.Program.Template`. Each is a move or a documented acceptance.
+7. **Leftovers:** `src/Effect4/Program/Agreement` and `src/Effect4/Program/Simulation` are
+   empty directories; `tools/conform-red` is unbuilt by design and should say so in a README or
+   go. The twelve largest modules top out at `Laws/Machine/Handles.lean` (6,428 lines) and
+   `Laws/Program/Guard/Core.lean` (3,766); `Machine/Fibers.lean` holds 365 definitions and one
+   theorem, which is what the milestone's S2 has to walk.
+
+None of these changes a slice's statement; 1, 3 and 4 change where M2–M6's files should go and
+belong in the plan review before M2 starts.

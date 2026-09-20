@@ -70,6 +70,7 @@ set still requires the typing-world instantiation; frame premises are not that p
 | host-protocol | `tools/Tools/HostProtocol.lean` (the `gen-host-protocol` recipe) | `Effect4.Api.HostProtocol` | `harness/truth/session/protocol.gen.ts`, `tape.schema.json` | `make check-host-protocol` | reproduced; tested |
 | schema-ts | `harness/schema-generation/Emit{Fixture,CoverageFixture,MultiFixture}.lean`, stdout redirected | `Effect4.Codegen.Schema`, the fixture declarations | the three `.generated.ts` beside them | `make check-schema-ts` | reproduced; tested |
 | census | `scripts/generate-effect-runtime-census.sh` (stdout) | the twelve vendored rc.112 sources it names | `generated/effect-runtime-census.tsv`, joined by `Test/Audit/RuntimeCoverage.lean` | `make check-census` | reproduced; proved where a row's witness theorem is joined |
+| architecture | `tools/Tools/Architecture.lean` (`make gen-architecture`) | every `.lean` under `src/`, `tools/` and `Test/` (import headers through `Lean.Elab.parseImports`), the roots `Tools.Architecture.roots` loaded for declaration counts, the estates by file walk, this table, `lakefile.toml`, the role register `tools/Tools/ArchitectureRoles.lean` (checked for totality on every run) | `docs/core/architecture-map.html` | `make check-architecture` on demand; not in `make check`: the map is a report and changes whenever the tree does | reproduced |
 
 Retired 2026-09-13 (the scripts ledger): `generated/schema-structural-assurance.tsv`, a
 2,682-row projection whose 446-line producer carried the SHA-256 of every Schema source

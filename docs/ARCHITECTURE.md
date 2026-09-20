@@ -1,5 +1,12 @@
 # Effect4 architecture
 
+The measured map is `docs/core/architecture-map.html`: every area of the tree at its declared
+height, the imports between them as the parser reads them, the typed-state proof stack as it
+lands, the file map by role, and every import against the direction this document states.
+`make gen-architecture` regenerates it from the tree (`docs/GENERATED.md`, group
+`architecture`); the roles and the layering it checks against are declared in
+`tools/Tools/ArchitectureRoles.lean`. This document is the prose; the map is the measurement.
+
 ## Dependency direction
 
 ```text

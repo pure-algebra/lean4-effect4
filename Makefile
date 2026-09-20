@@ -365,6 +365,19 @@ $(CHK)/corpus: $(CORE) $(LAWS) .lake/build/lib/lean/Test/Program/Gen.trace $(TRU
 gen-corpus-results: | build harness/truth/node_modules ## promote a fresh corpus run to harness/truth/corpus-results.tsv
 	$(PY) scripts/check-corpus.py --promote
 
+# The architecture map (docs/GENERATED.md, group `architecture`): measured from the tree by a
+# Lean driver that parses every import header, loads the roots for declaration counts and
+# walks the estates; the role register tools/Tools/ArchitectureRoles.lean is its one hand
+# input. A report, replaced at landings like STATE.md; `check-architecture` says whether the
+# committed map still matches the tree and is not a member of `check`.
+.PHONY: gen-architecture check-architecture
+gen-architecture: | build build-tools ## the architecture map, measured from the tree, into docs/core/architecture-map.html
+	$(LAKE) build Tools.Architecture ProofGraph
+	$(LAKE) env lean -M6144 --run tools/Tools/Architecture.lean
+check-architecture: | build build-tools ## does the committed architecture map match the tree (a report, not in check)
+	$(LAKE) build Tools.Architecture ProofGraph
+	$(LAKE) env lean -M6144 --run tools/Tools/Architecture.lean --check
+
 # T0: the printed programs' answer, error and requirement types against the one compiler
 # (tsgo, decisions row 57; tools/target). The oracle reads the truth modules and their
 # prelude, the generated TypeScript tables, the package's compiler config, manifest and
