@@ -66,6 +66,10 @@ finite controls and proposed D0–D7 sequence in `docs/research/2026-09-19-state
 Rows 44–45 record the approved typed world; rows 78–83 remain proposals. The existing tooling
 branch is paused and has not been merged. Set the storage/observation contract before pinning
 the concrete obligation count; fast backends and new API families do not all block the milestone.
+The immediate priority is shared representations and composition laws. Known future modules
+can reserve contracts with explicit missing implementations using the existing wanted machinery.
+Supporting reviews and the paused tooling handoff are tracked in
+`docs/research/2026-09-19-state-refinement/closeout.md`; none depends on retaining the design worktree.
 
 0. **The tooling-first waves, 1 and 2 landed** (2026-09-19). Wave 1: `f8517fa7`, `dfd94366`,
    `9e20cf9b`, `ee88efe2`, rows 59–66 (`1f1cc8e3`), the policy re-seed (`ba5286d3`); the coherence

@@ -119,6 +119,15 @@ scheduled and inline wakes can return different values. Each composed module the
 its own behavior law on a named profile, as DI-89 requires; typing is not enough. Printing an
 expansion exercises that expansion, not the native rc.112 module API.
 
+**Deferred modules.** Reserve a public signature and contract for known future needs; derived
+modules are Eff programs using the shared primitives. Prove reusable consequences over explicit
+implementation and law parameters, then instantiate them when the implementation arrives.
+Existing wanted declarations record missing definitions or proofs without supplying them.
+They are planning dependencies, never executable defaults or extra Eff constructors. Stream
+and Channel can follow this pattern; logging remains optional until an application needs it.
+The priority is composing existing representations and laws, with tooling serving those
+interfaces rather than introducing a new framework or gate for each module.
+
 **Lowering.** Keep four obligations distinct: program meaning to machine behavior; concrete
 storage to logical storage; LCNF/IR to target syntax; target compiler/runtime/host execution.
 The existing OCaml interfaces and tests are useful inputs to the second. Structural rule

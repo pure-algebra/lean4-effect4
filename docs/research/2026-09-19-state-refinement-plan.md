@@ -22,6 +22,13 @@ The new questions are narrower: the observable contract of those compositions; c
 memo storage; a scheduled-wake primitive; transaction admission; stored behavior values; and
 environment profiles. These are proposals in rows 78–83, not approvals inferred from a scout.
 
+The central task is representation and composition. Reuse the data structures, interpretations
+and proof infrastructure already present; choose the few shared interfaces that let them fit
+together, and prove their reusable laws once. Further machinery is justified by a concrete
+missing connection, not by a requirement to add a gate for every feature. Known future needs
+can reserve checked signatures and law statements now, with implementations left explicitly
+absent. Completing every future module is not a prerequisite for settling these interfaces.
+
 Done for this design stage means:
 
 1. Every state family and surveyed API family has an owner, representation, primitive
@@ -238,16 +245,22 @@ the expansion on the host; it does not test the native rc.112 API of the same na
 explicitly when claiming agreement. Library-first is an architectural ruling, not a theorem
 that every exported overload has been represented.
 
-### Remaining scope and the inventory closure rule
+### Future compositions and deliberately unselected scope
 
-The catalogue is not enough to declare all Effect exports covered. The package-level inventory
-must separately account for these adjacent families before any such claim:
+The following is a candidate menu, not an implementation backlog. Stream and Channel should
+first have contracts describing their intended composition as Eff programs; implement only the
+pieces a selected consumer needs. Logging is not a required feature. Context extensions and
+other derived services likewise start from ordinary programs and existing context operations.
+Use the deferred-contract pattern in §9 where the intended shape is useful before the body.
+
+The catalogue does not establish coverage of all Effect exports. If that broader claim is ever
+made, its inventory must also account for adjacent families such as these:
 
 | Family outside the 20-row table | Existing direction / design requirement |
 | --- | --- |
 | Stream, Channel, Sink | DI-11/DI-89 reserve a separate packet; scoped pull, backpressure, cancellation, buffering and consumer/producer lifetime must be related to the shared primitives |
 | Config and external services/resources | Existing schema/admission and host-answer seam; name unsupported carriers and operations; OS/network handles stay explicit capabilities rather than hidden state |
-| Logger, Metric, Tracer and context extensions | Determine which effects alter program-visible context/results and which belong only to the diagnostic sink; stateful callbacks require the same stored-behavior contract |
+| Logger, Metric, Tracer and context extensions | Select only for a concrete application need; distinguish program-visible context/results from diagnostics; stateful callbacks use the shared stored-behavior contract |
 | Mailbox and other aliases/wrappers | DI-11's composition direction applies to Mailbox; enumerate pinned aliases and overloads before claiming a concrete module implementation |
 | Transactional collections | The ten Tx modules sit over TxRef but their generic value/operation signatures and caller-supplied code must pass admission individually |
 
@@ -333,7 +346,55 @@ route emits C. LLVM's Wasm linker documentation supplies linking constraints, no
 [LLVM Wasm linking](https://lld.llvm.org/WebAssembly.html).
 The project's pinned compiler source, not the moving manual version, owns concrete API facts.
 
-## 9. Proof infrastructure: derive work, then check evidence
+## 9. Shared contracts and proof reuse
+
+### Deferred implementations with useful composition now
+
+Keep Eff, Ty, Val and the machine's existing state owners. Separate four roles in the interfaces
+that need them; this is not a requirement for four new framework types per module:
+
+| Role | Content | Reuse |
+| --- | --- | --- |
+| Signature | First-order operation names, arguments, answers, handles and configuration | Existing signatures and generated rows remain the source for clients and targets |
+| Contract | Logical state, observations and allowed transitions or delivery actions | One meaning shared by implementations; unresolved profile choices stay parameters |
+| Implementation | Executable operations interpreting the signature | Reference, efficient Lean and target-specific instances can occupy the same seam |
+| Laws | Statements relating a particular implementation to the contract | Derived module proofs depend on these laws, then instantiate them for each implementation |
+
+Derived APIs are primarily Eff programs composed from that basis. A Lean builder may be
+parameterized while constructing a program; the resulting stored program remains first-order
+Eff data. Proof-only interpretations may use Lean functions without putting those functions
+into stored syntax. Prefer existing protocol/sequence laws and container interfaces to another
+evaluator or a universal module framework. The first real consumer determines any missing law.
+
+An unfinished module can therefore supply its public signature, contract and dependencies now.
+Ordinary theorems can prove consequences for any implementation satisfying those laws. Later,
+supplying an implementation and its law proofs discharges those parameters once for all derived
+clients. A checked conditional theorem establishes the implication; it does not establish its
+premises. Even a well-typed contract may be uninhabited until a model realizes it.
+
+Reuse Batteries.Util.ProofWanted from the pinned Batteries revision
+4488d40d070b9700d4d5a6aa342f0d40c31b2a2d: def_wanted records a missing implementation;
+theorem_wanted/proof_wanted records a missing proof. Derived def_wanted bodies can thread
+missing dependencies as explicit parameters. A theorem_wanted with a body is still a wanted
+marker; publish an ordinary theorem when a conditional proof is actually complete. Wanted
+commands have private/file-local bookkeeping, so stable cross-module interfaces are public
+signatures and explicit contract parameters, not an assumption that the wanted notation works
+as a cross-module linker.
+
+A stub carries no executable implementation. Do not implement it as a default success, no-op,
+fabricated failure or new hole constructor in Eff. Runtime entry points and lowering require
+their executable dependencies to be supplied; erasing proof parameters supplies no missing
+operation. Recursive programs use the existing recursion representation and induction laws,
+not circular placeholder dependencies.
+
+Track implementation availability separately from proof status, using existing declaration
+identities and proof references. The paused Obligation carrier covers propositions; its current
+command neither derives the whole dependency graph nor integrates missing implementations.
+Connect wanted definitions only when the first consumer needs that view. Shared profile,
+observation and assumption descriptions should be referenced by goals, not copied into each
+one. This pattern requires no new stub framework or per-feature gate suite.
+
+### Completing the existing tooling seam
 
 Retain the scanner repair, direct declaration generation, named Aesop bank, kernel-checked
 structural frames and shared theorem-reference validation from the paused tooling branch.
@@ -402,7 +463,9 @@ Source review also confirmed the existing OCaml interfaces/list twins/tests, Boo
 restriction, Obs's concrete Stores field, and the pinned LLVM layout TODO. No new Lean
 declarations, compiler targets or proof claims were produced in this design stage.
 
-Before each corresponding implementation, add independent controls for:
+Use these unresolved behavior questions to guide each corresponding implementation, reusing
+existing fixtures where they exercise the question and adding focused controls only where
+the answer is missing:
 
 - scope close versus late registration; memo hit/completion shared identity and build-once;
 - scheduled cancellation, reentrant enqueue/flush, stale batches, dispatcher ownership,
@@ -427,8 +490,8 @@ or whole-repository sweep was run for this documentation slice.
 
 | Slice | Work | Acceptance and deletion |
 | --- | --- | --- |
-| D0: this packet | Reconcile research, record the approved world, correct authority overclaims, retain bounded controls | Citation/consistency checks pass; remaining semantic choices stay open in the one register |
-| D1: structural contract | Set observation/representation relation, completion and memo contract, identity policy, wake protocol | Positive/negative examples and exact Lean statements elaborate; existing frozen Obs is not weakened |
+| D0: this packet | Reconcile research, record the approved world, correct authority overclaims, identify reusable interfaces | Representation owners and composition seams are explicit; remaining semantic choices stay open in the one register |
+| D1: structural contract | Set observation/representation relation, completion and memo contract, identity policy, wake protocol; reserve signatures for known future consumers | Shared law statements and dependencies elaborate; future bodies can remain wanted; existing frozen Obs is not weakened |
 | D2: completion/memo migration | Completion-valued cells/owed data beside the old representation, connector, callers, then old fields | Delayed Ref reads and memo sharing retained; twelve Deferred witnesses and layer memo clause revisited; obsolete shape/decoder invariants deleted; generated outputs re-cut |
 | D3: world/language and ledger | Approved per-cell world, generic Ref/Deferred and binder-term atomic updates in their dependency order; independent transition-goal producer | Exact expected goals, frames, placeholders and dependencies; pinned semantic debt after D2; no claims that structural-frame premises are that debt |
 | D4: typed-state proofs | S1/S2/S3 on the stable representation and declared assumptions | Exit typing theorem at its stated fragment/world; current trust ceiling; no full behavioral-equivalence claim from typing |
@@ -436,9 +499,10 @@ or whole-repository sweep was run for this documentation slice.
 | D6: scheduled/module/control slices | Latch contract first if chosen, then groups from §6; transactions after isolation/admission contract; stored behaviors before their consumers | A behavior law per module/profile; schedule controls and explicit deviations; no dedicated Queue/Pool store without new evidence and ruling |
 | D7: target growth | Apply the established relations to other containers and one small lowering fragment; separate native/LLVM/Wasm probes | Per-target domain/runtime/ABI, Lean-to-IR trust or proof, IR-to-target and printer/bytes evidence; reusable lowering obligations instead of re-proving module semantics |
 
-Rows 78–83 gate semantic choices, not all useful work. Interface formation and independent
-controls proceed now. Fast-container implementation and new API families do not block the
-typed-state milestone once its representation contract is fixed. The catalogue's proposed
+Rows 78–83 reserve semantic choices, not all useful work. Interface formation and conditional
+composition proofs can proceed before all their implementations exist. Fast-container
+implementation and new API families do not block the typed-state milestone once its
+representation contract is fixed. The catalogue's proposed
 “number-only TxRef first” and an automatic “all APIs after the milestone” are not imported as
 new sequencing rules: generic language work already required by rows 42–43 must precede the
 proofs that depend on it.
@@ -464,3 +528,5 @@ program syntax to make a transaction or target easier to implement.
   existing implementation seam and finite evidence, not Lean certificates.
 - tools/Conform/Lcnf/Rules.lean, tools/Conform/Effect4/TargetLeanNative.lean,
   tools/Conform/Effect4/LcnfSemantics.lean, tools/Conform/Effect4/LcnfMl.lean: evidence scope.
+- docs/research/2026-09-19-state-refinement/closeout.md: tracked supporting reviews,
+  worktree provenance and the paused tooling handoff.
