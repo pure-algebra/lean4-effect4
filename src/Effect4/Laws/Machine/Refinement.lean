@@ -53,59 +53,49 @@ def DeferredCell.map (f : κ → κ') (cell : DeferredCell κ) : DeferredCell κ
 def DeferredStore.map (f : κ → κ') (store : DeferredStore κ) : DeferredStore κ' :=
   ⟨store.cells.map (DeferredCell.map f), store.due.map (Owed.mapCode f)⟩
 
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] DeferredCell.map DeferredStore.map
+
 namespace M1.DeferredWanted
 
 variable (f : κ → κ') (g : κ' → κ'') (d : DeferredStore κ)
 
 def cell_map_id (c : DeferredCell κ) : ProofGraph.Obligation
     (c.map id = c) := ⟨⟩
-#proof_wanted cell_map_id
 
 def cell_map_comp (c : DeferredCell κ) : ProofGraph.Obligation
     ((c.map f).map g = c.map (g ∘ f)) := ⟨⟩
-#proof_wanted cell_map_comp
 
 def map_id : ProofGraph.Obligation (d.map id = d) := ⟨⟩
-#proof_wanted map_id
 
 def map_comp : ProofGraph.Obligation ((d.map f).map g = d.map (g ∘ f)) := ⟨⟩
-#proof_wanted map_comp
 
 -- The ten operations, in the declaration order of Machine/Stores.lean.
 
 def map_make : ProofGraph.Obligation
     ((d.map f).make = ((d.make).1, (d.make).2.map f)) := ⟨⟩
-#proof_wanted map_make
 
 def map_cellAt (cell : DeferredKey) : ProofGraph.Obligation
     ((d.map f).cellAt cell = (d.cellAt cell).map (DeferredCell.map f)) := ⟨⟩
-#proof_wanted map_cellAt
 
 def map_setCell (cell : DeferredKey) (value : DeferredCell κ) : ProofGraph.Obligation
     ((d.map f).setCell cell (value.map f) = (d.setCell cell value).map f) := ⟨⟩
-#proof_wanted map_setCell
 
 def map_isDone (cell : DeferredKey) : ProofGraph.Obligation
     ((d.map f).isDone cell = d.isDone cell) := ⟨⟩
-#proof_wanted map_isDone
 
 def map_poll (cell : DeferredKey) : ProofGraph.Obligation
     ((d.map f).poll cell = (d.poll cell).map (Option.map f)) := ⟨⟩
-#proof_wanted map_poll
 
 def map_register (cell : DeferredKey) (waiter : FiberId) (token : Nat) : ProofGraph.Obligation
     ((d.map f).register cell waiter token =
       ((d.register cell waiter token).1.map f, (d.register cell waiter token).2.map f)) := ⟨⟩
-#proof_wanted map_register
 
 def map_cancel (cell : DeferredKey) (waiter : FiberId) (token : Nat) : ProofGraph.Obligation
     ((d.map f).cancel cell waiter token = (d.cancel cell waiter token).map f) := ⟨⟩
-#proof_wanted map_cancel
 
 def map_complete (cell : DeferredKey) (completion : κ) : ProofGraph.Obligation
     ((d.map f).complete cell (f completion) =
       ((d.complete cell completion).1.map f, (d.complete cell completion).2)) := ⟨⟩
-#proof_wanted map_complete
 
 def map_drainDue : ProofGraph.Obligation
     ((d.map f).drainDue =
@@ -113,9 +103,113 @@ def map_drainDue : ProofGraph.Obligation
 
 def map_wakeBatch (cell : DeferredKey) : ProofGraph.Obligation
     ((d.map f).wakeBatch cell = (d.wakeBatch cell).map f) := ⟨⟩
-#proof_wanted map_wakeBatch
 
 end M1.DeferredWanted
+
+def M1.CellMapWanted.id_fun : ProofGraph.Obligation
+    (DeferredCell.map (id : κ → κ) = id) := ⟨⟩
+
+section DeferredMapLaws
+
+variable (f : κ → κ') (g : κ' → κ'') (d : DeferredStore κ)
+
+theorem DeferredCell.map_id (c : DeferredCell κ) :
+    (c.map id = c) := by
+  aesop (rule_sets := [Effect4.Stores])
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] DeferredCell.map_id
+
+theorem DeferredCell.map_comp (c : DeferredCell κ) :
+    ((c.map f).map g = c.map (g ∘ f)) := by
+  aesop (rule_sets := [Effect4.Stores])
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] DeferredCell.map_comp
+
+theorem DeferredCell.map_id_fun : DeferredCell.map (id : κ → κ) = id := by
+  aesop (rule_sets := [Effect4.Stores])
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] DeferredCell.map_id_fun
+
+theorem DeferredStore.map_id : (d.map id = d) := by
+  aesop (rule_sets := [Effect4.Stores])
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] DeferredStore.map_id
+
+theorem DeferredStore.map_comp : ((d.map f).map g = d.map (g ∘ f)) := by
+  aesop (rule_sets := [Effect4.Stores])
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] DeferredStore.map_comp
+
+-- The ten operations, in the declaration order of Machine/Stores.lean.
+
+theorem DeferredStore.map_make :
+    ((d.map f).make = ((d.make).1, (d.make).2.map f)) := by
+  aesop (rule_sets := [Effect4.Stores])
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] DeferredStore.map_make
+
+theorem DeferredStore.map_cellAt (cell : DeferredKey) :
+    ((d.map f).cellAt cell = (d.cellAt cell).map (DeferredCell.map f)) := by
+  aesop (rule_sets := [Effect4.Stores])
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] DeferredStore.map_cellAt
+
+theorem DeferredStore.map_setCell (cell : DeferredKey) (value : DeferredCell κ) :
+    ((d.map f).setCell cell (value.map f) = (d.setCell cell value).map f) := by
+  aesop (rule_sets := [Effect4.Stores])
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] DeferredStore.map_setCell
+
+theorem DeferredStore.map_isDone (cell : DeferredKey) :
+    ((d.map f).isDone cell = d.isDone cell) := by
+  aesop (rule_sets := [Effect4.Stores])
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] DeferredStore.map_isDone
+
+theorem DeferredStore.map_poll (cell : DeferredKey) :
+    ((d.map f).poll cell = (d.poll cell).map (Option.map f)) := by
+  aesop (rule_sets := [Effect4.Stores])
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] DeferredStore.map_poll
+
+theorem DeferredStore.map_register (cell : DeferredKey) (waiter : FiberId) (token : Nat) :
+    ((d.map f).register cell waiter token =
+      ((d.register cell waiter token).1.map f, (d.register cell waiter token).2.map f)) := by
+  aesop (rule_sets := [Effect4.Stores])
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] DeferredStore.map_register
+
+theorem DeferredStore.map_cancel (cell : DeferredKey) (waiter : FiberId) (token : Nat) :
+    ((d.map f).cancel cell waiter token = (d.cancel cell waiter token).map f) := by
+  aesop (rule_sets := [Effect4.Stores])
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] DeferredStore.map_cancel
+
+theorem DeferredStore.map_complete (cell : DeferredKey) (completion : κ) :
+    ((d.map f).complete cell (f completion) =
+      ((d.complete cell completion).1.map f, (d.complete cell completion).2)) := by
+  aesop (rule_sets := [Effect4.Stores])
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] DeferredStore.map_complete
+
+theorem DeferredStore.map_drainDue :
+    ((d.map f).drainDue =
+      ((d.drainDue).1.map (Owed.mapCode f), (d.drainDue).2.map f)) := by
+  aesop (rule_sets := [Effect4.Stores])
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] DeferredStore.map_drainDue
+
+theorem DeferredStore.map_wakeBatch (cell : DeferredKey) :
+    ((d.map f).wakeBatch cell = (d.wakeBatch cell).map f) := by
+  aesop (rule_sets := [Effect4.Stores])
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] DeferredStore.map_wakeBatch
+
+end DeferredMapLaws
+
+#typed_state_obligations Effect4.Machine.M1.CellMapWanted ceiling 0 using aesop (rule_sets := [Effect4.Stores])
+
+#typed_state_obligations Effect4.Machine.M1.DeferredWanted ceiling 0 using aesop (rule_sets := [Effect4.Stores])
 
 /-! The image boundary lives in Laws, and never becomes a machine invariant again. -/
 namespace Refinement

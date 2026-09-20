@@ -537,3 +537,14 @@ population this is 1/2, up from the corrected plain-search baseline 0/2. New hel
 are reported separately from that increase. Exact commands, failed and successful
 probes, axiom results, source snapshots and hashes are retained in phase-c/store-bank.
 No generation ran in this slice. The remaining Phase C fills and final sweep are pending.
+
+
+The deferred-map slice now passes its narrow build. All 14 frozen functor/naturality
+statements are unchanged; 13 previously open seats close, while drainDue was already
+closed. Their local gate and the one new cell-map identity helper are at zero.
+The module census is 14/19 with the bank, versus the original 0/4; the original four
+remain unclosed, so this denominator change is not counted as common-population gain.
+Every reported closure uses only propext and/or Quot.sound. The full downstream
+connector namespace remains pending. Evidence and the exact failed/successful commands
+are retained in phase-c/deferred-map. The earlier store bank landed at c6911d69;
+finite OCaml arena controls and dune build landed at 8cb639b4. No generator ran.

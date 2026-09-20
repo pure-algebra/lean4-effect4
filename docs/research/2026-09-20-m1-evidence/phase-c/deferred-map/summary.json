@@ -1,0 +1,107 @@
+{
+  "kind": "green Deferred naturality proof slice; scratch evidence only",
+  "base_commit": "c6911d6900fe035558547e19ec13dd8c4539cbe0",
+  "head_at_capture": "c6911d6900fe035558547e19ec13dd8c4539cbe0",
+  "source": "src/Effect4/Laws/Machine/Refinement.lean",
+  "source_before_sha256": "2c501ee7c026c2edc5e4a0a47176a2fa34ec27e9217958f5fd8e3e0c63243428",
+  "source_after_sha256": "bb8777b34a076c350b210ccc69ecf8496b0a4ddbd10589d92ec6a451dd17d5fe",
+  "frozen_statements_unchanged": 14,
+  "new_searched_theorem_bodies": 15,
+  "new_norm_rules": 17,
+  "commands": [
+    {
+      "name": "first narrow module build",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Refinement > /tmp/m1-phase-c-refinement-map.log 2>&1",
+      "exit_code": 1,
+      "log": "logs/m1-phase-c-refinement-map.log",
+      "source_version": "not frozen at the failed invocation; do not substitute the phase-B before-image or final after-image"
+    },
+    {
+      "name": "fixed narrow module build",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Refinement > /tmp/m1-phase-c-refinement-map-fixed.log 2>&1",
+      "exit_code": 0,
+      "log": "logs/m1-phase-c-refinement-map-fixed.log",
+      "source_version": "current after-image captured after green build; its gate locations match the retained log"
+    },
+    {
+      "name": "Stores-bank census",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -DwarningAsError=true /tmp/m1-phase-c/census/Refinement.lean > /tmp/m1-phase-c/census/Refinement-map.log 2>&1",
+      "exit_code": 0,
+      "log": "census/Refinement-map.log",
+      "source": "census/Refinement.lean"
+    }
+  ],
+  "exit_code_provenance": "reported by coordinator; retained logs inspected, no commands rerun here",
+  "probe_attempts": [
+    {
+      "log": "DeferredRound1.log",
+      "exit_code": 1,
+      "reason": "remaining search goals",
+      "source": "DeferredRound1.lean"
+    },
+    {
+      "log": "DeferredRound2.log",
+      "exit_code": 1,
+      "reason": "store identity still needs function-level map identities",
+      "source": "DeferredRound2.lean"
+    },
+    {
+      "log": "DeferredRound3.log",
+      "exit_code": 1,
+      "reason": "missing imported Refinement object file; no proof conclusion",
+      "source": null
+    },
+    {
+      "log": "DeferredRound3-rebased.log",
+      "exit_code": 1,
+      "reason": "remaining Owed.mapCode identity under List.map",
+      "source": "DeferredRound3.lean"
+    },
+    {
+      "log": "DeferredIdentity.log",
+      "exit_code": 1,
+      "reason": "id resolves to a ledger declaration instead of the identity function",
+      "source": "DeferredIdentity-name-shadowing.lean"
+    },
+    {
+      "log": "DeferredIdentity-fixed.log",
+      "exit_code": 0,
+      "reason": "fixed helper probes and fourteen example laws accepted",
+      "source": "DeferredIdentity.lean"
+    }
+  ],
+  "probe_source_limit": "Sources are copied as retained now. Except the explicitly named shadowing snapshot, earlier edits were not all version-pinned at invocation; filenames alone do not certify exact historical input. Original Round3 import-failure source is unavailable. Failed logs are diagnostic history, not positive proof evidence. Exact shell flags for probe invocations were not retained in this packet.",
+  "gate_trajectory": {
+    "phase_B_selected14": {
+      "open": 13,
+      "proved": 1,
+      "note": "selected from complete31 status; this was not a separately executed14-scope gate"
+    },
+    "first_live_local_gate": {
+      "status": "failed",
+      "reason": "map_id had no proof/placeholder"
+    },
+    "fixed_map_gate": {
+      "open": 0,
+      "proved": 14,
+      "total": 14,
+      "ceiling": 0
+    },
+    "new_helper_gate": {
+      "open": 0,
+      "proved": 1,
+      "total": 1,
+      "ceiling": 0
+    }
+  },
+  "scope_boundary": "The local DeferredWanted gate occurs before the later image/Projects/Factors declarations. It proves the first14 only, not the full31-seat downstream namespace.",
+  "helper_wanted_evidence": "Both OwedMapWanted.id_fun and CellMapWanted.id_fun appear as Obligation + #proof_wanted before their theorem attempts in retained DeferredIdentity.lean. Owed helper belongs to the upstream bank slice.",
+  "dependency_source_hashes": {
+    "src/Effect4/Laws/Machine/CompletionData.lean": "c67cdab0e3f3405ec9559b414eca4baff202ea79cff94b929ab4d33b3834c8f6",
+    "src/Effect4/Laws/Machine/RefKernel.lean": "b6f4b674664ed889afdc8b04753f9397aa5868033c138912814a9306e00e8a82",
+    "src/Effect4/Laws/Auto/RuleSets.lean": "71faebe811ffb932fa7bc79248cb70a9022c7736b01257609e50c95643f72495",
+    "tools/ProofGraph/Search.lean": "07c369e09b40e4b7922bde688313f4e0f4515d8ce022e1eb2f5a144d7ed7d2df"
+  },
+  "phase_B_statement_freeze": "3f89307488835002c1cb9d8b3bcb9c1dcc1554a1",
+  "before_source_unchanged_by_store_bank_commit": true
+}

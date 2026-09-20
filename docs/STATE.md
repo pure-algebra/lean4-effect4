@@ -31,7 +31,7 @@ Phase B's statement skeleton is installed: indexed heap and promise columns, the
 world and its order, the arena laws and projection, the M1 representation connectors,
 origin and trace statements, and the held handshake. All 36 new gates passed their 30
 owner-module builds. They account for 221 statements (48 closed, 173 open) beside 90
-statements already covered by zero gates. Phase C must close the 172 active open statements;
+statements already covered by zero gates. Phase C began with 172 active open statements;
 the remaining handshake stays open until M4. New ceilings are the statement counts, and
 the 19 existing zero gate sites are unchanged.
 
@@ -41,8 +41,13 @@ Its fresh census measured 647 admissible closures out of 4062 statements across 
 (247/1584 in the original 38-module radius). One further closure was rejected for
 Classical.choice. The earlier identical counts are retained as provisional history because
 that search wrapper could return references to discarded helpers. Phase B's `make check`
-and fresh coverage checks passed; the sanctioned report remains green 133/135. Proof fills
-have not started.
+and fresh coverage checks passed; the sanctioned report remains green 133/135.
+
+Phase C proof fills have started. The completion-data rule bank passes its positive and
+negative controls, and its support gates are at zero. All fourteen deferred-store map laws
+now close by search, with a zero gate in their module and allowed axiom dependencies in
+the after-census. The arena, remaining connectors, world order and simulation fills are
+next; the full Phase C check remains pending.
 
 The one-regeneration target was missed: Phase A required three completed runtime rounds,
 plus two partial LCNF attempts. Placement added one EFF/wire/CAS validation round; cumulative
