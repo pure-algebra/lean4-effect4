@@ -163,7 +163,7 @@ theorem spawn_trace (interp : RunInterp ν σ β ε δ ι α χ St κ)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (parent : RunFiber ν σ β ε δ ι α χ κ φ)
     (program : κ) (options : Supervision.ForkOptions) :
     (spawn interp m parent program options).1.trace =
-      m.trace ++ [RunEvent.forked parent.id ⟨m.nextId⟩ options.daemon] := rfl
+      m.trace ++ [RunEvent.forked parent.id ⟨m.nextId⟩ options.daemon] := by aesop
 
 def M1Trace.spawn_forked (interp : RunInterp ν σ β ε δ ι α χ St κ)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (parent : RunFiber ν σ β ε δ ι α χ κ φ)
@@ -183,13 +183,13 @@ theorem spawn_forked (interp : RunInterp ν σ β ε δ ι α χ St κ)
 theorem spawn_child (interp : RunInterp ν σ β ε δ ι α χ St κ)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (parent : RunFiber ν σ β ε δ ι α χ κ φ)
     (program : κ) (options : Supervision.ForkOptions) :
-    (spawn interp m parent program options).2.2 = ⟨m.nextId⟩ := rfl
+    (spawn interp m parent program options).2.2 = ⟨m.nextId⟩ := by aesop
 
 /-- The fresh id is consumed. -/
 theorem spawn_nextId (interp : RunInterp ν σ β ε δ ι α χ St κ)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (parent : RunFiber ν σ β ε δ ι α χ κ φ)
     (program : κ) (options : Supervision.ForkOptions) :
-    (spawn interp m parent program options).1.nextId = m.nextId + 1 := rfl
+    (spawn interp m parent program options).1.nextId = m.nextId + 1 := by aesop
 
 /-- The spawn appends the child and touches no other fiber (`:922`); the child starts with no
 exit, no observer and no child of its own (`RunFiber.make`, `:259-275`). -/
@@ -206,8 +206,7 @@ theorem spawn_fibers (interp : RunInterp ν σ β ε δ ι α χ St κ)
     ∃ child : RunFiber ν σ β ε δ ι α χ κ φ,
       (spawn interp m parent program options).1.fibers = m.fibers ++ [child] ∧
         child.id = ⟨m.nextId⟩ ∧ child.exit = none ∧ child.observers = [] ∧
-        child.children = [] ∧ child.origin = .forked parent.id options.daemon [] :=
-  ⟨_, rfl, rfl, rfl, rfl, rfl, rfl⟩
+        child.children = [] ∧ child.origin = .forked parent.id options.daemon [] := by aesop
 
 def M1Trace.start_forked (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (parent : RunFiber ν σ β ε δ ι α χ κ φ) (child : FiberId) (immediately : Bool) : ProofGraph.Obligation (
