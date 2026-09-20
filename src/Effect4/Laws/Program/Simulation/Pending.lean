@@ -72,8 +72,7 @@ theorem registerRace_pendingOk (m : FMachine) (f : FRun) (y : Bool) (raceId : Na
 @[aesop safe apply (rule_sets := [Effect4.Stores])]
 theorem beginRace_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (entrants : List NCode)
     (hf : PendingOk f) (site : Option (List Nat) := none) :
-    PendingOk (beginRace i m f y entrants site).fiber := by
-  aesop (rule_sets := [Effect4.Stores])
+    PendingOk (beginRace i m f y entrants site).fiber := by aesop
 
 theorem finishFrame_pendingOk (m : FMachine) (f : FRun) (y : Bool)
     (next : FrameStep EffName EffThunk Val Err Defect FiberId Ann)
