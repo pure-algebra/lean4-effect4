@@ -5,10 +5,12 @@ import Effect4.Laws.Auto.Obligations
 
 namespace Effect4.Machine
 
-attribute [aesop norm simp (rule_sets := [Effect4.Stores])]
+attribute [aesop norm simp (rule_sets := [Effect4.StoreKernel])]
   DeferredStore.make DeferredStore.cellAt DeferredStore.setCell DeferredStore.isDone
   DeferredStore.poll DeferredStore.register DeferredStore.cancel DeferredStore.complete
   DeferredStore.drainDue DeferredStore.wakeBatch Owed.mapCode
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])]
   Owed.mapCode_waiter Owed.mapCode_token Owed.mapCode_mode
 
 def M1.CompletionSupport.store_lookup_lt {α : Type} {xs : List α} {i : Nat} {a : α}
@@ -41,22 +43,22 @@ def M1.OwedMapWanted.id_fun : ProofGraph.Obligation
 
 theorem Owed.mapCode_code (f : κ → κ') (d : Owed κ) :
     (d.mapCode f).code = f d.code := by
-  aesop (rule_sets := [Effect4.Stores])
+  aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 
 theorem Owed.mapCode_id (d : Owed κ) : d.mapCode id = d := by
-  aesop (rule_sets := [Effect4.Stores])
+  aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 
 theorem Owed.mapCode_comp (f : κ → κ') (g : κ' → κ'') (d : Owed κ) :
     (d.mapCode f).mapCode g = d.mapCode (g ∘ f) := by
-  aesop (rule_sets := [Effect4.Stores])
+  aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 
 theorem Owed.mapCode_id_fun : Owed.mapCode (id : κ → κ) = id := by
-  aesop (rule_sets := [Effect4.Stores])
+  aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 
 attribute [aesop norm simp (rule_sets := [Effect4.Stores])]
   Owed.mapCode_code Owed.mapCode_id Owed.mapCode_comp Owed.mapCode_id_fun
 
-#typed_state_obligations Effect4.Machine.M1.OwedMapWanted ceiling 0 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Machine.M1.OwedMapWanted ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 end OwedMap
 
 end Effect4.Machine
@@ -93,7 +95,7 @@ def deferredStore_waiter_receives_stored (self : DeferredStore) (cell : Deferred
     (_hw : c.wake.waiters = [⟨waiter, token, phase, ()⟩]) : ProofGraph.Obligation (
     (self.complete cell e).1.due = self.due ++ [⟨waiter, token, e, WakeMode.now⟩]) := ⟨⟩
 
-#typed_state_obligations Effect4.Machine.M1.Core ceiling 0 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Machine.M1.Core ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 
 end Effect4.Machine.M1.Core
 
@@ -105,7 +107,7 @@ def M1.CompletionSupport.poll_reads_cell (s : DeferredStore) (k : DeferredKey) (
 /-- The store bank control: a successful cell lookup determines the poll result. -/
 theorem poll_reads_cell (s : DeferredStore) (k : DeferredKey) (c : DeferredCell)
     (h : s.cellAt k = some c) : s.poll k = some c.completion := by
-  aesop (rule_sets := [Effect4.Stores])
+  aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 end Effect4.Machine
 
-#typed_state_obligations Effect4.Machine.M1.CompletionSupport ceiling 0 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Machine.M1.CompletionSupport ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])

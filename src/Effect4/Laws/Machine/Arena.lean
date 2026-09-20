@@ -97,8 +97,10 @@ def deferred_setCell {κ : Type} (d : DeferredStore κ) (cell : DeferredKey)
 
 end ArenaObligations
 
-attribute [aesop norm simp (rule_sets := [Effect4.Stores])]
+attribute [aesop norm simp (rule_sets := [Effect4.StoreKernel])]
   instArenaList Arena.empty Arena.size Arena.peek Arena.poke Arena.alloc
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])]
   LawfulArena.size_empty LawfulArena.dense LawfulArena.alloc_fresh
   LawfulArena.size_alloc LawfulArena.peek_alloc_new LawfulArena.peek_alloc_old
   LawfulArena.size_poke LawfulArena.peek_poke_same LawfulArena.peek_poke_other
@@ -110,19 +112,19 @@ attribute [aesop safe apply (rule_sets := [Effect4.Stores])] List.getElem?_set_n
 namespace Arena
 
 theorem list_lawful (α : Type) : LawfulArena (List α) α := by
-  aesop (rule_sets := [Effect4.Stores]) (add safe constructors [LawfulArena])
+  aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel]) (add safe constructors [LawfulArena])
 
 attribute [aesop safe apply (rule_sets := [Effect4.Stores])] list_lawful
 
 instance instLawfulArenaList {α : Type} : LawfulArena (List α) α := by
-  aesop (rule_sets := [Effect4.Stores])
+  aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 
 theorem map_some_filterMap {α β : Type} (xs : List α) (f : α → Option β)
     (present : ∀ a ∈ xs, (f a).isSome = true) :
     (xs.filterMap f).map some = xs.map f := by
   rw [List.map_filterMap_some_eq_filter_map_isSome]
   apply List.filter_eq_self.mpr
-  aesop (rule_sets := [Effect4.Stores]) (add norm simp [List.forall_mem_map])
+  aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel]) (add norm simp [List.forall_mem_map])
 
 attribute [aesop norm simp (rule_sets := [Effect4.Stores])] map_some_filterMap
 
@@ -132,7 +134,7 @@ theorem lookup_filterMap {α β : Type} (xs : List α) (f : α → Option β) (i
   have mapped := congrArg (fun values : List (Option β) => values[i]?)
     (map_some_filterMap xs f present)
   simp only [List.getElem?_map, lookup, Option.map_some] at mapped
-  aesop (rule_sets := [Effect4.Stores])
+  aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 
 attribute [aesop safe apply (rule_sets := [Effect4.Stores])] lookup_filterMap
 
@@ -145,14 +147,14 @@ attribute [aesop norm simp (rule_sets := [Effect4.Stores])] peek_none
 
 theorem toList_empty {σ α : Type} [Arena σ α] [LawfulArena σ α] :
     Arena.toList (Arena.empty : σ) = [] := by
-  aesop (rule_sets := [Effect4.Stores]) (add norm simp [Arena.toList])
+  aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel]) (add norm simp [Arena.toList])
 
 attribute [aesop norm simp (rule_sets := [Effect4.Stores])] toList_empty
 
 theorem toList_length {σ α : Type} [Arena σ α] [LawfulArena σ α] (s : σ) :
     (Arena.toList s).length = Arena.size s := by
   have present : ∀ i ∈ List.range (Arena.size s), (Arena.peek s i).isSome = true := by
-    aesop (rule_sets := [Effect4.Stores]) (add norm simp [List.mem_range])
+    aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel]) (add norm simp [List.mem_range])
   have lengths := List.filterMap_length_eq_length.mpr present
   simpa only [Arena.toList, List.length_range] using lengths
 
@@ -162,9 +164,9 @@ theorem peek_toList {σ α : Type} [Arena σ α] [LawfulArena σ α] (s : σ) (i
     Arena.peek s i = (Arena.toList s)[i]? := by
   by_cases bound : i < Arena.size s
   · symm
-    aesop (rule_sets := [Effect4.Stores])
+    aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
       (add norm simp [Arena.toList, List.mem_range, List.getElem?_range])
-  · aesop (rule_sets := [Effect4.Stores]) (add safe apply [List.getElem?_eq_none])
+  · aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel]) (add safe apply [List.getElem?_eq_none])
 
 attribute [aesop safe apply (rule_sets := [Effect4.Stores])] peek_toList
 
@@ -173,7 +175,7 @@ theorem toList_list {α : Type} [LawfulArena (List α) α] (xs : List α) :
   apply List.ext_getElem?
   intro i
   have lookup := peek_toList xs i
-  aesop (rule_sets := [Effect4.Stores])
+  aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 
 attribute [aesop norm simp (rule_sets := [Effect4.Stores])] toList_list
 
@@ -189,14 +191,14 @@ theorem toList_poke {σ α : Type} [Arena σ α] [LawfulArena σ α]
     · have inside : i < (Arena.toList s).length := by
         simpa only [toList_length] using bound
       rw [List.getElem?_set_self inside]
-      aesop (rule_sets := [Effect4.Stores])
+      aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
     · have outside : Arena.size s ≤ i := Nat.le_of_not_gt bound
       have absent : (Arena.toList s).length ≤ i := by
         simpa only [toList_length] using outside
       rw [List.set_eq_of_length_le absent, ← peek_toList]
-      aesop (rule_sets := [Effect4.Stores])
+      aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
   · rw [List.getElem?_set_ne (Ne.symm same), ← peek_toList]
-    aesop (rule_sets := [Effect4.Stores])
+    aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 
 attribute [aesop norm simp (rule_sets := [Effect4.Stores])] toList_poke
 
@@ -204,7 +206,7 @@ theorem toList_alloc {σ α : Type} [Arena σ α] [LawfulArena σ α]
     (s : σ) (v : α) :
     Arena.toList (Arena.alloc s v).2 = Arena.toList s ++ [v] := by
   apply List.ext_getElem
-  · aesop (rule_sets := [Effect4.Stores])
+  · aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
   · intro i leftBound rightBound
     apply Option.some.inj
     rw [← List.getElem?_eq_getElem leftBound, ← List.getElem?_eq_getElem rightBound, ← peek_toList]
@@ -214,13 +216,13 @@ theorem toList_alloc {σ α : Type} [Arena σ α] [LawfulArena σ α]
     · have inside : i < (Arena.toList s).length := by
         simpa only [toList_length] using old
       rw [List.getElem?_append_left inside, ← peek_toList]
-      aesop (rule_sets := [Effect4.Stores])
+      aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
     · subst i
       have last : (Arena.toList s ++ [v])[Arena.size s]? = some v := by
         simpa only [toList_length] using
           (List.getElem?_concat_length (l := Arena.toList s) (a := v))
       rw [last]
-      aesop (rule_sets := [Effect4.Stores])
+      aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 
 attribute [aesop norm simp (rule_sets := [Effect4.Stores])] toList_alloc
 
@@ -239,15 +241,15 @@ theorem deferred_setCell {κ : Type} (d : DeferredStore κ) (cell : DeferredKey)
     d.setCell cell value = { d with cells := Arena.poke d.cells cell.index value } := by
   aesop
 
-attribute [aesop norm simp (rule_sets := [Effect4.Stores])]
+attribute [aesop norm simp (rule_sets := [Effect4.StoreKernel])]
   deferred_make deferred_cellAt deferred_setCell
 
 end Arena
 
 #typed_state_obligations Effect4.Machine.ArenaObligations ceiling 0
-  using aesop (rule_sets := [Effect4.Stores])
+  using aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 
 #typed_state_obligations Effect4.Machine.ArenaSupportWanted ceiling 0
-  using aesop (rule_sets := [Effect4.Stores])
+  using aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 
 end Effect4.Machine

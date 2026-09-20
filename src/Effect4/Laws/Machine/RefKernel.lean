@@ -212,7 +212,7 @@ end M1.RefKernelSupport
 theorem toList_writeBackA {σ : Type} [Arena σ Val] [LawfulArena σ Val]
     (s : σ) (cell : RefKey) (next : Option Val) :
     Arena.toList (writeBackA s cell next) = refWriteBack (Arena.toList s) cell next := by
-  aesop (rule_sets := [Effect4.Stores])
+  aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
     (add norm simp [writeBackA, refWriteBack, refPoke])
 
 attribute [aesop norm simp (rule_sets := [Effect4.Stores])] toList_writeBackA
@@ -222,7 +222,7 @@ theorem toList_refStepOf {σ : Type} [Arena σ Val] [LawfulArena σ Val]
     (cell : RefKey) (k : RefKernel) (s : σ) :
     (refStepOfA cell k s).map (Prod.map id Arena.toList) =
       refStepOf cell k (Arena.toList s) := by
-  aesop (rule_sets := [Effect4.Stores])
+  aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
     (add norm simp [refStepOfA, refStepOf, refPeek, Arena.peek_toList,
       Function.comp_def, Prod.map])
 
@@ -233,7 +233,7 @@ theorem refStepOfA_list (cell : RefKey) (k : RefKernel) (xs : List Val) :
     refStepOfA cell k xs = refStepOf cell k xs := by
   have project : (Arena.toList : List Val → List Val) = id := by
     funext values
-    aesop (rule_sets := [Effect4.Stores])
+    aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
   simpa only [project, Prod.map_id, Option.map_id_apply, id_eq] using
     (toList_refStepOf cell k xs)
 
@@ -247,7 +247,7 @@ theorem refStepOfA_size {σ : Type} [Arena σ Val] [LawfulArena σ Val]
     rw [← toList_refStepOf, h]
     rfl
   have lengths := refStepOf_length projected
-  aesop (rule_sets := [Effect4.Stores])
+  aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 
 attribute [aesop safe forward (rule_sets := [Effect4.Stores])] refStepOfA_size
 
@@ -261,19 +261,19 @@ theorem refStepOfA_keeps {σ : Type} [Arena σ Val] [LawfulArena σ Val]
     rw [← toList_refStepOf, h]
     rfl
   have cells : ∀ v ∈ Arena.toList s, P v := by
-    aesop (rule_sets := [Effect4.Stores])
+    aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
       (add norm simp [Arena.peek_toList, List.mem_iff_getElem?])
   have kept := refStepOf_keeps cells hk projected
-  aesop (rule_sets := [Effect4.Stores])
+  aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
     (add norm simp [Arena.peek_toList]) (add safe forward [List.mem_of_getElem?])
 
 attribute [aesop safe forward (rule_sets := [Effect4.Stores])] refStepOfA_keeps
 
 #typed_state_obligations Effect4.Machine.ArenaObligations ceiling 0
-  using aesop (rule_sets := [Effect4.Stores])
+  using aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 
 #typed_state_obligations Effect4.Machine.M1.RefKernelSupport ceiling 0
-  using aesop (rule_sets := [Effect4.Stores])
+  using aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 
 end Effect4.Machine
 -- END M1 PHASE B RefKernel
