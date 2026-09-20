@@ -215,17 +215,21 @@ namespace RunMachine
 /-- `m'` recorded everything `m` had, in order, and then some. -/
 def Extends (m m' : RunMachine ν σ β ε δ ι α χ St κ φ η) : Prop := m.trace <+: m'.trace
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core evaluator in
 theorem Extends.refl (m : RunMachine ν σ β ε δ ι α χ St κ φ η) : Extends m m := List.prefix_rfl
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core evaluator in
 theorem Extends.trans {a b c : RunMachine ν σ β ε δ ι α χ St κ φ η} (h₁ : Extends a b) (h₂ : Extends b c) :
     Extends a c := List.IsPrefix.trans h₁ h₂
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core evaluator in
 /-- The form the review states: the later trace is the earlier one followed by some events. -/
 theorem Extends.exists {a b : RunMachine ν σ β ε δ ι α χ St κ φ η} (h : Extends a b) :
     ∃ ev, b.trace = a.trace ++ ev :=
   let ⟨ev, hev⟩ := h
   ⟨ev, hev.symm⟩
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem emit_trace (m : RunMachine ν σ β ε δ ι α χ St) (ev : List (RunEvent ν σ β ε δ ι α χ)) :
     (m.emit ev).trace = m.trace ++ ev := by
   -- the field-local guard (direction L4): an empty emit is the trace itself
@@ -233,23 +237,29 @@ theorem emit_trace (m : RunMachine ν σ β ε δ ι α χ St) (ev : List (RunEv
   | nil => exact (List.append_nil _).symm
   | cons _ _ => rfl
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem update_trace (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) :
     (m.update f).trace = m.trace := by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem modify_trace (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId)
     (k : RunFiber ν σ β ε δ ι α χ → RunFiber ν σ β ε δ ι α χ) : (m.modify id k).trace = m.trace := by
   unfold modify
   split <;> rfl
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem halt_trace (m : RunMachine ν σ β ε δ ι α χ St) (why : Stuck) :
     (m.halt why).trace = m.trace := by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem updateRace_trace (m : RunMachine ν σ β ε δ ι α χ St) (r : Race ν σ β ε δ ι α) :
     (m.updateRace r).trace = m.trace := by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem arm_trace (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId) :
     (m.arm owner).trace = m.trace := by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem disarm_trace (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId) :
     (m.disarm owner).trace = m.trace := by aesop
 
@@ -258,6 +268,7 @@ machine beside other things has, so a hop through it is one lemma. -/
 def Grows (m : RunMachine ν σ β ε δ ι α χ St) {R : Type w} (e : RunMachine ν σ β ε δ ι α χ St × R) :
     Prop := Extends m e.1
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem Grows.refl (m : RunMachine ν σ β ε δ ι α χ St) {R : Type w} (r : R) : Grows m (m, r) :=
   Extends.refl m
 
@@ -304,14 +315,16 @@ def M1OriginApproximation.spawn_grows {interp : RunInterp ν σ β ε δ ι α �
     {m : RunMachine ν σ β ε δ ι α χ St} {parent : RunFiber ν σ β ε δ ι α χ}
     {program : Prim ν σ β ε δ ι α} {options : Supervision.ForkOptions} {site : List Nat} :
     ProofGraph.Obligation (Grows m (spawn interp m parent program options site)) := ⟨⟩
-#proof_wanted M1OriginApproximation.spawn_grows
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem spawn_grows {interp : RunInterp ν σ β ε δ ι α χ St} {m : RunMachine ν σ β ε δ ι α χ St}
     {parent : RunFiber ν σ β ε δ ι α χ} {program : Prim ν σ β ε δ ι α}
     {options : Supervision.ForkOptions} {site : List Nat} : Grows m (spawn interp m parent program options site) := by
   unfold Grows spawn
   trace_leaf
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem start_grows {m : RunMachine ν σ β ε δ ι α χ St} {parent : RunFiber ν σ β ε δ ι α χ}
     {child : FiberId} {immediately : Bool} : Grows m (start m parent child immediately) := by
   unfold Grows start
@@ -328,6 +341,7 @@ theorem interruptEach_grows {interp : RunInterp ν σ β ε δ ι α χ St} {who
     refine Extends.trans ?_ ih
     split <;> trace_leaf
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem countdownPark_grows {interp : RunInterp ν σ β ε δ ι α χ St}
     {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ} {targets : List FiberId}
     {resumeWith : Resume ν} {failFast : Bool} :
@@ -371,8 +385,9 @@ def M1OriginApproximation.launchEntrant_grows {interp : RunInterp ν σ β ε δ
     {raceId : Nat} {m : RunMachine ν σ β ε δ ι α χ St} {host : RunFiber ν σ β ε δ ι α χ}
     {program : Prim ν σ β ε δ ι α} {site : List Nat} :
     ProofGraph.Obligation (Grows m (launchEntrant interp raceId m host program site)) := ⟨⟩
-#proof_wanted M1OriginApproximation.launchEntrant_grows
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem launchEntrant_grows {interp : RunInterp ν σ β ε δ ι α χ St} {raceId : Nat}
     {m : RunMachine ν σ β ε δ ι α χ St} {host : RunFiber ν σ β ε δ ι α χ}
     {program : Prim ν σ β ε δ ι α} {site : List Nat} : Grows m (launchEntrant interp raceId m host program site) := by
@@ -380,6 +395,7 @@ theorem launchEntrant_grows {interp : RunInterp ν σ β ε δ ι α χ St} {rac
   dsimp only
   trace_leaf
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- `injectYield` extends the diagnostic trace and changes no store observation. -/
 theorem injectYield_extends {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ}
     {yielding : Bool} {it : Iter ν σ β ε δ ι α χ St} (h : injectYield m f yielding = some it) :
@@ -414,6 +430,7 @@ macro "hops_observers" : tactic => `(tactic| first
   | hops_leaf
   | exact fireObserver_fold_grows)
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem exitFiber_grows {interp : RunInterp ν σ β ε δ ι α χ St} {m : RunMachine ν σ β ε δ ι α χ St}
     {f : RunFiber ν σ β ε δ ι α χ} {exit : Exit β ε δ ι α} :
     Grows m (exitFiber interp m f exit) := by
@@ -423,6 +440,7 @@ theorem exitFiber_grows {interp : RunInterp ν σ β ε δ ι α χ St} {m : Run
 
 /-! ### `evaluatePrim` and its arms -/
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- A race's registration only marks the race (D6a). -/
 theorem registerRace_extends {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ}
     {yielding : Bool} {raceId : Nat} :
@@ -431,6 +449,7 @@ theorem registerRace_extends {m : RunMachine ν σ β ε δ ι α χ St} {f : Ru
   try dsimp only
   split <;> trace_leaf
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem finishFrame_extends {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ}
     {yielding : Bool} {next : FrameStep ν σ β ε δ ι α} {events : List (FrameEvent ν σ β ε δ ι α)}
     {nested : List (Cmd ν σ β ε δ ι α)} :
@@ -497,11 +516,13 @@ theorem iteration_extends {interp : RunInterp ν σ β ε δ ι α χ St}
 
 /-! ### The loop -/
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem settle_grows {id : FiberId} {rest : List (Cmd ν σ β ε δ ι α)} {it : Iter ν σ β ε δ ι α χ St} :
     Grows it.machine (settle id rest it) := by
   unfold Grows settle
   (repeat' split) <;> trace_leaf
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Posting a task keeps the trace's prefix: a halt, or an update, an arm and an emit. -/
 theorem postTask_extends {m : RunMachine ν σ β ε δ ι α χ St} {owner : FiberId}
     {priority : Nat} {task : Task ν σ β ε δ ι α} :
@@ -658,8 +679,8 @@ theorem flushRoot_trace_extends (interp : RunInterp ν σ β ε δ ι α χ St) 
 which extends (the timer, A4). -/
 def M1Clock.advance_extends {interp : RunInterp ν σ β ε δ ι α χ St} {fuel : Nat} {millis : ClockMillis} : ProofGraph.Obligation (∀ {rounds : Nat} {m : RunMachine ν σ β ε δ ι α χ St},
       Extends m (advanceState interp fuel millis rounds m).1) := ⟨⟩
-#proof_wanted M1Clock.advance_extends
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem advance_extends {interp : RunInterp ν σ β ε δ ι α χ St} {fuel : Nat} {millis : ClockMillis} :
     ∀ {rounds : Nat} {m : RunMachine ν σ β ε δ ι α χ St},
       Extends m (advanceState interp fuel millis rounds m).1
@@ -794,12 +815,14 @@ def terminal : ReplayResult ν σ β ε δ ι α χ St κ φ η → Bool
   | finished _ => true
   | stuck _ _ => true
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core evaluator in
 theorem le_refl (a : ReplayResult ν σ β ε δ ι α χ St κ φ η) : le a a := by
   cases a with
   | frontier _ m => exact List.prefix_rfl
   | finished m => rfl
   | stuck why m => rfl
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core evaluator in
 theorem le_trans {a b c : ReplayResult ν σ β ε δ ι α χ St κ φ η} (h₁ : le a b) (h₂ : le b c) : le a c := by
   cases a with
   | frontier _ m =>
@@ -810,6 +833,7 @@ theorem le_trans {a b c : ReplayResult ν σ β ε δ ι α χ St κ φ η} (h�
   | finished m => unfold le at h₁; subst h₁; exact h₂
   | stuck why m => unfold le at h₁; subst h₁; exact h₂
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core evaluator in
 /-- Antisymmetry on terminal results; two frontiers with the same trace may still differ
 elsewhere, so the order is a preorder on frontiers. -/
 theorem le_antisymm_terminal {a b : ReplayResult ν σ β ε δ ι α χ St κ φ η} (ht : a.terminal = true)
@@ -819,6 +843,7 @@ theorem le_antisymm_terminal {a b : ReplayResult ν σ β ε δ ι α χ St κ �
   | finished m => exact h₁.symm
   | stuck why m => exact h₁.symm
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core evaluator in
 /-- A frontier is below anything that extends it. -/
 theorem frontier_le {why : Exhaustion} {m : RunMachine ν σ β ε δ ι α χ St κ φ η}
     {b : ReplayResult ν σ β ε δ ι α χ St κ φ η}
@@ -979,8 +1004,8 @@ def M1Clock.advanceState_stable (interp : RunInterp ν σ β ε δ ι α χ St �
       (advanceState interp fuel millis rounds m).2 = true →
       ∀ k j, advanceState interp (fuel + k) millis (rounds + j) m =
         advanceState interp fuel millis rounds m) := ⟨⟩
-#proof_wanted M1Clock.advanceState_stable
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem advanceState_stable (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) (millis : ClockMillis) :
     ∀ (rounds : Nat) (m : RunMachine ν σ β ε δ ι α χ St κ φ η),
       (advanceState interp fuel millis rounds m).2 = true →
@@ -1276,8 +1301,8 @@ completed is the same fire. -/
 def M1Clock.advance_trace_mono (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (millis : ClockMillis) : ProofGraph.Obligation (∀ (rounds : Nat) (m : RunMachine ν σ β ε δ ι α χ St) (k j : Nat),
       Extends (advanceState interp fuel millis rounds m).1
         (advanceState interp (fuel + k) millis (rounds + j) m).1) := ⟨⟩
-#proof_wanted M1Clock.advance_trace_mono
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem advance_trace_mono (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (millis : ClockMillis) :
     ∀ (rounds : Nat) (m : RunMachine ν σ β ε δ ι α χ St) (k j : Nat),
       Extends (advanceState interp fuel millis rounds m).1
@@ -1664,4 +1689,4 @@ theorem replay_colimit_eq_of_sufficient (interp : RunInterp ν σ β ε δ ι α
 
 end Effect4.Machine
 
-#typed_state_obligations Effect4.Machine.M1OriginApproximation ceiling 2 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Machine.M1OriginApproximation ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

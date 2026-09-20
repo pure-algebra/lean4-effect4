@@ -83,8 +83,8 @@ def M1Drive.drain_rel (root : NativeEff) : ProofGraph.Obligation (∀ (l : List 
       ListRel (OwedMeans (CodeMeans root))
         (l.map (Owed.mapCode (fun c => embed (completionPrim c))))
         (l.map (Owed.mapCode denoteCompletion))) := ⟨⟩
-#proof_wanted M1Drive.drain_rel
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem drain_rel (root : NativeEff) :
     ∀ (l : List (Owed (Completion Val Err Defect FiberId Ann))),
       ListRel (OwedMeans (CodeMeans root))
@@ -190,6 +190,7 @@ def M1Drive.dropFinalizer_ok (root : NativeEff) (scope key : Nat) {s s' : Stores
     (_h : (interpOf root).dropFinalizer scope key s = some s') : ProofGraph.Obligation (StoresOk s') := ⟨⟩
 #proof_wanted M1Drive.dropFinalizer_ok
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem dropFinalizer_ok (root : NativeEff) (scope key : Nat) {s s' : Stores} (hs : StoresOk s)
     (h : (interpOf root).dropFinalizer scope key s = some s') : StoresOk s' := by
   dsimp only [interpOf] at h
@@ -253,14 +254,13 @@ def M1Drive.clockStep_rel (root : NativeEff) (millis : ClockMillis) (s : Stores)
       ((interpOf root).clockStep millis s).2 = ((interpR root).clockStep millis s).2 ∧
       ListRel (OwedMeans (CodeMeans root)) ((interpOf root).clockStep millis s).1.toList
         ((interpR root).clockStep millis s).1.toList) := ⟨⟩
-#proof_wanted M1Drive.clockStep_rel
 
 def M1Clock.clockStep_rel (root : NativeEff) (millis : ClockMillis) (s : Stores) (_hs : StoresOk s) : ProofGraph.Obligation (StoresOk ((interpOf root).clockStep millis s).2 ∧
       ((interpOf root).clockStep millis s).2 = ((interpR root).clockStep millis s).2 ∧
       ListRel (OwedMeans (CodeMeans root)) ((interpOf root).clockStep millis s).1.toList
         ((interpR root).clockStep millis s).1.toList) := ⟨⟩
-#proof_wanted M1Clock.clockStep_rel
 
+@[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
 theorem clockStep_rel (root : NativeEff) (millis : ClockMillis) (s : Stores) (hs : StoresOk s) :
     StoresOk ((interpOf root).clockStep millis s).2 ∧
       ((interpOf root).clockStep millis s).2 = ((interpR root).clockStep millis s).2 ∧
@@ -1141,5 +1141,5 @@ theorem stepAgrees (root : NativeEff) :
 
 end Effect4.Program.Sched
 
-#typed_state_obligations Effect4.Program.Sched.M1Clock ceiling 5 using aesop (rule_sets := [Effect4.Stores])
-#typed_state_obligations Effect4.Program.Sched.M1Drive ceiling 7 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Program.Sched.M1Clock ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
+#typed_state_obligations Effect4.Program.Sched.M1Drive ceiling 1 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

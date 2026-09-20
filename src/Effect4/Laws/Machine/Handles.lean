@@ -687,8 +687,9 @@ def M1.Handles.owed_flatMap_mapCode_keys_subset {κ κ' : Type} (f : κ → κ')
     (sourceKeys : κ → List Handle) (targetKeys : κ' → List Handle)
     (_h : ∀ c, targetKeys (f c) ⊆ sourceKeys c) (ds : List (Owed κ)) : ProofGraph.Obligation (
     (ds.map (Owed.mapCode f)).flatMap (Owed.keys targetKeys) ⊆ ds.flatMap (Owed.keys sourceKeys)) := ⟨⟩
-#proof_wanted M1.Handles.owed_flatMap_mapCode_keys_subset
 
+
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem Owed.flatMap_mapCode_keys_subset {κ κ' : Type} (f : κ → κ')
     (sourceKeys : κ → List Handle) (targetKeys : κ' → List Handle)
     (h : ∀ c, targetKeys (f c) ⊆ sourceKeys c) (ds : List (Owed κ)) :
@@ -2056,8 +2057,8 @@ machine's, its fiber's, its commands') exist in the world it leaves. -/
 def M1Origin.make_keys_subset (id : FiberId) (program : Prim ν σ Val Err Defect FiberId Ann) (flag : Bool)
     (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) : ProofGraph.Obligation ((RunFiber.make id program flag budget ctx origin : RunFiber ν σ Val Err Defect FiberId Ann Ctx).keys nk sk ⊆
       primKeys nk sk program ++ ctx.keys) := ⟨⟩
-#proof_wanted M1Origin.make_keys_subset
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem make_keys_subset (id : FiberId) (program : Prim ν σ Val Err Defect FiberId Ann) (flag : Bool)
     (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) :
     (RunFiber.make id program flag budget ctx origin : RunFiber ν σ Val Err Defect FiberId Ann Ctx).keys nk sk ⊆
@@ -2079,6 +2080,7 @@ def M1Origin.spawnChild_keys_subset (interp : RunInterp ν σ Val Err Defect Fib
       Handle.fiber parent.id :: primKeys nk sk program ++ parent.context.keys) := ⟨⟩
 #proof_wanted M1Origin.spawnChild_keys_subset
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem spawnChild_keys_subset (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (parent : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (program : Prim ν σ Val Err Defect FiberId Ann)
@@ -2101,6 +2103,7 @@ def M1Origin.spawn_minted (interp : RunInterp ν σ Val Err Defect FiberId Ann C
           (spawn interp m parent program options site).2.1.keys nk sk)) := ⟨⟩
 #proof_wanted M1Origin.spawn_minted
 
+@[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
 theorem spawn_minted (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (parent : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (program : Prim ν σ Val Err Defect FiberId Ann)
@@ -2333,8 +2336,8 @@ def M1Origin.launchEntrant_minted (interp : RunInterp ν σ Val Err Defect Fiber
       MintedIn (launchEntrant interp raceId m host program site).1
         (Handle.fiber (launchEntrant interp raceId m host program site).2 ::
           (launchEntrant interp raceId m host program site).1.keys nk sk)) := ⟨⟩
-#proof_wanted M1Origin.launchEntrant_minted
 
+@[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
 theorem launchEntrant_minted (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores) (raceId : Nat)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (host : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (program : Prim ν σ Val Err Defect FiberId Ann)
@@ -3149,6 +3152,7 @@ def M1Origin.fork_arm_minted (_hb : KeyBounded nk sk interp ambient)
     (_hout : it.outcome.keys = []) : ProofGraph.Obligation (IterMinted nk sk m it) := ⟨⟩
 #proof_wanted M1Origin.fork_arm_minted
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem fork_arm_minted (hb : KeyBounded nk sk interp ambient)
     (m M : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores) (hMw : M.world = m.world)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx)
@@ -3198,6 +3202,7 @@ def M1Origin.withFiber_fork_minted (_hb : KeyBounded nk sk interp ambient)
       (WithFiberAction.fork program options site).keys nk sk)) : ProofGraph.Obligation (IterMinted nk sk m (evaluatePrim.withFiber interp m f yielding (WithFiberAction.fork program options site))) := ⟨⟩
 #proof_wanted M1Origin.withFiber_fork_minted
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem withFiber_fork_minted (hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
@@ -3235,8 +3240,8 @@ def M1Origin.withFiber_forkIn_minted (_hb : KeyBounded nk sk interp ambient)
     (_hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++
       (WithFiberAction.forkIn program options scope site).keys nk sk)) : ProofGraph.Obligation (IterMinted nk sk m
       (evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkIn program options scope site))) := ⟨⟩
-#proof_wanted M1Origin.withFiber_forkIn_minted
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem withFiber_forkIn_minted (hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
@@ -3262,8 +3267,8 @@ def M1Origin.withFiber_forkScoped_minted (_hb : KeyBounded nk sk interp ambient)
     (_hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++
       (WithFiberAction.forkScoped program options site).keys nk sk)) : ProofGraph.Obligation (IterMinted nk sk m
       (evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkScoped program options site))) := ⟨⟩
-#proof_wanted M1Origin.withFiber_forkScoped_minted
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem withFiber_forkScoped_minted (hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
@@ -3452,8 +3457,8 @@ def M1Origin.withFiber_raceAll_minted (_hb : KeyBounded nk sk interp ambient)
     {site : Option (List Nat)}
     (_hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++
       (WithFiberAction.raceAll entrants site).keys nk sk)) : ProofGraph.Obligation (IterMinted nk sk m (evaluatePrim.withFiber interp m f yielding (WithFiberAction.raceAll entrants site))) := ⟨⟩
-#proof_wanted M1Origin.withFiber_raceAll_minted
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem withFiber_raceAll_minted (hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
@@ -4939,8 +4944,8 @@ def M1Clock.advanceState_minted_of_evaluator (_hb : KeyBounded nk sk interp)
     (_hEval : EvaluatorMinted nk sk interp) (fuel : Nat) (millis : ClockMillis) : ProofGraph.Obligation (∀ (rounds : Nat) (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores), MintedAt nk sk m →
       m.world.le (advanceState interp fuel millis rounds m).1.world ∧
         MintedAt nk sk (advanceState interp fuel millis rounds m).1) := ⟨⟩
-#proof_wanted M1Clock.advanceState_minted_of_evaluator
 
+@[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
 theorem advanceState_minted_of_evaluator (hb : KeyBounded nk sk interp)
     (hEval : EvaluatorMinted nk sk interp) (fuel : Nat) (millis : ClockMillis) :
     ∀ (rounds : Nat) (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores), MintedAt nk sk m →
@@ -5477,7 +5482,6 @@ def flatMap_resumes_const (ws : List (Waiter Unit)) (e : Completion Val Err Defe
     ProofGraph.Obligation (
     (ws.map fun w => (⟨w.fiber, w.token, e, WakeMode.now⟩ : Owed (Completion Val Err Defect FiberId Ann))).flatMap
         (Owed.keys Completion.keys) ⊆ e.keys) := ⟨⟩
-#proof_wanted flatMap_resumes_const
 
 def complete_keys (self : DeferredStore) (cell : DeferredKey) (e : Completion Val Err Defect FiberId Ann) :
     ProofGraph.Obligation (
@@ -5488,14 +5492,15 @@ def complete_keys (self : DeferredStore) (cell : DeferredKey) (e : Completion Va
 def drainDue_keys (self : DeferredStore) : ProofGraph.Obligation (
     (self.drainDue).2.keys ⊆ self.keys ∧
       (self.drainDue).1.flatMap (Owed.keys Completion.keys) ⊆ self.keys) := ⟨⟩
+#proof_wanted drainDue_keys
 
 end M1.Handles
 
 /-- Reading a Deferred cell exposes only handles already owned by its store. -/
 def M1.Handles.cellAt_keys_subset {self : DeferredStore} {cell : DeferredKey} {c : DeferredCell}
     (_h : self.cellAt cell = some c) : ProofGraph.Obligation (c.keys ⊆ self.keys) := ⟨⟩
-#proof_wanted M1.Handles.cellAt_keys_subset
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem DeferredStore.cellAt_keys_subset {self : DeferredStore} {cell : DeferredKey} {c : DeferredCell}
     (h : self.cellAt cell = some c) : c.keys ⊆ self.keys := by
   intro x hx
@@ -5533,6 +5538,7 @@ def M1.Handles.setCell_keys_of_subset (self : DeferredStore) (cell : DeferredKey
     (_h : c.keys ⊆ self.keys) : ProofGraph.Obligation ((self.setCell cell c).keys ⊆ self.keys) := ⟨⟩
 #proof_wanted M1.Handles.setCell_keys_of_subset
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem DeferredStore.setCell_keys_of_subset (self : DeferredStore) (cell : DeferredKey) (c : DeferredCell)
     (h : c.keys ⊆ self.keys) : (self.setCell cell c).keys ⊆ self.keys := by
   exact List.Subset.trans (DeferredStore.setCell_keys_subset self cell c)
@@ -5546,6 +5552,7 @@ def M1.Handles.setCell_appendDue_keys (self : DeferredStore) (cell : DeferredKey
     ({ self.setCell cell c with due := self.due ++ due } : DeferredStore).keys ⊆ self.keys ++ extra) := ⟨⟩
 #proof_wanted M1.Handles.setCell_appendDue_keys
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem DeferredStore.setCell_appendDue_keys (self : DeferredStore) (cell : DeferredKey) (c : DeferredCell)
     (due : List (Owed (Completion Val Err Defect FiberId Ann))) (extra : List Handle)
     (hc : c.keys ⊆ extra) (hd : due.flatMap (Owed.keys Completion.keys) ⊆ extra) :
@@ -5564,27 +5571,29 @@ theorem DeferredStore.setCell_appendDue_keys (self : DeferredStore) (cell : Defe
 attribute [aesop safe apply (rule_sets := [Effect4.Stores])]
   DeferredStore.setCell_keys_of_subset DeferredStore.setCell_appendDue_keys
 
+@[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
 theorem DeferredStore.register_keys (self : DeferredStore) (cell : DeferredKey) (waiter : FiberId) (token : Nat) :
     (self.register cell waiter token).1.keys ⊆ self.keys ∧
       (∀ p, (self.register cell waiter token).2 = some p → p.keys ⊆ self.keys) ∧
       self.cells.length ≤ (self.register cell waiter token).1.cells.length := by
   unfold DeferredStore.register
   split
-  · aesop (rule_sets := [Effect4.Stores])
+  · aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
   · next c hc =>
     have hck := DeferredStore.cellAt_keys_subset hc
     cases heff : c.completion with
     | some e =>
       have he : e.keys ⊆ self.keys := by
         simpa only [DeferredCell.keys, heff] using hck
-      aesop (rule_sets := [Effect4.Stores])
+      aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
     | none =>
       have hsame : ({ c with wake := c.wake.register waiter token () } : DeferredCell).keys ⊆ self.keys := hck
       have hs := DeferredStore.setCell_keys_of_subset self cell _ hsame
       have hl := DeferredStore.setCell_le self cell { c with wake := c.wake.register waiter token () }
-      aesop (rule_sets := [Effect4.Stores])
+      aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 
 /-- The owed resumes a broadcast wake mints carry the completion's keys and no other. -/
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem flatMap_resumes_const (ws : List (Waiter Unit)) (e : Completion Val Err Defect FiberId Ann) :
     (ws.map fun w => (⟨w.fiber, w.token, e, WakeMode.now⟩ : Owed (Completion Val Err Defect FiberId Ann))).flatMap
         (Owed.keys Completion.keys) ⊆ e.keys := by
@@ -5593,21 +5602,22 @@ theorem flatMap_resumes_const (ws : List (Waiter Unit)) (e : Completion Val Err 
   obtain ⟨w, _, rfl⟩ := List.mem_map.mp hr
   simpa only [Owed.keys, List.append_nil] using hxr
 
+@[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
 theorem DeferredStore.complete_keys (self : DeferredStore) (cell : DeferredKey) (e : Completion Val Err Defect FiberId Ann) :
     (self.complete cell e).1.keys ⊆ self.keys ++ e.keys ∧
       self.cells.length ≤ (self.complete cell e).1.cells.length := by
   unfold DeferredStore.complete
   split
-  · aesop (rule_sets := [Effect4.Stores])
+  · aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
   · next c hc =>
     cases heff : c.completion with
-    | some previous => aesop (rule_sets := [Effect4.Stores])
+    | some previous => aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
     | none =>
       have hk := DeferredStore.setCell_appendDue_keys self cell ⟨some e, (c.wake.wakeAll).2⟩
         ((c.wake.wakeAll).1.map fun w => ⟨w.fiber, w.token, e, WakeMode.now⟩) e.keys
         (List.Subset.refl _) (flatMap_resumes_const (c.wake.wakeAll).1 e)
       have hl := DeferredStore.setCell_le self cell ⟨some e, (c.wake.wakeAll).2⟩
-      aesop (rule_sets := [Effect4.Stores])
+      aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 
 theorem DeferredStore.cancel_keys (self : DeferredStore) (cell : DeferredKey) (waiter : FiberId) (token : Nat) :
     (self.cancel cell waiter token).keys ⊆ self.keys ∧
@@ -5627,7 +5637,7 @@ theorem DeferredStore.cancel_keys (self : DeferredStore) (cell : DeferredKey) (w
 theorem DeferredStore.drainDue_keys (self : DeferredStore) :
     (self.drainDue).2.keys ⊆ self.keys ∧
       (self.drainDue).1.flatMap (Owed.keys Completion.keys) ⊆ self.keys := by
-  aesop (rule_sets := [Effect4.Stores])
+  aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 
 /-- A cell's keys are its completion's, whatever its list. -/
 theorem DeferredCell.keys_wake (c : DeferredCell) (w : WakeList Unit) :
@@ -6654,10 +6664,51 @@ namespace Effect4.Machine.M1.DeferredWanted
 /-- The deleted await program named precisely this handle; the new entry still owns it. -/
 def memoEntry_keys (entry : MemoEntry) : ProofGraph.Obligation
     (Handle.promise entry.deferred ∈ entry.keys) := ⟨⟩
-#proof_wanted memoEntry_keys
+
+theorem memoEntry_keys_holds (entry : MemoEntry) : Handle.promise entry.deferred ∈ entry.keys :=
+  List.mem_append_left _ (List.mem_cons_of_mem _ List.mem_cons_self)
+
+attribute [aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])] memoEntry_keys_holds
 
 end Effect4.Machine.M1.DeferredWanted
 -- END M1 PHASE B Handles
 
-#typed_state_obligations Effect4.Machine.M1.Handles ceiling 9 using aesop (rule_sets := [Effect4.Stores])
-#typed_state_obligations Effect4.Machine.M1Origin ceiling 9 using aesop (rule_sets := [Effect4.Stores])
+namespace Effect4.Machine
+
+/-- The two conjunctive key laws, one rule per conjunct, so the bank closes each after the
+store simp rules have already settled the cell-count conjunct. -/
+@[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
+theorem DeferredStore.complete_keys_subset (self : DeferredStore) (cell : DeferredKey)
+    (e : Completion Val Err Defect FiberId Ann) :
+    (self.complete cell e).1.keys ⊆ self.keys ++ e.keys :=
+  (DeferredStore.complete_keys self cell e).1
+
+@[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
+theorem DeferredStore.complete_cells_le (self : DeferredStore) (cell : DeferredKey)
+    (e : Completion Val Err Defect FiberId Ann) :
+    self.cells.length ≤ (self.complete cell e).1.cells.length :=
+  (DeferredStore.complete_keys self cell e).2
+
+@[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
+theorem DeferredStore.register_keys_subset (self : DeferredStore) (cell : DeferredKey)
+    (waiter : FiberId) (token : Nat) :
+    (self.register cell waiter token).1.keys ⊆ self.keys :=
+  (DeferredStore.register_keys self cell waiter token).1
+
+@[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
+theorem DeferredStore.register_answer_keys (self : DeferredStore) (cell : DeferredKey)
+    (waiter : FiberId) (token : Nat) (p : Completion Val Err Defect FiberId Ann)
+    (h : (self.register cell waiter token).2 = some p) : p.keys ⊆ self.keys :=
+  (DeferredStore.register_keys self cell waiter token).2.1 p h
+
+@[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
+theorem DeferredStore.register_cells_le (self : DeferredStore) (cell : DeferredKey)
+    (waiter : FiberId) (token : Nat) :
+    self.cells.length ≤ (self.register cell waiter token).1.cells.length :=
+  (DeferredStore.register_keys self cell waiter token).2.2
+
+end Effect4.Machine
+
+#typed_state_obligations Effect4.Machine.M1.Handles ceiling 5 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
+#typed_state_obligations Effect4.Machine.M1.DeferredWanted ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
+#typed_state_obligations Effect4.Machine.M1Origin ceiling 4 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

@@ -38,6 +38,7 @@ variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
 
 /-! ## The run-loop top and the per-entry budget -/
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- A deferred interrupt is cleared at the top of the iteration and the current primitive
 becomes the pending cause's failure (`:639-642`). census: checkpoint.runloop-top -/
 theorem runloopTop_deferred (f : RunFiber ν σ β ε δ ι α χ) (h : f.frame.deferredInterrupt = true) :
@@ -46,18 +47,21 @@ theorem runloopTop_deferred (f : RunFiber ν σ β ε δ ι α χ) (h : f.frame.
           { f.frame with deferredInterrupt := false, current := Prim.failure f.frame.pendingCause } } := by
   simp [runloopTop, h]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- With no deferred interrupt the top of the loop changes nothing (`:639`).
 census: checkpoint.runloop-top -/
 theorem runloopTop_idle (f : RunFiber ν σ β ε δ ι α χ) (h : f.frame.deferredInterrupt = false) :
     runloopTop f = f := by
   simp [runloopTop, h]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- After the top of the loop no interrupt is deferred. census: checkpoint.runloop-top -/
 theorem runloopTop_clears (f : RunFiber ν σ β ε δ ι α χ) :
     (runloopTop f).frame.deferredInterrupt = false := by
   unfold runloopTop
   aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The op counter counts every iteration (`:643`). census: rule.budget-per-runloop-entry -/
 theorem countOp_count (f : RunFiber ν σ β ε δ ι α χ) :
     (countOp f).currentOpCount = f.currentOpCount + 1 :=
@@ -93,34 +97,40 @@ theorem drive_evaluate_running (interp : RunInterp ν σ β ε δ ι α χ St) (
     drive interp (fuel + 1) m (Cmd.evaluate id :: rest) = drive interp fuel m rest := by
   simp [drive, driveState, driveStep, hs, hf, hrun]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The scheduler's verdict by default: the op count has reached the budget
 (`Scheduler.ts:174-176`). census: scheduler.should-yield -/
 theorem yieldVerdict_default (f : RunFiber ν σ β ε δ ι α χ) (h : f.yieldOverride = none) :
     yieldVerdict f = decide (f.currentOpCount >= f.maxOpsBeforeYield) := by
   simp [yieldVerdict, h]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The tape's override answers instead (`Scheduler.ts:78-81`). census: scheduler.should-yield -/
 theorem yieldVerdict_override (f : RunFiber ν σ β ε δ ι α χ) (verdict : Bool)
     (h : f.yieldOverride = some verdict) : yieldVerdict f = verdict := by
   simp [yieldVerdict, h]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The latch: once a yield has been injected in this entry, no second one is (`:648`).
 census: rule.budget-per-runloop-entry -/
 theorem injectYield_latched (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) :
     injectYield m f true = none :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- `PreventSchedulerYield` bypasses the check (`:645`, `Scheduler.ts:295-298`).
 census: scheduler.prevent-yield-default -/
 theorem injectYield_prevented (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ)
     (yielding : Bool) (h : f.preventYield = true) : injectYield m f yielding = none := by
   simp [injectYield, h]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- No verdict, no injection (`:646`). census: scheduler.should-yield -/
 theorem injectYield_no_verdict (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ)
     (yielding : Bool) (h : yieldVerdict f = false) : injectYield m f yielding = none := by
   simp [injectYield, h]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The injection (`:647-652`): save the current program in the ordinary
 success-continuation stack protocol, set the latch and consume the override.
 No guard or dispatcher task is allocated until the following Yield operation.
@@ -158,6 +168,7 @@ theorem iteration_evaluates (interp : RunInterp ν σ β ε δ ι α χ St)
 
 /-! ## The dispatcher: buckets, arming, drain, flush -/
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- A task joins its priority's bucket at the end (`Scheduler.ts:105-131`, FIFO).
 census: scheduler.priority-buckets -/
 theorem Dispatcher.enqueue_same_bucket (d : Dispatcher ν σ β ε δ ι α) (priority : Nat)
@@ -166,6 +177,7 @@ theorem Dispatcher.enqueue_same_bucket (d : Dispatcher ν σ β ε δ ι α) (pr
     (d.enqueue priority task).buckets = ⟨bucket.priority, bucket.tasks ++ [task]⟩ :: rest := by
   simp [Dispatcher.enqueue, Dispatcher.insert, hb, hp]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- A lower priority opens a bucket in front (`Scheduler.ts:105-131`, ascending).
 census: scheduler.priority-buckets -/
 theorem Dispatcher.enqueue_lower_priority (d : Dispatcher ν σ β ε δ ι α) (priority : Nat)
@@ -174,11 +186,13 @@ theorem Dispatcher.enqueue_lower_priority (d : Dispatcher ν σ β ε δ ι α) 
     (d.enqueue priority task).buckets = ⟨priority, [task]⟩ :: bucket :: rest := by
   simp [Dispatcher.enqueue, Dispatcher.insert, hb, hne, hlt]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- An empty dispatcher takes the task as its one bucket. census: scheduler.priority-buckets -/
 theorem Dispatcher.enqueue_empty (priority : Nat) (task : Task ν σ β ε δ ι α) :
     ((Dispatcher.empty : Dispatcher ν σ β ε δ ι α).enqueue priority task).buckets = [⟨priority, [task]⟩] :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Enqueueing arms the dispatcher (`Scheduler.ts:207-212`); an already armed one stays
 armed, which is the "later tasks join the armed callback" clause.
 census: scheduler.dispatcher-arming -/
@@ -186,12 +200,14 @@ theorem Dispatcher.enqueue_arms (d : Dispatcher ν σ β ε δ ι α) (priority 
     (task : Task ν σ β ε δ ι α) : (d.enqueue priority task).armed = true :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- `runTasks` takes the whole snapshot once, in bucket order, and leaves an idle
 dispatcher (`Scheduler.ts:225-233`). census: scheduler.run-tasks-drain-once -/
 theorem Dispatcher.drain_eq (d : Dispatcher ν σ β ε δ ι α) :
     d.drain = ((d.buckets.map Bucket.tasks).flatten, Dispatcher.empty) :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- A drained dispatcher is disarmed: a task enqueued during the run re-arms it and waits
 for the next host task. census: scheduler.run-tasks-drain-once -/
 theorem Dispatcher.drain_disarms (d : Dispatcher ν σ β ε δ ι α) : (d.drain).2.armed = false :=
@@ -217,6 +233,7 @@ theorem fire_eq (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
   unfold stepDecision.fire fireState
   rw [h]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The first task scheduled on a dispatcher arms it: a host callback is scheduled behind
 those already scheduled (`Scheduler.ts:207-212`, R2-15). census: scheduler.dispatcher-arming -/
 theorem RunMachine.arm_new (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId)
@@ -225,6 +242,7 @@ theorem RunMachine.arm_new (m : RunMachine ν σ β ε δ ι α χ St) (owner : 
   rw [h]
   simp
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- A later task joins the armed callback: the order is unchanged.
 census: scheduler.dispatcher-arming -/
 theorem RunMachine.arm_known (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId)
@@ -233,12 +251,14 @@ theorem RunMachine.arm_known (m : RunMachine ν σ β ε δ ι α χ St) (owner 
   rw [h]
   simp
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Arming changes nothing but the schedule. census: scheduler.dispatcher-arming -/
 theorem RunMachine.arm_fields (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId) :
     (m.arm owner).fibers = m.fibers ∧ (m.arm owner).nextToken = m.nextToken ∧
       (m.arm owner).trace = m.trace ∧ (m.arm owner).state = m.state :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- A callback that ran is no longer scheduled. census: scheduler.host-loop -/
 theorem RunMachine.disarm_eq (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId) :
     (m.disarm owner).armed = m.armed.filter fun x => x ≠ owner := rfl
@@ -376,6 +396,7 @@ theorem evaluatePrim_sync_pure (interp : RunInterp ν σ β ε δ ι α χ St)
         yielding, Outcome.answered, []⟩ := by
   simp only [evaluatePrim, hpark, hsync]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- An answered iteration: the nested commands run first, then the delivery (`:932-933`).
 census: op.Sync -/
 theorem settle_answered (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α))
@@ -384,6 +405,7 @@ theorem settle_answered (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α))
       (it.machine.update it.fiber, it.nested ++ [Cmd.deliver id it.yielding] ++ rest) := by
   simp [settle, h]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- A finished iteration: the nested commands run first, then the exit path (`:611-628`, M1).
 census: rule.children-interrupted-after-exit -/
 theorem settle_finished (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α))
@@ -612,6 +634,7 @@ def M1OriginClauses.spawn_eq (interp : RunInterp ν σ β ε δ ι α χ St) (m 
           [RunEvent.forked parent.id ⟨m.nextId⟩ options.daemon],
         parent, ⟨m.nextId⟩)) := ⟨⟩
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- `forkUnsafe` (`:5264-5284`, D6b): the child takes the next id and is appended to the
 machine, the id counter advances, and the parent is untouched — tracking is `Cmd.trackChild`
 after the child's immediate run or its scheduling (`:5279-5282`). census: fork.unsafe -/
@@ -635,10 +658,11 @@ def M1OriginClauses.spawnChild_fields (interp : RunInterp ν σ β ε δ ι α �
           | Supervision.MaskMode.inherit => parent.frame.interruptible) ∧
       (spawnChild interp m parent program options site).observers = [] ∧
       (spawnChild interp m parent program options site).origin = .forked parent.id options.daemon site) := ⟨⟩
-#proof_wanted M1OriginClauses.spawnChild_fields
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The child's identity, context and mask (`:5264-5284`); it carries no observer yet.
 census: fork.unsafe -/
+@[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
 theorem spawnChild_fields (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
     (parent : RunFiber ν σ β ε δ ι α χ) (program : Prim ν σ β ε δ ι α)
     (options : Supervision.ForkOptions) (site : List Nat := []) :
@@ -659,6 +683,7 @@ def M1OriginClauses.spawn_untracked (interp : RunInterp ν σ β ε δ ι α χ 
     (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (
     (spawn interp m parent program options site).2.1 = parent) := ⟨⟩
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- No fork joins the parent's children at its spawn (`:5279-5282`, D6b): the tracking is a
 command after the child's run, and only a non-daemon fork issues it (`withFiber_fork`).
 census: rule.only-fork-child-tracks -/
@@ -667,6 +692,7 @@ theorem spawn_untracked (interp : RunInterp ν σ β ε δ ι α χ St)
     (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (site : List Nat := []) :
     (spawn interp m parent program options site).2.1 = parent := by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The start is asymmetric (`:5274-5278`): immediately means on the caller's stack, as a
 command; deferred means a start task at priority 0 on the parent's dispatcher.
 census: rule.start-is-asymmetric -/
@@ -857,6 +883,7 @@ theorem runSyncExit_survives (interp : RunInterp ν σ β ε δ ι α χ St) (fu
     (runSyncExit interp fuel m program context).2 = Exit.failure (Cause.die interp.asyncFiberError) := by
   simp [runSyncExit, h]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- `runPromiseExitWith` resolves with the exit, `runPromiseWith` rejects with `causeSquash`
 (`:5493-5525`). census: entry.run-promise-exit-with -/
 theorem promiseOutcome_eq (value : β) (cause : Cause ε δ ι α) :
@@ -864,6 +891,7 @@ theorem promiseOutcome_eq (value : β) (cause : Cause ε δ ι α) :
       promiseOutcome (Exit.failure cause : Exit β ε δ ι α) = Except.error cause.squash :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The squash is the projection, never the exit (`:5510-5525`). census: entry.run-promise-with -/
 theorem promiseOutcome_failure (cause : Cause ε δ ι α) :
     promiseOutcome (Exit.failure cause : Exit β ε δ ι α) = Except.error cause.squash :=
@@ -880,19 +908,23 @@ that a clause can be a projection of a branch rather than a hypothesis-laden equ
 
 namespace RunMachine
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Emitting events touches only the trace. -/
 theorem fiber?_emit (m : RunMachine ν σ β ε δ ι α χ St) (events : List (RunEvent ν σ β ε δ ι α χ))
     (id : FiberId) : (m.emit events).fiber? id = m.fiber? id :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem race?_emit (m : RunMachine ν σ β ε δ ι α χ St) (events : List (RunEvent ν σ β ε δ ι α χ))
     (id : Nat) : (m.emit events).race? id = m.race? id :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem state_emit (m : RunMachine ν σ β ε δ ι α χ St) (events : List (RunEvent ν σ β ε δ ι α χ)) :
     (m.emit events).state = m.state :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem stuck_emit (m : RunMachine ν σ β ε δ ι α χ St) (events : List (RunEvent ν σ β ε δ ι α χ)) :
     (m.emit events).stuck = m.stuck :=
   by aesop
@@ -942,6 +974,7 @@ theorem interruptEach_known (interp : RunInterp ν σ β ε δ ι α χ St) (who
            acc.2 ++ (if r.2 then [Cmd.evaluate t] else []))) := by
   simp only [interruptEach_cons, h]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The exit path is the two clauses, chosen by the middleware, the finalizing flag and the
 tracked children (`:611-627`). census: rule.children-interrupted-after-exit -/
 theorem exitFiber_eq (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
@@ -951,6 +984,7 @@ theorem exitFiber_eq (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMac
         exitFiber.exitInterruptChildren interp m f exit
       else exitFiber.exitStore interp m f exit := rfl
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Without the middleware the exit is published at once: the children survive (`:611`).
 census: fork.child -/
 theorem exitFiber_no_middleware (interp : RunInterp ν σ β ε δ ι α χ St)
@@ -959,6 +993,7 @@ theorem exitFiber_no_middleware (interp : RunInterp ν σ β ε δ ι α χ St)
     exitFiber interp m f exit = exitFiber.exitStore interp m f exit := by
   rw [exitFiber_eq]; simp [h]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- A fiber with no tracked children publishes its exit at once, whatever the middleware: a
 daemon child is never tracked (`spawn_untracked`, `drive_trackChild_*`), so a parent's exit
 never reaches it (`:613`). census: fork.detach -/
@@ -968,6 +1003,7 @@ theorem exitFiber_no_children (interp : RunInterp ν σ β ε δ ι α χ St)
     exitFiber interp m f exit = exitFiber.exitStore interp m f exit := by
   rw [exitFiber_eq]; simp [h]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- A fiber already finalizing publishes the exit it is now given (`:612`): the re-entry's
 program restores the body's exit, and an interrupt that lands while the children are awaited
 replaces it with its own failure. census: rule.children-interrupted-after-exit -/
@@ -977,6 +1013,7 @@ theorem exitFiber_finalizing (interp : RunInterp ν σ β ε δ ι α χ St)
     exitFiber interp m f exit = exitFiber.exitStore interp m f exit := by
   rw [exitFiber_eq]; simp [h]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- With the middleware installed, not finalizing, and tracked children, the children clause
 runs (`:613`). census: rule.children-interrupted-after-exit -/
 theorem exitFiber_children (interp : RunInterp ν σ β ε δ ι α χ St)
@@ -986,6 +1023,7 @@ theorem exitFiber_children (interp : RunInterp ν σ β ε δ ι α χ St)
     exitFiber interp m f exit = exitFiber.exitInterruptChildren interp m f exit := by
   rw [exitFiber_eq]; simp [hm, hf, hc]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The published fiber (`:619`, D6b): the exit stored, the finalizing flag, the parks and
 the loop's deferred flag cleared, not running; stack, children, observers and context are
 kept for the observers. census: fork.child -/
@@ -997,6 +1035,7 @@ theorem publish_fields (f : RunFiber ν σ β ε δ ι α χ) (exit : Exit β ε
       (f.publish exit).observers = f.observers ∧ (f.publish exit).context = f.context :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The cleared fiber (`:624-627`): observers, stack, children and context emptied, the exit
 kept. census: fork.child -/
 theorem cleared_fields (interp : RunInterp ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) :
@@ -1005,6 +1044,7 @@ theorem cleared_fields (interp : RunInterp ν σ β ε δ ι α χ St) (f : RunF
       (f.cleared interp).exit = f.exit :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- A fiber with no observer is published and cleared in one step, and only the due drain
 follows (`:619-627`): the straight fragment's exit cost. census: fork.child -/
 theorem exitStore_no_observers (interp : RunInterp ν σ β ε δ ι α χ St)
@@ -1015,6 +1055,7 @@ theorem exitStore_no_observers (interp : RunInterp ν σ β ε δ ι α χ St)
         ((f.publish exit).cleared interp), [Cmd.drainDue]) := by
   simp [exitFiber.exitStore, RunFiber.publish, h]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- With observers, the exit is published and each observer is a command in index order, each
 fired on the machine its predecessors left, before the fiber is cleared and the due resumes
 drained (`:619-627`, D6b). census: fork.child -/
@@ -1045,6 +1086,7 @@ theorem drive_exitDone (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : N
       drive interp fuel (m.update (f.cleared interp)) rest := by
   simp [drive, driveState, driveStep, hs, hf]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The children clause, spelled out (`:613-617`, D6b): the parent remembers the exit it is
 finalizing, its deferred flag is cleared, the middleware's program
 `flatMap(fiberInterruptAll(children), () => exit)` is installed, the `childrenInterrupted`
@@ -1062,6 +1104,7 @@ theorem exitInterruptChildren_eq (interp : RunInterp ν σ β ε δ ι α χ St)
         [RunEvent.childrenInterrupted f.id f.children],
        [Cmd.evaluate f.id]) := by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The re-entry is `evaluate` (`:615`): a new counted entry, on the fiber now finalizing.
 census: rule.children-interrupted-after-exit -/
 theorem exitInterruptChildren_reenters (interp : RunInterp ν σ β ε δ ι α χ St)
@@ -1069,6 +1112,7 @@ theorem exitInterruptChildren_reenters (interp : RunInterp ν σ β ε δ ι α 
     (exitFiber.exitInterruptChildren interp m f exit).2 = [Cmd.evaluate f.id] :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- A countdown keeps the fiber's finalizing flag, parked or not. -/
 theorem countdownPark_finalizing (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (targets : List FiberId)
@@ -1078,6 +1122,7 @@ theorem countdownPark_finalizing (interp : RunInterp ν σ β ε δ ι α χ St)
   rcases countdownWalk { m with nextToken := m.nextToken + 1 } targets [] with
     ⟨exits, _ | ⟨target, remaining⟩⟩ <;> rfl
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- A finished countdown that continues with a name resumes with the collected exits fed to
 that name (`:617`, the parent's `flatMap(awaitAllChildren, () => exit)`).
 census: rule.children-interrupted-after-exit -/
@@ -1123,12 +1168,14 @@ theorem fireObserver_dropScopeFinalizer (interp : RunInterp ν σ β ε δ ι α
           state := state }, acc.2) := by
   simp [fireObserver, RunMachine.state_emit, h]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- `fiberAwaitAll`'s walk (`:794-808`, R2-4) on an empty list: every exit, nothing to
 observe. census: fork.await-all-children -/
 theorem countdownWalk_nil (m : RunMachine ν σ β ε δ ι α χ St) (exits : List (Exit β ε δ ι α)) :
     countdownWalk m [] exits = (exits, none) :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- An exited target's exit is collected in place and the walk goes on (`:797-800`).
 census: fork.await-all-children -/
 theorem countdownWalk_exited (m : RunMachine ν σ β ε δ ι α χ St) (t : FiberId)
@@ -1137,6 +1184,7 @@ theorem countdownWalk_exited (m : RunMachine ν σ β ε δ ι α χ St) (t : Fi
     countdownWalk m (t :: rest) exits = countdownWalk m rest (exits ++ [exit]) := by
   simp [countdownWalk, hg, hexit]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The first live target stops the walk: it is the one to observe, with the targets after
 it (`:802`). census: fork.await-all-children -/
 theorem countdownWalk_live (m : RunMachine ν σ β ε δ ι α χ St) (t : FiberId)
@@ -1145,6 +1193,7 @@ theorem countdownWalk_live (m : RunMachine ν σ β ε δ ι α χ St) (t : Fibe
     countdownWalk m (t :: rest) exits = (exits, some (t, rest)) := by
   simp [countdownWalk, hg, hlive]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- A countdown with no live target answers the exits at once, in input order (`:806`),
 without parking. census: fork.await-all-children -/
 theorem countdownPark_none_live (interp : RunInterp ν σ β ε δ ι α χ St)
@@ -1157,6 +1206,7 @@ theorem countdownPark_none_live (interp : RunInterp ν σ β ε δ ι α χ St)
         false) := by
   simp [countdownPark, hwalk]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- A countdown with a live target observes that one target only, pushes the park's cleanup
 as an `AsyncFinalizer` frame (`:812`, `:1128-1141`; R2-3), and parks with the rest of the
 walk pending (`:802`; R2-4). census: fork.await-all-children -/
@@ -1231,6 +1281,7 @@ def settleRace (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine �
   (m, acc ++ (if race.registering then [] else
     [Cmd.resume race.host race.token (interp.raceSettle raceId state.cleanupNeeded accepted)]))
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The settle resumes the host, and nothing else: no entrant is touched until the host runs
 the program it was resumed with (`:1510-1514`); during registration it resumes nothing and
 `registrationDone` takes the buffered answer up (D6a). census: fork.race-all -/
@@ -1317,11 +1368,11 @@ def M1OriginClauses.drive_launch_runs (interp : RunInterp ν σ β ε δ ι α �
        drive interp fuel
          ((l.1.updateRace { race with programs := more, nextSite := race.nextSite.map (fun site => site ++ [1]) }).emit [RunEvent.raceLaunched raceId l.2])
          (Cmd.evaluate l.2 :: Cmd.enrollRace raceId l.2 :: Cmd.launch raceId :: rest))) := ⟨⟩
-#proof_wanted M1OriginClauses.drive_launch_runs
 
 /-- A launch before the race has accepted forks the next entrant over the host, evaluates it
 now (`forkUnsafe(…, true, …)`, `:1521`), enrolls it after that run returns (`:1522-1526`,
 D6a) and goes round again (`:1520-1528`). census: fork.race-all -/
+@[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
 theorem drive_launch_runs (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St) (raceId : Nat) (rest : List (Cmd ν σ β ε δ ι α))
     (race : Race ν σ β ε δ ι α) (program : Prim ν σ β ε δ ι α) (more : List (Prim ν σ β ε δ ι α))
@@ -1424,12 +1475,12 @@ def M1OriginClauses.withFiber_fork (interp : RunInterp ν σ β ε δ ι α χ S
           current := Prim.success (interp.fiberValue s.2.2) } },
         yielding, Outcome.continue_,
         t.2.2 ++ (if options.daemon then [] else [Cmd.trackChild f.id s.2.2])⟩)) := ⟨⟩
-#proof_wanted M1OriginClauses.withFiber_fork
 
 /-- `fork` (`:5264-5284`): a non-daemon fork installs the interrupt-children middleware
 (`forkChild`, `:5253`), then spawn with the options as given, start by `startImmediately`,
 answer the child's handle, and — unless daemon — track the child by a command after its
 immediate run or its scheduling (`:5279-5282`, D6b). census: fork.child -/
+@[aesop norm simp (rule_sets := [Effect4.Fibers])]
 theorem withFiber_fork (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
     (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (program : Prim ν σ β ε δ ι α)
     (options : Supervision.ForkOptions) (site : List Nat := []) :
@@ -1483,10 +1534,10 @@ def M1OriginClauses.withFiber_forkScoped_ambient (interp : RunInterp ν σ β ε
         yielding, Outcome.continue_,
         t.2.2 ++ [Cmd.link Supervision.ScopeMode.forkIn scope s.2.2 (some t.2.1.id)
           (interp.stackAnnotations t.2.1.id)]⟩)) := ⟨⟩
-#proof_wanted M1OriginClauses.withFiber_forkScoped_ambient
 
 /-- `forkScoped` (`:5400-5406`) resolves the ambient `Scope` service of the parent's context
 and is then `forkIn` on it. census: fork.scoped -/
+@[aesop norm simp (rule_sets := [Effect4.Fibers])]
 theorem withFiber_forkScoped_ambient (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
     (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (scope : Nat)
@@ -1509,11 +1560,11 @@ def M1OriginClauses.withFiber_forkScoped_none (interp : RunInterp ν σ β ε δ
       ⟨m, { f with frame := { f.frame with
           current := Prim.failure (Cause.die interp.missingScope) } },
         yielding, Outcome.continue_, []⟩) := ⟨⟩
-#proof_wanted M1OriginClauses.withFiber_forkScoped_none
 
 /-- Without an ambient `Scope` service `forkScoped` dies with the `missingScope` defect: the
 service is required (`:5400`, `Context.get` throws `ServiceNotFound`); it is not the
 "unimplemented step" defect (finding S1-1, 2026-09-04). census: fork.scoped -/
+@[aesop norm simp (rule_sets := [Effect4.Fibers])]
 theorem withFiber_forkScoped_none (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
     (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions)
@@ -1638,6 +1689,7 @@ theorem drive_afterInterrupt (interp : RunInterp ν σ β ε δ ι α χ St) (fu
         (Cmd.loop f.id yielding :: rest) := by
   simp [drive, driveState, driveStep, settle, hs, hf]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- `asVoid(code)` is `flatMap(code, _ => exitVoid)` (`:1467`): the restoring continuation at
 the void exit. census: fork.interrupt -/
 theorem asVoidCode_eq (interp : RunInterp ν σ β ε δ ι α χ St) (code : Prim ν σ β ε δ ι α) :
@@ -1645,6 +1697,7 @@ theorem asVoidCode_eq (interp : RunInterp ν σ β ε δ ι α χ St) (code : Pr
       Prim.onSuccess code (interp.restoreName (Exit.success interp.voidValue)) :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- `fiberAwait` folds an already exited target at construction (`:767-769`).
 census: fork.await -/
 theorem awaitCode_join_exited (interp : RunInterp ν σ β ε δ ι α χ St)
@@ -1654,6 +1707,7 @@ theorem awaitCode_join_exited (interp : RunInterp ν σ β ε δ ι α χ St)
     awaitCode interp m (ParkKind.join target mode) = interp.exitValue exit mode := by
   simp [awaitCode, ht, hx]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- A live target's await is the join park (`:770-775`). census: fork.await -/
 theorem awaitCode_join_live (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (target : FiberId) (mode : Supervision.ObserverMode)
@@ -1661,6 +1715,7 @@ theorem awaitCode_join_live (interp : RunInterp ν σ β ε δ ι α χ St)
     awaitCode interp m (ParkKind.join target mode) = interp.parkCode (ParkKind.join target mode) := by
   simp [awaitCode, ht, hx]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- `fiberAwaitAll` is always its `callback` (`:779`), also over exited targets.
 census: fork.interrupt-all -/
 theorem awaitCode_awaitAll (interp : RunInterp ν σ β ε δ ι α χ St)
@@ -1719,6 +1774,7 @@ def M1OriginClauses.launchEntrant_eq (interp : RunInterp ν σ β ε δ ι α χ
       (let s := spawn interp m host program ⟨true, true, Supervision.MaskMode.interruptible⟩ site
        (s.1, s.2.2))) := ⟨⟩
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The entrant's fork, read off the definition: immediate, daemon, interruptible
 (`forkUnsafe(parent, effect, true, true, false)`, `:1521`; R2-10), with the race callback as
 its observer (`:1523`). census: rule.only-fork-child-tracks -/
@@ -1871,11 +1927,13 @@ theorem withFiber_ambientScope_none (interp : RunInterp ν σ β ε δ ι α χ 
         yielding, Outcome.continue_, []⟩ := by
   simp only [evaluatePrim.withFiber, h]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem forkFinalizers_nil (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (host : RunFiber ν σ β ε δ ι α χ) :
     forkFinalizers interp m host [] = (m, []) :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The parallel close's forks (`forkUnsafe(parent, finalizer(exit_), true, true, "inherit")`,
 `:3820`; §20), one per finalizer in close order: an immediate daemon inheriting the closer's
 mask, spawned on the closer and left untracked; the closer is unchanged.
@@ -2050,4 +2108,4 @@ theorem driveState_resume_guard (interp : RunInterp ν σ β ε δ ι α χ St) 
 
 end Effect4.Machine
 
-#typed_state_obligations Effect4.Machine.M1OriginClauses ceiling 10 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Machine.M1OriginClauses ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

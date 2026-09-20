@@ -623,8 +623,8 @@ def M1Quiet.complete_quiet {d : DeferredStore} (_hdue : d.due = [])
     (d.complete cell e).1.due = [] ∧
       ∀ c ∈ (d.complete cell e).1.cells, c.wake.waiters = [] ∧ c.wake.batch = none) := ⟨⟩
 
-#proof_wanted M1Quiet.complete_quiet
 
+@[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
 theorem DeferredStore.complete_quiet {d : DeferredStore} (hdue : d.due = [])
     (hcells : ∀ c ∈ d.cells, c.wake.waiters = [] ∧ c.wake.batch = none) (cell : DeferredKey)
     (e : Completion Val Err Defect FiberId Ann) :
@@ -1936,4 +1936,4 @@ theorem run_eq_meaning (e : NativeEff) (fuel : Nat) (hs : Straight e = true)
 
 end Effect4.Program.Agreement
 
-#typed_state_obligations Effect4.Program.Agreement.M1Quiet ceiling 1 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Program.Agreement.M1Quiet ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

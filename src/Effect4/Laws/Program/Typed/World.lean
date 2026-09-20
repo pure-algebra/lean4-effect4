@@ -143,46 +143,36 @@ variable {K A : Type}
 
 def table_refl (table : K → Option A) : ProofGraph.Obligation
     (TableExtends table table) := ⟨⟩
-#proof_wanted table_refl
 
 def table_trans (a b c : K → Option A) : ProofGraph.Obligation
     (TableExtends a b → TableExtends b c → TableExtends a c) := ⟨⟩
-#proof_wanted table_trans
 
 def insert_extends [DecidableEq K] (table : K → Option A) (key : K) (value : A)
     (_fresh : table key = none) : ProofGraph.Obligation
     (TableExtends table (tableInsert table key value)) := ⟨⟩
-#proof_wanted insert_extends
 
 def insert_here [DecidableEq K] (table : K → Option A) (key : K) (value : A) :
     ProofGraph.Obligation (tableInsert table key value key = some value) := ⟨⟩
-#proof_wanted insert_here
 
 def insert_other [DecidableEq K] (table : K → Option A) (key other : K) (value : A)
     (_different : other ≠ key) : ProofGraph.Obligation
     (tableInsert table key value other = table other) := ⟨⟩
-#proof_wanted insert_other
 
 def order_refl (w : World) : ProofGraph.Obligation (w.le w) := ⟨⟩
-#proof_wanted order_refl
 
 def order_trans (a b c : World) : ProofGraph.Obligation
     (a.le b → b.le c → a.le c) := ⟨⟩
-#proof_wanted order_trans
 
 /-- Freeze the exact connection to the existing protocol's order interface. -/
 def protocol_order : ProofGraph.Obligation
     (∃ order : Effect4.Laws.Effects.WorldOrder World, order.le = World.le) := ⟨⟩
-#proof_wanted protocol_order
 
 def heap_typed_at_mono (w newer : World) (key : RefKey) (ty : Ty) : ProofGraph.Obligation
     (w.le newer → HeapTypedAt w key ty → HeapTypedAt newer key ty) := ⟨⟩
-#proof_wanted heap_typed_at_mono
 
 def promise_typed_at_mono (w newer : World) (key : DeferredKey) (types : Ty × Ty) :
     ProofGraph.Obligation
     (w.le newer → PromiseTypedAt w key types → PromiseTypedAt newer key types) := ⟨⟩
-#proof_wanted promise_typed_at_mono
 
 def ref_completion_inv (w : World) (cell : RefKey) (types : Ty × Ty) :
     ProofGraph.Obligation
@@ -195,13 +185,11 @@ def heap_coverage_iff (w : World) : ProofGraph.Obligation
     ((HeapTable w ∧ HeapCoverage w) ↔
       ∀ key value, refPeek w.state.refs key = some value →
         ∃ ty, HeapTypedAt w key ty) := ⟨⟩
-#proof_wanted heap_coverage_iff
 
 def promise_coverage_iff (w : World) : ProofGraph.Obligation
     ((PromiseTable w ∧ PromiseCoverage w) ↔
       ∀ key cell, w.state.deferreds.cellAt key = some cell →
         ∃ types, PromiseTypedAt w key types) := ⟨⟩
-#proof_wanted promise_coverage_iff
 
 /-- The old all-nat column is exactly the polymorphic column when every live
 heap key is declared nat. Entries beyond the heap do not affect the equivalence. -/
@@ -209,7 +197,6 @@ def heapNat_iff (w : World)
     (_types : ∀ cell value, refPeek w.state.refs cell = some value →
       w.Ρ cell = some .nat) : ProofGraph.Obligation
     (HeapTable w ↔ Effect4.Program.Stores.HeapNat w.state) := ⟨⟩
-#proof_wanted heapNat_iff
 
 /-- Freshness is logical table freshness, not merely absence from an id list. -/
 def fork_extension (w : World) (id : FiberId) (ty : EffTy)
@@ -220,7 +207,6 @@ def fork_extension (w : World) (id : FiberId) (ty : EffTy)
       (PromiseTable w → PromiseTable (w.addFiber id ty)) ∧
       (HeapCoverage w → HeapCoverage (w.addFiber id ty)) ∧
       (PromiseCoverage w → PromiseCoverage (w.addFiber id ty))) := ⟨⟩
-#proof_wanted fork_extension
 
 def refMake_extension (w : World) (value : Val) (ty : Ty) (state : Stores) (key : RefKey)
     (_step : syncOpStep (.refMake value) w.state = some (state, Val.cell key))
@@ -230,7 +216,6 @@ def refMake_extension (w : World) (value : Val) (ty : Ty) (state : Stores) (key 
       (PromiseTable w → PromiseTable (w.addRef state key ty)) ∧
       (HeapCoverage w → HeapCoverage (w.addRef state key ty)) ∧
       (PromiseCoverage w → PromiseCoverage (w.addRef state key ty))) := ⟨⟩
-#proof_wanted refMake_extension
 
 def deferredMake_extension (w : World) (types : Ty × Ty) (state : Stores)
     (key : DeferredKey)
@@ -242,7 +227,6 @@ def deferredMake_extension (w : World) (types : Ty × Ty) (state : Stores)
       (PromiseTable w → PromiseTable (w.addPromise state key types)) ∧
       (HeapCoverage w → HeapCoverage (w.addPromise state key types)) ∧
       (PromiseCoverage w → PromiseCoverage (w.addPromise state key types))) := ⟨⟩
-#proof_wanted deferredMake_extension
 
 /-- Memo allocation uses the same deferred allocator, with the layer's own type.
 The returned value is the layer scope; the new promise key is the allocator's key. -/
@@ -263,7 +247,6 @@ def memoBuild_extension (w : World) (types : Ty × Ty) (state : Stores)
 def heapNotMonotone : ProofGraph.Obligation
     (¬ (∀ state newer : Stores, state.le newer →
       Effect4.Program.Stores.HeapNat state → Effect4.Program.Stores.HeapNat newer)) := ⟨⟩
-#proof_wanted heapNotMonotone
 
 end WorldWanted
 
@@ -279,30 +262,474 @@ def worldBad : World :=
 namespace WorldControlWanted
 
 def stores_ordered : ProofGraph.Obligation (worldGood.state.le worldBad.state) := ⟨⟩
-#proof_wanted stores_ordered
 
 def heap_good : ProofGraph.Obligation (HeapTable worldGood) := ⟨⟩
-#proof_wanted heap_good
 
 def heap_bad : ProofGraph.Obligation (¬ HeapTable worldBad) := ⟨⟩
-#proof_wanted heap_bad
 
 def world_order_refuses : ProofGraph.Obligation (¬ worldGood.le worldBad) := ⟨⟩
-#proof_wanted world_order_refuses
 
 /-- An invalid world still relates to itself; validity is not an order premise. -/
 def invalid_refl : ProofGraph.Obligation (worldBad.le worldBad) := ⟨⟩
-#proof_wanted invalid_refl
 
 end WorldControlWanted
 
--- Phase B: census built dependencies first, then elaborate this statement snapshot.
--- Remove only the wanted markers search actually closes; the live slice gate uses
--- exactly those frozen statements. Expected declaration count: 24 total (19 + 5).
--- #typed_state_obligations Effect4.Program.Typed.WorldWanted ceiling 19 using aesop
--- #typed_state_obligations Effect4.Program.Typed.WorldControlWanted ceiling 5 using aesop
+/-! ## The proofs: every statement above, closed; the order is a preorder, the columns
+recover the keywise judgments, and each allocation extends the world. -/
+
+theorem cell_inj {a b : RefKey} (h : Val.cell a = Val.cell b) : a = b := by
+  cases a with
+  | mk ia =>
+    cases b with
+    | mk ib =>
+      cases h
+      rfl
+
+theorem promise_inj {a b : DeferredKey} (h : Val.promise a = Val.promise b) : a = b := by
+  cases a with
+  | mk ia =>
+    cases b with
+    | mk ib =>
+      cases h
+      rfl
+
+/-- The `nat` column never reads the allocation table. -/
+theorem hasTy_nat_allocated (v : Val) (allocated : List String) :
+    Val.hasTy v .nat allocated = Val.hasTy v .nat := by
+  simp only [Val.hasTy]
+
+/-- A lookup in a list grown by one element is an old lookup or the new element. -/
+theorem getElem?_append_singleton_cases {α : Type} {heap : List α} {v x : α} {i : Nat}
+    (h : (heap ++ [v])[i]? = some x) :
+    (i < heap.length ∧ heap[i]? = some x) ∨ (i = heap.length ∧ x = v) := by
+  by_cases lt : i < heap.length
+  · rw [List.getElem?_append_left lt] at h
+    exact Or.inl ⟨lt, h⟩
+  · rw [List.getElem?_append_right (Nat.le_of_not_lt lt)] at h
+    by_cases eq : i = heap.length
+    · subst eq
+      rw [Nat.sub_self, List.getElem?_cons_zero, Option.some.injEq] at h
+      exact Or.inr ⟨rfl, h.symm⟩
+    · have none : ([v] : List α)[i - heap.length]? = none := by
+        rw [List.getElem?_eq_none_iff]
+        simp only [List.length_singleton]
+        omega
+      rw [none] at h
+      cases h
+
+theorem refPeek_append_old {heap : RefHeap} {v : Val} {key : RefKey} {value : Val}
+    (ne : key ≠ ⟨heap.length⟩) (h : refPeek (heap ++ [v]) key = some value) :
+    refPeek heap key = some value := by
+  unfold refPeek at h ⊢
+  rcases getElem?_append_singleton_cases h with ⟨_, old⟩ | ⟨eq, _⟩
+  · exact old
+  · exact absurd (congrArg RefKey.mk eq) ne
+
+theorem refPeek_append_new (heap : RefHeap) (v : Val) :
+    refPeek (heap ++ [v]) ⟨heap.length⟩ = some v := by
+  unfold refPeek
+  exact List.getElem?_concat_length
+
+theorem cellAt_append_old {κ : Type} {cells : List (DeferredCell κ)} {due : List (Owed κ)}
+    {c : DeferredCell κ} {key : DeferredKey} {cell : DeferredCell κ}
+    (ne : key ≠ ⟨cells.length⟩)
+    (h : DeferredStore.cellAt ⟨cells ++ [c], due⟩ key = some cell) :
+    DeferredStore.cellAt (⟨cells, due⟩ : DeferredStore κ) key = some cell := by
+  unfold DeferredStore.cellAt at h ⊢
+  rcases getElem?_append_singleton_cases h with ⟨_, old⟩ | ⟨eq, _⟩
+  · exact old
+  · exact absurd (congrArg DeferredKey.mk eq) ne
+
+theorem syncOpStep_refMake (s : Stores) (value : Val) :
+    syncOpStep (.refMake value) s =
+      some ({ s with refs := s.refs ++ [value] }, Val.cell ⟨s.refs.length⟩) := rfl
+
+theorem table_refl {K A : Type} (table : K → Option A) : TableExtends table table :=
+  fun _ _ h => h
+
+theorem table_trans {K A : Type} (a b c : K → Option A) :
+    TableExtends a b → TableExtends b c → TableExtends a c :=
+  fun hab hbc key value h => hbc key value (hab key value h)
+
+theorem insert_extends {K A : Type} [DecidableEq K] (table : K → Option A) (key : K) (value : A)
+    (fresh : table key = none) : TableExtends table (tableInsert table key value) := by
+  intro query v h
+  unfold tableInsert
+  by_cases same : query = key
+  · rw [same, fresh] at h
+    cases h
+  · rw [if_neg same]
+    exact h
+
+theorem insert_here {K A : Type} [DecidableEq K] (table : K → Option A) (key : K) (value : A) :
+    tableInsert table key value key = some value := by
+  unfold tableInsert
+  rw [if_pos rfl]
+
+theorem insert_other {K A : Type} [DecidableEq K] (table : K → Option A) (key other : K)
+    (value : A) (different : other ≠ key) :
+    tableInsert table key value other = table other := by
+  unfold tableInsert
+  rw [if_neg different]
+
+theorem order_refl (w : World) : w.le w :=
+  ⟨Effect4.Machine.World.le_refl _, table_refl _, table_refl _, table_refl _,
+    fun _ _ h => h, fun _ _ h => h⟩
+
+theorem order_trans (a b c : World) : a.le b → b.le c → a.le c :=
+  fun hab hbc =>
+    ⟨Effect4.Machine.World.le_trans hab.1 hbc.1,
+     table_trans _ _ _ hab.2.1 hbc.2.1,
+     table_trans _ _ _ hab.2.2.1 hbc.2.2.1,
+     table_trans _ _ _ hab.2.2.2.1 hbc.2.2.2.1,
+     fun key ty h => hbc.2.2.2.2.1 key ty (hab.2.2.2.2.1 key ty h),
+     fun key types h => hbc.2.2.2.2.2 key types (hab.2.2.2.2.2 key types h)⟩
+
+theorem protocol_order : ∃ order : Effect4.Laws.Effects.WorldOrder World, order.le = World.le :=
+  ⟨⟨World.le, order_refl, fun h₁ h₂ => order_trans _ _ _ h₁ h₂⟩, rfl⟩
+
+theorem heap_typed_at_mono (w newer : World) (key : RefKey) (ty : Ty) :
+    w.le newer → HeapTypedAt w key ty → HeapTypedAt newer key ty :=
+  fun hle h => hle.2.2.2.2.1 key ty h
+
+theorem promise_typed_at_mono (w newer : World) (key : DeferredKey) (types : Ty × Ty) :
+    w.le newer → PromiseTypedAt w key types → PromiseTypedAt newer key types :=
+  fun hle h => hle.2.2.2.2.2 key types h
+
+theorem ref_completion_inv (w : World) (cell : RefKey) (types : Ty × Ty) :
+    CompletionOk w types (.ofRefGet cell) ↔ ∃ ty, w.Ρ cell = some ty ∧ ty.sub types.1 = true :=
+  Iff.rfl
+
+theorem heap_coverage_iff (w : World) :
+    (HeapTable w ∧ HeapCoverage w) ↔
+      ∀ key value, refPeek w.state.refs key = some value → ∃ ty, HeapTypedAt w key ty := by
+  constructor
+  · rintro ⟨table, cover⟩ key value hv
+    obtain ⟨ty, hty⟩ := cover key.index value hv
+    exact ⟨ty, hty, fun value' hv' => table key.index value' hv' ty hty⟩
+  · intro typed
+    constructor
+    · intro i v hv ty hty
+      obtain ⟨ty', hty', hval⟩ := typed ⟨i⟩ v hv
+      have same := Option.some.inj (hty.symm.trans hty')
+      subst same
+      exact hval v hv
+    · intro i v hv
+      obtain ⟨ty, hty, _⟩ := typed ⟨i⟩ v hv
+      exact ⟨ty, hty⟩
+
+theorem promise_coverage_iff (w : World) :
+    (PromiseTable w ∧ PromiseCoverage w) ↔
+      ∀ key cell, w.state.deferreds.cellAt key = some cell →
+        ∃ types, PromiseTypedAt w key types := by
+  constructor
+  · rintro ⟨table, cover⟩ key cell hcell
+    obtain ⟨types, htypes⟩ := cover key.index cell hcell
+    exact ⟨types, htypes, fun cell' hcell' => table key.index cell' hcell' types htypes⟩
+  · intro typed
+    constructor
+    · intro i cell hcell types htypes
+      obtain ⟨types', htypes', hok⟩ := typed ⟨i⟩ cell hcell
+      have same := Option.some.inj (htypes.symm.trans htypes')
+      subst same
+      exact hok cell hcell
+    · intro i cell hcell
+      obtain ⟨types, htypes, _⟩ := typed ⟨i⟩ cell hcell
+      exact ⟨types, htypes⟩
+
+theorem heapNat_iff (w : World)
+    (types : ∀ cell value, refPeek w.state.refs cell = some value → w.Ρ cell = some .nat) :
+    HeapTable w ↔ Effect4.Program.Stores.HeapNat w.state := by
+  constructor
+  · intro table v hv
+    obtain ⟨i, hi⟩ := List.mem_iff_getElem?.mp hv
+    have typed : ValueOk w .nat v := table i v hi .nat (types ⟨i⟩ v hi)
+    unfold ValueOk at typed
+    rw [hasTy_nat_allocated] at typed
+    exact typed
+  · intro hnat i v hv ty hty
+    have same := Option.some.inj ((types ⟨i⟩ v hv).symm.trans hty)
+    subst same
+    unfold ValueOk
+    rw [hasTy_nat_allocated]
+    exact hnat v (List.mem_of_getElem? hv)
+
+/-- Completion typing only grows with the heap table when the allocation table is unchanged. -/
+theorem completionOk_extends (w newer : World) (types : Ty × Ty)
+    (hΡ : TableExtends w.Ρ newer.Ρ)
+    (hext : newer.state.externals.allocated = w.state.externals.allocated) :
+    ∀ completion, CompletionOk w types completion → CompletionOk newer types completion := by
+  intro completion h
+  cases completion with
+  | ofExit exit =>
+    cases exit with
+    | success value =>
+      simp only [CompletionOk, ValueOk] at h ⊢
+      rw [hext]
+      exact h
+    | failure cause =>
+      simp only [CompletionOk] at h ⊢
+      rw [hext]
+      exact h
+  | ofRefGet cell =>
+    simp only [CompletionOk] at h ⊢
+    obtain ⟨ty, hty, hsub⟩ := h
+    exact ⟨ty, hΡ cell ty hty, hsub⟩
+
+theorem fork_extension (w : World) (id : FiberId) (ty : EffTy) (fresh : w.Γ id = none) :
+    w.le (w.addFiber id ty) ∧
+      (w.addFiber id ty).Γ id = some ty ∧
+      (HeapTable w → HeapTable (w.addFiber id ty)) ∧
+      (PromiseTable w → PromiseTable (w.addFiber id ty)) ∧
+      (HeapCoverage w → HeapCoverage (w.addFiber id ty)) ∧
+      (PromiseCoverage w → PromiseCoverage (w.addFiber id ty)) :=
+  ⟨⟨⟨fun _ h => List.mem_append_left _ h, Stores.le_refl _⟩,
+     insert_extends _ _ _ fresh, table_refl _, table_refl _, fun _ _ h => h, fun _ _ h => h⟩,
+   insert_here _ _ _, fun h => h, fun h => h, fun h => h, fun h => h⟩
+
+theorem refMake_extension (w : World) (value : Val) (ty : Ty) (state : Stores) (key : RefKey)
+    (step : syncOpStep (.refMake value) w.state = some (state, Val.cell key))
+    (fresh : w.Ρ key = none) (hvalue : ValueOk w ty value) :
+    w.le (w.addRef state key ty) ∧ HeapTypedAt (w.addRef state key ty) key ty ∧
+      (HeapTable w → HeapTable (w.addRef state key ty)) ∧
+      (PromiseTable w → PromiseTable (w.addRef state key ty)) ∧
+      (HeapCoverage w → HeapCoverage (w.addRef state key ty)) ∧
+      (PromiseCoverage w → PromiseCoverage (w.addRef state key ty)) := by
+  have hle := syncOpStep_le _ _ _ _ step
+  rw [syncOpStep_refMake, Option.some.injEq, Prod.mk.injEq] at step
+  obtain ⟨hstate, hkey⟩ := step
+  have hkey' := cell_inj hkey
+  subst hstate
+  subst hkey'
+  have hΡ : ∀ q, (w.addRef { w.state with refs := w.state.refs ++ [value] } ⟨w.state.refs.length⟩ ty).Ρ q =
+      tableInsert w.Ρ ⟨w.state.refs.length⟩ ty q := fun _ => rfl
+  refine ⟨⟨⟨fun _ h => h, hle⟩, table_refl _, table_refl _, insert_extends _ _ _ fresh, ?_, ?_⟩,
+    ?_, ?_, ?_, ?_, ?_⟩
+  · intro key' ty' hty'
+    obtain ⟨hk, hv⟩ := hty'
+    have ne : key' ≠ ⟨w.state.refs.length⟩ := by
+      intro eq
+      rw [eq, fresh] at hk
+      cases hk
+    refine ⟨?_, ?_⟩
+    · rw [hΡ, insert_other _ _ _ _ ne]
+      exact hk
+    · intro value' hv'
+      exact hv value' (refPeek_append_old ne hv')
+  · intro key' types hty'
+    obtain ⟨hk, hc⟩ := hty'
+    refine ⟨hk, fun cell hcell completion hcomp => ?_⟩
+    exact completionOk_extends w
+      (w.addRef { w.state with refs := w.state.refs ++ [value] } ⟨w.state.refs.length⟩ ty) types
+      (insert_extends _ _ _ fresh) rfl completion (hc cell hcell completion hcomp)
+  · refine ⟨insert_here _ _ _, fun value' hv' => ?_⟩
+    have hv'' : refPeek (w.state.refs ++ [value]) ⟨w.state.refs.length⟩ = some value' := hv'
+    rw [refPeek_append_new, Option.some.injEq] at hv''
+    subst hv''
+    exact hvalue
+  · intro table i v hv ty' hty'
+    rcases getElem?_append_singleton_cases hv with ⟨lt, old⟩ | ⟨eq, rfl⟩
+    · have ne : (⟨i⟩ : RefKey) ≠ ⟨w.state.refs.length⟩ := by
+        intro eq
+        cases eq
+        exact Nat.lt_irrefl _ lt
+      rw [hΡ, insert_other _ _ _ _ ne] at hty'
+      exact table i v old ty' hty'
+    · subst eq
+      rw [hΡ, insert_here, Option.some.injEq] at hty'
+      subst hty'
+      exact hvalue
+  · intro table i cell hcell types hty completion hcomp
+    exact completionOk_extends w
+      (w.addRef { w.state with refs := w.state.refs ++ [value] } ⟨w.state.refs.length⟩ ty) types
+      (insert_extends _ _ _ fresh) rfl completion (table i cell hcell types hty completion hcomp)
+  · intro cover i v hv
+    rcases getElem?_append_singleton_cases hv with ⟨lt, old⟩ | ⟨eq, _⟩
+    · obtain ⟨ty', hty'⟩ := cover i v old
+      have ne : (⟨i⟩ : RefKey) ≠ ⟨w.state.refs.length⟩ := by
+        intro eq
+        cases eq
+        exact Nat.lt_irrefl _ lt
+      refine ⟨ty', ?_⟩
+      rw [hΡ, insert_other _ _ _ _ ne]
+      exact hty'
+    · subst eq
+      exact ⟨ty, insert_here _ _ _⟩
+  · intro cover i cell hcell
+    exact cover i cell hcell
+
+/-- The shared promise-allocation argument: a state whose deferred store grew by one empty
+cell, with the same heap and allocation table, extends the world at the fresh key. -/
+theorem promise_extension (w : World) (types : Ty × Ty) (state : Stores)
+    (hrefs : state.refs = w.state.refs)
+    (hcells : state.deferreds = ⟨w.state.deferreds.cells ++ [⟨none, WakeList.empty⟩], w.state.deferreds.due⟩)
+    (hext : state.externals.allocated = w.state.externals.allocated)
+    (hle : w.state.le state)
+    (fresh : w.«Π» ⟨w.state.deferreds.cells.length⟩ = none) :
+    w.le (w.addPromise state ⟨w.state.deferreds.cells.length⟩ types) ∧
+      PromiseTypedAt (w.addPromise state ⟨w.state.deferreds.cells.length⟩ types)
+        ⟨w.state.deferreds.cells.length⟩ types ∧
+      (HeapTable w → HeapTable (w.addPromise state ⟨w.state.deferreds.cells.length⟩ types)) ∧
+      (PromiseTable w → PromiseTable (w.addPromise state ⟨w.state.deferreds.cells.length⟩ types)) ∧
+      (HeapCoverage w → HeapCoverage (w.addPromise state ⟨w.state.deferreds.cells.length⟩ types)) ∧
+      (PromiseCoverage w →
+        PromiseCoverage (w.addPromise state ⟨w.state.deferreds.cells.length⟩ types)) := by
+  have hPi : ∀ q, (w.addPromise state ⟨w.state.deferreds.cells.length⟩ types).«Π» q =
+      tableInsert w.«Π» ⟨w.state.deferreds.cells.length⟩ types q := fun _ => rfl
+  have hstate : (w.addPromise state ⟨w.state.deferreds.cells.length⟩ types).state = state := rfl
+  have hΡeq : (w.addPromise state ⟨w.state.deferreds.cells.length⟩ types).Ρ = w.Ρ := rfl
+  have keep : ∀ completion, CompletionOk w types completion →
+      CompletionOk (w.addPromise state ⟨w.state.deferreds.cells.length⟩ types) types completion :=
+    completionOk_extends w _ types (fun _ _ h => h) (by rw [hstate, hext])
+  have keepAt : ∀ (types' : Ty × Ty) completion, CompletionOk w types' completion →
+      CompletionOk (w.addPromise state ⟨w.state.deferreds.cells.length⟩ types) types' completion :=
+    fun types' => completionOk_extends w _ types' (fun _ _ h => h) (by rw [hstate, hext])
+  have valueKeep : ∀ (ty : Ty) (v : Val), ValueOk w ty v →
+      ValueOk (w.addPromise state ⟨w.state.deferreds.cells.length⟩ types) ty v := by
+    intro ty v h
+    unfold ValueOk at h ⊢
+    rw [hstate, hext]
+    exact h
+  refine ⟨⟨⟨fun _ h => h, hle⟩, table_refl _, insert_extends _ _ _ fresh, table_refl _, ?_, ?_⟩,
+    ?_, ?_, ?_, ?_, ?_⟩
+  · intro key' ty' hty'
+    obtain ⟨hk, hv⟩ := hty'
+    refine ⟨hk, fun value hv' => ?_⟩
+    have hv'' : refPeek w.state.refs key' = some value := by
+      rw [hstate, hrefs] at hv'
+      exact hv'
+    exact valueKeep ty' value (hv value hv'')
+  · intro key' types' hty'
+    obtain ⟨hk, hc⟩ := hty'
+    have ne : key' ≠ ⟨w.state.deferreds.cells.length⟩ := by
+      intro eq
+      rw [eq, fresh] at hk
+      cases hk
+    refine ⟨?_, fun cell hcell completion hcomp => ?_⟩
+    · rw [hPi, insert_other _ _ _ _ ne]
+      exact hk
+    · rw [hstate, hcells] at hcell
+      exact keepAt types' completion (hc cell (cellAt_append_old ne hcell) completion hcomp)
+  · refine ⟨insert_here _ _ _, fun cell hcell completion hcomp => ?_⟩
+    rw [hstate, hcells] at hcell
+    unfold DeferredStore.cellAt at hcell
+    rw [List.getElem?_concat_length, Option.some.injEq] at hcell
+    subst hcell
+    cases hcomp
+  · intro table i v hv ty' hty'
+    rw [hstate, hrefs] at hv
+    exact valueKeep ty' v (table i v hv ty' hty')
+  · intro table i cell hcell types' hty' completion hcomp
+    rw [hstate, hcells] at hcell
+    rcases getElem?_append_singleton_cases hcell with ⟨lt, old⟩ | ⟨eq, rfl⟩
+    · have ne : (⟨i⟩ : DeferredKey) ≠ ⟨w.state.deferreds.cells.length⟩ := by
+        intro eq
+        cases eq
+        exact Nat.lt_irrefl _ lt
+      rw [hPi, insert_other _ _ _ _ ne] at hty'
+      exact keepAt types' completion (table i cell old types' hty' completion hcomp)
+    · cases hcomp
+  · intro cover i v hv
+    rw [hstate, hrefs] at hv
+    exact cover i v hv
+  · intro cover i cell hcell
+    rw [hstate, hcells] at hcell
+    rcases getElem?_append_singleton_cases hcell with ⟨lt, old⟩ | ⟨eq, _⟩
+    · obtain ⟨types', hty'⟩ := cover i cell old
+      have ne : (⟨i⟩ : DeferredKey) ≠ ⟨w.state.deferreds.cells.length⟩ := by
+        intro eq
+        cases eq
+        exact Nat.lt_irrefl _ lt
+      refine ⟨types', ?_⟩
+      rw [hPi, insert_other _ _ _ _ ne]
+      exact hty'
+    · subst eq
+      exact ⟨types, insert_here _ _ _⟩
+
+theorem deferredMake_extension (w : World) (types : Ty × Ty) (state : Stores)
+    (key : DeferredKey)
+    (step : syncOpStep .deferredMake w.state = some (state, Val.promise key))
+    (fresh : w.«Π» key = none) :
+    w.le (w.addPromise state key types) ∧
+      PromiseTypedAt (w.addPromise state key types) key types ∧
+      (HeapTable w → HeapTable (w.addPromise state key types)) ∧
+      (PromiseTable w → PromiseTable (w.addPromise state key types)) ∧
+      (HeapCoverage w → HeapCoverage (w.addPromise state key types)) ∧
+      (PromiseCoverage w → PromiseCoverage (w.addPromise state key types)) := by
+  have hle := syncOpStep_le _ _ _ _ step
+  rw [syncOpStep_deferredMake, Option.some.injEq, Prod.mk.injEq] at step
+  obtain ⟨hstate, hkey⟩ := step
+  have hkey' := promise_inj hkey
+  subst hstate
+  subst hkey'
+  exact promise_extension w types _ rfl rfl rfl hle fresh
+
+theorem memoBuild_extension (w : World) (types : Ty × Ty) (state : Stores)
+    (layer : LayerId) (memoMap : MemoMapId) (answer : Val)
+    (step : syncOpStep (.memoBuild layer memoMap) w.state = some (state, answer))
+    (fresh : w.«Π» w.state.deferreds.make.1 = none) :
+    w.le (w.addPromise state w.state.deferreds.make.1 types) ∧
+      PromiseTypedAt (w.addPromise state w.state.deferreds.make.1 types) w.state.deferreds.make.1 types ∧
+      (HeapTable w → HeapTable (w.addPromise state w.state.deferreds.make.1 types)) ∧
+      (PromiseTable w → PromiseTable (w.addPromise state w.state.deferreds.make.1 types)) ∧
+      (HeapCoverage w → HeapCoverage (w.addPromise state w.state.deferreds.make.1 types)) ∧
+      (PromiseCoverage w → PromiseCoverage (w.addPromise state w.state.deferreds.make.1 types)) := by
+  have hle := syncOpStep_le _ _ _ _ step
+  rw [syncOpStep_memoBuild, Option.some.injEq, Prod.mk.injEq] at step
+  obtain ⟨hstate, _⟩ := step
+  subst hstate
+  exact promise_extension w types _ rfl rfl rfl hle fresh
+
+theorem stores_ordered : worldGood.state.le worldBad.state :=
+  ⟨Nat.le_refl _, Nat.le_refl _, fun _ h => h, Nat.le_refl _, fun _ h => h, Nat.le_refl _⟩
+
+theorem heap_good : HeapTable worldGood := by
+  intro i v hv ty hty
+  cases i with
+  | zero =>
+    have hv' : Val.nat 0 = v := Option.some.inj hv
+    have hty' : Ty.nat = ty := Option.some.inj hty
+    subst hv'
+    subst hty'
+    rfl
+  | succ n =>
+    simp only [worldGood, List.getElem?_cons_succ, List.getElem?_nil] at hv
+    cases hv
+
+theorem heap_bad : ¬ HeapTable worldBad := by
+  intro table
+  have := table 0 (Val.bool false) rfl Ty.nat rfl
+  exact Bool.noConfusion this
+
+theorem world_order_refuses : ¬ worldGood.le worldBad := by
+  intro hle
+  have typed : HeapTypedAt worldGood ⟨0⟩ Ty.nat :=
+    ⟨rfl, fun value hv => by
+      have hv' : Val.nat 0 = value := Option.some.inj hv
+      subst hv'
+      rfl⟩
+  have bad := hle.2.2.2.2.1 ⟨0⟩ Ty.nat typed
+  exact Bool.noConfusion (bad.2 (Val.bool false) rfl)
+
+theorem invalid_refl : worldBad.le worldBad := order_refl _
+
+theorem heapNotMonotone :
+    ¬ (∀ state newer : Stores, state.le newer →
+      Effect4.Program.Stores.HeapNat state → Effect4.Program.Stores.HeapNat newer) :=
+  fun h => absurd (h _ _ stores_ordered (by decide)) (by decide)
+
+attribute [aesop unsafe 90% apply (rule_sets := [Effect4.TypedState])]
+  table_refl table_trans insert_extends insert_here insert_other order_refl order_trans
+  protocol_order heap_typed_at_mono promise_typed_at_mono completionOk_extends
+
+attribute [aesop safe -100 apply (rule_sets := [Effect4.TypedState])]
+  fork_extension refMake_extension deferredMake_extension memoBuild_extension
+
+attribute [aesop norm simp (rule_sets := [Effect4.TypedState])]
+  ref_completion_inv heap_coverage_iff promise_coverage_iff heapNat_iff
+  stores_ordered heap_good heap_bad world_order_refuses invalid_refl heapNotMonotone
 
 end Effect4.Program.Typed
 
-#typed_state_obligations Effect4.Program.Typed.WorldControlWanted ceiling 5 using aesop (rule_sets := [Effect4.Stores, Effect4.TypedState])
-#typed_state_obligations Effect4.Program.Typed.WorldWanted ceiling 19 using aesop (rule_sets := [Effect4.Stores, Effect4.TypedState])
+#typed_state_obligations Effect4.Program.Typed.WorldControlWanted ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.TypedState])
+#typed_state_obligations Effect4.Program.Typed.WorldWanted ceiling 1 using aesop (rule_sets := [Effect4.Stores, Effect4.TypedState])

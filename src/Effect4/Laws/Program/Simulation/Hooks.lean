@@ -34,15 +34,15 @@ structure StoresOk (s : Stores) : Prop where
 
 /-- The empty store has no registered scope keys. -/
 def M1Hooks.storesOk_empty : ProofGraph.Obligation (StoresOk Stores.empty) := ⟨⟩
-#proof_wanted M1Hooks.storesOk_empty
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem storesOk_empty : StoresOk Stores.empty := by
   aesop (add safe constructors StoresOk) (add safe apply Stores.scopeKeysFresh_empty)
 
 /-- A wake changes only the deferred store, whose frame is generated above. -/
 def M1Hooks.storesOk_wakeList {s : Stores} (_hs : StoresOk s) (key : WakeKey) (phase : WakePhase) : ProofGraph.Obligation (StoresOk (Stores.wakeList key phase s)) := ⟨⟩
-#proof_wanted M1Hooks.storesOk_wakeList
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem storesOk_wakeList {s : Stores} (hs : StoresOk s) (key : WakeKey) (phase : WakePhase) :
     StoresOk (Stores.wakeList key phase s) := by
   unfold Stores.wakeList
@@ -53,8 +53,8 @@ theorem storesOk_wakeList {s : Stores} (hs : StoresOk s) (key : WakeKey) (phase 
 /-- Every store step keeps the registration-key bound. -/
 def M1Hooks.storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (_hs : StoresOk s)
     (_h : syncOpStep o s = some (s', v)) : ProofGraph.Obligation (StoresOk s') := ⟨⟩
-#proof_wanted M1Hooks.storesOk_syncOpStep
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresOk s)
     (h : syncOpStep o s = some (s', v)) : StoresOk s' := by
   cases o with
@@ -726,4 +726,4 @@ theorem means_clearStack {root : NativeEff} {f₁ : FFiber} {f₂ : RSaved} (h :
 
 end Effect4.Program.Sched
 
-#typed_state_obligations Effect4.Program.Sched.M1Hooks ceiling 4 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Program.Sched.M1Hooks ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

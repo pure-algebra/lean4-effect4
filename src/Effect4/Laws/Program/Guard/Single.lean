@@ -287,8 +287,8 @@ theorem held_flushAllState (p : NativeEff) (table : RowTable) (fuel rounds : Nat
         · exact held_fireState p table fuel h _
 
 def M1Clock.timer_fireNext_keys (timers : TimerStore) (target : ClockMillis) (code : Completion Val Err Defect FiberId Ann) : ProofGraph.Obligation (wakeKeys (timers.fireNext target code).2.wake ⊆ wakeKeys timers.wake) := ⟨⟩
-#proof_wanted M1Clock.timer_fireNext_keys
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem timer_fireNext_keys (timers : TimerStore) (target : ClockMillis) (code : Completion Val Err Defect FiberId Ann) :
     wakeKeys (timers.fireNext target code).2.wake ⊆ wakeKeys timers.wake := by
   cases hd : TimerStore.dueMin target timers.wake.waiters with
@@ -302,8 +302,8 @@ theorem timer_fireNext_keys (timers : TimerStore) (target : ClockMillis) (code :
     · exact List.mem_append_right _ hk
 
 def M1Clock.timer_clockStep_keys (timers : TimerStore) (millis : ClockMillis) (code : Completion Val Err Defect FiberId Ann) : ProofGraph.Obligation (wakeKeys (timers.clockStep millis code).2.wake ⊆ wakeKeys timers.wake) := ⟨⟩
-#proof_wanted M1Clock.timer_clockStep_keys
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem timer_clockStep_keys (timers : TimerStore) (millis : ClockMillis) (code : Completion Val Err Defect FiberId Ann) :
     wakeKeys (timers.clockStep millis code).2.wake ⊆ wakeKeys timers.wake := by
   have hs := timer_fireNext_keys timers (timers.target.getD (timers.now + millis)) code
@@ -314,8 +314,8 @@ theorem timer_clockStep_keys (timers : TimerStore) (millis : ClockMillis) (code 
     cases owed <;> simpa only [hc] using hs
 
 def M1Clock.clockStep_storeKeys (p : NativeEff) (table : RowTable) (stores : Stores) (millis : ClockMillis) : ProofGraph.Obligation (storeKeys ((interpOf p table).clockStep millis stores).2 ⊆ storeKeys stores) := ⟨⟩
-#proof_wanted M1Clock.clockStep_storeKeys
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem clockStep_storeKeys (p : NativeEff) (table : RowTable) (stores : Stores) (millis : ClockMillis) :
     storeKeys ((interpOf p table).clockStep millis stores).2 ⊆ storeKeys stores := by
   change storeKeys { stores with timers := (stores.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).2 } ⊆ _
@@ -325,8 +325,8 @@ def M1Clock.clockStep_owed_safe (p : NativeEff) (table : RowTable) {m : NativeMa
     {fiber : FiberId} {token : Nat} {request : NativeOp × Val}
     (_h : Held m fiber token request) (millis : ClockMillis) (owed : Owed NCode)
     (_ho : ((interpOf p table).clockStep millis m.state).1 = some owed) : ProofGraph.Obligation ((owed.waiter, owed.token) ≠ (fiber, token)) := ⟨⟩
-#proof_wanted M1Clock.clockStep_owed_safe
 
+@[aesop safe forward (rule_sets := [Effect4.Fibers])]
 theorem clockStep_owed_safe (p : NativeEff) (table : RowTable) {m : NativeMachine}
     {fiber : FiberId} {token : Nat} {request : NativeOp × Val}
     (h : Held m fiber token request) (millis : ClockMillis) (owed : Owed NCode)
@@ -347,8 +347,8 @@ def M1Clock.held_advanceState (p : NativeEff) (table : RowTable) (fuel : Nat) (m
     (_h : Held m fiber token request) : ProofGraph.Obligation (
     letI := evaluatorFor p table
     Held (advanceState (interpOf p table) fuel millis rounds m).1 fiber token request) := ⟨⟩
-#proof_wanted M1Clock.held_advanceState
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem held_advanceState (p : NativeEff) (table : RowTable) (fuel : Nat) (millis : ClockMillis) (rounds : Nat)
     {m : NativeMachine} {fiber : FiberId} {token : Nat} {request : NativeOp × Val}
     (h : Held m fiber token request) :
@@ -501,4 +501,4 @@ theorem requestOf_singleton_takePrefix (p : NativeEff) (table : RowTable)
 
 end Effect4.Program.Guard.SingleGuard
 
-#typed_state_obligations Effect4.Program.Guard.SingleGuard.M1Clock ceiling 5 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Program.Guard.SingleGuard.M1Clock ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

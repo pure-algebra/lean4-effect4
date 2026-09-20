@@ -24,4 +24,4 @@ def reachable_agrees (program : NativeEff) (table : RowTable) (compileFuel : Nat
 
 end Effect4.Api.TraceFacts.M1Trace
 
-#typed_state_obligations Effect4.Api.TraceFacts.M1Trace ceiling 3 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Api.TraceFacts.M1Trace ceiling 2 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

@@ -447,7 +447,7 @@ def M1.StoresLaws.DeferredStore.complete_cells_length (self : DeferredStore) (ce
 one `setCell`. -/
 theorem DeferredStore.complete_cells_length (self : DeferredStore) (cell : DeferredKey)
     (e : Completion Val Err Defect FiberId Ann) : (self.complete cell e).1.cells.length = self.cells.length := by
-  aesop (rule_sets := [Effect4.Stores])
+  aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])
 
 /-- `cancel` (`Stores.lean:732-738`) keeps the cell count. -/
 theorem DeferredStore.cancel_cells_length (self : DeferredStore) (cell : DeferredKey)
@@ -853,7 +853,7 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
   | deferredMake =>
     simp only [syncOpStep_deferredMake, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
-    exact ⟨Nat.le_refl _, by aesop (rule_sets := [Effect4.Stores]), fun _ hk => hk, Nat.le_refl _, fun _ hm => hm, Nat.le_refl _⟩
+    exact ⟨Nat.le_refl _, by aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel]), fun _ hk => hk, Nat.le_refl _, fun _ hm => hm, Nat.le_refl _⟩
   | deferredIsDone cell | deferredPoll cell | scopeIsClosed cell =>
     simp only [syncOpStep_deferredIsDone, syncOpStep_deferredPoll, syncOpStep_scopeIsClosed] at h
     obtain ⟨_, _, hf⟩ := Option.map_eq_some_iff.mp h
@@ -932,7 +932,7 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
   | memoBuild layer memoMap =>
     simp only [syncOpStep_memoBuild, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
-    exact ⟨Nat.le_refl _, by aesop (rule_sets := [Effect4.Stores]),
+    exact ⟨Nat.le_refl _, by aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel]),
       fun k hk => ScopeStore.entryAt_make_isSome _ _ _ k hk, Nat.le_succ _, fun id hm => by
         show ((s.memo.insertEntry memoMap layer _).mapAt id).isSome = true
         exact MemoWorld.mapAt_insertEntry_isSome hm, Nat.le_refl _⟩
@@ -1272,7 +1272,7 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
     rcases MemoWorld.mem_insertEntry_entries hm' he with ⟨m₀, hm₀, he₀⟩ | rfl
     · obtain ⟨hd, hs⟩ := hwf.2.2.1 m₀ hm₀ e he₀
       exact ⟨Nat.lt_of_lt_of_le hd hle.2.1, hle.2.2.1 _ hs⟩
-    · exact ⟨by aesop (rule_sets := [Effect4.Stores]), ScopeStore.entryAt_make_self _ _ _⟩
+    · exact ⟨by aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel]), ScopeStore.entryAt_make_self _ _ _⟩
   | memoComplete layer memoMap exit =>
     cases hentry : s.memo.entryAt memoMap layer with
     | none =>
@@ -2056,4 +2056,4 @@ attribute [aesop safe forward (rule_sets := [Effect4.Stores])]
   syncOpStep_memoComplete_some
 
 #typed_state_obligations Effect4.Machine.M1.StoresLaws ceiling 0
-  using aesop (rule_sets := [Effect4.Stores])
+  using aesop (rule_sets := [Effect4.Stores, Effect4.StoreKernel])

@@ -62,8 +62,8 @@ theorem FMeans.parked (h : FMeans root f₁ f₂) : f₁.parked = f₂.parked :=
 theorem FMeans.context (h : FMeans root f₁ f₂) : f₁.context = f₂.context := fiberMeans_context h
 def M1OriginFibers.FMeans_origin (_h : FMeans root f₁ f₂) : ProofGraph.Obligation (
     f₁.origin = f₂.origin) := ⟨⟩
-#proof_wanted M1OriginFibers.FMeans_origin
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem FMeans.origin (h : FMeans root f₁ f₂) : f₁.origin = f₂.origin := fiberMeans_origin h
 theorem FMeans.running (h : FMeans root f₁ f₂) : f₁.running = f₂.running := h.2.1
 theorem FMeans.pending (h : FMeans root f₁ f₂) : f₁.pending = f₂.pending := h.2.2.1
@@ -109,9 +109,9 @@ def M1OriginFibers.FMeans_mk' (_hid : f₁.id = f₂.id) (_hpk : f₁.parked = f
     (_hdisp : DispatcherMeans (CodeMeans root) f₁.dispatcher f₂.dispatcher)
     (_hS : Means root f₁.frame f₂.frame) (_horigin : f₁.origin = f₂.origin) : ProofGraph.Obligation (
     FMeans root f₁ f₂) := ⟨⟩
-#proof_wanted M1OriginFibers.FMeans_mk'
 
 /-- The relation from its fields. -/
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem FMeans.mk' (hid : f₁.id = f₂.id) (hpk : f₁.parked = f₂.parked)
     (hctx : f₁.context = f₂.context) (hrun : f₁.running = f₂.running)
     (hpend : f₁.pending = f₂.pending) (hfin : f₁.finalizing = f₂.finalizing)
@@ -263,10 +263,10 @@ theorem FMeans.enqueue (h : FMeans root f₁ f₂) (priority : Nat) {t₁ : FTas
 def M1OriginFibers.fmeans_make (root : NativeEff) (id : FiberId) {c₁ : NCode} {c₂ : RProgram}
     (_hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) : ProofGraph.Obligation (
     FMeans root (RunFiber.make id c₁ flag budget ctx origin) (RunFiber.make id c₂ flag budget ctx origin)) := ⟨⟩
-#proof_wanted M1OriginFibers.fmeans_make
 
 /-- A fresh fiber over related programs. -/
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem fmeans_make (root : NativeEff) (id : FiberId) {c₁ : NCode} {c₂ : RProgram}
     (hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) :
     FMeans root (RunFiber.make id c₁ flag budget ctx origin) (RunFiber.make id c₂ flag budget ctx origin) :=
@@ -381,8 +381,8 @@ theorem raceMeans_programs {r₁ : FRace} {r₂ : RRace} (h : RaceMeans (CodeMea
 
 def M1OriginFibers.raceMeans_nextSite {r₁ : FRace} {r₂ : RRace} (_h : RaceMeans (CodeMeans root) r₁ r₂) : ProofGraph.Obligation (
     r₁.nextSite = r₂.nextSite) := ⟨⟩
-#proof_wanted M1OriginFibers.raceMeans_nextSite
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem raceMeans_nextSite {r₁ : FRace} {r₂ : RRace} (h : RaceMeans (CodeMeans root) r₁ r₂) :
     r₁.nextSite = r₂.nextSite := h.2.2.2.2.2.2.2
 
@@ -391,8 +391,8 @@ def M1OriginFibers.raceMeans_mk' {r₁ : FRace} {r₂ : RRace} (_hid : r₁.id =
     (_hreg : r₁.registering = r₂.registering) (_hprog : ListRel (CodeMeans root) r₁.programs r₂.programs)
     (_hsite : r₁.nextSite = r₂.nextSite) : ProofGraph.Obligation (
     RaceMeans (CodeMeans root) r₁ r₂) := ⟨⟩
-#proof_wanted M1OriginFibers.raceMeans_mk'
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem raceMeans_mk' {r₁ : FRace} {r₂ : RRace} (hid : r₁.id = r₂.id) (hhost : r₁.host = r₂.host)
     (htok : r₁.token = r₂.token) (hst : r₁.state = r₂.state) (hsettled : r₁.settled = r₂.settled)
     (hreg : r₁.registering = r₂.registering) (hprog : ListRel (CodeMeans root) r₁.programs r₂.programs)
@@ -520,4 +520,4 @@ theorem machineOk_mapFibers {m : FMachine} (hok : MachineOk StoresOk m) {g : FRu
 
 end Effect4.Program.Sched
 
-#typed_state_obligations Effect4.Program.Sched.M1OriginFibers ceiling 6 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Program.Sched.M1OriginFibers ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

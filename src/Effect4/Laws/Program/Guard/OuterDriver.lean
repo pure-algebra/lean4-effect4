@@ -185,8 +185,8 @@ theorem flushAllState_preserved (p : NativeEff) (table : RowTable) (driver : Dri
         · exact fired
 
 def M1Clock.timer_clockStep_keys {κ : Type} (timers : TimerStore) (millis : ClockMillis) (answer : κ) : ProofGraph.Obligation (wakeKeys (timers.clockStep millis answer).2.wake ⊆ wakeKeys timers.wake) := ⟨⟩
-#proof_wanted M1Clock.timer_clockStep_keys
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem timer_clockStep_keys {κ : Type} (timers : TimerStore) (millis : ClockMillis) (answer : κ) :
     wakeKeys (timers.clockStep millis answer).2.wake ⊆ wakeKeys timers.wake := by
   unfold TimerStore.clockStep TimerStore.fireNext WakeList.wakeBy
@@ -202,8 +202,8 @@ theorem timer_clockStep_keys {κ : Type} (timers : TimerStore) (millis : ClockMi
 
 def M1Clock.clockStep_preserved (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (millis : ClockMillis) (_state : GuardState m) : ProofGraph.Obligation (Preserved m { m with state := ((interpOf p table).clockStep millis m.state).2 }) := ⟨⟩
-#proof_wanted M1Clock.clockStep_preserved
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem clockStep_preserved (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (millis : ClockMillis) (state : GuardState m) :
     Preserved m { m with state := ((interpOf p table).clockStep millis m.state).2 } := by
@@ -216,8 +216,8 @@ theorem clockStep_preserved (p : NativeEff) (table : RowTable)
 def M1Clock.clockStep_owed_facts (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (millis : ClockMillis) (owed : Owed NCode)
     (_h : ((interpOf p table).clockStep millis m.state).1 = some owed) : ProofGraph.Obligation ((owed.waiter, owed.token) ∈ internalKeys m ∧ raceSites owed.code = [] ∧ owed.mode = .now) := ⟨⟩
-#proof_wanted M1Clock.clockStep_owed_facts
 
+@[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
 theorem clockStep_owed_facts (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (millis : ClockMillis) (owed : Owed NCode)
     (h : ((interpOf p table).clockStep millis m.state).1 = some owed) :
@@ -241,8 +241,8 @@ def M1Clock.advanceTick_preserved (p : NativeEff) (table : RowTable) (_driver : 
     let mid : NativeMachine := { m with state := ((interpOf p table).clockStep millis m.state).2 }
     let drained := drainOwed mid [owed]
     Preserved m (driveState (interpOf p table) fuel drained.1 (drained.2 ++ [.drainDue])).1) := ⟨⟩
-#proof_wanted M1Clock.advanceTick_preserved
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem advanceTick_preserved (p : NativeEff) (table : RowTable) (driver : DriverContract p table)
     (fuel : Nat) (millis : ClockMillis) (m : NativeMachine) (owed : Owed NCode) (state : GuardState m)
     (clock : ((interpOf p table).clockStep millis m.state).1 = some owed) :
@@ -269,8 +269,8 @@ def M1Clock.advanceState_preserved (p : NativeEff) (table : RowTable) (_driver :
     (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine) (_state : GuardState m) : ProofGraph.Obligation (
     letI := evaluatorFor p table
     Preserved m (advanceState (interpOf p table) fuel millis rounds m).1) := ⟨⟩
-#proof_wanted M1Clock.advanceState_preserved
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem advanceState_preserved (p : NativeEff) (table : RowTable) (driver : DriverContract p table)
     (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine) (state : GuardState m) :
     letI := evaluatorFor p table
@@ -362,8 +362,8 @@ def M1Clock.guardState_advanceState (p : NativeEff) (table : RowTable) (_driver 
     (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine) (_state : GuardState m) : ProofGraph.Obligation (
     letI := evaluatorFor p table
     GuardState (advanceState (interpOf p table) fuel millis rounds m).1) := ⟨⟩
-#proof_wanted M1Clock.guardState_advanceState
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem guardState_advanceState (p : NativeEff) (table : RowTable) (driver : DriverContract p table)
     (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine) (state : GuardState m) :
     letI := evaluatorFor p table
@@ -375,8 +375,8 @@ def M1Clock.reservedKeys_advanceState (p : NativeEff) (table : RowTable) (_drive
     (keys : List GuardKey) (_reserved : ReservedKeys m keys) : ProofGraph.Obligation (
     letI := evaluatorFor p table
     ReservedKeys (advanceState (interpOf p table) fuel millis rounds m).1 keys) := ⟨⟩
-#proof_wanted M1Clock.reservedKeys_advanceState
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem reservedKeys_advanceState (p : NativeEff) (table : RowTable) (driver : DriverContract p table)
     (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine) (state : GuardState m)
     (keys : List GuardKey) (reserved : ReservedKeys m keys) :
@@ -391,8 +391,8 @@ def M1Clock.requestOrInterrupted_advanceState (p : NativeEff) (table : RowTable)
     letI := evaluatorFor p table
     requestOf (advanceState (interpOf p table) fuel millis rounds m).1 fiber token = some request ∨
       InterruptedAt (advanceState (interpOf p table) fuel millis rounds m).1 fiber) := ⟨⟩
-#proof_wanted M1Clock.requestOrInterrupted_advanceState
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem requestOrInterrupted_advanceState (p : NativeEff) (table : RowTable)
     (driver : DriverContract p table) (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine)
     (state : GuardState m) (fiber : FiberId) (token : Nat) (request : NativeOp × Val)
@@ -407,8 +407,8 @@ def M1Clock.interruptedAt_advanceState (p : NativeEff) (table : RowTable) (_driv
     (fiber : FiberId) (_before : InterruptedAt m fiber) : ProofGraph.Obligation (
     letI := evaluatorFor p table
     InterruptedAt (advanceState (interpOf p table) fuel millis rounds m).1 fiber) := ⟨⟩
-#proof_wanted M1Clock.interruptedAt_advanceState
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem interruptedAt_advanceState (p : NativeEff) (table : RowTable) (driver : DriverContract p table)
     (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine) (state : GuardState m)
     (fiber : FiberId) (before : InterruptedAt m fiber) :
@@ -418,4 +418,4 @@ theorem interruptedAt_advanceState (p : NativeEff) (table : RowTable) (driver : 
 
 end Effect4.Program.Guard.OuterDriver
 
-#typed_state_obligations Effect4.Program.Guard.OuterDriver.M1Clock ceiling 9 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Program.Guard.OuterDriver.M1Clock ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

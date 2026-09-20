@@ -18,7 +18,7 @@ end Test.Obligations.Positive
 namespace Test.Obligations.Missing
 def pending : Obligation (∀ n : Nat, n = n + 1) := ⟨⟩
 end Test.Obligations.Missing
-/-- error: obligation ledger: missing proof or placeholder for Test.Obligations.Missing.pending -/
+/-- error: obligation ledger: missing proof or placeholder for [Test.Obligations.Missing.pending] -/
 #guard_msgs in
 #typed_state_obligations Test.Obligations.Missing ceiling 1 using aesop
 
@@ -34,7 +34,7 @@ namespace Test.Obligations.Solved
 def closed : Obligation (∀ n : Nat, n = n) := ⟨⟩
 #proof_wanted closed
 end Test.Obligations.Solved
-/-- error: obligation ledger: proved goal Test.Obligations.Solved.closed still has a placeholder -/
+/-- error: obligation ledger: proved goals still have a placeholder: [Test.Obligations.Solved.closed] -/
 #guard_msgs in
 #typed_state_obligations Test.Obligations.Solved ceiling 1 using aesop
 

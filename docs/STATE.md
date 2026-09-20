@@ -14,48 +14,16 @@ reads back.
 
 ## Current milestone (2026-09-20)
 
-Phase A of the owner's skeleton-first redirect is implemented: deferred stores have a
-payload parameter defaulting to completion data, fiber origin records source paths, and
-the clock is exact through the generated OCaml engine. `clockNow` retains the target's
-number profile and explicitly refuses overflow. Large clock advances use canonical decimal
-text in keyed host protocol version 3; the stock rc.112 adapter refuses values outside its
-number range.
-
-The full Lean build and axiom/root audit, focused host checks and fresh OCaml checks passed.
-Placement is also complete: 47 files moved, connector proofs live in Laws, shared fixtures
-live under tooling, and the architecture report has zero imports against the declared
-direction (the retained baseline had 26). `make check` passed after placement, including a
-fresh root/axiom audit and generated drift.
-
-Phase B's statement skeleton is installed: indexed heap and promise columns, the typed
-world and its order, the arena laws and projection, the M1 representation connectors,
-origin and trace statements, and the held handshake. All 36 new gates passed their 30
-owner-module builds. They account for 221 statements (48 closed, 173 open) beside 90
-statements already covered by zero gates. Phase C began with 172 active open statements;
-the remaining handshake stays open until M4. New ceilings are the statement counts, and
-the 19 existing zero gate sites are unchanged.
-
-The proof-search tool now checks returned terms against the original kernel environment
-after closing over temporary helpers, and checks dependencies in both statement and proof.
-Its fresh census measured 647 admissible closures out of 4062 statements across 218 modules
-(247/1584 in the original 38-module radius). One further closure was rejected for
-Classical.choice. The earlier identical counts are retained as provisional history because
-that search wrapper could return references to discarded helpers. Phase B's `make check`
-and fresh coverage checks passed; the sanctioned report remains green 133/135.
-
-Phase C proof fills have started. The completion-data rule bank passes its positive and
-negative controls, and its support gates are at zero. All fourteen deferred-store map laws
-now close by search, with a zero gate in their module and allowed axiom dependencies in
-the after-census. The arena's ten original laws and three support lemmas also pass zero
-gates and the final-source axiom check. The reference-step projection and its four local
-contracts also pass zero gates. All 115 replacements identified by the corrected baseline
-census have landed with unchanged statement headers and passing narrow builds. The remaining
-connectors, world order and simulation fills are next; the full Phase C check remains pending.
-
-The one-regeneration target was missed: Phase A required three completed runtime rounds,
-plus two partial LCNF attempts. Placement added one EFF/wire/CAS validation round; cumulative
-completed counts are LCNF 3, EFF 4, wire 4 and CAS 4. Failed attempts, exact commands and
-open proof evidence are retained in `docs/research/2026-09-20-skeleton-first-receipt.md`.
+Phase A, placement, the Phase B skeleton and the Phase C fills of the skeleton-first redirect
+are landed; the phase-by-phase account is
+`docs/research/2026-09-20-skeleton-first-receipt.md`, the review of that landing is
+`docs/research/2026-09-20-codex-landing-review.md`, and the close of Phase C with its numbers
+and its open residue is `docs/research/2026-09-20-phase-c-close-receipt.md`. The ledger has
+65 gates over 393 statements, 351 closed by the bank search and 42 open with their cause
+recorded; the banks are `Effect4.Stores` (equations and laws), `Effect4.StoreKernel` (store
+definitions, kernel modules only), `Effect4.Fibers` (fiber machine clauses) and
+`Effect4.TypedState`. Next: the memo slice (`MemoKeysFresh`, then the identity write goes),
+the static-site bridge, the trace agreement, then rows 84/80.
 
 ## Earlier full-check landing (2026-09-17)
 

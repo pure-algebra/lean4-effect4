@@ -52,13 +52,16 @@ syntax (name := typedStateObligations)
       unless goals.any (fun g => g.id ++ `wanted == name) do
         throwError "obligation ledger: stale placeholder {name}"
     let mut entries : Array Entry := #[]
+    -- every mismatch is collected, so one run reports the whole residue of a scope
+    let mut missing : Array Name := #[]
+    let mut stale : Array Name := #[]
     for goal in goals do
       let wanted := goal.id ++ `wanted
       let checked := goal.id ++ `checked
       match ← ProofGraph.search goal.proposition tactic 40000 with
       | .ok proof =>
         if placeholders.contains wanted then
-          throwError "obligation ledger: proved goal {goal.id} still has a placeholder"
+          stale := stale.push goal.id
         if let some _ := (← getEnv).find? checked then
           let ref : ProofRef := ⟨checked, goal.levels, goal.proposition⟩
           if let .error why ← ref.validate then throwError why
@@ -67,8 +70,12 @@ syntax (name := typedStateObligations)
         entries := entries.push ⟨goal.id, .proved checked⟩
       | .error _ =>
         unless placeholders.contains wanted do
-          throwError "obligation ledger: missing proof or placeholder for {goal.id}"
+          missing := missing.push goal.id
         entries := entries.push ⟨goal.id, .wanted wanted⟩
+    unless stale.isEmpty do
+      throwError "obligation ledger: proved goals still have a placeholder: {stale}"
+    unless missing.isEmpty do
+      throwError "obligation ledger: missing proof or placeholder for {missing}"
     ProofGraph.check goals entries limit
   logInfo m!"{scope}: {report.wanted} open, {report.proved} proved, {report.wanted + report.proved} total; ceiling {limit}"
 

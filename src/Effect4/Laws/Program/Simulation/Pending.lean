@@ -108,7 +108,7 @@ variable (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (hf : PendingOk f)
 
 include hf
 
-@[aesop safe apply (rule_sets := [Effect4.Stores])]
+@[aesop safe apply (rule_sets := [Effect4.Stores]), aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem fork_pendingOk (program : NCode) (options : Supervision.ForkOptions) {a : FAnswer}
     (ha : ∀ g v, PendingOk g → PendingOk (a g v)) (site : List Nat := []) :
     PendingOk (FiberAction.fork i m f y program options a site).fiber := by
@@ -117,7 +117,7 @@ theorem fork_pendingOk (program : NCode) (options : Supervision.ForkOptions) {a 
   apply ha
   aesop (rule_sets := [Effect4.Stores])
 
-@[aesop safe apply (rule_sets := [Effect4.Stores])]
+@[aesop safe apply (rule_sets := [Effect4.Stores]), aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem forkIn_pendingOk (program : NCode) (options : Supervision.ForkOptions) (scope : Nat)
     {a : FAnswer} (ha : ∀ g v, PendingOk g → PendingOk (a g v)) (site : List Nat := []) :
     PendingOk (FiberAction.forkIn i m f y program options scope a site).fiber := by
@@ -126,7 +126,7 @@ theorem forkIn_pendingOk (program : NCode) (options : Supervision.ForkOptions) (
   apply ha
   aesop (rule_sets := [Effect4.Stores])
 
-@[aesop safe apply (rule_sets := [Effect4.Stores])]
+@[aesop safe apply (rule_sets := [Effect4.Stores]), aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem forkScoped_pendingOk (program : NCode) (options : Supervision.ForkOptions)
     {a : FAnswer} (ha : ∀ g v, PendingOk g → PendingOk (a g v)) (site : List Nat := []) :
     PendingOk (FiberAction.forkScoped i m f y program options a site).fiber := by
@@ -290,4 +290,4 @@ theorem iteration_pendingOk (root : NativeEff) (m : FMachine) (f : FRun) (y : Bo
 
 end Effect4.Program.Sched
 
-#typed_state_obligations Effect4.Program.Sched.M1PendingOrigin ceiling 4 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Program.Sched.M1PendingOrigin ceiling 3 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

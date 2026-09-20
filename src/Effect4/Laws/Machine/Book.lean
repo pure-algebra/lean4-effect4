@@ -245,47 +245,60 @@ section Invariant
 variable {κ φ η : Type (max u v)} [core : FiberCore ν β ε δ ι α κ φ]
 variable {StOk : St → Prop} {m : RunMachine ν σ β ε δ ι α χ St κ φ η}
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core in
 theorem MachineOk.state (h : MachineOk StOk m) : StOk m.state := h.1
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core in
 theorem MachineOk.fibers (h : MachineOk StOk m) : ∀ f ∈ m.fibers, PendingOk f := h.2
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core in
 theorem machineOk_emit (h : MachineOk StOk m) (e : List (RunEvent ν σ β ε δ ι α χ κ η)) :
     MachineOk StOk (m.emit e) :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core in
 theorem machineOk_halt (h : MachineOk StOk m) (why : Stuck) : MachineOk StOk (m.halt why) :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core in
 theorem machineOk_disarm (h : MachineOk StOk m) (owner : FiberId) :
     MachineOk StOk (m.disarm owner) :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core in
 theorem machineOk_arm (h : MachineOk StOk m) (owner : FiberId) : MachineOk StOk (m.arm owner) :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core in
 theorem machineOk_middleware (h : MachineOk StOk m) :
     MachineOk StOk { m with middlewareInstalled := true } :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core in
 theorem machineOk_updateRace (h : MachineOk StOk m) (r : Race ν σ β ε δ ι α κ) :
     MachineOk StOk (m.updateRace r) :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core in
 theorem machineOk_stateOf (h : MachineOk StOk m) {s : St} (hs : StOk s) :
     MachineOk StOk { m with state := s } := ⟨hs, h.2⟩
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core in
 theorem pendingOk_dispatcher {f : RunFiber ν σ β ε δ ι α χ κ φ} (hf : PendingOk f)
     (d : Dispatcher ν σ β ε δ ι α κ) : PendingOk { f with dispatcher := d } :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core in
 theorem pendingOk_yield {f : RunFiber ν σ β ε δ ι α χ κ φ} (hf : PendingOk f) (v : Option Bool) :
     PendingOk { f with yieldOverride := v } :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core in
 theorem pendingOk_of_fiber? (h : MachineOk StOk m) {id : FiberId} {f : RunFiber ν σ β ε δ ι α χ κ φ}
     (hf : m.fiber? id = some f) : PendingOk f :=
   h.2 f (List.mem_of_find?_eq_some hf)
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core in
 theorem machineOk_update (h : MachineOk StOk m) {f : RunFiber ν σ β ε δ ι α χ κ φ}
     (hf : PendingOk f) : MachineOk StOk (m.update f) := by
   refine ⟨h.1, fun g hg => ?_⟩
@@ -295,6 +308,7 @@ theorem machineOk_update (h : MachineOk StOk m) {f : RunFiber ν σ β ε δ ι 
   · exact hf
   · exact h.2 g' hg'
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core in
 theorem machineOk_modify (h : MachineOk StOk m) (id : FiberId)
     {k : RunFiber ν σ β ε δ ι α χ κ φ → RunFiber ν σ β ε δ ι α χ κ φ}
     (hk : ∀ f, PendingOk f → PendingOk (k f)) : MachineOk StOk (m.modify id k) := by
@@ -322,24 +336,34 @@ variable {C : κ₁ → κ₂ → Prop} {S : φ₁ → φ₂ → Prop}
 variable {m₁ : RunMachine ν σ β ε δ ι α χ St κ₁ φ₁ η₁}
 variable {m₂ : RunMachine ν σ β ε δ ι α χ St κ₂ φ₂ η₂}
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem BookMeans.fibers (h : BookMeans C S m₁ m₂) :
     ListRel (FiberMeans C S) m₁.fibers m₂.fibers := h.1
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem BookMeans.races (h : BookMeans C S m₁ m₂) :
     ListRel (RaceMeans C) m₁.races m₂.races := h.2.1
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem BookMeans.nextId (h : BookMeans C S m₁ m₂) : m₁.nextId = m₂.nextId := h.2.2.1
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem BookMeans.nextToken (h : BookMeans C S m₁ m₂) : m₁.nextToken = m₂.nextToken :=
   h.2.2.2.1
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem BookMeans.nextRace (h : BookMeans C S m₁ m₂) : m₁.nextRace = m₂.nextRace :=
   h.2.2.2.2.1
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem BookMeans.middleware (h : BookMeans C S m₁ m₂) :
     m₁.middlewareInstalled = m₂.middlewareInstalled := h.2.2.2.2.2.1
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem BookMeans.armed (h : BookMeans C S m₁ m₂) : m₁.armed = m₂.armed :=
   h.2.2.2.2.2.2.1
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem BookMeans.state (h : BookMeans C S m₁ m₂) : m₁.state = m₂.state :=
   h.2.2.2.2.2.2.2.1
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem BookMeans.stuck (h : BookMeans C S m₁ m₂) : m₁.stuck = m₂.stuck :=
   h.2.2.2.2.2.2.2.2
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The trace is not in the book, so `emit` is free on either side, with unrelated event
 lists (decision D3). -/
 theorem book_emit (h : BookMeans C S m₁ m₂) (e₁ : List (RunEvent ν σ β ε δ ι α χ κ₁ η₁))
@@ -347,45 +371,54 @@ theorem book_emit (h : BookMeans C S m₁ m₂) (e₁ : List (RunEvent ν σ β 
     BookMeans C S (m₁.emit e₁) (m₂.emit e₂) :=
   by aesop
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem book_halt (h : BookMeans C S m₁ m₂) (why : Stuck) :
     BookMeans C S (m₁.halt why) (m₂.halt why) :=
   ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1, h.2.2.2.2.2.1, h.2.2.2.2.2.2.1,
     h.2.2.2.2.2.2.2.1, rfl⟩
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem book_disarm (h : BookMeans C S m₁ m₂) (owner : FiberId) :
     BookMeans C S (m₁.disarm owner) (m₂.disarm owner) :=
   ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1, h.2.2.2.2.2.1,
     congrArg (fun l => List.filter (fun x => x ≠ owner) l) h.armed,
     h.2.2.2.2.2.2.2.1, h.2.2.2.2.2.2.2.2⟩
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem book_arm (h : BookMeans C S m₁ m₂) (owner : FiberId) :
     BookMeans C S (m₁.arm owner) (m₂.arm owner) :=
   ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1, h.2.2.2.2.2.1,
     by unfold RunMachine.arm; rw [h.armed],
     h.2.2.2.2.2.2.2.1, h.2.2.2.2.2.2.2.2⟩
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem book_middleware (h : BookMeans C S m₁ m₂) :
     BookMeans C S { m₁ with middlewareInstalled := true } { m₂ with middlewareInstalled := true } :=
   ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1, rfl, h.2.2.2.2.2.2.1,
     h.2.2.2.2.2.2.2.1, h.2.2.2.2.2.2.2.2⟩
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem book_stateOf (h : BookMeans C S m₁ m₂) (s : St) :
     BookMeans C S { m₁ with state := s } { m₂ with state := s } :=
   ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1, h.2.2.2.2.2.1, h.2.2.2.2.2.2.1, rfl,
     h.2.2.2.2.2.2.2.2⟩
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem fiberMeans_id {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (h : FiberMeans C S f₁ f₂) : f₁.id = f₂.id :=
   congrArg FiberControl.id h.1
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem fiberMeans_exit {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (h : FiberMeans C S f₁ f₂) : f₁.exit = f₂.exit :=
   h.2.2.2.2.1
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem fiberMeans_parked {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (h : FiberMeans C S f₁ f₂) : f₁.parked = f₂.parked :=
   congrArg FiberControl.parked h.1
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem fiberMeans_context {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (h : FiberMeans C S f₁ f₂) : f₁.context = f₂.context :=
   congrArg FiberControl.context h.1
@@ -393,22 +426,26 @@ theorem fiberMeans_context {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
 def M1OriginBook.fiberMeans_origin {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (_h : FiberMeans C S f₁ f₂) : ProofGraph.Obligation (
     f₁.origin = f₂.origin) := ⟨⟩
-#proof_wanted M1OriginBook.fiberMeans_origin
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem fiberMeans_origin {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (h : FiberMeans C S f₁ f₂) : f₁.origin = f₂.origin :=
   congrArg FiberControl.origin h.1
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem fiberMeans_interruptedCause {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (h : FiberMeans C S f₁ f₂) :
     core₁.interruptedCause f₁.frame = core₂.interruptedCause f₂.frame :=
   congrArg FiberControl.interruptedCause h.1
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem fiberMeans_deferred {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (h : FiberMeans C S f₁ f₂) :
     core₁.deferredInterrupt f₁.frame = core₂.deferredInterrupt f₂.frame :=
   congrArg FiberControl.deferredInterrupt h.1
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The mask of a live fiber agrees. -/
 theorem fiberMeans_interruptible {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (h : FiberMeans C S f₁ f₂) (hlive : f₁.exit = none) :
@@ -419,6 +456,7 @@ theorem fiberMeans_interruptible {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ 
     Option.some.injEq] at hc
   exact hc
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- `update`: the map's `if g.id = f.id` never reduces on a variable, so the lemma is by
 induction on the pairwise relation. -/
 theorem listRel_update {l₁ : List (RunFiber ν σ β ε δ ι α χ κ₁ φ₁)}
@@ -438,12 +476,14 @@ theorem listRel_update {l₁ : List (RunFiber ν σ β ε δ ι α χ κ₁ φ�
     · have hy : ¬ (b.id = f₂.id) := by rw [← fiberMeans_id hab, ← fiberMeans_id hf]; exact hx
       rw [if_neg hx, if_neg hy]; exact hab
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem book_update (h : BookMeans C S m₁ m₂) {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (hf : FiberMeans C S f₁ f₂) :
     BookMeans C S (m₁.update f₁) (m₂.update f₂) :=
   ⟨listRel_update h.1 hf, h.2.1, h.2.2.1, h.2.2.2.1, h.2.2.2.2.1, h.2.2.2.2.2.1,
     h.2.2.2.2.2.2.1, h.2.2.2.2.2.2.2.1, h.2.2.2.2.2.2.2.2⟩
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- `fiber?` is `find?` on the id, and the ids agree pairwise. -/
 theorem listRel_find {l₁ : List (RunFiber ν σ β ε δ ι α χ κ₁ φ₁)}
     {l₂ : List (RunFiber ν σ β ε δ ι α χ κ₂ φ₂)} (h : ListRel (FiberMeans C S) l₁ l₂)
@@ -469,9 +509,11 @@ theorem listRel_find {l₁ : List (RunFiber ν σ β ε δ ι α χ κ₁ φ₁)
         simp only [List.find?_cons_of_neg, decide_eq_true_eq, hy, not_false_eq_true]
       rw [e₁, e₂]; exact ih
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem book_fiber? (h : BookMeans C S m₁ m₂) (id : FiberId) :
     OptRel (FiberMeans C S) (m₁.fiber? id) (m₂.fiber? id) := listRel_find h.1 id
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem book_modify (h : BookMeans C S m₁ m₂) (id : FiberId)
     {k₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁ → RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {k₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂ → RunFiber ν σ β ε δ ι α χ κ₂ φ₂}
@@ -489,6 +531,7 @@ theorem book_modify (h : BookMeans C S m₁ m₂) (id : FiberId)
     | none => rw [h₁, h₂] at hf; exact absurd hf not_false
     | some g => rw [h₁, h₂] at hf; exact book_update h (hk f g hf)
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Both machines find a fiber, or neither. -/
 theorem book_fiber?_cases (h : BookMeans C S m₁ m₂) (id : FiberId) :
     (m₁.fiber? id = none ∧ m₂.fiber? id = none) ∨
@@ -504,6 +547,7 @@ theorem book_fiber?_cases (h : BookMeans C S m₁ m₂) (id : FiberId) :
     | none => rw [h₁, h₂] at hf; exact absurd hf not_false
     | some g => rw [h₁, h₂] at hf; exact Or.inr ⟨f, g, rfl, rfl, hf⟩
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem listRel_insert (priority : Nat) {t₁ : Task ν σ β ε δ ι α κ₁} {t₂ : Task ν σ β ε δ ι α κ₂}
     (ht : TaskMeans C t₁ t₂) :
     ∀ {l₁ : List (Bucket ν σ β ε δ ι α κ₁)} {l₂ : List (Bucket ν σ β ε δ ι α κ₂)},
@@ -531,12 +575,14 @@ theorem listRel_insert (priority : Nat) {t₁ : Task ν σ β ε δ ι α κ₁}
       · rw [if_neg hlt, if_neg hlt]
         exact ListRel.cons hb ih
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem dispatcherMeans_enqueue {d₁ : Dispatcher ν σ β ε δ ι α κ₁} {d₂ : Dispatcher ν σ β ε δ ι α κ₂}
     (hd : DispatcherMeans C d₁ d₂) (priority : Nat) {t₁ : Task ν σ β ε δ ι α κ₁}
     {t₂ : Task ν σ β ε δ ι α κ₂} (ht : TaskMeans C t₁ t₂) :
     DispatcherMeans C (d₁.enqueue priority t₁) (d₂.enqueue priority t₂) :=
   ⟨listRel_insert priority ht hd.1, rfl⟩
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem fiberMeans_enqueue {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (hf : FiberMeans C S f₁ f₂) (priority : Nat)
     {t₁ : Task ν σ β ε δ ι α κ₁} {t₂ : Task ν σ β ε δ ι α κ₂} (ht : TaskMeans C t₁ t₂) :
@@ -598,6 +644,7 @@ theorem book_drainOwed {StOk : St → Prop} (hok : MachineOk StOk m₁) (h : Boo
       ListRel (CmdMeans C) (drainOwed m₁ d₁).2 (drainOwed m₂ d₂).2 :=
   book_drainOwed_aux hd m₁ m₂ hok h
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem all_exits {l₁ : List (RunFiber ν σ β ε δ ι α χ κ₁ φ₁)}
     {l₂ : List (RunFiber ν σ β ε δ ι α χ κ₂ φ₂)} (h : ListRel (FiberMeans C S) l₁ l₂) :
     (l₁.all fun f => f.exit.isSome) = (l₂.all fun f => f.exit.isSome) := by
@@ -607,9 +654,11 @@ theorem all_exits {l₁ : List (RunFiber ν σ β ε δ ι α χ κ₁ φ₁)}
     show (x.exit.isSome && _) = (y.exit.isSome && _)
     rw [hd.2.2.2.2.1, ih]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem book_finished (h : BookMeans C S m₁ m₂) : m₁.finished = m₂.finished :=
   all_exits h.1
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem completedExits_rel {l₁ : List (RunFiber ν σ β ε δ ι α χ κ₁ φ₁)}
     {l₂ : List (RunFiber ν σ β ε δ ι α χ κ₂ φ₂)} (h : ListRel (FiberMeans C S) l₁ l₂) :
     (l₁.filterMap fun f => f.exit.map fun ex => (f.id, ex)) =
@@ -620,6 +669,7 @@ theorem completedExits_rel {l₁ : List (RunFiber ν σ β ε δ ι α χ κ₁ 
     simp only [List.filterMap_cons]
     rw [fiberMeans_id hab, fiberMeans_exit hab, ih]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- The completed-exit view both instances hand their construction callbacks. -/
 theorem book_completedExits (h : BookMeans C S m₁ m₂) :
     m₁.completedExits = m₂.completedExits :=
@@ -690,12 +740,14 @@ theorem book_settled (hstep : StepAgrees i₁ i₂ StOk C S) (fuel : Nat)
 
 /-! ### `fire`: a fold over the drained dispatcher -/
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem taskCmds_rel {t₁ : Task ν σ β ε δ ι α κ₁} {t₂ : Task ν σ β ε δ ι α κ₂}
     (h : TaskMeans C t₁ t₂) : ListRel (CmdMeans C) (taskCmds t₁) (taskCmds t₂) := by
   cases t₁ <;> cases t₂ <;> first
     | exact absurd h not_false
     | (refine ListRel.cons ?_ (ListRel.cons True.intro ListRel.nil); exact h)
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem flatten_tasks_rel {l₁ : List (Bucket ν σ β ε δ ι α κ₁)}
     {l₂ : List (Bucket ν σ β ε δ ι α κ₂)} (h : ListRel (BucketMeans C) l₁ l₂) :
     ListRel (TaskMeans C) ((l₁.map Bucket.tasks).flatten) ((l₂.map Bucket.tasks).flatten) := by
@@ -703,10 +755,12 @@ theorem flatten_tasks_rel {l₁ : List (Bucket ν σ β ε δ ι α κ₁)}
   | nil => exact ListRel.nil
   | cons hd _ ih => exact ListRel.append hd.2 ih
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem drain_rel {d₁ : Dispatcher ν σ β ε δ ι α κ₁}
     {d₂ : Dispatcher ν σ β ε δ ι α κ₂} (h : DispatcherMeans C d₁ d₂) :
     ListRel (TaskMeans C) (d₁.drain).1 (d₂.drain).1 := flatten_tasks_rel h.1
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem fiberMeans_drained {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (hf : FiberMeans C S f₁ f₂) :
     FiberMeans C S { f₁ with dispatcher := (f₁.dispatcher.drain).2 }
@@ -824,6 +878,7 @@ theorem flushRootState_succ (i : RunInterp ν σ β ε δ ι α χ St κ₁) (fu
            flushRootState i fuel root n (fireState i fuel m root).1
          else fireState i fuel m root) := rfl
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem dispatcherMeans_isEmpty {d₁ : Dispatcher ν σ β ε δ ι α κ₁}
     {d₂ : Dispatcher ν σ β ε δ ι α κ₂} (h : DispatcherMeans C d₁ d₂) :
     d₁.buckets.isEmpty = d₂.buckets.isEmpty := ListRel.isEmpty h.1
@@ -867,6 +922,7 @@ theorem book_flushRootState (hstep : StepAgrees i₁ i₂ StOk C S) (fuel : Nat)
 
 /-! ### The decisions, and replay -/
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem fiberMeans_yield {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (hf : FiberMeans C S f₁ f₂) (v : Option Bool) :
     FiberMeans C S { f₁ with yieldOverride := v } { f₂ with yieldOverride := v } :=
@@ -929,6 +985,7 @@ def M1Clock.book_advanceState (_hstep : StepAgrees i₁ i₂ StOk C S)
         (advanceState i₁ fuel millis rounds a).2 = (advanceState i₂ fuel millis rounds b).2) := ⟨⟩
 #proof_wanted M1Clock.book_advanceState
 
+@[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
 theorem book_advanceState (hstep : StepAgrees i₁ i₂ StOk C S)
     (hclock : ∀ millis s, StOk s →
       StOk (i₁.clockStep millis s).2 ∧ (i₁.clockStep millis s).2 = (i₂.clockStep millis s).2 ∧
@@ -1106,6 +1163,11 @@ def ReplayRel (C : κ₁ → κ₂ → Prop) (S : φ₁ → φ₂ → Prop) :
   | .stuck w₁ m₁, .stuck w₂ m₂ => w₁ = w₂ ∧ BookMeans C S m₁ m₂
   | _, _ => False
 
+omit [DecidableEq
+  ε] [DecidableEq
+  δ] [DecidableEq
+  ι] [DecidableEq
+  α] [FiberEvaluator ν σ β ε δ ι α χ St κ₁ φ₁ η₁] [FiberEvaluator ν σ β ε δ ι α χ St κ₂ φ₂ η₂] in
 theorem ReplayRel.machine {r₁ : ReplayResult ν σ β ε δ ι α χ St κ₁ φ₁ η₁}
     {r₂ : ReplayResult ν σ β ε δ ι α χ St κ₂ φ₂ η₂} (h : ReplayRel C S r₁ r₂) :
     BookMeans C S r₁.machine r₂.machine := by
@@ -1217,4 +1279,4 @@ end Observation
 
 end Effect4.Machine
 
-#typed_state_obligations Effect4.Machine.M1OriginBook ceiling 1 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Machine.M1OriginBook ceiling 0 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

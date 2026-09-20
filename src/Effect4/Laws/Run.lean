@@ -877,9 +877,10 @@ def observe_replace_trace (s : Run)
       (Run.observe { s with session :=
         { s.session with machine := { s.session.machine with trace } } } =
        Run.observe s) := ⟨⟩
+
 #proof_wanted observe_replace_trace
 
 end Effect4.Run.M1Trace
 -- END M1 PHASE B Run
 
-#typed_state_obligations Effect4.Run.M1Trace ceiling 1 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Run.M1Trace ceiling 1 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])

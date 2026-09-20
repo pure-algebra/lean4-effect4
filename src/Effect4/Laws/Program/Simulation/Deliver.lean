@@ -413,6 +413,7 @@ def M1Deliver.storesOk_closeScopeUnsafe {scope : Nat} {ex : ExitV} {flag : Bool}
     (_h : storesCloseScopeUnsafe scope ex flag s = some (s', program)) : ProofGraph.Obligation (StoresOk s') := ⟨⟩
 #proof_wanted M1Deliver.storesOk_closeScopeUnsafe
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem storesOk_closeScopeUnsafe {scope : Nat} {ex : ExitV} {flag : Bool} {s s' : Stores}
     {program : Option Program} (hs : StoresOk s)
     (h : storesCloseScopeUnsafe scope ex flag s = some (s', program)) : StoresOk s' := by
@@ -645,4 +646,4 @@ theorem deliver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : 
 
 end Effect4.Program.Sched
 
-#typed_state_obligations Effect4.Program.Sched.M1Deliver ceiling 1 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Program.Sched.M1Deliver ceiling 1 using aesop (rule_sets := [Effect4.Stores, Effect4.Fibers])
