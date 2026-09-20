@@ -22,8 +22,13 @@ and its open residue is `docs/research/2026-09-20-phase-c-close-receipt.md`. The
 65 gates over 393 statements, 351 closed by the bank search and 42 open with their cause
 recorded; the banks are `Effect4.Stores` (equations and laws), `Effect4.StoreKernel` (store
 definitions, kernel modules only), `Effect4.Fibers` (fiber machine clauses) and
-`Effect4.TypedState`. Next: the memo slice (`MemoKeysFresh`, then the identity write goes),
-the static-site bridge, the trace agreement, then rows 84/80.
+`Effect4.TypedState`. The look-ahead `docs/research/2026-09-20-look-ahead-after-phase-c.md`
+sets the plan's slice table against the tree (M1 and P2 done, M2 and P1 half, M3–M7 and
+P3–P5 unstarted, the F5/F6 tooling amendments absent), names the five 2026-09-20 rulings not
+yet written in `decisions.md`, cuts the residue into five items (the ledger's namesake-theorem
+closer first, then the memo slice as its own regenerated commit), and lists seven probes
+G1–G7 for Gemini. Next in order: the residue, the memo slice, the register, `Preds World`
+(M2b), the F5/F6 amendments, then M3.
 
 ## Earlier full-check landing (2026-09-17)
 
