@@ -6,9 +6,15 @@ The semantic owner is docs/core/machine-state.md; decisions live only in
 docs/core/decisions.md. This file is the implementation plan and evidence record behind them.
 
 Base: 5d6c70da on refactor/phase1-phase3. Lean is pinned at v4.33.1; the behavioral reference is
-vendor/effect-4.0.0-rc.112. The earlier tooling branch codex/typed-state-tooling remains paused:
-scanner repair f6f9f793 is committed there, later declaration/frame/ledger work is uncommitted.
+vendor/effect-4.0.0-rc.112. The earlier tooling branch codex/typed-state-tooling was paused at
+the scanner repair f6f9f793; its declaration/frame/ledger work was checkpointed as three
+commits on 2026-09-19 and §14 sequences its merge as the first slices.
 No machine or language implementation is authorized by the recommendations in this plan.
+
+§14 (2026-09-19) is the short form for the implementer: the D0–D7 stages re-cut as slices with
+files, statements, deletions and red controls, from
+`docs/research/2026-09-19-plan-deep-dive-review.md`. Read §14 first; §§1–13 are the contracts
+and the evidence record behind it.
 
 The checked critique follow-up is `docs/research/2026-09-19-critique-response.md`. It refines
 this plan with scope-correct composition, exact term transport, a driver-continuation contract,
@@ -657,3 +663,46 @@ The new audit's reported Bun runs and additional straight-line checks have no re
 receipt in that input; they are not counted as freshly reproduced evidence here. Source reading
 confirms the poll/wake facts. The previously retained critique proofs/probes keep their existing
 scope and receipts. This integration adds no new proof or benchmark result.
+
+## 14. The slices (deep-dive review, 2026-09-19)
+
+`docs/research/2026-09-19-plan-deep-dive-review.md` re-cut D0–D7 into slices after reading the
+paused tooling worktree (built green at its last edit) and the tree. Its findings F1–F16 are the
+reasons; this section is the order. Every slice names files, a statement or instrument, a
+deletion, a red control and a narrow build in the note's §4. Rows 84–85 record its two
+proposals; nothing here rules them.
+
+The simplifications it adopts: the world is one record `⟨Γ, Π, Ρ, s⟩` ordered by table
+extension and the existing `Stores.le`; the promise column is stated on `Completion` data,
+which makes D2 a deletion and the first machine change; D5 is the `Arena` interface over which
+`refStepOf` and its laws are restated, with `RefHeap` the list instance and the OCaml store the
+trusted instance (row 85); `WakeList` is already the ordered-work interface of §5, and Latch its
+named instance; two of the eleven hand predicates and five `Expect` constructors go; frames are
+generated per written-field set; the ledger's goal set is the authored declarations joined to
+the write-census holders by name; a first transaction profile on `TxBody ∩ Straight` needs no
+across-budget ownership (row 84).
+
+| slice | is | blocks on | deletes |
+| --- | --- | --- | --- |
+| T0 | the tooling worktree checkpointed as three commits on `codex/typed-state-tooling` | — | — (done) |
+| T1 | `tools/ProofGraph` (references, search, ledger) with `Conform` and `Census` over it | T0 | 81 lines of duplicated validator/search |
+| T2 | `#typed_state`: the skeleton elaborated in place, the named bank, the scanner refusals | T1 | `TypedStateGen.lean`, the emit driver, the generated `State.lean` body |
+| T3 | `#frame_rules`; amend to per written-field set before M6 | T1 | — |
+| T4 | `Obligation`, `#proof_wanted`, `#typed_state_obligations`; add `#typed_state_coverage` | T1 | the deleted-goal hazard |
+| T5 | the wiring: roots, gate exemptions, `make check-typed-state`, three docs | T2–T4 | the `TypedStateGen` exemption |
+| M1 | D2 = R1+R2: completion cells and owed resumes hold `Completion`; `MemoEntry.effect` gone | T5 (the gate re-cuts) | `CompletionShaped`, `DeferredOk.1`, `StoredCodeNoRace`, `DeferredCodes`, `denoteStored`, `STORES-FB-COMPLETION` |
+| M2 | layer 1: `Typed/World.lean`, the columns on data, nine hand predicates, `Preds` instance | M1 | `ResumeOk`, `InterruptOnly`, five `Expect` constructors |
+| M3 | the residual protocol: `OpOk`/`AnswerOk` under `#answer_gate`, `TypedProg`, `HandlesFit` | M2 | — |
+| M4 | `Laws/Machine/Keeps.lean`; the existential `StackOk`; `popR_typed` | M3 | — |
+| M5 | S1 `denoteR_typed`; `InterpTyped` for the hooks | M4 | — |
+| M6 | S2 by ledger row: the ceiling pinned here; frames, delivery sites, operation families | M5, T3–T4 amendments; binder-term rows before the `refUpdate` family | — |
+| M7 | S3 `run_typed` through `BMeans.exitOf`; no `badShape`; DI-17 | M6 | — |
+| P1 | D1's Lean content: `Obs.semantic`, `Run.holder`, `Factors` promoted; R3 `parent`/`daemon` | — | the trace read in supervision |
+| P2 | D5 re-scoped: `Arena`, `refStepOf` over it, the list instance | T1 | the Lean `Array` instance |
+| P3 | R5: typed identities | — | numeric coincidences |
+| P4 | D6 transactions v1 on `TxBody ∩ Straight`, per the scout §3 | M7, row 84 | versions, journal handle, conflict path |
+| P5 | D6 Latch as the `WakeList` instance with its four controls | — | — |
+
+D3's three parts are split across T4 (the ledger), M2 (layer 1) and the binder-term rows before
+M6's `refUpdate` family. D4 is M5–M7. D7 stays as written, after P2. The pin of the semantic
+obligation count moves to the start of M6, after M1 and M2, which is what rows 78 and 80 asked.

@@ -63,9 +63,17 @@ reads back.
 **Design review before implementation resumes (2026-09-19).** The completed STM and stateful-API
 research is reconciled in `docs/core/machine-state.md`, with the detailed contracts, retained
 finite controls and proposed D0–D7 sequence in `docs/research/2026-09-19-state-refinement-plan.md`.
-Rows 44–45 record the approved typed world; rows 78–83 remain proposals. The existing tooling
-branch is paused and has not been merged. Set the storage/observation contract before pinning
+Rows 44–45 record the approved typed world; rows 78–83 remain proposals. The tooling branch
+`codex/typed-state-tooling` was checkpointed as three commits on 2026-09-19 (it had built green
+at its last edit) and is not yet merged. Set the storage/observation contract before pinning
 the concrete obligation count; fast backends and new API families do not all block the milestone.
+**The deep-dive review** `docs/research/2026-09-19-plan-deep-dive-review.md` (2026-09-19) re-cut
+D0–D7 into slices with files, statements, deletions and red controls (plan §14): the tooling
+merge T1–T5 first; then D2 as the first machine change (a deletion: completion cells hold data),
+layer 1 as one world record ordered by `Stores.le`, the residual protocol under an answer gate,
+`Keeps`, S1, S2 with the ledger's ceiling pinned there, S3. Proposals: row 84 (a first
+transaction profile on the straight fragment, so row 80 does not block it) and row 85 (D5 as the
+`Arena` interface over which the store kernel's laws are restated; no Lean `Array` instance).
 The immediate priority is shared representations and composition laws. Known future modules
 can reserve contracts with explicit missing implementations using the existing wanted machinery.
 Supporting reviews and the paused tooling handoff are tracked in

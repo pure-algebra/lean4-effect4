@@ -1,0 +1,300 @@
+# Deep-dive review of the state refinement plan: slices, simpler abstractions, proof infrastructure
+
+Reviewed at `a96051a6` on `refactor/phase1-phase3` against the paused tooling worktree
+`/private/tmp/effect4-typed-state-tooling` (branch `codex/typed-state-tooling`, base `23e668b0`,
+one commit `f6f9f793`, the rest uncommitted). Every file and line below was read at those
+revisions. The plan under review is `docs/research/2026-09-19-state-refinement-plan.md`; its
+§14 now carries the slice table this note derives. Nothing here rules a decisions row.
+
+## 0. Verdict
+
+The plan is right about what it refuses and thin about what to build. Its D0–D7 rows are
+stages, not slices: no row names a Lean file, a theorem statement, a deletion or a red control,
+so the next implementer has to re-derive all of it. The tooling worktree already supplies most
+of what D3 asks for, built green today (§1), and should land first as five tooling slices. Three
+abstractions get simpler before any proof is written, and one owner question dissolves:
+
+1. **One world, one order.** The world is `⟨Γ, Π, Ρ, s⟩`; its order is table extension paired
+   with `Stores.le`, which already has `le_refl`/`le_trans`
+   (`src/Effect4/Laws/Machine/StoresLaws.lean:46-60`). Layer 0 (`Laws/Effects/Protocol.lean`)
+   needs exactly a `WorldOrder`; nothing else is owed for weakening.
+2. **Columns over data, not decoders.** D2 (the map's R1+R2) is the first machine change and it
+   is a deletion: two `Program`-typed positions leave the store, `denoteStored`'s partial arm
+   goes, and the promise column is stated on `Completion` data. It must precede layer 1's
+   `PromiseTable`, not the whole milestone.
+3. **The store kernel is already the storage interface.** `refStepOf` reads one cell, computes,
+   writes back, and its laws are proved once (`src/Effect4/Laws/Machine/RefKernel.lean`). D5 is
+   "make the kernel generic over an arena", not "an efficient Lean implementation" — which the
+   plan's own §8 says would not speed up OCaml, since the translator lowers `Array` to a list.
+4. **Row 80 is moot for a first transaction profile** if admitted bodies are the straight
+   fragment: a straight body under prevented yields is one `sync` step and cannot reach a fuel
+   frontier, so there is no budget to own across (§3, F9).
+
+## 1. What was checked
+
+Facts the slices stand on; each was read, not recalled.
+
+| fact | where |
+| --- | --- |
+| The tooling tree built green after its last edit: every `.olean` is newer than its source (`TypedStateDecl` 13:35:30 → 13:35:40; `Frames`, `State`, `Typed/Frames`, the four audit tests 13:40–13:41; `AxiomGate` 13:43:51), so the trust-gate exemptions it adds are not stale | `.lake/build/lib/lean/**` in the worktree |
+| Main differs from the tooling base by documentation only: 39 files, all under `docs/`, since `23e668b0` | `git diff --stat 23e668b0 a96051a6` |
+| The tooling diff: 18 tracked files (+162/−710), 12 new files (945 lines): `tools/ProofGraph/{Proof,Ledger,Search}.lean` (209), `Laws/Auto/{TypedStateDecl,Frames,Obligations}.lean` (518), `Typed/Frames.lean` (10), five tests (208). It deletes `Laws/Auto/TypedStateGen.lean` (402), `scripts/lean/TypedStateEmit.lean` (18), the generated body of `Typed/State.lean` (170 → 26) and 66 lines of `tools/Conform/Core/Proof.lean` | `git status --short --untracked-files=all` |
+| `ProofGraph` imports `Lean` and Batteries only; `Conform.Core.Proof` is a four-line shim over it; `Laws/Auto/Census.lean` reuses `ProofGraph.search` and `axiomsOf` | `tools/ProofGraph/*.lean`, `tools/Conform/Core/Proof.lean`, `src/Effect4/Laws/Auto/Census.lean` |
+| `#typed_state` generates `Preds` from the source table, one `Ok` per owner, the aesop registrations into the named bank `Effect4.TypedState`; the red control `TypedStateRulesRed` proves the bank is what closes `saved_from_clauses` | `Laws/Auto/TypedStateDecl.lean:202-355`, `Typed/State.lean`, `Test/Program/TypedStateRulesRed.lean` |
+| `#frame_rules` fills the invariant constructor with old projections where the type still matches and abstracts the rest; **one rule per single field** | `Laws/Auto/Frames.lean:21-35` (`fill`), `:59-72` (per field) |
+| `#typed_state_obligations` collects `Obligation p` declarations by name prefix, searches each with the given tactic, publishes `<goal>.checked` through the kernel, and checks placeholders and a ceiling; **the goal set is the authored declarations** | `Laws/Auto/Obligations.lean:38-48` |
+| Layer 0 exists, 125 lines, no axioms: `Typed`, `mono`, `bind`, `widen`, `inl`, `inl_inv`, `inr_inv`, `pure_inv` | `src/Effect4/Laws/Effects/Protocol.lean` |
+| Layer 1 does not exist; `Laws/Machine/Keeps.lean` does not exist; Move 1 (`EvaluateR.lean`) landed | `ls src/Effect4/Laws/{Machine,Program,Program/Typed}` |
+| The store's heap column and the store progress theorem: `Stores.HeapNat` (`Progress.lean:71`), `progress` with hypotheses `WF`, `HeapNat`, `.sync`, request typing and validity, conclusion answer typing, validity, `WF`, `HeapNat` (`:346-352`); `answer_typed` (`:259`) | `src/Effect4/Laws/Program/Progress.lean` |
+| `Stores.WF` excludes completions (`STORES-FB-COMPLETION`); a Deferred cell holds `Option Program` and the owed resumes hold `Program`; the reference decodes with `denoteStored`, whose catch-all is `pending .unsupported` | `StoresLaws.lean:11-19`, `Stores.lean:1079-1096`, `InterpR.lean:133-137` |
+| `MemoEntry.effect : Program` duplicates the cell (`Deferred.await` until the build exits, then the exit) | `Stores.lean:551-562` |
+| `WakeList` is a lawful ordered-work interface already: `register_phase`, `cancel_pending`, `cancel_owed_iff`, `schedule_posts`, `schedule_coalesces`, `runBatch_clears`, `sweep_keeps_order` and eight more; Latch is named there as the `Unit`/broadcast/scheduled instance | `src/Effect4/Machine/Wake.lean` header |
+| The OCaml property tests compare the store carrier with Lean's list operations law by law | `ocaml/engine/test/prop_store.ml:1-8` |
+| The STM scout's admitted fragment includes `iterate`/`gen` ("never park by themselves") and notes that a loop that never ends inside a transaction reaches a fuel frontier | `docs/research/2026-09-19-stm-scout.md:516-520` |
+| `Simulation/*` is 6,008 lines across eight files; the scout's S2 count is 65 arms | `wc -l src/Effect4/Laws/Program/Simulation/*.lean` |
+| A `lake serve` and two `lean --worker` processes are open on the tooling worktree (an editor), no `lake build` anywhere | `pgrep -fl 'lean\|lake'` |
+
+## 2. Findings on the plan
+
+**F1. Stages, not slices.** D1–D7 (`plan §11`) name work and acceptance in prose. None names a
+file, a statement, a deletion or a red control, which is what every landed slice of this
+estate has carried (`Tier 3` of the tooling plan, the atoms receipt). §14 of the plan now holds
+the slice table of §4 below.
+
+**F2. D1 is three things.** "Structural contract" bundles (a) the observation projections of
+plan §3, which are two definitions and one factorization lemma already proved in the critique
+packet (`docs/research/2026-09-19-critique/Contracts.lean`: `Factors`, `transfer_safety`);
+(b) the completion and memo contract, which is D2's statement; (c) the wake protocol, Latch and
+the replay-versus-suspension choice, which belong to D6 and to row 80. Only (a) and (b) are
+Lean-shaped now. The rest is reserved with `theorem_wanted` when its first consumer appears,
+which is the plan's own §9 rule.
+
+**F3. D2 first, and it is a deletion.** R1 changes `DeferredCell.completion : Option Program`
+to `Option (Completion Val Err Defect FiberId Ann)` and `DeferredStore.due : List (Owed Program)`
+to `List (Owed (Completion …))`; R2 deletes `MemoEntry.effect`. The position census then loses
+two `Program` positions (`DeferredCell.completion`, `MemoEntry.effect`) and `Owed.code`'s carrier
+changes; the map (`stores-and-event-log-map.md:328-346`) lists what dies with it:
+`CompletionShaped`, the first conjunct of `DeferredOk`, `StoredCodeNoRace`, `DeferredCodes`, the
+partial arm of `denoteStored` (it becomes `denoteCompletion`, already total at
+`InterpR.lean:128`), and `Stores`' dependence on the compiled code type. The twelve
+`deferred.*` census witnesses re-spell at `Completion`. Radius about twenty files. The
+totality gate forces the source-table edit. Nothing in S1's fiber arms or in `Keeps` depends on
+it, so those can run beside it; layer 1's `PromiseTable` column and the deferred store arms
+wait for it.
+
+**F4. D3 is three things too.** It bundles the generic language work rows 42–43 still owe
+(binder-term rows, `hasTyWith`, the `Ρ` column), layer 1 (the `Preds` instance), and the
+ledger. They have different owners and different blockers: binder terms change one kernel
+line per `refUpdate` row (`RefKernel.lean`, tooling 3.1) and are needed only when S2 reaches
+those rows; layer 1 needs D2; the ledger needs the coverage join of F5. Split them (§4, M2 and
+M6).
+
+**F5. The "independent goal producer" is over-specified.** Plan §9 asks that the ledger derive
+"the required goal set" from the invariant and the actual transitions so that a deleted
+declaration cannot vanish. A goal *statement* per definition cannot be synthesized: `driveStep`
+returns a pair, `popR` a step result, `exitFiber` takes an exit, `fireObserver` a fiber and an
+observer; each preservation statement is hand-shaped. What can be derived is the *set of
+definitions that must carry one*: the holders of the write census closure
+(`#write_census f closure over R…`, `Positions.writeSites`, with matcher-arm provenance
+already carried). So the join is a coverage check: every holder with a write site on a typed
+position must have an `Obligation` declaration named after it under the ledger's scope, and
+every such declaration must name a holder. Deleting a declaration then fails the build.
+About forty lines on top of `Laws/Auto/Obligations.lean`. Counts stay a report.
+
+**F6. Frames per field are not the frames S2 uses.** A step writes a field *set*
+(`exitFiber` writes `exit`, `frame`, `pending`, …), and the write census reports that set per
+site (`Site.fields`). A single-field frame chain needs every intermediate record to satisfy the
+invariant, which a record with a fresh `exit` and a stale `frame` does not. `Frames.fill`
+generalizes without change of shape: replace several projections at once, keep the rest, fill
+what still matches. Generate frames per `(owner, written-field set)` found by the census, which
+is what decisions row 50 already says.
+
+**F7. Two of the eleven hand predicates are derivable, and five `Expect` constructors are
+unused.** `Task.resume.answer` and `Cmd.resume.answer` are sourced as `.custom "ResumeOk"`; the
+generator binds constructor fields by name (`TypedStateDecl.lean:228-233`), so
+`.program (.fiber "target")` elaborates to `P.program w (.fiber target) answer` and `ResumeOk`
+goes. `RSaved.interruptedCause : Option CauseV` is `.custom "InterruptOnly"`; `.cause .inherited`
+generates `∀ v0, x.interruptedCause = some v0 → P.cause w e v0`, and an interrupt cause is
+admitted by every column, which is what `InterruptOnly` would have said. `Expect` carries
+`promise`, `refColumn`, `row`, `checker`, `const`; no row uses them (per-cell typing goes through
+the `column` escape because a cell's index is not in scope at its position). Prune them: every
+hand predicate of layer 1 matches on `Expect`, so each unused constructor is an arm in nine
+definitions.
+
+**F8. Two expectation vocabularies.** `Expected` (strings, `Typed/Vocabulary.lean`) and `Expect`
+(typed, `Typed/State.lean`) are the data and the elaborated form of one thing. The split is
+necessary; the near-identical names are not. Low priority; rename when `Expect` is pruned.
+
+**F9. The transaction profile's first cut should be the straight fragment.** Plan §7 keeps
+finite replay and driver suspension both open (row 80) because an admitted body might reach a
+fuel frontier. The scout admits `iterate` and `gen` and names that hazard
+(`stm-scout.md:516-520`). If the first profile admits `TxBody ∩ Straight` (no `iterate`, no
+`gen`), a body under `PreventSchedulerYield` is one `sync` step: no frontier, no budget, no
+ownership across budgets, and the isolation lemma is the scout's §2.1 argument without the
+loop case. Loops inside a transaction become a named refusal until row 80 is ruled. This is a
+proposal for the owner (plan §14, decisions row 84); it removes nothing the plan requires and
+lets D6 start without row 80.
+
+**F10. D5's "efficient Lean implementation" buys nothing where speed is wanted.** Plan §8
+records that `translateClosure` lowers `Array` to `List` and `Array.push` to append
+(`src/OCaml5/Lcnf/Types.lean`, `Translate.lean`), and D5's acceptance says "verify actual
+target operations". So a Lean `Array` arena changes no OCaml artifact. What D5 needs is the
+*interface*: a structure `Arena` with `peek`, `poke`, `alloc`, `size`; the dense-arena laws of
+plan §5 as its fields; `refStepOf` and `refStepOf_keeps`, `refStepOf_length` restated over it;
+the `List Val` instance is today's `RefHeap` and is the reference. The OCaml `E4_store`
+already implements those operations and `prop_store.ml` already checks each law against
+Lean's list operation, so the OCaml instance is the trusted edge plan §8 names, with its
+evidence in place. No Lean `Array` instance until the translator can emit one. Decisions row 85
+records the re-scope as a proposal.
+
+**F11. The ordered-work interface exists.** Plan §5's table lists "ordered work sequence" as
+an interface to expose. `WakeList` is that interface, with fifteen proved laws and the
+cancellation clause the plan worries about (`Wake.lean` header). Latch is already named there
+as the `Unit`/broadcast/scheduled instance. D6's "Latch contract first" is therefore: one
+`DeferredCell`-shaped store, the four controls (cancel in pending versus captured batch,
+coalescing, snapshot versus live drain, opener dispatcher) as instances of `cancel_pending`,
+`schedule_coalesces`, `runBatch_clears` and a new owner clause. Say so in §5 rather than
+re-deriving it.
+
+**F12. Observations as definitions.** Plan §3's three views should be two Lean definitions
+(`Obs.semantic`, `Run.holder`) with the `Factors` lemma from the critique packet promoted into
+`Laws/Machine/Behaviour.lean`, and R3 of the map (`parent`/`daemon` on `RunFiber`, set at
+`spawn`) as the one machine change that makes holder supervision a state projection rather
+than a trace read. Small; independent of the milestone; it is the concrete content of D1.
+
+**F13. The aesop bank and its red control already exist.** Plan §9 asks for "small named banks
+with positive and omitted-bank controls". `Effect4.TypedState` is declared
+(`Laws/Auto/RuleSets.lean`), `#typed_state` registers into it, `TypedStateRulesRed` is the
+omitted-bank control. The next banks are `Effect4.World` (the order facts, `Typed.mono`,
+the three inversions as `safe forward`) and `Effect4.Store` (`progress`, `answer_typed`,
+`refStepOf_keeps`).
+
+**F14. A totality gate for the fiber alphabet.** The position census makes the *state*
+invariant total by construction; nothing does the same for the residual protocol's forty
+`OpOk`/`AnswerOk` arms. A `#answer_gate FiberOp using answerSources` that walks `FiberOp`'s
+constructors, reads `FiberOp.answer` per constructor, and refuses a constructor without a row
+or a row without a constructor is sixty lines on the `PositionGate` pattern. It is the
+instrument that ends the "which operation did we forget" class of surprise for M3.
+
+**F15. `STORES-FB-COMPLETION` retires with layer 1.** Once `PromiseTable` is stated on
+`Completion` data (after D2), `Stores.WF`'s refusal of completions is subsumed; delete the
+refusal row and the docstring at that slice, not later.
+
+**F16. Register.** About forty percent of the plan is restatement of what is not claimed. That
+was the right answer to an audit; it is the wrong shape for the implementer. §14 is the short
+form; the rest stays as the evidence record.
+
+## 3. The abstractions, simplified
+
+| abstraction | today | after | what it deletes |
+| --- | --- | --- | --- |
+| the world | `W` abstract in `Preds`; layer 1 unwritten | `World := ⟨Γ : FiberId → Option EffTy, Π : DeferredKey → Option (Ty × Ty), Ρ : RefKey → Option Ty, s : Stores⟩`; `WorldOrder` = pointwise table extension ∧ `Stores.le` | nothing; it is the missing piece |
+| the promise column | `Option Program` decoded by a partial `denoteStored`; `WF` refuses completions | `Option Completion`; `PromiseTable w s := ∀ i c, s.deferreds.cells[i]? = some c → ∀ x, c.completion = some x → CompletionOk w (Π ⟨i⟩) x` | `CompletionShaped`, `DeferredOk.1`, `StoredCodeNoRace`, `DeferredCodes`, `denoteStored`'s catch-all, `STORES-FB-COMPLETION`, `MemoEntry.effect` |
+| the store interface | `RefHeap := List Val` with `refPeek`/`refPoke`; kernel laws proved on it | `Arena` (peek/poke/alloc/size + five laws); `refStepOf` over any `Arena`; `RefHeap` its list instance | no new code path; the OCaml instance keeps `prop_store.ml` as its evidence |
+| the hand predicates | eleven (`program`, `exit`, `StackOk`, `InterruptOnly`, `PendingOk`, `ResumeOk`, `ServiceOk`, `RaceOk`, `HeapNat`, `PromiseTable`, `CaptureOk`) | nine: `ResumeOk` and `InterruptOnly` derived from the table | two arms in every layer-1 definition |
+| `Expect` | eight constructors, three used | `root`, `fiber`, `hook` (add one when a row uses it) | five arms in nine definitions |
+| the frames | one theorem per field, 60 rules | one theorem per `(owner, written-field set)` the census reports | the single-field rules nothing applies |
+| the ledger | authored `Obligation` declarations, searched and checked | the same, plus a coverage join from the write census closure to the declarations by name | the "a deleted goal disappears" hazard |
+| the residual protocol | forty arms to be written by reading | the same forty, under an `#answer_gate` | the forgotten-operation surprise |
+| transactions v1 | `TxBody` with `iterate`/`gen`; row 80 open | `TxBody ∩ Straight`; loops refused by name | the across-budget ownership clause, for v1 |
+
+## 4. The slices
+
+Every slice names its files, its statement or instrument, its deletion, its red control and its
+build. Tooling slices T0–T5 land first; they touch no runtime root. M-slices are the milestone.
+P-slices are independent and may run beside any M-slice.
+
+### Tooling, from the paused worktree
+
+| slice | files | statement / instrument | deletes | red control | build |
+| --- | --- | --- | --- | --- | --- |
+| T0 checkpoint | the worktree's 12 new and 18 modified files, as three commits on `codex/typed-state-tooling` (ProofGraph; the typed-state tooling with its wiring; docs) | preserve the work as commits before anything else touches the worktree | nothing | — | none (built green 13:40–13:43 today) |
+| T1 ProofGraph | `tools/ProofGraph/{Proof,Ledger,Search}.lean`, `lakefile.toml`, `tools/Conform/Core/Proof.lean` (shim), `Laws/Auto/Census.lean`, `Test/Audit/ProofGraph.lean` | `ProofRef.validate` (name, universes, proposition by `isDefEq`, axioms ⊆ `[propext, Quot.sound]`); `search` (rolled back, closed term or refusal); `addTheorem`; `Ledger.check` (exact set, dependencies acyclic, ceiling) | 66 lines of `Conform/Core/Proof.lean`, 15 of `Census.lean` | the nine `#guard_msgs` of `Test/Audit/ProofGraph.lean` (wrong proposition, non-theorem, extra axioms, stale, missing, ceiling, cycle) | `lake build ProofGraph Conform.Core.Proof Effect4.Laws.Auto.Census Test.Audit.ProofGraph` |
+| T2 declarations | `Laws/Auto/TypedStateDecl.lean`, `Typed/State.lean` (26 lines), `Typed/Vocabulary.lean`, `Typed/Sources.lean`, `Laws/Auto/TypedSources.lean` (`readRows table`), `Laws/Auto/Positions.lean` (the two refusals, the arms), `Test/Audit/{TypedStateDecl,PositionAnalysis}.lean`, `Test/Program/TypedStateRulesRed.lean` | `#typed_state R… using sources columns Stores` elaborates `Preds` and one `Ok` per owner in place; registers the bank | `Laws/Auto/TypedStateGen.lean` (402), `scripts/lean/TypedStateEmit.lean` (18), the generated body of `State.lean` (150) | collision, missing-source and the omitted-bank control | `lake build Effect4.Laws.Program.Typed.State Test.Audit.TypedStateDecl Test.Audit.PositionAnalysis Test.Program.TypedStateRulesRed` |
+| T3 frames | `Laws/Auto/Frames.lean`, `Typed/Frames.lean`, `Test/Audit/FrameRules.lean` | `#frame_rules Inv…`: one kernel-checked theorem per field today; **amend to per written-field set** (F6) before M6 uses it | — | the two-field fixture (`Fits.frame_value` needs both clauses) | `lake build Effect4.Laws.Program.Typed.Frames Test.Audit.FrameRules` |
+| T4 ledger | `Laws/Auto/Obligations.lean`, `Test/Audit/Obligations.lean` | `Obligation p`, `#proof_wanted`, `#typed_state_obligations S ceiling n using tac`; **add the coverage join** (F5): `#typed_state_coverage <step roots> over <state roots> ledger S` | — | missing, stale, solved-with-placeholder, ceiling; new: a holder without a declaration | `lake build Effect4.Laws.Auto.Obligations Test.Audit.Obligations` |
+| T5 wiring | `Effect4/Laws.lean`, `Test/All.lean`, `Test/Audit/AxiomGate.lean` (three exemptions), `Makefile` (`check-typed-state`), `docs/{ARCHITECTURE,GENERATED,STATE}.md` | the group has no generated file; `make check-typed-state` is the focused build | the `TypedStateGen` exemption | the gate's bidirectional staleness check | `lake build Test.Audit.AxiomGate` then `make check-typed-state` |
+
+T0 is done in this review (§6). T1–T5 merge as one branch merge once `docs/STATE.md` and
+`docs/ARCHITECTURE.md` are reconciled by hand (both sides changed them).
+
+### The milestone
+
+| slice | files | statement | deletes | red control | build |
+| --- | --- | --- | --- | --- | --- |
+| M1 = D2 (R1+R2) | `Machine/Stores.lean` (cell, `due`, three writers, `memoBuild`/`memoComplete`), `Machine/Completion.lean`, `Laws/Program/InterpR.lean`, `Simulation/Hooks.lean`, `Laws/Machine/{StoresLaws,Handles}.lean`, `Typed/Sources.lean`, the OCaml regeneration, twelve `deferred.*` witnesses | `DeferredCell.completion : Option Completion`; `due : List (Owed Completion)`; `answerCode`/`dueResumes` mint code at the consumer; `MemoEntry.effect` gone | `CompletionShaped`, `DeferredOk.1`, `StoredCodeNoRace`, `DeferredCodes`, `denoteStored`, `STORES-FB-COMPLETION` | the position gate (two positions fewer, one carrier changed); `#guard` that `dueResumes` still delivers `Completion.ofRefGet` as a deferred read | `lake build Effect4.Machine.Stores Effect4.Laws.Program.InterpR Effect4.Laws.Program.Simulation.Hooks Effect4.Laws.Machine.StoresLaws Test.Audit.PositionCensus`; OCaml `make gen-lcnf` |
+| M2 layer 1 | `Typed/World.lean` (new) | `World`, `WorldOrder`, `Γ`/`Π`/`Ρ` extension, the columns `HeapNat` (reuse `Stores.HeapNat`) and `PromiseTable` on data, the nine hand predicates, `instance : Preds World`; `ResumeOk`/`InterruptOnly` retired by table edit (F7); `Expect` pruned | two source rows' `custom` names; five `Expect` constructors | `TypedStateRulesRed` still red without the bank; a `#guard` that `RStateOk P₁ w (loadR e fuel)` is stated | `lake build Effect4.Laws.Program.Typed.World` |
+| M3 residual | `Typed/Residual.lean` (new), `Laws/Auto/AnswerGate.lean` (new, F14), `Typed/AnswerSources.lean` | `Ψ_S := ⟨progress's hypotheses, its conclusion⟩`; `OpOk`/`AnswerOk` forty arms under `#answer_gate`; `TypedProg w ty p := Typed order (Ψ_S.sum Ψ_F) w (ExitOk ty) p`; `HandlesFit` | — | the gate: a `FiberOp` constructor without a row | `lake build Effect4.Laws.Program.Typed.Residual` |
+| M4 keeps and stack | `Laws/Machine/Keeps.lean` (new, imports `Machine/Fibers` only), `Typed/Stack.lean` (new) | the unary ladder; existential `StackOk` (row 48); `popR_typed`, the first hard witness | — | `popR_typed` at `[propext, Quot.sound]` | `lake build Effect4.Laws.Machine.Keeps Effect4.Laws.Program.Typed.Stack` |
+| M5 = S1 | `Typed/Denotation.lean`, `Typed/Hooks.lean` (new) | `denoteR_typed` by the weight induction of `code_intro_aux`; `InterpTyped (interpR root)` for the fourteen hook fields | — | the 51 hook rows `proved` in the ledger | one module at a time |
+| M6 = S2 | `Typed/Ledger.lean` (the `Obligation` declarations, one per write-census holder, named `Ledger.<holder>`), `Typed/Step/{Frame,Deliver,Operations}.lean` | `#typed_state_coverage` green before the first proof; the ceiling pinned **here**, after M1 and M2; frames per written set first, then the nine delivery sites, then the operation arms by family | — | coverage; ceiling decreasing | per module |
+| M7 = S3 | `Typed/Transfer.lean` (the only `Typed/*` module importing `RuntimeR`), `TypedRun.lean` | `TypedProgram.run_typed` through `replay_rel`/`BMeans.exitOf`; no `badShape`; DI-17 | — | `Test/Program/TypedStateContract.lean` on the dogfood programs | `lake build Effect4.Laws.Program.Typed.Transfer` |
+
+Binder-term rows (rows 42–43 step 3) are needed when M6 reaches the `refUpdate` family; they
+change one kernel line per row (`SyncOp.refKernel`) and one `progress` arm. Land them before
+that family, not before M2.
+
+### Independent
+
+| slice | files | statement | deletes | red control |
+| --- | --- | --- | --- | --- |
+| P1 observations (D1's Lean content) | `Laws/Machine/Behaviour.lean`, `Run.lean` | `Obs.semantic`, `Run.holder`, `Factors`, `transfer_safety` promoted from the critique packet; R3 (`parent`, `daemon` on `RunFiber`) | the trace read in `forkedOf` (it becomes a check) | the equal-`Obs`/different-supervision fixture stays a refutation of the unrestricted claim |
+| P2 arena (D5 re-scoped) | `Laws/Machine/Arena.lean` (new), `RefKernel.lean` | `Arena`, its five laws, `refStepOf` and `refStepOf_keeps` over it, `instArenaList`; the OCaml `E4_store` as the trusted instance with `prop_store.ml` | nothing in Lean; the plan's Lean `Array` instance | a lawless arena (poke that drops) fails `refStepOf_keeps`' premise by construction |
+| P3 identities (R5) | `Machine/Stores.lean`, `Machine/Fibers.lean` | `ScopeKey`, `FinKey`, `Token`, `RaceId` as one-field structures | numeric coincidences no clause reads | `DecidableEq` derives; the join's counter unchanged |
+| P4 transactions v1 (D6, after M7) | per the scout §3 items 1–8, with `TxBody ∩ Straight` (F9) | isolation lemma; transaction meaning as `run_eq_meaning` on a run segment | versions, journal handle, conflict path (the scout's "what not to add") | the finite `probe.ts` wake controls; `iterate` inside `tx` refused by name |
+| P5 Latch (D6) | `Machine/Stores.lean`, `Machine/Wake.lean` | the `Unit`/broadcast/scheduled instance and its owner clause | — | the four controls of F11 |
+
+## 5. Proof infrastructure and structure
+
+Three instruments to add (each is a chore done by hand once already):
+
+1. **Field-set frames** (`Frames.generate invariant fields`): the same `fill`, several
+   projections replaced; `#frame_rules Inv from #write_census root…` reads the sets from the
+   census. Red control: a two-field write whose single-field chain is unprovable.
+2. **Coverage join** (`#typed_state_coverage`): `writeSites` closure over the step roots →
+   holder set; the ledger scope → declaration set; the difference either way is an error with
+   the name. Red control: delete one declaration in a fixture scope.
+3. **Answer gate** (`#answer_gate FiberOp using answerSources`): totality over the fiber
+   alphabet's constructors, same vocabulary as `Sources`. Red control: a constructor without a
+   row.
+
+Banks: `Effect4.TypedState` (exists), `Effect4.World` (order, `Typed.mono`, the inversions),
+`Effect4.Store` (`progress`, `answer_typed`, `refStepOf_keeps`). Each bank lands with the slice
+whose proofs it closes and with an omitted-bank control.
+
+Where things live, so no `Typed/*` module imports `Simulation` or `Book` before `Transfer`:
+
+| module | slice | imports |
+| --- | --- | --- |
+| `tools/ProofGraph/*` | T1 | `Lean`, Batteries |
+| `Laws/Auto/{Positions,PositionGate,TypedSources,TypedStateDecl,Frames,Obligations,AnswerGate}` | T2–T4, M3 | `Lean`, `ProofGraph`, the vocabulary; trust-gate exemptions |
+| `Laws/Effects/Protocol` | exists | the pinned `Effects` only |
+| `Laws/Program/Typed/{Vocabulary,Sources,State,Frames}` | T2–T3 | `EvaluateR`, the generators |
+| `Laws/Program/Typed/World` | M2 | `State`, `StoresLaws`, `Progress` |
+| `Laws/Program/Typed/Residual` | M3 | `World`, `Protocol`, `Sched` |
+| `Laws/Machine/Keeps`, `Typed/Stack` | M4 | `Machine/Fibers`; `Residual` |
+| `Typed/{Denotation,Hooks}` | M5 | `Stack`, `DenoteR` |
+| `Typed/{Ledger,Step/*}` | M6 | `Hooks`, `Frames` |
+| `Typed/Transfer` | M7 | `RuntimeR` |
+| `Laws/Machine/{Arena,Behaviour}` | P1–P2 | `RefKernel`; `Approximation` |
+
+## 6. Done in this review
+
+- The tooling worktree's uncommitted work is checkpointed on `codex/typed-state-tooling` as
+  three commits by explicit paths (ProofGraph; the typed-state tooling with its wiring, since
+  the root imports cannot be split without a broken intermediate; docs), so T0 is closed and
+  the worktree can be retired after the merge.
+- The plan gained §14 with the slice table above; `docs/STATE.md` points at this note;
+  decisions rows 84–85 record F9 and F10 as proposals.
+- No Lean build was run in the main checkout; the tooling tree's own build evidence is §1.
+  T1–T5 merge is the next act, with a narrow build of the touched modules on the merged tree.
+
+## 7. Owner decisions surfaced
+
+- **Row 84** (F9): the first transaction profile admits `TxBody ∩ Straight`; loops inside
+  `tx` are a named refusal; row 80 waits.
+- **Row 85** (F10): D5 is the `Arena` interface and its list instance; no Lean `Array`
+  instance; the OCaml instance is the trusted edge with `prop_store.ml`.
+- Merge T1–T5 now (recommended; nothing runtime moves, the tree is green, the plan's §9 already
+  says to retain every piece).
+- F7's pruning of `Expect` and the two derived predicates needs no ruling; it lands with M2.

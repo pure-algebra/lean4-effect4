@@ -140,6 +140,8 @@ already given; it does not approve any choice below.
 | 81 | Scheduled-wake primitive for composed modules | Design Latch against cancellation in pending and captured batches, coalescing, live/snapshot traversal and dispatcher ownership; add it only with those controls. Keep DI-11's existing composition ruling. Do not assume Latch reproduces counted Pool, Semaphore, Queue or STM waking. Decide unused wake-policy deletion after the contracts identify their consumers | catalogue §§2–5; refinement plan §§5–6 | owner | open for Latch; DI-11 remains ruled for Queue/Mailbox/PubSub |
 | 82 | Typed behavior values for APIs that retain code | A typed first-order code reference into the existing Eff owner with typed captures; settle typed registry/entry resolution, lexical captures versus invocation/captured service context, lifetime/portability, recursive admission and printer/reader contract before a Val/Ty form. A digest alone is not proof of code identity. No host closure or second IR. Closed entries or behavior supplied per use remain narrower alternatives | catalogue §3; refinement plan §6 | owner | open; lifting the entire machine Capture record is not the design |
 | 83 | Clock, randomness and behavior-bearing context profiles | Keep the logical clock and name the custom-Clock refusal; propose a versioned seeded generator held in ordinary Ref state behind its context reference, with seed supplied at load. Specify inheritance, algorithm/numeric behavior and host correspondence; no automatic claim that a chosen seed agrees with arbitrary host randomness | catalogue §5; refinement plan §6 | owner | open; no new Random store required by the proposal |
+| 84 | Which fragment the first transaction profile admits, and whether ownership across fuel budgets (row 80) blocks it | Admit `TxBody ∩ Straight` first: under prevented yields a straight body is one `sync` step, so no fuel frontier can open inside an attempt and row 80's across-budget clause is not needed for a first profile; `iterate` and `gen` inside `tx` are a named refusal until row 80 is ruled | stm-scout §2.1, §2.6; deep-dive review F9; refinement plan §14 | owner | open, proposed 2026-09-19 |
+| 85 | What D5's first storage refinement delivers | The `Arena` interface (peek, poke, alloc, size and the dense-arena laws) with `refStepOf` and `refStepOf_keeps` restated over it and `RefHeap` as its list instance; the OCaml store is the trusted instance with `ocaml/engine/test/prop_store.ml` as its evidence; no Lean `Array` instance while the translator lowers `Array` to a list | `src/Effect4/Laws/Machine/RefKernel.lean`; refinement plan §8, §14; deep-dive review F10 | owner | open, proposed 2026-09-19 |
 
 ## The order (milestone before the MCP server; state/refinement review before the concrete ledger pin)
 
@@ -175,6 +177,6 @@ for the typed-state milestone.
    edit, the two confirmations.
 
 Owner rows open after the review: 1, 2, 7, 10, 11, 14, 15, 19, 20, 21, 22, 26, 27, 28, 29, 30
-(`compileEff` only), 32, 41, and the newly proposed rows 78–83; 4 and 9 are folded into 39, which is ruled.
+(`compileEff` only), 32, 41, and the newly proposed rows 78–85; 4 and 9 are folded into 39, which is ruled.
 Rows 44–45 are approved; the current implementation home of Protocol is established, with its
 future upstream publication still separate (row 53).
