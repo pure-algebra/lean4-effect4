@@ -1,0 +1,20 @@
+root	owner	field	shape	carrier
+Review.Mixed.Parent	Review.Mixed.Parent	pair	Prod.1 	Effect4.Store.Val
+Review.Mixed.Parent	Review.Mixed.Child	payload		Effect4.Store.Val
+typed state: 1 predicates, 1 carrier predicates, 0 refusals
+structure Review.Mixed.ParentOk {W : Type} (P : Preds W) (w : W) (e : Expect) (x : Parent) : Prop
+number of parameters: 5
+fields:
+  Review.Mixed.ParentOk.c0 : P.value w e x.pair.fst
+constructor:
+  Review.Mixed.ParentOk.mk {W : Type} {P : Preds W} {w : W} {e : Expect} {x : Parent} (c0 : P.value w e x.pair.fst) :
+    ParentOk P w e x
+'Review.Mixed.firstOnly' does not depend on any axioms
+root	owner	field	shape	carrier
+Review.Single.Box	Review.Single.Box	payload		Effect4.Store.Val
+typed state: 1 predicates, 0 carrier predicates, 0 refusals
+def Review.Single.BoxOk : {W : Type} → Preds W → W → Expect → Box → Prop :=
+fun {W} P w e x =>
+  match x with
+  | Box.mk payload => True
+'Review.Single.everyBox' does not depend on any axioms

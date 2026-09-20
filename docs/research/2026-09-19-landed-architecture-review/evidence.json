@@ -1,0 +1,70 @@
+{
+  "reviewed_commit": "48ae89e048ea524b867ddfd450d718ff522bb6ea",
+  "comparison_base": "a96051a693ceb0d71cae0a4417c5724df8eeec69",
+  "working_directory": "/Users/pooks/Dev/lean4-effect4",
+  "toolchain_file": "leanprover/lean4:v4.33.1",
+  "scope": "read-only review of production code; added research evidence only",
+  "commands": [
+    {
+      "command": "make check-typed-state",
+      "exit_code": 0,
+      "evidence": "incremental, 251 jobs; build-excerpt.txt is a selected excerpt"
+    },
+    {
+      "command": "lake env lean /private/tmp/effect4-review-skeleton-probes.lean",
+      "exit_code": 0,
+      "reproduce": "lake env lean docs/research/2026-09-19-landed-architecture-review/Skeleton.lean",
+      "output": "Skeleton.out"
+    },
+    {
+      "command": "lake env lean /private/tmp/effect4-review-skeleton-scope.lean",
+      "exit_code": 0,
+      "reproduce": "lake env lean docs/research/2026-09-19-landed-architecture-review/Scope.lean",
+      "output": "Scope.out"
+    },
+    {
+      "command": "lake env lean /private/tmp/effect4-review-boundaries.lean",
+      "exit_code": 0,
+      "reproduce": "lake env lean docs/research/2026-09-19-landed-architecture-review/Boundaries.lean",
+      "output": "Boundaries.out"
+    }
+  ],
+  "axioms": "Named omission and ledger witnesses: []; order witness: []; HeapNat facts and nonmonotonicity: [propext]. No full axiom sweep.",
+  "limitations": [
+    "Generic skeleton omissions; no current-machine omission established.",
+    "Fuel evidence is a finite machine probe, not a transaction implementation.",
+    "Parameterized stale marker acceptance does not create a proof.",
+    "No backend or host conformance claim."
+  ],
+  "files": [
+    {
+      "path": "docs/research/2026-09-19-landed-architecture-review/Skeleton.lean",
+      "sha256": "ba70995ae8996d7c17e06b588c46266dc941051195f27f19d823613f94196aca"
+    },
+    {
+      "path": "docs/research/2026-09-19-landed-architecture-review/Skeleton.out",
+      "sha256": "da95a79a6e2e5a4c6e9205334f4f1747fae52581a13d5c62fc908b247bb12386"
+    },
+    {
+      "path": "docs/research/2026-09-19-landed-architecture-review/Scope.lean",
+      "sha256": "24788a789c684a66968efbef95f0480477bdc636090681573abadccf9dbde7a9"
+    },
+    {
+      "path": "docs/research/2026-09-19-landed-architecture-review/Scope.out",
+      "sha256": "145cb133d9060d63fbda28bc46f83f98815dfd777cfd915515b62b481cd3baa8"
+    },
+    {
+      "path": "docs/research/2026-09-19-landed-architecture-review/Boundaries.lean",
+      "sha256": "0a09d9d41508b0c97e9dca807acff29d709c05a7a01420bf39290260ee47aab8"
+    },
+    {
+      "path": "docs/research/2026-09-19-landed-architecture-review/Boundaries.out",
+      "sha256": "8259c2ee6ab9541cc3e3a31ba9e22e8196d730e4eb45db18e98a8880256817f3"
+    },
+    {
+      "path": "docs/research/2026-09-19-landed-architecture-review/build-excerpt.txt",
+      "sha256": "28362a7e26ec579e0974007a8b8f593b873657c87ad66261f068e443af954f48"
+    }
+  ],
+  "lean_version": "Lean 4.33.1, arm64-apple-darwin24.6.0, compiler commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release"
+}

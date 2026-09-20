@@ -1,0 +1,6 @@
+Review.Ledger: 0 open, 1 proved, 1 total; ceiling 0
+'Review.Ledger.closed.checked' does not depend on any axioms
+'Review.World.heapNotMonotone' depends on axioms: [propext]
+'Review.World.ordered' does not depend on any axioms
+'Review.World.goodTyped' depends on axioms: [propext]
+'Review.World.badUntyped' depends on axioms: [propext]

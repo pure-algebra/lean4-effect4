@@ -1,0 +1,11 @@
+Effect4.Program.Sched.RState: mixed fields [Effect4.Supervision.RaceAllState.winner]; single non-structure fields []
+Effect4.Program.Sched.RCmd: mixed fields []; single non-structure fields []
+typed state: 1 predicates, 0 carrier predicates, 0 refusals
+structure Review.ColumnOnly.ParentOk {W : Type} (P : Preds W) (w : W) (e : Expect) (x : Parent) : Prop
+number of parameters: 5
+fields:
+  Review.ColumnOnly.ParentOk.c0 : True
+constructor:
+  Review.ColumnOnly.ParentOk.mk {W : Type} {P : Preds W} {w : W} {e : Expect} {x : Parent} (c0 : True) :
+    ParentOk P w e x
+'Review.ColumnOnly.everyParent' does not depend on any axioms
