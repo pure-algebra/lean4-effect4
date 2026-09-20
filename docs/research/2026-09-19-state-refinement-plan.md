@@ -14,6 +14,10 @@ The checked critique follow-up is `docs/research/2026-09-19-critique-response.md
 this plan with scope-correct composition, exact term transport, a driver-continuation contract,
 and fixed-parameter container/scalar laws. It does not approve the open semantic proposals.
 
+The subsequent `docs/research/2026-09-19-implementation-audit-and-fusion-analysis.md` is retained
+unchanged as review input. Its accepted findings and corrections are incorporated below;
+§13 records their disposition against cc28511c. Its recommendations do not rule rows 78–83.
+
 ## 1. What is settled, and what this packet completes
 
 The owner approved HandlesFit with Val.hasTy unchanged, and per-cell Ref/Deferred types,
@@ -97,6 +101,13 @@ mutual exclusion, linearizability, deadlock freedom or fairness. Add only the mi
 rules demonstrated by the first real module; do not invent a second evaluator or an entire
 concurrent program logic merely to name the intended laws.
 
+For syntax composition, reuse the checked `composeAt_typed` and term environment-transport
+laws in the critique packet. Extend transport to the selected Eff meaning, then derive identity
+and associativity there using the existing semantic bind laws. Start with Straight; Looped
+additionally needs its fuel/termination and state/error observations. Neither the typing
+theorem nor finite straight-line examples prove these general behavior laws. The two associated
+syntax trees need not be equal; normalize grade joins or state the grade equality used.
+
 ## 3. Observations must precede representation changes
 
 The current Obs observes every fiber exit and the full Stores record
@@ -132,6 +143,15 @@ restricted execution profile, state inclusion of target behaviors in allowed sou
 and its assumptions. Equality of behavior sets needs the converse direction too. Neither
 finite tests nor a single successful terminal execution establish fairness or divergence claims.
 
+Fix what counts as a behavior before using inclusion: finite prefixes, returned outcomes and
+maximal executions give different obligations. The retained silent-spin example proves only
+preservation of a relation, not a step simulation or full behavior inclusion. When a profile
+promises progress, state no-new-stuck conditions for ready operations and control infinite
+internal stuttering, for example by a well-founded measure. Eventual completion or starvation
+freedom must quantify over every allowed fair execution with the required external responses.
+An existential path to a result does not suffice: a transition system can offer both that path
+and an infinite self-loop. Blocking APIs do not acquire a universal termination obligation.
+
 This follows the useful shape of the CompCert semantic-preservation contract: a named source
 semantics, target semantics and observation, with allowed behaviors explicit. It imports no
 CompCert theorem into Eff. See [CompCert's semantic-preservation contract](https://compcert.org/man/manual001.html), §1.2.
@@ -161,7 +181,12 @@ This is an inventory of semantic roles, not a proposal to add a store for every 
 “Completion as data” is scoped to the admitted completion alphabet. It does not ban stored
 first-order program references in finalizers or future behavior values, and it does not claim
 to implement arbitrary rc.112 Deferred.completeWith effects. Narrowing the carrier also does not turn poll
-into a stored-exit query: ofRefGet is not yet an exit, so poll needs its own result contract.
+into a stored-exit query: ofRefGet is not yet an exit. Preserve DI-97's ruled internal Boolean
+poll and signed target answer-type exception through D2. A pure transition can read the Stores
+argument; the issue is that reading at poll time changes a delayed read's timing. A future
+faithful rc.112 poll returns stored behavior without executing it and needs a separately
+admitted value/signature, handle/capture typing, lifetime and invocation contract. This migration
+neither supplies that carrier nor retires the current row.
 
 Identity types should distinguish scopes, finalizers, park tokens and races as well as the
 existing fiber/ref/deferred/memo identities. Shared counters are still permitted. Numeric
@@ -183,19 +208,24 @@ key lookup, ordered draining and tracing would conceal the laws that matter.
 | Derived view | query/update through its owner | Cached completed exits and similar views equal a specified base projection after every operation |
 
 Lists can be proof instances. Arrays, persistent maps/deques, or owned mutable storage are
-implementations. A mutable implementation must prove unique access or copy-on-write against
-all retained snapshots and aliases. One scheduler thread does not imply unique ownership.
-Target data layout and memory management belong below these contracts.
+implementations. Every implementation must preserve all retained snapshots and aliases under
+its payload/heap contract. Private construction followed by freezing, copying before updates,
+persistent sharing, or proved ownership can each satisfy that obligation; unique ownership and
+copy-on-write are not the only choices. One scheduler thread does not imply unique ownership.
+The existing OCaml append sequence uses privately filled, then frozen array chunks
+(ocaml/engine/e4_log.ml); it is a reuse example, not a Lean refinement certificate. Target data
+layout and memory management belong below these contracts.
 
 For an exact abstraction alpha from a concrete container to its model, the desired shape is:
 
     WF c → getC c k = getM (alpha c) k
-    WF c → alpha (setC c k v) = setM (alpha c) k v
+    WF c → let c' := setC c k v
+      alpha c' = setM (alpha c) k v ∧ WF c'
     WF c → allocC c v = (k, c') →
       allocM (alpha c) v = (k, alpha c') ∧ WF c'
 
-Where representations intentionally quotient order/duplicates, use a relation instead of
-inventing an inverse list:
+Where representations intentionally quotient order/duplicates, use a named logical projection
+or a relation; neither needs an inverse recovering the old concrete list:
 
     Rel c m → stepC c input = (outC, c') →
       ∃ outM m', stepM m input = (outM, m') ∧
@@ -292,17 +322,49 @@ Version erasure requires proof, not merely PreventSchedulerYield:
    and nested transaction. Unknown foreign code is refused without a suitable summary.
 2. No admitted action can execute another fiber inline, change protected scheduling state,
    deliver an interrupt/observer, park/fork, or admit a conflicting host action before close.
-3. One owner holds the attempt through residual commands and fuel exhaustion. Refueling does
-   not release ownership or convert the attempt into a typed failure.
+3. Ownership covers the entire admitted attempt under the selected execution contract. A fuel
+   frontier is not release, failure, or permission for a conflicting action. Under replay,
+   restart from the initial state with compatible inputs; under suspension, retain the owner
+   and all pending driver work. The choice and changed-budget relation are D1 obligations below.
 4. Buffered reads see the latest own write; the ordered dynamic access list matches executed
    accesses. A static footprint is a conservative proof aid, not the retry subscription set.
 5. Failure/retry discards transactional writes. Allocation and any admitted ordinary Ref writes
    retain their separately specified behavior; rc.112 does not roll back the whole world.
 6. Retry closes the attempt and registers one identity across its accessed cells before yielding
    control. Wake/cancel removes it from all cells before guarded resumption. Nested tx is flat.
-7. Commit updates atomically and owes the specified scheduled actions. rc.112 wakes waiters of
-   every accessed cell, even unchanged/read-only cells, on the committer's dispatcher. This is
-   not Latch's one coalesced broadcast task.
+7. Commit updates atomically and owes the specified scheduled actions. rc.112 schedules retry
+   callbacks for every accessed cell, even unchanged/read-only cells, on the committer's
+   dispatcher. Versions change only for changed values: notification is not version
+   invalidation. With the ordinary queued dispatcher, one subscription can yield a callback
+   per accessed cell; cleanup uses the shared registration identity and the resume guard
+   prevents repeated effective resumption. This is not Latch's one coalesced broadcast task.
+
+### The execution contract needed by ownership
+
+`driveState` retains its command remainder; `driveState_add` in
+src/Effect4/Laws/Machine/Approximation.lean already proves the command-loop split/resume law.
+The current decision/session projections discard driver remainder. The retained probe shows
+that another evaluate command does not resume that particular frontier, whereas supplying the
+saved remainder does. It does not establish that every frontier is permanently stuck.
+
+Keep two contracts available for the owner decision in row 80:
+
+- **Finite replay:** restart from the initial state, fixing compilation inputs and relating
+  complete compatible decisions/answers at the chosen budgets. `journal_replays` in
+  src/Effect4/Laws/Run.lean proves exact replay at the original budget; it does not prove that
+  an existing host journal remains compatible after changing the budget. Reuse the approximation
+  laws within their stated scope, then prove any needed changed-budget observation relation.
+  Replaying recorded inputs does not authorize repeating external side effects.
+- **Driver suspension:** retain commands plus the outer dispatcher batch/task suffix,
+  clock/replay position and other pending control work required by the chosen driver. A machine
+  and a single dispatcher snapshot are not yet a complete suspension specification. Lift the
+  existing split/resume law and generic journal-action laws to that carrier; identify the new
+  connector obligations rather than assume all replay laws must be rebuilt.
+
+Neither alternative is selected by this audit. Conditional transaction contracts can be stated
+now, but no across-budget ownership claim follows from today's projected session alone.
+Write-only retry notification likewise needs a named profile and behavior/progress relation;
+hiding diagnostic events alone does not justify it.
 
 Prefer a pure/TxRef first profile; adding other sync effects is a separate admission extension.
 The owner decides retry under cause-catching, allocation visibility and the exact effect
@@ -344,6 +406,15 @@ execution are separate obligations. Lean definition-to-LCNF/IR compilation also 
 explicit trusted edge unless separately verified or validated. Preserve these useful checks
 while reporting their actual scope.
 
+For D5, distinguish the logical Lean carrier from what each target actually emits. The current
+OCaml translator maps Array to list, Array.push to list append, and array lookup to List.nth
+(src/OCaml5/Lcnf/Types.lean and src/OCaml5/Lcnf/Translate.lean). Merely replacing a Lean List by
+Array therefore establishes no OCaml speedup. Inspect the emitted operations and measure the
+selected workload after its refinement laws hold. Do not infer a regression without a compared
+baseline, ban Lean Array, or require an RRB vector before proving the storage interface.
+Reuse the existing persistent target containers where their operation and retention laws fit;
+one logical interface can have different lawful physical representations on different targets.
+
 The official Lean reference separates kernel checking from compilation; the default documented
 route emits C. LLVM's Wasm linker documentation supplies linking constraints, not an Eff port:
 [Lean compilation pipeline](https://lean-lang.org/doc/reference/latest/Elaboration-and-Compilation/);
@@ -351,6 +422,27 @@ route emits C. LLVM's Wasm linker documentation supplies linking constraints, no
 The project's pinned compiler source, not the moving manual version, owns concrete API facts.
 
 ## 9. Shared contracts and proof reuse
+
+### Local fold reuse within the existing boundary
+
+Decisions 34 and 40 remain in force: no generated-fusion framework, census gate, or conversion
+campaign for the thirteen exemptions. Reuse existing algebras, connectors and uniqueness laws
+when they simplify a concrete owed proof. Keep the checked short transport proofs where they
+already serve the contract; no uniform presentation is required.
+
+Function-valued proof carriers are supported by Program/FoldOf and used by the denotation
+algebras in src/Effect4/Laws/Program/Folds/Denote.lean. Weakening and term evaluation already have
+parameterized algebras in src/Effect4/Program/Folds/Term.lean; src/Effect4/Program/Fold.lean supplies
+TermHom and hom_eq_cata_term. A composed candidate satisfying those constructor equations can use
+uniqueness locally. The environment lookup/transport equation still has to be proved; a fold
+law does not discover it. No new `cata_term_fusion` API is needed for that argument.
+
+Use each sort's own signature: the Eff fold is mutual, and Term, CauseTerm and operation
+payloads are leaves for that fold. Its uniqueness theorem does not discharge their laws,
+scheduler invariants, transaction isolation, or progress. Such operational proofs may still
+reuse algebra/transport lemmas for individual components. A fold equality also does not change
+executable callers or remove allocations. Any proposed pass fusion must supply constructor
+compatibility, replace the executed traversal, and establish benefit on the selected target.
 
 ### Deferred implementations with useful composition now
 
@@ -495,12 +587,12 @@ or whole-repository sweep was run for this documentation slice.
 | Slice | Work | Acceptance and deletion |
 | --- | --- | --- |
 | D0: this packet | Reconcile research, record the approved world, correct authority overclaims, identify reusable interfaces | Representation owners and composition seams are explicit; remaining semantic choices stay open in the one register |
-| D1: structural contract | Set observation/representation relation, completion and memo contract, identity policy, wake protocol, and replay-versus-resumption contract; reserve signatures for known future consumers | Shared law statements and dependencies elaborate; future bodies can remain wanted; existing frozen Obs is not weakened |
-| D2: completion/memo migration | Completion-valued cells/owed data beside the old representation, connector, callers, then old fields | Delayed Ref reads and memo sharing retained; twelve Deferred witnesses and layer memo clause revisited; obsolete shape/decoder invariants deleted; generated outputs re-cut |
+| D1: structural contract | Set observation/representation relation, completion and memo contract, identity policy, wake protocol, and replay-versus-suspension contract (§7); reserve signatures and scope-correct composition laws | Shared law statements and dependencies elaborate; reuse command-loop and transport laws; changed-budget claims have their own compatible-input premise; future bodies can remain wanted; frozen Obs stays intact |
+| D2: completion/memo migration | Completion-valued cells/owed data beside the old representation, connector, callers, then old fields | Delayed Ref reads, memo sharing and DI-97's Boolean poll exception retained; twelve Deferred witnesses and layer memo clause revisited; obsolete shape/decoder invariants deleted; generated outputs re-cut |
 | D3: world/language and ledger | Approved per-cell world, generic Ref/Deferred and binder-term atomic updates in their dependency order; independent transition-goal producer | Exact expected goals, frames, placeholders and dependencies; pinned semantic debt after D2; no claims that structural-frame premises are that debt |
 | D4: typed-state proofs | S1/S2/S3 on the stable representation and declared assumptions | Exit typing theorem at its stated fragment/world; current trust ceiling; no full behavioral-equivalence claim from typing |
-| D5: first storage refinement | Dense Ref arena: list model and efficient Lean implementation; join to OCaml interface/oracle | Operation and snapshot laws plus machine connector; verify generated OCaml uses the intended carrier primitives (Array currently lowers to List), and measure separately; delete the corresponding hand semantic prelude body only after its replacement agrees |
-| D6: scheduled/module/control slices | Latch contract first if chosen, then groups from §6; transactions after isolation/admission contract; stored behaviors before their consumers | A behavior law per module/profile; schedule controls and explicit deviations; no dedicated Queue/Pool store without new evidence and ruling |
+| D5: first storage refinement | Dense Ref arena: list model and efficient Lean implementation; join to existing OCaml interface/oracle with a target-specific carrier | Operation, well-formedness and retained-snapshot laws plus machine connector; verify actual target operations (Array currently lowers to List), then measure against a named baseline; delete the hand semantic prelude body only after its replacement agrees |
+| D6: scheduled/module/control slices | Latch contract first if chosen, then groups from §6; transactions after isolation/admission and ownership contract; stored behaviors before their consumers | A behavior law per module/profile; wake-on-access distinct from version changes; any progress promise covers allowed executions, not just one successful path; no dedicated Queue/Pool store without new evidence and ruling |
 | D7: target growth | Apply the established relations to other containers and one small lowering fragment; separate native/LLVM/Wasm probes | Per-target domain/runtime/ABI, Lean-to-IR trust or proof, IR-to-target and printer/bytes evidence; reusable lowering obligations instead of re-proving module semantics |
 
 Rows 78–83 reserve semantic choices, not all useful work. Interface formation and conditional
@@ -510,6 +602,10 @@ representation contract is fixed. The catalogue's proposed
 “number-only TxRef first” and an automatic “all APIs after the milestone” are not imported as
 new sequencing rules: generic language work already required by rows 42–43 must precede the
 proofs that depend on it.
+
+D5 and selected D6 consumers can proceed independently once their required contracts are fixed.
+D7 starts with one admitted fragment using those contracts; it does not wait for every D6 API.
+Their numerical order is not a new serial dependency between unrelated implementations.
 
 Every slice names its deletion. Do not delete wake primitives solely from today's consumer count
 while Tx/Latch contracts are being formed; after those contracts are fixed, retain only used
@@ -534,3 +630,30 @@ program syntax to make a transaction or target easier to implement.
   tools/Conform/Effect4/LcnfSemantics.lean, tools/Conform/Effect4/LcnfMl.lean: evidence scope.
 - docs/research/2026-09-19-state-refinement/closeout.md: tracked supporting reviews,
   worktree provenance and the paused tooling handoff.
+
+## 13. Implementation/fusion audit disposition
+
+Reviewed against cc28511c. The incoming audit is preserved byte-for-byte as historical input;
+this plan owns the resulting implementation recommendations. Existing decisions remain in their
+registers. No machine change, new semantic ruling or fresh execution result is implied.
+
+| Incoming finding | Disposition in this plan |
+| --- | --- |
+| Public frontier loses continuation | Accept the missing outer-driver contract; §7 reuses driveState_add, preserves both owner choices, and corrects the same-budget scope of journal_replays. “Zombie forever” exceeds the retained probe. |
+| composeAt association | Already a semantic obligation; §2 makes environment transport, observation and grade handling explicit. General Straight/Looped laws remain owed. |
+| Completion collides with poll | §4/D2 now explicitly preserve DI-97. Purity does not prohibit reading an explicit store; executing a delayed read too early is the semantic error. No retirement is approved. |
+| STM wake-on-access | Accept the source fact already present in §7; distinguish version updates, callback scheduling, cleanup and guarded resumption. A write-only policy needs its own behavior relation. |
+| Array performance and snapshots | Accept target-operation inspection in §8/D5. Reject an unmeasured slowdown, a blanket Array ban, and RRB/uniqueness as the only routes to persistence; existing frozen chunks are a concrete counterexample. |
+| Safety and progress | §3 separates them at the selected behavior boundary. Reject the suggested existential path as a starvation guarantee; an allowed infinite self-loop can coexist with a terminating path. |
+| Fusion effectiveness | §9 retains the closed conversion campaign while permitting local reuse. Function carriers are supported; cited algebras already exist. The speculative proof-length comparison is not evidence, and fold equality alone does not optimize execution. |
+
+Two evidence corrections matter when reading the supplied audit's baseline list. Equal frozen
+Obs with different holder supervision shows that holder supervision cannot be recovered from
+Obs, not the reverse factorization. The silent-spin fixture checks relation preservation only;
+it does not prove a matching-step simulation. The original scalar controls remain finite target
+hazards, not backend correctness results.
+
+The new audit's reported Bun runs and additional straight-line checks have no retained runnable
+receipt in that input; they are not counted as freshly reproduced evidence here. Source reading
+confirms the poll/wake facts. The previously retained critique proofs/probes keep their existing
+scope and receipts. This integration adds no new proof or benchmark result.

@@ -171,7 +171,7 @@ Their proof-side continuations may contain functions; compiled frames remain dat
 The decision tape carries Completion data at every instance. Replay agreement is not
 a public resumption guarantee: the command-level `driveState` retains residue, but the
 current session projection does not retain the whole suspended driver. The alternatives
-are specified in `docs/research/2026-09-19-critique-response.md` §5.
+are specified by the semantic owner, `docs/core/machine-state.md` §5.
 
 ## The faces, and the two ingest contracts
 

@@ -51,3 +51,54 @@ Validation of the synthesis and finite controls is recorded in plan §10 and evi
 The later composition/preservation amendment changes prose only and uses git diff --check.
 No Lean/runtime build, backend verification or full repository sweep is claimed for these
 documentation commits.
+
+## Implementation/fusion audit integration
+
+Reviewed source head and branch base: cc28511c783e45782e04191aac151457baea1673.
+Branch: codex/plan-fusion-review, in the existing design checkout above.
+Integration commit subject: `docs: incorporate implementation and fusion audit`.
+The commit containing this section records the amended plan and unchanged incoming audit.
+
+The coordinator should know before merging: this is documentation only. It preserves both
+execution-contract choices, DI-97, and decisions 34/40; rows 78–83 remain open. The separate
+tooling checkout is untouched. No new runtime or proof claim is made.
+
+Changed files:
+
+- docs/research/2026-09-19-state-refinement-plan.md: integrate the six operational findings
+  and fold-reuse review into existing contracts and D1–D7; §13 records rejected overclaims.
+- docs/research/2026-09-19-implementation-audit-and-fusion-analysis.md: original audit,
+  preserved without edits and explicitly tracked despite the research-directory ignore rule.
+- docs/STATE.md: index the review and correct the old unconditional transaction summary.
+- docs/ARCHITECTURE.md: route the driver-contract citation through its semantic owner.
+- This closeout: source identity, review disposition and document verification.
+
+Incoming audit SHA-256:
+`e369e4c300be56fd04e00345d66dadbcc09b9cf8c3e251c75c998baded6701c7`.
+
+Two independent source reviews covered control/completion/progress and fold reuse. Their final
+diff reviews found no remaining actionable issue after distinguishing parameterized term
+algebras from the function-valued denotation carrier. The coordinator also inspected the actual
+OCaml Array translations and persistent frozen-chunk append implementation.
+
+Validation in the isolated checkout:
+
+- `python3 scripts/check-source-citations.py`: exit 0; 4,066 existence tokens, zero baselined
+  missing targets; no prohibited line citations (2,773 tokens in 1,431 files). The first run
+  found the pre-existing direct research citation in ARCHITECTURE, which this change routes
+  through the current semantic owner. No checker or baseline was changed.
+- `git diff --check` on the amended tracked documents: exit 0. After staging the original
+  audit too, `git diff --cached --check` reports its five pre-existing trailing-space lines
+  (3, 4, 79, 131, 145); these bytes are deliberately preserved with the input hash above.
+  The staged check restricted to ARCHITECTURE, STATE, the plan and this closeout exits 0.
+- A Python assertion pass checked the original audit hash, all 31 explicit plan source paths,
+  exactly one row each for D0–D7, and byte equality of both decision registers against the base.
+  It also checked that tracked modifications are Markdown documentation only.
+- No Lean build, new axiom report, host probe, benchmark or full sweep was run. Prior critique
+  receipts remain the evidence for their original claims; reported experiments in the incoming
+  audit are not counted as independently reproduced here.
+
+The owner's primary README.md bytes were checked separately and left unchanged. The new audit
+and amended synthesis are to be integrated together, with no dependency on temporary review
+files. The open semantic choices and general composition/refinement/progress proofs remain
+exactly the work described in the plan; this review does not discharge them.
