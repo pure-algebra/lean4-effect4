@@ -548,3 +548,13 @@ Every reported closure uses only propext and/or Quot.sound. The full downstream
 connector namespace remains pending. Evidence and the exact failed/successful commands
 are retained in phase-c/deferred-map. The earlier store bank landed at c6911d69;
 finite OCaml arena controls and dune build landed at 8cb639b4. No generator ran.
+
+
+The arena module passes its final narrow build: all 10 original seats and three
+new support seats are at ceiling 0. Its ten frozen statements are unchanged.
+The final-source audit prints 27 proofs/instances/checked terms, all within
+[propext, Quot.sound]. The census is 3/24 for default search and 1/24 for the
+Stores bank, against the earlier 0/10 population; no unchanged-population gain
+is claimed. All attempts, wanted snapshots and final-source checks are retained
+in phase-c/arena. The reference-step projection and the two red controls remain
+separate pending work. No generator ran.

@@ -46,8 +46,9 @@ and fresh coverage checks passed; the sanctioned report remains green 133/135.
 Phase C proof fills have started. The completion-data rule bank passes its positive and
 negative controls, and its support gates are at zero. All fourteen deferred-store map laws
 now close by search, with a zero gate in their module and allowed axiom dependencies in
-the after-census. The arena, remaining connectors, world order and simulation fills are
-next; the full Phase C check remains pending.
+the after-census. The arena's ten original laws and three support lemmas also pass zero
+gates and the final-source axiom check. The reference-step projection, remaining connectors,
+world order and simulation fills are next; the full Phase C check remains pending.
 
 The one-regeneration target was missed: Phase A required three completed runtime rounds,
 plus two partial LCNF attempts. Placement added one EFF/wire/CAS validation round; cumulative

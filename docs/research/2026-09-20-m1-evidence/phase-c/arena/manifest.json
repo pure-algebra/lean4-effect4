@@ -1,0 +1,354 @@
+{
+  "phase_b_base": "3f89307488835002c1cb9d8b3bcb9c1dcc1554a1",
+  "packaging_head": "6977cfd97c14eeb071beda7ccb4f68be060c7f9f",
+  "scope": "Arena only: ten frozen seats, three support lemmas, reusable Stores rules. No downstream compilation or whole-task completion claim.",
+  "final_source_sha256": "de20f1d994ef1f2d7c4179cea4b9a7df1ede0d37f8afa69439a2841b36c77e13",
+  "frozen_original_statements_unchanged": 10,
+  "commands": [
+    {
+      "id": "initial-probe-1",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -DwarningAsError=true /tmp/m1-phase-c/probes/ArenaRound1.lean > /tmp/m1-phase-c/probes/ArenaRound1.log 2>&1",
+      "exit_code": 1,
+      "log": "probes/ArenaRound1.log",
+      "source": "probes/ArenaRound1.lean",
+      "provenance": "Exact command and exit confirmed by coordinator; no -M override."
+    },
+    {
+      "id": "initial-probe-2",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -DwarningAsError=true /tmp/m1-phase-c/probes/ArenaRound2.lean > /tmp/m1-phase-c/probes/ArenaRound2.log 2>&1",
+      "exit_code": 1,
+      "log": "probes/ArenaRound2.log",
+      "source": "probes/ArenaRound2.lean",
+      "provenance": "Exact command and exit confirmed by coordinator; no -M override."
+    },
+    {
+      "id": "initial-probe-3",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -DwarningAsError=true /tmp/m1-phase-c/probes/ArenaRound3.lean > /tmp/m1-phase-c/probes/ArenaRound3.log 2>&1",
+      "exit_code": 1,
+      "log": "probes/ArenaRound3.log",
+      "source": "probes/ArenaRound3.lean",
+      "provenance": "Exact command and exit confirmed by coordinator; no -M override."
+    },
+    {
+      "id": "build-1",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Arena > /tmp/m1-phase-c/arena/build-1.log 2>&1",
+      "exit_code": 1,
+      "log": "scratch/arena/build-1.log",
+      "source": "scratch/arena/Arena-attempt-1.lean"
+    },
+    {
+      "id": "build-2",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Arena > /tmp/m1-phase-c/arena/build-2.log 2>&1",
+      "exit_code": 0,
+      "log": "scratch/arena/build-2.log",
+      "source": "scratch/arena/Arena-attempt-2.lean"
+    },
+    {
+      "id": "build-3",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Arena > /tmp/m1-phase-c/arena/build-3.log 2>&1",
+      "exit_code": 1,
+      "log": "scratch/arena/build-3.log",
+      "source": "scratch/arena/Arena-attempt-3.lean"
+    },
+    {
+      "id": "build-4",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Arena > /tmp/m1-phase-c/arena/build-4.log 2>&1",
+      "exit_code": 1,
+      "log": "scratch/arena/build-4.log",
+      "source": "scratch/arena/Arena-attempt-4.lean"
+    },
+    {
+      "id": "build-5",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Arena > /tmp/m1-phase-c/arena/build-5.log 2>&1",
+      "exit_code": 0,
+      "log": "scratch/arena/build-5.log",
+      "source": "scratch/arena/Arena-attempt-5.lean"
+    },
+    {
+      "id": "build-6",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Arena > /tmp/m1-phase-c/arena/build-6-gates.log 2>&1",
+      "exit_code": 0,
+      "log": "scratch/arena/build-6-gates.log",
+      "source": "scratch/arena/Arena-attempt-6.lean"
+    },
+    {
+      "id": "build-7",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Arena > /tmp/m1-phase-c/arena/build-7-final.log 2>&1",
+      "exit_code": 0,
+      "log": "scratch/arena/build-7-final.log",
+      "source": "scratch/arena/Arena-attempt-7.lean"
+    },
+    {
+      "id": "after-census-axioms",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true /tmp/m1-phase-c/arena/After.lean > /tmp/m1-phase-c/arena/after-census-axioms.log 2>&1",
+      "exit_code": 0,
+      "log": "scratch/arena/after-census-axioms.log",
+      "driver": "scratch/arena/After.lean",
+      "source": "scratch/arena/Arena-attempt-6.lean",
+      "provenance": "Completed in delegated compiler lease."
+    },
+    {
+      "id": "after-final-census-axioms",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true /tmp/m1-phase-c/arena/After.lean > /tmp/m1-phase-c/arena/after-final-census-axioms.log 2>&1",
+      "exit_code": 0,
+      "log": "scratch/arena/after-final-census-axioms.log",
+      "driver": "scratch/arena/After.lean",
+      "source": "scratch/arena/Arena-attempt-7.lean",
+      "provenance": "Exact command and exit confirmed by coordinator; session3518 completed."
+    }
+  ],
+  "gates": [
+    {
+      "namespace": "Effect4.Machine.ArenaObligations",
+      "open": 0,
+      "proved": 10,
+      "total": 10,
+      "ceiling": 0
+    },
+    {
+      "namespace": "Effect4.Machine.ArenaSupportWanted",
+      "open": 0,
+      "proved": 3,
+      "total": 3,
+      "ceiling": 0
+    }
+  ],
+  "census": {
+    "cap": 20000,
+    "before": {
+      "raw": 0,
+      "admissible": 0,
+      "total": 10,
+      "tactic": "aesop",
+      "evidence": "census/before-row.json"
+    },
+    "final_plain": {
+      "raw": 3,
+      "admissible": 3,
+      "total": 24
+    },
+    "final_stores": {
+      "raw": 1,
+      "admissible": 1,
+      "total": 24
+    },
+    "note": "The theorem population grew. No same-population improvement claimed. Unchanged instrument rejects self/future-theorem references.",
+    "final_source": "final/src/Effect4/Laws/Machine/Arena.lean",
+    "final_log": "scratch/arena/after-final-census-axioms.log"
+  },
+  "axioms": {
+    "printed_declarations": 27,
+    "allowed_union": [
+      "Quot.sound",
+      "propext"
+    ],
+    "all_allowed": true,
+    "checked_on_final_source": true
+  },
+  "wanted_evidence": {
+    "original": "scratch/arena/Arena-before.lean",
+    "new_helpers": "scratch/arena/Arena-helpers-wanted.lean",
+    "new_helper_count": 3,
+    "live_wanted_remaining": 0
+  },
+  "historical_records": [
+    "scratch/arena/README.md",
+    "scratch/arena/receipt.json"
+  ],
+  "historical_note": "Interim receipts predate the coordinator final-tree audit; retained byte-for-byte, superseded only by this final package manifest/receipt.",
+  "files": [
+    {
+      "member": "census/before-module.log",
+      "source": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Machine.Arena.log",
+      "bytes": 104,
+      "sha256": "603c9faec57f4037640e4f2c0aba1ee89c8ce8c4594b080e97339dbc5a31b0b4"
+    },
+    {
+      "member": "census/before-row.json",
+      "source": "Selected exact row from portable before-fill results.json; JSON formatting only.",
+      "bytes": 1397,
+      "sha256": "4adb56158f505c2b7aad312bf8c565435b048693f4bdab53bd78ceb19716850c"
+    },
+    {
+      "member": "changes.patch",
+      "source": "Scoped final-source delta against Phase B commit 3f89307488835002c1cb9d8b3bcb9c1dcc1554a1",
+      "bytes": 9920,
+      "sha256": "4473268ee32591318256b85c044d3466d3878705218bd894267b7ec64f0626a5"
+    },
+    {
+      "member": "final/src/Effect4/Laws/Machine/Arena.lean",
+      "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Machine/Arena.lean",
+      "bytes": 11145,
+      "sha256": "de20f1d994ef1f2d7c4179cea4b9a7df1ede0d37f8afa69439a2841b36c77e13"
+    },
+    {
+      "member": "probes/ArenaRound1.lean",
+      "source": "/tmp/m1-phase-c/probes/ArenaRound1.lean",
+      "bytes": 2105,
+      "sha256": "389cdaa1defcea954f97198ad01dfa169ed92aa67b3c234142eafb97206fd603"
+    },
+    {
+      "member": "probes/ArenaRound1.log",
+      "source": "/tmp/m1-phase-c/probes/ArenaRound1.log",
+      "bytes": 1566,
+      "sha256": "15f3871ff065127096682fdeb5d2b0fd262cc78d8754270777eaec511938cdf3"
+    },
+    {
+      "member": "probes/ArenaRound2.lean",
+      "source": "/tmp/m1-phase-c/probes/ArenaRound2.lean",
+      "bytes": 2677,
+      "sha256": "13238a2f224e10a1a948e46ec513713aef0cedf354ce750772deee3030ee51e6"
+    },
+    {
+      "member": "probes/ArenaRound2.log",
+      "source": "/tmp/m1-phase-c/probes/ArenaRound2.log",
+      "bytes": 2978,
+      "sha256": "c161168c50f2526aaeaeeaeca56d313b83ee236bff036019205f7447fb62d264"
+    },
+    {
+      "member": "probes/ArenaRound3.lean",
+      "source": "/tmp/m1-phase-c/probes/ArenaRound3.lean",
+      "bytes": 2818,
+      "sha256": "a01d46efa04579e38ac63f5d3691f84b4450e37905b839c9c072f453c6a30e90"
+    },
+    {
+      "member": "probes/ArenaRound3.log",
+      "source": "/tmp/m1-phase-c/probes/ArenaRound3.log",
+      "bytes": 2291,
+      "sha256": "1db757c72ea0b8dcdac6b23734a3ae11dd74caa244c629f837781896a989e525"
+    },
+    {
+      "member": "scratch/arena/After.lean",
+      "source": "/tmp/m1-phase-c/arena/After.lean",
+      "bytes": 1845,
+      "sha256": "20c7b3adf029fbf7d6cd21ccca14273aa3160b3cf8f3e110c6dc9207f03f8d89"
+    },
+    {
+      "member": "scratch/arena/Arena-attempt-1.lean",
+      "source": "/tmp/m1-phase-c/arena/Arena-attempt-1.lean",
+      "bytes": 6181,
+      "sha256": "9c4f2eadfe650b5470a3cc3051459887f345d97922888eb036acd4fa62923e1a"
+    },
+    {
+      "member": "scratch/arena/Arena-attempt-2.lean",
+      "source": "/tmp/m1-phase-c/arena/Arena-attempt-2.lean",
+      "bytes": 6825,
+      "sha256": "0fb4185068d4c763106b73d3770d602e0eee6d180cce876eeda07c29e35dfbd6"
+    },
+    {
+      "member": "scratch/arena/Arena-attempt-3.lean",
+      "source": "/tmp/m1-phase-c/arena/Arena-attempt-3.lean",
+      "bytes": 9475,
+      "sha256": "cde70fbbceba786c9b7c8f472e4f295229c675aaefdf9a501daf1f0c76dccd91"
+    },
+    {
+      "member": "scratch/arena/Arena-attempt-4.lean",
+      "source": "/tmp/m1-phase-c/arena/Arena-attempt-4.lean",
+      "bytes": 11035,
+      "sha256": "7f911bdd5612bb4b43a68ed83cd0cdb315afebf9cb746f1767bfe6297211d65c"
+    },
+    {
+      "member": "scratch/arena/Arena-attempt-5.lean",
+      "source": "/tmp/m1-phase-c/arena/Arena-attempt-5.lean",
+      "bytes": 11050,
+      "sha256": "5cb568348e8099c7cb9b18d950cd7180067fb6dc21311ebbfd7db4a8bbfce7bf"
+    },
+    {
+      "member": "scratch/arena/Arena-attempt-6.lean",
+      "source": "/tmp/m1-phase-c/arena/Arena-attempt-6.lean",
+      "bytes": 11329,
+      "sha256": "4993a1e98a5d34e8054eabd26320f480f62d5da38726e524b24b58bf454aa3b4"
+    },
+    {
+      "member": "scratch/arena/Arena-attempt-7.lean",
+      "source": "/tmp/m1-phase-c/arena/Arena-attempt-7.lean",
+      "bytes": 11145,
+      "sha256": "de20f1d994ef1f2d7c4179cea4b9a7df1ede0d37f8afa69439a2841b36c77e13"
+    },
+    {
+      "member": "scratch/arena/Arena-before.lean",
+      "source": "/tmp/m1-phase-c/arena/Arena-before.lean",
+      "bytes": 3840,
+      "sha256": "4336613c84a04e566bfcf41a710018d8093cddef7f1d87daa1edab5a6205ce02"
+    },
+    {
+      "member": "scratch/arena/Arena-helpers-wanted.lean",
+      "source": "/tmp/m1-phase-c/arena/Arena-helpers-wanted.lean",
+      "bytes": 4605,
+      "sha256": "e288c1591a2333d3b1309a70b261c96896669b0c011ac8f87fd0e37273cc2a89"
+    },
+    {
+      "member": "scratch/arena/README.md",
+      "source": "/tmp/m1-phase-c/arena/README.md",
+      "bytes": 3177,
+      "sha256": "026e715826bf2c552361ed65e0dab3cf4e478cb213b3bf30a7abe4856b719895"
+    },
+    {
+      "member": "scratch/arena/after-census-axioms.log",
+      "source": "/tmp/m1-phase-c/arena/after-census-axioms.log",
+      "bytes": 2734,
+      "sha256": "98eaa0a7ba6fd3f2a7d852a93d2a8366cf08936c9db07ec59659d2e66a7ef1b0"
+    },
+    {
+      "member": "scratch/arena/after-final-census-axioms.log",
+      "source": "/tmp/m1-phase-c/arena/after-final-census-axioms.log",
+      "bytes": 2734,
+      "sha256": "6c340c90738e920094b9ed9eae1320ec3eeca998c947f0a851b8839dcf017aa1"
+    },
+    {
+      "member": "scratch/arena/build-1.log",
+      "source": "/tmp/m1-phase-c/arena/build-1.log",
+      "bytes": 2227,
+      "sha256": "d7b53e852720ccc48d1e49117f81e30e6038d837807b8f73e2877e1bb0bf2e29"
+    },
+    {
+      "member": "scratch/arena/build-2.log",
+      "source": "/tmp/m1-phase-c/arena/build-2.log",
+      "bytes": 95,
+      "sha256": "8e2757c3cb402eb5be6ef2baf8d1aea399e4bd2fe9366891b1a4a8163ffac3a6"
+    },
+    {
+      "member": "scratch/arena/build-3.log",
+      "source": "/tmp/m1-phase-c/arena/build-3.log",
+      "bytes": 1775,
+      "sha256": "535356ddeac0dd50a6568e5ec5e0185c81e553cca5ed45596f23d0ab8bf05a11"
+    },
+    {
+      "member": "scratch/arena/build-4.log",
+      "source": "/tmp/m1-phase-c/arena/build-4.log",
+      "bytes": 1456,
+      "sha256": "701c0b98e3c5e6d8bc16fcc9c0f3a1050f76e354a1d7756a62e32695ed2859d0"
+    },
+    {
+      "member": "scratch/arena/build-5.log",
+      "source": "/tmp/m1-phase-c/arena/build-5.log",
+      "bytes": 95,
+      "sha256": "69cf3b76fad19d10ab5d923c1b5b0b346c8873148e154554ea2e6a787b561809"
+    },
+    {
+      "member": "scratch/arena/build-6-gates.log",
+      "source": "/tmp/m1-phase-c/arena/build-6-gates.log",
+      "bytes": 339,
+      "sha256": "3f8b213fea37c3bd432bb7c9dc59753d381569cc3652213a2db9ee4391bda06b"
+    },
+    {
+      "member": "scratch/arena/build-7-final.log",
+      "source": "/tmp/m1-phase-c/arena/build-7-final.log",
+      "bytes": 339,
+      "sha256": "289290a5f5b11b46f93710561b8ff442fa7bf7ca0e2f9d6a8969c0df24a44c54"
+    },
+    {
+      "member": "scratch/arena/receipt.json",
+      "source": "/tmp/m1-phase-c/arena/receipt.json",
+      "bytes": 1091,
+      "sha256": "c53df86e25b8f01b54aeb2aa17dd846b880092692850e3a98acc0eca6fd37703"
+    }
+  ],
+  "archive": {
+    "path": "raw.tar.gz",
+    "members": 31,
+    "bytes": 11554,
+    "sha256": "37533a6d47e268360234aca8304ccdb1bc8e698ada633303dafe4cec2000bfe2",
+    "readback": "All members read back and compared byte-for-byte to their source bytes."
+  }
+}
