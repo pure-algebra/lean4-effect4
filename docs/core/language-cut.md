@@ -72,7 +72,7 @@ What Effect has that no constructor, action, row or atom spells:
 
 | Effect module | status | note |
 | --- | --- | --- |
-| `Queue`, `PubSub`, `Mailbox`, `Semaphore`, `Latch` | absent | the store has the generic waiter list (`Machine/Wake.lean`) they would sit on; each is a store family plus rows, and the position census then demands their typing source |
+| `Queue`, `PubSub`, `Mailbox`, `Semaphore`, `Latch` | absent | DI-11 chooses composite programs for Queue, Mailbox and PubSub; a scheduled Latch primitive and the other families' behavior contracts remain proposals in `docs/core/machine-state.md`. The generic waiter list alone does not establish agreement |
 | `Stream`, `Channel`, `Sink` | ruled as design only (DI-11: an external handle answering `pull` in a scope) | nothing landed |
 | `STM`, `TxRef` | absent | — |
 | `Schedule`, `Effect.retry`, `Effect.repeat`, `Effect.timeout` | absent | `iterate` + `sleep` + `raceAll` can encode fixed cases by hand; no schedule value |

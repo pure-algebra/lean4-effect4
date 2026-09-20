@@ -1,0 +1,27 @@
+{
+  "evidence": "finite host observations; no Lean theorem or general conformance claim",
+  "sourceRevision": "5d6c70da86bc54ee993a3aea930479d2c16aee85",
+  "vendorTree": "38664f72ce5f79fb2d37914de4822a4df7877d0d",
+  "effectProfile": "effect-4.0.0-rc.112",
+  "leanToolchain": "leanprover/lean4:v4.33.1",
+  "bunVersion": "1.4.2",
+  "command": "bun docs/research/2026-09-19-state-refinement/probe.ts",
+  "exitCode": 0,
+  "checks": [
+    "scheduled-versus-inline values",
+    "cancellation removes scheduled waiter",
+    "plain-object map equality"
+  ],
+  "files": {
+    "vendor/effect-4.0.0-rc.112/README.md": "c92a6fb10ba01e83969d06f5dcd30a1be01a44d4254a6aa1722bc39de1416687",
+    "vendor/effect-4.0.0-rc.112/src/Effect.ts": "92372a76d06a1c66a47319cd67e1f25c8aa0bc81970ea7cfe7fea2253134e718",
+    "vendor/effect-4.0.0-rc.112/src/Latch.ts": "fc3d4845725de47cde112743f5144a7857ebb9aa79c0d626b91dac0277953b45",
+    "vendor/effect-4.0.0-rc.112/src/Deferred.ts": "78b5d3cd2ad37f9e4f8ebaf465c9375bb982a00bd22a9f3d50ed02e0cb65f0e9",
+    "vendor/effect-4.0.0-rc.112/src/internal/effect.ts": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0",
+    "vendor/effect-4.0.0-rc.112/src/MutableHashMap.ts": "fa06f1e1015c682d4466ca7832e56387c43045dd3a660cb33fa7be9a4afc3d7a",
+    "vendor/effect-4.0.0-rc.112/src/Equal.ts": "28f483b87b52abe426e70afa695821fa5806dc9a24ee098d76b5830097bbe8e8",
+    "vendor/effect-4.0.0-rc.112/src/Hash.ts": "38a5d76793f3b6e21787d36c6836c1d4e98fdd7675b09edd37080d213b1c3299",
+    "docs/research/2026-09-19-state-refinement/probe.ts": "ce468123c847f517597ee92474b023f934cac9bcf1835ea4b1da66bd6547ee1d",
+    "docs/research/2026-09-19-state-refinement/probe-output.json": "e6a3c0d4740b263b1a837cd5b5125edc9f7b5fb562396f19fbad7866917821db"
+  }
+}

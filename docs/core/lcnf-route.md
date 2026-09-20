@@ -4,6 +4,15 @@ Owner's ask, while scouts E and F run: "dig in more into the LCNF and see what o
 are there; make sure it stays apprised of the sugar; our LCNF is really our superpower for
 verified semantics." Read off the translator and the rungs, not their docs. Tree at `14f8d4d4`.
 
+## Review boundary (2026-09-19)
+
+The measurements below are the dated 2026-09-17 investigation, not a fresh whole-machine
+verification. The state/refinement review in `docs/research/2026-09-19-state-refinement-plan.md`
+corrects three claims: Rules extracts structural summaries, TargetLeanNative reflects layouts,
+and the LCNF vector lane covers the type-processing fragment. No theorem currently joins all
+of Lean definitions, compiler IR, target syntax, printed bytes and native/OCaml/Wasm execution.
+The semantic and runtime assumptions at each of those arrows remain distinct.
+
 ## 1. What the route is
 
 Lean's own compiler IR, mono phase, read off the `.olean` (`getMonoDecl?`, `PhaseExt.lean:162`
@@ -47,20 +56,22 @@ else in the machine's closure translates.
   the emitted syntax (`Expr`, `Pat`, `TValue`, `evalT` at `:424`, `PrimEnv` for the named
   primitive assumptions).
 - `Lcnf/Validity.lean` (728), `Lcnf/Rules.lean` (757), `Lcnf/Cases.lean` (721): the validity
-  check, the rewrite rules, and the case-site policy — the gate that refused `Run.rowOf` and
+  check, structural rule summaries, and the case-site policy — the gate that refused `Run.rowOf` and
   `ServiceDef.receiver` today (`cases-policy.json`).
 - `tools/Conform/Effect4/LcnfSemantics.lean` (rung 2): the LCNF evaluator against the compiled Lean functions
   on 20,387 vectors. `tools/Conform/Effect4/LcnfMl.lean` (rung 3): the emitted OCaml read into the target
   evaluator and run on the same vectors — "the evaluator handles what the translator emits" is
   a checked claim because the reader refuses by constructor name. `tools/Conform/Effect4/TargetLeanNative.lean`
-  closes the loop against native Lean.
+  reflects native Lean data layout; it is not another execution comparison. The two vector
+  modules cover the Ty/GenTy.merge closure, not the full machine. LcnfMl reads in-memory
+  Ml.Syntax, not printed OCaml text.
 
-So "verified semantics" today means: a differential on 20,387 vectors between LCNF, the
-emitted target, and native Lean — evidence, not a theorem that the lowering preserves the LCNF
-semantics. **And that evidence was produced once, not on every change.** The three modules
+The recorded evidence is a differential on 20,387 vectors over the type-processing closure,
+comparing LCNF and target-AST evaluation with compiled Lean. It is not a theorem that lowering
+preserves the LCNF semantics. **And that evidence was produced once, not on every change.** The three modules
 above are libraries; their `--run` drivers are named by no `make` target, no script and no CI
 job, so nothing re-runs the 20,387 cases. What does run on every change is the case-site policy
-(`make check-cases`), the validity walk and the rewrite rules. Wiring the vector lane into
+(`make check-cases`), the validity walk and structural rule summaries. Wiring the vector lane into
 `check-host` is the plan's item 4.5; until it lands, read this paragraph as a record of a run,
 with its date, and not as a standing check. Scout F's question 6 is whether to prove it
 (CompCert-shaped simulation over `Semantics` and `SemanticsTarget`, both of which exist as Lean
@@ -105,9 +116,9 @@ Upstream, not beside. The authoring sugar, the generated lifts, the forms and an
 generation are metaprograms that *write Lean* (definitions, tables, instances); LCNF lowers the
 Lean they wrote. So "apprised of the sugar" means one thing concretely: the roots list. A
 metaprogram that adds a definition an agent should be able to call from TypeScript adds it to
-the roots, and the closure walk, the case-site policy and the rungs take it from there. The
-two powers do not compete: metaprogramming decides *what* exists; LCNF decides that its
-TypeScript image *means the same*.
+the roots, and the closure walk, the case-site policy and the rungs take it from there.
+Metaprogramming determines which declarations exist; LCNF supplies a lowering input.
+Agreement of the TypeScript image still requires the named translation and execution evidence.
 
 ## 6. The three facts to carry into the decisions
 
@@ -131,18 +142,21 @@ ourselves." Read against that document:
   builtin table wired into the OCaml printer. *Legalization* (`LegalizeTypes`/`LegalizeOps`:
   promote, expand, custom) is the name for what a profile does — `Nat` promoted to `bigint` or
   expanded to a clamped `int63`, tail calls expanded to loops, `cases` to `switch`, strings
-  custom — and each rule is a semantics-preserving rewrite on the IR with its obligation, which
-  is what `tools/Conform/Lcnf/Rules.lean` already holds. `MCInst` as "the common currency" →
+  custom — and each proposed legalization rule must carry a semantic preservation obligation.
+  `tools/Conform/Lcnf/Rules.lean` currently holds structural summaries and policy joins,
+  not proofs of those semantic rewrite obligations. `MCInst` as "the common currency" →
   promote `Conform.Lcnf.SemanticsTarget.Expr` from the rung-3 reader's image to the emission
   language; each backend a printer with a reader. LLVM's own note that a non-traditional target
   (its C backend) implements only the two mandatory classes is the class OCaml and TypeScript
   belong to: profile + printer, no instruction selection, scheduling or register allocation.
-- **Use (WebAssembly, native).** Do not write a low-tier backend: Lean's pipeline already goes
-  LCNF → reference-counted IR (Ullrich–de Moura 2019; Perceus, Reinking et al. 2021) → C →
-  clang, and clang is LLVM with `wasm32-wasi` as a target. The trust boundary is the one the
-  Lean binary already has; LLVM IR has a formal semantics (Vellvm, Zhao et al. 2012) and
-  translation validation (Alive2). Everything above the common currency is ours and verified;
-  below it, GC targets get our printers, memory-owning targets get LLVM.
+- **Use (WebAssembly, native), proposed route.** Prefer the pinned Lean compiler's IR and C
+  route over a new low-level backend. Kernel-checked source proofs do not certify the compiler,
+  runtime, FFI or emitted executable. The pinned compiler also contains an LLVM emitter, but
+  its size_t layout is hardcoded to i64 with a target-triple TODO. Native C, direct LLVM and
+  Wasm therefore require separate profile/probe results. Wasm needs a compatible runtime and
+  libraries, host imports and a checked ABI/memory layout; changing clang's target alone is
+  not an established port. The existence of LLVM semantics or external validation tools does
+  not supply any missing Eff proof automatically.
 - **Shape:** `Lowering/Profile`, `Lowering/IR`, `Lowering/Legalize`, per-target printers with
   readers; the WASM/native path leaves through Lean's RC IR into LLVM. Held until scout E's
   Part 3 (the TypeScript printer is the profile's first customer).

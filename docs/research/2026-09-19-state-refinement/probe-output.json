@@ -1,0 +1,20 @@
+{
+  "kind": "finite pinned-rc112 probe, not a Lean theorem",
+  "gateObservations": {
+    "latch": {
+      "before": null,
+      "after": 1
+    },
+    "deferred": {
+      "before": 0,
+      "after": 0
+    }
+  },
+  "cancelScheduled": {
+    "scheduledBefore": 1,
+    "scheduledAfter": 0,
+    "resumed": 0
+  },
+  "mutableHashMapObjectKeys": 1,
+  "nativeMapObjectKeys": 2
+}

@@ -49,7 +49,7 @@ reads back.
 | `docs/core/ontology.md` | the frame: six sorts with one free object each, five arrow kinds with their obligations, coherence as a per-sort census; the probe of the "do now" rows; the Schema layer as the place to start over |
 | `docs/core/coherence-principle.md` | scout F: the principle in full, the seven squares, the arrows lacking obligations |
 | `docs/core/traversal-census.md` | the census numbers, every hand traversal by root, the converter design |
-| `docs/core/decisions.md` | every open decision, one list (55 rows; reviewed row by row against HEAD on 2026-09-18, a status column; rows 42–55 the milestone's rulings with recommendations) with the order |
+| `docs/core/decisions.md` | every open decision, one list (status by row; rows 44–45 record the approved world and rows 78–83 the state/refinement proposals) with the order |
 | `docs/core/language-cut.md` | the language as cut, every alphabet against Effect: terms (first order, twenty atoms, positional binders), types, values and errors, the 25 constructors, the absent modules; which gaps are profile rulings, which are cuts nobody decided |
 | `docs/core/api-surface.md` | the consolidated API and its awkward constructs |
 | `docs/core/lcnf-route.md` | what the LCNF lowering handles and refuses; the LLVM-shaped architecture |
@@ -59,6 +59,13 @@ reads back.
 | `AGENTS.md` | the operating rules and the vocabulary |
 
 ## Next, in order
+
+**Design review before implementation resumes (2026-09-19).** The completed STM and stateful-API
+research is reconciled in `docs/core/machine-state.md`, with the detailed contracts, retained
+finite controls and proposed D0–D7 sequence in `docs/research/2026-09-19-state-refinement-plan.md`.
+Rows 44–45 record the approved typed world; rows 78–83 remain proposals. The existing tooling
+branch is paused and has not been merged. Set the storage/observation contract before pinning
+the concrete obligation count; fast backends and new API families do not all block the milestone.
 
 0. **The tooling-first waves, 1 and 2 landed** (2026-09-19). Wave 1: `f8517fa7`, `dfd94366`,
    `9e20cf9b`, `ee88efe2`, rows 59–66 (`1f1cc8e3`), the policy re-seed (`ba5286d3`); the coherence
@@ -110,10 +117,12 @@ Scout G (third-party Lean tooling for this work) is out: `docs/research/2026-09-
 
 Row 39 (the Schema wipe) and row 41 (the typed-state invariant on the reference machine, the
 core milestone, no shortcuts; design `docs/research/2026-09-18-typed-state-plan.md`, scouted, §6) are
-ruled (2026-09-18); rows 34 and 40 are ruled out. Three rulings owed on row 41: `HandlesFit`
-(plan §6), the promise table `Π` and layer 0's home (plan §7, the composed graph
-`docs/research/2026-09-18-typed-state-composed-graph.md`), and a DI for the release's exit
-parameter (composed graph §9). Step 0 of the milestone is landed
+ruled (2026-09-18); rows 34 and 40 are ruled out. HandlesFit with Val.hasTy unchanged and
+per-cell Ref/Deferred typing, including memo cells, were approved on 2026-09-19 (rows 44–45).
+The release rule is implemented (DI-94/row 47), and layer 0 exists in Laws/Effects; its future
+upstream publication remains separate. Storage, observation, transactions and future API
+choices are proposals in rows 78–83, consolidated from the completed research.
+Step 0 of the milestone is landed
 (`docs/research/2026-09-18-position-census-design.md` §3a): the position census, the source
 table under a totality gate (74/74, two refusals named), layer 0, and the generated skeleton
 `Laws/Program/Typed/State.lean` parametric in the carrier predicates; owed: the obligation
