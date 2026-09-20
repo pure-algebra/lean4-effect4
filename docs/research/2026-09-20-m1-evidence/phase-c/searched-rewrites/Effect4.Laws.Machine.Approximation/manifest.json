@@ -1,0 +1,347 @@
+{
+  "module": "Effect4.Laws.Machine.Approximation",
+  "evidence_kind": "completed finite rewrite/build/census slice",
+  "phase_b_commit": "3f89307488835002c1cb9d8b3bcb9c1dcc1554a1",
+  "recorded_finished_utc": "2026-09-20T13:55:14.647410+00:00",
+  "rewritten_bodies": 14,
+  "source_path": "src/Effect4/Laws/Machine/Approximation.lean",
+  "source_before_sha256": "1f044de18dae45948afe626ea809d0a7935e27997dd6440a1f08d71114edc498",
+  "source_after_sha256": "2ab59138af460a2a069bb5617213585f23f52bc68ec910fb94e355c5ccc2eb1b",
+  "certified_headers_equal": true,
+  "only_certified_body_spans_changed": true,
+  "before": {
+    "tactic": "aesop",
+    "cap": 20000,
+    "instrument_closed_count": 14,
+    "trust_admissible_closed_count": 14,
+    "instrument_total_count": 119
+  },
+  "after": {
+    "tactic": "aesop (rule_sets := [Effect4.Stores])",
+    "cap": 20000,
+    "instrument_closed_count": 14,
+    "trust_admissible_closed_count": 14,
+    "instrument_total_count": 119
+  },
+  "comparison_limit": "After search may use a different rule-bank context; counts do not attribute any change solely to shorter proof bodies.",
+  "processes": [
+    {
+      "label": "patch-check",
+      "command": [
+        "git",
+        "apply",
+        "--check",
+        "/private/tmp/m1-tools/phase-c-searched-rewrites/patches/Effect4.Laws.Machine.Approximation.patch"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Machine.Approximation/patch-check.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "apply",
+      "command": [
+        "git",
+        "apply",
+        "/private/tmp/m1-tools/phase-c-searched-rewrites/patches/Effect4.Laws.Machine.Approximation.patch"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Machine.Approximation/apply.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        "src/Effect4/Laws/Machine/Approximation.lean"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Machine.Approximation/diff-check.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "build",
+      "command": [
+        "lake",
+        "build",
+        "Effect4.Laws.Machine.Approximation"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Machine.Approximation/build.log",
+      "log_sha256": "7826d632263be2ffe9a670f1d7fa39b60b9b1e76c161401182966f3399ad75be"
+    },
+    {
+      "label": "census",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Machine.Approximation/Census.lean"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Machine.Approximation/census.log",
+      "log_sha256": "05ddcde3359cc2f42ae2c9d8c39aa5da3beb18ff0a3d1e135f91ea1bdcda56cb"
+    }
+  ],
+  "fresh_build_line": "ℹ [193/193] Built Effect4.Laws.Machine.Approximation (9.7s)",
+  "local_gate_lines": [
+    "info: src/Effect4/Laws/Machine/Approximation.lean:1667:0: Effect4.Machine.M1OriginApproximation: 2 open, 0 proved, 2 total; ceiling 2"
+  ],
+  "headers": [
+    {
+      "name": "Effect4.Machine.drive_zero",
+      "header_sha256": "531a5aa241fe682f3b9e8ad98e2dfd78b3fba774a9cf68eac952b1ab9068c357",
+      "exact_before_after_header_match": true
+    },
+    {
+      "name": "Effect4.Machine.driveState_zero",
+      "header_sha256": "875492b63840866da9132b9d6fc5d23619f5fa31b72c3ead93acf10a423ef682",
+      "exact_before_after_header_match": true
+    },
+    {
+      "name": "Effect4.Machine.driveState_succ_cons",
+      "header_sha256": "7b2bdc1bf99d2f138faa1c50f92a2344c238621b536371b0ce9e6ac87e0ed6ca",
+      "exact_before_after_header_match": true
+    },
+    {
+      "name": "Effect4.Machine.drive_eq_driveState",
+      "header_sha256": "aaf381e72e2c7f40bd0b24e5d12cfb1e4541ec5ba67c61b44e1a1c583ed7b50e",
+      "exact_before_after_header_match": true
+    },
+    {
+      "name": "Effect4.Machine.stepDecision_eq_state",
+      "header_sha256": "0045dd7ae581fb634a06c79acd0de11815712e235c4b9862b1080196fc9f37fd",
+      "exact_before_after_header_match": true
+    },
+    {
+      "name": "Effect4.Machine.RunMachine.update_trace",
+      "header_sha256": "24feff4abd5780e3005178e786e401ba0c819ce60727bee7e569f18979fad284",
+      "exact_before_after_header_match": true
+    },
+    {
+      "name": "Effect4.Machine.RunMachine.halt_trace",
+      "header_sha256": "de795b0686627646816daa866a783373b25815a9c85a2d9d7e856e644575ef37",
+      "exact_before_after_header_match": true
+    },
+    {
+      "name": "Effect4.Machine.RunMachine.updateRace_trace",
+      "header_sha256": "45ab5728d637de23fd68cf58798342a4ce37471ed628d0a80be0864cf316ac85",
+      "exact_before_after_header_match": true
+    },
+    {
+      "name": "Effect4.Machine.RunMachine.arm_trace",
+      "header_sha256": "c9ecf399cdc04a610093f13bdafc11a7236ca110b5339726ea94a703bbb2469d",
+      "exact_before_after_header_match": true
+    },
+    {
+      "name": "Effect4.Machine.RunMachine.disarm_trace",
+      "header_sha256": "037003dbcc4c0b3f37714fdbca03e164b50f0d7823138025abdfbf7d3e23d698",
+      "exact_before_after_header_match": true
+    },
+    {
+      "name": "Effect4.Machine.ReplayResult.frontier_le",
+      "header_sha256": "34a285110f3ab6a5e5605fcee4f65d42b12612c2718c8775fa26d53f1923cd06",
+      "exact_before_after_header_match": true
+    },
+    {
+      "name": "Effect4.Machine.fire_eq_fireState",
+      "header_sha256": "3c8e2b099ba5e421a52e9aadbe40e9c97a9495009827756f35306041cc349b98",
+      "exact_before_after_header_match": true
+    },
+    {
+      "name": "Effect4.Machine.flushAll_eq_flushAllState",
+      "header_sha256": "03416d399ee575ed66e631654680bcd90b93eb11af01852c2e883ba823ee8332",
+      "exact_before_after_header_match": true
+    },
+    {
+      "name": "Effect4.Machine.flushRoot_eq_flushRootState",
+      "header_sha256": "75099c9d97fefbf0394e45653e0039cfa63d650229f073434f9d81a62d9fe456",
+      "exact_before_after_header_match": true
+    }
+  ],
+  "baseline_provenance": {
+    "census_results": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/results.json",
+    "census_results_sha256": "de504894001ca31ecd5fd195b09b513f415bb9bcb9987bb7c01c97249a93319e",
+    "census_run": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/run.json",
+    "census_run_sha256": "3420c3a7f77913db13b8c91a9f381f0a50b01f309f06cb390544e7bbd6d142b4",
+    "census_inputs_sha256": "a7f8f045a9e4f9bbee0cb5d93964bb1660b0379fea4c00dd415784da13744a34",
+    "prior_candidate_manifest": "/tmp/m1-tools/phase-c-rewrite-scope/rewrite-ready.json",
+    "prior_candidate_manifest_sha256": "adea2d7901d98a02a3dcdf006c3c7c1f365ee3c2334cbba07aba4f2a81a7eb18",
+    "prior_fragments_retained_unchanged": true,
+    "phase_b_scope_sha256": "aaa3de31fdaf2c26f62f7ebc179b7c6c00a7a91fa93223a880b43550583ef080",
+    "module_classification_sha256": "a71e5c5c72bf6b762f964c8a0691e5bc3202169585cdceed846d5d0a768d9a7a"
+  },
+  "runner_source_limit": "Runner source is packaged as currently retained; result pins its input manifest and census reader, not the runner script itself.",
+  "no_claims": [
+    "No compiler or git command run by packager",
+    "No full-tree gate or task completion inferred",
+    "No live source/current HEAD revalidation",
+    "No other module inspected"
+  ],
+  "members": [
+    {
+      "path": "baseline/Census.lean",
+      "bytes": 172,
+      "sha256": "011cf02f4ab23295ca9bd4665deaa1819abbfb0b674cbcf6969eb19a1ff084c0",
+      "source": "/private/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/013-Effect4.Laws.Machine.Approximation.lean"
+    },
+    {
+      "path": "baseline/job.json",
+      "bytes": 1073,
+      "sha256": "2f1c3406e50861529b5d78dd2cf046e84572aa5afb4c644010e2ec60f8a9d7ef",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "baseline/module-result.json",
+      "bytes": 5009,
+      "sha256": "fddfcfd571096f550e23a0ef910b2e45b8d4763264745bbb5acf9866e5732000",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "baseline/module.log",
+      "bytes": 1007,
+      "sha256": "98aa0babfc13d6e189fada74de773e00ec3a5215edb8c3acc46f408537cd162d",
+      "source": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Machine.Approximation.log"
+    },
+    {
+      "path": "baseline/process.log",
+      "bytes": 1007,
+      "sha256": "98aa0babfc13d6e189fada74de773e00ec3a5215edb8c3acc46f408537cd162d",
+      "source": "/private/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/013-Effect4.Laws.Machine.Approximation.log"
+    },
+    {
+      "path": "provenance/package-searched-rewrite.py",
+      "bytes": 14872,
+      "sha256": "44087abf80c6b344b3dabbc559168e83b3bd60070cfc0e8c462b5bcc684677da",
+      "source": "/private/tmp/m1-tools/package-searched-rewrite.py"
+    },
+    {
+      "path": "provenance/run-one.py",
+      "bytes": 9697,
+      "sha256": "c215f030938b56b2e0c4e7fa2557a8799207f834f8ed5f83ca41f9dc91320e14",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/run-one.py"
+    },
+    {
+      "path": "rewrite/certified-candidates.json",
+      "bytes": 30909,
+      "sha256": "45ab8774e505e35b2338f8029471cce2ae69f61ddedf61e390f56ae9685d06ea",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "rewrite/certified-comparison.json",
+      "bytes": 3364,
+      "sha256": "f6a2c4e31ea56077aaf875be732c4857ea5a72ed761bd5a61522c79ef9ae5235",
+      "source": "/tmp/m1-tools/phase-c-rewrite-scope/portable-certified/comparison.json"
+    },
+    {
+      "path": "rewrite/change.patch",
+      "bytes": 6396,
+      "sha256": "a7cd4e92d9b2658e13798ba585ec77a44b40e137a32a437f64d40a08b9604c94",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/patches/Effect4.Laws.Machine.Approximation.patch"
+    },
+    {
+      "path": "rewrite/header-comparisons.json",
+      "bytes": 2731,
+      "sha256": "213622ae02172f3737396bc4b149ad0fa7e6b793ce29141562ff7054078edb3b",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "rewrite/master-manifest.json",
+      "bytes": 8341,
+      "sha256": "d7a25d4fa05e6ac890e5aa15950e32f12332ff9d28c35c42045bd56ee9acc2b6",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/manifest.json"
+    },
+    {
+      "path": "rewrite/module.json",
+      "bytes": 17043,
+      "sha256": "f5711f4ff781e841eee78a2009e40b46051c8a8314c2ec34a95ade4c5bff53a2",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/modules/Effect4.Laws.Machine.Approximation.json"
+    },
+    {
+      "path": "run/Census.lean",
+      "bytes": 217,
+      "sha256": "7a607c89879a46fe977d5028ca9769a9896cc96b7c3e71b22090907637ddc5ba",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Machine.Approximation/Census.lean"
+    },
+    {
+      "path": "run/apply.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Machine.Approximation/apply.log"
+    },
+    {
+      "path": "run/build.log",
+      "bytes": 413,
+      "sha256": "7826d632263be2ffe9a670f1d7fa39b60b9b1e76c161401182966f3399ad75be",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Machine.Approximation/build.log"
+    },
+    {
+      "path": "run/census.json",
+      "bytes": 4277,
+      "sha256": "11ba5a80821b810b2ec6ff1bc7891299ea54a0dc20f9dc0518cde8c77d974be4",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Machine.Approximation/census.json"
+    },
+    {
+      "path": "run/census.log",
+      "bytes": 1007,
+      "sha256": "05ddcde3359cc2f42ae2c9d8c39aa5da3beb18ff0a3d1e135f91ea1bdcda56cb",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Machine.Approximation/census.log"
+    },
+    {
+      "path": "run/diff-check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Machine.Approximation/diff-check.log"
+    },
+    {
+      "path": "run/patch-check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Machine.Approximation/patch-check.log"
+    },
+    {
+      "path": "run/result.json",
+      "bytes": 4110,
+      "sha256": "f74a2c3fd70683a5b02dc59900a95e3fa795eb3f55909e48d72d94d8be8a28cf",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Machine.Approximation/result.json"
+    },
+    {
+      "path": "sources/after/src/Effect4/Laws/Machine/Approximation.lean",
+      "bytes": 80387,
+      "sha256": "2ab59138af460a2a069bb5617213585f23f52bc68ec910fb94e355c5ccc2eb1b",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/after/src/Effect4/Laws/Machine/Approximation.lean"
+    },
+    {
+      "path": "sources/before/src/Effect4/Laws/Machine/Approximation.lean",
+      "bytes": 80317,
+      "sha256": "1f044de18dae45948afe626ea809d0a7935e27997dd6440a1f08d71114edc498",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/before/src/Effect4/Laws/Machine/Approximation.lean"
+    }
+  ],
+  "archive": {
+    "path": "raw.tar.gz",
+    "sha256": "a3861dc7d1c47accb7b3fb084557f2f60ee0bd3e8b6f9278bf6dba6d397d37f2",
+    "members": 23,
+    "bytes": 49905,
+    "lossless_readback_verified": true
+  }
+}

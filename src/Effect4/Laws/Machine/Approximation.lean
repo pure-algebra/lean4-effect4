@@ -100,7 +100,7 @@ theorem drive_succ_cons (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel
   · simp [drive, driveState, hs]
 
 theorem drive_zero (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
-    (cmds : List (Cmd ν σ β ε δ ι α κ)) : drive interp 0 m cmds = m := rfl
+    (cmds : List (Cmd ν σ β ε δ ι α κ)) : drive interp 0 m cmds = m := by aesop
 
 theorem drive_nil (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) : drive interp fuel m [] = m := by
@@ -118,7 +118,7 @@ theorem drive_stuck (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : N
 
 theorem driveState_zero (interp : RunInterp ν σ β ε δ ι α χ St κ)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (cmds : List (Cmd ν σ β ε δ ι α κ)) :
-    driveState interp 0 m cmds = (m, cmds) := rfl
+    driveState interp 0 m cmds = (m, cmds) := by aesop
 
 theorem driveState_nil (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) : driveState interp fuel m [] = (m, []) := by
@@ -129,8 +129,7 @@ theorem driveState_succ_cons (interp : RunInterp ν σ β ε δ ι α χ St κ) 
     (rest : List (Cmd ν σ β ε δ ι α κ)) :
     driveState interp (fuel + 1) m (cmd :: rest) =
       if m.stuck.isSome then (m, cmd :: rest)
-      else driveState interp fuel (driveStep interp m cmd rest).1 (driveStep interp m cmd rest).2 :=
-  rfl
+      else driveState interp fuel (driveStep interp m cmd rest).1 (driveStep interp m cmd rest).2 := by aesop
 
 /-- A stuck machine keeps its commands, whatever the fuel. -/
 theorem driveState_stuck (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
@@ -146,7 +145,7 @@ theorem driveState_stuck (interp : RunInterp ν σ β ε δ ι α χ St κ) (fue
 /-- `drive` is the machine half of `driveState`. -/
 theorem drive_eq_driveState (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (cmds : List (Cmd ν σ β ε δ ι α κ)) :
-    drive interp fuel m cmds = (driveState interp fuel m cmds).1 := rfl
+    drive interp fuel m cmds = (driveState interp fuel m cmds).1 := by aesop
 
 /-- The splitting law: fuel `a + b` is fuel `a`, then fuel `b` on what fuel `a` left. The
 corner cases compose because fuel `0` leaves everything, no command leaves nothing, and a
@@ -171,7 +170,7 @@ theorem driveState_add (interp : RunInterp ν σ β ε δ ι α χ St κ) (a b :
 /-- A decision's public machine is the machine in its receipt. -/
 theorem stepDecision_eq_state (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (decision : RunDecision ν σ β ε δ ι α) :
-    stepDecision interp fuel m decision = (stepDecisionState interp fuel m decision).1 := rfl
+    stepDecision interp fuel m decision = (stepDecisionState interp fuel m decision).1 := by aesop
 
 /-- The splitting law on `drive`. -/
 theorem drive_add (interp : RunInterp ν σ β ε δ ι α χ St κ) (a b : Nat)
@@ -235,7 +234,7 @@ theorem emit_trace (m : RunMachine ν σ β ε δ ι α χ St) (ev : List (RunEv
   | cons _ _ => rfl
 
 theorem update_trace (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) :
-    (m.update f).trace = m.trace := rfl
+    (m.update f).trace = m.trace := by aesop
 
 theorem modify_trace (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId)
     (k : RunFiber ν σ β ε δ ι α χ → RunFiber ν σ β ε δ ι α χ) : (m.modify id k).trace = m.trace := by
@@ -243,16 +242,16 @@ theorem modify_trace (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId)
   split <;> rfl
 
 theorem halt_trace (m : RunMachine ν σ β ε δ ι α χ St) (why : Stuck) :
-    (m.halt why).trace = m.trace := rfl
+    (m.halt why).trace = m.trace := by aesop
 
 theorem updateRace_trace (m : RunMachine ν σ β ε δ ι α χ St) (r : Race ν σ β ε δ ι α) :
-    (m.updateRace r).trace = m.trace := rfl
+    (m.updateRace r).trace = m.trace := by aesop
 
 theorem arm_trace (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId) :
-    (m.arm owner).trace = m.trace := rfl
+    (m.arm owner).trace = m.trace := by aesop
 
 theorem disarm_trace (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId) :
-    (m.disarm owner).trace = m.trace := rfl
+    (m.disarm owner).trace = m.trace := by aesop
 
 /-- A machine-first tuple whose machine extends `m`: the shape every helper that returns a
 machine beside other things has, so a hop through it is one lemma. -/
@@ -823,7 +822,7 @@ theorem le_antisymm_terminal {a b : ReplayResult ν σ β ε δ ι α χ St κ �
 /-- A frontier is below anything that extends it. -/
 theorem frontier_le {why : Exhaustion} {m : RunMachine ν σ β ε δ ι α χ St κ φ η}
     {b : ReplayResult ν σ β ε δ ι α χ St κ φ η}
-    (h : Extends m b.machine) : le (frontier why m) b := h
+    (h : Extends m b.machine) : le (frontier why m) b := by aesop
 
 end ReplayResult
 
@@ -879,7 +878,7 @@ theorem fireTasks_stopped (interp : RunInterp ν σ β ε δ ι α χ St κ) (fu
 
 theorem fire_eq_fireState (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (owner : FiberId) :
-    stepDecision.fire interp fuel m owner = (fireState interp fuel m owner).1 := rfl
+    stepDecision.fire interp fuel m owner = (fireState interp fuel m owner).1 := by aesop
 
 /-- Once a task's loop did not settle, the receipt stays false. -/
 theorem fireTasks_false (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) (owner : FiberId)
@@ -927,7 +926,7 @@ theorem fire_stable (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : N
 
 theorem flushAll_eq_flushAllState (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel rounds : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) :
-    stepDecision.flushAll interp fuel rounds m = (flushAllState interp fuel rounds m).1 := rfl
+    stepDecision.flushAll interp fuel rounds m = (flushAllState interp fuel rounds m).1 := by aesop
 
 /-- A flush that stopped on its own is the same flush at every larger fuel and round count. -/
 theorem flushAllState_stable (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel rounds : Nat)
@@ -971,7 +970,7 @@ theorem flushAll_stable (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel
 
 theorem flushRoot_eq_flushRootState (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
     (root : FiberId) (rounds : Nat) (m : RunMachine ν σ β ε δ ι α χ St κ φ η) :
-    stepDecision.flushRoot interp fuel root rounds m = (flushRootState interp fuel root rounds m).1 := rfl
+    stepDecision.flushRoot interp fuel root rounds m = (flushRootState interp fuel root rounds m).1 := by aesop
 
 /-- An advance whose fuel sufficed is the same advance, receipt included, at every larger fuel
 and fire budget (the timer, A4): each fire's drive was settled and each flush's receipt true,
