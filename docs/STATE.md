@@ -94,6 +94,16 @@ reads back.
    positions and 95 source rows: 13 captured-name positions were previously skipped. The
    new rows use the existing stack, pending, journal and hook sources. Focused controls:
    `Test/Audit/PositionAnalysis.lean`; receipt `docs/research/2026-09-19-typed-state-tooling-receipt.md`.
+   Direct declaration generation, structural frames and the shared evidence API now accompany
+   the scanner repair. `#typed_state` replaces the source-file writer; the named TypedState
+   bank has a red control. `Typed/Frames.lean` generates 60 checked frame rules: 159 clauses
+   are reused and 40 are explicit premises across those rules. `ProofGraph` owns theorem
+   references, search and the obligation join for Laws and Conform. The declaration-backed
+   `#typed_state_obligations` checker rejects missing/stale entries and exceeded ceilings;
+   its executable controls pass. No new TSV or generated source file is required.
+   **These are structural tools, not the completed machine-preservation ledger.** Deriving
+   the transition-specific goals and pinning their open count still needs the concrete
+   predicate/world instantiation. The 40 premises are not a count of those future proofs.
    Still open from the plan: 1.11a span pinning, 4.4, 4.8/4.9 and Q4–Q6 with seat I's survey;
    from Tier 3: 3.2, 3.3, 3.4, 3.7. L2–L7 resume after Tier 3.
 1. **The fold work stops here** (owner, 2026-09-18): the checker, the term typer and the
@@ -115,14 +125,14 @@ Scout G (third-party Lean tooling for this work) is out: `docs/research/2026-09-
 
 Row 39 (the Schema wipe) and row 41 (the typed-state invariant on the reference machine, the
 core milestone, no shortcuts; design `docs/research/2026-09-18-typed-state-plan.md`, scouted, §6) are
-ruled (2026-09-18); rows 34 and 40 are ruled out. Three rulings owed on row 41: `HandlesFit`
-(plan §6), the promise table `Π` and layer 0's home (plan §7, the composed graph
-`docs/research/2026-09-18-typed-state-composed-graph.md`), and a DI for the release's exit
-parameter (composed graph §9). Step 0 of the milestone is landed
+ruled (2026-09-18); rows 34 and 40 are ruled out. The `HandlesFit` and per-cell promise-table model remain owner decisions on row 41
+(plan §§6–7, `docs/research/2026-09-18-typed-state-composed-graph.md`). The implementation
+already places layer 0 in `Laws/Effects/Protocol.lean`. The release parameter is settled
+and implemented by DI-94; its old "DI owed" label was stale. Step 0 of the milestone is landed
 (`docs/research/2026-09-18-position-census-design.md` §3a): the position census, the source
 table under a totality gate (87/87, two refusals named), layer 0, and the generated skeleton
-`Laws/Program/Typed/State.lean` parametric in the carrier predicates; owed: the obligation
-ledger and the generated group wiring. Open, in the order `decisions.md`'s last section
+`Laws/Program/Typed/State.lean` parametric in the carrier predicates; the source-file writer is now retired and `make check-typed-state` owns the focused group.
+Owed: the concrete transition-obligation set and its pinned count. Open, in the order `decisions.md`'s last section
 gives: group D (26–29, 32, 30's `compileEff`), then group B (14, 15) and 2, 7, 10, 11; then 1
 with 3, and 19–22. Row 5 has the restatement `ontology.md` §2 gives.
 
