@@ -53,6 +53,7 @@ reads back.
 | `docs/core/language-cut.md` | the language as cut, every alphabet against Effect: terms (first order, twenty atoms, positional binders), types, values and errors, the 25 constructors, the absent modules; which gaps are profile rulings, which are cuts nobody decided |
 | `docs/core/api-surface.md` | the consolidated API and its awkward constructs |
 | `docs/core/lcnf-route.md` | what the LCNF lowering handles and refuses; the LLVM-shaped architecture |
+| `docs/core/machine-state.md` | **the last design push (2026-09-19)**: the state the machine holds, the five logs and what each is for, the promise store, five defects and the five changes that repair them, transactions without a journal, and the route by which the rest of Effect's stateful modules land. Evidence: the stores map, the STM scout and the stateful-API catalogue, all three force-added under `docs/research/` |
 | `docs/DESIGN-ISSUES.md` | the DI register (rulings are made only when written here) |
 | `docs/ARCHITECTURE.md`, `docs/GENERATED.md`, `docs/DESIGN-BASIS.md`, `docs/DESIGN-MAP.md`, `docs/RUNTIME-COVERAGE.md` | the tree, the generated groups, the DB register, the earlier five-layer map (superseded in substance by `ontology.md` §5), the runtime census |
 | `AGENTS.md` | the operating rules and the vocabulary |
