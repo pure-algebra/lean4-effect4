@@ -565,3 +565,12 @@ statement headers. Both narrow builds pass; its already-closed origin seat drops
 from ceiling 1 to 0. The final census remains 82/192 with the same closed names
 and allowed axiom sets. This is proof-body cleanup, not new semantic coverage;
 the changed search environments are recorded in phase-c/searched-agreement.
+
+
+The reference-kernel slice passes: the four new projection/length/predicate statements
+and one optional-write-back helper are proved. The aggregate arena gate is now
+14/14 at zero; the helper gate is 1/1 at zero. The old eight theorem bodies and
+the four frozen statements are unchanged. All 18 printed axioms are allowed.
+Both final census lanes report 0/13 against the earlier 0/8; this module's success
+is its checked proofs, not an increased search count. The finite-step Projects
+instance remains in Refinement. Evidence is retained in phase-c/refkernel.

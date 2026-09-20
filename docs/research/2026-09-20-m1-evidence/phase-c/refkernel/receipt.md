@@ -1,0 +1,11 @@
+Phase C RefKernel slice
+
+The final narrow build and audit return 0. The aggregate Arena ledger now reports 14 proved and zero open (ten imported seats and four local seats); the new helper ledger reports one proved and zero open. Both ceilings are zero. The four original local statements and eight existing theorem bodies are unchanged. The five live wanted markers were removed only after the candidate compiled.
+
+One helper projects optional write-back to the existing list operation. The step projection then supports the list special case and transports the existing list size and predicate laws to the arena. No second kernel-case proof was introduced. The generic and list step/write-back definitions remain opaque in the shared bank; needed normalization is local. The five reusable laws are registered in Effect4.Stores. The former skeleton comment now describes the actual projection and derived laws.
+
+The final audit prints 18 proof dependencies: all 13 public module theorems and five checked ledger terms. Every dependency is within [propext, Quot.sound]; getD_keeps has no axioms. Both final 20,000-heartbeat census lanes honestly report 0/13, against the earlier plain-aesop 0/8 baseline. The five new declarations change the denominator. No search-closure increase or extra searched-proof rewrite is claimed for this module; the checked proofs and zero ledgers are separate evidence.
+
+The lossless archive includes the two failed coordinator probes, both successful build candidates and logs, the helper wanted snapshot, original and final sources, the final census/axiom driver and log, baseline row/log, dependency-refresh log, and scoped source diff. Exact confirmed commands and outcomes are recorded in manifest.json. The dependency refresh returned 0 according to the coordinator, but its exact command is not reconstructed. Every archive member was read back and compared byte-for-byte. The final source matches the gate-build snapshot; the original source matches Phase B commit 3f893074.
+
+Frozen-statement comparison, forbidden-tactic checks, and scoped git diff --check pass. Packaging ran no compiler and changed no live source. No staging, commit, or downstream build was performed. Root owns the compiler and commit. Ready to copy under docs/research/2026-09-20-m1-evidence/phase-c/refkernel.

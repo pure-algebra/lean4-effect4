@@ -1,0 +1,238 @@
+{
+  "phase_b_base": "3f89307488835002c1cb9d8b3bcb9c1dcc1554a1",
+  "packaging_head": "0091b2baeb41185e35a504725bf4b90b00e6699d",
+  "scope": "RefKernel four frozen seats and one optional write-back projection helper; no downstream or whole-task completion claim.",
+  "final_source_sha256": "2a4efaa5e154c8f3be50da81c62143f5cb566b7719e3d5243b39ddcffa358628",
+  "frozen_original_statements_unchanged": 4,
+  "original_eight_theorem_bodies_unchanged": true,
+  "commands": [
+    {
+      "id": "initial-probe-1",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -DwarningAsError=true /tmp/m1-phase-c/probes/RefKernelRound1.lean > /tmp/m1-phase-c/probes/RefKernelRound1.log 2>&1",
+      "exit_code": 1,
+      "log": "probes/RefKernelRound1.log",
+      "source": "probes/RefKernelRound1.lean",
+      "provenance": "Exact command and exit confirmed by coordinator."
+    },
+    {
+      "id": "initial-probe-2",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -DwarningAsError=true /tmp/m1-phase-c/probes/RefKernelRound2.lean > /tmp/m1-phase-c/probes/RefKernelRound2.log 2>&1",
+      "exit_code": 1,
+      "log": "probes/RefKernelRound2.log",
+      "source": "probes/RefKernelRound2.lean",
+      "provenance": "Exact command and exit confirmed by coordinator."
+    },
+    {
+      "id": "build-1",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.RefKernel > /tmp/m1-phase-c/refkernel/build-1.log 2>&1",
+      "exit_code": 0,
+      "log": "scratch/refkernel/build-1.log",
+      "source": "scratch/refkernel/RefKernel-attempt-1.lean",
+      "provenance": "Exact command and exit confirmed by coordinator."
+    },
+    {
+      "id": "build-2",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.RefKernel > /tmp/m1-phase-c/refkernel/build-2-gates.log 2>&1",
+      "exit_code": 0,
+      "log": "scratch/refkernel/build-2-gates.log",
+      "source": "scratch/refkernel/RefKernel-attempt-2.lean",
+      "provenance": "Exact command and exit confirmed by coordinator."
+    },
+    {
+      "id": "final-census-axioms",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true /tmp/m1-phase-c/refkernel/After.lean > /tmp/m1-phase-c/refkernel/after-census-axioms.log 2>&1",
+      "exit_code": 0,
+      "log": "scratch/refkernel/after-census-axioms.log",
+      "driver": "scratch/refkernel/After.lean",
+      "source": "scratch/refkernel/RefKernel-attempt-2.lean",
+      "provenance": "Exact command and exit confirmed by coordinator; completed session80462."
+    }
+  ],
+  "dependency_refresh": {
+    "exit_code": 0,
+    "log": "logs/arena-dependency-refresh.log",
+    "provenance": "Coordinator confirmed refresh exit 0; exact invocation not separately recorded."
+  },
+  "gates": [
+    {
+      "namespace": "Effect4.Machine.ArenaObligations",
+      "open": 0,
+      "proved": 14,
+      "total": 14,
+      "ceiling": 0,
+      "scope": "10 imported Arena seats plus 4 local RefKernel seats."
+    },
+    {
+      "namespace": "Effect4.Machine.M1.RefKernelSupport",
+      "open": 0,
+      "proved": 1,
+      "total": 1,
+      "ceiling": 0
+    }
+  ],
+  "rules": {
+    "bank": "Effect4.Stores",
+    "norm_simp": [
+      "Effect4.Machine.toList_writeBackA",
+      "Effect4.Machine.toList_refStepOf",
+      "Effect4.Machine.refStepOfA_list"
+    ],
+    "safe_forward": [
+      "Effect4.Machine.refStepOfA_size",
+      "Effect4.Machine.refStepOfA_keeps"
+    ],
+    "note": "Generic step/write-back and list step/write-back definitions remain opaque in the shared bank. Projection normalization is local."
+  },
+  "census": {
+    "cap": 20000,
+    "before": {
+      "raw": 0,
+      "admissible": 0,
+      "total": 8,
+      "tactic": "aesop",
+      "evidence": "census/before-row.json"
+    },
+    "final_plain": {
+      "raw": 0,
+      "admissible": 0,
+      "total": 13
+    },
+    "final_stores": {
+      "raw": 0,
+      "admissible": 0,
+      "total": 13
+    },
+    "note": "No increase or searched-proof rewrite claimed. Five added theorem declarations expand the population. Separate compiled proofs and zero ledgers supply evidence for the new laws.",
+    "final_log": "scratch/refkernel/after-census-axioms.log"
+  },
+  "axioms": {
+    "printed_declarations": 18,
+    "allowed_union": [
+      "Quot.sound",
+      "propext"
+    ],
+    "all_allowed": true,
+    "axiom_free_declarations": [
+      "Effect4.Machine.RefKernel.getD_keeps"
+    ],
+    "checked_on_final_source": true
+  },
+  "wanted_evidence": {
+    "original": "scratch/refkernel/RefKernel-before.lean",
+    "new_helper": "scratch/refkernel/RefKernel-helper-wanted.lean",
+    "root_initial_helper_probe": "probes/RefKernelRound2.lean",
+    "new_helper_count": 1,
+    "live_wanted_remaining": 0
+  },
+  "files": [
+    {
+      "member": "census/before-module.log",
+      "source": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Machine.RefKernel.log",
+      "bytes": 107,
+      "sha256": "84226dd65a3b14588993f5c7bfd4275518915a6acb63a591555ccfcbe6c59451"
+    },
+    {
+      "member": "census/before-row.json",
+      "source": "Selected exact row from portable before-fill results.json; JSON formatting only.",
+      "bytes": 1428,
+      "sha256": "a3d4eacc292f98e8a9921e89dc5c45ecfa1d2a4b4e444f00384c570cbbca0617"
+    },
+    {
+      "member": "changes.patch",
+      "source": "Scoped final-source delta against Phase B commit 3f89307488835002c1cb9d8b3bcb9c1dcc1554a1",
+      "bytes": 5595,
+      "sha256": "0bb9f556bb9946a234930a3aab4051c117ea4992a33944c70d79c7e656e95c0a"
+    },
+    {
+      "member": "final/src/Effect4/Laws/Machine/RefKernel.lean",
+      "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Machine/RefKernel.lean",
+      "bytes": 13273,
+      "sha256": "2a4efaa5e154c8f3be50da81c62143f5cb566b7719e3d5243b39ddcffa358628"
+    },
+    {
+      "member": "logs/arena-dependency-refresh.log",
+      "source": "/tmp/m1-phase-c-refkernel-arena-dependency.log",
+      "bytes": 393,
+      "sha256": "73222bf47cea7f818ef62efc0b5815eefa5f6abf746cff25e739db0edb209c26"
+    },
+    {
+      "member": "probes/RefKernelRound1.lean",
+      "source": "/tmp/m1-phase-c/probes/RefKernelRound1.lean",
+      "bytes": 1275,
+      "sha256": "190efaa3088b17ad77ec66c5ba5ab06c9153764bb45996c9531de5f3c3265534"
+    },
+    {
+      "member": "probes/RefKernelRound1.log",
+      "source": "/tmp/m1-phase-c/probes/RefKernelRound1.log",
+      "bytes": 1630,
+      "sha256": "d52b0803e6af1d6dbd1f2b17ddd0762d18b2642b937652cf133481806c68068a"
+    },
+    {
+      "member": "probes/RefKernelRound2.lean",
+      "source": "/tmp/m1-phase-c/probes/RefKernelRound2.lean",
+      "bytes": 2117,
+      "sha256": "203454015d4e4b1162baec14fe25fb62035a3be80bbc3b6eb22643738175d06d"
+    },
+    {
+      "member": "probes/RefKernelRound2.log",
+      "source": "/tmp/m1-phase-c/probes/RefKernelRound2.log",
+      "bytes": 3482,
+      "sha256": "5b8555a742f40ebc2f77f1b5f8b8660d6f70284236ec40ca7d71a94cf0eae1c8"
+    },
+    {
+      "member": "scratch/refkernel/After.lean",
+      "source": "/tmp/m1-phase-c/refkernel/After.lean",
+      "bytes": 1236,
+      "sha256": "be02150907732c9778ee2ad3aed811931f3ca19bdc94d28cd8ac9e945a4700c1"
+    },
+    {
+      "member": "scratch/refkernel/RefKernel-attempt-1.lean",
+      "source": "/tmp/m1-phase-c/refkernel/RefKernel-attempt-1.lean",
+      "bytes": 13139,
+      "sha256": "8d1a63401511555ef6b7c38a4873ec6b9453784b3ca558504938ebfcd3599899"
+    },
+    {
+      "member": "scratch/refkernel/RefKernel-attempt-2.lean",
+      "source": "/tmp/m1-phase-c/refkernel/RefKernel-attempt-2.lean",
+      "bytes": 13273,
+      "sha256": "2a4efaa5e154c8f3be50da81c62143f5cb566b7719e3d5243b39ddcffa358628"
+    },
+    {
+      "member": "scratch/refkernel/RefKernel-before.lean",
+      "source": "/tmp/m1-phase-c/refkernel/RefKernel-before.lean",
+      "bytes": 9789,
+      "sha256": "b6f4b674664ed889afdc8b04753f9397aa5868033c138912814a9306e00e8a82"
+    },
+    {
+      "member": "scratch/refkernel/RefKernel-helper-wanted.lean",
+      "source": "/tmp/m1-phase-c/refkernel/RefKernel-helper-wanted.lean",
+      "bytes": 10117,
+      "sha256": "708268f79a023cdacf7e536b9169110643231c511d89de4c6719ef82d817aa77"
+    },
+    {
+      "member": "scratch/refkernel/after-census-axioms.log",
+      "source": "/tmp/m1-phase-c/refkernel/after-census-axioms.log",
+      "bytes": 1689,
+      "sha256": "4688915b297daeeec1594102cae06cb14d815d892df7d68540dbbcbf8647a638"
+    },
+    {
+      "member": "scratch/refkernel/build-1.log",
+      "source": "/tmp/m1-phase-c/refkernel/build-1.log",
+      "bytes": 393,
+      "sha256": "96ec2b82893248adbf850d80d68c6ee23a7709cfcb13773a59ce9e633d1fd65a"
+    },
+    {
+      "member": "scratch/refkernel/build-2-gates.log",
+      "source": "/tmp/m1-phase-c/refkernel/build-2-gates.log",
+      "bytes": 646,
+      "sha256": "0903965574d16e8cf567bcf373589c56d19e1cdf2f545621b5888fa749211c78"
+    }
+  ],
+  "archive": {
+    "path": "raw.tar.gz",
+    "members": 17,
+    "bytes": 7542,
+    "sha256": "1dba84ca4e1978104b21d0acdd90f6b610bda5474ebee05ee1cd10edf2a51870",
+    "readback": "All members read back and compared byte-for-byte to source bytes."
+  }
+}

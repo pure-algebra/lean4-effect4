@@ -164,7 +164,8 @@ end Effect4.Machine
 -- BEGIN M1 PHASE B RefKernel
 namespace Effect4.Machine
 
-/-! Phase B candidate only: unbuilt statement skeleton, no proof admission. -/
+/-! The arena kernel projects to the list kernel; its size and predicate laws
+therefore follow from the existing list-kernel laws. -/
 
 /-- Same optional write-back as the existing list kernel, at an arbitrary carrier. -/
 def writeBackA {σ α : Type} [Arena σ α] (s : σ) (cell : RefKey) : Option α → σ
@@ -182,26 +183,97 @@ def toList_refStepOf {σ : Type} [Arena σ Val] [LawfulArena σ Val]
     (cell : RefKey) (k : RefKernel) (s : σ) : ProofGraph.Obligation (
     (refStepOfA cell k s).map (Prod.map id Arena.toList) =
       refStepOf cell k (Arena.toList s)) := ⟨⟩
-#proof_wanted toList_refStepOf
 
 def refStepOfA_list (cell : RefKey) (k : RefKernel) (xs : List Val) :
     ProofGraph.Obligation (refStepOfA cell k xs = refStepOf cell k xs) := ⟨⟩
-#proof_wanted refStepOfA_list
 
 def refStepOfA_size {σ : Type} [Arena σ Val] [LawfulArena σ Val]
     {cell : RefKey} {k : RefKernel} {s s' : σ} {a : Val}
     (_h : refStepOfA cell k s = some (a, s')) :
     ProofGraph.Obligation (Arena.size s' = Arena.size s) := ⟨⟩
-#proof_wanted refStepOfA_size
 
 def refStepOfA_keeps {σ : Type} [Arena σ Val] [LawfulArena σ Val]
     {P Q : Val → Prop} {cell : RefKey} {k : RefKernel} {s s' : σ} {a : Val}
     (_hheap : ∀ i v, Arena.peek s i = some v → P v)
     (_hk : RefKernel.Keeps P Q k) (_h : refStepOfA cell k s = some (a, s')) :
     ProofGraph.Obligation (Q a ∧ ∀ i v, Arena.peek s' i = some v → P v) := ⟨⟩
-#proof_wanted refStepOfA_keeps
 
 end ArenaObligations
+
+namespace M1.RefKernelSupport
+
+def toList_writeBackA {σ : Type} [Arena σ Val] [LawfulArena σ Val]
+    (s : σ) (cell : RefKey) (next : Option Val) : ProofGraph.Obligation
+    (Arena.toList (writeBackA s cell next) = refWriteBack (Arena.toList s) cell next) := ⟨⟩
+
+end M1.RefKernelSupport
+
+/-- Projecting the optional write-back gives the existing list write-back. -/
+theorem toList_writeBackA {σ : Type} [Arena σ Val] [LawfulArena σ Val]
+    (s : σ) (cell : RefKey) (next : Option Val) :
+    Arena.toList (writeBackA s cell next) = refWriteBack (Arena.toList s) cell next := by
+  aesop (rule_sets := [Effect4.Stores])
+    (add norm simp [writeBackA, refWriteBack, refPoke])
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] toList_writeBackA
+
+/-- The arena kernel projects to the existing list kernel. -/
+theorem toList_refStepOf {σ : Type} [Arena σ Val] [LawfulArena σ Val]
+    (cell : RefKey) (k : RefKernel) (s : σ) :
+    (refStepOfA cell k s).map (Prod.map id Arena.toList) =
+      refStepOf cell k (Arena.toList s) := by
+  aesop (rule_sets := [Effect4.Stores])
+    (add norm simp [refStepOfA, refStepOf, refPeek, Arena.peek_toList,
+      Function.comp_def, Prod.map])
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] toList_refStepOf
+
+/-- The generic kernel on lists is the existing list kernel. -/
+theorem refStepOfA_list (cell : RefKey) (k : RefKernel) (xs : List Val) :
+    refStepOfA cell k xs = refStepOf cell k xs := by
+  have project : (Arena.toList : List Val → List Val) = id := by
+    funext values
+    aesop (rule_sets := [Effect4.Stores])
+  simpa only [project, Prod.map_id, Option.map_id_apply, id_eq] using
+    (toList_refStepOf cell k xs)
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] refStepOfA_list
+
+/-- The projected list step supplies the arena step's size law. -/
+theorem refStepOfA_size {σ : Type} [Arena σ Val] [LawfulArena σ Val]
+    {cell : RefKey} {k : RefKernel} {s s' : σ} {a : Val}
+    (h : refStepOfA cell k s = some (a, s')) : Arena.size s' = Arena.size s := by
+  have projected : refStepOf cell k (Arena.toList s) = some (a, Arena.toList s') := by
+    rw [← toList_refStepOf, h]
+    rfl
+  have lengths := refStepOf_length projected
+  aesop (rule_sets := [Effect4.Stores])
+
+attribute [aesop safe forward (rule_sets := [Effect4.Stores])] refStepOfA_size
+
+/-- The projected list step supplies the arena step's cell and answer predicates. -/
+theorem refStepOfA_keeps {σ : Type} [Arena σ Val] [LawfulArena σ Val]
+    {P Q : Val → Prop} {cell : RefKey} {k : RefKernel} {s s' : σ} {a : Val}
+    (hheap : ∀ i v, Arena.peek s i = some v → P v)
+    (hk : RefKernel.Keeps P Q k) (h : refStepOfA cell k s = some (a, s')) :
+    Q a ∧ ∀ i v, Arena.peek s' i = some v → P v := by
+  have projected : refStepOf cell k (Arena.toList s) = some (a, Arena.toList s') := by
+    rw [← toList_refStepOf, h]
+    rfl
+  have cells : ∀ v ∈ Arena.toList s, P v := by
+    aesop (rule_sets := [Effect4.Stores])
+      (add norm simp [Arena.peek_toList, List.mem_iff_getElem?])
+  have kept := refStepOf_keeps cells hk projected
+  aesop (rule_sets := [Effect4.Stores])
+    (add norm simp [Arena.peek_toList]) (add safe forward [List.mem_of_getElem?])
+
+attribute [aesop safe forward (rule_sets := [Effect4.Stores])] refStepOfA_keeps
+
+#typed_state_obligations Effect4.Machine.ArenaObligations ceiling 0
+  using aesop (rule_sets := [Effect4.Stores])
+
+#typed_state_obligations Effect4.Machine.M1.RefKernelSupport ceiling 0
+  using aesop (rule_sets := [Effect4.Stores])
 
 end Effect4.Machine
 -- END M1 PHASE B RefKernel
