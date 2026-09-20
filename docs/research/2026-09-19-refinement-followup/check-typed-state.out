@@ -1,0 +1,16 @@
+lake build Effect4.Laws.Program.Typed.Frames Test.Audit.PositionCensus Test.Audit.PositionAnalysis Test.Audit.TypedStateDecl Test.Audit.FrameRules Test.Audit.ProofGraph Test.Audit.Obligations Test.Program.TypedStateRulesRed
+[Excerpt: focused build results; dependency replay and census detail omitted.]
+info: Test/Audit/TypedStateDecl.lean:10:0: typed state: 1 predicates, 1 carrier predicates, 0 refusals
+info: Test/Audit/TypedStateDecl.lean:51:0: typed state: 2 predicates, 1 carrier predicates, 0 refusals
+info: Test/Audit/TypedStateDecl.lean:63:0: typed state: 1 predicates, 1 carrier predicates, 0 refusals
+info: Test/Audit/TypedStateDecl.lean:75:0: typed state: 2 predicates, 1 carrier predicates, 0 refusals
+info: Test/Audit/FrameRules.lean:11:0: frame rules: 2 checked theorems, 1 reused clauses, 3 explicit premises
+ℹ [245/251] Built Test.Audit.Obligations (5.0s)
+ℹ [248/251] Built Effect4.Laws.Program.Typed.State (3.3s)
+info: src/Effect4/Laws/Program/Typed/State.lean:28:0: typed state: 16 predicates, 11 carrier predicates, 2 refusals
+ℹ [249/251] Built Test.Audit.PositionCensus (4.1s)
+ℹ [250/251] Built Test.Program.TypedStateRulesRed (2.5s)
+info: Test/Program/TypedStateRulesRed.lean:26:0: 'Effect4.Program.Typed.saved_from_clauses' depends on axioms: [propext]
+ℹ [251/251] Built Effect4.Laws.Program.Typed.Frames (2.6s)
+info: src/Effect4/Laws/Program/Typed/Frames.lean:8:0: frame rules: 60 checked theorems, 159 reused clauses, 40 explicit premises
+Build completed successfully (251 jobs).

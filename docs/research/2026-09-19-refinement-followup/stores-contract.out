@@ -1,0 +1,8 @@
+Env.Val.ofSpine_entries : ∀ (c : Env.Ctx), Env.spine (Env.encode c) = some c.entries
+'Effect4.Machine.Val.image' does not depend on any axioms
+'Effect4.Machine.Val.keys_eq_handles' depends on axioms: [propext]
+'Effect4.Machine.Val.validIn_eq_handles' depends on axioms: [propext]
+'Effect4.Machine.Val.handles_eq_keys_code' depends on axioms: [propext]
+'Effect4.Machine.exitImage' depends on axioms: [propext]
+'Effect4.Machine.Val.image' does not depend on any axioms
+'Effect4.Machine.Env.Val.ofSpine_entries' depends on axioms: [propext]

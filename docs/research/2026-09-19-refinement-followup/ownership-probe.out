@@ -1,0 +1,30 @@
+typed state: 1 predicates, 1 carrier predicates, 0 refusals
+structure FollowupSkippedOccurrence.ParentOk {W : Type} (P : Preds W) (w : W) (e : Expect) (x : Parent) : Prop
+number of parameters: 5
+fields:
+  FollowupSkippedOccurrence.ParentOk.c0 : P.Owned w e x.owned
+constructor:
+  FollowupSkippedOccurrence.ParentOk.mk {W : Type} {P : Preds W} {w : W} {e : Expect} {x : Parent}
+    (c0 : P.Owned w e x.owned) : ParentOk P w e x
+structure FollowupSkippedOccurrence.Preds (W : Type) : Type
+number of parameters: 1
+fields:
+  FollowupSkippedOccurrence.Preds.Owned : W → Expect → CellStore → Prop
+constructor:
+  FollowupSkippedOccurrence.Preds.mk {W : Type} (Owned : W → Expect → CellStore → Prop) : Preds W
+'FollowupSkippedOccurrence.ignores_unowned' does not depend on any axioms
+typed state: 2 predicates, 1 carrier predicates, 0 refusals
+structure FollowupColumnOwnership.ParentOk {W : Type} (P : Preds W) (w : W) (e : Expect) (x : Parent) : Prop
+number of parameters: 5
+fields:
+  FollowupColumnOwnership.ParentOk.c0 : AOk P w e x.a
+constructor:
+  FollowupColumnOwnership.ParentOk.mk {W : Type} {P : Preds W} {w : W} {e : Expect} {x : Parent} (c0 : AOk P w e x.a) :
+    ParentOk P w e x
+structure FollowupColumnOwnership.Preds (W : Type) : Type
+number of parameters: 1
+fields:
+  FollowupColumnOwnership.Preds.Heap : W → A → Prop
+constructor:
+  FollowupColumnOwnership.Preds.mk {W : Type} (Heap : W → A → Prop) : Preds W
+'FollowupColumnOwnership.ignores_b' does not depend on any axioms

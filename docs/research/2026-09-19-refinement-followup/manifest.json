@@ -1,0 +1,49 @@
+{
+  "review_base": "f440492387d7a3cd601fb2bcb1aa80d6af2a21d8",
+  "reviewed_head": "65b143a27e3b9c614cda8f21ffd63e40f88b54cf",
+  "checks": [
+    {
+      "commit": "3cb5805eb7028286f1bf372e6501820faf29a520",
+      "command": "make check-typed-state",
+      "exit_code": 0,
+      "output": "check-typed-state.out",
+      "scope": "Narrow target and dependency build; 251 jobs, including replayed cached jobs. Not a whole-tree trust sweep.",
+      "output_is_excerpt": true,
+      "full_output_sha256": "ebe16677fa70ecc6a6c0569fdb333b766e4d476fade4ac43fd55812606097be3"
+    },
+    {
+      "commit": "3cb5805eb7028286f1bf372e6501820faf29a520",
+      "command": "lake env lean docs/research/2026-09-19-refinement-followup/OwnershipProbe.lean",
+      "exit_code": 0,
+      "output": "ownership-probe.out",
+      "scope": "Executed from /private/tmp/effect4-followup-repairs-probe.lean with these exact bytes. Both omission witnesses checked with no axioms."
+    },
+    {
+      "commit": "3cb5805eb7028286f1bf372e6501820faf29a520",
+      "command": "lake env lean Test/Machine/Runtime/StoresLawsContract.lean",
+      "exit_code": 0,
+      "output": "stores-contract.out",
+      "scope": "Existing contract and finite guards, including CE003. Printed axioms are at most propext."
+    },
+    {
+      "commit": "65b143a27e3b9c614cda8f21ffd63e40f88b54cf",
+      "command": "bash scripts/test-source-trust-tokenizer.sh",
+      "exit_code": 0,
+      "output": "source-scanner.out",
+      "scope": "Fourteen source-token/parser fixtures. Does not test proof-shape counts or the source-specific token-table branch."
+    }
+  ],
+  "notes": [
+    "Checks ran serially in the isolated worktree; package and build caches were copied with APFS copy-on-write and narrow dependencies rebuilt by Lake.",
+    "An initial ownership-probe draft failed because it omitted import Effect4.Store.Val. That failed run is not evidence. The retained file adds the import and disables autoImplicit, and elaborates with exit 0.",
+    "TypedStateDecl, Obligations, StoresLawsContract, RuntimeR and the architecture producer/role table are unchanged between 3cb5805e and the reviewed head.",
+    "No whole-tree sweep, map regeneration, OCaml build, benchmark, or backend agreement check was run."
+  ],
+  "sha256": {
+    "OwnershipProbe.lean": "0a54b9c523a5028704f5c9b49325b3172f8abc8cd26a1cdd3897747ca38e107c",
+    "ownership-probe.out": "06d977a513fc4efcae05ebfbb6fd174a71a05b8a479fc78031a84b27d13d4d40",
+    "check-typed-state.out": "cedd0123ef20a830a78944a1c9a9fefec9d47c55fbafde3adf09e6f83e55e49c",
+    "stores-contract.out": "4a6564678bd61e97a25806ea6f3e6181a55fc628c81756acf1afe8d78be16904",
+    "source-scanner.out": "e7225dd434becb682cb41bd9632c7ebfdbcfe265b8b6e1ef08373f15af0c9393"
+  }
+}
