@@ -334,7 +334,7 @@ def headTerm (hc : Ctor) : String :=
 /-- One lift over a row. `none` when the constructor has an argument no lift can take.
 `fixed?` names a data argument fixed to a head, whose fields become the lift's parameters:
 the head-conditioned rows' lifts (`selectOption`, `selectTag`). -/
-def emitLiftCore (t : Table) (c : Ctor) (row? : Option Row) (fixed? : Option (Nat × Ctor))
+def emitLiftCore (_t : Table) (c : Ctor) (row? : Option Row) (fixed? : Option (Nat × Ctor))
     (defName : String) : MetaM (Option (String × String)) := do
   let slots := (row?.map (·.slots)).getD []
   let scopeOf (j : Nat) : String :=
@@ -621,7 +621,7 @@ def hypOf (kind : ArgKind) (name : String) : Option String :=
   | .optionTerm => some s!"∀ t ∈ {name}, t.Scoped"
   | .other => none
 
-def emitLiftLemmaCore (t : Table) (c : Ctor) (row? : Option Row) (fixed? : Option (Nat × Ctor))
+def emitLiftLemmaCore (_t : Table) (c : Ctor) (row? : Option Row) (fixed? : Option (Nat × Ctor))
     (defName : String) : MetaM (Option (String × String)) := do
   let slots := (row?.map (·.slots)).getD []
   let closedArg (j : Nat) : Bool := match row? with
