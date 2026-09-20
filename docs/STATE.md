@@ -16,8 +16,8 @@ reads back.
 
 - Branch `refactor/phase1-phase3`. `make check` green (build, roots, generated drift,
   catch-all arms, native, the TypeScript reader, the corpus pin); axioms `[propext, Quot.sound]`
-  everywhere but the four meta modules the axiom gate names. `check-host` green after the
-  corpus re-cut. CI: the workflow-file error that stopped every run since `78684a8` is repaired
+  everywhere but the four meta modules the axiom gate names; the oracles are `check-full`'s
+  since 2026-09-19. CI: the workflow-file error that stopped every run since `78684a8` is repaired
   (`3a394912`, row 37), unverified until the owner pushes.
 - The surface: `Api.Author` (`Author.build : Module → Except BuildRefusal Built`), `Effect4.Run`
   (`Run.open` cannot refuse; every convenience is a `List Command`; `journal_replays`,
@@ -84,7 +84,13 @@ is addressed in §10: row 84's budget is the proved bound already in the tree, r
 the seven placement resolutions are accepted or amended for the owner, M1's radius is 38 files and
 `DeferredOk` goes whole. Its ratchet finding rebuilt the instrument: the trust gate's source scan
 parses each source as the compiler did and counts tactics by syntax kind (`Test/Audit/AxiomGate.lean`),
-which made five `local macro` tactics `scoped`.
+which made five `local macro` tactics `scoped`. The refinement follow-up
+(`docs/research/2026-09-19-refinement-followup.md`, `60b7d0da`) is addressed in §11: the generator's
+coverage follows fields and column occurrences (two new controls), `E4-STORES-CE-003` stays as M1's
+reference-validity boundary, row 84 owes the transaction connector, the map says presence not
+completion. The owner then retired the proof-shape ceiling and the source scan (the gate reads the
+compiled environment), collapsed the tiers to `check` and `check-full`, and cut the citation,
+compatibility, known-red and script-test lanes.
 The immediate priority is shared representations and composition laws. Known future modules
 can reserve contracts with explicit missing implementations using the existing wanted machinery.
 Supporting reviews and the paused tooling handoff are tracked in
@@ -200,7 +206,7 @@ with 3, and 19–22. Row 5 has the restatement `ontology.md` §2 gives.
 ## Process
 
 - Speed over ceremony: build what you touch (`lake build <Module>`), `make check` once per
-  step, `make check-host` per slice; nothing pushed without the owner.
+  step, `make check-full` per slice; nothing pushed without the owner.
 - One Lean process per checkout; a parallel seat runs in its own worktree on disjoint files with
   a brief the owner has seen; scouts read `docs/research` from the main checkout by path and
   never copy it (2 GB of evidence trees).

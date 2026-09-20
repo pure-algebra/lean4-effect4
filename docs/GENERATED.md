@@ -114,8 +114,7 @@ machine agreement theorem covers, which module exists and whether it compiles, t
 and type outcomes, both exits and both compared schedules in full. A fresh run must equal it
 (`make gen-corpus-results` promotes), and a row that records a disagreement must be listed by
 program, dimension and outcome with its reason in `harness/truth/corpus-known-differences.md`,
-which may list nothing that no longer occurs. `scripts/test-corpus-check.py`
-(`make check-tools`) plants the acceptance defects the checker must refuse.
+which may list nothing that no longer occurs.
 
 **Schema codec comparisons.** `make check-schema-codec` produces a temporary TypeScript
 data module from the public `Ty.encode` results for

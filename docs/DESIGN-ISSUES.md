@@ -12,16 +12,14 @@ A row moves in one direction. **open** — the question is named and nobody has 
 proceed on it where the row says so, on the understanding that a different ruling costs a
 revert, not a redesign. **ruled** — the owner has decided; the ruling text and its date live in
 the row, and the row names the tracked place the ruling was written into: a DB row, a module
-header, a contract packet, a counterexample row, a `# reason:` line in
-`Test/fixtures/trust-gate/known-red.txt`. **basis** — the ruling has become a `DB-nn` row and
+header, a contract packet, a counterexample row. **basis** — the ruling has become a `DB-nn` row and
 this row is retired to a one-line pointer. A row is never deleted and an id is never reused, as
 in `Test/Counterexamples/REGISTER.md`.
 
 Two rules make the register worth keeping.
 
 **A ruling is not made until it is written into a tracked file.** `docs/research/` is
-gitignored, and `scripts/check-source-citations.py` accepts citations into it without checking
-that they resolve, so a decision recorded only there does not survive a clone — the sweep
+gitignored, so a decision recorded only there does not survive a clone — the sweep
 counted 504 such citations from 278 tracked files, six of whose targets are already gone. When
 a row reaches **ruled**, the same commit puts the ruling in a tracked place and the row cites
 it. DI-00 is the worked example: decided in a note, written into DB-15, the truth driver and

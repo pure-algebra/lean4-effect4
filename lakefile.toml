@@ -1,9 +1,7 @@
 name = "effect4"
 version = "0.1.0"
-# `Test`, not the red-inclusive glob: the umbrella `Test.All` plus exactly its transitive
-# imports is the green battery and the gate. A module declared red in
-# `Test/fixtures/trust-gate/known-red.txt` is deliberately not imported by `Test/All.lean`,
-# so it stays out of the default build and `#effect4_axiom_gate` actually runs in it.
+# `Test`: the umbrella `Test.All` plus exactly its transitive imports is the green battery
+# and the gate; `#effect4_axiom_gate` runs in it.
 defaultTargets = ["Effect4", "Effect4Laws", "Test"]
 
 # Every Lean process of this package is capped at 6 GB (`lean --memory`): a runaway

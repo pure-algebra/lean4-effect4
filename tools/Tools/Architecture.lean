@@ -527,7 +527,7 @@ def pathOfModule (m : String) : IO (String × Bool) := do
   let root := if m.startsWith "Effect4." then "src/" else "tools/"
   return (root ++ rel ++ ".lean", false)
 
-/-- The typed-state proof stack: one row per slice, its modules solid once they exist. -/
+/-- The typed-state proof stack: one row per slice, its modules solid once their source is present. -/
 def renderMilestone : IO String := do
   let rowH := 60
   let labelW := 150
@@ -655,7 +655,6 @@ def renderAudit (f : Facts) : String := Id.run do
   out := out.push s!"<div class=\"kv\"><b>Imports against the direction:</b> {againstCount}, and {acceptedCount} accepted by a document. Every one is listed above.</div>"
   out := out.push s!"<div class=\"kv\"><b>Area pairs that import each other:</b> {cycles.size}. {String.intercalate "; " (cycles.toList.map fun e => esc (short e.src) ++ " ↔ " ++ esc (short e.dst))}</div>"
   out := out.push s!"<div class=\"kv\"><b>Modules with no built olean, drivers aside:</b> {unbuilt.size}. {String.intercalate ", " (unbuilt.toList.map fun x => "<code>" ++ esc x.path ++ "</code>")}</div>"
-  out := out.push s!"<div class=\"kv\"><b>Directories under src/ and tools/ with no Lean file:</b> {f.emptyDirs.size}. {String.intercalate ", " (f.emptyDirs.toList.map fun d => "<code>" ++ esc d ++ "</code>")}</div>"
   out := out.push "</div>"
   out := out.push "<h3>The twelve largest modules</h3><div class=\"scroll\"><table><thead><tr><th>module</th><th class=\"n\">lines</th><th class=\"n\">thm</th><th class=\"n\">def</th><th>area</th></tr></thead><tbody>"
   for x in largest do
@@ -677,7 +676,7 @@ def page (f : Facts) : IO String := do
   let roots := "<section id=\"roots\"><h2>The roots and their direction</h2><p class=\"lede\">Each column is a lake root; each box an area at the height the register declares. Inside a column an import may point at the same height or lower; the runtime imports only itself; the proof graph imports the runtime and <code>ProofGraph</code>; the tool roots import the runtime, the proof graph and lower tools; the batteries import everything. A red count on a box is the number of that area's imports that break one of those rules.</p><figure><div class=\"scroll\">" ++ renderStack f ++ "</div><figcaption>Arrows at the top aggregate the import statements between columns. Counts on the boxes are the area with its detail directories; theorems, definitions and inductives are counted from the loaded environment, auxiliaries excluded.</figcaption></figure></section>"
   let matrix := "<section id=\"matrix\"><h2>The import matrix</h2><p class=\"lede\">Rows import columns. A red cell is an import against the direction; a dot is none. The external columns are the packages the tree imports, by first component.</p><div class=\"scroll\">" ++ renderMatrix f ++ "</div></section>"
   let against := "<section id=\"against\"><h2>Against the direction</h2><p class=\"lede\">Every import statement the register does not allow, by file. An accepted row names the document that accepts it; the rest are the organization questions the map exists to surface.</p><div class=\"scroll\">" ++ renderAgainst f ++ "</div></section>"
-  let stack := "<section id=\"stack\"><h2>The typed-state stack</h2><p class=\"lede\">The milestone's modules by slice of the plan's §14. A box is solid once its file exists and dashed until then, so this figure updates itself as slices land.</p><figure><div class=\"scroll\">" ++ milestoneSvg ++ "</div><figcaption>Layer 0 and slices T1 to T4 are landed; M2 to M7 and P2 are the milestone's remaining slices.</figcaption></figure></section>"
+  let stack := "<section id=\"stack\"><h2>The typed-state stack</h2><p class=\"lede\">The milestone's modules by slice of the plan's §14. A box is solid once its file exists and dashed until then, so this figure updates itself as slices land.</p><figure><div class=\"scroll\">" ++ milestoneSvg ++ "</div><figcaption>A solid box is a module whose source is present in the tree; presence is not completion, which the plan's §14 and the obligation ledger record.</figcaption></figure></section>"
   let map := "<section id=\"map\"><h2>The file map</h2><p class=\"lede\">Every area by column, top of the column first, with its detail directories indented. Files and lines are the area's own; a tag counts its <code>--run</code> drivers and any module without a built olean.</p>" ++
     renderLeanColumn f .runtime ++ renderLeanColumn f .laws ++ renderLeanColumn f .tools ++ renderLeanColumn f .tests ++
     renderEstates f .ocaml ++ renderEstates f .ts ++ renderEstates f .host ++ renderEstates f .docs ++ "</section>"
@@ -714,5 +713,8 @@ def main (args : List String) : IO UInt32 := do
     return 1
   IO.FS.writeFile out html
   let loaded := (facts.leanFiles.filter fun x => facts.counts.contains x.module).size
+  -- checkout debris, reported here and kept out of the tracked page
+  unless facts.emptyDirs.isEmpty do
+    IO.println s!"architecture: directories under src/ and tools/ with no Lean file (local): {String.intercalate ", " facts.emptyDirs.toList}"
   IO.println s!"architecture: wrote {out}: {facts.leanFiles.size} Lean modules, {fmt (linesOf facts.leanFiles)} lines, {loaded} loaded for counts, {against} imports against the direction, {facts.edges.size} area edges"
   return 0

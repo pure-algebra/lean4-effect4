@@ -113,7 +113,7 @@ its arrows; anything else is a leak.
   research note in `docs/research/`, then lands as commits by explicit paths, each after a
   narrow build of the modules it touches (`lake build <Module>` and its direct dependents;
   `lake env lean <file>` for a test). No closure or battery run is owed for an integration; the
-  whole battery (`lake build Test`, the trust gate) and `make check`/`make check-host` run when
+  whole battery (`lake build Test`, the trust gate) and `make check`/`make check-full` run when
   the owner asks for a sweep. A docstring or comment edit needs no build of a dependent module.
 - An agent commits the same way, on its own branch in its own worktree, from the base the
   coordinator names, on the files its brief names. `git add` names files (never `git add -A`
@@ -141,8 +141,7 @@ its arrows; anything else is a leak.
   searched proof to `[propext, Quot.sound]` like any other; `simp` at `(x == x) = true` for
   `String`/`Nat` and aesop on a catch-all's negative hypotheses both reach `Classical.choice`.
   Not written by hand in a new or touched proof, anywhere under `src/`: `simp_all`, `first | …`
-  and `try` (a fallback that fails silently into an unsolved goal hides a missing lemma);
-  `generated/proof-shape.tsv` pins their count per module as a ceiling that only falls. A
+  and `try` (a fallback that fails silently into an unsolved goal hides a missing lemma). A
   hand-written `simp` names its lemmas as `simp only [...]`.
 - The gates that run with a commit are the ones the change reaches: `make check-cases` after a
   new match on a policy family, `python3 scripts/generate.py --only <family>` after a generator

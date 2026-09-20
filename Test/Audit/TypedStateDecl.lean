@@ -77,6 +77,42 @@ example {W : Type} (P : Preds W) (w : W) (e : Expect) (x : Parent)
     (h : ParentOk P w e x) : P.Heap w x.store := h.c0.c0
 end Test.TypedStateDecl.ColumnOnly
 
+namespace Test.TypedStateDecl.SkippedOccurrence
+inductive Expect | root
+structure CellStore where
+  payload : Effect4.Store.Val
+structure Parent where
+  owned : CellStore
+  unowned : CellStore
+def sources : List Row := [
+  ("Test.TypedStateDecl.SkippedOccurrence.CellStore.payload", .column "Heap"),
+  ("Test.TypedStateDecl.SkippedOccurrence.Parent.owned", .custom "Owned")]
+-- A custom source on `owned` covers that field's subtree only; the sibling occurrence of the
+-- same type under `unowned` is still checked (refinement follow-up §1, first probe).
+/-- error: typed state: column Heap at Test.TypedStateDecl.SkippedOccurrence.CellStore.payload has no column owner -/
+#guard_msgs in
+#typed_state Test.TypedStateDecl.SkippedOccurrence.Parent using sources
+end Test.TypedStateDecl.SkippedOccurrence
+
+namespace Test.TypedStateDecl.ColumnOwnership
+inductive Expect | root
+structure A where
+  payload : Effect4.Store.Val
+structure B where
+  payload : Effect4.Store.Val
+structure Parent where
+  a : A
+  b : B
+def sources : List Row := [
+  ("Test.TypedStateDecl.ColumnOwnership.A.payload", .column "Heap"),
+  ("Test.TypedStateDecl.ColumnOwnership.B.payload", .column "Heap")]
+-- A column predicate named `Heap` emitted for `A` covers `A`'s occurrence, not `B`'s
+-- (refinement follow-up §1, second probe).
+/-- error: typed state: column Heap at Test.TypedStateDecl.ColumnOwnership.B.payload has no column owner -/
+#guard_msgs in
+#typed_state Test.TypedStateDecl.ColumnOwnership.Parent using sources columns Test.TypedStateDecl.ColumnOwnership.A
+end Test.TypedStateDecl.ColumnOwnership
+
 namespace Test.TypedStateDecl.NoColumnOwner
 inductive Expect | root
 structure Store where

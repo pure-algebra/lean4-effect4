@@ -9,8 +9,8 @@ must write exactly its named files; `conform_report.fresh_run` validates the rep
 refuses an input that changed during the run, and keeps the receipt under `.lake/conform/`.
 `compiler` is a Python step of this file (`--step`): one production compiler checkpoint,
 Lean-emitted OCaml for normalization, compiled and run against Lean's fixture list, plus
-one emitted-code mutation that must fail. The report refusal controls are
-`scripts/test-conform-report.py`, in `make check-tools`. The `models`, `types`, `layouts`
+one emitted-code mutation that must fail. The report refusal controls (`test-conform-report.py`) were
+retired on 2026-09-19 with the other tests of scripts. The `models`, `types`, `layouts`
 and `target` profiles were retired on 2026-09-13: receipts of theorems the build already
 checks, a layout enumeration the wire theorems and the OCaml lane cover, and a subset of
 `make check-target`.

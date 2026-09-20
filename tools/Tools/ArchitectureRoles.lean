@@ -98,7 +98,6 @@ def areas : List Area := [
   ⟨"src/Effect4/Laws.lean", .laws, 6, "Effect4.Laws", "the root of the proof graph", false, true⟩,
   -- the tool roots
   ⟨"tools/ProofGraph", .tools, 0, "ProofGraph", "checked theorem references, rolled-back search, published theorems, the obligation join; below Laws and Conform", false, true⟩,
-  ⟨"tools/Compatibility", .tools, 1, "Compatibility", "the declaration snapshot extractor", false, true⟩,
   ⟨"tools/Conform", .tools, 1, "Conform", "generic conformance: source descriptions, reports and evidence, obligations, the LCNF walkers and semantics, layouts, models, the `Std.Do` pilot", false, true⟩,
   ⟨"tools/Conform/Core", .tools, 1, "Conform/Core", "reports, evidence, obligations, policy, the proof shim", true, true⟩,
   ⟨"tools/Conform/Lcnf", .tools, 1, "Conform/Lcnf", "the mono-LCNF walkers, rules, validity and semantics", true, true⟩,
@@ -122,7 +121,7 @@ def areas : List Area := [
   ⟨"Test/Audit", .tests, 0, "Test/Audit", "the axiom gate, the runtime coverage join, the censuses, the proof-graph and ledger controls", true, true⟩,
   ⟨"Test/Counterexamples", .tests, 0, "Test/Counterexamples", "the durable attacks, by stable ID", true, true⟩,
   ⟨"Test/contracts", .tests, 0, "Test/contracts", "the packets: what each area promises, as prose", true, true⟩,
-  ⟨"Test/fixtures", .tests, 0, "Test/fixtures", "the trust-gate fixtures, the sample trees and the known-red list; its `.lean` files are fixtures, not modules", true, true⟩,
+  ⟨"Test/fixtures", .tests, 0, "Test/fixtures", "the sample trees and the trust-boundary fixture; its `.lean` files are fixtures, not modules", true, true⟩,
   ⟨"Test/Api", .tests, 0, "Test/Api", "the face's batteries", true, true⟩,
   ⟨"Test/Codegen", .tests, 0, "Test/Codegen", "printer, reader and module batteries", true, true⟩,
   ⟨"Test/Data", .tests, 0, "Test/Data", "rows, JSON and optics", true, true⟩,

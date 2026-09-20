@@ -122,9 +122,10 @@ structure Emit where
   refused : Array String := #[]
   /-- Position and edge keys a clause was emitted for, or deliberately omitted. -/
   accounted : Array String := #[]
-  /-- Children under a whole-field, journal or refused edge: their subtrees are covered or
-  named debt, not stated position by position. -/
-  skipped : Array Name := #[]
+  /-- Field keys whose subtree a whole-field, journal or refused source covers: nothing beneath
+  that edge is stated position by position. Coverage follows the field, not the child's type:
+  the same type under an uncovered edge elsewhere is still checked. -/
+  covered : Array String := #[]
 
 private def addPred (em : Emit) (name : String) (type : Expr) (column := false) : MetaM Emit := do
   if let some old := em.preds.find? (·.name == name) then
@@ -172,6 +173,24 @@ private def hasPositions (rows : List Row) (ps : Array Positions.Position) (edge
         | some (_, .journal) | some (_, .refused _) => pure ()
         | _ => if ← hasPositions rows ps edges columnOwners fuel e.child (owner :: seen) then return true
     return false
+
+/-- The keys of the column positions `columnsUnder` reaches from `owner`: what a column owner's
+clauses cover, occurrence by occurrence. -/
+private def columnKeysUnder (rows : List Row) (ps : Array Positions.Position) (edges : Array Edge) :
+    Nat → Name → List Name → MetaM (List String)
+  | 0, owner, _ => throwError "typed state: column walk exhausted at {owner}"
+  | fuel + 1, owner, seen => do
+    if seen.contains owner then return []
+    let mut out : List String := []
+    for p in ps do
+      if p.owner == owner then
+        if let some (_, .column _) := rows.find? (·.1 == p.key) then
+          unless out.contains p.key do out := out ++ [p.key]
+    for e in edges do
+      if e.parent == owner then
+        for k in ← columnKeysUnder rows ps edges fuel e.child (owner :: seen) do
+          unless out.contains k do out := out ++ [k]
+    return out
 
 private def headOfChild (child : Name) : Nat → Expr → MetaM (Option Expr)
   | 0, _ => throwError "typed state: child walk exhausted at {child}"
@@ -227,6 +246,8 @@ private def emitOwner (rows : List Row) (ps : Array Positions.Position) (edges :
     let name := okName owner
     let columns ← if columnOwners.contains owner then
       columnsUnder rows ps edges 64 owner [] else pure []
+    if columnOwners.contains owner then
+      em := { em with accounted := em.accounted ++ (← columnKeysUnder rows ps edges 64 owner []).toArray }
     for (c, fields) in ctors do
       let mut clauses : Array (TSyntax `term) := #[]
       let mut binders : Array (TSyntax `term) := #[]
@@ -252,13 +273,13 @@ private def emitOwner (rows : List Row) (ps : Array Positions.Position) (edges :
         | some (.custom pred) =>
           em ← addPred em pred fty
           clauses := clauses.push (← `(P.$(mkIdent (Name.mkSimple pred)):ident w e $term))
-          em := { em with accounted := em.accounted.push key, skipped := em.skipped ++ es.map (·.child) }
+          em := { em with accounted := em.accounted.push key, covered := em.covered.push key }
         | some (.refused reason) =>
           em := { em with refused := em.refused.push s!"{key}: {reason}",
-                          accounted := em.accounted.push key, skipped := em.skipped ++ es.map (·.child) }
+                          accounted := em.accounted.push key, covered := em.covered.push key }
           clauses := clauses.push (← `(True))
         | some .journal =>
-          em := { em with accounted := em.accounted.push key, skipped := em.skipped ++ es.map (·.child) }
+          em := { em with accounted := em.accounted.push key, covered := em.covered.push key }
         | _ =>
           if !positions.isEmpty then
             let some src := src? | throwError "typed state: missing source for {key}"
@@ -343,35 +364,41 @@ syntax (name := typedState) "#typed_state " ident+ " using " ident (" columns " 
       unless keys.contains p.key do throwError "typed state: missing source for {p.key}"
     let mut em : Emit := {}
     let mut tops : Array (TSyntax `command) := #[]
+    let mut reach : Array Name := #[]
     for root in roots do
       let ty ← whnf (mkConst root)
       em ← emitOwner rows ps edges columnOwners 64 ty em
       let owner := ty.getAppFn.constName!
+      unless reach.contains owner do reach := reach.push owner
       let name := okName root
       unless name == okName owner do
         tops := tops.push (← `(command|
           abbrev $name:ident {W : Type} (P : Preds W) (w : W) (x : $(mkIdent root):ident) : Prop :=
           $(okName owner):ident P w Expect.root x))
-    -- Every position and edge the census found is stated, deliberately omitted, or under a
-    -- covered subtree; every column a row names was emitted by a column owner. A shape the
-    -- emitter does not understand therefore fails here, by key, instead of weakening the
-    -- invariant to `True`.
-    let mut skipped := em.skipped
+    -- Every position and edge the census found under a stated subtree is stated or deliberately
+    -- omitted, and every column occurrence was emitted by a column owner whose walk reached it.
+    -- Coverage follows the field: the owners in reach are those on a path of uncovered edges
+    -- from a root, so a type under a covered edge here and an uncovered edge there is checked
+    -- for the uncovered occurrence; and a column predicate's name covers nothing by itself. A
+    -- shape the emitter does not understand therefore fails here, by key, instead of weakening
+    -- the invariant to `True`.
     for _ in [:edges.size + 1] do
       for e in edges do
-        if skipped.contains e.parent && !skipped.contains e.child then skipped := skipped.push e.child
+        if reach.contains e.parent && !em.covered.contains s!"{e.parent}.{e.field}"
+            && !reach.contains e.child then
+          reach := reach.push e.child
     for p in ps do
-      if skipped.contains p.owner then continue
+      unless reach.contains p.owner do continue
       match rows.find? (·.1 == p.key) with
       | some (_, .journal) | some (_, .hook none) => pure ()
       | some (_, .column c) =>
-        unless em.preds.any (fun q => q.column && q.name == c) do
+        unless em.accounted.contains p.key do
           throwError "typed state: column {c} at {p.key} has no column owner"
       | _ =>
         unless em.accounted.contains p.key do
           throwError "typed state: {p.key} has a source but no clause was emitted"
     for e in edges do
-      if skipped.contains e.parent then continue
+      unless reach.contains e.parent do continue
       let key := s!"{e.parent}.{e.field}"
       match rows.find? (·.1 == key) with
       | some (_, .custom _) | some (_, .nested _) | some (_, .refused _) =>

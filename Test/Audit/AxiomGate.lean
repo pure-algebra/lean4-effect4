@@ -5,12 +5,12 @@ import Effect4
 /-!
 # Effect4 axiom allowlist gate
 
-This command tokenizes every authored `Effect4` source and inspects every
-declaration compiled from it, including definitions, instances, generated
-declarations, and private helper declarations. The build fails on an authored
-trust token, on a bodyless `opaque`, or if any declaration reaches an axiom
-outside the library's current ceiling: propositional extensionality and
-quotient soundness.
+This command inspects every declaration compiled from the authored `Effect4`
+and `Test` sources, including definitions, instances, generated declarations
+and private helper declarations. The build fails on an `unsafe` or `partial`
+declaration, a declared axiom, an `@[extern]` or `@[implemented_by]` body, a
+bodyless `opaque`, or any declaration that reaches an axiom outside the
+library's current ceiling: propositional extensionality and quotient soundness.
 
 The gate is intentionally exhaustive over the compiled namespace rather than
 maintaining a hand-written theorem list. Until 2026-09-13 thirty-four
@@ -19,20 +19,21 @@ declarations as a human-readable receipt; every one was a subset of what this
 command audits, so they were retired. A receipt for one declaration is
 `#print axioms` at the prompt.
 
-## Why the source is tokenized at all
+## What the gate reads
 
-The declaration pass reads `environment.constants`, and Lean's `example` never
-enters the environment. Every trust token written inside an `example` is
-therefore invisible to it — including `sorry`, which is a warning rather than
-an error and leaves the build green. The source pass is what closes that hole:
-it visits every token of every audited file whether or not the surrounding
-declaration is named. `forbiddenTrustTokens` records what it refuses and why.
+The compiled environment, not the source text. Until 2026-09-19 a source pass
+tokenized, then parsed, every audited file to catch a trust token inside an
+`example`, which leaves no constant; the owner retired it together with the
+proof-shape ceiling (deep-dive review §11). What that pass caught is a
+declaration this command sees, except a `sorry` or `native_decide` inside an
+`example`, which is a warning the build shows; `-DwarningAsError=true` would make
+it an error once the tree's 237 warnings (unused `simp` arguments, mostly) are
+cleared.
 
 ## The policy on `example`
 
 An `example` stays an `example` when it is a sanity check — a shape that would
-read the same as a comment, and that nothing cites. The tokenizer reaches
-inside it now, so nothing trust-relevant hides there.
+read the same as a comment, and that nothing cites.
 
 A *receipt* becomes a named `theorem` where it is cited. A receipt that leaves
 no constant cannot be named by an axiom report, joined by
@@ -54,11 +55,8 @@ definition's clothes, and every receipt stated about it is a receipt about
 nothing. `AGENTS.md` already requires an authored admission for an
 opaque trust boundary; this is the enforcement.
 
-The refusal is a declaration-level check rather than a token, because the
-source tokenizer sees the `opaque` keyword but cannot see whether a `:=`
-follows it. The two shapes are told apart by the synthesised value's head
-constant, which is `Inhabited.default` or `Classical.ofNonempty` and nothing
-else. `test/fixtures/trust-gate/opaque.lean.txt` is the acceptance test.
+The two shapes are told apart by the synthesised value's head constant, which
+is `Inhabited.default` or `Classical.ofNonempty` and nothing else.
 -/
 
 open Lean
@@ -216,98 +214,6 @@ private def choiceImplementationPrivateDeclarations : List (Name × Name) :=
 private def forbiddenAxioms : List Name :=
   [``sorryAx, ``Lean.ofReduceBool, ``Lean.ofReduceNat, ``Lean.trustCompiler]
 
-/--
-The authored trust tokens the source gate refuses, in either shape Lean's
-tokenizer can produce for them.
-
-Which shape a word takes depends on the token table of the environment doing
-the audit, and the two halves of this list do not agree at this pin: `unsafe`,
-`partial`, `sorry` and `axiom` are keywords and arrive as atoms, while
-`native_decide`, `extern` and `implemented_by` are ordinary identifiers.
-Checking both shapes means the list states a policy rather than tracking
-Lean's grammar.
-
-What each one buys:
-
-* `unsafe`, `partial` — the original two; the compiled-environment pass below
-  independently confirms `isUnsafe`/`isPartial`, and this catches them inside
-  an `example`, where there is no constant to inspect.
-* `sorry` — an admitted goal is a warning, not an error, so a `sorry` inside an
-  `example` leaves no constant, emits no failure, and keeps the build green.
-  Outside an `example` it also reaches `sorryAx`, which `forbiddenAxioms`
-  refuses; this is the half that has no declaration behind it.
-* `axiom` — a new axiom is only visible to the axiom pass once something
-  reaches it. The gate's ceiling is a claim about what the tree *contains*, so
-  the declaration is refused where it is written.
-* `native_decide` — closes the goal by compiler evaluation and reaches
-  `Lean.ofReduceBool`, already in `forbiddenAxioms`; again the point is the
-  `example` that leaves nothing to inspect.
-* `extern`, `implemented_by` — replace a checked Lean body with host code at
-  runtime. Neither moves an axiom, and neither is a claim this tree is entitled
-  to make about its own semantics.
-
-An identifier is judged by its *raw* source text, never by its resolved name,
-so the escaped `«unsafe»` of `test/fixtures/trust-gate/benign.lean.txt` stays a
-name and a string literal stays prose.
--/
-private def forbiddenTrustTokens : List String :=
-  [ "unsafe", "partial", "sorry", "axiom"
-  , "native_decide", "extern", "implemented_by" ]
-
-/--
-`admit` is refused only as a keyword.
-
-At this toolchain pin it is not one: the tactic does not exist, so `admit`
-tokenizes as an identifier — and it is the name of `Effects.admit`, the flow
-admission function the lowering batteries call unqualified. Refusing the
-identifier would refuse those batteries, so the entry sits here and fires only
-if a future toolchain reintroduces the tactic and puts the word in the token
-table. Nothing is lost meanwhile: the tactic expands to `sorry`, which the list
-above refuses, and reaches `sorryAx`, which `forbiddenAxioms` refuses.
--/
-private def forbiddenTrustKeywords : List String :=
-  [ "admit" ]
-
-/--
-The counted tactics: the proof-shape ratchet (tooling plan 1.7, decision D-D).
-
-`first`, `simp_all` and `try` are not refused — the estate has hundreds of them and a refusal
-would be a lie — but their number per source is pinned in `generated/proof-shape.tsv` and may
-only fall. That makes "the proofs got shorter" a checked fact rather than a claim, and it is
-the receipt the algebra work is measured by: `AdmitsSub` deleting sixteen `first` blocks from
-`Program/Typed.lean` shows up here as a number, in a build that had to happen anyway.
-
-Counted by syntax kind, not by word: each source is parsed as the compiler parsed it
-(`scanSource`), and a `first` is `Lean.Parser.Tactic.first` or its `conv` twin, a `try` the
-macro `tacticTry_` or `convTry_`, a `simp_all` `simpAll`. So prose about `try` is not a
-`try`, a binder named `first` is a binder (`intro raw first second`, a `let … first | alt`
-pattern), a `| first | second` alternative is a pattern, and `try … catch` in a `do` block
-is a term. The earlier reading of this gate counted tokens, `first` when followed by `|`, and
-measuring the difference on 2026-09-19 found it over-counting exactly those shapes: `try` 7 → 4
-in `Laws/Program/Decision.lean` and 35 → 14 in `Laws/Program/TypeAlgebra.lean` were `do`
-blocks; `first` 2 → 0 in `Laws/Machine/LiveStack.lean` were patterns — and under-counting in the
-other direction: `first` 11 → 14 in `Laws/Machine/Handles.lean`, three `first $[| …]*` whose next
-token is a splice. The ceilings were re-pinned to the exact counts (668 over 91 sources).
-
-What it does not see: a tactic reached through a macro of this tree, and anything inside a
-proof term. This counts syntax nodes and claims nothing more.
--/
-private def countedTactics : List String :=
-  [ "first", "simp_all", "try" ]
-
-/-- The counts of `countedTactics` in one source, in that order. -/
-structure ProofShape where
-  counts : Array Nat := (countedTactics.map fun _ => 0).toArray
-deriving Inhabited, BEq
-
-def ProofShape.total (shape : ProofShape) : Nat := shape.counts.foldl (· + ·) 0
-
-def ProofShape.bump (shape : ProofShape) (index : Nat) : ProofShape :=
-  { counts := shape.counts.modify index (· + 1) }
-
-def ProofShape.render (path : String) (shape : ProofShape) : String :=
-  shape.counts.foldl (init := path) fun line n => line ++ "\t" ++ toString n
-
 /-- The synthesised values Lean gives a bodyless `opaque`. -/
 private def synthesizedOpaqueBodies : List Name :=
   [``Inhabited.default, ``Classical.ofNonempty]
@@ -434,216 +340,6 @@ private def isGeneratedSafeRecursor (environment : Environment) (name : Name) : 
       | none => false
       | _ => false
 
-/-
-A source is read the way the compiler read it. Each command is parsed with `Parser.parseCommand`
-under the scope the frontend keeps (`Lean.Elab.Frontend.processCommand`): `namespace`,
-`section`, `end` and `open` are elaborated so scoped syntax resolves, nothing else is, and the
-declarations are already in the environment. The token table is the one the source's own
-compilation had — the builtin table plus the tokens of its import closure, read from the parser
-extension's module entries over the compiled import graph. The audit environment holds every
-module's tokens at once, and a name in one module is a keyword in another (`daemon`, `eff`,
-`ceiling`): parsed against the whole table, 32 of 450 sources refuse (measured 2026-09-19),
-which is why an earlier reading of this gate tokenized instead of parsing. Parsing gives the
-syntax tree, so a counted tactic is a node of its kind and a binder named `first` is a binder.
--/
-/-- The forbidden word a single token carries, if any. A keyword arrives as an
-atom whose value is the word; an ordinary identifier arrives as an ident, and
-is judged by the raw source text so that `«unsafe»` and `Foo.unsafe` are names
-rather than modifiers. Every other token shape — string, char, and numeric
-literals above all — carries none. -/
-private def forbiddenToken? (token : Syntax) : Option String :=
-  match token with
-  | .atom _ value =>
-      let value := value.trimAscii.toString
-      if forbiddenTrustTokens.contains value || forbiddenTrustKeywords.contains value then
-        some value
-      else
-        none
-  | .ident _ rawValue _ _ =>
-      let raw := rawValue.toString
-      if forbiddenTrustTokens.contains raw then some raw else none
-  | _ => none
-
-/-- The commands whose elaboration changes what the parser accepts next: they push, pop and
-open the scopes whose namespace and open declarations `parseCommand` reads. -/
-private def scopeCommands : List Name :=
-  [ ``Lean.Parser.Command.«namespace», ``Lean.Parser.Command.«section»
-  , ``Lean.Parser.Command.«end», ``Lean.Parser.Command.«open» ]
-
-/-- The syntax kinds of `countedTactics`, in that order: the tactic and its `conv` twin. `try`
-is a macro over `first`, so its kind is the macro's; `try … catch` in a `do` block is a term
-(`doTry`) and is not one. -/
-private def countedKinds : List (List Name) :=
-  [ [``Lean.Parser.Tactic.first, ``Lean.Parser.Tactic.Conv.first]
-  , [``Lean.Parser.Tactic.simpAll]
-  , [``Lean.Parser.Tactic.tacticTry_, ``Lean.Parser.Tactic.Conv.convTry_] ]
-
-/-- The tokens one module declared globally. A scoped token (`Lean.Parser.Do` reserves `skip`
-in its namespace) is not a keyword until `open` or `namespace` activates it, and elaborating
-those commands activates it here too. -/
-private def tokensOf (environment : Environment) (moduleName : Name) : Array String :=
-  match environment.getModuleIdx? moduleName with
-  | none => #[]
-  | some index =>
-    (Parser.parserExtension.ext.getModuleEntries environment index).filterMap fun
-      | .global (.token token) => some token
-      | _ => none
-
-/-- The token table a module's compilation started from: the builtin table plus every token a
-module of its import closure declared. The module's own tokens are not here; they arrive as
-the commands declaring them are parsed (`syntaxCommands`), so a name used before its
-reservation is still a name, as it was when the module compiled. -/
-private def tokenTableOf (environment : Environment) (imports : Array Name) :
-    IO Parser.TokenTable := do
-  let mut table ← Parser.builtinTokenTable.get
-  for moduleName in imports do
-    for token in tokensOf environment moduleName do
-      table := table.insert token token
-  return table
-
-/-- The commands that reserve tokens: the symbols they quote become keywords from there on. -/
-private def syntaxCommands : List Name :=
-  [ ``Lean.Parser.Command.«syntax», ``Lean.Parser.Command.syntaxAbbrev
-  , ``Lean.Parser.Command.«macro», ``Lean.Parser.Command.«elab»
-  , ``Lean.Parser.Command.«notation», ``Lean.Parser.Command.«mixfix» ]
-
-/-- The string literals a command quotes, trimmed as `symbol` trims a token. A worklist, not a
-recursion: this file is an audited source and the gate refuses the `partial` a recursion over
-`Syntax` would need. -/
-private def quotedSymbols (stx : Syntax) : Array String := Id.run do
-  let mut symbols : Array String := #[]
-  let mut stack : Array Syntax := #[stx]
-  while !stack.isEmpty do
-    let node := stack.back!
-    stack := stack.pop
-    match node.isStrLit? with
-    | some literal => symbols := symbols.push literal.trimAscii.toString
-    | none =>
-      if let .node _ _ args := node then
-        stack := stack ++ args.reverse
-  return symbols
-
-/-- The import closure of a module over the compiled graph, the module itself included. -/
-private def closureOf (graph : Std.HashMap Name (Array Name)) (root : Name) : Array Name :=
-  Id.run do
-    let mut reached := #[root]
-    let mut frontier := #[root]
-    while !frontier.isEmpty do
-      let mut next := #[]
-      for name in frontier do
-        for imported in graph.getD name #[] do
-          if !reached.contains imported then
-            reached := reached.push imported
-            next := next.push imported
-      frontier := next
-    return reached
-
-/-- One parsed command's contribution: the first forbidden token among its atoms and
-identifiers in source order, documentation excluded, and the counted tactics by kind. -/
-private def scanSyntax (stx : Syntax) (acc : Option String × ProofShape) :
-    Option String × ProofShape := Id.run do
-  let mut acc := acc
-  let mut stack : Array Syntax := #[stx]
-  while !stack.isEmpty do
-    let node := stack.back!
-    stack := stack.pop
-    match node with
-    | .node _ kind args =>
-      if kind == ``Lean.Parser.Command.docComment || kind == ``Lean.Parser.Command.moduleDoc then
-        continue
-      if let some index := countedKinds.findIdx? (·.contains kind) then
-        acc := (acc.1, acc.2.bump index)
-      stack := stack ++ args.reverse
-    | .missing => pure ()
-    | token => acc := (acc.1 <|> forbiddenToken? token, acc.2)
-  return acc
-
-/-- One source, read as the compiler read it: the first authored trust token, if any, and the
-counts of the ratcheted tactics. `tokens` is the table its imports gave it and the tokens it
-reserves itself; a fragment with no module is read against the audit environment's whole
-table. -/
-private def scanSource (environment : Environment) (source : System.FilePath)
-    (tokens : Option (Parser.TokenTable × Array String) := none) :
-    IO (Option String × ProofShape) := do
-  let environment := match tokens with
-    | some (table, _) =>
-      Parser.parserExtension.modifyState environment fun s => { s with tokens := table }
-    | none => environment
-  let own := (tokens.map (·.2)).getD #[]
-  let input ← IO.FS.readFile source
-  let inputContext := Parser.mkInputContext input source.toString
-  let (_, parserState, messages) ← Parser.parseHeader inputContext
-  let commandContext : Elab.Command.Context :=
-    { fileName := source.toString, fileMap := inputContext.fileMap, snap? := none, cancelTk? := none }
-  let mut commandState := Elab.Command.mkState environment messages
-  let mut parserState := parserState
-  let mut acc : Option String × ProofShape := (none, {})
-  repeat
-    let scope := commandState.scopes.head!
-    let moduleContext : Parser.ParserModuleContext :=
-      { env := commandState.env, options := scope.opts, currNamespace := scope.currNamespace,
-        openDecls := scope.openDecls }
-    let (command, nextParserState, messages) :=
-      Parser.parseCommand inputContext moduleContext parserState commandState.messages
-    parserState := nextParserState
-    commandState := { commandState with messages }
-    if messages.hasErrors then
-      let text ← match messages.toList.find? (·.severity == .error) with
-        | some message => message.toString
-        | none => pure "unknown error"
-      throw <| IO.userError s!"Effect4 source trust gate: {source} does not parse: {text}"
-    acc := scanSyntax command acc
-    if Parser.isTerminalCommand command then break
-    if syntaxCommands.contains command.getKind then
-      -- `command[1]` is the attribute kind of every syntax-declaring command
-      if command[1].getArgs.any fun arg => arg.getArgs.any (·.isToken "local") then
-        let position := inputContext.fileMap.toPosition (command.getPos?.getD 0)
-        throw <| IO.userError s!"Effect4 source trust gate: {source}:{position.line}: a `local` \
-          syntax declaration is not in the compiled environment this scanner reads, so what \
-          uses it does not parse; declare it `scoped`"
-      let reserved := (quotedSymbols command).filter own.contains
-      unless reserved.isEmpty do
-        commandState := { commandState with
-          env := Parser.parserExtension.modifyState commandState.env fun s =>
-            { s with tokens := reserved.foldl (fun t tk => t.insert tk tk) s.tokens } }
-    if scopeCommands.contains command.getKind then
-      match ← EIO.toIO' ((Elab.Command.elabCommandTopLevel command) commandContext |>.run commandState) with
-      | .error e =>
-        throw <| IO.userError s!"Effect4 source trust gate: {source}: {← Exception.toMessageData e |>.toString}"
-      | .ok ((), next) => commandState := next
-  return acc
-
-/-- Every audited source scanned once. The trust refusal is thrown here; the shapes of the
-library sources under `src/` come back for the ratchet, keyed by their repository-relative
-path. -/
-private def auditSourceTrustModifiers
-    (environment : Environment)
-    (projectRoot : System.FilePath)
-    (sources : Array System.FilePath) : IO (Array (String × ProofShape)) := do
-  let libraryDirectory := (projectRoot / "src").toString ++
-    System.FilePath.pathSeparator.toString
-  let graph : Std.HashMap Name (Array Name) :=
-    (environment.header.moduleNames.zip environment.header.moduleData).foldl (init := {})
-      fun m (name, data) => m.insert name (data.imports.map (·.module))
-  let modules : Std.HashMap String Name := environment.header.moduleNames.foldl (init := {})
-    fun m name => m.insert (modulePath projectRoot name).toString name
-  let mut shapes : Array (String × ProofShape) := #[]
-  for source in sources do
-    let tokens? ← match modules[source.normalize.toString]? with
-      | some moduleName => do
-        let imports := (closureOf graph moduleName).filter (· != moduleName)
-        let table ← tokenTableOf environment imports
-        pure (some (table, tokensOf environment moduleName))
-      | none => pure none
-    let (token?, shape) ← scanSource environment source tokens?
-    if let some token := token? then
-      throw <| IO.userError
-        s!"Effect4 source trust gate: {source} contains an authored `{token}` trust token"
-    let text := source.normalize.toString
-    if text.startsWith libraryDirectory then
-      shapes := shapes.push ((text.drop (projectRoot.toString.length + 1)).toString, shape)
-  return shapes.qsort fun a b => a.1 < b.1
-
 private def findProjectRoot (directory : System.FilePath) : IO System.FilePath := do
   let mut current := directory
   for _ in [0:64] do
@@ -654,104 +350,11 @@ private def findProjectRoot (directory : System.FilePath) : IO System.FilePath :
     | none => throw <| IO.userError "Effect4 axiom gate: could not locate the project root"
   throw <| IO.userError "Effect4 axiom gate: project-root search exceeded 64 parents"
 
-/--
-The modules `Test/fixtures/trust-gate/known-red.txt` declares intentionally
-red, one per line, `#` comments and blank lines ignored.
-
-The breaker/builder discipline has a phase in which a frozen red battery exists
-and its implementation does not. Such a module is correctly *not* imported by
-the audit root, so the closure check below would fire on it and the axiom scan
-would never be reached — which is why `lake build` was red for as long as any
-red phase was open. Reading the declared set keeps the closure check's teeth
-(an *undeclared* unreachable module still fails) without letting a sanctioned
-red phase defeat it. The entry is checked in the other direction too: a
-declared module that the audit root does in fact import has outlived its red
-phase and fails the gate.
-
-The file is not optional. A missing one is a gate that checks nothing.
-
-Lake does not trace it — it is not an import — so a `lake build` that replays
-the audit root's olean carries the previous reading. `scripts/check-known-red.sh`
-is the authority: it elaborates each declared-red source against the green
-closure and judges the results by one policy, in both directions.
--/
-private def declaredRedModules (projectRoot : System.FilePath) : IO (List Name) := do
-  let path := projectRoot / "Test" / "fixtures" / "trust-gate" / "known-red.txt"
-  unless ← path.pathExists do
-    throw <| IO.userError
-      s!"Effect4 module-closure gate: {path} is missing; the declared-red set is part of the gate, not an optional file"
-  let contents ← IO.FS.readFile path
-  return contents.splitOn "\n" |>.filterMap fun line =>
-    let line := line.trimAscii.toString
-    if line.isEmpty || line.startsWith "#" then none else some line.toName
-
-/--
-The pinned proof shape, one row per library source that holds at least one counted tactic.
-
-`generated/proof-shape.tsv`, and like `known-red.txt` it is not optional: a missing file is a
-gate that checks nothing. `#effect4_print_proof_shape` prints the file the tree would pin now,
-so re-pinning is a copy-paste rather than arithmetic.
-
-The pin is a **ceiling** (decision D-D, tooling plan 1.7). A count above its row fails; a count
-below it passes and the summary says by how much, because blocking a seat for improving a proof
-is friction with no gate behind it. Two staleness teeth keep the ceiling honest in the other
-direction: a source with a counted tactic and no row fails, so a new module cannot arrive under
-the radar, and a row whose source no longer exists fails, so a row cannot outlive its file.
--/
-private def readProofShapePins
-    (projectRoot : System.FilePath) : IO (Array (String × ProofShape)) := do
-  let path := projectRoot / "generated" / "proof-shape.tsv"
-  unless ← path.pathExists do
-    throw <| IO.userError
-      s!"Effect4 proof-shape ratchet: {path} is missing; the pin is part of the gate, not an \
-         optional file. `#effect4_print_proof_shape` prints the file to commit"
-  let contents ← IO.FS.readFile path
-  let mut rows : Array (String × ProofShape) := #[]
-  for line in contents.splitOn "\n" do
-    let line := line.trimAscii.toString
-    if line.isEmpty || line.startsWith "#" then continue
-    let fields := line.splitOn "\t"
-    let counts := fields.tail.filterMap String.toNat?
-    unless counts.length == countedTactics.length do
-      throw <| IO.userError
-        s!"Effect4 proof-shape ratchet: {path} has a row with {counts.length} counts where \
-           {countedTactics.length} are expected: {line}"
-    rows := rows.push (fields.headD "", { counts := counts.toArray })
-  return rows
-
-/-- The ratchet: every measured shape against its pin, in both directions. -/
-private def auditProofShape
-    (projectRoot : System.FilePath)
-    (shapes : Array (String × ProofShape)) : IO String := do
-  let pins ← readProofShapePins projectRoot
-  let measured : Std.HashMap String ProofShape := shapes.foldl (init := {}) fun m (k, v) =>
-    m.insert k v
-  let mut slack := 0
-  for (path, pinned) in pins do
-    match measured[path]? with
-    | none =>
-      throw <| IO.userError
-        s!"Effect4 proof-shape ratchet: generated/proof-shape.tsv pins {path}, which is not an audited source under src/; the row has outlived its file, so remove it"
-    | some shape =>
-      for tactic in countedTactics.toArray, now in shape.counts, ceiling in pinned.counts do
-        if now > ceiling then
-          throw <| IO.userError
-            s!"Effect4 proof-shape ratchet: {path} now holds {now} `{tactic}` where generated/proof-shape.tsv pins {ceiling}. The pin is a ceiling: a proof may get shorter, never longer. Write the proof without it, or re-pin deliberately with `#effect4_print_proof_shape`"
-        slack := slack + (ceiling - now)
-  let pinnedPaths : Std.HashSet String := pins.foldl (init := {}) fun m (k, _) => m.insert k
-  for (path, shape) in shapes do
-    if shape.total > 0 && !pinnedPaths.contains path then
-      throw <| IO.userError
-        s!"Effect4 proof-shape ratchet: {path} holds {shape.total} counted tactic(s) and has no row in generated/proof-shape.tsv; a new source does not arrive under the ceiling. `#effect4_print_proof_shape` prints the file to commit"
-  let counted := shapes.foldl (init := 0) fun n (_, shape) => n + shape.total
-  let tail := if slack == 0 then "" else " — `#effect4_print_proof_shape` tightens it"
-  return s!"Effect4 proof-shape ratchet: {counted} counted tactic(s) ({String.intercalate ", " countedTactics}) over {pins.size} pinned source(s); {slack} below the ceiling" ++ tail
-
 private def auditedSources (projectRoot : System.FilePath) : IO (Array System.FilePath) := do
   let effect4 ← (projectRoot / "src" / "Effect4").walkDir
   let effect4 := effect4.filter fun path => path.extension == some "lean"
-  -- `Test/fixtures/` holds the gates' own probe sources (forged declarations, planted
-  -- trust tokens); they are inputs to `scripts/test-source-trust-tokenizer.sh`, not battery modules.
+  -- `Test/fixtures/` holds fixtures (`scripts/test-trust-boundaries.sh`'s planted declarations,
+  -- sample trees), not battery modules.
   let fixturesRoot := (projectRoot / "Test" / "fixtures").toString
   let tests ← (projectRoot / "Test").walkDir
   let tests := tests.filter fun path =>
@@ -791,25 +394,10 @@ elab "#effect4_axiom_gate" : command => do
   let sources ← liftIO <| auditedSources projectRoot
   let importedPaths := environment.header.moduleNames.map fun moduleName =>
     modulePath projectRoot moduleName
-  let declaredRed ← liftIO <| declaredRedModules projectRoot
-  let declaredRedPaths := declaredRed.map fun moduleName =>
-    modulePath projectRoot moduleName
   for source in sources do
-    if source.normalize != sourceFile.normalize
-        && !importedPaths.contains source.normalize
-        && !declaredRedPaths.contains source.normalize then
+    if source.normalize != sourceFile.normalize && !importedPaths.contains source.normalize then
       throwError
         "Effect4 module-closure gate: {source} is not reachable from the Test.All audit root"
-  for (moduleName, path) in declaredRed.zip declaredRedPaths do
-    if !(sources.map System.FilePath.normalize).contains path then
-      throwError
-        "Effect4 module-closure gate: {moduleName} is declared red in \
-         Test/fixtures/trust-gate/known-red.txt but has no source file at {path}"
-    if importedPaths.contains path then
-      throwError
-        "Effect4 module-closure gate: {moduleName} is declared red in \
-         Test/fixtures/trust-gate/known-red.txt but the audit root imports it; \
-         its red phase is over, so remove the entry"
 
   -- A Test-only import is not a library root. Every library source must belong
   -- to Effect4 or Effect4.Laws, and the application root must never reach Laws.
@@ -840,9 +428,6 @@ elab "#effect4_axiom_gate" : command => do
     (`Effect4).isPrefixOf name && !apiModules.contains name).size
   logInfo m!"Effect4 library-root gate: {apiCount} API/utility modules, {lawsCount} Laws-only modules; every library source is reachable; Effect4 never reaches Laws"
 
-  let shapes ← liftIO <| auditSourceTrustModifiers environment projectRoot sources
-  logInfo (← liftIO <| auditProofShape projectRoot shapes)
-
   let mut declarations : Array Name := #[]
   for (name, info) in environment.constants.toList do
     if let some moduleName := moduleOf? environment name then
@@ -852,6 +437,12 @@ elab "#effect4_axiom_gate" : command => do
             throwError "Effect4 trust gate: declaration {name} is unsafe"
           if info.isPartial then
             throwError "Effect4 trust gate: declaration {name} is partial"
+          if let .axiomInfo _ := info then
+            throwError "Effect4 trust gate: declaration {name} is an axiom; the tree declares none"
+          if isExtern environment name then
+            throwError "Effect4 trust gate: declaration {name} is `@[extern]`; a checked body is replaced by host code"
+          if (Compiler.getImplementedBy? environment name).isSome then
+            throwError "Effect4 trust gate: declaration {name} is `@[implemented_by]`; a checked body is replaced by another"
           if let .opaqueInfo opaqueInfo := info then
             if isSynthesizedOpaqueBody opaqueInfo.value then
               throwError
@@ -927,33 +518,6 @@ command prints is exactly the list the exact-declaration boundary still needs.
 Run it from a module that imports the whole tree, i.e. beside
 `#effect4_axiom_gate` in `Test.lean`.
 -/
-
-/-!
-## Re-pinning the proof shape
-
-`#effect4_print_proof_shape` prints `generated/proof-shape.tsv` as the tree would pin it now.
-Copy the output into the file when a proof got shorter, or when a new source arrives with a
-counted tactic. Run it from a module that imports the whole tree, i.e. beside
-`#effect4_axiom_gate` in `Test.lean`.
--/
-
-open Lean Elab Command in
-elab "#effect4_print_proof_shape" : command => do
-  let named := System.FilePath.mk (← getFileName)
-  let workingDirectory ← IO.currentDir
-  let sourceFile := if named.isAbsolute then named else workingDirectory / named
-  let some sourceDirectory := sourceFile.parent
-    | throwError "Effect4 proof-shape ratchet: source file has no parent directory"
-  let projectRoot ← liftIO <| findProjectRoot sourceDirectory
-  let sources ← liftIO <| auditedSources projectRoot
-  let shapes ← liftIO <| auditSourceTrustModifiers (← getEnv) projectRoot sources
-  let header :=
-    "# GENERATED by `#effect4_print_proof_shape` (Test/Audit/AxiomGate.lean); commit it\n\
-     # format=proof-shape-v1; the ceiling per library source, never a target\n\
-     # path\t" ++ String.intercalate "\t" countedTactics
-  let rows := shapes.filterMap fun (path, shape) =>
-    if shape.total == 0 then none else some (ProofShape.render path shape)
-  logInfo (header ++ "\n" ++ String.intercalate "\n" rows.toList)
 
 open Lean Elab Command in
 elab "#effect4_print_choice_reachers" : command => do

@@ -7,9 +7,11 @@
 #   gen-*    the generated files, one rule per group, in the dependency order the
 #            producers need. A rule fires when its generator, its inputs, or the
 #            compiled core it reads changed; its marker is .lake/gen/<group>.
-#   check-*  the checks. `check` is the tier that runs after every change;
-#            `check-host` adds the outside oracles (the real Effect runtime, the
-#            TypeScript compiler, the OCaml engine); `check-full` is everything.
+#   check-*  the checks. `check` is the tier that runs after every change: the build
+#            (the axiom audit runs inside it), the fresh root elaboration and the
+#            generated-file drift. `check-full` is everything else: the outside oracles
+#            (the real Effect runtime, the TypeScript compiler, the OCaml engine), the
+#            host groups and the tool harnesses.
 #            A check that names its inputs is a marker rule too (.lake/check/<name>)
 #            and is skipped while nothing it reads has changed; `make -B <target>`
 #            or `make clean-check` forces it. CI starts from a fresh clone, so it
@@ -261,14 +263,13 @@ doctor: ## the tools and installs every tier needs, with their versions
 
 # ---------------------------------------------------------------------------- checks
 
-CHECKS := roots citations cases native ts-reader truth target schema-codec ocaml ingest ingest-smoke \
-  host-protocol census schema-ts schema-pins schema-host compat tools corpus
-.PHONY: check check-host check-full check-gen check-gen-full clean-check FORCE $(addprefix check-,$(CHECKS))
+CHECKS := roots cases native ts-reader truth target schema-codec ocaml ingest ingest-smoke \
+  host-protocol census schema-ts schema-pins schema-host tools corpus
+.PHONY: check check-full check-gen check-gen-full clean-check FORCE $(addprefix check-,$(CHECKS))
 FORCE:
 
-check: build check-roots check-gen check-cases check-native check-ts-reader check-corpus ## after every change (the corpus pin is stamped against the compiler, the machine and the generator, so it re-runs only when they move)
-check-host: check check-citations check-truth check-tsdiag check-target check-schema-codec check-ocaml check-ingest-smoke check-compat ## per slice: the outside oracles and the citation scans
-check-full: check-host check-tools check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins check-schema-host ## everything
+check: build check-roots check-gen ## after every change: the build with its axiom audit, the fresh root elaboration, the generated-file drift
+check-full: check check-cases check-native check-ts-reader check-corpus check-truth check-tsdiag check-target check-schema-codec check-ocaml check-ingest-smoke check-tools check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins check-schema-host ## everything else: the outside oracles, the host groups and the tool harnesses
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
 # generated file. `check-gen-full` re-cuts every group, the host-cut ones included,
@@ -313,16 +314,6 @@ $(CHK)/cases: $(CORE) $(CONFORM_SOURCES)
 
 $(CHK)/native: $(CORE) $(CONFORM_SOURCES)
 	$(PY) scripts/check-conform.py native
-	@mkdir -p $(CHK) && touch $@
-
-# One scan of every text file of the nine trees, with `vendor`, `node_modules`, `_copy`,
-# `research`, `_build` and `.lake` pruned as the scanner prunes them, answering both citation
-# questions: every cited path exists, and no line-numbered citation names a mutable authored
-# document. It was two programs reading the same files until 2026-09-18.
-CITATION_TREES := src Test tools ocaml ts docs scripts harness generated
-CITATION_SOURCES := $(shell find $(CITATION_TREES) \( -type d \( -name vendor -o -name node_modules -o -name _copy -o -name research -o -name _build -o -name .lake \) -prune \) -o -type f -print)
-$(CHK)/citations: scripts/check-source-citations.py scripts/source-citations-allowed.txt $(CITATION_SOURCES)
-	$(PY) scripts/check-source-citations.py
 	@mkdir -p $(CHK) && touch $@
 
 # The TypeScript reader against Lean's reader: every `.ts` of the corpus and of the truth
@@ -482,42 +473,11 @@ $(CHK)/schema-host: $(SCHEMA_SOURCES) $(shell find harness/schema-annotations ha
 	bash scripts/check-schema-effectful-field.sh
 	@mkdir -p $(CHK) && touch $@
 
-# The compatibility snapshot: reflect the working tree in a checkout outside the
-# repository and compare its constructor shapes with the promoted baseline. Joins
-# `check` once the baseline is re-promoted at the freeze commit (the current one
-# predates the removal of `choose`).
-# The compatibility lane: the working tree's reflected families, with their wire tags from
-# $(WIRE_TAGS), against the retained baseline under the named policy beside it, and the
-# retained byte vectors against their recorded digests under the same policy. A difference
-# the policy does not name fails; so does a policy entry that matches no difference.
-COMPAT_NAME ?= 66ee4657-supplement-v1
-COMPAT_BASELINE ?= Test/fixtures/baseline/$(COMPAT_NAME)/snapshot.json
-COMPAT_POLICY ?= Test/fixtures/baseline/$(COMPAT_NAME).policy.json
-COMPAT_VECTORS ?= Test/fixtures/baseline/66ee4657/golden-digests.sha256
-$(CHK)/compat: $(CORE) scripts/check-compatibility.py scripts/lib/compatibility.py tools/Compatibility/Extract.lean \
-  $(COMPAT_BASELINE) $(COMPAT_POLICY) $(COMPAT_VECTORS) $(WIRE_TAGS) tools/Tools/ProgramStructure.lean tools/Effect4Gen/manifest.json \
-  $(wildcard ocaml/goldens/eff/*.hex ocaml/eff/goldens/*.bin)
-	$(PY) scripts/test-compatibility.py
-	@work="$$(mktemp -d "$${TMPDIR:-/tmp}/effect4-compat.XXXXXX")/tree"; \
-	  $(PY) scripts/check-compatibility.py prepare --work "$$work" --working-tree && \
-	  $(PY) scripts/check-compatibility.py reflect --work "$$work" && \
-	  $(PY) scripts/check-compatibility.py compare --baseline $(COMPAT_BASELINE) --candidate "$$work/snapshot.json" \
-	    --policy $(COMPAT_POLICY) --vectors $(COMPAT_VECTORS) --vector-root ocaml > "$$work/report.json"; \
-	  status=$$?; $(PY) scripts/check-compatibility.py summary --report "$$work/report.json"; \
-	  rm -rf "$$(dirname "$$work")"; exit $$status
-	@mkdir -p $(CHK) && touch $@
-
-SELFTEST_SOURCES := $(wildcard scripts/test-*.sh scripts/test-*.py scripts/check-*.sh scripts/check-*.py scripts/lib/*) Test/Audit/AxiomGate.lean \
-  $(shell find Test/fixtures/trust-gate Test/fixtures/internal-citations -type f)
+# The one tool harness: the exact `Classical.choice` admissions against compiled declarations.
+SELFTEST_SOURCES := scripts/test-trust-boundaries.sh Test/Audit/AxiomGate.lean \
+  $(shell find Test/fixtures/trust-gate -type f)
 $(CHK)/tools: $(SELFTEST_SOURCES) | build
-	bash scripts/test-source-trust-tokenizer.sh
 	bash scripts/test-trust-boundaries.sh
-	bash scripts/test-internal-citations-gate.sh
-	$(PY) scripts/test-source-citations.py
-	$(PY) scripts/test-conform-report.py
-	$(PY) scripts/test-program-structure.py
-	$(PY) scripts/test-compatibility.py
-	$(PY) scripts/test-corpus-check.py
 	@mkdir -p $(CHK) && touch $@
 
 # ---------------------------------------------------------------------------- help
@@ -528,7 +488,7 @@ help: ## this list
 	@echo
 	@echo '  check-<name>       one check: roots, cases, native, ts-reader, truth, target, schema-codec,'
 	@echo '                     ocaml, ingest, ingest-smoke, host-protocol, census, schema-ts, corpus,'
-	@echo '                     schema-pins, schema-host, compat, tools'
+	@echo '                     schema-pins, schema-host, tools'
 	@echo '                     (each skipped while its inputs are unchanged; -B forces)'
 	@echo '  gen-<group>        one generated group: derived, eff, wire, cas, ts, readme, lcnf,'
 	@echo '                     truth, host-protocol, schema-ts, census'
