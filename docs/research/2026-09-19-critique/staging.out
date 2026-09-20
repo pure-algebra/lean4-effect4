@@ -1,0 +1,13 @@
+'CritiqueStaging.absolute_zero_reads_context' depends on axioms: [propext]
+'CritiqueStaging.input_reads_context_length' depends on axioms: [propext]
+'CritiqueStaging.wrong_identity_type' depends on axioms: [propext, Quot.sound]
+'CritiqueStaging.correct_identity_type' depends on axioms: [propext, Quot.sound]
+'CritiqueStaging.raw_composition_reads_old_input' depends on axioms: [propext]
+'CritiqueStaging.weakened_composition_reads_answer' depends on axioms: [propext]
+'CritiqueStaging.left_associated_result' depends on axioms: [propext]
+'CritiqueStaging.raw_right_associated_result' depends on axioms: [propext]
+'CritiqueStaging.weakened_right_associated_result' depends on axioms: [propext]
+'CritiqueStaging.raw_term_can_be_unscoped' does not depend on any axioms
+'CritiqueStaging.unscoped_term_refuses' depends on axioms: [propext]
+'CritiqueStaging.compile_evaluates_env_three' depends on axioms: [propext]
+'CritiqueStaging.compile_evaluates_env_five' depends on axioms: [propext]

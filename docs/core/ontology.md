@@ -179,23 +179,28 @@ beside `Eff`, restructures `Await`. §3 is what the principle actually asks for.
 
 ### 5.1 Sorts and free objects
 
-Six sorts. For each, one free object, presented by a signature Σ written as data where the
-generator can read it:
+Each syntax sort has one owner and its signature is available to the generator. The following
+map includes generated folds and other maps out of data; a codec or compiler translation is
+not itself a catamorphism or an initiality proof. Term also has the generated TermAlgebra and
+cata_term in Program/Fold.lean.
 
-| sort | free object | signature as data | fold |
+| sort | data owner | signature as data | fold or other map |
 | --- | --- | --- | --- |
 | program | `Eff` (`Program/Eff.lean:301`) | `binders.json` → `LayerView` (`ArgSort`, `argSorts`, `makers`) | `cataFam`, unique by `hom_eq_cata_eff` |
-| type | `Ty` (`Program/Ty.lean:23`) | its inductive (no data signature yet) | hand folds; a `TyAlgebra` is one generator run |
-| value | `Store.Val` | its inductive; `Kind`/`Shape` classify it | `Canonical` instances are the algebras |
+| type | `Ty` (`Program/Ty.lean:23`) | its inductive and generated family description | `TyAlgebra`, `cata_ty` in `Program/Fold.lean` |
+| value | `Store.Val` | its inductive; `Kind`/`Shape` classify it | `ValAlgebra`, `cata_val` in `Store/Fold.lean`; `Canonical` supplies exact embeddings, a different arrow kind |
 | syntax | `TypeScript.Expr` (vendored) | vendored | `print`/`read` calculus over the template table |
 | code | LCNF (Lean's) | Lean's | `translateClosure` |
 | run | `List Command` (free monoid on `Command`) | `Runner` group | `Play` — the monoid action |
 
-The machine's *state* (`Machine`, `Run`) is not a free object; it is a coalgebra `S → Ω × S^Command`
-(observe, step) — a Moore machine. The two halves meet at the journal: `replay_unique` and
-`journal_replays` say every reachable state is the image of a unique word of the free monoid, so
-the run face is on the initial-algebra side after all, and only the machine's internal `step` is
-coalgebraic. That is why `Run` can be data (the journal) while `Machine` cannot.
+At a fixed input/budget policy, observation and command stepping give a coalgebraic view of
+state, `S → Ω × S^Command`. This does not determine whether a state is stored data: the compiled
+machine uses first-order carriers, while the reference proof machine has semantic functions.
+The journal acts by replay. `replay_unique` proves uniqueness of that action from its empty,
+append and singleton equations; it does not prove injectivity from command words to machine
+states. `journal_replays` reconstructs a Run, including the journal it explicitly retains.
+Different words may have the same machine projection. Serialization and resumption require
+their own contracts; first-order fields alone establish neither.
 
 ### 5.2 Five arrow kinds and their obligations
 
@@ -227,24 +232,35 @@ Anything else is a leak. The census at `e6724a05`:
 
 So the leak is entirely in the type sort and its checkers, which is where §3 cuts.
 
-### 5.4 The program category, stated at `Eff` (what "graded Freyd" would mean)
+### 5.4 Scope-correct composition at `Eff`
 
-Objects: `Ty`. For a signature σ and context Γ, `Hom(A, B)` is the set of `p : Eff` with
-`effTy σ (Γ ++ [A]) p = some ⟨B, E, R⟩`, *graded* by `(E, R)` in the join-semilattice
-(`Ty.union`, `Requirement.union`) — the grade of a composite is the join. Identity is
-`succeed (var 0)`; composition is `bind`. The three laws, at the meaning:
+For signature σ and fixed context Γ, consider programs checked at Γ ++ [A] with answer B and
+error/service grade (E,R). Variables are absolute positions from the start of the environment;
+successful bind appends its answer. Consequently the proposed operations are:
 
-```
-denote (bind (succeed x) f)  =  denote (f x)
-denote (bind p succeed)      =  denote p
-denote (bind (bind p f) g)   =  denote (bind p (fun x => bind (f x) g))
+```text
+idAt Γ          := succeed (var Γ.length)
+composeAt Γ p q := bind p (q.weaken Γ.length)
 ```
 
-These are statable today on the `Looped` fragment (`Denote` is compositional in `bind` by
-definition) and become one-line consequences of `denoteAlg` once row 30 lands. The *pure*
-subcategory a Freyd category needs is the image of `sync` (Lean functions `Val → Val`), which is
-what `SchemaFn` was reaching for; it needs no wrapper. The premonoidal structure is `select`'s
-tagged pairing. None of this needs `Transform`, `Endpoint` or `SchemaFn` to exist.
+The second program originally expects Γ,B; weakening skips the retained input A in Γ,A,B.
+The checked research theorem `CritiqueContracts.composeAt_typed` derives typing closure from
+the existing HasTy.bind and hasTy_weaken, with error join Ty.join and requirement union. Raw
+Ty.union is a constructor, not a normalized semilattice operation; use CTy/ErrTy or state the
+normalization equality explicitly. The research packet also checks general term evaluation
+transport under slot insertion, including refusal.
+
+Raw bind is not categorical composition at this interface: concrete well-scoped pure examples
+return different values after raw reassociation. Semantic identity/associativity must instead
+be proved for scope-correct composition at a named meaning, quantifying over fitting environments
+and stores. Extend from straight-line meaning to a concurrent observation only with the relevant
+connector. The exact witnesses and remaining laws are in
+`docs/research/2026-09-19-critique-response.md` §2. No frozen theorem is weakened by this correction.
+
+A category or graded Freyd structure remains a proposed organization, not a current theorem.
+`sync` contains a Term, not an arbitrary Lean function. Pure maps, pairing, products, grade
+normalization and the necessary semantic equations must be identified before claiming those
+structures. Neither adding a wrapper nor obtaining a fold's uniqueness supplies these laws.
 
 ### 5.5 Metaprogramming
 

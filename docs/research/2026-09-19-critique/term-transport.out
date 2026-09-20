@@ -1,0 +1,3 @@
+'CritiqueTermTransport.lookup_weaken' depends on axioms: [propext]
+'CritiqueTermTransport.evalTerm_weaken' depends on axioms: [propext, Quot.sound]
+'CritiqueTermTransport.evalTerms_weaken' depends on axioms: [propext, Quot.sound]

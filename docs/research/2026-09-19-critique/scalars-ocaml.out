@@ -1,0 +1,4 @@
+{"probe":"scalar","int_size":63,"max_int":"4611686018427387903","input":"4611686018427387902","exact_intermediate":"9223372036854775804","exact_result":"4611686018427387902","translated_result":"2305843009213693951","translated_succ_max":"-4611686018427387904","library_succ_max":"4611686018427387903","clamped_2pow64_guard_at_max":false}
+{"probe":"memo","raw_length":3,"map_cardinal":2,"raw_values":[10,20,99],"map_values":[20,10],"first_binding":10,"after_delete":null,"list_update_callback_calls":2,"map_update_callback_calls":1}
+{"probe":"persistence","old_value":10,"new_value":20,"absent_set_same_object":true,"old_log_length":255,"full_log_length":256,"later_log_length":257,"aliased_mutable_payload_in_old_snapshot":2}
+{"probe":"fixed-functions","cached_node_after_other_resolver":1,"recomputed_node":101,"mixed_cached_view":[7,-9],"recomputed_view":[-7,-9]}

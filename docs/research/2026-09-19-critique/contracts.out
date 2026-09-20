@@ -1,0 +1,11 @@
+Effect4.Machine.foldl_rel.{w, w'} {α₁ α₂ : Type w} {γ₁ γ₂ : Type w'} {R : α₁ → α₂ → Prop} {P : γ₁ → γ₂ → Prop}
+  {f₁ : γ₁ → α₁ → γ₁} {f₂ : γ₂ → α₂ → γ₂}
+  (hf : ∀ (a₁ : γ₁) (a₂ : γ₂) (x₁ : α₁) (x₂ : α₂), P a₁ a₂ → R x₁ x₂ → P (f₁ a₁ x₁) (f₂ a₂ x₂)) {l₁ : List α₁}
+  {l₂ : List α₂} (h : Machine.ListRel R l₁ l₂) {a₁ : γ₁} {a₂ : γ₂} :
+  P a₁ a₂ → P (List.foldl f₁ a₁ l₁) (List.foldl f₂ a₂ l₂)
+'CritiqueContracts.composeAt_typed' depends on axioms: [propext, Quot.sound]
+'CritiqueContracts.Factors.respects_eq' does not depend on any axioms
+'CritiqueContracts.Factors.trans' does not depend on any axioms
+'CritiqueContracts.transfer_safety' does not depend on any axioms
+'CritiqueContracts.reverse_inclusion_holds' does not depend on any axioms
+'CritiqueContracts.reverse_inclusion_does_not_transfer_safety' does not depend on any axioms

@@ -70,6 +70,9 @@ The immediate priority is shared representations and composition laws. Known fut
 can reserve contracts with explicit missing implementations using the existing wanted machinery.
 Supporting reviews and the paused tooling handoff are tracked in
 `docs/research/2026-09-19-state-refinement/closeout.md`; none depends on retaining the design worktree.
+The critique follow-up is tracked in `docs/research/2026-09-19-critique-response.md`, with Lean
+proofs and reproducible probes beside it. It corrects the composition/compilation account and
+identifies the driver-continuation contract needed before ownership across fuel frontiers.
 
 0. **The tooling-first waves, 1 and 2 landed** (2026-09-19). Wave 1: `f8517fa7`, `dfd94366`,
    `9e20cf9b`, `ee88efe2`, rows 59–66 (`1f1cc8e3`), the policy re-seed (`ba5286d3`); the coherence

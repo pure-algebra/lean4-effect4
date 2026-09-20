@@ -1,0 +1,166 @@
+{
+  "baseCommit": "6d2385cdb9d18f3513d51e92f24835feed394c88",
+  "lean": "Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
+  "ocaml": "The OCaml toplevel, version 5.1.1",
+  "bun": "1.4.2",
+  "runs": [
+    {
+      "name": "contracts",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "/private/tmp/effect4-state-refinement-design/docs/research/2026-09-19-critique/Contracts.lean"
+      ],
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "exitCode": 0,
+      "output": "contracts.out",
+      "reproduceFromRepoRoot": [
+        "lake",
+        "env",
+        "lean",
+        "docs/research/2026-09-19-critique/Contracts.lean"
+      ]
+    },
+    {
+      "name": "staging",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "/private/tmp/effect4-state-refinement-design/docs/research/2026-09-19-critique/Staging.lean"
+      ],
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "exitCode": 0,
+      "output": "staging.out",
+      "reproduceFromRepoRoot": [
+        "lake",
+        "env",
+        "lean",
+        "docs/research/2026-09-19-critique/Staging.lean"
+      ]
+    },
+    {
+      "name": "term-transport",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "/private/tmp/effect4-state-refinement-design/docs/research/2026-09-19-critique/TermTransport.lean"
+      ],
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "exitCode": 0,
+      "output": "term-transport.out",
+      "reproduceFromRepoRoot": [
+        "lake",
+        "env",
+        "lean",
+        "docs/research/2026-09-19-critique/TermTransport.lean"
+      ]
+    },
+    {
+      "name": "observation-tx",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "/private/tmp/effect4-state-refinement-design/docs/research/2026-09-19-critique/ObservationTx.lean"
+      ],
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "exitCode": 0,
+      "output": "observation-tx.out",
+      "reproduceFromRepoRoot": [
+        "lake",
+        "env",
+        "lean",
+        "docs/research/2026-09-19-critique/ObservationTx.lean"
+      ]
+    },
+    {
+      "name": "scalars-ocaml",
+      "command": [
+        "opam",
+        "exec",
+        "--switch=effect4",
+        "--",
+        "ocaml",
+        "-I",
+        "ocaml/engine",
+        "/private/tmp/effect4-state-refinement-design/docs/research/2026-09-19-critique/scalars.ml"
+      ],
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "exitCode": 0,
+      "output": "scalars-ocaml.out",
+      "reproduceFromRepoRoot": [
+        "opam",
+        "exec",
+        "--switch=effect4",
+        "--",
+        "ocaml",
+        "-I",
+        "ocaml/engine",
+        "docs/research/2026-09-19-critique/scalars.ml"
+      ]
+    },
+    {
+      "name": "scalars-js",
+      "command": [
+        "bun",
+        "/private/tmp/effect4-state-refinement-design/docs/research/2026-09-19-critique/scalars.js"
+      ],
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "exitCode": 0,
+      "output": "scalars-js.out",
+      "reproduceFromRepoRoot": [
+        "bun",
+        "docs/research/2026-09-19-critique/scalars.js"
+      ]
+    }
+  ],
+  "sourceSHA256": {
+    "lean-toolchain": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71",
+    "lake-manifest.json": "47d6d6edc14b38fdd7ce5be1fa58d3374f2159e7732e56fbc02d8be31088b1e6",
+    "src/Effect4/Machine/Term.lean": "1e2afb13a9422d105e5fe133c9ee70d52af24ad28bbdd0c6d1597d01b3f956da",
+    "src/Effect4/Machine/Fibers.lean": "3b92276f84e2887a22df5419b67e8e9ffd613b6a0419e4baadc8e3a618269916",
+    "src/Effect4/Program/Compile.lean": "589a4b4c9cd8620f2fe1d5efdc91619c11e5b8eae3b01c537e566591474cdd78",
+    "src/Effect4/Program/Typing.lean": "db7eb9a325cbf17e2119c5d95e9fca549d3bc3da06bc152070aaa66b2a0911f4",
+    "src/Effect4/Program/Typing/Rules.lean": "eb4fd9fe5222ee84c7359977981bc47a6c0c9c0116718cce2d15c29eb1303ecb",
+    "src/Effect4/Laws/Program/Denote.lean": "34c66bdfd6879d07ee4fe1c00453bee0738b678ca0a76a8eafe0ee82fe2a7339",
+    "src/Effect4/Laws/Program/Typing/Sound.lean": "cc22bccd33a7e4df9561e9db93e21db4220f7020dbb7b0cdf99d6290a2973d6a",
+    "src/Effect4/Laws/Machine/Behaviour.lean": "a65b5890d5248db8901b241ab13512375a9fcc3b47752863a105bca4969434cd",
+    "src/Effect4/Api/HostSession.lean": "010480e607f88ce4230b7f44463bf3e1047c854aa4f8be07d1cd2a2f94798497",
+    "src/OCaml5/Lcnf/Translate.lean": "63afc9b4e3fe870b5886350082a1b768a00a11de2f398c77f02d99715814a5c2",
+    "ocaml/engine/e4_nat.ml": "d16c7604930d01cc8ed72f10849fca129d09982b04db43047b73fca67ba22487",
+    "ocaml/engine/e4_table.ml": "af7afe5d8363e63f37f4974602b8ecbff2bc970289786064bb9fa171b44c8257",
+    "ocaml/engine/e4_memo.ml": "54d8b2a9b6824e255fd3f1e6733b47a2fc526c2e9355f2ff9a400426e9d66a48",
+    "ocaml/engine/e4_memo_list.ml": "a6281c7bd018f09d1a3afe98b6ef1b1c972592d648a31469e089b090244260b9",
+    "ocaml/engine/e4_log.ml": "a4862dc52414492f6265451c95ad4ad1589c043c799354133a242f3ffcedc40b",
+    "ocaml/engine/e4_ppath.ml": "6a657b19930cbc7e7cbbd71aaa2d02e66f9323e3f349cdaf6a4e788f56a10b43",
+    "ocaml/engine/e4_fibers_view.ml": "ff74c88e11e6847fc16dee63df2fa07dd23145a1b99bd62e8812fd25d9ea2499",
+    "src/Effect4/Laws/Program/RuntimeR.lean": "ad7de04b313e20e7c6327e7f1b45413895c9a6c7a058893c752f844e755b5147"
+  },
+  "packetSHA256": {
+    "Contracts.lean": "5eb05833ec7eeac67ce3fbbf1c675ca11a817fb4a87b5c474c390d4b725fad0b",
+    "ObservationTx.lean": "00daa96d1b0ea77b982c9bbd16e7b9d8d5375f579025dca4be3152f7ad0cef88",
+    "Staging.lean": "8764fb59d242de7817200d982e441818b1d2ea9b53dcff26cc77eb7a9a7f6e7a",
+    "TermTransport.lean": "8986d9ceb1a962f01cc5d8d31c255fb7716ce00b91f8f7fc1c728b2b1017e363",
+    "contracts.out": "ff37036c8a73bb752736fa5d58183b37b63ce90c130964eeb3da59ed9a9def9f",
+    "observation-tx-review.md": "4cab60a00471b08a8314d209fdc11efc8fc2e94b92d45be94cd34bb6f1dbd5a1",
+    "observation-tx.out": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "scalars-js.out": "9b0528c717d797003eddd3dcfa8ade8b7baa3a5ac4142867c262794d9f506b5c",
+    "scalars-ocaml.out": "7f7f65ab0380ee472ad9b2c947550ed8c3839e81856f65dc4dea772a1b7c0858",
+    "scalars-storage-review.md": "ee311a5b23cc6d398d4546d84d3559dee2a894d85d748a2bf8ccca87db87c896",
+    "scalars.js": "ac7b04c5344e8322913d67ec1bbc6c478f101870231d82c0c1c5d404472a7cf5",
+    "scalars.ml": "622a300733390d53bbc7c0ba979ca66cd3e661fe25a0e571018a8a5367834d79",
+    "staging-review.md": "25a8c20b98472806875a345c51a4b63e014a71d0e717b14b408d09b95bd3e482",
+    "staging.out": "b1ce7be47f3743cd8baaf590f89f2ae7fc6000342f57e56a70e6dd58e57a53b4",
+    "submitted-critique.md": "53c911159df778aacb86cff7aee2e593bd1fe6fd364cd9782819051a1c56380d",
+    "term-transport.out": "cf82b30b565c40695ba4e6f8a8e087ed08f151746c8fa29dc1a77add52a60f4e"
+  },
+  "scope": "Checked research contracts and finite controls; OCaml translation arithmetic is source transcription, not a newly generated artifact. No runtime changes or full repository sweep.",
+  "notes": [
+    "Research interfaces are not installed library APIs.",
+    "The retained OCaml probe uses a repository-relative include directory; the independent review records the original absolute-path script hash.",
+    "General term transport and composition typing were checked after the independent reviews were drafted."
+  ]
+}

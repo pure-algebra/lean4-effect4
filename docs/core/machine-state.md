@@ -28,8 +28,9 @@ event log and a stuck marker. Four instances run it: the compiled machine, the r
 A fiber (`:229-247`) is fifteen fields transcribing the modelled part of rc.112's fiber object:
 its saved execution state (the current code, the continuation stack, the interrupt flags), its
 parking state and outstanding parks, its exit, the yield budget, its observers and children, its
-dispatcher and its context. Continuations are names with a total interpretation, never closures,
-which is what makes every piece of this state first-order data.
+dispatcher and its context. The compiled runtime uses first-order code and continuation names.
+The reference proof instance instead has function-valued RProgram/ScopeFrame continuations;
+they are semantic carriers, not stored program syntax or serializable runtime snapshots.
 
 The service state, `Stores` (`src/Effect4/Machine/Stores.lean:1719-1733`), holds seven things:
 the ref heap, the promise store, the scopes, the layer memo world, the timer, one fresh-name
@@ -105,12 +106,24 @@ any admitted ordinary Ref writes are not automatically rolled back. The observat
 execution assumptions determine where an active transaction record belongs. A future concurrent
 backend may require locking or validation even if the cooperative implementation does not.
 
+Fuel ownership needs a continuation contract. driveState returns unfinished Cmd data, but the
+public decision/session boundary does not retain the complete command and outer-driver remainder.
+A fresh command with more fuel is not resumption of that remainder. Choose either replay from
+the original state with more fuel, or a retained driver suspension, before relying on ownership
+across budgets. The checked witness and proposed control law are in
+`docs/research/2026-09-19-critique-response.md` §5; no STM implementation exists yet.
+
 **Composed APIs.** The catalogue has 20 API-family rows, not an exhaustive export census.
 DI-11 already chooses composite programs for Queue, Mailbox and PubSub. The proposed basis
 adds generic Ref/Deferred operations, binder-term atomic updates, map/list atoms with a named key
 policy, nested-handle typing, and typed first-order references to stored behaviors. Such
 references must resolve into the existing Eff owner; promoting the whole Capture record would
 accidentally freeze execution details into the value language.
+
+Code resolution must establish the entry signature and capture layout; a digest alone does not.
+Invocation context is selected by the module contract: existing registered finalizers restore
+captured services. First-order capability handles can be captured with type/lifetime conditions;
+reusable behavior content and a paused invocation's control state remain different sorts.
 
 A Latch is a candidate scheduled-wake primitive. It does not by itself prove Semaphore, Pool,
 Queue or transaction agreement: they differ in selection timing, wake count, live traversal,
@@ -127,6 +140,11 @@ They are planning dependencies, never executable defaults or extra Eff construct
 and Channel can follow this pattern; logging remains optional until an application needs it.
 The priority is composing existing representations and laws, with tooling serving those
 interfaces rather than introducing a new framework or gate for each module.
+
+Container laws fix their hidden parameters once: code root/resolver for cached paths, projection
+for cached views, equality/order/duplicate policy for maps, and immutable payloads or explicit
+heap ownership for retained snapshots. Scalar relations cover intermediate arithmetic and fresh
+allocation; saturation does not implement mathematical Nat or preserve fresh identities.
 
 **Lowering.** Keep four obligations distinct: program meaning to machine behavior; concrete
 storage to logical storage; LCNF/IR to target syntax; target compiler/runtime/host execution.

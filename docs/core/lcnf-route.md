@@ -13,6 +13,13 @@ and the LCNF vector lane covers the type-processing fragment. No theorem current
 of Lean definitions, compiler IR, target syntax, printed bytes and native/OCaml/Wasm execution.
 The semantic and runtime assumptions at each of those arrows remain distinct.
 
+The critique follow-up (`docs/research/2026-09-19-critique-response.md`) distinguishes this
+declaration-lowering route from compileEff, which evaluates a program at a Point into Prim
+runtime data. getMonoDecl? does not consume Prim values; no self-applied specializer establishing
+a second Futamura projection is present. Boundary probes also distinguish raw generated Nat
+addition/successor from saturating helper operations. Exact scalar contracts must cover all
+intermediates; neither bounded public results nor arbitrary saturation supplies that theorem.
+
 ## 1. What the route is
 
 Lean's own compiler IR, mono phase, read off the `.olean` (`getMonoDecl?`, `PhaseExt.lean:162`

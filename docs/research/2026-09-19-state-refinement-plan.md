@@ -10,6 +10,10 @@ vendor/effect-4.0.0-rc.112. The earlier tooling branch codex/typed-state-tooling
 scanner repair f6f9f793 is committed there, later declaration/frame/ledger work is uncommitted.
 No machine or language implementation is authorized by the recommendations in this plan.
 
+The checked critique follow-up is `docs/research/2026-09-19-critique-response.md`. It refines
+this plan with scope-correct composition, exact term transport, a driver-continuation contract,
+and fixed-parameter container/scalar laws. It does not approve the open semantic proposals.
+
 ## 1. What is settled, and what this packet completes
 
 The owner approved HandlesFit with Val.hasTy unchanged, and per-cell Ref/Deferred types,
@@ -491,7 +495,7 @@ or whole-repository sweep was run for this documentation slice.
 | Slice | Work | Acceptance and deletion |
 | --- | --- | --- |
 | D0: this packet | Reconcile research, record the approved world, correct authority overclaims, identify reusable interfaces | Representation owners and composition seams are explicit; remaining semantic choices stay open in the one register |
-| D1: structural contract | Set observation/representation relation, completion and memo contract, identity policy, wake protocol; reserve signatures for known future consumers | Shared law statements and dependencies elaborate; future bodies can remain wanted; existing frozen Obs is not weakened |
+| D1: structural contract | Set observation/representation relation, completion and memo contract, identity policy, wake protocol, and replay-versus-resumption contract; reserve signatures for known future consumers | Shared law statements and dependencies elaborate; future bodies can remain wanted; existing frozen Obs is not weakened |
 | D2: completion/memo migration | Completion-valued cells/owed data beside the old representation, connector, callers, then old fields | Delayed Ref reads and memo sharing retained; twelve Deferred witnesses and layer memo clause revisited; obsolete shape/decoder invariants deleted; generated outputs re-cut |
 | D3: world/language and ledger | Approved per-cell world, generic Ref/Deferred and binder-term atomic updates in their dependency order; independent transition-goal producer | Exact expected goals, frames, placeholders and dependencies; pinned semantic debt after D2; no claims that structural-frame premises are that debt |
 | D4: typed-state proofs | S1/S2/S3 on the stable representation and declared assumptions | Exit typing theorem at its stated fragment/world; current trust ceiling; no full behavioral-equivalence claim from typing |
