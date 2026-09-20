@@ -8,8 +8,8 @@ namespace Test.ProofGraph
 open Lean Meta Elab Command
 open _root_.ProofGraph
 
-theorem reflexive (n : Nat) : n = n := rfl
-theorem another (n : Nat) : n ≤ n := Nat.le_refl n
+theorem reflexive (n : Nat) : n = n := by aesop
+theorem another (n : Nat) : n ≤ n := by aesop
 def pending : ProofWanted (∀ n : Nat, n = n + 1) := ⟨⟩
 def ordinary : Nat := 3
 

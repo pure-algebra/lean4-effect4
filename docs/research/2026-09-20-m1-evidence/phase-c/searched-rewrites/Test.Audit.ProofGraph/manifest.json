@@ -1,0 +1,285 @@
+{
+  "module": "Test.Audit.ProofGraph",
+  "evidence_kind": "completed finite rewrite/build/census slice",
+  "phase_b_commit": "3f89307488835002c1cb9d8b3bcb9c1dcc1554a1",
+  "recorded_finished_utc": "2026-09-20T13:52:49.061078+00:00",
+  "rewritten_bodies": 2,
+  "source_path": "Test/Audit/ProofGraph.lean",
+  "source_before_sha256": "194a0e2235abcb3cae2d9fbef907228b16e78c26cf2a6d051392541d51b47217",
+  "source_after_sha256": "ccd9e99609b1dde9fa0bdef1ca04a38a0cad21b05cf91412730a091295f949a2",
+  "certified_headers_equal": true,
+  "only_certified_body_spans_changed": true,
+  "before": {
+    "tactic": "aesop",
+    "cap": 20000,
+    "instrument_closed_count": 2,
+    "trust_admissible_closed_count": 2,
+    "instrument_total_count": 2
+  },
+  "after": {
+    "tactic": "aesop",
+    "cap": 20000,
+    "instrument_closed_count": 2,
+    "trust_admissible_closed_count": 2,
+    "instrument_total_count": 2
+  },
+  "comparison_limit": "After search may use a different rule-bank context; counts do not attribute any change solely to shorter proof bodies.",
+  "processes": [
+    {
+      "label": "patch-check",
+      "command": [
+        "git",
+        "apply",
+        "--check",
+        "/private/tmp/m1-tools/phase-c-searched-rewrites/patches/Test.Audit.ProofGraph.patch"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Audit.ProofGraph/patch-check.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "apply",
+      "command": [
+        "git",
+        "apply",
+        "/private/tmp/m1-tools/phase-c-searched-rewrites/patches/Test.Audit.ProofGraph.patch"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Audit.ProofGraph/apply.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        "Test/Audit/ProofGraph.lean"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Audit.ProofGraph/diff-check.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "build",
+      "command": [
+        "lake",
+        "build",
+        "Test.Audit.ProofGraph"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Audit.ProofGraph/build.log",
+      "log_sha256": "0ddca24214510b105103cc8e6afae8839311c76ed587ad75d2146f6ea40295d2"
+    },
+    {
+      "label": "census",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Audit.ProofGraph/Census.lean"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Audit.ProofGraph/census.log",
+      "log_sha256": "399cbc338604e16b342c2ae45e6c6dade5e3fe0aca3e8b13d3cf0ce8302160db"
+    }
+  ],
+  "fresh_build_line": "ℹ [177/177] Built Test.Audit.ProofGraph (1.9s)",
+  "local_gate_lines": [],
+  "headers": [
+    {
+      "name": "Test.ProofGraph.reflexive",
+      "header_sha256": "1c08471db7d98b1a1896c476ffe4cdb639a0453cb1e4192081acab33f63da99d",
+      "exact_before_after_header_match": true
+    },
+    {
+      "name": "Test.ProofGraph.another",
+      "header_sha256": "26e0ca6e9abee16538376b88585003dd762dbfe8bbdd45f025bf882c5912e684",
+      "exact_before_after_header_match": true
+    }
+  ],
+  "baseline_provenance": {
+    "census_results": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/results.json",
+    "census_results_sha256": "de504894001ca31ecd5fd195b09b513f415bb9bcb9987bb7c01c97249a93319e",
+    "census_run": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/run.json",
+    "census_run_sha256": "3420c3a7f77913db13b8c91a9f381f0a50b01f309f06cb390544e7bbd6d142b4",
+    "census_inputs_sha256": "a7f8f045a9e4f9bbee0cb5d93964bb1660b0379fea4c00dd415784da13744a34",
+    "prior_candidate_manifest": "/tmp/m1-tools/phase-c-rewrite-scope/rewrite-ready.json",
+    "prior_candidate_manifest_sha256": "adea2d7901d98a02a3dcdf006c3c7c1f365ee3c2334cbba07aba4f2a81a7eb18",
+    "prior_fragments_retained_unchanged": true,
+    "phase_b_scope_sha256": "aaa3de31fdaf2c26f62f7ebc179b7c6c00a7a91fa93223a880b43550583ef080",
+    "module_classification_sha256": "a71e5c5c72bf6b762f964c8a0691e5bc3202169585cdceed846d5d0a768d9a7a"
+  },
+  "runner_source_limit": "Runner source is packaged as currently retained; result pins its input manifest and census reader, not the runner script itself.",
+  "no_claims": [
+    "No compiler or git command run by packager",
+    "No full-tree gate or task completion inferred",
+    "No live source/current HEAD revalidation",
+    "No other module inspected"
+  ],
+  "members": [
+    {
+      "path": "baseline/Census.lean",
+      "bytes": 146,
+      "sha256": "8d4f530eb1a03d38d983f2681193f5cdbe1580bcfad8f267eaf7263199f2a47d",
+      "source": "/private/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/135-Test.Audit.ProofGraph.lean"
+    },
+    {
+      "path": "baseline/job.json",
+      "bytes": 996,
+      "sha256": "dfac73b9ea2393df7522db2e6294f36d8e685c2626fb8a3ebd6ac3783fb1a5aa",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "baseline/module-result.json",
+      "bytes": 1844,
+      "sha256": "11679b9646b562cd9658eb5bdde02a95c263d51aaf1e4ccaaf99f33a99d5abec",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "baseline/module.log",
+      "bytes": 200,
+      "sha256": "399cbc338604e16b342c2ae45e6c6dade5e3fe0aca3e8b13d3cf0ce8302160db",
+      "source": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Audit.ProofGraph.log"
+    },
+    {
+      "path": "baseline/process.log",
+      "bytes": 200,
+      "sha256": "399cbc338604e16b342c2ae45e6c6dade5e3fe0aca3e8b13d3cf0ce8302160db",
+      "source": "/private/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/135-Test.Audit.ProofGraph.log"
+    },
+    {
+      "path": "provenance/package-searched-rewrite.py",
+      "bytes": 14872,
+      "sha256": "44087abf80c6b344b3dabbc559168e83b3bd60070cfc0e8c462b5bcc684677da",
+      "source": "/private/tmp/m1-tools/package-searched-rewrite.py"
+    },
+    {
+      "path": "provenance/run-one.py",
+      "bytes": 9697,
+      "sha256": "c215f030938b56b2e0c4e7fa2557a8799207f834f8ed5f83ca41f9dc91320e14",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/run-one.py"
+    },
+    {
+      "path": "rewrite/certified-candidates.json",
+      "bytes": 3686,
+      "sha256": "0ada1b3d368a4bc6352e1e71f783c7d67e211050664adddf8da78b32ccdb7b2b",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "rewrite/certified-comparison.json",
+      "bytes": 3364,
+      "sha256": "f6a2c4e31ea56077aaf875be732c4857ea5a72ed761bd5a61522c79ef9ae5235",
+      "source": "/tmp/m1-tools/phase-c-rewrite-scope/portable-certified/comparison.json"
+    },
+    {
+      "path": "rewrite/change.patch",
+      "bytes": 422,
+      "sha256": "3fb2fb9753edcb64473706cc5161dbb28ca8be4857511e1e23588c5f31581789",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/patches/Test.Audit.ProofGraph.patch"
+    },
+    {
+      "path": "rewrite/header-comparisons.json",
+      "bytes": 367,
+      "sha256": "0de8a8108d8d32fa21b1c2f353e37250f4fcc9189444873d7fc586e2e2579860",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "rewrite/master-manifest.json",
+      "bytes": 8341,
+      "sha256": "d7a25d4fa05e6ac890e5aa15950e32f12332ff9d28c35c42045bd56ee9acc2b6",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/manifest.json"
+    },
+    {
+      "path": "rewrite/module.json",
+      "bytes": 2886,
+      "sha256": "d8f51dc2847ad4926f2a7c4169d69a8064e70caf40d23fc2da2187a9b0f73838",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/modules/Test.Audit.ProofGraph.json"
+    },
+    {
+      "path": "run/Census.lean",
+      "bytes": 159,
+      "sha256": "c5fd64db8eca3ffeb5460b7e31b7e5c321f1d2b979e5cbfbbe8f5eb2b331f413",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Audit.ProofGraph/Census.lean"
+    },
+    {
+      "path": "run/apply.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Audit.ProofGraph/apply.log"
+    },
+    {
+      "path": "run/build.log",
+      "bytes": 581,
+      "sha256": "0ddca24214510b105103cc8e6afae8839311c76ed587ad75d2146f6ea40295d2",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Audit.ProofGraph/build.log"
+    },
+    {
+      "path": "run/census.json",
+      "bytes": 1203,
+      "sha256": "d2763374554ce5859c6ec737fc75aeb22fca111d0be8eb10e74df1c78e2afd39",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Audit.ProofGraph/census.json"
+    },
+    {
+      "path": "run/census.log",
+      "bytes": 200,
+      "sha256": "399cbc338604e16b342c2ae45e6c6dade5e3fe0aca3e8b13d3cf0ce8302160db",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Audit.ProofGraph/census.log"
+    },
+    {
+      "path": "run/diff-check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Audit.ProofGraph/diff-check.log"
+    },
+    {
+      "path": "run/patch-check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Audit.ProofGraph/patch-check.log"
+    },
+    {
+      "path": "run/result.json",
+      "bytes": 3876,
+      "sha256": "0dd965bf159a656b36547ad1c674296fb51f7967da016b3b2bbcf13fbc6a0b49",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/runs/Test.Audit.ProofGraph/result.json"
+    },
+    {
+      "path": "sources/after/Test/Audit/ProofGraph.lean",
+      "bytes": 3457,
+      "sha256": "ccd9e99609b1dde9fa0bdef1ca04a38a0cad21b05cf91412730a091295f949a2",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/after/Test/Audit/ProofGraph.lean"
+    },
+    {
+      "path": "sources/before/Test/Audit/ProofGraph.lean",
+      "bytes": 3457,
+      "sha256": "194a0e2235abcb3cae2d9fbef907228b16e78c26cf2a6d051392541d51b47217",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/before/Test/Audit/ProofGraph.lean"
+    }
+  ],
+  "archive": {
+    "path": "raw.tar.gz",
+    "sha256": "61cc0108ecc5c4c682e84fe022e2507fd9a1b7d804eb6560196e495608014344",
+    "members": 23,
+    "bytes": 15081,
+    "lossless_readback_verified": true
+  }
+}
