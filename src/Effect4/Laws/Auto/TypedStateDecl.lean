@@ -120,6 +120,11 @@ structure Emit where
   preds : Array Predicate := #[]
   emitted : Array (Name × Expr) := #[]
   refused : Array String := #[]
+  /-- Position and edge keys a clause was emitted for, or deliberately omitted. -/
+  accounted : Array String := #[]
+  /-- Children under a whole-field, journal or refused edge: their subtrees are covered or
+  named debt, not stated position by position. -/
+  skipped : Array Name := #[]
 
 private def addPred (em : Emit) (name : String) (type : Expr) (column := false) : MetaM Emit := do
   if let some old := em.preds.find? (·.name == name) then
@@ -132,21 +137,6 @@ private def emittable : Source → Bool
   | .program _ | .continuation _ | .value _ | .exit _ | .cause _ | .custom _ | .refused _ => true
   | .hook (some _) => true
   | _ => false
-
-private def hasPositions (rows : List Row) (ps : Array Positions.Position) (edges : Array Edge) :
-    Nat → Name → List Name → MetaM Bool
-  | 0, owner, _ => throwError "typed state: clause walk exhausted at {owner}"
-  | fuel + 1, owner, seen => do
-    if seen.contains owner then return false
-    if ps.any (fun p => p.owner == owner && (rows.find? (·.1 == p.key)).any (emittable ·.2)) then
-      return true
-    for e in edges do
-      if e.parent == owner then
-        match rows.find? (·.1 == s!"{e.parent}.{e.field}") with
-        | some (_, .custom _) => return true
-        | some (_, .journal) | some (_, .refused _) => pure ()
-        | _ => if ← hasPositions rows ps edges fuel e.child (owner :: seen) then return true
-    return false
 
 private def columnsUnder (rows : List Row) (ps : Array Positions.Position) (edges : Array Edge) :
     Nat → Name → List Name → MetaM (List String)
@@ -163,6 +153,25 @@ private def columnsUnder (rows : List Row) (ps : Array Positions.Position) (edge
         for c in ← columnsUnder rows ps edges fuel e.child (owner :: seen) do
           unless out.contains c do out := out ++ [c]
     return out
+
+/-- Does an owner beneath a field contribute a clause: a stated position, a whole-field
+predicate on one of its edges, a column it owns, or such an owner further down. -/
+private def hasPositions (rows : List Row) (ps : Array Positions.Position) (edges : Array Edge)
+    (columnOwners : List Name) : Nat → Name → List Name → MetaM Bool
+  | 0, owner, _ => throwError "typed state: clause walk exhausted at {owner}"
+  | fuel + 1, owner, seen => do
+    if seen.contains owner then return false
+    if columnOwners.contains owner then
+      unless (← columnsUnder rows ps edges fuel owner []).isEmpty do return true
+    if ps.any (fun p => p.owner == owner && (rows.find? (·.1 == p.key)).any (emittable ·.2)) then
+      return true
+    for e in edges do
+      if e.parent == owner then
+        match rows.find? (·.1 == s!"{e.parent}.{e.field}") with
+        | some (_, .custom _) => return true
+        | some (_, .journal) | some (_, .refused _) => pure ()
+        | _ => if ← hasPositions rows ps edges columnOwners fuel e.child (owner :: seen) then return true
+    return false
 
 private def headOfChild (child : Name) : Nat → Expr → MetaM (Option Expr)
   | 0, _ => throwError "typed state: child walk exhausted at {child}"
@@ -224,62 +233,65 @@ private def emitOwner (rows : List Row) (ps : Array Positions.Position) (edges :
       for col in columns do
         em ← addPred em col ty true
         clauses := clauses.push (← `(P.$(mkIdent (Name.mkSimple col)):ident w x))
+      let single := ctors.size == 1
       for (fname, fty) in fields do
-        let label := if isStruct then fname else s!"{c.getString!}.{fname}"
+        -- the census's naming rule: a single constructor's arguments are the owner's fields
+        let label := if single then fname else s!"{c.getString!}.{fname}"
         let key := s!"{owner}.{label}"
         let f := mkIdent (Name.mkSimple fname)
         let term ← if isStruct then `(x.$f:ident) else `($f:ident)
         binders := binders.push (← `($f:ident))
-        let src? := rows.find? (·.1 == key) |>.map (·.2)
+        let src? : Option Source := rows.find? (·.1 == key) |>.map (·.2)
         let positions := ps.filter (·.key == key)
-        if !positions.isEmpty then
-          let some src := src? | throwError "typed state: missing source for {key}"
-          match src with
-          | .custom pred =>
-            em ← addPred em pred fty
-            clauses := clauses.push (← `(P.$(mkIdent (Name.mkSimple pred)):ident w e $term))
-          | .refused reason =>
-            em := {em with refused := em.refused.push s!"{key}: {reason}"}
-            clauses := clauses.push (← `(True))
-          | .column _ | .hook none | .journal | .nested _ => pure ()
-          | _ =>
-            for p in positions do
-              let kind ← match src with
-                | .custom n => pure n
-                | .continuation _ => pure "continuation"
-                | _ => carrierKind p.carrier
-              -- Recover the carrier's type by walking the same wrappers in the field type.
-              let some carrierTy ← headOfChild p.carrier 64 fty
-                | throwError "typed state: no carrier type for {key}"
-              em ← addPred em kind carrierTy
-              let ex ← match src with
-                | .program ex | .continuation ex | .value ex | .exit ex | .cause ex => expectSyntax ex
-                | .hook _ => `(.hook $(Syntax.mkStrLit label))
-                | _ => throwError "typed state: unsupported source at {key}"
-              clauses := clauses.push (← throughWraps p.wraps term 0 fun value =>
-                `(P.$(mkIdent (Name.mkSimple kind)):ident w $ex $value))
-        else
-          let es := edges.filter (fun e => e.parent == owner && e.field == label)
-          if !es.isEmpty then
-            match src? with
-            | some (.custom pred) =>
-              em ← addPred em pred fty
-              clauses := clauses.push (← `(P.$(mkIdent (Name.mkSimple pred)):ident w e $term))
-            | some .journal => pure ()
-            | some (.refused reason) =>
-              em := {em with refused := em.refused.push s!"{key}: {reason}"}
-              clauses := clauses.push (← `(True))
+        let es := edges.filter (fun e => e.parent == owner && e.field == label)
+        if positions.isEmpty && es.isEmpty then continue
+        -- One resolution per field. A whole-field source owns the field and everything under
+        -- it; otherwise the field's direct positions and its child edges each contribute a
+        -- clause, never one instead of the other.
+        match src? with
+        | some (.custom pred) =>
+          em ← addPred em pred fty
+          clauses := clauses.push (← `(P.$(mkIdent (Name.mkSimple pred)):ident w e $term))
+          em := { em with accounted := em.accounted.push key, skipped := em.skipped ++ es.map (·.child) }
+        | some (.refused reason) =>
+          em := { em with refused := em.refused.push s!"{key}: {reason}",
+                          accounted := em.accounted.push key, skipped := em.skipped ++ es.map (·.child) }
+          clauses := clauses.push (← `(True))
+        | some .journal =>
+          em := { em with accounted := em.accounted.push key, skipped := em.skipped ++ es.map (·.child) }
+        | _ =>
+          if !positions.isEmpty then
+            let some src := src? | throwError "typed state: missing source for {key}"
+            match src with
+            | .column _ | .hook none => em := { em with accounted := em.accounted.push key }
+            | .nested _ => throwError "typed state: a nested source names a child, but {key} is a direct position"
             | _ =>
-              for edge in es do
-                if ← hasPositions rows ps edges 64 edge.child [] then
-                  let ex ← match src? with
-                    | some (.nested ex) => expectSyntax ex
-                    | _ => `(e)
-                  let some childTy ← headOfChild edge.child 64 fty
-                    | throwError "typed state: no child type at {key}"
-                  em ← emitOwner rows ps edges columnOwners fuel childTy em
-                  clauses := clauses.push (← throughWraps edge.wraps term 0 fun value =>
-                    `($(okName edge.child):ident P w $ex $value))
+              for p in positions do
+                let kind ← match src with
+                  | .continuation _ => pure "continuation"
+                  | _ => carrierKind p.carrier
+                -- Recover the carrier's type by walking the same wrappers in the field type.
+                let some carrierTy ← headOfChild p.carrier 64 fty
+                  | throwError "typed state: no carrier type for {key}"
+                em ← addPred em kind carrierTy
+                let ex ← match src with
+                  | .program ex | .continuation ex | .value ex | .exit ex | .cause ex => expectSyntax ex
+                  | .hook _ => `(.hook $(Syntax.mkStrLit label))
+                  | _ => throwError "typed state: unsupported source at {key}"
+                clauses := clauses.push (← throughWraps p.wraps term 0 fun value =>
+                  `(P.$(mkIdent (Name.mkSimple kind)):ident w $ex $value))
+              em := { em with accounted := em.accounted.push key }
+          for edge in es do
+            if ← hasPositions rows ps edges columnOwners 64 edge.child [] then
+              let ex ← match src? with
+                | some (.nested ex) => expectSyntax ex
+                | _ => `(e)
+              let some childTy ← headOfChild edge.child 64 fty
+                | throwError "typed state: no child type at {key}"
+              em ← emitOwner rows ps edges columnOwners fuel childTy em
+              clauses := clauses.push (← throughWraps edge.wraps term 0 fun value =>
+                `($(okName edge.child):ident P w $ex $value))
+              em := { em with accounted := em.accounted.push key }
       if isStruct then
         let mut fs : Array (TSyntax ``Parser.Command.structSimpleBinder) := #[]
         let mut accessors : Array Ident := #[]
@@ -340,6 +352,32 @@ syntax (name := typedState) "#typed_state " ident+ " using " ident (" columns " 
         tops := tops.push (← `(command|
           abbrev $name:ident {W : Type} (P : Preds W) (w : W) (x : $(mkIdent root):ident) : Prop :=
           $(okName owner):ident P w Expect.root x))
+    -- Every position and edge the census found is stated, deliberately omitted, or under a
+    -- covered subtree; every column a row names was emitted by a column owner. A shape the
+    -- emitter does not understand therefore fails here, by key, instead of weakening the
+    -- invariant to `True`.
+    let mut skipped := em.skipped
+    for _ in [:edges.size + 1] do
+      for e in edges do
+        if skipped.contains e.parent && !skipped.contains e.child then skipped := skipped.push e.child
+    for p in ps do
+      if skipped.contains p.owner then continue
+      match rows.find? (·.1 == p.key) with
+      | some (_, .journal) | some (_, .hook none) => pure ()
+      | some (_, .column c) =>
+        unless em.preds.any (fun q => q.column && q.name == c) do
+          throwError "typed state: column {c} at {p.key} has no column owner"
+      | _ =>
+        unless em.accounted.contains p.key do
+          throwError "typed state: {p.key} has a source but no clause was emitted"
+    for e in edges do
+      if skipped.contains e.parent then continue
+      let key := s!"{e.parent}.{e.field}"
+      match rows.find? (·.1 == key) with
+      | some (_, .custom _) | some (_, .nested _) | some (_, .refused _) =>
+        unless em.accounted.contains key do
+          throwError "typed state: {key} has a source but no clause was emitted"
+      | _ => pure ()
     let mut fields : Array (TSyntax ``Parser.Command.structSimpleBinder) := #[]
     for p in em.preds do
       let ty ← typeSyntax 256 #[] p.type

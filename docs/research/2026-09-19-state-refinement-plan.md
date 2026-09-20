@@ -672,15 +672,18 @@ reasons; this section is the order. Every slice names files, a statement or inst
 deletion, a red control and a narrow build in the note's §4. Rows 84–85 record its two
 proposals; nothing here rules them.
 
-The simplifications it adopts: the world is one record `⟨Γ, Π, Ρ, s⟩` ordered by table
-extension and the existing `Stores.le`; the promise column is stated on `Completion` data,
+The simplifications it adopts, as amended by the landed-architecture review (deep-dive note
+§9): the world is one record `⟨Γ, Π, Ρ, s⟩` ordered by table extension, allocation growth
+(`Stores.le`) and typed-cell compatibility, since `Stores.le` alone is refuted; the promise column is stated on `Completion` data,
 which makes D2 a deletion and the first machine change; D5 is the `Arena` interface over which
 `refStepOf` and its laws are restated, with `RefHeap` the list instance and the OCaml store the
 trusted instance (row 85); `WakeList` is already the ordered-work interface of §5, and Latch its
-named instance; two of the eleven hand predicates and five `Expect` constructors go; frames are
-generated per written-field set; the ledger's goal set is the authored declarations joined to
-the write-census holders by name; a first transaction profile on `TxBody ∩ Straight` needs no
-across-budget ownership (row 84).
+named instance; five unused `Expect` constructors go (the two predicate deletions were
+withdrawn: a resume answer is typed at the continuation's input, an interrupt cause is
+provenance); frames are generated per written-field set; the ledger's goal set is the authored
+declarations, joined to the write-census holders by name for inventory and fixed per transition
+shape for their statements; a first transaction profile on `TxBody ∩ Straight` needs a proved
+sufficient budget or row 80's contract (row 84, amended).
 
 | slice | is | blocks on | deletes |
 | --- | --- | --- | --- |
@@ -688,11 +691,11 @@ across-budget ownership (row 84).
 | T1 | `tools/ProofGraph` (references, search, ledger) with `Conform` and `Census` over it | T0 | 81 lines of duplicated validator/search |
 | T2 | `#typed_state`: the skeleton elaborated in place, the named bank, the scanner refusals | T1 | `TypedStateGen.lean`, the emit driver, the generated `State.lean` body |
 | T3 | `#frame_rules`; amend to per written-field set before M6 | T1 | — |
-| T4 | `Obligation`, `#proof_wanted`, `#typed_state_obligations`; add `#typed_state_coverage` | T1 | the deleted-goal hazard |
+| T4 | `Obligation`, `#proof_wanted`, `#typed_state_obligations` (markers recognized under binders); add the holder inventory join and the per-shape statement adapters | T1 | the deleted-goal and weakened-statement hazards |
 | T5 | the wiring: roots, gate exemptions, `make check-typed-state`, three docs | T2–T4 | the `TypedStateGen` exemption |
 | M1 | D2 = R1+R2: completion cells and owed resumes hold `Completion`; `MemoEntry.effect` gone | T5 (the gate re-cuts) | `CompletionShaped`, `DeferredOk.1`, `StoredCodeNoRace`, `DeferredCodes`, `denoteStored`, `STORES-FB-COMPLETION` |
-| M2 | layer 1: `Typed/World.lean`, the columns on data, nine hand predicates, `Preds` instance | M1 | `ResumeOk`, `InterruptOnly`, five `Expect` constructors |
-| M3 | the residual protocol: `OpOk`/`AnswerOk` under `#answer_gate`, `TypedProg`, `HandlesFit` | M2 | — |
+| M2 | layer 1: `Typed/World.lean`, the world's data, its order (allocation growth ∧ typed-cell compatibility) and the columns on data, `HeapNat` a specialization of the per-cell column | M1 | five `Expect` constructors |
+| M3 | the operation protocol over `SyncOp` (`progress` the public-row adapter) and the fiber protocol `OpOk`/`AnswerOk` under `#answer_gate`; `TypedProg`, `HandlesFit`; then the `Preds` instance and the stack assembly | M2 | — |
 | M4 | `Laws/Machine/Keeps.lean`; the existential `StackOk`; `popR_typed` | M3 | — |
 | M5 | S1 `denoteR_typed`; `InterpTyped` for the hooks | M4 | — |
 | M6 | S2 by ledger row: the ceiling pinned here; frames, delivery sites, operation families | M5, T3–T4 amendments; binder-term rows before the `refUpdate` family | — |

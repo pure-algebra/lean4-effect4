@@ -38,4 +38,12 @@ end Test.Obligations.Solved
 #guard_msgs in
 #typed_state_obligations Test.Obligations.Solved ceiling 1 using aesop
 
+namespace Test.Obligations.Parameterized
+def closed : Obligation True := ⟨⟩
+def leftover (n : Nat) : ProofWanted (n = n) := ⟨⟩
+end Test.Obligations.Parameterized
+/-- error: obligation ledger: stale placeholder Test.Obligations.Parameterized.leftover -/
+#guard_msgs in
+#typed_state_obligations Test.Obligations.Parameterized ceiling 0 using aesop
+
 #print axioms Test.Obligations.Positive.closed.checked

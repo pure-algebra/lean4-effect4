@@ -30,6 +30,11 @@ abstractions get simpler before any proof is written, and one owner question dis
    fragment: a straight body under prevented yields is one `sync` step and cannot reach a fuel
    frontier, so there is no budget to own across (§3, F9).
 
+*Corrections (2026-09-19, after the landed-architecture review, §9): item 1 is amended (the
+order also needs typed-cell compatibility; `Stores.le` alone is refuted) and item 4 is withdrawn
+(a straight body compiles to continuation frames; a sufficient budget must be proved). F5 and
+F7 are amended there too.*
+
 ## 1. What was checked
 
 Facts the slices stand on; each was read, not recalled.
@@ -89,7 +94,9 @@ line per `refUpdate` row (`RefKernel.lean`, tooling 3.1) and are needed only whe
 those rows; layer 1 needs D2; the ledger needs the coverage join of F5. Split them (§4, M2 and
 M6).
 
-**F5. The "independent goal producer" is over-specified.** Plan §9 asks that the ledger derive
+**F5. The "independent goal producer" is over-specified.** *(Amended in §9: the holder join is
+the inventory; each holder's statement is fixed by a per-transition-shape adapter, so an
+`Obligation True` cannot pass.)* Plan §9 asks that the ledger derive
 "the required goal set" from the invariant and the actual transitions so that a deleted
 declaration cannot vanish. A goal *statement* per definition cannot be synthesized: `driveStep`
 returns a pair, `popR` a step result, `exitFiber` takes an exit, `fireObserver` a fiber and an
@@ -110,7 +117,9 @@ what still matches. Generate frames per `(owner, written-field set)` found by th
 is what decisions row 50 already says.
 
 **F7. Two of the eleven hand predicates are derivable, and five `Expect` constructors are
-unused.** `Task.resume.answer` and `Cmd.resume.answer` are sourced as `.custom "ResumeOk"`; the
+unused.** *(The two deletions are withdrawn in §9: a resume answer is typed at the saved
+continuation's input, not the fiber's final type, and an interrupt cause is provenance, not
+admission at one type. The pruning of the unused `Expect` constructors stands.)* `Task.resume.answer` and `Cmd.resume.answer` are sourced as `.custom "ResumeOk"`; the
 generator binds constructor fields by name (`TypedStateDecl.lean:228-233`), so
 `.program (.fiber "target")` elaborates to `P.program w (.fiber target) answer` and `ResumeOk`
 goes. `RSaved.interruptedCause : Option CauseV` is `.custom "InterruptOnly"`; `.cause .inherited`
@@ -125,7 +134,10 @@ definitions.
 (typed, `Typed/State.lean`) are the data and the elaborated form of one thing. The split is
 necessary; the near-identical names are not. Low priority; rename when `Expect` is pruned.
 
-**F9. The transaction profile's first cut should be the straight fragment.** Plan §7 keeps
+**F9. The transaction profile's first cut should be the straight fragment.** *(Corrected in §9:
+"one `sync` step" is false, since Straight admits `bind` and `suspend` and the driver's budget
+is independent of prevented yields; the profile needs a proved sufficient budget or row 80's
+contract. Row 84's rationale is amended.)* Plan §7 keeps
 finite replay and driver suspension both open (row 80) because an admitted body might reach a
 fuel frontier. The scout admits `iterate` and `gen` and names that hazard
 (`stm-scout.md:516-520`). If the first profile admits `TxBody ∩ Straight` (no `iterate`, no
@@ -188,7 +200,7 @@ form; the rest stays as the evidence record.
 
 | abstraction | today | after | what it deletes |
 | --- | --- | --- | --- |
-| the world | `W` abstract in `Preds`; layer 1 unwritten | `World := ⟨Γ : FiberId → Option EffTy, Π : DeferredKey → Option (Ty × Ty), Ρ : RefKey → Option Ty, s : Stores⟩`; `WorldOrder` = pointwise table extension ∧ `Stores.le` | nothing; it is the missing piece |
+| the world | `W` abstract in `Preds`; layer 1 unwritten | `World := ⟨Γ : FiberId → Option EffTy, Π : DeferredKey → Option (Ty × Ty), Ρ : RefKey → Option Ty, s : Stores⟩`; `WorldOrder` = pointwise table extension ∧ `Stores.le` ∧ typed-cell compatibility (every cell keeps the type its column declares; `Stores.le` alone is refuted, §9) | nothing; it is the missing piece |
 | the promise column | `Option Program` decoded by a partial `denoteStored`; `WF` refuses completions | `Option Completion`; `PromiseTable w s := ∀ i c, s.deferreds.cells[i]? = some c → ∀ x, c.completion = some x → CompletionOk w (Π ⟨i⟩) x` | `CompletionShaped`, `DeferredOk.1`, `StoredCodeNoRace`, `DeferredCodes`, `denoteStored`'s catch-all, `STORES-FB-COMPLETION`, `MemoEntry.effect` |
 | the store interface | `RefHeap := List Val` with `refPeek`/`refPoke`; kernel laws proved on it | `Arena` (peek/poke/alloc/size + five laws); `refStepOf` over any `Arena`; `RefHeap` its list instance | no new code path; the OCaml instance keeps `prop_store.ml` as its evidence |
 | the hand predicates | eleven (`program`, `exit`, `StackOk`, `InterruptOnly`, `PendingOk`, `ResumeOk`, `ServiceOk`, `RaceOk`, `HeapNat`, `PromiseTable`, `CaptureOk`) | nine: `ResumeOk` and `InterruptOnly` derived from the table | two arms in every layer-1 definition |
@@ -361,3 +373,24 @@ import each other. The organization questions it puts to the plan review:
 
 None of these changes a slice's statement; 1, 3 and 4 change where M2–M6's files should go and
 belong in the plan review before M2 starts.
+
+## 9. The landed-architecture review, addressed (2026-09-19)
+
+`docs/research/2026-09-19-landed-architecture-review.md` (`f4404923`) checked this note and the
+merged tooling against the tree, with witnesses under
+`docs/research/2026-09-19-landed-architecture-review/`. Each finding, and its disposition:
+
+| finding | disposition |
+| --- | --- |
+| P1 §1: the generator silently weakens for three shapes (a field that is both a position and an edge; a single-constructor inductive that is not a structure; a nested column owner) | **Fixed** in `src/Effect4/Laws/Auto/TypedStateDecl.lean`: the census's naming rule is shared (a single constructor's arguments are the owner's fields); a field's direct positions and its child edges each contribute a clause, never one instead of the other; a nested column owner is relevant; and `#typed_state` ends with an accounting pass in which every censused position and edge is stated, deliberately omitted (`journal`, `hook none`) or under a covered subtree, and every column a row names was emitted by a column owner, else it fails by key. The three shapes and the ownerless column are controls in `Test/Audit/TypedStateDecl.lean`. On the real roots the skeleton is unchanged (16 predicates, 2 refusals), as the review's scope probe predicted. The review's `Skeleton.lean` and `Scope.lean` witnesses no longer elaborate: the weakened statements do not exist. |
+| P1 §2: allocation growth does not license weakening | **Withdrawn** (§0.1, §3). `Typed.mono` needs monotone demands and result predicates; `Stores.le` orders allocation, not contents; `heapNotMonotone` is checked. M2's order is allocation growth *and* typed-cell compatibility, and the store's own invariants are handler-preservation premises, not part of the protocol's monotone demand. |
+| P1 §3: Straight is not one `sync` step | **Withdrawn** (F9; row 84 amended). Straight admits `bind` and `suspend`, which compile to continuation frames, and the driver's budget is independent of `preventYield` (the probe leaves a straight bind unfinished at fuel 1). A straight-first profile needs a proved sufficient budget, the fold `Agreement.steps` being the candidate bound the `tx` wrapper must supply, or row 80's contract. |
+| P1 §4: the two predicate deletions | **Withdrawn** (F7). `ResumeOk` types the resume answer at the saved continuation's input, which is not the fiber's final type; `InterruptOnly` is provenance. Both stay; eleven predicates. The `Expect` pruning stands. |
+| P1 §5: the store protocol must cover every `SyncOp` | **Accepted** (M3 amended in plan §14). `Ψ_S` is stated over `SyncOp`, internal operations included; `progress` is the adapter theorem for the public rows. |
+| P2 §6: name coverage is not statement coverage | **Accepted** (T4 and M6 amended). The holder join is the inventory; a per-transition-shape adapter fixes each holder's full preservation type, with a weakened-statement control. |
+| P2 §7: order world, protocol, predicate assembly | **Accepted** (plan §14 re-cut): M2 is the world's data, order and columns, `HeapNat` a specialization of the per-cell column; M3 the operation protocol and `TypedProg`; M3b the `Preds` instance and the stack assembly. |
+| P2 §8: a parameterized stale placeholder vanishes from the ledger | **Fixed** in `src/Effect4/Laws/Auto/Obligations.lean`: a marker is recognized under binders, so a parameterized leftover is reported stale; control `Parameterized` in `Test/Audit/Obligations.lean`. The review's `Boundaries.lean` ledger line now fails as it should. |
+
+What the review confirms stands: ProofGraph as the one evidence seam, the frames with the
+field-set amendment, in-place generation and the named bank, completion data, `WakeList`, the
+Ref kernel, and `Arena` as a law interface with the OCaml tests as finite host evidence.

@@ -75,6 +75,10 @@ layer 1 as one world record ordered by `Stores.le`, the residual protocol under 
 `Keeps`, S1, S2 with the ledger's ceiling pinned there, S3. Proposals: row 84 (a first
 transaction profile on the straight fragment, so row 80 does not block it) and row 85 (D5 as the
 `Arena` interface over which the store kernel's laws are restated; no Lean `Array` instance).
+The landed-architecture review (`docs/research/2026-09-19-landed-architecture-review.md`,
+`f4404923`) is addressed in the deep-dive note's §9: the generator's three omission shapes and
+the ledger's stale-marker gap are fixed with controls; the world-order, straight-profile and
+predicate-deletion claims are withdrawn; M2 and M3 are re-cut and row 84's rationale amended.
 The immediate priority is shared representations and composition laws. Known future modules
 can reserve contracts with explicit missing implementations using the existing wanted machinery.
 Supporting reviews and the paused tooling handoff are tracked in

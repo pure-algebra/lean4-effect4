@@ -44,7 +44,9 @@ syntax (name := typedStateObligations)
     for name in names do
       if let some goal ← readGoal name then goals := goals.push goal
       let ci ← getConstInfo name
-      if ci.type.isAppOfArity ``ProofWanted 1 then placeholders := placeholders.push name
+      -- a marker is recognized under any binders, so a parameterized leftover is stale, not invisible
+      let marker ← forallTelescope ci.type fun _ body => pure (body.isAppOfArity ``ProofWanted 1)
+      if marker then placeholders := placeholders.push name
     if goals.isEmpty then throwError "obligation ledger: no declared goals under {scope}"
     for name in placeholders do
       unless goals.any (fun g => g.id ++ `wanted == name) do
