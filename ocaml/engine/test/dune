@@ -67,7 +67,7 @@
 ;   prop_table    E4_table T1-T8 + R6a/R6b, and the TABLE module type of
 ;                 2026-09-08-engine-a1-state.md §1.5 ascribed to BOTH carriers.
 ;   prop_trace    E4_trace TR1-TR8, and the TRACE module type ascribed to both.
-;   prop_store    E4_store ST1-ST8, against Lean's List.get?/List.set/++/find?/map.
+;   prop_store    E4_store ST1-ST11, against Lean's list operations and arena laws.
 ;   prop_fibers   E4_fibers FB2-FB9 against Fibers.lean's own definitions (FB1 is owed to
 ;                 lane X: it needs the substituted engine).
 ;   prop_memo     E4_memo MM1-MM7, and the LAYERS module type ascribed to both; MM2 is the

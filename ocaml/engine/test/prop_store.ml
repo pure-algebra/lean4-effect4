@@ -6,6 +6,16 @@
    src/Effect4/Machine/Stores.lean.  That is what "exactness" means here: the carrier is not
    compared with a plausible OCaml equivalent, it is compared with Lean's own definition.
 
+   ST9-ST11 add direct arena laws from
+   docs/research/2026-09-20-arena-packet-and-review-verification.md §2.6-2.7:
+   ST9  dense: Ref and Deferred reads exist exactly below cardinal; a sparse
+        scope table is rejected by the same check.                         tested
+   ST10 peek_alloc_old: grow/make_cell keep every previously allocated cell. tested
+   ST11 peek_poke_other: poke/set_cell keep every other key, including absent
+        keys; negative keys are extra host-boundary controls.               tested
+   These are deterministic finite host tests, not Lean proofs. They use the
+   existing check/dense_pair/lean_get/lean_set helpers and E4_store only.
+
    Exit code 0 iff every line passed. *)
 
 open Effect4_engine
@@ -206,6 +216,76 @@ let st7 nops =
     (Printf.sprintf "ST7 agreement with Lean's list operations over %d random heap ops" nops)
     (match !bad with None -> true | Some _ -> false)
 
+(* ---------------------------------------------------- direct arena laws: ST9-ST11 *)
+
+let st9 () =
+  let ok = ref true in
+  let dense_at h i =
+    let expected = i < S.cardinal h in
+    Option.is_some (S.peek i h) = expected &&
+    Option.is_some (S.cell_at i h) = expected
+  in
+  List.iter
+    (fun n ->
+      let h, _ = dense_pair n in
+      (* Replacements and absent writes must retain density; both allocators grow it. *)
+      List.iter
+        (fun h ->
+          for i = 0 to S.cardinal h + 3 do
+            if not (dense_at h i) then ok := false
+          done;
+          if not (dense_at h max_int) then ok := false)
+        [ h; S.poke 0 4242 h; S.set_cell (n - 1) 4242 h;
+          S.poke n 4242 h; S.set_cell (n + 1) 4242 h;
+          snd (S.grow 4242 h); snd (S.make_cell 4242 h) ])
+    [ 0; 1; 7; 8; 9; 64; 500 ];
+  (* The scope family is excluded: size 1 with key 2 violates both directions. *)
+  let sparse = S.add_entry 2 4242 S.empty in
+  if dense_at sparse 0 || dense_at sparse 2 then ok := false;
+  check "ST9 dense: Ref/Deferred reads exist iff i < cardinal; sparse scopes fail" !ok
+
+let st10 () =
+  let ok = ref true in
+  List.iter
+    (fun n ->
+      let h, l = dense_pair n in
+      (* Include a previously replaced cell, not only the original allocation values. *)
+      List.iter
+        (fun (h, l) ->
+          let _, grown = S.grow 4242 h in
+          let _, cells = S.make_cell 4242 h in
+          for i = 0 to n - 1 do
+            let expected = lean_get l i in
+            if S.peek i grown <> expected || S.cell_at i cells <> expected then ok := false;
+            if S.peek i h <> expected then ok := false
+          done)
+        [ (h, l); (S.poke (n / 2) 2001 h, lean_set l (n / 2) 2001) ])
+    [ 0; 1; 7; 8; 9; 64; 500 ];
+  check "ST10 peek_alloc_old: grow/make_cell keep every old cell" !ok
+
+let st11 () =
+  let ok = ref true in
+  List.iter
+    (fun n ->
+      let h, l = dense_pair n in
+      (* Exhaust all unequal pairs around the extent, plus a distant absent key.
+         -1 exercises the host boundary; the Lean arena law has natural indices. *)
+      let keys = List.init (n + 4) (fun i -> i - 1) @ [ max_int ] in
+      List.iter
+        (fun i ->
+          let written = S.poke i 4242 h and cells = S.set_cell i 4242 h in
+          List.iter
+            (fun j ->
+              if j <> i then begin
+                let expected = lean_get l j in
+                if S.peek j written <> expected || S.cell_at j cells <> expected then ok := false;
+                if S.peek j h <> expected then ok := false
+              end)
+            keys)
+        keys)
+    [ 0; 1; 2; 7; 8; 9; 64; 500 ];
+  check "ST11 peek_poke_other: poke/set_cell leave every tested different key unchanged" !ok
+
 let () =
   st1 ();
   st2 ();
@@ -217,5 +297,8 @@ let () =
     "e4_store.mli exposes add_entry (supplied key) for scopes and grow/make_cell only for the dense families";
   argue "ST8 KeysBelow is preserved"
     "the carrier neither mints nor drops keys; every key it holds was supplied by Stores.nextName";
+  st9 ();
+  st10 ();
+  st11 ();
   Printf.printf "== %s: %d failure(s) ==\n" (if !failures = 0 then "ALL PASS" else "FAILED") !failures;
   exit (if !failures = 0 then 0 else 1)

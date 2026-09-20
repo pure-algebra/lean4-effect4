@@ -1,0 +1,13 @@
+PASS ST1 peek is refPeek: peek k h = heap[k]? on a dense heap
+PASS ST2 poke is refPoke and is a NO-OP out of range (no insertion, same heap)
+PASS ST3 grow is refMake: fresh key = heap.length, to_list = heap ++ [v]
+PASS ST4 cell_at / set_cell / make_cell are DeferredStore.cellAt / setCell / make
+PASS ST5 entry_at is ScopeStore.entryAt (find? by key); set_entry is the replace-by-key map
+PASS ST6b scope keys are supply-drawn: the fresh key is never the cardinal
+PASS ST7 agreement with Lean's list operations over 20000 random heap ops
+PASS ST6 the scope store is sparse: no allocate-by-cardinal is offered for scopes [by construction: e4_store.mli exposes add_entry (supplied key) for scopes and grow/make_cell only for the dense families]
+PASS ST8 KeysBelow is preserved [by construction: the carrier neither mints nor drops keys; every key it holds was supplied by Stores.nextName]
+PASS ST9 dense: Ref/Deferred reads exist iff i < cardinal; sparse scopes fail
+PASS ST10 peek_alloc_old: grow/make_cell keep every old cell
+PASS ST11 peek_poke_other: poke/set_cell leave every tested different key unchanged
+== ALL PASS: 0 failure(s) ==

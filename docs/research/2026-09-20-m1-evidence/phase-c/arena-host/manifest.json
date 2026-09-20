@@ -1,0 +1,20 @@
+{
+  "cwd": "/Users/pooks/Dev/lean4-effect4/ocaml",
+  "commands": [
+    {
+      "command": "opam exec --switch=effect4 -- dune exec engine/test/prop_store.exe",
+      "exit_code": 0,
+      "log": "prop-store.log"
+    },
+    {
+      "command": "opam exec --switch=effect4 -- dune build",
+      "exit_code": 0,
+      "log": "dune-build.log"
+    }
+  ],
+  "scope": "Deterministic finite host controls ST9-ST11; no universal Lean proof claim. Existing ST1-ST8 also run.",
+  "files": {
+    "ocaml/engine/test/prop_store.ml": "152ce3278ab842bc9b5989302f4c959cbb698ce33b719a01415a7952e8cfcedd",
+    "ocaml/engine/test/dune": "4e367edd6bde9b84cbef98645823daea698bcfffaed92f784621f5089c683904"
+  }
+}
