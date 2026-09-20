@@ -83,6 +83,17 @@ legalization, data refinement, DimSum, handler fusion, Alive2/ISLE) into the sha
 lowering-module API: carrier interfaces with laws, one `Layout` reader, legalization rules
 with an obligation and an evidence tier. Codex holds M1–M2; the design focus stays on rows 84
 and 85 next.
+
+**The open design issues in order (2026-09-20).**
+`docs/research/2026-09-20-open-design-issues-order-and-observation-packet.md` ranks the open
+register by core stability, ergonomics and utility (row 79 with R3 and row 20 first; the
+park-handshake invariant; row 85; rows 48/51/52 as M3 content; then L4 of rows 42/43, row 2,
+DI-24's repair half, Config D1–D5; then rows 84/80, 81, 82/83, groups B and D) and carries the
+first packet: the three views named (semantic `Obs` unchanged, holder through state and ledger,
+diagnostic through the sink), R3 as one `origin` field on the fiber replacing the trace read in
+`statusOf`, the representation connector in projection and relation form (one module, instanced
+by M1's memo condition now and `Arena` next), agreement profiles as data, and the park-handshake
+invariant stated. Rulings R79.1–R79.5, R3, row 20 and rows 48/51/52 are asked of the owner.
 **The deep-dive review** `docs/research/2026-09-19-plan-deep-dive-review.md` (2026-09-19) re-cut
 D0–D7 into slices with files, statements, deletions and red controls (plan §14): the tooling
 merge T1–T5 first; then D2 as the first machine change (a deletion: completion cells hold data),
