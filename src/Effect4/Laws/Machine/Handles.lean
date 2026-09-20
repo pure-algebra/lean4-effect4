@@ -673,7 +673,6 @@ def M1.Handles.owed_mapCode_keys_subset {κ κ' : Type} (f : κ → κ')
     (sourceKeys : κ → List Handle) (targetKeys : κ' → List Handle)
     (_h : ∀ c, targetKeys (f c) ⊆ sourceKeys c) (d : Owed κ) : ProofGraph.Obligation (
     (d.mapCode f).keys targetKeys ⊆ d.keys sourceKeys) := ⟨⟩
-#proof_wanted M1.Handles.owed_mapCode_keys_subset
 
 theorem Owed.mapCode_keys_subset {κ κ' : Type} (f : κ → κ')
     (sourceKeys : κ → List Handle) (targetKeys : κ' → List Handle)

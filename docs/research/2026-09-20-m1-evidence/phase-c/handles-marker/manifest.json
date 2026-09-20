@@ -1,0 +1,21 @@
+{
+  "change": "Remove only the stale wanted marker after the store bank closes the exact obligation. Existing theorem body unchanged.",
+  "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Handles > /tmp/m1-phase-c-handles-marker.log 2>&1",
+  "exit_code": 0,
+  "scope": {
+    "before_open": 8,
+    "before_closed": 1,
+    "after_open": 7,
+    "after_closed": 2,
+    "total": 9,
+    "ceiling": 9
+  },
+  "origin_scope": "9 open,0 proved,ceiling9 unchanged",
+  "census": "Pending the remaining Handles proof fill; this marker repair is not an after-census claim.",
+  "files": {
+    "before.lean": "693cda305b16b0aac2091112367b9fedea107d3b22c7ea83023f721b49e056c3",
+    "after.lean": "54dc0fd829f13890b6528dd58d395e2772a688f3e7ffac7544d99c55ac54bd81",
+    "build.log": "59682b0b74ac6dfa82ce4bc9ef80270f74322b845d8786072415d1a5ed3f22ee",
+    "dependency-failure.log": "ecac29ba3f0454d5dc88c9238cdf46709bfba425b5ee90292f5c43e19a4b4444"
+  }
+}
