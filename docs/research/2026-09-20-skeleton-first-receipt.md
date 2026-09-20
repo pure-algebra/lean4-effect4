@@ -574,3 +574,22 @@ the four frozen statements are unchanged. All 18 printed axioms are allowed.
 Both final census lanes report 0/13 against the earlier 0/8; this module's success
 is its checked proofs, not an increased search count. The finite-step Projects
 instance remains in Refinement. Evidence is retained in phase-c/refkernel.
+
+
+All 115 certified searched-proof replacements are now committed: Agreement's 80 and
+35 across Clauses, ProofGraph, Supervision, Approximation, DenoteRContract, FrameOwned,
+Fibers and Pending. Their statement headers are byte-identical. Narrow builds and
+per-module after-censuses passed. The last four commits are 1864dcbd, 531b9c76,
+76f67589 and 7eac8578. The Fibers comparison rises from 5/96 plain to 6/96 with
+Stores; FrameOwned falls from 2/49 plain to 0/49 with Stores, though its two copied
+plain searched proofs compile. These differing search environments do not establish
+a causal effect of the rewrites. The common-radius final bank census remains owed.
+
+The stronger bank also closes the existing owed-code key bound in Handles. Its
+stale wanted marker caused the first FrameOwned dependency build to fail; the
+one-marker repair, committed at cdf3eb8c, passes a fresh Handles build. That local
+ledger moves from eight open to seven open, still at ceiling nine. The failed build,
+successful repair, and repaired FrameOwned run are retained separately. A premature
+Fibers invocation was refused by the runner's compiler lock before Lean or mutation;
+the later serialized run passed. No Phase C generator has run. Remaining fills and
+the final full check are still pending.
