@@ -254,6 +254,14 @@ the census witnesses of `layer.memo-build-once` restate through. One theorem, on
 registered in the `Effect4.Stores` bank as the slice's first rules. It is the cheapest form the
 condition can take, and it is the form every later store change will copy.
 
+**Amended the same day** (`docs/research/2026-09-20-arena-packet-and-review-verification.md`
+§1): `alpha : StoresOld → StoresNew` cannot be stated without both types in one tree, and the
+literal reading produced a 334-line legacy copy with a fallback value. The connector is instead
+the deferred store's functoriality: the payload becomes a defaulted parameter (the `RunMachine`
+idiom, no call-site change), `DeferredStore.map` with one naturality lemma per operation, and
+`deferredOk_iff_image` (the old invariant is the image of `map completionPrim`). The memo field
+is a deletion witnessed by the restated census rows and one key-set fact; no legacy `MemoEntry`.
+
 ## 4. Receipts
 
 Read at `6dcfe79a`: `Laws/Machine/{Behaviour,Book}.lean`, `Machine/Fibers.lean` (`RunEvent`,
