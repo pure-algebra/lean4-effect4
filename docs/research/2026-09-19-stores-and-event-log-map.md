@@ -8,6 +8,13 @@ findings, and gives an order that does not collide with that work.
 
 Everything below was read at `23e668b0` (3.5 landed).
 
+**Reviewed the same day** by `docs/research/2026-09-19-stateful-api-catalogue.md` §1. Its
+corrections are applied below. Two things it adds are not repeated here and should be read
+there: §1.3 lists state this map does not cover (the fiber's context and the services in it,
+captures, races, the code inside dispatcher tasks, `Point.completed` and the inert
+`Point.tape`), and it measures R1's blast radius at about twenty files rather than the six
+named in §7.
+
 ## 0. The short answer
 
 **Where the promise store comes from.** It transcribes rc.112's `Deferred`
@@ -18,9 +25,10 @@ in `Stores.deferreds` (`Machine/Stores.lean:1079-1177`). It has two populations 
 - **memoised layer builds**: `memoBuild` allocates a cell from the same store, and
   `memoComplete` completes it with the build's exit (rc.112 `Layer.ts:396-416`).
 
-The scheduler never touches the store directly. It goes through four interpreter hooks:
-`registerAsync`, `dueResumes`, `wakeList` and `answerCode` (`Machine/Fibers.lean:491-503`).
-That layering is right.
+The scheduler never touches the store directly. It goes through interpreter hooks:
+`syncState` (`Machine/Fibers.lean:490`), which carries most promise operations, `registerAsync`,
+`dueResumes`, `wakeList` (`:491-503`) and `prepareAnswer` (`:592-593`). `answerCode` (`:495`)
+turns a completion into code and never touches the store. That layering is right.
 
 **What is wrong with it**, in one line each (details in §4):
 
@@ -51,8 +59,14 @@ Three instances run it:
 | reference machine | `RProgram` (free-monad tree over `RSig`) | `RSaved` | `Unit` | `Stores` | `InterpR.lean:94` (`RState`) |
 | OCaml engine | generated `prim` | generated `frame_fiber` | generated `frame_event` | generated `stores`, containers swapped | `ocaml/engine/api_engine.ml` |
 
-The reference machine and the compiled machine share the record *and the stores*. That is why
-a promise cell holds compiled-machine code even when the reference machine runs (§4, F1).
+There is a fourth instance: the stores module's own interpreter (`Machine/Stores.lean:2167-2272`),
+which runs the stores' own name alphabet natively.
+
+The reference machine and the compiled machine share the record *and the stores*. The code a
+promise cell holds is the stores module's own alphabet, `Program := Prim Name Thunk …`
+(`Machine/Stores.lean:538`). The compiled machine runs a different alphabet and embeds the
+stored code (`embed`, `src/Effect4/Program/Compile.lean:358`); the reference machine decodes it.
+So the store depends on *a* code type, which is what F1 is about.
 
 ### 1.1 `RunMachine` (the process)
 
@@ -69,7 +83,10 @@ a promise cell holds compiled-machine code even when the reference machine runs 
 
 ### 1.2 `RunFiber` (one fiber; `Fibers.lean:229-247`)
 
-Seventeen fields transcribe rc.112's `FiberImpl` (`:505-555`):
+Fifteen fields (`:232-246`) transcribe the modelled part of rc.112's `FiberImpl`, which declares
+twenty-two (`vendor/effect-4.0.0-rc.112/src/internal/effect.ts:528-552`; the scheduler, tracer,
+log-level, stack-frame and metrics fields have no counterpart). The docstring at `:223` says
+seventeen and is stale:
 
 - `id`
 - `frame`: the saved execution state. For the compiled machine this is `FrameFiber`
@@ -87,8 +104,10 @@ Seventeen fields transcribe rc.112's `FiberImpl` (`:505-555`):
 ### 1.3 The code and its continuations
 
 `Prim` (`Frames.lean:100-160`) is rc.112's op set:
-- `success`/`failure`/`sync`/`suspend`/`withFiber`;
-- the continuation frames `onSuccess`/`onFailure`/`onExit`/`exitFrame`/`setInterruptible`/`iterator`;
+- `success`/`failure`/`sync`/`suspend`/`withFiber`/`yieldableError`;
+- the continuation frames `onSuccess`/`onSuccessConst`/`onFailure`/`onSuccessAndFailure`/
+  `onExit`/`exitFrame`/`setInterruptible`/`iterator`/`whileLoop` (the frame alphabet keeps
+  `whileLoop` although `Eff` retired it);
 - `yieldNowWith`, `async` and `asyncFinalizer`.
 
 Continuations are *names* (`ν`) with a total interpretation (`PrimInterp`), never closures
@@ -130,12 +149,20 @@ token code`. The resume is **inert unless the fiber is still parked on that toke
 (`drive_resume_wrong_token`). This is the generation-index pattern (stale handles cannot
 fire) and it is correct. What is not stated anywhere is the relation between the two sides:
 every store waiter `(f, t)` either matches `f.parked = withGuard t` or is provably inert. The
-typed-state invariant will need it (the `PendingOk` custom row). I recommend stating it once,
+typed-state invariant will need it (as `ResumeOk`, `Laws/Program/Typed/State.lean:36`, and the
+composed graph's parked-fiber clause; not `PendingOk`, which types a fiber's pending list). I
+recommend stating it once,
 as its own named invariant, instead of discovering it inside S2.
 
 ## 3. The logs
 
-There are three logs with three different roles.
+The machine has three logs with three different roles. Two more sit above it, in the API layer,
+and the review note found them: the host session's ledger of bound calls, received replies,
+consumed call ids and retired calls (`src/Effect4/Api/HostSession.lean:84-93`), and the run's own
+journal of played rows with their verdicts (`src/Effect4/Run.lean:57-59`), from which a fresh run
+replays. That fifth log qualifies F3 below: at the run layer this tree has already chosen "the
+journal is the truth and the state is a fold over it", and the machine's trace is the derived,
+diagnostic one. Both are true, at different layers.
 
 ### 3.1 Inputs: the decision tape and the host's answers
 
@@ -166,7 +193,8 @@ three kinds:
 
 - **host-visible**: `exited`, `callback`, `forked`, `started`;
 - **scheduling**: `scheduledTask`, `ranTask`, `yieldInjected`, `parkedOn`, `resumedWith`, the
-  interrupt events, `observerFired`, the race events, `scopeLinked`, `contextSet`;
+  interrupt events, `observerFired`, the race events, `scopeLinked`, `scopeClosedOnLink`,
+  `finalizerProgram`, `contextSet`;
 - **frame-level**: `frame fiber (η)`, which wraps `FrameEvent` (`Frames.lean:334-350`):
   `popped`, `pushed`, `ranContAll`, `ranFinalizer`, `substituted`, `deferred`, `yielded`.
 
@@ -214,9 +242,15 @@ hit path answers the entry's **promise** instead (`memoGet`, `Stores.lean:1996-2
 pending one parks. So `effect` (either "await the cell" or "the exit") carries nothing the
 cell does not.
 
-In the tree, only `Laws/Machine/Handles.lean` (the handle-keys laws) and the `StoresLaws`
+In the tree, only `Laws/Machine/Handles.lean:747` (the key set) and the `StoresLaws`
 bookkeeping read it, and the typed-state source table gives it a `PromiseTable` row
 (`Typed/Sources.lean:55`). It is write-only state that costs proof work.
+
+One caveat the review adds: the two `StoresLaws` theorems that write the field
+(`syncOpStep_memoBuild` and `syncOpStep_memoComplete_some`) are the green witnesses of the
+census row `layer.memo-build-once`, whose summary ends "and on exit replaces the entry effect
+with the exit". Deleting the field makes that row partial unless the clause is restated against
+the cell, which is the honest restatement since the cell is what the machine reads.
 
 **F3. The log is read back as if it were state.** The API's fiber statuses
 (`Api/Supervision.lean:168-196`) need to tell the run's root from a detached daemon, and the
@@ -244,9 +278,14 @@ About twenty store operations are re-implemented in the hand prelude (`sh_ref_st
 
 The swaps were forced by measurement (`externs.txt` D7, D8). `Point.path` and `env` were
 98.5 % of retained memory and 58 % of time. `completedExits` was 62.7 % of time at fan-out
-512. So the need is real. But the trusted base is now a set of hand OCaml functions with no
-statement relating them to the Lean definitions, only the differential lanes. That also sits
-badly with the rule that OCaml not made from LCNF is ditched.
+512. So the need is real. The review note corrects the sharpness of the complaint: the engine is
+a functor over seven carrier signatures, a reference instance runs the same generated bodies
+over list twins written to reproduce the Lean operations one for one
+(`ocaml/engine/api_engine_ref.ml:1-30`), and per-carrier property tests compare each law against
+the Lean list operation (`ocaml/engine/test/prop_store.ml:1-9`). What is true is narrower, and
+still the problem: those twins and laws are hand-written OCaml, stated nowhere in Lean, and not
+generated from LCNF. The list above also omits the dispatcher swap (`externs.txt:10-14`, `:50`)
+and the `Capture` rows (`:64-66`).
 
 Lowering Lean `Array` does not rescue this today: the translator maps `Array` to OCaml lists
 (`OCaml5/Lcnf/Translate.lean:239-255`).
@@ -314,8 +353,9 @@ event alphabet the way CompCert does:
 - a **diagnostic** alphabet (everything else), emitted through a sink parameter.
 
 The reference machine already instantiates the frame part with `Unit`. The lowered engine can
-instantiate the whole diagnostic sink with `Unit` and pay nothing, and `emit`'s O(n) append
-stops mattering.
+instantiate the whole diagnostic sink with `Unit` and pay nothing. (The append cost is not the
+argument: in the OCaml engine the trace is already its own carrier with its own `emit`,
+`externs.txt:54`, `:74`.)
 
 **R4. One container interface with laws, proved in Lean and implemented once in OCaml.** The
 fiber machine is already parametric in `St` through `RunInterp`. What is missing is a single
@@ -347,7 +387,10 @@ pin a count of open obligations. R1 changes the type at `DeferredCell.completion
 `Owed.code`, and R2 deletes the `MemoEntry.effect` position. Landing them after the pin moves
 the pin and invalidates the frame and obligation rows for those positions.
 
-1. **R1 and R2 first**, as one small slice before the ledger pins its count. Both are narrow:
+1. **R1 and R2 first**, before the ledger pins its count. The review note measures the real
+   radius at about twenty files, most of it deletion (it also finds two further invariants R1
+   deletes, `StoredCodeNoRace` and `DeferredCodes`, and twelve `deferred.*` census witnesses
+   that re-spell at `Completion`), so this is not the small slice the list below suggests:
    - `Machine/Stores.lean` (the cell, `due`, three writers, `memoBuild`/`memoComplete`);
    - `InterpR.lean` (`denoteStored`);
    - `Simulation/Hooks.lean` (`DeferredOk`);
@@ -392,16 +435,24 @@ state:
    (`ClockRef`, a `Context.Reference`, `internal/effect.ts:6033`), so a program can provide
    its own `Clock`. Here there is one global logical clock and no refusal row names the
    difference. Register the refusal now, and revisit with the service carriers (L7).
-2. **Stores with expiry.** `Cache`, `ScopedCache`, `RcMap` and `Pool` all read the clock for
-   their time-to-live. Each needs its own keyed store. The firing is the timer's wake list;
-   the entries need a home.
-3. **Randomness.** `Random` is also a context reference, and the machine has none. For
-   replay it must come from somewhere deterministic: a seeded generator in the stores (as
-   `TestRandom` does), or a tape decision. A seed is the recommendation, since randomness is
-   not a host scheduling choice.
+2. **Things that expire.** `Cache`, `ScopedCache`, `RcMap` and `Pool` all read the clock for
+   their time-to-live. This first said each needs its own keyed store; the review shows
+   otherwise. rc.112 keeps those entries in ordinary maps inside library objects and expires
+   them lazily on read, or through a `sleep` loop on a forked fiber. They need map-valued refs
+   and a way to hold a behaviour, not stores.
+3. **Randomness.** The machine does have context references (`Machine/ContextMap.lean:264-276`,
+   with the two budget references among the reserved keys); what it has is no *Random*
+   reference. For replay the values must come from somewhere deterministic: a seeded generator
+   in the stores (as rc.112's test random does), or a tape decision. A seed is the
+   recommendation, since randomness is not a host scheduling choice.
 4. **The other waiting primitives.** Semaphore, Queue, PubSub and Latch are not in the
-   alphabet. `WakeList` was designed for exactly these (its header names each one's policy),
-   so each is a new store, its rows, and a wake policy: new data, not new infrastructure.
+   alphabet. This first said each is a new store; that contradicts a ruling. DI-11
+   (`docs/DESIGN-ISSUES.md`, ruled 2026-09-10) says queues, mailboxes and publish-subscribe are
+   composite programs over `Ref`, `Deferred` and the wake protocol, "never new machine stores",
+   and rc.112 itself composes publish-subscribe that way. The review's finding is that only the
+   *schedule* is lost by composing, and that one store family, a latch, restores it for four of
+   the five affected modules. Note that `docs/core/language-cut.md:75` states the opposite of
+   DI-11: one of those has to move.
 5. **STM** looked like the exception when this was written, on the assumption that it needs a
    per-transaction journal with version checks. The STM scout
    (`docs/research/2026-09-19-stm-scout.md`) shows otherwise: rc.112's journal and versions
