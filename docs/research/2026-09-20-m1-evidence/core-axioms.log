@@ -1,0 +1,5 @@
+'Effect4.Machine.deferredStore_register_done' depends on axioms: [propext]
+'Effect4.Machine.deferredStore_complete_done' depends on axioms: [propext]
+'Effect4.Machine.deferredStore_complete_pending' depends on axioms: [propext]
+'Effect4.Machine.deferredStore_complete_stores_argument' depends on axioms: [propext]
+'Effect4.Machine.deferredStore_waiter_receives_stored' depends on axioms: [propext]

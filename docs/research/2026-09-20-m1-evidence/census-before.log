@@ -1,0 +1,329 @@
+Test.Api.HostSessionContract: 2 of 2 theorems closed from their statements; 4 source lines they now take
+  2	71-72	Test.Api.HostSessionContract.evaluate_retains_guard	[Quot.sound, propext]
+  2	74-75	Test.Api.HostSessionContract.evaluate_retains_token	[Quot.sound, propext]
+Test.Api.KeyedHostContract: 0 of 0 theorems closed from their statements; 0 source lines they now take
+docs/research/2026-09-20-m1-evidence/CensusBefore.lean:42:46: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+Test.Audit.PositionCensus: 0 of 0 theorems closed from their statements; 0 source lines they now take
+docs/research/2026-09-20-m1-evidence/CensusBefore.lean:43:45: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+Test.Audit.RuntimeCoverage: 0 of 0 theorems closed from their statements; 0 source lines they now take
+docs/research/2026-09-20-m1-evidence/CensusBefore.lean:44:46: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+Test.Machine.Fuzz: 0 of 0 theorems closed from their statements; 0 source lines they now take
+docs/research/2026-09-20-m1-evidence/CensusBefore.lean:45:37: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+Test.Machine.Runtime.StoresLawsContract: 0 of 0 theorems closed from their statements; 0 source lines they now take
+docs/research/2026-09-20-m1-evidence/CensusBefore.lean:46:59: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+Test.Program.RuntimeRShapesContract: 0 of 0 theorems closed from their statements; 0 source lines they now take
+docs/research/2026-09-20-m1-evidence/CensusBefore.lean:47:55: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+Effect4.Api.HostSession: 0 of 0 theorems closed from their statements; 0 source lines they now take
+docs/research/2026-09-20-m1-evidence/CensusBefore.lean:48:43: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+Effect4.Laws.Api.HostSession: 4 of 20 theorems closed from their statements; 10 source lines they now take
+  3	69-71	Effect4.Api.HostSession.preflight_pending	[Quot.sound, propext]
+  3	185-187	Effect4.Api.HostSession.advance_answer_refuses	[Quot.sound, propext]
+  2	179-180	Effect4.Api.HostSession.applyPending_zero	[Quot.sound, propext]
+  2	182-183	Effect4.Api.HostSession.applyReply_zero	[Quot.sound, propext]
+Effect4.Laws.Auto.Frames: 0 of 0 theorems closed from their statements; 0 source lines they now take
+docs/research/2026-09-20-m1-evidence/CensusBefore.lean:50:44: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+Effect4.Laws.Auto.RuleSets: 0 of 0 theorems closed from their statements; 0 source lines they now take
+docs/research/2026-09-20-m1-evidence/CensusBefore.lean:51:46: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+Effect4.Laws.Machine.Handles: 38 of 364 theorems closed from their statements; 56 source lines they now take
+  6	202-207	Effect4.Machine.Val.keys_entryStore	[propext]
+  5	3428-3432	Effect4.Machine.evaluate_cmds_keys	[Quot.sound, propext]
+  3	5415-5417	Effect4.Machine.DeferredCell.keys_wake	[propext]
+  2	1708-1709	Effect4.Machine.keys_emit	[propext]
+  2	274-275	Effect4.Machine.Ctx.keys_withServices	[propext]
+  2	108-109	Effect4.Machine.Handle.ofCode_promise	[]
+  2	5582-5583	Effect4.Machine.scopeClosingKeys_make	[propext]
+  2	1917-1918	Effect4.Machine.world_updateRace	[]
+  2	5910-5911	Effect4.Machine.MemoEntry.keys_observers	[propext]
+  2	1711-1712	Effect4.Machine.world_emit	[]
+  1	144-144	Effect4.Machine.Val.keys_scopeHandle	[propext]
+  1	786-786	Effect4.Machine.state_updateRace	[]
+  1	790-790	Effect4.Machine.fibers_disarm	[]
+  1	111-111	Effect4.Machine.Handle.ofCode_memoMap	[]
+  1	785-785	Effect4.Machine.armed_updateRace	[]
+  1	107-107	Effect4.Machine.Handle.ofCode_cell	[]
+  1	791-791	Effect4.Machine.races_disarm	[]
+  1	272-272	Effect4.Machine.Env.Context.handleKeys_empty	[propext]
+  1	789-789	Effect4.Machine.state_arm	[]
+  1	781-781	Effect4.Machine.races_update	[]
+  1	110-110	Effect4.Machine.Handle.ofCode_scope	[]
+  1	1728-1728	Effect4.Machine.world_disarm	[]
+  1	143-143	Effect4.Machine.Val.keys_promise	[propext]
+  1	145-145	Effect4.Machine.Val.keys_memoMap	[propext]
+  1	141-141	Effect4.Machine.Val.keys_fiber	[propext]
+  1	783-783	Effect4.Machine.state_update	[]
+  1	1718-1718	Effect4.Machine.world_arm	[]
+  1	200-200	Effect4.Machine.Ctx.keys_eq_handleKeys	[propext]
+  1	142-142	Effect4.Machine.Val.keys_cell	[propext]
+  1	787-787	Effect4.Machine.fibers_arm	[]
+  1	792-792	Effect4.Machine.state_disarm	[]
+  1	782-782	Effect4.Machine.armed_update	[]
+  1	1716-1716	Effect4.Machine.world_halt	[]
+  1	784-784	Effect4.Machine.fibers_updateRace	[]
+  1	1714-1714	Effect4.Machine.keys_halt	[propext]
+  1	788-788	Effect4.Machine.races_arm	[]
+  1	106-106	Effect4.Machine.Handle.ofCode_fiber	[]
+  1	1977-1977	Effect4.Machine.Dispatcher.keys_empty	[propext]
+Effect4.Laws.Machine.StoresLaws: 24 of 83 theorems closed from their statements; 121 source lines they now take
+  17	595-611	Effect4.Machine.syncOpStep_scopeAdd	[propext]
+  13	689-701	Effect4.Machine.syncOpStep_memoBuild	[propext]
+  9	564-572	Effect4.Machine.syncOpStep_deferredInterruptWith	[propext]
+  6	557-562	Effect4.Machine.syncOpStep_deferredCompleteWith	[propext]
+  6	790-795	Effect4.Machine.contAOf_closeIfLast_scope	[propext]
+  6	777-782	Effect4.Machine.finProgram_memoEntry	[]
+  5	784-788	Effect4.Machine.finProgram_memoDone	[]
+  5	574-578	Effect4.Machine.syncOpStep_deferredAwaitCleanup	[propext]
+  5	589-593	Effect4.Machine.syncOpStep_scopeMake	[propext]
+  5	766-770	Effect4.Machine.finProgram_closeChildOnFailure_failure	[]
+  4	584-587	Effect4.Machine.syncOpStep_sleepCancel	[propext]
+  4	640-643	Effect4.Machine.syncOpStep_scopeRemove	[propext]
+  4	772-775	Effect4.Machine.finProgram_closeChildOnFailure_success	[]
+  4	547-550	Effect4.Machine.syncOpStep_deferredIsDone	[propext]
+  4	645-648	Effect4.Machine.syncOpStep_scopeIsClosed	[propext]
+  4	552-555	Effect4.Machine.syncOpStep_deferredPoll	[propext]
+  4	542-545	Effect4.Machine.syncOpStep_deferredMake	[propext]
+  4	669-672	Effect4.Machine.syncOpStep_memoFork	[propext]
+  3	580-582	Effect4.Machine.syncOpStep_clockNow	[propext]
+  2	103-104	Effect4.Machine.Val.validIn_cell	[propext]
+  2	107-108	Effect4.Machine.Val.validIn_scopeHandle	[propext]
+  2	109-110	Effect4.Machine.Val.validIn_memoMap	[propext]
+  2	105-106	Effect4.Machine.Val.validIn_promise	[propext]
+  1	111-111	Effect4.Machine.Val.validIn_fiber	[propext]
+Effect4.Laws.Machine.Witnesses: 58 of 69 theorems closed from their statements; 383 source lines they now take
+  13	417-429	Effect4.Machine.Witnesses.w3_immediate_success_stops_launch	[Quot.sound, propext]
+  12	1036-1047	Effect4.Machine.Witnesses.w12_awaitAll_input_order	[Quot.sound, propext]
+  11	614-624	Effect4.Machine.Witnesses.w5_await_all_children_awaits_only_new	[Quot.sound, propext]
+  11	897-907	Effect4.Machine.Witnesses.w6_parallel_forks_and_merges	[Quot.sound, propext]
+  11	1290-1300	Effect4.Machine.Witnesses.w13_sync_meets_the_finalizer_program	[Quot.sound, propext]
+  11	1161-1171	Effect4.Machine.Witnesses.w8_sync_child_yield_is_async	[Quot.sound, propext]
+  11	676-686	Effect4.Machine.Witnesses.w6_link_then_close	[Quot.sound, propext]
+  10	1360-1369	Effect4.Machine.Witnesses.w3_settle_interrupts_the_parked_loser	[Quot.sound, propext]
+  10	556-565	Effect4.Machine.Witnesses.w5_middleware_interrupts_children	[Quot.sound, propext]
+  10	320-329	Effect4.Machine.Witnesses.w1_deferred_start_is_a_task	[Quot.sound, propext]
+  9	567-575	Effect4.Machine.Witnesses.w5_fork_latches_the_middleware	[Quot.sound, propext]
+  9	577-585	Effect4.Machine.Witnesses.w5_daemon_child_survives_parent_exit	[Quot.sound, propext]
+  9	775-783	Effect4.Machine.Witnesses.w6_two_links_have_two_keys	[Quot.sound, propext]
+  8	793-800	Effect4.Machine.Witnesses.w6_close_interrupts_both_children	[Quot.sound, propext]
+  8	605-612	Effect4.Machine.Witnesses.w5_await_all_children_on_failure	[Quot.sound, propext]
+  8	981-988	Effect4.Machine.Witnesses.w11_cancel_splices_the_waiter	[Quot.sound, propext]
+  8	1220-1227	Effect4.Machine.Witnesses.w15_flush_runs_callbacks_in_arming_order	[Quot.sound, propext]
+  8	725-732	Effect4.Machine.Witnesses.w6_child_exit_drops_key	[Quot.sound, propext]
+  8	1063-1070	Effect4.Machine.Witnesses.w13_unknown_scope_is_stuck	[Quot.sound, propext]
+  8	504-511	Effect4.Machine.Witnesses.w4_completion_resumes_on_the_spot	[Quot.sound, propext]
+  7	1453-1459	Effect4.Machine.Witnesses.db07_store_survives_failure	[Quot.sound, propext]
+  7	438-444	Effect4.Machine.Witnesses.w3_all_failures_retain_order	[Quot.sound, propext]
+  7	496-502	Effect4.Machine.Witnesses.w4_sibling_resumes	[Quot.sound, propext]
+  7	889-895	Effect4.Machine.Witnesses.w6_sequential_captures_and_merges	[Quot.sound, propext]
+  7	1407-1413	Effect4.Machine.Witnesses.forbidden_setInterruptible_as_current	[propext]
+  7	746-752	Effect4.Machine.Witnesses.w6_deferred_child_is_linked	[Quot.sound, propext]
+  7	1005-1011	Effect4.Machine.Witnesses.w12_awaitAll_answers_the_exits	[Quot.sound, propext]
+  7	934-940	Effect4.Machine.Witnesses.w10_program_masks_its_own_fiber	[Quot.sound, propext]
+  6	1072-1077	Effect4.Machine.Witnesses.w13_unknown_link_is_stuck	[Quot.sound, propext]
+  6	811-816	Effect4.Machine.Witnesses.w6_three_links_have_three_keys	[Quot.sound, propext]
+  6	1122-1127	Effect4.Machine.Witnesses.w7_update_some_and_get_rereads	[Quot.sound, propext]
+  6	858-863	Effect4.Machine.Witnesses.w6_repeated_runIn_drops_both	[Quot.sound, propext]
+  6	431-436	Effect4.Machine.Witnesses.w3_failure_allows_next_launch	[Quot.sound, propext]
+  6	1431-1436	Effect4.Machine.Witnesses.forbidden_task_enqueued_during_drain	[Quot.sound, propext]
+  6	827-832	Effect4.Machine.Witnesses.w6_freed_key_is_not_reused	[Quot.sound, propext]
+  6	843-848	Effect4.Machine.Witnesses.w6_repeated_runIn_registers_twice	[Quot.sound, propext]
+  6	379-384	Effect4.Machine.Witnesses.w2_masked_interrupt_does_not_apply	[Quot.sound, propext]
+  6	406-411	Effect4.Machine.Witnesses.w3_empty_is_a_frontier	[Quot.sound, propext]
+  6	950-955	Effect4.Machine.Witnesses.w10_into_completes_on_failure	[Quot.sound, propext]
+  6	1115-1120	Effect4.Machine.Witnesses.w7_modify_some_writes_back_the_read	[Quot.sound, propext]
+  5	337-341	Effect4.Machine.Witnesses.w1_await_is_a_value	[Quot.sound, propext]
+  5	1103-1107	Effect4.Machine.Witnesses.w7_set_answers_the_cell	[Quot.sound, propext]
+  5	331-335	Effect4.Machine.Witnesses.w1_immediate_join	[Quot.sound, propext]
+  5	1109-1113	Effect4.Machine.Witnesses.w7_update_answers_void	[Quot.sound, propext]
+  5	754-758	Effect4.Machine.Witnesses.w6_self_interruptor_skipped	[Quot.sound, propext]
+  4	315-318	Effect4.Machine.Witnesses.w1_deferred_join_child	[Quot.sound, propext]
+  4	343-346	Effect4.Machine.Witnesses.w1_join_is_an_effect	[Quot.sound, propext]
+  3	1157-1159	Effect4.Machine.Witnesses.w8_sync_exit_async_fiber_error	[Quot.sound, propext]
+  3	413-415	Effect4.Machine.Witnesses.w3_empty_until_interrupted	[Quot.sound, propext]
+  3	368-370	Effect4.Machine.Witnesses.w2_delivered_at_unmask	[Quot.sound, propext]
+  3	372-374	Effect4.Machine.Witnesses.w2_recorded_once	[Quot.sound, propext]
+  3	1438-1440	Effect4.Machine.Witnesses.w9_next_fire_runs_it	[Quot.sound, propext]
+  3	513-515	Effect4.Machine.Witnesses.w4_complete_twice_answers_false	[Quot.sound, propext]
+  3	311-313	Effect4.Machine.Witnesses.w1_deferred_join_parent	[Quot.sound, propext]
+  2	1179-1180	Effect4.Machine.Witnesses.w8_promise_squashes	[]
+  2	376-377	Effect4.Machine.Witnesses.w2_finalizer_runs_once	[Quot.sound, propext]
+  2	1176-1177	Effect4.Machine.Witnesses.w8_callback_fires	[Quot.sound, propext]
+  2	1173-1174	Effect4.Machine.Witnesses.w8_sync_exit_value	[Quot.sound, propext]
+Effect4.Laws.Program.Agreement.Machine: 28 of 109 theorems closed from their statements; 84 source lines they now take
+  11	1420-1430	Effect4.Program.Agreement.drive_finish_M	[Quot.sound, propext]
+  7	1432-1438	Effect4.Program.Agreement.drive_evaluate_load	[Quot.sound, propext]
+  5	374-378	Effect4.Program.Agreement.localStep_failure	[Quot.sound, propext]
+  5	368-372	Effect4.Program.Agreement.localStep_success	[Quot.sound, propext]
+  4	961-964	Effect4.Program.Agreement.stepFrame_eq	[Quot.sound, propext]
+  4	874-877	Effect4.Program.Agreement.Mexit_exit	[Quot.sound, propext]
+  3	830-832	Effect4.Program.Agreement.M_completedExits	[propext]
+  3	870-872	Effect4.Program.Agreement.Mexit_finished	[Quot.sound, propext]
+  3	846-848	Effect4.Program.Agreement.M_fiber?	[propext]
+  3	850-852	Effect4.Program.Agreement.M_update	[propext]
+  3	888-890	Effect4.Program.Agreement.Myield_fiber?	[propext]
+  2	840-841	Effect4.Program.Agreement.M_state	[propext]
+  2	879-880	Effect4.Program.Agreement.Myield_stuck	[propext]
+  2	867-868	Effect4.Program.Agreement.Mexit_state	[Quot.sound, propext]
+  2	864-865	Effect4.Program.Agreement.Mexit_armed	[Quot.sound, propext]
+  2	837-838	Effect4.Program.Agreement.M_stuck	[propext]
+  2	885-886	Effect4.Program.Agreement.Myield_armed	[propext]
+  2	910-911	Effect4.Program.Agreement.syncValue_op	[Quot.sound, propext]
+  2	861-862	Effect4.Program.Agreement.Mexit_stuck	[Quot.sound, propext]
+  2	882-883	Effect4.Program.Agreement.Myield_state	[propext]
+  2	843-844	Effect4.Program.Agreement.M_middleware	[propext]
+  2	103-104	Effect4.Program.Agreement.PlainStack.head	[propext]
+  2	834-835	Effect4.Program.Agreement.Myield_completedExits	[propext]
+  2	913-914	Effect4.Program.Agreement.syncValue_pure	[Quot.sound, propext]
+  2	904-905	Effect4.Program.Agreement.syncState_op	[Quot.sound, propext]
+  2	907-908	Effect4.Program.Agreement.syncState_pure	[Quot.sound, propext]
+  2	894-895	Effect4.Program.Agreement.parkOf_sync	[Quot.sound, propext]
+  1	781-781	Effect4.Program.Agreement.fiberAt_frame	[propext]
+Effect4.Laws.Program.Guard.Core: 9 of 295 theorems closed from their statements; 33 source lines they now take
+  5	3511-3515	Effect4.Program.Guard.spawn_machine	[Quot.sound, propext]
+  5	251-255	Effect4.Program.Guard.requestOf_prepareExternalAnswer	[Quot.sound, propext]
+  4	3595-3598	Effect4.Program.Guard.spawn_child_raceSites	[propext]
+  4	217-220	Effect4.Program.Guard.requestOf_answer_zero	[Quot.sound, propext]
+  3	138-140	Effect4.Program.Guard.internalKeys_load	[propext]
+  3	222-224	Effect4.Program.Guard.requestOf_evaluate_zero	[Quot.sound, propext]
+  3	226-228	Effect4.Program.Guard.requestOf_advance_zero	[Quot.sound, propext]
+  3	213-215	Effect4.Program.Guard.requestOf_installMiddleware	[Quot.sound, propext]
+  3	3570-3572	Effect4.Program.Guard.spawn_parent_unchanged	[Quot.sound, propext]
+Effect4.Laws.Program.Guard.FrameOwned: 0 of 45 theorems closed from their statements; 0 source lines they now take
+Effect4.Laws.Program.Guard.NativeState: 0 of 43 theorems closed from their statements; 0 source lines they now take
+Effect4.Laws.Program.Guard.RaceSites: 0 of 46 theorems closed from their statements; 0 source lines they now take
+Effect4.Laws.Program.Guard.Settle: 0 of 14 theorems closed from their statements; 0 source lines they now take
+Effect4.Laws.Program.Handles.Hooks: 0 of 20 theorems closed from their statements; 0 source lines they now take
+Effect4.Laws.Program.InterpR: 0 of 1 theorems closed from their statements; 0 source lines they now take
+Effect4.Laws.Program.LayerSharing: 2 of 19 theorems closed from their statements; 10 source lines they now take
+  7	45-51	Effect4.Program.LayerSharing.memoize_hit	[Quot.sound, propext]
+  3	63-65	Effect4.Program.LayerSharing.fresh_forks_without_parent	[Quot.sound, propext]
+Effect4.Laws.Program.Simulation.Actions: 0 of 51 theorems closed from their statements; 0 source lines they now take
+Effect4.Laws.Program.Simulation.Deliver: 5 of 33 theorems closed from their statements; 22 source lines they now take
+  6	233-238	Effect4.Program.Sched.finishFrame_finished	[propext]
+  5	227-231	Effect4.Program.Sched.finishFrame_running	[propext]
+  4	320-323	Effect4.Program.Sched.prepareIterR_continue	[propext]
+  4	222-225	Effect4.Program.Sched.stepFrame_eq'	[propext]
+  3	446-448	Effect4.Program.Sched.BMeans.emitL	[Quot.sound, propext]
+Effect4.Laws.Program.Simulation.Drive: 7 of 68 theorems closed from their statements; 21 source lines they now take
+  4	195-198	Effect4.Program.Sched.clockStep_frame	[Quot.sound, propext]
+  4	185-188	Effect4.Program.Sched.dueResumes_frame	[Quot.sound, propext]
+  4	190-193	Effect4.Program.Sched.dueResumes_term	[Quot.sound, propext]
+  4	200-203	Effect4.Program.Sched.clockStep_term	[Quot.sound, propext]
+  2	32-33	Effect4.Program.Sched.cmeans_evaluate	[Quot.sound, propext]
+  2	62-63	Effect4.Program.Sched.cmeans_exitDone	[Quot.sound, propext]
+  1	43-43	Effect4.Program.Sched.cmeans_launch	[]
+Effect4.Laws.Program.Simulation.Evaluate: 12 of 62 theorems closed from their statements; 40 source lines they now take
+  5	385-389	Effect4.Program.Sched.registerAsyncR_await	[Quot.sound, propext]
+  5	379-383	Effect4.Program.Sched.registerAsync_await	[Quot.sound, propext]
+  4	352-355	Effect4.Program.Sched.point_refresh	[propext]
+  4	414-417	Effect4.Program.Sched.registerAsyncR_sleep	[Quot.sound, propext]
+  4	409-412	Effect4.Program.Sched.registerAsync_sleep	[Quot.sound, propext]
+  3	197-199	Effect4.Program.Sched.parkOf_storePark	[Quot.sound, propext]
+  3	405-407	Effect4.Program.Sched.registerAsyncR_external	[Quot.sound, propext]
+  3	401-403	Effect4.Program.Sched.registerAsync_external	[Quot.sound, propext]
+  3	397-399	Effect4.Program.Sched.registerAsyncR_foreign	[Quot.sound, propext]
+  2	201-202	Effect4.Program.Sched.parkOf_sync'	[Quot.sound, propext]
+  2	349-350	Effect4.Program.Sched.bool_eq_false_of_not	[propext]
+  2	194-195	Effect4.Program.Sched.parkOf_park	[Quot.sound, propext]
+Effect4.Laws.Program.Simulation.Hooks: 3 of 55 theorems closed from their statements; 16 source lines they now take
+  6	749-754	Effect4.Program.Sched.point_congr	[propext]
+  6	756-761	Effect4.Program.Sched.childWith_congr	[propext]
+  4	441-444	Effect4.Program.Sched.bodyR_eq	[Quot.sound, propext]
+Effect4.Laws.Program.Typed.Frames: 0 of 0 theorems closed from their statements; 0 source lines they now take
+docs/research/2026-09-20-m1-evidence/CensusBefore.lean:69:53: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+Effect4.Laws.Program.Typed.Sources: 0 of 0 theorems closed from their statements; 0 source lines they now take
+docs/research/2026-09-20-m1-evidence/CensusBefore.lean:70:54: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+Effect4.Laws.Run: 23 of 67 theorems closed from their statements; 58 source lines they now take
+  5	739-743	Effect4.Run.replay_eq	[Quot.sound, propext]
+  5	286-290	Effect4.Run.api_requestOf	[propext]
+  4	376-379	Effect4.Run.any_append_key	[propext]
+  4	261-264	Effect4.Run.allows_submit	[]
+  3	53-55	Effect4.Run.step_session_bind	[Quot.sound, propext]
+  3	64-66	Effect4.Run.step_phases_submit	[Quot.sound, propext]
+  3	76-78	Effect4.Run.step_session_control	[Quot.sound, propext]
+  3	68-70	Effect4.Run.step_session_apply	[Quot.sound, propext]
+  3	72-74	Effect4.Run.step_phases_apply	[Quot.sound, propext]
+  3	57-59	Effect4.Run.step_phases_bind	[Quot.sound, propext]
+  3	80-82	Effect4.Run.step_phases_control	[Quot.sound, propext]
+  2	61-62	Effect4.Run.step_session_submit	[Quot.sound, propext]
+  2	90-91	Effect4.Run.play_cons	[Quot.sound, propext]
+  2	43-44	Effect4.Run.step_session	[Quot.sound, propext]
+  2	46-47	Effect4.Run.step_phases	[Quot.sound, propext]
+  2	135-136	Effect4.Run.open_phases	[Quot.sound, propext]
+  2	141-142	Effect4.Run.open_machine	[Quot.sound, propext]
+  2	138-139	Effect4.Run.open_journal	[Quot.sound, propext]
+  1	88-88	Effect4.Run.play_nil	[Quot.sound, propext]
+  1	86-86	Effect4.Run.step_budget	[Quot.sound, propext]
+  1	49-49	Effect4.Run.step_journal	[Quot.sound, propext]
+  1	84-84	Effect4.Run.step_built	[Quot.sound, propext]
+  1	93-93	Effect4.Run.play_single	[Quot.sound, propext]
+Effect4.Machine.Stores: 30 of 116 theorems closed from their statements; 169 source lines they now take
+  14	623-636	Effect4.Machine.MemoWorld.find?_append_other_key	[Quot.sound, propext]
+  13	2619-2631	Effect4.Machine.stores_hooks	[propext]
+  11	2324-2334	Effect4.Machine.intoDeferred_masks	[]
+  9	2379-2387	Effect4.Machine.closeSeq_step	[propext]
+  8	2370-2377	Effect4.Machine.closeWalk_sequential	[]
+  7	2398-2404	Effect4.Machine.closeSeq_merges	[propext]
+  7	2294-2300	Effect4.Machine.interruptWith_is_completion	[propext]
+  7	2302-2308	Effect4.Machine.interruptDeferred_spelling	[]
+  7	2316-2322	Effect4.Machine.intoDeferred_spelling	[]
+  6	982-987	Effect4.Machine.set_answer_ne_update_answer	[propext]
+  6	2413-2418	Effect4.Machine.actionOf_closePar	[]
+  6	2349-2354	Effect4.Machine.cancelAwait_splices_the_waiter	[propext]
+  6	2596-2601	Effect4.Machine.interruptFiber_compiles_to_interruptScoped	[]
+  6	2406-2411	Effect4.Machine.closeWalk_parallel	[]
+  5	2343-2347	Effect4.Machine.awaitDeferred_is_a_park	[]
+  5	2288-2292	Effect4.Machine.completeWith_non_exit	[]
+  5	1181-1185	Effect4.Machine.deferredStore_make	[]
+  5	2310-2314	Effect4.Machine.interruptDeferred_delegates	[propext]
+  5	2356-2360	Effect4.Machine.cancelThenFail_runs_then_refails	[propext]
+  4	1187-1190	Effect4.Machine.deferredCell_cases_receipt	[propext]
+  4	228-231	Effect4.Machine.Val.context_eq	[propext]
+  4	921-924	Effect4.Machine.refStep_make	[propext]
+  4	2276-2279	Effect4.Machine.completionPrim_ofExit	[]
+  4	214-217	Effect4.Machine.ctxImage_toVal	[propext]
+  4	942-945	Effect4.Machine.refMake_is_sync	[propext]
+  2	115-116	Effect4.Machine.Ctx.withServices_services	[propext]
+  2	118-119	Effect4.Machine.Ctx.provide_services	[Quot.sound, propext]
+  1	2130-2130	Effect4.Machine.emptyCtx_cacheAgrees	[]
+  1	106-106	Effect4.Machine.Ctx.withServices_cacheAgrees	[propext]
+  1	2128-2128	Effect4.Machine.emptyCtx_eq	[]
+Effect4.Program.Admit: 0 of 8 theorems closed from their statements; 0 source lines they now take
+Effect4.Program.Compile: 1 of 3 theorems closed from their statements; 1 source lines they now take
+  1	447-447	Effect4.Program.exitOfVal_exitOk	[propext]
+OCaml5.Lcnf.Externs: 0 of 0 theorems closed from their statements; 0 source lines they now take
+docs/research/2026-09-20-m1-evidence/CensusBefore.lean:75:39: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+OCaml5.Lcnf.Translate: 0 of 0 theorems closed from their statements; 0 source lines they now take
+docs/research/2026-09-20-m1-evidence/CensusBefore.lean:76:41: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+OCaml5.Lcnf.Types: 0 of 0 theorems closed from their statements; 0 source lines they now take
+docs/research/2026-09-20-m1-evidence/CensusBefore.lean:77:37: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+OCaml5.Tools.CasGoldens: 0 of 0 theorems closed from their statements; 0 source lines they now take
+docs/research/2026-09-20-m1-evidence/CensusBefore.lean:78:43: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
