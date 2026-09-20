@@ -62,7 +62,7 @@ def stateSources : List Row := [
   ("Effect4.Machine.Completion.ofExit.exit", .column "PromiseTable"),
   ("Effect4.Machine.Capture.env", .custom "CaptureOk"),
   ("Effect4.ScopeState.closed.exit",
-    .refused "the release's exit parameter is typed at the acquire's exit; rc.112 says Exit<unknown, unknown> (composed graph §9, DI owed)"),
+    .refused "DI-94 fixes the release type at Exit<unknown, unknown>; connecting stored scope exits to the invariant remains open"),
   -- the journal
   ("Effect4.Machine.RunEvent.finalizerProgram.finalizer", .journal),
   ("Effect4.Machine.RunEvent.resumedWith.answer", .journal),

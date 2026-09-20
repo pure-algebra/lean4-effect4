@@ -84,9 +84,9 @@ private def decodeRows : Nat → Expr → MetaM (List Row)
     | _ => throwError "typed sources: not a list: {e}"
 
 /-- The table, read from the environment: `Effect4.Program.Typed.sources`. -/
-def readRows : MetaM (List Row) := do
+def readRows (table : Name := `Effect4.Program.Typed.sources) : MetaM (List Row) := do
   -- named without resolution: the table is in the module that runs the gate, not in this reader
-  let e := mkConst `Effect4.Program.Typed.sources
+  let e := mkConst table
   decodeRows 10000 e
 
 end Effect4.Laws.Auto.TypedSources

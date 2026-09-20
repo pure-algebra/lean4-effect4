@@ -83,12 +83,15 @@ import Effect4.Laws.Auto.Traversals
 import Effect4.Laws.Auto.Exhaustive
 import Effect4.Laws.Auto.Positions
 import Effect4.Laws.Auto.PositionGate
-import Effect4.Laws.Auto.TypedStateGen
+import Effect4.Laws.Auto.TypedStateDecl
+import Effect4.Laws.Auto.Frames
+import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Effects.Protocol
 import Effect4.Laws.Program.Typed.Vocabulary
 import Effect4.Laws.Auto.TypedSources
 import Effect4.Laws.Program.Typed.Sources
 import Effect4.Laws.Program.Typed.State
+import Effect4.Laws.Program.Typed.Frames
 import Effect4.Laws.Codegen.Template
 import Effect4.Laws.Codegen.Read
 import Effect4.Laws.Codegen.ReadPrint

@@ -119,6 +119,8 @@ def walkType (carriers wrappers : List Name) : Nat → Name → String → Optio
       return w
     match (← getEnv).find? n with
     | some (.inductInfo iv) =>
+      unless args.size == iv.numParams && iv.numIndices == 0 do
+        throwError "REFUSED {owner}.{field}: {n} needs a closed, non-indexed instantiation"
       if iv.isRec then
         throwError "REFUSED {owner}.{field}: recursive type {n} needs an explicit carrier or wrapper"
       -- the edge is recorded from every parent; the child is entered once
@@ -143,11 +145,8 @@ def walkType (carriers wrappers : List Name) : Nat → Name → String → Optio
             i := i + 1
           return w
       return w
-    | _ =>
-      if args.any (mentionsCarrier carriers) then
-        throwError "REFUSED {owner}.{field}: unknown type constructor {n} over a carrier"
-      return w
-  | _ => return w
+    | _ => throwError "REFUSED {owner}.{field}: cannot inspect type constructor {n}"
+  | _ => throwError "REFUSED {owner}.{field}: cannot inspect type {ty}"
 
 /-- The walk from a root: a type constant, or a definition whose value is one. -/
 def walkOf (root : Name) (carriers := defaultCarriers) (wrappers := defaultWrappers) :
@@ -218,21 +217,28 @@ def ctorArgNames (ty : Expr) (numParams : Nat) : Array String := Id.run do
     | _ => break
   return out
 
+/-- Compiler matcher provenance is diagnostic data, never the stable identity of a goal. -/
+structure Arm where
+  matcher : Name
+  alternative : Nat
+deriving Inhabited, Repr, BEq
+
 structure Site where
   holder : Name
   owner : Name
   fields : Array String
+  arms : Array Arm := #[]
 deriving Inhabited
 
 /-- Every reconstructed field is a potential write unless it is copied from the
 explicit source record. Callers without that source receive a conservative inventory. -/
 def writeSites (env : Environment) (owners : List Name) (holder : Name)
     (fuel : Nat) (e : Expr) (acc : Array Site) (source? : Option Expr := none) :
-    MetaM (Array Site) := go fuel e acc
+    MetaM (Array Site) := go fuel e acc #[]
 where
-  go : Nat → Expr → Array Site → MetaM (Array Site)
-    | 0, _, _ => throwError "position analysis: write scan ran out of depth"
-    | fuel + 1, e, acc => do
+  go : Nat → Expr → Array Site → Array Arm → MetaM (Array Site)
+    | 0, _, _, _ => throwError "position analysis: write scan ran out of depth"
+    | fuel + 1, e, acc, arms => do
       let mut acc := acc
       match e with
       | .app .. =>
@@ -253,15 +259,24 @@ where
                 let names := ctorArgNames ci.type ci.numParams
                 for i in [:ci.numFields] do
                   written := written.push s!"{c.getString!}.{(names[i]?).getD s!"arg{i}"}"
-              acc := acc.push { holder, owner := ci.induct, fields := written }
-        for a in args do acc ← go fuel a acc
-        go fuel fn acc
+              acc := acc.push { holder, owner := ci.induct, fields := written, arms }
+        let matcher? ← matchMatcherApp? e (alsoCasesOn := true)
+        for j in [:args.size] do
+          let path := match matcher? with
+            | some app =>
+              let first := app.toMatcherInfo.getFirstAltPos
+              if first ≤ j && j < first + app.alts.size then
+                arms.push ⟨app.matcherName, j - first⟩
+              else arms
+            | none => arms
+          acc ← go fuel args[j]! acc path
+        go fuel fn acc arms
       | .lam n d b bi | .forallE n d b bi =>
-        withLocalDecl n bi d fun x => go fuel (b.instantiate1 x) acc
+        withLocalDecl n bi d fun x => go fuel (b.instantiate1 x) acc arms
       | .letE n t v b _ =>
-        acc ← go fuel v acc
-        withLetDecl n t v fun x => go fuel (b.instantiate1 x) acc
-      | .mdata _ b | .proj _ _ b => go fuel b acc
+        acc ← go fuel v acc arms
+        withLetDecl n t v fun x => go fuel (b.instantiate1 x) acc arms
+      | .mdata _ b | .proj _ _ b => go fuel b acc arms
       | _ => return acc
 
 /-- All fields of a value used opaquely. Pattern matchers and predicate parameters

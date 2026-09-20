@@ -97,6 +97,7 @@ import Test.Program.NativeAtomContract
 import Test.Program.AtomTable
 import Test.Program.AtomRulesRed
 import Test.Program.CheckerRulesRed
+import Test.Program.TypedStateRulesRed
 import Test.Program.ErrorQueriesContract
 import Test.Program.CatchIfContract
 import Test.Machine.Fuzz
@@ -106,6 +107,10 @@ import Test.Audit.ExhaustiveFixture
 import Test.Audit.TraversalCensus
 import Test.Audit.PositionCensus
 import Test.Audit.PositionAnalysis
+import Test.Audit.TypedStateDecl
+import Test.Audit.FrameRules
+import Test.Audit.ProofGraph
+import Test.Audit.Obligations
 import Test.Program.TypeAlgebraContract
 import Test.Program.TyViewContract
 import Test.Program.ValueModelContract

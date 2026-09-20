@@ -2,8 +2,8 @@
 # Typed/Vocabulary — what a position's typing source can be
 
 The vocabulary of the typed-state source table (`docs/research/2026-09-18-position-census-design.md`
-§2B). Rows are declared with `typed_position` (`Laws/Auto/TypedSources.lean`) and read from its
-environment extension by the totality gate and the skeleton emitter. This module holds only the
+§2B). Rows are ordinary `List Row` declarations, decoded from their kernel expressions by
+`Laws/Auto/TypedSources.lean` for the totality gate and direct declaration generator. This module holds only the
 data types, with no meta import, so that anything may name them.
 
 The world is the tables plus the store: the fiber table `Γ` (every fiber ever forked, at the

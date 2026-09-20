@@ -10,6 +10,11 @@ structure Cell where
   other : Nat
 
 def copyTracked (s t : Cell) : Cell := {s with tracked := t.tracked}
+def branchWrite (b : Bool) (s : Cell) : Cell :=
+  match b with
+  | true => {s with tracked := 1}
+  | false => {s with other := 2}
+
 def readMatched (s : Cell) : Nat := match s with | .mk tracked _ => tracked
 def readProjected (s : Cell) : Nat := s.tracked
 def readWhole (p : Cell → Prop) (s : Cell) : Prop := p s
@@ -53,6 +58,14 @@ run_cmd liftTermElabM do
   let some v := (← getConstInfo ``readProjected).value? | throwError "missing body"
   let reads ← readSites env [``Cell] 1000 v #[]
   unless reads == #[( ``Cell, "tracked")] do throwError "projection lost its precision"
+
+run_cmd liftTermElabM do
+  let env ← getEnv
+  let some v := (← getConstInfo ``branchWrite).value? | throwError "missing branch body"
+  let sites ← writeSites env [``Cell] ``branchWrite 1000 v #[]
+  unless sites.size == 2 do throwError "expected two branch write sites"
+  unless sites.all (fun site => !site.arms.isEmpty) do throwError "write lost its matcher arm"
+  if sites[0]!.arms == sites[1]!.arms then throwError "branches were conflated"
 
 /-- error: position analysis: closure scan ran out of work at Test.PositionAnalysis.copyTracked -/
 #guard_msgs in
