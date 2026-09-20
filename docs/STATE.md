@@ -68,6 +68,21 @@ Rows 44–45 record the approved typed world; rows 78–85 remain proposals. The
 `codex/typed-state-tooling` was checkpointed as three commits and merged on 2026-09-19
 (`de27095d`; it had built green at its last edit in its worktree). Set the storage/observation contract before pinning
 the concrete obligation count; fast backends and new API families do not all block the milestone.
+
+**M1 kickoff (2026-09-20).** `docs/research/2026-09-20-m1-kickoff-confidence-and-design-representations.md`
+checks the forward scout brief against `f9d3112b` (six corrections: `completionPrim` is at
+`Stores.lean:1813`; the census rows are keyed by field name so only row 61 is edited; `make
+gen-lcnf` and `gen-cas` exist and `generate.py --only` takes one family; there is no
+`Effect4.World` aesop bank; replay is one of row 80's options, not a ruling; the placement
+moves go between M1 and M2, not inside M1), records what each of rows 44/45, the world order,
+the store record, the heap kernel and the promise table stands on, states the design as one
+shape at four levels (interaction tree + Hazel protocol; world ordered as persistent tables
+plus owned cells; the store as a comodel; the observation in CompCert's contract shape), and
+organizes the verified-abstraction research (CompCert/CakeML, Coq extraction, LLVM/MLIR
+legalization, data refinement, DimSum, handler fusion, Alive2/ISLE) into the shape of a
+lowering-module API: carrier interfaces with laws, one `Layout` reader, legalization rules
+with an obligation and an evidence tier. Codex holds M1–M2; the design focus stays on rows 84
+and 85 next.
 **The deep-dive review** `docs/research/2026-09-19-plan-deep-dive-review.md` (2026-09-19) re-cut
 D0–D7 into slices with files, statements, deletions and red controls (plan §14): the tooling
 merge T1–T5 first; then D2 as the first machine change (a deletion: completion cells hold data),
