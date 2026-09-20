@@ -475,7 +475,7 @@ def M1OriginFibers.make_pending_empty (id : FiberId) (c : NCode) (flag : Bool) (
 @[aesop norm simp (rule_sets := [Effect4.Stores])]
 theorem make_pending_empty (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool)
     (ctx : Ctx) (origin : Origin) :
-    (RunFiber.make id c flag budget ctx origin : FRun).pending = [] := rfl
+    (RunFiber.make id c flag budget ctx origin : FRun).pending = [] := by aesop
 
 attribute [aesop norm simp (rule_sets := [Effect4.Stores])] PendingOk
 

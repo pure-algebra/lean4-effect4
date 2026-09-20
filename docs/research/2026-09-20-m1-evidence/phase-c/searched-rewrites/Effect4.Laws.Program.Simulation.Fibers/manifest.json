@@ -1,0 +1,304 @@
+{
+  "module": "Effect4.Laws.Program.Simulation.Fibers",
+  "evidence_kind": "completed finite rewrite/build/census slice",
+  "phase_b_commit": "3f89307488835002c1cb9d8b3bcb9c1dcc1554a1",
+  "recorded_finished_utc": "2026-09-20T14:09:17.511189+00:00",
+  "rewritten_bodies": 1,
+  "source_path": "src/Effect4/Laws/Program/Simulation/Fibers.lean",
+  "source_before_sha256": "2b62db3cfac136176a670057587721e86d40831f512b9ec8bc80e55ba7e15654",
+  "source_after_sha256": "b42e6c936ac0dc96d74b5d9e5e282ec9cebec54476e5cdadc91c79ff2dbe7f96",
+  "certified_headers_equal": true,
+  "only_certified_body_spans_changed": true,
+  "before": {
+    "tactic": "aesop",
+    "cap": 20000,
+    "instrument_closed_count": 5,
+    "trust_admissible_closed_count": 5,
+    "instrument_total_count": 96
+  },
+  "after": {
+    "tactic": "aesop (rule_sets := [Effect4.Stores])",
+    "cap": 20000,
+    "instrument_closed_count": 6,
+    "trust_admissible_closed_count": 6,
+    "instrument_total_count": 96
+  },
+  "comparison_limit": "After search may use a different rule-bank context; counts do not attribute any change solely to shorter proof bodies.",
+  "processes": [
+    {
+      "label": "patch-check",
+      "command": [
+        "git",
+        "apply",
+        "--check",
+        "/private/tmp/m1-tools/phase-c-searched-rewrites/patches/Effect4.Laws.Program.Simulation.Fibers.patch"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Simulation.Fibers/patch-check.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "apply",
+      "command": [
+        "git",
+        "apply",
+        "/private/tmp/m1-tools/phase-c-searched-rewrites/patches/Effect4.Laws.Program.Simulation.Fibers.patch"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Simulation.Fibers/apply.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        "src/Effect4/Laws/Program/Simulation/Fibers.lean"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Simulation.Fibers/diff-check.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "build",
+      "command": [
+        "lake",
+        "build",
+        "Effect4.Laws.Program.Simulation.Fibers"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Simulation.Fibers/build.log",
+      "log_sha256": "c2f24dcc6b86b493563f0561aea7e2794878a18a61c285d58d6fa3af238ddf63"
+    },
+    {
+      "label": "census",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Simulation.Fibers/Census.lean"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Simulation.Fibers/census.log",
+      "log_sha256": "f0bb67dbc260f8d4a791b6091ebac8579d484eb7d3f3bf9f2d84d50482bdc651"
+    }
+  ],
+  "fresh_build_line": "ℹ [330/330] Built Effect4.Laws.Program.Simulation.Fibers (1.7s)",
+  "local_gate_lines": [
+    "info: src/Effect4/Laws/Program/Simulation/Fibers.lean:523:0: Effect4.Program.Sched.M1OriginFibers: 5 open, 1 proved, 6 total; ceiling 6"
+  ],
+  "headers": [
+    {
+      "name": "Effect4.Program.Sched.make_pending_empty",
+      "header_sha256": "13b586e3a339bd779a6ba8b7fe1150596bbe95b209b0f0e2a0fe628758c07d55",
+      "exact_before_after_header_match": true
+    }
+  ],
+  "baseline_provenance": {
+    "census_results": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/results.json",
+    "census_results_sha256": "de504894001ca31ecd5fd195b09b513f415bb9bcb9987bb7c01c97249a93319e",
+    "census_run": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/run.json",
+    "census_run_sha256": "3420c3a7f77913db13b8c91a9f381f0a50b01f309f06cb390544e7bbd6d142b4",
+    "census_inputs_sha256": "a7f8f045a9e4f9bbee0cb5d93964bb1660b0379fea4c00dd415784da13744a34",
+    "prior_candidate_manifest": "/tmp/m1-tools/phase-c-rewrite-scope/rewrite-ready.json",
+    "prior_candidate_manifest_sha256": "adea2d7901d98a02a3dcdf006c3c7c1f365ee3c2334cbba07aba4f2a81a7eb18",
+    "prior_fragments_retained_unchanged": true,
+    "phase_b_scope_sha256": "aaa3de31fdaf2c26f62f7ebc179b7c6c00a7a91fa93223a880b43550583ef080",
+    "module_classification_sha256": "a71e5c5c72bf6b762f964c8a0691e5bc3202169585cdceed846d5d0a768d9a7a"
+  },
+  "history": [
+    {
+      "kind": "orchestration history, not semantic failure",
+      "path": "/tmp/m1-phase-c-fibers-runner.log",
+      "sha256": "d551d7de16b82c12ea3dc214d173a16ac458e99e28ef25718f96a1912dcf9442",
+      "reported_exit_code": 2,
+      "exit_code_provenance": "explicit packager argument supplied by coordinator; no process is rerun",
+      "outer_command": null
+    }
+  ],
+  "runner_source_limit": "Runner source is packaged as currently retained; result pins its input manifest and census reader, not the runner script itself.",
+  "no_claims": [
+    "No compiler or git command run by packager",
+    "No full-tree gate or task completion inferred",
+    "No live source/current HEAD revalidation",
+    "No other module inspected"
+  ],
+  "members": [
+    {
+      "path": "baseline/Census.lean",
+      "bytes": 180,
+      "sha256": "a94dbe24fa1ce1caecd5978c698d42fb392784af56e935532077eb180b98e6b5",
+      "source": "/private/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/063-Effect4.Laws.Program.Simulation.Fibers.lean"
+    },
+    {
+      "path": "baseline/job.json",
+      "bytes": 1098,
+      "sha256": "38f539eb84905c78df95ecadeed0a5d300821ba1f0f97a57850700453bffe1f3",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "baseline/module-result.json",
+      "bytes": 2758,
+      "sha256": "74cc4874b33dae092d2f3eb93797a1343a4a59d04baab019e11d25100a47f817",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "baseline/module.log",
+      "bytes": 432,
+      "sha256": "404b270070ca36736b4042cf0cd8cb213cab6660d695553409f2fc766baa95f3",
+      "source": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Simulation.Fibers.log"
+    },
+    {
+      "path": "baseline/process.log",
+      "bytes": 432,
+      "sha256": "404b270070ca36736b4042cf0cd8cb213cab6660d695553409f2fc766baa95f3",
+      "source": "/private/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/063-Effect4.Laws.Program.Simulation.Fibers.log"
+    },
+    {
+      "path": "history/orchestration.log",
+      "bytes": 53,
+      "sha256": "d551d7de16b82c12ea3dc214d173a16ac458e99e28ef25718f96a1912dcf9442",
+      "source": "/tmp/m1-phase-c-fibers-runner.log"
+    },
+    {
+      "path": "history/records.json",
+      "bytes": 360,
+      "sha256": "6c5bfef41152b7b80382f471823df03421a43846085c0b59b9c989a7f44e4c2c",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "provenance/package-searched-rewrite.py",
+      "bytes": 17992,
+      "sha256": "b68f6bc3407570433dc4da882db15f41440883ac2dfcd9bf69951af470ee7fc8",
+      "source": "/private/tmp/m1-tools/package-searched-rewrite.py"
+    },
+    {
+      "path": "provenance/run-one.py",
+      "bytes": 9697,
+      "sha256": "c215f030938b56b2e0c4e7fa2557a8799207f834f8ed5f83ca41f9dc91320e14",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/run-one.py"
+    },
+    {
+      "path": "rewrite/certified-candidates.json",
+      "bytes": 2424,
+      "sha256": "0b40949d9295a4f79d1183d78e6a3f3d8d7bc008d5da0c1807b33e92558d274a",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "rewrite/certified-comparison.json",
+      "bytes": 3364,
+      "sha256": "f6a2c4e31ea56077aaf875be732c4857ea5a72ed761bd5a61522c79ef9ae5235",
+      "source": "/tmp/m1-tools/phase-c-rewrite-scope/portable-certified/comparison.json"
+    },
+    {
+      "path": "rewrite/change.patch",
+      "bytes": 541,
+      "sha256": "a81204434b9eaab56b849021b01930bfd5b59df2c14ef5a7b2cecd29e005cd0b",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/patches/Effect4.Laws.Program.Simulation.Fibers.patch"
+    },
+    {
+      "path": "rewrite/header-comparisons.json",
+      "bytes": 201,
+      "sha256": "6a2b0b5b92e7ca117c40026cfb8df27ff7c2b36ff83caf153ec67349f541a3ee",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "rewrite/master-manifest.json",
+      "bytes": 8341,
+      "sha256": "d7a25d4fa05e6ac890e5aa15950e32f12332ff9d28c35c42045bd56ee9acc2b6",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/manifest.json"
+    },
+    {
+      "path": "rewrite/module.json",
+      "bytes": 1881,
+      "sha256": "ce6f15403f82252a3904477a8f461cfe3fb38f1d9c8b3db7eabe2a45a18393ba",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/modules/Effect4.Laws.Program.Simulation.Fibers.json"
+    },
+    {
+      "path": "run/Census.lean",
+      "bytes": 225,
+      "sha256": "e6d4d157bfe94dec29aa69c3e4eb2ed9591d8e5ae270f33d896a6b4e43b5394d",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Simulation.Fibers/Census.lean"
+    },
+    {
+      "path": "run/apply.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Simulation.Fibers/apply.log"
+    },
+    {
+      "path": "run/build.log",
+      "bytes": 39672,
+      "sha256": "c2f24dcc6b86b493563f0561aea7e2794878a18a61c285d58d6fa3af238ddf63",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Simulation.Fibers/build.log"
+    },
+    {
+      "path": "run/census.json",
+      "bytes": 2309,
+      "sha256": "c91c282c818ff5e99b0e8b265f4e0aa2e2fc69d999552e7ca2c5676524fbe38d",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Simulation.Fibers/census.json"
+    },
+    {
+      "path": "run/census.log",
+      "bytes": 523,
+      "sha256": "f0bb67dbc260f8d4a791b6091ebac8579d484eb7d3f3bf9f2d84d50482bdc651",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Simulation.Fibers/census.log"
+    },
+    {
+      "path": "run/diff-check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Simulation.Fibers/diff-check.log"
+    },
+    {
+      "path": "run/patch-check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Simulation.Fibers/patch-check.log"
+    },
+    {
+      "path": "run/result.json",
+      "bytes": 4167,
+      "sha256": "078dc03591b817720a38f6dc4e0067e356968e3338f1a6fdb118151ba6583a40",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Simulation.Fibers/result.json"
+    },
+    {
+      "path": "sources/after/src/Effect4/Laws/Program/Simulation/Fibers.lean",
+      "bytes": 30257,
+      "sha256": "b42e6c936ac0dc96d74b5d9e5e282ec9cebec54476e5cdadc91c79ff2dbe7f96",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/after/src/Effect4/Laws/Program/Simulation/Fibers.lean"
+    },
+    {
+      "path": "sources/before/src/Effect4/Laws/Program/Simulation/Fibers.lean",
+      "bytes": 30252,
+      "sha256": "2b62db3cfac136176a670057587721e86d40831f512b9ec8bc80e55ba7e15654",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/before/src/Effect4/Laws/Program/Simulation/Fibers.lean"
+    }
+  ],
+  "archive": {
+    "path": "raw.tar.gz",
+    "sha256": "73623b5a485efb34c3f412adc955a3dabcf998a2b29f0374304adae537cc9b84",
+    "members": 25,
+    "bytes": 25754,
+    "lossless_readback_verified": true
+  }
+}
