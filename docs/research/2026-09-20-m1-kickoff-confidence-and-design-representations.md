@@ -415,6 +415,49 @@ still are).
 7. Standing rules: one Lean compiler process at a time; commit by explicit paths; nothing
    pushed; the owner's `README.md` untouched; research notes force-added.
 
+### 6a. How the proofs are done: the graph is attacked with the instruments, not by hand
+
+Measured at `c57b1821`: 493 `aesop` calls under `src/` against about 50 registered rules (25
+in the default inversion bank, 16 in `Effect4.Checker`, 6 in `Effect4.Atoms`, 3 generated into
+`Effect4.TypedState`; `TyOrder`, `Rows` and `Reader` declared and empty). `#auto_census` runs
+nowhere but its docstring; `#proof_wanted` and `#typed_state_obligations` only in their control;
+`#frame_rules` once. The instruments exist and the loop does not pass through them. Every slice
+from M1 on runs this loop, and its receipt reports the numbers.
+
+1. **Measure before touching a proof.** `#auto_census <module> using aesop` on every module
+   of the radius, in a scratch file importing the built tree. The report says which theorems
+   search already closes and at what line cost; those are rewritten to the searched proof,
+   the rest are the real work. The numbers go in the receipt.
+2. **Statements first, into the ledger.** Every theorem whose statement changes gets an
+   `Obligation` declaration and `#proof_wanted` before any proof is attempted, so
+   `#typed_state_obligations <namespace> ceiling N using aesop` shows the open set; the
+   ceiling falls to 0 by the last commit of the slice and is the slice's gate.
+3. **Delete first.** A slice that removes a predicate removes its lemmas before restating
+   anything; a smaller graph is attacked, not the old one plus the new.
+4. **One bank per proof graph, grown as the slice goes.** Declare the bank in
+   `Laws/Auto/RuleSets.lean` if it does not exist (for the store steps: `Effect4.Stores`).
+   Register every reusable closing step there as the slice finds it: unconditional equations
+   as `norm simp`, inversions as `safe destruct`, conditional round trips as `safe forward`,
+   with one red control per bank (a theorem that closes only with it, as `AtomRules.lean`
+   has). Re-run `#auto_census` with the bank at the end; the count that closes must have
+   risen, and that number is in the receipt.
+5. **The proof loop is statement, `aesop`, residual goals, register, again.** Read the residual
+   goals aesop prints; each names a missing fact. Prove it as a small lemma by `cases` and
+   `simp`, register it, retry. If a statement resists after two rounds, restate it (a smaller
+   lemma or a missing hypothesis), never pile tactics. No `first`, `simp_all` or `try` by hand;
+   catch-all arms take one tactic or one rule, never a constructor list.
+6. **Frames are generated.** A structure-valued invariant restated over new field types gets
+   its frame lemmas from `#frame_rules`, not by hand.
+7. **Skeletons are filled, not drafted.** Where a slice's predicate family is generated
+   (`#typed_state`), the work is the clauses the generator leaves open, in the order the
+   ledger lists them; the skeleton is never edited around.
+8. **Narrow builds, small commits.** One module per build, its own diagnostics read; a green
+   module is committed by path at once; no confirmation builds.
+
+The receipt of a slice therefore carries four numbers beside the commit hash: theorems closed
+by search before and after, rules added to the bank with its red control, the ledger ceiling's
+trajectory to 0, and lines deleted.
+
 ## 7. Open for the owner
 
 - **Row 84**: the connector obligation for an embedded straight attempt (outer continuation and
