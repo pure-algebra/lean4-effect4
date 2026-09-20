@@ -188,7 +188,7 @@ def localRun (root : NativeEff) : Nat → NFiber → Stores → Option (ExitV ×
     | .finished ex s' => some (ex, s')
 
 theorem localRun_zero (root : NativeEff) (fr : NFiber) (s : Stores) :
-    localRun root 0 fr s = none := rfl
+    localRun root 0 fr s = none := by aesop
 
 theorem localRun_running {root : NativeEff} {fr fr' : NFiber} {s s' : Stores}
     (h : localStep root fr s = .running fr' s') (n : Nat) :
@@ -230,45 +230,44 @@ variable (root : NativeEff)
 theorem step_push_onSuccess (body : NCode) (n : EffName) (K : List NCode) (i : Bool)
     (s : Stores) :
     localStep root (fiberOf (Prim.onSuccess body n) K i) s =
-      .running (fiberOf body (Prim.onSuccess body n :: K) i) s := rfl
+      .running (fiberOf body (Prim.onSuccess body n :: K) i) s := by aesop
 
 theorem step_push_onFailure (body : NCode) (n : EffName) (K : List NCode) (i : Bool)
     (s : Stores) :
     localStep root (fiberOf (Prim.onFailure body n) K i) s =
-      .running (fiberOf body (Prim.onFailure body n :: K) i) s := rfl
+      .running (fiberOf body (Prim.onFailure body n :: K) i) s := by aesop
 
 theorem step_push_onSuccessAndFailure (body : NCode) (n₁ n₂ : EffName) (K : List NCode)
     (i : Bool) (s : Stores) :
     localStep root (fiberOf (Prim.onSuccessAndFailure body n₁ n₂) K i) s =
-      .running (fiberOf body (Prim.onSuccessAndFailure body n₁ n₂ :: K) i) s := rfl
+      .running (fiberOf body (Prim.onSuccessAndFailure body n₁ n₂ :: K) i) s := by aesop
 
 theorem step_push_exitFrame (body : NCode) (K : List NCode) (i : Bool) (s : Stores) :
     localStep root (fiberOf (Prim.exitFrame body) K i) s =
-      .running (fiberOf body (Prim.exitFrame body :: K) i) s := rfl
+      .running (fiberOf body (Prim.exitFrame body :: K) i) s := by aesop
 
 theorem step_push_onExit (body : NCode) (n : EffName) (flag : Bool) (K : List NCode) (i : Bool)
     (s : Stores) :
     localStep root (fiberOf (Prim.onExit body n flag) K i) s =
-      .running (fiberOf body (Prim.onExit body n flag :: K) i) s := rfl
+      .running (fiberOf body (Prim.onExit body n flag :: K) i) s := by aesop
 
 theorem step_yieldableError (e : Err) (K : List NCode) (i : Bool) (s : Stores) :
     localStep root (fiberOf (Prim.yieldableError e) K i) s =
-      .running (fiberOf (Prim.failure (Cause.fail e)) K i) s := rfl
+      .running (fiberOf (Prim.failure (Cause.fail e)) K i) s := by aesop
 
 theorem step_suspend (thunk : EffThunk) (K : List NCode) (i : Bool) (s : Stores) :
     localStep root (fiberOf (Prim.suspend thunk) K i) s =
-      .running (fiberOf ((interpAt root []).suspendBody thunk) K i) s := rfl
+      .running (fiberOf ((interpAt root []).suspendBody thunk) K i) s := by aesop
 
 theorem step_sync_pure (p : Point) (K : List NCode) (i : Bool) (s : Stores) :
     localStep root (fiberOf (Prim.sync (EffThunk.pure p)) K i) s =
-      .running (fiberOf (Prim.success (syncValueAt root (EffThunk.pure p))) K i) s := rfl
+      .running (fiberOf (Prim.success (syncValueAt root (EffThunk.pure p))) K i) s := by aesop
 
 theorem step_sync_op (o : SyncOp) (K : List NCode) (i : Bool) (s : Stores) :
     localStep root (fiberOf (Prim.sync (EffThunk.op o)) K i) s =
       (match syncOpStep o s with
        | some (s', v) => .running (fiberOf (Prim.success v) K i) s'
-       | none => .running (fiberOf (Prim.success Val.unit) K i) s) := by
-  simp only [localStep, fiberOf]
+       | none => .running (fiberOf (Prim.success Val.unit) K i) s) := by aesop
 
 /-- An exit on the empty stack finishes the fiber with itself. -/
 theorem step_exit_empty (ex : ExitV) (i : Bool) (s : Stores) :
@@ -279,22 +278,19 @@ theorem step_exit_empty (ex : ExitV) (i : Bool) (s : Stores) :
 theorem step_success_onSuccess (v : Val) (body : NCode) (n : EffName) (K : List NCode)
     (i : Bool) (s : Stores) :
     localStep root (fiberOf (Prim.success v) (Prim.onSuccess body n :: K) i) s =
-      .running (fiberOf ((interpAt root []).contA n v) K i) s := by
-  cases i <;> rfl
+      .running (fiberOf ((interpAt root []).contA n v) K i) s := by aesop
 
 /-- A value meets its `OnSuccessAndFailure` frame: the value arm. -/
 theorem step_success_onSuccessAndFailure (v : Val) (body : NCode) (n₁ n₂ : EffName)
     (K : List NCode) (i : Bool) (s : Stores) :
     localStep root (fiberOf (Prim.success v) (Prim.onSuccessAndFailure body n₁ n₂ :: K) i) s =
-      .running (fiberOf ((interpAt root []).contA n₁ v) K i) s := by
-  cases i <;> rfl
+      .running (fiberOf ((interpAt root []).contA n₁ v) K i) s := by aesop
 
 /-- A value meets the `Exit` frame: the reified success. -/
 theorem step_success_exitFrame (v : Val) (body : NCode) (K : List NCode) (i : Bool)
     (s : Stores) :
     localStep root (fiberOf (Prim.success v) (Prim.exitFrame body :: K) i) s =
-      .running (fiberOf (Prim.success (reifyExitVal (Exit.success v))) K i) s := by
-  cases i <;> rfl
+      .running (fiberOf (Prim.success (reifyExitVal (Exit.success v))) K i) s := by aesop
 
 /-- A cause meets its `OnFailure` frame: the handler at the cause. -/
 theorem step_failure_onFailure (c : CauseV) (body : NCode) (n : EffName) (K : List NCode)
@@ -397,17 +393,13 @@ theorem step_success_pass_onFailure (v : Val) (body : NCode) (n : EffName) (K : 
 /-- A value passes the restoring frame a mask left: the fiber is interruptible again. -/
 theorem step_success_pass_setInterruptible (v : Val) (K : List NCode) (i : Bool) (s : Stores) :
     localStep root (fiberOf (Prim.success v) (Prim.setInterruptible true :: K) i) s =
-      localStep root (fiberOf (Prim.success v) K true) s := by
-  have hpop := popFrom_pass_setInterruptible Effect4.Arm.contA false K (Prim.success v) i rfl
-  exact exitFrom_ext root _ s hpop.1 hpop.2
+      localStep root (fiberOf (Prim.success v) K true) s := by aesop
 
 /-- A cause passes the restoring frame a mask left: the fiber is interruptible again. -/
 theorem step_failure_pass_setInterruptible (c : CauseV) (K : List NCode) (i : Bool)
     (s : Stores) :
     localStep root (fiberOf (Prim.failure c) (Prim.setInterruptible true :: K) i) s =
-      localStep root (fiberOf (Prim.failure c) K true) s := by
-  have hpop := popFrom_pass_setInterruptible Effect4.Arm.contE true K (Prim.failure c) i rfl
-  exact exitFrom_ext root _ s hpop.1 hpop.2
+      localStep root (fiberOf (Prim.failure c) K true) s := by aesop
 
 /-- Either exit passes the restoring frame. -/
 theorem step_ofExit_pass_setInterruptible (ex : ExitV) (K : List NCode) (i : Bool)
@@ -665,7 +657,7 @@ variable (root : NativeEff) {p : Point}
 (§20). census: fork.scoped -/
 theorem contAOf_forkScopedIn (scope : Nat) :
     Program.contAOf root (EffName.forkScopedIn p) (Val.scopeHandle scope) =
-      Prim.withFiber (EffThunk.forkInAt p scope) := rfl
+      Prim.withFiber (EffThunk.forkInAt p scope) := by aesop
 
 /-- The `forkScoped` wrapper's continuation on anything but a scope handle is the wrong
 shape. -/
@@ -676,7 +668,7 @@ theorem contAOf_forkScopedIn_other (v : Val) (hne : ∀ s, v ≠ Val.scopeHandle
 /-- The `forkIn` half reads the child, the options and the point's fuel off the `forkScoped`
 node, on the handle the read answered (§20). census: fork.scoped -/
 theorem withFiberOf_forkInAt (scope : Nat) :
-    (interpOf root).withFiberOf (EffThunk.forkInAt p scope) = forkScopedAt root p scope := rfl
+    (interpOf root).withFiberOf (EffThunk.forkInAt p scope) = forkScopedAt root p scope := by aesop
 
 /-! The `acquireRelease` names (`Compile.lean`; V1). The value patterns are variables except
 `acquireIn`'s, whose wrong-shape row is `contAOf_acquireIn_other`. -/
@@ -685,11 +677,11 @@ theorem contAOf_acquireCtx (v : Val) :
     Program.contAOf root (.acquireCtx p) v =
       match Val.context? v with
       | some ctx => Prim.withFiber (EffThunk.acquireMasked p ctx)
-      | none => badShape := rfl
+      | none => badShape := by aesop
 
 theorem contAOf_acquireIn_scope (ctx : Ctx) (s : Nat) :
     Program.contAOf root (.acquireIn p ctx) (Val.scopeHandle s) =
-      Prim.onSuccess (resolve root (p.child 0)) (.acquired p ctx s) := rfl
+      Prim.onSuccess (resolve root (p.child 0)) (.acquired p ctx s) := by aesop
 
 theorem contAOf_acquireIn_other (ctx : Ctx) (v : Val) (hne : ∀ s, v ≠ Val.scopeHandle s) :
     Program.contAOf root (.acquireIn p ctx) v = badShape := by
@@ -699,7 +691,7 @@ theorem contAOf_acquired (ctx : Ctx) (s : Nat) (a : Val) :
     Program.contAOf root (.acquired p ctx s) a =
       Prim.onSuccess
         (Prim.sync (EffThunk.op (SyncOp.scopeAdd s (FinName.foreign (p.capture a ctx)))))
-        (.afterScopeAdd a (FinName.foreign (p.capture a ctx))) := rfl
+        (.afterScopeAdd a (FinName.foreign (p.capture a ctx))) := by aesop
 
 theorem contAOf_afterScopeAdd (a : Val) (fin : FinName) (v : Val) :
     Program.contAOf root (.afterScopeAdd a fin) v =
@@ -707,18 +699,18 @@ theorem contAOf_afterScopeAdd (a : Val) (fin : FinName) (v : Val) :
       else
         match exitOfVal v with
         | some exit => Prim.onSuccess (embed (finProgram fin exit)) (.constant a)
-        | none => badShape := rfl
+        | none => badShape := by aesop
 
 theorem contAOf_releaseUnder (ctx : Ctx) (exit : ExitV) (v : Val) :
     Program.contAOf root (.releaseUnder p ctx exit) v =
       match Val.context? v with
       | some previous =>
         Prim.onSuccess (Prim.withFiber (EffThunk.setCtx ctx)) (.releaseBody p exit previous)
-      | none => badShape := rfl
+      | none => badShape := by aesop
 
 theorem contAOf_releaseBody (exit : ExitV) (previous : Ctx) (v : Val) :
     Program.contAOf root (.releaseBody p exit previous) v =
-      Prim.withFiber (EffThunk.releaseMasked (p.childWith 1 (reifyExitVal exit)) previous) := rfl
+      Prim.withFiber (EffThunk.releaseMasked (p.childWith 1 (reifyExitVal exit)) previous) := by aesop
 
 end scopeConts
 
@@ -734,30 +726,29 @@ variable (root : NativeEff)
 
 theorem contAOf_provideLayerWith_scope (p : Point) (scope : Nat) :
     Program.contAOf root (.provideLayerWith p) (Val.scopeHandle scope) =
-      provideLayerWithK root p scope := rfl
+      provideLayerWithK root p scope := by aesop
 
 theorem contAOf_provideLayerWith_other (p : Point) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
     Program.contAOf root (.provideLayerWith p) v = badShape := by
   simp only [Program.contAOf]
 
 theorem contAOf_provideLayerBody (p : Point) (v : Val) :
-    Program.contAOf root (.provideLayerBody p) v = provideLayerBodyK root p v := rfl
+    Program.contAOf root (.provideLayerBody p) v = provideLayerBodyK root p v := by aesop
 
 theorem contAOf_updateThen (u : Env.ContextUpdate) (body : Region) (v : Val) :
-    Program.contAOf root (.updateThen u body) v = updateThenK root u body v := rfl
+    Program.contAOf root (.updateThen u body) v = updateThenK root u body v := by aesop
 
 theorem contAOf_bodyThen (body : Region) (previous : Ctx) (v : Val) :
     Program.contAOf root (.bodyThen body previous) v =
-      Prim.onExit (regionCode root body) (.restoreCtx previous) false := rfl
+      Prim.onExit (regionCode root body) (.restoreCtx previous) false := by aesop
 
 theorem contAOf_buildWithScopeFromContext (q : Point) (scope : Nat) (v : Val) :
-    Program.contAOf root (.buildWithScopeFromContext q scope) v = buildWithScopeK q scope v := rfl
+    Program.contAOf root (.buildWithScopeFromContext q scope) v = buildWithScopeK q scope v := by aesop
 
 theorem contAOf_withMemoMapThen_memoMap (q : Point) (scope : Nat) (id : MemoMapId) :
     Program.contAOf root (.withMemoMapThen q scope) (Val.memoMap id) =
       updateContextAt (Env.ContextUpdate.provideService Env.currentMemoMapKey (Val.memoMap id))
-        (Region.buildAdding q id scope) := by
-  cases id; rfl
+        (Region.buildAdding q id scope) := by aesop
 
 theorem contAOf_withMemoMapThen_other (q : Point) (scope : Nat) (v : Val) (hne : ∀ x, v ≠ Val.memoMap x) :
     Program.contAOf root (.withMemoMapThen q scope) v = badShape := by
@@ -765,12 +756,12 @@ theorem contAOf_withMemoMapThen_other (q : Point) (scope : Nat) (v : Val) (hne :
   simp only [Program.contAOf]
 
 theorem contAOf_addCurrentMemoMap (m : MemoMapId) (v : Val) :
-    Program.contAOf root (.addCurrentMemoMap m) v = addCurrentMemoMapK m v := rfl
+    Program.contAOf root (.addCurrentMemoMap m) v = addCurrentMemoMapK m v := by aesop
 
 theorem contAOf_fromBuildThen_scope (q : Point) (m : MemoMapId) (child : Nat) :
     Program.contAOf root (.fromBuildThen q m) (Val.scopeHandle child) =
       Prim.onExit (innerLayerAt root q m child)
-        (.store (Name.finalizerName (FinName.closeChildOnFailure child))) false := rfl
+        (.store (Name.finalizerName (FinName.closeChildOnFailure child))) false := by aesop
 
 theorem contAOf_fromBuildThen_other (q : Point) (m : MemoMapId) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
     Program.contAOf root (.fromBuildThen q m) v = badShape := by
@@ -779,13 +770,12 @@ theorem contAOf_fromBuildThen_other (q : Point) (m : MemoMapId) (v : Val) (hne :
 theorem contAOf_memoize_hit (q : Point) (m : MemoMapId) (scope : Nat) (cell : DeferredKey)
     (owner : MemoMapId) :
     Program.contAOf root (.memoize q m scope) (.pair (Val.promise cell) (Val.memoMap owner)) =
-      Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.path owner)) (.awaitPromise cell) := by
-  cases cell; cases owner; rfl
+      Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.path owner)) (.awaitPromise cell) := by aesop
 
 theorem contAOf_memoize_unit (q : Point) (m : MemoMapId) (scope : Nat) :
     Program.contAOf root (.memoize q m scope) Val.unit =
       Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoBuild q.path m)))
-        (.buildIntoLayerScope q m scope) := rfl
+        (.buildIntoLayerScope q m scope) := by aesop
 
 theorem contAOf_memoize_other (q : Point) (m : MemoMapId) (scope : Nat) (v : Val)
     (hhit : ∀ c o, v ≠ .pair (Val.promise c) (Val.memoMap o)) (hunit : v ≠ Val.unit) :
@@ -795,12 +785,12 @@ theorem contAOf_memoize_other (q : Point) (m : MemoMapId) (scope : Nat) (v : Val
 
 theorem contAOf_awaitPromise (cell : DeferredKey) (v : Val) :
     Program.contAOf root (.awaitPromise cell) v =
-      Prim.async (.registerAwait cell) true (some (.cancelAwait cell)) := rfl
+      Prim.async (.registerAwait cell) true (some (.cancelAwait cell)) := by aesop
 
 theorem contAOf_buildIntoLayerScope_scope (q : Point) (m : MemoMapId) (scope layerScope : Nat) :
     Program.contAOf root (.buildIntoLayerScope q m scope) (Val.scopeHandle layerScope) =
       Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.path m))
-        (.thenBuildInto q m layerScope) := rfl
+        (.thenBuildInto q m layerScope) := by aesop
 
 theorem contAOf_buildIntoLayerScope_other (q : Point) (m : MemoMapId) (scope : Nat) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
     Program.contAOf root (.buildIntoLayerScope q m scope) v = badShape := by
@@ -809,11 +799,10 @@ theorem contAOf_buildIntoLayerScope_other (q : Point) (m : MemoMapId) (scope : N
 theorem contAOf_thenBuildInto (q : Point) (m : MemoMapId) (layerScope : Nat) (v : Val) :
     Program.contAOf root (.thenBuildInto q m layerScope) v =
       Prim.onExit (constructionAt root q layerScope)
-        (.store (Name.finalizerName (FinName.memoDone q.path m))) false := rfl
+        (.store (Name.finalizerName (FinName.memoDone q.path m))) false := by aesop
 
 theorem contAOf_freshThen_memoMap (q : Point) (scope : Nat) (id : MemoMapId) :
-    Program.contAOf root (.freshThen q scope) (Val.memoMap id) = resolveLayer root q id scope := by
-  cases id; rfl
+    Program.contAOf root (.freshThen q scope) (Val.memoMap id) = resolveLayer root q id scope := by aesop
 
 theorem contAOf_freshThen_other (q : Point) (scope : Nat) (v : Val) (hne : ∀ x, v ≠ Val.memoMap x) :
     Program.contAOf root (.freshThen q scope) v = badShape := by
@@ -822,16 +811,16 @@ theorem contAOf_freshThen_other (q : Point) (scope : Nat) (v : Val) (hne : ∀ x
 
 theorem contAOf_provideThen (q : Point) (m : MemoMapId) (scope : Nat) (mode : CombineMode)
     (v : Val) :
-    Program.contAOf root (.provideThen q m scope mode) v = provideThenK q m scope mode v := rfl
+    Program.contAOf root (.provideThen q m scope mode) v = provideThenK q m scope mode v := by aesop
 
 theorem contAOf_combineWith (mode : CombineMode) (that : Env.Ctx) (v : Val) :
-    Program.contAOf root (.combineWith mode that) v = combineWithK mode that v := rfl
+    Program.contAOf root (.combineWith mode that) v = combineWithK mode that v := by aesop
 
 theorem contAOf_mergeChildren_scope (q : Point) (m : MemoMapId) (parent : Nat) :
     Program.contAOf root (.mergeChildren q m) (Val.scopeHandle parent) =
       Prim.onSuccess
         (Prim.sync (EffThunk.op (SyncOp.scopeFork parent FinalizerStrategy.sequential)))
-        (.mergeForkOne q 0 m parent []) := rfl
+        (.mergeForkOne q 0 m parent []) := by aesop
 
 theorem contAOf_mergeChildren_other (q : Point) (m : MemoMapId) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
     Program.contAOf root (.mergeChildren q m) v = badShape := by
@@ -841,7 +830,7 @@ theorem contAOf_mergeForkOne_scope (q : Point) (i : Nat) (m : MemoMapId) (parent
     (forked : List FiberId) (child : Nat) :
     Program.contAOf root (.mergeForkOne q i m parent forked) (Val.scopeHandle child) =
       Prim.onSuccess (Prim.withFiber (EffThunk.forkLayer (q.child i) m child))
-        (.mergeForkNext q i m parent forked) := rfl
+        (.mergeForkNext q i m parent forked) := by aesop
 
 theorem contAOf_mergeForkOne_other (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
     (forked : List FiberId) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
@@ -857,8 +846,7 @@ theorem contAOf_mergeForkNext_fiber (q : Point) (i : Nat) (m : MemoMapId) (paren
           (.mergeForkOne q 1 m parent (forked ++ [id]))
       else
         Prim.onSuccess (Prim.withFiber (EffThunk.awaitAllFailFast (forked ++ [id])))
-          .mergeContexts) := by
-  cases id; rfl
+          .mergeContexts) := by aesop
 
 theorem contAOf_mergeForkNext_other (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
     (forked : List FiberId) (v : Val) (hne : ∀ x, v ≠ Val.fiber x) :
@@ -876,7 +864,7 @@ theorem contAOf_mergeAllChildren_scope (q : Point) (m : MemoMapId) (parent : Nat
           (Prim.sync (EffThunk.op (SyncOp.scopeFork parent FinalizerStrategy.sequential)))
           (.mergeAllForkOne q 0 m parent [])
       else
-        Prim.onSuccess (Prim.withFiber (EffThunk.awaitAllFailFast [])) .mergeContexts) := rfl
+        Prim.onSuccess (Prim.withFiber (EffThunk.awaitAllFailFast [])) .mergeContexts) := by aesop
 
 theorem contAOf_mergeAllChildren_other (q : Point) (m : MemoMapId) (v : Val)
     (hne : ∀ x, v ≠ Val.scopeHandle x) :
@@ -887,7 +875,7 @@ theorem contAOf_mergeAllForkOne_scope (q : Point) (i : Nat) (m : MemoMapId) (par
     (forked : List FiberId) (child : Nat) :
     Program.contAOf root (.mergeAllForkOne q i m parent forked) (Val.scopeHandle child) =
       Prim.onSuccess (Prim.withFiber (EffThunk.forkLayer (q.spineChild i) m child))
-        (.mergeAllForkNext q i m parent forked) := rfl
+        (.mergeAllForkNext q i m parent forked) := by aesop
 
 theorem contAOf_mergeAllForkOne_other (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
     (forked : List FiberId) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
@@ -903,8 +891,7 @@ theorem contAOf_mergeAllForkNext_fiber (q : Point) (i : Nat) (m : MemoMapId) (pa
           (.mergeAllForkOne q (i + 1) m parent (forked ++ [id]))
       else
         Prim.onSuccess (Prim.withFiber (EffThunk.awaitAllFailFast (forked ++ [id])))
-          .mergeContexts) := by
-  cases id; rfl
+          .mergeContexts) := by aesop
 
 theorem contAOf_mergeAllForkNext_other (q : Point) (i : Nat) (m : MemoMapId) (parent : Nat)
     (forked : List FiberId) (v : Val) (hne : ∀ x, v ≠ Val.fiber x) :
@@ -913,21 +900,20 @@ theorem contAOf_mergeAllForkNext_other (q : Point) (i : Nat) (m : MemoMapId) (pa
   simp only [Program.contAOf]
 
 theorem contAOf_mergeContexts (v : Val) :
-    Program.contAOf root .mergeContexts v = mergeContextsK v := rfl
+    Program.contAOf root .mergeContexts v = mergeContextsK v := by aesop
 
 theorem contAOf_serviceLookup (key : ServiceKey) (v : Val) :
-    Program.contAOf root (.serviceLookup key) v = serviceLookupK key v := rfl
+    Program.contAOf root (.serviceLookup key) v = serviceLookupK key v := by aesop
 
 theorem contAOf_bindService (key : Option ServiceKey) (v : Val) :
-    Program.contAOf root (.bindService key) v = bindServiceK key v := rfl
+    Program.contAOf root (.bindService key) v = bindServiceK key v := by aesop
 
 theorem contEOf_orDie (c : CauseV) :
-    Program.contEOf root .orDie c = Prim.failure (orDieCause c) := rfl
+    Program.contEOf root .orDie c = Prim.failure (orDieCause c) := by aesop
 
 theorem suspendBodyAt_memoLookup (q : Point) (m : MemoMapId) (scope : Nat) :
     suspendBodyAt root (.memoLookup q m scope) =
-      Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoGet q.path m))) (.memoize q m scope) :=
-  rfl
+      Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoGet q.path m))) (.memoize q m scope) := by aesop
 
 def M1Origin.withFiberOf_forkLayer (q : Point) (m : MemoMapId) (scope : Nat) :
     ProofGraph.Obligation ((interpOf root).withFiberOf (.forkLayer q m scope) =
@@ -935,11 +921,10 @@ def M1Origin.withFiberOf_forkLayer (q : Point) (m : MemoMapId) (scope : Nat) :
 
 theorem withFiberOf_forkLayer (q : Point) (m : MemoMapId) (scope : Nat) :
     (interpOf root).withFiberOf (.forkLayer q m scope) =
-      some (.fork (resolveLayer root q m scope) ⟨true, true, .inherit⟩ q.path) := rfl
+      some (.fork (resolveLayer root q m scope) ⟨true, true, .inherit⟩ q.path) := by aesop
 
 theorem withFiberOf_awaitAllFailFast (targets : List FiberId) :
-    (interpOf root).withFiberOf (.awaitAllFailFast targets) = some (.awaitAllFailFast targets) :=
-  rfl
+    (interpOf root).withFiberOf (.awaitAllFailFast targets) = some (.awaitAllFailFast targets) := by aesop
 
 /-- The layer at a point, resolved: the node's term, built — `compileLayer` for every
 constructor but a reference, which hops to its target (`resolveLayer.resolveLayerTerm`, the
@@ -964,7 +949,7 @@ theorem resolveLayerTerm_ref (target : List Nat) (q : Point) (m : MemoMapId) (sc
         match Node.at_ (Node.eff root) target with
         | some (Node.layer (.ref _)) => badShape
         | some (Node.layer l) => compileLayer l (q.redirect target) m scope
-        | _ => badShape := rfl
+        | _ => badShape := by aesop
 
 theorem innerLayerAt_effect {q : Point} {key : ServiceKey} {body : NativeEff}
     (h : Node.at_ (Node.eff root) q.path = some (Node.layer (.effect key body)))
@@ -1063,13 +1048,13 @@ theorem compileLayer_effect (key : ServiceKey) (body : NativeEff) (q : Point) (m
     compileLayer (.effect key body) q m scope =
       Prim.onSuccess
         (Prim.sync (EffThunk.op (SyncOp.scopeFork scope FinalizerStrategy.sequential)))
-        (.fromBuildThen q m) := rfl
+        (.fromBuildThen q m) := by aesop
 
 theorem compileLayer_effectDiscard (body : NativeEff) (q : Point) (m : MemoMapId) (scope : Nat) :
     compileLayer (.effectDiscard body) q m scope =
       Prim.onSuccess
         (Prim.sync (EffThunk.op (SyncOp.scopeFork scope FinalizerStrategy.sequential)))
-        (.fromBuildThen q m) := rfl
+        (.fromBuildThen q m) := by aesop
 
 /-- `provide` is a `fromBuild` wrapper too (`:1915`). census: layer.provide-dependency-first -/
 theorem compileLayer_provide (self that : LayerTerm NativeOp) (q : Point) (m : MemoMapId)
@@ -1077,14 +1062,14 @@ theorem compileLayer_provide (self that : LayerTerm NativeOp) (q : Point) (m : M
     compileLayer (.provide self that) q m scope =
       Prim.onSuccess
         (Prim.sync (EffThunk.op (SyncOp.scopeFork scope FinalizerStrategy.sequential)))
-        (.fromBuildThen q m) := rfl
+        (.fromBuildThen q m) := by aesop
 
 theorem compileLayer_provideMerge (self that : LayerTerm NativeOp) (q : Point) (m : MemoMapId)
     (scope : Nat) :
     compileLayer (.provideMerge self that) q m scope =
       Prim.onSuccess
         (Prim.sync (EffThunk.op (SyncOp.scopeFork scope FinalizerStrategy.sequential)))
-        (.fromBuildThen q m) := rfl
+        (.fromBuildThen q m) := by aesop
 
 /-- `merge` is `mergeAllEffect` under `fromBuild` (`:1587`). census: layer.merge-parallel-scopes -/
 theorem compileLayer_merge (left right : LayerTerm NativeOp) (q : Point) (m : MemoMapId)
@@ -1092,19 +1077,19 @@ theorem compileLayer_merge (left right : LayerTerm NativeOp) (q : Point) (m : Me
     compileLayer (.merge left right) q m scope =
       Prim.onSuccess
         (Prim.sync (EffThunk.op (SyncOp.scopeFork scope FinalizerStrategy.sequential)))
-        (.fromBuildThen q m) := rfl
+        (.fromBuildThen q m) := by aesop
 
 /-- `fresh` builds the inner layer with a brand-new memo map on the same scope, no `fromBuild`
 child of its own (`:3851`). census: layer.fresh-drops-memoization -/
 theorem compileLayer_fresh (inner : LayerTerm NativeOp) (q : Point) (m : MemoMapId) (scope : Nat) :
     compileLayer (.fresh inner) q m scope =
       Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoFork none)))
-        (.freshThen (q.child 0) scope) := rfl
+        (.freshThen (q.child 0) scope) := by aesop
 
 /-- `orDie` is `catch_(build, die)` (`:3327`). -/
 theorem compileLayer_orDie (inner : LayerTerm NativeOp) (q : Point) (m : MemoMapId) (scope : Nat) :
     compileLayer (.orDie inner) q m scope =
-      Prim.onFailure (compileLayer inner (q.child 0) m scope) .orDie := rfl
+      Prim.onFailure (compileLayer inner (q.child 0) m scope) .orDie := by aesop
 
 /-- `mergeAll` is `mergeAllEffect` under `fromBuild` too (`:1587`, the host rows slice). -/
 theorem compileLayer_mergeAll (layers : LayerTerms NativeOp) (q : Point) (m : MemoMapId)
@@ -1112,12 +1097,12 @@ theorem compileLayer_mergeAll (layers : LayerTerms NativeOp) (q : Point) (m : Me
     compileLayer (.mergeAll layers) q m scope =
       Prim.onSuccess
         (Prim.sync (EffThunk.op (SyncOp.scopeFork scope FinalizerStrategy.sequential)))
-        (.fromBuildThen q m) := rfl
+        (.fromBuildThen q m) := by aesop
 
 /-- A reference reaching the table is the refusal: `resolveLayer` redirects to the target
 before consulting it, and `orDie` compiles its inner term at the table directly. -/
 theorem compileLayer_ref (target : List Nat) (q : Point) (m : MemoMapId) (scope : Nat) :
-    compileLayer (.ref target) q m scope = badShape := rfl
+    compileLayer (.ref target) q m scope = badShape := by aesop
 
 /-- `buildWithMemoMap` installs the map as the `CurrentMemoMap` service (`Layer.ts:756-762`).
 census: layer.build-with-memo-map-service -/
@@ -1138,23 +1123,23 @@ theorem currentMemoMapOf_addV (ctx : Env.Ctx) (id : Nat) :
   rw [Env.Context.getV_addV_same]
   rfl
 
-theorem currentMemoMapOf_empty : currentMemoMapOf Env.Context.empty = none := rfl
+theorem currentMemoMapOf_empty : currentMemoMapOf Env.Context.empty = none := by aesop
 
-theorem regionCode_program (q : Point) : regionCode root (.program q) = resolve root q := rfl
+theorem regionCode_program (q : Point) : regionCode root (.program q) = resolve root q := by aesop
 
 /-- The build region: `self.build(memoMap, scope)` at the point (`Layer.ts:1920-1922`).
 census: layer.provide-dependency-first -/
 theorem regionCode_build (q : Point) (m : MemoMapId) (scope : Nat) :
-    regionCode root (.build q m scope) = resolveLayer root q m scope := rfl
+    regionCode root (.build q m scope) = resolveLayer root q m scope := by aesop
 
 /-- `buildWithMemoMap` adds the same map to the produced context (`:762`).
 census: layer.build-with-memo-map-service -/
 theorem regionCode_buildAdding (q : Point) (m : MemoMapId) (scope : Nat) :
     regionCode root (.buildAdding q m scope) =
-      Prim.onSuccess (resolveLayer root q m scope) (.addCurrentMemoMap m) := rfl
+      Prim.onSuccess (resolveLayer root q m scope) (.addCurrentMemoMap m) := by aesop
 
 theorem regionCode_construct (q : Point) (key : Option ServiceKey) :
-    regionCode root (.construct q key) = Prim.onSuccess (resolve root q) (.bindService key) := rfl
+    regionCode root (.construct q key) = Prim.onSuccess (resolve root q) (.bindService key) := by aesop
 
 theorem addCurrentMemoMapK_context (m : MemoMapId) (ctx : Env.Ctx) :
     addCurrentMemoMapK m (Env.encode ctx) =
@@ -1218,10 +1203,10 @@ theorem updateThenK_context (u : Env.ContextUpdate) (body : Region) (prev : Ctx)
   simp [updateThenK, Val.context?_context]
 
 theorem bindServiceK_some (key : ServiceKey) (v : Val) :
-    bindServiceK (some key) v = Prim.success (Env.encode (Env.Context.empty.addV key v)) := rfl
+    bindServiceK (some key) v = Prim.success (Env.encode (Env.Context.empty.addV key v)) := by aesop
 
 theorem bindServiceK_none (v : Val) :
-    bindServiceK none v = Prim.success (Env.encode Env.Context.empty) := rfl
+    bindServiceK none v = Prim.success (Env.encode Env.Context.empty) := by aesop
 
 theorem exitOfVal_reifyExitVal (e : ExitV) : exitOfVal (reifyExitVal e) = some e := by
   rw [reifyExitVal_eq_exitImage]
@@ -1279,7 +1264,7 @@ theorem provideLayerBodyK_exit (p : Point) (built : Env.Ctx) (exit : ExitV)
 census: layer.provide-effect-scope -/
 theorem finalizerProgram_scopeClose (scope : Nat) (exit : ExitV) :
     (interpOf root).finalizerProgram (.scopeClose scope) exit =
-      some (Prim.withFiber (EffThunk.closeScope scope exit)) := rfl
+      some (Prim.withFiber (EffThunk.closeScope scope exit)) := by aesop
 
 /-- The native `scoped` entry (`internal/effect.ts:3938-3948`): the scope made at the supply, the
 `Scope` service installed on the fiber context, the body under the frame that carries the
@@ -1298,7 +1283,7 @@ theorem enterScoped_eq (p : Point)
           frame := { f.frame with
             current := Prim.onExit (resolve root (p.child 0))
               (.scopedExit f.context m.state.nextName) false } },
-        yielding, .continue_, []⟩ := rfl
+        yielding, .continue_, []⟩ := by aesop
 
 /-- The scoped callback restores the previous context before the close (`:3944-3947`), whether
 or not the scope is known to the store. census: scope.remove-finalizer -/
@@ -1463,29 +1448,29 @@ theorem meaning_of_asExit : ∀ (b : NativeEff) (q : Point) (s : Stores) {exit :
   | .catchIf _ _ _, _, _, _, hpl, _ => by simp [Straight] at hpl
 
 theorem contAOf_cont (root : NativeEff) (p : Point) (v : Val) :
-    contAOf root (EffName.cont p) v = resolve root (p.childWith 1 v) := rfl
+    contAOf root (EffName.cont p) v = resolve root (p.childWith 1 v) := by aesop
 
 theorem contAOf_onValue (root : NativeEff) (p : Point) (v : Val) :
-    contAOf root (EffName.onValue p) v = resolve root (p.childWith 1 v) := rfl
+    contAOf root (EffName.onValue p) v = resolve root (p.childWith 1 v) := by aesop
 
 theorem contEOf_caught (root : NativeEff) (p : Point) (c : CauseV) :
-    contEOf root (EffName.caught p) c = resolve root (p.childWith 1 (Val.exitErr c)) := rfl
+    contEOf root (EffName.caught p) c = resolve root (p.childWith 1 (Val.exitErr c)) := by aesop
 
 theorem contEOf_onCause (root : NativeEff) (p : Point) (c : CauseV) :
-    contEOf root (EffName.onCause p) c = resolve root (p.childWith 2 (Val.exitErr c)) := rfl
+    contEOf root (EffName.onCause p) c = resolve root (p.childWith 2 (Val.exitErr c)) := by aesop
 
 /-- The restoring continuation of a finalizer: the body's exit, whatever the finalizer
 answered (`Compile.lean:555`). -/
 theorem contAOf_restore (root : NativeEff) (ex : ExitV) (v : Val) :
-    contAOf root (EffName.restore ex) v = Prim.ofExit ex := rfl
+    contAOf root (EffName.restore ex) v = Prim.ofExit ex := by aesop
 
 /-- The merging continuation of a finalizer: the body's exit with the finalizer's cause
 (`Compile.lean:577`). -/
 theorem contEOf_merge (root : NativeEff) (ex : ExitV) (c : CauseV) :
     contEOf root (EffName.merge ex) c =
-      Prim.ofExit (Exit.restoreAfterFinalizer ex (Exit.failure c)) := rfl
+      Prim.ofExit (Exit.restoreAfterFinalizer ex (Exit.failure c)) := by aesop
 
-theorem badShape_eq : badShape = Prim.ofExit badShapeExit := rfl
+theorem badShape_eq : badShape = Prim.ofExit badShapeExit := by aesop
 
 /-- An exit meets the `Exit` frame: the reified exit, whichever side it is. -/
 theorem step_ofExit_exitFrame (root : NativeEff) (ex : ExitV) (body : NCode) (K : List NCode)
@@ -1526,10 +1511,10 @@ theorem Reaches.trans {root : NativeEff} {c₁ c₂ : Nat} {fr₁ fr₂ fr₃ : 
 
 /-! ## Points, one level down -/
 
-theorem Point.child_env (p : Point) (i : Nat) : (p.child i).env = p.env := rfl
+theorem Point.child_env (p : Point) (i : Nat) : (p.child i).env = p.env := by aesop
 
 theorem Point.childWith_env (p : Point) (i : Nat) (v : Val) :
-    (p.childWith i v).env = p.env ++ [v] := rfl
+    (p.childWith i v).env = p.env ++ [v] := by aesop
 
 /-- Positive fuel, spelled as the compile's match wants it. -/
 theorem fuel_succ {e : NativeEff} {p : Point} (hd : depth e ≤ p.fuel) :
@@ -1943,4 +1928,4 @@ theorem localRun_root (e : NativeEff) (fuel : Nat) (hpl : Straight e = true)
 
 end Effect4.Program.Agreement
 
-#typed_state_obligations Effect4.Program.Agreement.M1Origin ceiling 1 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Program.Agreement.M1Origin ceiling 0 using aesop (rule_sets := [Effect4.Stores])

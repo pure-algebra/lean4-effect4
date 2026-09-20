@@ -1,0 +1,67 @@
+{
+  "slice": "Phase C Agreement searched proofs",
+  "packaging_status": "scratch only; no compiler or live source edits by packaging agent",
+  "base_phase_B_commit": "3f89307488835002c1cb9d8b3bcb9c1dcc1554a1",
+  "head_at_capture": "c786d23ca270233bedbae96a01a8f85b4d8c9ffe",
+  "module": "Effect4.Laws.Program.Agreement",
+  "source_path": "src/Effect4/Laws/Program/Agreement.lean",
+  "source_hashes": {
+    "before": "1ce67fb889f9f68ffcc3c94ccf2b0f38e66d1b8d02f8645fe9a203685c16fab9",
+    "searched": "ff396b81f7ff02c2721eae06d71e0a836d6b4526a2e97761bc72e3b33364eb72",
+    "final": "adacb0714047c4f446776e37a098eec16d596b3440bd99ac1898a214039642ed"
+  },
+  "changes": {
+    "certified_plain_aesop_replacements": 80,
+    "unchanged_headers": 80,
+    "extra_change": "M1Origin ceiling 1 to 0; already closed in Phase B",
+    "other_changes": 0
+  },
+  "provenance": {
+    "reviewed_master_sha256": "d7a25d4fa05e6ac890e5aa15950e32f12332ff9d28c35c42045bd56ee9acc2b6",
+    "certified_candidates_sha256": "a76013573084a220a1ae395312131432b5f4b460aae077fe33a1ce0d1bc4492d",
+    "certified_comparison_sha256": "f6a2c4e31ea56077aaf875be732c4857ea5a72ed761bd5a61522c79ef9ae5235",
+    "baseline_results_sha256": "de504894001ca31ecd5fd195b09b513f415bb9bcb9987bb7c01c97249a93319e",
+    "reviewed_patch_sha256": "50636d9e950f785e4dc560023a28ac936353ef28cadd98daead70675749ad470"
+  },
+  "commands": [
+    {
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Agreement >/tmp/m1-phase-c-agreement-search.log",
+      "exit_code": 0,
+      "exit_code_authority": "root process report",
+      "log": "logs/build-search.log",
+      "fresh_build_line": "ℹ [227/227] Built Effect4.Laws.Program.Agreement (6.4s)",
+      "gate_report": "Effect4.Program.Agreement.M1Origin: 0 open, 1 proved, 1 total; ceiling 1"
+    },
+    {
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Agreement >/tmp/m1-phase-c-agreement-zero.log",
+      "exit_code": 0,
+      "exit_code_authority": "root process report",
+      "log": "logs/build-zero.log",
+      "fresh_build_line": "ℹ [227/227] Built Effect4.Laws.Program.Agreement (6.1s)",
+      "gate_report": "Effect4.Program.Agreement.M1Origin: 0 open, 1 proved, 1 total; ceiling 0"
+    },
+    {
+      "command": "LEAN_NUM_THREADS=1 lake env lean -DwarningAsError=true /tmp/m1-phase-c/census/Agreement.lean >/tmp/m1-phase-c/census/Agreement.log",
+      "exit_code": 0,
+      "exit_code_authority": "root process report",
+      "source": "census/after.lean",
+      "log": "census/after.log"
+    }
+  ],
+  "census": {
+    "closed_before": 82,
+    "closed_after": 82,
+    "population_before": 192,
+    "population_after": 192,
+    "after_allowed": 82,
+    "after_disallowed": 0,
+    "axiom_union": [
+      "Quot.sound",
+      "propext"
+    ],
+    "newly_closed_names": 0,
+    "no_longer_closed_names": 0,
+    "axiom_set_changes": 0
+  },
+  "trust_boundary": "Census audits dependencies of the searched proposition/proof terms. This package does not report a new full AxiomGate run over all stored declarations. Both narrow builds succeeded."
+}

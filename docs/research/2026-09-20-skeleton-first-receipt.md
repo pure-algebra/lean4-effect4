@@ -558,3 +558,10 @@ Stores bank, against the earlier 0/10 population; no unchanged-population gain
 is claimed. All attempts, wanted snapshots and final-source checks are retained
 in phase-c/arena. The reference-step projection and the two red controls remain
 separate pending work. No generator ran.
+
+
+Agreement's 80 certified replacements now use the searched proof with unchanged
+statement headers. Both narrow builds pass; its already-closed origin seat drops
+from ceiling 1 to 0. The final census remains 82/192 with the same closed names
+and allowed axiom sets. This is proof-body cleanup, not new semantic coverage;
+the changed search environments are recorded in phase-c/searched-agreement.
