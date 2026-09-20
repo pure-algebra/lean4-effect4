@@ -40,6 +40,7 @@ import Test.Counterexamples.Machine.Runtime.Frames
 import Test.Machine.Runtime.LiveStackContract
 import Test.Counterexamples.Machine.Runtime.LiveStack
 import Test.Machine.Runtime.StoresLawsContract
+import Test.Machine.Runtime.CompletionDataContract
 import Test.Machine.Runtime.ApproximationContract
 import Test.Machine.Runtime.BehaviourContract
 import Test.Machine.Runtime.CompletionContract
@@ -102,6 +103,7 @@ import Test.Program.ErrorQueriesContract
 import Test.Program.CatchIfContract
 import Test.Machine.Fuzz
 import Test.Audit.RuntimeCoverage
+import Test.Audit.ClockLowering
 import Test.Audit.AxiomGate
 import Test.Audit.ExhaustiveFixture
 import Test.Audit.TraversalCensus

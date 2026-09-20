@@ -1,0 +1,6 @@
+ℹ [178/178] Built Test.Audit.TypedStateDecl (1.2s)
+info: Test/Audit/TypedStateDecl.lean:10:0: typed state: 1 predicates, 1 carrier predicates, 0 refusals
+info: Test/Audit/TypedStateDecl.lean:51:0: typed state: 2 predicates, 1 carrier predicates, 0 refusals
+info: Test/Audit/TypedStateDecl.lean:63:0: typed state: 1 predicates, 1 carrier predicates, 0 refusals
+info: Test/Audit/TypedStateDecl.lean:75:0: typed state: 2 predicates, 1 carrier predicates, 0 refusals
+Build completed successfully (178 jobs).

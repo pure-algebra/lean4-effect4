@@ -1,0 +1,28 @@
+frame rules: 10 checked theorems, 123 reused clauses, 27 explicit premises
+Effect4.Program.Guard.M1: 0 open, 4 proved, 4 total; ceiling 0
+/tmp/m1-guard-core-gates-residual.lean:3764:2: warning: aesop: failed to prove the goal after exhaustive search.
+/tmp/m1-guard-core-gates-residual.lean:3763:70: error: unsolved goals
+store : DeferredStore
+cell : DeferredKey
+code : Completion Val Err Defect FiberId Ann
+x : Option DeferredCell
+fwd : cell.index < (store.cells (Completion Val Err Defect FiberId Ann)).length
+x_1 : Option (Completion Val Err Defect FiberId Ann)
+heq :
+  (store.cells (Completion Val Err Defect FiberId Ann))[cell.index].completion (Completion Val Err Defect FiberId Ann) =
+    none
+⊢ deferredKeys
+      {
+        cells :=
+          (store.cells (Completion Val Err Defect FiberId Ann)).set cell.index
+            { completion := some code,
+              wake :=
+                ((store.cells (Completion Val Err Defect FiberId Ann))[cell.index].wake
+                      (Completion Val Err Defect FiberId Ann)).wakeAll.snd },
+        due :=
+          store.due (Completion Val Err Defect FiberId Ann) ++
+            List.map (fun w => { waiter := w.fiber, token := w.token, code := code, mode := WakeMode.now })
+              ((store.cells (Completion Val Err Defect FiberId Ann))[cell.index].wake
+                    (Completion Val Err Defect FiberId Ann)).wakeAll.fst } ⊆
+    deferredKeys store
+Effect4.Program.Guard.M1Origin: 0 open, 18 proved, 18 total; ceiling 0

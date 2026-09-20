@@ -1,0 +1,7 @@
+'Effect4.ClockMillis.DecimalPlan.readBytes' does not depend on any axioms
+'Effect4.ClockMillis.DecimalPlan.read' does not depend on any axioms
+'Effect4.ClockMillis.DecimalPlan.readBytes_digits' depends on axioms: [propext, Quot.sound]
+'Effect4.ClockMillis.DecimalPlan.readChars_core' depends on axioms: [propext, Quot.sound]
+'Effect4.ClockMillis.DecimalPlan.readBytes_repr' depends on axioms: [propext, Quot.sound]
+'Effect4.ClockMillis.DecimalPlan.read_toDecimal' depends on axioms: [propext, Quot.sound]
+'Effect4.ClockMillis.DecimalPlan.read_exact' depends on axioms: [propext]

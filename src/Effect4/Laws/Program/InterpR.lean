@@ -12,9 +12,8 @@ Functions in a saved continuation belong to this proof carrier, never `Eff`.
 
 Direct program shapes transcribe `Machine/Stores.lean:1041-1181` and
 `Program/Compile.lean:582-734`. No recursive translation through named
-primitive continuations is claimed. `RSTATE-FB-STORE-CODE` leaves other
-manually inserted Deferred programs at an unsupported frontier. The source
-store interface and Completion tape produce exactly the three decoded shapes.
+primitive continuations is claimed. Deferred cells and owed resumes carry the
+admitted Completion alphabet, interpreted directly at each consumer.
 `RSTATE-FB-EVALUATOR-FIELD` names the unused frame-only interpreter hooks;
 `RSTATE-FB-ONSUCCESS-NAME` restricts the shared loop's composition hook to
 `restore`, its sole producer. `RSTATE-FB-IDENTITY`: semantic saved states have
@@ -128,19 +127,6 @@ def acquireInR (acquire : RProgram) (p : Point) (ctx : Ctx) : RProgram :=
 def denoteCompletion : Completion Val Err Defect FiberId Ann → RProgram
   | .ofExit ex => .pure ex
   | .ofRefGet cell => storeR (.refGet cell)
-
-/-- A shape decoder, not an interpreter for arbitrary named store programs. -/
-def denoteStored : Effect4.Machine.Program → RProgram
-  | .success v => .pure (.success v)
-  | .failure c => .pure (.failure c)
-  | .sync (.op (.refGet cell)) => storeR (.refGet cell)
-  | _ => pending .unsupported (rootPoint 0)
-
-theorem denoteStored_completion (answer : Completion Val Err Defect FiberId Ann) :
-    denoteStored (completionPrim answer) = denoteCompletion answer := by
-  cases answer with
-  | ofExit ex => cases ex <;> rfl
-  | ofRefGet _ => rfl
 
 /-- The `Exit` primitive around a finalizer (`internal/effect.ts:3617`, `:3621-3637`): the
 term's both-arm boundary, answering the reified exit; it never fails. -/
@@ -345,18 +331,18 @@ def interpR (root : NativeEff) : RInterp where
     match name with
     | .registerAwait cell | .store (.registerAwait cell) =>
       let (deferreds, immediate) := state.deferreds.register cell fiber token
-      ({ state with deferreds }, immediate.map denoteStored)
+      ({ state with deferreds }, immediate.map denoteCompletion)
     | .store (.registerSleep millis) =>
       ({ state with timers := state.timers.sleep fiber token millis }, none)
     | _ => (state, none)
   answerCode := denoteCompletion
   dueResumes := fun state =>
     let (due, deferreds) := state.deferreds.drainDue
-    (due.map (Owed.mapCode denoteStored), { state with deferreds })
+    (due.map (Owed.mapCode denoteCompletion), { state with deferreds })
   wakeList := Stores.wakeList
   clockStep := fun millis state =>
-    let (owed, timers) := state.timers.clockStep millis (Prim.success Val.unit)
-    (owed.map (Owed.mapCode denoteStored), { state with timers })
+    let (owed, timers) := state.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)
+    (owed.map (Owed.mapCode denoteCompletion), { state with timers })
   cancelName := (interpOf root).cancelName
   abortName := .abort
   parkCancelName := .store .cancelPark

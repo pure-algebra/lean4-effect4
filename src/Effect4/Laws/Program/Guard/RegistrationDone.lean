@@ -156,7 +156,7 @@ theorem guardState_driveStep_registrationDone (p : NativeEff) (table : RowTable)
   have hr' : m.race? race.id = some race := by simpa only [race_id_of_lookup hr] using hr
   let base : NativeMachine := m.updateRace { race with registering := false }
   have state' : GuardState base := guardState_updateRace state hr' _ rfl rfl rfl
-    (state.internalCodes.2.2.2 race (List.mem_of_find?_eq_some hr))
+    (state.internalCodes.2 race (List.mem_of_find?_eq_some hr))
   have lookup : base.fiber? f.id = some f := by
     change m.fiber? f.id = some f
     simpa only [fiber_id_of_lookup hf] using hf
@@ -194,7 +194,7 @@ theorem guardQueue_driveStep_registrationDone (p : NativeEff) (table : RowTable)
   have hr' : m.race? race.id = some race := by simpa only [race_id_of_lookup hr] using hr
   let base : NativeMachine := m.updateRace { race with registering := false }
   have state' : GuardState base := guardState_updateRace state hr' _ rfl rfl rfl
-    (state.internalCodes.2.2.2 race (List.mem_of_find?_eq_some hr))
+    (state.internalCodes.2 race (List.mem_of_find?_eq_some hr))
   have lookup : base.fiber? f.id = some f := by
     change m.fiber? f.id = some f
     simpa only [fiber_id_of_lookup hf] using hf

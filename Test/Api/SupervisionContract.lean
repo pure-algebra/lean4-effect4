@@ -19,9 +19,8 @@ supervision data has to separate:
   anyway (`internal/effect.ts:5406`).
 
 Every static `#guard` reads `supervision`, every dynamic one reads `fiberStatuses` of the
-machine the run left. The two are joined by the `forked` events: the flag on each event is
-the flag of the site at that path, which is `supervision_static`
-(`src/Effect4/Laws/Api/Supervision.lean`) on a real run.
+machine the run left. The origin stored on each fiber records the parent, daemon flag and
+source path. The trace remains a diagnostic control beside those state observations.
 -/
 
 set_option autoImplicit false
@@ -87,11 +86,26 @@ def pinnedRun : Api.Inspection := Api.run pinnedDaemon 400 [] table
 #guard [childFork, looseDaemon, pinnedDaemon].all fun p =>
   (Api.supervision p).all fun s => s.kind != ForkKind.child || !s.options.daemon
 
-/-! ## `supervision_static` on a real run: the event's flag is the site's -/
+/-! ## Fork provenance on real runs -/
 
 #guard Api.Inspection.forked childRun = [(⟨0⟩, ⟨1⟩, false)]
 #guard Api.Inspection.forked looseRun = [(⟨0⟩, ⟨1⟩, true)]
 #guard Api.Inspection.forked pinnedRun = [(⟨0⟩, ⟨1⟩, true)]
+
+#guard childRun.machine.fibers.map RunFiber.origin =
+  [.root, .forked ⟨0⟩ false [0, 0]]
+#guard looseRun.machine.fibers.map RunFiber.origin =
+  [.root, .forked ⟨0⟩ true [0, 0]]
+#guard pinnedRun.machine.fibers.map RunFiber.origin =
+  [.root, .forked ⟨0⟩ true [0, 0, 0]]
+
+-- Replacing the diagnostic trace does not change supervision.
+#guard [childRun, looseRun, pinnedRun].all fun r =>
+  Api.fiberStatuses { r.machine with trace := [] } == Api.fiberStatuses r.machine
+
+-- The diagnostic event projection agrees with the recorded origins on these runs.
+#guard [childRun, looseRun, pinnedRun].all fun r =>
+  Api.TraceFacts.forkedOf r.machine.trace == Api.Inspection.forked r
 
 #guard [(childFork, childRun), (looseDaemon, looseRun), (pinnedDaemon, pinnedRun)].all
   fun entry => (Api.Inspection.forked entry.2).map (fun e => e.2.2) ==

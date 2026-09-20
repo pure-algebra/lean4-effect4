@@ -1,0 +1,58 @@
+docs/research/2026-09-20-m1-evidence/HandlesKeysProbe.lean:682:8: error(lean.unknownIdentifier): Unknown constant `List.append_subset_append`
+docs/research/2026-09-20-m1-evidence/HandlesKeysProbe.lean:889:2: warning: aesop: failed to prove the goal after exhaustive search.
+docs/research/2026-09-20-m1-evidence/HandlesKeysProbe.lean:888:78: error: unsolved goals
+self : DeferredStore
+cell : DeferredKey
+waiter : FiberId
+token : Nat
+x : Option DeferredCell
+fwd : cell.index < self.cells.length
+x_1 : Option (Completion Val Err Defect FiberId Ann)
+effect : Completion Val Err Defect FiberId Ann
+heq : self.cells[cell.index].completion = some effect
+⊢ effect.keys ⊆ List.flatMap DeferredCell.keys self.cells ++ List.flatMap (Owed.keys Completion.keys) self.due
+
+self : DeferredStore
+cell : DeferredKey
+waiter : FiberId
+token : Nat
+x : Option DeferredCell
+fwd : cell.index < self.cells.length
+x_1 : Option (Completion Val Err Defect FiberId Ann)
+heq : self.cells[cell.index].completion = none
+⊢ List.flatMap DeferredCell.keys
+      (self.cells.set cell.index { completion := none, wake := self.cells[cell.index].wake.register waiter token () }) ⊆
+    List.flatMap DeferredCell.keys self.cells ++ List.flatMap (Owed.keys Completion.keys) self.due
+docs/research/2026-09-20-m1-evidence/HandlesKeysProbe.lean:895:2: error: Tactic `aesop` failed, made no progress
+Initial goal:
+  ws : List (Waiter Unit)
+  e : Completion Val Err Defect FiberId Ann
+  ⊢ List.flatMap (Owed.keys Completion.keys)
+        (List.map (fun w => { waiter := w.fiber, token := w.token, code := e, mode := WakeMode.now }) ws) ⊆
+      e.keys
+docs/research/2026-09-20-m1-evidence/HandlesKeysProbe.lean:900:2: warning: aesop: failed to prove the goal after exhaustive search.
+docs/research/2026-09-20-m1-evidence/HandlesKeysProbe.lean:899:67: error: unsolved goals
+case left
+self : DeferredStore
+cell : DeferredKey
+e : Completion Val Err Defect FiberId Ann
+x : Option DeferredCell
+fwd : cell.index < self.cells.length
+x_1 : Option (Completion Val Err Defect FiberId Ann)
+heq : self.cells[cell.index].completion = none
+⊢ List.flatMap DeferredCell.keys
+      (self.cells.set cell.index { completion := some e, wake := self.cells[cell.index].wake.wakeAll.snd }) ⊆
+    List.flatMap DeferredCell.keys self.cells ++ (List.flatMap (Owed.keys Completion.keys) self.due ++ e.keys)
+
+case right
+self : DeferredStore
+cell : DeferredKey
+e : Completion Val Err Defect FiberId Ann
+x : Option DeferredCell
+fwd : cell.index < self.cells.length
+x_1 : Option (Completion Val Err Defect FiberId Ann)
+heq : self.cells[cell.index].completion = none
+⊢ List.flatMap (Owed.keys Completion.keys)
+      (List.map (fun w => { waiter := w.fiber, token := w.token, code := e, mode := WakeMode.now })
+        self.cells[cell.index].wake.wakeAll.fst) ⊆
+    List.flatMap DeferredCell.keys self.cells ++ (List.flatMap (Owed.keys Completion.keys) self.due ++ e.keys)

@@ -4,8 +4,9 @@
  * is bijective. Actual completions are stored before a separate application resumes Effect. */
 import { Cause, Effect, Exit, Option, Result } from "effect"
 import { equalJson, type Json } from "./protocol.ts"
-import { decodeKeyed, decodeRecord, keyText, transition, type DecisionRecord, type Key, type KeyedHeader, type KeyedRecording } from "./keyed-protocol.ts"
+import { decodeKeyed, decodeRecord, hostProtocol, keyText, transition, type DecisionRecord, type Key, type KeyedHeader, type KeyedRecording } from "./keyed-protocol.ts"
 import type { ProtocolState } from "./protocol.gen.ts"
+import type { Rc112ClockBoundary } from "./clock.ts"
 export interface PlannedCall extends Key { callId: number; row: number; request: Json }
 export interface PlannedAnswer { answerFor: number; completion: Json }
 export interface KeyedFixture { name: string; expression: string; table: Json[]; source: null | { variant: number; pulls: number }; plan: Array<PlannedCall | PlannedAnswer>; expected: Json }
@@ -56,11 +57,11 @@ export class KeyedRecorder {
   readonly header: KeyedHeader
   constructor(readonly fixture: KeyedFixture, readonly session: string) {
     this.calls = fixture.plan.filter((entry): entry is PlannedCall => "callId" in entry)
-    this.header = { format: "effect4-host-session-v2", version: 2, session, profile: "keyed-v2", program: fixture.name, table: fixture.table }
+    this.header = { format: "effect4-host-session-v3", version: hostProtocol.version, session, profile: "keyed-v3", program: fixture.name, table: fixture.table }
     this.record({ kind: "evaluate", fiber: 0 })
   }
   private record(fields: Record<string, unknown>): void {
-    this.records.push(decodeRecord({ ...fields, version: 2, session: this.session }, this.session))
+    this.records.push(decodeRecord({ ...fields, version: hostProtocol.version, session: this.session }, this.session))
   }
   external<A, E>(row: number, request: Json, work: Effect.Effect<A, E>): Effect.Effect<A, E> {
     return Effect.withFiber(fiber => Effect.callback<A, E>(resume => {
@@ -87,6 +88,20 @@ export class KeyedRecorder {
   outstanding(): PlannedCall[] { return [...this.waiters.values()].map(w => w.call).sort((a, b) => a.callId - b.callId) }
   pending(): number[] { return [...this.stored.values()].map(s => s.waiting.call.callId).sort((a, b) => a - b) }
   hasReply(key: Key): boolean { return this.stored.has(keyText(key)) }
+  async advanceClock(clock: Rc112ClockBoundary, millis: string): Promise<void> {
+    if (this.refused) throw this.refused
+    try {
+      await clock.advance(millis, () => {
+        if (this.refused) throw this.refused
+        this.record({ kind: "advanceClock", millis })
+      })
+    } catch (error) {
+      // Preflight refusals record nothing. A refusal after the advance begins retains
+      // its attempted decision and any enabled calls, but can never publish a receipt.
+      this.refused ??= error instanceof Error ? error : Error(String(error))
+      throw this.refused
+    }
+  }
   async arrive(key: Key): Promise<void> {
     if (this.refused) throw this.refused
     const id = keyText(key), waiting = this.waiters.get(id)

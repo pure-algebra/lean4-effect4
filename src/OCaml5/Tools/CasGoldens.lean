@@ -42,9 +42,9 @@ only bytes in the output directory that are not a Lean encode of a Lean object. 
 carries Lean bytes inside it (`Node.encode`, `Digest.bytes`), so what a differential compares
 through them is still Lean's.
 
-`MemoEntry.effect : Program` and `MemoEntry.finalizer : FinName` have no canonical encoding at
-all, so `entryVal` omits them and the G4 world holds one fixed value in each of those two
-fields; the projection is therefore injective on the world this tool builds.
+`MemoEntry.finalizer : FinName` has no canonical encoding, so `entryVal` omits it and
+the G4 world holds one fixed finalizer; the projection is therefore injective on the
+world this tool builds.
 -/
 
 open Effect4.Store
@@ -92,7 +92,7 @@ def nodesVal (ns : List (Digest × Node)) : Val :=
 def storeVal (s : Store) : Val := .pair (nodesVal s.nodes) (.list (s.roots.map rootVal))
 
 open Effect4.Machine in
-/-- A memo entry, minus the two fields with no canonical encoding (see the header). -/
+/-- A memo entry, minus its finalizer with no canonical encoding (see the header). -/
 def entryVal (e : MemoEntry) : Effect4.Store.Val :=
   .ctor 0 [.nat e.observers, .nat e.layerScope, .nat e.deferred.index]
 
@@ -289,14 +289,11 @@ def g3Cases : List Case :=
 section Memo
 open Effect4.Machine
 
-/-- The one `effect` every golden entry carries: `Program` has no canonical encoding. -/
-def fixedEffect : Program := .success .unit
-
 /-- The one `finalizer` every golden entry carries: `FinName` has no canonical encoding. -/
 def fixedFinalizer : FinName := .release 0 false
 
 def mkEntry (observers layerScope deferred : Nat) : MemoEntry :=
-  ⟨observers, fixedEffect, layerScope, ⟨deferred⟩, fixedFinalizer⟩
+  ⟨observers, layerScope, ⟨deferred⟩, fixedFinalizer⟩
 
 def m0 : MemoMapId := ⟨0⟩
 def m1 : MemoMapId := ⟨1⟩
@@ -499,8 +496,8 @@ def header : List String :=
   , "#   nodesVal ns  = list (map (fun (d, n) => pair (bytes d) (bytes (Node.encode n))) ns)"
   , "#   storeVal s   = pair (nodesVal s.nodes) (list (map rootVal s.roots))"
   , "#   entryVal e   = ctor 0 [nat observers, nat layerScope, nat deferred.index]"
-  , "#                  (effect : Program and finalizer : FinName have no canonical encoding and"
-  , "#                   are held fixed across the G4 world, so entryVal is injective on it)"
+  , "#                  (finalizer : FinName has no canonical encoding and is held fixed"
+  , "#                   across the G4 world, so entryVal is injective on it)"
   , "#   mapVal m     = ctor 0 [nat id, option (nat parent), list (pair layer entry)]"
   , "#   worldVal w   = list (map mapVal w)"
   , "#   entriesVal   = list (pair (list (map nat layer)) (entryVal entry))"

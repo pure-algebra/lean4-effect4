@@ -1,0 +1,4 @@
+Effect4.Data.ClockMillis: 0 of 0 theorems closed from their statements; 0 source lines they now take
+/tmp/m1-tools/clock-wanted.lean:4:44: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`

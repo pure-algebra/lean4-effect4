@@ -68,13 +68,11 @@ def _root_.Effect4.Program.EffName.refreshE (completed : List (FiberId × ExitV)
   | name => name
 
 theorem interpAt_contA (root : NativeEff) (completed : List (FiberId × ExitV)) (n : EffName) (v : Val) :
-    (interpAt root completed).contA n v = contAOf root (n.refreshA completed) v := by
-  cases n <;> rfl
+    (interpAt root completed).contA n v = contAOf root (n.refreshA completed) v := by aesop
 
 theorem interpAt_contE (root : NativeEff) (completed : List (FiberId × ExitV)) (n : EffName)
     (c : CauseV) :
-    (interpAt root completed).contE n c = contEOf root (n.refreshE completed) c := by
-  cases n <;> rfl
+    (interpAt root completed).contE n c = contEOf root (n.refreshE completed) c := by aesop
 
 /-- The frame's finalizer code for an `OnExit` frame whose finalizer is a program, at the
 refreshed interpreter (`Machine.finalizerCode` reads only the two exit names). -/
@@ -213,7 +211,7 @@ inductive CodeMeans (root : NativeEff) : NCode → RProgram → Prop
       CodeMeans root (Prim.async (.store (.externalRegister slot)) false none)
         (.vis (.inr (.async (.store (.externalRegister slot)) .unit)) k)
   -- `Effect.sleep(d)`, `0 < d` (the timer, A4): the registration by the machine's name
-  | asyncSleep (millis : Nat) (request : Val) (k : ExitV → RProgram) (hk : Delivers k) :
+  | asyncSleep (millis : ClockMillis) (request : Val) (k : ExitV → RProgram) (hk : Delivers k) :
       CodeMeans root (Prim.async (.store (.registerSleep millis)) true (some (.store .cancelSleep)))
         (.vis (.inr (.async (.store (.registerSleep millis)) request)) k)
   | joinValue (target : FiberId) (k : Val → RProgram) (hk : Delivers (seqR k)) :
@@ -234,17 +232,17 @@ inductive CodeMeans (root : NativeEff) : NCode → RProgram → Prop
       CodeMeans root (Prim.suspend (EffThunk.park (.awaitAll targets)))
         (.vis (.inr (.awaitAll targets)) k)
   -- `withFiber`: one clause per fiber action, on the thunk the frame's interpreter reads
-  | actFork (t : EffThunk) (program : NCode) (options : Supervision.ForkOptions) (body : Body)
-      (k : Val → RProgram) (ht : (interpOf root).withFiberOf t = some (.fork program options))
+  | actFork {site : List Nat} (t : EffThunk) (program : NCode) (options : Supervision.ForkOptions) (body : Body)
+      (k : Val → RProgram) (ht : (interpOf root).withFiberOf t = some (.fork program options site))
       (hc : CodeMeans root program (denoteBody root body))
       (hk : ∀ v, CodeMeans root (Prim.success v) (k v)) :
-      CodeMeans root (Prim.withFiber t) (.vis (.inr (.fork body options)) k)
-  | actForkIn (t : EffThunk) (program : NCode) (options : Supervision.ForkOptions) (q : Point)
+      CodeMeans root (Prim.withFiber t) (.vis (.inr (.fork body options site)) k)
+  | actForkIn {site : List Nat} (t : EffThunk) (program : NCode) (options : Supervision.ForkOptions) (q : Point)
       (scope : Nat) (k : Val → RProgram)
-      (ht : (interpOf root).withFiberOf t = some (.forkIn program options scope))
+      (ht : (interpOf root).withFiberOf t = some (.forkIn program options scope site))
       (hc : CodeMeans root program (denoteAt root q))
       (hk : ∀ v, CodeMeans root (Prim.success v) (k v)) :
-      CodeMeans root (Prim.withFiber t) (.vis (.inr (.forkIn q options scope)) k)
+      CodeMeans root (Prim.withFiber t) (.vis (.inr (.forkIn q options scope site)) k)
   | actAmbientScope (t : EffThunk) (k : Val → RProgram)
       (ht : (interpOf root).withFiberOf t = some .ambientScope)
       (hk : ∀ v, CodeMeans root (Prim.success v) (k v)) :
@@ -278,12 +276,12 @@ inductive CodeMeans (root : NativeEff) : NCode → RProgram → Prop
   | actAwaitNewChildren (t : EffThunk) (snapshot : List FiberId) (k : Val → RProgram)
       (ht : (interpOf root).withFiberOf t = some (.awaitNewChildren snapshot)) (hk : Delivers (seqR k)) :
       CodeMeans root (Prim.withFiber t) (.vis (.inr (.awaitNewChildren snapshot)) k)
-  | actRaceAll (t : EffThunk) (entrants : List NCode) (points : List Point) (k : ExitV → RProgram)
-      (ht : (interpOf root).withFiberOf t = some (.raceAll entrants))
+  | actRaceAll {site : Option (List Nat)} (t : EffThunk) (entrants : List NCode) (points : List Point) (k : ExitV → RProgram)
+      (ht : (interpOf root).withFiberOf t = some (.raceAll entrants site))
       (hlen : entrants.length = points.length)
       (hc : ∀ x ∈ entrants.zip (points.map (denoteAt root)), CodeMeans root x.1 x.2)
       (hk : Delivers k) :
-      CodeMeans root (Prim.withFiber t) (.vis (.inr (.raceAll points)) k)
+      CodeMeans root (Prim.withFiber t) (.vis (.inr (.raceAll points site)) k)
   | actMask (t : EffThunk) (body : NCode) (flag : Bool) (b : Body) (k : ExitV → RProgram)
       (ht : (interpOf root).withFiberOf t = some (.setInterruptible body flag))
       (hc : CodeMeans root body (denoteBody root b)) (hk : Delivers k) :
@@ -399,25 +397,25 @@ def MaskInv : Bool → List ScopeFrame → Prop
 theorem maskInv_nil (b : Bool) : MaskInv b [] := trivial
 
 theorem maskInv_resume (b : Bool) (kind : GuardKind) (K : ExitV → RProgram) (rest : List ScopeFrame) :
-    MaskInv b (.resume kind K :: rest) = MaskInv b rest := rfl
+    MaskInv b (.resume kind K :: rest) = MaskInv b rest := by aesop
 
 theorem maskInv_answer (b : Bool) (k : ExitV → RProgram) (rest : List ScopeFrame) :
-    MaskInv b (.answer k :: rest) = MaskInv b rest := rfl
+    MaskInv b (.answer k :: rest) = MaskInv b rest := by aesop
 
 theorem maskInv_restoreMask (b flag : Bool) (rest : List ScopeFrame) :
-    MaskInv b (.restoreMask flag :: rest) = MaskInv flag rest := rfl
+    MaskInv b (.restoreMask flag :: rest) = MaskInv flag rest := by aesop
 
 theorem maskInv_finalizerMask (b flag : Bool) (rest : List ScopeFrame) :
-    MaskInv b (.finalizerMask flag :: rest) = (b = false ∧ MaskInv flag rest) := rfl
+    MaskInv b (.finalizerMask flag :: rest) = (b = false ∧ MaskInv flag rest) := by aesop
 
 theorem maskInv_asyncFinalizer (b : Bool) (name : EffName) (rest : List ScopeFrame) :
-    MaskInv b (.asyncFinalizer name :: rest) = MaskInv b rest := rfl
+    MaskInv b (.asyncFinalizer name :: rest) = MaskInv b rest := by aesop
 
 theorem maskInv_iter (b : Bool) (name : EffName) (rest : List ScopeFrame) :
-    MaskInv b (.iter name :: rest) = MaskInv b rest := rfl
+    MaskInv b (.iter name :: rest) = MaskInv b rest := by aesop
 
 theorem maskInv_loop (b : Bool) (name : EffName) (cursor : Val) (rest : List ScopeFrame) :
-    MaskInv b (.loop name cursor :: rest) = MaskInv b rest := rfl
+    MaskInv b (.loop name cursor :: rest) = MaskInv b rest := by aesop
 
 /-- The saved-state relation of the book: control bits equal, currents in `CodeMeans`,
 stacks in `StackMeans`, and the term's mask discipline. -/
@@ -447,10 +445,10 @@ theorem codeMeans_of_deliversV (root : NativeEff) {k : Val → RProgram} (hk : D
 /-! ## `prepareR` and `bind` -/
 
 theorem prepareR_pure (completed : List (FiberId × ExitV)) (ex : ExitV) :
-    prepareR completed (.pure ex) = .pure ex := rfl
+    prepareR completed (.pure ex) = .pure ex := by aesop
 
 theorem prepareR_construct (completed : List (FiberId × ExitV)) (k : List (FiberId × ExitV) → RProgram) :
-    prepareR completed (.vis (.inr .construction) k) = prepareR completed (k completed) := rfl
+    prepareR completed (.vis (.inr .construction) k) = prepareR completed (k completed) := by aesop
 
 theorem prepareR_guard (completed : List (FiberId × ExitV)) (kind : GuardKind)
     (g : Option ExitV → RProgram) :
@@ -460,7 +458,7 @@ theorem prepareR_guard (completed : List (FiberId × ExitV)) (kind : GuardKind)
         | some ex => g (some ex) := rfl
 
 theorem prepareR_store (completed : List (FiberId × ExitV)) (o : SyncOp) (k : Val → RProgram) :
-    prepareR completed (.vis (.inl o) k) = .vis (.inl o) k := rfl
+    prepareR completed (.vis (.inl o) k) = .vis (.inl o) k := by aesop
 
 /-- On any fiber operation but `construction` and a guard, `prepareR` is the identity. -/
 theorem prepareR_fiber (completed : List (FiberId × ExitV)) (op : FiberOp) (k : op.answer → RProgram)
@@ -516,7 +514,7 @@ theorem delivers_seqR_bind {k : Val → RProgram} {h : ExitV → RProgram} (hk :
     exact this
 
 theorem unguardTail_bind (K h : ExitV → RProgram) :
-    (fun ex => (unguardTail K ex).bind h) = unguardTail fun ex => (K ex).bind h := rfl
+    (fun ex => (unguardTail K ex).bind h) = unguardTail fun ex => (K ex).bind h := by aesop
 
 /-! ## Closure under delivering tails and under `prepareR` -/
 

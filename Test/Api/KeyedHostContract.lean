@@ -2,7 +2,7 @@ import Effect4.Laws.Api.HostSession
 import Effect4.Program.Profile
 import Effect4.Program.Stream
 
-/-! Finite v2 controls and retained T-12 counterexamples. No oracle answers are loaded.
+/-! Finite v3 controls and retained T-12 counterexamples. No oracle answers are loaded.
 The general receipt/storage law is reply_commute, not the bounded machine probes below. -/
 set_option autoImplicit false
 set_option maxRecDepth 8192
@@ -25,7 +25,7 @@ def initial : Session program table where
     intFreeTable := by decide
     intFreeProgram := by decide
     intFreeType := by decide }
-  header := ⟨version, "multi", "keyed-v2", table⟩
+  header := ⟨version, "multi", "keyed-v3", table⟩
   machine := Api.load program 1000
 
 def parked := (advance initial 1000 Api.evaluate).session

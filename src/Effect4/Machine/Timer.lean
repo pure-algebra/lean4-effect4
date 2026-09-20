@@ -1,4 +1,5 @@
 import Effect4.Machine.Wake
+import Effect4.Data.ClockMillis
 
 /-!
 # The timer store — the logical clock and its sleeps (A4)
@@ -14,9 +15,9 @@ latch opens, `:366`). The *meaning* of a registration is the live clock's
 R2), and this store does not model that. `sleep 0` and `sleep ∞` never reach the store
 (`:6054-6055`: `yieldNow` and `never` are programs, decided at the row).
 
-**Representation.** `now : Nat` (ms), the pending sleeps as a `WakeList Nat` whose payload is
+**Representation.** `now : ClockMillis` (ms), the pending sleeps as a `WakeList ClockMillis` whose payload is
 the deadline (registration order is the list's, the earliest deadline is the family's choice,
-`WakeList.wakeBy`), and `target : Option Nat`, an advance in progress — `TestClock.run` holds
+`WakeList.wakeBy`), and `target : Option ClockMillis`, an advance in progress — `TestClock.run` holds
 its `endTimestamp` under `runSemaphore.withPermits(1)` (`:345`, `:375`), and so does this store
 between the fires of one `advance`. There is no `due` list: a fired sleep is owed *to the
 machine* (`RunInterp.clockStep`), which resumes the sleeper inline (`WakeMode.now`, as a
@@ -43,11 +44,11 @@ universe u
 /-- The logical clock and its pending sleeps; see the module header. -/
 structure TimerStore where
   /-- `currentTimestamp` (`testing/TestClock.ts:257`), in milliseconds. -/
-  now : Nat
+  now : ClockMillis
   /-- `sleeps` (`:249-253`): the parked fiber, its token, its phase, its deadline. -/
-  wake : WakeList Nat
+  wake : WakeList ClockMillis
   /-- An advance in progress: the `endTimestamp` of the running `adjust` (`:355`). -/
-  target : Option Nat
+  target : Option ClockMillis
 deriving DecidableEq
 
 namespace TimerStore
@@ -57,7 +58,7 @@ def empty : TimerStore := ⟨0, WakeList.empty, none⟩
 
 /-- `sleep(d)` with `0 < d` (`:327-338`; live `:6057-6062`): registered at its deadline, in
 registration order. -/
-def sleep (self : TimerStore) (fiber : FiberId) (token : Nat) (millis : Nat) : TimerStore :=
+def sleep (self : TimerStore) (fiber : FiberId) (token : Nat) (millis : ClockMillis) : TimerStore :=
   { self with wake := self.wake.register fiber token (self.now + millis) }
 
 /-- `clearTimeout` (`internal/effect.ts:6063`): the sleep removed. The clause's owed wake
@@ -68,7 +69,7 @@ def cancel (self : TimerStore) (fiber : FiberId) (token : Nat) : TimerStore :=
 /-- The family's choice (`SleepOrder`, `:337`): among the sleeps due at `target`, the earliest
 deadline; among equal deadlines the first registered — the list is in registration order and
 a later waiter replaces the choice only when strictly earlier. -/
-def dueMin (target : Nat) : List (Waiter Nat) → Option (Waiter Nat)
+def dueMin (target : ClockMillis) : List (Waiter ClockMillis) → Option (Waiter ClockMillis)
   | [] => none
   | w :: rest =>
     match dueMin target rest with
@@ -78,7 +79,7 @@ def dueMin (target : Nat) : List (Waiter Nat) → Option (Waiter Nat)
 /-- One fire of `TestClock.run`'s loop (`:361-367`): the least due sleep is popped, the clock
 staged at its deadline, and its resume owed inline (`latch.openUnsafe()`; see the header).
 `none` when nothing is due at `target`. -/
-def fireNext {κ : Type u} (self : TimerStore) (target : Nat) (resume : κ) :
+def fireNext {κ : Type u} (self : TimerStore) (target : ClockMillis) (resume : κ) :
     Option (Owed κ) × TimerStore :=
   match self.wake.wakeBy (dueMin target) with
   | (none, _) => (none, self)
@@ -89,7 +90,7 @@ def fireNext {κ : Type u} (self : TimerStore) (target : Nat) (resume : κ) :
 fixes the end (`now + millis`, `:355`, `:378`) and keeps it until the loop finishes; each step
 fires the least due sleep, or, with nothing due, sets the clock to the end
 (`advanceTo(endTimestamp)`, `:368`) and clears the advance. -/
-def clockStep {κ : Type u} (self : TimerStore) (millis : Nat) (resume : κ) :
+def clockStep {κ : Type u} (self : TimerStore) (millis : ClockMillis) (resume : κ) :
     Option (Owed κ) × TimerStore :=
   let target := self.target.getD (self.now + millis)
   match self.fireNext target resume with
@@ -109,13 +110,15 @@ theorem empty_wf : empty.WF := by intro w hw; cases hw
 
 theorem empty_quiet : empty.Quiet := ⟨WakeList.empty_quiet, rfl⟩
 
-theorem sleep_wf {self : TimerStore} (h : self.WF) (fiber : FiberId) (token millis : Nat) :
+theorem sleep_wf {self : TimerStore} (h : self.WF) (fiber : FiberId) (token : Nat) (millis : ClockMillis) :
     (self.sleep fiber token millis).WF := by
   intro w hw
   simp only [sleep, WakeList.register_phase, List.mem_append, List.mem_singleton] at hw
   rcases hw with hw | rfl
   · exact h w hw
-  · exact Nat.le_add_right _ _
+  · show self.now.toNat ≤ (self.now + millis).toNat
+    rw [ClockMillis.toNat_add]
+    exact Nat.le_add_right _ _
 
 theorem cancel_wf {self : TimerStore} (h : self.WF) (fiber : FiberId) (token : Nat) :
     (self.cancel fiber token).WF := by
@@ -130,30 +133,30 @@ theorem cancel_pending (self : TimerStore) (fiber : FiberId) (token : Nat) :
     (self.cancel fiber token).wake.pending fiber token = false := by
   unfold cancel WakeList.cancel
   split
-  · simp only [WakeList.pending]
-    simp
-    intro x _ h hf ht
-    exact h.elim (fun h => h hf) (fun h => h ht)
+  · apply List.any_eq_false.mpr
+    intro w hw hp
+    have hn := (List.mem_filter.mp hw).2
+    simp only [hp, Bool.not_true, Bool.false_eq_true] at hn
   · rename_i h
-    simpa using h
+    exact Bool.eq_false_iff.mpr h
 
 /-- With no choice, every deadline is past the target. -/
-theorem dueMin_none_of_late (target : Nat) :
-    ∀ (l : List (Waiter Nat)), dueMin target l = none → ∀ w ∈ l, target < w.payload
+theorem dueMin_none_of_late (target : ClockMillis) :
+    ∀ (l : List (Waiter ClockMillis)), dueMin target l = none → ∀ w ∈ l, target < w.payload
   | [], _, _, hw => nomatch hw
   | w :: rest, h, x, hx => by
     cases hr : dueMin target rest with
     | none =>
       simp only [dueMin, hr] at h
       rcases List.mem_cons.mp hx with rfl | hx
-      · exact Nat.lt_of_not_le (by intro hle; simp [hle] at h)
+      · exact Nat.lt_of_not_le (by intro hle; rw [if_pos (show x.payload ≤ target from hle)] at h; cases h)
       · exact dueMin_none_of_late target rest hr x hx
     | some m =>
       simp only [dueMin, hr] at h
-      split at h <;> simp at h
+      split at h <;> cases h
 
-theorem dueMin_mem (target : Nat) :
-    ∀ (l : List (Waiter Nat)) (m : Waiter Nat), dueMin target l = some m → m ∈ l
+theorem dueMin_mem (target : ClockMillis) :
+    ∀ (l : List (Waiter ClockMillis)) (m : Waiter ClockMillis), dueMin target l = some m → m ∈ l
   | [], _, h => nomatch h
   | w :: rest, m, h => by
     cases hr : dueMin target rest with
@@ -171,8 +174,8 @@ theorem dueMin_mem (target : Nat) :
       · rcases Option.some.inj h with rfl
         exact List.mem_cons_of_mem _ (dueMin_mem target rest _ hr)
 
-theorem dueMin_le (target : Nat) :
-    ∀ (l : List (Waiter Nat)) (m : Waiter Nat), dueMin target l = some m → m.payload ≤ target
+theorem dueMin_le (target : ClockMillis) :
+    ∀ (l : List (Waiter ClockMillis)) (m : Waiter ClockMillis), dueMin target l = some m → m.payload ≤ target
   | [], _, h => nomatch h
   | w :: rest, m, h => by
     cases hr : dueMin target rest with
@@ -187,13 +190,13 @@ theorem dueMin_le (target : Nat) :
       split at h
       · rename_i hc
         rcases Option.some.inj h with rfl
-        exact (by simpa using hc : _ ∧ _).1
+        exact (by simpa only [Bool.and_eq_true, decide_eq_true_eq] using hc : _ ∧ _).1
       · rcases Option.some.inj h with rfl
         exact dueMin_le target rest _ hr
 
 /-- The choice is the least due deadline. -/
-theorem dueMin_min (target : Nat) :
-    ∀ (l : List (Waiter Nat)) (m : Waiter Nat), dueMin target l = some m →
+theorem dueMin_min (target : ClockMillis) :
+    ∀ (l : List (Waiter ClockMillis)) (m : Waiter ClockMillis), dueMin target l = some m →
       ∀ x ∈ l, x.payload ≤ target → m.payload ≤ x.payload
   | [], _, h => nomatch h
   | w :: rest, m, h => by
@@ -213,40 +216,48 @@ theorem dueMin_min (target : Nat) :
       split at h
       · rename_i hc
         rcases Option.some.inj h with rfl
-        have hc' := (by simpa using hc : _ ∧ _)
+        have hc' := (by simpa only [Bool.and_eq_true, decide_eq_true_eq] using hc : _ ∧ _)
         rcases List.mem_cons.mp hx with rfl | hx
         · exact Nat.le_refl _
         · exact Nat.le_trans hc'.2 (ih x hx hxt)
       · rename_i hc
         rcases Option.some.inj h with rfl
         rcases List.mem_cons.mp hx with rfl | hx
-        · exact Nat.le_of_lt (Nat.lt_of_not_le fun hle => by simp [hxt, hle] at hc)
+        · exact Nat.le_of_lt (Nat.lt_of_not_le fun hle => by
+            apply hc
+            rw [Bool.and_eq_true]
+            exact ⟨decide_eq_true hxt, decide_eq_true (show x.payload ≤ m'.payload from hle)⟩)
         · exact ih x hx hxt
 
 /-- Equal deadlines fire in registration order: a due head that no later waiter beats is the
 choice. -/
-theorem dueMin_first (target : Nat) (w : Waiter Nat) (rest : List (Waiter Nat))
+theorem dueMin_first (target : ClockMillis) (w : Waiter ClockMillis) (rest : List (Waiter ClockMillis))
     (hw : w.payload ≤ target) (hrest : ∀ x ∈ rest, w.payload ≤ x.payload) :
     dueMin target (w :: rest) = some w := by
   cases hr : dueMin target rest with
-  | none => simp [dueMin, hr, hw]
-  | some m => simp [dueMin, hr, hw, hrest m (dueMin_mem target rest m hr)]
+  | none => simp only [dueMin, hr, if_pos hw]
+  | some m =>
+    rw [dueMin, hr]
+    apply if_pos
+    rw [Bool.and_eq_true]
+    exact ⟨decide_eq_true hw,
+      decide_eq_true (hrest m (dueMin_mem target rest m hr))⟩
 
-theorem fireNext_none {κ : Type u} (self : TimerStore) (target : Nat) (resume : κ)
+theorem fireNext_none {κ : Type u} (self : TimerStore) (target : ClockMillis) (resume : κ)
     (h : dueMin target self.wake.waiters = none) : self.fireNext target resume = (none, self) := by
-  simp [fireNext, WakeList.wakeBy, h]
+  simp only [fireNext, WakeList.wakeBy, h]
 
 /-- A fire stages the clock at the fired deadline, owes the sleeper its resume posted on its own
 dispatcher, and removes exactly that sleep. -/
-theorem fireNext_now {κ : Type u} (self : TimerStore) (target : Nat) (resume : κ) (w : Waiter Nat)
+theorem fireNext_now {κ : Type u} (self : TimerStore) (target : ClockMillis) (resume : κ) (w : Waiter ClockMillis)
     (h : dueMin target self.wake.waiters = some w) :
     (self.fireNext target resume).1 = some ⟨w.fiber, w.token, resume, WakeMode.now⟩ ∧
       (self.fireNext target resume).2.now = w.payload ∧
       (self.fireNext target resume).2.wake.waiters = self.wake.waiters.erase w := by
-  simp [fireNext, WakeList.wakeBy, h]
+  simp only [fireNext, WakeList.wakeBy, h, and_self]
 
 /-- Whatever a fire owes resumes with the given code, inline. -/
-theorem fireNext_owed {κ : Type u} (self : TimerStore) (target : Nat) (resume : κ) (o : Owed κ)
+theorem fireNext_owed {κ : Type u} (self : TimerStore) (target : ClockMillis) (resume : κ) (o : Owed κ)
     (h : (self.fireNext target resume).1 = some o) : o.code = resume ∧ o.mode = WakeMode.now := by
   cases hd : dueMin target self.wake.waiters with
   | none => rw [fireNext_none self target resume hd] at h; cases h
@@ -255,7 +266,7 @@ theorem fireNext_owed {κ : Type u} (self : TimerStore) (target : Nat) (resume :
     cases Option.some.inj h
     exact ⟨rfl, rfl⟩
 
-theorem fireNext_wf {κ : Type u} {self : TimerStore} (hwf : self.WF) (target : Nat) (resume : κ) :
+theorem fireNext_wf {κ : Type u} {self : TimerStore} (hwf : self.WF) (target : ClockMillis) (resume : κ) :
     (self.fireNext target resume).2.WF := by
   cases h : dueMin target self.wake.waiters with
   | none => rw [fireNext_none self target resume h]; exact hwf
@@ -269,26 +280,26 @@ theorem fireNext_wf {κ : Type u} {self : TimerStore} (hwf : self.WF) (target : 
     · exact Nat.le_trans (dueMin_le target _ w h) (Nat.le_of_lt (Nat.lt_of_not_le hxt))
 
 /-- With nothing due, the step finishes: the clock at the end, no advance in progress. -/
-theorem clockStep_finish {κ : Type u} (self : TimerStore) (millis : Nat) (resume : κ)
+theorem clockStep_finish {κ : Type u} (self : TimerStore) (millis : ClockMillis) (resume : κ)
     (h : dueMin (self.target.getD (self.now + millis)) self.wake.waiters = none) :
     self.clockStep millis resume =
       (none, { self with now := self.target.getD (self.now + millis), target := none }) := by
-  simp [clockStep, fireNext_none self _ resume h]
+  simp only [clockStep, fireNext_none self _ resume h]
 
 /-- Whatever a step owes resumes with the given code, inline. -/
-theorem clockStep_owed {κ : Type u} (self : TimerStore) (millis : Nat) (resume : κ) (o : Owed κ)
+theorem clockStep_owed {κ : Type u} (self : TimerStore) (millis : ClockMillis) (resume : κ) (o : Owed κ)
     (h : (self.clockStep millis resume).1 = some o) : o.code = resume ∧ o.mode = WakeMode.now := by
   simp only [clockStep] at h
   rcases hfx : self.fireNext (self.target.getD (self.now + millis)) resume with ⟨o', s⟩
   rw [hfx] at h
   cases o' with
-  | none => simp at h
+  | none => cases h
   | some o' =>
     simp only [Option.some.injEq] at h
     subst h
     exact fireNext_owed self _ resume o' (by rw [hfx])
 
-theorem clockStep_wf {κ : Type u} {self : TimerStore} (hwf : self.WF) (millis : Nat) (resume : κ) :
+theorem clockStep_wf {κ : Type u} {self : TimerStore} (hwf : self.WF) (millis : ClockMillis) (resume : κ) :
     (self.clockStep millis resume).2.WF := by
   cases h : dueMin (self.target.getD (self.now + millis)) self.wake.waiters with
   | none =>

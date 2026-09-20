@@ -115,7 +115,7 @@ def eraseControl {A : Type} (program : Effects.Program RSig A) : Effects.Program
   Effects.interpret controlErasure program
 
 theorem eraseControl_pure {A : Type} (a : A) :
-    eraseControl (Effects.Program.pure a) = .pure a := rfl
+    eraseControl (Effects.Program.pure a) = .pure a := by aesop
 
 theorem eraseControl_bind {A B : Type} (p : Effects.Program RSig A)
     (k : A → Effects.Program RSig B) :
@@ -147,13 +147,13 @@ theorem eraseControl_onExitR (body : RProgram) (fin : ExitV → RProgram) (flag 
     cases fex <;> rfl
 
 theorem eraseControl_suspendR (p : Point) (body : RProgram) :
-    eraseControl (suspendR p body) = eraseControl body := rfl
+    eraseControl (suspendR p body) = eraseControl body := by aesop
 
 theorem eraseControl_sync (v : Val) (k : Val → RProgram) :
-    eraseControl (.vis (.inr (.sync v)) k) = eraseControl (k v) := rfl
+    eraseControl (.vis (.inr (.sync v)) k) = eraseControl (k v) := by aesop
 
 theorem eraseControl_constructR (k : List (FiberId × ExitV) → RProgram) :
-    eraseControl (constructR k) = eraseControl (k []) := rfl
+    eraseControl (constructR k) = eraseControl (k []) := by aesop
 
 /-- Race entrants use the same list-node addresses as `actionAt.entrants`. -/
 def entrantPoints : Effs NativeOp → Point → List Point
@@ -168,12 +168,12 @@ def racePoints (root : NativeEff) (p : Point) : List Point :=
 /-- The term of the fiber action `actionAt` answers at a point. Program-valued fields of
 the action are represented by their source addresses, never stored as `Prim`. -/
 def denoteFiberAction (root : NativeEff) (p : Point) : NAction → RProgram
-  | .fork _ options =>
-    .vis (.inr (.fork (.at_ ((p.child 0).child 0)) options)) fun v => .pure (.success v)
-  | .forkIn _ options scope =>
-    .vis (.inr (.forkIn ((p.child 0).child 0) options scope)) fun v => .pure (.success v)
-  | .forkScoped _ options =>
-    .vis (.inr (.forkScoped ((p.child 0).child 0) options)) Effects.Program.pure
+  | .fork _ options site =>
+    .vis (.inr (.fork (.at_ ((p.child 0).child 0)) options site)) fun v => .pure (.success v)
+  | .forkIn _ options scope site =>
+    .vis (.inr (.forkIn ((p.child 0).child 0) options scope site)) fun v => .pure (.success v)
+  | .forkScoped _ options site =>
+    .vis (.inr (.forkScoped ((p.child 0).child 0) options site)) Effects.Program.pure
   | .runIn target scope =>
     .vis (.inr (.runIn target scope)) fun v => .pure (.success v)
   | .interrupt target => .vis (.inr (.interrupt target)) fun v => .pure (.success v)
@@ -188,7 +188,7 @@ def denoteFiberAction (root : NativeEff) (p : Point) : NAction → RProgram
   | .snapshotChildren => .vis (.inr .snapshotChildren) fun v => .pure (.success v)
   | .awaitNewChildren snapshot =>
     .vis (.inr (.awaitNewChildren snapshot)) fun v => .pure (.success v)
-  | .raceAll _ => .vis (.inr (.raceAll (racePoints root p))) Effects.Program.pure
+  | .raceAll _ site => .vis (.inr (.raceAll (racePoints root p) site)) Effects.Program.pure
   | .setInterruptible _ flag =>
     .vis (.inr (.mask flag (.at_ (p.child 0)))) Effects.Program.pure
   | .setContext ctx => .vis (.inr (.setContext ctx)) fun v => .pure (.success v)
@@ -205,7 +205,7 @@ def denoteFiberAction (root : NativeEff) (p : Point) : NAction → RProgram
     | some (.eff (.withFiber (.forkScoped _ options))) =>
       (guardR .onSuccess (fiberValR .ambientScope rfl)).bind (seqR fun
         | .scopeHandle s =>
-          .vis (.inr (.forkIn ((p.child 0).child 0) options s)) fun v => .pure (.success v)
+          .vis (.inr (.forkIn ((p.child 0).child 0) options s (p.child 0).path)) fun v => .pure (.success v)
         | _ => .pure badShapeExit)
     | _ => .pure badShapeExit
   -- the parallel close's step is a store program, never a source node
@@ -241,7 +241,7 @@ def denoteSleep (request : Term) (p : Point) : RProgram :=
   | none => .pure badShapeExit
   | some 0 => .vis (.inr (.yieldNow 0)) fun v => .pure (.success v)
   | some (n + 1) =>
-    .vis (.inr (.async (.store (.registerSleep (n + 1))) (Val.nat (n + 1)))) Effects.Program.pure
+    .vis (.inr (.async (.store (.registerSleep (ClockMillis.ofNat (n + 1)))) (Val.nat (n + 1)))) Effects.Program.pure
 
 /-- The scope's finalizer shapes (`Stores.finProgram`). -/
 def denoteFin : FinName → ExitV → RProgram
@@ -402,7 +402,7 @@ def provideWithR (dependency dependent : RProgram) (mode : CombineMode) : RProgr
 /-- One sibling's build forked as an immediate daemon (`Layer.ts:1597`; `forEach`'s
 concurrency, `internal/effect.ts:4851`). -/
 def forkLayerR (q : Point) (m : MemoMapId) (scope : Nat) : RProgram :=
-  .vis (.inr (.fork (.layerBuild q m scope) ⟨true, true, .inherit⟩)) fun v => .pure (.success v)
+  .vis (.inr (.fork (.layerBuild q m scope) ⟨true, true, .inherit⟩ q.path)) fun v => .pure (.success v)
 
 /-- `mergeAllEffect`'s fork loop for two siblings (`Layer.ts:1597-1600`): a sequential child of
 the parallel parent per sibling, the sibling's build forked into it, then the await and the
@@ -802,14 +802,14 @@ def denoteLayer (root : NativeEff) (l : LayerTerm NativeOp) (q : Point) (m : Mem
   denoteLayerWith root q.fuel l q m scope
 
 /-- A child point's fuel is one less: the budget of every child call. -/
-theorem Point.child_fuel (p : Point) (i : Nat) : (p.child i).fuel = p.fuel - 1 := rfl
-theorem Point.childWith_fuel (p : Point) (i : Nat) (v : Val) : (p.childWith i v).fuel = p.fuel - 1 := rfl
+theorem Point.child_fuel (p : Point) (i : Nat) : (p.child i).fuel = p.fuel - 1 := by aesop
+theorem Point.childWith_fuel (p : Point) (i : Nat) (v : Val) : (p.childWith i v).fuel = p.fuel - 1 := by aesop
 theorem Point.childBind_fuel (p : Point) (i : Nat) (v : Option Val) :
     (p.childBind i v).fuel = p.fuel - 1 := by
   cases v <;> rfl
-theorem Point.redirect_fuel (p : Point) (target : List Nat) : (p.redirect target).fuel = p.fuel - 1 := rfl
+theorem Point.redirect_fuel (p : Point) (target : List Nat) : (p.redirect target).fuel = p.fuel - 1 := by aesop
 theorem Point.completed_fuel (p : Point) (completed : List (FiberId × ExitV)) :
-    ({ p with completed } : Point).fuel = p.fuel := rfl
+    ({ p with completed } : Point).fuel = p.fuel := by aesop
 
 /-! ## The address and frontier equations -/
 
@@ -1206,8 +1206,7 @@ theorem inlineSyncYield_eq_headExit (op : NativeOp) (request : Term) (p : Point)
         | some value => match NativeOp.syncOpOf op value with
           | some operation => Prim.sync (EffThunk.op operation)
           | none => badShape
-        | none => badShape) := by
-  aesop
+        | none => badShape) := by aesop
 
 /-- The shared route's source classifier agrees with its immediate compiled exit. -/
 theorem inlineAsyncYield_eq_headExit (op : NativeOp) (request : Term) (p : Point) :

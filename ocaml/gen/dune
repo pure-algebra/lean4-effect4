@@ -11,6 +11,7 @@
  (name effect4_gen)
  (public_name effect4_gen)
  (modules machine_gen fibers_gen api_gen)
+ (libraries effect4_clock)
  (flags
   (:standard -warn-error -a)))
 

@@ -1,0 +1,8 @@
+✔ [7/19] Built Test.Audit.ClockLiteralFixtures (512ms)
+✖ [21/21] Building Test.Audit.ClockLowering (3.5s)
+trace: .> LEAN_PATH=/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4/Test/Audit/ClockLowering.lean -o /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Test/Audit/ClockLowering.olean -i /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Test/Audit/ClockLowering.ilean -c /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Test/Audit/ClockLowering.c --setup /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Test/Audit/ClockLowering.setup.json --json
+error: Test/Audit/ClockLowering.lean:28:0: clock helper control Test.ClockLiteralFixtures.throughKnownNatCallback accepted a saturated argument
+error: Lean exited with code 1
+Some required targets logged failures:
+- Test.Audit.ClockLowering
+error: build failed

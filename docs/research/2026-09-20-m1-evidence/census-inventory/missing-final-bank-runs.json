@@ -1,0 +1,476 @@
+[
+  {
+    "module": "Effect4.Api.HostSession",
+    "final_module": "Effect4.Api.HostSession",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Data.ClockMillis",
+    "final_module": "Effect4.Data.ClockMillis",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Api.HostSession",
+    "final_module": "Effect4.Laws.Api.HostSession",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Api.Supervision",
+    "final_module": "Effect4.Laws.Api.Supervision",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Auto.Frames",
+    "final_module": "Effect4.Laws.Auto.Frames",
+    "bank": "Effect4.TypedState",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Auto.RuleSets",
+    "final_module": "Effect4.Laws.Auto.RuleSets",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Machine.Approximation",
+    "final_module": "Effect4.Laws.Machine.Approximation",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Machine.Book",
+    "final_module": "Effect4.Laws.Machine.Book",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Machine.Clauses",
+    "final_module": "Effect4.Laws.Machine.Clauses",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Machine.Clock",
+    "final_module": "Effect4.Laws.Machine.Clock",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Machine.CompletionData",
+    "final_module": "Effect4.Laws.Machine.CompletionData",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Machine.Handles",
+    "final_module": "Effect4.Laws.Machine.Handles",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Machine.Refinement",
+    "final_module": "Effect4.Laws.Machine.Refinement",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Machine.Scheduling",
+    "final_module": "Effect4.Laws.Machine.Scheduling",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Machine.StoresLaws",
+    "final_module": "Effect4.Laws.Machine.StoresLaws",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Machine.Witnesses",
+    "final_module": "Effect4.Laws.Machine.Witnesses",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Agreement",
+    "final_module": "Effect4.Laws.Program.Agreement",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Agreement.Machine",
+    "final_module": "Effect4.Laws.Program.Agreement.Machine",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.DenoteR",
+    "final_module": "Effect4.Laws.Program.DenoteR",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.EvaluateR",
+    "final_module": "Effect4.Laws.Program.EvaluateR",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.AnswerDecision",
+    "final_module": "Effect4.Laws.Program.Guard.AnswerDecision",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.Core",
+    "final_module": "Effect4.Laws.Program.Guard.Core",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.DeferredCause",
+    "final_module": "Effect4.Laws.Program.Guard.DeferredCause",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.FrameOwned",
+    "final_module": "Effect4.Laws.Program.Guard.FrameOwned",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.Interruption",
+    "final_module": "Effect4.Laws.Program.Guard.Interruption",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.NativeAssembly",
+    "final_module": "Effect4.Laws.Program.Guard.NativeAssembly",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.NativeState",
+    "final_module": "Effect4.Laws.Program.Guard.NativeState",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.NativeStateExternal",
+    "final_module": "Effect4.Laws.Program.Guard.NativeStateExternal",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.NativeStateLinks",
+    "final_module": "Effect4.Laws.Program.Guard.NativeStateLinks",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.NativeStateMotion",
+    "final_module": "Effect4.Laws.Program.Guard.NativeStateMotion",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.Observer",
+    "final_module": "Effect4.Laws.Program.Guard.Observer",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.OuterDriver",
+    "final_module": "Effect4.Laws.Program.Guard.OuterDriver",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.Race",
+    "final_module": "Effect4.Laws.Program.Guard.Race",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.RaceSites",
+    "final_module": "Effect4.Laws.Program.Guard.RaceSites",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.RegistrationDone",
+    "final_module": "Effect4.Laws.Program.Guard.RegistrationDone",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.RegistrationNested",
+    "final_module": "Effect4.Laws.Program.Guard.RegistrationNested",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.ReturnCommands",
+    "final_module": "Effect4.Laws.Program.Guard.ReturnCommands",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.ReturnFields",
+    "final_module": "Effect4.Laws.Program.Guard.ReturnFields",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.ReturnTasks",
+    "final_module": "Effect4.Laws.Program.Guard.ReturnTasks",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.Settle",
+    "final_module": "Effect4.Laws.Program.Guard.Settle",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Guard.Single",
+    "final_module": "Effect4.Laws.Program.Guard.Single",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Handles.Compile",
+    "final_module": "Effect4.Laws.Program.Handles.Compile",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Handles.Evaluation",
+    "final_module": "Effect4.Laws.Program.Handles.Evaluation",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Handles.Hooks",
+    "final_module": "Effect4.Laws.Program.Handles.Hooks",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Handles.Layer",
+    "final_module": "Effect4.Laws.Program.Handles.Layer",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.InterpR",
+    "final_module": "Effect4.Laws.Program.InterpR",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Intro.Fibers",
+    "final_module": "Effect4.Laws.Program.Intro.Fibers",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Intro.Merge",
+    "final_module": "Effect4.Laws.Program.Intro.Merge",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Intro.Weight",
+    "final_module": "Effect4.Laws.Program.Intro.Weight",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.LayerSharing",
+    "final_module": "Effect4.Laws.Program.LayerSharing",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Means",
+    "final_module": "Effect4.Laws.Program.Means",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.RuntimeR",
+    "final_module": "Effect4.Laws.Program.RuntimeR",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Sched",
+    "final_module": "Effect4.Laws.Program.Sched",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Simulation.Actions",
+    "final_module": "Effect4.Laws.Program.Simulation.Actions",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Simulation.Deliver",
+    "final_module": "Effect4.Laws.Program.Simulation.Deliver",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Simulation.Drive",
+    "final_module": "Effect4.Laws.Program.Simulation.Drive",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Simulation.Evaluate",
+    "final_module": "Effect4.Laws.Program.Simulation.Evaluate",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Simulation.Fibers",
+    "final_module": "Effect4.Laws.Program.Simulation.Fibers",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Simulation.Hooks",
+    "final_module": "Effect4.Laws.Program.Simulation.Hooks",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Simulation.Pending",
+    "final_module": "Effect4.Laws.Program.Simulation.Pending",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.Frames",
+    "final_module": "Effect4.Laws.Program.Typed.Frames",
+    "bank": "Effect4.TypedState",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Program.Typed.Sources",
+    "final_module": "Effect4.Laws.Program.Typed.Sources",
+    "bank": "Effect4.TypedState",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Laws.Run",
+    "final_module": "Effect4.Laws.Run",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Machine.Stores",
+    "final_module": "Effect4.Machine.Stores",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Machine.Timer",
+    "final_module": "Effect4.Machine.Timer",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Program.Admit",
+    "final_module": "Effect4.Program.Admit",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Program.Compile",
+    "final_module": "Effect4.Program.Compile",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Effect4.Store.Clock",
+    "final_module": "Effect4.Store.Domain.Clock",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "OCaml5.Lcnf.Externs",
+    "final_module": "OCaml5.Lcnf.Externs",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "OCaml5.Lcnf.Translate",
+    "final_module": "OCaml5.Lcnf.Translate",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "OCaml5.Lcnf.Types",
+    "final_module": "OCaml5.Lcnf.Types",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "OCaml5.Tools.CasGoldens",
+    "final_module": "OCaml5.Tools.CasGoldens",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Test.Api.HostSessionContract",
+    "final_module": "Test.Api.HostSessionContract",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Test.Api.KeyedHostContract",
+    "final_module": "Test.Api.KeyedHostContract",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Test.Audit.PositionCensus",
+    "final_module": "Test.Audit.PositionCensus",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Test.Audit.RuntimeCoverage",
+    "final_module": "Test.Audit.RuntimeCoverage",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Test.Machine.Fuzz",
+    "final_module": "Test.Machine.Fuzz",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Test.Machine.Runtime.StoresLawsContract",
+    "final_module": "Test.Machine.Runtime.StoresLawsContract",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  },
+  {
+    "module": "Test.Program.RuntimeRShapesContract",
+    "final_module": "Test.Program.RuntimeRShapesContract",
+    "bank": "Effect4.Stores",
+    "reason": "No post-placement run with corrected search budget exists in inspected evidence."
+  }
+]

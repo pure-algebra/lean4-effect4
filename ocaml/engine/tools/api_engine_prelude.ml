@@ -37,7 +37,7 @@ let sh_stores_empty : stores =
     deferreds = { cells = M.empty; due = [] };
     scopes = M.empty;
     memo = [];
-    timers = { now = 0; wake = { waiters = []; batch = None; phase = 0 }; target = None };
+    timers = { now = E4_clock.zero; wake = { waiters = []; batch = None; phase = 0 }; target = None };
     next_name = 0;
     externals = { answers = []; allocated = []; rejected = None } }
 
@@ -89,51 +89,51 @@ let sh_machine_finished m =
    which is at most once per fiber. *)
 let sh_machine_completed_exits m = F.completed m.fibers
 
-(* Effect4.Machine.RunFiber.make, src/Effect4/Machine/Fibers.lean:252-268, with
-   `core.start current interruptible` at the `frameCore` instance (:196) spelled out:
+(* Effect4.Machine.RunFiber.make, src/Effect4/Machine/Fibers.lean:271-288, with
+   `core.start current interruptible` at the `frameCore` instance (:204) spelled out:
    `Effect4.FrameFiber.start` is `⟨current, [], true, none, false⟩` and `make` overrides
    `interruptible`.  Transcribed rather than called, because the two specialisations of
    `RunFiber.make` were callees of `Api.load` and of `spawn`, which this table deletes, and
    the generic `RunFiber.make` takes the `FiberCore` record — a `@[reducible] instance` that
    the mono phase never emits — as its first argument. *)
-let sh_run_fiber_make id current interruptible (budget : int * bool) context =
+let sh_run_fiber_make id current interruptible (budget : int * bool) context origin =
   { id;
     frame = ({ current; stack = []; interruptible; interrupted_cause = None;
                deferred_interrupt = false } : (_, _, _, _, _, _, _) frame_fiber);
     running = false; parked = Parked_notParked; pending = []; finalizing = None;
     exit_ = None; current_op_count = 0;
     max_ops_before_yield = fst budget; prevent_yield = snd budget; yield_override = None;
-    observers = []; children = []; dispatcher = D.empty; context }
+    observers = []; children = []; dispatcher = D.empty; context; origin }
 
-(* Effect4.Api.load, src/Effect4/Api.lean:137-140:
+(* Effect4.Api.load, src/Effect4/Api.lean:255-260:
    `{ (RunMachine.empty Stores.empty) with fibers := [RunFiber.make root (compile …) true
-      (stores.budgetOf emptyCtx) emptyCtx], nextId := 1 }`.
+      (stores.budgetOf emptyCtx) emptyCtx], nextId := 1 }`; the default origin is root.
    `compile` (`Program.compile`), `ectx` (`emptyCtx`) and `interp` (`Machine.stores`) are
    generated and come AFTER this prelude, so the row hands them in at the call site; `emit`
    adds the emission-order edge that keeps each of them above its user. *)
 let sh_api_load compile ectx interp program fuel answers =
   let stores = { sh_stores_empty with externals = { answers; allocated = []; rejected = None } } in
   let m = sh_machine_empty stores in
-  let root = sh_run_fiber_make 0 (compile program fuel []) true (interp.budget_of ectx) ectx in
+  let root = sh_run_fiber_make 0 (compile program fuel []) true (interp.budget_of ectx) ectx Origin_root in
   { m with fibers = F.add ~exit_of:sh_fiber_exit 0 root F.empty; next_id = 1 }
 
-(* Effect4.Machine.spawn, src/Effect4/Machine/Fibers.lean:863-878.  One row deletes both of
+(* Effect4.Machine.spawn, src/Effect4/Machine/Fibers.lean:924-939.  One row deletes both of
    its specialisations (`evaluatePrim.withFiber`'s and `launchEntrant`'s). *)
-let sh_spawn interp m (parent : (_, _, _, _, _, _, _, _, _, _) run_fiber) program options =
+let sh_spawn interp m (parent : (_, _, _, _, _, _, _, _, _, _) run_fiber) program options site =
   let child_id = m.next_id in
   let child_interruptible =
     match options.mask_mode with
     | MaskMode_interruptible -> true
     | MaskMode_uninterruptible -> false
     | MaskMode_inherit ->
-      (* `core.interruptible parent.frame` (Fibers.lean:872), which the mono phase reads off
+      (* `core.interruptible parent.frame` (Fibers.lean:933), which the mono phase reads off
          the frame record; the annotation is needed because `interruptible` is also a field of
          `fiber_core`, where it is a function. *)
       (parent.frame : (_, _, _, _, _, _, _) frame_fiber).interruptible
   in
   let child =
     sh_run_fiber_make child_id program child_interruptible (interp.budget_of parent.context)
-      parent.context
+      parent.context (Origin_forked (parent.id, options.daemon, site))
   in
   let m =
     { m with fibers = F.add ~exit_of:sh_fiber_exit child_id child m.fibers;
@@ -147,7 +147,7 @@ let sh_spawn interp m (parent : (_, _, _, _, _, _, _, _, _, _) run_fiber) progra
    fields there, and the generic `RunFiber.make` — which takes `core` — is generated, so the
    row hands it in. *)
 let sh_spawn_generic mk_fiber (core : (_, _, _, _, _, _, _, _) fiber_core) interp m
-    (parent : (_, _, _, _, _, _, _, _, _, _) run_fiber) program options =
+    (parent : (_, _, _, _, _, _, _, _, _, _) run_fiber) program options site =
   let child_id = m.next_id in
   let child_interruptible =
     match options.mask_mode with
@@ -157,7 +157,7 @@ let sh_spawn_generic mk_fiber (core : (_, _, _, _, _, _, _, _) fiber_core) inter
   in
   let child =
     mk_fiber core child_id program child_interruptible (interp.budget_of parent.context)
-      parent.context
+      parent.context (Origin_forked (parent.id, options.daemon, site))
   in
   let m =
     { m with fibers = F.add ~exit_of:sh_fiber_exit child_id child m.fibers;
@@ -262,16 +262,16 @@ let sh_ref_step total partial_update modify modify_some op heap =
 (* -- the deferred cells ------------------------------------------------------------------ *)
 
 (* Effect4.Machine.DeferredStore.make, src/Effect4/Machine/Stores.lean:1365-1366. *)
-let sh_deferred_make (self : deferred_store) =
+let sh_deferred_make (self : _ deferred_store) =
   let k = M.cardinal self.cells in
   (k, { self with cells = M.add k { completion = None; wake = { waiters = []; batch = None; phase = 0 } } self.cells })
 
 (* Effect4.Machine.DeferredStore.cellAt, src/Effect4/Machine/Stores.lean:1369-1370. *)
-let sh_deferred_cell_at (self : deferred_store) cell = M.find_opt cell self.cells
+let sh_deferred_cell_at (self : _ deferred_store) cell = M.find_opt cell self.cells
 
 (* Effect4.Machine.DeferredStore.setCell, src/Effect4/Machine/Stores.lean:1373-1374
    (`cells.set i v`: a no-op out of range, which is `M.set`). *)
-let sh_deferred_set_cell (self : deferred_store) cell value =
+let sh_deferred_set_cell (self : _ deferred_store) cell value =
   { self with cells = M.set cell value self.cells }
 
 (* -- the scope entries -------------------------------------------------------------------- *)

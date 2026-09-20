@@ -14,7 +14,7 @@ theorem guardState_driveStep_launch (p : NativeEff) (table : RowTable)
   cases hr : m.race? raceId with
   | none => simpa only [driveStep, hr] using state
   | some race =>
-    have programs := state.internalCodes.2.2.2 race (List.mem_of_find?_eq_some hr)
+    have programs := state.internalCodes.2 race (List.mem_of_find?_eq_some hr)
     have hr' : m.race? race.id = some race := by simpa only [race_id_of_lookup hr] using hr
     cases hp : race.programs with
     | nil => simpa only [driveStep, hr, hp] using state
@@ -26,8 +26,8 @@ theorem guardState_driveStep_launch (p : NativeEff) (table : RowTable)
         | none => exact state
         | some host =>
           have spawned := guardState_launchEntrant p table state raceId host program
-            (programs program (by rw [hp]; exact List.mem_cons_self ..))
-          exact guardState_emit (guardState_updateRace spawned hr' { race with programs := more }
+            (programs program (by rw [hp]; exact List.mem_cons_self ..)) (race.nextSite.getD [])
+          exact guardState_emit (guardState_updateRace spawned hr' { race with programs := more, nextSite := race.nextSite.map (fun site => site ++ [1]) }
             rfl rfl rfl (fun code hc => programs code (by rw [hp]; exact List.mem_cons_of_mem _ hc))) _
 
 theorem guardQueue_driveStep_launch (p : NativeEff) (table : RowTable)
@@ -51,12 +51,12 @@ theorem guardQueue_driveStep_launch (p : NativeEff) (table : RowTable)
       · cases hh : m.fiber? race.host with
         | none => exact tail
         | some host =>
-          let spawned := launchEntrant (interpOf p table) raceId m host program
-          let next := (spawned.1.updateRace { race with programs := more }).emit
+          let spawned := launchEntrant (interpOf p table) raceId m host program (race.nextSite.getD [])
+          let next := (spawned.1.updateRace { race with programs := more, nextSite := race.nextSite.map (fun site => site ++ [1]) }).emit
             [RunEvent.raceLaunched raceId spawned.2]
           have kept : GuardQueue p table next (.launch raceId :: rest) := guardQueue_emit p table
-            (guardQueue_updateRace p table (guardQueue_launchEntrant p table queue raceId host program)
-              hr' { race with programs := more } rfl rfl) _
+            (guardQueue_updateRace p table (guardQueue_launchEntrant p table queue raceId host program (race.nextSite.getD []))
+              hr' { race with programs := more, nextSite := race.nextSite.map (fun site => site ++ [1]) } rfl rfl) _
           apply guardQueue_replaceHead p table kept
             [.evaluate spawned.2, .enrollRace raceId spawned.2, .launch raceId]
           · intro command hc
@@ -77,10 +77,10 @@ theorem requestOf_driveStep_launch (p : NativeEff) (table : RowTable)
     requestOf (driveStep (interpOf p table) m (.launch raceId) rest).1 fiber token = requestOf m fiber token := by
   letI := evaluatorFor p table
   simp only [driveStep]
-  repeat' first
-    | rfl
-    | exact requestOf_launchEntrant p table m raceId _ _ fiber token
-    | split
+  repeat' split
+  all_goals
+    aesop (rule_sets := [Effect4.Stores])
+      (add safe 50 (by exact requestOf_launchEntrant p table m raceId _ _ fiber token _))
 
 theorem reservedKeys_driveStep_launch (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (raceId : Nat) (rest : List NCmd) (keys : List GuardKey)
@@ -100,10 +100,10 @@ theorem interruptedAt_driveStep_launch (p : NativeEff) (table : RowTable)
     InterruptedAt (driveStep (interpOf p table) m (.launch raceId) rest).1 fiber := by
   letI := evaluatorFor p table
   simp only [driveStep]
-  repeat' first
-    | exact interrupted
-    | exact interruptedAt_launchEntrant p table raceId _ _ interrupted
-    | split
+  repeat' split
+  all_goals
+    aesop (rule_sets := [Effect4.Stores])
+      (add safe 50 (by exact interruptedAt_launchEntrant p table raceId _ _ interrupted _))
 
 theorem registrationQueue_driveStep_launch (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (raceId : Nat) (rest : List NCmd)
@@ -135,7 +135,7 @@ theorem guardState_driveStep_enrollRace (p : NativeEff) (table : RowTable)
       have hr' : m.race? race.id = some race := by simpa only [race_id_of_lookup hr] using hr
       let next : NRace := { race with state := { race.state with live := race.state.live ++ [child] } }
       have updated := guardState_updateRace state hr' next rfl rfl rfl
-        (state.internalCodes.2.2.2 race (List.mem_of_find?_eq_some hr))
+        (state.internalCodes.2 race (List.mem_of_find?_eq_some hr))
       simp only [driveStep, hr, hc]
       cases he : c.exit with
       | none => exact guardState_addObserver updated child (.raceCallback raceId) (reservedKeys_nil _)
@@ -159,7 +159,7 @@ theorem guardQueue_driveStep_enrollRace (p : NativeEff) (table : RowTable)
       let next : NRace := { race with state := { race.state with live := race.state.live ++ [child] } }
       have updated := guardQueue_updateRace p table tail hr' next rfl rfl
       have nextState := guardState_updateRace state hr' next rfl rfl rfl
-        (state.internalCodes.2.2.2 race (List.mem_of_find?_eq_some hr))
+        (state.internalCodes.2 race (List.mem_of_find?_eq_some hr))
       simp only [driveStep, hr, hc]
       cases he : c.exit with
       | none => exact guardQueue_addObserver p table updated child (.raceCallback raceId)

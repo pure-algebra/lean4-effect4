@@ -96,7 +96,7 @@ theorem intro_withFiber (root : NativeEff) (n : Nat) (a : ActionTerm NativeOp) (
         have hv := Val.scope?_exact hsc
         subst hv
         show CodeMeans root (Prim.withFiber (.forkInAt p s))
-          (prepareR completed (.vis (.inr (.forkIn ((p.child 0).child 0) options s))
+          (prepareR completed (.vis (.inr (.forkIn ((p.child 0).child 0) options s (p.child 0).path))
             fun v => .pure (.success v)))
         refine CodeMeans.actForkIn _ (resolve root ((p.child 0).child 0)) options _ s _
           ?_ ?_ (successV root)
@@ -118,13 +118,13 @@ theorem intro_withFiber (root : NativeEff) (n : Nat) (a : ActionTerm NativeOp) (
     unfold denoteAction; rw [hact]
     have ht : (interpOf root).withFiberOf (.act p) = some act := hact
     cases act with
-    | fork program options =>
+    | fork program options site =>
       obtain rfl := actionAt_fork h hact
       exact CodeMeans.actFork _ _ _ _ _ ht (hres _ hw00) (successV root)
-    | forkIn program options scope =>
+    | forkIn program options scope site =>
       obtain rfl := actionAt_forkIn h hact
       exact CodeMeans.actForkIn _ _ _ _ _ _ ht (hres _ hw00) (successV root)
-    | forkScoped program options => exact (actionAt_not_forkScoped h hact).elim
+    | forkScoped program options site => exact (actionAt_not_forkScoped h hact).elim
     | runIn target scope => exact CodeMeans.actRunIn _ _ _ _ ht (successV root)
     | interrupt target => exact CodeMeans.actInterrupt _ _ _ ht delivers_seqR_pure
     | interruptAs target who => exact CodeMeans.actInterruptAs _ _ _ _ ht delivers_seqR_pure
@@ -135,11 +135,11 @@ theorem intro_withFiber (root : NativeEff) (n : Nat) (a : ActionTerm NativeOp) (
     | snapshotChildren => exact CodeMeans.actSnapshotChildren _ _ ht (successV root)
     | awaitNewChildren snapshot =>
       exact CodeMeans.actAwaitNewChildren _ _ _ ht delivers_seqR_pure
-    | raceAll entrants =>
+    | raceAll entrants site =>
       obtain ⟨es, rfl, rfl⟩ := actionAt_raceAll h hact
       have hpts : racePoints root p = entrantPoints es ((p.child 0).child 0) := by
         simp [racePoints, h]
-      show CodeMeans root _ (.vis (.inr (.raceAll (racePoints root p))) Effects.Program.pure)
+      show CodeMeans root _ (.vis (.inr (.raceAll (racePoints root p) site)) Effects.Program.pure)
       rw [hpts]
       have hes : Node.at_ (.eff root) ((p.child 0).child 0).path = some (.effs es) :=
         at_child_of (n := .action (.raceAll es)) (at_child_of h 0) 0

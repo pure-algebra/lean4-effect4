@@ -6,6 +6,7 @@ type answer =
   | Finished
   | Suspended of frontier
   | Refused of string
+  | Outside_profile of string
   | Delay of frontier
 
 module type INSTANCE = sig
@@ -165,7 +166,7 @@ module type INSTANCE = sig
     | RunDecision_answerAsync of fiber_id * int * ('b, 'e, 'd, 'i, 'a) completion
     | RunDecision_interruptFrom of fiber_id option * 'a reason_annotations * fiber_id
     | RunDecision_installMiddleware
-    | RunDecision_advance of int
+    | RunDecision_advance of E4_clock.t
 
   type machine
   type fiber
@@ -245,6 +246,7 @@ module type ENGINE = sig
   val interrupt_from : int option -> int -> decision
   val install_middleware : decision
   val advance : int -> decision
+  val advance_exact : E4_clock.t -> decision
   val compile : Eff_types.eff -> program
   val of_bytes : string -> program option
   val load_program : program -> fuel:int -> t
@@ -290,6 +292,7 @@ module Make (I : INSTANCE) = struct
     fuel_ : int;
     m : I.machine;
     settled : bool;  (** the generated `settled` of the LAST step; true after a load *)
+    outside_profile : string option;
   }
 
   (* -- the tape ------------------------------------------------------------------- *)
@@ -307,7 +310,8 @@ module Make (I : INSTANCE) = struct
     I.RunDecision_interruptFrom (who, [], target)
 
   let install_middleware : decision = I.RunDecision_installMiddleware
-  let advance millis : decision = I.RunDecision_advance millis
+  let advance_exact millis : decision = I.RunDecision_advance millis
+  let advance millis : decision = advance_exact (E4_clock.of_nat millis)
 
   (* -- loading -------------------------------------------------------------------- *)
 
@@ -316,7 +320,7 @@ module Make (I : INSTANCE) = struct
 
   let load_program (p : program) ~(fuel : int) : t =
     { program = p; interp = I.interp_of p; fuel_ = fuel;
-      m = I.load p ~fuel; settled = true }
+      m = I.load p ~fuel; settled = true; outside_profile = None }
 
   let load (p : Eff_types.eff) ~(fuel : int) : t = load_program (compile p) ~fuel
 
@@ -326,8 +330,16 @@ module Make (I : INSTANCE) = struct
   (* -- driving -------------------------------------------------------------------- *)
 
   let step (t : t) (d : decision) : t =
-    let m, settled = I.step t.program t.interp ~fuel:t.fuel_ t.m d in
-    { t with m; settled }
+    match t.outside_profile with
+    | Some _ -> t
+    | None ->
+      match I.step t.program t.interp ~fuel:t.fuel_ t.m d with
+      | m, settled -> { t with m; settled }
+      | exception E4_clock.Profile_refusal why ->
+        (* Generated transitions are pure. Keep the input machine when a numeric
+           observation leaves the host profile, including a refusal mid-decision.
+           This is a host boundary result, not a simulated transition. *)
+        { t with outside_profile = Some why }
 
   (* `replayEval` STOPS consuming the tape (Fibers.lean:2028-2040, generated at
      api_engine.ml's `replayEval`): at a stuck machine it answers `stuck why m` WITHOUT
@@ -341,7 +353,8 @@ module Make (I : INSTANCE) = struct
      over and over.  The sequence now ends where the replay ends, and `replay_to` hands back
      the decisions that were never read, whose head is the REFUSED one when the machine is
      stuck. *)
-  let halted (t : t) : bool = Option.is_some (I.stuck_of t.m) || not t.settled
+  let halted (t : t) : bool =
+    Option.is_some t.outside_profile || Option.is_some (I.stuck_of t.m) || not t.settled
   let step_or_hold (t : t) (d : decision) : t = if halted t then t else step t d
 
   (* The machine and the decisions the replay never read.  `[]` means the tape was spent; a
@@ -350,7 +363,11 @@ module Make (I : INSTANCE) = struct
      applying it.  The position of the stop is `|tape| - |residue|`. *)
   let rec replay_to (t : t) (tape : decision list) : t * decision list =
     if halted t then (t, tape)
-    else match tape with [] -> (t, []) | d :: rest -> replay_to (step t d) rest
+    else match tape with
+    | [] -> (t, [])
+    | d :: rest ->
+      let next = step t d in
+      if Option.is_some next.outside_profile then (next, tape) else replay_to next rest
 
   let replay (t : t) (tape : decision list) : t = fst (replay_to t tape)
 
@@ -610,7 +627,9 @@ module Make (I : INSTANCE) = struct
       due = I.due_count t.m }
 
   let answer (t : t) : answer =
-    match I.stuck_of t.m with
+    match t.outside_profile with
+    | Some why -> Outside_profile why
+    | None -> match I.stuck_of t.m with
     | Some s -> Refused (show_stuck s)
     | None ->
       if not t.settled then Delay (frontier_of t)
@@ -619,7 +638,9 @@ module Make (I : INSTANCE) = struct
 
   (* Exactly `replayEval`'s verdict (api_engine.ml:11489-11507) read off the same state. *)
   let outcome (t : t) : string =
-    match I.stuck_of t.m with
+    match t.outside_profile with
+    | Some why -> "outside-profile " ^ why
+    | None -> match I.stuck_of t.m with
     | Some s -> "stuck " ^ show_stuck s
     | None -> if t.settled && I.finished t.m then "finished" else "frontier"
 

@@ -155,8 +155,8 @@ jobs:
       - uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: ${{ env.OCAML_COMPILER }}
-      - name: Install the OCaml build tools (the estate uses the standard library only)
-        run: opam install --yes dune ocamlfind
+      - name: Install the OCaml build tools and exact clock dependency
+        run: opam install --yes dune ocamlfind zarith.1.14
       - run: make doctor OCAML="opam exec --"
       # The engine's four faces are cut from the tree's own LCNF, and nothing held them: the
       # committed api_engine.ml was four `Ty` constructors behind the source for the whole of
@@ -226,7 +226,7 @@ jobs:
       - uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: ${{ env.OCAML_COMPILER }}
-      - run: opam install --yes dune ocamlfind
+      - run: opam install --yes dune ocamlfind zarith.1.14
       - name: Install the pinned TypeScript dependencies
         run: bun install --frozen-lockfile --cwd ts/eff
       - name: The full ingest census (the constructed foreign corpus through both recognizers, the OCaml decode)

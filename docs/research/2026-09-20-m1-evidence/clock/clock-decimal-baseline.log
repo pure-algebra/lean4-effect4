@@ -1,0 +1,13 @@
+Effect4.Data.ClockMillis: 0 of 5 theorems closed from their statements; 0 source lines they now take
+'Nat.ofDigitChars_ten_toDigits' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Nat.isDigit_of_mem_toDigits' depends on axioms: [propext]
+'String.toByteArray_ofList' depends on axioms: [propext]
+'String.toByteArray_inj' does not depend on any axioms
+'List.data_toByteArray' depends on axioms: [propext, Quot.sound]
+'Nat.toNat_digitChar_sub_48_of_lt_ten' depends on axioms: [propext, Quot.sound]
+'Char.isDigit_iff_toNat' depends on axioms: [propext]
+'Effect4.Data.Ascii.byteArray_eq_of_data' depends on axioms: [propext]
+'Effect4.ClockMillis.ofDecimal' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Effect4.ClockMillis.toDecimal' does not depend on any axioms
+'Effect4.ClockMillis.ofDecimal_toDecimal' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Effect4.ClockMillis.ofDecimal_exact' depends on axioms: [propext, Classical.choice, Quot.sound]

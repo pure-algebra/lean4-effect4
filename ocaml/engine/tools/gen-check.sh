@@ -16,8 +16,9 @@
 #   C2  The oracle is green and untouched: `dune build gen && dune build @gen/runtest`.
 #       `ocaml/gen/api_gen.ml` is the in-process oracle and lane G never edits it.
 #   C3  The seam compiles: `dune build engine`, and — the real statement — `api_engine.ml`
-#       type-checks ON ITS OWN, with no carrier instance.  A functor body that type-checks
-#       is the proof that the extern table is closed (engine-a1 §1.3).
+#       type-checks against the E4_clock and E4_nat interfaces, with no carrier instance or
+#       numeric implementation. A functor body that type-checks checks the extern table's
+#       type closure (engine-a1 §1.3).
 #   C4  The checked-in generated file carries the CURRENT prelude, verbatim: an edit to
 #       ocaml/engine/tools/api_engine_prelude.ml without a regeneration is caught here.
 set -u
@@ -62,11 +63,16 @@ fi
 
 iso=$(mktemp -d)
 cp "$GEN" "$iso/"
-if (cd "$iso" && ocamlfind ocamlopt -c -w +a-4-9-40-41-42-44-45-70 api_engine.ml) >/tmp/geng-c3b.log 2>&1; then
-  note ok "C3b api_engine.ml type-checks alone: the functor body needs no instance, so the"
+# The clock and natural-number externs are explicit target dependencies. Admit only their
+# signatures: copying a compiled engine or numeric implementation would hide the seam.
+cp "$REPO/ocaml/clock/e4_clock.mli" "$iso/"
+cp "$REPO/ocaml/engine/e4_nat.mli" "$iso/"
+if (cd "$iso" && ocamlfind ocamlopt -opaque -c e4_clock.mli e4_nat.mli &&
+    ocamlfind ocamlopt -c -w +a-4-9-40-41-42-44-45-70 api_engine.ml) >/tmp/geng-c3b.log 2>&1; then
+  note ok "C3b api_engine.ml type-checks against E4_clock/E4_nat interfaces: the functor needs no instance, so the"
   note ""  "     extern table is closed (every unconverted carrier site would be a type error)"
 else
-  note FAIL "C3b api_engine.ml does not type-check on its own — the extern table has a hole:"
+  note FAIL "C3b api_engine.ml does not type-check against E4_clock/E4_nat interfaces — the extern table has a hole:"
   cat /tmp/geng-c3b.log; fail=1
 fi
 rm -rf "$iso"

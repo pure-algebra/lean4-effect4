@@ -1,0 +1,39 @@
+Effect4.Laws.Program.Sched: 6 of 8 theorems closed from their statements; 10 source lines they now take
+  5	207-211	Effect4.Program.Sched.perform_inl_bind	[propext]
+  1	200-200	Effect4.Program.Sched.RSig_answer_inl	[propext]
+  1	198-198	Effect4.Program.Sched.RSig_op	[propext]
+  1	202-202	Effect4.Program.Sched.RSig_answer_inr	[propext]
+  1	225-225	Effect4.Program.Sched.rHandler_inr	[propext]
+  1	223-223	Effect4.Program.Sched.rHandler_inl	[propext]
+Effect4.Laws.Program.DenoteR: 9 of 59 theorems closed from their statements; 24 source lines they now take
+  10	1201-1210	Effect4.Program.Sched.inlineSyncYield_eq_headExit	[Quot.sound, propext]
+  2	811-812	Effect4.Program.Sched.Point.completed_fuel	[propext]
+  2	117-118	Effect4.Program.Sched.eraseControl_pure	[propext]
+  2	152-153	Effect4.Program.Sched.eraseControl_sync	[propext]
+  2	804-805	Effect4.Program.Sched.Point.child_fuel	[]
+  2	149-150	Effect4.Program.Sched.eraseControl_suspendR	[propext]
+  2	155-156	Effect4.Program.Sched.eraseControl_constructR	[propext]
+  1	810-810	Effect4.Program.Sched.Point.redirect_fuel	[]
+  1	806-806	Effect4.Program.Sched.Point.childWith_fuel	[]
+Effect4.Laws.Program.EvaluateR: 0 of 0 theorems closed from their statements; 0 source lines they now take
+/tmp/m1-reference-origin-seven-before.lean:12:50: warning: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+Effect4.Laws.Program.Means: 13 of 25 theorems closed from their statements; 29 source lines they now take
+  4	74-77	Effect4.Program.Sched.interpAt_contE	[Quot.sound, propext]
+  3	70-72	Effect4.Program.Sched.interpAt_contA	[Quot.sound, propext]
+  2	401-402	Effect4.Program.Sched.maskInv_resume	[propext]
+  2	416-417	Effect4.Program.Sched.maskInv_iter	[propext]
+  2	404-405	Effect4.Program.Sched.maskInv_answer	[propext]
+  2	419-420	Effect4.Program.Sched.maskInv_loop	[propext]
+  2	449-450	Effect4.Program.Sched.prepareR_pure	[propext]
+  2	413-414	Effect4.Program.Sched.maskInv_asyncFinalizer	[propext]
+  2	518-519	Effect4.Program.Sched.unguardTail_bind	[propext]
+  2	462-463	Effect4.Program.Sched.prepareR_store	[propext]
+  2	410-411	Effect4.Program.Sched.maskInv_finalizerMask	[propext]
+  2	407-408	Effect4.Program.Sched.maskInv_restoreMask	[propext]
+  2	452-453	Effect4.Program.Sched.prepareR_construct	[propext]
+Effect4.Laws.Program.Intro.Weight: 1 of 24 theorems closed from their statements; 2 source lines they now take
+  2	47-48	Effect4.Program.Sched.weight_completed	[]
+Effect4.Laws.Program.Intro.Fibers: 0 of 5 theorems closed from their statements; 0 source lines they now take
+Effect4.Laws.Program.Intro.Merge: 0 of 4 theorems closed from their statements; 0 source lines they now take

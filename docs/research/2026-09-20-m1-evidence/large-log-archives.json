@@ -1,0 +1,51 @@
+[
+  {
+    "log": "phase-a-final/m1-phase-a-gen-cas-2.log",
+    "archive": "phase-a-final/m1-phase-a-gen-cas-2.log.gz",
+    "rawBytes": 1019441,
+    "rawSha256": "98c5ca2e7ce775018ed38b2d9db28559406b8b6d4357e8a62a29982eb95361d5",
+    "gzipBytes": 78884
+  },
+  {
+    "log": "phase-a-final/m1-phase-a-gen-cas-3.log",
+    "archive": "phase-a-final/m1-phase-a-gen-cas-3.log.gz",
+    "rawBytes": 1019440,
+    "rawSha256": "eb16b57dfb368a7139f344283808095a1cf2584585e8148e209dc2053313132a",
+    "gzipBytes": 78839
+  },
+  {
+    "log": "phase-a-final/m1-phase-a-gen-lcnf-5.log",
+    "archive": "phase-a-final/m1-phase-a-gen-lcnf-5.log.gz",
+    "rawBytes": 1047626,
+    "rawSha256": "9f673e47a7fca13f4f410cf7cacf608d8592d8dd480b1c6670a34628a098c53a",
+    "gzipBytes": 84754
+  },
+  {
+    "log": "phase-a-final/m1-phase-a-gen-lcnf-6.log",
+    "archive": "phase-a-final/m1-phase-a-gen-lcnf-6.log.gz",
+    "rawBytes": 1047625,
+    "rawSha256": "7f46a717c91a3ac0cec857774ce071ee8456a973910c6d54e262962c5c312636",
+    "gzipBytes": 84632
+  },
+  {
+    "log": "phase-a-gen-cas-1.log",
+    "archive": "phase-a-gen-cas-1.log.gz",
+    "rawBytes": 1019703,
+    "rawSha256": "250d3ab571503d3ad832c8750eb96e7f710d210093b645317e62478b2362d1e9",
+    "gzipBytes": 78916
+  },
+  {
+    "log": "phase-a-gen-eff-1.log",
+    "archive": "phase-a-gen-eff-1.log.gz",
+    "rawBytes": 924239,
+    "rawSha256": "4b7f5e7d29d5920e352020858137b1f65422e2e2e070dfbe3523111680951f57",
+    "gzipBytes": 72009
+  },
+  {
+    "log": "phase-a-gen-lcnf-final.log",
+    "archive": "phase-a-gen-lcnf-final.log.gz",
+    "rawBytes": 1047682,
+    "rawSha256": "13558817150d3a16240630fec870b97ae0a0f8cad4e105b54f2719d61558b6dc",
+    "gzipBytes": 84726
+  }
+]

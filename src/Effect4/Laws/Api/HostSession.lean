@@ -1,4 +1,5 @@
 import Effect4.Api.HostSession
+import Effect4.Laws.Auto.Inversion
 
 /-! Checked host protocol laws. Receipt commutation is equality of sessions, including
 stored replies and the unchanged machine. Answer application is a separate ordered step.
@@ -68,7 +69,8 @@ theorem readReply_store_other (slots : List ReplySlot) (reply : Reply) (key : Ke
 
 @[simp] theorem preflight_pending {program : Api.Program} {table : RowTable}
     (s : Session program table) (slots : List ReplySlot) (reply : Reply) :
-    preflight { s with pending := slots } reply = preflight s reply := rfl
+    preflight { s with pending := slots } reply = preflight s reply :=
+  by aesop
 
 private theorem bool_false_of_not_true (b : Bool) (h : ¬b = true) : b = false := by
   cases b with
@@ -177,14 +179,17 @@ theorem submit_refusal_retains {program : Api.Program} {table : RowTable}
   · rw [h]
 
 theorem applyPending_zero {program : Api.Program} {table : RowTable}
-    (s : Session program table) : applyPending s 0 = ⟨.frontier, s⟩ := rfl
+    (s : Session program table) : applyPending s 0 = ⟨.frontier, s⟩ :=
+  by aesop
 
 theorem applyReply_zero {program : Api.Program} {table : RowTable}
-    (s : Session program table) (key : Key) : applyReply s key 0 = ⟨.frontier, s⟩ := rfl
+    (s : Session program table) (key : Key) : applyReply s key 0 = ⟨.frontier, s⟩ :=
+  by aesop
 
 theorem advance_answer_refuses {program : Api.Program} {table : RowTable}
     (s : Session program table) (fuel : Nat) (fiber : FiberId) (token : Nat) (reply : Answer) :
-    advance s fuel (.answerAsync fiber token reply) = ⟨.refused .directAnswer, s⟩ := rfl
+    advance s fuel (.answerAsync fiber token reply) = ⟨.refused .directAnswer, s⟩ :=
+  by aesop
 
 /-- The consumption receipt is absence of the exact applied guard, independently of
 whether the subsequent command loop had enough fuel to finish. -/

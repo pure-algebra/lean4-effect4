@@ -120,15 +120,18 @@ theorem Links.interruptRecord (p : NativeEff) (table : RowTable) (completed)
     exact (requestOf_update_other m g id token
       (fun heq => he ((interruptRecord_id p table who extra f).symm.trans heq))) ▸ hr
 
+def M1Origin.Links.spawn (p : NativeEff) (table : RowTable) (completed) (m : NativeMachine)
+    (f : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (Links m (spawn (interpAt p completed table) m f code options site).1) := ⟨⟩
+
 theorem Links.spawn (p : NativeEff) (table : RowTable) (completed) (m : NativeMachine)
-    (f : NFiber) (code : NCode) (options : Supervision.ForkOptions) :
-    Links m (spawn (interpAt p completed table) m f code options).1 := by
-  change Links m (Effect4.Machine.spawn (interpOf p table) m f code options).1
-  refine ⟨controls_of_full (controlsPreserved_spawnAppend m (spawnedChild p table m f code options)),
+    (f : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) :
+    Links m (spawn (interpAt p completed table) m f code options site).1 := by
+  change Links m (Effect4.Machine.spawn (interpOf p table) m f code options site).1
+  refine ⟨controls_of_full (controlsPreserved_spawnAppend m (spawnedChild p table m f code options site)),
     (fun _ race hr => ⟨race, hr, rfl⟩), ?_, ?_⟩
   · intro id token request hr
-    exact Or.inl ((requestOf_spawn p table m f code options id token).trans hr)
-  · exact fun _ hi => interruptedAt_spawn p table f code options hi
+    exact Or.inl ((requestOf_spawn p table m f code options id token site).trans hr)
+  · exact fun _ hi => interruptedAt_spawn p table f code options hi site
 
 theorem Links.start (m : NativeMachine) (f : NFiber) (child : FiberId) (immediate : Bool) :
     Links m (start m f child immediate).1 := by
@@ -147,9 +150,12 @@ theorem Links.forkFinalizers (p : NativeEff) (table : RowTable) (completed)
   | cons code rest ih =>
     exact (Links.spawn p table completed m f code ⟨true,true,.inherit⟩).trans (ih _)
 
+def M1Origin.Links.beginRace (interp : NInterp) (m : NativeMachine) (f : NFiber)
+    (yielding : Bool) (codes : List NCode) (site : Option (List Nat) := none) : ProofGraph.Obligation (Links m (beginRace interp m f yielding codes site).machine) := ⟨⟩
+
 theorem Links.beginRace (interp : NInterp) (m : NativeMachine) (f : NFiber)
-    (yielding : Bool) (codes : List NCode) :
-    Links m (beginRace interp m f yielding codes).machine :=
+    (yielding : Bool) (codes : List NCode) (site : Option (List Nat) := none) :
+    Links m (beginRace interp m f yielding codes site).machine :=
   .same rfl (raceHostsPreserved_append m [_])
 
 theorem Links.registerRace (m : NativeMachine) (f : NFiber) (yielding : Bool) (id : Nat) :
@@ -246,16 +252,15 @@ theorem withFiber_links (p : NativeEff) (table : RowTable) (completed)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (action : NAction) :
     Links m (evaluatePrim.withFiber (interpAt p completed table) m f yielding action).machine := by
   cases action <;> unfold evaluatePrim.withFiber <;> dsimp only
-  all_goals try exact .sameTables rfl rfl
-  case fork code options =>
+  case fork code options site =>
     split
-    · exact (Links.spawn p table completed m f code options).startAfter _ _ _
+    · exact (Links.spawn p table completed m f code options site).startAfter _ _ _
     · exact (Links.sameTables (m := m) (n := {m with middlewareInstalled := true}) rfl rfl).trans
-        ((Links.spawn p table completed _ f code options).startAfter _ _ _)
-  case forkIn code options scope => exact (Links.spawn p table completed m f code _).startAfter _ _ _
-  case forkScoped code options =>
+        ((Links.spawn p table completed _ f code options site).startAfter _ _ _)
+  case forkIn code options scope site => exact (Links.spawn p table completed m f code _ site).startAfter _ _ _
+  case forkScoped code options site =>
     split
-    · exact (Links.spawn p table completed m f code _).startAfter _ _ _
+    · exact (Links.spawn p table completed m f code _ site).startAfter _ _ _
     · exact .refl m
   case ambientScope => split <;> exact .refl m
   case runIn target scope => exact Links.linkScope p table completed m _ _ _ _ _
@@ -264,12 +269,13 @@ theorem withFiber_links (p : NativeEff) (table : RowTable) (completed)
   case awaitAll targets => exact Links.countdown _ m f targets _ _
   case awaitAllFailFast targets => exact Links.countdown _ m f targets _ _
   case awaitNewChildren snapshot => exact Links.countdown _ m f _ _ _
-  case raceAll entrants => exact Links.beginRace _ m f yielding entrants
+  case raceAll entrants site => exact Links.beginRace _ m f yielding entrants site
   case setInterruptible code mask => cases mask <;> exact .refl m
   case closeScope scope exit => split <;> exact .sameTables rfl rfl
   case closePar codes => exact Links.forkFinalizers p table completed m f codes
   case dropObservers token => exact Links.filterObservers m _
   case cancelRace id => split <;> exact .refl m
+  all_goals aesop (rule_sets := [Effect4.Stores]) (add safe apply [Links.sameTables])
 
 theorem Links.joinPark (m : NativeMachine) (f : NFiber) (target : FiberId) (other : NFiber)
     (hf : m.fiber? target = some other) (mode : Supervision.ObserverMode) :
@@ -331,5 +337,8 @@ theorem iteration_links (p : NativeEff) (table : RowTable) (m : NativeMachine)
       apply ((Links.refl m).emit _).trans
       exact evaluateNative_links _ _ _ _ _
     · cases hy
+
+#typed_state_obligations Effect4.Program.Guard.NativeStateLinks.M1Origin ceiling 0 using
+  aesop (rule_sets := [Effect4.Stores]) (add unsafe apply [Links.spawn, Links.beginRace])
 
 end Effect4.Program.Guard.NativeStateLinks

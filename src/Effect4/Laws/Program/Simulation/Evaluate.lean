@@ -1,3 +1,4 @@
+import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Program.Simulation.Actions
 import Effect4.Laws.Auto.Inversion
 
@@ -27,7 +28,7 @@ theorem FMeans.answer' {root : NativeEff} {f₁ : FRun} {f₂ : RFiber} (h : FMe
     {c₂ : RProgram} (hc : CodeMeans root f₁.frame.current c₂) : FMeans root f₁ (answerR f₂ c₂) :=
   FMeans.mk' h.id h.parked h.context h.running h.pending h.finalizing h.exit h.opCount h.maxOps
     h.preventYield h.yieldOverride h.observers h.children h.dispatcher
-    ⟨h.interruptible, h.interruptedCause, h.deferred, hc, h.stack, h.maskInv⟩
+    ⟨h.interruptible, h.interruptedCause, h.deferred, hc, h.stack, h.maskInv⟩ h.origin
 
 /-- One iteration's result, the term's current related only once constructed at the
 result's view. -/
@@ -192,14 +193,16 @@ theorem evaluatePrim_join (root : NativeEff) (c : List (FiberId × ExitV)) (m : 
         FiberCore.pushAsyncFinalizer]
 
 theorem parkOf_park (root : NativeEff) (c : List (FiberId × ExitV)) (kind : ParkKind) :
-    (interpAt root c).parkOf (Prim.suspend (EffThunk.park kind)) = some (Except.ok kind) := rfl
+    (interpAt root c).parkOf (Prim.suspend (EffThunk.park kind)) = some (Except.ok kind) :=
+  by aesop
 
 theorem parkOf_storePark (root : NativeEff) (c : List (FiberId × ExitV)) (kind : ParkKind) :
     (interpAt root c).parkOf (Prim.suspend (EffThunk.store (Thunk.park kind))) = some (Except.ok kind) :=
-  rfl
+  by aesop
 
 theorem parkOf_sync' (root : NativeEff) (c : List (FiberId × ExitV)) (thunk : EffThunk) :
-    (interpAt root c).parkOf (Prim.sync thunk) = none := rfl
+    (interpAt root c).parkOf (Prim.sync thunk) = none :=
+  by aesop
 
 theorem evaluatePrim_sync_some (root : NativeEff) (c : List (FiberId × ExitV)) (m : FMachine) (f : FRun)
     (y : Bool) {thunk : EffThunk} (hcur : f.frame.current = Prim.sync thunk) {s : Stores} {v : Val}
@@ -346,13 +349,13 @@ theorem countdownPark_stuck (i : FInterp) (m : FMachine) (f : FRun) (targets : L
     unfold RunMachine.modify
     split <;> rfl
 
-theorem bool_eq_false_of_not {b : Bool} (h : ¬ b = true) : b = false := by
-  aesop
+theorem bool_eq_false_of_not {b : Bool} (h : ¬ b = true) : b = false :=
+  by aesop
 
 theorem point_refresh {p p' : Point}
     (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
-    (cv : List (FiberId × ExitV)) : ({ p' with completed := cv } : Point) = { p with completed := cv } := by
-  aesop
+    (cv : List (FiberId × ExitV)) : ({ p' with completed := cv } : Point) = { p with completed := cv } :=
+  by aesop
 
 theorem iterNext_gen_congr (root : NativeEff) (cv : List (FiberId × ExitV)) {p p' : Point}
     (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root) :
@@ -376,17 +379,31 @@ theorem answerRel_coreCore (root : NativeEff) :
     AnswerRel root FiberAction.coreAnswer FiberAction.coreAnswer :=
   fun _ _ v h => h.answer (CodeMeans.success v)
 
+def M1Evaluate.registerAsync_await (root : NativeEff) (c : List (FiberId × ExitV)) (cell : DeferredKey)
+    (fid : FiberId) (tok : Nat) (s : Stores) : ProofGraph.Obligation ((interpAt root c).registerAsync (.registerAwait cell) fid tok s =
+      ({ s with deferreds := (s.deferreds.register cell fid tok).1 },
+        (s.deferreds.register cell fid tok).2.map (fun c => embed (completionPrim c)))) := ⟨⟩
+#proof_wanted M1Evaluate.registerAsync_await
+
 theorem registerAsync_await (root : NativeEff) (c : List (FiberId × ExitV)) (cell : DeferredKey)
     (fid : FiberId) (tok : Nat) (s : Stores) :
     (interpAt root c).registerAsync (.registerAwait cell) fid tok s =
       ({ s with deferreds := (s.deferreds.register cell fid tok).1 },
-        (s.deferreds.register cell fid tok).2.map embed) := rfl
+        (s.deferreds.register cell fid tok).2.map (fun c => embed (completionPrim c))) :=
+  by aesop
+
+def M1Evaluate.registerAsyncR_await (root : NativeEff) (c : List (FiberId × ExitV)) (cell : DeferredKey)
+    (fid : FiberId) (tok : Nat) (s : Stores) : ProofGraph.Obligation ((interpRAt root c).registerAsync (.registerAwait cell) fid tok s =
+      ({ s with deferreds := (s.deferreds.register cell fid tok).1 },
+        (s.deferreds.register cell fid tok).2.map denoteCompletion)) := ⟨⟩
+#proof_wanted M1Evaluate.registerAsyncR_await
 
 theorem registerAsyncR_await (root : NativeEff) (c : List (FiberId × ExitV)) (cell : DeferredKey)
     (fid : FiberId) (tok : Nat) (s : Stores) :
     (interpRAt root c).registerAsync (.registerAwait cell) fid tok s =
       ({ s with deferreds := (s.deferreds.register cell fid tok).1 },
-        (s.deferreds.register cell fid tok).2.map denoteStored) := rfl
+        (s.deferreds.register cell fid tok).2.map denoteCompletion) :=
+  by aesop
 
 /-- The default table has no external registration to answer. -/
 theorem registerAsync_foreign (root : NativeEff) (c : List (FiberId × ExitV))
@@ -396,25 +413,40 @@ theorem registerAsync_foreign (root : NativeEff) (c : List (FiberId × ExitV))
 
 theorem registerAsyncR_foreign (root : NativeEff) (c : List (FiberId × ExitV))
     (op : NativeOp) (request : Val) (fid : FiberId) (tok : Nat) (s : Stores) :
-    (interpRAt root c).registerAsync (.external op request) fid tok s = (s, none) := rfl
+    (interpRAt root c).registerAsync (.external op request) fid tok s = (s, none) :=
+  by aesop
 
 theorem registerAsync_external (root : NativeEff) (c : List (FiberId × ExitV)) (slot : Nat)
     (fid : FiberId) (tok : Nat) (s : Stores) :
-    (interpAt root c).registerAsync (.store (.externalRegister slot)) fid tok s = (s, none) := rfl
+    (interpAt root c).registerAsync (.store (.externalRegister slot)) fid tok s = (s, none) :=
+  by aesop
 
 theorem registerAsyncR_external (root : NativeEff) (c : List (FiberId × ExitV)) (slot : Nat)
     (fid : FiberId) (tok : Nat) (s : Stores) :
-    (interpRAt root c).registerAsync (.store (.externalRegister slot)) fid tok s = (s, none) := rfl
+    (interpRAt root c).registerAsync (.store (.externalRegister slot)) fid tok s = (s, none) :=
+  by aesop
 
-theorem registerAsync_sleep (root : NativeEff) (c : List (FiberId × ExitV)) (millis : Nat)
+def M1Clock.registerAsync_sleep (root : NativeEff) (c : List (FiberId × ExitV)) (millis : ClockMillis)
+    (fid : FiberId) (tok : Nat) (s : Stores) : ProofGraph.Obligation ((interpAt root c).registerAsync (.store (.registerSleep millis)) fid tok s =
+      ({ s with timers := s.timers.sleep fid tok millis }, none)) := ⟨⟩
+#proof_wanted M1Clock.registerAsync_sleep
+
+theorem registerAsync_sleep (root : NativeEff) (c : List (FiberId × ExitV)) (millis : ClockMillis)
     (fid : FiberId) (tok : Nat) (s : Stores) :
     (interpAt root c).registerAsync (.store (.registerSleep millis)) fid tok s =
-      ({ s with timers := s.timers.sleep fid tok millis }, none) := rfl
+      ({ s with timers := s.timers.sleep fid tok millis }, none) :=
+  by aesop
 
-theorem registerAsyncR_sleep (root : NativeEff) (c : List (FiberId × ExitV)) (millis : Nat)
+def M1Clock.registerAsyncR_sleep (root : NativeEff) (c : List (FiberId × ExitV)) (millis : ClockMillis)
+    (fid : FiberId) (tok : Nat) (s : Stores) : ProofGraph.Obligation ((interpRAt root c).registerAsync (.store (.registerSleep millis)) fid tok s =
+      ({ s with timers := s.timers.sleep fid tok millis }, none)) := ⟨⟩
+#proof_wanted M1Clock.registerAsyncR_sleep
+
+theorem registerAsyncR_sleep (root : NativeEff) (c : List (FiberId × ExitV)) (millis : ClockMillis)
     (fid : FiberId) (tok : Nat) (s : Stores) :
     (interpRAt root c).registerAsync (.store (.registerSleep millis)) fid tok s =
-      ({ s with timers := s.timers.sleep fid tok millis }, none) := rfl
+      ({ s with timers := s.timers.sleep fid tok millis }, none) :=
+  by aesop
 
 /-! ## Frame arms that are the shared helpers only up to a case split -/
 
@@ -736,16 +768,14 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     have hreg₁ : (interpAt root m₂.completedExits).registerAsync (.registerAwait cell) f₁.id m₁.nextToken
         m₁.state =
         ({ m₂.state with deferreds := (m₂.state.deferreds.register cell g₂.id m₂.nextToken).1 },
-          (m₂.state.deferreds.register cell g₂.id m₂.nextToken).2.map embed) := by
+          (m₂.state.deferreds.register cell g₂.id m₂.nextToken).2.map (fun c => embed (completionPrim c))) := by
       rw [hf'.id, hm.nextToken, hm.state]
       exact registerAsync_await root _ cell g₂.id m₂.nextToken m₂.state
     have hreg₂ := registerAsyncR_await root m₂.completedExits cell g₂.id m₂.nextToken m₂.state
-    have hd := deferredOk_register (hm.state ▸ hok.state.1 : DeferredOk m₂.state.deferreds) cell g₂.id
-      m₂.nextToken
     simp only [hreg₂]
-    generalize hr : m₂.state.deferreds.register cell g₂.id m₂.nextToken = r at hreg₁ hd ⊢
+    generalize hr : m₂.state.deferreds.register cell g₂.id m₂.nextToken = r at hreg₁ ⊢
     obtain ⟨d, imm⟩ := r
-    dsimp only at hreg₁ hd
+    dsimp only at hreg₁
     cases imm with
     | none =>
       rw [evaluatePrim_async_none root _ m₁ f₁ y hc₁ hreg₁]
@@ -754,7 +784,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
       rw [hm.nextToken]
       refine iterRel_prepare ⟨machineOk_emit
           (machineOk_withStateToken (s := { m₂.state with deferreds := d }) hok
-            ⟨hd.1, hm.state ▸ hok.state.2⟩ _) _,
+            (StoresOk.frame_deferreds m₂.state (hm.state ▸ hok.state) d) _) _,
         BMeans.emit (hm.withStateToken _ _) _ _, ((hf'.saveAnswer hk).withFrame ?_).park _, rfl, rfl,
         ListRel.nil⟩
       rw [hf'.id]
@@ -764,10 +794,10 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
       dsimp only
       rw [hm.nextToken]
       refine iterRelP_prepare ⟨machineOk_withStateToken (s := { m₂.state with deferreds := d }) hok
-          ⟨hd.1, hm.state ▸ hok.state.2⟩ _,
+          (StoresOk.frame_deferreds m₂.state (hm.state ▸ hok.state) d) _,
         hm.withStateToken _ _,
         (hf'.saveAnswer hk).withFrame (means_answerWith (hf'.saveAnswer hk).means
-          ((stored_means root (hd.2 prog rfl)).prepare _)), rfl, rfl,
+          ((completion_means root prog).prepare _)), rfl, rfl,
         ListRel.cons True.intro ListRel.nil⟩ ⟨nofun, nofun⟩
   | asyncExternal slot k hk =>
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
@@ -805,7 +835,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     refine iterRel_prepare ⟨machineOk_emit
         (machineOk_withStateToken
           (s := { m₂.state with timers := m₂.state.timers.sleep g₂.id m₂.nextToken millis }) hok
-          ⟨hm.state ▸ hok.state.1, hm.state ▸ hok.state.2⟩ _) _,
+          (StoresOk.frame_timers m₂.state (hm.state ▸ hok.state) _) _) _,
       BMeans.emit (hm.withStateToken _ _) _ _, ((hf'.saveAnswer hk).withFrame ?_).park _, rfl, rfl,
       ListRel.nil⟩
     rw [hf'.id]
@@ -862,10 +892,10 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
   -- the fiber actions
   | actFork t program options body k ht hc hk =>
     rw [evaluateNative_action root m₁ f₁ y hc₁ ht, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
-    exact iterRel_prepare (fork_rel root _ hok hm hf' y hc options (answerRel_core root hk))
+    exact iterRel_prepare (fork_rel root _ hok hm hf' y hc options (answerRel_core root hk) (site := _))
   | actForkIn t program options q scope k ht hc hk =>
     rw [evaluateNative_action root m₁ f₁ y hc₁ ht, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
-    exact iterRel_prepare (forkIn_rel root _ hok hm hf' y hc options scope (answerRel_core root hk))
+    exact iterRel_prepare (forkIn_rel root _ hok hm hf' y hc options scope (answerRel_core root hk) (site := _))
   | actAmbientScope t k ht hk =>
     rw [evaluateNative_action root m₁ f₁ y hc₁ ht, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
     exact iterRel_prepare (ambientScope_rel root _ hok hm hf' y (answerRel_core root hk))
@@ -910,7 +940,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
   | actRaceAll t entrants points k ht hlen hc hk =>
     rw [evaluateNative_action root m₁ f₁ y hc₁ ht, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
     exact iterRel_prepare (raceAll_rel root _ hok hm (hf'.saveAnswer hk) y
-      (listRel_of_zip (by rw [List.length_map]; exact hlen) hc))
+      (listRel_of_zip (by rw [List.length_map]; exact hlen) hc) (site := _))
   | actMask t body flag b k ht hc hk =>
     rw [evaluateNative_action root m₁ f₁ y hc₁ ht, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
     refine iterRelP_prepare ?_ ⟨nofun, nofun⟩
@@ -993,13 +1023,12 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     -- the scoped entry makes a fresh scope with an empty registration table and advances
     -- the supply past its handle, so the registration-key bound survives
     refine iterRelP_prepare ⟨machineOk_stateOf hok
-        ⟨(hm.state ▸ hok.state).1,
-          (ScopeStore.keysBelow_make (hm.state ▸ hok.state).2).mono (Nat.le_succ _)⟩,
+        ⟨(ScopeStore.keysBelow_make (hm.state ▸ hok.state).keysFresh).mono (Nat.le_succ _)⟩,
       hm.stateOf _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
     refine FMeans.mk' hf'.id hf'.parked rfl hf'.running hf'.pending hf'.finalizing hf'.exit hf'.opCount rfl rfl
       hf'.yieldOverride hf'.observers hf'.children hf'.dispatcher
       ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred, ?_, StackMeans.answer k hk hf'.stack,
-        hf'.maskInv⟩
+        hf'.maskInv⟩ hf'.origin
     show CodeMeans root (Prim.onExit (resolve root (p.child 0)) (.scopedExit g₂.context m₂.state.nextName) false)
       (prepareR _ ((guardR (.onExit false) (bodyR (interpRAt root m₂.completedExits) (.at_ (p.child 0)))).bind
         fun ex => .vis (.inr (.scopeExit g₂.context m₂.state.nextName ex)) Effects.Program.pure))

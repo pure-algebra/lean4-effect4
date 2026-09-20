@@ -49,17 +49,25 @@ theorem StateStep.grow {m : NativeMachine} (state : GuardState m) :
     StateStep m {m with nextToken := m.nextToken + 1} :=
   ⟨guardState_increaseTokens state _ (Nat.le_succ _), Nat.le_succ _, fun _ _ _ h => h⟩
 
+def M1.StateStep.store {m : NativeMachine} (_state : GuardState m) (stores : Stores)
+    (_keys : storeKeys stores ⊆ storeKeys m.state) : ProofGraph.Obligation (
+    StateStep m {m with state := stores}) := ⟨⟩
+
 theorem StateStep.store {m : NativeMachine} (state : GuardState m) (stores : Stores)
-    (keys : storeKeys stores ⊆ storeKeys m.state) (codes : DeferredCodes stores.deferreds) :
+    (keys : storeKeys stores ⊆ storeKeys m.state) :
     StateStep m {m with state := stores} :=
-  ⟨guardState_withState state stores keys codes, Nat.le_refl _, fun _ _ _ h => h⟩
+  ⟨guardState_withState state stores keys, Nat.le_refl _, fun _ _ _ h => h⟩
+
+def M1.StateStep.storeFresh {m : NativeMachine} (_state : GuardState m)
+    (stores : Stores) (fiber : FiberId)
+    (_keys : storeKeys stores ⊆ storeKeys m.state ++ [(fiber, m.nextToken)]) : ProofGraph.Obligation (
+    StateStep m {m with state := stores, nextToken := m.nextToken + 1}) := ⟨⟩
 
 theorem StateStep.storeFresh {m : NativeMachine} (state : GuardState m)
     (stores : Stores) (fiber : FiberId)
-    (keys : storeKeys stores ⊆ storeKeys m.state ++ [(fiber, m.nextToken)])
-    (codes : DeferredCodes stores.deferreds) :
+    (keys : storeKeys stores ⊆ storeKeys m.state ++ [(fiber, m.nextToken)]) :
     StateStep m {m with state := stores, nextToken := m.nextToken + 1} :=
-  ⟨guardState_storeFresh state stores fiber keys codes, Nat.le_succ _, fun _ _ _ h => h⟩
+  ⟨guardState_storeFresh state stores fiber keys, Nat.le_succ _, fun _ _ _ h => h⟩
 
 theorem StateStep.observer {m : NativeMachine} (state : GuardState m)
     (target : FiberId) (observer : Observer) (keys : ReservedKeys m (observerKeys observer)) :
@@ -78,7 +86,7 @@ theorem StateStep.registerRace {m : NativeMachine} (state : GuardState m)
   · exact .refl state
   · rename_i race hr
     refine ⟨guardState_updateRace (race := race) state ?_ {race with registering := true}
-      rfl rfl rfl (state.internalCodes.2.2.2 race (List.mem_of_find?_eq_some hr)),
+      rfl rfl rfl (state.internalCodes.2 race (List.mem_of_find?_eq_some hr)),
       Nat.le_refl _, fun _ _ _ h => h⟩
     simpa only [race_id_of_lookup hr] using hr
 
@@ -109,7 +117,7 @@ theorem guardState_appendRace {m : NativeMachine} (state : GuardState m)
   · exact state.fiberIds
   · exact state.fibersBelow
   · simp only [List.map_append, List.map_cons, List.map_nil, List.nodup_append]
-    refine ⟨state.raceIds, by simp, ?_⟩
+    refine ⟨state.raceIds, List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩, ?_⟩
     intro value hv other ho he
     obtain ⟨r, hr, heq⟩ := List.mem_map.mp hv
     have bound := state.racesBelow r hr
@@ -137,14 +145,18 @@ theorem guardState_appendRace {m : NativeMachine} (state : GuardState m)
   · exact state.deferredCause
   · exact fun f hf => frameCodeOwned_transport (raceHostsPreserved_append m [race])
       (state.frameCodes f hf)
-  · exact ⟨state.internalCodes.1, state.internalCodes.2.1,
-      state.internalCodes.2.2.1, hall _ state.internalCodes.2.2.2 programs⟩
+  · exact ⟨state.internalCodes.1, hall _ state.internalCodes.2 programs⟩
+
+def M1Origin.StateStep.beginRace (p : NativeEff) (table : RowTable) (completed)
+    {m : NativeMachine} (_state : GuardState m) (f : NFiber) (yielding : Bool)
+    (entrants : List NCode) (_host : ∃ saved, m.fiber? f.id = some saved)
+    (_programs : ∀ code ∈ entrants, raceSites code = []) (site : Option (List Nat) := none) : ProofGraph.Obligation (StateStep m (beginRace (interpAt p completed table) m f yielding entrants site).machine) := ⟨⟩
 
 theorem StateStep.beginRace (p : NativeEff) (table : RowTable) (completed)
     {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool)
     (entrants : List NCode) (host : ∃ saved, m.fiber? f.id = some saved)
-    (programs : ∀ code ∈ entrants, raceSites code = []) :
-    StateStep m (beginRace (interpAt p completed table) m f yielding entrants).machine := by
+    (programs : ∀ code ∈ entrants, raceSites code = []) (site : Option (List Nat) := none) :
+    StateStep m (beginRace (interpAt p completed table) m f yielding entrants site).machine := by
   apply StateStep.emit
   exact ⟨guardState_appendRace state _ rfl rfl host programs, Nat.le_succ _, fun _ _ _ h => h⟩
 
@@ -160,59 +172,101 @@ theorem StateStep.countdown (p : NativeEff) (table : RowTable) (completed)
       (.observer (guardState_increaseTokens state _ (Nat.le_succ _)) _ (.countdown f.id m.nextToken)
         (reservedKeys_fresh state f.id))).emit _
 
+def M1.storeKeys_registerDeferred (stores : Stores) (cell : DeferredKey)
+    (fiber : FiberId) (token : Nat) : ProofGraph.Obligation
+    (storeKeys {stores with deferreds := (stores.deferreds.register cell fiber token).1} ⊆
+      storeKeys stores ++ [(fiber, token)]) := ⟨⟩
+
+theorem storeKeys_registerDeferred (stores : Stores) (cell : DeferredKey)
+    (fiber : FiberId) (token : Nat) :
+    storeKeys {stores with deferreds := (stores.deferreds.register cell fiber token).1} ⊆
+      storeKeys stores ++ [(fiber, token)] := by
+  intro key hk
+  rcases List.mem_append.mp hk with hk | hk
+  · exact List.mem_append_left _ (List.mem_append_left _ hk)
+  · rcases List.mem_append.mp
+      (deferredKeys_register_subset stores.deferreds cell fiber token hk) with hk | hk
+    · exact List.mem_append_left _ (List.mem_append_right _ hk)
+    · exact List.mem_append_right _ hk
+
+def M1.storeKeys_sleep (stores : Stores) (fiber : FiberId) (token : Nat)
+    (millis : ClockMillis) : ProofGraph.Obligation
+    (storeKeys {stores with timers := stores.timers.sleep fiber token millis} ⊆
+      storeKeys stores ++ [(fiber, token)]) := ⟨⟩
+
+theorem storeKeys_sleep (stores : Stores) (fiber : FiberId) (token : Nat)
+    (millis : ClockMillis) :
+    storeKeys {stores with timers := stores.timers.sleep fiber token millis} ⊆
+      storeKeys stores ++ [(fiber, token)] := by
+  intro key hk
+  change key ∈ wakeKeys (stores.timers.sleep fiber token millis).wake ++
+    deferredKeys stores.deferreds at hk
+  rcases List.mem_append.mp hk with hk | hk
+  · rcases (wakeKeys_register_mem _ _ _ _ _).mp hk with hk | hk
+    · exact List.mem_append_left _ (List.mem_append_left _ hk)
+    · exact List.mem_append_right _ (List.mem_singleton.mpr hk)
+  · exact List.mem_append_left _ (List.mem_append_right _ hk)
+
+def M1.registerExternal_storeKeys (p : NativeEff) (table : RowTable)
+    (op : NativeOp) (request : Val) (fiber : FiberId) (token : Nat) (stores : Stores) :
+    ProofGraph.Obligation
+    (storeKeys ((interpOf p table).registerAsync (.external op request) fiber token stores).1 =
+      storeKeys stores) := ⟨⟩
+
+theorem registerExternal_storeKeys (p : NativeEff) (table : RowTable)
+    (op : NativeOp) (request : Val) (fiber : FiberId) (token : Nat) (stores : Stores) :
+    storeKeys ((interpOf p table).registerAsync (.external op request) fiber token stores).1 =
+      storeKeys stores := by
+  have h := registerExternal_internal_state p table op request fiber token stores
+  simp only [storeKeys, h.1, h.2]
+
+attribute [aesop norm -1 apply (rule_sets := [Effect4.Stores])]
+  storeKeys_registerDeferred storeKeys_sleep
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] registerExternal_storeKeys
+
+def M1.registerAsync_state (p : NativeEff) (table : RowTable) (completed)
+    (stores : Stores) (name : EffName)
+    (fiber : FiberId) (token : Nat) : ProofGraph.Obligation (
+    storeKeys ((interpAt p completed table).registerAsync name fiber token stores).1 ⊆
+      storeKeys stores ++ [(fiber, token)]) := ⟨⟩
+
 theorem registerAsync_state (p : NativeEff) (table : RowTable) (completed)
-    (stores : Stores) (hd : DeferredCodes stores.deferreds) (name : EffName)
+    (stores : Stores) (name : EffName)
     (fiber : FiberId) (token : Nat) :
     storeKeys ((interpAt p completed table).registerAsync name fiber token stores).1 ⊆
-      storeKeys stores ++ [(fiber, token)] ∧
-    DeferredCodes ((interpAt p completed table).registerAsync name fiber token stores).1.deferreds := by
+      storeKeys stores ++ [(fiber, token)] := by
   have base : storeKeys stores ⊆ storeKeys stores ++ [(fiber, token)] :=
     fun _ h => List.mem_append_left _ h
-  have deferred (cell : DeferredKey) :
-      storeKeys {stores with deferreds := (stores.deferreds.register cell fiber token).1} ⊆
-          storeKeys stores ++ [(fiber, token)] ∧
-        DeferredCodes (stores.deferreds.register cell fiber token).1 := by
-    refine ⟨?_, (deferredCodes_register hd cell fiber token).1⟩
-    intro key hk
-    rcases List.mem_append.mp hk with hk | hk
-    · exact List.mem_append_left _ (List.mem_append_left _ hk)
-    · rcases List.mem_append.mp (deferredKeys_register_subset stores.deferreds cell fiber token hk) with hk | hk
-      · exact List.mem_append_left _ (List.mem_append_right _ hk)
-      · exact List.mem_append_right _ hk
-  cases name <;> try exact ⟨base, hd⟩
-  case registerAwait cell => exact deferred cell
-  case store name =>
-    cases name <;> try exact ⟨base, hd⟩
-    case registerAwait cell => exact deferred cell
-    case registerSleep millis =>
-      refine ⟨?_, hd⟩
-      intro key hk
-      change key ∈ wakeKeys (stores.timers.sleep fiber token millis).wake ++ deferredKeys stores.deferreds at hk
-      rcases List.mem_append.mp hk with hk | hk
-      · rcases (wakeKeys_register_mem _ _ _ _ _).mp hk with hk | hk
-        · exact List.mem_append_left _ (List.mem_append_left _ hk)
-        · exact List.mem_append_right _ (List.mem_singleton.mpr hk)
-      · exact List.mem_append_left _ (List.mem_append_right _ hk)
-  case external op request =>
-    have h := registerExternal_internal_state p table op request fiber token stores
-    change storeKeys ((interpOf p table).registerAsync (.external op request) fiber token stores).1 ⊆ _ ∧
-      DeferredCodes ((interpOf p table).registerAsync (.external op request) fiber token stores).1.deferreds
-    unfold storeKeys
-    rw [h.1, h.2]
-    exact ⟨base, hd⟩
+  cases name with
+  | registerAwait cell =>
+    simpa only [interpAt, interpOf] using storeKeys_registerDeferred stores cell fiber token
+  | store name =>
+    cases name with
+    | registerAwait cell =>
+      simpa only [interpAt, interpOf] using storeKeys_registerDeferred stores cell fiber token
+    | registerSleep millis =>
+      simpa only [interpAt, interpOf] using storeKeys_sleep stores fiber token millis
+    | _ => exact base
+  | external op request =>
+    change storeKeys ((interpOf p table).registerAsync (.external op request) fiber token stores).1 ⊆ _
+    rw [registerExternal_storeKeys]
+    exact base
+  | _ => exact base
+
+attribute [aesop norm -1 apply (rule_sets := [Effect4.Stores])] registerAsync_state
 
 theorem syncState_state (p : NativeEff) (table : RowTable) (completed)
     {m : NativeMachine} (state : GuardState m) (thunk : EffThunk) (stores : Stores) (value : Val)
     (h : (interpAt p completed table).syncState thunk m.state = some (stores, value)) :
     StateStep m {m with state := stores} := by
-  have hd : DeferredCodes m.state.deferreds := ⟨state.internalCodes.1, state.internalCodes.2.1⟩
-  cases thunk <;> simp only [interpAt, interpOf] at h
-  all_goals try contradiction
-  case op op => exact .store state stores (syncOpStep_storeKeys h) (syncOpStep_deferredCodes hd h)
-  case store thunk =>
-    cases thunk <;> simp only at h
-    all_goals try contradiction
-    exact .store state stores (syncOpStep_storeKeys h) (syncOpStep_deferredCodes hd h)
+  apply StateStep.store state stores
+  cases thunk with
+  | op operation => exact syncOpStep_storeKeys h
+  | store thunk =>
+    cases thunk with
+    | op operation => exact syncOpStep_storeKeys h
+    | _ => cases h
+  | _ => cases h
 
 theorem closeScopeUnsafe_state (scope : Nat) (exit : ExitV) (mask : Bool)
     {stores after : Stores} {code : Option Effect4.Machine.Program}
@@ -240,16 +294,19 @@ theorem closeScope_state (p : NativeEff) (table : RowTable) (completed)
     obtain ⟨keys, codes⟩ := closeScopeUnsafe_state scope exit mask hu
     apply StateStep.store state after
     · rw [keys]; exact fun _ h => h
-    · rw [codes]; exact ⟨state.internalCodes.1, state.internalCodes.2.1⟩
+
+def M1Origin.StateStep.spawn (p : NativeEff) (table : RowTable) (completed)
+    {m : NativeMachine} (_state : GuardState m) (f : NFiber) (code : NCode)
+    (_sites : raceSites code = []) (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (StateStep m (spawn (interpAt p completed table) m f code options site).1) := ⟨⟩
 
 theorem StateStep.spawn (p : NativeEff) (table : RowTable) (completed)
     {m : NativeMachine} (state : GuardState m) (f : NFiber) (code : NCode)
-    (sites : raceSites code = []) (options : Supervision.ForkOptions) :
-    StateStep m (spawn (interpAt p completed table) m f code options).1 := by
-  change StateStep m (Effect4.Machine.spawn (interpOf p table) m f code options).1
-  refine ⟨guardState_spawn p table state f code sites options, Nat.le_refl _, ?_⟩
+    (sites : raceSites code = []) (options : Supervision.ForkOptions) (site : List Nat := []) :
+    StateStep m (spawn (interpAt p completed table) m f code options site).1 := by
+  change StateStep m (Effect4.Machine.spawn (interpOf p table) m f code options site).1
+  refine ⟨guardState_spawn p table state f code sites options site, Nat.le_refl _, ?_⟩
   intro fiber token request hr
-  rwa [requestOf_spawn] at hr
+  rwa [requestOf_spawn (site := site)] at hr
 
 theorem StateStep.start {m : NativeMachine} (state : GuardState m)
     (f : NFiber) (child : FiberId) (immediate : Bool) :
@@ -382,8 +439,7 @@ theorem StateStep.filterObservers {m : NativeMachine} (state : GuardState m) (ke
     · exact hall _ state.exited
     · exact hall _ state.deferredCause
     · exact hall _ state.frameCodes
-    · exact ⟨state.internalCodes.1, state.internalCodes.2.1,
-        hall _ state.internalCodes.2.2.1, state.internalCodes.2.2.2⟩
+    · exact ⟨hall _ state.internalCodes.1, state.internalCodes.2⟩
   · intro fiber token request hr
     rwa [filtered_request] at hr
 
@@ -426,18 +482,16 @@ theorem withFiber_state (p : NativeEff) (table : RowTable) (completed)
     StateStep m (evaluatePrim.withFiber (interpAt p completed table) m f yielding action).machine := by
   cases action <;> simp only [actionRaceSites] at sites <;>
     unfold evaluatePrim.withFiber <;> dsimp only
-  all_goals try exact .refl state
-  all_goals try exact (StateStep.refl state).emit _
-  case fork code options =>
+  case fork code options site =>
     split
-    · exact (StateStep.spawn p table completed state f code sites options).startAfter _ _ _
+    · exact (StateStep.spawn p table completed state f code sites options site).startAfter _ _ _
     · exact (StateStep.middleware state true).trans
-        ((StateStep.spawn p table completed (StateStep.middleware state true).state f code sites options).startAfter _ _ _)
-  case forkIn code options scope =>
-    exact (StateStep.spawn p table completed state f code sites _).startAfter _ _ _
-  case forkScoped code options =>
+        ((StateStep.spawn p table completed (StateStep.middleware state true).state f code sites options site).startAfter _ _ _)
+  case forkIn code options scope site =>
+    exact (StateStep.spawn p table completed state f code sites _ site).startAfter _ _ _
+  case forkScoped code options site =>
     split
-    · exact (StateStep.spawn p table completed state f code sites _).startAfter _ _ _
+    · exact (StateStep.spawn p table completed state f code sites _ site).startAfter _ _ _
     · exact .refl state
   case ambientScope => split <;> exact .refl state
   case runIn target scope => exact StateStep.linkScope p table completed state _ _ _ _ _
@@ -446,9 +500,9 @@ theorem withFiber_state (p : NativeEff) (table : RowTable) (completed)
   case awaitAll targets => exact StateStep.countdown p table completed state f targets _ _
   case awaitAllFailFast targets => exact StateStep.countdown p table completed state f targets _ _
   case awaitNewChildren snapshot => exact StateStep.countdown p table completed state f _ _ _
-  case raceAll entrants =>
+  case raceAll entrants site =>
     exact StateStep.beginRace p table completed state f yielding entrants host
-      (List.flatMap_eq_nil_iff.mp sites)
+      (List.flatMap_eq_nil_iff.mp sites) site
   case setInterruptible code mask => cases mask <;> exact .refl state
   case closeScope scope exit =>
     split
@@ -460,6 +514,7 @@ theorem withFiber_state (p : NativeEff) (table : RowTable) (completed)
       (List.flatMap_eq_nil_iff.mp sites)
   case dropObservers token => exact StateStep.filterObservers state _
   case cancelRace id => split <;> exact .refl state
+  all_goals aesop (rule_sets := [Effect4.Stores]) (add safe apply [StateStep.refl, StateStep.emit])
 
 theorem StateStep.joinPark {m : NativeMachine} (state : GuardState m)
     (f : NFiber) (target : FiberId) (other : NFiber)
@@ -470,6 +525,38 @@ theorem StateStep.joinPark {m : NativeMachine} (state : GuardState m)
     (StateStep.observer (StateStep.grow state).state target
       (.resumeAwait f.id m.nextToken mode) (reservedKeys_fresh state f.id))
   simpa only [RunMachine.modify, show ({m with nextToken := m.nextToken + 1} : NativeMachine).fiber? target = some other from hf] using step
+
+def M1Results.registerAsync (p : NativeEff) (table : RowTable) (completed)
+    {m : NativeMachine} (_state : GuardState m) (name : EffName) (fiber : FiberId) :
+    ProofGraph.Obligation (StateStep m {m with
+      state := ((interpAt p completed table).registerAsync name fiber m.nextToken m.state).1,
+      nextToken := m.nextToken + 1}) := ⟨⟩
+
+def M1Results.countdown (p : NativeEff) (table : RowTable) (completed)
+    {m : NativeMachine} (_state : GuardState m) (f : NFiber) (targets : List FiberId)
+    (resumeWith : Resume EffName) (failFast : Bool) (after : NativeMachine) (next : NFiber)
+    (parked : Bool)
+    (_h : countdownPark (interpAt p completed table) m f targets resumeWith failFast =
+      (after, next, parked)) : ProofGraph.Obligation (StateStep m after) := ⟨⟩
+
+theorem StateStep.registerAsync (p : NativeEff) (table : RowTable) (completed)
+    {m : NativeMachine} (state : GuardState m) (name : EffName) (fiber : FiberId) :
+    StateStep m {m with
+      state := ((interpAt p completed table).registerAsync name fiber m.nextToken m.state).1,
+      nextToken := m.nextToken + 1} := by
+  exact StateStep.storeFresh state _ fiber
+    (registerAsync_state p table completed m.state name fiber m.nextToken)
+
+theorem StateStep.countdown_result (p : NativeEff) (table : RowTable) (completed)
+    {m : NativeMachine} (state : GuardState m) (f : NFiber) (targets : List FiberId)
+    (resumeWith : Resume EffName) (failFast : Bool) (after : NativeMachine) (next : NFiber)
+    (parked : Bool)
+    (h : countdownPark (interpAt p completed table) m f targets resumeWith failFast =
+      (after, next, parked)) : StateStep m after := by
+  simpa only [h] using StateStep.countdown p table completed state f targets resumeWith failFast
+
+attribute [aesop safe apply (rule_sets := [Effect4.Stores])] StateStep.registerAsync
+attribute [aesop safe forward (rule_sets := [Effect4.Stores])] StateStep.countdown_result
 
 theorem evaluatePrim_state (p : NativeEff) (table : RowTable) (completed)
     {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool)
@@ -482,40 +569,27 @@ theorem evaluatePrim_state (p : NativeEff) (table : RowTable) (completed)
     change (interpOf p table).withFiberOf thunk = some action at h
     rw [h] at sites
     exact sites
+  have joining := StateStep.joinPark state f
   unfold evaluatePrim
-  repeat' first
-    | exact .refl state
-    | exact ((StateStep.grow state).arm f.id).emit _
-    | exact StateStep.registerRace state f yielding _
-    | exact StateStep.countdown p table completed state f _ _ _
-    | exact (StateStep.joinPark state f _ _ (by assumption) _).emit _
-    | exact withFiber_state p table completed state f yielding _ (ha _ _ (by assumption)) host
-    | exact stepFrame_state p table completed state f yielding
-    | exact finalizerOr_state p table completed state f yielding _
-    | exact syncState_state p table completed state _ _ _ (by assumption)
-    | dsimp only
-    | split
+  repeat' split
   all_goals
-    have hd : DeferredCodes m.state.deferreds := ⟨state.internalCodes.1, state.internalCodes.2.1⟩
-    first
-    | exact .storeFresh state _ f.id (registerAsync_state p table completed m.state hd _ f.id m.nextToken).1
-        (registerAsync_state p table completed m.state hd _ f.id m.nextToken).2
-    | exact (StateStep.storeFresh state _ f.id (registerAsync_state p table completed m.state hd _ f.id m.nextToken).1
-        (registerAsync_state p table completed m.state hd _ f.id m.nextToken).2).emit _
+    aesop (rule_sets := [Effect4.Stores])
+      (add safe apply [StateStep.refl, StateStep.emit, StateStep.arm, StateStep.grow,
+        StateStep.registerRace, withFiber_state, stepFrame_state, finalizerOr_state])
+      (add safe forward [syncState_state, ha, joining])
 
 theorem StateStep.closeUnsafe {m n : NativeMachine} (step : StateStep m n)
     (scope : Nat) (exit : ExitV) (mask : Bool) (stores : Stores) (code : Option Effect4.Machine.Program)
     (h : storesCloseScopeUnsafe scope exit mask n.state = some (stores, code)) :
     StateStep m {n with state := stores} := by
   obtain ⟨keys, codes⟩ := closeScopeUnsafe_state scope exit mask h
-  apply step.trans (.store step.state stores ?_ ?_)
+  apply step.trans (.store step.state stores ?_)
   · rw [keys]; exact fun _ h => h
-  · rw [codes]; exact ⟨step.state.internalCodes.1, step.state.internalCodes.2.1⟩
 
 theorem enterScoped_state (p : NativeEff) (point : Point)
     {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool) :
     StateStep m (enterScoped p point m f yielding).machine :=
-  .store state _ (fun _ h => h) ⟨state.internalCodes.1, state.internalCodes.2.1⟩
+  .store state _ (fun _ h => h)
 
 theorem exitScoped_state (p : NativeEff) {m : NativeMachine}
     (state : GuardState m) (f : NFiber) (yielding : Bool) (exit : ExitV)
@@ -566,5 +640,16 @@ theorem iteration_state (p : NativeEff) (table : RowTable)
       exact host'
     · cases hy
 
+
+#typed_state_obligations Effect4.Program.Guard.NativeState.M1 ceiling 0 using
+  aesop (rule_sets := [Effect4.Stores])
+    (add safe forward [StateStep.store, StateStep.storeFresh])
+
+#typed_state_obligations Effect4.Program.Guard.NativeState.M1Origin ceiling 0 using
+  aesop (rule_sets := [Effect4.Stores])
+    (add unsafe apply [StateStep.beginRace, StateStep.spawn])
+
+#typed_state_obligations Effect4.Program.Guard.NativeState.M1Results ceiling 0 using
+  aesop (rule_sets := [Effect4.Stores])
 
 end Effect4.Program.Guard.NativeState

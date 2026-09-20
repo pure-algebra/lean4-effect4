@@ -35,6 +35,7 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'f) run_fiber = {
   children : fiber_id list;
   dispatcher : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) dispatcher;
   context : 'ch;
+  origin : origin;
 }
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k) run_interp = {
   to_prim_interp : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) prim_interp;
@@ -49,7 +50,7 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k) run_interp = {
   answer_code : ('b, 'e, 'd, 'i, 'a) completion -> 'k;
   due_resumes : 'st -> 'k owed list * 'st;
   wake_list : wake_key -> int -> 'st -> 'st;
-  clock_step : int -> 'st -> 'k owed option * 'st;
+  clock_step : E4_clock.t -> 'st -> 'k owed option * 'st;
   cancel_name : 'nu -> fiber_id -> int -> 'nu;
   abort_name : 'nu;
   park_cancel_name : 'nu;
@@ -108,6 +109,7 @@ and fiber_id = int
 and stuck = Placeholder_stuck
 and ('nu, 'b, 'e, 'd, 'i, 'a) pending = Placeholder_pending
 and observer = Placeholder_observer
+and origin = Placeholder_origin
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) prim_interp = Placeholder_prim_interp
 and ('e, 'd, 'i, 'a) cause = ('e, 'd, 'i, 'a) reason list
 and park_kind = Placeholder_park_kind
@@ -648,22 +650,22 @@ let cause_combine (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : 
 
 let interrupt_record (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -> _ -> bool) (inst_4 : _ -> _ -> bool) (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) (interruptor : int option) (extra : (string * _) list) (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) =
   match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (match exit_ with
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (match exit_ with
         | None -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
             | { encode_fiber = encode_fiber; stack_annotations = stack_annotations; _ } -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
                 | { answer_with = answer_with; interruptible = interruptible; interrupted_cause = interrupted_cause; record_cause = record_cause; set_deferred = set_deferred; failure = failure; _ } -> (let _x_5 = false in
                   let _x_6 = true in
                   let _jp_7 = fun _y_8 -> let _x_9 = record_cause frame _y_8 in
-                  let f_1 = ({ id = id; frame = _x_9; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                  let f_1 = ({ id = id; frame = _x_9; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                   let _x_10 = interruptible _x_9 in
                   if _x_10 then (if running then (let _x_18 = set_deferred _x_9 _x_6 in
-                      let _x_19 = ({ id = id; frame = _x_18; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                      let _x_19 = ({ id = id; frame = _x_18; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                       let _x_20 = _x_19, _x_5 in
                       _x_20) else (let _x_12 = failure _y_8 in
                       let _x_13 = answer_with _x_9 _x_12 in
                       let _x_14 = Parked_notParked in
                       let _x_15 = [] in
-                      let _x_16 = ({ id = id; frame = _x_13; running = running; parked = _x_14; pending = _x_15; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                      let _x_16 = ({ id = id; frame = _x_13; running = running; parked = _x_14; pending = _x_15; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                       let _x_17 = _x_16, _x_6 in
                       _x_17)) else (let _x_11 = f_1, _x_5 in
                     _x_11) in

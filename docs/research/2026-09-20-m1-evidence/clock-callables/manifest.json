@@ -1,0 +1,24 @@
+{
+  "base_head": "15cb510e2ea747364e1c814e3a92f1e1ac0075eb",
+  "source_state": "uncommitted Phase A correction; source hashes identify this check",
+  "files": {
+    "src/OCaml5/Lcnf/ClockFlow.lean": "4eff992e67e0f0a1fc39bd41b4b20147c93cae55842a164a10c226d41a6ab2a5",
+    "src/OCaml5/Lcnf/Translate.lean": "c62d81707e2920ce9f611900e411b00b3d10411577bbb1276c678abb406984a5",
+    "Test/Audit/ClockLiteralFixtures.lean": "b260e7cda031464ad10ad76ee93121ac7a976fd3117f7a3c8e21385f7e5cca5f",
+    "Test/Audit/ClockLowering.lean": "ea91521d817c0f7283a7e16d22bedcc40468aee0e319193828f59494a9186f7b"
+  },
+  "api_roots": [
+    "Effect4.Api.run",
+    "Effect4.Api.replay"
+  ],
+  "api_closure": {
+    "declarations": 664,
+    "missing": 0,
+    "frontier": 0,
+    "todos": 0
+  },
+  "finite_controls": 18,
+  "generator_invocations": 0,
+  "compiler_lease": "released to root",
+  "limits": "Finite source-translation checks; no universal translation theorem or runtime generated-engine result claimed."
+}

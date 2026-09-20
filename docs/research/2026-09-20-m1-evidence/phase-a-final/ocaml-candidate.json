@@ -1,0 +1,13 @@
+{
+  "source": "ocaml/engine/api_engine.ml",
+  "source_sha256": "d822e46a5b6c87c3c28c58486229f5132f445012f9216c2681a8519a8031961c",
+  "candidate_sha256": "34a7bd0bc8fe7c6ca63c4537b63edc2254d0ce61728b3d47a15a02f2959d803b",
+  "edit": "Exactly three self annotations: deferred_store \u2192 _ deferred_store; embedded prelude now equals the live handwritten template byte for byte. Diagnostic only, never applied to tracked generated output.",
+  "compile": {
+    "command": "opam exec --switch=effect4 -- ocamlfind ocamlopt -I /tmp/m1-ocaml-candidate -c -w +a-4-9-40-41-42-44-45-70 /tmp/m1-ocaml-candidate/api_engine.ml",
+    "log": "/tmp/m1-ocaml-candidate-2.log",
+    "exit_code": 0,
+    "dependencies": "Only e4_clock.mli and e4_nat.mli; no implementations or carrier instance",
+    "warnings": "Only expected no-cmx-file for the two interface-only dependencies; corrected C3b compiles interfaces with -opaque to express the boundary."
+  }
+}

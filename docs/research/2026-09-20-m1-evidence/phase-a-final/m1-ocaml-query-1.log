@@ -1,0 +1,42 @@
+== lane Q3b: the query API over a run (Q1, Q3, Q4, the cost model, DF-3) ==
+
+== the INV-TAPE-1(query) repo gate ==
+  /Users/pooks/Dev/lean4-effect4/ocaml/engine/e4_query.mli: 31 signatures
+PASS query-inv-tape-1: no signature but of_run RETURNS a source or a tape (31 checked)
+PASS query-inv-tape-1: of_run is the single constructor and it does return a source
+PASS query-inv-tape-1: neither e4_query.mli nor e4_query.ml refers to E4_sched
+PASS query-inv-tape-1: the gate catches a planted `-> source` signature (mutation)
+
+== by_cid / by_occurrence / by_path: what they answer today ==
+PASS query: by_cid finds the seal the writer put in the row, and computes none
+PASS query: by_occurrence is program/[path], by_path is the path alone
+PASS query: the path glyph is space-separated, so an id list is not mistaken for a path
+PASS query: outcome reads the caller's status and the log's open scopes
+
+== the query laws on pFork (|tape| = 40) ==
+  20 log rows, 40 decisions, 1 fibers, 1 tokens, 0 scopes, k = 8
+PASS query-complete (Q4): rows 0..length is the whole log, no gap
+PASS query-complete (Q4): the decision segments partition the log
+PASS query-complete (Q4): decision_of_row lands inside that row's own segment
+PASS query-idempotent (Q3): two `at i` agree on all thirteen projections
+PASS query-idempotent (Q3): rows / fibers / outcome / cost repeat
+PASS query-free (Q1): every entry point called, every observable unchanged
+PASS query-free (Q1): by_cid refuses the empty address (it would match every row)
+PASS query: the cursor walk is replay_steps, machine for machine
+PASS query: replay_steps from..upto is inclusive and its ends are `at`
+  k = 1           cost exact: true   worst `at` = 0 replays, 0 over the walk
+  k = 8           cost exact: true   worst `at` = 7 replays, 140 over the walk
+  k = 1024        cost exact: true   worst `at` = 40 replays, 820 over the walk
+  k = infinity    cost exact: true   worst `at` = 40 replays, 820 over the walk
+PASS query-cost-exact: `cost` is the number of replays actually made, at every k
+PASS query-cost-exact: k = 1 replays nothing, k = infinity replays i, k = 8 bounded by 7
+
+== DF-3: query agreement over the 37 byte goldens (fuel 1000) ==
+  /Users/pooks/Dev/lean4-effect4/ocaml/eff/goldens: 53/53 programs decoded
+  212 cases, EVERY i on all of them; the ten longest tapes are: p42/gen64 pAcquire/gen64 pActions/gen64 pAwait/gen64 pBind/gen64 pBranch/gen64 pCallback/gen64 pCatch/gen64 pCatchError/gen64 pCatchIf/gen64
+  13356 comparisons over 6678 positions, two checkpoint intervals, 0 divergences
+PASS DF-3: `at s i` = the tape prefix's machine, 13356 comparisons, 0 divergences
+  mutation: 212/212 tapes whose dropped-first-decision source goes red
+PASS DF-3 mutation: an `at` built from a different tape prefix is caught, every time
+
+== ALL PASS: 0 failure(s) in 21 checks ==

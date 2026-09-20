@@ -1,0 +1,17 @@
+/tmp/m1-tools/ClockDecimalProofs.lean:87:72: error: unsolved goals
+a : ClockMillis
+⊢ (if True then some a else none) = some a
+/tmp/m1-tools/ClockDecimalProofs.lean:88:46: warning: This simp argument is unused:
+  if_pos rfl
+
+Hint: Omit it from the simp argument list.
+  [apply] simp only [read, toDecimal, readBytes_repr, ofNat_toNat]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+'Effect4.ClockMillis.DecimalPlan.readBytes' does not depend on any axioms
+'Effect4.ClockMillis.DecimalPlan.read' does not depend on any axioms
+'Effect4.ClockMillis.DecimalPlan.readBytes_digits' depends on axioms: [propext, Quot.sound]
+'Effect4.ClockMillis.DecimalPlan.readChars_core' depends on axioms: [propext, Quot.sound]
+'Effect4.ClockMillis.DecimalPlan.readBytes_repr' depends on axioms: [propext, Quot.sound]
+'Effect4.ClockMillis.DecimalPlan.read_toDecimal' depends on axioms: [propext, sorryAx, Quot.sound]
+'Effect4.ClockMillis.DecimalPlan.read_exact' depends on axioms: [propext]

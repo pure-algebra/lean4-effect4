@@ -1,0 +1,177 @@
+== test_checkpoint (lane P6: E4_chunk, E4_checkpoint) ==
+  sandbox: /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/e4ckpt-71550-1789900248
+
+== 1. E4_chunk: cutting ==
+  image 1024000 B, 761 chunks, mean 1345 B
+PASS CH1 cut is deterministic (same bytes, same cut)
+PASS CH1 cut is a function of the bytes, not the string identity
+PASS CH1 reassembly is the identity: concat (pieces s) = s
+PASS CH1 the cut covers the string exactly, in order
+PASS CH2 every chunk but the last is in [min, max]
+PASS CH2 the last chunk is non-empty and at most max
+PASS CH2 the empty image cuts to nothing
+PASS CH2 an image below min is one chunk
+PASS the window is smaller than min (what makes CH6 hold)
+PASS params_ok refuses min <= window
+PASS params_ok refuses an avg that is not a power of two
+PASS params_ok refuses max < avg
+PASS params_ok accepts the default
+PASS cut raises Invalid_argument on refused params
+  200 one-byte insertions (worst at offset 450511): worst boundaries moved 3; worst new chunks — content-defined 3, fixed 1 KB 999
+  boundaries moved, over 200 trials: 0->162  1->19  2->18  3->1  4->0  5+->0
+PASS CH6(a) every boundary at or before a one-byte insertion is unchanged
+PASS CH6(b) a one-byte insertion moves boundaries only locally (at most 3)
+PASS CH6(b) at most three chunks are rewritten
+PASS MUTATION: fixed-size chunking fails CH6(b) — the property has teeth
+  100 one-byte deletions: worst new chunks 2
+PASS CH6(b) a one-byte deletion makes at most three new chunks
+  LIMITATION, period-90 image (306 chunks, mean 3346 B): worst new chunks — content-defined 10, fixed 1 KB 988
+PASS on adversarial period-90 content, content-defined chunking still beats fixed-size
+PASS an append rewrites at most one chunk
+  default params on 4194304 B: 210 chunks, mean 19972 B
+PASS the default params hold CH2 on a 4 MB image
+PASS the default params reassemble
+
+== 2. E4_chunk: the manifest ==
+PASS the leaf manifest round-trips
+PASS the interior manifest round-trips
+PASS a trailing byte is refused
+PASS a truncated manifest is refused
+PASS a leaf whose refs are at the wrong kind is refused
+PASS an interior whose refs are at the wrong kind is refused
+PASS an unknown ctor index is refused
+PASS a non-list body is refused
+PASS the empty leaf round-trips
+  5000 refs -> 16 groups, sizes min 64 max 759 mean 312
+PASS CH7 the groups concatenate back to the ref list
+PASS CH7 every group but the last is within [g_min, g_max]
+PASS CH7 the group cut is deterministic
+PASS CH7 inserting one ref changes at most two groups
+
+== 3. E4_checkpoint: the byte table ==
+PASS the whole form round-trips
+PASS the whole form refuses a trailing byte
+PASS the whole form refuses a truncation
+PASS the chunked form round-trips
+PASS the chunked form refuses a trailing byte
+PASS the chunked form refuses a truncation
+PASS the manifested form round-trips
+PASS the manifested form refuses a trailing byte
+PASS the manifested form refuses a truncation
+PASS the optional fields round-trip as none
+PASS a job ref at the wrong kind is refused
+PASS the payload begins with ctor 0 and the job ref, in that order
+PASS `engine` is a bytes frame, so the edge scan treats it as a leaf (D5, risk R1)
+PASS the pending schema is a genesis: kind schema, the zero spec
+PASS the pending marker is on
+
+== 4. E4_checkpoint: write, read, LOG-REL, the chain ==
+PASS a small image is stored Whole
+PASS CP5 read gives the image back byte for byte (whole)
+  chunked: 2048000 B image, 39 chunks (39 fresh, 0 dup), 1 manifest nodes, payload 244 B
+PASS a large image is stored through a manifest
+PASS CP5 read gives the image back byte for byte (chunked)
+PASS the checkpoint's payload is small and constant: the image is not inside it
+PASS CH8 flatten is the inverse of the build
+PASS CH9 fold_chunks reassembles one chunk at a time
+PASS the one-level form is available and reads back
+PASS read_parts answers (job, position, prev, image)
+PASS CP2 a checkpoint whose job is not stored is refused Dangling by the STORE
+PASS CP2 a checkpoint whose prev is not stored is refused Dangling
+PASS LOG-REL two jobs, same content and position: the addresses differ
+PASS LOG-REL two jobs differ in the job field's 32 bytes and in nothing else
+PASS LOG-REL the same job at two positions: two addresses
+PASS LOG-REL the same job, position and content: one address
+PASS LOG-REL the chunk digests are a function of the image alone
+PASS LOG-REL / D3 two store layouts, one checkpoint address
+
+== 4b. the prev chain, the head root, the cycle refusal ==
+PASS CP8 chain walks prev from the head to the first
+PASS CP3 the head root names the last checkpoint
+PASS M1 the pin root of the last checkpoint is minted
+PASS CP3 a publish whose prev is not the head is refused (M7 Fork)
+PASS CP8 chain refuses a cycle instead of looping
+PASS CP8 chain_from on a finite chain is the chain
+PASS chain refuses an address that is not a checkpoint
+PASS read refuses a node that is not a checkpoint
+
+== 4c. a flipped byte inside a stored chunk ==
+PASS CP7 read verifies before the mutation
+PASS MUTATION a flipped byte inside a stored chunk makes read refuse
+  refusal: missingChunk
+
+== 5. CP9 / risk R8: closure_streaming ==
+  closure: 34 nodes, 1539077 node bytes; the largest node held at once is 65579 B (image 1536000 B)
+PASS CP9 the streaming closure visits exactly E4_cas.closure's addresses
+PASS CP9 each address once
+PASS CP9 children first: every checked edge is delivered before its node
+PASS CP9 the closure never holds the image: the peak node is one chunk, not the image
+PASS CP9 closure_size counts the same nodes
+PASS the closure covers the chunks, the manifests, the checkpoint, the job and the schema
+
+== 6. CP10: an ephemeral checkpoint files no node ==
+PASS CP10 an ephemeral checkpoint files no CAS node
+PASS CP10 the marks are in the log, with no address
+
+== 7. CP11: image_of_machine / machine_of_image ==
+  chain 40 at fuel 2000: finished, 83 trace rows, 40 refs, image 5672 B
+PASS CP11 machine_of_image (image_of_machine m) = machine_state m
+PASS CP11 re-encoding the decoded state gives the same bytes
+PASS CP11 the decoder is exact: a trailing byte is refused
+PASS CP11 the decoder is exact: a truncation is refused
+PASS CP11 the decoder is exact: the empty string is refused
+PASS CP11 the image names the instance's carriers
+PASS CP11 the image carries the reading axis: one row per trace index
+PASS CP11 the image carries the ref heap
+PASS CP11 the image version is the pending one
+PASS CP11 machines at different points of one run give distinct images
+PASS CP11 the image is a function of the machine value alone
+PASS MUTATION a changed field changes the image bytes
+
+== 8. A2 §4.4 / bench B7: 64 consecutive checkpoints of chain n=2000 ==
+  64 positions of chain 2000 at fuel 50..3200, driven in 0.05 s
+PASS the premise: the run has not finished at the last position, so every image differs
+  image 2147 B -> 104479 B; trace 26 -> 1600 rows; refs 12 -> 800
+PASS the run really grows: every image is larger than the one before it
+  consecutive positions: trace 1576 -> 1600 rows (common prefix 1576); refs 787 -> 800 (common prefix 787)
+PASS the machine image grows by APPENDING: the trace and the ref heap are stable prefixes
+  the closed form c* = sqrt(42 * S / k) at S = 104479 B, k = 2 is 1481 B
+
+  chunking on at avg 1 KB / min 256 B / max 4 KB (nearest the closed form):
+   i   image B  chunks  fresh   dup  manif  mfresh   delta B   cumulative B
+   0      2147       2      2     0      1       1      2792           2792
+   1      3725       2      2     0      1       1      4413           7205
+   2      5397       3      3     0      1       1      6215          13420
+   3      6976       3      3     0      1       1      7794          21214
+   8     15149       7      5     2      1       1     11241          71328
+  16     28150      12      4     8      1       1     10251         175462
+  24     41150      16      4    12      1       1     10517         264482
+  32     54150      21      5    16      1       1     10705         351302
+  40     67151      25      5    20      1       1      9237         478613
+  48     80151      28      4    24      1       1     12028         562852
+  56     93151      32      5    27      1       1     12996         677888
+  63    104479      34      4    30      1       1     14300         764534
+
+  plan                                       cumulative B   mean delta B     vs off
+  avg 16 KB (the default, tuned for 64 MB)        3456896          54829      0.99x
+  avg 4 KB                                        2014548          31932      1.70x
+  avg 1 KB (nearest the closed form)               764534          12091      4.49x
+  OFF: the whole blob, M2 as written              3430516          54414      1.00x
+  the 64 images themselves sum to 3412103 B (2147 B .. 104479 B)
+PASS CP6 at the closed-form average, chunking stores far less than the whole blob
+PASS CP6 the chunked store is smaller than the sum of the images it holds
+PASS CP6 chunks are shared: at the last checkpoint most chunks are Duplicate
+PASS B7 a checkpoint that shares half its chunks costs less than its image
+PASS A2 §4.4's closed form is real: the 64 MB default saves nothing on a 100 KB image
+PASS every store reads every checkpoint back byte for byte
+  READ THIS BEFORE QUOTING THE RATIO.  The default average is tuned for a 64 MB image
+  (A2 §4.4, owner question OQ2) and on a 100 KB machine image it cuts one to three
+  chunks, shares nothing and costs the node overhead — the closed form says so and the
+  row above measures it.  A checkpointing engine must therefore pick `avg` from the
+  image size, not from a constant; that is a finding for the coordinator, not a knob
+  this lane may turn (OQ2 fixed the default).  B7's own acceptance (<= 300 KB per
+  checkpoint and >= 200x) is stated at 64 MB with a one-cell edit and is
+  bench_checkpoint.ml's cell, not this one.
+
+== ALL PASS: 0 failure(s) ==
+   107 checks

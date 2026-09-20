@@ -1,0 +1,5 @@
+ℹ [197/198] Replayed Effect4.Laws.Machine.CompletionData
+info: src/Effect4/Laws/Machine/CompletionData.lean:55:0: Effect4.Machine.M1.Core: 0 open, 5 proved, 5 total; ceiling 0
+ℹ [198/198] Built Effect4.Laws.Machine.StoresLaws (2.4s)
+info: src/Effect4/Laws/Machine/StoresLaws.lean:2038:0: Effect4.Machine.M1.StoresLaws: 0 open, 5 proved, 5 total; ceiling 0
+Build completed successfully (198 jobs).

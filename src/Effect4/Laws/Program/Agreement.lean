@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.Denote
 import Effect4.Laws.Auto.Inversion
+import Effect4.Laws.Auto.Obligations
 
 /-!
 # Program.Agreement — the compile agrees with the denotation, one fiber at a time
@@ -928,9 +929,14 @@ theorem suspendBodyAt_memoLookup (q : Point) (m : MemoMapId) (scope : Nat) :
       Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoGet q.path m))) (.memoize q m scope) :=
   rfl
 
+def M1Origin.withFiberOf_forkLayer (q : Point) (m : MemoMapId) (scope : Nat) :
+    ProofGraph.Obligation ((interpOf root).withFiberOf (.forkLayer q m scope) =
+      some (.fork (resolveLayer root q m scope) ⟨true, true, .inherit⟩ q.path)) := ⟨⟩
+#proof_wanted M1Origin.withFiberOf_forkLayer
+
 theorem withFiberOf_forkLayer (q : Point) (m : MemoMapId) (scope : Nat) :
     (interpOf root).withFiberOf (.forkLayer q m scope) =
-      some (.fork (resolveLayer root q m scope) ⟨true, true, .inherit⟩) := rfl
+      some (.fork (resolveLayer root q m scope) ⟨true, true, .inherit⟩ q.path) := rfl
 
 theorem withFiberOf_awaitAllFailFast (targets : List FiberId) :
     (interpOf root).withFiberOf (.awaitAllFailFast targets) = some (.awaitAllFailFast targets) :=

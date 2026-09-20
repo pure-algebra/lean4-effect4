@@ -1,4 +1,5 @@
 import Lean
+import OCaml5.Lcnf.Clock
 import Conform.Source.Description
 import OCaml5.Ml.Syntax
 import OCaml5.Lcnf.Naming
@@ -47,6 +48,7 @@ open Lean Meta
 /-- A Lean type constant with a native OCaml counterpart, applied to already-converted
 arguments. -/
 def builtinTy? (n : Name) (args : List Ml.Ty) : Option Ml.Ty :=
+  (Clock.type? n args).orElse fun _ =>
   match n, args with
   | ``Nat, [] | ``Int, [] => some Ml.Ty.int
   | ``UInt8, [] | ``UInt16, [] | ``UInt32, [] | ``UInt64, [] | ``USize, [] => some Ml.Ty.int
@@ -67,7 +69,7 @@ def builtinTypeNames : List Name :=
   [``Nat, ``Int, ``UInt8, ``UInt16, ``UInt32, ``UInt64, ``USize, ``Bool, ``String, ``Unit,
    ``PUnit, ``Char, ``Float, ``List, ``Array, ``Option, ``Prod, ``Except]
 
-def isBuiltinType (n : Name) : Bool := builtinTypeNames.contains n
+def isBuiltinType (n : Name) : Bool := Clock.owns n || builtinTypeNames.contains n
 
 /-- The name of the abstract type standing for a type this module could not spell. -/
 def unknownTypeName : String := "lcnf_unknown"

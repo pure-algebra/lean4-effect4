@@ -22,4 +22,4 @@ it fails the gate's staleness check.
 declare_aesop_rule_sets [Effect4.Inversion] (default := true)
 
 declare_aesop_rule_sets [Effect4.TyOrder, Effect4.TypedState, Effect4.Rows, Effect4.Atoms,
-  Effect4.Reader, Effect4.Checker]
+  Effect4.Reader, Effect4.Checker, Effect4.Stores]

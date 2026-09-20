@@ -1,0 +1,206 @@
+--- ClockFlow.before-worklist.lean
++++ src/OCaml5/Lcnf/ClockFlow.lean
+@@ -140,20 +140,28 @@
+   | callable (target : Target) (supplied : Nat)
+   | constructor (site : ValueKey)
+   | unresolved
+-  deriving BEq
++  deriving BEq, Hashable, Inhabited
+ 
+ private structure CallableState where
+-  values : Std.HashMap ValueKey (Array Origin) := {}
++  values : Std.HashMap ValueKey (Std.HashSet Origin) := {}
+   facts : Nat := 0
++  edges : Std.HashMap ValueKey (Array ValueKey) := {}
++  pending : Array (ValueKey × Origin) := #[]
+ 
+ private def addOrigins (s : CallableState) (key : ValueKey) (values : Array Origin) : CallableState :=
+   values.foldl (fun s value =>
+-    let old := s.values.getD key #[]
++    let old := s.values.getD key {}
+     if old.contains value then s else
+-      { s with values := s.values.insert key (old.push value), facts := s.facts + 1 }) s
+-
+-private def copyOrigins (s : CallableState) (to source : ValueKey) : CallableState :=
+-  addOrigins s to (s.values.getD source #[])
++      { s with
++        values := s.values.insert key (old.insert value)
++        facts := s.facts + 1
++        pending := s.pending.push (key, value) }) s
++
++private def addEdge (s : CallableState) (source destination : ValueKey) : CallableState :=
++  let destinations := s.edges.getD source #[]
++  if destinations.contains destination then s else
++    let s := { s with edges := s.edges.insert source (destinations.push destination) }
++    addOrigins s destination (s.values.getD source {}).toArray
+ 
+ private def globalArity (env : Environment) (byName : Std.HashMap Name Flow) (n : Name) : Nat :=
+   match byName[n]? with
+@@ -196,7 +204,7 @@
+     let params := targetParams target
+     for i in [:args.size] do
+       if let some parameter := params[supplied + i]? then
+-        if let .fvar argument := args[i]! then s := copyOrigins s parameter (owner, argument)
++        if let .fvar argument := args[i]! then s := addEdge s (owner, argument) parameter
+     if let some result := result then
+       let result := (owner, result)
+       let arity := targetArity target
+@@ -205,7 +213,7 @@
+       else
+         let returns := targetReturns target
+         if returns.isEmpty then s := addOrigins s result #[.unresolved]
+-        else for value in returns do s := copyOrigins s result value
++        else for value in returns do s := addEdge s value result
+     return s
+   -- There are finitely many sites, constructor origins and (target, supplied-arity) pairs.
+   -- Each productive pass adds a fact. The computed product bounds all such additions.
+@@ -220,44 +228,55 @@
+     for (_, params) in flow.locals.toArray do
+       sites := sites + params.size
+       origins := origins + params.size + 1
+-  let mut converged := false
++  -- Copy edges are installed once. Each newly discovered (value, origin) fact is
++  -- queued once; projections and resolved callbacks add edges as their origins arrive.
++  -- Installing an edge also copies existing facts, so discovery order loses no source.
++  let mut projections : Std.HashMap ValueKey (Array (ValueKey × Option Name × Nat)) := {}
++  let mut watchers : Std.HashMap ValueKey (Array (Name × Array (Arg .pure) × Option FVarId)) := {}
++  for flow in flows do
++    for (to, source) in flow.aliases.toArray do
++      state := addEdge state (flow.name, source) (flow.name, to)
++    for (result, source, expected, index) in flow.projections do
++      let key := (flow.name, source)
++      projections := projections.insert key
++        ((projections.getD key #[]).push ((flow.name, result), expected, index))
++    for (callee, args, result) in flow.localCalls do
++      let key := (flow.name, callee)
++      watchers := watchers.insert key ((watchers.getD key #[]).push (flow.name, args, result))
++    for (id, name, args) in flow.globals.toArray do
++      if let some (.ctorInfo ci) := env.find? name then
++        if args.size ≥ ci.numParams + ci.numFields then
++          state := addOrigins state (flow.name, id) #[.constructor (flow.name, id)]
++        else
++          state := addOrigins state (flow.name, id) #[.callable (.global name) args.size]
++      else
++        state := applyTarget state flow.name (some id) (.global name) 0 args
++  let mut cursor := 0
+   for _ in [:sites * origins + 1] do
+-    let before := state.facts
+-    for flow in flows do
+-      for (to, source) in flow.aliases.toArray do
+-        state := copyOrigins state (flow.name, to) (flow.name, source)
+-      for (id, name, args) in flow.globals.toArray do
+-        if let some (.ctorInfo ci) := env.find? name then
+-          if args.size ≥ ci.numParams + ci.numFields then
+-            state := addOrigins state (flow.name, id) #[.constructor (flow.name, id)]
+-          else
+-            state := addOrigins state (flow.name, id) #[.callable (.global name) args.size]
+-        else
+-          state := applyTarget state flow.name (some id) (.global name) 0 args
+-      for (result, source, expected, index) in flow.projections do
+-        for origin in state.values.getD (flow.name, source) #[] do
+-          match origin with
+-          | .unresolved => state := addOrigins state (flow.name, result) #[.unresolved]
+-          | .constructor site =>
+-            if let some (ctor, args) := constructors[site]? then
+-              if expected.isNone || expected == some ctor then
+-                if let some (.ctorInfo ci) := env.find? ctor then
+-                  if let some (.fvar field) := args[ci.numParams + index]? then
+-                    state := copyOrigins state (flow.name, result) (site.1, field)
+-          | .callable .. => pure ()
+-      for (callee, args, result) in flow.localCalls do
+-        for origin in state.values.getD (flow.name, callee) #[] do
+-          match origin with
+-          | .callable target supplied =>
+-            state := applyTarget state flow.name result target supplied args
+-          | .unresolved =>
+-            if let some result := result then
+-              state := addOrigins state (flow.name, result) #[.unresolved]
+-          | .constructor _ => pure ()
+-    if state.facts == before then
+-      converged := true
+-      break
+-  unless converged do return none
++    if cursor ≥ state.pending.size then break
++    let (source, origin) := state.pending[cursor]!
++    cursor := cursor + 1
++    for destination in state.edges.getD source #[] do
++      state := addOrigins state destination #[origin]
++    for (destination, expected, index) in projections.getD source #[] do
++      match origin with
++      | .unresolved => state := addOrigins state destination #[.unresolved]
++      | .constructor site =>
++        if let some (ctor, args) := constructors[site]? then
++          if expected.isNone || expected == some ctor then
++            if let some (.ctorInfo ci) := env.find? ctor then
++              if let some (.fvar field) := args[ci.numParams + index]? then
++                state := addEdge state (site.1, field) destination
++      | .callable .. => pure ()
++    for (owner, args, result) in watchers.getD source #[] do
++      match origin with
++      | .callable target supplied =>
++        state := applyTarget state owner result target supplied args
++      | .unresolved =>
++        if let some result := result then state := addOrigins state (owner, result) #[.unresolved]
++      | .constructor _ => pure ()
++  -- Exhausting the finite fact bound is a refusal, never an incomplete fixed point.
++  unless cursor == state.pending.size do return none
+   let localName (owner : Name) (id : FVarId) := owner ++ `_clockFlowLocal ++ id.name
+   let mut out := #[]
+   for flow in flows do
+@@ -269,7 +288,7 @@
+       | none => true
+     let mut calls := flow.calls
+     for (callee, args, result) in flow.localCalls do
+-      let choices := state.values.getD (flow.name, callee) #[]
++      let choices := (state.values.getD (flow.name, callee) {}).toArray
+       if let some result := result then
+         let hasTarget := choices.any fun | .callable .. => true | _ => false
+         if !hasTarget || choices.contains .unresolved then unknown := unknown.insert result
+@@ -344,10 +363,47 @@
+     if narrowed.size + unknown.size == before then break
+   return (narrowed, unknown)
+ 
++/-- The globals referenced by a root include partial applications and wrapper/redArg
++links. Local calls stay within their owning flow; their global targets are among those
++references. Retain the original input order when selecting the reachable flows. -/
++private def rootFlows (input : Array Flow) (root : Name) : Array Flow := Id.run do
++  let mut byName : Std.HashMap Name Flow := {}
++  for flow in input do byName := byName.insert flow.name flow
++  let mut reached : NameSet := ({} : NameSet).insert root
++  let mut work := #[root]
++  let mut cursor := 0
++  -- Every queued name except the initial root is a distinct name from `input`.
++  for _ in [:input.size + 1] do
++    if cursor ≥ work.size then break
++    let name := work[cursor]!
++    cursor := cursor + 1
++    if let some flow := byName[name]? then
++      for (callee, _, _) in flow.calls do
++        if byName.contains callee && !reached.contains callee then
++          reached := reached.insert callee
++          work := work.push callee
++  return input.filter fun flow => reached.contains flow.name
++
++/-- Independent exports without a reachable clock boundary do not seed opaque inputs
++into another export's shared polymorphic helpers. The remaining roots are still analyzed
++as a union: every clock-reaching root and all of its opaque inputs are retained. -/
++private def clockRoots (roots : Array Name) (input : Array Flow) : Array Name × Array Flow := Id.run do
++  let mut active : Array Name := #[]
++  let mut names : NameSet := {}
++  for root in roots do
++    let selected := rootFlows input root
++    let relevant := selected.any fun flow => flow.clockResult || flow.calls.any fun (name, _, _) =>
++      clockIngress name || name == `OCaml5.Lcnf.ClockFlow.higherOrderClockResult
++    if relevant then
++      active := active.push root
++      for flow in selected do names := names.insert flow.name
++  return (active, input.filter fun flow => names.contains flow.name)
++
+ /-- Only values reaching a clock boundary are refused. Parameter and returned-value summaries
+ reach fixed points bounded by the number of facts that can be added. Ordinary Nat arithmetic
+ and its deliberate saturation stay unchanged. -/
+ def refusals (env : Environment) (roots : Array Name) (input : Array Flow) : Array String := Id.run do
++  let (roots, input) := clockRoots roots input
+   let some flows := resolveCallables env roots input
+     | return #["clock callable provenance did not reach a fixed point"]
+   let mut summaries : Std.HashMap Name (Array Nat) := {}

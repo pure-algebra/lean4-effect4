@@ -1,4 +1,8 @@
-(* e4_timers.mli — the timer store as a persistent priority search queue.
+(* e4_timers.mli — the bounded workshop timer store as a persistent priority search queue.
+
+   This is the workshop comparison carrier. The generated runtime uses the Lean
+   Machine.Timer store with exact ClockMillis/E4_clock.t times; E4_engine does not
+   substitute this bounded store for that generated implementation.
 
    What it is: the carrier of workshop/Timer/Timer.lean's `Store`, keyed by the registration
    number and prioritised by (deadline, seq). `Psq`'s shape (a finite map and a priority queue

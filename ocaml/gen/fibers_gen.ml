@@ -41,6 +41,7 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'f) run_fiber = {
   children : fiber_id list;
   dispatcher : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) dispatcher;
   context : 'ch;
+  origin : origin;
 }
 and parked = Parked_notParked | Parked_withGuard of int
 and ('nu, 'b, 'e, 'd, 'i, 'a) pending = {
@@ -76,7 +77,7 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k) run_interp = {
   answer_code : ('b, 'e, 'd, 'i, 'a) completion -> 'k;
   due_resumes : 'st -> 'k owed list * 'st;
   wake_list : wake_key -> int -> 'st -> 'st;
-  clock_step : int -> 'st -> 'k owed option * 'st;
+  clock_step : E4_clock.t -> 'st -> 'k owed option * 'st;
   cancel_name : 'nu -> fiber_id -> int -> 'nu;
   abort_name : 'nu;
   park_cancel_name : 'nu;
@@ -130,6 +131,7 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k, 'h) run_event =
   | RunEvent_callback of int * ('b, 'e, 'd, 'i, 'a) exit_
   | RunEvent_exited of fiber_id * ('b, 'e, 'd, 'i, 'a) exit_
 and fork_options = { start_immediately : bool; daemon : bool; mask_mode : mask_mode }
+and origin = Origin_root | Origin_forked of fiber_id * bool * int list
 and mask_mode = MaskMode_interruptible | MaskMode_uninterruptible | MaskMode_inherit
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task = Task_start of fiber_id | Task_resume of fiber_id * int * 'k | Task_wake of wake_key * int
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) cmd =
@@ -223,6 +225,7 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) race = {
   settled : bool;
   programs : 'k list;
   registering : bool;
+  next_site : int list option;
 }
 and ('b, 'e, 'd, 'i, 'a) race_all_state = {
   unstarted : fiber_id list;
@@ -240,9 +243,9 @@ and ('b, 'e, 'd, 'i, 'a) race_all_state = {
 and exhaustion = Exhaustion_fuel | Exhaustion_tape
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) replay_result = ReplayResult_finished of ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine | ReplayResult_frontier of exhaustion * ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine | ReplayResult_stuck of stuck * ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k, 'f, 'h) run_machine
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k) with_fiber_action =
-  | WithFiberAction_fork of 'k * fork_options
-  | WithFiberAction_forkIn of 'k * fork_options * int
-  | WithFiberAction_forkScoped of 'k * fork_options
+  | WithFiberAction_fork of 'k * fork_options * int list
+  | WithFiberAction_forkIn of 'k * fork_options * int * int list
+  | WithFiberAction_forkScoped of 'k * fork_options * int list
   | WithFiberAction_ambientScope
   | WithFiberAction_runIn of fiber_id * int
   | WithFiberAction_interrupt of fiber_id
@@ -253,7 +256,7 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'k) with_fiber_action =
   | WithFiberAction_awaitAllFailFast of fiber_id list
   | WithFiberAction_snapshotChildren
   | WithFiberAction_awaitNewChildren of fiber_id list
-  | WithFiberAction_raceAll of 'k list
+  | WithFiberAction_raceAll of 'k list * int list option
   | WithFiberAction_setInterruptible of 'k * bool
   | WithFiberAction_setContext of 'ch
   | WithFiberAction_getContext
@@ -285,7 +288,7 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a) run_decision =
   | RunDecision_answerAsync of fiber_id * int * ('b, 'e, 'd, 'i, 'a) completion
   | RunDecision_interruptFrom of fiber_id option * 'a reason_annotations * fiber_id
   | RunDecision_installMiddleware
-  | RunDecision_advance of int
+  | RunDecision_advance of E4_clock.t
 and ('e, 'd, 'i, 'a) reason = Reason_fail of 'e * 'a reason_annotations | Reason_die of 'd * 'a reason_annotations | Reason_interrupt of 'i option * 'a reason_annotations
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_step = FrameStep_running of ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_fiber | FrameStep_finished of ('b, 'e, 'd, 'i, 'a) exit_
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a) frame_event =
@@ -432,9 +435,9 @@ let run_fiber_interrupt_pending (core : (_, _, _, _, _, _, _, _) fiber_core) (f 
 
 
 
-(* LCNF mono: Effect4.Machine.RunFiber.make._redArg (core : Effect4.Machine.FiberCore lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (id : Nat) (current : lcAny) (interruptible : Bool) (budget : Prod Nat Bool) (context : lcAny) : Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny *)
+(* LCNF mono: Effect4.Machine.RunFiber.make._redArg (core : Effect4.Machine.FiberCore lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (id : Nat) (current : lcAny) (interruptible : Bool) (budget : Prod Nat Bool) (context : lcAny) (origin : Effect4.Machine.Origin) : Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny *)
 
-let run_fiber_make (core : (_, _, _, _, _, _, _, _) fiber_core) (id : int) current (interruptible : bool) (budget : int * bool) context : (_, _, _, _, _, _, _, _, _, _) run_fiber =
+let run_fiber_make (core : (_, _, _, _, _, _, _, _) fiber_core) (id : int) current (interruptible : bool) (budget : int * bool) context (origin : origin) : (_, _, _, _, _, _, _, _, _, _) run_fiber =
   match (core : (_, _, _, _, _, _, _, _) fiber_core) with
     | { start = start; _ } -> (match budget with
         | fst_1, snd_1 -> (let _x_1 = start current interruptible in
@@ -444,7 +447,7 @@ let run_fiber_make (core : (_, _, _, _, _, _, _, _) fiber_core) (id : int) curre
           let _x_5 = None in
           let _x_6 = 0 in
           let _x_7 = dispatcher_empty () () () () () () () () in
-          let _x_8 = ({ id = id; frame = _x_1; running = _x_2; parked = _x_3; pending = _x_4; finalizing = _x_5; exit_ = _x_5; current_op_count = _x_6; max_ops_before_yield = fst_1; prevent_yield = snd_1; yield_override = _x_5; observers = _x_4; children = _x_4; dispatcher = _x_7; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+          let _x_8 = ({ id = id; frame = _x_1; running = _x_2; parked = _x_3; pending = _x_4; finalizing = _x_5; exit_ = _x_5; current_op_count = _x_6; max_ops_before_yield = fst_1; prevent_yield = snd_1; yield_override = _x_5; observers = _x_4; children = _x_4; dispatcher = _x_7; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
           _x_8))
 
 
@@ -453,12 +456,12 @@ let run_fiber_make (core : (_, _, _, _, _, _, _, _) fiber_core) (id : int) curre
 
 let run_fiber_park (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) (p : (_, _, _, _, _, _) pending) : (_, _, _, _, _, _, _, _, _, _) run_fiber =
   match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; _ } -> (match (p : (_, _, _, _, _, _) pending) with
+    | { id = id; frame = frame; running = running; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin; _ } -> (match (p : (_, _, _, _, _, _) pending) with
         | { token = token; _ } -> (let _x_1 = Parked_withGuard token in
           let _x_2 = [] in
           let _x_3 = p :: _x_2 in
           let _x_4 = pending @ _x_3 in
-          let _x_5 = ({ id = id; frame = frame; running = running; parked = _x_1; pending = _x_4; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+          let _x_5 = ({ id = id; frame = frame; running = running; parked = _x_1; pending = _x_4; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
           _x_5))
 
 
@@ -1012,22 +1015,22 @@ let cause_combine (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : 
 
 let interrupt_record (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -> _ -> bool) (inst_4 : _ -> _ -> bool) (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) (interruptor : int option) (extra : (string * _) list) (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) =
   match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (match exit_ with
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (match exit_ with
         | None -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
             | { encode_fiber = encode_fiber; stack_annotations = stack_annotations; _ } -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
                 | { answer_with = answer_with; interruptible = interruptible; interrupted_cause = interrupted_cause; record_cause = record_cause; set_deferred = set_deferred; failure = failure; _ } -> (let _x_5 = false in
                   let _x_6 = true in
                   let _jp_7 = fun _y_8 -> let _x_9 = record_cause frame _y_8 in
-                  let f_1 = ({ id = id; frame = _x_9; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                  let f_1 = ({ id = id; frame = _x_9; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                   let _x_10 = interruptible _x_9 in
                   if _x_10 then (if running then (let _x_18 = set_deferred _x_9 _x_6 in
-                      let _x_19 = ({ id = id; frame = _x_18; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                      let _x_19 = ({ id = id; frame = _x_18; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                       let _x_20 = _x_19, _x_5 in
                       _x_20) else (let _x_12 = failure _y_8 in
                       let _x_13 = answer_with _x_9 _x_12 in
                       let _x_14 = Parked_notParked in
                       let _x_15 = [] in
-                      let _x_16 = ({ id = id; frame = _x_13; running = running; parked = _x_14; pending = _x_15; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                      let _x_16 = ({ id = id; frame = _x_13; running = running; parked = _x_14; pending = _x_15; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                       let _x_17 = _x_16, _x_6 in
                       _x_17)) else (let _x_11 = f_1, _x_5 in
                     _x_11) in
@@ -1129,11 +1132,11 @@ let countdown_park_resume_prim (core : (_, _, _, _, _, _, _, _) fiber_core) (int
 
 let countdown_park__red_arg__lam_0 (id : int) (next_token : int) (g : (_, _, _, _, _, _, _, _, _, _) run_fiber) : (_, _, _, _, _, _, _, _, _, _) run_fiber =
   match (g : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id_1; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let _x_1 = Observer_countdown (id, next_token) in
+    | { id = id_1; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (let _x_1 = Observer_countdown (id, next_token) in
       let _x_2 = [] in
       let _x_3 = _x_1 :: _x_2 in
       let _x_4 = observers @ _x_3 in
-      let _x_5 = ({ id = id_1; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = _x_4; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+      let _x_5 = ({ id = id_1; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = _x_4; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
       _x_5)
 
 
@@ -1150,10 +1153,10 @@ let countdown_park (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : (_, _,
       match _x_4 with
         | fst_5, snd_6 -> (match snd_6 with
             | None -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-                | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
+                | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
                     | { answer_with = answer_with; _ } -> (let _x_7 = countdown_park_resume_prim core interp resume_with fst_5 in
                       let _x_8 = answer_with frame _x_7 in
-                      let _x_9 = ({ id = id; frame = _x_8; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                      let _x_9 = ({ id = id; frame = _x_8; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                       let _x_10 = false in
                       let _x_11 = _x_9, _x_10 in
                       let _x_12 = m_1, _x_11 in
@@ -1161,12 +1164,12 @@ let countdown_park (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : (_, _,
             | Some val__13 -> (match val__13 with
                 | fst_14, snd_15 -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
                     | { cancel_name = cancel_name; park_cancel_name = park_cancel_name; _ } -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-                        | { id = id_1; frame = frame_1; running = running_1; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1 } -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
+                        | { id = id_1; frame = frame_1; running = running_1; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1; origin = origin_1 } -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
                             | { push_async_finalizer = push_async_finalizer; _ } -> (let _f_16 = countdown_park__red_arg__lam_0 id_1 next_token in
                               let m_2 = run_machine_modify m_1 fst_14 _f_16 in
                               let name = cancel_name park_cancel_name id_1 next_token in
                               let _x_17 = push_async_finalizer name frame_1 in
-                              let f_1 = ({ id = id_1; frame = _x_17; running = running_1; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                              let f_1 = ({ id = id_1; frame = _x_17; running = running_1; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1; origin = origin_1 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                               let _x_18 = Some fst_14 in
                               let _x_19 = ({ token = next_token; waiting_on = _x_18; remaining = snd_15; collected = fst_5; resume_with = resume_with; fail_fast = fail_fast } : (_, _, _, _, _, _) pending) in
                               let f_2 = run_fiber_park f_1 _x_19 in
@@ -1181,36 +1184,37 @@ let countdown_park (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : (_, _,
 
 
 
-(* LCNF mono: Effect4.Machine.spawn._redArg (core : Effect4.Machine.FiberCore lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (interp : Effect4.Machine.RunInterp lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (m : Effect4.Machine.RunMachine lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (parent : Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (program : lcAny) (options : Effect4.Supervision.ForkOptions) : Prod (Effect4.Machine.RunMachine lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (Prod (Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) Nat) *)
+(* LCNF mono: Effect4.Machine.spawn._redArg (core : Effect4.Machine.FiberCore lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (interp : Effect4.Machine.RunInterp lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (m : Effect4.Machine.RunMachine lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (parent : Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (program : lcAny) (options : Effect4.Supervision.ForkOptions) (site : List Nat) : Prod (Effect4.Machine.RunMachine lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (Prod (Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) Nat) *)
 
-let spawn (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (parent : (_, _, _, _, _, _, _, _, _, _) run_fiber) program (options : fork_options) : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine * ((_, _, _, _, _, _, _, _, _, _) run_fiber * int) =
+let spawn (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (parent : (_, _, _, _, _, _, _, _, _, _) run_fiber) program (options : fork_options) (site : int list) : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine * ((_, _, _, _, _, _, _, _, _, _) run_fiber * int) =
   match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
     | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = trace; stuck = stuck } -> (match (options : fork_options) with
         | { daemon = daemon; mask_mode = mask_mode; _ } -> (let _jp_1 = fun _y_2 -> match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
             | { budget_of = budget_of; _ } -> (match (parent : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
                 | { id = id; context = context; _ } -> (let _x_3 = budget_of context in
-                  let child = run_fiber_make core next_id program _y_2 _x_3 context in
-                  let _x_4 = [] in
-                  let _x_5 = child :: _x_4 in
-                  let _x_6 = fibers @ _x_5 in
-                  let _x_7 = 1 in
-                  let _x_8 = next_id + _x_7 in
-                  let m_1 = ({ fibers = _x_6; races = races; next_id = _x_8; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = trace; stuck = stuck } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
-                  let _x_9 = RunEvent_forked (id, next_id, daemon) in
-                  let _x_10 = _x_9 :: _x_4 in
-                  let _x_11 = run_machine_emit m_1 _x_10 in
-                  let _x_12 = parent, next_id in
-                  let _x_13 = _x_11, _x_12 in
-                  _x_13)) in
+                  let _x_4 = Origin_forked (id, daemon, site) in
+                  let child = run_fiber_make core next_id program _y_2 _x_3 context _x_4 in
+                  let _x_5 = [] in
+                  let _x_6 = child :: _x_5 in
+                  let _x_7 = fibers @ _x_6 in
+                  let _x_8 = 1 in
+                  let _x_9 = next_id + _x_8 in
+                  let m_1 = ({ fibers = _x_7; races = races; next_id = _x_9; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = trace; stuck = stuck } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
+                  let _x_10 = RunEvent_forked (id, next_id, daemon) in
+                  let _x_11 = _x_10 :: _x_5 in
+                  let _x_12 = run_machine_emit m_1 _x_11 in
+                  let _x_13 = parent, next_id in
+                  let _x_14 = _x_12, _x_13 in
+                  _x_14)) in
           match (mask_mode : mask_mode) with
-            | MaskMode_interruptible -> (let _x_14 = true in
-              _jp_1 _x_14)
-            | MaskMode_uninterruptible -> (let _x_15 = false in
+            | MaskMode_interruptible -> (let _x_15 = true in
               _jp_1 _x_15)
+            | MaskMode_uninterruptible -> (let _x_16 = false in
+              _jp_1 _x_16)
             | MaskMode_inherit -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
                 | { interruptible = interruptible; _ } -> (match (parent : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-                    | { frame = frame; _ } -> (let _x_16 = interruptible frame in
-                      _jp_1 _x_16)))))
+                    | { frame = frame; _ } -> (let _x_17 = interruptible frame in
+                      _jp_1 _x_17)))))
 
 
 
@@ -1223,10 +1227,10 @@ let start (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (parent : (_, _
     let _x_14 = parent, _x_13 in
     let _x_15 = m, _x_14 in
     _x_15) else (match (parent : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-      | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let _x_1 = 0 in
+      | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (let _x_1 = 0 in
         let _x_2 = Task_start child in
         let _x_3 = dispatcher_enqueue dispatcher _x_1 _x_2 in
-        let parent_1 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = _x_3; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+        let parent_1 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = _x_3; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
         let _x_4 = run_machine_arm m id in
         let _x_5 = RunEvent_scheduledTask (id, _x_1, _x_2) in
         let _x_6 = [] in
@@ -1238,13 +1242,13 @@ let start (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (parent : (_, _
 
 
 
-(* LCNF mono: Effect4.Machine.launchEntrant._redArg (core : Effect4.Machine.FiberCore lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (interp : Effect4.Machine.RunInterp lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (m : Effect4.Machine.RunMachine lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (host : Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (program : lcAny) : lcAny *)
+(* LCNF mono: Effect4.Machine.launchEntrant._redArg (core : Effect4.Machine.FiberCore lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (interp : Effect4.Machine.RunInterp lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (m : Effect4.Machine.RunMachine lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (host : Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (program : lcAny) (site : List Nat) : lcAny *)
 
-let launch_entrant (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (host : (_, _, _, _, _, _, _, _, _, _) run_fiber) program =
+let launch_entrant (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (host : (_, _, _, _, _, _, _, _, _, _) run_fiber) program (site : int list) =
   let _x_1 = true in
   let _x_2 = MaskMode_interruptible in
   let _x_3 = ({ start_immediately = _x_1; daemon = _x_1; mask_mode = _x_2 } : fork_options) in
-  let _x_4 = spawn core interp m host program _x_3 in
+  let _x_4 = spawn core interp m host program _x_3 site in
   match _x_4 with
     | fst_5, snd_6 -> (match snd_6 with
         | _, snd_8 -> (let _x_9 = fst_5, snd_8 in
@@ -1256,11 +1260,11 @@ let launch_entrant (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : (_, _,
 
 let link_scope__red_arg__lam_0 (scope : int) (snd_1 : int) (t : (_, _, _, _, _, _, _, _, _, _) run_fiber) : (_, _, _, _, _, _, _, _, _, _) run_fiber =
   match (t : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let _x_2 = Observer_dropScopeFinalizer (scope, snd_1) in
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (let _x_2 = Observer_dropScopeFinalizer (scope, snd_1) in
       let _x_3 = [] in
       let _x_4 = _x_2 :: _x_3 in
       let _x_5 = observers @ _x_4 in
-      let _x_6 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = _x_5; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+      let _x_6 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = _x_5; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
       _x_6)
 
 
@@ -1333,9 +1337,9 @@ let link_scope (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -
 let runloop_top (core : (_, _, _, _, _, _, _, _) fiber_core) (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) : (_, _, _, _, _, _, _, _, _, _) run_fiber =
   match (core : (_, _, _, _, _, _, _, _) fiber_core) with
     | { deferred_interrupt = deferred_interrupt; pending_failure = pending_failure; _ } -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-        | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let _x_1 = deferred_interrupt frame in
+        | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (let _x_1 = deferred_interrupt frame in
           if _x_1 then (let _x_2 = pending_failure frame in
-            let _x_3 = ({ id = id; frame = _x_2; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+            let _x_3 = ({ id = id; frame = _x_2; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
             _x_3) else f))
 
 
@@ -1344,9 +1348,9 @@ let runloop_top (core : (_, _, _, _, _, _, _, _) fiber_core) (f : (_, _, _, _, _
 
 let count_op (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) : (_, _, _, _, _, _, _, _, _, _) run_fiber =
   match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let _x_1 = 1 in
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (let _x_1 = 1 in
       let _x_2 = current_op_count + _x_1 in
-      let _x_3 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = _x_2; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+      let _x_3 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = _x_2; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
       _x_3)
 
 
@@ -1367,14 +1371,14 @@ let yield_verdict (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) : bool =
 let inject_yield (core : (_, _, _, _, _, _, _, _) fiber_core) (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) (yielding : bool) =
   if yielding then (let _x_15 = None in
     _x_15) else (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-      | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; observers = observers; children = children; dispatcher = dispatcher; context = context; _ } -> if prevent_yield then (let _x_14 = None in
+      | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin; _ } -> if prevent_yield then (let _x_14 = None in
           _x_14) else (let _x_1 = yield_verdict f in
           if _x_1 then (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
               | { current = current; answer_with = answer_with; yield_before = yield_before; _ } -> (let _x_3 = current frame in
                 let _x_4 = yield_before _x_3 in
                 let _x_5 = answer_with frame _x_4 in
                 let _x_6 = None in
-                let f_1 = ({ id = id; frame = _x_5; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = _x_6; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                let f_1 = ({ id = id; frame = _x_5; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = _x_6; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                 let _x_7 = RunEvent_yieldInjected (id, current_op_count) in
                 let _x_8 = [] in
                 let _x_9 = _x_7 :: _x_8 in
@@ -2479,13 +2483,13 @@ let evaluate_prim_finish_frame (m : (_, _, _, _, _, _, _, _, _, (_, _, _, _, _, 
   let m_1 = run_machine_emit m _x_2 in
   match (next : (_, _, _, _, _, _, _) frame_step) with
     | FrameStep_running fiber_3 -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-        | { id = id; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; _ } -> (let _x_4 = ({ id = id; frame = fiber_3; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+        | { id = id; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin; _ } -> (let _x_4 = ({ id = id; frame = fiber_3; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
           let _x_5 = Outcome_continue_ in
           let _x_6 = ({ machine = m_1; fiber = _x_4; yielding = yielding; outcome = _x_5; nested = nested } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
           _x_6))
     | FrameStep_finished exit__7 -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-        | { id = id_1; frame = frame; running = running_1; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1 } -> (let _x_8 = frame_exit_state frame in
-          let _x_9 = ({ id = id_1; frame = _x_8; running = running_1; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+        | { id = id_1; frame = frame; running = running_1; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1; origin = origin_1 } -> (let _x_8 = frame_exit_state frame in
+          let _x_9 = ({ id = id_1; frame = _x_8; running = running_1; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1; origin = origin_1 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
           let _x_10 = Outcome_finished exit__7 in
           let _x_11 = ({ machine = m_1; fiber = _x_9; yielding = yielding; outcome = _x_10; nested = nested } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
           _x_11))
@@ -2509,10 +2513,10 @@ let evaluate_prim_step_frame (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool)
 
 let evaluate_prim_with_fiber__red_arg__lam_0 (f : (_, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim, (_, _, _, _, _, _, _) frame_fiber) run_fiber) value : (_, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim, (_, _, _, _, _, _, _) frame_fiber) run_fiber =
   match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (match (frame : (_, _, _, _, _, _, _) frame_fiber) with
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (match (frame : (_, _, _, _, _, _, _) frame_fiber) with
         | { stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt; _ } -> (let _x_1 = Prim_success value in
           let _x_2 = ({ current = _x_1; stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
-          let _x_3 = ({ id = id; frame = _x_2; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+          let _x_3 = ({ id = id; frame = _x_2; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
           _x_3))
 
 
@@ -2612,12 +2616,12 @@ let supervision_race_all_state_initial (entrants : int list) : (_, _, _, _, _) r
 
 
 
-(* LCNF mono: Effect4.Machine.beginRace._redArg (core : Effect4.Machine.FiberCore lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (interp : Effect4.Machine.RunInterp lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (m : Effect4.Machine.RunMachine lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (f : Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (yielding : Bool) (entrants : List lcAny) : Effect4.Machine.Iter lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny *)
+(* LCNF mono: Effect4.Machine.beginRace._redArg (core : Effect4.Machine.FiberCore lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (interp : Effect4.Machine.RunInterp lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (m : Effect4.Machine.RunMachine lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (f : Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (yielding : Bool) (entrants : List lcAny) (site : Option (List Nat)) : Effect4.Machine.Iter lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny *)
 
-let begin_race (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) (yielding : bool) (entrants : _ list) : (_, _, _, _, _, _, _, _, _, _, _, _) iter =
+let begin_race (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) (yielding : bool) (entrants : _ list) (site : int list option) : (_, _, _, _, _, _, _, _, _, _, _, _) iter =
   match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
     | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = trace; stuck = stuck } -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-        | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let _x_1 = [] in
+        | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (let _x_1 = [] in
           let _x_2 = supervision_race_all_state_initial _x_1 in
           match (_x_2 : (_, _, _, _, _) race_all_state) with
             | { unstarted = unstarted; _ } -> (let _x_3 = false in
@@ -2627,7 +2631,7 @@ let begin_race (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : (_, _, _, 
               let _x_7 = next_race + _x_5 in
               let _x_8 = List.length entrants in
               let _x_9 = ({ unstarted = unstarted; starting = _x_4; live = _x_1; remaining = _x_8; failures = _x_1; winner = _x_4; accepted = _x_4; cleanup_needed = _x_3; requests = _x_1; cleanup = _x_4; cleanup_requested = _x_3 } : (_, _, _, _, _) race_all_state) in
-              let race = ({ id = next_race; host = id; token = next_token; state = _x_9; settled = _x_3; programs = entrants; registering = _x_3 } : (_, _, _, _, _, _, _, _) race) in
+              let race = ({ id = next_race; host = id; token = next_token; state = _x_9; settled = _x_3; programs = entrants; registering = _x_3; next_site = site } : (_, _, _, _, _, _, _, _) race) in
               match (core : (_, _, _, _, _, _, _, _) fiber_core) with
                 | { answer_with = answer_with; _ } -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
                     | { park_code = park_code; _ } -> (let _x_10 = race :: _x_1 in
@@ -2636,7 +2640,7 @@ let begin_race (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : (_, _, _, 
                       let _x_12 = ParkKind_race next_race in
                       let _x_13 = park_code _x_12 in
                       let _x_14 = answer_with frame _x_13 in
-                      let f_1 = ({ id = id; frame = _x_14; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                      let f_1 = ({ id = id; frame = _x_14; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                       let _x_15 = RunEvent_raceStarted (next_race, id, _x_8) in
                       let _x_16 = _x_15 :: _x_1 in
                       let _x_17 = run_machine_emit m_1 _x_16 in
@@ -2699,14 +2703,15 @@ let rec fork_finalizers (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : (
     | head_4 :: tail_5 -> (let _x_6 = true in
       let _x_7 = MaskMode_inherit in
       let _x_8 = ({ start_immediately = _x_6; daemon = _x_6; mask_mode = _x_7 } : fork_options) in
-      let _x_9 = spawn core interp m host head_4 _x_8 in
-      match _x_9 with
-        | fst_10, snd_11 -> (match snd_11 with
-            | _, snd_13 -> (let _x_14 = fork_finalizers core interp fst_10 host tail_5 in
-              match _x_14 with
-                | fst_15, snd_16 -> (let _x_17 = snd_13 :: snd_16 in
-                  let _x_18 = fst_15, _x_17 in
-                  _x_18))))
+      let _x_9 = [] in
+      let _x_10 = spawn core interp m host head_4 _x_8 _x_9 in
+      match _x_10 with
+        | fst_11, snd_12 -> (match snd_12 with
+            | _, snd_14 -> (let _x_15 = fork_finalizers core interp fst_11 host tail_5 in
+              match _x_15 with
+                | fst_16, snd_17 -> (let _x_18 = snd_14 :: snd_17 in
+                  let _x_19 = fst_16, _x_18 in
+                  _x_19))))
 
 
 
@@ -2739,9 +2744,9 @@ let evaluate_prim_with_fiber__red_arg__lam_5 (token_1 : int) (x_2 : observer) : 
 
 let evaluate_prim_with_fiber__red_arg__lam_6 (_f_1 : observer -> bool) (g : (_, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim, (_, _, _, _, _, _, _) frame_fiber) run_fiber) : (_, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim, (_, _, _, _, _, _, _) frame_fiber) run_fiber =
   match (g : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let _x_2 = [] in
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (let _x_2 = [] in
       let _x_3 = list_filter_tr_loop _f_1 observers _x_2 in
-      let _x_4 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = _x_3; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+      let _x_4 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = _x_3; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
       _x_4)
 
 
@@ -2749,317 +2754,317 @@ let evaluate_prim_with_fiber__red_arg__lam_6 (_f_1 : observer -> bool) (g : (_, 
 (* LCNF mono: Effect4.Machine.evaluatePrim.withFiber._redArg (inst.1 : lcAny -> lcAny -> Bool) (inst.2 : lcAny -> lcAny -> Bool) (inst.3 : lcAny -> lcAny -> Bool) (inst.4 : lcAny -> lcAny -> Bool) (interp : Effect4.Machine.RunInterp lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny (Effect4.Prim lcAny lcAny lcAny lcAny lcAny lcAny lcAny)) (m : Effect4.Machine.RunMachine lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny (Effect4.Prim lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (Effect4.FrameFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (Effect4.FrameEvent lcAny lcAny lcAny lcAny lcAny lcAny lcAny)) (f : Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny (Effect4.Prim lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (Effect4.FrameFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny)) (yielding : Bool) (action : Effect4.Machine.WithFiberAction lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny (Effect4.Prim lcAny lcAny lcAny lcAny lcAny lcAny lcAny)) : Effect4.Machine.Iter lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny (Effect4.Prim lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (Effect4.FrameFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (Effect4.FrameEvent lcAny lcAny lcAny lcAny lcAny lcAny lcAny) *)
 
 let evaluate_prim_with_fiber (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -> _ -> bool) (inst_4 : _ -> _ -> bool) (interp : (_, _, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim) run_interp) (m : (_, _, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim, (_, _, _, _, _, _, _) frame_fiber, (_, _, _, _, _, _, _) frame_event) run_machine) (f : (_, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim, (_, _, _, _, _, _, _) frame_fiber) run_fiber) (yielding : bool) (action : (_, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim) with_fiber_action) : (_, _, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim, (_, _, _, _, _, _, _) frame_fiber, (_, _, _, _, _, _, _) frame_event) iter =
-  let _jp_5 = fun _y_6 _y_7 _y_8 _y_9 _y_10 -> let _x_11 = _y_6 @ _y_10 in
-  let _x_12 = ({ machine = _y_7; fiber = _y_8; yielding = yielding; outcome = _y_9; nested = _x_11 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+  let _jp_5 = fun _y_6 _y_7 _y_8 _y_9 _y_10 -> let _x_11 = _y_9 @ _y_10 in
+  let _x_12 = ({ machine = _y_8; fiber = _y_7; yielding = yielding; outcome = _y_6; nested = _x_11 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
   _x_12 in
   let _x_13 = frame_core () () () () () () () in
   match (action : (_, _, _, _, _, _, _, _, _) with_fiber_action) with
-    | WithFiberAction_fork (program_14, options_15) -> (match (options_15 : fork_options) with
-        | { start_immediately = start_immediately; daemon = daemon; _ } -> (let _jp_16 = fun _y_17 -> match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-            | { id = id; _ } -> (let _x_18 = spawn _x_13 interp _y_17 f program_14 options_15 in
-              match _x_18 with
-                | fst_19, snd_20 -> (match snd_20 with
-                    | fst_21, snd_22 -> (let _x_23 = start fst_19 fst_21 snd_22 start_immediately in
-                      match _x_23 with
-                        | fst_24, snd_25 -> (match snd_25 with
-                            | fst_26, snd_27 -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
-                                | { fiber_value = fiber_value; _ } -> (let _x_28 = fiber_value snd_22 in
-                                  let _x_29 = evaluate_prim_with_fiber__red_arg__lam_0 fst_26 _x_28 in
-                                  let _x_30 = Outcome_continue_ in
-                                  if daemon then (let _x_34 = [] in
-                                    _jp_5 snd_27 fst_24 _x_29 _x_30 _x_34) else (let _x_31 = Cmd_trackChild (id, snd_22) in
-                                    let _x_32 = [] in
-                                    let _x_33 = _x_31 :: _x_32 in
-                                    _jp_5 snd_27 fst_24 _x_29 _x_30 _x_33))))))) in
-          if daemon then _jp_16 m else (match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
-              | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; armed = armed; state = state; trace = trace; stuck = stuck; _ } -> (let _x_35 = true in
-                let _x_36 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = _x_35; armed = armed; state = state; trace = trace; stuck = stuck } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
-                _jp_16 _x_36))))
-    | WithFiberAction_forkIn (program_37, options_38, scope_39) -> (match (options_38 : fork_options) with
-        | { start_immediately = start_immediately_1; mask_mode = mask_mode; _ } -> (let _x_40 = true in
-          let _x_41 = ({ start_immediately = start_immediately_1; daemon = _x_40; mask_mode = mask_mode } : fork_options) in
-          let _x_42 = spawn _x_13 interp m f program_37 _x_41 in
-          match _x_42 with
-            | fst_43, snd_44 -> (match snd_44 with
-                | fst_45, snd_46 -> (let _x_47 = start fst_43 fst_45 snd_46 start_immediately_1 in
-                  match _x_47 with
-                    | fst_48, snd_49 -> (match snd_49 with
-                        | fst_50, snd_51 -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
-                            | { fiber_value = fiber_value_1; stack_annotations = stack_annotations; _ } -> (match (fst_50 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-                                | { id = id_1; _ } -> (let _x_52 = fiber_value_1 snd_46 in
-                                  let _x_53 = evaluate_prim_with_fiber__red_arg__lam_0 fst_50 _x_52 in
-                                  let _x_54 = Outcome_continue_ in
-                                  let _x_55 = ScopeMode_forkIn in
-                                  let _x_56 = Some id_1 in
-                                  let _x_57 = stack_annotations id_1 in
-                                  let _x_58 = Cmd_link (_x_55, scope_39, snd_46, _x_56, _x_57) in
-                                  let _x_59 = [] in
-                                  let _x_60 = _x_58 :: _x_59 in
-                                  let _x_61 = snd_51 @ _x_60 in
-                                  let _x_62 = ({ machine = fst_48; fiber = _x_53; yielding = yielding; outcome = _x_54; nested = _x_61 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-                                  _x_62))))))))
-    | WithFiberAction_forkScoped (program_63, options_64) -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
+    | WithFiberAction_fork (program_14, options_15, site_16) -> (match (options_15 : fork_options) with
+        | { start_immediately = start_immediately; daemon = daemon; _ } -> (let _jp_17 = fun _y_18 -> match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+            | { id = id; _ } -> (let _x_19 = spawn _x_13 interp _y_18 f program_14 options_15 site_16 in
+              match _x_19 with
+                | fst_20, snd_21 -> (match snd_21 with
+                    | fst_22, snd_23 -> (let _x_24 = start fst_20 fst_22 snd_23 start_immediately in
+                      match _x_24 with
+                        | fst_25, snd_26 -> (match snd_26 with
+                            | fst_27, snd_28 -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
+                                | { fiber_value = fiber_value; _ } -> (let _x_29 = fiber_value snd_23 in
+                                  let _x_30 = evaluate_prim_with_fiber__red_arg__lam_0 fst_27 _x_29 in
+                                  let _x_31 = Outcome_continue_ in
+                                  if daemon then (let _x_35 = [] in
+                                    _jp_5 _x_31 _x_30 fst_25 snd_28 _x_35) else (let _x_32 = Cmd_trackChild (id, snd_23) in
+                                    let _x_33 = [] in
+                                    let _x_34 = _x_32 :: _x_33 in
+                                    _jp_5 _x_31 _x_30 fst_25 snd_28 _x_34))))))) in
+          if daemon then _jp_17 m else (match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
+              | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; armed = armed; state = state; trace = trace; stuck = stuck; _ } -> (let _x_36 = true in
+                let _x_37 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = _x_36; armed = armed; state = state; trace = trace; stuck = stuck } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
+                _jp_17 _x_37))))
+    | WithFiberAction_forkIn (program_38, options_39, scope_40, site_41) -> (match (options_39 : fork_options) with
+        | { start_immediately = start_immediately_1; mask_mode = mask_mode; _ } -> (let _x_42 = true in
+          let _x_43 = ({ start_immediately = start_immediately_1; daemon = _x_42; mask_mode = mask_mode } : fork_options) in
+          let _x_44 = spawn _x_13 interp m f program_38 _x_43 site_41 in
+          match _x_44 with
+            | fst_45, snd_46 -> (match snd_46 with
+                | fst_47, snd_48 -> (let _x_49 = start fst_45 fst_47 snd_48 start_immediately_1 in
+                  match _x_49 with
+                    | fst_50, snd_51 -> (match snd_51 with
+                        | fst_52, snd_53 -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
+                            | { fiber_value = fiber_value_1; stack_annotations = stack_annotations; _ } -> (match (fst_52 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+                                | { id = id_1; _ } -> (let _x_54 = fiber_value_1 snd_48 in
+                                  let _x_55 = evaluate_prim_with_fiber__red_arg__lam_0 fst_52 _x_54 in
+                                  let _x_56 = Outcome_continue_ in
+                                  let _x_57 = ScopeMode_forkIn in
+                                  let _x_58 = Some id_1 in
+                                  let _x_59 = stack_annotations id_1 in
+                                  let _x_60 = Cmd_link (_x_57, scope_40, snd_48, _x_58, _x_59) in
+                                  let _x_61 = [] in
+                                  let _x_62 = _x_60 :: _x_61 in
+                                  let _x_63 = snd_53 @ _x_62 in
+                                  let _x_64 = ({ machine = fst_50; fiber = _x_55; yielding = yielding; outcome = _x_56; nested = _x_63 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+                                  _x_64))))))))
+    | WithFiberAction_forkScoped (program_65, options_66, site_67) -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
         | { ambient_scope = ambient_scope; fiber_value = fiber_value_2; stack_annotations = stack_annotations_1; missing_scope = missing_scope; _ } -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-            | { id = id_2; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let _x_65 = ambient_scope context in
-              match _x_65 with
+            | { id = id_2; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (let _x_68 = ambient_scope context in
+              match _x_68 with
                 | None -> (match (frame : (_, _, _, _, _, _, _) frame_fiber) with
-                    | { stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt; _ } -> (let _x_66 = cause_die missing_scope in
-                      let _x_67 = Prim_failure _x_66 in
-                      let _x_68 = ({ current = _x_67; stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
-                      let _x_69 = ({ id = id_2; frame = _x_68; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
-                      let _x_70 = Outcome_continue_ in
-                      let _x_71 = [] in
-                      let _x_72 = ({ machine = m; fiber = _x_69; yielding = yielding; outcome = _x_70; nested = _x_71 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-                      _x_72))
-                | Some val__73 -> (match (options_64 : fork_options) with
-                    | { start_immediately = start_immediately_2; mask_mode = mask_mode_1; _ } -> (let _x_74 = true in
-                      let _x_75 = ({ start_immediately = start_immediately_2; daemon = _x_74; mask_mode = mask_mode_1 } : fork_options) in
-                      let _x_76 = spawn _x_13 interp m f program_63 _x_75 in
-                      match _x_76 with
-                        | fst_77, snd_78 -> (match snd_78 with
-                            | fst_79, snd_80 -> (let _x_81 = start fst_77 fst_79 snd_80 start_immediately_2 in
-                              match _x_81 with
-                                | fst_82, snd_83 -> (match snd_83 with
-                                    | fst_84, snd_85 -> (match (fst_84 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-                                        | { id = id_3; _ } -> (let _x_86 = fiber_value_2 snd_80 in
-                                          let _x_87 = evaluate_prim_with_fiber__red_arg__lam_0 fst_84 _x_86 in
-                                          let _x_88 = Outcome_continue_ in
-                                          let _x_89 = ScopeMode_forkIn in
-                                          let _x_90 = Some id_3 in
-                                          let _x_91 = stack_annotations_1 id_3 in
-                                          let _x_92 = Cmd_link (_x_89, val__73, snd_80, _x_90, _x_91) in
-                                          let _x_93 = [] in
-                                          let _x_94 = _x_92 :: _x_93 in
-                                          let _x_95 = snd_85 @ _x_94 in
-                                          let _x_96 = ({ machine = fst_82; fiber = _x_87; yielding = yielding; outcome = _x_88; nested = _x_95 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-                                          _x_96))))))))))
+                    | { stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt; _ } -> (let _x_69 = cause_die missing_scope in
+                      let _x_70 = Prim_failure _x_69 in
+                      let _x_71 = ({ current = _x_70; stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
+                      let _x_72 = ({ id = id_2; frame = _x_71; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                      let _x_73 = Outcome_continue_ in
+                      let _x_74 = [] in
+                      let _x_75 = ({ machine = m; fiber = _x_72; yielding = yielding; outcome = _x_73; nested = _x_74 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+                      _x_75))
+                | Some val__76 -> (match (options_66 : fork_options) with
+                    | { start_immediately = start_immediately_2; mask_mode = mask_mode_1; _ } -> (let _x_77 = true in
+                      let _x_78 = ({ start_immediately = start_immediately_2; daemon = _x_77; mask_mode = mask_mode_1 } : fork_options) in
+                      let _x_79 = spawn _x_13 interp m f program_65 _x_78 site_67 in
+                      match _x_79 with
+                        | fst_80, snd_81 -> (match snd_81 with
+                            | fst_82, snd_83 -> (let _x_84 = start fst_80 fst_82 snd_83 start_immediately_2 in
+                              match _x_84 with
+                                | fst_85, snd_86 -> (match snd_86 with
+                                    | fst_87, snd_88 -> (match (fst_87 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+                                        | { id = id_3; _ } -> (let _x_89 = fiber_value_2 snd_83 in
+                                          let _x_90 = evaluate_prim_with_fiber__red_arg__lam_0 fst_87 _x_89 in
+                                          let _x_91 = Outcome_continue_ in
+                                          let _x_92 = ScopeMode_forkIn in
+                                          let _x_93 = Some id_3 in
+                                          let _x_94 = stack_annotations_1 id_3 in
+                                          let _x_95 = Cmd_link (_x_92, val__76, snd_83, _x_93, _x_94) in
+                                          let _x_96 = [] in
+                                          let _x_97 = _x_95 :: _x_96 in
+                                          let _x_98 = snd_88 @ _x_97 in
+                                          let _x_99 = ({ machine = fst_85; fiber = _x_90; yielding = yielding; outcome = _x_91; nested = _x_98 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+                                          _x_99))))))))))
     | WithFiberAction_ambientScope -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
         | { ambient_scope = ambient_scope_1; scope_value = scope_value; missing_scope = missing_scope_1; _ } -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-            | { id = id_4; frame = frame_1; running = running_1; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1 } -> (let _x_97 = ambient_scope_1 context_1 in
-              match _x_97 with
+            | { id = id_4; frame = frame_1; running = running_1; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1; origin = origin_1 } -> (let _x_100 = ambient_scope_1 context_1 in
+              match _x_100 with
                 | None -> (match (frame_1 : (_, _, _, _, _, _, _) frame_fiber) with
-                    | { stack = stack_1; interruptible = interruptible_1; interrupted_cause = interrupted_cause_1; deferred_interrupt = deferred_interrupt_1; _ } -> (let _x_98 = cause_die missing_scope_1 in
-                      let _x_99 = Prim_failure _x_98 in
-                      let _x_100 = ({ current = _x_99; stack = stack_1; interruptible = interruptible_1; interrupted_cause = interrupted_cause_1; deferred_interrupt = deferred_interrupt_1 } : (_, _, _, _, _, _, _) frame_fiber) in
-                      let _x_101 = ({ id = id_4; frame = _x_100; running = running_1; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
-                      let _x_102 = Outcome_continue_ in
-                      let _x_103 = [] in
-                      let _x_104 = ({ machine = m; fiber = _x_101; yielding = yielding; outcome = _x_102; nested = _x_103 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-                      _x_104))
-                | Some val__105 -> (let _x_106 = scope_value val__105 in
-                  let _x_107 = evaluate_prim_with_fiber__red_arg__lam_0 f _x_106 in
-                  let _x_108 = Outcome_continue_ in
-                  let _x_109 = [] in
-                  let _x_110 = ({ machine = m; fiber = _x_107; yielding = yielding; outcome = _x_108; nested = _x_109 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-                  _x_110))))
-    | WithFiberAction_runIn (target_111, scope_112) -> (let _x_113 = ScopeMode_fiberRunIn in
-      let _x_114 = Some target_111 in
-      let _x_115 = [] in
-      let _x_116 = link_scope inst_1 inst_2 inst_3 inst_4 _x_13 interp m _x_113 scope_112 target_111 _x_114 _x_115 in
-      match _x_116 with
-        | fst_117, snd_118 -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
-            | { void_value = void_value; _ } -> (let _x_119 = evaluate_prim_with_fiber__red_arg__lam_0 f void_value in
-              let _x_120 = false in
-              let _x_121 = evaluate_prim_with_fiber__red_arg__lam_1 fst_117 _x_120 in
-              let _x_122 = ({ machine = fst_117; fiber = _x_119; yielding = yielding; outcome = _x_121; nested = snd_118 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-              _x_122)))
-    | WithFiberAction_interrupt target_123 -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-        | { id = id_5; frame = frame_2; running = running_2; parked = parked_2; pending = pending_2; finalizing = finalizing_2; exit_ = exit__2; current_op_count = current_op_count_2; max_ops_before_yield = max_ops_before_yield_2; prevent_yield = prevent_yield_2; yield_override = yield_override_2; observers = observers_2; children = children_2; dispatcher = dispatcher_2; context = context_2 } -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
+                    | { stack = stack_1; interruptible = interruptible_1; interrupted_cause = interrupted_cause_1; deferred_interrupt = deferred_interrupt_1; _ } -> (let _x_101 = cause_die missing_scope_1 in
+                      let _x_102 = Prim_failure _x_101 in
+                      let _x_103 = ({ current = _x_102; stack = stack_1; interruptible = interruptible_1; interrupted_cause = interrupted_cause_1; deferred_interrupt = deferred_interrupt_1 } : (_, _, _, _, _, _, _) frame_fiber) in
+                      let _x_104 = ({ id = id_4; frame = _x_103; running = running_1; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1; origin = origin_1 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                      let _x_105 = Outcome_continue_ in
+                      let _x_106 = [] in
+                      let _x_107 = ({ machine = m; fiber = _x_104; yielding = yielding; outcome = _x_105; nested = _x_106 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+                      _x_107))
+                | Some val__108 -> (let _x_109 = scope_value val__108 in
+                  let _x_110 = evaluate_prim_with_fiber__red_arg__lam_0 f _x_109 in
+                  let _x_111 = Outcome_continue_ in
+                  let _x_112 = [] in
+                  let _x_113 = ({ machine = m; fiber = _x_110; yielding = yielding; outcome = _x_111; nested = _x_112 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+                  _x_113))))
+    | WithFiberAction_runIn (target_114, scope_115) -> (let _x_116 = ScopeMode_fiberRunIn in
+      let _x_117 = Some target_114 in
+      let _x_118 = [] in
+      let _x_119 = link_scope inst_1 inst_2 inst_3 inst_4 _x_13 interp m _x_116 scope_115 target_114 _x_117 _x_118 in
+      match _x_119 with
+        | fst_120, snd_121 -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
+            | { void_value = void_value; _ } -> (let _x_122 = evaluate_prim_with_fiber__red_arg__lam_0 f void_value in
+              let _x_123 = false in
+              let _x_124 = evaluate_prim_with_fiber__red_arg__lam_1 fst_120 _x_123 in
+              let _x_125 = ({ machine = fst_120; fiber = _x_122; yielding = yielding; outcome = _x_124; nested = snd_121 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+              _x_125)))
+    | WithFiberAction_interrupt target_126 -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+        | { id = id_5; frame = frame_2; running = running_2; parked = parked_2; pending = pending_2; finalizing = finalizing_2; exit_ = exit__2; current_op_count = current_op_count_2; max_ops_before_yield = max_ops_before_yield_2; prevent_yield = prevent_yield_2; yield_override = yield_override_2; observers = observers_2; children = children_2; dispatcher = dispatcher_2; context = context_2; origin = origin_2 } -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
             | { interrupt_as_code = interrupt_as_code; _ } -> (match (frame_2 : (_, _, _, _, _, _, _) frame_fiber) with
-                | { stack = stack_2; interruptible = interruptible_2; interrupted_cause = interrupted_cause_2; deferred_interrupt = deferred_interrupt_2; _ } -> (let _x_124 = interrupt_as_code target_123 id_5 in
-                  let _x_125 = ({ current = _x_124; stack = stack_2; interruptible = interruptible_2; interrupted_cause = interrupted_cause_2; deferred_interrupt = deferred_interrupt_2 } : (_, _, _, _, _, _, _) frame_fiber) in
-                  let _x_126 = ({ id = id_5; frame = _x_125; running = running_2; parked = parked_2; pending = pending_2; finalizing = finalizing_2; exit_ = exit__2; current_op_count = current_op_count_2; max_ops_before_yield = max_ops_before_yield_2; prevent_yield = prevent_yield_2; yield_override = yield_override_2; observers = observers_2; children = children_2; dispatcher = dispatcher_2; context = context_2 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
-                  let _x_127 = Outcome_continue_ in
-                  let _x_128 = [] in
-                  let _x_129 = ({ machine = m; fiber = _x_126; yielding = yielding; outcome = _x_127; nested = _x_128 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-                  _x_129))))
-    | WithFiberAction_interruptAs (target_130, who_131) -> (let _x_132 = evaluate_prim_interrupt_as inst_1 inst_2 inst_3 inst_4 interp m f yielding target_130 who_131 in
-      _x_132)
-    | WithFiberAction_interruptScoped target_133 -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-        | { id = id_6; frame = frame_3; running = running_3; parked = parked_3; pending = pending_3; finalizing = finalizing_3; exit_ = exit__3; current_op_count = current_op_count_3; max_ops_before_yield = max_ops_before_yield_3; prevent_yield = prevent_yield_3; yield_override = yield_override_3; observers = observers_3; children = children_3; dispatcher = dispatcher_3; context = context_3 } -> (let _x_134 = target_133 = id_6 in
-          if _x_134 then (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
-              | { void_value = void_value_1; _ } -> (let _x_141 = evaluate_prim_with_fiber__red_arg__lam_0 f void_value_1 in
-                let _x_142 = Outcome_continue_ in
-                let _x_143 = [] in
-                let _x_144 = ({ machine = m; fiber = _x_141; yielding = yielding; outcome = _x_142; nested = _x_143 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-                _x_144)) else (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
+                | { stack = stack_2; interruptible = interruptible_2; interrupted_cause = interrupted_cause_2; deferred_interrupt = deferred_interrupt_2; _ } -> (let _x_127 = interrupt_as_code target_126 id_5 in
+                  let _x_128 = ({ current = _x_127; stack = stack_2; interruptible = interruptible_2; interrupted_cause = interrupted_cause_2; deferred_interrupt = deferred_interrupt_2 } : (_, _, _, _, _, _, _) frame_fiber) in
+                  let _x_129 = ({ id = id_5; frame = _x_128; running = running_2; parked = parked_2; pending = pending_2; finalizing = finalizing_2; exit_ = exit__2; current_op_count = current_op_count_2; max_ops_before_yield = max_ops_before_yield_2; prevent_yield = prevent_yield_2; yield_override = yield_override_2; observers = observers_2; children = children_2; dispatcher = dispatcher_2; context = context_2; origin = origin_2 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                  let _x_130 = Outcome_continue_ in
+                  let _x_131 = [] in
+                  let _x_132 = ({ machine = m; fiber = _x_129; yielding = yielding; outcome = _x_130; nested = _x_131 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+                  _x_132))))
+    | WithFiberAction_interruptAs (target_133, who_134) -> (let _x_135 = evaluate_prim_interrupt_as inst_1 inst_2 inst_3 inst_4 interp m f yielding target_133 who_134 in
+      _x_135)
+    | WithFiberAction_interruptScoped target_136 -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+        | { id = id_6; frame = frame_3; running = running_3; parked = parked_3; pending = pending_3; finalizing = finalizing_3; exit_ = exit__3; current_op_count = current_op_count_3; max_ops_before_yield = max_ops_before_yield_3; prevent_yield = prevent_yield_3; yield_override = yield_override_3; observers = observers_3; children = children_3; dispatcher = dispatcher_3; context = context_3; origin = origin_3 } -> (let _x_137 = target_136 = id_6 in
+          if _x_137 then (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
+              | { void_value = void_value_1; _ } -> (let _x_144 = evaluate_prim_with_fiber__red_arg__lam_0 f void_value_1 in
+                let _x_145 = Outcome_continue_ in
+                let _x_146 = [] in
+                let _x_147 = ({ machine = m; fiber = _x_144; yielding = yielding; outcome = _x_145; nested = _x_146 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+                _x_147)) else (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
               | { interrupt_code = interrupt_code; _ } -> (match (frame_3 : (_, _, _, _, _, _, _) frame_fiber) with
-                  | { stack = stack_3; interruptible = interruptible_3; interrupted_cause = interrupted_cause_3; deferred_interrupt = deferred_interrupt_3; _ } -> (let _x_135 = interrupt_code target_133 in
-                    let _x_136 = ({ current = _x_135; stack = stack_3; interruptible = interruptible_3; interrupted_cause = interrupted_cause_3; deferred_interrupt = deferred_interrupt_3 } : (_, _, _, _, _, _, _) frame_fiber) in
-                    let _x_137 = ({ id = id_6; frame = _x_136; running = running_3; parked = parked_3; pending = pending_3; finalizing = finalizing_3; exit_ = exit__3; current_op_count = current_op_count_3; max_ops_before_yield = max_ops_before_yield_3; prevent_yield = prevent_yield_3; yield_override = yield_override_3; observers = observers_3; children = children_3; dispatcher = dispatcher_3; context = context_3 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
-                    let _x_138 = Outcome_continue_ in
-                    let _x_139 = [] in
-                    let _x_140 = ({ machine = m; fiber = _x_137; yielding = yielding; outcome = _x_138; nested = _x_139 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-                    _x_140)))))
-    | WithFiberAction_interruptAll (targets_145, interruptor_146) -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-        | { id = id_7; _ } -> (let _f_147 = evaluate_prim_with_fiber__red_arg__lam_2 interp id_7 interruptor_146 in
-          let _x_148 = Outcome_commands in
-          let _x_149 = [] in
-          let _x_150 = list_map_tr_loop _f_147 targets_145 _x_149 in
-          let _x_151 = ParkKind_awaitAll targets_145 in
-          let _x_152 = Cmd_afterInterrupt (id_7, yielding, _x_151) in
-          let _x_153 = _x_152 :: _x_149 in
-          let _x_154 = _x_150 @ _x_153 in
-          let _x_155 = ({ machine = m; fiber = f; yielding = yielding; outcome = _x_148; nested = _x_154 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-          _x_155))
-    | WithFiberAction_awaitAll targets_156 -> (let _x_157 = Resume_exitsValue in
-      let _x_158 = false in
-      let _x_159 = countdown_park _x_13 interp m f targets_156 _x_157 _x_158 in
-      match _x_159 with
-        | fst_160, snd_161 -> (match snd_161 with
-            | fst_162, snd_163 -> (let _x_164 = evaluate_prim_with_fiber__red_arg__lam_1 fst_160 snd_163 in
-              let _x_165 = [] in
-              let _x_166 = ({ machine = fst_160; fiber = fst_162; yielding = yielding; outcome = _x_164; nested = _x_165 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-              _x_166)))
-    | WithFiberAction_awaitAllFailFast targets_167 -> (let _x_168 = Resume_exitsValue in
-      let _x_169 = true in
-      let _x_170 = countdown_park _x_13 interp m f targets_167 _x_168 _x_169 in
-      match _x_170 with
-        | fst_171, snd_172 -> (match snd_172 with
-            | fst_173, snd_174 -> (let _x_175 = evaluate_prim_with_fiber__red_arg__lam_1 fst_171 snd_174 in
-              let _x_176 = [] in
-              let _x_177 = ({ machine = fst_171; fiber = fst_173; yielding = yielding; outcome = _x_175; nested = _x_176 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-              _x_177)))
+                  | { stack = stack_3; interruptible = interruptible_3; interrupted_cause = interrupted_cause_3; deferred_interrupt = deferred_interrupt_3; _ } -> (let _x_138 = interrupt_code target_136 in
+                    let _x_139 = ({ current = _x_138; stack = stack_3; interruptible = interruptible_3; interrupted_cause = interrupted_cause_3; deferred_interrupt = deferred_interrupt_3 } : (_, _, _, _, _, _, _) frame_fiber) in
+                    let _x_140 = ({ id = id_6; frame = _x_139; running = running_3; parked = parked_3; pending = pending_3; finalizing = finalizing_3; exit_ = exit__3; current_op_count = current_op_count_3; max_ops_before_yield = max_ops_before_yield_3; prevent_yield = prevent_yield_3; yield_override = yield_override_3; observers = observers_3; children = children_3; dispatcher = dispatcher_3; context = context_3; origin = origin_3 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                    let _x_141 = Outcome_continue_ in
+                    let _x_142 = [] in
+                    let _x_143 = ({ machine = m; fiber = _x_140; yielding = yielding; outcome = _x_141; nested = _x_142 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+                    _x_143)))))
+    | WithFiberAction_interruptAll (targets_148, interruptor_149) -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+        | { id = id_7; _ } -> (let _f_150 = evaluate_prim_with_fiber__red_arg__lam_2 interp id_7 interruptor_149 in
+          let _x_151 = Outcome_commands in
+          let _x_152 = [] in
+          let _x_153 = list_map_tr_loop _f_150 targets_148 _x_152 in
+          let _x_154 = ParkKind_awaitAll targets_148 in
+          let _x_155 = Cmd_afterInterrupt (id_7, yielding, _x_154) in
+          let _x_156 = _x_155 :: _x_152 in
+          let _x_157 = _x_153 @ _x_156 in
+          let _x_158 = ({ machine = m; fiber = f; yielding = yielding; outcome = _x_151; nested = _x_157 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+          _x_158))
+    | WithFiberAction_awaitAll targets_159 -> (let _x_160 = Resume_exitsValue in
+      let _x_161 = false in
+      let _x_162 = countdown_park _x_13 interp m f targets_159 _x_160 _x_161 in
+      match _x_162 with
+        | fst_163, snd_164 -> (match snd_164 with
+            | fst_165, snd_166 -> (let _x_167 = evaluate_prim_with_fiber__red_arg__lam_1 fst_163 snd_166 in
+              let _x_168 = [] in
+              let _x_169 = ({ machine = fst_163; fiber = fst_165; yielding = yielding; outcome = _x_167; nested = _x_168 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+              _x_169)))
+    | WithFiberAction_awaitAllFailFast targets_170 -> (let _x_171 = Resume_exitsValue in
+      let _x_172 = true in
+      let _x_173 = countdown_park _x_13 interp m f targets_170 _x_171 _x_172 in
+      match _x_173 with
+        | fst_174, snd_175 -> (match snd_175 with
+            | fst_176, snd_177 -> (let _x_178 = evaluate_prim_with_fiber__red_arg__lam_1 fst_174 snd_177 in
+              let _x_179 = [] in
+              let _x_180 = ({ machine = fst_174; fiber = fst_176; yielding = yielding; outcome = _x_178; nested = _x_179 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+              _x_180)))
     | WithFiberAction_snapshotChildren -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
         | { fibers_value = fibers_value; _ } -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-            | { children = children_4; _ } -> (let _x_178 = fibers_value children_4 in
-              let _x_179 = evaluate_prim_with_fiber__red_arg__lam_0 f _x_178 in
-              let _x_180 = Outcome_continue_ in
-              let _x_181 = [] in
-              let _x_182 = ({ machine = m; fiber = _x_179; yielding = yielding; outcome = _x_180; nested = _x_181 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-              _x_182)))
-    | WithFiberAction_awaitNewChildren snapshot_183 -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-        | { children = children_5; _ } -> (let _f_184 = evaluate_prim_with_fiber__red_arg__lam_3 snapshot_183 in
-          let _x_185 = [] in
-          let fresh = list_filter_tr_loop _f_184 children_5 _x_185 in
-          let _x_186 = Resume_void in
-          let _x_187 = false in
-          let _x_188 = countdown_park _x_13 interp m f fresh _x_186 _x_187 in
-          match _x_188 with
-            | fst_189, snd_190 -> (match snd_190 with
-                | fst_191, snd_192 -> (let _x_193 = evaluate_prim_with_fiber__red_arg__lam_1 fst_189 snd_192 in
-                  let _x_194 = ({ machine = fst_189; fiber = fst_191; yielding = yielding; outcome = _x_193; nested = _x_185 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-                  _x_194))))
-    | WithFiberAction_raceAll entrants_195 -> (let _x_196 = begin_race _x_13 interp m f yielding entrants_195 in
-      _x_196)
-    | WithFiberAction_setInterruptible (body_197, flag_198) -> if flag_198 then (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-          | { id = id_9; frame = frame_5; running = running_5; parked = parked_5; pending = pending_5; finalizing = finalizing_5; exit_ = exit__5; current_op_count = current_op_count_5; max_ops_before_yield = max_ops_before_yield_5; prevent_yield = prevent_yield_5; yield_override = yield_override_5; observers = observers_5; children = children_7; dispatcher = dispatcher_5; context = context_5 } -> (let _x_205 = frame_fiber_interruptible_region frame_5 in
-            match _x_205 with
-              | fst_206, snd_207 -> (let _jp_208 = fun _y_209 -> match (fst_206 : (_, _, _, _, _, _, _) frame_fiber) with
-                  | { stack = stack_5; interruptible = interruptible_5; interrupted_cause = interrupted_cause_5; deferred_interrupt = deferred_interrupt_5; _ } -> (let _x_210 = ({ current = _y_209; stack = stack_5; interruptible = interruptible_5; interrupted_cause = interrupted_cause_5; deferred_interrupt = deferred_interrupt_5 } : (_, _, _, _, _, _, _) frame_fiber) in
-                    let _x_211 = ({ id = id_9; frame = _x_210; running = running_5; parked = parked_5; pending = pending_5; finalizing = finalizing_5; exit_ = exit__5; current_op_count = current_op_count_5; max_ops_before_yield = max_ops_before_yield_5; prevent_yield = prevent_yield_5; yield_override = yield_override_5; observers = observers_5; children = children_7; dispatcher = dispatcher_5; context = context_5 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
-                    let _x_212 = Outcome_continue_ in
-                    let _x_213 = [] in
-                    let _x_214 = ({ machine = m; fiber = _x_211; yielding = yielding; outcome = _x_212; nested = _x_213 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-                    _x_214) in
-                match snd_207 with
-                  | None -> _jp_208 body_197
-                  | Some val__215 -> _jp_208 val__215))) else (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-          | { id = id_8; frame = frame_4; running = running_4; parked = parked_4; pending = pending_4; finalizing = finalizing_4; exit_ = exit__4; current_op_count = current_op_count_4; max_ops_before_yield = max_ops_before_yield_4; prevent_yield = prevent_yield_4; yield_override = yield_override_4; observers = observers_4; children = children_6; dispatcher = dispatcher_4; context = context_4 } -> (let _x_199 = frame_fiber_uninterruptible frame_4 in
-            match (_x_199 : (_, _, _, _, _, _, _) frame_fiber) with
-              | { stack = stack_4; interruptible = interruptible_4; interrupted_cause = interrupted_cause_4; deferred_interrupt = deferred_interrupt_4; _ } -> (let _x_200 = ({ current = body_197; stack = stack_4; interruptible = interruptible_4; interrupted_cause = interrupted_cause_4; deferred_interrupt = deferred_interrupt_4 } : (_, _, _, _, _, _, _) frame_fiber) in
-                let _x_201 = ({ id = id_8; frame = _x_200; running = running_4; parked = parked_4; pending = pending_4; finalizing = finalizing_4; exit_ = exit__4; current_op_count = current_op_count_4; max_ops_before_yield = max_ops_before_yield_4; prevent_yield = prevent_yield_4; yield_override = yield_override_4; observers = observers_4; children = children_6; dispatcher = dispatcher_4; context = context_4 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
-                let _x_202 = Outcome_continue_ in
-                let _x_203 = [] in
-                let _x_204 = ({ machine = m; fiber = _x_201; yielding = yielding; outcome = _x_202; nested = _x_203 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-                _x_204)))
-    | WithFiberAction_setContext context_216 -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
-        | { budget_of = budget_of; void_value = void_value_2; _ } -> (let _x_217 = budget_of context_216 in
-          match _x_217 with
-            | fst_218, snd_219 -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-                | { id = id_10; frame = frame_6; running = running_6; parked = parked_6; pending = pending_6; finalizing = finalizing_6; exit_ = exit__6; current_op_count = current_op_count_6; yield_override = yield_override_6; observers = observers_6; children = children_8; dispatcher = dispatcher_6; _ } -> (let f_1 = ({ id = id_10; frame = frame_6; running = running_6; parked = parked_6; pending = pending_6; finalizing = finalizing_6; exit_ = exit__6; current_op_count = current_op_count_6; max_ops_before_yield = fst_218; prevent_yield = snd_219; yield_override = yield_override_6; observers = observers_6; children = children_8; dispatcher = dispatcher_6; context = context_216 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
-                  let _x_220 = RunEvent_contextSet (id_10, context_216) in
-                  let _x_221 = [] in
-                  let _x_222 = _x_220 :: _x_221 in
-                  let _x_223 = run_machine_emit m _x_222 in
-                  let _x_224 = evaluate_prim_with_fiber__red_arg__lam_0 f_1 void_value_2 in
-                  let _x_225 = Outcome_continue_ in
-                  let _x_226 = ({ machine = _x_223; fiber = _x_224; yielding = yielding; outcome = _x_225; nested = _x_221 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-                  _x_226))))
+            | { children = children_4; _ } -> (let _x_181 = fibers_value children_4 in
+              let _x_182 = evaluate_prim_with_fiber__red_arg__lam_0 f _x_181 in
+              let _x_183 = Outcome_continue_ in
+              let _x_184 = [] in
+              let _x_185 = ({ machine = m; fiber = _x_182; yielding = yielding; outcome = _x_183; nested = _x_184 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+              _x_185)))
+    | WithFiberAction_awaitNewChildren snapshot_186 -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+        | { children = children_5; _ } -> (let _f_187 = evaluate_prim_with_fiber__red_arg__lam_3 snapshot_186 in
+          let _x_188 = [] in
+          let fresh = list_filter_tr_loop _f_187 children_5 _x_188 in
+          let _x_189 = Resume_void in
+          let _x_190 = false in
+          let _x_191 = countdown_park _x_13 interp m f fresh _x_189 _x_190 in
+          match _x_191 with
+            | fst_192, snd_193 -> (match snd_193 with
+                | fst_194, snd_195 -> (let _x_196 = evaluate_prim_with_fiber__red_arg__lam_1 fst_192 snd_195 in
+                  let _x_197 = ({ machine = fst_192; fiber = fst_194; yielding = yielding; outcome = _x_196; nested = _x_188 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+                  _x_197))))
+    | WithFiberAction_raceAll (entrants_198, site_199) -> (let _x_200 = begin_race _x_13 interp m f yielding entrants_198 site_199 in
+      _x_200)
+    | WithFiberAction_setInterruptible (body_201, flag_202) -> if flag_202 then (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+          | { id = id_9; frame = frame_5; running = running_5; parked = parked_5; pending = pending_5; finalizing = finalizing_5; exit_ = exit__5; current_op_count = current_op_count_5; max_ops_before_yield = max_ops_before_yield_5; prevent_yield = prevent_yield_5; yield_override = yield_override_5; observers = observers_5; children = children_7; dispatcher = dispatcher_5; context = context_5; origin = origin_5 } -> (let _x_209 = frame_fiber_interruptible_region frame_5 in
+            match _x_209 with
+              | fst_210, snd_211 -> (let _jp_212 = fun _y_213 -> match (fst_210 : (_, _, _, _, _, _, _) frame_fiber) with
+                  | { stack = stack_5; interruptible = interruptible_5; interrupted_cause = interrupted_cause_5; deferred_interrupt = deferred_interrupt_5; _ } -> (let _x_214 = ({ current = _y_213; stack = stack_5; interruptible = interruptible_5; interrupted_cause = interrupted_cause_5; deferred_interrupt = deferred_interrupt_5 } : (_, _, _, _, _, _, _) frame_fiber) in
+                    let _x_215 = ({ id = id_9; frame = _x_214; running = running_5; parked = parked_5; pending = pending_5; finalizing = finalizing_5; exit_ = exit__5; current_op_count = current_op_count_5; max_ops_before_yield = max_ops_before_yield_5; prevent_yield = prevent_yield_5; yield_override = yield_override_5; observers = observers_5; children = children_7; dispatcher = dispatcher_5; context = context_5; origin = origin_5 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                    let _x_216 = Outcome_continue_ in
+                    let _x_217 = [] in
+                    let _x_218 = ({ machine = m; fiber = _x_215; yielding = yielding; outcome = _x_216; nested = _x_217 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+                    _x_218) in
+                match snd_211 with
+                  | None -> _jp_212 body_201
+                  | Some val__219 -> _jp_212 val__219))) else (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+          | { id = id_8; frame = frame_4; running = running_4; parked = parked_4; pending = pending_4; finalizing = finalizing_4; exit_ = exit__4; current_op_count = current_op_count_4; max_ops_before_yield = max_ops_before_yield_4; prevent_yield = prevent_yield_4; yield_override = yield_override_4; observers = observers_4; children = children_6; dispatcher = dispatcher_4; context = context_4; origin = origin_4 } -> (let _x_203 = frame_fiber_uninterruptible frame_4 in
+            match (_x_203 : (_, _, _, _, _, _, _) frame_fiber) with
+              | { stack = stack_4; interruptible = interruptible_4; interrupted_cause = interrupted_cause_4; deferred_interrupt = deferred_interrupt_4; _ } -> (let _x_204 = ({ current = body_201; stack = stack_4; interruptible = interruptible_4; interrupted_cause = interrupted_cause_4; deferred_interrupt = deferred_interrupt_4 } : (_, _, _, _, _, _, _) frame_fiber) in
+                let _x_205 = ({ id = id_8; frame = _x_204; running = running_4; parked = parked_4; pending = pending_4; finalizing = finalizing_4; exit_ = exit__4; current_op_count = current_op_count_4; max_ops_before_yield = max_ops_before_yield_4; prevent_yield = prevent_yield_4; yield_override = yield_override_4; observers = observers_4; children = children_6; dispatcher = dispatcher_4; context = context_4; origin = origin_4 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                let _x_206 = Outcome_continue_ in
+                let _x_207 = [] in
+                let _x_208 = ({ machine = m; fiber = _x_205; yielding = yielding; outcome = _x_206; nested = _x_207 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+                _x_208)))
+    | WithFiberAction_setContext context_220 -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
+        | { budget_of = budget_of; void_value = void_value_2; _ } -> (let _x_221 = budget_of context_220 in
+          match _x_221 with
+            | fst_222, snd_223 -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+                | { id = id_10; frame = frame_6; running = running_6; parked = parked_6; pending = pending_6; finalizing = finalizing_6; exit_ = exit__6; current_op_count = current_op_count_6; yield_override = yield_override_6; observers = observers_6; children = children_8; dispatcher = dispatcher_6; origin = origin_6; _ } -> (let f_1 = ({ id = id_10; frame = frame_6; running = running_6; parked = parked_6; pending = pending_6; finalizing = finalizing_6; exit_ = exit__6; current_op_count = current_op_count_6; max_ops_before_yield = fst_222; prevent_yield = snd_223; yield_override = yield_override_6; observers = observers_6; children = children_8; dispatcher = dispatcher_6; context = context_220; origin = origin_6 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                  let _x_224 = RunEvent_contextSet (id_10, context_220) in
+                  let _x_225 = [] in
+                  let _x_226 = _x_224 :: _x_225 in
+                  let _x_227 = run_machine_emit m _x_226 in
+                  let _x_228 = evaluate_prim_with_fiber__red_arg__lam_0 f_1 void_value_2 in
+                  let _x_229 = Outcome_continue_ in
+                  let _x_230 = ({ machine = _x_227; fiber = _x_228; yielding = yielding; outcome = _x_229; nested = _x_225 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+                  _x_230))))
     | WithFiberAction_getContext -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
         | { context_value = context_value; _ } -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-            | { context = context_6; _ } -> (let _x_227 = context_value context_6 in
-              let _x_228 = evaluate_prim_with_fiber__red_arg__lam_0 f _x_227 in
-              let _x_229 = Outcome_continue_ in
-              let _x_230 = [] in
-              let _x_231 = ({ machine = m; fiber = _x_228; yielding = yielding; outcome = _x_229; nested = _x_230 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-              _x_231)))
+            | { context = context_6; _ } -> (let _x_231 = context_value context_6 in
+              let _x_232 = evaluate_prim_with_fiber__red_arg__lam_0 f _x_231 in
+              let _x_233 = Outcome_continue_ in
+              let _x_234 = [] in
+              let _x_235 = ({ machine = m; fiber = _x_232; yielding = yielding; outcome = _x_233; nested = _x_234 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+              _x_235)))
     | WithFiberAction_getId -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
         | { fiber_id_value = fiber_id_value; _ } -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-            | { id = id_11; _ } -> (let _x_232 = fiber_id_value id_11 in
-              let _x_233 = evaluate_prim_with_fiber__red_arg__lam_0 f _x_232 in
-              let _x_234 = Outcome_continue_ in
-              let _x_235 = [] in
-              let _x_236 = ({ machine = m; fiber = _x_233; yielding = yielding; outcome = _x_234; nested = _x_235 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-              _x_236)))
-    | WithFiberAction_closeScope (scope_237, exit__238) -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
+            | { id = id_11; _ } -> (let _x_236 = fiber_id_value id_11 in
+              let _x_237 = evaluate_prim_with_fiber__red_arg__lam_0 f _x_236 in
+              let _x_238 = Outcome_continue_ in
+              let _x_239 = [] in
+              let _x_240 = ({ machine = m; fiber = _x_237; yielding = yielding; outcome = _x_238; nested = _x_239 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+              _x_240)))
+    | WithFiberAction_closeScope (scope_241, exit__242) -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
         | { close_scope = close_scope; _ } -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-            | { id = id_12; frame = frame_7; running = running_7; parked = parked_7; pending = pending_7; finalizing = finalizing_7; exit_ = exit__7; current_op_count = current_op_count_7; max_ops_before_yield = max_ops_before_yield_6; prevent_yield = prevent_yield_6; yield_override = yield_override_7; observers = observers_7; children = children_9; dispatcher = dispatcher_7; context = context_7 } -> (match (frame_7 : (_, _, _, _, _, _, _) frame_fiber) with
+            | { id = id_12; frame = frame_7; running = running_7; parked = parked_7; pending = pending_7; finalizing = finalizing_7; exit_ = exit__7; current_op_count = current_op_count_7; max_ops_before_yield = max_ops_before_yield_6; prevent_yield = prevent_yield_6; yield_override = yield_override_7; observers = observers_7; children = children_9; dispatcher = dispatcher_7; context = context_7; origin = origin_7 } -> (match (frame_7 : (_, _, _, _, _, _, _) frame_fiber) with
                 | { stack = stack_6; interruptible = interruptible_6; interrupted_cause = interrupted_cause_6; deferred_interrupt = deferred_interrupt_6; _ } -> (match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
-                    | { fibers = fibers_1; races = races_1; next_id = next_id_1; next_token = next_token_1; next_race = next_race_1; middleware_installed = middleware_installed; armed = armed_1; state = state_1; trace = trace_1; stuck = stuck_1 } -> (let _x_239 = close_scope scope_237 exit__238 interruptible_6 id_12 state_1 in
-                      match _x_239 with
-                        | None -> (let _x_240 = Stuck_unknownScope scope_237 in
-                          let _x_241 = Outcome_stuck _x_240 in
-                          let _x_242 = [] in
-                          let _x_243 = ({ machine = m; fiber = f; yielding = yielding; outcome = _x_241; nested = _x_242 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-                          _x_243)
-                        | Some val__244 -> (match val__244 with
-                            | fst_245, snd_246 -> (let _x_247 = ({ fibers = fibers_1; races = races_1; next_id = next_id_1; next_token = next_token_1; next_race = next_race_1; middleware_installed = middleware_installed; armed = armed_1; state = fst_245; trace = trace_1; stuck = stuck_1 } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
-                              let _x_248 = ({ current = snd_246; stack = stack_6; interruptible = interruptible_6; interrupted_cause = interrupted_cause_6; deferred_interrupt = deferred_interrupt_6 } : (_, _, _, _, _, _, _) frame_fiber) in
-                              let _x_249 = ({ id = id_12; frame = _x_248; running = running_7; parked = parked_7; pending = pending_7; finalizing = finalizing_7; exit_ = exit__7; current_op_count = current_op_count_7; max_ops_before_yield = max_ops_before_yield_6; prevent_yield = prevent_yield_6; yield_override = yield_override_7; observers = observers_7; children = children_9; dispatcher = dispatcher_7; context = context_7 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
-                              let _x_250 = Outcome_continue_ in
-                              let _x_251 = [] in
-                              let _x_252 = ({ machine = _x_247; fiber = _x_249; yielding = yielding; outcome = _x_250; nested = _x_251 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-                              _x_252)))))))
-    | WithFiberAction_closePar finalizers_253 -> (let _x_254 = fork_finalizers _x_13 interp m f finalizers_253 in
-      match _x_254 with
-        | fst_255, snd_256 -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-            | { id = id_13; _ } -> (let _f_257 = evaluate_prim_with_fiber__red_arg__lam_4 in
-              let _x_258 = Outcome_commands in
-              let _x_259 = [] in
-              let _x_260 = list_map_tr_loop _f_257 snd_256 _x_259 in
-              let _x_261 = Cmd_closeParAwait (id_13, yielding, snd_256) in
-              let _x_262 = _x_261 :: _x_259 in
-              let _x_263 = _x_260 @ _x_262 in
-              let _x_264 = ({ machine = fst_255; fiber = f; yielding = yielding; outcome = _x_258; nested = _x_263 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-              _x_264)))
-    | WithFiberAction_refuse cause_265 -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-        | { id = id_14; frame = frame_8; running = running_8; parked = parked_8; pending = pending_8; finalizing = finalizing_8; exit_ = exit__8; current_op_count = current_op_count_8; max_ops_before_yield = max_ops_before_yield_7; prevent_yield = prevent_yield_7; yield_override = yield_override_8; observers = observers_8; children = children_10; dispatcher = dispatcher_8; context = context_8 } -> (match (frame_8 : (_, _, _, _, _, _, _) frame_fiber) with
-            | { stack = stack_7; interruptible = interruptible_7; interrupted_cause = interrupted_cause_7; deferred_interrupt = deferred_interrupt_7; _ } -> (let _x_266 = Prim_failure cause_265 in
-              let _x_267 = ({ current = _x_266; stack = stack_7; interruptible = interruptible_7; interrupted_cause = interrupted_cause_7; deferred_interrupt = deferred_interrupt_7 } : (_, _, _, _, _, _, _) frame_fiber) in
-              let _x_268 = ({ id = id_14; frame = _x_267; running = running_8; parked = parked_8; pending = pending_8; finalizing = finalizing_8; exit_ = exit__8; current_op_count = current_op_count_8; max_ops_before_yield = max_ops_before_yield_7; prevent_yield = prevent_yield_7; yield_override = yield_override_8; observers = observers_8; children = children_10; dispatcher = dispatcher_8; context = context_8 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
-              let _x_269 = Outcome_continue_ in
-              let _x_270 = [] in
-              let _x_271 = ({ machine = m; fiber = _x_268; yielding = yielding; outcome = _x_269; nested = _x_270 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-              _x_271)))
-    | WithFiberAction_dropObservers token_272 -> (match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
+                    | { fibers = fibers_1; races = races_1; next_id = next_id_1; next_token = next_token_1; next_race = next_race_1; middleware_installed = middleware_installed; armed = armed_1; state = state_1; trace = trace_1; stuck = stuck_1 } -> (let _x_243 = close_scope scope_241 exit__242 interruptible_6 id_12 state_1 in
+                      match _x_243 with
+                        | None -> (let _x_244 = Stuck_unknownScope scope_241 in
+                          let _x_245 = Outcome_stuck _x_244 in
+                          let _x_246 = [] in
+                          let _x_247 = ({ machine = m; fiber = f; yielding = yielding; outcome = _x_245; nested = _x_246 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+                          _x_247)
+                        | Some val__248 -> (match val__248 with
+                            | fst_249, snd_250 -> (let _x_251 = ({ fibers = fibers_1; races = races_1; next_id = next_id_1; next_token = next_token_1; next_race = next_race_1; middleware_installed = middleware_installed; armed = armed_1; state = fst_249; trace = trace_1; stuck = stuck_1 } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
+                              let _x_252 = ({ current = snd_250; stack = stack_6; interruptible = interruptible_6; interrupted_cause = interrupted_cause_6; deferred_interrupt = deferred_interrupt_6 } : (_, _, _, _, _, _, _) frame_fiber) in
+                              let _x_253 = ({ id = id_12; frame = _x_252; running = running_7; parked = parked_7; pending = pending_7; finalizing = finalizing_7; exit_ = exit__7; current_op_count = current_op_count_7; max_ops_before_yield = max_ops_before_yield_6; prevent_yield = prevent_yield_6; yield_override = yield_override_7; observers = observers_7; children = children_9; dispatcher = dispatcher_7; context = context_7; origin = origin_7 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                              let _x_254 = Outcome_continue_ in
+                              let _x_255 = [] in
+                              let _x_256 = ({ machine = _x_251; fiber = _x_253; yielding = yielding; outcome = _x_254; nested = _x_255 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+                              _x_256)))))))
+    | WithFiberAction_closePar finalizers_257 -> (let _x_258 = fork_finalizers _x_13 interp m f finalizers_257 in
+      match _x_258 with
+        | fst_259, snd_260 -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+            | { id = id_13; _ } -> (let _f_261 = evaluate_prim_with_fiber__red_arg__lam_4 in
+              let _x_262 = Outcome_commands in
+              let _x_263 = [] in
+              let _x_264 = list_map_tr_loop _f_261 snd_260 _x_263 in
+              let _x_265 = Cmd_closeParAwait (id_13, yielding, snd_260) in
+              let _x_266 = _x_265 :: _x_263 in
+              let _x_267 = _x_264 @ _x_266 in
+              let _x_268 = ({ machine = fst_259; fiber = f; yielding = yielding; outcome = _x_262; nested = _x_267 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+              _x_268)))
+    | WithFiberAction_refuse cause_269 -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+        | { id = id_14; frame = frame_8; running = running_8; parked = parked_8; pending = pending_8; finalizing = finalizing_8; exit_ = exit__8; current_op_count = current_op_count_8; max_ops_before_yield = max_ops_before_yield_7; prevent_yield = prevent_yield_7; yield_override = yield_override_8; observers = observers_8; children = children_10; dispatcher = dispatcher_8; context = context_8; origin = origin_8 } -> (match (frame_8 : (_, _, _, _, _, _, _) frame_fiber) with
+            | { stack = stack_7; interruptible = interruptible_7; interrupted_cause = interrupted_cause_7; deferred_interrupt = deferred_interrupt_7; _ } -> (let _x_270 = Prim_failure cause_269 in
+              let _x_271 = ({ current = _x_270; stack = stack_7; interruptible = interruptible_7; interrupted_cause = interrupted_cause_7; deferred_interrupt = deferred_interrupt_7 } : (_, _, _, _, _, _, _) frame_fiber) in
+              let _x_272 = ({ id = id_14; frame = _x_271; running = running_8; parked = parked_8; pending = pending_8; finalizing = finalizing_8; exit_ = exit__8; current_op_count = current_op_count_8; max_ops_before_yield = max_ops_before_yield_7; prevent_yield = prevent_yield_7; yield_override = yield_override_8; observers = observers_8; children = children_10; dispatcher = dispatcher_8; context = context_8; origin = origin_8 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+              let _x_273 = Outcome_continue_ in
+              let _x_274 = [] in
+              let _x_275 = ({ machine = m; fiber = _x_272; yielding = yielding; outcome = _x_273; nested = _x_274 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+              _x_275)))
+    | WithFiberAction_dropObservers token_276 -> (match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
         | { fibers = fibers_2; races = races_2; next_id = next_id_2; next_token = next_token_2; next_race = next_race_2; middleware_installed = middleware_installed_1; armed = armed_2; state = state_2; trace = trace_2; stuck = stuck_2 } -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
-            | { void_value = void_value_3; _ } -> (let _f_273 = evaluate_prim_with_fiber__red_arg__lam_5 token_272 in
-              let _f_274 = evaluate_prim_with_fiber__red_arg__lam_6 _f_273 in
-              let _x_275 = [] in
-              let _x_276 = list_map_tr_loop _f_274 fibers_2 _x_275 in
-              let m_1 = ({ fibers = _x_276; races = races_2; next_id = next_id_2; next_token = next_token_2; next_race = next_race_2; middleware_installed = middleware_installed_1; armed = armed_2; state = state_2; trace = trace_2; stuck = stuck_2 } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
-              let _x_277 = evaluate_prim_with_fiber__red_arg__lam_0 f void_value_3 in
-              let _x_278 = Outcome_continue_ in
-              let _x_279 = ({ machine = m_1; fiber = _x_277; yielding = yielding; outcome = _x_278; nested = _x_275 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-              _x_279)))
-    | WithFiberAction_cancelRace race_280 -> (let _x_281 = run_machine_race_opt m race_280 in
-      match _x_281 with
+            | { void_value = void_value_3; _ } -> (let _f_277 = evaluate_prim_with_fiber__red_arg__lam_5 token_276 in
+              let _f_278 = evaluate_prim_with_fiber__red_arg__lam_6 _f_277 in
+              let _x_279 = [] in
+              let _x_280 = list_map_tr_loop _f_278 fibers_2 _x_279 in
+              let m_1 = ({ fibers = _x_280; races = races_2; next_id = next_id_2; next_token = next_token_2; next_race = next_race_2; middleware_installed = middleware_installed_1; armed = armed_2; state = state_2; trace = trace_2; stuck = stuck_2 } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
+              let _x_281 = evaluate_prim_with_fiber__red_arg__lam_0 f void_value_3 in
+              let _x_282 = Outcome_continue_ in
+              let _x_283 = ({ machine = m_1; fiber = _x_281; yielding = yielding; outcome = _x_282; nested = _x_279 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+              _x_283)))
+    | WithFiberAction_cancelRace race_284 -> (let _x_285 = run_machine_race_opt m race_284 in
+      match _x_285 with
         | None -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
-            | { void_value = void_value_4; _ } -> (let _x_282 = evaluate_prim_with_fiber__red_arg__lam_0 f void_value_4 in
-              let _x_283 = Outcome_continue_ in
-              let _x_284 = [] in
-              let _x_285 = ({ machine = m; fiber = _x_282; yielding = yielding; outcome = _x_283; nested = _x_284 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-              _x_285))
-        | Some val__286 -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-            | { id = id_15; _ } -> (match (val__286 : (_, _, _, _, _, _, _, _) race) with
+            | { void_value = void_value_4; _ } -> (let _x_286 = evaluate_prim_with_fiber__red_arg__lam_0 f void_value_4 in
+              let _x_287 = Outcome_continue_ in
+              let _x_288 = [] in
+              let _x_289 = ({ machine = m; fiber = _x_286; yielding = yielding; outcome = _x_287; nested = _x_288 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+              _x_289))
+        | Some val__290 -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+            | { id = id_15; _ } -> (match (val__290 : (_, _, _, _, _, _, _, _) race) with
                 | { state = state_3; _ } -> (match (state_3 : (_, _, _, _, _) race_all_state) with
-                    | { live = live; _ } -> (let _x_287 = Outcome_commands in
-                      let _x_288 = [] in
-                      let _x_289 = Cmd_raceCancel (race_280, id_15, yielding, live, _x_288) in
-                      let _x_290 = _x_289 :: _x_288 in
-                      let _x_291 = ({ machine = m; fiber = f; yielding = yielding; outcome = _x_287; nested = _x_290 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-                      _x_291)))))
+                    | { live = live; _ } -> (let _x_291 = Outcome_commands in
+                      let _x_292 = [] in
+                      let _x_293 = Cmd_raceCancel (race_284, id_15, yielding, live, _x_292) in
+                      let _x_294 = _x_293 :: _x_292 in
+                      let _x_295 = ({ machine = m; fiber = f; yielding = yielding; outcome = _x_291; nested = _x_294 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+                      _x_295)))))
 
 
 
@@ -3093,7 +3098,7 @@ let finalizer_code (interp : (_, _, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) p
 let evaluate_prim_finalizer_or (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -> _ -> bool) (inst_4 : _ -> _ -> bool) (interp : (_, _, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim) run_interp) (m : (_, _, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim, (_, _, _, _, _, _, _) frame_fiber, (_, _, _, _, _, _, _) frame_event) run_machine) (f : (_, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim, (_, _, _, _, _, _, _) frame_fiber) run_fiber) (yielding : bool) (exit_ : (_, _, _, _, _) exit_) : (_, _, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim, (_, _, _, _, _, _, _) frame_fiber, (_, _, _, _, _, _, _) frame_event) iter =
   let _f_5 = evaluate_prim_finalizer_or__red_arg__lam_0 f in
   let _jp_6 = fun _y_7 _y_8 -> match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let pop = frame_fiber_get_cont frame _y_7 _y_8 in
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (let pop = frame_fiber_get_cont frame _y_7 _y_8 in
       match (pop : (_, _, _, _, _, _, _) frame_pop) with
         | { answer = answer; events = events; fiber = fiber; _ } -> (match (answer : (_, _, _, _, _, _, _) cont_answer) with
             | ContAnswer_frame frame_9 -> (match (frame_9 : (_, _, _, _, _, _, _) prim) with
@@ -3111,7 +3116,7 @@ let evaluate_prim_finalizer_or (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> boo
                               let _x_20 = _x_19 :: _x_17 in
                               let _x_21 = _x_18 @ _x_20 in
                               let _x_22 = run_machine_emit m _x_21 in
-                              let _x_23 = ({ id = id; frame = fiber_1; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                              let _x_23 = ({ id = id; frame = fiber_1; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                               let _x_24 = Outcome_continue_ in
                               let _x_25 = ({ machine = _x_22; fiber = _x_23; yielding = yielding; outcome = _x_24; nested = _x_17 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
                               _x_25))))
@@ -3143,8 +3148,8 @@ let register_race (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (f : (_
       let _x_5 = ({ machine = m; fiber = f; yielding = yielding; outcome = _x_3; nested = _x_4 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
       _x_5)
     | Some val__6 -> (match (val__6 : (_, _, _, _, _, _, _, _) race) with
-        | { id = id; host = host; token = token; state = state; settled = settled; programs = programs; _ } -> (let _x_7 = true in
-          let _x_8 = ({ id = id; host = host; token = token; state = state; settled = settled; programs = programs; registering = _x_7 } : (_, _, _, _, _, _, _, _) race) in
+        | { id = id; host = host; token = token; state = state; settled = settled; programs = programs; next_site = next_site; _ } -> (let _x_7 = true in
+          let _x_8 = ({ id = id; host = host; token = token; state = state; settled = settled; programs = programs; registering = _x_7; next_site = next_site } : (_, _, _, _, _, _, _, _) race) in
           let _x_9 = run_machine_update_race m _x_8 in
           let _x_10 = Outcome_commands in
           let _x_11 = Cmd_launch race_id in
@@ -3162,7 +3167,7 @@ let register_race (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (f : (_
 let evaluate_prim (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -> _ -> bool) (inst_4 : _ -> _ -> bool) (interp : (_, _, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim) run_interp) (m : (_, _, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim, (_, _, _, _, _, _, _) frame_fiber, (_, _, _, _, _, _, _) frame_event) run_machine) (f : (_, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim, (_, _, _, _, _, _, _) frame_fiber) run_fiber) (yielding : bool) : (_, _, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) prim, (_, _, _, _, _, _, _) frame_fiber, (_, _, _, _, _, _, _) frame_event) iter =
   let _x_5 = frame_core () () () () () () () in
   match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (match (frame : (_, _, _, _, _, _, _) frame_fiber) with
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (match (frame : (_, _, _, _, _, _, _) frame_fiber) with
         | { current = current; stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } -> (match (current : (_, _, _, _, _, _, _) prim) with
             | Prim_yieldNowWith priority_6 -> (match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
                 | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = trace; stuck = stuck } -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
@@ -3172,7 +3177,7 @@ let evaluate_prim (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : 
                       let _x_10 = ({ current = _x_9; stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
                       let _x_11 = Task_resume (id, next_token, _x_9) in
                       let _x_12 = dispatcher_enqueue dispatcher priority_6 _x_11 in
-                      let f_1 = ({ id = id; frame = _x_10; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = _x_12; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                      let f_1 = ({ id = id; frame = _x_10; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = _x_12; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                       let _x_13 = None in
                       let _x_14 = [] in
                       let _x_15 = Resume_void in
@@ -3212,7 +3217,7 @@ let evaluate_prim (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : 
                           let _x_46 = Prim_asyncFinalizer name in
                           let _x_47 = _x_46 :: stack in
                           let _x_48 = ({ current = current; stack = _x_47; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
-                          let _x_49 = ({ id = id; frame = _x_48; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                          let _x_49 = ({ id = id; frame = _x_48; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                           _jp_32 _x_49 in
                           let _jp_50 = fun () -> match cancel_26 with
                             | None -> _jp_44 abort_name
@@ -3222,7 +3227,7 @@ let evaluate_prim (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : 
                                   | None -> _jp_32 f
                                   | Some _ -> _jp_50 ())
                             | Some val__53 -> (let _x_54 = ({ current = val__53; stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
-                              let _x_55 = ({ id = id; frame = _x_54; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                              let _x_55 = ({ id = id; frame = _x_54; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                               let _x_56 = Outcome_continue_ in
                               let _x_57 = Cmd_drainDue in
                               let _x_58 = [] in
@@ -3246,7 +3251,7 @@ let evaluate_prim (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : 
                                     | { sync_value = sync_value; _ } -> (let _x_69 = sync_value thunk_67 in
                                       let _x_70 = Prim_success _x_69 in
                                       let _x_71 = ({ current = _x_70; stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
-                                      let _x_72 = ({ id = id; frame = _x_71; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                                      let _x_72 = ({ id = id; frame = _x_71; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                                       let _x_73 = Outcome_answered in
                                       let _x_74 = [] in
                                       let _x_75 = ({ machine = m; fiber = _x_72; yielding = yielding; outcome = _x_73; nested = _x_74 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
@@ -3255,7 +3260,7 @@ let evaluate_prim (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : 
                                     | fst_77, snd_78 -> (let _x_79 = ({ fibers = fibers_2; races = races_2; next_id = next_id_2; next_token = next_token_2; next_race = next_race_2; middleware_installed = middleware_installed_2; armed = armed_2; state = fst_77; trace = trace_2; stuck = stuck_2 } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
                                       let _x_80 = Prim_success snd_78 in
                                       let _x_81 = ({ current = _x_80; stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
-                                      let _x_82 = ({ id = id; frame = _x_81; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                                      let _x_82 = ({ id = id; frame = _x_81; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                                       let _x_83 = Outcome_answered in
                                       let _x_84 = Cmd_drainDue in
                                       let _x_85 = [] in
@@ -3273,7 +3278,7 @@ let evaluate_prim (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : 
                     | Some val__95 -> (match val__95 with
                         | Error a_96 -> (let _x_97 = Prim_failure a_96 in
                           let _x_98 = ({ current = _x_97; stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
-                          let _x_99 = ({ id = id; frame = _x_98; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                          let _x_99 = ({ id = id; frame = _x_98; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                           let _x_100 = Outcome_continue_ in
                           let _x_101 = [] in
                           let _x_102 = ({ machine = m; fiber = _x_99; yielding = yielding; outcome = _x_100; nested = _x_101 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
@@ -3287,7 +3292,7 @@ let evaluate_prim (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : 
                                   let _x_110 = ({ machine = m; fiber = f; yielding = yielding; outcome = _x_108; nested = _x_109 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
                                   _x_110)
                                 | Some val__111 -> (match (val__111 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-                                    | { id = id_3; frame = frame_1; running = running_1; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1 } -> (match exit__1 with
+                                    | { id = id_3; frame = frame_1; running = running_1; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1; origin = origin_1 } -> (match exit__1 with
                                         | None -> (match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
                                             | { fibers = fibers_3; races = races_3; next_id = next_id_3; next_token = next_token_3; next_race = next_race_3; middleware_installed = middleware_installed_3; armed = armed_3; state = state_3; trace = trace_3; stuck = stuck_3 } -> (let _x_112 = 1 in
                                               let _x_113 = next_token_3 + _x_112 in
@@ -3296,7 +3301,7 @@ let evaluate_prim (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : 
                                               let _x_115 = Prim_asyncFinalizer name_1 in
                                               let _x_116 = _x_115 :: stack in
                                               let _x_117 = ({ current = current; stack = _x_116; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
-                                              let f_4 = ({ id = id; frame = _x_117; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                                              let f_4 = ({ id = id; frame = _x_117; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                                               let _x_118 = Some target_104 in
                                               let _x_119 = [] in
                                               let _x_120 = Resume_void in
@@ -3307,7 +3312,7 @@ let evaluate_prim (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : 
                                                 | { id = id_4; _ } -> (let m_3 = ({ fibers = fibers_3; races = races_3; next_id = next_id_3; next_token = _x_113; next_race = next_race_3; middleware_installed = middleware_installed_3; armed = armed_3; state = state_3; trace = trace_3; stuck = stuck_3 } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
                                                   let _x_123 = _x_114 :: _x_119 in
                                                   let _x_124 = observers_1 @ _x_123 in
-                                                  let _x_125 = ({ id = id_3; frame = frame_1; running = running_1; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = _x_124; children = children_1; dispatcher = dispatcher_1; context = context_1 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                                                  let _x_125 = ({ id = id_3; frame = frame_1; running = running_1; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = _x_124; children = children_1; dispatcher = dispatcher_1; context = context_1; origin = origin_1 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                                                   let m_4 = run_machine_update m_3 _x_125 in
                                                   let _x_126 = RunEvent_parkedOn (id_4, next_token_3) in
                                                   let _x_127 = _x_126 :: _x_119 in
@@ -3317,7 +3322,7 @@ let evaluate_prim (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : 
                                                   _x_130)))
                                         | Some val__131 -> (let _x_132 = exit_value val__131 mode_105 in
                                           let _x_133 = ({ current = _x_132; stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
-                                          let _x_134 = ({ id = id; frame = _x_133; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                                          let _x_134 = ({ id = id; frame = _x_133; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                                           let _x_135 = Outcome_continue_ in
                                           let _x_136 = [] in
                                           let _x_137 = ({ machine = m; fiber = _x_134; yielding = yielding; outcome = _x_135; nested = _x_136 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
@@ -3369,9 +3374,9 @@ let fire_observer__red_arg__lam_0 (id : int) (c : int) : bool =
 
 let fire_observer__red_arg__lam_1 (_f_1 : int -> bool) (p : (_, _, _, _, _, _, _, _, _, _) run_fiber) : (_, _, _, _, _, _, _, _, _, _) run_fiber =
   match (p : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let _x_2 = [] in
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (let _x_2 = [] in
       let _x_3 = list_filter_tr_loop _f_1 children _x_2 in
-      let _x_4 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = _x_3; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+      let _x_4 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = _x_3; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
       _x_4)
 
 
@@ -3389,10 +3394,10 @@ let fire_observer__red_arg__lam_2 (token_1 : int) (p : (_, _, _, _, _, _) pendin
 
 let fire_observer__red_arg__lam_3 (observer : observer) (g : (_, _, _, _, _, _, _, _, _, _) run_fiber) : (_, _, _, _, _, _, _, _, _, _) run_fiber =
   match (g : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let _x_1 = [] in
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (let _x_1 = [] in
       let _x_2 = observer :: _x_1 in
       let _x_3 = observers @ _x_2 in
-      let _x_4 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = _x_3; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+      let _x_4 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = _x_3; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
       _x_4)
 
 
@@ -3562,7 +3567,7 @@ let fire_observer (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : 
             | None -> (let _x_33 = m, snd_1 in
               _x_33)
             | Some val__34 -> (match (val__34 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-                | { id = id_1; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let _f_35 = fire_observer__red_arg__lam_2 token_31 in
+                | { id = id_1; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (let _f_35 = fire_observer__red_arg__lam_2 token_31 in
                   let _x_36 = List.find_opt _f_35 pending in
                   match _x_36 with
                     | None -> (let _x_37 = m, snd_1 in
@@ -3576,7 +3581,7 @@ let fire_observer (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : 
                             | fst_45, snd_46 -> (match snd_46 with
                                 | None -> (let _f_47 = fire_observer__red_arg__lam_4 token_31 fst_45 in
                                   let _x_48 = list_map_tr_loop _f_47 pending _x_6 in
-                                  let w = ({ id = id_1; frame = frame; running = running; parked = parked; pending = _x_48; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                                  let w = ({ id = id_1; frame = frame; running = running; parked = parked; pending = _x_48; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                                   let _x_49 = run_machine_update fst_42 w in
                                   let _x_50 = snd_1 @ snd_43 in
                                   let _x_51 = countdown_park_resume_prim core interp resume_with fst_45 in
@@ -3589,7 +3594,7 @@ let fire_observer (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : 
                                     | fst_57, snd_58 -> (let _f_59 = fire_observer__red_arg__lam_5 token_31 fst_57 snd_58 fst_45 in
                                       let m_1 = run_machine_modify fst_42 fst_57 _f_39 in
                                       let _x_60 = list_map_tr_loop _f_59 pending _x_6 in
-                                      let w_1 = ({ id = id_1; frame = frame; running = running; parked = parked; pending = _x_60; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                                      let w_1 = ({ id = id_1; frame = frame; running = running; parked = parked; pending = _x_60; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                                       let _x_61 = run_machine_update m_1 w_1 in
                                       let _x_62 = snd_1 @ snd_43 in
                                       let _x_63 = _x_61, _x_62 in
@@ -3609,14 +3614,14 @@ let fire_observer (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : 
             | None -> (let _x_75 = m, snd_1 in
               _x_75)
             | Some val__76 -> (match (val__76 : (_, _, _, _, _, _, _, _) race) with
-                | { id = id_2; host = host; token = token; state = state_1; settled = settled; programs = programs; registering = registering } -> (let state_2 = supervision_race_complete state_1 id exit_ in
+                | { id = id_2; host = host; token = token; state = state_1; settled = settled; programs = programs; registering = registering; next_site = next_site } -> (let state_2 = supervision_race_complete state_1 id exit_ in
                   match (state_2 : (_, _, _, _, _) race_all_state) with
-                    | { accepted = accepted; cleanup_needed = cleanup_needed; _ } -> (let race = ({ id = id_2; host = host; token = token; state = state_2; settled = settled; programs = programs; registering = registering } : (_, _, _, _, _, _, _, _) race) in
+                    | { accepted = accepted; cleanup_needed = cleanup_needed; _ } -> (let race = ({ id = id_2; host = host; token = token; state = state_2; settled = settled; programs = programs; registering = registering; next_site = next_site } : (_, _, _, _, _, _, _, _) race) in
                       let m_2 = run_machine_update_race m race in
                       match accepted with
                         | Some val__77 -> if settled then (let _x_89 = m_2, snd_1 in
                             _x_89) else (let _x_78 = true in
-                            let _x_79 = ({ id = id_2; host = host; token = token; state = state_2; settled = _x_78; programs = programs; registering = registering } : (_, _, _, _, _, _, _, _) race) in
+                            let _x_79 = ({ id = id_2; host = host; token = token; state = state_2; settled = _x_78; programs = programs; registering = registering; next_site = next_site } : (_, _, _, _, _, _, _, _) race) in
                             let m_3 = run_machine_update_race m_2 _x_79 in
                             let _x_80 = RunEvent_raceSettled (race_73, val__77) in
                             let _x_81 = _x_80 :: _x_6 in
@@ -3643,14 +3648,14 @@ let fire_observer (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : 
 
 let run_fiber_publish (core : (_, _, _, _, _, _, _, _) fiber_core) (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) (exit_ : (_, _, _, _, _) exit_) : (_, _, _, _, _, _, _, _, _, _) run_fiber =
   match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; _ } -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
+    | { id = id; frame = frame; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin; _ } -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
         | { set_deferred = set_deferred; _ } -> (let _x_1 = false in
           let _x_2 = set_deferred frame _x_1 in
           let _x_3 = Parked_notParked in
           let _x_4 = [] in
           let _x_5 = None in
           let _x_6 = Some exit_ in
-          let _x_7 = ({ id = id; frame = _x_2; running = _x_1; parked = _x_3; pending = _x_4; finalizing = _x_5; exit_ = _x_6; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+          let _x_7 = ({ id = id; frame = _x_2; running = _x_1; parked = _x_3; pending = _x_4; finalizing = _x_5; exit_ = _x_6; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
           _x_7))
 
 
@@ -3659,11 +3664,11 @@ let run_fiber_publish (core : (_, _, _, _, _, _, _, _) fiber_core) (f : (_, _, _
 
 let run_fiber_cleared (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) : (_, _, _, _, _, _, _, _, _, _) run_fiber =
   match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; dispatcher = dispatcher; _ } -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; dispatcher = dispatcher; origin = origin; _ } -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
         | { clear_stack = clear_stack; _ } -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
             | { empty_context = empty_context; _ } -> (let _x_1 = clear_stack frame in
               let _x_2 = [] in
-              let _x_3 = ({ id = id; frame = _x_1; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = _x_2; children = _x_2; dispatcher = dispatcher; context = empty_context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+              let _x_3 = ({ id = id; frame = _x_1; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = _x_2; children = _x_2; dispatcher = dispatcher; context = empty_context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
               _x_3)))
 
 
@@ -3714,14 +3719,14 @@ let exit_fiber_exit_interrupt_children (core : (_, _, _, _, _, _, _, _) fiber_co
   match (core : (_, _, _, _, _, _, _, _) fiber_core) with
     | { answer_with = answer_with; set_deferred = set_deferred; on_success = on_success; _ } -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
         | { interrupt_all_code = interrupt_all_code; restore_name = restore_name; _ } -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-            | { id = id; frame = frame; parked = parked; pending = pending; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; _ } -> (let _x_1 = interrupt_all_code children in
+            | { id = id; frame = frame; parked = parked; pending = pending; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin; _ } -> (let _x_1 = interrupt_all_code children in
               let _x_2 = restore_name exit_ in
               let code = on_success _x_1 _x_2 in
               let _x_3 = false in
               let _x_4 = set_deferred frame _x_3 in
               let _x_5 = answer_with _x_4 code in
               let _x_6 = Some exit_ in
-              let f_1 = ({ id = id; frame = _x_5; running = _x_3; parked = parked; pending = pending; finalizing = _x_6; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+              let f_1 = ({ id = id; frame = _x_5; running = _x_3; parked = parked; pending = pending; finalizing = _x_6; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
               let _x_7 = run_machine_update m f_1 in
               let _x_8 = RunEvent_childrenInterrupted (id, children) in
               let _x_9 = [] in
@@ -3765,17 +3770,17 @@ let settle (core : (_, _, _, _, _, _, _, _) fiber_core) (id : int) (rest : (_, _
           _x_7)
         | Outcome_parked -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
             | { deferred_interrupt = deferred_interrupt; _ } -> (match (fiber : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-                | { id = id_1; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let _x_8 = deferred_interrupt frame in
+                | { id = id_1; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (let _x_8 = deferred_interrupt frame in
                   if _x_8 then (let _x_13 = Parked_notParked in
                     let _x_14 = [] in
-                    let _x_15 = ({ id = id_1; frame = frame; running = running; parked = _x_13; pending = _x_14; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                    let _x_15 = ({ id = id_1; frame = frame; running = running; parked = _x_13; pending = _x_14; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                     let _x_16 = run_machine_update machine _x_15 in
                     let _x_17 = Cmd_loop (id, yielding) in
                     let _x_18 = _x_17 :: _x_14 in
                     let _x_19 = nested @ _x_18 in
                     let _x_20 = _x_19 @ rest in
                     let _x_21 = _x_16, _x_20 in
-                    _x_21) else (let _x_9 = ({ id = id_1; frame = frame; running = _x_8; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                    _x_21) else (let _x_9 = ({ id = id_1; frame = frame; running = _x_8; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                     let _x_10 = run_machine_update machine _x_9 in
                     let _x_11 = nested @ rest in
                     let _x_12 = _x_10, _x_11 in
@@ -3789,8 +3794,8 @@ let settle (core : (_, _, _, _, _, _, _, _) fiber_core) (id : int) (rest : (_, _
           let _x_29 = _x_23, _x_28 in
           _x_29)
         | Outcome_stuck why_30 -> (match (fiber : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-            | { id = id_2; frame = frame_1; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1; _ } -> (let _x_31 = false in
-              let _x_32 = ({ id = id_2; frame = frame_1; running = _x_31; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+            | { id = id_2; frame = frame_1; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1; origin = origin_1; _ } -> (let _x_31 = false in
+              let _x_32 = ({ id = id_2; frame = frame_1; running = _x_31; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1; origin = origin_1 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
               let _x_33 = run_machine_update machine _x_32 in
               let _x_34 = run_machine_halt _x_33 why_30 in
               let _x_35 = [] in
@@ -3842,11 +3847,11 @@ let drive_step__red_arg__lam_0 (token_1 : int) (_x_2 : bool) (p : (_, _, _, _, _
 
 let drive_step__red_arg__lam_1 (race_1 : int) (c : (_, _, _, _, _, _, _, _, _, _) run_fiber) : (_, _, _, _, _, _, _, _, _, _) run_fiber =
   match (c : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let _x_2 = Observer_raceCallback race_1 in
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (let _x_2 = Observer_raceCallback race_1 in
       let _x_3 = [] in
       let _x_4 = _x_2 :: _x_3 in
       let _x_5 = observers @ _x_4 in
-      let _x_6 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = _x_5; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+      let _x_6 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = _x_5; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
       _x_6)
 
 
@@ -3889,10 +3894,10 @@ let as_void_code (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : (_, _, _
 
 let drive_step__red_arg__lam_2 (child_1 : int) (p : (_, _, _, _, _, _, _, _, _, _) run_fiber) : (_, _, _, _, _, _, _, _, _, _) run_fiber =
   match (p : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let _x_2 = [] in
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (let _x_2 = [] in
       let _x_3 = child_1 :: _x_2 in
       let _x_4 = children @ _x_3 in
-      let _x_5 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = _x_4; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+      let _x_5 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = _x_4; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
       _x_5)
 
 
@@ -3901,11 +3906,11 @@ let drive_step__red_arg__lam_2 (child_1 : int) (p : (_, _, _, _, _, _, _, _, _, 
 
 let drive_step__red_arg__lam_3 (parent_1 : int) (c : (_, _, _, _, _, _, _, _, _, _) run_fiber) : (_, _, _, _, _, _, _, _, _, _) run_fiber =
   match (c : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let _x_2 = Observer_untrackChild parent_1 in
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (let _x_2 = Observer_untrackChild parent_1 in
       let _x_3 = [] in
       let _x_4 = _x_2 :: _x_3 in
       let _x_5 = observers @ _x_4 in
-      let _x_6 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = _x_5; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+      let _x_6 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = _x_5; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
       _x_6)
 
 
@@ -3919,8 +3924,8 @@ let run_machine_post_task (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine)
       let _x_3 = run_machine_halt m _x_2 in
       _x_3)
     | Some val__4 -> (match (val__4 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-        | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let _x_5 = dispatcher_enqueue dispatcher priority task in
-          let _x_6 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = _x_5; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+        | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (let _x_5 = dispatcher_enqueue dispatcher priority task in
+          let _x_6 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = _x_5; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
           let _x_7 = run_machine_update m _x_6 in
           let _x_8 = run_machine_arm _x_7 owner in
           let _x_9 = RunEvent_scheduledTask (owner, priority, task) in
@@ -3962,12 +3967,12 @@ let drive_step (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -
         | None -> (let _x_9 = m, x_6 in
           _x_9)
         | Some val__10 -> (match (val__10 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-            | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; _ } -> (match exit_ with
+            | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin; _ } -> (match exit_ with
                 | None -> if running then (let _x_23 = m, x_6 in
                     _x_23) else (let _x_11 = Parked_notParked in
                     let _x_12 = inst_decidable_eq_parked_dec_eq parked _x_11 in
                     if _x_12 then (let _x_14 = 0 in
-                      let f = ({ id = id; frame = frame; running = _x_12; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = _x_14; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                      let f = ({ id = id; frame = frame; running = _x_12; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = _x_14; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                       let _x_15 = run_machine_update m f in
                       let _x_16 = RunEvent_started fiber_7 in
                       let _x_17 = [] in
@@ -3999,8 +4004,8 @@ let drive_step (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -
         | None -> (let _x_43 = m, x_6 in
           _x_43)
         | Some val__44 -> (match (val__44 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-            | { id = id_1; frame = frame_1; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1; _ } -> (let _x_45 = false in
-              let _x_46 = ({ id = id_1; frame = frame_1; running = _x_45; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+            | { id = id_1; frame = frame_1; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1; origin = origin_1; _ } -> (let _x_45 = false in
+              let _x_46 = ({ id = id_1; frame = frame_1; running = _x_45; parked = parked_1; pending = pending_1; finalizing = finalizing_1; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield_1; prevent_yield = prevent_yield_1; yield_override = yield_override_1; observers = observers_1; children = children_1; dispatcher = dispatcher_1; context = context_1; origin = origin_1 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
               let _x_47 = exit_fiber core interp m _x_46 exit__41 in
               match _x_47 with
                 | fst_48, snd_49 -> (let _x_50 = snd_49 @ x_6 in
@@ -4011,7 +4016,7 @@ let drive_step (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -
         | None -> (let _x_56 = m, x_6 in
           _x_56)
         | Some val__57 -> (match (val__57 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-            | { id = id_2; frame = frame_2; running = running_1; parked = parked_2; pending = pending_2; finalizing = finalizing_2; exit_ = exit__2; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_2; prevent_yield = prevent_yield_2; yield_override = yield_override_2; observers = observers_2; children = children_2; dispatcher = dispatcher_2; context = context_2 } -> (match (parked_2 : parked) with
+            | { id = id_2; frame = frame_2; running = running_1; parked = parked_2; pending = pending_2; finalizing = finalizing_2; exit_ = exit__2; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_2; prevent_yield = prevent_yield_2; yield_override = yield_override_2; observers = observers_2; children = children_2; dispatcher = dispatcher_2; context = context_2; origin = origin_2 } -> (match (parked_2 : parked) with
                 | Parked_notParked -> (let _x_58 = m, x_6 in
                   _x_58)
                 | Parked_withGuard token_59 -> (let _x_60 = token_59 = token_53 in
@@ -4021,7 +4026,7 @@ let drive_step (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -
                         let _x_64 = Parked_notParked in
                         let _x_65 = [] in
                         let _x_66 = list_filter_tr_loop _f_62 pending_2 _x_65 in
-                        let t = ({ id = id_2; frame = _x_63; running = running_1; parked = _x_64; pending = _x_66; finalizing = finalizing_2; exit_ = exit__2; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_2; prevent_yield = prevent_yield_2; yield_override = yield_override_2; observers = observers_2; children = children_2; dispatcher = dispatcher_2; context = context_2 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                        let t = ({ id = id_2; frame = _x_63; running = running_1; parked = _x_64; pending = _x_66; finalizing = finalizing_2; exit_ = exit__2; current_op_count = current_op_count_1; max_ops_before_yield = max_ops_before_yield_2; prevent_yield = prevent_yield_2; yield_override = yield_override_2; observers = observers_2; children = children_2; dispatcher = dispatcher_2; context = context_2; origin = origin_2 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
                         let _x_67 = run_machine_update m t in
                         let _x_68 = RunEvent_resumedWith (fiber_52, token_53, answer_54) in
                         let _x_69 = _x_68 :: _x_65 in
@@ -4036,235 +4041,247 @@ let drive_step (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -
         | None -> (let _x_76 = m, x_6 in
           _x_76)
         | Some val__77 -> (match (val__77 : (_, _, _, _, _, _, _, _) race) with
-            | { id = id_3; host = host; token = token; state = state; settled = settled; programs = programs; registering = registering } -> (match programs with
+            | { id = id_3; host = host; token = token; state = state; settled = settled; programs = programs; registering = registering; next_site = next_site } -> (match programs with
                 | [] -> (let _x_78 = m, x_6 in
                   _x_78)
-                | head_79 :: tail_80 -> (match (state : (_, _, _, _, _) race_all_state) with
+                | head_79 :: tail_80 -> (let _jp_81 = fun _y_82 _y_83 _y_84 -> let _x_85 = ({ id = id_3; host = host; token = token; state = state; settled = settled; programs = tail_80; registering = registering; next_site = _y_84 } : (_, _, _, _, _, _, _, _) race) in
+                  let m_1 = run_machine_update_race _y_83 _x_85 in
+                  let _x_86 = RunEvent_raceLaunched (race_74, _y_82) in
+                  let _x_87 = [] in
+                  let _x_88 = _x_86 :: _x_87 in
+                  let _x_89 = run_machine_emit m_1 _x_88 in
+                  let _x_90 = Cmd_evaluate _y_82 in
+                  let _x_91 = Cmd_enrollRace (race_74, _y_82) in
+                  let _x_92 = x_5 :: x_6 in
+                  let _x_93 = _x_91 :: _x_92 in
+                  let _x_94 = _x_90 :: _x_93 in
+                  let _x_95 = _x_89, _x_94 in
+                  _x_95 in
+                  match (state : (_, _, _, _, _) race_all_state) with
                     | { accepted = accepted; _ } -> (match accepted with
-                        | None -> (let _x_81 = run_machine_fiber_opt m host in
-                          match _x_81 with
-                            | None -> (let _x_82 = m, x_6 in
-                              _x_82)
-                            | Some val__83 -> (let _x_84 = launch_entrant core interp m val__83 head_79 in
-                              match _x_84 with
-                                | fst_85, snd_86 -> (let _x_87 = ({ id = id_3; host = host; token = token; state = state; settled = settled; programs = tail_80; registering = registering } : (_, _, _, _, _, _, _, _) race) in
-                                  let m_1 = run_machine_update_race fst_85 _x_87 in
-                                  let _x_88 = RunEvent_raceLaunched (race_74, snd_86) in
-                                  let _x_89 = [] in
-                                  let _x_90 = _x_88 :: _x_89 in
-                                  let _x_91 = run_machine_emit m_1 _x_90 in
-                                  let _x_92 = Cmd_evaluate snd_86 in
-                                  let _x_93 = Cmd_enrollRace (race_74, snd_86) in
-                                  let _x_94 = x_5 :: x_6 in
-                                  let _x_95 = _x_93 :: _x_94 in
-                                  let _x_96 = _x_92 :: _x_95 in
-                                  let _x_97 = _x_91, _x_96 in
-                                  _x_97)))
-                        | Some _ -> (let _x_99 = m, x_6 in
-                          _x_99))))))
-    | Cmd_enrollRace (race_100, child_101) -> (let _x_102 = run_machine_race_opt m race_100 in
-      match _x_102 with
-        | Some val__103 -> (let _x_104 = run_machine_fiber_opt m child_101 in
-          match _x_104 with
-            | Some val__105 -> (match (val__103 : (_, _, _, _, _, _, _, _) race) with
-                | { id = id_4; host = host_1; token = token_1; state = state_1; settled = settled_1; programs = programs_1; registering = registering_1 } -> (match (state_1 : (_, _, _, _, _) race_all_state) with
-                    | { unstarted = unstarted; starting = starting; live = live; remaining = remaining; failures = failures; winner = winner; accepted = accepted_1; cleanup_needed = cleanup_needed; requests = requests; cleanup = cleanup; cleanup_requested = cleanup_requested } -> (match (val__105 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-                        | { exit_ = exit__3; _ } -> (let _x_106 = [] in
-                          let _x_107 = child_101 :: _x_106 in
-                          let _x_108 = live @ _x_107 in
-                          let _x_109 = ({ unstarted = unstarted; starting = starting; live = _x_108; remaining = remaining; failures = failures; winner = winner; accepted = accepted_1; cleanup_needed = cleanup_needed; requests = requests; cleanup = cleanup; cleanup_requested = cleanup_requested } : (_, _, _, _, _) race_all_state) in
-                          let _x_110 = ({ id = id_4; host = host_1; token = token_1; state = _x_109; settled = settled_1; programs = programs_1; registering = registering_1 } : (_, _, _, _, _, _, _, _) race) in
-                          let m_2 = run_machine_update_race m _x_110 in
+                        | None -> (let _x_96 = run_machine_fiber_opt m host in
+                          match _x_96 with
+                            | None -> (let _x_97 = m, x_6 in
+                              _x_97)
+                            | Some val__98 -> (let _jp_99 = fun _y_100 -> let _x_101 = launch_entrant core interp m val__98 head_79 _y_100 in
+                              match _x_101 with
+                                | fst_102, snd_103 -> (match next_site with
+                                    | None -> _jp_81 snd_103 fst_102 next_site
+                                    | Some val__104 -> (let _x_105 = 1 in
+                                      let _x_106 = [] in
+                                      let _x_107 = _x_105 :: _x_106 in
+                                      let _x_108 = val__104 @ _x_107 in
+                                      let _x_109 = Some _x_108 in
+                                      _jp_81 snd_103 fst_102 _x_109)) in
+                              match next_site with
+                                | None -> (let _x_110 = [] in
+                                  _jp_99 _x_110)
+                                | Some val__111 -> _jp_99 val__111))
+                        | Some _ -> (let _x_113 = m, x_6 in
+                          _x_113))))))
+    | Cmd_enrollRace (race_114, child_115) -> (let _x_116 = run_machine_race_opt m race_114 in
+      match _x_116 with
+        | Some val__117 -> (let _x_118 = run_machine_fiber_opt m child_115 in
+          match _x_118 with
+            | Some val__119 -> (match (val__117 : (_, _, _, _, _, _, _, _) race) with
+                | { id = id_4; host = host_1; token = token_1; state = state_1; settled = settled_1; programs = programs_1; registering = registering_1; next_site = next_site_1 } -> (match (state_1 : (_, _, _, _, _) race_all_state) with
+                    | { unstarted = unstarted; starting = starting; live = live; remaining = remaining; failures = failures; winner = winner; accepted = accepted_1; cleanup_needed = cleanup_needed; requests = requests; cleanup = cleanup; cleanup_requested = cleanup_requested } -> (match (val__119 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+                        | { exit_ = exit__3; _ } -> (let _x_120 = [] in
+                          let _x_121 = child_115 :: _x_120 in
+                          let _x_122 = live @ _x_121 in
+                          let _x_123 = ({ unstarted = unstarted; starting = starting; live = _x_122; remaining = remaining; failures = failures; winner = winner; accepted = accepted_1; cleanup_needed = cleanup_needed; requests = requests; cleanup = cleanup; cleanup_requested = cleanup_requested } : (_, _, _, _, _) race_all_state) in
+                          let _x_124 = ({ id = id_4; host = host_1; token = token_1; state = _x_123; settled = settled_1; programs = programs_1; registering = registering_1; next_site = next_site_1 } : (_, _, _, _, _, _, _, _) race) in
+                          let m_2 = run_machine_update_race m _x_124 in
                           match exit__3 with
-                            | None -> (let _f_111 = drive_step__red_arg__lam_1 race_100 in
-                              let _x_112 = run_machine_modify m_2 child_101 _f_111 in
-                              let _x_113 = _x_112, x_6 in
-                              _x_113)
-                            | Some val__114 -> (let _x_115 = m_2, _x_106 in
-                              let _x_116 = Observer_raceCallback race_100 in
-                              let _x_117 = fire_observer inst_1 inst_2 inst_3 inst_4 core interp child_101 val__114 _x_115 _x_116 in
-                              match _x_117 with
-                                | fst_118, snd_119 -> (let _x_120 = snd_119 @ x_6 in
-                                  let _x_121 = fst_118, _x_120 in
-                                  _x_121))))))
-            | _ -> (let _x_122 = m, x_6 in
-              _x_122))
-        | _ -> (let _x_123 = m, x_6 in
-          _x_123))
-    | Cmd_registrationDone (race_124, yielding_125) -> (let _x_126 = run_machine_race_opt m race_124 in
-      match _x_126 with
-        | None -> (let _x_127 = m, x_6 in
-          _x_127)
-        | Some val__128 -> (match (val__128 : (_, _, _, _, _, _, _, _) race) with
-            | { id = id_5; host = host_2; token = token_2; state = state_2; settled = settled_2; programs = programs_2; _ } -> (let _x_129 = false in
-              let _x_130 = ({ id = id_5; host = host_2; token = token_2; state = state_2; settled = settled_2; programs = programs_2; registering = _x_129 } : (_, _, _, _, _, _, _, _) race) in
-              let m_3 = run_machine_update_race m _x_130 in
-              let _x_131 = run_machine_fiber_opt m_3 host_2 in
-              match _x_131 with
-                | None -> (let _x_132 = m_3, x_6 in
-                  _x_132)
-                | Some val__133 -> (match (state_2 : (_, _, _, _, _) race_all_state) with
+                            | None -> (let _f_125 = drive_step__red_arg__lam_1 race_114 in
+                              let _x_126 = run_machine_modify m_2 child_115 _f_125 in
+                              let _x_127 = _x_126, x_6 in
+                              _x_127)
+                            | Some val__128 -> (let _x_129 = m_2, _x_120 in
+                              let _x_130 = Observer_raceCallback race_114 in
+                              let _x_131 = fire_observer inst_1 inst_2 inst_3 inst_4 core interp child_115 val__128 _x_129 _x_130 in
+                              match _x_131 with
+                                | fst_132, snd_133 -> (let _x_134 = snd_133 @ x_6 in
+                                  let _x_135 = fst_132, _x_134 in
+                                  _x_135))))))
+            | _ -> (let _x_136 = m, x_6 in
+              _x_136))
+        | _ -> (let _x_137 = m, x_6 in
+          _x_137))
+    | Cmd_registrationDone (race_138, yielding_139) -> (let _x_140 = run_machine_race_opt m race_138 in
+      match _x_140 with
+        | None -> (let _x_141 = m, x_6 in
+          _x_141)
+        | Some val__142 -> (match (val__142 : (_, _, _, _, _, _, _, _) race) with
+            | { id = id_5; host = host_2; token = token_2; state = state_2; settled = settled_2; programs = programs_2; next_site = next_site_2; _ } -> (let _x_143 = false in
+              let _x_144 = ({ id = id_5; host = host_2; token = token_2; state = state_2; settled = settled_2; programs = programs_2; registering = _x_143; next_site = next_site_2 } : (_, _, _, _, _, _, _, _) race) in
+              let m_3 = run_machine_update_race m _x_144 in
+              let _x_145 = run_machine_fiber_opt m_3 host_2 in
+              match _x_145 with
+                | None -> (let _x_146 = m_3, x_6 in
+                  _x_146)
+                | Some val__147 -> (match (state_2 : (_, _, _, _, _) race_all_state) with
                     | { accepted = accepted_2; cleanup_needed = cleanup_needed_1; _ } -> (match accepted_2 with
                         | None -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
-                            | { cancel_name = cancel_name; race_cancel_name = race_cancel_name; _ } -> (match (val__133 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-                                | { id = id_6; frame = frame_3; running = running_2; parked = parked_3; pending = pending_3; finalizing = finalizing_3; exit_ = exit__4; current_op_count = current_op_count_2; max_ops_before_yield = max_ops_before_yield_3; prevent_yield = prevent_yield_3; yield_override = yield_override_3; observers = observers_3; children = children_3; dispatcher = dispatcher_3; context = context_3 } -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
-                                    | { push_async_finalizer = push_async_finalizer; _ } -> (let _x_134 = race_cancel_name race_124 in
-                                      let name = cancel_name _x_134 id_6 token_2 in
-                                      let _x_135 = push_async_finalizer name frame_3 in
-                                      let f_1 = ({ id = id_6; frame = _x_135; running = running_2; parked = parked_3; pending = pending_3; finalizing = finalizing_3; exit_ = exit__4; current_op_count = current_op_count_2; max_ops_before_yield = max_ops_before_yield_3; prevent_yield = prevent_yield_3; yield_override = yield_override_3; observers = observers_3; children = children_3; dispatcher = dispatcher_3; context = context_3 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
-                                      let _x_136 = None in
-                                      let _x_137 = [] in
-                                      let _x_138 = Resume_void in
-                                      let _x_139 = ({ token = token_2; waiting_on = _x_136; remaining = _x_137; collected = _x_137; resume_with = _x_138; fail_fast = _x_129 } : (_, _, _, _, _, _) pending) in
-                                      let f_2 = run_fiber_park f_1 _x_139 in
+                            | { cancel_name = cancel_name; race_cancel_name = race_cancel_name; _ } -> (match (val__147 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+                                | { id = id_6; frame = frame_3; running = running_2; parked = parked_3; pending = pending_3; finalizing = finalizing_3; exit_ = exit__4; current_op_count = current_op_count_2; max_ops_before_yield = max_ops_before_yield_3; prevent_yield = prevent_yield_3; yield_override = yield_override_3; observers = observers_3; children = children_3; dispatcher = dispatcher_3; context = context_3; origin = origin_3 } -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
+                                    | { push_async_finalizer = push_async_finalizer; _ } -> (let _x_148 = race_cancel_name race_138 in
+                                      let name = cancel_name _x_148 id_6 token_2 in
+                                      let _x_149 = push_async_finalizer name frame_3 in
+                                      let f_1 = ({ id = id_6; frame = _x_149; running = running_2; parked = parked_3; pending = pending_3; finalizing = finalizing_3; exit_ = exit__4; current_op_count = current_op_count_2; max_ops_before_yield = max_ops_before_yield_3; prevent_yield = prevent_yield_3; yield_override = yield_override_3; observers = observers_3; children = children_3; dispatcher = dispatcher_3; context = context_3; origin = origin_3 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                                      let _x_150 = None in
+                                      let _x_151 = [] in
+                                      let _x_152 = Resume_void in
+                                      let _x_153 = ({ token = token_2; waiting_on = _x_150; remaining = _x_151; collected = _x_151; resume_with = _x_152; fail_fast = _x_143 } : (_, _, _, _, _, _) pending) in
+                                      let f_2 = run_fiber_park f_1 _x_153 in
                                       match (f_2 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-                                        | { id = id_7; _ } -> (let _x_140 = RunEvent_parkedOn (id_7, token_2) in
-                                          let _x_141 = _x_140 :: _x_137 in
-                                          let _x_142 = run_machine_emit m_3 _x_141 in
-                                          let _x_143 = Outcome_parked in
-                                          let _x_144 = ({ machine = _x_142; fiber = f_2; yielding = yielding_125; outcome = _x_143; nested = _x_137 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-                                          let _x_145 = settle core id_7 x_6 _x_144 in
-                                          _x_145)))))
-                        | Some val__146 -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
-                            | { race_settle = race_settle; _ } -> (match (val__133 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-                                | { id = id_8; frame = frame_4; running = running_3; parked = parked_4; pending = pending_4; finalizing = finalizing_4; exit_ = exit__5; current_op_count = current_op_count_3; max_ops_before_yield = max_ops_before_yield_4; prevent_yield = prevent_yield_4; yield_override = yield_override_4; observers = observers_4; children = children_4; dispatcher = dispatcher_4; context = context_4 } -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
-                                    | { answer_with = answer_with_1; _ } -> (let code = race_settle race_124 cleanup_needed_1 val__146 in
-                                      let _x_147 = answer_with_1 frame_4 code in
-                                      let f_3 = ({ id = id_8; frame = _x_147; running = running_3; parked = parked_4; pending = pending_4; finalizing = finalizing_4; exit_ = exit__5; current_op_count = current_op_count_3; max_ops_before_yield = max_ops_before_yield_4; prevent_yield = prevent_yield_4; yield_override = yield_override_4; observers = observers_4; children = children_4; dispatcher = dispatcher_4; context = context_4 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
-                                      let _x_148 = Outcome_continue_ in
-                                      let _x_149 = [] in
-                                      let _x_150 = ({ machine = m_3; fiber = f_3; yielding = yielding_125; outcome = _x_148; nested = _x_149 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-                                      let _x_151 = settle core id_8 x_6 _x_150 in
-                                      _x_151)))))))))
-    | Cmd_interruptTarget (target_152, who_153, extra_154) -> (let _x_155 = run_machine_fiber_opt m target_152 in
-      match _x_155 with
-        | None -> (let _x_156 = m, x_6 in
-          _x_156)
-        | Some val__157 -> (let _x_158 = interrupt_record inst_1 inst_2 inst_3 inst_4 core interp who_153 extra_154 val__157 in
-          match _x_158 with
-            | fst_159, snd_160 -> (let _x_161 = run_machine_update m fst_159 in
-              let _x_162 = RunEvent_interruptRecorded (who_153, target_152) in
-              let _x_163 = [] in
-              let _x_164 = _x_162 :: _x_163 in
-              let _x_165 = run_machine_emit _x_161 _x_164 in
-              let _jp_166 = fun _y_167 -> let _x_168 = _y_167 @ x_6 in
-              let _x_169 = _x_165, _x_168 in
-              _x_169 in
-              if snd_160 then (let _x_170 = Cmd_evaluate target_152 in
-                let _x_171 = _x_170 :: _x_163 in
-                _jp_166 _x_171) else _jp_166 _x_163)))
-    | Cmd_afterInterrupt (host_172, yielding_173, kind_174) -> (let _x_175 = run_machine_fiber_opt m host_172 in
-      match _x_175 with
-        | None -> (let _x_176 = m, x_6 in
-          _x_176)
-        | Some val__177 -> (match (val__177 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-            | { id = id_9; frame = frame_5; running = running_4; parked = parked_5; pending = pending_5; finalizing = finalizing_5; exit_ = exit__6; current_op_count = current_op_count_4; max_ops_before_yield = max_ops_before_yield_5; prevent_yield = prevent_yield_5; yield_override = yield_override_5; observers = observers_5; children = children_5; dispatcher = dispatcher_5; context = context_5 } -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
-                | { answer_with = answer_with_2; _ } -> (let _x_178 = await_code interp m kind_174 in
-                  let _x_179 = as_void_code core interp _x_178 in
-                  let _x_180 = answer_with_2 frame_5 _x_179 in
-                  let f_4 = ({ id = id_9; frame = _x_180; running = running_4; parked = parked_5; pending = pending_5; finalizing = finalizing_5; exit_ = exit__6; current_op_count = current_op_count_4; max_ops_before_yield = max_ops_before_yield_5; prevent_yield = prevent_yield_5; yield_override = yield_override_5; observers = observers_5; children = children_5; dispatcher = dispatcher_5; context = context_5 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
-                  let _x_181 = Outcome_continue_ in
-                  let _x_182 = [] in
-                  let _x_183 = ({ machine = m; fiber = f_4; yielding = yielding_173; outcome = _x_181; nested = _x_182 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-                  let _x_184 = settle core id_9 x_6 _x_183 in
-                  _x_184))))
-    | Cmd_raceCancel (race_185, host_186, yielding_187, remaining_188, visited_189) -> (let _jp_190 = fun () -> let _x_191 = ParkKind_awaitAll visited_189 in
-      let _x_192 = Cmd_afterInterrupt (host_186, yielding_187, _x_191) in
-      let _x_193 = _x_192 :: x_6 in
-      let _x_194 = m, _x_193 in
-      _x_194 in
-      match remaining_188 with
-        | [] -> _jp_190 ()
-        | head_195 :: tail_196 -> (let _x_197 = run_machine_race_opt m race_185 in
-          match _x_197 with
-            | None -> _jp_190 ()
-            | Some val__198 -> (match (val__198 : (_, _, _, _, _, _, _, _) race) with
+                                        | { id = id_7; _ } -> (let _x_154 = RunEvent_parkedOn (id_7, token_2) in
+                                          let _x_155 = _x_154 :: _x_151 in
+                                          let _x_156 = run_machine_emit m_3 _x_155 in
+                                          let _x_157 = Outcome_parked in
+                                          let _x_158 = ({ machine = _x_156; fiber = f_2; yielding = yielding_139; outcome = _x_157; nested = _x_151 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+                                          let _x_159 = settle core id_7 x_6 _x_158 in
+                                          _x_159)))))
+                        | Some val__160 -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
+                            | { race_settle = race_settle; _ } -> (match (val__147 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+                                | { id = id_8; frame = frame_4; running = running_3; parked = parked_4; pending = pending_4; finalizing = finalizing_4; exit_ = exit__5; current_op_count = current_op_count_3; max_ops_before_yield = max_ops_before_yield_4; prevent_yield = prevent_yield_4; yield_override = yield_override_4; observers = observers_4; children = children_4; dispatcher = dispatcher_4; context = context_4; origin = origin_4 } -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
+                                    | { answer_with = answer_with_1; _ } -> (let code = race_settle race_138 cleanup_needed_1 val__160 in
+                                      let _x_161 = answer_with_1 frame_4 code in
+                                      let f_3 = ({ id = id_8; frame = _x_161; running = running_3; parked = parked_4; pending = pending_4; finalizing = finalizing_4; exit_ = exit__5; current_op_count = current_op_count_3; max_ops_before_yield = max_ops_before_yield_4; prevent_yield = prevent_yield_4; yield_override = yield_override_4; observers = observers_4; children = children_4; dispatcher = dispatcher_4; context = context_4; origin = origin_4 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                                      let _x_162 = Outcome_continue_ in
+                                      let _x_163 = [] in
+                                      let _x_164 = ({ machine = m_3; fiber = f_3; yielding = yielding_139; outcome = _x_162; nested = _x_163 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+                                      let _x_165 = settle core id_8 x_6 _x_164 in
+                                      _x_165)))))))))
+    | Cmd_interruptTarget (target_166, who_167, extra_168) -> (let _x_169 = run_machine_fiber_opt m target_166 in
+      match _x_169 with
+        | None -> (let _x_170 = m, x_6 in
+          _x_170)
+        | Some val__171 -> (let _x_172 = interrupt_record inst_1 inst_2 inst_3 inst_4 core interp who_167 extra_168 val__171 in
+          match _x_172 with
+            | fst_173, snd_174 -> (let _x_175 = run_machine_update m fst_173 in
+              let _x_176 = RunEvent_interruptRecorded (who_167, target_166) in
+              let _x_177 = [] in
+              let _x_178 = _x_176 :: _x_177 in
+              let _x_179 = run_machine_emit _x_175 _x_178 in
+              let _jp_180 = fun _y_181 -> let _x_182 = _y_181 @ x_6 in
+              let _x_183 = _x_179, _x_182 in
+              _x_183 in
+              if snd_174 then (let _x_184 = Cmd_evaluate target_166 in
+                let _x_185 = _x_184 :: _x_177 in
+                _jp_180 _x_185) else _jp_180 _x_177)))
+    | Cmd_afterInterrupt (host_186, yielding_187, kind_188) -> (let _x_189 = run_machine_fiber_opt m host_186 in
+      match _x_189 with
+        | None -> (let _x_190 = m, x_6 in
+          _x_190)
+        | Some val__191 -> (match (val__191 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+            | { id = id_9; frame = frame_5; running = running_4; parked = parked_5; pending = pending_5; finalizing = finalizing_5; exit_ = exit__6; current_op_count = current_op_count_4; max_ops_before_yield = max_ops_before_yield_5; prevent_yield = prevent_yield_5; yield_override = yield_override_5; observers = observers_5; children = children_5; dispatcher = dispatcher_5; context = context_5; origin = origin_5 } -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
+                | { answer_with = answer_with_2; _ } -> (let _x_192 = await_code interp m kind_188 in
+                  let _x_193 = as_void_code core interp _x_192 in
+                  let _x_194 = answer_with_2 frame_5 _x_193 in
+                  let f_4 = ({ id = id_9; frame = _x_194; running = running_4; parked = parked_5; pending = pending_5; finalizing = finalizing_5; exit_ = exit__6; current_op_count = current_op_count_4; max_ops_before_yield = max_ops_before_yield_5; prevent_yield = prevent_yield_5; yield_override = yield_override_5; observers = observers_5; children = children_5; dispatcher = dispatcher_5; context = context_5; origin = origin_5 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                  let _x_195 = Outcome_continue_ in
+                  let _x_196 = [] in
+                  let _x_197 = ({ machine = m; fiber = f_4; yielding = yielding_187; outcome = _x_195; nested = _x_196 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+                  let _x_198 = settle core id_9 x_6 _x_197 in
+                  _x_198))))
+    | Cmd_raceCancel (race_199, host_200, yielding_201, remaining_202, visited_203) -> (let _jp_204 = fun () -> let _x_205 = ParkKind_awaitAll visited_203 in
+      let _x_206 = Cmd_afterInterrupt (host_200, yielding_201, _x_205) in
+      let _x_207 = _x_206 :: x_6 in
+      let _x_208 = m, _x_207 in
+      _x_208 in
+      match remaining_202 with
+        | [] -> _jp_204 ()
+        | head_209 :: tail_210 -> (let _x_211 = run_machine_race_opt m race_199 in
+          match _x_211 with
+            | None -> _jp_204 ()
+            | Some val__212 -> (match (val__212 : (_, _, _, _, _, _, _, _) race) with
                 | { state = state_3; _ } -> (match (state_3 : (_, _, _, _, _) race_all_state) with
-                    | { live = live_1; _ } -> (let _x_199 = inst_decidable_eq_fiber_id in
-                      let _f_200 = inst_beq_of_decidable_eq__red_arg__lam_0 _x_199 in
-                      let _x_201 = List.exists (_f_200 head_195) live_1 in
-                      if _x_201 then (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
-                          | { stack_annotations = stack_annotations; _ } -> (let _x_205 = Some host_186 in
-                            let _x_206 = stack_annotations host_186 in
-                            let _x_207 = Cmd_interruptTarget (head_195, _x_205, _x_206) in
-                            let _x_208 = [] in
-                            let _x_209 = head_195 :: _x_208 in
-                            let _x_210 = visited_189 @ _x_209 in
-                            let _x_211 = Cmd_raceCancel (race_185, host_186, yielding_187, tail_196, _x_210) in
-                            let _x_212 = _x_211 :: x_6 in
-                            let _x_213 = _x_207 :: _x_212 in
-                            let _x_214 = m, _x_213 in
-                            _x_214)) else (let _x_202 = Cmd_raceCancel (race_185, host_186, yielding_187, tail_196, visited_189) in
-                        let _x_203 = _x_202 :: x_6 in
-                        let _x_204 = m, _x_203 in
-                        _x_204))))))
-    | Cmd_trackChild (parent_215, child_216) -> (let _x_217 = run_machine_fiber_opt m child_216 in
-      match _x_217 with
-        | None -> (let _x_218 = m, x_6 in
-          _x_218)
-        | Some val__219 -> (match (val__219 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+                    | { live = live_1; _ } -> (let _x_213 = inst_decidable_eq_fiber_id in
+                      let _f_214 = inst_beq_of_decidable_eq__red_arg__lam_0 _x_213 in
+                      let _x_215 = List.exists (_f_214 head_209) live_1 in
+                      if _x_215 then (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
+                          | { stack_annotations = stack_annotations; _ } -> (let _x_219 = Some host_200 in
+                            let _x_220 = stack_annotations host_200 in
+                            let _x_221 = Cmd_interruptTarget (head_209, _x_219, _x_220) in
+                            let _x_222 = [] in
+                            let _x_223 = head_209 :: _x_222 in
+                            let _x_224 = visited_203 @ _x_223 in
+                            let _x_225 = Cmd_raceCancel (race_199, host_200, yielding_201, tail_210, _x_224) in
+                            let _x_226 = _x_225 :: x_6 in
+                            let _x_227 = _x_221 :: _x_226 in
+                            let _x_228 = m, _x_227 in
+                            _x_228)) else (let _x_216 = Cmd_raceCancel (race_199, host_200, yielding_201, tail_210, visited_203) in
+                        let _x_217 = _x_216 :: x_6 in
+                        let _x_218 = m, _x_217 in
+                        _x_218))))))
+    | Cmd_trackChild (parent_229, child_230) -> (let _x_231 = run_machine_fiber_opt m child_230 in
+      match _x_231 with
+        | None -> (let _x_232 = m, x_6 in
+          _x_232)
+        | Some val__233 -> (match (val__233 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
             | { exit_ = exit__7; _ } -> (match exit__7 with
-                | None -> (let _f_220 = drive_step__red_arg__lam_2 child_216 in
-                  let _f_221 = drive_step__red_arg__lam_3 parent_215 in
-                  let _x_222 = run_machine_modify m parent_215 _f_220 in
-                  let _x_223 = run_machine_modify _x_222 child_216 _f_221 in
-                  let _x_224 = _x_223, x_6 in
-                  _x_224)
-                | Some _ -> (let _x_226 = m, x_6 in
-                  _x_226))))
-    | Cmd_observe (fiber_227, exit__228, observer_229) -> (let _x_230 = [] in
-      let _x_231 = m, _x_230 in
-      let _x_232 = fire_observer inst_1 inst_2 inst_3 inst_4 core interp fiber_227 exit__228 _x_231 observer_229 in
-      match _x_232 with
-        | fst_233, snd_234 -> (let _x_235 = snd_234 @ x_6 in
-          let _x_236 = fst_233, _x_235 in
-          _x_236))
-    | Cmd_exitDone fiber_237 -> (let _x_238 = run_machine_fiber_opt m fiber_237 in
-      match _x_238 with
-        | None -> (let _x_239 = m, x_6 in
-          _x_239)
-        | Some val__240 -> (let _x_241 = run_fiber_cleared core interp val__240 in
-          let _x_242 = run_machine_update m _x_241 in
-          let _x_243 = _x_242, x_6 in
-          _x_243))
-    | Cmd_closeParAwait (host_244, yielding_245, fibers_246) -> (let _x_247 = run_machine_fiber_opt m host_244 in
-      match _x_247 with
-        | None -> (let _x_248 = m, x_6 in
-          _x_248)
-        | Some val__249 -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
+                | None -> (let _f_234 = drive_step__red_arg__lam_2 child_230 in
+                  let _f_235 = drive_step__red_arg__lam_3 parent_229 in
+                  let _x_236 = run_machine_modify m parent_229 _f_234 in
+                  let _x_237 = run_machine_modify _x_236 child_230 _f_235 in
+                  let _x_238 = _x_237, x_6 in
+                  _x_238)
+                | Some _ -> (let _x_240 = m, x_6 in
+                  _x_240))))
+    | Cmd_observe (fiber_241, exit__242, observer_243) -> (let _x_244 = [] in
+      let _x_245 = m, _x_244 in
+      let _x_246 = fire_observer inst_1 inst_2 inst_3 inst_4 core interp fiber_241 exit__242 _x_245 observer_243 in
+      match _x_246 with
+        | fst_247, snd_248 -> (let _x_249 = snd_248 @ x_6 in
+          let _x_250 = fst_247, _x_249 in
+          _x_250))
+    | Cmd_exitDone fiber_251 -> (let _x_252 = run_machine_fiber_opt m fiber_251 in
+      match _x_252 with
+        | None -> (let _x_253 = m, x_6 in
+          _x_253)
+        | Some val__254 -> (let _x_255 = run_fiber_cleared core interp val__254 in
+          let _x_256 = run_machine_update m _x_255 in
+          let _x_257 = _x_256, x_6 in
+          _x_257))
+    | Cmd_closeParAwait (host_258, yielding_259, fibers_260) -> (let _x_261 = run_machine_fiber_opt m host_258 in
+      match _x_261 with
+        | None -> (let _x_262 = m, x_6 in
+          _x_262)
+        | Some val__263 -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
             | { answer_with = answer_with_3; push_iterator = push_iterator; _ } -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
-                | { park_code = park_code; void_value = void_value; close_done_name = close_done_name; _ } -> (match (val__249 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-                    | { id = id_10; frame = frame_6; running = running_5; parked = parked_6; pending = pending_6; finalizing = finalizing_6; exit_ = exit__8; current_op_count = current_op_count_5; max_ops_before_yield = max_ops_before_yield_6; prevent_yield = prevent_yield_6; yield_override = yield_override_6; observers = observers_6; children = children_6; dispatcher = dispatcher_6; context = context_6 } -> (let frame_7 = push_iterator close_done_name void_value frame_6 in
-                      let _x_250 = ParkKind_awaitAll fibers_246 in
-                      let _x_251 = park_code _x_250 in
-                      let _x_252 = answer_with_3 frame_7 _x_251 in
-                      let f_5 = ({ id = id_10; frame = _x_252; running = running_5; parked = parked_6; pending = pending_6; finalizing = finalizing_6; exit_ = exit__8; current_op_count = current_op_count_5; max_ops_before_yield = max_ops_before_yield_6; prevent_yield = prevent_yield_6; yield_override = yield_override_6; observers = observers_6; children = children_6; dispatcher = dispatcher_6; context = context_6 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
-                      let _x_253 = Outcome_continue_ in
-                      let _x_254 = [] in
-                      let _x_255 = ({ machine = m; fiber = f_5; yielding = yielding_245; outcome = _x_253; nested = _x_254 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
-                      let _x_256 = settle core id_10 x_6 _x_255 in
-                      _x_256)))))
-    | Cmd_link (mode_257, scope_258, target_259, interruptor_260, extra_261) -> (let _x_262 = link_scope inst_1 inst_2 inst_3 inst_4 core interp m mode_257 scope_258 target_259 interruptor_260 extra_261 in
-      match _x_262 with
-        | fst_263, snd_264 -> (let _x_265 = snd_264 @ x_6 in
-          let _x_266 = fst_263, _x_265 in
-          _x_266))
+                | { park_code = park_code; void_value = void_value; close_done_name = close_done_name; _ } -> (match (val__263 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+                    | { id = id_10; frame = frame_6; running = running_5; parked = parked_6; pending = pending_6; finalizing = finalizing_6; exit_ = exit__8; current_op_count = current_op_count_5; max_ops_before_yield = max_ops_before_yield_6; prevent_yield = prevent_yield_6; yield_override = yield_override_6; observers = observers_6; children = children_6; dispatcher = dispatcher_6; context = context_6; origin = origin_6 } -> (let frame_7 = push_iterator close_done_name void_value frame_6 in
+                      let _x_264 = ParkKind_awaitAll fibers_260 in
+                      let _x_265 = park_code _x_264 in
+                      let _x_266 = answer_with_3 frame_7 _x_265 in
+                      let f_5 = ({ id = id_10; frame = _x_266; running = running_5; parked = parked_6; pending = pending_6; finalizing = finalizing_6; exit_ = exit__8; current_op_count = current_op_count_5; max_ops_before_yield = max_ops_before_yield_6; prevent_yield = prevent_yield_6; yield_override = yield_override_6; observers = observers_6; children = children_6; dispatcher = dispatcher_6; context = context_6; origin = origin_6 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                      let _x_267 = Outcome_continue_ in
+                      let _x_268 = [] in
+                      let _x_269 = ({ machine = m; fiber = f_5; yielding = yielding_259; outcome = _x_267; nested = _x_268 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+                      let _x_270 = settle core id_10 x_6 _x_269 in
+                      _x_270)))))
+    | Cmd_link (mode_271, scope_272, target_273, interruptor_274, extra_275) -> (let _x_276 = link_scope inst_1 inst_2 inst_3 inst_4 core interp m mode_271 scope_272 target_273 interruptor_274 extra_275 in
+      match _x_276 with
+        | fst_277, snd_278 -> (let _x_279 = snd_278 @ x_6 in
+          let _x_280 = fst_277, _x_279 in
+          _x_280))
     | Cmd_drainDue -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
         | { due_resumes = due_resumes; _ } -> (match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
-            | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state_4; trace = trace; stuck = stuck } -> (let _x_267 = due_resumes state_4 in
-              match _x_267 with
-                | fst_268, snd_269 -> (let _x_270 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = snd_269; trace = trace; stuck = stuck } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
-                  let r = drain_owed _x_270 fst_268 in
+            | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state_4; trace = trace; stuck = stuck } -> (let _x_281 = due_resumes state_4 in
+              match _x_281 with
+                | fst_282, snd_283 -> (let _x_284 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = snd_283; trace = trace; stuck = stuck } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
+                  let r = drain_owed _x_284 fst_282 in
                   match r with
-                    | fst_1, snd_1 -> (let _x_271 = snd_1 @ x_6 in
-                      let _x_272 = fst_1, _x_271 in
-                      _x_272)))))
-    | Cmd_wake (list_273, phase_274) -> (match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
+                    | fst_1, snd_1 -> (let _x_285 = snd_1 @ x_6 in
+                      let _x_286 = fst_1, _x_285 in
+                      _x_286)))))
+    | Cmd_wake (list_287, phase_288) -> (match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
         | { fibers = fibers_1; races = races_1; next_id = next_id_1; next_token = next_token_1; next_race = next_race_1; middleware_installed = middleware_installed_1; armed = armed_1; state = state_5; trace = trace_1; stuck = stuck_1 } -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
-            | { wake_list = wake_list; _ } -> (let _x_275 = wake_list list_273 phase_274 state_5 in
-              let _x_276 = ({ fibers = fibers_1; races = races_1; next_id = next_id_1; next_token = next_token_1; next_race = next_race_1; middleware_installed = middleware_installed_1; armed = armed_1; state = _x_275; trace = trace_1; stuck = stuck_1 } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
-              let _x_277 = _x_276, x_6 in
-              _x_277)))
+            | { wake_list = wake_list; _ } -> (let _x_289 = wake_list list_287 phase_288 state_5 in
+              let _x_290 = ({ fibers = fibers_1; races = races_1; next_id = next_id_1; next_token = next_token_1; next_race = next_race_1; middleware_installed = middleware_installed_1; armed = armed_1; state = _x_289; trace = trace_1; stuck = stuck_1 } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
+              let _x_291 = _x_290, x_6 in
+              _x_291)))
 
 
 
@@ -4365,13 +4382,13 @@ let fire_state (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -
       let _x_7 = m, _x_6 in
       _x_7)
     | Some val__8 -> (match (val__8 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-        | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let _x_9 = dispatcher_drain dispatcher in
+        | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } -> (let _x_9 = dispatcher_drain dispatcher in
           match _x_9 with
             | fst_1, _ -> (let _x_10 = [] in
               let _x_11 = false in
               let _x_12 = ({ buckets = _x_10; armed = _x_11 } : (_, _, _, _, _, _, _, _) dispatcher) in
               let _x_13 = fun _eta _eta_1 -> fire_step inst_1 inst_2 inst_3 inst_4 core evaluator interp fuel owner _eta _eta_1 in
-              let _x_14 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = _x_12; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+              let _x_14 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = _x_12; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
               let _x_15 = run_machine_update m _x_14 in
               let _x_16 = run_machine_disarm _x_15 owner in
               let _x_17 = true in
@@ -4425,8 +4442,8 @@ let step_decision_state_loop (r : (_, _, _, _, _, _, _, _, _, _, _, _) run_machi
 
 let step_decision_state__red_arg__lam_0 (verdict_1 : bool) (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) : (_, _, _, _, _, _, _, _, _, _) run_fiber =
   match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; observers = observers; children = children; dispatcher = dispatcher; context = context; _ } -> (let _x_2 = Some verdict_1 in
-      let _x_3 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = _x_2; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin; _ } -> (let _x_2 = Some verdict_1 in
+      let _x_3 = ({ id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = _x_2; observers = observers; children = children; dispatcher = dispatcher; context = context; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
       _x_3)
 
 
@@ -4458,9 +4475,9 @@ let prepare_async_answer (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : 
 
 
 
-(* LCNF mono: Effect4.Machine.advanceState._redArg (inst.1 : lcAny -> lcAny -> Bool) (inst.2 : lcAny -> lcAny -> Bool) (inst.3 : lcAny -> lcAny -> Bool) (inst.4 : lcAny -> lcAny -> Bool) (core : Effect4.Machine.FiberCore lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (evaluator : (Effect4.Machine.RunInterp lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) -> (Effect4.Machine.RunMachine lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) -> (Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) -> Bool -> (Effect4.Machine.Iter lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny)) (interp : Effect4.Machine.RunInterp lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (fuel : Nat) (millis : Nat) (x.5 : Nat) (x.6 : Effect4.Machine.RunMachine lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) : lcAny *)
+(* LCNF mono: Effect4.Machine.advanceState._redArg (inst.1 : lcAny -> lcAny -> Bool) (inst.2 : lcAny -> lcAny -> Bool) (inst.3 : lcAny -> lcAny -> Bool) (inst.4 : lcAny -> lcAny -> Bool) (core : Effect4.Machine.FiberCore lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (evaluator : (Effect4.Machine.RunInterp lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) -> (Effect4.Machine.RunMachine lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) -> (Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) -> Bool -> (Effect4.Machine.Iter lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny)) (interp : Effect4.Machine.RunInterp lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (fuel : Nat) (millis : Effect4.ClockMillis) (x.5 : Nat) (x.6 : Effect4.Machine.RunMachine lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) : lcAny *)
 
-let rec advance_state (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -> _ -> bool) (inst_4 : _ -> _ -> bool) (core : (_, _, _, _, _, _, _, _) fiber_core) (evaluator : (_, _, _, _, _, _, _, _, _, _) run_interp -> (_, _, _, _, _, _, _, _, _, _, _, _) run_machine -> (_, _, _, _, _, _, _, _, _, _) run_fiber -> bool -> (_, _, _, _, _, _, _, _, _, _, _, _) iter) (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) (fuel : int) (millis : int) (x_5 : int) (x_6 : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) =
+let rec advance_state (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -> _ -> bool) (inst_4 : _ -> _ -> bool) (core : (_, _, _, _, _, _, _, _) fiber_core) (evaluator : (_, _, _, _, _, _, _, _, _, _) run_interp -> (_, _, _, _, _, _, _, _, _, _, _, _) run_machine -> (_, _, _, _, _, _, _, _, _, _) run_fiber -> bool -> (_, _, _, _, _, _, _, _, _, _, _, _) iter) (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) (fuel : int) (millis : E4_clock.t) (x_5 : int) (x_6 : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) =
   let zero = 0 in
   let is_zero = x_5 = zero in
   if is_zero then (let _x_7 = false in
@@ -4626,20 +4643,21 @@ let run_fork (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -> 
     | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = trace; stuck = stuck } -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
         | { budget_of = budget_of; _ } -> (let _x_5 = true in
           let _x_6 = budget_of context in
-          let fiber = run_fiber_make core next_id program _x_5 _x_6 context in
-          let _x_7 = [] in
-          let _x_8 = fiber :: _x_7 in
-          let _x_9 = fibers @ _x_8 in
-          let _x_10 = 1 in
-          let _x_11 = next_id + _x_10 in
-          let m_1 = ({ fibers = _x_9; races = races; next_id = _x_11; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = trace; stuck = stuck } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
-          let _x_12 = Cmd_evaluate next_id in
-          let _x_13 = Cmd_drainDue in
-          let _x_14 = _x_13 :: _x_7 in
-          let _x_15 = _x_12 :: _x_14 in
-          let _x_16 = drive inst_1 inst_2 inst_3 inst_4 core evaluator interp fuel m_1 _x_15 in
-          let _x_17 = _x_16, next_id in
-          _x_17))
+          let _x_7 = Origin_root in
+          let fiber = run_fiber_make core next_id program _x_5 _x_6 context _x_7 in
+          let _x_8 = [] in
+          let _x_9 = fiber :: _x_8 in
+          let _x_10 = fibers @ _x_9 in
+          let _x_11 = 1 in
+          let _x_12 = next_id + _x_11 in
+          let m_1 = ({ fibers = _x_10; races = races; next_id = _x_12; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = trace; stuck = stuck } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
+          let _x_13 = Cmd_evaluate next_id in
+          let _x_14 = Cmd_drainDue in
+          let _x_15 = _x_14 :: _x_8 in
+          let _x_16 = _x_13 :: _x_15 in
+          let _x_17 = drive inst_1 inst_2 inst_3 inst_4 core evaluator interp fuel m_1 _x_16 in
+          let _x_18 = _x_17, next_id in
+          _x_18))
 
 
 
@@ -4650,29 +4668,30 @@ let run_callback (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _
     | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = trace; stuck = stuck } -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
         | { budget_of = budget_of; _ } -> (let _x_5 = true in
           let _x_6 = budget_of context in
-          let fiber = run_fiber_make core next_id program _x_5 _x_6 context in
+          let _x_7 = Origin_root in
+          let fiber = run_fiber_make core next_id program _x_5 _x_6 context _x_7 in
           match (fiber : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-            | { id = id; frame = frame; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; context = context_1; _ } -> (let _x_7 = [] in
-              let _x_8 = false in
-              let _x_9 = ({ buckets = _x_7; armed = _x_8 } : (_, _, _, _, _, _, _, _) dispatcher) in
-              let _x_10 = None in
-              let _x_11 = 0 in
-              let _x_12 = Parked_notParked in
-              let _x_13 = Observer_callback key in
-              let _x_14 = _x_13 :: _x_7 in
-              let fiber_1 = ({ id = id; frame = frame; running = _x_8; parked = _x_12; pending = _x_7; finalizing = _x_10; exit_ = _x_10; current_op_count = _x_11; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = _x_10; observers = _x_14; children = _x_7; dispatcher = _x_9; context = context_1 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
-              let _x_15 = fiber_1 :: _x_7 in
-              let _x_16 = fibers @ _x_15 in
-              let _x_17 = 1 in
-              let _x_18 = next_id + _x_17 in
-              let m_1 = ({ fibers = _x_16; races = races; next_id = _x_18; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = trace; stuck = stuck } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
-              let _x_19 = Cmd_evaluate next_id in
-              let _x_20 = Cmd_drainDue in
-              let _x_21 = _x_20 :: _x_7 in
-              let _x_22 = _x_19 :: _x_21 in
-              let _x_23 = drive inst_1 inst_2 inst_3 inst_4 core evaluator interp fuel m_1 _x_22 in
-              let _x_24 = _x_23, next_id in
-              _x_24)))
+            | { id = id; frame = frame; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; context = context_1; origin = origin; _ } -> (let _x_8 = [] in
+              let _x_9 = false in
+              let _x_10 = ({ buckets = _x_8; armed = _x_9 } : (_, _, _, _, _, _, _, _) dispatcher) in
+              let _x_11 = None in
+              let _x_12 = 0 in
+              let _x_13 = Parked_notParked in
+              let _x_14 = Observer_callback key in
+              let _x_15 = _x_14 :: _x_8 in
+              let fiber_1 = ({ id = id; frame = frame; running = _x_9; parked = _x_13; pending = _x_8; finalizing = _x_11; exit_ = _x_11; current_op_count = _x_12; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = _x_11; observers = _x_15; children = _x_8; dispatcher = _x_10; context = context_1; origin = origin } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+              let _x_16 = fiber_1 :: _x_8 in
+              let _x_17 = fibers @ _x_16 in
+              let _x_18 = 1 in
+              let _x_19 = next_id + _x_18 in
+              let m_1 = ({ fibers = _x_17; races = races; next_id = _x_19; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = trace; stuck = stuck } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
+              let _x_20 = Cmd_evaluate next_id in
+              let _x_21 = Cmd_drainDue in
+              let _x_22 = _x_21 :: _x_8 in
+              let _x_23 = _x_20 :: _x_22 in
+              let _x_24 = drive inst_1 inst_2 inst_3 inst_4 core evaluator interp fuel m_1 _x_23 in
+              let _x_25 = _x_24, next_id in
+              _x_25)))
 
 
 

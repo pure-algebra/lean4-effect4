@@ -1,3 +1,4 @@
+import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Program.Guard.Contract
 
 /-! Outer scheduler induction. The command loop is supplied through the
@@ -142,7 +143,7 @@ theorem dispatcher_sites {m : NativeMachine} (state : GuardState m) (f : NFiber)
   intro task ht
   simp only [Dispatcher.drain, List.mem_flatten, List.mem_map] at ht
   obtain ⟨tasks, ⟨bucket, hb, rfl⟩, ht⟩ := ht
-  exact state.internalCodes.2.2.1 f member bucket hb task ht
+  exact state.internalCodes.1 f member bucket hb task ht
 
 theorem fireState_preserved (p : NativeEff) (table : RowTable) (driver : DriverContract p table)
     (fuel : Nat) (m : NativeMachine) (owner : FiberId) (state : GuardState m) :
@@ -183,7 +184,10 @@ theorem flushAllState_preserved (p : NativeEff) (table : RowTable) (driver : Dri
         · exact fired.trans (ih _ fired.state)
         · exact fired
 
-theorem timer_clockStep_keys {κ : Type} (timers : TimerStore) (millis : Nat) (answer : κ) :
+def M1Clock.timer_clockStep_keys {κ : Type} (timers : TimerStore) (millis : ClockMillis) (answer : κ) : ProofGraph.Obligation (wakeKeys (timers.clockStep millis answer).2.wake ⊆ wakeKeys timers.wake) := ⟨⟩
+#proof_wanted M1Clock.timer_clockStep_keys
+
+theorem timer_clockStep_keys {κ : Type} (timers : TimerStore) (millis : ClockMillis) (answer : κ) :
     wakeKeys (timers.clockStep millis answer).2.wake ⊆ wakeKeys timers.wake := by
   unfold TimerStore.clockStep TimerStore.fireNext WakeList.wakeBy
   dsimp only
@@ -196,33 +200,51 @@ theorem timer_clockStep_keys {κ : Type} (timers : TimerStore) (millis : Nat) (a
       exact List.mem_append_left _ (List.mem_map.mpr ⟨w, List.mem_of_mem_erase hw, rfl⟩)
     · exact List.mem_append_right _ hk
 
+def M1Clock.clockStep_preserved (p : NativeEff) (table : RowTable)
+    (m : NativeMachine) (millis : ClockMillis) (_state : GuardState m) : ProofGraph.Obligation (Preserved m { m with state := ((interpOf p table).clockStep millis m.state).2 }) := ⟨⟩
+#proof_wanted M1Clock.clockStep_preserved
+
 theorem clockStep_preserved (p : NativeEff) (table : RowTable)
-    (m : NativeMachine) (millis : Nat) (state : GuardState m) :
+    (m : NativeMachine) (millis : ClockMillis) (state : GuardState m) :
     Preserved m { m with state := ((interpOf p table).clockStep millis m.state).2 } := by
   have keys : storeKeys ((interpOf p table).clockStep millis m.state).2 ⊆ storeKeys m.state :=
-    storeKeys_mono (timer_clockStep_keys m.state.timers millis (Prim.success Val.unit))
+    storeKeys_mono (timer_clockStep_keys m.state.timers millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann))
       (List.Subset.refl _)
-  have st := guardState_withState state _ keys ⟨state.internalCodes.1, state.internalCodes.2.1⟩
+  have st := guardState_withState state _ keys
   exact Preserved.of_eq_requests st (Nat.le_refl _) (fun _ _ => rfl) (fun _ h => h)
 
+def M1Clock.clockStep_owed_facts (p : NativeEff) (table : RowTable) (m : NativeMachine)
+    (millis : ClockMillis) (owed : Owed NCode)
+    (_h : ((interpOf p table).clockStep millis m.state).1 = some owed) : ProofGraph.Obligation ((owed.waiter, owed.token) ∈ internalKeys m ∧ raceSites owed.code = [] ∧ owed.mode = .now) := ⟨⟩
+#proof_wanted M1Clock.clockStep_owed_facts
+
 theorem clockStep_owed_facts (p : NativeEff) (table : RowTable) (m : NativeMachine)
-    (millis : Nat) (owed : Owed NCode)
+    (millis : ClockMillis) (owed : Owed NCode)
     (h : ((interpOf p table).clockStep millis m.state).1 = some owed) :
     (owed.waiter, owed.token) ∈ internalKeys m ∧ raceSites owed.code = [] ∧ owed.mode = .now := by
-  change ((m.state.timers.clockStep millis (Prim.success Val.unit)).1.map
-    (Owed.mapCode embed)) = some owed at h
+  change ((m.state.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).1.map
+    (Owed.mapCode (fun c => embed (completionPrim c)))) = some owed at h
   obtain ⟨o, ho, rfl⟩ := Option.map_eq_some_iff.mp h
-  have facts := TimerStore.clockStep_owed m.state.timers millis (Prim.success Val.unit) o ho
+  have facts := TimerStore.clockStep_owed m.state.timers millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann) o ho
   refine ⟨?_, ?_, facts.2⟩
-  · have key := timer_clockStep_key m.state.timers millis (Prim.success Val.unit) o ho
+  · have key := timer_clockStep_key m.state.timers millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann) o ho
     exact List.mem_append_left _ (List.mem_append_left _ (List.mem_append_left _
       (List.mem_append_left _ key)))
-  · change raceSites (embed o.code) = []
+  · change raceSites (embed (completionPrim o.code)) = []
     rw [facts.1]
     rfl
 
+def M1Clock.advanceTick_preserved (p : NativeEff) (table : RowTable) (_driver : DriverContract p table)
+    (fuel : Nat) (millis : ClockMillis) (m : NativeMachine) (owed : Owed NCode) (_state : GuardState m)
+    (_clock : ((interpOf p table).clockStep millis m.state).1 = some owed) : ProofGraph.Obligation (
+    letI := evaluatorFor p table
+    let mid : NativeMachine := { m with state := ((interpOf p table).clockStep millis m.state).2 }
+    let drained := drainOwed mid [owed]
+    Preserved m (driveState (interpOf p table) fuel drained.1 (drained.2 ++ [.drainDue])).1) := ⟨⟩
+#proof_wanted M1Clock.advanceTick_preserved
+
 theorem advanceTick_preserved (p : NativeEff) (table : RowTable) (driver : DriverContract p table)
-    (fuel millis : Nat) (m : NativeMachine) (owed : Owed NCode) (state : GuardState m)
+    (fuel : Nat) (millis : ClockMillis) (m : NativeMachine) (owed : Owed NCode) (state : GuardState m)
     (clock : ((interpOf p table).clockStep millis m.state).1 = some owed) :
     letI := evaluatorFor p table
     let mid : NativeMachine := { m with state := ((interpOf p table).clockStep millis m.state).2 }
@@ -243,8 +265,14 @@ theorem advanceTick_preserved (p : NativeEff) (table : RowTable) (driver : Drive
   simpa only [drainOwed, facts.2.2, List.append_nil, taskCmds,
     List.cons_append, List.nil_append] using changed.trans run
 
+def M1Clock.advanceState_preserved (p : NativeEff) (table : RowTable) (_driver : DriverContract p table)
+    (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine) (_state : GuardState m) : ProofGraph.Obligation (
+    letI := evaluatorFor p table
+    Preserved m (advanceState (interpOf p table) fuel millis rounds m).1) := ⟨⟩
+#proof_wanted M1Clock.advanceState_preserved
+
 theorem advanceState_preserved (p : NativeEff) (table : RowTable) (driver : DriverContract p table)
-    (fuel millis rounds : Nat) (m : NativeMachine) (state : GuardState m) :
+    (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine) (state : GuardState m) :
     letI := evaluatorFor p table
     Preserved m (advanceState (interpOf p table) fuel millis rounds m).1 := by
   letI := evaluatorFor p table
@@ -330,21 +358,43 @@ theorem interruptedAt_flushAllState (p : NativeEff) (table : RowTable) (driver :
     InterruptedAt (flushAllState (interpOf p table) fuel rounds m).1 fiber :=
   (flushAllState_preserved p table driver fuel rounds m state).interrupted fiber before
 
+def M1Clock.guardState_advanceState (p : NativeEff) (table : RowTable) (_driver : DriverContract p table)
+    (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine) (_state : GuardState m) : ProofGraph.Obligation (
+    letI := evaluatorFor p table
+    GuardState (advanceState (interpOf p table) fuel millis rounds m).1) := ⟨⟩
+#proof_wanted M1Clock.guardState_advanceState
+
 theorem guardState_advanceState (p : NativeEff) (table : RowTable) (driver : DriverContract p table)
-    (fuel millis rounds : Nat) (m : NativeMachine) (state : GuardState m) :
+    (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine) (state : GuardState m) :
     letI := evaluatorFor p table
     GuardState (advanceState (interpOf p table) fuel millis rounds m).1 :=
   (advanceState_preserved p table driver fuel millis rounds m state).state
 
+def M1Clock.reservedKeys_advanceState (p : NativeEff) (table : RowTable) (_driver : DriverContract p table)
+    (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine) (_state : GuardState m)
+    (keys : List GuardKey) (_reserved : ReservedKeys m keys) : ProofGraph.Obligation (
+    letI := evaluatorFor p table
+    ReservedKeys (advanceState (interpOf p table) fuel millis rounds m).1 keys) := ⟨⟩
+#proof_wanted M1Clock.reservedKeys_advanceState
+
 theorem reservedKeys_advanceState (p : NativeEff) (table : RowTable) (driver : DriverContract p table)
-    (fuel millis rounds : Nat) (m : NativeMachine) (state : GuardState m)
+    (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine) (state : GuardState m)
     (keys : List GuardKey) (reserved : ReservedKeys m keys) :
     letI := evaluatorFor p table
     ReservedKeys (advanceState (interpOf p table) fuel millis rounds m).1 keys :=
   (advanceState_preserved p table driver fuel millis rounds m state).reserved keys reserved
 
+def M1Clock.requestOrInterrupted_advanceState (p : NativeEff) (table : RowTable)
+    (_driver : DriverContract p table) (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine)
+    (_state : GuardState m) (fiber : FiberId) (token : Nat) (request : NativeOp × Val)
+    (_before : requestOf m fiber token = some request) : ProofGraph.Obligation (
+    letI := evaluatorFor p table
+    requestOf (advanceState (interpOf p table) fuel millis rounds m).1 fiber token = some request ∨
+      InterruptedAt (advanceState (interpOf p table) fuel millis rounds m).1 fiber) := ⟨⟩
+#proof_wanted M1Clock.requestOrInterrupted_advanceState
+
 theorem requestOrInterrupted_advanceState (p : NativeEff) (table : RowTable)
-    (driver : DriverContract p table) (fuel millis rounds : Nat) (m : NativeMachine)
+    (driver : DriverContract p table) (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine)
     (state : GuardState m) (fiber : FiberId) (token : Nat) (request : NativeOp × Val)
     (before : requestOf m fiber token = some request) :
     letI := evaluatorFor p table
@@ -352,8 +402,15 @@ theorem requestOrInterrupted_advanceState (p : NativeEff) (table : RowTable)
       InterruptedAt (advanceState (interpOf p table) fuel millis rounds m).1 fiber :=
   (advanceState_preserved p table driver fuel millis rounds m state).request fiber token request before
 
+def M1Clock.interruptedAt_advanceState (p : NativeEff) (table : RowTable) (_driver : DriverContract p table)
+    (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine) (_state : GuardState m)
+    (fiber : FiberId) (_before : InterruptedAt m fiber) : ProofGraph.Obligation (
+    letI := evaluatorFor p table
+    InterruptedAt (advanceState (interpOf p table) fuel millis rounds m).1 fiber) := ⟨⟩
+#proof_wanted M1Clock.interruptedAt_advanceState
+
 theorem interruptedAt_advanceState (p : NativeEff) (table : RowTable) (driver : DriverContract p table)
-    (fuel millis rounds : Nat) (m : NativeMachine) (state : GuardState m)
+    (fuel : Nat) (millis : ClockMillis) (rounds : Nat) (m : NativeMachine) (state : GuardState m)
     (fiber : FiberId) (before : InterruptedAt m fiber) :
     letI := evaluatorFor p table
     InterruptedAt (advanceState (interpOf p table) fuel millis rounds m).1 fiber :=

@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Denote
+import Effect4.Laws.Auto.RuleSets
 import Effects.Algebra.Sum
 
 /-!
@@ -94,9 +95,9 @@ deriving DecidableEq
 /-- Fiber operations plus addressed bodies, checkpoints, control boundaries and live
 frontiers. -/
 inductive FiberOp : Type
-  | fork (child : Body) (options : Supervision.ForkOptions)
-  | forkIn (child : Point) (options : Supervision.ForkOptions) (scope : Nat)
-  | forkScoped (child : Point) (options : Supervision.ForkOptions)
+  | fork (child : Body) (options : Supervision.ForkOptions) (site : List Nat := [])
+  | forkIn (child : Point) (options : Supervision.ForkOptions) (scope : Nat) (site : List Nat := [])
+  | forkScoped (child : Point) (options : Supervision.ForkOptions) (site : List Nat := [])
   | await (target : FiberId) (mode : Supervision.ObserverMode)
   | awaitAll (targets : List FiberId)
   | awaitAllFailFast (targets : List FiberId)
@@ -118,7 +119,7 @@ inductive FiberOp : Type
   (`FinName.foreign`'s `finProgram`, V1): the term instance of the frame's
   `Prim.suspend (Thunk.foreign c exit)`, answering unit before the release. -/
   | foreignRelease (capture : Capture) (exit : ExitV)
-  | raceAll (entrants : List Point)
+  | raceAll (entrants : List Point) (site : Option (List Nat) := none)
   /-- The counted `Async` registration a race's entry returns (`internal/effect.ts:1493`,
   D6a): the term instance of `RunInterp.parkCode` at `ParkKind.race`. -/
   | raceRegister (race : Nat)
@@ -167,8 +168,8 @@ abbrev FiberOp.answer : FiberOp → Type
   | .guard_ _ => Option ExitV
   | .unguard _ | .finishFinalizer _ => ExitV
   | .scoped _ | .scopeExit _ _ _
-  | .mask _ _ | .closeScope _ _ | .raceAll _ | .raceRegister _
-  | .async _ _ | .forkScoped _ _ | .frontier _ _ | .gen _ | .loop _ _ | .closeIter _ _ _ => ExitV
+  | .mask _ _ | .closeScope _ _ | .raceAll _ _ | .raceRegister _
+  | .async _ _ | .forkScoped _ _ _ | .frontier _ _ | .gen _ | .loop _ _ | .closeIter _ _ _ => ExitV
   | .await _ .joinEffect => ExitV
   | _ => Val
 
@@ -178,12 +179,12 @@ def FiberOp.defaultAnswer : (op : FiberOp) → op.answer
   | .guard_ _ => none
   | .unguard ex | .finishFinalizer ex => ex
   | .scoped _ | .scopeExit _ _ _
-  | .mask _ _ | .closeScope _ _ | .raceAll _ | .raceRegister _
-  | .async _ _ | .forkScoped _ _ | .frontier _ _ | .gen _ | .loop _ _ | .closeIter _ _ _ =>
+  | .mask _ _ | .closeScope _ _ | .raceAll _ _ | .raceRegister _
+  | .async _ _ | .forkScoped _ _ _ | .frontier _ _ | .gen _ | .loop _ _ | .closeIter _ _ _ =>
     Exit.success Val.unit
   | .await _ .joinEffect => Exit.success Val.unit
   | .await _ .awaitValue => Val.unit
-  | .fork _ _ | .forkIn _ _ _ | .awaitAll _ | .awaitAllFailFast _
+  | .fork _ _ _ | .forkIn _ _ _ _ | .awaitAll _ | .awaitAllFailFast _
   | .yieldNow _ | .interrupt _ | .interruptAs _ _ | .interruptScoped _ | .interruptAll _ _
   | .cancelRace _ | .getId | .getContext | .setContext _ | .snapshotChildren
   | .awaitNewChildren _ | .runIn _ _ | .dropObservers _ | .refuse _
@@ -195,11 +196,11 @@ abbrev FiberSig : Effects.Signature.{0, 0} := ⟨FiberOp, FiberOp.answer⟩
 /-- The term scheduler's signature: the stores on the left, the fibers on the right. -/
 abbrev RSig : Effects.Signature.{0, 0} := Effects.Signature.sum StoreSig FiberSig
 
-theorem RSig_op : RSig.Op = (SyncOp ⊕ FiberOp) := rfl
+theorem RSig_op : RSig.Op = (SyncOp ⊕ FiberOp) := by aesop
 
-theorem RSig_answer_inl (o : SyncOp) : RSig.Answer (Sum.inl o) = Val := rfl
+theorem RSig_answer_inl (o : SyncOp) : RSig.Answer (Sum.inl o) = Val := by aesop
 
-theorem RSig_answer_inr (o : FiberOp) : RSig.Answer (Sum.inr o) = o.answer := rfl
+theorem RSig_answer_inr (o : FiberOp) : RSig.Answer (Sum.inr o) = o.answer := by aesop
 
 /-- The programs the term scheduler's fibers hold. -/
 abbrev RProgram := Effects.Program RSig ExitV
@@ -208,7 +209,7 @@ abbrev RProgram := Effects.Program RSig ExitV
 program, so a store step in a meaning is written `vis (.inl op) k`, never `.perform`. -/
 theorem perform_inl_bind (op : SyncOp) (k : Val → RProgram) :
     Effects.Program.bind (Effects.Program.perform (S := RSig) (Sum.inl op)) k =
-      Effects.Program.vis (Sum.inl op) k := rfl
+      Effects.Program.vis (Sum.inl op) k := by aesop
 
 /-! ## The store half, lifted -/
 
@@ -220,9 +221,9 @@ def fiberRefusal : Effects.Handler FiberSig (StateT Stores Id) where
 def rHandler : Effects.Handler RSig (StateT Stores Id) :=
   Effects.Handler.sum storeHandler fiberRefusal
 
-theorem rHandler_inl (o : SyncOp) : rHandler.handle (Sum.inl o) = storeHandler.handle o := rfl
+theorem rHandler_inl (o : SyncOp) : rHandler.handle (Sum.inl o) = storeHandler.handle o := by aesop
 
-theorem rHandler_inr (o : FiberOp) : rHandler.handle (Sum.inr o) = fiberRefusal.handle o := rfl
+theorem rHandler_inr (o : FiberOp) : rHandler.handle (Sum.inr o) = fiberRefusal.handle o := by aesop
 
 /-- The straight-line denotation, injected on the left, means under the summed handler
 exactly what it means under the store handler. -/

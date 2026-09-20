@@ -22,13 +22,15 @@ def run(*args, output=None, timeout=180):
         subprocess.run(args, cwd=ROOT, check=True, timeout=timeout)
 
 def lean(path, *args, output=None):
-    run('lake', 'env', 'lean', '-M4096', '--run', path, *map(str, args), output=output)
+    run('lake', 'env', 'lean', '-DwarningAsError=true', '-M4096', '--run', path,
+        *map(str, args), output=output)
 
 def main():
     bun = shutil.which('bun')
     if not bun or json.loads((MODULES / 'effect/package.json').read_text())['version'] != '4.0.0-rc.112':
         raise SystemExit('FAIL host-protocol: Bun and the pinned rc.112 installation are required')
-    run('lake', 'build', 'Test.Api.HostSessionContract', 'Test.Api.KeyedHostContract')
+    for module in ['Test.Api.HostSessionContract', 'Test.Api.KeyedHostContract']:
+        run('lake', 'build', module)
     work_root = SESSION / '.work'
     work_root.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='check-', dir=work_root) as tmp:
@@ -48,7 +50,7 @@ def main():
                   'compilerOptions': {'types': ['bun'], 'typeRoots': [str(MODULES / '@types')]}}
         (work / 'tsconfig.json').write_text(json.dumps(config))
         run(bun, str(MODULES / 'typescript/bin/tsc'), '--pretty', 'false', '--noEmit', '-p', str(work / 'tsconfig.json'))
-        run(bun, 'test', str(SESSION / 'keyed-protocol.test.ts'), str(SESSION / 'protocol.test.ts'), str(SESSION / 'resource.test.ts'))
+        run(bun, 'test', str(SESSION / 'keyed-protocol.test.ts'), str(SESSION / 'protocol.test.ts'), str(SESSION / 'resource.test.ts'), str(SESSION / 'clock.test.ts'))
         lean('harness/truth/session/Keyed.lean', 'batch', host / 'cases.json', output=work / 'lean.json')
         run(bun, str(SESSION / 'prepare-keyed-controls.ts'), str(host))
         lean('harness/truth/session/Keyed.lean', 'batch', host / 'controls.json', output=work / 'controls-lean.json')

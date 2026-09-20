@@ -1,0 +1,68 @@
+== lane X: the differential over every corpus, three engines ==
+  Gen  = ocaml/gen/api_gen.ml as generated: List everywhere, no externs
+  Ref  = E4_table_list / E4_trace_list / E4_memo_list / E4_buckets_list / E4_ppath_list / E4_env_list / E4_fibers_view_list
+  Fast = E4_table / E4_trace / E4_memo / E4_buckets / E4_ppath / E4_env / E4_fibers_view
+
+PASS DF-classification: all three profile refusals are not agreement
+PASS DF-classification: Gen profile refusal with two answers is not agreement
+PASS DF-classification: Ref profile refusal with two answers is not agreement
+PASS DF-classification: Fast profile refusal with two answers is not agreement
+PASS DF-classification: profile refusal and unexpected exception remain distinct
+PASS DF-classification: three unexpected exceptions are not agreement
+PASS DF-classification: unexpected exception with two answers is not agreement
+PASS DF-classification: three answers remain comparable
+PASS DF-classification: semantic divergence fails independently
+== 1. ocaml/eff/goldens: the byte goldens (fuel 1000) ==
+  /Users/pooks/Dev/lean4-effect4/ocaml/eff/goldens: 53 files, 53 decoded
+PASS the byte corpus decodes: all 53 programs found
+  goldens: 53 programs x 424 tapes (longest 64 decisions), 10494 positions, 20988 projection comparisons (2 pairs each position), 0 profile-refused tapes, 0 raised tapes, 0.36 s
+PASS goldens: 0 divergences and no unvalidated tapes
+
+== 2. the truth corpus: the Lean-cut wire goldens (fuel 1000) ==
+  /Users/pooks/Dev/lean4-effect4/ocaml/goldens/eff: 8 files, 8 decoded
+  truth programs with canonical bytes: 11 of 14 (p42,pAwait,pBind,pCatch,pFork,pGen,pLoop,pScope,pTwo,pAcquire,pProvide)
+  NOTE no canonical bytes anywhere in the tree for: pAcquireClosed pProvideMerge pProvideTwice -- they are TypeScript declarations in corpus.json and Lean has not cut their wire, so they cannot enter a byte-driven differential
+PASS the truth corpus has at least the 8 Lean-cut goldens
+  truth: 11 programs x 88 tapes (longest 64 decisions), 2178 positions, 4356 projection comparisons (2 pairs each position), 0 profile-refused tapes, 0 raised tapes, 0.07 s
+PASS truth: 0 divergences and no unvalidated tapes
+
+== 3. the Lean corpus: the programs `make corpus` printed (random tapes, fuel sweep) ==
+  /Users/pooks/Dev/lean4-effect4/.lake/corpus: 408 files, 408 decoded
+PASS the Lean corpus is present (`make corpus` writes it under .lake/corpus)
+PASS every program of the Lean corpus decodes exactly
+PASS every program of the Lean corpus re-encodes to Lean's bytes
+  408 programs: 135 well typed by Lean (Api.wellTyped), 273 ill-typed -- the machine's answer to both is semantics
+  lean: 408 programs x 2448 tapes (longest 64 decisions), 53040 positions, 106080 projection comparisons (2 pairs each position), 0 profile-refused tapes, 0 raised tapes, 1.23 s
+PASS lean: 0 divergences and no unvalidated tapes
+
+== 4. the owed rows ==
+PASS FB1 (lane C, owed): E4_fibers.to_list = api_gen's m.fibers, ids AND rows, on 53/53 goldens
+  NOTE DF-2 (A3 §4.2, the family order byte-identical with only Deferred owing) is NOT RUN: `E4_due` is not wired into the engine. ocaml/engine/externs.txt has no row for `Effect4.Machine.DeferredStore.due` and none for E4_due's drain, so the due list in `api_engine.ml` is still the generated one and the substitution DF-2 is about does not exist yet. What stands in its place today is lane Q1's own due-family-order-mutation test, and the fact that every machine in all three corpora above owes only Deferred resumes (there is no Timer/Queue/Semaphore family in the Lean machine yet), so ORD-FAM is vacuous here by construction.
+  NOTE DF-3 (query agreement, `E4_query.at s i` = `api_replay` of the first i) waits on lane Q3 and is out of this lane's scope. The half of it that exists -- `replay_steps` at position i equals a replay of the first i decisions -- is what every position of every tape above compares, on three engines.
+
+== 5. the comparison has teeth: one mutation per field ==
+PASS compare p p = [] (the projection is equal to itself)
+  base = pFork at the end of [evaluate 0; flush], fuel 1000: 2 fibers, 26 trace rows
+PASS mutating p1_outcome is caught, and only it
+PASS mutating p2_stuck is caught, and only it
+PASS mutating p3_settled is caught, and only it
+PASS mutating p4_answer is caught, and only it
+PASS mutating p5_fiber_count is caught, and only it
+PASS mutating p6_fiber_ids is caught, and only it (at index 0)
+PASS mutating p7_exits is caught, and only it (at index 0)
+PASS mutating p8_root_exit is caught, and only it
+PASS mutating p9_fiber_rows is caught, and only it (at index 1)
+PASS mutating p10_armed is caught, and only it
+PASS mutating p11_trace_length is caught, and only it
+PASS mutating p12_trace_rows is caught, and only it (at index 7)
+PASS mutating p13_store_row is caught, and only it
+
+== the cross face: the engines against harness/truth/corpus.json ==
+  corpus.json: 36 programs recorded at fuel 1000
+  DIFFERS pAcquire       engine: outcome=finished fibers=1 exit=failure [die(missingService)] | lean: outcome=finished fibers=1 exitKind=success
+  DIFFERS pProvide       engine: outcome=finished fibers=6 exit=success 2 | lean: outcome=finished fibers=1 exitKind=success
+  agree=9  differ=2  not in corpus.json=0
+  NOTE reported, not gated: 9 of the truth programs agree with Lean's recorded run
+
+== totals: 472 programs, 2960 tapes, 65712 positions, 131424 projection comparisons, 0 divergences, 0 profile-refused tapes, 0 raised tapes, 1.66 s ==
+== ALL PASS: 0 failure(s) == (32 checks)

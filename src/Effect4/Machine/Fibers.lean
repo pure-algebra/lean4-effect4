@@ -1,3 +1,4 @@
+import Effect4.Data.ClockMillis
 import Effect4.Machine.Frames
 import Effect4.Machine.Supervision
 import Effect4.Machine.Completion
@@ -220,6 +221,15 @@ attribute [reducible] FiberCore.current FiberCore.answerWith FiberCore.start
   onSuccess := Prim.onSuccess
   yieldBefore := fun previous => Prim.onSuccessConst (Prim.yieldNowWith 0) previous
 
+/-- A fiber's creation provenance, retained independently of diagnostic events. The
+parent records the creator, not the live child-tracking relation (`internal/effect.ts:5279-5282`).
+`site` is the source action's path; internal forks without a source point use `[]`.
+Packet 1 §2.3 and packet 2 §0 (row 20). -/
+inductive Origin
+  | root
+  | forked (parent : FiberId) (daemon : Bool) (site : List Nat)
+deriving DecidableEq, Repr
+
 /-- rc.112 `FiberImpl` (`:505-555`), seventeen fields read through one record. `frame` is
 the five-field machine of `Runtime.lean`; `running` (`:537`), `parked` (`:536`), `pending`,
 `finalizing` (the exit held while the children are interrupted, `:613-617`), `exit`
@@ -244,6 +254,8 @@ structure RunFiber (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u)
   children : List FiberId
   dispatcher : Dispatcher ν σ β ε δ ι α κ
   context : χ
+  /-- Set at creation; later tracking and trace changes do not alter provenance. -/
+  origin : Origin := .root
 deriving DecidableEq
 
 namespace RunFiber
@@ -257,7 +269,7 @@ def interruptPending (f : RunFiber ν σ β ε δ ι α χ κ φ) : Bool :=
 /-- `new FiberImpl(context, interruptible)` (`:512-514`) with the modelled fields; the
 budget fields are read off the context as `setContext` does (`:726-727`). -/
 def make (id : FiberId) (current : κ) (interruptible : Bool)
-    (budget : Nat × Bool) (context : χ) : RunFiber ν σ β ε δ ι α χ κ φ where
+    (budget : Nat × Bool) (context : χ) (origin : Origin := .root) : RunFiber ν σ β ε δ ι α χ κ φ where
   id := id
   frame := core.start current interruptible
   running := false
@@ -273,6 +285,7 @@ def make (id : FiberId) (current : κ) (interruptible : Bool)
   children := []
   dispatcher := Dispatcher.empty
   context := context
+  origin := origin
 
 /-- Park on `p.token`, remembering what resumes it. -/
 def park (f : RunFiber ν σ β ε δ ι α χ κ φ) (p : Pending ν β ε δ ι α) :
@@ -288,13 +301,13 @@ operation is one of these shapes. A parameter of the interp names which one a th
 inductive WithFiberAction (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u)
     (κ : Type (max u v) := Prim ν σ β ε δ ι α) : Type (max u v)
   /-- `forkUnsafe` (`:5264-5284`): `forkChild`, `forkDetach`, `forkDaemon` by options. -/
-  | fork (program : κ) (options : Supervision.ForkOptions)
+  | fork (program : κ) (options : Supervision.ForkOptions) (site : List Nat := [])
   /-- `forkIn` (`:5364-5378`): a daemon linked to a scope by a keyed, self-guarded finalizer.
   The key is allocated by the store at the executed registration (`:5366`), so no identity
   is carried in the action. -/
-  | forkIn (program : κ) (options : Supervision.ForkOptions) (scope : Nat)
+  | forkIn (program : κ) (options : Supervision.ForkOptions) (scope : Nat) (site : List Nat := [])
   /-- `forkScoped` (`:5400-5406`): `forkIn` on the ambient `Scope` service. -/
-  | forkScoped (program : κ) (options : Supervision.ForkOptions)
+  | forkScoped (program : κ) (options : Supervision.ForkOptions) (site : List Nat := [])
   /-- The `Scope` service read (`Context.ts:423`, `effect.ts:3929`): the ambient scope's
   handle as a value, or the `missingScope` defect (source-repairs §20). -/
   | ambientScope
@@ -326,7 +339,7 @@ inductive WithFiberAction (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type 
   | awaitNewChildren (snapshot : List FiberId)
   /-- `raceAll`: immediate daemons in order until an observed success, failures in order,
   the empty race pending until interrupted (`Supervision.RaceAllState`). -/
-  | raceAll (entrants : List κ)
+  | raceAll (entrants : List κ) (site : Option (List Nat) := none)
   /-- `uninterruptible`/`interruptible` bodies (`:4302-4310`, `:4331-4352`): set the flag,
   push the restoring frame, and fail now if a cause is pending (M2). -/
   | setInterruptible (body : κ) (flag : Bool)
@@ -408,6 +421,9 @@ structure Race (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
   /-- The registration has not returned: a callback buffers its first answer instead of
   resuming the host (`:1120-1126`, D6a). -/
   registering : Bool
+  /-- The source `effs.cons` path of the next entrant. Advancing the program list advances
+  its source-list path with `[1]`; internal races without a source Point use `none`. -/
+  nextSite : Option (List Nat) := none
 
 /-- The process: every live fiber, the races, the id and token counters, the global
 middleware latch (`:6656-6658`), the service state the stores live in, the trace, and the
@@ -457,7 +473,7 @@ inductive RunDecision (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) : Ty
   order, the clock staged at each fired deadline and the dispatchers flushed between fires
   (`:361-367`), then the clock is set to the end (`:368`). A duration, never a timestamp: the
   clock does not move backwards (`TIMER-FB-SET-TIME`). -/
-  | advance (millis : Nat)
+  | advance (millis : ClockMillis)
 deriving DecidableEq
 
 /-- What gives names meaning at the machine level. Extends the frame machine's pure
@@ -505,7 +521,7 @@ structure RunInterp (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St
   A4): `some` an owed resume, the least sleep due by the clock's end fired and the clock staged
   at its deadline — the machine delivers it and flushes before asking again; `none` the end
   reached, the clock set to it. -/
-  clockStep : Nat → St → Option (Owed κ) × St
+  clockStep : ClockMillis → St → Option (Owed κ) × St
   /-- Attach the waiter's identity to a cancel name, so the `AsyncFinalizer` frame's
   `contE` can splice the waiter out (`Deferred.ts:181-184`, M3). -/
   cancelName : ν → FiberId → Nat → ν
@@ -877,7 +893,7 @@ structure Iter (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St : Ty
 token, and return the counted `Async` registration as the next program. Nothing is forked
 or parked here; the registration is the next counted iteration (source-repairs §16, D6a). -/
 def beginRace (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
-    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (entrants : List κ) :
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (entrants : List κ) (site : Option (List Nat) := none) :
     Iter ν σ β ε δ ι α χ St κ φ η :=
   let raceId := m.nextRace
   let token := m.nextToken
@@ -885,7 +901,7 @@ def beginRace (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine
   let race : Race ν σ β ε δ ι α κ :=
     ⟨raceId, f.id, token,
       { Supervision.RaceAllState.initial [] with remaining := entrants.length },
-      false, entrants, false⟩
+      false, entrants, false, site⟩
   let m := { m with races := m.races ++ [race] }
   let f := { f with frame := core.answerWith f.frame (interp.parkCode (ParkKind.race raceId)) }
   ⟨m.emit [RunEvent.raceStarted raceId f.id entrants.length], f, yielding, Outcome.continue_, []⟩
@@ -907,7 +923,7 @@ def registerRace (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
 parent's context (`:5273`), tracked unless daemon (`:5280-5281`). -/
 def spawn (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (parent : RunFiber ν σ β ε δ ι α χ κ φ) (program : κ)
-    (options : Supervision.ForkOptions) :
+    (options : Supervision.ForkOptions) (site : List Nat := []) :
     RunMachine ν σ β ε δ ι α χ St κ φ η × RunFiber ν σ β ε δ ι α χ κ φ × FiberId :=
   let childId : FiberId := ⟨m.nextId⟩
   let childInterruptible :=
@@ -916,7 +932,7 @@ def spawn (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν 
     | Supervision.MaskMode.uninterruptible => false
     | Supervision.MaskMode.inherit => core.interruptible parent.frame
   let child := RunFiber.make childId program childInterruptible
-    (interp.budgetOf parent.context) parent.context
+    (interp.budgetOf parent.context) parent.context (.forked parent.id options.daemon site)
   -- tracking (`:5279-5282`) is `Cmd.trackChild`, after the child's immediate run or its
   -- scheduling (source-repairs §19, D6b); the parent is returned unchanged
   let m := { m with fibers := m.fibers ++ [child], nextId := m.nextId + 1 }
@@ -933,23 +949,24 @@ def start (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (parent : RunFibe
     ((m.arm parent.id).emit [RunEvent.scheduledTask parent.id 0 (Task.start child)], parent, [])
 
 /-- One entrant of a `raceAll`, forked at its launch (`forkUnsafe(parent, effect, true, true,
-false)`, `:1521`): an immediate daemon, interruptible (R2-10). Its race observer is attached
+false)`, `:1521`): an immediate daemon, interruptible (R2-10). `site` identifies the
+source list cell; internal races without a source Point supply `[]`. Its race observer is attached
 by `Cmd.enrollRace` only after its immediate run has returned (`:1522-1526`, D6a). -/
 def launchEntrant (interp : RunInterp ν σ β ε δ ι α χ St κ) (_raceId : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (host : RunFiber ν σ β ε δ ι α χ κ φ)
-    (program : κ) : RunMachine ν σ β ε δ ι α χ St κ φ η × FiberId :=
-  let (m, _, child) := spawn interp m host program ⟨true, true, Supervision.MaskMode.interruptible⟩
+    (program : κ) (site : List Nat := []) : RunMachine ν σ β ε δ ι α χ St κ φ η × FiberId :=
+  let (m, _, child) := spawn interp m host program ⟨true, true, Supervision.MaskMode.interruptible⟩ site
   (m, child)
 
 /-- The parallel close's forks (`forkUnsafe(parent, finalizer(exit_), true, true, "inherit")`,
 `:3820`, §20): every finalizer program as an immediate daemon that inherits the closer's
 mask, in close order, without tracking. Their runs are the commands the caller issues; the
-children are returned in fork order. -/
+children are returned in fork order. Their source-free provenance site is `[]`. -/
 def forkFinalizers (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (host : RunFiber ν σ β ε δ ι α χ κ φ) : List κ → RunMachine ν σ β ε δ ι α χ St κ φ η × List FiberId
   | [] => (m, [])
   | program :: rest =>
-    let (m, _, child) := spawn interp m host program ⟨true, true, Supervision.MaskMode.inherit⟩
+    let (m, _, child) := spawn interp m host program ⟨true, true, Supervision.MaskMode.inherit⟩ []
     let (m, children) := forkFinalizers interp m host rest
     (m, child :: children)
 
@@ -1188,29 +1205,29 @@ where
       | some why => Outcome.stuck why
       | none => if parked then Outcome.parked else Outcome.continue_
     match action with
-    | WithFiberAction.fork program options =>
+    | WithFiberAction.fork program options site =>
       -- `forkChild` installs the interrupt-children middleware for the process
       -- (`interruptChildrenPatch()`, `:5253`, `:6656-6658`); `forkDetach` does not (R2-6)
       let m := if options.daemon then m else { m with middlewareInstalled := true }
       let parent := f.id
-      let (m, f, child) := spawn interp m f program options
+      let (m, f, child) := spawn interp m f program options site
       let (m, f, nested) := start m f child options.startImmediately
       -- a non-daemon child is tracked after its immediate run or its scheduling
       -- (`:5279-5282`, D6b)
       ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_,
         nested ++ (if options.daemon then [] else [Cmd.trackChild parent child])⟩
-    | WithFiberAction.forkIn program options scope =>
+    | WithFiberAction.forkIn program options scope site =>
       -- fork and, when immediate, run first; the link follows (`:5366-5376`, R2-8), and
       -- `linkScope` links only a child that has not exited (R2-9)
-      let (m, f, child) := spawn interp m f program { options with daemon := true }
+      let (m, f, child) := spawn interp m f program { options with daemon := true } site
       let (m, f, started) := start m f child options.startImmediately
       ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_,
         started ++ [Cmd.link Supervision.ScopeMode.forkIn scope child (some f.id)
           (interp.stackAnnotations f.id)]⟩
-    | WithFiberAction.forkScoped program options =>
+    | WithFiberAction.forkScoped program options site =>
       match interp.ambientScope f.context with
       | some scope =>
-        let (m, f, child) := spawn interp m f program { options with daemon := true }
+        let (m, f, child) := spawn interp m f program { options with daemon := true } site
         let (m, f, started) := start m f child options.startImmediately
         ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_,
           started ++ [Cmd.link Supervision.ScopeMode.forkIn scope child (some f.id)
@@ -1261,10 +1278,10 @@ where
       let fresh := f.children.filter fun c => !(snapshot.contains c)
       let (m, f, parked) := countdownPark interp m f fresh Resume.void
       ⟨m, f, yielding, outcomeOf m parked, []⟩
-    | WithFiberAction.raceAll entrants =>                               -- :1493, D6a
+    | WithFiberAction.raceAll entrants site =>                               -- :1493, D6a
       -- the `WithFiber` returns the counted `Async` registration; the register loop, the
       -- cancel frame and the park belong to that later iteration (source-repairs §16)
-      beginRace interp m f yielding entrants
+      beginRace interp m f yielding entrants site
     | WithFiberAction.setInterruptible body false =>                    -- :4302-4310 (M2)
       ⟨m, { f with frame := { f.frame.uninterruptible with current := body } },
         yielding, Outcome.continue_, []⟩
@@ -1403,10 +1420,11 @@ def runIn (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν 
 def fork (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (program : κ)
     (options : Supervision.ForkOptions)
-    (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer) : Iter ν σ β ε δ ι α χ St κ φ η :=
+    (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer)
+    (site : List Nat := []) : Iter ν σ β ε δ ι α χ St κ φ η :=
   let m := if options.daemon then m else { m with middlewareInstalled := true }
   let parent := f.id
-  let (m, f, child) := spawn interp m f program options
+  let (m, f, child) := spawn interp m f program options site
   let (m, f, nested) := start m f child options.startImmediately
   ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_,
     nested ++ (if options.daemon then [] else [Cmd.trackChild parent child])⟩
@@ -1414,8 +1432,9 @@ def fork (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν �
 def forkIn (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (program : κ)
     (options : Supervision.ForkOptions) (scope : Nat)
-    (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer) : Iter ν σ β ε δ ι α χ St κ φ η :=
-  let (m, f, child) := spawn interp m f program { options with daemon := true }
+    (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer)
+    (site : List Nat := []) : Iter ν σ β ε δ ι α χ St κ φ η :=
+  let (m, f, child) := spawn interp m f program { options with daemon := true } site
   let (m, f, started) := start m f child options.startImmediately
   ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_,
     started ++ [Cmd.link Supervision.ScopeMode.forkIn scope child (some f.id)
@@ -1424,10 +1443,11 @@ def forkIn (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν
 def forkScoped (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (program : κ)
     (options : Supervision.ForkOptions)
-    (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer) : Iter ν σ β ε δ ι α χ St κ φ η :=
+    (answer : Answer ν σ β ε δ ι α χ κ φ := coreAnswer)
+    (site : List Nat := []) : Iter ν σ β ε δ ι α χ St κ φ η :=
   match interp.ambientScope f.context with
   | some scope =>
-    let (m, f, child) := spawn interp m f program { options with daemon := true }
+    let (m, f, child) := spawn interp m f program { options with daemon := true } site
     let (m, f, started) := start m f child options.startImmediately
     ⟨m, answer f (interp.fiberValue child), yielding, Outcome.continue_,
       started ++ [Cmd.link Supervision.ScopeMode.forkIn scope child (some f.id)
@@ -1534,9 +1554,9 @@ def cancelRace (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachin
     ⟨m, f, yielding, Outcome.commands, [Cmd.raceCancel raceId f.id yielding race.state.live []]⟩
 
 def raceAll (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
-    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (entrants : List κ) :
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (entrants : List κ) (site : Option (List Nat) := none) :
     Iter ν σ β ε δ ι α χ St κ φ η :=
-  beginRace interp m f yielding entrants
+  beginRace interp m f yielding entrants site
 
 def yieldNow (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (priority : Nat) :
@@ -1837,8 +1857,10 @@ def driveStep (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine
           match m.fiber? race.host with
           | none => (m, rest)
           | some host =>
-            let (m, child) := launchEntrant interp raceId m host program
-            let m := m.updateRace { race with programs := more }
+            let (m, child) := launchEntrant interp raceId m host program (race.nextSite.getD [])
+            let m := m.updateRace { race with
+              programs := more
+              nextSite := race.nextSite.map (fun site => site ++ [1]) }
             (m.emit [RunEvent.raceLaunched raceId child],
               Cmd.evaluate child :: Cmd.enrollRace raceId child :: Cmd.launch raceId :: rest)
   | Cmd.enrollRace raceId child, rest =>                              -- :1522-1526, D6a
@@ -2010,7 +2032,7 @@ the woken fibers run — a sleep they register that is due by the end fires in t
 finding 4 of the timer note); with nothing due the clock is set to the end (`:368`). The fires
 are bounded by `rounds`, as the host flush's rounds are; a fuel frontier stops the loop
 between fires. -/
-def advanceState (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) (millis : Nat) :
+def advanceState (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) (millis : ClockMillis) :
     Nat → RunMachine ν σ β ε δ ι α χ St κ φ η → RunMachine ν σ β ε δ ι α χ St κ φ η × Bool
   | 0, m => (m, false)
   | rounds + 1, m =>
@@ -2158,7 +2180,7 @@ def runFork (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (program : κ) (context : χ) :
     RunMachine ν σ β ε δ ι α χ St κ φ η × FiberId :=
   let root : FiberId := ⟨m.nextId⟩
-  let fiber := RunFiber.make root program true (interp.budgetOf context) context
+  let fiber := RunFiber.make root program true (interp.budgetOf context) context .root
   let m := { m with fibers := m.fibers ++ [fiber], nextId := m.nextId + 1 }
   (drive interp fuel m [Cmd.evaluate root, Cmd.drainDue], root)
 
@@ -2168,7 +2190,7 @@ def runCallback (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (program : κ) (context : χ)
     (key : Nat) : RunMachine ν σ β ε δ ι α χ St κ φ η × FiberId :=
   let root : FiberId := ⟨m.nextId⟩
-  let fiber := RunFiber.make root program true (interp.budgetOf context) context
+  let fiber := RunFiber.make root program true (interp.budgetOf context) context .root
   let fiber := { fiber with observers := [Observer.callback key] }
   let m := { m with fibers := m.fibers ++ [fiber], nextId := m.nextId + 1 }
   (drive interp fuel m [Cmd.evaluate root, Cmd.drainDue], root)

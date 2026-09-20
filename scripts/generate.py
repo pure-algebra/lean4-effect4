@@ -29,6 +29,8 @@ TIMEOUT = os.environ.get('EFFECT4_GEN_TIMEOUT', '5400')
 
 
 def run(args, capture=False):
+    if args[:3] == ['lake', 'env', 'lean']:
+        args = [*args[:3], '-DwarningAsError=true', *args[3:]]
     print('+ ' + shlex.join(args), flush=True)
     return subprocess.run(['timeout', TIMEOUT, *args], check=True,
                           stdout=subprocess.PIPE if capture else None, text=True).stdout
@@ -95,7 +97,8 @@ def generate(families, output):
             for row in rows:
                 args = row['args']
                 imports = args[args.index('--imports') + 1].split(',')
-                run(['lake', 'build', 'Tools.GeneratedStamp', *imports])
+                for module in dict.fromkeys(['Tools.GeneratedStamp', *imports]):
+                    run(['lake', 'build', module])
                 canonical = row['out'].replace('\\', '/')
                 temp = out / canonical
                 temp.parent.mkdir(parents=True, exist_ok=True)
@@ -148,7 +151,8 @@ def generate(families, output):
         if 'lcnf' in families:
             if checking:
                 raise ValueError('LCNF regenerates in place only; the drift check is `git diff`')
-            run(['lake', 'build', 'Effect4', 'OCaml5.Tools.LcnfGen'])
+            run(['lake', 'build', 'Effect4'])
+            run(['lake', 'build', 'OCaml5.Tools.LcnfGen'])
             roots = json.loads((ROOT / LCNF_ROOTS).read_text())
             if roots.get('format') != 'effect4-lcnf-roots-v1':
                 raise ValueError('unsupported LCNF roots format')

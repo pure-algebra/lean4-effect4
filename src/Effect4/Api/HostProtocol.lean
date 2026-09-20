@@ -21,7 +21,7 @@ deriving DecidableEq, Repr
 inductive Label
   | submit (key : Key)
   | answer (key : Key)
-  | advanceClock (millis : Nat)
+  | advanceClock (millis : ClockMillis)
   | cancel (fiber : FiberId)
   | schedule
 deriving DecidableEq, Repr
@@ -37,7 +37,7 @@ structure Edge where
 deriving DecidableEq, Repr
 
 inductive FieldType
-  | natural | boolean | text | json
+  | natural | boolean | text | json | clockMillis
 deriving DecidableEq, Repr
 
 structure RecordShape where
@@ -58,9 +58,10 @@ def states : List State := [.idle, .awaitingAsync, .parked, .terminated]
 /-- Scheduler, clock, and cancellation steps can wake or finish fibers. Only an
 outstanding external call admits receipt/application; receipt keeps the phase unchanged.
 Terminal sessions admit only terminal controls. Guards and row types remain the existing
-`requestOf` / `Envelope` checks, not a duplicate transition semantics. -/
+`requestOf` / `Envelope` checks, not a duplicate transition semantics. Version 3 gives
+canonical decimal clock durations a distinct wire identity from version 2 numeric durations. -/
 def hostProtocol : Protocol where
-  version := 2
+  version := 3
   initial := .idle
   states := states
   transitions :=
@@ -76,7 +77,7 @@ def hostProtocol : Protocol where
     , ⟨"reply", [("callId", .natural), ("fiber", .natural), ("token", .natural),
         ("completion", .json)]⟩
     , ⟨"apply", [("fiber", .natural), ("token", .natural)]⟩
-    , ⟨"advanceClock", [("millis", .natural)]⟩
+    , ⟨"advanceClock", [("millis", .clockMillis)]⟩
     , ⟨"cancel", [("fiber", .natural)]⟩
     , ⟨"evaluate", [("fiber", .natural)]⟩
     , ⟨"fire", [("fiber", .natural)]⟩

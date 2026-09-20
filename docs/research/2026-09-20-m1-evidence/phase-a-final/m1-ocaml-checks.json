@@ -1,0 +1,102 @@
+[
+  {
+    "label": "build-3",
+    "command": [
+      "opam",
+      "exec",
+      "--switch=effect4",
+      "--",
+      "dune",
+      "build"
+    ],
+    "cwd": "/Users/pooks/Dev/lean4-effect4/ocaml",
+    "log": "/tmp/m1-ocaml-build-3.log",
+    "exit_code": 0,
+    "elapsed_seconds": 7.177,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "label": "engine-1",
+    "command": [
+      "opam",
+      "exec",
+      "--switch=effect4",
+      "--",
+      "dune",
+      "exec",
+      "engine/test/test_engine.exe"
+    ],
+    "cwd": "/Users/pooks/Dev/lean4-effect4/ocaml",
+    "log": "/tmp/m1-ocaml-engine-1.log",
+    "exit_code": 0,
+    "elapsed_seconds": 1.37,
+    "log_sha256": "19cb30c1fecb39cae8a474541f947bbc10f2db31554530b095bb065de4260fc7"
+  },
+  {
+    "label": "query-1",
+    "command": [
+      "opam",
+      "exec",
+      "--switch=effect4",
+      "--",
+      "dune",
+      "exec",
+      "engine/test/test_query.exe"
+    ],
+    "cwd": "/Users/pooks/Dev/lean4-effect4/ocaml",
+    "log": "/tmp/m1-ocaml-query-1.log",
+    "exit_code": 0,
+    "elapsed_seconds": 0.957,
+    "log_sha256": "b3434c003f863dfc113c54382f74e2c05505d59a001b061d1305eb8d73363101"
+  },
+  {
+    "label": "checkpoint-1",
+    "command": [
+      "opam",
+      "exec",
+      "--switch=effect4",
+      "--",
+      "dune",
+      "exec",
+      "engine/cas/test/test_checkpoint.exe"
+    ],
+    "cwd": "/Users/pooks/Dev/lean4-effect4/ocaml",
+    "log": "/tmp/m1-ocaml-checkpoint-1.log",
+    "exit_code": 0,
+    "elapsed_seconds": 2.737,
+    "log_sha256": "209cc2a1d288c641306ba164777eb22b4f9960bde82c0062654e481bb36df608"
+  },
+  {
+    "label": "diff-1",
+    "command": [
+      "opam",
+      "exec",
+      "--switch=effect4",
+      "--",
+      "dune",
+      "exec",
+      "engine/test/test_diff.exe"
+    ],
+    "cwd": "/Users/pooks/Dev/lean4-effect4/ocaml",
+    "log": "/tmp/m1-ocaml-diff-1.log",
+    "exit_code": 0,
+    "elapsed_seconds": 2.117,
+    "log_sha256": "cba7866df1cae8d798c2535cb7495c30020748936afc43fdef2faadf35e67294"
+  },
+  {
+    "label": "gen-check-1",
+    "command": [
+      "opam",
+      "exec",
+      "--switch=effect4",
+      "--",
+      "bash",
+      "ocaml/engine/tools/gen-check.sh"
+    ],
+    "cwd": "/Users/pooks/Dev/lean4-effect4",
+    "log": "/tmp/m1-ocaml-gen-check-1.log",
+    "exit_code": 0,
+    "elapsed_seconds": 2.853,
+    "log_sha256": "c610fef0937e0c3d34b03eeb7bc85f74113c4d088d76e10a96bcc2c4a7e00756"
+  }
+]

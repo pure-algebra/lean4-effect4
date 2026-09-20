@@ -23,7 +23,7 @@ inductive FrontierReason
   | commandFuel
   | compileFuel (fiber : FiberId)
   | awaitHost (key : HostProtocol.Key)
-  | awaitTimer (fiber : FiberId) (wakeAt : Nat)
+  | awaitTimer (fiber : FiberId) (wakeAt : ClockMillis)
   | awaitDecision
 deriving DecidableEq, Repr
 

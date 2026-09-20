@@ -12,7 +12,24 @@ ecosystem (the printer and readers). Programs are data: a canonical `Eff` tree w
 a computed typing certificate, folds, a journaled run with replay, and a printed image that
 reads back.
 
-## True at HEAD (2026-09-17)
+## Current milestone (2026-09-20)
+
+Phase A of the owner's skeleton-first redirect is implemented: deferred stores have a
+payload parameter defaulting to completion data, fiber origin records source paths, and
+the clock is exact through the generated OCaml engine. `clockNow` retains the target's
+number profile and explicitly refuses overflow. Large clock advances use canonical decimal
+text in keyed host protocol version 3; the stock rc.112 adapter refuses values outside its
+number range.
+
+The full Lean build and axiom/root audit, focused host checks and fresh OCaml checks passed.
+Placement, the proof-statement skeleton, proof-bank fills, and the requested full `make check`
+remain in that order. Three completed runtime regeneration rounds were needed, with two
+additional partial LCNF attempts; the requested one-round target was missed. Details,
+counts, retained failures and open proof evidence are in
+`docs/research/2026-09-20-skeleton-first-receipt.md`. This is an implementation checkpoint,
+not a claim that the world, arena or M1 connector obligations are discharged.
+
+## Earlier full-check landing (2026-09-17)
 
 - Branch `refactor/phase1-phase3`. `make check` green (build, roots, generated drift,
   catch-all arms, native, the TypeScript reader, the corpus pin); axioms `[propext, Quot.sound]`

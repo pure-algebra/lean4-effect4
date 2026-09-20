@@ -222,20 +222,21 @@ theorem finalizerOr_program (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (
 theorem stepFrame_eq' (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) :
     evaluatePrim.stepFrame i m f y =
       evaluatePrim.finishFrame m f y (f.frame.step i.toPrimInterp).1
-        (f.frame.step i.toPrimInterp).2 [] := rfl
+        (f.frame.step i.toPrimInterp).2 [] :=
+  by aesop
 
 theorem finishFrame_running (m : FMachine) (f : FRun) (y : Bool) (frame : FFiber)
     (events : List (FrameEvent EffName EffThunk Val Err Defect FiberId Ann)) (nested : List FCmd) :
     evaluatePrim.finishFrame m f y (.running frame) events nested =
       ⟨m.emit (events.map (RunEvent.frame f.id)), { f with frame := frame }, y, .continue_, nested⟩ :=
-  rfl
+  by aesop
 
 theorem finishFrame_finished (m : FMachine) (f : FRun) (y : Bool) (ex : ExitV)
     (events : List (FrameEvent EffName EffThunk Val Err Defect FiberId Ann)) (nested : List FCmd) :
     evaluatePrim.finishFrame m f y (.finished ex) events nested =
       ⟨m.emit (events.map (RunEvent.frame f.id)), { f with frame := frameExitState f.frame }, y,
         .finished ex, nested⟩ :=
-  rfl
+  by aesop
 
 theorem frameExitState_exit (fr : FFiber) (ex : ExitV) (hcur : fr.current = Prim.ofExit ex) :
     frameExitState fr = (fr.getCont (demandOf ex) (skipOf ex)).fiber := by
@@ -320,7 +321,8 @@ theorem prepareIterR_walk (m : RState) (g : RFiber) (y : Bool) (done : Option Ex
 theorem prepareIterR_continue (m : RState) (g : RFiber) (y : Bool) :
     prepareIterR ⟨m, g, y, .continue_, []⟩ =
       prepareScopedExitR ⟨m, answerR g (prepareR m.completedExits g.frame.current), y,
-        .continue_, []⟩ := rfl
+        .continue_, []⟩ :=
+  by aesop
 
 theorem prepareScopedExitR_of_not (it : RIter)
     (h : ∀ previous scope ex k,
@@ -406,6 +408,11 @@ theorem scopeCloseSnapshot_scopes {scope : Nat} {ex : ExitV} {s st : Stores}
     simp [hentry] at h
     exact ⟨by rw [← h.1], by rw [← h.1]⟩
 
+def M1Deliver.storesOk_closeScopeUnsafe {scope : Nat} {ex : ExitV} {flag : Bool} {s s' : Stores}
+    {program : Option Program} (_hs : StoresOk s)
+    (_h : storesCloseScopeUnsafe scope ex flag s = some (s', program)) : ProofGraph.Obligation (StoresOk s') := ⟨⟩
+#proof_wanted M1Deliver.storesOk_closeScopeUnsafe
+
 theorem storesOk_closeScopeUnsafe {scope : Nat} {ex : ExitV} {flag : Bool} {s s' : Stores}
     {program : Option Program} (hs : StoresOk s)
     (h : storesCloseScopeUnsafe scope ex flag s = some (s', program)) : StoresOk s' := by
@@ -416,11 +423,10 @@ theorem storesOk_closeScopeUnsafe {scope : Nat} {ex : ExitV} {flag : Bool} {s s'
     obtain ⟨st, strategy, order⟩ := r
     simp [hsnap] at h
     obtain ⟨hsc, hnm⟩ := scopeCloseSnapshot_scopes hsnap
-    have hdef : s'.deferreds = s.deferreds := h.1 ▸ scopeCloseSnapshot_deferreds hsnap
-    refine ⟨by unfold DeferredOk; rw [hdef]; exact hs.1, ?_⟩
+    refine ⟨?_⟩
     show ScopeStore.KeysBelow s'.scopes s'.nextName
     rw [← h.1, hsc, hnm]
-    exact ScopeStore.keysBelow_closeState hs.2
+    exact ScopeStore.keysBelow_closeState hs.keysFresh
 
 /-! ## The delivery agreement -/
 
@@ -441,11 +447,12 @@ theorem FMeans.withFrameContext {root : NativeEff} {f₁ : FRun} {f₂ : RFiber}
       { f₁ with frame := fr₁, context := ctx, maxOpsBeforeYield := maxOps, preventYield := prevent }
       { f₂ with frame := fr₂, context := ctx, maxOpsBeforeYield := maxOps, preventYield := prevent } :=
   FMeans.mk' h.id h.parked rfl h.running h.pending h.finalizing h.exit h.opCount rfl rfl
-    h.yieldOverride h.observers h.children h.dispatcher hS
+    h.yieldOverride h.observers h.children h.dispatcher hS h.origin
 
 theorem BMeans.emitL {root : NativeEff} {m₁ : FMachine} {m₂ : RState} (h : BMeans root m₁ m₂)
     (e : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx)) :
-    BMeans root (m₁.emit e) m₂ := h
+    BMeans root (m₁.emit e) m₂ :=
+  by aesop
 
 /-- **Exit delivery agrees.** A fiber whose current is an exit, evaluated by the frame's
 native evaluator and by the term's delivery followed by its construction glue. -/

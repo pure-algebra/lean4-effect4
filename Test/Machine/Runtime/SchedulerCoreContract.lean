@@ -465,7 +465,7 @@ open Effect4 Effect4.Machine
 
 /-- `Effect.sleep(d)`, `0 < d`: the registration and its `clearTimeout`. -/
 def sleepFor (millis : Nat) : Program :=
-  Prim.async (Name.registerSleep millis) true (some Name.cancelSleep)
+  Prim.async (Name.registerSleep (ClockMillis.ofNat millis)) true (some Name.cancelSleep)
 
 /-- `Clock.currentTimeMillis`: the logical clock, read. -/
 def clockNow : Program := Prim.sync (Thunk.op SyncOp.clockNow)
@@ -485,8 +485,8 @@ def runTape (m : Witnesses.M) (tape : List Witnesses.D) : Witnesses.M :=
   | .frontier _ m => m
   | .stuck _ m => m
 
-def clockOf (m : Witnesses.M) : Nat := m.state.timers.now
-def pendingOf (m : Witnesses.M) : List (Nat × Nat) :=
+def clockOf (m : Witnesses.M) : ClockMillis := m.state.timers.now
+def pendingOf (m : Witnesses.M) : List (Nat × ClockMillis) :=
   m.state.timers.wake.waiters.map fun w => (w.fiber.value, w.payload)
 /-- The fibers resumed, in trace order. -/
 def resumedOrder (m : Witnesses.M) : List Nat :=

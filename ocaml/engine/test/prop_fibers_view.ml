@@ -62,7 +62,7 @@ let next () =
 let rand n = if n <= 0 then 0 else next () mod n
 
 (* ------------------------------------------------------- the smallest fiber record.
-   The generated `run_fiber` has 15 fields; the three these laws touch are the id
+   This independent carrier fixture records the three fields these laws observe: the id
    (Fibers.lean:573), the exit (:609, :1543) and the observers (:1256, :1344). *)
 type fiber = { id : int; exit_ : int option; observers : int list }
 

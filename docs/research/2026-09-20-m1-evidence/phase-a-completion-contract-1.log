@@ -1,0 +1,26 @@
+ℹ [199/200] Replayed Effect4.Laws.Machine.CompletionData
+info: src/Effect4/Laws/Machine/CompletionData.lean:56:0: Effect4.Machine.M1.Core: 0 open, 5 proved, 5 total; ceiling 0
+✖ [200/200] Building Test.Machine.Runtime.CompletionDataContract (1.1s)
+trace: .> LEAN_PATH=/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4/Test/Machine/Runtime/CompletionDataContract.lean -o /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Test/Machine/Runtime/CompletionDataContract.olean -i /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Test/Machine/Runtime/CompletionDataContract.ilean -c /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Test/Machine/Runtime/CompletionDataContract.c --setup /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Test/Machine/Runtime/CompletionDataContract.setup.json --json
+error: Test/Machine/Runtime/CompletionDataContract.lean:18:2: Tactic `aesop` failed, made no progress
+Initial goal:
+  s : DeferredStore
+  k : DeferredKey
+  c : DeferredCell
+  h : s.cellAt k = some c
+  ⊢ s.poll k = some (c.completion (Completion Val Err Defect FiberId Ann))
+error: Test/Machine/Runtime/CompletionDataContract.lean:15:0: ❌️ Docstring on `#guard_msgs` does not match generated message:
+
+  error: Tactic `aesop` failed, made no progress
+  Initial goal:
+    s : DeferredStore
+    k : DeferredKey
+    c : DeferredCell
+    h : s.cellAt k = some c
+-   ⊢ s.poll k = some c.completion
++   ⊢ s.poll k = some (c.completion (Completion Val Err Defect FiberId Ann))
+info: Test/Machine/Runtime/CompletionDataContract.lean:20:0: 'Effect4.Machine.poll_reads_cell' depends on axioms: [propext]
+error: Lean exited with code 1
+Some required targets logged failures:
+- Test.Machine.Runtime.CompletionDataContract
+error: build failed

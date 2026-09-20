@@ -1,0 +1,4 @@
+Effect rc.112 runtime coverage: denominator 135; owned-with-green 8/135;
+green 133, partial 2, absent 0; census 137 rows, 2 excluded
+partial: op.Failure layer.launch-holds-scope
+produced at 15cb510e (working tree has uncommitted changes) by scripts/report-effect-runtime-coverage.sh

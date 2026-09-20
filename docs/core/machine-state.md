@@ -25,10 +25,13 @@ races in flight, three fresh-name counters, the armed host callbacks, the servic
 event log and a stuck marker. Four instances run it: the compiled machine, the reference machine
 (which erases frame events), the stores module's own interpreter, and the generated OCaml engine.
 
-A fiber (`:229-247`) is fifteen fields transcribing the modelled part of rc.112's fiber object:
+A fiber has sixteen fields transcribing the modelled part of rc.112's fiber object and
+its source provenance:
 its saved execution state (the current code, the continuation stack, the interrupt flags), its
 parking state and outstanding parks, its exit, the yield budget, its observers and children, its
-dispatcher and its context. The compiled runtime uses first-order code and continuation names.
+dispatcher, its context, and its origin. Origin is either the root or a fork's parent, daemon
+flag and source path; supervision reads this state even when diagnostic events are erased.
+The current tracking parent remains a separate relation. The compiled runtime uses first-order code and continuation names.
 The reference proof instance instead has function-valued RProgram/ScopeFrame continuations;
 they are semantic carriers, not stored program syntax or serializable runtime snapshots.
 
@@ -51,6 +54,18 @@ token on the fiber, and a resume for a fiber no longer parked on that token is i
 handshake is the machine's protection against stale wakeups and should be stated as its own
 invariant before the typed-state proofs need it.
 
+The runtime payload is `Completion`; consumers interpret it when it is delivered. The store
+and cell accept a defaulted payload parameter so the Laws graph can relate this representation
+to the former program payload without copying the store's operations. The runtime no longer
+needs a stored-program shape check or partial decoder.
+
+The logical timer uses exact nonnegative `ClockMillis` values for its current time, advances
+and deadlines. Its generated OCaml carrier uses arbitrary precision arithmetic; decimal text
+transports large advances. The public `clockNow` result remains a number, and the target
+refuses observations outside its exact number range. The stock rc.112 clock adapter also
+refuses an overflowing advance or deadline before changing its numeric timer state. DB-14
+owns this target-profile decision.
+
 ## 3. The logs, and what they are for
 
 Three logs in the machine, two above it:
@@ -69,13 +84,13 @@ layer, though, the journal is the truth and the state is a fold over it. Both ar
 long as each layer says which it is: in the machine, state is the truth and the trace is
 derived.
 
-## 4. Representation changes under review
+## 4. Representation changes and migration conditions
 
 | area | current cost or gap | proposed change and condition |
 | --- | --- | --- |
-| promise cells | code-shaped storage requires a shape invariant and partial decoder | use admitted Completion data and interpret it at the consumer; retain deferred Ref reads and do not claim arbitrary Deferred.completeWith support |
-| memo entries | the duplicated effect is not read by machine execution, but census witnesses inspect it | delete it only with cell-based replacement witnesses and the representation connector |
-| supervision and events | the holder's supervision depends on a trace excluded by Obs | define semantic, holder/replay and diagnostic observations; make needed topology available without relying on erased diagnostics; a parent/daemon field is one candidate |
+| promise cells | storage now holds Completion data; the shape invariant and partial decoder are removed | retain deferred Ref reads and do not claim arbitrary Deferred.completeWith support; finish the representation connector in the Laws graph |
+| memo entries | the unused effect field is removed and census witnesses inspect the cell | the migration requires both cell-based replacement witnesses and the representation connector; the connector remains a Phase B/C obligation |
+| supervision and events | the holder now reads the fiber's origin instead of the event trace | retain separate semantic, holder/replay and diagnostic observations; prove the source-path and observation statements in the Laws graph |
 | optimized containers | OCaml already has interfaces, list twins and property tests, but no Lean refinement certificate for the swaps | use separate lawful interfaces for dense arenas, keyed tables, ordered work, append sequences and persistent paths; prove a relation to the reference |
 | identities | scope/finalizer/token/race spaces share Nat | distinguish their types while retaining the shared allocation policy; target overflow/freshness obligations remain |
 
@@ -164,4 +179,5 @@ composition ruling; correcting a contradictory summary does not require ruling i
 `docs/research/2026-09-19-state-refinement-plan.md` owns the staged work and acceptance:
 contracts and observations, completion/memo migration, generic-cell/world tooling and the
 concrete ledger, typed-state proofs, one storage refinement, then the additional primitive
-families and target profiles. Runtime implementation stays paused for this design review.
+families and target profiles. The owner's skeleton-first redirect resumes implementation:
+finish the data changes, settle module placement, record every statement, then fill the proofs.

@@ -1,0 +1,54 @@
+clock-api probe: decls=664, missing=0, frontier=0, todos=22
+unknown-producing declaration: Effect4.Program.interpOf._lam_1
+  callable _uniq.76, args 2, result _uniq.82
+unknown-producing declaration: Effect4.Program.interpOf._lam_29
+  callable _uniq.3, args 1, result _uniq.7
+unknown-producing declaration: Effect4.Program.interpOf._lam_31
+  callable _uniq.4, args 1, result _uniq.8
+unknown-producing declaration: Effect4.Program.contEOf
+  callable _uniq.12, args 1, result _uniq.17
+  callable _uniq.48, args 1, result _uniq.53
+unknown-producing declaration: Effect4.Program.exitOfVal
+  callable _uniq.4, args 1, result _uniq.7
+unknown-producing declaration: Effect4.Program.actionAt._lam_0
+  callable _uniq.18, args 1, result _uniq.21
+unknown-producing declaration: Effect4.Program.Val.hasTy
+  callable _uniq.100, args 1, result _uniq.103
+unknown-producing declaration: Effect4.Store.Image.equiv._redArg._lam_0
+  callable _uniq.2, args 1, result _uniq.8
+  callable _uniq.4, args 1, result _uniq.9
+unknown-producing declaration: Effect4.Store.Image.equiv._redArg._lam_1
+  callable _uniq.5, args 1, result _uniq.8
+  callable _uniq.2, args 1, result _uniq.11
+unknown-producing declaration: Effect4.Store.Image.ofListAux._redArg
+  callable _uniq.8, args 1, result _uniq.11
+unknown-producing declaration: Effect4.Program.reasonAdmits
+  callable _uniq.1, args 2, result _uniq.9
+unknown-producing declaration: Effect4.Store.Image.ctor1._redArg._lam_0
+  callable _uniq.4, args 1, result _uniq.8
+unknown-producing declaration: Effect4.Store.Image.ofCtor1._redArg
+  callable _uniq.11, args 1, result _uniq.14
+unknown-producing declaration: Effect4.Program.interpAt._lam_3
+  callable _uniq.78, args 2, result _uniq.84
+unknown-producing declaration: Effect4.Program.interpAt._lam_6
+  callable _uniq.38, args 2, result _uniq.70
+unknown-producing declaration: Effect4.Store.Image.toOption._redArg
+  callable _uniq.5, args 1, result _uniq.9
+unknown-producing declaration: Effect4.Store.Image.ofOption._redArg
+  callable _uniq.7, args 1, result _uniq.10
+unknown-producing declaration: Effect4.Store.Image.ctor2._redArg._lam_0
+  callable _uniq.5, args 1, result _uniq.15
+  callable _uniq.11, args 1, result _uniq.16
+unknown-producing declaration: Effect4.Store.Image.ofCtor2._redArg
+  callable _uniq.14, args 1, result _uniq.17
+  callable _uniq.20, args 1, result _uniq.23
+unknown-producing declaration: Effect4.Store.Image.toPair._redArg
+  callable _uniq.4, args 1, result _uniq.14
+  callable _uniq.10, args 1, result _uniq.15
+unknown-producing declaration: Effect4.Store.Image.ofPair._redArg
+  callable _uniq.7, args 1, result _uniq.10
+  callable _uniq.13, args 1, result _uniq.16
+unknown-producing declaration: Effect4.Store.Image.subtype._at_.Effect4.Machine.Value.annotations.spec_1._redArg._lam_0
+  callable _uniq.3, args 1, result _uniq.7
+unknown-producing declaration: Effect4.Store.Image.subtype._at_.Effect4.Machine.Value.annotations.spec_1._redArg._lam_1
+  callable _uniq.4, args 1, result _uniq.7

@@ -434,7 +434,6 @@ theorem guardState_fireObserver (p : NativeEff) (table : RowTable)
     | none => exact guardState_halt before _
     | some entry =>
       exact guardState_withState before _ (List.Subset.refl _)
-        ⟨before.internalCodes.1, before.internalCodes.2.1⟩
   | raceCallback raceId =>
     let base := m.emit [RunEvent.observerFired id (.raceCallback raceId)]
     have before : GuardState base := guardState_emit state _
@@ -442,7 +441,7 @@ theorem guardState_fireObserver (p : NativeEff) (table : RowTable)
     | none => simpa only [fireObserver, show m.emit _ = base from rfl, hr] using before
     | some race =>
       have hr' : base.race? race.id = some race := by simpa only [race_id_of_lookup hr] using hr
-      have programs := before.internalCodes.2.2.2 race (List.mem_of_find?_eq_some hr)
+      have programs := before.internalCodes.2 race (List.mem_of_find?_eq_some hr)
       let next : NRace := { race with state := Supervision.raceComplete race.state id exit }
       have updated := guardState_updateRace before hr' next rfl rfl rfl programs
       have hn : (base.updateRace next).race? next.id = some next := by

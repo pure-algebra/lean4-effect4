@@ -1,0 +1,7 @@
+CALLABLE passes=22 facts=76712 sites=20945 origins=37102
+STAGE extract decls=664 flows=891: used=6122 max=200000
+STAGE resolveCallables flows=1021: used=449661 max=200000
+STAGE clockInputSlots: used=456023 max=200000
+STAGE clockRisks summary: used=459779 max=200000
+STAGE clockRisks final: used=461153 max=200000
+todos=0

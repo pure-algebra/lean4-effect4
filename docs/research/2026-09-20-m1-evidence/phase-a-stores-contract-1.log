@@ -1,0 +1,16 @@
+ℹ [199/208] Replayed Effect4.Laws.Machine.CompletionData
+info: src/Effect4/Laws/Machine/CompletionData.lean:56:0: Effect4.Machine.M1.Core: 0 open, 5 proved, 5 total; ceiling 0
+ℹ [200/208] Replayed Effect4.Laws.Machine.StoresLaws
+info: src/Effect4/Laws/Machine/StoresLaws.lean:2059:0: Effect4.Machine.M1.StoresLaws: 0 open, 5 proved, 5 total; ceiling 0
+✔ [205/213] Built Effect4.Laws.Machine.StoresValue (1.2s)
+✔ [212/213] Built Effect4.Laws.Machine.ContextValue (380ms)
+ℹ [213/213] Built Test.Machine.Runtime.StoresLawsContract (1.4s)
+info: Test/Machine/Runtime/StoresLawsContract.lean:408:0: Env.Val.ofSpine_entries : ∀ (c : Env.Ctx), Env.spine (Env.encode c) = some c.entries
+info: Test/Machine/Runtime/StoresLawsContract.lean:410:0: 'Effect4.Machine.Val.image' does not depend on any axioms
+info: Test/Machine/Runtime/StoresLawsContract.lean:411:0: 'Effect4.Machine.Val.keys_eq_handles' depends on axioms: [propext]
+info: Test/Machine/Runtime/StoresLawsContract.lean:412:0: 'Effect4.Machine.Val.validIn_eq_handles' depends on axioms: [propext]
+info: Test/Machine/Runtime/StoresLawsContract.lean:413:0: 'Effect4.Machine.Val.handles_eq_keys_code' depends on axioms: [propext]
+info: Test/Machine/Runtime/StoresLawsContract.lean:414:0: 'Effect4.Machine.exitImage' depends on axioms: [propext]
+info: Test/Machine/Runtime/StoresLawsContract.lean:415:0: 'Effect4.Machine.Val.image' does not depend on any axioms
+info: Test/Machine/Runtime/StoresLawsContract.lean:416:0: 'Effect4.Machine.Env.Val.ofSpine_entries' depends on axioms: [propext]
+Build completed successfully (213 jobs).

@@ -1,0 +1,11 @@
+Full raw output retained losslessly in phase-a-gen-eff-1.log.gz.
+Raw SHA-256: 4b7f5e7d29d5920e352020858137b1f65422e2e2e070dfbe3523111680951f57
+Raw bytes: 924239
+This index is not the full log; read the gzip archive for complete diagnostics.
+
+Final five lines:
+ℹ [675/677] Replayed Test.All
+info: Test/All.lean:134:0: Effect4 library-root gate: 147 API/utility modules, 182 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+info: Test/All.lean:134:0: Effect4 module and axiom gate: checked 458 modules and 65498 declarations; semantic/test axioms are [propext,
+ Quot.sound]; exact implementation boundary (14 module(s), 29 declaration(s)) additionally allows Classical.choice
+Build completed successfully (677 jobs).

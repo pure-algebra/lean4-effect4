@@ -1,3 +1,4 @@
+import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Machine.Clauses
 import Effect4.Laws.Machine.StoresLaws
 import Effect4.Laws.Machine.Approximation
@@ -103,12 +104,17 @@ theorem Handle.code_ofCode {code : UInt8 × Nat} {h : Handle} (hc : Handle.ofCod
         exact Prod.ext h1.symm rfl)
     | exact nomatch hc
 
-theorem Handle.ofCode_fiber (index : Nat) : Handle.ofCode (1, index) = some (.fiber ⟨index⟩) := rfl
-theorem Handle.ofCode_cell (index : Nat) : Handle.ofCode (2, index) = some (.cell ⟨index⟩) := rfl
+theorem Handle.ofCode_fiber (index : Nat) : Handle.ofCode (1, index) = some (.fiber ⟨index⟩) :=
+  by aesop
+theorem Handle.ofCode_cell (index : Nat) : Handle.ofCode (2, index) = some (.cell ⟨index⟩) :=
+  by aesop
 theorem Handle.ofCode_promise (index : Nat) :
-    Handle.ofCode (3, index) = some (.promise ⟨index⟩) := rfl
-theorem Handle.ofCode_scope (index : Nat) : Handle.ofCode (4, index) = some (.scope index) := rfl
-theorem Handle.ofCode_memoMap (index : Nat) : Handle.ofCode (5, index) = some (.memoMap index) := rfl
+    Handle.ofCode (3, index) = some (.promise ⟨index⟩) :=
+  by aesop
+theorem Handle.ofCode_scope (index : Nat) : Handle.ofCode (4, index) = some (.scope index) :=
+  by aesop
+theorem Handle.ofCode_memoMap (index : Nat) : Handle.ofCode (5, index) = some (.memoMap index) :=
+  by aesop
 
 mutual
 /-- The handles of a value: every `handle` frame the carrier carries, read through
@@ -138,11 +144,16 @@ theorem Val.keysList_eq_flatMap (values : List Val) :
 theorem Val.keys_list (values : List Val) : Val.keys (Val.list values) = values.flatMap Val.keys :=
   Val.keysList_eq_flatMap values
 
-theorem Val.keys_fiber (id : FiberId) : (Val.fiber id).keys = [Handle.fiber id] := rfl
-theorem Val.keys_cell (key : RefKey) : (Val.cell key).keys = [Handle.cell key] := rfl
-theorem Val.keys_promise (key : DeferredKey) : (Val.promise key).keys = [Handle.promise key] := rfl
-theorem Val.keys_scopeHandle (key : Nat) : (Val.scopeHandle key).keys = [Handle.scope key] := rfl
-theorem Val.keys_memoMap (id : MemoMapId) : (Val.memoMap id).keys = [Handle.memoMap id.index] := rfl
+theorem Val.keys_fiber (id : FiberId) : (Val.fiber id).keys = [Handle.fiber id] :=
+  by aesop
+theorem Val.keys_cell (key : RefKey) : (Val.cell key).keys = [Handle.cell key] :=
+  by aesop
+theorem Val.keys_promise (key : DeferredKey) : (Val.promise key).keys = [Handle.promise key] :=
+  by aesop
+theorem Val.keys_scopeHandle (key : Nat) : (Val.scopeHandle key).keys = [Handle.scope key] :=
+  by aesop
+theorem Val.keys_memoMap (id : MemoMapId) : (Val.memoMap id).keys = [Handle.memoMap id.index] :=
+  by aesop
 
 theorem Val.keys_exitOk (v : Val) : Val.keys (Val.exitOk v) = v.keys := by
   simp only [Val.keys, Val.keysList, List.append_nil]
@@ -197,14 +208,13 @@ def Env.Context.handleKeys (c : Env.Ctx) : List Handle :=
 def Ctx.keys (ctx : Ctx) : List Handle :=
   ctx.services.entries.flatMap fun s => Val.keys s.valueVal
 
-theorem Ctx.keys_eq_handleKeys (ctx : Ctx) : ctx.keys = Env.Context.handleKeys ctx.services := rfl
+theorem Ctx.keys_eq_handleKeys (ctx : Ctx) : ctx.keys = Env.Context.handleKeys ctx.services :=
+  by aesop
 
 /-- A written entry's handles are its value's: the key's image is handle-free. -/
 theorem Val.keys_entryStore (key : ServiceKey) (value : Val) :
-    Val.keys (Env.entryStore key value) = value.keys := by
-  show Val.keys (Env.serviceKeyImage.toVal key) ++ Val.keys value = Val.keys value
-  rw [Val.keys_eq_handles (Env.serviceKeyImage.toVal key), Env.serviceKeyImage_handleFree key]
-  rfl
+    Val.keys (Env.entryStore key value) = value.keys :=
+  by aesop
 
 theorem Val.keysList_entryStore :
     ∀ es : List (Env.Service Env.ValU),
@@ -269,10 +279,12 @@ theorem Val.keys_encode (c : Env.Ctx) : Val.keys (Env.encode c) = Env.Context.ha
   rw [Val.keysList_entryStore]
   rfl
 
-theorem Env.Context.handleKeys_empty : Env.Context.handleKeys Env.Context.empty = [] := rfl
+theorem Env.Context.handleKeys_empty : Env.Context.handleKeys Env.Context.empty = [] :=
+  by aesop
 
 theorem Ctx.keys_withServices (s : Env.Ctx) :
-    (Ctx.withServices s).keys = Env.Context.handleKeys s := rfl
+    (Ctx.withServices s).keys = Env.Context.handleKeys s :=
+  by aesop
 
 /-- `Context.add`'s handles: the value's, and the previous map's. -/
 theorem Env.Context.handleKeys_add (c : Env.Ctx) (key : ServiceKey)
@@ -585,9 +597,9 @@ def programKeys : Program → List Handle := primKeys Name.keys Thunk.keys
 /-- The handles a `withFiber` action carries. -/
 def WithFiberAction.keys (nk : ν → List Handle) (sk : σ → List Handle) :
     WithFiberAction ν σ Val Err Defect FiberId Ann Ctx → List Handle
-  | WithFiberAction.fork program _ => primKeys nk sk program
-  | WithFiberAction.forkIn program _ scope => Handle.scope scope :: primKeys nk sk program
-  | WithFiberAction.forkScoped program _ => primKeys nk sk program
+  | WithFiberAction.fork program _ _ => primKeys nk sk program
+  | WithFiberAction.forkIn program _ scope _ => Handle.scope scope :: primKeys nk sk program
+  | WithFiberAction.forkScoped program _ _ => primKeys nk sk program
   | WithFiberAction.ambientScope => []
   | WithFiberAction.runIn target scope => [Handle.fiber target, Handle.scope scope]
   | WithFiberAction.interrupt target => [Handle.fiber target]
@@ -598,7 +610,7 @@ def WithFiberAction.keys (nk : ν → List Handle) (sk : σ → List Handle) :
   | WithFiberAction.awaitAllFailFast targets => targets.map Handle.fiber
   | WithFiberAction.snapshotChildren => []
   | WithFiberAction.awaitNewChildren snapshot => snapshot.map Handle.fiber
-  | WithFiberAction.raceAll entrants => entrants.flatMap (primKeys nk sk)
+  | WithFiberAction.raceAll entrants _ => entrants.flatMap (primKeys nk sk)
   | WithFiberAction.setInterruptible body _ => primKeys nk sk body
   | WithFiberAction.setContext context => context.keys
   | WithFiberAction.getContext => []
@@ -654,6 +666,38 @@ def Owed.keys {κ : Type} (ck : κ → List Handle) (d : Owed κ) : List Handle 
     (match d.mode with
       | WakeMode.now => []
       | WakeMode.scheduled owner _ => [Handle.fiber owner, Handle.fiber d.waiter])
+
+/-- Mapping an owed resume carries no handles beyond the input keys when the code map
+has that property; the wake mode and waiter remain the same. -/
+def M1.Handles.owed_mapCode_keys_subset {κ κ' : Type} (f : κ → κ')
+    (sourceKeys : κ → List Handle) (targetKeys : κ' → List Handle)
+    (_h : ∀ c, targetKeys (f c) ⊆ sourceKeys c) (d : Owed κ) : ProofGraph.Obligation (
+    (d.mapCode f).keys targetKeys ⊆ d.keys sourceKeys) := ⟨⟩
+#proof_wanted M1.Handles.owed_mapCode_keys_subset
+
+theorem Owed.mapCode_keys_subset {κ κ' : Type} (f : κ → κ')
+    (sourceKeys : κ → List Handle) (targetKeys : κ' → List Handle)
+    (h : ∀ c, targetKeys (f c) ⊆ sourceKeys c) (d : Owed κ) :
+    (d.mapCode f).keys targetKeys ⊆ d.keys sourceKeys := by
+  simp only [Owed.keys, Owed.mapCode]
+  exact List.append_subset.mpr ⟨List.Subset.trans (h d.code) (List.subset_append_left _ _),
+    List.subset_append_right _ _⟩
+
+/-- Code-map handle bounds lift through an ordered list of owed resumes. -/
+def M1.Handles.owed_flatMap_mapCode_keys_subset {κ κ' : Type} (f : κ → κ')
+    (sourceKeys : κ → List Handle) (targetKeys : κ' → List Handle)
+    (_h : ∀ c, targetKeys (f c) ⊆ sourceKeys c) (ds : List (Owed κ)) : ProofGraph.Obligation (
+    (ds.map (Owed.mapCode f)).flatMap (Owed.keys targetKeys) ⊆ ds.flatMap (Owed.keys sourceKeys)) := ⟨⟩
+#proof_wanted M1.Handles.owed_flatMap_mapCode_keys_subset
+
+theorem Owed.flatMap_mapCode_keys_subset {κ κ' : Type} (f : κ → κ')
+    (sourceKeys : κ → List Handle) (targetKeys : κ' → List Handle)
+    (h : ∀ c, targetKeys (f c) ⊆ sourceKeys c) (ds : List (Owed κ)) :
+    (ds.map (Owed.mapCode f)).flatMap (Owed.keys targetKeys) ⊆ ds.flatMap (Owed.keys sourceKeys) := by
+  intro x hx
+  obtain ⟨mapped, hmapped, hx⟩ := List.mem_flatMap.mp hx
+  obtain ⟨d, hd, rfl⟩ := List.mem_map.mp hmapped
+  exact List.mem_flatMap.mpr ⟨d, hd, Owed.mapCode_keys_subset f sourceKeys targetKeys h d hx⟩
 
 /-- The handles of a dispatcher task: the fiber it starts or resumes, the resume's code, the
 list a wake names. -/
@@ -717,12 +761,12 @@ def Outcome.keys : Outcome ν σ Val Err Defect FiberId Ann → List Handle
 /-- The handles a Deferred cell holds: its stored completion. -/
 def DeferredCell.keys (c : DeferredCell) : List Handle :=
   match c.completion with
-  | some program => programKeys program
+  | some completion => completion.keys
   | none => []
 
 /-- The handles of the Deferred store: every cell's completion and every owed resume's. -/
 def DeferredStore.keys (d : DeferredStore) : List Handle :=
-  d.cells.flatMap DeferredCell.keys ++ d.due.flatMap (Owed.keys programKeys)
+  d.cells.flatMap DeferredCell.keys ++ d.due.flatMap (Owed.keys Completion.keys)
 
 /-- The handles a closed scope's exit carries. The store answers that exit to a registration
 on a closed scope (`syncOpStep`, `SyncOp.scopeAdd`; `internal/effect.ts:3851-3853`), so it is
@@ -741,10 +785,10 @@ def ScopeEntry.keys (e : ScopeEntry) : List Handle :=
 def ScopeStore.keys (s : ScopeStore) : List Handle :=
   s.entries.flatMap ScopeEntry.keys
 
-/-- The handles a memo entry holds: its stored program's, its layer scope, its Deferred and
-its finalizer's (the join). -/
+/-- The handles a memo entry holds: its layer scope, its Deferred and its finalizer.
+The Deferred store owns the completion's handles. -/
 def MemoEntry.keys (e : MemoEntry) : List Handle :=
-  programKeys e.effect ++ [Handle.scope e.layerScope, Handle.promise e.deferred] ++ e.finalizer.keys
+  [Handle.scope e.layerScope, Handle.promise e.deferred] ++ e.finalizer.keys
 
 /-- The handles of a memo map: its entries'. -/
 def MemoMap.keys (m : MemoMap) : List Handle := m.entries.flatMap fun e => e.2.keys
@@ -778,18 +822,30 @@ section Projections
 
 variable {m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores}
 
-theorem races_update (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) : (m.update f).races = m.races := rfl
-theorem armed_update (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) : (m.update f).armed = m.armed := rfl
-theorem state_update (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) : (m.update f).state = m.state := rfl
-theorem fibers_updateRace (r : Race ν σ Val Err Defect FiberId Ann) : (m.updateRace r).fibers = m.fibers := rfl
-theorem armed_updateRace (r : Race ν σ Val Err Defect FiberId Ann) : (m.updateRace r).armed = m.armed := rfl
-theorem state_updateRace (r : Race ν σ Val Err Defect FiberId Ann) : (m.updateRace r).state = m.state := rfl
-theorem fibers_arm (owner : FiberId) : (m.arm owner).fibers = m.fibers := rfl
-theorem races_arm (owner : FiberId) : (m.arm owner).races = m.races := rfl
-theorem state_arm (owner : FiberId) : (m.arm owner).state = m.state := rfl
-theorem fibers_disarm (owner : FiberId) : (m.disarm owner).fibers = m.fibers := rfl
-theorem races_disarm (owner : FiberId) : (m.disarm owner).races = m.races := rfl
-theorem state_disarm (owner : FiberId) : (m.disarm owner).state = m.state := rfl
+theorem races_update (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) : (m.update f).races = m.races :=
+  by aesop
+theorem armed_update (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) : (m.update f).armed = m.armed :=
+  by aesop
+theorem state_update (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) : (m.update f).state = m.state :=
+  by aesop
+theorem fibers_updateRace (r : Race ν σ Val Err Defect FiberId Ann) : (m.updateRace r).fibers = m.fibers :=
+  by aesop
+theorem armed_updateRace (r : Race ν σ Val Err Defect FiberId Ann) : (m.updateRace r).armed = m.armed :=
+  by aesop
+theorem state_updateRace (r : Race ν σ Val Err Defect FiberId Ann) : (m.updateRace r).state = m.state :=
+  by aesop
+theorem fibers_arm (owner : FiberId) : (m.arm owner).fibers = m.fibers :=
+  by aesop
+theorem races_arm (owner : FiberId) : (m.arm owner).races = m.races :=
+  by aesop
+theorem state_arm (owner : FiberId) : (m.arm owner).state = m.state :=
+  by aesop
+theorem fibers_disarm (owner : FiberId) : (m.disarm owner).fibers = m.fibers :=
+  by aesop
+theorem races_disarm (owner : FiberId) : (m.disarm owner).races = m.races :=
+  by aesop
+theorem state_disarm (owner : FiberId) : (m.disarm owner).state = m.state :=
+  by aesop
 
 theorem races_modify (id : FiberId)
     (k : RunFiber ν σ Val Err Defect FiberId Ann Ctx → RunFiber ν σ Val Err Defect FiberId Ann Ctx) :
@@ -1706,16 +1762,21 @@ section Ops
 variable {m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores}
 
 theorem keys_emit (ev : List (RunEvent ν σ Val Err Defect FiberId Ann Ctx)) :
-    (m.emit ev).keys nk sk = m.keys nk sk := rfl
+    (m.emit ev).keys nk sk = m.keys nk sk :=
+  by aesop
 
 theorem world_emit (ev : List (RunEvent ν σ Val Err Defect FiberId Ann Ctx)) :
-    (m.emit ev).world = m.world := rfl
+    (m.emit ev).world = m.world :=
+  by aesop
 
-theorem keys_halt (why : Stuck) : (m.halt why).keys nk sk = m.keys nk sk := rfl
+theorem keys_halt (why : Stuck) : (m.halt why).keys nk sk = m.keys nk sk :=
+  by aesop
 
-theorem world_halt (why : Stuck) : (m.halt why).world = m.world := rfl
+theorem world_halt (why : Stuck) : (m.halt why).world = m.world :=
+  by aesop
 
-theorem world_arm (owner : FiberId) : (m.arm owner).world = m.world := rfl
+theorem world_arm (owner : FiberId) : (m.arm owner).world = m.world :=
+  by aesop
 
 theorem keys_arm_subset (owner : FiberId) :
     (m.arm owner).keys nk sk ⊆ Handle.fiber owner :: m.keys nk sk := by
@@ -1725,7 +1786,8 @@ theorem keys_arm_subset (owner : FiberId) :
   · simp only [List.map_append, List.map_cons, List.map_nil]
     sub_tac
 
-theorem world_disarm (owner : FiberId) : (m.disarm owner).world = m.world := rfl
+theorem world_disarm (owner : FiberId) : (m.disarm owner).world = m.world :=
+  by aesop
 
 theorem map_filter_subset {γ ζ : Type} (f : γ → ζ) (p : γ → Bool) (l : List γ) :
     (l.filter p).map f ⊆ l.map f :=
@@ -1915,7 +1977,8 @@ theorem keys_modify_subset (id : FiberId)
       · sub_tac
 
 theorem world_updateRace (r : Race ν σ Val Err Defect FiberId Ann) :
-    (m.updateRace r).world = m.world := rfl
+    (m.updateRace r).world = m.world :=
+  by aesop
 
 theorem keys_updateRace_subset (r : Race ν σ Val Err Defect FiberId Ann) :
     (m.updateRace r).keys nk sk ⊆ m.keys nk sk ++ r.keys nk sk := by
@@ -1974,7 +2037,8 @@ theorem Dispatcher.keys_enqueue_subset (d : Dispatcher ν σ Val Err Defect Fibe
   simp only [Dispatcher.keys, Dispatcher.enqueue]
   exact Dispatcher.insert_keys_subset nk sk priority task d.buckets
 
-theorem Dispatcher.keys_empty : (Dispatcher.empty : Dispatcher ν σ Val Err Defect FiberId Ann).keys nk sk = [] := rfl
+theorem Dispatcher.keys_empty : (Dispatcher.empty : Dispatcher ν σ Val Err Defect FiberId Ann).keys nk sk = [] :=
+  by aesop
 
 theorem keys_park (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx)
     (p : Pending ν Val Err Defect FiberId Ann) :
@@ -1990,9 +2054,14 @@ end Ops
 Each helper's receipt: the world grew, and the handles the helper leaves behind (its
 machine's, its fiber's, its commands') exist in the world it leaves. -/
 
+def M1Origin.make_keys_subset (id : FiberId) (program : Prim ν σ Val Err Defect FiberId Ann) (flag : Bool)
+    (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) : ProofGraph.Obligation ((RunFiber.make id program flag budget ctx origin : RunFiber ν σ Val Err Defect FiberId Ann Ctx).keys nk sk ⊆
+      primKeys nk sk program ++ ctx.keys) := ⟨⟩
+#proof_wanted M1Origin.make_keys_subset
+
 theorem make_keys_subset (id : FiberId) (program : Prim ν σ Val Err Defect FiberId Ann) (flag : Bool)
-    (budget : Nat × Bool) (ctx : Ctx) :
-    (RunFiber.make id program flag budget ctx : RunFiber ν σ Val Err Defect FiberId Ann Ctx).keys nk sk ⊆
+    (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) :
+    (RunFiber.make id program flag budget ctx origin : RunFiber ν σ Val Err Defect FiberId Ann Ctx).keys nk sk ⊆
       primKeys nk sk program ++ ctx.keys := by
   show primKeys nk sk program ++ [] ++ [] ++ [] ++ [] ++ [] ++ [] ++ [] ++ ctx.keys ⊆ _
   simp only [List.append_nil]
@@ -2004,30 +2073,48 @@ theorem keys_set_observers (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (
   simp only [RunFiber.keys]
   sub_tac
 
+def M1Origin.spawnChild_keys_subset (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores)
+    (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
+    (parent : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (program : Prim ν σ Val Err Defect FiberId Ann)
+    (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation ((spawnChild interp m parent program options site).keys nk sk ⊆
+      Handle.fiber parent.id :: primKeys nk sk program ++ parent.context.keys) := ⟨⟩
+#proof_wanted M1Origin.spawnChild_keys_subset
+
 theorem spawnChild_keys_subset (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (parent : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (program : Prim ν σ Val Err Defect FiberId Ann)
-    (options : Supervision.ForkOptions) :
-    (spawnChild interp m parent program options).keys nk sk ⊆
+    (options : Supervision.ForkOptions) (site : List Nat := []) :
+    (spawnChild interp m parent program options site).keys nk sk ⊆
       Handle.fiber parent.id :: primKeys nk sk program ++ parent.context.keys := by
   unfold spawnChild
-  try dsimp only
-  refine List.Subset.trans (make_keys_subset nk sk _ _ _ _ _) ?_
+  dsimp only
+  refine List.Subset.trans (make_keys_subset nk sk _ _ _ _ _ (.forked parent.id options.daemon site)) ?_
   sub_tac
+
+def M1Origin.spawn_minted (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores)
+    (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
+    (parent : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (program : Prim ν σ Val Err Defect FiberId Ann)
+    (options : Supervision.ForkOptions)
+    (_hm : MintedIn m (Handle.fiber parent.id :: m.keys nk sk ++ parent.keys nk sk ++ primKeys nk sk program)) (site : List Nat := []) : ProofGraph.Obligation (m.world.le (spawn interp m parent program options site).1.world ∧
+      MintedIn (spawn interp m parent program options site).1
+        (Handle.fiber (spawn interp m parent program options site).2.2 ::
+          (spawn interp m parent program options site).1.keys nk sk ++
+          (spawn interp m parent program options site).2.1.keys nk sk)) := ⟨⟩
+#proof_wanted M1Origin.spawn_minted
 
 theorem spawn_minted (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (parent : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (program : Prim ν σ Val Err Defect FiberId Ann)
     (options : Supervision.ForkOptions)
-    (hm : MintedIn m (Handle.fiber parent.id :: m.keys nk sk ++ parent.keys nk sk ++ primKeys nk sk program)) :
-    m.world.le (spawn interp m parent program options).1.world ∧
-      MintedIn (spawn interp m parent program options).1
-        (Handle.fiber (spawn interp m parent program options).2.2 ::
-          (spawn interp m parent program options).1.keys nk sk ++
-          (spawn interp m parent program options).2.1.keys nk sk) := by
-  rw [spawn_eq]
-  have hcid : (spawnChild interp m parent program options).id = ⟨m.nextId⟩ :=
-    (spawnChild_fields interp m parent program options).1
+    (hm : MintedIn m (Handle.fiber parent.id :: m.keys nk sk ++ parent.keys nk sk ++ primKeys nk sk program)) (site : List Nat := []) :
+    m.world.le (spawn interp m parent program options site).1.world ∧
+      MintedIn (spawn interp m parent program options site).1
+        (Handle.fiber (spawn interp m parent program options site).2.2 ::
+          (spawn interp m parent program options site).1.keys nk sk ++
+          (spawn interp m parent program options site).2.1.keys nk sk) := by
+  rw [spawn_eq (site := site)]
+  have hcid : (spawnChild interp m parent program options site).id = ⟨m.nextId⟩ :=
+    (spawnChild_fields interp m parent program options site).1
   have hle : m.world.le ⟨m.fibers.map RunFiber.id ++ [⟨m.nextId⟩], m.state⟩ :=
     ⟨fun id h => List.mem_append_left _ h, Stores.le_refl _⟩
   refine ⟨by rw [world_fibers_append, hcid]; exact hle, ?_⟩
@@ -2035,7 +2122,7 @@ theorem spawn_minted (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx St
   rw [world_fibers_append, hcid]
   have hchild : (Handle.fiber ⟨m.nextId⟩).existsIn ⟨m.fibers.map RunFiber.id ++ [⟨m.nextId⟩], m.state⟩ = true :=
     decide_eq_true (List.mem_append_right _ (List.mem_singleton_self _))
-  have hsc := spawnChild_keys_subset nk sk interp m parent program options
+  have hsc := spawnChild_keys_subset nk sk interp m parent program options site
   refine Ok_of_subset ?_ (Ok_cons.mpr ⟨hchild, Ok_append.mpr ⟨Ok_mono hle hm, Ok_of_subset hsc
     (Ok_of_subset (by simp only [RunFiber.keys]; sub_tac) (Ok_mono hle hm))⟩⟩)
   rw [keys_fibers_append]
@@ -2240,17 +2327,26 @@ theorem countdownPark_minted (hb : KeyBounded nk sk interp ambient)
         Option.toList]
       sub_tac
 
+def M1Origin.launchEntrant_minted (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores) (raceId : Nat)
+    (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
+    (host : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (program : Prim ν σ Val Err Defect FiberId Ann)
+    (_hm : MintedIn m (Handle.fiber host.id :: m.keys nk sk ++ host.keys nk sk ++ primKeys nk sk program)) (site : List Nat := []) : ProofGraph.Obligation (m.world.le (launchEntrant interp raceId m host program site).1.world ∧
+      MintedIn (launchEntrant interp raceId m host program site).1
+        (Handle.fiber (launchEntrant interp raceId m host program site).2 ::
+          (launchEntrant interp raceId m host program site).1.keys nk sk)) := ⟨⟩
+#proof_wanted M1Origin.launchEntrant_minted
+
 theorem launchEntrant_minted (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores) (raceId : Nat)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (host : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (program : Prim ν σ Val Err Defect FiberId Ann)
-    (hm : MintedIn m (Handle.fiber host.id :: m.keys nk sk ++ host.keys nk sk ++ primKeys nk sk program)) :
-    m.world.le (launchEntrant interp raceId m host program).1.world ∧
-      MintedIn (launchEntrant interp raceId m host program).1
-        (Handle.fiber (launchEntrant interp raceId m host program).2 ::
-          (launchEntrant interp raceId m host program).1.keys nk sk) := by
+    (hm : MintedIn m (Handle.fiber host.id :: m.keys nk sk ++ host.keys nk sk ++ primKeys nk sk program)) (site : List Nat := []) :
+    m.world.le (launchEntrant interp raceId m host program site).1.world ∧
+      MintedIn (launchEntrant interp raceId m host program site).1
+        (Handle.fiber (launchEntrant interp raceId m host program site).2 ::
+          (launchEntrant interp raceId m host program site).1.keys nk sk) := by
   unfold launchEntrant
   obtain ⟨hle, hsp⟩ := spawn_minted nk sk interp m host program
-    ⟨true, true, Supervision.MaskMode.interruptible⟩ hm
+    ⟨true, true, Supervision.MaskMode.interruptible⟩ hm site
   exact ⟨hle, Ok_of_subset (by sub_tac) hsp⟩
 
 theorem linkScope_minted (hb : KeyBounded nk sk interp ambient)
@@ -3037,14 +3133,32 @@ the arm forks in (the fork arm may have set the middleware latch first, so its w
 `S` and `T` name the spawn and the start, and the iteration `it` is whatever the arm built
 from them: its machine is `T.1`, its fiber names nothing beyond the started parent's handles and
 the child's, its commands nothing beyond the start's, and its outcome nothing. -/
+def M1Origin.fork_arm_minted (_hb : KeyBounded nk sk interp ambient)
+    (m M : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores) (_hMw : M.world = m.world)
+    (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx)
+    (program : Prim ν σ Val Err Defect FiberId Ann) (options : Supervision.ForkOptions)
+    {site : List Nat}
+    (S : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores × RunFiber ν σ Val Err Defect FiberId Ann Ctx × FiberId)
+    (T : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores × RunFiber ν σ Val Err Defect FiberId Ann Ctx ×
+      List (Cmd ν σ Val Err Defect FiberId Ann))
+    (_hS : spawn interp M f program options site = S) (_hT : start S.1 S.2.1 S.2.2 options.startImmediately = T)
+    (_hm : MintedIn M (Handle.fiber f.id :: M.keys nk sk ++ f.keys nk sk ++ primKeys nk sk program))
+    (it : Iter ν σ Val Err Defect FiberId Ann Ctx Stores) (_hmach : it.machine = T.1)
+    (_hfib : it.fiber.keys nk sk ⊆ T.2.1.keys nk sk ++ (interp.fiberValue S.2.2).keys)
+    (_hnest : cmdsKeys nk sk it.nested ⊆
+      cmdsKeys nk sk T.2.2 ++ [Handle.fiber f.id, Handle.fiber S.2.2])
+    (_hout : it.outcome.keys = []) : ProofGraph.Obligation (IterMinted nk sk m it) := ⟨⟩
+#proof_wanted M1Origin.fork_arm_minted
+
 theorem fork_arm_minted (hb : KeyBounded nk sk interp ambient)
     (m M : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores) (hMw : M.world = m.world)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx)
     (program : Prim ν σ Val Err Defect FiberId Ann) (options : Supervision.ForkOptions)
+    {site : List Nat}
     (S : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores × RunFiber ν σ Val Err Defect FiberId Ann Ctx × FiberId)
     (T : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores × RunFiber ν σ Val Err Defect FiberId Ann Ctx ×
       List (Cmd ν σ Val Err Defect FiberId Ann))
-    (hS : spawn interp M f program options = S) (hT : start S.1 S.2.1 S.2.2 options.startImmediately = T)
+    (hS : spawn interp M f program options site = S) (hT : start S.1 S.2.1 S.2.2 options.startImmediately = T)
     (hm : MintedIn M (Handle.fiber f.id :: M.keys nk sk ++ f.keys nk sk ++ primKeys nk sk program))
     (it : Iter ν σ Val Err Defect FiberId Ann Ctx Stores) (hmach : it.machine = T.1)
     (hfib : it.fiber.keys nk sk ⊆ T.2.1.keys nk sk ++ (interp.fiberValue S.2.2).keys)
@@ -3053,8 +3167,8 @@ theorem fork_arm_minted (hb : KeyBounded nk sk interp ambient)
     (hout : it.outcome.keys = []) :
     IterMinted nk sk m it := by
   unfold IterMinted
-  obtain ⟨hle1, h1⟩ := spawn_minted nk sk interp M f program options hm
-  have hid : (spawn interp M f program options).2.1.id = f.id := rfl
+  obtain ⟨hle1, h1⟩ := spawn_minted nk sk interp M f program options hm site
+  have hid : (spawn interp M f program options site).2.1.id = f.id := rfl
   rw [hS] at hle1 h1 hid
   have h1' : MintedIn S.1 (Handle.fiber S.2.1.id :: Handle.fiber S.2.2 :: S.1.keys nk sk ++ S.2.1.keys nk sk) := by
     rw [hid]
@@ -3076,15 +3190,24 @@ theorem fork_arm_minted (hb : KeyBounded nk sk interp ambient)
   · refine List.Subset.trans hfib ?_; sub_tac
   · refine List.Subset.trans hnest ?_; sub_tac
 
+def M1Origin.withFiber_fork_minted (_hb : KeyBounded nk sk interp ambient)
+    (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
+    (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
+    (program : Prim ν σ Val Err Defect FiberId Ann) (options : Supervision.ForkOptions)
+    {site : List Nat}
+    (_hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++
+      (WithFiberAction.fork program options site).keys nk sk)) : ProofGraph.Obligation (IterMinted nk sk m (evaluatePrim.withFiber interp m f yielding (WithFiberAction.fork program options site))) := ⟨⟩
+#proof_wanted M1Origin.withFiber_fork_minted
+
 theorem withFiber_fork_minted (hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
     (program : Prim ν σ Val Err Defect FiberId Ann) (options : Supervision.ForkOptions)
+    {site : List Nat}
     (hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++
-      (WithFiberAction.fork program options).keys nk sk)) :
-    IterMinted nk sk m (evaluatePrim.withFiber interp m f yielding (WithFiberAction.fork program options)) := by
+      (WithFiberAction.fork program options site).keys nk sk)) :
+    IterMinted nk sk m (evaluatePrim.withFiber interp m f yielding (WithFiberAction.fork program options site)) := by
   simp only [evaluatePrim.withFiber]
-  try dsimp only
   have hM : ∀ M : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores,
       (if options.daemon then m else { m with middlewareInstalled := true }) = M →
       M.world = m.world ∧ M.keys nk sk = m.keys nk sk := by
@@ -3097,46 +3220,66 @@ theorem withFiber_fork_minted (hb : KeyBounded nk sk interp ambient)
     simp only [MintedIn]
     rw [hMw, hMk]
     exact Ok_of_subset (by sub_tac) hm
-  generalize hS : spawn interp M f program options = S
+  generalize hS : spawn interp M f program options site = S
   generalize hT : start S.1 S.2.1 S.2.2 options.startImmediately = T
-  refine fork_arm_minted nk sk hb m M hMw f program options S T hS hT hm' _ rfl ?_ ?_ rfl
+  refine fork_arm_minted (site := site) nk sk hb m M hMw f program options S T hS hT hm' _ rfl ?_ ?_ rfl
   · sub_tac
   · -- the start's commands, then the tracking command unless daemon (D6b)
     simp only [cmdsKeys, List.flatMap_append]
     split <;> simp only [List.flatMap_cons, List.flatMap_nil, Cmd.keys, List.append_nil] <;> sub_tac
 
+def M1Origin.withFiber_forkIn_minted (_hb : KeyBounded nk sk interp ambient)
+    (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
+    (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
+    (program : Prim ν σ Val Err Defect FiberId Ann) (options : Supervision.ForkOptions) (scope : Nat)
+    {site : List Nat}
+    (_hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++
+      (WithFiberAction.forkIn program options scope site).keys nk sk)) : ProofGraph.Obligation (IterMinted nk sk m
+      (evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkIn program options scope site))) := ⟨⟩
+#proof_wanted M1Origin.withFiber_forkIn_minted
+
 theorem withFiber_forkIn_minted (hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
     (program : Prim ν σ Val Err Defect FiberId Ann) (options : Supervision.ForkOptions) (scope : Nat)
+    {site : List Nat}
     (hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++
-      (WithFiberAction.forkIn program options scope).keys nk sk)) :
+      (WithFiberAction.forkIn program options scope site).keys nk sk)) :
     IterMinted nk sk m
-      (evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkIn program options scope)) := by
+      (evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkIn program options scope site)) := by
   simp only [evaluatePrim.withFiber]
-  try dsimp only
-  generalize hS : spawn interp m f program { options with daemon := true } = S
+  generalize hS : spawn interp m f program { options with daemon := true } site = S
   generalize hT : start S.1 S.2.1 S.2.2 options.startImmediately = T
-  refine fork_arm_minted nk sk hb m m rfl f program { options with daemon := true } S T hS hT
+  refine fork_arm_minted (site := site) nk sk hb m m rfl f program { options with daemon := true } S T hS hT
     (Ok_of_subset (by sub_tac) hm) _ rfl ?_ ?_ rfl
   · sub_tac
   · sub_tac
+
+def M1Origin.withFiber_forkScoped_minted (_hb : KeyBounded nk sk interp ambient)
+    (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
+    (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
+    (program : Prim ν σ Val Err Defect FiberId Ann) (options : Supervision.ForkOptions)
+    {site : List Nat}
+    (_hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++
+      (WithFiberAction.forkScoped program options site).keys nk sk)) : ProofGraph.Obligation (IterMinted nk sk m
+      (evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkScoped program options site))) := ⟨⟩
+#proof_wanted M1Origin.withFiber_forkScoped_minted
 
 theorem withFiber_forkScoped_minted (hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
     (program : Prim ν σ Val Err Defect FiberId Ann) (options : Supervision.ForkOptions)
+    {site : List Nat}
     (hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++
-      (WithFiberAction.forkScoped program options).keys nk sk)) :
+      (WithFiberAction.forkScoped program options site).keys nk sk)) :
     IterMinted nk sk m
-      (evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkScoped program options)) := by
+      (evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkScoped program options site)) := by
   simp only [evaluatePrim.withFiber]
-  try dsimp only
   split
   · next scope _ =>
-    generalize hS : spawn interp m f program { options with daemon := true } = S
+    generalize hS : spawn interp m f program { options with daemon := true } site = S
     generalize hT : start S.1 S.2.1 S.2.2 options.startImmediately = T
-    refine fork_arm_minted nk sk hb m m rfl f program { options with daemon := true } S T hS hT
+    refine fork_arm_minted (site := site) nk sk hb m m rfl f program { options with daemon := true } S T hS hT
       (Ok_of_subset (by sub_tac) hm) _ rfl ?_ ?_ rfl
     · sub_tac
     · sub_tac
@@ -3303,13 +3446,23 @@ theorem withFiber_awaitNewChildren_minted (hb : KeyBounded nk sk interp ambient)
     (Ok_of_subset (by sub_tac) hm)
     (Ok_of_subset (by sub_tac) (Ok_append.mpr ⟨hm, Ok_of_subset hfresh (Ok_of_subset (by sub_tac) hm)⟩))
 
+def M1Origin.withFiber_raceAll_minted (_hb : KeyBounded nk sk interp ambient)
+    (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
+    (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
+    (entrants : List (Prim ν σ Val Err Defect FiberId Ann))
+    {site : Option (List Nat)}
+    (_hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++
+      (WithFiberAction.raceAll entrants site).keys nk sk)) : ProofGraph.Obligation (IterMinted nk sk m (evaluatePrim.withFiber interp m f yielding (WithFiberAction.raceAll entrants site))) := ⟨⟩
+#proof_wanted M1Origin.withFiber_raceAll_minted
+
 theorem withFiber_raceAll_minted (hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
     (entrants : List (Prim ν σ Val Err Defect FiberId Ann))
+    {site : Option (List Nat)}
     (hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++
-      (WithFiberAction.raceAll entrants).keys nk sk)) :
-    IterMinted nk sk m (evaluatePrim.withFiber interp m f yielding (WithFiberAction.raceAll entrants)) := by
+      (WithFiberAction.raceAll entrants site).keys nk sk)) :
+    IterMinted nk sk m (evaluatePrim.withFiber interp m f yielding (WithFiberAction.raceAll entrants site)) := by
   unfold IterMinted
   simp only [evaluatePrim.withFiber, beginRace]
   -- the registration code names no handle: a race identity is a lookup key (D6a)
@@ -3426,10 +3579,8 @@ theorem forkFinalizers_minted (interp : RunInterp ν σ Val Err Defect FiberId A
     sub_tac
 
 theorem evaluate_cmds_keys : ∀ ids : List FiberId,
-    (ids.map Cmd.evaluate).flatMap (Cmd.keys nk sk) = []
-  | [] => rfl
-  | id :: ids => by
-    simp only [List.map_cons, List.flatMap_cons, Cmd.keys, List.nil_append, evaluate_cmds_keys ids]
+    (ids.map Cmd.evaluate).flatMap (Cmd.keys nk sk) = [] :=
+  by aesop
 
 /-- The parallel walk's step (§20): the daemons it forks are minted, and its commands name
 them and the closer. -/
@@ -3562,10 +3713,10 @@ theorem withFiber_minted (hb : KeyBounded nk sk interp ambient)
     (hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++ action.keys nk sk)) :
     IterMinted nk sk m (evaluatePrim.withFiber interp m f yielding action) := by
   cases action with
-  | fork program options => exact withFiber_fork_minted nk sk hb m f yielding program options hm
-  | forkIn program options scope =>
-    exact withFiber_forkIn_minted nk sk hb m f yielding program options scope hm
-  | forkScoped program options => exact withFiber_forkScoped_minted nk sk hb m f yielding program options hm
+  | fork program options site => exact withFiber_fork_minted (site := site) nk sk hb m f yielding program options hm
+  | forkIn program options scope site =>
+    exact withFiber_forkIn_minted (site := site) nk sk hb m f yielding program options scope hm
+  | forkScoped program options site => exact withFiber_forkScoped_minted (site := site) nk sk hb m f yielding program options hm
   | runIn target scope => exact withFiber_runIn_minted nk sk hb m f yielding target scope hm
   | interrupt target => exact withFiber_interrupt_minted nk sk hb m f yielding target hm
   | interruptAs target who => exact withFiber_interruptAs_minted nk sk hb m f yielding target who hm
@@ -3576,7 +3727,7 @@ theorem withFiber_minted (hb : KeyBounded nk sk interp ambient)
   | awaitAllFailFast targets => exact withFiber_awaitAllFailFast_minted nk sk hb m f yielding targets hm
   | snapshotChildren => exact withFiber_snapshotChildren_minted nk sk hb m f yielding hm
   | awaitNewChildren snapshot => exact withFiber_awaitNewChildren_minted nk sk hb m f yielding snapshot hm
-  | raceAll entrants => exact withFiber_raceAll_minted nk sk hb m f yielding entrants hm
+  | raceAll entrants site => exact withFiber_raceAll_minted (site := site) nk sk hb m f yielding entrants hm
   | setInterruptible body flag => exact withFiber_setInterruptible_minted nk sk m f yielding body flag hm
   | setContext context => exact withFiber_setContext_minted nk sk hb m f yielding context hm
   | getContext => exact withFiber_getContext_minted nk sk hb m f yielding hm
@@ -4124,9 +4275,9 @@ theorem driveStep_launch_minted (m : RunMachine ν σ Val Err Defect FiberId Ann
           have hhid : (Handle.fiber host.id).existsIn m.world = true := fiber?_exists hhost
           have hmk : Ok m.world (m.keys nk sk) := Ok_of_subset (by sub_tac) hm
           have hpk : Ok m.world (primKeys nk sk program) := Ok_of_subset (by sub_tac) hprogk
-          obtain ⟨hle, hL⟩ := launchEntrant_minted nk sk interp raceId m host program
+          obtain ⟨hle, hL⟩ := launchEntrant_minted (site := race.nextSite.getD []) nk sk interp raceId m host program
             (Ok_cons.mpr ⟨hhid, Ok_append.mpr ⟨Ok_append.mpr ⟨hmk, hhk⟩, hpk⟩⟩)
-          generalize hLdef : launchEntrant interp raceId m host program = L at hle hL ⊢
+          generalize hLdef : launchEntrant interp raceId m host program (race.nextSite.getD []) = L at hle hL ⊢
           refine ⟨by rw [world_emit, world_updateRace]; exact hle, ?_⟩
           simp only [MintedIn]
           rw [world_emit, world_updateRace]
@@ -4785,8 +4936,14 @@ theorem flushAllState_minted_of_evaluator (hb : KeyBounded nk sk interp)
 
 /-- An advance mints nothing it does not own (the timer, A4): each fire's owed resume names
 handles the store held, its drain, drive and flush keep the discipline, and the loop recurs. -/
+def M1Clock.advanceState_minted_of_evaluator (_hb : KeyBounded nk sk interp)
+    (_hEval : EvaluatorMinted nk sk interp) (fuel : Nat) (millis : ClockMillis) : ProofGraph.Obligation (∀ (rounds : Nat) (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores), MintedAt nk sk m →
+      m.world.le (advanceState interp fuel millis rounds m).1.world ∧
+        MintedAt nk sk (advanceState interp fuel millis rounds m).1) := ⟨⟩
+#proof_wanted M1Clock.advanceState_minted_of_evaluator
+
 theorem advanceState_minted_of_evaluator (hb : KeyBounded nk sk interp)
-    (hEval : EvaluatorMinted nk sk interp) (fuel millis : Nat) :
+    (hEval : EvaluatorMinted nk sk interp) (fuel : Nat) (millis : ClockMillis) :
     ∀ (rounds : Nat) (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores), MintedAt nk sk m →
       m.world.le (advanceState interp fuel millis rounds m).1.world ∧
         MintedAt nk sk (advanceState interp fuel millis rounds m).1
@@ -5307,6 +5464,51 @@ theorem actionOf_keys (action : ActionName) :
     simp only [actionOf, WithFiberAction.keys, ActionName.keys]
     exact finPrograms_keys exit order
 
+namespace M1.Handles
+open Effect4 Effect4.Machine
+
+def register_keys (self : DeferredStore) (cell : DeferredKey) (waiter : FiberId) (token : Nat) :
+    ProofGraph.Obligation (
+    (self.register cell waiter token).1.keys ⊆ self.keys ∧
+      (∀ p, (self.register cell waiter token).2 = some p → p.keys ⊆ self.keys) ∧
+      self.cells.length ≤ (self.register cell waiter token).1.cells.length) := ⟨⟩
+#proof_wanted register_keys
+
+def flatMap_resumes_const (ws : List (Waiter Unit)) (e : Completion Val Err Defect FiberId Ann) :
+    ProofGraph.Obligation (
+    (ws.map fun w => (⟨w.fiber, w.token, e, WakeMode.now⟩ : Owed (Completion Val Err Defect FiberId Ann))).flatMap
+        (Owed.keys Completion.keys) ⊆ e.keys) := ⟨⟩
+#proof_wanted flatMap_resumes_const
+
+def complete_keys (self : DeferredStore) (cell : DeferredKey) (e : Completion Val Err Defect FiberId Ann) :
+    ProofGraph.Obligation (
+    (self.complete cell e).1.keys ⊆ self.keys ++ e.keys ∧
+      self.cells.length ≤ (self.complete cell e).1.cells.length) := ⟨⟩
+#proof_wanted complete_keys
+
+def drainDue_keys (self : DeferredStore) : ProofGraph.Obligation (
+    (self.drainDue).2.keys ⊆ self.keys ∧
+      (self.drainDue).1.flatMap (Owed.keys Completion.keys) ⊆ self.keys) := ⟨⟩
+#proof_wanted drainDue_keys
+
+end M1.Handles
+
+/-- Reading a Deferred cell exposes only handles already owned by its store. -/
+def M1.Handles.cellAt_keys_subset {self : DeferredStore} {cell : DeferredKey} {c : DeferredCell}
+    (_h : self.cellAt cell = some c) : ProofGraph.Obligation (c.keys ⊆ self.keys) := ⟨⟩
+#proof_wanted M1.Handles.cellAt_keys_subset
+
+theorem DeferredStore.cellAt_keys_subset {self : DeferredStore} {cell : DeferredKey} {c : DeferredCell}
+    (h : self.cellAt cell = some c) : c.keys ⊆ self.keys := by
+  intro x hx
+  exact List.mem_append_left _ (List.mem_flatMap.mpr ⟨c, List.mem_of_getElem? h, hx⟩)
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])]
+  DeferredCell.keys DeferredStore.keys Owed.keys
+
+attribute [aesop safe forward (rule_sets := [Effect4.Stores])]
+  DeferredStore.cellAt_keys_subset
+
 /-! ### The Deferred store -/
 
 theorem DeferredStore.setCell_keys_subset (self : DeferredStore) (cell : DeferredKey) (c : DeferredCell) :
@@ -5325,71 +5527,89 @@ theorem DeferredStore.setCell_le (self : DeferredStore) (cell : DeferredKey) (c 
   rw [DeferredStore.setCell_cells_length]
   exact Nat.le_refl _
 
+attribute [aesop safe apply (rule_sets := [Effect4.Stores])]
+  DeferredStore.setCell_keys_subset DeferredStore.setCell_le
+
+/-- Replacing a cell by already-owned handles does not enlarge the store's handle set. -/
+def M1.Handles.setCell_keys_of_subset (self : DeferredStore) (cell : DeferredKey) (c : DeferredCell)
+    (_h : c.keys ⊆ self.keys) : ProofGraph.Obligation ((self.setCell cell c).keys ⊆ self.keys) := ⟨⟩
+#proof_wanted M1.Handles.setCell_keys_of_subset
+
+theorem DeferredStore.setCell_keys_of_subset (self : DeferredStore) (cell : DeferredKey) (c : DeferredCell)
+    (h : c.keys ⊆ self.keys) : (self.setCell cell c).keys ⊆ self.keys := by
+  exact List.Subset.trans (DeferredStore.setCell_keys_subset self cell c)
+    (List.append_subset.mpr ⟨List.Subset.refl _, h⟩)
+
+/-- Writing a cell and appending owed resumes adds only their common admitted handles. -/
+def M1.Handles.setCell_appendDue_keys (self : DeferredStore) (cell : DeferredKey) (c : DeferredCell)
+    (due : List (Owed (Completion Val Err Defect FiberId Ann))) (extra : List Handle)
+    (_hc : c.keys ⊆ extra) (_hd : due.flatMap (Owed.keys Completion.keys) ⊆ extra) :
+    ProofGraph.Obligation (
+    ({ self.setCell cell c with due := self.due ++ due } : DeferredStore).keys ⊆ self.keys ++ extra) := ⟨⟩
+#proof_wanted M1.Handles.setCell_appendDue_keys
+
+theorem DeferredStore.setCell_appendDue_keys (self : DeferredStore) (cell : DeferredKey) (c : DeferredCell)
+    (due : List (Owed (Completion Val Err Defect FiberId Ann))) (extra : List Handle)
+    (hc : c.keys ⊆ extra) (hd : due.flatMap (Owed.keys Completion.keys) ⊆ extra) :
+    ({ self.setCell cell c with due := self.due ++ due } : DeferredStore).keys ⊆ self.keys ++ extra := by
+  intro x hx
+  rcases List.mem_append.mp hx with hx | hx
+  · have hs := DeferredStore.setCell_keys_subset self cell c (List.mem_append_left _ hx)
+    rcases List.mem_append.mp hs with hs | hs
+    · exact List.mem_append_left _ hs
+    · exact List.mem_append_right _ (hc hs)
+  · rw [List.flatMap_append] at hx
+    rcases List.mem_append.mp hx with hx | hx
+    · exact List.mem_append_left _ (List.mem_append_right _ hx)
+    · exact List.mem_append_right _ (hd hx)
+
+attribute [aesop safe apply (rule_sets := [Effect4.Stores])]
+  DeferredStore.setCell_keys_of_subset DeferredStore.setCell_appendDue_keys
+
 theorem DeferredStore.register_keys (self : DeferredStore) (cell : DeferredKey) (waiter : FiberId) (token : Nat) :
     (self.register cell waiter token).1.keys ⊆ self.keys ∧
-      (∀ p, (self.register cell waiter token).2 = some p → programKeys p ⊆ self.keys) ∧
+      (∀ p, (self.register cell waiter token).2 = some p → p.keys ⊆ self.keys) ∧
       self.cells.length ≤ (self.register cell waiter token).1.cells.length := by
   unfold DeferredStore.register
   split
-  · exact ⟨List.Subset.refl _, (fun p hp => nomatch (show (none : Option Program) = some p from hp)),Nat.le_refl _⟩
+  · aesop (rule_sets := [Effect4.Stores])
   · next c hc =>
-    split
-    · next effect heff =>
-      refine ⟨List.Subset.refl _, fun p hp => ?_, Nat.le_refl _⟩
-      simp only [Option.some.injEq] at hp
-      subst hp
-      have hcm : c ∈ self.cells := List.mem_of_getElem? hc
-      have : c.keys ⊆ self.keys := by
-        intro y hy
-        simp only [DeferredStore.keys, List.mem_append]
-        exact Or.inl (List.mem_flatMap.mpr ⟨c, hcm, hy⟩)
-      refine List.Subset.trans ?_ this
-      simp only [DeferredCell.keys, heff]
-      exact List.Subset.refl _
-    · refine ⟨?_, (fun p hp => nomatch (show (none : Option Program) = some p from hp)),DeferredStore.setCell_le _ _ _⟩
-      refine List.Subset.trans (DeferredStore.setCell_keys_subset _ _ _) ?_
-      have hcm : c ∈ self.cells := List.mem_of_getElem? hc
-      refine List.append_subset.mpr ⟨List.Subset.refl _, ?_⟩
-      intro y hy
-      simp only [DeferredStore.keys, List.mem_append]
-      exact Or.inl (List.mem_flatMap.mpr ⟨c, hcm, by simpa [DeferredCell.keys] using hy⟩)
+    have hck := DeferredStore.cellAt_keys_subset hc
+    cases heff : c.completion with
+    | some e =>
+      have he : e.keys ⊆ self.keys := by
+        simpa only [DeferredCell.keys, heff] using hck
+      aesop (rule_sets := [Effect4.Stores])
+    | none =>
+      have hsame : ({ c with wake := c.wake.register waiter token () } : DeferredCell).keys ⊆ self.keys := hck
+      have hs := DeferredStore.setCell_keys_of_subset self cell _ hsame
+      have hl := DeferredStore.setCell_le self cell { c with wake := c.wake.register waiter token () }
+      aesop (rule_sets := [Effect4.Stores])
 
 /-- The owed resumes a broadcast wake mints carry the completion's keys and no other. -/
-theorem flatMap_resumes_const (ws : List (Waiter Unit)) (e : Program) :
-    (ws.map fun w => (⟨w.fiber, w.token, e, WakeMode.now⟩ : Owed Program)).flatMap
-        (Owed.keys programKeys) ⊆ programKeys e := by
+theorem flatMap_resumes_const (ws : List (Waiter Unit)) (e : Completion Val Err Defect FiberId Ann) :
+    (ws.map fun w => (⟨w.fiber, w.token, e, WakeMode.now⟩ : Owed (Completion Val Err Defect FiberId Ann))).flatMap
+        (Owed.keys Completion.keys) ⊆ e.keys := by
   intro x hx
   obtain ⟨r, hr, hxr⟩ := List.mem_flatMap.mp hx
   obtain ⟨w, _, rfl⟩ := List.mem_map.mp hr
-  simpa [Owed.keys] using hxr
+  simpa only [Owed.keys, List.append_nil] using hxr
 
-theorem DeferredStore.complete_keys (self : DeferredStore) (cell : DeferredKey) (e : Program) :
-    (self.complete cell e).1.keys ⊆ self.keys ++ programKeys e ∧
+theorem DeferredStore.complete_keys (self : DeferredStore) (cell : DeferredKey) (e : Completion Val Err Defect FiberId Ann) :
+    (self.complete cell e).1.keys ⊆ self.keys ++ e.keys ∧
       self.cells.length ≤ (self.complete cell e).1.cells.length := by
   unfold DeferredStore.complete
   split
-  · exact ⟨List.subset_append_left _ _, Nat.le_refl _⟩
+  · aesop (rule_sets := [Effect4.Stores])
   · next c hc =>
-    split
-    · exact ⟨List.subset_append_left _ _, Nat.le_refl _⟩
-    · refine ⟨?_, ?_⟩
-      · intro x hx
-        simp only [DeferredStore.keys, List.mem_append] at hx
-        rcases hx with hx | hx
-        · have := DeferredStore.setCell_keys_subset self cell ⟨some e, (c.wake.wakeAll).2⟩
-          simp only [DeferredStore.keys, DeferredCell.keys] at this
-          have hx' := this (List.mem_append_left _ hx)
-          simp only [List.mem_append] at hx' ⊢
-          rcases hx' with (h | h) | h
-          · exact Or.inl (List.mem_append_left _ h)
-          · exact Or.inl (List.mem_append_right _ h)
-          · exact Or.inr h
-        · simp only [List.flatMap_append, List.mem_append] at hx
-          rcases hx with hx | hx
-          · exact List.mem_append.mpr (Or.inl (List.mem_append_right _ hx))
-          · exact List.mem_append.mpr (Or.inr (flatMap_resumes_const (c.wake.wakeAll).1 e hx))
-      · show self.cells.length ≤ (self.setCell cell ⟨some e, (c.wake.wakeAll).2⟩).cells.length
-        exact DeferredStore.setCell_le _ _ _
+    cases heff : c.completion with
+    | some previous => aesop (rule_sets := [Effect4.Stores])
+    | none =>
+      have hk := DeferredStore.setCell_appendDue_keys self cell ⟨some e, (c.wake.wakeAll).2⟩
+        ((c.wake.wakeAll).1.map fun w => ⟨w.fiber, w.token, e, WakeMode.now⟩) e.keys
+        (List.Subset.refl _) (flatMap_resumes_const (c.wake.wakeAll).1 e)
+      have hl := DeferredStore.setCell_le self cell ⟨some e, (c.wake.wakeAll).2⟩
+      aesop (rule_sets := [Effect4.Stores])
 
 theorem DeferredStore.cancel_keys (self : DeferredStore) (cell : DeferredKey) (waiter : FiberId) (token : Nat) :
     (self.cancel cell waiter token).keys ⊆ self.keys ∧
@@ -5408,13 +5628,13 @@ theorem DeferredStore.cancel_keys (self : DeferredStore) (cell : DeferredKey) (w
 
 theorem DeferredStore.drainDue_keys (self : DeferredStore) :
     (self.drainDue).2.keys ⊆ self.keys ∧
-      (self.drainDue).1.flatMap (Owed.keys programKeys) ⊆ self.keys := by
-  simp only [DeferredStore.drainDue, DeferredStore.keys, List.flatMap_nil, List.append_nil]
-  exact ⟨List.subset_append_left _ _, List.subset_append_right _ _⟩
+      (self.drainDue).1.flatMap (Owed.keys Completion.keys) ⊆ self.keys := by
+  aesop (rule_sets := [Effect4.Stores])
 
 /-- A cell's keys are its completion's, whatever its list. -/
 theorem DeferredCell.keys_wake (c : DeferredCell) (w : WakeList Unit) :
-    DeferredCell.keys { c with wake := w } = DeferredCell.keys c := rfl
+    DeferredCell.keys { c with wake := w } = DeferredCell.keys c :=
+  by aesop
 
 /-- A batch wake on a Deferred's list: the completion's keys are the cell's already, the
 cell count does not move. -/
@@ -5580,7 +5800,8 @@ theorem scopeClosingKeys_removeUnsafe (sc : ScopeV) (key : Nat) :
   simp only [scopeClosingKeys, Scope.closingExit_removeUnsafe]
 
 theorem scopeClosingKeys_make (strategy : FinalizerStrategy) :
-    scopeClosingKeys (Scope.make strategy : ScopeV) = [] := rfl
+    scopeClosingKeys (Scope.make strategy : ScopeV) = [] :=
+  by aesop
 
 theorem scopeClosingKeys_closeState (sc : ScopeV) (exit : ExitV) :
     scopeClosingKeys (sc.closeState exit) ⊆ scopeClosingKeys sc ++ exitKeys exit := by
@@ -5908,12 +6129,8 @@ theorem MemoWorld.keys_deleteEntry_subset (w : MemoWorld) (id : MemoMapId) (laye
     · exact hx
 
 theorem MemoEntry.keys_observers (e : MemoEntry) (n : Nat) :
-    ({ e with observers := n } : MemoEntry).keys = e.keys := rfl
-
-theorem MemoEntry.keys_effect (e : MemoEntry) (p : Program) :
-    ({ e with effect := p } : MemoEntry).keys ⊆ programKeys p ++ e.keys := by
-  simp only [MemoEntry.keys]
-  sub_tac
+    ({ e with observers := n } : MemoEntry).keys = e.keys :=
+  by aesop
 
 /-- A store step from a store whose handles exist answers a value whose handles exist, and
 leaves a store whose handles exist. -/
@@ -5928,7 +6145,10 @@ theorem syncOpStep_keys (o : SyncOp) (s s' : Stores) (v : Val) (ids : List Fiber
     simp only [syncOpStep_deferredMake, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     refine Ok_append.mpr ⟨Ok_cons.mpr ⟨?_, Ok_nil _⟩, ?_⟩
-    · simp [Handle.existsIn, DeferredStore.make]
+    · apply decide_eq_true
+      change s.deferreds.cells.length < (s.deferreds.cells ++ [(⟨none, WakeList.empty⟩ : DeferredCell)]).length
+      rw [List.length_append]
+      exact Nat.lt_succ_self _
     · refine Ok_of_subset ?_ hok'
       simp only [DeferredStore.make]
       sub_tac
@@ -5942,20 +6162,15 @@ theorem syncOpStep_keys (o : SyncOp) (s s' : Stores) (v : Val) (ids : List Fiber
     simp only [syncOpStep_deferredCompleteWith, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     refine Ok_of_subset ?_ hok'
-    have hcompletion : (s.deferreds.complete cell (completionPrim completion)).1.keys ⊆
-        s.deferreds.keys ++ completion.keys :=
-      List.Subset.trans (DeferredStore.complete_keys s.deferreds cell (completionPrim completion)).1
-        (List.append_subset.mpr ⟨List.subset_append_left _ _,
-          List.Subset.trans (completionPrim_keys completion) (List.subset_append_right _ _)⟩)
+    have hcompletion := (DeferredStore.complete_keys s.deferreds cell completion).1
     sub_tac using hcompletion norm [SyncOp.keys]
   | deferredInterruptWith cell interruptor =>
     simp only [syncOpStep_deferredInterruptWith, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     refine Ok_of_subset ?_ hok'
     have hc := (DeferredStore.complete_keys s.deferreds cell
-      (Prim.ofExit (Exit.failure (Cause.interrupt (some interruptor))))).1
-    rw [programKeys_ofExit] at hc
-    simp only [exitKeys, List.append_nil] at hc
+      (Completion.ofExit (Exit.failure (Cause.interrupt (some interruptor))))).1
+    simp only [Completion.keys, exitKeys, List.append_nil] at hc
     sub_tac using hc
   | deferredAwaitCleanup cell waiter token =>
     simp only [syncOpStep_deferredAwaitCleanup, Option.some.injEq, Prod.mk.injEq] at h
@@ -6026,7 +6241,8 @@ theorem syncOpStep_keys (o : SyncOp) (s s' : Stores) (v : Val) (ids : List Fiber
       obtain ⟨rfl, rfl⟩ := h
       obtain ⟨m, hm, hid, hmem⟩ := MemoWorld.get_mem hget
       have hpromise : Handle.promise entry.deferred ∈ s.memo.keys :=
-        MemoWorld.entry_keys_subset hm hmem (by simp [MemoEntry.keys])
+        MemoWorld.entry_keys_subset hm hmem
+          (List.mem_append_left _ (List.mem_cons_of_mem _ (List.mem_singleton.mpr rfl)))
       have hp : Ok ⟨ids, _⟩ [Handle.promise entry.deferred] :=
         Ok_cons.mpr ⟨hok' _ (List.mem_append_right _ (List.mem_append_right _ hpromise)), Ok_nil _⟩
       have hown : Ok ⟨ids, { s with
@@ -6045,19 +6261,13 @@ theorem syncOpStep_keys (o : SyncOp) (s s' : Stores) (v : Val) (ids : List Fiber
   | memoBuild layer memoMap =>
     simp only [syncOpStep_memoBuild, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    -- the inserted entry's handles: its await program's (the Deferred, twice), its scope, its
-    -- Deferred, its finalizer's (the memo map) — computed, so the search sees handles
+    -- The entry owns its scope, promise and finalizer; its completion lives in the cell.
     have hentry : MemoEntry.keys
-        ⟨1, Prim.async (Name.registerAwait s.deferreds.make.1) true
-            (some (Name.cancelAwait s.deferreds.make.1)),
-          s.nextName, s.deferreds.make.1, FinName.memoEntry layer memoMap⟩ =
-        [Handle.promise s.deferreds.make.1, Handle.promise s.deferreds.make.1,
-          Handle.scope s.nextName, Handle.promise s.deferreds.make.1,
+        ⟨1, s.nextName, s.deferreds.make.1, FinName.memoEntry layer memoMap⟩ =
+        [Handle.scope s.nextName, Handle.promise s.deferreds.make.1,
           Handle.memoMap memoMap.index] := rfl
     have hmemo := MemoWorld.keys_insertEntry_subset s.memo memoMap layer
-      ⟨1, Prim.async (Name.registerAwait s.deferreds.make.1) true
-          (some (Name.cancelAwait s.deferreds.make.1)),
-        s.nextName, s.deferreds.make.1, FinName.memoEntry layer memoMap⟩
+      ⟨1, s.nextName, s.deferreds.make.1, FinName.memoEntry layer memoMap⟩
     rw [hentry] at hmemo
     have hdef : (s.deferreds.make.2).keys ⊆ s.deferreds.keys := by
       simp only [DeferredStore.make]
@@ -6070,7 +6280,10 @@ theorem syncOpStep_keys (o : SyncOp) (s s' : Stores) (v : Val) (ids : List Fiber
           Ok_append.mpr ⟨hmap, hok'⟩⟩⟩)
     · sub_tac using hmemo, hdef, (ScopeStore.make_keys s.scopes s.nextName .sequential)
     · exact ScopeStore.entryAt_make_self s.scopes s.nextName FinalizerStrategy.sequential
-    · simp [Handle.existsIn, DeferredStore.make]
+    · apply decide_eq_true
+      change s.deferreds.cells.length < (s.deferreds.cells ++ [(⟨none, WakeList.empty⟩ : DeferredCell)]).length
+      rw [List.length_append]
+      exact Nat.lt_succ_self _
   | memoComplete layer memoMap exit =>
     cases hentry : s.memo.entryAt memoMap layer with
     | none =>
@@ -6083,11 +6296,11 @@ theorem syncOpStep_keys (o : SyncOp) (s s' : Stores) (v : Val) (ids : List Fiber
       rw [syncOpStep_memoComplete_some s layer memoMap exit hentry, Option.some.injEq,
         Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      have hd := (DeferredStore.complete_keys s.deferreds entry.deferred (Prim.ofExit exit)).1
-      rw [programKeys_ofExit] at hd
-      have hm := MemoWorld.keys_updateEntry_subset s.memo memoMap layer
-        (fun e => { e with effect := Prim.ofExit exit }) (exitKeys exit)
-        (fun e => by rw [← programKeys_ofExit]; exact MemoEntry.keys_effect e _)
+      have hd := (DeferredStore.complete_keys s.deferreds entry.deferred (Completion.ofExit exit)).1
+      simp only [Completion.keys] at hd
+      have hm := MemoWorld.keys_updateEntry_subset s.memo memoMap layer id []
+        (fun e => List.Subset.refl _)
+      rw [List.nil_append] at hm
       -- the exit's handles are the operation's own
       have hexit : Ok ⟨ids, _⟩ (exitKeys exit) :=
         Ok_of_subset (fun x hx => List.mem_append_left _ (List.mem_cons_of_mem _ hx)) hok'
@@ -6103,7 +6316,8 @@ theorem syncOpStep_keys (o : SyncOp) (s s' : Stores) (v : Val) (ids : List Fiber
     | some entry =>
       obtain ⟨m, hm, _, hmem⟩ := MemoWorld.entryAt_mem hentry
       have hscope : Handle.scope entry.layerScope ∈ s.memo.keys :=
-        MemoWorld.entry_keys_subset hm hmem (by simp [MemoEntry.keys])
+        MemoWorld.entry_keys_subset hm hmem
+          (List.mem_append_left _ List.mem_cons_self)
       by_cases hobs : entry.observers ≤ 1
       · rw [syncOpStep_memoRelease_last s layer memoMap hentry hobs, Option.some.injEq,
           Prod.mk.injEq] at h
@@ -6196,16 +6410,16 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
     exact ⟨hle, Ok_of_subset hk (Ok_mono (World.le_of_state hle) hok)⟩
   clockStep millis s ids hok := by
     simp only [stores]
-    rcases hc : s.timers.clockStep millis (Prim.success Val.unit) with ⟨o, timers⟩
+    rcases hc : s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann) with ⟨o, timers⟩
     have hle : s.le { s with timers := timers } :=
       ⟨Nat.le_refl _, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, (fun _ hm => hm), Nat.le_refl _⟩
     refine ⟨hle, Ok_of_subset ?_ (Ok_mono (World.le_of_state hle) hok)⟩
     cases o with
     | none => simp only [Option.map_none, Option.getD_none, List.append_nil]; exact fun _ h => h
     | some d =>
-      obtain ⟨hcode, hmode⟩ := TimerStore.clockStep_owed s.timers millis (Prim.success Val.unit) d
+      obtain ⟨hcode, hmode⟩ := TimerStore.clockStep_owed s.timers millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann) d
         (by rw [hc])
-      simp only [Option.map_some, Option.getD_some, Owed.keys, hcode, hmode, primKeys, Val.keys,
+      simp only [Option.map_some, Option.getD_some, Owed.keys, Owed.mapCode, hcode, hmode, completionPrim, Prim.ofExit, primKeys, Val.keys,
         List.append_nil]
       exact fun _ h => h
   syncValue t := by simp only [stores]; exact List.nil_subset _
@@ -6305,8 +6519,8 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
       · cases himm' : (s.deferreds.register cell fiber token).2 with
         | none => exact List.nil_subset _
         | some p =>
-          show programKeys p ⊆ _
-          refine List.Subset.trans (himm p himm') ?_
+          show programKeys (completionPrim p) ⊆ _
+          refine List.Subset.trans (completionPrim_keys p) (List.Subset.trans (himm p himm') ?_)
           sub_tac
     | registerSleep millis =>
       -- the sleep is a waiter on the timer list, which holds no handle of the world
@@ -6333,7 +6547,9 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
     refine ⟨hle, ?_⟩
     have hok' := Ok_mono (World.le_of_state hle) hok
     refine Ok_of_subset ?_ hok'
-    sub_tac using h1, h2
+    have hm := Owed.flatMap_mapCode_keys_subset completionPrim Completion.keys programKeys
+      completionPrim_keys s.deferreds.drainDue.1
+    sub_tac using h1, (List.Subset.trans hm h2)
   cancelName base fiber token := by simp only [stores]; sub_tac
   abortName := rfl
   parkCancelName := rfl

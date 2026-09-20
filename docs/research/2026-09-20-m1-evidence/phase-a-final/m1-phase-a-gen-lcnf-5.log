@@ -1,0 +1,11 @@
+Full raw output retained losslessly in m1-phase-a-gen-lcnf-5.log.gz.
+Raw SHA-256: 9f673e47a7fca13f4f410cf7cacf608d8592d8dd480b1c6670a34628a098c53a
+Raw bytes: 1047626
+This index is not the full log; read the gzip archive for complete diagnostics.
+
+Final five lines:
+  Option.some.val [P.t]
+  Effect4.Machine.WithFiberAction.forkIn.site [P.t]
+  List.filterMapTR.go._at_.Effect4.Program.awaits.spec_0 #1 [F.t]
+wrote ocaml/engine/api_engine.ml and ocaml/gen/closure-api_engine.tsv
+PASS generate: requested producers ran in dependency order

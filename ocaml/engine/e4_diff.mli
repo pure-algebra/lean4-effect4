@@ -25,7 +25,11 @@
    generated tape can reach `Stuck.unknownFiber` by accident and a stuck answer is always
    a fact about the program, never about the tape.
 
-   Depends on: E4_engine, effect4_eff (Eff_types), stdlib.
+   A clock Outside_profile answer is refused before a projection is constructed. Two
+   such answers therefore cannot count as differential agreement. This is a host boundary,
+   separate from a semantic Stuck answer.
+
+   Depends on: E4_engine, E4_clock, effect4_eff (Eff_types), stdlib.
 
    Behaviours:
    D1  {!compare} is reflexive-complete: `compare p p = []` for every projection, and
@@ -38,7 +42,7 @@
    D4  Every row of a projection is free: no fuel is spent and nothing reaches the tape.
                                                                           by construction
    D5  {!Of.positions} yields `List.length tape + 1` projections, the loaded machine first
-       (`E4_engine` EN4).                                                 by construction
+       (`E4_engine` EN4), unless a host profile refusal aborts projection.   by construction
    D6  {!Of.gen_tape} only names fiber ids and park tokens the machine has shown.
                                                                           by construction *)
 
@@ -102,6 +106,7 @@ module type SIDE = sig
   val load : Eff_types.eff -> fuel:int -> t
   val step : t -> decision -> t
   val project : t -> projection
+  (** @raise E4_clock.Profile_refusal for an Outside_profile host answer. *)
 
   val positions : Eff_types.eff -> fuel:int -> decision list -> projection list
   (** The projection at every position of `replay_steps`: `|tape| + 1` of them. *)

@@ -17,11 +17,38 @@ namespace Effect4.Program.Sched
 
 open Effect4 Effect4.Machine Effect4.Program
 
+namespace M1PendingOrigin
+
+def beginRace_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (entrants : List NCode)
+    (site : Option (List Nat)) (_hf : PendingOk f) :
+    ProofGraph.Obligation (PendingOk (beginRace i m f y entrants site).fiber) := ⟨⟩
+
+def fork_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (_hf : PendingOk f)
+    (program : NCode) (options : Supervision.ForkOptions) (site : List Nat) {a : FAnswer}
+    (_ha : ∀ g v, PendingOk g → PendingOk (a g v)) :
+    ProofGraph.Obligation (PendingOk (FiberAction.fork i m f y program options a site).fiber) := ⟨⟩
+#proof_wanted fork_pendingOk
+
+def forkIn_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (_hf : PendingOk f)
+    (program : NCode) (options : Supervision.ForkOptions) (scope : Nat) (site : List Nat) {a : FAnswer}
+    (_ha : ∀ g v, PendingOk g → PendingOk (a g v)) :
+    ProofGraph.Obligation (PendingOk (FiberAction.forkIn i m f y program options scope a site).fiber) := ⟨⟩
+#proof_wanted forkIn_pendingOk
+
+def forkScoped_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (_hf : PendingOk f)
+    (program : NCode) (options : Supervision.ForkOptions) (site : List Nat) {a : FAnswer}
+    (_ha : ∀ g v, PendingOk g → PendingOk (a g v)) :
+    ProofGraph.Obligation (PendingOk (FiberAction.forkScoped i m f y program options a site).fiber) := ⟨⟩
+#proof_wanted forkScoped_pendingOk
+
+end M1PendingOrigin
+
 theorem pendingOk_parkVoid {f : FRun} (hf : PendingOk f) (token : Nat) (waitingOn : Option FiberId)
     (remaining : List FiberId) (collected : List ExitV) (failFast : Bool) :
     PendingOk (f.park ⟨token, waitingOn, remaining, collected, Resume.void, failFast⟩) :=
   pendingOk_park hf _ (fun _ h => nomatch h)
 
+@[aesop norm simp (rule_sets := [Effect4.Stores])]
 theorem start_pending (m : FMachine) (p : FRun) (child : FiberId) (imm : Bool) :
     (start m p child imm).2.1.pending = p.pending := by
   unfold start
@@ -42,9 +69,11 @@ theorem registerRace_pendingOk (m : FMachine) (f : FRun) (y : Bool) (raceId : Na
   unfold registerRace
   split <;> exact hf
 
+@[aesop safe apply (rule_sets := [Effect4.Stores])]
 theorem beginRace_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (entrants : List NCode)
-    (hf : PendingOk f) : PendingOk (beginRace i m f y entrants).fiber :=
-  pendingOk_of_fields hf rfl
+    (hf : PendingOk f) (site : Option (List Nat) := none) :
+    PendingOk (beginRace i m f y entrants site).fiber := by
+  aesop (rule_sets := [Effect4.Stores])
 
 theorem finishFrame_pendingOk (m : FMachine) (f : FRun) (y : Bool)
     (next : FrameStep EffName EffThunk Val Err Defect FiberId Ann)
@@ -80,56 +109,33 @@ variable (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (hf : PendingOk f)
 
 include hf
 
+@[aesop safe apply (rule_sets := [Effect4.Stores])]
 theorem fork_pendingOk (program : NCode) (options : Supervision.ForkOptions) {a : FAnswer}
-    (ha : ∀ g v, PendingOk g → PendingOk (a g v)) :
-    PendingOk (FiberAction.fork i m f y program options a).fiber := by
+    (ha : ∀ g v, PendingOk g → PendingOk (a g v)) (site : List Nat := []) :
+    PendingOk (FiberAction.fork i m f y program options a site).fiber := by
   unfold FiberAction.fork
   dsimp only
-  have hs : (spawn i (if options.daemon then m else { m with middlewareInstalled := true }) f program
-    options).2.1 = f := rfl
-  generalize spawn i (if options.daemon then m else { m with middlewareInstalled := true }) f program
-    options = s at hs ⊢
-  obtain ⟨sm, sf, ch⟩ := s
-  dsimp only at hs
-  subst hs
-  have hst := start_pending sm sf ch options.startImmediately
-  generalize start sm sf ch options.startImmediately = t at hst ⊢
-  obtain ⟨tm, tf, tn⟩ := t
-  dsimp only at hst
-  exact ha _ _ (pendingOk_of_fields hf hst)
+  apply ha
+  aesop (rule_sets := [Effect4.Stores])
 
+@[aesop safe apply (rule_sets := [Effect4.Stores])]
 theorem forkIn_pendingOk (program : NCode) (options : Supervision.ForkOptions) (scope : Nat)
-    {a : FAnswer} (ha : ∀ g v, PendingOk g → PendingOk (a g v)) :
-    PendingOk (FiberAction.forkIn i m f y program options scope a).fiber := by
+    {a : FAnswer} (ha : ∀ g v, PendingOk g → PendingOk (a g v)) (site : List Nat := []) :
+    PendingOk (FiberAction.forkIn i m f y program options scope a site).fiber := by
   unfold FiberAction.forkIn
   dsimp only
-  have hs : (spawn i m f program { options with daemon := true }).2.1 = f := rfl
-  generalize spawn i m f program { options with daemon := true } = s at hs ⊢
-  obtain ⟨sm, sf, ch⟩ := s
-  dsimp only at hs
-  subst hs
-  have hst := start_pending sm sf ch options.startImmediately
-  generalize start sm sf ch options.startImmediately = t at hst ⊢
-  obtain ⟨tm, tf, tn⟩ := t
-  dsimp only at hst
-  exact ha _ _ (pendingOk_of_fields hf hst)
+  apply ha
+  aesop (rule_sets := [Effect4.Stores])
 
+@[aesop safe apply (rule_sets := [Effect4.Stores])]
 theorem forkScoped_pendingOk (program : NCode) (options : Supervision.ForkOptions)
-    {a : FAnswer} (ha : ∀ g v, PendingOk g → PendingOk (a g v)) :
-    PendingOk (FiberAction.forkScoped i m f y program options a).fiber := by
+    {a : FAnswer} (ha : ∀ g v, PendingOk g → PendingOk (a g v)) (site : List Nat := []) :
+    PendingOk (FiberAction.forkScoped i m f y program options a site).fiber := by
   unfold FiberAction.forkScoped
   split
   · dsimp only
-    have hs : (spawn i m f program { options with daemon := true }).2.1 = f := rfl
-    generalize spawn i m f program { options with daemon := true } = s at hs ⊢
-    obtain ⟨sm, sf, ch⟩ := s
-    dsimp only at hs
-    subst hs
-    have hst := start_pending sm sf ch options.startImmediately
-    generalize start sm sf ch options.startImmediately = t at hst ⊢
-    obtain ⟨tm, tf, tn⟩ := t
-    dsimp only at hst
-    exact ha _ _ (pendingOk_of_fields hf hst)
+    apply ha
+    aesop (rule_sets := [Effect4.Stores])
   · exact pendingOk_of_fields hf rfl
 
 theorem runIn_pendingOk (target : FiberId) (scope : Nat) {a : FAnswer}
@@ -168,9 +174,9 @@ theorem withFiber_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (
       PendingOk (FiberAction.coreAnswer (κ := NCode) (φ := FFiber) g v) :=
     fun _ _ hg => pendingOk_of_fields hg rfl
   cases action with
-  | fork program options => exact fork_pendingOk i m f y hf program options hcore
-  | forkIn program options scope => exact forkIn_pendingOk i m f y hf program options scope hcore
-  | forkScoped program options => exact forkScoped_pendingOk i m f y hf program options hcore
+  | fork program options site => exact fork_pendingOk i m f y hf program options hcore site
+  | forkIn program options scope site => exact forkIn_pendingOk i m f y hf program options scope hcore site
+  | forkScoped program options site => exact forkScoped_pendingOk i m f y hf program options hcore site
   | ambientScope =>
     unfold evaluatePrim.withFiber
     dsimp only
@@ -187,20 +193,14 @@ theorem withFiber_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (
   | awaitAllFailFast targets => exact awaitAll_pendingOk i m f y hf targets true
   | snapshotChildren => exact pendingOk_of_fields hf rfl
   | awaitNewChildren snapshot => exact awaitNewChildren_pendingOk i m f y hf snapshot
-  | raceAll entrants => exact beginRace_pendingOk i m f y entrants hf
+  | raceAll entrants site => exact beginRace_pendingOk i m f y entrants hf site
   | setInterruptible body flag =>
     cases flag with
     | false => exact pendingOk_of_fields hf rfl
     | true =>
-      unfold evaluatePrim.withFiber
-      dsimp only
-      try split
-      all_goals exact pendingOk_of_fields hf rfl
+      exact pendingOk_of_fields hf rfl
   | setContext context =>
-    unfold evaluatePrim.withFiber
-    dsimp only
-    try split
-    all_goals exact pendingOk_of_fields hf rfl
+    exact pendingOk_of_fields hf rfl
   | getContext => exact pendingOk_of_fields hf rfl
   | getId => exact pendingOk_of_fields hf rfl
   | closeScope scope exit =>
@@ -286,5 +286,7 @@ theorem iteration_pendingOk (root : NativeEff) (m : FMachine) (f : FRun) (y : Bo
       exact evaluateNative_pendingOk root _ _ _ (pendingOk_of_fields hf' rfl)
     · cases heq
   · exact evaluateNative_pendingOk root m _ y hf'
+
+-- The namespace ceiling is pinned with the final-path skeleton in Phase B.
 
 end Effect4.Program.Sched

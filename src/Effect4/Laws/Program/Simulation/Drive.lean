@@ -1,3 +1,4 @@
+import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Program.Simulation.Evaluate
 import Effect4.Laws.Program.Simulation.Pending
 
@@ -30,7 +31,8 @@ theorem CmdsRel.appendRest {root : NativeEff} {a₁ : FMachine × List FCmd} {a�
     CmdsRel root (a₁.1, a₁.2 ++ r₁) (a₂.1, a₂.2 ++ r₂) := ⟨h.1, h.2.1, ListRel.append h.2.2 hr⟩
 
 theorem cmeans_evaluate (root : NativeEff) {a b : FiberId} (h : a = b) :
-    CMeans root (.evaluate a) (.evaluate b) := h
+    CMeans root (.evaluate a) (.evaluate b) :=
+  by aesop
 theorem cmeans_loop (root : NativeEff) (id : FiberId) (y : Bool) :
     CMeans root (.loop id y) (.loop id y) := ⟨rfl, rfl⟩
 theorem cmeans_deliver (root : NativeEff) (id : FiberId) (y : Bool) :
@@ -40,7 +42,8 @@ theorem cmeans_finish (root : NativeEff) (id : FiberId) (ex : ExitV) :
 theorem cmeans_resume (root : NativeEff) {a b : FiberId} (h : a = b) (token : Nat) {c₁ : NCode}
     {c₂ : RProgram} (hc : CodeMeans root c₁ c₂) :
     CMeans root (.resume a token c₁) (.resume b token c₂) := ⟨h, rfl, hc⟩
-theorem cmeans_launch (root : NativeEff) (r : Nat) : CMeans root (.launch r) (.launch r) := rfl
+theorem cmeans_launch (root : NativeEff) (r : Nat) : CMeans root (.launch r) (.launch r) :=
+  by aesop
 theorem cmeans_enrollRace (root : NativeEff) (r : Nat) (c : FiberId) :
     CMeans root (.enrollRace r c) (.enrollRace r c) := ⟨rfl, rfl⟩
 theorem cmeans_enrollRace' (root : NativeEff) (r : Nat) {a b : FiberId} (h : a = b) :
@@ -60,7 +63,8 @@ theorem cmeans_trackChild (root : NativeEff) (p c : FiberId) :
 theorem cmeans_observe (root : NativeEff) {a b : FiberId} (h : a = b) (e : ExitV) (o : Observer) :
     CMeans root (.observe a e o) (.observe b e o) := ⟨h, rfl, rfl⟩
 theorem cmeans_exitDone (root : NativeEff) {a b : FiberId} (h : a = b) :
-    CMeans root (.exitDone a) (.exitDone b) := h
+    CMeans root (.exitDone a) (.exitDone b) :=
+  by aesop
 theorem cmeans_closeParAwait (root : NativeEff) (h : FiberId) (y : Bool) (fs : List FiberId) :
     CMeans root (.closeParAwait h y fs) (.closeParAwait h y fs) := ⟨rfl, rfl, rfl⟩
 theorem cmeans_link (root : NativeEff) (md : Supervision.ScopeMode) (s : Nat) (t : FiberId)
@@ -75,14 +79,22 @@ theorem listRel_observe (root : NativeEff) {a b : FiberId} (hab : a = b) (exit :
   | _ :: rest => ListRel.cons ⟨hab, rfl, rfl⟩ (listRel_observe root hab exit rest)
 
 /-- The due resumes read into related owed entries: every owed program is a completion. -/
+def M1Drive.drain_rel (root : NativeEff) : ProofGraph.Obligation (∀ (l : List (Owed (Completion Val Err Defect FiberId Ann))),
+      ListRel (OwedMeans (CodeMeans root))
+        (l.map (Owed.mapCode (fun c => embed (completionPrim c))))
+        (l.map (Owed.mapCode denoteCompletion))) := ⟨⟩
+#proof_wanted M1Drive.drain_rel
+
 theorem drain_rel (root : NativeEff) :
-    ∀ (l : List (Owed Program)), (∀ e ∈ l, CompletionShaped e.code) →
-      ListRel (OwedMeans (CodeMeans root)) (l.map (Owed.mapCode embed))
-        (l.map (Owed.mapCode denoteStored))
-  | [], _ => ListRel.nil
-  | e :: rest, h =>
-    ListRel.cons ⟨rfl, rfl, stored_means root (h e (List.mem_cons.mpr (Or.inl rfl))), rfl⟩
-      (drain_rel root rest fun x hx => h x (List.mem_cons.mpr (Or.inr hx)))
+    ∀ (l : List (Owed (Completion Val Err Defect FiberId Ann))),
+      ListRel (OwedMeans (CodeMeans root))
+        (l.map (Owed.mapCode (fun c => embed (completionPrim c))))
+        (l.map (Owed.mapCode denoteCompletion)) := by
+  intro l
+  induction l with
+  | nil => exact ListRel.nil
+  | cons e rest ih =>
+    exact ListRel.cons ⟨rfl, rfl, completion_means root e.code, rfl⟩ ih
 
 /-! ## Fibers, at the shapes the driver produces -/
 
@@ -105,14 +117,14 @@ theorem FMeans.publish (h : FMeans root f₁ f₂) (exit : ExitV) :
   unfold RunFiber.publish
   dsimp only [FiberCore.setDeferred, frameCore, termCore]
   exact FMeans.mk' h.id rfl h.context rfl rfl rfl rfl h.opCount h.maxOps h.preventYield
-    h.yieldOverride h.observers h.children h.dispatcher (means_setDeferred h.means false)
+    h.yieldOverride h.observers h.children h.dispatcher (means_setDeferred h.means false) h.origin
 
 theorem FMeans.cleared (h : FMeans root f₁ f₂) :
     FMeans root (f₁.cleared (interpOf root)) (f₂.cleared (interpR root)) := by
   unfold RunFiber.cleared
   dsimp only [FiberCore.clearStack, frameCore, termCore]
   exact FMeans.mk' h.id h.parked rfl h.running h.pending h.finalizing h.exit h.opCount h.maxOps
-    h.preventYield h.yieldOverride rfl rfl h.dispatcher (means_clearStack h.means)
+    h.preventYield h.yieldOverride rfl rfl h.dispatcher (means_clearStack h.means) h.origin
 
 theorem FMeans.runloopTop (h : FMeans root f₁ f₂) :
     FMeans root (runloopTop f₁) (runloopTop f₂) := by
@@ -133,7 +145,7 @@ theorem FMeans.countdownEntry (h : FMeans root f₁ f₂) (token : Nat) (w : Opt
       { f₂ with pending := f₂.pending.map fun q =>
         if q.token = token then { q with waitingOn := w, remaining := rem, collected := exits } else q } :=
   FMeans.mk' h.id h.parked h.context h.running rfl h.finalizing h.exit h.opCount h.maxOps
-    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means
+    h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means h.origin
 
 end FiberShapes
 
@@ -174,54 +186,97 @@ theorem pendingOk_countdownEntry {w₁ : FRun} (hw : PendingOk w₁) {w₂ : RFi
 
 /-- The observer's removal keeps the loop's store invariant: removal only removes, so the
 registration-key bound survives (`E4-CHECK-CE-016`). -/
+def M1Drive.dropFinalizer_ok (root : NativeEff) (scope key : Nat) {s s' : Stores} (_hs : StoresOk s)
+    (_h : (interpOf root).dropFinalizer scope key s = some s') : ProofGraph.Obligation (StoresOk s') := ⟨⟩
+#proof_wanted M1Drive.dropFinalizer_ok
+
 theorem dropFinalizer_ok (root : NativeEff) (scope key : Nat) {s s' : Stores} (hs : StoresOk s)
     (h : (interpOf root).dropFinalizer scope key s = some s') : StoresOk s' := by
   dsimp only [interpOf] at h
   split at h
   · cases h
   · rw [← Option.some.inj h]
-    exact ⟨hs.1, ScopeStore.keysBelow_removeFinalizer hs.2⟩
+    exact ⟨ScopeStore.keysBelow_removeFinalizer hs.keysFresh⟩
+
+def M1Drive.dueResumes_frame (root : NativeEff) (s : Stores) : ProofGraph.Obligation ((interpOf root).dueResumes s =
+      ((s.deferreds.drainDue).1.map (Owed.mapCode (fun c => embed (completionPrim c))),
+        { s with deferreds := (s.deferreds.drainDue).2 })) := ⟨⟩
+#proof_wanted M1Drive.dueResumes_frame
 
 theorem dueResumes_frame (root : NativeEff) (s : Stores) :
     (interpOf root).dueResumes s =
-      ((s.deferreds.drainDue).1.map (Owed.mapCode embed),
-        { s with deferreds := (s.deferreds.drainDue).2 }) := rfl
+      ((s.deferreds.drainDue).1.map (Owed.mapCode (fun c => embed (completionPrim c))),
+        { s with deferreds := (s.deferreds.drainDue).2 }) :=
+  by aesop
+
+def M1Drive.dueResumes_term (root : NativeEff) (s : Stores) : ProofGraph.Obligation ((interpR root).dueResumes s =
+      ((s.deferreds.drainDue).1.map (Owed.mapCode denoteCompletion),
+        { s with deferreds := (s.deferreds.drainDue).2 })) := ⟨⟩
+#proof_wanted M1Drive.dueResumes_term
 
 theorem dueResumes_term (root : NativeEff) (s : Stores) :
     (interpR root).dueResumes s =
-      ((s.deferreds.drainDue).1.map (Owed.mapCode denoteStored),
-        { s with deferreds := (s.deferreds.drainDue).2 }) := rfl
+      ((s.deferreds.drainDue).1.map (Owed.mapCode denoteCompletion),
+        { s with deferreds := (s.deferreds.drainDue).2 }) :=
+  by aesop
 
-theorem clockStep_frame (root : NativeEff) (millis : Nat) (s : Stores) :
+def M1Drive.clockStep_frame (root : NativeEff) (millis : ClockMillis) (s : Stores) : ProofGraph.Obligation ((interpOf root).clockStep millis s =
+      ((s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).1.map (Owed.mapCode (fun c => embed (completionPrim c))),
+        { s with timers := (s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).2 })) := ⟨⟩
+#proof_wanted M1Drive.clockStep_frame
+
+def M1Clock.clockStep_frame (root : NativeEff) (millis : ClockMillis) (s : Stores) : ProofGraph.Obligation ((interpOf root).clockStep millis s =
+      ((s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).1.map (Owed.mapCode (fun c => embed (completionPrim c))),
+        { s with timers := (s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).2 })) := ⟨⟩
+#proof_wanted M1Clock.clockStep_frame
+
+theorem clockStep_frame (root : NativeEff) (millis : ClockMillis) (s : Stores) :
     (interpOf root).clockStep millis s =
-      ((s.timers.clockStep millis (Prim.success Val.unit : Program)).1.map (Owed.mapCode embed),
-        { s with timers := (s.timers.clockStep millis (Prim.success Val.unit : Program)).2 }) := rfl
+      ((s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).1.map (Owed.mapCode (fun c => embed (completionPrim c))),
+        { s with timers := (s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).2 }) :=
+  by aesop
 
-theorem clockStep_term (root : NativeEff) (millis : Nat) (s : Stores) :
+def M1Drive.clockStep_term (root : NativeEff) (millis : ClockMillis) (s : Stores) : ProofGraph.Obligation ((interpR root).clockStep millis s =
+      ((s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).1.map (Owed.mapCode denoteCompletion),
+        { s with timers := (s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).2 })) := ⟨⟩
+#proof_wanted M1Drive.clockStep_term
+
+def M1Clock.clockStep_term (root : NativeEff) (millis : ClockMillis) (s : Stores) : ProofGraph.Obligation ((interpR root).clockStep millis s =
+      ((s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).1.map (Owed.mapCode denoteCompletion),
+        { s with timers := (s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).2 })) := ⟨⟩
+#proof_wanted M1Clock.clockStep_term
+
+theorem clockStep_term (root : NativeEff) (millis : ClockMillis) (s : Stores) :
     (interpR root).clockStep millis s =
-      ((s.timers.clockStep millis (Prim.success Val.unit : Program)).1.map (Owed.mapCode denoteStored),
-        { s with timers := (s.timers.clockStep millis (Prim.success Val.unit : Program)).2 }) := rfl
+      ((s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).1.map (Owed.mapCode denoteCompletion),
+        { s with timers := (s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).2 }) :=
+  by aesop
 
 /-- The clock step in the book (the timer, A4): the same store on both routes, the fired
 resume — `void`, a completion — related, and the store invariant kept, since it reads nothing
 of the timer store. -/
-theorem clockStep_rel (root : NativeEff) (millis : Nat) (s : Stores) (hs : StoresOk s) :
+def M1Drive.clockStep_rel (root : NativeEff) (millis : ClockMillis) (s : Stores) (_hs : StoresOk s) : ProofGraph.Obligation (StoresOk ((interpOf root).clockStep millis s).2 ∧
+      ((interpOf root).clockStep millis s).2 = ((interpR root).clockStep millis s).2 ∧
+      ListRel (OwedMeans (CodeMeans root)) ((interpOf root).clockStep millis s).1.toList
+        ((interpR root).clockStep millis s).1.toList) := ⟨⟩
+#proof_wanted M1Drive.clockStep_rel
+
+def M1Clock.clockStep_rel (root : NativeEff) (millis : ClockMillis) (s : Stores) (_hs : StoresOk s) : ProofGraph.Obligation (StoresOk ((interpOf root).clockStep millis s).2 ∧
+      ((interpOf root).clockStep millis s).2 = ((interpR root).clockStep millis s).2 ∧
+      ListRel (OwedMeans (CodeMeans root)) ((interpOf root).clockStep millis s).1.toList
+        ((interpR root).clockStep millis s).1.toList) := ⟨⟩
+#proof_wanted M1Clock.clockStep_rel
+
+theorem clockStep_rel (root : NativeEff) (millis : ClockMillis) (s : Stores) (hs : StoresOk s) :
     StoresOk ((interpOf root).clockStep millis s).2 ∧
       ((interpOf root).clockStep millis s).2 = ((interpR root).clockStep millis s).2 ∧
       ListRel (OwedMeans (CodeMeans root)) ((interpOf root).clockStep millis s).1.toList
         ((interpR root).clockStep millis s).1.toList := by
   rw [clockStep_frame, clockStep_term]
-  refine ⟨storesOk_of_deferreds rfl rfl rfl hs, rfl, ?_⟩
-  rcases hc : (s.timers.clockStep millis (Prim.success Val.unit : Program)).1 with _ | d
-  · exact ListRel.nil
-  · obtain ⟨hcode, _⟩ := TimerStore.clockStep_owed s.timers millis (Prim.success Val.unit : Program) d hc
-    simp only [Option.map_some, Option.toList_some]
-    exact drain_rel root [d] (by
-      intro e he
-      rw [List.mem_singleton] at he
-      subst he
-      rw [hcode]
-      exact ⟨.ofExit (.success .unit), rfl⟩)
+  refine ⟨StoresOk.frame_timers s hs _, rfl, ?_⟩
+  cases (s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).1 with
+  | none => exact ListRel.nil
+  | some d => exact drain_rel root [d]
 
 /-- The book's hook obligation, discharged at the two instances. -/
 theorem hooksAgree_of (root : NativeEff) :
@@ -514,15 +569,15 @@ theorem fireObserver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (h
     · rw [h₁, h₂]
       exact CmdsRel.mk' hok' hm' hn
     · rw [h₁, h₂]
-      obtain ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, reg₁⟩ := r₁
-      obtain ⟨id₂, host₂, token₂, state₂, settled₂, progs₂, reg₂⟩ := r₂
+      obtain ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, reg₁, site₁⟩ := r₁
+      obtain ⟨id₂, host₂, token₂, state₂, settled₂, progs₂, reg₂, site₂⟩ := r₂
       dsimp only [RaceMeans] at hr
-      obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, hprog⟩ := hr
+      obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, hprog, rfl⟩ := hr
       dsimp only
       have hrace : RaceMeans (CodeMeans root)
-          ⟨id₁, host₁, token₁, Supervision.raceComplete state₁ id exit, settled₁, progs₁, reg₁⟩
-          ⟨id₁, host₁, token₁, Supervision.raceComplete state₁ id exit, settled₁, progs₂, reg₁⟩ :=
-        raceMeans_mk' rfl rfl rfl rfl rfl rfl hprog
+          ⟨id₁, host₁, token₁, Supervision.raceComplete state₁ id exit, settled₁, progs₁, reg₁, site₁⟩
+          ⟨id₁, host₁, token₁, Supervision.raceComplete state₁ id exit, settled₁, progs₂, reg₁, site₁⟩ :=
+        raceMeans_mk' rfl rfl rfl rfl rfl rfl hprog rfl
       cases settled₁ with
       | true =>
         cases hacc : (Supervision.raceComplete state₁ id exit).accepted <;>
@@ -534,7 +589,7 @@ theorem fireObserver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (h
           dsimp only
           refine CmdsRel.mk' (machineOk_emit (machineOk_updateRace (machineOk_updateRace hok' _) _) _)
             (BMeans.emit ((hm'.updateRace hrace).updateRace
-              (raceMeans_mk' rfl rfl rfl rfl rfl rfl hprog)) _ _)
+              (raceMeans_mk' rfl rfl rfl rfl rfl rfl hprog rfl)) _ _)
             (ListRel.append hn ?_)
           cases reg₁ with
           | true => exact ListRel.nil
@@ -564,7 +619,7 @@ theorem exitInterruptChildren_rel (root : NativeEff) {m₁ : FMachine} {m₂ : R
   · exact pendingOk_of_fields hp rfl
   · exact FMeans.mk' hf.id hf.parked hf.context rfl hf.pending rfl hf.exit hf.opCount hf.maxOps
       hf.preventYield hf.yieldOverride hf.observers hf.children hf.dispatcher
-      (means_answerWith (means_setDeferred hf.means false) hcode)
+      (means_answerWith (means_setDeferred hf.means false) hcode) hf.origin
 
 theorem exitStore_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState}
     (hok : MachineOk StoresOk m₁) (hm : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber}
@@ -703,7 +758,7 @@ theorem drive_resume (id : FiberId) (token : Nat) {c₁ : NCode} {c₂ : RProgra
         · exact pendingOk_filter (pendingOk_of_fiber? hok h₁) _ rfl
         · exact FMeans.mk' ht.id rfl ht.context ht.running (by rw [ht.pending]) ht.finalizing ht.exit
             ht.opCount ht.maxOps ht.preventYield ht.yieldOverride ht.observers ht.children ht.dispatcher
-            (means_answerWith ht.means hc)
+            (means_answerWith ht.means hc) ht.origin
       · rw [if_neg he, if_neg he]
         exact CmdsRel.mk' hok hm hr
 
@@ -717,10 +772,10 @@ theorem drive_launch (raceId : Nat) :
   · rw [h₁, h₂]
     exact CmdsRel.mk' hok hm hr
   · rw [h₁, h₂]
-    obtain ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, reg₁⟩ := r₁'
-    obtain ⟨id₂, host₂, token₂, state₂, settled₂, progs₂, reg₂⟩ := r₂'
+    obtain ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, reg₁, site₁⟩ := r₁'
+    obtain ⟨id₂, host₂, token₂, state₂, settled₂, progs₂, reg₂, site₂⟩ := r₂'
     dsimp only [RaceMeans] at hrace
-    obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, hprog⟩ := hrace
+    obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, hprog, rfl⟩ := hrace
     dsimp only
     cases hprog with
     | nil => exact CmdsRel.mk' hok hm hr
@@ -736,12 +791,12 @@ theorem drive_launch (raceId : Nat) :
         · rw [hh₁, hh₂]
           unfold launchEntrant
           have hs := spawn_rel root (i₁ := interpOf root) (i₂ := interpR root) rfl hok hm hg hpc
-            ⟨true, true, Supervision.MaskMode.interruptible⟩
+            ⟨true, true, Supervision.MaskMode.interruptible⟩ (site := site₁.getD [])
           dsimp only [TripleRel] at hs
           obtain ⟨hsok, hsm, -, hchild⟩ := hs
           dsimp only
           exact CmdsRel.mk' (machineOk_emit (machineOk_updateRace hsok _) _)
-            (BMeans.emit (hsm.updateRace (raceMeans_mk' rfl rfl rfl rfl rfl rfl hrest)) _ _)
+            (BMeans.emit (hsm.updateRace (raceMeans_mk' rfl rfl rfl rfl rfl rfl hrest rfl)) _ _)
             (ListRel.cons (cmeans_evaluate root hchild)
               (ListRel.cons (cmeans_enrollRace' root raceId hchild)
                 (ListRel.cons (cmeans_launch root raceId) hr)))
@@ -760,15 +815,15 @@ theorem drive_enrollRace (raceId : Nat) (child : FiberId) :
     · rw [hc₁, hc₂]
       exact CmdsRel.mk' hok hm hr
     · rw [hc₁, hc₂]
-      obtain ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, reg₁⟩ := r₁'
-      obtain ⟨id₂, host₂, token₂, state₂, settled₂, progs₂, reg₂⟩ := r₂'
+      obtain ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, reg₁, site₁⟩ := r₁'
+      obtain ⟨id₂, host₂, token₂, state₂, settled₂, progs₂, reg₂, site₂⟩ := r₂'
       dsimp only [RaceMeans] at hrace
-      obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, hprog⟩ := hrace
+      obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, hprog, rfl⟩ := hrace
       dsimp only
       have hrace' : RaceMeans (CodeMeans root)
-          ⟨id₁, host₁, token₁, { state₁ with live := state₁.live ++ [child] }, settled₁, progs₁, reg₁⟩
-          ⟨id₁, host₁, token₁, { state₁ with live := state₁.live ++ [child] }, settled₁, progs₂, reg₁⟩ :=
-        raceMeans_mk' rfl rfl rfl rfl rfl rfl hprog
+          ⟨id₁, host₁, token₁, { state₁ with live := state₁.live ++ [child] }, settled₁, progs₁, reg₁, site₁⟩
+          ⟨id₁, host₁, token₁, { state₁ with live := state₁.live ++ [child] }, settled₁, progs₂, reg₁, site₁⟩ :=
+        raceMeans_mk' rfl rfl rfl rfl rfl rfl hprog rfl
       simp only [hc.exit]
       cases hex : c₂.exit with
       | some exit =>
@@ -793,18 +848,18 @@ theorem drive_registrationDone (raceId : Nat) (y : Bool) :
   · rw [h₁, h₂]
     exact CmdsRel.mk' hok hm hr
   · rw [h₁, h₂]
-    obtain ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, reg₁⟩ := r₁'
-    obtain ⟨id₂, host₂, token₂, state₂, settled₂, progs₂, reg₂⟩ := r₂'
+    obtain ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, reg₁, site₁⟩ := r₁'
+    obtain ⟨id₂, host₂, token₂, state₂, settled₂, progs₂, reg₂, site₂⟩ := r₂'
     dsimp only [RaceMeans] at hrace
-    obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, hprog⟩ := hrace
+    obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, hprog, rfl⟩ := hrace
     dsimp only
     have hok' := machineOk_updateRace hok
-      (⟨id₁, host₁, token₁, state₁, settled₁, progs₁, false⟩ : FRace)
-    have hm' := hm.updateRace (r₁ := ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, false⟩)
-      (r₂ := ⟨id₁, host₁, token₁, state₁, settled₁, progs₂, false⟩)
-      (raceMeans_mk' rfl rfl rfl rfl rfl rfl hprog)
-    generalize m₁.updateRace ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, false⟩ = M₁ at hok' hm' ⊢
-    generalize m₂.updateRace ⟨id₁, host₁, token₁, state₁, settled₁, progs₂, false⟩ = M₂ at hm' ⊢
+      (⟨id₁, host₁, token₁, state₁, settled₁, progs₁, false, site₁⟩ : FRace)
+    have hm' := hm.updateRace (r₁ := ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, false, site₁⟩)
+      (r₂ := ⟨id₁, host₁, token₁, state₁, settled₁, progs₂, false, site₁⟩)
+      (raceMeans_mk' rfl rfl rfl rfl rfl rfl hprog rfl)
+    generalize m₁.updateRace ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, false, site₁⟩ = M₁ at hok' hm' ⊢
+    generalize m₂.updateRace ⟨id₁, host₁, token₁, state₁, settled₁, progs₂, false, site₁⟩ = M₂ at hm' ⊢
     rcases hm'.fiber?_cases host₁ with ⟨hh₁, hh₂⟩ | ⟨f₁, f₂, hh₁, hh₂, hf⟩
     · rw [hh₁, hh₂]
       exact CmdsRel.mk' hok' hm' hr
@@ -974,7 +1029,6 @@ theorem drive_drainDue :
     CmdsRel root (driveStep (interpOf root) m₁ .drainDue r₁) (driveStep (interpR root) m₂ .drainDue r₂) := by
   simp only [driveStep]
   have hs : StoresOk m₂.state := hm.state ▸ hok.state
-  have hd := deferredOk_drainDue hs.1
   rw [hm.state]
   show CmdsRel root
     ((drainOwed { m₁ with state := ((interpOf root).dueResumes m₂.state).2 }
@@ -989,8 +1043,8 @@ theorem drive_drainDue :
   dsimp only
   obtain ⟨hok', hm', hc⟩ := book_drainOwed
     (machineOk_stateOf (s := { m₂.state with deferreds := (m₂.state.deferreds.drainDue).2 }) hok
-      ⟨hd.1, hs.2⟩)
-    (hm.stateOf _) (drain_rel root _ hd.2)
+      (StoresOk.frame_deferreds m₂.state hs _))
+    (hm.stateOf _) (drain_rel root _)
   exact CmdsRel.mk' hok' hm' (ListRel.append hc hr)
 
 /-- A batch wake: the same store hook on both sides. -/

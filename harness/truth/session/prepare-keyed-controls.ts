@@ -22,6 +22,10 @@ add("wrong-request", tape => { row(tape, "call").request = 91 })
 add("wrong-call-id", tape => { row(tape, "reply").callId = 1 })
 add("wrong-session", tape => { row(tape, "reply").session = "foreign" })
 add("wrong-version", tape => { (tape.header as { version: number }).version = 1 })
+add("legacy-v2", tape => {
+  const header = tape.header as { version: number; format: string; profile: string }
+  header.version = 2; header.format = "effect4-host-session-v2"; header.profile = "keyed-v2"
+})
 add("wrong-profile", tape => { (tape.header as { profile: string }).profile = "other" })
 add("wrong-table", tape => { (tape.header.table[0] as Record<string, unknown>).trailing = ["extra"] })
 add("wrong-answer-type", tape => { row(tape, "reply").completion = { success: "wrong" } })
@@ -35,7 +39,7 @@ add("unanswered", tape => { tape.records = tape.records.slice(0, tape.records.fi
 add("receive-AB", tape => { tape.records = tape.records.slice(0, tape.records.findIndex(r => r.kind === "apply")) }, "two-AB", "prefix")
 add("receive-BA", tape => { tape.records = tape.records.slice(0, tape.records.findIndex(r => r.kind === "apply")) }, "two-BA", "prefix")
 add("wrong-value-same-type", tape => { row(tape, "reply").completion = { success: 99 } }, "two-AB", "different")
-add("control-with-pending", tape => { const i = tape.records.findIndex(r => r.kind === "apply"); tape.records.splice(i, 0, { kind: "flush", version: 2, session: tape.header.session }) }, "two-AB", "same")
+add("control-with-pending", tape => { const i = tape.records.findIndex(r => r.kind === "apply"); tape.records.splice(i, 0, { kind: "flush", version: tape.header.version, session: tape.header.session }) }, "two-AB", "same")
 add("empty-public-chunk", tape => { tape.records.find(r => r.kind === "reply" && (r.completion as { success: unknown }).success && typeof (r.completion as { success: unknown }).success === "object")!.completion = { success: { some: [] } } }, "stream-3-AB")
 const zero = find("two-AB")
 controls.push({ name: "zero-application", recording: zero, fuel: 0 }); expectations.push({ name: "zero-application", expected: "zero" })

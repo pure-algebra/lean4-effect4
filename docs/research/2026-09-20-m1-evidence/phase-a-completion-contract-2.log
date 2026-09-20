@@ -1,0 +1,5 @@
+ℹ [199/200] Replayed Effect4.Laws.Machine.CompletionData
+info: src/Effect4/Laws/Machine/CompletionData.lean:56:0: Effect4.Machine.M1.Core: 0 open, 5 proved, 5 total; ceiling 0
+ℹ [200/200] Built Test.Machine.Runtime.CompletionDataContract (1.2s)
+info: Test/Machine/Runtime/CompletionDataContract.lean:20:0: 'Effect4.Machine.poll_reads_cell' depends on axioms: [propext]
+Build completed successfully (200 jobs).

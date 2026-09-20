@@ -31,7 +31,7 @@ theorem guardState_settle_native (p : NativeEff) (table : RowTable)
   · exact native_settledFiber_valid p table m f yielding state lookup running park
       (Effect4.Program.Guard.NativeStateMotion.evaluateNative_nextId p table m f yielding)
       (Effect4.Program.Guard.ReturnTasks.evaluateNative_taskRaceSites p table m f yielding
-        (state.internalCodes.2.2.1 f member))
+        (state.internalCodes.1 f member))
   · exact returnedFiber_reserved m f _ state member machine.tokens fresh machine.requests
       (Effect4.Program.Guard.ReturnTasks.evaluateNative_fiberKeys_refined p table m f yielding)
   · apply returnedFiber_guardSafe m f _ state member fresh
@@ -60,7 +60,7 @@ theorem guardState_settle_iteration (p : NativeEff) (table : RowTable)
   · exact iteration_settledFiber_valid p table m f yielding state lookup running park
       (Effect4.Program.Guard.NativeStateMotion.iteration_nextId p table m f yielding)
       (Effect4.Program.Guard.ReturnTasks.iteration_taskRaceSites p table m f yielding
-        (state.internalCodes.2.2.1 f member))
+        (state.internalCodes.1 f member))
   · exact returnedFiber_reserved m f _ state member machine.tokens fresh machine.requests
       (Effect4.Program.Guard.ReturnTasks.iteration_fiberKeys_refined p table m f yielding)
   · apply returnedFiber_guardSafe m f _ state member fresh

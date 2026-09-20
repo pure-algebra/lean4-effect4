@@ -1,0 +1,63 @@
+--- Translate.before-worklist.lean
++++ src/OCaml5/Lcnf/Translate.lean
+@@ -1074,10 +1074,10 @@
+ private def pushNew (a : Array Name) (n : Name) : Array Name :=
+   if a.contains n then a else a.push n
+ 
+-/-- Translate `roots` and, transitively, every non-builtin constant they call, up to `cap`
+-declarations. -/
+-def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
+-    (ex : Externs := {}) : CoreM Closure := do
++/-- Collect the translated closure and its original mono dependency graph. Intermediate
++carrier-inference rounds stay private; only the final checked closure is returned publicly. -/
++private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
++    (ex : Externs := {}) : CoreM (Closure × Array ClockFlow.Flow) := do
+   let env ← getEnv
+   let mono := Conform.Lcnf.persistedMonoIndex env
+   let mut c : Closure := {}
+@@ -1137,7 +1137,15 @@
+           if (mono.findIn? env (callee ++ `_redArg)).isSome then
+             c := { c with wrapperRefs := pushNew c.wrapperRefs callee }
+         queue := queue.push callee
+-  return { c with todos := c.todos ++ ClockFlow.refusals env roots clockFlows }
++  return (c, clockFlows)
++
++/-- Translate `roots` and, transitively, every non-builtin constant they call, up to `cap`
++declarations. Validate the final closure at the clock boundary before returning it. -/
++def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
++    (ex : Externs := {}) : CoreM Closure := do
++  let (closure, clockFlows) ← collectClosure roots cap tn ex
++  let todos := ClockFlow.refusals (← getEnv) roots clockFlows
++  return { closure with todos := closure.todos ++ todos }
+ 
+ /-- `translateClosure`, with the carrier parameters inferred. A carrier that has no `to_list`
+ operation can only be passed on as itself, so a generated callee that is handed one takes it as
+@@ -1150,7 +1158,9 @@
+     (ex : Externs := {}) : CoreM (Closure × Externs × Array String) := do
+   let mut ex := ex
+   let mut inferred : Array String := #[]
+-  let mut closure ← translateClosure roots cap tn ex
++  let (initial, initialFlows) ← collectClosure roots cap tn ex
++  let mut closure := initial
++  let mut clockFlows := initialFlows
+   for _ in [:64] do
+     if closure.wantedCargs.isEmpty then break
+     for (g, i, c) in closure.wantedCargs do
+@@ -1159,10 +1169,15 @@
+       unless prev.any (fun row => row.1 == CargParam.pos i) do
+         ex := { ex with cargs := ex.cargs.insert key (prev ++ [(CargParam.pos i, [c])]) }
+         inferred := inferred.push s!"carg {key} {i} {c}"
+-    closure ← translateClosure roots cap tn ex
++    let (next, nextFlows) ← collectClosure roots cap tn ex
++    closure := next
++    clockFlows := nextFlows
+   unless closure.wantedCargs.isEmpty do
+     throwError "carrier parameters still unsettled after 64 rounds: {closure.wantedCargs}"
+-  return (closure, ex, inferred)
++  -- Carrier rows affect translation, so validate the graph of the settled result.
++  -- Checking intermediate results repeats the same analysis without returning an artifact.
++  let todos := ClockFlow.refusals (← getEnv) roots clockFlows
++  return ({ closure with todos := closure.todos ++ todos }, ex, inferred)
+ 
+ /-! ## Emission: strongly connected components, dependencies first -/
+ 

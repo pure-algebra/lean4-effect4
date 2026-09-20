@@ -5,7 +5,7 @@ import Tools.ProfileJson
 import TypeScript.Render
 import Lean.Data.Json
 
-/-! Strict v2 decision-tape tool. The runtime session is the semantic owner; this is
+/-! Strict v3 decision-tape tool. The runtime session is the semantic owner; this is
 only fixture construction, JSON transport, and rendering of the same admitted Eff program.
 No legacy tape inference, oracle answer queue, or implicit pending-reply scheduler. -/
 open Lean Effect4 Effect4.Machine Effect4.Program Effect4.Api.HostSession
@@ -75,6 +75,11 @@ def nat (j : J) : Except String Nat := do
   if n ≤ rc112.natBound then return n else throw "unsafe natural"
 def strField (j : J) (k : String) := field j k >>= text
 def natField (j : J) (k : String) := field j k >>= nat
+def clockField (j : J) (k : String) : Except String ClockMillis := do
+  let text ← (← field j k).getStr?
+  match ClockMillis.ofDecimal text with
+  | some millis => pure millis
+  | none => throw "clock milliseconds require canonical decimal text"
 
 def decodeVal : Nat → J → Except String Val
   | 0, _ => .error "value depth"
@@ -167,6 +172,7 @@ def checkRecord (j : J) (session : String) : Except String String := do
   for (name, type) in shape.fields do
     match type with
     | .natural => discard (natField j name)
+    | .clockMillis => discard (clockField j name)
     | .boolean => discard ((← field j name).getBool?)
     | .text => discard (strField j name)
     | .json => pure ()
@@ -190,7 +196,7 @@ def consume {p : Api.Program} {rows : RowTable} (s : Session p rows) (fuel : Nat
       | _, _ => pure ()
     return submit s ⟨version, s.header.session, ← natField j "callId", key, answer⟩
   | "apply" => return applyReply s (← keyOf j) fuel
-  | "advanceClock" => return advance s fuel (.advance (← natField j "millis"))
+  | "advanceClock" => return advance s fuel (.advance (← clockField j "millis"))
   | "cancel" => return advance s fuel (.interruptFrom none .empty ⟨← natField j "fiber"⟩)
   | "evaluate" => return advance s fuel (.evaluate ⟨← natField j "fiber"⟩)
   | "fire" => return advance s fuel (.fire ⟨← natField j "fiber"⟩)
@@ -235,13 +241,13 @@ def replay (j : J) (fuel : Nat := 1000) : Except String J := do
   keys j ["header", "records"]
   let h ← field j "header"
   keys h ["format", "version", "session", "profile", "program", "table"]
-  unless (← strField h "format") = "effect4-host-session-v2" && (← natField h "version") = version do
-    throw "version 2 required; legacy input needs explicit migration"
-  unless (← strField h "profile") = "keyed-v2" do throw "profile mismatch"
+  unless (← strField h "format") = "effect4-host-session-v3" && (← natField h "version") = version do
+    throw "version 3 required; version 2 and older inputs need explicit migration"
+  unless (← strField h "profile") = "keyed-v3" do throw "profile mismatch"
   let f ← fixture (← strField h "program")
   unless (← field h "table") == tableJson f.table do throw "full table mismatch"
-  let header : Header := ⟨version, ← strField h "session", "keyed-v2", f.table⟩
-  let s ← (start f.program f.table "keyed-v2" header 1000).mapError reprStr
+  let header : Header := ⟨version, ← strField h "session", "keyed-v3", f.table⟩
+  let s ← (start f.program f.table "keyed-v3" header 1000).mapError reprStr
   let records := (← (← field j "records").getArr?).toList
   return receipt (walk s fuel 0 records)
 
@@ -326,8 +332,8 @@ def planRun (f : Fixture) (s : Session f.program f.table) (model : ModelState) :
       return (calls ++ [Json.mkObj [("answerFor", toJson bound.call.callId), ("completion", answerJson answer)]] ++ rest, exit)
 
 def plan (f : Fixture) : Except String (List J × J) := do
-  let header : Header := ⟨version, "plan", "keyed-v2", f.table⟩
-  let s ← (start f.program f.table "keyed-v2" header 1000).mapError reprStr
+  let header : Header := ⟨version, "plan", "keyed-v3", f.table⟩
+  let s ← (start f.program f.table "keyed-v3" header 1000).mapError reprStr
   let s := (advance s 1000 Api.evaluate).session
   planRun f s {} 100
 

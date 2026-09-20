@@ -1,0 +1,2 @@
+'Effect4.Machine.Refinement.MemoDuplicateCounterexample.admitted' depends on axioms: [propext, Quot.sound]
+'Effect4.Machine.Refinement.MemoDuplicateCounterexample.mismatch' depends on axioms: [propext]

@@ -29,6 +29,11 @@
    fiber ids and park tokens the machine has shown, so a `Stuck` answer is always a fact
    about the program.
 
+   Properties (tested by the classification controls below): profile refusals and
+   unexpected exceptions prevent successful differential validation, including when
+   all three engines refuse; neither is counted as a semantic divergence. Every
+   refusal/exception report retains the named engine and its diagnostic.
+
    Run: make check-ocaml (which writes the Lean corpus first), or by hand
         make corpus && cd ocaml && dune build @engine/test/runtest --force *)
 
@@ -165,12 +170,78 @@ type tally = {
   mutable t_positions : int;
   mutable t_pairs : int;  (** projection-vs-projection comparisons made *)
   mutable t_div : int;
-  mutable t_errors : int;
+  mutable t_errors : int;  (** tapes with an unexpected exception *)
+  mutable t_profile_refusals : int;  (** tapes refused by at least one profile *)
   mutable t_maxlen : int;
 }
 
 let fresh () = { t_programs = 0; t_tapes = 0; t_positions = 0; t_pairs = 0; t_div = 0;
-                 t_errors = 0; t_maxlen = 0 }
+                 t_errors = 0; t_profile_refusals = 0; t_maxlen = 0 }
+
+(* Refusing a target profile is not an observed machine result. A mixed refusal
+   and unexpected exception records both reasons that this tape was not compared. *)
+type 'a run_classification =
+  | Comparable of 'a * 'a * 'a
+  | Incomplete of { profile_refused : bool; raised : bool }
+
+let classify_runs (t : tally) (g, r, f) =
+  match g, r, f with
+  | Ok g, Ok r, Ok f -> Comparable (g, r, f)
+  | _ ->
+    let profile_refused, raised =
+      List.fold_left
+        (fun (profile, raised) -> function
+           | Ok _ -> (profile, raised)
+           | Error (E4_clock.Profile_refusal _) -> (true, raised)
+           | Error _ -> (profile, true))
+        (false, false) [g; r; f]
+    in
+    if profile_refused then t.t_profile_refusals <- t.t_profile_refusals + 1;
+    if raised then t.t_errors <- t.t_errors + 1;
+    Incomplete { profile_refused; raised }
+
+let differential_valid (t : tally) =
+  t.t_div = 0 && t.t_profile_refusals = 0 && t.t_errors = 0
+
+let classification_controls () =
+  let refused = Error (E4_clock.Profile_refusal "classification control") in
+  let raised = Error (Failure "classification control") in
+  let incomplete name runs ~profile ~error =
+    let t = fresh () in
+    let classified =
+      match classify_runs t runs with
+      | Comparable _ -> false
+      | Incomplete { profile_refused; raised } ->
+        profile_refused = profile && raised = error
+    in
+    check ("DF-classification: " ^ name)
+      (classified && not (differential_valid t)
+       && t.t_profile_refusals = (if profile then 1 else 0)
+       && t.t_errors = (if error then 1 else 0)
+       && t.t_div = 0 && t.t_pairs = 0 && t.t_positions = 0)
+  in
+  incomplete "all three profile refusals are not agreement"
+    (refused, refused, refused) ~profile:true ~error:false;
+  incomplete "Gen profile refusal with two answers is not agreement"
+    (refused, Ok (), Ok ()) ~profile:true ~error:false;
+  incomplete "Ref profile refusal with two answers is not agreement"
+    (Ok (), refused, Ok ()) ~profile:true ~error:false;
+  incomplete "Fast profile refusal with two answers is not agreement"
+    (Ok (), Ok (), refused) ~profile:true ~error:false;
+  incomplete "profile refusal and unexpected exception remain distinct"
+    (refused, raised, Ok ()) ~profile:true ~error:true;
+  incomplete "three unexpected exceptions are not agreement"
+    (raised, raised, raised) ~profile:false ~error:true;
+  incomplete "unexpected exception with two answers is not agreement"
+    (Ok (), raised, Ok ()) ~profile:false ~error:true;
+  let t = fresh () in
+  check "DF-classification: three answers remain comparable"
+    (match classify_runs t (Ok 1, Ok 2, Ok 3) with
+     | Comparable (1, 2, 3) -> differential_valid t
+     | _ -> false);
+  t.t_div <- 1;
+  check "DF-classification: semantic divergence fails independently"
+    (not (differential_valid t) && t.t_profile_refusals = 0 && t.t_errors = 0)
 
 let shown = ref 0
 
@@ -188,12 +259,13 @@ let one_pair (t : tally) (corpus : string) (p : Corpora.program)
     (tape : E4_diff.decision list) ~(fuel : int) : unit =
   t.t_tapes <- t.t_tapes + 1;
   if List.length tape > t.t_maxlen then t.t_maxlen <- List.length tape;
-  match
+  let runs =
     ( (try Ok (S_gen.positions p.Corpora.eff ~fuel tape) with e -> Error e),
       (try Ok (S_ref.positions p.Corpora.eff ~fuel tape) with e -> Error e),
       (try Ok (S_fast.positions p.Corpora.eff ~fuel tape) with e -> Error e) )
-  with
-  | Ok g, Ok r, Ok f ->
+  in
+  match classify_runs t runs with
+  | Comparable (g, r, f) ->
     let n = List.length g in
     if n <> List.length tape + 1 then begin
       t.t_div <- t.t_div + 1;
@@ -223,16 +295,17 @@ let one_pair (t : tally) (corpus : string) (p : Corpora.program)
            end)
         g
     end
-  | g, r, f ->
-    (* An engine that RAISES where another answers is itself a divergence, and one that
-       raises where all three raise is a fact about the program, reported not hidden. *)
+  | Incomplete { profile_refused; raised } ->
+    let g, r, f = runs in
     let sh = function Ok _ -> "ok" | Error e -> Printexc.to_string e in
-    t.t_errors <- t.t_errors + 1;
-    let all_err = match g, r, f with Error _, Error _, Error _ -> true | _ -> false in
-    if not all_err then t.t_div <- t.t_div + 1;
+    let label =
+      if profile_refused && raised then "PROFILE REFUSAL + RAISED"
+      else if profile_refused then "PROFILE REFUSAL"
+      else "RAISED"
+    in
     if !shown <= 5 then begin
       incr shown;
-      Printf.printf "  RAISED %s/%s  Gen=%s Ref=%s Fast=%s\n    tape = %s\n" corpus
+      Printf.printf "  %s %s/%s  Gen=%s Ref=%s Fast=%s\n    tape = %s\n" label corpus
         p.Corpora.name (sh g) (sh r) (sh f) (E4_diff.show_tape tape)
     end
 
@@ -250,9 +323,11 @@ let run_corpus (corpus : string) (progs : Corpora.program list)
 let verdict (corpus : string) ((t, secs) : tally * float) =
   Printf.printf
     "  %s: %d programs x %d tapes (longest %d decisions), %d positions, %d projection \
-     comparisons (2 pairs each position), %d raised, %.2f s\n"
-    corpus t.t_programs t.t_tapes t.t_maxlen t.t_positions t.t_pairs t.t_errors secs;
-  check (Printf.sprintf "%s: 0 divergences" corpus) (t.t_div = 0)
+     comparisons (2 pairs each position), %d profile-refused tapes, %d raised tapes, %.2f s\n"
+    corpus t.t_programs t.t_tapes t.t_maxlen t.t_positions t.t_pairs
+    t.t_profile_refusals t.t_errors secs;
+  check (Printf.sprintf "%s: 0 divergences and no unvalidated tapes" corpus)
+    (differential_valid t)
 
 (* ==================================================================== the corpora *)
 
@@ -362,6 +437,8 @@ let () =
   Printf.printf "  Ref  = %s\n" E4_engine.Ref.carriers;
   Printf.printf "  Fast = %s\n" E4_engine.Fast.carriers;
   print_endline "";
+
+  classification_controls ();
 
   (* -------------------------------------------------------------- 1. the byte goldens *)
   print_endline "== 1. ocaml/eff/goldens: the byte goldens (fuel 1000) ==";
@@ -523,12 +600,14 @@ let () =
   print_endline "";
   Printf.printf
     "== totals: %d programs, %d tapes, %d positions, %d projection comparisons, %d \
-     divergences, %.2f s ==\n"
+     divergences, %d profile-refused tapes, %d raised tapes, %.2f s ==\n"
     (tot (fun t -> t.t_programs))
     (tot (fun t -> t.t_tapes))
     (tot (fun t -> t.t_positions))
     (tot (fun t -> t.t_pairs))
     (tot (fun t -> t.t_div))
+    (tot (fun t -> t.t_profile_refusals))
+    (tot (fun t -> t.t_errors))
     (snd tg +. snd tt +. snd tl);
   if !failures = 0 then
     Printf.printf "== ALL PASS: 0 failure(s) == (%d checks)\n" !checks

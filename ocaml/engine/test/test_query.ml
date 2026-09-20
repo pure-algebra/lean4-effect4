@@ -100,6 +100,7 @@ let hold (m : F.t) (d : F.decision) : F.t = F.replay m [ d ]
 
 let status_of (t : F.t) : E4_query.status =
   match F.answer t with
+  | E4_engine.Outside_profile why -> raise (E4_clock.Profile_refusal why)
   | E4_engine.Finished -> { E4_query.finished = true; stuck = None; fuel_left = F.fuel t }
   | E4_engine.Refused r ->
     { E4_query.finished = false; stuck = Some r; fuel_left = F.fuel t }

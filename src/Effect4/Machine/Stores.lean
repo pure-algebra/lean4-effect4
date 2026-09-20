@@ -441,7 +441,7 @@ inductive Name
   | cancelAwait (cell : DeferredKey)
   /-- `register(resume, signal)` for `Effect.sleep(d)`, `0 < d < ∞` (`internal/effect.ts:6057-6062`,
   the timer, A4): the sleep registered at its deadline; nothing is answered at once. -/
-  | registerSleep (millis : Nat)
+  | registerSleep (millis : ClockMillis)
   /-- `clearTimeout` (`internal/effect.ts:6063`): the cancel effect a sleep's registration
   returned. -/
   | cancelSleep
@@ -1074,9 +1074,9 @@ completion is admitted data; the receiver interprets it when it resumes.
 The waiters are the wake protocol's list (`Machine/Wake.lean`, the scheduler surface): payload
 `Unit`, policy `broadcast`, mode `now` — a Deferred completes inline and never schedules a
 batch. -/
-structure DeferredCell where
+structure DeferredCell (κ : Type := Completion Val Err Defect FiberId Ann) where
   /-- `self.effect` (`Deferred.ts:60`): absent, or one admitted completion. -/
-  completion : Option (Completion Val Err Defect FiberId Ann)
+  completion : Option κ
   /-- `self.resumes`, in registration order: the parked fiber, its resume token, its phase. -/
   wake : WakeList Unit
 deriving DecidableEq
@@ -1084,39 +1084,41 @@ deriving DecidableEq
 /-- The Deferred store: the cells plus the resume queue a completion owes.
 `doneUnsafe` clears `resumes` *before* resuming (`Deferred.ts:1655-1656`), so the queue is an
 answer of the store step and not a promise. -/
-structure DeferredStore where
+structure DeferredStore (κ : Type := Completion Val Err Defect FiberId Ann) where
   /-- Allocated cells, in allocation order. -/
-  cells : List DeferredCell
+  cells : List (DeferredCell κ)
   /-- The resumes owed, in registration order (`Deferred.ts:1657-1658`), every one `now`. -/
-  due : List (Owed (Completion Val Err Defect FiberId Ann))
+  due : List (Owed κ)
 deriving DecidableEq
 
 namespace DeferredStore
 
+variable {κ : Type}
+
 /-- `Deferred.makeUnsafe` (`Deferred.ts:140-145`): both fields undefined. -/
-def make (self : DeferredStore) : DeferredKey × DeferredStore :=
+def make (self : DeferredStore κ) : DeferredKey × DeferredStore κ :=
   (⟨self.cells.length⟩, { self with cells := self.cells ++ [⟨none, WakeList.empty⟩] })
 
 /-- The cell under a key; `none` is a frontier. -/
-def cellAt (self : DeferredStore) (cell : DeferredKey) : Option DeferredCell :=
+def cellAt (self : DeferredStore κ) (cell : DeferredKey) : Option (DeferredCell κ) :=
   self.cells[cell.index]?
 
 /-- Replace one cell. -/
-def setCell (self : DeferredStore) (cell : DeferredKey) (value : DeferredCell) : DeferredStore :=
+def setCell (self : DeferredStore κ) (cell : DeferredKey) (value : DeferredCell κ) : DeferredStore κ :=
   { self with cells := self.cells.set cell.index value }
 
 /-- `isDoneUnsafe` (`Deferred.ts:1382`): done-ness is exactly the presence of a completion. -/
-def isDone (self : DeferredStore) (cell : DeferredKey) : Option Bool :=
+def isDone (self : DeferredStore κ) (cell : DeferredKey) : Option Bool :=
   (self.cellAt cell).map (fun c => c.completion.isSome)
 
 /-- `poll` (`Deferred.ts:1414-1416`): a non-blocking sync read of the slot. -/
-def poll (self : DeferredStore) (cell : DeferredKey) : Option (Option (Completion Val Err Defect FiberId Ann)) :=
+def poll (self : DeferredStore κ) (cell : DeferredKey) : Option (Option κ) :=
   (self.cellAt cell).map DeferredCell.completion
 
 /-- `_await` (`Deferred.ts:173-177`), the store half of `registerAsync`: resume at once with the
 stored effect when done, otherwise append this waiter in registration order and park. -/
-def register (self : DeferredStore) (cell : DeferredKey) (waiter : FiberId) (token : Nat) :
-    DeferredStore × Option (Completion Val Err Defect FiberId Ann) :=
+def register (self : DeferredStore κ) (cell : DeferredKey) (waiter : FiberId) (token : Nat) :
+    DeferredStore κ × Option κ :=
   match self.cellAt cell with
   | none => (self, none)
   | some c =>
@@ -1127,8 +1129,8 @@ def register (self : DeferredStore) (cell : DeferredKey) (waiter : FiberId) (tok
 /-- `_await`'s cleanup (`Deferred.ts:178-185`): splice this waiter out, order-preserving; a
 no-op once completion has cleared the array. The clause's owed wake (`WakeList.cancel`) is a
 broadcast's, which reached every waiter: nothing to re-owe. -/
-def cancel (self : DeferredStore) (cell : DeferredKey) (waiter : FiberId) (token : Nat) :
-    DeferredStore :=
+def cancel (self : DeferredStore κ) (cell : DeferredKey) (waiter : FiberId) (token : Nat) :
+    DeferredStore κ :=
   match self.cellAt cell with
   | none => self
   | some c => self.setCell cell { c with wake := (c.wake.cancel waiter token).1 }
@@ -1137,8 +1139,8 @@ def cancel (self : DeferredStore) (cell : DeferredKey) (waiter : FiberId) (token
 nothing when an effect is already stored; otherwise the effect is stored, the waiter list is
 *cleared* (`WakeList.wakeAll`, the phase advanced), and every waiter is owed a resume with
 that effect in registration order, inline (`WakeMode.now`). -/
-def complete (self : DeferredStore) (cell : DeferredKey) (effect : Completion Val Err Defect FiberId Ann) :
-    DeferredStore × Bool :=
+def complete (self : DeferredStore κ) (cell : DeferredKey) (effect : κ) :
+    DeferredStore κ × Bool :=
   match self.cellAt cell with
   | none => (self, false)
   | some c =>
@@ -1150,7 +1152,7 @@ def complete (self : DeferredStore) (cell : DeferredKey) (effect : Completion Va
             ⟨w.fiber, w.token, effect, WakeMode.now⟩ }, true)
 
 /-- The resumes the store owes now, drained in registration order. -/
-def drainDue (self : DeferredStore) : List (Owed (Completion Val Err Defect FiberId Ann)) × DeferredStore :=
+def drainDue (self : DeferredStore κ) : List (Owed κ) × DeferredStore κ :=
   (self.due, { self with due := [] })
 
 /-- A posted batch wake runs on a Deferred's list (`Task.wake (WakeKey.deferred cell)`): the
@@ -1158,7 +1160,7 @@ batch's waiters are owed the stored completion inline; with no completion stored
 to the pending list, no wake lost. No Deferred operation schedules a batch (a Deferred
 completes inline), so this is the protocol's meaning at the store, reached only through a
 posted task. -/
-def wakeBatch (self : DeferredStore) (cell : DeferredKey) : DeferredStore :=
+def wakeBatch (self : DeferredStore κ) (cell : DeferredKey) : DeferredStore κ :=
   match self.cellAt cell with
   | none => self
   | some c =>
@@ -1951,7 +1953,7 @@ def syncOpStep : SyncOp → Stores → Option (Stores × Val)
     some ({ st with deferreds := deferreds }, Val.bool answered)
   | SyncOp.deferredAwaitCleanup cell waiter token, st =>
     some ({ st with deferreds := st.deferreds.cancel cell waiter token }, Val.unit)
-  | SyncOp.clockNow, st => some (st, Val.nat st.timers.now)
+  | SyncOp.clockNow, st => some (st, Val.nat st.timers.now.toNat)
   | SyncOp.sleepCancel waiter token, st =>
     some ({ st with timers := st.timers.cancel waiter token }, Val.unit)
   | SyncOp.scopeMake strategy, st =>
@@ -2015,6 +2017,7 @@ def syncOpStep : SyncOp → Stores → Option (Stores × Val)
     | some entry =>
       let (deferreds, _) := st.deferreds.complete entry.deferred (Completion.ofExit exit)
       some ({ st with
+          memo := st.memo.updateEntry memoMap layer id
           deferreds := deferreds },
         Val.unit)
   | SyncOp.memoRelease layer memoMap, st =>                                               -- :403-408
@@ -2083,11 +2086,11 @@ def contEOf : Name → CauseV → Program
 
 /-- `WithFiberAction` from a name. -/
 def actionOf : ActionName → WithFiberAction Name Thunk Val Err Defect FiberId Ann Ctx
-  | ActionName.fork program options => WithFiberAction.fork (progOf program) options
+  | ActionName.fork program options => WithFiberAction.fork (progOf program) options []
   | ActionName.forkIn program options scope =>
-    WithFiberAction.forkIn (progOf program) options scope
+    WithFiberAction.forkIn (progOf program) options scope []
   | ActionName.forkScoped program options =>
-    WithFiberAction.forkScoped (progOf program) options
+    WithFiberAction.forkScoped (progOf program) options []
   | ActionName.ambientScope => WithFiberAction.ambientScope
   | ActionName.runIn target scope => WithFiberAction.runIn target scope
   | ActionName.interrupt target => WithFiberAction.interrupt target
@@ -2098,7 +2101,7 @@ def actionOf : ActionName → WithFiberAction Name Thunk Val Err Defect FiberId 
   | ActionName.awaitAll targets => WithFiberAction.awaitAll targets
   | ActionName.snapshotChildren => WithFiberAction.snapshotChildren
   | ActionName.awaitNewChildren snapshot => WithFiberAction.awaitNewChildren snapshot
-  | ActionName.raceAll race => WithFiberAction.raceAll ((raceEntrants race).map progOf)
+  | ActionName.raceAll race => WithFiberAction.raceAll ((raceEntrants race).map progOf) none
   | ActionName.setContext context => WithFiberAction.setContext context
   | ActionName.getContext => WithFiberAction.getContext
   | ActionName.getId => WithFiberAction.getId

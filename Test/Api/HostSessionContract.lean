@@ -14,7 +14,7 @@ open Effect4.Api.HostSession
 def table : RowTable := [Profile.Scalar.waitRow]
 def program : Api.Program :=
   .bind (.perform (.external 0) (.lit (.nat 2))) (.perform (.external 0) (.lit (.nat 3)))
-def header : Header := ⟨2, "session-A", "serial-root-scalar-v1", table⟩
+def header : Header := ⟨version, "session-A", "serial-root-scalar-v1", table⟩
 def admitted : Api.AdmittedProgram program table where
   ty := ⟨.nat, .prod .string .string, .empty⟩
   typed := by cbv
@@ -26,9 +26,9 @@ def admitted : Api.AdmittedProgram program table where
 
 def initial : Session program table := { admitted, header, machine := Api.load program 100 }
 def parked : Session program table := (advance initial 100 Api.evaluate).session
-def call0 : Call := ⟨2, "session-A", table, 0, Api.root, .external 0, .nat 2⟩
+def call0 : Call := ⟨version, "session-A", table, 0, Api.root, .external 0, .nat 2⟩
 def bound0 : Session program table := (bindCall parked call0 0).session
-def reply0 : Reply := ⟨2, "session-A", 0, ⟨Api.root, 0⟩, .ofExit (.success (.nat 2))⟩
+def reply0 : Reply := ⟨version, "session-A", 0, ⟨Api.root, 0⟩, .ofExit (.success (.nat 2))⟩
 def pending0 : Session program table := (submit bound0 reply0).session
 def after0 : Session program table := (applyPending pending0 100).session
 
@@ -38,7 +38,9 @@ def reply1 : Reply := { reply0 with callId := 1, key := ⟨Api.root, 1⟩, compl
 def pending1 : Session program table := (submit bound1 reply1).session
 def finished : Session program table := (applyPending pending1 100).session
 
+#guard version = 3
 #guard match start program table "serial-root-scalar-v1" header 100 with | .ok _ => true | _ => false
+#guard match start program table "serial-root-scalar-v1" { header with version := 2 } 100 with | .error .version => true | _ => false
 #guard match start program table "serial-root-scalar-v1" { header with version := 99 } 100 with | .error .version => true | _ => false
 #guard outstanding parked = [(Api.root, 0, .external 0, .nat 2)]
 #guard parked.machine.state.externals.answers = []
@@ -69,10 +71,12 @@ def evaluatedAgain : Session program table := (advance bound0 100 Api.evaluate).
 def replyAfterEvaluate : Session program table := (submit evaluatedAgain reply0).session
 
 theorem evaluate_retains_guard :
-    requestOf repeatedEvaluation.machine Api.root 0 = some (.external 0, .nat 2) := by decide
+    requestOf repeatedEvaluation.machine Api.root 0 = some (.external 0, .nat 2) :=
+  by aesop
 
 theorem evaluate_retains_token :
-    repeatedEvaluation.machine.nextToken = parked.machine.nextToken := by decide
+    repeatedEvaluation.machine.nextToken = parked.machine.nextToken :=
+  by aesop
 
 #guard outstanding evaluatedAgain = [(Api.root, 0, .external 0, .nat 2)]
 #guard (advance bound0 100 Api.evaluate).phase = .progressed

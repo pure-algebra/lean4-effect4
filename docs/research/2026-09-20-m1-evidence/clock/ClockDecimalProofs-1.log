@@ -1,0 +1,91 @@
+/tmp/m1-tools/ClockDecimalProofs.lean:52:37: error: omega could not prove the goal:
+a possible counterexample may satisfy the constraints
+  d ≥ 0
+  b ≥ 0
+  a ≥ 256
+  a - b ≥ 0
+  a - d ≤ 0
+where
+ a := ↑c.toNat
+ b := ↑'0'.toNat
+ d := ↑'9'.toNat
+/tmp/m1-tools/ClockDecimalProofs.lean:53:63: error: omega could not prove the goal:
+a possible counterexample may satisfy the constraints
+  d ≥ 0
+  b ≥ 0
+  128 ≤ a ≤ 255
+  a - b ≥ 0
+  a - d ≤ 0
+where
+ a := ↑c.toNat
+ b := ↑'0'.toNat
+ d := ↑'9'.toNat
+/tmp/m1-tools/ClockDecimalProofs.lean:71:44: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  (n % 10).digitChar.toNat - 48
+in the target expression
+  Nat.ofDigitChars 10 tail (10 * 0 + ((n % 10).digitChar.toNat - '0'.toNat)) = Nat.ofDigitChars 10 tail n
+
+case pos
+fuel : Nat
+ih :
+  ∀ (n : Nat) (tail : List Char),
+    n < fuel → Nat.ofDigitChars 10 (Nat.toDigitsCore 10 fuel n tail) 0 = Nat.ofDigitChars 10 tail n
+n : Nat
+tail : List Char
+h : n < fuel + 1
+hd : n % 10 < 10
+hn : n / 10 = 0
+⊢ Nat.ofDigitChars 10 tail (10 * 0 + ((n % 10).digitChar.toNat - '0'.toNat)) = Nat.ofDigitChars 10 tail n
+/tmp/m1-tools/ClockDecimalProofs.lean:76:8: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  (n % 10).digitChar.toNat - 48
+in the target expression
+  Nat.ofDigitChars 10 tail (10 * (n / 10) + ((n % 10).digitChar.toNat - '0'.toNat)) = Nat.ofDigitChars 10 tail n
+
+case neg
+fuel : Nat
+ih :
+  ∀ (n : Nat) (tail : List Char),
+    n < fuel → Nat.ofDigitChars 10 (Nat.toDigitsCore 10 fuel n tail) 0 = Nat.ofDigitChars 10 tail n
+n : Nat
+tail : List Char
+h : n < fuel + 1
+hd : n % 10 < 10
+hn : ¬n / 10 = 0
+⊢ Nat.ofDigitChars 10 tail (10 * (n / 10) + ((n % 10).digitChar.toNat - '0'.toNat)) = Nat.ofDigitChars 10 tail n
+/tmp/m1-tools/ClockDecimalProofs.lean:86:6: error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  readBytes (Nat.repr ?n).toByteArray.data.toList
+in the target expression
+  (have bytes := a.toNat.repr.toByteArray.data.toList;
+    have n := readBytes bytes;
+    if bytes = n.repr.toByteArray.data.toList then some (ofNat n) else none) =
+    some a
+
+a : ClockMillis
+⊢ (have bytes := a.toNat.repr.toByteArray.data.toList;
+    have n := readBytes bytes;
+    if bytes = n.repr.toByteArray.data.toList then some (ofNat n) else none) =
+    some a
+/tmp/m1-tools/ClockDecimalProofs.lean:91:2: error: Tactic `split` failed: Could not split an `if` or `match` expression in the type
+  (have bytes := text.toByteArray.data.toList;
+    have n := readBytes bytes;
+    if bytes = n.repr.toByteArray.data.toList then some (ofNat n) else none) =
+    some a
+of `h`
+
+Hint: Use `set_option trace.split.failure true` to display additional diagnostic information
+
+text : String
+a : ClockMillis
+h :
+  (have bytes := text.toByteArray.data.toList;
+    have n := readBytes bytes;
+    if bytes = n.repr.toByteArray.data.toList then some (ofNat n) else none) =
+    some a
+⊢ text = a.toDecimal
+'Effect4.ClockMillis.DecimalPlan.readBytes' does not depend on any axioms
+'Effect4.ClockMillis.DecimalPlan.read' does not depend on any axioms
+'Effect4.ClockMillis.DecimalPlan.readBytes_digits' depends on axioms: [propext, sorryAx]
+'Effect4.ClockMillis.DecimalPlan.readChars_core' depends on axioms: [propext, sorryAx, Quot.sound]
+'Effect4.ClockMillis.DecimalPlan.readBytes_repr' depends on axioms: [propext, sorryAx, Quot.sound]
+'Effect4.ClockMillis.DecimalPlan.read_toDecimal' depends on axioms: [sorryAx]
+'Effect4.ClockMillis.DecimalPlan.read_exact' depends on axioms: [sorryAx]

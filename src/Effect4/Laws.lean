@@ -2,6 +2,7 @@ import Effect4.Laws.Machine.Clauses
 import Effect4.Laws.Machine.Approximation
 import Effect4.Laws.Machine.RefKernel
 import Effect4.Laws.Machine.StoresLaws
+import Effect4.Laws.Machine.Clock
 import Effect4.Laws.Machine.Behaviour
 import Effect4.Laws.Machine.Book
 import Effect4.Laws.Machine.ContextValue

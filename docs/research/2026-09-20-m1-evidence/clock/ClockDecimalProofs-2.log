@@ -1,0 +1,12 @@
+/tmp/m1-tools/ClockDecimalProofs.lean:89:6: error: (deterministic) timeout at `whnf`, maximum number of heartbeats (200000) has been reached
+
+Note: Use `set_option maxHeartbeats <num>` to set the limit.
+
+Hint: Additional diagnostic information may be available using the `set_option diagnostics true` command.
+'Effect4.ClockMillis.DecimalPlan.readBytes' does not depend on any axioms
+'Effect4.ClockMillis.DecimalPlan.read' does not depend on any axioms
+'Effect4.ClockMillis.DecimalPlan.readBytes_digits' depends on axioms: [propext, Quot.sound]
+'Effect4.ClockMillis.DecimalPlan.readChars_core' depends on axioms: [propext, Quot.sound]
+'Effect4.ClockMillis.DecimalPlan.readBytes_repr' depends on axioms: [propext, Quot.sound]
+'Effect4.ClockMillis.DecimalPlan.read_toDecimal' depends on axioms: [sorryAx]
+'Effect4.ClockMillis.DecimalPlan.read_exact' depends on axioms: [propext]

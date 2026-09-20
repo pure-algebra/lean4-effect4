@@ -101,7 +101,8 @@ theorem PlainStack.cons {f : NCode} {K : List NCode} (hf : PlainFrame f = true)
   · exact hK g hg
 
 theorem PlainStack.head {f : NCode} {K : List NCode} (h : PlainStack (f :: K)) :
-    PlainFrame f = true := h f (List.mem_cons_self ..)
+    PlainFrame f = true :=
+  by aesop
 
 theorem PlainStack.tail {f : NCode} {K : List NCode} (h : PlainStack (f :: K)) :
     PlainStack K := fun g hg => h g (List.mem_cons_of_mem _ hg)
@@ -369,13 +370,13 @@ theorem localStep_success (root : NativeEff) (v : Val) (K : List NCode) (i : Boo
     (s : Stores) :
     localStep root (fiberOf (Prim.success v) K i) s =
       exitFrom root (Exit.success v) (popOf (fiberOf (Prim.success v) K i) (Exit.success v)) s :=
-  rfl
+  by aesop
 
 theorem localStep_failure (root : NativeEff) (c : CauseV) (K : List NCode) (i : Bool)
     (s : Stores) :
     localStep root (fiberOf (Prim.failure c) K i) s =
       exitFrom root (Exit.failure c) (popOf (fiberOf (Prim.failure c) K i) (Exit.failure c)) s :=
-  rfl
+  by aesop
 
 /-- Anything that is not a `sync` and not an exit is the frame machine's step. -/
 theorem localStep_other (root : NativeEff) (cur : NCode) (K : List NCode) (i : Bool)
@@ -616,9 +617,17 @@ theorem DeferredStore.make_quiet {d : DeferredStore} (hdue : d.due = [])
   · exact hcells c hc
   · exact ⟨rfl, rfl⟩
 
+def M1Quiet.complete_quiet {d : DeferredStore} (_hdue : d.due = [])
+    (_hcells : ∀ c ∈ d.cells, c.wake.waiters = [] ∧ c.wake.batch = none) (cell : DeferredKey)
+    (e : Completion Val Err Defect FiberId Ann) : ProofGraph.Obligation (
+    (d.complete cell e).1.due = [] ∧
+      ∀ c ∈ (d.complete cell e).1.cells, c.wake.waiters = [] ∧ c.wake.batch = none) := ⟨⟩
+
+#proof_wanted M1Quiet.complete_quiet
+
 theorem DeferredStore.complete_quiet {d : DeferredStore} (hdue : d.due = [])
     (hcells : ∀ c ∈ d.cells, c.wake.waiters = [] ∧ c.wake.batch = none) (cell : DeferredKey)
-    (e : Effect4.Machine.Program) :
+    (e : Completion Val Err Defect FiberId Ann) :
     (d.complete cell e).1.due = [] ∧
       ∀ c ∈ (d.complete cell e).1.cells, c.wake.waiters = [] ∧ c.wake.batch = none := by
   unfold DeferredStore.complete
@@ -778,7 +787,8 @@ def fiberAt (fr : NFiber) (k : Nat) : NRunFiber :=
   { RunFiber.make Api.root fr.current true (stores.budgetOf emptyCtx) emptyCtx with
     frame := fr, running := true, currentOpCount := k }
 
-theorem fiberAt_frame (fr : NFiber) (k : Nat) : (fiberAt fr k).frame = fr := rfl
+theorem fiberAt_frame (fr : NFiber) (k : Nat) : (fiberAt fr k).frame = fr :=
+  by aesop
 
 /-- The machine of the run: one fiber, nothing armed, no race, the stores `s`, the trace
 `tr`, the next resume token `nt` (zero until the first yield; each yield takes one). -/
@@ -829,27 +839,32 @@ def Myield (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat) : Api.Ma
 
 /-- No completed exit is visible while the single root fiber is running. -/
 theorem M_completedExits (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) :
-    (M fr s k tr nt).completedExits = [] := rfl
+    (M fr s k tr nt).completedExits = [] :=
+  by aesop
 
 theorem Myield_completedExits (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat) :
-    (Myield fr s k tr t).completedExits = [] := rfl
+    (Myield fr s k tr t).completedExits = [] :=
+  by aesop
 
 theorem M_stuck (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) :
-    (M fr s k tr nt).stuck = none := rfl
+    (M fr s k tr nt).stuck = none :=
+  by aesop
 
 theorem M_state (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) :
-    (M fr s k tr nt).state = s := rfl
+    (M fr s k tr nt).state = s :=
+  by aesop
 
 theorem M_middleware (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) :
-    (M fr s k tr nt).middlewareInstalled = false := rfl
+    (M fr s k tr nt).middlewareInstalled = false :=
+  by aesop
 
 theorem M_fiber? (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) :
-    (M fr s k tr nt).fiber? Api.root = some (fiberAt fr k) := by
-  simp [M, RunMachine.fiber?, fiberAt, RunFiber.make]
+    (M fr s k tr nt).fiber? Api.root = some (fiberAt fr k) :=
+  by aesop
 
 theorem M_update (fr fr' : NFiber) (s : Stores) (k k' : Nat) (tr : NTrace) (nt : Nat) :
-    (M fr s k tr nt).update (fiberAt fr' k') = M fr' s k' tr nt := by
-  simp [M, RunMachine.update, fiberAt, RunFiber.make]
+    (M fr s k tr nt).update (fiberAt fr' k') = M fr' s k' tr nt :=
+  by aesop
 
 theorem M_emit (fr : NFiber) (s : Stores) (k : Nat) (tr ev : NTrace) (nt : Nat) :
     (M fr s k tr nt).emit ev = M fr s k (tr ++ ev) nt := by
@@ -859,40 +874,47 @@ theorem M_emit (fr : NFiber) (s : Stores) (k : Nat) (tr ev : NTrace) (nt : Nat) 
   | cons _ _ => rfl
 
 theorem Mexit_stuck (root : NativeEff) (ex : ExitV) (fr : NFiber) (s : Stores) (k : Nat)
-    (tr : NTrace) (nt : Nat) : (Mexit root ex fr s k tr nt).stuck = none := rfl
+    (tr : NTrace) (nt : Nat) : (Mexit root ex fr s k tr nt).stuck = none :=
+  by aesop
 
 theorem Mexit_armed (root : NativeEff) (ex : ExitV) (fr : NFiber) (s : Stores) (k : Nat)
-    (tr : NTrace) (nt : Nat) : (Mexit root ex fr s k tr nt).armed = [] := rfl
+    (tr : NTrace) (nt : Nat) : (Mexit root ex fr s k tr nt).armed = [] :=
+  by aesop
 
 theorem Mexit_state (root : NativeEff) (ex : ExitV) (fr : NFiber) (s : Stores) (k : Nat)
-    (tr : NTrace) (nt : Nat) : (Mexit root ex fr s k tr nt).state = s := rfl
+    (tr : NTrace) (nt : Nat) : (Mexit root ex fr s k tr nt).state = s :=
+  by aesop
 
 theorem Mexit_finished (root : NativeEff) (ex : ExitV) (fr : NFiber) (s : Stores) (k : Nat)
-    (tr : NTrace) (nt : Nat) : (Mexit root ex fr s k tr nt).finished = true := by
-  simp [Mexit, RunMachine.finished, exitedAt]
+    (tr : NTrace) (nt : Nat) : (Mexit root ex fr s k tr nt).finished = true :=
+  by aesop
 
 theorem Mexit_exit (root : NativeEff) (ex : ExitV) (fr : NFiber) (s : Stores) (k : Nat)
     (tr : NTrace) (nt : Nat) :
-    ((Mexit root ex fr s k tr nt).fiber? Api.root).bind RunFiber.exit = some ex := by
-  simp [Mexit, RunMachine.fiber?, exitedAt, fiberAt, RunFiber.make]
+    ((Mexit root ex fr s k tr nt).fiber? Api.root).bind RunFiber.exit = some ex :=
+  by aesop
 
 theorem Myield_stuck (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat) :
-    (Myield fr s k tr t).stuck = none := rfl
+    (Myield fr s k tr t).stuck = none :=
+  by aesop
 
 theorem Myield_state (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat) :
-    (Myield fr s k tr t).state = s := rfl
+    (Myield fr s k tr t).state = s :=
+  by aesop
 
 theorem Myield_armed (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat) :
-    (Myield fr s k tr t).armed = [Api.root] := rfl
+    (Myield fr s k tr t).armed = [Api.root] :=
+  by aesop
 
 theorem Myield_fiber? (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat) :
-    (Myield fr s k tr t).fiber? Api.root = some (parkedAt fr k t) := by
-  simp [Myield, RunMachine.fiber?, parkedAt, fiberAt, RunFiber.make]
+    (Myield fr s k tr t).fiber? Api.root = some (parkedAt fr k t) :=
+  by aesop
 
 /-! ### What the interp of a root program classifies -/
 
 theorem parkOf_sync (root : NativeEff) (thunk : EffThunk) :
-    (interpAt root []).parkOf (Prim.sync thunk) = none := rfl
+    (interpAt root []).parkOf (Prim.sync thunk) = none :=
+  by aesop
 
 theorem parkOf_plain (root : NativeEff) {cur : NCode} (h : PlainCode cur = true) :
     (interpAt root []).parkOf cur = none := by
@@ -902,16 +924,20 @@ theorem parkOf_plain (root : NativeEff) {cur : NCode} (h : PlainCode cur = true)
     | (rename_i thunk; cases thunk <;> first | rfl | simp [PlainCode] at h)
 
 theorem syncState_op (root : NativeEff) (o : SyncOp) (s : Stores) :
-    (interpAt root []).syncState (EffThunk.op o) s = syncOpStep o s := rfl
+    (interpAt root []).syncState (EffThunk.op o) s = syncOpStep o s :=
+  by aesop
 
 theorem syncState_pure (root : NativeEff) (p : Point) (s : Stores) :
-    (interpAt root []).syncState (EffThunk.pure p) s = none := rfl
+    (interpAt root []).syncState (EffThunk.pure p) s = none :=
+  by aesop
 
 theorem syncValue_op (root : NativeEff) (o : SyncOp) :
-    (interpAt root []).syncValue (EffThunk.op o) = Val.unit := rfl
+    (interpAt root []).syncValue (EffThunk.op o) = Val.unit :=
+  by aesop
 
 theorem syncValue_pure (root : NativeEff) (p : Point) :
-    (interpAt root []).syncValue (EffThunk.pure p) = syncValueAt root (EffThunk.pure p) := rfl
+    (interpAt root []).syncValue (EffThunk.pure p) = syncValueAt root (EffThunk.pure p) :=
+  by aesop
 
 /-! ### `evaluatePrim` on a plain fiber is the local step -/
 
@@ -961,7 +987,8 @@ theorem evaluatePrim_sync_pure (root : NativeEff) (m : Api.Machine) (f : NRunFib
 theorem stepFrame_eq (root : NativeEff) (m : Api.Machine) (f : NRunFiber) :
     evaluatePrim.stepFrame (interpAt root []) m f false =
       evaluatePrim.finishFrame m f false (f.frame.step (primOf root)).1
-        (f.frame.step (primOf root)).2 [] := rfl
+        (f.frame.step (primOf root)).2 [] :=
+  by aesop
 
 /-- The frame machine's answer to a value, from the pop alone. -/
 theorem step_fst_success (root : NativeEff) (v : Val) (K : List NCode) (i : Bool) :
@@ -1422,20 +1449,15 @@ the drain is owed. -/
 theorem drive_finish_M (root : NativeEff) (ex : ExitV) (fr : NFiber) (s : Stores) (k : Nat)
     (tr : NTrace) (nt : Nat) (rest : List NCmd) :
     ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root) (interpOf root) (n + 1) (M fr s k tr nt) (Cmd.finish Api.root ex :: rest) =
-      driveState (evaluator := evaluatorFor root) (interpOf root) n (Mexit root ex fr s k tr' nt) (Cmd.drainDue :: rest) := by
-  refine ⟨tr ++ [RunEvent.exited Api.root ex], fun n => ?_⟩
-  rw [driveState_succ_cons (evaluator := evaluatorFor root)]
-  simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?]
-  rw [exitFiber_no_middleware _ _ _ _ rfl]
-  rfl
+      driveState (evaluator := evaluatorFor root) (interpOf root) n (Mexit root ex fr s k tr' nt) (Cmd.drainDue :: rest) :=
+  by aesop
 
 /-- `Cmd.evaluate` on the loaded root: the fiber starts running at count zero. -/
 theorem drive_evaluate_load (e : NativeEff) (fuel : Nat) (rest : List NCmd) :
     ∀ n, driveState (evaluator := evaluatorFor e) (interpOf e) (n + 1) (Api.load e fuel) (Cmd.evaluate Api.root :: rest) =
       driveState (evaluator := evaluatorFor e) (interpOf e) n (M (fiberOf (compile e fuel) []) Stores.empty 0
-        [RunEvent.started Api.root] 0) (Cmd.loop Api.root false :: rest) := by
-  intro n
-  rfl
+        [RunEvent.started Api.root] 0) (Cmd.loop Api.root false :: rest) :=
+  by aesop
 
 theorem drive_nil (root : NativeEff) (m : Api.Machine) :
     ∀ n, driveState (evaluator := evaluatorFor root) (interpOf root) n m [] = (m, [])

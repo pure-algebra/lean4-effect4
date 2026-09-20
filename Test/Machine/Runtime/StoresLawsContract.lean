@@ -25,10 +25,10 @@ Register rows (`Test/Counterexamples/REGISTER.md`):
 * `E4-STORES-CE-002` — a valid request's answer is valid without a heap invariant. Refuted:
   the heap `[Val.cell ⟨9⟩]` answers the dangling `cell ⟨9⟩` to the valid `refGet ⟨0⟩`;
   `syncOpStep_answer_valid` carries `Stores.WF`, which that heap fails.
-* `E4-STORES-CE-003` — `Stores.WF` covers the program a completed Deferred stores. Refuted:
+* `E4-STORES-CE-003` — `Stores.WF` validates the payload handles of a completed Deferred. Refuted:
   completing a fresh Deferred with `ofRefGet ⟨9⟩` on an empty heap is a valid, stepping
-  operation whose result is `WF` while `cell ⟨9⟩` is not valid in it; the stored program is
-  a `Prim` that `Val.validIn` does not traverse (`STORES-FB-COMPLETION`, plan §7). `WF` is
+  operation whose result is `WF` while `cell ⟨9⟩` is not valid in it; the stored value is
+  a `Completion` whose payload handles `Stores.WF` does not validate. `WF` is
   not widened in this slice.
 -/
 
@@ -77,9 +77,11 @@ section Rows
 #guard Stores.WF s1
 #guard (answer (SyncOp.refGet ⟨0⟩) s1).map (Val.validIn s1) = some true
 
--- E4-STORES-CE-003: `WF` says nothing about a stored completion (STORES-FB-COMPLETION)
+-- E4-STORES-CE-003: `WF` does not validate a stored completion's referenced cell
 #guard SyncOp.validIn s2 (SyncOp.deferredCompleteWith ⟨0⟩ (Completion.ofRefGet ⟨9⟩)) = true
 #guard (syncOpStep (SyncOp.deferredCompleteWith ⟨0⟩ (Completion.ofRefGet ⟨9⟩)) s2).isSome
+#guard (after (SyncOp.deferredCompleteWith ⟨0⟩ (Completion.ofRefGet ⟨9⟩)) s2).deferreds.poll ⟨0⟩ =
+  some (some (Completion.ofRefGet ⟨9⟩))
 #guard Stores.WF (after (SyncOp.deferredCompleteWith ⟨0⟩ (Completion.ofRefGet ⟨9⟩)) s2)
 #guard Val.validIn (after (SyncOp.deferredCompleteWith ⟨0⟩ (Completion.ofRefGet ⟨9⟩)) s2)
   (Val.cell ⟨9⟩) = false

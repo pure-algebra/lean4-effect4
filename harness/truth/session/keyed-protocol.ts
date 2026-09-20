@@ -2,11 +2,12 @@
  * and per-key bookkeeping; the Lean session separately checks the actual machine envelope. */
 import { hostProtocol, type ProtocolState, type ProtocolTag } from "./protocol.gen.ts"
 import { equalJson, keys, nat, text, ProtocolRefusal, type Json } from "./protocol.ts"
+import { clockMillis } from "./clock.ts"
 export { hostProtocol }
 export interface Key { fiber: number; token: number }
 export const keyText = (key: Key): string => `${key.fiber}:${key.token}`
-export interface DecisionRecord extends Record<string, unknown> { kind: string; version: 2; session: string }
-export interface KeyedHeader { format: "effect4-host-session-v2"; version: 2; session: string; profile: "keyed-v2"; program: string; table: Json[] }
+export interface DecisionRecord extends Record<string, unknown> { kind: string; version: typeof hostProtocol.version; session: string }
+export interface KeyedHeader { format: "effect4-host-session-v3"; version: typeof hostProtocol.version; session: string; profile: "keyed-v3"; program: string; table: Json[] }
 export interface KeyedRecording { header: KeyedHeader; records: DecisionRecord[] }
 const bad = (why: string): never => { throw new ProtocolRefusal("malformed", why) }
 const natural = (value: unknown): number => { if (Object.is(value, -0)) bad("negative zero"); return nat(value) }
@@ -38,6 +39,7 @@ export const decodeRecord = (value: unknown, session: string): DecisionRecord =>
   for (const [name, fieldType] of Object.entries(shape.fields)) {
     const type: string = fieldType
     if (type === "natural") natural(record[name])
+    else if (type === "clockMillis") clockMillis(record[name])
     else if (type === "text") text(record[name])
     else if (type === "boolean") { if (typeof record[name] !== "boolean") bad("expected boolean") }
     else jsonData(record[name])
@@ -47,9 +49,9 @@ export const decodeRecord = (value: unknown, session: string): DecisionRecord =>
 export const decodeKeyed = (value: unknown, expected: { program: string; table: Json[] }): KeyedRecording => {
   const body = keys(value, ["header", "records"])
   const h = keys(body.header, ["format", "version", "session", "profile", "program", "table"])
-  if (h.version !== hostProtocol.version || h.format !== "effect4-host-session-v2") bad("version 2 required; legacy migration must be explicit")
+  if (h.version !== hostProtocol.version || h.format !== "effect4-host-session-v3") bad("version 3 required; version 2 and older inputs need explicit migration")
   const session = text(h.session)
-  if (!session || h.profile !== "keyed-v2" || h.program !== expected.program) bad("header identity mismatch")
+  if (!session || h.profile !== "keyed-v3" || h.program !== expected.program) bad("header identity mismatch")
   if (!equalJson(h.table, expected.table)) bad("full table mismatch")
   if (!Array.isArray(body.records)) bad("expected records")
   const records = (body.records as unknown[]).map(record => decodeRecord(record, session))

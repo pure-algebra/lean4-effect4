@@ -41,56 +41,72 @@ open Effect4.Api.Runner (Command Runner)
 /-! ## Playing rows -/
 
 theorem step_session (s : Run) (c : Command) :
-    (s.step c).session = (Api.Runner.result s.runner c).session := rfl
+    (s.step c).session = (Api.Runner.result s.runner c).session :=
+  by aesop
 
 theorem step_phases (s : Run) (c : Command) :
-    (s.step c).phases = s.phases ++ [(Api.Runner.result s.runner c).phase] := rfl
+    (s.step c).phases = s.phases ++ [(Api.Runner.result s.runner c).phase] :=
+  by aesop
 
-theorem step_journal (s : Run) (c : Command) : (s.step c).journal = s.journal ++ [c] := rfl
+theorem step_journal (s : Run) (c : Command) : (s.step c).journal = s.journal ++ [c] :=
+  by aesop
 
 /-! Each row's transition, named so that a proof can rewrite with a fact about it. -/
 
 theorem step_session_bind (s : Run) (call : Call) (token : Nat) :
     (s.step (.bind call token)).session =
-      (Api.HostSession.bindCall s.session call token).session := rfl
+      (Api.HostSession.bindCall s.session call token).session :=
+  by aesop
 
 theorem step_phases_bind (s : Run) (call : Call) (token : Nat) :
     (s.step (.bind call token)).phases =
-      s.phases ++ [(Api.HostSession.bindCall s.session call token).phase] := rfl
+      s.phases ++ [(Api.HostSession.bindCall s.session call token).phase] :=
+  by aesop
 
 theorem step_session_submit (s : Run) (reply : Reply) :
-    (s.step (.submit reply)).session = (Api.HostSession.submit s.session reply).session := rfl
+    (s.step (.submit reply)).session = (Api.HostSession.submit s.session reply).session :=
+  by aesop
 
 theorem step_phases_submit (s : Run) (reply : Reply) :
     (s.step (.submit reply)).phases =
-      s.phases ++ [(Api.HostSession.submit s.session reply).phase] := rfl
+      s.phases ++ [(Api.HostSession.submit s.session reply).phase] :=
+  by aesop
 
 theorem step_session_apply (s : Run) (key : Key) :
     (s.step (.apply key)).session =
-      (Api.HostSession.applyReply s.session key s.budget.fuel).session := rfl
+      (Api.HostSession.applyReply s.session key s.budget.fuel).session :=
+  by aesop
 
 theorem step_phases_apply (s : Run) (key : Key) :
     (s.step (.apply key)).phases =
-      s.phases ++ [(Api.HostSession.applyReply s.session key s.budget.fuel).phase] := rfl
+      s.phases ++ [(Api.HostSession.applyReply s.session key s.budget.fuel).phase] :=
+  by aesop
 
 theorem step_session_control (s : Run) (d : Api.Decision) :
     (s.step (.control d)).session =
-      (Api.HostSession.advance s.session s.budget.fuel d).session := rfl
+      (Api.HostSession.advance s.session s.budget.fuel d).session :=
+  by aesop
 
 theorem step_phases_control (s : Run) (d : Api.Decision) :
     (s.step (.control d)).phases =
-      s.phases ++ [(Api.HostSession.advance s.session s.budget.fuel d).phase] := rfl
+      s.phases ++ [(Api.HostSession.advance s.session s.budget.fuel d).phase] :=
+  by aesop
 
-theorem step_built (s : Run) (c : Command) : (s.step c).built = s.built := rfl
+theorem step_built (s : Run) (c : Command) : (s.step c).built = s.built :=
+  by aesop
 
-theorem step_budget (s : Run) (c : Command) : (s.step c).budget = s.budget := rfl
+theorem step_budget (s : Run) (c : Command) : (s.step c).budget = s.budget :=
+  by aesop
 
-theorem play_nil (s : Run) : s.play [] = s := rfl
+theorem play_nil (s : Run) : s.play [] = s :=
+  by aesop
 
 theorem play_cons (s : Run) (c : Command) (rows : List Command) :
-    s.play (c :: rows) = (s.step c).play rows := rfl
+    s.play (c :: rows) = (s.step c).play rows :=
+  by aesop
 
-theorem play_single (s : Run) (c : Command) : s.play [c] = s.step c := rfl
+theorem play_single (s : Run) (c : Command) : s.play [c] = s.step c :=
+  by aesop
 
 /-- Rows act on runs: a concatenation plays as its parts, in order. -/
 theorem play_append (s : Run) (a b : List Command) : s.play (a ++ b) = (s.play a).play b := by
@@ -133,13 +149,16 @@ theorem step_profile (s : Run) (c : Command) : (s.step c).profile = s.profile :=
 /-! An opened run has played nothing. -/
 
 theorem open_phases (b : Api.Built) (id : String) (budget : Api.Budget) (profile : String) :
-    (Run.open b id budget profile).phases = [] := rfl
+    (Run.open b id budget profile).phases = [] :=
+  by aesop
 
 theorem open_journal (b : Api.Built) (id : String) (budget : Api.Budget) (profile : String) :
-    (Run.open b id budget profile).journal = [] := rfl
+    (Run.open b id budget profile).journal = [] :=
+  by aesop
 
 theorem open_machine (b : Api.Built) (id : String) (budget : Api.Budget) (profile : String) :
-    (Run.open b id budget profile).machine = Api.load b.program budget.compileFuel := rfl
+    (Run.open b id budget profile).machine = Api.load b.program budget.compileFuel :=
+  by aesop
 
 /-! ## A run is its own recording -/
 
@@ -260,8 +279,8 @@ theorem observe_awaitingAsync (m : NativeMachine) (fiber : FiberId) (token : Nat
 
 /-- A receipt is an edge from `awaitingAsync` to itself. -/
 theorem allows_submit (key : Key) :
-    Api.HostProtocol.allows .awaitingAsync (.submit key) .awaitingAsync = true := by
-  aesop
+    Api.HostProtocol.allows .awaitingAsync (.submit key) .awaitingAsync = true :=
+  by aesop
 
 /-- An answer is an edge from `awaitingAsync` to every state, so the machine it leaves is
 never a protocol refusal. -/
@@ -287,7 +306,8 @@ theorem advance_not_envelope {program : Api.Program} {table : RowTable}
 session module reads the facade's name and the envelope reads the program plane's, so a proof
 that joins them needs this. -/
 theorem api_requestOf (m : Api.Machine) (fiber : FiberId) (token : Nat) :
-    Api.requestOf m fiber token = requestOf m fiber token := rfl
+    Api.requestOf m fiber token = requestOf m fiber token :=
+  by aesop
 
 attribute [local simp] api_requestOf Api.HostSession.Call.claim Run.machine Run.id
 
@@ -375,8 +395,8 @@ theorem answer_rows_three (s : Run) (key : Key) (c : Answer) (call : Call)
 
 /-- A slot is there for a key that was just bound. -/
 theorem any_append_key (slots : List ReplySlot) (key : Key) :
-    (slots ++ [(⟨key, none⟩ : ReplySlot)]).any (fun slot => slot.key == key) = true := by
-  aesop
+    (slots ++ [(⟨key, none⟩ : ReplySlot)]).any (fun slot => slot.key == key) = true :=
+  by aesop
 
 /-- Preflight succeeds on a reply that names a binding the machine still holds and carries a
 completion the machine admits; the decision it returns is the answer that reply records. -/
@@ -740,7 +760,8 @@ def runOf : NativeReplay → Api.Inspection
 theorem replay_eq (program : Api.Program) (fuel : Nat) (tape : List Api.Decision)
     (table : RowTable) (compileFuel : Nat) :
     Api.replay program fuel tape [] table compileFuel =
-      runOf (replayFrom program table fuel tape (Api.load program compileFuel)) := rfl
+      runOf (replayFrom program table fuel tape (Api.load program compileFuel)) :=
+  by aesop
 
 /-- However a replay ended, the run it reports carries the machine it reached. -/
 theorem replay_machine (program : Api.Program) (fuel : Nat) (tape : List Api.Decision)

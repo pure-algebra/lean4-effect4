@@ -168,7 +168,7 @@ def interruptedFromNowhere : Api.Inspection :=
 -- Race settlement reads both the accepted exit and the live entrants. The duplicate
 -- winner is bookkeeping only. These probes pin the precise collected positions.
 def raceCarrier (state : Supervision.RaceAllState Val Err Defect FiberId Ann) : Api.Machine :=
-  { Api.load waiting 80 with races := [⟨0, Api.root, 0, state, false, [], false⟩] }
+  { Api.load waiting 80 with races := [⟨0, Api.root, 0, state, false, [], false, none⟩] }
 
 #guard Minted (raceCarrier (Supervision.RaceAllState.initial []))
 #guard !(Minted (raceCarrier { Supervision.RaceAllState.initial [] with
@@ -177,7 +177,7 @@ def raceCarrier (state : Supervision.RaceAllState Val Err Defect FiberId Ann) : 
 #guard Minted (raceCarrier { Supervision.RaceAllState.initial [] with
   winner := some (⟨7⟩, .fiber ⟨7⟩) })
 
--- Deferred waiter targets are excluded; the completion code is collected separately.
+-- Deferred waiter targets are excluded; the completion data is collected separately.
 def orphanWaiterStore : Stores :=
   { Stores.empty with
     deferreds := ⟨[⟨none, { WakeList.empty with waiters := [⟨⟨7⟩, 0, 0, ()⟩] }⟩], []⟩ }
@@ -185,7 +185,7 @@ def orphanWaiterStore : Stores :=
 #guard MintedS (RunMachine.empty orphanWaiterStore)
 #guard !(MintedS (RunMachine.empty { orphanWaiterStore with
   deferreds :=
-    ⟨[⟨some (.success (.fiber ⟨7⟩)), { WakeList.empty with waiters := [⟨⟨7⟩, 0, 0, ()⟩] }⟩], []⟩ }))
+    ⟨[⟨some (.ofExit (.success (.fiber ⟨7⟩))), { WakeList.empty with waiters := [⟨⟨7⟩, 0, 0, ()⟩] }⟩], []⟩ }))
 
 /-! ## The theorem on an explicit run -/
 

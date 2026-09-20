@@ -1,0 +1,38 @@
+{
+  "base_head": "15cb510e2ea747364e1c814e3a92f1e1ac0075eb",
+  "source_state": "uncommitted Phase A correction",
+  "files": {
+    "src/OCaml5/Lcnf/ClockFlow.lean": "2e134ceabbad3a3dbe3f70d216245b03918d77c07f9970ddbe0c8d2d4ea2e677",
+    "src/OCaml5/Lcnf/Translate.lean": "86649e17d703651cd1e9bab72d32f2a04d3284ab9ac2683354ee3b32601a6d6c",
+    "Test/Audit/ClockLowering.lean": "8de8218df4eff7bdba2922f4c3a5de61bcc178163ea5c2cbdd26d8538a66ba9d",
+    "Test/Audit/ClockLiteralFixtures.lean": "b260e7cda031464ad10ad76ee93121ac7a976fd3117f7a3c8e21385f7e5cca5f",
+    "src/OCaml5/Tools/LcnfGen.lean": "34fcc2936e393d794231720c0ed97e2d1b5e52e7e6293ea54cec8fe0ca6302cf",
+    "ocaml/gen/roots.json": "a952eb5c9797becad36aabcd41bee9ac628b55ab54146365b29693161142dd5b",
+    "ocaml/engine/externs.txt": "e7430ff9b4c0c4be60ea92d056bd1d50f453d430670d1392c28ef6cf0a2bbe6d",
+    "ocaml/engine/tools/api_engine_prelude.ml": "9eb3d48ac25dbb3102d661272e87201034161f0d0f10a6380b39660239de3456"
+  },
+  "max_heartbeats": 200000,
+  "budget_changes": false,
+  "budget_resets": false,
+  "finite_controls": 22,
+  "full_no_write": {
+    "flat_api": {
+      "declarations": 664,
+      "todos": 0,
+      "final_heartbeats": 124584,
+      "rendered_bytes": 1036271,
+      "manifest_bytes": 114478
+    },
+    "engine": {
+      "declarations": 658,
+      "todos": 0,
+      "final_heartbeats": 158907,
+      "rendered_bytes": 1125318,
+      "manifest_bytes": 111401,
+      "extern_ledger": "pass"
+    }
+  },
+  "canonical_generator_invocations_by_seat": 0,
+  "generated_file_writes_by_seat": 0,
+  "compiler_lease": "released to root"
+}

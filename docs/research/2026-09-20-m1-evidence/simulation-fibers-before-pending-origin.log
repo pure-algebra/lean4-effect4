@@ -1,0 +1,5 @@
+Effect4.Laws.Program.Simulation.Fibers: 4 of 95 theorems closed from their statements; 10 source lines they now take
+  4	291-294	Effect4.Program.Sched.BMeans.emit	[Quot.sound, propext]
+  2	458-459	Effect4.Program.Sched.machineOk_withNextToken	[]
+  2	195-196	Effect4.Program.Sched.taskMeans_start	[]
+  2	465-466	Effect4.Program.Sched.machineOk_appendRace	[]

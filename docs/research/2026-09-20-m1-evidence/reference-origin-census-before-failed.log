@@ -1,0 +1,1 @@
+docs/research/2026-09-20-m1-evidence/ReferenceOriginCensusBefore.lean:1:0: error: import Effect4.Laws.Program.Simulation.Hooks failed, environment already contains 'Effect4.Machine.DeferredStore.drainDue.eq_1' from Effect4.Laws.Machine.CompletionData

@@ -15,11 +15,13 @@ def tagName : Tag → String
   | .cancel => "cancel" | .schedule => "schedule"
 def typeName : FieldType → String
   | .natural => "natural" | .boolean => "boolean" | .text => "text" | .json => "json"
+  | .clockMillis => "clockMillis"
 def fieldSchema : FieldType → Json
   | .natural => Json.mkObj [("type", "integer"), ("minimum", toJson (0 : Nat)), ("maximum", toJson Effect4.Program.rc112.natBound)]
   | .boolean => Json.mkObj [("type", "boolean")]
   | .text => Json.mkObj [("type", "string"), ("maxLength", toJson (4096 : Nat))]
   | .json => Json.mkObj []
+  | .clockMillis => Json.mkObj [("type", "string"), ("pattern", "^(0|[1-9][0-9]*)$")]
 
 def datum : Json := Json.mkObj [
   ("version", toJson hostProtocol.version), ("initial", .str (stateName hostProtocol.initial)),
@@ -38,7 +40,7 @@ def recordSchema (shape : RecordShape) : Json := Json.mkObj [
 
 def schema : Json := Json.mkObj [
   ("$schema", "https://json-schema.org/draft/2020-12/schema"),
-  ("title", "Effect4 keyed host decision record v2"),
+  ("title", .str s!"Effect4 keyed host decision record v{hostProtocol.version}"),
   ("description", "One decision record; row payload meaning is checked by Envelope. Receipt and application are distinct."),
   ("oneOf", toJson (hostProtocol.records.map recordSchema))]
 

@@ -1,4 +1,7 @@
-(* e4_time.mli — the logical clock: ticks, deadlines, and the only motion the clock has.
+(* e4_time.mli — the bounded workshop clock: ticks, deadlines, and clock motion.
+
+   This is the workshop comparison carrier. The generated runtime uses Lean's
+   Effect4.ClockMillis and OCaml's E4_clock.t; E4_engine does not call this module.
 
    What it is: the tick unit and the clock of the timer store (lane Q2 of
    docs/research/2026-09-08-engine-a3-queue-query.md §3; the type `time` of §1.1.3 lives
@@ -24,9 +27,9 @@
          R1 (workshop Timer.lean:31-32, "`setTime` is not a decision of this store") and it
          is what makes `advance_now_mono` / `fireNext_now_mono` true of the carrier.
          [by construction; tested: timers-now-monotone, timers-mutation-advance-backwards]
-     C3  `advance_by c ~by` = `advance_to c ~target:(now c + by)`. `by` is the shape the
-         decision alphabet has (`RunDecision.advance (by : Nat)`, grill agenda §3 call 3),
-         so a negative `by` is the same refusal as a backwards target.
+     C3  `advance_by c ~by` = `advance_to c ~target:(now c + by)`. The workshop's
+         duration is natural (grill agenda §3 call 3), so a negative `by` is the same
+         refusal as a backwards target.
          [by construction; tested: timers-now-monotone]
      C4  No physical clock: `Unix.gettimeofday`, `Sys.time` and every other host clock are
          absent from this file and from `e4_timers.ml` (survey trap #8 — the only place a

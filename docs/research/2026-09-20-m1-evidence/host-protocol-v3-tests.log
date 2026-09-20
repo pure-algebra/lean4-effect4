@@ -1,0 +1,33 @@
+bun test v1.4.2 (744846f84)
+
+harness/truth/session/keyed-protocol.test.ts:
+(pass) projected keyed tape structure > replies arrive by key; application order remains independent [4.24ms]
+(pass) projected keyed tape structure > missing fiber is not inferred [24.36ms]
+(pass) projected keyed tape structure > missing token is not inferred [0.09ms]
+(pass) projected keyed tape structure > missing callId is not inferred [0.02ms]
+(pass) projected keyed tape structure > duplicate pending reply [0.32ms]
+(pass) projected keyed tape structure > application without a stored reply [0.04ms]
+(pass) projected keyed tape structure > one key cannot replace another key's payload [0.02ms]
+(pass) projected keyed tape structure > decimal clock transport has protocol version 3 [0.05ms]
+(pass) projected keyed tape structure > legacy version 1 requires explicit migration [0.54ms]
+(pass) projected keyed tape structure > legacy version 2 requires explicit migration
+(pass) projected keyed tape structure > version 2 clock records cannot enter a version 3 tape [0.05ms]
+(pass) projected keyed tape structure > table metadata participates in identity [0.01ms]
+(pass) projected keyed tape structure > pending and unanswered prefixes are accepted [0.05ms]
+(pass) projected keyed tape structure > unsafe and negative-zero keys refuse [0.31ms]
+(pass) projected keyed tape structure > clock and cancellation follow the generated table [0.05ms]
+(pass) projected keyed tape structure > clock transport keeps canonical decimal text beyond host integer ranges [0.27ms]
+(pass) projected keyed tape structure > Result uses failure=0/success=1, with value/error alias order [0.07ms]
+
+harness/truth/session/clock.test.ts:
+(pass) exact clock and numeric target boundary > decimal round trips beyond both numeric target ranges [0.30ms]
+(pass) exact clock and numeric target boundary > noncanonical transport and numeric overflow refuse [0.27ms]
+(pass) exact clock and numeric target boundary > nanoseconds are checked exactly before any numeric conversion [0.04ms]
+(pass) exact clock and numeric target boundary > stock TestClock rejects an overflowing adjustment before mutation [4.30ms]
+(pass) exact clock and numeric target boundary > stock TestClock refuses an overflowing deadline without a program failure [1.86ms]
+(pass) exact clock and numeric target boundary > refusal takes precedence even after a concurrent root completes [1.03ms]
+
+ 23 pass
+ 0 fail
+ 63 expect() calls
+Ran 23 tests across 2 files. [1399.00ms]

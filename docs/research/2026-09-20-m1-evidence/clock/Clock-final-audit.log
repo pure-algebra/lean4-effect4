@@ -1,0 +1,7 @@
+Effect4.Data.ClockMillis: 0 of 8 theorems closed from their statements; 0 source lines they now take
+Effect4.Store.Clock: 1 of 3 theorems closed from their statements; 1 source lines they now take
+  1	33-33	Effect4.Store.ClockCanonical.fits	[propext]
+'Effect4.ClockMillis.ofDecimal' does not depend on any axioms
+'Effect4.ClockMillis.ofDecimal_toDecimal' depends on axioms: [propext, Quot.sound]
+'Effect4.ClockMillis.ofDecimal_exact' depends on axioms: [propext]
+'Effect4.Store.instCanonicalClockMillis' depends on axioms: [propext, Quot.sound]

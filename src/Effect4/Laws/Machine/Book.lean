@@ -1,3 +1,4 @@
+import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Machine.Behaviour
 
 /-!
@@ -43,7 +44,8 @@ inductive ListRel {α β : Type w} (R : α → β → Prop) : List α → List �
   | cons {a b l l'} : R a b → ListRel R l l' → ListRel R (a :: l) (b :: l')
 
 theorem cons_eq_of {α : Type w} {a b : α} {l l' : List α} (h : a = b) (h' : l = l') :
-    a :: l = b :: l' := by rw [h, h']
+    a :: l = b :: l' :=
+  by aesop
 
 theorem ListRel.append {α β : Type w} {R : α → β → Prop} {l₁ l₂ r₁ r₂}
     (h : ListRel R l₁ l₂) (h' : ListRel R r₁ r₂) : ListRel R (l₁ ++ r₁) (l₂ ++ r₂) := by
@@ -138,12 +140,12 @@ def DispatcherMeans (C : κ₁ → κ₂ → Prop)
     (d₁ : Dispatcher ν σ β ε δ ι α κ₁) (d₂ : Dispatcher ν σ β ε δ ι α κ₂) : Prop :=
   ListRel (BucketMeans C) d₁.buckets d₂.buckets ∧ d₁.armed = d₂.armed
 
-/-- `Race`: six code-free fields and the unforked entrant programs. -/
+/-- `Race`: seven code-free fields, including the next source site, and the unforked entrant programs. -/
 def RaceMeans (C : κ₁ → κ₂ → Prop)
     (r₁ : Race ν σ β ε δ ι α κ₁) (r₂ : Race ν σ β ε δ ι α κ₂) : Prop :=
   r₁.id = r₂.id ∧ r₁.host = r₂.host ∧ r₁.token = r₂.token ∧
     r₁.state = r₂.state ∧ r₁.settled = r₂.settled ∧ r₁.registering = r₂.registering ∧
-    ListRel C r₁.programs r₂.programs
+    ListRel C r₁.programs r₂.programs ∧ r₁.nextSite = r₂.nextSite
 
 /-! ## The control projection -/
 
@@ -156,6 +158,7 @@ structure FiberControl (ε δ ι α χ : Type u) : Type u where
   interruptedCause : Option (Cause ε δ ι α)
   deferredInterrupt : Bool
   context : χ
+  origin : Origin
 
 /-- One function of the `FiberCore` instance. The mask is read only while the fiber is
 live: the finite battery compared it that way when the frame's `finishFrame` still
@@ -165,13 +168,13 @@ def controlOf {κ φ : Type (max u v)} [c : FiberCore ν β ε δ ι α κ φ]
     (f : RunFiber ν σ β ε δ ι α χ κ φ) : FiberControl ε δ ι α χ :=
   ⟨f.id, f.parked,
     if f.exit.isSome then none else some (c.interruptible f.frame),
-    c.interruptedCause f.frame, c.deferredInterrupt f.frame, f.context⟩
+    c.interruptedCause f.frame, c.deferredInterrupt f.frame, f.context, f.origin⟩
 
-/-! ## The fifteen fields of `RunFiber` and the ten of `RunMachine` -/
+/-! ## The sixteen fields of `RunFiber` and the ten of `RunMachine` -/
 
 /-- Code-free by equality: `id`, `running`, `parked`, `pending`, `finalizing`, `exit`,
 `currentOpCount`, `maxOpsBeforeYield`, `preventYield`, `yieldOverride`, `observers`,
-`children`, `context` (thirteen; `Pending` carries a name, never code). Code-carrying:
+`children`, `context`, `origin` (fourteen; `Pending` carries a name, never code). Code-carrying:
 `dispatcher`, through `Task.resume`. Related by `S`: `frame`, live or exited (the loop may
 re-enter an exited fiber's saved state through a late `loop`/`deliver` command, and the
 exit path only clears it). -/
@@ -247,29 +250,37 @@ theorem MachineOk.state (h : MachineOk StOk m) : StOk m.state := h.1
 theorem MachineOk.fibers (h : MachineOk StOk m) : ∀ f ∈ m.fibers, PendingOk f := h.2
 
 theorem machineOk_emit (h : MachineOk StOk m) (e : List (RunEvent ν σ β ε δ ι α χ κ η)) :
-    MachineOk StOk (m.emit e) := h
+    MachineOk StOk (m.emit e) :=
+  by aesop
 
-theorem machineOk_halt (h : MachineOk StOk m) (why : Stuck) : MachineOk StOk (m.halt why) := h
+theorem machineOk_halt (h : MachineOk StOk m) (why : Stuck) : MachineOk StOk (m.halt why) :=
+  by aesop
 
 theorem machineOk_disarm (h : MachineOk StOk m) (owner : FiberId) :
-    MachineOk StOk (m.disarm owner) := h
+    MachineOk StOk (m.disarm owner) :=
+  by aesop
 
-theorem machineOk_arm (h : MachineOk StOk m) (owner : FiberId) : MachineOk StOk (m.arm owner) := h
+theorem machineOk_arm (h : MachineOk StOk m) (owner : FiberId) : MachineOk StOk (m.arm owner) :=
+  by aesop
 
 theorem machineOk_middleware (h : MachineOk StOk m) :
-    MachineOk StOk { m with middlewareInstalled := true } := h
+    MachineOk StOk { m with middlewareInstalled := true } :=
+  by aesop
 
 theorem machineOk_updateRace (h : MachineOk StOk m) (r : Race ν σ β ε δ ι α κ) :
-    MachineOk StOk (m.updateRace r) := h
+    MachineOk StOk (m.updateRace r) :=
+  by aesop
 
 theorem machineOk_stateOf (h : MachineOk StOk m) {s : St} (hs : StOk s) :
     MachineOk StOk { m with state := s } := ⟨hs, h.2⟩
 
 theorem pendingOk_dispatcher {f : RunFiber ν σ β ε δ ι α χ κ φ} (hf : PendingOk f)
-    (d : Dispatcher ν σ β ε δ ι α κ) : PendingOk { f with dispatcher := d } := hf
+    (d : Dispatcher ν σ β ε δ ι α κ) : PendingOk { f with dispatcher := d } :=
+  by aesop
 
 theorem pendingOk_yield {f : RunFiber ν σ β ε δ ι α χ κ φ} (hf : PendingOk f) (v : Option Bool) :
-    PendingOk { f with yieldOverride := v } := hf
+    PendingOk { f with yieldOverride := v } :=
+  by aesop
 
 theorem pendingOk_of_fiber? (h : MachineOk StOk m) {id : FiberId} {f : RunFiber ν σ β ε δ ι α χ κ φ}
     (hf : m.fiber? id = some f) : PendingOk f :=
@@ -333,7 +344,8 @@ theorem BookMeans.stuck (h : BookMeans C S m₁ m₂) : m₁.stuck = m₂.stuck 
 lists (decision D3). -/
 theorem book_emit (h : BookMeans C S m₁ m₂) (e₁ : List (RunEvent ν σ β ε δ ι α χ κ₁ η₁))
     (e₂ : List (RunEvent ν σ β ε δ ι α χ κ₂ η₂)) :
-    BookMeans C S (m₁.emit e₁) (m₂.emit e₂) := h
+    BookMeans C S (m₁.emit e₁) (m₂.emit e₂) :=
+  by aesop
 
 theorem book_halt (h : BookMeans C S m₁ m₂) (why : Stuck) :
     BookMeans C S (m₁.halt why) (m₂.halt why) :=
@@ -377,6 +389,10 @@ theorem fiberMeans_parked {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
 theorem fiberMeans_context {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (h : FiberMeans C S f₁ f₂) : f₁.context = f₂.context :=
   congrArg FiberControl.context h.1
+
+theorem fiberMeans_origin {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
+    {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (h : FiberMeans C S f₁ f₂) : f₁.origin = f₂.origin :=
+  congrArg FiberControl.origin h.1
 
 theorem fiberMeans_interruptedCause {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (h : FiberMeans C S f₁ f₂) :
@@ -748,7 +764,8 @@ theorem flushAllState_succ (i : RunInterp ν σ β ε δ ι α χ St κ₁) (fue
          if m.stuck.isSome then (m, true)
          else if (fireState i fuel m owner).2 then
            flushAllState i fuel n (fireState i fuel m owner).1
-         else fireState i fuel m owner) := rfl
+         else fireState i fuel m owner) :=
+  by aesop
 
 theorem book_flushAllState (hstep : StepAgrees i₁ i₂ StOk C S) (fuel : Nat) :
     ∀ (rounds : Nat) (a : RunMachine ν σ β ε δ ι α χ St κ₁ φ₁ η₁)
@@ -788,7 +805,8 @@ theorem flushRootState_zero (i : RunInterp ν σ β ε δ ι α χ St κ₁) (fu
     flushRootState i fuel root 0 m =
       (match m.fiber? root with
        | none => (m, true)
-       | some o => (m, o.dispatcher.buckets.isEmpty || m.stuck.isSome)) := rfl
+       | some o => (m, o.dispatcher.buckets.isEmpty || m.stuck.isSome)) :=
+  by aesop
 
 theorem flushRootState_succ (i : RunInterp ν σ β ε δ ι α χ St κ₁) (fuel : Nat) (root : FiberId)
     (n : Nat) (m : RunMachine ν σ β ε δ ι α χ St κ₁ φ₁ η₁) :
@@ -895,11 +913,22 @@ def HooksAgree (StOk : St → Prop) (C : κ₁ → κ₂ → Prop) (S : φ₁ �
 
 /-- The advance lemma (the timer, A4): fire by fire, the two instances drain the same owed
 resume, drive and flush in the book, and recur on machines in the book. -/
+def M1Clock.book_advanceState (_hstep : StepAgrees i₁ i₂ StOk C S)
+    (_hclock : ∀ millis s, StOk s →
+      StOk (i₁.clockStep millis s).2 ∧ (i₁.clockStep millis s).2 = (i₂.clockStep millis s).2 ∧
+        ListRel (OwedMeans C) (i₁.clockStep millis s).1.toList (i₂.clockStep millis s).1.toList)
+    (fuel : Nat) (millis : ClockMillis) : ProofGraph.Obligation (∀ (rounds : Nat) (a : RunMachine ν σ β ε δ ι α χ St κ₁ φ₁ η₁)
+      (b : RunMachine ν σ β ε δ ι α χ St κ₂ φ₂ η₂), MachineOk StOk a → BookMeans C S a b →
+      MachineOk StOk (advanceState i₁ fuel millis rounds a).1 ∧
+        BookMeans C S (advanceState i₁ fuel millis rounds a).1 (advanceState i₂ fuel millis rounds b).1 ∧
+        (advanceState i₁ fuel millis rounds a).2 = (advanceState i₂ fuel millis rounds b).2) := ⟨⟩
+#proof_wanted M1Clock.book_advanceState
+
 theorem book_advanceState (hstep : StepAgrees i₁ i₂ StOk C S)
     (hclock : ∀ millis s, StOk s →
       StOk (i₁.clockStep millis s).2 ∧ (i₁.clockStep millis s).2 = (i₂.clockStep millis s).2 ∧
         ListRel (OwedMeans C) (i₁.clockStep millis s).1.toList (i₂.clockStep millis s).1.toList)
-    (fuel millis : Nat) :
+    (fuel : Nat) (millis : ClockMillis) :
     ∀ (rounds : Nat) (a : RunMachine ν σ β ε δ ι α χ St κ₁ φ₁ η₁)
       (b : RunMachine ν σ β ε δ ι α χ St κ₂ φ₂ η₂), MachineOk StOk a → BookMeans C S a b →
       MachineOk StOk (advanceState i₁ fuel millis rounds a).1 ∧
@@ -1082,7 +1111,8 @@ theorem replayEval_nil (i : RunInterp ν σ β ε δ ι α χ St κ₁) (fuel : 
     replayEval i fuel [] m =
       (match m.stuck with
        | some why => ReplayResult.stuck why m
-       | none => if m.finished then ReplayResult.finished m else ReplayResult.frontier .tape m) := rfl
+       | none => if m.finished then ReplayResult.finished m else ReplayResult.frontier .tape m) :=
+  by aesop
 
 theorem replayEval_cons (i : RunInterp ν σ β ε δ ι α χ St κ₁) (fuel : Nat)
     (d : RunDecision ν σ β ε δ ι α) (tape : List (RunDecision ν σ β ε δ ι α))
@@ -1093,7 +1123,8 @@ theorem replayEval_cons (i : RunInterp ν σ β ε δ ι α χ St κ₁) (fuel :
        | none =>
          if (stepDecisionState i fuel m d).2 then
            replayEval i fuel tape (stepDecisionState i fuel m d).1
-         else ReplayResult.frontier .fuel (stepDecisionState i fuel m d).1) := rfl
+         else ReplayResult.frontier .fuel (stepDecisionState i fuel m d).1) :=
+  by aesop
 
 /-- **Replay agrees.** Two instances with `StepAgrees` and the hook obligations replay
 every tape to the same classification and related books. -/

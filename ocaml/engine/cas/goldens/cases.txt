@@ -30,8 +30,8 @@
 #   nodesVal ns  = list (map (fun (d, n) => pair (bytes d) (bytes (Node.encode n))) ns)
 #   storeVal s   = pair (nodesVal s.nodes) (list (map rootVal s.roots))
 #   entryVal e   = ctor 0 [nat observers, nat layerScope, nat deferred.index]
-#                  (effect : Program and finalizer : FinName have no canonical encoding and
-#                   are held fixed across the G4 world, so entryVal is injective on it)
+#                  (finalizer : FinName has no canonical encoding and is held fixed
+#                   across the G4 world, so entryVal is injective on it)
 #   mapVal m     = ctor 0 [nat id, option (nat parent), list (pair layer entry)]
 #   worldVal w   = list (map mapVal w)
 #   entriesVal   = list (pair (list (map nat layer)) (entryVal entry))

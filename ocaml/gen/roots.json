@@ -94,7 +94,8 @@
       ],
       "cap": 2000,
       "types": [
-        "Effect4.Program.RowShape"
+        "Effect4.Program.RowShape",
+        "Effect4.Machine.Origin"
       ],
       "roots": [
         "Effect4.Api.run",

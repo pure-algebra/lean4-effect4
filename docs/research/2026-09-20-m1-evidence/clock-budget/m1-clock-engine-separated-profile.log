@@ -1,0 +1,17 @@
+ROOT Effect4.Api.run: flows=615 todos=0 hb=0
+ROOT Effect4.Api.replay: flows=613 todos=0 hb=0
+ROOT Effect4.Machine.stepDecisionState: flows=93 no clock boundary
+ROOT Effect4.Machine.driveState: flows=81 no clock boundary
+ROOT Effect4.Machine.settled: flows=2 no clock boundary
+ROOT Effect4.Machine.FnName.total: flows=1 no clock boundary
+ROOT Effect4.Machine.FnName.partialUpdate: flows=2 no clock boundary
+ROOT Effect4.Machine.FnName.modify: flows=2 no clock boundary
+ROOT Effect4.Machine.FnName.modifySome: flows=3 no clock boundary
+ROOT Effect4.Scope.make: flows=2 no clock boundary
+ROOT Effect4.Scope.fork: flows=11 no clock boundary
+ROOT Effect4.Machine.RunFiber.make: flows=2 no clock boundary
+ROOT Effect4.Machine.emptyCtx: flows=1 no clock boundary
+ROOT Effect4.Program.compile: flows=129 todos=0 hb=0
+ROOT Effect4.Machine.stores: flows=235 no clock boundary
+ROOT Effect4.Program.Node.child: flows=2 no clock boundary
+TOTAL: todos=#[] analysis=76478 all=118107

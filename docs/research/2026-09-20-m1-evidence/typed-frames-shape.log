@@ -1,0 +1,59 @@
+frame rules: 16 checked theorems, 87 reused clauses, 9 explicit premises
+frame rules: 44 checked theorems, 77 reused clauses, 31 explicit premises
+fun {W} =>
+  RunFiberOk.frame_origin : ∀ {W : Type} (P : Preds W) (w : W) (e : Expect)
+  (x :
+    Machine.RunFiber EffName EffThunk Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann Machine.Ctx
+      Sched.RProgram Sched.RSaved),
+  RunFiberOk P w e x →
+    ∀ (value : Machine.Origin),
+      RunFiberOk P w e
+        { id := x.1, frame := x.2, running := x.3, parked := x.4, pending := x.5, finalizing := x.6, exit := x.7,
+          currentOpCount := x.8, maxOpsBeforeYield := x.9, preventYield := x.10, yieldOverride := x.11,
+          observers := x.12, children := x.13, dispatcher := x.14, context := x.15, origin := value }
+fun {W} =>
+  RunFiberOk.frame_id : ∀ {W : Type} (P : Preds W) (w : W) (e : Expect)
+  (x :
+    Machine.RunFiber EffName EffThunk Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann Machine.Ctx
+      Sched.RProgram Sched.RSaved),
+  RunFiberOk P w e x →
+    ∀ (value : FiberId),
+      RSavedOk P w
+          (Expect.fiber
+            { id := value, frame := x.2, running := x.3, parked := x.4, pending := x.5, finalizing := x.6, exit := x.7,
+                currentOpCount := x.8, maxOpsBeforeYield := x.9, preventYield := x.10, yieldOverride := x.11,
+                observers := x.12, children := x.13, dispatcher := x.14, context := x.15, origin := x.16 }.id)
+          { id := value, frame := x.2, running := x.3, parked := x.4, pending := x.5, finalizing := x.6, exit := x.7,
+              currentOpCount := x.8, maxOpsBeforeYield := x.9, preventYield := x.10, yieldOverride := x.11,
+              observers := x.12, children := x.13, dispatcher := x.14, context := x.15, origin := x.16 }.frame →
+        (∀ (v0 : Exit Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann),
+            { id := value, frame := x.2, running := x.3, parked := x.4, pending := x.5, finalizing := x.6, exit := x.7,
+                    currentOpCount := x.8, maxOpsBeforeYield := x.9, preventYield := x.10, yieldOverride := x.11,
+                    observers := x.12, children := x.13, dispatcher := x.14, context := x.15,
+                    origin := x.16 }.finalizing =
+                some v0 →
+              P.exit w
+                (Expect.fiber
+                  { id := value, frame := x.2, running := x.3, parked := x.4, pending := x.5, finalizing := x.6,
+                      exit := x.7, currentOpCount := x.8, maxOpsBeforeYield := x.9, preventYield := x.10,
+                      yieldOverride := x.11, observers := x.12, children := x.13, dispatcher := x.14, context := x.15,
+                      origin := x.16 }.id)
+                v0) →
+          (∀ (v0 : Exit Machine.Val Machine.Err Machine.Defect FiberId Machine.Ann),
+              { id := value, frame := x.2, running := x.3, parked := x.4, pending := x.5, finalizing := x.6,
+                      exit := x.7, currentOpCount := x.8, maxOpsBeforeYield := x.9, preventYield := x.10,
+                      yieldOverride := x.11, observers := x.12, children := x.13, dispatcher := x.14, context := x.15,
+                      origin := x.16 }.exit =
+                  some v0 →
+                P.exit w
+                  (Expect.fiber
+                    { id := value, frame := x.2, running := x.3, parked := x.4, pending := x.5, finalizing := x.6,
+                        exit := x.7, currentOpCount := x.8, maxOpsBeforeYield := x.9, preventYield := x.10,
+                        yieldOverride := x.11, observers := x.12, children := x.13, dispatcher := x.14, context := x.15,
+                        origin := x.16 }.id)
+                  v0) →
+            RunFiberOk P w e
+              { id := value, frame := x.2, running := x.3, parked := x.4, pending := x.5, finalizing := x.6,
+                exit := x.7, currentOpCount := x.8, maxOpsBeforeYield := x.9, preventYield := x.10,
+                yieldOverride := x.11, observers := x.12, children := x.13, dispatcher := x.14, context := x.15,
+                origin := x.16 }

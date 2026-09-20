@@ -99,7 +99,7 @@
     },
     {
       "Name": "Api",
-      "Imports": "Effect4.Api.Frontier,Effect4.Store.Canonical",
+      "Imports": "Effect4.Api.Frontier,Effect4.Store.Canonical,Effect4.Store.Clock",
       "Out": "src\\Effect4\\Api\\Derived.lean",
       "Guards": "tools\\Effect4Gen\\guards\\api.lean",
       "Kinds": [],
@@ -127,7 +127,7 @@
     {
       "Note": "The runner's byte boundary: a journal row, its verdict and what a holder observes. `ReasonAnnotations` has a proof field, so its instance is the hand one in Store/AnnotationsCanonical.lean; every applied carrier is listed before the type that holds it.",
       "Name": "Runner",
-      "Imports": "Effect4.Api.Runner,Effect4.Store.Derived.Value,Effect4.Store.AnnotationsCanonical,Effect4.Program.Derived,Effect4.Api.Derived",
+      "Imports": "Effect4.Api.Runner,Effect4.Store.Derived.Value,Effect4.Store.AnnotationsCanonical,Effect4.Store.Clock,Effect4.Program.Derived,Effect4.Api.Derived",
       "Out": "src\\Effect4\\Api\\RunnerDerived.lean",
       "Guards": "tools\\Effect4Gen\\guards\\runner.lean",
       "Kinds": [],

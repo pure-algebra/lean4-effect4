@@ -1,0 +1,22 @@
+STAGE start: current=2780862 init=2780610 used=0 max=200000
+STAGE translation first: current=63477414 init=2780610 used=60696 max=200000
+STAGE types first: current=63674046 init=2780610 used=60893 max=200000
+STAGE translation collision: current=124354386 init=2780610 used=121573 max=200000
+STAGE types collision: current=124544286 init=2780610 used=121763 max=200000
+STAGE emission: current=124789591 init=2780610 used=122008 max=200000
+STAGE manifest: current=127195049 init=2780610 used=124414 max=200000
+closure: 664 of --cap 2000 (1336 of headroom); manifest ocaml/gen/closure-api_gen.tsv
+missing (no mono decl): #[]
+wrapper referenced directly: #[Effect4.Machine.Stores.wakeList, Effect4.Store.Image.toList, Effect4.Store.Image.ofList, Effect4.Machine.Value.toExit, Effect4.Machine.Value.ofExit, Effect4.Store.Image.ofCtor1, Effect4.Machine.Value.toReason, Effect4.Machine.Value.ofReason, Effect4.Store.Image.toOption, Effect4.Store.Image.ofOption, Effect4.Store.Image.ofCtor2, Effect4.Store.Image.toPair, Effect4.Store.Image.ofPair]
+todos (0):
+types in full: #[Effect4.Machine.RunDecision, Effect4.Machine.ReplayResult, Effect4.Api.Outcome, Effect4.Api.Inspection, Effect4.Machine.Defect, Effect4.PrimInterp, Effect4.Program.EffName, Effect4.Machine.Name, Effect4.Store.Val, Effect4.Machine.RunInterp, Effect4.Machine.Stores, Effect4.Machine.ExternalStore, Effect4.Machine.DeferredStore, Effect4.Machine.RunMachine, Effect4.Machine.Origin, Effect4.Machine.Exhaustion, Effect4.Api.FrontierReason, Effect4.Program.Point, Effect4.IterStep, Effect4.Prim, Effect4.LoopNext, Effect4.Program.EffThunk, Effect4.Machine.Thunk, Effect4.Machine.ActionName, Effect4.Machine.WithFiberAction, Effect4.Supervision.MaskMode, Effect4.Supervision.ForkOptions, Effect4.Program.NativeOp, Effect4.Exit, Effect4.Machine.Completion, Effect4.Machine.FinName, Effect4.Supervision.ScopeMode, Effect4.Machine.Ctx, Effect4.Supervision.ObserverMode, Effect4.Store.Image, Effect4.Machine.SyncOp, Effect4.Machine.Env.ContextUpdate, Effect4.Program.Region, Effect4.FinalizerStrategy, Effect4.Program.Node, Effect4.Program.Eff, Effect4.Machine.Capture, Effect4.Machine.WakeKey, Effect4.Machine.HandleKind, Effect4.Program.Row, Effect4.FrameFiber, Effect4.Machine.Parked, Effect4.Machine.RunFiber, Effect4.Machine.Cmd, Effect4.Machine.RunEvent, Effect4.Machine.TimerStore, Effect4.Machine.WakeList, Effect4.Machine.Err, Effect4.Program.Stmts, Effect4.Program.Stmt, Effect4.Program.ActionTerm, Effect4.Machine.ScopeEntry, Effect4.Machine.MemoMap, Effect4.Machine.MemoEntry, Effect4.Machine.DeferredCell, Effect4.Program.Registration, Effect4.Program.RowKind, Effect4.Machine.Owed, Effect4.Machine.ProgName, Effect4.Machine.ParkKind, Effect4.ServiceKey, Effect4.Program.LayerTerm, Effect4.Program.CombineMode, Effect4.Program.Term, Effect4.Reason, Effect4.Program.Decision, Effect4.Program.Ty, Effect4.Machine.Dispatcher, Effect4.Api.HostProtocol.Key, Effect4.Machine.Waiter, Effect4.Program.Effs, Effect4.Machine.RaceName, Effect4.Scope, Effect4.Machine.WakeMode, Effect4.Machine.Env.Service, Effect4.Program.LayerTerms, Effect4.Program.Lit, Effect4.Program.Terms, Effect4.Program.CauseTerm, Effect4.Machine.Race, Effect4.Supervision.RaceAllState, Effect4.Machine.Observer, Effect4.Machine.Resume, Effect4.Machine.Pending, Effect4.Machine.Outcome, Effect4.Machine.Iter, Effect4.Machine.Task, Effect4.ScopeState, Effect4.Machine.FnName, Effect4.Program.NativeAtom, Effect4.ReasonTag, Effect4.Machine.Bucket, Effect4.Machine.Stuck, Effect4.Machine.Env.Context.Reference, Effect4.FramePop, Effect4.ContAnswer, Effect4.Arm, Effect4.Supervision.WaitState, Effect4.FrameEvent, Effect4.FrameStep, Effect4.Program.RowShape]
+types as abbreviations: #[Effect4.ServiceUniverse, Effect4.FiberId, Effect4.ReasonAnnotations, Effect4.Cause, Effect4.Machine.DeferredKey, Effect4.Machine.MemoMapId, Effect4.Machine.Env.Context, Effect4.Machine.ScopeStore, Effect4.Machine.RefKey, Effect4.ServiceName, Effect4.ServiceTypeCode]
+types as placeholders: #[]
+requested but not inductive: #[]
+field types not spelled: #[]
+type-name collisions renamed to their full path: #[(outcome, (Effect4.Api.Outcome, Effect4.Machine.Outcome))]
+type-name collisions left unresolved: #[]
+Ml.checkModule: PASS (0 diagnostics)
+STAGE Ml.checkModule: current=127332723 init=2780610 used=124552 max=200000
+NO OUTPUT: rendered 1036271 bytes, manifest 114478 bytes
+STAGE render: current=127365559 init=2780610 used=124584 max=200000

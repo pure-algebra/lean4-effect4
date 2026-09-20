@@ -58,7 +58,6 @@ def stateSources : List Row := [
   ("Effect4.Machine.Stores.refs", .column "HeapNat"),
   ("Effect4.Machine.DeferredCell.completion", .column "PromiseTable"),
   ("Effect4.Machine.Owed.code", .column "PromiseTable"),
-  ("Effect4.Machine.MemoEntry.effect", .column "PromiseTable"),
   ("Effect4.Machine.Completion.ofExit.exit", .column "PromiseTable"),
   ("Effect4.Machine.Capture.env", .custom "CaptureOk"),
   ("Effect4.ScopeState.closed.exit",

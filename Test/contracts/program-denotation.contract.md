@@ -77,7 +77,7 @@ rc.112, and it is not an equivalence, a bisimulation, or a trace agreement
 Not modelled here: generators, `whileLoop`, `choose`, the masks, `yieldNow`, `callback`,
 `awaitFiber`, `withFiber`, `scoped`, `acquireRelease`, async rows, program rows, a second
 fiber, the trace, the cause component of a reified failed exit (`TYPED-FB-CAUSE`), the
-stored program of a completed Deferred (`STORES-FB-COMPLETION`), and the types `.int`,
+payload handles of a completed Deferred, and the types `.int`,
 `.except`, `.causeOf`, `.never` and unknown handle targets, which no value of this cut
 inhabits at the empty external allocation table (`TYPED-FB-INT`). `.string` and `.option` are inhabited since the DB-15 amendment
 below.
@@ -338,7 +338,7 @@ appears only in the batteries.
 | `E4-DEN-CE-001` | SEEDED | An ill-formed `sync` term is a defect, as an ill-formed `succeed` is | `.sync (.var 3)` at `[]`: the machine answers `success unit` (`syncValueAt`'s `getD`), `.succeed (.var 3)` answers `die badName` | `denote (.sync t)` uses `getD Val.unit`; `denote (.succeed v)` uses `badShapeExit` |
 | `E4-DEN-CE-002` | SEEDED | The store handler may fail on a key the store never minted | `storeHandler.handle (.refGet ⟨5⟩) Stores.empty = (Val.unit, Stores.empty)`, as `stores.syncState` falls back to `syncValue` | the handler's `none` arm is the machine's fallback, never a defect |
 | `E4-DEN-CE-003` | SEEDED | The denotation and the machine agree on the trace | the trace of `Api.run pBindSync 400` holds `frame` events; `denote` performs only store operations | `run_eq_meaning` is stated on exit and stores; trace agreement is a later row under a mask |
-| `E4-STORES-CE-003` | SEEDED | `Stores.WF` covers the program a completed Deferred stores | `deferredCompleteWith ⟨0⟩ (Completion.ofRefGet ⟨9⟩)` on a fresh cell is valid, steps, and leaves a `WF` store whose stored program reads a cell the heap never minted | `WF` is not widened (`STORES-FB-COMPLETION`) |
+| `E4-STORES-CE-003` | SEEDED | `Stores.WF` validates the payload handles of a completed Deferred | `deferredCompleteWith ⟨0⟩ (Completion.ofRefGet ⟨9⟩)` on a fresh cell is valid, steps, and leaves a `WF` store whose stored completion reads a cell the heap never minted | `WF` is not widened; the missing-reference boundary remains |
 | `E4-STORES-CE-004` | SEEDED | The memo world's refcount law holds by store steps alone | it needs the build-after-miss protocol (`Stores.MemoKeysNodup`); a second `memoBuild` on a present layer leaves an unobserved entry after a release (`StoresLawsContract` §Rows) |
 | `E4-DEN-CE-004` | SEEDED | `run_eq_meaning` covers the whole straight-line fragment | `Straight pOnExit = true`; the copy `Plain pOnExit` was `false` at the first landing and `true` since the repair; `Plain` deleted 2026-09-16 (B5) | the finalizer mask is modelled (`exitFrom`, `maskStack`); the theorem is stated on `Straight` |
 | `E4-PROGRESS-CE-001` | SEEDED | `answer_typed` needs no more than `Stores.WF` | the heap `[Val.bool true]` is `WF`; `refGet ⟨0⟩` answers `Val.bool true`, not a `.nat` | `answer_typed` carries `Stores.HeapNat` |

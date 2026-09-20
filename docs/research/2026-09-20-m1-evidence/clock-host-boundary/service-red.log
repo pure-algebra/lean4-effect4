@@ -1,0 +1,55 @@
+bun test v1.4.2 (744846f84)
+
+harness/truth/session/clock.test.ts:
+(pass) exact clock and numeric target boundary > decimal round trips beyond both numeric target ranges [1.31ms]
+(pass) exact clock and numeric target boundary > noncanonical transport and numeric overflow refuse [0.30ms]
+(pass) exact clock and numeric target boundary > nanoseconds are checked exactly before any numeric conversion [0.04ms]
+24 |   test("the provided service exposes only the pinned Clock readers and checked sleep", async () => {
+25 |     const clock = await Rc112ClockBoundary.make()
+26 |     try {
+27 |       const fields = await Effect.runPromise(clock.provide(Clock.clockWith(service =>
+28 |         Effect.succeed(Object.keys(service).sort()))))
+29 |       expect(fields).toEqual([
+                          ^
+error: expect(received).toEqual(expected)
+
+  [
++   "adjust",
+    "currentTimeMillis",
+    "currentTimeMillisUnsafe",
+    "currentTimeNanos",
+    "currentTimeNanosUnsafe",
+    "monotonicTimeNanos",
+    "monotonicTimeNanosUnsafe",
++   "setTime",
+    "sleep",
++   "withLive",
+  ]
+
+- Expected  - 0
++ Received  + 3
+
+      at <anonymous> (/Users/pooks/Dev/lean4-effect4/harness/truth/session/clock.test.ts:29:22)
+(fail) exact clock and numeric target boundary > the provided service exposes only the pinned Clock readers and checked sleep [1.28ms]
+45 |   })
+46 |   test("in-program TestClock mutation is unsupported and cannot bypass the numeric boundary", async () => {
+47 |     for (const mutation of [TestClock.adjust(9007199254740992), TestClock.setTime(9007199254740992)]) {
+48 |       const clock = await Rc112ClockBoundary.make()
+49 |       try {
+50 |         await expect(Effect.runPromise(clock.provide(mutation))).rejects.toThrow("not a function")
+                                                                              ^
+error: expect(received).rejects.toThrow(expected)
+
+Expected promise that rejects
+Received promise that resolved: Promise { <resolved> }
+
+      at <anonymous> (/Users/pooks/Dev/lean4-effect4/harness/truth/session/clock.test.ts:50:74)
+(fail) exact clock and numeric target boundary > in-program TestClock mutation is unsupported and cannot bypass the numeric boundary [0.71ms]
+(pass) exact clock and numeric target boundary > stock TestClock rejects an overflowing adjustment before mutation [0.22ms]
+(pass) exact clock and numeric target boundary > stock TestClock refuses an overflowing deadline without a program failure [2.52ms]
+(pass) exact clock and numeric target boundary > refusal takes precedence even after a concurrent root completes [0.76ms]
+
+ 6 pass
+ 2 fail
+ 30 expect() calls
+Ran 8 tests across 1 file. [1367.00ms]

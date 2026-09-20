@@ -1,0 +1,4 @@
+✔ [16/18] Built OCaml5.Lcnf.ClockFlow (1.2s)
+✔ [17/18] Built OCaml5.Lcnf.Translate (2.1s)
+✔ [18/18] Built Test.Audit.ClockLowering (3.0s)
+Build completed successfully (18 jobs).

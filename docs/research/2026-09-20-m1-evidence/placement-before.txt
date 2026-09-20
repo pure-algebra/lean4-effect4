@@ -1,0 +1,4 @@
+Stored pre-placement report, not a fresh producer run.
+Path: docs/core/architecture-map.html
+SHA256: 6eb751f25f6dcee1d1f82770a13e69e9d05c26f88061942dc4c270b8ea55a6ef
+Against-direction rows: 26

@@ -1,11 +1,12 @@
 import Effect4.Api
+import Effect4.Laws.Machine.CompletionData
 
 /-!
 # Laws.Program.Guard.RaceSites: where a code can park on a race, and who owns it
 
 The race sites of a code (`raceSites`, `stepRaceSites`, `actionRaceSites`), the ownership
 predicates over them (`RaceCodeOwned`, `RaceIdsBelow`, `FrameCodeOwned`, `RaceHostsPreserved`,
-`DeferredCodes`, `StoredCodeNoRace`, `HooksNoRace`) and the lemmas that every compiled code, hook
+`HooksNoRace`) and the lemmas that every compiled code, hook
 and stored answer registers no race. Stated once. `Guard/Core.lean` (the reachable-machine
 induction) and `Guard/FrameOwned.lean` (the returned-frame ownership) both build on it. Until
 2026-09-17 each carried its own copy of these fifty-nine declarations, and `Guard/Settle.lean`
@@ -120,6 +121,8 @@ theorem raceSites_completion (answer : Completion Val Err Defect FiberId Ann) :
   cases answer
   · exact raceSites_embed_ofExit _
   · rfl
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] raceSites_completion
 
 theorem raceSites_cancelProgram (name : Name) :
     raceSites (embed (cancelProgram name)) = [] := by
@@ -315,11 +318,11 @@ theorem hooksNoRace_interpAt (root : NativeEff) (completed : List (FiberId × Ex
       | exact raceSites_store_iterNext _ _
 
 def actionRaceSites : NAction → List Nat
-  | .fork code _ => raceSites code
-  | .forkIn code _ _ => raceSites code
-  | .forkScoped code _ => raceSites code
+  | .fork code _ _ => raceSites code
+  | .forkIn code _ _ _ => raceSites code
+  | .forkScoped code _ _ => raceSites code
   | .setInterruptible code _ => raceSites code
-  | .raceAll codes => codes.flatMap raceSites
+  | .raceAll codes _ => codes.flatMap raceSites
   | .closePar codes => codes.flatMap raceSites
   | _ => []
 
@@ -448,17 +451,22 @@ theorem race_lookup_fresh {m : NativeMachine} (bounds : RaceIdsBelow m) :
   intro race hr h
   exact (Nat.ne_of_lt (bounds race hr)) (of_decide_eq_true h)
 
+def M1Origin.raceCodeOwned_beginRace (p : NativeEff) (table : RowTable)
+    (m : NativeMachine) (f : NFiber) (yielding : Bool) (entrants : List NCode)
+    (_bounds : RaceIdsBelow m) (site : Option (List Nat) := none) : ProofGraph.Obligation (RaceCodeOwned (beginRace (interpOf p table) m f yielding entrants site).machine f.id
+      (beginRace (interpOf p table) m f yielding entrants site).fiber.frame.current) := ⟨⟩
+
 theorem raceCodeOwned_beginRace (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (entrants : List NCode)
-    (bounds : RaceIdsBelow m) :
-    RaceCodeOwned (beginRace (interpOf p table) m f yielding entrants).machine f.id
-      (beginRace (interpOf p table) m f yielding entrants).fiber.frame.current := by
+    (bounds : RaceIdsBelow m) (site : Option (List Nat) := none) :
+    RaceCodeOwned (beginRace (interpOf p table) m f yielding entrants site).machine f.id
+      (beginRace (interpOf p table) m f yielding entrants site).fiber.frame.current := by
   intro raceId hr
   change raceId ∈ [m.nextRace] at hr
   have hid := List.mem_singleton.mp hr
   subst raceId
   let race : NRace := ⟨m.nextRace, f.id, m.nextToken,
-    { Supervision.RaceAllState.initial [] with remaining := entrants.length }, false, entrants, false⟩
+    { Supervision.RaceAllState.initial [] with remaining := entrants.length }, false, entrants, false, site⟩
   refine ⟨race, ?_, rfl⟩
   change (m.races ++ [race]).find? (fun r => r.id = m.nextRace) = some race
   have hf : m.races.find? (fun r => r.id = m.nextRace) = none := race_lookup_fresh bounds
@@ -469,50 +477,7 @@ def FrameCodeOwned (m : NativeMachine) (f : NFiber) : Prop :=
   RaceCodeOwned m f.id f.frame.current ∧
     ∀ code ∈ f.frame.stack, RaceCodeOwned m f.id code
 
-/-- Deferred completions are native store programs with no scheduler race sites. -/
-def StoredCodeNoRace (code : Effect4.Machine.Program) : Prop := raceSites (embed code) = []
-
-def DeferredCodes (d : DeferredStore) : Prop :=
-  (∀ cell ∈ d.cells, ∀ code, cell.completion = some code → StoredCodeNoRace code) ∧
-    ∀ owed ∈ d.due, StoredCodeNoRace owed.code
-
-theorem deferredCodes_cellAt {d : DeferredStore} (hd : DeferredCodes d) {cell : DeferredKey}
-    {c : DeferredCell} (h : d.cellAt cell = some c) :
-    ∀ p, c.completion = some p → StoredCodeNoRace p :=
-  hd.1 c (List.mem_of_getElem? h)
-
-theorem deferredCodes_make {d : DeferredStore} (hd : DeferredCodes d) : DeferredCodes (d.make).2 := by
-  refine ⟨fun cell hc p hp => ?_, hd.2⟩
-  simp only [DeferredStore.make, List.mem_append, List.mem_singleton] at hc
-  rcases hc with hc | rfl
-  · exact hd.1 cell hc p hp
-  · cases hp
-
-theorem deferredCodes_setCell {d : DeferredStore} (hd : DeferredCodes d) (cell : DeferredKey)
-    {c : DeferredCell} (hc : ∀ p, c.completion = some p → StoredCodeNoRace p) :
-    DeferredCodes (d.setCell cell c) := by
-  refine ⟨fun cell' hc' p hp => ?_, hd.2⟩
-  rcases List.mem_or_eq_of_mem_set hc' with hm | rfl
-  · exact hd.1 cell' hm p hp
-  · exact hc p hp
-
-theorem deferredCodes_register {d : DeferredStore} (hd : DeferredCodes d) (cell : DeferredKey)
-    (waiter : FiberId) (token : Nat) :
-    DeferredCodes (d.register cell waiter token).1 ∧
-      ∀ p, (d.register cell waiter token).2 = some p → StoredCodeNoRace p := by
-  unfold DeferredStore.register
-  cases hc : d.cellAt cell with
-  | none => exact ⟨hd, fun p hp => by cases hp⟩
-  | some c =>
-    dsimp only
-    cases hcomp : c.completion with
-    | some effect =>
-      dsimp only
-      exact ⟨hd, fun p hp => by rw [← Option.some.inj hp]; exact deferredCodes_cellAt hd hc _ hcomp⟩
-    | none =>
-      dsimp only
-      refine ⟨deferredCodes_setCell hd cell (fun p hp => ?_), fun p hp => by cases hp⟩
-      simp only at hp
-      cases hp
+#typed_state_obligations Effect4.Program.Guard.M1Origin ceiling 0 using
+  aesop (rule_sets := [Effect4.Stores]) (add safe apply [raceCodeOwned_beginRace])
 
 end Effect4.Program.Guard

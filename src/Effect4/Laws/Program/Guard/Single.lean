@@ -1,3 +1,4 @@
+import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Program.Guard.Core
 
 /-! Single-fiber guard equality, internal proof support only.
@@ -285,7 +286,10 @@ theorem held_flushAllState (p : NativeEff) (table : RowTable) (fuel rounds : Nat
         · exact ih (held_fireState p table fuel h _)
         · exact held_fireState p table fuel h _
 
-theorem timer_fireNext_keys (timers : TimerStore) (target : Nat) (code : Effect4.Machine.Program) :
+def M1Clock.timer_fireNext_keys (timers : TimerStore) (target : ClockMillis) (code : Completion Val Err Defect FiberId Ann) : ProofGraph.Obligation (wakeKeys (timers.fireNext target code).2.wake ⊆ wakeKeys timers.wake) := ⟨⟩
+#proof_wanted M1Clock.timer_fireNext_keys
+
+theorem timer_fireNext_keys (timers : TimerStore) (target : ClockMillis) (code : Completion Val Err Defect FiberId Ann) :
     wakeKeys (timers.fireNext target code).2.wake ⊆ wakeKeys timers.wake := by
   cases hd : TimerStore.dueMin target timers.wake.waiters with
   | none => simp only [TimerStore.fireNext_none timers target code hd]; exact List.Subset.refl _
@@ -297,7 +301,10 @@ theorem timer_fireNext_keys (timers : TimerStore) (target : Nat) (code : Effect4
       exact List.mem_append_left _ (List.mem_map.mpr ⟨w, List.mem_of_mem_erase hw, rfl⟩)
     · exact List.mem_append_right _ hk
 
-theorem timer_clockStep_keys (timers : TimerStore) (millis : Nat) (code : Effect4.Machine.Program) :
+def M1Clock.timer_clockStep_keys (timers : TimerStore) (millis : ClockMillis) (code : Completion Val Err Defect FiberId Ann) : ProofGraph.Obligation (wakeKeys (timers.clockStep millis code).2.wake ⊆ wakeKeys timers.wake) := ⟨⟩
+#proof_wanted M1Clock.timer_clockStep_keys
+
+theorem timer_clockStep_keys (timers : TimerStore) (millis : ClockMillis) (code : Completion Val Err Defect FiberId Ann) :
     wakeKeys (timers.clockStep millis code).2.wake ⊆ wakeKeys timers.wake := by
   have hs := timer_fireNext_keys timers (timers.target.getD (timers.now + millis)) code
   unfold TimerStore.clockStep
@@ -306,27 +313,43 @@ theorem timer_clockStep_keys (timers : TimerStore) (millis : Nat) (code : Effect
     rw [hc] at hs
     cases owed <;> simpa only [hc] using hs
 
-theorem clockStep_storeKeys (p : NativeEff) (table : RowTable) (stores : Stores) (millis : Nat) :
+def M1Clock.clockStep_storeKeys (p : NativeEff) (table : RowTable) (stores : Stores) (millis : ClockMillis) : ProofGraph.Obligation (storeKeys ((interpOf p table).clockStep millis stores).2 ⊆ storeKeys stores) := ⟨⟩
+#proof_wanted M1Clock.clockStep_storeKeys
+
+theorem clockStep_storeKeys (p : NativeEff) (table : RowTable) (stores : Stores) (millis : ClockMillis) :
     storeKeys ((interpOf p table).clockStep millis stores).2 ⊆ storeKeys stores := by
-  change storeKeys { stores with timers := (stores.timers.clockStep millis (Prim.success Val.unit)).2 } ⊆ _
-  exact storeKeys_mono (timer_clockStep_keys stores.timers millis (Prim.success Val.unit)) (List.Subset.refl _)
+  change storeKeys { stores with timers := (stores.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).2 } ⊆ _
+  exact storeKeys_mono (timer_clockStep_keys stores.timers millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)) (List.Subset.refl _)
+
+def M1Clock.clockStep_owed_safe (p : NativeEff) (table : RowTable) {m : NativeMachine}
+    {fiber : FiberId} {token : Nat} {request : NativeOp × Val}
+    (_h : Held m fiber token request) (millis : ClockMillis) (owed : Owed NCode)
+    (_ho : ((interpOf p table).clockStep millis m.state).1 = some owed) : ProofGraph.Obligation ((owed.waiter, owed.token) ≠ (fiber, token)) := ⟨⟩
+#proof_wanted M1Clock.clockStep_owed_safe
 
 theorem clockStep_owed_safe (p : NativeEff) (table : RowTable) {m : NativeMachine}
     {fiber : FiberId} {token : Nat} {request : NativeOp × Val}
-    (h : Held m fiber token request) (millis : Nat) (owed : Owed NCode)
+    (h : Held m fiber token request) (millis : ClockMillis) (owed : Owed NCode)
     (ho : ((interpOf p table).clockStep millis m.state).1 = some owed) :
     (owed.waiter, owed.token) ≠ (fiber, token) := by
   have hk : (owed.waiter, owed.token) ∈ wakeKeys m.state.timers.wake := by
-    change ((m.state.timers.clockStep millis (Prim.success Val.unit)).1.map
-      (Owed.mapCode embed)) = some owed at ho
+    change ((m.state.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).1.map
+      (Owed.mapCode (fun c => embed (completionPrim c)))) = some owed at ho
     obtain ⟨o, he, rfl⟩ := Option.map_eq_some_iff.mp ho
-    exact timer_clockStep_key _ millis (Prim.success Val.unit) o he
+    exact timer_clockStep_key _ millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann) o he
   intro he
   apply h.key
   simp only [internalKeys, List.mem_append]
   exact Or.inl (Or.inl (Or.inl (Or.inl (he ▸ hk))))
 
-theorem held_advanceState (p : NativeEff) (table : RowTable) (fuel millis rounds : Nat)
+def M1Clock.held_advanceState (p : NativeEff) (table : RowTable) (fuel : Nat) (millis : ClockMillis) (rounds : Nat)
+    {m : NativeMachine} {fiber : FiberId} {token : Nat} {request : NativeOp × Val}
+    (_h : Held m fiber token request) : ProofGraph.Obligation (
+    letI := evaluatorFor p table
+    Held (advanceState (interpOf p table) fuel millis rounds m).1 fiber token request) := ⟨⟩
+#proof_wanted M1Clock.held_advanceState
+
+theorem held_advanceState (p : NativeEff) (table : RowTable) (fuel : Nat) (millis : ClockMillis) (rounds : Nat)
     {m : NativeMachine} {fiber : FiberId} {token : Nat} {request : NativeOp × Val}
     (h : Held m fiber token request) :
     letI := evaluatorFor p table

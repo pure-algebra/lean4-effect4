@@ -9,4 +9,4 @@
 ;
 ; Not built from here: goldens/ (data). The avatar, the daemon `effect4d`, the wasm host,
 ; route 1 (link/) and the spike probes are archived on `archive/ocaml5-avatar` at `14e6835`.
-(dirs gen eff engine)
+(dirs gen eff engine clock)

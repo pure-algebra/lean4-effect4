@@ -32,15 +32,15 @@ open Effect4 Effect4.Machine Effect4.Program
 
 /-- `TestClock.adjust(d)` (`testing/TestClock.ts:507`): the decision that advances the clock
 by `millis` and runs every sleep that comes due. -/
-def adjust (millis : Nat) : Decision := RunDecision.advance millis
+def adjust (millis : ClockMillis) : Decision := RunDecision.advance millis
 
 /-- The decisions of a run that evaluates the root, adjusts the clock in order, and flushes. -/
-def tape (adjusts : List Nat) : List Decision :=
+def tape (adjusts : List ClockMillis) : List Decision :=
   [evaluate] ++ adjusts.map adjust ++ [flush]
 
 /-- `Api.replay` under the test clock: the root evaluated, the clock adjusted in order, the
 dispatcher flushed. -/
-def run (program : Program) (fuel : Nat) (adjusts : List Nat)
+def run (program : Program) (fuel : Nat) (adjusts : List ClockMillis)
     (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := [])
     (compileFuel : Nat := fuel) : Inspection :=
   replay program fuel (tape adjusts) answers table compileFuel
@@ -54,14 +54,14 @@ def sleepDeadlines (program : Program) : List Nat :=
 
 /-- The tape that adjusts once per literal sleep, in program order. Exact for a program
 whose sleeps run in sequence. -/
-def synthesize (program : Program) : List Decision := tape (sleepDeadlines program)
+def synthesize (program : Program) : List Decision := tape ((sleepDeadlines program).map ClockMillis.ofNat)
 
 /-- The run under the synthesized tape: a program whose sleeps run in sequence finishes with
 the clock at the sum of its literal sleeps. -/
 def runSequential (program : Program) (fuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := [])
     (compileFuel : Nat := fuel) : Inspection :=
-  run program fuel (sleepDeadlines program) answers table compileFuel
+  run program fuel ((sleepDeadlines program).map ClockMillis.ofNat) answers table compileFuel
 
 /-- Every sleep an immediate success: the identity fold with the invocation slot replaced. -/
 def fastForwardAlgebra : EffAlgebra NativeOp (EffSelfCarrier NativeOp) :=

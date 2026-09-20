@@ -1,3 +1,4 @@
+import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Program.Intro.Identity
 
 /-!
@@ -45,7 +46,7 @@ theorem weight_childWith_lt (p : Point) (i : Nat) (v : Val) (h : p.fuel ≠ 0) :
   simp only [Point.weight, Point.childWith]; omega
 
 theorem weight_completed (p : Point) (completed : List (FiberId × ExitV)) :
-    ({ p with completed } : Point).weight = p.weight := rfl
+    ({ p with completed } : Point).weight = p.weight := by aesop
 
 theorem fuel_child_le (p : Point) (i : Nat) : (p.child i).fuel ≤ p.fuel := by
   rw [Point.child_fuel]; exact Nat.sub_le _ _
@@ -141,25 +142,41 @@ variable {root : NativeEff} {p : Point} {a : ActionTerm NativeOp}
 
 include h
 
-theorem actionAt_fork {program : NCode} {options : Supervision.ForkOptions}
-    (hact : actionAt root p = some (.fork program options)) :
+def M1Origin.actionAt_fork {site : List Nat} {program : NCode} {options : Supervision.ForkOptions}
+    (_hact : actionAt root p = some (.fork program options site)) : ProofGraph.Obligation (program = resolve root ((p.child 0).child 0)) := ⟨⟩
+#proof_wanted M1Origin.actionAt_fork
+
+theorem actionAt_fork {site : List Nat} {program : NCode} {options : Supervision.ForkOptions}
+    (hact : actionAt root p = some (.fork program options site)) :
     program = resolve root ((p.child 0).child 0) := by
   cases a <;> simp only [actionAt, h, Option.some.injEq] at hact <;> (repeat' split at hact) <;>
     cases hact; rfl
 
-theorem actionAt_forkIn {program : NCode} {options : Supervision.ForkOptions} {scope : Nat}
-    (hact : actionAt root p = some (.forkIn program options scope)) :
+def M1Origin.actionAt_forkIn {site : List Nat} {program : NCode} {options : Supervision.ForkOptions} {scope : Nat}
+    (_hact : actionAt root p = some (.forkIn program options scope site)) : ProofGraph.Obligation (program = resolve root ((p.child 0).child 0)) := ⟨⟩
+#proof_wanted M1Origin.actionAt_forkIn
+
+theorem actionAt_forkIn {site : List Nat} {program : NCode} {options : Supervision.ForkOptions} {scope : Nat}
+    (hact : actionAt root p = some (.forkIn program options scope site)) :
     program = resolve root ((p.child 0).child 0) := by
   cases a <;> simp only [actionAt, h, Option.some.injEq] at hact <;> (repeat' split at hact) <;>
     cases hact; rfl
 
-theorem actionAt_not_forkScoped {program : NCode} {options : Supervision.ForkOptions}
-    (hact : actionAt root p = some (.forkScoped program options)) : False := by
+def M1Origin.actionAt_not_forkScoped {site : List Nat} {program : NCode} {options : Supervision.ForkOptions}
+    (_hact : actionAt root p = some (.forkScoped program options site)) : ProofGraph.Obligation (False) := ⟨⟩
+#proof_wanted M1Origin.actionAt_not_forkScoped
+
+theorem actionAt_not_forkScoped {site : List Nat} {program : NCode} {options : Supervision.ForkOptions}
+    (hact : actionAt root p = some (.forkScoped program options site)) : False := by
   cases a <;> simp only [actionAt, h, Option.some.injEq] at hact <;> (repeat' split at hact) <;>
     cases hact
 
-theorem actionAt_raceAll {entrants : List NCode}
-    (hact : actionAt root p = some (.raceAll entrants)) :
+def M1Origin.actionAt_raceAll {site : Option (List Nat)} {entrants : List NCode}
+    (_hact : actionAt root p = some (.raceAll entrants site)) : ProofGraph.Obligation (∃ es, a = .raceAll es ∧ entrants = actionAt.entrants es ((p.child 0).child 0)) := ⟨⟩
+#proof_wanted M1Origin.actionAt_raceAll
+
+theorem actionAt_raceAll {site : Option (List Nat)} {entrants : List NCode}
+    (hact : actionAt root p = some (.raceAll entrants site)) :
     ∃ es, a = .raceAll es ∧ entrants = actionAt.entrants es ((p.child 0).child 0) := by
   cases a <;> simp only [actionAt, h, Option.some.injEq] at hact <;> (repeat' split at hact) <;>
     cases hact; exact ⟨_, rfl, rfl⟩

@@ -29,7 +29,7 @@ theorem asyncRoute_means (root : NativeEff) (op : NativeOp) (r : Term) (p : Poin
     | some n =>
       cases n with
       | zero => exact CodeMeans.yieldNow 0 _ delivers_seqR_pure
-      | succ n => exact CodeMeans.asyncSleep (n + 1) (Val.nat (n + 1)) _ delivers_pure
+      | succ n => exact CodeMeans.asyncSleep (ClockMillis.ofNat (n + 1)) (Val.nat (n + 1)) _ delivers_pure
   | deferredAwait =>
     unfold denoteAsync
     cases evalTerm p.env r with

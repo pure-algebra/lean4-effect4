@@ -1,0 +1,85 @@
+STAGE start: current=2874964 init=2874712 used=0 max=200000
+STAGE translation first: current=80738552 init=2874712 used=77863 max=200000
+STAGE types first: current=80936763 init=2874712 used=78062 max=200000
+STAGE translation collision: current=158785830 init=2874712 used=155911 max=200000
+STAGE types collision: current=158976882 init=2874712 used=156102 max=200000
+STAGE emission: current=159202019 init=2874712 used=156327 max=200000
+STAGE manifest: current=161626075 init=2874712 used=158751 max=200000
+closure: 658 of --cap 2000 (1342 of headroom); manifest ocaml/gen/closure-api_engine.tsv
+missing (no mono decl): #[]
+wrapper referenced directly: #[Effect4.Machine.Stores.wakeList, Effect4.Machine.fireStep, Effect4.Exit.isSuccess, Effect4.Store.Image.toList, Effect4.Store.Image.ofList, Effect4.Store.Image.ofCtor1, Effect4.Machine.Value.toReason, Effect4.Machine.Value.ofReason, Effect4.Machine.Value.toExit, Effect4.Machine.Value.ofExit, Effect4.Store.Image.toOption, Effect4.Store.Image.ofOption, Effect4.Store.Image.toPair, Effect4.Store.Image.ofPair, Effect4.Store.Image.ofCtor2]
+todos (0):
+types in full: #[Effect4.Machine.RunDecision, Effect4.Machine.ReplayResult, Effect4.Api.Outcome, Effect4.Api.Inspection, Effect4.Machine.Cmd, Effect4.Machine.RunMachine, Effect4.Machine.FiberCore, Effect4.Machine.RunFiber, Effect4.Machine.RunEvent, Effect4.Store.Val, Effect4.Machine.FnName, Effect4.ScopeState, Effect4.Scope, Effect4.Machine.Parked, Effect4.Machine.Ctx, Effect4.Machine.Defect, Effect4.PrimInterp, Effect4.Machine.Name, Effect4.Machine.RunInterp, Effect4.Program.Node, Effect4.Program.Eff, Effect4.Program.Stmts, Effect4.Program.Stmt, Effect4.Program.ActionTerm, Effect4.Program.Effs, Effect4.Program.LayerTerm, Effect4.Program.LayerTerms, Effect4.Program.EffName, Effect4.Machine.Exhaustion, Effect4.Api.FrontierReason, Effect4.Machine.Race, Effect4.Supervision.RaceAllState, Effect4.Machine.Observer, Effect4.Machine.Resume, Effect4.Machine.Pending, Effect4.Machine.Outcome, Effect4.Machine.Iter, Effect4.Machine.ParkKind, Effect4.Program.EffThunk, Effect4.Prim, Effect4.Program.Point, Effect4.Program.NativeOp, Effect4.Program.RowKind, Effect4.Machine.Env.ContextUpdate, Effect4.Program.Region, Effect4.Store.Image, Effect4.Machine.Stores, Effect4.Machine.Thunk, Effect4.IterStep, Effect4.LoopNext, Effect4.Machine.ActionName, Effect4.Machine.FinName, Effect4.Supervision.ScopeMode, Effect4.Supervision.ObserverMode, Effect4.Machine.SyncOp, Effect4.Exit, Effect4.Machine.Completion, Effect4.Machine.WakeKey, Effect4.Machine.HandleKind, Effect4.Machine.ProgName, Effect4.Machine.WithFiberAction, Effect4.Supervision.MaskMode, Effect4.Supervision.ForkOptions, Effect4.Machine.ExternalStore, Effect4.FinalizerStrategy, Effect4.Machine.Capture, Effect4.Program.Row, Effect4.FrameFiber, Effect4.Machine.TimerStore, Effect4.Machine.WakeList, Effect4.Machine.Owed, Effect4.Machine.WakeMode, Effect4.Machine.Task, Effect4.Machine.Stuck, Effect4.Program.Term, Effect4.Machine.Err, Effect4.Reason, Effect4.Program.CauseTerm, Effect4.Machine.DeferredStore, Effect4.Machine.ScopeEntry, Effect4.Machine.MemoEntry, Effect4.Machine.DeferredCell, Effect4.Program.Registration, Effect4.ServiceKey, Effect4.Program.CombineMode, Effect4.Program.Decision, Effect4.Program.Ty, Effect4.Api.HostProtocol.Key, Effect4.Machine.Waiter, Effect4.Supervision.WaitState, Effect4.Program.Lit, Effect4.Program.Terms, Effect4.Machine.RaceName, Effect4.Machine.Env.Service, Effect4.Program.NativeAtom, Effect4.ReasonTag, Effect4.Machine.MemoMap, Effect4.Machine.Env.Context.Reference, Effect4.FramePop, Effect4.ContAnswer, Effect4.Arm, Effect4.FrameEvent, Effect4.FrameStep, Effect4.Program.RowShape]
+types as abbreviations: #[Effect4.ServiceUniverse, Effect4.FiberId, Effect4.ReasonAnnotations, Effect4.Cause, Effect4.Machine.Env.Context, Effect4.Machine.DeferredKey, Effect4.Machine.MemoMapId, Effect4.Machine.ScopeStore, Effect4.Machine.RefKey, Effect4.ServiceName, Effect4.ServiceTypeCode]
+types as placeholders: #[Effect4.Machine.Origin]
+requested but not inductive: #[]
+field types not spelled: #[]
+type-name collisions renamed to their full path: #[(outcome, (Effect4.Api.Outcome, Effect4.Machine.Outcome))]
+type-name collisions left unresolved: #[]
+Ml.checkModule: PASS (0 diagnostics)
+STAGE Ml.checkModule: current=161744007 init=2874712 used=158869 max=200000
+extern rows: 32 fn, 1 type, 9 field, 1 elem
+fn rows used (32):
+  Effect4.Api.load -> sh_api_load
+  Effect4.Machine.RunMachine.fiber? -> sh_machine_fiber
+  Effect4.Machine.RunMachine.update -> sh_machine_update
+  Effect4.Machine.RunMachine.emit -> sh_machine_emit
+  Effect4.Machine.Dispatcher.empty -> D.empty
+  Effect4.Program.rootPoint -> sh_root_point
+  Effect4.Machine.RunMachine.finished -> sh_machine_finished
+  Effect4.Machine.Dispatcher.drain -> D.drain
+  Effect4.Machine.Dispatcher.mk -> sh_dispatcher_mk
+  List.find?._at_.Effect4.Machine.ScopeStore.entryAt.spec_0 -> sh_scope_entry_at
+  Effect4.Program.Node.at_ -> sh_node_at
+  Effect4.Machine.spawn -> sh_spawn_generic
+  Effect4.Machine.DeferredStore.make -> sh_deferred_make
+  Effect4.Machine.ScopeStore.make -> sh_scope_store_make
+  Effect4.Machine.ScopeStore.setEntry -> sh_scope_set_entry
+  Effect4.Machine.ScopeStore.forkChild -> sh_scope_fork_child
+  Effect4.Machine.MemoMap.mk -> sh_memo_map_mk
+  Effect4.Machine.MemoWorld.updateEntry -> sh_memo_update_entry
+  Effect4.Machine.MemoWorld.insertEntry -> sh_memo_insert_entry
+  Effect4.Machine.MemoWorld.entryAt -> sh_memo_entry_at
+  Effect4.Machine.MemoWorld.deleteEntry -> sh_memo_delete_entry
+  Effect4.Machine.refStep -> sh_ref_step
+  Effect4.Machine.DeferredStore.cellAt -> sh_deferred_cell_at
+  Effect4.Machine.DeferredStore.setCell -> sh_deferred_set_cell
+  Effect4.Machine.Dispatcher.enqueue -> D.enqueue
+  Effect4.Program.Point.redirect -> sh_point_redirect
+  Nat.div -> E4_nat.div
+  Nat.mod -> E4_nat.rem
+  Effect4.Machine.RunMachine.completedExits -> sh_machine_completed_exits
+  Effect4.Machine.spawn._at_.Effect4.Machine.launchEntrant._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_12.spec_19 -> sh_spawn
+  Effect4.Machine.spawn._at_.Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_0.spec_1.spec_3 -> sh_spawn
+  List.mapTR.loop._at_.Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_0.spec_1.spec_12 -> sh_drop_observers
+type rows used (1): #[Effect4.Machine.Dispatcher]
+field rows used (9): #[Effect4.Machine.RunMachine.fibers, Effect4.Machine.RunMachine.trace, Effect4.Program.Point.path, Effect4.Program.Point.env, Effect4.Machine.Stores.refs, Effect4.Machine.Capture.path, Effect4.Machine.Capture.env, Effect4.Machine.DeferredStore.cells, Effect4.Machine.MemoMap.entries]
+elem rows used (1): #[Effect4.Machine.ScopeEntry]
+ops rows: 9, used (9): #[E.t#snoc, P.t#to_list, F.t#to_list, E.t#get, P.t#snoc, P.t#append, E.t#append, E.t#length, E.t#take]
+carg rows: 0 stated, used (9): #[Effect4.Program.evalTerm, Effect4.Program.causeOf, Effect4.Program.runStmts, Effect4.Program.caughtErrorValue?, Effect4.Program.evalTerms, Effect4.Program.blockExit, Effect4.Program.runStmts.yieldOf, Effect4.Program.loopExit, Effect4.Program.blockEnv]
+carg rows inferred from the call sites (9):
+  carg Effect4.Program.evalTerm 0 E.t
+  carg Effect4.Program.causeOf 0 E.t
+  carg Effect4.Program.runStmts 4 E.t
+  carg Effect4.Program.caughtErrorValue? 0 E.t
+  carg Effect4.Program.evalTerms 0 E.t
+  carg Effect4.Program.blockExit 3 E.t
+  carg Effect4.Program.runStmts.yieldOf 6 E.t
+  carg Effect4.Program.loopExit 4 E.t
+  carg Effect4.Program.blockEnv 4 E.t
+carrier to_list sites (13):
+  Effect4.Machine.WithFiberAction.fork.site [P.t]
+  Effect4.Machine.FinName.memoEntry.layer [P.t]
+  Effect4.Machine.SyncOp.memoBuild.layer [P.t]
+  Effect4.Machine.FinName.memoEntry.layer [P.t]
+  Effect4.Machine.FinName.memoDone.layer [P.t]
+  Effect4.Machine.SyncOp.memoGet.layer [P.t]
+  List.filterMapTR.go._at_.Effect4.Api.compileReasons.spec_0 #0 [F.t]
+  List.any._at_.Effect4.Api.hasRunnable.spec_0 #0 [F.t]
+  Effect4.Machine.WithFiberAction.fork.site [P.t]
+  Effect4.Machine.WithFiberAction.forkIn.site [P.t]
+  Option.some.val [P.t]
+  Effect4.Machine.WithFiberAction.forkIn.site [P.t]
+  List.filterMapTR.go._at_.Effect4.Program.awaits.spec_0 #1 [F.t]
+NO OUTPUT: rendered 1125318 bytes, manifest 111401 bytes
+STAGE render: current=161782387 init=2874712 used=158907 max=200000

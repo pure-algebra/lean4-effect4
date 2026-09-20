@@ -1,0 +1,8 @@
+ok   C1 no filter/erase/removeAll/dropWhile on RunMachine.fibers in src/Effect4/
+ok   C2 ocaml/gen builds and @gen/runtest passes (api_gen.ml is the oracle)
+ok   C3a dune build engine
+ok   C3b api_engine.ml type-checks against E4_clock/E4_nat interfaces: the functor needs no instance, so the
+          extern table is closed (every unconverted carrier site would be a type error)
+ok   C4 the generated file carries the current prelude
+
+gen-check: PASS

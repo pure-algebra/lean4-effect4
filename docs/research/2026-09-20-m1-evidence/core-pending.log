@@ -1,0 +1,3 @@
+ℹ [196/196] Built Effect4.Laws.Machine.CompletionData (1.8s)
+info: src/Effect4/Laws/Machine/CompletionData.lean:43:0: Effect4.Machine.M1.Core: 5 open, 0 proved, 5 total; ceiling 5
+Build completed successfully (196 jobs).

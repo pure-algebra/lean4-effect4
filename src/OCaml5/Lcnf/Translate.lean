@@ -5,6 +5,7 @@ import OCaml5.Lcnf.Dump
 import OCaml5.Lcnf.Naming
 import OCaml5.Lcnf.Types
 import OCaml5.Lcnf.Native
+import OCaml5.Lcnf.ClockFlow
 
 /-!
 # OCaml5.Lcnf.Translate
@@ -152,6 +153,7 @@ private def powClamped (a b : Ml.Expr) : Ml.Expr :=
 /-- The Lean constants with a native OCaml spelling. Names are unchecked literals: several
 are specialisations that only exist in the target's environment. -/
 def builtin? (n : Name) : Option Builtin :=
+  (Clock.builtin? (stripRedArg n)).orElse fun _ =>
   match stripRedArg n with
   -- Nat (63-bit caveat throughout)
   | `Nat.decEq | `Nat.beq | `instDecidableEqNat => some (bin "=")
@@ -309,6 +311,12 @@ structure St where
   /-- Free variables bound to a list literal: `none` is `[]`, `some e` is `[e]`. It is what
   tells `x ++ ys` from `x ++ [i]`, i.e. `append` from `snoc`. -/
   listLit : Std.HashMap FVarId (Option Ml.Expr) := {}
+  /-- Original naturals before the ordinary target's literal saturation. Clock ingress
+  consumes this provenance as canonical decimal text; aliases retain it. -/
+  natLit : Std.HashMap FVarId Nat := {}
+  /-- Values derived from a saturated natural after its exact literal provenance was lost.
+  A clock ingress must refuse these rather than reinterpret the narrowed target integer. -/
+  narrowedNat : Std.HashSet FVarId := {}
   /-- `ops` rows this declaration used, as `<carrier>#<op>`. -/
   usedOps : Array String := #[]
   /-- `carg` rows this declaration used, by the declaration the row names. -/
@@ -455,6 +463,54 @@ def argExpr? : Arg .pure → TM (Option Ml.Expr)
 def argExpr (a : Arg .pure) : TM Ml.Expr := do
   return (← argExpr? a).getD .unit
 
+/-- The natural literal an argument originated from, before target integer lowering. -/
+def argNatLit? : Arg .pure → TM (Option Nat)
+  | .fvar id => return (← get).natLit[id]?
+  | _ => return none
+
+/-- Whether an argument already depends on a natural the ordinary target narrowed. -/
+def argNarrowedNat : Arg .pure → TM Bool
+  | .fvar id => return (← get).narrowedNat.contains id
+  | _ => return false
+
+/-- Local literal and alias facts, independent of the ordinary Nat target's representation. -/
+def natFact? : LetValue .pure → TM (Option Nat)
+  | .lit (.nat n) => return some n
+  | .fvar id args => if args.isEmpty then return (← get).natLit[id]? else return none
+  | _ => return none
+
+/-- Dependency on a saturated literal propagates through local operations. Exact clock
+constructors consume that provenance and produce an exact value, so they clear the marker. -/
+def narrowedNatFact : LetValue .pure → TM Bool
+  | .lit (.nat n) => return n ≥ 4611686018427387904
+  | .fvar id args => do
+    if (← get).narrowedNat.contains id then return true
+    args.anyM argNarrowedNat
+  | .const n _ args =>
+    if stripRedArg n == `Effect4.ClockMillis.ofNat || n == `Effect4.ClockMillis.positive then
+      return false
+    else args.anyM argNarrowedNat
+  | .proj _ _ id => return (← get).narrowedNat.contains id
+  | _ => return false
+
+/-- Preserve a clock's known literal before the shared Nat path can narrow it. An
+unrecoverable local dependency is a located generation refusal. Dynamic Nat parameters
+still enter through the existing checked scalar-profile bridge. -/
+def clockNatIngress? (declName n : Name) (args : Array (Arg .pure)) : TM (Option Ml.Expr) := do
+  let name := stripRedArg n
+  let successor := name == `Effect4.ClockMillis.positive
+  unless successor || name == `Effect4.ClockMillis.ofNat do return none
+  let relevant := args.filter fun | .fvar _ => true | _ => false
+  let #[arg] := relevant | return none
+  if let some value ← argNatLit? arg then
+    let exactValue := if successor then value + 1 else value
+    return some (Ml.Expr.call "E4_clock.literal" [.str (toString exactValue)])
+  if ← argNarrowedNat arg then
+    let reason := s!"{declName}: {name} consumes a narrowed Nat without exact literal provenance"
+    todo reason
+    return some (.hole reason (.assertE (.bool false)))
+  return none
+
 /-! ## Carriers
 
 A `field` extern row changes a field's *type*, so the value read out of it is no longer the
@@ -554,7 +610,8 @@ def ctorApp (ci : ConstructorVal) (args : Array (Arg .pure)) : TM Ml.Expr := do
           else useAsList s!"{ci.name}.{fn}" c e
       rel := rel ++ [e]
       named := named ++ [(fieldName fn.toString, e)]
-  if let some native := Native.expression ci.name rel then return native
+  if let some clock := Clock.constructor? ci.name rel then return clock
+  else if let some native := Native.expression ci.name rel then return native
   else
     let env ← readEnv
     noteReal ci.induct
@@ -708,6 +765,7 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option 
     noteLocalArgs f args
     return (.app fv (← args.toList.mapM argExpr), none)
   | .const n _ args =>
+    if let some exactClock ← clockNatIngress? declName n args then return (exactClock, none)
     let env ← readEnv
     -- `Extract Constant`: the row wins over the constructor rule and over `builtin?`, so a
     -- carrier's own constructor (`Dispatcher.mk`, `MemoMap.mk`) can be re-spelled too. Erased
@@ -829,7 +887,13 @@ partial def code (declName : Name) (c : Code .pure) : TM Ml.Expr := do
   | .let decl k =>
     let (v, carr?) ← letValueExpr declName decl.value
     let lit? ← listFact? decl.value
+    let nat? ← natFact? decl.value
+    let narrowed ← narrowedNatFact decl.value
     let x ← bindVar decl.fvarId decl.binderName
+    if let some n := nat? then
+      modify fun s => { s with natLit := s.natLit.insert decl.fvarId n }
+    if narrowed then
+      modify fun s => { s with narrowedNat := s.narrowedNat.insert decl.fvarId }
     if let some c := carr? then setCarrier decl.fvarId c
     if let some f := lit? then
       modify fun s => { s with listLit := s.listLit.insert decl.fvarId f }
@@ -844,6 +908,9 @@ partial def code (declName : Name) (c : Code .pure) : TM Ml.Expr := do
   | .return x => return .var (← nameOf x)
   | .unreach _ => return .assertE (.bool false)
   | .cases cs =>
+    if Clock.owns cs.typeName then
+      todo s!"{declName}: raw ClockMillis elimination escapes its checked operations"
+      return .hole "raw ClockMillis elimination" (.assertE (.bool false))
     let d ← nameOf cs.discr
     if cs.typeName == ``Bool then
       let mut t? : Option Ml.Expr := none
@@ -1007,13 +1074,14 @@ structure Closure where
 private def pushNew (a : Array Name) (n : Name) : Array Name :=
   if a.contains n then a else a.push n
 
-/-- Translate `roots` and, transitively, every non-builtin constant they call, up to `cap`
-declarations. -/
-def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
-    (ex : Externs := {}) : CoreM Closure := do
+/-- Collect the translated closure and its original mono dependency graph. Intermediate
+carrier-inference rounds stay private; only the final checked closure is returned publicly. -/
+private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
+    (ex : Externs := {}) : CoreM (Closure × Array ClockFlow.Flow) := do
   let env ← getEnv
   let mono := Conform.Lcnf.persistedMonoIndex env
   let mut c : Closure := {}
+  let mut clockFlows : Array ClockFlow.Flow := #[]
   let mut done : NameSet := {}
   let mut queue : Array Name := roots
   let mut i := 0
@@ -1034,17 +1102,23 @@ def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {
       c := { c with missing := pushNew c.missing n }
       continue
     let d := d?.get!
+    clockFlows := clockFlows.push (ClockFlow.ofDecl d)
     -- the wrapper folds onto its twin
     let mut d := d
     let mut userName := n
     match redArgTarget? d with
     | some twin =>
       done := done.insert twin
-      if let some dt := mono.findIn? env twin then d := dt
+      if let some dt := mono.findIn? env twin then
+        d := dt
+        clockFlows := clockFlows.push (ClockFlow.ofDecl dt)
     | none =>
       -- a twin reached directly: its wrapper is the user-facing name
       userName := stripRedArg n
-      if userName != n then done := done.insert userName
+      if userName != n then
+        done := done.insert userName
+        if let some wrapper := mono.findIn? env userName then
+          clockFlows := clockFlows.push (ClockFlow.ofDecl wrapper)
     let (t, st) := translateDecl env d userName (globalName userName) tn ex
     c := { c with
       decls := c.decls.push t,
@@ -1063,7 +1137,15 @@ def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {
           if (mono.findIn? env (callee ++ `_redArg)).isSome then
             c := { c with wrapperRefs := pushNew c.wrapperRefs callee }
         queue := queue.push callee
-  return c
+  return (c, clockFlows)
+
+/-- Translate `roots` and, transitively, every non-builtin constant they call, up to `cap`
+declarations. Validate the final closure at the clock boundary before returning it. -/
+def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
+    (ex : Externs := {}) : CoreM Closure := do
+  let (closure, clockFlows) ← collectClosure roots cap tn ex
+  let todos := ClockFlow.refusals (← getEnv) roots clockFlows
+  return { closure with todos := closure.todos ++ todos }
 
 /-- `translateClosure`, with the carrier parameters inferred. A carrier that has no `to_list`
 operation can only be passed on as itself, so a generated callee that is handed one takes it as
@@ -1076,7 +1158,9 @@ def translateClosureInferring (roots : Array Name) (cap : Nat := 60) (tn : TypeN
     (ex : Externs := {}) : CoreM (Closure × Externs × Array String) := do
   let mut ex := ex
   let mut inferred : Array String := #[]
-  let mut closure ← translateClosure roots cap tn ex
+  let (initial, initialFlows) ← collectClosure roots cap tn ex
+  let mut closure := initial
+  let mut clockFlows := initialFlows
   for _ in [:64] do
     if closure.wantedCargs.isEmpty then break
     for (g, i, c) in closure.wantedCargs do
@@ -1085,10 +1169,15 @@ def translateClosureInferring (roots : Array Name) (cap : Nat := 60) (tn : TypeN
       unless prev.any (fun row => row.1 == CargParam.pos i) do
         ex := { ex with cargs := ex.cargs.insert key (prev ++ [(CargParam.pos i, [c])]) }
         inferred := inferred.push s!"carg {key} {i} {c}"
-    closure ← translateClosure roots cap tn ex
+    let (next, nextFlows) ← collectClosure roots cap tn ex
+    closure := next
+    clockFlows := nextFlows
   unless closure.wantedCargs.isEmpty do
     throwError "carrier parameters still unsettled after 64 rounds: {closure.wantedCargs}"
-  return (closure, ex, inferred)
+  -- Carrier rows affect translation, so validate the graph of the settled result.
+  -- Checking intermediate results repeats the same analysis without returning an artifact.
+  let todos := ClockFlow.refusals (← getEnv) roots clockFlows
+  return ({ closure with todos := closure.todos ++ todos }, ex, inferred)
 
 /-! ## Emission: strongly connected components, dependencies first -/
 

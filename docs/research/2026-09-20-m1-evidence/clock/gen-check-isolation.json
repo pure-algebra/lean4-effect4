@@ -1,0 +1,61 @@
+{
+  "scope": "gen-check C3b isolated type check",
+  "reason": "Generated clock operations refer to E4_clock; the isolated compilation must receive its declared abstract interface. No clock implementation or engine instance is copied.",
+  "verification": [
+    {
+      "command": [
+        "opam",
+        "exec",
+        "--switch=effect4",
+        "--",
+        "ocamlfind",
+        "ocamlopt",
+        "-c",
+        "e4_clock.mli"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "opam",
+        "exec",
+        "--switch=effect4",
+        "--",
+        "ocamlfind",
+        "ocamlopt",
+        "-c",
+        "clock_surface.ml"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": "File \"_none_\", line 1:\nWarning 58 [no-cmx-file]: no cmx file was found in path for module E4_clock, and its interface was not compiled with -opaque\n"
+    }
+  ],
+  "fullGeneratedCheck": "Pending final LCNF regeneration; this is an interface-only finite probe.",
+  "denoteRExpectedSites": {
+    "branchFork": [
+      1,
+      0
+    ],
+    "forkInTerm": [
+      0
+    ],
+    "scopedFork": [
+      0
+    ]
+  },
+  "siteEvidence": [
+    "src/Effect4/Program/Compile.lean actionAt: q := p.child 0; fork/forkIn site := q.path",
+    "src/Effect4/Program/Compile.lean forkScopedAt: site := (p.child 0).path",
+    "src/Effect4/Laws/Program/DenoteR.lean denoteFiberAction preserves those sites"
+  ],
+  "leanVerification": "Not run under root compiler lease.",
+  "casGoldensMaintenance": {
+    "source": "src/OCaml5/Tools/CasGoldens.lean",
+    "change": "Remove deleted MemoEntry.effect constructor field and fixedEffect fixture; describe only the omitted fixed finalizer.",
+    "projection": "entryVal byte expression unchanged",
+    "verification": "Source checked; narrow Lean build delegated to root before gen-cas."
+  }
+}

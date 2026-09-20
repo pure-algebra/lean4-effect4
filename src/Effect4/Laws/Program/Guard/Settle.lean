@@ -131,16 +131,6 @@ theorem active_noExit {m : NativeMachine} {f : NFiber} (state : GuardState m)
     have stopped := (state.exited f (List.mem_of_find?_eq_some lookup) hx).2
     exact False.elim (Bool.noConfusion (stopped.symm.trans running))
 
-/-- The guard state's stored answers are safe codes, in the shape the frame-ownership lemmas
-ask for. -/
-theorem guardState_deferredCodes {m : NativeMachine} (state : GuardState m) :
-    DeferredCodes m.state.deferreds := by
-  constructor
-  · intro cell hc code hp
-    exact state.internalCodes.1 cell hc code (by simp only [hp, Option.mem_some_iff])
-  · intro owed ho
-    exact state.internalCodes.2.1 owed ho
-
 theorem native_settledFiber_valid (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (state : GuardState m)
     (lookup : m.fiber? f.id = some f) (running : f.running = true)
@@ -164,7 +154,7 @@ theorem native_settledFiber_valid (p : NativeEff) (table : RowTable)
   · exact Effect4.Program.Guard.DeferredCause.evaluateNative_deferredCause p table m f yielding
       (state.deferredCause f mem)
   · exact Effect4.Program.Guard.FrameOwned.evaluateNative_frameOwned p table m f yielding
-      state.racesBelow (state.frameCodes f mem) (guardState_deferredCodes state)
+      state.racesBelow (state.frameCodes f mem)
   · exact tasks
 
 theorem iteration_settledFiber_valid (p : NativeEff) (table : RowTable)
@@ -193,7 +183,7 @@ theorem iteration_settledFiber_valid (p : NativeEff) (table : RowTable)
   · exact Effect4.Program.Guard.DeferredCause.iteration_deferredCause p table m f yielding
       (state.deferredCause f mem)
   · exact Effect4.Program.Guard.FrameOwned.iteration_frameOwned p table m f yielding
-      state.racesBelow (state.frameCodes f mem) (guardState_deferredCodes state)
+      state.racesBelow (state.frameCodes f mem)
   · exact tasks
 
 theorem returnedFiber_reserved (m : NativeMachine) (f : NFiber) (it : NIter)

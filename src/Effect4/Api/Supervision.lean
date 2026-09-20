@@ -158,26 +158,6 @@ def ForkSite.parent (sites : List ForkSite) (s : ForkSite) : Option ForkSite :=
       | some b => if b.body.length < t.body.length then some t else some b
       | none => some t) none
 
-/-! ## The `forked` events of a trace
-
-What the machine stamps when it forks. Kept beside the static table so the law that the two
-agree has both halves in one place. -/
-
-/-- Every `RunEvent.forked` of a trace, as parent, child and the daemon flag the machine
-stamped. -/
-def forkedOf {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {κ η : Type (max u v)}
-    (trace : List (RunEvent ν σ β ε δ ι α χ κ η)) : List (FiberId × FiberId × Bool) :=
-  trace.filterMap fun
-    | .forked parent child daemon => some (parent, child, daemon)
-    | _ => none
-
-/-- The `forked` events of a run. -/
-def forkedEvents (m : Machine) : List (FiberId × FiberId × Bool) := forkedOf m.trace
-
-/-- The fibers this run forked, whatever the flag. A fiber that is not among them was not
-forked: it is the fiber the run started. -/
-def forkedIds (m : Machine) : List FiberId := (forkedEvents m).map (·.2.1)
-
 /-! ## The fibers of a run: supervision during it -/
 
 /-- One fiber of the machine at the application's alphabet. -/
@@ -193,7 +173,7 @@ the run itself started is held by the driver, outside the machine.
 `root` is the one alternative the brief for this module did not ask for, and the machine
 forces it: a fresh root is untracked and unpinned exactly as a detached daemon is, so without
 it every run would report its own root as a loose daemon and `daemonsQuiet` would decide
-nothing. The `forked` events of the trace separate them, and only they can. -/
+nothing. The origin recorded on the fiber separates them. -/
 inductive FiberStatus
   /-- `parent` tracks it (`RunFiber.children`, `Machine/Fibers.lean:244`), so the parent's
   exit interrupts it (`:1724`, `RunEvent.childrenInterrupted`). -/
@@ -204,7 +184,7 @@ inductive FiberStatus
   /-- Alive, forked, untracked and unpinned: DI-75's fiber, whose rows appear on neither
   face. -/
   | daemon
-  /-- The fiber the run started: no `forked` event names it as a child. -/
+  /-- The fiber the run started, recorded by its root origin. -/
   | root
   /-- It has exited. -/
   | exited (exit : ExitV)
@@ -231,7 +211,7 @@ def pinOf (f : Fiber) : Option (Nat × Nat) :=
 
 /-- What the machine holds this fiber by: four observations, all of them machine state — its
 own exit, the fiber whose `children` name it, the scope link on its own observer list, and
-whether a `forked` event of the trace names it. -/
+its origin. -/
 def statusOf (m : Machine) (f : Fiber) : FiberStatus :=
   match f.exit with
   | some exit => .exited exit
@@ -241,7 +221,10 @@ def statusOf (m : Machine) (f : Fiber) : FiberStatus :=
     | none =>
       match pinOf f with
       | some (scope, key) => .pinned scope key
-      | none => if (forkedIds m).contains f.id then .daemon else .root
+      | none =>
+        match f.origin with
+        | .forked _ _ _ => .daemon
+        | .root => .root
 
 /-- Every fiber of the run with what holds it, in creation order (`spawn` appends and nothing
 removes a fiber, `Machine/Fibers.lean:922`). -/
@@ -281,9 +264,12 @@ def Inspection.unpinnedDaemonsAlive (r : Inspection) : List FiberId :=
 /-- Whether the run left no unpinned daemon alive. -/
 def Inspection.daemonsQuiet (r : Inspection) : Bool := Api.daemonsQuiet r.machine
 
-/-- Every fork the run made, with the flag the machine stamped. -/
+/-- Every fork recorded on the run's fibers, with its parent and daemon flag. -/
 def Inspection.forked (r : Inspection) : List (FiberId × FiberId × Bool) :=
-  forkedEvents r.machine
+  r.machine.fibers.filterMap fun f =>
+    match f.origin with
+    | .forked parent daemon _ => some (parent, f.id, daemon)
+    | .root => none
 
 /-! ## Receipts -/
 
@@ -357,7 +343,7 @@ driver and not by anything in the machine. Running programs is the battery's job
 private def loaded : Machine := load (.succeed (.lit (.nat 1))) 100
 
 #guard (loaded.fibers.map RunFiber.id) = [root]
-#guard forkedEvents loaded = []
+#guard loaded.fibers.map RunFiber.origin = [.root]
 #guard fiberStatuses loaded = [(root, .root)]
 #guard unpinnedDaemonsAlive loaded = []
 #guard daemonsQuiet loaded

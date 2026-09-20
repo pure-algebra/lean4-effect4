@@ -1,0 +1,177 @@
+== lane D: the drive loop, the conversion, the two instances of the generated engine ==
+  Fast = E4_table / E4_trace / E4_memo / E4_buckets / E4_ppath / E4_env / E4_fibers_view
+  Ref  = E4_table_list / E4_trace_list / E4_memo_list / E4_buckets_list / E4_ppath_list / E4_env_list / E4_fibers_view_list
+
+== 1. G0 on both instances (fuel 1000) ==
+  p42     Fast: outcome=finished fibers=1 exit=success 42 trace=3
+PASS G0 p42 on Fast (finished, fibers=1, success 42)
+PASS G0 p42 on Ref
+PASS G0 p42: Fast = Ref, whole report
+PASS G0 p42: the drive loop = the generated Api.run (Fast)
+PASS G0 p42: the drive loop = the generated Api.run (Ref)
+  pFork   Fast: outcome=finished fibers=2 exit=success ctor 0 [7] trace=26
+PASS G0 pFork on Fast (finished, fibers=2, success ctor 0 [7])
+PASS G0 pFork on Ref
+PASS G0 pFork: Fast = Ref, whole report
+PASS G0 pFork: the drive loop = the generated Api.run (Fast)
+PASS G0 pFork: the drive loop = the generated Api.run (Ref)
+  pAwait  Fast: outcome=frontier fibers=1 exit=<no exit> trace=4
+PASS G0 pAwait on Fast (frontier, fibers=1, no exit)
+PASS G0 pAwait on Ref
+PASS G0 pAwait: Fast = Ref, whole report
+PASS G0 pAwait: the drive loop = the generated Api.run (Fast)
+PASS G0 pAwait: the drive loop = the generated Api.run (Ref)
+
+== 2. the byte corpus: 37 programs, Fast vs Ref (fuel 1000) ==
+  /Users/pooks/Dev/lean4-effect4/ocaml/eff/goldens: 53 programs
+  p42              finished  fibers=1  trace=3    exits=1  EQ
+  pAcquire         finished  fibers=1  trace=9    exits=1  EQ
+  pActions         finished  fibers=1  trace=7    exits=1  EQ
+  pAwait           frontier  fibers=1  trace=4    exits=0  EQ
+  pBind            finished  fibers=1  trace=5    exits=1  EQ
+  pBranch          finished  fibers=1  trace=3    exits=1  EQ
+  pCallback        frontier  fibers=1  trace=4    exits=0  EQ
+  pCatch           finished  fibers=1  trace=5    exits=1  EQ
+  pCatchError      finished  fibers=1  trace=5    exits=1  EQ
+  pCatchIf         finished  fibers=1  trace=5    exits=1  EQ
+  pDiamond         finished  fibers=6  trace=196  exits=6  EQ
+  pExit            finished  fibers=1  trace=3    exits=1  EQ
+  pExternal        frontier  fibers=1  trace=2    exits=0  EQ
+  pFailCause       finished  fibers=1  trace=3    exits=1  EQ
+  pFailText        finished  fibers=1  trace=3    exits=1  EQ
+  pFork            finished  fibers=2  trace=26   exits=2  EQ
+  pGen             finished  fibers=1  trace=3    exits=1  EQ
+  pIll             finished  fibers=1  trace=3    exits=1  EQ
+  pIllBranch       finished  fibers=1  trace=3    exits=1  EQ
+  pIllBreak        finished  fibers=1  trace=3    exits=1  EQ
+  pIllCallback     finished  fibers=1  trace=5    exits=1  EQ
+  pIllCatchIf      finished  fibers=1  trace=5    exits=1  EQ
+  pIllCauseBool    finished  fibers=1  trace=3    exits=1  EQ
+  pIllExternalDomain finished  fibers=1  trace=5    exits=1  EQ
+  pIllFailBool     finished  fibers=1  trace=3    exits=1  EQ
+  pIllInterruptor  finished  fibers=1  trace=3    exits=1  EQ
+  pIllJoin         finished  fibers=1  trace=3    exits=1  EQ
+  pIllReq          finished  fibers=1  trace=3    exits=1  EQ
+  pIllRet          finished  fibers=1  trace=3    exits=1  EQ
+  pIllStep         finished  fibers=1  trace=9    exits=1  EQ
+  pIllVar          finished  fibers=1  trace=3    exits=1  EQ
+  pIterate         finished  fibers=1  trace=21   exits=1  EQ
+  pIterateAnswer   finished  fibers=1  trace=5    exits=1  EQ
+  pJoin            finished  fibers=2  trace=25   exits=2  EQ
+  pMasks           finished  fibers=1  trace=7    exits=1  EQ
+  pMatch           finished  fibers=1  trace=5    exits=1  EQ
+  pMergeAll        finished  fibers=8  trace=178  exits=8  EQ
+  pOnExit          finished  fibers=1  trace=15   exits=1  EQ
+  pOps             finished  fibers=1  trace=43   exits=1  EQ
+  pPair            finished  fibers=1  trace=3    exits=1  EQ
+  pProvide         finished  fibers=6  trace=316  exits=6  EQ
+  pScoped          finished  fibers=2  trace=14   exits=2  EQ
+  pSelectBool      finished  fibers=1  trace=3    exits=1  EQ
+  pSelectOption    finished  fibers=1  trace=5    exits=1  EQ
+  pSelectTag       finished  fibers=1  trace=3    exits=1  EQ
+  pSleep           frontier  fibers=1  trace=3    exits=0  EQ
+  pStmts           frontier  fibers=1  trace=6003 exits=0  EQ
+  pStr             finished  fibers=1  trace=3    exits=1  EQ
+  pSuspend         finished  fibers=1  trace=3    exits=1  EQ
+  pSync            finished  fibers=1  trace=3    exits=1  EQ
+  pTwo             finished  fibers=3  trace=41   exits=3  EQ
+  pWhile           finished  fibers=1  trace=21   exits=1  EQ
+  pYieldError      finished  fibers=1  trace=3    exits=1  EQ
+PASS every golden decodes (53/53)
+PASS Fast = Ref on every golden: outcome, exits, fibers, trace, store (53/53)
+
+== 3. the ordinal pin (M17) ==
+PASS the wire's alphabet is a PREFIX of the engine's, every family
+  /Users/pooks/Dev/lean4-effect4/ocaml/eff/eff_manifest.txt: 21 inductive families
+PASS eff_manifest.txt parses into inductive families
+PASS eff_manifest.txt = Eff_types = the engine (the content table)
+PASS mutation: a transposed `eff` arm in the manifest is REFUSED
+  92 + 92 constructor ordinals compared
+PASS ctor_index (of_x v) = Eff_types.ctor_index v, 92 arms on Fast
+PASS ctor_index (of_x v) = Eff_types.ctor_index v, 92 arms on Ref
+
+== 4. replay_steps (EN4) ==
+PASS replay_steps p42: |tape|+1 = 6 machines
+PASS replay_steps p42: the last is replay's
+PASS replay_steps p42: position i is replay of the first i
+PASS snapshot p42 is the value
+PASS replay_steps pFork: |tape|+1 = 6 machines
+PASS replay_steps pFork: the last is replay's
+PASS replay_steps pFork: position i is replay of the first i
+PASS snapshot pFork is the value
+PASS replay_steps pAwait: |tape|+1 = 6 machines
+PASS replay_steps pAwait: the last is replay's
+PASS replay_steps pAwait: position i is replay of the first i
+PASS snapshot pAwait is the value
+  chain 200 at fuel 20: Delay parked=[] armed=[] due=0
+PASS a starved run answers Delay (the residue is non-empty), not Suspended
+PASS a starved run's outcome is still Api.Outcome.frontier
+PASS Fast generated clock: load starts at zero
+PASS Fast generated clock: advance beyond max_int settles
+PASS Fast generated clock: large advance retains every digit
+PASS Fast generated clock: add seven settles
+PASS Fast generated clock: addition beyond max_int is exact
+PASS Fast generated clock: register sleep settles
+PASS Fast generated clock: sleep stores the exact now plus duration
+PASS Fast generated clock: advance before deadline settles
+PASS Fast generated clock: timer remains pending one millisecond before its deadline
+PASS Fast generated clock: cross deadline settles
+PASS Fast generated clock: timer fires and advance finishes at its exact target
+PASS Fast generated clock: add another large advance settles
+PASS Fast generated clock: successive large advances exceed signed 64-bit exactly
+PASS Ref generated clock: load starts at zero
+PASS Ref generated clock: advance beyond max_int settles
+PASS Ref generated clock: large advance retains every digit
+PASS Ref generated clock: add seven settles
+PASS Ref generated clock: addition beyond max_int is exact
+PASS Ref generated clock: register sleep settles
+PASS Ref generated clock: sleep stores the exact now plus duration
+PASS Ref generated clock: advance before deadline settles
+PASS Ref generated clock: timer remains pending one millisecond before its deadline
+PASS Ref generated clock: cross deadline settles
+PASS Ref generated clock: timer fires and advance finishes at its exact target
+PASS Ref generated clock: add another large advance settles
+PASS Ref generated clock: successive large advances exceed signed 64-bit exactly
+PASS Fast exact clock: large adjustment is accepted
+PASS Fast exact clock: clockNow explicitly refuses the numeric profile
+PASS Fast exact clock: mid-decision refusal retains the input machine
+PASS Fast exact clock: refused decision stays unread
+PASS Fast exact clock: refusal cannot become differential agreement
+PASS Fast exact clock: halted refusal holds the input machine
+PASS Ref exact clock: large adjustment is accepted
+PASS Ref exact clock: clockNow explicitly refuses the numeric profile
+PASS Ref exact clock: mid-decision refusal retains the input machine
+PASS Ref exact clock: refused decision stays unread
+PASS Ref exact clock: refusal cannot become differential agreement
+PASS Ref exact clock: halted refusal holds the input machine
+PASS Fast creation origin: load marks the root
+PASS Fast creation origin: spawn retains parent, daemon and exact site
+PASS Ref creation origin: load marks the root
+PASS Ref creation origin: spawn retains parent, daemon and exact site
+
+== 5. the two failwith rows of the generated prelude ==
+PASS sh_dispatcher_mk / sh_memo_map_mk never fired on the corpus (0 hits)
+
+== W1: the GENERATED Api.run, fuel 100, 20 000 iterations, best of 3 ==
+  program  instance  ms         iterations/s   decisions/s
+  p42      Fast      6.65       3009258        6018516
+  p42      Ref       6.34       3156104        6312207
+  pAwait   Fast      14.25      1403223        2806446
+  pAwait   Ref       14.81      1350540        2701080
+  pFork    Fast      51.87      385609         771217
+  pFork    Ref       56.96      351111         702222
+
+== W2: the chain of refMake, fuel 8n+400, best of 5 ==
+  n     instance  steps  refs  load ms   run ms     steps/s      held words   held bytes
+  50    Fast      103    50    0.000     0.022      4695797      3821         30568
+  50    Ref       103    50    0.000     0.045      2285785      10467        83736
+  100   Fast      203    100   0.000     0.045      4528956      7421         59368
+  100   Ref       203    100   0.000     0.198      1025836      35717        285736
+  300   Fast      603    300   0.000     0.159      3791852      20815        166520
+  300   Ref       603    300   0.000     1.534      393094       286717       2293736
+  500   Fast      1003   500   0.000     0.283      3544134      34712        277696
+  500   Ref       1003   500   0.000     4.507      222540       777717       6221736
+  1000  Fast      2003   1000  0.000     0.621      3225025      68700        549600
+  1000  Ref       2003   1000  0.000     29.314     68329        3055217      24441736
+
+== ALL PASS: 0 failure(s) in 80 checks ==

@@ -27,6 +27,7 @@ import Effect4.Store.Digest
 import Effect4.Store.Kind
 import Effect4.Store.Shape
 import Effect4.Store.Canonical
+import Effect4.Store.Clock
 import Effect4.Store.RowCanonical
 import Effect4.Store.Node
 import Effect4.Store.Store

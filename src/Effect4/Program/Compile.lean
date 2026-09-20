@@ -385,9 +385,9 @@ def embedStep : IterStep Name Thunk Val Err Defect FiberId Ann Program →
 
 /-- The embedding of a stores action. -/
 def embedAction : WithFiberAction Name Thunk Val Err Defect FiberId Ann Ctx → NAction
-  | .fork p o => .fork (embed p) o
-  | .forkIn p o s => .forkIn (embed p) o s
-  | .forkScoped p o => .forkScoped (embed p) o
+  | .fork p o site => .fork (embed p) o site
+  | .forkIn p o s site => .forkIn (embed p) o s site
+  | .forkScoped p o site => .forkScoped (embed p) o site
   | .runIn t s => .runIn t s
   | .interrupt t => .interrupt t
   | .interruptAs t who => .interruptAs t who
@@ -397,7 +397,7 @@ def embedAction : WithFiberAction Name Thunk Val Err Defect FiberId Ann Ctx → 
   | .awaitAllFailFast ts => .awaitAllFailFast ts
   | .snapshotChildren => .snapshotChildren
   | .awaitNewChildren s => .awaitNewChildren s
-  | .raceAll es => .raceAll (es.map embed)
+  | .raceAll es site => .raceAll (es.map embed) site
   | .setInterruptible body flag => .setInterruptible (embed body) flag
   | .setContext c => .setContext c
   | .getContext => .getContext
@@ -532,7 +532,7 @@ def asyncRoute (op : NativeOp) (request : Term) (p : Point) : NCode :=
     match (evalTerm p.env request).bind NativeOp.sleepMillisOf with
     | some 0 => Prim.yieldNowWith 0
     | some (n + 1) =>
-      Prim.async (EffName.store (Name.registerSleep (n + 1))) true
+      Prim.async (EffName.store (Name.registerSleep (ClockMillis.ofNat (n + 1)))) true
         (some (EffName.store Name.cancelSleep))
     | none => badShape
   | _ =>
@@ -984,11 +984,11 @@ def actionAt (root : NativeEff) (p : Point) : Option NAction :=
         | Val.fiber ⟨id⟩ => some ⟨id⟩
         | _ => none
     some (match a with
-      | .fork _ options => WithFiberAction.fork (resolve root (q.child 0)) options
+      | .fork _ options => WithFiberAction.fork (resolve root (q.child 0)) options q.path
       | .forkIn _ options scope =>
         match evalTerm p.env scope with
         | some (Val.scopeHandle s) =>
-          WithFiberAction.forkIn (resolve root (q.child 0)) options s
+          WithFiberAction.forkIn (resolve root (q.child 0)) options s q.path
         | _ => refuse
       -- the `Scope` service read (`Context.ts:423`, §20); `forkScopedAt` is the `forkIn` half
       | .forkScoped _ _ => WithFiberAction.ambientScope
@@ -1027,7 +1027,7 @@ def actionAt (root : NativeEff) (p : Point) : Option NAction :=
         match (evalTerm p.env snapshot).bind handles with
         | some ids => WithFiberAction.awaitNewChildren ids
         | none => refuse
-      | .raceAll es => WithFiberAction.raceAll (entrants es (q.child 0))
+      | .raceAll es => WithFiberAction.raceAll (entrants es (q.child 0)) (some (q.child 0).path)
       | .setContext context =>
         -- the context is read back off the value (`Val.context?`); any other shape refuses
         match (evalTerm p.env context).bind Val.context? with
@@ -1053,7 +1053,7 @@ store allocates one per executed registration, as `:5366` does (`E4-CHECK-CE-016
 def forkScopedAt (root : NativeEff) (p : Point) (scope : Nat) : Option NAction :=
   match Node.at_ (Node.eff root) p.path with
   | some (Node.eff (.withFiber (.forkScoped _ options))) =>
-    some (WithFiberAction.forkIn (resolve root ((p.child 0).child 0)) options scope)
+    some (WithFiberAction.forkIn (resolve root ((p.child 0).child 0)) options scope (p.child 0).path)
   | _ => none
 
 /-- `cont[contA](value, fiber)`. -/
@@ -1452,7 +1452,7 @@ def interpOf (root : NativeEff) (table : RowTable := []) :
     -- "inherit")`, `internal/effect.ts:4851`), then the await
     | EffThunk.forkLayer q m scope =>
       some (WithFiberAction.fork (resolveLayer root q m scope)
-        ⟨true, true, Supervision.MaskMode.inherit⟩)
+        ⟨true, true, Supervision.MaskMode.inherit⟩ q.path)
     | EffThunk.awaitAllFailFast targets => some (WithFiberAction.awaitAllFailFast targets)
     | _ => none
   syncState := fun
@@ -1463,10 +1463,10 @@ def interpOf (root : NativeEff) (table : RowTable := []) :
     match name with
     | .registerAwait cell =>
       let (deferreds, immediate) := state.deferreds.register cell fiber token
-      ({ state with deferreds := deferreds }, immediate.map embed)
+      ({ state with deferreds := deferreds }, immediate.map (fun c => embed (completionPrim c)))
     | .store (Name.registerAwait cell) =>
       let (deferreds, immediate) := state.deferreds.register cell fiber token
-      ({ state with deferreds := deferreds }, immediate.map embed)
+      ({ state with deferreds := deferreds }, immediate.map (fun c => embed (completionPrim c)))
     | .store (Name.registerSleep millis) =>
       ({ state with timers := state.timers.sleep fiber token millis }, none)
     | .external (.external i) _ =>
@@ -1484,11 +1484,11 @@ def interpOf (root : NativeEff) (table : RowTable := []) :
     | _ => (state, none)
   dueResumes := fun state =>
     let (due, deferreds) := state.deferreds.drainDue
-    (due.map (Owed.mapCode embed), { state with deferreds := deferreds })
+    (due.map (Owed.mapCode (fun c => embed (completionPrim c))), { state with deferreds := deferreds })
   wakeList := Stores.wakeList
   clockStep := fun millis state =>
-    let (owed, timers) := state.timers.clockStep millis (Prim.success Val.unit)
-    (owed.map (Owed.mapCode embed), { state with timers := timers })
+    let (owed, timers) := state.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)
+    (owed.map (Owed.mapCode (fun c => embed (completionPrim c))), { state with timers := timers })
   answerCode := fun answer => embed (completionPrim answer)
   prepareAnswer := prepareExternalAnswer table
   cancelName := fun base fiber token => EffName.withWaiter base fiber token

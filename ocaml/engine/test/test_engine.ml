@@ -152,6 +152,7 @@ let show_answer (a : E4_engine.answer) =
   | E4_engine.Finished -> "Finished"
   | E4_engine.Suspended f -> "Suspended " ^ show_frontier f
   | E4_engine.Refused r -> "Refused " ^ r
+  | E4_engine.Outside_profile r -> "Outside_profile " ^ r
   | E4_engine.Delay f -> "Delay " ^ show_frontier f
 
 module Rep (En : E4_engine.ENGINE) = struct
@@ -531,6 +532,142 @@ let replay_steps_check () =
   check "a starved run's outcome is still Api.Outcome.frontier"
     (En_fast.outcome starved = "frontier")
 
+(* Handwritten carrier substitutions must retain creation provenance. These checks call
+   the prelude functions actually spliced into each generated engine instance. *)
+let origin_prelude_check () =
+  let () =
+    let module I = Api_engine_inst in
+    let module P = E4_program.Make (I) in
+    let program = P.load p42 in
+    let machine = I.load program ~fuel:100 in
+    let parent = List.assoc 0 (I.fibers machine) in
+    check "Fast creation origin: load marks the root"
+      (match parent.origin with I.Origin_root -> true | _ -> false);
+    let options = { I.start_immediately = true; daemon = true; mask_mode = I.MaskMode_inherit } in
+    let spawned, (_, child_id) = I.sh_spawn (I.interp_of program) machine parent
+      parent.frame.current options [3; 1] in
+    let child = List.assoc child_id (I.fibers spawned) in
+    check "Fast creation origin: spawn retains parent, daemon and exact site"
+      (match child.origin with I.Origin_forked (0, true, [3; 1]) -> true | _ -> false)
+  in
+  let () =
+    let module I = Api_engine_ref in
+    let module P = E4_program.Make (I) in
+    let program = P.load p42 in
+    let machine = I.load program ~fuel:100 in
+    let parent = List.assoc 0 (I.fibers machine) in
+    check "Ref creation origin: load marks the root"
+      (match parent.origin with I.Origin_root -> true | _ -> false);
+    let options = { I.start_immediately = true; daemon = true; mask_mode = I.MaskMode_inherit } in
+    let spawned, (_, child_id) = I.sh_spawn (I.interp_of program) machine parent
+      parent.frame.current options [3; 1] in
+    let child = List.assoc child_id (I.fibers spawned) in
+    check "Ref creation origin: spawn retains parent, daemon and exact site"
+      (match child.origin with I.Origin_forked (0, true, [3; 1]) -> true | _ -> false)
+  in
+  ()
+
+(* DI-56: clock storage remains exact; number-valued clockNow refuses at the host
+   boundary. The refusal retains the input snapshot and its unread decision. *)
+let clock_profile_check () =
+  (* Read the actual generated machine: store_row deliberately omits timers, so accepting
+     a decision through the public wrapper alone cannot detect a narrowed clock. Expected
+     decimals are independent of the clock arithmetic used by the machine. *)
+  let check_generated name load advance evaluate now deadlines root_succeeded =
+    let prefix = name ^ " generated clock: " in
+    let step label f m =
+      let next, settled = f m in
+      check (prefix ^ label ^ " settles") settled;
+      next
+    in
+    let clock_is m expected = E4_clock.to_decimal (now m) = expected in
+    let deadlines_are m expected =
+      List.map E4_clock.to_decimal (deadlines m) = expected
+    in
+    let huge = E4_clock.literal "4611686018427387905" in
+    let m0 = load () in
+    check (prefix ^ "load starts at zero") (clock_is m0 "0");
+    let m1 = step "advance beyond max_int" (advance huge) m0 in
+    check (prefix ^ "large advance retains every digit")
+      (clock_is m1 "4611686018427387905");
+    let m2 = step "add seven" (advance (E4_clock.of_nat 7)) m1 in
+    check (prefix ^ "addition beyond max_int is exact")
+      (clock_is m2 "4611686018427387912");
+    let asleep = step "register sleep" evaluate m2 in
+    check (prefix ^ "sleep stores the exact now plus duration")
+      (clock_is asleep "4611686018427387912"
+       && deadlines_are asleep ["4611686018427387929"]
+       && not (root_succeeded asleep));
+    let early = step "advance before deadline" (advance (E4_clock.of_nat 16)) asleep in
+    check (prefix ^ "timer remains pending one millisecond before its deadline")
+      (clock_is early "4611686018427387928"
+       && deadlines_are early ["4611686018427387929"]
+       && not (root_succeeded early));
+    let fired = step "cross deadline" (advance (E4_clock.of_nat 4)) early in
+    check (prefix ^ "timer fires and advance finishes at its exact target")
+      (clock_is fired "4611686018427387932"
+       && deadlines_are fired [] && root_succeeded fired);
+    let later = step "add another large advance" (advance huge) fired in
+    check (prefix ^ "successive large advances exceed signed 64-bit exactly")
+      (clock_is later "9223372036854775837")
+  in
+  let sleep_then_42 = E.Eff_bind
+    (E.Eff_perform (E.Native_op_sleep, E.Term_lit (E.Lit_nat 17)), p42) in
+  let () =
+    let module I = Api_engine_inst in
+    let module P = E4_program.Make (I) in
+    let p = P.load sleep_then_42 in
+    let step m d = I.step p (I.interp_of p) ~fuel:100 m d in
+    check_generated I.name (fun () -> I.load p ~fuel:100)
+      (fun millis m -> step m (I.RunDecision_advance millis))
+      (fun m -> step m (I.RunDecision_evaluate 0))
+      (fun m -> (I.stores_of m).timers.now)
+      (fun m -> List.map (fun (w : E4_clock.t I.waiter) -> w.payload)
+        (I.stores_of m).timers.wake.waiters)
+      (fun m -> match List.assoc_opt 0 (I.completed_exits m) with
+        | Some (I.Exit_success (I.Val_nat 42)) -> true | _ -> false)
+  in
+  let () =
+    let module I = Api_engine_ref in
+    let module P = E4_program.Make (I) in
+    let p = P.load sleep_then_42 in
+    let step m d = I.step p (I.interp_of p) ~fuel:100 m d in
+    check_generated I.name (fun () -> I.load p ~fuel:100)
+      (fun millis m -> step m (I.RunDecision_advance millis))
+      (fun m -> step m (I.RunDecision_evaluate 0))
+      (fun m -> (I.stores_of m).timers.now)
+      (fun m -> List.map (fun (w : E4_clock.t I.waiter) -> w.payload)
+        (I.stores_of m).timers.wake.waiters)
+      (fun m -> match List.assoc_opt 0 (I.completed_exits m) with
+        | Some (I.Exit_success (I.Val_nat 42)) -> true | _ -> false)
+  in
+  let check_instance (module En : E4_engine.ENGINE) =
+    let module Projection = E4_diff.Of (En) in
+    let p = E.Eff_bind
+      (E.Eff_perform (E.Native_op_refMake, E.Term_lit (E.Lit_nat 7)),
+       E.Eff_perform (E.Native_op_clockNow, E.Term_lit E.Lit_unit)) in
+    let prefix = En.name ^ " exact clock: " in
+    let m0 = En.load p ~fuel:100 in
+    let m = En.step m0 (En.advance_exact (E4_clock.literal "4611686018427387904")) in
+    check (prefix ^ "large adjustment is accepted")
+      (match En.answer m with E4_engine.Outside_profile _ -> false | _ -> true);
+    let before = (En.refs m, En.trace_rows m, En.fiber_rows m, En.store_row m) in
+    let refused, residue = En.replay_to m [En.evaluate 0; En.flush] in
+    check (prefix ^ "clockNow explicitly refuses the numeric profile")
+      (match En.answer refused with E4_engine.Outside_profile _ -> true | _ -> false);
+    check (prefix ^ "mid-decision refusal retains the input machine")
+      (before = (En.refs refused, En.trace_rows refused, En.fiber_rows refused, En.store_row refused));
+    check (prefix ^ "refused decision stays unread") (List.length residue = 2);
+    check (prefix ^ "refusal cannot become differential agreement")
+      (match Projection.project refused with
+       | _ -> false
+       | exception E4_clock.Profile_refusal _ -> true);
+    check (prefix ^ "halted refusal holds the input machine")
+      (En.step refused En.flush == refused)
+  in
+  check_instance (module En_fast);
+  check_instance (module En_ref)
+
 (* ================================================================ the bench *)
 
 let best_of k f =
@@ -610,6 +747,8 @@ let () =
   goldens ();
   ordinals ();
   replay_steps_check ();
+  clock_profile_check ();
+  origin_prelude_check ();
   print_endline "";
   print_endline "== 5. the two failwith rows of the generated prelude ==";
   check

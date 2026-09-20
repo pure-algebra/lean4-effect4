@@ -1,0 +1,56 @@
+bun test v1.4.2 (744846f84)
+
+harness/truth/session/protocol.test.ts:
+(pass) serial scalar recorder and strict protocol > two actual Effect calls retain call-start identities [0.95ms]
+(pass) serial scalar recorder and strict protocol > valid pending and completed-call prefixes retain their records [0.17ms]
+(pass) serial scalar recorder and strict protocol > actual typed failure keeps category/tag/message [0.34ms]
+(pass) serial scalar recorder and strict protocol > independent provenance and sequencing mutants refuse [0.95ms]
+(pass) serial scalar recorder and strict protocol > bound violations are outside-profile; cannot be caught into agreement [0.20ms]
+(pass) serial scalar recorder and strict protocol > child-fiber calls cannot borrow the root identity [0.45ms]
+
+harness/truth/session/resource.test.ts:
+(pass) failed use charges state; real scoped finalization closes it once [1.39ms]
+(pass) closed use and double release retain category/message without more work [0.86ms]
+(pass) two independently owned allocations need two completed releases [0.48ms]
+(pass) public metadata cannot impersonate a registered object [0.18ms]
+(pass) foreign session and never-acquired handle refuse before mutation [0.30ms]
+(pass) interrupted pending allocation compensates the later unclaimed object [1.84ms]
+(pass) a compensated physical allocation does not consume a machine allocation index [0.36ms]
+
+harness/truth/session/keyed-protocol.test.ts:
+(pass) projected keyed tape structure > replies arrive by key; application order remains independent [0.30ms]
+(pass) projected keyed tape structure > missing fiber is not inferred [0.06ms]
+(pass) projected keyed tape structure > missing token is not inferred [0.02ms]
+(pass) projected keyed tape structure > missing callId is not inferred [0.02ms]
+(pass) projected keyed tape structure > duplicate pending reply [0.10ms]
+(pass) projected keyed tape structure > application without a stored reply [0.02ms]
+(pass) projected keyed tape structure > one key cannot replace another key's payload [0.02ms]
+(pass) projected keyed tape structure > decimal clock transport has protocol version 3 [0.03ms]
+(pass) projected keyed tape structure > legacy version 1 requires explicit migration [0.02ms]
+(pass) projected keyed tape structure > legacy version 2 requires explicit migration
+(pass) projected keyed tape structure > version 2 clock records cannot enter a version 3 tape [0.03ms]
+(pass) projected keyed tape structure > table metadata participates in identity [0.01ms]
+(pass) projected keyed tape structure > pending and unanswered prefixes are accepted [0.03ms]
+(pass) projected keyed tape structure > unsafe and negative-zero keys refuse [0.08ms]
+(pass) projected keyed tape structure > clock and cancellation follow the generated table [0.04ms]
+(pass) projected keyed tape structure > clock transport keeps canonical decimal text beyond host integer ranges [0.14ms]
+(pass) projected keyed tape structure > Result uses failure=0/success=1, with value/error alias order [0.07ms]
+(pass) keyed clock execution > an advance is recorded before the host call it wakes [1.83ms]
+(pass) keyed clock execution > malformed and overflowing advances neither record nor mutate, and refuse the receipt [0.22ms]
+(pass) keyed clock execution > a refusal from a woken continuation rejects the advance and prevents a receipt [0.33ms]
+(pass) keyed clock execution > queued advances validate against their own input clock before recording [0.20ms]
+
+harness/truth/session/clock.test.ts:
+(pass) exact clock and numeric target boundary > decimal round trips beyond both numeric target ranges [0.03ms]
+(pass) exact clock and numeric target boundary > noncanonical transport and numeric overflow refuse [0.03ms]
+(pass) exact clock and numeric target boundary > nanoseconds are checked exactly before any numeric conversion [0.02ms]
+(pass) exact clock and numeric target boundary > the provided service exposes only the pinned Clock readers and checked sleep [0.21ms]
+(pass) exact clock and numeric target boundary > in-program TestClock mutation is unsupported and cannot bypass the numeric boundary [0.87ms]
+(pass) exact clock and numeric target boundary > stock TestClock rejects an overflowing adjustment before mutation [0.17ms]
+(pass) exact clock and numeric target boundary > stock TestClock refuses an overflowing deadline without a program failure [1.90ms]
+(pass) exact clock and numeric target boundary > refusal takes precedence even after a concurrent root completes [0.51ms]
+
+ 42 pass
+ 0 fail
+ 179 expect() calls
+Ran 42 tests across 4 files. [347.00ms]

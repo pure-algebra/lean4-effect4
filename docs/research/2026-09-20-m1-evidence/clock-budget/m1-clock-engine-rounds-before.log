@@ -1,0 +1,9 @@
+STAGE start: current=2874979 init=2874727 used=0 max=200000
+STAGE carrier initial decls=659 wanted=4: current=66653244 init=2874727 used=63778 max=200000
+STAGE carrier round decls=659 wanted=4: current=130455973 init=2874727 used=127581 max=200000
+STAGE carrier round decls=659 wanted=1: current=194324136 init=2874727 used=191449 max=200000
+STAGE carrier round decls=658 wanted=0: current=258179777 init=2874727 used=255305 max=200000
+STAGE translation first: current=258179786 init=2874727 used=255305 max=200000
+uncaught exception: (deterministic) timeout at `whnf`, maximum number of heartbeats (200000) has been reached
+
+Note: Use `set_option maxHeartbeats <num>` to set the limit.(invalid MessageData.lazy, missing context)

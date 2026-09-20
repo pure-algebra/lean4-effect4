@@ -76,12 +76,10 @@ def failed : ExitV := .failure (Cause.fail (.tag 3))
 #guard rootExit (runShape (closeWalkR .parallel releases failed)) =
   some (.failure ⟨(Cause.fail (Err.tag 7)).reasons ++ (Cause.fail (Err.tag 9)).reasons⟩)
 
--- Both Completion shapes and the exact stored-code decoder, including a live refusal.
+-- Both admitted Completion shapes are interpreted at the consumer.
 #guard shapeAgrees (completionPrim (.ofExit failed)) (denoteCompletion (.ofExit failed))
 #guard shapeAgrees (completionPrim (.ofRefGet ⟨0⟩)) (denoteCompletion (.ofRefGet ⟨0⟩))
   { Stores.empty with refs := [.nat 12] }
-#guard rootExit (runShape (denoteStored (.yieldNowWith 0))) = none
-#guard (runShape (denoteStored (.yieldNowWith 0))).machine.stuck = none
 #guard (runShape (.vis (.inr (.closeScope 0 (.success .unit))) Effects.Program.pure)).machine.stuck =
   some (.unknownScope 0)
 

@@ -1,0 +1,11 @@
+(library
+ (name effect4_clock)
+ (public_name effect4_clock)
+ (wrapped false)
+ (modules e4_clock)
+ (libraries zarith))
+
+(test
+ (name test_clock)
+ (modules test_clock)
+ (libraries effect4_clock))

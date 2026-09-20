@@ -227,14 +227,14 @@ def evaluateFiberR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool
       | .joinEffect => saveAnswerR f next
       | .awaitValue => saveAnswerR f (seqR next)
     FiberAction.join interp m f yielding target mode
-  | .fork child options =>
-    FiberAction.fork interp m f yielding (bodyR interp child) options (answerWith next)
-  | .forkIn child options scope =>
+  | .fork child options site =>
+    FiberAction.fork interp m f yielding (bodyR interp child) options (answerWith next) site
+  | .forkIn child options scope site =>
     FiberAction.forkIn interp m f yielding (bodyR interp (.at_ child)) options scope
-      (answerWith next)
-  | .forkScoped child options =>
+      (answerWith next) site
+  | .forkScoped child options site =>
     FiberAction.forkScoped interp m f yielding (bodyR interp (.at_ child)) options
-      (fun f v => answerR f (next (.success v)))
+      (fun f v => answerR f (next (.success v))) site
   | .runIn target scope =>
     FiberAction.runIn interp m f yielding target scope (answerWith next)
   | .interrupt target =>
@@ -252,9 +252,9 @@ def evaluateFiberR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool
   | .snapshotChildren => FiberAction.snapshotChildren interp m f yielding (answerWith next)
   | .awaitNewChildren snapshot =>
     FiberAction.awaitNewChildren interp m (saveAnswerR f (seqR next)) yielding snapshot
-  | .raceAll entrants =>
+  | .raceAll entrants site =>
     FiberAction.raceAll interp m (saveAnswerR f next) yielding
-      (entrants.map fun p => bodyR interp (.at_ p))
+      (entrants.map fun p => bodyR interp (.at_ p)) site
   | .raceRegister race => registerRace m f yielding race
   | .mask flag body =>
     let f := saveAnswerR f next

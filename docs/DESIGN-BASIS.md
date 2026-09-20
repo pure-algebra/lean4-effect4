@@ -547,7 +547,7 @@ fires every due sleep in that order staging the clock at each fired deadline and
 fibers run between fires); its registration meaning is the live `ClockImpl`'s
 (`internal/effect.ts:6052-6066`): a cancelled sleep is removed.
 
-The host moves the clock by one decision, `RunDecision.advance (millis : Nat)` — a duration,
+The host moves the clock by one decision, `RunDecision.advance (millis : ClockMillis)` — a duration,
 never a timestamp — and the machine runs the staged loop (`advanceState`): fire the least due
 sleep (`RunInterp.clockStep`, the one new interpreter field), resume it, flush the
 dispatchers, repeat, then set the clock to the end. A sleep a woken fiber registers that is
@@ -559,6 +559,21 @@ is Latch's to land. Two rows reach the store: `sleep d` with `0 < d < ∞` regis
 (`SyncOp.clockNow`); `sleep 0` is `yieldNow` and `sleep ∞` is `never`, decided at the row.
 `TimerStore.WF` — every pending deadline at or after the clock — is a conjunct of
 `Stores.WF`, kept by every store step and every clock step.
+
+The owner amended the carrier on 2026-09-20: logical milliseconds, stored deadlines and
+advance durations use exact arbitrary-precision arithmetic. `ClockMillis` keeps this
+carrier distinct from ordinary program numbers; the OCaml target uses Zarith. Advances
+and timer-frontier deadlines cross the wire as canonical nonnegative decimal strings.
+The keyed host tape uses protocol version 3 (`effect4-host-session-v3`, `keyed-v3`):
+version 2 used numeric clock durations and is not accepted by the current reader. Legacy
+recordings stay unchanged; any future migration must be explicit. The current format never
+accepts a number-or-string union for the clock field.
+`clockNow` retains its number-valued result and explicitly refuses observations outside
+the target's numeric profile. The stock rc.112 TestClock adapter likewise refuses an
+out-of-profile advance or deadline before mutation. These are host profile refusals,
+separate from program failures and from fuel frontiers; the ordinary scalar profile
+remains DI-56's. The implementation receipt is
+`docs/research/2026-09-20-skeleton-first-receipt.md`.
 
 What this basis refuses. `setTime` (`TIMER-FB-SET-TIME`): the clock never moves backwards. A
 kept cancelled sleep (`TIMER-FB-KEPT-CANCEL`): the store models `clearTimeout`, not the test

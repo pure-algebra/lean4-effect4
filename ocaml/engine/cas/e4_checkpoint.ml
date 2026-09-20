@@ -512,6 +512,7 @@ let show_answer = function
   | E4_engine.Finished -> "finished"
   | E4_engine.Suspended fr -> "suspended " ^ show_frontier fr
   | E4_engine.Refused s -> "refused " ^ s
+  | E4_engine.Outside_profile s -> "outside-profile " ^ s
   | E4_engine.Delay fr -> "delay " ^ show_frontier fr
 
 module Of_engine (En : E4_engine.ENGINE) = struct

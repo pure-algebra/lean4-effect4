@@ -25,6 +25,8 @@ inductive Expect
 #position_gate Effect4.Program.Sched.RState Effect4.Program.Sched.RCmd
   Effect4.Program.Sched.RInterp Effect4.Program.Sched.RIter
 
+/-- info: typed state: 16 predicates, 11 carrier predicates, 2 refusals -/
+#guard_msgs in
 #typed_state Effect4.Program.Sched.RState Effect4.Program.Sched.RCmd
   using Effect4.Program.Typed.sources columns Effect4.Machine.Stores
 

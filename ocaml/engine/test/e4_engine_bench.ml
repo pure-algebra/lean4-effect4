@@ -646,6 +646,7 @@ let sched_engine : (F.t, F.decision) E4_sched.engine =
     answer =
       (fun m ->
          match F.answer m with
+         | E4_engine.Outside_profile why -> raise (E4_clock.Profile_refusal why)
          | E4_engine.Finished -> E4_sched.Finished
          | E4_engine.Suspended _ -> E4_sched.Suspended
          | E4_engine.Refused _ -> E4_sched.Refused

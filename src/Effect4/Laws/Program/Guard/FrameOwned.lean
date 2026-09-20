@@ -3,9 +3,9 @@ import Effect4.Laws.Program.Guard.RaceSites
 import Effect4.Laws.Machine.Handles
 
 /-! Native returned-frame race ownership under existing internal invariants.
-RaceIdsBelow, FrameCodeOwned, and DeferredCodes express allocation bounds,
-frame ownership, and safe stored answers. The native evaluation laws use these
-three local premises. Settle connects them to the complete GuardState predicate.
+RaceIdsBelow and FrameCodeOwned express allocation bounds and frame ownership.
+Completion data gives every stored answer its race-free code unconditionally. The native
+evaluation laws use the two local premises. Settle connects them to the complete GuardState predicate.
 
 Proof graph: frame-site and native-hook lemmas, safe Deferred answers,
 and race-host transport establish primitive ownership; scoped entry/exit then
@@ -557,12 +557,18 @@ def optionRaceSites : Option NCode → List Nat
   | none => []
   | some code => raceSites code
 
-theorem deferred_register_sites (d : DeferredStore) (hd : DeferredCodes d)
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] optionRaceSites
+
+def M1.deferred_register_sites (d : DeferredStore)
+    (cell : DeferredKey) (fid : FiberId) (token : Nat) : ProofGraph.Obligation (
+    optionRaceSites ((d.register cell fid token).2.map (fun c => embed (completionPrim c))) = []) := ⟨⟩
+
+theorem deferred_register_sites (d : DeferredStore)
     (cell : DeferredKey) (fid : FiberId) (token : Nat) :
-    optionRaceSites ((d.register cell fid token).2.map embed) = [] := by
-  cases h : (d.register cell fid token).2 with
+    optionRaceSites ((d.register cell fid token).2.map (fun c => embed (completionPrim c))) = [] := by
+  cases (d.register cell fid token).2 with
   | none => rfl
-  | some code => exact (deferredCodes_register hd cell fid token).2 code h
+  | some completion => exact raceSites_completion completion
 
 theorem prepareExternalAnswer_sites (table : RowTable) (current : Option NCode)
     (answer : Completion Val Err Defect FiberId Ann) (state : Stores) :
@@ -570,24 +576,35 @@ theorem prepareExternalAnswer_sites (table : RowTable) (current : Option NCode)
   unfold prepareExternalAnswer
   repeat' first | rfl | exact raceSites_completion _ | split
 
+attribute [aesop norm -1 apply (rule_sets := [Effect4.Stores])]
+  deferred_register_sites prepareExternalAnswer_sites
+
+def M1.registerAsync_sites (p : NativeEff) (completed : List (FiberId × ExitV))
+    (table : RowTable) (name : EffName) (fid : FiberId) (token : Nat) (state : Stores) : ProofGraph.Obligation (
+    optionRaceSites ((interpAt p completed table).registerAsync name fid token state).2 = []) := ⟨⟩
+
 theorem registerAsync_sites (p : NativeEff) (completed : List (FiberId × ExitV))
-    (table : RowTable) (name : EffName) (fid : FiberId) (token : Nat) (state : Stores)
-    (hd : DeferredCodes state.deferreds) :
+    (table : RowTable) (name : EffName) (fid : FiberId) (token : Nat) (state : Stores) :
     optionRaceSites ((interpAt p completed table).registerAsync name fid token state).2 = [] := by
   cases name <;> simp only [interpAt, interpOf]
-  all_goals repeat' first
-    | rfl
-    | exact deferred_register_sites _ hd _ _ _
-    | exact prepareExternalAnswer_sites _ _ _ _
-    | split
+  all_goals
+    aesop (rule_sets := [Effect4.Stores])
+      (add safe [deferred_register_sites, prepareExternalAnswer_sites])
+
+attribute [aesop norm -1 apply (rule_sets := [Effect4.Stores])] registerAsync_sites
+
+def M1Origin.beginRace_owned (p : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
+    (m : NativeMachine) (f : NFiber) (yielding : Bool) (entrants : List NCode)
+    (_bounds : RaceIdsBelow m) (_hf : FrameCodeOwned m f) (site : Option (List Nat) := none) : ProofGraph.Obligation (FrameCodeOwned (beginRace (interpAt p completed table) m f yielding entrants site).machine
+      (beginRace (interpAt p completed table) m f yielding entrants site).fiber) := ⟨⟩
 
 theorem beginRace_owned (p : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (entrants : List NCode)
-    (bounds : RaceIdsBelow m) (hf : FrameCodeOwned m f) :
-    FrameCodeOwned (beginRace (interpAt p completed table) m f yielding entrants).machine
-      (beginRace (interpAt p completed table) m f yielding entrants).fiber := by
+    (bounds : RaceIdsBelow m) (hf : FrameCodeOwned m f) (site : Option (List Nat) := none) :
+    FrameCodeOwned (beginRace (interpAt p completed table) m f yielding entrants site).machine
+      (beginRace (interpAt p completed table) m f yielding entrants site).fiber := by
   constructor
-  · exact raceCodeOwned_beginRace p table m f yielding entrants bounds
+  · exact raceCodeOwned_beginRace p table m f yielding entrants bounds site
   · intro code hc
     apply raceCodeOwned_transport (raceHostsPreserved_append m _) (hf.2 code hc)
 
@@ -638,41 +655,47 @@ theorem closeScope_hook_sites (p : NativeEff) (completed : List (FiberId × Exit
     rcases h with ⟨_, rfl⟩
     exact raceSites_closeScope scope exit mask state s c hs
 
+def M1Hooks.interruptCode_sites (p : NativeEff) (completed : List (FiberId × ExitV))
+    (table : RowTable) (target : FiberId) : ProofGraph.Obligation (
+    raceSites ((interpAt p completed table).interruptCode target) = []) := ⟨⟩
+
+def M1Hooks.interruptAsCode_sites (p : NativeEff) (completed : List (FiberId × ExitV))
+    (table : RowTable) (target who : FiberId) : ProofGraph.Obligation (
+    raceSites ((interpAt p completed table).interruptAsCode target who) = []) := ⟨⟩
+
+theorem interruptCode_sites (p : NativeEff) (completed : List (FiberId × ExitV))
+    (table : RowTable) (target : FiberId) :
+    raceSites ((interpAt p completed table).interruptCode target) = [] := by
+  rfl
+
+theorem interruptAsCode_sites (p : NativeEff) (completed : List (FiberId × ExitV))
+    (table : RowTable) (target who : FiberId) :
+    raceSites ((interpAt p completed table).interruptAsCode target who) = [] := by
+  rfl
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])]
+  interruptCode_sites interruptAsCode_sites
+attribute [aesop safe forward (rule_sets := [Effect4.Stores])] closeScope_hook_sites
+
 theorem withFiber_owned (p : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (action : NAction)
     (bounds : RaceIdsBelow m) (hf : FrameCodeOwned m f) (ha : actionRaceSites action = []) :
     FrameCodeOwned (evaluatePrim.withFiber (interpAt p completed table) m f yielding action).machine
       (evaluatePrim.withFiber (interpAt p completed table) m f yielding action).fiber := by
   cases action <;> simp only [actionRaceSites] at ha
+  case raceAll entrants site =>
+    exact beginRace_owned p completed table m f yielding entrants bounds hf site
   all_goals simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs, spawn, start,
     countdownPark, RunFiber.park, FrameFiber.uninterruptible, FrameFiber.interruptibleRegion,
     FrameFiber.setFiberInterruptible]
-  all_goals repeat' first
-    | exact beginRace_owned _ _ _ _ _ _ _ bounds hf
-    | exact hf
-    | (solve
-        | apply frameCodeOwned_same_races hf
-          · simp only [RunMachine.emit, modify_races, linkScope_races, forkFinalizers_races]
-            try rfl
-          · rfl
-          · simp only [frameSites, raceSites, Option.getD_none, Option.getD_some, countdownPark.resumePrim,
-              List.flatMap_cons, List.nil_append]; sub_tac)
-    | split
-  all_goals try simp_all only [WithFiberAction.setInterruptible.injEq,
-    reduceCtorEq]
-  all_goals repeat' first
-    | (solve
-        | apply frameCodeOwned_same_races hf
-          · simp only
-            try rfl
-          · rfl
-          · simp only [frameSites, raceSites, Option.getD_none, ha,
-              List.flatMap_cons, List.nil_append] <;> sub_tac)
-    | (solve
-        | apply frameCodeOwned_same_races hf <;> try rfl
-          apply replace_current_sites
-          apply closeScope_hook_sites
-          assumption)
+  all_goals repeat' split
+  all_goals apply frameCodeOwned_same_races hf
+  all_goals
+    aesop (rule_sets := [Effect4.Stores])
+      (add norm simp [RunMachine.emit, modify_races, linkScope_races, forkFinalizers_races,
+        frameSites, raceSites, Option.getD_none, Option.getD_some, countdownPark.resumePrim,
+        List.flatMap_cons, List.nil_append, ha])
+      (add safe apply [replace_current_sites, closeScope_hook_sites])
 
 theorem withFiber_hook_sites (p : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
     (thunk : EffThunk) (action : NAction)
@@ -682,12 +705,16 @@ theorem withFiber_hook_sites (p : NativeEff) (completed : List (FiberId × ExitV
   rw [h] at hs
   exact hs
 
+def M1.registerAsync_result_sites (p : NativeEff) (completed : List (FiberId × ExitV))
+    (table : RowTable) (name : EffName) (fid : FiberId) (token : Nat) (state : Stores) (code : NCode)
+    (_h : ((interpAt p completed table).registerAsync name fid token state).2 = some code) : ProofGraph.Obligation (
+    raceSites code = []) := ⟨⟩
+
 theorem registerAsync_result_sites (p : NativeEff) (completed : List (FiberId × ExitV))
-    (table : RowTable) (name : EffName) (fid : FiberId) (token : Nat) (state : Stores)
-    (hd : DeferredCodes state.deferreds) (code : NCode)
+    (table : RowTable) (name : EffName) (fid : FiberId) (token : Nat) (state : Stores) (code : NCode)
     (h : ((interpAt p completed table).registerAsync name fid token state).2 = some code) :
     raceSites code = [] := by
-  have hs := registerAsync_sites p completed table name fid token state hd
+  have hs := registerAsync_sites p completed table name fid token state
   rw [h] at hs
   exact hs
 
@@ -713,6 +740,35 @@ theorem countdownPark_owned (interp : NInterp) (m : NativeMachine) (f : NFiber)
       · simp only [RunFiber.park, frameSites, raceSites, List.flatMap_cons, List.nil_append]
         exact List.Subset.refl _
 
+def M1Results.countdownPark_result_owned (interp : NInterp) (m : NativeMachine) (f : NFiber)
+    (targets : List FiberId) (resumeWith : Resume EffName) (failFast : Bool)
+    (after : NativeMachine) (next : NFiber) (parked : Bool)
+    (_hf : FrameCodeOwned m f)
+    (_h : countdownPark interp m f targets resumeWith failFast = (after, next, parked)) :
+    ProofGraph.Obligation (FrameCodeOwned after next) := ⟨⟩
+
+def M1Results.closeScopeUnsafe_some_sites (scope : Nat) (exit : ExitV) (mask : Bool)
+    (state after : Stores) (code : Effect4.Machine.Program)
+    (_h : storesCloseScopeUnsafe scope exit mask state = some (after, some code)) :
+    ProofGraph.Obligation (raceSites (embed code) = []) := ⟨⟩
+
+theorem countdownPark_result_owned (interp : NInterp) (m : NativeMachine) (f : NFiber)
+    (targets : List FiberId) (resumeWith : Resume EffName) (failFast : Bool)
+    (after : NativeMachine) (next : NFiber) (parked : Bool)
+    (hf : FrameCodeOwned m f)
+    (h : countdownPark interp m f targets resumeWith failFast = (after, next, parked)) :
+    FrameCodeOwned after next := by
+  simpa only [h] using countdownPark_owned interp m f targets resumeWith failFast hf
+
+theorem closeScopeUnsafe_some_sites (scope : Nat) (exit : ExitV) (mask : Bool)
+    (state after : Stores) (code : Effect4.Machine.Program)
+    (h : storesCloseScopeUnsafe scope exit mask state = some (after, some code)) :
+    raceSites (embed code) = [] := by
+  exact raceSites_closeScopeUnsafe scope exit mask state after (some code) h code rfl
+
+attribute [aesop safe forward (rule_sets := [Effect4.Stores])]
+  countdownPark_result_owned closeScopeUnsafe_some_sites
+
 theorem exitValue_sites (p : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
     (exit : ExitV) (mode : Supervision.ObserverMode) :
     raceSites ((interpAt p completed table).exitValue exit mode) = [] := by
@@ -720,78 +776,69 @@ theorem exitValue_sites (p : NativeEff) (completed : List (FiberId × ExitV)) (t
   · rfl
   · exact raceSites_ofExit _
 
+def M1.evaluatePrim_owned (p : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
+    (m : NativeMachine) (f : NFiber) (yielding : Bool)
+    (_bounds : RaceIdsBelow m) (_hf : FrameCodeOwned m f) : ProofGraph.Obligation (
+    FrameCodeOwned (evaluatePrim (interpAt p completed table) m f yielding).machine
+      (evaluatePrim (interpAt p completed table) m f yielding).fiber) := ⟨⟩
+
 theorem evaluatePrim_owned (p : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool)
-    (bounds : RaceIdsBelow m) (hf : FrameCodeOwned m f) (hd : DeferredCodes m.state.deferreds) :
+    (bounds : RaceIdsBelow m) (hf : FrameCodeOwned m f) :
     FrameCodeOwned (evaluatePrim (interpAt p completed table) m f yielding).machine
       (evaluatePrim (interpAt p completed table) m f yielding).fiber := by
-  simp only [evaluatePrim, RunFiber.park]
-  repeat' first
-    | exact stepFrame_owned _ _ _ _ _ _ hf
-    | exact finalizerOr_owned _ _ _ _ _ _ _ hf
-    | exact registerRace_owned _ _ _ _ hf
-    | exact countdownPark_owned _ _ _ _ _ _ hf
-    | (solve
-        | apply withFiber_owned p completed table _ _ _ _ bounds hf
-          apply withFiber_hook_sites p completed table
-          assumption)
-    | exact hf
-    | (solve
-        | apply frameCodeOwned_same_races hf
-          · simp only [RunMachine.emit]
-            try rfl
-          · rfl
-          · simp only [frameSites, raceSites,
-              List.flatMap_cons, List.nil_append]; sub_tac)
-    | (solve
-        | apply frameCodeOwned_same_races hf <;> try rfl
-          apply replace_current_sites
-          apply registerAsync_result_sites p completed table _ f.id m.nextToken m.state hd
-          assumption)
-    | (solve
-        | apply frameCodeOwned_same_races hf <;> try rfl
-          apply replace_current_sites
-          exact exitValue_sites _ _ _ _ _)
-    | split
+  unfold evaluatePrim
+  repeat' split
+  all_goals
+    aesop (rule_sets := [Effect4.Stores])
+      (add safe apply [stepFrame_owned, finalizerOr_owned, registerRace_owned,
+        countdownPark_owned, withFiber_owned])
+      (add safe forward [withFiber_hook_sites, registerAsync_result_sites])
+      (add norm simp [exitValue_sites, RunFiber.park, RunMachine.emit, frameSites,
+        raceSites, List.flatMap_cons, List.nil_append])
+      (add safe 50 (by apply frameCodeOwned_same_races hf))
+
+def M1.exitScoped_owned (p : NativeEff) (m : NativeMachine) (f : NFiber)
+    (yielding : Bool) (exit : ExitV) (_bounds : RaceIdsBelow m)
+    (_hf : FrameCodeOwned m f) : ProofGraph.Obligation (
+    FrameCodeOwned (exitScoped p m f yielding exit).machine (exitScoped p m f yielding exit).fiber) := ⟨⟩
 
 theorem exitScoped_owned (p : NativeEff) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (exit : ExitV) (bounds : RaceIdsBelow m)
-    (hf : FrameCodeOwned m f) (hd : DeferredCodes m.state.deferreds) :
+    (hf : FrameCodeOwned m f) :
     FrameCodeOwned (exitScoped p m f yielding exit).machine (exitScoped p m f yielding exit).fiber := by
+  have replaced (demand : Effect4.Arm) (skip : Bool) (code : NCode) (sites : raceSites code = []) :
+      frameSites { (f.frame.getCont demand skip).fiber with current := code } ⊆
+        frameSites f.frame :=
+    List.Subset.trans (replace_current_sites _ code sites) (getCont_frameSites f.frame demand skip)
   cases exit <;> simp only [exitScoped]
-  all_goals repeat' first
-    | exact evaluatePrim_owned _ _ _ _ _ _ bounds hf hd
-    | (solve
-        | apply frameCodeOwned_same_races hf <;> try rfl
-          exact getCont_frameSites _ _ _)
-    | (solve
-        | apply frameCodeOwned_same_races hf <;> try rfl
-          refine (replace_current_sites _ _ ?_).trans (getCont_frameSites _ _ _)
-          first
-          | exact raceSites_ofExit _
-          | rw [raceSites_finalizerCode]
-            apply raceSites_closeScopeUnsafe
-            · assumption
-            · rfl)
-    | split
+  all_goals repeat' split
+  all_goals
+    aesop (rule_sets := [Effect4.Stores])
+      (add safe apply [evaluatePrim_owned, getCont_frameSites, replaced])
+      (add norm simp [RunMachine.emit, raceSites_ofExit, raceSites_finalizerCode])
+      (add safe 50 (by apply frameCodeOwned_same_races hf))
 
 /-- Internal local ownership: the input frame is owned, allocated race ids are
-below nextRace, and completed Deferred code is safe. No public guard premise changes. -/
+below nextRace, and completion data supplies race-free answers. No public guard premise changes. -/
+def M1.evaluateNative_frameOwned (p : NativeEff) (table : RowTable)
+    (m : NativeMachine) (f : NFiber) (yielding : Bool)
+    (_bounds : RaceIdsBelow m) (_hf : FrameCodeOwned m f) : ProofGraph.Obligation (
+    FrameCodeOwned (evaluateNative p m f yielding table).machine
+      (evaluateNative p m f yielding table).fiber) := ⟨⟩
+
 theorem evaluateNative_frameOwned (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool)
-    (bounds : RaceIdsBelow m) (hf : FrameCodeOwned m f) (hd : DeferredCodes m.state.deferreds) :
+    (bounds : RaceIdsBelow m) (hf : FrameCodeOwned m f) :
     FrameCodeOwned (evaluateNative p m f yielding table).machine
       (evaluateNative p m f yielding table).fiber := by
-  simp only [evaluateNative]
-  repeat' first
-    | exact evaluatePrim_owned _ _ _ _ _ _ bounds hf hd
-    | exact exitScoped_owned _ _ _ _ _ bounds hf hd
-    | (solve
-        | apply frameCodeOwned_same_races hf <;> try rfl
-          simp only [enterScoped, frameSites, raceSites, raceSites_resolve,
-            List.nil_append]
-          sub_tac)
-    | split
+  unfold evaluateNative
+  repeat' split
+  all_goals
+    aesop (rule_sets := [Effect4.Stores])
+      (add safe apply [evaluatePrim_owned, exitScoped_owned])
+      (add norm simp [enterScoped, frameSites, raceSites, raceSites_resolve])
+      (add safe 50 (by apply frameCodeOwned_same_races hf))
 
 theorem runloopTop_owned (m : NativeMachine) (f : NFiber) (hf : FrameCodeOwned m f) :
     FrameCodeOwned m (runloopTop f) := by
@@ -814,10 +861,17 @@ theorem injectYield_owned (m : NativeMachine) (f : NFiber) (yielding : Bool)
     exact List.Subset.refl _
   · cases h
 
-/-- The native iteration version uses the same three internal premises. -/
+/-- The native iteration version uses the same two internal premises. -/
+def M1.iteration_frameOwned (p : NativeEff) (table : RowTable)
+    (m : NativeMachine) (f : NFiber) (yielding : Bool)
+    (_bounds : RaceIdsBelow m) (_hf : FrameCodeOwned m f) : ProofGraph.Obligation (
+    letI := evaluatorFor p table
+    FrameCodeOwned (iteration (interpOf p table) m f yielding).machine
+      (iteration (interpOf p table) m f yielding).fiber) := ⟨⟩
+
 theorem iteration_frameOwned (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool)
-    (bounds : RaceIdsBelow m) (hf : FrameCodeOwned m f) (hd : DeferredCodes m.state.deferreds) :
+    (bounds : RaceIdsBelow m) (hf : FrameCodeOwned m f) :
     letI := evaluatorFor p table
     FrameCodeOwned (iteration (interpOf p table) m f yielding).machine
       (iteration (interpOf p table) m f yielding).fiber := by
@@ -826,12 +880,23 @@ theorem iteration_frameOwned (p : NativeEff) (table : RowTable)
   cases hi : injectYield m (countOp (runloopTop f)) yielding with
   | none =>
     simpa only [iteration, hi] using
-      evaluateNative_frameOwned p table m (countOp (runloopTop f)) yielding bounds ht hd
+      evaluateNative_frameOwned p table m (countOp (runloopTop f)) yielding bounds ht
   | some it =>
-    obtain ⟨hown, hr, hb, hs⟩ := injectYield_owned m _ yielding it ht hi
+    obtain ⟨hown, hr, hb, _⟩ := injectYield_owned m _ yielding it ht hi
     have bounds' : RaceIdsBelow it.machine := by simpa only [RaceIdsBelow, hr, hb] using bounds
-    have hd' : DeferredCodes it.machine.state.deferreds := by simpa only [hs] using hd
     simpa only [iteration, hi] using
-      evaluateNative_frameOwned p table it.machine it.fiber it.yielding bounds' hown hd'
+      evaluateNative_frameOwned p table it.machine it.fiber it.yielding bounds' hown
+
+#typed_state_obligations Effect4.Program.Guard.FrameOwned.M1 ceiling 0 using
+  aesop (rule_sets := [Effect4.Stores]) (add safe [deferred_register_sites, registerAsync_sites, registerAsync_result_sites, evaluatePrim_owned, exitScoped_owned, evaluateNative_frameOwned, iteration_frameOwned])
+
+#typed_state_obligations Effect4.Program.Guard.FrameOwned.M1Origin ceiling 0 using
+  aesop (rule_sets := [Effect4.Stores]) (add safe apply [beginRace_owned])
+
+#typed_state_obligations Effect4.Program.Guard.FrameOwned.M1Hooks ceiling 0 using
+  aesop (rule_sets := [Effect4.Stores])
+
+#typed_state_obligations Effect4.Program.Guard.FrameOwned.M1Results ceiling 0 using
+  aesop (rule_sets := [Effect4.Stores])
 
 end Effect4.Program.Guard.FrameOwned

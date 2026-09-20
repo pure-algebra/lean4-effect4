@@ -60,7 +60,10 @@ build: ## lake build: the core, the proof graph, the batteries and the axiom aud
 	$(LAKE) build
 
 build-tools: build ## the generator and checker roots (Tools, OCaml5, Conform, Effect4Gen)
-	$(LAKE) build Tools OCaml5 Conform Effect4Gen
+	$(LAKE) build Tools
+	$(LAKE) build OCaml5
+	$(LAKE) build Conform
+	$(LAKE) build Effect4Gen
 
 # ---------------------------------------------------------------------------- gen
 #
@@ -116,7 +119,7 @@ $(GEN)/derived: $(GEN)/variances $(DERIVED_SOURCES) $(DERIVED_TRACES) | build
 # together they make the second pass unnecessary. `make gen-lcnf` is run by name, by `gen`
 # and by the check-ocaml CI job.
 LCNF_SOURCES := src/OCaml5/Tools/LcnfGen.lean $(wildcard src/OCaml5/Lcnf/*.lean) \
-  ocaml/engine/externs.txt ocaml/engine/tools/api_engine_prelude.ml
+  ocaml/gen/roots.json ocaml/engine/externs.txt ocaml/engine/tools/api_engine_prelude.ml
 $(GEN)/lcnf: $(GEN)/derived $(LCNF_SOURCES) $(CORE)
 	$(PY) scripts/generate.py --only lcnf
 	@mkdir -p $(GEN) && touch $@
@@ -303,7 +306,7 @@ $(CHK)/inventory: FORCE
 	@mkdir -p $(CHK); printf '%s\n' $(sort $(LEAN_SOURCES)) > $@.new; \
 	  if cmp -s $@.new $@; then rm -f $@.new; else mv $@.new $@; fi
 $(CHK)/roots: $(CHK)/inventory lakefile.toml lean-toolchain | build
-	$(LAKE) env lean Test/All.lean
+	$(LAKE) env lean -DwarningAsError=true Test/All.lean
 	@echo 'PASS library-roots: fresh module, root-closure and axiom audit'
 	@mkdir -p $(CHK) && touch $@
 
@@ -363,11 +366,13 @@ gen-corpus-results: | build harness/truth/node_modules ## promote a fresh corpus
 # committed map still matches the tree and is not a member of `check`.
 .PHONY: gen-architecture check-architecture
 gen-architecture: | build build-tools ## the architecture map, measured from the tree, into docs/core/architecture-map.html
-	$(LAKE) build Tools.Architecture ProofGraph
-	$(LAKE) env lean -M6144 --run tools/Tools/Architecture.lean
+	$(LAKE) build Tools.Architecture
+	$(LAKE) build ProofGraph
+	$(LAKE) env lean -DwarningAsError=true -M6144 --run tools/Tools/Architecture.lean
 check-architecture: | build build-tools ## does the committed architecture map match the tree (a report, not in check)
-	$(LAKE) build Tools.Architecture ProofGraph
-	$(LAKE) env lean -M6144 --run tools/Tools/Architecture.lean --check
+	$(LAKE) build Tools.Architecture
+	$(LAKE) build ProofGraph
+	$(LAKE) env lean -DwarningAsError=true -M6144 --run tools/Tools/Architecture.lean --check
 
 # T0: the printed programs' answer, error and requirement types against the one compiler
 # (tsgo, decisions row 57; tools/target). The oracle reads the truth modules and their
@@ -417,7 +422,7 @@ $(CHK)/schema-codec: $(CORE) $(wildcard harness/truth/schema-codec/*) | build ha
 # three-engine differential (which reads the printed corpus), and the engine seam check.
 OCAML_SOURCES := $(shell find ocaml -type f -not -path '*/_build/*')
 $(CHK)/ocaml: $(CORPUS)/index.tsv $(OCAML_SOURCES)
-	cd ocaml && $(OCAML) dune build && $(OCAML) dune test eff gen
+	cd ocaml && $(OCAML) dune build && $(OCAML) dune test eff gen clock
 	cd ocaml && $(OCAML) dune test engine
 	$(OCAML) bash ocaml/engine/tools/gen-check.sh
 	@mkdir -p $(CHK) && touch $@

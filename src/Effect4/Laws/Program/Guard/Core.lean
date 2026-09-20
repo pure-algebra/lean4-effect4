@@ -1,5 +1,7 @@
+import Effect4.Laws.Auto.Obligations
 import Effect4.Api
 import Effect4.Laws.Program.Guard.RaceSites
+import Effect4.Laws.Auto.Frames
 
 /-!
 DI-68 guard ownership for the owner-approved reachable-machine scope. A prefix is raw
@@ -137,7 +139,7 @@ def InternalKeysBelow (m : NativeMachine) : Prop :=
 
 theorem internalKeys_load (p : NativeEff) (compileFuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann)) :
-    internalKeys (Api.load p compileFuel answers) = [] := rfl
+    internalKeys (Api.load p compileFuel answers) = [] := by aesop
 
 theorem requestsOwned_load (p : NativeEff) (compileFuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann)) :
@@ -212,20 +214,23 @@ theorem requestOf_yieldVerdict (p : NativeEff) (fuel : Nat) (table : RowTable)
 
 theorem requestOf_installMiddleware (p : NativeEff) (fuel : Nat) (table : RowTable)
     (m : NativeMachine) (fiber : FiberId) (token : Nat) :
-    requestOf (steppedBy p fuel table m .installMiddleware) fiber token = requestOf m fiber token := rfl
+    requestOf (steppedBy p fuel table m .installMiddleware) fiber token = requestOf m fiber token := by aesop
 
 theorem requestOf_answer_zero (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (fiber target : FiberId) (token offered : Nat) (answer : Completion Val Err Defect FiberId Ann) :
     requestOf (steppedBy p 0 table m (.answerAsync target offered answer)) fiber token =
-      requestOf m fiber token := rfl
+      requestOf m fiber token := by aesop
 
 theorem requestOf_evaluate_zero (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (fiber target : FiberId) (token : Nat) :
-    requestOf (steppedBy p 0 table m (.evaluate target)) fiber token = requestOf m fiber token := rfl
+    requestOf (steppedBy p 0 table m (.evaluate target)) fiber token = requestOf m fiber token := by aesop
+
+def M1Clock.requestOf_advance_zero (p : NativeEff) (table : RowTable) (m : NativeMachine)
+    (fiber : FiberId) (token : Nat) (millis : ClockMillis) : ProofGraph.Obligation (requestOf (steppedBy p 0 table m (.advance millis)) fiber token = requestOf m fiber token) := ⟨⟩
 
 theorem requestOf_advance_zero (p : NativeEff) (table : RowTable) (m : NativeMachine)
-    (fiber : FiberId) (token millis : Nat) :
-    requestOf (steppedBy p 0 table m (.advance millis)) fiber token = requestOf m fiber token := rfl
+    (fiber : FiberId) (token : Nat) (millis : ClockMillis) :
+    requestOf (steppedBy p 0 table m (.advance millis)) fiber token = requestOf m fiber token := by aesop
 
 theorem prepareExternalAnswer_internal_state (table : RowTable) (current : Option NCode)
     (answer : Completion Val Err Defect FiberId Ann) (state : Stores) :
@@ -252,7 +257,7 @@ theorem requestOf_prepareExternalAnswer (m : NativeMachine) (table : RowTable)
     (current : Option NCode) (answer : Completion Val Err Defect FiberId Ann)
     (fiber : FiberId) (token : Nat) :
     requestOf { m with state := (prepareExternalAnswer table current answer m.state).1 } fiber token =
-      requestOf m fiber token := rfl
+      requestOf m fiber token := by aesop
 
 theorem requestsOwned_prepareExternalAnswer {m : NativeMachine} (h : RequestsOwned m)
     (table : RowTable) (current : Option NCode) (answer : Completion Val Err Defect FiberId Ann) :
@@ -348,7 +353,10 @@ theorem driveStep_resume_wrong_key (p : NativeEff) (table : RowTable)
           exact hr
         · exact hr
 
-theorem timer_fireNext_key {κ : Type} (timers : TimerStore) (target : Nat)
+def M1Clock.timer_fireNext_key {κ : Type} (timers : TimerStore) (target : ClockMillis)
+    (answer : κ) (owed : Owed κ) (_h : (timers.fireNext target answer).1 = some owed) : ProofGraph.Obligation ((owed.waiter, owed.token) ∈ wakeKeys timers.wake) := ⟨⟩
+
+theorem timer_fireNext_key {κ : Type} (timers : TimerStore) (target : ClockMillis)
     (answer : κ) (owed : Owed κ) (h : (timers.fireNext target answer).1 = some owed) :
     (owed.waiter, owed.token) ∈ wakeKeys timers.wake := by
   cases hd : TimerStore.dueMin target timers.wake.waiters with
@@ -358,7 +366,10 @@ theorem timer_fireNext_key {κ : Type} (timers : TimerStore) (target : Nat)
     cases Option.some.inj h
     exact List.mem_append_left _ (List.mem_map.mpr ⟨w, TimerStore.dueMin_mem _ _ _ hd, rfl⟩)
 
-theorem timer_clockStep_key {κ : Type} (timers : TimerStore) (millis : Nat)
+def M1Clock.timer_clockStep_key {κ : Type} (timers : TimerStore) (millis : ClockMillis)
+    (answer : κ) (owed : Owed κ) (_h : (timers.clockStep millis answer).1 = some owed) : ProofGraph.Obligation ((owed.waiter, owed.token) ∈ wakeKeys timers.wake) := ⟨⟩
+
+theorem timer_clockStep_key {κ : Type} (timers : TimerStore) (millis : ClockMillis)
     (answer : κ) (owed : Owed κ) (h : (timers.clockStep millis answer).1 = some owed) :
     (owed.waiter, owed.token) ∈ wakeKeys timers.wake := by
   unfold TimerStore.clockStep at h
@@ -371,16 +382,21 @@ theorem timer_clockStep_key {κ : Type} (timers : TimerStore) (millis : Nat)
       cases Option.some.inj h
       exact timer_fireNext_key timers _ answer owed (by rw [hf])
 
+def M1Clock.clock_resume_not_external_key (p : NativeEff) (table : RowTable)
+    (m : NativeMachine) (fiber : FiberId) (token : Nat) (millis : ClockMillis) (request : NativeOp × Val)
+    (_owned : RequestsOwned m) (_hr : requestOf m fiber token = some request)
+    (owed : Owed NCode) (_ho : ((interpOf p table).clockStep millis m.state).1 = some owed) : ProofGraph.Obligation (owed.waiter ≠ fiber ∨ owed.token ≠ token) := ⟨⟩
+
 theorem clock_resume_not_external_key (p : NativeEff) (table : RowTable)
-    (m : NativeMachine) (fiber : FiberId) (token millis : Nat) (request : NativeOp × Val)
+    (m : NativeMachine) (fiber : FiberId) (token : Nat) (millis : ClockMillis) (request : NativeOp × Val)
     (owned : RequestsOwned m) (hr : requestOf m fiber token = some request)
     (owed : Owed NCode) (ho : ((interpOf p table).clockStep millis m.state).1 = some owed) :
     owed.waiter ≠ fiber ∨ owed.token ≠ token := by
   have hk : (owed.waiter, owed.token) ∈ wakeKeys m.state.timers.wake := by
-    change ((m.state.timers.clockStep millis (Prim.success Val.unit)).1.map
-      (Owed.mapCode embed)) = some owed at ho
+    change ((m.state.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).1.map
+      (Owed.mapCode (fun c => embed (completionPrim c)))) = some owed at ho
     obtain ⟨o, he, rfl⟩ := Option.map_eq_some_iff.mp ho
-    exact timer_clockStep_key _ millis (Prim.success Val.unit) o he
+    exact timer_clockStep_key _ millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann) o he
   by_cases hf : owed.waiter = fiber
   · right
     intro ht
@@ -613,7 +629,12 @@ theorem deferredKeys_cancel_subset (store : DeferredStore) (cell : DeferredKey)
       simpa only [List.append_nil] using deferredKeys_cell hc (wakeKeys_cancel_subset c.wake fiber token hk)
     simpa only [List.append_nil] using deferredKeys_setCell_subset store cell _ [] hnew
 
-theorem deferredKeys_due_append (store : DeferredStore) (due : List (Owed Effect4.Machine.Program)) :
+def M1Completion.deferredKeys_due_append (store : DeferredStore)
+    (due : List (Owed (Completion Val Err Defect FiberId Ann))) : ProofGraph.Obligation (
+    deferredKeys { store with due := store.due ++ due } =
+      deferredKeys store ++ due.map (fun o => (o.waiter, o.token))) := ⟨⟩
+
+theorem deferredKeys_due_append (store : DeferredStore) (due : List (Owed (Completion Val Err Defect FiberId Ann))) :
     deferredKeys { store with due := store.due ++ due } =
       deferredKeys store ++ due.map (fun o => (o.waiter, o.token)) := by
   simp only [deferredKeys, List.map_append, List.append_assoc]
@@ -623,8 +644,12 @@ theorem wakeKeys_wakeAll_subset {α : Type} (wake : WakeList α) :
   intro key hk
   exact List.mem_append_right _ hk
 
+def M1Completion.deferredKeys_complete_subset (store : DeferredStore) (cell : DeferredKey)
+    (code : Completion Val Err Defect FiberId Ann) : ProofGraph.Obligation (
+    deferredKeys (store.complete cell code).1 ⊆ deferredKeys store) := ⟨⟩
+
 theorem deferredKeys_complete_subset (store : DeferredStore) (cell : DeferredKey)
-    (code : Effect4.Machine.Program) :
+    (code : Completion Val Err Defect FiberId Ann) :
     deferredKeys (store.complete cell code).1 ⊆ deferredKeys store := by
   unfold DeferredStore.complete
   cases hc : store.cellAt cell with
@@ -911,7 +936,7 @@ theorem dueResumes_keys_iff (p : NativeEff) (table : RowTable) (m : NativeMachin
       key ∈ internalKeys m := by
   have hdue : ((interpOf p table).dueResumes m.state).1.map (fun o => (o.waiter, o.token)) =
       m.state.deferreds.due.map (fun o => (o.waiter, o.token)) := by
-    change (m.state.deferreds.due.map (Owed.mapCode embed)).map _ = _
+    change (m.state.deferreds.due.map (Owed.mapCode (fun c => embed (completionPrim c)))).map _ = _
     rw [List.map_map]
     rfl
   rw [hdue]
@@ -1028,8 +1053,6 @@ def taskRaceSites : NTask → List Nat
   | _ => []
 
 def InternalCodeNoRace (m : NativeMachine) : Prop :=
-  (∀ cell ∈ m.state.deferreds.cells, ∀ code ∈ cell.completion, raceSites (embed code) = []) ∧
-  (∀ owed ∈ m.state.deferreds.due, raceSites (embed owed.code) = []) ∧
   (∀ f ∈ m.fibers, ∀ bucket ∈ f.dispatcher.buckets,
     ∀ task ∈ bucket.tasks, taskRaceSites task = []) ∧
   (∀ race ∈ m.races, ∀ code ∈ race.programs, raceSites code = [])
@@ -1051,6 +1074,8 @@ structure GuardState (m : NativeMachine) : Prop where
     f.frame.interruptedCause.isSome = true
   frameCodes : ∀ f ∈ m.fibers, FrameCodeOwned m f
   internalCodes : InternalCodeNoRace m
+
+#frame_rules GuardState
 
 /-- Keys already removed from a dispatcher are still reserved while its snapshot runs. -/
 structure ReservedKeys (m : NativeMachine) (keys : List GuardKey) : Prop where
@@ -1115,8 +1140,7 @@ theorem guardState_load (p : NativeEff) (compileFuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann)) :
     GuardState (Api.load p compileFuel answers) := by
   constructor
-  · change ([⟨0⟩] : List FiberId).Nodup
-    simp
+  · exact List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩
   · intro f hf
     have he := List.mem_singleton.mp hf
     subst f
@@ -1153,9 +1177,7 @@ theorem guardState_load (p : NativeEff) (compileFuel : Nat)
     refine ⟨raceCodeOwned_compileEff _ _ _ _, ?_⟩
     intro code hc
     cases hc
-  · refine ⟨?_, ?_, ?_, ?_⟩
-    · intro cell hc; cases hc
-    · intro owed ho; cases ho
+  · refine ⟨?_, ?_⟩
     · intro f hf bucket hb
       have he := List.mem_singleton.mp hf
       subst f
@@ -1215,8 +1237,8 @@ theorem guardState_setRunning {m : NativeMachine} {f : NFiber}
     cases this
   · exact update_all m g _ state.deferredCause (state.deferredCause f hmem)
   · exact update_all m g _ state.frameCodes (state.frameCodes f hmem)
-  · refine ⟨state.internalCodes.1, state.internalCodes.2.1, ?_, state.internalCodes.2.2.2⟩
-    exact update_all m g _ state.internalCodes.2.2.1 (state.internalCodes.2.2.1 f hmem)
+  · refine ⟨?_, state.internalCodes.2⟩
+    exact update_all m g _ state.internalCodes.1 (state.internalCodes.1 f hmem)
 
 theorem guardState_emit {m : NativeMachine} (state : GuardState m) (events) :
     GuardState (m.emit events) := by
@@ -1451,7 +1473,7 @@ theorem guardState_fiber {m : NativeMachine} (state : GuardState m)
     {f : NFiber} (hf : f ∈ m.fibers) : FiberGuardState m f :=
   ⟨state.fibersBelow f hf, state.pendingShape f hf, state.parkedIdle f hf,
     state.parkedBelow f hf, state.exited f hf, state.deferredCause f hf,
-    state.frameCodes f hf, state.internalCodes.2.2.1 f hf⟩
+    state.frameCodes f hf, state.internalCodes.1 f hf⟩
 
 /-- A fiber replacement accounts for its new internal keys and its possible external guard. -/
 theorem guardState_update {m : NativeMachine} {f : NFiber} (state : GuardState m)
@@ -1480,30 +1502,28 @@ theorem guardState_update {m : NativeMachine} {f : NFiber} (state : GuardState m
     obtain ⟨found, hfound, hpark, _⟩ := requestOf_shape hr
     exact hparked found (List.mem_of_find?_eq_some hfound) token hpark
   · intro fiber token request hr hk
-    rcases List.mem_append.mp (hkeys hk) with hk | hk
-    all_goals
-      by_cases he : g.id = fiber
-      · obtain ⟨found, hfound, hpark, hrequest⟩ := requestOf_shape hr
-        have hlookup : (m.update g).fiber? fiber = some g :=
-          fiber_lookup_update_self (by simpa only [← hid, he] using hf) g he
-        rw [hlookup] at hfound
-        cases Option.some.inj hfound
-        have safe := guardSafe token request hpark hrequest
-        first
-        | exact safe.1 (by simpa only [he] using hk)
-        | exact safe.2 (by simpa only [he] using hk)
-      · rw [requestOf_update_other _ _ _ _ he] at hr
-        first
-        | exact state.requestsOwned fiber token request hr hk
-        | exact reserved.disjoint fiber token request hr hk
+    by_cases he : g.id = fiber
+    · obtain ⟨found, hfound, hpark, hrequest⟩ := requestOf_shape hr
+      have hlookup : (m.update g).fiber? fiber = some g :=
+        fiber_lookup_update_self (by simpa only [← hid, he] using hf) g he
+      rw [hlookup] at hfound
+      cases Option.some.inj hfound
+      have safe := guardSafe token request hpark hrequest
+      rcases List.mem_append.mp (hkeys hk) with hk | hk
+      · exact safe.1 (by simpa only [he] using hk)
+      · exact safe.2 (by simpa only [he] using hk)
+    · rw [requestOf_update_other _ _ _ _ he] at hr
+      rcases List.mem_append.mp (hkeys hk) with hk | hk
+      · exact state.requestsOwned fiber token request hr hk
+      · exact reserved.disjoint fiber token request hr hk
   · exact update_all m g _ state.pendingShape valid.pending
   · exact update_all m g _ state.parkedIdle valid.idle
   · exact hparked
   · exact update_all m g _ state.exited valid.exited
   · exact update_all m g _ state.deferredCause valid.deferredCause
   · exact update_all m g _ state.frameCodes valid.codes
-  · refine ⟨state.internalCodes.1, state.internalCodes.2.1, ?_, state.internalCodes.2.2.2⟩
-    exact update_all m g _ state.internalCodes.2.2.1 valid.tasks
+  · refine ⟨?_, state.internalCodes.2⟩
+    exact update_all m g _ state.internalCodes.1 valid.tasks
 
 theorem reservedKeys_fiber {m : NativeMachine} (state : GuardState m)
     {f : NFiber} (hf : f ∈ m.fibers) : ReservedKeys m (fiberKeys f) := by
@@ -1666,119 +1686,22 @@ theorem reservedKeys_driveStep_resume (p : NativeEff) (table : RowTable)
         · exact requestOf_update_unparked_subset m _ rfl
       · exact reserved
 
-theorem deferredCodes_cancel {d : DeferredStore} (hd : DeferredCodes d) (cell : DeferredKey)
-    (waiter : FiberId) (token : Nat) : DeferredCodes (d.cancel cell waiter token) := by
-  unfold DeferredStore.cancel
-  cases hc : d.cellAt cell with
-  | none => exact hd
-  | some c =>
-    dsimp only
-    exact deferredCodes_setCell hd cell (fun p hp => deferredCodes_cellAt hd hc p hp)
-
-theorem deferredCodes_complete {d : DeferredStore} (hd : DeferredCodes d) (cell : DeferredKey)
-    {effect : Effect4.Machine.Program} (he : StoredCodeNoRace effect) :
-    DeferredCodes (d.complete cell effect).1 := by
-  unfold DeferredStore.complete
-  cases hc : d.cellAt cell with
-  | none => exact hd
-  | some c =>
-    dsimp only
-    cases hcomp : c.completion with
-    | some _ => exact hd
-    | none =>
-      dsimp only
-      refine ⟨fun cell' hc' p hp => ?_, fun e he' => ?_⟩
-      · simp only [DeferredStore.setCell] at hc'
-        rcases List.mem_or_eq_of_mem_set hc' with hm | rfl
-        · exact hd.1 cell' hm p hp
-        · rw [← Option.some.inj hp]; exact he
-      · simp only [List.mem_append, List.mem_map] at he'
-        rcases he' with hm | ⟨w, _, rfl⟩
-        · exact hd.2 e hm
-        · exact he
-
-/-- A batch wake on a Deferred's list owes its batch the stored completion, which is shaped. -/
-theorem deferredCodes_wakeBatch {d : DeferredStore} (hd : DeferredCodes d) (cell : DeferredKey) :
-    DeferredCodes (d.wakeBatch cell) := by
-  unfold DeferredStore.wakeBatch
-  cases hc : d.cellAt cell with
-  | none => exact hd
-  | some c =>
-    dsimp only
-    have hcm : c ∈ d.cells := List.mem_of_getElem? hc
-    cases hcomp : c.completion with
-    | some e =>
-      dsimp only
-      have he : StoredCodeNoRace e := hd.1 c hcm e hcomp
-      refine ⟨fun cell' hc' p hp => ?_, fun x hx => ?_⟩
-      · simp only [DeferredStore.setCell] at hc'
-        rcases List.mem_or_eq_of_mem_set hc' with hm | rfl
-        · exact hd.1 cell' hm p hp
-        · simp only at hp; exact (Option.some.inj hp) ▸ he
-      · simp only [List.mem_append, List.mem_map] at hx
-        rcases hx with hm | ⟨w, _, rfl⟩
-        · exact hd.2 x hm
-        · exact he
-    | none =>
-      dsimp only
-      refine ⟨fun cell' hc' p hp => ?_, hd.2⟩
-      simp only [DeferredStore.setCell] at hc'
-      rcases List.mem_or_eq_of_mem_set hc' with hm | rfl
-      · exact hd.1 cell' hm p hp
-      · simp only at hp; exact nomatch hp
-
-theorem deferredCodes_wakeList {s : Stores} (codes : DeferredCodes s.deferreds)
-    (key : WakeKey) (phase : WakePhase) : DeferredCodes (s.wakeList key phase).deferreds := by
-  unfold Stores.wakeList
-  split
-  · exact deferredCodes_wakeBatch codes _
-  · exact codes
-
-theorem deferredCodes_drainDue {d : DeferredStore} (codes : DeferredCodes d) :
-    DeferredCodes d.drainDue.2 ∧ ∀ owed ∈ d.drainDue.1, StoredCodeNoRace owed.code :=
-  ⟨⟨codes.1, fun _ h => by cases h⟩, codes.2⟩
-
-theorem syncOpStep_deferredCodes {state after : Stores} {op : SyncOp} {value : Val}
-    (codes : DeferredCodes state.deferreds) (h : syncOpStep op state = some (after, value)) :
-    DeferredCodes after.deferreds := by
-  cases op <;> unfold syncOpStep at h
-  all_goals repeat' (first | dsimp only [Option.map] at h | split at h)
-  all_goals cases h
-  all_goals first
-    | exact codes
-    | exact deferredCodes_make codes
-    | exact deferredCodes_cancel codes _ _ _
-    | apply deferredCodes_complete codes
-  all_goals first
-    | exact raceSites_completion _
-    | exact raceSites_embed_ofExit _
+def M1.guardState_withState {m : NativeMachine} (_state : GuardState m) (stores : Stores)
+    (_keys : storeKeys stores ⊆ storeKeys m.state) : ProofGraph.Obligation (
+    GuardState { m with state := stores }) := ⟨⟩
 
 theorem guardState_withState {m : NativeMachine} (state : GuardState m) (stores : Stores)
-    (keys : storeKeys stores ⊆ storeKeys m.state) (codes : DeferredCodes stores.deferreds) :
+    (keys : storeKeys stores ⊆ storeKeys m.state) :
     GuardState { m with state := stores } := by
-  constructor
-  · exact state.fiberIds
-  · exact state.fibersBelow
-  · exact state.raceIds
-  · exact state.racesBelow
-  · exact state.raceHosts
-  · exact internalKeysBelow_state_subset m stores keys state.keysBelow
-  · exact state.requestsBelow
-  · exact requestsOwned_state_subset m stores keys state.requestsOwned
-  · exact state.pendingShape
-  · exact state.parkedIdle
-  · exact state.parkedBelow
-  · exact state.exited
-  · exact state.deferredCause
-  · exact state.frameCodes
-  · exact ⟨codes.1, codes.2, state.internalCodes.2.2⟩
+  exact GuardState.frame_state m state stores
+    (internalKeysBelow_state_subset m stores keys state.keysBelow)
+    (requestsOwned_state_subset m stores keys state.requestsOwned)
 
 theorem guardState_driveStep_wake (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (key : WakeKey) (phase : WakePhase) (rest : List NCmd) (state : GuardState m) :
     letI := evaluatorFor p table
     GuardState (driveStep (interpOf p table) m (.wake key phase) rest).1 := by
   exact guardState_withState state _ (wakeList_storeKeys m.state key phase)
-    (deferredCodes_wakeList ⟨state.internalCodes.1, state.internalCodes.2.1⟩ key phase)
 
 theorem guardQueue_driveStep_wake (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (key : WakeKey) (phase : WakePhase) (rest : List NCmd)
@@ -2179,7 +2102,6 @@ theorem guardState_dueResumes (p : NativeEff) (table : RowTable) (m : NativeMach
     · intro key hk
       rw [deferredKeys_drain_partition m.state.deferreds]
       exact List.mem_append_left _ hk
-  · exact (deferredCodes_drainDue ⟨state.internalCodes.1, state.internalCodes.2.1⟩).1
 
 theorem reservedKeys_dueResumes (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (state : GuardState m) :
@@ -2192,20 +2114,23 @@ theorem reservedKeys_dueResumes (p : NativeEff) (table : RowTable) (m : NativeMa
     exact state.requestsOwned fiber token request hr
       ((dueResumes_keys_iff p table m (fiber, token)).mp (List.mem_append_right _ hk))
 
-theorem codeSites_dueResumes (p : NativeEff) (table : RowTable) (m : NativeMachine)
-    (state : GuardState m) : ∀ owed ∈ ((interpOf p table).dueResumes m.state).1,
+def M1.codeSites_dueResumes (p : NativeEff) (table : RowTable) (m : NativeMachine) : ProofGraph.Obligation (
+    ∀ owed ∈ ((interpOf p table).dueResumes m.state).1,
+      raceSites owed.code = []) := ⟨⟩
+
+theorem codeSites_dueResumes (p : NativeEff) (table : RowTable) (m : NativeMachine) : ∀ owed ∈ ((interpOf p table).dueResumes m.state).1,
       raceSites owed.code = [] := by
   intro owed ho
-  change owed ∈ m.state.deferreds.due.map (Owed.mapCode embed) at ho
+  change owed ∈ m.state.deferreds.due.map (Owed.mapCode (fun c => embed (completionPrim c))) at ho
   obtain ⟨d, hd, rfl⟩ := List.mem_map.mp ho
-  exact state.internalCodes.2.1 d hd
+  exact raceSites_completion d.code
 
 theorem guardState_driveStep_drainDue (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (rest : List NCmd) (state : GuardState m) :
     letI := evaluatorFor p table
     GuardState (driveStep (interpOf p table) m .drainDue rest).1 := by
   exact guardState_drainOwed (guardState_dueResumes p table m state) _
-    (reservedKeys_dueResumes p table m state) (codeSites_dueResumes p table m state)
+    (reservedKeys_dueResumes p table m state) (codeSites_dueResumes p table m)
 
 theorem guardQueue_driveStep_drainDue (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (rest : List NCmd) (state : GuardState m)
@@ -2221,7 +2146,7 @@ theorem guardQueue_driveStep_drainDue (p : NativeEff) (table : RowTable)
     exact ⟨ha, ho, ⟨hb, hd⟩, hc⟩
   apply guardQueue_append_noOwners p table
     (guardQueue_drainOwed p table before due (reservedKeys_dueResumes p table m state)
-      (codeSites_dueResumes p table m state))
+      (codeSites_dueResumes p table m))
     (guardQueue_drainOwed_rest p table tail due)
   apply List.filterMap_eq_nil_iff.mpr
   intro command hc
@@ -2634,32 +2559,22 @@ theorem internalKeys_state_add (m : NativeMachine) (stores : Stores) :
     rw [internalKeys_store_decomposition]
     exact List.mem_append_right _ hf
 
+def M1.guardState_withStoreKeys {m : NativeMachine} (_state : GuardState m)
+    (stores : Stores) (_keys : ReservedKeys m (storeKeys stores)) : ProofGraph.Obligation (
+    GuardState { m with state := stores }) := ⟨⟩
+
 theorem guardState_withStoreKeys {m : NativeMachine} (state : GuardState m)
-    (stores : Stores) (keys : ReservedKeys m (storeKeys stores))
-    (codes : DeferredCodes stores.deferreds) : GuardState { m with state := stores } := by
+    (stores : Stores) (keys : ReservedKeys m (storeKeys stores)) : GuardState { m with state := stores } := by
   have subset := internalKeys_state_add m stores
-  constructor
-  · exact state.fiberIds
-  · exact state.fibersBelow
-  · exact state.raceIds
-  · exact state.racesBelow
-  · exact state.raceHosts
+  apply GuardState.frame_state m state stores
   · intro key hk
     rcases List.mem_append.mp (subset hk) with h | h
     · exact state.keysBelow key h
     · exact keys.below key h
-  · exact state.requestsBelow
   · intro fiber token request hr hk
     rcases List.mem_append.mp (subset hk) with h | h
     · exact state.requestsOwned fiber token request hr h
     · exact keys.disjoint fiber token request hr h
-  · exact state.pendingShape
-  · exact state.parkedIdle
-  · exact state.parkedBelow
-  · exact state.exited
-  · exact state.deferredCause
-  · exact state.frameCodes
-  · exact ⟨codes.1, codes.2, state.internalCodes.2.2⟩
 
 theorem reservedKeys_fresh {m : NativeMachine} (state : GuardState m) (fiber : FiberId) :
     ReservedKeys { m with nextToken := m.nextToken + 1 } [(fiber, m.nextToken)] := by
@@ -2674,10 +2589,14 @@ theorem reservedKeys_fresh {m : NativeMachine} (state : GuardState m) (fiber : F
     rw [ht] at bound
     exact Nat.lt_irrefl _ bound
 
+def M1.guardState_storeFresh {m : NativeMachine} (_state : GuardState m)
+    (stores : Stores) (fiber : FiberId)
+    (_keys : storeKeys stores ⊆ storeKeys m.state ++ [(fiber, m.nextToken)]) : ProofGraph.Obligation (
+    GuardState { m with state := stores, nextToken := m.nextToken + 1 }) := ⟨⟩
+
 theorem guardState_storeFresh {m : NativeMachine} (state : GuardState m)
     (stores : Stores) (fiber : FiberId)
-    (keys : storeKeys stores ⊆ storeKeys m.state ++ [(fiber, m.nextToken)])
-    (codes : DeferredCodes stores.deferreds) :
+    (keys : storeKeys stores ⊆ storeKeys m.state ++ [(fiber, m.nextToken)]) :
     GuardState { m with state := stores, nextToken := m.nextToken + 1 } := by
   let grown : NativeMachine := { m with nextToken := m.nextToken + 1 }
   have sg : GuardState grown := guardState_increaseTokens state _ (Nat.le_succ _)
@@ -2687,7 +2606,7 @@ theorem guardState_storeFresh {m : NativeMachine} (state : GuardState m)
     rw [internalKeys_store_decomposition]
     exact List.mem_append_left _ (List.mem_append_left _ hk)
   exact guardState_withStoreKeys sg stores
-    (reservedKeys_subset (reservedKeys_append oldKeys (reservedKeys_fresh state fiber)) keys) codes
+    (reservedKeys_subset (reservedKeys_append oldKeys (reservedKeys_fresh state fiber)) keys)
 
 theorem frameCodeOwned_transport {m n : NativeMachine} (races : RaceHostsPreserved m n)
     {f : NFiber} (code : FrameCodeOwned m f) : FrameCodeOwned n f :=
@@ -2752,13 +2671,13 @@ theorem guardState_updateRace {m : NativeMachine} {race : NRace} (state : GuardS
   · exact state.exited
   · exact state.deferredCause
   · exact fun f hf => frameCodeOwned_transport transport (state.frameCodes f hf)
-  · refine ⟨state.internalCodes.1, state.internalCodes.2.1, state.internalCodes.2.2.1, ?_⟩
+  · refine ⟨state.internalCodes.1, ?_⟩
     intro r hr'
     obtain ⟨old, hold, he⟩ := List.mem_map.mp hr'
     subst r
     split
     · exact programs
-    · exact state.internalCodes.2.2.2 old hold
+    · exact state.internalCodes.2 old hold
 
 theorem reservedKeys_updateRace {m : NativeMachine} {keys : List GuardKey}
     (reserved : ReservedKeys m keys) (race : NRace) : ReservedKeys (m.updateRace race) keys := by
@@ -3108,8 +3027,6 @@ theorem guardState_scopeLinkFiber (p : NativeEff) (table : RowTable)
   apply guardState_withState state
   · simp only [storeKeys, hs.1, hs.2]
     exact List.Subset.refl _
-  · rw [hs.2]
-    exact ⟨state.internalCodes.1, state.internalCodes.2.1⟩
 
 theorem guardQueue_withState (p : NativeEff) (table : RowTable)
     {m : NativeMachine} {commands : List NCmd} (queue : GuardQueue p table m commands)
@@ -3451,7 +3368,7 @@ theorem guardState_spawnAppend {m : NativeMachine} (state : GuardState m)
       exact he ▸ new
   constructor
   · simp only [List.map_append, List.map_cons, List.map_nil, List.nodup_append]
-    refine ⟨state.fiberIds, by simp, ?_⟩
+    refine ⟨state.fiberIds, List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩, ?_⟩
     intro id hid other hother heq
     have he : id = child.id := heq.trans (List.mem_singleton.mp hother)
     obtain ⟨f, hf, hfid⟩ := List.mem_map.mp hid
@@ -3480,13 +3397,16 @@ theorem guardState_spawnAppend {m : NativeMachine} (state : GuardState m)
   · exact hall _ state.exited valid.exited
   · exact hall _ state.deferredCause valid.deferredCause
   · exact hall _ state.frameCodes valid.codes
-  · exact ⟨state.internalCodes.1, state.internalCodes.2.1,
-      hall _ state.internalCodes.2.2.1 valid.tasks, state.internalCodes.2.2.2⟩
+  · exact ⟨hall _ state.internalCodes.1 valid.tasks, state.internalCodes.2⟩
+
+def M1Origin.fiberGuardState_freshChild (m : NativeMachine) (code : NCode)
+    (_sites : raceSites code = []) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) : ProofGraph.Obligation (FiberGuardState { m with nextId := m.nextId + 1 }
+      (RunFiber.make ⟨m.nextId⟩ code flag budget ctx origin)) := ⟨⟩
 
 theorem fiberGuardState_freshChild (m : NativeMachine) (code : NCode)
-    (sites : raceSites code = []) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) :
+    (sites : raceSites code = []) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) :
     FiberGuardState { m with nextId := m.nextId + 1 }
-      (RunFiber.make ⟨m.nextId⟩ code flag budget ctx) := by
+      (RunFiber.make ⟨m.nextId⟩ code flag budget ctx origin) := by
   constructor
   · exact Nat.lt_succ_self _
   · rfl
@@ -3500,60 +3420,88 @@ theorem fiberGuardState_freshChild (m : NativeMachine) (code : NCode)
   · intro bucket h; cases h
 
 abbrev spawnedChild (p : NativeEff) (table : RowTable) (m : NativeMachine)
-    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) : NFiber :=
+    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions)
+    (site : List Nat := []) : NFiber :=
   RunFiber.make ⟨m.nextId⟩ code
     (match options.maskMode with
     | .interruptible => true
     | .uninterruptible => false
     | .inherit => parent.frame.interruptible)
     ((interpOf p table).budgetOf parent.context) parent.context
+    (.forked parent.id options.daemon site)
+
+def M1Origin.spawn_machine (p : NativeEff) (table : RowTable) (m : NativeMachine)
+    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation ((spawn (interpOf p table) m parent code options site).1 =
+      (spawnAppend m (spawnedChild p table m parent code options site)).emit
+        [.forked parent.id ⟨m.nextId⟩ options.daemon]) := ⟨⟩
 
 theorem spawn_machine (p : NativeEff) (table : RowTable) (m : NativeMachine)
-    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) :
-    (spawn (interpOf p table) m parent code options).1 =
-      (spawnAppend m (spawnedChild p table m parent code options)).emit
-        [.forked parent.id ⟨m.nextId⟩ options.daemon] := rfl
+    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) :
+    (spawn (interpOf p table) m parent code options site).1 =
+      (spawnAppend m (spawnedChild p table m parent code options site)).emit
+        [.forked parent.id ⟨m.nextId⟩ options.daemon] := by aesop
+
+def M1Origin.requestOf_spawn (p : NativeEff) (table : RowTable) (m : NativeMachine)
+    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions)
+    (fiber : FiberId) (token : Nat) (site : List Nat := []) : ProofGraph.Obligation (requestOf (spawn (interpOf p table) m parent code options site).1 fiber token =
+      requestOf m fiber token) := ⟨⟩
 
 theorem requestOf_spawn (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions)
-    (fiber : FiberId) (token : Nat) :
-    requestOf (spawn (interpOf p table) m parent code options).1 fiber token =
+    (fiber : FiberId) (token : Nat) (site : List Nat := []) :
+    requestOf (spawn (interpOf p table) m parent code options site).1 fiber token =
       requestOf m fiber token :=
-  requestOf_spawnAppend m (spawnedChild p table m parent code options) rfl fiber token
+  requestOf_spawnAppend m (spawnedChild p table m parent code options site) rfl fiber token
+
+def M1Origin.interruptedAt_spawn (p : NativeEff) (table : RowTable) {m : NativeMachine}
+    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions)
+    {fiber : FiberId} (_hi : InterruptedAt m fiber) (site : List Nat := []) : ProofGraph.Obligation (InterruptedAt (spawn (interpOf p table) m parent code options site).1 fiber) := ⟨⟩
 
 theorem interruptedAt_spawn (p : NativeEff) (table : RowTable) {m : NativeMachine}
     (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions)
-    {fiber : FiberId} (hi : InterruptedAt m fiber) :
-    InterruptedAt (spawn (interpOf p table) m parent code options).1 fiber :=
-  interruptedAt_spawnAppend (spawnedChild p table m parent code options) hi
+    {fiber : FiberId} (hi : InterruptedAt m fiber) (site : List Nat := []) :
+    InterruptedAt (spawn (interpOf p table) m parent code options site).1 fiber :=
+  interruptedAt_spawnAppend (spawnedChild p table m parent code options site) hi
+
+def M1Origin.guardState_spawn (p : NativeEff) (table : RowTable) {m : NativeMachine}
+    (_state : GuardState m) (parent : NFiber) (code : NCode)
+    (_sites : raceSites code = []) (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (GuardState (spawn (interpOf p table) m parent code options site).1) := ⟨⟩
 
 theorem guardState_spawn (p : NativeEff) (table : RowTable) {m : NativeMachine}
     (state : GuardState m) (parent : NFiber) (code : NCode)
-    (sites : raceSites code = []) (options : Supervision.ForkOptions) :
-    GuardState (spawn (interpOf p table) m parent code options).1 := by
-  rw [spawn_machine]
+    (sites : raceSites code = []) (options : Supervision.ForkOptions) (site : List Nat := []) :
+    GuardState (spawn (interpOf p table) m parent code options site).1 := by
+  rw [spawn_machine (site := site)]
   apply guardState_emit
   apply guardState_spawnAppend state _ rfl
-  · exact fiberGuardState_freshChild m code sites _ _ _
+  · exact fiberGuardState_freshChild m code sites _ _ _ (.forked parent.id options.daemon site)
   · rfl
   · rfl
+
+def M1Origin.reservedKeys_spawn (p : NativeEff) (table : RowTable) {m : NativeMachine}
+    {keys : List GuardKey} (_reserved : ReservedKeys m keys)
+    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (ReservedKeys (spawn (interpOf p table) m parent code options site).1 keys) := ⟨⟩
 
 theorem reservedKeys_spawn (p : NativeEff) (table : RowTable) {m : NativeMachine}
     {keys : List GuardKey} (reserved : ReservedKeys m keys)
-    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) :
-    ReservedKeys (spawn (interpOf p table) m parent code options).1 keys :=
-  reservedKeys_of_same_requests reserved (Nat.le_refl _) (requestOf_spawn p table m parent code options)
+    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) :
+    ReservedKeys (spawn (interpOf p table) m parent code options site).1 keys :=
+  reservedKeys_of_same_requests reserved (Nat.le_refl _) (requestOf_spawn p table m parent code options (site := site))
+
+def M1Origin.guardQueue_spawn (p : NativeEff) (table : RowTable) {m : NativeMachine}
+    {rest : List NCmd} (_queue : GuardQueue p table m rest)
+    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (GuardQueue p table (spawn (interpOf p table) m parent code options site).1 rest) := ⟨⟩
 
 theorem guardQueue_spawn (p : NativeEff) (table : RowTable) {m : NativeMachine}
     {rest : List NCmd} (queue : GuardQueue p table m rest)
-    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) :
-    GuardQueue p table (spawn (interpOf p table) m parent code options).1 rest := by
+    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) :
+    GuardQueue p table (spawn (interpOf p table) m parent code options site).1 rest := by
   apply guardQueue_transport p table queue
-  · exact controlsPreserved_spawnAppend m (spawnedChild p table m parent code options)
-  · exact raceHostsPreserved_spawnAppend m (spawnedChild p table m parent code options)
+  · exact controlsPreserved_spawnAppend m (spawnedChild p table m parent code options site)
+  · exact raceHostsPreserved_spawnAppend m (spawnedChild p table m parent code options site)
   · exact Nat.le_refl _
   · intro fiber token request hr
-    rw [requestOf_spawn] at hr
+    rw [requestOf_spawn (site := site)] at hr
     exact hr
 
 theorem fiber_lookup_nextId_none {m : NativeMachine} (state : GuardState m) :
@@ -3567,65 +3515,104 @@ theorem fiber_lookup_nextId_none {m : NativeMachine} (state : GuardState m) :
   simp only at hv
   omega
 
+def M1Origin.spawn_parent_unchanged (p : NativeEff) (table : RowTable) (m : NativeMachine)
+    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation ((spawn (interpOf p table) m parent code options site).2.1 = parent) := ⟨⟩
+
 theorem spawn_parent_unchanged (p : NativeEff) (table : RowTable) (m : NativeMachine)
-    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) :
-    (spawn (interpOf p table) m parent code options).2.1 = parent := rfl
+    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) :
+    (spawn (interpOf p table) m parent code options site).2.1 = parent := by aesop
+
+def M1Origin.spawn_child_fresh (p : NativeEff) (table : RowTable) {m : NativeMachine}
+    (_state : GuardState m) (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (m.fiber? (spawn (interpOf p table) m parent code options site).2.2 = none) := ⟨⟩
 
 theorem spawn_child_fresh (p : NativeEff) (table : RowTable) {m : NativeMachine}
-    (state : GuardState m) (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) :
-    m.fiber? (spawn (interpOf p table) m parent code options).2.2 = none :=
+    (state : GuardState m) (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) :
+    m.fiber? (spawn (interpOf p table) m parent code options site).2.2 = none :=
   fiber_lookup_nextId_none state
 
+def M1Origin.spawn_child_below (p : NativeEff) (table : RowTable) (m : NativeMachine)
+    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation ((spawn (interpOf p table) m parent code options site).2.2.value <
+      (spawn (interpOf p table) m parent code options site).1.nextId) := ⟨⟩
+
 theorem spawn_child_below (p : NativeEff) (table : RowTable) (m : NativeMachine)
-    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) :
-    (spawn (interpOf p table) m parent code options).2.2.value <
-      (spawn (interpOf p table) m parent code options).1.nextId := Nat.lt_succ_self _
+    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) :
+    (spawn (interpOf p table) m parent code options site).2.2.value <
+      (spawn (interpOf p table) m parent code options site).1.nextId := Nat.lt_succ_self _
+
+def M1Origin.spawn_child_lookup (p : NativeEff) (table : RowTable) {m : NativeMachine}
+    (_state : GuardState m) (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation ((spawn (interpOf p table) m parent code options site).1.fiber?
+      (spawn (interpOf p table) m parent code options site).2.2 =
+        some (spawnedChild p table m parent code options site)) := ⟨⟩
 
 theorem spawn_child_lookup (p : NativeEff) (table : RowTable) {m : NativeMachine}
-    (state : GuardState m) (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) :
-    (spawn (interpOf p table) m parent code options).1.fiber?
-      (spawn (interpOf p table) m parent code options).2.2 =
-        some (spawnedChild p table m parent code options) := by
+    (state : GuardState m) (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := []) :
+    (spawn (interpOf p table) m parent code options site).1.fiber?
+      (spawn (interpOf p table) m parent code options site).2.2 =
+        some (spawnedChild p table m parent code options site) := by
   have hf := fiber_lookup_nextId_none state
   change m.fibers.find? _ = none at hf
   simp only [spawn, RunMachine.emit, RunMachine.fiber?, List.find?_append,
     hf, Option.none_or, List.find?_cons, RunFiber.make, decide_true]
   rfl
 
+def M1Origin.spawn_child_raceSites (p : NativeEff) (table : RowTable) (m : NativeMachine)
+    (parent : NFiber) (code : NCode) (_sites : raceSites code = [])
+    (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (raceSites (spawnedChild p table m parent code options site).frame.current = []) := ⟨⟩
+
 theorem spawn_child_raceSites (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (parent : NFiber) (code : NCode) (sites : raceSites code = [])
-    (options : Supervision.ForkOptions) :
-    raceSites (spawnedChild p table m parent code options).frame.current = [] := sites
+    (options : Supervision.ForkOptions) (site : List Nat := []) :
+    raceSites (spawnedChild p table m parent code options site).frame.current = [] := by aesop
+
+def M1Origin.requestOf_launchEntrant (p : NativeEff) (table : RowTable) (m : NativeMachine)
+    (raceId : Nat) (host : NFiber) (code : NCode) (fiber : FiberId) (token : Nat) (site : List Nat := []) : ProofGraph.Obligation (requestOf (launchEntrant (interpOf p table) raceId m host code site).1 fiber token =
+      requestOf m fiber token) := ⟨⟩
 
 theorem requestOf_launchEntrant (p : NativeEff) (table : RowTable) (m : NativeMachine)
-    (raceId : Nat) (host : NFiber) (code : NCode) (fiber : FiberId) (token : Nat) :
-    requestOf (launchEntrant (interpOf p table) raceId m host code).1 fiber token =
+    (raceId : Nat) (host : NFiber) (code : NCode) (fiber : FiberId) (token : Nat) (site : List Nat := []) :
+    requestOf (launchEntrant (interpOf p table) raceId m host code site).1 fiber token =
       requestOf m fiber token :=
-  requestOf_spawn p table m host code ⟨true, true, .interruptible⟩ fiber token
+  requestOf_spawn p table m host code ⟨true, true, .interruptible⟩ fiber token site
+
+def M1Origin.interruptedAt_launchEntrant (p : NativeEff) (table : RowTable) {m : NativeMachine}
+    (raceId : Nat) (host : NFiber) (code : NCode) {fiber : FiberId}
+    (_hi : InterruptedAt m fiber) (site : List Nat := []) : ProofGraph.Obligation (InterruptedAt (launchEntrant (interpOf p table) raceId m host code site).1 fiber) := ⟨⟩
 
 theorem interruptedAt_launchEntrant (p : NativeEff) (table : RowTable) {m : NativeMachine}
     (raceId : Nat) (host : NFiber) (code : NCode) {fiber : FiberId}
-    (hi : InterruptedAt m fiber) :
-    InterruptedAt (launchEntrant (interpOf p table) raceId m host code).1 fiber :=
-  interruptedAt_spawn p table host code ⟨true, true, .interruptible⟩ hi
+    (hi : InterruptedAt m fiber) (site : List Nat := []) :
+    InterruptedAt (launchEntrant (interpOf p table) raceId m host code site).1 fiber :=
+  interruptedAt_spawn p table host code ⟨true, true, .interruptible⟩ hi site
+
+def M1Origin.guardState_launchEntrant (p : NativeEff) (table : RowTable) {m : NativeMachine}
+    (_state : GuardState m) (raceId : Nat) (host : NFiber) (code : NCode)
+    (_sites : raceSites code = []) (site : List Nat := []) : ProofGraph.Obligation (GuardState (launchEntrant (interpOf p table) raceId m host code site).1) := ⟨⟩
 
 theorem guardState_launchEntrant (p : NativeEff) (table : RowTable) {m : NativeMachine}
     (state : GuardState m) (raceId : Nat) (host : NFiber) (code : NCode)
-    (sites : raceSites code = []) :
-    GuardState (launchEntrant (interpOf p table) raceId m host code).1 :=
-  guardState_spawn p table state host code sites ⟨true, true, .interruptible⟩
+    (sites : raceSites code = []) (site : List Nat := []) :
+    GuardState (launchEntrant (interpOf p table) raceId m host code site).1 :=
+  guardState_spawn p table state host code sites ⟨true, true, .interruptible⟩ site
+
+def M1Origin.guardQueue_launchEntrant (p : NativeEff) (table : RowTable) {m : NativeMachine}
+    {rest : List NCmd} (_queue : GuardQueue p table m rest)
+    (raceId : Nat) (host : NFiber) (code : NCode) (site : List Nat := []) : ProofGraph.Obligation (GuardQueue p table (launchEntrant (interpOf p table) raceId m host code site).1 rest) := ⟨⟩
 
 theorem guardQueue_launchEntrant (p : NativeEff) (table : RowTable) {m : NativeMachine}
     {rest : List NCmd} (queue : GuardQueue p table m rest)
-    (raceId : Nat) (host : NFiber) (code : NCode) :
-    GuardQueue p table (launchEntrant (interpOf p table) raceId m host code).1 rest :=
-  guardQueue_spawn p table queue host code ⟨true, true, .interruptible⟩
+    (raceId : Nat) (host : NFiber) (code : NCode) (site : List Nat := []) :
+    GuardQueue p table (launchEntrant (interpOf p table) raceId m host code site).1 rest :=
+  guardQueue_spawn p table queue host code ⟨true, true, .interruptible⟩ site
+
+def M1Origin.reservedKeys_launchEntrant (p : NativeEff) (table : RowTable) {m : NativeMachine}
+    {keys : List GuardKey} (_reserved : ReservedKeys m keys)
+    (raceId : Nat) (host : NFiber) (code : NCode) (site : List Nat := []) : ProofGraph.Obligation (ReservedKeys (launchEntrant (interpOf p table) raceId m host code site).1 keys) := ⟨⟩
 
 theorem reservedKeys_launchEntrant (p : NativeEff) (table : RowTable) {m : NativeMachine}
     {keys : List GuardKey} (reserved : ReservedKeys m keys)
-    (raceId : Nat) (host : NFiber) (code : NCode) :
-    ReservedKeys (launchEntrant (interpOf p table) raceId m host code).1 keys :=
-  reservedKeys_spawn p table reserved host code ⟨true, true, .interruptible⟩
+    (raceId : Nat) (host : NFiber) (code : NCode) (site : List Nat := []) :
+    ReservedKeys (launchEntrant (interpOf p table) raceId m host code site).1 keys :=
+  reservedKeys_spawn p table reserved host code ⟨true, true, .interruptible⟩ site
 
 theorem requestOf_forkFinalizers (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (host : NFiber) (programs : List NCode) (fiber : FiberId) (token : Nat) :
@@ -3762,5 +3749,26 @@ theorem reservedKeys_race {m : NativeMachine} (state : GuardState m)
   obtain rfl := List.mem_singleton.mp hk
   rw [internalKeys_store_decomposition]
   exact List.mem_append_left _ (List.mem_append_right _ (List.mem_map.mpr ⟨race, hr, rfl⟩))
+
+#typed_state_obligations Effect4.Program.Guard.M1 ceiling 0 using
+  aesop (rule_sets := [Effect4.Stores])
+    (add safe forward [guardState_withState, guardState_withStoreKeys, guardState_storeFresh])
+    (add safe apply [codeSites_dueResumes])
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])] deferredKeys_due_append
+attribute [aesop norm -1 apply (rule_sets := [Effect4.Stores])] deferredKeys_complete_subset
+
+#typed_state_obligations Effect4.Program.Guard.M1Completion ceiling 0 using
+  aesop (rule_sets := [Effect4.Stores])
+
+#typed_state_obligations Effect4.Program.Guard.M1Clock ceiling 0 using
+  aesop (rule_sets := [Effect4.Stores])
+    (add safe apply [requestOf_advance_zero])
+    (add safe forward [timer_fireNext_key, timer_clockStep_key, clock_resume_not_external_key])
+
+#typed_state_obligations Effect4.Program.Guard.M1Origin ceiling 0 using
+  aesop (rule_sets := [Effect4.Stores])
+    (add unsafe apply [raceCodeOwned_beginRace,
+      fiberGuardState_freshChild, spawn_machine, requestOf_spawn, interruptedAt_spawn, guardState_spawn, reservedKeys_spawn, guardQueue_spawn, spawn_parent_unchanged, spawn_child_fresh, spawn_child_below, spawn_child_lookup, spawn_child_raceSites, requestOf_launchEntrant, interruptedAt_launchEntrant, guardState_launchEntrant, guardQueue_launchEntrant, reservedKeys_launchEntrant])
 
 end Effect4.Program.Guard

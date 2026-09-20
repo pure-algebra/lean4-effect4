@@ -39,7 +39,7 @@ theorem FMeans.saveAnswer {root : NativeEff} {f₁ : FRun} {f₂ : RFiber} (h : 
   FMeans.mk' h.id h.parked h.context h.running h.pending h.finalizing h.exit h.opCount h.maxOps
     h.preventYield h.yieldOverride h.observers h.children h.dispatcher
     ⟨h.interruptible, h.interruptedCause, h.deferred, h.current, StackMeans.answer k hk h.stack,
-      h.maskInv⟩
+      h.maskInv⟩ h.origin
 
 /-! ## The interpreters, beyond the code hooks -/
 
@@ -55,20 +55,15 @@ structure InterpAgree (i₁ : FInterp) (i₂ : RInterp) : Prop where
 /-- Registration keeps the loop's store invariant: the deferred half is untouched, and the
 registration-key bound survives because the allocated key is the supply's own value
 (`Machine.scopeLinkFiber_keysFresh`, `E4-CHECK-CE-016`). -/
+def M1Actions.scopeLinkFiber_ok (root : NativeEff) (mode : Supervision.ScopeMode) (scope : Nat)
+    (fiber : FiberId) (s s' : Stores) (key : Nat) (_hs : StoresOk s)
+    (_h : (interpOf root).scopeLinkFiber mode scope fiber s = some (s', key)) : ProofGraph.Obligation (StoresOk s') := ⟨⟩
+#proof_wanted M1Actions.scopeLinkFiber_ok
+
 theorem scopeLinkFiber_ok (root : NativeEff) (mode : Supervision.ScopeMode) (scope : Nat)
     (fiber : FiberId) (s s' : Stores) (key : Nat) (hs : StoresOk s)
     (h : (interpOf root).scopeLinkFiber mode scope fiber s = some (s', key)) : StoresOk s' := by
-  have hstores : stores.scopeLinkFiber mode scope fiber s = some (s', key) := h
-  refine ⟨?_, scopeLinkFiber_keysFresh mode scope fiber hs.2 hstores⟩
-  dsimp only [interpOf] at h
-  cases hentry : s.scopes.entryAt scope with
-  | none => rw [hentry] at h; cases h
-  | some entry =>
-    rw [hentry] at h
-    dsimp only at h
-    unfold DeferredOk
-    rw [← (Prod.mk.inj (Option.some.inj h)).1]
-    exact hs.1
+  exact ⟨scopeLinkFiber_keysFresh mode scope fiber hs.keysFresh h⟩
 
 theorem interpAgree_at (root : NativeEff) (c c' : List (FiberId × ExitV)) :
     InterpAgree (interpAt root c) (interpRAt root c') :=
@@ -167,7 +162,7 @@ theorem interruptRecord_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp}
         rw [if_neg hrun, if_neg hrun₂]
         exact ⟨FMeans.mk' ht.id rfl ht.context ht.running rfl ht.finalizing ht.exit ht.opCount
           ht.maxOps ht.preventYield ht.yieldOverride ht.observers ht.children ht.dispatcher
-          ⟨ht.interruptible, rfl, ht.deferred, CodeMeans.failure acc, ht.stack, ht.maskInv⟩, rfl⟩
+          ⟨ht.interruptible, rfl, ht.deferred, CodeMeans.failure acc, ht.stack, ht.maskInv⟩ ht.origin, rfl⟩
     · have hint₂ : ¬ t₂.frame.interruptible = true := by rw [← ht.interruptible]; exact hint
       rw [if_neg hint, if_neg hint₂]
       exact ⟨ht.withFrame ⟨ht.interruptible, rfl, ht.deferred, ht.current, ht.stack, ht.maskInv⟩, rfl⟩
@@ -188,27 +183,34 @@ theorem listRel_evaluate (root : NativeEff) :
   | [] => ListRel.nil
   | _ :: rest => ListRel.cons rfl (listRel_evaluate root rest)
 
+def M1Origin.spawn_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp} (_hb : i₁.budgetOf = i₂.budgetOf)
+    {m₁ : FMachine} {m₂ : RState}
+    (_hok : MachineOk StoresOk m₁) (_hm : BMeans root m₁ m₂) {p₁ : FRun} {p₂ : RFiber}
+    (_hp : FMeans root p₁ p₂) {prog₁ : NCode} {prog₂ : RProgram} (_hprog : CodeMeans root prog₁ prog₂)
+    (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (TripleRel root Eq (spawn i₁ m₁ p₁ prog₁ options site) (spawn i₂ m₂ p₂ prog₂ options site)) := ⟨⟩
+#proof_wanted M1Origin.spawn_rel
+
 theorem spawn_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp} (hb : i₁.budgetOf = i₂.budgetOf)
     {m₁ : FMachine} {m₂ : RState}
     (hok : MachineOk StoresOk m₁) (hm : BMeans root m₁ m₂) {p₁ : FRun} {p₂ : RFiber}
     (hp : FMeans root p₁ p₂) {prog₁ : NCode} {prog₂ : RProgram} (hprog : CodeMeans root prog₁ prog₂)
-    (options : Supervision.ForkOptions) :
-    TripleRel root Eq (spawn i₁ m₁ p₁ prog₁ options) (spawn i₂ m₂ p₂ prog₂ options) := by
+    (options : Supervision.ForkOptions) (site : List Nat := []) :
+    TripleRel root Eq (spawn i₁ m₁ p₁ prog₁ options site) (spawn i₂ m₂ p₂ prog₂ options site) := by
   unfold spawn
   dsimp only [FiberCore.interruptible, frameCore, termCore]
-  rw [hm.nextId, hp.context, hb]
+  rw [hm.nextId, hp.context, hb, hp.id]
   cases options.maskMode with
   | interruptible =>
-    exact ⟨machineOk_emit (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _) _) _,
-      BMeans.emit (hm.appendFiber (fmeans_make root _ hprog _ _ _) _) _ _, hp, rfl⟩
+    exact ⟨machineOk_emit (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _ _) _) _,
+      BMeans.emit (hm.appendFiber (fmeans_make root _ hprog _ _ _ (.forked p₂.id options.daemon site)) _) _ _, hp, rfl⟩
   | uninterruptible =>
-    exact ⟨machineOk_emit (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _) _) _,
-      BMeans.emit (hm.appendFiber (fmeans_make root _ hprog _ _ _) _) _ _, hp, rfl⟩
+    exact ⟨machineOk_emit (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _ _) _) _,
+      BMeans.emit (hm.appendFiber (fmeans_make root _ hprog _ _ _ (.forked p₂.id options.daemon site)) _) _ _, hp, rfl⟩
   | inherit =>
     dsimp only
     rw [hp.interruptible]
-    exact ⟨machineOk_emit (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _) _) _,
-      BMeans.emit (hm.appendFiber (fmeans_make root _ hprog _ _ _) _) _ _, hp, rfl⟩
+    exact ⟨machineOk_emit (machineOk_appendFiber hok (pendingOk_make _ _ _ _ _ _) _) _,
+      BMeans.emit (hm.appendFiber (fmeans_make root _ hprog _ _ _ (.forked p₂.id options.daemon site)) _) _ _, hp, rfl⟩
 
 theorem start_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : MachineOk StoresOk m₁)
     (hm : BMeans root m₁ m₂) {p₁ : FRun} {p₂ : RFiber} (hp : FMeans root p₁ p₂) (child : FiberId)
@@ -303,16 +305,22 @@ theorem countdownPark_rel (root : NativeEff) (c : List (FiberId × ExitV)) {m₁
       · rw [hf.id]
         exact means_pushAsyncFinalizer hf.means _
 
+def M1Origin.beginRace_rel (root : NativeEff) (c : List (FiberId × ExitV)) {m₁ : FMachine} {m₂ : RState}
+    (_hok : MachineOk StoresOk m₁) (_hm : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber}
+    (_hf : FMeans root f₁ f₂) (y : Bool) {e₁ : List NCode} {e₂ : List RProgram}
+    (_he : ListRel (CodeMeans root) e₁ e₂) (site : Option (List Nat) := none) : ProofGraph.Obligation (IterRel root (beginRace (interpAt root c) m₁ f₁ y e₁ site) (beginRace (interpRAt root c) m₂ f₂ y e₂ site)) := ⟨⟩
+#proof_wanted M1Origin.beginRace_rel
+
 theorem beginRace_rel (root : NativeEff) (c : List (FiberId × ExitV)) {m₁ : FMachine} {m₂ : RState}
     (hok : MachineOk StoresOk m₁) (hm : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber}
     (hf : FMeans root f₁ f₂) (y : Bool) {e₁ : List NCode} {e₂ : List RProgram}
-    (he : ListRel (CodeMeans root) e₁ e₂) :
-    IterRel root (beginRace (interpAt root c) m₁ f₁ y e₁) (beginRace (interpRAt root c) m₂ f₂ y e₂) := by
+    (he : ListRel (CodeMeans root) e₁ e₂) (site : Option (List Nat) := none) :
+    IterRel root (beginRace (interpAt root c) m₁ f₁ y e₁ site) (beginRace (interpRAt root c) m₂ f₂ y e₂ site) := by
   unfold beginRace
   dsimp only
   rw [hm.nextRace, hm.nextToken, ListRel.length he]
   exact ⟨machineOk_emit (machineOk_appendRace hok _ _ _) _,
-    BMeans.emit (hm.appendRace (raceMeans_mk' rfl hf.id rfl rfl rfl rfl he) _ _) _ _,
+    BMeans.emit (hm.appendRace (raceMeans_mk' rfl hf.id rfl rfl rfl rfl he rfl) _ _) _ _,
     hf.withFrame (means_answerWith hf.means (parkCode_means root _)), rfl, rfl, ListRel.nil⟩
 
 theorem registerRace_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : MachineOk StoresOk m₁)
@@ -409,7 +417,7 @@ theorem FMeans.answerEnqueue {root : NativeEff} {f₁ : FRun} {f₂ : RFiber} (h
       { f₂ with frame := { f₂.frame with current := c₂ }, dispatcher := f₂.dispatcher.enqueue priority t₂ } :=
   FMeans.mk' h.id h.parked h.context h.running h.pending h.finalizing h.exit h.opCount h.maxOps
     h.preventYield h.yieldOverride h.observers h.children
-    (dispatcherMeans_enqueue h.dispatcher priority ht) (means_answerWith h.means hc)
+    (dispatcherMeans_enqueue h.dispatcher priority ht) (means_answerWith h.means hc) h.origin
 
 /-- A value answered through related answer functions. -/
 theorem iterRel_answer {root : NativeEff} {m₁ : FMachine} {m₂ : RState} (hok : MachineOk StoresOk m₁)
@@ -502,17 +510,22 @@ theorem runIn_rel (target : FiberId) (scope : Nat) {a₁ : FAnswer} {a₂ : RAns
   dsimp only at hok' hm' hcs
   exact ⟨hok', hm', ha _ _ _ hf, rfl, outcomeOf_eq hm' false, hcs⟩
 
+def M1Origin.fork_rel {p₁ : NCode} {p₂ : RProgram} (_hp : CodeMeans root p₁ p₂)
+    (options : Supervision.ForkOptions) {a₁ : FAnswer} {a₂ : RAnswer} (_ha : AnswerRel root a₁ a₂) (site : List Nat := []) : ProofGraph.Obligation (IterRel root (FiberAction.fork (interpAt root c) m₁ f₁ y p₁ options a₁ site)
+      (FiberAction.fork (interpRAt root c) m₂ f₂ y p₂ options a₂ site)) := ⟨⟩
+#proof_wanted M1Origin.fork_rel
+
 theorem fork_rel {p₁ : NCode} {p₂ : RProgram} (hp : CodeMeans root p₁ p₂)
-    (options : Supervision.ForkOptions) {a₁ : FAnswer} {a₂ : RAnswer} (ha : AnswerRel root a₁ a₂) :
-    IterRel root (FiberAction.fork (interpAt root c) m₁ f₁ y p₁ options a₁)
-      (FiberAction.fork (interpRAt root c) m₂ f₂ y p₂ options a₂) := by
+    (options : Supervision.ForkOptions) {a₁ : FAnswer} {a₂ : RAnswer} (ha : AnswerRel root a₁ a₂) (site : List Nat := []) :
+    IterRel root (FiberAction.fork (interpAt root c) m₁ f₁ y p₁ options a₁ site)
+      (FiberAction.fork (interpRAt root c) m₂ f₂ y p₂ options a₂ site) := by
   unfold FiberAction.fork
   cases hd : options.daemon with
   | true =>
     simp only [↓reduceIte, List.append_nil]
-    have hs := spawn_rel root (i₁ := interpAt root c) (i₂ := interpRAt root c) rfl hok hm hf hp options
-    generalize spawn (interpAt root c) m₁ f₁ p₁ options = s₁ at hs ⊢
-    generalize spawn (interpRAt root c) m₂ f₂ p₂ options = s₂ at hs ⊢
+    have hs := spawn_rel root (i₁ := interpAt root c) (i₂ := interpRAt root c) rfl hok hm hf hp options site
+    generalize spawn (interpAt root c) m₁ f₁ p₁ options site = s₁ at hs ⊢
+    generalize spawn (interpRAt root c) m₂ f₂ p₂ options site = s₂ at hs ⊢
     obtain ⟨sm₁, sf₁, ch₁⟩ := s₁
     obtain ⟨sm₂, sf₂, ch₂⟩ := s₂
     obtain ⟨hok', hm', hf', hch⟩ := hs
@@ -530,9 +543,9 @@ theorem fork_rel {p₁ : NCode} {p₂ : RProgram} (hp : CodeMeans root p₁ p₂
   | false =>
     simp only [Bool.false_eq_true, ↓reduceIte]
     have hs := spawn_rel root (i₁ := interpAt root c) (i₂ := interpRAt root c) rfl
-      (machineOk_middleware hok) hm.middlewareOn hf hp options
-    generalize spawn (interpAt root c) { m₁ with middlewareInstalled := true } f₁ p₁ options = s₁ at hs ⊢
-    generalize spawn (interpRAt root c) { m₂ with middlewareInstalled := true } f₂ p₂ options = s₂ at hs ⊢
+      (machineOk_middleware hok) hm.middlewareOn hf hp options site
+    generalize spawn (interpAt root c) { m₁ with middlewareInstalled := true } f₁ p₁ options site = s₁ at hs ⊢
+    generalize spawn (interpRAt root c) { m₂ with middlewareInstalled := true } f₂ p₂ options site = s₂ at hs ⊢
     obtain ⟨sm₁, sf₁, ch₁⟩ := s₁
     obtain ⟨sm₂, sf₂, ch₂⟩ := s₂
     obtain ⟨hok', hm', hf', hch⟩ := hs
@@ -549,15 +562,21 @@ theorem fork_rel {p₁ : NCode} {p₂ : RProgram} (hp : CodeMeans root p₁ p₂
     exact ⟨hok'', hm'', ha _ _ _ hf'', rfl, rfl,
       ListRel.append hn (ListRel.cons ⟨hf.id, rfl⟩ ListRel.nil)⟩
 
+def M1Origin.forkIn_rel {p₁ : NCode} {p₂ : RProgram} (_hp : CodeMeans root p₁ p₂)
+    (options : Supervision.ForkOptions) (scope : Nat) {a₁ : FAnswer} {a₂ : RAnswer}
+    (_ha : AnswerRel root a₁ a₂) (site : List Nat := []) : ProofGraph.Obligation (IterRel root (FiberAction.forkIn (interpAt root c) m₁ f₁ y p₁ options scope a₁ site)
+      (FiberAction.forkIn (interpRAt root c) m₂ f₂ y p₂ options scope a₂ site)) := ⟨⟩
+#proof_wanted M1Origin.forkIn_rel
+
 theorem forkIn_rel {p₁ : NCode} {p₂ : RProgram} (hp : CodeMeans root p₁ p₂)
     (options : Supervision.ForkOptions) (scope : Nat) {a₁ : FAnswer} {a₂ : RAnswer}
-    (ha : AnswerRel root a₁ a₂) :
-    IterRel root (FiberAction.forkIn (interpAt root c) m₁ f₁ y p₁ options scope a₁)
-      (FiberAction.forkIn (interpRAt root c) m₂ f₂ y p₂ options scope a₂) := by
+    (ha : AnswerRel root a₁ a₂) (site : List Nat := []) :
+    IterRel root (FiberAction.forkIn (interpAt root c) m₁ f₁ y p₁ options scope a₁ site)
+      (FiberAction.forkIn (interpRAt root c) m₂ f₂ y p₂ options scope a₂ site) := by
   unfold FiberAction.forkIn
-  have hs := spawn_rel root (i₁ := interpAt root c) (i₂ := interpRAt root c) rfl hok hm hf hp { options with daemon := true }
-  generalize spawn (interpAt root c) m₁ f₁ p₁ { options with daemon := true } = s₁ at hs ⊢
-  generalize spawn (interpRAt root c) m₂ f₂ p₂ { options with daemon := true } = s₂ at hs ⊢
+  have hs := spawn_rel root (i₁ := interpAt root c) (i₂ := interpRAt root c) rfl hok hm hf hp { options with daemon := true } site
+  generalize spawn (interpAt root c) m₁ f₁ p₁ { options with daemon := true } site = s₁ at hs ⊢
+  generalize spawn (interpRAt root c) m₂ f₂ p₂ { options with daemon := true } site = s₂ at hs ⊢
   obtain ⟨sm₁, sf₁, ch₁⟩ := s₁
   obtain ⟨sm₂, sf₂, ch₂⟩ := s₂
   obtain ⟨hok', hm', hf', hch⟩ := hs
@@ -742,10 +761,14 @@ theorem cancelRace_rel (raceId : Nat) {a₁ : FAnswer} {a₂ : RAnswer} (ha : An
     exact ⟨hok, hm, hf, rfl, rfl,
       ListRel.cons ⟨rfl, hf.id, rfl, congrArg (fun s => s.live) (raceMeans_state hr), rfl⟩ ListRel.nil⟩
 
-theorem raceAll_rel {e₁ : List NCode} {e₂ : List RProgram} (he : ListRel (CodeMeans root) e₁ e₂) :
-    IterRel root (FiberAction.raceAll (interpAt root c) m₁ f₁ y e₁)
-      (FiberAction.raceAll (interpRAt root c) m₂ f₂ y e₂) :=
-  beginRace_rel root c hok hm hf y he
+def M1Origin.raceAll_rel {e₁ : List NCode} {e₂ : List RProgram} (_he : ListRel (CodeMeans root) e₁ e₂) (site : Option (List Nat) := none) : ProofGraph.Obligation (IterRel root (FiberAction.raceAll (interpAt root c) m₁ f₁ y e₁ site)
+      (FiberAction.raceAll (interpRAt root c) m₂ f₂ y e₂ site)) := ⟨⟩
+#proof_wanted M1Origin.raceAll_rel
+
+theorem raceAll_rel {e₁ : List NCode} {e₂ : List RProgram} (he : ListRel (CodeMeans root) e₁ e₂) (site : Option (List Nat) := none) :
+    IterRel root (FiberAction.raceAll (interpAt root c) m₁ f₁ y e₁ site)
+      (FiberAction.raceAll (interpRAt root c) m₂ f₂ y e₂ site) :=
+  beginRace_rel root c hok hm hf y he site
 
 theorem yieldNow_rel (priority : Nat) :
     IterRel root (FiberAction.yieldNow (interpAt root c) m₁ f₁ y priority)
@@ -780,7 +803,7 @@ theorem join_rel (target : FiberId) (mode : Supervision.ObserverMode) :
       · exact pendingOk_of_fields (pendingOk_of_fiber? hok h₁) rfl
       · exact FMeans.mk' ht.id ht.parked ht.context ht.running ht.pending ht.finalizing rfl ht.opCount
           ht.maxOps ht.preventYield ht.yieldOverride (by rw [ht.observers, hf.id]) ht.children
-          ht.dispatcher ht.means
+          ht.dispatcher ht.means ht.origin
       · rw [hf.id]
         exact means_pushAsyncFinalizer hf.means _
     · rw [hex₁] at hex

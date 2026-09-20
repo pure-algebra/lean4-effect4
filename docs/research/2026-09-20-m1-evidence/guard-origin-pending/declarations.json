@@ -1,0 +1,117 @@
+[
+  {
+    "file": "src/Effect4/Laws/Program/Guard/Core.lean",
+    "name": "fiberGuardState_freshChild",
+    "ledger": "def M1Origin.fiberGuardState_freshChild (m : NativeMachine) (code : NCode)\n    (sites : raceSites code = []) (flag : Bool) (budget : Nat \u00d7 Bool) (ctx : Ctx) (origin : Origin := .root)  : ProofGraph.Obligation (FiberGuardState { m with nextId := m.nextId + 1 }\n      (RunFiber.make \u27e8m.nextId\u27e9 code flag budget ctx origin)) := \u27e8\u27e9\n#proof_wanted M1Origin.fiberGuardState_freshChild\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/Core.lean",
+    "name": "spawn_machine",
+    "ledger": "def M1Origin.spawn_machine (p : NativeEff) (table : RowTable) (m : NativeMachine)\n    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := [])  : ProofGraph.Obligation ((spawn (interpOf p table) m parent code options site).1 =\n      (spawnAppend m (spawnedChild p table m parent code options site)).emit\n        [.forked parent.id \u27e8m.nextId\u27e9 options.daemon]) := \u27e8\u27e9\n#proof_wanted M1Origin.spawn_machine\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/Core.lean",
+    "name": "requestOf_spawn",
+    "ledger": "def M1Origin.requestOf_spawn (p : NativeEff) (table : RowTable) (m : NativeMachine)\n    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions)\n    (fiber : FiberId) (token : Nat) (site : List Nat := [])  : ProofGraph.Obligation (requestOf (spawn (interpOf p table) m parent code options site).1 fiber token =\n      requestOf m fiber token) := \u27e8\u27e9\n#proof_wanted M1Origin.requestOf_spawn\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/Core.lean",
+    "name": "interruptedAt_spawn",
+    "ledger": "def M1Origin.interruptedAt_spawn (p : NativeEff) (table : RowTable) {m : NativeMachine}\n    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions)\n    {fiber : FiberId} (hi : InterruptedAt m fiber) (site : List Nat := [])  : ProofGraph.Obligation (InterruptedAt (spawn (interpOf p table) m parent code options site).1 fiber) := \u27e8\u27e9\n#proof_wanted M1Origin.interruptedAt_spawn\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/Core.lean",
+    "name": "guardState_spawn",
+    "ledger": "def M1Origin.guardState_spawn (p : NativeEff) (table : RowTable) {m : NativeMachine}\n    (state : GuardState m) (parent : NFiber) (code : NCode)\n    (sites : raceSites code = []) (options : Supervision.ForkOptions) (site : List Nat := [])  : ProofGraph.Obligation (GuardState (spawn (interpOf p table) m parent code options site).1) := \u27e8\u27e9\n#proof_wanted M1Origin.guardState_spawn\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/Core.lean",
+    "name": "reservedKeys_spawn",
+    "ledger": "def M1Origin.reservedKeys_spawn (p : NativeEff) (table : RowTable) {m : NativeMachine}\n    {keys : List GuardKey} (reserved : ReservedKeys m keys)\n    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := [])  : ProofGraph.Obligation (ReservedKeys (spawn (interpOf p table) m parent code options site).1 keys) := \u27e8\u27e9\n#proof_wanted M1Origin.reservedKeys_spawn\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/Core.lean",
+    "name": "guardQueue_spawn",
+    "ledger": "def M1Origin.guardQueue_spawn (p : NativeEff) (table : RowTable) {m : NativeMachine}\n    {rest : List NCmd} (queue : GuardQueue p table m rest)\n    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := [])  : ProofGraph.Obligation (GuardQueue p table (spawn (interpOf p table) m parent code options site).1 rest) := \u27e8\u27e9\n#proof_wanted M1Origin.guardQueue_spawn\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/Core.lean",
+    "name": "spawn_parent_unchanged",
+    "ledger": "def M1Origin.spawn_parent_unchanged (p : NativeEff) (table : RowTable) (m : NativeMachine)\n    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := [])  : ProofGraph.Obligation ((spawn (interpOf p table) m parent code options site).2.1 = parent) := \u27e8\u27e9\n#proof_wanted M1Origin.spawn_parent_unchanged\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/Core.lean",
+    "name": "spawn_child_fresh",
+    "ledger": "def M1Origin.spawn_child_fresh (p : NativeEff) (table : RowTable) {m : NativeMachine}\n    (state : GuardState m) (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := [])  : ProofGraph.Obligation (m.fiber? (spawn (interpOf p table) m parent code options site).2.2 = none) := \u27e8\u27e9\n#proof_wanted M1Origin.spawn_child_fresh\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/Core.lean",
+    "name": "spawn_child_below",
+    "ledger": "def M1Origin.spawn_child_below (p : NativeEff) (table : RowTable) (m : NativeMachine)\n    (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := [])  : ProofGraph.Obligation ((spawn (interpOf p table) m parent code options site).2.2.value <\n      (spawn (interpOf p table) m parent code options site).1.nextId) := \u27e8\u27e9\n#proof_wanted M1Origin.spawn_child_below\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/Core.lean",
+    "name": "spawn_child_lookup",
+    "ledger": "def M1Origin.spawn_child_lookup (p : NativeEff) (table : RowTable) {m : NativeMachine}\n    (state : GuardState m) (parent : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := [])  : ProofGraph.Obligation ((spawn (interpOf p table) m parent code options site).1.fiber?\n      (spawn (interpOf p table) m parent code options site).2.2 =\n        some (spawnedChild p table m parent code options site)) := \u27e8\u27e9\n#proof_wanted M1Origin.spawn_child_lookup\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/Core.lean",
+    "name": "spawn_child_raceSites",
+    "ledger": "def M1Origin.spawn_child_raceSites (p : NativeEff) (table : RowTable) (m : NativeMachine)\n    (parent : NFiber) (code : NCode) (sites : raceSites code = [])\n    (options : Supervision.ForkOptions) (site : List Nat := [])  : ProofGraph.Obligation (raceSites (spawnedChild p table m parent code options site).frame.current = []) := \u27e8\u27e9\n#proof_wanted M1Origin.spawn_child_raceSites\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/Core.lean",
+    "name": "requestOf_launchEntrant",
+    "ledger": "def M1Origin.requestOf_launchEntrant (p : NativeEff) (table : RowTable) (m : NativeMachine)\n    (raceId : Nat) (host : NFiber) (code : NCode) (fiber : FiberId) (token : Nat) (site : List Nat := [])  : ProofGraph.Obligation (requestOf (launchEntrant (interpOf p table) raceId m host code site).1 fiber token =\n      requestOf m fiber token) := \u27e8\u27e9\n#proof_wanted M1Origin.requestOf_launchEntrant\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/Core.lean",
+    "name": "interruptedAt_launchEntrant",
+    "ledger": "def M1Origin.interruptedAt_launchEntrant (p : NativeEff) (table : RowTable) {m : NativeMachine}\n    (raceId : Nat) (host : NFiber) (code : NCode) {fiber : FiberId}\n    (hi : InterruptedAt m fiber) (site : List Nat := [])  : ProofGraph.Obligation (InterruptedAt (launchEntrant (interpOf p table) raceId m host code site).1 fiber) := \u27e8\u27e9\n#proof_wanted M1Origin.interruptedAt_launchEntrant\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/Core.lean",
+    "name": "guardState_launchEntrant",
+    "ledger": "def M1Origin.guardState_launchEntrant (p : NativeEff) (table : RowTable) {m : NativeMachine}\n    (state : GuardState m) (raceId : Nat) (host : NFiber) (code : NCode)\n    (sites : raceSites code = []) (site : List Nat := [])  : ProofGraph.Obligation (GuardState (launchEntrant (interpOf p table) raceId m host code site).1) := \u27e8\u27e9\n#proof_wanted M1Origin.guardState_launchEntrant\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/Core.lean",
+    "name": "guardQueue_launchEntrant",
+    "ledger": "def M1Origin.guardQueue_launchEntrant (p : NativeEff) (table : RowTable) {m : NativeMachine}\n    {rest : List NCmd} (queue : GuardQueue p table m rest)\n    (raceId : Nat) (host : NFiber) (code : NCode) (site : List Nat := [])  : ProofGraph.Obligation (GuardQueue p table (launchEntrant (interpOf p table) raceId m host code site).1 rest) := \u27e8\u27e9\n#proof_wanted M1Origin.guardQueue_launchEntrant\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/Core.lean",
+    "name": "reservedKeys_launchEntrant",
+    "ledger": "def M1Origin.reservedKeys_launchEntrant (p : NativeEff) (table : RowTable) {m : NativeMachine}\n    {keys : List GuardKey} (reserved : ReservedKeys m keys)\n    (raceId : Nat) (host : NFiber) (code : NCode) (site : List Nat := [])  : ProofGraph.Obligation (ReservedKeys (launchEntrant (interpOf p table) raceId m host code site).1 keys) := \u27e8\u27e9\n#proof_wanted M1Origin.reservedKeys_launchEntrant\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/RaceSites.lean",
+    "name": "raceCodeOwned_beginRace",
+    "ledger": "def M1Origin.raceCodeOwned_beginRace (p : NativeEff) (table : RowTable)\n    (m : NativeMachine) (f : NFiber) (yielding : Bool) (entrants : List NCode)\n    (bounds : RaceIdsBelow m) (site : Option (List Nat) := none)  : ProofGraph.Obligation (RaceCodeOwned (beginRace (interpOf p table) m f yielding entrants site).machine f.id\n      (beginRace (interpOf p table) m f yielding entrants site).fiber.frame.current) := \u27e8\u27e9\n#proof_wanted M1Origin.raceCodeOwned_beginRace\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/FrameOwned.lean",
+    "name": "beginRace_owned",
+    "ledger": "def M1Origin.beginRace_owned (p : NativeEff) (completed : List (FiberId \u00d7 ExitV)) (table : RowTable)\n    (m : NativeMachine) (f : NFiber) (yielding : Bool) (entrants : List NCode)\n    (bounds : RaceIdsBelow m) (hf : FrameCodeOwned m f) (site : Option (List Nat) := none)  : ProofGraph.Obligation (FrameCodeOwned (beginRace (interpAt p completed table) m f yielding entrants site).machine\n      (beginRace (interpAt p completed table) m f yielding entrants site).fiber) := \u27e8\u27e9\n#proof_wanted M1Origin.beginRace_owned\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/NativeState.lean",
+    "name": "StateStep.spawn",
+    "ledger": "def M1Origin.StateStep.spawn (p : NativeEff) (table : RowTable) (completed)\n    {m : NativeMachine} (state : GuardState m) (f : NFiber) (code : NCode)\n    (sites : raceSites code = []) (options : Supervision.ForkOptions) (site : List Nat := [])  : ProofGraph.Obligation (StateStep m (spawn (interpAt p completed table) m f code options site).1) := \u27e8\u27e9\n#proof_wanted M1Origin.StateStep.spawn\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/NativeState.lean",
+    "name": "StateStep.beginRace",
+    "ledger": "def M1Origin.StateStep.beginRace (p : NativeEff) (table : RowTable) (completed)\n    {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool)\n    (entrants : List NCode) (host : \u2203 saved, m.fiber? f.id = some saved)\n    (programs : \u2200 code \u2208 entrants, raceSites code = []) (site : Option (List Nat) := none)  : ProofGraph.Obligation (StateStep m (beginRace (interpAt p completed table) m f yielding entrants site).machine) := \u27e8\u27e9\n#proof_wanted M1Origin.StateStep.beginRace\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/NativeStateLinks.lean",
+    "name": "Links.spawn",
+    "ledger": "def M1Origin.Links.spawn (p : NativeEff) (table : RowTable) (completed) (m : NativeMachine)\n    (f : NFiber) (code : NCode) (options : Supervision.ForkOptions) (site : List Nat := [])  : ProofGraph.Obligation (Links m (spawn (interpAt p completed table) m f code options site).1) := \u27e8\u27e9\n#proof_wanted M1Origin.Links.spawn\n\n"
+  },
+  {
+    "file": "src/Effect4/Laws/Program/Guard/NativeStateLinks.lean",
+    "name": "Links.beginRace",
+    "ledger": "def M1Origin.Links.beginRace (interp : NInterp) (m : NativeMachine) (f : NFiber)\n    (yielding : Bool) (codes : List NCode) (site : Option (List Nat) := none)  : ProofGraph.Obligation (Links m (beginRace interp m f yielding codes).machine) := \u27e8\u27e9\n#proof_wanted M1Origin.Links.beginRace\n\n"
+  }
+]

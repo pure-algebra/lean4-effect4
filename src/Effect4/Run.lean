@@ -175,7 +175,7 @@ def start : List Command := control Api.evaluate
 def flush : List Command := control Api.flush
 
 /-- The row that advances the test clock, `TestClock.adjust` (`Api/TestClock.lean`). -/
-def clock (millis : Nat) : List Command := control (Api.TestClock.adjust millis)
+def clock (millis : ClockMillis) : List Command := control (Api.TestClock.adjust millis)
 
 /-- The receipt of a completion for this key, as the claim a `submit` row carries. -/
 def reply (s : Run) (call : Call) (key : Key) (c : Answer) : Reply :=
@@ -336,7 +336,7 @@ def runPure (b : Api.Built) (id : String := "run") (budget : Api.Budget := {}) :
 
 /-- The run under the test clock: the root evaluated, the clock adjusted in order, the
 dispatcher flushed (`Api/TestClock.lean`, `tape`). -/
-def runClock (b : Api.Built) (adjusts : List Nat) (id : String := "run")
+def runClock (b : Api.Built) (adjusts : List ClockMillis) (id : String := "run")
     (budget : Api.Budget := {}) : Run :=
   (Run.open b id budget).play (Rows.tape (Api.TestClock.tape adjusts))
 

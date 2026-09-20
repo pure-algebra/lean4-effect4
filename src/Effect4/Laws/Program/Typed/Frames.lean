@@ -5,6 +5,11 @@ import Effect4.Laws.Auto.Frames
 Each theorem retains explicit hypotheses for changed clauses. These are infrastructure
 for preservation proofs, not proofs that arbitrary state writes preserve the invariant. -/
 namespace Effect4.Program.Typed
-#frame_rules RSavedOk BucketOk DispatcherOk RunFiberOk CaptureOk ScopeOk ScopeEntryOk
+/-- info: frame rules: 16 checked theorems, 87 reused clauses, 9 explicit premises -/
+#guard_msgs in
+#frame_rules RunFiberOk
+/-- info: frame rules: 44 checked theorems, 77 reused clauses, 31 explicit premises -/
+#guard_msgs in
+#frame_rules RSavedOk BucketOk DispatcherOk CaptureOk ScopeOk ScopeEntryOk
   ScopeStoreOk MemoEntryOk MemoMapOk StoresOk RunMachineOk
 end Effect4.Program.Typed

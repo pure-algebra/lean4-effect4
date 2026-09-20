@@ -1,0 +1,18 @@
+== G0. the generated engine runs a program (Api.run, fuel 1000) ==
+  p42: outcome=finished fibers=1 exit=success 42
+PASS p42 exits success 42
+  pFork: outcome=finished fibers=2 exit=success ctor 0 [7]
+PASS pFork exits success (ctor 0 [7]), two fibers
+  pAwait: outcome=frontier fibers=1 exit=<no exit>
+PASS pAwait parks on the deferred (no exit, frontier)
+== generated option atoms (bounded smoke checks) ==
+PASS isSome none is false
+PASS isSome some unit is true
+PASS getOrElse none selects the default
+PASS getOrElse some selects its payload
+PASS getOrElse retains a nested none payload
+PASS isSome refuses a malformed outer shape
+PASS getOrElse refuses a malformed outer shape
+PASS getOrElse preserves the selected payload handle
+PASS getOrElse preserves the selected default handle
+== ALL PASS: 0 failure(s) ==

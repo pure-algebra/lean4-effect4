@@ -782,7 +782,7 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
         s.le { s with deferreds := (s.deferreds.register cell fiber token).1 } ∧
           Ok ⟨ids, { s with deferreds := (s.deferreds.register cell fiber token).1 }⟩
             ({ s with deferreds := (s.deferreds.register cell fiber token).1 }.keys ++
-              (((s.deferreds.register cell fiber token).2.map embed).map nativeKeys).getD []) := by
+              (((s.deferreds.register cell fiber token).2.map (embed ∘ completionPrim)).map nativeKeys).getD []) := by
       intro cell hok
       obtain ⟨hkeys, himm, hlen⟩ := DeferredStore.register_keys s.deferreds cell fiber token
       have hle : s.le { s with deferreds := (s.deferreds.register cell fiber token).1 } :=
@@ -795,9 +795,10 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
       · cases himm' : (s.deferreds.register cell fiber token).2 with
         | none => exact List.nil_subset _
         | some prog =>
-          show nativeKeys (embed prog) ⊆ _
+          show nativeKeys (embed (completionPrim prog)) ⊆ _
           simp only [nativeKeys, embed_keys]
-          exact List.Subset.trans (himm prog himm') (by sub_tac)
+          exact List.Subset.trans (completionPrim_keys prog)
+            (List.Subset.trans (himm prog himm') (by sub_tac))
     cases n with
     | registerAwait cell => simp only [interpOf]; exact reg cell hok
     | store name =>
@@ -863,14 +864,14 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
     refine ⟨hle, ?_⟩
     have hok' := Ok_mono (World.le_of_state hle) hok
     refine Ok_of_subset ?_ hok'
-    have h2' : (s.deferreds.drainDue.1.map (Owed.mapCode embed)).flatMap
-        (Owed.keys (primKeys EffName.keys EffThunk.keys)) ⊆ s.deferreds.keys := by
-      rw [List.flatMap_map]
-      refine List.Subset.trans ?_ h2
-      intro x hx
-      obtain ⟨d, hd, hxd⟩ := List.mem_flatMap.mp hx
-      refine List.mem_flatMap.mpr ⟨d, hd, ?_⟩
-      simpa [Owed.keys, Owed.mapCode, embed_keys, programKeys] using hxd
+    have hmap : ∀ c : Completion Val Err Defect FiberId Ann,
+        primKeys EffName.keys EffThunk.keys ((embed ∘ completionPrim) c) ⊆ c.keys := by
+      intro c
+      simp only [Function.comp_apply, embed_keys]
+      exact completionPrim_keys c
+    have h2' := List.Subset.trans
+      (Owed.flatMap_mapCode_keys_subset (embed ∘ completionPrim) Completion.keys
+        (primKeys EffName.keys EffThunk.keys) hmap s.deferreds.drainDue.1) h2
     sub_tac using h1, h2'
   wakeList key phase s ids hok := by
     simp only [interpOf]
@@ -878,17 +879,17 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
     exact ⟨hle, Ok_of_subset hk (Ok_mono (World.le_of_state hle) hok)⟩
   clockStep millis s ids hok := by
     simp only [interpOf]
-    rcases hc : s.timers.clockStep millis (Prim.success Val.unit) with ⟨o, timers⟩
+    rcases hc : s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann) with ⟨o, timers⟩
     have hle : s.le { s with timers := timers } :=
       ⟨Nat.le_refl _, Nat.le_refl _, fun _ hk => hk, Nat.le_refl _, (fun _ hm => hm), Nat.le_refl _⟩
     refine ⟨hle, Ok_of_subset ?_ (Ok_mono (World.le_of_state hle) hok)⟩
     cases o with
     | none => simp only [Option.map_none, Option.getD_none, List.append_nil]; exact fun _ h => h
     | some d =>
-      obtain ⟨hcode, hmode⟩ := TimerStore.clockStep_owed s.timers millis (Prim.success Val.unit) d
+      obtain ⟨hcode, hmode⟩ := TimerStore.clockStep_owed s.timers millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann) d
         (by rw [hc])
       simp only [Option.map_some, Option.getD_some, Owed.keys, Owed.mapCode, hcode, hmode,
-        embed_keys, primKeys, Val.keys, List.append_nil]
+        embed_keys, completionPrim, Prim.ofExit, primKeys, Val.keys, List.append_nil]
       exact fun _ h => h
   cancelName base fiber token := by simp only [interpOf]; exact List.Subset.refl _
   abortName := rfl

@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Intro
+import Effect4.Laws.Auto.Frames
 
 /-!
 # The concrete hook agreements (P3, step 3)
@@ -6,11 +7,11 @@ import Effect4.Laws.Program.Intro
 Packet: `Test/contracts/program-runtime-r.contract.md` (the P3 relation). The shared loop
 reads code only through the interpreter's code-valued hooks and the fiber core. This module
 relates, hook by hook, what `interpOf`/`interpAt` (the frame instance) and `interpR`/
-`interpRAt` (the term instance) answer, at the relation of `Means.lean`: completions and
-stored programs, exit values, parks, the interrupt programs, a settled race, the cancel
-chain, finalizer programs, the scope close, and the generator walks. It also states the
-store invariant the deferred cells keep — every stored program is a completion — and its
-preservation by the store steps, and the `FiberCore` agreements: each core operation
+`interpRAt` (the term instance) answer, at the relation of `Means.lean`: completion data,
+exit values, parks, the interrupt programs, a settled race, the cancel chain, finalizer
+programs, the scope close, and the generator walks. Deferred completion shape follows from
+its carrier; the remaining store invariant bounds scope registration keys. This module
+states its preservation by store steps and the `FiberCore` agreements: each core operation
 preserves the saved-state relation.
 -/
 
@@ -20,164 +21,46 @@ namespace Effect4.Program.Sched
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote Effect4.Program.Agreement
 
-/-! ## The store invariant: deferred cells hold completions -/
+/-! ## The remaining store invariant: scope registration keys are fresh -/
 
-/-- A stored program the term instance can read back (`RSTATE-FB-STORE-CODE`): the
-primitive a `Completion` names. -/
-def CompletionShaped (p : Program) : Prop := ∃ c, p = completionPrim c
+/-- Scope registration keys lie below the fresh-name supply at every reachable registration.
+Deferred completion shape is now guaranteed by its data type. -/
+structure StoresOk (s : Stores) : Prop where
+  keysFresh : s.ScopeKeysFresh
 
-theorem completionShaped_ofExit (ex : ExitV) : CompletionShaped (Prim.ofExit ex) :=
-  ⟨.ofExit ex, rfl⟩
+/-- info: frame rules: 7 checked theorems, 5 reused clauses, 2 explicit premises -/
+#guard_msgs in
+#frame_rules StoresOk
 
-/-- Every completed cell and every owed resume carries a completion. -/
-def DeferredOk (d : DeferredStore) : Prop :=
-  (∀ cell ∈ d.cells, ∀ p, cell.completion = some p → CompletionShaped p) ∧
-    ∀ e ∈ d.due, CompletionShaped e.code
+/-- The empty store has no registered scope keys. -/
+def M1Hooks.storesOk_empty : ProofGraph.Obligation (StoresOk Stores.empty) := ⟨⟩
+#proof_wanted M1Hooks.storesOk_empty
 
-/-- The store predicate the loop carries (`MachineOk`): every deferred cell holds a
-completion, and every registration key any scope holds is below the store's fresh-name supply.
+theorem storesOk_empty : StoresOk Stores.empty := by
+  aesop (add safe constructors StoresOk) (add safe apply Stores.scopeKeysFresh_empty)
 
-The second conjunct is the registration-identity invariant of `E4-CHECK-CE-016`. Because
-`MachineOk StoresOk` is carried through `spawn`, `evaluatePrim`, `fireObserver`, `driveStep`,
-`driveState`, `flushAll` and `replayEval`, it holds at *every reachable* registration, which
-is what makes the key `scopeLinkFiber` allocates fresh each time — not merely at the initial
-store, and not merely for two chosen keys. -/
-def StoresOk (s : Stores) : Prop := DeferredOk s.deferreds ∧ s.ScopeKeysFresh
+/-- A wake changes only the deferred store, whose frame is generated above. -/
+def M1Hooks.storesOk_wakeList {s : Stores} (_hs : StoresOk s) (key : WakeKey) (phase : WakePhase) : ProofGraph.Obligation (StoresOk (Stores.wakeList key phase s)) := ⟨⟩
+#proof_wanted M1Hooks.storesOk_wakeList
 
-theorem storesOk_empty : StoresOk Stores.empty :=
-  ⟨⟨fun _ h => by simp [Stores.empty] at h, fun _ h => by simp [Stores.empty] at h⟩,
-    Stores.scopeKeysFresh_empty⟩
-
-/-- The invariant's registration half, on the store a `MachineOk` machine carries. -/
-theorem StoresOk.keysFresh {s : Stores} (h : StoresOk s) : s.ScopeKeysFresh := h.2
-
-theorem storesOk_of_deferreds {s s' : Stores} (h : s'.deferreds = s.deferreds)
-    (hscopes : s'.scopes = s.scopes) (hname : s'.nextName = s.nextName) (hs : StoresOk s) :
-    StoresOk s' := by
-  refine ⟨by unfold DeferredOk; rw [h]; exact hs.1, ?_⟩
-  show ScopeStore.KeysBelow s'.scopes s'.nextName
-  rw [hscopes, hname]
-  exact hs.2
-
-theorem deferredOk_cellAt {d : DeferredStore} (hd : DeferredOk d) {cell : DeferredKey}
-    {c : DeferredCell} (h : d.cellAt cell = some c) :
-    ∀ p, c.completion = some p → CompletionShaped p :=
-  hd.1 c (List.mem_of_getElem? h)
-
-theorem deferredOk_make {d : DeferredStore} (hd : DeferredOk d) : DeferredOk (d.make).2 := by
-  refine ⟨fun cell hc p hp => ?_, hd.2⟩
-  simp only [DeferredStore.make, List.mem_append, List.mem_singleton] at hc
-  rcases hc with hc | rfl
-  · exact hd.1 cell hc p hp
-  · cases hp
-
-theorem deferredOk_setCell {d : DeferredStore} (hd : DeferredOk d) (cell : DeferredKey)
-    {c : DeferredCell} (hc : ∀ p, c.completion = some p → CompletionShaped p) :
-    DeferredOk (d.setCell cell c) := by
-  refine ⟨fun cell' hc' p hp => ?_, hd.2⟩
-  rcases List.mem_or_eq_of_mem_set hc' with hm | rfl
-  · exact hd.1 cell' hm p hp
-  · exact hc p hp
-
-theorem deferredOk_register {d : DeferredStore} (hd : DeferredOk d) (cell : DeferredKey)
-    (waiter : FiberId) (token : Nat) :
-    DeferredOk (d.register cell waiter token).1 ∧
-      ∀ p, (d.register cell waiter token).2 = some p → CompletionShaped p := by
-  unfold DeferredStore.register
-  cases hc : d.cellAt cell with
-  | none => exact ⟨hd, fun p hp => by cases hp⟩
-  | some c =>
-    dsimp only
-    cases hcomp : c.completion with
-    | some effect =>
-      dsimp only
-      exact ⟨hd, fun p hp => by rw [← Option.some.inj hp]; exact deferredOk_cellAt hd hc _ hcomp⟩
-    | none =>
-      dsimp only
-      refine ⟨deferredOk_setCell hd cell (fun p hp => ?_), fun p hp => by cases hp⟩
-      simp only at hp
-      cases hp
-
-theorem deferredOk_cancel {d : DeferredStore} (hd : DeferredOk d) (cell : DeferredKey)
-    (waiter : FiberId) (token : Nat) : DeferredOk (d.cancel cell waiter token) := by
-  unfold DeferredStore.cancel
-  cases hc : d.cellAt cell with
-  | none => exact hd
-  | some c =>
-    dsimp only
-    exact deferredOk_setCell hd cell (fun p hp => deferredOk_cellAt hd hc p hp)
-
-theorem deferredOk_complete {d : DeferredStore} (hd : DeferredOk d) (cell : DeferredKey)
-    {effect : Program} (he : CompletionShaped effect) :
-    DeferredOk (d.complete cell effect).1 := by
-  unfold DeferredStore.complete
-  cases hc : d.cellAt cell with
-  | none => exact hd
-  | some c =>
-    dsimp only
-    cases hcomp : c.completion with
-    | some _ => exact hd
-    | none =>
-      dsimp only
-      refine ⟨fun cell' hc' p hp => ?_, fun e he' => ?_⟩
-      · simp only [DeferredStore.setCell] at hc'
-        rcases List.mem_or_eq_of_mem_set hc' with hm | rfl
-        · exact hd.1 cell' hm p hp
-        · rw [← Option.some.inj hp]; exact he
-      · simp only [List.mem_append, List.mem_map] at he'
-        rcases he' with hm | ⟨w, _, rfl⟩
-        · exact hd.2 e hm
-        · exact he
-
-/-- A batch wake on a Deferred's list owes its batch the stored completion, which is shaped. -/
-theorem deferredOk_wakeBatch {d : DeferredStore} (hd : DeferredOk d) (cell : DeferredKey) :
-    DeferredOk (d.wakeBatch cell) := by
-  unfold DeferredStore.wakeBatch
-  cases hc : d.cellAt cell with
-  | none => exact hd
-  | some c =>
-    dsimp only
-    have hcm : c ∈ d.cells := List.mem_of_getElem? hc
-    cases hcomp : c.completion with
-    | some e =>
-      dsimp only
-      have he : CompletionShaped e := hd.1 c hcm e hcomp
-      refine ⟨fun cell' hc' p hp => ?_, fun x hx => ?_⟩
-      · simp only [DeferredStore.setCell] at hc'
-        rcases List.mem_or_eq_of_mem_set hc' with hm | rfl
-        · exact hd.1 cell' hm p hp
-        · simp only at hp; exact (Option.some.inj hp) ▸ he
-      · simp only [List.mem_append, List.mem_map] at hx
-        rcases hx with hm | ⟨w, _, rfl⟩
-        · exact hd.2 x hm
-        · exact he
-    | none =>
-      dsimp only
-      refine ⟨fun cell' hc' p hp => ?_, hd.2⟩
-      simp only [DeferredStore.setCell] at hc'
-      rcases List.mem_or_eq_of_mem_set hc' with hm | rfl
-      · exact hd.1 cell' hm p hp
-      · simp only at hp; exact nomatch hp
-
-/-- The store-level wake hook keeps the store invariant. -/
 theorem storesOk_wakeList {s : Stores} (hs : StoresOk s) (key : WakeKey) (phase : WakePhase) :
     StoresOk (Stores.wakeList key phase s) := by
   unfold Stores.wakeList
   split
-  · exact ⟨deferredOk_wakeBatch hs.1 _, hs.2⟩
+  · exact StoresOk.frame_deferreds s hs _
   · exact hs
 
-theorem deferredOk_drainDue {d : DeferredStore} (hd : DeferredOk d) :
-    DeferredOk (d.drainDue).2 ∧ ∀ e ∈ (d.drainDue).1, CompletionShaped e.code :=
-  ⟨⟨hd.1, fun _ h => by simp [DeferredStore.drainDue] at h⟩, hd.2⟩
+/-- Every store step keeps the registration-key bound. -/
+def M1Hooks.storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (_hs : StoresOk s)
+    (_h : syncOpStep o s = some (s', v)) : ProofGraph.Obligation (StoresOk s') := ⟨⟩
+#proof_wanted M1Hooks.storesOk_syncOpStep
 
-/-- Every store step keeps the invariant. -/
 theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresOk s)
     (h : syncOpStep o s = some (s', v)) : StoresOk s' := by
   cases o with
   | deferredMake =>
     have h' := Prod.mk.inj (Option.some.inj h)
-    rw [← h'.1]; exact ⟨deferredOk_make hs.1, hs.2⟩
+    rw [← h'.1]; exact StoresOk.frame_deferreds s hs _
   | deferredIsDone cell =>
     simp only [syncOpStep, Option.map_eq_some_iff] at h
     obtain ⟨_, _, hf⟩ := h
@@ -188,25 +71,25 @@ theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresO
     rw [← (Prod.mk.inj hf).1]; exact hs
   | deferredCompleteWith cell completion =>
     have h' := Prod.mk.inj (Option.some.inj h)
-    rw [← h'.1]; exact ⟨deferredOk_complete hs.1 cell ⟨completion, rfl⟩, hs.2⟩
+    rw [← h'.1]; exact StoresOk.frame_deferreds s hs _
   | deferredInterruptWith cell interruptor =>
     have h' := Prod.mk.inj (Option.some.inj h)
-    rw [← h'.1]; exact ⟨deferredOk_complete hs.1 cell (completionShaped_ofExit _), hs.2⟩
+    rw [← h'.1]; exact StoresOk.frame_deferreds s hs _
   | deferredAwaitCleanup cell waiter token =>
     have h' := Prod.mk.inj (Option.some.inj h)
-    rw [← h'.1]; exact ⟨deferredOk_cancel hs.1 cell waiter token, hs.2⟩
+    rw [← h'.1]; exact StoresOk.frame_deferreds s hs _
   | clockNow =>
     have h' := Prod.mk.inj (Option.some.inj h)
     rw [← h'.1]; exact hs
   | sleepCancel waiter token =>
     -- the invariant reads nothing of the timer store
     have h' := Prod.mk.inj (Option.some.inj h)
-    rw [← h'.1]; exact ⟨hs.1, hs.2⟩
+    rw [← h'.1]; exact StoresOk.frame_timers s hs _
   | scopeMake strategy =>
     -- a new scope holds no registrations, and the supply advances past its handle
     have h' := Prod.mk.inj (Option.some.inj h)
     rw [← h'.1]
-    exact ⟨hs.1, (ScopeStore.keysBelow_make hs.2).mono (Nat.le_succ _)⟩
+    exact ⟨(ScopeStore.keysBelow_make hs.keysFresh).mono (Nat.le_succ _)⟩
   | scopeAdd scope finalizer =>
     cases hentry : s.scopes.entryAt scope with
     | none => rw [syncOpStep_scopeAdd_none s scope finalizer hentry] at h; cases h
@@ -220,11 +103,11 @@ theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresO
         -- the registration key is the supply's own value, and the supply advances past it
         rw [syncOpStep_scopeAdd_open s scope finalizer hentry hclose] at h
         rw [← (Prod.mk.inj (Option.some.inj h)).1]
-        exact ⟨hs.1, ScopeStore.keysBelow_addUnsafe_entry hs.2 hentry⟩
+        exact ⟨ScopeStore.keysBelow_addUnsafe_entry hs.keysFresh hentry⟩
   | scopeRemove scope key =>
     have h' := Prod.mk.inj (Option.some.inj h)
     rw [← h'.1]
-    exact ⟨hs.1, ScopeStore.keysBelow_removeFinalizer hs.2⟩
+    exact ⟨ScopeStore.keysBelow_removeFinalizer hs.keysFresh⟩
   | scopeIsClosed scope =>
     simp only [syncOpStep, Option.map_eq_some_iff] at h
     obtain ⟨_, _, hf⟩ := h
@@ -236,20 +119,20 @@ theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresO
       rw [syncOpStep_scopeFork_some s parent strategy hentry] at h
       rw [← (Prod.mk.inj (Option.some.inj h)).1]
       -- the shared key is the supply's successor, and the supply advances past both keys
-      exact ⟨hs.1, ScopeStore.keysBelow_forkChild (m := s.nextName + 2) (shared := s.nextName + 1)
-        hs.2 (Nat.le_add_right _ _) (Nat.lt_succ_self _)⟩
+      exact ⟨ScopeStore.keysBelow_forkChild (m := s.nextName + 2) (shared := s.nextName + 1)
+        hs.keysFresh (Nat.le_add_right _ _) (Nat.lt_succ_self _)⟩
   | memoFork parent =>
     have h' := Prod.mk.inj (Option.some.inj h)
     rw [← h'.1]
-    exact ⟨hs.1, hs.2.mono (Nat.le_succ _)⟩
+    exact ⟨hs.keysFresh.mono (Nat.le_succ _)⟩
   | memoGet layer memoMap =>
-    obtain ⟨_, hd, hsc, hn⟩ := syncOpStep_memoGet_families s s' layer memoMap v h
-    exact storesOk_of_deferreds hd hsc hn hs
+    obtain ⟨_, _, hsc, hn⟩ := syncOpStep_memoGet_families s s' layer memoMap v h
+    exact ⟨by change ScopeStore.KeysBelow s'.scopes s'.nextName; rw [hsc, hn]; exact hs.keysFresh⟩
   | memoBuild layer memoMap =>
     -- a layer scope holds no registrations; the Deferred is fresh; the supply advances
     have h' := Prod.mk.inj (Option.some.inj h)
     rw [← h'.1]
-    exact ⟨deferredOk_make hs.1, (ScopeStore.keysBelow_make hs.2).mono (Nat.le_succ _)⟩
+    exact ⟨(ScopeStore.keysBelow_make hs.keysFresh).mono (Nat.le_succ _)⟩
   | memoComplete layer memoMap exit =>
     cases hentry : s.memo.entryAt memoMap layer with
     | none =>
@@ -258,7 +141,7 @@ theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresO
     | some entry =>
       rw [syncOpStep_memoComplete_some s layer memoMap exit hentry] at h
       rw [← (Prod.mk.inj (Option.some.inj h)).1]
-      exact ⟨deferredOk_complete hs.1 _ (completionShaped_ofExit _), hs.2⟩
+      exact StoresOk.frame_memo _ (StoresOk.frame_deferreds s hs _) _
   | memoRelease layer memoMap =>
     cases hentry : s.memo.entryAt memoMap layer with
     | none =>
@@ -267,29 +150,37 @@ theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresO
     | some entry =>
       by_cases hobs : entry.observers ≤ 1
       · rw [syncOpStep_memoRelease_last s layer memoMap hentry hobs] at h
-        rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact hs
+        rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact StoresOk.frame_memo s hs _
       · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hobs] at h
-        rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact hs
+        rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact StoresOk.frame_memo s hs _
   | _ =>
     -- every remaining operation is a `refStep`: only the heap changes
     simp only [syncOpStep, Option.map_eq_some_iff] at h
     obtain ⟨_, _, hf⟩ := h
-    rw [← (Prod.mk.inj hf).1]; exact storesOk_of_deferreds rfl rfl rfl hs
+    rw [← (Prod.mk.inj hf).1]; exact StoresOk.frame_refs s hs _
 
 /-! ## Code-valued hooks -/
+
+/-- An exit becomes the matching terminal code in both interpreters. -/
+def M1Hooks.exit_completion_means (root : NativeEff) (ex : ExitV) :
+    ProofGraph.Obligation (CodeMeans root (embed (Prim.ofExit ex)) (.pure ex)) := ⟨⟩
+#proof_wanted M1Hooks.exit_completion_means
+
+theorem exit_completion_means (root : NativeEff) (ex : ExitV) :
+    CodeMeans root (embed (Prim.ofExit ex)) (.pure ex) := by
+  cases ex with
+  | success value => exact CodeMeans.success value
+  | failure cause => exact CodeMeans.failure cause
+
+attribute [aesop safe apply (rule_sets := [Effect4.Stores])] exit_completion_means
 
 /-- The external answers and the stored programs read into related code. -/
 theorem completion_means (root : NativeEff) (a : Completion Val Err Defect FiberId Ann) :
     CodeMeans root (embed (completionPrim a)) (denoteCompletion a) := by
   cases a with
-  | ofExit ex => cases ex <;> first | exact CodeMeans.success _ | exact CodeMeans.failure _
+  | ofExit ex =>
+    aesop (rule_sets := [Effect4.Stores]) (add norm simp [completionPrim, denoteCompletion])
   | ofRefGet cell => exact CodeMeans.syncStore _ _ (successV root)
-
-theorem stored_means (root : NativeEff) {p : Program} (hp : CompletionShaped p) :
-    CodeMeans root (embed p) (denoteStored p) := by
-  obtain ⟨c, rfl⟩ := hp
-  rw [denoteStored_completion]
-  exact completion_means root c
 
 theorem answerCode_means (root : NativeEff) (a : Completion Val Err Defect FiberId Ann) :
     CodeMeans root ((interpOf root).answerCode a) ((interpR root).answerCode a) :=
@@ -440,8 +331,8 @@ theorem denoteFin_means (root : NativeEff) (fin : FinName) (ex : ExitV) :
 
 /-- The term's body hook is the denotation, at every view. -/
 theorem bodyR_eq (root : NativeEff) (completed : List (FiberId × ExitV)) (b : Body) :
-    bodyR (interpRAt root completed) b = denoteBody root b := by
-  cases b <;> rfl
+    bodyR (interpRAt root completed) b = denoteBody root b :=
+  by aesop
 
 theorem body_means (root : NativeEff) (b : Body) :
     ∀ {c : NCode}, (match b with
@@ -750,15 +641,14 @@ theorem loopAt_congr (root : NativeEff) {p p' : Point} (h : p'.path = p.path) :
 theorem point_congr {p p' : Point}
     (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
     (completed : List (FiberId × ExitV)) :
-    ({ p' with completed } : Point) = ({ p with completed } : Point) := by
-  rw [hp.1, hp.2.1, hp.2.2.1, hp.2.2.2.1, hp.2.2.2.2]
+    ({ p' with completed } : Point) = ({ p with completed } : Point) :=
+  by aesop
 
 theorem childWith_congr {p p' : Point}
     (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
     (completed : List (FiberId × ExitV)) (i : Nat) (v : Val) :
-    ({ p' with completed } : Point).childWith i v = ({ p with completed } : Point).childWith i v := by
-  simp only [Point.childWith]
-  rw [hp.1, hp.2.1, hp.2.2.1, hp.2.2.2.1, hp.2.2.2.2]
+    ({ p' with completed } : Point).childWith i v = ({ p with completed } : Point).childWith i v :=
+  by aesop
 
 /-- The loop hooks of loops named up to the captured view are related, entering and
 resuming. -/

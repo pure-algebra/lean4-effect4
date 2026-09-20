@@ -3,6 +3,7 @@ import Effect4.Laws.Machine.Clauses
 import Effect4.Laws.Api.Frontier
 import Effect4.Laws.Auto.Inversion
 import Effect4.Laws.Program.Size
+import Effect4.Laws.Auto.Obligations
 
 /-!
 # Laws.Api.Supervision — the static table and the running machine say the same thing
@@ -23,8 +24,7 @@ child step — a node's children are what the generated layer view lists, and a 
 smaller than its node by one fold (`sizeAlg`) and one lemma (`size_child_lt`).
 
 **(b) What a status can change by.** `statusOf` is a function of four observations — the
-fiber's exit, the fiber that tracks it, the scope link on it, and whether a `forked` event
-names it — so it changes only when one of the four does. That is the `guard_persists` shape
+fiber's exit, the fiber that tracks it, the scope link on it, and its origin — so it changes only when one of the four does. That is the `guard_persists` shape
 (`Laws/Api/Guard.lean:22`) for supervision: `status_persists` states it, and the machine
 writes that move the observations are named beside it. `spawn_status_fresh` is DI-75 in one
 theorem: a child is a loose daemon from the moment it exists until the command that holds it
@@ -48,6 +48,14 @@ namespace Effect4.Api
 open Effect4 Effect4.Machine Effect4.Program
 
 universe u v
+
+/-- Diagnostic trace projection. Runtime supervision reads fiber origins. -/
+def TraceFacts.forkedOf {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
+    {κ η : Type (max u v)} (trace : List (RunEvent ν σ β ε δ ι α χ κ η)) :
+    List (FiberId × FiberId × Bool) :=
+  trace.filterMap fun
+    | .forked parent child daemon => some (parent, child, daemon)
+    | _ => none
 
 /-! ## A measure on the program, so a fold's law is one generic step
 
@@ -143,7 +151,7 @@ variable {κ φ η : Type (max u v)} [core : FiberCore ν β ε δ ι α κ φ]
 
 /-- Reading the `forked` events of two traces in turn. -/
 theorem forkedOf_append (a b : List (RunEvent ν σ β ε δ ι α χ κ η)) :
-    forkedOf (a ++ b) = forkedOf a ++ forkedOf b := List.filterMap_append ..
+    TraceFacts.forkedOf (a ++ b) = TraceFacts.forkedOf a ++ TraceFacts.forkedOf b := List.filterMap_append ..
 
 /-- `spawn` appends exactly one event, naming the parent, the fresh id and the options'
 daemon flag (`Machine/Fibers.lean:908-923`). -/
@@ -156,9 +164,9 @@ theorem spawn_trace (interp : RunInterp ν σ β ε δ ι α χ St κ)
 theorem spawn_forked (interp : RunInterp ν σ β ε δ ι α χ St κ)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (parent : RunFiber ν σ β ε δ ι α χ κ φ)
     (program : κ) (options : Supervision.ForkOptions) :
-    forkedOf (spawn interp m parent program options).1.trace =
-      forkedOf m.trace ++ [(parent.id, ⟨m.nextId⟩, options.daemon)] := by
-  aesop (add norm simp [spawn_trace, forkedOf])
+    TraceFacts.forkedOf (spawn interp m parent program options).1.trace =
+      TraceFacts.forkedOf m.trace ++ [(parent.id, ⟨m.nextId⟩, options.daemon)] := by
+  aesop (add norm simp [spawn_trace, TraceFacts.forkedOf])
 
 /-- The id the spawn mints is the machine's `nextId`. -/
 theorem spawn_child (interp : RunInterp ν σ β ε δ ι α χ St κ)
@@ -174,29 +182,37 @@ theorem spawn_nextId (interp : RunInterp ν σ β ε δ ι α χ St κ)
 
 /-- The spawn appends the child and touches no other fiber (`:922`); the child starts with no
 exit, no observer and no child of its own (`RunFiber.make`, `:259-275`). -/
+def M1Origin.spawn_fibers (interp : RunInterp ν σ β ε δ ι α χ St κ)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (parent : RunFiber ν σ β ε δ ι α χ κ φ)
+    (program : κ) (options : Supervision.ForkOptions) : ProofGraph.Obligation (∃ child : RunFiber ν σ β ε δ ι α χ κ φ,
+      (spawn interp m parent program options).1.fibers = m.fibers ++ [child] ∧
+        child.id = ⟨m.nextId⟩ ∧ child.exit = none ∧ child.observers = [] ∧
+        child.children = [] ∧ child.origin = .forked parent.id options.daemon []) := ⟨⟩
+#proof_wanted M1Origin.spawn_fibers
+
 theorem spawn_fibers (interp : RunInterp ν σ β ε δ ι α χ St κ)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (parent : RunFiber ν σ β ε δ ι α χ κ φ)
     (program : κ) (options : Supervision.ForkOptions) :
     ∃ child : RunFiber ν σ β ε δ ι α χ κ φ,
       (spawn interp m parent program options).1.fibers = m.fibers ++ [child] ∧
         child.id = ⟨m.nextId⟩ ∧ child.exit = none ∧ child.observers = [] ∧
-        child.children = [] :=
-  ⟨_, rfl, rfl, rfl, rfl, rfl⟩
+        child.children = [] ∧ child.origin = .forked parent.id options.daemon [] :=
+  ⟨_, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- Starting a child emits a `scheduledTask` or nothing; either way, no `forked` (`:925-933`). -/
 theorem start_forked (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (parent : RunFiber ν σ β ε δ ι α χ κ φ) (child : FiberId) (immediately : Bool) :
-    forkedOf (start m parent child immediately).1.trace = forkedOf m.trace := by
+    TraceFacts.forkedOf (start m parent child immediately).1.trace = TraceFacts.forkedOf m.trace := by
   cases immediately <;>
-    aesop (add norm simp [start, RunMachine.emit, RunMachine.arm, forkedOf])
+    aesop (add norm simp [start, RunMachine.emit, RunMachine.arm, TraceFacts.forkedOf])
 
 /-- `fork`: the flag the program wrote (`:1191-1201`, `Effect.forkChild` / `forkDetach`). -/
 theorem fork_forked (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
     (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) :
-    forkedOf (evaluatePrim.withFiber interp m f yielding
+    TraceFacts.forkedOf (evaluatePrim.withFiber interp m f yielding
         (WithFiberAction.fork program options)).machine.trace =
-      forkedOf m.trace ++ [(f.id, ⟨m.nextId⟩, options.daemon)] := by
+      TraceFacts.forkedOf m.trace ++ [(f.id, ⟨m.nextId⟩, options.daemon)] := by
   rw [withFiber_fork]
   cases hd : options.daemon <;> aesop (add norm simp [hd, start_forked, spawn_forked])
 
@@ -204,9 +220,9 @@ theorem fork_forked (interp : RunInterp ν σ β ε δ ι α χ St)
 theorem forkIn_forked (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
     (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (scope : Nat) :
-    forkedOf (evaluatePrim.withFiber interp m f yielding
+    TraceFacts.forkedOf (evaluatePrim.withFiber interp m f yielding
         (WithFiberAction.forkIn program options scope)).machine.trace =
-      forkedOf m.trace ++ [(f.id, ⟨m.nextId⟩, true)] := by
+      TraceFacts.forkedOf m.trace ++ [(f.id, ⟨m.nextId⟩, true)] := by
   aesop (add norm simp [withFiber_forkIn, start_forked, spawn_forked])
 
 /-- `forkScoped` with an ambient scope: `forkIn` on it (`:1213`, `:5406`). -/
@@ -214,9 +230,9 @@ theorem forkScoped_forked (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
     (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (scope : Nat)
     (ambient : interp.ambientScope f.context = some scope) :
-    forkedOf (evaluatePrim.withFiber interp m f yielding
+    TraceFacts.forkedOf (evaluatePrim.withFiber interp m f yielding
         (WithFiberAction.forkScoped program options)).machine.trace =
-      forkedOf m.trace ++ [(f.id, ⟨m.nextId⟩, true)] := by
+      TraceFacts.forkedOf m.trace ++ [(f.id, ⟨m.nextId⟩, true)] := by
   have arm := withFiber_forkScoped_ambient interp m f yielding program options scope ambient
   aesop (add norm simp [arm, start_forked, spawn_forked])
 
@@ -225,8 +241,8 @@ theorem forkScoped_none_forked (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
     (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions)
     (ambient : interp.ambientScope f.context = none) :
-    forkedOf (evaluatePrim.withFiber interp m f yielding
-        (WithFiberAction.forkScoped program options)).machine.trace = forkedOf m.trace := by
+    TraceFacts.forkedOf (evaluatePrim.withFiber interp m f yielding
+        (WithFiberAction.forkScoped program options)).machine.trace = TraceFacts.forkedOf m.trace := by
   have arm := withFiber_forkScoped_none interp m f yielding program options ambient
   aesop (add norm simp arm)
 
@@ -234,8 +250,8 @@ theorem forkScoped_none_forked (interp : RunInterp ν σ β ε δ ι α χ St)
 theorem launchEntrant_forked (interp : RunInterp ν σ β ε δ ι α χ St κ) (raceId : Nat)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (host : RunFiber ν σ β ε δ ι α χ κ φ)
     (program : κ) :
-    forkedOf (launchEntrant interp raceId m host program).1.trace =
-      forkedOf m.trace ++ [(host.id, ⟨m.nextId⟩, true)] := by
+    TraceFacts.forkedOf (launchEntrant interp raceId m host program).1.trace =
+      TraceFacts.forkedOf m.trace ++ [(host.id, ⟨m.nextId⟩, true)] := by
   aesop (add norm simp [launchEntrant, spawn_forked])
 
 /-- A parallel scope close forks one immediate daemon per finalizer (`:948-954`, `:3820`):
@@ -243,8 +259,8 @@ every event it adds carries `true`. -/
 theorem forkFinalizers_forked (interp : RunInterp ν σ β ε δ ι α χ St κ)
     (host : RunFiber ν σ β ε δ ι α χ κ φ) :
     ∀ (programs : List κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η),
-      ∃ new, forkedOf (forkFinalizers interp m host programs).1.trace =
-        forkedOf m.trace ++ new ∧ new.all (fun e => e.2.2) = true
+      ∃ new, TraceFacts.forkedOf (forkFinalizers interp m host programs).1.trace =
+        TraceFacts.forkedOf m.trace ++ new ∧ new.all (fun e => e.2.2) = true
   | [], m => ⟨[], by aesop (add norm simp forkFinalizers)⟩
   | program :: rest, m => by
     have ih := forkFinalizers_forked interp host rest
@@ -260,8 +276,8 @@ theorem action_fork_forked (interp : RunInterp ν σ β ε δ ι α χ St κ)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool)
     (program : κ) (options : Supervision.ForkOptions)
     (answer : FiberAction.Answer ν σ β ε δ ι α χ κ φ) :
-    forkedOf (FiberAction.fork interp m f yielding program options answer).machine.trace =
-      forkedOf m.trace ++ [(f.id, ⟨m.nextId⟩, options.daemon)] := by
+    TraceFacts.forkedOf (FiberAction.fork interp m f yielding program options answer).machine.trace =
+      TraceFacts.forkedOf m.trace ++ [(f.id, ⟨m.nextId⟩, options.daemon)] := by
   unfold FiberAction.fork
   cases hd : options.daemon <;> aesop (add norm simp [hd, start_forked, spawn_forked])
 
@@ -269,8 +285,8 @@ theorem action_forkIn_forked (interp : RunInterp ν σ β ε δ ι α χ St κ)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool)
     (program : κ) (options : Supervision.ForkOptions) (scope : Nat)
     (answer : FiberAction.Answer ν σ β ε δ ι α χ κ φ) :
-    forkedOf (FiberAction.forkIn interp m f yielding program options scope answer).machine.trace =
-      forkedOf m.trace ++ [(f.id, ⟨m.nextId⟩, true)] := by
+    TraceFacts.forkedOf (FiberAction.forkIn interp m f yielding program options scope answer).machine.trace =
+      TraceFacts.forkedOf m.trace ++ [(f.id, ⟨m.nextId⟩, true)] := by
   aesop (add norm simp [FiberAction.forkIn, start_forked, spawn_forked])
 
 theorem action_forkScoped_forked (interp : RunInterp ν σ β ε δ ι α χ St κ)
@@ -278,8 +294,8 @@ theorem action_forkScoped_forked (interp : RunInterp ν σ β ε δ ι α χ St 
     (program : κ) (options : Supervision.ForkOptions) (scope : Nat)
     (answer : FiberAction.Answer ν σ β ε δ ι α χ κ φ)
     (ambient : interp.ambientScope f.context = some scope) :
-    forkedOf (FiberAction.forkScoped interp m f yielding program options answer).machine.trace =
-      forkedOf m.trace ++ [(f.id, ⟨m.nextId⟩, true)] := by
+    TraceFacts.forkedOf (FiberAction.forkScoped interp m f yielding program options answer).machine.trace =
+      TraceFacts.forkedOf m.trace ++ [(f.id, ⟨m.nextId⟩, true)] := by
   aesop (add norm simp [FiberAction.forkScoped, ambient, start_forked, spawn_forked])
 
 /-- **supervision_static.** At each of the four forks the machine can make, the `forked` event
@@ -289,17 +305,17 @@ theorem supervision_static (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
     (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (scope : Nat)
     (raceId : Nat) (ambient : interp.ambientScope f.context = some scope) :
-    forkedOf (evaluatePrim.withFiber interp m f yielding
+    TraceFacts.forkedOf (evaluatePrim.withFiber interp m f yielding
         (WithFiberAction.fork program options)).machine.trace =
-      forkedOf m.trace ++ [(f.id, ⟨m.nextId⟩, options.daemon)] ∧
-    forkedOf (evaluatePrim.withFiber interp m f yielding
+      TraceFacts.forkedOf m.trace ++ [(f.id, ⟨m.nextId⟩, options.daemon)] ∧
+    TraceFacts.forkedOf (evaluatePrim.withFiber interp m f yielding
         (WithFiberAction.forkIn program options scope)).machine.trace =
-      forkedOf m.trace ++ [(f.id, ⟨m.nextId⟩, true)] ∧
-    forkedOf (evaluatePrim.withFiber interp m f yielding
+      TraceFacts.forkedOf m.trace ++ [(f.id, ⟨m.nextId⟩, true)] ∧
+    TraceFacts.forkedOf (evaluatePrim.withFiber interp m f yielding
         (WithFiberAction.forkScoped program options)).machine.trace =
-      forkedOf m.trace ++ [(f.id, ⟨m.nextId⟩, true)] ∧
-    forkedOf (launchEntrant interp raceId m f program).1.trace =
-      forkedOf m.trace ++ [(f.id, ⟨m.nextId⟩, true)] :=
+      TraceFacts.forkedOf m.trace ++ [(f.id, ⟨m.nextId⟩, true)] ∧
+    TraceFacts.forkedOf (launchEntrant interp raceId m f program).1.trace =
+      TraceFacts.forkedOf m.trace ++ [(f.id, ⟨m.nextId⟩, true)] :=
   ⟨fork_forked interp m f yielding program options,
    forkIn_forked interp m f yielding program options scope,
    forkScoped_forked interp m f yielding program options scope ambient,
@@ -324,22 +340,27 @@ theorem nextIdFresh_iff (m : Machine) : nextIdFresh m = true ↔ NextIdFresh m :
   aesop
 
 /-- **status_persists.** A fiber's status is a function of four observations and nothing
-else: its own exit, the fiber that tracks it, the scope it is pinned to, and whether the run
-forked it. So it survives every change to the machine except a change to one of those four —
-the fiber exits, its parent starts or stops tracking it, its pin is made or dropped, or it is
-forked. This is `guard_persists`' shape (`Laws/Api/Guard.lean:22`) for supervision. -/
+else: its own exit, the fiber that tracks it, the scope it is pinned to, and its origin. So it survives every change to the machine except a change to one of those four —
+the fiber exits, its parent starts or stops tracking it, its pin is made or dropped, or its origin changes. This is `guard_persists`' shape (`Laws/Api/Guard.lean:22`) for supervision. -/
+def M1Origin.status_persists (m m' : Machine) (f f' : Fiber)
+    (_exit : f'.exit = f.exit)
+    (_track : parentOf m' f'.id = parentOf m f.id)
+    (_pin : pinOf f' = pinOf f)
+    (_origin : f'.origin = f.origin) : ProofGraph.Obligation (statusOf m' f' = statusOf m f) := ⟨⟩
+#proof_wanted M1Origin.status_persists
+
 theorem status_persists (m m' : Machine) (f f' : Fiber)
     (exit : f'.exit = f.exit)
     (track : parentOf m' f'.id = parentOf m f.id)
     (pin : pinOf f' = pinOf f)
-    (forked : (forkedIds m').contains f'.id = (forkedIds m).contains f.id) :
+    (origin : f'.origin = f.origin) :
     statusOf m' f' = statusOf m f := by
   unfold statusOf
   aesop
 
 /-- The first of the four is written in one place: `RunFiber.publish` (`:1696-1704`). -/
 theorem publish_status (m : Machine) (f : Fiber) (exit : ExitV) :
-    statusOf m (f.publish exit) = FiberStatus.exited exit := rfl
+    statusOf m (f.publish exit) = FiberStatus.exited exit := by aesop
 
 /-- `.exited` says exactly that the fiber has exited, and nothing else produces it. -/
 theorem status_exited_iff (m : Machine) (f : Fiber) (exit : ExitV) :
@@ -356,20 +377,17 @@ theorem status_live_of_none (m : Machine) (f : Fiber) (h : f.exit = none) :
 /-- Nobody tracks an id no fiber's `children` holds. -/
 theorem parentOf_append_none (fibers : List Fiber) (child : Fiber) (id : FiberId)
     (before : ∀ g ∈ fibers, id ∉ g.children) (fresh : child.children = []) :
-    ((fibers ++ [child]).find? fun g => g.children.contains id) = none := by
-  aesop
+    ((fibers ++ [child]).find? fun g => g.children.contains id) = none := by aesop
 
 /-- Appending a fiber with no children of its own leaves every tracking answer alone. -/
 theorem parentOf_append_same (fibers : List Fiber) (child : Fiber) (id : FiberId)
     (fresh : child.children = []) :
     ((fibers ++ [child]).find? fun g => g.children.contains id) =
-      (fibers.find? fun g => g.children.contains id) := by
-  aesop
+      (fibers.find? fun g => g.children.contains id) := by aesop
 
 /-- **DI-75 in one theorem.** A spawned fiber is a loose daemon the moment it exists: nothing
 tracks it (tracking is `Cmd.trackChild`, run after its start, `:1903-1910`) and nothing pins
-it (`Cmd.link`, likewise after its start, `:1208`), while the spawn's own `forked` event
-already names it. Between the fork and the command that holds it, even a tracked child is
+it (`Cmd.link`, likewise after its start, `:1208`), while its origin already records the fork. Between the fork and the command that holds it, even a tracked child is
 unheld — which is why a `daemonsQuiet` reading is a reading of a settled machine. -/
 theorem spawn_status_fresh
     (interp : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores) (m : Machine)
@@ -378,7 +396,7 @@ theorem spawn_status_fresh
     (member : child ∈ (spawn interp m parent program options).1.fibers)
     (id : child.id = ⟨m.nextId⟩) :
     statusOf (spawn interp m parent program options).1 child = FiberStatus.daemon := by
-  obtain ⟨new, hfib, hid, hexit, hobs, hchildren⟩ :=
+  obtain ⟨new, hfib, hid, hexit, hobs, hchildren, horigin⟩ :=
     spawn_fibers interp m parent program options
   rw [hfib, List.mem_append] at member
   have hsame : child = new := by
@@ -395,31 +413,20 @@ theorem spawn_status_fresh
     unfold pinOf
     rw [hobs]
     rfl
-  have hforked :
-      (forkedIds (spawn interp m parent program options).1).contains child.id = true := by
-    unfold forkedIds forkedEvents
-    rw [spawn_forked, id]
-    aesop
   unfold statusOf
-  rw [hexit, hparent, hpin, hforked]
-  rfl
+  rw [hexit, hparent, hpin, horigin]
 
 /-- A spawn changes no existing fiber's status: it appends a fiber with no children, touches
-no other, and adds one `forked` event naming an id no fiber has. -/
+no other, and retains every existing origin. -/
 theorem spawn_status_other
     (interp : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores) (m : Machine)
     (parent : Fiber) (program : NCode) (options : Supervision.ForkOptions)
-    (fresh : NextIdFresh m) (g : Fiber) (member : g ∈ m.fibers) :
+    (_fresh : NextIdFresh m) (g : Fiber) (_member : g ∈ m.fibers) :
     statusOf (spawn interp m parent program options).1 g = statusOf m g := by
-  obtain ⟨new, hfib, hid, _, _, hchildren⟩ := spawn_fibers interp m parent program options
-  refine status_persists m (spawn interp m parent program options).1 g g rfl ?_ rfl ?_
-  · unfold parentOf
-    rw [hfib, parentOf_append_same m.fibers new g.id hchildren]
-  · unfold forkedIds forkedEvents
-    rw [spawn_forked]
-    have hne : (g.id == (⟨m.nextId⟩ : FiberId)) = false := by
-      simp only [beq_eq_false_iff_ne, ne_eq, (fresh g member).1, not_false_eq_true]
-    aesop
+  obtain ⟨new, hfib, _, _, _, hchildren, _⟩ := spawn_fibers interp m parent program options
+  refine status_persists m (spawn interp m parent program options).1 g g rfl ?_ rfl rfl
+  unfold parentOf
+  rw [hfib, parentOf_append_same m.fibers new g.id hchildren]
 
 /-! ## (c) `fiberStatuses` and `awaits` agree on which fibers are parked -/
 

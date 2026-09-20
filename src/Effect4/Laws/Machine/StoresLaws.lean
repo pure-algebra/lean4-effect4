@@ -1,4 +1,5 @@
 import Effect4.Laws.Machine.RefKernel
+import Effect4.Laws.Machine.CompletionData
 
 /-!
 # Machine.StoresLaws — growth, validity and well-formedness of the stores (slice 1, lane 2)
@@ -16,10 +17,6 @@ validity (plan §1.3): the machine-wide `handles_minted` invariant is a later sl
 
 What is deliberately not said, each named so it is a refusal and not an omission:
 
-* `STORES-FB-COMPLETION` — `Stores.WF` speaks only of the heap. A `Completion` stored in a
-  Deferred cell (`Stores.lean:680-693`, `completionPrim` at `:1083`) is a `Prim` and is not
-  traversed by `Val.validIn`; a Deferred completed with `ofRefGet cell` on a dangling cell is
-  not excluded (plan §7, row `E4-STORES-CE-003`). `WF` is not widened in this slice.
 * `Val.fiber` and `Val.fibers` are the machine's handles, not the store's: `validIn` accepts
   them (`Stores.handleValid`, the fiber byte).
 * `Val.exitErr` carries a cause and no handle; it is valid everywhere (`Val.validIn_exitErr`).
@@ -101,14 +98,19 @@ def Val.validInList (s : Stores) : List Val → Bool
 end
 
 theorem Val.validIn_cell (s : Stores) (k : RefKey) :
-    Val.validIn s (Val.cell k) = decide (k.index < s.refs.length) := rfl
+    Val.validIn s (Val.cell k) = decide (k.index < s.refs.length) :=
+  by aesop
 theorem Val.validIn_promise (s : Stores) (k : DeferredKey) :
-    Val.validIn s (Val.promise k) = decide (k.index < s.deferreds.cells.length) := rfl
+    Val.validIn s (Val.promise k) = decide (k.index < s.deferreds.cells.length) :=
+  by aesop
 theorem Val.validIn_scopeHandle (s : Stores) (key : Nat) :
-    Val.validIn s (Val.scopeHandle key) = (s.scopes.entryAt key).isSome := rfl
+    Val.validIn s (Val.scopeHandle key) = (s.scopes.entryAt key).isSome :=
+  by aesop
 theorem Val.validIn_memoMap (s : Stores) (id : MemoMapId) :
-    Val.validIn s (Val.memoMap id) = (s.memo.mapAt id).isSome := rfl
-theorem Val.validIn_fiber (s : Stores) (id : FiberId) : Val.validIn s (Val.fiber id) = true := rfl
+    Val.validIn s (Val.memoMap id) = (s.memo.mapAt id).isSome :=
+  by aesop
+theorem Val.validIn_fiber (s : Stores) (id : FiberId) : Val.validIn s (Val.fiber id) = true :=
+  by aesop
 theorem Val.validIn_exitOk (s : Stores) (v : Val) : Val.validIn s (Val.exitOk v) = Val.validIn s v := by
   simp only [Val.validIn, Val.validInList, Bool.and_true]
 
@@ -213,8 +215,9 @@ instance (s : Stores) : Decidable s.MemoValid := by
 
 /-- Every value the store holds and answers is valid in the store that holds it (plan §3.1,
 ENSURES 12): the heap's values, and the closing exit of every closed scope — which
-`scopeAdd` answers on a closed scope (`internal/effect.ts:3851-3853`; V1, 2026-09-07). Deferred
-completions stay excluded: `STORES-FB-COMPLETION` in the header. -/
+`scopeAdd` answers on a closed scope (`internal/effect.ts:3851-3853`; V1, 2026-09-07).
+Deferred cells store completion data; this predicate does not certify handles inside that
+payload (`E4-STORES-CE-003` remains its independent counterexample). -/
 def Stores.WF (s : Stores) : Prop :=
   (∀ v ∈ s.refs, v.validIn s = true) ∧
     (∀ e ∈ s.scopes.entries,
@@ -437,16 +440,14 @@ theorem DeferredStore.setCell_cells_length (self : DeferredStore) (cell : Deferr
     (value : DeferredCell) : (self.setCell cell value).cells.length = self.cells.length :=
   List.length_set
 
+def M1.StoresLaws.DeferredStore.complete_cells_length (self : DeferredStore) (cell : DeferredKey)
+    (e : Completion Val Err Defect FiberId Ann) : ProofGraph.Obligation ((self.complete cell e).1.cells.length = self.cells.length) := ⟨⟩
+
 /-- `complete` (`Stores.lean:742-751`) keeps the cell count: it answers the store itself or
 one `setCell`. -/
 theorem DeferredStore.complete_cells_length (self : DeferredStore) (cell : DeferredKey)
-    (e : Program) : (self.complete cell e).1.cells.length = self.cells.length := by
-  unfold DeferredStore.complete
-  split
-  · rfl
-  · split
-    · rfl
-    · exact List.length_set
+    (e : Completion Val Err Defect FiberId Ann) : (self.complete cell e).1.cells.length = self.cells.length := by
+  aesop (rule_sets := [Effect4.Stores])
 
 /-- `cancel` (`Stores.lean:732-738`) keeps the cell count. -/
 theorem DeferredStore.cancel_cells_length (self : DeferredStore) (cell : DeferredKey)
@@ -542,24 +543,41 @@ without splitting the match. -/
 /-- `Stores.lean:1210-1212`. -/
 theorem syncOpStep_deferredMake (s : Stores) :
     syncOpStep SyncOp.deferredMake s =
-      some ({ s with deferreds := s.deferreds.make.2 }, Val.promise s.deferreds.make.1) := rfl
+      some ({ s with deferreds := s.deferreds.make.2 }, Val.promise s.deferreds.make.1) :=
+  by aesop
 
 /-- `Stores.lean:1213-1214`. -/
 theorem syncOpStep_deferredIsDone (s : Stores) (cell : DeferredKey) :
     syncOpStep (SyncOp.deferredIsDone cell) s =
-      (s.deferreds.isDone cell).map (fun flag => (s, Val.bool flag)) := rfl
+      (s.deferreds.isDone cell).map (fun flag => (s, Val.bool flag)) :=
+  by aesop
 
 /-- `Stores.lean:1215-1216`. -/
 theorem syncOpStep_deferredPoll (s : Stores) (cell : DeferredKey) :
     syncOpStep (SyncOp.deferredPoll cell) s =
-      (s.deferreds.poll cell).map (fun slot => (s, Val.bool slot.isSome)) := rfl
+      (s.deferreds.poll cell).map (fun slot => (s, Val.bool slot.isSome)) :=
+  by aesop
+
+def M1.StoresLaws.syncOpStep_deferredCompleteWith (s : Stores) (cell : DeferredKey)
+    (c : Completion Val Err Defect FiberId Ann) : ProofGraph.Obligation (syncOpStep (SyncOp.deferredCompleteWith cell c) s =
+      some ({ s with deferreds := (s.deferreds.complete cell c).1 },
+        Val.bool (s.deferreds.complete cell c).2)) := ⟨⟩
 
 /-- `Stores.lean:1217-1219`. -/
 theorem syncOpStep_deferredCompleteWith (s : Stores) (cell : DeferredKey)
     (c : Completion Val Err Defect FiberId Ann) :
     syncOpStep (SyncOp.deferredCompleteWith cell c) s =
-      some ({ s with deferreds := (s.deferreds.complete cell (completionPrim c)).1 },
-        Val.bool (s.deferreds.complete cell (completionPrim c)).2) := rfl
+      some ({ s with deferreds := (s.deferreds.complete cell c).1 },
+        Val.bool (s.deferreds.complete cell c).2) :=
+  by aesop
+
+def M1.StoresLaws.syncOpStep_deferredInterruptWith (s : Stores) (cell : DeferredKey)
+    (interruptor : FiberId) : ProofGraph.Obligation (syncOpStep (SyncOp.deferredInterruptWith cell interruptor) s =
+      some ({ s with deferreds :=
+          (s.deferreds.complete cell
+            (.ofExit (Exit.failure (Cause.interrupt (some interruptor))))).1 },
+        Val.bool (s.deferreds.complete cell
+          (.ofExit (Exit.failure (Cause.interrupt (some interruptor))))).2)) := ⟨⟩
 
 /-- `Stores.lean:1220-1224`. -/
 theorem syncOpStep_deferredInterruptWith (s : Stores) (cell : DeferredKey)
@@ -567,30 +585,39 @@ theorem syncOpStep_deferredInterruptWith (s : Stores) (cell : DeferredKey)
     syncOpStep (SyncOp.deferredInterruptWith cell interruptor) s =
       some ({ s with deferreds :=
           (s.deferreds.complete cell
-            (Prim.ofExit (Exit.failure (Cause.interrupt (some interruptor))))).1 },
+            (.ofExit (Exit.failure (Cause.interrupt (some interruptor))))).1 },
         Val.bool (s.deferreds.complete cell
-          (Prim.ofExit (Exit.failure (Cause.interrupt (some interruptor))))).2) := rfl
+          (.ofExit (Exit.failure (Cause.interrupt (some interruptor))))).2) :=
+  by aesop
 
 /-- `Stores.lean:1225-1226`. -/
 theorem syncOpStep_deferredAwaitCleanup (s : Stores) (cell : DeferredKey) (waiter : FiberId)
     (token : Nat) :
     syncOpStep (SyncOp.deferredAwaitCleanup cell waiter token) s =
-      some ({ s with deferreds := s.deferreds.cancel cell waiter token }, Val.unit) := rfl
+      some ({ s with deferreds := s.deferreds.cancel cell waiter token }, Val.unit) :=
+  by aesop
+
+def M1Clock.syncOpStep_clockNow (s : Stores) : ProofGraph.Obligation
+    (syncOpStep SyncOp.clockNow s = some (s, Val.nat s.timers.now.toNat)) := ⟨⟩
+#proof_wanted M1Clock.syncOpStep_clockNow
 
 /-- The clock read (the timer, A4). -/
 theorem syncOpStep_clockNow (s : Stores) :
-    syncOpStep SyncOp.clockNow s = some (s, Val.nat s.timers.now) := rfl
+    syncOpStep SyncOp.clockNow s = some (s, Val.nat s.timers.now.toNat) :=
+  by aesop
 
 /-- `clearTimeout` (the timer, A4). -/
 theorem syncOpStep_sleepCancel (s : Stores) (waiter : FiberId) (token : Nat) :
     syncOpStep (SyncOp.sleepCancel waiter token) s =
-      some ({ s with timers := s.timers.cancel waiter token }, Val.unit) := rfl
+      some ({ s with timers := s.timers.cancel waiter token }, Val.unit) :=
+  by aesop
 
 /-- `Stores.lean:1227-1229`. -/
 theorem syncOpStep_scopeMake (s : Stores) (strategy : FinalizerStrategy) :
     syncOpStep (SyncOp.scopeMake strategy) s =
       some ({ s with scopes := s.scopes.make s.nextName strategy, nextName := s.nextName + 1 },
-        Val.scopeHandle s.nextName) := rfl
+        Val.scopeHandle s.nextName) :=
+  by aesop
 
 /-- `scopeAddFinalizerExit` (`internal/effect.ts:3846-3858`) as the step spells it: an
 unknown scope is a frontier, a closed scope answers its closing exit, an open one registers
@@ -608,7 +635,8 @@ theorem syncOpStep_scopeAdd (s : Stores) (scope : Nat) (fin : FinName) :
           some ({ s with
               scopes := s.scopes.setEntry { entry with scope := entry.scope.addUnsafe s.nextName fin }
               nextName := s.nextName + 1 },
-            Val.unit) := rfl
+            Val.unit) :=
+  by aesop
 
 /-- Unknown scope: the step is a frontier (M7). -/
 theorem syncOpStep_scopeAdd_none (s : Stores) (scope : Nat) (fin : FinName)
@@ -640,12 +668,14 @@ theorem syncOpStep_scopeAdd_open (s : Stores) (scope : Nat) (fin : FinName)
 /-- `Stores.lean:1233-1234`. -/
 theorem syncOpStep_scopeRemove (s : Stores) (scope key : Nat) :
     syncOpStep (SyncOp.scopeRemove scope key) s =
-      some ({ s with scopes := s.scopes.removeFinalizer scope key }, Val.unit) := rfl
+      some ({ s with scopes := s.scopes.removeFinalizer scope key }, Val.unit) :=
+  by aesop
 
 /-- `Stores.lean:1235-1236`. -/
 theorem syncOpStep_scopeIsClosed (s : Stores) (scope : Nat) :
     syncOpStep (SyncOp.scopeIsClosed scope) s =
-      (s.scopes.entryAt scope).map (fun entry => (s, Val.bool entry.scope.isClosed)) := rfl
+      (s.scopes.entryAt scope).map (fun entry => (s, Val.bool entry.scope.isClosed)) :=
+  by aesop
 
 /-! ### The six arms of the join (`Layer.ts:396-458`, `internal/effect.ts:3834-3844`) -/
 
@@ -669,7 +699,8 @@ theorem syncOpStep_scopeFork_some (s : Stores) (parent : Nat) (strategy : Finali
 theorem syncOpStep_memoFork (s : Stores) (parent : Option MemoMapId) :
     syncOpStep (SyncOp.memoFork parent) s =
       some ({ s with memo := s.memo ++ [⟨⟨s.nextName⟩, parent, []⟩], nextName := s.nextName + 1 },
-        Val.memoMap ⟨s.nextName⟩) := rfl
+        Val.memoMap ⟨s.nextName⟩) :=
+  by aesop
 
 theorem syncOpStep_memoGet_none (s : Stores) (layer : LayerId) (memoMap : MemoMapId)
     (h : s.memo.get layer memoMap = none) :
@@ -686,6 +717,15 @@ theorem syncOpStep_memoGet_some (s : Stores) (layer : LayerId) (memoMap : MemoMa
         Val.pair (Val.promise entry.deferred) (Val.memoMap owner)) := by
   simp only [syncOpStep, h]
 
+def M1.StoresLaws.syncOpStep_memoBuild (s : Stores) (layer : LayerId) (memoMap : MemoMapId) : ProofGraph.Obligation (syncOpStep (SyncOp.memoBuild layer memoMap) s =
+      some ({ s with
+          scopes := s.scopes.make s.nextName FinalizerStrategy.sequential
+          deferreds := s.deferreds.make.2
+          memo := s.memo.insertEntry memoMap layer
+            ⟨1, s.nextName, s.deferreds.make.1, FinName.memoEntry layer memoMap⟩
+          nextName := s.nextName + 1 },
+        Val.scopeHandle s.nextName)) := ⟨⟩
+
 /-- `memoMapBuild`'s synchronous half (`Layer.ts:396-411`): the layer scope at the supply, a
 fresh Deferred, the entry with one observer. census: layer.memo-build-once -/
 theorem syncOpStep_memoBuild (s : Stores) (layer : LayerId) (memoMap : MemoMapId) :
@@ -694,16 +734,22 @@ theorem syncOpStep_memoBuild (s : Stores) (layer : LayerId) (memoMap : MemoMapId
           scopes := s.scopes.make s.nextName FinalizerStrategy.sequential
           deferreds := s.deferreds.make.2
           memo := s.memo.insertEntry memoMap layer
-            ⟨1, Prim.async (Name.registerAwait s.deferreds.make.1) true
-                (some (Name.cancelAwait s.deferreds.make.1)),
-              s.nextName, s.deferreds.make.1, FinName.memoEntry layer memoMap⟩
+            ⟨1, s.nextName, s.deferreds.make.1, FinName.memoEntry layer memoMap⟩
           nextName := s.nextName + 1 },
-        Val.scopeHandle s.nextName) := rfl
+        Val.scopeHandle s.nextName) :=
+  by aesop
 
 theorem syncOpStep_memoComplete_none (s : Stores) (layer : LayerId) (memoMap : MemoMapId)
     (exit : ExitV) (h : s.memo.entryAt memoMap layer = none) :
     syncOpStep (SyncOp.memoComplete layer memoMap exit) s = some (s, Val.unit) := by
   simp only [syncOpStep, h]
+
+def M1.StoresLaws.syncOpStep_memoComplete_some (s : Stores) (layer : LayerId) (memoMap : MemoMapId)
+    (exit : ExitV) {entry : MemoEntry} (_h : s.memo.entryAt memoMap layer = some entry) : ProofGraph.Obligation (syncOpStep (SyncOp.memoComplete layer memoMap exit) s =
+      some ({ s with
+          memo := s.memo.updateEntry memoMap layer id
+          deferreds := (s.deferreds.complete entry.deferred (.ofExit exit)).1 },
+        Val.unit)) := ⟨⟩
 
 /-- `memoMapBuild`'s `onExit` (`Layer.ts:414-417`): the exit stored, the Deferred completed —
 the wakeup borrowed from the Deferred family. census: layer.memo-build-once -/
@@ -711,8 +757,8 @@ theorem syncOpStep_memoComplete_some (s : Stores) (layer : LayerId) (memoMap : M
     (exit : ExitV) {entry : MemoEntry} (h : s.memo.entryAt memoMap layer = some entry) :
     syncOpStep (SyncOp.memoComplete layer memoMap exit) s =
       some ({ s with
-          memo := s.memo.updateEntry memoMap layer fun e => { e with effect := Prim.ofExit exit }
-          deferreds := (s.deferreds.complete entry.deferred (Prim.ofExit exit)).1 },
+          memo := s.memo.updateEntry memoMap layer id
+          deferreds := (s.deferreds.complete entry.deferred (.ofExit exit)).1 },
         Val.unit) := by
   simp only [syncOpStep, h]
 
@@ -767,32 +813,37 @@ each: the compile route's witnesses for the layer rows of the census
 census: layer.from-build-child-scope -/
 theorem finProgram_closeChildOnFailure_failure (scope : Nat) (cause : CauseV) :
     finProgram (FinName.closeChildOnFailure scope) (Exit.failure cause) =
-      Prim.withFiber (Thunk.act (ActionName.closeScope scope (Exit.failure cause))) := rfl
+      Prim.withFiber (Thunk.act (ActionName.closeScope scope (Exit.failure cause))) :=
+  by aesop
 
 /-- A successful build leaves its child scope, and its finalizers, attached to the caller scope.
 census: layer.from-build-child-scope -/
 theorem finProgram_closeChildOnFailure_success (scope : Nat) (v : Val) :
-    finProgram (FinName.closeChildOnFailure scope) (Exit.success v) = Prim.success Val.unit := rfl
+    finProgram (FinName.closeChildOnFailure scope) (Exit.success v) = Prim.success Val.unit :=
+  by aesop
 
 /-- The memo entry finalizer: `memoRelease`, then `closeIfLast` on its answer (`:401-410`).
 census: layer.memo-finalizer-last-observer -/
 theorem finProgram_memoEntry (layer : LayerId) (memoMap : MemoMapId) (exit : ExitV) :
     finProgram (FinName.memoEntry layer memoMap) exit =
       Prim.onSuccess (Prim.sync (Thunk.op (SyncOp.memoRelease layer memoMap)))
-        (Name.closeIfLast exit) := rfl
+        (Name.closeIfLast exit) :=
+  by aesop
 
 /-- `memoMapBuild`'s `onExit` (`:414-417`): the exit stored and the Deferred completed.
 census: layer.memo-build-once -/
 theorem finProgram_memoDone (layer : LayerId) (memoMap : MemoMapId) (exit : ExitV) :
     finProgram (FinName.memoDone layer memoMap) exit =
-      Prim.sync (Thunk.op (SyncOp.memoComplete layer memoMap exit)) := rfl
+      Prim.sync (Thunk.op (SyncOp.memoComplete layer memoMap exit)) :=
+  by aesop
 
 /-- The last observer's release answered the layer scope: closed with the closing exit (`:406`);
 `contAOf_closeIfLast_other` (`Program/Intro.lean`) is the other answer, void (`:408`).
 census: layer.memo-finalizer-last-observer -/
 theorem contAOf_closeIfLast_scope (exit : ExitV) (scope : Nat) :
     contAOf (Name.closeIfLast exit) (Val.scopeHandle scope) =
-      Prim.withFiber (Thunk.act (ActionName.closeScope scope exit)) := rfl
+      Prim.withFiber (Thunk.act (ActionName.closeScope scope exit)) :=
+  by aesop
 
 /-! ## The laws of `syncOpStep` -/
 
@@ -803,7 +854,7 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
   | deferredMake =>
     simp only [syncOpStep_deferredMake, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
-    exact ⟨Nat.le_refl _, by simp [DeferredStore.make], fun _ hk => hk, Nat.le_refl _, fun _ hm => hm, Nat.le_refl _⟩
+    exact ⟨Nat.le_refl _, by aesop (rule_sets := [Effect4.Stores]), fun _ hk => hk, Nat.le_refl _, fun _ hm => hm, Nat.le_refl _⟩
   | deferredIsDone cell | deferredPoll cell | scopeIsClosed cell =>
     simp only [syncOpStep_deferredIsDone, syncOpStep_deferredPoll, syncOpStep_scopeIsClosed] at h
     obtain ⟨_, _, hf⟩ := Option.map_eq_some_iff.mp h
@@ -882,7 +933,7 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
   | memoBuild layer memoMap =>
     simp only [syncOpStep_memoBuild, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, _⟩ := h
-    exact ⟨Nat.le_refl _, by simp [DeferredStore.make],
+    exact ⟨Nat.le_refl _, by aesop (rule_sets := [Effect4.Stores]),
       fun k hk => ScopeStore.entryAt_make_isSome _ _ _ k hk, Nat.le_succ _, fun id hm => by
         show ((s.memo.insertEntry memoMap layer _).mapAt id).isSome = true
         exact MemoWorld.mapAt_insertEntry_isSome hm, Nat.le_refl _⟩
@@ -899,7 +950,7 @@ theorem syncOpStep_le (o : SyncOp) (s s' : Stores) (v : Val) (h : syncOpStep o s
       obtain ⟨rfl, _⟩ := h
       exact ⟨Nat.le_refl _, Nat.le_of_eq (DeferredStore.complete_cells_length _ _ _).symm,
         fun _ hk => hk, Nat.le_refl _, fun id hm => by
-          show ((s.memo.updateEntry memoMap layer fun e => { e with effect := Prim.ofExit exit }).mapAt
+          show ((s.memo.updateEntry memoMap layer (fun e => e)).mapAt
             id).isSome = true
           exact MemoWorld.mapAt_updateEntry_isSome hm, Nat.le_refl _⟩
   | memoRelease layer memoMap =>
@@ -1222,7 +1273,7 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
     rcases MemoWorld.mem_insertEntry_entries hm' he with ⟨m₀, hm₀, he₀⟩ | rfl
     · obtain ⟨hd, hs⟩ := hwf.2.2.1 m₀ hm₀ e he₀
       exact ⟨Nat.lt_of_lt_of_le hd hle.2.1, hle.2.2.1 _ hs⟩
-    · exact ⟨by simp [DeferredStore.make], ScopeStore.entryAt_make_self _ _ _⟩
+    · exact ⟨by aesop (rule_sets := [Effect4.Stores]), ScopeStore.entryAt_make_self _ _ _⟩
   | memoComplete layer memoMap exit =>
     cases hentry : s.memo.entryAt memoMap layer with
     | none =>
@@ -1235,7 +1286,7 @@ theorem syncOpStep_memoValid (o : SyncOp) (s s' : Stores) (v : Val) (hwf : s.WF)
         Prod.mk.injEq] at h
       obtain ⟨rfl, _⟩ := h
       intro m hm e he
-      have hm' : m ∈ s.memo.updateEntry memoMap layer fun e => { e with effect := Prim.ofExit exit } :=
+      have hm' : m ∈ s.memo.updateEntry memoMap layer (fun e => e) :=
         hm
       obtain ⟨m₀, hm₀, e₀, he₀, heq⟩ := MemoWorld.mem_updateEntry_entries hm' he
       obtain ⟨hd, hs⟩ := hwf.2.2.1 m₀ hm₀ e₀ he₀
@@ -1904,7 +1955,7 @@ theorem syncOpStep_memoObserved (o : SyncOp) (s s' : Stores) (v : Val) (hnodup :
         Prod.mk.injEq] at h
       obtain ⟨rfl, _⟩ := h
       intro m hm e he
-      have hm' : m ∈ s.memo.updateEntry memoMap layer fun e => { e with effect := Prim.ofExit exit } :=
+      have hm' : m ∈ s.memo.updateEntry memoMap layer (fun e => e) :=
         hm
       obtain ⟨m₀, hm₀, e₀, he₀, heq⟩ := MemoWorld.mem_updateEntry_entries hm' he
       have h₀ := hobs m₀ hm₀ e₀ he₀
@@ -1997,3 +2048,13 @@ theorem syncOpStep_memoObserved (o : SyncOp) (s s' : Stores) (v : Val) (hnodup :
     obtain ⟨⟨a, heap'⟩, hstep, hf⟩ := Option.map_eq_some_iff.mp h
     cases hf
     exact hsame rfl
+
+attribute [aesop norm simp (rule_sets := [Effect4.Stores])]
+  DeferredStore.setCell_cells_length DeferredStore.complete_cells_length
+  syncOpStep_deferredCompleteWith syncOpStep_deferredInterruptWith syncOpStep_memoBuild
+
+attribute [aesop safe forward (rule_sets := [Effect4.Stores])]
+  syncOpStep_memoComplete_some
+
+#typed_state_obligations Effect4.Machine.M1.StoresLaws ceiling 0
+  using aesop (rule_sets := [Effect4.Stores])

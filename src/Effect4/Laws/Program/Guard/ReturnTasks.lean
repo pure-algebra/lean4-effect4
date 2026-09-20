@@ -120,25 +120,23 @@ theorem withFiber_returned (interp : NInterp) (m : NativeMachine) (f : NFiber)
   cases action <;>
     simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs, spawn, start,
       beginRace]
-  all_goals repeat' first
-    | exact returned_same _ _ _ rfl rfl
-    | exact returned_start _ _ _ _ rfl rfl
-    | exact countdown_returned _ _ _ _ _ _
-    | split
-  all_goals simp_all
+  all_goals repeat' split
+  all_goals
+    aesop (rule_sets := [Effect4.Stores])
+      (add safe apply [countdown_returned])
+      (add safe 50 (by exact returned_same _ _ _ rfl rfl))
+      (add safe 50 (by exact returned_start _ _ _ _ rfl rfl))
 
 theorem evaluatePrim_returned (interp : NInterp) (m : NativeMachine) (f : NFiber) (yielding : Bool) :
     Returned m f (evaluatePrim interp m f yielding).fiber := by
   simp only [evaluatePrim, registerRace, RunFiber.park]
-  repeat' first
-    | exact stepFrame_returned _ _ _ _
-    | exact finalizerOr_returned _ _ _ _ _
-    | exact withFiber_returned _ _ _ _ _
-    | exact returned_same _ _ _ rfl rfl
-    | exact returned_yield _ _ _ _ _ rfl rfl rfl rfl
-    | exact countdown_returned _ _ _ _ _ _
-    | split
-  all_goals simp_all
+  repeat' split
+  all_goals
+    aesop (rule_sets := [Effect4.Stores])
+      (add safe apply [stepFrame_returned, finalizerOr_returned, withFiber_returned,
+        countdown_returned])
+      (add safe 50 (by exact returned_same _ _ _ rfl rfl))
+      (add safe 50 (by exact returned_yield _ _ _ _ _ rfl rfl rfl rfl))
 
 theorem exitScoped_returned (p : NativeEff) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (exit : ExitV) : Returned m f (exitScoped p m f yielding exit).fiber := by

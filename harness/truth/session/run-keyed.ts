@@ -1,4 +1,4 @@
-/** Run the exact Lean-printed expressions, then save fresh v2 tapes and host receipts.
+/** Run the exact Lean-printed expressions, then save fresh v3 tapes and host receipts.
  * Binding plans are explicit before execution; none of their completions executes on host. */
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { dirname, relative, resolve } from "node:path"
@@ -8,6 +8,7 @@ import { deepStrictEqual } from "node:assert"
 import { Effect, type Exit } from "effect"
 import { KeyedRecorder, exitJson, type KeyedFixture } from "./keyed-recorder.ts"
 import { KeyedBindings } from "./keyed-bindings.ts"
+import { Rc112ClockBoundary } from "./clock.ts"
 const [manifestPath, outputPath] = process.argv.slice(2)
 if (!manifestPath || !outputPath) throw Error("usage: run-keyed.ts LEAN_FIXTURES OUTPUT_DIRECTORY")
 const fixtures = JSON.parse(await readFile(manifestPath, "utf8")) as KeyedFixture[]
@@ -26,11 +27,13 @@ for (const fixture of fixtures) {
     const name = `${fixture.name}-${order}`
     const recorder = new KeyedRecorder(fixture, name), binding = new KeyedBindings(recorder)
     let completed: Exit.Exit<unknown, unknown> | undefined
-    const fiber = Effect.runFork(build(binding))
+    const clock = await Rc112ClockBoundary.make()
+    const fiber = Effect.runFork(clock.provide(build(binding)))
     fiber.addObserver(exit => { completed = exit })
     try {
       const started = Date.now()
       while (!completed) {
+        clock.check()
         if (Date.now() - started > 8000) throw Error(`${name}: host frontier timed out`)
         await setImmediate()
         const open = recorder.outstanding()
@@ -44,8 +47,10 @@ for (const fixture of fixtures) {
         for (const call of arrivals) if (!recorder.hasReply(call)) await recorder.arrive(call)
         recorder.apply(next)
       }
+      clock.check()
       const observed = exitJson(completed)
       deepStrictEqual(observed, order === "apply-BA" ? { success: 1 } : fixture.expected, `${name}: actual rc.112 exit versus finite Lean model`)
+      clock.check()
       const recording = recorder.finish()
       for (const resource of binding.resources) {
         deepStrictEqual([resource.closed, resource.closes], [true, 1], `${name}: exactly one close`)
@@ -57,6 +62,7 @@ for (const fixture of fixtures) {
     } finally {
       fiber.interruptUnsafe()
       await binding.dispose()
+      await clock.dispose()
     }
   }
 }

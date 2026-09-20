@@ -200,9 +200,9 @@ Named boundaries, also recorded in `Test/Counterexamples/REGISTER.md`:
   `withFiberOf` and `syncState` are unused stubs. Since P2 `iterNext` and
   `loopBody` are the generator walk and the addressed loop body, and the
   addressed `.body` case of `suspendBody` is used and implemented.
-- `RSTATE-FB-STORE-CODE`: Deferred code manually inserted outside the source
-  Completion profile is left at an unsupported frontier; the decoder is not
-  a general primitive interpreter.
+- `RSTATE-FB-STORE-CODE` (retired by M1, 2026-09-20): Deferred cells and owed
+  resumes hold Completion data; their consumers interpret every constructor.
+  This does not admit arbitrary Deferred.completeWith programs.
 - `RSTEP-FB-PROTOCOL` (retired 2026-09-07 by the P3 walk agreement): a cleanup-end
   marker delivers the finalizer's exit through the saved slots, restoring the mask at
   the `finalizerMask` slot it meets, exactly as the frame's `Prim.ofExit` restores at

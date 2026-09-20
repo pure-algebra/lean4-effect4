@@ -1,0 +1,103 @@
+ℹ [198/201] Replayed Effect4.Laws.Machine.CompletionData
+info: src/Effect4/Laws/Machine/CompletionData.lean:55:0: Effect4.Machine.M1.Core: 0 open, 5 proved, 5 total; ceiling 0
+ℹ [199/201] Replayed Effect4.Laws.Machine.StoresLaws
+info: src/Effect4/Laws/Machine/StoresLaws.lean:2038:0: Effect4.Machine.M1.StoresLaws: 0 open, 5 proved, 5 total; ceiling 0
+✖ [201/201] Building Effect4.Laws.Machine.Handles (129s)
+trace: .> LEAN_PATH=/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Machine/Handles.lean -o /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Machine/Handles.olean -i /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Machine/Handles.ilean -c /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Effect4/Laws/Machine/Handles.c --setup /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Effect4/Laws/Machine/Handles.setup.json --json
+error: src/Effect4/Laws/Machine/Handles.lean:681:2: Tactic `aesop` failed, made no progress
+Initial goal:
+  κ κ' : Type
+  f : κ → κ'
+  sourceKeys : κ → List Handle
+  targetKeys : κ' → List Handle
+  h : ∀ (c : κ), targetKeys (f c) ⊆ sourceKeys c
+  d : Owed κ
+  ⊢ keys targetKeys (mapCode f d) ⊆ keys sourceKeys d
+error: src/Effect4/Laws/Machine/Handles.lean:694:2: Tactic `aesop` failed, made no progress
+Initial goal:
+  κ κ' : Type
+  f : κ → κ'
+  sourceKeys : κ → List Handle
+  targetKeys : κ' → List Handle
+  h : ∀ (c : κ), targetKeys (f c) ⊆ sourceKeys c
+  ds : List (Owed κ)
+  ⊢ List.flatMap (keys targetKeys) (List.map (mapCode f) ds) ⊆ List.flatMap (keys sourceKeys) ds
+error: src/Effect4/Laws/Machine/Handles.lean:5402:2: aesop: failed to prove the goal after exhaustive search.
+error: src/Effect4/Laws/Machine/Handles.lean:5401:60: unsolved goals
+self : DeferredStore
+cell : DeferredKey
+fwd : cell.index < self.cells.length
+⊢ self.cells[cell.index].keys ⊆ self.keys
+error: src/Effect4/Laws/Machine/Handles.lean:5426:2: aesop: failed to prove the goal after exhaustive search.
+error: src/Effect4/Laws/Machine/Handles.lean:5425:78: unsolved goals
+self : DeferredStore
+cell : DeferredKey
+waiter : FiberId
+token : Nat
+x : Option DeferredCell
+fwd : cell.index < self.cells.length
+x_1 : Option (Completion Val Err Defect FiberId Ann)
+effect : Completion Val Err Defect FiberId Ann
+heq : self.cells[cell.index].completion = some effect
+⊢ effect.keys ⊆ self.keys
+
+self : DeferredStore
+cell : DeferredKey
+waiter : FiberId
+token : Nat
+x : Option DeferredCell
+fwd : cell.index < self.cells.length
+x_1 : Option (Completion Val Err Defect FiberId Ann)
+heq : self.cells[cell.index].completion = none
+⊢ {
+        cells :=
+          self.cells.set cell.index
+            { completion := none, wake := self.cells[cell.index].wake.register waiter token () },
+        due := self.due }.keys ⊆
+    self.keys
+error: src/Effect4/Laws/Machine/Handles.lean:5432:2: Tactic `aesop` failed, made no progress
+Initial goal:
+  ws : List (Waiter Unit)
+  e : Completion Val Err Defect FiberId Ann
+  ⊢ List.flatMap (Owed.keys Completion.keys)
+        (List.map (fun w => { waiter := w.fiber, token := w.token, code := e, mode := WakeMode.now }) ws) ⊆
+      e.keys
+error: src/Effect4/Laws/Machine/Handles.lean:5437:2: aesop: failed to prove the goal after exhaustive search.
+error: src/Effect4/Laws/Machine/Handles.lean:5436:67: unsolved goals
+self : DeferredStore
+cell : DeferredKey
+e : Completion Val Err Defect FiberId Ann
+x : Option DeferredCell
+fwd : cell.index < self.cells.length
+x_1 : Option (Completion Val Err Defect FiberId Ann)
+heq : self.cells[cell.index].completion = none
+⊢ { cells := self.cells.set cell.index { completion := some e, wake := self.cells[cell.index].wake.wakeAll.snd },
+        due :=
+          self.due ++
+            List.map (fun w => { waiter := w.fiber, token := w.token, code := e, mode := WakeMode.now })
+              self.cells[cell.index].wake.wakeAll.fst }.keys ⊆
+    self.keys ++ e.keys
+error: src/Effect4/Laws/Machine/Handles.lean:5457:2: aesop: failed to prove the goal after exhaustive search.
+error: src/Effect4/Laws/Machine/Handles.lean:5456:75: unsolved goals
+case left
+self : DeferredStore
+⊢ { cells := self.cells, due := [] }.keys ⊆ self.keys
+
+case right
+self : DeferredStore
+⊢ List.flatMap (Owed.keys Completion.keys) self.due ⊆ self.keys
+error: src/Effect4/Laws/Machine/Handles.lean:5973:63: Invalid `⟨...⟩` notation: The expected type of this term could not be determined
+error: src/Effect4/Laws/Machine/Handles.lean:6107:63: Invalid `⟨...⟩` notation: The expected type of this term could not be determined
+error: src/Effect4/Laws/Machine/Handles.lean:6140:35: Function expected at
+  List.mem_cons_self
+but this term has type
+  ?m.3143 ∈ ?m.3143 :: ?m.3144
+
+Note: Expected a function because this term is being applied to the argument
+  _
+error: src/Effect4/Laws/Machine/Handles.lean:6238:14: `simp` made no progress
+error: src/Effect4/Laws/Machine/Handles.lean:6242:6: `simp` made no progress
+error: Lean exited with code 1
+Some required targets logged failures:
+- Effect4.Laws.Machine.Handles
+error: build failed

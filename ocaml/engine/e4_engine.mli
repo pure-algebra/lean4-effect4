@@ -2,7 +2,8 @@
 
    What it is: docs/research/2026-09-08-engine-a1-state.md §5.  Load a program, apply
    decisions, replay a tape, take a snapshot, and answer in the four-letter alphabet of
-   proposal 16.  It adds NO semantics: every transition is the generated
+   proposal 16, or explicitly refuse the host numeric profile. Every accepted transition
+   is the generated
    `stepDecisionState` (api_engine.ml:11424) and the answer is a projection of what that
    function and the generated `settled` (:11330) already say.
 
@@ -16,6 +17,11 @@
                 conflates this with Suspended (Api.lean:144-148); the engine does not,
                 because a caller that can give more fuel must be able to tell them apart.
      Refused    `ReplayResult.stuck` -- `Stuck.unknownFiber/unknownScope/unknownRace`.
+
+   Outside_profile is separate from those four semantic answers. If a generated decision
+   observes a clock outside the number profile, step retains its INPUT machine and records
+   this host refusal. Intermediate pure values from that decision are discarded; no claim
+   of a simulated transition is made. The refused decision remains in replay_to's residue.
 
    ONE loop, TWO instances.  {!Fast} is `Api_engine.Make(E4_table)(E4_trace)(E4_memo)
    (E4_buckets)`; {!Ref} is the same generated bodies over Lean's list carriers.  Both are
@@ -38,7 +44,8 @@
    EN3 `step` is total: it answers a machine for every decision and never raises -- the two
        `failwith` rows of the generated prelude (`sh_dispatcher_mk`, `sh_memo_map_mk`) are
        the only exception, and they fire on a construction the closure does not contain.
-       test_engine counts them over the whole corpus and expects 0.
+       test_engine counts them over the whole corpus and expects 0. Clock profile exceptions
+       are caught and returned as Outside_profile with the input machine retained.
                                                           by construction; counted
    EN4 THE TAPE AXIS.  `replay_steps m tape` yields `List.length tape + 1` machines, the
        initial one first, position i equal to `replay m (the first i decisions)`, and the
@@ -86,6 +93,7 @@ type answer =
   | Finished
   | Suspended of frontier
   | Refused of string  (** the `Stuck` constructor, spelled *)
+  | Outside_profile of string  (** host numeric boundary; the input machine is retained *)
   | Delay of frontier  (** the fuel ran out; the command residue is non-empty *)
 
 (** {1 What an instance must supply} *)
@@ -256,7 +264,7 @@ module type INSTANCE = sig
     | RunDecision_answerAsync of fiber_id * int * ('b, 'e, 'd, 'i, 'a) completion
     | RunDecision_interruptFrom of fiber_id option * 'a reason_annotations * fiber_id
     | RunDecision_installMiddleware
-    | RunDecision_advance of int
+    | RunDecision_advance of E4_clock.t
 
   (** The fully applied machine.  `machine`, `fiber` and `interp` are abstract: they mention
       the carriers. *)
@@ -352,6 +360,9 @@ module type ENGINE = sig
   val interrupt_from : int option -> int -> decision
   val install_middleware : decision
   val advance : int -> decision
+  val advance_exact : E4_clock.t -> decision
+  (** Exact logical milliseconds. [advance] promotes a nonnegative host integer;
+      [advance_exact] also accepts values above the host integer range. *)
 
   (** {2 Loading} *)
 

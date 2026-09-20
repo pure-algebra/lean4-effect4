@@ -48,7 +48,7 @@ theorem memoize_hit (root : NativeEff) (q : Point) (map : MemoMapId) (scope : Na
     contAOf root (.memoize q map scope) (Val.pair (Val.promise entry.deferred) (Val.memoMap owner)) =
       Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.path owner))
         (EffName.awaitPromise entry.deferred) :=
-  Effect4.Program.Agreement.contAOf_memoize_hit (root := root) q map scope entry.deferred owner
+  by aesop
 
 /-- The store hit and the continuation agree on the stored deferred and owner. -/
 theorem memoGet_memoize_hit (root : NativeEff) (s : Stores) (q : Point)
@@ -62,7 +62,8 @@ theorem memoGet_memoize_hit (root : NativeEff) (s : Stores) (q : Point)
 
 theorem fresh_forks_without_parent (l : LayerTerm NativeOp) (q : Point) (map : MemoMapId) (scope : Nat) :
     compileLayer (.fresh l) q map scope =
-      Prim.onSuccess (Prim.sync (EffThunk.op (.memoFork none))) (EffName.freshThen (q.child 0) scope) := rfl
+      Prim.onSuccess (Prim.sync (EffThunk.op (.memoFork none))) (EffName.freshThen (q.child 0) scope) :=
+  by aesop
 
 def Isolated (inside : List MemoMapId) (w : MemoWorld) : Prop :=
   ∀ m ∈ w, m.id ∈ inside → ∀ parent, m.parent = some parent → parent ∈ inside
@@ -228,10 +229,10 @@ theorem local_step {inside : List MemoMapId} {s s' : Stores} {op : SyncOp} {v : 
     | some entry =>
       rw [syncOpStep_memoComplete_some s layer id exit he] at hs
       cases hs
-      refine ⟨isolated_updateEntry hw id layer (fun e => { e with effect := Prim.ofExit exit }), ?_⟩
+      refine ⟨isolated_updateEntry hw id layer (fun e => e), ?_⟩
       intro outside ho
       exact mapAt_updateEntry_other s.memo id outside layer
-        (fun e => { e with effect := Prim.ofExit exit }) (fun h => ho (h ▸ hl))
+        (fun e => e) (fun h => ho (h ▸ hl))
   case memoRelease layer id =>
     cases he : s.memo.entryAt id layer with
     | none =>

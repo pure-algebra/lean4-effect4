@@ -1,0 +1,5 @@
+ℹ [6/6] Replayed Test.Audit.FrameRules
+info: Test/Audit/FrameRules.lean:11:0: frame rules: 2 checked theorems, 1 reused clauses, 3 explicit premises
+info: Test/Audit/FrameRules.lean:28:0: 'Test.FrameRules.Fits.frame_key' does not depend on any axioms
+info: Test/Audit/FrameRules.lean:29:0: 'Test.FrameRules.Fits.frame_value' does not depend on any axioms
+Build completed successfully (6 jobs).

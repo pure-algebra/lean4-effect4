@@ -34,8 +34,6 @@ theorem guardState_prepareAsyncAnswer (p : NativeEff) (table : RowTable) (m : Na
   apply guardState_withState state
   · simp only [storeKeys, timers, deferreds]
     exact List.Subset.refl _
-  · rw [deferreds]
-    exact ⟨state.internalCodes.1, state.internalCodes.2.1⟩
 
 theorem guardQueue_drainDue (p : NativeEff) (table : RowTable) (m : NativeMachine) :
     GuardQueue p table m [.drainDue] := by

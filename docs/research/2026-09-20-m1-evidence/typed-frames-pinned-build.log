@@ -1,0 +1,84 @@
+ℹ [17/94] Replayed Effect4.Program.AtomInventory
+info: src/Effect4/Program/AtomInventory.lean:61:0: 'Effect4.Program.NativeAtom.all_complete' depends on axioms: [propext]
+info: src/Effect4/Program/AtomInventory.lean:62:0: 'Effect4.Program.NativeAtom.covers_iff' depends on axioms: [propext, Quot.sound]
+ℹ [24/94] Replayed Effect4.Program.NodeLenses
+info: src/Effect4/Program/NodeLenses.lean:135:0: 'Effect4.Program.Node.child' depends on axioms: [propext]
+info: src/Effect4/Program/NodeLenses.lean:136:0: 'Effect4.Program.Node.setChild' depends on axioms: [propext]
+ℹ [25/94] Replayed Effect4.Program.Fold
+info: src/Effect4/Program/Fold.lean:3350:0: 'Effect4.Program.hom_eq_cata_ty' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3351:0: 'Effect4.Program.cata_id_ty' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3352:0: 'Effect4.Program.foldM_eq_cata_ty' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3353:0: 'Effect4.Program.foldM_id_ty' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3354:0: 'Effect4.Program.foldM_natural_ty' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3355:0: 'Effect4.Program.hom_eq_cata_term' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3356:0: 'Effect4.Program.hom_eq_cata_terms' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3357:0: 'Effect4.Program.cata_id_term' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3358:0: 'Effect4.Program.cata_id_terms' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3359:0: 'Effect4.Program.foldM_eq_cata_term' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3360:0: 'Effect4.Program.foldM_eq_cata_terms' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3361:0: 'Effect4.Program.foldM_id_term' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3362:0: 'Effect4.Program.foldM_id_terms' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3363:0: 'Effect4.Program.foldM_natural_term' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3364:0: 'Effect4.Program.foldM_natural_terms' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3365:0: 'Effect4.Program.hom_eq_cata_cause' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3366:0: 'Effect4.Program.cata_id_cause' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3367:0: 'Effect4.Program.foldM_eq_cata_cause' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3368:0: 'Effect4.Program.foldM_id_cause' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3369:0: 'Effect4.Program.foldM_natural_cause' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3370:0: 'Effect4.Program.hom_eq_cata_eff' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3371:0: 'Effect4.Program.hom_eq_cata_stmt' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3372:0: 'Effect4.Program.hom_eq_cata_stmts' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3373:0: 'Effect4.Program.hom_eq_cata_effs' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3374:0: 'Effect4.Program.hom_eq_cata_action' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3375:0: 'Effect4.Program.hom_eq_cata_layer' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3376:0: 'Effect4.Program.hom_eq_cata_layers' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3377:0: 'Effect4.Program.cata_id_eff' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3378:0: 'Effect4.Program.cata_id_stmt' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3379:0: 'Effect4.Program.cata_id_stmts' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3380:0: 'Effect4.Program.cata_id_effs' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3381:0: 'Effect4.Program.cata_id_action' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3382:0: 'Effect4.Program.cata_id_layer' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3383:0: 'Effect4.Program.cata_id_layers' does not depend on any axioms
+info: src/Effect4/Program/Fold.lean:3384:0: 'Effect4.Program.foldM_eq_cata_eff' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3385:0: 'Effect4.Program.foldM_eq_cata_stmt' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3386:0: 'Effect4.Program.foldM_eq_cata_stmts' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3387:0: 'Effect4.Program.foldM_eq_cata_effs' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3388:0: 'Effect4.Program.foldM_eq_cata_action' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3389:0: 'Effect4.Program.foldM_eq_cata_layer' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3390:0: 'Effect4.Program.foldM_eq_cata_layers' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3391:0: 'Effect4.Program.foldM_id_eff' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3392:0: 'Effect4.Program.foldM_id_stmt' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3393:0: 'Effect4.Program.foldM_id_stmts' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3394:0: 'Effect4.Program.foldM_id_effs' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3395:0: 'Effect4.Program.foldM_id_action' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3396:0: 'Effect4.Program.foldM_id_layer' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3397:0: 'Effect4.Program.foldM_id_layers' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3398:0: 'Effect4.Program.foldM_natural_eff' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3399:0: 'Effect4.Program.foldM_natural_stmt' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3400:0: 'Effect4.Program.foldM_natural_stmts' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3401:0: 'Effect4.Program.foldM_natural_effs' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3402:0: 'Effect4.Program.foldM_natural_action' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3403:0: 'Effect4.Program.foldM_natural_layer' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3404:0: 'Effect4.Program.foldM_natural_layers' depends on axioms: [propext, Quot.sound]
+info: src/Effect4/Program/Fold.lean:3405:0: 'Effect4.Program.weaken_eq_cata_eff' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3406:0: 'Effect4.Program.weaken_eq_cata_stmt' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3407:0: 'Effect4.Program.weaken_eq_cata_stmts' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3408:0: 'Effect4.Program.weaken_eq_cata_effs' depends on axioms: [propext]
+info: src/Effect4/Program/Fold.lean:3409:0: 'Effect4.Program.weaken_eq_cata_action' depends on axioms: [propext]
+ℹ [235/248] Replayed Effect4.Laws.Machine.CompletionData
+info: src/Effect4/Laws/Machine/CompletionData.lean:56:0: Effect4.Machine.M1.Core: 0 open, 5 proved, 5 total; ceiling 0
+ℹ [236/248] Replayed Effect4.Laws.Machine.StoresLaws
+info: src/Effect4/Laws/Machine/StoresLaws.lean:2059:0: Effect4.Machine.M1.StoresLaws: 0 open, 5 proved, 5 total; ceiling 0
+ℹ [247/248] Built Effect4.Laws.Program.Typed.State (1.7s)
+info: src/Effect4/Laws/Program/Typed/State.lean:25:0: 85 positions from 4 roots, 94 source rows
+  1	program
+  18	custom
+  5	exit
+  3	column
+  1	refused
+  6	journal
+  51	hook
+  refused	Effect4.Machine.Stores.externals	external rows are the table-aware slice (DI-57); the reference parks them forever
+  refused	Effect4.ScopeState.closed.exit	DI-94 fixes the release type at Exit<unknown, unknown>; connecting stored scope exits to the invariant remains open
+✔ [248/248] Built Effect4.Laws.Program.Typed.Frames (1.1s)
+Build completed successfully (248 jobs).

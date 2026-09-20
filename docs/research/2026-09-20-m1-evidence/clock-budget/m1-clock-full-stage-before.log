@@ -1,0 +1,5 @@
+STAGE start: current=2780862 init=2780610 used=0 max=200000
+STAGE translation first: current=569586586 init=2780610 used=566805 max=200000
+uncaught exception: (deterministic) timeout at `whnf`, maximum number of heartbeats (200000) has been reached
+
+Note: Use `set_option maxHeartbeats <num>` to set the limit.(invalid MessageData.lazy, missing context)
