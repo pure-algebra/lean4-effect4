@@ -1,0 +1,355 @@
+{
+  "module": "Effect4.Laws.Program.Guard.FrameOwned",
+  "evidence_kind": "completed finite rewrite/build/census slice",
+  "phase_b_commit": "3f89307488835002c1cb9d8b3bcb9c1dcc1554a1",
+  "recorded_finished_utc": "2026-09-20T14:07:22.263056+00:00",
+  "rewritten_bodies": 2,
+  "source_path": "src/Effect4/Laws/Program/Guard/FrameOwned.lean",
+  "source_before_sha256": "f2b39b9fabaf87bbbf6f1d6b2c0699ba6c6eb2c20f7ed5f34c58ce2b089cb105",
+  "source_after_sha256": "8fd4210d698ce395f9fa5edc78bb0d75cb4dc416d20bf5a265c992a135dc8753",
+  "certified_headers_equal": true,
+  "only_certified_body_spans_changed": true,
+  "before": {
+    "tactic": "aesop",
+    "cap": 20000,
+    "instrument_closed_count": 2,
+    "trust_admissible_closed_count": 2,
+    "instrument_total_count": 49
+  },
+  "after": {
+    "tactic": "aesop (rule_sets := [Effect4.Stores])",
+    "cap": 20000,
+    "instrument_closed_count": 0,
+    "trust_admissible_closed_count": 0,
+    "instrument_total_count": 49
+  },
+  "comparison_limit": "After search may use a different rule-bank context; counts do not attribute any change solely to shorter proof bodies.",
+  "processes": [
+    {
+      "label": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        "src/Effect4/Laws/Program/Guard/FrameOwned.lean"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/repaired-runs/Effect4.Laws.Program.Guard.FrameOwned/diff-check.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "build",
+      "command": [
+        "lake",
+        "build",
+        "Effect4.Laws.Program.Guard.FrameOwned"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/repaired-runs/Effect4.Laws.Program.Guard.FrameOwned/build.log",
+      "log_sha256": "f67dbc50d78e870399c617d7a5537e873975a00acb6fc90ac3b9964de1d925d4"
+    },
+    {
+      "label": "census",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "/private/tmp/m1-tools/phase-c-searched-rewrites/repaired-runs/Effect4.Laws.Program.Guard.FrameOwned/Census.lean"
+      ],
+      "environment": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "exit_code": 0,
+      "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/repaired-runs/Effect4.Laws.Program.Guard.FrameOwned/census.log",
+      "log_sha256": "25c6fba6455d2d47f4f0c259e3ba45e503fc02ce014ae308113a2862df847def"
+    }
+  ],
+  "fresh_build_line": "ℹ [300/300] Built Effect4.Laws.Program.Guard.FrameOwned (14s)",
+  "local_gate_lines": [
+    "info: src/Effect4/Laws/Program/Guard/FrameOwned.lean:888:0: Effect4.Program.Guard.FrameOwned.M1: 0 open, 7 proved, 7 total; ceiling 0",
+    "info: src/Effect4/Laws/Program/Guard/FrameOwned.lean:891:0: Effect4.Program.Guard.FrameOwned.M1Origin: 0 open, 1 proved, 1 total; ceiling 0",
+    "info: src/Effect4/Laws/Program/Guard/FrameOwned.lean:894:0: Effect4.Program.Guard.FrameOwned.M1Hooks: 0 open, 2 proved, 2 total; ceiling 0",
+    "info: src/Effect4/Laws/Program/Guard/FrameOwned.lean:897:0: Effect4.Program.Guard.FrameOwned.M1Results: 0 open, 2 proved, 2 total; ceiling 0"
+  ],
+  "headers": [
+    {
+      "name": "Effect4.Program.Guard.FrameOwned.interruptCode_sites",
+      "header_sha256": "fd9ca6074f18553cf0ae59c32dae1210d6c941c24009784b215f0cd604342d42",
+      "exact_before_after_header_match": true
+    },
+    {
+      "name": "Effect4.Program.Guard.FrameOwned.interruptAsCode_sites",
+      "header_sha256": "cfee470dc3889ffb17c83afb565c46d24723b17c55871afeecea9e2d6227fc73",
+      "exact_before_after_header_match": true
+    }
+  ],
+  "baseline_provenance": {
+    "census_results": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/results.json",
+    "census_results_sha256": "de504894001ca31ecd5fd195b09b513f415bb9bcb9987bb7c01c97249a93319e",
+    "census_run": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/run.json",
+    "census_run_sha256": "3420c3a7f77913db13b8c91a9f381f0a50b01f309f06cb390544e7bbd6d142b4",
+    "census_inputs_sha256": "a7f8f045a9e4f9bbee0cb5d93964bb1660b0379fea4c00dd415784da13744a34",
+    "prior_candidate_manifest": "/tmp/m1-tools/phase-c-rewrite-scope/rewrite-ready.json",
+    "prior_candidate_manifest_sha256": "adea2d7901d98a02a3dcdf006c3c7c1f365ee3c2334cbba07aba4f2a81a7eb18",
+    "prior_fragments_retained_unchanged": true,
+    "phase_b_scope_sha256": "aaa3de31fdaf2c26f62f7ebc179b7c6c00a7a91fa93223a880b43550583ef080",
+    "module_classification_sha256": "a71e5c5c72bf6b762f964c8a0691e5bc3202169585cdceed846d5d0a768d9a7a"
+  },
+  "history": [
+    {
+      "kind": "explicit prior stopped runner result",
+      "path": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Guard.FrameOwned/result.json",
+      "status": "stopped",
+      "error": "build failed; retained output, no retry or rollback",
+      "processes": [
+        {
+          "label": "patch-check",
+          "command": [
+            "git",
+            "apply",
+            "--check",
+            "/private/tmp/m1-tools/phase-c-searched-rewrites/patches/Effect4.Laws.Program.Guard.FrameOwned.patch"
+          ],
+          "environment": {
+            "LEAN_NUM_THREADS": "1"
+          },
+          "exit_code": 0,
+          "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Guard.FrameOwned/patch-check.log",
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "apply",
+          "command": [
+            "git",
+            "apply",
+            "/private/tmp/m1-tools/phase-c-searched-rewrites/patches/Effect4.Laws.Program.Guard.FrameOwned.patch"
+          ],
+          "environment": {
+            "LEAN_NUM_THREADS": "1"
+          },
+          "exit_code": 0,
+          "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Guard.FrameOwned/apply.log",
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "diff-check",
+          "command": [
+            "git",
+            "diff",
+            "--check",
+            "--",
+            "src/Effect4/Laws/Program/Guard/FrameOwned.lean"
+          ],
+          "environment": {
+            "LEAN_NUM_THREADS": "1"
+          },
+          "exit_code": 0,
+          "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Guard.FrameOwned/diff-check.log",
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "label": "build",
+          "command": [
+            "lake",
+            "build",
+            "Effect4.Laws.Program.Guard.FrameOwned"
+          ],
+          "environment": {
+            "LEAN_NUM_THREADS": "1"
+          },
+          "exit_code": 1,
+          "log": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Guard.FrameOwned/build.log",
+          "log_sha256": "ecac29ba3f0454d5dc88c9238cdf46709bfba425b5ee90292f5c43e19a4b4444"
+        }
+      ],
+      "not_current_semantic_result": true
+    }
+  ],
+  "runner_source_limit": "Runner source is packaged as currently retained; result pins its input manifest and census reader, not the runner script itself.",
+  "no_claims": [
+    "No compiler or git command run by packager",
+    "No full-tree gate or task completion inferred",
+    "No live source/current HEAD revalidation",
+    "No other module inspected"
+  ],
+  "members": [
+    {
+      "path": "baseline/Census.lean",
+      "bytes": 178,
+      "sha256": "6c1fb40da95f48c98b01b60ef7d7ca038b585cc470cf5eacc256918374b1ca8b",
+      "source": "/private/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/029-Effect4.Laws.Program.Guard.FrameOwned.lean"
+    },
+    {
+      "path": "baseline/job.json",
+      "bytes": 1092,
+      "sha256": "7135d21c5f5594a13a6074c950e1830e89b415b67fb65aef145e695bd5d2e8d7",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "baseline/module-result.json",
+      "bytes": 2095,
+      "sha256": "fce1d52d25cff821fce862e9eb27d0d54c718346d602b7d0fff7637722751176",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "baseline/module.log",
+      "bytes": 291,
+      "sha256": "6fbb7372f1301e0ad2bc5ab2f79868e81541a62fef79ef90bb32ec6e38e17eef",
+      "source": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.FrameOwned.log"
+    },
+    {
+      "path": "baseline/process.log",
+      "bytes": 291,
+      "sha256": "6fbb7372f1301e0ad2bc5ab2f79868e81541a62fef79ef90bb32ec6e38e17eef",
+      "source": "/private/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/029-Effect4.Laws.Program.Guard.FrameOwned.log"
+    },
+    {
+      "path": "history/prior-run/apply.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Guard.FrameOwned/apply.log"
+    },
+    {
+      "path": "history/prior-run/build.log",
+      "bytes": 39166,
+      "sha256": "ecac29ba3f0454d5dc88c9238cdf46709bfba425b5ee90292f5c43e19a4b4444",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Guard.FrameOwned/build.log"
+    },
+    {
+      "path": "history/prior-run/diff-check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Guard.FrameOwned/diff-check.log"
+    },
+    {
+      "path": "history/prior-run/patch-check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Guard.FrameOwned/patch-check.log"
+    },
+    {
+      "path": "history/prior-run/result.json",
+      "bytes": 3295,
+      "sha256": "d530a988e1418cbe982b4e3d6b8e3be708cb1144628279cc7a14990f571c0b99",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/runs/Effect4.Laws.Program.Guard.FrameOwned/result.json"
+    },
+    {
+      "path": "history/records.json",
+      "bytes": 2405,
+      "sha256": "bdea33ddd4e335ea440c0e699626c79b96e9b8c9d0cce2ef662ac77f973aa3cf",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "provenance/package-searched-rewrite.py",
+      "bytes": 17992,
+      "sha256": "b68f6bc3407570433dc4da882db15f41440883ac2dfcd9bf69951af470ee7fc8",
+      "source": "/private/tmp/m1-tools/package-searched-rewrite.py"
+    },
+    {
+      "path": "provenance/run-one.py",
+      "bytes": 9697,
+      "sha256": "c215f030938b56b2e0c4e7fa2557a8799207f834f8ed5f83ca41f9dc91320e14",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/run-one.py"
+    },
+    {
+      "path": "rewrite/certified-candidates.json",
+      "bytes": 4594,
+      "sha256": "8257482f2716cc521d7b5c23cb63f0ccc941d109737b26fd81f9d7f37abe3a59",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "rewrite/certified-comparison.json",
+      "bytes": 3364,
+      "sha256": "f6a2c4e31ea56077aaf875be732c4857ea5a72ed761bd5a61522c79ef9ae5235",
+      "source": "/tmp/m1-tools/phase-c-rewrite-scope/portable-certified/comparison.json"
+    },
+    {
+      "path": "rewrite/change.patch",
+      "bytes": 852,
+      "sha256": "3df24180bddd18ca6817edb76a46d3a18f5a97a79fb3e969be71522fb8a5f8cd",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/patches/Effect4.Laws.Program.Guard.FrameOwned.patch"
+    },
+    {
+      "path": "rewrite/header-comparisons.json",
+      "bytes": 425,
+      "sha256": "390a473c7144732c4925fb3cfbfbe567a6528acac8ae0f67fb82b96792479965",
+      "source": "derived record; see provenance in contents"
+    },
+    {
+      "path": "rewrite/master-manifest.json",
+      "bytes": 8341,
+      "sha256": "d7a25d4fa05e6ac890e5aa15950e32f12332ff9d28c35c42045bd56ee9acc2b6",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/manifest.json"
+    },
+    {
+      "path": "rewrite/module.json",
+      "bytes": 3142,
+      "sha256": "8751cc707ecd9f6105a806c078f033afd9d9917e65841e00e95d777d2ae3557d",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/modules/Effect4.Laws.Program.Guard.FrameOwned.json"
+    },
+    {
+      "path": "run/Census.lean",
+      "bytes": 223,
+      "sha256": "b40ee8368e02013ab4a9e2534649fa5cef5d36a8d10183c580dec110362f1959",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/repaired-runs/Effect4.Laws.Program.Guard.FrameOwned/Census.lean"
+    },
+    {
+      "path": "run/build.log",
+      "bytes": 38681,
+      "sha256": "f67dbc50d78e870399c617d7a5537e873975a00acb6fc90ac3b9964de1d925d4",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/repaired-runs/Effect4.Laws.Program.Guard.FrameOwned/build.log"
+    },
+    {
+      "path": "run/census.json",
+      "bytes": 761,
+      "sha256": "c74888dcd3ff551cd0cd1cd1207c470bcca4563f51077fc0721add9072e33a9e",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/repaired-runs/Effect4.Laws.Program.Guard.FrameOwned/census.json"
+    },
+    {
+      "path": "run/census.log",
+      "bytes": 115,
+      "sha256": "25c6fba6455d2d47f4f0c259e3ba45e503fc02ce014ae308113a2862df847def",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/repaired-runs/Effect4.Laws.Program.Guard.FrameOwned/census.log"
+    },
+    {
+      "path": "run/diff-check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/repaired-runs/Effect4.Laws.Program.Guard.FrameOwned/diff-check.log"
+    },
+    {
+      "path": "run/result.json",
+      "bytes": 3183,
+      "sha256": "cd5c697aae22d3ba99f85272f88f64cc6e9764e5ee433b87b1c5a9f24ac6abd8",
+      "source": "/private/tmp/m1-tools/phase-c-searched-rewrites/repaired-runs/Effect4.Laws.Program.Guard.FrameOwned/result.json"
+    },
+    {
+      "path": "sources/after/src/Effect4/Laws/Program/Guard/FrameOwned.lean",
+      "bytes": 42512,
+      "sha256": "8fd4210d698ce395f9fa5edc78bb0d75cb4dc416d20bf5a265c992a135dc8753",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/after/src/Effect4/Laws/Program/Guard/FrameOwned.lean"
+    },
+    {
+      "path": "sources/before/src/Effect4/Laws/Program/Guard/FrameOwned.lean",
+      "bytes": 42512,
+      "sha256": "f2b39b9fabaf87bbbf6f1d6b2c0699ba6c6eb2c20f7ed5f34c58ce2b089cb105",
+      "source": "/tmp/m1-tools/phase-c-searched-rewrites/before/src/Effect4/Laws/Program/Guard/FrameOwned.lean"
+    }
+  ],
+  "archive": {
+    "path": "raw.tar.gz",
+    "sha256": "4db1559241c5e9ab792896c2d31a4adbfb0cfe5c9108b4c7a176e0aa1a78d534",
+    "members": 27,
+    "bytes": 37247,
+    "lossless_readback_verified": true
+  }
+}

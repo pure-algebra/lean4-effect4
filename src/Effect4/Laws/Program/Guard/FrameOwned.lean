@@ -665,13 +665,11 @@ def M1Hooks.interruptAsCode_sites (p : NativeEff) (completed : List (FiberId × 
 
 theorem interruptCode_sites (p : NativeEff) (completed : List (FiberId × ExitV))
     (table : RowTable) (target : FiberId) :
-    raceSites ((interpAt p completed table).interruptCode target) = [] := by
-  rfl
+    raceSites ((interpAt p completed table).interruptCode target) = [] := by aesop
 
 theorem interruptAsCode_sites (p : NativeEff) (completed : List (FiberId × ExitV))
     (table : RowTable) (target who : FiberId) :
-    raceSites ((interpAt p completed table).interruptAsCode target who) = [] := by
-  rfl
+    raceSites ((interpAt p completed table).interruptAsCode target who) = [] := by aesop
 
 attribute [aesop norm simp (rule_sets := [Effect4.Stores])]
   interruptCode_sites interruptAsCode_sites
