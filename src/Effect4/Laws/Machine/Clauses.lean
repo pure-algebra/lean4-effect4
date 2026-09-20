@@ -300,8 +300,7 @@ theorem evaluatePrim_yieldNowWith (interp : RunInterp ν σ β ε δ ι α χ St
       it.fiber.dispatcher =
         f.dispatcher.enqueue priority (Task.resume f.id m.nextToken (Prim.success interp.voidValue)) ∧
       it.machine.nextToken = m.nextToken + 1 ∧
-      it.nested = [] :=
-  ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩
+      it.nested = [] := by aesop
 
 /-- `Yield` is overloaded (`:656-668`): where rc.112 reads `_yielded` as an exit the fiber is
 finished, and where it reads a thunk the fiber is parked; the machine's loop takes the two
@@ -676,8 +675,7 @@ theorem start_eq (m : RunMachine ν σ β ε δ ι α χ St) (parent : RunFiber 
     start m parent child true = (m, parent, [Cmd.evaluate child]) ∧
       start m parent child false =
         ((m.arm parent.id).emit [RunEvent.scheduledTask parent.id 0 (Task.start child)],
-          { parent with dispatcher := parent.dispatcher.enqueue 0 (Task.start child) }, []) :=
-  ⟨rfl, rfl⟩
+          { parent with dispatcher := parent.dispatcher.enqueue 0 (Task.start child) }, []) := by aesop
 
 /-- The root runs synchronously on the caller's stack (`runForkWith`, `:5410-5430`): a fresh
 fiber over the caller context, evaluated at once, then the store's due resumes.
@@ -689,7 +687,7 @@ theorem runFork_eq (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
         { m with
           fibers := m.fibers ++ [RunFiber.make ⟨m.nextId⟩ program true (interp.budgetOf context) context]
           nextId := m.nextId + 1 }
-        [Cmd.evaluate ⟨m.nextId⟩, Cmd.drainDue], ⟨m.nextId⟩) := rfl
+        [Cmd.evaluate ⟨m.nextId⟩, Cmd.drainDue], ⟨m.nextId⟩) := by aesop
 
 /-! ## Join and await -/
 
@@ -748,7 +746,7 @@ theorem withFiber_snapshotChildren (interp : RunInterp ν σ β ε δ ι α χ S
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool) :
     evaluatePrim.withFiber interp m f yielding WithFiberAction.snapshotChildren =
       ⟨m, { f with frame := { f.frame with current := Prim.success (interp.fibersValue f.children) } },
-        yielding, Outcome.continue_, []⟩ := rfl
+        yielding, Outcome.continue_, []⟩ := by aesop
 
 /-- The exit half (`:5322-5331`): only the children added since the snapshot are awaited.
 census: fork.await-all-children -/
@@ -773,7 +771,7 @@ theorem withFiber_runIn (interp : RunInterp ν σ β ε δ ι α χ St)
        ⟨r.1, { f with frame := { f.frame with current := Prim.success interp.voidValue } }, yielding,
         (match r.1.stuck with
           | some why => Outcome.stuck why
-          | none => Outcome.continue_), r.2⟩) := rfl
+          | none => Outcome.continue_), r.2⟩) := by aesop
 
 /-- Linking to a closed scope interrupts the fiber at once (`:5374`, `:5454`).
 census: fork.fiber-run-in -/
@@ -810,7 +808,7 @@ theorem runCallback_eq (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : N
             [{ RunFiber.make ⟨m.nextId⟩ program true (interp.budgetOf context) context with
                 observers := [Observer.callback key] }]
           nextId := m.nextId + 1 }
-        [Cmd.evaluate ⟨m.nextId⟩, Cmd.drainDue], ⟨m.nextId⟩) := rfl
+        [Cmd.evaluate ⟨m.nextId⟩, Cmd.drainDue], ⟨m.nextId⟩) := by aesop
 
 /-- The callback observer delivers the exit as an event under its key (`runCallbackWith`'s
 `onExit`). census: entry.run-callback-with -/
@@ -1062,7 +1060,7 @@ theorem exitInterruptChildren_eq (interp : RunInterp ν σ β ε δ ι α χ St)
             deferredInterrupt := false
             current := Prim.onSuccess (interp.interruptAllCode f.children) (interp.restoreName exit) } }).emit
         [RunEvent.childrenInterrupted f.id f.children],
-       [Cmd.evaluate f.id]) := rfl
+       [Cmd.evaluate f.id]) := by aesop
 
 /-- The re-entry is `evaluate` (`:615`): a new counted entry, on the fiber now finalizing.
 census: rule.children-interrupted-after-exit -/
@@ -1580,7 +1578,7 @@ theorem withFiber_interrupt (interp : RunInterp ν σ β ε δ ι α χ St)
     (target : FiberId) :
     evaluatePrim.withFiber interp m f yielding (WithFiberAction.interrupt target) =
       ⟨m, { f with frame := { f.frame with current := interp.interruptAsCode target f.id } },
-        yielding, Outcome.continue_, []⟩ := rfl
+        yielding, Outcome.continue_, []⟩ := by aesop
 
 /-- `fiberInterruptAs(target, who)` (`:871-884`, D6b): the record with `who` and the caller's
 stack annotations (`:880-883`, R2-5), then the commands: the target's own run when the record
@@ -1888,7 +1886,7 @@ theorem forkFinalizers_cons (interp : RunInterp ν σ β ε δ ι α χ St)
     forkFinalizers interp m host (program :: rest) =
       (let s := spawn interp m host program ⟨true, true, Supervision.MaskMode.inherit⟩
        let t := forkFinalizers interp s.1 host rest
-       (t.1, s.2.2 :: t.2)) := rfl
+       (t.1, s.2.2 :: t.2)) := by aesop
 
 /-- The parallel walk's step (`:3819-3824`, §20): every finalizer forked and run now — the
 daemons' evaluations are the commands — then the await yielded on the closer's behalf by
