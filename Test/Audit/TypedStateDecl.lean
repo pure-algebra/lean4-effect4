@@ -1,3 +1,5 @@
+import Test.Audit.IndexedColumns
+import Test.Audit.IndexedColumnActual
 import Effect4.Laws.Program.Typed.TypedStateDecl
 import Effect4.Store.Carrier.Val
 open Effect4.Program.Typed

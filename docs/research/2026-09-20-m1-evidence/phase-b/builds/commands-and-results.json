@@ -1,0 +1,1709 @@
+{
+  "scope": "Phase B statement/tool builds and completed prebaseline direct compiles; not the later theorem census or ledger-status runs.",
+  "event_timestamps": "No timestamps inferred. Archive metadata normalized to zero only for reproducible packaging, not execution evidence.",
+  "serialization": "Recorded runner runs one module at a time with LEAN_NUM_THREADS=1; no Lean process was started for packaging.",
+  "plan_caveat": "Original serial-plan status and requested counts are planning fields, not execution evidence. Actual records below override no field in the retained original.",
+  "outer_exit_caveat": "Null means unknown, never inferred from successful stdout or a compiler child exit.",
+  "records": [
+    {
+      "log": "logs/serial/02-Effect4.Laws.Machine.Arena.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/02-Effect4.Laws.Machine.Arena.log",
+      "bytes": 95,
+      "sha256": "9b1d7649e0fe80b468e8d0f3c9ce6fde84e022d766b10b236510b36d2e359da9",
+      "argv": [
+        "lake",
+        "build",
+        "Effect4.Laws.Machine.Arena"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Arena",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Machine.Arena"
+      ],
+      "embedded_child_commands": [],
+      "order": 2,
+      "module": "Effect4.Laws.Machine.Arena",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-modules-2-9.log",
+        "line": 2,
+        "literal": "RESULT 0 /tmp/m1-tools/phase-b-serial-plan/logs/02-Effect4.Laws.Machine.Arena.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/02-Effect4.Laws.Machine.Arena.log",
+      "renamed_prior_attempt": false,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Arena > /tmp/m1-tools/phase-b-serial-plan/logs/02-Effect4.Laws.Machine.Arena.log 2>&1"
+    },
+    {
+      "log": "logs/serial/03-Effect4.Laws.Machine.RefKernel.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/03-Effect4.Laws.Machine.RefKernel.log",
+      "bytes": 99,
+      "sha256": "2b2cd07b77b3bb0b20271bc33d932431ce555405f4e81c2538845455c0cf73c6",
+      "argv": [
+        "lake",
+        "build",
+        "Effect4.Laws.Machine.RefKernel"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.RefKernel",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Machine.RefKernel"
+      ],
+      "embedded_child_commands": [],
+      "order": 3,
+      "module": "Effect4.Laws.Machine.RefKernel",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-modules-2-9.log",
+        "line": 4,
+        "literal": "RESULT 0 /tmp/m1-tools/phase-b-serial-plan/logs/03-Effect4.Laws.Machine.RefKernel.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/03-Effect4.Laws.Machine.RefKernel.log",
+      "renamed_prior_attempt": false,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.RefKernel > /tmp/m1-tools/phase-b-serial-plan/logs/03-Effect4.Laws.Machine.RefKernel.log 2>&1"
+    },
+    {
+      "log": "logs/serial/04-Effect4.Laws.Machine.Refinement.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/04-Effect4.Laws.Machine.Refinement.log",
+      "bytes": 278,
+      "sha256": "9156f75cee2cd6055fe885cf5404d4bdbacf30df6d11bce7273dc899b3ff2159",
+      "argv": [
+        "lake",
+        "build",
+        "Effect4.Laws.Machine.Refinement"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Refinement",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Machine.Refinement"
+      ],
+      "embedded_child_commands": [],
+      "order": 4,
+      "module": "Effect4.Laws.Machine.Refinement",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-modules-2-9.log",
+        "line": 6,
+        "literal": "RESULT 0 /tmp/m1-tools/phase-b-serial-plan/logs/04-Effect4.Laws.Machine.Refinement.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/04-Effect4.Laws.Machine.Refinement.log",
+      "renamed_prior_attempt": false,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Refinement > /tmp/m1-tools/phase-b-serial-plan/logs/04-Effect4.Laws.Machine.Refinement.log 2>&1"
+    },
+    {
+      "log": "logs/serial/05-Effect4.Laws.Machine.Clauses.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/05-Effect4.Laws.Machine.Clauses.log",
+      "bytes": 97,
+      "sha256": "04454b3aa1446c75322d8469fb882a9ca188a521968d353cb49cb148832613ff",
+      "argv": [
+        "lake",
+        "build",
+        "Effect4.Laws.Machine.Clauses"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Clauses",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Machine.Clauses"
+      ],
+      "embedded_child_commands": [],
+      "order": 5,
+      "module": "Effect4.Laws.Machine.Clauses",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-modules-2-9.log",
+        "line": 8,
+        "literal": "RESULT 0 /tmp/m1-tools/phase-b-serial-plan/logs/05-Effect4.Laws.Machine.Clauses.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/05-Effect4.Laws.Machine.Clauses.log",
+      "renamed_prior_attempt": false,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Clauses > /tmp/m1-tools/phase-b-serial-plan/logs/05-Effect4.Laws.Machine.Clauses.log 2>&1"
+    },
+    {
+      "log": "logs/serial/06-Effect4.Laws.Machine.Handles.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/06-Effect4.Laws.Machine.Handles.log",
+      "bytes": 519,
+      "sha256": "8f7309be700e8cbeeabad6ddb7cad2f20c38e638dc3b1ca410e404a7cbb14011",
+      "argv": [
+        "lake",
+        "build",
+        "Effect4.Laws.Machine.Handles"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Handles",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Machine.Approximation",
+        "Effect4.Laws.Machine.StoresLaws",
+        "Effect4.Laws.Machine.Handles"
+      ],
+      "embedded_child_commands": [],
+      "order": 6,
+      "module": "Effect4.Laws.Machine.Handles",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-modules-2-9.log",
+        "line": 10,
+        "literal": "RESULT 0 /tmp/m1-tools/phase-b-serial-plan/logs/06-Effect4.Laws.Machine.Handles.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/06-Effect4.Laws.Machine.Handles.log",
+      "renamed_prior_attempt": false,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Handles > /tmp/m1-tools/phase-b-serial-plan/logs/06-Effect4.Laws.Machine.Handles.log 2>&1"
+    },
+    {
+      "log": "logs/serial/07-Effect4.Laws.Machine.Behaviour.attempt1.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/07-Effect4.Laws.Machine.Behaviour.attempt1.log",
+      "bytes": 1614,
+      "sha256": "2ccf913e1af6de53b57e23d6588f04de7c4922e9f7f3900ed295d05670614909",
+      "argv": [
+        "lake",
+        "build",
+        "Effect4.Laws.Machine.Behaviour"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Behaviour",
+      "process_exit_code": 1,
+      "compiler_child_exit_code": 1,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build failed",
+      "fresh_built_modules": [],
+      "embedded_child_commands": [
+        "LEAN_PATH=/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Machine/Behaviour.lean -o /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Machine/Behaviour.olean -i /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Machine/Behaviour.ilean -c /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Effect4/Laws/Machine/Behaviour.c --setup /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Effect4/Laws/Machine/Behaviour.setup.json --json"
+      ],
+      "order": 7,
+      "module": "Effect4.Laws.Machine.Behaviour",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-modules-2-9.log",
+        "line": 12,
+        "literal": "RESULT 1 /tmp/m1-tools/phase-b-serial-plan/logs/07-Effect4.Laws.Machine.Behaviour.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/07-Effect4.Laws.Machine.Behaviour.log",
+      "renamed_prior_attempt": true,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Behaviour > /tmp/m1-tools/phase-b-serial-plan/logs/07-Effect4.Laws.Machine.Behaviour.attempt1.log 2>&1"
+    },
+    {
+      "log": "logs/serial/07-Effect4.Laws.Machine.Behaviour.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/07-Effect4.Laws.Machine.Behaviour.log",
+      "bytes": 455,
+      "sha256": "3e32be39be775e5b53c8e5bda8af38636789aec75e81fad55b3b326eef8dee71",
+      "argv": [
+        "lake",
+        "build",
+        "Effect4.Laws.Machine.Behaviour"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Behaviour",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Machine.Behaviour"
+      ],
+      "embedded_child_commands": [],
+      "order": 7,
+      "module": "Effect4.Laws.Machine.Behaviour",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-modules-7-9.log",
+        "line": 2,
+        "literal": "RESULT 0 /tmp/m1-tools/phase-b-serial-plan/logs/07-Effect4.Laws.Machine.Behaviour.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/07-Effect4.Laws.Machine.Behaviour.log",
+      "renamed_prior_attempt": false,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Behaviour > /tmp/m1-tools/phase-b-serial-plan/logs/07-Effect4.Laws.Machine.Behaviour.log 2>&1"
+    },
+    {
+      "log": "logs/serial/08-Effect4.Laws.Machine.Book.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/08-Effect4.Laws.Machine.Book.log",
+      "bytes": 450,
+      "sha256": "f0e68a84f6ff3715d7a6deb6605c80189df76907f3bb32fc49945ebf58dc979a",
+      "argv": [
+        "lake",
+        "build",
+        "Effect4.Laws.Machine.Book"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Book",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Machine.Book"
+      ],
+      "embedded_child_commands": [],
+      "order": 8,
+      "module": "Effect4.Laws.Machine.Book",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-modules-7-9.log",
+        "line": 4,
+        "literal": "RESULT 0 /tmp/m1-tools/phase-b-serial-plan/logs/08-Effect4.Laws.Machine.Book.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/08-Effect4.Laws.Machine.Book.log",
+      "renamed_prior_attempt": false,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Book > /tmp/m1-tools/phase-b-serial-plan/logs/08-Effect4.Laws.Machine.Book.log 2>&1"
+    },
+    {
+      "log": "logs/serial/09-Effect4.Laws.Program.Simulation.Fibers.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/09-Effect4.Laws.Program.Simulation.Fibers.log",
+      "bytes": 37821,
+      "sha256": "bc199eacbdab75794b36f78ad361e3e872b8f79b220a4518291fdea60de711dc",
+      "argv": [
+        "lake",
+        "build",
+        "Effect4.Laws.Program.Simulation.Fibers"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Simulation.Fibers",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Program.Agreement",
+        "Effect4.Laws.Program.DenoteR",
+        "Effect4.Laws.Program.InterpR",
+        "Effect4.Laws.Program.EvaluateR",
+        "Effect4.Laws.Auto.Frames",
+        "Effect4.Laws.Program.Means",
+        "Effect4.Laws.Program.Intro.Prepare",
+        "Effect4.Laws.Program.Intro.Equations",
+        "Effect4.Laws.Program.Intro.Identity",
+        "Effect4.Laws.Program.Intro.Weight",
+        "Effect4.Laws.Program.Intro.AcquireRelease",
+        "Effect4.Laws.Program.Intro.Region",
+        "Effect4.Laws.Program.Intro.Memo",
+        "Effect4.Laws.Program.Intro.Merge",
+        "Effect4.Laws.Program.Intro.Layer",
+        "Effect4.Laws.Program.Intro.Elementary",
+        "Effect4.Laws.Program.Intro.Sequential",
+        "Effect4.Laws.Program.Intro.Errors",
+        "Effect4.Laws.Program.Intro.Fibers",
+        "Effect4.Laws.Program.Intro.Scope",
+        "Effect4.Laws.Program.Intro",
+        "Effect4.Laws.Program.Simulation.Hooks",
+        "Effect4.Laws.Program.Simulation.Walk",
+        "Effect4.Laws.Program.Simulation.Fibers"
+      ],
+      "embedded_child_commands": [],
+      "order": 9,
+      "module": "Effect4.Laws.Program.Simulation.Fibers",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-modules-7-9.log",
+        "line": 6,
+        "literal": "RESULT 0 /tmp/m1-tools/phase-b-serial-plan/logs/09-Effect4.Laws.Program.Simulation.Fibers.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/09-Effect4.Laws.Program.Simulation.Fibers.log",
+      "renamed_prior_attempt": false,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Simulation.Fibers > /tmp/m1-tools/phase-b-serial-plan/logs/09-Effect4.Laws.Program.Simulation.Fibers.log 2>&1"
+    },
+    {
+      "log": "logs/serial/10-Test.Audit.TypedStateDecl.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/10-Test.Audit.TypedStateDecl.log",
+      "bytes": 9409,
+      "sha256": "15737bbd83a20972ee6f42c8b3925eb45f33a499ad40c495acc56a2c63f75396",
+      "argv": [
+        "lake",
+        "build",
+        "Test.Audit.TypedStateDecl"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Test.Audit.TypedStateDecl",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Test.Audit.IndexedColumnActual",
+        "Test.Audit.TypedStateDecl"
+      ],
+      "embedded_child_commands": [],
+      "order": 10,
+      "module": "Test.Audit.TypedStateDecl",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-state-controls-run.log",
+        "line": 2,
+        "literal": "RESULT 0 /tmp/m1-tools/phase-b-serial-plan/logs/10-Test.Audit.TypedStateDecl.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/10-Test.Audit.TypedStateDecl.log",
+      "renamed_prior_attempt": false,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Test.Audit.TypedStateDecl > /tmp/m1-tools/phase-b-serial-plan/logs/10-Test.Audit.TypedStateDecl.log 2>&1"
+    },
+    {
+      "log": "logs/serial/13-Effect4.Laws.Program.Typed.Frames.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/13-Effect4.Laws.Program.Typed.Frames.log",
+      "bytes": 8484,
+      "sha256": "af1c2db9afd916be594dc5f02afd304ae9c74d8f7d91c7262a4daaee5a7dbfc3",
+      "argv": [
+        "lake",
+        "build",
+        "Effect4.Laws.Program.Typed.Frames"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Typed.Frames",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Program.Typed.Frames"
+      ],
+      "embedded_child_commands": [],
+      "order": 13,
+      "module": "Effect4.Laws.Program.Typed.Frames",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-frame-repair-run.log",
+        "line": 2,
+        "literal": "RESULT 0 /tmp/m1-tools/phase-b-serial-plan/logs/13-Effect4.Laws.Program.Typed.Frames.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/13-Effect4.Laws.Program.Typed.Frames.log",
+      "renamed_prior_attempt": false,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Typed.Frames > /tmp/m1-tools/phase-b-serial-plan/logs/13-Effect4.Laws.Program.Typed.Frames.log 2>&1"
+    },
+    {
+      "log": "logs/serial/15-Test.Audit.PositionCensus.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/15-Test.Audit.PositionCensus.log",
+      "bytes": 255412,
+      "sha256": "2b51b317dc35c7fd5d368d66f874bb6a27760287073864abbb603191a01c3b07",
+      "argv": [
+        "lake",
+        "build",
+        "Test.Audit.PositionCensus"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Test.Audit.PositionCensus",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Test.Audit.PositionCensus"
+      ],
+      "embedded_child_commands": [],
+      "order": 15,
+      "module": "Test.Audit.PositionCensus",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-modules-15-18.log",
+        "line": 2,
+        "literal": "RESULT 0 /tmp/m1-tools/phase-b-serial-plan/logs/15-Test.Audit.PositionCensus.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/15-Test.Audit.PositionCensus.log",
+      "renamed_prior_attempt": false,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Test.Audit.PositionCensus > /tmp/m1-tools/phase-b-serial-plan/logs/15-Test.Audit.PositionCensus.log 2>&1"
+    },
+    {
+      "log": "logs/serial/16-Test.Program.TypedStateRulesRed.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/16-Test.Program.TypedStateRulesRed.log",
+      "bytes": 8603,
+      "sha256": "271935a9e53d83f8f6f71cd6f809d4e7b613007282f8f9a82eb8a369e01a474f",
+      "argv": [
+        "lake",
+        "build",
+        "Test.Program.TypedStateRulesRed"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Test.Program.TypedStateRulesRed",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Test.Program.TypedStateRulesRed"
+      ],
+      "embedded_child_commands": [],
+      "order": 16,
+      "module": "Test.Program.TypedStateRulesRed",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-modules-15-18.log",
+        "line": 4,
+        "literal": "RESULT 0 /tmp/m1-tools/phase-b-serial-plan/logs/16-Test.Program.TypedStateRulesRed.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/16-Test.Program.TypedStateRulesRed.log",
+      "renamed_prior_attempt": false,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Test.Program.TypedStateRulesRed > /tmp/m1-tools/phase-b-serial-plan/logs/16-Test.Program.TypedStateRulesRed.log 2>&1"
+    },
+    {
+      "log": "logs/serial/17-Effect4.Laws.Program.Typed.World.attempt1.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/17-Effect4.Laws.Program.Typed.World.attempt1.log",
+      "bytes": 29247,
+      "sha256": "1268d2a4e9513e9e116826060bb56d44b31e5a16cdf5ff80d0872c1591a88c29",
+      "argv": [
+        "lake",
+        "build",
+        "Effect4.Laws.Program.Typed.World"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Typed.World",
+      "process_exit_code": 1,
+      "compiler_child_exit_code": 1,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build failed",
+      "fresh_built_modules": [
+        "Effect4.Laws.Program.Progress"
+      ],
+      "embedded_child_commands": [
+        "LEAN_PATH=/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Typed/World.lean -o /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Program/Typed/World.olean -i /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Program/Typed/World.ilean -c /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Effect4/Laws/Program/Typed/World.c --setup /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Effect4/Laws/Program/Typed/World.setup.json --json"
+      ],
+      "order": 17,
+      "module": "Effect4.Laws.Program.Typed.World",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-modules-15-18.log",
+        "line": 6,
+        "literal": "RESULT 1 /tmp/m1-tools/phase-b-serial-plan/logs/17-Effect4.Laws.Program.Typed.World.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/17-Effect4.Laws.Program.Typed.World.log",
+      "renamed_prior_attempt": true,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Typed.World > /tmp/m1-tools/phase-b-serial-plan/logs/17-Effect4.Laws.Program.Typed.World.attempt1.log 2>&1"
+    },
+    {
+      "log": "logs/serial/17-Effect4.Laws.Program.Typed.World.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/17-Effect4.Laws.Program.Typed.World.log",
+      "bytes": 22073,
+      "sha256": "f6317b27ecad66c630f1287806c1a4dd543c53e908f893cd6da0dfcb61a559f1",
+      "argv": [
+        "lake",
+        "build",
+        "Effect4.Laws.Program.Typed.World"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Typed.World",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Program.Typed.World"
+      ],
+      "embedded_child_commands": [],
+      "order": 17,
+      "module": "Effect4.Laws.Program.Typed.World",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-world-repair-run.log",
+        "line": 2,
+        "literal": "RESULT 0 /tmp/m1-tools/phase-b-serial-plan/logs/17-Effect4.Laws.Program.Typed.World.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/17-Effect4.Laws.Program.Typed.World.log",
+      "renamed_prior_attempt": false,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Typed.World > /tmp/m1-tools/phase-b-serial-plan/logs/17-Effect4.Laws.Program.Typed.World.log 2>&1"
+    },
+    {
+      "log": "logs/serial/18-Effect4.Laws.Program.Typed.ForkSource.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/18-Effect4.Laws.Program.Typed.ForkSource.log",
+      "bytes": 22078,
+      "sha256": "69b2de6cf68b6e5353f64fce01cd92a0a390e3cbea3286afaa939f7efd7eac95",
+      "argv": [
+        "lake",
+        "build",
+        "Effect4.Laws.Program.Typed.ForkSource"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Typed.ForkSource",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Program.Typed.ForkSource"
+      ],
+      "embedded_child_commands": [],
+      "order": 18,
+      "module": "Effect4.Laws.Program.Typed.ForkSource",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-world-repair-run.log",
+        "line": 4,
+        "literal": "RESULT 0 /tmp/m1-tools/phase-b-serial-plan/logs/18-Effect4.Laws.Program.Typed.ForkSource.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/18-Effect4.Laws.Program.Typed.ForkSource.log",
+      "renamed_prior_attempt": false,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Typed.ForkSource > /tmp/m1-tools/phase-b-serial-plan/logs/18-Effect4.Laws.Program.Typed.ForkSource.log 2>&1"
+    },
+    {
+      "log": "logs/serial/21-Effect4.Laws.Program.Guard.TraceOrigin.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/21-Effect4.Laws.Program.Guard.TraceOrigin.log",
+      "bytes": 37124,
+      "sha256": "9083ca97f84af950fb1d63c6f56f0f633b75ac248bec976ed0b1afe46068f8d3",
+      "argv": [
+        "lake",
+        "build",
+        "Effect4.Laws.Program.Guard.TraceOrigin"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Guard.TraceOrigin",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Program.Guard.RaceSites",
+        "Effect4.Laws.Program.Guard.Core",
+        "Effect4.Laws.Program.Guard.TraceOrigin"
+      ],
+      "embedded_child_commands": [],
+      "order": 21,
+      "module": "Effect4.Laws.Program.Guard.TraceOrigin",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-modules-21-24.log",
+        "line": 2,
+        "literal": "RESULT 0 /tmp/m1-tools/phase-b-serial-plan/logs/21-Effect4.Laws.Program.Guard.TraceOrigin.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/21-Effect4.Laws.Program.Guard.TraceOrigin.log",
+      "renamed_prior_attempt": false,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Guard.TraceOrigin > /tmp/m1-tools/phase-b-serial-plan/logs/21-Effect4.Laws.Program.Guard.TraceOrigin.log 2>&1"
+    },
+    {
+      "log": "logs/serial/22-Effect4.Laws.Program.Guard.Handshake.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/22-Effect4.Laws.Program.Guard.Handshake.log",
+      "bytes": 37299,
+      "sha256": "fd233dd5aeecfeb67a6346eb6e63a387146a46a981649a55560ef8b250917498",
+      "argv": [
+        "lake",
+        "build",
+        "Effect4.Laws.Program.Guard.Handshake"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Guard.Handshake",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Program.Guard.Handshake"
+      ],
+      "embedded_child_commands": [],
+      "order": 22,
+      "module": "Effect4.Laws.Program.Guard.Handshake",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-modules-21-24.log",
+        "line": 4,
+        "literal": "RESULT 0 /tmp/m1-tools/phase-b-serial-plan/logs/22-Effect4.Laws.Program.Guard.Handshake.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/22-Effect4.Laws.Program.Guard.Handshake.log",
+      "renamed_prior_attempt": false,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Guard.Handshake > /tmp/m1-tools/phase-b-serial-plan/logs/22-Effect4.Laws.Program.Guard.Handshake.log 2>&1"
+    },
+    {
+      "log": "logs/serial/23-Effect4.Laws.Run.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/23-Effect4.Laws.Run.log",
+      "bytes": 42004,
+      "sha256": "bccc469190eff122d3affe6a1bcc61d0a6863959acff8b09e81cdfa69145184d",
+      "argv": [
+        "lake",
+        "build",
+        "Effect4.Laws.Run"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Run",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Program.Admit",
+        "Effect4.Laws.Run"
+      ],
+      "embedded_child_commands": [],
+      "order": 23,
+      "module": "Effect4.Laws.Run",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-modules-21-24.log",
+        "line": 6,
+        "literal": "RESULT 0 /tmp/m1-tools/phase-b-serial-plan/logs/23-Effect4.Laws.Run.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/23-Effect4.Laws.Run.log",
+      "renamed_prior_attempt": false,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Run > /tmp/m1-tools/phase-b-serial-plan/logs/23-Effect4.Laws.Run.log 2>&1"
+    },
+    {
+      "log": "logs/serial/24-Test.Api.SupervisionContract.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/24-Test.Api.SupervisionContract.log",
+      "bytes": 36061,
+      "sha256": "926c9898af07fdc523ba907920a017d64308a276f94e346afdf4ea86b9be3950",
+      "argv": [
+        "lake",
+        "build",
+        "Test.Api.SupervisionContract"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Test.Api.SupervisionContract",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Test.Api.SupervisionContract"
+      ],
+      "embedded_child_commands": [],
+      "order": 24,
+      "module": "Test.Api.SupervisionContract",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-modules-21-24.log",
+        "line": 8,
+        "literal": "RESULT 0 /tmp/m1-tools/phase-b-serial-plan/logs/24-Test.Api.SupervisionContract.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/24-Test.Api.SupervisionContract.log",
+      "renamed_prior_attempt": false,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Test.Api.SupervisionContract > /tmp/m1-tools/phase-b-serial-plan/logs/24-Test.Api.SupervisionContract.log 2>&1"
+    },
+    {
+      "log": "logs/serial/26-Effect4.Laws.log",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/26-Effect4.Laws.log",
+      "bytes": 119759,
+      "sha256": "c39b234e175ee4db5102faa05cf83dbbd51e4ee4ac22764c0581f25d4fe0871e",
+      "argv": [
+        "lake",
+        "build",
+        "Effect4.Laws"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact runner implementation plus retained orchestration RESULT; prior failures preserved through runner rename.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Machine.Clock",
+        "Effect4.Laws.Machine.Scheduling",
+        "Effect4.Laws.Machine.StoresValue",
+        "Effect4.Laws.Machine.Witnesses",
+        "Effect4.Laws.Program.Agreement.LoopSteps",
+        "Effect4.Laws.Program.Agreement.Machine",
+        "Effect4.Laws.Program.LoopAgreement",
+        "Effect4.Laws.Machine.Folds.Val",
+        "Effect4.Laws.Program.MeaningSound",
+        "Effect4.Laws.Program.LoopSound",
+        "Effect4.Laws.Program.Agreement.Loop",
+        "Effect4.Laws.Program.TypedRun",
+        "Effect4.Laws.Program.Folds.Denote",
+        "Effect4.Laws.Api.Fuel",
+        "Effect4.Laws.Program.Guard.FrameOwned",
+        "Effect4.Laws.Program.Guard.NativeState",
+        "Effect4.Laws.Program.Guard.NativeStateMotion",
+        "Effect4.Laws.Program.Guard.NativeStateLinks",
+        "Effect4.Laws.Program.Guard.ReturnFields",
+        "Effect4.Laws.Program.Guard.ReturnTasks",
+        "Effect4.Laws.Program.Guard.NativeStateExternal",
+        "Effect4.Laws.Program.Guard.Finish",
+        "Effect4.Laws.Program.Guard.Settle",
+        "Effect4.Laws.Program.Guard.RegistrationQueue",
+        "Effect4.Laws.Program.Guard.RegistrationNested",
+        "Effect4.Laws.Program.Guard.FinishQueue",
+        "Effect4.Laws.Program.Guard.ReturnCommands",
+        "Effect4.Laws.Program.Guard.SettleQueue",
+        "Effect4.Laws.Program.Guard.NativeQueueTail",
+        "Effect4.Laws.Program.Guard.NativeAssembly",
+        "Effect4.Laws.Program.Guard.Observer",
+        "Effect4.Laws.Program.Guard.NativeQueueAssembly",
+        "Effect4.Laws.Program.Guard.Continuation",
+        "Effect4.Laws.Program.Guard.Race",
+        "Effect4.Laws.Program.Guard.Single",
+        "Effect4.Laws.Program.Guard.RegistrationDone",
+        "Effect4.Laws.Program.Guard.Contract",
+        "Effect4.Laws.Program.Guard.ControlRemainder",
+        "Effect4.Laws.Program.Guard.Command",
+        "Effect4.Laws.Program.Guard.OuterDriver",
+        "Effect4.Laws.Program.Guard.AnswerDecision",
+        "Effect4.Laws.Program.Guard.CommandObservations",
+        "Effect4.Laws.Program.Guard.LocalDecision",
+        "Effect4.Laws.Program.Guard.Driver",
+        "Effect4.Laws.Program.Guard.Decision",
+        "Effect4.Laws.Program.Guard",
+        "Effect4.Laws.Api.Guard",
+        "Effect4.Laws.Program.Handles.Alphabet",
+        "Effect4.Laws.Program.Handles.Term",
+        "Effect4.Laws.Program.Handles.Compile",
+        "Effect4.Laws.Program.Handles.Layer",
+        "Effect4.Laws.Program.Handles.Hooks",
+        "Effect4.Laws.Program.Handles.Evaluation",
+        "Effect4.Laws.Program.Handles",
+        "Effect4.Laws.Program.LayerSharing",
+        "Effect4.Laws.Program.Simulation.Deliver",
+        "Effect4.Laws.Program.Simulation.Actions",
+        "Effect4.Laws.Program.Simulation.Pending",
+        "Effect4.Laws.Program.Simulation.Evaluate",
+        "Effect4.Laws.Program.Simulation.Drive",
+        "Effect4.Laws.Auto.Traversals",
+        "Effect4.Laws.Program.RuntimeR",
+        "Effect4.Laws.Auto.Exhaustive",
+        "Effect4.Laws.Program.ReasonsR",
+        "Effect4.Laws.Program.Typed.World",
+        "Effect4.Laws.Program.Typed.ForkSource",
+        "Effect4.Laws"
+      ],
+      "embedded_child_commands": [],
+      "order": 26,
+      "module": "Effect4.Laws",
+      "result_record": {
+        "original_path": "/tmp/m1-phase-b-laws-root-run.log",
+        "line": 2,
+        "literal": "RESULT 0 /tmp/m1-tools/phase-b-serial-plan/logs/26-Effect4.Laws.log"
+      },
+      "recorded_path": "/tmp/m1-tools/phase-b-serial-plan/logs/26-Effect4.Laws.log",
+      "renamed_prior_attempt": false,
+      "kind": "serial module build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws > /tmp/m1-tools/phase-b-serial-plan/logs/26-Effect4.Laws.log 2>&1"
+    },
+    {
+      "log": "logs/manual/m1-phase-b-api-supervision.log",
+      "original_path": "/tmp/m1-phase-b-api-supervision.log",
+      "bytes": 36061,
+      "sha256": "03bed388691d1e434d6879936aa6159fc0dc779df5fefb9381e92a1c119a1e07",
+      "argv": null,
+      "env": null,
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": null,
+      "process_exit_code": null,
+      "compiler_child_exit_code": null,
+      "provenance": "Retained compiler/build output only; exact outer command and exit code not retained.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Api.Supervision"
+      ],
+      "embedded_child_commands": [],
+      "kind": "manual compile/build",
+      "redirected_command": null
+    },
+    {
+      "log": "logs/manual/m1-phase-b-arena-contract.log",
+      "original_path": "/tmp/m1-phase-b-arena-contract.log",
+      "bytes": 281,
+      "sha256": "ee6fe7559d1b5a83ec1e3c6c45e07121c9323695f4c8c938d0b4d48b752b364d",
+      "argv": null,
+      "env": null,
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": null,
+      "process_exit_code": null,
+      "compiler_child_exit_code": null,
+      "provenance": "Retained compiler/build output only; exact outer command and exit code not retained.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Test.Machine.Runtime.ArenaContract"
+      ],
+      "embedded_child_commands": [],
+      "kind": "manual compile/build",
+      "redirected_command": null
+    },
+    {
+      "log": "logs/manual/m1-phase-b-completion-data.log",
+      "original_path": "/tmp/m1-phase-b-completion-data.log",
+      "bytes": 223,
+      "sha256": "b34b68c8a6f19c1da3d1d7819f8cd3a17044a32dbd687de53d519ebecb935fe6",
+      "argv": null,
+      "env": null,
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": null,
+      "process_exit_code": null,
+      "compiler_child_exit_code": null,
+      "provenance": "Retained compiler/build output only; exact outer command and exit code not retained.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Machine.CompletionData"
+      ],
+      "embedded_child_commands": [],
+      "kind": "manual compile/build",
+      "redirected_command": null
+    },
+    {
+      "log": "logs/manual/m1-phase-b-forms-compile.log",
+      "original_path": "/tmp/m1-phase-b-forms-compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "--root=tools",
+        "tools/Effect4Gen/Forms.lean",
+        "-o",
+        ".lake/build/lib/lean/Effect4Gen/Forms.olean",
+        "-i",
+        ".lake/build/lib/lean/Effect4Gen/Forms.ilean"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true --root=tools tools/Effect4Gen/Forms.lean -o .lake/build/lib/lean/Effect4Gen/Forms.olean -i .lake/build/lib/lean/Effect4Gen/Forms.ilean",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact command and rc0 confirmed by coordinator from completed session 8293; empty diagnostic log retained.",
+      "observed_result": "empty output",
+      "fresh_built_modules": [],
+      "embedded_child_commands": [],
+      "kind": "manual compile/build",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true --root=tools tools/Effect4Gen/Forms.lean -o .lake/build/lib/lean/Effect4Gen/Forms.olean -i .lake/build/lib/lean/Effect4Gen/Forms.ilean > /tmp/m1-phase-b-forms-compile.log 2>&1"
+    },
+    {
+      "log": "logs/manual/m1-phase-b-frames-old-pin.log",
+      "original_path": "/tmp/m1-phase-b-frames-old-pin.log",
+      "bytes": 9992,
+      "sha256": "566700048dfd0f0feff35b8fddfe8bb3dfefa1a32f1b24b6e56669068e31484a",
+      "argv": null,
+      "env": null,
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": null,
+      "process_exit_code": null,
+      "compiler_child_exit_code": 1,
+      "provenance": "Retained compiler/build output only; exact outer command and exit code not retained.",
+      "observed_result": "build failed",
+      "fresh_built_modules": [
+        "Effect4.Laws.Program.Typed.State"
+      ],
+      "embedded_child_commands": [
+        "LEAN_PATH=/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Typed/Frames.lean -o /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Program/Typed/Frames.olean -i /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Program/Typed/Frames.ilean -c /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Effect4/Laws/Program/Typed/Frames.c --setup /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Effect4/Laws/Program/Typed/Frames.setup.json --json"
+      ],
+      "kind": "manual compile/build",
+      "redirected_command": null
+    },
+    {
+      "log": "logs/manual/m1-phase-b-indexed-columns-unpinned.log",
+      "original_path": "/tmp/m1-phase-b-indexed-columns-unpinned.log",
+      "bytes": 1914,
+      "sha256": "2c76f8fe656581368ba8ec63e602c4c5f0db8482b187637d112c3cab41a83019",
+      "argv": null,
+      "env": null,
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": null,
+      "process_exit_code": null,
+      "compiler_child_exit_code": 1,
+      "provenance": "Retained compiler/build output only; exact outer command and exit code not retained.",
+      "observed_result": "build failed",
+      "fresh_built_modules": [],
+      "embedded_child_commands": [
+        "LEAN_PATH=/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4/Test/Audit/IndexedColumns.lean -o /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Test/Audit/IndexedColumns.olean -i /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Test/Audit/IndexedColumns.ilean -c /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Test/Audit/IndexedColumns.c --setup /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Test/Audit/IndexedColumns.setup.json --json"
+      ],
+      "kind": "manual compile/build",
+      "redirected_command": null
+    },
+    {
+      "log": "logs/manual/m1-phase-b-indexed-columns.log",
+      "original_path": "/tmp/m1-phase-b-indexed-columns.log",
+      "bytes": 508,
+      "sha256": "428409c49cf9411d5cb6878c57240e2dd26d0644d814d63a5aee1cd911bf806d",
+      "argv": null,
+      "env": null,
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": null,
+      "process_exit_code": null,
+      "compiler_child_exit_code": null,
+      "provenance": "Retained compiler/build output only; exact outer command and exit code not retained.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Test.Audit.IndexedColumns"
+      ],
+      "embedded_child_commands": [],
+      "kind": "manual compile/build",
+      "redirected_command": null
+    },
+    {
+      "log": "logs/manual/m1-phase-b-machine-handshake.log",
+      "original_path": "/tmp/m1-phase-b-machine-handshake.log",
+      "bytes": 455,
+      "sha256": "fbfc3a1ccf2d8cb8d839f5e111c56458ad6d2cdd624c97a9625b2174761a9936",
+      "argv": null,
+      "env": null,
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": null,
+      "process_exit_code": null,
+      "compiler_child_exit_code": null,
+      "provenance": "Retained compiler/build output only; exact outer command and exit code not retained.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Machine.Handshake"
+      ],
+      "embedded_child_commands": [],
+      "kind": "manual compile/build",
+      "redirected_command": null
+    },
+    {
+      "log": "logs/manual/m1-phase-b-position-tool.log",
+      "original_path": "/tmp/m1-phase-b-position-tool.log",
+      "bytes": 286,
+      "sha256": "26d7b84a2bc73e3a859461af1feaabf1ad6fbcf4e07580bb1a5213a931a17be5",
+      "argv": null,
+      "env": null,
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": null,
+      "process_exit_code": null,
+      "compiler_child_exit_code": null,
+      "provenance": "Retained compiler/build output only; exact outer command and exit code not retained.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Program.Typed.Vocabulary",
+        "Effect4.Laws.Program.Typed.Sources",
+        "Effect4.Laws.Program.Typed.TypedSources",
+        "Effect4.Laws.Program.Typed.PositionGate"
+      ],
+      "embedded_child_commands": [],
+      "kind": "manual compile/build",
+      "redirected_command": null
+    },
+    {
+      "log": "logs/manual/m1-phase-b-state-generator-syntax-failed.log",
+      "original_path": "/tmp/m1-phase-b-state-generator-syntax-failed.log",
+      "bytes": 2713,
+      "sha256": "cff6d5e4b21dfe861f01533f7dca136a01ae1c9eafd4069f2073bad03a29c473",
+      "argv": null,
+      "env": null,
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": null,
+      "process_exit_code": null,
+      "compiler_child_exit_code": 1,
+      "provenance": "Retained compiler/build output only; exact outer command and exit code not retained.",
+      "observed_result": "build failed",
+      "fresh_built_modules": [],
+      "embedded_child_commands": [
+        "LEAN_PATH=/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Typed/TypedStateDecl.lean -o /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Program/Typed/TypedStateDecl.olean -i /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Program/Typed/TypedStateDecl.ilean -c /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Effect4/Laws/Program/Typed/TypedStateDecl.c --setup /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Effect4/Laws/Program/Typed/TypedStateDecl.setup.json --json"
+      ],
+      "kind": "manual compile/build",
+      "redirected_command": null
+    },
+    {
+      "log": "logs/manual/m1-phase-b-state-generator.log",
+      "original_path": "/tmp/m1-phase-b-state-generator.log",
+      "bytes": 110,
+      "sha256": "721f2feef3bd4937d2b54916d889cf6d81bd8ccc0be131c24cf01cdfe354ecad",
+      "argv": null,
+      "env": null,
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": null,
+      "process_exit_code": null,
+      "compiler_child_exit_code": null,
+      "provenance": "Retained compiler/build output only; exact outer command and exit code not retained.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Program.Typed.TypedStateDecl"
+      ],
+      "embedded_child_commands": [],
+      "kind": "manual compile/build",
+      "redirected_command": null
+    },
+    {
+      "log": "logs/manual/m1-phase-b-state-old-pin.log",
+      "original_path": "/tmp/m1-phase-b-state-old-pin.log",
+      "bytes": 9887,
+      "sha256": "2874204ecc80bb3db305c9c280e90ebd7538f6a97b11f9690eea1f9646891b73",
+      "argv": null,
+      "env": null,
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": null,
+      "process_exit_code": null,
+      "compiler_child_exit_code": 1,
+      "provenance": "Retained compiler/build output only; exact outer command and exit code not retained.",
+      "observed_result": "build failed",
+      "fresh_built_modules": [],
+      "embedded_child_commands": [
+        "LEAN_PATH=/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Typed/State.lean -o /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Program/Typed/State.olean -i /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Program/Typed/State.ilean -c /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Effect4/Laws/Program/Typed/State.c --setup /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Effect4/Laws/Program/Typed/State.setup.json --json"
+      ],
+      "kind": "manual compile/build",
+      "redirected_command": null
+    },
+    {
+      "log": "logs/manual/m1-phase-b-test-all.log",
+      "original_path": "/tmp/m1-phase-b-test-all.log",
+      "bytes": 942544,
+      "sha256": "772668c32153ff90a5924927554af4a17d1053417602fe811f62284faf834755",
+      "argv": [
+        "lake",
+        "build",
+        "Test.All"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Test.All",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact command and process exit confirmed by coordinator from completed tool result.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Machine.Arena",
+        "Effect4.Laws.Machine.RefKernel",
+        "Effect4.Laws.Machine.StoresLaws",
+        "Effect4.Laws.Machine.Behaviour",
+        "Effect4.Laws.Machine.Book",
+        "Effect4.Laws.Machine.Handles",
+        "Effect4.Laws.Machine.StoresValue",
+        "Effect4.Laws.Program.InterpR",
+        "Effect4.Laws.Program.EvaluateR",
+        "Effect4.Laws.Program.Means",
+        "Effect4.Laws.Program.Intro.Prepare",
+        "Effect4.Laws.Program.Intro.Equations",
+        "Effect4.Laws.Program.Intro.Identity",
+        "Effect4.Laws.Program.Intro.Weight",
+        "Effect4.Laws.Program.Admit",
+        "Effect4.Laws.Program.Progress",
+        "Effect4.Laws.Machine.Folds.Val",
+        "Effect4.Laws.Program.MeaningSound",
+        "Effect4.Laws.Program.LoopSound",
+        "Effect4.Laws.Program.Agreement.Loop",
+        "Effect4.Laws.Program.TypedRun",
+        "Effect4.Laws.Program.Folds.Denote",
+        "Effect4.Laws.Program.Guard.FrameOwned",
+        "Effect4.Laws.Program.Guard.NativeState",
+        "Effect4.Laws.Program.Guard.NativeStateMotion",
+        "Effect4.Laws.Program.Guard.NativeStateLinks",
+        "Effect4.Laws.Program.Guard.ReturnFields",
+        "Effect4.Laws.Program.Guard.NativeStateExternal",
+        "Effect4.Laws.Program.Guard.Settle",
+        "Effect4.Laws.Program.Guard.RegistrationQueue",
+        "Effect4.Laws.Program.Guard.FinishQueue",
+        "Effect4.Laws.Program.Guard.RegistrationNested",
+        "Effect4.Laws.Program.Guard.SettleQueue",
+        "Effect4.Laws.Program.Guard.NativeQueueTail",
+        "Effect4.Laws.Program.Guard.NativeAssembly",
+        "Effect4.Laws.Program.Guard.ReturnCommands",
+        "Effect4.Laws.Program.Guard.Observer",
+        "Effect4.Laws.Program.Guard.NativeQueueAssembly",
+        "Effect4.Laws.Program.Guard.Continuation",
+        "Effect4.Laws.Program.Guard.Race",
+        "Effect4.Laws.Program.Guard.RegistrationDone",
+        "Effect4.Laws.Program.Guard.Contract",
+        "Effect4.Laws.Program.Guard.ControlRemainder",
+        "Effect4.Laws.Program.Guard.Command",
+        "Effect4.Laws.Program.Guard.OuterDriver",
+        "Effect4.Laws.Program.Guard.AnswerDecision",
+        "Effect4.Laws.Program.Guard.CommandObservations",
+        "Effect4.Laws.Program.Guard.LocalDecision",
+        "Effect4.Laws.Program.Guard.Driver",
+        "Effect4.Laws.Program.Guard.Decision",
+        "Effect4.Laws.Program.Guard",
+        "Effect4.Laws.Api.Guard",
+        "Effect4.Laws.Program.Handles.Alphabet",
+        "Effect4.Laws.Run",
+        "Effect4.Laws.Program.Handles.Term",
+        "Effect4.Laws.Program.Handles.Compile",
+        "Effect4.Laws.Program.Handles.Layer",
+        "Effect4.Laws.Program.Handles.Hooks",
+        "Effect4.Laws.Program.Handles.Evaluation",
+        "Effect4.Laws.Program.Handles",
+        "Effect4.Laws.Program.Intro.AcquireRelease",
+        "Effect4.Laws.Program.Intro.Region",
+        "Effect4.Laws.Program.Intro.Memo",
+        "Effect4.Laws.Program.Intro.Merge",
+        "Effect4.Laws.Program.Intro.Layer",
+        "Effect4.Laws.Program.Intro.Elementary",
+        "Effect4.Laws.Program.Intro.Sequential",
+        "Effect4.Laws.Program.Intro.Errors",
+        "Effect4.Laws.Program.Intro.Fibers",
+        "Effect4.Laws.Program.Intro.Scope",
+        "Effect4.Laws.Program.Intro",
+        "Effect4.Laws.Program.LayerSharing",
+        "Effect4.Laws.Program.Simulation.Hooks",
+        "Effect4.Laws.Program.Simulation.Walk",
+        "Effect4.Laws.Program.Simulation.Fibers",
+        "Effect4.Laws.Program.Simulation.Deliver",
+        "Effect4.Laws.Program.Simulation.Actions",
+        "Effect4.Laws.Program.Simulation.Pending",
+        "Effect4.Laws.Program.Simulation.Evaluate",
+        "Effect4.Laws.Program.Simulation.Drive",
+        "Effect4.Laws.Program.RuntimeR",
+        "Effect4.Laws.Program.ReasonsR",
+        "Effect4.Laws.Program.Typed.State",
+        "Effect4.Laws.Program.Typed.Frames",
+        "Effect4.Laws.Machine.Refinement",
+        "Effect4.Laws.Program.Typed.World",
+        "Effect4.Laws.Program.Typed.ForkSource",
+        "Effect4.Laws.Machine.Handshake",
+        "Effect4.Laws.Program.Guard.Handshake",
+        "Test.Api.FrontierContract",
+        "Effect4.Laws",
+        "Test.Machine.Runtime.StoresLawsContract",
+        "Test.Machine.Runtime.CompletionDataContract",
+        "Test.Program.CompileContract",
+        "Test.Machine.Runtime.ApproximationContract",
+        "Test.Machine.Runtime.CompletionContract",
+        "Test.Machine.Runtime.BehaviourContract",
+        "Test.Machine.Runtime.HandlesContract",
+        "Test.Machine.Runtime.SchedulerCoreContract",
+        "Test.Machine.Runtime.SchedulingContract",
+        "Test.Program.TypedContract",
+        "Test.Program.LayerSharingContract",
+        "Test.Program.AuthorContract",
+        "Test.Program.AuthoringContract",
+        "Test.Program.DenoteContract",
+        "Test.Program.DenoteBContract",
+        "Test.Program.MeaningSoundContract",
+        "Test.Program.LoopSoundContract",
+        "Test.Program.LoopAgreementContract",
+        "Test.Program.AgreementContract",
+        "Test.Program.ProgressContract",
+        "Test.Run.RunContract",
+        "Test.Program.SchedContract",
+        "Test.Program.DenoteRContract",
+        "Test.Program.RuntimeRReference",
+        "Test.Program.RuntimeRShapesContract",
+        "Test.Program.RuntimeRContract",
+        "Test.Program.SimulationContract",
+        "Test.Api.AcquireHandleContract",
+        "Test.Api.ExternalContract",
+        "Test.Api.ApiContract",
+        "Test.Program.TypedStateRulesRed",
+        "Test.Program.CatchIfContract",
+        "Test.Machine.Fuzz",
+        "Test.Audit.RuntimeCoverage",
+        "Test.Audit.PositionCensus",
+        "Test.Audit.TraversalCensus",
+        "Test.Audit.IndexedColumns",
+        "Test.Audit.IndexedColumnActual",
+        "Test.Audit.FrameRules",
+        "Test.Audit.TypedStateDecl",
+        "Test.Machine.Runtime.ArenaContract",
+        "Test.All"
+      ],
+      "embedded_child_commands": [],
+      "kind": "manual compile/build",
+      "audit": {
+        "modules": 469,
+        "declarations": 66141,
+        "semantic_test_axioms": [
+          "propext",
+          "Quot.sound"
+        ],
+        "implementation_modules": 14,
+        "implementation_declarations": 29,
+        "implementation_additional_axiom": "Classical.choice"
+      },
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Test.All > /tmp/m1-phase-b-test-all.log 2>&1"
+    },
+    {
+      "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+      "original_path": "/tmp/m1-phase-b-test-all-census-tool.log",
+      "bytes": 943685,
+      "sha256": "96acac059f993e936af9fa6087c06103f04e7f7ca2f6e22e5ebd8b7ef4dc02b6",
+      "argv": [
+        "lake",
+        "build",
+        "Test.All"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Test.All",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact command and process exit confirmed by coordinator from completed tool result.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Auto.Obligations",
+        "Effect4.Laws.Machine.Clauses",
+        "Effect4.Laws.Machine.Approximation",
+        "Effect4.Laws.Machine.Arena",
+        "Effect4.Laws.Machine.CompletionData",
+        "Effect4.Laws.Machine.RefKernel",
+        "Effect4.Laws.Machine.StoresLaws",
+        "Effect4.Laws.Machine.Behaviour",
+        "Effect4.Laws.Machine.Book",
+        "Effect4.Laws.Machine.Clock",
+        "Effect4.Laws.Machine.Handles",
+        "Effect4.Laws.Machine.Scheduling",
+        "Effect4.Laws.Machine.StoresValue",
+        "Effect4.Laws.Machine.Witnesses",
+        "Effect4.Laws.Program.Agreement",
+        "Effect4.Laws.Program.Agreement.LoopSteps",
+        "Effect4.Laws.Program.Agreement.Machine",
+        "Effect4.Laws.Program.LoopAgreement",
+        "Effect4.Laws.Program.DenoteR",
+        "Effect4.Laws.Program.InterpR",
+        "Effect4.Laws.Program.EvaluateR",
+        "Effect4.Laws.Program.Means",
+        "Effect4.Laws.Program.Intro.Prepare",
+        "Effect4.Laws.Program.Intro.Equations",
+        "Effect4.Laws.Program.Intro.Identity",
+        "Effect4.Laws.Program.Intro.Weight",
+        "Effect4.Laws.Program.Admit",
+        "Effect4.Laws.Program.Progress",
+        "Effect4.Laws.Machine.Folds.Val",
+        "Effect4.Laws.Program.MeaningSound",
+        "Effect4.Laws.Program.LoopSound",
+        "Effect4.Laws.Program.Agreement.Loop",
+        "Effect4.Laws.Program.TypedRun",
+        "Effect4.Laws.Program.Folds.Denote",
+        "Effect4.Laws.Api.Fuel",
+        "Effect4.Laws.Program.Guard.RaceSites",
+        "Effect4.Laws.Program.Guard.FrameOwned",
+        "Effect4.Laws.Program.Guard.Core",
+        "Effect4.Laws.Program.Guard.NativeState",
+        "Effect4.Laws.Program.Guard.NativeStateMotion",
+        "Effect4.Laws.Program.Guard.NativeStateLinks",
+        "Effect4.Laws.Program.Guard.ReturnFields",
+        "Effect4.Laws.Program.Guard.ReturnTasks",
+        "Effect4.Laws.Program.Guard.NativeStateExternal",
+        "Effect4.Laws.Program.Guard.Finish",
+        "Effect4.Laws.Program.Guard.Settle",
+        "Effect4.Laws.Program.Guard.RegistrationQueue",
+        "Effect4.Laws.Program.Guard.RegistrationNested",
+        "Effect4.Laws.Program.Guard.FinishQueue",
+        "Effect4.Laws.Program.Guard.ReturnCommands",
+        "Effect4.Laws.Program.Guard.SettleQueue",
+        "Effect4.Laws.Program.Guard.NativeQueueTail",
+        "Effect4.Laws.Program.Guard.NativeAssembly",
+        "Effect4.Laws.Program.Guard.Observer",
+        "Effect4.Laws.Program.Guard.NativeQueueAssembly",
+        "Effect4.Laws.Program.Guard.Continuation",
+        "Effect4.Laws.Program.Guard.Race",
+        "Effect4.Laws.Program.Guard.Single",
+        "Effect4.Laws.Program.Guard.RegistrationDone",
+        "Effect4.Laws.Program.Guard.Contract",
+        "Effect4.Laws.Program.Guard.ControlRemainder",
+        "Effect4.Laws.Program.Guard.Command",
+        "Effect4.Laws.Program.Guard.OuterDriver",
+        "Effect4.Laws.Program.Guard.AnswerDecision",
+        "Effect4.Laws.Program.Guard.CommandObservations",
+        "Effect4.Laws.Program.Guard.LocalDecision",
+        "Effect4.Laws.Program.Guard.Driver",
+        "Effect4.Laws.Program.Guard.Decision",
+        "Effect4.Laws.Program.Guard",
+        "Effect4.Laws.Api.Supervision",
+        "Effect4.Laws.Api.Guard",
+        "Effect4.Laws.Program.Handles.Alphabet",
+        "Effect4.Laws.Run",
+        "Effect4.Laws.Program.Handles.Term",
+        "Effect4.Laws.Program.Handles.Compile",
+        "Effect4.Laws.Program.Handles.Layer",
+        "Effect4.Laws.Program.Handles.Hooks",
+        "Effect4.Laws.Program.Handles.Evaluation",
+        "Effect4.Laws.Program.Handles",
+        "Effect4.Laws.Program.Intro.AcquireRelease",
+        "Effect4.Laws.Program.Intro.Region",
+        "Effect4.Laws.Program.Intro.Memo",
+        "Effect4.Laws.Program.Intro.Merge",
+        "Effect4.Laws.Program.Intro.Layer",
+        "Effect4.Laws.Program.Intro.Elementary",
+        "Effect4.Laws.Program.Intro.Sequential",
+        "Effect4.Laws.Program.Intro.Errors",
+        "Effect4.Laws.Program.Intro.Fibers",
+        "Effect4.Laws.Program.Intro.Scope",
+        "Effect4.Laws.Program.LayerSharing",
+        "Effect4.Laws.Program.Intro",
+        "Effect4.Laws.Program.Simulation.Hooks",
+        "Effect4.Laws.Program.Simulation.Walk",
+        "Effect4.Laws.Program.Simulation.Fibers",
+        "Effect4.Laws.Program.Simulation.Deliver",
+        "Effect4.Laws.Program.Simulation.Actions",
+        "Effect4.Laws.Program.Simulation.Pending",
+        "Effect4.Laws.Program.Simulation.Evaluate",
+        "Effect4.Laws.Auto.Traversals",
+        "Effect4.Laws.Program.Simulation.Drive",
+        "Effect4.Laws.Auto.Exhaustive",
+        "Effect4.Laws.Program.RuntimeR",
+        "Effect4.Laws.Program.ReasonsR",
+        "Effect4.Laws.Program.Typed.State",
+        "Effect4.Laws.Program.Typed.Frames",
+        "Effect4.Laws.Machine.Refinement",
+        "Effect4.Laws.Program.Typed.World",
+        "Effect4.Laws.Program.Typed.ForkSource",
+        "Effect4.Laws.Program.Guard.TraceOrigin",
+        "Effect4.Laws.Machine.Handshake",
+        "Effect4.Laws.Program.Guard.Handshake",
+        "Test.Api.FrontierContract",
+        "Effect4.Laws",
+        "Test.Machine.Runtime.StoresLawsContract",
+        "Test.Machine.Runtime.CompletionDataContract",
+        "Test.Program.CompileContract",
+        "Test.Machine.Runtime.CompletionContract",
+        "Test.Machine.Runtime.ApproximationContract",
+        "Test.Machine.Runtime.HandlesContract",
+        "Test.Machine.Runtime.BehaviourContract",
+        "Test.Machine.Runtime.SchedulerCoreContract",
+        "Test.Machine.Runtime.SchedulingContract",
+        "Test.Program.TypedContract",
+        "Test.Program.LayerSharingContract",
+        "Test.Program.AuthorContract",
+        "Test.Program.AuthoringContract",
+        "Test.Program.DenoteContract",
+        "Test.Program.DenoteBContract",
+        "Test.Program.MeaningSoundContract",
+        "Test.Program.LoopSoundContract",
+        "Test.Program.LoopAgreementContract",
+        "Test.Program.AgreementContract",
+        "Test.Program.ProgressContract",
+        "Test.Api.SupervisionContract",
+        "Test.Run.RunContract",
+        "Test.Program.SchedContract",
+        "Test.Program.DenoteRContract",
+        "Test.Program.RuntimeRReference",
+        "Test.Program.RuntimeRShapesContract",
+        "Test.Program.RuntimeRContract",
+        "Test.Program.SimulationContract",
+        "Test.Api.AcquireHandleContract",
+        "Test.Api.ExternalContract",
+        "Test.Api.ApiContract",
+        "Test.Program.TypedStateRulesRed",
+        "Test.Program.CatchIfContract",
+        "Test.Machine.Fuzz",
+        "Test.Audit.RuntimeCoverage",
+        "Test.Audit.PositionCensus",
+        "Test.Audit.TraversalCensus",
+        "Test.Audit.IndexedColumns",
+        "Test.Audit.IndexedColumnActual",
+        "Test.Audit.TypedStateDecl",
+        "Test.Audit.Obligations",
+        "Test.Machine.Runtime.ArenaContract",
+        "Test.All"
+      ],
+      "embedded_child_commands": [],
+      "kind": "manual compile/build",
+      "audit": {
+        "modules": 469,
+        "declarations": 66142,
+        "semantic_test_axioms": [
+          "propext",
+          "Quot.sound"
+        ],
+        "implementation_modules": 14,
+        "implementation_declarations": 29,
+        "implementation_additional_axiom": "Classical.choice"
+      },
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Test.All > /tmp/m1-phase-b-test-all-census-tool.log 2>&1"
+    },
+    {
+      "log": "logs/manual/m1-phase-b-census-truth-build.log",
+      "original_path": "/tmp/m1-phase-b-census-truth-build.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "--root=.",
+        "harness/truth/Truth.lean",
+        "-o",
+        ".lake/build/lib/lean/harness/truth/Truth.olean",
+        "-i",
+        ".lake/build/lib/lean/harness/truth/Truth.ilean"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true --root=. harness/truth/Truth.lean -o .lake/build/lib/lean/harness/truth/Truth.olean -i .lake/build/lib/lean/harness/truth/Truth.ilean",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact direct-driver script retained; coordinator confirmed entire set -e script rc0 in session 11629, establishing each sequential command rc0.",
+      "observed_result": "empty output",
+      "fresh_built_modules": [],
+      "embedded_child_commands": [],
+      "kind": "prebaseline direct driver compile",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true --root=. harness/truth/Truth.lean -o .lake/build/lib/lean/harness/truth/Truth.olean -i .lake/build/lib/lean/harness/truth/Truth.ilean > /tmp/m1-phase-b-census-truth-build.log 2>&1"
+    },
+    {
+      "log": "logs/manual/m1-phase-b-census-keyed-build.log",
+      "original_path": "/tmp/m1-phase-b-census-keyed-build.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "--root=.",
+        "harness/truth/session/Keyed.lean",
+        "-o",
+        ".lake/build/lib/lean/harness/truth/session/Keyed.olean",
+        "-i",
+        ".lake/build/lib/lean/harness/truth/session/Keyed.ilean"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true --root=. harness/truth/session/Keyed.lean -o .lake/build/lib/lean/harness/truth/session/Keyed.olean -i .lake/build/lib/lean/harness/truth/session/Keyed.ilean",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact direct-driver script retained; coordinator confirmed entire set -e script rc0 in session 11629, establishing each sequential command rc0.",
+      "observed_result": "empty output",
+      "fresh_built_modules": [],
+      "embedded_child_commands": [],
+      "kind": "prebaseline direct driver compile",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true --root=. harness/truth/session/Keyed.lean -o .lake/build/lib/lean/harness/truth/session/Keyed.olean -i .lake/build/lib/lean/harness/truth/session/Keyed.ilean > /tmp/m1-phase-b-census-keyed-build.log 2>&1"
+    },
+    {
+      "log": "logs/instruments/m1-phase-b-search-old-red.log",
+      "original_path": "/tmp/m1-phase-b-search-old-red.log",
+      "bytes": 1362,
+      "sha256": "27ff1dc2f672250d25add69b15528c9148592a65d6bf1c10a14a85c32af31255",
+      "argv": null,
+      "env": null,
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": null,
+      "process_exit_code": null,
+      "compiler_child_exit_code": 1,
+      "provenance": "Retained stdout and embedded child Lean command only; exact outer argv/exit not retained.",
+      "observed_result": "build failed",
+      "fresh_built_modules": [],
+      "embedded_child_commands": [
+        "LEAN_PATH=/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4/Test/Audit/ProofGraphSearch.lean -o /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Test/Audit/ProofGraphSearch.olean -i /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Test/Audit/ProofGraphSearch.ilean -c /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Test/Audit/ProofGraphSearch.c --setup /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Test/Audit/ProofGraphSearch.setup.json --json"
+      ],
+      "kind": "instrument finite control",
+      "control_id": "search-old-red",
+      "control_result": "expected refusal",
+      "redirected_command": null
+    },
+    {
+      "log": "logs/instruments/m1-phase-b-search-green.log",
+      "original_path": "/tmp/m1-phase-b-search-green.log",
+      "bytes": 382,
+      "sha256": "f7d1ad139af12c568f8bcba78ec7c3bd4787a1ac5316031fa9563acaf9e7c064",
+      "argv": null,
+      "env": null,
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": null,
+      "process_exit_code": null,
+      "compiler_child_exit_code": null,
+      "provenance": "Retained stdout records successful build; exact outer argv/exit not retained.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "ProofGraph.Search",
+        "Test.Audit.ProofGraphSearch",
+        "Test.Audit.ProofGraph"
+      ],
+      "embedded_child_commands": [],
+      "kind": "instrument finite control",
+      "control_id": "search-green",
+      "control_result": "pass",
+      "redirected_command": null
+    },
+    {
+      "log": "logs/instruments/m1-phase-b-obligations.log",
+      "original_path": "/tmp/m1-phase-b-obligations.log",
+      "bytes": 312,
+      "sha256": "4b30a6d83baa33a3eb837d16a0cdfd4c996b9eb54ee172c7708792ab7295b227",
+      "argv": null,
+      "env": null,
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": null,
+      "process_exit_code": null,
+      "compiler_child_exit_code": null,
+      "provenance": "Additional retained stdout records successful existing ledger controls; exact outer argv/exit not retained.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Auto.Census",
+        "Effect4.Laws.Auto.Obligations",
+        "Test.Audit.Obligations"
+      ],
+      "embedded_child_commands": [],
+      "kind": "instrument finite control",
+      "control_id": "obligations-green",
+      "control_result": "pass",
+      "redirected_command": null
+    },
+    {
+      "log": "logs/instruments/m1-phase-b-census-empty-red.log",
+      "original_path": "/tmp/m1-phase-b-census-empty-red.log",
+      "bytes": 460,
+      "sha256": "dc30a04b72a87bdac0036067c2b1d1e6eecc3e8d5965f6951294636de858e63f",
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "Test/Audit/ProofGraph.lean"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true Test/Audit/ProofGraph.lean",
+      "process_exit_code": 1,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact argv and process exit confirmed by coordinator from tool result.",
+      "observed_result": "compiler error",
+      "fresh_built_modules": [],
+      "embedded_child_commands": [],
+      "kind": "instrument finite control",
+      "control_id": "census-empty-missing-import",
+      "control_result": "setup failure; not defect evidence",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true Test/Audit/ProofGraph.lean > /tmp/m1-phase-b-census-empty-red.log 2>&1"
+    },
+    {
+      "log": "logs/instruments/m1-phase-b-census-empty-red-imported.log",
+      "original_path": "/tmp/m1-phase-b-census-empty-red-imported.log",
+      "bytes": 667,
+      "sha256": "c34ea0aceab74f722886f628057be73c81b7ac2af32984143a5eb837dd1cc686",
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "Test/Audit/ProofGraph.lean"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true Test/Audit/ProofGraph.lean",
+      "process_exit_code": 1,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact argv and process exit confirmed by coordinator from tool result.",
+      "observed_result": "compiler error",
+      "fresh_built_modules": [],
+      "embedded_child_commands": [],
+      "kind": "instrument finite control",
+      "control_id": "census-empty-imported-red",
+      "control_result": "expected refusal",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true Test/Audit/ProofGraph.lean > /tmp/m1-phase-b-census-empty-red-imported.log 2>&1"
+    },
+    {
+      "log": "logs/instruments/m1-phase-b-census-empty-green.log",
+      "original_path": "/tmp/m1-phase-b-census-empty-green.log",
+      "bytes": 392,
+      "sha256": "69c04e92d980ba78a4be5c8dc35fc36d994034a1240a01761fd121ebff385eb7",
+      "argv": [
+        "lake",
+        "build",
+        "Test.Audit.ProofGraph"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake build Test.Audit.ProofGraph",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact argv and process exit confirmed by coordinator from tool result.",
+      "observed_result": "build completed successfully",
+      "fresh_built_modules": [
+        "Effect4.Laws.Auto.Census",
+        "Test.Audit.ProofGraph"
+      ],
+      "embedded_child_commands": [],
+      "kind": "instrument finite control",
+      "control_id": "census-empty-green",
+      "control_result": "pass",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake build Test.Audit.ProofGraph > /tmp/m1-phase-b-census-empty-green.log 2>&1"
+    },
+    {
+      "log": "logs/instruments/m1-phase-b-census-ordinary-dead-tactic-red.log",
+      "original_path": "/tmp/m1-phase-b-census-ordinary-dead-tactic-red.log",
+      "bytes": 173,
+      "sha256": "0a5e11d668836f21e5d1595b4863278a843e023384f39dca8d7d40caa0fba423",
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "/tmp/m1-tools/OrdinaryUnreachableControl.lean"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true /tmp/m1-tools/OrdinaryUnreachableControl.lean",
+      "process_exit_code": 1,
+      "compiler_child_exit_code": null,
+      "provenance": "Exact argv and process exit confirmed by coordinator from tool result.",
+      "observed_result": "compiler error",
+      "fresh_built_modules": [],
+      "embedded_child_commands": [],
+      "kind": "instrument finite control",
+      "control_id": "ordinary-dead-tactic-red",
+      "control_result": "expected refusal",
+      "redirected_command": "LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true /tmp/m1-tools/OrdinaryUnreachableControl.lean > /tmp/m1-phase-b-census-ordinary-dead-tactic-red.log 2>&1"
+    }
+  ]
+}

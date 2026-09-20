@@ -1,0 +1,6 @@
+✔ [3/5] Built ProofGraph.Search (1.2s)
+ℹ [5/11] Built Test.Audit.ProofGraphSearch (1.3s)
+info: Test/Audit/ProofGraphSearch.lean:74:0: 'Test.ProofGraphSearch.closed' does not depend on any axioms
+ℹ [11/11] Built Test.Audit.ProofGraph (1.2s)
+info: Test/Audit/ProofGraph.lean:74:0: 'Test.ProofGraph.searched' does not depend on any axioms
+Build completed successfully (11 jobs).

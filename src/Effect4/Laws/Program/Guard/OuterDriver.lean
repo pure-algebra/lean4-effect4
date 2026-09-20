@@ -417,3 +417,5 @@ theorem interruptedAt_advanceState (p : NativeEff) (table : RowTable) (driver : 
   (advanceState_preserved p table driver fuel millis rounds m state).interrupted fiber before
 
 end Effect4.Program.Guard.OuterDriver
+
+#typed_state_obligations Effect4.Program.Guard.OuterDriver.M1Clock ceiling 9 using aesop (rule_sets := [Effect4.Stores])

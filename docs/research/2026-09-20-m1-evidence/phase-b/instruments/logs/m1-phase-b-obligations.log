@@ -1,0 +1,5 @@
+✔ [175/177] Built Effect4.Laws.Auto.Census (1.7s)
+✔ [176/177] Built Effect4.Laws.Auto.Obligations (1.3s)
+ℹ [177/177] Built Test.Audit.Obligations (2.1s)
+info: Test/Audit/Obligations.lean:49:0: 'Test.Obligations.Positive.closed.checked' depends on axioms: [propext]
+Build completed successfully (177 jobs).

@@ -121,6 +121,7 @@ import Test.Program.LinkedRowsContract
 import Test.Program.LayerSharingContract
 import Test.Program.BlameContract
 import Test.Program.DecisionContract
+import Test.Machine.Runtime.ArenaContract
 
 /-!
 # Effect4 test battery

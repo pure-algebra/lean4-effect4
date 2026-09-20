@@ -957,7 +957,6 @@ def w10Into : M :=
 def M1Witnesses.w10_into_completes_on_failure : ProofGraph.Obligation (exitOf w10Into 0 = some (Exit.success (Val.bool true)) ∧
       ((w10Into.state.deferreds.cellAt ⟨0⟩).map DeferredCell.completion) =
         some (some (Completion.ofExit (Exit.failure (Cause.fail Err.boom))))) := ⟨⟩
-#proof_wanted M1Witnesses.w10_into_completes_on_failure
 
 theorem w10_into_completes_on_failure :
     exitOf w10Into 0 = some (Exit.success (Val.bool true)) ∧
@@ -1485,3 +1484,5 @@ alone) — the receipt `docs/RUNTIME-COVERAGE.md:52-55` requires of a witness. T
 `sorry`, no `native_decide` and no custom axiom anywhere in this spike. -/
 
 end Effect4.Machine.Witnesses
+
+#typed_state_obligations Effect4.Machine.Witnesses.M1Witnesses ceiling 1 using aesop (rule_sets := [Effect4.Stores])

@@ -383,7 +383,6 @@ def M1Evaluate.registerAsync_await (root : NativeEff) (c : List (FiberId × Exit
     (fid : FiberId) (tok : Nat) (s : Stores) : ProofGraph.Obligation ((interpAt root c).registerAsync (.registerAwait cell) fid tok s =
       ({ s with deferreds := (s.deferreds.register cell fid tok).1 },
         (s.deferreds.register cell fid tok).2.map (fun c => embed (completionPrim c)))) := ⟨⟩
-#proof_wanted M1Evaluate.registerAsync_await
 
 theorem registerAsync_await (root : NativeEff) (c : List (FiberId × ExitV)) (cell : DeferredKey)
     (fid : FiberId) (tok : Nat) (s : Stores) :
@@ -396,7 +395,6 @@ def M1Evaluate.registerAsyncR_await (root : NativeEff) (c : List (FiberId × Exi
     (fid : FiberId) (tok : Nat) (s : Stores) : ProofGraph.Obligation ((interpRAt root c).registerAsync (.registerAwait cell) fid tok s =
       ({ s with deferreds := (s.deferreds.register cell fid tok).1 },
         (s.deferreds.register cell fid tok).2.map denoteCompletion)) := ⟨⟩
-#proof_wanted M1Evaluate.registerAsyncR_await
 
 theorem registerAsyncR_await (root : NativeEff) (c : List (FiberId × ExitV)) (cell : DeferredKey)
     (fid : FiberId) (tok : Nat) (s : Stores) :
@@ -429,7 +427,6 @@ theorem registerAsyncR_external (root : NativeEff) (c : List (FiberId × ExitV))
 def M1Clock.registerAsync_sleep (root : NativeEff) (c : List (FiberId × ExitV)) (millis : ClockMillis)
     (fid : FiberId) (tok : Nat) (s : Stores) : ProofGraph.Obligation ((interpAt root c).registerAsync (.store (.registerSleep millis)) fid tok s =
       ({ s with timers := s.timers.sleep fid tok millis }, none)) := ⟨⟩
-#proof_wanted M1Clock.registerAsync_sleep
 
 theorem registerAsync_sleep (root : NativeEff) (c : List (FiberId × ExitV)) (millis : ClockMillis)
     (fid : FiberId) (tok : Nat) (s : Stores) :
@@ -440,7 +437,6 @@ theorem registerAsync_sleep (root : NativeEff) (c : List (FiberId × ExitV)) (mi
 def M1Clock.registerAsyncR_sleep (root : NativeEff) (c : List (FiberId × ExitV)) (millis : ClockMillis)
     (fid : FiberId) (tok : Nat) (s : Stores) : ProofGraph.Obligation ((interpRAt root c).registerAsync (.store (.registerSleep millis)) fid tok s =
       ({ s with timers := s.timers.sleep fid tok millis }, none)) := ⟨⟩
-#proof_wanted M1Clock.registerAsyncR_sleep
 
 theorem registerAsyncR_sleep (root : NativeEff) (c : List (FiberId × ExitV)) (millis : ClockMillis)
     (fid : FiberId) (tok : Nat) (s : Stores) :
@@ -1037,3 +1033,5 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
       delivers_pure rfl (fun _ => rfl)
 
 end Effect4.Program.Sched
+
+#typed_state_obligations Effect4.Program.Sched.M1Evaluate ceiling 2 using aesop (rule_sets := [Effect4.Stores])

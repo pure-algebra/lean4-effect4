@@ -1,0 +1,174 @@
+{
+  "scope": "Search portability repair: retained red controls, unit failure/retry, and completed full Test.All build/audit. No corrected census result included.",
+  "records": [
+    {
+      "id": "minimal-old-search-red",
+      "command": "LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true /tmp/m1-tools/ProofGraphFreshDependencyRed.lean > /tmp/m1-phase-b-search-fresh-dependency-red.log 2>&1",
+      "outer_exit_code": 1,
+      "log": "before/fresh-dependency-red.log",
+      "outcome": "Expected refusal: returned proof contains rolled-back FreshSearchHelper; the missing-reference guard fires before publication.",
+      "provenance": "Exact argv and rc1 confirmed by coordinator; pre-repair snapshot hashes retained."
+    },
+    {
+      "id": "original-status-blocker",
+      "command": null,
+      "outer_exit_code": 1,
+      "log": "before/origin-status-red.log",
+      "outcome": "Failed status run: unknown private spawn matcher splitter after rollback; not valid closed-goal evidence.",
+      "provenance": "Exit code retained in before.json; exact outer command not retained in this bundle."
+    },
+    {
+      "id": "unit-attempt1",
+      "command": "LEAN_NUM_THREADS=1 lake build Test.Audit.ProofGraphSearch > /tmp/m1-phase-b-search-portability-green-attempt1.log 2>&1",
+      "outer_exit_code": 1,
+      "log": "logs/unit-attempt1.log",
+      "outcome": "Failed: quoted existing theorem name acquired a hygiene suffix; repaired using run_tac closeMainGoal with mkConst.",
+      "provenance": "Exact command and completed process exit confirmed by coordinator from exec_command/write_stdin."
+    },
+    {
+      "id": "unit-attempt2",
+      "command": "LEAN_NUM_THREADS=1 lake build Test.Audit.ProofGraphSearch > /tmp/m1-phase-b-search-portability-green-attempt2.log 2>&1",
+      "outer_exit_code": 0,
+      "log": "logs/unit-attempt2.log",
+      "outcome": "Passed: existing budget controls and new portability/publication controls; three published theorems report no axioms.",
+      "provenance": "Exact command and completed process exit confirmed by coordinator from exec_command/write_stdin."
+    },
+    {
+      "id": "full-test-all",
+      "command": "LEAN_NUM_THREADS=1 lake build Test.All > /tmp/m1-phase-b-test-all-portability.log 2>&1",
+      "outer_exit_code": 0,
+      "log": "logs/full-test-all.log",
+      "outcome": "Completed full rebuild and module/axiom audit.",
+      "provenance": "Exact command and completed outer rc0 confirmed by coordinator; retained log contains successful completion and gate totals.",
+      "gates": {
+        "checked_modules": 469,
+        "checked_declarations": 66144,
+        "api_utility_modules": 138,
+        "laws_only_modules": 198,
+        "all_library_sources_reachable": true,
+        "effect4_reaches_laws": false,
+        "semantic_test_axioms": [
+          "propext",
+          "Quot.sound"
+        ],
+        "implementation_boundary_modules": 14,
+        "implementation_boundary_declarations": 29,
+        "implementation_additional_axiom": "Classical.choice",
+        "build_jobs": 686
+      }
+    }
+  ],
+  "files": [
+    {
+      "source": "/tmp/m1-tools/search-portability/evidence/ProofGraphSearch-before-portability.lean",
+      "member": "before/ProofGraphSearch-before-portability.lean",
+      "bytes": 3646,
+      "sha256": "6b24defb9afebb4e691ae5e7be320e1f22f75e1f3258471e238e401085b99991"
+    },
+    {
+      "source": "/tmp/m1-tools/search-portability/evidence/Search-before-portability.lean",
+      "member": "before/Search-before-portability.lean",
+      "bytes": 2355,
+      "sha256": "5108f443d59fee47a9d54a8a44b2fa2ce0f4ce97b046941c5e312557be576b25"
+    },
+    {
+      "source": "/tmp/m1-tools/search-portability/evidence/before.json",
+      "member": "before/before.json",
+      "bytes": 1398,
+      "sha256": "5867720f93351a85e996016e34a9b23fe838b359a1b40e184a36053f57b515cb"
+    },
+    {
+      "source": "/tmp/m1-tools/search-portability/evidence/fresh-dependency-red.lean",
+      "member": "before/fresh-dependency-red.lean",
+      "bytes": 869,
+      "sha256": "c0c813bd999dc8a295e4c3d9b6c143d0090f8b57ea563cdab2e7acd19b1f38ee"
+    },
+    {
+      "source": "/tmp/m1-tools/search-portability/evidence/fresh-dependency-red.log",
+      "member": "before/fresh-dependency-red.log",
+      "bytes": 122,
+      "sha256": "05c45b9f665ba6dd5b8ef713d85ea225c84696ef95527321bd693c7a44fc6d86"
+    },
+    {
+      "source": "/tmp/m1-tools/search-portability/evidence/origin-status-red.log",
+      "member": "before/origin-status-red.log",
+      "bytes": 1962,
+      "sha256": "265b725181d368a519f69531f0678cc519ee33cbc01f0a442677b8c1d2d55954"
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4/Test/Audit/ProofGraphSearch.lean",
+      "member": "final/Test/Audit/ProofGraphSearch.lean",
+      "bytes": 9924,
+      "sha256": "9bedaedec0989030e9aeede5f75c3d08428a140f16fd50f147ced6eba18d850a"
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Auto/Census.lean",
+      "member": "final/src/Effect4/Laws/Auto/Census.lean",
+      "bytes": 5096,
+      "sha256": "7b1b6bdbf3cd061154581ca896ece642ada94076dc7c00732efe9d5cfff0a58b"
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4/tools/ProofGraph/Search.lean",
+      "member": "final/tools/ProofGraph/Search.lean",
+      "bytes": 7266,
+      "sha256": "07c369e09b40e4b7922bde688313f4e0f4515d8ce022e1eb2f5a144d7ed7d2df"
+    },
+    {
+      "source": "/tmp/m1-phase-b-search-portability-green-attempt1.log",
+      "member": "logs/unit-attempt1.log",
+      "bytes": 1660,
+      "sha256": "759b76047c82d46064a6e4161f598e8c0febde9bc852b724c24a31e2e2063dbd"
+    },
+    {
+      "source": "/tmp/m1-phase-b-search-portability-green-attempt2.log",
+      "member": "logs/unit-attempt2.log",
+      "bytes": 437,
+      "sha256": "62bdde7f2ece18411a9a1417e1af23d79bcf4f8826f86155cac32e890b0d90a5"
+    },
+    {
+      "source": "Exact previous scratch package manifest.json",
+      "member": "chronology/unit-stage-manifest.json",
+      "bytes": 5524,
+      "sha256": "375d42a07a9e8abd15d349b4dc8abb0c9c976be0f5b8d5622143ba2253b24b10"
+    },
+    {
+      "source": "Exact previous scratch package receipt.md",
+      "member": "chronology/unit-stage-receipt.md",
+      "bytes": 2191,
+      "sha256": "a3f81d0efd20f590e4bdbc4f6f2ee529988979707b1fbad0800ac3badc1609dc"
+    },
+    {
+      "source": "/tmp/m1-phase-b-test-all-portability.log",
+      "member": "logs/full-test-all.log",
+      "bytes": 944038,
+      "sha256": "d1d94f8a8146aa236e543aef4de96f847ea02d0dc2588d24d0469f4facf8f420"
+    }
+  ],
+  "archive": {
+    "path": "raw.tar.gz",
+    "bytes": 87139,
+    "sha256": "5ba09a2c041fd8fbaa4a3cd07499ae8133d7273b0a34826065ebf702f372ebe5",
+    "members": 14,
+    "uncompressed_bytes": 986488,
+    "readback": "Every member compared byte-for-byte, including unchanged prior archive members and exact prior receipt/manifest."
+  },
+  "old_census": "Provisional raw observations only: 648 closed / 647 passing the old axiom scan / 4062 statements. Missing rolled-back constants could evade the old scan, and it omitted proposition-only dependencies. No portable-proof or final-bank claim.",
+  "timestamps": "No execution timestamps invented; archive headers normalized to zero for reproducible packaging.",
+  "chronology": [
+    {
+      "stage": 1,
+      "name": "unit-controls complete; full audit pending",
+      "manifest_member": "chronology/unit-stage-manifest.json",
+      "manifest_sha256": "375d42a07a9e8abd15d349b4dc8abb0c9c976be0f5b8d5622143ba2253b24b10",
+      "receipt_member": "chronology/unit-stage-receipt.md",
+      "receipt_sha256": "a3f81d0efd20f590e4bdbc4f6f2ee529988979707b1fbad0800ac3badc1609dc",
+      "status_note": "Prior receipt preserved verbatim; its full-audit-pending statement describes that earlier stage."
+    },
+    {
+      "stage": 2,
+      "name": "full Test.All completed",
+      "record_id": "full-test-all",
+      "corrected_census_status": "Running separately at packaging time; no census output or frozen input included or changed."
+    }
+  ]
+}

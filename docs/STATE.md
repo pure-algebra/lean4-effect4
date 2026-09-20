@@ -25,8 +25,24 @@ The full Lean build and axiom/root audit, focused host checks and fresh OCaml ch
 Placement is also complete: 47 files moved, connector proofs live in Laws, shared fixtures
 live under tooling, and the architecture report has zero imports against the declared
 direction (the retained baseline had 26). `make check` passed after placement, including a
-fresh root/axiom audit and generated drift. The proof-statement skeleton and proof fills
-are next; world, arena and M1 connector obligations are not yet discharged.
+fresh root/axiom audit and generated drift.
+
+Phase B's statement skeleton is installed: indexed heap and promise columns, the typed
+world and its order, the arena laws and projection, the M1 representation connectors,
+origin and trace statements, and the held handshake. All 36 new gates passed their 30
+owner-module builds. They account for 221 statements (48 closed, 173 open) beside 90
+statements already covered by zero gates. Phase C must close the 172 active open statements;
+the remaining handshake stays open until M4. New ceilings are the statement counts, and
+the 19 existing zero gate sites are unchanged.
+
+The proof-search tool now checks returned terms against the original kernel environment
+after closing over temporary helpers, and checks dependencies in both statement and proof.
+Its fresh census measured 647 admissible closures out of 4062 statements across 218 modules
+(247/1584 in the original 38-module radius). One further closure was rejected for
+Classical.choice. The earlier identical counts are retained as provisional history because
+that search wrapper could return references to discarded helpers. Phase B's `make check`
+and fresh coverage checks passed; the sanctioned report remains green 133/135. Proof fills
+have not started.
 
 The one-regeneration target was missed: Phase A required three completed runtime rounds,
 plus two partial LCNF attempts. Placement added one EFF/wire/CAS validation round; cumulative
@@ -81,6 +97,10 @@ open proof evidence are retained in `docs/research/2026-09-20-skeleton-first-rec
 | `AGENTS.md` | the operating rules and the vocabulary |
 
 ## Next, in order
+
+The active remaining work in the owner's skeleton-first redirect is Phase C: fill the
+named proof banks and obligations. The dated plan
+notes below explain its background; they are not a new pause instruction.
 
 **Design review before implementation resumes (2026-09-19).** The completed STM and stateful-API
 research is reconciled in `docs/core/machine-state.md`, with the detailed contracts, retained

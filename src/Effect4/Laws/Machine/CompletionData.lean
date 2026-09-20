@@ -1,5 +1,4 @@
 import Effect4.Machine.Stores
-import Effect4.Laws.Machine.Refinement
 import Effect4.Laws.Auto.Obligations
 
 /-! M1: obligations recorded before the completion-data proof migration. -/
@@ -10,6 +9,10 @@ attribute [aesop norm simp (rule_sets := [Effect4.Stores])]
   DeferredStore.make DeferredStore.cellAt DeferredStore.setCell DeferredStore.isDone
   DeferredStore.poll DeferredStore.register DeferredStore.complete DeferredStore.drainDue
   Owed.mapCode_waiter Owed.mapCode_token Owed.mapCode_mode
+
+def M1.CompletionSupport.store_lookup_lt {α : Type} {xs : List α} {i : Nat} {a : α}
+    (_h : xs[i]? = some a) : ProofGraph.Obligation (
+    i < xs.length) := ⟨⟩
 
 /-- A successful list lookup supplies the bound needed by the store write/read law. -/
 theorem store_lookup_lt {α : Type} {xs : List α} {i : Nat} {a : α}
@@ -58,8 +61,14 @@ def deferredStore_waiter_receives_stored (self : DeferredStore) (cell : Deferred
 end Effect4.Machine.M1.Core
 
 namespace Effect4.Machine
+def M1.CompletionSupport.poll_reads_cell (s : DeferredStore) (k : DeferredKey) (c : DeferredCell)
+    (_h : s.cellAt k = some c) : ProofGraph.Obligation (
+    s.poll k = some c.completion) := ⟨⟩
+
 /-- The store bank control: a successful cell lookup determines the poll result. -/
 theorem poll_reads_cell (s : DeferredStore) (k : DeferredKey) (c : DeferredCell)
     (h : s.cellAt k = some c) : s.poll k = some c.completion := by
   aesop (rule_sets := [Effect4.Stores])
 end Effect4.Machine
+
+#typed_state_obligations Effect4.Machine.M1.CompletionSupport ceiling 2 using aesop (rule_sets := [Effect4.Stores])

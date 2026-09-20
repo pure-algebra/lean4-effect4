@@ -108,6 +108,12 @@ import Effect4.Laws.Program.Authoring.Forms
 import Effect4.Laws.Program.Authoring.Sugar
 import Effect4.Laws.Program.Authoring.Loops
 import Effect4.Laws.Program.Author
+import Effect4.Laws.Machine.Refinement
+import Effect4.Laws.Program.Typed.World
+import Effect4.Laws.Program.Typed.ForkSource
+import Effect4.Laws.Program.Guard.TraceOrigin
+import Effect4.Laws.Machine.Handshake
+import Effect4.Laws.Program.Guard.Handshake
 
 import Effect4.Laws.Program.Folds.Checker
 import Effect4.Laws.Program.Folds.Projections
@@ -127,3 +133,6 @@ The machine and program judgments, simulation, composition and execution laws.
 These modules continue their definition modules' namespaces; the module paths
 separate build targets. `import Effect4` never reaches this root.
 -/
+
+#typed_state_obligations Effect4.Machine.M1.DeferredWanted ceiling 31 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Machine.M1Clock ceiling 6 using aesop (rule_sets := [Effect4.Stores])

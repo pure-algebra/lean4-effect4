@@ -1,0 +1,12 @@
+'Test.ProofGraph.searched' does not depend on any axioms
+Effect4.Laws.Auto.RuleSets: 0 of 0 theorems closed from their statements; 0 source lines they now take
+Test/Audit/ProofGraph.lean:80:46: error: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+Test/Audit/ProofGraph.lean:79:0: error: ❌️ Docstring on `#guard_msgs` does not match generated message:
+
+  info: Effect4.Laws.Auto.RuleSets: 0 of 0 theorems closed from their statements; 0 source lines they now take
++ ---
++ error: this tactic is never executed
++
++ Note: This linter can be disabled with `set_option linter.unreachableTactic false`

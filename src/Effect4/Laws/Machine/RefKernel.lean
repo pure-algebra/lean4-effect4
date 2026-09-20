@@ -1,4 +1,6 @@
 import Effect4.Machine.Stores
+import Effect4.Laws.Machine.Arena
+import Effect4.Laws.Auto.Obligations
 
 /-!
 # Machine.RefKernel — the heap rows as one kernel
@@ -158,3 +160,48 @@ theorem refStepOf_keeps {P Q : Val → Prop} {cell : RefKey} {k : RefKernel}
   · exact hnext x hw
 
 end Effect4.Machine
+
+-- BEGIN M1 PHASE B RefKernel
+namespace Effect4.Machine
+
+/-! Phase B candidate only: unbuilt statement skeleton, no proof admission. -/
+
+/-- Same optional write-back as the existing list kernel, at an arbitrary carrier. -/
+def writeBackA {σ α : Type} [Arena σ α] (s : σ) (cell : RefKey) : Option α → σ
+  | some next => Arena.poke s cell.index next
+  | none => s
+
+def refStepOfA {σ : Type} [Arena σ Val] (cell : RefKey) (k : RefKernel)
+    (s : σ) : Option (Val × σ) :=
+  (Arena.peek s cell.index).bind fun a =>
+    (k a).map fun r => (r.1, writeBackA s cell r.2)
+
+namespace ArenaObligations
+
+def toList_refStepOf {σ : Type} [Arena σ Val] [LawfulArena σ Val]
+    (cell : RefKey) (k : RefKernel) (s : σ) : ProofGraph.Obligation (
+    (refStepOfA cell k s).map (Prod.map id Arena.toList) =
+      refStepOf cell k (Arena.toList s)) := ⟨⟩
+#proof_wanted toList_refStepOf
+
+def refStepOfA_list (cell : RefKey) (k : RefKernel) (xs : List Val) :
+    ProofGraph.Obligation (refStepOfA cell k xs = refStepOf cell k xs) := ⟨⟩
+#proof_wanted refStepOfA_list
+
+def refStepOfA_size {σ : Type} [Arena σ Val] [LawfulArena σ Val]
+    {cell : RefKey} {k : RefKernel} {s s' : σ} {a : Val}
+    (_h : refStepOfA cell k s = some (a, s')) :
+    ProofGraph.Obligation (Arena.size s' = Arena.size s) := ⟨⟩
+#proof_wanted refStepOfA_size
+
+def refStepOfA_keeps {σ : Type} [Arena σ Val] [LawfulArena σ Val]
+    {P Q : Val → Prop} {cell : RefKey} {k : RefKernel} {s s' : σ} {a : Val}
+    (_hheap : ∀ i v, Arena.peek s i = some v → P v)
+    (_hk : RefKernel.Keeps P Q k) (_h : refStepOfA cell k s = some (a, s')) :
+    ProofGraph.Obligation (Q a ∧ ∀ i v, Arena.peek s' i = some v → P v) := ⟨⟩
+#proof_wanted refStepOfA_keeps
+
+end ArenaObligations
+
+end Effect4.Machine
+-- END M1 PHASE B RefKernel

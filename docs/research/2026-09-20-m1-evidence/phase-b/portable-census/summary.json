@@ -1,0 +1,63 @@
+{
+  "lane": "before-fill",
+  "process_exit_code": 0,
+  "process_exit_provenance": "Coordinator completed session 34967; exact outer command and all inner exits retained.",
+  "modules": 218,
+  "processes": 139,
+  "skipped_modules": 0,
+  "heartbeat_cap": 20000,
+  "tactic": "aesop",
+  "raw_closed": 648,
+  "admissible_closed": 647,
+  "total_theorems": 4062,
+  "original_radius38": {
+    "modules": 38,
+    "raw_closed": 247,
+    "admissible_closed": 247,
+    "total_theorems": 1584
+  },
+  "rejected": [
+    {
+      "module": "Effect4.Laws.Api.ModuleReadable",
+      "name": "Effect4.Program.path_beq_self",
+      "first_line": 70,
+      "last_line": 78,
+      "source_lines": 9,
+      "axioms": [
+        "Classical.choice",
+        "Quot.sound",
+        "propext"
+      ],
+      "trust_admissible": false,
+      "disallowed_axioms": [
+        "Classical.choice"
+      ]
+    }
+  ],
+  "archived_files": 529,
+  "archived_bytes": 7234234,
+  "compressed_bytes": 699341,
+  "verification": "All 218 reports reparsed and compared, all 139 frozen scratch/process hashes and 218 module-log hashes checked, pinned provenance matched, all archive bytes compared on readback.",
+  "final_bank_status": "not measured in this package",
+  "historical_old_cap_comparison": "not performed; old 246/1593 figures are not a comparable baseline and enter no aggregate",
+  "same_per_module_counts_as_provisional_run": true,
+  "prior_run_status": "Provisional, retained unchanged in phase-b-before-fill-evidence and phase-b-census-evidence; not portable-proof evidence.",
+  "corrected_guarantee": "Every returned candidate passed synchronous requested-proposition kernel checking against the frozen original kernel environment; reported axiom dependencies include both proposition and proof.",
+  "plan_preparation_hash_mismatches": [
+    {
+      "module": "Effect4.Laws.Auto.Census",
+      "prepared_source_sha256": "f5f9215ced960d36546885070e7139b91ca38ccdc9013d429b44e9887fdf4cad",
+      "captured_run_source_sha256": "7b1b6bdbf3cd061154581ca896ece642ada94076dc7c00732efe9d5cfff0a58b"
+    },
+    {
+      "module": "ProofGraph.Search",
+      "prepared_source_sha256": "5108f443d59fee47a9d54a8a44b2fa2ce0f4ce97b046941c5e312557be576b25",
+      "captured_run_source_sha256": "07c369e09b40e4b7922bde688313f4e0f4515d8ce022e1eb2f5a144d7ed7d2df"
+    },
+    {
+      "module": "Test.Audit.ProofGraphSearch",
+      "prepared_source_sha256": "6b24defb9afebb4e691ae5e7be320e1f22f75e1f3258471e238e401085b99991",
+      "captured_run_source_sha256": "9bedaedec0989030e9aeede5f75c3d08428a140f16fd50f147ced6eba18d850a"
+    }
+  ]
+}

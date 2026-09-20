@@ -1,0 +1,3 @@
+/tmp/m1-tools/OrdinaryUnreachableControl.lean:4:23: error: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`

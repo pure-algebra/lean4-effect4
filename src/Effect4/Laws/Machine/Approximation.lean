@@ -1664,3 +1664,5 @@ theorem replay_colimit_eq_of_sufficient (interp : RunInterp ν σ β ε δ ι α
     exact replay_colimit interp tape m found k
 
 end Effect4.Machine
+
+#typed_state_obligations Effect4.Machine.M1OriginApproximation ceiling 2 using aesop (rule_sets := [Effect4.Stores])

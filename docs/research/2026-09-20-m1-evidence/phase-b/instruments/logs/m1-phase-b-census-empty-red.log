@@ -1,0 +1,6 @@
+'Test.ProofGraph.searched' does not depend on any axioms
+Test/Audit/ProofGraph.lean:79:0: error: #auto_census: Effect4.Laws.Auto.RuleSets is not an imported module
+Test/Audit/ProofGraph.lean:78:0: error: ❌️ Docstring on `#guard_msgs` does not match generated message:
+
+- info: Effect4.Laws.Auto.RuleSets: 0 of 0 theorems closed from their statements; 0 source lines they now take
++ error: #auto_census: Effect4.Laws.Auto.RuleSets is not an imported module

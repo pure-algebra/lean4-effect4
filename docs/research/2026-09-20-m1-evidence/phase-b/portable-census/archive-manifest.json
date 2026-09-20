@@ -1,0 +1,3176 @@
+[
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/inputs.json",
+    "archive_member": "before-fill/inputs.json",
+    "bytes": 1012215,
+    "sha256": "a7f8f045a9e4f9bbee0cb5d93964bb1660b0379fea4c00dd415784da13744a34"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Drivers.Corpus.log",
+    "archive_member": "before-fill/module-logs/Drivers.Corpus.log",
+    "bytes": 91,
+    "sha256": "8c62d323ff4abb2730619fd06c723a59b2f8c6a1829b396f8e3fc70ac624f76d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Drivers.ForeignCorpus.log",
+    "archive_member": "before-fill/module-logs/Drivers.ForeignCorpus.log",
+    "bytes": 98,
+    "sha256": "d54064d5aba9426ce82e2d0200f504159c47707a0dcc2d23f3eafbf73aad8815"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Drivers.ProgramStructureCheck.log",
+    "archive_member": "before-fill/module-logs/Drivers.ProgramStructureCheck.log",
+    "bytes": 106,
+    "sha256": "2979993be09a6348630dd2a8ef56aaf671d55a9f0af61a756fb824509dee76e3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Drivers.Styles.log",
+    "archive_member": "before-fill/module-logs/Drivers.Styles.log",
+    "bytes": 91,
+    "sha256": "430dcd70e5761a2f4fda2af8c532da355efb7def7ae020df712e5cbb3c5229e6"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Drivers.TsGen.log",
+    "archive_member": "before-fill/module-logs/Drivers.TsGen.log",
+    "bytes": 90,
+    "sha256": "7c1d8f6f22d62586932f6140a13ed91e5a048487a3248afcdefd0e7aeeb1faef"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Api.Derived.log",
+    "archive_member": "before-fill/module-logs/Effect4.Api.Derived.log",
+    "bytes": 806,
+    "sha256": "a900ef0f8372b8331f360a86f29e337e989df2a5930171e46ec473a1c21794cb"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Api.Frontier.log",
+    "archive_member": "before-fill/module-logs/Effect4.Api.Frontier.log",
+    "bytes": 97,
+    "sha256": "1ef379fa4d5b49dd9311f3e27bf3c079699c74bf2e4eca15efb75ca8c07a313e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Api.HostProtocol.log",
+    "archive_member": "before-fill/module-logs/Effect4.Api.HostProtocol.log",
+    "bytes": 101,
+    "sha256": "14765d757d88e2d274fd4f88f6409ebaab906946243219ef62c4db3013ffe0d4"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Api.HostSession.log",
+    "archive_member": "before-fill/module-logs/Effect4.Api.HostSession.log",
+    "bytes": 100,
+    "sha256": "d87701b6cf22c91376e5c30358ad1a46434bc84bdddfaecb137797d31cc97c3a"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Api.RunnerDerived.log",
+    "archive_member": "before-fill/module-logs/Effect4.Api.RunnerDerived.log",
+    "bytes": 1892,
+    "sha256": "78442b076566973d8a553bfbc15a4eaef23db1252ce1c0c6d6df4b0c348ba35b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Api.Supervision.log",
+    "archive_member": "before-fill/module-logs/Effect4.Api.Supervision.log",
+    "bytes": 100,
+    "sha256": "5baca47269a046d45db278328564c83734c73bbdaa1691fdeee7b922108c4c3d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Api.TestClock.log",
+    "archive_member": "before-fill/module-logs/Effect4.Api.TestClock.log",
+    "bytes": 98,
+    "sha256": "1c3a6322e00ee71e81dfae104625381022c60707ceade73ffd22caa60e544966"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Api.log",
+    "archive_member": "before-fill/module-logs/Effect4.Api.log",
+    "bytes": 88,
+    "sha256": "9c86ef1dc898a10788aae77abf58060c4f8ce43b52b39fff89540234e112b04d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Codegen.Authoring.Forms.log",
+    "archive_member": "before-fill/module-logs/Effect4.Codegen.Authoring.Forms.log",
+    "bytes": 108,
+    "sha256": "e811f6e4855dd8000263e957c5fe97f11d9d051803ae1a2cb47d796706a47b56"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Codegen.SourceBindings.log",
+    "archive_member": "before-fill/module-logs/Effect4.Codegen.SourceBindings.log",
+    "bytes": 107,
+    "sha256": "bbcaf151f9888c4c82ea0a175f467228a6e59ef01c3f402724bc2e3f1c579f24"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Codegen.Types.log",
+    "archive_member": "before-fill/module-logs/Effect4.Codegen.Types.log",
+    "bytes": 368,
+    "sha256": "c7588e400d6e3107e014c9729aa6807a55f709113d0e4786325bb6ec62446b7b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Data.Ascii.log",
+    "archive_member": "before-fill/module-logs/Effect4.Data.Ascii.log",
+    "bytes": 221,
+    "sha256": "2add7000f747ed7c1b14bec784b0e4b8f8264a0c955ace492b9eee57d061044c"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Data.ClockMillis.log",
+    "archive_member": "before-fill/module-logs/Effect4.Data.ClockMillis.log",
+    "bytes": 101,
+    "sha256": "ed62ed50b37e40e3881041e9c3337175201fc3eb7f3d00a42915bca28083f6c7"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Data.JsonNumber.log",
+    "archive_member": "before-fill/module-logs/Effect4.Data.JsonNumber.log",
+    "bytes": 100,
+    "sha256": "b8dc29270b4c5cc5498171757a363ae036bcf4dd94721d1c5f5f2eaacc4e52a8"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Api.HostSession.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Api.HostSession.log",
+    "bytes": 338,
+    "sha256": "00084871fd6d0e95cdb8d7055f029984847ee8e00de12ee0b3f3a9e930cd1e97"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Api.ModuleReadable.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Api.ModuleReadable.log",
+    "bytes": 188,
+    "sha256": "31616e5ab349ed8f2682841368ce14c6ab1f89dbef1bc227390acbfe6be3f371"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Api.Supervision.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Api.Supervision.log",
+    "bytes": 448,
+    "sha256": "75afea8d5c0b77af8b33795ae58ae3159b26afb727219217193abec8f3443439"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Auto.Census.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Auto.Census.log",
+    "bytes": 101,
+    "sha256": "65a8663439c3fcbea9353778432368ef6914f92879098b6c2e9ab7b711c20c14"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Auto.Frames.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Auto.Frames.log",
+    "bytes": 101,
+    "sha256": "fcf77dfe97870cdb01cc5e8797f1e3d2167c210311b8e71a5d2266f30b8d67f5"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Auto.Obligations.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Auto.Obligations.log",
+    "bytes": 106,
+    "sha256": "74bc3f40242e0a65a795968d3728fd99938f6701394fb2502a4b7ba4147f22da"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Auto.RuleSets.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Auto.RuleSets.log",
+    "bytes": 103,
+    "sha256": "1e2b531daad7035602f6ac23fc7f1f925d9095ef4ee7f6106daffde273d9e496"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Machine.Approximation.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Machine.Approximation.log",
+    "bytes": 1007,
+    "sha256": "98aa0babfc13d6e189fada74de773e00ec3a5215edb8c3acc46f408537cd162d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Machine.Arena.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Machine.Arena.log",
+    "bytes": 104,
+    "sha256": "603c9faec57f4037640e4f2c0aba1ee89c8ce8c4594b080e97339dbc5a31b0b4"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Machine.Behaviour.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Machine.Behaviour.log",
+    "bytes": 107,
+    "sha256": "dddf8a07114912b373c1026ac80aac7caeb6d50474fdf6434a6ca23d6d00da4f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Machine.Book.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Machine.Book.log",
+    "bytes": 864,
+    "sha256": "15a1a1943df5984a18fc1ec69ff26e5fd0d7d43bc4412dfd8f6f6e0e16b7766a"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Machine.Clauses.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Machine.Clauses.log",
+    "bytes": 2567,
+    "sha256": "d1dd939c4cc73022de32b3f63dcd42941be1685ff4d2f7e1fd75d5beeed0dfbf"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Machine.Clock.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Machine.Clock.log",
+    "bytes": 103,
+    "sha256": "a1c1ccdbb04f56ed53c40d03f87ec12e5c838a17d8a94d5dced41de58203375b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Machine.CompletionData.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Machine.CompletionData.log",
+    "bytes": 112,
+    "sha256": "e1f60624ebbfc39c9ec0ce1f0ceda9220ac5dc2a6e2f239b273d45f2183b30b4"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Machine.Folds.Stores.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Machine.Folds.Stores.log",
+    "bytes": 110,
+    "sha256": "8319c0b90244b393d58351f1ce5649ac795757620aed32ee357a301ac0fdfd09"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Machine.Folds.Val.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Machine.Folds.Val.log",
+    "bytes": 107,
+    "sha256": "a0a5a61adfb0e9c5c620fbb19b06b18a2f1de3890805a3dec7484cfc706609f3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Machine.Handles.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Machine.Handles.log",
+    "bytes": 2071,
+    "sha256": "81ac98a37ba42bc474f7b44f73a648b26b440ee8094e28c3c0f85b8c64afec2b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Machine.Handshake.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Machine.Handshake.log",
+    "bytes": 107,
+    "sha256": "b1e8d871ca96d2f828ca88c9a4209a90a3160f087529799228f02430467a4688"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Machine.RefKernel.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Machine.RefKernel.log",
+    "bytes": 107,
+    "sha256": "84226dd65a3b14588993f5c7bfd4275518915a6acb63a591555ccfcbe6c59451"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Machine.Refinement.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Machine.Refinement.log",
+    "bytes": 108,
+    "sha256": "1e880db4cc72071d7630138ed8ef0622d893629e7c7ac4af997432539ab892e5"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Machine.Scheduling.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Machine.Scheduling.log",
+    "bytes": 109,
+    "sha256": "2d77a0df76c73364cb2af2f7e7a87192402598f75c144dbb6baaf598136af0ca"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Machine.StoresLaws.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Machine.StoresLaws.log",
+    "bytes": 1587,
+    "sha256": "2258f8ee158587097517406b7f99281a7477bd90440c40e4cd44e784c9c1d270"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Machine.Witnesses.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Machine.Witnesses.log",
+    "bytes": 5259,
+    "sha256": "8de245b8e0055259ce04ec8dff910d1ba31d8e5c2acb7e331d9aeef2b7b9e729"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Admits.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Admits.log",
+    "bytes": 159,
+    "sha256": "19ddb281000da81113c5d65b47754670b3dfff164c4c279e098d99945ff200e1"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Agreement.Machine.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Agreement.Machine.log",
+    "bytes": 2030,
+    "sha256": "e7406053bcb017de410f2a14d4989f34e54be9b8602ef9c613872d611656b81e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Agreement.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Agreement.log",
+    "bytes": 6769,
+    "sha256": "4c7b673d6fc2dd4a2656b4383223b0b59424982a0b9cb94954942550a36a0b6f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Authoring.Forms.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Authoring.Forms.log",
+    "bytes": 114,
+    "sha256": "667c6d22b76c0877fc4a10a9fe2d9e1c7622888d43b255383998e0688c8b5784"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.DenoteR.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.DenoteR.log",
+    "bytes": 685,
+    "sha256": "bed0b04d9f054444afb78f25b91d5a22ac7a44b7b366014e420e9c860565cd97"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.EvaluateR.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.EvaluateR.log",
+    "bytes": 107,
+    "sha256": "f1bf68320d800630ad8e528bd2a33195af41bc17b77fc03c0db7ebf61f56260a"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Folds.Checker.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Folds.Checker.log",
+    "bytes": 111,
+    "sha256": "ae53472cf35aa8b00e81b78772a6844f8921837eb31936732e25957043275f37"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Folds.Looped.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Folds.Looped.log",
+    "bytes": 110,
+    "sha256": "bb77e16b1278d39d16978045cb44cd02d0246786e038c70ed7e31e1296817cd4"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Folds.Projections.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Folds.Projections.log",
+    "bytes": 115,
+    "sha256": "69671e8dcab747c47a0225527b41decece9dffcb76b6ec6ddd78904043a2e074"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Folds.Provision.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Folds.Provision.log",
+    "bytes": 113,
+    "sha256": "acb3657acaa395321423d374d024ecd8f10a4f2b0b3faf396a26cd5709a0e3d6"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Folds.Representation.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Folds.Representation.log",
+    "bytes": 118,
+    "sha256": "d418f00fd926d450e084956122c3164f66c3d850d85000edf5fa8c95b0fcf5fe"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Folds.Straight.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Folds.Straight.log",
+    "bytes": 112,
+    "sha256": "e2632ee04278732a11a90e3948d8b3b8af86e0eadc4fb4296711430765e53527"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Folds.Term.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Folds.Term.log",
+    "bytes": 108,
+    "sha256": "019b5e4ae80bef2cf9cd40ed924a9188087d8af53f5d272e72ff80ec1a4b2ae5"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Folds.Ty.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Folds.Ty.log",
+    "bytes": 106,
+    "sha256": "16adb33ccd559feaa96752636e26f0309f001884998cf7d3162ada01c64dc2c3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.AnswerDecision.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.AnswerDecision.log",
+    "bytes": 119,
+    "sha256": "6992b7f6753da8ad2f586d098cc140364fe15877acc0f8417dc74531894b3637"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.Core.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.Core.log",
+    "bytes": 815,
+    "sha256": "3503f0ea65cf8af1f4a2a6dd8d1177c6e9851051af33585c756c053c578bf5a2"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.DeferredCause.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.DeferredCause.log",
+    "bytes": 118,
+    "sha256": "60993fe43ee09e1f823b14cc9117701344b35f98ded8c0f8aea025c453177be3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.FrameOwned.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.FrameOwned.log",
+    "bytes": 291,
+    "sha256": "6fbb7372f1301e0ad2bc5ab2f79868e81541a62fef79ef90bb32ec6e38e17eef"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.Handshake.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.Handshake.log",
+    "bytes": 113,
+    "sha256": "4d8c61cecdf34a8b310273bf50bf832cf5b526101c8fbf6e742a442f25852579"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.Interruption.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.Interruption.log",
+    "bytes": 117,
+    "sha256": "fcd35ada7e112c26b6d53af1f45b24318d6765f1b001266d4fc4eb0f3face2e0"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.NativeAssembly.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.NativeAssembly.log",
+    "bytes": 119,
+    "sha256": "6894958afe79e8418a77543a9693694b9f27bd0ab31c9fd09d09a6f57b69f5c8"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.NativeState.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.NativeState.log",
+    "bytes": 116,
+    "sha256": "7c7136e0b33cfaa5231f4593eae4521d0f9365c4fa47a2890d4813db3a103797"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.NativeStateExternal.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.NativeStateExternal.log",
+    "bytes": 124,
+    "sha256": "19812d4c134ea4b91572bf205b4105bd7dea954528548ef8fa77c830ba2e6aee"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.NativeStateLinks.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.NativeStateLinks.log",
+    "bytes": 121,
+    "sha256": "f5995241ca4f4e9ccf4dd727ce64663f43d58a2b282ca89fc1888490282ac5c8"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.NativeStateMotion.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.NativeStateMotion.log",
+    "bytes": 122,
+    "sha256": "6b9d83127c2496d7d429d0e99fc423341e31d64b4dcb84ee79a765de319f9405"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.Observer.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.Observer.log",
+    "bytes": 113,
+    "sha256": "4b6e45c02da841e3c6d71ed300437bf3bba8bcd139d27611c71ccd3ceae8bf27"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.OuterDriver.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.OuterDriver.log",
+    "bytes": 116,
+    "sha256": "1fb0659ec322219c3a1ebeefe2f3508d5838b749397b1195a7bb8b898fef2512"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.Race.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.Race.log",
+    "bytes": 109,
+    "sha256": "b269ee48bcab12348e097dc086011d563cff44209557f306d6c407da0c7a3ebb"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.RaceSites.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.RaceSites.log",
+    "bytes": 114,
+    "sha256": "11e21701f67056791aa532a6f12336c28fdd6c24d7500abc88be165e4cabf709"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.RegistrationDone.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.RegistrationDone.log",
+    "bytes": 121,
+    "sha256": "88f9e1f4fbd55c8e631a4a3c367858e4e248be23be2e39ba68268127915b785a"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.RegistrationNested.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.RegistrationNested.log",
+    "bytes": 123,
+    "sha256": "93a674fcea93b031ec3ca61f64474fcc6f6ef9270159d0677d003b6b2470fd57"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.ReturnCommands.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.ReturnCommands.log",
+    "bytes": 119,
+    "sha256": "c683cf06c1014fb1de27ab99c97f171a6620cdda786eec9ae538b76f68ffeeae"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.ReturnFields.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.ReturnFields.log",
+    "bytes": 117,
+    "sha256": "f65011fb16746efc7947c9e32db26d914c389bedccae4d414debddad98d11e5f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.ReturnTasks.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.ReturnTasks.log",
+    "bytes": 116,
+    "sha256": "75ea971d780b9be8b5b03bd727f0cfd20f84dcd1e20c468c667a3cbb5666e0e2"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.Settle.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.Settle.log",
+    "bytes": 111,
+    "sha256": "8fd37798d35164918f17909934d5c640e3c6770ae48b1fab41d477c404de108f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.Single.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.Single.log",
+    "bytes": 111,
+    "sha256": "cdb1e37f12ed7cdaaabe2d778a5949dd3681359c9a0c422c063a2e04c5af8c75"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Guard.TraceOrigin.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Guard.TraceOrigin.log",
+    "bytes": 115,
+    "sha256": "207d849b2464b0d2461a84eda6e98b6e9764cec401d7cc14b82ccdf189e7fbdb"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Handles.Compile.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Handles.Compile.log",
+    "bytes": 163,
+    "sha256": "eda543a6b1d63238bfe396254820c02b37c1724fede28993ed30e2ed69e8b238"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Handles.Evaluation.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Handles.Evaluation.log",
+    "bytes": 117,
+    "sha256": "fe2416687fc5ac51c7cd5c62a508d3923d881c8fc9bcbe18aaf688bf06360cfa"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Handles.Hooks.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Handles.Hooks.log",
+    "bytes": 112,
+    "sha256": "3dff86df971051ec017f77cbfbfd924bdffc80ca7fc7dfa4ed3782650ac50966"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Handles.Layer.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Handles.Layer.log",
+    "bytes": 168,
+    "sha256": "727a2d95da2bfca53737c18383bd376176c35d617fb0dbc9040c503e33b734c9"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.InterpR.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.InterpR.log",
+    "bytes": 105,
+    "sha256": "344c12c3355343f89c077d20fdb9214738df46f09155a871956e44664d3401a9"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Intro.Elementary.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Intro.Elementary.log",
+    "bytes": 114,
+    "sha256": "51a78731c247723b2c50bf32b55d1e31965ad283472304d922824925cbf08a8e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Intro.Fibers.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Intro.Fibers.log",
+    "bytes": 110,
+    "sha256": "d961c9b70ad6c6b3760e6287755e545d0c149827fc05d0868068c099a1bdc91d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Intro.Merge.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Intro.Merge.log",
+    "bytes": 109,
+    "sha256": "b3df647c2378a85f3166aadea4e2baa3a9864528522cb30e49d383db7c63f11e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Intro.Weight.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Intro.Weight.log",
+    "bytes": 163,
+    "sha256": "542affede0b0976b0dbc351b534f25d153f32693c0d8837f0bc37b667e268a9d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.LayerSharing.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.LayerSharing.log",
+    "bytes": 273,
+    "sha256": "35960b7a70adf53a2dbe4000adaa332fb03783614291722a3f78e4534224d963"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Means.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Means.log",
+    "bytes": 914,
+    "sha256": "c3c547b2ce347c02b10cd58cc97f838245ac2d040f391f954f3d505c485b7f56"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.RuntimeR.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.RuntimeR.log",
+    "bytes": 733,
+    "sha256": "c8b8ac4466e09511d7530a1297e86b47c53a7940157abb389cd4a1e2b8c970f4"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Sched.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Sched.log",
+    "bytes": 451,
+    "sha256": "237832fa4d8898572c93aeae7b3d412477f8916d104a966b34c386f6db9d7599"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Simulation.Actions.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Simulation.Actions.log",
+    "bytes": 117,
+    "sha256": "7bf273cc2d45d0daa01b2ec9a160447eb886cb48e34fbb15b5c4766ea202e94c"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Simulation.Deliver.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Simulation.Deliver.log",
+    "bytes": 440,
+    "sha256": "23fe66ee97b462c4f31c140ec9ad679605689a2f0bf0e83805d9967c5fe31185"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Simulation.Drive.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Simulation.Drive.log",
+    "bytes": 612,
+    "sha256": "d5ab2e58e94966fe036b5f9cd8a0656a84ffde1e44ed91863f8cdb37039d4695"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Simulation.Evaluate.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Simulation.Evaluate.log",
+    "bytes": 997,
+    "sha256": "ab9080e5404efd9a35831e628be3bc0b993eb9bbade6a0d14e698719fa113235"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Simulation.Fibers.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Simulation.Fibers.log",
+    "bytes": 432,
+    "sha256": "404b270070ca36736b4042cf0cd8cb213cab6660d695553409f2fc766baa95f3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Simulation.Hooks.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Simulation.Hooks.log",
+    "bytes": 297,
+    "sha256": "eb01d326c675f1e87d8f48a55648736fe89c951717cea0cbe99d541fd1d2fd02"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Simulation.Pending.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Simulation.Pending.log",
+    "bytes": 301,
+    "sha256": "4fb0ac284ecb267e928d50bb9a9d2e5bf2acc87c43dcfff9354ccbd380d5689b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.TyView.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.TyView.log",
+    "bytes": 105,
+    "sha256": "a199080d1a5eb57aab84ddae7f3e9c2a5a784379207161790189c26fe8e1c055"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Typed.ForkSource.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Typed.ForkSource.log",
+    "bytes": 114,
+    "sha256": "bf1ae15f68fac1a4f49c5b931599834a488abdb1aa83bb720e36af0eab99a46d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Typed.Frames.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Typed.Frames.log",
+    "bytes": 110,
+    "sha256": "8c9b491833d73ea1404c4d08fd666c9516ccf5b317faefe77f8af23f4294ac80"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Typed.PositionGate.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Typed.PositionGate.log",
+    "bytes": 116,
+    "sha256": "08745a03700709a12057001e6e403e81bc6f64912ddbf467de6cde472eae749d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Typed.Sources.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Typed.Sources.log",
+    "bytes": 111,
+    "sha256": "93dc9f7d1dca4f4692e066fa2192569bd843d514cb5d3bf5e1ccc73d0d100f4d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Typed.State.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Typed.State.log",
+    "bytes": 109,
+    "sha256": "67cb1a91d54f34ab80b65beff8e09ec79430b4d510cc55ed1f2745a6c6b866ba"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Typed.TypedSources.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Typed.TypedSources.log",
+    "bytes": 116,
+    "sha256": "a528616d51e63ffa28aa8ef277cce596545ee8e1a4a13305cc178a539a689767"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Typed.TypedStateDecl.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Typed.TypedStateDecl.log",
+    "bytes": 118,
+    "sha256": "5fdaf2f169962e17f10a2e3f5f5b45d2bb50c255cdf932cde8fc7e5b73d632f4"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Typed.Vocabulary.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Typed.Vocabulary.log",
+    "bytes": 114,
+    "sha256": "bb93a2250841130da73d8bf0fa036c4dae76c8bc4adeee8852135a575072fee0"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Typed.World.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Typed.World.log",
+    "bytes": 109,
+    "sha256": "4dbcc136c84d6a442c6f357fb0e68b5c2de4221c74e58da0a1bbf72e2f26fc23"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.Typing.FoldAgreement.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.Typing.FoldAgreement.log",
+    "bytes": 118,
+    "sha256": "86bc28b5755270efd76e65bc3daec4595903e01492a8262a076bd69884c98819"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Program.ValueModel.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Program.ValueModel.log",
+    "bytes": 108,
+    "sha256": "5992a9a4c4060322c4d1475fbed324b227855486b103b2fd2ae5ee07a0f3bd1a"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Run.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Run.log",
+    "bytes": 1421,
+    "sha256": "473a9d379f9be1ce9ae4e48c0f818022566108a0485c7d2d218ca3f6d6f5dd95"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Store.CanonicalSpec.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Store.CanonicalSpec.log",
+    "bytes": 109,
+    "sha256": "fd0dbe507a8065cfc2d3603e7cb15b0d02b2e442fe70bf4dfa126d24fb24bb1d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.Store.Folds.Val.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.Store.Folds.Val.log",
+    "bytes": 105,
+    "sha256": "3d146ab7a83049afd90eba9b3816fb5224645296d30afb4b2a600d3fbd55f6ac"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Laws.log",
+    "archive_member": "before-fill/module-logs/Effect4.Laws.log",
+    "bytes": 89,
+    "sha256": "d142048bff0725054b2fa461f243c8467882f064dc5ad5c6b6ab39aa98634992"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Machine.Fibers.log",
+    "archive_member": "before-fill/module-logs/Effect4.Machine.Fibers.log",
+    "bytes": 99,
+    "sha256": "667dfdbae9d9af5c8369e4977ce99aab3d9c823138caff748bb0a99aa9586ef8"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Machine.Stores.log",
+    "archive_member": "before-fill/module-logs/Effect4.Machine.Stores.log",
+    "bytes": 1911,
+    "sha256": "1f738dd1cd72644e96a643539e542d78c8e5113fb653d34445405de72cd595cf"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Machine.Timer.log",
+    "archive_member": "before-fill/module-logs/Effect4.Machine.Timer.log",
+    "bytes": 99,
+    "sha256": "aedd9922af38fe8ab5cff23365a566fe7099d55f17745c4dca391f9a00b013d7"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Machine.Value.log",
+    "archive_member": "before-fill/module-logs/Effect4.Machine.Value.log",
+    "bytes": 224,
+    "sha256": "6620f20e80609fe70fdaa159e42733839b4598baad242fa38f0d23b84a4be2ed"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Program.Admit.log",
+    "archive_member": "before-fill/module-logs/Effect4.Program.Admit.log",
+    "bytes": 98,
+    "sha256": "56777d98b5c827c1b1e3c7278e6ff0c3a3ddfad6a5e6952ebb535bed8b41f957"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Program.Compile.log",
+    "archive_member": "before-fill/module-logs/Effect4.Program.Compile.log",
+    "bytes": 155,
+    "sha256": "28929b0806bdbd7ef567ed2c894f60270039d58c8bab7720e72f160431f6cc37"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Program.ConfigValue.log",
+    "archive_member": "before-fill/module-logs/Effect4.Program.ConfigValue.log",
+    "bytes": 104,
+    "sha256": "57bce1eb6ff0c456755652286b5e8bf8c86e73e43f87c7a5721d7a862e65c849"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Program.Decision.log",
+    "archive_member": "before-fill/module-logs/Effect4.Program.Decision.log",
+    "bytes": 101,
+    "sha256": "458bd7462c28ab9ea551e03cc4a8be5c9f20d1445dbb9545446374ece3f7ba9c"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Program.Packages.log",
+    "archive_member": "before-fill/module-logs/Effect4.Program.Packages.log",
+    "bytes": 101,
+    "sha256": "bf3722d998f1c44f3066accc823546d7e064b72714bb45fef3106a1558885db8"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Program.Profile.log",
+    "archive_member": "before-fill/module-logs/Effect4.Program.Profile.log",
+    "bytes": 609,
+    "sha256": "06650038f85c2c7f6a8882ab48dde97380564341680aa11f198b24999be2748c"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Program.Typing.Agreement.log",
+    "archive_member": "before-fill/module-logs/Effect4.Program.Typing.Agreement.log",
+    "bytes": 242,
+    "sha256": "2b56e54a696ec2b4d59848b7592039a085da55064dc6e30b777602994b022536"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Run.log",
+    "archive_member": "before-fill/module-logs/Effect4.Run.log",
+    "bytes": 88,
+    "sha256": "6e7f1e0fa4473c88c1e45ea4dc51a18b66a3119b88003257f058fbe4ad17e968"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Schema.Accepts.log",
+    "archive_member": "before-fill/module-logs/Effect4.Schema.Accepts.log",
+    "bytes": 99,
+    "sha256": "b00bf77f0e8abe67a1bea16234319cefb8cc3ee62859c663d4ac99548e8573e0"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Schema.Codec.log",
+    "archive_member": "before-fill/module-logs/Effect4.Schema.Codec.log",
+    "bytes": 97,
+    "sha256": "6b7e607637401c832c1145553b8dbd2d567a7b62ef989aaad733e24d8cbbed44"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Schema.Image.log",
+    "archive_member": "before-fill/module-logs/Effect4.Schema.Image.log",
+    "bytes": 97,
+    "sha256": "d03ce5b18be1c707991473c3936f5bf98c670f0608995f5e4ae70aa92a16e5ec"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Carrier.Digest.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Carrier.Digest.log",
+    "bytes": 106,
+    "sha256": "3afd721508264ab4cef8b263e11437b0b8ab59aa39ab9576924985db538e1c02"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Carrier.Digits.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Carrier.Digits.log",
+    "bytes": 231,
+    "sha256": "761af1913882914657b21038d6c9cee592bbcb43442fa796d48fc03a3df73f82"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Carrier.Fold.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Carrier.Fold.log",
+    "bytes": 594,
+    "sha256": "ebd2a2807372e12b201a3693457f9582a1aebe80910e709ce582a7c41ef02407"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Carrier.Image.Containers.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Carrier.Image.Containers.log",
+    "bytes": 115,
+    "sha256": "66fef905568cb53e1d1b2538f87d36b07bcb86462370e49937e40a894f3c3ec2"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Carrier.Image.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Carrier.Image.log",
+    "bytes": 175,
+    "sha256": "a125f22ff2e819b1c6d6a85cd5064fd6c36deafd37cdb0f496125bc70ff47f75"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Carrier.Kind.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Carrier.Kind.log",
+    "bytes": 149,
+    "sha256": "856bb18630ee35ad2ee6c23e0f8157e4f805541344d5505674a0ca10982cee7d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Carrier.Utf8.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Carrier.Utf8.log",
+    "bytes": 187,
+    "sha256": "1aa2242617140cb9607abf28e335c4d9a424ca91141cd07f45463a1880f85d4e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Carrier.Val.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Carrier.Val.log",
+    "bytes": 1228,
+    "sha256": "4293230111c36f1db884e82bd08aa026822d51efe80c83e4c6f608245cdd1f14"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Domain.AnnotationsCanonical.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Domain.AnnotationsCanonical.log",
+    "bytes": 187,
+    "sha256": "4156392b065db4814d48db003d1babc7d0a701117f70d82311b24de912ee4b02"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Domain.Canonical.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Domain.Canonical.log",
+    "bytes": 514,
+    "sha256": "38998a3138bc48c0c05beb078b5f07bb03125edd49b239fb7840a632ecaf87a9"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Domain.Cascade.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Domain.Cascade.log",
+    "bytes": 105,
+    "sha256": "0626858e3e958896e56d551b6d121bec83fa030d62e566fcd113f8ce95943794"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Domain.Clock.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Domain.Clock.log",
+    "bytes": 157,
+    "sha256": "e12cdb785b10dd4a80b93f90ceefa6118924e521253d88e2b056c2ea97b52f4f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Domain.Derived.Json.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Domain.Derived.Json.log",
+    "bytes": 452,
+    "sha256": "cbdf437675bc5181a484873b0d62344dbdc16dcc82db179e4197dbc055a815a6"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Domain.Derived.Program.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Domain.Derived.Program.log",
+    "bytes": 1864,
+    "sha256": "33eb634d667357839e66e6121719e8468bfc09aa067bae1b58351f78a65c66ad"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Domain.Derived.Schema.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Domain.Derived.Schema.log",
+    "bytes": 1926,
+    "sha256": "7944263cfd260549f0e1dc8436090a9b49107059806a5d7457fcd890f65c4f81"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Domain.Derived.Value.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Domain.Derived.Value.log",
+    "bytes": 545,
+    "sha256": "dab4a1217af9ba2049198d84ba32771074d279dd302b3d21fa732a9ec8c9d1bf"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Domain.Genesis.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Domain.Genesis.log",
+    "bytes": 292,
+    "sha256": "a4139eb43fe40f20eb9f6dc9112cf3b3d3bd71924e69d0bcacbab4d217762103"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Domain.Node.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Domain.Node.log",
+    "bytes": 414,
+    "sha256": "9bfa0e10734623c961120df52cba9dcaebeb98a2136f6491cc36948ba4ce80f2"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Domain.Pin.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Domain.Pin.log",
+    "bytes": 101,
+    "sha256": "aeac484d58a4d77939a9b8de1623ca4eed9934e206f362a6cc554bfb92ee118a"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Domain.PinDerived.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Domain.PinDerived.log",
+    "bytes": 250,
+    "sha256": "8fcd9bef5f2cc5d3425c6d353eac519c3464d79f2ab2fed0200d1ec1b7676d41"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Domain.ProgramWire.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Domain.ProgramWire.log",
+    "bytes": 109,
+    "sha256": "c500bc37805e0ddd3600bd8f03088c3b8df7f5af8890988bb7bb1749add5e5ac"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Domain.RowCanonical.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Domain.RowCanonical.log",
+    "bytes": 110,
+    "sha256": "b14c366fb24cb3ead8e9ce4db500645e4f4dfce4eeded7c9f98382c031e61c2a"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Domain.Shape.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Domain.Shape.log",
+    "bytes": 161,
+    "sha256": "011eaef9e60d378748add81979e857d673ff44c0258ab85e8b46531425e73330"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Domain.Store.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Domain.Store.log",
+    "bytes": 161,
+    "sha256": "45eb794dcff56c9b2b7d01e526e30aa88a7d564f376ecf1a16565b997e3d1df3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Domain.Traits.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Domain.Traits.log",
+    "bytes": 235,
+    "sha256": "946318d642495006f2f72f2d136318140d2db7e8e68bbec30020e859748340f7"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.Store.Domain.Word.log",
+    "archive_member": "before-fill/module-logs/Effect4.Store.Domain.Word.log",
+    "bytes": 103,
+    "sha256": "2d8ba584668777ca8fb07363cf84df1769df3b6a1913ec80ce427d380aa0e92e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4.log",
+    "archive_member": "before-fill/module-logs/Effect4.log",
+    "bytes": 84,
+    "sha256": "866fb61eaf7f6a0ec5a4168ebb66435538f19282ff467bb12600138f489f5e95"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4Gen.Check.log",
+    "archive_member": "before-fill/module-logs/Effect4Gen.Check.log",
+    "bytes": 93,
+    "sha256": "a03772c676cb92c6c87d53c22f3a7c76a25cd04f6d084c2f62dcea7aac53c7d3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4Gen.Forms.log",
+    "archive_member": "before-fill/module-logs/Effect4Gen.Forms.log",
+    "bytes": 93,
+    "sha256": "413135ba37dbb65199ab32b1d6387f4a2849a9b3f9646c8f521e882dcd881a8e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Effect4Gen.Main.log",
+    "archive_member": "before-fill/module-logs/Effect4Gen.Main.log",
+    "bytes": 92,
+    "sha256": "eb8c67b63d3459f7bda367848c802ca7580c0dcab616bcda937a1cbccf85d1d0"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/OCaml5.Eff.Emit.log",
+    "archive_member": "before-fill/module-logs/OCaml5.Eff.Emit.log",
+    "bytes": 92,
+    "sha256": "da600d6a1a4930c3cfec2fef5f6b9e19bbefb9f96e2fadb585112c1912ba6dda"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/OCaml5.Eff.Goldens.log",
+    "archive_member": "before-fill/module-logs/OCaml5.Eff.Goldens.log",
+    "bytes": 95,
+    "sha256": "c3ba16e39a71a73c5ff744f2add37100c1c0d99832b352632a3b89df19a1ff1c"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/OCaml5.Eff.Metadata.log",
+    "archive_member": "before-fill/module-logs/OCaml5.Eff.Metadata.log",
+    "bytes": 96,
+    "sha256": "c61000514613fe9140326925ca724ccc712f5fe55f2c729fbf8bab2ca680a1ed"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/OCaml5.Lcnf.Clock.log",
+    "archive_member": "before-fill/module-logs/OCaml5.Lcnf.Clock.log",
+    "bytes": 94,
+    "sha256": "7987691e734b2528b2c717f5f2aa0df0deab6f4b27fd49660f586bacd651bde4"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/OCaml5.Lcnf.ClockFlow.log",
+    "archive_member": "before-fill/module-logs/OCaml5.Lcnf.ClockFlow.log",
+    "bytes": 98,
+    "sha256": "91cc7580757a018ee8bb1eac420a75a9cf454a9d7c28565463cbe815891a0cfb"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/OCaml5.Lcnf.Externs.log",
+    "archive_member": "before-fill/module-logs/OCaml5.Lcnf.Externs.log",
+    "bytes": 96,
+    "sha256": "fd11913b2ed11a91f8222a8160fc8a0db6e49c632bfbdc10df229f7c6d4bf87e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/OCaml5.Lcnf.Translate.log",
+    "archive_member": "before-fill/module-logs/OCaml5.Lcnf.Translate.log",
+    "bytes": 98,
+    "sha256": "70e93bdb8764adc73a3a30d7d17fb2abc00355d4ad771242b414ff8e23973f2d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/OCaml5.Lcnf.Types.log",
+    "archive_member": "before-fill/module-logs/OCaml5.Lcnf.Types.log",
+    "bytes": 94,
+    "sha256": "d73d48c8717f6e4fff6d449ccaa6ce8e5f49e5e132f87a9b7f48a494f3f96cdd"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/OCaml5.Tools.CasGoldens.log",
+    "archive_member": "before-fill/module-logs/OCaml5.Tools.CasGoldens.log",
+    "bytes": 100,
+    "sha256": "52684199b694d76beb030ea7b83ee3d4e9584ff5e7814a411c0feb7358eb2dba"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/OCaml5.Tools.EffGen.log",
+    "archive_member": "before-fill/module-logs/OCaml5.Tools.EffGen.log",
+    "bytes": 96,
+    "sha256": "03c66325954d121ea7ac390d9570bf7cc1c29d2c749ec567889d9853f5f937e0"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/OCaml5.Tools.EffWire.log",
+    "archive_member": "before-fill/module-logs/OCaml5.Tools.EffWire.log",
+    "bytes": 97,
+    "sha256": "7d32fc44b8557e8e4dcea15391fcae7dbaf9cf2cb5e5c6a52a12210dd83cf957"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/ProofGraph.Search.log",
+    "archive_member": "before-fill/module-logs/ProofGraph.Search.log",
+    "bytes": 94,
+    "sha256": "6b50e8c93a94ddc7166c8da36bacc6d9216daf8037fcd65da2d275dff58dc2fe"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.All.log",
+    "archive_member": "before-fill/module-logs/Test.All.log",
+    "bytes": 85,
+    "sha256": "ced58a29fc8cf00804703cb13311f9b22588ab4724903f0f0a1810617e25ed3a"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Api.AcquireHandleContract.log",
+    "archive_member": "before-fill/module-logs/Test.Api.AcquireHandleContract.log",
+    "bytes": 107,
+    "sha256": "056e5b89a36b1dc314fd3a75a33aa7522e43a1125b7f63d794e5280709e0e35d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Api.HostSessionContract.log",
+    "archive_member": "before-fill/module-logs/Test.Api.HostSessionContract.log",
+    "bytes": 273,
+    "sha256": "c4d8ce3f773f4965a222992da39e9f78bc400e9b3bff099d1d445f444553f5eb"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Api.KeyedHostContract.log",
+    "archive_member": "before-fill/module-logs/Test.Api.KeyedHostContract.log",
+    "bytes": 103,
+    "sha256": "08ec1c58cd6aa309013919c7ff9b8eacb8f6956f31ee744de27a6332320dff4e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Api.SupervisionContract.log",
+    "archive_member": "before-fill/module-logs/Test.Api.SupervisionContract.log",
+    "bytes": 105,
+    "sha256": "7c9919029cc9cd8006dd712caec2b7c06b0b963ec9b9391ff9ad7f65ebbfb4a8"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Audit.AxiomGate.log",
+    "archive_member": "before-fill/module-logs/Test.Audit.AxiomGate.log",
+    "bytes": 97,
+    "sha256": "81ea7486fc33849690dde5a02e37bf9a9570da561665fd711bb4707aba5ef988"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Audit.ClockLiteralFixtures.log",
+    "archive_member": "before-fill/module-logs/Test.Audit.ClockLiteralFixtures.log",
+    "bytes": 108,
+    "sha256": "cc974ba45d3da78220366777b8b8c4d6485895bd9e3d96dc0fc7b18384a5c696"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Audit.ClockLowering.log",
+    "archive_member": "before-fill/module-logs/Test.Audit.ClockLowering.log",
+    "bytes": 101,
+    "sha256": "2a05446a4a429bf3dfc04373423f4531540e3c8372a0d62e5c28ac8b8138d87d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Audit.IndexedColumnActual.log",
+    "archive_member": "before-fill/module-logs/Test.Audit.IndexedColumnActual.log",
+    "bytes": 107,
+    "sha256": "ac90a662ee248b33ab045fe3b4156f0f71369b728d32d794df29f9c0f2abf6a0"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Audit.IndexedColumns.log",
+    "archive_member": "before-fill/module-logs/Test.Audit.IndexedColumns.log",
+    "bytes": 102,
+    "sha256": "80f46e276390f898ec01a58615bc181c74edc133ed157c606fb01e1c93c48200"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Audit.PositionAnalysis.log",
+    "archive_member": "before-fill/module-logs/Test.Audit.PositionAnalysis.log",
+    "bytes": 104,
+    "sha256": "9181f8cd41025506603d1ca78ae4e211b9bac78a6c5a8d31f16e378300a4d5b7"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Audit.PositionCensus.log",
+    "archive_member": "before-fill/module-logs/Test.Audit.PositionCensus.log",
+    "bytes": 102,
+    "sha256": "4f1784021ca361439b02ea97c39612446f19ad7bd24f0aa0e9f94cead3806e7d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Audit.ProofGraph.log",
+    "archive_member": "before-fill/module-logs/Test.Audit.ProofGraph.log",
+    "bytes": 200,
+    "sha256": "399cbc338604e16b342c2ae45e6c6dade5e3fe0aca3e8b13d3cf0ce8302160db"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Audit.ProofGraphSearch.log",
+    "archive_member": "before-fill/module-logs/Test.Audit.ProofGraphSearch.log",
+    "bytes": 104,
+    "sha256": "1834b1eb322b4ea3680345f5fe87fa6b54f0e571316e3a99da980edd1774f3f6"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Audit.RuntimeCoverage.log",
+    "archive_member": "before-fill/module-logs/Test.Audit.RuntimeCoverage.log",
+    "bytes": 103,
+    "sha256": "60eb9154fad1de49ec9951db58ae3bcc8d2025a058f41a29b1eb9103b875872b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Audit.TypedStateDecl.log",
+    "archive_member": "before-fill/module-logs/Test.Audit.TypedStateDecl.log",
+    "bytes": 102,
+    "sha256": "3c25fcd8e39dffd931b1ae0b23a6997c23fc547cfb5afb23dfd4858fea969abb"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Counterexamples.Schema.Codec.log",
+    "archive_member": "before-fill/module-logs/Test.Counterexamples.Schema.Codec.log",
+    "bytes": 616,
+    "sha256": "097dbd0300e2e420777da62b6383b42c2b8e77b19c13462b5fa0ed5775939080"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Machine.Fuzz.log",
+    "archive_member": "before-fill/module-logs/Test.Machine.Fuzz.log",
+    "bytes": 94,
+    "sha256": "2bac178f4405b57e48070bcb17b3c30ccc5903519795fe042424ec4573ae4d00"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Machine.Runtime.ArenaContract.log",
+    "archive_member": "before-fill/module-logs/Test.Machine.Runtime.ArenaContract.log",
+    "bytes": 111,
+    "sha256": "27a2c27eb520be6c8e899f116e613ca913f3d00805731e30dc3f75620d3f403d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Machine.Runtime.CompletionDataContract.log",
+    "archive_member": "before-fill/module-logs/Test.Machine.Runtime.CompletionDataContract.log",
+    "bytes": 120,
+    "sha256": "328b5b397fc6721b6dc87b7e54efc1ebc677da8c32184de8051ebcb3bc34b427"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Machine.Runtime.HandlesContract.log",
+    "archive_member": "before-fill/module-logs/Test.Machine.Runtime.HandlesContract.log",
+    "bytes": 113,
+    "sha256": "a9a0462555e1749838134f621c354e67cbe225b11b1cd9c8a14638c628b1e5e0"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Machine.Runtime.SchedulerCoreContract.log",
+    "archive_member": "before-fill/module-logs/Test.Machine.Runtime.SchedulerCoreContract.log",
+    "bytes": 119,
+    "sha256": "a5a90dbb05b17ddd1a7402d74a94faccddc4ba8e250c9d8c4ecd903eec2357d3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Machine.Runtime.StoresLawsContract.log",
+    "archive_member": "before-fill/module-logs/Test.Machine.Runtime.StoresLawsContract.log",
+    "bytes": 116,
+    "sha256": "b09138cc362ba95dee70136f430e03d5e8a76a43cebbd63d8678e9e2bdb04cec"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Program.AuthorContract.log",
+    "archive_member": "before-fill/module-logs/Test.Program.AuthorContract.log",
+    "bytes": 104,
+    "sha256": "595cc80f78c973491da4049ffd64ef4c2d62b8049e782715f6c3f3ed2e498cb7"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Program.AuthoringContract.log",
+    "archive_member": "before-fill/module-logs/Test.Program.AuthoringContract.log",
+    "bytes": 107,
+    "sha256": "ec2484cea52693ad20de26d400eded0f991059515b51d10bae260e39f1a9ff6f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Program.ConfigContract.log",
+    "archive_member": "before-fill/module-logs/Test.Program.ConfigContract.log",
+    "bytes": 1104,
+    "sha256": "57fe68b7b4f0d23f899269bb8581e90f5e47ab7bd57256ec5674728f41c26632"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Program.DenoteRContract.log",
+    "archive_member": "before-fill/module-logs/Test.Program.DenoteRContract.log",
+    "bytes": 252,
+    "sha256": "dc188b05375bfd78f72f9224c8b524165e60abd0a3744cd3d4a7f44f9f8513ac"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Program.Gen.log",
+    "archive_member": "before-fill/module-logs/Test.Program.Gen.log",
+    "bytes": 93,
+    "sha256": "12ecf9676683e236c764c8c1e8423d7cac382a1e42e80229f87517fa6f4eb1cb"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Program.LinkedRowsContract.log",
+    "archive_member": "before-fill/module-logs/Test.Program.LinkedRowsContract.log",
+    "bytes": 108,
+    "sha256": "b1c3ffd3140de82bf744d3fc8a4706b7661be82faebe08e05699b28021561d43"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Program.RuntimeRShapesContract.log",
+    "archive_member": "before-fill/module-logs/Test.Program.RuntimeRShapesContract.log",
+    "bytes": 112,
+    "sha256": "0132dac2ce14aca0c1ab050bf6506984dd37ee99cb8befdd5ef85b0f87efc8f0"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Schema.DialectContract.log",
+    "archive_member": "before-fill/module-logs/Test.Schema.DialectContract.log",
+    "bytes": 104,
+    "sha256": "dac095e81faee2ac56b11704c267dc76ef58784dc39b1777244bcd7265c9643b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Store.DerivedCheck.log",
+    "archive_member": "before-fill/module-logs/Test.Store.DerivedCheck.log",
+    "bytes": 100,
+    "sha256": "889c1e0ff68090bc53f2b304f877c691e8acc3f1aa9336d3e292ce6a631456e7"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Store.NodeContract.log",
+    "archive_member": "before-fill/module-logs/Test.Store.NodeContract.log",
+    "bytes": 100,
+    "sha256": "c89bb7d0b412994eb55a6cecf14308e3b471ca7ab172969fba1e12e53628527b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Store.ProbeContract.log",
+    "archive_member": "before-fill/module-logs/Test.Store.ProbeContract.log",
+    "bytes": 101,
+    "sha256": "43b8e5e986ca5fb6bf9a95b23c73810119c43be71bfc85e4c84b8e38ff6870cf"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Store.StoreContract.log",
+    "archive_member": "before-fill/module-logs/Test.Store.StoreContract.log",
+    "bytes": 101,
+    "sha256": "b4d9b43e04c524bfd104f84f0472468acc4fcdfd538d89c390edbb6612998839"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Store.Templates.log",
+    "archive_member": "before-fill/module-logs/Test.Store.Templates.log",
+    "bytes": 97,
+    "sha256": "214936e078add1c1a03463a66d0abf816439f024937884f5b38ff318af62a4aa"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Store.TraitContract.log",
+    "archive_member": "before-fill/module-logs/Test.Store.TraitContract.log",
+    "bytes": 101,
+    "sha256": "ac111032f613b1919216eddfa53420d17b7f2f3f70a2e85d2888ee8bfe3e179e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Test.Store.WordContract.log",
+    "archive_member": "before-fill/module-logs/Test.Store.WordContract.log",
+    "bytes": 100,
+    "sha256": "1fcba90ab1107927cbd383ea80ff3500026a152767f10b4181cc6bd798a40f44"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/TestSupport.AcquireHandle.log",
+    "archive_member": "before-fill/module-logs/TestSupport.AcquireHandle.log",
+    "bytes": 102,
+    "sha256": "a2b12beb69eeaafad96a4ce237b2b06c477a3ec23eea393a7e70b2faed893dc0"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/TestSupport.CasEntry.log",
+    "archive_member": "before-fill/module-logs/TestSupport.CasEntry.log",
+    "bytes": 97,
+    "sha256": "fe044b8ee7affe4473f2adda950b9afeb35ec9383a9cb41c0f3ad542e3ddd004"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Tools.ArchitectureRoles.log",
+    "archive_member": "before-fill/module-logs/Tools.ArchitectureRoles.log",
+    "bytes": 100,
+    "sha256": "54ee9fc0f9bce75a865cbed71a9d0c5d00f6fe8c12e33941bd05e1992fb1d25f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Tools.HostProtocol.log",
+    "archive_member": "before-fill/module-logs/Tools.HostProtocol.log",
+    "bytes": 95,
+    "sha256": "1c75a4ffa0e24f5cf75b26a02c98b329c2350616c2aae9c66e38d915752b0575"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Tools.RowTypes.log",
+    "archive_member": "before-fill/module-logs/Tools.RowTypes.log",
+    "bytes": 91,
+    "sha256": "516e0a75763349f1cd3c93c1e9c9b7fe843c03e017c90a2a30f9345794864a15"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/Tools.Variances.log",
+    "archive_member": "before-fill/module-logs/Tools.Variances.log",
+    "bytes": 92,
+    "sha256": "80ed0272ffcddff765a05a9bd4d60042143e1d44a5487448c19a512b20d0cef5"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/harness.truth.Truth.log",
+    "archive_member": "before-fill/module-logs/harness.truth.Truth.log",
+    "bytes": 96,
+    "sha256": "f4dcf1b3e7f073f6d7c0b5fa4a8d2201d009eef9c0cfe4ddb750dfd3a0f7e77e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/module-logs/harness.truth.session.Keyed.log",
+    "archive_member": "before-fill/module-logs/harness.truth.session.Keyed.log",
+    "bytes": 104,
+    "sha256": "633e514b59bc2be1537f9bb3f1ec78c995220fca0af42714645e63a6fe452fce"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/000-ZeroCandidates.log",
+    "archive_member": "before-fill/process-logs/000-ZeroCandidates.log",
+    "bytes": 8233,
+    "sha256": "05e3e292d69d0a11ebe782ded6a4265396846a486569399ec9f48bec34add16c"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/001-Drivers.Corpus.log",
+    "archive_member": "before-fill/process-logs/001-Drivers.Corpus.log",
+    "bytes": 91,
+    "sha256": "8c62d323ff4abb2730619fd06c723a59b2f8c6a1829b396f8e3fc70ac624f76d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/002-Drivers.ProgramStructureCheck.log",
+    "archive_member": "before-fill/process-logs/002-Drivers.ProgramStructureCheck.log",
+    "bytes": 106,
+    "sha256": "2979993be09a6348630dd2a8ef56aaf671d55a9f0af61a756fb824509dee76e3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/003-Drivers.TsGen.log",
+    "archive_member": "before-fill/process-logs/003-Drivers.TsGen.log",
+    "bytes": 90,
+    "sha256": "7c1d8f6f22d62586932f6140a13ed91e5a048487a3248afcdefd0e7aeeb1faef"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/004-Effect4.Api.log",
+    "archive_member": "before-fill/process-logs/004-Effect4.Api.log",
+    "bytes": 88,
+    "sha256": "9c86ef1dc898a10788aae77abf58060c4f8ce43b52b39fff89540234e112b04d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/005-Effect4.Api.Derived.log",
+    "archive_member": "before-fill/process-logs/005-Effect4.Api.Derived.log",
+    "bytes": 806,
+    "sha256": "a900ef0f8372b8331f360a86f29e337e989df2a5930171e46ec473a1c21794cb"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/006-Effect4.Api.RunnerDerived.log",
+    "archive_member": "before-fill/process-logs/006-Effect4.Api.RunnerDerived.log",
+    "bytes": 1892,
+    "sha256": "78442b076566973d8a553bfbc15a4eaef23db1252ce1c0c6d6df4b0c348ba35b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/007-Effect4.Codegen.Types.log",
+    "archive_member": "before-fill/process-logs/007-Effect4.Codegen.Types.log",
+    "bytes": 368,
+    "sha256": "c7588e400d6e3107e014c9729aa6807a55f709113d0e4786325bb6ec62446b7b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/008-Effect4.Data.Ascii.log",
+    "archive_member": "before-fill/process-logs/008-Effect4.Data.Ascii.log",
+    "bytes": 221,
+    "sha256": "2add7000f747ed7c1b14bec784b0e4b8f8264a0c955ace492b9eee57d061044c"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/009-Effect4.Data.ClockMillis.log",
+    "archive_member": "before-fill/process-logs/009-Effect4.Data.ClockMillis.log",
+    "bytes": 101,
+    "sha256": "ed62ed50b37e40e3881041e9c3337175201fc3eb7f3d00a42915bca28083f6c7"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/010-Effect4.Laws.Api.HostSession.log",
+    "archive_member": "before-fill/process-logs/010-Effect4.Laws.Api.HostSession.log",
+    "bytes": 338,
+    "sha256": "00084871fd6d0e95cdb8d7055f029984847ee8e00de12ee0b3f3a9e930cd1e97"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/011-Effect4.Laws.Api.ModuleReadable.log",
+    "archive_member": "before-fill/process-logs/011-Effect4.Laws.Api.ModuleReadable.log",
+    "bytes": 188,
+    "sha256": "31616e5ab349ed8f2682841368ce14c6ab1f89dbef1bc227390acbfe6be3f371"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/012-Effect4.Laws.Api.Supervision.log",
+    "archive_member": "before-fill/process-logs/012-Effect4.Laws.Api.Supervision.log",
+    "bytes": 448,
+    "sha256": "75afea8d5c0b77af8b33795ae58ae3159b26afb727219217193abec8f3443439"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/013-Effect4.Laws.Machine.Approximation.log",
+    "archive_member": "before-fill/process-logs/013-Effect4.Laws.Machine.Approximation.log",
+    "bytes": 1007,
+    "sha256": "98aa0babfc13d6e189fada74de773e00ec3a5215edb8c3acc46f408537cd162d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/014-Effect4.Laws.Machine.Book.log",
+    "archive_member": "before-fill/process-logs/014-Effect4.Laws.Machine.Book.log",
+    "bytes": 864,
+    "sha256": "15a1a1943df5984a18fc1ec69ff26e5fd0d7d43bc4412dfd8f6f6e0e16b7766a"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/015-Effect4.Laws.Machine.Clauses.log",
+    "archive_member": "before-fill/process-logs/015-Effect4.Laws.Machine.Clauses.log",
+    "bytes": 2567,
+    "sha256": "d1dd939c4cc73022de32b3f63dcd42941be1685ff4d2f7e1fd75d5beeed0dfbf"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/016-Effect4.Laws.Machine.CompletionData.log",
+    "archive_member": "before-fill/process-logs/016-Effect4.Laws.Machine.CompletionData.log",
+    "bytes": 112,
+    "sha256": "e1f60624ebbfc39c9ec0ce1f0ceda9220ac5dc2a6e2f239b273d45f2183b30b4"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/017-Effect4.Laws.Machine.Handles.log",
+    "archive_member": "before-fill/process-logs/017-Effect4.Laws.Machine.Handles.log",
+    "bytes": 2071,
+    "sha256": "81ac98a37ba42bc474f7b44f73a648b26b440ee8094e28c3c0f85b8c64afec2b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/018-Effect4.Laws.Machine.Scheduling.log",
+    "archive_member": "before-fill/process-logs/018-Effect4.Laws.Machine.Scheduling.log",
+    "bytes": 109,
+    "sha256": "2d77a0df76c73364cb2af2f7e7a87192402598f75c144dbb6baaf598136af0ca"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/019-Effect4.Laws.Machine.StoresLaws.log",
+    "archive_member": "before-fill/process-logs/019-Effect4.Laws.Machine.StoresLaws.log",
+    "bytes": 1587,
+    "sha256": "2258f8ee158587097517406b7f99281a7477bd90440c40e4cd44e784c9c1d270"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/020-Effect4.Laws.Machine.Witnesses.log",
+    "archive_member": "before-fill/process-logs/020-Effect4.Laws.Machine.Witnesses.log",
+    "bytes": 5259,
+    "sha256": "8de245b8e0055259ce04ec8dff910d1ba31d8e5c2acb7e331d9aeef2b7b9e729"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/021-Effect4.Laws.Program.Admits.log",
+    "archive_member": "before-fill/process-logs/021-Effect4.Laws.Program.Admits.log",
+    "bytes": 159,
+    "sha256": "19ddb281000da81113c5d65b47754670b3dfff164c4c279e098d99945ff200e1"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/022-Effect4.Laws.Program.Agreement.log",
+    "archive_member": "before-fill/process-logs/022-Effect4.Laws.Program.Agreement.log",
+    "bytes": 6769,
+    "sha256": "4c7b673d6fc2dd4a2656b4383223b0b59424982a0b9cb94954942550a36a0b6f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/023-Effect4.Laws.Program.Agreement.Machine.log",
+    "archive_member": "before-fill/process-logs/023-Effect4.Laws.Program.Agreement.Machine.log",
+    "bytes": 2030,
+    "sha256": "e7406053bcb017de410f2a14d4989f34e54be9b8602ef9c613872d611656b81e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/024-Effect4.Laws.Program.Authoring.Forms.log",
+    "archive_member": "before-fill/process-logs/024-Effect4.Laws.Program.Authoring.Forms.log",
+    "bytes": 114,
+    "sha256": "667c6d22b76c0877fc4a10a9fe2d9e1c7622888d43b255383998e0688c8b5784"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/025-Effect4.Laws.Program.DenoteR.log",
+    "archive_member": "before-fill/process-logs/025-Effect4.Laws.Program.DenoteR.log",
+    "bytes": 685,
+    "sha256": "bed0b04d9f054444afb78f25b91d5a22ac7a44b7b366014e420e9c860565cd97"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/026-Effect4.Laws.Program.Guard.AnswerDecision.log",
+    "archive_member": "before-fill/process-logs/026-Effect4.Laws.Program.Guard.AnswerDecision.log",
+    "bytes": 119,
+    "sha256": "6992b7f6753da8ad2f586d098cc140364fe15877acc0f8417dc74531894b3637"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/027-Effect4.Laws.Program.Guard.Core.log",
+    "archive_member": "before-fill/process-logs/027-Effect4.Laws.Program.Guard.Core.log",
+    "bytes": 815,
+    "sha256": "3503f0ea65cf8af1f4a2a6dd8d1177c6e9851051af33585c756c053c578bf5a2"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/028-Effect4.Laws.Program.Guard.DeferredCause.log",
+    "archive_member": "before-fill/process-logs/028-Effect4.Laws.Program.Guard.DeferredCause.log",
+    "bytes": 118,
+    "sha256": "60993fe43ee09e1f823b14cc9117701344b35f98ded8c0f8aea025c453177be3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/029-Effect4.Laws.Program.Guard.FrameOwned.log",
+    "archive_member": "before-fill/process-logs/029-Effect4.Laws.Program.Guard.FrameOwned.log",
+    "bytes": 291,
+    "sha256": "6fbb7372f1301e0ad2bc5ab2f79868e81541a62fef79ef90bb32ec6e38e17eef"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/030-Effect4.Laws.Program.Guard.Interruption.log",
+    "archive_member": "before-fill/process-logs/030-Effect4.Laws.Program.Guard.Interruption.log",
+    "bytes": 117,
+    "sha256": "fcd35ada7e112c26b6d53af1f45b24318d6765f1b001266d4fc4eb0f3face2e0"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/031-Effect4.Laws.Program.Guard.NativeAssembly.log",
+    "archive_member": "before-fill/process-logs/031-Effect4.Laws.Program.Guard.NativeAssembly.log",
+    "bytes": 119,
+    "sha256": "6894958afe79e8418a77543a9693694b9f27bd0ab31c9fd09d09a6f57b69f5c8"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/032-Effect4.Laws.Program.Guard.NativeState.log",
+    "archive_member": "before-fill/process-logs/032-Effect4.Laws.Program.Guard.NativeState.log",
+    "bytes": 116,
+    "sha256": "7c7136e0b33cfaa5231f4593eae4521d0f9365c4fa47a2890d4813db3a103797"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/033-Effect4.Laws.Program.Guard.NativeStateExternal.log",
+    "archive_member": "before-fill/process-logs/033-Effect4.Laws.Program.Guard.NativeStateExternal.log",
+    "bytes": 124,
+    "sha256": "19812d4c134ea4b91572bf205b4105bd7dea954528548ef8fa77c830ba2e6aee"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/034-Effect4.Laws.Program.Guard.NativeStateLinks.log",
+    "archive_member": "before-fill/process-logs/034-Effect4.Laws.Program.Guard.NativeStateLinks.log",
+    "bytes": 121,
+    "sha256": "f5995241ca4f4e9ccf4dd727ce64663f43d58a2b282ca89fc1888490282ac5c8"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/035-Effect4.Laws.Program.Guard.NativeStateMotion.log",
+    "archive_member": "before-fill/process-logs/035-Effect4.Laws.Program.Guard.NativeStateMotion.log",
+    "bytes": 122,
+    "sha256": "6b9d83127c2496d7d429d0e99fc423341e31d64b4dcb84ee79a765de319f9405"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/036-Effect4.Laws.Program.Guard.Observer.log",
+    "archive_member": "before-fill/process-logs/036-Effect4.Laws.Program.Guard.Observer.log",
+    "bytes": 113,
+    "sha256": "4b6e45c02da841e3c6d71ed300437bf3bba8bcd139d27611c71ccd3ceae8bf27"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/037-Effect4.Laws.Program.Guard.OuterDriver.log",
+    "archive_member": "before-fill/process-logs/037-Effect4.Laws.Program.Guard.OuterDriver.log",
+    "bytes": 116,
+    "sha256": "1fb0659ec322219c3a1ebeefe2f3508d5838b749397b1195a7bb8b898fef2512"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/038-Effect4.Laws.Program.Guard.Race.log",
+    "archive_member": "before-fill/process-logs/038-Effect4.Laws.Program.Guard.Race.log",
+    "bytes": 109,
+    "sha256": "b269ee48bcab12348e097dc086011d563cff44209557f306d6c407da0c7a3ebb"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/039-Effect4.Laws.Program.Guard.RaceSites.log",
+    "archive_member": "before-fill/process-logs/039-Effect4.Laws.Program.Guard.RaceSites.log",
+    "bytes": 114,
+    "sha256": "11e21701f67056791aa532a6f12336c28fdd6c24d7500abc88be165e4cabf709"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/040-Effect4.Laws.Program.Guard.RegistrationDone.log",
+    "archive_member": "before-fill/process-logs/040-Effect4.Laws.Program.Guard.RegistrationDone.log",
+    "bytes": 121,
+    "sha256": "88f9e1f4fbd55c8e631a4a3c367858e4e248be23be2e39ba68268127915b785a"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/041-Effect4.Laws.Program.Guard.RegistrationNested.log",
+    "archive_member": "before-fill/process-logs/041-Effect4.Laws.Program.Guard.RegistrationNested.log",
+    "bytes": 123,
+    "sha256": "93a674fcea93b031ec3ca61f64474fcc6f6ef9270159d0677d003b6b2470fd57"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/042-Effect4.Laws.Program.Guard.ReturnCommands.log",
+    "archive_member": "before-fill/process-logs/042-Effect4.Laws.Program.Guard.ReturnCommands.log",
+    "bytes": 119,
+    "sha256": "c683cf06c1014fb1de27ab99c97f171a6620cdda786eec9ae538b76f68ffeeae"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/043-Effect4.Laws.Program.Guard.ReturnFields.log",
+    "archive_member": "before-fill/process-logs/043-Effect4.Laws.Program.Guard.ReturnFields.log",
+    "bytes": 117,
+    "sha256": "f65011fb16746efc7947c9e32db26d914c389bedccae4d414debddad98d11e5f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/044-Effect4.Laws.Program.Guard.ReturnTasks.log",
+    "archive_member": "before-fill/process-logs/044-Effect4.Laws.Program.Guard.ReturnTasks.log",
+    "bytes": 116,
+    "sha256": "75ea971d780b9be8b5b03bd727f0cfd20f84dcd1e20c468c667a3cbb5666e0e2"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/045-Effect4.Laws.Program.Guard.Settle.log",
+    "archive_member": "before-fill/process-logs/045-Effect4.Laws.Program.Guard.Settle.log",
+    "bytes": 111,
+    "sha256": "8fd37798d35164918f17909934d5c640e3c6770ae48b1fab41d477c404de108f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/046-Effect4.Laws.Program.Guard.Single.log",
+    "archive_member": "before-fill/process-logs/046-Effect4.Laws.Program.Guard.Single.log",
+    "bytes": 111,
+    "sha256": "cdb1e37f12ed7cdaaabe2d778a5949dd3681359c9a0c422c063a2e04c5af8c75"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/047-Effect4.Laws.Program.Handles.Compile.log",
+    "archive_member": "before-fill/process-logs/047-Effect4.Laws.Program.Handles.Compile.log",
+    "bytes": 163,
+    "sha256": "eda543a6b1d63238bfe396254820c02b37c1724fede28993ed30e2ed69e8b238"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/048-Effect4.Laws.Program.Handles.Evaluation.log",
+    "archive_member": "before-fill/process-logs/048-Effect4.Laws.Program.Handles.Evaluation.log",
+    "bytes": 117,
+    "sha256": "fe2416687fc5ac51c7cd5c62a508d3923d881c8fc9bcbe18aaf688bf06360cfa"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/049-Effect4.Laws.Program.Handles.Hooks.log",
+    "archive_member": "before-fill/process-logs/049-Effect4.Laws.Program.Handles.Hooks.log",
+    "bytes": 112,
+    "sha256": "3dff86df971051ec017f77cbfbfd924bdffc80ca7fc7dfa4ed3782650ac50966"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/050-Effect4.Laws.Program.Handles.Layer.log",
+    "archive_member": "before-fill/process-logs/050-Effect4.Laws.Program.Handles.Layer.log",
+    "bytes": 168,
+    "sha256": "727a2d95da2bfca53737c18383bd376176c35d617fb0dbc9040c503e33b734c9"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/051-Effect4.Laws.Program.Intro.Elementary.log",
+    "archive_member": "before-fill/process-logs/051-Effect4.Laws.Program.Intro.Elementary.log",
+    "bytes": 114,
+    "sha256": "51a78731c247723b2c50bf32b55d1e31965ad283472304d922824925cbf08a8e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/052-Effect4.Laws.Program.Intro.Fibers.log",
+    "archive_member": "before-fill/process-logs/052-Effect4.Laws.Program.Intro.Fibers.log",
+    "bytes": 110,
+    "sha256": "d961c9b70ad6c6b3760e6287755e545d0c149827fc05d0868068c099a1bdc91d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/053-Effect4.Laws.Program.Intro.Merge.log",
+    "archive_member": "before-fill/process-logs/053-Effect4.Laws.Program.Intro.Merge.log",
+    "bytes": 109,
+    "sha256": "b3df647c2378a85f3166aadea4e2baa3a9864528522cb30e49d383db7c63f11e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/054-Effect4.Laws.Program.Intro.Weight.log",
+    "archive_member": "before-fill/process-logs/054-Effect4.Laws.Program.Intro.Weight.log",
+    "bytes": 163,
+    "sha256": "542affede0b0976b0dbc351b534f25d153f32693c0d8837f0bc37b667e268a9d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/055-Effect4.Laws.Program.LayerSharing.log",
+    "archive_member": "before-fill/process-logs/055-Effect4.Laws.Program.LayerSharing.log",
+    "bytes": 273,
+    "sha256": "35960b7a70adf53a2dbe4000adaa332fb03783614291722a3f78e4534224d963"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/056-Effect4.Laws.Program.Means.log",
+    "archive_member": "before-fill/process-logs/056-Effect4.Laws.Program.Means.log",
+    "bytes": 914,
+    "sha256": "c3c547b2ce347c02b10cd58cc97f838245ac2d040f391f954f3d505c485b7f56"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/057-Effect4.Laws.Program.RuntimeR.log",
+    "archive_member": "before-fill/process-logs/057-Effect4.Laws.Program.RuntimeR.log",
+    "bytes": 733,
+    "sha256": "c8b8ac4466e09511d7530a1297e86b47c53a7940157abb389cd4a1e2b8c970f4"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/058-Effect4.Laws.Program.Sched.log",
+    "archive_member": "before-fill/process-logs/058-Effect4.Laws.Program.Sched.log",
+    "bytes": 451,
+    "sha256": "237832fa4d8898572c93aeae7b3d412477f8916d104a966b34c386f6db9d7599"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/059-Effect4.Laws.Program.Simulation.Actions.log",
+    "archive_member": "before-fill/process-logs/059-Effect4.Laws.Program.Simulation.Actions.log",
+    "bytes": 117,
+    "sha256": "7bf273cc2d45d0daa01b2ec9a160447eb886cb48e34fbb15b5c4766ea202e94c"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/060-Effect4.Laws.Program.Simulation.Deliver.log",
+    "archive_member": "before-fill/process-logs/060-Effect4.Laws.Program.Simulation.Deliver.log",
+    "bytes": 440,
+    "sha256": "23fe66ee97b462c4f31c140ec9ad679605689a2f0bf0e83805d9967c5fe31185"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/061-Effect4.Laws.Program.Simulation.Drive.log",
+    "archive_member": "before-fill/process-logs/061-Effect4.Laws.Program.Simulation.Drive.log",
+    "bytes": 612,
+    "sha256": "d5ab2e58e94966fe036b5f9cd8a0656a84ffde1e44ed91863f8cdb37039d4695"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/062-Effect4.Laws.Program.Simulation.Evaluate.log",
+    "archive_member": "before-fill/process-logs/062-Effect4.Laws.Program.Simulation.Evaluate.log",
+    "bytes": 997,
+    "sha256": "ab9080e5404efd9a35831e628be3bc0b993eb9bbade6a0d14e698719fa113235"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/063-Effect4.Laws.Program.Simulation.Fibers.log",
+    "archive_member": "before-fill/process-logs/063-Effect4.Laws.Program.Simulation.Fibers.log",
+    "bytes": 432,
+    "sha256": "404b270070ca36736b4042cf0cd8cb213cab6660d695553409f2fc766baa95f3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/064-Effect4.Laws.Program.Simulation.Hooks.log",
+    "archive_member": "before-fill/process-logs/064-Effect4.Laws.Program.Simulation.Hooks.log",
+    "bytes": 297,
+    "sha256": "eb01d326c675f1e87d8f48a55648736fe89c951717cea0cbe99d541fd1d2fd02"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/065-Effect4.Laws.Program.Simulation.Pending.log",
+    "archive_member": "before-fill/process-logs/065-Effect4.Laws.Program.Simulation.Pending.log",
+    "bytes": 301,
+    "sha256": "4fb0ac284ecb267e928d50bb9a9d2e5bf2acc87c43dcfff9354ccbd380d5689b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/066-Effect4.Laws.Program.TyView.log",
+    "archive_member": "before-fill/process-logs/066-Effect4.Laws.Program.TyView.log",
+    "bytes": 105,
+    "sha256": "a199080d1a5eb57aab84ddae7f3e9c2a5a784379207161790189c26fe8e1c055"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/067-Effect4.Laws.Program.Typed.State.log",
+    "archive_member": "before-fill/process-logs/067-Effect4.Laws.Program.Typed.State.log",
+    "bytes": 109,
+    "sha256": "67cb1a91d54f34ab80b65beff8e09ec79430b4d510cc55ed1f2745a6c6b866ba"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/068-Effect4.Laws.Program.Typing.FoldAgreement.log",
+    "archive_member": "before-fill/process-logs/068-Effect4.Laws.Program.Typing.FoldAgreement.log",
+    "bytes": 118,
+    "sha256": "86bc28b5755270efd76e65bc3daec4595903e01492a8262a076bd69884c98819"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/069-Effect4.Laws.Run.log",
+    "archive_member": "before-fill/process-logs/069-Effect4.Laws.Run.log",
+    "bytes": 1421,
+    "sha256": "473a9d379f9be1ce9ae4e48c0f818022566108a0485c7d2d218ca3f6d6f5dd95"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/070-Effect4.Laws.Store.CanonicalSpec.log",
+    "archive_member": "before-fill/process-logs/070-Effect4.Laws.Store.CanonicalSpec.log",
+    "bytes": 109,
+    "sha256": "fd0dbe507a8065cfc2d3603e7cb15b0d02b2e442fe70bf4dfa126d24fb24bb1d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/071-Effect4.Machine.Stores.log",
+    "archive_member": "before-fill/process-logs/071-Effect4.Machine.Stores.log",
+    "bytes": 1911,
+    "sha256": "1f738dd1cd72644e96a643539e542d78c8e5113fb653d34445405de72cd595cf"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/072-Effect4.Machine.Timer.log",
+    "archive_member": "before-fill/process-logs/072-Effect4.Machine.Timer.log",
+    "bytes": 99,
+    "sha256": "aedd9922af38fe8ab5cff23365a566fe7099d55f17745c4dca391f9a00b013d7"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/073-Effect4.Machine.Value.log",
+    "archive_member": "before-fill/process-logs/073-Effect4.Machine.Value.log",
+    "bytes": 224,
+    "sha256": "6620f20e80609fe70fdaa159e42733839b4598baad242fa38f0d23b84a4be2ed"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/074-Effect4.Program.Admit.log",
+    "archive_member": "before-fill/process-logs/074-Effect4.Program.Admit.log",
+    "bytes": 98,
+    "sha256": "56777d98b5c827c1b1e3c7278e6ff0c3a3ddfad6a5e6952ebb535bed8b41f957"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/075-Effect4.Program.Compile.log",
+    "archive_member": "before-fill/process-logs/075-Effect4.Program.Compile.log",
+    "bytes": 155,
+    "sha256": "28929b0806bdbd7ef567ed2c894f60270039d58c8bab7720e72f160431f6cc37"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/076-Effect4.Program.ConfigValue.log",
+    "archive_member": "before-fill/process-logs/076-Effect4.Program.ConfigValue.log",
+    "bytes": 104,
+    "sha256": "57bce1eb6ff0c456755652286b5e8bf8c86e73e43f87c7a5721d7a862e65c849"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/077-Effect4.Program.Decision.log",
+    "archive_member": "before-fill/process-logs/077-Effect4.Program.Decision.log",
+    "bytes": 101,
+    "sha256": "458bd7462c28ab9ea551e03cc4a8be5c9f20d1445dbb9545446374ece3f7ba9c"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/078-Effect4.Program.Profile.log",
+    "archive_member": "before-fill/process-logs/078-Effect4.Program.Profile.log",
+    "bytes": 609,
+    "sha256": "06650038f85c2c7f6a8882ab48dde97380564341680aa11f198b24999be2748c"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/079-Effect4.Program.Typing.Agreement.log",
+    "archive_member": "before-fill/process-logs/079-Effect4.Program.Typing.Agreement.log",
+    "bytes": 242,
+    "sha256": "2b56e54a696ec2b4d59848b7592039a085da55064dc6e30b777602994b022536"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/080-Effect4.Store.Carrier.Digest.log",
+    "archive_member": "before-fill/process-logs/080-Effect4.Store.Carrier.Digest.log",
+    "bytes": 106,
+    "sha256": "3afd721508264ab4cef8b263e11437b0b8ab59aa39ab9576924985db538e1c02"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/081-Effect4.Store.Carrier.Digits.log",
+    "archive_member": "before-fill/process-logs/081-Effect4.Store.Carrier.Digits.log",
+    "bytes": 231,
+    "sha256": "761af1913882914657b21038d6c9cee592bbcb43442fa796d48fc03a3df73f82"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/082-Effect4.Store.Carrier.Fold.log",
+    "archive_member": "before-fill/process-logs/082-Effect4.Store.Carrier.Fold.log",
+    "bytes": 594,
+    "sha256": "ebd2a2807372e12b201a3693457f9582a1aebe80910e709ce582a7c41ef02407"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/083-Effect4.Store.Carrier.Image.log",
+    "archive_member": "before-fill/process-logs/083-Effect4.Store.Carrier.Image.log",
+    "bytes": 175,
+    "sha256": "a125f22ff2e819b1c6d6a85cd5064fd6c36deafd37cdb0f496125bc70ff47f75"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/084-Effect4.Store.Carrier.Kind.log",
+    "archive_member": "before-fill/process-logs/084-Effect4.Store.Carrier.Kind.log",
+    "bytes": 149,
+    "sha256": "856bb18630ee35ad2ee6c23e0f8157e4f805541344d5505674a0ca10982cee7d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/085-Effect4.Store.Carrier.Utf8.log",
+    "archive_member": "before-fill/process-logs/085-Effect4.Store.Carrier.Utf8.log",
+    "bytes": 187,
+    "sha256": "1aa2242617140cb9607abf28e335c4d9a424ca91141cd07f45463a1880f85d4e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/086-Effect4.Store.Carrier.Val.log",
+    "archive_member": "before-fill/process-logs/086-Effect4.Store.Carrier.Val.log",
+    "bytes": 1228,
+    "sha256": "4293230111c36f1db884e82bd08aa026822d51efe80c83e4c6f608245cdd1f14"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/087-Effect4.Store.Domain.AnnotationsCanonical.log",
+    "archive_member": "before-fill/process-logs/087-Effect4.Store.Domain.AnnotationsCanonical.log",
+    "bytes": 187,
+    "sha256": "4156392b065db4814d48db003d1babc7d0a701117f70d82311b24de912ee4b02"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/088-Effect4.Store.Domain.Canonical.log",
+    "archive_member": "before-fill/process-logs/088-Effect4.Store.Domain.Canonical.log",
+    "bytes": 514,
+    "sha256": "38998a3138bc48c0c05beb078b5f07bb03125edd49b239fb7840a632ecaf87a9"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/089-Effect4.Store.Domain.Cascade.log",
+    "archive_member": "before-fill/process-logs/089-Effect4.Store.Domain.Cascade.log",
+    "bytes": 105,
+    "sha256": "0626858e3e958896e56d551b6d121bec83fa030d62e566fcd113f8ce95943794"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/090-Effect4.Store.Domain.Clock.log",
+    "archive_member": "before-fill/process-logs/090-Effect4.Store.Domain.Clock.log",
+    "bytes": 157,
+    "sha256": "e12cdb785b10dd4a80b93f90ceefa6118924e521253d88e2b056c2ea97b52f4f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/091-Effect4.Store.Domain.Derived.Json.log",
+    "archive_member": "before-fill/process-logs/091-Effect4.Store.Domain.Derived.Json.log",
+    "bytes": 452,
+    "sha256": "cbdf437675bc5181a484873b0d62344dbdc16dcc82db179e4197dbc055a815a6"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/092-Effect4.Store.Domain.Derived.Program.log",
+    "archive_member": "before-fill/process-logs/092-Effect4.Store.Domain.Derived.Program.log",
+    "bytes": 1864,
+    "sha256": "33eb634d667357839e66e6121719e8468bfc09aa067bae1b58351f78a65c66ad"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/093-Effect4.Store.Domain.Derived.Schema.log",
+    "archive_member": "before-fill/process-logs/093-Effect4.Store.Domain.Derived.Schema.log",
+    "bytes": 1926,
+    "sha256": "7944263cfd260549f0e1dc8436090a9b49107059806a5d7457fcd890f65c4f81"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/094-Effect4.Store.Domain.Derived.Value.log",
+    "archive_member": "before-fill/process-logs/094-Effect4.Store.Domain.Derived.Value.log",
+    "bytes": 545,
+    "sha256": "dab4a1217af9ba2049198d84ba32771074d279dd302b3d21fa732a9ec8c9d1bf"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/095-Effect4.Store.Domain.Genesis.log",
+    "archive_member": "before-fill/process-logs/095-Effect4.Store.Domain.Genesis.log",
+    "bytes": 292,
+    "sha256": "a4139eb43fe40f20eb9f6dc9112cf3b3d3bd71924e69d0bcacbab4d217762103"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/096-Effect4.Store.Domain.Node.log",
+    "archive_member": "before-fill/process-logs/096-Effect4.Store.Domain.Node.log",
+    "bytes": 414,
+    "sha256": "9bfa0e10734623c961120df52cba9dcaebeb98a2136f6491cc36948ba4ce80f2"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/097-Effect4.Store.Domain.Pin.log",
+    "archive_member": "before-fill/process-logs/097-Effect4.Store.Domain.Pin.log",
+    "bytes": 101,
+    "sha256": "aeac484d58a4d77939a9b8de1623ca4eed9934e206f362a6cc554bfb92ee118a"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/098-Effect4.Store.Domain.PinDerived.log",
+    "archive_member": "before-fill/process-logs/098-Effect4.Store.Domain.PinDerived.log",
+    "bytes": 250,
+    "sha256": "8fcd9bef5f2cc5d3425c6d353eac519c3464d79f2ab2fed0200d1ec1b7676d41"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/099-Effect4.Store.Domain.ProgramWire.log",
+    "archive_member": "before-fill/process-logs/099-Effect4.Store.Domain.ProgramWire.log",
+    "bytes": 109,
+    "sha256": "c500bc37805e0ddd3600bd8f03088c3b8df7f5af8890988bb7bb1749add5e5ac"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/100-Effect4.Store.Domain.Shape.log",
+    "archive_member": "before-fill/process-logs/100-Effect4.Store.Domain.Shape.log",
+    "bytes": 161,
+    "sha256": "011eaef9e60d378748add81979e857d673ff44c0258ab85e8b46531425e73330"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/101-Effect4.Store.Domain.Store.log",
+    "archive_member": "before-fill/process-logs/101-Effect4.Store.Domain.Store.log",
+    "bytes": 161,
+    "sha256": "45eb794dcff56c9b2b7d01e526e30aa88a7d564f376ecf1a16565b997e3d1df3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/102-Effect4.Store.Domain.Traits.log",
+    "archive_member": "before-fill/process-logs/102-Effect4.Store.Domain.Traits.log",
+    "bytes": 235,
+    "sha256": "946318d642495006f2f72f2d136318140d2db7e8e68bbec30020e859748340f7"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/103-Effect4.Store.Domain.Word.log",
+    "archive_member": "before-fill/process-logs/103-Effect4.Store.Domain.Word.log",
+    "bytes": 103,
+    "sha256": "2d8ba584668777ca8fb07363cf84df1769df3b6a1913ec80ce427d380aa0e92e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/104-Effect4Gen.Check.log",
+    "archive_member": "before-fill/process-logs/104-Effect4Gen.Check.log",
+    "bytes": 93,
+    "sha256": "a03772c676cb92c6c87d53c22f3a7c76a25cd04f6d084c2f62dcea7aac53c7d3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/105-Effect4Gen.Forms.log",
+    "archive_member": "before-fill/process-logs/105-Effect4Gen.Forms.log",
+    "bytes": 93,
+    "sha256": "413135ba37dbb65199ab32b1d6387f4a2849a9b3f9646c8f521e882dcd881a8e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/106-Effect4Gen.Main.log",
+    "archive_member": "before-fill/process-logs/106-Effect4Gen.Main.log",
+    "bytes": 92,
+    "sha256": "eb8c67b63d3459f7bda367848c802ca7580c0dcab616bcda937a1cbccf85d1d0"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/107-OCaml5.Tools.CasGoldens.log",
+    "archive_member": "before-fill/process-logs/107-OCaml5.Tools.CasGoldens.log",
+    "bytes": 100,
+    "sha256": "52684199b694d76beb030ea7b83ee3d4e9584ff5e7814a411c0feb7358eb2dba"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/108-OCaml5.Tools.EffGen.log",
+    "archive_member": "before-fill/process-logs/108-OCaml5.Tools.EffGen.log",
+    "bytes": 96,
+    "sha256": "03c66325954d121ea7ac390d9570bf7cc1c29d2c749ec567889d9853f5f937e0"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/109-OCaml5.Tools.EffWire.log",
+    "archive_member": "before-fill/process-logs/109-OCaml5.Tools.EffWire.log",
+    "bytes": 97,
+    "sha256": "7d32fc44b8557e8e4dcea15391fcae7dbaf9cf2cb5e5c6a52a12210dd83cf957"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/110-Test.Api.HostSessionContract.log",
+    "archive_member": "before-fill/process-logs/110-Test.Api.HostSessionContract.log",
+    "bytes": 273,
+    "sha256": "c4d8ce3f773f4965a222992da39e9f78bc400e9b3bff099d1d445f444553f5eb"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/111-Test.Counterexamples.Schema.Codec.log",
+    "archive_member": "before-fill/process-logs/111-Test.Counterexamples.Schema.Codec.log",
+    "bytes": 616,
+    "sha256": "097dbd0300e2e420777da62b6383b42c2b8e77b19c13462b5fa0ed5775939080"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/112-Test.Machine.Runtime.HandlesContract.log",
+    "archive_member": "before-fill/process-logs/112-Test.Machine.Runtime.HandlesContract.log",
+    "bytes": 113,
+    "sha256": "a9a0462555e1749838134f621c354e67cbe225b11b1cd9c8a14638c628b1e5e0"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/113-Test.Machine.Runtime.SchedulerCoreContract.log",
+    "archive_member": "before-fill/process-logs/113-Test.Machine.Runtime.SchedulerCoreContract.log",
+    "bytes": 119,
+    "sha256": "a5a90dbb05b17ddd1a7402d74a94faccddc4ba8e250c9d8c4ecd903eec2357d3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/114-Test.Program.AuthorContract.log",
+    "archive_member": "before-fill/process-logs/114-Test.Program.AuthorContract.log",
+    "bytes": 104,
+    "sha256": "595cc80f78c973491da4049ffd64ef4c2d62b8049e782715f6c3f3ed2e498cb7"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/115-Test.Program.AuthoringContract.log",
+    "archive_member": "before-fill/process-logs/115-Test.Program.AuthoringContract.log",
+    "bytes": 107,
+    "sha256": "ec2484cea52693ad20de26d400eded0f991059515b51d10bae260e39f1a9ff6f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/116-Test.Program.ConfigContract.log",
+    "archive_member": "before-fill/process-logs/116-Test.Program.ConfigContract.log",
+    "bytes": 1104,
+    "sha256": "57fe68b7b4f0d23f899269bb8581e90f5e47ab7bd57256ec5674728f41c26632"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/117-Test.Program.DenoteRContract.log",
+    "archive_member": "before-fill/process-logs/117-Test.Program.DenoteRContract.log",
+    "bytes": 252,
+    "sha256": "dc188b05375bfd78f72f9224c8b524165e60abd0a3744cd3d4a7f44f9f8513ac"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/118-Test.Store.Templates.log",
+    "archive_member": "before-fill/process-logs/118-Test.Store.Templates.log",
+    "bytes": 97,
+    "sha256": "214936e078add1c1a03463a66d0abf816439f024937884f5b38ff318af62a4aa"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/119-TestSupport.CasEntry.log",
+    "archive_member": "before-fill/process-logs/119-TestSupport.CasEntry.log",
+    "bytes": 97,
+    "sha256": "fe044b8ee7affe4473f2adda950b9afeb35ec9383a9cb41c0f3ad542e3ddd004"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/120-Tools.HostProtocol.log",
+    "archive_member": "before-fill/process-logs/120-Tools.HostProtocol.log",
+    "bytes": 95,
+    "sha256": "1c75a4ffa0e24f5cf75b26a02c98b329c2350616c2aae9c66e38d915752b0575"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/121-Tools.RowTypes.log",
+    "archive_member": "before-fill/process-logs/121-Tools.RowTypes.log",
+    "bytes": 91,
+    "sha256": "516e0a75763349f1cd3c93c1e9c9b7fe843c03e017c90a2a30f9345794864a15"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/122-Tools.Variances.log",
+    "archive_member": "before-fill/process-logs/122-Tools.Variances.log",
+    "bytes": 92,
+    "sha256": "80ed0272ffcddff765a05a9bd4d60042143e1d44a5487448c19a512b20d0cef5"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/123-harness.truth.Truth.log",
+    "archive_member": "before-fill/process-logs/123-harness.truth.Truth.log",
+    "bytes": 96,
+    "sha256": "f4dcf1b3e7f073f6d7c0b5fa4a8d2201d009eef9c0cfe4ddb750dfd3a0f7e77e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/124-harness.truth.session.Keyed.log",
+    "archive_member": "before-fill/process-logs/124-harness.truth.session.Keyed.log",
+    "bytes": 104,
+    "sha256": "633e514b59bc2be1537f9bb3f1ec78c995220fca0af42714645e63a6fe452fce"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/125-Effect4.Laws.Machine.Arena.log",
+    "archive_member": "before-fill/process-logs/125-Effect4.Laws.Machine.Arena.log",
+    "bytes": 104,
+    "sha256": "603c9faec57f4037640e4f2c0aba1ee89c8ce8c4594b080e97339dbc5a31b0b4"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/126-Effect4.Laws.Program.Typed.World.log",
+    "archive_member": "before-fill/process-logs/126-Effect4.Laws.Program.Typed.World.log",
+    "bytes": 109,
+    "sha256": "4dbcc136c84d6a442c6f357fb0e68b5c2de4221c74e58da0a1bbf72e2f26fc23"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/127-Effect4.Laws.Program.Typed.ForkSource.log",
+    "archive_member": "before-fill/process-logs/127-Effect4.Laws.Program.Typed.ForkSource.log",
+    "bytes": 114,
+    "sha256": "bf1ae15f68fac1a4f49c5b931599834a488abdb1aa83bb720e36af0eab99a46d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/128-Effect4.Laws.Program.Guard.TraceOrigin.log",
+    "archive_member": "before-fill/process-logs/128-Effect4.Laws.Program.Guard.TraceOrigin.log",
+    "bytes": 115,
+    "sha256": "207d849b2464b0d2461a84eda6e98b6e9764cec401d7cc14b82ccdf189e7fbdb"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/129-Effect4.Laws.Machine.Handshake.log",
+    "archive_member": "before-fill/process-logs/129-Effect4.Laws.Machine.Handshake.log",
+    "bytes": 107,
+    "sha256": "b1e8d871ca96d2f828ca88c9a4209a90a3160f087529799228f02430467a4688"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/130-Effect4.Laws.Program.Guard.Handshake.log",
+    "archive_member": "before-fill/process-logs/130-Effect4.Laws.Program.Guard.Handshake.log",
+    "bytes": 113,
+    "sha256": "4d8c61cecdf34a8b310273bf50bf832cf5b526101c8fbf6e742a442f25852579"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/131-Test.Machine.Runtime.ArenaContract.log",
+    "archive_member": "before-fill/process-logs/131-Test.Machine.Runtime.ArenaContract.log",
+    "bytes": 111,
+    "sha256": "27a2c27eb520be6c8e899f116e613ca913f3d00805731e30dc3f75620d3f403d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/132-Test.Audit.IndexedColumns.log",
+    "archive_member": "before-fill/process-logs/132-Test.Audit.IndexedColumns.log",
+    "bytes": 102,
+    "sha256": "80f46e276390f898ec01a58615bc181c74edc133ed157c606fb01e1c93c48200"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/133-Test.Audit.IndexedColumnActual.log",
+    "archive_member": "before-fill/process-logs/133-Test.Audit.IndexedColumnActual.log",
+    "bytes": 107,
+    "sha256": "ac90a662ee248b33ab045fe3b4156f0f71369b728d32d794df29f9c0f2abf6a0"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/134-Test.Audit.ProofGraphSearch.log",
+    "archive_member": "before-fill/process-logs/134-Test.Audit.ProofGraphSearch.log",
+    "bytes": 104,
+    "sha256": "1834b1eb322b4ea3680345f5fe87fa6b54f0e571316e3a99da980edd1774f3f6"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/135-Test.Audit.ProofGraph.log",
+    "archive_member": "before-fill/process-logs/135-Test.Audit.ProofGraph.log",
+    "bytes": 200,
+    "sha256": "399cbc338604e16b342c2ae45e6c6dade5e3fe0aca3e8b13d3cf0ce8302160db"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/136-Effect4.Laws.Machine.Behaviour.log",
+    "archive_member": "before-fill/process-logs/136-Effect4.Laws.Machine.Behaviour.log",
+    "bytes": 107,
+    "sha256": "dddf8a07114912b373c1026ac80aac7caeb6d50474fdf6434a6ca23d6d00da4f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/137-Effect4.Laws.Machine.RefKernel.log",
+    "archive_member": "before-fill/process-logs/137-Effect4.Laws.Machine.RefKernel.log",
+    "bytes": 107,
+    "sha256": "84226dd65a3b14588993f5c7bfd4275518915a6acb63a591555ccfcbe6c59451"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/process-logs/138-Effect4.Laws.Program.Typed.Vocabulary.log",
+    "archive_member": "before-fill/process-logs/138-Effect4.Laws.Program.Typed.Vocabulary.log",
+    "bytes": 114,
+    "sha256": "bb93a2250841130da73d8bf0fa036c4dae76c8bc4adeee8852135a575072fee0"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/results.json",
+    "archive_member": "before-fill/results.json",
+    "bytes": 503722,
+    "sha256": "de504894001ca31ecd5fd195b09b513f415bb9bcb9987bb7c01c97249a93319e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/run.json",
+    "archive_member": "before-fill/run.json",
+    "bytes": 693005,
+    "sha256": "3420c3a7f77913db13b8c91a9f381f0a50b01f309f06cb390544e7bbd6d142b4"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/source-plan.json",
+    "archive_member": "before-fill/source-plan.json",
+    "bytes": 851162,
+    "sha256": "71a87aab9badf6777a047f71ff3801b0e1fc740f8b0d166fb3b2168f44712fda"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/000-ZeroCandidates.lean",
+    "archive_member": "before-fill/sources/000-ZeroCandidates.lean",
+    "bytes": 8227,
+    "sha256": "bddc4ddb8e42675c0d475b14ce385c7d43b623393edb4193da195d1ad5cd252f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/001-Drivers.Corpus.lean",
+    "archive_member": "before-fill/sources/001-Drivers.Corpus.lean",
+    "bytes": 132,
+    "sha256": "5e30dafb7b207bfb20e0442452de7f861b83c2a06a0b6ebf906b77b1d4552074"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/002-Drivers.ProgramStructureCheck.lean",
+    "archive_member": "before-fill/sources/002-Drivers.ProgramStructureCheck.lean",
+    "bytes": 162,
+    "sha256": "a7d4ee9278eb7018719f109be17ba54d031a69d3b98f9363c014b163dbb7ecb6"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/003-Drivers.TsGen.lean",
+    "archive_member": "before-fill/sources/003-Drivers.TsGen.lean",
+    "bytes": 130,
+    "sha256": "d2720ddbc61e55758ccb2925849d78b10c0ed3ac3df367be674ff1f69bf5ad29"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/004-Effect4.Api.lean",
+    "archive_member": "before-fill/sources/004-Effect4.Api.lean",
+    "bytes": 126,
+    "sha256": "3f48300724a0301870cc8d314954c1dc0c677700e4f6bcb39229a42054da1f4f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/005-Effect4.Api.Derived.lean",
+    "archive_member": "before-fill/sources/005-Effect4.Api.Derived.lean",
+    "bytes": 142,
+    "sha256": "cb1782120b1fc53310dc0026ad565d431f8eae65d891ea540ca12c2295648ada"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/006-Effect4.Api.RunnerDerived.lean",
+    "archive_member": "before-fill/sources/006-Effect4.Api.RunnerDerived.lean",
+    "bytes": 154,
+    "sha256": "792a1a6d60dc82bd956f1013ca2888bd69869056da8f06a5ac9373d8a3a5b214"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/007-Effect4.Codegen.Types.lean",
+    "archive_member": "before-fill/sources/007-Effect4.Codegen.Types.lean",
+    "bytes": 146,
+    "sha256": "d8d065c4eec4f3b9170e5efe00408bf24e1dde0e3711cb1dc46743eae0f33833"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/008-Effect4.Data.Ascii.lean",
+    "archive_member": "before-fill/sources/008-Effect4.Data.Ascii.lean",
+    "bytes": 140,
+    "sha256": "da64bd5f9d7aa99bb07014242c64d4dca2781d75ab50261d0e8338f333f39739"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/009-Effect4.Data.ClockMillis.lean",
+    "archive_member": "before-fill/sources/009-Effect4.Data.ClockMillis.lean",
+    "bytes": 152,
+    "sha256": "872ceb2ae8e7c2a5a6462f4b582dbbd7fb114aed2af0b14701e82cf70a8e7a48"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/010-Effect4.Laws.Api.HostSession.lean",
+    "archive_member": "before-fill/sources/010-Effect4.Laws.Api.HostSession.lean",
+    "bytes": 160,
+    "sha256": "4af8d1cdbe1955180046b4e41896ef698435ff7d5799fd1229893eb5618f263b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/011-Effect4.Laws.Api.ModuleReadable.lean",
+    "archive_member": "before-fill/sources/011-Effect4.Laws.Api.ModuleReadable.lean",
+    "bytes": 166,
+    "sha256": "c4e680f3d94b9d18d68c292cd491b31a175c6c920a77f28b483370fbe7722bc6"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/012-Effect4.Laws.Api.Supervision.lean",
+    "archive_member": "before-fill/sources/012-Effect4.Laws.Api.Supervision.lean",
+    "bytes": 160,
+    "sha256": "4f11d6a698dc0bf201fcece1502f4536a40ca32a6817cedf60466860539a350a"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/013-Effect4.Laws.Machine.Approximation.lean",
+    "archive_member": "before-fill/sources/013-Effect4.Laws.Machine.Approximation.lean",
+    "bytes": 172,
+    "sha256": "011cf02f4ab23295ca9bd4665deaa1819abbfb0b674cbcf6969eb19a1ff084c0"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/014-Effect4.Laws.Machine.Book.lean",
+    "archive_member": "before-fill/sources/014-Effect4.Laws.Machine.Book.lean",
+    "bytes": 154,
+    "sha256": "084aca4bbfce0fd98e6743210f0e693ab28c243beb0f9c76c3f0988b6bb8cd36"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/015-Effect4.Laws.Machine.Clauses.lean",
+    "archive_member": "before-fill/sources/015-Effect4.Laws.Machine.Clauses.lean",
+    "bytes": 160,
+    "sha256": "ae99bf76e0e270f4d344e416755ad031b2015c458754f66b9dc18429fa71f1ba"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/016-Effect4.Laws.Machine.CompletionData.lean",
+    "archive_member": "before-fill/sources/016-Effect4.Laws.Machine.CompletionData.lean",
+    "bytes": 174,
+    "sha256": "b580dd840f114e5e6b647764548a28937d55e6ab2c333a460efceda3e6eab35e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/017-Effect4.Laws.Machine.Handles.lean",
+    "archive_member": "before-fill/sources/017-Effect4.Laws.Machine.Handles.lean",
+    "bytes": 160,
+    "sha256": "38caefc4dda9c76cdc8430d796945df334f97d3acd587b5ff3fd03de570b8b8b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/018-Effect4.Laws.Machine.Scheduling.lean",
+    "archive_member": "before-fill/sources/018-Effect4.Laws.Machine.Scheduling.lean",
+    "bytes": 166,
+    "sha256": "9a7749e26f289b05481a160d4fdec96c3185648dfa7844c04ff1e63f535db73e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/019-Effect4.Laws.Machine.StoresLaws.lean",
+    "archive_member": "before-fill/sources/019-Effect4.Laws.Machine.StoresLaws.lean",
+    "bytes": 166,
+    "sha256": "c9366cb4f201344758140b4002d59ef708342e85327f7596bff4111139171da3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/020-Effect4.Laws.Machine.Witnesses.lean",
+    "archive_member": "before-fill/sources/020-Effect4.Laws.Machine.Witnesses.lean",
+    "bytes": 164,
+    "sha256": "caea8a35ad8adf2895b429f0ecc06760c44a89ecd03d4cc1674d56988746f242"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/021-Effect4.Laws.Program.Admits.lean",
+    "archive_member": "before-fill/sources/021-Effect4.Laws.Program.Admits.lean",
+    "bytes": 158,
+    "sha256": "1237fed0c633563af5e62e59687262f478af9f46ea2e93ed496c5f79e6dacc2d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/022-Effect4.Laws.Program.Agreement.lean",
+    "archive_member": "before-fill/sources/022-Effect4.Laws.Program.Agreement.lean",
+    "bytes": 164,
+    "sha256": "21bae0d73e16e66da5ad373c6b5edd689434e2f4eb0ed383c36fc69e59787182"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/023-Effect4.Laws.Program.Agreement.Machine.lean",
+    "archive_member": "before-fill/sources/023-Effect4.Laws.Program.Agreement.Machine.lean",
+    "bytes": 180,
+    "sha256": "672707cd064e88588c2c4c48841805dd0704d3be83e9fa0091b78ccf14a12a59"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/024-Effect4.Laws.Program.Authoring.Forms.lean",
+    "archive_member": "before-fill/sources/024-Effect4.Laws.Program.Authoring.Forms.lean",
+    "bytes": 176,
+    "sha256": "bac3f93b3b858939075633cebfa14d156977c4418697314fcb021faccf81d995"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/025-Effect4.Laws.Program.DenoteR.lean",
+    "archive_member": "before-fill/sources/025-Effect4.Laws.Program.DenoteR.lean",
+    "bytes": 160,
+    "sha256": "826408e5ebf899d353a8d71633a1266ca9d722f849fc05e82baead1772a830d4"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/026-Effect4.Laws.Program.Guard.AnswerDecision.lean",
+    "archive_member": "before-fill/sources/026-Effect4.Laws.Program.Guard.AnswerDecision.lean",
+    "bytes": 186,
+    "sha256": "04418cf6b0fe2a2c2d8fde0507ab5bb9c115c6a10c57da5204b7e8c30d6dbc07"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/027-Effect4.Laws.Program.Guard.Core.lean",
+    "archive_member": "before-fill/sources/027-Effect4.Laws.Program.Guard.Core.lean",
+    "bytes": 166,
+    "sha256": "5a763d24d41aa3babfc087e857ef6f0a2d4a35eae744e1f8ad0df5465eb24077"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/028-Effect4.Laws.Program.Guard.DeferredCause.lean",
+    "archive_member": "before-fill/sources/028-Effect4.Laws.Program.Guard.DeferredCause.lean",
+    "bytes": 184,
+    "sha256": "c7a4248111aa5bcdc754dfa40bb532adf0579b5cb3c4d664640be5ddb8874dee"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/029-Effect4.Laws.Program.Guard.FrameOwned.lean",
+    "archive_member": "before-fill/sources/029-Effect4.Laws.Program.Guard.FrameOwned.lean",
+    "bytes": 178,
+    "sha256": "6c1fb40da95f48c98b01b60ef7d7ca038b585cc470cf5eacc256918374b1ca8b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/030-Effect4.Laws.Program.Guard.Interruption.lean",
+    "archive_member": "before-fill/sources/030-Effect4.Laws.Program.Guard.Interruption.lean",
+    "bytes": 182,
+    "sha256": "1e9db007a7b9612f187942436c51d9717e56d662689b7a6319a8649533423be8"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/031-Effect4.Laws.Program.Guard.NativeAssembly.lean",
+    "archive_member": "before-fill/sources/031-Effect4.Laws.Program.Guard.NativeAssembly.lean",
+    "bytes": 186,
+    "sha256": "4a789fbc8024ce6c6939169506bed1d314b2f5d8b632285d08f9ed1cc4d37228"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/032-Effect4.Laws.Program.Guard.NativeState.lean",
+    "archive_member": "before-fill/sources/032-Effect4.Laws.Program.Guard.NativeState.lean",
+    "bytes": 180,
+    "sha256": "d3df78962ae7bb4c3e124ba4d80775fcbaf1c8f13aa69385212550ff2f4a0661"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/033-Effect4.Laws.Program.Guard.NativeStateExternal.lean",
+    "archive_member": "before-fill/sources/033-Effect4.Laws.Program.Guard.NativeStateExternal.lean",
+    "bytes": 196,
+    "sha256": "3ca49829a51a3bc98b6ecc01e213ac5752e57f8c496adc63d84025807c8608ee"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/034-Effect4.Laws.Program.Guard.NativeStateLinks.lean",
+    "archive_member": "before-fill/sources/034-Effect4.Laws.Program.Guard.NativeStateLinks.lean",
+    "bytes": 190,
+    "sha256": "7031ffb223592c75291c9fb1cdcc28e5e2470545e86aea7e52c15f893604dac1"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/035-Effect4.Laws.Program.Guard.NativeStateMotion.lean",
+    "archive_member": "before-fill/sources/035-Effect4.Laws.Program.Guard.NativeStateMotion.lean",
+    "bytes": 192,
+    "sha256": "b8ab2a422882cbb114137d1f619d0feaf1f56948ada40b22a40ca961c75be41a"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/036-Effect4.Laws.Program.Guard.Observer.lean",
+    "archive_member": "before-fill/sources/036-Effect4.Laws.Program.Guard.Observer.lean",
+    "bytes": 174,
+    "sha256": "c2eb8db3f07c900213e92beafb94a5759fc125261a39074bf46a56c79f3a0f2e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/037-Effect4.Laws.Program.Guard.OuterDriver.lean",
+    "archive_member": "before-fill/sources/037-Effect4.Laws.Program.Guard.OuterDriver.lean",
+    "bytes": 180,
+    "sha256": "fb031f2c384b326d507904f818f5d190283304cce2c9e63b3e5e35616aa1b731"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/038-Effect4.Laws.Program.Guard.Race.lean",
+    "archive_member": "before-fill/sources/038-Effect4.Laws.Program.Guard.Race.lean",
+    "bytes": 166,
+    "sha256": "21b130fc9eb74a76eb1fa0cdbcd286dab80afc3d6c70542b4af74cc60e49e545"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/039-Effect4.Laws.Program.Guard.RaceSites.lean",
+    "archive_member": "before-fill/sources/039-Effect4.Laws.Program.Guard.RaceSites.lean",
+    "bytes": 176,
+    "sha256": "4ddf947d5e18fb63c3aa11138636a427c2afaab4a2524bbe9006ef815283ad84"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/040-Effect4.Laws.Program.Guard.RegistrationDone.lean",
+    "archive_member": "before-fill/sources/040-Effect4.Laws.Program.Guard.RegistrationDone.lean",
+    "bytes": 190,
+    "sha256": "c32bc4885dc12e5016b5f6f2b24de56bcec394046a67c36b33a6d6343a8b1bbc"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/041-Effect4.Laws.Program.Guard.RegistrationNested.lean",
+    "archive_member": "before-fill/sources/041-Effect4.Laws.Program.Guard.RegistrationNested.lean",
+    "bytes": 194,
+    "sha256": "769b98016ee477376755604199185f7f90f88794e779ca703357c2a02d09ef2f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/042-Effect4.Laws.Program.Guard.ReturnCommands.lean",
+    "archive_member": "before-fill/sources/042-Effect4.Laws.Program.Guard.ReturnCommands.lean",
+    "bytes": 186,
+    "sha256": "41fe53be243f75de45d81f8045b8126493ddb065a688ce67cad9dc91edda80ee"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/043-Effect4.Laws.Program.Guard.ReturnFields.lean",
+    "archive_member": "before-fill/sources/043-Effect4.Laws.Program.Guard.ReturnFields.lean",
+    "bytes": 182,
+    "sha256": "7ba5ed2e64460fcad074eb6a42cbf831c2857cdd0456f8f63ae73dec8d947437"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/044-Effect4.Laws.Program.Guard.ReturnTasks.lean",
+    "archive_member": "before-fill/sources/044-Effect4.Laws.Program.Guard.ReturnTasks.lean",
+    "bytes": 180,
+    "sha256": "4d4fda8a972bf27f601deb4493001a70b4955ad1672a760dcdd98d31f534efeb"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/045-Effect4.Laws.Program.Guard.Settle.lean",
+    "archive_member": "before-fill/sources/045-Effect4.Laws.Program.Guard.Settle.lean",
+    "bytes": 170,
+    "sha256": "42293468b1026f4a200b962aec8faa60b96a6909b612deb02e0d9f183808c4ec"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/046-Effect4.Laws.Program.Guard.Single.lean",
+    "archive_member": "before-fill/sources/046-Effect4.Laws.Program.Guard.Single.lean",
+    "bytes": 170,
+    "sha256": "8bb10d60335291aae779c9cd790250d63fceab66a5e26d6eb5e1ff07ca1f4075"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/047-Effect4.Laws.Program.Handles.Compile.lean",
+    "archive_member": "before-fill/sources/047-Effect4.Laws.Program.Handles.Compile.lean",
+    "bytes": 176,
+    "sha256": "5cd472625480c701981c8887cfb626451b6d96b52d56d0b483e69a569d0a19e8"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/048-Effect4.Laws.Program.Handles.Evaluation.lean",
+    "archive_member": "before-fill/sources/048-Effect4.Laws.Program.Handles.Evaluation.lean",
+    "bytes": 182,
+    "sha256": "df0f6593b79217f7603d005c89214ad48a0ee722768fea322eafce92d23b0e4b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/049-Effect4.Laws.Program.Handles.Hooks.lean",
+    "archive_member": "before-fill/sources/049-Effect4.Laws.Program.Handles.Hooks.lean",
+    "bytes": 172,
+    "sha256": "bad4a0df154abed7aa278f647e73be5b44af26fd4b63efa3704a9a1fdf3e6b39"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/050-Effect4.Laws.Program.Handles.Layer.lean",
+    "archive_member": "before-fill/sources/050-Effect4.Laws.Program.Handles.Layer.lean",
+    "bytes": 172,
+    "sha256": "2925d92291c98ea6ca531983592e0607642b88cc80432c5efcd2f508cfc7e804"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/051-Effect4.Laws.Program.Intro.Elementary.lean",
+    "archive_member": "before-fill/sources/051-Effect4.Laws.Program.Intro.Elementary.lean",
+    "bytes": 178,
+    "sha256": "f0bc18ac4d9828e127fa8d69425c968d92366b5e219b41c8855587b102092569"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/052-Effect4.Laws.Program.Intro.Fibers.lean",
+    "archive_member": "before-fill/sources/052-Effect4.Laws.Program.Intro.Fibers.lean",
+    "bytes": 170,
+    "sha256": "834ff972aa74c6aeb99f17dc5961aa950c24936f904f36d54ab5a5af6f415431"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/053-Effect4.Laws.Program.Intro.Merge.lean",
+    "archive_member": "before-fill/sources/053-Effect4.Laws.Program.Intro.Merge.lean",
+    "bytes": 168,
+    "sha256": "bd3d045c3f7d3dfbe5d9df306430a0cb61ce99b7f64ce1263276948a7ebc60fe"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/054-Effect4.Laws.Program.Intro.Weight.lean",
+    "archive_member": "before-fill/sources/054-Effect4.Laws.Program.Intro.Weight.lean",
+    "bytes": 170,
+    "sha256": "4a85d1d2bcc113c562ae36864a8a24ba0f8cb721ca3bb43873a43356c0ec19fc"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/055-Effect4.Laws.Program.LayerSharing.lean",
+    "archive_member": "before-fill/sources/055-Effect4.Laws.Program.LayerSharing.lean",
+    "bytes": 170,
+    "sha256": "a25a04d41645dc9e7fe2df843d8696d0491575854c2e418d6303739abd523900"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/056-Effect4.Laws.Program.Means.lean",
+    "archive_member": "before-fill/sources/056-Effect4.Laws.Program.Means.lean",
+    "bytes": 156,
+    "sha256": "b1ed9711a23bd62bb26ffd0b661f77364650f691419bf5457e69cf8fa32d8c7f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/057-Effect4.Laws.Program.RuntimeR.lean",
+    "archive_member": "before-fill/sources/057-Effect4.Laws.Program.RuntimeR.lean",
+    "bytes": 162,
+    "sha256": "448490458e31d5c1652b313b9f46b46f3fd0ee9e8f343bc6f31311ad6e6cf720"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/058-Effect4.Laws.Program.Sched.lean",
+    "archive_member": "before-fill/sources/058-Effect4.Laws.Program.Sched.lean",
+    "bytes": 156,
+    "sha256": "0ecda80920fe03aeaceba95f80cda8f24edb22bf6aeed02c67c951a4959cb5be"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/059-Effect4.Laws.Program.Simulation.Actions.lean",
+    "archive_member": "before-fill/sources/059-Effect4.Laws.Program.Simulation.Actions.lean",
+    "bytes": 182,
+    "sha256": "fbd47a2cbfa4524bae878896c47eec4622465ff1b74b4da9d256d47db68708b8"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/060-Effect4.Laws.Program.Simulation.Deliver.lean",
+    "archive_member": "before-fill/sources/060-Effect4.Laws.Program.Simulation.Deliver.lean",
+    "bytes": 182,
+    "sha256": "87679af6538ee4ff08da011b48faecec86bcb4b63394d416cfee65377f725937"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/061-Effect4.Laws.Program.Simulation.Drive.lean",
+    "archive_member": "before-fill/sources/061-Effect4.Laws.Program.Simulation.Drive.lean",
+    "bytes": 178,
+    "sha256": "85d02a3ad8fff4b96e4b48185546c67fd7dda95033bcaa766b87bfdec0cd7247"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/062-Effect4.Laws.Program.Simulation.Evaluate.lean",
+    "archive_member": "before-fill/sources/062-Effect4.Laws.Program.Simulation.Evaluate.lean",
+    "bytes": 184,
+    "sha256": "05d1487b4b8ee5f80ab6fdc1564531e62ff21644a4214858d03b60c1b9d1ef15"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/063-Effect4.Laws.Program.Simulation.Fibers.lean",
+    "archive_member": "before-fill/sources/063-Effect4.Laws.Program.Simulation.Fibers.lean",
+    "bytes": 180,
+    "sha256": "a94dbe24fa1ce1caecd5978c698d42fb392784af56e935532077eb180b98e6b5"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/064-Effect4.Laws.Program.Simulation.Hooks.lean",
+    "archive_member": "before-fill/sources/064-Effect4.Laws.Program.Simulation.Hooks.lean",
+    "bytes": 178,
+    "sha256": "801094342c5b557dfdab78aa1562b65a7634fcee599c8b07505142d96a526fa9"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/065-Effect4.Laws.Program.Simulation.Pending.lean",
+    "archive_member": "before-fill/sources/065-Effect4.Laws.Program.Simulation.Pending.lean",
+    "bytes": 182,
+    "sha256": "e3e48bda0a988ba0608de511a935a98613f83f0bd1715bcdc942fc233836dd6f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/066-Effect4.Laws.Program.TyView.lean",
+    "archive_member": "before-fill/sources/066-Effect4.Laws.Program.TyView.lean",
+    "bytes": 158,
+    "sha256": "51aaa57b1081c7f7f952edca2b80a0b1adadaebb83d86e371083f0626b628a2f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/067-Effect4.Laws.Program.Typed.State.lean",
+    "archive_member": "before-fill/sources/067-Effect4.Laws.Program.Typed.State.lean",
+    "bytes": 168,
+    "sha256": "6aee6dcde368df1808d0109df9a43e13aeb9c4fd5257ea3ab8f1284be348b756"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/068-Effect4.Laws.Program.Typing.FoldAgreement.lean",
+    "archive_member": "before-fill/sources/068-Effect4.Laws.Program.Typing.FoldAgreement.lean",
+    "bytes": 186,
+    "sha256": "db0c8cb483b1294adb470cd71640bf35da8d2f3aec6d8f90e7b18d88ced4ca08"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/069-Effect4.Laws.Run.lean",
+    "archive_member": "before-fill/sources/069-Effect4.Laws.Run.lean",
+    "bytes": 136,
+    "sha256": "d7cfca5fc21f1fcf12018a4dbc48a27ebe314e80960994c193f4eb970ea9872b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/070-Effect4.Laws.Store.CanonicalSpec.lean",
+    "archive_member": "before-fill/sources/070-Effect4.Laws.Store.CanonicalSpec.lean",
+    "bytes": 168,
+    "sha256": "77a4465dfa5861a17191ad7f5d1389691bdbda7880a3600ee7398fa73d350dd6"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/071-Effect4.Machine.Stores.lean",
+    "archive_member": "before-fill/sources/071-Effect4.Machine.Stores.lean",
+    "bytes": 148,
+    "sha256": "d43e1bc425cac26a2b1653ca9100c9a91f9fadb84ff9a8b4f0e6293b4f67ae78"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/072-Effect4.Machine.Timer.lean",
+    "archive_member": "before-fill/sources/072-Effect4.Machine.Timer.lean",
+    "bytes": 146,
+    "sha256": "938f52394e3ea898b3bc1f38d704aa176b2e49e80e9c4adac1206fce1a470a05"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/073-Effect4.Machine.Value.lean",
+    "archive_member": "before-fill/sources/073-Effect4.Machine.Value.lean",
+    "bytes": 146,
+    "sha256": "c80ed24b677fe5d9c3cd2253378aa40691c144460f8262998a73075f958b3102"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/074-Effect4.Program.Admit.lean",
+    "archive_member": "before-fill/sources/074-Effect4.Program.Admit.lean",
+    "bytes": 146,
+    "sha256": "fcac9b0ef1c4a3c9528b003d4ed2905a4c1db82f60d0c7cabc87185b0878f9aa"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/075-Effect4.Program.Compile.lean",
+    "archive_member": "before-fill/sources/075-Effect4.Program.Compile.lean",
+    "bytes": 150,
+    "sha256": "f59e32d137607db971aee3c0134a97a3d638db4267b2f1edda8c094ea256682e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/076-Effect4.Program.ConfigValue.lean",
+    "archive_member": "before-fill/sources/076-Effect4.Program.ConfigValue.lean",
+    "bytes": 158,
+    "sha256": "dcde6bfc282cc2839a057eef6ba59f01ce67e0989e7db739525bdcae5ed9c9a8"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/077-Effect4.Program.Decision.lean",
+    "archive_member": "before-fill/sources/077-Effect4.Program.Decision.lean",
+    "bytes": 152,
+    "sha256": "c9d4a0015f031d70722318e88120529b156a7896e4151d1a0de0a7ae53288c5f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/078-Effect4.Program.Profile.lean",
+    "archive_member": "before-fill/sources/078-Effect4.Program.Profile.lean",
+    "bytes": 150,
+    "sha256": "a8cbc7d284455945fd6d75f9d95d6414cdb94e57062ff0c9886ce6ff772451aa"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/079-Effect4.Program.Typing.Agreement.lean",
+    "archive_member": "before-fill/sources/079-Effect4.Program.Typing.Agreement.lean",
+    "bytes": 168,
+    "sha256": "f2ce01967fc612c0f530deb2e243c243c1fcd03243b27c7a9d9d070779f9605c"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/080-Effect4.Store.Carrier.Digest.lean",
+    "archive_member": "before-fill/sources/080-Effect4.Store.Carrier.Digest.lean",
+    "bytes": 160,
+    "sha256": "530d128c5faaaab436c01cadfa3ed2938f04c1482ac2b4d8ab9550a8e8b9f6fe"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/081-Effect4.Store.Carrier.Digits.lean",
+    "archive_member": "before-fill/sources/081-Effect4.Store.Carrier.Digits.lean",
+    "bytes": 160,
+    "sha256": "e4b053315e0e569e349d9b5e9bac31d4d0d870b2e5c3c45b34045acdc5f4e08c"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/082-Effect4.Store.Carrier.Fold.lean",
+    "archive_member": "before-fill/sources/082-Effect4.Store.Carrier.Fold.lean",
+    "bytes": 156,
+    "sha256": "6395758b5d341697ea9d025bae9e02acc68256b91f216958809dc724fdc976a3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/083-Effect4.Store.Carrier.Image.lean",
+    "archive_member": "before-fill/sources/083-Effect4.Store.Carrier.Image.lean",
+    "bytes": 158,
+    "sha256": "b5132ba49e18e71824f2016c5678e7bf081260fdc2d4c091167937eb8a03ebc3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/084-Effect4.Store.Carrier.Kind.lean",
+    "archive_member": "before-fill/sources/084-Effect4.Store.Carrier.Kind.lean",
+    "bytes": 156,
+    "sha256": "ada955633d94d3281fec52de1fea2b13397bff4cfbaeaa073754a1274ef05d30"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/085-Effect4.Store.Carrier.Utf8.lean",
+    "archive_member": "before-fill/sources/085-Effect4.Store.Carrier.Utf8.lean",
+    "bytes": 156,
+    "sha256": "c00eede43ed46c6c701d4b2ffe472f0a106daadb6ab306caf49a4f59efb9506d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/086-Effect4.Store.Carrier.Val.lean",
+    "archive_member": "before-fill/sources/086-Effect4.Store.Carrier.Val.lean",
+    "bytes": 154,
+    "sha256": "87fca9a1d95c983ba8ae333b0996a0c81f1f415dbeed2a63e3ea039debb74230"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/087-Effect4.Store.Domain.AnnotationsCanonical.lean",
+    "archive_member": "before-fill/sources/087-Effect4.Store.Domain.AnnotationsCanonical.lean",
+    "bytes": 186,
+    "sha256": "02fc4fbdfdbdfc043b10b9c8d46ec6bcdcf0c33335e705e658649ca9af48a740"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/088-Effect4.Store.Domain.Canonical.lean",
+    "archive_member": "before-fill/sources/088-Effect4.Store.Domain.Canonical.lean",
+    "bytes": 164,
+    "sha256": "514f0807da74b302f8b813f6434b0fc55ffa1652e4d45e199776b793e2bc394c"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/089-Effect4.Store.Domain.Cascade.lean",
+    "archive_member": "before-fill/sources/089-Effect4.Store.Domain.Cascade.lean",
+    "bytes": 160,
+    "sha256": "3ee9885a6eea25176db5c7b0d16f69561940ca4516d953ff098dbbb3c315f3ef"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/090-Effect4.Store.Domain.Clock.lean",
+    "archive_member": "before-fill/sources/090-Effect4.Store.Domain.Clock.lean",
+    "bytes": 156,
+    "sha256": "ae4f1b05843ed031350b744dee574750db1a53b4d7d944c85fe07100298050c8"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/091-Effect4.Store.Domain.Derived.Json.lean",
+    "archive_member": "before-fill/sources/091-Effect4.Store.Domain.Derived.Json.lean",
+    "bytes": 170,
+    "sha256": "3ad69eb29ff6cc1b5eb49768a99864503f0413fd433fe982f29567d7e2c3b58e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/092-Effect4.Store.Domain.Derived.Program.lean",
+    "archive_member": "before-fill/sources/092-Effect4.Store.Domain.Derived.Program.lean",
+    "bytes": 176,
+    "sha256": "bde80708e523c4abd19a02eec39ac2491e953ed269ca94228befaf5d63e67183"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/093-Effect4.Store.Domain.Derived.Schema.lean",
+    "archive_member": "before-fill/sources/093-Effect4.Store.Domain.Derived.Schema.lean",
+    "bytes": 174,
+    "sha256": "94baeda26708e4230863e8a2d08543a8af1e347af51dca18005f4853213b22a8"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/094-Effect4.Store.Domain.Derived.Value.lean",
+    "archive_member": "before-fill/sources/094-Effect4.Store.Domain.Derived.Value.lean",
+    "bytes": 172,
+    "sha256": "765be17c29d1a345f51782b269e09724cd272faf4037e746deb842da823ef463"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/095-Effect4.Store.Domain.Genesis.lean",
+    "archive_member": "before-fill/sources/095-Effect4.Store.Domain.Genesis.lean",
+    "bytes": 160,
+    "sha256": "344cb13af40259cd67446ddea5305105823388303221ceefba6a3c6dfedb426b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/096-Effect4.Store.Domain.Node.lean",
+    "archive_member": "before-fill/sources/096-Effect4.Store.Domain.Node.lean",
+    "bytes": 154,
+    "sha256": "a9ec50f2e07eb120335ff4e8a6f1705d83fe0438c91bf262b140be3ceedc7c78"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/097-Effect4.Store.Domain.Pin.lean",
+    "archive_member": "before-fill/sources/097-Effect4.Store.Domain.Pin.lean",
+    "bytes": 152,
+    "sha256": "8120f4a0408c8379f928e55cb8184d6511a782c7525f372bb412c3cf33ec4b9a"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/098-Effect4.Store.Domain.PinDerived.lean",
+    "archive_member": "before-fill/sources/098-Effect4.Store.Domain.PinDerived.lean",
+    "bytes": 166,
+    "sha256": "dafb8efa1229d225fbc9d9807064e434aa67bdc06f6aadd9cd0180fcd28ce72f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/099-Effect4.Store.Domain.ProgramWire.lean",
+    "archive_member": "before-fill/sources/099-Effect4.Store.Domain.ProgramWire.lean",
+    "bytes": 168,
+    "sha256": "1487d747e5703a849d41eb650a1ecf628a116c235078b3d42e9ac0bf18c34979"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/100-Effect4.Store.Domain.Shape.lean",
+    "archive_member": "before-fill/sources/100-Effect4.Store.Domain.Shape.lean",
+    "bytes": 156,
+    "sha256": "ce1665388229dfc5599836a173dec0053311b795523ccb3473593dfb82406737"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/101-Effect4.Store.Domain.Store.lean",
+    "archive_member": "before-fill/sources/101-Effect4.Store.Domain.Store.lean",
+    "bytes": 156,
+    "sha256": "b0f7f945c8d51520d99764e6787111cdbd3cfd51abbd3f2b378e1f8a5440e514"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/102-Effect4.Store.Domain.Traits.lean",
+    "archive_member": "before-fill/sources/102-Effect4.Store.Domain.Traits.lean",
+    "bytes": 158,
+    "sha256": "b894d6ef97284b8f10436143fa9e95836cf190e2d288a31cdb8588a7e1661bd1"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/103-Effect4.Store.Domain.Word.lean",
+    "archive_member": "before-fill/sources/103-Effect4.Store.Domain.Word.lean",
+    "bytes": 154,
+    "sha256": "b854295824c035fb3670d11531c30b98f3ca0b86a04068301c21cefe05e2178d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/104-Effect4Gen.Check.lean",
+    "archive_member": "before-fill/sources/104-Effect4Gen.Check.lean",
+    "bytes": 136,
+    "sha256": "62888c06bc98591d670a9ef5ddbba9dfbce396aed78f5cf10b40e3d44e19cbb4"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/105-Effect4Gen.Forms.lean",
+    "archive_member": "before-fill/sources/105-Effect4Gen.Forms.lean",
+    "bytes": 136,
+    "sha256": "a5e69494a7362871351aff5fc58a485632226326415b3efdbea01da6f6d73b49"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/106-Effect4Gen.Main.lean",
+    "archive_member": "before-fill/sources/106-Effect4Gen.Main.lean",
+    "bytes": 134,
+    "sha256": "4c39f978841b81b827005d88ffdce7a463cf36b4b9fb7660b4861759833044d3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/107-OCaml5.Tools.CasGoldens.lean",
+    "archive_member": "before-fill/sources/107-OCaml5.Tools.CasGoldens.lean",
+    "bytes": 150,
+    "sha256": "a9c2b659317dc03af103637aeda63da86b72bf14c917acc1904ae1692b7fd36f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/108-OCaml5.Tools.EffGen.lean",
+    "archive_member": "before-fill/sources/108-OCaml5.Tools.EffGen.lean",
+    "bytes": 142,
+    "sha256": "dcf3ce0c7baa6b81002d0e97d35ebf2f529dae703490be4bc57bc3cee29d079a"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/109-OCaml5.Tools.EffWire.lean",
+    "archive_member": "before-fill/sources/109-OCaml5.Tools.EffWire.lean",
+    "bytes": 144,
+    "sha256": "133e6db8bbc283ca6408d7a31d7564dce6ef07087723f5f4274ba88a59b0dd17"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/110-Test.Api.HostSessionContract.lean",
+    "archive_member": "before-fill/sources/110-Test.Api.HostSessionContract.lean",
+    "bytes": 160,
+    "sha256": "ff71b3f4b543177e236ff03e633bc9c74ff6c1347eebf49b3f395b5977daa7dc"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/111-Test.Counterexamples.Schema.Codec.lean",
+    "archive_member": "before-fill/sources/111-Test.Counterexamples.Schema.Codec.lean",
+    "bytes": 170,
+    "sha256": "f05a9fb40898a77632a3e1f9abe5890a85ebb9e39677565453820690e90de123"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/112-Test.Machine.Runtime.HandlesContract.lean",
+    "archive_member": "before-fill/sources/112-Test.Machine.Runtime.HandlesContract.lean",
+    "bytes": 176,
+    "sha256": "48cb101cce19928b79c95212d48dbef4b5afecd39bd16ab61dba8360439abf4f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/113-Test.Machine.Runtime.SchedulerCoreContract.lean",
+    "archive_member": "before-fill/sources/113-Test.Machine.Runtime.SchedulerCoreContract.lean",
+    "bytes": 188,
+    "sha256": "f611bc057c2c601a3dd80a263239cf2f2a309f9588869f01e018ee3c120ad853"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/114-Test.Program.AuthorContract.lean",
+    "archive_member": "before-fill/sources/114-Test.Program.AuthorContract.lean",
+    "bytes": 158,
+    "sha256": "6e2a0b8fe85e058a9746fec294b98621da4f0a3eecc52986874071c375733577"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/115-Test.Program.AuthoringContract.lean",
+    "archive_member": "before-fill/sources/115-Test.Program.AuthoringContract.lean",
+    "bytes": 164,
+    "sha256": "88c3d2b05bae61c1c210f9181c9709efc92a49f008142e995010410d4b2f8c86"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/116-Test.Program.ConfigContract.lean",
+    "archive_member": "before-fill/sources/116-Test.Program.ConfigContract.lean",
+    "bytes": 158,
+    "sha256": "4788be313e092a9b36ab1baf93c4385998987712682fb03f7d0ca17a8c03a761"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/117-Test.Program.DenoteRContract.lean",
+    "archive_member": "before-fill/sources/117-Test.Program.DenoteRContract.lean",
+    "bytes": 160,
+    "sha256": "7505c788469de284e518588a2fc54c2fb9fa778d46890720e1fed8d99432f02c"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/118-Test.Store.Templates.lean",
+    "archive_member": "before-fill/sources/118-Test.Store.Templates.lean",
+    "bytes": 144,
+    "sha256": "f972eb4b5d6334906402e615fd0e2077e2b9850fd9bfbd31c457a452cecc3bee"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/119-TestSupport.CasEntry.lean",
+    "archive_member": "before-fill/sources/119-TestSupport.CasEntry.lean",
+    "bytes": 144,
+    "sha256": "c353cabc71389475bd71238a5825dbdf92d221320a563eed81f3e2d80d1d91ea"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/120-Tools.HostProtocol.lean",
+    "archive_member": "before-fill/sources/120-Tools.HostProtocol.lean",
+    "bytes": 140,
+    "sha256": "1aaf2eb3c9d8045dad7044468325a9e4acda97f6e69be2811455daf4b235e86b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/121-Tools.RowTypes.lean",
+    "archive_member": "before-fill/sources/121-Tools.RowTypes.lean",
+    "bytes": 132,
+    "sha256": "91aafd7e9727a45814313597da5c4a11851998222f34a614fc2d7f554420e37e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/122-Tools.Variances.lean",
+    "archive_member": "before-fill/sources/122-Tools.Variances.lean",
+    "bytes": 134,
+    "sha256": "3807c231cb294c01518470d046d7d34e8b115732caa37664afae1e8b10428cd4"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/123-harness.truth.Truth.lean",
+    "archive_member": "before-fill/sources/123-harness.truth.Truth.lean",
+    "bytes": 142,
+    "sha256": "b8989ccb7aa09c726cd873e19ed5cf0160cec3605c73388ac8aac5f147a8c11b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/124-harness.truth.session.Keyed.lean",
+    "archive_member": "before-fill/sources/124-harness.truth.session.Keyed.lean",
+    "bytes": 158,
+    "sha256": "2d4b81b5f7ee822f8bce664ede111bcfbc1637ad19ea668d7f3f9d2900d328ec"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/125-Effect4.Laws.Machine.Arena.lean",
+    "archive_member": "before-fill/sources/125-Effect4.Laws.Machine.Arena.lean",
+    "bytes": 156,
+    "sha256": "e07e59f03c6f9d1260ce4a345031c2761f932f3c507124b8c43c045feef25d1f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/126-Effect4.Laws.Program.Typed.World.lean",
+    "archive_member": "before-fill/sources/126-Effect4.Laws.Program.Typed.World.lean",
+    "bytes": 168,
+    "sha256": "0899d4d6810132f6b291ed7957c59e39afd0352b073b81027bab21604b554915"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/127-Effect4.Laws.Program.Typed.ForkSource.lean",
+    "archive_member": "before-fill/sources/127-Effect4.Laws.Program.Typed.ForkSource.lean",
+    "bytes": 178,
+    "sha256": "3898cab4dc9b361286362547d6276fea51459f2002f023cff8e7d97d17803c5f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/128-Effect4.Laws.Program.Guard.TraceOrigin.lean",
+    "archive_member": "before-fill/sources/128-Effect4.Laws.Program.Guard.TraceOrigin.lean",
+    "bytes": 180,
+    "sha256": "7f96e4c77abdaf6a59136cc663e53357e567e8098d1d509153bded980a7dc590"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/129-Effect4.Laws.Machine.Handshake.lean",
+    "archive_member": "before-fill/sources/129-Effect4.Laws.Machine.Handshake.lean",
+    "bytes": 164,
+    "sha256": "26a9768626669289f48b973543fe59f524ad2647840082cb57f38cccda00419b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/130-Effect4.Laws.Program.Guard.Handshake.lean",
+    "archive_member": "before-fill/sources/130-Effect4.Laws.Program.Guard.Handshake.lean",
+    "bytes": 176,
+    "sha256": "a77b4a962f91e462c8cbab52533644343ed62e9325f2a6230626eb8fc906f0f2"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/131-Test.Machine.Runtime.ArenaContract.lean",
+    "archive_member": "before-fill/sources/131-Test.Machine.Runtime.ArenaContract.lean",
+    "bytes": 172,
+    "sha256": "b2c797dd28253e3500ba3c7c1986f3a6cf53e23f3ea8f2cae979ac577911878e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/132-Test.Audit.IndexedColumns.lean",
+    "archive_member": "before-fill/sources/132-Test.Audit.IndexedColumns.lean",
+    "bytes": 154,
+    "sha256": "4aac986024a7db074783d23c34592602013ce6af88b5c86d7a9e8223ab84bdc6"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/133-Test.Audit.IndexedColumnActual.lean",
+    "archive_member": "before-fill/sources/133-Test.Audit.IndexedColumnActual.lean",
+    "bytes": 164,
+    "sha256": "54a52cc4d3a26540c49a50aba20c93d6301430895b79886e76dbace85d0b9855"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/134-Test.Audit.ProofGraphSearch.lean",
+    "archive_member": "before-fill/sources/134-Test.Audit.ProofGraphSearch.lean",
+    "bytes": 158,
+    "sha256": "94dd64cda4cc3862681b18fa05bac8fa08ae5c071e701749d9bc1d590a57098b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/135-Test.Audit.ProofGraph.lean",
+    "archive_member": "before-fill/sources/135-Test.Audit.ProofGraph.lean",
+    "bytes": 146,
+    "sha256": "8d4f530eb1a03d38d983f2681193f5cdbe1580bcfad8f267eaf7263199f2a47d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/136-Effect4.Laws.Machine.Behaviour.lean",
+    "archive_member": "before-fill/sources/136-Effect4.Laws.Machine.Behaviour.lean",
+    "bytes": 164,
+    "sha256": "e24b526492250af5052dcd27333a620eb82d41d8303999be72d962c32190fd0e"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/137-Effect4.Laws.Machine.RefKernel.lean",
+    "archive_member": "before-fill/sources/137-Effect4.Laws.Machine.RefKernel.lean",
+    "bytes": 164,
+    "sha256": "c88dbfa1efece7c7bd34fbba999556bc7f337c93b23d7ba3080fe74792f655aa"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-portable-before-fill-evidence/sources/138-Effect4.Laws.Program.Typed.Vocabulary.lean",
+    "archive_member": "before-fill/sources/138-Effect4.Laws.Program.Typed.Vocabulary.lean",
+    "bytes": 178,
+    "sha256": "8f09f62f1cef5f63cf7869feed059f6bae532de96f0952085987e9927f677b42"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-search-portability-green-attempt2.log",
+    "archive_member": "provenance/guard-logs/m1-phase-b-search-portability-green-attempt2.log",
+    "bytes": 437,
+    "sha256": "62bdde7f2ece18411a9a1417e1af23d79bcf4f8826f86155cac32e890b0d90a5"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-test-all-portability.log",
+    "archive_member": "provenance/guard-logs/m1-phase-b-test-all-portability.log",
+    "bytes": 944038,
+    "sha256": "d1d94f8a8146aa236e543aef4de96f847ea02d0dc2588d24d0469f4facf8f420"
+  },
+  {
+    "original_path": "/Users/pooks/Dev/lean4-effect4/Test/Audit/ProofGraph.lean",
+    "archive_member": "provenance/guard-sources/Test/Audit/ProofGraph.lean",
+    "bytes": 3457,
+    "sha256": "194a0e2235abcb3cae2d9fbef907228b16e78c26cf2a6d051392541d51b47217"
+  },
+  {
+    "original_path": "/Users/pooks/Dev/lean4-effect4/Test/Audit/ProofGraphSearch.lean",
+    "archive_member": "provenance/guard-sources/Test/Audit/ProofGraphSearch.lean",
+    "bytes": 9924,
+    "sha256": "9bedaedec0989030e9aeede5f75c3d08428a140f16fd50f147ced6eba18d850a"
+  },
+  {
+    "original_path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Auto/Census.lean",
+    "archive_member": "provenance/guard-sources/src/Effect4/Laws/Auto/Census.lean",
+    "bytes": 5096,
+    "sha256": "7b1b6bdbf3cd061154581ca896ece642ada94076dc7c00732efe9d5cfff0a58b"
+  },
+  {
+    "original_path": "/Users/pooks/Dev/lean4-effect4/tools/ProofGraph/Search.lean",
+    "archive_member": "provenance/guard-sources/tools/ProofGraph/Search.lean",
+    "bytes": 7266,
+    "sha256": "07c369e09b40e4b7922bde688313f4e0f4515d8ce022e1eb2f5a144d7ed7d2df"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-portable-census.log",
+    "archive_member": "provenance/outer-run.log",
+    "bytes": 13453,
+    "sha256": "7e6dbad0ec429220ff7424123b5604df45f8ddfd4548bbad726ca974bf2ccee3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-integration/census-plan.json",
+    "archive_member": "provenance/plans/census-plan.base.json",
+    "bytes": 768079,
+    "sha256": "ea5f74ca6f1f168cc5e9491d9b0cee48c9abc59ef4501db35e915071115cffa7"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/census-plan.json",
+    "archive_member": "provenance/plans/census-plan.current218.json",
+    "bytes": 851162,
+    "sha256": "71a87aab9badf6777a047f71ff3801b0e1fc740f8b0d166fb3b2168f44712fda"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/census-plan.original214.json",
+    "archive_member": "provenance/plans/census-plan.original214.json",
+    "bytes": 785448,
+    "sha256": "b77e9ec5e3b7c59434bc0c498df411de5b4741613141c0610cd7fbf00d38a49a"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-census-runner/README.md",
+    "archive_member": "provenance/runner/README.md",
+    "bytes": 4137,
+    "sha256": "9ab68662dbe5eb1fc26ed15fccb87cf2a6d75ec4609a9e939738de7ebe53e98d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-census-runner/SHA256SUMS",
+    "archive_member": "provenance/runner/SHA256SUMS",
+    "bytes": 1102,
+    "sha256": "4c4d36745c5a575c120980f77dfc1208d55f128ae679aaa9953cb99ce3c776cb"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-census-runner/direct-driver-compiles.sh",
+    "archive_member": "provenance/runner/direct-driver-compiles.sh",
+    "bytes": 716,
+    "sha256": "539a4e1a923b9d3a4387ea7cc4318f8511a028370cdbbb269efbb40153df6c88"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-census-runner/extension-audit.log",
+    "archive_member": "provenance/runner/extension-audit.log",
+    "bytes": 1831,
+    "sha256": "945a9b9791c39b3be77d0f1444d7f2b957a7f8b30363ae2df7ef886044dbcad1"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-census-runner/extension-controls.json",
+    "archive_member": "provenance/runner/extension-controls.json",
+    "bytes": 522,
+    "sha256": "c40bfda9435523c8673c45c6a80fd1d4cdcb50899954db111e31ab7b052b92b2"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-census-runner/guards-before-portability.json",
+    "archive_member": "provenance/runner/guards-before-portability.json",
+    "bytes": 1213,
+    "sha256": "a5fadab46f2240111b1b54309c5ca6f2f242f538c630e44d36d6f21c264a2a73"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-census-runner/guards.json",
+    "archive_member": "provenance/runner/guards.json",
+    "bytes": 1363,
+    "sha256": "90cce474c06396a461af9c23d9276dfc2f7fc7d43b86e0ca1a10115ad1c727b3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-census-runner/missing-module-commands.sh",
+    "archive_member": "provenance/runner/missing-module-commands.sh",
+    "bytes": 961,
+    "sha256": "8812af8aa452c715e23a65a202830bfd6304bc3d87bd3f2b4838a56358734d25"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-census-runner/olean-audit.json",
+    "archive_member": "provenance/runner/olean-audit.json",
+    "bytes": 263345,
+    "sha256": "fc0633811bc30fccb697ba33488d226578b9d24fafa61b2ce07dc0c040e22d5a"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-census-runner/pre-portable-audit.json",
+    "archive_member": "provenance/runner/pre-portable-audit.json",
+    "bytes": 263641,
+    "sha256": "54c0ed8e8085409de97037affa6f98d35b2c72ef8c872933977962653a6b1948"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-census-runner/read-census-log.py",
+    "archive_member": "provenance/runner/read-census-log.py",
+    "bytes": 2313,
+    "sha256": "020eb1c8c0e208c962a1c221fe145ce5e3704fa043de1ed0e5dfbc945600798d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-census-runner/resolved-jobs.json",
+    "archive_member": "provenance/runner/resolved-jobs.json",
+    "bytes": 49020,
+    "sha256": "7b8c523f8874970ca6720f010c3140312995476375354e6776072c596c96d19b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-census-runner/run-census.py",
+    "archive_member": "provenance/runner/run-census.py",
+    "bytes": 15124,
+    "sha256": "11e6870a4201395358e42fb33820755a4e519da55313e91230a93cf654dcdb90"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-census-runner/runner-controls.json",
+    "archive_member": "provenance/runner/runner-controls.json",
+    "bytes": 499,
+    "sha256": "580cf29d431dcec22ac517599931e95bb1834d66887535a74247ad764956b0a0"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-census-runner/runner-controls.log",
+    "archive_member": "provenance/runner/runner-controls.log",
+    "bytes": 874,
+    "sha256": "47116afd643355159dec9d7750f99a5872c4019f6a01e11e833bf844bd74da4b"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-census-runner/test-runner.py",
+    "archive_member": "provenance/runner/test-runner.py",
+    "bytes": 4585,
+    "sha256": "cc1e2304f896d5329045997490c3e1c32621fbfcb7b6ae36bd06a232f425e7d5"
+  },
+  {
+    "original_path": "/Users/pooks/Dev/lean4-effect4/lake-manifest.json",
+    "archive_member": "provenance/toolchain/lake-manifest.json",
+    "bytes": 1856,
+    "sha256": "47d6d6edc14b38fdd7ce5be1fa58d3374f2159e7732e56fbc02d8be31088b1e6"
+  },
+  {
+    "original_path": "/Users/pooks/Dev/lean4-effect4/lakefile.toml",
+    "archive_member": "provenance/toolchain/lakefile.toml",
+    "bytes": 6924,
+    "sha256": "d0fa6755c18b415881f4839704c988ceb47665f5f032cf9da4dc4cf59dca65db"
+  },
+  {
+    "original_path": "/Users/pooks/Dev/lean4-effect4/lean-toolchain",
+    "archive_member": "provenance/toolchain/lean-toolchain",
+    "bytes": 25,
+    "sha256": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71"
+  }
+]

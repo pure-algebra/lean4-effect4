@@ -1,0 +1,22 @@
+[
+  {
+    "path": "tools/ProofGraph/Search.lean",
+    "snapshot": "sources/tools/ProofGraph/Search.lean",
+    "sha256": "5108f443d59fee47a9d54a8a44b2fa2ce0f4ce97b046941c5e312557be576b25"
+  },
+  {
+    "path": "Test/Audit/ProofGraphSearch.lean",
+    "snapshot": "sources/Test/Audit/ProofGraphSearch.lean",
+    "sha256": "6b24defb9afebb4e691ae5e7be320e1f22f75e1f3258471e238e401085b99991"
+  },
+  {
+    "path": "src/Effect4/Laws/Auto/Census.lean",
+    "snapshot": "sources/src/Effect4/Laws/Auto/Census.lean",
+    "sha256": "f5f9215ced960d36546885070e7139b91ca38ccdc9013d429b44e9887fdf4cad"
+  },
+  {
+    "path": "Test/Audit/ProofGraph.lean",
+    "snapshot": "sources/Test/Audit/ProofGraph.lean",
+    "sha256": "194a0e2235abcb3cae2d9fbef907228b16e78c26cf2a6d051392541d51b47217"
+  }
+]

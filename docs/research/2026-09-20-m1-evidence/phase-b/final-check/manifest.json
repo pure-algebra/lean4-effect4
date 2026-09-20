@@ -1,0 +1,174 @@
+{
+  "scope": "Phase B final make check, canonical runtime census/coverage, and warning-option cleanup verification.",
+  "commands": [
+    {
+      "id": "make-check",
+      "command": "LEAN_NUM_THREADS=1 make check > /tmp/m1-phase-b-make-check.log 2>&1",
+      "outer_exit_code": 0,
+      "session": "72523",
+      "log": "logs/make-check.log",
+      "provenance": "Coordinator confirmed exact command and completed process exit."
+    },
+    {
+      "id": "runtime-census",
+      "command": "LEAN_NUM_THREADS=1 scripts/check-effect-runtime-census.sh > /tmp/m1-phase-b-runtime-census.log 2>&1",
+      "outer_exit_code": 0,
+      "session": "12420",
+      "log": "logs/runtime-census.log",
+      "provenance": "Coordinator confirmed exact command and completed process exit."
+    },
+    {
+      "id": "runtime-coverage",
+      "command": "LEAN_NUM_THREADS=1 scripts/report-effect-runtime-coverage.sh > /tmp/m1-phase-b-runtime-coverage.log 2>&1",
+      "outer_exit_code": 0,
+      "session": "96560",
+      "log": "logs/runtime-coverage.log",
+      "provenance": "Coordinator confirmed exact command and completed process exit."
+    },
+    {
+      "id": "refinement-linter",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Refinement > /tmp/m1-phase-b-refinement-linter.log 2>&1",
+      "outer_exit_code": 0,
+      "session": "5586",
+      "log": "logs/refinement-linter.log",
+      "provenance": "Coordinator confirmed exact command and completed process exit."
+    }
+  ],
+  "additional_reported_check": {
+    "check": "bash -n on both runtime scripts",
+    "result": "passed",
+    "provenance": "Coordinator reported pass; exact invocation and separate log not retained.",
+    "command": null
+  },
+  "gates": {
+    "checked_modules": 469,
+    "checked_declarations": 66145,
+    "api_utility_modules": 138,
+    "laws_only_modules": 198,
+    "all_library_sources_reachable": true,
+    "effect4_reaches_laws": false,
+    "semantic_test_axioms": [
+      "propext",
+      "Quot.sound"
+    ],
+    "implementation_boundary_modules": 14,
+    "implementation_boundary_declarations": 29,
+    "implementation_additional_axiom": "Classical.choice"
+  },
+  "coverage": {
+    "denominator": 135,
+    "green": 133,
+    "partial": 2,
+    "absent": 0,
+    "owned_with_green": 8,
+    "census_rows": 137,
+    "excluded_rows": 2,
+    "partial_rows": [
+      "op.Failure",
+      "layer.launch-holds-scope"
+    ],
+    "produced_commit": "05417cc6",
+    "working_tree_dirty": true,
+    "authority": "Exact block in logs/runtime-coverage.log, following successful logs/runtime-census.log."
+  },
+  "generation_observation": "No scripts/generate.py command appears in the retained make-check log; ordinary producer recipes echo commands. This records the observed log, not an independent process trace. Generated-file drift gate passed.",
+  "option_cleanup": {
+    "runtime_scripts": "One line in each script adds -DwarningAsError=true. Before and after bytes compared.",
+    "refinement": "Single set_option linter.unusedSectionVars false line removed. The before snapshot matches the corrected census source hash; after-cleanup snapshot differs only by that deletion. The final snapshot also includes subsequent already-reviewed marker changes and is not mislabeled option-only."
+  },
+  "files": [
+    {
+      "member": "after-cleanup-before-markers/src/Effect4/Laws/Machine/Refinement.lean",
+      "source": "/tmp/m1-tools/phase-b-live-ledger/reviewed-gate-plan/before/src/Effect4/Laws/Machine/Refinement.lean",
+      "bytes": 12711,
+      "sha256": "139f83e0a2be42c2d1937ab7b528351ed1b8fc4618d1e52cb6876191eafb5b77"
+    },
+    {
+      "member": "before-cleanup/src/Effect4/Laws/Machine/Refinement.lean",
+      "source": "/tmp/m1-tools/phase-b-apply/reviewed-plan/after/src/Effect4/Laws/Machine/Refinement.lean",
+      "bytes": 12753,
+      "sha256": "bc1adcbc5f0f860f8e193bab56c65d119e03a5129897e3d0eb9248fce9aefece"
+    },
+    {
+      "member": "before/scripts/check-effect-runtime-census.sh",
+      "source": "git HEAD:scripts/check-effect-runtime-census.sh",
+      "bytes": 4705,
+      "sha256": "08a2588004efef4bf0349d4cd459bddb5a291a764c40859f421f8dfedce47433"
+    },
+    {
+      "member": "before/scripts/report-effect-runtime-coverage.sh",
+      "source": "git HEAD:scripts/report-effect-runtime-coverage.sh",
+      "bytes": 2599,
+      "sha256": "65817ea5ac29b427e5995d663256f13af8e836865e78ccc8e55c599510a85c34"
+    },
+    {
+      "member": "changes/refinement-census-source-pin.json",
+      "source": "Exact source pin from corrected census inputs.json; validates retained pre-cleanup source bytes.",
+      "bytes": 220,
+      "sha256": "81dea0c605d2298162fc366ffd83a0e9b00289fa149d1f06dfe4207fc3ed5b83"
+    },
+    {
+      "member": "changes/refinement-option-only.patch",
+      "source": "Exact byte comparison: remove the single linter.unusedSectionVars suppression line; no other difference.",
+      "bytes": 251,
+      "sha256": "4c796dddef86205086f13fbbe95da2295a62753ef9cf61d8657a5df6bd8b4166"
+    },
+    {
+      "member": "changes/runtime-script-warning-options.patch",
+      "source": "Verified one-line warning-as-error change in each script.",
+      "bytes": 1066,
+      "sha256": "f28403f55ebe77417a84348e947b9fb5491cdd0990b95f9e5c1d4c44a3956db5"
+    },
+    {
+      "member": "final/scripts/check-effect-runtime-census.sh",
+      "source": "/Users/pooks/Dev/lean4-effect4/scripts/check-effect-runtime-census.sh",
+      "bytes": 4727,
+      "sha256": "51dcef3f2fb35d39d1cc4349cd9353ec8c99e03063755a242cf8c4761113a4f6"
+    },
+    {
+      "member": "final/scripts/report-effect-runtime-coverage.sh",
+      "source": "/Users/pooks/Dev/lean4-effect4/scripts/report-effect-runtime-coverage.sh",
+      "bytes": 2621,
+      "sha256": "abfdab49c65dc0a070d69c9164ed54c71608c921629f8550a4afeb9545359977"
+    },
+    {
+      "member": "final/src/Effect4/Laws/Machine/Refinement.lean",
+      "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Machine/Refinement.lean",
+      "bytes": 12798,
+      "sha256": "2c501ee7c026c2edc5e4a0a47176a2fa34ec27e9217958f5fd8e3e0c63243428"
+    },
+    {
+      "member": "logs/make-check.log",
+      "source": "/tmp/m1-phase-b-make-check.log",
+      "bytes": 982146,
+      "sha256": "ab91c491756a2fc1e01a78c2d39e6af75da08965138bef4734fd76e07cd344b2"
+    },
+    {
+      "member": "logs/refinement-linter.log",
+      "source": "/tmp/m1-phase-b-refinement-linter.log",
+      "bytes": 278,
+      "sha256": "88822bc250e7f46c06f82e89ecabed95eb7b54ce3f07b7ac9406da0da028e9e5"
+    },
+    {
+      "member": "logs/runtime-census.log",
+      "source": "/tmp/m1-phase-b-runtime-census.log",
+      "bytes": 130,
+      "sha256": "26353b60f0352c6add95280f1be6554778382c6676c13a567f00459217fd44ee"
+    },
+    {
+      "member": "logs/runtime-coverage.log",
+      "source": "/tmp/m1-phase-b-runtime-coverage.log",
+      "bytes": 283,
+      "sha256": "a31ee92e7f5c3402d249e32269fba201abeac033bb950c0635f59b4b55754ec4"
+    }
+  ],
+  "archive": {
+    "file": "raw.tar.gz",
+    "sha256": "eb0d74013050e90dca530e0db2c88adfeffb117631b372ca5b6f62bdff1beea0",
+    "bytes": 87850,
+    "members": 14,
+    "uncompressed_bytes": 1037288,
+    "readback": "All archive members compared byte-for-byte."
+  },
+  "timestamps": "No execution timestamps invented; archive headers normalized to zero for reproducible packaging."
+}

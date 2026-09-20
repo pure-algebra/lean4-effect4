@@ -26,7 +26,7 @@ def kindLabel : Source → String
   | .exit _ => "exit"
   | .cause _ => "cause"
   | .hook _ => "hook"
-  | .column _ => "column"
+  | .column _ _ => "column"
   | .journal => "journal"
   | .custom _ => "custom"
   | .refused _ => "refused"

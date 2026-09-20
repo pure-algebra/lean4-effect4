@@ -1,0 +1,14 @@
+{
+  "archived_files": 58,
+  "archived_log_files": 52,
+  "uncompressed_bytes": 2652349,
+  "archive_bytes": 209639,
+  "compile_records": 44,
+  "serial_records": 21,
+  "serial_process_successes": 19,
+  "serial_process_failures": 2,
+  "unknown_outer_exit_records": 14,
+  "planned_modules": 26,
+  "planned_modules_with_fresh_build_evidence": 26,
+  "archive_byte_verification": "Every archived member matches the original bytes and manifest SHA256."
+}

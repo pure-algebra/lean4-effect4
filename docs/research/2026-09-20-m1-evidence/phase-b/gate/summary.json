@@ -1,0 +1,1027 @@
+{
+  "kind": "completed gate-run evidence, separate from status-only and make-check evidence",
+  "completed_command": "bash /tmp/m1-tools/phase-b-live-ledger/reviewed-gate-plan/gate-serial.sh > /tmp/m1-phase-b-gates.log 2>&1",
+  "exit_code": 0,
+  "exit_code_provenance": "root reported completed session28687; gate script uses set -e, every owner has matching validated JSON and Built/success lines",
+  "requested_owner_builds": 30,
+  "requested_owners_genuinely_built": 30,
+  "requested_owner_replay_only": 0,
+  "exact_scopes": 36,
+  "statements": 221,
+  "proved": 48,
+  "open": 173,
+  "rejected_in_prior_status": 0,
+  "all_scope_classifications_match_prior_status": true,
+  "all_phase_B_ceilings_equal_total_N": true,
+  "held_M4_open": 1,
+  "gate_rows": [
+    {
+      "namespace": "Test.IndexedColumnDraft",
+      "open": 1,
+      "proved": 7,
+      "N": 8,
+      "ceiling": 8,
+      "matches_before_gate_status": true,
+      "owner": "Test/Audit/IndexedColumns.lean",
+      "module": "Test.Audit.IndexedColumns",
+      "log_file": "gate-logs/Test.Audit.IndexedColumns.log",
+      "report_line": 6
+    },
+    {
+      "namespace": "Effect4.Machine.M1OriginClauses",
+      "open": 5,
+      "proved": 5,
+      "N": 10,
+      "ceiling": 10,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Machine/Clauses.lean",
+      "module": "Effect4.Laws.Machine.Clauses",
+      "log_file": "gate-logs/Effect4.Laws.Machine.Clauses.log",
+      "report_line": 2
+    },
+    {
+      "namespace": "Effect4.Machine.M1.CompletionSupport",
+      "open": 0,
+      "proved": 2,
+      "N": 2,
+      "ceiling": 2,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Machine/CompletionData.lean",
+      "module": "Effect4.Laws.Machine.CompletionData",
+      "log_file": "gate-logs/Effect4.Laws.Machine.CompletionData.log",
+      "report_line": 3
+    },
+    {
+      "namespace": "Effect4.Machine.Witnesses.M1Witnesses",
+      "open": 0,
+      "proved": 1,
+      "N": 1,
+      "ceiling": 1,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Machine/Witnesses.lean",
+      "module": "Effect4.Laws.Machine.Witnesses",
+      "log_file": "gate-logs/Effect4.Laws.Machine.Witnesses.log",
+      "report_line": 2
+    },
+    {
+      "namespace": "Effect4.Program.Agreement.M1Origin",
+      "open": 0,
+      "proved": 1,
+      "N": 1,
+      "ceiling": 1,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Program/Agreement.lean",
+      "module": "Effect4.Laws.Program.Agreement",
+      "log_file": "gate-logs/Effect4.Laws.Program.Agreement.log",
+      "report_line": 69
+    },
+    {
+      "namespace": "Effect4.Api.M1Origin",
+      "open": 16,
+      "proved": 2,
+      "N": 18,
+      "ceiling": 18,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Api/Supervision.lean",
+      "module": "Effect4.Laws.Api.Supervision",
+      "log_file": "gate-logs/Effect4.Laws.Api.Supervision.log",
+      "report_line": 287
+    },
+    {
+      "namespace": "Effect4.Api.M1Trace",
+      "open": 13,
+      "proved": 2,
+      "N": 15,
+      "ceiling": 15,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Api/Supervision.lean",
+      "module": "Effect4.Laws.Api.Supervision",
+      "log_file": "gate-logs/Effect4.Laws.Api.Supervision.log",
+      "report_line": 288
+    },
+    {
+      "namespace": "Effect4.Machine.M1OriginApproximation",
+      "open": 2,
+      "proved": 0,
+      "N": 2,
+      "ceiling": 2,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Machine/Approximation.lean",
+      "module": "Effect4.Laws.Machine.Approximation",
+      "log_file": "gate-logs/Effect4.Laws.Machine.Approximation.log",
+      "report_line": 4
+    },
+    {
+      "namespace": "Effect4.Machine.ArenaObligations",
+      "open": 12,
+      "proved": 3,
+      "N": 15,
+      "ceiling": 15,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Machine/Refinement.lean",
+      "module": "Effect4.Laws.Machine.Refinement",
+      "log_file": "gate-logs/Effect4.Laws.Machine.Refinement.log",
+      "report_line": 7
+    },
+    {
+      "namespace": "Effect4.Program.Guard.SingleGuard.M1Clock",
+      "open": 5,
+      "proved": 0,
+      "N": 5,
+      "ceiling": 5,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Program/Guard/Single.lean",
+      "module": "Effect4.Laws.Program.Guard.Single",
+      "log_file": "gate-logs/Effect4.Laws.Program.Guard.Single.log",
+      "report_line": 296
+    },
+    {
+      "namespace": "Effect4.Machine.ArenaRed.Obligations",
+      "open": 2,
+      "proved": 0,
+      "N": 2,
+      "ceiling": 2,
+      "matches_before_gate_status": true,
+      "owner": "Test/Machine/Runtime/ArenaContract.lean",
+      "module": "Test.Machine.Runtime.ArenaContract",
+      "log_file": "gate-logs/Test.Machine.Runtime.ArenaContract.log",
+      "report_line": 7
+    },
+    {
+      "namespace": "Effect4.Machine.M1Trace",
+      "open": 0,
+      "proved": 1,
+      "N": 1,
+      "ceiling": 1,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Machine/Behaviour.lean",
+      "module": "Effect4.Laws.Machine.Behaviour",
+      "log_file": "gate-logs/Effect4.Laws.Machine.Behaviour.log",
+      "report_line": 11
+    },
+    {
+      "namespace": "Effect4.Machine.M1.Handles",
+      "open": 8,
+      "proved": 1,
+      "N": 9,
+      "ceiling": 9,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Machine/Handles.lean",
+      "module": "Effect4.Laws.Machine.Handles",
+      "log_file": "gate-logs/Effect4.Laws.Machine.Handles.log",
+      "report_line": 11
+    },
+    {
+      "namespace": "Effect4.Machine.M1Origin",
+      "open": 9,
+      "proved": 0,
+      "N": 9,
+      "ceiling": 9,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Machine/Handles.lean",
+      "module": "Effect4.Laws.Machine.Handles",
+      "log_file": "gate-logs/Effect4.Laws.Machine.Handles.log",
+      "report_line": 12
+    },
+    {
+      "namespace": "Effect4.Program.Agreement.M1Quiet",
+      "open": 1,
+      "proved": 0,
+      "N": 1,
+      "ceiling": 1,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Program/Agreement/Machine.lean",
+      "module": "Effect4.Laws.Program.Agreement.Machine",
+      "log_file": "gate-logs/Effect4.Laws.Program.Agreement.Machine.log",
+      "report_line": 292
+    },
+    {
+      "namespace": "Effect4.Api.TraceFacts.M1Trace",
+      "open": 2,
+      "proved": 1,
+      "N": 3,
+      "ceiling": 3,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Program/Guard/TraceOrigin.lean",
+      "module": "Effect4.Laws.Program.Guard.TraceOrigin",
+      "log_file": "gate-logs/Effect4.Laws.Program.Guard.TraceOrigin.log",
+      "report_line": 301
+    },
+    {
+      "namespace": "Effect4.Machine.M1OriginBook",
+      "open": 1,
+      "proved": 0,
+      "N": 1,
+      "ceiling": 1,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Machine/Book.lean",
+      "module": "Effect4.Laws.Machine.Book",
+      "log_file": "gate-logs/Effect4.Laws.Machine.Book.log",
+      "report_line": 13
+    },
+    {
+      "namespace": "Effect4.Program.Guard.M4Handshake",
+      "open": 1,
+      "proved": 0,
+      "N": 1,
+      "ceiling": 1,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Program/Guard/Handshake.lean",
+      "module": "Effect4.Laws.Program.Guard.Handshake",
+      "log_file": "gate-logs/Effect4.Laws.Program.Guard.Handshake.log",
+      "report_line": 305
+    },
+    {
+      "namespace": "Effect4.Program.Guard.OuterDriver.M1Clock",
+      "open": 9,
+      "proved": 0,
+      "N": 9,
+      "ceiling": 9,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Program/Guard/OuterDriver.lean",
+      "module": "Effect4.Laws.Program.Guard.OuterDriver",
+      "log_file": "gate-logs/Effect4.Laws.Program.Guard.OuterDriver.log",
+      "report_line": 315
+    },
+    {
+      "namespace": "Effect4.Program.Typed.M2ExpectWanted",
+      "open": 0,
+      "proved": 1,
+      "N": 1,
+      "ceiling": 1,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Program/Typed/State.lean",
+      "module": "Effect4.Laws.Program.Typed.State",
+      "log_file": "gate-logs/Effect4.Laws.Program.Typed.State.log",
+      "report_line": 95
+    },
+    {
+      "namespace": "Effect4.Run.M1Trace",
+      "open": 1,
+      "proved": 0,
+      "N": 1,
+      "ceiling": 1,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Run.lean",
+      "module": "Effect4.Laws.Run",
+      "log_file": "gate-logs/Effect4.Laws.Run.log",
+      "report_line": 345
+    },
+    {
+      "namespace": "Test.IndexedColumnActual",
+      "open": 0,
+      "proved": 4,
+      "N": 4,
+      "ceiling": 4,
+      "matches_before_gate_status": true,
+      "owner": "Test/Audit/IndexedColumnActual.lean",
+      "module": "Test.Audit.IndexedColumnActual",
+      "log_file": "gate-logs/Test.Audit.IndexedColumnActual.log",
+      "report_line": 94
+    },
+    {
+      "namespace": "Effect4.Program.Sched.M1Hooks",
+      "open": 3,
+      "proved": 1,
+      "N": 4,
+      "ceiling": 4,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Program/Simulation/Hooks.lean",
+      "module": "Effect4.Laws.Program.Simulation.Hooks",
+      "log_file": "gate-logs/Effect4.Laws.Program.Simulation.Hooks.log",
+      "report_line": 316
+    },
+    {
+      "namespace": "Effect4.Program.Typed.WorldControlWanted",
+      "open": 5,
+      "proved": 0,
+      "N": 5,
+      "ceiling": 5,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Program/Typed/World.lean",
+      "module": "Effect4.Laws.Program.Typed.World",
+      "log_file": "gate-logs/Effect4.Laws.Program.Typed.World.log",
+      "report_line": 215
+    },
+    {
+      "namespace": "Effect4.Program.Typed.WorldWanted",
+      "open": 18,
+      "proved": 1,
+      "N": 19,
+      "ceiling": 19,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Program/Typed/World.lean",
+      "module": "Effect4.Laws.Program.Typed.World",
+      "log_file": "gate-logs/Effect4.Laws.Program.Typed.World.log",
+      "report_line": 216
+    },
+    {
+      "namespace": "Effect4.Program.Sched.M1OriginFibers",
+      "open": 5,
+      "proved": 1,
+      "N": 6,
+      "ceiling": 6,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Program/Simulation/Fibers.lean",
+      "module": "Effect4.Laws.Program.Simulation.Fibers",
+      "log_file": "gate-logs/Effect4.Laws.Program.Simulation.Fibers.log",
+      "report_line": 303
+    },
+    {
+      "namespace": "Effect4.Program.Typed.M2ForkSourceWanted",
+      "open": 1,
+      "proved": 0,
+      "N": 1,
+      "ceiling": 1,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Program/Typed/ForkSource.lean",
+      "module": "Effect4.Laws.Program.Typed.ForkSource",
+      "log_file": "gate-logs/Effect4.Laws.Program.Typed.ForkSource.log",
+      "report_line": 217
+    },
+    {
+      "namespace": "Effect4.Program.Sched.M1Deliver",
+      "open": 1,
+      "proved": 0,
+      "N": 1,
+      "ceiling": 1,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Program/Simulation/Deliver.lean",
+      "module": "Effect4.Laws.Program.Simulation.Deliver",
+      "log_file": "gate-logs/Effect4.Laws.Program.Simulation.Deliver.log",
+      "report_line": 304
+    },
+    {
+      "namespace": "Effect4.Program.Sched.M1Actions",
+      "open": 1,
+      "proved": 0,
+      "N": 1,
+      "ceiling": 1,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Program/Simulation/Actions.lean",
+      "module": "Effect4.Laws.Program.Simulation.Actions",
+      "log_file": "gate-logs/Effect4.Laws.Program.Simulation.Actions.log",
+      "report_line": 306
+    },
+    {
+      "namespace": "Effect4.Program.Sched.M1Origin",
+      "open": 9,
+      "proved": 1,
+      "N": 10,
+      "ceiling": 10,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Program/Simulation/Actions.lean",
+      "module": "Effect4.Laws.Program.Simulation.Actions",
+      "log_file": "gate-logs/Effect4.Laws.Program.Simulation.Actions.log",
+      "report_line": 307
+    },
+    {
+      "namespace": "Effect4.Program.Sched.M1Evaluate",
+      "open": 0,
+      "proved": 2,
+      "N": 2,
+      "ceiling": 2,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Program/Simulation/Evaluate.lean",
+      "module": "Effect4.Laws.Program.Simulation.Evaluate",
+      "log_file": "gate-logs/Effect4.Laws.Program.Simulation.Evaluate.log",
+      "report_line": 309
+    },
+    {
+      "namespace": "Effect4.Program.Sched.M1PendingOrigin",
+      "open": 3,
+      "proved": 1,
+      "N": 4,
+      "ceiling": 4,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Program/Simulation/Pending.lean",
+      "module": "Effect4.Laws.Program.Simulation.Pending",
+      "log_file": "gate-logs/Effect4.Laws.Program.Simulation.Pending.log",
+      "report_line": 309
+    },
+    {
+      "namespace": "Effect4.Program.Sched.M1Clock",
+      "open": 1,
+      "proved": 4,
+      "N": 5,
+      "ceiling": 5,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Program/Simulation/Drive.lean",
+      "module": "Effect4.Laws.Program.Simulation.Drive",
+      "log_file": "gate-logs/Effect4.Laws.Program.Simulation.Drive.log",
+      "report_line": 313
+    },
+    {
+      "namespace": "Effect4.Program.Sched.M1Drive",
+      "open": 3,
+      "proved": 4,
+      "N": 7,
+      "ceiling": 7,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws/Program/Simulation/Drive.lean",
+      "module": "Effect4.Laws.Program.Simulation.Drive",
+      "log_file": "gate-logs/Effect4.Laws.Program.Simulation.Drive.log",
+      "report_line": 314
+    },
+    {
+      "namespace": "Effect4.Machine.M1.DeferredWanted",
+      "open": 30,
+      "proved": 1,
+      "N": 31,
+      "ceiling": 31,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws.lean",
+      "module": "Effect4.Laws",
+      "log_file": "gate-logs/Effect4.Laws.log",
+      "report_line": 1057
+    },
+    {
+      "namespace": "Effect4.Machine.M1Clock",
+      "open": 5,
+      "proved": 1,
+      "N": 6,
+      "ceiling": 6,
+      "matches_before_gate_status": true,
+      "owner": "src/Effect4/Laws.lean",
+      "module": "Effect4.Laws",
+      "log_file": "gate-logs/Effect4.Laws.log",
+      "report_line": 1058
+    }
+  ],
+  "owner_builds": [
+    {
+      "module": "Test.Audit.IndexedColumns",
+      "owner": "Test/Audit/IndexedColumns.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Test.Audit.IndexedColumns",
+      "requested_owner_status": "Built",
+      "built_line": 1,
+      "built_text": "\u2139 [202/202] Built Test.Audit.IndexedColumns (2.6s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Test.IndexedColumnDraft",
+          "log_line": 6,
+          "text": "info: Test/Audit/IndexedColumns.lean:160:0: Test.IndexedColumnDraft: 1 open, 7 proved, 8 total; ceiling 8"
+        }
+      ],
+      "log_sha256": "74b713e92fc734b1a2ffb47dcd09f80b6246e97023e46c2f5bbd17325b93cf89",
+      "json_sha256": "68adf11f376af92c10202d13502e589af41aa1c77754a18b59717b029efc88b7"
+    },
+    {
+      "module": "Effect4.Laws.Machine.Clauses",
+      "owner": "src/Effect4/Laws/Machine/Clauses.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Clauses",
+      "requested_owner_status": "Built",
+      "built_line": 1,
+      "built_text": "\u2139 [192/192] Built Effect4.Laws.Machine.Clauses (4.8s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Machine.M1OriginClauses",
+          "log_line": 2,
+          "text": "info: src/Effect4/Laws/Machine/Clauses.lean:2055:0: Effect4.Machine.M1OriginClauses: 5 open, 5 proved, 10 total; ceiling 10"
+        }
+      ],
+      "log_sha256": "5b1194c69760a5107827bc0a225617cff8e234211fb0343ea9eb4c82f5c5fc62",
+      "json_sha256": "f5188c43714d1062f3cdc827008200ca0b134de16864b248dedf93a16a3f3905"
+    },
+    {
+      "module": "Effect4.Laws.Machine.CompletionData",
+      "owner": "src/Effect4/Laws/Machine/CompletionData.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.CompletionData",
+      "requested_owner_status": "Built",
+      "built_line": 1,
+      "built_text": "\u2139 [198/198] Built Effect4.Laws.Machine.CompletionData (1.4s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Machine.M1.CompletionSupport",
+          "log_line": 3,
+          "text": "info: src/Effect4/Laws/Machine/CompletionData.lean:74:0: Effect4.Machine.M1.CompletionSupport: 0 open, 2 proved, 2 total; ceiling 2"
+        }
+      ],
+      "log_sha256": "71bf0dcd295dfaa0012c1162e17bb758882f8ae26e82111e8d46fc0be04e2a4f",
+      "json_sha256": "0b078c26acc9f361f282ca17a1621c373012c780e5fc6d9c4577fb6614e309da"
+    },
+    {
+      "module": "Effect4.Laws.Machine.Witnesses",
+      "owner": "src/Effect4/Laws/Machine/Witnesses.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Witnesses",
+      "requested_owner_status": "Built",
+      "built_line": 1,
+      "built_text": "\u2139 [198/198] Built Effect4.Laws.Machine.Witnesses (8.0s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Machine.Witnesses.M1Witnesses",
+          "log_line": 2,
+          "text": "info: src/Effect4/Laws/Machine/Witnesses.lean:1488:0: Effect4.Machine.Witnesses.M1Witnesses: 0 open, 1 proved, 1 total; ceiling 1"
+        }
+      ],
+      "log_sha256": "386c828efdb4e4050b996c9b67fb60dc4a0e25b97ef3ca986b2ef6dfa169d651",
+      "json_sha256": "be6d17183f8c40eaeb9f4a20869addea1296790878723c0ad634cc005303a8f8"
+    },
+    {
+      "module": "Effect4.Laws.Program.Agreement",
+      "owner": "src/Effect4/Laws/Program/Agreement.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Agreement",
+      "requested_owner_status": "Built",
+      "built_line": 68,
+      "built_text": "\u2139 [227/227] Built Effect4.Laws.Program.Agreement (6.3s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Program.Agreement.M1Origin",
+          "log_line": 69,
+          "text": "info: src/Effect4/Laws/Program/Agreement.lean:1946:0: Effect4.Program.Agreement.M1Origin: 0 open, 1 proved, 1 total; ceiling 1"
+        }
+      ],
+      "log_sha256": "acb430ad4a1b906dc271a4f8234a640e09d4b0eaecb5cfd1442f8e2c5651592d",
+      "json_sha256": "a002ed1920ed819988b14a1a774c14ded0f0a862313caf65ab56db3ae5667da2"
+    },
+    {
+      "module": "Effect4.Laws.Api.Supervision",
+      "owner": "src/Effect4/Laws/Api/Supervision.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Api.Supervision",
+      "requested_owner_status": "Built",
+      "built_line": 286,
+      "built_text": "\u2139 [297/297] Built Effect4.Laws.Api.Supervision (7.7s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Api.M1Origin",
+          "log_line": 287,
+          "text": "info: src/Effect4/Laws/Api/Supervision.lean:856:0: Effect4.Api.M1Origin: 16 open, 2 proved, 18 total; ceiling 18"
+        },
+        {
+          "namespace": "Effect4.Api.M1Trace",
+          "log_line": 288,
+          "text": "info: src/Effect4/Laws/Api/Supervision.lean:857:0: Effect4.Api.M1Trace: 13 open, 2 proved, 15 total; ceiling 15"
+        }
+      ],
+      "log_sha256": "0185411fe44514e87ed36f54ebbd4ff66525de7adeeea3ada13a0b512151c317",
+      "json_sha256": "44f9eba1bcf7f5882554c4d27c5ebd83923c0ab7284e588ebe8763991f4468f7"
+    },
+    {
+      "module": "Effect4.Laws.Machine.Approximation",
+      "owner": "src/Effect4/Laws/Machine/Approximation.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Approximation",
+      "requested_owner_status": "Built",
+      "built_line": 3,
+      "built_text": "\u2139 [193/193] Built Effect4.Laws.Machine.Approximation (9.2s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Machine.M1OriginApproximation",
+          "log_line": 4,
+          "text": "info: src/Effect4/Laws/Machine/Approximation.lean:1668:0: Effect4.Machine.M1OriginApproximation: 2 open, 0 proved, 2 total; ceiling 2"
+        }
+      ],
+      "log_sha256": "8d1588aee94e900bd2742d01ed09ec1d3045be4bc0dfb2975db527239e7750a8",
+      "json_sha256": "e6db0e35713eb64a790b668d97c6634143e87a6927e61411d6d0e346fbfe1b7e"
+    },
+    {
+      "module": "Effect4.Laws.Machine.Refinement",
+      "owner": "src/Effect4/Laws/Machine/Refinement.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Refinement",
+      "requested_owner_status": "Built",
+      "built_line": 6,
+      "built_text": "\u2139 [201/201] Built Effect4.Laws.Machine.Refinement (1.8s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Machine.ArenaObligations",
+          "log_line": 7,
+          "text": "info: src/Effect4/Laws/Machine/Refinement.lean:304:0: Effect4.Machine.ArenaObligations: 12 open, 3 proved, 15 total; ceiling 15"
+        }
+      ],
+      "log_sha256": "d2f3f00590823151a6d94869ecafc9799324310d420e74ed1dccd0888acd5f8a",
+      "json_sha256": "672880972c11528473d5bb2bf7471eca6bb4031992bc8ccc6ddbc98e74c13004"
+    },
+    {
+      "module": "Effect4.Laws.Program.Guard.Single",
+      "owner": "src/Effect4/Laws/Program/Guard/Single.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Guard.Single",
+      "requested_owner_status": "Built",
+      "built_line": 295,
+      "built_text": "\u2139 [297/297] Built Effect4.Laws.Program.Guard.Single (1.7s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Program.Guard.SingleGuard.M1Clock",
+          "log_line": 296,
+          "text": "info: src/Effect4/Laws/Program/Guard/Single.lean:504:0: Effect4.Program.Guard.SingleGuard.M1Clock: 5 open, 0 proved, 5 total; ceiling 5"
+        }
+      ],
+      "log_sha256": "4cc6959bbeeebe1a7ee44e10f14fdaef9a171964b5f0ba9bf37d7e3f06c94483",
+      "json_sha256": "6714bc4f80c2a83651d2f652715d3b7d5f591f78ba954b55c93b311dae67b604"
+    },
+    {
+      "module": "Test.Machine.Runtime.ArenaContract",
+      "owner": "Test/Machine/Runtime/ArenaContract.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Test.Machine.Runtime.ArenaContract",
+      "requested_owner_status": "Built",
+      "built_line": 6,
+      "built_text": "\u2139 [202/202] Built Test.Machine.Runtime.ArenaContract (1.2s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Machine.ArenaRed.Obligations",
+          "log_line": 7,
+          "text": "info: Test/Machine/Runtime/ArenaContract.lean:31:0: Effect4.Machine.ArenaRed.Obligations: 2 open, 0 proved, 2 total; ceiling 2"
+        }
+      ],
+      "log_sha256": "757331234eba868e32674e8bef775e7b149ce9eb205358557fc6ab583e0d9827",
+      "json_sha256": "3d3186145fb2e26f8e2b201c07842b4ce3551c95a43f2ea6e21f65334003341e"
+    },
+    {
+      "module": "Effect4.Laws.Machine.Behaviour",
+      "owner": "src/Effect4/Laws/Machine/Behaviour.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Behaviour",
+      "requested_owner_status": "Built",
+      "built_line": 10,
+      "built_text": "\u2139 [204/204] Built Effect4.Laws.Machine.Behaviour (1.2s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Machine.M1Trace",
+          "log_line": 11,
+          "text": "info: src/Effect4/Laws/Machine/Behaviour.lean:119:0: Effect4.Machine.M1Trace: 0 open, 1 proved, 1 total; ceiling 1"
+        }
+      ],
+      "log_sha256": "d5c60404d94ceb1684ce95ef826ec520077aa92449ba5ee9d5baaa5e43759ec8",
+      "json_sha256": "479e73b6f7a7f86a798d6bd8a5682e8b721cdf17cb05bb7b9f263d4d1622c44e"
+    },
+    {
+      "module": "Effect4.Laws.Machine.Handles",
+      "owner": "src/Effect4/Laws/Machine/Handles.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Handles",
+      "requested_owner_status": "Built",
+      "built_line": 10,
+      "built_text": "\u2139 [204/204] Built Effect4.Laws.Machine.Handles (104s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Machine.M1.Handles",
+          "log_line": 11,
+          "text": "info: src/Effect4/Laws/Machine/Handles.lean:6663:0: Effect4.Machine.M1.Handles: 8 open, 1 proved, 9 total; ceiling 9"
+        },
+        {
+          "namespace": "Effect4.Machine.M1Origin",
+          "log_line": 12,
+          "text": "info: src/Effect4/Laws/Machine/Handles.lean:6664:0: Effect4.Machine.M1Origin: 9 open, 0 proved, 9 total; ceiling 9"
+        }
+      ],
+      "log_sha256": "fdb3b1249fd5695a84bfae7d41e8f225f4bdd57ab7da96b73bd18fd6e56d7278",
+      "json_sha256": "771a4917d19e834277bdb3d526e9d9b64a89d2b646ecb533d13698305420cacb"
+    },
+    {
+      "module": "Effect4.Laws.Program.Agreement.Machine",
+      "owner": "src/Effect4/Laws/Program/Agreement/Machine.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Agreement.Machine",
+      "requested_owner_status": "Built",
+      "built_line": 291,
+      "built_text": "\u2139 [302/302] Built Effect4.Laws.Program.Agreement.Machine (9.7s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Program.Agreement.M1Quiet",
+          "log_line": 292,
+          "text": "info: src/Effect4/Laws/Program/Agreement/Machine.lean:1939:0: Effect4.Program.Agreement.M1Quiet: 1 open, 0 proved, 1 total; ceiling 1"
+        }
+      ],
+      "log_sha256": "473938d37bf73852dd3a6cf8eb2776d22060447ebceceb5a2c27eafbac85f55c",
+      "json_sha256": "e04830e9af0c607d184f62eef9a81f67fa2d8d22d5522e01b940eedd43b5a323"
+    },
+    {
+      "module": "Effect4.Laws.Program.Guard.TraceOrigin",
+      "owner": "src/Effect4/Laws/Program/Guard/TraceOrigin.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Guard.TraceOrigin",
+      "requested_owner_status": "Built",
+      "built_line": 300,
+      "built_text": "\u2139 [303/303] Built Effect4.Laws.Program.Guard.TraceOrigin (1.5s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Api.TraceFacts.M1Trace",
+          "log_line": 301,
+          "text": "info: src/Effect4/Laws/Program/Guard/TraceOrigin.lean:27:0: Effect4.Api.TraceFacts.M1Trace: 2 open, 1 proved, 3 total; ceiling 3"
+        }
+      ],
+      "log_sha256": "222ca6dcf8a4cc291a2eb430ecca10744e99256af88f2b8acdab47cd84018012",
+      "json_sha256": "7ec16701a2f9f01a6f13bd7a965bd99ee118131080a8776dc91ea65b1c73eb4f"
+    },
+    {
+      "module": "Effect4.Laws.Machine.Book",
+      "owner": "src/Effect4/Laws/Machine/Book.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Book",
+      "requested_owner_status": "Built",
+      "built_line": 12,
+      "built_text": "\u2139 [205/205] Built Effect4.Laws.Machine.Book (2.3s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Machine.M1OriginBook",
+          "log_line": 13,
+          "text": "info: src/Effect4/Laws/Machine/Book.lean:1220:0: Effect4.Machine.M1OriginBook: 1 open, 0 proved, 1 total; ceiling 1"
+        }
+      ],
+      "log_sha256": "e0dd407f1c815152eb2a6dc4df383c12164bbdc8a06593d31dbc8f2a7cb1b15d",
+      "json_sha256": "3822e28c1d25e63e6b4b1d5bfbce603cbac9924317f360771a80176dd061aeb7"
+    },
+    {
+      "module": "Effect4.Laws.Program.Guard.Handshake",
+      "owner": "src/Effect4/Laws/Program/Guard/Handshake.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Guard.Handshake",
+      "requested_owner_status": "Built",
+      "built_line": 304,
+      "built_text": "\u2139 [304/304] Built Effect4.Laws.Program.Guard.Handshake (1.3s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Program.Guard.M4Handshake",
+          "log_line": 305,
+          "text": "info: src/Effect4/Laws/Program/Guard/Handshake.lean:30:0: Effect4.Program.Guard.M4Handshake: 1 open, 0 proved, 1 total; ceiling 1"
+        }
+      ],
+      "log_sha256": "eba80c2d93e156c77a4ad3cc477bc9c0a9884ae875d13cf9a9e0ba3d15736f6d",
+      "json_sha256": "eff6907356023db70cc5c7702160141d2ce28eca3b6277912327d622c0128320"
+    },
+    {
+      "module": "Effect4.Laws.Program.Guard.OuterDriver",
+      "owner": "src/Effect4/Laws/Program/Guard/OuterDriver.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Guard.OuterDriver",
+      "requested_owner_status": "Built",
+      "built_line": 314,
+      "built_text": "\u2139 [311/311] Built Effect4.Laws.Program.Guard.OuterDriver (1.6s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Program.Guard.OuterDriver.M1Clock",
+          "log_line": 315,
+          "text": "info: src/Effect4/Laws/Program/Guard/OuterDriver.lean:421:0: Effect4.Program.Guard.OuterDriver.M1Clock: 9 open, 0 proved, 9 total; ceiling 9"
+        }
+      ],
+      "log_sha256": "c66e700a4d05fcc718d80593368315a34d2223bab6b0c328bae11ddede8fc5a5",
+      "json_sha256": "a0a58676e01460bea23ff8a42b7f11c58b2f234271f0b4bfc61445c4b8587226"
+    },
+    {
+      "module": "Effect4.Laws.Program.Typed.State",
+      "owner": "src/Effect4/Laws/Program/Typed/State.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Typed.State",
+      "requested_owner_status": "Built",
+      "built_line": 84,
+      "built_text": "\u2139 [246/246] Built Effect4.Laws.Program.Typed.State (1.6s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Program.Typed.M2ExpectWanted",
+          "log_line": 95,
+          "text": "info: src/Effect4/Laws/Program/Typed/State.lean:52:0: Effect4.Program.Typed.M2ExpectWanted: 0 open, 1 proved, 1 total; ceiling 1"
+        }
+      ],
+      "log_sha256": "9c4cc09fd74926f0c733dbdb6aa974b65a5a7481cda80997156f391b94c1f62b",
+      "json_sha256": "84506012d54a0c6dcd7d399f369c2b9a2589d42ce5bf62deac30d29c7ffdb3b5"
+    },
+    {
+      "module": "Effect4.Laws.Run",
+      "owner": "src/Effect4/Laws/Run.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Run",
+      "requested_owner_status": "Built",
+      "built_line": 344,
+      "built_text": "\u2139 [318/318] Built Effect4.Laws.Run (2.8s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Run.M1Trace",
+          "log_line": 345,
+          "text": "info: src/Effect4/Laws/Run.lean:885:0: Effect4.Run.M1Trace: 1 open, 0 proved, 1 total; ceiling 1"
+        }
+      ],
+      "log_sha256": "c4e1a41d52b8b43e09ed7f446b8d83b2713cdfa66a2071c8b2f6bd64c24a904a",
+      "json_sha256": "fdf1a20a4e1d3849eda4f3eca9744fb509c84c50a37cdb50d6a1a91aa3e7d603"
+    },
+    {
+      "module": "Test.Audit.IndexedColumnActual",
+      "owner": "Test/Audit/IndexedColumnActual.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Test.Audit.IndexedColumnActual",
+      "requested_owner_status": "Built",
+      "built_line": 93,
+      "built_text": "\u2139 [247/247] Built Test.Audit.IndexedColumnActual (1.3s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Test.IndexedColumnActual",
+          "log_line": 94,
+          "text": "info: Test/Audit/IndexedColumnActual.lean:34:0: Test.IndexedColumnActual: 0 open, 4 proved, 4 total; ceiling 4"
+        }
+      ],
+      "log_sha256": "b92f247792024f53a26e1f94f700eb255df36b96e7af3f72dcdd5cffbdafd4e0",
+      "json_sha256": "639b767d3535c4d7a0a5112022f725eeb1b19bd85a31505393efb707c9d78d07"
+    },
+    {
+      "module": "Effect4.Laws.Program.Simulation.Hooks",
+      "owner": "src/Effect4/Laws/Program/Simulation/Hooks.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Simulation.Hooks",
+      "requested_owner_status": "Built",
+      "built_line": 315,
+      "built_text": "\u2139 [328/328] Built Effect4.Laws.Program.Simulation.Hooks (1.8s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Program.Sched.M1Hooks",
+          "log_line": 316,
+          "text": "info: src/Effect4/Laws/Program/Simulation/Hooks.lean:729:0: Effect4.Program.Sched.M1Hooks: 3 open, 1 proved, 4 total; ceiling 4"
+        }
+      ],
+      "log_sha256": "58849698fb9722854c5e59f34a84cdd5e30080e86de468ad06a07910590512d8",
+      "json_sha256": "318db90e5c99a6426ebf1156070b9115272c3be5c19f17c6a3bf460278c1391e"
+    },
+    {
+      "module": "Effect4.Laws.Program.Typed.World",
+      "owner": "src/Effect4/Laws/Program/Typed/World.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Typed.World",
+      "requested_owner_status": "Built",
+      "built_line": 214,
+      "built_text": "\u2139 [273/273] Built Effect4.Laws.Program.Typed.World (1.0s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Program.Typed.WorldControlWanted",
+          "log_line": 215,
+          "text": "info: src/Effect4/Laws/Program/Typed/World.lean:307:0: Effect4.Program.Typed.WorldControlWanted: 5 open, 0 proved, 5 total; ceiling 5"
+        },
+        {
+          "namespace": "Effect4.Program.Typed.WorldWanted",
+          "log_line": 216,
+          "text": "info: src/Effect4/Laws/Program/Typed/World.lean:308:0: Effect4.Program.Typed.WorldWanted: 18 open, 1 proved, 19 total; ceiling 19"
+        }
+      ],
+      "log_sha256": "8884ab5e16d0e62a6e50a7d2487d09f9f2eaeb797db53cfd3b1fc6126f2172f9",
+      "json_sha256": "19cb67e0d0ef2ebe2e3e47fdb194f86e686051615805406cb52360dc6ba02dda"
+    },
+    {
+      "module": "Effect4.Laws.Program.Simulation.Fibers",
+      "owner": "src/Effect4/Laws/Program/Simulation/Fibers.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Simulation.Fibers",
+      "requested_owner_status": "Built",
+      "built_line": 302,
+      "built_text": "\u2139 [330/330] Built Effect4.Laws.Program.Simulation.Fibers (1.7s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Program.Sched.M1OriginFibers",
+          "log_line": 303,
+          "text": "info: src/Effect4/Laws/Program/Simulation/Fibers.lean:523:0: Effect4.Program.Sched.M1OriginFibers: 5 open, 1 proved, 6 total; ceiling 6"
+        }
+      ],
+      "log_sha256": "79a948e11693bc1e9deb3e7fe61812a86b0533f5eefe6bc2b61d067e1978fd50",
+      "json_sha256": "e357bab02dc08e26d6bccf1feaf1a71146cc96194bfdea056bee883b7771b4a4"
+    },
+    {
+      "module": "Effect4.Laws.Program.Typed.ForkSource",
+      "owner": "src/Effect4/Laws/Program/Typed/ForkSource.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Typed.ForkSource",
+      "requested_owner_status": "Built",
+      "built_line": 216,
+      "built_text": "\u2139 [274/274] Built Effect4.Laws.Program.Typed.ForkSource (1.4s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Program.Typed.M2ForkSourceWanted",
+          "log_line": 217,
+          "text": "info: src/Effect4/Laws/Program/Typed/ForkSource.lean:52:0: Effect4.Program.Typed.M2ForkSourceWanted: 1 open, 0 proved, 1 total; ceiling 1"
+        }
+      ],
+      "log_sha256": "7b2dc3dcbcd98e75ad34de910577a89b758a8bae6b7c85debcdc6f0721af2dcc",
+      "json_sha256": "82e3338e4aa13f10585128c9c6c598a91a0be84b484470f63bf631b5c3ca5c2e"
+    },
+    {
+      "module": "Effect4.Laws.Program.Simulation.Deliver",
+      "owner": "src/Effect4/Laws/Program/Simulation/Deliver.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Simulation.Deliver",
+      "requested_owner_status": "Built",
+      "built_line": 303,
+      "built_text": "\u2139 [331/331] Built Effect4.Laws.Program.Simulation.Deliver (1.7s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Program.Sched.M1Deliver",
+          "log_line": 304,
+          "text": "info: src/Effect4/Laws/Program/Simulation/Deliver.lean:648:0: Effect4.Program.Sched.M1Deliver: 1 open, 0 proved, 1 total; ceiling 1"
+        }
+      ],
+      "log_sha256": "97c45a116af9dfca224a3b937e2fd697a070530a65f0586ce2233d8513cf64db",
+      "json_sha256": "9cdfb99a6ce8a7547019f3334b6b9549b0ffc2bba23cfafb928c9ac098ea458a"
+    },
+    {
+      "module": "Effect4.Laws.Program.Simulation.Actions",
+      "owner": "src/Effect4/Laws/Program/Simulation/Actions.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Simulation.Actions",
+      "requested_owner_status": "Built",
+      "built_line": 305,
+      "built_text": "\u2139 [332/332] Built Effect4.Laws.Program.Simulation.Actions (2.6s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Program.Sched.M1Actions",
+          "log_line": 306,
+          "text": "info: src/Effect4/Laws/Program/Simulation/Actions.lean:818:0: Effect4.Program.Sched.M1Actions: 1 open, 0 proved, 1 total; ceiling 1"
+        },
+        {
+          "namespace": "Effect4.Program.Sched.M1Origin",
+          "log_line": 307,
+          "text": "info: src/Effect4/Laws/Program/Simulation/Actions.lean:819:0: Effect4.Program.Sched.M1Origin: 9 open, 1 proved, 10 total; ceiling 10"
+        }
+      ],
+      "log_sha256": "8902c98e1d9642a60bd29c2c93666bd9fb87c686f04dc02b266c234b1fd01e22",
+      "json_sha256": "a4d8e17521d836156f62e3d26780e3e960440c2f6cccc5ca2c195882666539db"
+    },
+    {
+      "module": "Effect4.Laws.Program.Simulation.Evaluate",
+      "owner": "src/Effect4/Laws/Program/Simulation/Evaluate.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Simulation.Evaluate",
+      "requested_owner_status": "Built",
+      "built_line": 308,
+      "built_text": "\u2139 [333/333] Built Effect4.Laws.Program.Simulation.Evaluate (3.1s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Program.Sched.M1Evaluate",
+          "log_line": 309,
+          "text": "info: src/Effect4/Laws/Program/Simulation/Evaluate.lean:1037:0: Effect4.Program.Sched.M1Evaluate: 0 open, 2 proved, 2 total; ceiling 2"
+        }
+      ],
+      "log_sha256": "fb43e33873ccb2380450a8d0ac07b82511f0ae86a36379c66a839d83637e0072",
+      "json_sha256": "83d2e49f6836eea2ffca80aed160ec740247e4ab27a75e35ac16c5d9ebb5104c"
+    },
+    {
+      "module": "Effect4.Laws.Program.Simulation.Pending",
+      "owner": "src/Effect4/Laws/Program/Simulation/Pending.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Simulation.Pending",
+      "requested_owner_status": "Built",
+      "built_line": 308,
+      "built_text": "\u2139 [333/333] Built Effect4.Laws.Program.Simulation.Pending (6.3s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Program.Sched.M1PendingOrigin",
+          "log_line": 309,
+          "text": "info: src/Effect4/Laws/Program/Simulation/Pending.lean:294:0: Effect4.Program.Sched.M1PendingOrigin: 3 open, 1 proved, 4 total; ceiling 4"
+        }
+      ],
+      "log_sha256": "243557ac887a3228d5cb4709662d51cfdb0351437c97e675c8711dbec17422fe",
+      "json_sha256": "90878fd9c6398fde2a67374734add3d24247d4c43e9e6813b5fccbbf8351220d"
+    },
+    {
+      "module": "Effect4.Laws.Program.Simulation.Drive",
+      "owner": "src/Effect4/Laws/Program/Simulation/Drive.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Simulation.Drive",
+      "requested_owner_status": "Built",
+      "built_line": 312,
+      "built_text": "\u2139 [335/335] Built Effect4.Laws.Program.Simulation.Drive (2.5s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Program.Sched.M1Clock",
+          "log_line": 313,
+          "text": "info: src/Effect4/Laws/Program/Simulation/Drive.lean:1144:0: Effect4.Program.Sched.M1Clock: 1 open, 4 proved, 5 total; ceiling 5"
+        },
+        {
+          "namespace": "Effect4.Program.Sched.M1Drive",
+          "log_line": 314,
+          "text": "info: src/Effect4/Laws/Program/Simulation/Drive.lean:1145:0: Effect4.Program.Sched.M1Drive: 3 open, 4 proved, 7 total; ceiling 7"
+        }
+      ],
+      "log_sha256": "8d38ccf25ecb18633f3223f62b0d400e5ee89257226dfbcde9f29bb451d089a7",
+      "json_sha256": "dfc08f5c6fe1a06eaa01977c58c2694ab7fb4cb2503f929cc98a064aa08abb63"
+    },
+    {
+      "module": "Effect4.Laws",
+      "owner": "src/Effect4/Laws.lean",
+      "command": "LEAN_NUM_THREADS=1 lake build Effect4.Laws",
+      "requested_owner_status": "Built",
+      "built_line": 1056,
+      "built_text": "\u2139 [517/517] Built Effect4.Laws (5.0s)",
+      "requested_owner_replayed": false,
+      "owner_gate_reports": [
+        {
+          "namespace": "Effect4.Machine.M1.DeferredWanted",
+          "log_line": 1057,
+          "text": "info: src/Effect4/Laws.lean:137:0: Effect4.Machine.M1.DeferredWanted: 30 open, 1 proved, 31 total; ceiling 31"
+        },
+        {
+          "namespace": "Effect4.Machine.M1Clock",
+          "log_line": 1058,
+          "text": "info: src/Effect4/Laws.lean:138:0: Effect4.Machine.M1Clock: 5 open, 1 proved, 6 total; ceiling 6"
+        }
+      ],
+      "log_sha256": "0b2f1422540436d8fbc5aae6721e025b5af409cf20d100417525853ea5f58bc6",
+      "json_sha256": "76dbefc3204cd8a8345ae247ef6dc3f822425be607aeac19ad4ab5da24eb57d3"
+    }
+  ],
+  "source_application_manifest_sha256": "e67bbad28d59ec727defda6c64e06ff8c6e70d194474523e6b43a3785147cdda",
+  "status_only_archive": "/tmp/m1-tools/phase-b-status-evidence.tar.gz",
+  "status_only_archive_sha256": "dd744494b811c41d8a3da54cdb9e97b2739d30eee35910407947d25370fd4227",
+  "make_check_evidence": "excluded; no partial make-check output read or copied"
+}

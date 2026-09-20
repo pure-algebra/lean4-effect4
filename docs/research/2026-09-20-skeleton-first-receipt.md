@@ -410,3 +410,120 @@ measured by the fresh audit, not inferred from replay output. A read-only audit 
 47 moved module names found no remaining executable stale module reference. Declaration
 names and proof bodies are retained. Root README.md is unchanged; nothing was pushed.
 Phase B's corrected-cap census and statement ledgers have not run yet.
+
+## Phase B installation
+
+Placement committed as `05417cc6`; its preceding warning-only correction is `f7d22703`.
+The new heartbeat control failed against the old search wrapper specifically because
+the cached Core heartbeat limit stayed unchanged. With Search updating that cache, the
+control and existing ProofGraph/Obligations controls pass. The control verifies requested
+and cached caps, zero/unlimited mode, state rollback after success and forced timeout,
+and a fresh subsequent search. Its published theorem has no axioms. The old-cap census
+counts remain historical; the new baseline will use the corrected 20000 cap, and ledgers
+their corrected 40000 cap. No budget was raised.
+
+The manual 32-entry ledger package, indexed-column/Expect instrument and 97-entry main
+statement package are installed. The main package has 96 active entries and one held M4
+entry; Expect adds a separate active entry. These are declaration counts, not proof results.
+World and its two leaf predicates reuse Columns.Stores_refs and Columns.DeferredStore_cells
+from the generator. The retained snapshots precede Phase C fills; they do not repair the
+historical Phase A before-proof evidence gaps documented above.
+
+The corrected column producer now compiles, including explicit List Nat columns that
+the value census does not visit; a constructor-field check also handles a parameterized
+nested record. Four positive shapes and five refusal controls pass. Its two new projection
+seats make twelve indexed-control obligations. Actual generated counts are 17 predicates,
+12 carrier predicates, two refusals; position coverage remains 85 positions with 95 source
+rows. Frame generation gives unchanged RunFiber 16/87/9 and remaining records 46 checked
+theorems / 90 reused clauses / 27 explicit premises, including DeferredStoreOk.
+
+All statement-only semantic modules, including World, ForkSource, trace/origin seats and
+the held handshake, have compiled. The complete Laws root passes with the corrected
+search budget and the existing zero ceilings unchanged. The fresh static ledger inventory
+contains 311 task statements: 169 prior + 32 manual + 97 main (including one held) + one
+Expect + 12 indexed. It separates six intentional audit fixtures. Its 54 complete scopes
+need 36 additional gate sites beside 19 existing sites (one prefix has two checkpoints).
+No proof fill or new gate is installed yet; the fresh census and measured open counts follow.
+
+
+The first corrected-cap census ran across 218 modules and reported 648 closures out
+of 4062 statements; 647 passed its axiom scan. These figures are retained as provisional,
+not portable-proof evidence. The following status pass found that a searched proof referred
+to a temporary spawn splitter removed by rollback. A minimal independent control reproduced
+that defect. The status pass stopped before any valid complete scope or marker removal.
+
+Search now expands temporary definitions and theorems into the returned proof, checks the
+exact requested proposition synchronously against the original checked kernel environment,
+and rejects unavailable dependencies. Temporary axioms and unsafe definitions are refused.
+The closure and kernel check share the search attempt's original heartbeat cap and origin;
+dependency expansion uses the existing recursion-depth limit. Axiom checking covers both
+statement and proof before publication. The finite controls pass, including polymorphic
+helpers, rollback, wrong-type assignment, missing constants and a forbidden dependency only
+in the statement. One control syntax-hygiene error was corrected before the successful run.
+Exact source/log snapshots and commands are retained in phase-b/search-portability. The
+full rebuilt audit and a fresh portable-proof census remain pending at this point.
+
+
+The repaired-tool full build passed (`LEAN_NUM_THREADS=1 lake build Test.All`):
+469 modules and 66144 declarations, 138 API/utility and 198 Laws-only modules.
+All sources remain reachable, and the runtime root never imports Laws. The semantic/test
+axioms remain [propext, Quot.sound]; the exact implementation exception remains 14 modules
+and 29 declarations. The refreshed search-portability archive retains this fresh log,
+command and exit code alongside the previous unit-stage evidence. The new 218-module
+census is running separately; none of the provisional closures are counted into it.
+
+
+The fresh portable-proof census completed: 218 modules, 139 serial calls, 648 closures
+out of 4062 statements; 647 are within [propext, Quot.sound]. The original 38-module radius
+is 247/1584. Every candidate passed the exact-proposition kernel check. The one rejected
+candidate remains path_beq_self (Classical.choice). The closed name set matches the
+provisional run; seven recorded dependency lists gained permitted axioms after temporary
+helpers were included. The corrected table, every raw report and frozen input are retained
+losslessly in phase-b/portable-census. The earlier run remains provisional history.
+
+The complete status pass measured the 221 statements requiring new gates at cap 40000:
+48 closed, 173 open, zero rejected. Together with the 90 distinct statements covered by
+existing zero gates, the skeleton accounts for all 311 task statements. One open statement
+is the held M4 handshake, leaving 172 active open statements for Phase C. Exactly 47 wanted
+markers were removed from checked closures; the remaining closed statement already had no
+marker. No proof body changed. The 36 new gates keep ceiling=N (their statement counts),
+and all 19 existing zero gate sites remain byte-for-byte unchanged. Their serial owner
+builds are running. Nonterminal search diagnostics can be the generic open-goal message;
+Phase C proof probes must inspect the actual residual goals before adding support facts.
+
+A copied unusedSectionVars suppression in Refinement had no justification and was removed.
+The narrow Refinement build passes with that warning check enabled. This option-only cleanup
+followed the completed census; it changed no statement or proof body.
+
+
+All 30 gate-owner builds passed. Each owner has a fresh Built line and its own emitted
+report; none is a replay-only confirmation build. The 36 scopes exactly match the status
+pass: 48 proved, 173 open, 221 statements, ceiling=N. M4 remains one open statement at
+ceiling 1. The status and gate packages are separate, with failures and the applied
+marker-only patch retained. Phase B's `make check` is now running. Both sanctioned
+coverage scripts now pass `-DwarningAsError=true` to their direct Lean calls; their shell
+syntax check passed, and the fresh coverage commands will run after the full check.
+
+
+Phase B's `LEAN_NUM_THREADS=1 make check` passed: the fresh Test.All audit checked 469
+modules and 66145 declarations, with the same root and axiom boundaries, and the generated
+file drift gate passed. No group producer ran in this phase's check; the cumulative runtime
+producer totals remain LCNF 3, EFF 4, wire 4, CAS 4. Both sanctioned coverage commands passed
+with warnings treated as errors. Their exact report is retained with the full-check evidence:
+
+Effect rc.112 runtime coverage: denominator 135; owned-with-green 8/135;
+green 133, partial 2, absent 0; census 137 rows, 2 excluded
+partial: op.Failure layer.launch-holds-scope
+produced at 05417cc6 (working tree has uncommitted changes) by scripts/report-effect-runtime-coverage.sh
+
+
+All 311 statement seats and their gates are now installed. Phase C has not begun: no manual
+proof body was changed by the marker/gate patch. The corrected before-fill census and
+source snapshots are retained for the per-module searched rewrites and bank comparison.
+README.md is unchanged; nothing has been pushed.
+
+
+The staged whitespace check is clean for source and prose. Two retained evidence formats
+are excluded from that formatting-only check: build-results.tsv preserves an empty final
+column, and reviewed-live-diff.patch preserves blank diff-context lines. Their original
+bytes and checksum manifests remain unchanged; no repository build or trust gate is relaxed.

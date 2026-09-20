@@ -390,6 +390,11 @@ theorem fiberMeans_context {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (h : FiberMeans C S f₁ f₂) : f₁.context = f₂.context :=
   congrArg FiberControl.context h.1
 
+def M1OriginBook.fiberMeans_origin {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
+    {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (_h : FiberMeans C S f₁ f₂) : ProofGraph.Obligation (
+    f₁.origin = f₂.origin) := ⟨⟩
+#proof_wanted M1OriginBook.fiberMeans_origin
+
 theorem fiberMeans_origin {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
     {f₂ : RunFiber ν σ β ε δ ι α χ κ₂ φ₂} (h : FiberMeans C S f₁ f₂) : f₁.origin = f₂.origin :=
   congrArg FiberControl.origin h.1
@@ -1211,3 +1216,5 @@ theorem bookMeans_controls {m₁ : RunMachine ν σ Val Err Defect FiberId Ann �
 end Observation
 
 end Effect4.Machine
+
+#typed_state_obligations Effect4.Machine.M1OriginBook ceiling 1 using aesop (rule_sets := [Effect4.Stores])

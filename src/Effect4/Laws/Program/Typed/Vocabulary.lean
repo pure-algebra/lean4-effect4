@@ -3,7 +3,7 @@
 
 The vocabulary of the typed-state source table (`docs/research/2026-09-18-position-census-design.md`
 §2B). Rows are ordinary `List Row` declarations, decoded from their kernel expressions by
-`Laws/Auto/TypedSources.lean` for the totality gate and direct declaration generator. This module holds only the
+`Laws/Program/Typed/TypedSources.lean` for the totality gate and direct declaration generator. This module holds only the
 data types, with no meta import, so that anything may name them.
 
 The world is the tables plus the store: the fiber table `Γ` (every fiber ever forked, at the
@@ -20,18 +20,8 @@ namespace Effect4.Program.Typed
 inductive Expected
   /-- The fiber table at this id. -/
   | fiber (id : String)
-  /-- The promise table at this cell. -/
-  | promise (cell : String)
-  /-- The heap column. -/
-  | refColumn
-  /-- The signature row's answer and error columns. -/
-  | row (op : String)
-  /-- The checker at this point of the root program. -/
-  | checker (point : String)
   /-- The expectation the enclosing owner passes down (`RSaved` inside `RunFiber`). -/
   | inherited
-  /-- A fixed type. -/
-  | const (ty : String)
 deriving Repr, BEq, Inhabited
 
 /-- What the invariant states at a position, or on a containment edge. -/
@@ -50,7 +40,7 @@ inductive Source
   never calls it (the read census checks). -/
   | hook (consumer : Option String)
   /-- A store column carried as its own clause (`HeapNat`, the promise table). -/
-  | column (name : String)
+  | column (name : String) (keyConstructor : Option String := none)
   /-- Written, never read back as an answer (the read census checks). -/
   | journal
   /-- A hand predicate over a whole field: on a position, over the position's own type; on an

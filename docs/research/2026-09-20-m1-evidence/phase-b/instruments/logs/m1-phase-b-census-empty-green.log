@@ -1,0 +1,6 @@
+ℹ [3/76] Replayed Test.Audit.ProofGraphSearch
+info: Test/Audit/ProofGraphSearch.lean:74:0: 'Test.ProofGraphSearch.closed' does not depend on any axioms
+✔ [176/177] Built Effect4.Laws.Auto.Census (1.4s)
+ℹ [177/177] Built Test.Audit.ProofGraph (1.4s)
+info: Test/Audit/ProofGraph.lean:76:0: 'Test.ProofGraph.searched' does not depend on any axioms
+Build completed successfully (177 jobs).

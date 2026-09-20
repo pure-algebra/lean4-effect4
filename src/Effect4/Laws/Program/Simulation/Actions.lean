@@ -814,3 +814,6 @@ theorem join_rel (target : FiberId) (mode : Supervision.ObserverMode) :
 end Actions
 
 end Effect4.Program.Sched
+
+#typed_state_obligations Effect4.Program.Sched.M1Actions ceiling 1 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Program.Sched.M1Origin ceiling 10 using aesop (rule_sets := [Effect4.Stores])

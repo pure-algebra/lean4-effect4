@@ -1,0 +1,350 @@
+[
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/02-Effect4.Laws.Machine.Arena.log",
+    "archive_member": "logs/serial/02-Effect4.Laws.Machine.Arena.log",
+    "bytes": 95,
+    "sha256": "9b1d7649e0fe80b468e8d0f3c9ce6fde84e022d766b10b236510b36d2e359da9"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/03-Effect4.Laws.Machine.RefKernel.log",
+    "archive_member": "logs/serial/03-Effect4.Laws.Machine.RefKernel.log",
+    "bytes": 99,
+    "sha256": "2b2cd07b77b3bb0b20271bc33d932431ce555405f4e81c2538845455c0cf73c6"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/04-Effect4.Laws.Machine.Refinement.log",
+    "archive_member": "logs/serial/04-Effect4.Laws.Machine.Refinement.log",
+    "bytes": 278,
+    "sha256": "9156f75cee2cd6055fe885cf5404d4bdbacf30df6d11bce7273dc899b3ff2159"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/05-Effect4.Laws.Machine.Clauses.log",
+    "archive_member": "logs/serial/05-Effect4.Laws.Machine.Clauses.log",
+    "bytes": 97,
+    "sha256": "04454b3aa1446c75322d8469fb882a9ca188a521968d353cb49cb148832613ff"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/06-Effect4.Laws.Machine.Handles.log",
+    "archive_member": "logs/serial/06-Effect4.Laws.Machine.Handles.log",
+    "bytes": 519,
+    "sha256": "8f7309be700e8cbeeabad6ddb7cad2f20c38e638dc3b1ca410e404a7cbb14011"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/07-Effect4.Laws.Machine.Behaviour.attempt1.log",
+    "archive_member": "logs/serial/07-Effect4.Laws.Machine.Behaviour.attempt1.log",
+    "bytes": 1614,
+    "sha256": "2ccf913e1af6de53b57e23d6588f04de7c4922e9f7f3900ed295d05670614909"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/07-Effect4.Laws.Machine.Behaviour.log",
+    "archive_member": "logs/serial/07-Effect4.Laws.Machine.Behaviour.log",
+    "bytes": 455,
+    "sha256": "3e32be39be775e5b53c8e5bda8af38636789aec75e81fad55b3b326eef8dee71"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/08-Effect4.Laws.Machine.Book.log",
+    "archive_member": "logs/serial/08-Effect4.Laws.Machine.Book.log",
+    "bytes": 450,
+    "sha256": "f0e68a84f6ff3715d7a6deb6605c80189df76907f3bb32fc49945ebf58dc979a"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/09-Effect4.Laws.Program.Simulation.Fibers.log",
+    "archive_member": "logs/serial/09-Effect4.Laws.Program.Simulation.Fibers.log",
+    "bytes": 37821,
+    "sha256": "bc199eacbdab75794b36f78ad361e3e872b8f79b220a4518291fdea60de711dc"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/10-Test.Audit.TypedStateDecl.log",
+    "archive_member": "logs/serial/10-Test.Audit.TypedStateDecl.log",
+    "bytes": 9409,
+    "sha256": "15737bbd83a20972ee6f42c8b3925eb45f33a499ad40c495acc56a2c63f75396"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/13-Effect4.Laws.Program.Typed.Frames.log",
+    "archive_member": "logs/serial/13-Effect4.Laws.Program.Typed.Frames.log",
+    "bytes": 8484,
+    "sha256": "af1c2db9afd916be594dc5f02afd304ae9c74d8f7d91c7262a4daaee5a7dbfc3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/15-Test.Audit.PositionCensus.log",
+    "archive_member": "logs/serial/15-Test.Audit.PositionCensus.log",
+    "bytes": 255412,
+    "sha256": "2b51b317dc35c7fd5d368d66f874bb6a27760287073864abbb603191a01c3b07"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/16-Test.Program.TypedStateRulesRed.log",
+    "archive_member": "logs/serial/16-Test.Program.TypedStateRulesRed.log",
+    "bytes": 8603,
+    "sha256": "271935a9e53d83f8f6f71cd6f809d4e7b613007282f8f9a82eb8a369e01a474f"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/17-Effect4.Laws.Program.Typed.World.attempt1.log",
+    "archive_member": "logs/serial/17-Effect4.Laws.Program.Typed.World.attempt1.log",
+    "bytes": 29247,
+    "sha256": "1268d2a4e9513e9e116826060bb56d44b31e5a16cdf5ff80d0872c1591a88c29"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/17-Effect4.Laws.Program.Typed.World.log",
+    "archive_member": "logs/serial/17-Effect4.Laws.Program.Typed.World.log",
+    "bytes": 22073,
+    "sha256": "f6317b27ecad66c630f1287806c1a4dd543c53e908f893cd6da0dfcb61a559f1"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/18-Effect4.Laws.Program.Typed.ForkSource.log",
+    "archive_member": "logs/serial/18-Effect4.Laws.Program.Typed.ForkSource.log",
+    "bytes": 22078,
+    "sha256": "69b2de6cf68b6e5353f64fce01cd92a0a390e3cbea3286afaa939f7efd7eac95"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/21-Effect4.Laws.Program.Guard.TraceOrigin.log",
+    "archive_member": "logs/serial/21-Effect4.Laws.Program.Guard.TraceOrigin.log",
+    "bytes": 37124,
+    "sha256": "9083ca97f84af950fb1d63c6f56f0f633b75ac248bec976ed0b1afe46068f8d3"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/22-Effect4.Laws.Program.Guard.Handshake.log",
+    "archive_member": "logs/serial/22-Effect4.Laws.Program.Guard.Handshake.log",
+    "bytes": 37299,
+    "sha256": "fd233dd5aeecfeb67a6346eb6e63a387146a46a981649a55560ef8b250917498"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/23-Effect4.Laws.Run.log",
+    "archive_member": "logs/serial/23-Effect4.Laws.Run.log",
+    "bytes": 42004,
+    "sha256": "bccc469190eff122d3affe6a1bcc61d0a6863959acff8b09e81cdfa69145184d"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/24-Test.Api.SupervisionContract.log",
+    "archive_member": "logs/serial/24-Test.Api.SupervisionContract.log",
+    "bytes": 36061,
+    "sha256": "926c9898af07fdc523ba907920a017d64308a276f94e346afdf4ea86b9be3950"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/logs/26-Effect4.Laws.log",
+    "archive_member": "logs/serial/26-Effect4.Laws.log",
+    "bytes": 119759,
+    "sha256": "c39b234e175ee4db5102faa05cf83dbbd51e4ee4ac22764c0581f25d4fe0871e"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-modules-2-9.log",
+    "archive_member": "logs/orchestration/m1-phase-b-modules-2-9.log",
+    "bytes": 2350,
+    "sha256": "3f7bc6b92f7f948d4d756a64c8450d0e701b1308135c05f6ae45bb6b5fa5c851"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-modules-7-9.log",
+    "archive_member": "logs/orchestration/m1-phase-b-modules-7-9.log",
+    "bytes": 381,
+    "sha256": "5bb06e4f2c2c25e1f997e13625dfacdc62f2ddb712ab02a8d56cdc4f2ae7af94"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-modules-15-18.log",
+    "archive_member": "logs/orchestration/m1-phase-b-modules-15-18.log",
+    "bytes": 2264,
+    "sha256": "8cec86a1d378a3f1e88756c93f187384f1aa279b7fed46abd1f9aefcdea72cba"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-world-repair-run.log",
+    "archive_member": "logs/orchestration/m1-phase-b-world-repair-run.log",
+    "bytes": 270,
+    "sha256": "159e349daaad2964a7896b72614e7494eaa3ee0228e880bda6abfc2c27da01b4"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-modules-21-24.log",
+    "archive_member": "logs/orchestration/m1-phase-b-modules-21-24.log",
+    "bytes": 500,
+    "sha256": "b8a4905ad3ee6f15ff0fc8d5d35ed779d62ea5a13f613a890040b4b7a3d2e1c3"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-frame-repair-run.log",
+    "archive_member": "logs/orchestration/m1-phase-b-frame-repair-run.log",
+    "bytes": 132,
+    "sha256": "1c3356fafe2f1a935663f20ff4c26a4a76762a005b72ac5288b602c81f0a7be1"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-laws-root-run.log",
+    "archive_member": "logs/orchestration/m1-phase-b-laws-root-run.log",
+    "bytes": 90,
+    "sha256": "ddd8a39a8211841e3ad1dd844e89cf255dd08f1cb396f3be57160be7817261ea"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-state-controls-run.log",
+    "archive_member": "logs/orchestration/m1-phase-b-state-controls-run.log",
+    "bytes": 116,
+    "sha256": "71dcd1f663b154380c3b3933bd3ced62d1d3f74237c3cab2be15c0966de8dade"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-api-supervision.log",
+    "archive_member": "logs/manual/m1-phase-b-api-supervision.log",
+    "bytes": 36061,
+    "sha256": "03bed388691d1e434d6879936aa6159fc0dc779df5fefb9381e92a1c119a1e07"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-arena-contract.log",
+    "archive_member": "logs/manual/m1-phase-b-arena-contract.log",
+    "bytes": 281,
+    "sha256": "ee6fe7559d1b5a83ec1e3c6c45e07121c9323695f4c8c938d0b4d48b752b364d"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-completion-data.log",
+    "archive_member": "logs/manual/m1-phase-b-completion-data.log",
+    "bytes": 223,
+    "sha256": "b34b68c8a6f19c1da3d1d7819f8cd3a17044a32dbd687de53d519ebecb935fe6"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-forms-compile.log",
+    "archive_member": "logs/manual/m1-phase-b-forms-compile.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-frames-old-pin.log",
+    "archive_member": "logs/manual/m1-phase-b-frames-old-pin.log",
+    "bytes": 9992,
+    "sha256": "566700048dfd0f0feff35b8fddfe8bb3dfefa1a32f1b24b6e56669068e31484a"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-indexed-columns-unpinned.log",
+    "archive_member": "logs/manual/m1-phase-b-indexed-columns-unpinned.log",
+    "bytes": 1914,
+    "sha256": "2c76f8fe656581368ba8ec63e602c4c5f0db8482b187637d112c3cab41a83019"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-indexed-columns.log",
+    "archive_member": "logs/manual/m1-phase-b-indexed-columns.log",
+    "bytes": 508,
+    "sha256": "428409c49cf9411d5cb6878c57240e2dd26d0644d814d63a5aee1cd911bf806d"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-machine-handshake.log",
+    "archive_member": "logs/manual/m1-phase-b-machine-handshake.log",
+    "bytes": 455,
+    "sha256": "fbfc3a1ccf2d8cb8d839f5e111c56458ad6d2cdd624c97a9625b2174761a9936"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-position-tool.log",
+    "archive_member": "logs/manual/m1-phase-b-position-tool.log",
+    "bytes": 286,
+    "sha256": "26d7b84a2bc73e3a859461af1feaabf1ad6fbcf4e07580bb1a5213a931a17be5"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-state-generator-syntax-failed.log",
+    "archive_member": "logs/manual/m1-phase-b-state-generator-syntax-failed.log",
+    "bytes": 2713,
+    "sha256": "cff6d5e4b21dfe861f01533f7dca136a01ae1c9eafd4069f2073bad03a29c473"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-state-generator.log",
+    "archive_member": "logs/manual/m1-phase-b-state-generator.log",
+    "bytes": 110,
+    "sha256": "721f2feef3bd4937d2b54916d889cf6d81bd8ccc0be131c24cf01cdfe354ecad"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-state-old-pin.log",
+    "archive_member": "logs/manual/m1-phase-b-state-old-pin.log",
+    "bytes": 9887,
+    "sha256": "2874204ecc80bb3db305c9c280e90ebd7538f6a97b11f9690eea1f9646891b73"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-test-all.log",
+    "archive_member": "logs/manual/m1-phase-b-test-all.log",
+    "bytes": 942544,
+    "sha256": "772668c32153ff90a5924927554af4a17d1053417602fe811f62284faf834755"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-test-all-census-tool.log",
+    "archive_member": "logs/manual/m1-phase-b-test-all-census-tool.log",
+    "bytes": 943685,
+    "sha256": "96acac059f993e936af9fa6087c06103f04e7f7ca2f6e22e5ebd8b7ef4dc02b6"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-census-truth-build.log",
+    "archive_member": "logs/manual/m1-phase-b-census-truth-build.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-census-keyed-build.log",
+    "archive_member": "logs/manual/m1-phase-b-census-keyed-build.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-search-old-red.log",
+    "archive_member": "logs/instruments/m1-phase-b-search-old-red.log",
+    "bytes": 1362,
+    "sha256": "27ff1dc2f672250d25add69b15528c9148592a65d6bf1c10a14a85c32af31255"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-search-green.log",
+    "archive_member": "logs/instruments/m1-phase-b-search-green.log",
+    "bytes": 382,
+    "sha256": "f7d1ad139af12c568f8bcba78ec7c3bd4787a1ac5316031fa9563acaf9e7c064"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-obligations.log",
+    "archive_member": "logs/instruments/m1-phase-b-obligations.log",
+    "bytes": 312,
+    "sha256": "4b30a6d83baa33a3eb837d16a0cdfd4c996b9eb54ee172c7708792ab7295b227"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-census-empty-red.log",
+    "archive_member": "logs/instruments/m1-phase-b-census-empty-red.log",
+    "bytes": 460,
+    "sha256": "dc30a04b72a87bdac0036067c2b1d1e6eecc3e8d5965f6951294636de858e63f"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-census-empty-red-imported.log",
+    "archive_member": "logs/instruments/m1-phase-b-census-empty-red-imported.log",
+    "bytes": 667,
+    "sha256": "c34ea0aceab74f722886f628057be73c81b7ac2af32984143a5eb837dd1cc686"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-census-empty-green.log",
+    "archive_member": "logs/instruments/m1-phase-b-census-empty-green.log",
+    "bytes": 392,
+    "sha256": "69c04e92d980ba78a4be5c8dc35fc36d994034a1240a01761fd121ebff385eb7"
+  },
+  {
+    "original_path": "/tmp/m1-phase-b-census-ordinary-dead-tactic-red.log",
+    "archive_member": "logs/instruments/m1-phase-b-census-ordinary-dead-tactic-red.log",
+    "bytes": 173,
+    "sha256": "0a5e11d668836f21e5d1595b4863278a843e023384f39dca8d7d40caa0fba423"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-serial-plan/serial-plan.json",
+    "archive_member": "metadata/serial-plan.original.json",
+    "bytes": 9351,
+    "sha256": "14564b1b9a7b0375c96543e921c7d3db40d8fd465117df16e9c8cf302380c199"
+  },
+  {
+    "original_path": "/tmp/m1-tools/run-phase-b-modules.py",
+    "archive_member": "metadata/run-phase-b-modules.py",
+    "bytes": 857,
+    "sha256": "431bdd662b82bf7b32e4c359b8b6f7e6821d547b05171f2562a40fc1e23459e5"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-repair-notes.txt",
+    "archive_member": "metadata/phase-b-repair-notes.txt",
+    "bytes": 1103,
+    "sha256": "19c96eb2870fd180a9da776f4df19eda04ab3881997ffed82b787f290b9d0649"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-census-runner/direct-driver-compiles.sh",
+    "archive_member": "metadata/direct-driver-compiles.sh",
+    "bytes": 716,
+    "sha256": "539a4e1a923b9d3a4387ea7cc4318f8511a028370cdbbb269efbb40153df6c88"
+  },
+  {
+    "original_path": "/tmp/m1-tools/phase-b-instrument-evidence/commands-and-results.json",
+    "archive_member": "metadata/instrument-commands-and-results.json",
+    "bytes": 5907,
+    "sha256": "6ad9dbfe6f7dfe7bd8f8e68547184280a00895d0cdb71971a863e930efd4c8cf"
+  },
+  {
+    "original_path": "/Users/pooks/Dev/lean4-effect4/lakefile.toml",
+    "archive_member": "metadata/lakefile.toml",
+    "bytes": 6924,
+    "sha256": "d0fa6755c18b415881f4839704c988ceb47665f5f032cf9da4dc4cf59dca65db"
+  }
+]

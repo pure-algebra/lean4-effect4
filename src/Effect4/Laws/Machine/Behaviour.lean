@@ -1,5 +1,6 @@
 import Effect4.Laws.Machine.Approximation
 import Effect4.Laws.Machine.StoresLaws
+import Effect4.Laws.Auto.Obligations
 
 /-!
 # Observations and behavior on a settled decision tape
@@ -100,3 +101,19 @@ theorem Beh_fuel_irrelevant (interp : RunInterp ν σ Val Err Defect FiberId Ann
     exact Beh_add interp m tape n' k h' h
 
 end Effect4.Machine
+
+-- BEGIN M1 PHASE B Machine.Behaviour
+/-! Diagnostic trace erasure leaves the existing semantic observation unchanged. -/
+
+namespace Effect4.Machine.M1Trace
+open Effect4
+
+def obs_replace_trace {ν σ χ κ φ η : Type}
+    (m : RunMachine ν σ Val Err Defect FiberId Ann χ Stores κ φ η)
+    (trace : List (RunEvent ν σ Val Err Defect FiberId Ann χ κ η)) :
+    ProofGraph.Obligation (obs { m with trace } = obs m) := ⟨⟩
+
+end Effect4.Machine.M1Trace
+-- END M1 PHASE B Machine.Behaviour
+
+#typed_state_obligations Effect4.Machine.M1Trace ceiling 1 using aesop (rule_sets := [Effect4.Stores])

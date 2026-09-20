@@ -3,6 +3,7 @@ import Effect4.Laws.Api.Runner
 import Effect4.Laws.Api.HostSession
 import Effect4.Laws.Api.Frontier
 import Effect4.Laws.Program.Admit
+import Effect4.Laws.Auto.Obligations
 
 /-!
 # Laws.Run — what a run guarantees
@@ -863,3 +864,22 @@ theorem runPure_eq_run (b : Api.Built) (id : String) (budget : Api.Budget)
     machineOf_nil]
 
 end Effect4.Run
+
+-- BEGIN M1 PHASE B Run
+/-! Diagnostic trace erasure leaves the existing semantic observation unchanged. -/
+
+namespace Effect4.Run.M1Trace
+open Effect4 Effect4.Machine Effect4.Program
+
+def observe_replace_trace (s : Run)
+    (trace : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx)) :
+    ProofGraph.Obligation
+      (Run.observe { s with session :=
+        { s.session with machine := { s.session.machine with trace } } } =
+       Run.observe s) := ⟨⟩
+#proof_wanted observe_replace_trace
+
+end Effect4.Run.M1Trace
+-- END M1 PHASE B Run
+
+#typed_state_obligations Effect4.Run.M1Trace ceiling 1 using aesop (rule_sets := [Effect4.Stores])

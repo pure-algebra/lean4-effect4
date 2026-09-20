@@ -58,10 +58,15 @@ publish the returned term through `ProofGraph.addTheorem`. -/
 def attempt (type : Expr) (tac : Syntax) (cap : Nat) (modIdx : ModuleIdx) (startLine : Nat) :
     TermElabM (Option (Array Name)) := do
   let some proof ← attemptProof type tac cap modIdx startLine | return none
-  return some (← axiomsOf proof)
+  return some (← ProofGraph.axiomsOfTheorem type proof)
 
 syntax (name := autoCensus)
   "#auto_census " ident (" heartbeats " num)? " using " tacticSeq : command
+
+-- This argument is a speculative search program, not an immediately executed
+-- proof. An empty module legitimately never evaluates it. Classify the command
+-- like Aesop's deferred rule tactics; ordinary proof tactics remain linted.
+initialize Batteries.Linter.UnreachableTactic.addIgnoreTacticKind ``autoCensus
 
 @[command_elab autoCensus] def elabAutoCensus : CommandElab := fun stx => do
   let modName := stx[1].getId

@@ -1935,3 +1935,5 @@ theorem run_eq_meaning (e : NativeEff) (fuel : Nat) (hs : Straight e = true)
     rfl
 
 end Effect4.Program.Agreement
+
+#typed_state_obligations Effect4.Program.Agreement.M1Quiet ceiling 1 using aesop (rule_sets := [Effect4.Stores])

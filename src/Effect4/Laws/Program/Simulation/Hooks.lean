@@ -164,7 +164,6 @@ theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresO
 /-- An exit becomes the matching terminal code in both interpreters. -/
 def M1Hooks.exit_completion_means (root : NativeEff) (ex : ExitV) :
     ProofGraph.Obligation (CodeMeans root (embed (Prim.ofExit ex)) (.pure ex)) := ⟨⟩
-#proof_wanted M1Hooks.exit_completion_means
 
 theorem exit_completion_means (root : NativeEff) (ex : ExitV) :
     CodeMeans root (embed (Prim.ofExit ex)) (.pure ex) := by
@@ -726,3 +725,5 @@ theorem means_clearStack {root : NativeEff} {f₁ : FFiber} {f₂ : RSaved} (h :
   ⟨h.1, h.2.1, h.2.2.1, h.2.2.2.1, StackMeans.nil, trivial⟩
 
 end Effect4.Program.Sched
+
+#typed_state_obligations Effect4.Program.Sched.M1Hooks ceiling 4 using aesop (rule_sets := [Effect4.Stores])

@@ -1,0 +1,533 @@
+[
+  {
+    "plan_order": 1,
+    "module": "Effect4.Laws.Machine.CompletionData",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/manual/m1-phase-b-completion-data.log",
+        "line": 1,
+        "diagnostic": "\u2139 [198/198] Built Effect4.Laws.Machine.CompletionData (1.8s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 5,
+        "diagnostic": "\u2139 [200/203] Built Effect4.Laws.Machine.CompletionData (1.4s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 2,
+    "module": "Effect4.Laws.Machine.Arena",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/serial/02-Effect4.Laws.Machine.Arena.log",
+        "line": 1,
+        "diagnostic": "\u2714 [198/198] Built Effect4.Laws.Machine.Arena (1.3s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 1,
+        "diagnostic": "\u2714 [199/203] Built Effect4.Laws.Machine.Arena (1.3s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 4,
+        "diagnostic": "\u2714 [199/203] Built Effect4.Laws.Machine.Arena (1.1s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 3,
+    "module": "Effect4.Laws.Machine.RefKernel",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/serial/03-Effect4.Laws.Machine.RefKernel.log",
+        "line": 1,
+        "diagnostic": "\u2714 [199/199] Built Effect4.Laws.Machine.RefKernel (1.3s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 4,
+        "diagnostic": "\u2714 [201/203] Built Effect4.Laws.Machine.RefKernel (1.2s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 7,
+        "diagnostic": "\u2714 [201/203] Built Effect4.Laws.Machine.RefKernel (1.2s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 4,
+    "module": "Effect4.Laws.Machine.Refinement",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/serial/04-Effect4.Laws.Machine.Refinement.log",
+        "line": 3,
+        "diagnostic": "\u2714 [201/201] Built Effect4.Laws.Machine.Refinement (1.2s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 840,
+        "diagnostic": "\u2714 [498/502] Built Effect4.Laws.Machine.Refinement (1.4s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 857,
+        "diagnostic": "\u2714 [498/502] Built Effect4.Laws.Machine.Refinement (1.2s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 5,
+    "module": "Effect4.Laws.Machine.Clauses",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/serial/05-Effect4.Laws.Machine.Clauses.log",
+        "line": 1,
+        "diagnostic": "\u2714 [192/192] Built Effect4.Laws.Machine.Clauses (4.3s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 2,
+        "diagnostic": "\u2714 [191/194] Built Effect4.Laws.Machine.Clauses (4.4s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 6,
+    "module": "Effect4.Laws.Machine.Handles",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/serial/06-Effect4.Laws.Machine.Handles.log",
+        "line": 6,
+        "diagnostic": "\u2714 [204/204] Built Effect4.Laws.Machine.Handles (106s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 84,
+        "diagnostic": "\u2714 [238/245] Built Effect4.Laws.Machine.Handles (113s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 87,
+        "diagnostic": "\u2714 [237/242] Built Effect4.Laws.Machine.Handles (103s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 7,
+    "module": "Effect4.Laws.Machine.Behaviour",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/serial/07-Effect4.Laws.Machine.Behaviour.log",
+        "line": 5,
+        "diagnostic": "\u2714 [204/204] Built Effect4.Laws.Machine.Behaviour (1.6s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 77,
+        "diagnostic": "\u2714 [223/231] Built Effect4.Laws.Machine.Behaviour (1.1s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 80,
+        "diagnostic": "\u2714 [221/231] Built Effect4.Laws.Machine.Behaviour (1.1s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 8,
+    "module": "Effect4.Laws.Machine.Book",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/serial/08-Effect4.Laws.Machine.Book.log",
+        "line": 5,
+        "diagnostic": "\u2714 [205/205] Built Effect4.Laws.Machine.Book (2.6s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 83,
+        "diagnostic": "\u2714 [230/240] Built Effect4.Laws.Machine.Book (2.4s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 81,
+        "diagnostic": "\u2714 [229/239] Built Effect4.Laws.Machine.Book (2.3s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 9,
+    "module": "Effect4.Laws.Program.Simulation.Fibers",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/serial/09-Effect4.Laws.Program.Simulation.Fibers.log",
+        "line": 311,
+        "diagnostic": "\u2714 [330/330] Built Effect4.Laws.Program.Simulation.Fibers (1.6s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 624,
+        "diagnostic": "\u2714 [452/461] Built Effect4.Laws.Program.Simulation.Fibers (1.4s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 639,
+        "diagnostic": "\u2714 [452/461] Built Effect4.Laws.Program.Simulation.Fibers (1.4s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 10,
+    "module": "Test.Audit.TypedStateDecl",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/serial/10-Test.Audit.TypedStateDecl.log",
+        "line": 89,
+        "diagnostic": "\u2139 [249/249] Built Test.Audit.TypedStateDecl (1.5s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 10753,
+        "diagnostic": "\u2139 [673/686] Built Test.Audit.TypedStateDecl (1.3s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 10772,
+        "diagnostic": "\u2139 [672/676] Built Test.Audit.TypedStateDecl (1.5s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 11,
+    "module": "Test.Audit.IndexedColumns",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/manual/m1-phase-b-indexed-columns.log",
+        "line": 1,
+        "diagnostic": "\u2139 [202/202] Built Test.Audit.IndexedColumns (1.6s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 10743,
+        "diagnostic": "\u2139 [669/673] Built Test.Audit.IndexedColumns (1.5s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 10762,
+        "diagnostic": "\u2139 [669/673] Built Test.Audit.IndexedColumns (1.6s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 12,
+    "module": "Effect4.Laws.Program.Typed.State",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/manual/m1-phase-b-frames-old-pin.log",
+        "line": 72,
+        "diagnostic": "\u2139 [247/248] Built Effect4.Laws.Program.Typed.State (7.5s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 632,
+        "diagnostic": "\u2139 [472/476] Built Effect4.Laws.Program.Typed.State (1.7s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 649,
+        "diagnostic": "\u2139 [472/477] Built Effect4.Laws.Program.Typed.State (1.5s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 13,
+    "module": "Effect4.Laws.Program.Typed.Frames",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/serial/13-Effect4.Laws.Program.Typed.Frames.log",
+        "line": 83,
+        "diagnostic": "\u2714 [248/248] Built Effect4.Laws.Program.Typed.Frames (1.8s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 643,
+        "diagnostic": "\u2714 [474/501] Built Effect4.Laws.Program.Typed.Frames (1.3s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 660,
+        "diagnostic": "\u2714 [474/501] Built Effect4.Laws.Program.Typed.Frames (1.1s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 14,
+    "module": "Test.Audit.IndexedColumnActual",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/serial/10-Test.Audit.TypedStateDecl.log",
+        "line": 88,
+        "diagnostic": "\u2714 [248/249] Built Test.Audit.IndexedColumnActual (1.6s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 10748,
+        "diagnostic": "\u2714 [670/673] Built Test.Audit.IndexedColumnActual (1.1s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 10767,
+        "diagnostic": "\u2714 [670/675] Built Test.Audit.IndexedColumnActual (1.4s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 15,
+    "module": "Test.Audit.PositionCensus",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/serial/15-Test.Audit.PositionCensus.log",
+        "line": 72,
+        "diagnostic": "\u2139 [245/245] Built Test.Audit.PositionCensus (2.1s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 4872,
+        "diagnostic": "\u2139 [666/669] Built Test.Audit.PositionCensus (1.7s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 4891,
+        "diagnostic": "\u2139 [666/669] Built Test.Audit.PositionCensus (1.8s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 16,
+    "module": "Test.Program.TypedStateRulesRed",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/serial/16-Test.Program.TypedStateRulesRed.log",
+        "line": 83,
+        "diagnostic": "\u2139 [247/247] Built Test.Program.TypedStateRulesRed (1.2s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 3963,
+        "diagnostic": "\u2139 [640/644] Built Test.Program.TypedStateRulesRed (1.2s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 3982,
+        "diagnostic": "\u2139 [640/644] Built Test.Program.TypedStateRulesRed (1.3s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 17,
+    "module": "Effect4.Laws.Program.Typed.World",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/serial/17-Effect4.Laws.Program.Typed.World.log",
+        "line": 200,
+        "diagnostic": "\u2714 [273/273] Built Effect4.Laws.Program.Typed.World (2.1s)"
+      },
+      {
+        "log": "logs/serial/26-Effect4.Laws.log",
+        "line": 821,
+        "diagnostic": "\u2714 [500/503] Built Effect4.Laws.Program.Typed.World (1.4s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 841,
+        "diagnostic": "\u2714 [500/503] Built Effect4.Laws.Program.Typed.World (1.3s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 858,
+        "diagnostic": "\u2714 [500/503] Built Effect4.Laws.Program.Typed.World (1.3s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 18,
+    "module": "Effect4.Laws.Program.Typed.ForkSource",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/serial/18-Effect4.Laws.Program.Typed.ForkSource.log",
+        "line": 200,
+        "diagnostic": "\u2714 [274/274] Built Effect4.Laws.Program.Typed.ForkSource (1.2s)"
+      },
+      {
+        "log": "logs/serial/26-Effect4.Laws.log",
+        "line": 822,
+        "diagnostic": "\u2714 [501/512] Built Effect4.Laws.Program.Typed.ForkSource (1.3s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 842,
+        "diagnostic": "\u2714 [501/505] Built Effect4.Laws.Program.Typed.ForkSource (1.2s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 859,
+        "diagnostic": "\u2714 [501/504] Built Effect4.Laws.Program.Typed.ForkSource (1.2s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 19,
+    "module": "Effect4.Laws.Api.Supervision",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/manual/m1-phase-b-api-supervision.log",
+        "line": 284,
+        "diagnostic": "\u2714 [297/297] Built Effect4.Laws.Api.Supervision (2.7s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 615,
+        "diagnostic": "\u2714 [411/414] Built Effect4.Laws.Api.Supervision (2.2s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 20,
+    "module": "Effect4.Laws.Machine.Handshake",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/manual/m1-phase-b-machine-handshake.log",
+        "line": 5,
+        "diagnostic": "\u2714 [205/205] Built Effect4.Laws.Machine.Handshake (1.4s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 843,
+        "diagnostic": "\u2714 [503/507] Built Effect4.Laws.Machine.Handshake (1.3s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 861,
+        "diagnostic": "\u2714 [503/507] Built Effect4.Laws.Machine.Handshake (1.1s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 21,
+    "module": "Effect4.Laws.Program.Guard.TraceOrigin",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/serial/21-Effect4.Laws.Program.Guard.TraceOrigin.log",
+        "line": 294,
+        "diagnostic": "\u2714 [303/303] Built Effect4.Laws.Program.Guard.TraceOrigin (1.2s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 860,
+        "diagnostic": "\u2714 [502/505] Built Effect4.Laws.Program.Guard.TraceOrigin (1.3s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 22,
+    "module": "Effect4.Laws.Program.Guard.Handshake",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/serial/22-Effect4.Laws.Program.Guard.Handshake.log",
+        "line": 296,
+        "diagnostic": "\u2714 [304/304] Built Effect4.Laws.Program.Guard.Handshake (1.2s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 867,
+        "diagnostic": "\u2714 [505/519] Built Effect4.Laws.Program.Guard.Handshake (1.3s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 885,
+        "diagnostic": "\u2714 [505/519] Built Effect4.Laws.Program.Guard.Handshake (1.2s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 23,
+    "module": "Effect4.Laws.Run",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/serial/23-Effect4.Laws.Run.log",
+        "line": 336,
+        "diagnostic": "\u2714 [318/318] Built Effect4.Laws.Run (2.7s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 603,
+        "diagnostic": "\u2714 [428/431] Built Effect4.Laws.Run (2.7s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 618,
+        "diagnostic": "\u2714 [428/431] Built Effect4.Laws.Run (2.7s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 24,
+    "module": "Test.Api.SupervisionContract",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/serial/24-Test.Api.SupervisionContract.log",
+        "line": 284,
+        "diagnostic": "\u2714 [299/299] Built Test.Api.SupervisionContract (1.4s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 3886,
+        "diagnostic": "\u2714 [617/622] Built Test.Api.SupervisionContract (1.3s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 25,
+    "module": "Test.Machine.Runtime.ArenaContract",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/manual/m1-phase-b-arena-contract.log",
+        "line": 3,
+        "diagnostic": "\u2714 [202/202] Built Test.Machine.Runtime.ArenaContract (1.3s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 10833,
+        "diagnostic": "\u2714 [685/686] Built Test.Machine.Runtime.ArenaContract (1.1s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 10852,
+        "diagnostic": "\u2714 [685/686] Built Test.Machine.Runtime.ArenaContract (1.2s)"
+      }
+    ]
+  },
+  {
+    "plan_order": 26,
+    "module": "Effect4.Laws",
+    "fresh_build_evidence": [
+      {
+        "log": "logs/serial/26-Effect4.Laws.log",
+        "line": 1019,
+        "diagnostic": "\u2714 [517/517] Built Effect4.Laws (1.7s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all.log",
+        "line": 1057,
+        "diagnostic": "\u2714 [518/560] Built Effect4.Laws (1.8s)"
+      },
+      {
+        "log": "logs/manual/m1-phase-b-test-all-census-tool.log",
+        "line": 1075,
+        "diagnostic": "\u2714 [518/564] Built Effect4.Laws (1.6s)"
+      }
+    ]
+  }
+]

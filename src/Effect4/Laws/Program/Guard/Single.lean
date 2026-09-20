@@ -500,3 +500,5 @@ theorem requestOf_singleton_takePrefix (p : NativeEff) (table : RowTable)
     (fun entry he => safe entry (List.mem_of_mem_take he))
 
 end Effect4.Program.Guard.SingleGuard
+
+#typed_state_obligations Effect4.Program.Guard.SingleGuard.M1Clock ceiling 5 using aesop (rule_sets := [Effect4.Stores])

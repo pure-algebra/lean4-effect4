@@ -1,0 +1,138 @@
+{
+  "head_at_capture": "05417cc614c6e0cefc11fe2f9bda91fe8b9c6fae",
+  "timestamps": "No execution timestamps were inferred or added.",
+  "controls": [
+    {
+      "id": "search-old-red",
+      "argv": null,
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "env": null,
+      "stdout_stderr": "logs/m1-phase-b-search-old-red.log",
+      "process_exit_code": null,
+      "compiler_child_exit_code": 1,
+      "result": "expected refusal",
+      "provenance": "Retained stdout and embedded child Lean command only; exact outer argv/exit not retained.",
+      "observed_message": "bounded search failed: search did not install its requested cached heartbeat limit",
+      "bytes": 1362,
+      "sha256": "27ff1dc2f672250d25add69b15528c9148592a65d6bf1c10a14a85c32af31255",
+      "embedded_child_command": "LEAN_PATH=/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4/Test/Audit/ProofGraphSearch.lean -o /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Test/Audit/ProofGraphSearch.olean -i /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Test/Audit/ProofGraphSearch.ilean -c /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Test/Audit/ProofGraphSearch.c --setup /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Test/Audit/ProofGraphSearch.setup.json --json"
+    },
+    {
+      "id": "search-green",
+      "argv": null,
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "env": null,
+      "stdout_stderr": "logs/m1-phase-b-search-green.log",
+      "process_exit_code": null,
+      "compiler_child_exit_code": null,
+      "result": "pass",
+      "provenance": "Retained stdout records successful build; exact outer argv/exit not retained.",
+      "observed_message": "Build completed successfully (11 jobs).",
+      "bytes": 382,
+      "sha256": "f7d1ad139af12c568f8bcba78ec7c3bd4787a1ac5316031fa9563acaf9e7c064"
+    },
+    {
+      "id": "obligations-green",
+      "argv": null,
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "env": null,
+      "stdout_stderr": "logs/m1-phase-b-obligations.log",
+      "process_exit_code": null,
+      "compiler_child_exit_code": null,
+      "result": "pass",
+      "provenance": "Additional retained stdout records successful existing ledger controls; exact outer argv/exit not retained.",
+      "observed_message": "Build completed successfully (177 jobs).",
+      "bytes": 312,
+      "sha256": "4b30a6d83baa33a3eb837d16a0cdfd4c996b9eb54ee172c7708792ab7295b227"
+    },
+    {
+      "id": "census-empty-missing-import",
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "Test/Audit/ProofGraph.lean"
+      ],
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "stdout_stderr": "logs/m1-phase-b-census-empty-red.log",
+      "process_exit_code": 1,
+      "compiler_child_exit_code": null,
+      "result": "setup failure; not defect evidence",
+      "provenance": "Exact argv and process exit confirmed by coordinator from tool result.",
+      "observed_message": "Effect4.Laws.Auto.RuleSets is not an imported module",
+      "bytes": 460,
+      "sha256": "dc30a04b72a87bdac0036067c2b1d1e6eecc3e8d5965f6951294636de858e63f"
+    },
+    {
+      "id": "census-empty-imported-red",
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "Test/Audit/ProofGraph.lean"
+      ],
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "stdout_stderr": "logs/m1-phase-b-census-empty-red-imported.log",
+      "process_exit_code": 1,
+      "compiler_child_exit_code": null,
+      "result": "expected refusal",
+      "provenance": "Exact argv and process exit confirmed by coordinator from tool result.",
+      "observed_message": "error: this tactic is never executed",
+      "bytes": 667,
+      "sha256": "c34ea0aceab74f722886f628057be73c81b7ac2af32984143a5eb837dd1cc686"
+    },
+    {
+      "id": "census-empty-green",
+      "argv": [
+        "lake",
+        "build",
+        "Test.Audit.ProofGraph"
+      ],
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "stdout_stderr": "logs/m1-phase-b-census-empty-green.log",
+      "process_exit_code": 0,
+      "compiler_child_exit_code": null,
+      "result": "pass",
+      "provenance": "Exact argv and process exit confirmed by coordinator from tool result.",
+      "observed_message": "Build completed successfully (177 jobs).",
+      "bytes": 392,
+      "sha256": "69c04e92d980ba78a4be5c8dc35fc36d994034a1240a01761fd121ebff385eb7"
+    },
+    {
+      "id": "ordinary-dead-tactic-red",
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "/tmp/m1-tools/OrdinaryUnreachableControl.lean"
+      ],
+      "cwd": "/Users/pooks/Dev/lean4-effect4",
+      "env": {
+        "LEAN_NUM_THREADS": "1"
+      },
+      "stdout_stderr": "logs/m1-phase-b-census-ordinary-dead-tactic-red.log",
+      "process_exit_code": 1,
+      "compiler_child_exit_code": null,
+      "result": "expected refusal",
+      "provenance": "Exact argv and process exit confirmed by coordinator from tool result.",
+      "observed_message": "error: this tactic is never executed",
+      "bytes": 173,
+      "sha256": "0a5e11d668836f21e5d1595b4863278a843e023384f39dca8d7d40caa0fba423"
+    }
+  ]
+}

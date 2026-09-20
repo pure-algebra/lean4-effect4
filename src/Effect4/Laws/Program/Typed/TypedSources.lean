@@ -40,12 +40,7 @@ private def decodeExpected (e : Expr) : MetaM Expected := do
   let args := e.getAppArgs
   match e.getAppFn with
   | .const ``Expected.fiber _ => return .fiber (← decodeString args[0]!)
-  | .const ``Expected.promise _ => return .promise (← decodeString args[0]!)
-  | .const ``Expected.refColumn _ => return .refColumn
-  | .const ``Expected.row _ => return .row (← decodeString args[0]!)
-  | .const ``Expected.checker _ => return .checker (← decodeString args[0]!)
   | .const ``Expected.inherited _ => return .inherited
-  | .const ``Expected.const _ => return .const (← decodeString args[0]!)
   | _ => throwError "typed sources: not an expectation: {e}"
 
 private def decodeSource (e : Expr) : MetaM Source := do
@@ -58,7 +53,10 @@ private def decodeSource (e : Expr) : MetaM Source := do
   | .const ``Source.exit _ => return .exit (← decodeExpected args[0]!)
   | .const ``Source.cause _ => return .cause (← decodeExpected args[0]!)
   | .const ``Source.hook _ => return .hook (← decodeOptString args[0]!)
-  | .const ``Source.column _ => return .column (← decodeString args[0]!)
+  | .const ``Source.column _ =>
+    unless args.size == 2 do
+      throwError "typed sources: column expects a name and optional key constructor: {e}"
+    return .column (← decodeString args[0]!) (← decodeOptString args[1]!)
   | .const ``Source.journal _ => return .journal
   | .const ``Source.custom _ => return .custom (← decodeString args[0]!)
   | .const ``Source.refused _ => return .refused (← decodeString args[0]!)

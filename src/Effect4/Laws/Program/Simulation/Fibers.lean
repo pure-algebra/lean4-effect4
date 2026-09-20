@@ -60,6 +60,10 @@ variable {root : NativeEff} {f₁ : FRun} {f₂ : RFiber}
 theorem FMeans.id (h : FMeans root f₁ f₂) : f₁.id = f₂.id := fiberMeans_id h
 theorem FMeans.parked (h : FMeans root f₁ f₂) : f₁.parked = f₂.parked := fiberMeans_parked h
 theorem FMeans.context (h : FMeans root f₁ f₂) : f₁.context = f₂.context := fiberMeans_context h
+def M1OriginFibers.FMeans_origin (_h : FMeans root f₁ f₂) : ProofGraph.Obligation (
+    f₁.origin = f₂.origin) := ⟨⟩
+#proof_wanted M1OriginFibers.FMeans_origin
+
 theorem FMeans.origin (h : FMeans root f₁ f₂) : f₁.origin = f₂.origin := fiberMeans_origin h
 theorem FMeans.running (h : FMeans root f₁ f₂) : f₁.running = f₂.running := h.2.1
 theorem FMeans.pending (h : FMeans root f₁ f₂) : f₁.pending = f₂.pending := h.2.2.1
@@ -94,6 +98,18 @@ theorem FMeans.stack (h : FMeans root f₁ f₂) : StackMeans root f₁.frame.st
   h.means.2.2.2.2.1
 theorem FMeans.maskInv (h : FMeans root f₁ f₂) : MaskInv f₂.frame.interruptible f₂.frame.stack :=
   h.means.2.2.2.2.2
+
+def M1OriginFibers.FMeans_mk' (_hid : f₁.id = f₂.id) (_hpk : f₁.parked = f₂.parked)
+    (_hctx : f₁.context = f₂.context) (_hrun : f₁.running = f₂.running)
+    (_hpend : f₁.pending = f₂.pending) (_hfin : f₁.finalizing = f₂.finalizing)
+    (_hex : f₁.exit = f₂.exit) (_hoc : f₁.currentOpCount = f₂.currentOpCount)
+    (_hmo : f₁.maxOpsBeforeYield = f₂.maxOpsBeforeYield) (_hpy : f₁.preventYield = f₂.preventYield)
+    (_hyo : f₁.yieldOverride = f₂.yieldOverride) (_hobs : f₁.observers = f₂.observers)
+    (_hch : f₁.children = f₂.children)
+    (_hdisp : DispatcherMeans (CodeMeans root) f₁.dispatcher f₂.dispatcher)
+    (_hS : Means root f₁.frame f₂.frame) (_horigin : f₁.origin = f₂.origin) : ProofGraph.Obligation (
+    FMeans root f₁ f₂) := ⟨⟩
+#proof_wanted M1OriginFibers.FMeans_mk'
 
 /-- The relation from its fields. -/
 theorem FMeans.mk' (hid : f₁.id = f₂.id) (hpk : f₁.parked = f₂.parked)
@@ -244,6 +260,11 @@ theorem FMeans.enqueue (h : FMeans root f₁ f₂) (priority : Nat) {t₁ : FTas
     h.preventYield h.yieldOverride h.observers h.children (dispatcherMeans_enqueue h.dispatcher priority ht)
     h.means h.origin
 
+def M1OriginFibers.fmeans_make (root : NativeEff) (id : FiberId) {c₁ : NCode} {c₂ : RProgram}
+    (_hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) (origin : Origin := .root) : ProofGraph.Obligation (
+    FMeans root (RunFiber.make id c₁ flag budget ctx origin) (RunFiber.make id c₂ flag budget ctx origin)) := ⟨⟩
+#proof_wanted M1OriginFibers.fmeans_make
+
 /-- A fresh fiber over related programs. -/
 
 theorem fmeans_make (root : NativeEff) (id : FiberId) {c₁ : NCode} {c₂ : RProgram}
@@ -358,8 +379,19 @@ theorem raceMeans_registering {r₁ : FRace} {r₂ : RRace} (h : RaceMeans (Code
 theorem raceMeans_programs {r₁ : FRace} {r₂ : RRace} (h : RaceMeans (CodeMeans root) r₁ r₂) :
     ListRel (CodeMeans root) r₁.programs r₂.programs := h.2.2.2.2.2.2.1
 
+def M1OriginFibers.raceMeans_nextSite {r₁ : FRace} {r₂ : RRace} (_h : RaceMeans (CodeMeans root) r₁ r₂) : ProofGraph.Obligation (
+    r₁.nextSite = r₂.nextSite) := ⟨⟩
+#proof_wanted M1OriginFibers.raceMeans_nextSite
+
 theorem raceMeans_nextSite {r₁ : FRace} {r₂ : RRace} (h : RaceMeans (CodeMeans root) r₁ r₂) :
     r₁.nextSite = r₂.nextSite := h.2.2.2.2.2.2.2
+
+def M1OriginFibers.raceMeans_mk' {r₁ : FRace} {r₂ : RRace} (_hid : r₁.id = r₂.id) (_hhost : r₁.host = r₂.host)
+    (_htok : r₁.token = r₂.token) (_hst : r₁.state = r₂.state) (_hsettled : r₁.settled = r₂.settled)
+    (_hreg : r₁.registering = r₂.registering) (_hprog : ListRel (CodeMeans root) r₁.programs r₂.programs)
+    (_hsite : r₁.nextSite = r₂.nextSite) : ProofGraph.Obligation (
+    RaceMeans (CodeMeans root) r₁ r₂) := ⟨⟩
+#proof_wanted M1OriginFibers.raceMeans_mk'
 
 theorem raceMeans_mk' {r₁ : FRace} {r₂ : RRace} (hid : r₁.id = r₂.id) (hhost : r₁.host = r₂.host)
     (htok : r₁.token = r₂.token) (hst : r₁.state = r₂.state) (hsettled : r₁.settled = r₂.settled)
@@ -435,7 +467,10 @@ end Machine
 def M1Origin.pendingOk_make (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx)
     (origin : Origin := .root) :
     ProofGraph.Obligation (PendingOk (RunFiber.make id c flag budget ctx origin : FRun)) := ⟨⟩
-#proof_wanted M1Origin.pendingOk_make
+
+def M1OriginFibers.make_pending_empty (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool)
+    (ctx : Ctx) (origin : Origin) : ProofGraph.Obligation (
+    (RunFiber.make id c flag budget ctx origin : FRun).pending = []) := ⟨⟩
 
 @[aesop norm simp (rule_sets := [Effect4.Stores])]
 theorem make_pending_empty (id : FiberId) (c : NCode) (flag : Bool) (budget : Nat × Bool)
@@ -484,3 +519,5 @@ theorem machineOk_mapFibers {m : FMachine} (hok : MachineOk StoresOk m) {g : FRu
   exact hg f' (hok.2 f' hf')
 
 end Effect4.Program.Sched
+
+#typed_state_obligations Effect4.Program.Sched.M1OriginFibers ceiling 6 using aesop (rule_sets := [Effect4.Stores])

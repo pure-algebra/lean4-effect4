@@ -67,12 +67,7 @@ private def accessSyntax (path : String) : MetaM (TSyntax `term) := do
 private def expectSyntax (ex : Expected) : MetaM (TSyntax `term) := do
   match ex with
   | .fiber id => `(.fiber $(← accessSyntax id))
-  | .promise cell => `(.promise $(← accessSyntax cell))
-  | .refColumn => `(Expect.refColumn)
-  | .row op => `(.row $(← accessSyntax op))
-  | .checker point => `(.checker $(← accessSyntax point))
   | .inherited => `(e)
-  | .const ty => `(.const $(← accessSyntax ty))
 
 private def okName (owner : Name) : Ident := mkIdent (Name.mkSimple s!"{owner.getString!}Ok")
 
@@ -113,8 +108,11 @@ structure Predicate where
   name : String
   type : Expr
   column : Bool
+  keyType : Option Expr := none
 
 structure Emit where
+  /-- Reusable indexed quantifiers, generated once from each field carrier. -/
+  columns : Array (Name × TSyntax `command) := #[]
   decls : Array (TSyntax `command) := #[]
   rules : Array (TSyntax `command) := #[]
   preds : Array Predicate := #[]
@@ -127,17 +125,67 @@ structure Emit where
   the same type under an uncovered edge elsewhere is still checked. -/
   covered : Array String := #[]
 
-private def addPred (em : Emit) (name : String) (type : Expr) (column := false) : MetaM Emit := do
+private def addPred (em : Emit) (name : String) (type : Expr) (column := false)
+    (keyType : Option Expr := none) : MetaM Emit := do
   if let some old := em.preds.find? (·.name == name) then
-    unless old.column == column && (← isDefEq old.type type) do
+    let keysMatch ← match old.keyType, keyType with
+      | none, none => pure true
+      | some a, some b => isDefEq a b
+      | _, _ => pure false
+    unless old.column == column && keysMatch && (← isDefEq old.type type) do
       throwError "typed state: incompatible uses of predicate {name}"
     return em
-  return { em with preds := em.preds.push {name, type, column} }
+  return { em with preds := em.preds.push {name, type, column, keyType} }
+
+/-- The source is owned at this exact field occurrence, before any child walk. -/
+private def ownsField : Source → Bool
+  | .custom _ | .journal | .refused _ | .column _ (some _) => true
+  | _ => false
+
+/-- Check the actual field carrier and the nominal key's constructor declaration. -/
+private def indexedTypes (fieldKey keyConstructor : String) (fieldTy : Expr) :
+    MetaM (Expr × Expr × TSyntax `term) := do
+  let fieldTy ← whnf fieldTy
+  unless fieldTy.getAppFn.isConstOf ``List && fieldTy.getAppArgs.size == 1 do
+    throwError "typed state: indexed column {fieldKey} requires List, got {fieldTy}"
+  let name := String.toName keyConstructor
+  let some (.ctorInfo ci) := (← getEnv).find? name
+    | throwError "typed state: {fieldKey} key metadata is not a constructor: {keyConstructor}"
+  unless ci.numParams == 0 && ci.numFields == 1 && ci.levelParams.isEmpty do
+    throwError "typed state: {fieldKey} key constructor must have shape Nat → Key"
+  let .forallE _ domain range .default := ci.type
+    | throwError "typed state: {fieldKey} key constructor must have shape Nat → Key"
+  unless (← isDefEq domain (mkConst ``Nat)) && !range.hasLooseBVars && !range.hasFVar do
+    throwError "typed state: {fieldKey} key constructor must have shape Nat → Key"
+  unless ← isDefEq (← inferType range) (mkSort (.succ .zero)) do
+    throwError "typed state: {fieldKey} key constructor must return a closed Type"
+  return (range, fieldTy.getAppArgs[0]!, ← typeSyntax 256 #[] (mkConst name))
 
 private def emittable : Source → Bool
   | .program _ | .continuation _ | .value _ | .exit _ | .cause _ | .custom _ | .refused _ => true
-  | .hook (some _) => true
+  | .hook (some _) | .column _ (some _) => true
   | _ => false
+
+private def isIndexedColumn : Source → Bool
+  | .column _ (some _) => true
+  | _ => false
+
+/-- An explicit indexed column contributes a clause even when its element contains no
+census carrier. Check real constructor fields, excluding parameters, rather than treating
+an arbitrary source-row prefix as evidence that the owner has such a field. -/
+private def hasIndexedField (rows : List Row) (owner : Name) : MetaM Bool := do
+  let iv ← getConstInfoInduct owner
+  for c in iv.ctors do
+    let ci ← getConstInfoCtor c
+    let found ← forallTelescope ci.type fun xs _ => do
+      for i in [ci.numParams:xs.size] do
+        let fname := argLabel (← xs[i]!.fvarId!.getDecl).userName (i - ci.numParams)
+        let label := if iv.ctors.length == 1 then fname else s!"{c.getString!}.{fname}"
+        let key := s!"{owner}.{label}"
+        if (rows.find? (·.1 == key)).any (isIndexedColumn ·.2) then return true
+      return false
+    if found then return true
+  return false
 
 private def columnsUnder (rows : List Row) (ps : Array Positions.Position) (edges : Array Edge) :
     Nat → Name → List Name → MetaM (List String)
@@ -147,10 +195,11 @@ private def columnsUnder (rows : List Row) (ps : Array Positions.Position) (edge
     let mut out : List String := []
     for p in ps do
       if p.owner == owner then
-        if let some (_, .column c) := rows.find? (·.1 == p.key) then
+        if let some (_, .column c none) := rows.find? (·.1 == p.key) then
           unless out.contains c do out := out ++ [c]
     for e in edges do
       if e.parent == owner then
+        if (rows.find? (·.1 == s!"{e.parent}.{e.field}")).any (ownsField ·.2) then continue
         for c in ← columnsUnder rows ps edges fuel e.child (owner :: seen) do
           unless out.contains c do out := out ++ [c]
     return out
@@ -162,6 +211,7 @@ private def hasPositions (rows : List Row) (ps : Array Positions.Position) (edge
   | 0, owner, _ => throwError "typed state: clause walk exhausted at {owner}"
   | fuel + 1, owner, seen => do
     if seen.contains owner then return false
+    if ← hasIndexedField rows owner then return true
     if columnOwners.contains owner then
       unless (← columnsUnder rows ps edges fuel owner []).isEmpty do return true
     if ps.any (fun p => p.owner == owner && (rows.find? (·.1 == p.key)).any (emittable ·.2)) then
@@ -169,7 +219,7 @@ private def hasPositions (rows : List Row) (ps : Array Positions.Position) (edge
     for e in edges do
       if e.parent == owner then
         match rows.find? (·.1 == s!"{e.parent}.{e.field}") with
-        | some (_, .custom _) => return true
+        | some (_, .custom _) | some (_, .column _ (some _)) => return true
         | some (_, .journal) | some (_, .refused _) => pure ()
         | _ => if ← hasPositions rows ps edges columnOwners fuel e.child (owner :: seen) then return true
     return false
@@ -184,10 +234,11 @@ private def columnKeysUnder (rows : List Row) (ps : Array Positions.Position) (e
     let mut out : List String := []
     for p in ps do
       if p.owner == owner then
-        if let some (_, .column _) := rows.find? (·.1 == p.key) then
+        if let some (_, .column _ none) := rows.find? (·.1 == p.key) then
           unless out.contains p.key do out := out ++ [p.key]
     for e in edges do
       if e.parent == owner then
+        if (rows.find? (·.1 == s!"{e.parent}.{e.field}")).any (ownsField ·.2) then continue
         for k in ← columnKeysUnder rows ps edges fuel e.child (owner :: seen) do
           unless out.contains k do out := out ++ [k]
     return out
@@ -265,11 +316,34 @@ private def emitOwner (rows : List Row) (ps : Array Positions.Position) (edges :
         let src? : Option Source := rows.find? (·.1 == key) |>.map (·.2)
         let positions := ps.filter (·.key == key)
         let es := edges.filter (fun e => e.parent == owner && e.field == label)
-        if positions.isEmpty && es.isEmpty then continue
+        if positions.isEmpty && es.isEmpty && !(src?.any isIndexedColumn) then continue
         -- One resolution per field. A whole-field source owns the field and everything under
         -- it; otherwise the field's direct positions and its child edges each contribute a
         -- clause, never one instead of the other.
+        if let some (.column _ none) := src? then
+          if (← whnf fty).getAppFn.isConstOf ``List then
+            throwError "typed state: list column {key} needs key-constructor metadata"
         match src? with
+        | some (.column pred (some keyConstructor)) =>
+          let (keyTy, valueTy, constructor) ← indexedTypes key keyConstructor fty
+          let valueSyntax ← typeSyntax 256 #[] valueTy
+          let keySyntax ← typeSyntax 256 #[] keyTy
+          let columnName := Name.str `Columns s!"{owner.getString!}_{label}"
+          if em.columns.any (fun entry => entry.1 == columnName) then
+            throwError "typed state: generated column name collision at {key}"
+          let column := mkIdent columnName
+          let declaration ← `(command|
+            def $column:ident {W : Type} (leaf : W → $keySyntax → $valueSyntax → Prop)
+                (w : W) (values : List $valueSyntax) : Prop :=
+              ∀ (i : Nat) (v : $valueSyntax), values[i]? = some v → leaf w ($constructor i) v)
+          let rule ← `(command|
+            attribute [aesop norm unfold (rule_sets := [Effect4.TypedState])] $column:ident)
+          em := { em with
+            columns := em.columns.push (columnName, declaration)
+            rules := em.rules.push rule }
+          em ← addPred em pred valueTy true (some keyTy)
+          clauses := clauses.push (← `($column:ident P.$(mkIdent (Name.mkSimple pred)):ident w $term))
+          em := { em with accounted := em.accounted.push key, covered := em.covered.push key }
         | some (.custom pred) =>
           em ← addPred em pred fty
           clauses := clauses.push (← `(P.$(mkIdent (Name.mkSimple pred)):ident w e $term))
@@ -284,7 +358,8 @@ private def emitOwner (rows : List Row) (ps : Array Positions.Position) (edges :
           if !positions.isEmpty then
             let some src := src? | throwError "typed state: missing source for {key}"
             match src with
-            | .column _ | .hook none => em := { em with accounted := em.accounted.push key }
+            | .column _ none => pure ()
+            | .hook none => em := { em with accounted := em.accounted.push key }
             | .nested _ => throwError "typed state: a nested source names a child, but {key} is a direct position"
             | _ =>
               for p in positions do
@@ -391,7 +466,7 @@ syntax (name := typedState) "#typed_state " ident+ " using " ident (" columns " 
       unless reach.contains p.owner do continue
       match rows.find? (·.1 == p.key) with
       | some (_, .journal) | some (_, .hook none) => pure ()
-      | some (_, .column c) =>
+      | some (_, .column c _) =>
         unless em.accounted.contains p.key do
           throwError "typed state: column {c} at {p.key} has no column owner"
       | _ =>
@@ -401,18 +476,24 @@ syntax (name := typedState) "#typed_state " ident+ " using " ident (" columns " 
       unless reach.contains e.parent do continue
       let key := s!"{e.parent}.{e.field}"
       match rows.find? (·.1 == key) with
-      | some (_, .custom _) | some (_, .nested _) | some (_, .refused _) =>
+      | some (_, .custom _) | some (_, .nested _) | some (_, .refused _)
+      | some (_, .column _ (some _)) =>
         unless em.accounted.contains key do
           throwError "typed state: {key} has a source but no clause was emitted"
       | _ => pure ()
     let mut fields : Array (TSyntax ``Parser.Command.structSimpleBinder) := #[]
     for p in em.preds do
       let ty ← typeSyntax 256 #[] p.type
-      let ty ← if p.column then `(W → $ty → Prop) else `(W → Expect → $ty → Prop)
+      let ty ← match p.keyType with
+        | some keyType => do
+          let keySyntax ← typeSyntax 256 #[] keyType
+          `(W → $keySyntax → $ty → Prop)
+        | none => if p.column then `(W → $ty → Prop) else `(W → Expect → $ty → Prop)
       fields := fields.push (← `(Parser.Command.structSimpleBinder| $(mkIdent (Name.mkSimple p.name)):ident : $ty))
     let bundle ← `(command| structure Preds (W : Type) where $[$fields:structSimpleBinder]*)
     return (em, bundle, tops)
   elabCommand bundle
+  for (_, column) in em.columns do elabCommand column
   for decl in em.decls do elabCommand decl
   for top in tops do elabCommand top
   for rule in em.rules do elabCommand rule

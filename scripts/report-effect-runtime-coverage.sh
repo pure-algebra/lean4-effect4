@@ -33,7 +33,7 @@ trap cleanup EXIT
   cd -- "$repo_root"
   unset LEAN_PATH LEAN_SRC_PATH
   "$lake_bin" build Test.Audit.RuntimeCoverage >"$tmp_root/build.log" 2>&1
-  "$lake_bin" env lean "$coverage_rel" >"$tmp_root/coverage.log" 2>&1
+  "$lake_bin" env lean -DwarningAsError=true "$coverage_rel" >"$tmp_root/coverage.log" 2>&1
 ) || {
   printf 'FAIL runtime coverage module did not build; no report can be issued\n' >&2
   cat "$tmp_root/build.log" "$tmp_root/coverage.log" >&2 2>/dev/null || true

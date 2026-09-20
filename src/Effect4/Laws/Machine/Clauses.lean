@@ -1,5 +1,6 @@
 import Effect4.Machine.Fibers
 import Effect4.Laws.Auto.Inversion
+import Effect4.Laws.Auto.Obligations
 
 /-!
 # Deep.Clauses
@@ -604,6 +605,14 @@ def spawnChild (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine �
   RunFiber.make ⟨m.nextId⟩ program childInterruptible (interp.budgetOf parent.context) parent.context
     (.forked parent.id options.daemon site)
 
+def M1OriginClauses.spawn_eq (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+    (parent : RunFiber ν σ β ε δ ι α χ) (program : Prim ν σ β ε δ ι α)
+    (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (
+    spawn interp m parent program options site =
+      ({ m with fibers := m.fibers ++ [spawnChild interp m parent program options site], nextId := m.nextId + 1 }.emit
+          [RunEvent.forked parent.id ⟨m.nextId⟩ options.daemon],
+        parent, ⟨m.nextId⟩)) := ⟨⟩
+
 /-- `forkUnsafe` (`:5264-5284`, D6b): the child takes the next id and is appended to the
 machine, the id counter advances, and the parent is untouched — tracking is `Cmd.trackChild`
 after the child's immediate run or its scheduling (`:5279-5282`). census: fork.unsafe -/
@@ -614,6 +623,20 @@ theorem spawn_eq (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine
       ({ m with fibers := m.fibers ++ [spawnChild interp m parent program options site], nextId := m.nextId + 1 }.emit
           [RunEvent.forked parent.id ⟨m.nextId⟩ options.daemon],
         parent, ⟨m.nextId⟩) := by aesop
+
+def M1OriginClauses.spawnChild_fields (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+    (parent : RunFiber ν σ β ε δ ι α χ) (program : Prim ν σ β ε δ ι α)
+    (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (
+    (spawnChild interp m parent program options site).id = ⟨m.nextId⟩ ∧
+      (spawnChild interp m parent program options site).context = parent.context ∧
+      (spawnChild interp m parent program options site).frame.interruptible =
+        (match options.maskMode with
+          | Supervision.MaskMode.interruptible => true
+          | Supervision.MaskMode.uninterruptible => false
+          | Supervision.MaskMode.inherit => parent.frame.interruptible) ∧
+      (spawnChild interp m parent program options site).observers = [] ∧
+      (spawnChild interp m parent program options site).origin = .forked parent.id options.daemon site) := ⟨⟩
+#proof_wanted M1OriginClauses.spawnChild_fields
 
 /-- The child's identity, context and mask (`:5264-5284`); it carries no observer yet.
 census: fork.unsafe -/
@@ -631,6 +654,11 @@ theorem spawnChild_fields (interp : RunInterp ν σ β ε δ ι α χ St) (m : R
       (spawnChild interp m parent program options site).origin = .forked parent.id options.daemon site := by
   cases hm : options.maskMode <;>
     aesop (add norm simp [spawnChild, RunFiber.make, hm])
+
+def M1OriginClauses.spawn_untracked (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (parent : RunFiber ν σ β ε δ ι α χ)
+    (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (
+    (spawn interp m parent program options site).2.1 = parent) := ⟨⟩
 
 /-- No fork joins the parent's children at its spawn (`:5279-5282`, D6b): the tracking is a
 command after the child's run, and only a non-daemon fork issues it (`withFiber_fork`).
@@ -1279,6 +1307,20 @@ theorem drive_launch_exhausted (interp : RunInterp ν σ β ε δ ι α χ St) (
     drive interp (fuel + 1) m (Cmd.launch raceId :: rest) = drive interp fuel m rest := by
   simp [drive, driveState, driveStep, hs, hr, hp]
 
+def M1OriginClauses.drive_launch_runs (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) (raceId : Nat) (rest : List (Cmd ν σ β ε δ ι α))
+    (race : Race ν σ β ε δ ι α) (program : Prim ν σ β ε δ ι α) (more : List (Prim ν σ β ε δ ι α))
+    (host : RunFiber ν σ β ε δ ι α χ)
+    (_hs : m.stuck = none) (_hr : m.race? raceId = some race)
+    (_hp : race.programs = program :: more) (_hacc : race.state.accepted = none)
+    (_hh : m.fiber? race.host = some host) : ProofGraph.Obligation (
+    drive interp (fuel + 1) m (Cmd.launch raceId :: rest) =
+      (let l := launchEntrant interp raceId m host program (race.nextSite.getD [])
+       drive interp fuel
+         ((l.1.updateRace { race with programs := more, nextSite := race.nextSite.map (fun site => site ++ [1]) }).emit [RunEvent.raceLaunched raceId l.2])
+         (Cmd.evaluate l.2 :: Cmd.enrollRace raceId l.2 :: Cmd.launch raceId :: rest))) := ⟨⟩
+#proof_wanted M1OriginClauses.drive_launch_runs
+
 /-- A launch before the race has accepted forks the next entrant over the host, evaluates it
 now (`forkUnsafe(…, true, …)`, `:1521`), enrolls it after that run returns (`:1522-1526`,
 D6a) and goes round again (`:1520-1528`). census: fork.race-all -/
@@ -1373,6 +1415,19 @@ theorem drive_link (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
        drive interp fuel l.1 (l.2 ++ rest)) := by
   simp [drive, driveState, driveStep, hs]
 
+def M1OriginClauses.withFiber_fork (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+    (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (program : Prim ν σ β ε δ ι α)
+    (options : Supervision.ForkOptions) (site : List Nat := []) : ProofGraph.Obligation (
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.fork program options site) =
+      (let m' := if options.daemon then m else { m with middlewareInstalled := true }
+       let s := spawn interp m' f program options site
+       let t := start s.1 s.2.1 s.2.2 options.startImmediately
+       ⟨t.1, { t.2.1 with frame := { t.2.1.frame with
+          current := Prim.success (interp.fiberValue s.2.2) } },
+        yielding, Outcome.continue_,
+        t.2.2 ++ (if options.daemon then [] else [Cmd.trackChild f.id s.2.2])⟩)) := ⟨⟩
+#proof_wanted M1OriginClauses.withFiber_fork
+
 /-- `fork` (`:5264-5284`): a non-daemon fork installs the interrupt-children middleware
 (`forkChild`, `:5253`), then spawn with the options as given, start by `startImmediately`,
 answer the child's handle, and — unless daemon — track the child by a command after its
@@ -1390,6 +1445,18 @@ theorem withFiber_fork (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunM
         t.2.2 ++ (if options.daemon then [] else [Cmd.trackChild f.id s.2.2])⟩) := by
   aesop (add norm simp [evaluatePrim.withFiber])
 
+def M1OriginClauses.withFiber_forkIn (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+    (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (program : Prim ν σ β ε δ ι α)
+    (options : Supervision.ForkOptions) (scope : Nat) (site : List Nat := []) : ProofGraph.Obligation (
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkIn program options scope site) =
+      (let s := spawn interp m f program { options with daemon := true } site
+       let t := start s.1 s.2.1 s.2.2 options.startImmediately
+       ⟨t.1, { t.2.1 with frame := { t.2.1.frame with
+          current := Prim.success (interp.fiberValue s.2.2) } },
+        yielding, Outcome.continue_,
+        t.2.2 ++ [Cmd.link Supervision.ScopeMode.forkIn scope s.2.2 (some t.2.1.id)
+          (interp.stackAnnotations t.2.1.id)]⟩)) := ⟨⟩
+
 /-- `forkIn` (`:5364-5378`): the child is a daemon of its parent, started by
 `startImmediately`, and *then* linked to the supplied scope by number — with the parent as
 interruptor and the parent's stack annotations — by a command after its start, so an
@@ -1406,6 +1473,20 @@ theorem withFiber_forkIn (interp : RunInterp ν σ β ε δ ι α χ St) (m : Ru
         t.2.2 ++ [Cmd.link Supervision.ScopeMode.forkIn scope s.2.2 (some t.2.1.id)
           (interp.stackAnnotations t.2.1.id)]⟩) := by aesop
 
+def M1OriginClauses.withFiber_forkScoped_ambient (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (scope : Nat)
+    (_h : interp.ambientScope f.context = some scope) (site : List Nat := []) : ProofGraph.Obligation (
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkScoped program options site) =
+      (let s := spawn interp m f program { options with daemon := true } site
+       let t := start s.1 s.2.1 s.2.2 options.startImmediately
+       ⟨t.1, { t.2.1 with frame := { t.2.1.frame with
+          current := Prim.success (interp.fiberValue s.2.2) } },
+        yielding, Outcome.continue_,
+        t.2.2 ++ [Cmd.link Supervision.ScopeMode.forkIn scope s.2.2 (some t.2.1.id)
+          (interp.stackAnnotations t.2.1.id)]⟩)) := ⟨⟩
+#proof_wanted M1OriginClauses.withFiber_forkScoped_ambient
+
 /-- `forkScoped` (`:5400-5406`) resolves the ambient `Scope` service of the parent's context
 and is then `forkIn` on it. census: fork.scoped -/
 theorem withFiber_forkScoped_ambient (interp : RunInterp ν σ β ε δ ι α χ St)
@@ -1421,6 +1502,16 @@ theorem withFiber_forkScoped_ambient (interp : RunInterp ν σ β ε δ ι α χ
         t.2.2 ++ [Cmd.link Supervision.ScopeMode.forkIn scope s.2.2 (some t.2.1.id)
           (interp.stackAnnotations t.2.1.id)]⟩) := by
   aesop (add norm simp [evaluatePrim.withFiber])
+
+def M1OriginClauses.withFiber_forkScoped_none (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions)
+    (_h : interp.ambientScope f.context = none) (site : List Nat := []) : ProofGraph.Obligation (
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.forkScoped program options site) =
+      ⟨m, { f with frame := { f.frame with
+          current := Prim.failure (Cause.die interp.missingScope) } },
+        yielding, Outcome.continue_, []⟩) := ⟨⟩
+#proof_wanted M1OriginClauses.withFiber_forkScoped_none
 
 /-- Without an ambient `Scope` service `forkScoped` dies with the `missingScope` defect: the
 service is required (`:5400`, `Context.get` throws `ServiceNotFound`); it is not the
@@ -1623,6 +1714,13 @@ theorem withFiber_interruptAll (interp : RunInterp ν σ β ε δ ι α χ St)
           [Cmd.afterInterrupt f.id yielding (ParkKind.awaitAll targets)]⟩ :=
   by aesop
 
+def M1OriginClauses.launchEntrant_eq (interp : RunInterp ν σ β ε δ ι α χ St) (raceId : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) (host : RunFiber ν σ β ε δ ι α χ)
+    (program : Prim ν σ β ε δ ι α) (site : List Nat := []) : ProofGraph.Obligation (
+    launchEntrant interp raceId m host program site =
+      (let s := spawn interp m host program ⟨true, true, Supervision.MaskMode.interruptible⟩ site
+       (s.1, s.2.2))) := ⟨⟩
+
 /-- The entrant's fork, read off the definition: immediate, daemon, interruptible
 (`forkUnsafe(parent, effect, true, true, false)`, `:1521`; R2-10), with the race callback as
 its observer (`:1523`). census: rule.only-fork-child-tracks -/
@@ -1632,6 +1730,22 @@ theorem launchEntrant_eq (interp : RunInterp ν σ β ε δ ι α χ St) (raceId
     launchEntrant interp raceId m host program site =
       (let s := spawn interp m host program ⟨true, true, Supervision.MaskMode.interruptible⟩ site
        (s.1, s.2.2)) := by aesop
+
+def M1OriginClauses.withFiber_raceAll (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (entrants : List (Prim ν σ β ε δ ι α)) (site : Option (List Nat) := none) : ProofGraph.Obligation (
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.raceAll entrants site) =
+      (let raceId := m.nextRace
+       let token := m.nextToken
+       let m := { m with nextRace := m.nextRace + 1, nextToken := m.nextToken + 1 }
+       let race : Race ν σ β ε δ ι α :=
+         ⟨raceId, f.id, token,
+           { Supervision.RaceAllState.initial [] with remaining := entrants.length }, false, entrants,
+           false, site⟩
+       let m := { m with races := m.races ++ [race] }
+       ⟨m.emit [RunEvent.raceStarted raceId f.id entrants.length],
+        { f with frame := { f.frame with current := interp.parkCode (ParkKind.race raceId) } },
+        yielding, Outcome.continue_, []⟩)) := ⟨⟩
 
 /-- `raceAll` (`:1490-1531`, D6a): the `WithFiber` records the race with its host, its guard
 and its entrants still to fork (none exists yet, R2-11) and returns the counted `Async`
@@ -1937,3 +2051,5 @@ theorem driveState_resume_guard (interp : RunInterp ν σ β ε δ ι α χ St) 
   simp [driveState, driveStep, hs, ht, hp]
 
 end Effect4.Machine
+
+#typed_state_obligations Effect4.Machine.M1OriginClauses ceiling 10 using aesop (rule_sets := [Effect4.Stores])

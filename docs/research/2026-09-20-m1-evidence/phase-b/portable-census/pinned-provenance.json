@@ -1,0 +1,124 @@
+{
+  "checks": [
+    {
+      "role": "runner/guard/plan",
+      "original_path": "/tmp/m1-tools/phase-b-census-runner/run-census.py",
+      "captured_input_path": "/private/tmp/m1-tools/phase-b-census-runner/run-census.py",
+      "sha256": "11e6870a4201395358e42fb33820755a4e519da55313e91230a93cf654dcdb90",
+      "bytes": 15124,
+      "matches_frozen_input": true
+    },
+    {
+      "role": "runner/guard/plan",
+      "original_path": "/tmp/m1-tools/phase-b-census-runner/read-census-log.py",
+      "captured_input_path": "/private/tmp/m1-tools/phase-b-census-runner/read-census-log.py",
+      "sha256": "020eb1c8c0e208c962a1c221fe145ce5e3704fa043de1ed0e5dfbc945600798d",
+      "bytes": 2313,
+      "matches_frozen_input": true
+    },
+    {
+      "role": "runner/guard/plan",
+      "original_path": "/tmp/m1-tools/phase-b-census-runner/guards.json",
+      "captured_input_path": "/private/tmp/m1-tools/phase-b-census-runner/guards.json",
+      "sha256": "90cce474c06396a461af9c23d9276dfc2f7fc7d43b86e0ca1a10115ad1c727b3",
+      "bytes": 1363,
+      "matches_frozen_input": true
+    },
+    {
+      "role": "runner/guard/plan",
+      "original_path": "/tmp/m1-tools/phase-b-serial-plan/census-plan.json",
+      "captured_input_path": "/private/tmp/m1-tools/phase-b-serial-plan/census-plan.json",
+      "sha256": "71a87aab9badf6777a047f71ff3801b0e1fc740f8b0d166fb3b2168f44712fda",
+      "bytes": 851162,
+      "matches_frozen_input": true
+    },
+    {
+      "role": "reviewed instrument/control source",
+      "original_path": "/Users/pooks/Dev/lean4-effect4/tools/ProofGraph/Search.lean",
+      "captured_input_path": "/Users/pooks/Dev/lean4-effect4/tools/ProofGraph/Search.lean",
+      "sha256": "07c369e09b40e4b7922bde688313f4e0f4515d8ce022e1eb2f5a144d7ed7d2df",
+      "bytes": 7266,
+      "matches_frozen_input": true
+    },
+    {
+      "role": "reviewed instrument/control source",
+      "original_path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Auto/Census.lean",
+      "captured_input_path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Auto/Census.lean",
+      "sha256": "7b1b6bdbf3cd061154581ca896ece642ada94076dc7c00732efe9d5cfff0a58b",
+      "bytes": 5096,
+      "matches_frozen_input": true
+    },
+    {
+      "role": "reviewed instrument/control source",
+      "original_path": "/Users/pooks/Dev/lean4-effect4/Test/Audit/ProofGraphSearch.lean",
+      "captured_input_path": "/Users/pooks/Dev/lean4-effect4/Test/Audit/ProofGraphSearch.lean",
+      "sha256": "9bedaedec0989030e9aeede5f75c3d08428a140f16fd50f147ced6eba18d850a",
+      "bytes": 9924,
+      "matches_frozen_input": true
+    },
+    {
+      "role": "reviewed instrument/control source",
+      "original_path": "/Users/pooks/Dev/lean4-effect4/Test/Audit/ProofGraph.lean",
+      "captured_input_path": "/Users/pooks/Dev/lean4-effect4/Test/Audit/ProofGraph.lean",
+      "sha256": "194a0e2235abcb3cae2d9fbef907228b16e78c26cf2a6d051392541d51b47217",
+      "bytes": 3457,
+      "matches_frozen_input": true
+    },
+    {
+      "role": "passed finite instrument control",
+      "original_path": "/tmp/m1-phase-b-search-portability-green-attempt2.log",
+      "captured_input_path": "inputs.json cap_guards.control_logs",
+      "sha256": "62bdde7f2ece18411a9a1417e1af23d79bcf4f8826f86155cac32e890b0d90a5",
+      "bytes": 437,
+      "matches_frozen_input": true
+    },
+    {
+      "role": "passed finite instrument control",
+      "original_path": "/tmp/m1-phase-b-test-all-portability.log",
+      "captured_input_path": "inputs.json cap_guards.control_logs",
+      "sha256": "d1d94f8a8146aa236e543aef4de96f847ea02d0dc2588d24d0469f4facf8f420",
+      "bytes": 944038,
+      "matches_frozen_input": true
+    },
+    {
+      "role": "toolchain/package/build settings",
+      "original_path": "/Users/pooks/Dev/lean4-effect4/lean-toolchain",
+      "captured_input_path": "/Users/pooks/Dev/lean4-effect4/lean-toolchain",
+      "sha256": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71",
+      "bytes": 25,
+      "matches_frozen_input": true
+    },
+    {
+      "role": "toolchain/package/build settings",
+      "original_path": "/Users/pooks/Dev/lean4-effect4/lake-manifest.json",
+      "captured_input_path": "/Users/pooks/Dev/lean4-effect4/lake-manifest.json",
+      "sha256": "47d6d6edc14b38fdd7ce5be1fa58d3374f2159e7732e56fbc02d8be31088b1e6",
+      "bytes": 1856,
+      "matches_frozen_input": true
+    },
+    {
+      "role": "toolchain/package/build settings",
+      "original_path": "/Users/pooks/Dev/lean4-effect4/lakefile.toml",
+      "captured_input_path": "/Users/pooks/Dev/lean4-effect4/lakefile.toml",
+      "sha256": "d0fa6755c18b415881f4839704c988ceb47665f5f032cf9da4dc4cf59dca65db",
+      "bytes": 6924,
+      "matches_frozen_input": true
+    }
+  ],
+  "scope": "Current retained runner, parser, guard, plan and reviewed control bytes match inputs.json from the completed run. Unmeasured runner readmes/audits are retained as preparation records, not run status.",
+  "outer_process": {
+    "exit_code": 0,
+    "session": "34967",
+    "provenance": "Coordinator confirmed exact outer command and completed rc0 from exec_command/write_stdin session 34967. The audit_only preamble is emitted by this same runner, not a separate command.",
+    "argv": [
+      "python3",
+      "/tmp/m1-tools/phase-b-census-runner/run-census.py",
+      "--run",
+      "--out",
+      "/tmp/m1-tools/phase-b-portable-before-fill-evidence"
+    ],
+    "command": "python3 /tmp/m1-tools/phase-b-census-runner/run-census.py --run --out /tmp/m1-tools/phase-b-portable-before-fill-evidence > /tmp/m1-phase-b-portable-census.log 2>&1",
+    "log": "provenance/outer-run.log"
+  },
+  "inner_processes": "All 139 exact subprocess argv and exit_code 0 are retained in before-fill/run.json."
+}

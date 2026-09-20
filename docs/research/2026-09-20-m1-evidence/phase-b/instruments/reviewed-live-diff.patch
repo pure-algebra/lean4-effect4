@@ -1,0 +1,74 @@
+diff --git a/Test/Audit/ProofGraph.lean b/Test/Audit/ProofGraph.lean
+index 17ecf6c1..a40411e6 100644
+--- a/Test/Audit/ProofGraph.lean
++++ b/Test/Audit/ProofGraph.lean
+@@ -1,3 +1,6 @@
++import Test.Audit.ProofGraphSearch
++import Effect4.Laws.Auto.Census
++import Effect4.Laws.Auto.RuleSets
+ import ProofGraph.Ledger
+ import ProofGraph.Search
+ 
+@@ -71,4 +74,9 @@ run_cmd liftTermElabM do
+   if let .error why ← reference.validate then throwError why
+ 
+ #print axioms Test.ProofGraph.searched
++
++/-- info: Effect4.Laws.Auto.RuleSets: 0 of 0 theorems closed from their statements; 0 source lines they now take -/
++#guard_msgs in
++#auto_census Effect4.Laws.Auto.RuleSets using aesop
++
+ end Test.ProofGraph
+diff --git a/src/Effect4/Laws/Auto/Census.lean b/src/Effect4/Laws/Auto/Census.lean
+index c58b5a8a..218bc3e6 100644
+--- a/src/Effect4/Laws/Auto/Census.lean
++++ b/src/Effect4/Laws/Auto/Census.lean
+@@ -63,6 +63,11 @@ def attempt (type : Expr) (tac : Syntax) (cap : Nat) (modIdx : ModuleIdx) (start
+ syntax (name := autoCensus)
+   "#auto_census " ident (" heartbeats " num)? " using " tacticSeq : command
+ 
++-- This argument is a speculative search program, not an immediately executed
++-- proof. An empty module legitimately never evaluates it. Classify the command
++-- like Aesop's deferred rule tactics; ordinary proof tactics remain linted.
++initialize Batteries.Linter.UnreachableTactic.addIgnoreTacticKind ``autoCensus
++
+ @[command_elab autoCensus] def elabAutoCensus : CommandElab := fun stx => do
+   let modName := stx[1].getId
+   let cap := if stx[2].isNone then 20000 else stx[2][1].toNat
+diff --git a/tools/ProofGraph/Search.lean b/tools/ProofGraph/Search.lean
+index b302c8c0..8e53b775 100644
+--- a/tools/ProofGraph/Search.lean
++++ b/tools/ProofGraph/Search.lean
+@@ -4,18 +4,23 @@ namespace ProofGraph
+ open Lean Elab Meta
+ 
+ /-- Search is speculative. Only a closed term is returned, and all elaborator changes are
+-rolled back. Publishing it as evidence separately checks the term with the kernel. -/
++rolled back. The cap uses Lean's `maxHeartbeats` units (thousands of allocations);
++zero means unlimited. Publishing evidence separately checks the term with the kernel. -/
+ def search (type : Expr) (tactic : Syntax) (cap : Nat) : TermElabM (Except String Expr) :=
+   withoutModifyingState do
+     tryCatchRuntimeEx
+-      (withOptions (fun o => maxHeartbeats.set o cap) <| withCurrHeartbeats do
+-        let goal ← mkFreshExprMVar type
+-        let rest ← Tactic.run goal.mvarId! (Tactic.evalTactic tactic)
+-        unless rest.isEmpty do return .error "search left goals open"
+-        let proof ← instantiateMVars goal
+-        if proof.hasMVar || proof.hasFVar || proof.hasSorry then
+-          return .error "search returned an open or admitted term"
+-        return .ok proof)
++      (withOptions (fun o => maxHeartbeats.set o cap) <|
++        -- Lean caches this limit separately; withOptions does not refresh it.
++        withTheReader Core.Context
++          (fun ctx => { ctx with maxHeartbeats := Core.getMaxHeartbeats ctx.options }) <|
++        withCurrHeartbeats do
++          let goal ← mkFreshExprMVar type
++          let rest ← Tactic.run goal.mvarId! (Tactic.evalTactic tactic)
++          unless rest.isEmpty do return .error "search left goals open"
++          let proof ← instantiateMVars goal
++          if proof.hasMVar || proof.hasFVar || proof.hasSorry then
++            return .error "search returned an open or admitted term"
++          return .ok proof)
+       (fun ex => return .error (← ex.toMessageData.toString))
+ 
+ /-- Trust dependencies of a candidate term, before it has a declaration name. -/

@@ -1,0 +1,8 @@
+✖ [4/4] Building Test.Audit.ProofGraphSearch (2.6s)
+trace: .> LEAN_PATH=/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4/Test/Audit/ProofGraphSearch.lean -o /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Test/Audit/ProofGraphSearch.olean -i /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Test/Audit/ProofGraphSearch.ilean -c /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Test/Audit/ProofGraphSearch.c --setup /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Test/Audit/ProofGraphSearch.setup.json --json
+error: Test/Audit/ProofGraphSearch.lean:12:0: bounded search failed: search did not install its requested cached heartbeat limit
+error: Test/Audit/ProofGraphSearch.lean:74:14: Unknown constant `Test.ProofGraphSearch.closed`
+error: Lean exited with code 1
+Some required targets logged failures:
+- Test.Audit.ProofGraphSearch
+error: build failed

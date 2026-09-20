@@ -5489,7 +5489,6 @@ def complete_keys (self : DeferredStore) (cell : DeferredKey) (e : Completion Va
 def drainDue_keys (self : DeferredStore) : ProofGraph.Obligation (
     (self.drainDue).2.keys ⊆ self.keys ∧
       (self.drainDue).1.flatMap (Owed.keys Completion.keys) ⊆ self.keys) := ⟨⟩
-#proof_wanted drainDue_keys
 
 end M1.Handles
 
@@ -6644,3 +6643,22 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
 end StoresInstance
 
 end Effect4.Machine
+
+-- BEGIN M1 PHASE B Handles
+/-!
+The memo key connector lives with MemoEntry.keys. Keeping it downstream of
+StoresLaws avoids a cycle through CompletionData and the generic Refinement module.
+-/
+
+namespace Effect4.Machine.M1.DeferredWanted
+
+/-- The deleted await program named precisely this handle; the new entry still owns it. -/
+def memoEntry_keys (entry : MemoEntry) : ProofGraph.Obligation
+    (Handle.promise entry.deferred ∈ entry.keys) := ⟨⟩
+#proof_wanted memoEntry_keys
+
+end Effect4.Machine.M1.DeferredWanted
+-- END M1 PHASE B Handles
+
+#typed_state_obligations Effect4.Machine.M1.Handles ceiling 9 using aesop (rule_sets := [Effect4.Stores])
+#typed_state_obligations Effect4.Machine.M1Origin ceiling 9 using aesop (rule_sets := [Effect4.Stores])

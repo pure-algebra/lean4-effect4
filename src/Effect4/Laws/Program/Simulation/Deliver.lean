@@ -644,3 +644,5 @@ theorem deliver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : 
                 rfl, rfl, ListRel.nil⟩
 
 end Effect4.Program.Sched
+
+#typed_state_obligations Effect4.Program.Sched.M1Deliver ceiling 1 using aesop (rule_sets := [Effect4.Stores])

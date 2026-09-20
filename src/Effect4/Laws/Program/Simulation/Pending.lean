@@ -290,3 +290,5 @@ theorem iteration_pendingOk (root : NativeEff) (m : FMachine) (f : FRun) (y : Bo
 -- The namespace ceiling is pinned with the final-path skeleton in Phase B.
 
 end Effect4.Program.Sched
+
+#typed_state_obligations Effect4.Program.Sched.M1PendingOrigin ceiling 4 using aesop (rule_sets := [Effect4.Stores])

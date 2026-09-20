@@ -599,7 +599,6 @@ theorem syncOpStep_deferredAwaitCleanup (s : Stores) (cell : DeferredKey) (waite
 
 def M1Clock.syncOpStep_clockNow (s : Stores) : ProofGraph.Obligation
     (syncOpStep SyncOp.clockNow s = some (s, Val.nat s.timers.now.toNat)) := ⟨⟩
-#proof_wanted M1Clock.syncOpStep_clockNow
 
 /-- The clock read (the timer, A4). -/
 theorem syncOpStep_clockNow (s : Stores) :

@@ -88,7 +88,7 @@ fi
   cd -- "$repo_root"
   unset LEAN_PATH LEAN_SRC_PATH
   "$lake_bin" build Test.Audit.RuntimeCoverage >"$tmp_root/build.log" 2>&1
-  "$lake_bin" env lean "$coverage_rel" >"$tmp_root/coverage.log" 2>&1
+  "$lake_bin" env lean -DwarningAsError=true "$coverage_rel" >"$tmp_root/coverage.log" 2>&1
 )
 
 grep $'^E4RTCOV\t' "$tmp_root/coverage.log" >"$tmp_root/evidence.rows" || {

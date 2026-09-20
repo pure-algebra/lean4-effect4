@@ -1,0 +1,45 @@
+kind	module_or_control	log	outer_exit_code	child_exit_code	observed_result	command
+serial module build	Effect4.Laws.Machine.Arena	logs/serial/02-Effect4.Laws.Machine.Arena.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Arena
+serial module build	Effect4.Laws.Machine.RefKernel	logs/serial/03-Effect4.Laws.Machine.RefKernel.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.RefKernel
+serial module build	Effect4.Laws.Machine.Refinement	logs/serial/04-Effect4.Laws.Machine.Refinement.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Refinement
+serial module build	Effect4.Laws.Machine.Clauses	logs/serial/05-Effect4.Laws.Machine.Clauses.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Clauses
+serial module build	Effect4.Laws.Machine.Handles	logs/serial/06-Effect4.Laws.Machine.Handles.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Handles
+serial module build	Effect4.Laws.Machine.Behaviour	logs/serial/07-Effect4.Laws.Machine.Behaviour.attempt1.log	1	1	build failed	LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Behaviour
+serial module build	Effect4.Laws.Machine.Behaviour	logs/serial/07-Effect4.Laws.Machine.Behaviour.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Behaviour
+serial module build	Effect4.Laws.Machine.Book	logs/serial/08-Effect4.Laws.Machine.Book.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Effect4.Laws.Machine.Book
+serial module build	Effect4.Laws.Program.Simulation.Fibers	logs/serial/09-Effect4.Laws.Program.Simulation.Fibers.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Simulation.Fibers
+serial module build	Test.Audit.TypedStateDecl	logs/serial/10-Test.Audit.TypedStateDecl.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Test.Audit.TypedStateDecl
+serial module build	Effect4.Laws.Program.Typed.Frames	logs/serial/13-Effect4.Laws.Program.Typed.Frames.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Typed.Frames
+serial module build	Test.Audit.PositionCensus	logs/serial/15-Test.Audit.PositionCensus.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Test.Audit.PositionCensus
+serial module build	Test.Program.TypedStateRulesRed	logs/serial/16-Test.Program.TypedStateRulesRed.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Test.Program.TypedStateRulesRed
+serial module build	Effect4.Laws.Program.Typed.World	logs/serial/17-Effect4.Laws.Program.Typed.World.attempt1.log	1	1	build failed	LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Typed.World
+serial module build	Effect4.Laws.Program.Typed.World	logs/serial/17-Effect4.Laws.Program.Typed.World.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Typed.World
+serial module build	Effect4.Laws.Program.Typed.ForkSource	logs/serial/18-Effect4.Laws.Program.Typed.ForkSource.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Typed.ForkSource
+serial module build	Effect4.Laws.Program.Guard.TraceOrigin	logs/serial/21-Effect4.Laws.Program.Guard.TraceOrigin.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Guard.TraceOrigin
+serial module build	Effect4.Laws.Program.Guard.Handshake	logs/serial/22-Effect4.Laws.Program.Guard.Handshake.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Effect4.Laws.Program.Guard.Handshake
+serial module build	Effect4.Laws.Run	logs/serial/23-Effect4.Laws.Run.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Effect4.Laws.Run
+serial module build	Test.Api.SupervisionContract	logs/serial/24-Test.Api.SupervisionContract.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Test.Api.SupervisionContract
+serial module build	Effect4.Laws	logs/serial/26-Effect4.Laws.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Effect4.Laws
+manual compile/build		logs/manual/m1-phase-b-api-supervision.log			build completed successfully	
+manual compile/build		logs/manual/m1-phase-b-arena-contract.log			build completed successfully	
+manual compile/build		logs/manual/m1-phase-b-completion-data.log			build completed successfully	
+manual compile/build		logs/manual/m1-phase-b-forms-compile.log	0		empty output	LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true --root=tools tools/Effect4Gen/Forms.lean -o .lake/build/lib/lean/Effect4Gen/Forms.olean -i .lake/build/lib/lean/Effect4Gen/Forms.ilean
+manual compile/build		logs/manual/m1-phase-b-frames-old-pin.log		1	build failed	
+manual compile/build		logs/manual/m1-phase-b-indexed-columns-unpinned.log		1	build failed	
+manual compile/build		logs/manual/m1-phase-b-indexed-columns.log			build completed successfully	
+manual compile/build		logs/manual/m1-phase-b-machine-handshake.log			build completed successfully	
+manual compile/build		logs/manual/m1-phase-b-position-tool.log			build completed successfully	
+manual compile/build		logs/manual/m1-phase-b-state-generator-syntax-failed.log		1	build failed	
+manual compile/build		logs/manual/m1-phase-b-state-generator.log			build completed successfully	
+manual compile/build		logs/manual/m1-phase-b-state-old-pin.log		1	build failed	
+manual compile/build		logs/manual/m1-phase-b-test-all.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Test.All
+manual compile/build		logs/manual/m1-phase-b-test-all-census-tool.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Test.All
+prebaseline direct driver compile		logs/manual/m1-phase-b-census-truth-build.log	0		empty output	LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true --root=. harness/truth/Truth.lean -o .lake/build/lib/lean/harness/truth/Truth.olean -i .lake/build/lib/lean/harness/truth/Truth.ilean
+prebaseline direct driver compile		logs/manual/m1-phase-b-census-keyed-build.log	0		empty output	LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true --root=. harness/truth/session/Keyed.lean -o .lake/build/lib/lean/harness/truth/session/Keyed.olean -i .lake/build/lib/lean/harness/truth/session/Keyed.ilean
+instrument finite control	search-old-red	logs/instruments/m1-phase-b-search-old-red.log		1	build failed	
+instrument finite control	search-green	logs/instruments/m1-phase-b-search-green.log			build completed successfully	
+instrument finite control	obligations-green	logs/instruments/m1-phase-b-obligations.log			build completed successfully	
+instrument finite control	census-empty-missing-import	logs/instruments/m1-phase-b-census-empty-red.log	1		compiler error	LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true Test/Audit/ProofGraph.lean
+instrument finite control	census-empty-imported-red	logs/instruments/m1-phase-b-census-empty-red-imported.log	1		compiler error	LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true Test/Audit/ProofGraph.lean
+instrument finite control	census-empty-green	logs/instruments/m1-phase-b-census-empty-green.log	0		build completed successfully	LEAN_NUM_THREADS=1 lake build Test.Audit.ProofGraph
+instrument finite control	ordinary-dead-tactic-red	logs/instruments/m1-phase-b-census-ordinary-dead-tactic-red.log	1		compiler error	LEAN_NUM_THREADS=1 lake env lean -M6144 -DwarningAsError=true /tmp/m1-tools/OrdinaryUnreachableControl.lean

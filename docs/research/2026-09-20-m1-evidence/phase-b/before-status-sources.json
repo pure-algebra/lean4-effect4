@@ -1,0 +1,284 @@
+{
+  "base": "05417cc614c6e0cefc11fe2f9bda91fe8b9c6fae",
+  "state": "all-wanted Phase B snapshot before status collection, marker removal, new gates, or Phase C proof fills; 19 prior zero gates retained",
+  "task_obligations": 311,
+  "held_M4": 1,
+  "archive_sha256": "391b0fdef078f37c349566353c50900ebd92a5165acca12be440cb67e744e94b",
+  "files": [
+    {
+      "path": "Test/All.lean",
+      "bytes": 5263,
+      "sha256": "2272213b52738cf7c9859f550ba73682bb895ed98275deec41a7c8610b471e1d"
+    },
+    {
+      "path": "Test/Api/SupervisionContract.lean",
+      "bytes": 9548,
+      "sha256": "f6fb4d36ef76ffc83bd0675835e9bfe476bdfa6f23ca60603dbe8a828d0ba730"
+    },
+    {
+      "path": "Test/Audit/IndexedColumnActual.lean",
+      "bytes": 1709,
+      "sha256": "f5dae53b4925739cbb8e00cc1977f6c0534e930d37c9845c7807d24efe489b36"
+    },
+    {
+      "path": "Test/Audit/IndexedColumns.lean",
+      "bytes": 7319,
+      "sha256": "bb0597725e83cfc2cea2928f4871113c90f03ac303faded3cfb2eb8857296797"
+    },
+    {
+      "path": "Test/Audit/Obligations.lean",
+      "bytes": 1926,
+      "sha256": "1f23aa68b60858a61093ead4a72674c05d62ff5f90ff5733ecd5cd66cc961b3b"
+    },
+    {
+      "path": "Test/Audit/PositionCensus.lean",
+      "bytes": 2192,
+      "sha256": "c90249b51144b1574932797a23ee10f28ce24e83b18cdaabde097a37714aad37"
+    },
+    {
+      "path": "Test/Audit/ProofGraph.lean",
+      "bytes": 3206,
+      "sha256": "f1d1324f84c7b110b595696eb05f9f497ab186a845441d222bd05026abe0b637"
+    },
+    {
+      "path": "Test/Audit/ProofGraphSearch.lean",
+      "bytes": 3646,
+      "sha256": "6b24defb9afebb4e691ae5e7be320e1f22f75e1f3258471e238e401085b99991"
+    },
+    {
+      "path": "Test/Audit/TypedStateDecl.lean",
+      "bytes": 5449,
+      "sha256": "610cfc59939e7380bc7876b40076771c7732de32a0bb147bfc4d82488842f0f1"
+    },
+    {
+      "path": "Test/Machine/Runtime/ArenaContract.lean",
+      "bytes": 966,
+      "sha256": "a1da857df4b190ec1fc36f4ae3beffa74cb5f1f32aa5d1f33474ed2ad1119d4c"
+    },
+    {
+      "path": "src/Effect4/Laws.lean",
+      "bytes": 5184,
+      "sha256": "992ee86d7b61b2bc7b97b1a871d4afa0cd92073c4691db6ad3a25ab407328222"
+    },
+    {
+      "path": "src/Effect4/Laws/Api/Supervision.lean",
+      "bytes": 49357,
+      "sha256": "27eb38b6bb15786d27754dd08233a2f41ff871535b82154e277069ef9cab8b3b"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Approximation.lean",
+      "bytes": 80199,
+      "sha256": "6c3b347dc71459b2c656d98f4f3ee6e12a8240a7eade63af09757102ef08535b"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Arena.lean",
+      "bytes": 3929,
+      "sha256": "9b95c9d720fe180fd40ae9d4d88e5afd21ef7a0d72178333530737068dcae815"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Behaviour.lean",
+      "bytes": 5063,
+      "sha256": "b5d2958eae6cf2a292a617748f8bb69188447d5d243e2dc94395cfb431203a76"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Book.lean",
+      "bytes": 66745,
+      "sha256": "0954bfd977c572dc4739b1eab0eaee3e47543635c0dc840c47b70e32852d0137"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Clauses.lean",
+      "bytes": 131351,
+      "sha256": "8b1c86471be1eda62981165028d990f0fe94e3dc3d058e02eeaf03aedb5f6e7e"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Clock.lean",
+      "bytes": 7483,
+      "sha256": "0b7f824aec4ac5fd87325c1e3e666419d91d799c7401d24996a49476328c3c40"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/CompletionData.lean",
+      "bytes": 3723,
+      "sha256": "3908254801abd6ba091918c81fe4aa3fa6fb3f423ca6f839ab5f4b8e827f4a3c"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Handles.lean",
+      "bytes": 350016,
+      "sha256": "efa302a4bb64d6dd6a05fcad99543d3a872e8c9f0a2b58e6d7b8ad5c69b4db2a"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Handshake.lean",
+      "bytes": 2784,
+      "sha256": "1021c3910e1093049be44b365f570d98f667fa6efb68545e7b7e3d4fac20dd92"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/RefKernel.lean",
+      "bytes": 9789,
+      "sha256": "b6f4b674664ed889afdc8b04753f9397aa5868033c138912814a9306e00e8a82"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Refinement.lean",
+      "bytes": 12753,
+      "sha256": "bc1adcbc5f0f860f8e193bab56c65d119e03a5129897e3d0eb9248fce9aefece"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/StoresLaws.lean",
+      "bytes": 99952,
+      "sha256": "58bd6605a81e5092145c126d6633c55aebde88c67f60ef5262e50fe67e285f9d"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Witnesses.lean",
+      "bytes": 70139,
+      "sha256": "1535014dceac91ee8e294b40c30451a59f814be6a5d46cceb5f908374fad9769"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Agreement.lean",
+      "bytes": 98528,
+      "sha256": "f58d6483c8294fc9027f6b7f6d635c09ba06fbbc012a69f5628e2f7f67979e40"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Agreement/Machine.lean",
+      "bytes": 96572,
+      "sha256": "cef17481414462663284641fd0c7401bcb43e4fa8958bfb875d28acd52c68c15"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Guard/Core.lean",
+      "bytes": 188091,
+      "sha256": "62b68815b9e24e9ac1433a195190c430291a1ad59a23fe9283c9b27d0ff827f3"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Guard/FrameOwned.lean",
+      "bytes": 42512,
+      "sha256": "f2b39b9fabaf87bbbf6f1d6b2c0699ba6c6eb2c20f7ed5f34c58ce2b089cb105"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Guard/Handshake.lean",
+      "bytes": 1114,
+      "sha256": "3b354b4248da915e6fd0a2bb7a323f0c384821c76eee49017ba2a97e7442264d"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Guard/NativeState.lean",
+      "bytes": 33745,
+      "sha256": "1231e2e2baeff161b6902bfad4aa0f4b7002245660f80b382d31d233476539b8"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Guard/NativeStateLinks.lean",
+      "bytes": 16542,
+      "sha256": "801800fb8fd0169c701b3ec12db159625c091c02bba70e25ee58c4a1d6d58614"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Guard/OuterDriver.lean",
+      "bytes": 23945,
+      "sha256": "0c60d4c6170ac61795396a35d9b5701a9d2dd99ee5a7ed35c4ee25e8d030a4ac"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Guard/RaceSites.lean",
+      "bytes": 19060,
+      "sha256": "29c79709c0f1e95d1eaa793b5cbee3d5628c95efde318cb6605c232b4d84a051"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Guard/Single.lean",
+      "bytes": 26019,
+      "sha256": "62d3ce49e40d87e2385612e295c773c7b19525aae14990eb0fa0a67b300e8ef0"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Guard/TraceOrigin.lean",
+      "bytes": 1172,
+      "sha256": "ceb93ffc4b79811339a61de531e3bc424a627e0a06b5edde617feca0d3f0d453"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Intro/Weight.lean",
+      "bytes": 12189,
+      "sha256": "2f6595143c00316022932d79a15e30da03f9ed66eaaa53999ae79a0644b3072c"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Simulation/Actions.lean",
+      "bytes": 45064,
+      "sha256": "06af6bc391adc9ffce40b771bdd8b14372b63fdacf27228000cb1532d3835fce"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Simulation/Deliver.lean",
+      "bytes": 31932,
+      "sha256": "50e2a97f39374e49bf4927907b4721d70f8102570c49354d697b40dbebdfdbf7"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Simulation/Drive.lean",
+      "bytes": 60210,
+      "sha256": "21a7503d15524512948481e16b5cf5aa74f1f4f5790f8362f035520cb862cc9b"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Simulation/Evaluate.lean",
+      "bytes": 61283,
+      "sha256": "68696766be4c7b4286d3d0d84d7c5c0a161556f54eceeee012818d6daa7f3525"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Simulation/Fibers.lean",
+      "bytes": 30221,
+      "sha256": "f13bb4743fc72adc39c9b8da98cd810876622fcf48ae06d004c75154bcc7fa35"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Simulation/Hooks.lean",
+      "bytes": 36547,
+      "sha256": "ef8baba57046aaab92dd4033fabf007f709badff40e0c39e51a2393594896f26"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Simulation/Pending.lean",
+      "bytes": 12441,
+      "sha256": "b06082935a7c81b186221c98995b826c1bd1bc5012f81a4a8be071319c49e087"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/ForkSource.lean",
+      "bytes": 2721,
+      "sha256": "692f87d2f7cb1853808eadadf71896539d925a4ded68eaf93d7521ea60f1e509"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Frames.lean",
+      "bytes": 771,
+      "sha256": "5bd8a546ab9c69ecb30466eb1c11a3449a20de7eeb9e4cb2a0604ded506b2fca"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/PositionGate.lean",
+      "bytes": 3225,
+      "sha256": "b4ce06198765a032b941fbf0de008b32050a55ec90de558e77da4b689027377f"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Sources.lean",
+      "bytes": 9317,
+      "sha256": "2cb1db7941e0ab12689e31f38dac8bd3f07c208caa94fda77c5af6447a0577f1"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/State.lean",
+      "bytes": 2208,
+      "sha256": "1e425053e9328a70123e1cdc14efa7ce1ff376df8e2bd5c3f73b76feca541ca2"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/TypedSources.lean",
+      "bytes": 4260,
+      "sha256": "ec03aae15355c6315aed1da6ccbffd72e1a4bf7f430414d4c190efcbbe9a428c"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/TypedStateDecl.lean",
+      "bytes": 26559,
+      "sha256": "022747705b707456a416034739ae4fbcd027d239c49fbb0db1dfd474598f4ba1"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Vocabulary.lean",
+      "bytes": 2681,
+      "sha256": "31fecfaadbe48b538bb1c2d1e2f42d381b08ea84328ad35b77d01085ea8af70b"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/World.lean",
+      "bytes": 14781,
+      "sha256": "54b548d1421bf1ac0028e6f50a26c46508b46f92d254f9ca4e12a1e9fc91caa0"
+    },
+    {
+      "path": "src/Effect4/Laws/Run.lean",
+      "bytes": 44807,
+      "sha256": "7f62fa573cccd55c59a01d2a409272acc1feb960f2375ae0e5016351cbc517e2"
+    },
+    {
+      "path": "tools/ProofGraph/Search.lean",
+      "bytes": 2355,
+      "sha256": "5108f443d59fee47a9d54a8a44b2fa2ce0f4ce97b046941c5e312557be576b25"
+    }
+  ]
+}

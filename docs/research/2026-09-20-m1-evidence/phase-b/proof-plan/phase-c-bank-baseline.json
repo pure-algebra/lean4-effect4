@@ -1,0 +1,800 @@
+{
+  "format_version": 1,
+  "bank": "Effect4.Stores",
+  "head_at_capture": "05417cc614c6e0cefc11fe2f9bda91fe8b9c6fae",
+  "scope": "Static explicit source registration inventory under src/Effect4/Laws. This is not Lean environment enumeration: inherited/imported default rules, generated dynamic registrations, and tactic-local add clauses are outside this count. Qualified names are reconstructed from source namespace context.",
+  "counts": {
+    "names": 80,
+    "unique_names": 80,
+    "attribute_blocks": 36,
+    "modules": 11
+  },
+  "required_deferred_and_owed_names": [
+    "Effect4.Machine.DeferredStore.make",
+    "Effect4.Machine.DeferredStore.cellAt",
+    "Effect4.Machine.DeferredStore.setCell",
+    "Effect4.Machine.DeferredStore.isDone",
+    "Effect4.Machine.DeferredStore.poll",
+    "Effect4.Machine.DeferredStore.register",
+    "Effect4.Machine.DeferredStore.complete",
+    "Effect4.Machine.DeferredStore.drainDue",
+    "Effect4.Machine.Owed.mapCode_waiter",
+    "Effect4.Machine.Owed.mapCode_token",
+    "Effect4.Machine.Owed.mapCode_mode"
+  ],
+  "required_names_present": true,
+  "sources": [
+    {
+      "path": "src/Effect4/Laws/Machine/Clock.lean",
+      "sha256": "0b7f824aec4ac5fd87325c1e3e666419d91d799c7401d24996a49476328c3c40"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/CompletionData.lean",
+      "sha256": "3908254801abd6ba091918c81fe4aa3fa6fb3f423ca6f839ab5f4b8e827f4a3c"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Handles.lean",
+      "sha256": "efa302a4bb64d6dd6a05fcad99543d3a872e8c9f0a2b58e6d7b8ad5c69b4db2a"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/StoresLaws.lean",
+      "sha256": "58bd6605a81e5092145c126d6633c55aebde88c67f60ef5262e50fe67e285f9d"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Guard/Core.lean",
+      "sha256": "62b68815b9e24e9ac1433a195190c430291a1ad59a23fe9283c9b27d0ff827f3"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Guard/FrameOwned.lean",
+      "sha256": "f2b39b9fabaf87bbbf6f1d6b2c0699ba6c6eb2c20f7ed5f34c58ce2b089cb105"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Guard/NativeState.lean",
+      "sha256": "1231e2e2baeff161b6902bfad4aa0f4b7002245660f80b382d31d233476539b8"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Guard/RaceSites.lean",
+      "sha256": "29c79709c0f1e95d1eaa793b5cbee3d5628c95efde318cb6605c232b4d84a051"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Simulation/Fibers.lean",
+      "sha256": "f13bb4743fc72adc39c9b8da98cd810876622fcf48ae06d004c75154bcc7fa35"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Simulation/Hooks.lean",
+      "sha256": "ef8baba57046aaab92dd4033fabf007f709badff40e0c39e51a2393594896f26"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Simulation/Pending.lean",
+      "sha256": "b06082935a7c81b186221c98995b826c1bd1bc5012f81a4a8be071319c49e087"
+    }
+  ],
+  "registrations": [
+    {
+      "source_path": "src/Effect4/Laws/Machine/Clock.lean",
+      "line": 14,
+      "end_line": 15,
+      "namespace": "Effect4",
+      "attribute_syntax": "attribute [aesop norm simp (rule_sets := [Effect4.Stores])]",
+      "builder": "norm simp",
+      "registration_kind": "attribute_command",
+      "names": [
+        "ClockMillis.ofNat_toNat",
+        "ClockMillis.toNat_ofNat",
+        "ClockMillis.toNat_add"
+      ],
+      "qualified_names_static": [
+        "Effect4.ClockMillis.ofNat_toNat",
+        "Effect4.ClockMillis.toNat_ofNat",
+        "Effect4.ClockMillis.toNat_add"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Machine/Clock.lean",
+      "line": 30,
+      "end_line": 31,
+      "namespace": "Effect4.Machine.TimerStore",
+      "attribute_syntax": "attribute [aesop norm simp (rule_sets := [Effect4.Stores])]",
+      "builder": "norm simp",
+      "registration_kind": "attribute_command",
+      "names": [
+        "cancel_pending",
+        "dueMin_first",
+        "fireNext_none",
+        "clockStep_finish"
+      ],
+      "qualified_names_static": [
+        "Effect4.Machine.TimerStore.cancel_pending",
+        "Effect4.Machine.TimerStore.dueMin_first",
+        "Effect4.Machine.TimerStore.fireNext_none",
+        "Effect4.Machine.TimerStore.clockStep_finish"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Machine/Clock.lean",
+      "line": 32,
+      "end_line": 33,
+      "namespace": "Effect4.Machine.TimerStore",
+      "attribute_syntax": "attribute [aesop safe forward (rule_sets := [Effect4.Stores])]",
+      "builder": "safe forward",
+      "registration_kind": "attribute_command",
+      "names": [
+        "dueMin_none_of_late",
+        "dueMin_mem",
+        "dueMin_le",
+        "dueMin_min",
+        "fireNext_now",
+        "fireNext_owed",
+        "clockStep_owed"
+      ],
+      "qualified_names_static": [
+        "Effect4.Machine.TimerStore.dueMin_none_of_late",
+        "Effect4.Machine.TimerStore.dueMin_mem",
+        "Effect4.Machine.TimerStore.dueMin_le",
+        "Effect4.Machine.TimerStore.dueMin_min",
+        "Effect4.Machine.TimerStore.fireNext_now",
+        "Effect4.Machine.TimerStore.fireNext_owed",
+        "Effect4.Machine.TimerStore.clockStep_owed"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Machine/Clock.lean",
+      "line": 34,
+      "end_line": 35,
+      "namespace": "Effect4.Machine.TimerStore",
+      "attribute_syntax": "attribute [aesop safe apply (rule_sets := [Effect4.Stores])]",
+      "builder": "safe apply",
+      "registration_kind": "attribute_command",
+      "names": [
+        "empty_wf",
+        "empty_quiet",
+        "sleep_wf",
+        "cancel_wf",
+        "fireNext_wf",
+        "clockStep_wf"
+      ],
+      "qualified_names_static": [
+        "Effect4.Machine.TimerStore.empty_wf",
+        "Effect4.Machine.TimerStore.empty_quiet",
+        "Effect4.Machine.TimerStore.sleep_wf",
+        "Effect4.Machine.TimerStore.cancel_wf",
+        "Effect4.Machine.TimerStore.fireNext_wf",
+        "Effect4.Machine.TimerStore.clockStep_wf"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Machine/Clock.lean",
+      "line": 91,
+      "end_line": 94,
+      "namespace": "Effect4",
+      "attribute_syntax": "attribute [aesop norm simp (rule_sets := [Effect4.Stores])]",
+      "builder": "norm simp",
+      "registration_kind": "attribute_command",
+      "names": [
+        "ClockMillis.Decimal.readBytes_digits",
+        "ClockMillis.Decimal.readChars_core",
+        "ClockMillis.Decimal.readBytes_repr",
+        "ClockMillis.ofDecimal_toDecimal",
+        "Store.ClockCanonical.ofVal_toVal",
+        "Store.ClockCanonical.fits"
+      ],
+      "qualified_names_static": [
+        "Effect4.ClockMillis.Decimal.readBytes_digits",
+        "Effect4.ClockMillis.Decimal.readChars_core",
+        "Effect4.ClockMillis.Decimal.readBytes_repr",
+        "Effect4.ClockMillis.ofDecimal_toDecimal",
+        "Effect4.Store.ClockCanonical.ofVal_toVal",
+        "Effect4.Store.ClockCanonical.fits"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Machine/Clock.lean",
+      "line": 95,
+      "end_line": 96,
+      "namespace": "Effect4",
+      "attribute_syntax": "attribute [aesop safe forward (rule_sets := [Effect4.Stores])]",
+      "builder": "safe forward",
+      "registration_kind": "attribute_command",
+      "names": [
+        "ClockMillis.ofDecimal_exact",
+        "Store.ClockCanonical.ofVal_exact"
+      ],
+      "qualified_names_static": [
+        "Effect4.ClockMillis.ofDecimal_exact",
+        "Effect4.Store.ClockCanonical.ofVal_exact"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Machine/CompletionData.lean",
+      "line": 8,
+      "end_line": 11,
+      "namespace": "Effect4.Machine",
+      "attribute_syntax": "attribute [aesop norm simp (rule_sets := [Effect4.Stores])]",
+      "builder": "norm simp",
+      "registration_kind": "attribute_command",
+      "names": [
+        "DeferredStore.make",
+        "DeferredStore.cellAt",
+        "DeferredStore.setCell",
+        "DeferredStore.isDone",
+        "DeferredStore.poll",
+        "DeferredStore.register",
+        "DeferredStore.complete",
+        "DeferredStore.drainDue",
+        "Owed.mapCode_waiter",
+        "Owed.mapCode_token",
+        "Owed.mapCode_mode"
+      ],
+      "qualified_names_static": [
+        "Effect4.Machine.DeferredStore.make",
+        "Effect4.Machine.DeferredStore.cellAt",
+        "Effect4.Machine.DeferredStore.setCell",
+        "Effect4.Machine.DeferredStore.isDone",
+        "Effect4.Machine.DeferredStore.poll",
+        "Effect4.Machine.DeferredStore.register",
+        "Effect4.Machine.DeferredStore.complete",
+        "Effect4.Machine.DeferredStore.drainDue",
+        "Effect4.Machine.Owed.mapCode_waiter",
+        "Effect4.Machine.Owed.mapCode_token",
+        "Effect4.Machine.Owed.mapCode_mode"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Machine/CompletionData.lean",
+      "line": 24,
+      "end_line": 24,
+      "namespace": "Effect4.Machine",
+      "attribute_syntax": "attribute [aesop safe forward (rule_sets := [Effect4.Stores])]",
+      "builder": "safe forward",
+      "registration_kind": "attribute_command",
+      "names": [
+        "store_lookup_lt"
+      ],
+      "qualified_names_static": [
+        "Effect4.Machine.store_lookup_lt"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Machine/Handles.lean",
+      "line": 5506,
+      "end_line": 5507,
+      "namespace": "Effect4.Machine",
+      "attribute_syntax": "attribute [aesop norm simp (rule_sets := [Effect4.Stores])]",
+      "builder": "norm simp",
+      "registration_kind": "attribute_command",
+      "names": [
+        "DeferredCell.keys",
+        "DeferredStore.keys",
+        "Owed.keys"
+      ],
+      "qualified_names_static": [
+        "Effect4.Machine.DeferredCell.keys",
+        "Effect4.Machine.DeferredStore.keys",
+        "Effect4.Machine.Owed.keys"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Machine/Handles.lean",
+      "line": 5509,
+      "end_line": 5510,
+      "namespace": "Effect4.Machine",
+      "attribute_syntax": "attribute [aesop safe forward (rule_sets := [Effect4.Stores])]",
+      "builder": "safe forward",
+      "registration_kind": "attribute_command",
+      "names": [
+        "DeferredStore.cellAt_keys_subset"
+      ],
+      "qualified_names_static": [
+        "Effect4.Machine.DeferredStore.cellAt_keys_subset"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Machine/Handles.lean",
+      "line": 5530,
+      "end_line": 5531,
+      "namespace": "Effect4.Machine",
+      "attribute_syntax": "attribute [aesop safe apply (rule_sets := [Effect4.Stores])]",
+      "builder": "safe apply",
+      "registration_kind": "attribute_command",
+      "names": [
+        "DeferredStore.setCell_keys_subset",
+        "DeferredStore.setCell_le"
+      ],
+      "qualified_names_static": [
+        "Effect4.Machine.DeferredStore.setCell_keys_subset",
+        "Effect4.Machine.DeferredStore.setCell_le"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Machine/Handles.lean",
+      "line": 5566,
+      "end_line": 5567,
+      "namespace": "Effect4.Machine",
+      "attribute_syntax": "attribute [aesop safe apply (rule_sets := [Effect4.Stores])]",
+      "builder": "safe apply",
+      "registration_kind": "attribute_command",
+      "names": [
+        "DeferredStore.setCell_keys_of_subset",
+        "DeferredStore.setCell_appendDue_keys"
+      ],
+      "qualified_names_static": [
+        "Effect4.Machine.DeferredStore.setCell_keys_of_subset",
+        "Effect4.Machine.DeferredStore.setCell_appendDue_keys"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Machine/StoresLaws.lean",
+      "line": 2052,
+      "end_line": 2054,
+      "namespace": "Effect4.Machine",
+      "attribute_syntax": "attribute [aesop norm simp (rule_sets := [Effect4.Stores])]",
+      "builder": "norm simp",
+      "registration_kind": "attribute_command",
+      "names": [
+        "DeferredStore.setCell_cells_length",
+        "DeferredStore.complete_cells_length",
+        "syncOpStep_deferredCompleteWith",
+        "syncOpStep_deferredInterruptWith",
+        "syncOpStep_memoBuild"
+      ],
+      "qualified_names_static": [
+        "Effect4.Machine.DeferredStore.setCell_cells_length",
+        "Effect4.Machine.DeferredStore.complete_cells_length",
+        "Effect4.Machine.syncOpStep_deferredCompleteWith",
+        "Effect4.Machine.syncOpStep_deferredInterruptWith",
+        "Effect4.Machine.syncOpStep_memoBuild"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Machine/StoresLaws.lean",
+      "line": 2056,
+      "end_line": 2057,
+      "namespace": "Effect4.Machine",
+      "attribute_syntax": "attribute [aesop safe forward (rule_sets := [Effect4.Stores])]",
+      "builder": "safe forward",
+      "registration_kind": "attribute_command",
+      "names": [
+        "syncOpStep_memoComplete_some"
+      ],
+      "qualified_names_static": [
+        "Effect4.Machine.syncOpStep_memoComplete_some"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Guard/Core.lean",
+      "line": 3758,
+      "end_line": 3758,
+      "namespace": "Effect4.Program.Guard",
+      "attribute_syntax": "attribute [aesop norm simp (rule_sets := [Effect4.Stores])]",
+      "builder": "norm simp",
+      "registration_kind": "attribute_command",
+      "names": [
+        "deferredKeys_due_append"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Guard.deferredKeys_due_append"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Guard/Core.lean",
+      "line": 3759,
+      "end_line": 3759,
+      "namespace": "Effect4.Program.Guard",
+      "attribute_syntax": "attribute [aesop norm -1 apply (rule_sets := [Effect4.Stores])]",
+      "builder": "norm -1 apply",
+      "registration_kind": "attribute_command",
+      "names": [
+        "deferredKeys_complete_subset"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Guard.deferredKeys_complete_subset"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Guard/FrameOwned.lean",
+      "line": 560,
+      "end_line": 560,
+      "namespace": "Effect4.Program.Guard.FrameOwned",
+      "attribute_syntax": "attribute [aesop norm simp (rule_sets := [Effect4.Stores])]",
+      "builder": "norm simp",
+      "registration_kind": "attribute_command",
+      "names": [
+        "optionRaceSites"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Guard.FrameOwned.optionRaceSites"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Guard/FrameOwned.lean",
+      "line": 579,
+      "end_line": 580,
+      "namespace": "Effect4.Program.Guard.FrameOwned",
+      "attribute_syntax": "attribute [aesop norm -1 apply (rule_sets := [Effect4.Stores])]",
+      "builder": "norm -1 apply",
+      "registration_kind": "attribute_command",
+      "names": [
+        "deferred_register_sites",
+        "prepareExternalAnswer_sites"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Guard.FrameOwned.deferred_register_sites",
+        "Effect4.Program.Guard.FrameOwned.prepareExternalAnswer_sites"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Guard/FrameOwned.lean",
+      "line": 594,
+      "end_line": 594,
+      "namespace": "Effect4.Program.Guard.FrameOwned",
+      "attribute_syntax": "attribute [aesop norm -1 apply (rule_sets := [Effect4.Stores])]",
+      "builder": "norm -1 apply",
+      "registration_kind": "attribute_command",
+      "names": [
+        "registerAsync_sites"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Guard.FrameOwned.registerAsync_sites"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Guard/FrameOwned.lean",
+      "line": 676,
+      "end_line": 677,
+      "namespace": "Effect4.Program.Guard.FrameOwned",
+      "attribute_syntax": "attribute [aesop norm simp (rule_sets := [Effect4.Stores])]",
+      "builder": "norm simp",
+      "registration_kind": "attribute_command",
+      "names": [
+        "interruptCode_sites",
+        "interruptAsCode_sites"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Guard.FrameOwned.interruptCode_sites",
+        "Effect4.Program.Guard.FrameOwned.interruptAsCode_sites"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Guard/FrameOwned.lean",
+      "line": 678,
+      "end_line": 678,
+      "namespace": "Effect4.Program.Guard.FrameOwned",
+      "attribute_syntax": "attribute [aesop safe forward (rule_sets := [Effect4.Stores])]",
+      "builder": "safe forward",
+      "registration_kind": "attribute_command",
+      "names": [
+        "closeScope_hook_sites"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Guard.FrameOwned.closeScope_hook_sites"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Guard/FrameOwned.lean",
+      "line": 769,
+      "end_line": 770,
+      "namespace": "Effect4.Program.Guard.FrameOwned",
+      "attribute_syntax": "attribute [aesop safe forward (rule_sets := [Effect4.Stores])]",
+      "builder": "safe forward",
+      "registration_kind": "attribute_command",
+      "names": [
+        "countdownPark_result_owned",
+        "closeScopeUnsafe_some_sites"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Guard.FrameOwned.countdownPark_result_owned",
+        "Effect4.Program.Guard.FrameOwned.closeScopeUnsafe_some_sites"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Guard/NativeState.lean",
+      "line": 223,
+      "end_line": 224,
+      "namespace": "Effect4.Program.Guard.NativeState",
+      "attribute_syntax": "attribute [aesop norm -1 apply (rule_sets := [Effect4.Stores])]",
+      "builder": "norm -1 apply",
+      "registration_kind": "attribute_command",
+      "names": [
+        "storeKeys_registerDeferred",
+        "storeKeys_sleep"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Guard.NativeState.storeKeys_registerDeferred",
+        "Effect4.Program.Guard.NativeState.storeKeys_sleep"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Guard/NativeState.lean",
+      "line": 225,
+      "end_line": 225,
+      "namespace": "Effect4.Program.Guard.NativeState",
+      "attribute_syntax": "attribute [aesop norm simp (rule_sets := [Effect4.Stores])]",
+      "builder": "norm simp",
+      "registration_kind": "attribute_command",
+      "names": [
+        "registerExternal_storeKeys"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Guard.NativeState.registerExternal_storeKeys"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Guard/NativeState.lean",
+      "line": 256,
+      "end_line": 256,
+      "namespace": "Effect4.Program.Guard.NativeState",
+      "attribute_syntax": "attribute [aesop norm -1 apply (rule_sets := [Effect4.Stores])]",
+      "builder": "norm -1 apply",
+      "registration_kind": "attribute_command",
+      "names": [
+        "registerAsync_state"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Guard.NativeState.registerAsync_state"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Guard/NativeState.lean",
+      "line": 558,
+      "end_line": 558,
+      "namespace": "Effect4.Program.Guard.NativeState",
+      "attribute_syntax": "attribute [aesop safe apply (rule_sets := [Effect4.Stores])]",
+      "builder": "safe apply",
+      "registration_kind": "attribute_command",
+      "names": [
+        "StateStep.registerAsync"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Guard.NativeState.StateStep.registerAsync"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Guard/NativeState.lean",
+      "line": 559,
+      "end_line": 559,
+      "namespace": "Effect4.Program.Guard.NativeState",
+      "attribute_syntax": "attribute [aesop safe forward (rule_sets := [Effect4.Stores])]",
+      "builder": "safe forward",
+      "registration_kind": "attribute_command",
+      "names": [
+        "StateStep.countdown_result"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Guard.NativeState.StateStep.countdown_result"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Guard/RaceSites.lean",
+      "line": 125,
+      "end_line": 125,
+      "namespace": "Effect4.Program.Guard",
+      "attribute_syntax": "attribute [aesop norm simp (rule_sets := [Effect4.Stores])]",
+      "builder": "norm simp",
+      "registration_kind": "attribute_command",
+      "names": [
+        "raceSites_completion"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Guard.raceSites_completion"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Simulation/Fibers.lean",
+      "line": 477,
+      "end_line": 478,
+      "namespace": "Effect4.Program.Sched",
+      "attribute_syntax": "@[aesop norm simp (rule_sets := [Effect4.Stores])]",
+      "builder": "norm simp",
+      "registration_kind": "declaration_attribute",
+      "names": [
+        "make_pending_empty"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Sched.make_pending_empty"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Simulation/Fibers.lean",
+      "line": 482,
+      "end_line": 482,
+      "namespace": "Effect4.Program.Sched",
+      "attribute_syntax": "attribute [aesop norm simp (rule_sets := [Effect4.Stores])]",
+      "builder": "norm simp",
+      "registration_kind": "attribute_command",
+      "names": [
+        "PendingOk"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Sched.PendingOk"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Simulation/Hooks.lean",
+      "line": 175,
+      "end_line": 175,
+      "namespace": "Effect4.Program.Sched",
+      "attribute_syntax": "attribute [aesop safe apply (rule_sets := [Effect4.Stores])]",
+      "builder": "safe apply",
+      "registration_kind": "attribute_command",
+      "names": [
+        "exit_completion_means"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Sched.exit_completion_means"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Simulation/Pending.lean",
+      "line": 51,
+      "end_line": 52,
+      "namespace": "Effect4.Program.Sched",
+      "attribute_syntax": "@[aesop norm simp (rule_sets := [Effect4.Stores])]",
+      "builder": "norm simp",
+      "registration_kind": "declaration_attribute",
+      "names": [
+        "start_pending"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Sched.start_pending"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Simulation/Pending.lean",
+      "line": 72,
+      "end_line": 73,
+      "namespace": "Effect4.Program.Sched",
+      "attribute_syntax": "@[aesop safe apply (rule_sets := [Effect4.Stores])]",
+      "builder": "safe apply",
+      "registration_kind": "declaration_attribute",
+      "names": [
+        "beginRace_pendingOk"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Sched.beginRace_pendingOk"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Simulation/Pending.lean",
+      "line": 112,
+      "end_line": 113,
+      "namespace": "Effect4.Program.Sched",
+      "attribute_syntax": "@[aesop safe apply (rule_sets := [Effect4.Stores])]",
+      "builder": "safe apply",
+      "registration_kind": "declaration_attribute",
+      "names": [
+        "fork_pendingOk"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Sched.fork_pendingOk"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Simulation/Pending.lean",
+      "line": 121,
+      "end_line": 122,
+      "namespace": "Effect4.Program.Sched",
+      "attribute_syntax": "@[aesop safe apply (rule_sets := [Effect4.Stores])]",
+      "builder": "safe apply",
+      "registration_kind": "declaration_attribute",
+      "names": [
+        "forkIn_pendingOk"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Sched.forkIn_pendingOk"
+      ]
+    },
+    {
+      "source_path": "src/Effect4/Laws/Program/Simulation/Pending.lean",
+      "line": 130,
+      "end_line": 131,
+      "namespace": "Effect4.Program.Sched",
+      "attribute_syntax": "@[aesop safe apply (rule_sets := [Effect4.Stores])]",
+      "builder": "safe apply",
+      "registration_kind": "declaration_attribute",
+      "names": [
+        "forkScoped_pendingOk"
+      ],
+      "qualified_names_static": [
+        "Effect4.Program.Sched.forkScoped_pendingOk"
+      ]
+    }
+  ],
+  "controls": [
+    {
+      "bank": "Effect4.Stores",
+      "positive": {
+        "name": "Effect4.Machine.poll_reads_cell",
+        "source_path": "src/Effect4/Laws/Machine/CompletionData.lean",
+        "line": 71,
+        "closing_tactic": "aesop (rule_sets := [Effect4.Stores])"
+      },
+      "negative": {
+        "name": null,
+        "kind": "anonymous example",
+        "namespace": "Test.Machine.CompletionDataContract",
+        "source_path": "Test/Machine/Runtime/CompletionDataContract.lean",
+        "guard_line": 15,
+        "line": 16,
+        "end_line": 18,
+        "closing_tactic": "aesop",
+        "expected_error": "Tactic `aesop` failed, made no progress",
+        "statement_and_body": "example (s : DeferredStore) (k : DeferredKey) (c : DeferredCell)\n    (h : s.cellAt k = some c) : s.poll k = some c.completion := by\n  aesop"
+      },
+      "axiom_print": {
+        "source_path": "Test/Machine/Runtime/CompletionDataContract.lean",
+        "line": 20,
+        "name": "Effect4.Machine.poll_reads_cell"
+      },
+      "verification_command": {
+        "argv": [
+          "lake",
+          "build",
+          "Test.Machine.Runtime.CompletionDataContract"
+        ],
+        "env": {
+          "LEAN_NUM_THREADS": "1"
+        },
+        "run_by_this_inventory": false
+      },
+      "source_sha256": "a12fb560cfa17e11bd888cdc6dd4578d78c272808070e0cbb0824c2610107bbb"
+    },
+    {
+      "bank": "Effect4.TypedState",
+      "positive": {
+        "name": "Effect4.Program.Typed.saved_from_clauses",
+        "source_path": "src/Effect4/Laws/Program/Typed/State.lean",
+        "line": 45,
+        "closing_tactic": "aesop (rule_sets := [Effect4.TypedState])"
+      },
+      "negative": {
+        "name": null,
+        "kind": "anonymous example",
+        "namespace": "Test.Program.TypedStateRulesRed",
+        "source_path": "Test/Program/TypedStateRulesRed.lean",
+        "guard_line": 19,
+        "line": 20,
+        "end_line": 24,
+        "closing_tactic": "aesop",
+        "expected_error": "Tactic `aesop` failed, made no progress",
+        "statement_and_body": "example {W : Type} (P : Preds W) (w : W) (e : Expect)\n    (x : Effect4.Program.Sched.RSaved)\n    (current : P.program w e x.current) (stack : P.StackOk w e x.stack)\n    (interrupted : P.InterruptOnly w e x.interruptedCause) : RSavedOk P w e x := by\n  aesop"
+      },
+      "axiom_print": {
+        "source_path": "Test/Program/TypedStateRulesRed.lean",
+        "line": 26,
+        "name": "Effect4.Program.Typed.saved_from_clauses"
+      },
+      "verification_command": {
+        "argv": [
+          "lake",
+          "build",
+          "Test.Program.TypedStateRulesRed"
+        ],
+        "env": {
+          "LEAN_NUM_THREADS": "1"
+        },
+        "run_by_this_inventory": false
+      },
+      "source_sha256": "ffcae3ce2252598ebfa36fca260569a224459d405450e8dfc770c94833a0b349"
+    }
+  ],
+  "typed_state_context": {
+    "generated_rule_builders": [
+      "norm unfold for Columns.Stores_refs and Columns.DeferredStore_cells",
+      "safe constructors for generated structure predicates",
+      "safe forward for their generated projections",
+      "norm unfold for generated non-structure predicates"
+    ],
+    "positive_control_rules": [
+      "Effect4.Program.Typed.RSavedOk constructors",
+      "Effect4.Program.Typed.RSavedOk.c0",
+      "Effect4.Program.Typed.RSavedOk.c1",
+      "Effect4.Program.Typed.RSavedOk.c2"
+    ],
+    "included_in_80_name_count": false
+  },
+  "verification": {
+    "lean_processes_started": 0,
+    "repository_files_modified": 0,
+    "control_limits": "Each positive/negative pair checks its one displayed statement; it does not certify bank completeness."
+  }
+}

@@ -12,7 +12,7 @@ position without a row and a row without a position, so adding a field to any st
 fails the build until it is sourced here. Edge rows name a field that reaches a structure: the
 expectation a child is typed at (`nested`), a predicate over the whole field (`custom`), a
 subtree that is the journal, a subtree that is named debt. The gate reads this list as an
-expression (`Laws/Auto/TypedSources.lean`), so it stays plain data.
+expression (`Laws/Program/Typed/TypedSources.lean`), so it stays plain data.
 -/
 
 namespace Effect4.Program.Typed
@@ -55,7 +55,8 @@ def stateSources : List Row := [
   ("Effect4.Supervision.WaitState.result", .custom "RaceOk"),
   ("Effect4.Machine.Race.programs", .custom "RaceOk"),
   -- the store's columns
-  ("Effect4.Machine.Stores.refs", .column "HeapNat"),
+  ("Effect4.Machine.Stores.refs", .column "HeapCell" (some "Effect4.Machine.RefKey.mk")),
+  ("Effect4.Machine.DeferredStore.cells", .column "PromiseCell" (some "Effect4.Machine.DeferredKey.mk")),
   ("Effect4.Machine.DeferredCell.completion", .column "PromiseTable"),
   ("Effect4.Machine.Owed.code", .column "PromiseTable"),
   ("Effect4.Machine.Completion.ofExit.exit", .column "PromiseTable"),

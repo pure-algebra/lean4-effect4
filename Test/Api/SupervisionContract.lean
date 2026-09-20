@@ -177,8 +177,8 @@ def tags (r : Api.Inspection) : List (FiberId × Nat) :=
 
 /-- info: 'Effect4.Api.supervision_child_flag' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms Effect4.Api.supervision_child_flag
-/-- info: 'Effect4.Api.supervision_static' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Api.supervision_static
+/-- info: 'Effect4.Api.TraceFacts.supervision_static_flags' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms Effect4.Api.TraceFacts.supervision_static_flags
 /-- info: 'Effect4.Api.status_persists' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms Effect4.Api.status_persists
 /-- info: 'Effect4.Api.spawn_status_fresh' depends on axioms: [propext, Quot.sound] -/
