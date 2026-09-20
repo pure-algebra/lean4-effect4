@@ -116,6 +116,22 @@ decisions 34/40 still close the fusion/conversion campaign. No open semantic cho
    `op.kind`; `Ty.scope` and `NativeOp.row` exit the LCNF engine closure manifest (`NativeOp.kind`
    at 13 instructions replaces `NativeOp.row` at 279); `roots.json` and `cases-policy.json`
    updated; Row 77.
+   Scanner hardening for 3.3/3.4: type instances are visited separately; exhausted scans and
+   unsupported recursive carriers fail; reads include opaque whole values and matchers;
+   a copied field is unchanged only relative to an explicit source. The census now has 87
+   positions and 95 source rows: 13 captured-name positions were previously skipped. The
+   new rows use the existing stack, pending, journal and hook sources. Focused controls:
+   `Test/Audit/PositionAnalysis.lean`; receipt `docs/research/2026-09-19-typed-state-tooling-receipt.md`.
+   Direct declaration generation, structural frames and the shared evidence API now accompany
+   the scanner repair. `#typed_state` replaces the source-file writer; the named TypedState
+   bank has a red control. `Typed/Frames.lean` generates 60 checked frame rules: 159 clauses
+   are reused and 40 are explicit premises across those rules. `ProofGraph` owns theorem
+   references, search and the obligation join for Laws and Conform. The declaration-backed
+   `#typed_state_obligations` checker rejects missing/stale entries and exceeded ceilings;
+   its executable controls pass. No new TSV or generated source file is required.
+   **These are structural tools, not the completed machine-preservation ledger.** Deriving
+   the transition-specific goals and pinning their open count still needs the concrete
+   predicate/world instantiation. The 40 premises are not a count of those future proofs.
    Still open from the plan: 1.11a span pinning, 4.4, 4.8/4.9 and Q4–Q6 with seat I's survey;
    from Tier 3: 3.2, 3.3, 3.4, 3.7. L2–L7 resume after Tier 3.
 1. **The fold work stops here** (owner, 2026-09-18): the checker, the term typer and the
@@ -139,14 +155,16 @@ Row 39 (the Schema wipe) and row 41 (the typed-state invariant on the reference 
 core milestone, no shortcuts; design `docs/research/2026-09-18-typed-state-plan.md`, scouted, §6) are
 ruled (2026-09-18); rows 34 and 40 are ruled out. HandlesFit with Val.hasTy unchanged and
 per-cell Ref/Deferred typing, including memo cells, were approved on 2026-09-19 (rows 44–45).
-The release rule is implemented (DI-94/row 47), and layer 0 exists in Laws/Effects; its future
-upstream publication remains separate. Storage, observation, transactions and future API
-choices are proposals in rows 78–83, consolidated from the completed research.
-Step 0 of the milestone is landed
+The release rule is implemented (DI-94/row 47), and layer 0 exists in `Laws/Effects/Protocol.lean`;
+its future upstream publication remains separate. Storage, observation, transactions and future
+API choices are proposals in rows 78–85, consolidated from the completed research and the
+deep-dive review. Step 0 of the milestone is landed
 (`docs/research/2026-09-18-position-census-design.md` §3a): the position census, the source
-table under a totality gate (74/74, two refusals named), layer 0, and the generated skeleton
-`Laws/Program/Typed/State.lean` parametric in the carrier predicates; owed: the obligation
-ledger and the generated group wiring. Open, in the order `decisions.md`'s last section
+table under a totality gate (87/87, two refusals named), layer 0, and the generated skeleton
+`Laws/Program/Typed/State.lean`, elaborated in place and parametric in the carrier predicates
+(the source-file writer is retired; `make check-typed-state` owns the focused group).
+Owed: the concrete transition-obligation set and its pinned count, at M6 of plan §14 after M1
+and M2. Open, in the order `decisions.md`'s last section
 gives: group D (26–29, 32, 30's `compileEff`), then group B (14, 15) and 2, 7, 10, 11; then 1
 with 3, and 19–22. Row 5 has the restatement `ontology.md` §2 gives.
 

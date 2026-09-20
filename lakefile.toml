@@ -58,6 +58,14 @@ srcDir = "tools"
 globs = ["Tools.+"]
 moreLeanArgs = ["-M6144"]
 
+# Shared metaprogramming evidence. No Effect4, Aesop or target-profile dependency.
+# Laws and Conform both depend on this seam; neither depends on the other.
+[[lean_lib]]
+name = "ProofGraph"
+srcDir = "tools"
+globs = ["ProofGraph.+"]
+moreLeanArgs = ["-M6144"]
+
 # Verification tooling (docs/research/type-tooling/, 2026-09-09): the generic core of
 # conformance checks between representations — one report format, separate evidence methods,
 # obligations, strict policy readers (`Conform.Core`), the mono-LCNF walkers and semantics

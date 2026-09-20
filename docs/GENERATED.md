@@ -40,6 +40,21 @@ to run last, after readme, which made `make gen` a non-fixpoint: a changed row n
 pass before the mirror agreed with the face (tooling plan 4.2). `make gen-<group>` regenerates
 one group; `make clean-gen` forgets the markers. The recipes hold the Lean lane one at a time.
 
+## Declarations generated during elaboration
+
+The typed-state group has no generated source file or committed table. `#typed_state`
+constructs the skeleton inside `Laws/Program/Typed/State.lean` from its roots and the
+`Typed/Sources.lean` declaration. `#frame_rules` constructs checked theorems in
+`Typed/Frames.lean`. Lake owns the dependencies and rebuilds both with the input changes.
+`make gen-typed-state` and `make check-typed-state` run the same focused build and controls;
+the normal Laws/Test roots include them. The old `TypedStateEmit.lean` file writer is retired.
+
+The proof-ledger command reads typed obligation and placeholder declarations, searches with
+the supplied tactic, and checks the resulting theorem terms through `ProofGraph`. Rendered
+counts are a report, not an input. Its missing/stale/wrong-proposition/ceiling controls are
+in `Test/Audit/{ProofGraph,Obligations}.lean`. The concrete transition-preservation obligation
+set still requires the typing-world instantiation; frame premises are not that proof count.
+
 ## The groups
 
 | Group | Producer (`make gen-<group>`) | Inputs | Consumers | Check | Evidence (DI-32) |

@@ -1,4 +1,5 @@
 import Effect4.Laws.Auto.Inversion
+import ProofGraph.Search
 
 /-!
 # Laws.Auto.Census — which theorems of a module does a tactic prove from their statements?
@@ -21,12 +22,7 @@ open Lean Elab Meta Command
 namespace Effect4.Laws.Auto
 
 /-- The axioms a term reaches: those of every constant it mentions. -/
-def axiomsOf (e : Expr) : CoreM (Array Name) := do
-  let mut out : Array Name := #[]
-  for c in e.getUsedConstants do
-    for a in (← collectAxioms c) do
-      unless out.contains a do out := out.push a
-  return out.qsort (·.toString < ·.toString)
+abbrev axiomsOf := ProofGraph.axiomsOf
 
 /-- The source line a constant of the current module is declared at: its own, or that of the
 declaration it was generated from (`foo.eq_1`, `foo.match_1`, … carry no range of their own). -/
@@ -51,21 +47,18 @@ def usesWhatFollows (proof : Expr) (modIdx : ModuleIdx) (first : Nat) : CoreM Bo
 
 /-- One attempt, rolled back: the axioms of the proof `tac` finds for `type`, if it finds one
 within `cap` heartbeats that the theorem could carry in place. -/
+def attemptProof (type : Expr) (tac : Syntax) (cap : Nat) (modIdx : ModuleIdx) (first : Nat) :
+    TermElabM (Option Expr) := do
+  let .ok proof ← ProofGraph.search type tac cap | return none
+  if ← usesWhatFollows proof modIdx first then return none
+  return some proof
+
+/-- The measuring API retains its previous result; generators may use `attemptProof` and
+publish the returned term through `ProofGraph.addTheorem`. -/
 def attempt (type : Expr) (tac : Syntax) (cap : Nat) (modIdx : ModuleIdx) (first : Nat) :
-    TermElabM (Option (Array Name)) :=
-  withoutModifyingState do
-    -- a search that runs out of heartbeats is a runtime exception: it is an answer ("no"),
-    -- not a failure of the census
-    tryCatchRuntimeEx
-      (withOptions (fun o => maxHeartbeats.set o cap) <| withCurrHeartbeats do
-        let goal ← mkFreshExprMVar type
-        let rest ← Tactic.run goal.mvarId! (Tactic.evalTactic tac)
-        unless rest.isEmpty do return none
-        let proof ← instantiateMVars goal
-        if proof.hasExprMVar || proof.hasSorry then return none
-        if ← usesWhatFollows proof modIdx first then return none
-        return some (← axiomsOf proof))
-      (fun _ => return none)
+    TermElabM (Option (Array Name)) := do
+  let some proof ← attemptProof type tac cap modIdx first | return none
+  return some (← axiomsOf proof)
 
 syntax (name := autoCensus)
   "#auto_census " ident (" heartbeats " num)? " using " tacticSeq : command

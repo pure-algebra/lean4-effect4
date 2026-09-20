@@ -7,8 +7,8 @@ import Effect4.Laws.Auto.PositionGate
 
 The driver: `lake build Test.Audit.PositionCensus` prints the positions reachable from the
 four roots of the typed-state invariant, the write sites of every step root over those
-positions, and the read sites. Each block is `tsv` under one `info` line
-(`docs/research/2026-09-18-position-census-design.md` §2). Nothing is changed.
+positions, and the read sites. The printed rows are diagnostics; the structured results of the scanner are the
+interface. No printed table is read back as authority. Nothing is changed.
 -/
 
 open Effect4.Laws.Auto.Positions
