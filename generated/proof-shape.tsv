@@ -20,8 +20,8 @@ src/Effect4/Laws/Codegen/SourceBindings.lean	0	1	0
 src/Effect4/Laws/Machine/Approximation.lean	11	0	16
 src/Effect4/Laws/Machine/Book.lean	4	0	0
 src/Effect4/Laws/Machine/Clauses.lean	0	1	8
-src/Effect4/Laws/Machine/Handles.lean	11	0	34
-src/Effect4/Laws/Machine/LiveStack.lean	2	1	1
+src/Effect4/Laws/Machine/Handles.lean	14	0	34
+src/Effect4/Laws/Machine/LiveStack.lean	0	1	1
 src/Effect4/Laws/Machine/Scheduling.lean	9	0	3
 src/Effect4/Laws/Machine/ScopeMachine.lean	0	2	0
 src/Effect4/Laws/Machine/ScopeRestoration.lean	0	4	2
@@ -32,7 +32,7 @@ src/Effect4/Laws/Program/Agreement/Machine.lean	21	1	14
 src/Effect4/Laws/Program/Authoring.lean	0	1	2
 src/Effect4/Laws/Program/Authoring/Lifts.lean	0	1	0
 src/Effect4/Laws/Program/CheckedTyping.lean	0	7	0
-src/Effect4/Laws/Program/Decision.lean	0	0	7
+src/Effect4/Laws/Program/Decision.lean	0	0	4
 src/Effect4/Laws/Program/DenoteR.lean	2	2	19
 src/Effect4/Laws/Program/Guard/AnswerDecision.lean	2	0	0
 src/Effect4/Laws/Program/Guard/Continuation.lean	0	0	1
@@ -72,8 +72,7 @@ src/Effect4/Laws/Program/Simulation/Drive.lean	0	1	18
 src/Effect4/Laws/Program/Simulation/Evaluate.lean	6	0	2
 src/Effect4/Laws/Program/Simulation/Hooks.lean	4	0	8
 src/Effect4/Laws/Program/Simulation/Pending.lean	1	0	2
-src/Effect4/Laws/Program/TypeAlgebra.lean	4	1	35
-src/Effect4/Laws/Program/Typed.lean	0	0	0
+src/Effect4/Laws/Program/TypeAlgebra.lean	0	1	14
 src/Effect4/Laws/Program/Typing/Check.lean	0	2	0
 src/Effect4/Laws/Store/CanonicalSpec.lean	0	1	0
 src/Effect4/Machine/Alphabets.lean	1	0	3
@@ -83,11 +82,9 @@ src/Effect4/Machine/Wake.lean	0	1	0
 src/Effect4/Program/Admission.lean	0	6	0
 src/Effect4/Program/Decision.lean	0	0	3
 src/Effect4/Program/Derived.lean	10	0	0
-src/Effect4/Program/FoldOf.lean	0	0	1
 src/Effect4/Program/LayerView.lean	7	0	0
 src/Effect4/Program/Ty.lean	0	3	7
-src/Effect4/Program/Typed.lean	16	0	7
-src/Effect4/Schema/Annotations.lean	3	0	0
+src/Effect4/Schema/Annotations.lean	2	0	0
 src/Effect4/Schema/EffectfulField.lean	0	0	1
 src/Effect4/Schema/Representation.lean	3	1	0
 src/Effect4/Store/Canonical.lean	1	0	0

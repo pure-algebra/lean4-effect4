@@ -17,7 +17,7 @@
 # A bare line is a Lean module. Two comment forms are structured, and they are
 # comments precisely so that the two parsers that already read this file --
 # `Test/Audit/AxiomGate.lean` (declaredRedModules) and
-# `scripts/test-trust-gate.sh` -- keep reading exactly the module lines they
+# `scripts/check-known-red.sh` -- keep reading exactly the module lines they
 # read before, unchanged:
 #
 #   # reason: <text>   the named failure reason of every entry below it, until

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Exercise the production private tokenizer without a whole-tree build or
-# exporting an audit API. The temporary copy appends tests in its namespace.
+# Exercise the production private source scanner (a parse of each fixture) without a
+# whole-tree build or exporting an audit API. The temporary copy appends tests in its namespace.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -29,7 +29,7 @@ run_elab do
     ("implemented-by.lean.txt", .ok (some "implemented_by")),
     -- `opaque` is a keyword the bodied form uses too, so the tokenizer must
     -- NOT refuse it; the ruling on the bodyless shape is a declaration-level
-    -- check, and `test-trust-gate.sh` is where that fixture is exercised.
+    -- check; the gate itself refuses it in `lake build Test.All`.
     ("opaque.lean.txt", .ok none),
     ("malformed-comment.lean.txt", .error ()),
     ("malformed-string.lean.txt", .error ()),
@@ -46,7 +46,7 @@ run_elab do
         return .error error.toString
     let accepted := match expected, result with
       | .ok expectedToken, .ok observedToken => expectedToken == observedToken
-      | .error (), .error message => message.startsWith "Effect4 source trust gate: tokenization failed"
+      | .error (), .error message => message.startsWith "Effect4 source trust gate: " && (message.splitOn " does not parse: ").length == 2
       | _, _ => false
     if accepted then
       logInfo m!"PASS source tokenizer {fixture}"

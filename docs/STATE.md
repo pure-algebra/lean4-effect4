@@ -79,6 +79,12 @@ The landed-architecture review (`docs/research/2026-09-19-landed-architecture-re
 `f4404923`) is addressed in the deep-dive note's §9: the generator's three omission shapes and
 the ledger's stale-marker gap are fixed with controls; the world-order, straight-profile and
 predicate-deletion claims are withdrawn; M2 and M3 are re-cut and row 84's rationale amended.
+The M1 specification review (`docs/research/2026-09-19-state-refinement-deep-dive-and-m1-specification.md`)
+is addressed in §10: row 84's budget is the proved bound already in the tree, row 85 is confirmed,
+the seven placement resolutions are accepted or amended for the owner, M1's radius is 38 files and
+`DeferredOk` goes whole. Its ratchet finding rebuilt the instrument: the trust gate's source scan
+parses each source as the compiler did and counts tactics by syntax kind (`Test/Audit/AxiomGate.lean`),
+which made five `local macro` tactics `scoped`.
 The immediate priority is shared representations and composition laws. Known future modules
 can reserve contracts with explicit missing implementations using the existing wanted machinery.
 Supporting reviews and the paused tooling handoff are tracked in

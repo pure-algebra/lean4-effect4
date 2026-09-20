@@ -277,26 +277,20 @@ only fall. That makes "the proofs got shorter" a checked fact rather than a clai
 the receipt the algebra work is measured by: `AdmitsSub` deleting sixteen `first` blocks from
 `Program/Typed.lean` shows up here as a number, in a build that had to happen anyway.
 
-Why the tokenizer and not a grep: the tokenizer skips comments, doc comments and string
-literals, so prose about `try` is not a `try`, and a qualified `Foo.first` is one identifier
-token whose raw text is `Foo.first`, not a `first`.
+Counted by syntax kind, not by word: each source is parsed as the compiler parsed it
+(`scanSource`), and a `first` is `Lean.Parser.Tactic.first` or its `conv` twin, a `try` the
+macro `tacticTry_` or `convTry_`, a `simp_all` `simpAll`. So prose about `try` is not a
+`try`, a binder named `first` is a binder (`intro raw first second`, a `let … first | alt`
+pattern), a `| first | second` alternative is a pattern, and `try … catch` in a `do` block
+is a term. The earlier reading of this gate counted tokens, `first` when followed by `|`, and
+measuring the difference on 2026-09-19 found it over-counting exactly those shapes: `try` 7 → 4
+in `Laws/Program/Decision.lean` and 35 → 14 in `Laws/Program/TypeAlgebra.lean` were `do`
+blocks; `first` 2 → 0 in `Laws/Machine/LiveStack.lean` were patterns — and under-counting in the
+other direction: `first` 11 → 14 in `Laws/Machine/Handles.lean`, three `first $[| …]*` whose next
+token is a splice. The ceilings were re-pinned to the exact counts (668 over 91 sources).
 
-**Which token shape each word takes is measured, not assumed.** At this toolchain pin `try` is
-a reserved keyword and arrives as an atom, while `first` and `simp_all` are identifier-shaped
-tokens the tactic parsers match by name and arrive as idents — so the counter reads both
-shapes, by raw text, exactly as `forbiddenToken?` reads an identifier. A qualified `Foo.first`
-is one ident whose raw text is `Foo.first` and is not counted.
-
-`first` needs one more condition, and measuring said so: `first` is also an ordinary binder
-name in this tree (`intro raw first second` in the optic and annotation laws, and
-`Census.attempt`'s own parameter), which put 775 of it in the first reading against 16 real
-tactics in `Program/Typed.lean`. The tactic's syntax is `"first" ("| " tacticSeq)+`, so a
-`first` tactic is always followed by `|` and a binder never is. The counter therefore counts
-`first` only when the next token is `|`. `simp_all` and `try` need no such condition: neither
-is a name anywhere in the tree, and their counts agree exactly with a grep (120 and 274).
-
-What it does not see: a tactic reached through a macro, and anything inside a proof term. This
-counts source tokens and claims nothing more.
+What it does not see: a tactic reached through a macro of this tree, and anything inside a
+proof term. This counts syntax nodes and claims nothing more.
 -/
 private def countedTactics : List String :=
   [ "first", "simp_all", "try" ]
@@ -441,12 +435,16 @@ private def isGeneratedSafeRecursor (environment : Environment) (name : Name) : 
       | _ => false
 
 /-
-`Parser.testParseFile` cannot replay an already-compiled source against the
-final project environment: syntax introduced by a later-imported test module
-can turn an earlier ordinary identifier into a keyword. Tokenization is the
-right level for this source check. Lean's own tokenizer skips comments and
-handles ordinary, character, interpolated, and raw string literals, while the
-compiled-environment pass below independently confirms declaration safety.
+A source is read the way the compiler read it. Each command is parsed with `Parser.parseCommand`
+under the scope the frontend keeps (`Lean.Elab.Frontend.processCommand`): `namespace`,
+`section`, `end` and `open` are elaborated so scoped syntax resolves, nothing else is, and the
+declarations are already in the environment. The token table is the one the source's own
+compilation had — the builtin table plus the tokens of its import closure, read from the parser
+extension's module entries over the compiled import graph. The audit environment holds every
+module's tokens at once, and a name in one module is a keyword in another (`daemon`, `eff`,
+`ceiling`): parsed against the whole table, 32 of 450 sources refuse (measured 2026-09-19),
+which is why an earlier reading of this gate tokenized instead of parsing. Parsing gives the
+syntax tree, so a counted tactic is a node of its kind and a binder named `first` is a binder.
 -/
 /-- The forbidden word a single token carries, if any. A keyword arrives as an
 atom whose value is the word; an ordinary identifier arrives as an ident, and
@@ -466,79 +464,154 @@ private def forbiddenToken? (token : Syntax) : Option String :=
       if forbiddenTrustTokens.contains raw then some raw else none
   | _ => none
 
-/-- One tokenization of one source, answering both questions the gate asks of its text: the
-first authored trust token, if any, and the counts of the ratcheted tactics. One pass, because
-walking every audited source is what this half of the gate already spends its time on. -/
-private def scanSource
-    (environment : Environment)
-    (source : System.FilePath) : IO (Option String × ProofShape) := do
+/-- The commands whose elaboration changes what the parser accepts next: they push, pop and
+open the scopes whose namespace and open declarations `parseCommand` reads. -/
+private def scopeCommands : List Name :=
+  [ ``Lean.Parser.Command.«namespace», ``Lean.Parser.Command.«section»
+  , ``Lean.Parser.Command.«end», ``Lean.Parser.Command.«open» ]
+
+/-- The syntax kinds of `countedTactics`, in that order: the tactic and its `conv` twin. `try`
+is a macro over `first`, so its kind is the macro's; `try … catch` in a `do` block is a term
+(`doTry`) and is not one. -/
+private def countedKinds : List (List Name) :=
+  [ [``Lean.Parser.Tactic.first, ``Lean.Parser.Tactic.Conv.first]
+  , [``Lean.Parser.Tactic.simpAll]
+  , [``Lean.Parser.Tactic.tacticTry_, ``Lean.Parser.Tactic.Conv.convTry_] ]
+
+/-- The tokens one module declared globally. A scoped token (`Lean.Parser.Do` reserves `skip`
+in its namespace) is not a keyword until `open` or `namespace` activates it, and elaborating
+those commands activates it here too. -/
+private def tokensOf (environment : Environment) (moduleName : Name) : Array String :=
+  match environment.getModuleIdx? moduleName with
+  | none => #[]
+  | some index =>
+    (Parser.parserExtension.ext.getModuleEntries environment index).filterMap fun
+      | .global (.token token) => some token
+      | _ => none
+
+/-- The token table a module's compilation started from: the builtin table plus every token a
+module of its import closure declared. The module's own tokens are not here; they arrive as
+the commands declaring them are parsed (`syntaxCommands`), so a name used before its
+reservation is still a name, as it was when the module compiled. -/
+private def tokenTableOf (environment : Environment) (imports : Array Name) :
+    IO Parser.TokenTable := do
+  let mut table ← Parser.builtinTokenTable.get
+  for moduleName in imports do
+    for token in tokensOf environment moduleName do
+      table := table.insert token token
+  return table
+
+/-- The commands that reserve tokens: the symbols they quote become keywords from there on. -/
+private def syntaxCommands : List Name :=
+  [ ``Lean.Parser.Command.«syntax», ``Lean.Parser.Command.syntaxAbbrev
+  , ``Lean.Parser.Command.«macro», ``Lean.Parser.Command.«elab»
+  , ``Lean.Parser.Command.«notation», ``Lean.Parser.Command.«mixfix» ]
+
+/-- The string literals a command quotes, trimmed as `symbol` trims a token. A worklist, not a
+recursion: this file is an audited source and the gate refuses the `partial` a recursion over
+`Syntax` would need. -/
+private def quotedSymbols (stx : Syntax) : Array String := Id.run do
+  let mut symbols : Array String := #[]
+  let mut stack : Array Syntax := #[stx]
+  while !stack.isEmpty do
+    let node := stack.back!
+    stack := stack.pop
+    match node.isStrLit? with
+    | some literal => symbols := symbols.push literal.trimAscii.toString
+    | none =>
+      if let .node _ _ args := node then
+        stack := stack ++ args.reverse
+  return symbols
+
+/-- The import closure of a module over the compiled graph, the module itself included. -/
+private def closureOf (graph : Std.HashMap Name (Array Name)) (root : Name) : Array Name :=
+  Id.run do
+    let mut reached := #[root]
+    let mut frontier := #[root]
+    while !frontier.isEmpty do
+      let mut next := #[]
+      for name in frontier do
+        for imported in graph.getD name #[] do
+          if !reached.contains imported then
+            reached := reached.push imported
+            next := next.push imported
+      frontier := next
+    return reached
+
+/-- One parsed command's contribution: the first forbidden token among its atoms and
+identifiers in source order, documentation excluded, and the counted tactics by kind. -/
+private def scanSyntax (stx : Syntax) (acc : Option String × ProofShape) :
+    Option String × ProofShape := Id.run do
+  let mut acc := acc
+  let mut stack : Array Syntax := #[stx]
+  while !stack.isEmpty do
+    let node := stack.back!
+    stack := stack.pop
+    match node with
+    | .node _ kind args =>
+      if kind == ``Lean.Parser.Command.docComment || kind == ``Lean.Parser.Command.moduleDoc then
+        continue
+      if let some index := countedKinds.findIdx? (·.contains kind) then
+        acc := (acc.1, acc.2.bump index)
+      stack := stack ++ args.reverse
+    | .missing => pure ()
+    | token => acc := (acc.1 <|> forbiddenToken? token, acc.2)
+  return acc
+
+/-- One source, read as the compiler read it: the first authored trust token, if any, and the
+counts of the ratcheted tactics. `tokens` is the table its imports gave it and the tokens it
+reserves itself; a fragment with no module is read against the audit environment's whole
+table. -/
+private def scanSource (environment : Environment) (source : System.FilePath)
+    (tokens : Option (Parser.TokenTable × Array String) := none) :
+    IO (Option String × ProofShape) := do
+  let environment := match tokens with
+    | some (table, _) =>
+      Parser.parserExtension.modifyState environment fun s => { s with tokens := table }
+    | none => environment
+  let own := (tokens.map (·.2)).getD #[]
   let input ← IO.FS.readFile source
   let inputContext := Parser.mkInputContext input source.toString
-  let parserContext : Parser.ParserModuleContext :=
-    { env := environment, options := {} }
-  let tokenTable := Parser.Module.updateTokens (Parser.getTokenTable environment)
-  let mut state := Parser.mkParserState input
-  let mut projectionEnd : Option String.Pos.Raw := none
-  let mut forbidden : Option String := none
-  let mut shape : ProofShape := {}
-  let mut awaitingBar := false
-  while !inputContext.atEnd state.pos do
-    let skipped := Parser.whitespace.run inputContext parserContext tokenTable state
-    if let some error := skipped.errorMsg then
-      throw <| IO.userError
-        s!"Effect4 source trust gate: tokenization failed in {source}: {error}"
-    state := skipped
-    if inputContext.atEnd state.pos then
-      return (forbidden, shape)
-    -- Documentation comments are syntax nodes rather than whitespace. Consume
-    -- them with Lean's own parsers so their prose never becomes audit tokens.
-    let docComment := Parser.Command.docComment.fn.run
-      inputContext parserContext tokenTable state
-    if docComment.errorMsg.isNone then
-      state := docComment.popSyntax
-      projectionEnd := none
-      continue
-    let moduleDoc := Parser.Command.moduleDoc.fn.run
-      inputContext parserContext tokenTable state
-    if moduleDoc.errorMsg.isNone then
-      state := moduleDoc.popSyntax
-      projectionEnd := none
-      continue
-    -- Lean parses the index in `h.2.trans` and `h |>.2.trans` with
-    -- `fieldIdxFn`: the ordinary number tokenizer mistakes `2.trans` for a
-    -- decimal. Use the same parser only immediately after a projection dot;
-    -- ordinary numerals and every tokenization error retain their usual path.
-    let tokenParser :=
-      if projectionEnd == some state.pos && (inputContext.get state.pos).isDigit then
-        Parser.fieldIdxFn
-      else
-        Parser.tokenFn []
-    let next := tokenParser.run inputContext parserContext tokenTable state
-    if let some error := next.errorMsg then
-      let position := inputContext.fileMap.toPosition state.pos
-      throw <| IO.userError
-        s!"Effect4 source trust gate: tokenization failed in {source}:{position.line}:{position.column + 1}: {error}"
-    let token := next.stxStack.back
-    if forbidden.isNone then
-      forbidden := forbiddenToken? token
-    -- `first` is confirmed by the token after it; the others are counted where they stand.
-    if awaitingBar then
-      if token.isToken "|" then shape := shape.bump 0
-      awaitingBar := false
-    let word? : Option String :=
-      match token with
-      | .atom _ value => some value.trimAscii.toString
-      | .ident _ rawValue _ _ => some rawValue.toString
-      | _ => none
-    if let some word := word? then
-      if word == "first" then
-        awaitingBar := true
-      else if let some index := countedTactics.idxOf? word then
-        shape := shape.bump index
-    projectionEnd :=
-      if token.isToken "." || token.isToken "|>." then token.getTailPos? else none
-    state := next.popSyntax
-  return (forbidden, shape)
+  let (_, parserState, messages) ← Parser.parseHeader inputContext
+  let commandContext : Elab.Command.Context :=
+    { fileName := source.toString, fileMap := inputContext.fileMap, snap? := none, cancelTk? := none }
+  let mut commandState := Elab.Command.mkState environment messages
+  let mut parserState := parserState
+  let mut acc : Option String × ProofShape := (none, {})
+  repeat
+    let scope := commandState.scopes.head!
+    let moduleContext : Parser.ParserModuleContext :=
+      { env := commandState.env, options := scope.opts, currNamespace := scope.currNamespace,
+        openDecls := scope.openDecls }
+    let (command, nextParserState, messages) :=
+      Parser.parseCommand inputContext moduleContext parserState commandState.messages
+    parserState := nextParserState
+    commandState := { commandState with messages }
+    if messages.hasErrors then
+      let text ← match messages.toList.find? (·.severity == .error) with
+        | some message => message.toString
+        | none => pure "unknown error"
+      throw <| IO.userError s!"Effect4 source trust gate: {source} does not parse: {text}"
+    acc := scanSyntax command acc
+    if Parser.isTerminalCommand command then break
+    if syntaxCommands.contains command.getKind then
+      -- `command[1]` is the attribute kind of every syntax-declaring command
+      if command[1].getArgs.any fun arg => arg.getArgs.any (·.isToken "local") then
+        let position := inputContext.fileMap.toPosition (command.getPos?.getD 0)
+        throw <| IO.userError s!"Effect4 source trust gate: {source}:{position.line}: a `local` \
+          syntax declaration is not in the compiled environment this scanner reads, so what \
+          uses it does not parse; declare it `scoped`"
+      let reserved := (quotedSymbols command).filter own.contains
+      unless reserved.isEmpty do
+        commandState := { commandState with
+          env := Parser.parserExtension.modifyState commandState.env fun s =>
+            { s with tokens := reserved.foldl (fun t tk => t.insert tk tk) s.tokens } }
+    if scopeCommands.contains command.getKind then
+      match ← EIO.toIO' ((Elab.Command.elabCommandTopLevel command) commandContext |>.run commandState) with
+      | .error e =>
+        throw <| IO.userError s!"Effect4 source trust gate: {source}: {← Exception.toMessageData e |>.toString}"
+      | .ok ((), next) => commandState := next
+  return acc
 
 /-- Every audited source scanned once. The trust refusal is thrown here; the shapes of the
 library sources under `src/` come back for the ratchet, keyed by their repository-relative
@@ -549,9 +622,20 @@ private def auditSourceTrustModifiers
     (sources : Array System.FilePath) : IO (Array (String × ProofShape)) := do
   let libraryDirectory := (projectRoot / "src").toString ++
     System.FilePath.pathSeparator.toString
+  let graph : Std.HashMap Name (Array Name) :=
+    (environment.header.moduleNames.zip environment.header.moduleData).foldl (init := {})
+      fun m (name, data) => m.insert name (data.imports.map (·.module))
+  let modules : Std.HashMap String Name := environment.header.moduleNames.foldl (init := {})
+    fun m name => m.insert (modulePath projectRoot name).toString name
   let mut shapes : Array (String × ProofShape) := #[]
   for source in sources do
-    let (token?, shape) ← scanSource environment source
+    let tokens? ← match modules[source.normalize.toString]? with
+      | some moduleName => do
+        let imports := (closureOf graph moduleName).filter (· != moduleName)
+        let table ← tokenTableOf environment imports
+        pure (some (table, tokensOf environment moduleName))
+      | none => pure none
+    let (token?, shape) ← scanSource environment source tokens?
     if let some token := token? then
       throw <| IO.userError
         s!"Effect4 source trust gate: {source} contains an authored `{token}` trust token"
@@ -587,10 +671,9 @@ phase and fails the gate.
 The file is not optional. A missing one is a gate that checks nothing.
 
 Lake does not trace it — it is not an import — so a `lake build` that replays
-the audit root's olean carries the previous reading. `scripts/test-trust-gate.sh`
-step 0 is the authority: it compares the declared set against the modules that
-actually fail a red-inclusive build, in both directions, and deletes the audit
-root's artifact from its probe copy so this check always re-runs there.
+the audit root's olean carries the previous reading. `scripts/check-known-red.sh`
+is the authority: it elaborates each declared-red source against the green
+closure and judges the results by one policy, in both directions.
 -/
 private def declaredRedModules (projectRoot : System.FilePath) : IO (List Name) := do
   let path := projectRoot / "Test" / "fixtures" / "trust-gate" / "known-red.txt"
@@ -668,7 +751,7 @@ private def auditedSources (projectRoot : System.FilePath) : IO (Array System.Fi
   let effect4 ← (projectRoot / "src" / "Effect4").walkDir
   let effect4 := effect4.filter fun path => path.extension == some "lean"
   -- `Test/fixtures/` holds the gates' own probe sources (forged declarations, planted
-  -- trust tokens); they are inputs to `scripts/test-trust-gate.sh`, not battery modules.
+  -- trust tokens); they are inputs to `scripts/test-source-trust-tokenizer.sh`, not battery modules.
   let fixturesRoot := (projectRoot / "Test" / "fixtures").toString
   let tests ← (projectRoot / "Test").walkDir
   let tests := tests.filter fun path =>

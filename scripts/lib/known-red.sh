@@ -19,7 +19,7 @@
 #
 # Both are ordinary `#` comments, and that is the whole point of the choice.
 # `Test/Audit/AxiomGate.lean` (`declaredRedModules`) and
-# `scripts/test-trust-gate.sh` already drop every line whose first non-space
+# `scripts/check-known-red.sh` already drop every line whose first non-space
 # character is `#`, so reasons and gate entries were added with NO change to
 # either existing parser, and every module entry's text is byte-for-byte the one
 # those two parsers read before. A second tab-separated column would have needed

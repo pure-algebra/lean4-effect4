@@ -34,30 +34,30 @@ def declaredAt : Name → CoreM (Option Nat)
     if let some r ← findDeclarationRanges? name then return some r.range.pos.line
     return none
 
-/-- Does `proof`, found for a theorem declared at line `first` of module `modIdx`, use that
+/-- Does `proof`, found for a theorem declared at line `startLine` of module `modIdx`, use that
 theorem itself or anything of the module declared after it? In place, the proof would have
 neither. -/
-def usesWhatFollows (proof : Expr) (modIdx : ModuleIdx) (first : Nat) : CoreM Bool := do
+def usesWhatFollows (proof : Expr) (modIdx : ModuleIdx) (startLine : Nat) : CoreM Bool := do
   let env ← getEnv
   for c in proof.getUsedConstants do
     if env.getModuleIdxFor? c == some modIdx then
       if let some line ← declaredAt c then
-        if line ≥ first then return true
+        if line ≥ startLine then return true
   return false
 
 /-- One attempt, rolled back: the axioms of the proof `tac` finds for `type`, if it finds one
 within `cap` heartbeats that the theorem could carry in place. -/
-def attemptProof (type : Expr) (tac : Syntax) (cap : Nat) (modIdx : ModuleIdx) (first : Nat) :
+def attemptProof (type : Expr) (tac : Syntax) (cap : Nat) (modIdx : ModuleIdx) (startLine : Nat) :
     TermElabM (Option Expr) := do
   let .ok proof ← ProofGraph.search type tac cap | return none
-  if ← usesWhatFollows proof modIdx first then return none
+  if ← usesWhatFollows proof modIdx startLine then return none
   return some proof
 
 /-- The measuring API retains its previous result; generators may use `attemptProof` and
 publish the returned term through `ProofGraph.addTheorem`. -/
-def attempt (type : Expr) (tac : Syntax) (cap : Nat) (modIdx : ModuleIdx) (first : Nat) :
+def attempt (type : Expr) (tac : Syntax) (cap : Nat) (modIdx : ModuleIdx) (startLine : Nat) :
     TermElabM (Option (Array Name)) := do
-  let some proof ← attemptProof type tac cap modIdx first | return none
+  let some proof ← attemptProof type tac cap modIdx startLine | return none
   return some (← axiomsOf proof)
 
 syntax (name := autoCensus)

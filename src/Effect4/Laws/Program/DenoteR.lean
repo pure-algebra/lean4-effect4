@@ -815,7 +815,7 @@ theorem Point.completed_fuel (p : Point) (completed : List (FiberId × ExitV)) :
 
 /-- The one budget arithmetic every equation below needs: a child's budget is the parent's
 predecessor, which at a positive fuel `f + 1` is `f`. -/
-local macro "budget" hf:ident : tactic => `(tactic|
+scoped macro "budget" hf:ident : tactic => `(tactic|
   simp only [denoteR, denoteLayer, $hf:ident, Point.child_fuel, Point.childWith_fuel,
     Point.childBind_fuel, Point.completed_fuel, Point.redirect_fuel, Nat.add_sub_cancel,
     denoteRWith, denoteEffBody])
@@ -1086,7 +1086,7 @@ arms are the frontier at fuel zero and the hop to the target's term at `Point.re
 /-- The layer equations' budget split: with no fuel the build is `denoteLayerZero`, with
 `f + 1` the body at budget `f`; on either side the children's spelling meets the child
 points' fuel (`0 - 1 = 0`, `f + 1 - 1 = f`). -/
-local macro "layerBudget" q:ident : tactic => `(tactic|
+scoped macro "layerBudget" q:ident : tactic => `(tactic|
   (cases hf : ($q).fuel with
    | zero =>
      simp only [denoteLayer, denoteR, hf, Point.child_fuel, Point.redirect_fuel, Nat.zero_sub,

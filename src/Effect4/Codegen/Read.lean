@@ -1712,7 +1712,7 @@ section ReadExact
 
 /-- Closes an arm of a wildcard case of the reader: the arm's own negated-pattern hypothesis
 is contradictory, or the arm is a refusal. -/
-local macro "close_arm" h:ident : tactic => `(tactic| first
+scoped macro "close_arm" h:ident : tactic => `(tactic| first
   | (exfalso; subst_vars; solve_by_elim [rfl])
   | cases $h:ident
   | (split at $h:ident <;> first | (exfalso; subst_vars; solve_by_elim [rfl]) | cases $h:ident))

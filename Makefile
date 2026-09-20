@@ -510,7 +510,8 @@ $(CHK)/compat: $(CORE) scripts/check-compatibility.py scripts/lib/compatibility.
 SELFTEST_SOURCES := $(wildcard scripts/test-*.sh scripts/test-*.py scripts/check-*.sh scripts/check-*.py scripts/lib/*) Test/Audit/AxiomGate.lean \
   $(shell find Test/fixtures/trust-gate Test/fixtures/internal-citations -type f)
 $(CHK)/tools: $(SELFTEST_SOURCES) | build
-	bash scripts/test-trust-gate.sh
+	bash scripts/test-source-trust-tokenizer.sh
+	bash scripts/test-trust-boundaries.sh
 	bash scripts/test-internal-citations-gate.sh
 	$(PY) scripts/test-source-citations.py
 	$(PY) scripts/test-conform-report.py

@@ -693,7 +693,7 @@ sufficient budget or row 80's contract (row 84, amended).
 | T3 | `#frame_rules`; amend to per written-field set before M6 | T1 | — |
 | T4 | `Obligation`, `#proof_wanted`, `#typed_state_obligations` (markers recognized under binders); add the holder inventory join and the per-shape statement adapters | T1 | the deleted-goal and weakened-statement hazards |
 | T5 | the wiring: roots, gate exemptions, `make check-typed-state`, three docs | T2–T4 | the `TypedStateGen` exemption |
-| M1 | D2 = R1+R2: completion cells and owed resumes hold `Completion`; `MemoEntry.effect` gone | T5 (the gate re-cuts) | `CompletionShaped`, `DeferredOk.1`, `StoredCodeNoRace`, `DeferredCodes`, `denoteStored`, `STORES-FB-COMPLETION` |
+| M1 | D2 = R1+R2: completion cells and owed resumes hold `Completion`; `MemoEntry.effect` gone (with the stores map's two memo conditions: cell-based replacement witnesses, the representation connector); radius 38 files, measured (deep-dive review §10) | T5 (the gate re-cuts: three census rows, the skeleton) | `CompletionShaped`, `DeferredOk` (both conjuncts; `StoresOk` keeps `ScopeKeysFresh`), `StoredCodeNoRace`, `DeferredCodes`, `denoteStored`, `STORES-FB-COMPLETION`, `E4-STORES-CE-003` |
 | M2 | layer 1: `Typed/World.lean`, the world's data, its order (allocation growth ∧ typed-cell compatibility) and the columns on data, `HeapNat` a specialization of the per-cell column | M1 | five `Expect` constructors |
 | M3 | the operation protocol over `SyncOp` (`progress` the public-row adapter) and the fiber protocol `OpOk`/`AnswerOk` under `#answer_gate`; `TypedProg`, `HandlesFit`; then the `Preds` instance and the stack assembly | M2 | — |
 | M4 | `Laws/Machine/Keeps.lean`; the existential `StackOk`; `popR_typed` | M3 | — |

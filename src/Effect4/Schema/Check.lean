@@ -854,7 +854,7 @@ private theorem optionalAnnotationAdmissible_iff
 and take the generated constructor equation; fold the mapped children back to the decision
 procedure; read the algebra's field and turn the Boolean conjunction and the `all`s over mapped
 children into the membership form the contract states. -/
-local macro "field_admission" : tactic =>
+scoped macro "field_admission" : tactic =>
   `(tactic| (
     simp only [Representation.FieldAdmissible, Check.FieldAdmissible,
       Representation.fieldAdmissible, Check.fieldAdmissible,

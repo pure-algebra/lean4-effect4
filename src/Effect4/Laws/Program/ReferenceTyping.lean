@@ -25,7 +25,7 @@ namespace Effect4.Program
 open Effect4.Program
 
 set_option hygiene false in
-local macro "close_ref_free" : tactic => `(tactic|
+scoped macro "close_ref_free" : tactic => `(tactic|
   (first
   | apply eff_expandRound_eq_self
   | apply stmts_expandRound_eq_self
