@@ -1,0 +1,9 @@
+docs/research/2026-09-21-foundations-divergence-evidence/CarrierRed.lean:13:40: error: Type mismatch
+  rfl
+has type
+  ?m.36 = ?m.36
+but is expected to have type
+  (FrameFiber.resumeCause interp exhausted original (some (Exit.failure original))).fst =
+    FrameStep.finished (Exit.failure sanitized)
+
+EXIT_CODE=1

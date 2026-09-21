@@ -1,0 +1,21 @@
+Test/Counterexamples/Machine/Semantics/InterruptCarrier.lean:45:6: error: No goals to be solved
+Test/Counterexamples/Machine/Semantics/InterruptCarrier.lean:46:4: error: unsolved goals
+case h_2.refl
+interp : Interp
+frame : Frame
+cause : CauseV
+provided : Option ExitV
+x✝¹ : ContAnswer EffName EffThunk Val Err Defect FiberId Ann
+frame✝ : Prim EffName EffThunk Val Err Defect FiberId Ann
+heq✝¹ : (FrameFiber.getCont frame Arm.contE true).answer = ContAnswer.frame frame✝
+x✝ : Option (Prim EffName EffThunk Val Err Defect FiberId Ann × List (Prim EffName EffThunk Val Err Defect FiberId Ann))
+heq✝ : Prim.armE interp frame✝ cause provided = none
+⊢ provided.getD (Exit.failure cause) = provided.getD (Exit.failure cause)
+'Test.Counterexamples.InterruptCarrier.original_ne_sanitized' does not depend on any axioms
+'Test.Counterexamples.InterruptCarrier.finished_uses_supplied_exit' depends on axioms: [propext, sorryAx]
+'Test.Counterexamples.InterruptCarrier.cannot_finish_sanitized' depends on axioms: [propext, sorryAx]
+'Test.Counterexamples.InterruptCarrier.sanitized_current_is_ignored' depends on axioms: [propext]
+'Test.Counterexamples.InterruptCarrier.masked_catch_returns_original' depends on axioms: [propext]
+'Test.Counterexamples.InterruptCarrier.remasked_handler_receives_original' depends on axioms: [propext]
+
+EXIT_CODE=1
