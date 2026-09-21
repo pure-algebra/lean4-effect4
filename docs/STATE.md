@@ -38,25 +38,29 @@ spelling transport, completion transport and `park_extension`. Its receipt is
 [`foundations slice 3`](research/2026-09-21-foundations-slice3-receipt.md). Its initialization theorem types ghost data,
 not arbitrary source programs. `make build` and `make check` pass for this landing.
 
-The approved independent subset of slice 4 now proves certificate-indexed protocols and
-unit-certificate compatibility (D12), heterogeneous indexed heap preservation (C2), and
-projection composition and its induced relation (C3/C4). All twelve independent obligations
-are proved; the fresh unique ledger is **336 total; 327 proved; 9 open**. The generic protocol
-stays independent of project tooling through its separate obligation module. The receipt
-and retained checks are in
-[`foundations slice 4`](research/2026-09-21-foundations-slice4-receipt.md).
-`make build`, `make check`, the binder audit and the twelve-proof axiom report pass.
+The approved independent subset of slice 4 (D12, C2–C4) and the unheld M3a foundations
+are landed on `codex/foundations-slices-3-4`. M3a proves strong values/exits, D13 lexical
+source admission, control admission and marker payload inversion, Store protocol Ψ_S (31
+SyncOp rows with ghost certificates), Fiber protocol Ψ_F (40 FiberOp rows with dependent
+carriers under `#answer_gate`), concrete `TypedProg`, interpreter hook contracts, and the two
+settling program cases: polymorphic ref allocation/read on a heterogeneous heap and addressed
+fork/mask with body admission.
 
-The dispatch remains
-[`foundations slices 3–6`](research/2026-09-21-codex-brief-foundations-slices-3-6.md).
+All six M3a obligations are proved; the fresh unique ledger is **342 total; 333 proved; 9 open**
+(0 open in the new obligations, ceiling 0; the 9 historical open names remain untouched).
+The receipts and retained checks are in [`foundations slice 4`](research/2026-09-21-foundations-slice4-receipt.md)
+and [`foundations slice 4 M3a`](research/2026-09-21-foundations-slice4-m3a-receipt.md).
+`make build`, `make check`, the binder audit and the full trust audit pass (483 modules and
+67,149 declarations checked at `[propext, Quot.sound]`).
+
+The dispatch remains [`foundations slices 3–6`](research/2026-09-21-codex-brief-foundations-slices-3-6.md).
 Its proposed slice 4/5 interrupt repair was refuted by the implementation preflight;
 [`the amendment`](research/2026-09-21-foundations-contract-preflight-amendment.md) records
 three checked counterexamples, including the separate defect-typing correction. The
-production stack judgment stays unchanged. Concrete M3a admission/residual/control typing,
-its answer inventory and settling program cases remain pending, as do slice 5 and M5–M7.
-The independent certificate and representation proofs do not resolve that contract.
-The slice 4 receipt names the pending work. The
-[additional probe disposition](research/2026-09-21-foundations-independent-probe-disposition.md)
+production stack judgment stays unchanged, and dependent stack/preemption contracts
+(`popR_typed`, `saveAnswerR_typed`, `DeliveryStateOk`, `FrameAccepts.resume` replacement) remain
+held. Slice 5 and M5–M7 remain pending.
+The [additional probe disposition](research/2026-09-21-foundations-independent-probe-disposition.md)
 retains six passing finite vendor controls and corrects the proposed runtime patch's
 justification, the unvisited-restoration case, the safety observation and the allocation
 walkthrough. No scheduler implementation or frozen stack judgment changes in this landing.

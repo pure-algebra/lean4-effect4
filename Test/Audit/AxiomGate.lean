@@ -113,6 +113,7 @@ private def auditImplementationModules : List Name :=
   , `Effect4.Laws.Auto.Frames
   , `Effect4.Laws.Auto.Obligations
   , `Effect4.Laws.Program.Typed.TypedSources
+  , `Effect4.Laws.Auto.AnswerGate
   ]
 
 /--

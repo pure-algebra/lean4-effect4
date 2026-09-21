@@ -1,0 +1,274 @@
+import Effect4.Laws.Program.Typed.Admission
+import Effect4.Laws.Effects.ProtocolObligations
+
+/-!
+# Laws.Program.Typed.Residual — concrete protocols and TypedProg
+
+Defines `Ψ_S` over all 31 `SyncOp` rows with ghost certificates, `Ψ_F` over all 40 `FiberOp`
+rows with dependent carriers, concrete `TypedProg`, interpreter hook contracts, and the two
+settling program cases:
+1. Polymorphic ref allocation and read on a heterogeneous heap.
+2. Addressed fork and mask with body admission.
+-/
+
+set_option autoImplicit false
+namespace Effect4.Program.Typed
+
+open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
+open Effect4.Laws.Effects
+
+/-! ## The Store Protocol (31 SyncOp rows) -/
+
+def StoreCert : SyncOp → Type
+  | .refMake _ => Ty
+  | .deferredMake | .memoBuild _ _ => Ty × Ty
+  | _ => PUnit
+
+def storePre (w : World) (op : SyncOp) (cert : StoreCert op) : Prop :=
+  match op with
+  | .refMake initial => cert.closed = true ∧ StrongValue w cert initial
+  | .refGet cell => ∃ ty, w.Ρ cell = some ty
+  | .refSet cell v => ∃ ty, w.Ρ cell = some ty ∧ StrongValue w ty v
+  | .refGetAndSet cell v => ∃ ty, w.Ρ cell = some ty ∧ StrongValue w ty v
+  | .refSetAndGet cell v => ∃ ty, w.Ρ cell = some ty ∧ StrongValue w ty v
+  | .refUpdate cell _ | .refGetAndUpdate cell _ | .refUpdateAndGet cell _
+  | .refUpdateSome cell _ | .refGetAndUpdateSome cell _ | .refUpdateSomeAndGet cell _
+  | .refModify cell _ | .refModifySome cell _ => ∃ ty, w.Ρ cell = some ty
+  | .deferredMake => cert.1.closed = true ∧ cert.2.closed = true
+  | .deferredIsDone key | .deferredPoll key | .deferredAwaitCleanup key _ _ => (w.«Π» key).isSome = true
+  | .deferredCompleteWith key _ => (w.«Π» key).isSome = true
+  | .deferredInterruptWith key _ => (w.«Π» key).isSome = true
+  | .clockNow | .sleepCancel _ _ => True
+  | .scopeMake _ | .scopeAdd _ _ | .scopeRemove _ _ | .scopeIsClosed _ | .scopeFork _ _ => True
+  | .memoFork _ | .memoGet _ _ | .memoComplete _ _ _ | .memoRelease _ _ => True
+  | .memoBuild _ _ => cert.1.closed = true ∧ cert.2.closed = true
+
+def storePost (w' : World) (op : SyncOp) (cert : StoreCert op) (ans : Val) : Prop :=
+  match op with
+  | .refMake _ => ∃ key : RefKey, ans = Val.cell key ∧ w'.Ρ key = some cert
+  | .refGet cell => ∃ ty, w'.Ρ cell = some ty ∧ StrongValue w' ty ans
+  | .refSet cell _ => ans = Val.cell cell
+  | .refGetAndSet cell _ => ∃ ty, w'.Ρ cell = some ty ∧ StrongValue w' ty ans
+  | .refSetAndGet cell _ => ∃ ty, w'.Ρ cell = some ty ∧ StrongValue w' ty ans
+  | .refUpdate _ _ | .refUpdateSome _ _ => ans = Val.unit
+  | .refGetAndUpdate cell _ | .refGetAndUpdateSome cell _ => ∃ ty, w'.Ρ cell = some ty ∧ StrongValue w' ty ans
+  | .refUpdateAndGet cell _ | .refUpdateSomeAndGet cell _ => ∃ ty, w'.Ρ cell = some ty ∧ StrongValue w' ty ans
+  | .refModify _ _ | .refModifySome _ _ => True
+  | .deferredMake => ∃ key : DeferredKey, ans = Val.promise key ∧ w'.«Π» key = some cert
+  | .deferredIsDone _ => ∃ b, ans = Val.bool b
+  | .deferredPoll _ => True
+  | .deferredCompleteWith _ _ | .deferredInterruptWith _ _ | .deferredAwaitCleanup _ _ _ => ∃ b, ans = Val.bool b
+  | .clockNow => ∃ n, ans = Val.nat n
+  | .sleepCancel _ _ => ans = Val.unit
+  | .scopeMake _ => ∃ sc, ans = Val.scopeHandle sc
+  | .scopeAdd _ _ | .scopeRemove _ _ => ∃ b, ans = Val.bool b
+  | .scopeIsClosed _ => ∃ b, ans = Val.bool b
+  | .scopeFork _ _ => ∃ sc, ans = Val.scopeHandle sc
+  | .memoFork _ => ∃ id, ans = Val.memoMap id
+  | .memoGet _ _ => True
+  | .memoBuild _ _ => True
+  | .memoComplete _ _ _ | .memoRelease _ _ => ans = Val.unit
+
+def Ψ_S : Protocol World StoreSig where
+  Cert := StoreCert
+  pre := storePre
+  post := storePost
+
+/-! ## The Fiber Protocol (40 FiberOp rows) -/
+
+def FiberCert : FiberOp → Type
+  | .fork _ _ _ | .mask _ _ => EffTy
+  | _ => PUnit
+
+def fiberPre (root : NativeEff) (w : World) (op : FiberOp) (cert : FiberCert op) : Prop :=
+  match op with
+  | .getId | .getContext | .setContext _ | .yieldNow _ | .ambientScope | .sync _ => True
+  | .await target _ => (w.Γ target).isSome = true
+  | .awaitAll targets | .awaitAllFailFast targets => ∀ t ∈ targets, (w.Γ t).isSome = true
+  | .raceAll _ _ | .async _ _ | .suspend _ | .interrupt _ | .interruptAs _ _
+  | .interruptScoped _ | .interruptAll _ _ | .runIn _ _ | .awaitNewChildren _ => True
+  | .guard_ _ | .unguard _ | .finishFinalizer _ | .scopeExit _ _ _ | .construction
+  | .closeScope _ _ | .foreignRelease _ _ | .closeWalk _ _ _ | .closeIter _ _ _
+  | .gen _ | .loop _ _ | .raceRegister _ | .cancelRace _ | .snapshotChildren
+  | .dropObservers _ => True
+  | .scoped body => ∃ ty, PointTyped root w body ty
+  | .mask _ body => BodyTyped root w body cert
+  | .forkScoped child _ _ => ∃ ty, PointTyped root w child ty
+  | .fork body _ _ => BodyTyped root w body cert
+  | .forkIn child _ _ _ => ∃ ty, PointTyped root w child ty
+  | .frontier _ _ => True
+  | .refuse _ => False
+
+def fiberPost (w' : World) (op : FiberOp) (cert : FiberCert op) (ans : op.answer) : Prop :=
+  match op with
+  | .getId => ∃ (id : FiberId), ans = Val.nat id.value
+  | .getContext => True
+  | .setContext _ | .yieldNow _ | .interrupt _ | .interruptAs _ _ | .interruptScoped _
+  | .interruptAll _ _ | .runIn _ _ | .cancelRace _ | .dropObservers _
+  | .foreignRelease _ _ | .closeWalk _ _ _ => ans = Val.unit
+  | .ambientScope => ∃ sc, ans = Val.scopeHandle sc
+  | .sync value => ans = value
+  | .await target mode => match mode with
+    | .joinEffect => ∃ ty, w'.Γ target = some ty ∧ StrongExit w' ty ans
+    | .awaitValue => ∃ ty, w'.Γ target = some ty ∧ StrongValue w' ty.answer ans
+  | .fork _ _ _ => ∃ id : FiberId, ans = Val.fiber id ∧ w'.Γ id = some cert
+  | .forkIn _ _ _ _ => ∃ (c : EffTy) (id : FiberId), ans = Val.fiber id ∧ w'.Γ id = some c
+  | .mask _ _ => StrongExit w' cert ans
+  | .unguard ex | .finishFinalizer ex | .closeScope _ ex | .scopeExit _ _ ex | .closeIter _ _ ex => ans = ex
+  | _ => True
+
+def Ψ_F (root : NativeEff) : Protocol World FiberSig where
+  Cert := FiberCert
+  pre := fiberPre root
+  post := fiberPost
+
+/-- Concrete TypedProg integrating protocol demands, future-world answers and control admission. -/
+def TypedProg (root : NativeEff) (w : World) (ty : EffTy) (p : RProgram) : Prop :=
+  Typed hostOrder (Ψ_S.sum (Ψ_F root)) w (fun w' ex => StrongExit w' ty ex) p ∧
+  ControlAdmitted root w ty p
+
+theorem typedProg_unguard_inv {root : NativeEff} {w : World} {ty : EffTy} {ex : ExitV} {k : ExitV → RProgram}
+    (h : TypedProg root w ty (.vis (.inr (.unguard ex)) k)) : StrongExit w ty ex :=
+  unguard_payload_inv root w ty ex k h.2
+
+/-- Interpreter hook contracts parameterized for Contracts.FrameProtocols. -/
+def frameProtocols : Contracts.FrameProtocols where
+  asyncFinalizer _ _ _ _ := True
+  iterator _ _ _ _ := True
+  loop _ _ _ _ _ := True
+
+/-! ## Settling Case 1: Polymorphic ref allocation and read on heterogeneous heap -/
+
+def refAllocCont : Val → RProgram
+  | .handle 2 index => .vis (.inl (.refGet ⟨index⟩)) fun v => .pure (.success v)
+  | _ => .pure (.success (Val.bool false))
+
+def refAllocGetProg : RProgram :=
+  .vis (.inl (.refMake (Val.bool true))) refAllocCont
+
+theorem strongValue_bool_true (w : World) : StrongValue w .bool (Val.bool true) := by
+  refine ⟨rfl, trivial, fun h mem => ?_⟩
+  cases mem
+
+theorem strongExit_bool (w : World) (v : Val) (hv : StrongValue w .bool v) :
+    StrongExit w (EffTy.pure .bool) (.success v) := by
+  refine ⟨hv.1, fun v' heq => ?_, fun _ heq => nomatch heq⟩
+  injection heq with heq
+  subst heq
+  exact hv
+
+theorem settling_ref_allocation (root : NativeEff) (w : World) (_h0 : HeapTypedAt w ⟨0⟩ .nat) :
+    TypedProg root w (EffTy.pure .bool) refAllocGetProg := by
+  constructor
+  · apply Typed.vis (cert := Ty.bool)
+    · exact ⟨rfl, strongValue_bool_true w⟩
+    · intro w' _ ans hpost
+      rcases hpost with ⟨key, rfl, hkey⟩
+      dsimp only [refAllocGetProg, refAllocCont]
+      apply Typed.vis (cert := ())
+      · exact ⟨Ty.bool, hkey⟩
+      · intro w'' hle v hpost'
+        rcases hpost' with ⟨ty', hkey', hv⟩
+        have extendsΡ := hle.1.2.2.2.1
+        have sameKey : w''.Ρ key = some Ty.bool := extendsΡ key Ty.bool hkey
+        change w''.Ρ key = some ty' at hkey'
+        rw [sameKey] at hkey'
+        cases hkey'
+        exact Typed.pure (strongExit_bool w'' v hv)
+  · apply ControlAdmitted.vis_inl
+    intro w' _ ans
+    unfold refAllocCont
+    split
+    · apply ControlAdmitted.vis_inl
+      intro w'' _ v
+      apply ControlAdmitted.pure
+    · apply ControlAdmitted.pure
+
+theorem settling_ref_preserves_nat (w w' : World) (ordered : w.leHost w') (h0 : HeapTypedAt w ⟨0⟩ .nat) :
+    HeapTypedAt w' ⟨0⟩ .nat :=
+  heapTypedAt_mono w w' ⟨0⟩ .nat ordered h0
+
+/-! ## Settling Case 2: Addressed fork and mask with body admission -/
+
+def forkProg (child : Body) : RProgram :=
+  .vis (.inr (.fork child ⟨false, false, .inherit⟩ [])) fun ans => .pure (.success ans)
+
+def maskProg (flag : Bool) (body : Body) : RProgram :=
+  .vis (.inr (.mask flag body)) fun ans => .pure ans
+
+theorem settling_fork (root : NativeEff) (w : World) (child : Body) (cert : EffTy)
+    (hbody : BodyTyped root w child cert) :
+    TypedProg root w (EffTy.pure (.fiberOf cert.answer cert.error)) (forkProg child) := by
+  constructor
+  · apply Typed.vis (cert := cert)
+    · exact hbody
+    · intro w' _ ans hpost
+      dsimp only [Protocol.sum, Ψ_F, fiberPost] at hpost
+      rcases hpost with ⟨id, rfl, hid⟩
+      refine Typed.pure ⟨rfl, fun v' heq => ?_, fun _ heq => nomatch heq⟩
+      injection heq with heq
+      subst heq
+      refine ⟨rfl, fun id' mem => ?_, fun h mem => ?_⟩
+      · simp only [Val.keys, Handle.ofCode_fiber, Option.toList, List.mem_singleton] at mem
+        injection mem with eq_id
+        subst eq_id
+        exact ⟨cert, hid, rfl, rfl⟩
+      · simp only [Val.keys, Handle.ofCode_fiber, Option.toList, List.mem_singleton] at mem
+        subst h
+        dsimp only [handleLive]
+        rw [hid]
+        rfl
+  · refine ControlAdmitted.other _ _ _ _ (fun _ h => ?_) (fun _ h => ?_) (fun _ h => ?_) (fun _ _ _ h => ?_) (fun _ _ _ => ?_)
+    · cases h
+    · cases h
+    · cases h
+    · cases h
+    · apply ControlAdmitted.pure
+
+theorem settling_mask (root : NativeEff) (w : World) (flag : Bool) (body : Body) (cert : EffTy)
+    (hbody : BodyTyped root w body cert) :
+    TypedProg root w cert (maskProg flag body) := by
+  constructor
+  · apply Typed.vis (cert := cert)
+    · exact hbody
+    · intro w' _ ans hpost
+      dsimp only [Protocol.sum, Ψ_F, fiberPost] at hpost
+      exact Typed.pure hpost
+  · refine ControlAdmitted.other _ _ _ _ (fun _ h => ?_) (fun _ h => ?_) (fun _ h => ?_) (fun _ _ _ h => ?_) (fun _ _ _ => ?_)
+    · cases h
+    · cases h
+    · cases h
+    · cases h
+    · exact ControlAdmitted.pure _ _ _
+
+namespace M3aResidualObligations
+
+theorem settling_ref_allocation (_root : NativeEff) (_w : World) (_h0 : HeapTypedAt _w ⟨0⟩ .nat) :
+    ProofGraph.Obligation (TypedProg _root _w (EffTy.pure .bool) refAllocGetProg) := ⟨⟩
+
+theorem settling_ref_preserves_nat (_w _w' : World) (_ordered : _w.leHost _w') (_h0 : HeapTypedAt _w ⟨0⟩ .nat) :
+    ProofGraph.Obligation (HeapTypedAt _w' ⟨0⟩ .nat) := ⟨⟩
+
+theorem settling_fork (_root : NativeEff) (_w : World) (_child : Body) (_cert : EffTy)
+    (_hbody : BodyTyped _root _w _child _cert) :
+    ProofGraph.Obligation (TypedProg _root _w (EffTy.pure (.fiberOf _cert.answer _cert.error)) (forkProg _child)) := ⟨⟩
+
+theorem settling_mask (_root : NativeEff) (_w : World) (_flag : Bool) (_body : Body) (_cert : EffTy)
+    (_hbody : BodyTyped _root _w _body _cert) :
+    ProofGraph.Obligation (TypedProg _root _w _cert (maskProg _flag _body)) := ⟨⟩
+
+end M3aResidualObligations
+
+end Effect4.Program.Typed
+
+#obligation_proved Effect4.Program.Typed.M3aResidualObligations.settling_ref_allocation :=
+  @Effect4.Program.Typed.settling_ref_allocation
+#obligation_proved Effect4.Program.Typed.M3aResidualObligations.settling_ref_preserves_nat :=
+  @Effect4.Program.Typed.settling_ref_preserves_nat
+#obligation_proved Effect4.Program.Typed.M3aResidualObligations.settling_fork :=
+  @Effect4.Program.Typed.settling_fork
+#obligation_proved Effect4.Program.Typed.M3aResidualObligations.settling_mask :=
+  @Effect4.Program.Typed.settling_mask
+
+#typed_state_obligations Effect4.Program.Typed.M3aResidualObligations ceiling 0
+  using aesop (rule_sets := [Effect4.TypedState])

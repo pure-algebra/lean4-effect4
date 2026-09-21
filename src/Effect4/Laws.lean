@@ -114,6 +114,9 @@ import Effect4.Laws.Program.Typed.World
 import Effect4.Laws.Program.Typed.Contracts
 import Effect4.Laws.Program.Typed.Validity
 import Effect4.Laws.Program.Typed.ForkSource
+import Effect4.Laws.Program.Typed.Admission
+import Effect4.Laws.Program.Typed.Residual
+import Effect4.Laws.Auto.AnswerGate
 import Effect4.Laws.Program.Guard.TraceOrigin
 import Effect4.Laws.Machine.Handshake
 import Effect4.Laws.Program.Guard.Handshake
