@@ -63,7 +63,9 @@ their finite controls checked in the evidence directory. Slice 5 is dispatched b
 [`foundations slice 5`](research/2026-09-21-codex-brief-foundations-slice-5.md).
 
 Owner decisions pending: (1) the typed-state scope is escape-free runs, as ruled; (2)
-whether to report the rc.112 escape upstream (the evidence probe is a minimal reproduction);
+whether and when to report the rc.112 escape upstream, now recorded as `U-01` in
+[`docs/UPSTREAM-BACKLOG.md`](UPSTREAM-BACKLOG.md) with its reproduction and the Effect 3 comparison
+(Effect 3 stripped the caught failures; Effect 4 dropped that and `main` still has the loop);
 (3) the five chat rulings of 2026-09-20 still wait for the owner's word in `decisions.md`.
 
 The preceding review is retained in

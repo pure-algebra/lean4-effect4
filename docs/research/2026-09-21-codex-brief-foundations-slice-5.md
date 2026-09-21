@@ -1,9 +1,11 @@
 # Brief for Codex: foundations slice 5 (M3b/M4) after the FR-08 ruling
 
-Repo `lean4-effect4` (Lean 4.33.1). Base: the commit carrying this brief on
-`refactor/phase1-phase3`, which is the fast-forward of `codex/foundations-slices-3-4` at
-`ef38bf11` plus the coordinator's landing of the FR-08 ruling. Continue on a fresh branch
-from that commit; nothing is pushed. This brief supersedes §2a.3 and §5 of
+Repo `lean4-effect4` (Lean 4.33.1). Base: the head of `refactor/phase1-phase3` that carries
+this brief's final text (`git log -1 --format=%H -- docs/research/2026-09-21-codex-brief-foundations-slice-5.md`):
+the fast-forward of `codex/foundations-slices-3-4` (`ef38bf11`), the FR-08 landing
+(`73e4f2ed`) and the upstream backlog entry `U-01`. Branch `codex/foundations-slice-5` in the
+worktree `/private/tmp/effect4-foundations-slice-5`, both prepared by the coordinator at that
+base; nothing is pushed. This brief supersedes §2a.3 and §5 of
 [`foundations slices 3–6`](2026-09-21-codex-brief-foundations-slices-3-6.md); everything else
 in that brief and in the plan (`2026-09-20-foundations-plan-and-next-two-slices.md`, D1–D14)
 stands. Ruling of record:
