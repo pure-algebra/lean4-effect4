@@ -1,0 +1,4 @@
+'Probe.Divergence.sanitize_clean' depends on axioms: [propext, Quot.sound]
+'Probe.Divergence.diverged' depends on axioms: [propext]
+'Probe.Divergence.diverged_keeps_defect' depends on axioms: [propext]
+'Probe.Divergence.diverged_fits' depends on axioms: [propext, Quot.sound]

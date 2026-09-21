@@ -86,7 +86,8 @@ Codex's counterexamples showed from the other side. A tape restriction does not 
 scope closes, race losers and `interruptChildren` interrupt masked fibers without any tape
 decision.
 
-## 2. The ruling
+## 2. The ruling (R1 and R2 overruled the same day; see §4)
+
 
 - **R1. Faithful model, no runtime change.** The escape is rc.112's semantics. Slices 3–6
   change no runtime source, evaluator or generated predicate. Whether to report it upstream
@@ -142,3 +143,43 @@ premise is observable on every run.
 - The fresh unique ledger audit (`final-audit.log`, the slice 4 driver rerun at this head):
   **342 total; 333 proved; 9 open**, the nine historical names unchanged. This landing adds
   no obligation and closes none; it adds one registered counterexample and one ruling.
+
+## 4. Amendment (2026-09-21, owner): the machine diverges from rc.112 and strips
+
+The owner overruled R1 and R2: the reference machine does not adopt the vendor's escape.
+It is a **noted divergence**, the first row of `docs/UPSTREAM-BACKLOG.md` (`U-01`), and the
+typed-state theorem is stated unconditionally. R3, R4 and R5 stand.
+
+**The rule.** At a preempted skip of a resume arm that would otherwise have run (a failure,
+the frame interruptible, a cause recorded), the walk passes on the sanitized failure
+`Cause.combine (stripFail cause) ic` in place of `ex`: the original failure without its
+`Fail` reasons, combined with the recorded interrupt `ic`. Defects and interrupts of the
+original failure are retained; only what the skipped handler was typed to remove is removed.
+This is Effect 3's rule (`stripFailures` at the skipped handler, the interrupt appended at
+the mask restore, `fiberRuntime.js:974-1000`), applied at the one site that matters. Nothing
+else in either walk changes: the success-path injections, guard misses, `onExit false`,
+answer glue, hooks and the deferred interception are as they were.
+
+**Checked** (`DivergenceProbe.lean`, `divergence.log`, `[propext, Quot.sound]`): a copy of
+`popR` with only that branch changed ends the `E4-SCHED-CE-006` walk with the interrupt-only
+failure (`diverged`), which fits the catch's output type at every world (`diverged_fits`);
+with a defect in the original failure the defect is retained and the `Fail` is not
+(`diverged_keeps_defect`); the sanitized cause is `Fail`-free for every input
+(`sanitize_clean`, through the cause module's `mem_combine`). The proposal that prompted the
+amendment replaced the cause by the recorded interrupt outright; that drops defects
+(`proposal_drops_defect`) and is not adopted. Its claim that `skipsClean` becomes true by
+definition is also wrong for the predicate as defined; the correct consequence is that the
+premise is unnecessary and is deleted.
+
+**Consequences.** The walk lives in two machines and both escaped: `popR` in the term
+evaluator and `popFrom`/`passPushed` in the compiled frame machine
+(`Machine/Frames.lean:1482, 1533`). Both change identically; the frame machine is what LCNF
+compiles to OCaml, so the generated faces regenerate. `skipsClean`, `DeliveryClean` and
+`NoEscape` are never landed; `cleanExit` and `strongExit_of_clean` remain as the lemma the
+sanitized branch uses. The coverage row `checkpoint.exit-failcause-skip` becomes a signed
+divergence. `E4-SCHED-CE-008` becomes the divergence's positive witness. The truth harness
+gains the escape program as a fixture with a signed host exception, because printed programs
+on rc.112 still deliver `Fail 42`; that is the cost, and the reason `U-01` should be reported.
+The divergence is dispatched first, as its own slice
+(`2026-09-21-codex-brief-foundations-divergence-slice.md`); slice 5 then proves `popR_typed`
+unconditionally (`2026-09-21-codex-brief-foundations-slice-5.md`, retargeted).

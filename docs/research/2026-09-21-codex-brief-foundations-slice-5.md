@@ -1,11 +1,12 @@
-# Brief for Codex: foundations slice 5 (M3b/M4) after the FR-08 ruling
+# Brief for Codex: foundations slice 5 (M3b/M4) after the divergence
 
-Repo `lean4-effect4` (Lean 4.33.1). Base: the head of `refactor/phase1-phase3` that carries
-this brief's final text (`git log -1 --format=%H -- docs/research/2026-09-21-codex-brief-foundations-slice-5.md`):
-the fast-forward of `codex/foundations-slices-3-4` (`ef38bf11`), the FR-08 landing
-(`73e4f2ed`) and the upstream backlog entry `U-01`. Branch `codex/foundations-slice-5` in the
-worktree `/private/tmp/effect4-foundations-slice-5`, both prepared by the coordinator at that
-base; nothing is pushed. This brief supersedes §2a.3 and §5 of
+Repo `lean4-effect4` (Lean 4.33.1). Base: the head of `refactor/phase1-phase3` after the
+divergence slice (`2026-09-21-codex-brief-foundations-divergence-slice.md`) is merged; this
+slice does not start before that merge. Branch `codex/foundations-slice-5` in the worktree
+`/private/tmp/effect4-foundations-slice-5`, fast-forwarded to that base by the coordinator at
+dispatch; nothing is pushed. **Retargeted 2026-09-21** after the owner overruled R1 and R2:
+the machine strips at a preempted skip, so `popR_typed` is unconditional and the walk premise
+machinery of the earlier text (`skipsClean`, `DeliveryClean`, `NoEscape`) is not landed. This brief supersedes §2a.3 and §5 of
 [`foundations slices 3–6`](2026-09-21-codex-brief-foundations-slices-3-6.md); everything else
 in that brief and in the plan (`2026-09-20-foundations-plan-and-next-two-slices.md`, D1–D14)
 stands. Ruling of record:
@@ -33,14 +34,13 @@ defect-free source.
 So no invariant of the form "every reachable delivery fits its declared error column" is
 true of the reference machine, and none should be attempted. The ruling:
 
-- **R1.** The escape is the vendor's semantics; the machine models it faithfully; no runtime
-  source, evaluator or generated predicate changes. The owner decides separately whether to
-  report it upstream.
-- **R2.** The typed-state theorem is stated for **escape-free runs**. The premise is the
-  interpreter-free walk predicate `skipsClean` below: every skip of a resume arm that `popR`
-  performs under preemption carries a failure with no `Fail` reason. It is a Bool over the
-  data `popR` already reads, computed by `popR`'s own recursion, so it is a trace observation
-  and not a runtime tag. `E4-SCHED-CE-008` is why it is necessary; it cannot be discharged.
+- **R1 (overruled, ruling §4).** The machine diverges from rc.112 as a signed divergence
+  (`U-01`): at a preempted skip of a catch that would have run, both walks pass on
+  `Cause.combine (stripFail cause) ic` instead of the original failure. That landed in the
+  divergence slice; this slice changes no runtime source.
+- **R2 (overruled, ruling §4).** The typed-state theorem is unconditional. The sanitized
+  exit at a preempted skip is `Fail`-free, so it fits every effect type
+  (`strongExit_of_clean`); no run premise exists.
 - **R3.** `FrameAccepts.resume.skip` becomes guard-miss-only, and every frame arrow reads
   `StrongExit`/`TypedProg` instead of `ExitFits`/the parameter. The former all-failures
   disjunct was standing in for the preemption case, which the walk premise now carries.
@@ -69,15 +69,18 @@ proposal, which is what their `Reviewed…` names say. Do not rename them.
 - `Typed/Contracts.lean`: the R3 amendment only (old and new statements below).
 - `Typed/Residual.lean`: `frameProtocols` becomes `frameProtocols (root : NativeEff)` with
   the real hook arrows (§3.3); nothing else moves.
-- New `Typed/Stack.lean`: `cleanExit`, `skipsClean`, `strongExit_of_clean`, `HookLaws`,
-  `popR_typed`, `saveAnswerR_typed`, `deliver_active`, `deliver_stale`, `DeliveryClean`.
-- New `Typed/Assembly.lean`: `preds`, `TypedState`, `RReachable`, `AnswersOk`, `NoEscape`,
+- New `Typed/Stack.lean`: `cleanExit`, `strongExit_of_clean`, `HookLaws`, `popR_typed`,
+  `saveAnswerR_typed`, `deliver_active`, `deliver_stale`.
+- New `Typed/Assembly.lean`: `preds`, `TypedState`, `RReachable`, `AnswersOk`,
   `typedState_load` (marker), `capture_lookup`.
 - New `Typed/Adequacy.lean`: the declared M6 delivery-adequacy obligations (§3.6).
 - New `Laws/Machine/Keeps.lean`: the unary `Keeps` ladder (imports `Machine/Fibers` only).
 - Controls: new `Test/Program/TypedStack.lean` and `Test/Program/TypedStateContract.lean`,
   both added to `Test/All.lean`. Read `2026-09-21-foundations-fr08-evidence/SkipsCleanProbe.lean`
-  first: its definitions and its four controls are the checked seed of `Typed/Stack.lean`.
+  and `DivergenceProbe.lean` first: `cleanExit`, `strongExit_of_clean`, the amended frame
+  contract and `masked_stack_accepted` are the checked seed of `Typed/Stack.lean`;
+  `skipsClean`, `masked_walk_not_clean` and `interrupt_walk_clean` are historical and are
+  not landed.
 
 ## 3. Statements
 
@@ -112,37 +115,14 @@ error-removing catch (`StackProbe.lean:23-33`) while standing in for preemption,
 `E4-SCHED-CE-008` shows preemption is a run-level fact, not a frame-level one. Add the
 register row citation to the amendment comment.
 
-### 3.2 The walk premise (`Typed/Stack.lean`)
+### 3.2 The clean-exit lemma (`Typed/Stack.lean`)
 
-Exactly the probe's definitions:
-
-```lean
-def cleanExit : ExitV → Bool
-  | .success _ => true
-  | .failure c => c.reasons.all fun r => r.tag != .fail
-
-def skipsClean (ex : ExitV) : List ScopeFrame → RSaved → Bool
-  -- popR's recursion, interpreter-free; at a preempted resume arm:
-  --   cleanExit ex && skipsClean ex rest frame
-  -- every arm that consults the interpreter ends the walk with `true`.
-```
-
-with `strongExit_of_clean : cleanExit (.failure c) = true → StrongExit w ty (.failure c)`
-(proved in the probe at `[propext, Quot.sound]`), and the two finite controls
-`masked_walk_not_clean` (`rfl`) and `interrupt_walk_clean` (`rfl`) retained in
-`Test/Program/TypedStack.lean`. Keep `skipsClean` literally parallel to `popR`; a
-reviewer must be able to check arm by arm that the only `false` source is a preempted skip
-of an unclean exit.
-
-`DeliveryClean (f : RFiber) : Bool` reads the fiber's current code and checks the walk that
-the next delivery would perform: `.pure ex`, `.vis (.inr (.unguard ex)) _` and
-`.vis (.inr (.finishFinalizer ex)) _` check `skipsClean ex f.frame.stack f.frame`; every other
-current code is `true`. Prove `deliverR_walk_of_clean`: every `popR` call `evaluateR` makes
-at a fiber with `DeliveryClean f = true` is on a walk with `skipsClean … = true`, by reading
-the actual call sites in `EvaluateR.lean` (the deferred-interrupt injection is the recorded
-cause, clean by `InterruptProvenance`). If a call site delivers an exit that
-`DeliveryClean` does not name, extend `DeliveryClean` and say so in the receipt; do not
-weaken `skipsClean`.
+Exactly the probe's `cleanExit` and `strongExit_of_clean : cleanExit (.failure c) = true →
+StrongExit w ty (.failure c)` (proved at `[propext, Quot.sound]`), plus
+`sanitize_clean_exit : cleanExit (.failure (Cause.sanitize cause ic)) = true` for
+`InterruptProvenance`-recorded `ic` (from `Cause.sanitize_clean`). These are the only facts
+the sanitized branch of `popR` needs. No walk predicate, no per-fiber delivery predicate, no
+run-level premise.
 
 ### 3.3 Hook contracts and `HookLaws`
 
@@ -169,17 +149,18 @@ HookLaws (interpR root) (frameProtocols root)` is declared with its marker in ga
 
 ### 3.4 The hard proofs, in order (gate `Typed.M4Stack`, ceiling 0 at finish)
 
-1. `popR_typed`: exactly the probe's `PopRTyped` with the landed `FrameAccepts`/`StackAccepts`
-   in place of the primed copies and `HookLaws interp hooks` as a premise:
-   for all `interp w tin tout ex stack frame`,
+1. `popR_typed`: the probe's `PopRTyped` with the landed `FrameAccepts`/`StackAccepts`
+   in place of the primed copies, `HookLaws interp hooks` as a premise, and **no walk
+   premise**: for all `interp w tin tout ex stack frame`,
    `StackAccepts (TypedProg root) StrongExit hooks w tin tout stack → StrongExit w tin ex →
-   InterruptProvenance frame → skipsClean ex stack frame = true →` match on
+   InterruptProvenance frame →` match on
    `popR interp ex stack frame`: `(frame', none)` gives `∃ middle, TypedProg root w middle
    frame'.current ∧ StackAccepts … w middle tout frame'.stack ∧ InterruptProvenance frame'`;
    `(_, some ex')` gives `StrongExit w tout ex'`. Prove by the recursion of `popR`. The arms:
    masks inject the recorded cause (`strongExit_of_clean` through `InterruptProvenance`);
-   a run arm uses `run`; a guard miss uses `skip`; a preempted skip uses the premise and
-   `strongExit_of_clean`; `answer` glue uses `run`, `Typed.pure_inv` and
+   a run arm uses `run`; a guard miss uses `skip`; a preempted skip passes the sanitized
+   exit, clean by `sanitize_clean_exit`, so `strongExit_of_clean` types it at every
+   `tout'`; `answer` glue uses `run`, `Typed.pure_inv` and
    `typedProg_unguard_inv`; the hook arms use `HookLaws`. The `onExit` push of
    `finalizerMask` is the identity arrow at the handler's output type.
 2. `saveAnswerR_typed`: pushing `.answer next` with `run` preserves `SavedOk` at the
@@ -195,17 +176,9 @@ HookLaws (interpR root) (frameProtocols root)` is declared with its marker in ga
 ### 3.5 Assembly (`Typed/Assembly.lean`)
 
 `preds`, `TypedState`, `RReachable`, `AnswersOk` and `typedState_load` exactly as the old
-§5 states them (D7, D14, the strong leaves, the active-delivery correlation), plus:
-
-```lean
-def NoEscape (root : NativeEff) (fuel cfuel : Nat) (tape : List Api.Decision) : Prop :=
-  ∀ prefix, prefix <+: tape →
-    ∀ f ∈ (replayR root fuel prefix cfuel).machine.fibers, DeliveryClean f = true
-```
-
-This is the run-level premise of M6/M7. It is a premise, not a clause of `TypedState`.
-The M7 corollaries (no `badShape`, no halting) are stated under it; `E4-SCHED-CE-008`'s
-second program is the checked reason the no-`badShape` corollary needs it.
+§5 states them (D7, D14, the strong leaves, the active-delivery correlation). There is no
+run-level premise: the M7 corollaries (no `badShape`, no halting) are stated over
+`RReachable` and `AnswersOk` alone.
 
 ### 3.6 Declared delivery adequacy (`Typed/Adequacy.lean`, gate `Typed.M6Adequacy`)
 
@@ -221,14 +194,16 @@ prove them in this slice; do not leave them unnamed.
 
 ## 4. Controls
 
-`Test/Program/TypedStack.lean`: the four probe controls; an error-removing catch that runs
+`Test/Program/TypedStack.lean`: `masked_stack_accepted` and the interrupt-only fit from the
+probe; the sanitized skip on the `E4-SCHED-CE-006` state typed at the catch's output
+(`diverged_fits` on the landed `popR`); an error-removing catch that runs
 (`onFailure`, `Nat → never`, handler typed); a `Nat → never` guard miss on a success; the
 `onExit false` arm running under a recorded interrupt with the pushed `finalizerMask`; a
 wrong-middle negative (a stack whose frames do not compose, `¬ StackAccepts`); a stale token
 that does not deliver (`deliver_stale` observed on `stepDecisionState`). `Test/Program/
-TypedStateContract.lean`: elaboration of `TypedState`, `RReachable`, `AnswersOk`,
-`NoEscape`; `DeliveryClean` is `false` on the `E4-SCHED-CE-008` root just before its
-poisoned delivery and `true` on the quiet one (compute both from `replayR` prefixes).
+TypedStateContract.lean`: elaboration of `TypedState`, `RReachable` and `AnswersOk`; the
+`E4-SCHED-CE-008` poisoned root's exit fits its checked type on the landed machine (a
+`#guard` on `replayR` plus `strongExit_of_clean`).
 
 ## 5. Build, finish, receipt
 
@@ -244,5 +219,5 @@ the receipt in `2026-09-21-foundations-slice5-receipt.md` with base and head, ev
 statement with its gate and ceiling before and after, the old/new `FrameAccepts` text,
 the axioms of every proof, the red-then-green control logs, the commands with exit codes,
 and the unique ledger line with every open name. If `popR_typed` needs a premise beyond
-`skipsClean`, `InterruptProvenance` and `HookLaws`, stop, retain the counterexample as
-`E4-SCHED-CE-009`, and amend §3.2 before any S2 work.
+`InterruptProvenance` and `HookLaws`, stop, retain the counterexample as `E4-SCHED-CE-009`,
+and amend the divergence before any S2 work.

@@ -34,5 +34,12 @@ interrupt-only failure is clean and fits. Run it from the repository root:
 lake env lean -DwarningAsError=true docs/research/2026-09-21-foundations-fr08-evidence/SkipsCleanProbe.lean
 ```
 
+`DivergenceProbe.lean` (log `divergence.log`) checks the owner's amendment (ruling §4): a copy
+of `popR` with only the preempted-skip branch changed to pass on
+`Cause.combine (stripFail cause) ic` ends the `E4-SCHED-CE-006` walk with the interrupt-only
+failure, which fits the catch's output type; a defect in the original failure is retained;
+the sanitized cause is `Fail`-free for every input; the replace-by-interrupt alternative drops
+defects. `skipsClean` in `SkipsCleanProbe.lean` is historical after that amendment.
+
 These are exact runs and elaborated statements. No decision-tape family, whole-machine
 preservation or replacement runtime is claimed; `popR_typed` itself is slice 5's proof.

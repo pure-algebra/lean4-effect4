@@ -408,10 +408,12 @@ The delivery-state correlation this section asked for cannot be a frame-level fa
 failure escapes an interruptible catch whenever an interrupt was recorded while the fiber was
 masked and the masked region then fails; that is rc.112's own rule (`internal/core.ts:540-545`),
 the reference machine models it, and it is reachable from checker-typed source
-(`E4-SCHED-CE-008`). The typed-state theorem is therefore stated for escape-free runs under
-the walk premise `skipsClean`, `FrameAccepts.resume.skip` is guard-miss-only, and the hook
-contracts are filled under `HookLaws`. The ruling, its evidence and the exact statements are
-in `docs/research/2026-09-21-foundations-slices-3-4-review-and-fr08-ruling.md`.
+(`E4-SCHED-CE-008`). The owner ruled that the machine does not adopt it: at a preempted skip
+both walks pass on the failure stripped of its `Fail` reasons and combined with the recorded
+interrupt (Effect 3's rule), a signed divergence (`U-01`). The typed-state theorem is
+unconditional; `FrameAccepts.resume.skip` is guard-miss-only; the hook contracts are filled
+under `HookLaws`. The ruling and its amendment, the evidence and the exact statements are in
+`docs/research/2026-09-21-foundations-slices-3-4-review-and-fr08-ruling.md` (§2, §4).
 
 ## 6. Staged implementation plan
 

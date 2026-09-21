@@ -55,18 +55,21 @@ evaluator and the pinned vendor source when an interrupt is recorded during the 
 region (`E4-SCHED-CE-008`, `Test/Counterexamples/Machine/Semantics/InterruptEscape.lean`,
 evidence in `research/2026-09-21-foundations-fr08-evidence/`). A re-masked walk runs a
 `nat`-typed catch on a string and dies with the bad-shape defect from defect-free source.
-The ruling: no runtime change; the typed-state theorem is stated for escape-free runs under
-the interpreter-free walk premise `skipsClean` (a preempted catch skip carries no `Fail`
-reason), `FrameAccepts.resume.skip` becomes guard-miss-only, and the hook contracts are filled
-under `HookLaws`. The replacement contract and `popR_typed` statement are elaborated and
-their finite controls checked in the evidence directory. Slice 5 is dispatched by
-[`foundations slice 5`](research/2026-09-21-codex-brief-foundations-slice-5.md).
+The owner ruled the same day (ruling §4): the machine does **not** adopt the regression. At
+a preempted skip of a catch that would have run, both walks pass on the failure stripped of
+its `Fail` reasons and combined with the recorded interrupt, which is Effect 3's rule; this
+is a signed divergence, `U-01` in [`docs/UPSTREAM-BACKLOG.md`](UPSTREAM-BACKLOG.md). The
+typed-state theorem is therefore unconditional; `FrameAccepts.resume.skip` becomes
+guard-miss-only and the hook contracts are filled under `HookLaws`. The divergence is its own
+slice, dispatched first by
+[`the divergence slice`](research/2026-09-21-codex-brief-foundations-divergence-slice.md)
+(both walks, `Cause.stripFail`, regeneration, the census row as a signed divergence, a truth
+fixture with a signed host exception); slice 5 follows on its head by
+[`foundations slice 5`](research/2026-09-21-codex-brief-foundations-slice-5.md), retargeted.
 
-Owner decisions pending: (1) the typed-state scope is escape-free runs, as ruled; (2)
-whether and when to report the rc.112 escape upstream, now recorded as `U-01` in
-[`docs/UPSTREAM-BACKLOG.md`](UPSTREAM-BACKLOG.md) with its reproduction and the Effect 3 comparison
-(Effect 3 stripped the caught failures; Effect 4 dropped that and `main` still has the loop);
-(3) the five chat rulings of 2026-09-20 still wait for the owner's word in `decisions.md`.
+Owner decisions pending: (1) whether and when to report `U-01` upstream (recommended; the
+reproduction and the Effect 3 comparison are in the row); (2) the five chat rulings of
+2026-09-20 still wait for the owner's word in `decisions.md`.
 
 The preceding review is retained in
 [`monotonicity and refinement findings`](research/2026-09-21-foundations-monotonicity-and-refinement-review.md)
