@@ -27,12 +27,12 @@ The current foundations review and proposed execution plan is
 [`docs/core/post-phase-c-synthesis.md`](core/post-phase-c-synthesis.md), checked against
 `10d5c009`. A retained Lean counterexample refutes the former `M1Origin.actionAt_raceAll`
 statement because it omitted the source-location premise of its backing theorem. Slice 1
-restores that premise and checks the backing proof; no false theorem was accepted. The review also proves that generated resume checks
-ignore target/token and capture checks ignore source path/root, and identifies the missing
-shared type between current code and its saved stack. These are statement/interface issues
-to resolve before the main typed-state proof, not evidence that the runtime is broken.
+restores that premise and checks the backing proof; no false theorem was accepted. The review also found that the then-generated resume checks
+ignored target/token and capture checks ignored source path/root, and identified the missing
+shared type between current code and its saved stack. Slice 2 now states these correlations;
+connecting them to reachable execution remains the main typed-state proof.
 
-Next: validate relational predicate interfaces and world transport; establish source/body admission and operation protocols (M3a);
+Next: world validity and transport (slice 3); establish source/body admission and operation protocols (M3a);
 then assemble the concrete state/stack/delivery relations (M3b/M4), denotation/hooks/init,
 the first real simultaneous-update proofs and an explicit transition inventory,
 transition preservation and transfer. Residue observation proofs and the invariant-backed
@@ -50,14 +50,23 @@ slice 2 adds owner-level source rows so the skeleton states `SavedOk`, `ResumeOk
 interface parameterised in `TypedProg`; slice 3 (world validity and transport) is written
 and disjoint. Decisions D1–D11 of that note are the coordinator's; the five chat rulings of
 2026-09-20 still wait for the owner's word to be written into `decisions.md`.
-Slice 1 is landed in the commit carrying
-`docs/research/2026-09-21-foundations-slice1-receipt.md`: 329 obligation declarations
+Slice 1 is landed as `3aa1a9f1`
+(`docs/research/2026-09-21-foundations-slice1-receipt.md`): 329 obligation declarations
 in 40 files now use theorem binders, seven statements have their approved premises restored,
 and 32 explicit references close former markers. The fresh unique Effect4 ledger is
 309 obligations, 300 checked, nine open. The namesake audit reports zero unadapted mismatches;
 four pre-existing argument reorderings keep their statements. The counterexamples also
 refute all three premise-free Actions statements. `make build` and `make check` pass.
-Slice 2 is next. The older look-ahead's namesake-first closure forecast and
+Slice 2 is landed in the commit carrying
+`docs/research/2026-09-21-foundations-slice2-receipt.md`. Whole-owner rows now pass the entire
+saved state and capture, and all resume arguments. The gate retains 85 positions and the
+same two refusals, now through 86 rows; 17 generated predicates use 10 carrier predicates.
+The token table is per fiber, the world order retains its declarations, and the stack
+interface composes through a shared middle type. `TypedProg`, named-frame protocols and the
+capture environment relation remain parameters; no operational preservation is claimed.
+The unique ledger has 309 obligations, 299 checked and ten open: the removed saved-field
+assembly is replaced by the explicitly open `park_extension`. `make check-typed-state`,
+`make build` and `make check` pass. The older look-ahead's namesake-first closure forecast and
 M2b-before-M3 sequence are superseded.
 
 The owner's broader direction is captured in the review's §11: all 452 pinned TypeScript

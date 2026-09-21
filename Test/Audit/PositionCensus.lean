@@ -29,9 +29,9 @@ open Effect4.Laws.Auto.Positions
 
 /-! ## The totality gate -/
 
-/-- info: 85 positions from 4 roots, 95 source rows
-  1	program
-  18	custom
+/-- info: 85 positions from 4 roots, 86 source rows
+  11	owner
+  8	custom
   5	exit
   3	column
   1	refused

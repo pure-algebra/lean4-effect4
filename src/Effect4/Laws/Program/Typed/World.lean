@@ -53,6 +53,8 @@ structure World extends Effect4.Machine.World where
   Γ : FiberTable
   «Π» : PromiseTableTy
   Ρ : HeapTableTy
+  /-- Ghost resume types, indexed by fiber and its fresh token. -/
+  Θ : FiberId → Nat → Option EffTy
 
 /-- Existing keys retain their declarations; unused keys are unconstrained. -/
 def TableExtends {K A : Type} (old newer : K → Option A) : Prop :=
@@ -124,7 +126,8 @@ def CellCompatible (w newer : World) : Prop :=
 def World.le (w newer : World) : Prop :=
   Effect4.Machine.World.le w.toWorld newer.toWorld ∧
   TableExtends w.Γ newer.Γ ∧ TableExtends w.«Π» newer.«Π» ∧
-  TableExtends w.Ρ newer.Ρ ∧ CellCompatible w newer
+  TableExtends w.Ρ newer.Ρ ∧ CellCompatible w newer ∧
+  ∀ id, TableExtends (w.Θ id) (newer.Θ id)
 
 /-- Ghost updates used by the four allocation contracts. -/
 def World.addFiber (w : World) (id : FiberId) (ty : EffTy) : World :=
@@ -136,6 +139,11 @@ def World.addRef (w : World) (state : Stores) (key : RefKey) (ty : Ty) : World :
 def World.addPromise (w : World) (state : Stores) (key : DeferredKey)
     (types : Ty × Ty) : World :=
   { w with state := state, «Π» := tableInsert w.«Π» key types }
+
+/-- Parking declares a fresh token for this fiber. Other fibers may use the same number. -/
+def World.addToken (w : World) (id : FiberId) (token : Nat) (ty : EffTy) : World :=
+  { w with Θ := fun target =>
+      if target = id then tableInsert (w.Θ target) token ty else w.Θ target }
 
 namespace WorldWanted
 
@@ -208,6 +216,13 @@ theorem fork_extension (w : World) (id : FiberId) (ty : EffTy)
       (HeapCoverage w → HeapCoverage (w.addFiber id ty)) ∧
       (PromiseCoverage w → PromiseCoverage (w.addFiber id ty))) := ⟨⟩
 
+/-- Ghost extension when parking at a fresh per-fiber token. Connecting this update to the
+active parked machine belongs to M3b; world validity and transport belong to slice 3. -/
+theorem park_extension (w : World) (id : FiberId) (token : Nat) (ty : EffTy)
+    (_fresh : w.Θ id token = none) : ProofGraph.Obligation
+    (w.le (w.addToken id token ty) ∧ (w.addToken id token ty).Θ id token = some ty) := ⟨⟩
+#proof_wanted park_extension
+
 theorem refMake_extension (w : World) (value : Val) (ty : Ty) (state : Stores) (key : RefKey)
     (_step : syncOpStep (.refMake value) w.state = some (state, Val.cell key))
     (_fresh : w.Ρ key = none) (_value : ValueOk w ty value) : ProofGraph.Obligation
@@ -253,7 +268,8 @@ end WorldWanted
 def worldGood : World :=
   { ids := [], state := { Stores.empty with refs := [.nat 0] }
     Γ := fun _ => none, «Π» := fun _ => none
-    Ρ := fun key => if key.index = 0 then some .nat else none }
+    Ρ := fun key => if key.index = 0 then some .nat else none
+    Θ := fun _ _ => none }
 
 def worldBad : World :=
   { worldGood with state := { worldGood.state with refs := [.bool false] } }
@@ -373,7 +389,7 @@ theorem insert_other {K A : Type} [DecidableEq K] (table : K → Option A) (key 
 
 theorem order_refl (w : World) : w.le w :=
   ⟨Effect4.Machine.World.le_refl _, table_refl _, table_refl _, table_refl _,
-    fun _ _ h => h, fun _ _ h => h⟩
+    ⟨fun _ _ h => h, fun _ _ h => h⟩, fun _ => table_refl _⟩
 
 theorem order_trans (a b c : World) : a.le b → b.le c → a.le c :=
   fun hab hbc =>
@@ -381,19 +397,20 @@ theorem order_trans (a b c : World) : a.le b → b.le c → a.le c :=
      table_trans _ _ _ hab.2.1 hbc.2.1,
      table_trans _ _ _ hab.2.2.1 hbc.2.2.1,
      table_trans _ _ _ hab.2.2.2.1 hbc.2.2.2.1,
-     fun key ty h => hbc.2.2.2.2.1 key ty (hab.2.2.2.2.1 key ty h),
-     fun key types h => hbc.2.2.2.2.2 key types (hab.2.2.2.2.2 key types h)⟩
+     ⟨fun key ty h => hbc.2.2.2.2.1.1 key ty (hab.2.2.2.2.1.1 key ty h),
+      fun key types h => hbc.2.2.2.2.1.2 key types (hab.2.2.2.2.1.2 key types h)⟩,
+     fun id => table_trans _ _ _ (hab.2.2.2.2.2 id) (hbc.2.2.2.2.2 id)⟩
 
 theorem protocol_order : ∃ order : Effect4.Laws.Effects.WorldOrder World, order.le = World.le :=
   ⟨⟨World.le, order_refl, fun h₁ h₂ => order_trans _ _ _ h₁ h₂⟩, rfl⟩
 
 theorem heap_typed_at_mono (w newer : World) (key : RefKey) (ty : Ty) :
     w.le newer → HeapTypedAt w key ty → HeapTypedAt newer key ty :=
-  fun hle h => hle.2.2.2.2.1 key ty h
+  fun hle h => hle.2.2.2.2.1.1 key ty h
 
 theorem promise_typed_at_mono (w newer : World) (key : DeferredKey) (types : Ty × Ty) :
     w.le newer → PromiseTypedAt w key types → PromiseTypedAt newer key types :=
-  fun hle h => hle.2.2.2.2.2 key types h
+  fun hle h => hle.2.2.2.2.1.2 key types h
 
 theorem ref_completion_inv (w : World) (cell : RefKey) (types : Ty × Ty) :
     CompletionOk w types (.ofRefGet cell) ↔ ∃ ty, w.Ρ cell = some ty ∧ ty.sub types.1 = true :=
@@ -483,7 +500,8 @@ theorem fork_extension (w : World) (id : FiberId) (ty : EffTy) (fresh : w.Γ id 
       (HeapCoverage w → HeapCoverage (w.addFiber id ty)) ∧
       (PromiseCoverage w → PromiseCoverage (w.addFiber id ty)) :=
   ⟨⟨⟨fun _ h => List.mem_append_left _ h, Stores.le_refl _⟩,
-     insert_extends _ _ _ fresh, table_refl _, table_refl _, fun _ _ h => h, fun _ _ h => h⟩,
+     insert_extends _ _ _ fresh, table_refl _, table_refl _,
+     ⟨fun _ _ h => h, fun _ _ h => h⟩, fun _ => table_refl _⟩,
    insert_here _ _ _, fun h => h, fun h => h, fun h => h, fun h => h⟩
 
 theorem refMake_extension (w : World) (value : Val) (ty : Ty) (state : Stores) (key : RefKey)
@@ -502,7 +520,8 @@ theorem refMake_extension (w : World) (value : Val) (ty : Ty) (state : Stores) (
   subst hkey'
   have hΡ : ∀ q, (w.addRef { w.state with refs := w.state.refs ++ [value] } ⟨w.state.refs.length⟩ ty).Ρ q =
       tableInsert w.Ρ ⟨w.state.refs.length⟩ ty q := fun _ => rfl
-  refine ⟨⟨⟨fun _ h => h, hle⟩, table_refl _, table_refl _, insert_extends _ _ _ fresh, ?_, ?_⟩,
+  refine ⟨⟨⟨fun _ h => h, hle⟩, table_refl _, table_refl _, insert_extends _ _ _ fresh,
+    ⟨?_, ?_⟩, fun _ => table_refl _⟩,
     ?_, ?_, ?_, ?_, ?_⟩
   · intro key' ty' hty'
     obtain ⟨hk, hv⟩ := hty'
@@ -589,7 +608,8 @@ theorem promise_extension (w : World) (types : Ty × Ty) (state : Stores)
     unfold ValueOk at h ⊢
     rw [hstate, hext]
     exact h
-  refine ⟨⟨⟨fun _ h => h, hle⟩, table_refl _, insert_extends _ _ _ fresh, table_refl _, ?_, ?_⟩,
+  refine ⟨⟨⟨fun _ h => h, hle⟩, table_refl _, insert_extends _ _ _ fresh, table_refl _,
+    ⟨?_, ?_⟩, fun _ => table_refl _⟩,
     ?_, ?_, ?_, ?_, ?_⟩
   · intro key' ty' hty'
     obtain ⟨hk, hv⟩ := hty'
@@ -707,7 +727,7 @@ theorem world_order_refuses : ¬ worldGood.le worldBad := by
       have hv' : Val.nat 0 = value := Option.some.inj hv
       subst hv'
       rfl⟩
-  have bad := hle.2.2.2.2.1 ⟨0⟩ Ty.nat typed
+  have bad := hle.2.2.2.2.1.1 ⟨0⟩ Ty.nat typed
   exact Bool.noConfusion (bad.2 (Val.bool false) rfl)
 
 theorem invalid_refl : worldBad.le worldBad := order_refl _

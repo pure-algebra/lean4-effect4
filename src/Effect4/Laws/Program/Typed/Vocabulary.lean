@@ -46,13 +46,18 @@ inductive Source
   /-- A hand predicate over a whole field: on a position, over the position's own type; on an
   edge, over the field's whole type (the stack, the pending list, the races, the context). -/
   | custom (pred : String)
+  /-- A structure predicate receives the whole value. A constructor predicate receives
+  every argument, including metadata that is not itself a census position. Descendant rows
+  are redundant unless their type is also reached outside this owner. -/
+  | owner (pred : String)
   /-- Named debt: must be cited by a decisions or DI row. -/
   | refused (reason : String)
   /-- On a containment edge: the child's `Ok` at this expectation instead of the parent's. -/
   | nested (e : Expected)
 deriving Repr, BEq, Inhabited
 
-/-- One row: the position's key as the census prints it, `Owner.field`, and its source. -/
+/-- One row: a census field key (`Owner.field`), structure name or constructor name,
+and its source. -/
 abbrev Row := String × Source
 
 end Effect4.Program.Typed

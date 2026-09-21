@@ -47,7 +47,12 @@ constructs the skeleton inside `Laws/Program/Typed/State.lean` from its roots an
 `Typed/Sources.lean` declaration. `#frame_rules` constructs checked theorems in
 `Typed/Frames.lean`. Lake owns the dependencies and rebuilds both with the input changes.
 `make gen-typed-state` and `make check-typed-state` run the same focused build and controls;
-the normal Laws/Test roots include them. The old `TypedStateEmit.lean` file writer is retired.
+the normal Laws/Test roots include them. A `Source.owner` row receives the entire structure
+or every constructor argument. Its descendants are covered; a redundant row is refused.
+A shared nested type still needs rows where another path reaches it outside that owner.
+`TypedSources.lean` supplies the same ownership accounting to the source gate and the emitter.
+Whole-owner frame rules require a new premise for every field update. The old
+`TypedStateEmit.lean` file writer is retired.
 
 The proof-ledger command reads obligation theorems and placeholder definitions, searches with
 the supplied tactic, and checks the resulting theorem terms through `ProofGraph`.

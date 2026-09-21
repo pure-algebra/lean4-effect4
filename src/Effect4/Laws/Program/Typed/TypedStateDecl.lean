@@ -9,6 +9,7 @@ text, or writes a source file. Unsupported shapes fail before the command can fi
 -/
 open Lean Meta Elab Command Parser.Term
 open Effect4.Laws.Auto.Positions Effect4.Program.Typed
+open Effect4.Laws.Auto.TypedSources
 
 namespace Effect4.Laws.Auto.TypedStateDecl
 
@@ -106,7 +107,7 @@ private def carrierKind (c : Name) : MetaM String := do
 
 structure Predicate where
   name : String
-  type : Expr
+  types : Array Expr
   column : Bool
   keyType : Option Expr := none
 
@@ -125,17 +126,19 @@ structure Emit where
   the same type under an uncovered edge elsewhere is still checked. -/
   covered : Array String := #[]
 
-private def addPred (em : Emit) (name : String) (type : Expr) (column := false)
+private def addPred (em : Emit) (name : String) (types : Array Expr) (column := false)
     (keyType : Option Expr := none) : MetaM Emit := do
   if let some old := em.preds.find? (·.name == name) then
     let keysMatch ← match old.keyType, keyType with
       | none, none => pure true
       | some a, some b => isDefEq a b
       | _, _ => pure false
-    unless old.column == column && keysMatch && (← isDefEq old.type type) do
+    unless old.column == column && keysMatch && old.types.size == types.size do
+      throwError "typed state: incompatible uses of predicate {name}"
+    unless ← (old.types.zip types).allM (fun (a, b) => isDefEq a b) do
       throwError "typed state: incompatible uses of predicate {name}"
     return em
-  return { em with preds := em.preds.push {name, type, column, keyType} }
+  return { em with preds := em.preds.push {name, types, column, keyType} }
 
 /-- The source is owned at this exact field occurrence, before any child walk. -/
 private def ownsField : Source → Bool
@@ -195,10 +198,12 @@ private def columnsUnder (rows : List Row) (ps : Array Positions.Position) (edge
     let mut out : List String := []
     for p in ps do
       if p.owner == owner then
+        if (← fieldOwner rows owner p.field).isSome then continue
         if let some (_, .column c none) := rows.find? (·.1 == p.key) then
           unless out.contains c do out := out ++ [c]
     for e in edges do
       if e.parent == owner then
+        if (← fieldOwner rows owner e.field).isSome then continue
         if (rows.find? (·.1 == s!"{e.parent}.{e.field}")).any (ownsField ·.2) then continue
         for c in ← columnsUnder rows ps edges fuel e.child (owner :: seen) do
           unless out.contains c do out := out ++ [c]
@@ -211,6 +216,8 @@ private def hasPositions (rows : List Row) (ps : Array Positions.Position) (edge
   | 0, owner, _ => throwError "typed state: clause walk exhausted at {owner}"
   | fuel + 1, owner, seen => do
     if seen.contains owner then return false
+    if (ownerSource rows owner).isSome then return true
+    if (← getConstInfoInduct owner).ctors.any (fun c => (ownerSource rows c).isSome) then return true
     if ← hasIndexedField rows owner then return true
     if columnOwners.contains owner then
       unless (← columnsUnder rows ps edges fuel owner []).isEmpty do return true
@@ -234,10 +241,12 @@ private def columnKeysUnder (rows : List Row) (ps : Array Positions.Position) (e
     let mut out : List String := []
     for p in ps do
       if p.owner == owner then
+        if (← fieldOwner rows owner p.field).isSome then continue
         if let some (_, .column _ none) := rows.find? (·.1 == p.key) then
           unless out.contains p.key do out := out ++ [p.key]
     for e in edges do
       if e.parent == owner then
+        if (← fieldOwner rows owner e.field).isSome then continue
         if (rows.find? (·.1 == s!"{e.parent}.{e.field}")).any (ownsField ·.2) then continue
         for k in ← columnKeysUnder rows ps edges fuel e.child (owner :: seen) do
           unless out.contains k do out := out ++ [k]
@@ -303,8 +312,22 @@ private def emitOwner (rows : List Row) (ps : Array Positions.Position) (edges :
       let mut clauses : Array (TSyntax `term) := #[]
       let mut binders : Array (TSyntax `term) := #[]
       for col in columns do
-        em ← addPred em col ty true
+        em ← addPred em col #[ty] true
         clauses := clauses.push (← `(P.$(mkIdent (Name.mkSimple col)):ident w x))
+      let whole := ownerSource rows owner
+      let arm := ownerSource rows c
+      let owns := whole.isSome || arm.isSome
+      if let some pred := whole then
+        em ← addPred em pred #[ty]
+        clauses := clauses.push (← `(P.$(mkIdent (Name.mkSimple pred)):ident w e x))
+        em := { em with accounted := em.accounted.push owner.toString }
+      if let some pred := arm then
+        em ← addPred em pred (fields.map (·.2))
+        let args ← fields.mapM fun (fname, _) => do
+          let field := mkIdent (Name.mkSimple fname)
+          if isStruct then `(x.$field:ident) else `($field:ident)
+        clauses := clauses.push (← `(P.$(mkIdent (Name.mkSimple pred)):ident w e $args*))
+        em := { em with accounted := em.accounted.push c.toString }
       let single := ctors.size == 1
       for (fname, fty) in fields do
         -- the census's naming rule: a single constructor's arguments are the owner's fields
@@ -313,6 +336,9 @@ private def emitOwner (rows : List Row) (ps : Array Positions.Position) (edges :
         let f := mkIdent (Name.mkSimple fname)
         let term ← if isStruct then `(x.$f:ident) else `($f:ident)
         binders := binders.push (← `($f:ident))
+        if owns then
+          em := { em with accounted := em.accounted.push key, covered := em.covered.push key }
+          continue
         let src? : Option Source := rows.find? (·.1 == key) |>.map (·.2)
         let positions := ps.filter (·.key == key)
         let es := edges.filter (fun e => e.parent == owner && e.field == label)
@@ -341,11 +367,11 @@ private def emitOwner (rows : List Row) (ps : Array Positions.Position) (edges :
           em := { em with
             columns := em.columns.push (columnName, declaration)
             rules := em.rules.push rule }
-          em ← addPred em pred valueTy true (some keyTy)
+          em ← addPred em pred #[valueTy] true (some keyTy)
           clauses := clauses.push (← `($column:ident P.$(mkIdent (Name.mkSimple pred)):ident w $term))
           em := { em with accounted := em.accounted.push key, covered := em.covered.push key }
         | some (.custom pred) =>
-          em ← addPred em pred fty
+          em ← addPred em pred #[fty]
           clauses := clauses.push (← `(P.$(mkIdent (Name.mkSimple pred)):ident w e $term))
           em := { em with accounted := em.accounted.push key, covered := em.covered.push key }
         | some (.refused reason) =>
@@ -369,7 +395,7 @@ private def emitOwner (rows : List Row) (ps : Array Positions.Position) (edges :
                 -- Recover the carrier's type by walking the same wrappers in the field type.
                 let some carrierTy ← headOfChild p.carrier 64 fty
                   | throwError "typed state: no carrier type for {key}"
-                em ← addPred em kind carrierTy
+                em ← addPred em kind #[carrierTy]
                 let ex ← match src with
                   | .program ex | .continuation ex | .value ex | .exit ex | .cause ex => expectSyntax ex
                   | .hook _ => `(.hook $(Syntax.mkStrLit label))
@@ -429,14 +455,19 @@ syntax (name := typedState) "#typed_state " ident+ " using " ident (" columns " 
     let rows ← Effect4.Laws.Auto.TypedSources.readRows table
     let mut ps : Array Positions.Position := #[]
     let mut edges : Array Edge := #[]
+    let mut seen : Array Expr := #[]
     for root in roots do
       let walk ← walkOf root
+      seen := seen ++ walk.seen
       for p in walk.positions do unless ps.contains p do ps := ps.push p
       for e in walk.edges do unless edges.contains e do edges := edges.push e
     let keys := rows.map (·.1)
     unless keys.length == keys.eraseDups.length do throwError "typed state: duplicate source rows"
+    let coverage ← ownerCoverage rows roots edges seen
     for p in ps do
-      unless keys.contains p.key do throwError "typed state: missing source for {p.key}"
+      unless keys.contains p.key ||
+          (coverage.covered.contains p.key && !coverage.active.contains p.key) do
+        throwError "typed state: missing source for {p.key}"
     let mut em : Emit := {}
     let mut tops : Array (TSyntax `command) := #[]
     let mut reach : Array Name := #[]
@@ -481,15 +512,21 @@ syntax (name := typedState) "#typed_state " ident+ " using " ident (" columns " 
         unless em.accounted.contains key do
           throwError "typed state: {key} has a source but no clause was emitted"
       | _ => pure ()
+    for key in coverage.ownerKeys do
+      unless em.accounted.contains key do
+        throwError "typed state: {key} has an owner source but no clause was emitted"
     let mut fields : Array (TSyntax ``Parser.Command.structSimpleBinder) := #[]
     for p in em.preds do
-      let ty ← typeSyntax 256 #[] p.type
-      let ty ← match p.keyType with
+      let mut ty ← `(Prop)
+      for arg in p.types.reverse do
+        let arg ← typeSyntax 256 #[] arg
+        ty ← `($arg → $ty)
+      let predicateTy ← match p.keyType with
         | some keyType => do
           let keySyntax ← typeSyntax 256 #[] keyType
-          `(W → $keySyntax → $ty → Prop)
-        | none => if p.column then `(W → $ty → Prop) else `(W → Expect → $ty → Prop)
-      fields := fields.push (← `(Parser.Command.structSimpleBinder| $(mkIdent (Name.mkSimple p.name)):ident : $ty))
+          `(W → $keySyntax → $ty)
+        | none => if p.column then `(W → $ty) else `(W → Expect → $ty)
+      fields := fields.push (← `(Parser.Command.structSimpleBinder| $(mkIdent (Name.mkSimple p.name)):ident : $predicateTy))
     let bundle ← `(command| structure Preds (W : Type) where $[$fields:structSimpleBinder]*)
     return (em, bundle, tops)
   elabCommand bundle

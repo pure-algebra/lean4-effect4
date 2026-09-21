@@ -8,7 +8,7 @@ The one hand-written input of the typed-state invariant
 positions from the types reachable from `RState`, `RCmd`, `RInterp` and `RIter`
 (`Test/Audit/PositionCensus.lean`); this table says, for each, where its type comes from and
 what the invariant states there (`Typed/Vocabulary.lean`). The totality gate refuses a
-position without a row and a row without a position, so adding a field to any state structure
+position without a field or owner row and a row outside the census, so adding a field to any state structure
 fails the build until it is sourced here. Edge rows name a field that reaches a structure: the
 expectation a child is typed at (`nested`), a predicate over the whole field (`custom`), a
 subtree that is the journal, a subtree that is named debt. The gate reads this list as an
@@ -22,31 +22,21 @@ def stateSources : List Row := [
   -- edge rows: the expectation a child is typed at, a predicate over a whole field, a subtree
   -- that is the journal, a subtree that is named debt
   ("Effect4.Machine.RunFiber.frame", .nested (.fiber "x.id")),
-  ("Effect4.Program.Sched.RSaved.stack", .custom "StackOk"),
   ("Effect4.Machine.RunFiber.pending", .custom "PendingOk"),
   ("Effect4.Machine.RunFiber.context", .custom "ServiceOk"),
-  ("Effect4.Machine.Capture.ctx", .custom "ServiceOk"),
   ("Effect4.Machine.RunMachine.races", .custom "RaceOk"),
   ("Effect4.Machine.RunMachine.trace", .journal),
   ("Effect4.Machine.Stores.externals", .refused "external rows are the table-aware slice (DI-57); the reference parks them forever"),
-  -- the fiber's saved frame: the residual program at the fiber's type, the stack as one typed
-  -- context, the interrupt cause admitted by every column
-  ("Effect4.Program.Sched.RSaved.current", .program .inherited),
-  ("Effect4.Program.Sched.ScopeFrame.resume.next", .custom "StackOk"),
-  ("Effect4.Program.Sched.ScopeFrame.answer.next", .custom "StackOk"),
-  ("Effect4.Program.Sched.ScopeFrame.loop.cursor", .custom "StackOk"),
-  ("Effect4.Program.Sched.RSaved.interruptedCause", .custom "InterruptOnly"),
-  -- Captured continuation names are a recursive carrier, covered by the enclosing
-  -- stack/pending predicate. They were absent from the original census.
-  ("Effect4.Program.Sched.ScopeFrame.asyncFinalizer.name", .custom "StackOk"),
-  ("Effect4.Program.Sched.ScopeFrame.iter.generator", .custom "StackOk"),
-  ("Effect4.Program.Sched.ScopeFrame.loop.loop", .custom "StackOk"),
+  -- Whole saved code/stack and capture correlations are supplied by M3a's contracts.
+  ("Effect4.Program.Sched.RSaved", .owner "SavedOk"),
+  ("Effect4.Machine.Capture", .owner "CaptureOk"),
+  -- Pending continuation names retain their enclosing predicate.
   ("Effect4.Machine.Resume.continueWith.name", .custom "PendingOk"),
   -- the fiber record
   ("Effect4.Machine.Pending.collected", .custom "PendingOk"),
   ("Effect4.Machine.RunFiber.finalizing", .exit (.fiber "x.id")),
   ("Effect4.Machine.RunFiber.exit", .exit (.fiber "x.id")),
-  ("Effect4.Machine.Task.resume.answer", .custom "ResumeOk"),
+  ("Effect4.Machine.Task.resume", .owner "ResumeOk"),
   ("Effect4.Machine.Env.Service.value", .custom "ServiceOk"),
   -- races: one predicate over the record, at the race's type
   ("Effect4.Supervision.RaceAllState.failures", .custom "RaceOk"),
@@ -60,7 +50,6 @@ def stateSources : List Row := [
   ("Effect4.Machine.DeferredCell.completion", .column "PromiseTable"),
   ("Effect4.Machine.Owed.code", .column "PromiseTable"),
   ("Effect4.Machine.Completion.ofExit.exit", .column "PromiseTable"),
-  ("Effect4.Machine.Capture.env", .custom "CaptureOk"),
   ("Effect4.ScopeState.closed.exit",
     .refused "DI-94 fixes the release type at Exit<unknown, unknown>; connecting stored scope exits to the invariant remains open"),
   -- the journal
@@ -72,7 +61,7 @@ def stateSources : List Row := [
   ("Effect4.Machine.RunEvent.exited.exit", .journal),
   -- the command residue
   ("Effect4.Machine.Cmd.finish.exit", .exit (.fiber "fiber")),
-  ("Effect4.Machine.Cmd.resume.answer", .custom "ResumeOk"),
+  ("Effect4.Machine.Cmd.resume", .owner "ResumeOk"),
   ("Effect4.Machine.Cmd.observe.exit", .exit (.fiber "fiber")),
   -- the step result
   ("Effect4.Machine.Outcome.finished.exit", .exit .inherited)

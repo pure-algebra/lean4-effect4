@@ -29,6 +29,7 @@ def kindLabel : Source → String
   | .column _ _ => "column"
   | .journal => "journal"
   | .custom _ => "custom"
+  | .owner _ => "owner"
   | .refused _ => "refused"
   | .nested _ => "nested"
 
@@ -40,26 +41,35 @@ syntax (name := positionGate) "#position_gate " ident+ : command
     let rows ← Effect4.Laws.Auto.TypedSources.readRows
     let mut keys : Array String := #[]
     let mut edgeKeys : Array String := #[]
+    let mut edges : Array Edge := #[]
+    let mut seen : Array Expr := #[]
     for root in roots do
       let w ← walkOf root
+      seen := seen ++ w.seen
+      for e in w.edges do
+        unless edges.contains e do edges := edges.push e
       for p in w.positions do
         unless keys.contains p.key do keys := keys.push p.key
       for e in w.edges do
         let k := s!"{e.parent}.{e.field}"
         unless edgeKeys.contains k do edgeKeys := edgeKeys.push k
     let rowKeys := rows.map (·.1)
-    let missing := keys.filter fun k => !rowKeys.contains k
+    let coverage ← Effect4.Laws.Auto.TypedSources.ownerCoverage rows roots edges seen
+    let missing := keys.filter fun k =>
+      !rowKeys.contains k && (!coverage.covered.contains k || coverage.active.contains k)
     -- a row names a position, or an edge (`nested`, `custom`, `journal`, `refused` on a field
     -- that reaches a structure)
-    let stale := rows.filter (fun (k, _) => !keys.contains k && !edgeKeys.contains k) |>.map (·.1)
+    let stale := rows.filter (fun (k, _) => !keys.contains k && !edgeKeys.contains k && !coverage.ownerKeys.contains k) |>.map (·.1)
     let dup := rowKeys.filter fun k => (rowKeys.filter (· == k)).length > 1
     let mut byKind : Array (String × Nat) := #[]
-    for (k, s) in rows do
-      if keys.contains k then
-        let l := kindLabel s
-        match byKind.findIdx? (·.1 == l) with
-        | some i => byKind := byKind.modify i fun (l, n) => (l, n + 1)
-        | none => byKind := byKind.push (l, 1)
+    for key in keys do
+      let label := match rows.find? (·.1 == key) with
+        | some (_, source) => kindLabel source
+        | none => if coverage.covered.contains key && !coverage.active.contains key
+          then "owner" else "missing"
+      match byKind.findIdx? (·.1 == label) with
+      | some i => byKind := byKind.modify i fun (label, n) => (label, n + 1)
+      | none => byKind := byKind.push (label, 1)
     let mut report := m!"{keys.size} positions from {roots.size} roots, {rows.length} source rows"
     for (l, n) in byKind do report := report ++ m!"\n  {n}\t{l}"
     for (k, s) in rows do

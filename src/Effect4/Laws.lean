@@ -110,6 +110,7 @@ import Effect4.Laws.Program.Authoring.Loops
 import Effect4.Laws.Program.Author
 import Effect4.Laws.Machine.Refinement
 import Effect4.Laws.Program.Typed.World
+import Effect4.Laws.Program.Typed.Contracts
 import Effect4.Laws.Program.Typed.ForkSource
 import Effect4.Laws.Program.Guard.TraceOrigin
 import Effect4.Laws.Machine.Handshake

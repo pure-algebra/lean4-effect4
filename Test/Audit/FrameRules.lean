@@ -27,4 +27,12 @@ example : ¬ Fits ⟨2, 1⟩ := by
 
 #print axioms Fits.frame_key
 #print axioms Fits.frame_value
+-- A whole-owner clause must be re-established even for a metadata-only field update.
+structure WholeFits (P : Pair → Prop) (s : Pair) : Prop where
+  whole : P s
+#frame_rules WholeFits
+example (P : Pair → Prop) (s : Pair) (h : WholeFits P s) (key : Nat)
+    (fresh : P { s with key := key }) : WholeFits P { s with key := key } :=
+  WholeFits.frame_key P s h key fresh
+#print axioms WholeFits.frame_key
 end Test.FrameRules

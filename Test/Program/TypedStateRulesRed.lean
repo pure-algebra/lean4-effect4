@@ -11,17 +11,18 @@ Initial goal:
   w : W
   e : Expect
   x : Effect4.Program.Sched.RSaved
-  current : P.program w e x.current
-  stack : P.StackOk w e x.stack
-  interrupted : P.InterruptOnly w e x.interruptedCause
+  saved : P.SavedOk w e x
   ⊢ RSavedOk P w e x
 -/
 #guard_msgs (error) in
 example {W : Type} (P : Preds W) (w : W) (e : Expect)
     (x : Effect4.Program.Sched.RSaved)
-    (current : P.program w e x.current) (stack : P.StackOk w e x.stack)
-    (interrupted : P.InterruptOnly w e x.interruptedCause) : RSavedOk P w e x := by
+    (saved : P.SavedOk w e x) : RSavedOk P w e x := by
   aesop
 
-#print axioms Effect4.Program.Typed.saved_from_clauses
+theorem from_owner {W : Type} (P : Preds W) (w : W) (e : Expect)
+    (x : Effect4.Program.Sched.RSaved) (saved : P.SavedOk w e x) : RSavedOk P w e x := by
+  aesop (rule_sets := [Effect4.TypedState])
+
+#print axioms from_owner
 end Test.Program.TypedStateRulesRed

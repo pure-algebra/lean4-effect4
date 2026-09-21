@@ -1,0 +1,5 @@
+typed state: 1 predicates, 1 carrier predicates, 0 refusals
+docs/research/2026-09-21-foundations-slice2-evidence/MetadataDuplicateRed.lean:13:0: error: ❌️ Docstring on `#guard_msgs` does not match generated message:
+
+- error: typed state: duplicate owner coverage at Test.MetadataDuplicateRed.Sample.token
++ info: typed state: 1 predicates, 1 carrier predicates, 0 refusals
